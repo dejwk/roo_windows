@@ -11,6 +11,23 @@ class Panel;
 
 using roo_display::Box;
 
+class TouchEvent {
+ public:
+  enum Type {
+    DOWN, MOVE, UP
+  };
+
+  TouchEvent(Type type, int16_t x, int16_t y) : type_(type), x_(x), y_(y) {}
+
+  Type type() const { return type_; }
+  int16_t x() const { return x_; }
+  int16_t y() const { return y_; }
+
+ private:
+  Type type_;
+  int16_t x_, y_;
+};
+
 class Widget {
  public:
   Widget(Panel* parent, Box bounds);
@@ -31,7 +48,20 @@ class Widget {
     dirty_ = false;
   }
 
+  virtual bool onTouch(const TouchEvent& event) {
+    if (event.type() == TouchEvent::DOWN) {
+      return onClick(event.x(), event.y());
+    }
+    return false;
+  }
+
+  virtual bool onClick(int16_t x, int16_t y) {
+    return false;
+  }
+
   bool isVisible() const { return visible_; }
+
+  const Panel* parent() const { return parent_; }
 
  protected:
   bool dirty_;
@@ -42,5 +72,23 @@ class Widget {
   Box bounds_;
   bool visible_;
 };
+
+
+// enum State {
+//   ENABLED,
+//   DISABLED,
+//   HOVER,
+//   FOCUSED,
+//   SELECTED,
+//   ACTIVATED,
+//   PRESSED,
+//   DRAGGED,
+//   ON,
+//   OFF,
+//   ERROR
+// };
+
+// TODO: adjust for different screen densities.
+static const int gridSize = 4;
 
 }  // namespace roo_windows

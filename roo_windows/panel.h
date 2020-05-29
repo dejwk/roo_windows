@@ -5,7 +5,6 @@
 
 #include "roo_display.h"
 #include "roo_display/core/color.h"
-
 #include "roo_windows/widget.h"
 
 namespace roo_windows {
@@ -23,9 +22,7 @@ class Panel : public Widget {
     }
   }
 
-  void setBackground(roo_display::Color bgcolor) {
-    bgcolor_ = bgcolor;
-  }
+  void setBackground(roo_display::Color bgcolor) { bgcolor_ = bgcolor; }
 
   void drawContent(const roo_display::Surface& s) const override {
     s.drawObject(roo_display::Clear());
@@ -53,7 +50,22 @@ class Panel : public Widget {
     has_dirty_descendants_ = false;
   }
 
- private:
+  virtual bool onTouch(const TouchEvent& event) {
+    TouchEvent shifted(event.type(), event.x() - bounds().xMin(),
+                       event.y() - bounds().yMin());
+    // Find if can delegate to a child.
+    for (const auto& child : children_) {
+      if (child->bounds().contains(shifted.x(), shifted.y())) {
+        if (child->onTouch(shifted)) {
+          return true;
+        }
+      }
+    }
+    // Unhandled.
+    return false;
+  }
+
+ protected:
   friend class Widget;
 
   void addChild(Widget* child) {
@@ -61,7 +73,6 @@ class Panel : public Widget {
     has_dirty_descendants_ = true;
   }
 
-  Panel* parent_;
   std::vector<std::unique_ptr<Widget>> children_;
   bool has_dirty_descendants_;
 
