@@ -20,4 +20,13 @@ void Widget::markDirty() {
   }
 }
 
+void Widget::setVisible(bool visible) {
+  if (visible == visible_) return;
+  visible_ = visible;
+  if (parent_ != nullptr) {
+    parent_->markDirty();
+  }
+  if (visible_) markDirty();
+}
+
 }  // namespace roo_windows
