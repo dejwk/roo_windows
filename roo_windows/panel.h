@@ -14,7 +14,7 @@ using roo_display::Color;
 
 class Panel : public Widget {
  public:
-  Panel(Panel* parent, Box bounds)
+  Panel(Panel* parent, const Box& bounds)
       : Widget(parent, bounds),
         has_dirty_descendants_(false),
         bgcolor_(DefaultTheme().color.background) {
@@ -23,17 +23,17 @@ class Panel : public Widget {
     }
   }
 
-  void setBackground(roo_display::Color bgcolor) { bgcolor_ = bgcolor; }
+  void setBackground(Color bgcolor) { bgcolor_ = bgcolor; }
 
-  void drawContent(const roo_display::Surface& s) const override {
+  void drawContent(const Surface& s) const override {
     s.drawObject(roo_display::Clear());
   }
 
-  virtual void update(const roo_display::Surface& s) {
+  virtual void update(const Surface& s) {
     if (!isVisible()) return;
     if (!dirty_ && !has_dirty_descendants_) return;
-    roo_display::Surface cs = s;
-    if (cs.clipToExtents(bounds()) == roo_display::Box::CLIP_RESULT_EMPTY) {
+    Surface cs = s;
+    if (cs.clipToExtents(bounds()) == Box::CLIP_RESULT_EMPTY) {
       return;
     }
     cs.bgcolor = roo_display::alphaBlend(cs.bgcolor, bgcolor_);

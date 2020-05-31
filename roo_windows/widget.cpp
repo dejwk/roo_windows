@@ -4,7 +4,7 @@
 
 namespace roo_windows {
 
-Widget::Widget(Panel* parent, roo_display::Box bounds)
+Widget::Widget(Panel* parent, const Box& bounds)
     : dirty_(true), parent_(parent), bounds_(bounds), visible_(true) {
   if (parent != nullptr) {
     parent->addChild(this);
