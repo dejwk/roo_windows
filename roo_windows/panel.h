@@ -6,6 +6,7 @@
 #include "roo_display.h"
 #include "roo_display/core/color.h"
 #include "roo_windows/widget.h"
+#include "roo_windows/theme.h"
 
 namespace roo_windows {
 
@@ -16,7 +17,7 @@ class Panel : public Widget {
   Panel(Panel* parent, Box bounds)
       : Widget(parent, bounds),
         has_dirty_descendants_(false),
-        bgcolor_(roo_display::color::White) {
+        bgcolor_(DefaultTheme().color.background) {
     if (parent != nullptr) {
       parent->addChild(this);
     }
