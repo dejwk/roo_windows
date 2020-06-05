@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include "roo_display/filter/translucency.h"
+#include "roo_display/filter/color_filter.h"
 #include "roo_display/ui/alignment.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_material_icons.h"
