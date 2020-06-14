@@ -30,7 +30,7 @@ class StatefulIcon : public Widget {
         halign_(halign),
         valign_(valign) {}
 
-  void drawContent(const Surface& s) const override {
+  void paint(const Surface& s, bool repaint) override {
     s.drawObject(roo_display::MakeTileOf(
         roo_display::MaterialIcon(*icons_[state_], color_), bounds(), halign_,
         valign_));

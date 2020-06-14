@@ -4,8 +4,12 @@
 
 namespace roo_windows {
 
-Widget::Widget(Panel* parent, const Box& bounds)
-    : dirty_(true), parent_(parent), bounds_(bounds), visible_(true) {
+Widget::Widget(Panel* parent, const Box& parent_bounds)
+    : dirty_(true),
+      needs_repaint_(true),
+      parent_(parent),
+      parent_bounds_(parent_bounds),
+      visible_(true) {
   if (parent != nullptr) {
     parent->addChild(this);
   }
@@ -15,7 +19,7 @@ void Widget::markDirty() {
   dirty_ = true;
   Panel* c = parent_;
   while (c != nullptr) {
-    c->has_dirty_descendants_ = true;
+    c->markDirty();
     c = c->parent_;
   }
 }
@@ -26,7 +30,10 @@ void Widget::setVisible(bool visible) {
   if (parent_ != nullptr) {
     parent_->markDirty();
   }
-  if (visible_) markDirty();
+  if (visible_) {
+    markDirty();
+    needs_repaint_ = true;
+  }
 }
 
 }  // namespace roo_windows

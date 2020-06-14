@@ -6,27 +6,11 @@
 
 namespace roo_windows {
 
-class T : public Drawable {
- public:
-  T(Widget* widget) : widget_(widget) {}
-
-  roo_display::Box extents() const override {
-    return widget_->bounds();
-  }
-
-  void drawTo(const roo_display::Surface& s) const override {
-    widget_->update(s);
-  }
-
- private:
-  Widget* widget_;
-};
-
 class WindowManager {
  public:
   WindowManager(roo_display::Display* display, Widget* main)
-      : display_(display), main_(main) {}
-  
+      : display_(display), main_(main), touch_down_(false) {}
+
   void tick() {
     // Check if no events to process.
     int16_t x, y;
@@ -44,11 +28,24 @@ class WindowManager {
     touch_y_ = y;
 
     roo_display::DrawingContext dc(display_);
-    T t(main_.get());
-    dc.draw(t);
+    dc.draw(Adapter(main_.get()));
   }
 
  private:
+  class Adapter : public Drawable {
+   public:
+    Adapter(Widget* widget) : widget_(widget) {}
+
+    roo_display::Box extents() const override { return widget_->bounds(); }
+
+    void drawTo(const roo_display::Surface& s) const override {
+      widget_->update(s, false);
+    }
+
+   private:
+    Widget* widget_;
+  };
+
   roo_display::Display* display_;
   std::unique_ptr<Widget> main_;
   int16_t touch_x_, touch_y_;

@@ -16,47 +16,46 @@ class Panel : public Widget {
  public:
   Panel(Panel* parent, const Box& bounds)
       : Widget(parent, bounds),
-        has_dirty_descendants_(false),
-        bgcolor_(DefaultTheme().color.background) {
-    if (parent != nullptr) {
-      parent->addChild(this);
-    }
-  }
+        //has_dirty_descendants_(false),
+        bgcolor_(DefaultTheme().color.background) {}
 
   void setBackground(Color bgcolor) { bgcolor_ = bgcolor; }
 
-  void drawContent(const Surface& s) const override {
-    s.drawObject(roo_display::Clear());
-  }
-
-  virtual void update(const Surface& s) {
-    if (!isVisible()) return;
-    if (!dirty_ && !has_dirty_descendants_) return;
+  void paint(const Surface& s, bool repaint) override {
     Surface cs = s;
-    if (cs.clipToExtents(bounds()) == Box::CLIP_RESULT_EMPTY) {
-      return;
-    }
     cs.bgcolor = roo_display::alphaBlend(cs.bgcolor, bgcolor_);
-    // Clip box is set in the device's coordinates, and constrained to the
-    // component's area.
-    if (dirty_) {
-      drawContent(cs);
-      dirty_ = false;
+    // // Clip box is set in the device's coordinates, and constrained to the
+    // // component's area.
+    // if (dirty_) {
+    //   drawContent(cs);
+    //   dirty_ = false;
+    // }
+    if (repaint) {
+      cs.drawObject(roo_display::Clear());
     }
-    cs.dx += bounds().xMin();
-    cs.dy += bounds().yMin();
+    Box clip_box = cs.clip_box;
+    int16_t dx = cs.dx;
+    int16_t dy = cs.dy;
     for (const auto& c : children_) {
-      c->update(cs);
+      if (!c->isVisible()) continue;
+      if (!repaint && !c->isDirty()) continue;
+      cs.dx = dx;
+      cs.dy = dy;
+      cs.clip_box = clip_box;
+      if (cs.clipToExtents(c->parent_bounds()) != Box::CLIP_RESULT_EMPTY) {
+        cs.dx += c->parent_bounds().xMin();
+        cs.dy += c->parent_bounds().yMin();
+        c->update(cs, repaint);
+      }
     }
-    has_dirty_descendants_ = false;
   }
 
   virtual bool onTouch(const TouchEvent& event) {
-    TouchEvent shifted(event.type(), event.x() - bounds().xMin(),
-                       event.y() - bounds().yMin());
     // Find if can delegate to a child.
     for (const auto& child : children_) {
-      if (child->bounds().contains(shifted.x(), shifted.y())) {
+      if (child->parent_bounds().contains(event.x(), event.y())) {
+        TouchEvent shifted(event.type(), event.x() - child->parent_bounds().xMin(),
+                          event.y() - child->parent_bounds().yMin());
         if (child->onTouch(shifted)) {
           return true;
         }
@@ -71,11 +70,12 @@ class Panel : public Widget {
 
   void addChild(Widget* child) {
     children_.emplace_back(std::unique_ptr<Widget>(child));
-    has_dirty_descendants_ = true;
+    //dirty_ = true; //has_dirty_descendants_ = true;
+    markDirty();
   }
 
   std::vector<std::unique_ptr<Widget>> children_;
-  bool has_dirty_descendants_;
+  // bool has_dirty_descendants_;
 
   Color bgcolor_;
 };

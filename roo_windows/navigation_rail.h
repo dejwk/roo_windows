@@ -30,15 +30,18 @@ class NavigationRail : public Panel {
     destinations_.push_back(dest);
   }
 
-  void drawContent(const roo_display::Surface& s) const override {
-    const Box box = bounds();
-    Color color = theme_->color.onBackground;
-    color.set_a(0x20);
-    s.drawObject(roo_display::FilledRect(box.xMax() - 2, box.yMin(),
-                                         box.xMax() - 2, box.yMax(), color));
-    color.set_a(0x10);
-    s.drawObject(roo_display::FilledRect(box.xMax() - 1, box.yMin(),
-                                         box.xMax() - 1, box.yMax(), color));
+  void paint(const roo_display::Surface& s, bool repaint) override {
+    Panel::paint(s, repaint);
+    if (repaint) {
+      const Box box = bounds();
+      Color color = theme_->color.onBackground;
+      color.set_a(0x20);
+      s.drawObject(roo_display::FilledRect(box.xMax() - 2, box.yMin(),
+                                           box.xMax() - 2, box.yMax(), color));
+      color.set_a(0x10);
+      s.drawObject(roo_display::FilledRect(box.xMax() - 1, box.yMin(),
+                                           box.xMax() - 1, box.yMax(), color));
+    }
   }
 
   int getActive() const { return active_; }
@@ -51,12 +54,10 @@ class NavigationRail : public Panel {
   }
 
   virtual bool onTouch(const TouchEvent& event) {
-    TouchEvent shifted(event.type(), event.x() - bounds().xMin(),
-                       event.y() - bounds().yMin());
     // Find if can delegate to a child.
     int active = -1;
     for (int i = 0; i < children_.size(); ++i) {
-      if (children_[i]->bounds().contains(shifted.x(), shifted.y())) {
+      if (children_[i]->parent_bounds().contains(event.x(), event.y())) {
         active = i;
         break;
       }
@@ -84,31 +85,30 @@ class NavigationRail : public Panel {
       active_ = active;
     }
 
-    void drawContent(const Surface& s) const override {
-      Box box = bounds();
+    void paint(const Surface& s, bool repaint) override {
       Surface news = s;
-      if (news.clipToExtents(box) == Box::CLIP_RESULT_EMPTY) return;
       const Theme* theme = rail()->theme_;
       Color fg = active_ ? theme->color.primary : theme->color.onSurface;
       roo_display::MaterialIcon icon(icon_, fg);
       const roo_display::Font* font = theme->font.caption;
       int16_t total_height =
           icon.extents().height() + font->metrics().maxHeight();
-      int16_t icon_x = (box.width() - icon.extents().width()) / 2;
-      int16_t icon_y = (box.height() - total_height) / 2;
+      int16_t icon_x = (width() - icon.extents().width()) / 2;
+      int16_t icon_y = (height() - total_height) / 2;
       roo_display::TranslucencyFilter filter(s.out, 0x40, theme->color.surface);
       if (!active_) {
         news.out = &filter;
       }
-      news.dx = s.dx + icon_x + box.xMin();
-      news.dy = s.dy + icon_y + box.yMin();
+      news.dx = s.dx + icon_x;
+      news.dy = s.dy + icon_y;
       news.drawObject(icon);
-      auto label = roo_display::TextLabel(*font, text_, fg, roo_display::FILL_MODE_RECTANGLE);
-      int16_t label_x = (box.width() - label.metrics().width()) / 2;
+      auto label = roo_display::TextLabel(*font, text_, fg,
+                                          roo_display::FILL_MODE_RECTANGLE);
+      int16_t label_x = (width() - label.metrics().width()) / 2;
       int16_t label_y =
           icon_y + icon.extents().height() + font->metrics().ascent();
-      news.dx = s.dx + label_x + box.xMin();
-      news.dy = s.dy + label_y + box.yMin();
+      news.dx = s.dx + label_x;
+      news.dy = s.dy + label_y;
       news.drawObject(label);
     }
 

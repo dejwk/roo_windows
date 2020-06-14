@@ -34,21 +34,22 @@ class Widget {
  public:
   Widget(Panel* parent, const Box& bounds);
 
-  virtual void drawContent(const Surface& s) const {}
-
   void markDirty();
 
-  const Box& bounds() const { return bounds_; }
+  int16_t width() const { return parent_bounds_.width(); }
+  int16_t height() const { return parent_bounds_.height(); }
+  Box bounds() const { return Box(0, 0, width() - 1, height() - 1); }
 
-  virtual void update(const Surface& s) {
-    if (!visible_) return;
-    Surface cs = s;
-    if (cs.clipToExtents(bounds()) == Box::CLIP_RESULT_EMPTY) {
-      return;
-    }
-    drawContent(cs);
-    dirty_ = false;
-  }
+  const Box& parent_bounds() const { return parent_bounds_; }
+
+  // Called as part of display update, for a visible, dirty widget.
+  // If repaint=false, the widget has not been painted-over, and so, it can
+  // update only the content that it knows has changed. Otherwise, it needs to
+  // fully redraw itself.
+  // The Surface's offset and clipbox has been pre-initialized so that this
+  // widget's top-left corner is painted at (0, 0), and the clip box is
+  // constrained to this widget's bounds (and non-empty).
+  virtual void paint(const Surface& s, bool repaint) {}
 
   virtual bool onTouch(const TouchEvent& event) {
     if (event.type() == TouchEvent::DOWN) {
@@ -66,13 +67,24 @@ class Widget {
   void setVisible(bool visible);
 
   const Panel* parent() const { return parent_; }
+  bool isDirty() const { return dirty_; }
 
  protected:
   bool dirty_;
+  bool needs_repaint_;
 
  private:
+  void update(const Surface& s, bool repaint) {
+    paint(s, repaint || needs_repaint_);
+    dirty_ = false;
+    needs_repaint_ = false;
+  }
+
+  friend class Panel;
+  friend class WindowManager;
+
   Panel* parent_;
-  Box bounds_;
+  Box parent_bounds_;
   bool visible_;
 };
 
