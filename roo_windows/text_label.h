@@ -18,7 +18,7 @@ class TextLabel : public Widget {
         halign_(halign),
         valign_(valign) {}
 
-  virtual void drawContent(const roo_display::Surface& s) const {
+  void paint(const roo_display::Surface& s, bool repaint) {
     s.drawObject(roo_display::MakeTileOf(
       roo_display::TextLabel(font_, value_, color_), bounds(), halign_, valign_));
   }
