@@ -23,7 +23,7 @@ class Panel : public Widget {
 
   void paint(const Surface& s, bool repaint) override {
     Surface cs = s;
-    cs.bgcolor = roo_display::alphaBlend(cs.bgcolor, bgcolor_);
+    cs.set_bgcolor(roo_display::alphaBlend(cs.bgcolor(), bgcolor_));
     // // Clip box is set in the device's coordinates, and constrained to the
     // // component's area.
     // if (dirty_) {
@@ -33,18 +33,18 @@ class Panel : public Widget {
     if (repaint) {
       cs.drawObject(roo_display::Clear());
     }
-    Box clip_box = cs.clip_box;
-    int16_t dx = cs.dx;
-    int16_t dy = cs.dy;
+    Box clip_box = cs.clip_box();
+    int16_t dx = cs.dx();
+    int16_t dy = cs.dy();
     for (const auto& c : children_) {
       if (!c->isVisible()) continue;
       if (!repaint && !c->isDirty()) continue;
-      cs.dx = dx;
-      cs.dy = dy;
-      cs.clip_box = clip_box;
+      cs.set_dx(dx);
+      cs.set_dy(dy);
+      cs.set_clip_box(clip_box);
       if (cs.clipToExtents(c->parent_bounds()) != Box::CLIP_RESULT_EMPTY) {
-        cs.dx += c->parent_bounds().xMin();
-        cs.dy += c->parent_bounds().yMin();
+        cs.set_dx(cs.dx() + c->parent_bounds().xMin());
+        cs.set_dy(cs.dy() + c->parent_bounds().yMin());
         c->update(cs, repaint);
       }
     }

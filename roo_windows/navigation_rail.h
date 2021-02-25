@@ -95,20 +95,20 @@ class NavigationRail : public Panel {
           icon.extents().height() + font->metrics().maxHeight();
       int16_t icon_x = (width() - icon.extents().width()) / 2;
       int16_t icon_y = (height() - total_height) / 2;
-      roo_display::TranslucencyFilter filter(s.out, 0x40, theme->color.surface);
+      roo_display::TranslucencyFilter filter(s.out(), 0x40, theme->color.surface);
       if (!active_) {
-        news.out = &filter;
+        news.set_out(&filter);
       }
-      news.dx = s.dx + icon_x;
-      news.dy = s.dy + icon_y;
+      news.set_dx(s.dx() + icon_x);
+      news.set_dy(s.dy() + icon_y);
       news.drawObject(icon);
       auto label = roo_display::TextLabel(*font, text_, fg,
                                           roo_display::FILL_MODE_RECTANGLE);
       int16_t label_x = (width() - label.metrics().width()) / 2;
       int16_t label_y =
           icon_y + icon.extents().height() + font->metrics().ascent();
-      news.dx = s.dx + label_x;
-      news.dy = s.dy + label_y;
+      news.set_dx(s.dx() + label_x);
+      news.set_dy(s.dy() + label_y);
       news.drawObject(label);
     }
 
