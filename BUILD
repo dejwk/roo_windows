@@ -12,7 +12,7 @@ cc_library(
         ".",
     ],
     deps = [
-        "//testing:arduino",
+        "//roo_testing:arduino",
         "//lib/roo_display",
         "//lib/roo_material_icons",
     ],
