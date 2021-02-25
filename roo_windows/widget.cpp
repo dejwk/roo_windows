@@ -29,6 +29,9 @@ void Widget::setVisible(bool visible) {
   visible_ = visible;
   if (parent_ != nullptr) {
     parent_->markDirty();
+    if (!visible) {
+      parent_->needs_repaint_ = true;
+    }
   }
   if (visible_) {
     markDirty();
