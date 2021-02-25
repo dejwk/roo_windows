@@ -33,6 +33,7 @@ class TouchEvent {
 class Widget {
  public:
   Widget(Panel* parent, const Box& bounds);
+  virtual ~Widget() {}
 
   void markDirty();
 
