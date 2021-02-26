@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include "roo_display/core/drawable.h"
 #include "roo_windows/widget.h"
 
 namespace roo_windows {
@@ -32,7 +33,7 @@ class WindowManager {
   }
 
  private:
-  class Adapter : public Drawable {
+  class Adapter : public roo_display::Drawable {
    public:
     Adapter(Widget* widget) : widget_(widget) {}
 
