@@ -40,7 +40,7 @@ class WindowManager {
     roo_display::Box extents() const override { return widget_->bounds(); }
 
     void drawTo(const roo_display::Surface& s) const override {
-      widget_->update(s, false);
+      widget_->paint(s);
     }
 
    private:

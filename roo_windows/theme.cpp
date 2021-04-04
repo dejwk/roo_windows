@@ -32,6 +32,45 @@ const Theme& DefaultTheme() {
       .button = &roo_display::font_NotoSans_Regular_18(),
       .caption = &roo_display::font_NotoSans_Regular_12(),
       .overline = &roo_display::font_NotoSans_Regular_12(),
+    },
+    .state = {
+      .disabled = 49,  // 38% of 128, used by TranslucencyFilter.
+
+      .hoverOnPrimary = 20,
+      .hoverOnSecondary = 20,
+      .hoverOnBackground = 10,
+      .hoverOnSurface = 10,
+      .hoverOnError = 20,
+
+      .focusOnPrimary = 61,
+      .focusOnSecondary = 61,
+      .focusOnBackground = 31,
+      .focusOnSurface = 31,
+      .focusOnError = 61,
+
+      .selectedOnPrimary = 41,
+      .selectedOnSecondary = 41,
+      .selectedOnBackground = 20,
+      .selectedOnSurface = 20,
+      .selectedOnError = 41,
+
+      .activatedOnPrimary = 61,
+      .activatedOnSecondary = 61,
+      .activatedOnBackground = 31,
+      .activatedOnSurface = 31,
+      .activatedOnError = 61,
+
+      .pressedOnPrimary = 61,
+      .pressedOnSecondary = 61,
+      .pressedOnBackground = 31,
+      .pressedOnSurface = 31,
+      .pressedOnError = 61,
+
+      .draggedOnPrimary = 41,
+      .draggedOnSecondary = 41,
+      .draggedOnBackground = 20,
+      .draggedOnSurface = 20,
+      .draggedOnError = 41,
     }
   };
   return theme;

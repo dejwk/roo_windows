@@ -30,9 +30,9 @@ class NavigationRail : public Panel {
     destinations_.push_back(dest);
   }
 
-  void paint(const roo_display::Surface& s, bool repaint) override {
-    Panel::paint(s, repaint);
-    if (repaint) {
+  void paint(const roo_display::Surface& s) override {
+    Panel::paint(s);
+    if (s.fill_mode() == roo_display::FILL_MODE_RECTANGLE) {
       const Box box = bounds();
       Color color = theme_->color.onBackground;
       color.set_a(0x20);
@@ -53,7 +53,7 @@ class NavigationRail : public Panel {
     }
   }
 
-  virtual bool onTouch(const TouchEvent& event) {
+  bool onTouch(const TouchEvent& event) override {
     // Find if can delegate to a child.
     int active = -1;
     for (int i = 0; i < children_.size(); ++i) {
@@ -62,7 +62,10 @@ class NavigationRail : public Panel {
         break;
       }
     }
-    if (active >= 0) setActive(active);
+    Panel::onTouch(event);
+    if (active >= 0) {
+      setActive(active);
+    }
     return true;
   }
 
@@ -85,7 +88,7 @@ class NavigationRail : public Panel {
       active_ = active;
     }
 
-    void paint(const Surface& s, bool repaint) override {
+    void paint(const Surface& s) override {
       Surface news = s;
       const Theme* theme = rail()->theme_;
       Color fg = active_ ? theme->color.primary : theme->color.onSurface;
