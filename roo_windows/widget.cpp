@@ -58,6 +58,16 @@ void Widget::setSelected(bool selected) {
   needs_repaint_ = true;
 }
 
+void Widget::setActivated(bool activated) {
+  if (activated == isActivated()) return;
+  state_ ^= kWidgetActivated;
+  if (!isVisible()) return;
+  markDirty();
+  if (useOverlayOnActivation()) {
+    needs_repaint_ = true;
+  }
+}
+
 void Widget::paint(const Surface& s) {
   if (!isVisible()) return;
   if (state_ == kWidgetEnabled && !needs_repaint_) {
@@ -86,7 +96,9 @@ void Widget::paint(const Surface& s) {
   if (isHover()) overlay_opacity += theme.hoverOpacity(s.bgcolor());
   if (isFocused()) overlay_opacity += theme.focusOpacity(s.bgcolor());
   if (isSelected()) overlay_opacity += theme.selectedOpacity(s.bgcolor());
-  if (isActivated()) overlay_opacity += theme.activatedOpacity(s.bgcolor());
+  if (isActivated() && useOverlayOnActivation()) {
+    overlay_opacity += theme.activatedOpacity(s.bgcolor());
+  }
   if (isDragged()) overlay_opacity += theme.draggedOpacity(s.bgcolor());
   if (overlay_opacity > 255) overlay_opacity = 255;
   if (overlay_opacity > 0) {

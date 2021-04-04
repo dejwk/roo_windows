@@ -37,6 +37,20 @@ struct ColorTheme {
       return onBackground;
     }
   }
+
+  roo_display::Color defaultColorActivated(roo_display::Color bg) const {
+    if (bg == surface) {
+      return primary;
+    } else if (bg == primary || bg == primaryVariant) {
+      return onPrimary;
+    } else if (bg == secondary || bg == secondaryVariant) {
+      return onSecondary;
+    } else if (bg == error) {
+      return onError;
+    } else {
+      return primary;
+    }
+  }
 };
 
 struct FontTheme {

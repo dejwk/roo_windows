@@ -113,6 +113,9 @@ class Widget {
   void setVisible(bool visible);
   void setEnabled(bool enabled);
   void setSelected(bool selected);
+  void setActivated(bool activated);
+
+  virtual bool useOverlayOnActivation() { return true; }
 
   const Panel* parent() const { return parent_; }
   bool isDirty() const { return dirty_; }
