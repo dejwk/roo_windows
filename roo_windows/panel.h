@@ -31,6 +31,7 @@ class Panel : public Widget {
   const Theme& theme() const { return theme_; }
 
   void paint(const Surface& s) override {
+    if (!isDirty()) return;
     Surface cs = s;
     cs.set_bgcolor(roo_display::alphaBlend(cs.bgcolor(), bgcolor_));
     // // Clip box is set in the device's coordinates, and constrained to the
@@ -80,6 +81,7 @@ class Panel : public Widget {
         // }
       }
     }
+    dirty_ = false;
   }
 
   virtual bool onTouch(const TouchEvent& event) {
