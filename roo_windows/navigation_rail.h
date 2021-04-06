@@ -20,7 +20,7 @@ class NavigationRail : public Panel {
       : Panel(parent, bounds),
         alignment_(roo_display::VAlign::Top()),
         theme_(&DefaultTheme()),
-        active_(0) {}
+        active_(-1) {}
 
   void addDestination(const roo_display::MaterialIconDef& icon,
                       std::string text) {
@@ -49,6 +49,7 @@ class NavigationRail : public Panel {
   int getActive() const { return active_; }
 
   void setActive(int index) {
+    if (index == active_) return;
     active_ = index;
     for (int i = 0; i < destinations_.size(); i++) {
       destinations_[i]->setActivated(i == index);
