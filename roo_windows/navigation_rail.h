@@ -6,6 +6,7 @@
 #include "roo_display/ui/alignment.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_material_icons.h"
+#include "roo_windows/icon_with_caption.h"
 #include "roo_windows/panel.h"
 #include "roo_windows/theme.h"
 
@@ -24,15 +25,16 @@ class NavigationRail : public Panel {
   void addDestination(const roo_display::MaterialIconDef& icon,
                       std::string text) {
     int16_t width = bounds().width();
-    Box box(4, 4, width - 4, width - 4);
+    Box box(4, 4, width - 8, width - 8);
     box = box.translate(0, children_.size() * width);
     Destination* dest = new Destination(this, box, icon, std::move(text));
     destinations_.push_back(dest);
   }
 
   void paint(const roo_display::Surface& s) override {
+    bool repaint = needs_repaint_;
     Panel::paint(s);
-    if (s.fill_mode() == roo_display::FILL_MODE_RECTANGLE) {
+    if (repaint) {
       const Box box = bounds();
       Color color = theme_->color.onBackground;
       color.set_a(0x20);
@@ -49,7 +51,7 @@ class NavigationRail : public Panel {
   void setActive(int index) {
     active_ = index;
     for (int i = 0; i < destinations_.size(); i++) {
-      destinations_[i]->setActive(i == index);
+      destinations_[i]->setActivated(i == index);
     }
   }
 
@@ -70,59 +72,18 @@ class NavigationRail : public Panel {
   }
 
  private:
-  class Destination : public Widget {
+  class Destination : public roo_windows::IconWithCaption {
    public:
-    enum State { ACTIVE, INACTIVE, FOCUSED, PRESSED };
-
     Destination(NavigationRail* parent, Box bounds,
                 const roo_display::MaterialIconDef& icon, std::string text)
-        : Widget(parent, bounds),
-          icon_(std::move(icon)),
-          text_(std::move(text)),
-          active_(false) {}
+        : roo_windows::IconWithCaption(parent, bounds, std::move(icon), std::move(text)) {}
 
-    void setActive(bool active) {
-      if (active_ != active) {
-        markDirty();
-      }
-      active_ = active;
-    }
-
-    void paint(const Surface& s) override {
-      Surface news = s;
-      const Theme* theme = rail()->theme_;
-      Color fg = active_ ? theme->color.primary : theme->color.onSurface;
-      roo_display::MaterialIcon icon(icon_, fg);
-      const roo_display::Font* font = theme->font.caption;
-      int16_t total_height =
-          icon.extents().height() + font->metrics().maxHeight();
-      int16_t icon_x = (width() - icon.extents().width()) / 2;
-      int16_t icon_y = (height() - total_height) / 2;
-      roo_display::TranslucencyFilter filter(s.out(), 0x40, theme->color.surface);
-      if (!active_) {
-        news.set_out(&filter);
-      }
-      news.set_dx(s.dx() + icon_x);
-      news.set_dy(s.dy() + icon_y);
-      news.drawObject(icon);
-      auto label = roo_display::TextLabel(*font, text_, fg,
-                                          roo_display::FILL_MODE_RECTANGLE);
-      int16_t label_x = (width() - label.metrics().width()) / 2;
-      int16_t label_y =
-          icon_y + icon.extents().height() + font->metrics().ascent();
-      news.set_dx(s.dx() + label_x);
-      news.set_dy(s.dy() + label_y);
-      news.drawObject(label);
-    }
+    bool useOverlayOnActivation() override { return false; }
 
    private:
     const NavigationRail* rail() const {
       return (const NavigationRail*)parent();
     }
-
-    const roo_display::MaterialIconDef& icon_;
-    std::string text_;
-    bool active_;
   };
 
   friend class Destination;
