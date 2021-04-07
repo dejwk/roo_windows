@@ -1,7 +1,8 @@
 #include "widget.h"
 
-#include "roo_windows/panel.h"
 #include "roo_display/filter/foreground.h"
+#include "roo_windows/main_window.h"
+#include "roo_windows/panel.h"
 
 namespace roo_windows {
 
@@ -15,6 +16,8 @@ Widget::Widget(Panel* parent, const Box& parent_bounds)
     parent->addChild(this);
   }
 }
+
+MainWindow* Widget::getMainWindow() { return parent_->getMainWindow(); }
 
 void Widget::markDirty() {
   dirty_ = true;
@@ -84,7 +87,7 @@ void Widget::paint(const Surface& s) {
   const Theme& theme = parent()->theme();
   if (!isEnabled()) {
     roo_display::TranslucencyFilter disablement_filter(
-      s.out(), theme.state.disabled, s.bgcolor());
+        s.out(), theme.state.disabled, s.bgcolor());
     news.set_out(&disablement_filter);
     defaultPaint(news);
     needs_repaint_ = false;

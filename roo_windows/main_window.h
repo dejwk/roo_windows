@@ -33,6 +33,8 @@ class MainWindow : public Panel {
     dc.draw(Adapter(this));
   }
 
+  MainWindow* getMainWindow() override { return this; }
+
  private:
   class Adapter : public roo_display::Drawable {
    public:

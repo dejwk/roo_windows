@@ -11,6 +11,7 @@
 namespace roo_windows {
 
 class Panel;
+class MainWindow;
 
 using roo_display::Box;
 using roo_display::Color;
@@ -84,6 +85,8 @@ class Widget {
   virtual void paint(const Surface& s);
 
   virtual void defaultPaint(const Surface& s) {}
+
+  virtual MainWindow* getMainWindow();
 
   virtual bool onTouch(const TouchEvent& event) {
     if (event.type() == TouchEvent::DOWN) {
