@@ -34,6 +34,8 @@ Box Widget::absolute_bounds() const {
 
 Color Widget::background() const { return parent_->background(); }
 
+const Theme& Widget::theme() const { return parent_->theme(); }
+
 void Widget::markDirty() {
   dirty_ = true;
   Panel* c = parent_;
@@ -109,18 +111,17 @@ void Widget::setDragged(bool dragged) {
 
 Color Widget::getOverlayColor() const {
   Color bgcolor = background();
-  const Theme& theme = parent()->theme();
   uint16_t overlay_opacity = 0;
-  if (isHover()) overlay_opacity += theme.hoverOpacity(bgcolor);
-  if (isFocused()) overlay_opacity += theme.focusOpacity(bgcolor);
-  if (isSelected()) overlay_opacity += theme.selectedOpacity(bgcolor);
+  if (isHover()) overlay_opacity += theme().hoverOpacity(bgcolor);
+  if (isFocused()) overlay_opacity += theme().focusOpacity(bgcolor);
+  if (isSelected()) overlay_opacity += theme().selectedOpacity(bgcolor);
   if (isActivated() && useOverlayOnActivation()) {
-    overlay_opacity += theme.activatedOpacity(bgcolor);
+    overlay_opacity += theme().activatedOpacity(bgcolor);
   }
-  if (isDragged()) overlay_opacity += theme.draggedOpacity(bgcolor);
+  if (isDragged()) overlay_opacity += theme().draggedOpacity(bgcolor);
   if (overlay_opacity > 255) overlay_opacity = 255;
   if (overlay_opacity == 0) return roo_display::color::Transparent;
-  Color overlay = theme.color.primary;
+  Color overlay = theme().color.primary;
   overlay.set_a(overlay_opacity);
   return overlay;
 }
@@ -148,9 +149,8 @@ void Widget::paint(const Surface& s) {
       defaultPaint(news);
     }
   } else {
-    const Theme& theme = parent()->theme();
     roo_display::TranslucencyFilter disablement_filter(
-        s.out(), theme.state.disabled, s.bgcolor());
+        s.out(), theme().state.disabled, s.bgcolor());
     news.set_out(&disablement_filter);
     defaultPaint(news);
   }

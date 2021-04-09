@@ -8,6 +8,7 @@
 #include "roo_display.h"
 #include "roo_display/core/box.h"
 #include "roo_display/filter/color_filter.h"
+#include "roo_windows/theme.h"
 
 namespace roo_windows {
 
@@ -41,11 +42,11 @@ class TouchEvent {
   TouchEvent(Type type, unsigned long start_time_ms, int16_t x_start,
              int16_t y_start, int16_t x_end, int16_t y_end)
       : type_(type),
-        start_time_ms_(start_time_ms),
         x_start_(x_start),
         y_start_(y_start),
         x_end_(x_end),
-        y_end_(y_end) {}
+        y_end_(y_end),
+        start_time_ms_(start_time_ms) {}
 
   Type type() const { return type_; }
   unsigned long startTime() const { return start_time_ms_; }
@@ -75,6 +76,7 @@ class Widget {
   int16_t width() const { return parent_bounds_.width(); }
   int16_t height() const { return parent_bounds_.height(); }
   Box bounds() const { return Box(0, 0, width() - 1, height() - 1); }
+  const Theme& theme() const;
 
   const Box& parent_bounds() const { return parent_bounds_; }
 

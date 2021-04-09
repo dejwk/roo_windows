@@ -3,12 +3,12 @@
 #include <memory>
 #include <vector>
 
+#include "press_overlay.h"
 #include "roo_display.h"
 #include "roo_display/core/color.h"
 #include "roo_display/filter/foreground.h"
-#include "roo_windows/widget.h"
 #include "roo_windows/theme.h"
-#include "press_overlay.h"
+#include "roo_windows/widget.h"
 
 namespace roo_windows {
 
@@ -17,12 +17,13 @@ using roo_display::Color;
 class Panel : public Widget {
  public:
   Panel(Panel* parent, const Box& bounds)
-      : Panel(parent, bounds, DefaultTheme()) {}
+      : Panel(parent, bounds,
+              parent == nullptr ? DefaultTheme() : parent->theme()) {}
 
   Panel(Panel* parent, const Box& bounds, const Theme& theme)
       : Widget(parent, bounds),
         theme_(theme),
-        //has_dirty_descendants_(false),
+        // has_dirty_descendants_(false),
         bgcolor_(theme.color.background) {}
 
   void setBackground(Color bgcolor) { bgcolor_ = bgcolor; }
@@ -50,7 +51,8 @@ class Panel : public Widget {
     roo_display::DisplayOutput* device = cs.out();
     for (const auto& c : children_) {
       if (!c->isVisible()) continue;
-      if (s.fill_mode() == roo_display::FILL_MODE_VISIBLE && !c->isDirty()) continue;
+      if (s.fill_mode() == roo_display::FILL_MODE_VISIBLE && !c->isDirty())
+        continue;
       cs.set_dx(dx);
       cs.set_dy(dy);
       cs.set_clip_box(clip_box);
@@ -69,10 +71,10 @@ class Panel : public Widget {
       if (!child->isVisible()) continue;
       if (child->parent_bounds().contains(event.startX(), event.startY())) {
         TouchEvent shifted(event.type(), event.startTime(),
-                          event.startX() - child->parent_bounds().xMin(),
-                          event.startY() - child->parent_bounds().yMin(),
-                          event.x() - child->parent_bounds().xMin(),
-                          event.y() - child->parent_bounds().yMin());
+                           event.startX() - child->parent_bounds().xMin(),
+                           event.startY() - child->parent_bounds().yMin(),
+                           event.x() - child->parent_bounds().xMin(),
+                           event.y() - child->parent_bounds().yMin());
         if (child->onTouch(shifted)) {
           return true;
         }
@@ -87,15 +89,15 @@ class Panel : public Widget {
 
   void addChild(Widget* child) {
     children_.emplace_back(std::unique_ptr<Widget>(child));
-    //dirty_ = true; //has_dirty_descendants_ = true;
+    // dirty_ = true; //has_dirty_descendants_ = true;
     markDirty();
   }
 
   std::vector<std::unique_ptr<Widget>> children_;
   // bool has_dirty_descendants_;
 
-  Color bgcolor_;
   const Theme& theme_;
+  Color bgcolor_;
 };
 
 }  // namespace roo_windows
