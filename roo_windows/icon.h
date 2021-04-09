@@ -10,6 +10,10 @@ namespace roo_windows {
 
 class Icon : public Widget {
  public:
+  Icon(Panel* parent, int16_t dx, int16_t dy,
+       const roo_display::MaterialIconDef& def)
+      : Icon(parent, def.extents().translate(dx, dy), def) {}
+
   Icon(Panel* parent, const Box& bounds,
        const roo_display::MaterialIconDef& def)
       : Icon(parent, bounds, def,
