@@ -11,13 +11,28 @@ Widget::Widget(Panel* parent, const Box& parent_bounds)
       needs_repaint_(true),
       parent_(parent),
       parent_bounds_(parent_bounds),
-      state_(kWidgetEnabled) {
+      state_(kWidgetEnabled),
+      on_clicked_([]{}) {
   if (parent != nullptr) {
     parent->addChild(this);
   }
 }
 
 MainWindow* Widget::getMainWindow() { return parent_->getMainWindow(); }
+
+Box Widget::absolute_bounds() const {
+  int16_t dx = 0;
+  int16_t dy = 0;
+  const Widget* w = this;
+  do {
+    dx += w->parent_bounds().xMin();
+    dy += w->parent_bounds().yMin();
+    w = w->parent_;
+  } while (w != nullptr);
+  return bounds().translate(dx, dy);
+}
+
+Color Widget::background() const { return parent_->background(); }
 
 void Widget::markDirty() {
   dirty_ = true;
@@ -26,6 +41,11 @@ void Widget::markDirty() {
     c->markDirty();
     c = c->parent_;
   }
+}
+
+void Widget::invalidate() {
+  markDirty();
+  needs_repaint_ = true;
 }
 
 void Widget::setVisible(bool visible) {
@@ -71,6 +91,40 @@ void Widget::setActivated(bool activated) {
   }
 }
 
+void Widget::setPressed(bool pressed) {
+  if (pressed == isPressed()) return;
+  state_ ^= kWidgetPressed;
+  if (!isVisible()) return;
+  markDirty();
+  needs_repaint_ = true;
+}
+
+void Widget::setDragged(bool dragged) {
+  if (dragged == isDragged()) return;
+  state_ ^= kWidgetDragged;
+  if (!isVisible()) return;
+  markDirty();
+  needs_repaint_ = true;
+}
+
+Color Widget::getOverlayColor() const {
+  Color bgcolor = background();
+  const Theme& theme = parent()->theme();
+  uint16_t overlay_opacity = 0;
+  if (isHover()) overlay_opacity += theme.hoverOpacity(bgcolor);
+  if (isFocused()) overlay_opacity += theme.focusOpacity(bgcolor);
+  if (isSelected()) overlay_opacity += theme.selectedOpacity(bgcolor);
+  if (isActivated() && useOverlayOnActivation()) {
+    overlay_opacity += theme.activatedOpacity(bgcolor);
+  }
+  if (isDragged()) overlay_opacity += theme.draggedOpacity(bgcolor);
+  if (overlay_opacity > 255) overlay_opacity = 255;
+  if (overlay_opacity == 0) return roo_display::color::Transparent;
+  Color overlay = theme.color.primary;
+  overlay.set_a(overlay_opacity);
+  return overlay;
+}
+
 void Widget::paint(const Surface& s) {
   if (!isVisible()) return;
   if (state_ == kWidgetEnabled && !needs_repaint_) {
@@ -84,55 +138,42 @@ void Widget::paint(const Surface& s) {
   if (needs_repaint_) {
     news.set_fill_mode(roo_display::FILL_MODE_RECTANGLE);
   }
-  const Theme& theme = parent()->theme();
-  if (!isEnabled()) {
+  if (isEnabled()) {
+    Color overlay = getOverlayColor();
+    if (overlay.a() > 0) {
+      roo_display::OverlayFilter filter(s.out(), overlay, s.bgcolor());
+      news.set_out(&filter);
+      defaultPaint(news);
+    } else {
+      defaultPaint(news);
+    }
+  } else {
+    const Theme& theme = parent()->theme();
     roo_display::TranslucencyFilter disablement_filter(
         s.out(), theme.state.disabled, s.bgcolor());
     news.set_out(&disablement_filter);
     defaultPaint(news);
-    needs_repaint_ = false;
-    dirty_ = false;
-    return;
   }
-
-  uint16_t overlay_opacity = 0;
-  if (isHover()) overlay_opacity += theme.hoverOpacity(s.bgcolor());
-  if (isFocused()) overlay_opacity += theme.focusOpacity(s.bgcolor());
-  if (isSelected()) overlay_opacity += theme.selectedOpacity(s.bgcolor());
-  if (isActivated() && useOverlayOnActivation()) {
-    overlay_opacity += theme.activatedOpacity(s.bgcolor());
-  }
-  if (isDragged()) overlay_opacity += theme.draggedOpacity(s.bgcolor());
-  if (overlay_opacity > 255) overlay_opacity = 255;
-  if (overlay_opacity > 0) {
-    Color overlay = theme.color.primary;
-    overlay.set_a(overlay_opacity);
-    roo_display::OverlayFilter filter(s.out(), overlay, s.bgcolor());
-    news.set_out(&filter);
-    defaultPaint(news);
-    needs_repaint_ = false;
-    dirty_ = false;
-    return;
-  } else {
-    defaultPaint(news);
-    needs_repaint_ = false;
-    dirty_ = false;
-  }
+  needs_repaint_ = false;
+  dirty_ = false;
 }
 
-// void Widget::setVisible(bool visible) {
-//   if (visible == visible_) return;
-//   visible_ = visible;
-//   if (parent_ != nullptr) {
-//     parent_->markDirty();
-//     if (!visible) {
-//       parent_->needs_repaint_ = true;
-//     }
-//   }
-//   if (visible_) {
-//     markDirty();
-//     needs_repaint_ = true;
-//   }
-// }
+bool Widget::onTouch(const TouchEvent& event) {
+  if (event.type() == TouchEvent::PRESSED) {
+    if (!isPressed() && isClickable() && getMainWindow()->animateClicked(this)) {
+      setPressed(true);
+      return true;
+    }
+  } else if (event.type() == TouchEvent::RELEASED) {
+    if (isPressed()) {
+      setPressed(false);
+      if (bounds().contains(event.x(), event.y())) {
+        on_clicked_();
+        return true;
+      }
+    }
+  }
+  return false;
+}
 
 }  // namespace roo_windows

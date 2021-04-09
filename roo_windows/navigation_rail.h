@@ -7,6 +7,7 @@
 #include "roo_display/ui/text_label.h"
 #include "roo_material_icons.h"
 #include "roo_windows/icon_with_caption.h"
+#include "roo_windows/main_window.h"
 #include "roo_windows/panel.h"
 #include "roo_windows/theme.h"
 
@@ -28,6 +29,8 @@ class NavigationRail : public Panel {
     Box box(4, 4, width - 8, width - 8);
     box = box.translate(0, children_.size() * width);
     Destination* dest = new Destination(this, box, icon, std::move(text));
+    int idx = destinations_.size();
+    dest->setOnClicked([this, idx]{ setActive(idx); });
     destinations_.push_back(dest);
   }
 
@@ -35,6 +38,7 @@ class NavigationRail : public Panel {
     bool repaint = needs_repaint_;
     Panel::paint(s);
     if (repaint) {
+      // Draw the divider.
       const Box box = bounds();
       Color color = theme_->color.onBackground;
       color.set_a(0x20);
@@ -56,22 +60,6 @@ class NavigationRail : public Panel {
     }
   }
 
-  bool onTouch(const TouchEvent& event) override {
-    // Find if can delegate to a child.
-    int active = -1;
-    for (int i = 0; i < children_.size(); ++i) {
-      if (children_[i]->parent_bounds().contains(event.x(), event.y())) {
-        active = i;
-        break;
-      }
-    }
-    Panel::onTouch(event);
-    if (active >= 0) {
-      setActive(active);
-    }
-    return true;
-  }
-
  private:
   class Destination : public roo_windows::IconWithCaption {
    public:
@@ -79,7 +67,8 @@ class NavigationRail : public Panel {
                 const roo_display::MaterialIconDef& icon, std::string text)
         : roo_windows::IconWithCaption(parent, bounds, std::move(icon), std::move(text)) {}
 
-    bool useOverlayOnActivation() override { return false; }
+    bool useOverlayOnActivation() const override { return false; }
+    bool isClickable() const override { return true; }
 
    private:
     const NavigationRail* rail() const {

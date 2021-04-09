@@ -1,8 +1,9 @@
 #pragma once
 
-#include <vector>
-
 #include <Arduino.h>
+
+#include <functional>
+#include <vector>
 
 #include "roo_display.h"
 #include "roo_display/core/box.h"
@@ -33,33 +34,30 @@ static const uint16_t kWidgetError = 0x0400;
 
 static const uint16_t kWidgetHidden = 0x8000;
 
-// enum State {
-//   WIDGET_ENABLED,
-//   WIDGET_DISABLED,
-//   WIDGET_HOVER,
-//   WIDGET_FOCUSED,
-//   WIDGET_SELECTED,
-//   WIDGET_ACTIVATED,
-//   WIDGET_PRESSED,
-//   WIDGET_DRAGGED,
-//   WIDGET_ON,
-//   WIDGET_OFF,
-//   WIDGET_ERROR
-// };
-
 class TouchEvent {
  public:
-  enum Type { DOWN, MOVE, UP };
+  enum Type { PRESSED, RELEASED, MOVED, DRAGGED };
 
-  TouchEvent(Type type, int16_t x, int16_t y) : type_(type), x_(x), y_(y) {}
+  TouchEvent(Type type, unsigned long start_time_ms, int16_t x_start,
+             int16_t y_start, int16_t x_end, int16_t y_end)
+      : type_(type),
+        start_time_ms_(start_time_ms),
+        x_start_(x_start),
+        y_start_(y_start),
+        x_end_(x_end),
+        y_end_(y_end) {}
 
   Type type() const { return type_; }
-  int16_t x() const { return x_; }
-  int16_t y() const { return y_; }
+  unsigned long startTime() const { return start_time_ms_; }
+  int16_t startX() const { return x_start_; }
+  int16_t startY() const { return y_start_; }
+  int16_t x() const { return x_end_; }
+  int16_t y() const { return y_end_; }
 
  private:
   Type type_;
-  int16_t x_, y_;
+  int16_t x_start_, y_start_, x_end_, y_end_;
+  unsigned long start_time_ms_;
 };
 
 class Widget {
@@ -67,7 +65,12 @@ class Widget {
   Widget(Panel* parent, const Box& bounds);
   virtual ~Widget() {}
 
+  // Causes the widget to request paint(). The widget decides which pixels
+  // need re-drawing (it will receive FILL_MODE_VISIBLE).
   void markDirty();
+
+  // Causes the widget to request paint(), replacing the entire ractangle area.
+  void invalidate();
 
   int16_t width() const { return parent_bounds_.width(); }
   int16_t height() const { return parent_bounds_.height(); }
@@ -75,10 +78,14 @@ class Widget {
 
   const Box& parent_bounds() const { return parent_bounds_; }
 
+  // Returns bounds in the device's coordinates.
+  Box absolute_bounds() const;
+
   // Called as part of display update, for a visible, dirty widget.
-//  // If repaint=false, the widget has not been painted-over, and so, it can
-//  // update only the content that it knows has changed. Otherwise, it needs to
-//  // fully redraw itself.
+  //  // If repaint=false, the widget has not been painted-over, and so, it can
+  //  // update only the content that it knows has changed. Otherwise, it needs
+  //  to
+  //  // fully redraw itself.
   // The Surface's offset and clipbox has been pre-initialized so that this
   // widget's top-left corner is painted at (0, 0), and the clip box is
   // constrained to this widget's bounds (and non-empty).
@@ -88,20 +95,15 @@ class Widget {
 
   virtual MainWindow* getMainWindow();
 
-  virtual bool onTouch(const TouchEvent& event) {
-    if (event.type() == TouchEvent::DOWN) {
-      //state_ = WIDGET_PRESSED;
-      pressed_time_millis_ = millis();
-      pressed_x_ = event.x();
-      pressed_y_ = event.y();
-      Serial.printf("Pressed: %d, %d\n", pressed_x_, pressed_y_);
+  virtual Color background() const;
 
-      //return onClick(event.x(), event.y());
-    }
-    return false;
+  virtual bool onTouch(const TouchEvent& event);
+
+  void setOnClicked(std::function<void()> on_clicked) {
+    on_clicked_ = on_clicked;
   }
 
-  virtual bool onClick(int16_t x, int16_t y) { return false; }
+  // virtual bool onClick(int16_t x, int16_t y) { return false; }
 
   bool isVisible() const { return (state_ & kWidgetHidden) == 0; }
   bool isEnabled() const { return (state_ & kWidgetEnabled) != 0; }
@@ -117,24 +119,17 @@ class Widget {
   void setEnabled(bool enabled);
   void setSelected(bool selected);
   void setActivated(bool activated);
+  void setPressed(bool pressed);
+  void setDragged(bool dragged);
 
-  virtual bool useOverlayOnActivation() { return true; }
+  virtual bool useOverlayOnActivation() const { return true; }
+  virtual bool isClickable() const { return false; }
+  virtual bool showClickAnimation() const { return true; }
+
+  virtual roo_display::Color getOverlayColor() const;
 
   const Panel* parent() const { return parent_; }
   bool isDirty() const { return dirty_; }
-  //State state() const { return state_; }
-
-  uint32_t pressed_millis() const {
-    return millis() - pressed_time_millis_;
-  }
-
-  int16_t pressed_x() const {
-    return pressed_x_;
-  }
-
-  int16_t pressed_y() const {
-    return pressed_y_;
-  }
 
  protected:
   // The widget wants its paint() method to be called.
@@ -144,27 +139,11 @@ class Widget {
   bool needs_repaint_;
 
  private:
-  // void update(const Surface& s) {
-  //   paint(s);
-  //   dirty_ = false;
-  //   needs_repaint_ = false;
-  // }
-
-  bool is_press_animating() {
-    return //state_ == WIDGET_PRESSED &&
-           millis() - pressed_time_millis_ < kPressAnimationMillis;
-  }
-
-  friend class Panel;
-  friend class WindowManager;
-
   Panel* parent_;
   Box parent_bounds_;
   uint16_t state_;
 
-  int16_t pressed_x_;
-  int16_t pressed_y_;
-  uint32_t pressed_time_millis_;
+  std::function<void()> on_clicked_;
 };
 
 // TODO: adjust for different screen densities.

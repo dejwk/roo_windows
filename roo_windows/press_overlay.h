@@ -1,3 +1,5 @@
+#pragma once
+
 #include "roo_display/core/rasterizable.h"
 
 class PressOverlay : public roo_display::Rasterizable {
