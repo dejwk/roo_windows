@@ -14,17 +14,20 @@ namespace roo_windows {
 
 using roo_display::Color;
 
+inline const Theme& getTheme(Panel* parent);
+
 class Panel : public Widget {
  public:
   Panel(Panel* parent, const Box& bounds)
-      : Panel(parent, bounds,
-              parent == nullptr ? DefaultTheme() : parent->theme()) {}
+      : Panel(parent, bounds, getTheme(parent),
+              getTheme(parent).color.background) {}
 
-  Panel(Panel* parent, const Box& bounds, const Theme& theme)
-      : Widget(parent, bounds),
-        theme_(theme),
-        // has_dirty_descendants_(false),
-        bgcolor_(theme.color.background) {}
+  Panel(Panel* parent, const Box& bounds, roo_display::Color bgcolor)
+      : Panel(parent, bounds, getTheme(parent), bgcolor) {}
+
+  Panel(Panel* parent, const Box& bounds, const Theme& theme,
+        roo_display::Color bgcolor)
+      : Widget(parent, bounds), theme_(theme), bgcolor_(bgcolor) {}
 
   void setBackground(Color bgcolor) { bgcolor_ = bgcolor; }
   Color background() const override { return bgcolor_; }
@@ -99,5 +102,9 @@ class Panel : public Widget {
   const Theme& theme_;
   Color bgcolor_;
 };
+
+const Theme& getTheme(Panel* parent) {
+  return parent == nullptr ? DefaultTheme() : parent->theme();
+}
 
 }  // namespace roo_windows
