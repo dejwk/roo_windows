@@ -16,6 +16,8 @@ using roo_display::Color;
 
 inline const Theme& getTheme(Panel* parent);
 
+static const int16_t kTouchMargin = 8;
+
 class Panel : public Widget {
  public:
   Panel(Panel* parent, const Box& bounds)
@@ -73,12 +75,20 @@ class Panel : public Widget {
     for (const auto& child : children_) {
       if (!child->isVisible()) continue;
       if (child->parent_bounds().contains(event.startX(), event.startY())) {
-        TouchEvent shifted(event.type(), event.startTime(),
-                           event.startX() - child->parent_bounds().xMin(),
-                           event.startY() - child->parent_bounds().yMin(),
-                           event.x() - child->parent_bounds().xMin(),
-                           event.y() - child->parent_bounds().yMin());
-        if (child->onTouch(shifted)) {
+        if (onTouchChild(event, child.get())) {
+          return true;
+        }
+      }
+    }
+    // See if can delegate assuming more loose bounds.
+    for (const auto& child : children_) {
+      if (!child->isVisible()) continue;
+      const roo_display::Box& pbounds = child->parent_bounds();
+      const roo_display::Box ebounds(
+          pbounds.xMin() - kTouchMargin, pbounds.yMin() - kTouchMargin,
+          pbounds.xMax() + kTouchMargin, pbounds.yMax() + kTouchMargin);
+      if (ebounds.contains(event.startX(), event.startY())) {
+        if (onTouchChild(event, child.get())) {
           return true;
         }
       }
@@ -99,6 +109,15 @@ class Panel : public Widget {
     children_.emplace_back(std::unique_ptr<Widget>(child));
     // dirty_ = true; //has_dirty_descendants_ = true;
     markDirty();
+  }
+
+  bool onTouchChild(const TouchEvent& event, Widget* child) {
+    TouchEvent shifted(event.type(), event.startTime(),
+                       event.startX() - child->parent_bounds().xMin(),
+                       event.startY() - child->parent_bounds().yMin(),
+                       event.x() - child->parent_bounds().xMin(),
+                       event.y() - child->parent_bounds().yMin());
+    return child->onTouch(shifted);
   }
 
   std::vector<std::unique_ptr<Widget>> children_;

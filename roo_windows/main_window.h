@@ -11,7 +11,7 @@ inline int32_t dsquare(int16_t x0, int16_t y0, int16_t x1, int16_t y1) {
   return (x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0);
 }
 
-static const unsigned long kClickAnimationMs = 200;
+static const unsigned long kClickAnimationMs = 250;
 
 class MainWindow : public Panel {
  public:
@@ -59,10 +59,10 @@ class MainWindow : public Panel {
     if (click_anim_target_ != nullptr) return false;
     click_anim_bounds_ = target->absolute_bounds();
     if (click_anim_target_ != nullptr || !touch_down_ ||
-        touch_x_ < click_anim_bounds_.xMin() ||
-        touch_x_ > click_anim_bounds_.xMax() ||
-        touch_y_ < click_anim_bounds_.yMin() ||
-        touch_y_ > click_anim_bounds_.yMax()) {
+        touch_x_ < click_anim_bounds_.xMin() - kTouchMargin ||
+        touch_x_ > click_anim_bounds_.xMax() + kTouchMargin ||
+        touch_y_ < click_anim_bounds_.yMin() - kTouchMargin ||
+        touch_y_ > click_anim_bounds_.yMax() + kTouchMargin) {
       return false;
     }
     int32_t ul = dsquare(touch_x_, touch_y_, click_anim_bounds_.xMin(),
