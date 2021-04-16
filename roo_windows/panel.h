@@ -88,6 +88,11 @@ class Panel : public Widget {
   }
 
  protected:
+  const std::vector<std::unique_ptr<Widget>>& children() const {
+    return children_;
+  }
+
+ private:
   friend class Widget;
 
   void addChild(Widget* child) {

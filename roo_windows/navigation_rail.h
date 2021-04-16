@@ -27,7 +27,7 @@ class NavigationRail : public Panel {
                       std::string text) {
     int16_t width = bounds().width();
     Box box(4, 4, width - 8, width - 8);
-    box = box.translate(0, children_.size() * width);
+    box = box.translate(0, children().size() * width);
     Destination* dest = new Destination(this, box, icon, std::move(text));
     int idx = destinations_.size();
     dest->setOnClicked([this, idx]{ setActive(idx); });
