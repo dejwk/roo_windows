@@ -6,13 +6,19 @@
 
 namespace roo_windows {
 
+// If the end-to-end duration of touch it shorted than this threshold,
+// it is always interpreted as a 'click' rather than 'drag'; i.e.
+// it is registered in the target component even if the exit coordinates
+// fall outside of the component. (It helps to overcome touch panel noise).
+static const long int kClickDuratiohThresholdMs = 200;
+
 Widget::Widget(Panel* parent, const Box& parent_bounds)
     : dirty_(true),
       needs_repaint_(true),
       parent_(parent),
       parent_bounds_(parent_bounds),
       state_(kWidgetEnabled),
-      on_clicked_([]{}) {
+      on_clicked_([] {}) {
   if (parent != nullptr) {
     parent->addChild(this);
   }
@@ -160,14 +166,16 @@ void Widget::paint(const Surface& s) {
 
 bool Widget::onTouch(const TouchEvent& event) {
   if (event.type() == TouchEvent::PRESSED) {
-    if (!isPressed() && isClickable() && getMainWindow()->animateClicked(this)) {
+    if (!isPressed() && isClickable() &&
+        getMainWindow()->animateClicked(this)) {
       setPressed(true);
       return true;
     }
   } else if (event.type() == TouchEvent::RELEASED) {
     if (isPressed()) {
       setPressed(false);
-      if (bounds().contains(event.x(), event.y())) {
+      if (bounds().contains(event.x(), event.y()) ||
+          millis() - event.startTime() < kClickDuratiohThresholdMs) {
         on_clicked_();
         return true;
       }
