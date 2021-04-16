@@ -84,10 +84,6 @@ class Widget {
   Box absolute_bounds() const;
 
   // Called as part of display update, for a visible, dirty widget.
-  //  // If repaint=false, the widget has not been painted-over, and so, it can
-  //  // update only the content that it knows has changed. Otherwise, it needs
-  //  to
-  //  // fully redraw itself.
   // The Surface's offset and clipbox has been pre-initialized so that this
   // widget's top-left corner is painted at (0, 0), and the clip box is
   // constrained to this widget's bounds (and non-empty).
