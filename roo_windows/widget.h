@@ -92,6 +92,7 @@ class Widget {
   virtual void defaultPaint(const Surface& s) {}
 
   virtual MainWindow* getMainWindow();
+  virtual const MainWindow* getMainWindow() const;
 
   virtual Color background() const;
 

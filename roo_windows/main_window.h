@@ -14,8 +14,10 @@ class MainWindow : public Panel {
   void tick();
 
   MainWindow* getMainWindow() override { return this; }
+  const MainWindow* getMainWindow() const override { return this; }
 
   bool animateClicked(Widget* target);
+  const Widget* getClickAnimationTarget() const { return click_anim_target_; }
 
   void paint(const Surface& s) override;
 

@@ -25,6 +25,7 @@ Widget::Widget(Panel* parent, const Box& parent_bounds)
 }
 
 MainWindow* Widget::getMainWindow() { return parent_->getMainWindow(); }
+const MainWindow* Widget::getMainWindow() const { return parent_->getMainWindow(); }
 
 Box Widget::absolute_bounds() const {
   int16_t dx = 0;
@@ -77,16 +78,14 @@ void Widget::setEnabled(bool enabled) {
   if (isEnabled() == enabled) return;
   state_ ^= kWidgetEnabled;
   if (!isVisible()) return;
-  markDirty();
-  needs_repaint_ = true;
+  invalidate();
 }
 
 void Widget::setSelected(bool selected) {
   if (selected == isSelected()) return;
   state_ ^= kWidgetSelected;
   if (!isVisible()) return;
-  markDirty();
-  needs_repaint_ = true;
+  invalidate();
 }
 
 void Widget::setActivated(bool activated) {
@@ -103,16 +102,14 @@ void Widget::setPressed(bool pressed) {
   if (pressed == isPressed()) return;
   state_ ^= kWidgetPressed;
   if (!isVisible()) return;
-  markDirty();
-  needs_repaint_ = true;
+  invalidate();
 }
 
 void Widget::setDragged(bool dragged) {
   if (dragged == isDragged()) return;
   state_ ^= kWidgetDragged;
   if (!isVisible()) return;
-  markDirty();
-  needs_repaint_ = true;
+  invalidate();
 }
 
 Color Widget::getOverlayColor() const {
@@ -123,6 +120,9 @@ Color Widget::getOverlayColor() const {
   if (isSelected()) overlay_opacity += theme().selectedOpacity(bgcolor);
   if (isActivated() && useOverlayOnActivation()) {
     overlay_opacity += theme().activatedOpacity(bgcolor);
+  }
+  if (isPressed() || getMainWindow()->getClickAnimationTarget() == this) {
+    overlay_opacity += theme().pressedOpacity(bgcolor);
   }
   if (isDragged()) overlay_opacity += theme().draggedOpacity(bgcolor);
   if (overlay_opacity > 255) overlay_opacity = 255;
