@@ -5,24 +5,26 @@
 
 namespace roo_windows {
 
-using roo_display::Color;
 using roo_display::Box;
+using roo_display::Color;
 using roo_display::DisplayOutput;
 
 const Theme& getTheme(Panel* parent) {
   return parent == nullptr ? DefaultTheme() : parent->theme();
 }
 
-  Panel::Panel(Panel* parent, const Box& bounds)
-      : Panel(parent, bounds, getTheme(parent),
-              getTheme(parent).color.background) {}
+Panel::Panel(Panel* parent, const Box& bounds)
+    : Panel(parent, bounds, getTheme(parent),
+            getTheme(parent).color.background) {}
 
-  Panel::Panel(Panel* parent, const Box& bounds, Color bgcolor)
-      : Panel(parent, bounds, getTheme(parent), bgcolor) {}
+Panel::Panel(Panel* parent, const Box& bounds, Color bgcolor)
+    : Panel(parent, bounds, getTheme(parent), bgcolor) {}
 
-  Panel::Panel(Panel* parent, const Box& bounds, const Theme& theme,
-        Color bgcolor)
-      : Widget(parent, bounds), theme_(theme), bgcolor_(bgcolor) {}
+Panel::Panel(Panel* parent, const Box& bounds, const Theme& theme,
+             Color bgcolor)
+    : Widget(parent, bounds),
+      theme_(theme),
+      bgcolor_(bgcolor) {}
 
 void Panel::paint(const Surface& s) {
   if (!isDirty()) return;
@@ -37,6 +39,18 @@ void Panel::paint(const Surface& s) {
   int16_t dy = cs.dy();
   roo_display::DisplayOutput* device = cs.out();
   for (const auto& c : children_) {
+    if (!c->isVisible() && c->isInvalidated()) {
+      cs.set_dx(dx);
+      cs.set_dy(dy);
+      cs.set_clip_box(clip_box);
+      if (cs.clipToExtents(c->parent_bounds()) != Box::CLIP_RESULT_EMPTY) {
+        cs.set_dx(cs.dx() + c->parent_bounds().xMin());
+        cs.set_dy(cs.dy() + c->parent_bounds().yMin());
+        c->clear(cs);
+      }
+    }
+  }
+  for (const auto& c : children_) {
     if (!c->isVisible()) continue;
     if (s.fill_mode() == roo_display::FILL_MODE_VISIBLE && !c->isDirty())
       continue;
@@ -50,6 +64,7 @@ void Panel::paint(const Surface& s) {
     }
   }
   dirty_ = false;
+  needs_repaint_ = false;
 }
 
 bool onTouchChild(const TouchEvent& event, Widget* child) {

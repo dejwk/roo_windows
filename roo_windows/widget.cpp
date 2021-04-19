@@ -45,10 +45,8 @@ const Theme& Widget::theme() const { return parent_->theme(); }
 
 void Widget::markDirty() {
   dirty_ = true;
-  Panel* c = parent_;
-  while (c != nullptr) {
-    c->markDirty();
-    c = c->parent_;
+  if (parent_ != nullptr) {
+    parent_->markDirty();
   }
 }
 
@@ -60,18 +58,7 @@ void Widget::invalidate() {
 void Widget::setVisible(bool visible) {
   if (visible == isVisible()) return;
   state_ ^= kWidgetHidden;
-  if (visible) {
-    if (parent_ != nullptr) {
-      parent_->markDirty();
-    }
-    markDirty();
-    needs_repaint_ = true;
-  } else {
-    if (parent_ != nullptr) {
-      parent_->markDirty();
-      parent_->needs_repaint_ = true;
-    }
-  }
+  invalidate();
 }
 
 void Widget::setEnabled(bool enabled) {
@@ -130,6 +117,13 @@ Color Widget::getOverlayColor() const {
   Color overlay = theme().color.primary;
   overlay.set_a(overlay_opacity);
   return overlay;
+}
+
+void Widget::clear(const Surface& s) {
+  if (!needs_repaint_) return;
+  s.drawObject(roo_display::Clear());
+  dirty_ = false;
+  needs_repaint_ = false;
 }
 
 void Widget::paint(const Surface& s) {

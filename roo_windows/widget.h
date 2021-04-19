@@ -89,6 +89,8 @@ class Widget {
   // constrained to this widget's bounds (and non-empty).
   virtual void paint(const Surface& s);
 
+  void clear(const Surface& s);
+
   virtual void defaultPaint(const Surface& s) {}
 
   virtual MainWindow* getMainWindow();
@@ -129,6 +131,7 @@ class Widget {
 
   const Panel* parent() const { return parent_; }
   bool isDirty() const { return dirty_; }
+  bool isInvalidated() const { return needs_repaint_; }
 
  protected:
   // The widget wants its paint() method to be called.
