@@ -25,7 +25,9 @@ Panel::Panel(Panel* parent, const Box& bounds, const Theme& theme,
     : Widget(parent, bounds), theme_(theme), bgcolor_(bgcolor) {}
 
 void Panel::paint(const Surface& s) {
-  if (!isDirty()) return;
+  // Even if we don't seem to be dirty, trust the parent: perhaps
+  // the parent is getting redrawn (e.g. made visible) in which
+  // case the dirties are not propagated to the children.
   Surface cs = s;
   cs.set_bgcolor(roo_display::alphaBlend(cs.bgcolor(), bgcolor_));
   if (s.fill_mode() == roo_display::FILL_MODE_RECTANGLE || needs_repaint_) {

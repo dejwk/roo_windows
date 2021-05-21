@@ -123,7 +123,9 @@ void MainWindow::paint(const Surface& s) {
       click_anim_target_ = nullptr;
     }
   } else {
-    Panel::paint(s);
+    if (isDirty()) {
+      Panel::paint(s);
+    }
   }
 }
 
