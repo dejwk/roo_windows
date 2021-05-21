@@ -22,9 +22,7 @@ Panel::Panel(Panel* parent, const Box& bounds, Color bgcolor)
 
 Panel::Panel(Panel* parent, const Box& bounds, const Theme& theme,
              Color bgcolor)
-    : Widget(parent, bounds),
-      theme_(theme),
-      bgcolor_(bgcolor) {}
+    : Widget(parent, bounds), theme_(theme), bgcolor_(bgcolor) {}
 
 void Panel::paint(const Surface& s) {
   if (!isDirty()) return;
@@ -32,7 +30,6 @@ void Panel::paint(const Surface& s) {
   cs.set_bgcolor(roo_display::alphaBlend(cs.bgcolor(), bgcolor_));
   if (s.fill_mode() == roo_display::FILL_MODE_RECTANGLE || needs_repaint_) {
     cs.drawObject(roo_display::Clear());
-    needs_repaint_ = false;
   }
   Box clip_box = cs.clip_box();
   int16_t dx = cs.dx();
@@ -52,7 +49,8 @@ void Panel::paint(const Surface& s) {
   }
   for (const auto& c : children_) {
     if (!c->isVisible()) continue;
-    if (s.fill_mode() == roo_display::FILL_MODE_VISIBLE && !c->isDirty())
+    if (!needs_repaint_ && s.fill_mode() == roo_display::FILL_MODE_VISIBLE &&
+        !c->isDirty())
       continue;
     cs.set_dx(dx);
     cs.set_dy(dy);
