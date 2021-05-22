@@ -137,6 +137,8 @@ class Widget {
   bool isDirty() const { return dirty_; }
   bool isInvalidated() const { return needs_repaint_; }
 
+  void updateBounds(const Box& bounds);
+
  protected:
   // The widget wants its paint() method to be called.
   bool dirty_;

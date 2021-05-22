@@ -187,4 +187,9 @@ bool Widget::onTouch(const TouchEvent& event) {
   return false;
 }
 
+void Widget::updateBounds(const Box& bounds) {
+  parent_bounds_ = bounds;
+  parent()->invalidate();
+}
+
 }  // namespace roo_windows
