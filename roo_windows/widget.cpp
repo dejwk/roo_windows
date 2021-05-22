@@ -51,8 +51,8 @@ void Widget::markDirty() {
 }
 
 void Widget::invalidate() {
+  invalidateDescending();
   markDirty();
-  needs_repaint_ = true;
 }
 
 void Widget::setVisible(bool visible) {

@@ -140,7 +140,12 @@ class Widget {
   // The entire widget rectangle needs to be redrawn.
   bool needs_repaint_;
 
+  virtual void invalidateDescending() {
+    needs_repaint_ = true;
+  }
+
  private:
+  friend class Panel;
   Panel* parent_;
   Box parent_bounds_;
   uint16_t state_;

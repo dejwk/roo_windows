@@ -39,6 +39,8 @@ class Panel : public Widget {
     return children_;
   }
 
+  void invalidateDescending() override;
+
  private:
   friend class Widget;
 

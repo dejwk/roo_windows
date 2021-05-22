@@ -105,8 +105,14 @@ bool Panel::onTouch(const TouchEvent& event) {
 
 void Panel::addChild(Widget* child) {
   children_.emplace_back(std::unique_ptr<Widget>(child));
-  // dirty_ = true; //has_dirty_descendants_ = true;
   markDirty();
+}
+
+void Panel::invalidateDescending() {
+  needs_repaint_ = true;
+  for (auto& child : children_) {
+    child->invalidateDescending();
+  }
 }
 
 }  // namespace roo_windows
