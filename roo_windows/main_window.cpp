@@ -1,6 +1,7 @@
 #include "main_window.h"
 
 #include "roo_display/filter/foreground.h"
+#include "roo_windows/modal_window.h"
 #include "roo_windows/press_overlay.h"
 
 namespace roo_windows {
@@ -20,7 +21,9 @@ MainWindow::MainWindow(Display* display, const Box& bounds)
     : Panel(nullptr, bounds),
       display_(display),
       touch_down_(false),
-      click_anim_target_(nullptr) {}
+      click_anim_target_(nullptr),
+      modal_window_(nullptr),
+      invalid_region_(Box(0, 0, -1, -1)) {}
 
 class Adapter : public roo_display::Drawable {
  public:
@@ -48,17 +51,17 @@ void MainWindow::tick() {
     last_x_ = x;
     last_y_ = y;
     touch_time_ms_ = millis();
-    onTouch(TouchEvent(TouchEvent::PRESSED, touch_time_ms_, x, y, x, y));
+    handleTouch(TouchEvent(TouchEvent::PRESSED, touch_time_ms_, x, y, x, y));
   } else if (touch_down_ && !down) {
     // Released.
     touch_down_ = false;
-    onTouch(TouchEvent(TouchEvent::RELEASED, touch_time_ms_, touch_x_, touch_y_,
-                       last_x_, last_y_));
+    handleTouch(TouchEvent(TouchEvent::RELEASED, touch_time_ms_, touch_x_,
+                           touch_y_, last_x_, last_y_));
   } else if (down) {
     last_x_ = x;
     last_y_ = y;
-    onTouch(TouchEvent(TouchEvent::DRAGGED, touch_time_ms_, touch_x_, touch_y_,
-                       x, y));
+    handleTouch(TouchEvent(TouchEvent::DRAGGED, touch_time_ms_, touch_x_,
+                           touch_y_, x, y));
   }
 
   roo_display::DrawingContext dc(display_);
@@ -127,9 +130,59 @@ void MainWindow::paint(const Surface& s) {
       click_anim_target_ = nullptr;
     }
   } else {
-    if (isDirty()) {
+    if (!invalid_region_.empty()) {
+      Surface news = s;
+      news.clipToExtents(invalid_region_);
+      Panel::paint(news);
+      invalid_region_ = Box(0, 0, -1, -1);
+    } else if (isDirty()) {
       Panel::paint(s);
     }
+    if (modal_window_ != nullptr) {
+      if (modal_window_->isDirty()) {
+        Surface news = s;
+        news.set_dx(news.dx() + modal_window_->parent_bounds().xMin());
+        news.set_dy(news.dy() + modal_window_->parent_bounds().yMin());
+        news.clipToExtents(modal_window_->bounds());
+        modal_window_->paint(news);
+      }
+    }
+  }
+}
+
+void MainWindow::enterModal(ModalWindow* modal_window) {
+  if (modal_window_ == modal_window) return;
+  if (modal_window_ != nullptr) {
+    modal_window_->exit();
+  }
+  modal_window_ = modal_window;
+}
+
+void MainWindow::exitModal(ModalWindow* modal_window) {
+  if (modal_window_ == modal_window) {
+    invalid_region_ = modal_window_->parent_bounds();
+    invalidate();
+    modal_window_ = nullptr;
+  }
+}
+
+void MainWindow::handleTouch(const TouchEvent& event) {
+  if (modal_window_ != nullptr) {
+    const auto& bounds = modal_window_->parent_bounds();
+    TouchEvent shifted(event.type(), event.startTime(),
+                       event.startX() - bounds.xMin(),
+                       event.startY() - bounds.yMin(),
+                       event.x() - bounds.xMin(), event.y() - bounds.yMin());
+    modal_window_->onTouch(shifted);
+  } else if (parent_bounds().xMin() != 0 || parent_bounds().yMin() != 0) {
+    TouchEvent shifted(event.type(), event.startTime(),
+                       event.startX() - parent_bounds().xMin(),
+                       event.startY() - parent_bounds().yMin(),
+                       event.x() - parent_bounds().xMin(),
+                       event.y() - parent_bounds().yMin());
+    onTouch(shifted);
+  } else {
+    onTouch(event);
   }
 }
 

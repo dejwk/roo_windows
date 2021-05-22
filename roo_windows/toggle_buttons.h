@@ -20,7 +20,7 @@ class ToggleButtons : public Panel {
         theme_(&DefaultTheme()),
         active_(-1) {}
 
-  void addButton(const roo_display::MaterialIconDef& icon, int16_t width) {
+  roo_windows::Widget* addButton(const roo_display::MaterialIconDef& icon, int16_t width) {
     Box box(this->width() - 1, 0, this->width() - 1 + width - 1, height() - 1);
     ToggleButton* btn = new ToggleButton(this, box, icon);
     int idx = buttons_.size();
@@ -28,6 +28,7 @@ class ToggleButtons : public Panel {
     buttons_.push_back(btn);
     updateBounds(Box(parent_bounds().xMin(), parent_bounds().yMin(),
                      parent_bounds().xMax() + width, parent_bounds().yMax()));
+    return btn;
   }
 
   void paint(const roo_display::Surface& s) override {
@@ -88,11 +89,11 @@ class ToggleButtons : public Panel {
     }
 
    private:
-    const roo_display::MaterialIconDef& icon_;
-
     const ToggleButtons* parentGroup() const {
       return (const ToggleButtons*)parent();
     }
+
+    const roo_display::MaterialIconDef& icon_;
   };
 
   friend class ToggleButton;

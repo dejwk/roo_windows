@@ -104,6 +104,22 @@ class Widget {
     on_clicked_ = on_clicked;
   }
 
+  void addOnClicked(std::function<void()> on_clicked) {
+    if (on_clicked_ == nullptr) {
+      on_clicked_ = on_clicked;
+    } else {
+      auto prev = on_clicked_;
+      on_clicked_ = [prev, on_clicked]() {
+        prev();
+        on_clicked();
+      };
+    }
+  }
+
+  std::function<void()> getOnClicked() const {
+    return on_clicked_;
+  }
+
   // virtual bool onClick(int16_t x, int16_t y) { return false; }
 
   bool isVisible() const { return (state_ & kWidgetHidden) == 0; }
