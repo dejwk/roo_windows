@@ -38,7 +38,7 @@ struct ColorTheme {
     }
   }
 
-  roo_display::Color defaultColorActivated(roo_display::Color bg) const {
+  roo_display::Color highlighterColor(roo_display::Color bg) const {
     if (bg == surface) {
       return primary;
     } else if (bg == primary || bg == primaryVariant) {
@@ -181,6 +181,20 @@ struct Theme {
       return state.pressedOnError;
     } else {
       return state.pressedOnBackground;
+    }
+  }
+
+  uint8_t pressAnimationOpacity(roo_display::Color bg) const {
+    if (bg == color.surface) {
+      return state.activatedOnSurface + state.pressedOnSurface;
+    } else if (bg == color.primary || bg == color.primaryVariant) {
+      return state.activatedOnPrimary + state.pressedOnPrimary;
+    } else if (bg == color.secondary || bg == color.secondaryVariant) {
+      return state.activatedOnSecondary + state.pressedOnSecondary;
+    } else if (bg == color.error) {
+      return state.activatedOnError + state.pressedOnError;
+    } else {
+      return state.activatedOnBackground + state.pressedOnBackground;
     }
   }
 

@@ -68,7 +68,9 @@ class NavigationRail : public Panel {
         : roo_windows::IconWithCaption(parent, bounds, std::move(icon), std::move(text)) {}
 
     bool useOverlayOnActivation() const override { return false; }
+    bool useOverlayOnPressAnimation() const override { return true; }
     bool isClickable() const override { return true; }
+    bool usesHighlighterColor() const override { return true; }
 
    private:
     const NavigationRail* rail() const {

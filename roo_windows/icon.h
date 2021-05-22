@@ -16,21 +16,14 @@ class Icon : public Widget {
 
   Icon(Panel* parent, const Box& bounds,
        const roo_display::MaterialIconDef& def)
-      : Icon(parent, bounds, def,
-             DefaultTheme().color.defaultColor(parent->background()),
-             DefaultTheme().color.defaultColorActivated(parent->background())) {
-  }
-
-  Icon(Panel* parent, const Box& bounds,
-       const roo_display::MaterialIconDef& def, roo_display::Color color,
-       roo_display::Color color_activated)
       : Widget(parent, bounds),
-        icon_(def),
-        color_(color),
-        color_activated_(color_activated) {}
+        icon_(def) {}
 
   void defaultPaint(const Surface& s) override {
-    Color color = isActivated() ? color_activated_ : color_;
+    Color color = theme().color.defaultColor(s.bgcolor());
+    if (isActivated() && usesHighlighterColor()) {
+      color = theme().color.highlighterColor(s.bgcolor());
+    }
     roo_display::MaterialIcon icon(icon_, color);
     roo_display::Tile tile(&icon, bounds(),
                            roo_display::HAlign::Center(),
@@ -41,8 +34,6 @@ class Icon : public Widget {
 
  private:
   const roo_display::MaterialIconDef& icon_;
-  Color color_;
-  Color color_activated_;
 };
 
 }  // namespace roo_windows

@@ -25,7 +25,9 @@ Widget::Widget(Panel* parent, const Box& parent_bounds)
 }
 
 MainWindow* Widget::getMainWindow() { return parent_->getMainWindow(); }
-const MainWindow* Widget::getMainWindow() const { return parent_->getMainWindow(); }
+const MainWindow* Widget::getMainWindow() const {
+  return parent_->getMainWindow();
+}
 
 Box Widget::absolute_bounds() const {
   int16_t dx = 0;
@@ -99,7 +101,7 @@ void Widget::setDragged(bool dragged) {
   invalidate();
 }
 
-Color Widget::getOverlayColor() const {
+uint8_t Widget::getOverlayOpacity() const {
   Color bgcolor = background();
   uint16_t overlay_opacity = 0;
   if (isHover()) overlay_opacity += theme().hoverOpacity(bgcolor);
@@ -108,15 +110,18 @@ Color Widget::getOverlayColor() const {
   if (isActivated() && useOverlayOnActivation()) {
     overlay_opacity += theme().activatedOpacity(bgcolor);
   }
-  if (isPressed() || getMainWindow()->getClickAnimationTarget() == this) {
+  if (isPressed() && getMainWindow()->getClickAnimationTarget() == nullptr) {
     overlay_opacity += theme().pressedOpacity(bgcolor);
   }
+  if (getMainWindow()->getClickAnimationTarget() == this &&
+      useOverlayOnPressAnimation()) {
+    overlay_opacity += theme().pressedOpacity(bgcolor);
+  }
+
   if (isDragged()) overlay_opacity += theme().draggedOpacity(bgcolor);
   if (overlay_opacity > 255) overlay_opacity = 255;
-  if (overlay_opacity == 0) return roo_display::color::Transparent;
-  Color overlay = theme().color.primary;
-  overlay.set_a(overlay_opacity);
-  return overlay;
+  if (overlay_opacity == 0) return 0;  // roo_display::color::Transparent;
+  return overlay_opacity;
 }
 
 void Widget::clear(const Surface& s) {
@@ -140,8 +145,12 @@ void Widget::paint(const Surface& s) {
     news.set_fill_mode(roo_display::FILL_MODE_RECTANGLE);
   }
   if (isEnabled()) {
-    Color overlay = getOverlayColor();
-    if (overlay.a() > 0) {
+    uint8_t overlay_opacity = getOverlayOpacity();
+    if (overlay_opacity > 0) {
+      Color overlay = usesHighlighterColor()
+                          ? theme().color.highlighterColor(s.bgcolor())
+                          : theme().color.defaultColor(s.bgcolor());
+      overlay.set_a(overlay_opacity);
       roo_display::OverlayFilter filter(s.out(), overlay, s.bgcolor());
       news.set_out(&filter);
       defaultPaint(news);

@@ -124,12 +124,16 @@ class Widget {
   void setDragged(bool dragged);
 
   virtual bool useOverlayOnActivation() const { return true; }
+  virtual bool useOverlayOnPressAnimation() const { return false; }
   virtual bool isClickable() const { return false; }
   virtual bool showClickAnimation() const { return true; }
 
-  virtual roo_display::Color getOverlayColor() const;
+  virtual bool usesHighlighterColor() const { return false; }
+
+  virtual uint8_t getOverlayOpacity() const;
 
   const Panel* parent() const { return parent_; }
+  Panel* parent() { return parent_; }
   bool isDirty() const { return dirty_; }
   bool isInvalidated() const { return needs_repaint_; }
 
@@ -140,12 +144,11 @@ class Widget {
   // The entire widget rectangle needs to be redrawn.
   bool needs_repaint_;
 
-  virtual void invalidateDescending() {
-    needs_repaint_ = true;
-  }
+  virtual void invalidateDescending() { needs_repaint_ = true; }
 
  private:
   friend class Panel;
+
   Panel* parent_;
   Box parent_bounds_;
   uint16_t state_;

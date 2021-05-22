@@ -6,11 +6,9 @@ namespace roo_windows {
 
 IconWithCaption::IconWithCaption(Panel* parent, const Box& bounds,
                                  const MaterialIconDef& def,
-                                 const std::string& caption, Color color, Color color_activated,
+                                 const std::string& caption,
                                  const Font* font)
     : Widget(parent, bounds),
-      color_(color),
-      color_activated_(color_activated),
       icon_(def),
       caption_(caption),
       font_(font) {
@@ -21,7 +19,10 @@ IconWithCaption::IconWithCaption(Panel* parent, const Box& bounds,
 }
 
 void IconWithCaption::defaultPaint(const Surface& s) {
-  Color color = isActivated() ? color_activated_ : color_;
+  Color color = theme().color.defaultColor(s.bgcolor());
+  if (isActivated() && usesHighlighterColor()) {
+    color = theme().color.highlighterColor(s.bgcolor());
+  }
   if (s.fill_mode() == FILL_MODE_RECTANGLE && hi_border_ > 0) {
     s.drawObject(FilledRect(bounds().xMin(), bounds().yMin(), bounds().xMax(),
                             bounds().yMin() + hi_border_ - 1,

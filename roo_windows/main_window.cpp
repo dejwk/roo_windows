@@ -96,8 +96,12 @@ bool MainWindow::animateClicked(Widget* target) {
   click_anim_max_radius_ = (int16_t)(sqrt(max) + 1);
 
   Color bg = click_anim_target_->background();
-  click_anim_overlay_color_ = theme().color.defaultColorActivated(bg);
-  click_anim_overlay_color_.set_a(theme().activatedOpacity(bg));
+  click_anim_overlay_color_ =
+      click_anim_target_->usesHighlighterColor()
+          ? click_anim_target_->theme().color.highlighterColor(bg)
+          : click_anim_target_->theme().color.defaultColor(bg);
+  click_anim_overlay_color_.set_a(
+      click_anim_target_->theme().pressAnimationOpacity(bg));
   return true;
 }
 

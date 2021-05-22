@@ -17,21 +17,16 @@ class IconWithCaption : public Widget {
                   const std::string& caption)
       : IconWithCaption(
             parent, bounds, def, caption,
-            DefaultTheme().color.defaultColor(parent->background()),
-            DefaultTheme().color.defaultColorActivated(parent->background()),
-            DefaultTheme().font.caption) {}
+            parent->theme().font.caption) {}
 
   IconWithCaption(Panel* parent, const Box& bounds,
                   const roo_display::MaterialIconDef& def,
-                  const std::string& caption, roo_display::Color color,
-                  roo_display::Color color_activated,
+                  const std::string& caption,
                   const roo_display::Font* font);
 
   void defaultPaint(const Surface& s) override;
 
  private:
-  roo_display::Color color_;
-  roo_display::Color color_activated_;
   const roo_display::MaterialIconDef& icon_;
   std::string caption_;
   const roo_display::Font* font_;
