@@ -22,7 +22,7 @@ Panel::Panel(Panel* parent, const Box& bounds, Color bgcolor)
 
 Panel::Panel(Panel* parent, const Box& bounds, const Theme& theme,
              Color bgcolor)
-    : Widget(parent, bounds), theme_(theme), bgcolor_(bgcolor) {}
+    : Widget(parent, bounds), theme_(theme), bgcolor_(bgcolor), invalid_region_(Box(0, 0, -1, -1)) {}
 
 void Panel::paint(const Surface& s) {
   // Even if we don't seem to be dirty, trust the parent: perhaps
@@ -30,6 +30,9 @@ void Panel::paint(const Surface& s) {
   // case the dirties are not propagated to the children.
   Surface cs = s;
   cs.set_bgcolor(roo_display::alphaBlend(cs.bgcolor(), bgcolor_));
+  if (!invalid_region_.empty()) {
+    cs.clipToExtents(invalid_region_);
+  }
   if (s.fill_mode() == roo_display::FILL_MODE_RECTANGLE || needs_repaint_) {
     cs.drawObject(roo_display::Clear());
   }
@@ -65,6 +68,7 @@ void Panel::paint(const Surface& s) {
   }
   dirty_ = false;
   needs_repaint_ = false;
+  invalid_region_ = Box(0, 0, -1, -1);
 }
 
 bool onTouchChild(const TouchEvent& event, Widget* child) {
@@ -110,8 +114,24 @@ void Panel::addChild(Widget* child) {
 
 void Panel::invalidateDescending() {
   needs_repaint_ = true;
+  invalid_region_ = Box(0, 0, -1, -1);
   for (auto& child : children_) {
     child->invalidateDescending();
+  }
+}
+
+void Panel::invalidateDescending(const Box& box) {
+  needs_repaint_ = true;
+  if (invalid_region_.empty()) {
+    invalid_region_ = box;
+  } else {
+    invalid_region_ = Box::extent(invalid_region_, box);
+  }
+  for (auto& child : children_) {
+    Box box = Box::intersect(invalid_region_, child->parent_bounds());
+    if (box.empty()) continue;
+    box = box.translate(-child->parent_bounds().xMin(), -child->parent_bounds().yMin());
+    child->invalidateDescending(box);
   }
 }
 

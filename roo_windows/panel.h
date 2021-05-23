@@ -40,6 +40,7 @@ class Panel : public Widget {
   }
 
   void invalidateDescending() override;
+  void invalidateDescending(const Box& box) override;
 
  private:
   friend class Widget;
@@ -49,6 +50,7 @@ class Panel : public Widget {
   std::vector<std::unique_ptr<Widget>> children_;
   const Theme& theme_;
   Color bgcolor_;
+  Box invalid_region_;
 };
 
 }  // namespace roo_windows

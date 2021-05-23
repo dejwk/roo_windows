@@ -57,6 +57,11 @@ void Widget::invalidate() {
   markDirty();
 }
 
+void Widget::invalidate(const Box& box) {
+  invalidateDescending(box);
+  markDirty();
+}
+
 void Widget::setVisible(bool visible) {
   if (visible == isVisible()) return;
   state_ ^= kWidgetHidden;

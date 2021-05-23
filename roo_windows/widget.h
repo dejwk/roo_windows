@@ -70,8 +70,11 @@ class Widget {
   // need re-drawing (it will receive FILL_MODE_VISIBLE).
   void markDirty();
 
-  // Causes the widget to request paint(), replacing the entire ractangle area.
+  // Causes the widget to request paint(), replacing the entire rectangle area.
   void invalidate();
+
+  // Causes the widget to request paint(), replacing the specified area.
+  void invalidate(const Box& box);
 
   int16_t width() const { return parent_bounds_.width(); }
   int16_t height() const { return parent_bounds_.height(); }
@@ -163,6 +166,7 @@ class Widget {
   bool needs_repaint_;
 
   virtual void invalidateDescending() { needs_repaint_ = true; }
+  virtual void invalidateDescending(const Box& box) { needs_repaint_ = true; }
 
  private:
   friend class Panel;

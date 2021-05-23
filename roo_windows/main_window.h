@@ -41,7 +41,6 @@ class MainWindow : public Panel {
   roo_display::Color click_anim_overlay_color_;
 
   ModalWindow* modal_window_;
-  Box invalid_region_;
 };
 
 }  // namespace roo_windows

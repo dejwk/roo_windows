@@ -22,8 +22,7 @@ MainWindow::MainWindow(Display* display, const Box& bounds)
       display_(display),
       touch_down_(false),
       click_anim_target_(nullptr),
-      modal_window_(nullptr),
-      invalid_region_(Box(0, 0, -1, -1)) {}
+      modal_window_(nullptr) {}
 
 class Adapter : public roo_display::Drawable {
  public:
@@ -130,12 +129,7 @@ void MainWindow::paint(const Surface& s) {
       click_anim_target_ = nullptr;
     }
   } else {
-    if (!invalid_region_.empty()) {
-      Surface news = s;
-      news.clipToExtents(invalid_region_);
-      Panel::paint(news);
-      invalid_region_ = Box(0, 0, -1, -1);
-    } else if (isDirty()) {
+    if (isDirty()) {
       Panel::paint(s);
     }
     if (modal_window_ != nullptr) {
@@ -160,8 +154,7 @@ void MainWindow::enterModal(ModalWindow* modal_window) {
 
 void MainWindow::exitModal(ModalWindow* modal_window) {
   if (modal_window_ == modal_window) {
-    invalid_region_ = modal_window_->parent_bounds();
-    invalidate();
+    invalidate(modal_window_->parent_bounds());
     modal_window_ = nullptr;
   }
 }
