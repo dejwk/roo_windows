@@ -1,5 +1,6 @@
 #include "main_window.h"
 
+#include "roo_display/core/color.h"
 #include "roo_display/filter/foreground.h"
 #include "roo_windows/modal_window.h"
 #include "roo_windows/press_overlay.h"
@@ -138,6 +139,7 @@ void MainWindow::paint(const Surface& s) {
         news.set_dx(news.dx() + modal_window_->parent_bounds().xMin());
         news.set_dy(news.dy() + modal_window_->parent_bounds().yMin());
         news.clipToExtents(modal_window_->bounds());
+        news.set_bgcolor(roo_display::alphaBlend(s.bgcolor(), background()));
         modal_window_->paint(news);
       }
     }
