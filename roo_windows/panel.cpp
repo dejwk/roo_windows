@@ -22,7 +22,10 @@ Panel::Panel(Panel* parent, const Box& bounds, Color bgcolor)
 
 Panel::Panel(Panel* parent, const Box& bounds, const Theme& theme,
              Color bgcolor)
-    : Widget(parent, bounds), theme_(theme), bgcolor_(bgcolor), invalid_region_(Box(0, 0, -1, -1)) {}
+    : Widget(parent, bounds),
+      theme_(theme),
+      bgcolor_(bgcolor),
+      invalid_region_(Box(0, 0, -1, -1)) {}
 
 void Panel::paint(const Surface& s) {
   // Even if we don't seem to be dirty, trust the parent: perhaps
@@ -40,15 +43,28 @@ void Panel::paint(const Surface& s) {
   int16_t dx = cs.dx();
   int16_t dy = cs.dy();
   roo_display::DisplayOutput* device = cs.out();
-  for (const auto& c : children_) {
-    if (!c->isVisible() && c->isInvalidated()) {
+  for (int i = 0; i < children_.size(); ++i) {
+    const auto& child = children_[i];
+    if (!child->isVisible() && child->isInvalidated()) {
       cs.set_dx(dx);
       cs.set_dy(dy);
       cs.set_clip_box(clip_box);
-      if (cs.clipToExtents(c->parent_bounds()) != Box::CLIP_RESULT_EMPTY) {
-        cs.set_dx(cs.dx() + c->parent_bounds().xMin());
-        cs.set_dy(cs.dy() + c->parent_bounds().yMin());
-        c->clear(cs);
+      if (cs.clipToExtents(child->parent_bounds()) != Box::CLIP_RESULT_EMPTY) {
+        // Need to clear the child. Let's find other children that may partially
+        // overlap this one; they need to be invalidated.
+        for (int j = i; j < children_.size(); ++j) {
+          const auto& other = children_[j];
+          Box intersect = Box::intersect(cs.clip_box().translate(-dx, -dy),
+                                         other->parent_bounds());
+          if (!intersect.empty()) {
+            other->invalidate(
+                intersect.translate(-other->parent_bounds().xMin(),
+                                    -other->parent_bounds().yMin()));
+          }
+        }
+        cs.set_dx(cs.dx() + child->parent_bounds().xMin());
+        cs.set_dy(cs.dy() + child->parent_bounds().yMin());
+        child->clear(cs);
       }
     }
   }
@@ -130,7 +146,8 @@ void Panel::invalidateDescending(const Box& box) {
   for (auto& child : children_) {
     Box box = Box::intersect(invalid_region_, child->parent_bounds());
     if (box.empty()) continue;
-    box = box.translate(-child->parent_bounds().xMin(), -child->parent_bounds().yMin());
+    box = box.translate(-child->parent_bounds().xMin(),
+                        -child->parent_bounds().yMin());
     child->invalidateDescending(box);
   }
 }
