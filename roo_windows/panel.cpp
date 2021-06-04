@@ -2,6 +2,7 @@
 
 #include "roo_display/core/box.h"
 #include "roo_display/core/device.h"
+#include "roo_display/filter/clip_exclude_rects.h"
 
 namespace roo_windows {
 
@@ -37,6 +38,7 @@ void Panel::paint(const Surface& s) {
     cs.clipToExtents(invalid_region_);
   }
   if (s.fill_mode() == roo_display::FILL_MODE_RECTANGLE || needs_repaint_) {
+    // TODO: only clear the area not covered by the children.
     cs.drawObject(roo_display::Clear());
   }
   Box clip_box = cs.clip_box();
@@ -45,41 +47,59 @@ void Panel::paint(const Surface& s) {
   roo_display::DisplayOutput* device = cs.out();
   for (int i = 0; i < children_.size(); ++i) {
     const auto& child = children_[i];
-    if (!child->isVisible() && child->isInvalidated()) {
-      cs.set_dx(dx);
-      cs.set_dy(dy);
-      cs.set_clip_box(clip_box);
-      if (cs.clipToExtents(child->parent_bounds()) != Box::CLIP_RESULT_EMPTY) {
-        // Need to clear the child. Let's find other children that may partially
-        // overlap this one; they need to be invalidated.
-        for (int j = i; j < children_.size(); ++j) {
-          const auto& other = children_[j];
-          Box intersect = Box::intersect(cs.clip_box().translate(-dx, -dy),
-                                         other->parent_bounds());
-          if (!intersect.empty()) {
-            other->invalidate(
-                intersect.translate(-other->parent_bounds().xMin(),
-                                    -other->parent_bounds().yMin()));
-          }
-        }
-        cs.set_dx(cs.dx() + child->parent_bounds().xMin());
-        cs.set_dy(cs.dy() + child->parent_bounds().yMin());
-        child->clear(cs);
+    if (child->isVisible()) {
+      if (!needs_repaint_ && s.fill_mode() == roo_display::FILL_MODE_VISIBLE &&
+          !child->isDirty()) {
+        continue;
+      }
+    } else {
+      if (!child->isInvalidated()) {
+        continue;
       }
     }
-  }
-  for (const auto& c : children_) {
-    if (!c->isVisible()) continue;
-    if (!needs_repaint_ && s.fill_mode() == roo_display::FILL_MODE_VISIBLE &&
-        !c->isDirty())
-      continue;
     cs.set_dx(dx);
     cs.set_dy(dy);
     cs.set_clip_box(clip_box);
-    if (cs.clipToExtents(c->parent_bounds()) != Box::CLIP_RESULT_EMPTY) {
-      cs.set_dx(cs.dx() + c->parent_bounds().xMin());
-      cs.set_dy(cs.dy() + c->parent_bounds().yMin());
-      c->paint(cs);
+    if (cs.clipToExtents(child->parent_bounds()) != Box::CLIP_RESULT_EMPTY) {
+      // Need to clear the child. Let's find other children that may partially
+      // overlap this one, and exclude their rects from the region to be cleared.
+      std::vector<Box> exclusions;
+      int j = 0;
+      if (child->isVisible()) {
+        // This child will cover all previous ones that it overlaps with,
+        // so we can ignore them.
+        j = i + 1;
+      }
+      for (; j < children_.size(); ++j) {
+        if (j == i) continue;
+        const auto& other = children_[j];
+        if (!other->isVisible()) continue;
+        Box intersect = Box::intersect(cs.clip_box(),
+                                        other->parent_bounds().translate(dx, dy));
+        if (!intersect.empty()) {
+          exclusions.push_back(intersect);
+        }
+      }
+      cs.set_dx(cs.dx() + child->parent_bounds().xMin());
+      cs.set_dy(cs.dy() + child->parent_bounds().yMin());
+      if (exclusions.empty()) {
+        if (child->isVisible()) {
+          child->paint(cs);
+        } else {
+          child->clear(cs);
+        }
+      } else {
+        roo_display::DisplayOutput* out = cs.out();
+        roo_display::RectUnion ru(std::move(exclusions));
+        roo_display::RectUnionFilter filter(out, &ru);
+        cs.set_out(&filter);
+        if (child->isVisible()) {
+          child->paint(cs);
+        } else {
+          child->clear(cs);
+        }
+        cs.set_out(out);
+      }
     }
   }
   dirty_ = false;
