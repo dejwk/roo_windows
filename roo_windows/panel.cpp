@@ -37,24 +37,6 @@ void Panel::paint(const Surface& s) {
   if (!invalid_region_.empty()) {
     cs.clipToExtents(invalid_region_);
   }
-  if (s.fill_mode() == roo_display::FILL_MODE_RECTANGLE || needs_repaint_) {
-    std::vector<Box> exclusions;
-    for (const auto& c : children_) {
-      Box b = Box::intersect(cs.clip_box(),
-                             c->parent_bounds().translate(cs.dx(), cs.dy()));
-      if (!b.empty()) exclusions.push_back(b);
-    }
-    if (exclusions.empty()) {
-      cs.drawObject(roo_display::Clear());
-    } else {
-      roo_display::DisplayOutput* out = cs.out();
-      roo_display::RectUnion ru(&*exclusions.begin(), &*exclusions.end());
-      roo_display::RectUnionFilter filter(s.out(), &ru);
-      cs.set_out(&filter);
-      cs.drawObject(roo_display::Clear());
-      cs.set_out(out);
-    }
-  }
   Box clip_box = cs.clip_box();
   int16_t dx = cs.dx();
   int16_t dy = cs.dy();
@@ -114,6 +96,27 @@ void Panel::paint(const Surface& s) {
         }
         cs.set_out(out);
       }
+    }
+  }
+  cs.set_dx(dx);
+  cs.set_dy(dy);
+  cs.set_clip_box(clip_box);
+  if (s.fill_mode() == roo_display::FILL_MODE_RECTANGLE || needs_repaint_) {
+    std::vector<Box> exclusions;
+    for (const auto& c : children_) {
+      Box b = Box::intersect(cs.clip_box(),
+                             c->parent_bounds().translate(cs.dx(), cs.dy()));
+      if (!b.empty()) exclusions.push_back(b);
+    }
+    if (exclusions.empty()) {
+      cs.drawObject(roo_display::Clear());
+    } else {
+      roo_display::DisplayOutput* out = cs.out();
+      roo_display::RectUnion ru(&*exclusions.begin(), &*exclusions.end());
+      roo_display::RectUnionFilter filter(s.out(), &ru);
+      cs.set_out(&filter);
+      cs.drawObject(roo_display::Clear());
+      cs.set_out(out);
     }
   }
   dirty_ = false;
