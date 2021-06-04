@@ -2,6 +2,7 @@
 
 #include "roo_display/core/color.h"
 #include "roo_display/filter/foreground.h"
+#include "roo_display/filter/clip_exclude_rects.h"
 #include "roo_windows/modal_window.h"
 #include "roo_windows/press_overlay.h"
 
@@ -131,7 +132,17 @@ void MainWindow::paint(const Surface& s) {
     }
   } else {
     if (isDirty()) {
-      Panel::paint(s);
+      if (modal_window_ == nullptr) {
+        Panel::paint(s);
+      } else {
+        // Exclude the modal window area from redraw.
+        Surface news = s;
+        Box exclusion(modal_window_->parent_bounds());
+        roo_display::RectUnion ru(&exclusion, &exclusion + 1);
+        roo_display::RectUnionFilter filter(s.out(), &ru);
+        news.set_out(&filter);
+        Panel::paint(news);
+      }
     }
     if (modal_window_ != nullptr) {
       if (modal_window_->isDirty()) {
