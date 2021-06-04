@@ -58,7 +58,6 @@ void Panel::paint(const Surface& s) {
   Box clip_box = cs.clip_box();
   int16_t dx = cs.dx();
   int16_t dy = cs.dy();
-  roo_display::DisplayOutput* device = cs.out();
   for (int i = 0; i < children_.size(); ++i) {
     const auto& child = children_[i];
     if (child->isVisible()) {
