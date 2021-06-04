@@ -90,7 +90,7 @@ void Panel::paint(const Surface& s) {
         }
       } else {
         roo_display::DisplayOutput* out = cs.out();
-        roo_display::RectUnion ru(std::move(exclusions));
+        roo_display::RectUnion ru(&*exclusions.begin(), &*exclusions.end());
         roo_display::RectUnionFilter filter(out, &ru);
         cs.set_out(&filter);
         if (child->isVisible()) {
