@@ -38,8 +38,22 @@ void Panel::paint(const Surface& s) {
     cs.clipToExtents(invalid_region_);
   }
   if (s.fill_mode() == roo_display::FILL_MODE_RECTANGLE || needs_repaint_) {
-    // TODO: only clear the area not covered by the children.
-    cs.drawObject(roo_display::Clear());
+    std::vector<Box> exclusions;
+    for (const auto& c : children_) {
+      Box b = Box::intersect(cs.clip_box(),
+                             c->parent_bounds().translate(cs.dx(), cs.dy()));
+      if (!b.empty()) exclusions.push_back(b);
+    }
+    if (exclusions.empty()) {
+      cs.drawObject(roo_display::Clear());
+    } else {
+      roo_display::DisplayOutput* out = cs.out();
+      roo_display::RectUnion ru(&*exclusions.begin(), &*exclusions.end());
+      roo_display::RectUnionFilter filter(s.out(), &ru);
+      cs.set_out(&filter);
+      cs.drawObject(roo_display::Clear());
+      cs.set_out(out);
+    }
   }
   Box clip_box = cs.clip_box();
   int16_t dx = cs.dx();
@@ -62,7 +76,8 @@ void Panel::paint(const Surface& s) {
     cs.set_clip_box(clip_box);
     if (cs.clipToExtents(child->parent_bounds()) != Box::CLIP_RESULT_EMPTY) {
       // Need to clear the child. Let's find other children that may partially
-      // overlap this one, and exclude their rects from the region to be cleared.
+      // overlap this one, and exclude their rects from the region to be
+      // cleared.
       std::vector<Box> exclusions;
       int j = 0;
       if (child->isVisible()) {
@@ -74,8 +89,8 @@ void Panel::paint(const Surface& s) {
         if (j == i) continue;
         const auto& other = children_[j];
         if (!other->isVisible()) continue;
-        Box intersect = Box::intersect(cs.clip_box(),
-                                        other->parent_bounds().translate(dx, dy));
+        Box intersect = Box::intersect(
+            cs.clip_box(), other->parent_bounds().translate(dx, dy));
         if (!intersect.empty()) {
           exclusions.push_back(intersect);
         }
