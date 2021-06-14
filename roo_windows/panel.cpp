@@ -2,7 +2,9 @@
 
 #include "roo_display/core/box.h"
 #include "roo_display/core/device.h"
+#include "roo_display/filter/background_fill_optimizer.h"
 #include "roo_display/filter/clip_exclude_rects.h"
+#include "roo_windows/main_window.h"
 
 namespace roo_windows {
 
@@ -34,6 +36,7 @@ void Panel::paint(const Surface& s) {
   // case the dirties are not propagated to the children.
   Surface cs = s;
   cs.set_bgcolor(roo_display::alphaBlend(cs.bgcolor(), bgcolor_));
+  getMainWindow()->setCurrentBg(cs.bgcolor());
   if (!invalid_region_.empty()) {
     cs.clipToExtents(invalid_region_);
   }

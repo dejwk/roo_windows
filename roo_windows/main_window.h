@@ -1,13 +1,14 @@
 #pragma once
 
 #include "roo_display.h"
+#include "roo_display/filter/background_fill_optimizer.h"
 #include "roo_windows/panel.h"
 
 namespace roo_windows {
 
 class ModalWindow;
 
-class MainWindow : public Panel {
+class MainWindow : public Panel  {
  public:
   MainWindow(roo_display::Display* display);
 
@@ -21,7 +22,9 @@ class MainWindow : public Panel {
   bool animateClicked(Widget* target);
   const Widget* getClickAnimationTarget() const { return click_anim_target_; }
 
+  void paintWindow(const Surface& s);
   void paint(const Surface& s) override;
+  void setCurrentBg(roo_display::Color bgcolor);
 
   void enterModal(ModalWindow* modal_window);
   void exitModal(ModalWindow* modal_window);
@@ -41,6 +44,12 @@ class MainWindow : public Panel {
   roo_display::Color click_anim_overlay_color_;
 
   ModalWindow* modal_window_;
+
+  std::unique_ptr<uint8_t[]> background_fill_buffer_;
+  roo_display::BitMask background_fill_;
+
+  // Only non-null during the paint() call.
+  roo_display::BackgroundFillOptimizer* background_fill_optimizer_;
 };
 
 }  // namespace roo_windows

@@ -1,8 +1,8 @@
 #include "main_window.h"
 
 #include "roo_display/core/color.h"
-#include "roo_display/filter/foreground.h"
 #include "roo_display/filter/clip_exclude_rects.h"
+#include "roo_display/filter/foreground.h"
 #include "roo_windows/modal_window.h"
 #include "roo_windows/press_overlay.h"
 
@@ -14,30 +14,46 @@ inline int32_t dsquare(int16_t x0, int16_t y0, int16_t x1, int16_t y1) {
   return (x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0);
 }
 
-static const unsigned long kClickAnimationMs = 250;
+static const unsigned long kClickAnimationMs = 200;
 
 MainWindow::MainWindow(Display* display)
     : MainWindow(display, display->extents()) {}
+
+size_t fill_buffer_size(int16_t w, int16_t h) {
+  auto window = roo_display::kBgFillOptimizerWindowSize;
+  return (((w - 1) / window + 1) * ((h - 1) / window + 1) + 7) / 8;
+}
 
 MainWindow::MainWindow(Display* display, const Box& bounds)
     : Panel(nullptr, bounds),
       display_(display),
       touch_down_(false),
       click_anim_target_(nullptr),
-      modal_window_(nullptr) {}
+      modal_window_(nullptr),
+      background_fill_buffer_(
+          new uint8_t[fill_buffer_size(display->width(), display->height())]),
+      background_fill_(
+          background_fill_buffer_.get(),
+          (display->width() - 1) / roo_display::kBgFillOptimizerWindowSize + 1,
+          (display->height() - 1) / roo_display::kBgFillOptimizerWindowSize +
+              1),
+      background_fill_optimizer_(nullptr) {
+  memset(background_fill_buffer_.get(), 0,
+         fill_buffer_size(display->width(), display->height()));
+}
 
 class Adapter : public roo_display::Drawable {
  public:
-  Adapter(Widget* widget) : widget_(widget) {}
+  Adapter(MainWindow * window) : window_(window) {}
 
-  roo_display::Box extents() const override { return widget_->bounds(); }
+  roo_display::Box extents() const override { return window_->bounds(); }
 
   void drawTo(const roo_display::Surface& s) const override {
-    widget_->paint(s);
+    window_->paintWindow(s);
   }
 
  private:
-  Widget* widget_;
+  MainWindow* window_;
 };
 
 void MainWindow::tick() {
@@ -109,6 +125,20 @@ bool MainWindow::animateClicked(Widget* target) {
   return true;
 }
 
+void MainWindow::paintWindow(const Surface& s) {
+  Surface news = s;
+  roo_display::BackgroundFillOptimizer bg_optimizer(s.out(), &background_fill_);
+  background_fill_optimizer_ = &bg_optimizer;
+  bg_optimizer.setBackground(background());
+  news.set_out(&bg_optimizer);
+  paint(news);
+  background_fill_optimizer_ = nullptr;
+}
+
+void MainWindow::setCurrentBg(roo_display::Color bgcolor) {
+  background_fill_optimizer_->setBackground(bgcolor);
+}
+
 void MainWindow::paint(const Surface& s) {
   if (click_anim_target_ != nullptr) {
     unsigned long elapsed = millis() - click_anim_start_millis_;
@@ -127,6 +157,16 @@ void MainWindow::paint(const Surface& s) {
     news.set_dy(news.dy() + click_anim_bounds_.yMin());
     click_anim_target_->paint(news);
     if (elapsed >= kClickAnimationMs) {
+      background_fill_.fillRect(
+          Box(click_anim_bounds_.xMin() /
+                  roo_display::kBgFillOptimizerWindowSize,
+              click_anim_bounds_.yMin() /
+                  roo_display::kBgFillOptimizerWindowSize,
+              click_anim_bounds_.xMax() /
+                  roo_display::kBgFillOptimizerWindowSize,
+              click_anim_bounds_.yMax() /
+                  roo_display::kBgFillOptimizerWindowSize),
+          false);
       click_anim_target_->invalidate();
       click_anim_target_ = nullptr;
     }
@@ -136,19 +176,21 @@ void MainWindow::paint(const Surface& s) {
         Panel::paint(s);
       } else {
         // Exclude the modal window area from redraw.
-        Surface news = s;
+        roo_display::Surface news(s);
+        roo_display::DisplayOutput* out = news.out();
         Box exclusion(modal_window_->parent_bounds());
         roo_display::RectUnion ru(&exclusion, &exclusion + 1);
         roo_display::RectUnionFilter filter(s.out(), &ru);
         news.set_out(&filter);
         Panel::paint(news);
+        news.set_out(out);
       }
     }
     if (modal_window_ != nullptr) {
       if (modal_window_->isDirty()) {
         Surface news = s;
-        news.set_dx(news.dx() + modal_window_->parent_bounds().xMin());
-        news.set_dy(news.dy() + modal_window_->parent_bounds().yMin());
+        news.set_dx(s.dx() + modal_window_->parent_bounds().xMin());
+        news.set_dy(s.dy() + modal_window_->parent_bounds().yMin());
         news.clipToExtents(modal_window_->bounds());
         news.set_bgcolor(roo_display::alphaBlend(s.bgcolor(), background()));
         modal_window_->paint(news);
