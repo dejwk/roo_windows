@@ -44,7 +44,7 @@ MainWindow::MainWindow(Display* display, const Box& bounds)
 
 class Adapter : public roo_display::Drawable {
  public:
-  Adapter(MainWindow * window) : window_(window) {}
+  Adapter(MainWindow* window) : window_(window) {}
 
   roo_display::Box extents() const override { return window_->bounds(); }
 
