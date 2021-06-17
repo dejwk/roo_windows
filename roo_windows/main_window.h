@@ -24,7 +24,6 @@ class MainWindow : public Panel  {
 
   void paintWindow(const Surface& s);
   void paint(const Surface& s) override;
-  void setCurrentBg(roo_display::Color bgcolor);
 
   void enterModal(ModalWindow* modal_window);
   void exitModal(ModalWindow* modal_window);

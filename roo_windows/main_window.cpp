@@ -135,10 +135,6 @@ void MainWindow::paintWindow(const Surface& s) {
   background_fill_optimizer_ = nullptr;
 }
 
-void MainWindow::setCurrentBg(roo_display::Color bgcolor) {
-  background_fill_optimizer_->setBackground(bgcolor);
-}
-
 void MainWindow::paint(const Surface& s) {
   if (click_anim_target_ != nullptr) {
     unsigned long elapsed = millis() - click_anim_start_millis_;

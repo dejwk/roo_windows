@@ -36,7 +36,6 @@ void Panel::paint(const Surface& s) {
   // case the dirties are not propagated to the children.
   Surface cs = s;
   cs.set_bgcolor(roo_display::alphaBlend(cs.bgcolor(), bgcolor_));
-  getMainWindow()->setCurrentBg(cs.bgcolor());
   if (!invalid_region_.empty()) {
     cs.clipToExtents(invalid_region_);
   }
@@ -59,9 +58,9 @@ void Panel::paint(const Surface& s) {
     cs.set_dy(dy);
     cs.set_clip_box(clip_box);
     if (cs.clipToExtents(child->parent_bounds()) != Box::CLIP_RESULT_EMPTY) {
-      // Need to clear the child. Let's find other children that may partially
+      // Need to update the child. Let's find other children that may partially
       // overlap this one, and exclude their rects from the region to be
-      // cleared.
+      // updated.
       std::vector<Box> exclusions;
       int j = 0;
       if (child->isVisible()) {
@@ -82,12 +81,14 @@ void Panel::paint(const Surface& s) {
       cs.set_dx(cs.dx() + child->parent_bounds().xMin());
       cs.set_dy(cs.dy() + child->parent_bounds().yMin());
       if (exclusions.empty()) {
+        // Nothing to cover; just paint the entire area.
         if (child->isVisible()) {
           child->paint(cs);
         } else {
           child->clear(cs);
         }
       } else {
+        // Exclude the calculated rect union from the area to paint.
         roo_display::DisplayOutput* out = cs.out();
         roo_display::RectUnion ru(&*exclusions.begin(), &*exclusions.end());
         roo_display::RectUnionFilter filter(out, &ru);
