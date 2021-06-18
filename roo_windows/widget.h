@@ -103,6 +103,8 @@ class Widget {
 
   virtual bool onTouch(const TouchEvent& event);
 
+  virtual void onClicked() { on_clicked_(); }
+
   void setOnClicked(std::function<void()> on_clicked) {
     on_clicked_ = on_clicked;
   }
