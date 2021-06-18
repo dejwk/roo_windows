@@ -20,7 +20,7 @@ class NavigationPanel : public Panel {
         new Panel(this, Box(rail_width, 0, bounds.xMax(), bounds.yMax())));
   }
 
-  Panel* addPane(const roo_display::MaterialIconDef& icon, std::string text) {
+  Panel* addPane(const roo_display::MaterialIcon& icon, std::string text) {
     rail_->addDestination(icon, text);
     Panel* p = new Panel(contents_.get(), contents_->bounds());
     bool first = panes_.empty();

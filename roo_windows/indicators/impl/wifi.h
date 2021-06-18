@@ -21,7 +21,7 @@ class WifiIndicator : public Widget {
   void setWifiSignalStrength(int rssi);
 
  protected:
-  virtual const roo_display::MaterialIconDef* const* icons() = 0;
+  virtual const roo_display::MaterialIcon* const* icons() = 0;
 
  private:
   enum WifiStatus {

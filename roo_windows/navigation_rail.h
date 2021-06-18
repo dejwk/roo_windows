@@ -23,7 +23,7 @@ class NavigationRail : public Panel {
         theme_(&DefaultTheme()),
         active_(-1) {}
 
-  void addDestination(const roo_display::MaterialIconDef& icon,
+  void addDestination(const roo_display::MaterialIcon& icon,
                       std::string text) {
     int16_t width = bounds().width();
     Box box(4, 4, width - 8, width - 8);
@@ -64,7 +64,7 @@ class NavigationRail : public Panel {
   class Destination : public roo_windows::IconWithCaption {
    public:
     Destination(NavigationRail* parent, Box bounds,
-                const roo_display::MaterialIconDef& icon, std::string text)
+                const roo_display::MaterialIcon& icon, std::string text)
         : roo_windows::IconWithCaption(parent, bounds, std::move(icon), std::move(text)) {}
 
     bool useOverlayOnActivation() const override { return false; }

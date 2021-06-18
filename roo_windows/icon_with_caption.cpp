@@ -5,7 +5,7 @@ using namespace roo_display;
 namespace roo_windows {
 
 IconWithCaption::IconWithCaption(Panel* parent, const Box& bounds,
-                                 const MaterialIconDef& def,
+                                 const MaterialIcon& def,
                                  const std::string& caption,
                                  const Font* font)
     : Widget(parent, bounds),
@@ -31,7 +31,8 @@ void IconWithCaption::defaultPaint(const Surface& s) {
 
   Box icon_bounds(bounds().xMin(), hi_border_, bounds().xMax(),
                   hi_border_ + icon_.extents().height() - 1);
-  MaterialIcon icon(icon_, color);
+  MaterialIcon icon(icon_);
+  icon.color_mode().setColor(color);
   s.drawObject(Tile(&icon, icon_bounds, HAlign::Center(),
                     VAlign::None(icon_bounds.yMin())));
 

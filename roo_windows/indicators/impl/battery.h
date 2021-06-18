@@ -19,7 +19,7 @@ class BatteryIndicator : public Widget {
   void setBatteryUnknown(bool unknown);
 
  protected:
-  virtual const roo_display::MaterialIconDef* const* icons() = 0;
+  virtual const roo_display::MaterialIcon* const* icons() = 0;
 
  private:
   enum BatteryLevel {

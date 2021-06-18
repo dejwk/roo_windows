@@ -13,8 +13,8 @@ class WifiIndicator18x18 : public WifiIndicator {
       : WifiIndicator(parent, Box(dx, dy, dx + 17, dy + 17)) {}
 
  protected:
-  const roo_display::MaterialIconDef* const* icons() override {
-    static const roo_display::MaterialIconDef* icons[] = {
+  const roo_display::MaterialIcon* const* icons() override {
+    static const roo_display::MaterialIcon* icons[] = {
         &ic_filled_18_device_signal_wifi_off(),
         &ic_filled_18_device_signal_wifi_1_bar(),
         &ic_filled_18_device_signal_wifi_2_bar(),

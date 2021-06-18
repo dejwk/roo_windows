@@ -13,21 +13,21 @@ namespace roo_windows {
 class IconWithCaption : public Widget {
  public:
   IconWithCaption(Panel* parent, const Box& bounds,
-                  const roo_display::MaterialIconDef& def,
+                  const roo_display::MaterialIcon& def,
                   const std::string& caption)
       : IconWithCaption(
             parent, bounds, def, caption,
             parent->theme().font.caption) {}
 
   IconWithCaption(Panel* parent, const Box& bounds,
-                  const roo_display::MaterialIconDef& def,
+                  const roo_display::MaterialIcon& def,
                   const std::string& caption,
                   const roo_display::Font* font);
 
   void defaultPaint(const Surface& s) override;
 
  private:
-  const roo_display::MaterialIconDef& icon_;
+  const roo_display::MaterialIcon& icon_;
   std::string caption_;
   const roo_display::Font* font_;
   int16_t hi_border_;
