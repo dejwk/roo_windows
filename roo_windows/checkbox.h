@@ -7,7 +7,7 @@ namespace roo_windows {
 class Checkbox : public Widget {
  public:
   enum State { OFF, INDETERMINATE, ON };
-  Checkbox(Panel* parent, const Box& bounds, State state)
+  Checkbox(Panel* parent, const Box& bounds, State state = OFF)
       : Widget(parent, bounds), state_(state) {}
 
   void defaultPaint(const Surface& s) override;
