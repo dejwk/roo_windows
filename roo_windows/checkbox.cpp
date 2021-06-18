@@ -9,10 +9,12 @@ using namespace roo_display;
 namespace roo_windows {
 
 void Checkbox::defaultPaint(const Surface& s) {
-  Color color = on_ ? theme().color.highlighterColor(s.bgcolor())
-                    : theme().color.defaultColor(s.bgcolor());
+  Color color = isOn() ? theme().color.highlighterColor(s.bgcolor())
+                       : theme().color.defaultColor(s.bgcolor());
   RleImage4bppxBiased<Alpha4, PrgMemResource> img =
-      on_ ? ic_filled_18_toggle_check_box() : ic_filled_18_toggle_check_box_outline_blank();
+      state() == ON    ? ic_filled_18_toggle_check_box()
+      : state() == OFF ? ic_filled_18_toggle_check_box_outline_blank()
+                       : ic_filled_18_toggle_indeterminate_check_box();
   img.color_mode().setColor(color);
   roo_display::Tile tile(&img, bounds(), roo_display::HAlign::Center(),
                          roo_display::VAlign::Middle(),
