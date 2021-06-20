@@ -8,7 +8,7 @@ namespace roo_windows {
 
 class ModalWindow;
 
-class MainWindow : public Panel  {
+class MainWindow : public Panel {
  public:
   MainWindow(roo_display::Display* display);
 
@@ -18,6 +18,8 @@ class MainWindow : public Panel  {
 
   MainWindow* getMainWindow() override { return this; }
   const MainWindow* getMainWindow() const override { return this; }
+
+  roo_display::Box absolute_bounds() const override { return parent_bounds(); }
 
   bool animateClicked(Widget* target);
   const Widget* getClickAnimationTarget() const { return click_anim_target_; }

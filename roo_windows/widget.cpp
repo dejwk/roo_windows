@@ -30,15 +30,8 @@ const MainWindow* Widget::getMainWindow() const {
 }
 
 Box Widget::absolute_bounds() const {
-  int16_t dx = 0;
-  int16_t dy = 0;
-  const Widget* w = this;
-  do {
-    dx += w->parent_bounds().xMin();
-    dy += w->parent_bounds().yMin();
-    w = w->parent_;
-  } while (w != nullptr);
-  return bounds().translate(dx, dy);
+  Box p = parent()->absolute_bounds();
+  return parent_bounds().translate(p.xMin(), p.yMin());
 }
 
 Color Widget::background() const { return parent_->background(); }
