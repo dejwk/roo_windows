@@ -55,6 +55,9 @@ class TouchEvent {
   int16_t x() const { return x_end_; }
   int16_t y() const { return y_end_; }
 
+  int16_t dx() const { return x() - startX(); }
+  int16_t dy() const { return y() - startY(); }
+
  private:
   Type type_;
   int16_t x_start_, y_start_, x_end_, y_end_;
