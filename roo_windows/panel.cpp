@@ -42,6 +42,7 @@ void Panel::paint(const Surface& s) {
   Box clip_box = cs.clip_box();
   int16_t dx = cs.dx();
   int16_t dy = cs.dy();
+  bool all_children_cleaned = true;
   for (int i = 0; i < children_.size(); ++i) {
     const auto& child = children_[i];
     if (child->isVisible()) {
@@ -100,6 +101,7 @@ void Panel::paint(const Surface& s) {
         }
         cs.set_out(out);
       }
+      all_children_cleaned &= (!child->isVisible() || !child->isDirty());
     }
   }
   cs.set_dx(dx);
@@ -123,7 +125,7 @@ void Panel::paint(const Surface& s) {
       cs.set_out(out);
     }
   }
-  dirty_ = false;
+  dirty_ = !all_children_cleaned;
   needs_repaint_ = false;
   invalid_region_ = Box(0, 0, -1, -1);
 }
