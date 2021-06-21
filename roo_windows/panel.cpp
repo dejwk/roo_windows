@@ -129,7 +129,7 @@ void Panel::paint(const Surface& s) {
 }
 
 bool onTouchChild(const TouchEvent& event, Widget* child) {
-  TouchEvent shifted(event.type(), event.startTime(),
+  TouchEvent shifted(event.type(), event.duration(),
                      event.startX() - child->parent_bounds().xMin(),
                      event.startY() - child->parent_bounds().yMin(),
                      event.x() - child->parent_bounds().xMin(),

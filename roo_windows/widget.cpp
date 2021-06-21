@@ -186,7 +186,7 @@ bool Widget::onTouch(const TouchEvent& event) {
     if (isPressed()) {
       setPressed(false);
       if (bounds().contains(event.x(), event.y()) ||
-          millis() - event.startTime() < kClickDurationThresholdMs) {
+          event.duration() < kClickDurationThresholdMs) {
         onClicked();
         return true;
       }

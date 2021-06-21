@@ -39,7 +39,8 @@ class MainWindow : public Panel {
 
   roo_display::Display* display_;
   int16_t touch_x_, touch_y_, last_x_, last_y_;
-  unsigned long touch_time_ms_;
+  unsigned long touch_time_ms_, last_time_ms_;
+  int16_t swipe_dx_, swipe_dy_;
   bool touch_down_;
 
   Widget* click_anim_target_;

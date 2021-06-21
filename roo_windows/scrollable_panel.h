@@ -50,7 +50,7 @@ class ScrollablePanel : public Panel {
 
   bool onTouch(const TouchEvent& event) override {
     TouchEvent shifted(
-        event.type(), event.startTime(), event.startX() + dx_ + dragged_x_,
+        event.type(), event.duration(), event.startX() + dx_ + dragged_x_,
         event.startY() + dy_ + dragged_y_, event.x() + dx_, event.y() + dy_);
     if (event.type() == TouchEvent::RELEASED) {
       dragged_x_ = 0;

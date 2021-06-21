@@ -37,19 +37,19 @@ static const uint16_t kWidgetHidden = 0x8000;
 
 class TouchEvent {
  public:
-  enum Type { PRESSED, RELEASED, MOVED, DRAGGED };
+  enum Type { PRESSED, RELEASED, MOVED, DRAGGED, SWIPED };
 
-  TouchEvent(Type type, unsigned long start_time_ms, int16_t x_start,
+  TouchEvent(Type type, unsigned long duration_ms, int16_t x_start,
              int16_t y_start, int16_t x_end, int16_t y_end)
       : type_(type),
         x_start_(x_start),
         y_start_(y_start),
         x_end_(x_end),
         y_end_(y_end),
-        start_time_ms_(start_time_ms) {}
+        duration_ms_(duration_ms) {}
 
   Type type() const { return type_; }
-  unsigned long startTime() const { return start_time_ms_; }
+  unsigned long duration() const { return duration_ms_; }
   int16_t startX() const { return x_start_; }
   int16_t startY() const { return y_start_; }
   int16_t x() const { return x_end_; }
@@ -58,7 +58,7 @@ class TouchEvent {
  private:
   Type type_;
   int16_t x_start_, y_start_, x_end_, y_end_;
-  unsigned long start_time_ms_;
+  unsigned long duration_ms_;
 };
 
 class Widget {

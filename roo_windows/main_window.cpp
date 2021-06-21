@@ -16,6 +16,9 @@ inline int32_t dsquare(int16_t x0, int16_t y0, int16_t x1, int16_t y1) {
 
 static const unsigned long kClickAnimationMs = 200;
 
+// How much movement in pixels before we consider it a swipe.
+static const uint16_t kSwipeThreshold = 8;
+
 MainWindow::MainWindow(Display* display)
     : MainWindow(display, display->extents()) {}
 
@@ -60,24 +63,33 @@ void MainWindow::tick() {
   // Check if no events to process.
   int16_t x, y;
   bool down = display_->getTouch(&x, &y);
+  unsigned long now = millis();
   if (!touch_down_ && down) {
     // Pressed.
     touch_down_ = true;
-    touch_x_ = x;
-    touch_y_ = y;
-    last_x_ = x;
-    last_y_ = y;
-    touch_time_ms_ = millis();
-    handleTouch(TouchEvent(TouchEvent::PRESSED, touch_time_ms_, x, y, x, y));
+    last_x_ = touch_x_ = x;
+    last_y_ = touch_y_ = y;
+    swipe_dx_ = swipe_dy_ = 0;
+    last_time_ms_ = touch_time_ms_ = now;
+    handleTouch(TouchEvent(TouchEvent::PRESSED, 0, x, y, x, y));
   } else if (touch_down_ && !down) {
     // Released.
     touch_down_ = false;
-    handleTouch(TouchEvent(TouchEvent::RELEASED, touch_time_ms_, touch_x_,
+    handleTouch(TouchEvent(TouchEvent::RELEASED, now - touch_time_ms_, touch_x_,
                            touch_y_, last_x_, last_y_));
+    if (swipe_dx_ * swipe_dx_ + swipe_dy_ * swipe_dy_ >
+        kSwipeThreshold * kSwipeThreshold) {
+      handleTouch(TouchEvent(TouchEvent::SWIPED, now - last_time_ms_,
+                             last_x_ - swipe_dx_, last_y_ - swipe_dy_, last_x_,
+                             last_y_));
+    }
   } else if (down) {
+    swipe_dx_ = x - last_x_;
+    swipe_dy_ = y - last_y_;
     last_x_ = x;
     last_y_ = y;
-    handleTouch(TouchEvent(TouchEvent::DRAGGED, touch_time_ms_, touch_x_,
+    last_time_ms_ = now;
+    handleTouch(TouchEvent(TouchEvent::DRAGGED, now - touch_time_ms_, touch_x_,
                            touch_y_, x, y));
   }
 
@@ -207,17 +219,16 @@ void MainWindow::exitModal(ModalWindow* modal_window) {
 void MainWindow::handleTouch(const TouchEvent& event) {
   if (modal_window_ != nullptr) {
     const auto& bounds = modal_window_->parent_bounds();
-    TouchEvent shifted(event.type(), event.startTime(),
+    TouchEvent shifted(event.type(), event.duration(),
                        event.startX() - bounds.xMin(),
                        event.startY() - bounds.yMin(),
                        event.x() - bounds.xMin(), event.y() - bounds.yMin());
     modal_window_->onTouch(shifted);
   } else if (parent_bounds().xMin() != 0 || parent_bounds().yMin() != 0) {
-    TouchEvent shifted(event.type(), event.startTime(),
-                       event.startX() - parent_bounds().xMin(),
-                       event.startY() - parent_bounds().yMin(),
-                       event.x() - parent_bounds().xMin(),
-                       event.y() - parent_bounds().yMin());
+    TouchEvent shifted(
+        event.type(), event.duration(), event.startX() - parent_bounds().xMin(),
+        event.startY() - parent_bounds().yMin(),
+        event.x() - parent_bounds().xMin(), event.y() - parent_bounds().yMin());
     onTouch(shifted);
   } else {
     onTouch(event);
