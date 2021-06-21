@@ -10,7 +10,7 @@ namespace roo_windows {
 // it is always interpreted as a 'click' rather than 'drag'; i.e.
 // it is registered in the target component even if the exit coordinates
 // fall outside of the component. (It helps to overcome touch panel noise).
-static const long int kClickDuratiohThresholdMs = 200;
+static const long int kClickDurationThresholdMs = 200;
 
 // When the user presses on a clickable item and drags the finger within
 // this radius, the drag events are ignored and considered 'random noise'.
@@ -186,7 +186,7 @@ bool Widget::onTouch(const TouchEvent& event) {
     if (isPressed()) {
       setPressed(false);
       if (bounds().contains(event.x(), event.y()) ||
-          millis() - event.startTime() < kClickDuratiohThresholdMs) {
+          millis() - event.startTime() < kClickDurationThresholdMs) {
         onClicked();
         return true;
       }
