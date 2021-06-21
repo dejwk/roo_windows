@@ -12,6 +12,14 @@ namespace roo_windows {
 // fall outside of the component. (It helps to overcome touch panel noise).
 static const long int kClickDuratiohThresholdMs = 200;
 
+// When the user presses on a clickable item and drags the finger within
+// this radius, the drag events are ignored and considered 'random noise'.
+// The item remains clicked, and when the press is released, the gesture
+// is interpreted as 'click'. If the user drags beyond this thredhold,
+// however, then the item gets 'unclicked' and the gesture gets interpreted
+// as drag.
+static const long int kClickStickinessRadius = 20;
+
 Widget::Widget(Panel* parent, const Box& parent_bounds)
     : dirty_(true),
       needs_repaint_(true),
@@ -29,9 +37,11 @@ const MainWindow* Widget::getMainWindow() const {
   return parent_->getMainWindow();
 }
 
-Box Widget::absolute_bounds() const {
-  Box p = parent()->absolute_bounds();
-  return parent_bounds().translate(p.xMin(), p.yMin());
+void Widget::getAbsoluteBounds(Box* full, Box* visible) const {
+  //Box full, visible;
+  parent()->getAbsoluteBounds(full, visible);
+  *full = parent_bounds().translate(full->xMin(), full->yMin());
+  *visible = Box::intersect(*visible, *full);
 }
 
 Color Widget::background() const { return parent_->background(); }
@@ -181,6 +191,13 @@ bool Widget::onTouch(const TouchEvent& event) {
         return true;
       }
     }
+  } else if (event.type() == TouchEvent::DRAGGED && isPressed()) {
+    int16_t dx = event.x() - event.startX();
+    int16_t dy = event.y() - event.startY();
+    uint32_t delta = dx*dx + dy*dy;
+    if (delta < kClickStickinessRadius * kClickStickinessRadius) return true;
+    setPressed(false);
+    // Leave unhandled, for parent to handle.
   }
   return false;
 }

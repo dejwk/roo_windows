@@ -87,7 +87,8 @@ void MainWindow::tick() {
 
 bool MainWindow::animateClicked(Widget* target) {
   if (click_anim_target_ != nullptr) return false;
-  click_anim_bounds_ = target->absolute_bounds();
+  Box full;
+  target->getAbsoluteBounds(&full, &click_anim_bounds_);
   if (click_anim_target_ != nullptr || !touch_down_ ||
       touch_x_ < click_anim_bounds_.xMin() - kTouchMargin ||
       touch_x_ > click_anim_bounds_.xMax() + kTouchMargin ||
@@ -95,14 +96,10 @@ bool MainWindow::animateClicked(Widget* target) {
       touch_y_ > click_anim_bounds_.yMax() + kTouchMargin) {
     return false;
   }
-  int32_t ul = dsquare(touch_x_, touch_y_, click_anim_bounds_.xMin(),
-                       click_anim_bounds_.yMin());
-  int32_t ur = dsquare(touch_x_, touch_y_, click_anim_bounds_.xMax(),
-                       click_anim_bounds_.yMin());
-  int32_t dl = dsquare(touch_x_, touch_y_, click_anim_bounds_.xMin(),
-                       click_anim_bounds_.yMax());
-  int32_t dr = dsquare(touch_x_, touch_y_, click_anim_bounds_.xMax(),
-                       click_anim_bounds_.yMax());
+  int32_t ul = dsquare(touch_x_, touch_y_, full.xMin(), full.yMin());
+  int32_t ur = dsquare(touch_x_, touch_y_, full.xMax(), full.yMin());
+  int32_t dl = dsquare(touch_x_, touch_y_, full.xMin(), full.yMax());
+  int32_t dr = dsquare(touch_x_, touch_y_, full.xMax(), full.yMax());
   int32_t max = 0;
   if (ul > max) max = ul;
   if (ur > max) max = ur;
@@ -147,22 +144,19 @@ void MainWindow::paint(const Surface& s) {
     news.set_out(&filter);
     news.set_bgcolor(roo_display::alphaBlend(s.bgcolor(), background()));
     news.set_fill_mode(roo_display::FILL_MODE_RECTANGLE);
-    news.set_clip_box(
-        roo_display::Box::intersect(news.clip_box(), click_anim_bounds_));
-    news.set_dx(news.dx() + click_anim_bounds_.xMin());
-    news.set_dy(news.dy() + click_anim_bounds_.yMin());
+    Box full, visible;
+    click_anim_target_->getAbsoluteBounds(&full, &visible);
+    news.set_clip_box(roo_display::Box::intersect(news.clip_box(), visible));
+    news.set_dx(news.dx() + full.xMin());
+    news.set_dy(news.dy() + full.yMin());
     click_anim_target_->paint(news);
+    background_fill_.fillRect(
+        Box(news.clip_box().xMin() / roo_display::kBgFillOptimizerWindowSize,
+            news.clip_box().yMin() / roo_display::kBgFillOptimizerWindowSize,
+            news.clip_box().xMax() / roo_display::kBgFillOptimizerWindowSize,
+            news.clip_box().yMax() / roo_display::kBgFillOptimizerWindowSize),
+        false);
     if (elapsed >= kClickAnimationMs) {
-      background_fill_.fillRect(
-          Box(click_anim_bounds_.xMin() /
-                  roo_display::kBgFillOptimizerWindowSize,
-              click_anim_bounds_.yMin() /
-                  roo_display::kBgFillOptimizerWindowSize,
-              click_anim_bounds_.xMax() /
-                  roo_display::kBgFillOptimizerWindowSize,
-              click_anim_bounds_.yMax() /
-                  roo_display::kBgFillOptimizerWindowSize),
-          false);
       click_anim_target_->invalidate();
       click_anim_target_ = nullptr;
     }

@@ -19,7 +19,11 @@ class MainWindow : public Panel {
   MainWindow* getMainWindow() override { return this; }
   const MainWindow* getMainWindow() const override { return this; }
 
-  roo_display::Box absolute_bounds() const override { return parent_bounds(); }
+  void getAbsoluteBounds(roo_display::Box* full,
+                         roo_display::Box* visible) const override {
+    *full = parent_bounds();
+    *visible = parent_bounds();
+  }
 
   bool animateClicked(Widget* target);
   const Widget* getClickAnimationTarget() const { return click_anim_target_; }

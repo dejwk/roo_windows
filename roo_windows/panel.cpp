@@ -12,7 +12,7 @@ using roo_display::Box;
 using roo_display::Color;
 using roo_display::DisplayOutput;
 
-const Theme& getTheme(Panel* parent) {
+static inline const Theme& getTheme(Panel* parent) {
   return parent == nullptr ? DefaultTheme() : parent->theme();
 }
 
