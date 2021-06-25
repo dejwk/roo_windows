@@ -1,10 +1,16 @@
 #pragma once
 
+#include "roo_windows/panel.h"
+#include "roo_windows/widget.h"
+
 namespace roo_windows {
 
 static inline const Theme& getTheme(Panel* parent) {
   return parent == nullptr ? DefaultTheme() : parent->theme();
 }
+
+static const float decceleration = 1000.0;
+static const float maxVel = 1200.0;
 
 class ScrollablePanel : public Panel {
  public:
@@ -22,76 +28,45 @@ class ScrollablePanel : public Panel {
         height_(bounds.height()),
         dx_(0),
         dy_(0),
-        dragged_x_(0),
-        dragged_y_(0) {}
+        scroll_start_vx_(0.0),
+        scroll_start_vy_(0.0) {}
 
-  void setWidth(int16_t width) { width_ = width; }
-  void setHeight(int16_t height) { height_ = height; }
-
-  void setOffset(int16_t dx, int16_t dy) {
-    dx_ = dx;
-    dy_ = dy;
+  void setWidth(int16_t width) {
+    width = std::max(width, parent_bounds().width());
+    width_ = width;
+  }
+  void setHeight(int16_t height) {
+    height = std::max(height, parent_bounds().height());
+    height_ = height;
   }
 
-  void paint(const Surface& s) override {
-    Surface news = s;
-    news.set_dx(news.dx() - dx_);
-    news.set_dy(news.dy() - dy_);
-    Panel::paint(news);
-  }
+  // Sets the relative position of the underlying content, relative to the the
+  // visible rectangle.
+  void setOffset(int16_t dx, int16_t dy);
 
-  void getAbsoluteBounds(Box* full, Box* visible) const override {
-    Panel::getAbsoluteBounds(full, visible);
-    *full =
-        Box(full->xMin() - dx_, full->yMin() - dy_,
-            full->xMin() - dx_ + width_ - 1, full->xMin() - dx_ + height_ - 1);
-    *visible = Box::intersect(*full, *visible);
-  }
+  void paint(const Surface& s) override;
+  void getAbsoluteBounds(Box* full, Box* visible) const override;
 
-  bool onTouch(const TouchEvent& event) override {
-    TouchEvent shifted(
-        event.type(), event.duration(), event.startX() + dx_ + dragged_x_,
-        event.startY() + dy_ + dragged_y_, event.x() + dx_, event.y() + dy_);
-    if (event.type() == TouchEvent::RELEASED) {
-      dragged_x_ = 0;
-      dragged_y_ = 0;
-    }
-    if (Panel::onTouch(shifted)) return true;
-    // Handle drag.
-    if (shifted.type() == TouchEvent::DRAGGED) {
-      int16_t drag_x_total = event.x() - event.startX();
-      int16_t drag_y_total = event.y() - event.startY();
-      int16_t drag_x_delta = drag_x_total - dragged_x_;
-      int16_t drag_y_delta = drag_y_total - dragged_y_;
-      if (dx_ - drag_x_delta + parent_bounds().width() > width_) {
-        drag_x_delta = dx_ + parent_bounds().width() - width_;
-      }
-      if (dx_ - drag_x_delta < 0) {
-        drag_x_delta = dx_;
-      }
-      if (dy_ - drag_y_delta + parent_bounds().height() > height_) {
-        drag_y_delta = dy_ + parent_bounds().height() - height_;
-      }
-      if (dy_ - drag_y_delta < 0) {
-        drag_y_delta = dy_;
-      }
-      if (drag_x_delta < 3 && drag_x_delta > -3 && drag_y_delta < 3 &&
-          drag_y_delta > -3) {
-        return true;
-      }
-      dx_ -= drag_x_delta;
-      dy_ -= drag_y_delta;
-      dragged_x_ += drag_x_delta;
-      dragged_y_ += drag_y_delta;
-      invalidate();
-      return true;
-    }
-  }
+  bool onTouch(const TouchEvent& event) override;
 
  private:
-  int16_t dx_, dy_;
+  // The current size of the virtual canvas. Always at least as
+  // large as the bounded viewport.
   int16_t width_, height_;
-  int16_t dragged_x_, dragged_y_;
+
+  // The current offset of the virtual canvas, relative to the bounded
+  // viewport, Always non-positive.
+  int16_t dx_, dy_;
+
+  // Captured dx_ and dy_ during drag and scroll animations.
+  int16_t dxStart_, dyStart_;
+
+  unsigned long scroll_start_time_;
+  unsigned long scroll_end_time_;
+  float scroll_start_vx_;  // initial scroll velocity in pixels/s.
+  float scroll_start_vy_;  // initial scroll velocity in pixels/s.
+  float scroll_decel_x_;
+  float scroll_decel_y_;
 };
 
 }  // namespace roo_windows
