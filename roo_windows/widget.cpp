@@ -18,7 +18,7 @@ static const long int kClickDurationThresholdMs = 200;
 // is interpreted as 'click'. If the user drags beyond this thredhold,
 // however, then the item gets 'unclicked' and the gesture gets interpreted
 // as drag.
-static const long int kClickStickinessRadius = 20;
+static const long int kClickStickinessRadius = 40;
 
 Widget::Widget(Panel* parent, const Box& parent_bounds)
     : dirty_(true),
@@ -192,6 +192,8 @@ bool Widget::onTouch(const TouchEvent& event) {
       }
     }
   } else if (event.type() == TouchEvent::DRAGGED && isPressed()) {
+    // Dragging within the bounds, when pressed, is fair game.
+    if (bounds().contains(event.x(), event.y())) return true;
     int16_t dx = event.x() - event.startX();
     int16_t dy = event.y() - event.startY();
     uint32_t delta = dx*dx + dy*dy;
