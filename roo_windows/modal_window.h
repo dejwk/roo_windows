@@ -15,6 +15,11 @@ class ModalWindow : public Panel {
   MainWindow* getMainWindow() override { return main_window_; }
   const MainWindow* getMainWindow() const override { return main_window_; }
 
+  void getAbsoluteBounds(Box* full, Box* visible) const override {
+    *full = parent_bounds();
+    *visible = parent_bounds();
+  }
+
   void enter() {
     invalidate();
     main_window_->enterModal(this);
