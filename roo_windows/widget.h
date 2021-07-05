@@ -8,12 +8,17 @@
 #include "roo_display.h"
 #include "roo_display/core/box.h"
 #include "roo_display/filter/color_filter.h"
+#include "roo_display/image/image.h"
 #include "roo_windows/theme.h"
 
 namespace roo_windows {
 
 class Panel;
 class MainWindow;
+
+typedef roo_display::RleImage4bppxBiased<roo_display::Alpha4,
+                                         roo_display::PrgMemResource>
+    MonoIcon;
 
 using roo_display::Box;
 using roo_display::Color;
@@ -124,9 +129,7 @@ class Widget {
     }
   }
 
-  std::function<void()> getOnClicked() const {
-    return on_clicked_;
-  }
+  std::function<void()> getOnClicked() const { return on_clicked_; }
 
   // virtual bool onClick(int16_t x, int16_t y) { return false; }
 

@@ -20,7 +20,7 @@ class ToggleButtons : public Panel {
         theme_(&DefaultTheme()),
         active_(-1) {}
 
-  roo_windows::Widget* addButton(const roo_display::MaterialIconDef& icon, int16_t width) {
+  roo_windows::Widget* addButton(const MonoIcon& icon, int16_t width) {
     Box box(this->width() - 1, 0, this->width() - 1 + width - 1, height() - 1);
     ToggleButton* btn = new ToggleButton(this, box, icon);
     int idx = buttons_.size();
@@ -37,13 +37,17 @@ class ToggleButtons : public Panel {
     if (repaint) {
       Color border = theme().color.defaultColor(s.bgcolor());
       border.set_a(0x30);
-      s.drawObject(roo_display::Line(0, 0, 0, 0, roo_display::color::Transparent));
+      s.drawObject(
+          roo_display::Line(0, 0, 0, 0, roo_display::color::Transparent));
       s.drawObject(roo_display::Line(0, 1, 0, height() - 2, border));
-      s.drawObject(roo_display::Line(0, height() - 1, 0, height() - 1, roo_display::color::Transparent));
+      s.drawObject(roo_display::Line(0, height() - 1, 0, height() - 1,
+                                     roo_display::color::Transparent));
       int16_t x = width() - 1;
-      s.drawObject(roo_display::Line(x, 0, x, 0, roo_display::color::Transparent));
+      s.drawObject(
+          roo_display::Line(x, 0, x, 0, roo_display::color::Transparent));
       s.drawObject(roo_display::Line(x, 1, x, height() - 2, border));
-      s.drawObject(roo_display::Line(x, height() - 1, x, height() - 1, roo_display::color::Transparent));
+      s.drawObject(roo_display::Line(x, height() - 1, x, height() - 1,
+                                     roo_display::color::Transparent));
     }
   }
 
@@ -60,8 +64,7 @@ class ToggleButtons : public Panel {
  private:
   class ToggleButton : public roo_windows::Widget {
    public:
-    ToggleButton(ToggleButtons* parent, Box bounds,
-                 const roo_display::MaterialIconDef& icon)
+    ToggleButton(ToggleButtons* parent, Box bounds, const MonoIcon& icon)
         : roo_windows::Widget(parent, bounds), icon_(icon) {}
 
     bool useOverlayOnActivation() const override { return true; }
@@ -76,7 +79,8 @@ class ToggleButtons : public Panel {
       s.drawObject(roo_display::Line(0, 0, width() - 1, 0, external_border));
       s.drawObject(roo_display::Line(0, 1, 0, height() - 3, internal_border));
       s.drawObject(roo_display::Line(1, 1, width() - 2, 1, internal_border));
-      roo_display::MaterialIcon icon(icon_, color);
+      MonoIcon icon(icon_);
+      icon.color_mode().setColor(color);
       roo_display::Tile tile(&icon,
                              Box(bounds().xMin() + 1, bounds().yMin() + 2,
                                  bounds().xMax() - 1, bounds().yMax() - 2),
@@ -84,8 +88,10 @@ class ToggleButtons : public Panel {
                              roo_display::VAlign::Middle(),
                              roo_display::color::Transparent, s.fill_mode());
       s.drawObject(tile);
-      s.drawObject(roo_display::Line(width() - 1, 0, width() - 1, height() - 3, external_border));
-      s.drawObject(roo_display::FilledRect(0, height() - 2, width() - 1, height() - 1, external_border));
+      s.drawObject(roo_display::Line(width() - 1, 0, width() - 1, height() - 3,
+                                     external_border));
+      s.drawObject(roo_display::FilledRect(0, height() - 2, width() - 1,
+                                           height() - 1, external_border));
     }
 
    private:
@@ -93,7 +99,7 @@ class ToggleButtons : public Panel {
       return (const ToggleButtons*)parent();
     }
 
-    const roo_display::MaterialIconDef& icon_;
+    const MonoIcon& icon_;
   };
 
   friend class ToggleButton;
