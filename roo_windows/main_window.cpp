@@ -154,7 +154,9 @@ void MainWindow::paint(const Surface& s) {
                          click_anim_overlay_color_);
     roo_display::ForegroundFilter filter(s.out(), &overlay);
     news.set_out(&filter);
-    news.set_bgcolor(roo_display::alphaBlend(s.bgcolor(), background()));
+    news.set_bgcolor(roo_display::alphaBlend(
+        roo_display::alphaBlend(s.bgcolor(), background()),
+        click_anim_target_->background()));
     news.set_fill_mode(roo_display::FILL_MODE_RECTANGLE);
     Box full, visible;
     click_anim_target_->getAbsoluteBounds(&full, &visible);
