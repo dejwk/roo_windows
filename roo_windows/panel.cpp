@@ -141,10 +141,14 @@ bool onTouchChild(const TouchEvent& event, Widget* child) {
 
 bool Panel::onTouch(const TouchEvent& event) {
   // Find if can delegate to a child.
-  for (const auto& child : children_) {
+  // Iterate backwards, because the order of children is assumed to represent
+  // Z dimension (e.g., later added child is on top) so in case they are
+  // overlapping, we want the right-most one receive the event.
+  for (auto i = children_.rbegin(); i != children_.rend(); i++) {
+    auto* child = i->get();
     if (!child->isVisible()) continue;
     if (child->parent_bounds().contains(event.startX(), event.startY())) {
-      if (onTouchChild(event, child.get())) {
+      if (onTouchChild(event, child)) {
         return true;
       }
     }
