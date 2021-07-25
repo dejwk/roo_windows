@@ -17,8 +17,18 @@ class Button : public Widget {
   Style style() const { return style_; }
 
   roo_display::Color textColor() const { return textColor_; }
+
+  void setTextColor(roo_display::Color color) { textColor_ = color; }
+
   roo_display::Color interiorColor() const { return interiorColor_; }
+
+  void setInteriorColor(roo_display::Color color) {
+    interiorColor_ = color;
+  }
+
   roo_display::Color outlineColor() const { return outlineColor_; }
+
+  void setOutlineColor(roo_display::Color color) { outlineColor_ = color; }
 
   void defaultPaint(const Surface& s) override;
 
