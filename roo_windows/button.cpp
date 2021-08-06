@@ -62,21 +62,6 @@ static const PROGMEM BorderSpec kContainedBorder = {
     .data_bottom = kContainedFillData,
     .data_bottom_right = kContainedRightData};
 
-// static const PROGMEM uint8_t kOutlinedTopLeftData[] = {0x02, 0x9E, 0x3E, 0x93};
-// static const PROGMEM uint8_t kOutlinedTopData[] = {0xF0};
-// static const PROGMEM uint8_t kOutlinedTopRightData[] = {0xE9, 0x20, 0x39, 0xE2};
-// static const PROGMEM uint8_t kOutlinedBottomLeftData[] = {0x2E, 0x93, 0x02,
-//                                                           0x9E};
-// static const PROGMEM uint8_t kOutlinedBottomData[] = {0x0F};
-// static const PROGMEM uint8_t kOutlinedBottomRightData[] = {0x39, 0xE2, 0xE9,
-//                                                            0x20};
-// static const PROGMEM uint8_t kOutlinedLeftTopData[] = {0x99, 0xE3};
-// static const PROGMEM uint8_t kOutlinedLeftData[] = {0xF0};
-// static const PROGMEM uint8_t kOutlinedLeftBottomData[] = {0xE3, 0x99};
-// static const PROGMEM uint8_t kOutlinedRightTopData[] = {0x99, 0x3E};
-// static const PROGMEM uint8_t kOutlinedRightData[] = {0x0F};
-// static const PROGMEM uint8_t kOutlinedRightBottomData[] = {0x3E, 0x99};
-
 static const PROGMEM uint8_t kOutlinedTopLeftData[] = {0x01, 0x57, 0x27, 0x52};
 static const PROGMEM uint8_t kOutlinedTopData[] = {0x71};
 static const PROGMEM uint8_t kOutlinedTopRightData[] = {0x75, 0x10, 0x25, 0x71};
@@ -114,11 +99,101 @@ static const PROGMEM BorderSpec kOutlinedBorder = {
     .data_bottom = kOutlinedBottomData,
     .data_bottom_right = kOutlinedBottomRightData};
 
+class Interior : public Drawable {
+ public:
+  Interior(const Button& button, const Box& bounds)
+      : button_(button),
+        bounds_(bounds),
+        label_(*button.theme().font.button, button.label(), button.textColor(),
+               roo_display::FILL_MODE_RECTANGLE),
+        icon_(button.icon()) {}
+
+  Box extents() const override { return bounds_; }
+
+ private:
+  bool hasIcon() const { return icon_ != nullptr; }
+  bool hasText() const { return !label_.label().empty(); }
+
+  void drawTo(const Surface& s) const override {
+    if (!hasIcon() && !hasText()) {
+      s.drawObject(roo_display::FilledRect(bounds_.xMin(), bounds_.yMin(),
+                                           bounds_.xMax(), bounds_.yMax(),
+                                           button_.interiorColor()));
+      return;
+    }
+    if (!hasText()) {
+      // Icon only.
+      MonoIcon colored_icon = *icon_;
+      colored_icon.color_mode().setColor(button_.textColor());
+      roo_display::Tile tile(&colored_icon, bounds_, HAlign::Center(),
+                             VAlign::Middle(), button_.interiorColor(),
+                             s.fill_mode());
+      s.drawObject(tile);
+      return;
+    }
+    if (!hasIcon()) {
+      roo_display::Tile tile(&label_, bounds_, HAlign::Center(),
+                             VAlign::Middle(), button_.interiorColor(),
+                             s.fill_mode());
+      s.drawObject(tile);
+      return;
+    }
+    // Both text and icon.
+    int16_t gap = (icon_->extents().width()  / 2) & 0xFFFC;
+    int16_t x_offset = (bounds_.width() - icon_->extents().width() -
+                        label_.extents().width() - gap) /
+                       2;
+    int16_t x_cursor = bounds_.xMin();
+    const int16_t yMin = bounds_.yMin();
+    const int16_t yMax = bounds_.yMax();
+    roo_display::Color c = button_.interiorColor();
+    // Left border.
+    if (x_offset > 0) {
+      s.drawObject(roo_display::FilledRect(x_cursor, yMin,
+                                           x_cursor + x_offset - 1, yMax, c));
+    }
+    x_cursor += x_offset;  // Note: x_offset may be negative.
+    // Icon.
+    {
+      MonoIcon colored_icon = *icon_;
+      colored_icon.color_mode().setColor(button_.textColor());
+      roo_display::Box box(x_cursor, yMin,
+                           x_cursor + icon_->extents().width() - 1, yMax);
+      roo_display::Tile tile(&colored_icon, box, HAlign::Center(),
+                             VAlign::Middle(), button_.interiorColor(),
+                             s.fill_mode());
+      s.drawObject(tile);
+    }
+    x_cursor += icon_->extents().width();
+    // Gap.
+    s.drawObject(
+        roo_display::FilledRect(x_cursor, yMin, x_cursor + gap - 1, yMax, c));
+    x_cursor += gap;
+    // Text.
+    {
+      roo_display::Box box(x_cursor, yMin,
+                           x_cursor + label_.extents().width() - 1, yMax);
+      roo_display::Tile tile(&label_, box, HAlign::Center(), VAlign::Middle(),
+                             button_.interiorColor(), s.fill_mode());
+      s.drawObject(tile);
+    }
+    x_cursor += label_.extents().width();
+    // Right border.
+    if (x_offset <= bounds_.xMax()) {
+      s.drawObject(
+          roo_display::FilledRect(x_cursor, yMin, bounds_.xMax(), yMax, c));
+    }
+  }
+
+  const Button& button_;
+  roo_display::Box bounds_;
+  roo_display::TextLabel label_;
+  const MonoIcon* icon_;
+};
+
 void paintInterior(const Surface& s, const Box& bounds, const Button& button) {
-  s.drawObject(MakeTileOf(TextLabel(*button.theme().font.button, button.label(),
-                                    button.textColor(), s.fill_mode()),
-                          bounds, HAlign::Center(), VAlign::Middle(),
-                          button.interiorColor(), s.fill_mode()));
+  Interior interior(button, bounds);
+  s.drawObject(interior);
 }
 
 void printVertStripes(const Surface& s, int16_t xMin, int16_t yMin,
@@ -147,10 +222,12 @@ void printHorizStripes(const Surface& s, int16_t xMin, int16_t yMin,
 
 }  // namespace
 
-Button::Button(Panel* parent, const Box& bounds, std::string label, Style style)
+Button::Button(Panel* parent, const Box& bounds, const MonoIcon* icon,
+               std::string label, Style style)
     : Widget(parent, bounds),
       style_(style),
       label_(std::move(label)),
+      icon_(icon),
       outlineColor_(style == CONTAINED  ? theme().color.primary
                     : style == OUTLINED ? theme().color.onBackground
                                         : color::Transparent),
@@ -158,7 +235,6 @@ Button::Button(Panel* parent, const Box& bounds, std::string label, Style style)
                                         : theme().color.background),
       textColor_(style == CONTAINED ? theme().color.onPrimary
                                     : theme().color.primary) {}
-
 
 // 111111_2_2_2_2_333333
 // 111111_2_2_2_2_333333
@@ -237,9 +313,10 @@ void Button::defaultPaint(const Surface& s) {
   // Right bar.
   int16_t right_bar_height = full_height - 2 * spec.right_height;
   if (right_bar_height > 0) {
-    printHorizStripes(s, full_width - spec.right_width, spec.top_height + spec.left_height,
-          full_height - spec.bottom_height - spec.left_height - 1,
-          spec.right_width, spec.data_right, outlineColor());
+    printHorizStripes(s, full_width - spec.right_width,
+                      spec.top_height + spec.left_height,
+                      full_height - spec.bottom_height - spec.left_height - 1,
+                      spec.right_width, spec.data_right, outlineColor());
   }
   // Right bottom.
   RasterAlpha4<const uint8_t * PROGMEM> rb(
