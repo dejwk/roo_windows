@@ -10,19 +10,26 @@ class Button : public Widget {
  public:
   enum Style { CONTAINED, OUTLINED, TEXT };
 
-  Button(Panel* parent, const Box& bounds, const MonoIcon* icon,
+  Button(Panel* parent, const Box& bounds, const MonoIcon& icon,
          Style style = CONTAINED)
-      : Button(parent, bounds, icon, "", style) {}
+      : Button(parent, bounds, &icon, "", style) {}
 
   Button(Panel* parent, const Box& bounds, std::string label,
          Style style = CONTAINED)
       : Button(parent, bounds, nullptr, label, style) {}
 
-  Button(Panel* parent, const Box& bounds, const MonoIcon* icon,
-         std::string label, Style style = CONTAINED);
+  Button(Panel* parent, const Box& bounds, const MonoIcon& icon,
+         std::string label, Style style = CONTAINED)
+      : Button(parent, bounds, &icon, label, style) {}
 
+  bool hasLabel() const { return !label_.empty(); }
   const std::string& label() const { return label_; }
-  const MonoIcon* icon() const { return icon_; }
+
+  bool hasIcon() const { return icon_ != nullptr; }
+
+  // Must not be called if hasIcon() returns true.
+  const MonoIcon& icon() const { return *icon_; }
+
   Style style() const { return style_; }
 
   roo_display::Color textColor() const { return textColor_; }
@@ -51,6 +58,9 @@ class Button : public Widget {
   bool isClickable() const override { return true; }
 
  private:
+  Button(Panel* parent, const Box& bounds, const MonoIcon* icon,
+         std::string label, Style style);
+
   Style style_;
   std::string label_;
   const MonoIcon* icon_;

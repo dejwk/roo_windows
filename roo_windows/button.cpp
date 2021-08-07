@@ -105,13 +105,12 @@ class Interior : public Drawable {
       : button_(button),
         bounds_(bounds),
         label_(*button.theme().font.button, button.label(), button.textColor(),
-               roo_display::FILL_MODE_RECTANGLE),
-        icon_(button.icon()) {}
+               roo_display::FILL_MODE_RECTANGLE) {}
 
   Box extents() const override { return bounds_; }
 
  private:
-  bool hasIcon() const { return icon_ != nullptr; }
+  bool hasIcon() const { return button_.hasIcon(); }
   bool hasText() const { return !label_.label().empty(); }
 
   void drawTo(const Surface& s) const override {
@@ -123,11 +122,10 @@ class Interior : public Drawable {
     }
     if (!hasText()) {
       // Icon only.
-      MonoIcon colored_icon = *icon_;
-      colored_icon.color_mode().setColor(button_.textColor());
-      roo_display::Tile tile(&colored_icon, bounds_, HAlign::Center(),
-                             VAlign::Middle(), button_.interiorColor(),
-                             s.fill_mode());
+      MonoIcon icon = button_.icon();
+      icon.color_mode().setColor(button_.textColor());
+      roo_display::Tile tile(&icon, bounds_, HAlign::Center(), VAlign::Middle(),
+                             button_.interiorColor(), s.fill_mode());
       s.drawObject(tile);
       return;
     }
@@ -139,8 +137,10 @@ class Interior : public Drawable {
       return;
     }
     // Both text and icon.
-    int16_t gap = (icon_->extents().width()  / 2) & 0xFFFC;
-    int16_t x_offset = (bounds_.width() - icon_->extents().width() -
+    MonoIcon icon = button_.icon();
+    icon.color_mode().setColor(button_.textColor());
+    int16_t gap = (icon.extents().width() / 2) & 0xFFFC;
+    int16_t x_offset = (bounds_.width() - icon.extents().width() -
                         label_.extents().width() - gap) /
                        2;
     int16_t x_cursor = bounds_.xMin();
@@ -155,16 +155,13 @@ class Interior : public Drawable {
     x_cursor += x_offset;  // Note: x_offset may be negative.
     // Icon.
     {
-      MonoIcon colored_icon = *icon_;
-      colored_icon.color_mode().setColor(button_.textColor());
       roo_display::Box box(x_cursor, yMin,
-                           x_cursor + icon_->extents().width() - 1, yMax);
-      roo_display::Tile tile(&colored_icon, box, HAlign::Center(),
-                             VAlign::Middle(), button_.interiorColor(),
-                             s.fill_mode());
+                           x_cursor + icon.extents().width() - 1, yMax);
+      roo_display::Tile tile(&icon, box, HAlign::Center(), VAlign::Middle(),
+                             button_.interiorColor(), s.fill_mode());
       s.drawObject(tile);
     }
-    x_cursor += icon_->extents().width();
+    x_cursor += icon.extents().width();
     // Gap.
     s.drawObject(
         roo_display::FilledRect(x_cursor, yMin, x_cursor + gap - 1, yMax, c));
@@ -188,7 +185,6 @@ class Interior : public Drawable {
   const Button& button_;
   roo_display::Box bounds_;
   roo_display::TextLabel label_;
-  const MonoIcon* icon_;
 };
 
 void paintInterior(const Surface& s, const Box& bounds, const Button& button) {
