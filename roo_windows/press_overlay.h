@@ -13,11 +13,11 @@ class PressOverlay : public roo_display::Rasterizable {
 
   virtual void ReadColors(const int16_t* x, const int16_t* y, uint32_t count,
                           roo_display::Color* result) const {
-    uint32_t r_sq_ = r_*r_;
+    int32_t r_sq = r_*r_;
     while (count-- > 0) {
       int16_t dx = (*x++ - x_);
       int16_t dy = (*y++ - y_);
-      int16_t delta = r_sq_ - (dx*dx + dy*dy);
+      int32_t delta = r_sq - (dx*dx + dy*dy);
       *result++ = (delta < 0 ? roo_display::color::Transparent : color_);
     }                            
   }
