@@ -108,6 +108,7 @@ bool MainWindow::animateClicked(Widget* target) {
       touch_y_ > click_anim_bounds_.yMax() + kTouchMargin) {
     return false;
   }
+  if (!target->showClickAnimation()) return true;
   int32_t ul = dsquare(touch_x_, touch_y_, full.xMin(), full.yMin());
   int32_t ur = dsquare(touch_x_, touch_y_, full.xMax(), full.yMin());
   int32_t dl = dsquare(touch_x_, touch_y_, full.xMin(), full.yMax());
