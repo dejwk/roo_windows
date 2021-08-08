@@ -91,6 +91,8 @@ class Widget {
 
   const Box& parent_bounds() const { return parent_bounds_; }
 
+  void moveTo(const Box& parent_bounds);
+
   // Returns bounds in the device's coordinates.
   virtual void getAbsoluteBounds(Box* full, Box* visible) const;
 
@@ -110,6 +112,8 @@ class Widget {
   virtual Color background() const;
 
   virtual bool onTouch(const TouchEvent& event);
+
+  virtual void onPressed() {}
 
   virtual void onClicked() { on_clicked_(); }
 

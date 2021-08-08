@@ -109,6 +109,15 @@ void Widget::setDragged(bool dragged) {
   invalidate();
 }
 
+void Widget::moveTo(const Box& parent_bounds) {
+  if (parent_bounds == parent_bounds_) return;
+  Box affected = Box::extent(parent_bounds, parent_bounds_);
+  parent_bounds_ = parent_bounds;
+  if (isVisible()) {
+    parent_->invalidate(affected);
+  }
+}
+
 uint8_t Widget::getOverlayOpacity() const {
   Color bgcolor = background();
   uint16_t overlay_opacity = 0;
@@ -180,6 +189,7 @@ bool Widget::onTouch(const TouchEvent& event) {
     if (!isPressed() && isClickable() &&
         getMainWindow()->animateClicked(this)) {
       setPressed(true);
+      onPressed();
       return true;
     }
   } else if (event.type() == TouchEvent::RELEASED) {
