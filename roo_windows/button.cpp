@@ -68,7 +68,7 @@ static const PROGMEM uint8_t kOutlinedTopRightData[] = {0x75, 0x10, 0x25, 0x71};
 static const PROGMEM uint8_t kOutlinedBottomLeftData[] = {0x17, 0x52, 0x01,
                                                           0x57};
 static const PROGMEM uint8_t kOutlinedBottomData[] = {0x17};
-static const PROGMEM uint8_t kOutlinedBottomRightData[] = {0x2A, 0x71, 0x75,
+static const PROGMEM uint8_t kOutlinedBottomRightData[] = {0x25, 0x71, 0x75,
                                                            0x10};
 static const PROGMEM uint8_t kOutlinedLeftTopData[] = {0x55, 0x72};
 static const PROGMEM uint8_t kOutlinedLeftData[] = {0x71};
