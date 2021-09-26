@@ -49,6 +49,10 @@ class ScrollablePanel : public Panel {
 
   bool onTouch(const TouchEvent& event) override;
 
+  void invalidateDescending(const Box& box) override {
+    Panel::invalidateDescending(box.translate(-dx_, -dy_));
+  }
+
  private:
   // The current size of the virtual canvas. Always at least as
   // large as the bounded viewport.
