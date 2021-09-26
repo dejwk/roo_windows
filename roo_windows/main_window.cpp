@@ -3,6 +3,7 @@
 #include "roo_display/core/color.h"
 #include "roo_display/filter/clip_exclude_rects.h"
 #include "roo_display/filter/foreground.h"
+#include "roo_display/internal/hashtable.h"
 #include "roo_windows/modal_window.h"
 #include "roo_windows/press_overlay.h"
 
@@ -22,9 +23,13 @@ static const uint16_t kSwipeThreshold = 8;
 MainWindow::MainWindow(Display* display)
     : MainWindow(display, display->extents()) {}
 
-size_t fill_buffer_size(int16_t w, int16_t h) {
-  auto window = roo_display::kBgFillOptimizerWindowSize;
-  return (((w - 1) / window + 1) * ((h - 1) / window + 1) + 7) / 8;
+namespace {
+
+void maybeAddColor(roo_display::internal::ColorSet& palette, Color color) {
+  if (palette.size() >= 15) return;
+  palette.insert(color);
+}
+
 }
 
 MainWindow::MainWindow(Display* display, const Box& bounds)
@@ -33,16 +38,18 @@ MainWindow::MainWindow(Display* display, const Box& bounds)
       touch_down_(false),
       click_anim_target_(nullptr),
       modal_window_(nullptr),
-      background_fill_buffer_(
-          new uint8_t[fill_buffer_size(display->width(), display->height())]),
-      background_fill_(
-          background_fill_buffer_.get(),
-          (display->width() - 1) / roo_display::kBgFillOptimizerWindowSize + 1,
-          (display->height() - 1) / roo_display::kBgFillOptimizerWindowSize +
-              1),
-      background_fill_optimizer_(nullptr) {
-  memset(background_fill_buffer_.get(), 0,
-         fill_buffer_size(display->width(), display->height()));
+      background_fill_buffer_(display->width(), display->height()) {
+  roo_display::internal::ColorSet color_set;
+  const auto& theme_colors = theme().color;
+  maybeAddColor(color_set, theme_colors.background);
+  maybeAddColor(color_set, theme_colors.surface);
+  maybeAddColor(color_set, theme_colors.primary);
+  maybeAddColor(color_set, theme_colors.primaryVariant);
+  maybeAddColor(color_set, theme_colors.secondary);
+  maybeAddColor(color_set, theme_colors.error);
+  Color palette[color_set.size()];
+  std::copy(color_set.begin(), color_set.end(), palette);
+  background_fill_buffer_.setPalette(palette, color_set.size());
 }
 
 class Adapter : public roo_display::Drawable {
@@ -137,12 +144,9 @@ bool MainWindow::animateClicked(Widget* target) {
 
 void MainWindow::paintWindow(const Surface& s) {
   Surface news = s;
-  roo_display::BackgroundFillOptimizer bg_optimizer(s.out(), &background_fill_);
-  background_fill_optimizer_ = &bg_optimizer;
-  bg_optimizer.setBackground(background());
+  roo_display::BackgroundFillOptimizer bg_optimizer(s.out(), &background_fill_buffer_);
   news.set_out(&bg_optimizer);
   paint(news);
-  background_fill_optimizer_ = nullptr;
 }
 
 void MainWindow::paint(const Surface& s) {
@@ -165,12 +169,7 @@ void MainWindow::paint(const Surface& s) {
     news.set_dx(news.dx() + full.xMin());
     news.set_dy(news.dy() + full.yMin());
     click_anim_target_->paint(news);
-    background_fill_.fillRect(
-        Box(news.clip_box().xMin() / roo_display::kBgFillOptimizerWindowSize,
-            news.clip_box().yMin() / roo_display::kBgFillOptimizerWindowSize,
-            news.clip_box().xMax() / roo_display::kBgFillOptimizerWindowSize,
-            news.clip_box().yMax() / roo_display::kBgFillOptimizerWindowSize),
-        false);
+    background_fill_buffer_.invalidateRect(news.clip_box());
     if (elapsed >= kClickAnimationMs) {
       click_anim_target_->invalidate();
       click_anim_target_ = nullptr;

@@ -51,11 +51,7 @@ class MainWindow : public Panel {
 
   ModalWindow* modal_window_;
 
-  std::unique_ptr<uint8_t[]> background_fill_buffer_;
-  roo_display::BitMask background_fill_;
-
-  // Only non-null during the paint() call.
-  roo_display::BackgroundFillOptimizer* background_fill_optimizer_;
+  roo_display::BackgroundFillOptimizer::FrameBuffer background_fill_buffer_;
 };
 
 }  // namespace roo_windows
