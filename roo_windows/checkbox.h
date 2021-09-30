@@ -14,11 +14,7 @@ class Checkbox : public Widget {
 
   bool isClickable() const override { return true; }
 
-  void onClicked() override {
-    state_ = isOn() ? OFF : ON;
-    markDirty();
-    Widget::onClicked();
-  }
+  void onClicked() override;
 
   State state() const { return state_; }
   bool isOn() const { return state() == ON; }

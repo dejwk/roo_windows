@@ -8,6 +8,13 @@ using namespace roo_display;
 
 namespace roo_windows {
 
+void RadioButton::onClicked() {
+  state_ = isOn() ? OFF : ON;
+  invalidate(roo_display::Tile::InteriorBounds(
+      bounds(), Box(0, 0, 17, 17), HAlign::Center(), VAlign::Middle()));
+  Widget::onClicked();
+}
+
 void RadioButton::defaultPaint(const Surface& s) {
   Color color = isOn() ? theme().color.highlighterColor(s.bgcolor())
                        : theme().color.defaultColor(s.bgcolor());
