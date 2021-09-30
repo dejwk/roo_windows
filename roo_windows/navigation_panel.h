@@ -21,7 +21,8 @@ class NavigationPanel : public Panel {
   }
 
   Panel* addPane(const roo_display::MaterialIcon& icon, std::string text) {
-    rail_->addDestination(icon, text);
+    int idx = panes_.size();
+    rail_->addDestination(icon, text, [this, idx]() { setActive(idx); });
     Panel* p = new Panel(contents_.get(), contents_->bounds());
     bool first = panes_.empty();
     panes_.emplace_back(p);
@@ -38,14 +39,6 @@ class NavigationPanel : public Panel {
     for (int i = 0; i < panes_.size(); ++i) {
       panes_[i]->setVisible(i == index);
     }
-}
-
-  bool onTouch(const TouchEvent& event) override {
-    if (Panel::onTouch(event)) {
-      setActive(rail_->getActive());
-      return true;
-    }
-    return false;
   }
 
  private:

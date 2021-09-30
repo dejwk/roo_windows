@@ -23,14 +23,14 @@ class NavigationRail : public Panel {
         theme_(&DefaultTheme()),
         active_(-1) {}
 
-  void addDestination(const roo_display::MaterialIcon& icon,
-                      std::string text) {
+  void addDestination(const roo_display::MaterialIcon& icon, std::string text,
+                      std::function<void()> activator) {
     int16_t width = bounds().width();
     Box box(4, 4, width - 8, width - 8);
     box = box.translate(0, children().size() * width);
-    Destination* dest = new Destination(this, box, icon, std::move(text));
-    int idx = destinations_.size();
-    dest->setOnClicked([this, idx]{ setActive(idx); });
+    Destination* dest =
+        new Destination(this, box, icon, std::move(text), destinations_.size(),
+                        std::move(activator));
     destinations_.push_back(dest);
   }
 
@@ -52,30 +52,44 @@ class NavigationRail : public Panel {
 
   int getActive() const { return active_; }
 
-  void setActive(int index) {
-    if (index == active_) return;
+  bool setActive(int index) {
+    if (index == active_) return false;
     active_ = index;
     for (int i = 0; i < destinations_.size(); i++) {
       destinations_[i]->setActivated(i == index);
     }
+    return true;
   }
 
  private:
-  class Destination : public roo_windows::IconWithCaption {
+  class Destination : public IconWithCaption {
    public:
     Destination(NavigationRail* parent, Box bounds,
-                const roo_display::MaterialIcon& icon, std::string text)
-        : roo_windows::IconWithCaption(parent, bounds, std::move(icon), std::move(text)) {}
+                const roo_display::MaterialIcon& icon, std::string text,
+                int idx, std::function<void()> activator)
+        : IconWithCaption(parent, bounds, std::move(icon), std::move(text)),
+          idx_(idx),
+          activator_(std::move(activator)) {}
 
     bool useOverlayOnActivation() const override { return false; }
     bool useOverlayOnPressAnimation() const override { return true; }
     bool isClickable() const override { return true; }
     bool usesHighlighterColor() const override { return true; }
 
+    void onClicked() override {
+      if (rail()->setActive(idx_)) activator_();
+      IconWithCaption::onClicked();
+    }
+
    private:
     const NavigationRail* rail() const {
-      return (const NavigationRail*)parent();
+      return static_cast<const NavigationRail*>(parent());
     }
+
+    NavigationRail* rail() { return static_cast<NavigationRail*>(parent()); }
+
+    int idx_;
+    std::function<void()> activator_;
   };
 
   friend class Destination;
