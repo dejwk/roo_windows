@@ -36,9 +36,9 @@ void Panel::paint(const Surface& s) {
   // case the dirties are not propagated to the children.
   Surface cs = s;
   cs.set_bgcolor(roo_display::alphaBlend(cs.bgcolor(), bgcolor_));
-  if (!invalid_region_.empty()) {
-    cs.clipToExtents(invalid_region_);
-  }
+  // Note: we do not apply the invalid region clipping here, because the
+  // children 'dirtiness' does not affect it. We need to redraw all dirty
+  // children.
   Box clip_box = cs.clip_box();
   int16_t dx = cs.dx();
   int16_t dy = cs.dy();
@@ -46,9 +46,12 @@ void Panel::paint(const Surface& s) {
   for (int i = 0; i < children_.size(); ++i) {
     const auto& child = children_[i];
     if (child->isVisible()) {
-      if (!needs_repaint_ && s.fill_mode() == roo_display::FILL_MODE_VISIBLE &&
-          !child->isDirty()) {
-        continue;
+      if (!child->isDirty() && s.fill_mode() == roo_display::FILL_MODE_VISIBLE) {
+        if (!needs_repaint_ ||
+            (!invalid_region_.empty() &&
+             !invalid_region_.intersects(child->parent_bounds()))) {
+          continue;
+        }
       }
     } else {
       if (!child->isInvalidated()) {
@@ -107,6 +110,11 @@ void Panel::paint(const Surface& s) {
   cs.set_dx(dx);
   cs.set_dy(dy);
   cs.set_clip_box(clip_box);
+  // Note: we apply the invalid region clipping only here, to minimize the ara
+  // that gets re-cleared.
+  if (!invalid_region_.empty()) {
+    cs.clipToExtents(invalid_region_);
+  }
   if (s.fill_mode() == roo_display::FILL_MODE_RECTANGLE || needs_repaint_) {
     std::vector<Box> exclusions;
     for (const auto& c : children_) {
@@ -177,6 +185,7 @@ void Panel::addChild(Widget* child) {
 
 void Panel::invalidateDescending() {
   needs_repaint_ = true;
+  dirty_ = true;
   invalid_region_ = Box(0, 0, -1, -1);
   for (auto& child : children_) {
     child->invalidateDescending();
@@ -185,6 +194,7 @@ void Panel::invalidateDescending() {
 
 void Panel::invalidateDescending(const Box& box) {
   needs_repaint_ = true;
+  dirty_ = true;
   if (invalid_region_.empty()) {
     invalid_region_ = box;
   } else {
