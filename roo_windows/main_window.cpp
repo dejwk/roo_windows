@@ -11,10 +11,6 @@ namespace roo_windows {
 
 using roo_display::Display;
 
-inline int32_t dsquare(int16_t x0, int16_t y0, int16_t x1, int16_t y1) {
-  return (x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0);
-}
-
 static const unsigned long kClickAnimationMs = 200;
 
 // How much movement in pixels before we consider it a swipe.
@@ -30,7 +26,7 @@ void maybeAddColor(roo_display::internal::ColorSet& palette, Color color) {
   palette.insert(color);
 }
 
-}
+}  // namespace
 
 MainWindow::MainWindow(Display* display, const Box& bounds)
     : Panel(nullptr, bounds),
@@ -71,6 +67,7 @@ void MainWindow::tick() {
   int16_t x, y;
   bool down = display_->getTouch(&x, &y);
   unsigned long now = millis();
+
   if (!touch_down_ && down) {
     // Pressed.
     touch_down_ = true;
@@ -102,103 +99,78 @@ void MainWindow::tick() {
 
   roo_display::DrawingContext dc(display_);
   dc.draw(Adapter(this));
+
+  // If an in-progress click animation is expired, clear the animation target so
+  // that other widgets can be clicked, and possibly deliver the delayed click
+  // notification. This is done after the overall redraw, so that the click
+  // animation target has a chance to fully redraw itself after the click
+  // animation complated but before the click notification is delivered.
+  if (click_anim_target_ != nullptr &&
+      now - click_anim_start_millis_ >= kClickAnimationMs &&
+      !click_anim_target_->isClicking()) {
+    if (click_anim_target_->isClicked()) {
+      click_anim_target_->clearClicked();
+      click_anim_target_->onClicked();
+    }
+    click_anim_target_ = nullptr;
+  }
 }
 
-bool MainWindow::animateClicked(Widget* target) {
-  if (click_anim_target_ != nullptr) return false;
-  Box full;
-  target->getAbsoluteBounds(&full, &click_anim_bounds_);
-  if (click_anim_target_ != nullptr || !touch_down_ ||
-      touch_x_ < click_anim_bounds_.xMin() - kTouchMargin ||
-      touch_x_ > click_anim_bounds_.xMax() + kTouchMargin ||
-      touch_y_ < click_anim_bounds_.yMin() - kTouchMargin ||
-      touch_y_ > click_anim_bounds_.yMax() + kTouchMargin) {
-    return false;
-  }
-  if (!target->showClickAnimation()) return true;
-  int32_t ul = dsquare(touch_x_, touch_y_, full.xMin(), full.yMin());
-  int32_t ur = dsquare(touch_x_, touch_y_, full.xMax(), full.yMin());
-  int32_t dl = dsquare(touch_x_, touch_y_, full.xMin(), full.yMax());
-  int32_t dr = dsquare(touch_x_, touch_y_, full.xMax(), full.yMax());
-  int32_t max = 0;
-  if (ul > max) max = ul;
-  if (ur > max) max = ur;
-  if (dl > max) max = dl;
-  if (dr > max) max = dr;
+bool MainWindow::isClickAnimating() const {
+  return click_anim_target_ != nullptr;
+}
 
-  click_anim_target_ = target;
+void MainWindow::startClickAnimation(Widget* widget) {
+  click_anim_target_ = widget;
+  click_anim_start_millis_ = millis();
   click_anim_x_ = touch_x_;
   click_anim_y_ = touch_y_;
-  click_anim_start_millis_ = millis();
-  click_anim_max_radius_ = (int16_t)(sqrt(max) + 1);
+}
 
-  Color bg = click_anim_target_->background();
-  click_anim_overlay_color_ =
-      click_anim_target_->usesHighlighterColor()
-          ? click_anim_target_->theme().color.highlighterColor(bg)
-          : click_anim_target_->theme().color.defaultColor(bg);
-  click_anim_overlay_color_.set_a(
-      click_anim_target_->theme().pressAnimationOpacity(bg));
+bool MainWindow::getClick(const Widget* target, float* progress,
+                          int16_t* x_center, int16_t* y_center) const {
+  if (click_anim_target_ != target) {
+    return false;
+  }
+  *progress = (float)(millis() - click_anim_start_millis_) / kClickAnimationMs;
+  if (*progress > 1.0) *progress = 1.0;
+  *x_center = click_anim_x_;
+  *y_center = click_anim_y_;
   return true;
 }
 
 void MainWindow::paintWindow(const Surface& s) {
   Surface news = s;
-  roo_display::BackgroundFillOptimizer bg_optimizer(s.out(), &background_fill_buffer_);
+  roo_display::BackgroundFillOptimizer bg_optimizer(s.out(),
+                                                    &background_fill_buffer_);
   news.set_out(&bg_optimizer);
   paint(news);
 }
 
 void MainWindow::paint(const Surface& s) {
-  if (click_anim_target_ != nullptr) {
-    unsigned long elapsed = millis() - click_anim_start_millis_;
-    double r = ((double)elapsed / kClickAnimationMs) * click_anim_max_radius_;
-    click_anim_target_->invalidate();
-    Surface news(s);
-    PressOverlay overlay(click_anim_x_, click_anim_y_, (int16_t)r,
-                         click_anim_overlay_color_);
-    roo_display::ForegroundFilter filter(s.out(), &overlay);
-    news.set_out(&filter);
-    news.set_bgcolor(roo_display::alphaBlend(
-        roo_display::alphaBlend(s.bgcolor(), background()),
-        click_anim_target_->background()));
-    news.set_fill_mode(roo_display::FILL_MODE_RECTANGLE);
-    Box full, visible;
-    click_anim_target_->getAbsoluteBounds(&full, &visible);
-    news.set_clip_box(roo_display::Box::intersect(news.clip_box(), visible));
-    news.set_dx(news.dx() + full.xMin());
-    news.set_dy(news.dy() + full.yMin());
-    click_anim_target_->paint(news);
-    background_fill_buffer_.invalidateRect(news.clip_box());
-    if (elapsed >= kClickAnimationMs) {
-      click_anim_target_->invalidate();
-      click_anim_target_ = nullptr;
+  if (isDirty()) {
+    if (modal_window_ == nullptr) {
+      Panel::paint(s);
+    } else {
+      // Exclude the modal window area from redraw.
+      roo_display::Surface news(s);
+      roo_display::DisplayOutput* out = news.out();
+      Box exclusion(modal_window_->parent_bounds());
+      roo_display::RectUnion ru(&exclusion, &exclusion + 1);
+      roo_display::RectUnionFilter filter(s.out(), &ru);
+      news.set_out(&filter);
+      Panel::paint(news);
+      news.set_out(out);
     }
-  } else {
-    if (isDirty()) {
-      if (modal_window_ == nullptr) {
-        Panel::paint(s);
-      } else {
-        // Exclude the modal window area from redraw.
-        roo_display::Surface news(s);
-        roo_display::DisplayOutput* out = news.out();
-        Box exclusion(modal_window_->parent_bounds());
-        roo_display::RectUnion ru(&exclusion, &exclusion + 1);
-        roo_display::RectUnionFilter filter(s.out(), &ru);
-        news.set_out(&filter);
-        Panel::paint(news);
-        news.set_out(out);
-      }
-    }
-    if (modal_window_ != nullptr) {
-      if (modal_window_->isDirty()) {
-        Surface news = s;
-        news.set_dx(s.dx() + modal_window_->parent_bounds().xMin());
-        news.set_dy(s.dy() + modal_window_->parent_bounds().yMin());
-        news.clipToExtents(modal_window_->bounds());
-        news.set_bgcolor(roo_display::alphaBlend(s.bgcolor(), background()));
-        modal_window_->paint(news);
-      }
+  }
+  if (modal_window_ != nullptr) {
+    if (modal_window_->isDirty()) {
+      Surface news = s;
+      news.set_dx(s.dx() + modal_window_->parent_bounds().xMin());
+      news.set_dy(s.dy() + modal_window_->parent_bounds().yMin());
+      news.clipToExtents(modal_window_->bounds());
+      news.set_bgcolor(roo_display::alphaBlend(s.bgcolor(), background()));
+      modal_window_->paint(news);
     }
   }
 }

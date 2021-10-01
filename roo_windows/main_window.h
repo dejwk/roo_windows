@@ -25,14 +25,24 @@ class MainWindow : public Panel {
     *visible = parent_bounds();
   }
 
-  bool animateClicked(Widget* target);
-  const Widget* getClickAnimationTarget() const { return click_anim_target_; }
-
   void paintWindow(const Surface& s);
   void paint(const Surface& s) override;
 
   void enterModal(ModalWindow* modal_window);
   void exitModal(ModalWindow* modal_window);
+
+  bool isClickAnimating() const;
+  void startClickAnimation(Widget* target);
+
+  // Can be called by a widget that is click-animating, from its paint() method.
+  // Returns true if the animation is still currently in progress; false
+  // otherwise. If returns true, updates progress, x_center, and y_center.
+  // Progress is a value in the [0, 1] range that specifies how much the
+  // animation is progressed. The x_center and y_center are the coordinates of
+  // the original click, in the device coordinates. (The widget can conver them
+  // to its local coordinates, by adjusting by the surface offsets).
+  bool getClick(const Widget* target, float* progress, int16_t* x_center,
+                int16_t* y_center) const;
 
  private:
   void handleTouch(const TouchEvent& event);
@@ -44,10 +54,8 @@ class MainWindow : public Panel {
   bool touch_down_;
 
   Widget* click_anim_target_;
-  int16_t click_anim_x_, click_anim_y_, click_anim_max_radius_;
-  roo_display::Box click_anim_bounds_;
   unsigned long click_anim_start_millis_;
-  roo_display::Color click_anim_overlay_color_;
+  int16_t click_anim_x_, click_anim_y_;
 
   ModalWindow* modal_window_;
 
