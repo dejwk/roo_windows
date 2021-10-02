@@ -141,13 +141,6 @@ uint8_t Widget::getOverlayOpacity() const {
   return overlay_opacity;
 }
 
-void Widget::clear(const Surface& s) {
-  if (!needs_repaint_) return;
-  s.drawObject(roo_display::Clear());
-  dirty_ = false;
-  needs_repaint_ = false;
-}
-
 namespace {
 
 Color getOverlayColor(const Widget& widget, const Surface& s) {
@@ -191,7 +184,14 @@ inline int16_t animation_radius(const Box& bounds, int16_t x, int16_t y,
 }  // namespace
 
 void Widget::paintWidget(const Surface& s) {
-  if (!isVisible()) return;
+  if (!isVisible()) {
+    if (needs_repaint_) {
+      s.drawObject(roo_display::Clear());
+    }
+    dirty_ = false;
+    needs_repaint_ = false;
+    return;
+  }
   if (state_ == kWidgetEnabled && !needs_repaint_) {
     // Fast path.
     paint(s);

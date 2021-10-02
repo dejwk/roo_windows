@@ -36,80 +36,80 @@ void Panel::paintWidget(const Surface& s) {
   // case the dirties are not propagated to the children.
   Surface cs = s;
   cs.set_bgcolor(roo_display::alphaBlend(cs.bgcolor(), bgcolor_));
-  // Note: we do not apply the invalid region clipping here, because the
-  // children 'dirtiness' does not affect it. We need to redraw all dirty
-  // children.
-  Box clip_box = cs.clip_box();
-  int16_t dx = cs.dx();
-  int16_t dy = cs.dy();
   bool all_children_cleaned = true;
-  for (int i = 0; i < children_.size(); ++i) {
-    const auto& child = children_[i];
-    if (child->isVisible()) {
-      if (!child->isDirty()) { //} && s.fill_mode() == roo_display::FILL_MODE_VISIBLE) {
-        if (!needs_repaint_ ||
-            (!invalid_region_.empty() &&
-             !invalid_region_.intersects(child->parent_bounds()))) {
+  if (!isVisible() && needs_repaint_) {
+    cs.drawObject(roo_display::Clear());
+    dirty_ = false;
+    needs_repaint_ = false;
+    return;
+  }
+  if (isVisible()) {
+    // Note: we do not apply the invalid region clipping here, because the
+    // children 'dirtiness' does not affect it. We need to redraw all dirty
+    // children.
+    Box clip_box = cs.clip_box();
+    int16_t dx = cs.dx();
+    int16_t dy = cs.dy();
+    for (int i = 0; i < children_.size(); ++i) {
+      const auto& child = children_[i];
+      if (child->isVisible()) {
+        if (!child->isDirty()) { //} && s.fill_mode() == roo_display::FILL_MODE_VISIBLE) {
+          if (!needs_repaint_ ||
+              (!invalid_region_.empty() &&
+              !invalid_region_.intersects(child->parent_bounds()))) {
+            continue;
+          }
+        }
+      } else {
+        if (!child->isInvalidated()) {
           continue;
         }
       }
-    } else {
-      if (!child->isInvalidated()) {
-        continue;
+      cs.set_dx(dx);
+      cs.set_dy(dy);
+      cs.set_clip_box(clip_box);
+      if (cs.clipToExtents(child->parent_bounds()) != Box::CLIP_RESULT_EMPTY) {
+        // Need to update the child. Let's find other children that may partially
+        // overlap this one, and exclude their rects from the region to be
+        // updated.
+        std::vector<Box> exclusions;
+        int j = 0;
+        if (child->isVisible()) {
+          // This child will cover all previous ones that it overlaps with,
+          // so we can ignore them.
+          j = i + 1;
+        }
+        for (; j < children_.size(); ++j) {
+          if (j == i) continue;
+          const auto& other = children_[j];
+          if (!other->isVisible()) continue;
+          Box intersect = Box::intersect(
+              cs.clip_box(), other->parent_bounds().translate(dx, dy));
+          if (!intersect.empty()) {
+            exclusions.push_back(intersect);
+          }
+        }
+        cs.set_dx(cs.dx() + child->parent_bounds().xMin());
+        cs.set_dy(cs.dy() + child->parent_bounds().yMin());
+        if (exclusions.empty()) {
+          // Nothing to cover; just paint the entire area.
+          child->paintWidget(cs);
+        } else {
+          // Exclude the calculated rect union from the area to paint.
+          roo_display::DisplayOutput* out = cs.out();
+          roo_display::RectUnion ru(&*exclusions.begin(), &*exclusions.end());
+          roo_display::RectUnionFilter filter(out, &ru);
+          cs.set_out(&filter);
+          child->paintWidget(cs);
+          cs.set_out(out);
+        }
+        all_children_cleaned &= (!child->isVisible() || !child->isDirty());
       }
     }
     cs.set_dx(dx);
     cs.set_dy(dy);
     cs.set_clip_box(clip_box);
-    if (cs.clipToExtents(child->parent_bounds()) != Box::CLIP_RESULT_EMPTY) {
-      // Need to update the child. Let's find other children that may partially
-      // overlap this one, and exclude their rects from the region to be
-      // updated.
-      std::vector<Box> exclusions;
-      int j = 0;
-      if (child->isVisible()) {
-        // This child will cover all previous ones that it overlaps with,
-        // so we can ignore them.
-        j = i + 1;
-      }
-      for (; j < children_.size(); ++j) {
-        if (j == i) continue;
-        const auto& other = children_[j];
-        if (!other->isVisible()) continue;
-        Box intersect = Box::intersect(
-            cs.clip_box(), other->parent_bounds().translate(dx, dy));
-        if (!intersect.empty()) {
-          exclusions.push_back(intersect);
-        }
-      }
-      cs.set_dx(cs.dx() + child->parent_bounds().xMin());
-      cs.set_dy(cs.dy() + child->parent_bounds().yMin());
-      if (exclusions.empty()) {
-        // Nothing to cover; just paint the entire area.
-        if (child->isVisible()) {
-          child->paintWidget(cs);
-        } else {
-          child->clear(cs);
-        }
-      } else {
-        // Exclude the calculated rect union from the area to paint.
-        roo_display::DisplayOutput* out = cs.out();
-        roo_display::RectUnion ru(&*exclusions.begin(), &*exclusions.end());
-        roo_display::RectUnionFilter filter(out, &ru);
-        cs.set_out(&filter);
-        if (child->isVisible()) {
-          child->paintWidget(cs);
-        } else {
-          child->clear(cs);
-        }
-        cs.set_out(out);
-      }
-      all_children_cleaned &= (!child->isVisible() || !child->isDirty());
-    }
   }
-  cs.set_dx(dx);
-  cs.set_dy(dy);
-  cs.set_clip_box(clip_box);
   // Note: we apply the invalid region clipping only here, to minimize the ara
   // that gets re-cleared.
   if (!invalid_region_.empty()) {

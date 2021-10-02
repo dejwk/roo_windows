@@ -110,8 +110,6 @@ class Widget {
   // constrained to this widget's bounds (and non-empty).
   virtual void paintWidget(const Surface& s);
 
-  void clear(const Surface& s);
-
   virtual void paint(const Surface& s) {}
 
   virtual MainWindow* getMainWindow();
