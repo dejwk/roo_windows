@@ -141,6 +141,7 @@ bool MainWindow::getClick(const Widget* target, float* progress,
 
 void MainWindow::paintWindow(const Surface& s) {
   Surface news = s;
+  news.set_fill_mode(roo_display::FILL_MODE_RECTANGLE);
   roo_display::BackgroundFillOptimizer bg_optimizer(s.out(),
                                                     &background_fill_buffer_);
   news.set_out(&bg_optimizer);

@@ -46,7 +46,7 @@ void Panel::paint(const Surface& s) {
   for (int i = 0; i < children_.size(); ++i) {
     const auto& child = children_[i];
     if (child->isVisible()) {
-      if (!child->isDirty() && s.fill_mode() == roo_display::FILL_MODE_VISIBLE) {
+      if (!child->isDirty()) { //} && s.fill_mode() == roo_display::FILL_MODE_VISIBLE) {
         if (!needs_repaint_ ||
             (!invalid_region_.empty() &&
              !invalid_region_.intersects(child->parent_bounds()))) {
@@ -115,7 +115,7 @@ void Panel::paint(const Surface& s) {
   if (!invalid_region_.empty()) {
     cs.clipToExtents(invalid_region_);
   }
-  if (s.fill_mode() == roo_display::FILL_MODE_RECTANGLE || needs_repaint_) {
+  if (needs_repaint_) {
     std::vector<Box> exclusions;
     for (const auto& c : children_) {
       Box b = Box::intersect(cs.clip_box(),

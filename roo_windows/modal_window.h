@@ -28,7 +28,7 @@ class ModalWindow : public Panel {
   void exit() { main_window_->exitModal(this); }
 
   void paint(const roo_display::Surface& s) override {
-    if (s.fill_mode() == roo_display::FILL_MODE_RECTANGLE || needs_repaint_) {
+    if (needs_repaint_) {
       Color color = theme().color.defaultColor(s.bgcolor());
       color.set_a(0x20);
       s.drawObject(roo_display::FilledRect(0, 0, width() - 1, 1, color));

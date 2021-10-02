@@ -6,12 +6,8 @@ namespace roo_windows {
 
 IconWithCaption::IconWithCaption(Panel* parent, const Box& bounds,
                                  const MaterialIcon& def,
-                                 const std::string& caption,
-                                 const Font* font)
-    : Widget(parent, bounds),
-      icon_(def),
-      caption_(caption),
-      font_(font) {
+                                 const std::string& caption, const Font* font)
+    : Widget(parent, bounds), icon_(def), caption_(caption), font_(font) {
   int16_t total_height = icon_.extents().height() + font->metrics().maxHeight();
   int16_t border = bounds.height() - total_height;
   hi_border_ = border / 2;
@@ -23,7 +19,8 @@ void IconWithCaption::defaultPaint(const Surface& s) {
   if (isActivated() && usesHighlighterColor()) {
     color = theme().color.highlighterColor(s.bgcolor());
   }
-  if (s.fill_mode() == FILL_MODE_RECTANGLE && hi_border_ > 0) {
+  if (s.fill_mode() == FILL_MODE_RECTANGLE && needs_repaint_ &&
+      hi_border_ > 0) {
     s.drawObject(FilledRect(bounds().xMin(), bounds().yMin(), bounds().xMax(),
                             bounds().yMin() + hi_border_ - 1,
                             color::Transparent));
@@ -42,7 +39,8 @@ void IconWithCaption::defaultPaint(const Surface& s) {
       TextLabel(*font_, caption_, color), caption_bounds, HAlign::Center(),
       VAlign::None(caption_bounds.yMin() + font_->metrics().ascent())));
 
-  if (s.fill_mode() == FILL_MODE_RECTANGLE && lo_border_ > 0) {
+  if (s.fill_mode() == FILL_MODE_RECTANGLE && needs_repaint_ &&
+      lo_border_ > 0) {
     s.drawObject(FilledRect(bounds().xMin(), bounds().yMax() - lo_border_ + 1,
                             bounds().xMax(), bounds().yMax(),
                             color::Transparent));
