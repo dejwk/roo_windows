@@ -17,7 +17,7 @@ WifiIndicator::WifiIndicator(Panel* parent, const Box& bounds,
       locked_(false),
       bar_count_(1) {}
 
-void WifiIndicator::defaultPaint(const Surface& s) {
+void WifiIndicator::paint(const Surface& s) {
   roo_display::MaterialIcon icon(*icons()[status()]);
   icon.color_mode().setColor(color_);
   roo_display::Tile tile(&icon, bounds(), roo_display::HAlign::Center(),

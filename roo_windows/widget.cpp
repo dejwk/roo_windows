@@ -190,11 +190,11 @@ inline int16_t animation_radius(const Box& bounds, int16_t x, int16_t y,
 
 }  // namespace
 
-void Widget::paint(const Surface& s) {
+void Widget::paintWidget(const Surface& s) {
   if (!isVisible()) return;
   if (state_ == kWidgetEnabled && !needs_repaint_) {
     // Fast path.
-    defaultPaint(s);
+    paint(s);
     needs_repaint_ = false;
     dirty_ = false;
     return;
@@ -229,7 +229,7 @@ void Widget::paint(const Surface& s) {
           alphaBlend(overlay, animation_color), overlay);
       roo_display::ForegroundFilter filter(s.out(), &press_overlay);
       news.set_out(&filter);
-      defaultPaint(news);
+      paint(news);
       // Do not clear dirtiness.
       invalidate();
       return;
@@ -243,9 +243,9 @@ void Widget::paint(const Surface& s) {
     if (overlay.a() > 0) {
       roo_display::OverlayFilter filter(s.out(), overlay, s.bgcolor());
       news.set_out(&filter);
-      defaultPaint(news);
+      paint(news);
     } else {
-      defaultPaint(news);
+      paint(news);
     }
     if (click_animation) {
       // Note that we have !click_animation_continues here. Make sure that the
@@ -259,7 +259,7 @@ void Widget::paint(const Surface& s) {
     roo_display::TranslucencyFilter disablement_filter(
         s.out(), theme().state.disabled, s.bgcolor());
     news.set_out(&disablement_filter);
-    defaultPaint(news);
+    paint(news);
   }
   needs_repaint_ = false;
   dirty_ = false;

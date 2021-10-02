@@ -31,9 +31,9 @@ class ToggleButtons : public Panel {
     return btn;
   }
 
-  void paint(const roo_display::Surface& s) override {
+  void paintWidget(const roo_display::Surface& s) override {
     bool repaint = needs_repaint_;
-    Panel::paint(s);
+    Panel::paintWidget(s);
     if (repaint) {
       Color border = theme().color.defaultColor(s.bgcolor());
       border.set_a(0x30);
@@ -70,7 +70,7 @@ class ToggleButtons : public Panel {
     bool useOverlayOnActivation() const override { return true; }
     bool isClickable() const override { return true; }
 
-    void defaultPaint(const roo_display::Surface& s) override {
+    void paint(const roo_display::Surface& s) override {
       Color color = theme().color.defaultColor(s.bgcolor());
       Color internal_border = color;
       internal_border.set_a(0x10);

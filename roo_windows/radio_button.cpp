@@ -20,7 +20,7 @@ void RadioButton::setState(State state) {
   markDirty();
 }
 
-void RadioButton::defaultPaint(const Surface& s) {
+void RadioButton::paint(const Surface& s) {
   Color color = isOn() ? theme().color.highlighterColor(s.bgcolor())
                        : theme().color.defaultColor(s.bgcolor());
   RleImage4bppxBiased<Alpha4, PrgMemResource> img =

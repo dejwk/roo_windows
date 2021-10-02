@@ -14,7 +14,7 @@ IconWithCaption::IconWithCaption(Panel* parent, const Box& bounds,
   lo_border_ = border - hi_border_;
 }
 
-void IconWithCaption::defaultPaint(const Surface& s) {
+void IconWithCaption::paint(const Surface& s) {
   Color color = theme().color.defaultColor(s.bgcolor());
   if (isActivated() && usesHighlighterColor()) {
     color = theme().color.highlighterColor(s.bgcolor());

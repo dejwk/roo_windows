@@ -14,7 +14,7 @@ class WalltimeIndicator18 : public WalltimeIndicator {
                       roo_time::TimeZone tz)
       : WalltimeIndicator(parent, Box(dx, dy, dx + 45, dy + 17), clock, tz) {}
 
-  void defaultPaint(const roo_display::Surface& s) override {
+  void paint(const roo_display::Surface& s) override {
     s.drawObject(MakeTileOf(TextLabel(font_NotoSans_Regular_18(), val_, color_),
                             bounds(), HAlign::None(), VAlign::Middle()));
   }

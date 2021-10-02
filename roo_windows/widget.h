@@ -108,11 +108,11 @@ class Widget {
   // The Surface's offset and clipbox has been pre-initialized so that this
   // widget's top-left corner is painted at (0, 0), and the clip box is
   // constrained to this widget's bounds (and non-empty).
-  virtual void paint(const Surface& s);
+  virtual void paintWidget(const Surface& s);
 
   void clear(const Surface& s);
 
-  virtual void defaultPaint(const Surface& s) {}
+  virtual void paint(const Surface& s) {}
 
   virtual MainWindow* getMainWindow();
   virtual const MainWindow* getMainWindow() const;

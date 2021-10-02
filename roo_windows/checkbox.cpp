@@ -20,7 +20,7 @@ void Checkbox::setState(State state) {
   markDirty();
 }
 
-void Checkbox::defaultPaint(const Surface& s) {
+void Checkbox::paint(const Surface& s) {
   Color color = isOn() ? theme().color.highlighterColor(s.bgcolor())
                        : theme().color.defaultColor(s.bgcolor());
   RleImage4bppxBiased<Alpha4, PrgMemResource> img =

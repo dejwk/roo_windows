@@ -30,7 +30,7 @@ class Panel : public Widget {
 
   const Theme& theme() const { return theme_; }
 
-  void paint(const Surface& s) override;
+  void paintWidget(const Surface& s) override;
 
   virtual bool onTouch(const TouchEvent& event);
 

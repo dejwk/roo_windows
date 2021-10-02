@@ -30,7 +30,7 @@ Panel::Panel(Panel* parent, const Box& bounds, const Theme& theme,
       bgcolor_(bgcolor),
       invalid_region_(Box(0, 0, -1, -1)) {}
 
-void Panel::paint(const Surface& s) {
+void Panel::paintWidget(const Surface& s) {
   // Even if we don't seem to be dirty, trust the parent: perhaps
   // the parent is getting redrawn (e.g. made visible) in which
   // case the dirties are not propagated to the children.
@@ -87,7 +87,7 @@ void Panel::paint(const Surface& s) {
       if (exclusions.empty()) {
         // Nothing to cover; just paint the entire area.
         if (child->isVisible()) {
-          child->paint(cs);
+          child->paintWidget(cs);
         } else {
           child->clear(cs);
         }
@@ -98,7 +98,7 @@ void Panel::paint(const Surface& s) {
         roo_display::RectUnionFilter filter(out, &ru);
         cs.set_out(&filter);
         if (child->isVisible()) {
-          child->paint(cs);
+          child->paintWidget(cs);
         } else {
           child->clear(cs);
         }

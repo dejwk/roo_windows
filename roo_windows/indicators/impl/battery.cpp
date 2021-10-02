@@ -19,7 +19,7 @@ BatteryIndicator::BatteryIndicator(Panel* parent, const Box& bounds,
       unknown_(false),
       level_(LEVEL_20) {}
 
-void BatteryIndicator::defaultPaint(const Surface& s) {
+void BatteryIndicator::paint(const Surface& s) {
   roo_display::MaterialIcon icon(*icons()[status()]);
   icon.color_mode().setColor(color_);
   roo_display::Tile tile(&icon, bounds(), roo_display::HAlign::Center(),

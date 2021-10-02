@@ -19,7 +19,7 @@ class Icon : public Widget {
       : Widget(parent, bounds),
         icon_(def) {}
 
-  void defaultPaint(const Surface& s) override {
+  void paint(const Surface& s) override {
     Color color = theme().color.defaultColor(s.bgcolor());
     if (isActivated() && usesHighlighterColor()) {
       color = theme().color.highlighterColor(s.bgcolor());

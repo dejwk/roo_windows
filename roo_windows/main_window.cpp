@@ -145,13 +145,13 @@ void MainWindow::paintWindow(const Surface& s) {
   roo_display::BackgroundFillOptimizer bg_optimizer(s.out(),
                                                     &background_fill_buffer_);
   news.set_out(&bg_optimizer);
-  paint(news);
+  paintWidget(news);
 }
 
-void MainWindow::paint(const Surface& s) {
+void MainWindow::paintWidget(const Surface& s) {
   if (isDirty()) {
     if (modal_window_ == nullptr) {
-      Panel::paint(s);
+      Panel::paintWidget(s);
     } else {
       // Exclude the modal window area from redraw.
       roo_display::Surface news(s);
@@ -160,7 +160,7 @@ void MainWindow::paint(const Surface& s) {
       roo_display::RectUnion ru(&exclusion, &exclusion + 1);
       roo_display::RectUnionFilter filter(s.out(), &ru);
       news.set_out(&filter);
-      Panel::paint(news);
+      Panel::paintWidget(news);
       news.set_out(out);
     }
   }
@@ -171,7 +171,7 @@ void MainWindow::paint(const Surface& s) {
       news.set_dy(s.dy() + modal_window_->parent_bounds().yMin());
       news.clipToExtents(modal_window_->bounds());
       news.set_bgcolor(roo_display::alphaBlend(s.bgcolor(), background()));
-      modal_window_->paint(news);
+      modal_window_->paintWidget(news);
     }
   }
 }

@@ -34,9 +34,9 @@ class NavigationRail : public Panel {
     destinations_.push_back(dest);
   }
 
-  void paint(const roo_display::Surface& s) override {
+  void paintWidget(const roo_display::Surface& s) override {
     bool repaint = needs_repaint_;
-    Panel::paint(s);
+    Panel::paintWidget(s);
     if (repaint) {
       // Draw the divider.
       const Box box = bounds();

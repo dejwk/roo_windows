@@ -12,7 +12,7 @@ class Checkbox : public Widget {
 
   void setState(State state);
 
-  void defaultPaint(const Surface& s) override;
+  void paint(const Surface& s) override;
 
   bool isClickable() const override { return true; }
 

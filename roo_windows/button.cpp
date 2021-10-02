@@ -243,7 +243,7 @@ Button::Button(Panel* parent, const Box& bounds, const MonoIcon* icon,
 // BBBBBB_C_C_C_C_DDDDDD
 // BBBBBB_C_C_C_C_DDDDDD
 
-void Button::defaultPaint(const Surface& s) {
+void Button::paint(const Surface& s) {
   if (style() == TEXT) {
     paintInterior(s, bounds(), *this);
     return;

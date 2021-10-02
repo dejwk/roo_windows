@@ -24,7 +24,7 @@ class IconWithCaption : public Widget {
                   const std::string& caption,
                   const roo_display::Font* font);
 
-  void defaultPaint(const Surface& s) override;
+  void paint(const Surface& s) override;
 
  private:
   const roo_display::MaterialIcon& icon_;
