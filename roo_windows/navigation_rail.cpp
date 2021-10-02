@@ -34,38 +34,36 @@ class Destination : public IconWithCaption {
   std::function<void()> activator_;
 };
 
+void Divider::paint(const Surface& s) {
+  if (!needs_repaint_) return;
+  const Box box = bounds();
+  Color color = theme().color.onBackground;
+  color.set_a(0x20);
+  s.drawObject(roo_display::FilledRect(box.xMax() - 1, box.yMin(),
+                                       box.xMax() - 1, box.yMax(), color));
+  color.set_a(0x10);
+  s.drawObject(roo_display::FilledRect(box.xMax(), box.yMin(), box.xMax(),
+                                       box.yMax(), color));
+}
+
 NavigationRail::NavigationRail(Panel* parent, Box bounds)
     : Panel(parent, bounds),
       alignment_(roo_display::VAlign::Top()),
       theme_(&DefaultTheme()),
-      active_(-1) {}
+      active_(-1),
+      divider_(this, Box(bounds.xMax() - 2, bounds.yMin(), bounds.xMax() - 1,
+                         bounds.yMax())) {}
 
 void NavigationRail::addDestination(const roo_display::MaterialIcon& icon,
                                     std::string text,
                                     std::function<void()> activator) {
   int16_t width = bounds().width();
   Box box(4, 4, width - 8, width - 8);
-  box = box.translate(0, children().size() * width);
+  box = box.translate(0, size() * width);
   Destination* dest =
       new Destination(this, box, icon, std::move(text), destinations_.size(),
                       std::move(activator));
   destinations_.push_back(dest);
-}
-
-void NavigationRail::paintWidget(const roo_display::Surface& s) {
-  bool repaint = needs_repaint_;
-  Panel::paintWidget(s);
-  if (repaint) {
-    // Draw the divider.
-    const Box box = bounds();
-    Color color = theme_->color.onBackground;
-    color.set_a(0x20);
-    s.drawObject(roo_display::FilledRect(box.xMax() - 2, box.yMin(),
-                                         box.xMax() - 2, box.yMax(), color));
-    color.set_a(0x10);
-    s.drawObject(roo_display::FilledRect(box.xMax() - 1, box.yMin(),
-                                         box.xMax() - 1, box.yMax(), color));
-  }
 }
 
 bool NavigationRail::setActive(int index) {

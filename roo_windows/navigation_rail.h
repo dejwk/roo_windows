@@ -10,6 +10,12 @@ namespace roo_windows {
 
 class Destination;
 
+class Divider : public Widget {
+ public:
+  using Widget::Widget;
+  void paint(const Surface& s) override;
+};
+
 class NavigationRail : public Panel {
  public:
   enum LabelVisibility { PERSISTED, SELECTED, UNLABELED };
@@ -19,8 +25,10 @@ class NavigationRail : public Panel {
   void addDestination(const roo_display::MaterialIcon& icon, std::string text,
                       std::function<void()> activator);
 
-  void paintWidget(const roo_display::Surface& s) override;
+  // Returns the number of destinations.
+  int size() const { return destinations_.size(); }
 
+  // Returns the index of active destination.
   int getActive() const { return active_; }
 
   bool setActive(int index);
@@ -34,6 +42,7 @@ class NavigationRail : public Panel {
   LabelVisibility label_visibility_;
   const Theme* theme_;
   int active_;
+  Divider divider_;
 
   std::vector<Destination*> destinations_;
 };
