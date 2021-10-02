@@ -10,9 +10,14 @@ namespace roo_windows {
 
 void Checkbox::onClicked() {
   state_ = isOn() ? OFF : ON;
-  invalidate(roo_display::Tile::InteriorBounds(
-      bounds(), Box(0, 0, 17, 17), HAlign::Center(), VAlign::Middle()));
+  markDirty();
   Widget::onClicked();
+}
+
+void Checkbox::setState(State state) {
+  if (state == state_) return;
+  state_ = state;
+  markDirty();
 }
 
 void Checkbox::defaultPaint(const Surface& s) {
@@ -23,10 +28,16 @@ void Checkbox::defaultPaint(const Surface& s) {
       : state() == OFF ? ic_filled_18_toggle_check_box_outline_blank()
                        : ic_filled_18_toggle_indeterminate_check_box();
   img.color_mode().setColor(color);
-  roo_display::Tile tile(&img, bounds(), roo_display::HAlign::Center(),
-                         roo_display::VAlign::Middle(),
-                         roo_display::color::Transparent, s.fill_mode());
-  s.drawObject(tile);
+  if (needs_repaint_) {
+    roo_display::Tile tile(&img, bounds(), roo_display::HAlign::Center(),
+                           roo_display::VAlign::Middle(),
+                           roo_display::color::Transparent, s.fill_mode());
+    s.drawObject(tile);
+  } else {
+    s.drawObject(
+        img, roo_display::HAlign::Center().GetOffset(bounds(), img.extents()),
+        roo_display::VAlign::Middle().GetOffset(bounds(), img.extents()));
+  }
 }
 
 }  // namespace roo_windows

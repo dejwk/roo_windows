@@ -10,6 +10,8 @@ class Checkbox : public Widget {
   Checkbox(Panel* parent, const Box& bounds, State state = OFF)
       : Widget(parent, bounds), state_(state) {}
 
+  void setState(State state);
+
   void defaultPaint(const Surface& s) override;
 
   bool isClickable() const override { return true; }

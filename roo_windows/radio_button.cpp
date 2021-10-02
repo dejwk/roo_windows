@@ -10,22 +10,33 @@ namespace roo_windows {
 
 void RadioButton::onClicked() {
   state_ = isOn() ? OFF : ON;
-  invalidate(roo_display::Tile::InteriorBounds(
-      bounds(), Box(0, 0, 17, 17), HAlign::Center(), VAlign::Middle()));
+  markDirty();
   Widget::onClicked();
+}
+
+void RadioButton::setState(State state) {
+  if (state == state_) return;
+  state_ = state;
+  markDirty();
 }
 
 void RadioButton::defaultPaint(const Surface& s) {
   Color color = isOn() ? theme().color.highlighterColor(s.bgcolor())
                        : theme().color.defaultColor(s.bgcolor());
   RleImage4bppxBiased<Alpha4, PrgMemResource> img =
-      state() == ON ? ic_filled_18_toggle_radio_button_checked()
-                    : ic_filled_18_toggle_radio_button_unchecked();
+      isOn() ? ic_filled_18_toggle_radio_button_checked()
+             : ic_filled_18_toggle_radio_button_unchecked();
   img.color_mode().setColor(color);
-  roo_display::Tile tile(&img, bounds(), roo_display::HAlign::Center(),
-                         roo_display::VAlign::Middle(),
-                         roo_display::color::Transparent, s.fill_mode());
-  s.drawObject(tile);
+  if (needs_repaint_) {
+    roo_display::Tile tile(&img, bounds(), roo_display::HAlign::Center(),
+                           roo_display::VAlign::Middle(),
+                           roo_display::color::Transparent, s.fill_mode());
+    s.drawObject(tile);
+  } else {
+    s.drawObject(
+        img, roo_display::HAlign::Center().GetOffset(bounds(), img.extents()),
+        roo_display::VAlign::Middle().GetOffset(bounds(), img.extents()));
+  }
 }
 
 }  // namespace roo_windows
