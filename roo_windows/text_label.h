@@ -2,15 +2,16 @@
 
 #include "roo_display/core/color.h"
 #include "roo_display/font/font.h"
+#include "roo_display/ui/text_label.h"
 #include "roo_display/ui/tile.h"
 
 namespace roo_windows {
 
 class TextLabel : public Widget {
  public:
-  TextLabel(Panel* parent, Box bounds, std::string value, const roo_display::Font& font,
-            roo_display::Color color, roo_display::HAlign halign,
-            roo_display::VAlign valign)
+  TextLabel(Panel* parent, Box bounds, std::string value,
+            const roo_display::Font& font, roo_display::Color color,
+            roo_display::HAlign halign, roo_display::VAlign valign)
       : Widget(parent, bounds),
         value_(std::move(value)),
         font_(font),
@@ -19,8 +20,9 @@ class TextLabel : public Widget {
         valign_(valign) {}
 
   void paint(const roo_display::Surface& s) override {
-    s.drawObject(roo_display::MakeTileOf(
-      roo_display::TextLabel(font_, value_, color_), bounds(), halign_, valign_));
+    s.drawObject(
+        roo_display::MakeTileOf(roo_display::TextLabel(font_, value_, color_),
+                                bounds(), halign_, valign_));
   }
 
   void setContent(std::string value) {
