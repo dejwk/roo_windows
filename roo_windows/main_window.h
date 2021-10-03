@@ -26,7 +26,6 @@ class MainWindow : public Panel {
   }
 
   void paintWindow(const Surface& s);
-  void paintWidget(const Surface& s) override;
 
   void enterModal(ModalWindow* modal_window);
   void exitModal(ModalWindow* modal_window);
