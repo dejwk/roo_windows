@@ -148,34 +148,6 @@ void MainWindow::paintWindow(const Surface& s) {
   paintWidget(news);
 }
 
-void MainWindow::paintWidget(const Surface& s) {
-  if (isDirty()) {
-    if (modal_window_ == nullptr) {
-      Panel::paintWidget(s);
-    } else {
-      // Exclude the modal window area from redraw.
-      roo_display::Surface news(s);
-      roo_display::DisplayOutput* out = news.out();
-      Box exclusion(modal_window_->parent_bounds());
-      roo_display::RectUnion ru(&exclusion, &exclusion + 1);
-      roo_display::RectUnionFilter filter(s.out(), &ru);
-      news.set_out(&filter);
-      Panel::paintWidget(news);
-      news.set_out(out);
-    }
-  }
-  if (modal_window_ != nullptr) {
-    if (modal_window_->isDirty()) {
-      Surface news = s;
-      news.set_dx(s.dx() + modal_window_->parent_bounds().xMin());
-      news.set_dy(s.dy() + modal_window_->parent_bounds().yMin());
-      news.clipToExtents(modal_window_->bounds());
-      news.set_bgcolor(roo_display::alphaBlend(s.bgcolor(), background()));
-      modal_window_->paintWidget(news);
-    }
-  }
-}
-
 void MainWindow::enterModal(ModalWindow* modal_window) {
   if (modal_window_ == modal_window) return;
   if (modal_window_ != nullptr) {

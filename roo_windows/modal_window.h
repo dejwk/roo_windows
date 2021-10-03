@@ -9,26 +9,20 @@ namespace roo_windows {
 
 class ModalWindow : public Panel {
  public:
-  ModalWindow(MainWindow* main_window, const Box& bounds)
-      : Panel(nullptr, bounds), main_window_(main_window) {}
-
-  MainWindow* getMainWindow() override { return main_window_; }
-  const MainWindow* getMainWindow() const override { return main_window_; }
-
-  void getAbsoluteBounds(Box* full, Box* visible) const override {
-    *full = parent_bounds();
-    *visible = parent_bounds();
-  }
+  ModalWindow(Panel* parent, const Box& bounds) : Panel(parent, bounds) {}
 
   void enter() {
-    invalidate();
-    main_window_->enterModal(this);
+    setVisible(true);
+    getMainWindow()->enterModal(this);
   }
 
-  void exit() { main_window_->exitModal(this); }
+  void exit() {
+    setVisible(false);
+    getMainWindow()->exitModal(this);
+  }
 
   void paintWidget(const roo_display::Surface& s) override {
-    if (needs_repaint_) {
+    if (isVisible() && needs_repaint_) {
       Color color = theme().color.defaultColor(s.bgcolor());
       color.set_a(0x20);
       s.drawObject(roo_display::FilledRect(0, 0, width() - 1, 1, color));
@@ -43,9 +37,6 @@ class ModalWindow : public Panel {
     news.clipToExtents(Box(2, 2, width() - 3, height() - 4));
     Panel::paintWidget(news);
   }
-
- private:
-  MainWindow* main_window_;
 };
 
 }  // namespace roo_windows
