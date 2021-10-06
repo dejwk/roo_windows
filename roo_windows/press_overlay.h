@@ -19,7 +19,19 @@ class PressOverlay : public roo_display::Rasterizable {
       int16_t dx = (*x++ - x_);
       int16_t dy = (*y++ - y_);
       int32_t delta = r_sq - (dx * dx + dy * dy);
-      *result++ = (delta < 0 ? bg_ : fg_);
+      roo_display::Color c = bg_;
+      if (delta <= 0) {
+        c = bg_;
+      } else if (r_ >= 1 && delta <= 2 * r_ - 1) {
+        c = averageColors(bg_, fg_, 96);
+      } else if (r_ >= 2 && delta <= 4 * r_ - 4) {
+        c = averageColors(bg_, fg_, 64);
+      } else if (r_ >= 3 && delta <= 6 * r_ - 9) {
+        c = averageColors(bg_, fg_, 32);
+      } else {
+        c = fg_;
+      }
+      *result++ = c;
     }
   }
 
