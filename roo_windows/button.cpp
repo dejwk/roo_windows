@@ -290,7 +290,7 @@ void Button::paint(const Surface& s) {
   // Left bottom.
   RasterAlpha4<const uint8_t * PROGMEM> lb(
       Box(0, full_height - spec.bottom_height - spec.left_height,
-          spec.left_width - 1, full_height - 1),
+          spec.left_width - 1, full_height - spec.bottom_height - 1),
       spec.data_left_bottom, Alpha4(outlineColor()));
   s.drawObject(lb);
 
@@ -318,7 +318,7 @@ void Button::paint(const Surface& s) {
   RasterAlpha4<const uint8_t * PROGMEM> rb(
       Box(full_width - spec.right_width,
           full_height - spec.bottom_height - spec.left_height, full_width - 1,
-          full_height - 1),
+          full_height - spec.bottom_height - 1),
       spec.data_right_bottom, Alpha4(outlineColor()));
   s.drawObject(rb);
 
