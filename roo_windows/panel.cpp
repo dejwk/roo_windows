@@ -37,10 +37,9 @@ void Panel::paintWidget(const Surface& s) {
   Surface cs = s;
   cs.set_bgcolor(roo_display::alphaBlend(cs.bgcolor(), bgcolor_));
   bool all_children_cleaned = true;
-  if (!isVisible() && needs_repaint_) {
+  if (!isVisible() && isInvalidated()) {
     cs.drawObject(roo_display::Clear());
-    dirty_ = false;
-    needs_repaint_ = false;
+    markClean();
     return;
   }
   if (isVisible()) {
@@ -53,10 +52,11 @@ void Panel::paintWidget(const Surface& s) {
     for (int i = 0; i < children_.size(); ++i) {
       const auto& child = children_[i];
       if (child->isVisible()) {
-        if (!child->isDirty()) { //} && s.fill_mode() == roo_display::FILL_MODE_VISIBLE) {
-          if (!needs_repaint_ ||
+        if (!child->isDirty()) {  //} && s.fill_mode() ==
+                                  // roo_display::FILL_MODE_VISIBLE) {
+          if (!isInvalidated() ||
               (!invalid_region_.empty() &&
-              !invalid_region_.intersects(child->parent_bounds()))) {
+               !invalid_region_.intersects(child->parent_bounds()))) {
             continue;
           }
         }
@@ -69,9 +69,9 @@ void Panel::paintWidget(const Surface& s) {
       cs.set_dy(dy);
       cs.set_clip_box(clip_box);
       if (cs.clipToExtents(child->parent_bounds()) != Box::CLIP_RESULT_EMPTY) {
-        // Need to update the child. Let's find other children that may partially
-        // overlap this one, and exclude their rects from the region to be
-        // updated.
+        // Need to update the child. Let's find other children that may
+        // partially overlap this one, and exclude their rects from the region
+        // to be updated.
         std::vector<Box> exclusions;
         int j = 0;
         if (child->isVisible()) {
@@ -115,7 +115,7 @@ void Panel::paintWidget(const Surface& s) {
   if (!invalid_region_.empty()) {
     cs.clipToExtents(invalid_region_);
   }
-  if (needs_repaint_) {
+  if (isInvalidated()) {
     std::vector<Box> exclusions;
     for (const auto& c : children_) {
       Box b = Box::intersect(cs.clip_box(),
@@ -133,8 +133,8 @@ void Panel::paintWidget(const Surface& s) {
       cs.set_out(out);
     }
   }
-  dirty_ = !all_children_cleaned;
-  needs_repaint_ = false;
+  markClean();
+  if (!all_children_cleaned) markDirty();
   invalid_region_ = Box(0, 0, -1, -1);
 }
 
@@ -184,8 +184,7 @@ void Panel::addChild(Widget* child) {
 }
 
 void Panel::invalidateDescending() {
-  needs_repaint_ = true;
-  dirty_ = true;
+  markInvalidated();
   invalid_region_ = Box(0, 0, -1, -1);
   for (auto& child : children_) {
     child->invalidateDescending();
@@ -193,8 +192,7 @@ void Panel::invalidateDescending() {
 }
 
 void Panel::invalidateDescending(const Box& box) {
-  needs_repaint_ = true;
-  dirty_ = true;
+  markInvalidated();
   if (invalid_region_.empty()) {
     invalid_region_ = box;
   } else {

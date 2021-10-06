@@ -21,11 +21,10 @@ static const long int kClickDurationThresholdMs = 200;
 static const long int kClickStickinessRadius = 40;
 
 Widget::Widget(Panel* parent, const Box& parent_bounds)
-    : dirty_(true),
-      needs_repaint_(true),
-      parent_(parent),
+    : parent_(parent),
       parent_bounds_(parent_bounds),
       state_(kWidgetEnabled),
+      redraw_status_(kDirty | kInvalidated),
       on_clicked_([] {}) {
   if (parent != nullptr) {
     parent->addChild(this);
@@ -48,7 +47,7 @@ Color Widget::background() const { return parent_->background(); }
 const Theme& Widget::theme() const { return parent_->theme(); }
 
 void Widget::markDirty() {
-  dirty_ = true;
+  redraw_status_ |= kDirty;
   if (parent_ != nullptr) {
     parent_->markDirty();
   }
@@ -90,7 +89,7 @@ void Widget::setActivated(bool activated) {
   if (!isVisible()) return;
   markDirty();
   if (useOverlayOnActivation()) {
-    needs_repaint_ = true;
+    markInvalidated();
   }
 }
 
@@ -185,22 +184,20 @@ inline int16_t animation_radius(const Box& bounds, int16_t x, int16_t y,
 
 void Widget::paintWidget(const Surface& s) {
   if (!isVisible()) {
-    if (needs_repaint_) {
+    if (isInvalidated()) {
       s.drawObject(roo_display::Clear());
     }
-    dirty_ = false;
-    needs_repaint_ = false;
+    markClean();
     return;
   }
-  if (state_ == kWidgetEnabled && !needs_repaint_) {
+  if (state_ == kWidgetEnabled && !isInvalidated()) {
     // Fast path.
     paint(s);
-    needs_repaint_ = false;
-    dirty_ = false;
+    markClean();
     return;
   }
   Surface news(s);
-  if (needs_repaint_) {
+  if (isInvalidated()) {
     news.set_fill_mode(roo_display::FILL_MODE_RECTANGLE);
   }
   if (isEnabled()) {
@@ -261,8 +258,7 @@ void Widget::paintWidget(const Surface& s) {
     news.set_out(&disablement_filter);
     paint(news);
   }
-  needs_repaint_ = false;
-  dirty_ = false;
+  markClean();
 }
 
 bool Widget::onTouch(const TouchEvent& event) {

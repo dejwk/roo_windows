@@ -48,6 +48,9 @@ static const uint16_t kWidgetClicked = 0x1000;
 
 static const uint16_t kWidgetHidden = 0x8000;
 
+static const uint8_t kDirty = 0x01;
+static const uint8_t kInvalidated = 0x02;
+
 class TouchEvent {
  public:
   enum Type { PRESSED, RELEASED, MOVED, DRAGGED, SWIPED };
@@ -176,28 +179,32 @@ class Widget {
 
   const Panel* parent() const { return parent_; }
   Panel* parent() { return parent_; }
-  bool isDirty() const { return dirty_; }
-  bool isInvalidated() const { return needs_repaint_; }
+
+  bool isDirty() const {
+    return (redraw_status_ & (kDirty | kInvalidated)) != 0;
+  }
+
+  bool isInvalidated() const { return (redraw_status_ & kInvalidated) != 0; }
 
   void updateBounds(const Box& bounds);
 
  protected:
-  virtual void invalidateDescending() { needs_repaint_ = true; }
-  virtual void invalidateDescending(const Box& box) { needs_repaint_ = true; }
+  virtual void invalidateDescending() { redraw_status_ |= kInvalidated; }
+
+  virtual void invalidateDescending(const Box& box) {
+    redraw_status_ |= kInvalidated;
+  }
 
  private:
   friend class Panel;
 
-  // The widget wants its paint() method to be called.
-  bool dirty_;
-
-  // The entire widget rectangle needs to be redrawn.
-  bool needs_repaint_;
+  void markClean() { redraw_status_ &= ~(kDirty | kInvalidated); }
+  void markInvalidated() { redraw_status_ |= (kDirty | kInvalidated); }
 
   Panel* parent_;
   Box parent_bounds_;
   uint16_t state_;
-
+  uint8_t redraw_status_;  // kDirty | kInvalidated.
   std::function<void()> on_clicked_;
 };
 
