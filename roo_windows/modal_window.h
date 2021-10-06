@@ -22,7 +22,7 @@ class ModalWindow : public Panel {
   }
 
   void paintWidget(const roo_display::Surface& s) override {
-    if (isVisible() && needs_repaint_) {
+    if (isVisible() && isInvalidated()) {
       Color color = theme().color.defaultColor(s.bgcolor());
       color.set_a(0x20);
       s.drawObject(roo_display::FilledRect(0, 0, width() - 1, 1, color));

@@ -32,7 +32,7 @@ class ToggleButtons : public Panel {
   }
 
   void paintWidget(const roo_display::Surface& s) override {
-    bool repaint = needs_repaint_;
+    bool repaint = isInvalidated();
     Panel::paintWidget(s);
     if (repaint) {
       Color border = theme().color.defaultColor(s.bgcolor());

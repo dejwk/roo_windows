@@ -35,7 +35,7 @@ class Destination : public IconWithCaption {
 };
 
 void Divider::paint(const Surface& s) {
-  if (!needs_repaint_) return;
+  if (!isInvalidated()) return;
   const Box box = bounds();
   Color color = theme().color.onBackground;
   color.set_a(0x20);

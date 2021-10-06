@@ -27,7 +27,7 @@ void RadioButton::paint(const Surface& s) {
       isOn() ? ic_filled_18_toggle_radio_button_checked()
              : ic_filled_18_toggle_radio_button_unchecked();
   img.color_mode().setColor(color);
-  if (needs_repaint_) {
+  if (isInvalidated()) {
     roo_display::Tile tile(&img, bounds(), roo_display::HAlign::Center(),
                            roo_display::VAlign::Middle(),
                            roo_display::color::Transparent, s.fill_mode());

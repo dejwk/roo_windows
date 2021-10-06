@@ -182,17 +182,17 @@ class Widget {
   void updateBounds(const Box& bounds);
 
  protected:
-  // The widget wants its paint() method to be called.
-  bool dirty_;
-
-  // The entire widget rectangle needs to be redrawn.
-  bool needs_repaint_;
-
   virtual void invalidateDescending() { needs_repaint_ = true; }
   virtual void invalidateDescending(const Box& box) { needs_repaint_ = true; }
 
  private:
   friend class Panel;
+
+  // The widget wants its paint() method to be called.
+  bool dirty_;
+
+  // The entire widget rectangle needs to be redrawn.
+  bool needs_repaint_;
 
   Panel* parent_;
   Box parent_bounds_;

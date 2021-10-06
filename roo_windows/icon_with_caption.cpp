@@ -19,7 +19,7 @@ void IconWithCaption::paint(const Surface& s) {
   if (isActivated() && usesHighlighterColor()) {
     color = theme().color.highlighterColor(s.bgcolor());
   }
-  if (s.fill_mode() == FILL_MODE_RECTANGLE && needs_repaint_ &&
+  if (s.fill_mode() == FILL_MODE_RECTANGLE && isInvalidated() &&
       hi_border_ > 0) {
     s.drawObject(FilledRect(bounds().xMin(), bounds().yMin(), bounds().xMax(),
                             bounds().yMin() + hi_border_ - 1,
@@ -39,7 +39,7 @@ void IconWithCaption::paint(const Surface& s) {
       TextLabel(*font_, caption_, color), caption_bounds, HAlign::Center(),
       VAlign::None(caption_bounds.yMin() + font_->metrics().ascent())));
 
-  if (s.fill_mode() == FILL_MODE_RECTANGLE && needs_repaint_ &&
+  if (s.fill_mode() == FILL_MODE_RECTANGLE && isInvalidated() &&
       lo_border_ > 0) {
     s.drawObject(FilledRect(bounds().xMin(), bounds().yMax() - lo_border_ + 1,
                             bounds().xMax(), bounds().yMax(),

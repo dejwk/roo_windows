@@ -28,7 +28,7 @@ void Checkbox::paint(const Surface& s) {
       : state() == OFF ? ic_filled_18_toggle_check_box_outline_blank()
                        : ic_filled_18_toggle_indeterminate_check_box();
   img.color_mode().setColor(color);
-  if (needs_repaint_) {
+  if (isInvalidated()) {
     roo_display::Tile tile(&img, bounds(), roo_display::HAlign::Center(),
                            roo_display::VAlign::Middle(),
                            roo_display::color::Transparent, s.fill_mode());
