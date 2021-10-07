@@ -204,36 +204,35 @@ void Widget::paintWidget(const Surface& s) {
     Color overlay = getOverlayColor(*this, s);
     // If click_animation is true, we need to redraw the overlay.
     bool click_animation = ((state_ & kWidgetClicking) != 0);
-    float click_progress;
-    int16_t click_x, click_y;
-    // If click_animation_continues is true, we need to invalidate ourselves
-    // after redrawing, so that we receive a subsequent paint request shortly.
-    bool click_animation_continues =
-        click_animation &&
-        getMainWindow()->getClick(this, &click_progress, &click_x, &click_y) &&
-        click_progress < 1.0;
-    if (!click_animation_continues) {
-      state_ &= ~kWidgetClicking;
-    }
-    if (click_animation_continues) {
-      // Need to draw the circular overlay. Combine the regular rect overlay
-      // into it.
-      Color animation_color = getClickAnimationColor(*this, s);
-      PressOverlay press_overlay(
-          click_x, click_y,
-          animation_radius(bounds(), click_x - s.dx(), click_y - s.dy(),
-                           click_progress),
-          alphaBlend(overlay, animation_color), overlay);
-      roo_display::ForegroundFilter filter(s.out(), &press_overlay);
-      news.set_out(&filter);
-      paint(news);
-      // Do not clear dirtiness.
-      invalidate();
-      return;
-    }
     if (click_animation) {
+      float click_progress;
+      int16_t click_x, click_y;
+      // If click_animation_continues is true, we need to invalidate ourselves
+      // after redrawing, so that we receive a subsequent paint request shortly.
+      bool click_animation_continues =
+          click_animation &&
+          getMainWindow()->getClick(this, &click_progress, &click_x,
+                                    &click_y) &&
+          click_progress < 1.0;
+      if (click_animation_continues) {
+        // Need to draw the circular overlay. Combine the regular rect overlay
+        // into it.
+        Color animation_color = getClickAnimationColor(*this, s);
+        PressOverlay press_overlay(
+            click_x, click_y,
+            animation_radius(bounds(), click_x - s.dx(), click_y - s.dy(),
+                             click_progress),
+            alphaBlend(overlay, animation_color), overlay);
+        roo_display::ForegroundFilter filter(s.out(), &press_overlay);
+        news.set_out(&filter);
+        paint(news);
+        // Do not clear dirtiness.
+        invalidate();
+        return;
+      }
       // Full rect click overlay - just apply on top of the overlay as
       // calculated so far.
+      state_ &= ~kWidgetClicking;
       Color animation_color = getClickAnimationColor(*this, s);
       overlay = alphaBlend(overlay, animation_color);
     }
