@@ -28,18 +28,22 @@ Panel::Panel(Panel* parent, const Box& bounds, const Theme& theme,
     : Widget(parent, bounds),
       theme_(theme),
       bgcolor_(bgcolor),
-      invalid_region_(Box(0, 0, -1, -1)) {}
+      invalid_region_(Box(0, 0, bounds.width() - 1, bounds.height() - 1)) {}
 
 void Panel::paintWidget(const Surface& s) {
+  bool dirty = isDirty();
+  bool invalidated = isInvalidated();
+  Box invalid_region = invalid_region_;
+  markClean();
+  invalid_region_ = Box(0, 0, -1, -1);
+
   // Even if we don't seem to be dirty, trust the parent: perhaps
   // the parent is getting redrawn (e.g. made visible) in which
   // case the dirties are not propagated to the children.
   Surface cs = s;
   cs.set_bgcolor(roo_display::alphaBlend(cs.bgcolor(), bgcolor_));
-  bool all_children_cleaned = true;
-  if (!isVisible() && isInvalidated()) {
+  if (!isVisible() && invalidated) {
     cs.drawObject(roo_display::Clear());
-    markClean();
     return;
   }
   if (isVisible()) {
@@ -54,9 +58,9 @@ void Panel::paintWidget(const Surface& s) {
       if (child->isVisible()) {
         if (!child->isDirty()) {  //} && s.fill_mode() ==
                                   // roo_display::FILL_MODE_VISIBLE) {
-          if (!isInvalidated() ||
-              (!invalid_region_.empty() &&
-               !invalid_region_.intersects(child->parent_bounds()))) {
+          if (!invalidated ||
+              (!invalid_region.empty() &&
+               !invalid_region.intersects(child->parent_bounds()))) {
             continue;
           }
         }
@@ -103,7 +107,6 @@ void Panel::paintWidget(const Surface& s) {
           child->paintWidget(cs);
           cs.set_out(out);
         }
-        all_children_cleaned &= (!child->isVisible() || !child->isDirty());
       }
     }
     cs.set_dx(dx);
@@ -112,10 +115,10 @@ void Panel::paintWidget(const Surface& s) {
   }
   // Note: we apply the invalid region clipping only here, to minimize the ara
   // that gets re-cleared.
-  if (!invalid_region_.empty()) {
-    cs.clipToExtents(invalid_region_);
+  if (!invalid_region.empty()) {
+    cs.clipToExtents(invalid_region);
   }
-  if (isInvalidated()) {
+  if (invalidated) {
     std::vector<Box> exclusions;
     for (const auto& c : children_) {
       Box b = Box::intersect(cs.clip_box(),
@@ -123,7 +126,7 @@ void Panel::paintWidget(const Surface& s) {
       if (!b.empty()) exclusions.push_back(b);
     }
     if (exclusions.empty()) {
-      cs.drawObject(roo_display::Clear());
+      paint(cs);
     } else {
       roo_display::DisplayOutput* out = cs.out();
       roo_display::RectUnion ru(&*exclusions.begin(), &*exclusions.end());
@@ -133,9 +136,6 @@ void Panel::paintWidget(const Surface& s) {
       cs.set_out(out);
     }
   }
-  markClean();
-  if (!all_children_cleaned) markDirty();
-  invalid_region_ = Box(0, 0, -1, -1);
 }
 
 void Panel::paint(const Surface& s) { s.drawObject(roo_display::Clear()); }
@@ -182,11 +182,26 @@ bool Panel::onTouch(const TouchEvent& event) {
 void Panel::addChild(Widget* child) {
   children_.emplace_back(std::unique_ptr<Widget>(child));
   markDirty();
+  child->invalidateInterior();
+}
+
+// Must propagate the 'dirty' flag even if the box comes down empty. This is
+// so that paint can clear all the dirty flags.
+void Panel::propagateDirty(const Widget* child, const Box& box) {
+  if (isDirty() && invalid_region_.contains(box)) {
+    // Already fully invalidated, thus dirty.
+    return;
+  }
+  Box clipped(0, 0, -1, -1);
+  if (isVisible()) {
+    clipped = Box::intersect(box, bounds());
+  }
+  markDirty(clipped);
 }
 
 void Panel::invalidateDescending() {
   markInvalidated();
-  invalid_region_ = Box(0, 0, -1, -1);
+  invalid_region_ = bounds();
   for (auto& child : children_) {
     child->invalidateDescending();
   }
@@ -206,6 +221,10 @@ void Panel::invalidateDescending(const Box& box) {
                         -child->parent_bounds().yMin());
     child->invalidateDescending(box);
   }
+}
+
+void Panel::childHidden(const Widget* child) {
+  invalidateInterior(parent_bounds_);
 }
 
 }  // namespace roo_windows

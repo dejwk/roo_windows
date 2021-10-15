@@ -45,12 +45,33 @@ class ScrollablePanel : public Panel {
   void setOffset(int16_t dx, int16_t dy);
 
   void paintWidget(const Surface& s) override;
+
   void getAbsoluteBounds(Box* full, Box* visible) const override;
 
   bool onTouch(const TouchEvent& event) override;
 
   void invalidateDescending(const Box& box) override {
-    Panel::invalidateDescending(box.translate(-dx_, -dy_));
+    markInvalidated();
+    if (invalid_region_.empty()) {
+      invalid_region_ = box;
+    } else {
+      invalid_region_ = Box::extent(invalid_region_, box);
+    }
+    for (auto& child : children_) {
+      Box cb = Box::intersect(invalid_region_, child->parent_bounds().translate(dx_, dy_));
+      if (cb.empty()) continue;
+      cb = cb.translate(-dx_ - child->parent_bounds().xMin(),
+                        -dy_ - child->parent_bounds().yMin());
+      child->invalidateDescending(cb);
+    }
+  }
+
+  void childHidden(const Widget* child) override {
+    invalidateInterior(parent_bounds_.translate(dx_, dy_));
+  }
+
+  void propagateDirty(const Widget* child, const Box& box) override {
+    Panel::propagateDirty(child, box.translate(dx_, dy_));
   }
 
  private:

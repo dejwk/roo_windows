@@ -86,8 +86,12 @@ class Widget {
   virtual ~Widget() {}
 
   // Causes the widget to request paint(). The widget decides which pixels
-  // need re-drawing (it will receive FILL_MODE_VISIBLE).
-  void markDirty();
+  // need re-drawing.
+  void markDirty() { markDirty(bounds()); }
+
+  // Causes the widget to request paint(). The widget decides which pixels
+  // need re-drawing. Hints which pixels need to be redrawn.
+  void markDirty(const Box& bounds);
 
   // Causes the widget to request paint(), replacing the entire rectangle area.
   void invalidateInterior();
@@ -101,6 +105,7 @@ class Widget {
   int16_t yOffset() const { return parent_bounds_.yMin(); }
 
   Box bounds() const { return Box(0, 0, width() - 1, height() - 1); }
+
   const Theme& theme() const;
 
   const Box& parent_bounds() const { return parent_bounds_; }
@@ -201,6 +206,7 @@ class Widget {
 
  private:
   friend class Panel;
+  friend class ScrollablePanel;
 
   void markClean() { redraw_status_ &= ~(kDirty | kInvalidated); }
   void markInvalidated() { redraw_status_ |= (kDirty | kInvalidated); }

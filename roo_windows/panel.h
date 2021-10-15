@@ -43,8 +43,12 @@ class Panel : public Widget {
   void invalidateDescending() override;
   void invalidateDescending(const Box& box) override;
 
+  virtual void propagateDirty(const Widget* child, const Box& box);
+  virtual void childHidden(const Widget* child);
+
  private:
   friend class Widget;
+  friend class ScrollablePanel;
 
   void addChild(Widget* child);
 

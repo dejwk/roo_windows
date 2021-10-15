@@ -46,10 +46,10 @@ Color Widget::background() const { return roo_display::color::Transparent; }
 
 const Theme& Widget::theme() const { return parent_->theme(); }
 
-void Widget::markDirty() {
+void Widget::markDirty(const Box& bounds) {
   redraw_status_ |= kDirty;
   if (parent_ != nullptr) {
-    parent_->markDirty();
+    parent_->propagateDirty(this, bounds.translate(xOffset(), yOffset()));
   }
 }
 
@@ -60,13 +60,16 @@ void Widget::invalidateInterior() {
 
 void Widget::invalidateInterior(const Box& box) {
   invalidateDescending(box);
-  markDirty();
+  markDirty(box);
 }
 
 void Widget::setVisible(bool visible) {
   if (visible == isVisible()) return;
   state_ ^= kWidgetHidden;
   invalidateInterior();
+  if (!isVisible()) {
+    parent()->childHidden(this);
+  }
 }
 
 void Widget::setEnabled(bool enabled) {
@@ -89,7 +92,7 @@ void Widget::setActivated(bool activated) {
   if (!isVisible()) return;
   markDirty();
   if (useOverlayOnActivation()) {
-    markInvalidated();
+    invalidateInterior();
   }
 }
 
@@ -111,11 +114,13 @@ void Widget::clearClicked() { state_ &= ~kWidgetClicked; }
 
 void Widget::moveTo(const Box& parent_bounds) {
   if (parent_bounds == parent_bounds_) return;
-  Box affected = Box::extent(parent_bounds, parent_bounds_);
-  parent_bounds_ = parent_bounds;
-  if (isVisible()) {
-    parent_->invalidateInterior(affected);
+  if (!isVisible()) {
+    parent_bounds_ = parent_bounds;
+    return;
   }
+  setVisible(false);
+  parent_bounds_ = parent_bounds;
+  setVisible(true);
 }
 
 uint8_t Widget::getOverlayOpacity() const {

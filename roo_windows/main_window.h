@@ -44,6 +44,9 @@ class MainWindow : public Panel {
   bool getClick(const Widget* target, float* progress, int16_t* x_center,
                 int16_t* y_center) const;
 
+ protected:
+  void propagateDirty(const Widget* child, const Box& box) override;
+
  private:
   void handleTouch(const TouchEvent& event);
 
@@ -58,6 +61,10 @@ class MainWindow : public Panel {
   Widget* deferred_click_;
   unsigned long click_anim_start_millis_;
   int16_t click_anim_x_, click_anim_y_;
+
+  // Maintains the area that encapsulates all content that needs to be
+  // (re)drawn.
+  Box redraw_bounds_;
 
   ModalWindow* modal_window_;
 

@@ -34,6 +34,7 @@ MainWindow::MainWindow(Display* display, const Box& bounds)
       touch_down_(false),
       click_anim_target_(nullptr),
       deferred_click_(nullptr),
+      redraw_bounds_(bounds),
       modal_window_(nullptr),
       background_fill_buffer_(display->width(), display->height()) {
   roo_display::internal::ColorSet color_set;
@@ -151,7 +152,10 @@ bool MainWindow::getClick(const Widget* target, float* progress,
 }
 
 void MainWindow::paintWindow(const Surface& s) {
+  if (!isDirty()) return;
   Surface news = s;
+  news.clipToExtents(redraw_bounds_);
+  redraw_bounds_ = Box(0, 0, -1, -1);
   news.set_fill_mode(roo_display::FILL_MODE_RECTANGLE);
   roo_display::BackgroundFillOptimizer bg_optimizer(s.out(),
                                                     &background_fill_buffer_);
@@ -189,6 +193,21 @@ void MainWindow::handleTouch(const TouchEvent& event) {
     onTouch(shifted);
   } else {
     onTouch(event);
+  }
+}
+
+void MainWindow::propagateDirty(const Widget* child, const Box& box) {
+  Box clipped(0, 0, -1, -1);
+  if (isVisible()) {
+    clipped = Box::intersect(box, bounds());
+  }
+  markDirty(clipped);
+  if (!clipped.empty()) {
+    if (redraw_bounds_.empty()) {
+      redraw_bounds_ = clipped;
+    } else {
+      redraw_bounds_ = Box::extent(redraw_bounds_, clipped);
+    }
   }
 }
 

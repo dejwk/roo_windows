@@ -81,6 +81,7 @@ void ScrollablePanel::paintWidget(const Surface& s) {
   Surface news = s;
   news.set_dx(news.dx() + dx_);
   news.set_dy(news.dy() + dy_);
+  invalid_region_ = invalid_region_.translate(-dx_, -dy_);
   Panel::paintWidget(news);
   if (scroll_in_progress) {
     // TODO: use a scheduler to cap the frequency of invalidation,
