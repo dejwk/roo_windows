@@ -97,6 +97,9 @@ class Widget {
 
   int16_t width() const { return parent_bounds_.width(); }
   int16_t height() const { return parent_bounds_.height(); }
+  int16_t xOffset() const { return parent_bounds_.xMin(); }
+  int16_t yOffset() const { return parent_bounds_.yMin(); }
+
   Box bounds() const { return Box(0, 0, width() - 1, height() - 1); }
   const Theme& theme() const;
 

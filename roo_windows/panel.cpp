@@ -89,8 +89,8 @@ void Panel::paintWidget(const Surface& s) {
             exclusions.push_back(intersect);
           }
         }
-        cs.set_dx(cs.dx() + child->parent_bounds().xMin());
-        cs.set_dy(cs.dy() + child->parent_bounds().yMin());
+        cs.set_dx(cs.dx() + child->xOffset());
+        cs.set_dy(cs.dy() + child->yOffset());
         if (exclusions.empty()) {
           // Nothing to cover; just paint the entire area.
           child->paintWidget(cs);
@@ -138,16 +138,13 @@ void Panel::paintWidget(const Surface& s) {
   invalid_region_ = Box(0, 0, -1, -1);
 }
 
-void Panel::paint(const Surface& s) {
-  s.drawObject(roo_display::Clear());
-}
+void Panel::paint(const Surface& s) { s.drawObject(roo_display::Clear()); }
 
 bool onTouchChild(const TouchEvent& event, Widget* child) {
-  TouchEvent shifted(event.type(), event.duration(),
-                     event.startX() - child->parent_bounds().xMin(),
-                     event.startY() - child->parent_bounds().yMin(),
-                     event.x() - child->parent_bounds().xMin(),
-                     event.y() - child->parent_bounds().yMin());
+  TouchEvent shifted(
+      event.type(), event.duration(), event.startX() - child->xOffset(),
+      event.startY() - child->yOffset(), event.x() - child->xOffset(),
+      event.y() - child->yOffset());
   return child->onTouch(shifted);
 }
 

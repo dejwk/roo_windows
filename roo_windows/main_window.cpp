@@ -182,11 +182,11 @@ void MainWindow::handleTouch(const TouchEvent& event) {
                        event.startY() - bounds.yMin(),
                        event.x() - bounds.xMin(), event.y() - bounds.yMin());
     modal_window_->onTouch(shifted);
-  } else if (parent_bounds().xMin() != 0 || parent_bounds().yMin() != 0) {
-    TouchEvent shifted(
-        event.type(), event.duration(), event.startX() - parent_bounds().xMin(),
-        event.startY() - parent_bounds().yMin(),
-        event.x() - parent_bounds().xMin(), event.y() - parent_bounds().yMin());
+  } else if (xOffset() != 0 || yOffset() != 0) {
+    TouchEvent shifted(event.type(), event.duration(),
+                       event.startX() - xOffset(),
+                       event.startY() - yOffset(),
+                       event.x() - xOffset(), event.y() - yOffset());
     onTouch(shifted);
   } else {
     onTouch(event);
