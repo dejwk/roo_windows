@@ -31,24 +31,20 @@ class ToggleButtons : public Panel {
     return btn;
   }
 
-  void paintWidget(const roo_display::Surface& s) override {
-    bool repaint = isInvalidated();
-    Panel::paintWidget(s);
-    if (repaint) {
-      Color border = theme().color.defaultColor(s.bgcolor());
-      border.set_a(0x30);
-      s.drawObject(
-          roo_display::Line(0, 0, 0, 0, roo_display::color::Transparent));
-      s.drawObject(roo_display::Line(0, 1, 0, height() - 2, border));
-      s.drawObject(roo_display::Line(0, height() - 1, 0, height() - 1,
-                                     roo_display::color::Transparent));
-      int16_t x = width() - 1;
-      s.drawObject(
-          roo_display::Line(x, 0, x, 0, roo_display::color::Transparent));
-      s.drawObject(roo_display::Line(x, 1, x, height() - 2, border));
-      s.drawObject(roo_display::Line(x, height() - 1, x, height() - 1,
-                                     roo_display::color::Transparent));
-    }
+  void paint(const roo_display::Surface& s) override {
+    Color border = theme().color.defaultColor(s.bgcolor());
+    border.set_a(0x30);
+    s.drawObject(
+        roo_display::Line(0, 0, 0, 0, roo_display::color::Transparent));
+    s.drawObject(roo_display::Line(0, 1, 0, height() - 2, border));
+    s.drawObject(roo_display::Line(0, height() - 1, 0, height() - 1,
+                                    roo_display::color::Transparent));
+    int16_t x = width() - 1;
+    s.drawObject(
+        roo_display::Line(x, 0, x, 0, roo_display::color::Transparent));
+    s.drawObject(roo_display::Line(x, 1, x, height() - 2, border));
+    s.drawObject(roo_display::Line(x, height() - 1, x, height() - 1,
+                                    roo_display::color::Transparent));
   }
 
   int getActive() const { return active_; }

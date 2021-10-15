@@ -129,13 +129,17 @@ void Panel::paintWidget(const Surface& s) {
       roo_display::RectUnion ru(&*exclusions.begin(), &*exclusions.end());
       roo_display::RectUnionFilter filter(s.out(), &ru);
       cs.set_out(&filter);
-      cs.drawObject(roo_display::Clear());
+      paint(cs);
       cs.set_out(out);
     }
   }
   markClean();
   if (!all_children_cleaned) markDirty();
   invalid_region_ = Box(0, 0, -1, -1);
+}
+
+void Panel::paint(const Surface& s) {
+  s.drawObject(roo_display::Clear());
 }
 
 bool onTouchChild(const TouchEvent& event, Widget* child) {
