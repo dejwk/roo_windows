@@ -189,10 +189,11 @@ class Widget {
   void updateBounds(const Box& bounds);
 
  protected:
-  virtual void invalidateDescending() { redraw_status_ |= kInvalidated; }
+  virtual void invalidateDescending() { markInvalidated(); }
 
   virtual void invalidateDescending(const Box& box) {
-    redraw_status_ |= kInvalidated;
+    if (!box.intersects(bounds())) return;
+    markInvalidated();
   }
 
  private:
