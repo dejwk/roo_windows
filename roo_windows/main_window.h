@@ -32,6 +32,7 @@ class MainWindow : public Panel {
 
   bool isClickAnimating() const;
   void startClickAnimation(Widget* target);
+  void clickWidget(Widget* target) { deferred_click_ = target; }
 
   // Can be called by a widget that is click-animating, from its paint() method.
   // Returns true if the animation is still currently in progress; false
@@ -47,12 +48,14 @@ class MainWindow : public Panel {
   void handleTouch(const TouchEvent& event);
 
   roo_display::Display* display_;
+
   int16_t touch_x_, touch_y_, last_x_, last_y_;
   unsigned long touch_time_ms_, last_time_ms_;
   int16_t swipe_dx_, swipe_dy_;
   bool touch_down_;
 
   Widget* click_anim_target_;
+  Widget* deferred_click_;
   unsigned long click_anim_start_millis_;
   int16_t click_anim_x_, click_anim_y_;
 

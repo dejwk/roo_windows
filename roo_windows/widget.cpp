@@ -282,7 +282,7 @@ bool Widget::onTouch(const TouchEvent& event) {
           // Defer the delivery of the event until the animation finishes.
           state_ |= kWidgetClicked;
         } else {
-          onClicked();
+          getMainWindow()->clickWidget(this);
         }
         return true;
       }

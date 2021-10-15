@@ -33,6 +33,7 @@ MainWindow::MainWindow(Display* display, const Box& bounds)
       display_(display),
       touch_down_(false),
       click_anim_target_(nullptr),
+      deferred_click_(nullptr),
       modal_window_(nullptr),
       background_fill_buffer_(display->width(), display->height()) {
   roo_display::internal::ColorSet color_set;
@@ -68,7 +69,32 @@ void MainWindow::tick() {
   bool down = display_->getTouch(&x, &y);
   unsigned long now = millis();
 
-  if (!touch_down_ && down) {
+  // If an in-progress click animation is expired, clear the animation target so
+  // that other widgets can be clicked, and possibly deliver the delayed click
+  // notification. This is done after the overall redraw, so that the click
+  // animation target has a chance to fully redraw itself after the click
+  // animation complated but before the click notification is delivered.
+  if (click_anim_target_ != nullptr &&
+      now - click_anim_start_millis_ >= kClickAnimationMs &&
+      !click_anim_target_->isClicking()) {
+    if (click_anim_target_->isClicked()) {
+      click_anim_target_->clearClicked();
+      clickWidget(click_anim_target_);
+    }
+    click_anim_target_ = nullptr;
+  }
+
+  if (deferred_click_ != nullptr) {
+    // We want to delier click only after the widget has been released and is no
+    // longer animating. This way, the visual updates of the widget and its
+    // resulting actions are distinct. This makes the widget feel more snappy,
+    // and reduces the redraw area (by splitting the update into smaller
+    // updates).
+    if (!deferred_click_->isPressed() && !deferred_click_->isDirty()) {
+      deferred_click_->onClicked();
+      deferred_click_ = nullptr;
+    }
+  } else if (!touch_down_ && down) {
     // Pressed.
     touch_down_ = true;
     last_x_ = touch_x_ = x;
@@ -99,21 +125,6 @@ void MainWindow::tick() {
 
   roo_display::DrawingContext dc(display_);
   dc.draw(Adapter(this));
-
-  // If an in-progress click animation is expired, clear the animation target so
-  // that other widgets can be clicked, and possibly deliver the delayed click
-  // notification. This is done after the overall redraw, so that the click
-  // animation target has a chance to fully redraw itself after the click
-  // animation complated but before the click notification is delivered.
-  if (click_anim_target_ != nullptr &&
-      now - click_anim_start_millis_ >= kClickAnimationMs &&
-      !click_anim_target_->isClicking()) {
-    if (click_anim_target_->isClicked()) {
-      click_anim_target_->clearClicked();
-      click_anim_target_->onClicked();
-    }
-    click_anim_target_ = nullptr;
-  }
 }
 
 bool MainWindow::isClickAnimating() const {
