@@ -184,8 +184,7 @@ void MainWindow::handleTouch(const TouchEvent& event) {
     modal_window_->onTouch(shifted);
   } else if (xOffset() != 0 || yOffset() != 0) {
     TouchEvent shifted(event.type(), event.duration(),
-                       event.startX() - xOffset(),
-                       event.startY() - yOffset(),
+                       event.startX() - xOffset(), event.startY() - yOffset(),
                        event.x() - xOffset(), event.y() - yOffset());
     onTouch(shifted);
   } else {
