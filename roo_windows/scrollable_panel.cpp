@@ -13,7 +13,7 @@ void ScrollablePanel::setOffset(int16_t dx, int16_t dy) {
   if (dy < parent_bounds().height() - height_) {
     dy = parent_bounds().height() - height_;
   }
-  if (dx != dx_ || dy_ != dy) invalidate();
+  if (dx != dx_ || dy_ != dy) invalidateInterior();
   dx_ = dx;
   dy_ = dy;
 }
@@ -85,7 +85,7 @@ void ScrollablePanel::paintWidget(const Surface& s) {
   if (scroll_in_progress) {
     // TODO: use a scheduler to cap the frequency of invalidation,
     // to something like 50-60 fps.
-    invalidate();
+    invalidateInterior();
   }
 }
 
@@ -135,7 +135,7 @@ bool ScrollablePanel::onTouch(const TouchEvent& event) {
     if (drag_x_delta != 0 || drag_y_delta != 0) {
       dx_ += drag_x_delta;
       dy_ += drag_y_delta;
-      invalidate();
+      invalidateInterior();
     }
     return true;
   } else if (shifted.type() == TouchEvent::SWIPED) {
@@ -178,7 +178,7 @@ bool ScrollablePanel::onTouch(const TouchEvent& event) {
     // Capture horizontal and vertical components of the decceleration.
     scroll_decel_x_ = -decceleration * scroll_start_vx_ / v_abs;
     scroll_decel_y_ = -decceleration * scroll_start_vy_ / v_abs;
-    invalidate();
+    invalidateInterior();
     return true;
   }
 }

@@ -90,10 +90,10 @@ class Widget {
   void markDirty();
 
   // Causes the widget to request paint(), replacing the entire rectangle area.
-  void invalidate();
+  void invalidateInterior();
 
   // Causes the widget to request paint(), replacing the specified area.
-  void invalidate(const Box& box);
+  void invalidateInterior(const Box& box);
 
   int16_t width() const { return parent_bounds_.width(); }
   int16_t height() const { return parent_bounds_.height(); }

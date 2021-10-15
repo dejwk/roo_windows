@@ -158,7 +158,7 @@ void MainWindow::enterModal(ModalWindow* modal_window) {
 
 void MainWindow::exitModal(ModalWindow* modal_window) {
   if (modal_window_ == modal_window) {
-    invalidate(modal_window_->parent_bounds());
+    invalidateInterior(modal_window_->parent_bounds());
     modal_window_ = nullptr;
   }
 }

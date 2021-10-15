@@ -53,12 +53,12 @@ void Widget::markDirty() {
   }
 }
 
-void Widget::invalidate() {
+void Widget::invalidateInterior() {
   invalidateDescending();
   markDirty();
 }
 
-void Widget::invalidate(const Box& box) {
+void Widget::invalidateInterior(const Box& box) {
   invalidateDescending(box);
   markDirty();
 }
@@ -66,21 +66,21 @@ void Widget::invalidate(const Box& box) {
 void Widget::setVisible(bool visible) {
   if (visible == isVisible()) return;
   state_ ^= kWidgetHidden;
-  invalidate();
+  invalidateInterior();
 }
 
 void Widget::setEnabled(bool enabled) {
   if (isEnabled() == enabled) return;
   state_ ^= kWidgetEnabled;
   if (!isVisible()) return;
-  invalidate();
+  invalidateInterior();
 }
 
 void Widget::setSelected(bool selected) {
   if (selected == isSelected()) return;
   state_ ^= kWidgetSelected;
   if (!isVisible()) return;
-  invalidate();
+  invalidateInterior();
 }
 
 void Widget::setActivated(bool activated) {
@@ -97,14 +97,14 @@ void Widget::setPressed(bool pressed) {
   if (pressed == isPressed()) return;
   state_ ^= kWidgetPressed;
   if (!isVisible()) return;
-  invalidate();
+  invalidateInterior();
 }
 
 void Widget::setDragged(bool dragged) {
   if (dragged == isDragged()) return;
   state_ ^= kWidgetDragged;
   if (!isVisible()) return;
-  invalidate();
+  invalidateInterior();
 }
 
 void Widget::clearClicked() { state_ &= ~kWidgetClicked; }
@@ -114,7 +114,7 @@ void Widget::moveTo(const Box& parent_bounds) {
   Box affected = Box::extent(parent_bounds, parent_bounds_);
   parent_bounds_ = parent_bounds;
   if (isVisible()) {
-    parent_->invalidate(affected);
+    parent_->invalidateInterior(affected);
   }
 }
 
@@ -227,7 +227,7 @@ void Widget::paintWidget(const Surface& s) {
         news.set_out(&filter);
         paint(news);
         // Do not clear dirtiness.
-        invalidate();
+        invalidateInterior();
         return;
       }
       // Full rect click overlay - just apply on top of the overlay as
@@ -248,7 +248,7 @@ void Widget::paintWidget(const Surface& s) {
       // next paint is scheduled promptly, but that it does not encounter
       // click_animation, so that it just draws the widget in its regular state
       // (possibly pressed, but not click-animating anymore).
-      invalidate();
+      invalidateInterior();
       return;
     }
   } else {
@@ -302,7 +302,7 @@ bool Widget::onTouch(const TouchEvent& event) {
 
 void Widget::updateBounds(const Box& bounds) {
   parent_bounds_ = bounds;
-  parent()->invalidate();
+  parent()->invalidateInterior();
 }
 
 }  // namespace roo_windows
