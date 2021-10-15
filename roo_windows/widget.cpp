@@ -42,7 +42,7 @@ void Widget::getAbsoluteBounds(Box* full, Box* visible) const {
   *visible = Box::intersect(*visible, *full);
 }
 
-Color Widget::background() const { return parent_->background(); }
+Color Widget::background() const { return roo_display::color::Transparent; }
 
 const Theme& Widget::theme() const { return parent_->theme(); }
 
