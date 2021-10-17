@@ -18,7 +18,7 @@ void ScrollablePanel::setOffset(int16_t dx, int16_t dy) {
   dy_ = dy;
 }
 
-void ScrollablePanel::paintWidget(const Surface& s) {
+void ScrollablePanel::paintWidgetContents(const Surface& s) {
   bool scroll_in_progress = (scroll_start_vx_ != 0 || scroll_start_vy_ != 0);
   // If scroll in progress, take it into account.
   if (scroll_in_progress) {
@@ -82,7 +82,7 @@ void ScrollablePanel::paintWidget(const Surface& s) {
   news.set_dx(news.dx() + dx_);
   news.set_dy(news.dy() + dy_);
   invalid_region_ = invalid_region_.translate(-dx_, -dy_);
-  Panel::paintWidget(news);
+  Panel::paintWidgetContents(news);
   if (scroll_in_progress) {
     // TODO: use a scheduler to cap the frequency of invalidation,
     // to something like 50-60 fps.

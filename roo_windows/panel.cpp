@@ -30,7 +30,7 @@ Panel::Panel(Panel* parent, const Box& bounds, const Theme& theme,
       bgcolor_(bgcolor),
       invalid_region_(Box(0, 0, bounds.width() - 1, bounds.height() - 1)) {}
 
-void Panel::paintWidget(const Surface& s) {
+void Panel::paintWidgetContents(const Surface& s) {
   bool dirty = isDirty();
   bool invalidated = isInvalidated();
   Box invalid_region = invalid_region_;

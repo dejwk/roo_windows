@@ -195,15 +195,15 @@ void Widget::paintWidget(const Surface& s) {
     markClean();
     return;
   }
-  if (state_ == kWidgetEnabled && !isInvalidated()) {
-    // Fast path.
-    paint(s);
-    markClean();
-    return;
-  }
   Surface news(s);
   if (isInvalidated()) {
     news.set_fill_mode(roo_display::FILL_MODE_RECTANGLE);
+  }
+  news.set_bgcolor(roo_display::alphaBlend(s.bgcolor(), background()));
+  if (state_ == kWidgetEnabled && !isInvalidated()) {
+    // Fast path.
+    paintWidgetContents(news);
+    return;
   }
   if (isEnabled()) {
     Color overlay = getOverlayColor(*this, s);
@@ -225,12 +225,12 @@ void Widget::paintWidget(const Surface& s) {
         Color animation_color = getClickAnimationColor(*this, s);
         PressOverlay press_overlay(
             click_x, click_y,
-            animation_radius(bounds(), click_x - s.dx(), click_y - s.dy(),
+            animation_radius(bounds(), click_x - news.dx(), click_y - news.dy(),
                              click_progress),
             alphaBlend(overlay, animation_color), overlay);
-        roo_display::ForegroundFilter filter(s.out(), &press_overlay);
+        roo_display::ForegroundFilter filter(news.out(), &press_overlay);
         news.set_out(&filter);
-        paint(news);
+        paintWidgetContents(news);
         // Do not clear dirtiness.
         invalidateInterior();
         return;
@@ -242,11 +242,11 @@ void Widget::paintWidget(const Surface& s) {
       overlay = alphaBlend(overlay, animation_color);
     }
     if (overlay.a() > 0) {
-      roo_display::OverlayFilter filter(s.out(), overlay, s.bgcolor());
+      roo_display::OverlayFilter filter(news.out(), overlay, s.bgcolor());
       news.set_out(&filter);
-      paint(news);
+      paintWidgetContents(news);
     } else {
-      paint(news);
+      paintWidgetContents(news);
     }
     if (click_animation) {
       // Note that we have !click_animation_continues here. Make sure that the
@@ -260,9 +260,15 @@ void Widget::paintWidget(const Surface& s) {
     roo_display::TranslucencyFilter disablement_filter(
         s.out(), theme().state.disabled, s.bgcolor());
     news.set_out(&disablement_filter);
-    paint(news);
+    paintWidgetContents(news);
   }
-  markClean();
+}
+
+void Widget::paintWidgetContents(const Surface& s) {
+  if (isDirty()) {
+    paint(s);
+    markClean();
+  }
 }
 
 bool Widget::onTouch(const TouchEvent& event) {

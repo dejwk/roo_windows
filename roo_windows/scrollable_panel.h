@@ -44,7 +44,7 @@ class ScrollablePanel : public Panel {
   // visible rectangle.
   void setOffset(int16_t dx, int16_t dy);
 
-  void paintWidget(const Surface& s) override;
+  void paintWidgetContents(const Surface& s) override;
 
   void getAbsoluteBounds(Box* full, Box* visible) const override;
 

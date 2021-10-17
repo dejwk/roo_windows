@@ -90,7 +90,8 @@ class Widget {
   void markDirty() { markDirty(bounds()); }
 
   // Causes the widget to request paint(). The widget decides which pixels
-  // need re-drawing. Hints which pixels need to be redrawn.
+  // need re-drawing. Provides a hint to the framework as to which pixels do
+  // need to be redrawn.
   void markDirty(const Box& bounds);
 
   // Causes the widget to request paint(), replacing the entire rectangle area.
@@ -119,8 +120,6 @@ class Widget {
   // The Surface's offset and clipbox has been pre-initialized so that this
   // widget's top-left corner is painted at (0, 0), and the clip box is
   // constrained to this widget's bounds (and non-empty).
-  virtual void paintWidget(const Surface& s);
-
   virtual void paint(const Surface& s) {}
 
   virtual MainWindow* getMainWindow();
@@ -194,6 +193,8 @@ class Widget {
 
   bool isInvalidated() const { return (redraw_status_ & kInvalidated) != 0; }
 
+  // Moves the widget to the new position, specified in the parent's
+  // coordinates.
   void updateBounds(const Box& bounds);
 
  protected:
@@ -204,9 +205,22 @@ class Widget {
     markInvalidated();
   }
 
+  // Responsible for drawing a widget to the specified surface. The default
+  // implementaion calls paint() (but only in case the) widget is actually
+  // dirty) to actually request the content to be drawn. Widgets should
+  // generally not override this method, and override paint() instead.
+  virtual void paintWidgetContents(const Surface& s);
+
  private:
   friend class Panel;
   friend class ScrollablePanel;
+  friend class MainWindow;
+
+  // Called by the framework. Receives the parent's surface. Determines
+  // state-related overlays and filters (enabled/disabled, clicking, etc.),
+  // creates the new, offset surface with overlays and/or filters, and calls
+  // paintWidgetContents().
+  void paintWidget(const Surface& s);
 
   void markClean() { redraw_status_ &= ~(kDirty | kInvalidated); }
   void markInvalidated() { redraw_status_ |= (kDirty | kInvalidated); }

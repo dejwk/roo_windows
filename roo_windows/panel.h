@@ -30,7 +30,18 @@ class Panel : public Widget {
 
   const Theme& theme() const { return theme_; }
 
-  void paintWidget(const Surface& s) override;
+  // Paints the panel with all its children. If the panel isn't invalidated,
+  // omits drawing the surface area; otherwise, draws the surface area over the
+  // invalidated region.
+  //
+  // Calls paint() to actually paint the surface area (with the surface object
+  // clipped to the invalidated region, and with the background color pre-set
+  // to the panel's background).
+  void paintWidgetContents(const Surface& s) override;
+
+  // Draws the surface area of this panel. The default implementation draws
+  // a transparent rectangle. (Effectively, the rectangle is drawn in the panel's
+  // background color, which is pre-set in the specified surface).
   void paint(const Surface& s) override;
 
   virtual bool onTouch(const TouchEvent& event);
