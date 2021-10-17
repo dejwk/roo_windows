@@ -2,8 +2,8 @@
 
 #include "roo_display.h"
 #include "roo_display/shape/basic_shapes.h"
-#include "roo_windows/main_window.h"
-#include "roo_windows/panel.h"
+#include "roo_windows/core/main_window.h"
+#include "roo_windows/core/panel.h"
 
 namespace roo_windows {
 

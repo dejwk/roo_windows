@@ -4,9 +4,9 @@
 #include "roo_display/ui/text_label.h"
 #include "roo_display/ui/tile.h"
 #include "roo_material_icons.h"
-#include "roo_windows/panel.h"
-#include "roo_windows/theme.h"
-#include "roo_windows/widget.h"
+#include "roo_windows/core/panel.h"
+#include "roo_windows/core/theme.h"
+#include "roo_windows/core/widget.h"
 
 namespace roo_windows {
 

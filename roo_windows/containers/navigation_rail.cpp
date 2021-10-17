@@ -1,6 +1,6 @@
 #include "navigation_rail.h"
 
-#include "roo_windows/icon_with_caption.h"
+#include "roo_windows/widgets/icon_with_caption.h"
 
 namespace roo_windows {
 

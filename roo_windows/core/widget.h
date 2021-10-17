@@ -9,8 +9,8 @@
 #include "roo_display/core/box.h"
 #include "roo_display/filter/color_filter.h"
 #include "roo_display/image/image.h"
-#include "roo_windows/clipper.h"
-#include "roo_windows/theme.h"
+#include "roo_windows/core/clipper.h"
+#include "roo_windows/core/theme.h"
 
 namespace roo_windows {
 

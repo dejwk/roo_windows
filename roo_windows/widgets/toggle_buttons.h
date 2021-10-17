@@ -6,10 +6,11 @@
 #include "roo_display/ui/alignment.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_material_icons.h"
-#include "roo_windows/icon.h"
-#include "roo_windows/main_window.h"
-#include "roo_windows/panel.h"
-#include "roo_windows/theme.h"
+#include "roo_windows/core/main_window.h"
+#include "roo_windows/core/panel.h"
+#include "roo_windows/core/theme.h"
+
+#include "roo_windows/widgets/icon.h"
 
 namespace roo_windows {
 

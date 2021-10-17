@@ -1,7 +1,7 @@
 #include "roo_windows/indicators/impl/walltime.h"
 
 #include "roo_display/ui/string_printer.h"
-#include "roo_windows/panel.h"
+#include "roo_windows/core/panel.h"
 
 namespace roo_windows {
 

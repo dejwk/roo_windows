@@ -4,7 +4,7 @@
 
 #include "roo_display/ui/alignment.h"
 #include "roo_material_icons.h"
-#include "roo_windows/panel.h"
+#include "roo_windows/core/panel.h"
 
 namespace roo_windows {
 

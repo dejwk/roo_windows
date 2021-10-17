@@ -2,8 +2,8 @@
 
 #include "roo_display.h"
 #include "roo_display/filter/background_fill_optimizer.h"
-#include "roo_windows/clipper.h"
-#include "roo_windows/panel.h"
+#include "roo_windows/core/clipper.h"
+#include "roo_windows/core/panel.h"
 
 namespace roo_windows {
 

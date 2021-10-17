@@ -1,7 +1,7 @@
 #include "roo_windows/indicators/impl/wifi.h"
 
 #include "roo_display/ui/tile.h"
-#include "roo_windows/panel.h"
+#include "roo_windows/core/panel.h"
 
 namespace roo_windows {
 

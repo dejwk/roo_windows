@@ -1,6 +1,6 @@
 #pragma once
 
-#include "roo_windows/widget.h"
+#include "roo_windows/core/widget.h"
 
 namespace roo_windows {
 

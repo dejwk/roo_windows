@@ -1,8 +1,8 @@
 #include "widget.h"
 
 #include "roo_display/filter/foreground.h"
-#include "roo_windows/main_window.h"
-#include "roo_windows/panel.h"
+#include "roo_windows/core/main_window.h"
+#include "roo_windows/core/panel.h"
 
 namespace roo_windows {
 

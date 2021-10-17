@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "roo_material_icons.h"
-#include "roo_windows/navigation_rail.h"
+#include "roo_windows/containers/navigation_rail.h"
 
 namespace roo_windows {
 

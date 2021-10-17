@@ -1,11 +1,11 @@
-#include "roo_windows/panel.h"
+#include "roo_windows/core/panel.h"
 
 #include "roo_display/core/box.h"
 #include "roo_display/core/device.h"
 #include "roo_display/filter/background_fill_optimizer.h"
 #include "roo_display/filter/clip_exclude_rects.h"
 #include "roo_display/shape/basic_shapes.h"
-#include "roo_windows/main_window.h"
+#include "roo_windows/core/main_window.h"
 
 namespace roo_windows {
 
