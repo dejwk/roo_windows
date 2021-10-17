@@ -187,24 +187,23 @@ inline int16_t animation_radius(const Box& bounds, int16_t x, int16_t y,
 
 }  // namespace
 
-void Widget::paintWidget(const Surface& s) {
+void Widget::paintWidget(const Surface& s, Clipper& clipper) {
   if (!isVisible()) {
-    if (isInvalidated()) {
-      s.drawObject(roo_display::Clear());
-    }
-    markClean();
+    markCleanDescending();
     return;
   }
   Surface news(s);
-  if (isInvalidated()) {
-    news.set_fill_mode(roo_display::FILL_MODE_RECTANGLE);
-  }
-  news.set_bgcolor(roo_display::alphaBlend(s.bgcolor(), background()));
-  if (state_ == kWidgetEnabled && !isInvalidated()) {
-    // Fast path.
-    paintWidgetContents(news);
+  news.set_dx(s.dx() + xOffset());
+  news.set_dy(s.dy() + yOffset());
+  if (news.clipToExtents(maxBounds()) == Box::CLIP_RESULT_EMPTY) {
+    markCleanDescending();
     return;
   }
+  if (!isDirty()) {
+    // Fast path to only include exclusion rect.
+    paintWidgetContents(news, clipper);
+  }
+  news.set_bgcolor(roo_display::alphaBlend(s.bgcolor(), background()));
   if (isEnabled()) {
     Color overlay = getOverlayColor(*this, s);
     // If click_animation is true, we need to redraw the overlay.
@@ -230,7 +229,7 @@ void Widget::paintWidget(const Surface& s) {
             alphaBlend(overlay, animation_color), overlay);
         roo_display::ForegroundFilter filter(news.out(), &press_overlay);
         news.set_out(&filter);
-        paintWidgetContents(news);
+        paintWidgetContents(news, clipper);
         // Do not clear dirtiness.
         invalidateInterior();
         return;
@@ -244,9 +243,9 @@ void Widget::paintWidget(const Surface& s) {
     if (overlay.a() > 0) {
       roo_display::OverlayFilter filter(news.out(), overlay, s.bgcolor());
       news.set_out(&filter);
-      paintWidgetContents(news);
+      paintWidgetContents(news, clipper);
     } else {
-      paintWidgetContents(news);
+      paintWidgetContents(news, clipper);
     }
     if (click_animation) {
       // Note that we have !click_animation_continues here. Make sure that the
@@ -260,15 +259,19 @@ void Widget::paintWidget(const Surface& s) {
     roo_display::TranslucencyFilter disablement_filter(
         s.out(), theme().state.disabled, s.bgcolor());
     news.set_out(&disablement_filter);
-    paintWidgetContents(news);
+    paintWidgetContents(news, clipper);
   }
 }
 
-void Widget::paintWidgetContents(const Surface& s) {
+void Widget::paintWidgetContents(const Surface& s, Clipper& clipper) {
+  Box absolute_bounds =
+      Box::intersect(bounds().translate(s.dx(), s.dy()), s.clip_box());
   if (isDirty()) {
+    clipper.setBounds(absolute_bounds);
     paint(s);
     markClean();
   }
+  clipper.addExclusion(absolute_bounds);
 }
 
 bool Widget::onTouch(const TouchEvent& event) {

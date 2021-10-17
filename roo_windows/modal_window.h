@@ -21,7 +21,8 @@ class ModalWindow : public Panel {
     getMainWindow()->exitModal(this);
   }
 
-  void paintWidgetContents(const roo_display::Surface& s) override {
+  void paintWidgetContents(const roo_display::Surface& s,
+                           Clipper& clipper) override {
     if (isVisible() && isInvalidated()) {
       Color color = theme().color.defaultColor(s.bgcolor());
       color.set_a(0x20);
@@ -35,7 +36,7 @@ class ModalWindow : public Panel {
     }
     roo_display::Surface news(s);
     news.clipToExtents(Box(2, 2, width() - 3, height() - 4));
-    Panel::paintWidgetContents(news);
+    Panel::paintWidgetContents(news, clipper);
   }
 };
 

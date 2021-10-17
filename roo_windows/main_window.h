@@ -2,6 +2,7 @@
 
 #include "roo_display.h"
 #include "roo_display/filter/background_fill_optimizer.h"
+#include "roo_windows/clipper.h"
 #include "roo_windows/panel.h"
 
 namespace roo_windows {
@@ -61,6 +62,9 @@ class MainWindow : public Panel {
   Widget* deferred_click_;
   unsigned long click_anim_start_millis_;
   int16_t click_anim_x_, click_anim_y_;
+
+  // Stored as instance variable, to avoid vector reallocation on each paint.
+  internal::ClipperState clipper_state_;
 
   // Maintains the area that encapsulates all content that needs to be
   // (re)drawn.

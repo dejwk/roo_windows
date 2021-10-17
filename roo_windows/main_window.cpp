@@ -159,8 +159,9 @@ void MainWindow::paintWindow(const Surface& s) {
   news.set_fill_mode(roo_display::FILL_MODE_RECTANGLE);
   roo_display::BackgroundFillOptimizer bg_optimizer(s.out(),
                                                     &background_fill_buffer_);
-  news.set_out(&bg_optimizer);
-  paintWidget(news);
+  Clipper clipper(clipper_state_, &bg_optimizer);
+  news.set_out(clipper.out());
+  paintWidget(news, clipper);
 }
 
 void MainWindow::enterModal(ModalWindow* modal_window) {

@@ -34,10 +34,14 @@ class Panel : public Widget {
   // omits drawing the surface area; otherwise, draws the surface area over the
   // invalidated region.
   //
+  // Calls paintChildren() to actually paint the children. The default
+  // implementation calls child->paintWidget(), thus omitting drawing of children
+  // that aren't dirty.
+  //
   // Calls paint() to actually paint the surface area (with the surface object
   // clipped to the invalidated region, and with the background color pre-set
   // to the panel's background).
-  void paintWidgetContents(const Surface& s) override;
+  void paintWidgetContents(const Surface& s, Clipper& clipper) override;
 
   // Draws the surface area of this panel. The default implementation draws
   // a transparent rectangle. (Effectively, the rectangle is drawn in the panel's
@@ -51,8 +55,12 @@ class Panel : public Widget {
     return children_;
   }
 
+  virtual void paintChildren(const Surface& s, Clipper& clipper);
+
   void invalidateDescending() override;
   void invalidateDescending(const Box& box) override;
+  bool invalidateBeneath(const Box& box, const Widget* subject) override;
+  void markCleanDescending() override;
 
   virtual void propagateDirty(const Widget* child, const Box& box);
   virtual void childHidden(const Widget* child);

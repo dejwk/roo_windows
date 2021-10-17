@@ -9,6 +9,7 @@
 #include "roo_display/core/box.h"
 #include "roo_display/filter/color_filter.h"
 #include "roo_display/image/image.h"
+#include "roo_windows/clipper.h"
 #include "roo_windows/theme.h"
 
 namespace roo_windows {
@@ -87,7 +88,7 @@ class Widget {
 
   // Causes the widget to request paint(). The widget decides which pixels
   // need re-drawing.
-  void markDirty() { markDirty(bounds()); }
+  void markDirty() { markDirty(maxBounds()); }
 
   // Causes the widget to request paint(). The widget decides which pixels
   // need re-drawing. Provides a hint to the framework as to which pixels do
@@ -106,6 +107,9 @@ class Widget {
   int16_t yOffset() const { return parent_bounds_.yMin(); }
 
   Box bounds() const { return Box(0, 0, width() - 1, height() - 1); }
+
+  // Returns the rectangle that covers all of this widget and its descendants.
+  virtual Box maxBounds() const { return bounds(); }
 
   const Theme& theme() const;
 
@@ -205,11 +209,24 @@ class Widget {
     markInvalidated();
   }
 
-  // Responsible for drawing a widget to the specified surface. The default
-  // implementaion calls paint() (but only in case the) widget is actually
-  // dirty) to actually request the content to be drawn. Widgets should
-  // generally not override this method, and override paint() instead.
-  virtual void paintWidgetContents(const Surface& s);
+  virtual bool invalidateBeneath(const Box& box, const Widget* subject) {
+    if (subject == this) return true;
+    invalidateDescending(box);
+    return false;
+  }
+
+  // Mark this widget and its descendants as non-dirty.
+  virtual void markCleanDescending() { markClean(); }
+
+  // Responsible for drawing a widget to the specified surface, and updating the
+  // clipper to exclude the region covered by the widget from the clipper to
+  // prevent it from being over-drawn. If called on a non-dirty widget, does not
+  // need to draw anything, but it should still exclude the widget's area from
+  // the clipper. The default implementaion calls paint() (but only in case the)
+  // widget is actually dirty) to actually request the content to be drawn.
+  // Widgets should generally not override this method, and override paint()
+  // instead.
+  virtual void paintWidgetContents(const Surface& s, Clipper& clipper);
 
  private:
   friend class Panel;
@@ -220,7 +237,7 @@ class Widget {
   // state-related overlays and filters (enabled/disabled, clicking, etc.),
   // creates the new, offset surface with overlays and/or filters, and calls
   // paintWidgetContents().
-  void paintWidget(const Surface& s);
+  void paintWidget(const Surface& s, Clipper& clipper);
 
   void markClean() { redraw_status_ &= ~(kDirty | kInvalidated); }
   void markInvalidated() { redraw_status_ |= (kDirty | kInvalidated); }

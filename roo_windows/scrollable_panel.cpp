@@ -18,7 +18,7 @@ void ScrollablePanel::setOffset(int16_t dx, int16_t dy) {
   dy_ = dy;
 }
 
-void ScrollablePanel::paintWidgetContents(const Surface& s) {
+void ScrollablePanel::paintWidgetContents(const Surface& s, Clipper& clipper) {
   bool scroll_in_progress = (scroll_start_vx_ != 0 || scroll_start_vy_ != 0);
   // If scroll in progress, take it into account.
   if (scroll_in_progress) {
@@ -78,15 +78,22 @@ void ScrollablePanel::paintWidgetContents(const Surface& s) {
       scroll_start_vx_ = scroll_start_vy_ = 0;
     }
   }
-  Surface news = s;
-  news.set_dx(news.dx() + dx_);
-  news.set_dy(news.dy() + dy_);
-  invalid_region_ = invalid_region_.translate(-dx_, -dy_);
-  Panel::paintWidgetContents(news);
+  Panel::paintWidgetContents(s, clipper);
+
   if (scroll_in_progress) {
     // TODO: use a scheduler to cap the frequency of invalidation,
     // to something like 50-60 fps.
     invalidateInterior();
+  }
+}
+
+void ScrollablePanel::paintChildren(const Surface& s, Clipper& clipper) {
+  Surface cs = s;
+  cs.set_dx(cs.dx() + dx_);
+  cs.set_dy(cs.dy() + dy_);
+  for (auto i = children_.rbegin(); i != children_.rend(); ++i) {
+    auto* child = i->get();
+    child->paintWidget(cs, clipper);
   }
 }
 

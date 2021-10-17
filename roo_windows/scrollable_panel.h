@@ -44,7 +44,9 @@ class ScrollablePanel : public Panel {
   // visible rectangle.
   void setOffset(int16_t dx, int16_t dy);
 
-  void paintWidgetContents(const Surface& s) override;
+  void paintWidgetContents(const Surface& s, Clipper& clipper) override;
+
+  void paintChildren(const Surface& s, Clipper& clipper) override;
 
   void getAbsoluteBounds(Box* full, Box* visible) const override;
 
@@ -67,7 +69,27 @@ class ScrollablePanel : public Panel {
   }
 
   void childHidden(const Widget* child) override {
-    invalidateInterior(parent_bounds_.translate(dx_, dy_));
+    invalidateBeneath(child->parent_bounds().translate(dx_, dy_), child);
+  }
+
+  bool invalidateBeneath(const Box& box, const Widget* subject) override {
+    Box clipped = Box::intersect(box, maxBounds());
+    if (clipped.empty()) return false;
+    markInvalidated();
+    if (invalid_region_.empty()) {
+      invalid_region_ = clipped;
+    } else {
+      invalid_region_ = Box::extent(invalid_region_, clipped);
+    }
+    for (auto& child : children_) {
+      if (child.get() == subject) return true;
+      if (child->isVisible()) {
+        Box adjusted =
+            clipped.translate(-dx_ - child->xOffset(), -dy_ - child->yOffset());
+        if (child->invalidateBeneath(adjusted, subject)) return true;
+      }
+    }
+    return false;
   }
 
   void propagateDirty(const Widget* child, const Box& box) override {
