@@ -1,5 +1,7 @@
 #include "theme.h"
 
+#include "roo_display/core/color.h"
+
 namespace roo_windows {
 
 const Theme& DefaultTheme() {

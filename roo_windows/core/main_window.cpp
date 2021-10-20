@@ -16,8 +16,8 @@ static const unsigned long kClickAnimationMs = 200;
 // How much movement in pixels before we consider it a swipe.
 static const uint16_t kSwipeThreshold = 8;
 
-MainWindow::MainWindow(Display* display)
-    : MainWindow(display, display->extents()) {}
+MainWindow::MainWindow(Display* display, const Theme& theme)
+    : MainWindow(display, display->extents(), theme) {}
 
 namespace {
 
@@ -28,8 +28,8 @@ void maybeAddColor(roo_display::internal::ColorSet& palette, Color color) {
 
 }  // namespace
 
-MainWindow::MainWindow(Display* display, const Box& bounds)
-    : Panel(nullptr, bounds),
+MainWindow::MainWindow(Display* display, const Box& bounds, const Theme& theme)
+    : Panel(nullptr, bounds, theme, theme.color.background),
       display_(display),
       touch_down_(false),
       click_anim_target_(nullptr),
@@ -38,7 +38,7 @@ MainWindow::MainWindow(Display* display, const Box& bounds)
       modal_window_(nullptr),
       background_fill_buffer_(display->width(), display->height()) {
   roo_display::internal::ColorSet color_set;
-  const auto& theme_colors = theme().color;
+  const auto& theme_colors = theme.color;
   maybeAddColor(color_set, theme_colors.background);
   maybeAddColor(color_set, theme_colors.surface);
   maybeAddColor(color_set, theme_colors.primary);

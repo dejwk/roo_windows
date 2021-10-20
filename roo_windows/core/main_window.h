@@ -11,9 +11,11 @@ class ModalWindow;
 
 class MainWindow : public Panel {
  public:
-  MainWindow(roo_display::Display* display);
+  MainWindow(roo_display::Display* display,
+             const Theme& theme = DefaultTheme());
 
-  MainWindow(roo_display::Display* display, const Box& bounds);
+  MainWindow(roo_display::Display* display, const Box& bounds,
+             const Theme& theme = DefaultTheme());
 
   void tick();
 
