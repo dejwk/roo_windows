@@ -18,7 +18,6 @@ class ToggleButtons : public Panel {
  public:
   ToggleButtons(Panel* parent, int16_t dx, int16_t dy, int16_t height)
       : Panel(parent, Box(dx, dy, dx + 1, dy + height - 1)),
-        theme_(&DefaultTheme()),
         active_(-1) {}
 
   roo_windows::Widget* addButton(const MonoIcon& icon, int16_t width) {
@@ -104,7 +103,6 @@ class ToggleButtons : public Panel {
   int width_dp_;  // defaults to 72.
   int destination_size_dp_;
   //   roo_display::VAlign alignment_;
-  const Theme* theme_;
   int active_;
 
   std::vector<ToggleButton*> buttons_;
