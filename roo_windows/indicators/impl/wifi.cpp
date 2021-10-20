@@ -6,8 +6,7 @@
 namespace roo_windows {
 
 WifiIndicator::WifiIndicator(Panel* parent, const Box& bounds)
-    : WifiIndicator(parent, bounds,
-                    DefaultTheme().color.defaultColor(parent->background())) {}
+    : WifiIndicator(parent, bounds, parent->defaultColor()) {}
 
 WifiIndicator::WifiIndicator(Panel* parent, const Box& bounds,
                              roo_display::Color color)

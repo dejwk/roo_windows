@@ -12,9 +12,7 @@ using roo_time::WallTimeClock;
 
 WalltimeIndicator::WalltimeIndicator(Panel* parent, const Box& bounds,
                                      const WallTimeClock* clock, TimeZone tz)
-    : WalltimeIndicator(parent, bounds,
-                        DefaultTheme().color.defaultColor(parent->background()),
-                        clock, tz) {}
+    : WalltimeIndicator(parent, bounds, parent->defaultColor(), clock, tz) {}
 
 WalltimeIndicator::WalltimeIndicator(Panel* parent, const Box& bounds,
                                      Color color, const WallTimeClock* clock,

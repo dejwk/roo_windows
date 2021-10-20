@@ -113,6 +113,22 @@ class Widget {
 
   const Theme& theme() const;
 
+  // Returns default color that should be used by monochromatic content.
+  // Calculated by determining the effective background color of this widget
+  // (which is the result of layering the, possibly semi-transparent,
+  // backgrounds of the ancestors), and consulting the theme to see if it has
+  // any registered 'onX' colors that correspond to that background. Usually,
+  // the background turns out to be one of: .surface, .background,
+  // .primary[Variant*], .secondary[Variant*], or .error, in which case the
+  // default color resolves to .onSurface, .onBackground, .onPrimary,
+  // .onSecondary, or .onError, appropriately. If all else fails, returns
+  // .onBackground. NOTE: during the call to paint(const Surface& s), the
+  // default color can also be determined by calling
+  // theme().color.defaultColor(s.bgcolor()).
+  roo_display::Color defaultColor() const {
+    return theme().color.defaultColor(effectiveBackground());
+  }
+
   const Box& parent_bounds() const { return parent_bounds_; }
 
   void moveTo(const Box& parent_bounds);
@@ -129,7 +145,16 @@ class Widget {
   virtual MainWindow* getMainWindow();
   virtual const MainWindow* getMainWindow() const;
 
-  virtual Color background() const;
+  // Returns this widget's background. Transparent by default. Normally overridden
+  // by panels, which usually have opaque backgrounds.
+  virtual Color background() const { return roo_display::color::Transparent; }
+
+  // Returns the effective background color of this widget. If this widget has a
+  // non-opaque background, it is returned. If this widget has a fully transparent
+  // background, the parent's effective background is returned. Otherwise, if this
+  // widget has a semi-transparent background, the returned color is the alpha-blend
+  // of the parent's effective background and this widget's background.
+  Color effectiveBackground() const;
 
   virtual bool onTouch(const TouchEvent& event);
 

@@ -6,9 +6,7 @@
 namespace roo_windows {
 
 BatteryIndicator::BatteryIndicator(Panel* parent, const Box& bounds)
-    : BatteryIndicator(
-          parent, bounds,
-          DefaultTheme().color.defaultColor(parent->background())) {}
+    : BatteryIndicator(parent, bounds, parent->defaultColor()) {}
 
 BatteryIndicator::BatteryIndicator(Panel* parent, const Box& bounds,
                                    roo_display::Color color)

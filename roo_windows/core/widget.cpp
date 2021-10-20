@@ -42,8 +42,16 @@ void Widget::getAbsoluteBounds(Box* full, Box* visible) const {
   *visible = Box::intersect(*visible, *full);
 }
 
-Color Widget::background() const { return roo_display::color::Transparent; }
+Color Widget::effectiveBackground() const {
+  roo_display::Color bgcolor = background();
+  return bgcolor.opaque() || parent() == nullptr
+             ? bgcolor
+             : roo_display::alphaBlend(parent()->effectiveBackground(),
+                                       bgcolor);
+}
 
+// Returns the theme used by this widget. Defaults to the parent's theme
+// (and, ultimately, to DefaultTheme(), if not otherwise specified).
 const Theme& Widget::theme() const { return parent_->theme(); }
 
 void Widget::markDirty(const Box& bounds) {
