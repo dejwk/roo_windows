@@ -134,20 +134,21 @@ void Widget::moveTo(const Box& parent_bounds) {
 uint8_t Widget::getOverlayOpacity() const {
   Color bgcolor = background();
   uint16_t overlay_opacity = 0;
-  if (isHover()) overlay_opacity += theme().hoverOpacity(bgcolor);
-  if (isFocused()) overlay_opacity += theme().focusOpacity(bgcolor);
-  if (isSelected()) overlay_opacity += theme().selectedOpacity(bgcolor);
+  const Theme& myTheme = theme();
+  if (isHover()) overlay_opacity += myTheme.hoverOpacity(bgcolor);
+  if (isFocused()) overlay_opacity += myTheme.focusOpacity(bgcolor);
+  if (isSelected()) overlay_opacity += myTheme.selectedOpacity(bgcolor);
   if (isActivated() && useOverlayOnActivation()) {
-    overlay_opacity += theme().activatedOpacity(bgcolor);
+    overlay_opacity += myTheme.activatedOpacity(bgcolor);
   }
   if (isClicking()) {
     if (useOverlayOnPressAnimation()) {
-      overlay_opacity += theme().pressedOpacity(bgcolor);
+      overlay_opacity += myTheme.pressedOpacity(bgcolor);
     }
   } else if (isPressed()) {
-    overlay_opacity += theme().pressedOpacity(bgcolor);
+    overlay_opacity += myTheme.pressedOpacity(bgcolor);
   }
-  if (isDragged()) overlay_opacity += theme().draggedOpacity(bgcolor);
+  if (isDragged()) overlay_opacity += myTheme.draggedOpacity(bgcolor);
   if (overlay_opacity > 255) overlay_opacity = 255;
   if (overlay_opacity == 0) return 0;  // roo_display::color::Transparent;
   return overlay_opacity;
@@ -160,18 +161,20 @@ Color getOverlayColor(const Widget& widget, const Surface& s) {
   if (overlay_opacity == 0) {
     return roo_display::color::Transparent;
   }
+  const Theme& myTheme = widget.theme();
   Color overlay = widget.usesHighlighterColor()
-                      ? widget.theme().color.highlighterColor(s.bgcolor())
-                      : widget.theme().color.defaultColor(s.bgcolor());
+                      ? myTheme.color.highlighterColor(s.bgcolor())
+                      : myTheme.color.defaultColor(s.bgcolor());
   overlay.set_a(overlay_opacity);
   return overlay;
 }
 
 Color getClickAnimationColor(const Widget& widget, const Surface& s) {
+  const Theme& myTheme = widget.theme();
   Color color = widget.usesHighlighterColor()
-                    ? widget.theme().color.highlighterColor(s.bgcolor())
-                    : widget.theme().color.defaultColor(s.bgcolor());
-  color.set_a(widget.theme().pressAnimationOpacity(s.bgcolor()));
+                    ? myTheme.color.highlighterColor(s.bgcolor())
+                    : myTheme.color.defaultColor(s.bgcolor());
+  color.set_a(myTheme.pressAnimationOpacity(s.bgcolor()));
   return color;
 }
 

@@ -14,20 +14,18 @@ class Icon : public Widget {
        const roo_display::MaterialIcon& def)
       : Icon(parent, def.extents().translate(dx, dy), def) {}
 
-  Icon(Panel* parent, const Box& bounds,
-       const roo_display::MaterialIcon& def)
-      : Widget(parent, bounds),
-        icon_(def) {}
+  Icon(Panel* parent, const Box& bounds, const roo_display::MaterialIcon& def)
+      : Widget(parent, bounds), icon_(def) {}
 
   void paint(const Surface& s) override {
-    Color color = theme().color.defaultColor(s.bgcolor());
+    const Theme& myTheme = theme();
+    Color color = myTheme.color.defaultColor(s.bgcolor());
     if (isActivated() && usesHighlighterColor()) {
-      color = theme().color.highlighterColor(s.bgcolor());
+      color = myTheme.color.highlighterColor(s.bgcolor());
     }
     roo_display::MaterialIcon icon(icon_);
     icon.color_mode().setColor(color);
-    roo_display::Tile tile(&icon, bounds(),
-                           roo_display::HAlign::Center(),
+    roo_display::Tile tile(&icon, bounds(), roo_display::HAlign::Center(),
                            roo_display::VAlign::Middle(),
                            roo_display::color::Transparent, s.fill_mode());
     s.drawObject(tile);

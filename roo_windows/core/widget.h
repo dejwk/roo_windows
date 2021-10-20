@@ -111,7 +111,7 @@ class Widget {
   // Returns the rectangle that covers all of this widget and its descendants.
   virtual Box maxBounds() const { return bounds(); }
 
-  const Theme& theme() const;
+  virtual const Theme& theme() const;
 
   // Returns default color that should be used by monochromatic content.
   // Calculated by determining the effective background color of this widget

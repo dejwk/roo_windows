@@ -15,9 +15,10 @@ IconWithCaption::IconWithCaption(Panel* parent, const Box& bounds,
 }
 
 void IconWithCaption::paint(const Surface& s) {
-  Color color = theme().color.defaultColor(s.bgcolor());
+  const Theme& myTheme = theme();
+  Color color = myTheme.color.defaultColor(s.bgcolor());
   if (isActivated() && usesHighlighterColor()) {
-    color = theme().color.highlighterColor(s.bgcolor());
+    color = myTheme.color.highlighterColor(s.bgcolor());
   }
   if (s.fill_mode() == FILL_MODE_RECTANGLE && isInvalidated() &&
       hi_border_ > 0) {

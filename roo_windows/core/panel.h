@@ -28,7 +28,7 @@ class Panel : public Widget {
   void setBackground(Color bgcolor) { bgcolor_ = bgcolor; }
   Color background() const override { return bgcolor_; }
 
-  const Theme& theme() const { return theme_; }
+  const Theme& theme() const override { return theme_; }
 
   // Paints the panel with all its children. If the panel isn't invalidated,
   // omits drawing the surface area; otherwise, draws the surface area over the
