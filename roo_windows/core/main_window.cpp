@@ -29,8 +29,9 @@ void maybeAddColor(roo_display::internal::ColorSet& palette, Color color) {
 }  // namespace
 
 MainWindow::MainWindow(Display* display, const Box& bounds, const Theme& theme)
-    : Panel(nullptr, bounds, theme, theme.color.background),
+    : Panel(nullptr, bounds, theme.color.background),
       display_(display),
+      theme_(theme),
       touch_down_(false),
       click_anim_target_(nullptr),
       deferred_click_(nullptr),

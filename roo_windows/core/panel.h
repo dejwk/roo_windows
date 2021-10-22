@@ -22,13 +22,10 @@ class Panel : public Widget {
 
   Panel(Panel* parent, const Box& bounds, roo_display::Color bgcolor);
 
-  Panel(Panel* parent, const Box& bounds, const Theme& theme,
-        roo_display::Color bgcolor);
-
   void setBackground(Color bgcolor) { bgcolor_ = bgcolor; }
   Color background() const override { return bgcolor_; }
 
-  const Theme& theme() const override { return theme_; }
+  const Theme& theme() const override { return parent()->theme(); }
 
   // Paints the panel with all its children. If the panel isn't invalidated,
   // omits drawing the surface area; otherwise, draws the surface area over the
@@ -72,7 +69,6 @@ class Panel : public Widget {
   void addChild(Widget* child);
 
   std::vector<std::unique_ptr<Widget>> children_;
-  const Theme& theme_;
   Color bgcolor_;
   Box invalid_region_;
 };

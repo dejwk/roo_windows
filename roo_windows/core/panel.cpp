@@ -13,21 +13,11 @@ using roo_display::Box;
 using roo_display::Color;
 using roo_display::DisplayOutput;
 
-static inline const Theme& getTheme(Panel* parent) {
-  return parent == nullptr ? DefaultTheme() : parent->theme();
-}
-
 Panel::Panel(Panel* parent, const Box& bounds)
-    : Panel(parent, bounds, getTheme(parent),
-            getTheme(parent).color.background) {}
+    : Panel(parent, bounds, parent->theme().color.background) {}
 
 Panel::Panel(Panel* parent, const Box& bounds, Color bgcolor)
-    : Panel(parent, bounds, getTheme(parent), bgcolor) {}
-
-Panel::Panel(Panel* parent, const Box& bounds, const Theme& theme,
-             Color bgcolor)
     : Widget(parent, bounds),
-      theme_(theme),
       bgcolor_(bgcolor),
       invalid_region_(Box(0, 0, bounds.width() - 1, bounds.height() - 1)) {}
 

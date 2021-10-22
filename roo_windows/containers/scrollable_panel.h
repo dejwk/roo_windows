@@ -5,25 +5,16 @@
 
 namespace roo_windows {
 
-static inline const Theme& getTheme(Panel* parent) {
-  return parent == nullptr ? DefaultTheme() : parent->theme();
-}
-
 static const float decceleration = 1000.0;
 static const float maxVel = 1200.0;
 
 class ScrollablePanel : public Panel {
  public:
   ScrollablePanel(Panel* parent, const Box& bounds)
-      : ScrollablePanel(parent, bounds, getTheme(parent),
-                        getTheme(parent).color.background) {}
+      : ScrollablePanel(parent, bounds, parent->theme().color.background) {}
 
   ScrollablePanel(Panel* parent, const Box& bounds, Color bgcolor)
-      : ScrollablePanel(parent, bounds, getTheme(parent), bgcolor) {}
-
-  ScrollablePanel(Panel* parent, const Box& bounds, const Theme& theme,
-                  Color bgcolor)
-      : Panel(parent, bounds, theme, bgcolor),
+      : Panel(parent, bounds, bgcolor),
         width_(bounds.width()),
         height_(bounds.height()),
         dx_(0),
@@ -60,7 +51,8 @@ class ScrollablePanel : public Panel {
       invalid_region_ = Box::extent(invalid_region_, box);
     }
     for (auto& child : children_) {
-      Box cb = Box::intersect(invalid_region_, child->parent_bounds().translate(dx_, dy_));
+      Box cb = Box::intersect(invalid_region_,
+                              child->parent_bounds().translate(dx_, dy_));
       if (cb.empty()) continue;
       cb = cb.translate(-dx_ - child->parent_bounds().xMin(),
                         -dy_ - child->parent_bounds().yMin());

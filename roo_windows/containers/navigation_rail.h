@@ -40,7 +40,6 @@ class NavigationRail : public Panel {
   int destination_size_dp_;
   roo_display::VAlign alignment_;
   LabelVisibility label_visibility_;
-  const Theme* theme_;
   int active_;
   Divider divider_;
 

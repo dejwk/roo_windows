@@ -37,6 +37,8 @@ class MainWindow : public Panel {
   void startClickAnimation(Widget* target);
   void clickWidget(Widget* target) { deferred_click_ = target; }
 
+  const Theme& theme() const override { return theme_; }
+
   // Can be called by a widget that is click-animating, from its paint() method.
   // Returns true if the animation is still currently in progress; false
   // otherwise. If returns true, updates progress, x_center, and y_center.
@@ -54,6 +56,7 @@ class MainWindow : public Panel {
   void handleTouch(const TouchEvent& event);
 
   roo_display::Display* display_;
+  const Theme& theme_;
 
   int16_t touch_x_, touch_y_, last_x_, last_y_;
   unsigned long touch_time_ms_, last_time_ms_;

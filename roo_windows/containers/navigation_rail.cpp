@@ -49,7 +49,6 @@ void Divider::paint(const Surface& s) {
 NavigationRail::NavigationRail(Panel* parent, Box bounds)
     : Panel(parent, bounds),
       alignment_(roo_display::VAlign::Top()),
-      theme_(&DefaultTheme()),
       active_(-1),
       divider_(this, Box(bounds.xMax() - 2, bounds.yMin(), bounds.xMax() - 1,
                          bounds.yMax())) {}
