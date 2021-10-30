@@ -301,10 +301,11 @@ bool Widget::onTouch(const TouchEvent& event) {
   } else if (event.type() == TouchEvent::RELEASED) {
     if (isPressed()) {
       setPressed(false);
+      onReleased();
       if (bounds().contains(event.x(), event.y()) ||
           event.duration() < kClickDurationThresholdMs) {
         if (isClicking()) {
-          // Defer the delivery of the event until the animation finishes.
+          // Defer the delivery of the click event until the animation finishes.
           state_ |= kWidgetClicked;
         } else {
           getMainWindow()->clickWidget(this);
@@ -320,6 +321,7 @@ bool Widget::onTouch(const TouchEvent& event) {
     uint32_t delta = dx * dx + dy * dy;
     if (delta < kClickStickinessRadius * kClickStickinessRadius) return true;
     setPressed(false);
+    onReleased();
     // Leave unhandled, for parent to handle.
   }
   return false;
