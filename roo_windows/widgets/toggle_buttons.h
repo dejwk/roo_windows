@@ -9,7 +9,6 @@
 #include "roo_windows/core/main_window.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/theme.h"
-
 #include "roo_windows/widgets/icon.h"
 
 namespace roo_windows {
@@ -17,8 +16,7 @@ namespace roo_windows {
 class ToggleButtons : public Panel {
  public:
   ToggleButtons(Panel* parent, int16_t dx, int16_t dy, int16_t height)
-      : Panel(parent, Box(dx, dy, dx + 1, dy + height - 1)),
-        active_(-1) {}
+      : Panel(parent, Box(dx, dy, dx + 1, dy + height - 1)), active_(-1) {}
 
   roo_windows::Widget* addButton(const MonoIcon& icon, int16_t width) {
     Box box(this->width() - 1, 0, this->width() - 1 + width - 1, height() - 1);
@@ -26,8 +24,8 @@ class ToggleButtons : public Panel {
     int idx = buttons_.size();
     btn->setOnClicked([this, idx] { setActive(idx); });
     buttons_.push_back(btn);
-    updateBounds(Box(parent_bounds().xMin(), parent_bounds().yMin(),
-                     parent_bounds().xMax() + width, parent_bounds().yMax()));
+    moveTo(Box(parent_bounds().xMin(), parent_bounds().yMin(),
+               parent_bounds().xMax() + width, parent_bounds().yMax()));
     return btn;
   }
 
@@ -38,13 +36,13 @@ class ToggleButtons : public Panel {
         roo_display::Line(0, 0, 0, 0, roo_display::color::Transparent));
     s.drawObject(roo_display::Line(0, 1, 0, height() - 2, border));
     s.drawObject(roo_display::Line(0, height() - 1, 0, height() - 1,
-                                    roo_display::color::Transparent));
+                                   roo_display::color::Transparent));
     int16_t x = width() - 1;
     s.drawObject(
         roo_display::Line(x, 0, x, 0, roo_display::color::Transparent));
     s.drawObject(roo_display::Line(x, 1, x, height() - 2, border));
     s.drawObject(roo_display::Line(x, height() - 1, x, height() - 1,
-                                    roo_display::color::Transparent));
+                                   roo_display::color::Transparent));
   }
 
   int getActive() const { return active_; }

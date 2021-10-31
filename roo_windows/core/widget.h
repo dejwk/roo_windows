@@ -131,6 +131,9 @@ class Widget {
 
   const Box& parent_bounds() const { return parent_bounds_; }
 
+
+  // Moves the widget to the new position, specified in the parent's
+  // coordinates.
   void moveTo(const Box& parent_bounds);
 
   // Returns bounds in the device's coordinates.
@@ -221,10 +224,6 @@ class Widget {
   }
 
   bool isInvalidated() const { return (redraw_status_ & kInvalidated) != 0; }
-
-  // Moves the widget to the new position, specified in the parent's
-  // coordinates.
-  void updateBounds(const Box& bounds);
 
  protected:
   virtual void invalidateDescending() { markInvalidated(); }
