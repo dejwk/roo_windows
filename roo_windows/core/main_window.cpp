@@ -16,8 +16,9 @@ static const unsigned long kClickAnimationMs = 200;
 // How much movement in pixels before we consider it a swipe.
 static const uint16_t kSwipeThreshold = 8;
 
-MainWindow::MainWindow(Display* display, const Theme& theme)
-    : MainWindow(display, display->extents(), theme) {}
+MainWindow::MainWindow(Display* display, const Theme& theme,
+                       const KeyboardColorTheme& keyboard_theme)
+    : MainWindow(display, display->extents(), theme, keyboard_theme) {}
 
 namespace {
 
@@ -28,7 +29,8 @@ void maybeAddColor(roo_display::internal::ColorSet& palette, Color color) {
 
 }  // namespace
 
-MainWindow::MainWindow(Display* display, const Box& bounds, const Theme& theme)
+MainWindow::MainWindow(Display* display, const Box& bounds, const Theme& theme,
+                       const KeyboardColorTheme& keyboard_theme)
     : Panel(nullptr, bounds, theme.color.background),
       display_(display),
       theme_(theme),
@@ -45,7 +47,10 @@ MainWindow::MainWindow(Display* display, const Box& bounds, const Theme& theme)
   maybeAddColor(color_set, theme_colors.primary);
   maybeAddColor(color_set, theme_colors.primaryVariant);
   maybeAddColor(color_set, theme_colors.secondary);
+  maybeAddColor(color_set, keyboard_theme.background);
+  maybeAddColor(color_set, keyboard_theme.normalButton);
   maybeAddColor(color_set, theme_colors.error);
+  maybeAddColor(color_set, keyboard_theme.modifierButton);
   Color palette[color_set.size()];
   std::copy(color_set.begin(), color_set.end(), palette);
   background_fill_buffer_.setPalette(palette, color_set.size());

@@ -11,11 +11,14 @@ class ModalWindow;
 
 class MainWindow : public Panel {
  public:
-  MainWindow(roo_display::Display* display,
-             const Theme& theme = DefaultTheme());
+  MainWindow(
+      roo_display::Display* display, const Theme& theme = DefaultTheme(),
+      const KeyboardColorTheme& keyboard_theme = DefaultKeyboardColorTheme());
 
-  MainWindow(roo_display::Display* display, const Box& bounds,
-             const Theme& theme = DefaultTheme());
+  MainWindow(
+      roo_display::Display* display, const Box& bounds,
+      const Theme& theme = DefaultTheme(),
+      const KeyboardColorTheme& keyboard_theme = DefaultKeyboardColorTheme());
 
   void tick();
 
