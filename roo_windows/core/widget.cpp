@@ -71,11 +71,25 @@ void Widget::invalidateInterior(const Box& box) {
   markDirty(box);
 }
 
+void Widget::setParentClipMode(ParentClipMode mode) {
+  if (mode == getParentClipMode()) return;
+  bool visible = isVisible();
+  if (visible) {
+    setVisible(false);
+  }
+  state_ ^= kWidgetClippedInParent;
+  if (visible) {
+    setVisible(true);
+  }
+}
+
 void Widget::setVisible(bool visible) {
   if (visible == isVisible()) return;
   state_ ^= kWidgetHidden;
   invalidateInterior();
-  if (!isVisible()) {
+  if (isVisible()) {
+    parent()->childShown(this);
+  } else {
     parent()->childHidden(this);
   }
 }

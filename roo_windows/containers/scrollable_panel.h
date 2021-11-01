@@ -61,10 +61,12 @@ class ScrollablePanel : public Panel {
   }
 
   void childHidden(const Widget* child) override {
-    invalidateBeneath(child->parent_bounds().translate(dx_, dy_), child);
+    invalidateBeneath(child->parent_bounds().translate(dx_, dy_), this,
+                      getParentClipMode() == Widget::CLIPPED);
   }
 
-  bool invalidateBeneath(const Box& box, const Widget* subject) override {
+  bool invalidateBeneathDescending(const Box& box,
+                                   const Widget* subject) override {
     Box clipped = Box::intersect(box, maxBounds());
     if (clipped.empty()) return false;
     markInvalidated();
@@ -78,7 +80,7 @@ class ScrollablePanel : public Panel {
       if (child->isVisible()) {
         Box adjusted =
             clipped.translate(-dx_ - child->xOffset(), -dy_ - child->yOffset());
-        if (child->invalidateBeneath(adjusted, subject)) return true;
+        if (child->invalidateBeneathDescending(adjusted, subject)) return true;
       }
     }
     return false;

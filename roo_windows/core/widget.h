@@ -27,8 +27,10 @@ using roo_display::Surface;
 
 static const uint32_t kPressAnimationMillis = 200;
 
-static const uint16_t kWidgetEnabled = 0x0001;
-static const uint16_t kWidgetDisabled = 0x0002;
+static const uint16_t kWidgetClippedInParent = 0x0001;
+
+static const uint16_t kWidgetEnabled = 0x0002;
+// static const uint16_t kWidgetDisabled = 0x0002;
 static const uint16_t kWidgetHover = 0x0004;
 static const uint16_t kWidgetFocused = 0x0008;
 static const uint16_t kWidgetSelected = 0x0010;
@@ -83,6 +85,8 @@ class TouchEvent {
 
 class Widget {
  public:
+  enum ParentClipMode { CLIPPED, UNCLIPPED };
+
   Widget(Panel* parent, const Box& bounds);
   virtual ~Widget() {}
 
@@ -131,10 +135,9 @@ class Widget {
 
   const Box& parent_bounds() const { return parent_bounds_; }
 
-
   // Moves the widget to the new position, specified in the parent's
   // coordinates.
-  void moveTo(const Box& parent_bounds);
+  virtual void moveTo(const Box& parent_bounds);
 
   // Returns bounds in the device's coordinates.
   virtual void getAbsoluteBounds(Box* full, Box* visible) const;
@@ -148,15 +151,16 @@ class Widget {
   virtual MainWindow* getMainWindow();
   virtual const MainWindow* getMainWindow() const;
 
-  // Returns this widget's background. Transparent by default. Normally overridden
-  // by panels, which usually have opaque backgrounds.
+  // Returns this widget's background. Transparent by default. Normally
+  // overridden by panels, which usually have opaque backgrounds.
   virtual Color background() const { return roo_display::color::Transparent; }
 
   // Returns the effective background color of this widget. If this widget has a
-  // non-opaque background, it is returned. If this widget has a fully transparent
-  // background, the parent's effective background is returned. Otherwise, if this
-  // widget has a semi-transparent background, the returned color is the alpha-blend
-  // of the parent's effective background and this widget's background.
+  // non-opaque background, it is returned. If this widget has a fully
+  // transparent background, the parent's effective background is returned.
+  // Otherwise, if this widget has a semi-transparent background, the returned
+  // color is the alpha-blend of the parent's effective background and this
+  // widget's background.
   Color effectiveBackground() const;
 
   virtual bool onTouch(const TouchEvent& event);
@@ -185,6 +189,13 @@ class Widget {
   std::function<void()> getOnClicked() const { return on_clicked_; }
 
   // virtual bool onClick(int16_t x, int16_t y) { return false; }
+
+  ParentClipMode getParentClipMode() const {
+    return (state_ & kWidgetClippedInParent) != 0 ? Widget::UNCLIPPED
+                                                  : Widget::CLIPPED;
+  }
+
+  void setParentClipMode(ParentClipMode mode);
 
   bool isVisible() const { return (state_ & kWidgetHidden) == 0; }
   bool isEnabled() const { return (state_ & kWidgetEnabled) != 0; }
@@ -227,14 +238,23 @@ class Widget {
   bool isInvalidated() const { return (redraw_status_ & kInvalidated) != 0; }
 
  protected:
+  // Marks the entire area of this widget, and all its descendants, as
+  // invalidated (needing full redraw).
   virtual void invalidateDescending() { markInvalidated(); }
 
+  // Marks the specified sub-area of this widget, and all its descendants, as
+  // invalidated (needing full redraw).
   virtual void invalidateDescending(const Box& box) {
     if (!box.intersects(bounds())) return;
     markInvalidated();
   }
 
-  virtual bool invalidateBeneath(const Box& box, const Widget* subject) {
+  // Recursively iterates through all widgets to the 'left' of subject (i.e.,
+  // with lower 'Z' than the subject), propagating the invalidation rectangle.
+  // Returns true when reaching subject on the iterative descent, which signals
+  // that the iteration should be stopped.
+  virtual bool invalidateBeneathDescending(const Box& box,
+                                           const Widget* subject) {
     if (subject == this) return true;
     invalidateDescending(box);
     return false;
