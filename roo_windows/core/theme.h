@@ -213,6 +213,15 @@ struct Theme {
   }
 };
 
+struct KeyboardColorTheme {
+  roo_display::Color background;
+  roo_display::Color normalButton;
+  roo_display::Color modifierButton;
+  roo_display::Color acceptButton;
+  roo_display::Color text;
+};
+
 const Theme& DefaultTheme();
+const KeyboardColorTheme& DefaultKeyboardColorTheme();
 
 }  // namespace roo_windows

@@ -276,13 +276,4 @@ void PressHighlighter::paint(const Surface& s) {
       bgcolor, roo_display::FILL_MODE_RECTANGLE));
 }
 
-const KeyboardColorTheme& DefaultKeyboardColorTheme() {
-  static KeyboardColorTheme theme = {.background = Color(0xFF303030),
-                                     .normalButton = Color(0xFF4C4C4C),
-                                     .modifierButton = Color(0xFF3C3C3C),
-                                     .acceptButton = Color(0xFF018786),
-                                     .text = roo_display::color::White};
-  return theme;
-}
-
 }  // namespace roo_windows

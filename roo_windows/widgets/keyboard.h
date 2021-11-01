@@ -90,16 +90,6 @@ class KeyboardPage : public Panel {
   std::unique_ptr<PressHighlighter> highlighter_;
 };
 
-struct KeyboardColorTheme {
-  roo_display::Color background;
-  roo_display::Color normalButton;
-  roo_display::Color modifierButton;
-  roo_display::Color acceptButton;
-  roo_display::Color text;
-};
-
-const KeyboardColorTheme& DefaultKeyboardColorTheme();
-
 class Keyboard : public Panel {
  public:
   Keyboard(Panel* parent, const roo_display::Box& bounds,
