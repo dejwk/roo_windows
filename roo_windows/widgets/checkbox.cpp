@@ -2,7 +2,7 @@
 
 #include "roo_display/image/image.h"
 #include "roo_display/ui/tile.h"
-#include "roo_material_icons/filled/18/toggle.h"
+#include "roo_material_icons/filled/24/toggle.h"
 
 using namespace roo_display;
 
@@ -24,9 +24,9 @@ void Checkbox::paint(const Surface& s) {
   Color color = isOn() ? theme().color.highlighterColor(s.bgcolor())
                        : theme().color.defaultColor(s.bgcolor());
   RleImage4bppxBiased<Alpha4, PrgMemResource> img =
-      state() == ON    ? ic_filled_18_toggle_check_box()
-      : state() == OFF ? ic_filled_18_toggle_check_box_outline_blank()
-                       : ic_filled_18_toggle_indeterminate_check_box();
+      state() == ON    ? ic_filled_24_toggle_check_box()
+      : state() == OFF ? ic_filled_24_toggle_check_box_outline_blank()
+                       : ic_filled_24_toggle_indeterminate_check_box();
   img.color_mode().setColor(color);
   if (isInvalidated()) {
     roo_display::Tile tile(&img, bounds(), roo_display::HAlign::Center(),

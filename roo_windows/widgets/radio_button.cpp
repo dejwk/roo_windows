@@ -2,7 +2,7 @@
 
 #include "roo_display/image/image.h"
 #include "roo_display/ui/tile.h"
-#include "roo_material_icons/filled/18/toggle.h"
+#include "roo_material_icons/filled/24/toggle.h"
 
 using namespace roo_display;
 
@@ -24,8 +24,8 @@ void RadioButton::paint(const Surface& s) {
   Color color = isOn() ? theme().color.highlighterColor(s.bgcolor())
                        : theme().color.defaultColor(s.bgcolor());
   RleImage4bppxBiased<Alpha4, PrgMemResource> img =
-      isOn() ? ic_filled_18_toggle_radio_button_checked()
-             : ic_filled_18_toggle_radio_button_unchecked();
+      isOn() ? ic_filled_24_toggle_radio_button_checked()
+             : ic_filled_24_toggle_radio_button_unchecked();
   img.color_mode().setColor(color);
   if (isInvalidated()) {
     roo_display::Tile tile(&img, bounds(), roo_display::HAlign::Center(),
