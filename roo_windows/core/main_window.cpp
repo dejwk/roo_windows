@@ -41,15 +41,28 @@ MainWindow::MainWindow(Display* display, const Box& bounds, const Theme& theme,
       modal_window_(nullptr),
       background_fill_buffer_(display->width(), display->height()) {
   roo_display::internal::ColorSet color_set;
-  const auto& theme_colors = theme.color;
-  maybeAddColor(color_set, theme_colors.background);
-  maybeAddColor(color_set, theme_colors.surface);
-  maybeAddColor(color_set, theme_colors.primary);
-  maybeAddColor(color_set, theme_colors.primaryVariant);
-  maybeAddColor(color_set, theme_colors.secondary);
+  maybeAddColor(color_set, theme.color.background);
+  maybeAddColor(color_set, theme.color.surface);
+  maybeAddColor(color_set, theme.color.primary);
+  maybeAddColor(color_set, theme.color.primaryVariant);
+  maybeAddColor(color_set, theme.color.secondary);
   maybeAddColor(color_set, keyboard_theme.background);
+
+  {
+    Color c = theme.color.defaultColor(theme.color.surface);
+    c.set_a(theme.pressAnimationOpacity(theme.color.surface));
+    c = alphaBlend(theme.color.surface, c);
+    maybeAddColor(color_set, c);
+  }
+  {
+    Color c = theme.color.highlighterColor(theme.color.surface);
+    c.set_a(theme.pressAnimationOpacity(theme.color.surface));
+    c = alphaBlend(theme.color.surface, c);
+    maybeAddColor(color_set, c);
+  }
+
   maybeAddColor(color_set, keyboard_theme.normalButton);
-  maybeAddColor(color_set, theme_colors.error);
+  maybeAddColor(color_set, theme.color.error);
   maybeAddColor(color_set, keyboard_theme.modifierButton);
   Color palette[color_set.size()];
   std::copy(color_set.begin(), color_set.end(), palette);
