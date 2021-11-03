@@ -241,6 +241,18 @@ void Panel::markCleanDescending() {
   }
 }
 
+void Panel::moveTo(const Box& parent_bounds) {
+  bool non_shrinking =
+      (parent_bounds.width() >= this->parent_bounds().width() &&
+       parent_bounds.height() >= this->parent_bounds().height());
+  Widget::moveTo(parent_bounds);
+  if (non_shrinking && !cached_max_bounds_.empty()) {
+    cached_max_bounds_ = Box::extent(cached_max_bounds_, bounds());
+  } else {
+    invalidateCachedMaxBounds();
+  }
+}
+
 Box Panel::maxBounds() const {
   if (cached_max_bounds_.empty()) {
     // The cache is stale; need to recompute.

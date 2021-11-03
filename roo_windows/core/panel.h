@@ -54,6 +54,8 @@ class Panel : public Widget {
   // to bounds().
   Box maxBounds() const override;
 
+  void moveTo(const Box& parent_bounds) override;
+
  protected:
   const std::vector<std::unique_ptr<Widget>>& children() const {
     return children_;
