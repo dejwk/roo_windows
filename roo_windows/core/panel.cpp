@@ -55,9 +55,10 @@ void Panel::paintChildren(const Surface& s, Clipper& clipper) {
   }
 }
 
-void Panel::paint(const Surface& s) {
+bool Panel::paint(const Surface& s) {
   s.drawObject(
       roo_display::FilledRect(bounds(), roo_display::color::Transparent));
+  return true;
 }
 
 bool onTouchChild(const TouchEvent& event, Widget* child) {

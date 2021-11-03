@@ -14,7 +14,7 @@ IconWithCaption::IconWithCaption(Panel* parent, const Box& bounds,
   lo_border_ = border - hi_border_;
 }
 
-void IconWithCaption::paint(const Surface& s) {
+bool IconWithCaption::paint(const Surface& s) {
   const Theme& myTheme = theme();
   Color color = myTheme.color.defaultColor(s.bgcolor());
   if (isActivated() && usesHighlighterColor()) {
@@ -46,6 +46,7 @@ void IconWithCaption::paint(const Surface& s) {
                             bounds().xMax(), bounds().yMax(),
                             color::Transparent));
   }
+  return true;
 }
 
 }  // namespace roo_windows

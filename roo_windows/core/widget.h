@@ -145,8 +145,11 @@ class Widget {
   // Called as part of display update, for a visible, dirty widget.
   // The Surface's offset and clipbox has been pre-initialized so that this
   // widget's top-left corner is painted at (0, 0), and the clip box is
-  // constrained to this widget's bounds (and non-empty).
-  virtual void paint(const Surface& s) {}
+  // constrained to this widget's bounds (and non-empty). Should return true if
+  // the painting is considered done, or false if the widget wants to be
+  // repainted again (e.g. because it is undergoing state change resulting in an
+  // animation).
+  virtual bool paint(const Surface& s) {}
 
   virtual MainWindow* getMainWindow();
   virtual const MainWindow* getMainWindow() const;

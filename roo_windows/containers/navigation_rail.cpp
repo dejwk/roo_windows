@@ -34,8 +34,8 @@ class Destination : public IconWithCaption {
   std::function<void()> activator_;
 };
 
-void Divider::paint(const Surface& s) {
-  if (!isInvalidated()) return;
+bool Divider::paint(const Surface& s) {
+  if (!isInvalidated()) return true;
   const Box box = bounds();
   Color color = theme().color.onBackground;
   color.set_a(0x20);
@@ -44,6 +44,7 @@ void Divider::paint(const Surface& s) {
   color.set_a(0x10);
   s.drawObject(roo_display::FilledRect(box.xMax(), box.yMin(), box.xMax(),
                                        box.yMax(), color));
+  return true;
 }
 
 NavigationRail::NavigationRail(Panel* parent, Box bounds)

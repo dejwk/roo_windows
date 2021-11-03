@@ -16,12 +16,13 @@ WifiIndicator::WifiIndicator(Panel* parent, const Box& bounds,
       locked_(false),
       bar_count_(1) {}
 
-void WifiIndicator::paint(const Surface& s) {
+bool WifiIndicator::paint(const Surface& s) {
   roo_display::MaterialIcon icon(*icons()[status()]);
   icon.color_mode().setColor(color_);
   roo_display::Tile tile(&icon, bounds(), roo_display::HAlign::Center(),
                          roo_display::VAlign::Middle());
   s.drawObject(tile);
+  return true;
 }
 
 void WifiIndicator::setWifiConnected(bool connected) {

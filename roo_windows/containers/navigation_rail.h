@@ -13,7 +13,7 @@ class Destination;
 class Divider : public Widget {
  public:
   using Widget::Widget;
-  void paint(const Surface& s) override;
+  bool paint(const Surface& s) override;
 };
 
 class NavigationRail : public Panel {

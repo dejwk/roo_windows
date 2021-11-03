@@ -17,7 +17,7 @@ class Icon : public Widget {
   Icon(Panel* parent, const Box& bounds, const roo_display::MaterialIcon& def)
       : Widget(parent, bounds), icon_(def) {}
 
-  void paint(const Surface& s) override {
+  bool paint(const Surface& s) override {
     const Theme& myTheme = theme();
     Color color = myTheme.color.defaultColor(s.bgcolor());
     if (isActivated() && usesHighlighterColor()) {
@@ -29,6 +29,7 @@ class Icon : public Widget {
                            roo_display::VAlign::Middle(),
                            roo_display::color::Transparent, s.fill_mode());
     s.drawObject(tile);
+    return true;
   }
 
  private:

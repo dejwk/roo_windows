@@ -293,8 +293,9 @@ void Widget::paintWidgetContents(const Surface& s, Clipper& clipper) {
       Box::intersect(bounds().translate(s.dx(), s.dy()), s.clip_box());
   if (isDirty()) {
     clipper.setBounds(absolute_bounds);
-    paint(s);
+    bool clean = paint(s);
     markClean();
+    if (!clean) markDirty();
   }
   clipper.addExclusion(absolute_bounds);
 }

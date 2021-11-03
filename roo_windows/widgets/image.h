@@ -17,7 +17,7 @@ class Image : public Widget {
   Image(Panel* parent, const Box& bounds, const roo_display::Drawable& image)
       : Widget(parent, bounds), image_(image) {}
 
-  void paint(const Surface& s) override {
+  bool paint(const Surface& s) override {
     roo_display::Tile tile(&image_, bounds(), roo_display::HAlign::Center(),
                            roo_display::VAlign::Middle(),
                            roo_display::color::Transparent, s.fill_mode());

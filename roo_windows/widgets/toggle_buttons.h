@@ -29,7 +29,7 @@ class ToggleButtons : public Panel {
     return btn;
   }
 
-  void paint(const roo_display::Surface& s) override {
+  bool paint(const roo_display::Surface& s) override {
     Color border = theme().color.defaultColor(s.bgcolor());
     border.set_a(0x30);
     s.drawObject(
@@ -43,6 +43,7 @@ class ToggleButtons : public Panel {
     s.drawObject(roo_display::Line(x, 1, x, height() - 2, border));
     s.drawObject(roo_display::Line(x, height() - 1, x, height() - 1,
                                    roo_display::color::Transparent));
+    return true;
   }
 
   int getActive() const { return active_; }
@@ -64,7 +65,7 @@ class ToggleButtons : public Panel {
     bool useOverlayOnActivation() const override { return true; }
     bool isClickable() const override { return true; }
 
-    void paint(const roo_display::Surface& s) override {
+    bool paint(const roo_display::Surface& s) override {
       Color color = theme().color.defaultColor(s.bgcolor());
       Color internal_border = color;
       internal_border.set_a(0x10);
@@ -86,6 +87,7 @@ class ToggleButtons : public Panel {
                                      external_border));
       s.drawObject(roo_display::FilledRect(0, height() - 2, width() - 1,
                                            height() - 1, external_border));
+      return true;
     }
 
    private:

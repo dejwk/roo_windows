@@ -12,7 +12,7 @@ class RadioButton : public Widget {
 
   void setState(State state);
 
-  void paint(const Surface& s) override;
+  bool paint(const Surface& s) override;
 
   bool isClickable() const override { return true; }
 

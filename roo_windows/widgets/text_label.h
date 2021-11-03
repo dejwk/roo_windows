@@ -25,10 +25,11 @@ class TextLabel : public Widget {
         halign_(halign),
         valign_(valign) {}
 
-  void paint(const roo_display::Surface& s) override {
+  bool paint(const roo_display::Surface& s) override {
     s.drawObject(
         roo_display::MakeTileOf(roo_display::TextLabel(font_, value_, color_),
                                 bounds(), halign_, valign_));
+    return true;
   }
 
   void setContent(std::string value) {

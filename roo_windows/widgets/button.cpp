@@ -243,10 +243,10 @@ Button::Button(Panel* parent, const Box& bounds, const MonoIcon* icon,
 // BBBBBB_C_C_C_C_DDDDDD
 // BBBBBB_C_C_C_C_DDDDDD
 
-void Button::paint(const Surface& s) {
+bool Button::paint(const Surface& s) {
   if (style() == TEXT) {
     paintInterior(s, bounds(), *this);
-    return;
+    return true;
   }
 
   const BorderSpec& spec =
@@ -342,6 +342,7 @@ void Button::paint(const Surface& s) {
           2 * spec.bottom_width + bottom_bar_width - 1, full_height - 1),
       spec.data_bottom_right, Alpha4(outlineColor()));
   s.drawObject(br);
+  return true;
 }
 
 }  // namespace roo_windows

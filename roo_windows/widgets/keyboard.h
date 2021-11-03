@@ -66,7 +66,7 @@ class PressHighlighter : public Widget {
 
   void setTarget(const TextButton* target) { target_ = target; }
 
-  void paint(const Surface& s) override;
+  bool paint(const Surface& s) override;
 
   const KeyboardPage* page() const;
   const Keyboard* keyboard() const;

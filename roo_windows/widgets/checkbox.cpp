@@ -20,7 +20,7 @@ void Checkbox::setState(State state) {
   markDirty();
 }
 
-void Checkbox::paint(const Surface& s) {
+bool Checkbox::paint(const Surface& s) {
   Color color = isOn() ? theme().color.highlighterColor(s.bgcolor())
                        : theme().color.defaultColor(s.bgcolor());
   RleImage4bppxBiased<Alpha4, PrgMemResource> img =
@@ -38,6 +38,7 @@ void Checkbox::paint(const Surface& s) {
         img, roo_display::HAlign::Center().GetOffset(bounds(), img.extents()),
         roo_display::VAlign::Middle().GetOffset(bounds(), img.extents()));
   }
+  return true;
 }
 
 }  // namespace roo_windows

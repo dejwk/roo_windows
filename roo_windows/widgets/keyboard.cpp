@@ -259,10 +259,10 @@ const Keyboard* PressHighlighter::keyboard() const {
   return page()->keyboard();
 }
 
-void PressHighlighter::paint(const Surface& s) {
+bool PressHighlighter::paint(const Surface& s) {
   if (target_ == nullptr) {
     s.drawObject(roo_display::Clear());
-    return;
+    return true;
   }
   const Theme& th = theme();
   const KeyboardColorTheme& kbTh = keyboard()->color_theme();
@@ -274,6 +274,7 @@ void PressHighlighter::paint(const Surface& s) {
                              target_->textColor()),
       bounds(), roo_display::HAlign::Center(), roo_display::VAlign::Top(3),
       bgcolor, roo_display::FILL_MODE_RECTANGLE));
+  return true;
 }
 
 }  // namespace roo_windows
