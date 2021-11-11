@@ -7,8 +7,9 @@ namespace roo_windows {
 class Switch : public Widget {
  public:
   enum State { OFF, ON };
-  Switch(Panel* parent, const Box& bounds, State state = OFF)
-      : Widget(parent, bounds), state_(state), anim_(0x8000) {}
+  Switch(const Environment& env, Panel* parent, const Box& bounds,
+         State state = OFF)
+      : Widget(env, parent, bounds), state_(state), anim_(0x8000) {}
 
   void setState(State state);
 

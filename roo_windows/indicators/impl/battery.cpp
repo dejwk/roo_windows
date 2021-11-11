@@ -5,12 +5,13 @@
 
 namespace roo_windows {
 
-BatteryIndicator::BatteryIndicator(Panel* parent, const Box& bounds)
-    : BatteryIndicator(parent, bounds, parent->defaultColor()) {}
+BatteryIndicator::BatteryIndicator(const Environment& env, Panel* parent,
+                                   const Box& bounds)
+    : BatteryIndicator(env, parent, bounds, roo_display::color::Transparent) {}
 
-BatteryIndicator::BatteryIndicator(Panel* parent, const Box& bounds,
-                                   roo_display::Color color)
-    : Widget(parent, bounds),
+BatteryIndicator::BatteryIndicator(const Environment& env, Panel* parent,
+                                   const Box& bounds, roo_display::Color color)
+    : Widget(env, parent, bounds),
       color_(color),
       charging_(false),
       alert_(false),
@@ -19,7 +20,9 @@ BatteryIndicator::BatteryIndicator(Panel* parent, const Box& bounds,
 
 bool BatteryIndicator::paint(const Surface& s) {
   roo_display::MaterialIcon icon(*icons()[status()]);
-  icon.color_mode().setColor(color_);
+  roo_display::Color color =
+      color_.a() == 0 ? parent()->defaultColor() : color_;
+  icon.color_mode().setColor(color);
   roo_display::Tile tile(&icon, bounds(), roo_display::HAlign::Center(),
                          roo_display::VAlign::Middle());
   s.drawObject(tile);

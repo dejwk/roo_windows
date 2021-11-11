@@ -99,8 +99,9 @@ std::string runeAsStr(uint32_t rune) {
 
 class TextButton : public Button {
  public:
-  TextButton(KeyboardPage* parent, const Box& bounds, uint32_t rune)
-      : Button(parent, bounds, runeAsStr(rune)), rune_(rune) {}
+  TextButton(const Environment& env, KeyboardPage* parent, const Box& bounds,
+             uint32_t rune)
+      : Button(env, parent, bounds, runeAsStr(rune)), rune_(rune) {}
 
   bool showClickAnimation() const override { return false; }
 
@@ -123,8 +124,8 @@ class TextButton : public Button {
 
 class SpaceButton : public Button {
  public:
-  SpaceButton(KeyboardPage* parent, const Box& bounds)
-      : Button(parent, bounds, "") {}
+  SpaceButton(const Environment& env, KeyboardPage* parent, const Box& bounds)
+      : Button(env, parent, bounds, "") {}
 
   bool showClickAnimation() const override { return false; }
 
@@ -141,28 +142,31 @@ class SpaceButton : public Button {
 
 class FnButton : public Button {
  public:
-  FnButton(KeyboardPage* parent, const Box& bounds, const MonoIcon& icon)
-      : Button(parent, bounds, icon) {}
+  FnButton(const Environment& env, KeyboardPage* parent, const Box& bounds,
+           const MonoIcon& icon)
+      : Button(env, parent, bounds, icon) {}
 
   bool showClickAnimation() const override { return false; }
 };
 
 const Keyboard* KeyboardPage::keyboard() const { return (Keyboard*)parent(); }
 
-Keyboard::Keyboard(Panel* parent, const roo_display::Box& bounds,
-                   const KeyboardPageSpec* spec,
-                   const KeyboardColorTheme& color_theme,
+Keyboard::Keyboard(const Environment& env, Panel* parent,
+                   const roo_display::Box& bounds, const KeyboardPageSpec* spec,
                    KeyboardListener* listener)
-    : Panel(parent, bounds), color_theme_(color_theme), listener_(listener) {
+    : Panel(env, parent, bounds),
+      color_theme_(env.keyboardColorTheme()),
+      listener_(listener) {
   setParentClipMode(Widget::UNCLIPPED);
-  auto page = new KeyboardPage(this, bounds.width(), bounds.height(), spec);
+  auto page =
+      new KeyboardPage(env, this, bounds.width(), bounds.height(), spec);
   current_page_ = page;
   pages_.emplace_back(page);
 }
 
-KeyboardPage::KeyboardPage(Keyboard* parent, int16_t w, int16_t h,
-                           const KeyboardPageSpec* spec)
-    : Panel(parent, Box(0, 0, w - 1, h - 1)) {
+KeyboardPage::KeyboardPage(const Environment& env, Keyboard* parent, int16_t w,
+                           int16_t h, const KeyboardPageSpec* spec)
+    : Panel(env, parent, Box(0, 0, w - 1, h - 1)) {
   setBackground(parent->color_theme().background);
   setParentClipMode(Widget::UNCLIPPED);
   // Calculate grid size.
@@ -192,28 +196,29 @@ KeyboardPage::KeyboardPage(Keyboard* parent, int16_t w, int16_t h,
       Color b_color;
       switch (key.function) {
         case KeySpec::TEXT: {
-          b = new TextButton(this, bounds, key.data);
+          b = new TextButton(env, this, bounds, key.data);
           b_color = parent->color_theme().normalButton;
           break;
         }
         case KeySpec::SPACE: {
-          b = new SpaceButton(this, bounds);
+          b = new SpaceButton(env, this, bounds);
           b_color = parent->color_theme().normalButton;
           break;
         }
         case KeySpec::ENTER: {
-          b = new FnButton(this, bounds, ic_outlined_24_action_done());
+          b = new FnButton(env, this, bounds, ic_outlined_24_action_done());
           b_color = parent->color_theme().acceptButton;
           break;
         }
         case KeySpec::SHIFT: {
-          b = new FnButton(this, bounds, shift_24());
+          b = new FnButton(env, this, bounds, shift_24());
           b_color = parent->color_theme().modifierButton;
           break;
         }
         case KeySpec::SWITCH_PAGE:
         default: {
-          b = new FnButton(this, bounds, ic_outlined_24_content_backspace());
+          b = new FnButton(env, this, bounds,
+                           ic_outlined_24_content_backspace());
           b_color = parent->color_theme().modifierButton;
           break;
         }
@@ -228,7 +233,7 @@ KeyboardPage::KeyboardPage(Keyboard* parent, int16_t w, int16_t h,
   }
   // Note: highlighter must be added last to be on top of all children.
   highlighter_ = std::unique_ptr<PressHighlighter>(
-      new PressHighlighter(this, Box(0, 0, -1, -1)));
+      new PressHighlighter(env, this, Box(0, 0, -1, -1)));
   highlighter_->setVisible(false);
   highlighter_->setParentClipMode(Widget::UNCLIPPED);
 }
@@ -246,8 +251,9 @@ void KeyboardPage::hideHighlighter() {
   highlighter_->setTarget(nullptr);
 }
 
-PressHighlighter::PressHighlighter(KeyboardPage* parent, const Box& bounds)
-    : Widget(parent, bounds) {
+PressHighlighter::PressHighlighter(const Environment& env, KeyboardPage* parent,
+                                   const Box& bounds)
+    : Widget(env, parent, bounds) {
   setParentClipMode(Widget::UNCLIPPED);
 }
 

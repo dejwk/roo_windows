@@ -7,8 +7,9 @@ namespace roo_windows {
 class Checkbox : public Widget {
  public:
   enum State { OFF, INDETERMINATE, ON };
-  Checkbox(Panel* parent, const Box& bounds, State state = OFF)
-      : Widget(parent, bounds), state_(state) {}
+  Checkbox(const Environment& env, Panel* parent, const Box& bounds,
+           State state = OFF)
+      : Widget(env, parent, bounds), state_(state) {}
 
   void setState(State state);
 

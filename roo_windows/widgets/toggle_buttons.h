@@ -15,8 +15,9 @@ namespace roo_windows {
 
 class ToggleButtons : public Panel {
  public:
-  ToggleButtons(Panel* parent, int16_t dx, int16_t dy, int16_t height)
-      : Panel(parent, Box(dx, dy, dx + 1, dy + height - 1)), active_(-1) {}
+  ToggleButtons(const Environment& env, Panel* parent, int16_t dx, int16_t dy,
+                int16_t height)
+      : Panel(env, parent, Box(dx, dy, dx + 1, dy + height - 1)), active_(-1) {}
 
   roo_windows::Widget* addButton(const MonoIcon& icon, int16_t width) {
     Box box(this->width() - 1, 0, this->width() - 1 + width - 1, height() - 1);
@@ -59,8 +60,9 @@ class ToggleButtons : public Panel {
  private:
   class ToggleButton : public roo_windows::Widget {
    public:
-    ToggleButton(ToggleButtons* parent, Box bounds, const MonoIcon& icon)
-        : roo_windows::Widget(parent, bounds), icon_(icon) {}
+    ToggleButton(const Environment& env, ToggleButtons* parent, Box bounds,
+                 const MonoIcon& icon)
+        : roo_windows::Widget(env, parent, bounds), icon_(icon) {}
 
     bool useOverlayOnActivation() const override { return true; }
     bool isClickable() const override { return true; }

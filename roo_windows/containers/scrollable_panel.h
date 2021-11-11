@@ -1,5 +1,6 @@
 #pragma once
 
+#include "roo_windows/core/environment.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/widget.h"
 
@@ -10,11 +11,13 @@ static const float maxVel = 1200.0;
 
 class ScrollablePanel : public Panel {
  public:
-  ScrollablePanel(Panel* parent, const Box& bounds)
-      : ScrollablePanel(parent, bounds, parent->theme().color.background) {}
+  ScrollablePanel(const Environment& env, Panel* parent, const Box& bounds)
+      : ScrollablePanel(env, parent, bounds, parent->theme().color.background) {
+  }
 
-  ScrollablePanel(Panel* parent, const Box& bounds, Color bgcolor)
-      : Panel(parent, bounds, bgcolor),
+  ScrollablePanel(const Environment& env, Panel* parent, const Box& bounds,
+                  Color bgcolor)
+      : Panel(env, parent, bounds, bgcolor),
         width_(bounds.width()),
         height_(bounds.height()),
         dx_(0),

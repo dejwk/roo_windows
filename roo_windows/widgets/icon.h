@@ -10,12 +10,13 @@ namespace roo_windows {
 
 class Icon : public Widget {
  public:
-  Icon(Panel* parent, int16_t dx, int16_t dy,
+  Icon(const Environment& env, Panel* parent, int16_t dx, int16_t dy,
        const roo_display::MaterialIcon& def)
-      : Icon(parent, def.extents().translate(dx, dy), def) {}
+      : Icon(env, parent, def.extents().translate(dx, dy), def) {}
 
-  Icon(Panel* parent, const Box& bounds, const roo_display::MaterialIcon& def)
-      : Widget(parent, bounds), icon_(def) {}
+  Icon(const Environment& env, Panel* parent, const Box& bounds,
+       const roo_display::MaterialIcon& def)
+      : Widget(env, parent, bounds), icon_(def) {}
 
   bool paint(const Surface& s) override {
     const Theme& myTheme = theme();

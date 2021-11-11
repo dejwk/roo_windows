@@ -3,6 +3,7 @@
 #include "roo_display/filter/foreground.h"
 #include "roo_windows/core/main_window.h"
 #include "roo_windows/core/panel.h"
+#include "roo_windows/core/press_overlay.h"
 
 namespace roo_windows {
 
@@ -20,7 +21,7 @@ static const long int kClickDurationThresholdMs = 200;
 // as drag.
 static const long int kClickStickinessRadius = 40;
 
-Widget::Widget(Panel* parent, const Box& parent_bounds)
+Widget::Widget(const Environment& env, Panel* parent, const Box& parent_bounds)
     : parent_(parent),
       parent_bounds_(parent_bounds),
       state_(kWidgetEnabled),

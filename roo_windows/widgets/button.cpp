@@ -218,9 +218,9 @@ void printHorizStripes(const Surface& s, int16_t xMin, int16_t yMin,
 
 }  // namespace
 
-Button::Button(Panel* parent, const Box& bounds, const MonoIcon* icon,
-               std::string label, Style style)
-    : Widget(parent, bounds),
+Button::Button(const Environment& env, Panel* parent, const Box& bounds,
+               const MonoIcon* icon, std::string label, Style style)
+    : Widget(env, parent, bounds),
       style_(style),
       label_(std::move(label)),
       icon_(icon),

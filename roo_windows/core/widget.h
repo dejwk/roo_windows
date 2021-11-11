@@ -10,6 +10,7 @@
 #include "roo_display/filter/color_filter.h"
 #include "roo_display/image/image.h"
 #include "roo_windows/core/clipper.h"
+#include "roo_windows/core/environment.h"
 #include "roo_windows/core/theme.h"
 
 namespace roo_windows {
@@ -87,7 +88,7 @@ class Widget {
  public:
   enum ParentClipMode { CLIPPED, UNCLIPPED };
 
-  Widget(Panel* parent, const Box& bounds);
+  Widget(const Environment& env, Panel* parent, const Box& bounds);
   virtual ~Widget() {}
 
   // Causes the widget to request paint(). The widget decides which pixels

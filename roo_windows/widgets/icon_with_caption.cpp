@@ -4,10 +4,10 @@ using namespace roo_display;
 
 namespace roo_windows {
 
-IconWithCaption::IconWithCaption(Panel* parent, const Box& bounds,
-                                 const MaterialIcon& def,
+IconWithCaption::IconWithCaption(const Environment& env, Panel* parent,
+                                 const Box& bounds, const MaterialIcon& def,
                                  const std::string& caption, const Font* font)
-    : Widget(parent, bounds), icon_(def), caption_(caption), font_(font) {
+    : Widget(env, parent, bounds), icon_(def), caption_(caption), font_(font) {
   int16_t total_height = icon_.extents().height() + font->metrics().maxHeight();
   int16_t border = bounds.height() - total_height;
   hi_border_ = border / 2;

@@ -6,10 +6,10 @@ namespace roo_windows {
 
 class Destination : public IconWithCaption {
  public:
-  Destination(NavigationRail* parent, Box bounds,
+  Destination(const Environment& env, NavigationRail* parent, Box bounds,
               const roo_display::MaterialIcon& icon, std::string text, int idx,
               std::function<void()> activator)
-      : IconWithCaption(parent, bounds, std::move(icon), std::move(text)),
+      : IconWithCaption(env, parent, bounds, std::move(icon), std::move(text)),
         idx_(idx),
         activator_(std::move(activator)) {}
 
@@ -47,12 +47,15 @@ bool Divider::paint(const Surface& s) {
   return true;
 }
 
-NavigationRail::NavigationRail(Panel* parent, Box bounds)
-    : Panel(parent, bounds),
+NavigationRail::NavigationRail(const Environment& env, Panel* parent,
+                               Box bounds)
+    : Panel(env, parent, bounds),
+      env_(env),
       alignment_(roo_display::VAlign::Top()),
       active_(-1),
-      divider_(this, Box(bounds.xMax() - 2, bounds.yMin(), bounds.xMax() - 1,
-                         bounds.yMax())) {}
+      divider_(env, this,
+               Box(bounds.xMax() - 2, bounds.yMin(), bounds.xMax() - 1,
+                   bounds.yMax())) {}
 
 void NavigationRail::addDestination(const roo_display::MaterialIcon& icon,
                                     std::string text,
@@ -61,8 +64,8 @@ void NavigationRail::addDestination(const roo_display::MaterialIcon& icon,
   Box box(4, 4, width - 8, width - 8);
   box = box.translate(0, size() * width);
   Destination* dest =
-      new Destination(this, box, icon, std::move(text), destinations_.size(),
-                      std::move(activator));
+      new Destination(env_, this, box, icon, std::move(text),
+                      destinations_.size(), std::move(activator));
   destinations_.push_back(dest);
 }
 

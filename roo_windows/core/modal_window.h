@@ -9,7 +9,8 @@ namespace roo_windows {
 
 class ModalWindow : public Panel {
  public:
-  ModalWindow(Panel* parent, const Box& bounds) : Panel(parent, bounds) {}
+  ModalWindow(const Environment& env, Panel* parent, const Box& bounds)
+      : Panel(env, parent, bounds) {}
 
   void enter() {
     setVisible(true);

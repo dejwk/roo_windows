@@ -13,11 +13,12 @@ using roo_display::Box;
 using roo_display::Color;
 using roo_display::DisplayOutput;
 
-Panel::Panel(Panel* parent, const Box& bounds)
-    : Panel(parent, bounds, parent->theme().color.background) {}
+Panel::Panel(const Environment& env, Panel* parent, const Box& bounds)
+    : Panel(env, parent, bounds, env.theme().color.background) {}
 
-Panel::Panel(Panel* parent, const Box& bounds, Color bgcolor)
-    : Widget(parent, bounds),
+Panel::Panel(const Environment& env, Panel* parent, const Box& bounds,
+             Color bgcolor)
+    : Widget(env, parent, bounds),
       bgcolor_(bgcolor),
       invalid_region_(0, 0, bounds.width() - 1, bounds.height() - 1),
       cached_max_bounds_(0, 0, -1, -1) {}

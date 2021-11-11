@@ -18,9 +18,10 @@ class WalltimeIndicator18 : public WalltimeIndicator {
       : WalltimeIndicator(parent, Box(dx, dy, dx + 45, dy + 17), clock, tz) {}
 
   bool paint(const roo_display::Surface& s) override {
+    roo_display::Color color = color_.a() == 0 ? parent()->defaultColor(), color_;
     s.drawObject(roo_display::MakeTileOf(
         roo_display::TextLabel(roo_display::font_NotoSans_Regular_18(), val_,
-                               color_),
+                               color),
         bounds(), roo_display::HAlign::None(), roo_display::VAlign::Middle()));
     return true;
   }

@@ -7,9 +7,9 @@ namespace roo_windows {
 
 class WifiIndicator : public Widget {
  public:
-  WifiIndicator(Panel* parent, const Box& bounds);
+  WifiIndicator(const Environment& env, Panel* parent, const Box& bounds);
 
-  WifiIndicator(Panel* parent, const Box& bounds,
+  WifiIndicator(const Environment& env, Panel* parent, const Box& bounds,
                 roo_display::Color color);
 
   bool paint(const Surface& s) override;
@@ -38,7 +38,7 @@ class WifiIndicator : public Widget {
 
   WifiStatus status();
 
-  Color color_;
+  Color color_;  // If transparent, use parent's default content color.
   bool connected_;
   bool locked_;
   int bar_count_;

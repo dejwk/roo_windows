@@ -16,9 +16,8 @@ static const unsigned long kClickAnimationMs = 200;
 // How much movement in pixels before we consider it a swipe.
 static const uint16_t kSwipeThreshold = 8;
 
-MainWindow::MainWindow(Display* display, const Theme& theme,
-                       const KeyboardColorTheme& keyboard_theme)
-    : MainWindow(display, display->extents(), theme, keyboard_theme) {}
+MainWindow::MainWindow(const Environment& env, Display* display)
+    : MainWindow(env, display, display->extents()) {}
 
 namespace {
 
@@ -29,11 +28,11 @@ void maybeAddColor(roo_display::internal::ColorSet& palette, Color color) {
 
 }  // namespace
 
-MainWindow::MainWindow(Display* display, const Box& bounds, const Theme& theme,
-                       const KeyboardColorTheme& keyboard_theme)
-    : Panel(nullptr, bounds, theme.color.background),
+MainWindow::MainWindow(const Environment& env, Display* display,
+                       const Box& bounds)
+    : Panel(env, nullptr, bounds, env.theme().color.background),
       display_(display),
-      theme_(theme),
+      theme_(env.theme()),
       touch_down_(false),
       click_anim_target_(nullptr),
       deferred_click_(nullptr),
@@ -41,29 +40,29 @@ MainWindow::MainWindow(Display* display, const Box& bounds, const Theme& theme,
       modal_window_(nullptr),
       background_fill_buffer_(display->width(), display->height()) {
   roo_display::internal::ColorSet color_set;
-  maybeAddColor(color_set, theme.color.background);
-  maybeAddColor(color_set, theme.color.surface);
-  maybeAddColor(color_set, theme.color.primary);
-  maybeAddColor(color_set, theme.color.primaryVariant);
-  maybeAddColor(color_set, theme.color.secondary);
-  maybeAddColor(color_set, keyboard_theme.background);
+  maybeAddColor(color_set, env.theme().color.background);
+  maybeAddColor(color_set, env.theme().color.surface);
+  maybeAddColor(color_set, env.theme().color.primary);
+  maybeAddColor(color_set, env.theme().color.primaryVariant);
+  maybeAddColor(color_set, env.theme().color.secondary);
+  maybeAddColor(color_set, env.keyboardColorTheme().background);
 
   {
-    Color c = theme.color.defaultColor(theme.color.surface);
-    c.set_a(theme.pressAnimationOpacity(theme.color.surface));
-    c = alphaBlend(theme.color.surface, c);
+    Color c = env.theme().color.defaultColor(env.theme().color.surface);
+    c.set_a(env.theme().pressAnimationOpacity(env.theme().color.surface));
+    c = alphaBlend(env.theme().color.surface, c);
     maybeAddColor(color_set, c);
   }
   {
-    Color c = theme.color.highlighterColor(theme.color.surface);
-    c.set_a(theme.pressAnimationOpacity(theme.color.surface));
-    c = alphaBlend(theme.color.surface, c);
+    Color c = env.theme().color.highlighterColor(env.theme().color.surface);
+    c.set_a(env.theme().pressAnimationOpacity(env.theme().color.surface));
+    c = alphaBlend(env.theme().color.surface, c);
     maybeAddColor(color_set, c);
   }
 
-  maybeAddColor(color_set, keyboard_theme.normalButton);
-  maybeAddColor(color_set, theme.color.error);
-  maybeAddColor(color_set, keyboard_theme.modifierButton);
+  maybeAddColor(color_set, env.keyboardColorTheme().normalButton);
+  maybeAddColor(color_set, env.theme().color.error);
+  maybeAddColor(color_set, env.keyboardColorTheme().modifierButton);
   Color palette[color_set.size()];
   std::copy(color_set.begin(), color_set.end(), palette);
   background_fill_buffer_.setPalette(palette, color_set.size());

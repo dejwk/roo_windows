@@ -3,10 +3,10 @@
 #include <memory>
 #include <vector>
 
-#include "press_overlay.h"
 #include "roo_display.h"
 #include "roo_display/core/color.h"
 #include "roo_display/filter/foreground.h"
+#include "roo_windows/core/environment.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/core/widget.h"
 
@@ -18,9 +18,10 @@ static const int16_t kTouchMargin = 8;
 
 class Panel : public Widget {
  public:
-  Panel(Panel* parent, const Box& bounds);
+  Panel(const Environment& env, Panel* parent, const Box& bounds);
 
-  Panel(Panel* parent, const Box& bounds, roo_display::Color bgcolor);
+  Panel(const Environment& env, Panel* parent, const Box& bounds,
+        roo_display::Color bgcolor);
 
   void setBackground(Color bgcolor) { bgcolor_ = bgcolor; }
   Color background() const override { return bgcolor_; }

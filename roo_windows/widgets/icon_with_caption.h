@@ -12,14 +12,14 @@ namespace roo_windows {
 
 class IconWithCaption : public Widget {
  public:
-  IconWithCaption(Panel* parent, const Box& bounds,
+  IconWithCaption(const Environment& env, Panel* parent, const Box& bounds,
                   const roo_display::MaterialIcon& def,
                   const std::string& caption)
       : IconWithCaption(
-            parent, bounds, def, caption,
-            parent->theme().font.caption) {}
+            env, parent, bounds, def, caption,
+            env.theme().font.caption) {}
 
-  IconWithCaption(Panel* parent, const Box& bounds,
+  IconWithCaption(const Environment& env, Panel* parent, const Box& bounds,
                   const roo_display::MaterialIcon& def,
                   const std::string& caption,
                   const roo_display::Font* font);

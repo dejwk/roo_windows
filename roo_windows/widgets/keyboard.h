@@ -9,8 +9,8 @@
 #include <vector>
 
 #include "roo_windows/core/panel.h"
-#include "roo_windows/widgets/button.h"
 #include "roo_windows/keyboard_layout/keyboard_layout.h"
+#include "roo_windows/widgets/button.h"
 
 namespace roo_windows {
 
@@ -62,7 +62,8 @@ class TextButton;
 
 class PressHighlighter : public Widget {
  public:
-  PressHighlighter(KeyboardPage* parent, const Box& bounds);
+  PressHighlighter(const Environment& env, KeyboardPage* parent,
+                   const Box& bounds);
 
   void setTarget(const TextButton* target) { target_ = target; }
 
@@ -77,7 +78,7 @@ class PressHighlighter : public Widget {
 
 class KeyboardPage : public Panel {
  public:
-  KeyboardPage(Keyboard* parent, int16_t w, int16_t h,
+  KeyboardPage(const Environment& env, Keyboard* parent, int16_t w, int16_t h,
                const KeyboardPageSpec* spec);
 
   void showHighlighter(const TextButton& btn);
@@ -92,12 +93,8 @@ class KeyboardPage : public Panel {
 
 class Keyboard : public Panel {
  public:
-  Keyboard(Panel* parent, const roo_display::Box& bounds,
-           const KeyboardPageSpec* spec, KeyboardListener* listener)
-      : Keyboard(parent, bounds, spec, DefaultKeyboardColorTheme(), listener) {}
-
-  Keyboard(Panel* parent, const roo_display::Box& bounds,
-           const KeyboardPageSpec* spec, const KeyboardColorTheme& color_theme,
+  Keyboard(const Environment& env, Panel* parent,
+           const roo_display::Box& bounds, const KeyboardPageSpec* spec,
            KeyboardListener* listener);
 
   const KeyboardColorTheme& color_theme() const { return color_theme_; }

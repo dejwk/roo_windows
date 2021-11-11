@@ -11,19 +11,20 @@ namespace roo_windows {
 // NavigationPanel has a navigation rail that activate sub-panes.
 class NavigationPanel : public Panel {
  public:
-  NavigationPanel(Panel* parent, Box bounds) : Panel(parent, bounds) {
+  NavigationPanel(const Environment& env, Panel* parent, Box bounds)
+      : Panel(env, parent, bounds), env_(env) {
     int16_t rail_width = 72;
     if (rail_width > bounds.width()) rail_width = bounds.width();
     rail_ = std::unique_ptr<NavigationRail>(new NavigationRail(
-        this, Box(0, 0, rail_width - 1, bounds.height() - 1)));
+        env, this, Box(0, 0, rail_width - 1, bounds.height() - 1)));
     contents_ = std::unique_ptr<Panel>(
-        new Panel(this, Box(rail_width, 0, bounds.xMax(), bounds.yMax())));
+        new Panel(env, this, Box(rail_width, 0, bounds.xMax(), bounds.yMax())));
   }
 
   Panel* addPane(const roo_display::MaterialIcon& icon, std::string text) {
     int idx = panes_.size();
     rail_->addDestination(icon, text, [this, idx]() { setActive(idx); });
-    Panel* p = new Panel(contents_.get(), contents_->bounds());
+    Panel* p = new Panel(env_, contents_.get(), contents_->bounds());
     bool first = panes_.empty();
     panes_.emplace_back(p);
     if (first) {
@@ -42,6 +43,7 @@ class NavigationPanel : public Panel {
   }
 
  private:
+  const Environment& env_;
   std::unique_ptr<NavigationRail> rail_;
   std::unique_ptr<Panel> contents_;
   std::vector<std::unique_ptr<Panel>> panes_;

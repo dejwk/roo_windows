@@ -20,7 +20,7 @@ class NavigationRail : public Panel {
  public:
   enum LabelVisibility { PERSISTED, SELECTED, UNLABELED };
 
-  NavigationRail(Panel* parent, Box bounds);
+  NavigationRail(const Environment& env, Panel* parent, Box bounds);
 
   void addDestination(const roo_display::MaterialIcon& icon, std::string text,
                       std::function<void()> activator);
@@ -36,6 +36,7 @@ class NavigationRail : public Panel {
  private:
   friend class Destination;
 
+  const Environment& env_;
   int width_dp_;  // defaults to 72.
   int destination_size_dp_;
   roo_display::VAlign alignment_;

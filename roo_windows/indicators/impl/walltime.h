@@ -7,18 +7,19 @@ namespace roo_windows {
 
 class WalltimeIndicator : public Widget {
  public:
-  WalltimeIndicator(Panel* parent, const Box& bounds,
+  WalltimeIndicator(const Environment& env, Panel* parent, const Box& bounds,
                     const roo_time::WallTimeClock* clock,
                     roo_time::TimeZone tz);
 
-  WalltimeIndicator(Panel* parent, const Box& bounds, roo_display::Color color,
+  WalltimeIndicator(const Environment& env, Panel* parent, const Box& bounds,
+                    roo_display::Color color,
                     const roo_time::WallTimeClock* clock,
                     roo_time::TimeZone tz);
 
   void update();
 
  protected:
-  Color color_;
+  Color color_;  // If transparent, use parent's default content color.
   const roo_time::WallTimeClock* clock_;
   roo_time::TimeZone tz_;
   std::string val_;

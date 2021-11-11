@@ -10,14 +10,16 @@ using roo_display::StringPrinter;
 using roo_time::TimeZone;
 using roo_time::WallTimeClock;
 
-WalltimeIndicator::WalltimeIndicator(Panel* parent, const Box& bounds,
+WalltimeIndicator::WalltimeIndicator(const Environment& env, Panel* parent,
+                                     const Box& bounds,
                                      const WallTimeClock* clock, TimeZone tz)
-    : WalltimeIndicator(parent, bounds, parent->defaultColor(), clock, tz) {}
+    : WalltimeIndicator(env, parent, bounds, roo_display::color::Transparent,
+                        clock, tz) {}
 
-WalltimeIndicator::WalltimeIndicator(Panel* parent, const Box& bounds,
-                                     Color color, const WallTimeClock* clock,
-                                     TimeZone tz)
-    : Widget(parent, bounds),
+WalltimeIndicator::WalltimeIndicator(const Environment& env, Panel* parent,
+                                     const Box& bounds, Color color,
+                                     const WallTimeClock* clock, TimeZone tz)
+    : Widget(env, parent, bounds),
       color_(color),
       clock_(clock),
       tz_(tz),

@@ -5,12 +5,13 @@
 
 namespace roo_windows {
 
-WifiIndicator::WifiIndicator(Panel* parent, const Box& bounds)
-    : WifiIndicator(parent, bounds, parent->defaultColor()) {}
+WifiIndicator::WifiIndicator(const Environment& env, Panel* parent,
+                             const Box& bounds)
+    : WifiIndicator(env, parent, bounds, roo_display::color::Transparent) {}
 
-WifiIndicator::WifiIndicator(Panel* parent, const Box& bounds,
-                             roo_display::Color color)
-    : Widget(parent, bounds),
+WifiIndicator::WifiIndicator(const Environment& env, Panel* parent,
+                             const Box& bounds, roo_display::Color color)
+    : Widget(env, parent, bounds),
       color_(color),
       connected_(false),
       locked_(false),
@@ -18,7 +19,9 @@ WifiIndicator::WifiIndicator(Panel* parent, const Box& bounds,
 
 bool WifiIndicator::paint(const Surface& s) {
   roo_display::MaterialIcon icon(*icons()[status()]);
-  icon.color_mode().setColor(color_);
+  roo_display::Color color =
+      color_.a() == 0 ? parent()->defaultColor() : color_;
+  icon.color_mode().setColor(color);
   roo_display::Tile tile(&icon, bounds(), roo_display::HAlign::Center(),
                          roo_display::VAlign::Middle());
   s.drawObject(tile);

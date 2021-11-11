@@ -10,17 +10,17 @@ class Button : public Widget {
  public:
   enum Style { CONTAINED, OUTLINED, TEXT };
 
-  Button(Panel* parent, const Box& bounds, const MonoIcon& icon,
-         Style style = CONTAINED)
-      : Button(parent, bounds, &icon, "", style) {}
+  Button(const Environment& env, Panel* parent, const Box& bounds,
+         const MonoIcon& icon, Style style = CONTAINED)
+      : Button(env, parent, bounds, &icon, "", style) {}
 
-  Button(Panel* parent, const Box& bounds, std::string label,
-         Style style = CONTAINED)
-      : Button(parent, bounds, nullptr, label, style) {}
-
-  Button(Panel* parent, const Box& bounds, const MonoIcon& icon,
+  Button(const Environment& env, Panel* parent, const Box& bounds,
          std::string label, Style style = CONTAINED)
-      : Button(parent, bounds, &icon, label, style) {}
+      : Button(env, parent, bounds, nullptr, label, style) {}
+
+  Button(const Environment& env, Panel* parent, const Box& bounds,
+         const MonoIcon& icon, std::string label, Style style = CONTAINED)
+      : Button(env, parent, bounds, &icon, label, style) {}
 
   bool hasLabel() const { return !label_.empty(); }
   const std::string& label() const { return label_; }
@@ -58,8 +58,8 @@ class Button : public Widget {
   bool isClickable() const override { return true; }
 
  private:
-  Button(Panel* parent, const Box& bounds, const MonoIcon* icon,
-         std::string label, Style style);
+  Button(const Environment& env, Panel* parent, const Box& bounds,
+         const MonoIcon* icon, std::string label, Style style);
 
   Style style_;
   std::string label_;

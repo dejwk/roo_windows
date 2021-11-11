@@ -9,16 +9,17 @@ namespace roo_windows {
 
 class TextLabel : public Widget {
  public:
-  TextLabel(Panel* parent, Box bounds, std::string value,
-            const roo_display::Font& font, roo_display::HAlign halign,
-            roo_display::VAlign valign)
-      : TextLabel(parent, bounds, value, font, parent->defaultColor(), halign,
-                  valign) {}
-
-  TextLabel(Panel* parent, Box bounds, std::string value,
-            const roo_display::Font& font, roo_display::Color color,
+  TextLabel(const Environment& env, Panel* parent, Box bounds,
+            std::string value, const roo_display::Font& font,
             roo_display::HAlign halign, roo_display::VAlign valign)
-      : Widget(parent, bounds),
+      : TextLabel(env, parent, bounds, value, font, parent->defaultColor(),
+                  halign, valign) {}
+
+  TextLabel(const Environment& env, Panel* parent, Box bounds,
+            std::string value, const roo_display::Font& font,
+            roo_display::Color color, roo_display::HAlign halign,
+            roo_display::VAlign valign)
+      : Widget(env, parent, bounds),
         value_(std::move(value)),
         font_(font),
         color_(color),
