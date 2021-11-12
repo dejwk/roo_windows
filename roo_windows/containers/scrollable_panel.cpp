@@ -2,50 +2,27 @@
 
 namespace roo_windows {
 
-// Sets the relative position of the underlying content, relative to the the
-// visible rectangle.
-void ScrollablePanel::setOffset(int16_t dx, int16_t dy) {
-  if (dx > 0) dx = 0;
-  if (dy > 0) dy = 0;
-  if (dx < parent_bounds().width() - width_) {
-    dx = parent_bounds().width() - width_;
+void ScrollablePanel::scrollTo(int16_t x, int16_t y) {
+  if (x > 0) x = 0;
+  if (y > 0) y = 0;
+  Widget* c = contents();
+  if (x < width() - c->width()) {
+    x = width() - c->width();
   }
-  if (dy < parent_bounds().height() - height_) {
-    dy = parent_bounds().height() - height_;
+  if (y < height() - c->height()) {
+    y = height() - c->height();
   }
-  if (dx != dx_ || dy_ != dy) invalidateInterior();
-  dx_ = dx;
-  dy_ = dy;
-}
-
-void ScrollablePanel::setParent(Panel* parent) {
-  Panel::setParent(parent);
-  if (parent == nullptr) {
-    width_ = height_ = dx_ = dy_ = 0;
-  } else {
-    if (width_ <= 0) {
-      width_ = parent_bounds().width();
-    }
-    if (height_ <= 0) {
-      height_ = parent_bounds().height();
-    }
-  }
-}
-
-void ScrollablePanel::setParentBounds(const Box& parent_bounds) {
-  Panel::setParentBounds(parent_bounds);
-  if (width_ <= 0) {
-    width_ = parent_bounds.width();
-  }
-  if (height_ <= 0) {
-    height_ = parent_bounds.height();
-  }
+  c->moveTo(c->bounds().translate(x, y));
 }
 
 void ScrollablePanel::paintWidgetContents(const Surface& s, Clipper& clipper) {
   bool scroll_in_progress = (scroll_start_vx_ != 0 || scroll_start_vy_ != 0);
   // If scroll in progress, take it into account.
   if (scroll_in_progress) {
+    Widget* c = contents();
+    int16_t drag_x_delta = 0;
+    int16_t drag_y_delta = 0;
+
     // Calculate the total offset to be moved.
     unsigned long t_end = millis();
     if ((long)(t_end - scroll_end_time_) >= 0) {
@@ -64,35 +41,34 @@ void ScrollablePanel::paintWidgetContents(const Surface& s, Clipper& clipper) {
       // The scrolling continues horizontally.
       int32_t scroll_x_total =
           (int32_t)(scroll_start_vx_ * t + scroll_decel_x_ * t * t / 2);
-      int16_t drag_x_delta = scroll_x_total - (dx_ - dxStart_);
+      drag_x_delta = scroll_x_total - (c->xOffset() - dxStart_);
       // Don't move outside the boundary.
-      if (drag_x_delta < -dx_ + parent_bounds().width() - width_) {
-        drag_x_delta = -dx_ + parent_bounds().width() - width_;
+      if (drag_x_delta < -c->xOffset() + width() - c->width()) {
+        drag_x_delta = -c->xOffset() + width() - c->width();
         scroll_start_vx_ = 0;
       }
-      if (drag_x_delta > -dx_) {
-        drag_x_delta = -dx_;
+      if (drag_x_delta > -c->xOffset()) {
+        drag_x_delta = -c->xOffset();
         scroll_start_vx_ = 0;
       }
-      // Move!
-      dx_ += drag_x_delta;
     }
     if (scroll_start_vy_ != 0) {
       // The scrolling continues vertically.
       int32_t scroll_y_total =
           (int32_t)(scroll_start_vy_ * t + scroll_decel_y_ * t * t / 2);
-      int16_t drag_y_delta = scroll_y_total - (dy_ - dyStart_);
+      drag_y_delta = scroll_y_total - (c->yOffset() - dyStart_);
       // Don't move outside the boundary.
-      if (drag_y_delta < -dy_ + parent_bounds().height() - height_) {
-        drag_y_delta = -dy_ + parent_bounds().height() - height_;
+      if (drag_y_delta < -c->yOffset() + height() - c->height()) {
+        drag_y_delta = -c->yOffset() + height() - c->height();
         scroll_start_vy_ = 0;
       }
-      if (drag_y_delta > -dy_) {
-        drag_y_delta = -dy_;
+      if (drag_y_delta > -c->yOffset()) {
+        drag_y_delta = -c->yOffset();
         scroll_start_vy_ = 0;
       }
-      dy_ += drag_y_delta;
     }
+    scrollBy(drag_x_delta, drag_y_delta);
+
     // If we're done, e.g. due to bumping against both horizontal and
     // vertical boundaries, then stop refreshing the view.
     if (scroll_start_vx_ == 0 && scroll_start_vy_ == 0) {
@@ -111,82 +87,45 @@ void ScrollablePanel::paintWidgetContents(const Surface& s, Clipper& clipper) {
   }
 }
 
-void ScrollablePanel::paintChildren(const Surface& s, Clipper& clipper) {
-  Surface cs = s;
-  cs.set_dx(cs.dx() + dx_);
-  cs.set_dy(cs.dy() + dy_);
-  for (auto i = children_.rbegin(); i != children_.rend(); ++i) {
-    auto* child = i->get();
-    child->paintWidget(cs, clipper);
-  }
-}
-
-void ScrollablePanel::getAbsoluteBounds(Box* full, Box* visible) const {
-  Panel::getAbsoluteBounds(full, visible);
-  *full =
-      Box(full->xMin() + dx_, full->yMin() + dy_,
-          full->xMin() + dx_ + width_ - 1, full->xMin() + dx_ + height_ - 1);
-  *visible = Box::intersect(*full, *visible);
-}
-
 bool ScrollablePanel::onTouch(const TouchEvent& event) {
+  Widget* c = contents();
   // Stop the scroll.
   scroll_start_vx_ = 0;
   scroll_start_vy_ = 0;
-  TouchEvent shifted(event.type(), event.duration(), event.startX() - dxStart_,
-                     event.startY() - dyStart_, event.x() - dx_,
-                     event.y() - dy_);
+  if (Panel::onTouch(event)) return true;
   if (event.type() == TouchEvent::RELEASED ||
       event.type() == TouchEvent::PRESSED) {
-    dxStart_ = dx_;
-    dyStart_ = dy_;
+    dxStart_ = c->xOffset();
+    dyStart_ = c->yOffset();
   }
-  if (Panel::onTouch(shifted)) return true;
   // Handle drag and swipe.
-  if (shifted.type() == TouchEvent::DRAGGED) {
-    int16_t drag_x_delta = event.dx() - (dx_ - dxStart_);
-    int16_t drag_y_delta = event.dy() - (dy_ - dyStart_);
-    // Cap the movement by the boundaries of the underlying content.
-    if (drag_x_delta < -dx_ + parent_bounds().width() - width_) {
-      drag_x_delta = -dx_ + parent_bounds().width() - width_;
-    }
-    if (drag_x_delta > -dx_) {
-      drag_x_delta = -dx_;
-    }
-    if (drag_y_delta < -dy_ + parent_bounds().height() - height_) {
-      drag_y_delta = -dy_ + parent_bounds().height() - height_;
-    }
-    if (drag_y_delta > -dy_) {
-      drag_y_delta = -dy_;
-    }
+  if (event.type() == TouchEvent::DRAGGED) {
+    int16_t drag_x_delta = event.dx() - (c->xOffset() - dxStart_);
+    int16_t drag_y_delta = event.dy() - (c->yOffset() - dyStart_);
     // To reduce flicker on random noise, ignore very small drags.
     if (drag_x_delta < 3 && drag_x_delta > -3 && drag_y_delta < 3 &&
         drag_y_delta > -3) {
       return true;
     }
-    if (drag_x_delta != 0 || drag_y_delta != 0) {
-      dx_ += drag_x_delta;
-      dy_ += drag_y_delta;
-      invalidateInterior();
-    }
+    scrollBy(drag_x_delta, drag_y_delta);
     return true;
-  } else if (shifted.type() == TouchEvent::SWIPED) {
+  } else if (event.type() == TouchEvent::SWIPED) {
     scroll_start_time_ = millis();
     // Capture the initial velocity of the scroll.
-    scroll_start_vx_ = 1000.0 * shifted.dx() / (float)shifted.duration();
-    scroll_start_vy_ = 1000.0 * shifted.dy() / (float)shifted.duration();
+    scroll_start_vx_ = 1000.0 * event.dx() / (float)event.duration();
+    scroll_start_vy_ = 1000.0 * event.dy() / (float)event.duration();
     // If we're already on the boundary and swiping outside of the bounded
     // region, cap the horizontal and/or vertical component of the scroll.
-    if (scroll_start_vx_ < 0 && dx_ == 0) {
+    if (scroll_start_vx_ < 0 && c->xOffset() == 0) {
       scroll_start_vx_ = 0;
     }
-    if (scroll_start_vx_ > 0 && -dx_ + parent_bounds().width() == width_) {
+    if (scroll_start_vx_ > 0 && -c->xOffset() + width() == c->width()) {
       scroll_start_vx_ = 0;
     }
-    if (scroll_start_vy_ < 0 && dy_ == 0) {
+    if (scroll_start_vy_ < 0 && c->yOffset() == 0) {
       scroll_start_vy_ = 0;
     }
-    if (scroll_start_vy_ > 0 && -dy_ + parent_bounds().height() == height_) {
+    if (scroll_start_vy_ > 0 && -c->yOffset() + height() == c->height()) {
       scroll_start_vy_ = 0;
     }
     // If the swipe is completely in the outside direction, ignore it.

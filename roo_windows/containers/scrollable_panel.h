@@ -11,96 +11,39 @@ static const float maxVel = 1200.0;
 
 class ScrollablePanel : public Panel {
  public:
-  ScrollablePanel(const Environment& env)
-      : Panel(env),
-        width_(0),
-        height_(0),
-        dx_(0),
-        dy_(0),
-        scroll_start_vx_(0.0),
-        scroll_start_vy_(0.0) {}
+  ScrollablePanel(const Environment& env, Widget* contents)
+      : Panel(env), scroll_start_vx_(0.0), scroll_start_vy_(0.0) {
+    add(contents);
+  }
 
-  void setWidth(int16_t width) {
-    width = std::max(width, parent_bounds().width());
-    width_ = width;
+  Widget* swapContents(Widget* contents) { return swap(0, contents); }
+
+  void setSize(int16_t width, int16_t height) {
+    width = std::max(width, this->width());
+    height = std::max(height, this->height());
+    Widget* c = contents();
+    Box bounds(0, 0, width - 1, height - 1);
+    c->moveTo(bounds.translate(c->xOffset(), c->yOffset()));
   }
-  void setHeight(int16_t height) {
-    height = std::max(height, parent_bounds().height());
-    height_ = height;
-  }
+
+  Widget* contents() { return children_[0].get(); }
+  const Widget& contents() const { return *children_[0]; }
 
   // Sets the relative position of the underlying content, relative to the the
   // visible rectangle.
-  void setOffset(int16_t dx, int16_t dy);
+  void scrollTo(int16_t x, int16_t y);
+
+  // Adjusts the relative position of the underlying content by the specified
+  // offset.
+  void scrollBy(int16_t dx, int16_t dy) {
+    scrollTo(dx + contents()->xOffset(), dy + contents()->yOffset());
+  }
 
   void paintWidgetContents(const Surface& s, Clipper& clipper) override;
 
-  void paintChildren(const Surface& s, Clipper& clipper) override;
-
-  void getAbsoluteBounds(Box* full, Box* visible) const override;
-
   bool onTouch(const TouchEvent& event) override;
 
-  void invalidateDescending(const Box& box) override {
-    markInvalidated();
-    if (invalid_region_.empty()) {
-      invalid_region_ = box;
-    } else {
-      invalid_region_ = Box::extent(invalid_region_, box);
-    }
-    for (auto& child : children_) {
-      Box cb = Box::intersect(invalid_region_,
-                              child->parent_bounds().translate(dx_, dy_));
-      if (cb.empty()) continue;
-      cb = cb.translate(-dx_ - child->parent_bounds().xMin(),
-                        -dy_ - child->parent_bounds().yMin());
-      child->invalidateDescending(cb);
-    }
-  }
-
-  void childHidden(const Widget* child) override {
-    invalidateBeneath(child->parent_bounds().translate(dx_, dy_), this,
-                      getParentClipMode() == Widget::CLIPPED);
-  }
-
-  bool invalidateBeneathDescending(const Box& box,
-                                   const Widget* subject) override {
-    Box clipped = Box::intersect(box, maxBounds());
-    if (clipped.empty()) return false;
-    markInvalidated();
-    if (invalid_region_.empty()) {
-      invalid_region_ = clipped;
-    } else {
-      invalid_region_ = Box::extent(invalid_region_, clipped);
-    }
-    for (auto& child : children_) {
-      if (child.get() == subject) return true;
-      if (child->isVisible()) {
-        Box adjusted =
-            clipped.translate(-dx_ - child->xOffset(), -dy_ - child->yOffset());
-        if (child->invalidateBeneathDescending(adjusted, subject)) return true;
-      }
-    }
-    return false;
-  }
-
-  void propagateDirty(const Widget* child, const Box& box) override {
-    Panel::propagateDirty(child, box.translate(dx_, dy_));
-  }
-
- protected:
-  void setParent(Panel* parent) override;
-  void setParentBounds(const Box& parent_bounds) override;
-
  private:
-  // The current size of the virtual canvas. Always at least as
-  // large as the bounded viewport.
-  int16_t width_, height_;
-
-  // The current offset of the virtual canvas, relative to the bounded
-  // viewport, Always non-positive.
-  int16_t dx_, dy_;
-
   // Captured dx_ and dy_ during drag and scroll animations.
   int16_t dxStart_, dyStart_;
 
