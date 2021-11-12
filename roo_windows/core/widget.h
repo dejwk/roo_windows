@@ -54,6 +54,7 @@ static const uint16_t kWidgetHidden = 0x8000;
 
 static const uint8_t kDirty = 0x01;
 static const uint8_t kInvalidated = 0x02;
+static const uint8_t kLayoutRequested = 0x04;
 
 class TouchEvent {
  public:
@@ -240,6 +241,14 @@ class Widget {
   }
 
   bool isInvalidated() const { return (redraw_status_ & kInvalidated) != 0; }
+
+  bool isLayoutRequested() const {
+    return (redraw_status_ & kLayoutRequested) != 0;
+  }
+
+  // Call this when something has changed which has invalidated the layout of
+  // this widget. This will schedule a layout pass of the tree.
+  void requestLayout();
 
  protected:
   // Marks the entire area of this widget, and all its descendants, as

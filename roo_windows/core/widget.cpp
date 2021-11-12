@@ -70,6 +70,12 @@ void Widget::invalidateInterior(const Box& box) {
   markDirty(box);
 }
 
+void Widget::requestLayout() {
+  if (isLayoutRequested()) return;
+  redraw_status_ |= (kDirty | kInvalidated | kLayoutRequested);
+  if (parent() != nullptr) parent()->requestLayout();
+}
+
 void Widget::setParentClipMode(ParentClipMode mode) {
   if (mode == getParentClipMode()) return;
   bool visible = isVisible();
