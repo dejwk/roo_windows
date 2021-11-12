@@ -5,64 +5,33 @@
 
 #include "roo_material_icons.h"
 #include "roo_windows/containers/navigation_rail.h"
+#include "roo_windows/containers/static_layout.h"
 
 namespace roo_windows {
 
 // NavigationPanel has a navigation rail that activate sub-panes.
 class NavigationPanel : public Panel {
  public:
-  NavigationPanel(const Environment& env)
-      : Panel(env), env_(env), rail_(env), contents_(env) {
-    add(&rail_);
-    add(&contents_);
-  }
+  NavigationPanel(const Environment& env);
 
-  ~NavigationPanel() {
-    swap(0, nullptr);
-    swap(1, nullptr);
-  }
+  ~NavigationPanel();
 
-  Panel* addPane(const roo_display::MaterialIcon& icon, std::string text) {
-    int idx = panes_.size();
-    rail_.addDestination(icon, text, [this, idx]() { setActive(idx); });
-    Panel* p = new Panel(env_);
-    contents_.add(p, contents_.bounds());
-    bool first = panes_.empty();
-    panes_.emplace_back(p);
-    if (first) {
-      setActive(0);
-    } else {
-      p->setVisible(false);
-    }
-    return p;
-  }
+  void addPage(const roo_display::MaterialIcon& icon, std::string text, Widget* page);
 
-  void setActive(int index) {
-    rail_.setActive(index);
-    for (int i = 0; i < panes_.size(); ++i) {
-      panes_[i]->setVisible(i == index);
-    }
-  }
+  void setActive(int index);
 
  protected:
-  void setParentBounds(const Box& parent_bounds) override {
-    Panel::setParentBounds(parent_bounds);
-    int16_t rail_width = 72;
-    if (rail_width > parent_bounds.width()) rail_width = parent_bounds.width();
-    rail_.moveTo(
-        Box(0, 0, rail_width - 1, parent_bounds.height() - 1));
-    contents_.moveTo(
-        Box(rail_width, 0, parent_bounds.xMax(), parent_bounds.yMax()));
-    for (auto& child : contents_.children()) {
-      child->moveTo(contents_.bounds());
-    }
-  }
+  void setParentBounds(const Box& parent_bounds) override;
 
  private:
+  bool empty() const { return contents_.children().empty(); }
+  size_t page_count() const { return contents_.children().size(); }
+  Widget* page(int index) { return contents_.children()[index].get(); }
+  const Widget& page(int index) const { return *contents_.children()[index]; }
+
   const Environment& env_;
   NavigationRail rail_;
-  Panel contents_;
-  std::vector<std::unique_ptr<Panel>> panes_;
+  StaticLayout contents_;
 };
 
 }  // namespace roo_windows
