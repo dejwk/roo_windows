@@ -5,10 +5,12 @@
 #include "roo_display/ui/alignment.h"
 #include "roo_material_icons.h"
 #include "roo_windows/core/panel.h"
+#include "roo_windows/widgets/icon_with_caption.h"
 
 namespace roo_windows {
 
 class Destination;
+class NavigationRail;
 
 class Divider : public Widget {
  public:
@@ -16,11 +18,34 @@ class Divider : public Widget {
   bool paint(const Surface& s) override;
 };
 
+class Destination : public IconWithCaption {
+ public:
+  Destination(const Environment& env, const roo_display::MaterialIcon& icon,
+              std::string text, int idx, std::function<void()> activator)
+      : IconWithCaption(env, std::move(icon), std::move(text)),
+        idx_(idx),
+        activator_(std::move(activator)) {}
+
+  bool useOverlayOnActivation() const override { return false; }
+  bool useOverlayOnPressAnimation() const override { return true; }
+  bool isClickable() const override { return true; }
+  bool usesHighlighterColor() const override { return true; }
+
+  void onClicked() override;
+
+ private:
+  const NavigationRail* rail() const;
+  NavigationRail* rail();
+
+  int idx_;
+  std::function<void()> activator_;
+};
+
 class NavigationRail : public Panel {
  public:
   enum LabelVisibility { PERSISTED, SELECTED, UNLABELED };
 
-  NavigationRail(const Environment& env, Panel* parent, Box bounds);
+  NavigationRail(const Environment& env);
 
   void addDestination(const roo_display::MaterialIcon& icon, std::string text,
                       std::function<void()> activator);
@@ -33,6 +58,8 @@ class NavigationRail : public Panel {
 
   bool setActive(int index);
 
+  void setParentBounds(const Box& parent_bounds) override;
+
  private:
   friend class Destination;
 
@@ -44,7 +71,7 @@ class NavigationRail : public Panel {
   int active_;
   Divider divider_;
 
-  std::vector<Destination*> destinations_;
+  std::vector<std::unique_ptr<Destination>> destinations_;
 };
 
 }  // namespace roo_windows

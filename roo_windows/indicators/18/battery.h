@@ -9,9 +9,11 @@ class BatteryIndicator18x18 : public BatteryIndicator {
  public:
   using BatteryIndicator::BatteryIndicator;
 
-  BatteryIndicator18x18(const Environment& env, Panel* parent, int16_t dx,
-                        int16_t dy)
-      : BatteryIndicator(env, parent, Box(dx, dy, dx + 17, dy + 17)) {}
+  BatteryIndicator18x18(const Environment& env) : BatteryIndicator(env) {}
+
+  void setPos(int16_t x, int16_t y) {
+    setParentBounds(Box(x, y, x + 17, y + 17));
+  }
 
  protected:
   const roo_display::MaterialIcon* const* icons() override {

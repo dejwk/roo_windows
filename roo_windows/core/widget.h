@@ -88,7 +88,7 @@ class Widget {
  public:
   enum ParentClipMode { CLIPPED, UNCLIPPED };
 
-  Widget(const Environment& env, Panel* parent, const Box& bounds);
+  Widget(const Environment& env);
   virtual ~Widget() {}
 
   // Causes the widget to request paint(). The widget decides which pixels
@@ -150,7 +150,7 @@ class Widget {
   // the painting is considered done, or false if the widget wants to be
   // repainted again (e.g. because it is undergoing state change resulting in an
   // animation).
-  virtual bool paint(const Surface& s) {}
+  virtual bool paint(const Surface& s) { return true; }
 
   virtual MainWindow* getMainWindow();
   virtual const MainWindow* getMainWindow() const;
@@ -277,6 +277,10 @@ class Widget {
   // instead.
   virtual void paintWidgetContents(const Surface& s, Clipper& clipper);
 
+  virtual void setParent(Panel* parent);
+
+  virtual void setParentBounds(const Box& parent_bounds);
+
  private:
   friend class Panel;
   friend class ScrollablePanel;
@@ -300,5 +304,8 @@ class Widget {
 
 // TODO: adjust for different screen densities.
 static const int gridSize = 4;
+
+// Debug support.
+std::ostream& operator<<(std::ostream& os, const Widget& widget);
 
 }  // namespace roo_windows

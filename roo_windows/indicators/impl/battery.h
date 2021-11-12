@@ -7,10 +7,9 @@ namespace roo_windows {
 
 class BatteryIndicator : public Widget {
  public:
-  BatteryIndicator(const Environment& env, Panel* parent, const Box& bounds);
+  BatteryIndicator(const Environment& env);
 
-  BatteryIndicator(const Environment& env, Panel* parent, const Box& bounds,
-                   roo_display::Color color);
+  BatteryIndicator(const Environment& env, roo_display::Color color);
 
   bool paint(const Surface& s) override;
 

@@ -14,6 +14,7 @@ cc_library(
     deps = [
         "//roo_testing:arduino",
         "//lib/roo_display",
+        "//lib/roo_glog",
         "//lib/roo_material_icons",
         "//lib/roo_time",
     ],

@@ -101,7 +101,10 @@ class TextButton : public Button {
  public:
   TextButton(const Environment& env, KeyboardPage* parent, const Box& bounds,
              uint32_t rune)
-      : Button(env, parent, bounds, runeAsStr(rune)), rune_(rune) {}
+      : Button(env, runeAsStr(rune)), rune_(rune) {
+    parent->add(this);
+    setParentBounds(bounds);
+  }
 
   bool showClickAnimation() const override { return false; }
 
@@ -125,7 +128,10 @@ class TextButton : public Button {
 class SpaceButton : public Button {
  public:
   SpaceButton(const Environment& env, KeyboardPage* parent, const Box& bounds)
-      : Button(env, parent, bounds, "") {}
+      : Button(env, "") {
+    parent->add(this);
+    setParentBounds(bounds);
+  }
 
   bool showClickAnimation() const override { return false; }
 
@@ -144,7 +150,10 @@ class FnButton : public Button {
  public:
   FnButton(const Environment& env, KeyboardPage* parent, const Box& bounds,
            const MonoIcon& icon)
-      : Button(env, parent, bounds, icon) {}
+      : Button(env, icon) {
+    parent->add(this);
+    setParentBounds(bounds);
+  }
 
   bool showClickAnimation() const override { return false; }
 };
@@ -154,9 +163,11 @@ const Keyboard* KeyboardPage::keyboard() const { return (Keyboard*)parent(); }
 Keyboard::Keyboard(const Environment& env, Panel* parent,
                    const roo_display::Box& bounds, const KeyboardPageSpec* spec,
                    KeyboardListener* listener)
-    : Panel(env, parent, bounds),
+    : Panel(env),
       color_theme_(env.keyboardColorTheme()),
       listener_(listener) {
+  parent->add(this);
+  setParentBounds(bounds);
   setParentClipMode(Widget::UNCLIPPED);
   auto page =
       new KeyboardPage(env, this, bounds.width(), bounds.height(), spec);
@@ -166,7 +177,9 @@ Keyboard::Keyboard(const Environment& env, Panel* parent,
 
 KeyboardPage::KeyboardPage(const Environment& env, Keyboard* parent, int16_t w,
                            int16_t h, const KeyboardPageSpec* spec)
-    : Panel(env, parent, Box(0, 0, w - 1, h - 1)) {
+    : Panel(env) {
+  parent->add(this);
+  setParentBounds(Box(0, 0, w - 1, h - 1));
   setBackground(parent->color_theme().background);
   setParentClipMode(Widget::UNCLIPPED);
   // Calculate grid size.
@@ -253,7 +266,9 @@ void KeyboardPage::hideHighlighter() {
 
 PressHighlighter::PressHighlighter(const Environment& env, KeyboardPage* parent,
                                    const Box& bounds)
-    : Widget(env, parent, bounds) {
+    : Widget(env) {
+  parent->add(this);
+  setParentBounds(bounds);
   setParentClipMode(Widget::UNCLIPPED);
 }
 

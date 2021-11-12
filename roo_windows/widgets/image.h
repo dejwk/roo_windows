@@ -10,13 +10,12 @@ namespace roo_windows {
 
 class Image : public Widget {
  public:
-  Image(const Environment& env, Panel* parent, int16_t dx, int16_t dy,
-        const roo_display::Drawable& image)
-      : Image(env, parent, image.extents().translate(dx, dy), image) {}
+  Image(const Environment& env, const roo_display::Drawable& image)
+      : Widget(env), image_(image) {}
 
-  Image(const Environment& env, Panel* parent, const Box& bounds,
-        const roo_display::Drawable& image)
-      : Widget(env, parent, bounds), image_(image) {}
+  void setPos(int16_t x, int16_t y) {
+    setParentBounds(Box(x, y, x + image_.width() - 1, y + image_.height() - 1));
+  }
 
   bool paint(const Surface& s) override {
     roo_display::Tile tile(&image_, bounds(), roo_display::HAlign::Center(),

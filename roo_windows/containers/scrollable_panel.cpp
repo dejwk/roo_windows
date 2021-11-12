@@ -18,6 +18,30 @@ void ScrollablePanel::setOffset(int16_t dx, int16_t dy) {
   dy_ = dy;
 }
 
+void ScrollablePanel::setParent(Panel* parent) {
+  Panel::setParent(parent);
+  if (parent == nullptr) {
+    width_ = height_ = dx_ = dy_ = 0;
+  } else {
+    if (width_ <= 0) {
+      width_ = parent_bounds().width();
+    }
+    if (height_ <= 0) {
+      height_ = parent_bounds().height();
+    }
+  }
+}
+
+void ScrollablePanel::setParentBounds(const Box& parent_bounds) {
+  Panel::setParentBounds(parent_bounds);
+  if (width_ <= 0) {
+    width_ = parent_bounds.width();
+  }
+  if (height_ <= 0) {
+    height_ = parent_bounds.height();
+  }
+}
+
 void ScrollablePanel::paintWidgetContents(const Surface& s, Clipper& clipper) {
   bool scroll_in_progress = (scroll_start_vx_ != 0 || scroll_start_vy_ != 0);
   // If scroll in progress, take it into account.

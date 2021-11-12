@@ -218,19 +218,19 @@ void printHorizStripes(const Surface& s, int16_t xMin, int16_t yMin,
 
 }  // namespace
 
-Button::Button(const Environment& env, Panel* parent, const Box& bounds,
-               const MonoIcon* icon, std::string label, Style style)
-    : Widget(env, parent, bounds),
+Button::Button(const Environment& env, const MonoIcon* icon, std::string label,
+               Style style)
+    : Widget(env),
       style_(style),
       label_(std::move(label)),
       icon_(icon),
-      outlineColor_(style == CONTAINED  ? theme().color.primary
-                    : style == OUTLINED ? theme().color.onBackground
+      outlineColor_(style == CONTAINED  ? env.theme().color.primary
+                    : style == OUTLINED ? env.theme().color.onBackground
                                         : color::Transparent),
-      interiorColor_(style == CONTAINED ? theme().color.primary
-                                        : theme().color.background),
-      textColor_(style == CONTAINED ? theme().color.onPrimary
-                                    : theme().color.primary) {}
+      interiorColor_(style == CONTAINED ? env.theme().color.primary
+                                        : env.theme().color.background),
+      textColor_(style == CONTAINED ? env.theme().color.onPrimary
+                                    : env.theme().color.primary) {}
 
 // 111111_2_2_2_2_333333
 // 111111_2_2_2_2_333333

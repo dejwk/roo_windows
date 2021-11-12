@@ -5,13 +5,12 @@
 
 namespace roo_windows {
 
-BatteryIndicator::BatteryIndicator(const Environment& env, Panel* parent,
-                                   const Box& bounds)
-    : BatteryIndicator(env, parent, bounds, roo_display::color::Transparent) {}
+BatteryIndicator::BatteryIndicator(const Environment& env)
+    : BatteryIndicator(env, roo_display::color::Transparent) {}
 
-BatteryIndicator::BatteryIndicator(const Environment& env, Panel* parent,
-                                   const Box& bounds, roo_display::Color color)
-    : Widget(env, parent, bounds),
+BatteryIndicator::BatteryIndicator(const Environment& env,
+                                   roo_display::Color color)
+    : Widget(env),
       color_(color),
       charging_(false),
       alert_(false),

@@ -13,15 +13,28 @@ using roo_display::Box;
 using roo_display::Color;
 using roo_display::DisplayOutput;
 
-Panel::Panel(const Environment& env, Panel* parent, const Box& bounds)
-    : Panel(env, parent, bounds, env.theme().color.background) {}
-
-Panel::Panel(const Environment& env, Panel* parent, const Box& bounds,
-             Color bgcolor)
-    : Widget(env, parent, bounds),
+Panel::Panel(const Environment& env, roo_display::Color bgcolor)
+    : Widget(env),
       bgcolor_(bgcolor),
-      invalid_region_(0, 0, bounds.width() - 1, bounds.height() - 1),
+      invalid_region_(0, 0, -1, -1),
       cached_max_bounds_(0, 0, -1, -1) {}
+
+void Panel::add(Widget* child, const Box& bounds) {
+  children_.emplace_back(std::unique_ptr<Widget>(child));
+  child->setParent(this);
+  child->setParentBounds(bounds);
+  if (child->isVisible()) {
+    markDirty();
+    child->invalidateInterior();
+    childShown(child);
+  }
+}
+
+Widget* Panel::swap(int idx, Widget* newChild) {
+  Widget* result = children_[idx].release();
+  children_[idx].reset(newChild);
+  return result;
+}
 
 void Panel::paintWidgetContents(const Surface& s, Clipper& clipper) {
   bool dirty = isDirty();
@@ -99,15 +112,6 @@ bool Panel::onTouch(const TouchEvent& event) {
   }
   // Unhandled.
   return false;
-}
-
-void Panel::addChild(Widget* child) {
-  children_.emplace_back(std::unique_ptr<Widget>(child));
-  if (child->isVisible()) {
-    markDirty();
-    child->invalidateInterior();
-    childShown(child);
-  }
 }
 
 // Must propagate the 'dirty' flag even if the box comes down empty. This is

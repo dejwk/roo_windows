@@ -7,10 +7,9 @@ namespace roo_windows {
 
 class WifiIndicator : public Widget {
  public:
-  WifiIndicator(const Environment& env, Panel* parent, const Box& bounds);
+  WifiIndicator(const Environment& env);
 
-  WifiIndicator(const Environment& env, Panel* parent, const Box& bounds,
-                roo_display::Color color);
+  WifiIndicator(const Environment& env, roo_display::Color color);
 
   bool paint(const Surface& s) override;
 

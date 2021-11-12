@@ -4,12 +4,21 @@ using namespace roo_display;
 
 namespace roo_windows {
 
-IconWithCaption::IconWithCaption(const Environment& env, Panel* parent,
-                                 const Box& bounds, const MaterialIcon& def,
+IconWithCaption::IconWithCaption(const Environment& env,
+                                 const MaterialIcon& def,
                                  const std::string& caption, const Font* font)
-    : Widget(env, parent, bounds), icon_(def), caption_(caption), font_(font) {
-  int16_t total_height = icon_.extents().height() + font->metrics().maxHeight();
-  int16_t border = bounds.height() - total_height;
+    : Widget(env),
+      icon_(def),
+      caption_(caption),
+      font_(font),
+      hi_border_(0),
+      lo_border_(0) {}
+
+void IconWithCaption::setParentBounds(const Box& parent_bounds) {
+  Widget::setParentBounds(parent_bounds);
+  int16_t total_height =
+      icon_.extents().height() + font_->metrics().maxHeight();
+  int16_t border = parent_bounds.height() - total_height;
   hi_border_ = border / 2;
   lo_border_ = border - hi_border_;
 }

@@ -11,15 +11,10 @@ static const float maxVel = 1200.0;
 
 class ScrollablePanel : public Panel {
  public:
-  ScrollablePanel(const Environment& env, Panel* parent, const Box& bounds)
-      : ScrollablePanel(env, parent, bounds, parent->theme().color.background) {
-  }
-
-  ScrollablePanel(const Environment& env, Panel* parent, const Box& bounds,
-                  Color bgcolor)
-      : Panel(env, parent, bounds, bgcolor),
-        width_(bounds.width()),
-        height_(bounds.height()),
+  ScrollablePanel(const Environment& env)
+      : Panel(env),
+        width_(0),
+        height_(0),
         dx_(0),
         dy_(0),
         scroll_start_vx_(0.0),
@@ -92,6 +87,10 @@ class ScrollablePanel : public Panel {
   void propagateDirty(const Widget* child, const Box& box) override {
     Panel::propagateDirty(child, box.translate(dx_, dy_));
   }
+
+ protected:
+  void setParent(Panel* parent) override;
+  void setParentBounds(const Box& parent_bounds) override;
 
  private:
   // The current size of the virtual canvas. Always at least as

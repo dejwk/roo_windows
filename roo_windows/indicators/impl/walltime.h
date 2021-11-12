@@ -7,12 +7,11 @@ namespace roo_windows {
 
 class WalltimeIndicator : public Widget {
  public:
-  WalltimeIndicator(const Environment& env, Panel* parent, const Box& bounds,
+  WalltimeIndicator(const Environment& env,
                     const roo_time::WallTimeClock* clock,
                     roo_time::TimeZone tz);
 
-  WalltimeIndicator(const Environment& env, Panel* parent, const Box& bounds,
-                    roo_display::Color color,
+  WalltimeIndicator(const Environment& env, roo_display::Color color,
                     const roo_time::WallTimeClock* clock,
                     roo_time::TimeZone tz);
 

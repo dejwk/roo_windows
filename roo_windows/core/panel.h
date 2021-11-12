@@ -18,15 +18,18 @@ static const int16_t kTouchMargin = 8;
 
 class Panel : public Widget {
  public:
-  Panel(const Environment& env, Panel* parent, const Box& bounds);
+  Panel(const Environment& env) : Panel(env, env.theme().color.background) {}
 
-  Panel(const Environment& env, Panel* parent, const Box& bounds,
-        roo_display::Color bgcolor);
+  Panel(const Environment& env, Color bgcolor);
 
   void setBackground(Color bgcolor) { bgcolor_ = bgcolor; }
   Color background() const override { return bgcolor_; }
 
   const Theme& theme() const override { return parent()->theme(); }
+
+  void add(Widget* child, const Box& bounds = Box(0, 0, -1, -1));
+
+  Widget* swap(int idx, Widget* newChild);
 
   // Paints the panel with all its children. If the panel isn't invalidated,
   // omits drawing the surface area; otherwise, draws the surface area over the
@@ -57,11 +60,11 @@ class Panel : public Widget {
 
   void moveTo(const Box& parent_bounds) override;
 
- protected:
   const std::vector<std::unique_ptr<Widget>>& children() const {
     return children_;
   }
 
+ protected:
   virtual void paintChildren(const Surface& s, Clipper& clipper);
 
   void invalidateDescending() override;

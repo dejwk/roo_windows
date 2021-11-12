@@ -1,9 +1,11 @@
 #include "widget.h"
 
+#include "glog/logging.h"
 #include "roo_display/filter/foreground.h"
 #include "roo_windows/core/main_window.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/press_overlay.h"
+#include "roo_windows/core/rtti.h"
 
 namespace roo_windows {
 
@@ -21,16 +23,12 @@ static const long int kClickDurationThresholdMs = 200;
 // as drag.
 static const long int kClickStickinessRadius = 40;
 
-Widget::Widget(const Environment& env, Panel* parent, const Box& parent_bounds)
-    : parent_(parent),
-      parent_bounds_(parent_bounds),
+Widget::Widget(const Environment& env)
+    : parent_(nullptr),
+      parent_bounds_(0, 0, -1, -1),
       state_(kWidgetEnabled),
       redraw_status_(kDirty | kInvalidated),
-      on_clicked_([] {}) {
-  if (parent != nullptr) {
-    parent->addChild(this);
-  }
-}
+      on_clicked_([] {}) {}
 
 MainWindow* Widget::getMainWindow() { return parent_->getMainWindow(); }
 const MainWindow* Widget::getMainWindow() const {
@@ -135,15 +133,27 @@ void Widget::setDragged(bool dragged) {
 
 void Widget::clearClicked() { state_ &= ~kWidgetClicked; }
 
-void Widget::moveTo(const Box& parent_bounds) {
+void Widget::setParent(Panel* parent) {
+  CHECK(parent_ == nullptr || parent == nullptr)
+      << "widget " << *this << " being added, but"
+      << " it already has a parent";
+  parent_ = parent;
+}
+
+void Widget::setParentBounds(const Box& parent_bounds) {
   if (parent_bounds == parent_bounds_) return;
-  if (!isVisible()) {
+  if (!isVisible() || parent() == nullptr) {
     parent_bounds_ = parent_bounds;
     return;
   }
   setVisible(false);
   parent_bounds_ = parent_bounds;
   setVisible(true);
+}
+
+
+void Widget::moveTo(const Box& parent_bounds) {
+  setParentBounds(parent_bounds);
 }
 
 uint8_t Widget::getOverlayOpacity() const {
@@ -341,6 +351,11 @@ bool Widget::onTouch(const TouchEvent& event) {
     // Leave unhandled, for parent to handle.
   }
   return false;
+}
+
+std::ostream& operator<<(std::ostream& os, const Widget& widget) {
+  os << GetTypeName(widget) << "{ " << &widget << "}";
+  return os;
 }
 
 }  // namespace roo_windows

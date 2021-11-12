@@ -7,9 +7,8 @@ namespace roo_windows {
 class RadioButton : public Widget {
  public:
   enum State { OFF, ON };
-  RadioButton(const Environment& env, Panel* parent, const Box& bounds,
-              State state = OFF)
-      : Widget(env, parent, bounds), state_(state) {}
+  RadioButton(const Environment& env, State state = OFF)
+      : Widget(env), state_(state) {}
 
   void setState(State state);
 

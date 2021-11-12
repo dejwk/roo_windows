@@ -30,7 +30,7 @@ void maybeAddColor(roo_display::internal::ColorSet& palette, Color color) {
 
 MainWindow::MainWindow(const Environment& env, Display* display,
                        const Box& bounds)
-    : Panel(env, nullptr, bounds, env.theme().color.background),
+    : Panel(env, env.theme().color.background),
       display_(display),
       theme_(env.theme()),
       touch_down_(false),
@@ -39,6 +39,8 @@ MainWindow::MainWindow(const Environment& env, Display* display,
       redraw_bounds_(bounds),
       modal_window_(nullptr),
       background_fill_buffer_(display->width(), display->height()) {
+  parent_bounds_ = bounds;
+  invalidateDescending();
   roo_display::internal::ColorSet color_set;
   maybeAddColor(color_set, env.theme().color.background);
   maybeAddColor(color_set, env.theme().color.surface);
