@@ -17,8 +17,6 @@ roo_windows::Widget* ToggleButtons::addButton(const MonoIcon& icon) {
   }
   height = std::max(height, icon.extents().height());
   height += 2 * padding;
-  moveTo(Box(0, 0, width + icon.extents().width() + 2 * padding + 1, height - 1)
-             .translate(xOffset(), yOffset()));
   ToggleButton* btn = new ToggleButton(env_, icon);
   Panel::add(btn,
              Box(width + 1, 0, width + icon.extents().width() + 2 * padding,
@@ -51,9 +49,10 @@ Dimensions ToggleButtons::getSuggestedMinimumDimensions() const {
   for (const auto& i : buttons_) {
     const Box& extents = i->icon().extents();
     width += extents.width();
+    width += 2;
     height = std::max(height, extents.height());
   }
-  return Dimensions(width + 2, height);
+  return Dimensions(width + 2, height + 2);
 }
 
 void ToggleButtons::setActive(int index) {
