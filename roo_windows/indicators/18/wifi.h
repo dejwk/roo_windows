@@ -15,10 +15,6 @@ class WifiIndicator18x18 : public WifiIndicator {
     return Dimensions(18, 18);
   }
 
-  void setPos(int16_t x, int16_t y) {
-    setParentBounds(Box(x, y, x + 17, y + 17));
-  }
-
  protected:
   const roo_display::MaterialIcon* const* icons() override {
     static const roo_display::MaterialIcon* icons[] = {
