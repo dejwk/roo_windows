@@ -41,6 +41,14 @@ class VerticalLayout : public Panel {
     Panel::add(child);
   }
 
+  void setPadding(Padding padding) {
+    if (padding_ == padding) return;
+    padding_ = padding;
+    requestLayout();
+  }
+
+  Padding getDefaultPadding() const override { return padding_; }
+
  protected:
   Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override {
     total_length_ = 0;
@@ -87,7 +95,7 @@ class VerticalLayout : public Panel {
             match_width_locally ? (int16_t)0 : measure.latest().width());
       }
     }
-
+    total_length_ += padding_.top() + padding_.bottom();
     Dimensions selfMinimum = getSuggestedMinimumDimensions();
     int16_t height_size =
         height.resolveSize(std::max(total_length_, selfMinimum.height()));
@@ -95,7 +103,7 @@ class VerticalLayout : public Panel {
     if (!all_match_parent && width.kind() != MeasureSpec::EXACTLY) {
       max_width = alternative_max_width;
     }
-    // max_width += padding;
+    max_width += padding_.left() + padding_.right();
     max_width = std::max(max_width, selfMinimum.width());
     if (!match_width) {
       return Dimensions(max_width, height_size);
@@ -107,13 +115,16 @@ class VerticalLayout : public Panel {
   }
 
   void onLayout(bool changed, const roo_display::Box& box) {
-    int16_t child_top = 0;
+    int16_t child_top = padding_.top();
     int count = children().size();
+    int16_t child_space = box.width() - padding_.right();
     for (int i = 0; i < count; ++i) {
       Widget& w = child_at(i);
       if (!w.isVisible()) continue;
       const ChildMeasure& measure = child_measures_[i];
-      w.moveTo(Box(0, child_top, measure.latest().width() - 1,
+      int16_t child_left = padding_.left();
+      w.moveTo(Box(child_left, child_top,
+                   child_left + measure.latest().width() - 1,
                    child_top + measure.latest().height() - 1));
       child_top += measure.latest().height();
     }
@@ -121,6 +132,7 @@ class VerticalLayout : public Panel {
 
  private:
   int16_t total_length_;
+  Padding padding_;
   std::vector<ChildMeasure> child_measures_;
 };
 
