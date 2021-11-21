@@ -16,6 +16,7 @@ class Divider : public Widget {
  public:
   using Widget::Widget;
   bool paint(const Surface& s) override;
+  Dimensions getSuggestedMinimumDimensions() const override;
 };
 
 class Destination : public IconWithCaption {

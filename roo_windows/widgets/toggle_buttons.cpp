@@ -6,7 +6,7 @@
 namespace roo_windows {
 
 roo_windows::Widget* ToggleButtons::addButton(const MonoIcon& icon) {
-  int16_t padding = 4;
+  int16_t padding = 12;
   int16_t width = 0;
   int16_t height = 0;
   for (const auto& i : buttons_) {
@@ -43,6 +43,17 @@ bool ToggleButtons::paint(const roo_display::Surface& s) {
   s.drawObject(roo_display::Line(x, height() - 1, x, height() - 1,
                                  roo_display::color::Transparent));
   return true;
+}
+
+Dimensions ToggleButtons::getSuggestedMinimumDimensions() const {
+  int16_t width = 0;
+  int16_t height = 0;
+  for (const auto& i : buttons_) {
+    const Box& extents = i->icon().extents();
+    width += extents.width();
+    height = std::max(height, extents.height());
+  }
+  return Dimensions(width + 2, height);
 }
 
 void ToggleButtons::setActive(int index) {

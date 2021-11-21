@@ -53,6 +53,8 @@ class Button : public Widget {
 
   bool paint(const Surface& s) override;
 
+  Dimensions getSuggestedMinimumDimensions() const override;
+
   bool isClickable() const override { return true; }
 
  private:

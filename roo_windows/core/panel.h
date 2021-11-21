@@ -58,10 +58,23 @@ class Panel : public Widget {
   // to bounds().
   Box maxBounds() const override;
 
+  Dimensions getSuggestedMinimumDimensions() const override {
+    // Panels are expected to override onMeasure, so this is rarely relevant anyway.
+    return Dimensions(0, 0);
+  }
+
   void moveTo(const Box& parent_bounds) override;
 
   const std::vector<std::unique_ptr<Widget>>& children() const {
     return children_;
+  }
+
+  Widget& child_at(int idx) {
+    return *children_[idx];
+  }
+
+  const Widget& child_at(int idx) const {
+    return *children_[idx];
   }
 
  protected:

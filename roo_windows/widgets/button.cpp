@@ -345,4 +345,31 @@ bool Button::paint(const Surface& s) {
   return true;
 }
 
+Dimensions Button::getSuggestedMinimumDimensions() const {
+  const BorderSpec& spec =
+      (style() == CONTAINED ? kContainedBorder : kOutlinedBorder);
+  int16_t border_width = std::max(2 * spec.top_width, 2 * spec.bottom_width);
+  int16_t border_height = std::max(2 * spec.left_height, 2 * spec.right_height);
+
+  if (!hasLabel()) {
+    if (!hasIcon()) return Dimensions(0, 0);
+    // Icon only.
+    return Dimensions(border_width + icon().extents().width(),
+                      border_height + icon().extents().height());
+  }
+  // We must measure the text.
+  auto metrics = theme().font.button->getHorizontalStringMetrics(
+      (const uint8_t*)label().c_str(), label().size());
+  if (!hasIcon()) {
+    // Label only.
+    return Dimensions(border_width + metrics.width(),
+                      border_height + metrics.height());
+  }
+  // Both icon and label.
+  int16_t gap = (icon().extents().width() / 2) & 0xFFFC;
+  return Dimensions(
+      border_width + icon().extents().width() + gap + metrics.width(),
+      border_height + std::max(icon().extents().height(), (int16_t)metrics.height()));
+}
+
 }  // namespace roo_windows

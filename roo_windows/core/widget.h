@@ -10,6 +10,7 @@
 #include "roo_display/filter/color_filter.h"
 #include "roo_display/image/image.h"
 #include "roo_windows/core/clipper.h"
+#include "roo_windows/core/dimensions.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/theme.h"
 
@@ -245,6 +246,8 @@ class Widget {
   bool isLayoutRequested() const {
     return (redraw_status_ & kLayoutRequested) != 0;
   }
+
+  virtual Dimensions getSuggestedMinimumDimensions() const = 0;
 
   // Call this when something has changed which has invalidated the layout of
   // this widget. This will schedule a layout pass of the tree.

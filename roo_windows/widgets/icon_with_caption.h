@@ -20,6 +20,7 @@ class IconWithCaption : public Widget {
                   const std::string& caption, const roo_display::Font* font);
 
   bool paint(const Surface& s) override;
+  Dimensions getSuggestedMinimumDimensions() const override;
 
   void setParentBounds(const Box& parent_bounds) override;
 

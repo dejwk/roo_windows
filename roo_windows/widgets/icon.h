@@ -28,6 +28,11 @@ class Icon : public Widget {
     return true;
   }
 
+  Dimensions getSuggestedMinimumDimensions() const override {
+    const Box& e = icon_.extents();
+    return Dimensions(e.width(), e.height());
+  }
+
   void setPos(int16_t dx, int16_t dy) {
     setParentBounds(icon_.extents().translate(dx, dy));
   }

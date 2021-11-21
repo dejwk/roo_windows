@@ -77,6 +77,10 @@ bool Switch::paint(const Surface& s) {
   return finished;
 }
 
+Dimensions Switch::getSuggestedMinimumDimensions() const {
+  return Dimensions(42, 24);
+}
+
 namespace {
 
 // Image file slider_20 34x14, 4-bit Alpha,  RLE, 62 bytes.

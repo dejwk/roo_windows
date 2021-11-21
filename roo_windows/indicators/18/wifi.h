@@ -11,6 +11,10 @@ class WifiIndicator18x18 : public WifiIndicator {
 
   WifiIndicator18x18(const Environment& env) : WifiIndicator(env) {}
 
+  Dimensions getSuggestedMinimumDimensions() const override {
+    return Dimensions(18, 18);
+  }
+
   void setPos(int16_t x, int16_t y) {
     setParentBounds(Box(x, y, x + 17, y + 17));
   }

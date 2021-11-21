@@ -16,6 +16,8 @@ class ToggleButtons : public Panel {
   // Draws left- and right-side framing around the togglebutton control.
   bool paint(const roo_display::Surface& s) override;
 
+  Dimensions getSuggestedMinimumDimensions() const override;
+
   int getActive() const { return active_; }
 
   void setActive(int index);
@@ -30,6 +32,10 @@ class ToggleButtons : public Panel {
     bool isClickable() const override { return true; }
 
     bool paint(const roo_display::Surface& s) override;
+
+    Dimensions getSuggestedMinimumDimensions() const override {
+      return Dimensions(icon_.extents().width(), icon_.extents().height());
+    }
 
     const MonoIcon& icon() const { return icon_; }
 

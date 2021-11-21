@@ -58,4 +58,11 @@ bool IconWithCaption::paint(const Surface& s) {
   return true;
 }
 
+Dimensions IconWithCaption::getSuggestedMinimumDimensions() const {
+  auto metrics = font_->getHorizontalStringMetrics(
+      (const uint8_t*)caption_.c_str(), caption_.size());
+  return Dimensions(std::max(icon_.extents().width(), (int16_t)metrics.width()),
+                    icon_.extents().height() + font_->metrics().maxHeight());
+}
+
 }  // namespace roo_windows

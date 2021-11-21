@@ -40,4 +40,8 @@ bool RadioButton::paint(const Surface& s) {
   return true;
 }
 
+Dimensions RadioButton::getSuggestedMinimumDimensions() const {
+  return Dimensions(24, 24);
+}
+
 }  // namespace roo_windows

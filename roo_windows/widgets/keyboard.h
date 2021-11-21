@@ -68,6 +68,7 @@ class PressHighlighter : public Widget {
   void setTarget(const TextButton* target) { target_ = target; }
 
   bool paint(const Surface& s) override;
+  Dimensions getSuggestedMinimumDimensions() const override;
 
   const KeyboardPage* page() const;
   const Keyboard* keyboard() const;

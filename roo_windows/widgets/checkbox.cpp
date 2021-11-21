@@ -41,4 +41,8 @@ bool Checkbox::paint(const Surface& s) {
   return true;
 }
 
+Dimensions Checkbox::getSuggestedMinimumDimensions() const {
+  return Dimensions(24, 24);
+}
+
 }  // namespace roo_windows

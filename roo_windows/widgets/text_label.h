@@ -34,6 +34,12 @@ class TextLabel : public Widget {
     return true;
   }
 
+  Dimensions getSuggestedMinimumDimensions() const override {
+    auto metrics = font_.getHorizontalStringMetrics(
+        (const uint8_t*)value_.c_str(), value_.size());
+    return Dimensions(metrics.width(), metrics.height());
+  }
+
   void setContent(std::string value) {
     if (value_ == value) return;
     value_ = value;

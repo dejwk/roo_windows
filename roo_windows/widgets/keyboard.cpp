@@ -298,4 +298,8 @@ bool PressHighlighter::paint(const Surface& s) {
   return true;
 }
 
+Dimensions PressHighlighter::getSuggestedMinimumDimensions() const {
+  return Dimensions(bounds().width(), bounds().height());
+}
+
 }  // namespace roo_windows

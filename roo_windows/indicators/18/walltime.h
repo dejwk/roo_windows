@@ -30,6 +30,10 @@ class WalltimeIndicator18 : public WalltimeIndicator {
         bounds(), roo_display::HAlign::None(), roo_display::VAlign::Middle()));
     return true;
   }
+
+  Dimensions getSuggestedMinimumDimensions() override {
+    return Dimensions(46, 18);
+  }
 };
 
 }  // namespace roo_windows

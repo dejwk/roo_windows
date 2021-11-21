@@ -15,6 +15,10 @@ bool Divider::paint(const Surface& s) {
   return true;
 }
 
+Dimensions Divider::getSuggestedMinimumDimensions() const {
+  return Dimensions(2, 0);
+}
+
 void Destination::onClicked() {
   if (rail()->setActive(idx_)) activator_();
   IconWithCaption::onClicked();
