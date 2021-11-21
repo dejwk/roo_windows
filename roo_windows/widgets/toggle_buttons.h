@@ -15,18 +15,31 @@ namespace roo_windows {
 
 class ToggleButtons : public Panel {
  public:
-  ToggleButtons(const Environment& env, Panel* parent, int16_t dx, int16_t dy,
-                int16_t height)
-      : Panel(env, parent, Box(dx, dy, dx + 1, dy + height - 1)), active_(-1) {}
+  ToggleButtons(const Environment& env) : Panel(env), env_(env), active_(-1) {}
 
-  roo_windows::Widget* addButton(const MonoIcon& icon, int16_t width) {
-    Box box(this->width() - 1, 0, this->width() - 1 + width - 1, height() - 1);
-    ToggleButton* btn = new ToggleButton(this, box, icon);
+  roo_windows::Widget* addButton(const MonoIcon& icon) {
+    int16_t padding = 4;
+    int16_t width = 0;
+    int16_t height = 0;
+    for (const auto& i : buttons_) {
+      const Box& extents = i->icon().extents();
+      width += extents.width();
+      width += 2 * padding;
+      height = std::max(height, extents.height());
+    }
+    height = std::max(height, icon.extents().height());
+    height += 2 * padding;
+    moveTo(
+        Box(0, 0, width + icon.extents().width() + 2 * padding + 1, height - 1)
+            .translate(xOffset(), yOffset()));
+    ToggleButton* btn = new ToggleButton(env_, icon);
+    Panel::add(btn,
+               Box(width + 1, 0, width + icon.extents().width() + 2 * padding,
+                   icon.extents().height() + 2 * padding - 1));
+
     int idx = buttons_.size();
     btn->setOnClicked([this, idx] { setActive(idx); });
     buttons_.push_back(btn);
-    moveTo(Box(parent_bounds().xMin(), parent_bounds().yMin(),
-               parent_bounds().xMax() + width, parent_bounds().yMax()));
     return btn;
   }
 
@@ -60,9 +73,8 @@ class ToggleButtons : public Panel {
  private:
   class ToggleButton : public roo_windows::Widget {
    public:
-    ToggleButton(const Environment& env, ToggleButtons* parent, Box bounds,
-                 const MonoIcon& icon)
-        : roo_windows::Widget(env, parent, bounds), icon_(icon) {}
+    ToggleButton(const Environment& env, const MonoIcon& icon)
+        : roo_windows::Widget(env), icon_(icon) {}
 
     bool useOverlayOnActivation() const override { return true; }
     bool isClickable() const override { return true; }
@@ -92,6 +104,8 @@ class ToggleButtons : public Panel {
       return true;
     }
 
+    const MonoIcon& icon() const { return icon_; }
+
    private:
     const ToggleButtons* parentGroup() const {
       return (const ToggleButtons*)parent();
@@ -107,6 +121,7 @@ class ToggleButtons : public Panel {
   //   roo_display::VAlign alignment_;
   int active_;
 
+  const Environment& env_;
   std::vector<ToggleButton*> buttons_;
 };
 
