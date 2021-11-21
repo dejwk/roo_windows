@@ -59,8 +59,8 @@ bool IconWithCaption::paint(const Surface& s) {
 }
 
 Dimensions IconWithCaption::getSuggestedMinimumDimensions() const {
-  auto metrics = font_->getHorizontalStringMetrics(
-      (const uint8_t*)caption_.c_str(), caption_.size());
+  auto metrics =
+      font_->getHorizontalStringMetrics((const uint8_t*)caption_.c_str(), caption_.size());
   return Dimensions(std::max(icon_.extents().width(), (int16_t)metrics.width()),
                     icon_.extents().height() + font_->metrics().maxHeight());
 }
