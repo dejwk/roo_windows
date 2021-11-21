@@ -65,6 +65,14 @@ class Panel : public Widget {
 
   Padding getDefaultPadding() const override { return Padding(0); }
 
+  PreferredSize getPreferredSize() const override {
+    return PreferredSize(PreferredSize::WrapContent(),
+                         PreferredSize::WrapContent());
+  }
+
+  void onLayout(boolean changed, const Box& box) override;
+  Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override;
+
   void moveTo(const Box& parent_bounds) override;
 
   const std::vector<std::unique_ptr<Widget>>& children() const {

@@ -12,6 +12,7 @@
 #include "roo_windows/core/clipper.h"
 #include "roo_windows/core/dimensions.h"
 #include "roo_windows/core/environment.h"
+#include "roo_windows/core/measure_spec.h"
 #include "roo_windows/core/padding.h"
 #include "roo_windows/core/preferred_size.h"
 #include "roo_windows/core/theme.h"
@@ -58,6 +59,7 @@ static const uint16_t kWidgetHidden = 0x8000;
 static const uint8_t kDirty = 0x01;
 static const uint8_t kInvalidated = 0x02;
 static const uint8_t kLayoutRequested = 0x04;
+static const uint8_t kLayoutRequired = 0x08;
 
 class TouchEvent {
  public:
@@ -249,6 +251,10 @@ class Widget {
     return (redraw_status_ & kLayoutRequested) != 0;
   }
 
+  bool isLayoutRequired() const {
+    return (redraw_status_ & kLayoutRequired) != 0;
+  }
+
   virtual Dimensions getSuggestedMinimumDimensions() const = 0;
 
   virtual Padding getDefaultPadding() const { return Padding(12); }
@@ -266,9 +272,28 @@ class Widget {
                          PreferredSize::Exact(d.height()));
   }
 
+  // Called to find out how big a widget should be. The parent supplies
+  // constraint information in the width and height parameters.
+  //
+  // The actual measurement work of a view is performed in onMeasure(int, int),
+  // called by this method.
+  Dimensions measure(MeasureSpec width, MeasureSpec height);
+
   // Call this when something has changed which has invalidated the layout of
   // this widget. This will schedule a layout pass of the tree.
   void requestLayout();
+
+  // Assign a size and position to a widget and all of its descendants.
+  //
+  // This is the second phase of the layout mechanism. (The first is measuring).
+  // In this phase each parent calls layout on all of its children to position
+  // them. This is typically done using the child measurements that were
+  // calculated in the measure pass().
+  //
+  // Derived classes should not override this method. Derived classes with
+  // children should override onLayout. In that method, they should call layout
+  // on each of their children.
+  void layout(const roo_display::Box& box);
 
  protected:
   // Marks the entire area of this widget, and all its descendants, as
@@ -310,6 +335,15 @@ class Widget {
 
   virtual void setParentBounds(const Box& parent_bounds);
 
+  // Called from layout when this view should assign a size and position to each
+  // of its children.
+  //
+  // Derived classes with children should override this method and call layout
+  // on each of their children.
+  virtual void onLayout(boolean changed, const roo_display::Box& box) {}
+
+  virtual Dimensions onMeasure(MeasureSpec width, MeasureSpec height);
+
  private:
   friend class Panel;
   friend class ScrollablePanel;
@@ -321,8 +355,14 @@ class Widget {
   // paintWidgetContents().
   void paintWidget(const Surface& s, Clipper& clipper);
 
-  void markClean() { redraw_status_ &= ~(kDirty | kInvalidated); }
+  void markClean() {
+    redraw_status_ &=
+        ~(kDirty | kInvalidated | kLayoutRequested | kLayoutRequired);
+  }
   void markInvalidated() { redraw_status_ |= (kDirty | kInvalidated); }
+  void markLayoutRequested() {
+    redraw_status_ |= (kDirty | kInvalidated | kLayoutRequested);
+  }
 
   Panel* parent_;
   Box parent_bounds_;

@@ -144,6 +144,11 @@ void MainWindow::tick() {
                            touch_y_, x, y));
   }
 
+  if (isLayoutRequested()) {
+    measure(MeasureSpec::Exactly(width()), MeasureSpec::Exactly(height()));
+    layout(bounds());
+  }
+
   roo_display::DrawingContext dc(display_);
   dc.draw(Adapter(this));
 }

@@ -47,6 +47,26 @@ class StaticLayout : public Panel {
     add(child, inner.translate(halign.GetOffset(anchor, inner),
                                valign.GetOffset(anchor, inner)));
   }
+
+ protected:
+  Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override {
+    for (const auto& child : children()) {
+      if (child->isVisible() && child->isLayoutRequested()) {
+        child->measure(MeasureSpec::Exactly(child->width()),
+                       MeasureSpec::Exactly(child->height()));
+      }
+      return Dimensions(this->width(), this->height());
+    }
+  }
+
+  void onLayout(boolean changed, const roo_display::Box& box) {
+    for (const auto& child : children()) {
+      if (child->isVisible() && child->isLayoutRequired()) {
+        child->layout(child->parent_bounds());
+      }
+    }
+    moveTo(box);
+  }
 };
 
 }  // namespace roo_windows

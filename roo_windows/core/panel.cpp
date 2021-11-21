@@ -24,8 +24,9 @@ void Panel::add(Widget* child, const Box& bounds) {
   child->setParent(this);
   child->setParentBounds(bounds);
   if (child->isVisible()) {
-    markDirty();
+    // markLayoutRequested();
     child->invalidateInterior();
+    child->requestLayout();
     childShown(child);
   }
 }
@@ -271,6 +272,24 @@ Box Panel::maxBounds() const {
     }
   }
   return cached_max_bounds_;
+}
+
+Dimensions Panel::onMeasure(MeasureSpec width, MeasureSpec height) {
+  for (const auto& child : children()) {
+    if (child->isVisible() && child->isLayoutRequested()) {
+      child->measure(MeasureSpec::Exactly(child->width()),
+                     MeasureSpec::Exactly(child->height()));
+    }
+  }
+  return Dimensions(this->width(), this->height());
+}
+
+void Panel::onLayout(boolean changed, const Box& box) {
+  for (const auto& child : children()) {
+    if (child->isVisible() && child->isLayoutRequired()) {
+      child->layout(child->parent_bounds());
+    }
+  }
 }
 
 }  // namespace roo_windows

@@ -72,8 +72,45 @@ void Widget::invalidateInterior(const Box& box) {
 
 void Widget::requestLayout() {
   if (isLayoutRequested()) return;
-  redraw_status_ |= (kDirty | kInvalidated | kLayoutRequested);
+  markLayoutRequested();
   if (parent() != nullptr) parent()->requestLayout();
+}
+
+Dimensions Widget::measure(MeasureSpec width, MeasureSpec height) {
+  CHECK(isLayoutRequested());
+  Dimensions result = onMeasure(width, height);
+  redraw_status_ |= kLayoutRequired;
+  return result;
+}
+
+void Widget::layout(const roo_display::Box& box) {
+  bool changed = (box != parent_bounds());
+  if (changed || isLayoutRequired()) {
+    moveTo(box);
+    onLayout(changed, box);
+  }
+  redraw_status_ &= ~(kLayoutRequired | kLayoutRequested);
+}
+
+namespace {
+
+// Utility to return a default size. Uses the supplied size if the MeasureSpec
+// imposed no constraints. Will get larger if allowed by the MeasureSpec.
+static int16_t getDefaultSize(int16_t size, MeasureSpec spec) {
+  switch (spec.kind()) {
+    case MeasureSpec::UNSPECIFIED:
+      return size;
+    default:
+      return spec.value();
+  }
+}
+
+}  // namespace
+
+Dimensions Widget::onMeasure(MeasureSpec width, MeasureSpec height) {
+  Dimensions suggestedMin = getSuggestedMinimumDimensions();
+  return Dimensions(getDefaultSize(suggestedMin.width(), width),
+                    getDefaultSize(suggestedMin.height(), height));
 }
 
 void Widget::setParentClipMode(ParentClipMode mode) {
@@ -93,6 +130,7 @@ void Widget::setVisible(bool visible) {
   state_ ^= kWidgetHidden;
   invalidateInterior();
   if (isVisible()) {
+    requestLayout();
     parent()->childShown(this);
   } else {
     parent()->childHidden(this);
@@ -152,11 +190,12 @@ void Widget::setParentBounds(const Box& parent_bounds) {
     parent_bounds_ = parent_bounds;
     return;
   }
-  setVisible(false);
+  invalidateInterior();
+  parent()->childHidden(this);
   parent_bounds_ = parent_bounds;
-  setVisible(true);
+  invalidateInterior();
+  parent()->childShown(this);
 }
-
 
 void Widget::moveTo(const Box& parent_bounds) {
   setParentBounds(parent_bounds);
