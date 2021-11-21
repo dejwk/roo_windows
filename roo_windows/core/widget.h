@@ -12,6 +12,8 @@
 #include "roo_windows/core/clipper.h"
 #include "roo_windows/core/dimensions.h"
 #include "roo_windows/core/environment.h"
+#include "roo_windows/core/padding.h"
+// #include "roo_windows/core/preferred_size.h"
 #include "roo_windows/core/theme.h"
 
 namespace roo_windows {
@@ -248,6 +250,21 @@ class Widget {
   }
 
   virtual Dimensions getSuggestedMinimumDimensions() const = 0;
+
+  virtual Padding getDefaultPadding() const { return Padding(12); }
+
+  virtual Dimensions getNaturalDimensions() const {
+    Dimensions d = getSuggestedMinimumDimensions();
+    Padding p = getDefaultPadding();
+    return Dimensions(d.width() + p.left() + p.right(),
+                      d.height() + p.top() + p.bottom());
+  }
+
+  // virtual PreferredSize getPreferredSize() const {
+  //   Dimensions d = getNaturalDimensions();
+  //   return PreferredSize(PreferredSize::Exact(d.width()),
+  //                        PreferredSize::Exact(d.height()));
+  // }
 
   // Call this when something has changed which has invalidated the layout of
   // this widget. This will schedule a layout pass of the tree.

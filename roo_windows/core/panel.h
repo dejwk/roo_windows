@@ -63,6 +63,8 @@ class Panel : public Widget {
     return Dimensions(0, 0);
   }
 
+  Padding getDefaultPadding() const override { return Padding(0); }
+
   void moveTo(const Box& parent_bounds) override;
 
   const std::vector<std::unique_ptr<Widget>>& children() const {
