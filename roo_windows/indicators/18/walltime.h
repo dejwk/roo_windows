@@ -34,6 +34,8 @@ class WalltimeIndicator18 : public WalltimeIndicator {
   Dimensions getSuggestedMinimumDimensions() override {
     return Dimensions(46, 18);
   }
+
+  Dimensions getDefaultPadding() const override { return Padding(0); }
 };
 
 }  // namespace roo_windows

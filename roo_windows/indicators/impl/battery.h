@@ -18,6 +18,8 @@ class BatteryIndicator : public Widget {
   void setBatteryAlert(bool alert);
   void setBatteryUnknown(bool unknown);
 
+  Padding getDefaultPadding() const override { return Padding(0); }
+
  protected:
   virtual const roo_display::MaterialIcon* const* icons() = 0;
 
