@@ -121,6 +121,10 @@ class TextButton : public Button {
     }
   }
 
+  const roo_display::Font& getFont() const override {
+    return *env().theme().font.h6;
+  }
+
  private:
   uint32_t rune_;
 };
@@ -291,7 +295,7 @@ bool PressHighlighter::paint(const Surface& s) {
   overlay.set_a(th.pressedOpacity(kbTh.normalButton));
   Color bgcolor = roo_display::alphaBlend(kbTh.normalButton, overlay);
   s.drawObject(roo_display::MakeTileOf(
-      roo_display::TextLabel(*th.font.button, target_->label(),
+      roo_display::TextLabel(*th.font.body1, target_->label(),
                              target_->textColor()),
       bounds(), roo_display::HAlign::Center(), roo_display::VAlign::Top(3),
       bgcolor, roo_display::FILL_MODE_RECTANGLE));

@@ -1,12 +1,7 @@
 #pragma once
 
 #include "roo_display/core/color.h"
-#include "roo_smooth_fonts/NotoSans_Regular/12.h"
-#include "roo_smooth_fonts/NotoSans_Regular/18.h"
-#include "roo_smooth_fonts/NotoSans_Regular/27.h"
-#include "roo_smooth_fonts/NotoSans_Regular/40.h"
-#include "roo_smooth_fonts/NotoSans_Regular/60.h"
-#include "roo_smooth_fonts/NotoSans_Regular/90.h"
+#include "roo_display/font/smooth_font.h"
 
 namespace roo_windows {
 

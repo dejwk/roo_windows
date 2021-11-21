@@ -1,6 +1,14 @@
 #include "theme.h"
 
 #include "roo_display/core/color.h"
+#include "roo_smooth_fonts/NotoSans_CondensedBold/15.h"
+#include "roo_smooth_fonts/NotoSans_Regular/12.h"
+#include "roo_smooth_fonts/NotoSans_Regular/15.h"
+#include "roo_smooth_fonts/NotoSans_Regular/18.h"
+#include "roo_smooth_fonts/NotoSans_Regular/27.h"
+#include "roo_smooth_fonts/NotoSans_Regular/40.h"
+#include "roo_smooth_fonts/NotoSans_Regular/60.h"
+#include "roo_smooth_fonts/NotoSans_Regular/90.h"
 
 namespace roo_windows {
 
@@ -26,11 +34,11 @@ const Theme& DefaultTheme() {
               .h4 = &roo_display::font_NotoSans_Regular_40(),
               .h5 = &roo_display::font_NotoSans_Regular_27(),
               .h6 = &roo_display::font_NotoSans_Regular_18(),
-              .subtitle1 = &roo_display::font_NotoSans_Regular_18(),
+              .subtitle1 = &roo_display::font_NotoSans_Regular_15(),
               .subtitle2 = &roo_display::font_NotoSans_Regular_12(),
-              .body1 = &roo_display::font_NotoSans_Regular_18(),
+              .body1 = &roo_display::font_NotoSans_Regular_15(),
               .body2 = &roo_display::font_NotoSans_Regular_12(),
-              .button = &roo_display::font_NotoSans_Regular_18(),
+              .button = &roo_display::font_NotoSans_CondensedBold_15(),
               .caption = &roo_display::font_NotoSans_Regular_12(),
               .overline = &roo_display::font_NotoSans_Regular_12(),
           },

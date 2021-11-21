@@ -30,6 +30,10 @@ class Button : public Widget {
 
   Style style() const { return style_; }
 
+  virtual const roo_display::Font& getFont() const {
+    return *env_.theme().font.button;
+  }
+
   roo_display::Color textColor() const { return textColor_; }
 
   void setTextColor(roo_display::Color color) {
@@ -54,13 +58,18 @@ class Button : public Widget {
   bool paint(const Surface& s) override;
 
   Dimensions getSuggestedMinimumDimensions() const override;
+  // Padding getDefaultPadding() const override;
 
   bool isClickable() const override { return true; }
+
+ protected:
+  const Environment& env() const { return env_; }
 
  private:
   Button(const Environment& env, const MonoIcon* icon, std::string label,
          Style style);
 
+  const Environment& env_;
   Style style_;
   std::string label_;
   const MonoIcon* icon_;

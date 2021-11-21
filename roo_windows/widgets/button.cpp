@@ -104,7 +104,7 @@ class Interior : public Drawable {
   Interior(const Button& button, const Box& bounds)
       : button_(button),
         bounds_(bounds),
-        label_(*button.theme().font.button, button.label(), button.textColor(),
+        label_(button.getFont(), button.label(), button.textColor(),
                roo_display::FILL_MODE_RECTANGLE) {}
 
   Box extents() const override { return bounds_; }
@@ -221,6 +221,7 @@ void printHorizStripes(const Surface& s, int16_t xMin, int16_t yMin,
 Button::Button(const Environment& env, const MonoIcon* icon, std::string label,
                Style style)
     : Widget(env),
+      env_(env),
       style_(style),
       label_(std::move(label)),
       icon_(icon),
@@ -345,31 +346,30 @@ bool Button::paint(const Surface& s) {
   return true;
 }
 
-Dimensions Button::getSuggestedMinimumDimensions() const {
-  const BorderSpec& spec =
-      (style() == CONTAINED ? kContainedBorder : kOutlinedBorder);
-  int16_t border_width = std::max(2 * spec.top_width, 2 * spec.bottom_width);
-  int16_t border_height = std::max(2 * spec.left_height, 2 * spec.right_height);
+// Padding Button::getDefaultPadding() const {
+//   return Padding(14, 4);
+// }
 
+Dimensions Button::getSuggestedMinimumDimensions() const {
   if (!hasLabel()) {
     if (!hasIcon()) return Dimensions(0, 0);
     // Icon only.
-    return Dimensions(border_width + icon().extents().width(),
-                      border_height + icon().extents().height());
+    return Dimensions(4 + icon().extents().width(),
+                      4 + icon().extents().height());
   }
   // We must measure the text.
-  auto metrics = theme().font.button->getHorizontalStringMetrics(
+  auto metrics = env_.theme().font.button->getHorizontalStringMetrics(
       (const uint8_t*)label().c_str(), label().size());
+  int16_t text_height =
+      ((env_.theme().font.button->metrics().maxHeight()) + 1) & ~1;
   if (!hasIcon()) {
     // Label only.
-    return Dimensions(border_width + metrics.width(),
-                      border_height + metrics.height());
+    return Dimensions(4 + metrics.width(), 4 + text_height);
   }
   // Both icon and label.
   int16_t gap = (icon().extents().width() / 2) & 0xFFFC;
-  return Dimensions(
-      border_width + icon().extents().width() + gap + metrics.width(),
-      border_height + std::max(icon().extents().height(), (int16_t)metrics.height()));
+  return Dimensions(4 + icon().extents().width() + gap + metrics.width(),
+                    4 + std::max(icon().extents().height(), text_height));
 }
 
 }  // namespace roo_windows
