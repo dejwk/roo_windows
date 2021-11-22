@@ -78,10 +78,11 @@ class VerticalLayout : public Panel {
       if (used_height != measure.latest_used_height()) {
         // Need to update the measure.
         PreferredSize preferred = w.getPreferredSize();
-        MeasureSpec child_width_spec =
-            width.getChildMeasureSpec(0, preferred.width());
-        MeasureSpec child_height_spec =
-            height.getChildMeasureSpec(used_height, preferred.height());
+        MeasureSpec child_width_spec = width.getChildMeasureSpec(
+            padding_.left() + padding_.right(), preferred.width());
+        MeasureSpec child_height_spec = height.getChildMeasureSpec(
+            used_height + padding_.top() + padding_.bottom(),
+            preferred.height());
         measure.update(used_height,
                        w.measure(child_width_spec, child_height_spec));
         total_length_ += measure.latest().height();
