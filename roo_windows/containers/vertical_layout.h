@@ -2,6 +2,7 @@
 
 #include <vector>
 
+#include "roo_windows/core/gravity.h"
 #include "roo_windows/core/panel.h"
 
 namespace roo_windows {
@@ -10,7 +11,13 @@ class VerticalLayout : public Panel {
  public:
   class Params {
    public:
+    Params(HorizontalGravity gravity = kHorizontalGravityLeft)
+        : gravity_(gravity) {}
+
+    HorizontalGravity gravity() const { return gravity_; }
+
    private:
+    HorizontalGravity gravity_;
   };
 
   // Layout parameters plus last cached measure for a child.
@@ -18,6 +25,8 @@ class VerticalLayout : public Panel {
    public:
     ChildMeasure(Params params)
         : params_(std::move(params)), latest_used_height_(-1), latest_(0, 0) {}
+
+    const Params& params() const { return params_; }
 
     int16_t latest_used_height() const { return latest_used_height_; }
 
@@ -115,24 +124,48 @@ class VerticalLayout : public Panel {
   }
 
   void onLayout(bool changed, const roo_display::Box& box) {
-    int16_t child_top = padding_.top();
+    int16_t child_ymin = padding_.top();
+    int16_t child_xmax = box.width() - padding_.right() - 1;
     int count = children().size();
-    int16_t child_space = box.width() - padding_.right();
+    int16_t child_space = box.width() - padding_.left() - padding_.right();
+    // Gravity::Axix major_gravity = gravity_.y();
+    // Gravity::Axis minor_gravity = gravity_.x();
+    if (gravity_.y().isBottom()) {
+      child_ymin += (box.height() - total_length_);
+    } else if (gravity_.y().isMiddle()) {
+      child_ymin += ((box.height() - total_length_) / 2);
+    } else {
+      // Top or unspecified.
+    }
     for (int i = 0; i < count; ++i) {
       Widget& w = child_at(i);
       if (!w.isVisible()) continue;
       const ChildMeasure& measure = child_measures_[i];
-      int16_t child_left = padding_.left();
-      w.moveTo(Box(child_left, child_top,
-                   child_left + measure.latest().width() - 1,
-                   child_top + measure.latest().height() - 1));
-      child_top += measure.latest().height();
+      HorizontalGravity gravity = measure.params().gravity();
+      if (!gravity.isSet()) {
+        gravity = gravity_.x();
+      }
+      int16_t child_xmin;
+      if (gravity.isCenter()) {
+        child_xmin =
+            padding_.left() + (child_space - measure.latest().width()) / 2;
+      } else if (gravity.isRight()) {
+        child_xmin = child_xmax + 1 - measure.latest().width();
+      } else {
+        // Left, or unspecified.
+        child_xmin = padding_.left();
+      }
+      w.moveTo(Box(child_xmin, child_ymin,
+                   child_xmin + measure.latest().width() - 1,
+                   child_ymin + measure.latest().height() - 1));
+      child_ymin += measure.latest().height();
     }
   }
 
  private:
   int16_t total_length_;
   Padding padding_;
+  Gravity gravity_;
   std::vector<ChildMeasure> child_measures_;
 };
 
