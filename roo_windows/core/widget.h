@@ -12,6 +12,7 @@
 #include "roo_windows/core/clipper.h"
 #include "roo_windows/core/dimensions.h"
 #include "roo_windows/core/environment.h"
+#include "roo_windows/core/margins.h"
 #include "roo_windows/core/measure_spec.h"
 #include "roo_windows/core/padding.h"
 #include "roo_windows/core/preferred_size.h"
@@ -258,6 +259,7 @@ class Widget {
   virtual Dimensions getSuggestedMinimumDimensions() const = 0;
 
   virtual Padding getDefaultPadding() const { return Padding(12); }
+  virtual Margins getDefaultMargins() const { return Margins(4); }
 
   virtual Dimensions getNaturalDimensions() const {
     Dimensions d = getSuggestedMinimumDimensions();

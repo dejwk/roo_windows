@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "roo_windows/core/gravity.h"
+#include "roo_windows/core/margins.h"
 #include "roo_windows/core/panel.h"
 
 namespace roo_windows {
@@ -73,19 +74,25 @@ class VerticalLayout : public Panel {
       Widget& w = child_at(i);
       if (!w.isVisible()) continue;
       ChildMeasure& measure = child_measures_[i];
+      Margins margins = w.getDefaultMargins();
       // if (height.kind() == MeasureSpec::EXACTLY)
       int16_t used_height = total_length_;
       if (used_height != measure.latest_used_height()) {
         // Need to update the measure.
         PreferredSize preferred = w.getPreferredSize();
-        MeasureSpec child_width_spec = width.getChildMeasureSpec(
-            padding_.left() + padding_.right(), preferred.width());
+        MeasureSpec child_width_spec =
+            width.getChildMeasureSpec(padding_.left() + padding_.right() +
+                                          margins.left() + margins.right(),
+                                      preferred.width());
         MeasureSpec child_height_spec = height.getChildMeasureSpec(
-            used_height + padding_.top() + padding_.bottom(),
+            used_height + padding_.top() + padding_.bottom() + margins.top() +
+                margins.bottom(),
             preferred.height());
         measure.update(used_height,
                        w.measure(child_width_spec, child_height_spec));
-        total_length_ += measure.latest().height();
+        total_length_ = std::max<int16_t>(
+            total_length_, total_length_ + measure.latest().height() +
+                               margins.top() + margins.bottom());
 
         bool match_width_locally = false;
         if (width.kind() != MeasureSpec::EXACTLY &&
@@ -97,7 +104,9 @@ class VerticalLayout : public Panel {
           match_width = true;
           match_width_locally = true;
         }
-        max_width = std::max(max_width, measure.latest().width());
+        int16_t measured_width =
+            measure.latest().width() + margins.left() + margins.right();
+        max_width = std::max(max_width, measured_width);
         all_match_parent =
             all_match_parent && preferred.width().isMatchParent();
         alternative_max_width = std::max(
@@ -142,24 +151,28 @@ class VerticalLayout : public Panel {
       Widget& w = child_at(i);
       if (!w.isVisible()) continue;
       const ChildMeasure& measure = child_measures_[i];
+      Margins margins = w.getDefaultMargins();
       HorizontalGravity gravity = measure.params().gravity();
       if (!gravity.isSet()) {
         gravity = gravity_.x();
       }
       int16_t child_xmin;
       if (gravity.isCenter()) {
-        child_xmin =
-            padding_.left() + (child_space - measure.latest().width()) / 2;
+        child_xmin = padding_.left() +
+                     (child_space - measure.latest().width()) / 2 +
+                     margins.left() - margins.right();
       } else if (gravity.isRight()) {
-        child_xmin = child_xmax + 1 - measure.latest().width();
+        child_xmin =
+            child_xmax + 1 - measure.latest().width() - margins.right();
       } else {
         // Left, or unspecified.
-        child_xmin = padding_.left();
+        child_xmin = padding_.left() + margins.left();
       }
+      child_ymin += margins.top();
       w.moveTo(Box(child_xmin, child_ymin,
                    child_xmin + measure.latest().width() - 1,
                    child_ymin + measure.latest().height() - 1));
-      child_ymin += measure.latest().height();
+      child_ymin += measure.latest().height() + margins.bottom();
     }
   }
 
