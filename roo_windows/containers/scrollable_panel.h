@@ -43,7 +43,24 @@ class ScrollablePanel : public Panel {
 
   bool onTouch(const TouchEvent& event) override;
 
+ protected:
+  Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override {
+    measured_ = contents()->measure(MeasureSpec::Unspecified(width.value()),
+                                    MeasureSpec::Unspecified(height.value()));
+    return Dimensions(width.resolveSize(measured_.width()),
+                      height.resolveSize(measured_.height()));
+  }
+
+  void onLayout(boolean changed, const roo_display::Box& box) override {
+    Widget* c = contents();
+    Box bounds(0, 0, measured_.width() - 1, measured_.height() - 1);
+    bounds = bounds.translate(c->xOffset(), c->yOffset());
+    c->layout(bounds);
+  }
+
  private:
+  Dimensions measured_;
+
   // Captured dx_ and dy_ during drag and scroll animations.
   int16_t dxStart_, dyStart_;
 

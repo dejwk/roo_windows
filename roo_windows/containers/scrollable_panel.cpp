@@ -3,14 +3,24 @@
 namespace roo_windows {
 
 void ScrollablePanel::scrollTo(int16_t x, int16_t y) {
-  if (x > 0) x = 0;
-  if (y > 0) y = 0;
   Widget* c = contents();
-  if (x < width() - c->width()) {
-    x = width() - c->width();
+  if (c->width() >= width()) {
+    if (x > 0) x = 0;
+    if (x < width() - c->width()) {
+      x = width() - c->width();
+    }
+  } else {
+    if (x < 0) x = 0;
+    if (x > width() - c->width()) x = width() - c->width();
   }
-  if (y < height() - c->height()) {
-    y = height() - c->height();
+  if (c->height() >= height()) {
+    if (y > 0) y = 0;
+    if (y < height() - c->height()) {
+      y = height() - c->height();
+    }
+  } else {
+    if (y < 0) y = 0;
+    if (y > height() - c->height()) y = height() - c->height();
   }
   c->moveTo(c->bounds().translate(x, y));
 }
