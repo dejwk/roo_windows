@@ -14,7 +14,7 @@ class MeasureSpec {
   };
 
   static constexpr MeasureSpec Unspecified(int16_t hint) {
-    return MeasureSpec(UNSPECIFIED | (hint >> 2));
+    return MeasureSpec(UNSPECIFIED | (hint << 2));
   }
 
   static constexpr MeasureSpec AtMost(int16_t value) {
@@ -28,7 +28,6 @@ class MeasureSpec {
   Kind kind() const { return static_cast<Kind>(value_ & 0x3); }
 
   int16_t value() const {
-    DCHECK_NE(kind(), UNSPECIFIED);
     return value_ >> 2;
   }
 
@@ -55,16 +54,12 @@ class MeasureSpec {
       // Parent has imposed a maximum size on us
       case MeasureSpec::AT_MOST: {
         return MeasureSpec::AtMost(size);
-        break;
       }
       // Parent asked to see how big we want to be
       case MeasureSpec::UNSPECIFIED: {
-        if (childDimension.isMatchParent()) {
-          // Child wants to be our size... find out how big it should
-          // be
-          return MeasureSpec::Unspecified(size);
-        }
-        break;
+        // Child wants to be our size... find out how big it should
+        // be
+        return MeasureSpec::Unspecified(size);
       }
     }
   }
