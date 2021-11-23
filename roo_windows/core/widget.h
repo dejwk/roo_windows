@@ -337,14 +337,14 @@ class Widget {
 
   virtual void setParentBounds(const Box& parent_bounds);
 
+  virtual Dimensions onMeasure(MeasureSpec width, MeasureSpec height);
+
   // Called from layout when this view should assign a size and position to each
   // of its children.
   //
   // Derived classes with children should override this method and call layout
   // on each of their children.
   virtual void onLayout(boolean changed, const roo_display::Box& box) {}
-
-  virtual Dimensions onMeasure(MeasureSpec width, MeasureSpec height);
 
  private:
   friend class Panel;
