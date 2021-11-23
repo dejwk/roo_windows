@@ -44,7 +44,15 @@ class VerticalLayout : public Panel {
     Dimensions latest_;
   };
 
-  VerticalLayout(const Environment& env) : Panel(env), total_length_(0) {}
+  VerticalLayout(const Environment& env)
+      : Panel(env),
+        preferred_size_(PreferredSize::WrapContent(),
+                        PreferredSize::WrapContent()),
+        total_length_(0) {}
+
+  void setPreferredSize(PreferredSize preferred_size) {
+    preferred_size_ = preferred_size;
+  }
 
   void add(Widget* child, Params params) {
     child_measures_.emplace_back(params);
@@ -58,6 +66,7 @@ class VerticalLayout : public Panel {
   }
 
   Padding getDefaultPadding() const override { return padding_; }
+  PreferredSize getPreferredSize() const override { return preferred_size_; }
 
  protected:
   Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override {
@@ -177,9 +186,11 @@ class VerticalLayout : public Panel {
   }
 
  private:
-  int16_t total_length_;
   Padding padding_;
   Gravity gravity_;
+  PreferredSize preferred_size_;
+
+  int16_t total_length_;
   std::vector<ChildMeasure> child_measures_;
 };
 
