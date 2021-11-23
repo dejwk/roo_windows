@@ -58,12 +58,13 @@ class ToggleButtons : public Panel {
 
   friend class ToggleButton;
 
+  const Environment& env_;
+
   int width_dp_;  // defaults to 72.
   int destination_size_dp_;
   //   roo_display::VAlign alignment_;
   int active_;
 
-  const Environment& env_;
   std::vector<std::unique_ptr<ToggleButton>> buttons_;
 };
 
