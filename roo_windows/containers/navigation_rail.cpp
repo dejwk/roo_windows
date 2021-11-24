@@ -6,10 +6,10 @@ bool Divider::paint(const Surface& s) {
   if (!isInvalidated()) return true;
   const Box box = bounds();
   Color color = theme().color.onBackground;
-  color.set_a(0x20);
+  color.set_a(0x40);
   s.drawObject(roo_display::FilledRect(box.xMax() - 1, box.yMin(),
                                        box.xMax() - 1, box.yMax(), color));
-  color.set_a(0x10);
+  color.set_a(0x20);
   s.drawObject(roo_display::FilledRect(box.xMax(), box.yMin(), box.xMax(),
                                        box.yMax(), color));
   return true;
@@ -37,24 +37,40 @@ NavigationRail::NavigationRail(const Environment& env)
       env_(env),
       alignment_(roo_display::VAlign::Top()),
       active_(-1),
-      divider_(env) {}
+      divider_(env) {
+  add(&divider_);
+}
 
-void NavigationRail::setParentBounds(const Box& parent_bounds) {
-  Panel::setParentBounds(parent_bounds);
-  divider_.moveTo(Box(parent_bounds.xMax() - 2, parent_bounds.yMin(),
-                      parent_bounds.xMax() - 1, parent_bounds.yMax()));
+NavigationRail::~NavigationRail() {
+  // Remove the divider so that it doesn't get double-destroyed.
+  swap(0, nullptr);
+}
+
+Dimensions NavigationRail::onMeasure(MeasureSpec width, MeasureSpec height) {
+  return Dimensions(width.resolveSize(72),
+                    height.resolveSize(72 * destinations_.size()));
+}
+
+void NavigationRail::onLayout(boolean changed, const roo_display::Box& box) {
+  divider_.layout(Box(box.xMax() - 2, box.yMin(), box.xMax() - 1, box.yMax()));
+  if (destinations_.empty()) return;
+  int16_t dwidth = box.width() - 4;
+  int16_t dheight = std::min<int16_t>(box.height() / destinations_.size(), 72);
+  int16_t y = 0;
+  for (const auto& d : destinations_) {
+    d->layout(Box(4, y + 4, dwidth - 5, y + dheight - 5));
+    y += dheight;
+  }
 }
 
 void NavigationRail::addDestination(const roo_display::MaterialIcon& icon,
                                     std::string text,
                                     std::function<void()> activator) {
-  int16_t width = bounds().width();
-  Box box(4, 4, width - 8, width - 8);
-  box = box.translate(0, size() * width);
   Destination* dest = new Destination(
       env_, icon, std::move(text), destinations_.size(), std::move(activator));
-  add(dest, box);
+  add(dest);
   destinations_.emplace_back(dest);
+  dest->requestLayout();
 }
 
 bool NavigationRail::setActive(int index) {

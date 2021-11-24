@@ -47,6 +47,7 @@ class NavigationRail : public Panel {
   enum LabelVisibility { PERSISTED, SELECTED, UNLABELED };
 
   NavigationRail(const Environment& env);
+  ~NavigationRail();
 
   void addDestination(const roo_display::MaterialIcon& icon, std::string text,
                       std::function<void()> activator);
@@ -59,7 +60,10 @@ class NavigationRail : public Panel {
 
   bool setActive(int index);
 
-  void setParentBounds(const Box& parent_bounds) override;
+ protected:
+  Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override;
+
+  void onLayout(boolean changed, const roo_display::Box& box) override;
 
  private:
   friend class Destination;
