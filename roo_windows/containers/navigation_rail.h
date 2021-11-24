@@ -6,18 +6,12 @@
 #include "roo_material_icons.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/widgets/icon_with_caption.h"
+#include "roo_windows/widgets/divider.h"
 
 namespace roo_windows {
 
 class Destination;
 class NavigationRail;
-
-class Divider : public Widget {
- public:
-  using Widget::Widget;
-  bool paint(const Surface& s) override;
-  Dimensions getSuggestedMinimumDimensions() const override;
-};
 
 class Destination : public IconWithCaption {
  public:
@@ -74,7 +68,7 @@ class NavigationRail : public Panel {
   roo_display::VAlign alignment_;
   LabelVisibility label_visibility_;
   int active_;
-  Divider divider_;
+  VerticalDivider divider_;
 
   std::vector<std::unique_ptr<Destination>> destinations_;
 };

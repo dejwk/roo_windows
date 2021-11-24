@@ -2,23 +2,6 @@
 
 namespace roo_windows {
 
-bool Divider::paint(const Surface& s) {
-  if (!isInvalidated()) return true;
-  const Box box = bounds();
-  Color color = theme().color.onBackground;
-  color.set_a(0x40);
-  s.drawObject(roo_display::FilledRect(box.xMax() - 1, box.yMin(),
-                                       box.xMax() - 1, box.yMax(), color));
-  color.set_a(0x20);
-  s.drawObject(roo_display::FilledRect(box.xMax(), box.yMin(), box.xMax(),
-                                       box.yMax(), color));
-  return true;
-}
-
-Dimensions Divider::getSuggestedMinimumDimensions() const {
-  return Dimensions(2, 0);
-}
-
 void Destination::onClicked() {
   if (rail()->setActive(idx_)) activator_();
   IconWithCaption::onClicked();
