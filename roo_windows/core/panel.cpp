@@ -24,7 +24,9 @@ void Panel::add(Widget* child, const Box& bounds) {
   child->setParent(this);
   child->setParentBounds(bounds);
   if (child->isVisible()) {
-    // markLayoutRequested();
+    // Make sure that we propagate the requestLayout even if the child
+    // already has the request flag set.
+    requestLayout();
     child->invalidateInterior();
     child->requestLayout();
     childShown(child);
