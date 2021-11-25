@@ -5,7 +5,7 @@
 
 #include "roo_material_icons.h"
 #include "roo_windows/containers/navigation_rail.h"
-#include "roo_windows/containers/static_layout.h"
+#include "roo_windows/containers/stacked_layout.h"
 
 namespace roo_windows {
 
@@ -21,7 +21,9 @@ class NavigationPanel : public Panel {
   void setActive(int index);
 
  protected:
-  void setParentBounds(const Box& parent_bounds) override;
+  Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override;
+
+  void onLayout(bool changed, const roo_display::Box& box) override;
 
  private:
   bool empty() const { return contents_.children().empty(); }
@@ -31,7 +33,7 @@ class NavigationPanel : public Panel {
 
   const Environment& env_;
   NavigationRail rail_;
-  StaticLayout contents_;
+  StackedLayout contents_;
 };
 
 }  // namespace roo_windows
