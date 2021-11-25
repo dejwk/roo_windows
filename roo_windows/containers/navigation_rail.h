@@ -5,8 +5,8 @@
 #include "roo_display/ui/alignment.h"
 #include "roo_material_icons.h"
 #include "roo_windows/core/panel.h"
-#include "roo_windows/widgets/icon_with_caption.h"
 #include "roo_windows/widgets/divider.h"
+#include "roo_windows/widgets/icon_with_caption.h"
 
 namespace roo_windows {
 
@@ -43,6 +43,11 @@ class NavigationRail : public Panel {
   NavigationRail(const Environment& env);
   ~NavigationRail();
 
+  PreferredSize getPreferredSize() const override {
+    return PreferredSize(PreferredSize::Exact(72),
+                         PreferredSize::MatchParent());
+  }
+
   void addDestination(const roo_display::MaterialIcon& icon, std::string text,
                       std::function<void()> activator);
 
@@ -57,7 +62,7 @@ class NavigationRail : public Panel {
  protected:
   Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override;
 
-  void onLayout(boolean changed, const roo_display::Box& box) override;
+  void onLayout(bool changed, const roo_display::Box& box) override;
 
  private:
   friend class Destination;
