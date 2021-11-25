@@ -22,7 +22,8 @@ class IconWithCaption : public Widget {
   bool paint(const Surface& s) override;
   Dimensions getSuggestedMinimumDimensions() const override;
 
-  void setParentBounds(const Box& parent_bounds) override;
+ protected:
+  void onLayout(bool changed, const Box& box) override;
 
  private:
   const roo_display::MaterialIcon& icon_;

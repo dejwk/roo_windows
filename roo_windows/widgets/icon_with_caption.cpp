@@ -14,11 +14,10 @@ IconWithCaption::IconWithCaption(const Environment& env,
       hi_border_(0),
       lo_border_(0) {}
 
-void IconWithCaption::setParentBounds(const Box& parent_bounds) {
-  Widget::setParentBounds(parent_bounds);
+void IconWithCaption::onLayout(bool changed, const Box& box) {
   int16_t total_height =
       icon_.extents().height() + font_->metrics().maxHeight();
-  int16_t border = parent_bounds.height() - total_height;
+  int16_t border = box.height() - total_height;
   hi_border_ = border / 2;
   lo_border_ = border - hi_border_;
 }
