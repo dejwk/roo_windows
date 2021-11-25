@@ -16,8 +16,8 @@
 #include "roo_windows/core/measure_spec.h"
 #include "roo_windows/core/padding.h"
 #include "roo_windows/core/preferred_size.h"
-#include "roo_windows/core/touch_event.h"
 #include "roo_windows/core/theme.h"
+#include "roo_windows/core/touch_event.h"
 
 namespace roo_windows {
 
@@ -307,8 +307,6 @@ class Widget {
 
   virtual void setParent(Panel* parent);
 
-  virtual void setParentBounds(const Box& parent_bounds);
-
   virtual Dimensions onMeasure(MeasureSpec width, MeasureSpec height);
 
   // Called from layout when this view should assign a size and position to each
@@ -333,10 +331,14 @@ class Widget {
     redraw_status_ &=
         ~(kDirty | kInvalidated | kLayoutRequested | kLayoutRequired);
   }
+
   void markInvalidated() { redraw_status_ |= (kDirty | kInvalidated); }
+
   void markLayoutRequested() {
     redraw_status_ |= (kDirty | kInvalidated | kLayoutRequested);
   }
+
+  void setParentBounds(const Box& parent_bounds);
 
   Panel* parent_;
   Box parent_bounds_;

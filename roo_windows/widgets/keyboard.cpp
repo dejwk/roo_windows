@@ -103,7 +103,7 @@ class TextButton : public Button {
              uint32_t rune)
       : Button(env, runeAsStr(rune)), rune_(rune) {
     parent->add(this);
-    setParentBounds(bounds);
+    moveTo(bounds);
   }
 
   bool showClickAnimation() const override { return false; }
@@ -134,7 +134,7 @@ class SpaceButton : public Button {
   SpaceButton(const Environment& env, KeyboardPage* parent, const Box& bounds)
       : Button(env, "") {
     parent->add(this);
-    setParentBounds(bounds);
+    moveTo(bounds);
   }
 
   bool showClickAnimation() const override { return false; }
@@ -156,7 +156,7 @@ class FnButton : public Button {
            const MonoIcon& icon)
       : Button(env, icon) {
     parent->add(this);
-    setParentBounds(bounds);
+    moveTo(bounds);
   }
 
   bool showClickAnimation() const override { return false; }
@@ -171,7 +171,7 @@ Keyboard::Keyboard(const Environment& env, Panel* parent,
       color_theme_(env.keyboardColorTheme()),
       listener_(listener) {
   parent->add(this);
-  setParentBounds(bounds);
+  moveTo(bounds);
   setParentClipMode(Widget::UNCLIPPED);
   auto page =
       new KeyboardPage(env, this, bounds.width(), bounds.height(), spec);
@@ -183,7 +183,7 @@ KeyboardPage::KeyboardPage(const Environment& env, Keyboard* parent, int16_t w,
                            int16_t h, const KeyboardPageSpec* spec)
     : Panel(env) {
   parent->add(this);
-  setParentBounds(Box(0, 0, w - 1, h - 1));
+  moveTo(Box(0, 0, w - 1, h - 1));
   setBackground(parent->color_theme().background);
   setParentClipMode(Widget::UNCLIPPED);
   // Calculate grid size.
@@ -272,7 +272,7 @@ PressHighlighter::PressHighlighter(const Environment& env, KeyboardPage* parent,
                                    const Box& bounds)
     : Widget(env) {
   parent->add(this);
-  setParentBounds(bounds);
+  moveTo(bounds);
   setParentClipMode(Widget::UNCLIPPED);
 }
 
