@@ -130,9 +130,9 @@ void Widget::setVisible(bool visible) {
   invalidateInterior();
   if (isVisible()) {
     requestLayout();
-    parent()->childShown(this);
+    if (parent() != nullptr) parent()->childShown(this);
   } else {
-    parent()->childHidden(this);
+    if (parent() != nullptr) parent()->childHidden(this);
   }
 }
 
@@ -190,10 +190,10 @@ void Widget::setParentBounds(const Box& parent_bounds) {
     return;
   }
   invalidateInterior();
-  parent()->childHidden(this);
+  if (parent() != nullptr) parent()->childHidden(this);
   parent_bounds_ = parent_bounds;
   invalidateInterior();
-  parent()->childShown(this);
+  if (parent() != nullptr) parent()->childShown(this);
 }
 
 void Widget::moveTo(const Box& parent_bounds) {
