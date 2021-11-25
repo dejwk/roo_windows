@@ -13,15 +13,16 @@ class Image : public Widget {
   Image(const Environment& env, const roo_display::Drawable& image)
       : Widget(env), image_(image) {}
 
-  void setPos(int16_t x, int16_t y) {
-    setParentBounds(Box(x, y, x + image_.width() - 1, y + image_.height() - 1));
-  }
-
   bool paint(const Surface& s) override {
     roo_display::Tile tile(&image_, bounds(), roo_display::HAlign::Center(),
                            roo_display::VAlign::Middle(),
                            roo_display::color::Transparent, s.fill_mode());
     s.drawObject(tile);
+  }
+
+  Dimensions getSuggestedMinimumDimensions() const {
+    const Box& extents = image_.extents();
+    return Dimensions(extents.width(), extents.height());
   }
 
  private:
