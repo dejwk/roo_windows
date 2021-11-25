@@ -55,13 +55,14 @@ const RleImage4bppxPolarized<Alpha4, PrgMemResource>& caps_lock_24() {
   return value;
 }
 
-static const int kTopMarginPx = 10;
-static const int kBottomMarginPx = 0;
-static const int kLeftMarginPx = 1;
-static const int kRightMarginPx = 1;
+static const int kExtraTopPaddingPx = 20;
 static const int kHighlighterHeight = 50;
 
-static const int kButtonBorderPercent = 10;
+static const int kButtonMarginPercent = 10;
+static const int kMinRowHeight = 10;
+static const int kPreferredRowHeight = 10;
+static const int kMinCellWidth = 5;
+static const int kPreferredCellWidth = 15;
 
 namespace {
 
@@ -99,12 +100,8 @@ std::string runeAsStr(uint32_t rune) {
 
 class TextButton : public Button {
  public:
-  TextButton(const Environment& env, KeyboardPage* parent, const Box& bounds,
-             uint32_t rune)
-      : Button(env, runeAsStr(rune)), rune_(rune) {
-    parent->add(this);
-    moveTo(bounds);
-  }
+  TextButton(const Environment& env, uint32_t rune)
+      : Button(env, runeAsStr(rune)), rune_(rune) {}
 
   bool showClickAnimation() const override { return false; }
 
@@ -131,11 +128,7 @@ class TextButton : public Button {
 
 class SpaceButton : public Button {
  public:
-  SpaceButton(const Environment& env, KeyboardPage* parent, const Box& bounds)
-      : Button(env, "") {
-    parent->add(this);
-    moveTo(bounds);
-  }
+  SpaceButton(const Environment& env) : Button(env, "") {}
 
   bool showClickAnimation() const override { return false; }
 
@@ -152,91 +145,80 @@ class SpaceButton : public Button {
 
 class FnButton : public Button {
  public:
-  FnButton(const Environment& env, KeyboardPage* parent, const Box& bounds,
-           const MonoIcon& icon)
-      : Button(env, icon) {
-    parent->add(this);
-    moveTo(bounds);
-  }
+  FnButton(const Environment& env, const MonoIcon& icon)
+      : Button(env, icon) {}
 
   bool showClickAnimation() const override { return false; }
 };
 
 const Keyboard* KeyboardPage::keyboard() const { return (Keyboard*)parent(); }
 
-Keyboard::Keyboard(const Environment& env, Panel* parent,
-                   const roo_display::Box& bounds, const KeyboardPageSpec* spec,
+Keyboard::Keyboard(const Environment& env, const KeyboardPageSpec* spec,
                    KeyboardListener* listener)
-    : Panel(env),
-      color_theme_(env.keyboardColorTheme()),
-      listener_(listener) {
-  parent->add(this);
-  moveTo(bounds);
+    : Panel(env), color_theme_(env.keyboardColorTheme()), listener_(listener) {
   setParentClipMode(Widget::UNCLIPPED);
-  auto page =
-      new KeyboardPage(env, this, bounds.width(), bounds.height(), spec);
+  auto page = new KeyboardPage(env, spec);
+  add(page);
   current_page_ = page;
   pages_.emplace_back(page);
 }
 
-KeyboardPage::KeyboardPage(const Environment& env, Keyboard* parent, int16_t w,
-                           int16_t h, const KeyboardPageSpec* spec)
-    : Panel(env) {
-  parent->add(this);
-  moveTo(Box(0, 0, w - 1, h - 1));
-  setBackground(parent->color_theme().background);
-  setParentClipMode(Widget::UNCLIPPED);
-  // Calculate grid size.
-  if (h <= kTopMarginPx + kBottomMarginPx) return;
-  int row_height = (h - kTopMarginPx - kBottomMarginPx) / spec->row_count;
-  if (row_height <= 2) return;
-  if (h <= kLeftMarginPx + kRightMarginPx) return;
-  int cell_width = (w - kLeftMarginPx - kRightMarginPx) / spec->row_width;
-  if (cell_width <= 2) return;
-  int h_key_border = row_height * kButtonBorderPercent / 100;
-  if (h_key_border < 1) h_key_border = 1;
-  int v_key_border = cell_width * kButtonBorderPercent / 100;
-  if (v_key_border < 1) v_key_border = 1;
+PreferredSize Keyboard::getPreferredSize() const {
+  return current_page_->getPreferredSize();
+}
 
-  int left_offset = (w - spec->row_width * cell_width) / 2;
-  int top_offset = (h + kTopMarginPx - spec->row_count * row_height) / 2;
-  int y = top_offset;
+PreferredSize KeyboardPage::getPreferredSize() const {
+  Padding padding = getDefaultPadding();
+  return PreferredSize(
+      PreferredSize::MatchParent(),
+      PreferredSize::Exact(spec_->row_count * kPreferredRowHeight +
+                           padding.top() + padding.bottom() +
+                           kExtraTopPaddingPx));
+}
+
+Dimensions Keyboard::onMeasure(MeasureSpec width, MeasureSpec height) {
+  return current_page_->measure(width, height);
+}
+
+void Keyboard::onLayout(boolean changed, const roo_display::Box& box) {
+  current_page_->layout(Box(0, 0, box.width() - 1, box.height() - 1));
+}
+
+KeyboardPage::KeyboardPage(const Environment& env, const KeyboardPageSpec* spec)
+    : Panel(env), spec_(spec) {
+  setBackground(env.keyboardColorTheme().background);
+  setParentClipMode(Widget::UNCLIPPED);
   for (int i = 0; i < spec->row_count; ++i) {
     const auto& row = spec->rows[i];
-    int x = left_offset + row.start_offset * cell_width;
     for (int j = 0; j < row.key_count; ++j) {
-      const auto& key = row.keys[j];
-      Box bounds(x + v_key_border, y + h_key_border,
-                 x + key.width * cell_width - v_key_border - 1,
-                 y + row_height - h_key_border - 1);
       Button* b;
       Color b_color;
+      const auto& key = row.keys[j];
       switch (key.function) {
         case KeySpec::TEXT: {
-          b = new TextButton(env, this, bounds, key.data);
-          b_color = parent->color_theme().normalButton;
+          b = new TextButton(env, key.data);
+          b_color = env.keyboardColorTheme().normalButton;
           break;
         }
         case KeySpec::SPACE: {
-          b = new SpaceButton(env, this, bounds);
-          b_color = parent->color_theme().normalButton;
+          b = new SpaceButton(env);
+          b_color = env.keyboardColorTheme().normalButton;
           break;
         }
         case KeySpec::ENTER: {
-          b = new FnButton(env, this, bounds, ic_outlined_24_action_done());
-          b_color = parent->color_theme().acceptButton;
+          b = new FnButton(env, ic_outlined_24_action_done());
+          b_color = env.keyboardColorTheme().acceptButton;
           break;
         }
         case KeySpec::SHIFT: {
-          b = new FnButton(env, this, bounds, shift_24());
-          b_color = parent->color_theme().modifierButton;
+          b = new FnButton(env, shift_24());
+          b_color = env.keyboardColorTheme().modifierButton;
           break;
         }
         case KeySpec::SWITCH_PAGE:
         default: {
-          b = new FnButton(env, this, bounds,
-                           ic_outlined_24_content_backspace());
-          b_color = parent->color_theme().modifierButton;
+          b = new FnButton(env, ic_outlined_24_content_backspace());
+          b_color = env.keyboardColorTheme().modifierButton;
           break;
         }
       }
@@ -244,15 +226,100 @@ KeyboardPage::KeyboardPage(const Environment& env, Keyboard* parent, int16_t w,
       b->setOutlineColor(b_color);
       b->setTextColor(roo_display::color::White);
       keys_.emplace_back(b);
+      add(b);
+    }
+  }
+  // Note: highlighter must be added last to be on top of all children.
+  highlighter_ = new PressHighlighter(env);
+  highlighter_->setVisible(false);
+  highlighter_->setParentClipMode(Widget::UNCLIPPED);
+  add(highlighter_);
+}
+
+Dimensions KeyboardPage::onMeasure(MeasureSpec width, MeasureSpec height) {
+  // Calculate grid size.
+  Padding padding = getDefaultPadding();
+  int16_t row_height;
+  int16_t full_height;
+  // int16_t top_offset;
+  if (height.kind() == MeasureSpec::UNSPECIFIED) {
+    row_height = kPreferredRowHeight;
+    full_height = row_height * spec_->row_count + padding.top() +
+                  padding.bottom() + kExtraTopPaddingPx;
+  } else {
+    int16_t hspan =
+        height.value() - padding.top() - padding.bottom() - kExtraTopPaddingPx;
+    row_height = std::max<int16_t>(kMinRowHeight, hspan / spec_->row_count);
+    full_height = height.value();
+  }
+  int16_t cell_width;
+  int16_t full_width;
+  if (width.kind() == MeasureSpec::UNSPECIFIED) {
+    cell_width = kPreferredCellWidth;
+    full_width =
+        cell_width * spec_->row_width + padding.left() + padding.right();
+  } else {
+    int16_t vspan = width.value() - padding.left() - padding.right();
+    cell_width = std::max<int16_t>(kMinCellWidth, vspan / spec_->row_width);
+    full_width = width.value();
+  }
+
+  int h_key_margin = row_height * kButtonMarginPercent / 100;
+  if (h_key_margin < 1) h_key_margin = 1;
+  int v_key_margin = cell_width * kButtonMarginPercent / 100;
+  if (v_key_margin < 1) v_key_margin = 1;
+
+  // Now go through all children and have them measured.
+  int child_idx = 0;
+  for (int i = 0; i < spec_->row_count; ++i) {
+    const auto& row = spec_->rows[i];
+    for (int j = 0; j < row.key_count; ++j) {
+      const auto& key = row.keys[j];
+      Widget& w = child_at(child_idx++);
+      w.measure(MeasureSpec::Exactly(cell_width - 2 * v_key_margin * key.width),
+                MeasureSpec::Exactly(row_height - 2 * h_key_margin));
+    }
+  }
+  // We skip the measurement of the highlighter.
+  return Dimensions(full_height, full_width);
+}
+
+void KeyboardPage::onLayout(boolean changed, const roo_display::Box& box) {
+  // Recalculate now that we have a specific dimensions.
+  Padding padding = getDefaultPadding();
+  int16_t vspan =
+      box.height() - padding.top() - padding.bottom() - kExtraTopPaddingPx;
+  int16_t row_height = std::max<int16_t>(kMinRowHeight, vspan / spec_->row_count);
+  int16_t top_offset = std::max<int16_t>(
+      0,
+      (box.height() - kExtraTopPaddingPx - spec_->row_count * row_height) / 2);
+  int16_t hspan = box.width() - padding.left() - padding.right();
+  int16_t cell_width = std::max<int16_t>(kMinCellWidth, hspan / spec_->row_width);
+  int16_t left_offset =
+      std::max<int16_t>(0, (box.width() - spec_->row_width * cell_width) / 2);
+
+  int h_key_margin = row_height * kButtonMarginPercent / 100;
+  if (h_key_margin < 1) h_key_margin = 1;
+  int v_key_margin = cell_width * kButtonMarginPercent / 100;
+  if (v_key_margin < 1) v_key_margin = 1;
+
+  int y = top_offset + kExtraTopPaddingPx;
+  int child_idx = 0;
+  for (int i = 0; i < spec_->row_count; ++i) {
+    const auto& row = spec_->rows[i];
+    int x = left_offset + row.start_offset * cell_width;
+    for (int j = 0; j < row.key_count; ++j) {
+      const auto& key = row.keys[j];
+      Box bounds(x + v_key_margin, y + h_key_margin,
+                 x + key.width * cell_width - v_key_margin - 1,
+                 y + row_height - h_key_margin - 1);
+      Widget& w = child_at(child_idx++);
+      w.layout(bounds);
       x += key.width * cell_width;
     }
     y += row_height;
   }
-  // Note: highlighter must be added last to be on top of all children.
-  highlighter_ = std::unique_ptr<PressHighlighter>(
-      new PressHighlighter(env, this, Box(0, 0, -1, -1)));
-  highlighter_->setVisible(false);
-  highlighter_->setParentClipMode(Widget::UNCLIPPED);
+  // Skipping the highlighter.
 }
 
 void KeyboardPage::showHighlighter(const TextButton& btn) {
@@ -268,11 +335,7 @@ void KeyboardPage::hideHighlighter() {
   highlighter_->setTarget(nullptr);
 }
 
-PressHighlighter::PressHighlighter(const Environment& env, KeyboardPage* parent,
-                                   const Box& bounds)
-    : Widget(env) {
-  parent->add(this);
-  moveTo(bounds);
+PressHighlighter::PressHighlighter(const Environment& env) : Widget(env) {
   setParentClipMode(Widget::UNCLIPPED);
 }
 
@@ -303,7 +366,7 @@ bool PressHighlighter::paint(const Surface& s) {
 }
 
 Dimensions PressHighlighter::getSuggestedMinimumDimensions() const {
-  return Dimensions(bounds().width(), bounds().height());
+  return Dimensions(0, 0);
 }
 
 }  // namespace roo_windows

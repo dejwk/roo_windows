@@ -62,8 +62,7 @@ class TextButton;
 
 class PressHighlighter : public Widget {
  public:
-  PressHighlighter(const Environment& env, KeyboardPage* parent,
-                   const Box& bounds);
+  PressHighlighter(const Environment& env);
 
   void setTarget(const TextButton* target) { target_ = target; }
 
@@ -73,29 +72,37 @@ class PressHighlighter : public Widget {
   const KeyboardPage* page() const;
   const Keyboard* keyboard() const;
 
+  void moveTo(const Box& box) { Widget::moveTo(box); }
+
  private:
   const TextButton* target_;
 };
 
 class KeyboardPage : public Panel {
  public:
-  KeyboardPage(const Environment& env, Keyboard* parent, int16_t w, int16_t h,
-               const KeyboardPageSpec* spec);
+  KeyboardPage(const Environment& env, const KeyboardPageSpec* spec);
 
   void showHighlighter(const TextButton& btn);
   void hideHighlighter();
 
   const Keyboard* keyboard() const;
 
+  PreferredSize getPreferredSize() const override;
+
+ protected:
+  Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override;
+
+  void onLayout(boolean changed, const roo_display::Box& box) override;
+
  private:
-  std::vector<std::unique_ptr<Widget>> keys_;
-  std::unique_ptr<PressHighlighter> highlighter_;
+  const KeyboardPageSpec* spec_;
+  std::vector<Widget*> keys_;
+  PressHighlighter* highlighter_;
 };
 
 class Keyboard : public Panel {
  public:
-  Keyboard(const Environment& env, Panel* parent,
-           const roo_display::Box& bounds, const KeyboardPageSpec* spec,
+  Keyboard(const Environment& env, const KeyboardPageSpec* spec,
            KeyboardListener* listener);
 
   const KeyboardColorTheme& color_theme() const { return color_theme_; }
@@ -104,8 +111,17 @@ class Keyboard : public Panel {
 
   const KeyboardListener* listener() const { return listener_; }
 
+  Padding getDefaultPadding() const override { return Padding(1); }
+
+  PreferredSize getPreferredSize() const override;
+
+ protected:
+  Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override;
+
+  void onLayout(boolean changed, const roo_display::Box& box) override;
+
  private:
-  std::vector<std::unique_ptr<KeyboardPage>> pages_;
+  std::vector<KeyboardPage*> pages_;
   const KeyboardColorTheme& color_theme_;
   KeyboardPage* current_page_;
   KeyboardListener* listener_;
