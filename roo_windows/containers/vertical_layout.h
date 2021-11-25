@@ -90,7 +90,8 @@ class VerticalLayout : public Panel {
       int16_t v_padding = padding_.top() + padding_.bottom();
       // if (height.kind() == MeasureSpec::EXACTLY)
       int16_t used_height = total_length_;
-      if (used_height != measure.latest_used_height()) {
+      // if (used_height != measure.latest_used_height()) {
+      if (true) {
         // Need to update the measure.
         PreferredSize preferred = w.getPreferredSize();
         MeasureSpec child_width_spec =
