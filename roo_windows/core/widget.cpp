@@ -77,7 +77,6 @@ void Widget::requestLayout() {
 }
 
 Dimensions Widget::measure(MeasureSpec width, MeasureSpec height) {
-  CHECK(isLayoutRequested());
   Dimensions result = onMeasure(width, height);
   redraw_status_ |= kLayoutRequired;
   return result;
