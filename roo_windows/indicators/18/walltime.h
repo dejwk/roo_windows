@@ -17,10 +17,6 @@ class WalltimeIndicator18 : public WalltimeIndicator {
                       roo_time::TimeZone tz)
       : WalltimeIndicator(env, clock, tz) {}
 
-  void setPos(int16_t x, int16_t y) {
-    setParentBounds(Box(dx, dy, dx + 45, dy + 17));
-  }
-
   bool paint(const roo_display::Surface& s) override {
     roo_display::Color color = color_.a() == 0 ? parent()->defaultColor(),
                        color_;
