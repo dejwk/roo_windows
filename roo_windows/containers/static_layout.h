@@ -55,8 +55,8 @@ class StaticLayout : public Panel {
         child->measure(MeasureSpec::Exactly(child->width()),
                        MeasureSpec::Exactly(child->height()));
       }
-      return Dimensions(this->width(), this->height());
     }
+    return Dimensions(this->width(), this->height());
   }
 
   void onLayout(boolean changed, const roo_display::Box& box) {
@@ -65,7 +65,6 @@ class StaticLayout : public Panel {
         child->layout(child->parent_bounds());
       }
     }
-    moveTo(box);
   }
 };
 
