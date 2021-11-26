@@ -79,9 +79,15 @@ class MeasureSpec {
   }
 
  private:
+  friend constexpr bool operator==(MeasureSpec a, MeasureSpec b);
+
   constexpr MeasureSpec(int16_t value) : value_(value) {}
 
   int16_t value_;
 };
+
+inline constexpr bool operator==(MeasureSpec a, MeasureSpec b) {
+  return a.value_ == b.value_;
+}
 
 }  // namespace roo_windows
