@@ -2,6 +2,7 @@
 
 #include <vector>
 
+#include "roo_windows/core/cached_measure.h"
 #include "roo_windows/core/gravity.h"
 #include "roo_windows/core/margins.h"
 #include "roo_windows/core/panel.h"
@@ -24,24 +25,16 @@ class VerticalLayout : public Panel {
   // Layout parameters plus last cached measure for a child.
   class ChildMeasure {
    public:
-    ChildMeasure(Params params)
-        : params_(std::move(params)), latest_used_height_(-1), latest_(0, 0) {}
+    ChildMeasure(Params params) : params_(std::move(params)), latest_() {}
 
     const Params& params() const { return params_; }
 
-    int16_t latest_used_height() const { return latest_used_height_; }
-
-    const Dimensions& latest() const { return latest_; }
-
-    void update(int16_t latest_used_height, Dimensions measurement) {
-      latest_used_height_ = latest_used_height;
-      latest_ = std::move(measurement);
-    }
+    const CachedMeasure& latest() const { return latest_; }
+    CachedMeasure& latest() { return latest_; }
 
    private:
     Params params_;
-    int16_t latest_used_height_;
-    Dimensions latest_;
+    CachedMeasure latest_;
   };
 
   VerticalLayout(const Environment& env)
@@ -90,38 +83,36 @@ class VerticalLayout : public Panel {
       int16_t v_padding = padding_.top() + padding_.bottom();
       // if (height.kind() == MeasureSpec::EXACTLY)
       int16_t used_height = total_length_;
-      // if (used_height != measure.latest_used_height()) {
-      if (true) {
-        // Need to update the measure.
-        PreferredSize preferred = w.getPreferredSize();
-        MeasureSpec child_width_spec =
-            width.getChildMeasureSpec(h_padding + h_margin, preferred.width());
-        MeasureSpec child_height_spec = height.getChildMeasureSpec(
-            used_height + v_padding + v_margin, preferred.height());
-        measure.update(used_height,
-                       w.measure(child_width_spec, child_height_spec));
-        total_length_ = std::max<int16_t>(
-            total_length_,
-            total_length_ + measure.latest().height() + v_margin);
-
-        bool match_width_locally = false;
-        if (width.kind() != MeasureSpec::EXACTLY &&
-            preferred.width().isMatchParent()) {
-          // The width of the linear layout will scale, and at least one
-          // child said it wanted to match our width. Set a flag
-          // indicating that we need to remeasure at least that view when
-          // we know our width.
-          match_width = true;
-          match_width_locally = true;
-        }
-        int16_t measured_width = measure.latest().width() + h_margin;
-        max_width = std::max(max_width, measured_width);
-        all_match_parent =
-            all_match_parent && preferred.width().isMatchParent();
-        alternative_max_width =
-            std::max(alternative_max_width,
-                     match_width_locally ? (int16_t)h_margin : measured_width);
+      PreferredSize preferred = w.getPreferredSize();
+      MeasureSpec child_width_spec =
+          width.getChildMeasureSpec(h_padding + h_margin, preferred.width());
+      MeasureSpec child_height_spec = height.getChildMeasureSpec(
+          used_height + v_padding + v_margin, preferred.height());
+      if (w.isLayoutRequested() ||
+          !measure.latest().valid(child_width_spec, child_height_spec)) {
+        // Need to re-measure.
+        measure.latest().update(child_width_spec, child_height_spec,
+                                w.measure(child_width_spec, child_height_spec));
       }
+      total_length_ = std::max<int16_t>(
+          total_length_, total_length_ + measure.latest().height() + v_margin);
+
+      bool match_width_locally = false;
+      if (width.kind() != MeasureSpec::EXACTLY &&
+          preferred.width().isMatchParent()) {
+        // The width of the linear layout will scale, and at least one
+        // child said it wanted to match our width. Set a flag
+        // indicating that we need to remeasure at least that view when
+        // we know our width.
+        match_width = true;
+        match_width_locally = true;
+      }
+      int16_t measured_width = measure.latest().width() + h_margin;
+      max_width = std::max(max_width, measured_width);
+      all_match_parent = all_match_parent && preferred.width().isMatchParent();
+      alternative_max_width =
+          std::max(alternative_max_width,
+                   match_width_locally ? (int16_t)h_margin : measured_width);
     }
     total_length_ += padding_.top() + padding_.bottom();
     Dimensions selfMinimum = getSuggestedMinimumDimensions();
