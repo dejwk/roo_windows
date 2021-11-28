@@ -22,8 +22,8 @@ class StackedLayout : public Panel {
     int16_t w = 0;
     int16_t h = 0;
     for (const auto& child : children()) {
+      Dimensions d = child->measure(width, height);
       if (child->isVisible()) {
-        Dimensions d = child->measure(width, height);
         w = std::max(w, d.width());
         h = std::max(h, d.height());
       }
@@ -34,9 +34,7 @@ class StackedLayout : public Panel {
   void onLayout(boolean changed, const roo_display::Box& box) {
     Box local(0, 0, box.width() - 1, box.height() - 1);
     for (const auto& child : children()) {
-      if (child->isVisible()) {
-        child->layout(local);
-      }
+      child->layout(local);
     }
   }
 

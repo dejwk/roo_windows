@@ -51,7 +51,7 @@ class StaticLayout : public Panel {
  protected:
   Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override {
     for (const auto& child : children()) {
-      if (child->isVisible() && child->isLayoutRequested()) {
+      if (child->isLayoutRequested()) {
         child->measure(MeasureSpec::Exactly(child->width()),
                        MeasureSpec::Exactly(child->height()));
       }
@@ -61,7 +61,7 @@ class StaticLayout : public Panel {
 
   void onLayout(boolean changed, const roo_display::Box& box) {
     for (const auto& child : children()) {
-      if (child->isVisible() && child->isLayoutRequired()) {
+      if (child->isLayoutRequired()) {
         child->layout(child->parent_bounds());
       }
     }

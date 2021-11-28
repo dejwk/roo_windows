@@ -307,13 +307,24 @@ class Widget {
 
   virtual void setParent(Panel* parent);
 
+  // Called to retrieve measurement information from the widget.
+  //
+  // The default implementation used getSuggestedMinimumDimensions() to
+  // determine the 'natural' dimensions of the widget, and then returns
+  // Dimensions that also takes into account the measure spec: for
+  // MeasureSpec::UNSPECIFIED, it returns the preferred minimum dimension, and
+  // for MeasureSpec::AT_MOST and MeasureSpec::EXACTLY, uses the value provided
+  // in the measure spec. (Consequently, the returned dimension may be greater
+  // than the preferred minimum if the measure spec allows it). For simple
+  // widgets, prefer overwriting getDefaultMinimumDimensions() and
+  // getDefaultSize() to overriding this method, whenn possible.
   virtual Dimensions onMeasure(MeasureSpec width, MeasureSpec height);
 
-  // Called from layout when this view should assign a size and position to each
-  // of its children.
-  //
-  // Derived classes with children should override this method and call layout
-  // on each of their children.
+  // Called from layout after the new position of this widget has been
+  // established. This method is not invoked in case the position of the widget
+  // did not change *and* the layout for this widget has not been explicitly
+  // requested. When this method is called, the widget has already been moved to
+  // the new position.
   virtual void onLayout(boolean changed, const roo_display::Box& box) {}
 
  private:
@@ -327,23 +338,21 @@ class Widget {
   // paintWidgetContents().
   void paintWidget(const Surface& s, Clipper& clipper);
 
-  void markClean() {
-    redraw_status_ &=
-        ~(kDirty | kInvalidated | kLayoutRequested | kLayoutRequired);
-  }
+  void markClean() { redraw_status_ &= ~(kDirty | kInvalidated); }
 
   void markInvalidated() { redraw_status_ |= (kDirty | kInvalidated); }
 
-  void markLayoutRequested() {
-    redraw_status_ |= (kDirty | kInvalidated | kLayoutRequested);
-  }
+  void markLayoutRequested() { redraw_status_ |= kLayoutRequested; }
 
   void setParentBounds(const Box& parent_bounds);
 
   Panel* parent_;
   Box parent_bounds_;
   uint16_t state_;
-  uint8_t redraw_status_;  // kDirty | kInvalidated.
+
+  // kDirty | kInvalidated | kLayout{Requested|Required}
+  uint8_t redraw_status_;
+
   std::function<void()> on_clicked_;
 };
 

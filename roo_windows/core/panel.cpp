@@ -278,7 +278,7 @@ Box Panel::maxBounds() const {
 
 Dimensions Panel::onMeasure(MeasureSpec width, MeasureSpec height) {
   for (const auto& child : children()) {
-    if (child->isVisible() && child->isLayoutRequested()) {
+    if (child->isLayoutRequested()) {
       child->measure(MeasureSpec::Exactly(child->width()),
                      MeasureSpec::Exactly(child->height()));
     }
@@ -288,7 +288,7 @@ Dimensions Panel::onMeasure(MeasureSpec width, MeasureSpec height) {
 
 void Panel::onLayout(boolean changed, const Box& box) {
   for (const auto& child : children()) {
-    if (child->isVisible() && child->isLayoutRequired()) {
+    if (child->isLayoutRequired()) {
       child->layout(child->parent_bounds());
     }
   }
