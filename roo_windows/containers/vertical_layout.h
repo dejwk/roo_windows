@@ -13,8 +13,12 @@ class VerticalLayout : public Panel {
  public:
   class Params {
    public:
-    Params(HorizontalGravity gravity = kHorizontalGravityLeft)
-        : gravity_(gravity) {}
+    Params() : gravity_() {}
+
+    Params& setGravity(HorizontalGravity gravity) {
+      gravity_ = gravity;
+      return *this;
+    }
 
     HorizontalGravity gravity() const { return gravity_; }
 
@@ -47,15 +51,15 @@ class VerticalLayout : public Panel {
     preferred_size_ = preferred_size;
   }
 
-  void add(Widget* child, Params params) {
-    child_measures_.emplace_back(params);
-    Panel::add(child);
-  }
-
   void setPadding(Padding padding) {
     if (padding_ == padding) return;
     padding_ = padding;
     requestLayout();
+  }
+
+  void add(Widget* child, Params params) {
+    child_measures_.emplace_back(params);
+    Panel::add(child);
   }
 
   Padding getDefaultPadding() const override { return padding_; }
