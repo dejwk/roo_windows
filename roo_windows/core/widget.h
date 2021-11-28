@@ -263,6 +263,12 @@ class Widget {
   // Derived classes should not override this method. Derived classes with
   // children should override onLayout. In that method, they should call layout
   // on each of their children.
+  //
+  // This method should generally not be called outside of the context of
+  // implementing onLayout() in a Panel. Any position changes made by calling
+  // this method directly may get invalidated by the next layout pass. It is OK,
+  // however, to call it on widgets belonging to a StaticLayout, since it does
+  // nothing interesting in its layout pass.
   void layout(const roo_display::Box& box);
 
  protected:
@@ -323,7 +329,8 @@ class Widget {
   // the new position.
   virtual void onLayout(boolean changed, const roo_display::Box& box) {}
 
-  // Moves the widget to the new position, specified in the parent's coordinates.
+  // Moves the widget to the new position, specified in the parent's
+  // coordinates.
   //
   // This method should not be called during paint().
   virtual void moveTo(const Box& parent_bounds);
