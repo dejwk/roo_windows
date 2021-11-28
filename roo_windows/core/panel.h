@@ -27,10 +27,6 @@ class Panel : public Widget {
 
   const Theme& theme() const override { return parent()->theme(); }
 
-  void add(Widget* child, const Box& bounds = Box(0, 0, -1, -1));
-
-  Widget* swap(int idx, Widget* newChild);
-
   // Paints the panel with all its children. If the panel isn't invalidated,
   // omits drawing the surface area; otherwise, draws the surface area over the
   // invalidated region.
@@ -82,6 +78,12 @@ class Panel : public Widget {
   const Widget& child_at(int idx) const { return *children_[idx]; }
 
  protected:
+  // Adds a child to this panel.
+  void add(Widget* child, const Box& bounds = Box(0, 0, -1, -1));
+
+  // Swaps the given child with the specified value.
+  Widget* swap(int idx, Widget* newChild);
+
   virtual void paintChildren(const Surface& s, Clipper& clipper);
 
   void invalidateDescending() override;
