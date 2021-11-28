@@ -71,32 +71,6 @@ class Panel : public Widget {
                          PreferredSize::WrapContent());
   }
 
-  // Overrides onMeasure in the Widget, to propagate measurement requests to the
-  // children. The default implementation is that of a static layout: it ignores
-  // child measurements and simply returns the panel's current dimensions.
-  //
-  // Subclasses implementing dynamic layout need to overwrite this method. The
-  // overwritten implementation can call measure() on its children as needed to
-  // calculate its own dimensions, and it must call it on the children (even the
-  // invisible ones) that have the 'isLayoutRequested()' flag set. If the
-  // subclass wishes to cache child dimensions (e.g. to use them later in
-  // onLayout()), it can use the CachedMeasure helper class.
-  Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override;
-
-  // Overrides onLayout in the Widget, to propagate the layout requests to the
-  // children. The default ipmlementation is that of a static layout: it
-  // only calls layout() on the children that have 'isLayoutReuired()' flag set,
-  // and it calls it with the child's current position. In other words, the
-  // positions of the children do not change, although the children get the
-  // oppportunity to re-layout themselves internally.
-  //
-  // Subclasses implementing dynamic layout need to overwrite this method. THe
-  // overwritten implementation can call layout() on its children as needed to
-  // implement its layout, and it must call it o the children (even the
-  // invisible ones, or the ones whose position do not change) that have
-  // 'isLayoutRequired()' flag set.
-  void onLayout(boolean changed, const Box& box) override;
-
   void moveTo(const Box& parent_bounds) override;
 
   const std::vector<std::unique_ptr<Widget>>& children() const {
@@ -142,6 +116,32 @@ class Panel : public Widget {
   // Called recursively upwards, to invalidate the cached_max_bounds if needed,
   // when a descendant has been hidden.
   void unclippedChildRectHidden(const Box& box);
+
+  // Overrides onMeasure in the Widget, to propagate measurement requests to the
+  // children. The default implementation is that of a static layout: it ignores
+  // child measurements and simply returns the panel's current dimensions.
+  //
+  // Subclasses implementing dynamic layout need to overwrite this method. The
+  // overwritten implementation can call measure() on its children as needed to
+  // calculate its own dimensions, and it must call it on the children (even the
+  // invisible ones) that have the 'isLayoutRequested()' flag set. If the
+  // subclass wishes to cache child dimensions (e.g. to use them later in
+  // onLayout()), it can use the CachedMeasure helper class.
+  Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override;
+
+  // Overrides onLayout in the Widget, to propagate the layout requests to the
+  // children. The default ipmlementation is that of a static layout: it
+  // only calls layout() on the children that have 'isLayoutReuired()' flag set,
+  // and it calls it with the child's current position. In other words, the
+  // positions of the children do not change, although the children get the
+  // oppportunity to re-layout themselves internally.
+  //
+  // Subclasses implementing dynamic layout need to overwrite this method. THe
+  // overwritten implementation can call layout() on its children as needed to
+  // implement its layout, and it must call it o the children (even the
+  // invisible ones, or the ones whose position do not change) that have
+  // 'isLayoutRequired()' flag set.
+  void onLayout(boolean changed, const Box& box) override;
 
  private:
   void invalidateCachedMaxBounds() { cached_max_bounds_ = Box(0, 0, -1, -1); }
