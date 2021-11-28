@@ -13,7 +13,7 @@ class VerticalLayout : public Panel {
  public:
   class Params {
    public:
-    Params() : gravity_() {}
+    Params() : gravity_(), weight_(0) {}
 
     Params& setGravity(HorizontalGravity gravity) {
       gravity_ = gravity;
@@ -22,8 +22,16 @@ class VerticalLayout : public Panel {
 
     HorizontalGravity gravity() const { return gravity_; }
 
+    Params& setWeight(uint8_t weight) {
+      weight_ = weight;
+      return *this;
+    }
+
+    uint8_t weight() const { return weight_; }
+
    private:
     HorizontalGravity gravity_;
+    uint8_t weight_;
   };
 
   // Layout parameters plus last cached measure for a child.
