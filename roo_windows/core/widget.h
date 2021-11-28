@@ -115,10 +115,6 @@ class Widget {
 
   const Box& parent_bounds() const { return parent_bounds_; }
 
-  // Moves the widget to the new position, specified in the parent's
-  // coordinates.
-  virtual void moveTo(const Box& parent_bounds);
-
   // Returns bounds in the device's coordinates.
   virtual void getAbsoluteBounds(Box* full, Box* visible) const;
 
@@ -326,6 +322,11 @@ class Widget {
   // requested. When this method is called, the widget has already been moved to
   // the new position.
   virtual void onLayout(boolean changed, const roo_display::Box& box) {}
+
+  // Moves the widget to the new position, specified in the parent's coordinates.
+  //
+  // This method should not be called during paint().
+  virtual void moveTo(const Box& parent_bounds);
 
  private:
   friend class Panel;

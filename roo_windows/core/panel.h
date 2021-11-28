@@ -67,8 +67,6 @@ class Panel : public Widget {
                          PreferredSize::WrapContent());
   }
 
-  void moveTo(const Box& parent_bounds) override;
-
   const std::vector<std::unique_ptr<Widget>>& children() const {
     return children_;
   }
@@ -144,6 +142,8 @@ class Panel : public Widget {
   // invisible ones, or the ones whose position do not change) that have
   // 'isLayoutRequired()' flag set.
   void onLayout(boolean changed, const Box& box) override;
+
+  void moveTo(const Box& parent_bounds) override;
 
  private:
   void invalidateCachedMaxBounds() { cached_max_bounds_ = Box(0, 0, -1, -1); }

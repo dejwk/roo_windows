@@ -169,7 +169,7 @@ class VerticalLayout : public Panel {
         child_xmin = padding_.left() + margins.left();
       }
       child_ymin += margins.top();
-      w.moveTo(Box(child_xmin, child_ymin,
+      w.layout(Box(child_xmin, child_ymin,
                    child_xmin + measure.latest().width() - 1,
                    child_ymin + measure.latest().height() - 1));
       child_ymin += measure.latest().height() + margins.bottom();
