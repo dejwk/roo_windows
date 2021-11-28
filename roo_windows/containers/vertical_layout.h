@@ -65,6 +65,9 @@ class VerticalLayout : public Panel {
     requestLayout();
   }
 
+  void setGravity(Gravity gravity) { gravity_ = gravity; }
+  const Gravity& gravity() const { return gravity_; }
+
   void add(Widget* child, Params params) {
     child_measures_.emplace_back(params);
     Panel::add(child);
@@ -79,7 +82,12 @@ class VerticalLayout : public Panel {
 
  private:
   Padding padding_;
+
+  // The vertical component dictates how the children are aligned in case there
+  // is some extra vertical space. The horizontal component is the default
+  // gravity that applies to children that don't specify their own gravity.
   Gravity gravity_;
+
   PreferredSize preferred_size_;
 
   int16_t total_length_;
