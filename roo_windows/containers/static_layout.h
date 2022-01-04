@@ -1,5 +1,6 @@
 #pragma once
 
+#include "roo_display/ui/alignment.h"
 #include "roo_windows/core/panel.h"
 
 namespace roo_windows {
