@@ -18,8 +18,8 @@ class WalltimeIndicator18 : public WalltimeIndicator {
       : WalltimeIndicator(env, clock, tz) {}
 
   bool paint(const roo_display::Surface& s) override {
-    roo_display::Color color = color_.a() == 0 ? parent()->defaultColor(),
-                       color_;
+    roo_display::Color color =
+        color_.a() == 0 ? parent()->defaultColor() : color_;
     s.drawObject(roo_display::MakeTileOf(
         roo_display::TextLabel(roo_display::font_NotoSans_Regular_18(), val_,
                                color),
@@ -27,11 +27,11 @@ class WalltimeIndicator18 : public WalltimeIndicator {
     return true;
   }
 
-  Dimensions getSuggestedMinimumDimensions() override {
+  Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(46, 18);
   }
 
-  Dimensions getDefaultPadding() const override { return Padding(0); }
+  Padding getDefaultPadding() const override { return Padding(0); }
 };
 
 }  // namespace roo_windows
