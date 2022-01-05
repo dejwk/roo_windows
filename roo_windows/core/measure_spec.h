@@ -1,7 +1,8 @@
 #pragma once
 
-#include "glog/logging.h"
 #include "roo_windows/core/preferred_size.h"
+
+#include "roo_glog/logging.h"
 
 namespace roo_windows {
 

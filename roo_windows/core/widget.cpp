@@ -1,4 +1,3 @@
-#include "glog/logging.h"
 
 #include "widget.h"
 
@@ -9,6 +8,8 @@
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/press_overlay.h"
 #include "roo_windows/core/rtti.h"
+
+#include "roo_glog/logging.h"
 
 namespace roo_windows {
 

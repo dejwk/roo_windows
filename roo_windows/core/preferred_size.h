@@ -1,10 +1,6 @@
 #pragma once
 
-#include "glog/logging.h"
-
-#if defined(__linux__) || defined(__linux) || defined(linux)
-#include <ostream>
-#endif
+#include "roo_glog/logging.h"
 
 namespace roo_windows {
 
@@ -67,9 +63,9 @@ inline bool operator==(PreferredSize::Dimension a, PreferredSize::Dimension b) {
 
 inline std::ostream& operator<<(std::ostream& os, PreferredSize::Dimension dim) {
   if (dim == PreferredSize::MatchParent()) {
-    os << "match-parent";
+    LOG(INFO) << "match-parent";
   } else if (dim == PreferredSize::WrapContent()) {
-    os << "wrap-content";
+    LOG(INFO) << "wrap-content";
   } else {
     os << dim.value_;
   }

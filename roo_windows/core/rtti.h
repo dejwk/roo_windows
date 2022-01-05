@@ -11,7 +11,7 @@ template <typename T>
 const char* GetTypeName(const T& t) {
 #if defined(__GXX_RTTI)
   char out[256];  
-  if (google::Demangle(typeid(t).name(), out, 256)) {
+  if (roo_glog::Demangle(typeid(t).name(), out, 256)) {
     return out;
   }
   return typeid(t).name();
