@@ -34,7 +34,7 @@ Dimensions NavigationRail::onMeasure(MeasureSpec width, MeasureSpec height) {
                     height.resolveSize(72 * destinations_.size()));
 }
 
-void NavigationRail::onLayout(boolean changed, const roo_display::Box& box) {
+void NavigationRail::onLayout(bool changed, const roo_display::Box& box) {
   divider_.layout(Box(box.xMax() - 2, box.yMin(), box.xMax() - 1, box.yMax()));
   if (destinations_.empty()) return;
   int16_t dwidth = box.width() - 4;

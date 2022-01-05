@@ -51,7 +51,7 @@ class ScrollablePanel : public Panel {
                       height.resolveSize(measured_.height()));
   }
 
-  void onLayout(boolean changed, const roo_display::Box& box) override {
+  void onLayout(bool changed, const roo_display::Box& box) override {
     Widget* c = contents();
     Box bounds(0, 0, measured_.width() - 1, measured_.height() - 1);
     bounds = bounds.translate(c->xOffset(), c->yOffset());

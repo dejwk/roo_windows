@@ -1,5 +1,7 @@
 #include "scrollable_panel.h"
 
+#include <Arduino.h>
+
 namespace roo_windows {
 
 void ScrollablePanel::scrollTo(int16_t x, int16_t y) {

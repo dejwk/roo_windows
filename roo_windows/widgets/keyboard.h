@@ -92,7 +92,7 @@ class KeyboardPage : public Panel {
  protected:
   Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override;
 
-  void onLayout(boolean changed, const roo_display::Box& box) override;
+  void onLayout(bool changed, const roo_display::Box& box) override;
 
  private:
   const KeyboardPageSpec* spec_;
@@ -118,7 +118,7 @@ class Keyboard : public Panel {
  protected:
   Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override;
 
-  void onLayout(boolean changed, const roo_display::Box& box) override;
+  void onLayout(bool changed, const roo_display::Box& box) override;
 
  private:
   std::vector<KeyboardPage*> pages_;

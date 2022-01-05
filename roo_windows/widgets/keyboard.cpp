@@ -180,7 +180,7 @@ Dimensions Keyboard::onMeasure(MeasureSpec width, MeasureSpec height) {
   return current_page_->measure(width, height);
 }
 
-void Keyboard::onLayout(boolean changed, const roo_display::Box& box) {
+void Keyboard::onLayout(bool changed, const roo_display::Box& box) {
   current_page_->layout(Box(0, 0, box.width() - 1, box.height() - 1));
 }
 
@@ -284,7 +284,7 @@ Dimensions KeyboardPage::onMeasure(MeasureSpec width, MeasureSpec height) {
   return Dimensions(full_height, full_width);
 }
 
-void KeyboardPage::onLayout(boolean changed, const roo_display::Box& box) {
+void KeyboardPage::onLayout(bool changed, const roo_display::Box& box) {
   // Recalculate now that we have a specific dimensions.
   Padding padding = getDefaultPadding();
   int16_t vspan =

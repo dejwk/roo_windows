@@ -31,7 +31,7 @@ class StackedLayout : public Panel {
     return Dimensions(w, h);
   }
 
-  void onLayout(boolean changed, const roo_display::Box& box) {
+  void onLayout(bool changed, const roo_display::Box& box) {
     Box local(0, 0, box.width() - 1, box.height() - 1);
     for (const auto& child : children()) {
       child->layout(local);

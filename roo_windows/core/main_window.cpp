@@ -1,5 +1,7 @@
 #include "main_window.h"
 
+#include <Arduino.h>
+
 #include "roo_display/core/color.h"
 #include "roo_display/filter/clip_exclude_rects.h"
 #include "roo_display/filter/foreground.h"

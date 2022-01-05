@@ -26,9 +26,7 @@ class Switch : public Widget {
 
  private:
   bool isAnimating() const { return (anim_ & 0x8000) == 0; }
-  int16_t time_animating_ms() const {
-    return (millis() & 0x7FFF) - (anim_ & 0x7FFF);
-  }
+  int16_t time_animating_ms() const;
 
   State state_;
 

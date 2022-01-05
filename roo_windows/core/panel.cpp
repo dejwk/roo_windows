@@ -286,7 +286,7 @@ Dimensions Panel::onMeasure(MeasureSpec width, MeasureSpec height) {
   return Dimensions(this->width(), this->height());
 }
 
-void Panel::onLayout(boolean changed, const Box& box) {
+void Panel::onLayout(bool changed, const Box& box) {
   for (const auto& child : children()) {
     if (child->isLayoutRequired()) {
       child->layout(child->parent_bounds());

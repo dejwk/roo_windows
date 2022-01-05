@@ -1,6 +1,9 @@
+#include "glog/logging.h"
+
 #include "widget.h"
 
-#include "glog/logging.h"
+#include <cmath>
+
 #include "roo_display/filter/foreground.h"
 #include "roo_windows/core/main_window.h"
 #include "roo_windows/core/panel.h"
@@ -262,7 +265,7 @@ inline int16_t animation_radius(const Box& bounds, int16_t x, int16_t y,
   if (ur > max) max = ur;
   if (dl > max) max = dl;
   if (dr > max) max = dr;
-  return (int16_t)(sqrt(max) * progress + 1);
+  return (int16_t)(std::sqrt(max) * progress + 1);
 }
 
 }  // namespace

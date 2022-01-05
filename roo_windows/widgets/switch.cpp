@@ -1,5 +1,7 @@
 #include "switch.h"
 
+#include <Arduino.h>
+
 #include "roo_display/image/image.h"
 #include "roo_display/internal/raw_streamable_overlay.h"
 #include "roo_display/ui/tile.h"
@@ -27,6 +29,10 @@ void Switch::setState(State state) {
   if (state == state_) return;
   state_ = state;
   markDirty();
+}
+
+int16_t Switch::time_animating_ms() const {
+  return (millis() & 0x7FFF) - (anim_ & 0x7FFF);
 }
 
 bool Switch::paint(const Surface& s) {

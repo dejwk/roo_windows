@@ -1,7 +1,5 @@
 #pragma once
 
-#include <Arduino.h>
-
 #include <functional>
 #include <vector>
 
@@ -327,7 +325,7 @@ class Widget {
   // did not change *and* the layout for this widget has not been explicitly
   // requested. When this method is called, the widget has already been moved to
   // the new position.
-  virtual void onLayout(boolean changed, const roo_display::Box& box) {}
+  virtual void onLayout(bool changed, const roo_display::Box& box) {}
 
   // Moves the widget to the new position, specified in the parent's
   // coordinates.

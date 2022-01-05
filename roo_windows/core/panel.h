@@ -141,7 +141,7 @@ class Panel : public Widget {
   // implement its layout, and it must call it o the children (even the
   // invisible ones, or the ones whose position do not change) that have
   // 'isLayoutRequired()' flag set.
-  void onLayout(boolean changed, const Box& box) override;
+  void onLayout(bool changed, const Box& box) override;
 
   void moveTo(const Box& parent_bounds) override;
 
