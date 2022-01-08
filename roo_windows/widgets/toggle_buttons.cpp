@@ -6,21 +6,20 @@
 namespace roo_windows {
 
 roo_windows::Widget* ToggleButtons::addButton(const MonoIcon& icon) {
-  int16_t padding = 12;
   int16_t width = 0;
   int16_t height = 0;
   for (const auto& i : buttons_) {
     const Box& extents = i->icon().extents();
     width += extents.width();
-    width += 2 * padding;
+    width += 2 * padding_;
     height = std::max(height, extents.height());
   }
   height = std::max(height, icon.extents().height());
-  height += 2 * padding;
+  height += 2 * padding_;
   ToggleButton* btn = new ToggleButton(env_, icon);
   Panel::add(btn,
-             Box(width + 1, 0, width + icon.extents().width() + 2 * padding,
-                 icon.extents().height() + 2 * padding - 1));
+             Box(width + 1, 0, width + icon.extents().width() + 2 * padding_,
+                 icon.extents().height() + 2 * padding_ - 1));
 
   int idx = buttons_.size();
   btn->setOnClicked([this, idx] { setActive(idx); });
@@ -31,15 +30,24 @@ roo_windows::Widget* ToggleButtons::addButton(const MonoIcon& icon) {
 bool ToggleButtons::paint(const roo_display::Surface& s) {
   Color border = theme().color.defaultColor(s.bgcolor());
   border.set_a(0x30);
+  Dimensions d = getNaturalDimensions();
   s.drawObject(roo_display::Line(0, 0, 0, 0, roo_display::color::Transparent));
-  s.drawObject(roo_display::Line(0, 1, 0, height() - 2, border));
-  s.drawObject(roo_display::Line(0, height() - 1, 0, height() - 1,
+  s.drawObject(roo_display::Line(0, 1, 0, d.height() - 2, border));
+  s.drawObject(roo_display::Line(0, d.height() - 1, 0, d.height() - 1,
                                  roo_display::color::Transparent));
-  int16_t x = width() - 1;
+  int16_t x = d.width() - 1;
   s.drawObject(roo_display::Line(x, 0, x, 0, roo_display::color::Transparent));
-  s.drawObject(roo_display::Line(x, 1, x, height() - 2, border));
-  s.drawObject(roo_display::Line(x, height() - 1, x, height() - 1,
+  s.drawObject(roo_display::Line(x, 1, x, d.height() - 2, border));
+  s.drawObject(roo_display::Line(x, d.height() - 1, x, d.height() - 1,
                                  roo_display::color::Transparent));
+  if (d.width() < width()) {
+    s.drawObject(roo_display::FilledRect(d.width(), 0, width() - 1,
+                                          d.height() - 1, background()));
+  }
+  if (d.height() < height()) {
+    s.drawObject(roo_display::FilledRect(0, d.height(), width() - 1,
+                                          height() - 1, background()));
+  }
   return true;
 }
 

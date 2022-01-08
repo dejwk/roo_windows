@@ -9,7 +9,8 @@ namespace roo_windows {
 
 class ToggleButtons : public Panel {
  public:
-  ToggleButtons(const Environment& env) : Panel(env), env_(env), active_(-1) {}
+  ToggleButtons(const Environment& env, int16_t padding = 12)
+      : Panel(env), env_(env), padding_(padding), active_(-1) {}
 
   roo_windows::Widget* addButton(const MonoIcon& icon);
 
@@ -21,7 +22,8 @@ class ToggleButtons : public Panel {
 
   Dimensions getNaturalDimensions() const override {
     Dimensions d = getSuggestedMinimumDimensions();
-    return Dimensions(d.width() + 22 * buttons_.size(), d.height() + 22);
+    return Dimensions(d.width() + (2 * padding_ - 2) * buttons_.size(),
+                      d.height() + (2 * padding_ - 2));
   }
 
   int getActive() const { return active_; }
@@ -60,9 +62,7 @@ class ToggleButtons : public Panel {
 
   const Environment& env_;
 
-  int width_dp_;  // defaults to 72.
-  int destination_size_dp_;
-  //   roo_display::VAlign alignment_;
+  int16_t padding_;  // defaults to 12.
   int active_;
 
   std::vector<std::unique_ptr<ToggleButton>> buttons_;
