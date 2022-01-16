@@ -43,10 +43,15 @@ class StaticLayout : public Panel {
   void add(Widget* child, int16_t x, int16_t y, roo_display::HAlign halign,
            roo_display::VAlign valign) {
     Box anchor(x, y, x, y);
-    Dimensions d = child->getNaturalDimensions();
-    Box inner(0, 0, d.width() - 1, d.height() - 1);
-    add(child, inner.translate(halign.GetOffset(anchor, inner),
-                               valign.GetOffset(anchor, inner)));
+    Dimensions d = child->measure(MeasureSpec::Unspecified(0),
+                                  MeasureSpec::Unspecified(0));
+    Padding p = child->getDefaultPadding();
+    Box inner(0, 0, d.width() + p.left() + p.right() - 1,
+              d.height() + p.top() + p.bottom() - 1);
+    Box actual = inner.translate(halign.GetOffset(anchor, inner),
+                                 valign.GetOffset(anchor, inner));
+    child->layout(actual);
+    add(child, actual);
   }
 
  protected:
