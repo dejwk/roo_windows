@@ -11,9 +11,9 @@ class ModalWindow;
 
 class MainWindow : public Panel {
  public:
-  MainWindow(const Environment& env, roo_display::Display* display);
+  MainWindow(const Environment& env, roo_display::Display& display);
 
-  MainWindow(const Environment& env, roo_display::Display* display,
+  MainWindow(const Environment& env, roo_display::Display& display,
              const Box& bounds);
 
   void tick();
@@ -58,7 +58,7 @@ class MainWindow : public Panel {
  private:
   void handleTouch(const TouchEvent& event);
 
-  roo_display::Display* display_;
+  roo_display::Display& display_;
   const Theme& theme_;
 
   int16_t touch_x_, touch_y_, last_x_, last_y_;

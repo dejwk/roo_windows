@@ -18,8 +18,8 @@ static const unsigned long kClickAnimationMs = 200;
 // How much movement in pixels before we consider it a swipe.
 static const uint16_t kSwipeThreshold = 8;
 
-MainWindow::MainWindow(const Environment& env, Display* display)
-    : MainWindow(env, display, display->extents()) {}
+MainWindow::MainWindow(const Environment& env, Display& display)
+    : MainWindow(env, display, display.extents()) {}
 
 namespace {
 
@@ -30,7 +30,7 @@ void maybeAddColor(roo_display::internal::ColorSet& palette, Color color) {
 
 }  // namespace
 
-MainWindow::MainWindow(const Environment& env, Display* display,
+MainWindow::MainWindow(const Environment& env, Display& display,
                        const Box& bounds)
     : Panel(env, env.theme().color.background),
       display_(display),
@@ -40,7 +40,7 @@ MainWindow::MainWindow(const Environment& env, Display* display,
       deferred_click_(nullptr),
       redraw_bounds_(bounds),
       modal_window_(nullptr),
-      background_fill_buffer_(display->width(), display->height()) {
+      background_fill_buffer_(display.width(), display.height()) {
   parent_bounds_ = bounds;
   invalidateDescending();
   roo_display::internal::ColorSet color_set;
@@ -89,7 +89,7 @@ class Adapter : public roo_display::Drawable {
 void MainWindow::tick() {
   // Check if no events to process.
   int16_t x, y;
-  bool down = display_->getTouch(&x, &y);
+  bool down = display_.getTouch(x, y);
   unsigned long now = millis();
 
   // If an in-progress click animation is expired, clear the animation target so
@@ -185,8 +185,8 @@ void MainWindow::paintWindow(const Surface& s) {
   redraw_bounds_ = Box(0, 0, -1, -1);
   news.set_fill_mode(roo_display::FILL_MODE_RECTANGLE);
   roo_display::BackgroundFillOptimizer bg_optimizer(s.out(),
-                                                    &background_fill_buffer_);
-  Clipper clipper(clipper_state_, &bg_optimizer);
+                                                    background_fill_buffer_);
+  Clipper clipper(clipper_state_, bg_optimizer);
   news.set_out(clipper.out());
   paintWidget(news, clipper);
 }

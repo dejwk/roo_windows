@@ -27,7 +27,7 @@ class ClipperState {
 
 class ClipperOutput : public roo_display::DisplayOutput {
  public:
-  ClipperOutput(internal::ClipperState &state, roo_display::DisplayOutput *out)
+  ClipperOutput(internal::ClipperState &state, roo_display::DisplayOutput &out)
       : bounds_(0, 0, -1, -1),
         exclusions_(state.exclusions_),
         bounded_exclusions_(state.bounded_exclusions_),
@@ -120,7 +120,7 @@ class ClipperOutput : public roo_display::DisplayOutput {
 // excluded from subsequent drawing.
 class Clipper {
  public:
-  Clipper(internal::ClipperState &state, roo_display::DisplayOutput *out)
+  Clipper(internal::ClipperState &state, roo_display::DisplayOutput &out)
       : out_(state, out) {}
 
   // Provides a hint to the underlying implementation that in the subsequent
