@@ -46,6 +46,8 @@ class TextLabel : public Widget {
     markDirty();
   }
 
+  const roo_display::Font& font() const { return font_; }
+
  private:
   std::string value_;
   const roo_display::Font& font_;
