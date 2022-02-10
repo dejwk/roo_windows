@@ -3,13 +3,13 @@
 #include "roo_display.h"
 #include "roo_display/shape/basic_shapes.h"
 #include "roo_windows/core/main_window.h"
-#include "roo_windows/core/panel.h"
+#include "roo_windows/containers/static_layout.h"
 
 namespace roo_windows {
 
-class ModalWindow : public Panel {
+class ModalWindow : public StaticLayout {
  public:
-  ModalWindow(const Environment& env) : Panel(env) {}
+  ModalWindow(const Environment& env) : StaticLayout(env) {}
 
   void enter() {
     setVisible(true);
