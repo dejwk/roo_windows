@@ -8,9 +8,14 @@ Dimensions VerticalLayout::onMeasure(MeasureSpec width, MeasureSpec height) {
   // Used when the width spec is dynamic, and at least some children
   // have EXACT or WRAP_CONTENT width preference.
   int16_t alternative_max_width = 0;
-  bool match_width = false;
+  int16_t weighted_max_width = 0;
   // Do all children have width = MATCH_PARENT?
   bool all_match_parent = true;
+  int16_t total_weight = 0;
+  bool match_width = false;
+  bool skipped_measure = false;
+  int16_t largest_child_height = 0;
+  int16_t consumed_excess_space = 0;
   int count = children().size();
   for (int i = 0; i < count; ++i) {
     Widget& w = child_at(i);
@@ -21,21 +26,39 @@ Dimensions VerticalLayout::onMeasure(MeasureSpec width, MeasureSpec height) {
     int16_t v_margin = margins.top() + margins.bottom();
     int16_t h_padding = padding_.left() + padding_.right();
     int16_t v_padding = padding_.top() + padding_.bottom();
-    // if (height.kind() == MeasureSpec::EXACTLY)
-    int16_t used_height = total_length_;
+    total_weight += measure.params().weight();
+
     PreferredSize preferred = w.getPreferredSize();
-    MeasureSpec child_width_spec =
-        width.getChildMeasureSpec(h_padding + h_margin, preferred.width());
-    MeasureSpec child_height_spec = height.getChildMeasureSpec(
-        used_height + v_padding + v_margin, preferred.height());
-    if (w.isLayoutRequested() ||
-        !measure.latest().valid(child_width_spec, child_height_spec)) {
-      // Need to re-measure.
-      measure.latest().update(child_width_spec, child_height_spec,
-                              w.measure(child_width_spec, child_height_spec));
+
+    bool use_excess_space =
+        preferred.height().isZero() && measure.params().weight() > 0;
+    if (height.kind() == MeasureSpec::EXACTLY && use_excess_space) {
+      // Optimization: don't bother measuring children who are only laid out
+      // using excess space. These views will get measured later if we have
+      // space to distribute.
+      total_length_ =
+          std::max<int16_t>(total_length_, total_length_ + v_margin);
+      skipped_measure = true;
+    } else {
+      int16_t used_height = total_length_;
+      MeasureSpec child_width_spec =
+          width.getChildMeasureSpec(h_padding + h_margin, preferred.width());
+      PreferredSize::Dimension pref_h =
+          use_excess_space ? PreferredSize::WrapContent() : preferred.height();
+      MeasureSpec child_height_spec = height.getChildMeasureSpec(
+          used_height + v_padding + v_margin, pref_h);
+      if (w.isLayoutRequested() ||
+          !measure.latest().valid(child_width_spec, child_height_spec)) {
+        // Need to re-measure.
+        measure.latest().update(child_width_spec, child_height_spec,
+                                w.measure(child_width_spec, child_height_spec));
+      }
+      if (use_excess_space) {
+        consumed_excess_space += measure.latest().height();
+      }
+      total_length_ = std::max<int16_t>(
+          total_length_, total_length_ + measure.latest().height() + v_margin);
     }
-    total_length_ = std::max<int16_t>(
-        total_length_, total_length_ + measure.latest().height() + v_margin);
 
     bool match_width_locally = false;
     if (width.kind() != MeasureSpec::EXACTLY &&
@@ -50,14 +73,85 @@ Dimensions VerticalLayout::onMeasure(MeasureSpec width, MeasureSpec height) {
     int16_t measured_width = measure.latest().width() + h_margin;
     max_width = std::max(max_width, measured_width);
     all_match_parent = all_match_parent && preferred.width().isMatchParent();
-    alternative_max_width =
-        std::max(alternative_max_width,
-                 match_width_locally ? (int16_t)h_margin : measured_width);
+    if (measure.params().weight() > 0) {
+      weighted_max_width =
+          std::max(weighted_max_width,
+                   match_width_locally ? (int16_t)h_margin : measured_width);
+    } else {
+      alternative_max_width =
+          std::max(alternative_max_width,
+                   match_width_locally ? (int16_t)h_margin : measured_width);
+    }
   }
+
   total_length_ += padding_.top() + padding_.bottom();
   Dimensions selfMinimum = getSuggestedMinimumDimensions();
+  // Reconcile our calculated size with the heightMeasureSpec.
   int16_t height_size =
       height.resolveSize(std::max(total_length_, selfMinimum.height()));
+
+  // Either expand children with weight to take up available space or shrink
+  // them if they extend beyond our current bounds. If we skipped measurement on
+  // any children, we need to measure them now.
+  int16_t remaining_excess =
+      height_size - total_length_ + consumed_excess_space;
+  if (skipped_measure || total_weight > 0) {
+    int16_t remaining_weighted_sum =
+        weight_sum_ > 0 ? weight_sum_ : total_weight;
+    total_length_ = 0;
+    for (int i = 0; i < count; ++i) {
+      Widget& w = child_at(i);
+      if (!w.isVisible()) continue;
+      ChildMeasure& measure = child_measures_[i];
+      Margins margins = w.getDefaultMargins();
+      int16_t h_margin = margins.left() + margins.right();
+      int16_t v_margin = margins.top() + margins.bottom();
+      int16_t h_padding = padding_.left() + padding_.right();
+      int16_t v_padding = padding_.top() + padding_.bottom();
+      int16_t child_weight = measure.params().weight();
+      PreferredSize preferred = w.getPreferredSize();
+      if (child_weight > 0) {
+        int16_t share = ((uint32_t)child_weight * (uint32_t)remaining_excess) /
+                        remaining_weighted_sum;
+        remaining_excess -= share;
+        remaining_weighted_sum -= child_weight;
+        int16_t child_height;
+        if (preferred.height().isZero()) {
+          // This child needs to be laid out from scratch using only its share
+          // of excess space.
+          child_weight = share;
+        } else {
+          // This child had some intrinsic height to which we need to add its
+          // share of excess space.
+          child_height = measure.latest().height() + share;
+        }
+        MeasureSpec child_height_spec =
+            MeasureSpec::Exactly(std::max<int16_t>(0, child_height));
+        MeasureSpec child_width_spec =
+            width.getChildMeasureSpec(h_padding + h_margin, preferred.width());
+        measure.latest().update(child_width_spec, child_height_spec,
+                                w.measure(child_width_spec, child_height_spec));
+      }
+
+      int16_t measured_width = measure.latest().width() + h_margin;
+      max_width = std::max<int16_t>(max_width, measured_width);
+      bool match_width_locally = (width.kind() != MeasureSpec::EXACTLY &&
+                                  preferred.width().isMatchParent());
+      alternative_max_width =
+          std::max<int16_t>(alternative_max_width,
+                            match_width_locally ? h_margin : measured_width);
+
+      all_match_parent &= preferred.width().isMatchParent();
+      total_length_ = std::max<int16_t>(
+          total_length_, total_length_ + measure.latest().height() + v_margin);
+    }
+    // Add in our padding.
+    total_length_ += padding_.top() + padding_.bottom();
+
+  } else {
+    alternative_max_width =
+        std::max<int16_t>(alternative_max_width, weighted_max_width);
+  }
 
   if (!all_match_parent && width.kind() != MeasureSpec::EXACTLY) {
     max_width = alternative_max_width;
