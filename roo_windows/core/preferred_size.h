@@ -21,6 +21,7 @@ class PreferredSize {
     bool isExact() const { return value_ >= 0; }
     bool isMatchParent() const { return value_ == -1; }
     bool isWrapContent() const { return value_ == -2; }
+    bool isZero() const { return value_ == 0; }
 
    private:
     friend class PreferredSize;
