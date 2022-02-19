@@ -12,11 +12,14 @@ Dimensions VerticalLayout::onMeasure(MeasureSpec width, MeasureSpec height) {
   // Do all children have width = MATCH_PARENT?
   bool all_match_parent = true;
   int16_t total_weight = 0;
+
+  int count = children().size();
+
   bool match_width = false;
   bool skipped_measure = false;
   int16_t largest_child_height = 0;
   int16_t consumed_excess_space = 0;
-  int count = children().size();
+
   for (int i = 0; i < count; ++i) {
     Widget& w = child_at(i);
     if (!w.isVisible()) continue;
@@ -58,6 +61,11 @@ Dimensions VerticalLayout::onMeasure(MeasureSpec width, MeasureSpec height) {
       }
       total_length_ = std::max<int16_t>(
           total_length_, total_length_ + measure.latest().height() + v_margin);
+
+      if (use_largest_child_) {
+        largest_child_height =
+            std::max<int16_t>(measure.latest().height(), largest_child_height);
+      }
     }
 
     bool match_width_locally = false;
@@ -81,6 +89,20 @@ Dimensions VerticalLayout::onMeasure(MeasureSpec width, MeasureSpec height) {
       alternative_max_width =
           std::max(alternative_max_width,
                    match_width_locally ? (int16_t)h_margin : measured_width);
+    }
+  }
+
+  if (use_largest_child_ && (height.kind() == MeasureSpec::AT_MOST ||
+                             height.kind() == MeasureSpec::UNSPECIFIED)) {
+    total_length_ = 0;
+    for (int i = 0; i < count; ++i) {
+      Widget& w = child_at(i);
+      if (!w.isVisible()) continue;
+      ChildMeasure& measure = child_measures_[i];
+      Margins margins = w.getDefaultMargins();
+      int16_t v_margin = margins.top() + margins.bottom();
+      total_length_ = std::max<int16_t>(
+          total_length_, total_length_ + largest_child_height + v_margin);
     }
   }
 
@@ -116,7 +138,9 @@ Dimensions VerticalLayout::onMeasure(MeasureSpec width, MeasureSpec height) {
         remaining_excess -= share;
         remaining_weighted_sum -= child_weight;
         int16_t child_height;
-        if (preferred.height().isZero()) {
+        if (use_largest_child_ && height.kind() != MeasureSpec::EXACTLY) {
+          child_height = largest_child_height;
+        } else if (preferred.height().isZero()) {
           // This child needs to be laid out from scratch using only its share
           // of excess space.
           child_weight = share;
@@ -151,6 +175,22 @@ Dimensions VerticalLayout::onMeasure(MeasureSpec width, MeasureSpec height) {
   } else {
     alternative_max_width =
         std::max<int16_t>(alternative_max_width, weighted_max_width);
+
+    if (use_largest_child_ && height.kind() != MeasureSpec::EXACTLY) {
+      // We have no limit, so make all weighted views as tall as the largest
+      // child. Children will have already been measured once.
+      for (int i = 0; i < count; i++) {
+        Widget& w = child_at(i);
+        if (!w.isVisible()) continue;
+        ChildMeasure& measure = child_measures_[i];
+        int16_t child_extra = measure.params().weight();
+        if (child_extra > 0) {
+          MeasureSpec ws = MeasureSpec::Exactly(measure.latest().width());
+          MeasureSpec hs = MeasureSpec::Exactly(largest_child_height);
+          measure.latest().update(ws, hs, w.measure(ws, hs));
+        }
+      }
+    }
   }
 
   if (!all_match_parent && width.kind() != MeasureSpec::EXACTLY) {
