@@ -98,7 +98,6 @@ Dimensions VerticalLayout::onMeasure(MeasureSpec width, MeasureSpec height) {
     for (int i = 0; i < count; ++i) {
       Widget& w = child_at(i);
       if (!w.isVisible()) continue;
-      ChildMeasure& measure = child_measures_[i];
       Margins margins = w.getDefaultMargins();
       int16_t v_margin = margins.top() + margins.bottom();
       total_length_ = std::max<int16_t>(
@@ -129,7 +128,6 @@ Dimensions VerticalLayout::onMeasure(MeasureSpec width, MeasureSpec height) {
       int16_t h_margin = margins.left() + margins.right();
       int16_t v_margin = margins.top() + margins.bottom();
       int16_t h_padding = padding_.left() + padding_.right();
-      int16_t v_padding = padding_.top() + padding_.bottom();
       int16_t child_weight = measure.params().weight();
       PreferredSize preferred = w.getPreferredSize();
       if (child_weight > 0) {
