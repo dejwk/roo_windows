@@ -14,9 +14,8 @@ class NavigationPanel : public Panel {
  public:
   NavigationPanel(const Environment& env);
 
-  ~NavigationPanel();
-
-  void addPage(const roo_display::MaterialIcon& icon, std::string text, Widget* page);
+  void addPage(const roo_display::MaterialIcon& icon, std::string text,
+               WidgetRef page);
 
   void setActive(int index);
 
@@ -28,7 +27,7 @@ class NavigationPanel : public Panel {
  private:
   bool empty() const { return contents_.children().empty(); }
   size_t page_count() const { return contents_.children().size(); }
-  Widget* page(int index) { return contents_.children()[index].get(); }
+  Widget* page(int index) { return contents_.children()[index]; }
   const Widget& page(int index) const { return *contents_.children()[index]; }
 
   const Environment& env_;

@@ -16,11 +16,54 @@ using roo_display::Color;
 
 static const int16_t kTouchMargin = 8;
 
+// A type of a smart pointer to a widget, with optional ownership.
+class WidgetRef {
+ public:
+  // Creates a WidgetRef that owns the widget.
+  template <typename T>
+  WidgetRef(std::unique_ptr<T> w) : ptr_(w.release()), is_owned_(true) {}
+
+  // Creates a WidgetRef that does not own the widget.
+  WidgetRef(Widget& w) : ptr_(&w), is_owned_(false) {}
+
+  WidgetRef(const WidgetRef& w) = delete;
+
+  WidgetRef(WidgetRef&& w) {
+    ptr_ = w.ptr_;
+    is_owned_ = w.is_owned_;
+    w.ptr_ = nullptr;
+  }
+
+  ~WidgetRef() {
+    if (is_owned_) delete ptr_;
+  }
+
+  Widget* operator->() { return ptr_; }
+  Widget& operator*() { return *ptr_; }
+
+  const Widget* operator->() const { return ptr_; }
+  const Widget& operator*() const { return *ptr_; }
+
+  Widget* release() {
+    Widget* result = ptr_;
+    ptr_ = nullptr;
+    return result;
+  }
+
+ private:
+  friend class Panel;
+
+  Widget* ptr_;
+  bool is_owned_;
+};
+
 class Panel : public Widget {
  public:
   Panel(const Environment& env) : Panel(env, env.theme().color.background) {}
 
   Panel(const Environment& env, Color bgcolor);
+
+  ~Panel();
 
   void setBackground(Color bgcolor) { bgcolor_ = bgcolor; }
   Color background() const override { return bgcolor_; }
@@ -67,9 +110,7 @@ class Panel : public Widget {
                          PreferredSize::WrapContent());
   }
 
-  const std::vector<std::unique_ptr<Widget>>& children() const {
-    return children_;
-  }
+  const std::vector<Widget*>& children() const { return children_; }
 
   Widget& child_at(int idx) { return *children_[idx]; }
 
@@ -77,10 +118,7 @@ class Panel : public Widget {
 
  protected:
   // Adds a child to this panel.
-  void add(Widget* child, const Box& bounds = Box(0, 0, -1, -1));
-
-  // Swaps the given child with the specified value.
-  Widget* swap(int idx, Widget* newChild);
+  void add(WidgetRef child, const Box& bounds = Box(0, 0, -1, -1));
 
   virtual void paintChildren(const Surface& s, Clipper& clipper);
 
@@ -153,7 +191,7 @@ class Panel : public Widget {
 
   void addChild(Widget* child);
 
-  std::vector<std::unique_ptr<Widget>> children_;
+  std::vector<Widget*> children_;
 
   Color bgcolor_;
   Box invalid_region_;

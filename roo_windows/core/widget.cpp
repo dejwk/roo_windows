@@ -180,11 +180,16 @@ void Widget::setDragged(bool dragged) {
 
 void Widget::clearClicked() { state_ &= ~kWidgetClicked; }
 
-void Widget::setParent(Panel* parent) {
+void Widget::setParent(Panel* parent, bool owned) {
   CHECK(parent_ == nullptr || parent == nullptr)
       << "widget " << *this << " being added, but"
       << " it already has a parent";
   parent_ = parent;
+  if (owned) {
+    state_ |= kWidgetOwnedByParent;
+  } else {
+    state_ &= ~kWidgetOwnedByParent;
+  }
 }
 
 void Widget::setParentBounds(const Box& parent_bounds) {

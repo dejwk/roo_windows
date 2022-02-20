@@ -4,25 +4,21 @@ namespace roo_windows {
 
 NavigationPanel::NavigationPanel(const Environment& env)
     : Panel(env), env_(env), rail_(env), contents_(env) {
-  add(&rail_);
-  add(&contents_);
-}
-
-NavigationPanel::~NavigationPanel() {
-  swap(0, nullptr);
-  swap(1, nullptr);
+  add(rail_);
+  add(contents_);
 }
 
 void NavigationPanel::addPage(const roo_display::MaterialIcon& icon,
-                              std::string text, Widget* page) {
+                              std::string text, WidgetRef page) {
   int idx = page_count();
   rail_.addDestination(icon, text, [this, idx]() { setActive(idx); });
   bool first = empty();
-  contents_.add(page);
+  Widget& w = *page;
+  contents_.add(std::move(page));
   if (first) {
     setActive(0);
   } else {
-    page->setVisible(false);
+    w.setVisible(false);
   }
 }
 

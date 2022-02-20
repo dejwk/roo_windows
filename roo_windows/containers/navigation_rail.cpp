@@ -21,12 +21,7 @@ NavigationRail::NavigationRail(const Environment& env)
       alignment_(roo_display::VAlign::Top()),
       active_(-1),
       divider_(env) {
-  add(&divider_);
-}
-
-NavigationRail::~NavigationRail() {
-  // Remove the divider so that it doesn't get double-destroyed.
-  swap(0, nullptr);
+  add(divider_);
 }
 
 Dimensions NavigationRail::onMeasure(MeasureSpec width, MeasureSpec height) {
@@ -51,9 +46,8 @@ void NavigationRail::addDestination(const roo_display::MaterialIcon& icon,
                                     std::function<void()> activator) {
   Destination* dest = new Destination(
       env_, icon, std::move(text), destinations_.size(), std::move(activator));
-  add(dest);
   destinations_.emplace_back(dest);
-  dest->requestLayout();
+  add(*dest);
 }
 
 bool NavigationRail::setActive(int index) {

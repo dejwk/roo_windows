@@ -15,7 +15,7 @@ class StackedLayout : public Panel {
   /**
    * Adds the specified child, at the end of the list.
    */
-  void add(Widget* child) { Panel::add(child); }
+  void add(WidgetRef child) { Panel::add(std::move(child)); }
 
  protected:
   Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override {

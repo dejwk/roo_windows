@@ -41,7 +41,6 @@ class NavigationRail : public Panel {
   enum LabelVisibility { PERSISTED, SELECTED, UNLABELED };
 
   NavigationRail(const Environment& env);
-  ~NavigationRail();
 
   PreferredSize getPreferredSize() const override {
     return PreferredSize(PreferredSize::Exact(72),

@@ -82,9 +82,9 @@ class VerticalLayout : public Panel {
 
   int16_t weight_sum() const { return weight_sum_; }
 
-  void add(Widget* child, Params params) {
+  void add(WidgetRef child, Params params) {
     child_measures_.emplace_back(params);
-    Panel::add(child);
+    Panel::add(std::move(child));
   }
 
   Padding getDefaultPadding() const override { return padding_; }

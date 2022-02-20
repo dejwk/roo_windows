@@ -16,14 +16,14 @@ roo_windows::Widget* ToggleButtons::addButton(const MonoIcon& icon) {
   }
   height = std::max(height, icon.extents().height());
   height += 2 * padding_;
-  ToggleButton* btn = new ToggleButton(env_, icon);
-  Panel::add(btn,
+  auto btn = new ToggleButton(env_, icon);
+  buttons_.emplace_back(btn);
+  Panel::add(*btn,
              Box(width + 1, 0, width + icon.extents().width() + 2 * padding_,
                  icon.extents().height() + 2 * padding_ - 1));
 
   int idx = buttons_.size();
   btn->setOnClicked([this, idx] { setActive(idx); });
-  buttons_.emplace_back(btn);
   return btn;
 }
 
@@ -42,11 +42,11 @@ bool ToggleButtons::paint(const roo_display::Surface& s) {
                                  roo_display::color::Transparent));
   if (d.width() < width()) {
     s.drawObject(roo_display::FilledRect(d.width(), 0, width() - 1,
-                                          d.height() - 1, background()));
+                                         d.height() - 1, background()));
   }
   if (d.height() < height()) {
     s.drawObject(roo_display::FilledRect(0, d.height(), width() - 1,
-                                          height() - 1, background()));
+                                         height() - 1, background()));
   }
   return true;
 }

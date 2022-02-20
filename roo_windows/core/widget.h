@@ -32,27 +32,28 @@ using roo_display::Surface;
 
 static const uint32_t kPressAnimationMillis = 200;
 
-static const uint16_t kWidgetClippedInParent = 0x0001;
+static const uint16_t kWidgetOwnedByParent = 0x0001;
+static const uint16_t kWidgetClippedInParent = 0x0002;
 
-static const uint16_t kWidgetEnabled = 0x0002;
+static const uint16_t kWidgetEnabled = 0x0004;
 // static const uint16_t kWidgetDisabled = 0x0002;
-static const uint16_t kWidgetHover = 0x0004;
-static const uint16_t kWidgetFocused = 0x0008;
-static const uint16_t kWidgetSelected = 0x0010;
-static const uint16_t kWidgetActivated = 0x0020;
-static const uint16_t kWidgetPressed = 0x0040;
-static const uint16_t kWidgetDragged = 0x0080;
-static const uint16_t kWidgetOn = 0x0100;
-static const uint16_t kWidgetOff = 0x0200;
-static const uint16_t kWidgetError = 0x0400;
+static const uint16_t kWidgetHover = 0x0008;
+static const uint16_t kWidgetFocused = 0x0010;
+static const uint16_t kWidgetSelected = 0x0020;
+static const uint16_t kWidgetActivated = 0x0040;
+static const uint16_t kWidgetPressed = 0x0080;
+static const uint16_t kWidgetDragged = 0x0100;
+static const uint16_t kWidgetOn = 0x0200;
+static const uint16_t kWidgetOff = 0x0400;
+static const uint16_t kWidgetError = 0x0800;
 
 // Widget is undergoing click animation.
-static const uint16_t kWidgetClicking = 0x0800;
+static const uint16_t kWidgetClicking = 0x1000;
 
 // The click has been released on top of the widget during click animation.
 // We are registering this as a 'deferred click', to be delivered immediately
 // when the click animation finishes.
-static const uint16_t kWidgetClicked = 0x1000;
+static const uint16_t kWidgetClicked = 0x2000;
 
 static const uint16_t kWidgetHidden = 0x8000;
 
@@ -173,6 +174,8 @@ class Widget {
   }
 
   void setParentClipMode(ParentClipMode mode);
+
+  bool isOwnedByParent() const { return (state_ & kWidgetOwnedByParent) != 0; }
 
   bool isVisible() const { return (state_ & kWidgetHidden) == 0; }
   bool isEnabled() const { return (state_ & kWidgetEnabled) != 0; }
@@ -305,7 +308,7 @@ class Widget {
   // instead.
   virtual void paintWidgetContents(const Surface& s, Clipper& clipper);
 
-  virtual void setParent(Panel* parent);
+  virtual void setParent(Panel* parent, bool is_owned);
 
   // Called to retrieve measurement information from the widget.
   //

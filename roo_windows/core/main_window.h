@@ -48,8 +48,8 @@ class MainWindow : public Panel {
   bool getClick(const Widget* target, float* progress, int16_t* x_center,
                 int16_t* y_center) const;
 
-  void add(Widget* child, const roo_display::Box& box) {
-    Panel::add(child, box);
+  void add(WidgetRef child, const roo_display::Box& box) {
+    Panel::add(std::move(child), box);
   }
 
  protected:

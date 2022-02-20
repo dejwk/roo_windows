@@ -11,12 +11,10 @@ static const float maxVel = 1200.0;
 
 class ScrollablePanel : public Panel {
  public:
-  ScrollablePanel(const Environment& env, Widget* contents)
+  ScrollablePanel(const Environment& env, WidgetRef contents)
       : Panel(env), scroll_start_vx_(0.0), scroll_start_vy_(0.0) {
-    add(contents);
+    add(std::move(contents));
   }
-
-  Widget* swapContents(Widget* contents) { return swap(0, contents); }
 
   void setSize(int16_t width, int16_t height) {
     width = std::max(width, this->width());
@@ -26,7 +24,7 @@ class ScrollablePanel : public Panel {
     c->moveTo(bounds.translate(c->xOffset(), c->yOffset()));
   }
 
-  Widget* contents() { return children_[0].get(); }
+  Widget* contents() { return children_[0]; }
   const Widget& contents() const { return *children_[0]; }
 
   // Sets the relative position of the underlying content, relative to the the

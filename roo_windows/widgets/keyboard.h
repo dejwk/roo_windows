@@ -97,7 +97,7 @@ class KeyboardPage : public Panel {
  private:
   const KeyboardPageSpec* spec_;
   std::vector<Widget*> keys_;
-  PressHighlighter* highlighter_;
+  PressHighlighter highlighter_;
 };
 
 class Keyboard : public Panel {

@@ -158,9 +158,9 @@ Keyboard::Keyboard(const Environment& env, const KeyboardPageSpec* spec,
     : Panel(env), color_theme_(env.keyboardColorTheme()), listener_(listener) {
   setParentClipMode(Widget::UNCLIPPED);
   auto page = new KeyboardPage(env, spec);
-  add(page);
+  add(std::unique_ptr<KeyboardPage>(page));
   current_page_ = page;
-  pages_.emplace_back(page);
+  pages_.push_back(page);
 }
 
 PreferredSize Keyboard::getPreferredSize() const {
@@ -185,7 +185,7 @@ void Keyboard::onLayout(bool changed, const roo_display::Box& box) {
 }
 
 KeyboardPage::KeyboardPage(const Environment& env, const KeyboardPageSpec* spec)
-    : Panel(env), spec_(spec) {
+    : Panel(env), spec_(spec), highlighter_(env) {
   setBackground(env.keyboardColorTheme().background);
   setParentClipMode(Widget::UNCLIPPED);
   for (int i = 0; i < spec->row_count; ++i) {
@@ -226,13 +226,12 @@ KeyboardPage::KeyboardPage(const Environment& env, const KeyboardPageSpec* spec)
       b->setOutlineColor(b_color);
       b->setTextColor(roo_display::color::White);
       keys_.emplace_back(b);
-      add(b);
+      add(std::unique_ptr<Button>(b));
     }
   }
   // Note: highlighter must be added last to be on top of all children.
-  highlighter_ = new PressHighlighter(env);
-  highlighter_->setVisible(false);
-  highlighter_->setParentClipMode(Widget::UNCLIPPED);
+  highlighter_.setVisible(false);
+  highlighter_.setParentClipMode(Widget::UNCLIPPED);
   add(highlighter_);
 }
 
@@ -324,15 +323,15 @@ void KeyboardPage::onLayout(bool changed, const roo_display::Box& box) {
 
 void KeyboardPage::showHighlighter(const TextButton& btn) {
   const Box& bBounds = btn.parent_bounds();
-  highlighter_->moveTo(Box(bBounds.xMin(), bBounds.yMin() - kHighlighterHeight,
-                           bBounds.xMax(), bBounds.yMax() - 3));
-  highlighter_->setTarget(&btn);
-  highlighter_->setVisible(true);
+  highlighter_.moveTo(Box(bBounds.xMin(), bBounds.yMin() - kHighlighterHeight,
+                         bBounds.xMax(), bBounds.yMax() - 3));
+  highlighter_.setTarget(&btn);
+  highlighter_.setVisible(true);
 }
 
 void KeyboardPage::hideHighlighter() {
-  highlighter_->setVisible(false);
-  highlighter_->setTarget(nullptr);
+  highlighter_.setVisible(false);
+  highlighter_.setTarget(nullptr);
 }
 
 PressHighlighter::PressHighlighter(const Environment& env) : Widget(env) {

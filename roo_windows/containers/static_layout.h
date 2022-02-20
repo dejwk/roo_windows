@@ -20,8 +20,8 @@ class StaticLayout : public Panel {
    * Adds the specified child, at the end of the list, positioning it at the
    * specified place in the parent's coordinates.
    */
-  void add(Widget* child, const roo_display::Box& box) {
-    Panel::add(child, box);
+  void add(WidgetRef child, const roo_display::Box& box) {
+    Panel::add(std::move(child), box);
   }
 
   /**
@@ -29,8 +29,8 @@ class StaticLayout : public Panel {
    * current natural dimensions, with its top left corner anchored at the
    * specified point in the parent's coordinates.
    */
-  void add(Widget* child, int16_t x, int16_t y) {
-    return add(child, x, y, roo_display::HAlign::Left(),
+  void add(WidgetRef child, int16_t x, int16_t y) {
+    return add(std::move(child), x, y, roo_display::HAlign::Left(),
                roo_display::VAlign::Top());
   }
 
@@ -40,7 +40,7 @@ class StaticLayout : public Panel {
    * coordinates, with the specified alignment of the anchor relative to the
    * contents.
    */
-  void add(Widget* child, int16_t x, int16_t y, roo_display::HAlign halign,
+  void add(WidgetRef child, int16_t x, int16_t y, roo_display::HAlign halign,
            roo_display::VAlign valign) {
     Box anchor(x, y, x, y);
     Dimensions d = child->measure(MeasureSpec::Unspecified(0),
@@ -51,7 +51,7 @@ class StaticLayout : public Panel {
     Box actual = inner.translate(halign.GetOffset(anchor, inner),
                                  valign.GetOffset(anchor, inner));
     child->layout(actual);
-    add(child, actual);
+    add(std::move(child), actual);
   }
 
  protected:

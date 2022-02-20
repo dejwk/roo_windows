@@ -19,9 +19,16 @@ Panel::Panel(const Environment& env, roo_display::Color bgcolor)
       invalid_region_(0, 0, -1, -1),
       cached_max_bounds_(0, 0, -1, -1) {}
 
-void Panel::add(Widget* child, const Box& bounds) {
-  children_.emplace_back(std::unique_ptr<Widget>(child));
-  child->setParent(this);
+Panel::~Panel() {
+  for (auto* c : children_) {
+    if (c->isOwnedByParent()) delete c;
+  }
+}
+
+void Panel::add(WidgetRef ref, const Box& bounds) {
+  Widget* child = ref.release();
+  children_.push_back(child);
+  child->setParent(this, ref.is_owned_);
   child->setParentBounds(bounds);
   if (child->isVisible()) {
     // Make sure that we propagate the requestLayout even if the child
@@ -31,12 +38,6 @@ void Panel::add(Widget* child, const Box& bounds) {
     child->requestLayout();
     childShown(child);
   }
-}
-
-Widget* Panel::swap(int idx, Widget* newChild) {
-  Widget* result = children_[idx].release();
-  children_[idx].reset(newChild);
-  return result;
 }
 
 void Panel::paintWidgetContents(const Surface& s, Clipper& clipper) {
@@ -66,9 +67,8 @@ void Panel::paintWidgetContents(const Surface& s, Clipper& clipper) {
 }
 
 void Panel::paintChildren(const Surface& s, Clipper& clipper) {
-  for (auto i = children_.rbegin(); i != children_.rend(); ++i) {
-    auto* child = i->get();
-    child->paintWidget(s, clipper);
+  for (auto child = children_.rbegin(); child != children_.rend(); ++child) {
+    (*child)->paintWidget(s, clipper);
   }
 }
 
@@ -91,11 +91,10 @@ bool Panel::onTouch(const TouchEvent& event) {
   // Iterate backwards, because the order of children is assumed to represent
   // Z dimension (e.g., later added child is on top) so in case they are
   // overlapping, we want the right-most one receive the event.
-  for (auto i = children_.rbegin(); i != children_.rend(); i++) {
-    auto* child = i->get();
-    if (!child->isVisible()) continue;
-    if (child->parent_bounds().contains(event.startX(), event.startY())) {
-      if (onTouchChild(event, child)) {
+  for (auto child = children_.rbegin(); child != children_.rend(); child++) {
+    if (!(*child)->isVisible()) continue;
+    if ((*child)->parent_bounds().contains(event.startX(), event.startY())) {
+      if (onTouchChild(event, *child)) {
         return true;
       }
     }
@@ -108,7 +107,7 @@ bool Panel::onTouch(const TouchEvent& event) {
         pbounds.xMin() - kTouchMargin, pbounds.yMin() - kTouchMargin,
         pbounds.xMax() + kTouchMargin, pbounds.yMax() + kTouchMargin);
     if (ebounds.contains(event.startX(), event.startY())) {
-      if (onTouchChild(event, child.get())) {
+      if (onTouchChild(event, child)) {
         return true;
       }
     }
@@ -231,7 +230,7 @@ bool Panel::invalidateBeneathDescending(const Box& box, const Widget* subject) {
     invalid_region_ = Box::extent(invalid_region_, clipped);
   }
   for (auto& child : children_) {
-    if (child.get() == subject) return true;
+    if (child == subject) return true;
     if (child->isVisible()) {
       Box adjusted = clipped.translate(-child->xOffset(), -child->yOffset());
       if (child->invalidateBeneathDescending(adjusted, subject)) return true;
