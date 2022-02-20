@@ -162,8 +162,8 @@ bool ScrollablePanel::onTouch(const TouchEvent& event) {
     scroll_decel_x_ = -decceleration * scroll_start_vx_ / v_abs;
     scroll_decel_y_ = -decceleration * scroll_start_vy_ / v_abs;
     invalidateInterior();
-    return true;
   }
+  return true;
 }
 
 }  // namespace roo_windows
