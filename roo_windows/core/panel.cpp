@@ -40,6 +40,13 @@ void Panel::add(WidgetRef ref, const Box& bounds) {
   }
 }
 
+void Panel::removeAll() {
+  for (auto* c : children_) {
+    c->setParent(nullptr, false);
+  }
+  children_.clear();
+}
+
 void Panel::paintWidgetContents(const Surface& s, Clipper& clipper) {
   bool dirty = isDirty();
   bool invalidated = isInvalidated();

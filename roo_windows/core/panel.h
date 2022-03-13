@@ -120,6 +120,9 @@ class Panel : public Widget {
   // Adds a child to this panel.
   void add(WidgetRef child, const Box& bounds = Box(0, 0, -1, -1));
 
+  // Removes all children.
+  void removeAll();
+
   virtual void paintChildren(const Surface& s, Clipper& clipper);
 
   void invalidateDescending() override;
