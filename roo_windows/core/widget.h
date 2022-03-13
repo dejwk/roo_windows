@@ -67,6 +67,7 @@ class Widget {
   enum ParentClipMode { CLIPPED, UNCLIPPED };
 
   Widget(const Environment& env);
+  Widget(const Widget& w);
   virtual ~Widget() {}
 
   // Causes the widget to request paint(). The widget decides which pixels
@@ -323,6 +324,8 @@ class Widget {
   // getDefaultSize() to overriding this method, whenn possible.
   virtual Dimensions onMeasure(MeasureSpec width, MeasureSpec height);
 
+  virtual void onRequestLayout();
+
   // Called from layout after the new position of this widget has been
   // established. This method is not invoked in case the position of the widget
   // did not change *and* the layout for this widget has not been explicitly
@@ -336,6 +339,8 @@ class Widget {
   // This method should not be called during paint().
   virtual void moveTo(const Box& parent_bounds);
 
+  void markClean() { redraw_status_ &= ~(kDirty | kInvalidated); }
+
  private:
   friend class Panel;
   friend class ScrollablePanel;
@@ -346,8 +351,6 @@ class Widget {
   // creates the new, offset surface with overlays and/or filters, and calls
   // paintWidgetContents().
   void paintWidget(const Surface& s, Clipper& clipper);
-
-  void markClean() { redraw_status_ &= ~(kDirty | kInvalidated); }
 
   void markInvalidated() { redraw_status_ |= (kDirty | kInvalidated); }
 

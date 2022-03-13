@@ -34,6 +34,13 @@ Widget::Widget(const Environment& env)
       redraw_status_(kDirty | kInvalidated),
       on_clicked_([] {}) {}
 
+Widget::Widget(const Widget& w)
+    : parent_(nullptr),
+      parent_bounds_(0, 0, -1, -1),
+      state_(kWidgetEnabled),
+      redraw_status_(kDirty | kInvalidated),
+      on_clicked_([] {}) {}
+
 MainWindow* Widget::getMainWindow() { return parent_->getMainWindow(); }
 const MainWindow* Widget::getMainWindow() const {
   return parent_->getMainWindow();
@@ -76,8 +83,7 @@ void Widget::invalidateInterior(const Box& box) {
 
 void Widget::requestLayout() {
   if (isLayoutRequested()) return;
-  markLayoutRequested();
-  if (parent() != nullptr) parent()->requestLayout();
+  onRequestLayout();
 }
 
 Dimensions Widget::measure(MeasureSpec width, MeasureSpec height) {
@@ -93,6 +99,11 @@ void Widget::layout(const roo_display::Box& box) {
     onLayout(changed, box);
   }
   redraw_status_ &= ~(kLayoutRequired | kLayoutRequested);
+}
+
+void Widget::onRequestLayout() {
+  markLayoutRequested();
+  if (parent() != nullptr) parent()->requestLayout();
 }
 
 namespace {
