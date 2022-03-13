@@ -83,6 +83,21 @@ class CircularBuffer {
   int count_;
 };
 
+Box unclippedRegion(const Widget* w) {
+  Box box = w->bounds();
+  int16_t dx = 0;
+  int16_t dy = 0;
+  while (w->parent() != nullptr) {
+    dx -= w->xOffset();
+    dy -= w->yOffset();
+    if (w->getParentClipMode() == Widget::CLIPPED) {
+      box.clip(w->parent()->bounds().translate(dx, dy));
+    }
+    w = w->parent();
+  }
+  return box;
+}
+
 template <typename Element>
 class ListLayout : public Panel {
  public:
@@ -122,9 +137,13 @@ class ListLayout : public Panel {
     CHECK(!in_paint_children_);
     in_paint_children_ = true;
     int element_count = model_.elementCount();
-    int new_first = ((s.clip_box().yMin() - s.dy() + 1) / element_height());
+    // NOTE: we are not just using clipbox, because it could result in removing
+    // some children that just happen to not need rendering at the moment -
+    // but we want to keep them so that they can keep receiving events.
+    Box box = unclippedRegion(this);
+    int new_first = (box.yMin() + 1) / element_height();
     if (new_first < 0) new_first = 0;
-    int new_last = ((s.clip_box().yMax() - s.dy()) / element_height());
+    int new_last = box.yMax() / element_height();
     if (new_last < new_first) new_last = new_first - 1;
     if (new_last - new_first >= element_count) {
       new_last = new_first + element_count - 1;
