@@ -53,8 +53,8 @@ void NavigationRail::addDestination(const roo_display::MaterialIcon& icon,
 bool NavigationRail::setActive(int index) {
   if (index == active_) return false;
   active_ = index;
-  for (int i = 0; i < destinations_.size(); i++) {
-    destinations_[i]->setActivated(i == index);
+  for (size_t i = 0; i < destinations_.size(); i++) {
+    destinations_[i]->setActivated(i == (size_t)index);
   }
   return true;
 }

@@ -24,8 +24,8 @@ void NavigationPanel::addPage(const roo_display::MaterialIcon& icon,
 
 void NavigationPanel::setActive(int index) {
   rail_.setActive(index);
-  for (int i = 0; i < page_count(); ++i) {
-    page(i)->setVisible(i == index);
+  for (size_t i = 0; i < page_count(); ++i) {
+    page(i)->setVisible(i == (size_t)index);
   }
 }
 

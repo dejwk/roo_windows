@@ -66,8 +66,8 @@ Dimensions ToggleButtons::getSuggestedMinimumDimensions() const {
 void ToggleButtons::setActive(int index) {
   if (index == active_) return;
   active_ = index;
-  for (int i = 0; i < buttons_.size(); i++) {
-    buttons_[i]->setActivated(i == index);
+  for (size_t i = 0; i < buttons_.size(); i++) {
+    buttons_[i]->setActivated(i == (size_t)index);
   }
 }
 
