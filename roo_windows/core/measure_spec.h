@@ -15,15 +15,15 @@ class MeasureSpec {
   };
 
   static constexpr MeasureSpec Unspecified(int16_t hint) {
-    return MeasureSpec(UNSPECIFIED | (hint << 2));
+    return MeasureSpec(UNSPECIFIED | ((uint16_t)hint << 2));
   }
 
   static constexpr MeasureSpec AtMost(int16_t value) {
-    return MeasureSpec(AT_MOST | (value << 2));
+    return MeasureSpec(AT_MOST | ((uint16_t)value << 2));
   }
 
   static constexpr MeasureSpec Exactly(int16_t value) {
-    return MeasureSpec(EXACTLY | (value << 2));
+    return MeasureSpec(EXACTLY | ((uint16_t)value << 2));
   }
 
   Kind kind() const { return static_cast<Kind>(value_ & 0x3); }
@@ -82,9 +82,9 @@ class MeasureSpec {
  private:
   friend constexpr bool operator==(MeasureSpec a, MeasureSpec b);
 
-  constexpr MeasureSpec(int16_t value) : value_(value) {}
+  constexpr MeasureSpec(uint16_t value) : value_(value) {}
 
-  int16_t value_;
+  uint16_t value_;
 };
 
 inline constexpr bool operator==(MeasureSpec a, MeasureSpec b) {
