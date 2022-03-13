@@ -11,8 +11,14 @@ static const float maxVel = 1200.0;
 
 class ScrollablePanel : public Panel {
  public:
-  ScrollablePanel(const Environment& env, WidgetRef contents)
-      : Panel(env), scroll_start_vx_(0.0), scroll_start_vy_(0.0) {
+  enum Direction { VERTICAL = 0, HORIZONTAL = 1, BOTH = 2 };
+
+  ScrollablePanel(const Environment& env, WidgetRef contents,
+                  Direction direction = VERTICAL)
+      : Panel(env),
+        direction_(direction),
+        scroll_start_vx_(0.0),
+        scroll_start_vy_(0.0) {
     add(std::move(contents));
   }
 
@@ -42,9 +48,22 @@ class ScrollablePanel : public Panel {
   bool onTouch(const TouchEvent& event) override;
 
  protected:
+  PreferredSize getPreferredSize() const override {
+    return PreferredSize(direction_ != VERTICAL ? PreferredSize::WrapContent()
+                                                : PreferredSize::MatchParent(),
+                         direction_ != HORIZONTAL
+                             ? PreferredSize::WrapContent()
+                             : PreferredSize::MatchParent());
+  }
+
   Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override {
-    measured_ = contents()->measure(MeasureSpec::Unspecified(width.value()),
-                                    MeasureSpec::Unspecified(height.value()));
+    if (direction_ != VERTICAL) {
+      width = MeasureSpec::Unspecified(width.value());
+    }
+    if (direction_ != HORIZONTAL) {
+      height = MeasureSpec::Unspecified(height.value());
+    }
+    measured_ = contents()->measure(width, height);
     return Dimensions(width.resolveSize(measured_.width()),
                       height.resolveSize(measured_.height()));
   }
@@ -57,6 +76,7 @@ class ScrollablePanel : public Panel {
   }
 
  private:
+  Direction direction_;
   Dimensions measured_;
 
   // Captured dx_ and dy_ during drag and scroll animations.

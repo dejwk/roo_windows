@@ -124,8 +124,10 @@ bool ScrollablePanel::onTouch(const TouchEvent& event) {
   } else if (event.type() == TouchEvent::SWIPED) {
     scroll_start_time_ = millis();
     // Capture the initial velocity of the scroll.
-    scroll_start_vx_ = 1000.0 * event.dx() / (float)event.duration();
-    scroll_start_vy_ = 1000.0 * event.dy() / (float)event.duration();
+    unsigned long duration = event.duration();
+    if (duration <= 0) duration = 1;
+    scroll_start_vx_ = 1000.0 * event.dx() / (float)duration;
+    scroll_start_vy_ = 1000.0 * event.dy() / (float)duration;
     // If we're already on the boundary and swiping outside of the bounded
     // region, cap the horizontal and/or vertical component of the scroll.
     if (scroll_start_vx_ < 0 && c->xOffset() == 0) {
