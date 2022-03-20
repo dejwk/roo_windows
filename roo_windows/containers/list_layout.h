@@ -183,9 +183,7 @@ class ListLayout : public Panel {
     return PreferredSize(
         PreferredSize::MatchParent(),
         element.height().isExact()
-            ? PreferredSize::Exact(
-                  calculatePossibleElementHeight(element.height().value()) *
-                  model_.elementCount())
+            ? PreferredSize::Exact(calculateHeight(element.height().value()))
             : element.height());
   }
 
@@ -199,7 +197,7 @@ class ListLayout : public Panel {
     Padding p = prototype_.getDefaultPadding();
     h += (p.top() + p.bottom());
     return Dimensions(width.resolveSize(this->width()),
-                      height.resolveSize(calculatePossibleElementHeight(h)));
+                      height.resolveSize(calculateHeight(h)));
   }
 
   void onLayout(bool changed, const roo_display::Box& box) override {
@@ -238,14 +236,14 @@ class ListLayout : public Panel {
                  voffset + element_height() - 1));
   }
 
-  int16_t calculatePossibleElementHeight(int16_t desired_height) const {
+  int16_t calculateHeight(int16_t desired_element_height) const {
     int count = model_.elementCount();
     int tops = Box::MaximumBox().yMax();
     if (count >= tops) return 1;
-    if (count * desired_height > tops) {
-      return tops / count;
+    if (count * desired_element_height > tops) {
+      return (tops / count) * count;
     }
-    return desired_height;
+    return desired_element_height * count;
   }
 
   int element_height() const { return prototype_.height(); }
