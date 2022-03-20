@@ -12,7 +12,7 @@ class WifiIndicator : public Widget {
   WifiIndicator(const Environment& env, roo_display::Color color);
 
   bool paint(const Surface& s) override;
-  Padding getDefaultPadding() const override { return Padding(0); }
+  // Padding getDefaultPadding() const override { return Padding(0); }
 
   void setWifiConnected(bool connected);
 
