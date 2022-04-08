@@ -117,6 +117,12 @@ class Panel : public Widget {
   const Widget& child_at(int idx) const { return *children_[idx]; }
 
  protected:
+  Panel(const Panel& other)
+      : Widget(other),
+        bgcolor_(other.bgcolor_),
+        invalid_region_(0, 0, -1, -1),
+        cached_max_bounds_(0, 0, -1, -1) {}
+
   // Adds a child to this panel.
   void add(WidgetRef child, const Box& bounds = Box(0, 0, -1, -1));
 
