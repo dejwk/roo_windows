@@ -119,8 +119,9 @@ bool Panel::onTouch(const TouchEvent& event) {
       }
     }
   }
-  // Unhandled.
-  return false;
+  return Widget::onTouch(event);
+  // // Unhandled.
+  // return false;
 }
 
 // Must propagate the 'dirty' flag even if the box comes down empty. This is
