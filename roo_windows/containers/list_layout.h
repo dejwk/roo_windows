@@ -196,7 +196,7 @@ class ListLayout : public Panel {
     if (h == 0) h = 15;
     Padding p = prototype_.getDefaultPadding();
     h += (p.top() + p.bottom());
-    return Dimensions(width.resolveSize(this->width()),
+    return Dimensions(width.resolveSize(d.width()),
                       height.resolveSize(calculateHeight(h)));
   }
 
@@ -227,7 +227,7 @@ class ListLayout : public Panel {
   void show(int pos, Element& e) {
     model_.set(pos, e);
     e.setVisible(true);
-    Dimensions d = e.measure(MeasureSpec::Unspecified(width()),
+    Dimensions d = e.measure(MeasureSpec::Exactly(width()),
                              MeasureSpec::Exactly(element_height()));
     int voffset = pos * element_height();
     // TODO: support gravity, and margins. And maybe dividers?
