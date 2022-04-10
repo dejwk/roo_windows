@@ -192,6 +192,12 @@ class Panel : public Widget {
 
   void moveTo(const Box& parent_bounds) override;
 
+ protected:
+  // Subclasses should avoid mutating this vector directly, preferring accessor
+  // methods that initialize the children properly. Direct access is sometimes
+  // useful when a child object gets moved and its pointer needs to be updated.
+  std::vector<Widget*> children_;
+
  private:
   void invalidateCachedMaxBounds() { cached_max_bounds_ = Box(0, 0, -1, -1); }
 
@@ -199,8 +205,6 @@ class Panel : public Widget {
   friend class ScrollablePanel;
 
   void addChild(Widget* child);
-
-  std::vector<Widget*> children_;
 
   Color bgcolor_;
   Box invalid_region_;

@@ -12,7 +12,7 @@ class ToggleButtons : public Panel {
   ToggleButtons(const Environment& env, int16_t padding = 12)
       : Panel(env), env_(env), padding_(padding), active_(-1) {}
 
-  roo_windows::Widget* addButton(const MonoIcon& icon);
+  roo_windows::Widget& addButton(const MonoIcon& icon);
 
   // Draws left- and right-side framing around the togglebutton control.
   bool paint(const roo_display::Surface& s) override;
@@ -33,11 +33,14 @@ class ToggleButtons : public Panel {
  private:
   class ToggleButton : public roo_windows::Widget {
    public:
-    ToggleButton(const Environment& env, const MonoIcon& icon)
-        : roo_windows::Widget(env), icon_(icon) {}
+    ToggleButton(const Environment& env, const MonoIcon& icon,
+                 ToggleButtons& group, int idx)
+        : roo_windows::Widget(env), icon_(icon), group_(group), idx_(idx) {}
 
     bool useOverlayOnActivation() const override { return true; }
     bool isClickable() const override { return true; }
+
+    void onClicked() override { group_.setActive(idx_); }
 
     bool paint(const roo_display::Surface& s) override;
 
@@ -51,11 +54,11 @@ class ToggleButtons : public Panel {
     const MonoIcon& icon() const { return icon_; }
 
    private:
-    const ToggleButtons* parentGroup() const {
-      return (const ToggleButtons*)parent();
-    }
+    const ToggleButtons& parentGroup() const { return group_; }
 
     const MonoIcon& icon_;
+    ToggleButtons& group_;
+    int idx_;
   };
 
   friend class ToggleButton;
@@ -65,7 +68,7 @@ class ToggleButtons : public Panel {
   int16_t padding_;  // defaults to 12.
   int active_;
 
-  std::vector<std::unique_ptr<ToggleButton>> buttons_;
+  std::vector<ToggleButton> buttons_;
 };
 
 }  // namespace roo_windows
