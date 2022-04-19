@@ -2,6 +2,7 @@
 
 #include "roo_display.h"
 #include "roo_display/filter/background_fill_optimizer.h"
+#include "roo_windows/core/click_animation.h"
 #include "roo_windows/core/clipper.h"
 #include "roo_windows/core/panel.h"
 
@@ -32,25 +33,13 @@ class MainWindow : public Panel {
   void enterModal(ModalWindow* modal_window);
   void exitModal(ModalWindow* modal_window);
 
-  bool isClickAnimating() const;
-  void startClickAnimation(Widget* target);
-  void clickWidget(Widget* target) { deferred_click_ = target; }
-
   const Theme& theme() const override { return theme_; }
-
-  // Can be called by a widget that is click-animating, from its paint() method.
-  // Returns true if the animation is still currently in progress; false
-  // otherwise. If returns true, updates progress, x_center, and y_center.
-  // Progress is a value in the [0, 1] range that specifies how much the
-  // animation is progressed. The x_center and y_center are the coordinates of
-  // the original click, in the device coordinates. (The widget can conver them
-  // to its local coordinates, by adjusting by the surface offsets).
-  bool getClick(const Widget* target, float* progress, int16_t* x_center,
-                int16_t* y_center) const;
 
   void add(WidgetRef child, const roo_display::Box& box) {
     Panel::add(std::move(child), box);
   }
+
+  ClickAnimation& click_animation() { return click_animation_; }
 
  protected:
   void propagateDirty(const Widget* child, const Box& box) override;
@@ -66,10 +55,7 @@ class MainWindow : public Panel {
   int16_t swipe_dx_, swipe_dy_;
   bool touch_down_;
 
-  Widget* click_anim_target_;
-  Widget* deferred_click_;
-  unsigned long click_anim_start_millis_;
-  int16_t click_anim_x_, click_anim_y_;
+  ClickAnimation click_animation_;
 
   // Stored as instance variable, to avoid vector reallocation on each paint.
   internal::ClipperState clipper_state_;

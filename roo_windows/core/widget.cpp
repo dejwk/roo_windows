@@ -42,8 +42,14 @@ Widget::Widget(const Widget& w)
       on_clicked_([] {}) {}
 
 MainWindow* Widget::getMainWindow() { return parent_->getMainWindow(); }
+
 const MainWindow* Widget::getMainWindow() const {
   return parent_->getMainWindow();
+}
+
+ClickAnimation* Widget::getClickAnimation() {
+  MainWindow* w = getMainWindow();
+  return (w == nullptr) ? nullptr : &w->click_animation();
 }
 
 void Widget::getAbsoluteBounds(Box* full, Box* visible) const {
@@ -189,7 +195,7 @@ void Widget::setDragged(bool dragged) {
   invalidateInterior();
 }
 
-void Widget::clearClicked() { state_ &= ~kWidgetClicked; }
+void Widget::setClicking() { state_ |= kWidgetClicking; }
 
 void Widget::setParent(Panel* parent, bool owned) {
   CHECK(parent_ == nullptr || parent == nullptr)
@@ -315,17 +321,16 @@ void Widget::paintWidget(const Surface& s, Clipper& clipper) {
       // after redrawing, so that we receive a subsequent paint request shortly.
       bool click_animation_continues =
           click_animation &&
-          getMainWindow()->getClick(this, &click_progress, &click_x,
-                                    &click_y) &&
+          getClickAnimation()->getProgress(this, &click_progress, &click_x,
+                                           &click_y) &&
           click_progress < 1.0;
       if (click_animation_continues) {
         // Need to draw the circular overlay. Combine the regular rect overlay
         // into it.
         Color animation_color = getClickAnimationColor(*this, s);
         PressOverlay press_overlay(
-            click_x, click_y,
-            animation_radius(bounds(), click_x - news.dx(), click_y - news.dy(),
-                             click_progress),
+            click_x + news.dx(), click_y + news.dy(),
+            animation_radius(bounds(), click_x, click_y, click_progress),
             alphaBlend(overlay, animation_color), overlay);
         roo_display::ForegroundFilter filter(news.out(), &press_overlay);
         news.set_out(&filter);
@@ -379,10 +384,10 @@ bool Widget::onTouch(const TouchEvent& event) {
   if (event.type() == TouchEvent::PRESSED) {
     if (!isClickable()) return false;
     if (isPressed()) return false;
-    MainWindow* mw = getMainWindow();
-    if (mw->isClickAnimating()) return false;
+    ClickAnimation* anim = getClickAnimation();
+    if (anim->isClickAnimating()) return false;
     if (showClickAnimation()) {
-      mw->startClickAnimation(this);
+      anim->start(this, event.x(), event.y());
       state_ |= kWidgetClicking;
     }
     setPressed(true);
@@ -394,12 +399,7 @@ bool Widget::onTouch(const TouchEvent& event) {
       onReleased();
       if (bounds().contains(event.x(), event.y()) ||
           event.duration() < kClickDurationThresholdMs) {
-        if (isClicking()) {
-          // Defer the delivery of the click event until the animation finishes.
-          state_ |= kWidgetClicked;
-        } else {
-          getMainWindow()->clickWidget(this);
-        }
+        getClickAnimation()->confirmClick(this);
         return true;
       }
     }

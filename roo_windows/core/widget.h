@@ -19,6 +19,7 @@
 
 namespace roo_windows {
 
+class ClickAnimation;
 class Panel;
 class MainWindow;
 
@@ -49,11 +50,6 @@ static const uint16_t kWidgetError = 0x0800;
 
 // Widget is undergoing click animation.
 static const uint16_t kWidgetClicking = 0x1000;
-
-// The click has been released on top of the widget during click animation.
-// We are registering this as a 'deferred click', to be delivered immediately
-// when the click animation finishes.
-static const uint16_t kWidgetClicked = 0x2000;
 
 static const uint16_t kWidgetHidden = 0x8000;
 
@@ -129,6 +125,7 @@ class Widget {
 
   virtual MainWindow* getMainWindow();
   virtual const MainWindow* getMainWindow() const;
+  ClickAnimation* getClickAnimation();
 
   // Returns this widget's background. Transparent by default. Normally
   // overridden by panels, which usually have opaque backgrounds.
@@ -189,7 +186,6 @@ class Widget {
   bool isDragged() const { return (state_ & kWidgetDragged) != 0; }
 
   bool isClicking() const { return (state_ & kWidgetClicking) != 0; }
-  bool isClicked() const { return (state_ & kWidgetClicked) != 0; }
 
   void setVisible(bool visible);
   void setEnabled(bool enabled);
@@ -198,7 +194,7 @@ class Widget {
   void setPressed(bool pressed);
   void setDragged(bool dragged);
 
-  void clearClicked();
+  void setClicking();
 
   virtual bool useOverlayOnActivation() const { return true; }
   virtual bool useOverlayOnPressAnimation() const { return false; }
