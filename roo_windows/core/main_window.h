@@ -22,12 +22,6 @@ class MainWindow : public Panel {
   MainWindow* getMainWindow() override { return this; }
   const MainWindow* getMainWindow() const override { return this; }
 
-  void getAbsoluteBounds(roo_display::Box* full,
-                         roo_display::Box* visible) const override {
-    *full = parent_bounds();
-    *visible = parent_bounds();
-  }
-
   void paintWindow(const Surface& s);
 
   void enterModal(ModalWindow* modal_window);

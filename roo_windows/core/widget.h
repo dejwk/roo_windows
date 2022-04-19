@@ -112,7 +112,10 @@ class Widget {
   const Box& parent_bounds() const { return parent_bounds_; }
 
   // Returns bounds in the device's coordinates.
-  virtual void getAbsoluteBounds(Box* full, Box* visible) const;
+  void getAbsoluteBounds(Box& full, Box& visible) const;
+
+  // Returns the offset in the device's coordinates.
+  void getAbsoluteOffset(int16_t& dx, int16_t& dy) const;
 
   // Called as part of display update, for a visible, dirty widget.
   // The Surface's offset and clipbox has been pre-initialized so that this

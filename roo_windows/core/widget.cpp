@@ -4,12 +4,11 @@
 #include <cmath>
 
 #include "roo_display/filter/foreground.h"
+#include "roo_glog/logging.h"
 #include "roo_windows/core/main_window.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/press_overlay.h"
 #include "roo_windows/core/rtti.h"
-
-#include "roo_glog/logging.h"
 
 namespace roo_windows {
 
@@ -52,10 +51,25 @@ ClickAnimation* Widget::getClickAnimation() {
   return (w == nullptr) ? nullptr : &w->click_animation();
 }
 
-void Widget::getAbsoluteBounds(Box* full, Box* visible) const {
-  parent()->getAbsoluteBounds(full, visible);
-  *full = parent_bounds().translate(full->xMin(), full->yMin());
-  *visible = Box::intersect(*visible, *full);
+void Widget::getAbsoluteBounds(Box& full, Box& visible) const {
+  if (parent() == nullptr) {
+    full = visible = parent_bounds();
+  } else {
+    parent()->getAbsoluteBounds(full, visible);
+    full = parent_bounds().translate(full.xMin(), full.yMin());
+    visible = Box::intersect(visible.translate(full.xMin(), full.yMin()), full);
+  }
+}
+
+void Widget::getAbsoluteOffset(int16_t& dx, int16_t& dy) const {
+  if (parent() == nullptr) {
+    dx = 0;
+    dy = 0;
+  } else {
+    parent()->getAbsoluteOffset(dx, dy);
+  }
+  dx += xOffset();
+  dy += yOffset();
 }
 
 Color Widget::effectiveBackground() const {
