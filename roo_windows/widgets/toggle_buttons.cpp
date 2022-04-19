@@ -31,9 +31,6 @@ roo_windows::Widget& ToggleButtons::addButton(const MonoIcon& icon) {
   Panel::add(btn,
              Box(width + 1, 0, width + icon.extents().width() + 2 * padding_,
                  icon.extents().height() + 2 * padding_ - 1));
-
-  int idx = buttons_.size();
-  btn->setOnClicked([this, idx] { setActive(idx); });
   return btn;
 }
 
