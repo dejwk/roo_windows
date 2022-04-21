@@ -10,8 +10,8 @@ static const unsigned long kClickAnimationMs = 200;
 
 ClickAnimation::ClickAnimation()
     : click_anim_target_(nullptr),
-      deferred_click_(nullptr),
-      click_confirmed_(false) {}
+      click_confirmed_(false),
+      deferred_click_(nullptr) {}
 
 void ClickAnimation::tick() {
   unsigned long now = millis();
