@@ -16,7 +16,7 @@ class Switch : public Widget {
 
   Dimensions getSuggestedMinimumDimensions() const override;
 
-  bool isClickable() const override { return !isAnimating(); }
+  bool isClickable() const override { return true; }
 
   void onReleased() override;
 
