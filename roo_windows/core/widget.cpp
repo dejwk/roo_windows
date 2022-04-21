@@ -405,12 +405,12 @@ bool Widget::onTouch(const TouchEvent& event) {
       state_ |= kWidgetClicking;
     }
     setPressed(true);
-    onPressed();
+    onShowPress(event.x(), event.y());
     return true;
   } else if (event.type() == TouchEvent::RELEASED) {
     if (isPressed()) {
       setPressed(false);
-      onReleased();
+      if (!onSingleTapUp(event.x(), event.y())) return false;
       if (bounds().contains(event.x(), event.y()) ||
           event.duration() < kClickDurationThresholdMs) {
         getClickAnimation()->confirmClick(this);
@@ -425,7 +425,7 @@ bool Widget::onTouch(const TouchEvent& event) {
     uint32_t delta = dx * dx + dy * dy;
     if (delta < kClickStickinessRadius * kClickStickinessRadius) return true;
     setPressed(false);
-    onReleased();
+    onSingleTapUp(event.x(), event.y());
     // Leave unhandled, for parent to handle.
   }
   return false;

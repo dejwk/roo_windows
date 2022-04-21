@@ -18,11 +18,11 @@ const RleImage4bppxBiased<Alpha4, PrgMemResource>& shadow_20();
 static constexpr int kSwitchAnimationMs = 120;
 }  // namespace
 
-void Switch::onReleased() {
+bool Switch::onSingleTapUp(int16_t x, int16_t y) {
   state_ = isOn() ? OFF : ON;
   markDirty();
   anim_ = millis() & 0x7FFF;
-  Widget::onReleased();
+  return Widget::onSingleTapUp(x, y);
 }
 
 void Switch::setState(State state) {

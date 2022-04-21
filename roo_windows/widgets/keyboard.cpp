@@ -105,17 +105,19 @@ class TextButton : public Button {
 
   bool showClickAnimation() const override { return false; }
 
-  void onPressed() override {
+  void onShowPress(int16_t x, int16_t y) override {
     ((KeyboardPage*)parent())->showHighlighter(*this);
+    Button::onShowPress(x, y);
   }
 
-  void onReleased() override {
+  bool onSingleTapUp(int16_t x, int16_t y) override {
     KeyboardPage* page = ((KeyboardPage*)parent());
     page->hideHighlighter();
     const KeyboardListener* listener = page->keyboard()->listener();
     if (listener != nullptr) {
       listener->rune(rune_);
     }
+    return Button::onSingleTapUp(x, y);
   }
 
   const roo_display::Font& getFont() const override {
@@ -132,14 +134,15 @@ class SpaceButton : public Button {
 
   bool showClickAnimation() const override { return false; }
 
-  void onPressed() override {}
+  void onShowPress(int16_t x, int16_t y) override {}
 
-  void onReleased() override {
+  bool onSingleTapUp(int16_t x, int16_t y) override {
     KeyboardPage* page = ((KeyboardPage*)parent());
     const KeyboardListener* listener = page->keyboard()->listener();
     if (listener != nullptr) {
       listener->rune(' ');
     }
+    return true;
   }
 };
 

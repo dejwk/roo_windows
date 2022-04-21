@@ -144,8 +144,8 @@ class Widget {
 
   virtual bool onTouch(const TouchEvent& event);
 
-  virtual void onPressed() {}
-  virtual void onReleased() {}
+  virtual void onShowPress(int16_t x, int16_t y) {}
+  virtual bool onSingleTapUp(int16_t x, int16_t y) { return true; }
 
   virtual void onClicked() { on_clicked_(); }
 

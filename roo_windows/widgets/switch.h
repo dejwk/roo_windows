@@ -18,7 +18,7 @@ class Switch : public Widget {
 
   bool isClickable() const override { return true; }
 
-  void onReleased() override;
+  bool onSingleTapUp(int16_t x, int16_t y) override;
 
   State state() const { return state_; }
   bool isOn() const { return state() == ON; }
