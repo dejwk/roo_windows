@@ -4,6 +4,7 @@
 #include "roo_display/filter/background_fill_optimizer.h"
 #include "roo_windows/core/click_animation.h"
 #include "roo_windows/core/clipper.h"
+#include "roo_windows/core/gesture_detector.h"
 #include "roo_windows/core/panel.h"
 
 namespace roo_windows {
@@ -39,17 +40,12 @@ class MainWindow : public Panel {
   void propagateDirty(const Widget* child, const Box& box) override;
 
  private:
-  void handleTouch(const TouchEvent& event);
-
   roo_display::Display& display_;
   const Theme& theme_;
 
-  int16_t touch_x_, touch_y_, last_x_, last_y_;
-  unsigned long touch_time_ms_, last_time_ms_;
-  int16_t swipe_dx_, swipe_dy_;
-  bool touch_down_;
-
   ClickAnimation click_animation_;
+
+  GestureDetector gesture_detector_;
 
   // Stored as instance variable, to avoid vector reallocation on each paint.
   internal::ClipperState clipper_state_;
