@@ -13,7 +13,10 @@ namespace roo_windows {
 
 using roo_display::Display;
 
-static const unsigned long kClickAnimationMs = 200;
+static constexpr unsigned long kClickAnimationMs = 200;
+
+// Do not refresh display more frequently than this (50 Hz).
+static constexpr long kMinRefreshTimeDeltaMs = 20;
 
 MainWindow::MainWindow(const Environment& env, Display& display)
     : MainWindow(env, display, display.extents()) {}
@@ -84,6 +87,10 @@ class Adapter : public roo_display::Drawable {
 void MainWindow::tick() {
   click_animation_.tick();
   if (!gesture_detector_.tick()) return;
+
+  unsigned long now = millis();
+  if ((long)(now - last_time_refreshed_ms_) < kMinRefreshTimeDeltaMs) return;
+  last_time_refreshed_ms_ = now;
 
   if (isLayoutRequested()) {
     measure(MeasureSpec::Exactly(width()), MeasureSpec::Exactly(height()));

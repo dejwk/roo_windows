@@ -42,6 +42,7 @@ class MainWindow : public Panel {
  private:
   roo_display::Display& display_;
   const Theme& theme_;
+  unsigned long last_time_refreshed_ms_;
 
   ClickAnimation click_animation_;
 
