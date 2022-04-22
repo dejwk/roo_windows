@@ -99,72 +99,60 @@ void ScrollablePanel::paintWidgetContents(const Surface& s, Clipper& clipper) {
   }
 }
 
-bool ScrollablePanel::onTouch(const TouchEvent& event) {
-  Widget* c = contents();
+bool ScrollablePanel::onDown(int16_t x, int16_t y) {
   // Stop the scroll.
   scroll_start_vx_ = 0;
   scroll_start_vy_ = 0;
-  if (Panel::onTouch(event)) return true;
-  if (event.type() == TouchEvent::RELEASED ||
-      event.type() == TouchEvent::PRESSED) {
-    dxStart_ = c->xOffset();
-    dyStart_ = c->yOffset();
+}
+
+bool ScrollablePanel::onScroll(int16_t dx, int16_t dy) {
+  scrollBy(dx, dy);
+  return true;
+}
+
+bool ScrollablePanel::onFling(int16_t vx, int16_t vy) {
+  Widget* c = contents();
+  scroll_start_time_ = millis();
+  scroll_start_vx_ = vx;
+  scroll_start_vy_ = vy;
+  dxStart_ = c->xOffset();
+  dyStart_ = c->yOffset();
+  // If we're already on the boundary and swiping outside of the bounded
+  // region, cap the horizontal and/or vertical component of the scroll.
+  if (scroll_start_vx_ < 0 && c->xOffset() == 0) {
+    scroll_start_vx_ = 0;
   }
-  // Handle drag and swipe.
-  if (event.type() == TouchEvent::DRAGGED) {
-    int16_t drag_x_delta = event.dx() - (c->xOffset() - dxStart_);
-    int16_t drag_y_delta = event.dy() - (c->yOffset() - dyStart_);
-    // To reduce flicker on random noise, ignore very small drags.
-    if (drag_x_delta < 3 && drag_x_delta > -3 && drag_y_delta < 3 &&
-        drag_y_delta > -3) {
-      return true;
-    }
-    scrollBy(drag_x_delta, drag_y_delta);
-    return true;
-  } else if (event.type() == TouchEvent::SWIPED) {
-    scroll_start_time_ = millis();
-    // Capture the initial velocity of the scroll.
-    unsigned long duration = event.duration();
-    if (duration <= 0) duration = 1;
-    scroll_start_vx_ = 1000.0 * event.dx() / (float)duration;
-    scroll_start_vy_ = 1000.0 * event.dy() / (float)duration;
-    // If we're already on the boundary and swiping outside of the bounded
-    // region, cap the horizontal and/or vertical component of the scroll.
-    if (scroll_start_vx_ < 0 && c->xOffset() == 0) {
-      scroll_start_vx_ = 0;
-    }
-    if (scroll_start_vx_ > 0 && -c->xOffset() + width() == c->width()) {
-      scroll_start_vx_ = 0;
-    }
-    if (scroll_start_vy_ < 0 && c->yOffset() == 0) {
-      scroll_start_vy_ = 0;
-    }
-    if (scroll_start_vy_ > 0 && -c->yOffset() + height() == c->height()) {
-      scroll_start_vy_ = 0;
-    }
-    // If the swipe is completely in the outside direction, ignore it.
-    if (scroll_start_vx_ == 0 && scroll_start_vy_ == 0) return true;
-    // Calculate the length of the initial velocity vector.
-    float v_abs = sqrtf(scroll_start_vx_ * scroll_start_vx_ +
-                        scroll_start_vy_ * scroll_start_vy_);
-    // Cap that scroll velocity if too large.
-    if (v_abs > maxVel) {
-      float mult = maxVel / v_abs;
-      scroll_start_vx_ *= mult;
-      scroll_start_vy_ *= mult;
-      v_abs = maxVel;
-    }
-    // Scroll is constantly deccelerating (with configured const
-    // decceleration). Calculate the total scroll time until it stops on
-    // its own if uninterrupted.
-    unsigned long scroll_duration =
-        (unsigned long)(1000.0 * v_abs / decceleration);
-    scroll_end_time_ = scroll_start_time_ + scroll_duration;
-    // Capture horizontal and vertical components of the decceleration.
-    scroll_decel_x_ = -decceleration * scroll_start_vx_ / v_abs;
-    scroll_decel_y_ = -decceleration * scroll_start_vy_ / v_abs;
-    invalidateInterior();
+  if (scroll_start_vx_ > 0 && -c->xOffset() + width() == c->width()) {
+    scroll_start_vx_ = 0;
   }
+  if (scroll_start_vy_ < 0 && c->yOffset() == 0) {
+    scroll_start_vy_ = 0;
+  }
+  if (scroll_start_vy_ > 0 && -c->yOffset() + height() == c->height()) {
+    scroll_start_vy_ = 0;
+  }
+  // If the swipe is completely in the outside direction, ignore it.
+  if (scroll_start_vx_ == 0 && scroll_start_vy_ == 0) return true;
+  // Calculate the length of the initial velocity vector.
+  float v_abs = sqrtf(scroll_start_vx_ * scroll_start_vx_ +
+                      scroll_start_vy_ * scroll_start_vy_);
+  // Cap that scroll velocity if too large.
+  if (v_abs > maxVel) {
+    float mult = maxVel / v_abs;
+    scroll_start_vx_ *= mult;
+    scroll_start_vy_ *= mult;
+    v_abs = maxVel;
+  }
+  // Scroll is constantly deccelerating (with configured const
+  // decceleration). Calculate the total scroll time until it stops on
+  // its own if uninterrupted.
+  unsigned long scroll_duration =
+      (unsigned long)(1000.0 * v_abs / decceleration);
+  scroll_end_time_ = scroll_start_time_ + scroll_duration;
+  // Capture horizontal and vertical components of the decceleration.
+  scroll_decel_x_ = -decceleration * scroll_start_vx_ / v_abs;
+  scroll_decel_y_ = -decceleration * scroll_start_vy_ / v_abs;
+  invalidateInterior();
   return true;
 }
 

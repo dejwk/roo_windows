@@ -1,5 +1,4 @@
-
-#include "widget.h"
+#include "roo_windows/core/widget.h"
 
 #include <cmath>
 
@@ -167,6 +166,8 @@ void Widget::setVisible(bool visible) {
     requestLayout();
     if (parent() != nullptr) parent()->childShown(this);
   } else {
+    setPressed(false);
+    state_ &= ~kWidgetClicking;
     if (parent() != nullptr) parent()->childHidden(this);
   }
 }
@@ -394,40 +395,68 @@ void Widget::paintWidgetContents(const Surface& s, Clipper& clipper) {
   clipper.addExclusion(absolute_bounds);
 }
 
-bool Widget::onTouch(const TouchEvent& event) {
-  if (event.type() == TouchEvent::PRESSED) {
-    if (!isClickable()) return false;
-    if (isPressed()) return false;
-    ClickAnimation* anim = getClickAnimation();
-    if (anim->isClickAnimating()) return false;
-    if (showClickAnimation()) {
-      anim->start(this, event.x(), event.y());
-      state_ |= kWidgetClicking;
-    }
-    setPressed(true);
-    onShowPress(event.x(), event.y());
-    return true;
-  } else if (event.type() == TouchEvent::RELEASED) {
-    if (isPressed()) {
-      setPressed(false);
-      if (!onSingleTapUp(event.x(), event.y())) return false;
-      if (bounds().contains(event.x(), event.y()) ||
-          event.duration() < kClickDurationThresholdMs) {
-        getClickAnimation()->confirmClick(this);
-        return true;
-      }
-    }
-  } else if (event.type() == TouchEvent::DRAGGED && isPressed()) {
-    // Dragging within the bounds, when pressed, is fair game.
-    if (bounds().contains(event.x(), event.y())) return true;
-    int16_t dx = event.x() - event.startX();
-    int16_t dy = event.y() - event.startY();
-    uint32_t delta = dx * dx + dy * dy;
-    if (delta < kClickStickinessRadius * kClickStickinessRadius) return true;
-    setPressed(false);
-    onSingleTapUp(event.x(), event.y());
-    // Leave unhandled, for parent to handle.
+Widget* Widget::dispatchTouchDownEvent(int16_t x, int16_t y,
+                                       GestureDetector& gesture_detector) {
+  return (onTouchDown(x, y, gesture_detector)) ? this : nullptr;
+}
+
+bool Widget::onTouchDown(int16_t x, int16_t y,
+                         GestureDetector& gesture_detector) {
+  return gesture_detector.onTouchDown(*this, x, y);
+}
+
+bool Widget::onTouchMove(int16_t x, int16_t y,
+                         GestureDetector& gesture_detector) {
+  return gesture_detector.onTouchMove(*this, x, y);
+}
+
+bool Widget::onTouchUp(int16_t x, int16_t y,
+                       GestureDetector& gesture_detector) {
+  return gesture_detector.onTouchUp(*this, x, y);
+}
+
+void Widget::onClicked() { on_clicked_(); }
+
+bool Widget::onDown(int16_t x, int16_t y) { return isClickable(); }
+
+void Widget::onShowPress(int16_t x, int16_t y) {
+  if (!isClickable()) return;
+  if (isPressed()) return;
+  ClickAnimation* anim = getClickAnimation();
+  if (anim->isClickAnimating() || anim->isClickConfirmed()) return;
+  if (showClickAnimation()) {
+    anim->start(this, x, y);
+    setClicking();
   }
+  setPressed(true);
+}
+
+bool Widget::onSingleTapUp(int16_t x, int16_t y) {
+  if (!isClickable()) return false;
+  if (isPressed()) {
+    getClickAnimation()->confirmClick(this);
+    setPressed(false);
+  } else {
+    // Quick release; onShowPress not yet triggered.
+
+    if (showClickAnimation()) {
+      ClickAnimation* anim = getClickAnimation();
+      setClicking();
+      markDirty();
+      anim->start(this, x, y);
+      anim->confirmClick(this);
+    }
+  }
+  return true;
+}
+
+bool Widget::onScroll(int16_t dx, int16_t dy) {
+  setPressed(false);
+  return false;
+}
+
+bool Widget::onFling(int16_t vx, int16_t vy) {
+  setPressed(false);
   return false;
 }
 

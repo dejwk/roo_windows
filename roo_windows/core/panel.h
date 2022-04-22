@@ -88,7 +88,8 @@ class Panel : public Widget {
   // panel's background color, which is pre-set in the specified surface).
   bool paint(const Surface& s) override;
 
-  virtual bool onTouch(const TouchEvent& event);
+  Widget* dispatchTouchDownEvent(int16_t x, int16_t y,
+                                 GestureDetector& gesture_detector) override;
 
   // Returns the minimum bounding box, in this widget's coordinates, that covers
   // all visible descendants, including those with parent clip mode = UNCLIPPED,

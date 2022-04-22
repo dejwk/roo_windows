@@ -45,7 +45,9 @@ class ScrollablePanel : public Panel {
 
   void paintWidgetContents(const Surface& s, Clipper& clipper) override;
 
-  bool onTouch(const TouchEvent& event) override;
+  bool onDown(int16_t x, int16_t y) override;
+  bool onScroll(int16_t dx, int16_t dy) override;
+  bool onFling(int16_t vx, int16_t vy) override;
 
  protected:
   PreferredSize getPreferredSize() const override {

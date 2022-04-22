@@ -85,43 +85,34 @@ bool Panel::paint(const Surface& s) {
   return true;
 }
 
-bool onTouchChild(const TouchEvent& event, Widget* child) {
-  TouchEvent shifted(
-      event.type(), event.duration(), event.startX() - child->xOffset(),
-      event.startY() - child->yOffset(), event.x() - child->xOffset(),
-      event.y() - child->yOffset());
-  return child->onTouch(shifted);
-}
-
-bool Panel::onTouch(const TouchEvent& event) {
+Widget* Panel::dispatchTouchDownEvent(int16_t x, int16_t y,
+                                      GestureDetector& gesture_detector) {
   // Find if can delegate to a child.
   // Iterate backwards, because the order of children is assumed to represent
   // Z dimension (e.g., later added child is on top) so in case they are
   // overlapping, we want the right-most one receive the event.
   for (auto child = children_.rbegin(); child != children_.rend(); child++) {
     if (!(*child)->isVisible()) continue;
-    if ((*child)->parent_bounds().contains(event.startX(), event.startY())) {
-      if (onTouchChild(event, *child)) {
-        return true;
-      }
+    if ((*child)->parent_bounds().contains(x, y)) {
+      Widget* w = (*child)->dispatchTouchDownEvent(
+          x - (*child)->xOffset(), y - (*child)->yOffset(), gesture_detector);
+      if (w != nullptr) return w;
     }
   }
   // See if can delegate assuming more loose bounds.
-  for (const auto& child : children_) {
-    if (!child->isVisible()) continue;
-    const Box& pbounds = child->parent_bounds();
+  for (auto child = children_.rbegin(); child != children_.rend(); child++) {
+    if (!(*child)->isVisible()) continue;
+    const Box& pbounds = (*child)->parent_bounds();
     const Box ebounds(
         pbounds.xMin() - kTouchMargin, pbounds.yMin() - kTouchMargin,
         pbounds.xMax() + kTouchMargin, pbounds.yMax() + kTouchMargin);
-    if (ebounds.contains(event.startX(), event.startY())) {
-      if (onTouchChild(event, child)) {
-        return true;
-      }
+    // When re-checking with looser bounds, don't recurse - we have already
+    // tried descendants with looser bounds.
+    if (ebounds.contains(x, y) && (*child)->onTouchDown(x, y, gesture_detector)) {
+      return *child;
     }
   }
-  return Widget::onTouch(event);
-  // // Unhandled.
-  // return false;
+  return Widget::dispatchTouchDownEvent(x, y, gesture_detector);
 }
 
 // Must propagate the 'dirty' flag even if the box comes down empty. This is

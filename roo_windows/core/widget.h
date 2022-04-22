@@ -22,6 +22,7 @@ namespace roo_windows {
 class ClickAnimation;
 class Panel;
 class MainWindow;
+class GestureDetector;
 
 typedef roo_display::RleImage4bppxBiased<roo_display::Alpha4,
                                          roo_display::PrgMemResource>
@@ -142,12 +143,43 @@ class Widget {
   // widget's background.
   Color effectiveBackground() const;
 
-  virtual bool onTouch(const TouchEvent& event);
+  virtual Widget* dispatchTouchDownEvent(int16_t x, int16_t y,
+                                         GestureDetector& gesture_detector);
 
-  virtual void onShowPress(int16_t x, int16_t y) {}
-  virtual bool onSingleTapUp(int16_t x, int16_t y) { return true; }
+  // Called by the framework when on the first touch event within the bounds of
+  // this widget. If the method returns false, the event will be redirected to
+  // this widget's parent, and this widget will not receive any further touch
+  // events received as part of this gesture. Most widgets should not overwrite
+  // this method. The default implementation calls the gesture detector which
+  // may then call more specific widget methods.
+  //
+  // Returns true if the event is handled, false otherwise.
+  virtual bool onTouchDown(int16_t x, int16_t y,
+                           GestureDetector& gesture_detector);
 
-  virtual void onClicked() { on_clicked_(); }
+  // Called by the framework upon the 'move' event. If the method returns false,
+  // the event will be redirected to this widget's parent, and this widget will
+  // not receive any further touch events received as part of this gesture. Most
+  // widgets should not overwrite this method. The default implementation calls
+  // the gesture detector which may then call more specific widget methods.
+  //
+  // Returns true if the event is handled, false otherwise.
+  virtual bool onTouchMove(int16_t x, int16_t y,
+                           GestureDetector& gesture_detector);
+
+  // Called by the framework upon the 'up' event. If the method returns false,
+  // the event will be redirected to this widget's parent. Most widgets should
+  // not overwrite this method. The default implementation calls the gesture
+  // detector which may then call more specific widget methods.
+  //
+  // Returns true if the event is handled, false otherwise.
+  virtual bool onTouchUp(int16_t x, int16_t y,
+                         GestureDetector& gesture_detector);
+
+  // Called when a 'click' should be handled (either during or after
+  // onSingleTapUp). For widgets that support click animation, the event is
+  // triggered after the animation completes.
+  virtual void onClicked();
 
   void setOnClicked(std::function<void()> on_clicked) {
     on_clicked_ = on_clicked;
@@ -167,7 +199,56 @@ class Widget {
 
   std::function<void()> getOnClicked() const { return on_clicked_; }
 
-  // virtual bool onClick(int16_t x, int16_t y) { return false; }
+  // Called when the first 'down' event happens within the bounds of this
+  // widget. Contains the touch coordinates relative to the widget. The widget
+  // should return true if it handled the event. Otherwise, the event, and the
+  // subsequent events, will be redirected to the parent.
+  //
+  // Most widgets should not override this method. The default implementation
+  // returns isClickable().
+  virtual bool onDown(int16_t x, int16_t y);
+
+  // Called when the gesture is recognized as press, rather than scroll.
+  // Contains the coordinates of the original 'down' event, relative to the
+  // widget. It happens with some delay since the onDown(), and only in case
+  // there was no significant movement. The gesture can still turn into scroll,
+  // even after this method is called.
+  //
+  // Most widgets should not override this method. The default implementation
+  // handles state changes to show the widget as 'pressed', and to trigger click
+  // animation.
+  virtual void onShowPress(int16_t x, int16_t y);
+
+  // Called when the gesture is recognized as a single tap, during the 'up'
+  // event that ended the tap. Contains the coordinates of the 'up' event, in
+  // the widget's coordinate system. The widget should return true if it handled
+  // the event. Otherwise, the event, and the subsequent events, will be
+  // redirected to the parent.
+  //
+  // Most widgets should not override this method, and override 'onClicked()'
+  // instead. The default implementation handles state changes to show the
+  // widget as no longer pressed, triggers click animation if it hasn't alrady
+  // started, and schedules onClicked().
+  //
+  // If you would like to perform some additional action on the tap 'up', you
+  // may want to override this method and call the superclass method at the
+  // beginning of your implementation.
+  virtual bool onSingleTapUp(int16_t x, int16_t y);
+
+  // Called during the 'move' event, when the gesture is recognized as 'scroll'.
+  // Contains the delta of coordinates since the last time onScroll was called
+  // as part of this gesture.
+  //
+  // Widgets that support scrolling should override this method. The default
+  // implementation clears the 'press' state and returns false.
+  virtual bool onScroll(int16_t dx, int16_t dy);
+
+  // Called during the 'up' event, when the gesture is recognized as 'fling'.
+  // Contains the velocity of the fling.
+  //
+  // Widgets that support fling (swipe) should override this method. The default
+  // implementation clears the 'press' state and returns false.
+  virtual bool onFling(int16_t vx, int16_t vy);
 
   ParentClipMode getParentClipMode() const {
     return (state_ & kWidgetClippedInParent) != 0 ? Widget::UNCLIPPED
