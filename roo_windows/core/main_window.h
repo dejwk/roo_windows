@@ -13,12 +13,10 @@ class ModalWindow;
 
 class MainWindow : public Panel {
  public:
-  MainWindow(const Environment& env, roo_display::Display& display);
-
-  MainWindow(const Environment& env, roo_display::Display& display,
-             const Box& bounds);
+  MainWindow(const Environment& env, const Box& bounds);
 
   void tick();
+  void update(roo_display::DrawingContext& dc);
 
   MainWindow* getMainWindow() override { return this; }
   const MainWindow* getMainWindow() const override { return this; }
@@ -40,13 +38,9 @@ class MainWindow : public Panel {
   void propagateDirty(const Widget* child, const Box& box) override;
 
  private:
-  roo_display::Display& display_;
   const Theme& theme_;
-  unsigned long last_time_refreshed_ms_;
 
   ClickAnimation click_animation_;
-
-  GestureDetector gesture_detector_;
 
   // Stored as instance variable, to avoid vector reallocation on each paint.
   internal::ClipperState clipper_state_;

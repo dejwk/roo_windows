@@ -18,9 +18,6 @@ static constexpr unsigned long kClickAnimationMs = 200;
 // Do not refresh display more frequently than this (50 Hz).
 static constexpr long kMinRefreshTimeDeltaMs = 20;
 
-MainWindow::MainWindow(const Environment& env, Display& display)
-    : MainWindow(env, display, display.extents()) {}
-
 namespace {
 
 void maybeAddColor(roo_display::internal::ColorSet& palette, Color color) {
@@ -30,15 +27,11 @@ void maybeAddColor(roo_display::internal::ColorSet& palette, Color color) {
 
 }  // namespace
 
-MainWindow::MainWindow(const Environment& env, Display& display,
-                       const Box& bounds)
+MainWindow::MainWindow(const Environment& env, const Box& bounds)
     : Panel(env, env.theme().color.background),
-      display_(display),
       theme_(env.theme()),
-      gesture_detector_(*this, display),
       redraw_bounds_(bounds),
-      modal_window_(nullptr),
-      background_fill_buffer_(display.width(), display.height()) {
+      background_fill_buffer_(bounds.width(), bounds.height()) {
   parent_bounds_ = bounds;
   invalidateDescending();
   roo_display::internal::ColorSet color_set;
@@ -70,6 +63,10 @@ MainWindow::MainWindow(const Environment& env, Display& display,
   background_fill_buffer_.setPalette(palette, color_set.size());
 }
 
+void MainWindow::tick() {
+  click_animation_.tick();
+}
+
 class Adapter : public roo_display::Drawable {
  public:
   Adapter(MainWindow* window) : window_(window) {}
@@ -84,20 +81,11 @@ class Adapter : public roo_display::Drawable {
   MainWindow* window_;
 };
 
-void MainWindow::tick() {
-  click_animation_.tick();
-  if (!gesture_detector_.tick()) return;
-
-  unsigned long now = millis();
-  if ((long)(now - last_time_refreshed_ms_) < kMinRefreshTimeDeltaMs) return;
-  last_time_refreshed_ms_ = now;
-
+void MainWindow::update(roo_display::DrawingContext& dc) {
   if (isLayoutRequested()) {
     measure(MeasureSpec::Exactly(width()), MeasureSpec::Exactly(height()));
     layout(bounds());
   }
-
-  roo_display::DrawingContext dc(display_);
   dc.draw(Adapter(this));
 }
 
@@ -112,21 +100,6 @@ void MainWindow::paintWindow(const Surface& s) {
   Clipper clipper(clipper_state_, bg_optimizer);
   news.set_out(clipper.out());
   paintWidget(news, clipper);
-}
-
-void MainWindow::enterModal(ModalWindow* modal_window) {
-  if (modal_window_ == modal_window) return;
-  if (modal_window_ != nullptr) {
-    modal_window_->exit();
-  }
-  modal_window_ = modal_window;
-}
-
-void MainWindow::exitModal(ModalWindow* modal_window) {
-  if (modal_window_ == modal_window) {
-    invalidateInterior(modal_window_->parent_bounds());
-    modal_window_ = nullptr;
-  }
 }
 
 void MainWindow::propagateDirty(const Widget* child, const Box& box) {
