@@ -95,6 +95,7 @@ bool GestureDetector::dispatch(TouchEvent::Type type) {
     }
     target = target->parent();
   }
+  return false;
 }
 
 bool GestureDetector::dispatchTo(Widget* target, TouchEvent::Type type) {
