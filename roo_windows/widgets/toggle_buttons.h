@@ -68,7 +68,9 @@ class ToggleButtons : public Panel {
   int16_t padding_;  // defaults to 12.
   int active_;
 
-  std::vector<ToggleButton> buttons_;
+  // Using unique_ptr to make sure that the address of a button remains constant
+  // as we add or remove buttons.
+  std::vector<std::unique_ptr<ToggleButton>> buttons_;
 };
 
 }  // namespace roo_windows

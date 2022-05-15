@@ -9,7 +9,7 @@ roo_windows::Widget& ToggleButtons::addButton(const MonoIcon& icon) {
   int16_t width = 0;
   int16_t height = 0;
   for (const auto& i : buttons_) {
-    const Box& extents = i.icon().extents();
+    const Box& extents = i->icon().extents();
     width += extents.width();
     width += 2 * padding_;
     height = std::max(height, extents.height());
@@ -17,17 +17,8 @@ roo_windows::Widget& ToggleButtons::addButton(const MonoIcon& icon) {
   height = std::max(height, icon.extents().height());
   height += 2 * padding_;
   int idx = buttons_.size();
-  bool realloc = (buttons_.size() == buttons_.capacity());
-  if (realloc) {
-    children_.clear();
-  }
-  buttons_.emplace_back(env_, icon, *this, idx);
-  if (realloc) {
-    for (int i = 0; i < buttons_.size() - 1; i++) {
-      children_.push_back(&buttons_[i]);
-    }
-  }
-  auto& btn = buttons_.back();
+  buttons_.emplace_back(new ToggleButton(env_, icon, *this, idx));
+  auto& btn = *buttons_.back();
   Panel::add(btn,
              Box(width + 1, 0, width + icon.extents().width() + 2 * padding_,
                  icon.extents().height() + 2 * padding_ - 1));
@@ -62,7 +53,7 @@ Dimensions ToggleButtons::getSuggestedMinimumDimensions() const {
   int16_t width = 0;
   int16_t height = 0;
   for (const auto& i : buttons_) {
-    const Box& extents = i.icon().extents();
+    const Box& extents = i->icon().extents();
     width += extents.width();
     width += 2;
     height = std::max(height, extents.height());
@@ -74,7 +65,7 @@ void ToggleButtons::setActive(int index) {
   if (index == active_) return;
   active_ = index;
   for (size_t i = 0; i < buttons_.size(); i++) {
-    buttons_[i].setActivated(i == (size_t)index);
+    buttons_[i]->setActivated(i == (size_t)index);
   }
 }
 
