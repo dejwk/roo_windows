@@ -40,7 +40,10 @@ class ToggleButtons : public Panel {
     bool useOverlayOnActivation() const override { return true; }
     bool isClickable() const override { return true; }
 
-    void onClicked() override { group_.setActive(idx_); }
+    void onClicked() override {
+      group_.setActive(idx_);
+      Widget::onClicked();
+    }
 
     bool paint(const roo_display::Surface& s) override;
 
