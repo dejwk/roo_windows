@@ -23,6 +23,7 @@ class ClickAnimation;
 class Panel;
 class MainWindow;
 class GestureDetector;
+class Task;
 
 typedef roo_display::RleImage4bppxBiased<roo_display::Alpha4,
                                          roo_display::PrgMemResource>
@@ -129,6 +130,9 @@ class Widget {
 
   virtual MainWindow* getMainWindow();
   virtual const MainWindow* getMainWindow() const;
+
+  virtual Task* getTask();
+
   ClickAnimation* getClickAnimation();
 
   // Returns this widget's background. Transparent by default. Normally

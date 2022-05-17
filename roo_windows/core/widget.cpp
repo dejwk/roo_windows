@@ -45,6 +45,8 @@ const MainWindow* Widget::getMainWindow() const {
   return parent_->getMainWindow();
 }
 
+Task* Widget::getTask() { return parent_->getTask(); }
+
 ClickAnimation* Widget::getClickAnimation() {
   MainWindow* w = getMainWindow();
   return (w == nullptr) ? nullptr : &w->click_animation();

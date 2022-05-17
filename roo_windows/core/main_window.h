@@ -23,8 +23,8 @@ class MainWindow : public Panel {
 
   void paintWindow(const Surface& s);
 
-  void enterModal(ModalWindow* modal_window);
-  void exitModal(ModalWindow* modal_window);
+  void enterModal(ModalWindow* modal_window) {}
+  void exitModal(ModalWindow* modal_window) {}
 
   const Theme& theme() const override { return theme_; }
 
