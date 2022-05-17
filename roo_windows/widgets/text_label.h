@@ -42,7 +42,7 @@ class TextLabel : public Widget {
 
   void setContent(std::string value) {
     if (value_ == value) return;
-    value_ = value;
+    value_ = std::move(value);
     markDirty();
   }
 
