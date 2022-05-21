@@ -13,9 +13,11 @@ void Task::pushActivity(Activity* activity) {
 void Task::pushActivity(Activity* activity, const roo_display::Box& bounds) {
   activities_.push_back(activity);
   panel_->pushActivity(activity, bounds);
+  activities_.back()->onStart();
 }
 
 void Task::popActivity() {
+  activities_.back()->onStop();
   panel_->popActivity();
   activities_.pop_back();
 }
@@ -25,7 +27,9 @@ void TaskPanel::pushActivity(Activity* activity,
   add(activity->getContents(), bounds);
 }
 
-void TaskPanel::popActivity() { children_.pop_back(); }
+void TaskPanel::popActivity() {
+  removeLast();
+}
 
 Widget* TaskPanel::dispatchTouchDownEvent(int16_t x, int16_t y,
                                           GestureDetector& gesture_detector) {

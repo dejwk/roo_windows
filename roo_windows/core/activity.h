@@ -14,6 +14,10 @@ namespace roo_windows {
 class Activity {
  public:
   virtual Widget& getContents() = 0;
+
+  virtual void onStart() {}
+  virtual void onStop() {}
+
   // virtual roo_display::Box getPlacement();
 
 //  protected:

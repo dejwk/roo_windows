@@ -130,6 +130,9 @@ class Panel : public Widget {
   // Removes all children.
   void removeAll();
 
+  // Removes and returns the last child.
+  void removeLast();
+
   virtual void paintChildren(const Surface& s, Clipper& clipper);
 
   void invalidateDescending() override;

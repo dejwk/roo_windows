@@ -47,6 +47,18 @@ void Panel::removeAll() {
   children_.clear();
 }
 
+void Panel::removeLast() {
+  Widget* w = children_.back();
+  if (w->isVisible()) {
+    childHidden(w);
+  }
+  bool owned = w->isOwnedByParent();
+  w->setParent(nullptr, false);
+  children_.pop_back();
+  if (owned) delete w;
+  invalidateInterior();
+}
+
 void Panel::paintWidgetContents(const Surface& s, Clipper& clipper) {
   bool dirty = isDirty();
   bool invalidated = isInvalidated();
@@ -108,7 +120,8 @@ Widget* Panel::dispatchTouchDownEvent(int16_t x, int16_t y,
         pbounds.xMax() + kTouchMargin, pbounds.yMax() + kTouchMargin);
     // When re-checking with looser bounds, don't recurse - we have already
     // tried descendants with looser bounds.
-    if (ebounds.contains(x, y) && (*child)->onTouchDown(x, y, gesture_detector)) {
+    if (ebounds.contains(x, y) &&
+        (*child)->onTouchDown(x, y, gesture_detector)) {
       return *child;
     }
   }
@@ -186,6 +199,7 @@ void Panel::unclippedChildRectHidden(const Box& box) {
     return;
   }
   invalidateCachedMaxBounds();
+  markDirty();
   if (getParentClipMode() == UNCLIPPED && !bounds().contains(box)) {
     // The box sticks out beyond us; need to propagate to the parent.
     parent()->unclippedChildRectHidden(box.translate(xOffset(), yOffset()));
@@ -223,6 +237,7 @@ bool Panel::invalidateBeneathDescending(const Box& box, const Widget* subject) {
   Box clipped = Box::intersect(box, maxBounds());
   if (clipped.empty()) return false;
   markInvalidated();
+  markDirty();
   if (invalid_region_.empty()) {
     invalid_region_ = clipped;
   } else {
@@ -251,12 +266,19 @@ void Panel::moveTo(const Box& parent_bounds) {
   bool non_shrinking =
       (parent_bounds.width() >= this->parent_bounds().width() &&
        parent_bounds.height() >= this->parent_bounds().height());
-  Widget::moveTo(parent_bounds);
+  // Before performing the actual move, invalidate the max_bounds cache, since
+  // the moveTo depends on it.
   if (non_shrinking && !cached_max_bounds_.empty()) {
-    cached_max_bounds_ = Box::extent(cached_max_bounds_, bounds());
+    // Optimization: if we're strictly growing, then the max bounds can be
+    // quickly recomputed by unioning with our new dimensions.
+    cached_max_bounds_ = Box::extent(
+        cached_max_bounds_,
+        Box(0, 0, parent_bounds.width() - 1, parent_bounds.height() - 1));
   } else {
+    // We're not strictly growing, so the max bounds will need full recompote.
     invalidateCachedMaxBounds();
   }
+  Widget::moveTo(parent_bounds);
 }
 
 Box Panel::maxBounds() const {

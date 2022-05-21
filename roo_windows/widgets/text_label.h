@@ -5,6 +5,8 @@
 #include "roo_display/ui/text_label.h"
 #include "roo_display/ui/tile.h"
 
+#include "roo_windows/core/panel.h"
+
 namespace roo_windows {
 
 class TextLabel : public Widget {
