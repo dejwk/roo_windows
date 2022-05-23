@@ -110,7 +110,49 @@ class ListLayout : public Panel {
         prototype_(std::move(prototype)),
         first_(0),
         last_(-1),
-        in_paint_children_(false) {}
+        in_paint_children_(false) {
+    element_count_ = model.elementCount();
+  }
+
+  // Notifies this view that the contents of the list has changed. Causes the
+  // list to be updated and rendered. If the element count has changed, the list
+  // is laid out, with new elements appearning or gone elements disappearing.
+  void modelChanged() { modelRangeChanged(first_, last_ + 1); }
+
+  // Notifies this view that the range of the list has changed. Causes the range
+  // to be updated and rendered. If the element count has changed, the list
+  // is laid out, with new elements appearning or gone elements disappearing.
+  //
+  // If the element count has changed but the common subset of the elements has
+  // not changed (e.g. if elements has been only added or only removed from the
+  // end), specify an empty range (e.g., 0, 0).
+  void modelRangeChanged(int begin, int end) {
+    int prev_count = element_count_;
+    element_count_ = model_.elementCount();
+    if (prev_count != element_count_) {
+      requestLayout();
+    }
+    if (first_ > last_) return;
+    if (end <= first_ || begin > last_) return;
+    int i = 0;
+    int pos = first_;
+    if (begin > first_) {
+      i = begin - first_;
+      pos += i;
+    }
+    while (pos <= last_ && pos < end && pos < element_count_) {
+      model_.set(pos, elements_[i]);
+      elements_[i].setVisible(true);
+      ++i;
+      ++pos;
+    }
+    markDirty();
+  }
+
+  // Notifies this view that the specified list item has changed. Causes the
+  // item to be updated and rendered. If the element count has changed, the list
+  // is laid out, with new elements appearning or gone elements disappearing.
+  void modelItemChanged(int idx) { modelRangeChanged(idx, idx + 1); }
 
  protected:
   void propagateDirty(const Widget* child, const Box& box) override {
@@ -136,7 +178,6 @@ class ListLayout : public Panel {
   void paintChildren(const Surface& s, Clipper& clipper) override {
     CHECK(!in_paint_children_);
     in_paint_children_ = true;
-    int element_count = model_.elementCount();
     // NOTE: we are not just using clipbox, because it could result in removing
     // some children that just happen to not need rendering at the moment -
     // but we want to keep them so that they can keep receiving events.
@@ -145,8 +186,8 @@ class ListLayout : public Panel {
     if (new_first < 0) new_first = 0;
     int new_last = box.yMax() / element_height();
     if (new_last < new_first) new_last = new_first - 1;
-    if (new_last - new_first >= element_count) {
-      new_last = new_first + element_count - 1;
+    if (new_last - new_first >= element_count_) {
+      new_last = new_first + element_count_ - 1;
     }
 
     // First, see if we need to shrink the list from any side.
@@ -207,10 +248,11 @@ class ListLayout : public Panel {
       elements_.pop_back().setVisible(false);
     }
     removeAll();
+    if (element_count_ == 0) return;
     add(prototype_);
     prototype_.setVisible(true);
     prototype_.layout(
-        Box(0, 0, box.width() - 1, box.height() / model_.elementCount() - 1));
+        Box(0, 0, box.width() - 1, box.height() / element_count_ - 1));
     prototype_.setVisible(false);
     Panel::onLayout(changed, box);
     int capacity = (getMainWindow()->height() - 2) / element_height() + 2;
@@ -237,13 +279,12 @@ class ListLayout : public Panel {
   }
 
   int16_t calculateHeight(int16_t desired_element_height) const {
-    int count = model_.elementCount();
     int tops = Box::MaximumBox().yMax();
-    if (count >= tops) return 1;
-    if (count * desired_element_height > tops) {
-      return (tops / count) * count;
+    if (element_count_ >= tops) return 1;
+    if (element_count_ * desired_element_height > tops) {
+      return (tops / element_count_) * element_count_;
     }
-    return desired_element_height * count;
+    return desired_element_height * element_count_;
   }
 
   int element_height() const { return prototype_.height(); }
@@ -251,6 +292,7 @@ class ListLayout : public Panel {
   ListModel<Element>& model_;
   CircularBuffer<Element> elements_;
   Element prototype_;
+  int element_count_;
   int element_height_;
   int first_;
   int last_;
