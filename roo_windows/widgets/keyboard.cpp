@@ -113,7 +113,7 @@ class TextButton : public Button {
   bool onSingleTapUp(int16_t x, int16_t y) override {
     KeyboardPage* page = ((KeyboardPage*)parent());
     page->hideHighlighter();
-    const KeyboardListener* listener = page->keyboard()->listener();
+    KeyboardListener* listener = page->keyboard()->listener();
     if (listener != nullptr) {
       listener->rune(rune_);
     }
@@ -138,7 +138,7 @@ class SpaceButton : public Button {
 
   bool onSingleTapUp(int16_t x, int16_t y) override {
     KeyboardPage* page = ((KeyboardPage*)parent());
-    const KeyboardListener* listener = page->keyboard()->listener();
+    KeyboardListener* listener = page->keyboard()->listener();
     if (listener != nullptr) {
       listener->rune(' ');
     }

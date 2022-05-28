@@ -18,9 +18,9 @@ class KeyboardListener {
  public:
   virtual ~KeyboardListener() {}
 
-  virtual void rune(uint32_t rune) const = 0;
-  virtual void enter() const = 0;
-  virtual void del() const = 0;
+  virtual void rune(uint32_t rune) = 0;
+  virtual void enter() = 0;
+  virtual void del() = 0;
 };
 
 // class KeyboardBuffer {
@@ -109,7 +109,7 @@ class Keyboard : public Panel {
 
   void setListener(KeyboardListener* listener) { listener_ = listener; }
 
-  const KeyboardListener* listener() const { return listener_; }
+  KeyboardListener* listener() const { return listener_; }
 
   Padding getDefaultPadding() const override { return Padding(1); }
 
