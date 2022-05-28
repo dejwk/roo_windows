@@ -134,15 +134,13 @@ class SpaceButton : public Button {
 
   bool showClickAnimation() const override { return false; }
 
-  void onShowPress(int16_t x, int16_t y) override {}
-
   bool onSingleTapUp(int16_t x, int16_t y) override {
     KeyboardPage* page = ((KeyboardPage*)parent());
     KeyboardListener* listener = page->keyboard()->listener();
     if (listener != nullptr) {
       listener->rune(' ');
     }
-    return true;
+    return Button::onSingleTapUp(x, y);
   }
 };
 
@@ -152,6 +150,23 @@ class FnButton : public Button {
       : Button(env, icon) {}
 
   bool showClickAnimation() const override { return false; }
+};
+
+class DelButton : public Button {
+ public:
+  DelButton(const Environment& env, const MonoIcon& icon)
+      : Button(env, icon) {}
+
+  bool showClickAnimation() const override { return false; }
+
+  bool onSingleTapUp(int16_t x, int16_t y) override {
+    KeyboardPage* page = ((KeyboardPage*)parent());
+    KeyboardListener* listener = page->keyboard()->listener();
+    if (listener != nullptr) {
+      listener->del();
+    }
+    return Button::onSingleTapUp(x, y);
+  }
 };
 
 const Keyboard* KeyboardPage::keyboard() const { return (Keyboard*)parent(); }
@@ -218,9 +233,8 @@ KeyboardPage::KeyboardPage(const Environment& env, const KeyboardPageSpec* spec)
           b_color = env.keyboardColorTheme().modifierButton;
           break;
         }
-        case KeySpec::SWITCH_PAGE:
-        default: {
-          b = new FnButton(env, ic_outlined_24_content_backspace());
+        case KeySpec::DEL: {
+          b = new DelButton(env, ic_outlined_24_content_backspace());
           b_color = env.keyboardColorTheme().modifierButton;
           break;
         }
