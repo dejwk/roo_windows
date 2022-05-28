@@ -25,15 +25,15 @@ struct KeyboardPageSpec {
   const KeyboardRowSpec* rows;
 };
 
-static const PROGMEM KeySpec textKey(uint8_t w, uint32_t rune) {
+static constexpr PROGMEM KeySpec textKey(uint8_t w, uint32_t rune) {
   return KeySpec{.function = KeySpec::TEXT, .data = rune, .width = w};
 }
 
-static const PROGMEM KeySpec spaceKey(uint8_t w) {
+static constexpr PROGMEM KeySpec spaceKey(uint8_t w) {
   return KeySpec{.function = KeySpec::SPACE, .data = 0x20, .width = w};
 }
 
-static const PROGMEM KeySpec fnKey(uint8_t w, KeySpec::Function f) {
+static constexpr PROGMEM KeySpec fnKey(uint8_t w, KeySpec::Function f) {
   return KeySpec{.function = f, .data = 0, .width = w};
 }
 
