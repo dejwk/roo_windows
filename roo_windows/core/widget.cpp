@@ -257,7 +257,7 @@ uint8_t Widget::getOverlayOpacity() const {
     if (useOverlayOnPressAnimation()) {
       overlay_opacity += myTheme.pressedOpacity(bgcolor);
     }
-  } else if (isPressed()) {
+  } else if (isPressed() && useOverlayOnPress()) {
     overlay_opacity += myTheme.pressedOpacity(bgcolor);
   }
   if (isDragged()) overlay_opacity += myTheme.draggedOpacity(bgcolor);
@@ -436,19 +436,17 @@ void Widget::onShowPress(int16_t x, int16_t y) {
 bool Widget::onSingleTapUp(int16_t x, int16_t y) {
   if (!isClickable()) return false;
   if (isPressed()) {
-    getClickAnimation()->confirmClick(this);
     setPressed(false);
   } else {
-    // Quick release; onShowPress not yet triggered.
-
+    // Quick release (onShowPress not yet triggered).
     if (showClickAnimation()) {
       ClickAnimation* anim = getClickAnimation();
       setClicking();
       markDirty();
       anim->start(this, x, y);
-      anim->confirmClick(this);
     }
   }
+  getClickAnimation()->confirmClick(this);
   return true;
 }
 

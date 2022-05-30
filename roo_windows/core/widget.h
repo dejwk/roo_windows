@@ -285,6 +285,7 @@ class Widget {
   void setClicking();
 
   virtual bool useOverlayOnActivation() const { return true; }
+  virtual bool useOverlayOnPress() const { return true; }
   virtual bool useOverlayOnPressAnimation() const { return false; }
   virtual bool isClickable() const { return false; }
   virtual bool showClickAnimation() const { return true; }
