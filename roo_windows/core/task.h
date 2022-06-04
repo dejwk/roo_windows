@@ -16,9 +16,16 @@ class Task {
   Task() {}
 
   void pushActivity(Activity* activity);
-  void pushActivity(Activity* activity, const roo_display::Box& bounds);
-
   void popActivity();
+
+  Dimensions getDimensions() const;
+
+  void getAbsoluteBounds(roo_display::Box& full,
+                         roo_display::Box& visible) const;
+
+  void getAbsoluteOffset(int16_t& dx, int16_t& dy) const;
+
+  MainWindow& getMainWindow() const;
 
  private:
   friend class Application;

@@ -28,10 +28,14 @@ const Theme& DefaultTheme() {
                 .onError = roo_display::Color(0xFFFFFFFF)},
       .font =
           {
-              .h1 = &roo_display::font_NotoSans_Regular_60(),
-              .h2 = &roo_display::font_NotoSans_Regular_60(),
-              .h3 = &roo_display::font_NotoSans_Regular_40(),
-              .h4 = &roo_display::font_NotoSans_Regular_40(),
+              .h1 = &roo_display::font_NotoSans_Regular_27(),
+              .h2 = &roo_display::font_NotoSans_Regular_27(),
+              .h3 = &roo_display::font_NotoSans_Regular_27(),
+              .h4 = &roo_display::font_NotoSans_Regular_27(),
+            //   .h1 = &roo_display::font_NotoSans_Regular_60(),
+            //   .h2 = &roo_display::font_NotoSans_Regular_60(),
+            //   .h3 = &roo_display::font_NotoSans_Regular_40(),
+            //   .h4 = &roo_display::font_NotoSans_Regular_40(),
               .h5 = &roo_display::font_NotoSans_Regular_27(),
               .h6 = &roo_display::font_NotoSans_Regular_18(),
               .subtitle1 = &roo_display::font_NotoSans_Regular_15(),

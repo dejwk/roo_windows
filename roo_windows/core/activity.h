@@ -15,16 +15,18 @@ class Activity {
  public:
   virtual Widget& getContents() = 0;
 
+  virtual roo_display::Box getPreferredPlacement(const Task& task);
+
   virtual void onStart() {}
   virtual void onStop() {}
 
   // virtual roo_display::Box getPlacement();
 
-//  protected:
-//   Activity(const Context* context) : context_(context) {}
+  //  protected:
+  //   Activity(const Context* context) : context_(context) {}
 
  private:
   // const Context* context_;
 };
 
-}  // namespace
+}  // namespace roo_windows
