@@ -67,33 +67,9 @@ static const int kPreferredCellWidth = 15;
 namespace {
 
 std::string runeAsStr(uint32_t rune) {
-  char buf[4];
-  if (rune <= 0x7F) {
-    buf[0] = rune;
-    return std::string(buf, 1);
-  }
-  if (rune <= 0x7FF) {
-    buf[1] = (rune & 0x3F) | 0x80;
-    rune >>= 6;
-    buf[0] = rune | 0xC0;
-    return std::string(buf, 2);
-  }
-  if (rune <= 0xFFFF) {
-    buf[2] = (rune & 0x3F) | 0x80;
-    rune >>= 6;
-    buf[1] = (rune & 0x3F) | 0x80;
-    rune >>= 6;
-    buf[0] = rune | 0xE0;
-    return std::string(buf, 3);
-  }
-  buf[3] = (rune & 0x3F) | 0x80;
-  rune >>= 6;
-  buf[2] = (rune & 0x3F) | 0x80;
-  rune >>= 6;
-  buf[1] = (rune & 0x3F) | 0x80;
-  rune >>= 6;
-  buf[0] = rune | 0xF0;
-  return std::string(buf, 4);
+  uint8_t buf[4];
+  int n = roo_display::EncodeRuneAsUtf8(rune, buf);
+  return std::string((const char*)buf, n);
 }
 
 }  // namespace
