@@ -3,11 +3,14 @@
 #include <memory>
 #include <string>
 
-#include "button.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_display/ui/tile.h"
 #include "roo_material_icons/outlined/24/action.h"
 #include "roo_material_icons/outlined/24/content.h"
+#include "roo_windows/core/dimensions.h"
+#include "roo_windows/core/main_window.h"
+#include "roo_windows/core/task.h"
+#include "roo_windows/widgets/button.h"
 
 namespace roo_windows {
 
@@ -74,6 +77,77 @@ std::string runeAsStr(uint32_t rune) {
 
 }  // namespace
 
+class KeyboardPage;
+class TextButton;
+class KeyboardWidget;
+
+class PressHighlighter : public Widget {
+ public:
+  PressHighlighter(const Environment& env);
+
+  void setTarget(const TextButton* target) { target_ = target; }
+
+  bool paint(const Surface& s) override;
+  Dimensions getSuggestedMinimumDimensions() const override;
+
+  const KeyboardPage* page() const;
+  const KeyboardWidget* keyboard() const;
+
+  void moveTo(const Box& box) { Widget::moveTo(box); }
+
+ private:
+  const TextButton* target_;
+};
+
+class KeyboardPage : public Panel {
+ public:
+  KeyboardPage(const Environment& env, const KeyboardPageSpec* spec);
+
+  void showHighlighter(const TextButton& btn);
+  void hideHighlighter();
+
+  const KeyboardWidget* keyboard() const;
+
+  PreferredSize getPreferredSize() const override;
+
+ protected:
+  Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override;
+
+  void onLayout(bool changed, const roo_display::Box& box) override;
+
+ private:
+  const KeyboardPageSpec* spec_;
+  std::vector<Widget*> keys_;
+  PressHighlighter highlighter_;
+};
+
+class KeyboardWidget : public Panel {
+ public:
+  KeyboardWidget(const Environment& env, const KeyboardPageSpec* spec,
+                 KeyboardListener* listener);
+
+  const KeyboardColorTheme& color_theme() const { return color_theme_; }
+
+  void setListener(KeyboardListener* listener) { listener_ = listener; }
+
+  KeyboardListener* listener() const { return listener_; }
+
+  Padding getDefaultPadding() const override { return Padding(1); }
+
+  PreferredSize getPreferredSize() const override;
+
+ protected:
+  Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override;
+
+  void onLayout(bool changed, const roo_display::Box& box) override;
+
+ private:
+  std::vector<KeyboardPage*> pages_;
+  const KeyboardColorTheme& color_theme_;
+  KeyboardPage* current_page_;
+  KeyboardListener* listener_;
+};
+
 class TextButton : public Button {
  public:
   TextButton(const Environment& env, uint32_t rune)
@@ -122,16 +196,14 @@ class SpaceButton : public Button {
 
 class FnButton : public Button {
  public:
-  FnButton(const Environment& env, const MonoIcon& icon)
-      : Button(env, icon) {}
+  FnButton(const Environment& env, const MonoIcon& icon) : Button(env, icon) {}
 
   bool showClickAnimation() const override { return false; }
 };
 
 class DelButton : public Button {
  public:
-  DelButton(const Environment& env, const MonoIcon& icon)
-      : Button(env, icon) {}
+  DelButton(const Environment& env, const MonoIcon& icon) : Button(env, icon) {}
 
   bool showClickAnimation() const override { return false; }
 
@@ -145,10 +217,13 @@ class DelButton : public Button {
   }
 };
 
-const Keyboard* KeyboardPage::keyboard() const { return (Keyboard*)parent(); }
+const KeyboardWidget* KeyboardPage::keyboard() const {
+  return (KeyboardWidget*)parent();
+}
 
-Keyboard::Keyboard(const Environment& env, const KeyboardPageSpec* spec,
-                   KeyboardListener* listener)
+KeyboardWidget::KeyboardWidget(const Environment& env,
+                               const KeyboardPageSpec* spec,
+                               KeyboardListener* listener)
     : Panel(env), color_theme_(env.keyboardColorTheme()), listener_(listener) {
   setParentClipMode(Widget::UNCLIPPED);
   auto page = new KeyboardPage(env, spec);
@@ -157,7 +232,7 @@ Keyboard::Keyboard(const Environment& env, const KeyboardPageSpec* spec,
   pages_.push_back(page);
 }
 
-PreferredSize Keyboard::getPreferredSize() const {
+PreferredSize KeyboardWidget::getPreferredSize() const {
   return current_page_->getPreferredSize();
 }
 
@@ -170,11 +245,11 @@ PreferredSize KeyboardPage::getPreferredSize() const {
                            kExtraTopPaddingPx));
 }
 
-Dimensions Keyboard::onMeasure(MeasureSpec width, MeasureSpec height) {
+Dimensions KeyboardWidget::onMeasure(MeasureSpec width, MeasureSpec height) {
   return current_page_->measure(width, height);
 }
 
-void Keyboard::onLayout(bool changed, const roo_display::Box& box) {
+void KeyboardWidget::onLayout(bool changed, const roo_display::Box& box) {
   current_page_->layout(Box(0, 0, box.width() - 1, box.height() - 1));
 }
 
@@ -281,12 +356,14 @@ void KeyboardPage::onLayout(bool changed, const roo_display::Box& box) {
   Padding padding = getDefaultPadding();
   int16_t vspan =
       box.height() - padding.top() - padding.bottom() - kExtraTopPaddingPx;
-  int16_t row_height = std::max<int16_t>(kMinRowHeight, vspan / spec_->row_count);
+  int16_t row_height =
+      std::max<int16_t>(kMinRowHeight, vspan / spec_->row_count);
   int16_t top_offset = std::max<int16_t>(
       0,
       (box.height() - kExtraTopPaddingPx - spec_->row_count * row_height) / 2);
   int16_t hspan = box.width() - padding.left() - padding.right();
-  int16_t cell_width = std::max<int16_t>(kMinCellWidth, hspan / spec_->row_width);
+  int16_t cell_width =
+      std::max<int16_t>(kMinCellWidth, hspan / spec_->row_width);
   int16_t left_offset =
       std::max<int16_t>(0, (box.width() - spec_->row_width * cell_width) / 2);
 
@@ -317,7 +394,7 @@ void KeyboardPage::onLayout(bool changed, const roo_display::Box& box) {
 void KeyboardPage::showHighlighter(const TextButton& btn) {
   const Box& bBounds = btn.parent_bounds();
   highlighter_.moveTo(Box(bBounds.xMin(), bBounds.yMin() - kHighlighterHeight,
-                         bBounds.xMax(), bBounds.yMax() - 3));
+                          bBounds.xMax(), bBounds.yMax() - 3));
   highlighter_.setTarget(&btn);
   highlighter_.setVisible(true);
 }
@@ -335,8 +412,12 @@ const KeyboardPage* PressHighlighter::page() const {
   return (KeyboardPage*)parent();
 }
 
-const Keyboard* PressHighlighter::keyboard() const {
+const KeyboardWidget* PressHighlighter::keyboard() const {
   return page()->keyboard();
+}
+
+KeyboardWidget* Keyboard::contents() {
+  return (KeyboardWidget*)contents_.get();
 }
 
 bool PressHighlighter::paint(const Surface& s) {
@@ -359,6 +440,32 @@ bool PressHighlighter::paint(const Surface& s) {
 
 Dimensions PressHighlighter::getSuggestedMinimumDimensions() const {
   return Dimensions(0, 0);
+}
+
+Keyboard::Keyboard(const Environment& env, const KeyboardPageSpec* spec,
+                   KeyboardListener* listener)
+    : contents_(new KeyboardWidget(env, spec, listener)) {
+  contents_->setVisible(false);
+}
+
+Widget& Keyboard::getContents() { return *contents_; }
+
+void Keyboard::show() { contents_->setVisible(true); }
+void Keyboard::hide() { contents_->setVisible(false); }
+
+void Keyboard::setListener(KeyboardListener* listener) {
+  contents()->setListener(listener);
+}
+
+// Position the keyboard in the lower half of the screen.
+roo_display::Box Keyboard::getPreferredPlacement(const Task& task) {
+  auto& window = task.getMainWindow();
+  Dimensions dims(window.width(), window.height());
+  int16_t dx, dy;
+  task.getAbsoluteOffset(dx, dy);
+  return roo_display::Box(0, dims.height() / 2, dims.width() - 1,
+                          dims.height() - 1)
+      .translate(-dx, -dy);
 }
 
 }  // namespace roo_windows
