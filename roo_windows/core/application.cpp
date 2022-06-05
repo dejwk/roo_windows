@@ -32,14 +32,14 @@ void Application::tick() {
   root_window_.update(dc);
 }
 
-void Application::addTask(Activity* activity, const roo_display::Box& bounds) {
+Task* Application::addTask(const roo_display::Box& bounds) {
   auto task = std::unique_ptr<Task>(new Task());
   auto task_panel = std::unique_ptr<TaskPanel>(new TaskPanel(*env_, *task));
   task->init(task_panel.get());
   root_window_.add(*task_panel, bounds);
-  task->pushActivity(activity);
   tasks_.push_back(std::move(task));
   task_panels_.push_back(std::move(task_panel));
+  return tasks_.back().get();
 }
 
 }  // namespace roo_windows

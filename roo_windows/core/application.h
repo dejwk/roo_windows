@@ -3,10 +3,10 @@
 #include <memory>
 #include <vector>
 
-#include "roo_windows/core/main_window.h"
+#include "roo_windows/core/activity.h"
 #include "roo_windows/core/click_animation.h"
 #include "roo_windows/core/gesture_detector.h"
-#include "roo_windows/core/activity.h"
+#include "roo_windows/core/main_window.h"
 #include "roo_windows/core/task.h"
 
 namespace roo_windows {
@@ -24,7 +24,8 @@ class Application {
 
   void add(WidgetRef child, const roo_display::Box& box);
 
-  void addTask(Activity* activity, const roo_display::Box& bounds);
+  Task* addTask() { return addTask(roo_display::Box(0, 0, -1, -1)); }
+  Task* addTask(const roo_display::Box& bounds);
 
   MainWindow& root() { return root_window_; }
 
@@ -40,4 +41,4 @@ class Application {
   std::vector<std::unique_ptr<TaskPanel>> task_panels_;
 };
 
-}  // namespace
+}  // namespace roo_windows
