@@ -21,12 +21,25 @@ class Button : public Widget {
       : Button(env, &icon, label, style) {}
 
   bool hasLabel() const { return !label_.empty(); }
+
   const std::string& label() const { return label_; }
+
+  void setLabel(const std::string& label) {
+    if (label_ == label) return;
+    label_ = label;
+    markDirty();
+  }
 
   bool hasIcon() const { return icon_ != nullptr; }
 
   // Must not be called if hasIcon() returns true.
   const MonoIcon& icon() const { return *icon_; }
+
+  void setIcon(const MonoIcon* icon) {
+    if (icon_ == icon) return;
+    icon_ = icon;
+    markDirty();
+  }
 
   Style style() const { return style_; }
 
@@ -37,6 +50,7 @@ class Button : public Widget {
   roo_display::Color textColor() const { return textColor_; }
 
   void setTextColor(roo_display::Color color) {
+    if (textColor_ == color) return;
     textColor_ = color;
     markDirty();
   }
@@ -44,15 +58,17 @@ class Button : public Widget {
   roo_display::Color interiorColor() const { return interiorColor_; }
 
   void setInteriorColor(roo_display::Color color) {
+    if (interiorColor_ == color) return;
     interiorColor_ = color;
-    markDirty();
+    invalidateInterior();
   }
 
   roo_display::Color outlineColor() const { return outlineColor_; }
 
   void setOutlineColor(roo_display::Color color) {
+    if (outlineColor_ == color) return;
     outlineColor_ = color;
-    markDirty();
+    invalidateInterior();
   }
 
   bool paint(const Surface& s) override;

@@ -257,43 +257,46 @@ bool Button::paint(const Surface& s) {
   int16_t min_height = std::max(2 * spec.left_height, 2 * spec.right_height);
   int16_t full_height = std::max(height(), min_height);
 
-  // Top left.
-  RasterAlpha4<const uint8_t * PROGMEM> tl(
-      Box(0, 0, spec.top_width - 1, spec.top_height - 1), spec.data_top_left,
-      Alpha4(outlineColor()));
-  s.drawObject(tl);
-  // Top bar.
   int16_t top_bar_width = full_width - 2 * spec.top_width;
-  if (top_bar_width > 0) {
-    printVertStripes(s, spec.top_width, 0, spec.top_width + top_bar_width - 1,
-                     spec.top_height, spec.data_top, outlineColor());
-  }
-  // Top right.
-  RasterAlpha4<const uint8_t * PROGMEM> tr(
-      Box(spec.top_width + top_bar_width, 0,
-          2 * spec.top_width + top_bar_width - 1, spec.top_height - 1),
-      spec.data_top_right, Alpha4(outlineColor()));
-  s.drawObject(tr);
 
-  // Left top.
-  RasterAlpha4<const uint8_t * PROGMEM> lt(
-      Box(0, spec.top_height, spec.left_width - 1,
-          spec.top_height + spec.left_height - 1),
-      spec.data_left_top, Alpha4(outlineColor()));
-  s.drawObject(lt);
-  // Left bar.
-  int16_t left_bar_height = full_height - 2 * spec.left_height;
-  if (left_bar_height > 0) {
-    printHorizStripes(s, 0, spec.top_height + spec.left_height,
-                      full_height - spec.bottom_height - spec.left_height - 1,
-                      spec.left_width, spec.data_left, outlineColor());
+  if (isInvalidated()) {
+    // Top left.
+    RasterAlpha4<const uint8_t * PROGMEM> tl(
+        Box(0, 0, spec.top_width - 1, spec.top_height - 1), spec.data_top_left,
+        Alpha4(outlineColor()));
+    s.drawObject(tl);
+    // Top bar.
+    if (top_bar_width > 0) {
+      printVertStripes(s, spec.top_width, 0, spec.top_width + top_bar_width - 1,
+                       spec.top_height, spec.data_top, outlineColor());
+    }
+    // Top right.
+    RasterAlpha4<const uint8_t * PROGMEM> tr(
+        Box(spec.top_width + top_bar_width, 0,
+            2 * spec.top_width + top_bar_width - 1, spec.top_height - 1),
+        spec.data_top_right, Alpha4(outlineColor()));
+    s.drawObject(tr);
+
+    // Left top.
+    RasterAlpha4<const uint8_t * PROGMEM> lt(
+        Box(0, spec.top_height, spec.left_width - 1,
+            spec.top_height + spec.left_height - 1),
+        spec.data_left_top, Alpha4(outlineColor()));
+    s.drawObject(lt);
+    // Left bar.
+    int16_t left_bar_height = full_height - 2 * spec.left_height;
+    if (left_bar_height > 0) {
+      printHorizStripes(s, 0, spec.top_height + spec.left_height,
+                        full_height - spec.bottom_height - spec.left_height - 1,
+                        spec.left_width, spec.data_left, outlineColor());
+    }
+    // Left bottom.
+    RasterAlpha4<const uint8_t * PROGMEM> lb(
+        Box(0, full_height - spec.bottom_height - spec.left_height,
+            spec.left_width - 1, full_height - spec.bottom_height - 1),
+        spec.data_left_bottom, Alpha4(outlineColor()));
+    s.drawObject(lb);
   }
-  // Left bottom.
-  RasterAlpha4<const uint8_t * PROGMEM> lb(
-      Box(0, full_height - spec.bottom_height - spec.left_height,
-          spec.left_width - 1, full_height - spec.bottom_height - 1),
-      spec.data_left_bottom, Alpha4(outlineColor()));
-  s.drawObject(lb);
 
   // Main content.
   Box extents(spec.left_width, spec.top_height,
@@ -301,54 +304,54 @@ bool Button::paint(const Surface& s) {
               full_height - spec.bottom_height - 1);
   paintInterior(s, extents, *this);
 
-  // Right top.
-  RasterAlpha4<const uint8_t * PROGMEM> rt(
-      Box(full_width - spec.right_width, spec.top_height, full_width - 1,
-          spec.top_height + spec.right_height - 1),
-      spec.data_right_top, Alpha4(outlineColor()));
-  s.drawObject(rt);
-  // Right bar.
-  int16_t right_bar_height = full_height - 2 * spec.right_height;
-  if (right_bar_height > 0) {
-    printHorizStripes(s, full_width - spec.right_width,
-                      spec.top_height + spec.left_height,
-                      full_height - spec.bottom_height - spec.left_height - 1,
-                      spec.right_width, spec.data_right, outlineColor());
-  }
-  // Right bottom.
-  RasterAlpha4<const uint8_t * PROGMEM> rb(
-      Box(full_width - spec.right_width,
-          full_height - spec.bottom_height - spec.left_height, full_width - 1,
-          full_height - spec.bottom_height - 1),
-      spec.data_right_bottom, Alpha4(outlineColor()));
-  s.drawObject(rb);
+  if (isInvalidated()) {
+    // Right top.
+    RasterAlpha4<const uint8_t * PROGMEM> rt(
+        Box(full_width - spec.right_width, spec.top_height, full_width - 1,
+            spec.top_height + spec.right_height - 1),
+        spec.data_right_top, Alpha4(outlineColor()));
+    s.drawObject(rt);
+    // Right bar.
+    int16_t right_bar_height = full_height - 2 * spec.right_height;
+    if (right_bar_height > 0) {
+      printHorizStripes(s, full_width - spec.right_width,
+                        spec.top_height + spec.left_height,
+                        full_height - spec.bottom_height - spec.left_height - 1,
+                        spec.right_width, spec.data_right, outlineColor());
+    }
+    // Right bottom.
+    RasterAlpha4<const uint8_t * PROGMEM> rb(
+        Box(full_width - spec.right_width,
+            full_height - spec.bottom_height - spec.left_height, full_width - 1,
+            full_height - spec.bottom_height - 1),
+        spec.data_right_bottom, Alpha4(outlineColor()));
+    s.drawObject(rb);
 
-  // Bottom left.
-  RasterAlpha4<const uint8_t * PROGMEM> bl(
-      Box(0, full_height - spec.bottom_height, spec.top_width - 1,
-          full_height - 1),
-      spec.data_bottom_left, Alpha4(outlineColor()));
-  s.drawObject(bl);
-  // Bottom bar.
-  int16_t bottom_bar_width = full_width - 2 * spec.bottom_width;
-  if (bottom_bar_width > 0) {
-    printVertStripes(s, spec.bottom_width, full_height - spec.bottom_height,
-                     spec.bottom_width + top_bar_width - 1, spec.bottom_height,
-                     spec.data_bottom, outlineColor());
+    // Bottom left.
+    RasterAlpha4<const uint8_t * PROGMEM> bl(
+        Box(0, full_height - spec.bottom_height, spec.top_width - 1,
+            full_height - 1),
+        spec.data_bottom_left, Alpha4(outlineColor()));
+    s.drawObject(bl);
+    // Bottom bar.
+    int16_t bottom_bar_width = full_width - 2 * spec.bottom_width;
+    if (bottom_bar_width > 0) {
+      printVertStripes(s, spec.bottom_width, full_height - spec.bottom_height,
+                      spec.bottom_width + top_bar_width - 1, spec.bottom_height,
+                      spec.data_bottom, outlineColor());
+    }
+    // Bottom right.
+    RasterAlpha4<const uint8_t * PROGMEM> br(
+        Box(spec.bottom_width + bottom_bar_width,
+            full_height - spec.bottom_height,
+            2 * spec.bottom_width + bottom_bar_width - 1, full_height - 1),
+        spec.data_bottom_right, Alpha4(outlineColor()));
+    s.drawObject(br);
   }
-  // Bottom right.
-  RasterAlpha4<const uint8_t * PROGMEM> br(
-      Box(spec.bottom_width + bottom_bar_width,
-          full_height - spec.bottom_height,
-          2 * spec.bottom_width + bottom_bar_width - 1, full_height - 1),
-      spec.data_bottom_right, Alpha4(outlineColor()));
-  s.drawObject(br);
   return true;
 }
 
-Padding Button::getDefaultPadding() const {
-  return Padding(14, 4);
-}
+Padding Button::getDefaultPadding() const { return Padding(14, 4); }
 
 Dimensions Button::getSuggestedMinimumDimensions() const {
   if (!hasLabel()) {
