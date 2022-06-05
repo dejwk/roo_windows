@@ -186,12 +186,16 @@ class KeyboardWidget : public Panel {
   KeyboardListener* listener_;
 };
 
-KeyboardWidget& KeyboardButton::keyboard() { return *((KeyboardPage*)parent())->keyboard(); }
+KeyboardWidget& KeyboardButton::keyboard() {
+  return *((KeyboardPage*)parent())->keyboard();
+}
 
 class TextButton : public KeyboardButton {
  public:
   TextButton(const Environment& env, uint16_t rune, uint16_t rune_caps)
-      : KeyboardButton(env, runeAsStr(rune)), rune_(rune), rune_caps_(rune_caps) {}
+      : KeyboardButton(env, runeAsStr(rune)),
+        rune_(rune),
+        rune_caps_(rune_caps) {}
 
   bool showClickAnimation() const override { return false; }
 
@@ -272,8 +276,7 @@ class EnterButton : public KeyboardButton {
 
 class ShiftButton : public KeyboardButton {
  public:
-  ShiftButton(const Environment& env)
-      : KeyboardButton(env, shift_24()) {}
+  ShiftButton(const Environment& env) : KeyboardButton(env, shift_24()) {}
 
   bool showClickAnimation() const override { return false; }
 
@@ -322,7 +325,8 @@ class FnButton : public KeyboardButton {
 
 class DelButton : public KeyboardButton {
  public:
-  DelButton(const Environment& env, const MonoIcon& icon) : KeyboardButton(env, icon) {}
+  DelButton(const Environment& env, const MonoIcon& icon)
+      : KeyboardButton(env, icon) {}
 
   bool showClickAnimation() const override { return false; }
 
@@ -340,14 +344,15 @@ const KeyboardWidget* KeyboardPage::keyboard() const {
   return (KeyboardWidget*)parent();
 }
 
-KeyboardWidget* KeyboardPage::keyboard() {
-  return (KeyboardWidget*)parent();
-}
+KeyboardWidget* KeyboardPage::keyboard() { return (KeyboardWidget*)parent(); }
 
 KeyboardWidget::KeyboardWidget(const Environment& env,
                                const KeyboardPageSpec* spec,
                                KeyboardListener* listener)
-    : Panel(env), color_theme_(env.keyboardColorTheme()), listener_(listener) {
+    : Panel(env),
+      color_theme_(env.keyboardColorTheme()),
+      caps_state_(CAPS_STATE_LOW),
+      listener_(listener) {
   setParentClipMode(Widget::UNCLIPPED);
   auto page = new KeyboardPage(env, spec);
   add(std::unique_ptr<KeyboardPage>(page));
