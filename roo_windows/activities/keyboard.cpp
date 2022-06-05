@@ -194,6 +194,22 @@ class SpaceButton : public Button {
   }
 };
 
+class EnterButton : public Button {
+ public:
+  EnterButton(const Environment& env, const MonoIcon& icon) : Button(env, icon) {}
+
+  bool showClickAnimation() const override { return false; }
+
+  bool onSingleTapUp(int16_t x, int16_t y) override {
+    KeyboardPage* page = ((KeyboardPage*)parent());
+    KeyboardListener* listener = page->keyboard()->listener();
+    if (listener != nullptr) {
+      listener->enter();
+    }
+    return Button::onSingleTapUp(x, y);
+  }
+};
+
 class FnButton : public Button {
  public:
   FnButton(const Environment& env, const MonoIcon& icon) : Button(env, icon) {}
@@ -275,7 +291,7 @@ KeyboardPage::KeyboardPage(const Environment& env, const KeyboardPageSpec* spec)
           break;
         }
         case KeySpec::ENTER: {
-          b = new FnButton(env, ic_outlined_24_action_done());
+          b = new EnterButton(env, ic_outlined_24_action_done());
           b_color = env.keyboardColorTheme().acceptButton;
           break;
         }
