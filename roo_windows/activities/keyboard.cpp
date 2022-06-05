@@ -155,9 +155,13 @@ class TextButton : public Button {
 
   bool showClickAnimation() const override { return false; }
 
-  void onShowPress(int16_t x, int16_t y) override {
+  // We use onDown rather than onShowPress in order to provide more rapid
+  // feedback. onShowPress has 100ms delay to differentiate from swipe, but for
+  // key presses, we want quicker feedback, to facilitate fast typing, and also
+  // because we don't handle the swipe anyway.
+  bool onDown(int16_t x, int16_t y) override {
     ((KeyboardPage*)parent())->showHighlighter(*this);
-    Button::onShowPress(x, y);
+    return Button::onDown(x, y);
   }
 
   bool onSingleTapUp(int16_t x, int16_t y) override {
@@ -196,7 +200,8 @@ class SpaceButton : public Button {
 
 class EnterButton : public Button {
  public:
-  EnterButton(const Environment& env, const MonoIcon& icon) : Button(env, icon) {}
+  EnterButton(const Environment& env, const MonoIcon& icon)
+      : Button(env, icon) {}
 
   bool showClickAnimation() const override { return false; }
 
