@@ -37,24 +37,39 @@ const RleImage4bppxPolarized<Alpha4, PrgMemResource>& shift_24() {
   return value;
 }
 
-// Image file caps_lock_24 24x24, 4-bit Alpha,  RLE, 130 bytes.
-static const uint8_t caps_lock_24_data[] PROGMEM = {
-    0x80, 0xE7, 0x00, 0x30, 0x47, 0x77, 0x82, 0x3E, 0xE5, 0x77, 0x50, 0x40,
-    0xEB, 0x05, 0x77, 0x38, 0x34, 0xEF, 0x76, 0xA0, 0x57, 0x71, 0x82, 0x4E,
-    0xF7, 0x20, 0x6A, 0x05, 0x76, 0x82, 0x4E, 0xF7, 0x40, 0x6A, 0x05, 0x74,
-    0x82, 0x5E, 0xF6, 0x60, 0x5A, 0x06, 0x72, 0x05, 0xA0, 0x67, 0x10, 0x5A,
-    0x06, 0x70, 0x5A, 0x06, 0x73, 0x05, 0xA0, 0x65, 0x05, 0xA8, 0x2E, 0xAA,
-    0x46, 0x82, 0x3A, 0xAD, 0xA0, 0x63, 0x05, 0xE0, 0x66, 0x05, 0xE0, 0x62,
-    0x80, 0x11, 0x81, 0x8F, 0x66, 0x86, 0x5F, 0x91, 0x11, 0x12, 0x78, 0x17,
-    0xF6, 0x68, 0x15, 0xF8, 0x75, 0x81, 0x7F, 0x66, 0x81, 0x5F, 0x87, 0x58,
-    0x17, 0xF6, 0x68, 0x15, 0xF8, 0x75, 0x81, 0x7F, 0xC8, 0x02, 0xA8, 0x1C,
-    0xF8, 0x75, 0x07, 0xFB, 0x08, 0x75, 0x03, 0x80, 0x66, 0x03, 0x75, 0x07,
-    0xFB, 0x08, 0x75, 0x04, 0x80, 0x67, 0x04, 0x80, 0xE2, 0x00,
+// Image file shift_filled_24 24x24, 4-bit Alpha,  RLE, 86 bytes.
+static const uint8_t shift_filled_24_data[] PROGMEM = {
+    0x80, 0xE7, 0x00, 0x30, 0x47, 0x77, 0x82, 0x3E, 0xE5, 0x77, 0x50,
+    0x40, 0xEB, 0x05, 0x77, 0x30, 0x40, 0xED, 0x05, 0x77, 0x10, 0x40,
+    0xEF, 0x05, 0x76, 0x04, 0x0E, 0xFA, 0x05, 0x74, 0x05, 0x0E, 0xFC,
+    0x06, 0x72, 0x05, 0xFF, 0x06, 0x70, 0x5F, 0xFA, 0x06, 0x50, 0x5F,
+    0xFC, 0x06, 0x30, 0x5F, 0xFE, 0x06, 0x28, 0x01, 0x10, 0x8F, 0xB8,
+    0x49, 0x11, 0x11, 0x27, 0x07, 0xFB, 0x08, 0x75, 0x07, 0xFB, 0x08,
+    0x75, 0x07, 0xFB, 0x08, 0x75, 0x07, 0xFB, 0x08, 0x75, 0x07, 0xFB,
+    0x08, 0x75, 0x01, 0x80, 0x62, 0x01, 0x80, 0x9C, 0x20,
 };
 
-const RleImage4bppxPolarized<Alpha4, PrgMemResource>& caps_lock_24() {
+const RleImage4bppxPolarized<Alpha4, PrgMemResource>& shift_filled_24() {
   static RleImage4bppxPolarized<Alpha4, PrgMemResource> value(
-      24, 24, caps_lock_24_data, Alpha4(color::Black));
+      24, 24, shift_filled_24_data, Alpha4(color::Black));
+  return value;
+}
+
+// Image file caps_lock_filled_24 24x24, 4-bit Alpha,  RLE, 95 bytes.
+static const uint8_t caps_lock_filled_24_data[] PROGMEM = {
+    0x80, 0xE7, 0x00, 0x30, 0x47, 0x77, 0x82, 0x3E, 0xE5, 0x77, 0x50, 0x40,
+    0xEB, 0x05, 0x77, 0x30, 0x40, 0xED, 0x05, 0x77, 0x10, 0x40, 0xEF, 0x05,
+    0x76, 0x04, 0x0E, 0xFA, 0x05, 0x74, 0x05, 0x0E, 0xFC, 0x06, 0x72, 0x05,
+    0xFF, 0x06, 0x70, 0x5F, 0xFA, 0x06, 0x50, 0x5F, 0xFC, 0x06, 0x30, 0x5F,
+    0xFE, 0x06, 0x28, 0x01, 0x10, 0x8F, 0xB8, 0x49, 0x11, 0x11, 0x27, 0x07,
+    0xFB, 0x08, 0x75, 0x07, 0xFB, 0x08, 0x75, 0x07, 0xFB, 0x08, 0x75, 0x07,
+    0xFB, 0x08, 0x75, 0x07, 0xFB, 0x08, 0x75, 0x03, 0x80, 0x66, 0x03, 0x75,
+    0x07, 0xFB, 0x08, 0x75, 0x04, 0x80, 0x67, 0x04, 0x80, 0xE2, 0x00,
+};
+
+const RleImage4bppxPolarized<Alpha4, PrgMemResource>& caps_lock_filled_24() {
+  static RleImage4bppxPolarized<Alpha4, PrgMemResource> value(
+      24, 24, caps_lock_filled_24_data, Alpha4(color::Black));
   return value;
 }
 
@@ -80,6 +95,21 @@ std::string runeAsStr(uint32_t rune) {
 class KeyboardPage;
 class TextButton;
 class KeyboardWidget;
+
+enum CapsState {
+  CAPS_STATE_LOW = 0,
+  CAPS_STATE_HIGH = 1,
+  CAPS_STATE_HIGH_LOCKED = 2,
+};
+
+class KeyboardButton : public Button {
+ public:
+  using Button::Button;
+  virtual void capsStateUpdated() {}
+
+ protected:
+  KeyboardWidget& keyboard();
+};
 
 class PressHighlighter : public Widget {
  public:
@@ -107,8 +137,11 @@ class KeyboardPage : public Panel {
   void hideHighlighter();
 
   const KeyboardWidget* keyboard() const;
+  KeyboardWidget* keyboard();
 
   PreferredSize getPreferredSize() const override;
+
+  void capsStateUpdated();
 
  protected:
   Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override;
@@ -117,7 +150,7 @@ class KeyboardPage : public Panel {
 
  private:
   const KeyboardPageSpec* spec_;
-  std::vector<Widget*> keys_;
+  std::vector<KeyboardButton*> keys_;
   PressHighlighter highlighter_;
 };
 
@@ -136,6 +169,10 @@ class KeyboardWidget : public Panel {
 
   PreferredSize getPreferredSize() const override;
 
+  void setCapsState(CapsState caps_state);
+
+  CapsState caps_state() const { return caps_state_; }
+
  protected:
   Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override;
 
@@ -144,14 +181,17 @@ class KeyboardWidget : public Panel {
  private:
   std::vector<KeyboardPage*> pages_;
   const KeyboardColorTheme& color_theme_;
+  CapsState caps_state_;
   KeyboardPage* current_page_;
   KeyboardListener* listener_;
 };
 
-class TextButton : public Button {
+KeyboardWidget& KeyboardButton::keyboard() { return *((KeyboardPage*)parent())->keyboard(); }
+
+class TextButton : public KeyboardButton {
  public:
-  TextButton(const Environment& env, uint32_t rune)
-      : Button(env, runeAsStr(rune)), rune_(rune) {}
+  TextButton(const Environment& env, uint16_t rune, uint16_t rune_caps)
+      : KeyboardButton(env, runeAsStr(rune)), rune_(rune), rune_caps_(rune_caps) {}
 
   bool showClickAnimation() const override { return false; }
 
@@ -164,12 +204,27 @@ class TextButton : public Button {
     return Button::onDown(x, y);
   }
 
+  void capsStateUpdated() override {
+    if (rune_ == rune_caps_) return;
+    CapsState caps = keyboard().caps_state();
+    if (caps == CAPS_STATE_LOW) {
+      setLabel(runeAsStr(rune_));
+    } else {
+      setLabel(runeAsStr(rune_caps_));
+    }
+  }
+
   bool onSingleTapUp(int16_t x, int16_t y) override {
     KeyboardPage* page = ((KeyboardPage*)parent());
     page->hideHighlighter();
     KeyboardListener* listener = page->keyboard()->listener();
+    CapsState caps = keyboard().caps_state();
     if (listener != nullptr) {
-      listener->rune(rune_);
+      listener->rune(caps == CAPS_STATE_LOW ? rune_ : rune_caps_);
+    }
+    if (caps == CAPS_STATE_HIGH) {
+      // Flip back.
+      keyboard().setCapsState(CAPS_STATE_LOW);
     }
     return Button::onSingleTapUp(x, y);
   }
@@ -178,13 +233,13 @@ class TextButton : public Button {
     return *env().theme().font.h6;
   }
 
- private:
-  uint32_t rune_;
+  uint16_t rune_;
+  uint16_t rune_caps_;
 };
 
-class SpaceButton : public Button {
+class SpaceButton : public KeyboardButton {
  public:
-  SpaceButton(const Environment& env) : Button(env, "") {}
+  SpaceButton(const Environment& env) : KeyboardButton(env, "") {}
 
   bool showClickAnimation() const override { return false; }
 
@@ -198,10 +253,10 @@ class SpaceButton : public Button {
   }
 };
 
-class EnterButton : public Button {
+class EnterButton : public KeyboardButton {
  public:
   EnterButton(const Environment& env, const MonoIcon& icon)
-      : Button(env, icon) {}
+      : KeyboardButton(env, icon) {}
 
   bool showClickAnimation() const override { return false; }
 
@@ -215,16 +270,59 @@ class EnterButton : public Button {
   }
 };
 
-class FnButton : public Button {
+class ShiftButton : public KeyboardButton {
  public:
-  FnButton(const Environment& env, const MonoIcon& icon) : Button(env, icon) {}
+  ShiftButton(const Environment& env)
+      : KeyboardButton(env, shift_24()) {}
+
+  bool showClickAnimation() const override { return false; }
+
+  bool onSingleTapUp(int16_t x, int16_t y) override {
+    auto& kb = keyboard();
+    switch (kb.caps_state()) {
+      case CAPS_STATE_LOW: {
+        kb.setCapsState(CAPS_STATE_HIGH);
+        break;
+      }
+      case CAPS_STATE_HIGH:
+      case CAPS_STATE_HIGH_LOCKED: {
+        kb.setCapsState(CAPS_STATE_LOW);
+        break;
+      }
+    }
+    return true;
+  }
+
+  void capsStateUpdated() override {
+    auto& kb = keyboard();
+    switch (kb.caps_state()) {
+      case CAPS_STATE_LOW: {
+        setIcon(&shift_24());
+        break;
+      }
+      case CAPS_STATE_HIGH: {
+        setIcon(&shift_filled_24());
+        break;
+      }
+      case CAPS_STATE_HIGH_LOCKED: {
+        setIcon(&caps_lock_filled_24());
+        break;
+      }
+    }
+  }
+};
+
+class FnButton : public KeyboardButton {
+ public:
+  FnButton(const Environment& env, const MonoIcon& icon)
+      : KeyboardButton(env, icon) {}
 
   bool showClickAnimation() const override { return false; }
 };
 
-class DelButton : public Button {
+class DelButton : public KeyboardButton {
  public:
-  DelButton(const Environment& env, const MonoIcon& icon) : Button(env, icon) {}
+  DelButton(const Environment& env, const MonoIcon& icon) : KeyboardButton(env, icon) {}
 
   bool showClickAnimation() const override { return false; }
 
@@ -239,6 +337,10 @@ class DelButton : public Button {
 };
 
 const KeyboardWidget* KeyboardPage::keyboard() const {
+  return (KeyboardWidget*)parent();
+}
+
+KeyboardWidget* KeyboardPage::keyboard() {
   return (KeyboardWidget*)parent();
 }
 
@@ -274,6 +376,18 @@ void KeyboardWidget::onLayout(bool changed, const roo_display::Box& box) {
   current_page_->layout(Box(0, 0, box.width() - 1, box.height() - 1));
 }
 
+void KeyboardWidget::setCapsState(CapsState caps_state) {
+  if (caps_state == caps_state_) return;
+  bool caps_switched =
+      (caps_state == CAPS_STATE_LOW || caps_state_ == CAPS_STATE_LOW);
+  caps_state_ = caps_state;
+  if (caps_switched) {
+    for (auto& page : pages_) {
+      page->capsStateUpdated();
+    }
+  }
+}
+
 KeyboardPage::KeyboardPage(const Environment& env, const KeyboardPageSpec* spec)
     : Panel(env), spec_(spec), highlighter_(env) {
   setBackground(env.keyboardColorTheme().background);
@@ -281,12 +395,13 @@ KeyboardPage::KeyboardPage(const Environment& env, const KeyboardPageSpec* spec)
   for (int i = 0; i < spec->row_count; ++i) {
     const auto& row = spec->rows[i];
     for (int j = 0; j < row.key_count; ++j) {
-      Button* b;
+      KeyboardButton* b;
       Color b_color;
       const auto& key = row.keys[j];
+      const auto& key_caps = row.keys_caps[j];
       switch (key.function) {
         case KeySpec::TEXT: {
-          b = new TextButton(env, key.data);
+          b = new TextButton(env, key.data, key_caps.data);
           b_color = env.keyboardColorTheme().normalButton;
           break;
         }
@@ -301,7 +416,7 @@ KeyboardPage::KeyboardPage(const Environment& env, const KeyboardPageSpec* spec)
           break;
         }
         case KeySpec::SHIFT: {
-          b = new FnButton(env, shift_24());
+          b = new ShiftButton(env);
           b_color = env.keyboardColorTheme().modifierButton;
           break;
         }
@@ -423,6 +538,12 @@ void KeyboardPage::showHighlighter(const TextButton& btn) {
 void KeyboardPage::hideHighlighter() {
   highlighter_.setVisible(false);
   highlighter_.setTarget(nullptr);
+}
+
+void KeyboardPage::capsStateUpdated() {
+  for (auto& key : keys_) {
+    key->capsStateUpdated();
+  }
 }
 
 PressHighlighter::PressHighlighter(const Environment& env) : Widget(env) {

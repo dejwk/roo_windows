@@ -17,6 +17,7 @@ struct KeyboardRowSpec {
   uint8_t start_offset;  // In grid units.
   uint8_t key_count;
   const KeySpec* keys;
+  const KeySpec* keys_caps;
 };
 
 struct KeyboardPageSpec {
