@@ -105,7 +105,7 @@ Widget* Panel::dispatchTouchDownEvent(int16_t x, int16_t y,
   // overlapping, we want the right-most one receive the event.
   for (auto child = children_.rbegin(); child != children_.rend(); child++) {
     if (!(*child)->isVisible()) continue;
-    if ((*child)->parent_bounds().contains(x, y)) {
+    if ((*child)->maxParentBounds().contains(x, y)) {
       Widget* w = (*child)->dispatchTouchDownEvent(
           x - (*child)->xOffset(), y - (*child)->yOffset(), gesture_detector);
       if (w != nullptr) return w;
@@ -125,7 +125,10 @@ Widget* Panel::dispatchTouchDownEvent(int16_t x, int16_t y,
       return *child;
     }
   }
-  return Widget::dispatchTouchDownEvent(x, y, gesture_detector);
+  if (bounds().contains(x, y)) {
+    return Widget::dispatchTouchDownEvent(x, y, gesture_detector);
+  }
+  return nullptr;
 }
 
 // Must propagate the 'dirty' flag even if the box comes down empty. This is
@@ -294,6 +297,10 @@ Box Panel::maxBounds() const {
     }
   }
   return cached_max_bounds_;
+}
+
+Box Panel::maxParentBounds() const {
+  return maxBounds().translate(xOffset(), yOffset());
 }
 
 Dimensions Panel::onMeasure(MeasureSpec width, MeasureSpec height) {

@@ -93,6 +93,10 @@ class Widget {
   // Returns the rectangle that covers all of this widget and its descendants.
   virtual Box maxBounds() const { return bounds(); }
 
+  // Returns the rectangle that covers all of this widget and its descendants,
+  // in the parent's coordinates.
+  virtual Box maxParentBounds() const { return parent_bounds(); }
+
   virtual const Theme& theme() const;
 
   // Returns default color that should be used by monochromatic content.

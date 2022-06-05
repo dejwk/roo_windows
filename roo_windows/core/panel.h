@@ -98,6 +98,8 @@ class Panel : public Widget {
   // to bounds().
   Box maxBounds() const override;
 
+  Box maxParentBounds() const override;
+
   Dimensions getSuggestedMinimumDimensions() const override {
     // Panels are expected to override onMeasure, so this is rarely relevant
     // anyway.
