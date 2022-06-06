@@ -243,6 +243,24 @@ class Widget {
   // beginning of your implementation.
   virtual bool onSingleTapUp(int16_t x, int16_t y);
 
+  // Should be overridden to return true by widgets that wish to handle the
+  // onLongPoress events.
+  virtual bool supportsLongPress() { return false; }
+
+  // Called when the gesture is recognized as a long press. The widget must
+  // have returned true from supportsLongPress() in order to receive this
+  // notification. Contains the coordinates of the original 'down' event,
+  // relative to the widget. It happens with some delay since the onShowPress(),
+  // and only in case there was no significant movement. The gesture can no
+  // longer turn into scroll.
+  virtual void onLongPress(int16_t x, int16_t y);
+
+  // Called when the long press has finished, and the widget is no longer
+  // touched. Contains the coordinates of the 'up' event, in the widget's
+  // coordinate system.  The widget must have returned true from
+  // supportsLongPress() in order to receive this notification.
+  virtual void onLongPressFinished(int16_t x, int16_t y);
+
   // Called during the 'move' event, when the gesture is recognized as 'scroll'.
   // Contains the delta of coordinates since the last time onScroll was called
   // as part of this gesture.

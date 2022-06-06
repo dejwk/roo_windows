@@ -450,6 +450,12 @@ bool Widget::onSingleTapUp(int16_t x, int16_t y) {
   return true;
 }
 
+void Widget::onLongPress(int16_t dx, int16_t dy) {}
+
+void Widget::onLongPressFinished(int16_t dx, int16_t dy) {
+  setPressed(false);
+}
+
 bool Widget::onScroll(int16_t dx, int16_t dy) {
   setPressed(false);
   return false;

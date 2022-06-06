@@ -41,6 +41,14 @@ bool GestureDetector::tick() {
     show_press_event_.clear();
     touch_target_->onShowPress(latest_.x() - dx, latest_.y() - dy);
   }
+  if (long_press_event_.isDue(now_us_)) {
+    int16_t dx, dy;
+    touch_target_->getAbsoluteOffset(dx, dy);
+    long_press_event_.clear();
+    in_long_press_ = true;
+    touch_target_->onLongPress(latest_.x() - dx, latest_.y() - dy);
+  }
+
   return true;
 }
 
@@ -48,11 +56,16 @@ bool GestureDetector::onTouchDown(Widget& widget, int16_t x, int16_t y) {
   if (&widget != touch_target_) {
   }
   moved_outside_tap_region_ = false;
+  in_long_press_ = false;
+  if (widget.supportsLongPress()) {
+    long_press_event_.schedule(now_us_ + kLongPressTimeoutUs);
+  }
   show_press_event_.schedule(now_us_ + kShowPressTimeoutUs);
   return handledOrCancel(widget.onDown(x, y));
 }
 
 bool GestureDetector::onTouchMove(Widget& widget, int16_t x, int16_t y) {
+  if (in_long_press_) return false;
   bool handled = false;
   if (!moved_outside_tap_region_) {
     int16_t total_move_x = latest_.x() - initial_down_.x();
@@ -72,7 +85,10 @@ bool GestureDetector::onTouchMove(Widget& widget, int16_t x, int16_t y) {
 
 bool GestureDetector::onTouchUp(Widget& widget, int16_t x, int16_t y) {
   bool handled = false;
-  if (!moved_outside_tap_region_) {
+  if (in_long_press_) {
+    in_long_press_ = false;
+    widget.onLongPressFinished(x, y);
+  } else if (!moved_outside_tap_region_) {
     handled |= widget.onSingleTapUp(x, y);
   } else {
     // We have been in 'scroll'. Perhaps a fling?

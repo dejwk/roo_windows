@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include <inttypes.h>
+
 #include <iostream>
 
 #include "roo_windows/core/panel.h"
@@ -81,6 +82,10 @@ class GestureDetector {
   unsigned long now_us_;
   bool is_down_;
   bool moved_outside_tap_region_;
+
+  // Indicates that the gesture has been recognized as a long press, rather than
+  // a single tap, scroll, or fling.
+  bool in_long_press_;
 
   Widget* touch_target_;
 
