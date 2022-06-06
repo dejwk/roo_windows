@@ -280,7 +280,7 @@ class ShiftButton : public KeyboardButton {
 
   bool showClickAnimation() const override { return false; }
 
-  bool onSingleTapUp(int16_t x, int16_t y) override {
+  bool onDown(int16_t x, int16_t y) override {
     auto& kb = keyboard();
     switch (kb.caps_state()) {
       case CAPS_STATE_LOW: {
@@ -293,7 +293,19 @@ class ShiftButton : public KeyboardButton {
         break;
       }
     }
-    return true;
+    setPressed(true);
+    return KeyboardButton::onDown(x, y);
+  }
+
+  bool supportsLongPress() override { return true; }
+
+  void onLongPress(int16_t x, int16_t y) {
+    auto& kb = keyboard();
+    if (kb.caps_state() == CAPS_STATE_HIGH) {
+      kb.setCapsState(CAPS_STATE_HIGH_LOCKED);
+      setIcon(&caps_lock_filled_24());
+    }
+    KeyboardButton::onLongPress(x, y);
   }
 
   void capsStateUpdated() override {
