@@ -39,33 +39,130 @@ static const PROGMEM KeySpec kbEngUsRow3keysCaps[] = {
 };
 
 static const PROGMEM KeySpec kbEngUsRow4keys[] = {
-    textKey(2, '@'),
-    spaceKey(10),
-    textKey(2, '.'),
-    fnKey(3, KeySpec::ENTER),
+    pageSwitchKey(3, 0, 4, 1), textKey(2, '@'),          spaceKey(10),
+    textKey(2, '.'),           fnKey(3, KeySpec::ENTER),
 };
 
-static const PROGMEM KeyboardRowSpec kbEngUsRows[] = {
+static const PROGMEM KeyboardRowSpec kbEngUsRowsLetters[] = {
     {.start_offset = 0,
      .key_count = 10,
      .keys = kbEngUsRow1keysSmall,
-     .keys_caps = kbEngUsRow1keysCaps},
+     .keys_caps = kbEngUsRow1keysCaps,
+     .pageswitch_key_labels = nullptr},
     {.start_offset = 1,
      .key_count = 9,
      .keys = kbEngUsRow2keysSmall,
-     .keys_caps = kbEngUsRow2keysCaps},
+     .keys_caps = kbEngUsRow2keysCaps,
+     .pageswitch_key_labels = nullptr},
     {.start_offset = 0,
      .key_count = 9,
      .keys = kbEngUsRow3keysSmall,
-     .keys_caps = kbEngUsRow3keysCaps},
-    {.start_offset = 3,
-     .key_count = 4,
+     .keys_caps = kbEngUsRow3keysCaps,
+     .pageswitch_key_labels = nullptr},
+    {.start_offset = 0,
+     .key_count = 5,
      .keys = kbEngUsRow4keys,
-     .keys_caps = kbEngUsRow4keys}};
+     .keys_caps = kbEngUsRow4keys,
+     .pageswitch_key_labels = "?123"}};
 
-const PROGMEM KeyboardPageSpec kbEngUSspec = {
-    .row_width = 20, .row_count = 4, .rows = kbEngUsRows};
+static const PROGMEM KeySpec kbEngUsDigitsRow1keys[] = {
+    textKey(2, '1'), textKey(2, '2'), textKey(2, '3'), textKey(2, '4'),
+    textKey(2, '5'), textKey(2, '6'), textKey(2, '7'), textKey(2, '8'),
+    textKey(2, '9'), textKey(2, '0'),
+};
 
-const KeyboardPageSpec* kbEngUS() { return &kbEngUSspec; }
+static const PROGMEM KeySpec kbEngUsDigitsRow2keys[] = {
+    textKey(2, '@'), textKey(2, '#'), textKey(2, '$'), textKey(2, '_'),
+    textKey(2, '&'), textKey(2, '-'), textKey(2, '+'), textKey(2, '('),
+    textKey(2, ')'), textKey(2, '/'),
+};
+
+static const PROGMEM KeySpec kbEngUsDigitsRow3keys[] = {
+    pageSwitchKey(3, 0, 3, 2), textKey(2, '*'), textKey(2, '"'),
+    textKey(2, '\''),          textKey(2, ':'), textKey(2, ';'),
+    textKey(2, '!'),           textKey(2, '?'), fnKey(3, KeySpec::DEL),
+};
+
+static const PROGMEM KeySpec kbEngUsDigitsRow4keys[] = {
+    pageSwitchKey(3, 0, 3, 0), textKey(2, ','),          spaceKey(10),
+    textKey(2, '.'),           fnKey(3, KeySpec::ENTER),
+};
+
+static const PROGMEM KeyboardRowSpec kbEngUsRowsDigits[] = {
+    {.start_offset = 0,
+     .key_count = 10,
+     .keys = kbEngUsDigitsRow1keys,
+     .keys_caps = kbEngUsDigitsRow1keys,
+     .pageswitch_key_labels = nullptr},
+    {.start_offset = 0,
+     .key_count = 10,
+     .keys = kbEngUsDigitsRow2keys,
+     .keys_caps = kbEngUsDigitsRow2keys,
+     .pageswitch_key_labels = nullptr},
+    {.start_offset = 0,
+     .key_count = 9,
+     .keys = kbEngUsDigitsRow3keys,
+     .keys_caps = kbEngUsDigitsRow3keys,
+     .pageswitch_key_labels = "=\\<"},
+    {.start_offset = 0,
+     .key_count = 5,
+     .keys = kbEngUsDigitsRow4keys,
+     .keys_caps = kbEngUsDigitsRow4keys,
+     .pageswitch_key_labels = "ABC"}};
+
+static const PROGMEM KeySpec kbEngUsSymbolsRow1keys[] = {
+    textKey(2, '~'), textKey(2, '`'), textKey(2, '|'), textKey(2, u'·'),
+    textKey(2, u'μ'), textKey(2, u'π'), textKey(2, u'÷'), textKey(2, u'×'),
+    textKey(2, u'¶'), textKey(2, u'Ω'),
+};
+
+static const PROGMEM KeySpec kbEngUsSymbolsRow2keys[] = {
+    textKey(2, u'£'), textKey(2, u'¢'), textKey(2, u'€'), textKey(2, u'¥'),
+    textKey(2, '^'), textKey(2, u'°'), textKey(2, '='), textKey(2, '{'),
+    textKey(2, '}'), textKey(2, '\\'),
+};
+
+static const PROGMEM KeySpec kbEngUsSymbolsRow3keys[] = {
+    pageSwitchKey(3, 0, 4, 1), textKey(2, '%'), textKey(2, u'©'),
+    textKey(2, u'®'),          textKey(2, u'™'), textKey(2, u'§'),
+    textKey(2, '['),           textKey(2, ']'), fnKey(3, KeySpec::DEL),
+};
+
+static const PROGMEM KeySpec kbEngUsSymbolsRow4keys[] = {
+    pageSwitchKey(3, 0, 3, 0), textKey(2, '<'),          spaceKey(10),
+    textKey(2, '>'),           fnKey(3, KeySpec::ENTER),
+};
+
+static const PROGMEM KeyboardRowSpec kbEngUsRowsSymbols[] = {
+    {.start_offset = 0,
+     .key_count = 10,
+     .keys = kbEngUsSymbolsRow1keys,
+     .keys_caps = kbEngUsSymbolsRow1keys,
+     .pageswitch_key_labels = nullptr},
+    {.start_offset = 0,
+     .key_count = 10,
+     .keys = kbEngUsSymbolsRow2keys,
+     .keys_caps = kbEngUsSymbolsRow2keys,
+     .pageswitch_key_labels = nullptr},
+    {.start_offset = 0,
+     .key_count = 9,
+     .keys = kbEngUsSymbolsRow3keys,
+     .keys_caps = kbEngUsSymbolsRow3keys,
+     .pageswitch_key_labels = "?123"},
+    {.start_offset = 0,
+     .key_count = 5,
+     .keys = kbEngUsSymbolsRow4keys,
+     .keys_caps = kbEngUsSymbolsRow4keys,
+     .pageswitch_key_labels = "ABC"}};
+
+static const PROGMEM KeyboardPageSpec kbEngUsPages[] = {
+    {.row_width = 20, .row_count = 4, .rows = kbEngUsRowsLetters},
+    {.row_width = 20, .row_count = 4, .rows = kbEngUsRowsDigits},
+    {.row_width = 20, .row_count = 4, .rows = kbEngUsRowsSymbols}};
+
+static const PROGMEM KeyboardSpec kbEngUsSpec = {.page_count = 3,
+                                                 .pages = kbEngUsPages};
+
+const KeyboardSpec* kbEngUS() { return &kbEngUsSpec; }
 
 }  // namespace roo_windows

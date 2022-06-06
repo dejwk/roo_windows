@@ -18,12 +18,18 @@ struct KeyboardRowSpec {
   uint8_t key_count;
   const KeySpec* keys;
   const KeySpec* keys_caps;
+  const char* pageswitch_key_labels;
 };
 
 struct KeyboardPageSpec {
   int8_t row_width;  // How many total grid units per row.
   int8_t row_count;  // How many rows of keys.
   const KeyboardRowSpec* rows;
+};
+
+struct KeyboardSpec {
+  int8_t page_count;
+  const KeyboardPageSpec* pages;
 };
 
 static constexpr PROGMEM KeySpec textKey(uint8_t w, uint32_t rune) {
@@ -36,6 +42,15 @@ static constexpr PROGMEM KeySpec spaceKey(uint8_t w) {
 
 static constexpr PROGMEM KeySpec fnKey(uint8_t w, KeySpec::Function f) {
   return KeySpec{.function = f, .data = 0, .width = w};
+}
+
+static constexpr PROGMEM KeySpec pageSwitchKey(uint8_t w, uint8_t label_offset,
+                                               uint8_t label_length,
+                                               uint8_t dest_page) {
+  return KeySpec{.function = KeySpec::SWITCH_PAGE,
+                 .data = ((uint32_t)label_length << 16) +
+                         ((uint32_t)label_offset << 8) + dest_page,
+                 .width = w};
 }
 
 }  // namespace roo_windows

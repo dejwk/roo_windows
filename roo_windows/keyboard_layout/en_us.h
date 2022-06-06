@@ -4,6 +4,6 @@
 
 namespace roo_windows {
 
-const KeyboardPageSpec* kbEngUS();
+const KeyboardSpec* kbEngUS();
 
 }  // namespace roo_windows

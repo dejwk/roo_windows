@@ -156,7 +156,7 @@ class KeyboardPage : public Panel {
 
 class KeyboardWidget : public Panel {
  public:
-  KeyboardWidget(const Environment& env, const KeyboardPageSpec* spec,
+  KeyboardWidget(const Environment& env, const KeyboardSpec* spec,
                  KeyboardListener* listener);
 
   const KeyboardColorTheme& color_theme() const { return color_theme_; }
@@ -172,6 +172,8 @@ class KeyboardWidget : public Panel {
   void setCapsState(CapsState caps_state);
 
   CapsState caps_state() const { return caps_state_; }
+
+  void setPage(int idx);
 
  protected:
   Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override;
@@ -327,14 +329,6 @@ class ShiftButton : public KeyboardButton {
   }
 };
 
-class FnButton : public KeyboardButton {
- public:
-  FnButton(const Environment& env, const MonoIcon& icon)
-      : KeyboardButton(env, icon) {}
-
-  bool showClickAnimation() const override { return false; }
-};
-
 class DelButton : public KeyboardButton {
  public:
   DelButton(const Environment& env, const MonoIcon& icon)
@@ -352,6 +346,22 @@ class DelButton : public KeyboardButton {
   }
 };
 
+class PageSwitchButton : public KeyboardButton {
+ public:
+  PageSwitchButton(const Environment& env, std::string label, uint8_t target)
+      : KeyboardButton(env, label), target_(target) {}
+
+  bool showClickAnimation() const override { return false; }
+
+  bool onDown(int16_t x, int16_t y) override {
+    keyboard().setPage(target_);
+    return KeyboardButton::onDown(x, y);
+  }
+
+ private:
+  uint8_t target_;
+};
+
 const KeyboardWidget* KeyboardPage::keyboard() const {
   return (KeyboardWidget*)parent();
 }
@@ -359,17 +369,19 @@ const KeyboardWidget* KeyboardPage::keyboard() const {
 KeyboardWidget* KeyboardPage::keyboard() { return (KeyboardWidget*)parent(); }
 
 KeyboardWidget::KeyboardWidget(const Environment& env,
-                               const KeyboardPageSpec* spec,
+                               const KeyboardSpec* spec,
                                KeyboardListener* listener)
     : Panel(env),
       color_theme_(env.keyboardColorTheme()),
       caps_state_(CAPS_STATE_LOW),
       listener_(listener) {
   setParentClipMode(Widget::UNCLIPPED);
-  auto page = new KeyboardPage(env, spec);
-  add(std::unique_ptr<KeyboardPage>(page));
-  current_page_ = page;
-  pages_.push_back(page);
+  for (int i = 0; i < spec->page_count; ++i) {
+    auto page = new KeyboardPage(env, &spec->pages[i]);
+    add(std::unique_ptr<KeyboardPage>(page));
+    pages_.push_back(page);
+  }
+  setPage(0);
 }
 
 PreferredSize KeyboardWidget::getPreferredSize() const {
@@ -403,6 +415,16 @@ void KeyboardWidget::setCapsState(CapsState caps_state) {
       page->capsStateUpdated();
     }
   }
+}
+
+void KeyboardWidget::setPage(int idx) {
+  if (current_page_ == pages_[idx]) return;
+  current_page_ = pages_[idx];
+  for (int i = 0; i < pages_.size(); ++i) {
+    pages_[i]->setVisible(i == idx);
+  }
+  setCapsState(CAPS_STATE_LOW);
+  requestLayout();
 }
 
 KeyboardPage::KeyboardPage(const Environment& env, const KeyboardPageSpec* spec)
@@ -439,6 +461,13 @@ KeyboardPage::KeyboardPage(const Environment& env, const KeyboardPageSpec* spec)
         }
         case KeySpec::DEL: {
           b = new DelButton(env, ic_outlined_24_content_backspace());
+          b_color = env.keyboardColorTheme().modifierButton;
+          break;
+        }
+        case KeySpec::SWITCH_PAGE: {
+          b = new PageSwitchButton(
+              env, std::string(row.pageswitch_key_labels + ((key.data >> 8) & 0xFF),
+                               key.data >> 16), (key.data & 0xFF));
           b_color = env.keyboardColorTheme().modifierButton;
           break;
         }
@@ -601,7 +630,7 @@ Dimensions PressHighlighter::getSuggestedMinimumDimensions() const {
   return Dimensions(0, 0);
 }
 
-Keyboard::Keyboard(const Environment& env, const KeyboardPageSpec* spec,
+Keyboard::Keyboard(const Environment& env, const KeyboardSpec* spec,
                    KeyboardListener* listener)
     : contents_(new KeyboardWidget(env, spec, listener)) {
   contents_->setVisible(false);

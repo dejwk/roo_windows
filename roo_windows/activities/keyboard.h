@@ -28,7 +28,7 @@ class KeyboardWidget;
 
 class Keyboard : public Activity {
  public:
-  Keyboard(const Environment& env, const KeyboardPageSpec* spec,
+  Keyboard(const Environment& env, const KeyboardSpec* spec,
            KeyboardListener* listener);
 
   Widget& getContents() override;
