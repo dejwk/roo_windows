@@ -73,7 +73,7 @@ const RleImage4bppxPolarized<Alpha4, PrgMemResource>& caps_lock_filled_24() {
   return value;
 }
 
-static const int kExtraTopPaddingPx = 20;
+static const int kExtraTopPaddingPx = 2;
 static const int kHighlighterHeight = 50;
 
 static const int kButtonMarginPercent = 10;
@@ -140,6 +140,7 @@ class KeyboardPage : public Panel {
   KeyboardWidget* keyboard();
 
   PreferredSize getPreferredSize() const override;
+  Padding getDefaultPadding() const override { return Padding(6); }
 
   void capsStateUpdated();
 
