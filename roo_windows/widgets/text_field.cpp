@@ -170,7 +170,7 @@ bool TextField::paint(const roo_display::Surface& s) {
     xMin = editor().glyphs().front().glyphXMin();
     xMax = editor().glyphs().back().glyphXMax();
     if (!editor().has_selection() &&
-        editor().cursor_position() == val->size() &&
+        editor().cursor_position() == editor().glyphs().size() &&
         xMax < editor().glyphs().back().advance() + 2) {
       xMax = editor().glyphs().back().advance() + 2;
     }
