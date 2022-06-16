@@ -98,11 +98,11 @@ Box slopify(Box bounds) {
   int16_t xMax = bounds.xMax();
   int16_t yMax = bounds.yMax();
   if (w < kMinSloppyTouchTargetSpan) {
-    xMin -= kMinSloppyTouchTargetSpan / 2;
+    xMin -= (kMinSloppyTouchTargetSpan - w) / 2;
     xMax = xMin + kMinSloppyTouchTargetSpan - 1;
   }
   if (h < kMinSloppyTouchTargetSpan) {
-    yMin -= -kMinSloppyTouchTargetSpan / 2;
+    yMin -= (kMinSloppyTouchTargetSpan - h) / 2;
     yMax = yMin + kMinSloppyTouchTargetSpan - 1;
   }
   return Box(xMin, yMin, xMax, yMax);
