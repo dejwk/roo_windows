@@ -107,8 +107,10 @@ class KeyboardButton : public Button {
   using Button::Button;
   virtual void capsStateUpdated() {}
 
-  bool onScroll(int16_t dx, int16_t dy) override;
-  bool onFling(int16_t vx, int16_t vy) override;
+  // bool onScroll(int16_t dx, int16_t dy) override;
+  // bool onFling(int16_t vx, int16_t vy) override;
+
+  void onCancel() override;
 
  protected:
   KeyboardWidget& keyboard();
@@ -196,16 +198,10 @@ KeyboardWidget& KeyboardButton::keyboard() {
   return *((KeyboardPage*)parent())->keyboard();
 }
 
-bool KeyboardButton::onFling(int16_t vx, int16_t vy) {
+void KeyboardButton::onCancel() {
   KeyboardPage* page = ((KeyboardPage*)parent());
   page->hideHighlighter();
-  return Button::onFling(vx, vy);
-}
-
-bool KeyboardButton::onScroll(int16_t vx, int16_t vy) {
-  KeyboardPage* page = ((KeyboardPage*)parent());
-  page->hideHighlighter();
-  return Button::onScroll(vx, vy);
+  Button::onCancel();
 }
 
 class TextButton : public KeyboardButton {
@@ -217,14 +213,9 @@ class TextButton : public KeyboardButton {
 
   bool showClickAnimation() const override { return false; }
 
-  // We use onDown rather than onShowPress in order to provide more rapid
-  // feedback. onShowPress has 100ms delay to differentiate from swipe, but for
-  // key presses, we want quicker feedback, to facilitate fast typing, and also
-  // because we don't handle the swipe anyway.
-  bool onDown(int16_t x, int16_t y) override {
-    setPressed(true);
+  void onShowPress(int16_t x, int16_t y) override {
     ((KeyboardPage*)parent())->showHighlighter(*this);
-    return Button::onDown(x, y);
+    Button::onShowPress(x, y);
   }
 
   void capsStateUpdated() override {
@@ -299,7 +290,7 @@ class ShiftButton : public KeyboardButton {
 
   bool showClickAnimation() const override { return false; }
 
-  bool onDown(int16_t x, int16_t y) override {
+  void onShowPress(int16_t x, int16_t y) override {
     auto& kb = keyboard();
     switch (kb.caps_state()) {
       case CAPS_STATE_LOW: {
@@ -312,8 +303,7 @@ class ShiftButton : public KeyboardButton {
         break;
       }
     }
-    setPressed(true);
-    return KeyboardButton::onDown(x, y);
+    KeyboardButton::onShowPress(x, y);
   }
 
   bool supportsLongPress() override { return true; }
@@ -370,9 +360,9 @@ class PageSwitchButton : public KeyboardButton {
 
   bool showClickAnimation() const override { return false; }
 
-  bool onDown(int16_t x, int16_t y) override {
+  void onShowPress(int16_t x, int16_t y) override {
     keyboard().setPage(target_);
-    return KeyboardButton::onDown(x, y);
+    KeyboardButton::onShowPress(x, y);
   }
 
  private:

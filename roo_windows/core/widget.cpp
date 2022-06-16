@@ -12,7 +12,7 @@
 
 namespace roo_windows {
 
-static int16_t kMinSloppyTouchTargetSpan = 40;
+static int16_t kMinSloppyTouchTargetSpan = 50;
 
 // If the end-to-end duration of touch it shorted than this threshold,
 // it is always interpreted as a 'click' rather than 'drag'; i.e.
