@@ -1,9 +1,9 @@
 #include "roo_windows/containers/scrollable_panel.h"
 
+#include <Arduino.h>
+
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/gesture_detector.h"
-
-#include <Arduino.h>
 
 namespace roo_windows {
 
@@ -109,8 +109,8 @@ bool ScrollablePanel::onInterceptTouchEvent(const TouchEvent& event) {
   }
   if (event.type() == TouchEvent::MOVE) {
     const GestureDetector& gd = getApplication()->gesture_detector();
-    int16_t dx = gd.xTotalMoveDelta();
-    int16_t dy = gd.yTotalMoveDelta();
+    int16_t dx = (direction_ == VERTICAL) ? 0 : gd.xTotalMoveDelta();
+    int16_t dy = (direction_ == HORIZONTAL) ? 0 : gd.yTotalMoveDelta();
     if (dx * dx + dy * dy > kTouchSlopSquare) {
       return true;
     }
