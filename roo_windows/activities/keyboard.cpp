@@ -646,7 +646,12 @@ Keyboard::Keyboard(const Environment& env, const KeyboardSpec* spec,
 Widget& Keyboard::getContents() { return *contents_; }
 
 void Keyboard::show() { contents_->setVisible(true); }
-void Keyboard::hide() { contents_->setVisible(false); }
+
+void Keyboard::hide() {
+  contents()->setVisible(false);
+  contents()->setPage(0);
+  contents()->setCapsState(CapsState::CAPS_STATE_LOW);
+}
 
 void Keyboard::setListener(KeyboardListener* listener) {
   contents()->setListener(listener);
