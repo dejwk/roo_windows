@@ -154,8 +154,7 @@ class Widget {
   // widget's background.
   Color effectiveBackground() const;
 
-  virtual Widget* dispatchTouchDownEvent(int16_t x, int16_t y,
-                                         GestureDetector& gesture_detector);
+  virtual Widget* dispatchTouchDownEvent(int16_t x, int16_t y);
 
   // Called by the framework when on the first touch event within the bounds of
   // this widget. If the method returns false, the event will be redirected to
@@ -165,8 +164,7 @@ class Widget {
   // may then call more specific widget methods.
   //
   // Returns true if the event is handled, false otherwise.
-  virtual bool onTouchDown(int16_t x, int16_t y,
-                           GestureDetector& gesture_detector);
+  virtual bool onTouchDown(int16_t x, int16_t y);
 
   // Called by the framework upon the 'move' event. If the method returns false,
   // the event will be redirected to this widget's parent, and this widget will
@@ -175,8 +173,7 @@ class Widget {
   // the gesture detector which may then call more specific widget methods.
   //
   // Returns true if the event is handled, false otherwise.
-  virtual bool onTouchMove(int16_t x, int16_t y,
-                           GestureDetector& gesture_detector);
+  virtual bool onTouchMove(int16_t x, int16_t y);
 
   // Called by the framework upon the 'up' event. If the method returns false,
   // the event will be redirected to this widget's parent. Most widgets should
@@ -184,8 +181,7 @@ class Widget {
   // detector which may then call more specific widget methods.
   //
   // Returns true if the event is handled, false otherwise.
-  virtual bool onTouchUp(int16_t x, int16_t y,
-                         GestureDetector& gesture_detector);
+  virtual bool onTouchUp(int16_t x, int16_t y);
 
   // Called when a 'click' should be handled (either during or after
   // onSingleTapUp). For widgets that support click animation, the event is

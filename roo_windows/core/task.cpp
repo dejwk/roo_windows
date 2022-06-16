@@ -42,12 +42,11 @@ void TaskPanel::pushActivity(Activity* activity,
 
 void TaskPanel::popActivity() { removeLast(); }
 
-Widget* TaskPanel::dispatchTouchDownEvent(int16_t x, int16_t y,
-                                          GestureDetector& gesture_detector) {
+Widget* TaskPanel::dispatchTouchDownEvent(int16_t x, int16_t y) {
   // Only the topmost activity gets to handle the gestures.
   Widget& activity = *children_.back();
   return activity.dispatchTouchDownEvent(
-      x - activity.xOffset(), y - activity.yOffset(), gesture_detector);
+      x - activity.xOffset(), y - activity.yOffset());
 }
 
 }  // namespace roo_windows

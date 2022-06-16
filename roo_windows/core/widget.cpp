@@ -403,24 +403,20 @@ void Widget::paintWidgetContents(const Surface& s, Clipper& clipper) {
   clipper.addExclusion(absolute_bounds);
 }
 
-Widget* Widget::dispatchTouchDownEvent(int16_t x, int16_t y,
-                                       GestureDetector& gesture_detector) {
-  return (onTouchDown(x, y, gesture_detector)) ? this : nullptr;
+Widget* Widget::dispatchTouchDownEvent(int16_t x, int16_t y) {
+  return onTouchDown(x, y) ? this : nullptr;
 }
 
-bool Widget::onTouchDown(int16_t x, int16_t y,
-                         GestureDetector& gesture_detector) {
-  return gesture_detector.onTouchDown(*this, x, y);
+bool Widget::onTouchDown(int16_t x, int16_t y) {
+  return getApplication()->gesture_detector().onTouchDown(*this, x, y);
 }
 
-bool Widget::onTouchMove(int16_t x, int16_t y,
-                         GestureDetector& gesture_detector) {
-  return gesture_detector.onTouchMove(*this, x, y);
+bool Widget::onTouchMove(int16_t x, int16_t y) {
+  return getApplication()->gesture_detector().onTouchMove(*this, x, y);
 }
 
-bool Widget::onTouchUp(int16_t x, int16_t y,
-                       GestureDetector& gesture_detector) {
-  return gesture_detector.onTouchUp(*this, x, y);
+bool Widget::onTouchUp(int16_t x, int16_t y) {
+  return getApplication()->gesture_detector().onTouchUp(*this, x, y);
 }
 
 void Widget::onClicked() { on_clicked_(); }

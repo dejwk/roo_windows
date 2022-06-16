@@ -42,8 +42,7 @@ class TaskPanel : public Panel {
 
   Task* getTask() override { return &task_; }
 
-  Widget* dispatchTouchDownEvent(int16_t x, int16_t y,
-                                 GestureDetector& gesture_detector) override;
+  Widget* dispatchTouchDownEvent(int16_t x, int16_t y) override;
 
  private:
   friend class Task;

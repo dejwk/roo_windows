@@ -15,7 +15,7 @@ bool GestureDetector::tick() {
     is_down_ = true;
     initial_down_ = latest_ = TouchPoint(x, y, now_us_);
     velocity_x_ = velocity_y_ = 0;
-    touch_target_ = root_.dispatchTouchDownEvent(x, y, *this);
+    touch_target_ = root_.dispatchTouchDownEvent(x, y);
   } else if (!down && is_down_) {
     // Up.
     is_down_ = false;
@@ -121,9 +121,9 @@ bool GestureDetector::dispatchTo(Widget* target, TouchEvent::Type type) {
   int16_t dx, dy;
   target->getAbsoluteOffset(dx, dy);
   if (type == TouchEvent::MOVE) {
-    return target->onTouchMove(latest_.x() - dx, latest_.y() - dy, *this);
+    return target->onTouchMove(latest_.x() - dx, latest_.y() - dy);
   } else if (type == TouchEvent::UP) {
-    return target->onTouchUp(latest_.x() - dx, latest_.y() - dy, *this);
+    return target->onTouchUp(latest_.x() - dx, latest_.y() - dy);
   } else {
     return false;
   }

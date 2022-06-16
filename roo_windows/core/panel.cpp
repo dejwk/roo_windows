@@ -97,8 +97,7 @@ bool Panel::paint(const Surface& s) {
   return true;
 }
 
-Widget* Panel::dispatchTouchDownEvent(int16_t x, int16_t y,
-                                      GestureDetector& gesture_detector) {
+Widget* Panel::dispatchTouchDownEvent(int16_t x, int16_t y) {
   // Find if can delegate to a child.
   // Iterate backwards, because the order of children is assumed to represent
   // Z dimension (e.g., later added child is on top) so in case they are
@@ -107,7 +106,7 @@ Widget* Panel::dispatchTouchDownEvent(int16_t x, int16_t y,
     if (!(*child)->isVisible()) continue;
     if ((*child)->maxParentBounds().contains(x, y)) {
       Widget* w = (*child)->dispatchTouchDownEvent(
-          x - (*child)->xOffset(), y - (*child)->yOffset(), gesture_detector);
+          x - (*child)->xOffset(), y - (*child)->yOffset());
       if (w != nullptr) return w;
     }
   }
@@ -121,12 +120,12 @@ Widget* Panel::dispatchTouchDownEvent(int16_t x, int16_t y,
     // When re-checking with looser bounds, don't recurse - we have already
     // tried descendants with looser bounds.
     if (ebounds.contains(x, y) &&
-        (*child)->onTouchDown(x, y, gesture_detector)) {
+        (*child)->onTouchDown(x, y)) {
       return *child;
     }
   }
   if (bounds().contains(x, y)) {
-    return Widget::dispatchTouchDownEvent(x, y, gesture_detector);
+    return Widget::dispatchTouchDownEvent(x, y);
   }
   return nullptr;
 }
