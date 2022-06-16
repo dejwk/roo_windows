@@ -122,6 +122,7 @@ bool ScrollablePanel::onDown(int16_t x, int16_t y) {
   // Stop the scroll.
   scroll_start_vx_ = 0;
   scroll_start_vy_ = 0;
+  return true;
 }
 
 bool ScrollablePanel::onScroll(int16_t dx, int16_t dy) {
