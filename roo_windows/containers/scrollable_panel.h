@@ -49,6 +49,8 @@ class ScrollablePanel : public Panel {
   bool onScroll(int16_t dx, int16_t dy) override;
   bool onFling(int16_t vx, int16_t vy) override;
 
+  bool supportsScrolling() const override { return true; }
+
  protected:
   PreferredSize getPreferredSize() const override {
     return PreferredSize(direction_ != VERTICAL ? PreferredSize::WrapContent()

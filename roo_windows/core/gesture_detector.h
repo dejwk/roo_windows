@@ -81,6 +81,7 @@ class GestureDetector {
 
   unsigned long now_us_;
   bool is_down_;
+  bool supports_scrolling_;
   bool moved_outside_tap_region_;
 
   // Indicates that the gesture has been recognized as a long press, rather than

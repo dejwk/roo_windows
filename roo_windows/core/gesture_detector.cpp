@@ -52,33 +52,63 @@ bool GestureDetector::tick() {
   return true;
 }
 
+namespace {
+
+// Returns true if the given widget or any of its ancestors support scroll
+// events. Used to determine if down events can be interpreted as 'press' right
+// away, or should there be the tap delay to disambiguate from scrolling.
+bool isScrollableContainer(const Panel* p) {
+  for (; p != nullptr; p = p->parent()) {
+    if (p->supportsScrolling()) return true;
+  }
+  return false;
+}
+
+}  // namespace
+
 bool GestureDetector::onTouchDown(Widget& widget, int16_t x, int16_t y) {
   if (&widget != touch_target_) {
   }
   moved_outside_tap_region_ = false;
   in_long_press_ = false;
+  supports_scrolling_ = widget.supportsScrolling();
   if (widget.supportsLongPress()) {
     long_press_event_.schedule(now_us_ + kLongPressTimeoutUs);
   }
-  show_press_event_.schedule(now_us_ + kShowPressTimeoutUs);
+  bool should_delay_press_state =
+      supports_scrolling_ || isScrollableContainer(widget.parent());
+  show_press_event_.schedule(
+      now_us_ + (should_delay_press_state ? kShowPressTimeoutUs : 0));
   return handledOrCancel(widget.onDown(x, y));
 }
 
 bool GestureDetector::onTouchMove(Widget& widget, int16_t x, int16_t y) {
   if (in_long_press_) return false;
   bool handled = false;
-  if (!moved_outside_tap_region_) {
-    int16_t total_move_x = latest_.x() - initial_down_.x();
-    int16_t total_move_y = latest_.y() - initial_down_.y();
-    int32_t dist_square =
-        total_move_x * total_move_x + total_move_y * total_move_y;
-    if (dist_square > kTouchSlopSquare) {
+  if (moved_outside_tap_region_) {
+    if (supports_scrolling_) {
       handled |= widget.onScroll(delta_x_, delta_y_);
-      moved_outside_tap_region_ = true;
-      cancelEvents();
     }
   } else {
-    handled |= widget.onScroll(delta_x_, delta_y_);
+    if (supports_scrolling_) {
+      int16_t total_move_x = latest_.x() - initial_down_.x();
+      int16_t total_move_y = latest_.y() - initial_down_.y();
+      int32_t dist_square =
+          total_move_x * total_move_x + total_move_y * total_move_y;
+      if (dist_square > kTouchSlopSquare) {
+        handled |= widget.onScroll(delta_x_, delta_y_);
+        moved_outside_tap_region_ = true;
+        cancelEvents();
+      }
+    } else {
+      // tap region = the entire bounds of the widget.
+      if (!widget.bounds().contains(x, y)) {
+        moved_outside_tap_region_ = true;
+        cancelEvents();
+        // TODO: consider sending a 'cancelled' notification?
+        widget.setPressed(false);
+      }
+    }
   }
   return handled;
 }
@@ -88,14 +118,17 @@ bool GestureDetector::onTouchUp(Widget& widget, int16_t x, int16_t y) {
   if (in_long_press_) {
     in_long_press_ = false;
     widget.onLongPressFinished(x, y);
+    handled = true;
   } else if (!moved_outside_tap_region_) {
     handled |= widget.onSingleTapUp(x, y);
-  } else {
+  } else if (supports_scrolling_) {
     // We have been in 'scroll'. Perhaps a fling?
     int32_t v_square = velocity_x_ * velocity_x_ + velocity_y_ * velocity_y_;
     if (v_square > kMinFlingVelocitySquare) {
       handled |= widget.onFling(velocity_x_, velocity_y_);
     }
+  } else {
+    // Moved outside bounds of a non-scrollable widget.
   }
   show_press_event_.clear();
   long_press_event_.clear();
@@ -104,13 +137,13 @@ bool GestureDetector::onTouchUp(Widget& widget, int16_t x, int16_t y) {
 
 bool GestureDetector::dispatch(TouchEvent::Type type) {
   Widget* target = touch_target_;
-  while (target != nullptr) {
+  // while (target != nullptr) {
     if (dispatchTo(target, type)) {
       touch_target_ = target;
       return true;
     }
-    target = target->parent();
-  }
+  //   target = target->parent();
+  // }
   return false;
 }
 

@@ -107,6 +107,9 @@ class KeyboardButton : public Button {
   using Button::Button;
   virtual void capsStateUpdated() {}
 
+  bool onScroll(int16_t dx, int16_t dy) override;
+  bool onFling(int16_t vx, int16_t vy) override;
+
  protected:
   KeyboardWidget& keyboard();
 };
@@ -193,6 +196,18 @@ KeyboardWidget& KeyboardButton::keyboard() {
   return *((KeyboardPage*)parent())->keyboard();
 }
 
+bool KeyboardButton::onFling(int16_t vx, int16_t vy) {
+  KeyboardPage* page = ((KeyboardPage*)parent());
+  page->hideHighlighter();
+  return Button::onFling(vx, vy);
+}
+
+bool KeyboardButton::onScroll(int16_t vx, int16_t vy) {
+  KeyboardPage* page = ((KeyboardPage*)parent());
+  page->hideHighlighter();
+  return Button::onScroll(vx, vy);
+}
+
 class TextButton : public KeyboardButton {
  public:
   TextButton(const Environment& env, uint16_t rune, uint16_t rune_caps)
@@ -207,6 +222,7 @@ class TextButton : public KeyboardButton {
   // key presses, we want quicker feedback, to facilitate fast typing, and also
   // because we don't handle the swipe anyway.
   bool onDown(int16_t x, int16_t y) override {
+    setPressed(true);
     ((KeyboardPage*)parent())->showHighlighter(*this);
     return Button::onDown(x, y);
   }
