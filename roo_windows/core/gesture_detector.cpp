@@ -121,8 +121,8 @@ bool GestureDetector::onTouchMove(Widget& widget, int16_t x, int16_t y) {
       if (!widget.getSloppyTouchBounds().contains(x, y)) {
         moved_outside_tap_region_ = true;
         cancelEvents();
-        // TODO: consider sending a 'cancelled' notification?
         widget.setPressed(false);
+        widget.onCancel();
       }
     }
   }
