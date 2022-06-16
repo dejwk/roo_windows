@@ -22,14 +22,6 @@ class ScrollablePanel : public Panel {
     add(std::move(contents));
   }
 
-  void setSize(int16_t width, int16_t height) {
-    width = std::max(width, this->width());
-    height = std::max(height, this->height());
-    Widget* c = contents();
-    Box bounds(0, 0, width - 1, height - 1);
-    c->moveTo(bounds.translate(c->xOffset(), c->yOffset()));
-  }
-
   Widget* contents() { return children_[0]; }
   const Widget& contents() const { return *children_[0]; }
 
