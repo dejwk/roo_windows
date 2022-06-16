@@ -142,6 +142,12 @@ class Panel : public Widget {
                                    const Widget* subject) override;
   void markCleanDescending() override;
 
+  // To be overwritten by scrolling containers, for which we want to delay the
+  // recognition of touch down as 'press', to give the container a small delay
+  // for properly recognizing drag and fling events (which get intercepted by
+  // the container).
+  virtual bool shouldDelayChildPressedState() { return false; }
+
   // Called when a previously obstructed region has been uncovered, because
   // the 'widget' descendant has been hidden or moved. Calls itself recursively
   // to determine the nearest ancestor that fully covers the invalidated region

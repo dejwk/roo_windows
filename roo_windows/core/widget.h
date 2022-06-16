@@ -91,6 +91,8 @@ class Widget {
 
   Box bounds() const { return Box(0, 0, width() - 1, height() - 1); }
 
+  Box getSloppyTouchBounds() const;
+
   // Returns the rectangle that covers all of this widget and its descendants.
   virtual Box maxBounds() const { return bounds(); }
 
@@ -188,6 +190,10 @@ class Widget {
   // Returns true if the event is handled, false otherwise.
   virtual bool onTouchUp(int16_t x, int16_t y);
 
+  // Called by the framework when onTouchMove returns false, indicating that
+  // this widget is no longer the target of the gesture.
+  virtual void onTouchCanceled() {}
+
   // Called when a 'click' should be handled (either during or after
   // onSingleTapUp). For widgets that support click animation, the event is
   // triggered after the animation completes.
@@ -250,6 +256,10 @@ class Widget {
   // Should be overridden to return true by widgets that wish to handle the
   // onLongPoress events.
   virtual bool supportsLongPress() { return false; }
+
+  // Should be overridden to return true by widgets that wish to handle the
+  // onScroll and onFling events.
+  virtual bool supportsScrolling() const { return false; }
 
   // Called when the gesture is recognized as a long press. The widget must
   // have returned true from supportsLongPress() in order to receive this

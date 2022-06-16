@@ -81,13 +81,15 @@ void Widget::getAbsoluteOffset(int16_t& dx, int16_t& dy) const {
   dy += yOffset();
 }
 
-Box Widget::getSloppyTouchParentBounds() const {
-  int16_t w = width();
-  int16_t h = height();
-  int16_t xMin = parent_bounds().xMin();
-  int16_t yMin = parent_bounds().yMin();
-  int16_t xMax = parent_bounds().xMax();
-  int16_t yMax = parent_bounds().yMax();
+namespace {
+
+Box slopify(Box bounds) {
+  int16_t w = bounds.width();
+  int16_t h = bounds.height();
+  int16_t xMin = bounds.xMin();
+  int16_t yMin = bounds.yMin();
+  int16_t xMax = bounds.xMax();
+  int16_t yMax = bounds.yMax();
   if (w < kMinSloppyTouchTargetSpan) {
     xMin -= kMinSloppyTouchTargetSpan / 2;
     xMax = xMin + kMinSloppyTouchTargetSpan - 1;
@@ -97,6 +99,16 @@ Box Widget::getSloppyTouchParentBounds() const {
     yMax = yMin + kMinSloppyTouchTargetSpan - 1;
   }
   return Box(xMin, yMin, xMax, yMax);
+}
+
+}
+
+Box Widget::getSloppyTouchParentBounds() const {
+  return slopify(parent_bounds());
+}
+
+Box Widget::getSloppyTouchBounds() const {
+  return slopify(bounds());
 }
 
 Color Widget::effectiveBackground() const {
