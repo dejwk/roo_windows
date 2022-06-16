@@ -10,10 +10,11 @@
 namespace roo_windows {
 
 class ModalWindow;
+class Application;
 
 class MainWindow : public Panel {
  public:
-  MainWindow(const Environment& env, const Box& bounds);
+  MainWindow(Application& app, const Box& bounds);
 
   void tick();
   void update(roo_display::DrawingContext& dc);
@@ -26,7 +27,9 @@ class MainWindow : public Panel {
   void enterModal(ModalWindow* modal_window) {}
   void exitModal(ModalWindow* modal_window) {}
 
-  const Theme& theme() const override { return theme_; }
+  Application& app();
+  const Application& app() const;
+  const Theme& theme() const override;
 
   void add(WidgetRef child, const roo_display::Box& box) {
     Panel::add(std::move(child), box);
@@ -38,7 +41,7 @@ class MainWindow : public Panel {
   void propagateDirty(const Widget* child, const Box& box) override;
 
  private:
-  const Theme& theme_;
+  Application& app_;
 
   ClickAnimation click_animation_;
 

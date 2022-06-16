@@ -6,6 +6,7 @@
 #include "roo_display/filter/clip_exclude_rects.h"
 #include "roo_display/filter/foreground.h"
 #include "roo_display/internal/hashtable.h"
+#include "roo_windows/core/application.h"
 #include "roo_windows/core/modal_window.h"
 #include "roo_windows/core/press_overlay.h"
 
@@ -27,13 +28,14 @@ void maybeAddColor(roo_display::internal::ColorSet& palette, Color color) {
 
 }  // namespace
 
-MainWindow::MainWindow(const Environment& env, const Box& bounds)
-    : Panel(env, env.theme().color.background),
-      theme_(env.theme()),
+MainWindow::MainWindow(Application& app, const Box& bounds)
+    : Panel(app.env(), app.env().theme().color.background),
+      app_(app),
       redraw_bounds_(bounds),
       background_fill_buffer_(bounds.width(), bounds.height()) {
   parent_bounds_ = bounds;
   invalidateDescending();
+  const Environment& env = app.env();
   roo_display::internal::ColorSet color_set;
   maybeAddColor(color_set, env.theme().color.background);
   maybeAddColor(color_set, env.theme().color.surface);
@@ -62,6 +64,10 @@ MainWindow::MainWindow(const Environment& env, const Box& bounds)
   std::copy(color_set.begin(), color_set.end(), palette);
   background_fill_buffer_.setPalette(palette, color_set.size());
 }
+
+Application& MainWindow::app() { return app_; }
+const Application& MainWindow::app() const { return app_; }
+const Theme& MainWindow::theme() const { return app().env().theme(); }
 
 void MainWindow::tick() {
   click_animation_.tick();

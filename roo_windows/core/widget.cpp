@@ -4,6 +4,7 @@
 
 #include "roo_display/filter/foreground.h"
 #include "roo_glog/logging.h"
+#include "roo_windows/core/application.h"
 #include "roo_windows/core/main_window.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/press_overlay.h"
@@ -40,6 +41,11 @@ Widget::Widget(const Widget& w)
       on_clicked_([] {}) {}
 
 MainWindow* Widget::getMainWindow() { return parent_->getMainWindow(); }
+
+Application* Widget::getApplication() {
+  MainWindow* w = getMainWindow();
+  return (w == nullptr) ? nullptr : &w->app();
+}
 
 const MainWindow* Widget::getMainWindow() const {
   return parent_->getMainWindow();

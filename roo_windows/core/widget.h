@@ -24,6 +24,7 @@ class Panel;
 class MainWindow;
 class GestureDetector;
 class Task;
+class Application;
 
 typedef roo_display::RleImage4bppxBiased<roo_display::Alpha4,
                                          roo_display::PrgMemResource>
@@ -136,6 +137,8 @@ class Widget {
   virtual const MainWindow* getMainWindow() const;
 
   virtual Task* getTask();
+
+  Application* getApplication();
 
   ClickAnimation* getClickAnimation();
 

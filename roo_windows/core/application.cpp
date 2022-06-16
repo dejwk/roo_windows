@@ -14,7 +14,7 @@ static constexpr long kMinRefreshTimeDeltaMs = 20;
 Application::Application(const Environment* env, Display& display)
     : display_(display),
       env_(env),
-      root_window_(*env, display.extents()),
+      root_window_(*this, display.extents()),
       gesture_detector_(root_window_, display) {}
 
 void Application::add(WidgetRef child, const roo_display::Box& box) {

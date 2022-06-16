@@ -20,7 +20,7 @@ class Application {
 
   void tick();
 
-  const Theme& theme() const { return env_->theme(); }
+  const Environment& env() const { return *env_; }
 
   void add(WidgetRef child, const roo_display::Box& box);
 
@@ -28,6 +28,7 @@ class Application {
   Task* addTask(const roo_display::Box& bounds);
 
   MainWindow& root() { return root_window_; }
+  GestureDetector& gesture_detector() { return gesture_detector_; }
 
  private:
   roo_display::Display& display_;
