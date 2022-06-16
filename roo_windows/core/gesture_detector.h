@@ -39,7 +39,7 @@ class ScheduledEvent {
 
   bool isScheduled() const { return scheduled_; }
   bool isDue(unsigned long now) const {
-    return scheduled_ && (long)(now - when_) > 0;
+    return scheduled_ && (long)(now - when_) >= 0;
   }
 
  private:
