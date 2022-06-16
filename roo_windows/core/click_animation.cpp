@@ -58,7 +58,10 @@ void ClickAnimation::start(Widget* widget, int16_t x, int16_t y) {
   click_anim_x_ = x;
   click_anim_y_ = y;
   click_confirmed_ = false;
-  // gesture_detector_.startClickAnimation();
+}
+
+void ClickAnimation::cancel() {
+  click_anim_target_ = nullptr;
 }
 
 void ClickAnimation::confirmClick(Widget* widget) {

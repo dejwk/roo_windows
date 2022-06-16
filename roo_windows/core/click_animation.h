@@ -25,6 +25,7 @@ class ClickAnimation {
   bool isClickAnimating() const;
   bool isClickConfirmed() const;
   void start(Widget* target, int16_t x, int16_t y);
+  void cancel();
   void confirmClick(Widget* widget);
   void clickWidget(Widget* target) { deferred_click_ = target; }
 

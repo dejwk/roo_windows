@@ -28,6 +28,13 @@ static const long int kClickDurationThresholdMs = 200;
 // as drag.
 static const long int kClickStickinessRadius = 40;
 
+// If working with the fast display, set it to false, so that click animations
+// finish gracefully. The default is true, because SPI displays are slow, and
+// continuing to animate a moving widget (e.g. when its) container is scrolling)
+// competes with the other display updates (e.g. updating the scrolled content),
+// making it stutter.
+static const bool kTerminateAnimationsOnCancel = true;
+
 Widget::Widget(const Environment& env)
     : parent_(nullptr),
       parent_bounds_(0, 0, -1, -1),
@@ -101,15 +108,13 @@ Box slopify(Box bounds) {
   return Box(xMin, yMin, xMax, yMax);
 }
 
-}
+}  // namespace
 
 Box Widget::getSloppyTouchParentBounds() const {
   return slopify(parent_bounds());
 }
 
-Box Widget::getSloppyTouchBounds() const {
-  return slopify(bounds());
-}
+Box Widget::getSloppyTouchBounds() const { return slopify(bounds()); }
 
 Color Widget::effectiveBackground() const {
   roo_display::Color bgcolor = background();
@@ -500,6 +505,10 @@ bool Widget::onFling(int16_t vx, int16_t vy) {
 
 void Widget::onCancel() {
   setPressed(false);
+  if (kTerminateAnimationsOnCancel) {
+    state_ &= ~kWidgetClicking;
+    getClickAnimation()->cancel();
+  }
 }
 
 std::ostream& operator<<(std::ostream& os, const Widget& widget) {
