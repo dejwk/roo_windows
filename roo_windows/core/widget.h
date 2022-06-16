@@ -280,6 +280,8 @@ class Widget {
   // implementation clears the 'press' state and returns false.
   virtual bool onFling(int16_t vx, int16_t vy);
 
+  virtual void onCancel() {}
+
   ParentClipMode getParentClipMode() const {
     return (state_ & kWidgetClippedInParent) != 0 ? Widget::UNCLIPPED
                                                   : Widget::CLIPPED;

@@ -62,8 +62,8 @@ class GestureDetector {
 
  private:
   bool dispatch(TouchEvent::Type type);
-
   bool dispatchTo(Widget* target, TouchEvent::Type type);
+  bool offerIntercept(Panel* target, TouchEvent::Type type);
 
   bool handledOrCancel(bool handled) {
     if (!handled) cancelEvents();

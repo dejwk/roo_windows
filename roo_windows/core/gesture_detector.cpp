@@ -1,6 +1,6 @@
-#include <algorithm>
-
 #include "roo_windows/core/gesture_detector.h"
+
+#include <algorithm>
 
 namespace roo_windows {
 
@@ -18,7 +18,7 @@ void fillTargetPath(Widget* target, std::vector<Widget*>& path) {
   std::reverse(path.begin(), path.end());
 }
 
-}
+}  // namespace
 
 bool GestureDetector::tick() {
   int16_t x;
@@ -121,10 +121,34 @@ bool GestureDetector::onTouchUp(Widget& widget, int16_t x, int16_t y) {
 }
 
 bool GestureDetector::dispatch(TouchEvent::Type type) {
-  for (auto w = touch_target_path_.rbegin(); w != touch_target_path_.rend(); w++) {
+  // Give the ancestors a chance to intercept the event.
+  // The last element may be a non-panel, and cannot intercept.
+  if (touch_target_path_.size() > 1) {
+    for (int i = 0; i < touch_target_path_.size() - 1; ++i) {
+      if (offerIntercept((Panel*)touch_target_path_[i], type)) {
+        // Intercepted, indeed.
+        // We need to cancel the current touch target.
+        touch_target_path_.back()->onCancel();
+        touch_target_path_.resize(i + 1);
+        break;
+      }
+    }
+  }
+  for (auto w = touch_target_path_.rbegin(); w != touch_target_path_.rend();
+       w++) {
     if (dispatchTo(*w, type)) return true;
   }
   return false;
+}
+
+bool GestureDetector::offerIntercept(Panel* target, TouchEvent::Type type) {
+  if (!target->isVisible()) {
+    return false;
+  }
+  int16_t dx, dy;
+  target->getAbsoluteOffset(dx, dy);
+  return target->onInterceptTouchEvent(
+      TouchEvent(type, latest_.x() - dx, latest_.y() - dy));
 }
 
 bool GestureDetector::dispatchTo(Widget* target, TouchEvent::Type type) {

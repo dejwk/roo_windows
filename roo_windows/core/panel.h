@@ -116,6 +116,8 @@ class Panel : public Widget {
 
   const Widget& child_at(int idx) const { return *children_[idx]; }
 
+  virtual bool onInterceptTouchEvent(const TouchEvent& event) { return false; }
+
  protected:
   Panel(const Panel& other)
       : Widget(other),
