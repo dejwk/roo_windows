@@ -87,7 +87,7 @@ class GestureDetector {
   // a single tap, scroll, or fling.
   bool in_long_press_;
 
-  Widget* touch_target_;
+  std::vector<Widget*> touch_target_path_;
 
   TouchPoint initial_down_;
   TouchPoint latest_;

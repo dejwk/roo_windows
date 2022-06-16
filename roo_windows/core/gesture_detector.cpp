@@ -1,9 +1,24 @@
+#include <algorithm>
+
 #include "roo_windows/core/gesture_detector.h"
 
 namespace roo_windows {
 
 // Ignore 'move' events that come more frequently than this (50 Hz).
 static constexpr long kMinMoveTimeDeltaMs = 20;
+
+namespace {
+
+void fillTargetPath(Widget* target, std::vector<Widget*>& path) {
+  path.clear();
+  while (target != nullptr) {
+    path.push_back(target);
+    target = target->parent();
+  }
+  std::reverse(path.begin(), path.end());
+}
+
+}
 
 bool GestureDetector::tick() {
   int16_t x;
@@ -15,12 +30,13 @@ bool GestureDetector::tick() {
     is_down_ = true;
     initial_down_ = latest_ = TouchPoint(x, y, now_us_);
     velocity_x_ = velocity_y_ = 0;
-    touch_target_ = root_.dispatchTouchDownEvent(x, y);
+    Widget* target = root_.dispatchTouchDownEvent(x, y);
+    fillTargetPath(target, touch_target_path_);
   } else if (!down && is_down_) {
     // Up.
     is_down_ = false;
     dispatch(TouchEvent::UP);
-    //   touch_target_ = nullptr;
+    touch_target_path_.clear();
   } else if (is_down_) {
     // Move.
     long time_delta = now_us_ - latest_.when_micros();
@@ -35,26 +51,28 @@ bool GestureDetector::tick() {
     dispatch(TouchEvent::MOVE);
   }
 
-  if (show_press_event_.isDue(now_us_)) {
-    int16_t dx, dy;
-    touch_target_->getAbsoluteOffset(dx, dy);
-    show_press_event_.clear();
-    touch_target_->onShowPress(latest_.x() - dx, latest_.y() - dy);
+  if (!touch_target_path_.empty()) {
+    Widget* touch_target = touch_target_path_.back();
+    if (show_press_event_.isDue(now_us_)) {
+      int16_t dx, dy;
+      touch_target->getAbsoluteOffset(dx, dy);
+      show_press_event_.clear();
+      touch_target->onShowPress(latest_.x() - dx, latest_.y() - dy);
+    }
+    if (long_press_event_.isDue(now_us_)) {
+      int16_t dx, dy;
+      touch_target->getAbsoluteOffset(dx, dy);
+      long_press_event_.clear();
+      in_long_press_ = true;
+      touch_target->onLongPress(latest_.x() - dx, latest_.y() - dy);
+    }
   }
-  if (long_press_event_.isDue(now_us_)) {
-    int16_t dx, dy;
-    touch_target_->getAbsoluteOffset(dx, dy);
-    long_press_event_.clear();
-    in_long_press_ = true;
-    touch_target_->onLongPress(latest_.x() - dx, latest_.y() - dy);
-  }
-
   return true;
 }
 
 bool GestureDetector::onTouchDown(Widget& widget, int16_t x, int16_t y) {
-  if (&widget != touch_target_) {
-  }
+  // if (&widget != touch_target_) {
+  // }
   moved_outside_tap_region_ = false;
   in_long_press_ = false;
   if (widget.supportsLongPress()) {
@@ -103,13 +121,8 @@ bool GestureDetector::onTouchUp(Widget& widget, int16_t x, int16_t y) {
 }
 
 bool GestureDetector::dispatch(TouchEvent::Type type) {
-  Widget* target = touch_target_;
-  while (target != nullptr) {
-    if (dispatchTo(target, type)) {
-      touch_target_ = target;
-      return true;
-    }
-    target = target->parent();
+  for (auto w = touch_target_path_.rbegin(); w != touch_target_path_.rend(); w++) {
+    if (dispatchTo(*w, type)) return true;
   }
   return false;
 }
