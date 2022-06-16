@@ -134,9 +134,8 @@ bool GestureDetector::dispatch(TouchEvent::Type type) {
       }
     }
   }
-  for (auto w = touch_target_path_.rbegin(); w != touch_target_path_.rend();
-       w++) {
-    if (dispatchTo(*w, type)) return true;
+  if (!touch_target_path_.empty()) {
+    return dispatchTo(touch_target_path_.back(), type);
   }
   return false;
 }

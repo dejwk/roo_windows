@@ -1,4 +1,7 @@
-#include "scrollable_panel.h"
+#include "roo_windows/containers/scrollable_panel.h"
+
+#include "roo_windows/core/application.h"
+#include "roo_windows/core/gesture_detector.h"
 
 #include <Arduino.h>
 
@@ -97,6 +100,22 @@ void ScrollablePanel::paintWidgetContents(const Surface& s, Clipper& clipper) {
     // to something like 50-60 fps.
     invalidateInterior();
   }
+}
+
+bool ScrollablePanel::onInterceptTouchEvent(const TouchEvent& event) {
+  if (scroll_start_vx_ != 0 || scroll_start_vy_ != 0) {
+    // Scroll in progress. Capture all events, including touch down.
+    return true;
+  }
+  if (event.type() == TouchEvent::MOVE) {
+    const GestureDetector& gd = getApplication()->gesture_detector();
+    int16_t dx = gd.xTotalMoveDelta();
+    int16_t dy = gd.yTotalMoveDelta();
+    if (dx * dx + dy * dy > kTouchSlopSquare) {
+      return true;
+    }
+  }
+  return false;
 }
 
 bool ScrollablePanel::onDown(int16_t x, int16_t y) {

@@ -486,6 +486,10 @@ bool Widget::onFling(int16_t vx, int16_t vy) {
   return false;
 }
 
+void Widget::onCancel() {
+  setPressed(false);
+}
+
 std::ostream& operator<<(std::ostream& os, const Widget& widget) {
   os << GetTypeName(widget) << "{ " << &widget << "}";
   return os;

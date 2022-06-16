@@ -60,6 +60,14 @@ class GestureDetector {
 
   bool onTouchUp(Widget& widget, int16_t x, int16_t y);
 
+  int16_t xTotalMoveDelta() const {
+    return latest_.x() - initial_down_.x();
+  }
+
+  int16_t yTotalMoveDelta() const {
+    return latest_.y() - initial_down_.y();
+  }
+
  private:
   bool dispatch(TouchEvent::Type type);
   bool dispatchTo(Widget* target, TouchEvent::Type type);
