@@ -105,22 +105,18 @@ Widget* Panel::dispatchTouchDownEvent(int16_t x, int16_t y) {
   for (auto child = children_.rbegin(); child != children_.rend(); child++) {
     if (!(*child)->isVisible()) continue;
     if ((*child)->maxParentBounds().contains(x, y)) {
-      Widget* w = (*child)->dispatchTouchDownEvent(
-          x - (*child)->xOffset(), y - (*child)->yOffset());
+      Widget* w = (*child)->dispatchTouchDownEvent(x - (*child)->xOffset(),
+                                                   y - (*child)->yOffset());
       if (w != nullptr) return w;
     }
   }
   // See if can delegate assuming more loose bounds.
   for (auto child = children_.rbegin(); child != children_.rend(); child++) {
     if (!(*child)->isVisible()) continue;
-    const Box& pbounds = (*child)->parent_bounds();
-    const Box ebounds(
-        pbounds.xMin() - kTouchMargin, pbounds.yMin() - kTouchMargin,
-        pbounds.xMax() + kTouchMargin, pbounds.yMax() + kTouchMargin);
+    Box ebounds = (*child)->getSloppyTouchParentBounds();
     // When re-checking with looser bounds, don't recurse - we have already
     // tried descendants with looser bounds.
-    if (ebounds.contains(x, y) &&
-        (*child)->onTouchDown(x, y)) {
+    if (ebounds.contains(x, y) && (*child)->onTouchDown(x, y)) {
       return *child;
     }
   }

@@ -12,6 +12,8 @@
 
 namespace roo_windows {
 
+static int16_t kMinSloppyTouchTargetSpan = 40;
+
 // If the end-to-end duration of touch it shorted than this threshold,
 // it is always interpreted as a 'click' rather than 'drag'; i.e.
 // it is registered in the target component even if the exit coordinates
@@ -77,6 +79,24 @@ void Widget::getAbsoluteOffset(int16_t& dx, int16_t& dy) const {
   }
   dx += xOffset();
   dy += yOffset();
+}
+
+Box Widget::getSloppyTouchParentBounds() const {
+  int16_t w = width();
+  int16_t h = height();
+  int16_t xMin = parent_bounds().xMin();
+  int16_t yMin = parent_bounds().yMin();
+  int16_t xMax = parent_bounds().xMax();
+  int16_t yMax = parent_bounds().yMax();
+  if (w < kMinSloppyTouchTargetSpan) {
+    xMin -= kMinSloppyTouchTargetSpan / 2;
+    xMax = xMin + kMinSloppyTouchTargetSpan - 1;
+  }
+  if (h < kMinSloppyTouchTargetSpan) {
+    yMin -= -kMinSloppyTouchTargetSpan / 2;
+    yMax = yMin + kMinSloppyTouchTargetSpan - 1;
+  }
+  return Box(xMin, yMin, xMax, yMax);
 }
 
 Color Widget::effectiveBackground() const {
@@ -454,9 +474,7 @@ bool Widget::onSingleTapUp(int16_t x, int16_t y) {
 
 void Widget::onLongPress(int16_t dx, int16_t dy) {}
 
-void Widget::onLongPressFinished(int16_t dx, int16_t dy) {
-  setPressed(false);
-}
+void Widget::onLongPressFinished(int16_t dx, int16_t dy) { setPressed(false); }
 
 bool Widget::onScroll(int16_t dx, int16_t dy) {
   setPressed(false);

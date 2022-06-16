@@ -14,8 +14,6 @@ namespace roo_windows {
 
 using roo_display::Color;
 
-static const int16_t kTouchMargin = 8;
-
 // A type of a smart pointer to a widget, with optional ownership.
 class WidgetRef {
  public:
