@@ -64,7 +64,7 @@ class Panel : public Widget {
   ~Panel();
 
   void setBackground(Color bgcolor) {
-    if (bgcolor_== bgcolor) return;
+    if (bgcolor_ == bgcolor) return;
     bgcolor_ = bgcolor;
     invalidateInterior();
   }
@@ -108,6 +108,13 @@ class Panel : public Widget {
     return Dimensions(0, 0);
   }
 
+  // Panels are usually used for grouping, where extra padding or margins would
+  // be unexpected and unwelcome. If you are implementing a custom widget that
+  // derives from panel, you might want to override it, e.g. to use Widget's
+  // defaults.
+  Margins getDefaultMargins() const override { return Margins(0); }
+
+  // Ditto.
   Padding getDefaultPadding() const override { return Padding(0); }
 
   PreferredSize getPreferredSize() const override {
