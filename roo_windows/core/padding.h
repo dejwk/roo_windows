@@ -5,14 +5,14 @@ namespace roo_windows {
 class Padding {
  public:
   Padding() : Padding(0) {}
-  Padding(int16_t padding) : value_h_(padding), value_v_(padding) {}
+  Padding(int16_t padding) : value_h_(padding + 32), value_v_(padding + 32) {}
   Padding(int16_t horizontal, int16_t vertical)
-      : value_h_(horizontal), value_v_(vertical) {}
+      : value_h_(horizontal + 32), value_v_(vertical + 32) {}
 
-  int16_t top() const { return value_v_; }
-  int16_t left() const { return value_h_; }
-  int16_t right() const { return value_h_; }
-  int16_t bottom() const { return value_v_; }
+  int16_t top() const { return (int16_t)value_v_ - 32; }
+  int16_t left() const { return (int16_t)value_h_ - 32; }
+  int16_t right() const { return (int16_t)value_h_ - 32; }
+  int16_t bottom() const { return (int16_t)value_v_ - 32; }
 
  private:
   friend bool operator==(Padding a, Padding b);
