@@ -24,17 +24,6 @@ bool Switch::onSingleTapUp(int16_t x, int16_t y) {
   return Widget::onSingleTapUp(x, y);
 }
 
-void Switch::setState(State state) {
-  if (state == state_) return;
-  state_ = state;
-  markDirty();
-}
-
-void Switch::toggle() {
-  state_ = isOn() ? OFF : ON;
-  markDirty();
-}
-
 int16_t Switch::time_animating_ms() const {
   return (millis() & 0x7FFF) - (anim_ & 0x7FFF);
 }

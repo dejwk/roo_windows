@@ -64,6 +64,7 @@ static const uint8_t kLayoutRequired = 0x08;
 class Widget {
  public:
   enum ParentClipMode { CLIPPED, UNCLIPPED };
+  enum OnOffState { OFF, INDETERMINATE, ON };
 
   Widget(const Environment& env);
   Widget(const Widget& w);
@@ -398,6 +399,16 @@ class Widget {
   void layout(const roo_display::Box& box);
 
  protected:
+  bool isOn() const { return (state_ & kWidgetOn) != 0; }
+  bool isOff() const { return (state_ & kWidgetOff) != 0; }
+
+  void setOn() { setOnOffState(Widget::ON); }
+  void setOff() { setOnOffState(Widget::OFF); }
+  void toggle();
+
+  OnOffState onOffState() const;
+  void setOnOffState(OnOffState state);
+
   // Marks the entire area of this widget, and all its descendants, as
   // invalidated (needing full redraw).
   virtual void invalidateDescending() { markInvalidated(); }

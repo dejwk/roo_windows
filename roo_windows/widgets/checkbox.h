@@ -6,11 +6,18 @@ namespace roo_windows {
 
 class Checkbox : public Widget {
  public:
-  enum State { OFF, INDETERMINATE, ON };
-  Checkbox(const Environment& env, State state = OFF)
-      : Widget(env), state_(state) {}
+  Checkbox(const Environment& env, OnOffState state = Widget::OFF)
+      : Widget(env) {
+    setOnOffState(state);
+  }
 
-  void setState(State state);
+  using Widget::isOn;
+  using Widget::isOff;
+  using Widget::setOn;
+  using Widget::setOff;
+  using Widget::toggle;
+  using Widget::setOnOffState;
+  using Widget::onOffState;
 
   bool paint(const Surface& s) override;
 
@@ -19,13 +26,6 @@ class Checkbox : public Widget {
   bool isClickable() const override { return true; }
 
   void onClicked() override;
-
-  State state() const { return state_; }
-  bool isOn() const { return state() == ON; }
-  bool isOff() const { return state() == OFF; }
-
- private:
-  State state_;
 };
 
 }  // namespace roo_windows

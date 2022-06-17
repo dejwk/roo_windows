@@ -6,12 +6,15 @@ namespace roo_windows {
 
 class Switch : public Widget {
  public:
-  enum State { OFF, ON };
-  Switch(const Environment& env, State state = OFF)
-      : Widget(env), state_(state), anim_(0x8000) {}
+  Switch(const Environment& env, bool on = false) : Widget(env), anim_(0x8000) {
+    setOnOffState(on ? Widget::ON : Widget::OFF);
+  }
 
-  void setState(State state);
-  void toggle();
+  using Widget::isOff;
+  using Widget::isOn;
+  using Widget::setOff;
+  using Widget::setOn;
+  using Widget::toggle;
 
   bool paint(const Surface& s) override;
 
@@ -21,15 +24,9 @@ class Switch : public Widget {
 
   bool onSingleTapUp(int16_t x, int16_t y) override;
 
-  State state() const { return state_; }
-  bool isOn() const { return state() == ON; }
-  bool isOff() const { return state() == OFF; }
-
  private:
   bool isAnimating() const { return (anim_ & 0x8000) == 0; }
   int16_t time_animating_ms() const;
-
-  State state_;
 
   // The topmost bit = 1 means 'no animation'.
   // Otherwise, the remaining 15 bits are millis, LSB.

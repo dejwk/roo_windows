@@ -255,6 +255,31 @@ void Widget::setDragged(bool dragged) {
   invalidateInterior();
 }
 
+Widget::OnOffState Widget::onOffState() const {
+  return isOn() ? (!isOff() ? Widget::ON : Widget::INDETERMINATE)
+                : (isOff() ? Widget::OFF : Widget::INDETERMINATE);
+}
+
+void Widget::toggle() {
+  OnOffState state = onOffState();
+  if (state == Widget::ON) {
+    setOff();
+  } else if (state == Widget::OFF) {
+    setOn();
+  }
+}
+
+void Widget::setOnOffState(OnOffState state) {
+  if (onOffState() == state) return;
+  state_ &= ~(kWidgetOn | kWidgetOff);
+  if (state == Widget::ON) {
+    state_ |= kWidgetOn;
+  } else if (state == Widget::OFF) {
+    state_ |= kWidgetOff;
+  }
+  markDirty();
+}
+
 void Widget::setClicking() { state_ |= kWidgetClicking; }
 
 void Widget::setParent(Panel* parent, bool owned) {

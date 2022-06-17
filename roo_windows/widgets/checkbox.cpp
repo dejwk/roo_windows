@@ -9,24 +9,18 @@ using namespace roo_display;
 namespace roo_windows {
 
 void Checkbox::onClicked() {
-  state_ = isOn() ? OFF : ON;
-  markDirty();
+  toggle();
   Widget::onClicked();
 }
 
-void Checkbox::setState(State state) {
-  if (state == state_) return;
-  state_ = state;
-  markDirty();
-}
-
 bool Checkbox::paint(const Surface& s) {
-  Color color = isOn() ? theme().color.highlighterColor(s.bgcolor())
-                       : theme().color.defaultColor(s.bgcolor());
+  OnOffState state = onOffState();
+  Color color = state == ON ? theme().color.highlighterColor(s.bgcolor())
+                            : theme().color.defaultColor(s.bgcolor());
   RleImage4bppxBiased<Alpha4, PrgMemResource> img =
-      state() == ON    ? ic_filled_24_toggle_check_box()
-      : state() == OFF ? ic_filled_24_toggle_check_box_outline_blank()
-                       : ic_filled_24_toggle_indeterminate_check_box();
+      state == ON    ? ic_filled_24_toggle_check_box()
+      : state == OFF ? ic_filled_24_toggle_check_box_outline_blank()
+                     : ic_filled_24_toggle_indeterminate_check_box();
   img.color_mode().setColor(color);
   if (isInvalidated()) {
     roo_display::Tile tile(&img, bounds(), roo_display::HAlign::Center(),

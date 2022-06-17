@@ -9,15 +9,8 @@ using namespace roo_display;
 namespace roo_windows {
 
 void RadioButton::onClicked() {
-  state_ = isOn() ? OFF : ON;
-  markDirty();
+  toggle();
   Widget::onClicked();
-}
-
-void RadioButton::setState(State state) {
-  if (state == state_) return;
-  state_ = state;
-  markDirty();
 }
 
 bool RadioButton::paint(const Surface& s) {
