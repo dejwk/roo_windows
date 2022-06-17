@@ -1,5 +1,6 @@
 #pragma once
 
+#include "roo_display/ui/alignment.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/widget.h"
@@ -17,9 +18,21 @@ class ScrollablePanel : public Panel {
                   Direction direction = VERTICAL)
       : Panel(env),
         direction_(direction),
+        h_align_(roo_display::HAlign::Left()),
+        v_align_(roo_display::VAlign::Top()),
         scroll_start_vx_(0.0),
         scroll_start_vy_(0.0) {
     add(std::move(contents));
+  }
+
+  void setHAlign(roo_display::HAlign halign) {
+    h_align_ = halign;
+    update();
+  }
+
+  void setVAlign(roo_display::VAlign valign) {
+    v_align_ = valign;
+    update();
   }
 
   Widget* contents() { return children_[0]; }
@@ -34,6 +47,8 @@ class ScrollablePanel : public Panel {
   void scrollBy(int16_t dx, int16_t dy) {
     scrollTo(dx + contents()->xOffset(), dy + contents()->yOffset());
   }
+
+  void update() { scrollBy(0, 0); }
 
   void paintWidgetContents(const Surface& s, Clipper& clipper) override;
 
@@ -71,10 +86,14 @@ class ScrollablePanel : public Panel {
     Box bounds(0, 0, measured_.width() - 1, measured_.height() - 1);
     bounds = bounds.translate(c->xOffset(), c->yOffset());
     c->layout(bounds);
+    update();
   }
 
  private:
   Direction direction_;
+  roo_display::HAlign h_align_;
+  roo_display::VAlign v_align_;
+
   Dimensions measured_;
 
   // Captured dx_ and dy_ during drag and scroll animations.
