@@ -20,6 +20,8 @@ Dimensions VerticalLayout::onMeasure(MeasureSpec width, MeasureSpec height) {
   int16_t largest_child_height = 0;
   int16_t consumed_excess_space = 0;
 
+  int16_t h_padding = padding_.left() + padding_.right();
+  int16_t v_padding = padding_.top() + padding_.bottom();
   for (int i = 0; i < count; ++i) {
     Widget& w = child_at(i);
     if (!w.isVisible()) continue;
@@ -27,8 +29,6 @@ Dimensions VerticalLayout::onMeasure(MeasureSpec width, MeasureSpec height) {
     Margins margins = w.getDefaultMargins();
     int16_t h_margin = margins.left() + margins.right();
     int16_t v_margin = margins.top() + margins.bottom();
-    int16_t h_padding = padding_.left() + padding_.right();
-    int16_t v_padding = padding_.top() + padding_.bottom();
     total_weight += measure.params().weight();
 
     PreferredSize preferred = w.getPreferredSize();
