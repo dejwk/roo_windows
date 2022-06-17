@@ -49,14 +49,14 @@ void Panel::removeAll() {
 
 void Panel::removeLast() {
   Widget* w = children_.back();
-  if (!w->isGone()) {
+  if (w->isVisible()) {
     childHidden(w);
+    requestLayout();
   }
   bool owned = w->isOwnedByParent();
   w->setParent(nullptr, false);
   children_.pop_back();
   if (owned) delete w;
-  invalidateInterior();
 }
 
 void Panel::paintWidgetContents(const Surface& s, Clipper& clipper) {
@@ -246,7 +246,7 @@ bool Panel::invalidateBeneathDescending(const Box& box, const Widget* subject) {
   }
   for (auto& child : children_) {
     if (child == subject) return true;
-    if (!child->isGone()) {
+    if (child->isVisible()) {
       Box adjusted = clipped.translate(-child->xOffset(), -child->yOffset());
       if (child->invalidateBeneathDescending(adjusted, subject)) return true;
     }
