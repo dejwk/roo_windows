@@ -63,7 +63,12 @@ class Panel : public Widget {
 
   ~Panel();
 
-  void setBackground(Color bgcolor) { bgcolor_ = bgcolor; }
+  void setBackground(Color bgcolor) {
+    if (bgcolor_== bgcolor) return;
+    bgcolor_ = bgcolor;
+    invalidateInterior();
+  }
+
   Color background() const override { return bgcolor_; }
 
   const Theme& theme() const override { return parent()->theme(); }
