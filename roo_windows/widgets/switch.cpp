@@ -19,8 +19,7 @@ static constexpr int kSwitchAnimationMs = 120;
 }  // namespace
 
 bool Switch::onSingleTapUp(int16_t x, int16_t y) {
-  state_ = isOn() ? OFF : ON;
-  markDirty();
+  toggle();
   anim_ = millis() & 0x7FFF;
   return Widget::onSingleTapUp(x, y);
 }
@@ -28,6 +27,11 @@ bool Switch::onSingleTapUp(int16_t x, int16_t y) {
 void Switch::setState(State state) {
   if (state == state_) return;
   state_ = state;
+  markDirty();
+}
+
+void Switch::toggle() {
+  state_ = isOn() ? OFF : ON;
   markDirty();
 }
 

@@ -11,6 +11,7 @@ class Switch : public Widget {
       : Widget(env), state_(state), anim_(0x8000) {}
 
   void setState(State state);
+  void toggle();
 
   bool paint(const Surface& s) override;
 
