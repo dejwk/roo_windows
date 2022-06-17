@@ -30,7 +30,7 @@ void Panel::add(WidgetRef ref, const Box& bounds) {
   children_.push_back(child);
   child->setParent(this, ref.is_owned_);
   child->setParentBounds(bounds);
-  if (child->isVisible()) {
+  if (!child->isGone()) {
     // Make sure that we propagate the requestLayout even if the child
     // already has the request flag set.
     requestLayout();
@@ -49,7 +49,7 @@ void Panel::removeAll() {
 
 void Panel::removeLast() {
   Widget* w = children_.back();
-  if (w->isVisible()) {
+  if (!w->isGone()) {
     childHidden(w);
   }
   bool owned = w->isOwnedByParent();
@@ -246,7 +246,7 @@ bool Panel::invalidateBeneathDescending(const Box& box, const Widget* subject) {
   }
   for (auto& child : children_) {
     if (child == subject) return true;
-    if (child->isVisible()) {
+    if (!child->isGone()) {
       Box adjusted = clipped.translate(-child->xOffset(), -child->yOffset());
       if (child->invalidateBeneathDescending(adjusted, subject)) return true;
     }

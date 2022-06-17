@@ -24,7 +24,7 @@ Dimensions HorizontalLayout::onMeasure(MeasureSpec width, MeasureSpec height) {
   int16_t v_padding = padding_.top() + padding_.bottom();
   for (int i = 0; i < count; ++i) {
     Widget& w = child_at(i);
-    if (!w.isVisible()) continue;
+    if (w.isGone()) continue;
     ChildMeasure& measure = child_measures_[i];
     Margins margins = w.getDefaultMargins();
     int16_t h_margin = margins.left() + margins.right();
@@ -97,7 +97,7 @@ Dimensions HorizontalLayout::onMeasure(MeasureSpec width, MeasureSpec height) {
     total_length_ = 0;
     for (int i = 0; i < count; ++i) {
       Widget& w = child_at(i);
-      if (!w.isVisible()) continue;
+      if (w.isGone()) continue;
       Margins margins = w.getDefaultMargins();
       int16_t h_margin = margins.left() + margins.right();
       total_length_ = std::max<int16_t>(
@@ -122,7 +122,7 @@ Dimensions HorizontalLayout::onMeasure(MeasureSpec width, MeasureSpec height) {
     total_length_ = 0;
     for (int i = 0; i < count; ++i) {
       Widget& w = child_at(i);
-      if (!w.isVisible()) continue;
+      if (w.isGone()) continue;
       ChildMeasure& measure = child_measures_[i];
       Margins margins = w.getDefaultMargins();
       int16_t h_margin = margins.left() + margins.right();
@@ -179,7 +179,7 @@ Dimensions HorizontalLayout::onMeasure(MeasureSpec width, MeasureSpec height) {
       // child. Children will have already been measured once.
       for (int i = 0; i < count; i++) {
         Widget& w = child_at(i);
-        if (!w.isVisible()) continue;
+        if (w.isGone()) continue;
         ChildMeasure& measure = child_measures_[i];
         int16_t child_extra = measure.params().weight();
         if (child_extra > 0) {
@@ -221,7 +221,7 @@ void HorizontalLayout::onLayout(bool changed, const roo_display::Box& box) {
   }
   for (int i = 0; i < count; ++i) {
     Widget& w = child_at(i);
-    if (!w.isVisible()) continue;
+    if (w.isGone()) continue;
     const ChildMeasure& measure = child_measures_[i];
     Margins margins = w.getDefaultMargins();
     VerticalGravity gravity = measure.params().gravity();

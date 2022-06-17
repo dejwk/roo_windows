@@ -12,12 +12,12 @@ class ModalWindow : public StaticLayout {
   ModalWindow(const Environment& env) : StaticLayout(env) {}
 
   void enter() {
-    setVisible(true);
+    setVisibility(VISIBLE);
     getMainWindow()->enterModal(this);
   }
 
   void exit() {
-    setVisible(false);
+    setVisibility(GONE);
     getMainWindow()->exitModal(this);
   }
 

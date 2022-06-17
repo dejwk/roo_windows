@@ -23,7 +23,7 @@ class StackedLayout : public Panel {
     int16_t h = 0;
     for (const auto& child : children()) {
       Dimensions d = child->measure(width, height);
-      if (child->isVisible()) {
+      if (!child->isGone()) {
         w = std::max(w, d.width());
         h = std::max(h, d.height());
       }

@@ -195,22 +195,28 @@ void Widget::setParentClipMode(ParentClipMode mode) {
   if (mode == getParentClipMode()) return;
   bool visible = isVisible();
   if (visible) {
-    setVisible(false);
+    setVisibility(INVISIBLE);
   }
   state_ ^= kWidgetClippedInParent;
   if (visible) {
-    setVisible(true);
+    setVisibility(VISIBLE);
   }
 }
 
-void Widget::setVisible(bool visible) {
-  if (visible == isVisible()) return;
-  state_ ^= kWidgetHidden;
-  invalidateInterior();
-  if (isVisible()) {
+void Widget::setVisibility(Visibility visibility) {
+  Visibility previous = this->visibility();
+  if (visibility == previous) return;
+  state_ &= ~(kWidgetHidden | kWidgetGone);
+  state_ |= (kWidgetHidden * (visibility == INVISIBLE));
+  state_ |= (kWidgetGone * (visibility == GONE));
+  if (previous == GONE) {
     requestLayout();
-    if (parent() != nullptr) parent()->childShown(this);
-  } else {
+  }
+  if (visibility != GONE) {
+    invalidateInterior();
+    if (previous == GONE && parent() != nullptr) parent()->childShown(this);
+  }
+  if (visibility != VISIBLE) {
     setPressed(false);
     state_ &= ~kWidgetClicking;
     if (parent() != nullptr) parent()->childHidden(this);
@@ -296,7 +302,7 @@ void Widget::setParent(Panel* parent, bool owned) {
 
 void Widget::setParentBounds(const Box& parent_bounds) {
   if (parent_bounds == parent_bounds_) return;
-  if (!isVisible() || parent() == nullptr) {
+  if (isGone() || parent() == nullptr) {
     parent_bounds_ = parent_bounds;
     return;
   }

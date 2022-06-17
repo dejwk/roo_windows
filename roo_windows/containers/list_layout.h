@@ -151,7 +151,7 @@ class ListLayout : public Panel {
     }
     while (pos <= last_ && pos < end && pos < element_count_) {
       model_.set(pos, elements_[i]);
-      elements_[i].setVisible(true);
+      elements_[i].setVisibility(VISIBLE);
       ++i;
       ++pos;
     }
@@ -201,11 +201,11 @@ class ListLayout : public Panel {
 
     // First, see if we need to shrink the list from any side.
     while (first_ < new_first && first_ <= last_) {
-      elements_.pop_front().setVisible(false);
+      elements_.pop_front().setVisibility(GONE);
       ++first_;
     }
     while (new_last < last_ && first_ <= last_) {
-      elements_.pop_back().setVisible(false);
+      elements_.pop_back().setVisibility(GONE);
       --last_;
     }
     if (first_ > last_) {
@@ -265,15 +265,15 @@ class ListLayout : public Panel {
     // Invalidate all the children so that they get repositioned during next
     // paintChildren().
     while (last_-- >= first_) {
-      elements_.pop_back().setVisible(false);
+      elements_.pop_back().setVisibility(GONE);
     }
     removeAll();
     if (element_count_ == 0) return;
     add(prototype_);
-    prototype_.setVisible(true);
+    prototype_.setVisibility(VISIBLE);
     prototype_.layout(
         Box(0, 0, box.width() - 1, box.height() / element_count_ - 1));
-    prototype_.setVisible(false);
+    prototype_.setVisibility(GONE);
     Panel::onLayout(changed, box);
     int capacity = (getMainWindow()->height() - 2) / element_height() + 2;
     elements_.ensure_capacity(capacity, prototype_);
@@ -293,7 +293,7 @@ class ListLayout : public Panel {
       return;
     }
     model_.set(pos, e);
-    e.setVisible(true);
+    e.setVisibility(VISIBLE);
     int16_t h_padding = padding_.left() + padding_.right();
     int16_t v_padding = padding_.top() + padding_.bottom();
     Dimensions d = e.measure(

@@ -54,7 +54,8 @@ static const uint16_t kWidgetError = 0x0800;
 // Widget is undergoing click animation.
 static const uint16_t kWidgetClicking = 0x1000;
 
-static const uint16_t kWidgetHidden = 0x8000;
+static const uint16_t kWidgetHidden = 0x4000;
+static const uint16_t kWidgetGone = 0x8000;
 
 static const uint8_t kDirty = 0x01;
 static const uint8_t kInvalidated = 0x02;
@@ -65,6 +66,7 @@ class Widget {
  public:
   enum ParentClipMode { CLIPPED, UNCLIPPED };
   enum OnOffState { OFF, INDETERMINATE, ON };
+  enum Visibility { VISIBLE, INVISIBLE, GONE };
 
   Widget(const Environment& env);
   Widget(const Widget& w);
@@ -302,7 +304,16 @@ class Widget {
 
   bool isOwnedByParent() const { return (state_ & kWidgetOwnedByParent) != 0; }
 
-  bool isVisible() const { return (state_ & kWidgetHidden) == 0; }
+  Visibility visibility() const {
+    return isGone() ? GONE : isVisible() ? VISIBLE : INVISIBLE;
+  }
+
+  bool isVisible() const {
+    return (state_ & (kWidgetHidden | kWidgetGone)) == 0;
+  }
+
+  bool isGone() const { return (state_ & kWidgetGone) != 0; }
+
   bool isEnabled() const { return (state_ & kWidgetEnabled) != 0; }
 
   bool isHover() const { return (state_ & kWidgetHover) != 0; }
@@ -314,7 +325,8 @@ class Widget {
 
   bool isClicking() const { return (state_ & kWidgetClicking) != 0; }
 
-  void setVisible(bool visible);
+  void setVisibility(Visibility visibility);
+
   void setEnabled(bool enabled);
   void setSelected(bool selected);
   void setActivated(bool activated);

@@ -428,7 +428,7 @@ void KeyboardWidget::setPage(int idx) {
   if (current_page_ == pages_[idx]) return;
   current_page_ = pages_[idx];
   for (int i = 0; i < pages_.size(); ++i) {
-    pages_[i]->setVisible(i == idx);
+    pages_[i]->setVisibility(i == idx ? VISIBLE : GONE);
   }
   setCapsState(CAPS_STATE_LOW);
   requestLayout();
@@ -487,7 +487,7 @@ KeyboardPage::KeyboardPage(const Environment& env, const KeyboardPageSpec* spec)
     }
   }
   // Note: highlighter must be added last to be on top of all children.
-  highlighter_.setVisible(false);
+  highlighter_.setVisibility(GONE);
   highlighter_.setParentClipMode(Widget::UNCLIPPED);
   add(highlighter_);
 }
@@ -585,11 +585,11 @@ void KeyboardPage::showHighlighter(const TextButton& btn) {
   highlighter_.moveTo(Box(bBounds.xMin(), bBounds.yMin() - kHighlighterHeight,
                           bBounds.xMax(), bBounds.yMax() - 3));
   highlighter_.setTarget(&btn);
-  highlighter_.setVisible(true);
+  highlighter_.setVisibility(VISIBLE);
 }
 
 void KeyboardPage::hideHighlighter() {
-  highlighter_.setVisible(false);
+  highlighter_.setVisibility(GONE);
   highlighter_.setTarget(nullptr);
 }
 
@@ -640,15 +640,15 @@ Dimensions PressHighlighter::getSuggestedMinimumDimensions() const {
 Keyboard::Keyboard(const Environment& env, const KeyboardSpec* spec,
                    KeyboardListener* listener)
     : contents_(new KeyboardWidget(env, spec, listener)) {
-  contents_->setVisible(false);
+  contents_->setVisibility(Widget::GONE);
 }
 
 Widget& Keyboard::getContents() { return *contents_; }
 
-void Keyboard::show() { contents_->setVisible(true); }
+void Keyboard::show() { contents_->setVisibility(Widget::VISIBLE); }
 
 void Keyboard::hide() {
-  contents()->setVisible(false);
+  contents()->setVisibility(Widget::GONE);
   contents()->setPage(0);
   contents()->setCapsState(CapsState::CAPS_STATE_LOW);
 }

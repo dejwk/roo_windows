@@ -18,14 +18,14 @@ void NavigationPanel::addPage(const roo_display::MaterialIcon& icon,
   if (first) {
     setActive(0);
   } else {
-    w.setVisible(false);
+    w.setVisibility(GONE);
   }
 }
 
 void NavigationPanel::setActive(int index) {
   rail_.setActive(index);
   for (size_t i = 0; i < page_count(); ++i) {
-    page(i)->setVisible(i == (size_t)index);
+    page(i)->setVisibility(i == (size_t)index ? VISIBLE : GONE);
   }
 }
 
