@@ -105,6 +105,7 @@ class ListLayout : public Panel {
   ListLayout(const Environment& env, ListModel<Element>& model,
              Element prototype)
       : Panel(env),
+        padding_(),
         model_(model),
         elements_(env),
         prototype_(std::move(prototype)),
@@ -113,6 +114,14 @@ class ListLayout : public Panel {
         in_paint_children_(false) {
     element_count_ = model.elementCount();
   }
+
+  void setPadding(Padding padding) {
+    if (padding_ == padding) return;
+    padding_ = padding;
+    requestLayout();
+  }
+
+  Padding getDefaultPadding() const override { return padding_; }
 
   // Notifies this view that the contents of the list has changed. Causes the
   // list to be updated and rendered. If the element count has changed, the list
@@ -229,15 +238,26 @@ class ListLayout : public Panel {
   }
 
   Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override {
+    int16_t h_padding = padding_.left() + padding_.right();
+    int16_t v_padding = padding_.top() + padding_.bottom();
     // Measure the element under new constraints, and see how many max instances
     // will fit on the screen.
-    Dimensions d = prototype_.measure(width, MeasureSpec::Unspecified(40));
+    Margins margins = prototype_.getDefaultMargins();
+    int16_t h_margin = margins.left() + margins.right();
+    int16_t v_margin = margins.top() + margins.bottom();
+    PreferredSize preferred = prototype_.getPreferredSize();
+
+    Dimensions d = prototype_.measure(
+        width.getChildMeasureSpec(h_padding + h_margin, preferred.width()),
+        MeasureSpec::Unspecified(40));
+
     int32_t h = d.height();
-    if (h == 0) h = prototype_.getNaturalDimensions().height();
+    if (h == 0) {
+      h = prototype_.getNaturalDimensions().height();
+    }
     if (h == 0) h = 15;
-    Padding p = prototype_.getDefaultPadding();
-    h += (p.top() + p.bottom());
-    return Dimensions(width.resolveSize(d.width()),
+    h += v_margin;
+    return Dimensions(width.resolveSize(d.width() + h_margin + h_padding),
                       height.resolveSize(calculateHeight(h)));
   }
 
@@ -267,28 +287,38 @@ class ListLayout : public Panel {
  private:
   // Configures the given element to represent the item at the given pos.
   void show(int pos, Element& e) {
+    Margins m = prototype_.getDefaultMargins();
+    if (element_height() <= m.top() + m.bottom()) {
+      // Won't fit anyway.
+      return;
+    }
     model_.set(pos, e);
     e.setVisible(true);
-    Dimensions d = e.measure(MeasureSpec::Exactly(width()),
-                             MeasureSpec::Exactly(element_height()));
-    int voffset = pos * element_height();
+    int16_t h_padding = padding_.left() + padding_.right();
+    int16_t v_padding = padding_.top() + padding_.bottom();
+    Dimensions d = e.measure(
+        MeasureSpec::Exactly(width() - m.left() - m.right() - h_padding),
+        MeasureSpec::Exactly(element_height() - m.top() - m.bottom()));
+    int hoffset = m.left() + padding_.left();
+    int voffset = pos * element_height() + padding_.top() + m.top();
     // TODO: support gravity, and margins. And maybe dividers?
-    Padding p = prototype_.getDefaultPadding();
-    e.layout(Box(0, voffset, d.width() + p.left() + p.right() - 1,
-                 voffset + element_height() - 1));
+    e.layout(Box(hoffset, voffset, hoffset + d.width() - 1,
+                 voffset + d.height() - 1));
   }
 
   int16_t calculateHeight(int16_t desired_element_height) const {
-    int tops = Box::MaximumBox().yMax();
+    int16_t v_padding = padding_.top() - padding_.bottom();
+    int tops = Box::MaximumBox().yMax() - v_padding;
     if (element_count_ >= tops) return 1;
     if (element_count_ * desired_element_height > tops) {
-      return (tops / element_count_) * element_count_;
+      return (tops / element_count_) * element_count_ + v_padding;
     }
-    return desired_element_height * element_count_;
+    return desired_element_height * element_count_ + v_padding;
   }
 
   int element_height() const { return prototype_.height(); }
 
+  Padding padding_;
   ListModel<Element>& model_;
   CircularBuffer<Element> elements_;
   Element prototype_;
