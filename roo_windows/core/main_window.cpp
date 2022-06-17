@@ -7,7 +7,6 @@
 #include "roo_display/filter/foreground.h"
 #include "roo_display/internal/hashtable.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/core/modal_window.h"
 #include "roo_windows/core/press_overlay.h"
 
 namespace roo_windows {
