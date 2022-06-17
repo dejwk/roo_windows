@@ -354,6 +354,7 @@ class Widget {
   virtual Padding getDefaultPadding() const { return Padding(12); }
   virtual Margins getDefaultMargins() const { return Margins(4); }
 
+  // Returns dimensions that make the widget 'look good'. Inclusive of padding.
   virtual Dimensions getNaturalDimensions() const {
     Dimensions d = getSuggestedMinimumDimensions();
     Padding p = getDefaultPadding();
@@ -444,7 +445,7 @@ class Widget {
   // in the measure spec. (Consequently, the returned dimension may be greater
   // than the preferred minimum if the measure spec allows it). For simple
   // widgets, prefer overwriting getDefaultMinimumDimensions() and
-  // getDefaultSize() to overriding this method, whenn possible.
+  // getDefaultSize() to overriding this method, when possible.
   virtual Dimensions onMeasure(MeasureSpec width, MeasureSpec height);
 
   virtual void onRequestLayout();
