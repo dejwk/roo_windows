@@ -2,6 +2,7 @@
 
 #include "roo_glog/logging.h"
 #include "roo_windows/core/dimensions.h"
+#include "roo_windows/core/main_window.h"
 #include "roo_windows/core/measure_spec.h"
 #include "roo_windows/core/panel.h"
 
@@ -83,7 +84,7 @@ class CircularBuffer {
   int count_;
 };
 
-Box unclippedRegion(const Widget* w) {
+inline Box unclippedRegion(const Widget* w) {
   Box box = w->bounds();
   int16_t dx = 0;
   int16_t dy = 0;
