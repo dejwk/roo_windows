@@ -6,16 +6,16 @@ namespace roo_windows {
 
 void Task::init(TaskPanel* panel) { panel_ = panel; }
 
-void Task::pushActivity(Activity* activity) {
+void Task::enterActivity(Activity* activity) {
   roo_display::Box bounds = activity->getPreferredPlacement(*this);
   activities_.push_back(activity);
-  panel_->pushActivity(activity, bounds);
+  panel_->enterActivity(activity, bounds);
   activities_.back()->onStart();
 }
 
-void Task::popActivity() {
+void Task::exitActivity() {
   activities_.back()->onStop();
-  panel_->popActivity();
+  panel_->exitActivity();
   activities_.pop_back();
 }
 
@@ -35,12 +35,12 @@ void Task::getAbsoluteOffset(int16_t& dx, int16_t& dy) const {
 
 MainWindow& Task::getMainWindow() const { return *panel_->getMainWindow(); }
 
-void TaskPanel::pushActivity(Activity* activity,
+void TaskPanel::enterActivity(Activity* activity,
                              const roo_display::Box& bounds) {
   add(activity->getContents(), bounds);
 }
 
-void TaskPanel::popActivity() { removeLast(); }
+void TaskPanel::exitActivity() { removeLast(); }
 
 Widget* TaskPanel::dispatchTouchDownEvent(int16_t x, int16_t y) {
   // Only the topmost activity gets to handle the gestures.

@@ -15,8 +15,8 @@ class Task {
  public:
   Task() {}
 
-  void pushActivity(Activity* activity);
-  void popActivity();
+  void enterActivity(Activity* activity);
+  void exitActivity();
 
   Dimensions getDimensions() const;
 
@@ -47,9 +47,9 @@ class TaskPanel : public Panel {
  private:
   friend class Task;
 
-  void pushActivity(Activity* activity, const roo_display::Box& bounds);
+  void enterActivity(Activity* activity, const roo_display::Box& bounds);
 
-  void popActivity();
+  void exitActivity();
 
   Task& task_;
 };
