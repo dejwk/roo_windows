@@ -13,8 +13,10 @@ class TextField;
 
 class TextFieldEditor : public KeyboardListener {
  public:
-  TextFieldEditor()
-      : cursor_position_(0),
+  TextFieldEditor(Keyboard& keyboard)
+      : keyboard_(keyboard),
+        target_(nullptr),
+        cursor_position_(0),
         selection_begin_(0),
         selection_end_(4),
         draw_xoffset_(0) {}
@@ -47,6 +49,8 @@ class TextFieldEditor : public KeyboardListener {
 
   void measure();
 
+  Keyboard& keyboard_;
+
   TextField* target_;
   std::vector<roo_display::GlyphMetrics> glyphs_;
   std::vector<int16_t> offsets_;
@@ -74,6 +78,8 @@ class TextField : public Widget {
   bool isClickable() const override { return true; }
   bool showClickAnimation() const override { return false; }
   bool useOverlayOnPress() const override { return false; }
+
+  virtual void onEditFinished(bool confirmed) {}
 
   const std::string& hint() const { return hint_; }
 

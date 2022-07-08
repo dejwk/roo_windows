@@ -6,29 +6,29 @@
 
 namespace roo_windows {
 
-void EditTextField::Listener::rune(uint32_t rune) {
-  activity_.text_.editor().rune(rune);
-}
+EditedTextField::EditedTextField(const Environment& env, TextFieldEditor& editor, const std::string& hint, EditTextField& activity)
+    : TextField(env, editor, roo_display::font_NotoSans_Regular_18(), hint,
+            roo_display::HAlign::Left(), roo_display::VAlign::Middle()),
+      activity_(activity) {}
 
-void EditTextField::Listener::enter() {
-  activity_.text_.editor().enter();
-  activity_.confirm();
+void EditedTextField::onEditFinished(bool confirmed) {
+  TextField::onEditFinished(confirmed);
+  if (confirmed) {
+    // Triggered by a direct click on the 'Enter' button.
+    activity_.confirm();
+  }
 }
-
-void EditTextField::Listener::del() { activity_.text_.editor().del(); }
 
 EditTextField::EditTextField(const Environment& env, TextFieldEditor& editor,
-                             const std::string& hint, Keyboard& kb)
-    : kb_(kb),
-      main_pane_(env),
+                             const std::string& hint)
+    : main_pane_(env),
       content_pane_(env),
       back_(env, ic_outlined_24_navigation_arrow_back(), Button::TEXT),
       text_pane_(env),
-      text_(env, editor, roo_display::font_NotoSans_Regular_18(), hint,
-            roo_display::HAlign::Left(), roo_display::VAlign::Middle()),
+      text_(env, editor, hint, *this),
       divider_(env),
       enter_(env, ic_outlined_24_navigation_check()),
-      listener_(*this),
+      editing_(false),
       enter_fn_(nullptr) {
   main_pane_.add(content_pane_, VerticalLayout::Params());
   content_pane_.add(
@@ -44,18 +44,18 @@ EditTextField::EditTextField(const Environment& env, TextFieldEditor& editor,
 }
 
 void EditTextField::confirm() {
+  if (!editing_) return;
+  editing_ = false;
   text_.editor().edit(nullptr);
-  kb_.setListener(nullptr);
-  kb_.hide();
   enter_fn_(text_.content());
   enter_fn_ = nullptr;
   back_.getTask()->popActivity();
 }
 
 void EditTextField::cancel() {
+  if (!editing_) return;
+  editing_ = false;
   text_.editor().edit(nullptr);
-  kb_.setListener(nullptr);
-  kb_.hide();
   enter_fn_ = nullptr;
   back_.getTask()->popActivity();
 }
@@ -63,10 +63,9 @@ void EditTextField::cancel() {
 void EditTextField::triggerEdit(
     Task& task, const std::string& initial, const std::string& hint,
     std::function<void(const std::string&)> enter_fn) {
+  editing_ = true;
   text_.setContent(initial);
   text_.edit();
-  kb_.setListener(&listener_);
-  kb_.show();
   task.pushActivity(this);
   enter_fn_ = enter_fn;
 }

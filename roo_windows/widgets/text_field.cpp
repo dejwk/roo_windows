@@ -197,8 +197,17 @@ bool TextField::paint(const roo_display::Surface& s) {
 }
 
 void TextFieldEditor::edit(TextField* target) {
+  if (target_ == target) return;
+  TextField* old_target = target_;
   target_ = target;
-  if (target == nullptr) return;
+  if (target == nullptr) {
+    old_target->onEditFinished(false);
+    keyboard_.hide();
+    keyboard_.setListener(nullptr);
+    return;
+  }
+  keyboard_.show();
+  keyboard_.setListener(this);
   measure();
 }
 
@@ -282,7 +291,11 @@ void TextFieldEditor::rune(uint32_t rune) {
   target_->markDirty();
 }
 
-void TextFieldEditor::enter() {}
+void TextFieldEditor::enter() {
+  if (target_ == nullptr) return;
+  keyboard_.hide();
+  target_->onEditFinished(true);
+}
 
 void TextFieldEditor::del() {
   if (target_ == nullptr) return;

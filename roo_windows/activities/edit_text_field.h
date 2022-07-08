@@ -16,49 +16,51 @@
 
 namespace roo_windows {
 
+class EditTextField;
+
+class EditedTextField : public TextField {
+ public:
+  EditedTextField(const Environment& env, TextFieldEditor& editor,
+                  const std::string& hint, EditTextField& activity);
+
+  void onEditFinished(bool confirmed) override;
+
+ private:
+  EditTextField& activity_;
+};
+
 class EditTextField : public Activity {
  public:
   EditTextField(const Environment& env, TextFieldEditor& editor,
-                const std::string& hint, Keyboard& kb);
+                const std::string& hint);
 
   Widget& getContents() override { return main_pane_; }
 
+  // Launches a text-enter activity with the specified conditions, triggering
+  // the specified function on confirmation.
   void triggerEdit(Task& task, const std::string& initial,
                    const std::string& hint,
                    std::function<void(const std::string&)> enter_fn);
 
-  // Opens up a text-enter activity to edit the text in the specified field.
+  // Launches a text-enter activity to edit the text in the specified field.
   // Typical usage:
   // field.addOnClicked([&]() { enter_text.triggerEditField(field); });
   void triggerEditField(TextField& field);
 
  private:
-  class Listener : public KeyboardListener {
-   public:
-    Listener(EditTextField& activity) : activity_(activity) {}
-
-    void rune(uint32_t rune) override;
-    void enter() override;
-    void del() override;
-
-   private:
-    EditTextField& activity_;
-  };
-
-  friend class Listener;
+  friend class EditedTextField;
 
   void confirm();
   void cancel();
 
-  Keyboard& kb_;
   VerticalLayout main_pane_;
   HorizontalLayout content_pane_;
   Button back_;
   VerticalLayout text_pane_;
-  TextField text_;
+  EditedTextField text_;
   HorizontalDivider divider_;
   Button enter_;
-  Listener listener_;
+  bool editing_;
   std::function<void(const std::string&)> enter_fn_;
 };
 
