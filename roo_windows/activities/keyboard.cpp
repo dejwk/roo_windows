@@ -162,8 +162,7 @@ class KeyboardPage : public Panel {
 
 class KeyboardWidget : public Panel {
  public:
-  KeyboardWidget(const Environment& env, const KeyboardSpec* spec,
-                 KeyboardListener* listener);
+  KeyboardWidget(const Environment& env, const KeyboardSpec* spec);
 
   const KeyboardColorTheme& color_theme() const { return color_theme_; }
 
@@ -376,12 +375,11 @@ const KeyboardWidget* KeyboardPage::keyboard() const {
 KeyboardWidget* KeyboardPage::keyboard() { return (KeyboardWidget*)parent(); }
 
 KeyboardWidget::KeyboardWidget(const Environment& env,
-                               const KeyboardSpec* spec,
-                               KeyboardListener* listener)
+                               const KeyboardSpec* spec)
     : Panel(env),
       color_theme_(env.keyboardColorTheme()),
       caps_state_(CAPS_STATE_LOW),
-      listener_(listener) {
+      listener_(nullptr) {
   setParentClipMode(Widget::UNCLIPPED);
   for (int i = 0; i < spec->page_count; ++i) {
     auto page = new KeyboardPage(env, &spec->pages[i]);
@@ -637,9 +635,8 @@ Dimensions PressHighlighter::getSuggestedMinimumDimensions() const {
   return Dimensions(0, 0);
 }
 
-Keyboard::Keyboard(const Environment& env, const KeyboardSpec* spec,
-                   KeyboardListener* listener)
-    : contents_(new KeyboardWidget(env, spec, listener)) {
+Keyboard::Keyboard(const Environment& env, const KeyboardSpec* spec)
+    : contents_(new KeyboardWidget(env, spec)) {
   contents_->setVisibility(Widget::GONE);
 }
 
