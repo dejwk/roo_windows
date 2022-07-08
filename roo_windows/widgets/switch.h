@@ -16,6 +16,14 @@ class Switch : public Widget {
   using Widget::setOn;
   using Widget::toggle;
 
+  void setOn(bool on) {
+    if (on) {
+      setOn();
+    } else {
+      setOff();
+    }
+  }
+
   bool paint(const Surface& s) override;
 
   Dimensions getSuggestedMinimumDimensions() const override;
