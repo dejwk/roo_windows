@@ -210,16 +210,19 @@ void Widget::setVisibility(Visibility visibility) {
   state_ |= (kWidgetHidden * (visibility == INVISIBLE));
   state_ |= (kWidgetGone * (visibility == GONE));
   if (previous == GONE) {
+    // Layout might have been skipped before, leaving the request pending.
+    if (parent() != nullptr) parent()->requestLayout();
     requestLayout();
+  } else if (visibility == GONE) {
+    if (parent() != nullptr) parent()->requestLayout();
   }
-  if (visibility != GONE) {
+  if (visibility == VISIBLE) {
     invalidateInterior();
-    if (previous == GONE && parent() != nullptr) parent()->childShown(this);
-  }
-  if (visibility != VISIBLE) {
+    if (previous != VISIBLE && parent() != nullptr) parent()->childShown(this);
+  } else {
     setPressed(false);
     state_ &= ~kWidgetClicking;
-    if (parent() != nullptr) parent()->childHidden(this);
+    if (previous == VISIBLE && parent() != nullptr) parent()->childHidden(this);
   }
 }
 
