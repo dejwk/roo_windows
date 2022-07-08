@@ -17,6 +17,10 @@ class Activity {
 
   virtual roo_display::Box getPreferredPlacement(const Task& task);
 
+  // Exits this activity. The activity must have been at the top of the task
+  // stack, or else the behavior is undefined.
+  void exit();
+
   virtual void onStart() {}
   virtual void onStop() {}
 

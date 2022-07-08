@@ -49,7 +49,7 @@ void EditTextField::confirm() {
   text_.editor().edit(nullptr);
   enter_fn_(text_.content());
   enter_fn_ = nullptr;
-  back_.getTask()->exitActivity();
+  exit();
 }
 
 void EditTextField::cancel() {
@@ -57,7 +57,7 @@ void EditTextField::cancel() {
   editing_ = false;
   text_.editor().edit(nullptr);
   enter_fn_ = nullptr;
-  back_.getTask()->exitActivity();
+  exit();
 }
 
 void EditTextField::triggerEdit(
