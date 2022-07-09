@@ -238,7 +238,8 @@ void TextFieldEditor::setSelection(int16_t selection_begin,
 // Sets up glyphs_ to contain all the metrics of the value.
 void TextFieldEditor::measure() {
   // The total number of glyphs can't exceed the string length.
-  const std::string& s = target_->content();
+  bool empty = target_->content().empty();
+  const std::string& s = empty ? target_->hint() : target_->content();
   selection_begin_ = 0;
   selection_end_ = 0;
   int max_count = s.size();
@@ -260,7 +261,7 @@ void TextFieldEditor::measure() {
     decoder.next();
   }
 
-  cursor_position_ = glyphs_.size();
+  cursor_position_ = empty ? 0 : glyphs_.size();
 }
 
 void TextFieldEditor::rune(uint32_t rune) {
