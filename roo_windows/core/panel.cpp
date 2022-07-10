@@ -182,7 +182,7 @@ void Panel::invalidateDescending(const Box& box) {
 
 void Panel::childHidden(const Widget* child) {
   invalidateBeneath(child->parent_bounds(), child,
-                    getParentClipMode() == Widget::CLIPPED);
+                    child->getParentClipMode() == Widget::CLIPPED);
   if (child->getParentClipMode() == Widget::UNCLIPPED) {
     unclippedChildRectHidden(child->parent_bounds());
   }
@@ -209,7 +209,7 @@ void Panel::unclippedChildRectHidden(const Box& box) {
   }
   invalidateCachedMaxBounds();
   markDirty();
-  if (getParentClipMode() == UNCLIPPED && !bounds().contains(box)) {
+  if (getParentClipMode() == UNCLIPPED && !parent()->bounds().contains(box)) {
     // The box sticks out beyond us; need to propagate to the parent.
     parent()->unclippedChildRectHidden(box.translate(xOffset(), yOffset()));
   }
