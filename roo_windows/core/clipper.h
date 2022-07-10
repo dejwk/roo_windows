@@ -39,6 +39,7 @@ class ClipperOutput : public roo_display::DisplayOutput {
   }
 
   void setBounds(const roo_display::Box &bounds) {
+    if (bounds == bounds_) return;
     bounds_ = bounds;
     valid_ = false;
   }
