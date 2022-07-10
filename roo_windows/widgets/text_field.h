@@ -62,11 +62,18 @@ class TextFieldEditor : public KeyboardListener {
 
 class TextField : public Widget {
  public:
+  enum Decoration {
+    NONE,
+    UNDERLINE,
+  };
+
   TextField(const Environment& env, TextFieldEditor& editor,
             const roo_display::Font& font, std::string hint,
-            roo_display::HAlign halign, roo_display::VAlign valign)
+            roo_display::HAlign halign, roo_display::VAlign valign,
+            Decoration decoration)
       : Widget(env),
         editor_(editor),
+        decoration_(decoration),
         value_(""),
         hint_(std::move(hint)),
         font_(font),
@@ -85,9 +92,18 @@ class TextField : public Widget {
 
   PreferredSize getPreferredSize() const override {
     Padding p = getDefaultPadding();
+    int16_t preferred_height =
+        font_.metrics().maxHeight() + p.top() + p.bottom();
+    switch (decoration_) {
+      case UNDERLINE: {
+        preferred_height += 6;
+        break;
+      }
+      default: {
+      }
+    }
     return PreferredSize(PreferredSize::MatchParent(),
-                         PreferredSize::Exact(font_.metrics().maxHeight() +
-                                              p.top() + p.bottom()));
+                         PreferredSize::Exact(preferred_height));
   }
 
   Padding getDefaultPadding() const override { return Padding(0, 2); }
@@ -97,7 +113,16 @@ class TextField : public Widget {
   Dimensions getSuggestedMinimumDimensions() const override {
     auto metrics = font_.getHorizontalStringMetrics(
         (const uint8_t*)value_.c_str(), value_.size());
-    return Dimensions(metrics.width(), metrics.height());
+    int16_t preferred_height = metrics.height();
+    switch (decoration_) {
+      case UNDERLINE: {
+        preferred_height += 6;
+        break;
+      }
+      default: {
+      }
+    }
+    return Dimensions(metrics.width(), preferred_height);
   }
 
   const std::string& content() const { return value_; }
@@ -123,6 +148,8 @@ class TextField : public Widget {
 
  private:
   TextFieldEditor& editor_;
+
+  Decoration decoration_;
 
   std::string value_;
   const std::string hint_;

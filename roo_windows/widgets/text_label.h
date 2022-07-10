@@ -42,6 +42,8 @@ class TextLabel : public Widget {
     return Dimensions(metrics.width(), metrics.height());
   }
 
+  const std::string& content() const { return value_; }
+
   void setContent(std::string value) {
     if (value_ == value) return;
     value_ = std::move(value);

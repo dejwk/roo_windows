@@ -10,7 +10,6 @@
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/task.h"
 #include "roo_windows/widgets/button.h"
-#include "roo_windows/widgets/divider.h"
 #include "roo_windows/widgets/icon.h"
 #include "roo_windows/widgets/text_field.h"
 
@@ -56,9 +55,7 @@ class EditTextField : public Activity {
   VerticalLayout main_pane_;
   HorizontalLayout content_pane_;
   Button back_;
-  VerticalLayout text_pane_;
   EditedTextField text_;
-  HorizontalDivider divider_;
   Button enter_;
   bool editing_;
   std::function<void(const std::string&)> enter_fn_;
