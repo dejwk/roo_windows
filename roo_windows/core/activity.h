@@ -21,7 +21,18 @@ class Activity {
   // stack, or else the behavior is undefined.
   void exit();
 
+  // Called when the activity gets entered.
   virtual void onStart() {}
+
+  // Called when the activity resumes focus (after start, or after a child
+  // activity has exited).
+  virtual void onResume() {}
+
+  // Called when the activity loses focus (just before it stops, or when a child
+  // activity has started).
+  virtual void onPause() {}
+
+  // Called when the activity gets exited.
   virtual void onStop() {}
 
   // virtual roo_display::Box getPlacement();

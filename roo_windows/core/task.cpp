@@ -8,15 +8,23 @@ void Task::init(TaskPanel* panel) { panel_ = panel; }
 
 void Task::enterActivity(Activity* activity) {
   roo_display::Box bounds = activity->getPreferredPlacement(*this);
+  if (!activities_.empty()) {
+    activities_.back()->onPause();
+  }
   activities_.push_back(activity);
   panel_->enterActivity(activity, bounds);
   activities_.back()->onStart();
+  activities_.back()->onResume();
 }
 
 void Task::exitActivity() {
+  activities_.back()->onPause();
   activities_.back()->onStop();
   panel_->exitActivity();
   activities_.pop_back();
+  if (!activities_.empty()) {
+    activities_.back()->onResume();
+  }
 }
 
 Dimensions Task::getDimensions() const {
