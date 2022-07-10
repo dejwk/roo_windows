@@ -86,8 +86,12 @@ void Panel::paintWidgetContents(const Surface& s, Clipper& clipper) {
 }
 
 void Panel::paintChildren(const Surface& s, Clipper& clipper) {
+  Box rect = bounds();
+  Surface s_clipped = s;
+  s_clipped.clipToExtents(rect);
   for (auto child = children_.rbegin(); child != children_.rend(); ++child) {
-    (*child)->paintWidget(s, clipper);
+    bool clipped = (*child)->getParentClipMode() == Widget::CLIPPED;
+    (*child)->paintWidget(clipped ? s_clipped : s, clipper);
   }
 }
 
@@ -101,12 +105,16 @@ Widget* Panel::dispatchTouchDownEvent(int16_t x, int16_t y) {
   if (onInterceptTouchEvent(TouchEvent(TouchEvent::DOWN, x, y))) {
     return this;
   }
+  bool within_bounds = bounds().contains(x, y);
   // Find if can delegate to a child.
   // Iterate backwards, because the order of children is assumed to represent
   // Z dimension (e.g., later added child is on top) so in case they are
   // overlapping, we want the right-most one receive the event.
   for (auto child = children_.rbegin(); child != children_.rend(); child++) {
     if (!(*child)->isVisible()) continue;
+    if (!within_bounds && (*child)->getParentClipMode() == Widget::CLIPPED) {
+      continue;
+    }
     if ((*child)->maxParentBounds().contains(x, y)) {
       Widget* w = (*child)->dispatchTouchDownEvent(x - (*child)->xOffset(),
                                                    y - (*child)->yOffset());

@@ -211,7 +211,7 @@ void Widget::setVisibility(Visibility visibility) {
   state_ |= (kWidgetGone * (visibility == GONE));
   if (previous == GONE) {
     // Layout might have been skipped before, leaving the request pending.
-    if (parent() != nullptr) parent()->requestLayout();
+    if (parent() != nullptr && isLayoutRequested()) parent()->requestLayout();
     requestLayout();
   } else if (visibility == GONE) {
     if (parent() != nullptr) parent()->requestLayout();
