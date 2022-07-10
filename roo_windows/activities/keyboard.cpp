@@ -485,7 +485,7 @@ KeyboardPage::KeyboardPage(const Environment& env, const KeyboardPageSpec* spec)
     }
   }
   // Note: highlighter must be added last to be on top of all children.
-  highlighter_.setVisibility(GONE);
+  highlighter_.setVisibility(INVISIBLE);
   highlighter_.setParentClipMode(Widget::UNCLIPPED);
   add(highlighter_);
 }
@@ -587,7 +587,8 @@ void KeyboardPage::showHighlighter(const TextButton& btn) {
 }
 
 void KeyboardPage::hideHighlighter() {
-  highlighter_.setVisibility(GONE);
+  // Use INVISIBLE to avoid needlessly re-measuring the keyboard page.
+  highlighter_.setVisibility(INVISIBLE);
   highlighter_.setTarget(nullptr);
 }
 
