@@ -88,6 +88,11 @@ class TextField : public Widget {
 
   virtual void onEditFinished(bool confirmed) {}
 
+  void onClicked() override {
+    edit();
+    Widget::onClicked();
+  }
+
   const std::string& hint() const { return hint_; }
 
   PreferredSize getPreferredSize() const override {
