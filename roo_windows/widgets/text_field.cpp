@@ -347,7 +347,14 @@ void TextFieldEditor::rune(uint32_t rune) {
 }
 
 void TextFieldEditor::enter() {
-  edit(nullptr);
+  if (target_ == nullptr) return;
+  TextField* old_target = target_;
+  target_ = nullptr;
+  old_target->onEditFinished(true);
+  keyboard_.hide();
+  keyboard_.setListener(nullptr);
+  old_target->invalidateInterior();
+  return;
 }
 
 void TextFieldEditor::del() {
