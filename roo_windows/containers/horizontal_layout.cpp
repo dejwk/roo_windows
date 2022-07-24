@@ -197,7 +197,7 @@ Dimensions HorizontalLayout::onMeasure(MeasureSpec width, MeasureSpec height) {
   max_height += padding_.top() + padding_.bottom();
   max_height = std::max(max_height, selfMinimum.height());
   if (!match_height) {
-    return Dimensions(width_size, max_height);
+    return Dimensions(width_size, height.resolveSize(max_height));
   }
   // We need to force the width to be uniform for all children with
   // preferred height = MATCH_PARENT.

@@ -197,7 +197,7 @@ Dimensions VerticalLayout::onMeasure(MeasureSpec width, MeasureSpec height) {
   max_width += padding_.left() + padding_.right();
   max_width = std::max(max_width, selfMinimum.width());
   if (!match_width) {
-    return Dimensions(max_width, height_size);
+    return Dimensions(width.resolveSize(max_width), height_size);
   }
   // We need to force the width to be uniform for all children with
   // preferred width = MATCH_PARENT.
