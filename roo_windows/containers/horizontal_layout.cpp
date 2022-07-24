@@ -150,7 +150,7 @@ Dimensions HorizontalLayout::onMeasure(MeasureSpec width, MeasureSpec height) {
         MeasureSpec child_width_spec =
             MeasureSpec::Exactly(std::max<int16_t>(0, child_width));
         MeasureSpec child_height_spec =
-            width.getChildMeasureSpec(v_padding + v_margin, preferred.height());
+            height.getChildMeasureSpec(v_padding + v_margin, preferred.height());
         measure.latest().update(child_width_spec, child_height_spec,
                                 w.measure(child_width_spec, child_height_spec));
       }
