@@ -92,3 +92,32 @@ inline constexpr bool operator==(MeasureSpec a, MeasureSpec b) {
 }
 
 }  // namespace roo_windows
+
+#if defined(__linux__) || defined(__linux) || defined(linux)
+#include <ostream>
+
+namespace roo_windows {
+inline std::ostream& operator<<(std::ostream& os, const roo_windows::MeasureSpec& spec) {
+  switch (spec.kind()) {
+    case MeasureSpec::UNSPECIFIED: {
+      os << "UNSPECIFIED";
+      break;
+    }
+    case MeasureSpec::AT_MOST: {
+      os << "AT_MOST";
+      break;
+    }
+    case MeasureSpec::EXACTLY: {
+      os << "EXACTLY";
+      break;
+    }
+    default: {
+      os << "UNKNOWN";
+      break;
+    }
+  }
+  os << "(" << spec.value() << ")";
+  return os;
+}
+}
+#endif  // defined(__linux__)

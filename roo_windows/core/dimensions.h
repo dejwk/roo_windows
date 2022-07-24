@@ -24,3 +24,14 @@ inline Dimensions DimensionsOf(const roo_display::Drawable& d) {
 }
 
 }  // namespace roo_windows
+
+#if defined(__linux__) || defined(__linux) || defined(linux)
+#include <ostream>
+
+namespace roo_windows {
+inline std::ostream& operator<<(std::ostream& os, const roo_windows::Dimensions& dims) {
+  os << "(" << dims.width() << ", " << dims.height() << ")";
+  return os;
+}
+}
+#endif  // defined(__linux__)
