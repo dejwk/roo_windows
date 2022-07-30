@@ -27,6 +27,7 @@ class WifiIndicator18x18 : public WifiIndicator {
         &ic_filled_18_device_signal_wifi_2_bar_lock(),
         &ic_filled_18_device_signal_wifi_3_bar_lock(),
         &ic_filled_18_device_signal_wifi_4_bar_lock(),
+        &ic_filled_18_device_signal_wifi_connected_no_internet_4(),
     };
     return icons;
   }

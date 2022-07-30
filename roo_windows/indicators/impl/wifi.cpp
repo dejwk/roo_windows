@@ -11,7 +11,7 @@ WifiIndicator::WifiIndicator(const Environment& env)
 WifiIndicator::WifiIndicator(const Environment& env, roo_display::Color color)
     : Widget(env),
       color_(color),
-      connected_(false),
+      connection_status_(DISCONNECTED),
       locked_(false),
       bar_count_(1) {}
 
@@ -26,9 +26,9 @@ bool WifiIndicator::paint(const Surface& s) {
   return true;
 }
 
-void WifiIndicator::setWifiConnected(bool connected) {
-  if (connected == connected_) return;
-  connected_ = connected;
+void WifiIndicator::setConnectionStatus(ConnectionStatus status) {
+  if (status == connection_status_) return;
+  connection_status_ = status;
   markDirty();
 }
 
@@ -53,16 +53,20 @@ void WifiIndicator::setWifiSignalStrength(int rssi) {
 }
 
 WifiIndicator::WifiStatus WifiIndicator::status() {
-  if (!connected_) return WIFI_STATUS_OFF;
-  switch (bar_count_) {
-    case 4:
-      return locked_ ? WIFI_STATUS_BAR_4_LOCK : WIFI_STATUS_BAR_4;
-    case 3:
-      return locked_ ? WIFI_STATUS_BAR_3_LOCK : WIFI_STATUS_BAR_3;
-    case 2:
-      return locked_ ? WIFI_STATUS_BAR_2_LOCK : WIFI_STATUS_BAR_2;
+  switch (connection_status_) {
+    case DISCONNECTED: return WIFI_STATUS_OFF;
+    case CONNECTED_NO_INTERNET: return WIFI_STATUS_CONNECTED_NO_INTERNET;
     default:
-      return locked_ ? WIFI_STATUS_BAR_1_LOCK : WIFI_STATUS_BAR_1;
+      switch (bar_count_) {
+        case 4:
+          return locked_ ? WIFI_STATUS_BAR_4_LOCK : WIFI_STATUS_BAR_4;
+        case 3:
+          return locked_ ? WIFI_STATUS_BAR_3_LOCK : WIFI_STATUS_BAR_3;
+        case 2:
+          return locked_ ? WIFI_STATUS_BAR_2_LOCK : WIFI_STATUS_BAR_2;
+        default:
+          return locked_ ? WIFI_STATUS_BAR_1_LOCK : WIFI_STATUS_BAR_1;
+      }
   }
 }
 

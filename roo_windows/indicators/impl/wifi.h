@@ -7,6 +7,12 @@ namespace roo_windows {
 
 class WifiIndicator : public Widget {
  public:
+  enum ConnectionStatus {
+    DISCONNECTED = 0,
+    CONNECTED_NO_INTERNET = 1,
+    CONNECTED = 2,
+  };
+
   WifiIndicator(const Environment& env);
 
   WifiIndicator(const Environment& env, roo_display::Color color);
@@ -14,7 +20,7 @@ class WifiIndicator : public Widget {
   bool paint(const Surface& s) override;
   // Padding getDefaultPadding() const override { return Padding(0); }
 
-  void setWifiConnected(bool connected);
+  void setConnectionStatus(ConnectionStatus status);
 
   void setWifiLocked(bool locked);
 
@@ -33,13 +39,14 @@ class WifiIndicator : public Widget {
     WIFI_STATUS_BAR_1_LOCK = 5,
     WIFI_STATUS_BAR_2_LOCK = 6,
     WIFI_STATUS_BAR_3_LOCK = 7,
-    WIFI_STATUS_BAR_4_LOCK = 8
+    WIFI_STATUS_BAR_4_LOCK = 8,
+    WIFI_STATUS_CONNECTED_NO_INTERNET = 9
   };
 
   WifiStatus status();
 
   Color color_;  // If transparent, use parent's default content color.
-  bool connected_;
+  ConnectionStatus connection_status_;
   bool locked_;
   int bar_count_;
 };
