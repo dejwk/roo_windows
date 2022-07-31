@@ -16,12 +16,19 @@ class TextField;
 static constexpr roo_time::Interval kCursorBlinkInterval =
     roo_time::Millis(500);
 
+static constexpr roo_time::Interval kShowLastGlyphInterval =
+    roo_time::Millis(1500);
+
 class TextFieldEditor : public KeyboardListener {
  public:
   TextFieldEditor(roo_scheduler::Scheduler& scheduler, Keyboard& keyboard)
       : scheduler_(scheduler),
         keyboard_(keyboard),
-        cursor_blinker_(&scheduler, [this](){ blinkCursor(); }),
+        cursor_blinker_(&scheduler, [this]() { blinkCursor(); }),
+        blinking_cursor_is_on_(false),
+        last_cursor_shown_time_(roo_time::Uptime::Now()),
+        last_glyph_hider_(&scheduler, [this]() { hideLastGlyph(); }),
+        last_glyph_recently_entered_(false),
         target_(nullptr),
         cursor_position_(0),
         selection_begin_(0),
@@ -31,6 +38,8 @@ class TextFieldEditor : public KeyboardListener {
   void edit(TextField* target);
 
   bool isEdited(const TextField* target) const;
+
+  bool lastGlyphRecentlyEntered() const { return last_glyph_recently_entered_; }
 
   const std::vector<roo_display::GlyphMetrics>& glyphs() const {
     return glyphs_;
@@ -58,14 +67,21 @@ class TextFieldEditor : public KeyboardListener {
 
   void measure();
   void restartCursor();
-
   void blinkCursor();
+
+  void restartLastGlyphRecentlyEntered();
+  void hideLastGlyph();
 
   roo_scheduler::Scheduler& scheduler_;
   Keyboard& keyboard_;
   roo_scheduler::SingletonTask cursor_blinker_;
   bool blinking_cursor_is_on_;
   roo_time::Uptime last_cursor_shown_time_;
+  roo_scheduler::SingletonTask last_glyph_hider_;
+
+  // True if the last (rightmost) glyph is considered as 'recently entered'
+  // and meant to be shown.
+  bool last_glyph_recently_entered_;
 
   TextField* target_;
   std::vector<roo_display::GlyphMetrics> glyphs_;
@@ -92,6 +108,7 @@ class TextField : public Widget {
         decoration_(decoration),
         value_(""),
         hint_(std::move(hint)),
+        starred_(false),
         font_(font),
         text_color_(roo_display::color::Transparent),
         highlight_color_(roo_display::color::Transparent),
@@ -107,6 +124,12 @@ class TextField : public Widget {
   void onClicked() override {
     edit();
     Widget::onClicked();
+  }
+
+  void setStarred(bool starred) {
+    if (starred == starred_) return;
+    starred_ = starred;
+    markDirty();
   }
 
   const std::string& hint() const { return hint_; }
@@ -163,6 +186,7 @@ class TextField : public Widget {
   friend class TextFieldEditor;
 
   bool isEdited() const { return editor_.isEdited(this); }
+  bool isStarred() const { return starred_; }
 
  public:
   void edit() { editor_.edit(this); }
@@ -174,6 +198,7 @@ class TextField : public Widget {
 
   std::string value_;
   const std::string hint_;
+  bool starred_;
   const roo_display::Font& font_;
   roo_display::Color text_color_;
   roo_display::Color highlight_color_;

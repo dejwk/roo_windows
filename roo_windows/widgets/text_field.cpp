@@ -8,7 +8,7 @@ class TextFieldInterior : public roo_display::Drawable {
  public:
   TextFieldInterior(const roo_display::Font* font,
                     const roo_display::Box& extents, const std::string* text,
-                    bool edited,
+                    bool edited, bool starred, bool show_last_glyph,
                     int16_t text_xmin, int16_t text_xmax,
                     int16_t selection_xmin, int16_t selection_xmax,
                     int16_t cursor_x, roo_display::Color text_color,
@@ -18,6 +18,8 @@ class TextFieldInterior : public roo_display::Drawable {
         extents_(extents),
         text_(text),
         edited_(edited),
+        starred_(starred),
+        show_last_glyph_(show_last_glyph),
         text_xmin_(text_xmin),
         text_xmax_(text_xmax),
         selection_xmin_(selection_xmin),
@@ -32,6 +34,16 @@ class TextFieldInterior : public roo_display::Drawable {
 
  private:
   void drawTo(const roo_display::Surface& s) const override {
+    std::string starred_text;
+    const std::string* text = text_;
+    if (starred_ && !text_->empty()) {
+      starred_text.resize(text_->size());
+      for (size_t i = 0; i < starred_text.size() - 1; i++) {
+        starred_text[i] = '*';
+      }
+      starred_text[text_->size() - 1] = show_last_glyph_ ? text_->back() : '*';
+      text = &starred_text;
+    }
     int16_t text_height = font_->metrics().maxHeight();
     int16_t text_ymin = extents_.yMin();
     int16_t text_ymax = text_ymin + text_height - 1;
@@ -45,8 +57,8 @@ class TextFieldInterior : public roo_display::Drawable {
         roo_display::Surface news = s;
         news.clipToExtents(pre_selection_clip);
         news.set_dx(news.dx() + offset_);
-        font_->drawHorizontalString(news, (const uint8_t*)text_->c_str(),
-                                    text_->size(), text_color_);
+        font_->drawHorizontalString(news, (const uint8_t*)text->c_str(),
+                                    text->size(), text_color_);
       }
       // Draw the highlighted area.
       {
@@ -58,8 +70,8 @@ class TextFieldInterior : public roo_display::Drawable {
         Color bg = highlight_color_;
         bg.set_a(0x80);
         news.set_bgcolor(roo_display::alphaBlend(s.bgcolor(), bg));
-        font_->drawHorizontalString(news, (const uint8_t*)text_->c_str(),
-                                    text_->size(), text_color_);
+        font_->drawHorizontalString(news, (const uint8_t*)text->c_str(),
+                                    text->size(), text_color_);
       }
       if (selection_xmax_ < extents_.xMax()) {
         // Draw post-selection area.
@@ -69,8 +81,8 @@ class TextFieldInterior : public roo_display::Drawable {
         roo_display::Surface news = s;
         news.clipToExtents(post_selection_clip);
         news.set_dx(news.dx() + offset_);
-        font_->drawHorizontalString(news, (const uint8_t*)text_->c_str(),
-                                    text_->size(), text_color_);
+        font_->drawHorizontalString(news, (const uint8_t*)text->c_str(),
+                                    text->size(), text_color_);
       }
       return;
     }
@@ -82,8 +94,8 @@ class TextFieldInterior : public roo_display::Drawable {
       roo_display::Surface news = s;
       news.clipToExtents(pre_cursor);
       news.set_dx(news.dx() + offset_);
-      font_->drawHorizontalString(news, (const uint8_t*)text_->c_str(),
-                                  text_->size(), text_color_);
+      font_->drawHorizontalString(news, (const uint8_t*)text->c_str(),
+                                  text->size(), text_color_);
     }
     // The x coordinate of the first pixel that will not be overwritten by text.
     int past_glyph = text_xmax_ + 1;
@@ -95,8 +107,8 @@ class TextFieldInterior : public roo_display::Drawable {
       news.set_dx(news.dx() + offset_);
       Color bg = highlight_color_;
       news.set_bgcolor(roo_display::alphaBlend(s.bgcolor(), bg));
-      font_->drawHorizontalString(news, (const uint8_t*)text_->c_str(),
-                                  text_->size(), text_color_);
+      font_->drawHorizontalString(news, (const uint8_t*)text->c_str(),
+                                  text->size(), text_color_);
       if (past_glyph <= cursor_x_ + 1) {
         // Must mean that the cursor is past the last character, and not
         // entirely drawn yet.
@@ -105,8 +117,8 @@ class TextFieldInterior : public roo_display::Drawable {
           s.drawObject(roo_display::FilledRect(
               past_glyph, text_ymin, cursor_x_ + 1, text_ymax, s.bgcolor()));
         }
-        s.drawObject(roo_display::FilledRect(cursor_x_, text_ymin, cursor_x_ + 1,
-                                             text_ymax, bg));
+        s.drawObject(roo_display::FilledRect(cursor_x_, text_ymin,
+                                             cursor_x_ + 1, text_ymax, bg));
       }
     }
     int16_t xstart_remaining = cursor_x_ + 2;
@@ -118,8 +130,8 @@ class TextFieldInterior : public roo_display::Drawable {
       news.clipToExtents(post_cursor);
       news.set_dx(news.dx() + offset_);
       if (past_glyph > xstart_remaining) {
-        font_->drawHorizontalString(news, (const uint8_t*)text_->c_str(),
-                                    text_->size(), text_color_);
+        font_->drawHorizontalString(news, (const uint8_t*)text->c_str(),
+                                    text->size(), text_color_);
         xstart_remaining = past_glyph;
       }
       if (xstart_remaining <= extents_.xMax()) {
@@ -145,6 +157,8 @@ class TextFieldInterior : public roo_display::Drawable {
   roo_display::Box extents_;
   const std::string* text_;
   bool edited_;
+  bool starred_;
+  bool show_last_glyph_;
   int16_t text_xmin_;
   int16_t text_xmax_;
   int16_t selection_xmin_;
@@ -165,11 +179,14 @@ bool TextField::paint(const roo_display::Surface& s) {
                                            ? parent()->theme().color.secondary
                                            : highlight_color_;
   const std::string* val = &value_;
+  bool starred = isStarred();
+  bool show_last_glyph = false;
   if (val->empty()) {
     // Show hint with half the opacity.
     val = &hint_;
     color.set_a(color.a() / 2);
     color = roo_display::alphaBlend(s.bgcolor(), color);
+    starred = false;
   }
   // Calculate the position of the undecorated text within the bounds.
   int16_t decoration_height_offset = 0;
@@ -189,6 +206,7 @@ bool TextField::paint(const roo_display::Surface& s) {
   int16_t draw_xoffset = 0;
   int16_t cursor_x = -2;
   if (isEdited()) {
+    show_last_glyph = editor().lastGlyphRecentlyEntered();
     if (!val->empty()) {
       // Figure out if the text will fit. If so, ignore the editor's offset.
       // If not, respect the editor's offset.
@@ -220,15 +238,31 @@ bool TextField::paint(const roo_display::Surface& s) {
     if (editor().isBlinkingCursorNowOn()) {
       cursor_x =
           (editor().cursor_position() == 0
-              ? 0
-              : editor().glyphs()[editor().cursor_position() - 1].advance()) +
+               ? 0
+               : editor().glyphs()[editor().cursor_position() - 1].advance()) +
           draw_xoffset;
     }
-  } else {
-    roo_display::GlyphMetrics metrics = font_.getHorizontalStringMetrics(
-        (const uint8_t*)val->c_str(), val->length());
-    xMin = metrics.glyphXMin();
-    xMax = metrics.glyphXMax();
+  } else if (!val->empty()) {
+    if (starred) {
+      // Calculate the bounds as-if the string is all-star.
+      roo_display::GlyphMetrics metrics;
+      font_.getGlyphMetrics('*', roo_display::FONT_LAYOUT_HORIZONTAL, &metrics);
+      roo_display::Utf8Decoder decoder((const uint8_t*)val->c_str(),
+                                       val->size());
+      int length = 0;
+      while (decoder.has_next()) {
+        decoder.next();
+        ++length;
+      }
+      xMin = metrics.glyphXMin();
+      xMax = metrics.glyphXMax() + (length - 1) * metrics.advance();
+    } else {
+      // Calculate the bounds based on the actual string content.
+      roo_display::GlyphMetrics metrics = font_.getHorizontalStringMetrics(
+          (const uint8_t*)val->c_str(), val->length());
+      xMin = metrics.glyphXMin();
+      xMax = metrics.glyphXMax();
+    }
   }
 
   Color c = highlight_color;
@@ -242,8 +276,8 @@ bool TextField::paint(const roo_display::Surface& s) {
       &font_,
       Box(0, -font().metrics().glyphYMax(), width() - 1,
           -font().metrics().glyphYMin() + decoration_height_offset),
-      val, isEdited(), xMin, xMax, selection_xmin, selection_xmax, cursor_x, color,
-      c, draw_xoffset, decoration_);
+      val, isEdited(), starred, show_last_glyph, xMin, xMax, selection_xmin,
+      selection_xmax, cursor_x, color, c, draw_xoffset, decoration_);
   s.drawObject(roo_display::MakeTileOf(interior, bounds(), halign_, valign_,
                                        roo_display::color::Transparent,
                                        s.fill_mode()));
@@ -264,6 +298,7 @@ void TextFieldEditor::edit(TextField* target) {
   keyboard_.show();
   keyboard_.setListener(this);
   target->invalidateInterior();
+  last_glyph_recently_entered_ = false;
   measure();
   restartCursor();
 }
@@ -308,16 +343,54 @@ void TextFieldEditor::measure() {
     offsets_.clear();
     return;
   }
-  int actual_size = target_->font().getHorizontalStringGlyphMetrics(
-      (const uint8_t*)s.c_str(), s.size(), &*glyphs_.begin(), 0, max_count);
-  glyphs_.resize(actual_size);
-  roo_display::Utf8Decoder decoder((const uint8_t*)s.c_str(), s.size());
-  offsets_.resize(actual_size);
-  for (int16_t i = 0; i < actual_size; ++i) {
-    offsets_[i] = decoder.data() - (const uint8_t*)s.c_str();
-    decoder.next();
+  int actual_size = 0;
+  if (empty || !target_->isStarred()) {
+    actual_size = target_->font().getHorizontalStringGlyphMetrics(
+        (const uint8_t*)s.c_str(), s.size(), &*glyphs_.begin(), 0, max_count);
+    glyphs_.resize(actual_size);
+    roo_display::Utf8Decoder decoder((const uint8_t*)s.c_str(), s.size());
+    offsets_.resize(actual_size);
+    for (int16_t i = 0; i < actual_size; ++i) {
+      offsets_[i] = decoder.data() - (const uint8_t*)s.c_str();
+      decoder.next();
+    }
+  } else {
+    roo_display::GlyphMetrics star_metrics;
+    target_->font().getGlyphMetrics('*', roo_display::FONT_LAYOUT_HORIZONTAL,
+                                    &star_metrics);
+    roo_display::GlyphMetrics last_rune_metrics = star_metrics;
+    // Determine how many stars.
+    roo_display::Utf8Decoder decoder((const uint8_t*)s.c_str(), s.size());
+    while (true) {
+      ++actual_size;
+      roo_display::unicode_t rune = decoder.next();
+      if (!decoder.has_next()) {
+        // Last one; perhaps actually measure.
+        if (last_glyph_recently_entered_) {
+          target_->font().getGlyphMetrics(
+              rune, roo_display::FONT_LAYOUT_HORIZONTAL, &last_rune_metrics);
+        }
+        break;
+      }
+    }
+    glyphs_.resize(actual_size);
+    offsets_.resize(actual_size);
+    int16_t xpos = 0;
+    for (size_t i = 0; i < actual_size - 1; ++i) {
+      glyphs_[i] = roo_display::GlyphMetrics(
+          star_metrics.glyphXMin() + xpos, star_metrics.glyphYMin(),
+          star_metrics.glyphXMax() + xpos, star_metrics.glyphYMax(),
+          star_metrics.advance() + xpos);
+      xpos += star_metrics.advance();
+      offsets_[i] = i;
+    }
+    glyphs_[actual_size - 1] = roo_display::GlyphMetrics(
+        last_rune_metrics.glyphXMin() + xpos, last_rune_metrics.glyphYMin(),
+        last_rune_metrics.glyphXMax() + xpos, last_rune_metrics.glyphYMax(),
+        last_rune_metrics.advance() + xpos);
+    xpos += last_rune_metrics.advance();
+    offsets_[actual_size - 1] = actual_size - 1;
   }
-
   cursor_position_ = empty ? 0 : glyphs_.size();
 }
 
@@ -335,6 +408,22 @@ void TextFieldEditor::blinkCursor() {
   }
 }
 
+void TextFieldEditor::restartLastGlyphRecentlyEntered() {
+  if (target_ == nullptr) return;
+  // Note: need to check for empty as a special case, because we may
+  // be showing the hint.
+  if (target_->content().empty() || cursor_position() == glyphs_.size()) {
+    last_glyph_recently_entered_ = true;
+    last_glyph_hider_.scheduleAfter(kShowLastGlyphInterval);
+  }
+}
+
+void TextFieldEditor::hideLastGlyph() {
+  if (!last_glyph_recently_entered_) return;
+  last_glyph_recently_entered_ = false;
+  measure();
+}
+
 void TextFieldEditor::restartCursor() {
   last_cursor_shown_time_ = roo_time::Uptime::Now();
   blinking_cursor_is_on_ = true;
@@ -344,6 +433,7 @@ void TextFieldEditor::restartCursor() {
 void TextFieldEditor::rune(uint32_t rune) {
   if (target_ == nullptr) return;
   restartCursor();
+  restartLastGlyphRecentlyEntered();
   std::string& val = target_->value_;
   if (has_selection()) {
     // Delete the selected text, remove the selection, and set the cursor where
@@ -372,6 +462,7 @@ void TextFieldEditor::rune(uint32_t rune) {
 
 void TextFieldEditor::enter() {
   if (target_ == nullptr) return;
+  last_glyph_recently_entered_ = false;
   TextField* old_target = target_;
   target_ = nullptr;
   old_target->onEditFinished(true);
@@ -383,6 +474,7 @@ void TextFieldEditor::enter() {
 
 void TextFieldEditor::del() {
   if (target_ == nullptr) return;
+  last_glyph_recently_entered_ = false;
   restartCursor();
   if (has_selection()) {
     // Delete the selected text, remove the selection, and set the cursor where
