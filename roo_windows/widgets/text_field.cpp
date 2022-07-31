@@ -1,6 +1,20 @@
 #include "roo_windows/widgets/text_field.h"
 
+#include "roo_material_icons.h"
+#include "roo_material_icons/filled/24/action.h"
+
 namespace roo_windows {
+
+bool VisibilityToggle::paint(const Surface& s) {
+  roo_display::MaterialIcon icon(isOn() ? ic_filled_24_action_visibility()
+                                        : ic_filled_24_action_visibility_off());
+  roo_display::Color color = parent()->defaultColor();
+  icon.color_mode().setColor(color);
+  roo_display::Tile tile(&icon, bounds(), roo_display::HAlign::Center(),
+                         roo_display::VAlign::Middle());
+  s.drawObject(tile);
+  return true;
+}
 
 namespace {
 

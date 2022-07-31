@@ -19,6 +19,32 @@ static constexpr roo_time::Interval kCursorBlinkInterval =
 static constexpr roo_time::Interval kShowLastGlyphInterval =
     roo_time::Millis(1500);
 
+class VisibilityToggle : public Widget {
+ public:
+  VisibilityToggle(const Environment& env) : Widget(env) {
+    setOff();
+  }
+
+  Dimensions getSuggestedMinimumDimensions() const override {
+    return Dimensions(24, 24);
+  }
+
+  bool isClickable() const override { return true; }
+
+  void onClicked() override {
+    toggle();
+    Widget::onClicked();
+  }
+
+  bool paint(const Surface& s) override;
+
+  using Widget::isOn;
+  using Widget::isOff;
+  using Widget::setOn;
+  using Widget::setOff;
+  using Widget::toggle;
+};
+
 class TextFieldEditor : public KeyboardListener {
  public:
   TextFieldEditor(roo_scheduler::Scheduler& scheduler, Keyboard& keyboard)
@@ -129,6 +155,7 @@ class TextField : public Widget {
   void setStarred(bool starred) {
     if (starred == starred_) return;
     starred_ = starred;
+    if (isEdited()) editor().measure();
     markDirty();
   }
 
