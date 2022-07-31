@@ -48,6 +48,7 @@ class TextLabel : public Widget {
     if (value_ == value) return;
     value_ = std::move(value);
     markDirty();
+    requestLayout();
   }
 
   const roo_display::Font& font() const { return font_; }
