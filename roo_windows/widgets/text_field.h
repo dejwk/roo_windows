@@ -4,6 +4,8 @@
 #include "roo_display/font/font.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_display/ui/tile.h"
+#include "roo_scheduler.h"
+#include "roo_time.h"
 #include "roo_windows/activities/keyboard.h"
 #include "roo_windows/core/panel.h"
 
@@ -11,10 +13,15 @@ namespace roo_windows {
 
 class TextField;
 
+static constexpr roo_time::Interval kCursorBlinkInterval =
+    roo_time::Millis(500);
+
 class TextFieldEditor : public KeyboardListener {
  public:
-  TextFieldEditor(Keyboard& keyboard)
-      : keyboard_(keyboard),
+  TextFieldEditor(roo_scheduler::Scheduler& scheduler, Keyboard& keyboard)
+      : scheduler_(scheduler),
+        keyboard_(keyboard),
+        cursor_blinker_(&scheduler, [this](){ blinkCursor(); }),
         target_(nullptr),
         cursor_position_(0),
         selection_begin_(0),
@@ -28,6 +35,8 @@ class TextFieldEditor : public KeyboardListener {
   const std::vector<roo_display::GlyphMetrics>& glyphs() const {
     return glyphs_;
   }
+
+  bool isBlinkingCursorNowOn() const { return blinking_cursor_is_on_; }
 
   int16_t draw_xoffset() const { return draw_xoffset_; }
   int16_t selection_begin() const { return selection_begin_; }
@@ -48,8 +57,15 @@ class TextFieldEditor : public KeyboardListener {
   friend class TextField;
 
   void measure();
+  void restartCursor();
 
+  void blinkCursor();
+
+  roo_scheduler::Scheduler& scheduler_;
   Keyboard& keyboard_;
+  roo_scheduler::SingletonTask cursor_blinker_;
+  bool blinking_cursor_is_on_;
+  roo_time::Uptime last_cursor_shown_time_;
 
   TextField* target_;
   std::vector<roo_display::GlyphMetrics> glyphs_;

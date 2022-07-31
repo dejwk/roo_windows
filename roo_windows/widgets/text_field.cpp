@@ -74,7 +74,7 @@ class TextFieldInterior : public roo_display::Drawable {
       }
       return;
     }
-    // There's no selection; we will draw a cursor though.
+    // There's no selection; we may need to draw a cursor though.
     if (cursor_x_ > 0) {
       // Draw the text before the cursor.
       roo_display::Box pre_cursor(extents_.xMin(), text_ymin, cursor_x_ - 1,
@@ -217,11 +217,13 @@ bool TextField::paint(const roo_display::Surface& s) {
           editor().glyphs()[selection_end - 1].advance() - 1 + draw_xoffset;
     }
 
-    cursor_x =
-        (editor().cursor_position() == 0
-             ? 0
-             : editor().glyphs()[editor().cursor_position() - 1].advance()) +
-        draw_xoffset;
+    if (editor().isBlinkingCursorNowOn()) {
+      cursor_x =
+          (editor().cursor_position() == 0
+              ? 0
+              : editor().glyphs()[editor().cursor_position() - 1].advance()) +
+          draw_xoffset;
+    }
   } else {
     roo_display::GlyphMetrics metrics = font_.getHorizontalStringMetrics(
         (const uint8_t*)val->c_str(), val->length());
@@ -263,6 +265,7 @@ void TextFieldEditor::edit(TextField* target) {
   keyboard_.setListener(this);
   target->invalidateInterior();
   measure();
+  restartCursor();
 }
 
 bool TextFieldEditor::isEdited(const TextField* target) const {
@@ -318,8 +321,29 @@ void TextFieldEditor::measure() {
   cursor_position_ = empty ? 0 : glyphs_.size();
 }
 
+void TextFieldEditor::blinkCursor() {
+  if (target_ == nullptr) return;
+  auto now = roo_time::Uptime::Now();
+  if (now - last_cursor_shown_time_ > 2 * kCursorBlinkInterval) {
+    restartCursor();
+    target_->markDirty();
+  }
+  if (now - last_cursor_shown_time_ > kCursorBlinkInterval) {
+    blinking_cursor_is_on_ = false;
+    target_->markDirty();
+    cursor_blinker_.scheduleAfter(kCursorBlinkInterval);
+  }
+}
+
+void TextFieldEditor::restartCursor() {
+  last_cursor_shown_time_ = roo_time::Uptime::Now();
+  blinking_cursor_is_on_ = true;
+  cursor_blinker_.scheduleAfter(kCursorBlinkInterval);
+}
+
 void TextFieldEditor::rune(uint32_t rune) {
   if (target_ == nullptr) return;
+  restartCursor();
   std::string& val = target_->value_;
   if (has_selection()) {
     // Delete the selected text, remove the selection, and set the cursor where
@@ -359,6 +383,7 @@ void TextFieldEditor::enter() {
 
 void TextFieldEditor::del() {
   if (target_ == nullptr) return;
+  restartCursor();
   if (has_selection()) {
     // Delete the selected text, remove the selection, and set the cursor where
     // there was the selection.
