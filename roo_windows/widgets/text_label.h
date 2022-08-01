@@ -4,7 +4,6 @@
 #include "roo_display/font/font.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_display/ui/tile.h"
-
 #include "roo_windows/core/panel.h"
 
 namespace roo_windows {
@@ -14,8 +13,8 @@ class TextLabel : public Widget {
   TextLabel(const Environment& env, std::string value,
             const roo_display::Font& font, roo_display::HAlign halign,
             roo_display::VAlign valign)
-      : TextLabel(env, value, font, roo_display::color::Transparent, halign,
-                  valign) {}
+      : TextLabel(env, std::move(value), font, roo_display::color::Transparent,
+                  halign, valign) {}
 
   TextLabel(const Environment& env, std::string value,
             const roo_display::Font& font, roo_display::Color color,
@@ -30,15 +29,14 @@ class TextLabel : public Widget {
   bool paint(const roo_display::Surface& s) override {
     roo_display::Color color =
         color_.a() == 0 ? parent()->defaultColor() : color_;
-    s.drawObject(
-        roo_display::MakeTileOf(roo_display::TextLabel(font_, value_, color),
-                                bounds(), halign_, valign_));
+    s.drawObject(roo_display::MakeTileOf(
+        roo_display::StringViewLabel(font_, value_, color), bounds(), halign_,
+        valign_));
     return true;
   }
 
   Dimensions getSuggestedMinimumDimensions() const override {
-    auto metrics = font_.getHorizontalStringMetrics(
-        (const uint8_t*)value_.c_str(), value_.size());
+    auto metrics = font_.getHorizontalStringMetrics(value_);
     return Dimensions(metrics.width(), metrics.height());
   }
 

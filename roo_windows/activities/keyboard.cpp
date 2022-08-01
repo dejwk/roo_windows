@@ -374,8 +374,7 @@ const KeyboardWidget* KeyboardPage::keyboard() const {
 
 KeyboardWidget* KeyboardPage::keyboard() { return (KeyboardWidget*)parent(); }
 
-KeyboardWidget::KeyboardWidget(const Environment& env,
-                               const KeyboardSpec* spec)
+KeyboardWidget::KeyboardWidget(const Environment& env, const KeyboardSpec* spec)
     : Panel(env),
       color_theme_(env.keyboardColorTheme()),
       caps_state_(CAPS_STATE_LOW),
@@ -471,8 +470,10 @@ KeyboardPage::KeyboardPage(const Environment& env, const KeyboardPageSpec* spec)
         }
         case KeySpec::SWITCH_PAGE: {
           b = new PageSwitchButton(
-              env, std::string(row.pageswitch_key_labels + ((key.data >> 8) & 0xFF),
-                               key.data >> 16), (key.data & 0xFF));
+              env,
+              std::string(row.pageswitch_key_labels + ((key.data >> 8) & 0xFF),
+                          key.data >> 16),
+              (key.data & 0xFF));
           b_color = env.keyboardColorTheme().modifierButton;
           break;
         }
@@ -625,8 +626,8 @@ bool PressHighlighter::paint(const Surface& s) {
   overlay.set_a(th.pressedOpacity(kbTh.normalButton));
   Color bgcolor = roo_display::alphaBlend(kbTh.normalButton, overlay);
   s.drawObject(roo_display::MakeTileOf(
-      roo_display::TextLabel(*th.font.body1, target_->label(),
-                             target_->textColor()),
+      roo_display::StringViewLabel(*th.font.body1, target_->label(),
+                                   target_->textColor()),
       bounds(), roo_display::HAlign::Center(), roo_display::VAlign::Top(3),
       bgcolor, roo_display::FILL_MODE_RECTANGLE));
   return true;

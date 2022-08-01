@@ -184,7 +184,7 @@ class Interior : public Drawable {
 
   const Button& button_;
   roo_display::Box bounds_;
-  roo_display::TextLabel label_;
+  roo_display::StringViewLabel label_;
 };
 
 void paintInterior(const Surface& s, const Box& bounds, const Button& button) {
@@ -337,8 +337,8 @@ bool Button::paint(const Surface& s) {
     int16_t bottom_bar_width = full_width - 2 * spec.bottom_width;
     if (bottom_bar_width > 0) {
       printVertStripes(s, spec.bottom_width, full_height - spec.bottom_height,
-                      spec.bottom_width + top_bar_width - 1, spec.bottom_height,
-                      spec.data_bottom, outlineColor());
+                       spec.bottom_width + top_bar_width - 1,
+                       spec.bottom_height, spec.data_bottom, outlineColor());
     }
     // Bottom right.
     RasterAlpha4<const uint8_t * PROGMEM> br(
@@ -361,8 +361,7 @@ Dimensions Button::getSuggestedMinimumDimensions() const {
                       4 + icon().extents().height());
   }
   // We must measure the text.
-  auto metrics = env_.theme().font.button->getHorizontalStringMetrics(
-      (const uint8_t*)label().c_str(), label().size());
+  auto metrics = env_.theme().font.button->getHorizontalStringMetrics(label_);
   int16_t text_height =
       ((env_.theme().font.button->metrics().maxHeight()) + 1) & ~1;
   if (!hasIcon()) {

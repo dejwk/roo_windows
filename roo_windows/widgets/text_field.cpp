@@ -71,8 +71,7 @@ class TextFieldInterior : public roo_display::Drawable {
         roo_display::Surface news = s;
         news.clipToExtents(pre_selection_clip);
         news.set_dx(news.dx() + offset_);
-        font_->drawHorizontalString(news, (const uint8_t*)text->c_str(),
-                                    text->size(), text_color_);
+        font_->drawHorizontalString(news, *text, text_color_);
       }
       // Draw the highlighted area.
       {
@@ -84,8 +83,7 @@ class TextFieldInterior : public roo_display::Drawable {
         Color bg = highlight_color_;
         bg.set_a(0x80);
         news.set_bgcolor(roo_display::alphaBlend(s.bgcolor(), bg));
-        font_->drawHorizontalString(news, (const uint8_t*)text->c_str(),
-                                    text->size(), text_color_);
+        font_->drawHorizontalString(news, *text, text_color_);
       }
       if (selection_xmax_ < extents_.xMax()) {
         // Draw post-selection area.
@@ -95,8 +93,7 @@ class TextFieldInterior : public roo_display::Drawable {
         roo_display::Surface news = s;
         news.clipToExtents(post_selection_clip);
         news.set_dx(news.dx() + offset_);
-        font_->drawHorizontalString(news, (const uint8_t*)text->c_str(),
-                                    text->size(), text_color_);
+        font_->drawHorizontalString(news, *text, text_color_);
       }
       return;
     }
@@ -108,8 +105,7 @@ class TextFieldInterior : public roo_display::Drawable {
       roo_display::Surface news = s;
       news.clipToExtents(pre_cursor);
       news.set_dx(news.dx() + offset_);
-      font_->drawHorizontalString(news, (const uint8_t*)text->c_str(),
-                                  text->size(), text_color_);
+      font_->drawHorizontalString(news, *text, text_color_);
     }
     // The x coordinate of the first pixel that will not be overwritten by text.
     int past_glyph = text_xmax_ + 1;
@@ -121,8 +117,7 @@ class TextFieldInterior : public roo_display::Drawable {
       news.set_dx(news.dx() + offset_);
       Color bg = highlight_color_;
       news.set_bgcolor(roo_display::alphaBlend(s.bgcolor(), bg));
-      font_->drawHorizontalString(news, (const uint8_t*)text->c_str(),
-                                  text->size(), text_color_);
+      font_->drawHorizontalString(news, *text, text_color_);
       if (past_glyph <= cursor_x_ + 1) {
         // Must mean that the cursor is past the last character, and not
         // entirely drawn yet.
@@ -144,8 +139,7 @@ class TextFieldInterior : public roo_display::Drawable {
       news.clipToExtents(post_cursor);
       news.set_dx(news.dx() + offset_);
       if (past_glyph > xstart_remaining) {
-        font_->drawHorizontalString(news, (const uint8_t*)text->c_str(),
-                                    text->size(), text_color_);
+        font_->drawHorizontalString(news, *text, text_color_);
         xstart_remaining = past_glyph;
       }
       if (xstart_remaining <= extents_.xMax()) {
@@ -272,8 +266,7 @@ bool TextField::paint(const roo_display::Surface& s) {
       xMax = metrics.glyphXMax() + (length - 1) * metrics.advance();
     } else {
       // Calculate the bounds based on the actual string content.
-      roo_display::GlyphMetrics metrics = font_.getHorizontalStringMetrics(
-          (const uint8_t*)val->c_str(), val->length());
+      roo_display::GlyphMetrics metrics = font_.getHorizontalStringMetrics(*val);
       xMin = metrics.glyphXMin();
       xMax = metrics.glyphXMax();
     }
@@ -360,7 +353,7 @@ void TextFieldEditor::measure() {
   int actual_size = 0;
   if (empty || !target_->isStarred()) {
     actual_size = target_->font().getHorizontalStringGlyphMetrics(
-        (const uint8_t*)s.c_str(), s.size(), &*glyphs_.begin(), 0, max_count);
+        s, &*glyphs_.begin(), 0, max_count);
     glyphs_.resize(actual_size);
     roo_display::Utf8Decoder decoder((const uint8_t*)s.c_str(), s.size());
     offsets_.resize(actual_size);

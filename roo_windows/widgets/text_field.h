@@ -182,8 +182,7 @@ class TextField : public Widget {
   bool paint(const roo_display::Surface& s) override;
 
   Dimensions getSuggestedMinimumDimensions() const override {
-    auto metrics = font_.getHorizontalStringMetrics(
-        (const uint8_t*)value_.c_str(), value_.size());
+    auto metrics = font_.getHorizontalStringMetrics(value_);
     int16_t preferred_height = metrics.height();
     switch (decoration_) {
       case UNDERLINE: {

@@ -6,19 +6,19 @@ namespace {
 
 class Interior : public roo_display::Drawable {
  public:
-  Interior(Box extents, const std::string* value, const roo_display::Font& font,
-           roo_display::Color color)
+  Interior(Box extents, roo_display::StringView value,
+           const roo_display::Font& font, roo_display::Color color)
       : extents_(extents), value_(value), font_(font), color_(color) {}
 
   Box extents() const override { return extents_; }
 
  private:
   void drawTo(const roo_display::Surface& s) const override {
-    if (value_->empty()) return;
+    if (value_.empty()) return;
     int16_t line_height = font_.metrics().maxHeight();
     int16_t y = 0;
-    const uint8_t* p = (const uint8_t*)&*value_->begin();
-    const uint8_t* end = (const uint8_t*)&*value_->end();
+    const uint8_t* p = &*value_.begin();
+    const uint8_t* end = &*value_.end();
     do {
       const uint8_t* start = p;
       while (p != end && *p != '\n') {
@@ -42,7 +42,7 @@ class Interior : public roo_display::Drawable {
   }
 
   roo_display::Box extents_;
-  const std::string* value_;
+  const roo_display::StringView value_;
   const roo_display::Font& font_;
   roo_display::Color color_;
 };
@@ -66,7 +66,7 @@ bool TextBlock::paint(const roo_display::Surface& s) {
       color_.a() == 0 ? parent()->defaultColor() : color_;
   s.drawObject(roo_display::MakeTileOf(
       Interior(Box(0, 0, text_dims_.width() - 1, text_dims_.height() - 1),
-               &value_, font_, color),
+               value_, font_, color),
       bounds(), halign_, valign_));
   return true;
 }
