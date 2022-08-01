@@ -45,7 +45,8 @@ bool IconWithCaption::paint(const Surface& s) {
   Box caption_bounds(bounds().xMin(), icon_bounds.yMax() + 1, bounds().xMax(),
                      icon_bounds.yMax() + font_->metrics().maxHeight());
   s.drawObject(MakeTileOf(
-      TextLabel(*font_, caption_, color), caption_bounds, HAlign::Center(),
+      StringViewLabel(*font_, caption_, color), caption_bounds,
+      HAlign::Center(),
       VAlign::None(caption_bounds.yMin() + font_->metrics().ascent())));
 
   if (s.fill_mode() == FILL_MODE_RECTANGLE && isInvalidated() &&
