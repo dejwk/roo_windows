@@ -21,9 +21,7 @@ static constexpr roo_time::Interval kShowLastGlyphInterval =
 
 class VisibilityToggle : public Widget {
  public:
-  VisibilityToggle(const Environment& env) : Widget(env) {
-    setOff();
-  }
+  VisibilityToggle(const Environment& env) : Widget(env) { setOff(); }
 
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(24, 24);
@@ -38,10 +36,10 @@ class VisibilityToggle : public Widget {
 
   bool paint(const Surface& s) override;
 
-  using Widget::isOn;
   using Widget::isOff;
-  using Widget::setOn;
+  using Widget::isOn;
   using Widget::setOff;
+  using Widget::setOn;
   using Widget::toggle;
 };
 
@@ -127,8 +125,7 @@ class TextField : public Widget {
 
   TextField(const Environment& env, TextFieldEditor& editor,
             const roo_display::Font& font, std::string hint,
-            roo_display::HAlign halign, roo_display::VAlign valign,
-            Decoration decoration)
+            roo_display::Alignment alignment, Decoration decoration)
       : Widget(env),
         editor_(editor),
         decoration_(decoration),
@@ -138,8 +135,7 @@ class TextField : public Widget {
         font_(font),
         text_color_(roo_display::color::Transparent),
         highlight_color_(roo_display::color::Transparent),
-        halign_(halign),
-        valign_(valign) {}
+        alignment_ (alignment) {}
 
   bool isClickable() const override { return true; }
   bool showClickAnimation() const override { return false; }
@@ -228,8 +224,7 @@ class TextField : public Widget {
   const roo_display::Font& font_;
   roo_display::Color text_color_;
   roo_display::Color highlight_color_;
-  roo_display::HAlign halign_;
-  roo_display::VAlign valign_;
+  roo_display::Alignment alignment_;
 };
 
 }  // namespace roo_windows

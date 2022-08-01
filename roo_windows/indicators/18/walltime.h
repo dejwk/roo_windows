@@ -23,7 +23,7 @@ class WalltimeIndicator18 : public WalltimeIndicator {
     s.drawObject(roo_display::MakeTileOf(
         roo_display::StringViewLabel(roo_display::font_NotoSans_Regular_18(),
                                      val_, color),
-        bounds(), roo_display::HAlign::None(), roo_display::VAlign::Middle()));
+        bounds(), roo_display::kMiddle));
     return true;
   }
 

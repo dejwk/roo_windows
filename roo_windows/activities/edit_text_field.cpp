@@ -11,8 +11,7 @@ EditedTextField::EditedTextField(const Environment& env,
                                  const std::string& hint,
                                  EditTextField& activity)
     : TextField(env, editor, roo_display::font_NotoSans_Regular_18(), hint,
-                roo_display::HAlign::Left(), roo_display::VAlign::Middle(),
-                UNDERLINE),
+                roo_display::kLeft | roo_display::kMiddle, UNDERLINE),
       activity_(activity) {}
 
 void EditedTextField::onEditFinished(bool confirmed) {

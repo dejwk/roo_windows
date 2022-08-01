@@ -10,8 +10,8 @@ bool VisibilityToggle::paint(const Surface& s) {
                                         : ic_filled_24_action_visibility_off());
   roo_display::Color color = parent()->defaultColor();
   icon.color_mode().setColor(color);
-  roo_display::Tile tile(&icon, bounds(), roo_display::HAlign::Center(),
-                         roo_display::VAlign::Middle());
+  roo_display::Tile tile(&icon, bounds(),
+                         roo_display::kCenter | roo_display::kMiddle);
   s.drawObject(tile);
   return true;
 }
@@ -266,7 +266,8 @@ bool TextField::paint(const roo_display::Surface& s) {
       xMax = metrics.glyphXMax() + (length - 1) * metrics.advance();
     } else {
       // Calculate the bounds based on the actual string content.
-      roo_display::GlyphMetrics metrics = font_.getHorizontalStringMetrics(*val);
+      roo_display::GlyphMetrics metrics =
+          font_.getHorizontalStringMetrics(*val);
       xMin = metrics.glyphXMin();
       xMax = metrics.glyphXMax();
     }
@@ -285,7 +286,7 @@ bool TextField::paint(const roo_display::Surface& s) {
           -font().metrics().glyphYMin() + decoration_height_offset),
       val, isEdited(), starred, show_last_glyph, xMin, xMax, selection_xmin,
       selection_xmax, cursor_x, color, c, draw_xoffset, decoration_);
-  s.drawObject(roo_display::MakeTileOf(interior, bounds(), halign_, valign_,
+  s.drawObject(roo_display::MakeTileOf(interior, bounds(), alignment_,
                                        roo_display::color::Transparent,
                                        s.fill_mode()));
   return true;

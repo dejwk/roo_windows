@@ -7,53 +7,59 @@ static const uint8_t kGravityAxisLeft = 2;
 static const uint8_t kGravityAxisRight = 4;
 static const uint8_t kGravityAxisClip = 8;
 
-enum GravityAxisAlign {
+enum GravityAxisAlignment {
   NONE = 0x0,
   MIDDLE = 0x1,
   MIN = 0x3,
   MAX = 0x5,
-//   FILL = 0x7,
-//   CLIPPED_MIDDLE = 0x9,
-//   CLIPPED_MIN = 0xB,
-//   CLIPPED_MAX = 0xD,
-//   CLIPPED_FILL = 0xF,
+  //   FILL = 0x7,
+  //   CLIPPED_MIDDLE = 0x9,
+  //   CLIPPED_MIN = 0xB,
+  //   CLIPPED_MAX = 0xD,
+  //   CLIPPED_FILL = 0xF,
 };
 
 class GravityAxis {
  public:
   constexpr GravityAxis() : GravityAxis(NONE) {}
 
-  constexpr GravityAxis(GravityAxisAlign align) : align_(align) {}
+  constexpr GravityAxis(GravityAxisAlignment alignment)
+      : alignment_(alignment) {}
 
-  constexpr bool isSet() const { return (align_ & kGravityAxisSpecified) != 0; }
+  constexpr bool isSet() const {
+    return (alignment_ & kGravityAxisSpecified) != 0;
+  }
 
   constexpr bool isAxisMiddle() const {
-    return (align_ & ~kGravityAxisClip) == MIDDLE;
+    return (alignment_ & ~kGravityAxisClip) == MIDDLE;
   }
 
   constexpr bool isAxisMin() const {
-    return (align_ & ~kGravityAxisClip) == MIN;
+    return (alignment_ & ~kGravityAxisClip) == MIN;
   }
 
   constexpr bool isAxisMax() const {
-    return (align_ & ~kGravityAxisClip) == MAX;
+    return (alignment_ & ~kGravityAxisClip) == MAX;
   }
 
-//   constexpr bool isFill() const { return (align_ & ~kGravityAxisClip) == FILL; }
+  //   constexpr bool isFill() const { return (align_ & ~kGravityAxisClip) ==
+  //   FILL; }
 
-//   constexpr bool isClipped() const { return (align_ & kGravityAxisClip) != 0; }
+  //   constexpr bool isClipped() const { return (align_ & kGravityAxisClip) !=
+  //   0; }
 
  private:
   friend class Gravity;
 
-  GravityAxisAlign align_;
+  GravityAxisAlignment alignment_;
 };
 
 class HorizontalGravity : public GravityAxis {
  public:
   constexpr HorizontalGravity() : GravityAxis(NONE) {}
 
-  constexpr HorizontalGravity(GravityAxisAlign align) : GravityAxis(align) {}
+  constexpr HorizontalGravity(GravityAxisAlignment alignment)
+      : GravityAxis(alignment) {}
 
   constexpr bool isCenter() const { return isAxisMiddle(); }
 
@@ -69,7 +75,8 @@ class VerticalGravity : public GravityAxis {
  public:
   constexpr VerticalGravity() : GravityAxis(NONE) {}
 
-  constexpr VerticalGravity(GravityAxisAlign align) : GravityAxis(align) {}
+  constexpr VerticalGravity(GravityAxisAlignment alignment)
+      : GravityAxis(alignment) {}
 
   constexpr bool isMiddle() const { return isAxisMiddle(); }
 
@@ -86,13 +93,13 @@ class Gravity {
   constexpr Gravity() : value_(0) {}
 
   constexpr Gravity(HorizontalGravity x, VerticalGravity y)
-      : value_(x.align_ | (y.align_ << 4)) {}
+      : value_(x.alignment_ | (y.alignment_ << 4)) {}
 
   constexpr HorizontalGravity x() const {
-    return HorizontalGravity((GravityAxisAlign)(value_ & 0xF));
+    return HorizontalGravity((GravityAxisAlignment)(value_ & 0xF));
   }
   constexpr VerticalGravity y() const {
-    return VerticalGravity((GravityAxisAlign)(value_ >> 4));
+    return VerticalGravity((GravityAxisAlignment)(value_ >> 4));
   }
 
  private:
@@ -100,33 +107,33 @@ class Gravity {
 };
 
 static constexpr HorizontalGravity kHorizontalGravityNone =
-    HorizontalGravity(GravityAxisAlign::NONE);
+    HorizontalGravity(GravityAxisAlignment::NONE);
 
 static constexpr HorizontalGravity kHorizontalGravityLeft =
-    HorizontalGravity(GravityAxisAlign::MIN);
+    HorizontalGravity(GravityAxisAlignment::MIN);
 
 static constexpr HorizontalGravity kHorizontalGravityRight =
-    HorizontalGravity(GravityAxisAlign::MAX);
+    HorizontalGravity(GravityAxisAlignment::MAX);
 
 static constexpr HorizontalGravity kHorizontalGravityCenter =
-    HorizontalGravity(GravityAxisAlign::MIDDLE);
+    HorizontalGravity(GravityAxisAlignment::MIDDLE);
 
 // static constexpr HorizontalGravity kHorizontalGravityFill =
-//     HorizontalGravity(GravityAxisAlign::FILL);
+//     HorizontalGravity(GravityAxisAlignment::FILL);
 
 static constexpr VerticalGravity kVerticalGravityNone =
-    VerticalGravity(GravityAxisAlign::NONE);
+    VerticalGravity(GravityAxisAlignment::NONE);
 
 static constexpr VerticalGravity kVerticalGravityTop =
-    VerticalGravity(GravityAxisAlign::MIN);
+    VerticalGravity(GravityAxisAlignment::MIN);
 
 static constexpr VerticalGravity kVerticalGravityBottom =
-    VerticalGravity(GravityAxisAlign::MAX);
+    VerticalGravity(GravityAxisAlignment::MAX);
 
 static constexpr VerticalGravity kVerticalGravityMiddle =
-    VerticalGravity(GravityAxisAlign::MIDDLE);
+    VerticalGravity(GravityAxisAlignment::MIDDLE);
 
 // static constexpr VerticalGravity kVerticalGravityFill =
-//     VerticalGravity(GravityAxisAlign::FILL);
+//     VerticalGravity(GravityAxisAlignment::FILL);
 
 }  // namespace roo_windows

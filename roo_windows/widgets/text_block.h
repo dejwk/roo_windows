@@ -12,14 +12,13 @@ namespace roo_windows {
 class TextBlock : public Widget {
  public:
   TextBlock(const Environment& env, std::string value,
-            const roo_display::Font& font, roo_display::HAlign halign,
-            roo_display::VAlign valign)
-      : TextBlock(env, value, font, roo_display::color::Transparent, halign,
-                  valign) {}
+            const roo_display::Font& font, roo_display::Alignment alignment)
+      : TextBlock(env, value, font, roo_display::color::Transparent,
+                  alignment) {}
 
   TextBlock(const Environment& env, std::string value,
             const roo_display::Font& font, roo_display::Color color,
-            roo_display::HAlign halign, roo_display::VAlign valign);
+            roo_display::Alignment alignment);
 
   bool paint(const roo_display::Surface& s) override;
 
@@ -39,8 +38,7 @@ class TextBlock : public Widget {
   Dimensions text_dims_;
   const roo_display::Font& font_;
   roo_display::Color color_;
-  roo_display::HAlign halign_;
-  roo_display::VAlign valign_;
+  roo_display::Alignment alignment_;
 };
 
 }  // namespace roo_windows

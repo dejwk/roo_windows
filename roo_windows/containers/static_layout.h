@@ -30,8 +30,8 @@ class StaticLayout : public Panel {
    * specified point in the parent's coordinates.
    */
   void add(WidgetRef child, int16_t x, int16_t y) {
-    return add(std::move(child), x, y, roo_display::HAlign::Left(),
-               roo_display::VAlign::Top());
+    return add(std::move(child), x, y, roo_display::kLeft,
+               roo_display::kTop);
   }
 
   /**

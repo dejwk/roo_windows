@@ -22,8 +22,8 @@ bool BatteryIndicator::paint(const Surface& s) {
   roo_display::Color color =
       color_.a() == 0 ? parent()->defaultColor() : color_;
   icon.color_mode().setColor(color);
-  roo_display::Tile tile(&icon, bounds(), roo_display::HAlign::Center(),
-                         roo_display::VAlign::Middle());
+  roo_display::Tile tile(&icon, bounds(),
+                         roo_display::kCenter | roo_display::kMiddle);
   s.drawObject(tile);
   return true;
 }

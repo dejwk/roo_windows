@@ -18,20 +18,14 @@ class ScrollablePanel : public Panel {
                   Direction direction = VERTICAL)
       : Panel(env),
         direction_(direction),
-        h_align_(roo_display::HAlign::Left()),
-        v_align_(roo_display::VAlign::Top()),
+        alignment_(roo_display::kLeft | roo_display::kTop),
         scroll_start_vx_(0.0),
         scroll_start_vy_(0.0) {
     add(std::move(contents));
   }
 
-  void setHAlign(roo_display::HAlign halign) {
-    h_align_ = halign;
-    update();
-  }
-
-  void setVAlign(roo_display::VAlign valign) {
-    v_align_ = valign;
+  void setAlign(roo_display::Alignment alignment) {
+    alignment_ = alignment;
     update();
   }
 
@@ -91,8 +85,7 @@ class ScrollablePanel : public Panel {
 
  private:
   Direction direction_;
-  roo_display::HAlign h_align_;
-  roo_display::VAlign v_align_;
+  roo_display::Alignment alignment_;
 
   Dimensions measured_;
 

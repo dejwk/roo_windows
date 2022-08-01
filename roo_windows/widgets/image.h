@@ -14,8 +14,8 @@ class Image : public Widget {
       : Widget(env), image_(image) {}
 
   bool paint(const Surface& s) override {
-    roo_display::Tile tile(&image_, bounds(), roo_display::HAlign::Center(),
-                           roo_display::VAlign::Middle(),
+    roo_display::Tile tile(&image_, bounds(),
+                           roo_display::kCenter | roo_display::kMiddle,
                            roo_display::color::Transparent, s.fill_mode());
     s.drawObject(tile);
   }

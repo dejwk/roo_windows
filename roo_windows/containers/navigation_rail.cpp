@@ -18,7 +18,7 @@ NavigationRail* Destination::rail() {
 NavigationRail::NavigationRail(const Environment& env)
     : Panel(env),
       env_(env),
-      alignment_(roo_display::VAlign::Top()),
+      alignment_(roo_display::kTop),
       active_(-1),
       divider_(env) {
   add(divider_);

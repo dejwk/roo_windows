@@ -628,8 +628,8 @@ bool PressHighlighter::paint(const Surface& s) {
   s.drawObject(roo_display::MakeTileOf(
       roo_display::StringViewLabel(*th.font.body1, target_->label(),
                                    target_->textColor()),
-      bounds(), roo_display::HAlign::Center(), roo_display::VAlign::Top(3),
-      bgcolor, roo_display::FILL_MODE_RECTANGLE));
+      bounds(), roo_display::kCenter | roo_display::kTop, 0, 3, bgcolor,
+      roo_display::FILL_MODE_RECTANGLE));
   return true;
 }
 

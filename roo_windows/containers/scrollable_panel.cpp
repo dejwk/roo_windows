@@ -17,7 +17,7 @@ void ScrollablePanel::scrollTo(int16_t x, int16_t y) {
   } else {
     // if (x < 0) x = 0;
     // if (x > width() - c->width()) x = width() - c->width();
-    x = h_align_.GetOffset(bounds(), c->bounds());
+    x = alignment_.h().GetOffset(bounds(), c->bounds());
   }
   if (c->height() >= height()) {
     if (y > 0) y = 0;
@@ -27,7 +27,7 @@ void ScrollablePanel::scrollTo(int16_t x, int16_t y) {
   } else {
     // if (y < 0) y = 0;
     // if (y > height() - c->height()) y = height() - c->height();
-    y = v_align_.GetOffset(bounds(), c->bounds());
+    y = alignment_.v().GetOffset(bounds(), c->bounds());
   }
   c->moveTo(c->bounds().translate(x, y));
 }

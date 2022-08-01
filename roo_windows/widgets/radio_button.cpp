@@ -21,14 +21,13 @@ bool RadioButton::paint(const Surface& s) {
              : ic_filled_24_toggle_radio_button_unchecked();
   img.color_mode().setColor(color);
   if (isInvalidated()) {
-    roo_display::Tile tile(&img, bounds(), roo_display::HAlign::Center(),
-                           roo_display::VAlign::Middle(),
+    roo_display::Tile tile(&img, bounds(),
+                           roo_display::kCenter | roo_display::kMiddle,
                            roo_display::color::Transparent, s.fill_mode());
     s.drawObject(tile);
   } else {
-    s.drawObject(
-        img, roo_display::HAlign::Center().GetOffset(bounds(), img.extents()),
-        roo_display::VAlign::Middle().GetOffset(bounds(), img.extents()));
+    s.drawObject(img, roo_display::kCenter.GetOffset(bounds(), img.extents()),
+                 roo_display::kMiddle.GetOffset(bounds(), img.extents()));
   }
   return true;
 }

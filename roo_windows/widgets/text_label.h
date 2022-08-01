@@ -11,31 +11,32 @@ namespace roo_windows {
 class TextLabel : public Widget {
  public:
   TextLabel(const Environment& env, std::string value,
-            const roo_display::Font& font, roo_display::HAlign halign,
-            roo_display::VAlign valign)
+            const roo_display::Font& font, roo_display::Alignment alignment)
       : TextLabel(env, std::move(value), font, roo_display::color::Transparent,
-                  halign, valign) {}
+                  alignment) {}
 
   TextLabel(const Environment& env, std::string value,
             const roo_display::Font& font, roo_display::Color color,
-            roo_display::HAlign halign, roo_display::VAlign valign)
+            roo_display::Alignment alignment)
       : Widget(env),
         value_(std::move(value)),
         font_(font),
         color_(color),
-        halign_(halign),
-        valign_(valign) {}
+        alignment_(alignment) {}
 
   bool paint(const roo_display::Surface& s) override {
     roo_display::Color color =
         color_.a() == 0 ? parent()->defaultColor() : color_;
     s.drawObject(roo_display::MakeTileOf(
-        roo_display::StringViewLabel(font_, value_, color), bounds(), halign_,
-        valign_));
+        roo_display::StringViewLabel(font_, value_, color), bounds(),
+        alignment_));
     return true;
   }
 
   Dimensions getSuggestedMinimumDimensions() const override {
+    // NOTE: we could consider pre-calculating and storing these (and avoid
+    // re-measuring in paint), but it is an extra 20 bytes per label so it is
+    // not a clear win.
     auto metrics = font_.getHorizontalStringMetrics(value_);
     return Dimensions(metrics.width(), metrics.height());
   }
@@ -55,8 +56,7 @@ class TextLabel : public Widget {
   std::string value_;
   const roo_display::Font& font_;
   roo_display::Color color_;
-  roo_display::HAlign halign_;
-  roo_display::VAlign valign_;
+  roo_display::Alignment alignment_;
 };
 
 }  // namespace roo_windows

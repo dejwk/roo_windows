@@ -20,8 +20,8 @@ bool WifiIndicator::paint(const Surface& s) {
   roo_display::Color color =
       color_.a() == 0 ? parent()->defaultColor() : color_;
   icon.color_mode().setColor(color);
-  roo_display::Tile tile(&icon, bounds(), roo_display::HAlign::Center(),
-                         roo_display::VAlign::Middle());
+  roo_display::Tile tile(&icon, bounds(),
+                         roo_display::kCenter | roo_display::kMiddle);
   s.drawObject(tile);
   return true;
 }
@@ -54,8 +54,10 @@ void WifiIndicator::setWifiSignalStrength(int rssi) {
 
 WifiIndicator::WifiStatus WifiIndicator::status() {
   switch (connection_status_) {
-    case DISCONNECTED: return WIFI_STATUS_OFF;
-    case CONNECTED_NO_INTERNET: return WIFI_STATUS_CONNECTED_NO_INTERNET;
+    case DISCONNECTED:
+      return WIFI_STATUS_OFF;
+    case CONNECTED_NO_INTERNET:
+      return WIFI_STATUS_CONNECTED_NO_INTERNET;
     default:
       switch (bar_count_) {
         case 4:

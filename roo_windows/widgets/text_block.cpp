@@ -51,13 +51,8 @@ class Interior : public roo_display::Drawable {
 
 TextBlock::TextBlock(const Environment& env, std::string value,
                      const roo_display::Font& font, roo_display::Color color,
-                     roo_display::HAlign halign, roo_display::VAlign valign)
-    : Widget(env),
-      value_(),
-      font_(font),
-      color_(color),
-      halign_(halign),
-      valign_(valign) {
+                     roo_display::Alignment alignment)
+    : Widget(env), value_(), font_(font), color_(color), alignment_(alignment) {
   setContent(value);
 }
 
@@ -67,7 +62,7 @@ bool TextBlock::paint(const roo_display::Surface& s) {
   s.drawObject(roo_display::MakeTileOf(
       Interior(Box(0, 0, text_dims_.width() - 1, text_dims_.height() - 1),
                value_, font_, color),
-      bounds(), halign_, valign_));
+      bounds(), alignment_));
   return true;
 }
 
