@@ -157,6 +157,10 @@ class TextField : public Widget {
 
   const std::string& hint() const { return hint_; }
 
+  void setHint(roo_display::StringView hint) {
+    hint_ = std::string((const char*)hint.data(), hint.size());
+  }
+
   PreferredSize getPreferredSize() const override {
     Padding p = getDefaultPadding();
     int16_t preferred_height =
@@ -219,7 +223,7 @@ class TextField : public Widget {
   Decoration decoration_;
 
   std::string value_;
-  const std::string hint_;
+  std::string hint_;
   bool starred_;
   const roo_display::Font& font_;
   roo_display::Color text_color_;
