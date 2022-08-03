@@ -83,8 +83,7 @@ bool ToggleButtons::ToggleButton::paint(const roo_display::Surface& s) {
   roo_display::Tile tile(&icon,
                          Box(bounds().xMin() + 1, bounds().yMin() + 2,
                              bounds().xMax() - 1, bounds().yMax() - 2),
-                         roo_display::kCenter | roo_display::kMiddle,
-                         roo_display::color::Transparent, s.fill_mode());
+                         roo_display::kCenter | roo_display::kMiddle);
   s.drawObject(tile);
   s.drawObject(roo_display::Line(width() - 1, 0, width() - 1, height() - 3,
                                  external_border));

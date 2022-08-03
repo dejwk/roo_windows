@@ -24,8 +24,7 @@ bool Checkbox::paint(const Surface& s) {
   img.color_mode().setColor(color);
   if (isInvalidated()) {
     roo_display::Tile tile(&img, bounds(),
-                           roo_display::kCenter | roo_display::kMiddle,
-                           roo_display::color::Transparent, s.fill_mode());
+                           roo_display::kCenter | roo_display::kMiddle);
     s.drawObject(tile);
   } else {
     s.drawObject(

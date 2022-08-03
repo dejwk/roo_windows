@@ -22,8 +22,7 @@ class Icon : public Widget {
     roo_display::MaterialIcon icon(icon_);
     icon.color_mode().setColor(color);
     roo_display::Tile tile(&icon, bounds(),
-                           roo_display::kCenter | roo_display::kMiddle,
-                           roo_display::color::Transparent, s.fill_mode());
+                           roo_display::kCenter | roo_display::kMiddle);
     s.drawObject(tile);
     return true;
   }

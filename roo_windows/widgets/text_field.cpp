@@ -286,14 +286,13 @@ bool TextField::paint(const roo_display::Surface& s) {
           -font().metrics().glyphYMin() + decoration_height_offset),
       val, isEdited(), starred, show_last_glyph, xMin, xMax, selection_xmin,
       selection_xmax, cursor_x, color, c, draw_xoffset, decoration_);
-  s.drawObject(roo_display::MakeTileOf(interior, bounds(), alignment_,
-                                       roo_display::color::Transparent,
-                                       s.fill_mode()));
+  s.drawObject(roo_display::MakeTileOf(interior, bounds(), alignment_));
   return true;
 }
 
 void TextFieldEditor::edit(TextField* target) {
   if (target_ == target) return;
+  last_glyph_recently_entered_ = false;
   TextField* old_target = target_;
   target_ = target;
   if (target == nullptr) {

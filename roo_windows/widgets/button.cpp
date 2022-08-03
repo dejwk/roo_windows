@@ -125,13 +125,13 @@ class Interior : public Drawable {
       MonoIcon icon = button_.icon();
       icon.color_mode().setColor(button_.textColor());
       roo_display::Tile tile(&icon, bounds_, kCenter | kMiddle,
-                             button_.interiorColor(), s.fill_mode());
+                             button_.interiorColor());
       s.drawObject(tile);
       return;
     }
     if (!hasIcon()) {
       roo_display::Tile tile(&label_, bounds_, kCenter | kMiddle,
-                             button_.interiorColor(), s.fill_mode());
+                             button_.interiorColor());
       s.drawObject(tile);
       return;
     }
@@ -157,7 +157,7 @@ class Interior : public Drawable {
       roo_display::Box box(x_cursor, yMin,
                            x_cursor + icon.extents().width() - 1, yMax);
       roo_display::Tile tile(&icon, box, kCenter | kMiddle,
-                             button_.interiorColor(), s.fill_mode());
+                             button_.interiorColor());
       s.drawObject(tile);
     }
     x_cursor += icon.extents().width();
@@ -170,7 +170,7 @@ class Interior : public Drawable {
       roo_display::Box box(x_cursor, yMin,
                            x_cursor + label_.extents().width() - 1, yMax);
       roo_display::Tile tile(&label_, box, kCenter | kMiddle,
-                             button_.interiorColor(), s.fill_mode());
+                             button_.interiorColor());
       s.drawObject(tile);
     }
     x_cursor += label_.extents().width();

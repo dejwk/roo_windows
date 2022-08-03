@@ -58,12 +58,11 @@ bool Switch::paint(const Surface& s) {
   }
   auto composite = MakeDrawableRawStreamable(Overlay(
       slider, 5, 4, Overlay(shadow, xoffset, 0, circle, xoffset + 1, 1), 0, 0));
-  roo_display::Tile toggle(&composite, Box(0, 0, 42, 24), roo_display::kMiddle,
-                           roo_display::color::Transparent, s.fill_mode());
+  roo_display::Tile toggle(&composite, Box(0, 0, 42, 24),
+                           roo_display::kMiddle | roo_display::kLeft);
   if (isInvalidated()) {
     roo_display::Tile tile(&toggle, bounds(),
-                           roo_display::kCenter | roo_display::kMiddle,
-                           roo_display::color::Transparent, s.fill_mode());
+                           roo_display::kCenter | roo_display::kMiddle);
     s.drawObject(tile);
   } else {
     s.drawObject(toggle,
