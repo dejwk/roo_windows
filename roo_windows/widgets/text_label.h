@@ -50,6 +50,17 @@ class TextLabel : public Widget {
     requestLayout();
   }
 
+  void setContent(const char* value) {
+    setContent(roo_display::StringView(value));
+  }
+
+  void setContent(roo_display::StringView value) {
+    if (value_ == value) return;
+    value_ = std::string((const char*)value.data(), value.size());
+    markDirty();
+    requestLayout();
+  }
+
   const roo_display::Font& font() const { return font_; }
 
  private:
