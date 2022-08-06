@@ -162,7 +162,7 @@ class TextField : public Widget {
   }
 
   PreferredSize getPreferredSize() const override {
-    Padding p = getDefaultPadding();
+    Padding p = getPadding();
     int16_t preferred_height =
         font_.metrics().maxHeight() + p.top() + p.bottom();
     switch (decoration_) {
@@ -177,7 +177,7 @@ class TextField : public Widget {
                          PreferredSize::Exact(preferred_height));
   }
 
-  Padding getDefaultPadding() const override { return Padding(0, 2); }
+  Padding getPadding() const override { return Padding(0, 2); }
 
   bool paint(const roo_display::Surface& s) override;
 

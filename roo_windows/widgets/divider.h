@@ -13,9 +13,9 @@ class HorizontalDivider : public Widget {
     return Dimensions(0, 2);
   }
 
-  Margins getDefaultMargins() const override { return Margins(1); }
+  Margins getMargins() const override { return Margins(1); }
 
-  Padding getDefaultPadding() const override { return Padding(0); }
+  Padding getPadding() const override { return Padding(0); }
 
   PreferredSize getPreferredSize() const override {
     return PreferredSize(PreferredSize::MatchParent(), PreferredSize::Exact(2));
@@ -31,9 +31,9 @@ class VerticalDivider : public Widget {
     return Dimensions(2, 0);
   }
 
-  Margins getDefaultMargins() const override { return Margins(1); }
+  Margins getMargins() const override { return Margins(1); }
 
-  Padding getDefaultPadding() const override { return Padding(0); }
+  Padding getPadding() const override { return Padding(0); }
 
   PreferredSize getPreferredSize() const override {
     return PreferredSize(PreferredSize::Exact(2), PreferredSize::MatchParent());

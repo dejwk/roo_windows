@@ -31,7 +31,7 @@ class WalltimeIndicator24 : public WalltimeIndicator {
     return Dimensions(62, 24);
   }
 
-  // Padding getDefaultPadding() const override { return Padding(0); }
+  // Padding getPadding() const override { return Padding(0); }
 };
 
 }  // namespace roo_windows

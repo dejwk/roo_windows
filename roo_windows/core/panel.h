@@ -112,10 +112,10 @@ class Panel : public Widget {
   // be unexpected and unwelcome. If you are implementing a custom widget that
   // derives from panel, you might want to override it, e.g. to use Widget's
   // defaults.
-  Margins getDefaultMargins() const override { return Margins(0); }
+  Margins getMargins() const override { return Margins(0); }
 
   // Ditto.
-  Padding getDefaultPadding() const override { return Padding(0); }
+  Padding getPadding() const override { return Padding(0); }
 
   PreferredSize getPreferredSize() const override {
     return PreferredSize(PreferredSize::WrapContent(),

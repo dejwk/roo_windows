@@ -41,7 +41,7 @@ class StaticLayout : public Panel {
   void add(WidgetRef child, roo_display::Alignment alignment) {
     Dimensions d = child->measure(MeasureSpec::Unspecified(0),
                                   MeasureSpec::Unspecified(0));
-    Padding p = child->getDefaultPadding();
+    Padding p = child->getPadding();
     Box inner(0, 0, d.width() + p.left() + p.right() - 1,
               d.height() + p.top() + p.bottom() - 1);
     std::pair<int16_t, int16_t> offset =

@@ -122,7 +122,7 @@ class ListLayout : public Panel {
     requestLayout();
   }
 
-  Padding getDefaultPadding() const override { return padding_; }
+  Padding getPadding() const override { return padding_; }
 
   // Notifies this view that the contents of the list has changed. Causes the
   // list to be updated and rendered. If the element count has changed, the list
@@ -243,7 +243,7 @@ class ListLayout : public Panel {
     int16_t v_padding = padding_.top() + padding_.bottom();
     // Measure the element under new constraints, and see how many max instances
     // will fit on the screen.
-    Margins margins = prototype_.getDefaultMargins();
+    Margins margins = prototype_.getMargins();
     int16_t h_margin = margins.left() + margins.right();
     int16_t v_margin = margins.top() + margins.bottom();
     PreferredSize preferred = prototype_.getPreferredSize();
@@ -288,7 +288,7 @@ class ListLayout : public Panel {
  private:
   // Configures the given element to represent the item at the given pos.
   void show(int pos, Element& e) {
-    Margins m = prototype_.getDefaultMargins();
+    Margins m = prototype_.getMargins();
     if (element_height() <= m.top() + m.bottom()) {
       // Won't fit anyway.
       return;

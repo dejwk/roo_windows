@@ -30,8 +30,8 @@ class TextBlock : public Widget {
 
   const roo_display::Font& font() const { return font_; }
 
-  Padding getDefaultPadding() const override { return Padding(0); }
-  Margins getDefaultMargins() const override { return Margins(0); }
+  Padding getPadding() const override { return Padding(0); }
+  Margins getMargins() const override { return Margins(0); }
 
  private:
   std::string value_;

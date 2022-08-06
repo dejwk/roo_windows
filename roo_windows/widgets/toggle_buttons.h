@@ -18,7 +18,7 @@ class ToggleButtons : public Panel {
   bool paint(const roo_display::Surface& s) override;
 
   Dimensions getSuggestedMinimumDimensions() const override;
-  Padding getDefaultPadding() const override { return Padding(0); }
+  Padding getPadding() const override { return Padding(0); }
 
   Dimensions getNaturalDimensions() const override {
     Dimensions d = getSuggestedMinimumDimensions();
@@ -52,7 +52,7 @@ class ToggleButtons : public Panel {
                         icon_.extents().height() + 2);
     }
 
-    Padding getDefaultPadding() const override { return Padding(11); }
+    Padding getPadding() const override { return Padding(11); }
 
     const MonoIcon& icon() const { return icon_; }
 

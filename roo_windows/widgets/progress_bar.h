@@ -16,8 +16,8 @@ class ProgressBar : public Widget {
     return PreferredSize(PreferredSize::MatchParent(), PreferredSize::Exact(4));
   }
 
-  Margins getDefaultMargins() const override { return Margins(0); }
-  Padding getDefaultPadding() const override { return Padding(0); }
+  Margins getMargins() const override { return Margins(0); }
+  Padding getPadding() const override { return Padding(0); }
 
   void setColor(roo_display::Color color) { color_ = color; }
 

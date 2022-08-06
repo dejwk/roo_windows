@@ -350,7 +350,7 @@ bool Button::paint(const Surface& s) {
   return true;
 }
 
-Padding Button::getDefaultPadding() const { return Padding(14, 4); }
+Padding Button::getPadding() const { return Padding(14, 4); }
 
 Dimensions Button::getSuggestedMinimumDimensions() const {
   if (!hasLabel()) {

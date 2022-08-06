@@ -364,13 +364,13 @@ class Widget {
 
   virtual Dimensions getSuggestedMinimumDimensions() const = 0;
 
-  virtual Padding getDefaultPadding() const { return Padding(12); }
-  virtual Margins getDefaultMargins() const { return Margins(4); }
+  virtual Padding getPadding() const { return Padding(12); }
+  virtual Margins getMargins() const { return Margins(4); }
 
   // Returns dimensions that make the widget 'look good'. Inclusive of padding.
   virtual Dimensions getNaturalDimensions() const {
     Dimensions d = getSuggestedMinimumDimensions();
-    Padding p = getDefaultPadding();
+    Padding p = getPadding();
     return Dimensions(d.width() + p.left() + p.right(),
                       d.height() + p.top() + p.bottom());
   }

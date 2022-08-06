@@ -145,7 +145,7 @@ class KeyboardPage : public Panel {
   KeyboardWidget* keyboard();
 
   PreferredSize getPreferredSize() const override;
-  Padding getDefaultPadding() const override { return Padding(6); }
+  Padding getPadding() const override { return Padding(6); }
 
   void capsStateUpdated();
 
@@ -170,7 +170,7 @@ class KeyboardWidget : public Panel {
 
   KeyboardListener* listener() const { return listener_; }
 
-  Padding getDefaultPadding() const override { return Padding(1); }
+  Padding getPadding() const override { return Padding(1); }
 
   PreferredSize getPreferredSize() const override;
 
@@ -393,7 +393,7 @@ PreferredSize KeyboardWidget::getPreferredSize() const {
 }
 
 PreferredSize KeyboardPage::getPreferredSize() const {
-  Padding padding = getDefaultPadding();
+  Padding padding = getPadding();
   return PreferredSize(
       PreferredSize::MatchParent(),
       PreferredSize::Exact(spec_->row_count * kPreferredRowHeight +
@@ -493,7 +493,7 @@ KeyboardPage::KeyboardPage(const Environment& env, const KeyboardPageSpec* spec)
 
 Dimensions KeyboardPage::onMeasure(MeasureSpec width, MeasureSpec height) {
   // Calculate grid size.
-  Padding padding = getDefaultPadding();
+  Padding padding = getPadding();
   int16_t row_height;
   int16_t full_height;
   // int16_t top_offset;
@@ -541,7 +541,7 @@ Dimensions KeyboardPage::onMeasure(MeasureSpec width, MeasureSpec height) {
 
 void KeyboardPage::onLayout(bool changed, const roo_display::Box& box) {
   // Recalculate now that we have a specific dimensions.
-  Padding padding = getDefaultPadding();
+  Padding padding = getPadding();
   int16_t vspan =
       box.height() - padding.top() - padding.bottom() - kExtraTopPaddingPx;
   int16_t row_height =

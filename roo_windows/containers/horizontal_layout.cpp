@@ -26,7 +26,7 @@ Dimensions HorizontalLayout::onMeasure(MeasureSpec width, MeasureSpec height) {
     Widget& w = child_at(i);
     if (w.isGone()) continue;
     ChildMeasure& measure = child_measures_[i];
-    Margins margins = w.getDefaultMargins();
+    Margins margins = w.getMargins();
     int16_t h_margin = margins.left() + margins.right();
     int16_t v_margin = margins.top() + margins.bottom();
     total_weight += measure.params().weight();
@@ -98,7 +98,7 @@ Dimensions HorizontalLayout::onMeasure(MeasureSpec width, MeasureSpec height) {
     for (int i = 0; i < count; ++i) {
       Widget& w = child_at(i);
       if (w.isGone()) continue;
-      Margins margins = w.getDefaultMargins();
+      Margins margins = w.getMargins();
       int16_t h_margin = margins.left() + margins.right();
       total_length_ = std::max<int16_t>(
           total_length_, total_length_ + largest_child_width + h_margin);
@@ -124,7 +124,7 @@ Dimensions HorizontalLayout::onMeasure(MeasureSpec width, MeasureSpec height) {
       Widget& w = child_at(i);
       if (w.isGone()) continue;
       ChildMeasure& measure = child_measures_[i];
-      Margins margins = w.getDefaultMargins();
+      Margins margins = w.getMargins();
       int16_t h_margin = margins.left() + margins.right();
       int16_t v_margin = margins.top() + margins.bottom();
       int16_t v_padding = padding_.top() + padding_.bottom();
@@ -223,7 +223,7 @@ void HorizontalLayout::onLayout(bool changed, const roo_display::Box& box) {
     Widget& w = child_at(i);
     if (w.isGone()) continue;
     const ChildMeasure& measure = child_measures_[i];
-    Margins margins = w.getDefaultMargins();
+    Margins margins = w.getMargins();
     VerticalGravity gravity = measure.params().gravity();
     if (!gravity.isSet()) {
       gravity = gravity_.y();

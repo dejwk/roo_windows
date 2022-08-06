@@ -87,7 +87,7 @@ class HorizontalLayout : public Panel {
     Panel::add(std::move(child));
   }
 
-  Padding getDefaultPadding() const override { return padding_; }
+  Padding getPadding() const override { return padding_; }
 
   Dimensions getSuggestedMinimumDimensions() const override {
     return min_dimensions_;
