@@ -38,7 +38,9 @@ class TextLabel : public Widget {
     // re-measuring in paint), but it is an extra 20 bytes per label so it is
     // not a clear win.
     auto metrics = font_.getHorizontalStringMetrics(value_);
-    return Dimensions(metrics.width(), metrics.height());
+    return Dimensions(
+        metrics.advance(),
+        font_.metrics().ascent() - font_.metrics().descent() + font_.linegap());
   }
 
   const std::string& content() const { return value_; }
