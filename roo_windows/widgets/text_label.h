@@ -28,7 +28,7 @@ class TextLabel : public Widget {
     roo_display::Color color =
         color_.a() == 0 ? parent()->defaultColor() : color_;
     s.drawObject(roo_display::MakeTileOf(
-        roo_display::StringViewLabel(font_, value_, color), bounds(),
+        roo_display::StringViewLabel(value_, font_, color), bounds(),
         alignment_));
     return true;
   }
