@@ -60,14 +60,13 @@ bool Switch::paint(const Surface& s) {
       slider, 5, 4, Overlay(shadow, xoffset, 0, circle, xoffset + 1, 1), 0, 0));
   roo_display::Tile toggle(&composite, Box(0, 0, 42, 24),
                            roo_display::kMiddle | roo_display::kLeft);
+  Alignment alignment = roo_display::kCenter | roo_display::kMiddle;
   if (isInvalidated()) {
-    roo_display::Tile tile(&toggle, bounds(),
-                           roo_display::kCenter | roo_display::kMiddle);
+    roo_display::Tile tile(&toggle, bounds(), alignment);
     s.drawObject(tile);
   } else {
-    s.drawObject(toggle,
-                 roo_display::kCenter.GetOffset(bounds(), toggle.extents()),
-                 roo_display::kMiddle.GetOffset(bounds(), toggle.extents()));
+    auto offset = alignment.resolveOffset(bounds(), toggle.extents());
+    s.drawObject(toggle, offset.first, offset.second);
   }
   return finished;
 }

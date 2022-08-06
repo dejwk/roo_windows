@@ -9,6 +9,7 @@ namespace roo_windows {
 
 void ScrollablePanel::scrollTo(int16_t x, int16_t y) {
   Widget* c = contents();
+  auto offset = alignment_.resolveOffset(bounds(), c->bounds());
   if (c->width() >= width()) {
     if (x > 0) x = 0;
     if (x < width() - c->width()) {
@@ -17,7 +18,7 @@ void ScrollablePanel::scrollTo(int16_t x, int16_t y) {
   } else {
     // if (x < 0) x = 0;
     // if (x > width() - c->width()) x = width() - c->width();
-    x = alignment_.h().GetOffset(bounds(), c->bounds());
+    x = offset.first;
   }
   if (c->height() >= height()) {
     if (y > 0) y = 0;
@@ -27,7 +28,7 @@ void ScrollablePanel::scrollTo(int16_t x, int16_t y) {
   } else {
     // if (y < 0) y = 0;
     // if (y > height() - c->height()) y = height() - c->height();
-    y = alignment_.v().GetOffset(bounds(), c->bounds());
+    y = offset.second;
   }
   c->moveTo(c->bounds().translate(x, y));
 }

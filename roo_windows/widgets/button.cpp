@@ -104,7 +104,7 @@ class Interior : public Drawable {
   Interior(const Button& button, const Box& bounds)
       : button_(button),
         bounds_(bounds),
-        label_(button.getFont(), button.label(), button.textColor(),
+        label_(button.label(), button.getFont(), button.textColor(),
                roo_display::FILL_MODE_RECTANGLE) {}
 
   Box extents() const override { return bounds_; }

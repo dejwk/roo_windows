@@ -626,9 +626,10 @@ bool PressHighlighter::paint(const Surface& s) {
   overlay.set_a(th.pressedOpacity(kbTh.normalButton));
   Color bgcolor = roo_display::alphaBlend(kbTh.normalButton, overlay);
   s.drawObject(roo_display::MakeTileOf(
-      roo_display::StringViewLabel(*th.font.body1, target_->label(),
+      roo_display::StringViewLabel(target_->label(), *th.font.body1,
                                    target_->textColor()),
-      bounds(), roo_display::kCenter | roo_display::kTop, 0, 3, bgcolor));
+      bounds(), roo_display::kCenter | roo_display::kTop.shiftBy(3),
+      bgcolor));
   return true;
 }
 

@@ -30,26 +30,23 @@ class StaticLayout : public Panel {
    * specified point in the parent's coordinates.
    */
   void add(WidgetRef child, int16_t x, int16_t y) {
-    return add(std::move(child), x, y, roo_display::kLeft,
-               roo_display::kTop);
+    return add(std::move(child),
+               roo_display::kLeft.shiftBy(x) | roo_display::kTop.shiftBy(y));
   }
 
   /**
    * Adds the specified child, at the end of the list, positioning it using its
-   * current natural dimensions, anchored at the specified point in the parent's
-   * coordinates, with the specified alignment of the anchor relative to the
-   * contents.
+   * current natural dimensions, applying the specified alignment.
    */
-  void add(WidgetRef child, int16_t x, int16_t y, roo_display::HAlign halign,
-           roo_display::VAlign valign) {
-    Box anchor(x, y, x, y);
+  void add(WidgetRef child, roo_display::Alignment alignment) {
     Dimensions d = child->measure(MeasureSpec::Unspecified(0),
                                   MeasureSpec::Unspecified(0));
     Padding p = child->getDefaultPadding();
     Box inner(0, 0, d.width() + p.left() + p.right() - 1,
               d.height() + p.top() + p.bottom() - 1);
-    Box actual = inner.translate(halign.GetOffset(anchor, inner),
-                                 valign.GetOffset(anchor, inner));
+    std::pair<int16_t, int16_t> offset =
+        alignment.resolveOffset(bounds(), inner);
+    Box actual = inner.translate(offset.first, offset.second);
     child->layout(actual);
     add(std::move(child), actual);
   }
