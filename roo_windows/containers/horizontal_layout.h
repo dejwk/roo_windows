@@ -51,7 +51,8 @@ class HorizontalLayout : public Panel {
 
   HorizontalLayout(const Environment& env)
       : Panel(env),
-        padding_(),
+        padding_(PADDING_NONE),
+        margins_(MARGIN_NONE),
         gravity_(),
         use_largest_child_(false),
         weight_sum_(0),
@@ -65,6 +66,12 @@ class HorizontalLayout : public Panel {
   void setPadding(Padding padding) {
     if (padding_ == padding) return;
     padding_ = padding;
+    requestLayout();
+  }
+
+  void setMargins(Margins margins) {
+    if (margins_ == margins) return;
+    margins_ = margins;
     requestLayout();
   }
 
@@ -89,6 +96,8 @@ class HorizontalLayout : public Panel {
 
   Padding getPadding() const override { return padding_; }
 
+  Margins getMargins() const override { return margins_; }
+
   Dimensions getSuggestedMinimumDimensions() const override {
     return min_dimensions_;
   }
@@ -99,6 +108,7 @@ class HorizontalLayout : public Panel {
 
  private:
   Padding padding_;
+  Margins margins_;
 
   // The horizontal component dictates how the children are aligned in case
   // there is some extra horizontal space. The vertical component is the default
