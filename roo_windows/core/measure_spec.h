@@ -1,8 +1,7 @@
 #pragma once
 
-#include "roo_windows/core/preferred_size.h"
-
 #include "roo_glog/logging.h"
+#include "roo_windows/core/preferred_size.h"
 
 namespace roo_windows {
 
@@ -28,9 +27,7 @@ class MeasureSpec {
 
   Kind kind() const { return static_cast<Kind>(value_ & 0x3); }
 
-  int16_t value() const {
-    return value_ >> 2;
-  }
+  int16_t value() const { return value_ >> 2; }
 
   MeasureSpec getChildMeasureSpec(int16_t padding,
                                   PreferredSize::Dimension childDimension) {
@@ -73,7 +70,8 @@ class MeasureSpec {
       case MeasureSpec::AT_MOST: {
         return std::min(desired_size, value());
       }
-      case MeasureSpec::EXACTLY: {
+      case MeasureSpec::EXACTLY:
+      default: {
         return value();
       }
     }
@@ -97,7 +95,8 @@ inline constexpr bool operator==(MeasureSpec a, MeasureSpec b) {
 #include <ostream>
 
 namespace roo_windows {
-inline std::ostream& operator<<(std::ostream& os, const roo_windows::MeasureSpec& spec) {
+inline std::ostream& operator<<(std::ostream& os,
+                                const roo_windows::MeasureSpec& spec) {
   switch (spec.kind()) {
     case MeasureSpec::UNSPECIFIED: {
       os << "UNSPECIFIED";
@@ -119,5 +118,5 @@ inline std::ostream& operator<<(std::ostream& os, const roo_windows::MeasureSpec
   os << "(" << spec.value() << ")";
   return os;
 }
-}
+}  // namespace roo_windows
 #endif  // defined(__linux__)
