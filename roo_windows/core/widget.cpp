@@ -40,14 +40,14 @@ Widget::Widget(const Environment& env)
       parent_bounds_(0, 0, -1, -1),
       state_(kWidgetEnabled),
       redraw_status_(kDirty | kInvalidated),
-      on_clicked_([] {}) {}
+      on_clicked_(nullptr) {}
 
 Widget::Widget(const Widget& w)
     : parent_(nullptr),
       parent_bounds_(0, 0, -1, -1),
       state_(kWidgetEnabled),
       redraw_status_(kDirty | kInvalidated),
-      on_clicked_([] {}) {}
+      on_clicked_(nullptr) {}
 
 MainWindow* Widget::getMainWindow() { return parent_->getMainWindow(); }
 
@@ -490,7 +490,10 @@ bool Widget::onTouchUp(int16_t x, int16_t y) {
   return getApplication()->gesture_detector().onTouchUp(*this, x, y);
 }
 
-void Widget::onClicked() { on_clicked_(); }
+void Widget::onClicked() {
+  if (on_clicked_ == nullptr) return;
+  on_clicked_();
+}
 
 bool Widget::onDown(int16_t x, int16_t y) { return isClickable(); }
 

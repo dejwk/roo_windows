@@ -338,7 +338,7 @@ class Widget {
   virtual bool useOverlayOnActivation() const { return true; }
   virtual bool useOverlayOnPress() const { return true; }
   virtual bool useOverlayOnPressAnimation() const { return false; }
-  virtual bool isClickable() const { return false; }
+  virtual bool isClickable() const { return on_clicked_ != nullptr; }
   virtual bool showClickAnimation() const { return true; }
 
   virtual bool usesHighlighterColor() const { return false; }
