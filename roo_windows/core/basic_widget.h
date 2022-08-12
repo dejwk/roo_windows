@@ -17,9 +17,9 @@ class BasicWidget : public Widget {
   virtual Padding getDefaultPadding() const { return Padding(PADDING_REGULAR); }
   virtual Margins getDefaultMargins() const { return Margins(MARGIN_REGULAR); }
 
-  Padding setPadding(PaddingSize h, PaddingSize v) { padding_ = (h << 4) | v; }
+  void setPadding(PaddingSize h, PaddingSize v) { padding_ = (h << 4) | v; }
 
-  Padding setPadding(PaddingSize size) { setPadding(size, size); }
+  void setPadding(PaddingSize size) { setPadding(size, size); }
 
   Padding getPadding() const override {
     PaddingSize hs = (PaddingSize)(padding_ >> 4);
