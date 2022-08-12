@@ -1,12 +1,13 @@
 #pragma once
 
-#include "roo_windows/core/widget.h"
+#include "roo_windows/core/basic_widget.h"
 
 namespace roo_windows {
 
-class Switch : public Widget {
+class Switch : public BasicWidget {
  public:
-  Switch(const Environment& env, bool on = false) : Widget(env), anim_(0x8000) {
+  Switch(const Environment& env, bool on = false)
+      : BasicWidget(env), anim_(0x8000) {
     setOnOffState(on ? Widget::ON : Widget::OFF);
   }
 

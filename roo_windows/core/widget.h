@@ -364,8 +364,8 @@ class Widget {
 
   virtual Dimensions getSuggestedMinimumDimensions() const = 0;
 
-  virtual Padding getPadding() const { return Padding(12); }
-  virtual Margins getMargins() const { return Margins(4); }
+  virtual Padding getPadding() const { return Padding(0); }
+  virtual Margins getMargins() const { return Margins(0); }
 
   // Returns dimensions that make the widget 'look good'. Inclusive of padding.
   virtual Dimensions getNaturalDimensions() const {
@@ -487,6 +487,48 @@ class Widget {
   virtual void moveTo(const Box& parent_bounds);
 
   void markClean() { redraw_status_ &= ~(kDirty | kInvalidated); }
+
+  // Helper method that, given the alignment, adds this widget's padding
+  // to that alignment, from the appropriate side. Centered and absolute
+  // alignments are not affected.
+  roo_display::Alignment adjustAlignment(
+      roo_display::Alignment alignment = roo_display::kMiddle |
+                                         roo_display::kCenter) const {
+    if ((alignment.h().dst() == roo_display::ANCHOR_MID ||
+         alignment.h().dst() == roo_display::ANCHOR_ORIGIN) &&
+            (alignment.v().dst() == roo_display::ANCHOR_MID) ||
+        (alignment.v().dst() == roo_display::ANCHOR_ORIGIN)) {
+      return alignment;
+    }
+    roo_display::HAlign h = alignment.h();
+    roo_display::VAlign v = alignment.v();
+    Padding p = getPadding();
+    switch (h.dst()) {
+      case roo_display::ANCHOR_MIN: {
+        h = h.shiftBy(p.left());
+        break;
+      }
+      case roo_display::ANCHOR_MAX: {
+        h = h.shiftBy(-p.right());
+        break;
+      }
+      default: {
+      }
+    }
+    switch (v.dst()) {
+      case roo_display::ANCHOR_MIN: {
+        v = v.shiftBy(p.top());
+        break;
+      }
+      case roo_display::ANCHOR_MAX: {
+        v = v.shiftBy(-p.bottom());
+        break;
+      }
+      default: {
+      }
+    }
+    return roo_display::Alignment(h, v);
+  }
 
  private:
   friend class Panel;

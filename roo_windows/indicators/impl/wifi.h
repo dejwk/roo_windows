@@ -1,11 +1,11 @@
 #pragma once
 
 #include "roo_material_icons.h"
-#include "roo_windows/core/widget.h"
+#include "roo_windows/core/basic_widget.h"
 
 namespace roo_windows {
 
-class WifiIndicator : public Widget {
+class WifiIndicator : public BasicWidget {
  public:
   enum ConnectionStatus {
     DISCONNECTED = 0,

@@ -4,11 +4,12 @@
 #include "roo_display/font/font.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_display/ui/tile.h"
+#include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/panel.h"
 
 namespace roo_windows {
 
-class TextLabel : public Widget {
+class TextLabel : public BasicWidget {
  public:
   TextLabel(const Environment& env, std::string value,
             const roo_display::Font& font, roo_display::Alignment alignment)
@@ -18,7 +19,7 @@ class TextLabel : public Widget {
   TextLabel(const Environment& env, std::string value,
             const roo_display::Font& font, roo_display::Color color,
             roo_display::Alignment alignment)
-      : Widget(env),
+      : BasicWidget(env),
         value_(std::move(value)),
         font_(font),
         color_(color),
@@ -29,7 +30,7 @@ class TextLabel : public Widget {
         color_.a() == 0 ? parent()->defaultColor() : color_;
     s.drawObject(roo_display::MakeTileOf(
         roo_display::StringViewLabel(value_, font_, color), bounds(),
-        alignment_));
+        adjustAlignment(alignment_), roo_display::color::LightGreen));
     return true;
   }
 
@@ -38,9 +39,9 @@ class TextLabel : public Widget {
     // re-measuring in paint), but it is an extra 20 bytes per label so it is
     // not a clear win.
     auto metrics = font_.getHorizontalStringMetrics(value_);
-    return Dimensions(
-        metrics.advance(),
-        font_.metrics().ascent() - font_.metrics().descent() + font_.linegap());
+    return Dimensions(metrics.advance(), font_.metrics().ascent() -
+                                             font_.metrics().descent() +
+                                             font_.metrics().linegap());
   }
 
   const std::string& content() const { return value_; }

@@ -15,8 +15,6 @@ class HorizontalDivider : public Widget {
 
   Margins getMargins() const override { return Margins(1); }
 
-  Padding getPadding() const override { return Padding(0); }
-
   PreferredSize getPreferredSize() const override {
     return PreferredSize(PreferredSize::MatchParent(), PreferredSize::Exact(2));
   }

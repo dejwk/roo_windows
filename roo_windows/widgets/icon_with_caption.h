@@ -6,11 +6,11 @@
 #include "roo_material_icons.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/theme.h"
-#include "roo_windows/core/widget.h"
+#include "roo_windows/core/basic_widget.h"
 
 namespace roo_windows {
 
-class IconWithCaption : public Widget {
+class IconWithCaption : public BasicWidget {
  public:
   IconWithCaption(const Environment& env, const roo_display::MaterialIcon& def,
                   const std::string& caption)

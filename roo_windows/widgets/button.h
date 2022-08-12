@@ -2,11 +2,11 @@
 
 #include <string>
 
-#include "roo_windows/core/widget.h"
+#include "roo_windows/core/basic_widget.h"
 
 namespace roo_windows {
 
-class Button : public Widget {
+class Button : public BasicWidget {
  public:
   enum Style { CONTAINED, OUTLINED, TEXT };
 
@@ -74,7 +74,7 @@ class Button : public Widget {
   bool paint(const Surface& s) override;
 
   Dimensions getSuggestedMinimumDimensions() const override;
-  Padding getPadding() const override;
+  Padding getDefaultPadding() const override;
 
   bool isClickable() const override { return true; }
 

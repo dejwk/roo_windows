@@ -4,14 +4,14 @@
 #include "roo_material_icons.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/theme.h"
-#include "roo_windows/core/widget.h"
+#include "roo_windows/core/basic_widget.h"
 
 namespace roo_windows {
 
-class Icon : public Widget {
+class Icon : public BasicWidget {
  public:
   Icon(const Environment& env, const roo_display::MaterialIcon& def)
-      : Widget(env), icon_(def) {}
+      : BasicWidget(env), icon_(def) {}
 
   bool paint(const Surface& s) override {
     const Theme& myTheme = theme();

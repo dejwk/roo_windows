@@ -108,15 +108,6 @@ class Panel : public Widget {
     return Dimensions(0, 0);
   }
 
-  // Panels are usually used for grouping, where extra padding or margins would
-  // be unexpected and unwelcome. If you are implementing a custom widget that
-  // derives from panel, you might want to override it, e.g. to use Widget's
-  // defaults.
-  Margins getMargins() const override { return Margins(0); }
-
-  // Ditto.
-  Padding getPadding() const override { return Padding(0); }
-
   PreferredSize getPreferredSize() const override {
     return PreferredSize(PreferredSize::WrapContent(),
                          PreferredSize::WrapContent());

@@ -9,7 +9,7 @@ WifiIndicator::WifiIndicator(const Environment& env)
     : WifiIndicator(env, roo_display::color::Transparent) {}
 
 WifiIndicator::WifiIndicator(const Environment& env, roo_display::Color color)
-    : Widget(env),
+    : BasicWidget(env),
       color_(color),
       connection_status_(DISCONNECTED),
       locked_(false),

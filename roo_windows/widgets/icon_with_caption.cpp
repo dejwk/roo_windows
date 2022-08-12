@@ -7,7 +7,7 @@ namespace roo_windows {
 IconWithCaption::IconWithCaption(const Environment& env,
                                  const MaterialIcon& def,
                                  const std::string& caption, const Font* font)
-    : Widget(env),
+    : BasicWidget(env),
       icon_(def),
       caption_(caption),
       font_(font),

@@ -19,9 +19,9 @@ static constexpr roo_time::Interval kCursorBlinkInterval =
 static constexpr roo_time::Interval kShowLastGlyphInterval =
     roo_time::Millis(1500);
 
-class VisibilityToggle : public Widget {
+class VisibilityToggle : public BasicWidget {
  public:
-  VisibilityToggle(const Environment& env) : Widget(env) { setOff(); }
+  VisibilityToggle(const Environment& env) : BasicWidget(env) { setOff(); }
 
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(24, 24);
@@ -56,7 +56,7 @@ class TextFieldEditor : public KeyboardListener {
         target_(nullptr),
         cursor_position_(0),
         selection_begin_(0),
-        selection_end_(4),
+        selection_end_(0),
         draw_xoffset_(0) {}
 
   void edit(TextField* target);
@@ -116,7 +116,7 @@ class TextFieldEditor : public KeyboardListener {
   int16_t draw_xoffset_;
 };
 
-class TextField : public Widget {
+class TextField : public BasicWidget {
  public:
   enum Decoration {
     NONE,
@@ -126,7 +126,7 @@ class TextField : public Widget {
   TextField(const Environment& env, TextFieldEditor& editor,
             const roo_display::Font& font, std::string hint,
             roo_display::Alignment alignment, Decoration decoration)
-      : Widget(env),
+      : BasicWidget(env),
         editor_(editor),
         decoration_(decoration),
         value_(""),
@@ -135,7 +135,7 @@ class TextField : public Widget {
         font_(font),
         text_color_(roo_display::color::Transparent),
         highlight_color_(roo_display::color::Transparent),
-        alignment_ (alignment) {}
+        alignment_(alignment) {}
 
   bool isClickable() const override { return true; }
   bool showClickAnimation() const override { return false; }
@@ -176,8 +176,6 @@ class TextField : public Widget {
     return PreferredSize(PreferredSize::MatchParent(),
                          PreferredSize::Exact(preferred_height));
   }
-
-  Padding getPadding() const override { return Padding(0, 2); }
 
   bool paint(const roo_display::Surface& s) override;
 

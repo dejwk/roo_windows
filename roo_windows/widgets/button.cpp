@@ -219,7 +219,7 @@ void printHorizStripes(const Surface& s, int16_t xMin, int16_t yMin,
 
 Button::Button(const Environment& env, const MonoIcon* icon, std::string label,
                Style style)
-    : Widget(env),
+    : BasicWidget(env),
       env_(env),
       style_(style),
       label_(std::move(label)),
@@ -350,7 +350,7 @@ bool Button::paint(const Surface& s) {
   return true;
 }
 
-Padding Button::getPadding() const { return Padding(14, 4); }
+Padding Button::getDefaultPadding() const { return Padding(14, 4); }
 
 Dimensions Button::getSuggestedMinimumDimensions() const {
   if (!hasLabel()) {

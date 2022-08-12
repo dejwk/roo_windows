@@ -8,10 +8,10 @@
 
 namespace roo_windows {
 
-class Image : public Widget {
+class Image : public BasicWidget {
  public:
   Image(const Environment& env, const roo_display::Drawable& image)
-      : Widget(env), image_(image) {}
+      : BasicWidget(env), image_(image) {}
 
   bool paint(const Surface& s) override {
     roo_display::Tile tile(&image_, bounds(),
