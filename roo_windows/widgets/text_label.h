@@ -30,7 +30,7 @@ class TextLabel : public BasicWidget {
         color_.a() == 0 ? parent()->defaultColor() : color_;
     s.drawObject(roo_display::MakeTileOf(
         roo_display::StringViewLabel(value_, font_, color), bounds(),
-        adjustAlignment(alignment_), roo_display::color::LightGreen));
+        adjustAlignment(alignment_)));
     return true;
   }
 
