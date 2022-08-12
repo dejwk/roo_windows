@@ -218,7 +218,7 @@ bool TextField::paint(const roo_display::Surface& s) {
   int16_t xoffset = padded.h().resolveOffset(0, width() - 1, 0, advance_width) +
                     editor().draw_xoffset();
   news.drawObject(TextFieldInterior(
-      &font_, text_clip_box, text, isEdited(), isStarred(),
+      &font_, text_clip_box, text, isEdited(), isStarred() && !value_.empty(),
       editor().lastGlyphRecentlyEntered(), xoffset, highlight_xmin,
       highlight_xmax, color, highlight_color));
 
