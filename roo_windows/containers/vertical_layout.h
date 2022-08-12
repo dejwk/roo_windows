@@ -14,7 +14,7 @@ class VerticalLayout : public Panel {
  public:
   class Params {
    public:
-    Params() : gravity_(), padding_(PADDING_DEFAULT), weight_(0) {}
+    Params() : gravity_(), weight_(0) {}
 
     Params& setGravity(HorizontalGravity gravity) {
       gravity_ = gravity;
@@ -22,13 +22,6 @@ class VerticalLayout : public Panel {
     }
 
     HorizontalGravity gravity() const { return gravity_; }
-
-    PaddingSize verticalPadding() const { return padding_; }
-
-    Params& setVerticalPadding(PaddingSize padding) {
-      padding_ = padding;
-      return *this;
-    }
 
     Params& setWeight(uint8_t weight) {
       weight_ = weight;
@@ -39,7 +32,6 @@ class VerticalLayout : public Panel {
 
    private:
     HorizontalGravity gravity_;
-    PaddingSize padding_;
     uint8_t weight_;
   };
 

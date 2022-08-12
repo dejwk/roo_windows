@@ -4,20 +4,6 @@ namespace roo_windows {
 
 namespace {
 
-// Possibly override the padding that the child used to report its preferred
-// height.
-PreferredSize getPreferredChildSize(const Widget& w, PaddingSize padding) {
-  PreferredSize orig = w.getPreferredSize();
-  if (padding == PADDING_DEFAULT || !orig.height().isExact()) {
-    return orig;
-  }
-  Padding p = w.getPadding();
-  return PreferredSize(
-      orig.width(),
-      PreferredSize::Exact(orig.height().value() - p.top() - p.bottom() +
-                           Padding::DimensionForSize(padding)));
-}
-
 }  // namespace
 
 Dimensions VerticalLayout::onMeasure(MeasureSpec width, MeasureSpec height) {
@@ -49,9 +35,7 @@ Dimensions VerticalLayout::onMeasure(MeasureSpec width, MeasureSpec height) {
     int16_t v_margin = margins.top() + margins.bottom();
     total_weight += measure.params().weight();
 
-    PreferredSize preferred =
-        getPreferredChildSize(w, measure.params().verticalPadding());
-
+    PreferredSize preferred = w.getPreferredSize();
     bool use_excess_space =
         preferred.height().isZero() && measure.params().weight() > 0;
     if (height.kind() == MeasureSpec::EXACTLY && use_excess_space) {
@@ -148,8 +132,7 @@ Dimensions VerticalLayout::onMeasure(MeasureSpec width, MeasureSpec height) {
       int16_t v_margin = margins.top() + margins.bottom();
       int16_t h_padding = padding_.left() + padding_.right();
       int16_t child_weight = measure.params().weight();
-      PreferredSize preferred =
-          getPreferredChildSize(w, measure.params().verticalPadding());
+      PreferredSize preferred = w.getPreferredSize();
       if (child_weight > 0) {
         int16_t share = ((uint32_t)child_weight * (uint32_t)remaining_excess) /
                         remaining_weighted_sum;
