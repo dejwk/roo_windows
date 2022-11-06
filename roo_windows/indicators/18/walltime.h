@@ -21,8 +21,8 @@ class WalltimeIndicator18 : public WalltimeIndicator {
     roo_display::Color color =
         color_.a() == 0 ? parent()->defaultColor() : color_;
     s.drawObject(roo_display::MakeTileOf(
-        roo_display::StringViewLabel(roo_display::font_NotoSans_Regular_18(),
-                                     val_, color),
+        roo_display::StringViewLabel(
+            val_, roo_display::font_NotoSans_Regular_18(), color),
         bounds(), roo_display::kMiddle));
     return true;
   }
