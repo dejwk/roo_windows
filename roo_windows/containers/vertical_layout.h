@@ -90,7 +90,7 @@ class VerticalLayout : public Panel {
 
   int16_t weight_sum() const { return weight_sum_; }
 
-  void add(WidgetRef child, Params params) {
+  void add(WidgetRef child, Params params = Params()) {
     child_measures_.emplace_back(params);
     Panel::add(std::move(child));
   }
