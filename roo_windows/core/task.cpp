@@ -12,15 +12,15 @@ void Task::enterActivity(Activity* activity) {
     activities_.back()->onPause();
   }
   activities_.push_back(activity);
-  panel_->enterActivity(activity, bounds);
   activities_.back()->onStart();
+  panel_->enterActivity(activity, bounds);
   activities_.back()->onResume();
 }
 
 void Task::exitActivity() {
   activities_.back()->onPause();
-  activities_.back()->onStop();
   panel_->exitActivity();
+  activities_.back()->onStop();
   activities_.pop_back();
   if (!activities_.empty()) {
     activities_.back()->onResume();
