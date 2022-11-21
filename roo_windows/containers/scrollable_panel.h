@@ -42,6 +42,10 @@ class ScrollablePanel : public Panel {
     scrollTo(dx + contents()->xOffset(), dy + contents()->yOffset());
   }
 
+  void scrollToTop() { scrollTo(contents()->xOffset(), 0); }
+
+  void scrollToBottom();
+
   void update() { scrollBy(0, 0); }
 
   void paintWidgetContents(const Surface& s, Clipper& clipper) override;
@@ -63,25 +67,9 @@ class ScrollablePanel : public Panel {
                              : PreferredSize::MatchParent());
   }
 
-  Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override {
-    if (direction_ != VERTICAL) {
-      width = MeasureSpec::Unspecified(width.value());
-    }
-    if (direction_ != HORIZONTAL) {
-      height = MeasureSpec::Unspecified(height.value());
-    }
-    measured_ = contents()->measure(width, height);
-    return Dimensions(width.resolveSize(measured_.width()),
-                      height.resolveSize(measured_.height()));
-  }
+  Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override;
 
-  void onLayout(bool changed, const roo_display::Box& box) override {
-    Widget* c = contents();
-    Box bounds(0, 0, measured_.width() - 1, measured_.height() - 1);
-    bounds = bounds.translate(c->xOffset(), c->yOffset());
-    c->layout(bounds);
-    update();
-  }
+  void onLayout(bool changed, const roo_display::Box& box) override;
 
  private:
   Direction direction_;

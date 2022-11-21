@@ -4,33 +4,72 @@
 
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/gesture_detector.h"
+#include "roo_windows/core/main_window.h"
 
 namespace roo_windows {
 
 void ScrollablePanel::scrollTo(int16_t x, int16_t y) {
   Widget* c = contents();
+  Margins m = c->getMargins();
+  Box inner_pane(m.left(), m.top(), width() - m.right() - 1,
+                 height() - m.bottom() - 1);
   auto offset = alignment_.resolveOffset(bounds(), c->bounds());
-  if (c->width() >= width()) {
+  if (c->width() >= inner_pane.width()) {
     if (x > 0) x = 0;
-    if (x < width() - c->width()) {
-      x = width() - c->width();
+    if (x < inner_pane.width() - c->width()) {
+      x = inner_pane.width() - c->width();
     }
   } else {
     // if (x < 0) x = 0;
     // if (x > width() - c->width()) x = width() - c->width();
     x = offset.first;
   }
-  if (c->height() >= height()) {
+  if (c->height() >= inner_pane.height()) {
     if (y > 0) y = 0;
-    if (y < height() - c->height()) {
-      y = height() - c->height();
+    if (y < inner_pane.height() - c->height()) {
+      y = inner_pane.height() - c->height();
     }
   } else {
     // if (y < 0) y = 0;
     // if (y > height() - c->height()) y = height() - c->height();
     y = offset.second;
   }
-  c->moveTo(c->bounds().translate(x, y));
+  c->moveTo(c->bounds().translate(x + m.left(), y + m.top()));
+}
+
+void ScrollablePanel::scrollToBottom() {
+  getMainWindow()->updateLayout();
+  Margins m = contents()->getMargins();
+  scrollTo(contents()->xOffset(),
+           height() - m.top() - m.bottom() - contents()->height() + 1);
+}
+
+Dimensions ScrollablePanel::onMeasure(MeasureSpec width, MeasureSpec height) {
+  Margins m = contents()->getMargins();
+  PreferredSize s = contents()->getPreferredSize();
+  MeasureSpec child_width =
+      (direction_ == VERTICAL)
+          ? width.getChildMeasureSpec(m.left() + m.right(), s.width())
+          : MeasureSpec::Unspecified(
+                std::max(0, width.value() - m.left() - m.right()));
+  MeasureSpec child_height =
+      (direction_ == HORIZONTAL)
+          ? height.getChildMeasureSpec(m.top() + m.bottom(), s.height())
+          : MeasureSpec::Unspecified(
+                std::max(0, height.value() - m.top() - m.bottom()));
+  measured_ = contents()->measure(child_width, child_height);
+  return Dimensions(
+      width.resolveSize(measured_.width() + m.left() + m.right()),
+      height.resolveSize(measured_.height() + m.top() + m.bottom()));
+}
+
+void ScrollablePanel::onLayout(bool changed, const roo_display::Box& box) {
+  Widget* c = contents();
+  Margins m = contents()->getMargins();
+  Box bounds(0, 0, measured_.width() - 1, measured_.height() - 1);
+  bounds = bounds.translate(c->xOffset() + m.left(), c->yOffset() + m.top());
+  c->layout(bounds);
+  update();
 }
 
 void ScrollablePanel::paintWidgetContents(const Surface& s, Clipper& clipper) {
