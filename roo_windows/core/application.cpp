@@ -27,9 +27,32 @@ void Application::tick() {
 
   unsigned long now = millis();
   if ((long)(now - last_time_refreshed_ms_) < kMinRefreshTimeDeltaMs) return;
-  last_time_refreshed_ms_ = now;
+  refresh();
+}
+
+namespace {
+
+class Adapter : public roo_display::Drawable {
+ public:
+  Adapter(MainWindow& window) : window_(window) {}
+
+  roo_display::Box extents() const override { return window_.bounds(); }
+
+  void drawTo(const roo_display::Surface& s) const override {
+    window_.paintWindow(s);
+  }
+
+ private:
+  MainWindow& window_;
+};
+
+}
+
+void Application::refresh() {
+  root_window_.updateLayout();
+  last_time_refreshed_ms_ = millis();
   roo_display::DrawingContext dc(display_);
-  root_window_.update(dc);
+  dc.draw(Adapter(root_window_));
 }
 
 Task* Application::addTask(const roo_display::Box& bounds) {

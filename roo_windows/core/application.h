@@ -15,17 +15,26 @@ class Application {
  public:
   Application(const Environment* env, roo_display::Display& display);
 
-  // Application(const Environment* env, roo_display::Display& display,
-  //             const Box& bounds);
-
+  // Handles user input (touch, etc.), and calls refresh() periodically.
+  // The application code is expected to call this function frequently.
   void tick();
+
+  // Lays out and paints all dirty items. Does not handle user input.
+  // Useful when you want to enforce some visual changes immediately,
+  // without waiting for the next tick().
+  void refresh();
 
   const Environment& env() const { return *env_; }
 
   void add(WidgetRef child, const roo_display::Box& box);
 
-  Task* addTask() { return addTask(roo_display::Box(0, 0, -1, -1)); }
   Task* addTask(const roo_display::Box& bounds);
+
+  Task* addTaskFullScreen() { return addTask(display_.extents()); }
+
+  Task* addTaskFloating() {
+    return addTask(roo_display::Box(0, 0, -1, -1));
+  }
 
   MainWindow& root() { return root_window_; }
   GestureDetector& gesture_detector() { return gesture_detector_; }

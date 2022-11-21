@@ -72,26 +72,11 @@ void MainWindow::tick() {
   click_animation_.tick();
 }
 
-class Adapter : public roo_display::Drawable {
- public:
-  Adapter(MainWindow* window) : window_(window) {}
-
-  roo_display::Box extents() const override { return window_->bounds(); }
-
-  void drawTo(const roo_display::Surface& s) const override {
-    window_->paintWindow(s);
-  }
-
- private:
-  MainWindow* window_;
-};
-
-void MainWindow::update(roo_display::DrawingContext& dc) {
+void MainWindow::updateLayout() {
   if (isLayoutRequested()) {
     measure(MeasureSpec::Exactly(width()), MeasureSpec::Exactly(height()));
     layout(bounds());
   }
-  dc.draw(Adapter(this));
 }
 
 void MainWindow::paintWindow(const Surface& s) {

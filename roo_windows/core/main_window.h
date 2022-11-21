@@ -17,15 +17,14 @@ class MainWindow : public Panel {
   MainWindow(Application& app, const Box& bounds);
 
   void tick();
-  void update(roo_display::DrawingContext& dc);
+
+  // Applies any pending layout requests.
+  void updateLayout();
 
   MainWindow* getMainWindow() override { return this; }
   const MainWindow* getMainWindow() const override { return this; }
 
   void paintWindow(const Surface& s);
-
-  void enterModal(ModalWindow* modal_window) {}
-  void exitModal(ModalWindow* modal_window) {}
 
   Application& app();
   const Application& app() const;
