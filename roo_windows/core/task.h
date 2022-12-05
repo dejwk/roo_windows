@@ -20,10 +20,9 @@ class Task {
 
   Dimensions getDimensions() const;
 
-  void getAbsoluteBounds(roo_display::Box& full,
-                         roo_display::Box& visible) const;
+  void getAbsoluteBounds(Rect& full, Rect& visible) const;
 
-  void getAbsoluteOffset(int16_t& dx, int16_t& dy) const;
+  void getAbsoluteOffset(XDim& dx, YDim& dy) const;
 
   MainWindow& getMainWindow() const;
 
@@ -42,7 +41,7 @@ class TaskPanel : public Panel {
 
   Task* getTask() override { return &task_; }
 
-  Widget* dispatchTouchDownEvent(int16_t x, int16_t y) override;
+  Widget* dispatchTouchDownEvent(XDim x, YDim y) override;
 
  private:
   friend class Task;

@@ -5,29 +5,29 @@
 
 namespace roo_windows {
 
-bool HorizontalDivider::paint(const Surface& s) {
+bool HorizontalDivider::paint(const Canvas& canvas) {
   if (!isInvalidated()) return true;
-  const Box box = bounds();
+  const Rect rect = bounds();
   Color color = theme().color.onBackground;
   color.set_a(0x40);
-  s.drawObject(roo_display::FilledRect(box.xMin(), box.yMin(), box.xMax(),
-                                       box.yMax() - 1, color));
+  canvas.drawObject(roo_display::FilledRect(
+      rect.xMin(), rect.yMin(), rect.xMax(), rect.yMax() - 1, color));
   color.set_a(0x20);
-  s.drawObject(roo_display::FilledRect(box.xMin(), box.yMax(), box.xMax(),
-                                       box.yMax(), color));
+  canvas.drawObject(roo_display::FilledRect(rect.xMin(), rect.yMax(),
+                                            rect.xMax(), rect.yMax(), color));
   return true;
 }
 
-bool VerticalDivider::paint(const Surface& s) {
+bool VerticalDivider::paint(const Canvas& canvas) {
   if (!isInvalidated()) return true;
-  const Box box = bounds();
+  const Rect rect = bounds();
   Color color = theme().color.onBackground;
   color.set_a(0x40);
-  s.drawObject(roo_display::FilledRect(box.xMin(), box.yMin(),
-                                       box.xMax() - 1, box.yMax(), color));
+  canvas.drawObject(roo_display::FilledRect(
+      rect.xMin(), rect.yMin(), rect.xMax() - 1, rect.yMax(), color));
   color.set_a(0x20);
-  s.drawObject(roo_display::FilledRect(box.xMax(), box.yMin(), box.xMax(),
-                                       box.yMax(), color));
+  canvas.drawObject(roo_display::FilledRect(rect.xMax(), rect.yMin(),
+                                            rect.xMax(), rect.yMax(), color));
   return true;
 }
 

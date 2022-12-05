@@ -15,14 +15,14 @@ WifiIndicator::WifiIndicator(const Environment& env, roo_display::Color color)
       locked_(false),
       bar_count_(1) {}
 
-bool WifiIndicator::paint(const Surface& s) {
+bool WifiIndicator::paint(const Canvas& canvas) {
   roo_display::MaterialIcon icon(*icons()[status()]);
   roo_display::Color color =
       color_.a() == 0 ? parent()->defaultColor() : color_;
   icon.color_mode().setColor(color);
-  roo_display::Tile tile(&icon, bounds(),
+  roo_display::Tile tile(&icon, bounds().asBox(),
                          roo_display::kCenter | roo_display::kMiddle);
-  s.drawObject(tile);
+  canvas.drawObject(tile);
   return true;
 }
 

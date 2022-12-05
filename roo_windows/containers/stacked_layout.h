@@ -18,9 +18,9 @@ class StackedLayout : public Panel {
   void add(WidgetRef child) { Panel::add(std::move(child)); }
 
  protected:
-  Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override {
-    int16_t w = 0;
-    int16_t h = 0;
+  Dimensions onMeasure(WidthSpec width, HeightSpec height) override {
+    XDim w = 0;
+    YDim h = 0;
     for (const auto& child : children()) {
       Dimensions d = child->measure(width, height);
       if (!child->isGone()) {
@@ -31,8 +31,8 @@ class StackedLayout : public Panel {
     return Dimensions(w, h);
   }
 
-  void onLayout(bool changed, const roo_display::Box& box) {
-    Box local(0, 0, box.width() - 1, box.height() - 1);
+  void onLayout(bool changed, const Rect& rect) {
+    Rect local(0, 0, rect.width() - 1, rect.height() - 1);
     for (const auto& child : children()) {
       child->layout(local);
     }

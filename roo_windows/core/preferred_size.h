@@ -15,9 +15,9 @@ namespace roo_windows {
 //
 class PreferredSize {
  public:
-  class Dimension {
+  class Width {
    public:
-    int16_t value() const { return value_; }
+    XDim value() const { return value_; }
     bool isExact() const { return value_ >= 0; }
     bool isMatchParent() const { return value_ == -1; }
     bool isWrapContent() const { return value_ == -2; }
@@ -25,50 +25,93 @@ class PreferredSize {
 
    private:
     friend class PreferredSize;
-    friend bool operator==(Dimension a, Dimension b);
+    friend bool operator==(Width a, Width b);
 
 #if defined(__linux__) || defined(__linux) || defined(linux)
-    friend std::ostream& operator<<(std::ostream& os, Dimension dim);
+    friend std::ostream& operator<<(std::ostream& os, Width w);
 #endif
 
-    constexpr Dimension(int16_t value) : value_(value) {}
+    constexpr Width(XDim value) : value_(value) {}
 
-    int16_t value_;
+    XDim value_;
   };
 
-  constexpr static inline Dimension Exact(int16_t value) {
-    return Dimension(value);
+  class Height {
+   public:
+    YDim value() const { return value_; }
+    bool isExact() const { return value_ >= 0; }
+    bool isMatchParent() const { return value_ == -1; }
+    bool isWrapContent() const { return value_ == -2; }
+    bool isZero() const { return value_ == 0; }
+
+   private:
+    friend class PreferredSize;
+    friend bool operator==(Height a, Height b);
+
+#if defined(__linux__) || defined(__linux) || defined(linux)
+    friend std::ostream& operator<<(std::ostream& os, Height h);
+#endif
+
+    constexpr Height(YDim value) : value_(value) {}
+
+    YDim value_;
+  };
+
+  constexpr static inline Width ExactWidth(XDim value) {
+    return PreferredSize::Width(value);
   }
 
-  constexpr static inline Dimension MatchParent() { return Dimension(-1); }
+  constexpr static inline Width MatchParentWidth() { return Width(-1); }
 
-  constexpr static inline Dimension WrapContent() { return Dimension(-2); }
+  constexpr static inline Width WrapContentWidth() { return Width(-2); }
+
+  constexpr static inline Height ExactHeight(YDim value) {
+    return PreferredSize::Height(value);
+  }
+
+  constexpr static inline Height MatchParentHeight() { return Height(-1); }
+
+  constexpr static inline Height WrapContentHeight() { return Height(-2); }
 
   // Creates a new preferred size with the specified width and height.
-  PreferredSize(Dimension width, Dimension height)
-      : width_(width), height_(height) {}
+  PreferredSize(Width width, Height height) : width_(width), height_(height) {}
 
-  Dimension width() const { return width_; }
-  Dimension height() const { return height_; }
+  Width width() const { return width_; }
+  Height height() const { return height_; }
 
  private:
-  Dimension width_;
-  Dimension height_;
+  Width width_;
+  Height height_;
 };
 
-inline bool operator==(PreferredSize::Dimension a, PreferredSize::Dimension b) {
+inline bool operator==(PreferredSize::Width a, PreferredSize::Width b) {
+  return a.value_ == b.value_;
+}
+
+inline bool operator==(PreferredSize::Height a, PreferredSize::Height b) {
   return a.value_ == b.value_;
 }
 
 #if defined(__linux__) || defined(__linux) || defined(linux)
 
-inline std::ostream& operator<<(std::ostream& os, PreferredSize::Dimension dim) {
-  if (dim == PreferredSize::MatchParent()) {
-    LOG(INFO) << "match-parent";
-  } else if (dim == PreferredSize::WrapContent()) {
-    LOG(INFO) << "wrap-content";
+inline std::ostream& operator<<(std::ostream& os, PreferredSize::Width w) {
+  if (w == PreferredSize::MatchParentWidth()) {
+    LOG(INFO) << "match-parent-width";
+  } else if (w == PreferredSize::WrapContentWidth()) {
+    LOG(INFO) << "wrap-content-width";
   } else {
-    os << dim.value_;
+    os << "width:" << w.value_;
+  }
+  return os;
+}
+
+inline std::ostream& operator<<(std::ostream& os, PreferredSize::Height h) {
+  if (h == PreferredSize::MatchParentHeight()) {
+    LOG(INFO) << "match-parent-height";
+  } else if (h == PreferredSize::WrapContentHeight()) {
+    LOG(INFO) << "wrap-content-height";
+  } else {
+    os << "height:" << h.value_;
   }
   return os;
 }

@@ -8,12 +8,12 @@
 
 namespace roo_windows {
 
-void ScrollablePanel::scrollTo(int16_t x, int16_t y) {
+void ScrollablePanel::scrollTo(XDim x, YDim y) {
   Widget* c = contents();
   Margins m = c->getMargins();
-  Box inner_pane(m.left(), m.top(), width() - m.right() - 1,
-                 height() - m.bottom() - 1);
-  auto offset = alignment_.resolveOffset(bounds(), c->bounds());
+  Rect inner_pane(m.left(), m.top(), width() - m.right() - 1,
+                  height() - m.bottom() - 1);
+  auto offset = ResolveAlignmentOffset(bounds(), c->bounds(), alignment_);
   if (c->width() >= inner_pane.width()) {
     if (x > 0) x = 0;
     if (x < inner_pane.width() - c->width()) {
@@ -44,18 +44,18 @@ void ScrollablePanel::scrollToBottom() {
            height() - m.top() - m.bottom() - contents()->height() + 1);
 }
 
-Dimensions ScrollablePanel::onMeasure(MeasureSpec width, MeasureSpec height) {
+Dimensions ScrollablePanel::onMeasure(WidthSpec width, HeightSpec height) {
   Margins m = contents()->getMargins();
   PreferredSize s = contents()->getPreferredSize();
-  MeasureSpec child_width =
+  WidthSpec child_width =
       (direction_ == VERTICAL)
-          ? width.getChildMeasureSpec(m.left() + m.right(), s.width())
-          : MeasureSpec::Unspecified(
+          ? width.getChildWidthSpec(m.left() + m.right(), s.width())
+          : WidthSpec::Unspecified(
                 std::max(0, width.value() - m.left() - m.right()));
-  MeasureSpec child_height =
+  HeightSpec child_height =
       (direction_ == HORIZONTAL)
-          ? height.getChildMeasureSpec(m.top() + m.bottom(), s.height())
-          : MeasureSpec::Unspecified(
+          ? height.getChildHeightSpec(m.top() + m.bottom(), s.height())
+          : HeightSpec::Unspecified(
                 std::max(0, height.value() - m.top() - m.bottom()));
   measured_ = contents()->measure(child_width, child_height);
   return Dimensions(
@@ -63,16 +63,17 @@ Dimensions ScrollablePanel::onMeasure(MeasureSpec width, MeasureSpec height) {
       height.resolveSize(measured_.height() + m.top() + m.bottom()));
 }
 
-void ScrollablePanel::onLayout(bool changed, const roo_display::Box& box) {
+void ScrollablePanel::onLayout(bool changed, const Rect& rect) {
   Widget* c = contents();
   Margins m = contents()->getMargins();
-  Box bounds(0, 0, measured_.width() - 1, measured_.height() - 1);
+  Rect bounds(0, 0, measured_.width() - 1, measured_.height() - 1);
   bounds = bounds.translate(c->xOffset() + m.left(), c->yOffset() + m.top());
   c->layout(bounds);
   update();
 }
 
-void ScrollablePanel::paintWidgetContents(const Surface& s, Clipper& clipper) {
+void ScrollablePanel::paintWidgetContents(const Canvas& canvas,
+                                          Clipper& clipper) {
   bool scroll_in_progress = (scroll_start_vx_ != 0 || scroll_start_vy_ != 0);
   // If scroll in progress, take it into account.
   if (scroll_in_progress) {
@@ -135,7 +136,7 @@ void ScrollablePanel::paintWidgetContents(const Surface& s, Clipper& clipper) {
       scroll_start_vx_ = scroll_start_vy_ = 0;
     }
   }
-  Panel::paintWidgetContents(s, clipper);
+  Panel::paintWidgetContents(canvas, clipper);
 
   if (scroll_in_progress) {
     // TODO: use a scheduler to cap the frequency of invalidation,
@@ -160,19 +161,19 @@ bool ScrollablePanel::onInterceptTouchEvent(const TouchEvent& event) {
   return false;
 }
 
-bool ScrollablePanel::onDown(int16_t x, int16_t y) {
+bool ScrollablePanel::onDown(XDim x, YDim y) {
   // Stop the scroll.
   scroll_start_vx_ = 0;
   scroll_start_vy_ = 0;
   return true;
 }
 
-bool ScrollablePanel::onScroll(int16_t dx, int16_t dy) {
+bool ScrollablePanel::onScroll(XDim dx, YDim dy) {
   scrollBy(dx, dy);
   return true;
 }
 
-bool ScrollablePanel::onFling(int16_t vx, int16_t vy) {
+bool ScrollablePanel::onFling(XDim vx, YDim vy) {
   Widget* c = contents();
   scroll_start_time_ = millis();
   scroll_start_vx_ = vx;

@@ -8,7 +8,7 @@ using namespace roo_display;
 
 namespace roo_windows {
 
-bool ProgressBar::paint(const Surface& s) {
+bool ProgressBar::paint(const Canvas& canvas) {
   const Theme& th = theme();
   Color c = (color_ == color::Transparent ? th.color.primary : color_);
   if (progress_ >= 0) {
@@ -16,14 +16,14 @@ bool ProgressBar::paint(const Surface& s) {
     int16_t xoffset_incomplete = (uint32_t)progress_ * width() / 10000;
     if (xoffset_incomplete > 0) {
       // There is some progress.
-      s.drawObject(roo_display::FilledRect(0, 0, xoffset_incomplete - 1,
-                                           height() - 1, c));
+      canvas.drawObject(roo_display::FilledRect(0, 0, xoffset_incomplete - 1,
+                                                height() - 1, c));
     }
     if (xoffset_incomplete < width()) {
       // There is some left.
       c.set_a(0x80);
-      s.drawObject(roo_display::FilledRect(xoffset_incomplete, 0, width() - 1,
-                                           height() - 1, c));
+      canvas.drawObject(roo_display::FilledRect(xoffset_incomplete, 0,
+                                                width() - 1, height() - 1, c));
     }
     return true;
   } else {
@@ -36,18 +36,18 @@ bool ProgressBar::paint(const Surface& s) {
     if (offset_end >= width()) offset_end = width() - 1;
     if (offset_start > 0) {
       c.set_a(0x80);
-      s.drawObject(
+      canvas.drawObject(
           roo_display::FilledRect(0, 0, offset_start - 1, height() - 1, c));
     }
     if (offset_start < width() - 1) {
       c.set_a(0xFF);
-      s.drawObject(roo_display::FilledRect(offset_start, 0, offset_end,
-                                           height() - 1, c));
+      canvas.drawObject(roo_display::FilledRect(offset_start, 0, offset_end,
+                                                height() - 1, c));
     }
     if (offset_end + 1 < width()) {
       c.set_a(0x80);
-      s.drawObject(roo_display::FilledRect(offset_end + 1, 0, width() - 1,
-                                           height() - 1, c));
+      canvas.drawObject(roo_display::FilledRect(offset_end + 1, 0, width() - 1,
+                                                height() - 1, c));
     }
     return false;
   }

@@ -18,7 +18,7 @@ const RleImage4bppxBiased<Alpha4, PrgMemResource>& shadow_20();
 static constexpr int kSwitchAnimationMs = 120;
 }  // namespace
 
-bool Switch::onSingleTapUp(int16_t x, int16_t y) {
+bool Switch::onSingleTapUp(XDim x, YDim y) {
   toggle();
   anim_ = millis() & 0x7FFF;
   return Widget::onSingleTapUp(x, y);
@@ -28,12 +28,12 @@ int16_t Switch::time_animating_ms() const {
   return (millis() & 0x7FFF) - (anim_ & 0x7FFF);
 }
 
-bool Switch::paint(const Surface& s) {
+bool Switch::paint(const Canvas& canvas) {
   const Theme& th = theme();
   Color circleColor =
-      isOn() ? th.color.highlighterColor(s.bgcolor()) : th.color.surface;
-  Color sliderColor = isOn() ? th.color.highlighterColor(s.bgcolor())
-                             : th.color.defaultColor(s.bgcolor());
+      isOn() ? th.color.highlighterColor(canvas.bgcolor()) : th.color.surface;
+  Color sliderColor = isOn() ? th.color.highlighterColor(canvas.bgcolor())
+                             : th.color.defaultColor(canvas.bgcolor());
   RleImage4bppxBiased<Alpha4, PrgMemResource> slider = slider_20();
   RleImage4bppxBiased<Alpha4, PrgMemResource> circle = circle_20();
   RleImage4bppxBiased<Alpha4, PrgMemResource> shadow = shadow_20();
@@ -57,16 +57,16 @@ bool Switch::paint(const Surface& s) {
     xoffset = isOn() ? 20 : 0;
   }
   auto composite = MakeDrawableRawStreamable(Overlay(
-      slider, 5, 4, Overlay(shadow, xoffset, 0, circle, xoffset + 1, 1), 0, 0));
+      slider, 4, 4, Overlay(shadow, xoffset, 0, circle, xoffset + 1, 1), 0, 0));
   roo_display::Tile toggle(&composite, Box(0, 0, 42, 24),
-                           roo_display::kMiddle | roo_display::kLeft);
+                           roo_display::kMiddle);
   Alignment alignment = roo_display::kCenter | roo_display::kMiddle;
   if (isInvalidated()) {
-    roo_display::Tile tile(&toggle, bounds(), alignment);
-    s.drawObject(tile);
+    roo_display::Tile tile(&toggle, bounds().asBox(), alignment);
+    canvas.drawObject(tile);
   } else {
-    auto offset = alignment.resolveOffset(bounds(), toggle.extents());
-    s.drawObject(toggle, offset.first, offset.second);
+    auto offset = alignment.resolveOffset(bounds().asBox(), toggle.extents());
+    canvas.drawObject(toggle, offset.first, offset.second);
   }
   return finished;
 }

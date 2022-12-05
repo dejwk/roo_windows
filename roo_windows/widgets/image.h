@@ -6,6 +6,7 @@
 #include "roo_windows/core/theme.h"
 #include "roo_windows/core/widget.h"
 #include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/canvas.h"
 
 namespace roo_windows {
 
@@ -14,14 +15,14 @@ class Image : public BasicWidget {
   Image(const Environment& env, const roo_display::Drawable& image)
       : BasicWidget(env), image_(image) {}
 
-  bool paint(const Surface& s) override {
-    roo_display::Tile tile(&image_, bounds(),
+  bool paint(const Canvas& canvas) override {
+    roo_display::Tile tile(&image_, bounds().asBox(),
                            roo_display::kCenter | roo_display::kMiddle);
-    s.drawObject(tile);
+    canvas.drawObject(tile);
   }
 
   Dimensions getSuggestedMinimumDimensions() const {
-    const Box& extents = image_.extents();
+    const roo_display::Box& extents = image_.extents();
     return Dimensions(extents.width(), extents.height());
   }
 

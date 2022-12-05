@@ -67,17 +67,18 @@ ClickAnimation* Widget::getClickAnimation() {
   return (w == nullptr) ? nullptr : &w->click_animation();
 }
 
-void Widget::getAbsoluteBounds(Box& full, Box& visible) const {
+void Widget::getAbsoluteBounds(Rect& full, Rect& visible) const {
   if (parent() == nullptr) {
     full = visible = parent_bounds();
   } else {
     parent()->getAbsoluteBounds(full, visible);
     full = parent_bounds().translate(full.xMin(), full.yMin());
-    visible = Box::intersect(visible.translate(full.xMin(), full.yMin()), full);
+    visible =
+        Rect::Intersect(visible.translate(full.xMin(), full.yMin()), full);
   }
 }
 
-void Widget::getAbsoluteOffset(int16_t& dx, int16_t& dy) const {
+void Widget::getAbsoluteOffset(XDim& dx, YDim& dy) const {
   if (parent() == nullptr) {
     dx = 0;
     dy = 0;
@@ -90,13 +91,13 @@ void Widget::getAbsoluteOffset(int16_t& dx, int16_t& dy) const {
 
 namespace {
 
-Box slopify(Box bounds) {
-  int16_t w = bounds.width();
-  int16_t h = bounds.height();
-  int16_t xMin = bounds.xMin();
-  int16_t yMin = bounds.yMin();
-  int16_t xMax = bounds.xMax();
-  int16_t yMax = bounds.yMax();
+Rect slopify(Rect bounds) {
+  XDim w = bounds.width();
+  YDim h = bounds.height();
+  XDim xMin = bounds.xMin();
+  YDim yMin = bounds.yMin();
+  XDim xMax = bounds.xMax();
+  YDim yMax = bounds.yMax();
   if (w < kMinSloppyTouchTargetSpan) {
     xMin -= (kMinSloppyTouchTargetSpan - w) / 2;
     xMax = xMin + kMinSloppyTouchTargetSpan - 1;
@@ -105,16 +106,16 @@ Box slopify(Box bounds) {
     yMin -= (kMinSloppyTouchTargetSpan - h) / 2;
     yMax = yMin + kMinSloppyTouchTargetSpan - 1;
   }
-  return Box(xMin, yMin, xMax, yMax);
+  return Rect(xMin, yMin, xMax, yMax);
 }
 
 }  // namespace
 
-Box Widget::getSloppyTouchParentBounds() const {
+Rect Widget::getSloppyTouchParentBounds() const {
   return slopify(parent_bounds());
 }
 
-Box Widget::getSloppyTouchBounds() const { return slopify(bounds()); }
+Rect Widget::getSloppyTouchBounds() const { return slopify(bounds()); }
 
 Color Widget::effectiveBackground() const {
   roo_display::Color bgcolor = background();
@@ -128,7 +129,7 @@ Color Widget::effectiveBackground() const {
 // (and, ultimately, to DefaultTheme(), if not otherwise specified).
 const Theme& Widget::theme() const { return parent_->theme(); }
 
-void Widget::markDirty(const Box& bounds) {
+void Widget::markDirty(const Rect& bounds) {
   redraw_status_ |= kDirty;
   if (parent_ != nullptr) {
     parent_->propagateDirty(this, bounds.translate(xOffset(), yOffset()));
@@ -140,9 +141,9 @@ void Widget::invalidateInterior() {
   markDirty();
 }
 
-void Widget::invalidateInterior(const Box& box) {
-  invalidateDescending(box);
-  markDirty(box);
+void Widget::invalidateInterior(const Rect& rect) {
+  invalidateDescending(rect);
+  markDirty(rect);
 }
 
 void Widget::requestLayout() {
@@ -150,17 +151,17 @@ void Widget::requestLayout() {
   onRequestLayout();
 }
 
-Dimensions Widget::measure(MeasureSpec width, MeasureSpec height) {
+Dimensions Widget::measure(WidthSpec width, HeightSpec height) {
   Dimensions result = onMeasure(width, height);
   redraw_status_ |= kLayoutRequired;
   return result;
 }
 
-void Widget::layout(const roo_display::Box& box) {
-  bool changed = (box != parent_bounds());
+void Widget::layout(const Rect& rect) {
+  bool changed = (rect != parent_bounds());
   if (changed || isLayoutRequired()) {
-    moveTo(box);
-    onLayout(changed, box);
+    moveTo(rect);
+    onLayout(changed, rect);
   }
   redraw_status_ &= ~(kLayoutRequired | kLayoutRequested);
 }
@@ -172,12 +173,24 @@ void Widget::onRequestLayout() {
 
 namespace {
 
-// Utility to return a default size. Uses the supplied size if the MeasureSpec
-// imposed no constraints. Will get larger if allowed by the MeasureSpec.
-static int16_t getDefaultSize(int16_t size, MeasureSpec spec) {
+// Utility to return a default width. Uses the supplied width if the WidthSpec
+// imposed no constraints. Will get larger if allowed by the WidthSpec.
+static XDim getDefaultWidth(XDim width, WidthSpec spec) {
   switch (spec.kind()) {
-    case MeasureSpec::UNSPECIFIED:
-      return size;
+    case UNSPECIFIED:
+      return width;
+    default:
+      return spec.value();
+  }
+}
+
+// Utility to return a default height. Uses the supplied height if the
+// HeightSpec imposed no constraints. Will get larger if allowed by the
+// HeightSpec.
+static YDim getDefaultHeight(YDim height, HeightSpec spec) {
+  switch (spec.kind()) {
+    case UNSPECIFIED:
+      return height;
     default:
       return spec.value();
   }
@@ -185,10 +198,10 @@ static int16_t getDefaultSize(int16_t size, MeasureSpec spec) {
 
 }  // namespace
 
-Dimensions Widget::onMeasure(MeasureSpec width, MeasureSpec height) {
+Dimensions Widget::onMeasure(WidthSpec width, HeightSpec height) {
   Dimensions suggestedMin = getSuggestedMinimumDimensions();
-  return Dimensions(getDefaultSize(suggestedMin.width(), width),
-                    getDefaultSize(suggestedMin.height(), height));
+  return Dimensions(getDefaultWidth(suggestedMin.width(), width),
+                    getDefaultHeight(suggestedMin.height(), height));
 }
 
 void Widget::setParentClipMode(ParentClipMode mode) {
@@ -303,7 +316,7 @@ void Widget::setParent(Panel* parent, bool owned) {
   }
 }
 
-void Widget::setParentBounds(const Box& parent_bounds) {
+void Widget::setParentBounds(const Rect& parent_bounds) {
   if (parent_bounds == parent_bounds_) return;
   if (isGone() || parent() == nullptr) {
     parent_bounds_ = parent_bounds;
@@ -316,7 +329,7 @@ void Widget::setParentBounds(const Box& parent_bounds) {
   if (parent() != nullptr) parent()->childShown(this);
 }
 
-void Widget::moveTo(const Box& parent_bounds) {
+void Widget::moveTo(const Rect& parent_bounds) {
   setParentBounds(parent_bounds);
 }
 
@@ -345,67 +358,75 @@ uint8_t Widget::getOverlayOpacity() const {
 
 namespace {
 
-Color getOverlayColor(const Widget& widget, const Surface& s) {
+Color getOverlayColor(const Widget& widget, const Canvas& canvas) {
   uint8_t overlay_opacity = widget.getOverlayOpacity();
   if (overlay_opacity == 0) {
     return roo_display::color::Transparent;
   }
   const Theme& myTheme = widget.theme();
   Color overlay = widget.usesHighlighterColor()
-                      ? myTheme.color.highlighterColor(s.bgcolor())
-                      : myTheme.color.defaultColor(s.bgcolor());
+                      ? myTheme.color.highlighterColor(canvas.bgcolor())
+                      : myTheme.color.defaultColor(canvas.bgcolor());
   overlay.set_a(overlay_opacity);
   return overlay;
 }
 
-Color getClickAnimationColor(const Widget& widget, const Surface& s) {
+Color getClickAnimationColor(const Widget& widget, const Canvas& canvas) {
   const Theme& myTheme = widget.theme();
   Color color = widget.usesHighlighterColor()
-                    ? myTheme.color.highlighterColor(s.bgcolor())
-                    : myTheme.color.defaultColor(s.bgcolor());
-  color.set_a(myTheme.pressAnimationOpacity(s.bgcolor()));
+                    ? myTheme.color.highlighterColor(canvas.bgcolor())
+                    : myTheme.color.defaultColor(canvas.bgcolor());
+  color.set_a(myTheme.pressAnimationOpacity(canvas.bgcolor()));
   return color;
 }
 
-inline int32_t dsquare(int16_t x0, int16_t y0, int16_t x1, int16_t y1) {
+static constexpr int64_t kMaxClickAnimRadius = 8192;
+
+inline int64_t dsquare(XDim x0, YDim y0, XDim x1, YDim y1) {
   return (x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0);
 }
 
-inline int16_t animation_radius(const Box& bounds, int16_t x, int16_t y,
+inline int16_t animation_radius(const Rect& bounds, XDim x, XDim y,
                                 float progress) {
-  int32_t ul = dsquare(x, y, bounds.xMin(), bounds.yMin());
-  int32_t ur = dsquare(x, y, bounds.xMax(), bounds.yMin());
-  int32_t dl = dsquare(x, y, bounds.xMin(), bounds.yMax());
-  int32_t dr = dsquare(x, y, bounds.xMax(), bounds.yMax());
-  int32_t max = 0;
+  int64_t ul = dsquare(x, y, bounds.xMin(), bounds.yMin());
+  int64_t ur = dsquare(x, y, bounds.xMax(), bounds.yMin());
+  int64_t dl = dsquare(x, y, bounds.xMin(), bounds.yMax());
+  int64_t dr = dsquare(x, y, bounds.xMax(), bounds.yMax());
+  int64_t max = 0;
   if (ul > max) max = ul;
   if (ur > max) max = ur;
   if (dl > max) max = dl;
   if (dr > max) max = dr;
-  return (int16_t)(std::sqrt(max) * progress + 1);
+  int32_t result = (int32_t)(std::sqrt(max) * progress + 1);
+  if (result > kMaxClickAnimRadius) {
+    result = kMaxClickAnimRadius;
+  }
+  return (int16_t)result;
 }
 
 }  // namespace
 
-void Widget::paintWidget(const Surface& s, Clipper& clipper) {
+void Widget::paintWidget(const Canvas& canvas, Clipper& clipper) {
   if (!isVisible()) {
     markCleanDescending();
     return;
   }
-  Surface news(s);
-  news.set_dx(s.dx() + xOffset());
-  news.set_dy(s.dy() + yOffset());
-  if (news.clipToExtents(maxBounds()) == Box::CLIP_RESULT_EMPTY) {
+  Canvas my_canvas(canvas);
+  my_canvas.shift(xOffset(), yOffset());
+  my_canvas.clipToExtents(maxBounds());
+  if (my_canvas.clip_box().empty()) {
     markCleanDescending();
     return;
   }
   if (!isDirty()) {
     // Fast path to only include exclusion rect.
-    paintWidgetContents(news, clipper);
+    paintWidgetContents(my_canvas, clipper);
   }
-  news.set_bgcolor(roo_display::alphaBlend(s.bgcolor(), background()));
+  my_canvas.set_bgcolor(
+      roo_display::alphaBlend(canvas.bgcolor(), background()));
+  bool animation_continues = false;
   if (isEnabled()) {
-    Color overlay = getOverlayColor(*this, s);
+    Color overlay = getOverlayColor(*this, canvas);
     // If click_animation is true, we need to redraw the overlay.
     bool click_animation = ((state_ & kWidgetClicking) != 0);
     if (click_animation) {
@@ -413,80 +434,88 @@ void Widget::paintWidget(const Surface& s, Clipper& clipper) {
       int16_t click_x, click_y;
       // If click_animation_continues is true, we need to invalidate ourselves
       // after redrawing, so that we receive a subsequent paint request shortly.
-      bool click_animation_continues =
-          click_animation &&
-          getClickAnimation()->getProgress(this, &click_progress, &click_x,
-                                           &click_y) &&
-          click_progress < 1.0;
-      if (click_animation_continues) {
-        // Need to draw the circular overlay. Combine the regular rect overlay
-        // into it.
-        Color animation_color = getClickAnimationColor(*this, s);
-        PressOverlay press_overlay(
-            click_x + news.dx(), click_y + news.dy(),
-            animation_radius(bounds(), click_x, click_y, click_progress),
-            alphaBlend(overlay, animation_color), overlay);
-        roo_display::ForegroundFilter filter(news.out(), &press_overlay);
-        news.set_out(&filter);
-        paintWidgetContents(news, clipper);
-        // Do not clear dirtiness.
-        invalidateInterior();
-        return;
+      animation_continues = click_animation &&
+                            getClickAnimation()->getProgress(
+                                this, &click_progress, &click_x, &click_y) &&
+                            click_progress < 1.0;
+      if (animation_continues) {
+        // Note that dx,dy might have changed since the click event, moving dim
+        // out of the int16_t horizon.
+        XDim cx = click_x + my_canvas.dx();
+        YDim cy = click_y + my_canvas.dy();
+        // See if the overlay would be visible.
+        int16_t r =
+            animation_radius(bounds(), click_x, click_y, click_progress);
+        Rect rect(cx - r, cy - r, cx + r, cy + r);
+        if (rect.intersects(my_canvas.clip_box())) {
+          // Need to draw the circular overlay. Combine the regular rect overlay
+          // into it.
+          Color animation_color = getClickAnimationColor(*this, my_canvas);
+          PressOverlay press_overlay(
+              cx, cy, r, alphaBlend(overlay, animation_color), overlay);
+          roo_display::ForegroundFilter filter(my_canvas.out(), &press_overlay);
+          my_canvas.set_out(&filter);
+          paintWidgetContents(my_canvas, clipper);
+          // Do not clear dirtiness.
+          invalidateInterior();
+          return;
+        }
+      } else {
+        // Full rect click overlay - just apply on top of the overlay as
+        // calculated so far.
+        state_ &= ~kWidgetClicking;
+        Color animation_color = getClickAnimationColor(*this, my_canvas);
+        overlay = alphaBlend(overlay, animation_color);
       }
-      // Full rect click overlay - just apply on top of the overlay as
-      // calculated so far.
-      state_ &= ~kWidgetClicking;
-      Color animation_color = getClickAnimationColor(*this, s);
-      overlay = alphaBlend(overlay, animation_color);
     }
     if (overlay.a() > 0) {
-      roo_display::OverlayFilter filter(news.out(), overlay, s.bgcolor());
-      news.set_out(&filter);
-      paintWidgetContents(news, clipper);
+      roo_display::OverlayFilter filter(canvas.out(), overlay,
+                                        canvas.bgcolor());
+      my_canvas.set_out(&filter);
+      paintWidgetContents(my_canvas, clipper);
     } else {
-      paintWidgetContents(news, clipper);
+      paintWidgetContents(my_canvas, clipper);
     }
-    if (click_animation) {
-      // Note that we have !click_animation_continues here. Make sure that the
-      // next paint is scheduled promptly, but that it does not encounter
-      // click_animation, so that it just draws the widget in its regular state
-      // (possibly pressed, but not click-animating anymore).
+    if (click_animation && !animation_continues) {
+      // Make sure that the next paint is scheduled promptly, but that it does
+      // not encounter click_animation, so that it just draws the widget in its
+      // regular state (possibly pressed, but not click-animating anymore).
       invalidateInterior();
       return;
     }
   } else {
     roo_display::TranslucencyFilter disablement_filter(
-        s.out(), theme().state.disabled, s.bgcolor());
-    news.set_out(&disablement_filter);
-    paintWidgetContents(news, clipper);
+        canvas.out(), theme().state.disabled, canvas.bgcolor());
+    my_canvas.set_out(&disablement_filter);
+    paintWidgetContents(my_canvas, clipper);
   }
 }
 
-void Widget::paintWidgetContents(const Surface& s, Clipper& clipper) {
-  Box absolute_bounds =
-      Box::intersect(bounds().translate(s.dx(), s.dy()), s.clip_box());
+void Widget::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
+  roo_display::Box absolute_bounds =
+      bounds().translate(canvas.dx(), canvas.dy()).clip(canvas.clip_box());
   if (isDirty()) {
     clipper.setBounds(absolute_bounds);
-    bool clean = paint(s);
+    bool clean = paint(canvas);
     markClean();
     if (!clean) markDirty();
   }
   clipper.addExclusion(absolute_bounds);
 }
 
-Widget* Widget::dispatchTouchDownEvent(int16_t x, int16_t y) {
+Widget* Widget::dispatchTouchDownEvent(XDim x, YDim y) {
   return onTouchDown(x, y) ? this : nullptr;
 }
 
-bool Widget::onTouchDown(int16_t x, int16_t y) {
+bool Widget::onTouchDown(XDim x, YDim y) {
   return getApplication()->gesture_detector().onTouchDown(*this, x, y);
 }
 
-bool Widget::onTouchMove(int16_t x, int16_t y) {
+bool Widget::onTouchMove(XDim x, YDim y) {
   return getApplication()->gesture_detector().onTouchMove(*this, x, y);
 }
 
-bool Widget::onTouchUp(int16_t x, int16_t y) {
+bool Widget::onTouchUp(XDim x, YDim y) {
   return getApplication()->gesture_detector().onTouchUp(*this, x, y);
 }
 
@@ -495,9 +524,9 @@ void Widget::onClicked() {
   on_clicked_();
 }
 
-bool Widget::onDown(int16_t x, int16_t y) { return isClickable(); }
+bool Widget::onDown(XDim x, YDim y) { return isClickable(); }
 
-void Widget::onShowPress(int16_t x, int16_t y) {
+void Widget::onShowPress(XDim x, YDim y) {
   if (!isClickable()) return;
   if (isPressed()) return;
   ClickAnimation* anim = getClickAnimation();
@@ -509,7 +538,7 @@ void Widget::onShowPress(int16_t x, int16_t y) {
   setPressed(true);
 }
 
-bool Widget::onSingleTapUp(int16_t x, int16_t y) {
+bool Widget::onSingleTapUp(XDim x, YDim y) {
   if (!isClickable()) return false;
   if (isPressed()) {
     setPressed(false);
@@ -526,16 +555,16 @@ bool Widget::onSingleTapUp(int16_t x, int16_t y) {
   return true;
 }
 
-void Widget::onLongPress(int16_t dx, int16_t dy) {}
+void Widget::onLongPress(XDim dx, YDim dy) {}
 
-void Widget::onLongPressFinished(int16_t dx, int16_t dy) { setPressed(false); }
+void Widget::onLongPressFinished(XDim dx, YDim dy) { setPressed(false); }
 
-bool Widget::onScroll(int16_t dx, int16_t dy) {
+bool Widget::onScroll(XDim dx, YDim dy) {
   setPressed(false);
   return false;
 }
 
-bool Widget::onFling(int16_t vx, int16_t vy) {
+bool Widget::onFling(XDim vx, YDim vy) {
   setPressed(false);
   return false;
 }

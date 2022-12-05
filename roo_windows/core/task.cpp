@@ -32,29 +32,28 @@ Dimensions Task::getDimensions() const {
                     panel_->parent_bounds().height());
 }
 
-void Task::getAbsoluteBounds(roo_display::Box& full,
-                             roo_display::Box& visible) const {
+void Task::getAbsoluteBounds(Rect& full, Rect& visible) const {
   panel_->getAbsoluteBounds(full, visible);
 }
 
-void Task::getAbsoluteOffset(int16_t& dx, int16_t& dy) const {
+void Task::getAbsoluteOffset(XDim& dx, YDim& dy) const {
   panel_->getAbsoluteOffset(dx, dy);
 }
 
 MainWindow& Task::getMainWindow() const { return *panel_->getMainWindow(); }
 
 void TaskPanel::enterActivity(Activity* activity,
-                             const roo_display::Box& bounds) {
+                              const roo_display::Box& bounds) {
   add(activity->getContents(), bounds);
 }
 
 void TaskPanel::exitActivity() { removeLast(); }
 
-Widget* TaskPanel::dispatchTouchDownEvent(int16_t x, int16_t y) {
+Widget* TaskPanel::dispatchTouchDownEvent(XDim x, YDim y) {
   // Only the topmost activity gets to handle the gestures.
   Widget& activity = *children_.back();
-  return activity.dispatchTouchDownEvent(
-      x - activity.xOffset(), y - activity.yOffset());
+  return activity.dispatchTouchDownEvent(x - activity.xOffset(),
+                                         y - activity.yOffset());
 }
 
 }  // namespace roo_windows

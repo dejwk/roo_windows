@@ -8,12 +8,13 @@ class ProgressBar : public Widget {
  public:
   ProgressBar(const Environment& env) : Widget(env), progress_(-1), color_(0) {}
 
-  bool paint(const Surface& s) override;
+  bool paint(const Canvas& canvas) override;
 
   Dimensions getSuggestedMinimumDimensions() const override;
 
   PreferredSize getPreferredSize() const override {
-    return PreferredSize(PreferredSize::MatchParent(), PreferredSize::Exact(4));
+    return PreferredSize(PreferredSize::MatchParentWidth(),
+                         PreferredSize::ExactHeight(4));
   }
 
   Margins getMargins() const override { return Margins(0); }

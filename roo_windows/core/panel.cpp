@@ -9,7 +9,6 @@
 
 namespace roo_windows {
 
-using roo_display::Box;
 using roo_display::Color;
 using roo_display::DisplayOutput;
 
@@ -25,7 +24,7 @@ Panel::~Panel() {
   }
 }
 
-void Panel::add(WidgetRef ref, const Box& bounds) {
+void Panel::add(WidgetRef ref, const Rect& bounds) {
   Widget* child = ref.release();
   children_.push_back(child);
   child->setParent(this, ref.is_owned_);
@@ -59,49 +58,49 @@ void Panel::removeLast() {
   if (owned) delete w;
 }
 
-void Panel::paintWidgetContents(const Surface& s, Clipper& clipper) {
+void Panel::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
   bool dirty = isDirty();
   bool invalidated = isInvalidated();
-  Box invalid_region = invalid_region_;
+  Rect invalid_region = invalid_region_;
   markClean();
-  invalid_region_ = Box(0, 0, -1, -1);
+  invalid_region_ = Rect(0, 0, -1, -1);
   if (dirty || !bounds().contains(maxBounds())) {
     // Draw the panel's children.
-    paintChildren(s, clipper);
+    paintChildren(canvas, clipper);
   }
   // Paint the surface.
-  Box absolute_bounds =
-      Box::intersect(bounds().translate(s.dx(), s.dy()), s.clip_box());
+  roo_display::Box absolute_bounds =
+      bounds().translate(canvas.dx(), canvas.dy()).clip(canvas.clip_box());
   if (absolute_bounds.empty()) return;
   if (invalidated) {
-    Box rect = Box::intersect(bounds(), invalid_region);
-    Surface news = s;
-    if (news.clipToExtents(rect) != Box::CLIP_RESULT_EMPTY) {
+    Rect rect = Rect::Intersect(bounds(), invalid_region);
+    Canvas my_canvas = canvas;
+    my_canvas.clipToExtents(rect);
+    if (!my_canvas.clip_box().empty()) {
       // Draw the panel's background.
-      clipper.setBounds(news.clip_box());
-      paint(news);
+      clipper.setBounds(my_canvas.clip_box());
+      paint(my_canvas);
     }
   }
   clipper.addExclusion(absolute_bounds);
 }
 
-void Panel::paintChildren(const Surface& s, Clipper& clipper) {
-  Box rect = bounds();
-  Surface s_clipped = s;
-  s_clipped.clipToExtents(rect);
+void Panel::paintChildren(const Canvas& canvas, Clipper& clipper) {
+  Rect rect = bounds();
+  Canvas canvas_clipped = canvas;
+  canvas_clipped.clipToExtents(rect);
   for (auto child = children_.rbegin(); child != children_.rend(); ++child) {
     bool clipped = (*child)->getParentClipMode() == Widget::CLIPPED;
-    (*child)->paintWidget(clipped ? s_clipped : s, clipper);
+    (*child)->paintWidget(clipped ? canvas_clipped : canvas, clipper);
   }
 }
 
-bool Panel::paint(const Surface& s) {
-  s.drawObject(
-      roo_display::FilledRect(bounds(), roo_display::color::Transparent));
+bool Panel::paint(const Canvas& canvas) {
+  canvas.clear();
   return true;
 }
 
-Widget* Panel::dispatchTouchDownEvent(int16_t x, int16_t y) {
+Widget* Panel::dispatchTouchDownEvent(XDim x, YDim y) {
   if (onInterceptTouchEvent(TouchEvent(TouchEvent::DOWN, x, y))) {
     return this;
   }
@@ -124,7 +123,7 @@ Widget* Panel::dispatchTouchDownEvent(int16_t x, int16_t y) {
   // See if can delegate assuming more loose bounds.
   for (auto child = children_.rbegin(); child != children_.rend(); child++) {
     if (!(*child)->isVisible()) continue;
-    Box ebounds = (*child)->getSloppyTouchParentBounds();
+    Rect ebounds = (*child)->getSloppyTouchParentBounds();
     // When re-checking with looser bounds, don't recurse - we have already
     // tried descendants with looser bounds.
     if (ebounds.contains(x, y) && (*child)->onTouchDown(x, y)) {
@@ -137,20 +136,20 @@ Widget* Panel::dispatchTouchDownEvent(int16_t x, int16_t y) {
   return nullptr;
 }
 
-// Must propagate the 'dirty' flag even if the box comes down empty. This is
+// Must propagate the 'dirty' flag even if the rect comes down empty. This is
 // so that paint can clear all the dirty flags.
-void Panel::propagateDirty(const Widget* child, const Box& box) {
-  if (isDirty() && invalid_region_.contains(box)) {
+void Panel::propagateDirty(const Widget* child, const Rect& rect) {
+  if (isDirty() && invalid_region_.contains(rect)) {
     // Already fully invalidated, thus dirty.
     return;
   }
-  Box clipped(0, 0, -1, -1);
+  Rect clipped(0, 0, -1, -1);
   if (isVisible()) {
-    clipped = box;
+    clipped = rect;
     if (child->getParentClipMode() == Widget::CLIPPED) {
-      clipped = Box::intersect(box, bounds());
+      clipped = Rect::Intersect(rect, bounds());
     } else if (!bounds().contains(clipped)) {
-      cached_max_bounds_ = Box(0, 0, -1, -1);
+      cached_max_bounds_ = Rect(0, 0, -1, -1);
     }
   }
   markDirty(clipped);
@@ -164,19 +163,19 @@ void Panel::invalidateDescending() {
   }
 }
 
-void Panel::invalidateDescending(const Box& box) {
+void Panel::invalidateDescending(const Rect& rect) {
   markInvalidated();
   if (invalid_region_.empty()) {
-    invalid_region_ = box;
+    invalid_region_ = rect;
   } else {
-    invalid_region_ = Box::extent(invalid_region_, box);
+    invalid_region_ = Rect::Extent(invalid_region_, rect);
   }
   for (auto& child : children_) {
-    Box box = Box::intersect(invalid_region_, child->parent_bounds());
-    if (box.empty()) continue;
-    box = box.translate(-child->parent_bounds().xMin(),
-                        -child->parent_bounds().yMin());
-    child->invalidateDescending(box);
+    Rect rect = Rect::Intersect(invalid_region_, child->parent_bounds());
+    if (rect.empty()) continue;
+    rect = rect.translate(-child->parent_bounds().xMin(),
+                          -child->parent_bounds().yMin());
+    child->invalidateDescending(rect);
   }
 }
 
@@ -194,42 +193,42 @@ void Panel::childShown(const Widget* child) {
   }
 }
 
-void Panel::unclippedChildRectHidden(const Box& box) {
+void Panel::unclippedChildRectHidden(const Rect& rect) {
   if (cached_max_bounds_.empty()) {
     // Already invalidated.
     return;
   }
-  if (box.xMin() != cached_max_bounds_.xMin() &&
-      box.yMin() != cached_max_bounds_.yMin() &&
-      box.xMax() != cached_max_bounds_.xMax() &&
-      box.yMax() != cached_max_bounds_.yMax()) {
-    // The previous max bounds rectangle is meaningfully larger than the box,
-    // which means that hiding the box won't affect the mas bounds.
+  if (rect.xMin() != cached_max_bounds_.xMin() &&
+      rect.yMin() != cached_max_bounds_.yMin() &&
+      rect.xMax() != cached_max_bounds_.xMax() &&
+      rect.yMax() != cached_max_bounds_.yMax()) {
+    // The previous max bounds rectangle is meaningfully larger than the rect,
+    // which means that hiding the rect won't affect the mas bounds.
     return;
   }
   invalidateCachedMaxBounds();
   markDirty();
-  if (getParentClipMode() == UNCLIPPED && !parent()->bounds().contains(box)) {
-    // The box sticks out beyond us; need to propagate to the parent.
-    parent()->unclippedChildRectHidden(box.translate(xOffset(), yOffset()));
+  if (getParentClipMode() == UNCLIPPED && !parent()->bounds().contains(rect)) {
+    // The rect sticks out beyond us; need to propagate to the parent.
+    parent()->unclippedChildRectHidden(rect.translate(xOffset(), yOffset()));
   }
 }
 
-void Panel::unclippedChildRectShown(const Box& box) {
+void Panel::unclippedChildRectShown(const Rect& rect) {
   if (cached_max_bounds_.empty()) {
     // Already invalidated.
     return;
   }
-  cached_max_bounds_ = Box::extent(cached_max_bounds_, box);
-  if (getParentClipMode() == UNCLIPPED && !bounds().contains(box)) {
-    // The box sticks out beyond us; need to propagate to the parent.
-    parent()->unclippedChildRectShown(box.translate(xOffset(), yOffset()));
+  cached_max_bounds_ = Rect::Extent(cached_max_bounds_, rect);
+  if (getParentClipMode() == UNCLIPPED && !bounds().contains(rect)) {
+    // The rect sticks out beyond us; need to propagate to the parent.
+    parent()->unclippedChildRectShown(rect.translate(xOffset(), yOffset()));
   }
 }
 
-void Panel::invalidateBeneath(const Box& bounds, const Widget* widget,
+void Panel::invalidateBeneath(const Rect& bounds, const Widget* widget,
                               bool clip) {
-  Box clipped = clip ? Box::intersect(bounds, this->bounds()) : bounds;
+  Rect clipped = clip ? Rect::Intersect(bounds, this->bounds()) : bounds;
   if (clipped.empty()) return;
   if (clip || this->bounds().contains(clipped)) {
     // Typical case: the hidden child will be overwritten by this panel.
@@ -242,20 +241,21 @@ void Panel::invalidateBeneath(const Box& bounds, const Widget* widget,
   }
 }
 
-bool Panel::invalidateBeneathDescending(const Box& box, const Widget* subject) {
-  Box clipped = Box::intersect(box, maxBounds());
+bool Panel::invalidateBeneathDescending(const Rect& rect,
+                                        const Widget* subject) {
+  Rect clipped = Rect::Intersect(rect, maxBounds());
   if (clipped.empty()) return false;
   markInvalidated();
   markDirty();
   if (invalid_region_.empty()) {
     invalid_region_ = clipped;
   } else {
-    invalid_region_ = Box::extent(invalid_region_, clipped);
+    invalid_region_ = Rect::Extent(invalid_region_, clipped);
   }
   for (auto& child : children_) {
     if (child == subject) return true;
     if (child->isVisible()) {
-      Box adjusted = clipped.translate(-child->xOffset(), -child->yOffset());
+      Rect adjusted = clipped.translate(-child->xOffset(), -child->yOffset());
       if (child->invalidateBeneathDescending(adjusted, subject)) return true;
     }
   }
@@ -265,13 +265,13 @@ bool Panel::invalidateBeneathDescending(const Box& box, const Widget* subject) {
 void Panel::markCleanDescending() {
   if (!isDirty()) return;
   markClean();
-  invalid_region_ = Box(0, 0, -1, -1);
+  invalid_region_ = Rect(0, 0, -1, -1);
   for (auto& child : children_) {
     child->markCleanDescending();
   }
 }
 
-void Panel::moveTo(const Box& parent_bounds) {
+void Panel::moveTo(const Rect& parent_bounds) {
   bool non_shrinking =
       (parent_bounds.width() >= this->parent_bounds().width() &&
        parent_bounds.height() >= this->parent_bounds().height());
@@ -280,9 +280,9 @@ void Panel::moveTo(const Box& parent_bounds) {
   if (non_shrinking && !cached_max_bounds_.empty()) {
     // Optimization: if we're strictly growing, then the max bounds can be
     // quickly recomputed by unioning with our new dimensions.
-    cached_max_bounds_ = Box::extent(
+    cached_max_bounds_ = Rect::Extent(
         cached_max_bounds_,
-        Box(0, 0, parent_bounds.width() - 1, parent_bounds.height() - 1));
+        Rect(0, 0, parent_bounds.width() - 1, parent_bounds.height() - 1));
   } else {
     // We're not strictly growing, so the max bounds will need full recompote.
     invalidateCachedMaxBounds();
@@ -290,14 +290,14 @@ void Panel::moveTo(const Box& parent_bounds) {
   Widget::moveTo(parent_bounds);
 }
 
-Box Panel::maxBounds() const {
+Rect Panel::maxBounds() const {
   if (cached_max_bounds_.empty()) {
     // The cache is stale; need to recompute.
     cached_max_bounds_ = bounds();
     for (const auto& child : children_) {
       if (!child->isVisible()) continue;
       if (child->getParentClipMode() == Widget::CLIPPED) continue;
-      cached_max_bounds_ = Box::extent(
+      cached_max_bounds_ = Rect::Extent(
           cached_max_bounds_,
           child->maxBounds().translate(child->xOffset(), child->yOffset()));
     }
@@ -305,21 +305,21 @@ Box Panel::maxBounds() const {
   return cached_max_bounds_;
 }
 
-Box Panel::maxParentBounds() const {
+Rect Panel::maxParentBounds() const {
   return maxBounds().translate(xOffset(), yOffset());
 }
 
-Dimensions Panel::onMeasure(MeasureSpec width, MeasureSpec height) {
+Dimensions Panel::onMeasure(WidthSpec width, HeightSpec height) {
   for (const auto& child : children()) {
     if (child->isLayoutRequested()) {
-      child->measure(MeasureSpec::Exactly(child->width()),
-                     MeasureSpec::Exactly(child->height()));
+      child->measure(WidthSpec::Exactly(child->width()),
+                     HeightSpec::Exactly(child->height()));
     }
   }
   return Dimensions(this->width(), this->height());
 }
 
-void Panel::onLayout(bool changed, const Box& box) {
+void Panel::onLayout(bool changed, const Rect& rect) {
   for (const auto& child : children()) {
     if (child->isLayoutRequired()) {
       child->layout(child->parent_bounds());

@@ -13,20 +13,20 @@ void RadioButton::onClicked() {
   Widget::onClicked();
 }
 
-bool RadioButton::paint(const Surface& s) {
-  Color color = isOn() ? theme().color.highlighterColor(s.bgcolor())
-                       : theme().color.defaultColor(s.bgcolor());
+bool RadioButton::paint(const Canvas& canvas) {
+  Color color = isOn() ? theme().color.highlighterColor(canvas.bgcolor())
+                       : theme().color.defaultColor(canvas.bgcolor());
   RleImage4bppxBiased<Alpha4, PrgMemResource> img =
       isOn() ? ic_filled_24_toggle_radio_button_checked()
              : ic_filled_24_toggle_radio_button_unchecked();
   img.color_mode().setColor(color);
   Alignment alignment = roo_display::kCenter | roo_display::kMiddle;
   if (isInvalidated()) {
-    roo_display::Tile tile(&img, bounds(), alignment);
-    s.drawObject(tile);
+    roo_display::Tile tile(&img, bounds().asBox(), alignment);
+    canvas.drawObject(tile, 0, 0);
   } else {
-    auto offset = alignment.resolveOffset(bounds(), img.extents());
-    s.drawObject(img, offset.first, offset.second);
+    auto offset = alignment.resolveOffset(bounds().asBox(), img.extents());
+    canvas.drawObject(img, offset.first, offset.second);
   }
   return true;
 }

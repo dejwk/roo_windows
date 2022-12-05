@@ -104,8 +104,8 @@ class VerticalLayout : public Panel {
   }
 
  protected:
-  Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override;
-  void onLayout(bool changed, const roo_display::Box& box) override;
+  Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
+  void onLayout(bool changed, const Rect& rect) override;
 
  private:
   Padding padding_;
@@ -130,7 +130,7 @@ class VerticalLayout : public Panel {
 
   Dimensions min_dimensions_;
 
-  int16_t total_length_;
+  YDim total_length_;
   std::vector<ChildMeasure> child_measures_;
 };
 

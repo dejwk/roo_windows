@@ -84,19 +84,19 @@ class CircularBuffer {
   int count_;
 };
 
-inline Box unclippedRegion(const Widget* w) {
-  Box box = w->bounds();
-  int16_t dx = 0;
-  int16_t dy = 0;
+inline Rect unclippedRegion(const Widget* w) {
+  Rect rect = w->bounds();
+  XDim dx = 0;
+  YDim dy = 0;
   while (w->parent() != nullptr) {
     dx -= w->xOffset();
     dy -= w->yOffset();
     if (w->getParentClipMode() == Widget::CLIPPED) {
-      box.clip(w->parent()->bounds().translate(dx, dy));
+      rect = Rect::Intersect(rect, w->parent()->bounds().translate(dx, dy));
     }
     w = w->parent();
   }
-  return box;
+  return rect;
 }
 
 template <typename Element>
@@ -165,9 +165,9 @@ class ListLayout : public Panel {
   void modelItemChanged(int idx) { modelRangeChanged(idx, idx + 1); }
 
  protected:
-  void propagateDirty(const Widget* child, const Box& box) override {
+  void propagateDirty(const Widget* child, const Rect& rect) override {
     if (in_paint_children_) return;
-    Panel::propagateDirty(child, box);
+    Panel::propagateDirty(child, rect);
   }
 
   void childHidden(const Widget* child) override {
@@ -185,16 +185,16 @@ class ListLayout : public Panel {
     Widget::onRequestLayout();
   }
 
-  void paintChildren(const Surface& s, Clipper& clipper) override {
+  void paintChildren(const Canvas& canvas, Clipper& clipper) override {
     CHECK(!in_paint_children_);
     in_paint_children_ = true;
     // NOTE: we are not just using clipbox, because it could result in removing
     // some children that just happen to not need rendering at the moment -
     // but we want to keep them so that they can keep receiving events.
-    Box box = unclippedRegion(this);
-    int new_first = (box.yMin() + 1) / element_height();
+    Rect rect = unclippedRegion(this);
+    int new_first = (rect.yMin() + 1) / element_height();
     if (new_first < 0) new_first = 0;
-    int new_last = box.yMax() / element_height();
+    int new_last = rect.yMax() / element_height();
     if (new_last < new_first) new_last = new_first - 1;
     if (new_last - new_first >= element_count_) {
       new_last = new_first + element_count_ - 1;
@@ -226,19 +226,19 @@ class ListLayout : public Panel {
     in_paint_children_ = false;
 
     // Now that we have set up all the children, we are ready to paint them.
-    Panel::paintChildren(s, clipper);
+    Panel::paintChildren(canvas, clipper);
   }
 
   PreferredSize getPreferredSize() const override {
     PreferredSize element = prototype_.getPreferredSize();
-    return PreferredSize(
-        PreferredSize::MatchParent(),
-        element.height().isExact()
-            ? PreferredSize::Exact(calculateHeight(element.height().value()))
-            : element.height());
+    return PreferredSize(PreferredSize::MatchParentWidth(),
+                         element.height().isExact()
+                             ? PreferredSize::ExactHeight(
+                                   calculateHeight(element.height().value()))
+                             : element.height());
   }
 
-  Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override {
+  Dimensions onMeasure(WidthSpec width, HeightSpec height) override {
     int16_t h_padding = padding_.left() + padding_.right();
     int16_t v_padding = padding_.top() + padding_.bottom();
     // Measure the element under new constraints, and see how many max instances
@@ -249,8 +249,8 @@ class ListLayout : public Panel {
     PreferredSize preferred = prototype_.getPreferredSize();
 
     Dimensions d = prototype_.measure(
-        width.getChildMeasureSpec(h_padding + h_margin, preferred.width()),
-        MeasureSpec::Unspecified(40));
+        width.getChildWidthSpec(h_padding + h_margin, preferred.width()),
+        HeightSpec::Unspecified(40));
 
     int32_t h = d.height();
     if (h == 0) {
@@ -262,7 +262,7 @@ class ListLayout : public Panel {
                       height.resolveSize(calculateHeight(h)));
   }
 
-  void onLayout(bool changed, const roo_display::Box& box) override {
+  void onLayout(bool changed, const Rect& rect) override {
     // Invalidate all the children so that they get repositioned during next
     // paintChildren().
     while (last_-- >= first_) {
@@ -273,9 +273,9 @@ class ListLayout : public Panel {
     add(prototype_);
     prototype_.setVisibility(VISIBLE);
     prototype_.layout(
-        Box(0, 0, box.width() - 1, box.height() / element_count_ - 1));
+        Rect(0, 0, rect.width() - 1, rect.height() / element_count_ - 1));
     prototype_.setVisibility(GONE);
-    Panel::onLayout(changed, box);
+    Panel::onLayout(changed, rect);
     int capacity = (getMainWindow()->height() - 2) / element_height() + 2;
     elements_.ensure_capacity(capacity, prototype_);
     for (int i = 0; i < elements_.capacity(); i++) {
@@ -298,18 +298,18 @@ class ListLayout : public Panel {
     int16_t h_padding = padding_.left() + padding_.right();
     int16_t v_padding = padding_.top() + padding_.bottom();
     Dimensions d = e.measure(
-        MeasureSpec::Exactly(width() - m.left() - m.right() - h_padding),
-        MeasureSpec::Exactly(element_height() - m.top() - m.bottom()));
+        WidthSpec::Exactly(width() - m.left() - m.right() - h_padding),
+        HeightSpec::Exactly(element_height() - m.top() - m.bottom()));
     int hoffset = m.left() + padding_.left();
     int voffset = pos * element_height() + padding_.top() + m.top();
     // TODO: support gravity, and margins. And maybe dividers?
-    e.layout(Box(hoffset, voffset, hoffset + d.width() - 1,
-                 voffset + d.height() - 1));
+    e.layout(Rect(hoffset, voffset, hoffset + d.width() - 1,
+                  voffset + d.height() - 1));
   }
 
-  int16_t calculateHeight(int16_t desired_element_height) const {
+  YDim calculateHeight(int16_t desired_element_height) const {
     int16_t v_padding = padding_.top() - padding_.bottom();
-    int tops = Box::MaximumBox().yMax() - v_padding;
+    YDim tops = Rect::MaximumRect().yMax() - v_padding;
     if (element_count_ >= tops) return 1;
     if (element_count_ * desired_element_height > tops) {
       return (tops / element_count_) * element_count_ + v_padding;

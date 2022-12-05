@@ -24,19 +24,19 @@ NavigationRail::NavigationRail(const Environment& env)
   add(divider_);
 }
 
-Dimensions NavigationRail::onMeasure(MeasureSpec width, MeasureSpec height) {
+Dimensions NavigationRail::onMeasure(WidthSpec width, HeightSpec height) {
   return Dimensions(width.resolveSize(72),
                     height.resolveSize(72 * destinations_.size()));
 }
 
-void NavigationRail::onLayout(bool changed, const roo_display::Box& box) {
-  divider_.layout(Box(box.xMax() - 2, box.yMin(), box.xMax() - 1, box.yMax()));
+void NavigationRail::onLayout(bool changed, const Rect& rect) {
+  divider_.layout(Rect(rect.xMax() - 2, rect.yMin(), rect.xMax() - 1, rect.yMax()));
   if (destinations_.empty()) return;
-  int16_t dwidth = box.width() - 4;
-  int16_t dheight = std::min<int16_t>(box.height() / destinations_.size(), 72);
+  int16_t dwidth = rect.width() - 4;
+  int16_t dheight = std::min<YDim>(rect.height() / destinations_.size(), 72);
   int16_t y = 0;
   for (const auto& d : destinations_) {
-    d->layout(Box(4, y + 4, dwidth - 5, y + dheight - 5));
+    d->layout(Rect(4, y + 4, dwidth - 5, y + dheight - 5));
     y += dheight;
   }
 }

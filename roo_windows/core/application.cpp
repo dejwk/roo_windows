@@ -36,7 +36,7 @@ class Adapter : public roo_display::Drawable {
  public:
   Adapter(MainWindow& window) : window_(window) {}
 
-  roo_display::Box extents() const override { return window_.bounds(); }
+  roo_display::Box extents() const override { return window_.bounds().asBox(); }
 
   void drawTo(const roo_display::Surface& s) const override {
     window_.paintWindow(s);
@@ -52,6 +52,7 @@ void Application::refresh() {
   root_window_.updateLayout();
   last_time_refreshed_ms_ = millis();
   roo_display::DrawingContext dc(display_);
+  dc.setFillMode(roo_display::FILL_MODE_RECTANGLE);
   dc.draw(Adapter(root_window_));
 }
 

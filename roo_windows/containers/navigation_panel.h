@@ -20,9 +20,9 @@ class NavigationPanel : public Panel {
   void setActive(int index);
 
  protected:
-  Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override;
+  Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
 
-  void onLayout(bool changed, const roo_display::Box& box) override;
+  void onLayout(bool changed, const Rect& rect) override;
 
  private:
   bool empty() const { return contents_.children().empty(); }

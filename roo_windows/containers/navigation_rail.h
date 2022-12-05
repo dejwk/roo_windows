@@ -43,8 +43,8 @@ class NavigationRail : public Panel {
   NavigationRail(const Environment& env);
 
   PreferredSize getPreferredSize() const override {
-    return PreferredSize(PreferredSize::Exact(72),
-                         PreferredSize::MatchParent());
+    return PreferredSize(PreferredSize::ExactWidth(72),
+                         PreferredSize::MatchParentHeight());
   }
 
   void addDestination(const roo_display::MaterialIcon& icon, std::string text,
@@ -59,9 +59,9 @@ class NavigationRail : public Panel {
   bool setActive(int index);
 
  protected:
-  Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override;
+  Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
 
-  void onLayout(bool changed, const roo_display::Box& box) override;
+  void onLayout(bool changed, const Rect& rect) override;
 
  private:
   friend class Destination;

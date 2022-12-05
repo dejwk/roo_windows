@@ -19,7 +19,7 @@ class Checkbox : public BasicWidget {
   using Widget::setOnOffState;
   using Widget::onOffState;
 
-  bool paint(const Surface& s) override;
+  bool paint(const Canvas& canvas) override;
 
   Dimensions getSuggestedMinimumDimensions() const override;
 

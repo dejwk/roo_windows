@@ -54,19 +54,15 @@ class GestureDetector {
 
   bool tick();
 
-  bool onTouchDown(Widget& widget, int16_t x, int16_t y);
+  bool onTouchDown(Widget& widget, XDim x, YDim y);
 
-  bool onTouchMove(Widget& widget, int16_t x, int16_t y);
+  bool onTouchMove(Widget& widget, XDim x, YDim y);
 
-  bool onTouchUp(Widget& widget, int16_t x, int16_t y);
+  bool onTouchUp(Widget& widget, XDim x, YDim y);
 
-  int16_t xTotalMoveDelta() const {
-    return latest_.x() - initial_down_.x();
-  }
+  int16_t xTotalMoveDelta() const { return latest_.x() - initial_down_.x(); }
 
-  int16_t yTotalMoveDelta() const {
-    return latest_.y() - initial_down_.y();
-  }
+  int16_t yTotalMoveDelta() const { return latest_.y() - initial_down_.y(); }
 
  private:
   bool dispatch(TouchEvent::Type type);

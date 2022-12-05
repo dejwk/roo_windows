@@ -5,25 +5,25 @@ namespace roo_windows {
 PreferredSize BorderedPanel::getPreferredSize() const {
   if (children().empty()) {
     return PreferredSize(
-        PreferredSize::Exact(border_.left() + border_.right()),
-        PreferredSize::Exact(border_.top() + border_.bottom()));
+        PreferredSize::ExactWidth(border_.left() + border_.right()),
+        PreferredSize::ExactHeight(border_.top() + border_.bottom()));
   }
   PreferredSize content_size = contents().getPreferredSize();
-  PreferredSize::Dimension w =
+  PreferredSize::Width w =
       (content_size.width().isExact()
-           ? PreferredSize::Exact(content_size.width().value() +
-                                  border_.left() + border_.right())
+           ? PreferredSize::ExactWidth(content_size.width().value() +
+                                       border_.left() + border_.right())
            : content_size.width());
-  PreferredSize::Dimension h =
+  PreferredSize::Height h =
       (content_size.height().isExact()
-           ? PreferredSize::Exact(content_size.height().value() +
-                                  border_.top() + border_.bottom())
+           ? PreferredSize::ExactHeight(content_size.height().value() +
+                                        border_.top() + border_.bottom())
            : content_size.height());
 
   return PreferredSize(w, h);
 }
 
-Dimensions BorderedPanel::onMeasure(MeasureSpec width, MeasureSpec height) {
+Dimensions BorderedPanel::onMeasure(WidthSpec width, HeightSpec height) {
   if (children().empty()) {
     return Dimensions(border_.left() + border_.right(),
                       border_.top() + border_.bottom());
@@ -34,11 +34,11 @@ Dimensions BorderedPanel::onMeasure(MeasureSpec width, MeasureSpec height) {
       content_measure.height() + border_.top() + border_.bottom());
 }
 
-void BorderedPanel::onLayout(bool changed, const roo_display::Box& box) {
+void BorderedPanel::onLayout(bool changed, const Rect& rect) {
   if (children().empty()) return;
-  contents()->layout(Box(border_.left(), border_.top(),
-                         box.width() - border_.right() - 1,
-                         box.height() - border_.bottom() - 1));
+  contents()->layout(Rect(border_.left(), border_.top(),
+                          rect.width() - border_.right() - 1,
+                          rect.height() - border_.bottom() - 1));
 }
 
 }  // namespace roo_windows

@@ -5,72 +5,74 @@
 
 namespace roo_windows {
 
-class MeasureSpec {
+enum MeasureSpecKind {
+  UNSPECIFIED = 0,
+  AT_MOST = 1,
+  EXACTLY = 2,
+};
+
+class WidthSpec {
  public:
-  enum Kind {
-    UNSPECIFIED = 0,
-    AT_MOST = 1,
-    EXACTLY = 2,
-  };
-
-  static constexpr MeasureSpec Unspecified(int16_t hint) {
-    return MeasureSpec(UNSPECIFIED | ((uint16_t)hint << 2));
+  static constexpr WidthSpec Unspecified(XDim hint) {
+    return WidthSpec(UNSPECIFIED | ((uint16_t)hint << 2));
   }
 
-  static constexpr MeasureSpec AtMost(int16_t value) {
-    return MeasureSpec(AT_MOST | ((uint16_t)value << 2));
+  static constexpr WidthSpec AtMost(XDim value) {
+    return WidthSpec(AT_MOST | ((uint16_t)value << 2));
   }
 
-  static constexpr MeasureSpec Exactly(int16_t value) {
-    return MeasureSpec(EXACTLY | ((uint16_t)value << 2));
+  static constexpr WidthSpec Exactly(XDim value) {
+    return WidthSpec(EXACTLY | ((uint16_t)value << 2));
   }
 
-  Kind kind() const { return static_cast<Kind>(value_ & 0x3); }
+  MeasureSpecKind kind() const {
+    return static_cast<MeasureSpecKind>(value_ & 0x3);
+  }
 
-  int16_t value() const { return value_ >> 2; }
+  XDim value() const { return value_ >> 2; }
 
-  MeasureSpec getChildMeasureSpec(int16_t padding,
-                                  PreferredSize::Dimension childDimension) {
-    if (childDimension.isExact()) {
-      return MeasureSpec::Exactly(childDimension.value());
+  WidthSpec getChildWidthSpec(int16_t padding,
+                              PreferredSize::Width childWidth) {
+    if (childWidth.isExact()) {
+      return WidthSpec::Exactly(childWidth.value());
     }
-    int16_t size = std::max(0, value() - padding);
+    XDim size = std::max(0, value() - padding);
     switch (kind()) {
       // Parent has imposed an exact size on us
-      case MeasureSpec::EXACTLY: {
-        if (childDimension.isMatchParent()) {
+      case EXACTLY: {
+        if (childWidth.isMatchParent()) {
           // Child wants to be our size. So be it.
-          return MeasureSpec::Exactly(size);
+          return WidthSpec::Exactly(size);
         } else {
-          CHECK(childDimension.isWrapContent());
+          CHECK(childWidth.isWrapContent());
           // Child wants to determine its own size. It can't be
           // bigger than us.
-          return MeasureSpec::AtMost(size);
+          return WidthSpec::AtMost(size);
         }
         break;
       }
       // Parent has imposed a maximum size on us
-      case MeasureSpec::AT_MOST: {
-        return MeasureSpec::AtMost(size);
+      case AT_MOST: {
+        return WidthSpec::AtMost(size);
       }
       // Parent asked to see how big we want to be
-      case MeasureSpec::UNSPECIFIED: {
+      case UNSPECIFIED: {
         // Child wants to be our size... find out how big it should
         // be
-        return MeasureSpec::Unspecified(size);
+        return WidthSpec::Unspecified(size);
       }
     }
   }
 
-  int16_t resolveSize(int16_t desired_size) {
+  XDim resolveSize(XDim desired_size) {
     switch (kind()) {
-      case MeasureSpec::UNSPECIFIED: {
+      case UNSPECIFIED: {
         return desired_size;
       }
-      case MeasureSpec::AT_MOST: {
+      case AT_MOST: {
         return std::min(desired_size, value());
       }
-      case MeasureSpec::EXACTLY:
+      case EXACTLY:
       default: {
         return value();
       }
@@ -78,14 +80,94 @@ class MeasureSpec {
   }
 
  private:
-  friend constexpr bool operator==(MeasureSpec a, MeasureSpec b);
+  friend constexpr bool operator==(WidthSpec a, WidthSpec b);
 
-  constexpr MeasureSpec(uint16_t value) : value_(value) {}
+  constexpr WidthSpec(uint16_t value) : value_(value) {}
 
   uint16_t value_;
 };
 
-inline constexpr bool operator==(MeasureSpec a, MeasureSpec b) {
+inline constexpr bool operator==(WidthSpec a, WidthSpec b) {
+  return a.value_ == b.value_;
+}
+
+class HeightSpec {
+ public:
+  static constexpr HeightSpec Unspecified(YDim hint) {
+    return HeightSpec(UNSPECIFIED | ((uint32_t)hint << 2));
+  }
+
+  static constexpr HeightSpec AtMost(YDim value) {
+    return HeightSpec(AT_MOST | ((uint32_t)value << 2));
+  }
+
+  static constexpr HeightSpec Exactly(YDim value) {
+    return HeightSpec(EXACTLY | ((uint32_t)value << 2));
+  }
+
+  MeasureSpecKind kind() const {
+    return static_cast<MeasureSpecKind>(value_ & 0x3);
+  }
+
+  YDim value() const { return value_ >> 2; }
+
+  HeightSpec getChildHeightSpec(int16_t padding,
+                                PreferredSize::Height childHeight) {
+    if (childHeight.isExact()) {
+      return HeightSpec::Exactly(childHeight.value());
+    }
+    YDim size = std::max(0, value() - padding);
+    switch (kind()) {
+      // Parent has imposed an exact size on us
+      case EXACTLY: {
+        if (childHeight.isMatchParent()) {
+          // Child wants to be our size. So be it.
+          return HeightSpec::Exactly(size);
+        } else {
+          CHECK(childHeight.isWrapContent());
+          // Child wants to determine its own size. It can't be
+          // bigger than us.
+          return HeightSpec::AtMost(size);
+        }
+        break;
+      }
+      // Parent has imposed a maximum size on us
+      case AT_MOST: {
+        return HeightSpec::AtMost(size);
+      }
+      // Parent asked to see how big we want to be
+      case UNSPECIFIED: {
+        // Child wants to be our size... find out how big it should
+        // be
+        return HeightSpec::Unspecified(size);
+      }
+    }
+  }
+
+  YDim resolveSize(YDim desired_size) {
+    switch (kind()) {
+      case UNSPECIFIED: {
+        return desired_size;
+      }
+      case AT_MOST: {
+        return std::min(desired_size, value());
+      }
+      case EXACTLY:
+      default: {
+        return value();
+      }
+    }
+  }
+
+ private:
+  friend constexpr bool operator==(HeightSpec a, HeightSpec b);
+
+  constexpr HeightSpec(uint32_t value) : value_(value) {}
+
+  uint32_t value_;
+};
+
+inline constexpr bool operator==(HeightSpec a, HeightSpec b) {
   return a.value_ == b.value_;
 }
 
@@ -96,22 +178,46 @@ inline constexpr bool operator==(MeasureSpec a, MeasureSpec b) {
 
 namespace roo_windows {
 inline std::ostream& operator<<(std::ostream& os,
-                                const roo_windows::MeasureSpec& spec) {
+                                const roo_windows::WidthSpec& spec) {
   switch (spec.kind()) {
-    case MeasureSpec::UNSPECIFIED: {
-      os << "UNSPECIFIED";
+    case UNSPECIFIED: {
+      os << "width:UNSPECIFIED";
       break;
     }
-    case MeasureSpec::AT_MOST: {
-      os << "AT_MOST";
+    case AT_MOST: {
+      os << "width:AT_MOST";
       break;
     }
-    case MeasureSpec::EXACTLY: {
-      os << "EXACTLY";
+    case EXACTLY: {
+      os << "width:EXACTLY";
       break;
     }
     default: {
-      os << "UNKNOWN";
+      os << "width:UNKNOWN";
+      break;
+    }
+  }
+  os << "(" << spec.value() << ")";
+  return os;
+}
+
+inline std::ostream& operator<<(std::ostream& os,
+                                const roo_windows::HeightSpec& spec) {
+  switch (spec.kind()) {
+    case UNSPECIFIED: {
+      os << "height:UNSPECIFIED";
+      break;
+    }
+    case AT_MOST: {
+      os << "height:AT_MOST";
+      break;
+    }
+    case EXACTLY: {
+      os << "height:EXACTLY";
+      break;
+    }
+    default: {
+      os << "height:UNKNOWN";
       break;
     }
   }

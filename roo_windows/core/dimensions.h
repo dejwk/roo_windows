@@ -1,6 +1,7 @@
 #pragma once
 
 #include "roo_display/core/drawable.h"
+#include "roo_windows/core/rect.h"
 
 namespace roo_windows {
 
@@ -8,14 +9,14 @@ namespace roo_windows {
 class Dimensions {
  public:
   Dimensions() : Dimensions(0, 0) {}
-  Dimensions(int16_t width, int16_t height) : width_(width), height_(height) {}
+  Dimensions(XDim width, YDim height) : width_(width), height_(height) {}
 
-  int16_t width() const { return width_; }
-  int16_t height() const { return height_; }
+  XDim width() const { return width_; }
+  YDim height() const { return height_; }
 
  private:
-  int16_t width_;
-  int16_t height_;
+  XDim width_;
+  YDim height_;
 };
 
 inline Dimensions DimensionsOf(const roo_display::Drawable& d) {
@@ -29,9 +30,10 @@ inline Dimensions DimensionsOf(const roo_display::Drawable& d) {
 #include <ostream>
 
 namespace roo_windows {
-inline std::ostream& operator<<(std::ostream& os, const roo_windows::Dimensions& dims) {
+inline std::ostream& operator<<(std::ostream& os,
+                                const roo_windows::Dimensions& dims) {
   os << "(" << dims.width() << ", " << dims.height() << ")";
   return os;
 }
-}
+}  // namespace roo_windows
 #endif  // defined(__linux__)

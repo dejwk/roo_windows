@@ -186,12 +186,13 @@ class Interior : public Drawable {
   roo_display::StringViewLabel label_;
 };
 
-void paintInterior(const Surface& s, const Box& bounds, const Button& button) {
+void paintInterior(const Canvas& canvas, const Box& bounds,
+                   const Button& button) {
   Interior interior(button, bounds);
-  s.drawObject(interior);
+  canvas.drawObject(interior);
 }
 
-void printVertStripes(const Surface& s, int16_t xMin, int16_t yMin,
+void printVertStripes(const Canvas& canvas, int16_t xMin, int16_t yMin,
                       int16_t xMax, uint8_t count,
                       const uint8_t* PROGMEM alpha4, Color base_color) {
   Alpha4 color_mode(base_color);
@@ -199,11 +200,11 @@ void printVertStripes(const Surface& s, int16_t xMin, int16_t yMin,
       alpha4, color_mode);
   for (int i = 0; i < count; ++i) {
     Color c = stream.next();
-    s.drawObject(Line(xMin, yMin + i, xMax, yMin + i, c));
+    canvas.drawObject(Line(xMin, yMin + i, xMax, yMin + i, c));
   }
 }
 
-void printHorizStripes(const Surface& s, int16_t xMin, int16_t yMin,
+void printHorizStripes(const Canvas& canvas, int16_t xMin, int16_t yMin,
                        int16_t yMax, uint8_t count,
                        const uint8_t* PROGMEM alpha4, Color base_color) {
   Alpha4 color_mode(base_color);
@@ -211,7 +212,7 @@ void printHorizStripes(const Surface& s, int16_t xMin, int16_t yMin,
       alpha4, color_mode);
   for (int i = 0; i < count; ++i) {
     Color c = stream.next();
-    s.drawObject(Line(xMin + i, yMin, xMin + i, yMax, c));
+    canvas.drawObject(Line(xMin + i, yMin, xMin + i, yMax, c));
   }
 }
 
@@ -243,9 +244,9 @@ Button::Button(const Environment& env, const MonoIcon* icon, std::string label,
 // BBBBBB_C_C_C_C_DDDDDD
 // BBBBBB_C_C_C_C_DDDDDD
 
-bool Button::paint(const Surface& s) {
+bool Button::paint(const Canvas& canvas) {
   if (style() == TEXT) {
-    paintInterior(s, bounds(), *this);
+    paintInterior(canvas, bounds().asBox(), *this);
     return true;
   }
 
@@ -254,7 +255,7 @@ bool Button::paint(const Surface& s) {
   int16_t min_width = std::max(2 * spec.top_width, 2 * spec.bottom_width);
   int16_t full_width = std::max(width(), min_width);
   int16_t min_height = std::max(2 * spec.left_height, 2 * spec.right_height);
-  int16_t full_height = std::max(height(), min_height);
+  int16_t full_height = std::max<YDim>(height(), min_height);
 
   int16_t top_bar_width = full_width - 2 * spec.top_width;
 
@@ -263,10 +264,10 @@ bool Button::paint(const Surface& s) {
     RasterAlpha4<const uint8_t * PROGMEM> tl(
         Box(0, 0, spec.top_width - 1, spec.top_height - 1), spec.data_top_left,
         Alpha4(outlineColor()));
-    s.drawObject(tl);
+    canvas.drawObject(tl);
     // Top bar.
     if (top_bar_width > 0) {
-      printVertStripes(s, spec.top_width, 0, spec.top_width + top_bar_width - 1,
+      printVertStripes(canvas, spec.top_width, 0, spec.top_width + top_bar_width - 1,
                        spec.top_height, spec.data_top, outlineColor());
     }
     // Top right.
@@ -274,18 +275,18 @@ bool Button::paint(const Surface& s) {
         Box(spec.top_width + top_bar_width, 0,
             2 * spec.top_width + top_bar_width - 1, spec.top_height - 1),
         spec.data_top_right, Alpha4(outlineColor()));
-    s.drawObject(tr);
+    canvas.drawObject(tr);
 
     // Left top.
     RasterAlpha4<const uint8_t * PROGMEM> lt(
         Box(0, spec.top_height, spec.left_width - 1,
             spec.top_height + spec.left_height - 1),
         spec.data_left_top, Alpha4(outlineColor()));
-    s.drawObject(lt);
+    canvas.drawObject(lt);
     // Left bar.
     int16_t left_bar_height = full_height - 2 * spec.left_height;
     if (left_bar_height > 0) {
-      printHorizStripes(s, 0, spec.top_height + spec.left_height,
+      printHorizStripes(canvas, 0, spec.top_height + spec.left_height,
                         full_height - spec.bottom_height - spec.left_height - 1,
                         spec.left_width, spec.data_left, outlineColor());
     }
@@ -294,14 +295,14 @@ bool Button::paint(const Surface& s) {
         Box(0, full_height - spec.bottom_height - spec.left_height,
             spec.left_width - 1, full_height - spec.bottom_height - 1),
         spec.data_left_bottom, Alpha4(outlineColor()));
-    s.drawObject(lb);
+    canvas.drawObject(lb);
   }
 
   // Main content.
   Box extents(spec.left_width, spec.top_height,
               full_width - spec.right_width - 1,
               full_height - spec.bottom_height - 1);
-  paintInterior(s, extents, *this);
+  paintInterior(canvas, extents, *this);
 
   if (isInvalidated()) {
     // Right top.
@@ -309,11 +310,11 @@ bool Button::paint(const Surface& s) {
         Box(full_width - spec.right_width, spec.top_height, full_width - 1,
             spec.top_height + spec.right_height - 1),
         spec.data_right_top, Alpha4(outlineColor()));
-    s.drawObject(rt);
+    canvas.drawObject(rt);
     // Right bar.
     int16_t right_bar_height = full_height - 2 * spec.right_height;
     if (right_bar_height > 0) {
-      printHorizStripes(s, full_width - spec.right_width,
+      printHorizStripes(canvas, full_width - spec.right_width,
                         spec.top_height + spec.left_height,
                         full_height - spec.bottom_height - spec.left_height - 1,
                         spec.right_width, spec.data_right, outlineColor());
@@ -324,18 +325,18 @@ bool Button::paint(const Surface& s) {
             full_height - spec.bottom_height - spec.left_height, full_width - 1,
             full_height - spec.bottom_height - 1),
         spec.data_right_bottom, Alpha4(outlineColor()));
-    s.drawObject(rb);
+    canvas.drawObject(rb);
 
     // Bottom left.
     RasterAlpha4<const uint8_t * PROGMEM> bl(
         Box(0, full_height - spec.bottom_height, spec.top_width - 1,
             full_height - 1),
         spec.data_bottom_left, Alpha4(outlineColor()));
-    s.drawObject(bl);
+    canvas.drawObject(bl);
     // Bottom bar.
     int16_t bottom_bar_width = full_width - 2 * spec.bottom_width;
     if (bottom_bar_width > 0) {
-      printVertStripes(s, spec.bottom_width, full_height - spec.bottom_height,
+      printVertStripes(canvas, spec.bottom_width, full_height - spec.bottom_height,
                        spec.bottom_width + top_bar_width - 1,
                        spec.bottom_height, spec.data_bottom, outlineColor());
     }
@@ -345,7 +346,7 @@ bool Button::paint(const Surface& s) {
             full_height - spec.bottom_height,
             2 * spec.bottom_width + bottom_bar_width - 1, full_height - 1),
         spec.data_bottom_right, Alpha4(outlineColor()));
-    s.drawObject(br);
+    canvas.drawObject(br);
   }
   return true;
 }

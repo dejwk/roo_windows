@@ -5,14 +5,14 @@
 
 namespace roo_windows {
 
-bool VisibilityToggle::paint(const Surface& s) {
+bool VisibilityToggle::paint(const Canvas& canvas) {
   roo_display::MaterialIcon icon(isOn() ? ic_filled_24_action_visibility()
                                         : ic_filled_24_action_visibility_off());
   roo_display::Color color = parent()->defaultColor();
   icon.color_mode().setColor(color);
-  roo_display::Tile tile(&icon, bounds(),
+  roo_display::Tile tile(&icon, bounds().asBox(),
                          roo_display::kCenter | roo_display::kMiddle);
-  s.drawObject(tile);
+  canvas.drawObject(tile);
   return true;
 }
 
@@ -41,7 +41,7 @@ class TextFieldInterior : public roo_display::Drawable {
         text_color_(text_color),
         highlight_color_(highlight_color) {}
 
-  Box extents() const override { return extents_; }
+  roo_display::Box extents() const override { return extents_; }
 
  private:
   void drawTo(const roo_display::Surface& s) const override {
@@ -103,7 +103,7 @@ class TextFieldInterior : public roo_display::Drawable {
 
 }  // namespace
 
-bool TextField::paint(const roo_display::Surface& s) {
+bool TextField::paint(const Canvas& canvas) {
   roo_display::Color color =
       text_color_.a() == 0 ? parent()->defaultColor() : text_color_;
   roo_display::Color highlight_color = highlight_color_.a() == 0
@@ -120,7 +120,7 @@ bool TextField::paint(const roo_display::Surface& s) {
     // Show hint with half the opacity.
     text = hint_;
     color.set_a(color.a() / 2);
-    color = roo_display::alphaBlend(s.bgcolor(), color);
+    color = roo_display::alphaBlend(canvas.bgcolor(), color);
     starred = false;
   }
   Padding padding = getPadding();
@@ -147,7 +147,7 @@ bool TextField::paint(const roo_display::Surface& s) {
   if (isEdited()) {
     // The metrics are captured in the editor.
     advance_width = editor().glyphs().back().advance();
-    if (editor().cursor_position() == editor().glyphs().size()) {
+    if (editor().cursor_position() == (int)editor().glyphs().size()) {
       // Leave two pixels for the cursor at the end of text.
       advance_width += 2;
     }
@@ -194,30 +194,31 @@ bool TextField::paint(const roo_display::Surface& s) {
   }
 
   if (isInvalidated() && yOffset > 0) {
-    s.drawObject(roo_display::FilledRect(0, 0, width() - 1, yOffset - 1,
-                                         roo_display::color::Background));
+    canvas.drawObject(roo_display::FilledRect(0, 0, width() - 1, yOffset - 1,
+                                              roo_display::color::Background));
   }
 
-  Surface news = s;
-  news.set_dy(s.dy() + yOffset - text_ymin);
+  Canvas my_canvas = canvas;
+  my_canvas.shift(0, yOffset - text_ymin);
   // int16_t text_height = font_.metrics().maxHeight();
-  Box text_clip_box(0, text_ymin, width() - 1, text_ymax);
+  roo_display::Box text_clip_box(0, text_ymin, width() - 1, text_ymax);
   if (is_x_offset) {
     // We truncate the text on the advance boundaries, so that it appears
     // aligned with the decoration.
-    news.drawObject(roo_display::FilledRect(0, text_ymin, padding.left() - 1,
-                                            text_ymax,
-                                            roo_display::color::Background));
-    news.drawObject(roo_display::FilledRect(text_ymax - padding.right() + 1,
-                                            text_ymin, width() - 1, text_ymax,
-                                            roo_display::color::Background));
+    my_canvas.drawObject(
+        roo_display::FilledRect(0, text_ymin, padding.left() - 1, text_ymax,
+                                roo_display::color::Background));
+    my_canvas.drawObject(roo_display::FilledRect(
+        text_ymax - padding.right() + 1, text_ymin, width() - 1, text_ymax,
+        roo_display::color::Background));
     text_clip_box = roo_display::Box(padding.left(), text_clip_box.yMin(),
                                      text_clip_box.xMax() - padding.right(),
                                      text_clip_box.yMax());
   }
-  int16_t xoffset = padded.h().resolveOffset(0, width() - 1, 0, advance_width) +
-                    editor().draw_xoffset();
-  news.drawObject(TextFieldInterior(
+  XDim xoffset =
+      padded.h().resolveOffset<XDim>(0, width() - 1, 0, advance_width) +
+      editor().draw_xoffset();
+  my_canvas.drawObject(TextFieldInterior(
       &font_, text_clip_box, text, isEdited(), isStarred() && !value_.empty(),
       editor().lastGlyphRecentlyEntered(), xoffset, highlight_xmin,
       highlight_xmax, color, highlight_color));
@@ -227,16 +228,16 @@ bool TextField::paint(const roo_display::Surface& s) {
   switch (decoration_) {
     case UNDERLINE: {
       // We have extra 6 pixels at the bottom to fill.
-      s.drawObject(roo_display::FilledRect(0, min_y_undrawn, width() - 1,
-                                           min_y_undrawn + 2,
-                                           roo_display::color::Background));
-      s.drawObject(roo_display::FilledRect(
+      canvas.drawObject(roo_display::FilledRect(
+          0, min_y_undrawn, width() - 1, min_y_undrawn + 2,
+          roo_display::color::Background));
+      canvas.drawObject(roo_display::FilledRect(
           0, min_y_undrawn + 3, padding.left() - 1, min_y_undrawn + 5,
           roo_display::color::Background));
-      s.drawObject(roo_display::FilledRect(padding.left(), min_y_undrawn + 3,
-                                           width() - 1 - padding.right(),
-                                           min_y_undrawn + 5, highlight_color));
-      s.drawObject(roo_display::FilledRect(
+      canvas.drawObject(roo_display::FilledRect(
+          padding.left(), min_y_undrawn + 3, width() - 1 - padding.right(),
+          min_y_undrawn + 5, highlight_color));
+      canvas.drawObject(roo_display::FilledRect(
           width() - padding.right() - 1, min_y_undrawn + 3, width() - 1,
           min_y_undrawn + 5, roo_display::color::Background));
       min_y_undrawn += 6;
@@ -246,9 +247,9 @@ bool TextField::paint(const roo_display::Surface& s) {
     }
   }
   if (isInvalidated() && min_y_undrawn < height()) {
-    s.drawObject(roo_display::FilledRect(0, min_y_undrawn, width() - 1,
-                                         height() - 1,
-                                         roo_display::color::Background));
+    canvas.drawObject(roo_display::FilledRect(0, min_y_undrawn, width() - 1,
+                                              height() - 1,
+                                              roo_display::color::Background));
   }
 
   return true;

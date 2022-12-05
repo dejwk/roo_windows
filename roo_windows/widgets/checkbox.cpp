@@ -13,10 +13,10 @@ void Checkbox::onClicked() {
   Widget::onClicked();
 }
 
-bool Checkbox::paint(const Surface& s) {
+bool Checkbox::paint(const Canvas& canvas) {
   OnOffState state = onOffState();
-  Color color = state == ON ? theme().color.highlighterColor(s.bgcolor())
-                            : theme().color.defaultColor(s.bgcolor());
+  Color color = state == ON ? theme().color.highlighterColor(canvas.bgcolor())
+                            : theme().color.defaultColor(canvas.bgcolor());
   RleImage4bppxBiased<Alpha4, PrgMemResource> img =
       state == ON    ? ic_filled_24_toggle_check_box()
       : state == OFF ? ic_filled_24_toggle_check_box_outline_blank()
@@ -24,11 +24,11 @@ bool Checkbox::paint(const Surface& s) {
   img.color_mode().setColor(color);
   Alignment alignment = roo_display::kCenter | roo_display::kMiddle;
   if (isInvalidated()) {
-    roo_display::Tile tile(&img, bounds(), alignment);
-    s.drawObject(tile);
+    roo_display::Tile tile(&img, bounds().asBox(), alignment);
+    canvas.drawObject(tile);
   } else {
-    auto offset = alignment.resolveOffset(bounds(), img.extents());
-    s.drawObject(img, offset.first, offset.second);
+    auto offset = alignment.resolveOffset(bounds().asBox(), img.extents());
+    canvas.drawObject(img, offset.first, offset.second);
   }
   return true;
 }

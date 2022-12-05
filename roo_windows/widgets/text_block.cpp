@@ -6,11 +6,11 @@ namespace {
 
 class Interior : public roo_display::Drawable {
  public:
-  Interior(Box extents, roo_display::StringView value,
+  Interior(roo_display::Box extents, roo_display::StringView value,
            const roo_display::Font& font, roo_display::Color color)
       : extents_(extents), value_(value), font_(font), color_(color) {}
 
-  Box extents() const override { return extents_; }
+  roo_display::Box extents() const override { return extents_; }
 
  private:
   void drawTo(const roo_display::Surface& s) const override {
@@ -24,7 +24,7 @@ class Interior : public roo_display::Drawable {
       while (p != end && *p != '\n') {
         ++p;
       }
-      Surface news = s;
+      roo_display::Surface news = s;
       news.set_dy(s.dy() + y + font_.metrics().glyphYMax());
       auto metrics = font_.getHorizontalStringMetrics(start, p - start);
       font_.drawHorizontalString(news, start, p - start, color_);
@@ -56,13 +56,14 @@ TextBlock::TextBlock(const Environment& env, std::string value,
   setContent(value);
 }
 
-bool TextBlock::paint(const roo_display::Surface& s) {
+bool TextBlock::paint(const Canvas& canvas) {
   roo_display::Color color =
       color_.a() == 0 ? parent()->defaultColor() : color_;
-  s.drawObject(roo_display::MakeTileOf(
-      Interior(Box(0, 0, text_dims_.width() - 1, text_dims_.height() - 1),
+  canvas.drawObject(roo_display::MakeTileOf(
+      Interior(roo_display::Box(0, 0, text_dims_.width() - 1,
+                                text_dims_.height() - 1),
                value_, font_, color),
-      bounds(), alignment_));
+      bounds().asBox(), alignment_));
   return true;
 }
 

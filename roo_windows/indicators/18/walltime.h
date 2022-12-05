@@ -17,13 +17,13 @@ class WalltimeIndicator18 : public WalltimeIndicator {
                       roo_time::TimeZone tz)
       : WalltimeIndicator(env, clock, tz) {}
 
-  bool paint(const roo_display::Surface& s) override {
+  bool paint(const roo_windows::Canvas& canvas) override {
     roo_display::Color color =
         color_.a() == 0 ? parent()->defaultColor() : color_;
-    s.drawObject(roo_display::MakeTileOf(
+    canvas.drawObject(roo_display::MakeTileOf(
         roo_display::StringViewLabel(
             val_, roo_display::font_NotoSans_Regular_18(), color),
-        bounds(), roo_display::kMiddle));
+        bounds().asBox(), roo_display::kMiddle));
     return true;
   }
 

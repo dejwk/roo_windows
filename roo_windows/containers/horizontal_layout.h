@@ -103,8 +103,8 @@ class HorizontalLayout : public Panel {
   }
 
  protected:
-  Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override;
-  void onLayout(bool changed, const roo_display::Box& box) override;
+  Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
+  void onLayout(bool changed, const Rect& rect) override;
 
  private:
   Padding padding_;
@@ -129,7 +129,7 @@ class HorizontalLayout : public Panel {
 
   Dimensions min_dimensions_;
 
-  int16_t total_length_;
+  XDim total_length_;
   std::vector<ChildMeasure> child_measures_;
 };
 

@@ -22,8 +22,8 @@ class BorderedPanel : public Panel {
   void setContents(WidgetRef contents) {
     removeAll();
     add(std::move(contents),
-        Box(border_.left(), border_.top(), width() - border_.right(),
-            height() - border_.bottom()));
+        Rect(border_.left(), border_.top(), width() - border_.right(),
+             height() - border_.bottom()));
   }
 
   Widget* contents() { return children_[0]; }
@@ -32,8 +32,8 @@ class BorderedPanel : public Panel {
 
  protected:
   PreferredSize getPreferredSize() const override;
-  Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override;
-  void onLayout(bool changed, const roo_display::Box& box) override;
+  Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
+  void onLayout(bool changed, const Rect& rect) override;
 
  private:
   Margins border_;

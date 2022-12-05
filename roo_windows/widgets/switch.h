@@ -25,13 +25,13 @@ class Switch : public BasicWidget {
     }
   }
 
-  bool paint(const Surface& s) override;
+  bool paint(const Canvas& canvas) override;
 
   Dimensions getSuggestedMinimumDimensions() const override;
 
   bool isClickable() const override { return true; }
 
-  bool onSingleTapUp(int16_t x, int16_t y) override;
+  bool onSingleTapUp(XDim x, YDim y) override;
 
  private:
   bool isAnimating() const { return (anim_ & 0x8000) == 0; }

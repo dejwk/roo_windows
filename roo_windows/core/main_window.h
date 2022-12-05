@@ -14,7 +14,7 @@ class Application;
 
 class MainWindow : public Panel {
  public:
-  MainWindow(Application& app, const Box& bounds);
+  MainWindow(Application& app, const roo_display::Box& bounds);
 
   void tick();
 
@@ -24,20 +24,20 @@ class MainWindow : public Panel {
   MainWindow* getMainWindow() override { return this; }
   const MainWindow* getMainWindow() const override { return this; }
 
-  void paintWindow(const Surface& s);
+  void paintWindow(const roo_display::Surface& s);
 
   Application& app();
   const Application& app() const;
   const Theme& theme() const override;
 
-  void add(WidgetRef child, const roo_display::Box& box) {
-    Panel::add(std::move(child), box);
+  void add(WidgetRef child, const Rect& rect) {
+    Panel::add(std::move(child), rect);
   }
 
   ClickAnimation& click_animation() { return click_animation_; }
 
  protected:
-  void propagateDirty(const Widget* child, const Box& box) override;
+  void propagateDirty(const Widget* child, const Rect& rect) override;
 
  private:
   Application& app_;
@@ -49,7 +49,7 @@ class MainWindow : public Panel {
 
   // Maintains the area that encapsulates all content that needs to be
   // (re)drawn.
-  Box redraw_bounds_;
+  Rect redraw_bounds_;
 
   ModalWindow* modal_window_;
 

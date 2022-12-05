@@ -74,33 +74,33 @@ class Panel : public Widget {
   const Theme& theme() const override { return parent()->theme(); }
 
   // Paints the panel with all its children. If the panel isn't invalidated,
-  // omits drawing the surface area; otherwise, draws the surface area over the
+  // omits drawing the canvas area; otherwise, draws the canvas area over the
   // invalidated region.
   //
   // Calls paintChildren() to actually paint the children. The default
   // implementation calls child->paintWidget(), thus omitting drawing of
   // children that aren't dirty.
   //
-  // Calls paint() to actually paint the surface area (with the surface object
+  // Calls paint() to actually paint the canvas area (with the canvas object
   // clipped to the invalidated region, and with the background color pre-set
   // to the panel's background).
-  void paintWidgetContents(const Surface& s, Clipper& clipper) override;
+  void paintWidgetContents(const Canvas& canvas, Clipper& clipper) override;
 
   // Draws the surface area of this panel. The default implementation draws
   // a transparent rectangle. (Effectively, the rectangle is drawn in the
-  // panel's background color, which is pre-set in the specified surface).
-  bool paint(const Surface& s) override;
+  // panel's background color, which is pre-set in the specified canvas).
+  bool paint(const Canvas& s) override;
 
-  Widget* dispatchTouchDownEvent(int16_t x, int16_t y) override;
+  Widget* dispatchTouchDownEvent(XDim x, YDim y) override;
 
-  // Returns the minimum bounding box, in this widget's coordinates, that covers
+  // Returns the minimum bounding rect, in this widget's coordinates, that covers
   // all visible descendants, including those with parent clip mode = UNCLIPPED,
   // i.e. sticking out of the normal bounds.
   // In the common case, when there are no 'unclipped' descendants, equivalent
   // to bounds().
-  Box maxBounds() const override;
+  Rect maxBounds() const override;
 
-  Box maxParentBounds() const override;
+  Rect maxParentBounds() const override;
 
   Dimensions getSuggestedMinimumDimensions() const override {
     // Panels are expected to override onMeasure, so this is rarely relevant
@@ -109,8 +109,8 @@ class Panel : public Widget {
   }
 
   PreferredSize getPreferredSize() const override {
-    return PreferredSize(PreferredSize::WrapContent(),
-                         PreferredSize::WrapContent());
+    return PreferredSize(PreferredSize::WrapContentWidth(),
+                         PreferredSize::WrapContentHeight());
   }
 
   const std::vector<Widget*>& children() const { return children_; }
@@ -129,7 +129,7 @@ class Panel : public Widget {
         cached_max_bounds_(0, 0, -1, -1) {}
 
   // Adds a child to this panel.
-  void add(WidgetRef child, const Box& bounds = Box(0, 0, -1, -1));
+  void add(WidgetRef child, const Rect& bounds = Rect(0, 0, -1, -1));
 
   // Removes all children.
   void removeAll();
@@ -137,11 +137,11 @@ class Panel : public Widget {
   // Removes and returns the last child.
   void removeLast();
 
-  virtual void paintChildren(const Surface& s, Clipper& clipper);
+  virtual void paintChildren(const Canvas& canvas, Clipper& clipper);
 
   void invalidateDescending() override;
-  void invalidateDescending(const Box& box) override;
-  bool invalidateBeneathDescending(const Box& box,
+  void invalidateDescending(const Rect& rect) override;
+  bool invalidateBeneathDescending(const Rect& rect,
                                    const Widget* subject) override;
   void markCleanDescending() override;
 
@@ -158,11 +158,11 @@ class Panel : public Widget {
   // clipping mode == UNCLIPPED). Then, calls invalidateBeneathDescending to
   // iterate over and invalidate all widgets with smaller 'Z' that intersect the
   // invalidated region.
-  virtual void invalidateBeneath(const Box& box, const Widget* widget,
+  virtual void invalidateBeneath(const Rect& rect, const Widget* widget,
                                  bool clip);
 
   // Called by markDirty(), to propagate the dirtiness through the ancestry.
-  virtual void propagateDirty(const Widget* child, const Box& box);
+  virtual void propagateDirty(const Widget* child, const Rect& rect);
 
   // Called on panel when its specified child gets hidden (or moved).
   virtual void childHidden(const Widget* child);
@@ -172,11 +172,11 @@ class Panel : public Widget {
 
   // Called recursively upwards, to extend the cached_max_bounds if needed,
   // when a descendant has been shown.
-  void unclippedChildRectShown(const Box& box);
+  void unclippedChildRectShown(const Rect& rect);
 
   // Called recursively upwards, to invalidate the cached_max_bounds if needed,
   // when a descendant has been hidden.
-  void unclippedChildRectHidden(const Box& box);
+  void unclippedChildRectHidden(const Rect& rect);
 
   // Overrides onMeasure in the Widget, to propagate measurement requests to the
   // children. The default implementation is that of a static layout: it ignores
@@ -188,7 +188,7 @@ class Panel : public Widget {
   // invisible ones) that have the 'isLayoutRequested()' flag set. If the
   // subclass wishes to cache child dimensions (e.g. to use them later in
   // onLayout()), it can use the CachedMeasure helper class.
-  Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override;
+  Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
 
   // Overrides onLayout in the Widget, to propagate the layout requests to the
   // children. The default ipmlementation is that of a static layout: it
@@ -202,9 +202,9 @@ class Panel : public Widget {
   // implement its layout, and it must call it o the children (even the
   // invisible ones, or the ones whose position do not change) that have
   // 'isLayoutRequired()' flag set.
-  void onLayout(bool changed, const Box& box) override;
+  void onLayout(bool changed, const Rect& rect) override;
 
-  void moveTo(const Box& parent_bounds) override;
+  void moveTo(const Rect& parent_bounds) override;
 
  protected:
   // Subclasses should avoid mutating this vector directly, preferring accessor
@@ -213,7 +213,7 @@ class Panel : public Widget {
   std::vector<Widget*> children_;
 
  private:
-  void invalidateCachedMaxBounds() { cached_max_bounds_ = Box(0, 0, -1, -1); }
+  void invalidateCachedMaxBounds() { cached_max_bounds_ = Rect(0, 0, -1, -1); }
 
   friend class Widget;
   friend class ScrollablePanel;
@@ -221,8 +221,8 @@ class Panel : public Widget {
   void addChild(Widget* child);
 
   Color bgcolor_;
-  Box invalid_region_;
-  mutable Box cached_max_bounds_;
+  Rect invalid_region_;
+  mutable Rect cached_max_bounds_;
 };
 
 }  // namespace roo_windows

@@ -34,7 +34,7 @@ class VisibilityToggle : public BasicWidget {
     Widget::onClicked();
   }
 
-  bool paint(const Surface& s) override;
+  bool paint(const Canvas& canvas) override;
 
   using Widget::isOff;
   using Widget::isOn;
@@ -173,11 +173,11 @@ class TextField : public BasicWidget {
       default: {
       }
     }
-    return PreferredSize(PreferredSize::MatchParent(),
-                         PreferredSize::Exact(preferred_height));
+    return PreferredSize(PreferredSize::MatchParentWidth(),
+                         PreferredSize::ExactHeight(preferred_height));
   }
 
-  bool paint(const roo_display::Surface& s) override;
+  bool paint(const Canvas& canvas) override;
 
   Dimensions getSuggestedMinimumDimensions() const override {
     auto metrics = font_.getHorizontalStringMetrics(value_);

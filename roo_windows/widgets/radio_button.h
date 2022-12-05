@@ -17,7 +17,7 @@ class RadioButton : public BasicWidget {
   using Widget::setOn;
   using Widget::toggle;
 
-  bool paint(const Surface& s) override;
+  bool paint(const Canvas& s) override;
 
   Dimensions getSuggestedMinimumDimensions() const override;
 

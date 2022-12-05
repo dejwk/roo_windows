@@ -54,13 +54,15 @@ bool GestureDetector::tick() {
   if (!touch_target_path_.empty()) {
     Widget* touch_target = touch_target_path_.back();
     if (show_press_event_.isDue(now_us_)) {
-      int16_t dx, dy;
+      XDim dx;
+      YDim dy;
       touch_target->getAbsoluteOffset(dx, dy);
       show_press_event_.clear();
       touch_target->onShowPress(latest_.x() - dx, latest_.y() - dy);
     }
     if (long_press_event_.isDue(now_us_)) {
-      int16_t dx, dy;
+      XDim dx;
+      YDim dy;
       touch_target->getAbsoluteOffset(dx, dy);
       long_press_event_.clear();
       in_long_press_ = true;
@@ -84,7 +86,7 @@ bool isScrollableContainer(const Panel* p) {
 
 }  // namespace
 
-bool GestureDetector::onTouchDown(Widget& widget, int16_t x, int16_t y) {
+bool GestureDetector::onTouchDown(Widget& widget, XDim x, YDim y) {
   moved_outside_tap_region_ = false;
   in_long_press_ = false;
   supports_scrolling_ = widget.supportsScrolling();
@@ -98,7 +100,7 @@ bool GestureDetector::onTouchDown(Widget& widget, int16_t x, int16_t y) {
   return handledOrCancel(widget.onDown(x, y));
 }
 
-bool GestureDetector::onTouchMove(Widget& widget, int16_t x, int16_t y) {
+bool GestureDetector::onTouchMove(Widget& widget, XDim x, YDim y) {
   if (in_long_press_) return false;
   bool handled = false;
   if (moved_outside_tap_region_) {
@@ -129,7 +131,7 @@ bool GestureDetector::onTouchMove(Widget& widget, int16_t x, int16_t y) {
   return handled;
 }
 
-bool GestureDetector::onTouchUp(Widget& widget, int16_t x, int16_t y) {
+bool GestureDetector::onTouchUp(Widget& widget, XDim x, YDim y) {
   bool handled = false;
   if (in_long_press_) {
     in_long_press_ = false;
@@ -176,7 +178,8 @@ bool GestureDetector::offerIntercept(Panel* target, TouchEvent::Type type) {
   if (!target->isVisible()) {
     return false;
   }
-  int16_t dx, dy;
+  XDim dx;
+  YDim dy;
   target->getAbsoluteOffset(dx, dy);
   return target->onInterceptTouchEvent(
       TouchEvent(type, latest_.x() - dx, latest_.y() - dy));
@@ -186,7 +189,8 @@ bool GestureDetector::dispatchTo(Widget* target, TouchEvent::Type type) {
   if (!target->isVisible()) {
     return false;
   }
-  int16_t dx, dy;
+  XDim dx;
+  YDim dy;
   target->getAbsoluteOffset(dx, dy);
   if (type == TouchEvent::MOVE) {
     return target->onTouchMove(latest_.x() - dx, latest_.y() - dy);

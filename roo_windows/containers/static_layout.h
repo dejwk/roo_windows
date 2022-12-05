@@ -20,8 +20,8 @@ class StaticLayout : public Panel {
    * Adds the specified child, at the end of the list, positioning it at the
    * specified place in the parent's coordinates.
    */
-  void add(WidgetRef child, const roo_display::Box& box) {
-    Panel::add(std::move(child), box);
+  void add(WidgetRef child, const Rect& rect) {
+    Panel::add(std::move(child), rect);
   }
 
   /**
@@ -29,9 +29,15 @@ class StaticLayout : public Panel {
    * current natural dimensions, with its top left corner anchored at the
    * specified point in the parent's coordinates.
    */
-  void add(WidgetRef child, int16_t x, int16_t y) {
-    return add(std::move(child),
-               roo_display::kLeft.shiftBy(x) | roo_display::kTop.shiftBy(y));
+  void add(WidgetRef child, XDim x, YDim y) {
+    Dimensions d =
+        child->measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+    Padding p = child->getPadding();
+    Rect inner(0, 0, d.width() + p.left() + p.right() - 1,
+               d.height() + p.top() + p.bottom() - 1);
+    Rect actual = inner.translate(x, y);
+    child->layout(actual);
+    add(std::move(child), actual);
   }
 
   /**
@@ -39,24 +45,24 @@ class StaticLayout : public Panel {
    * current natural dimensions, applying the specified alignment.
    */
   void add(WidgetRef child, roo_display::Alignment alignment) {
-    Dimensions d = child->measure(MeasureSpec::Unspecified(0),
-                                  MeasureSpec::Unspecified(0));
+    Dimensions d =
+        child->measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
     Padding p = child->getPadding();
-    Box inner(0, 0, d.width() + p.left() + p.right() - 1,
-              d.height() + p.top() + p.bottom() - 1);
-    std::pair<int16_t, int16_t> offset =
-        alignment.resolveOffset(bounds(), inner);
-    Box actual = inner.translate(offset.first, offset.second);
+    Rect inner(0, 0, d.width() + p.left() + p.right() - 1,
+               d.height() + p.top() + p.bottom() - 1);
+    std::pair<XDim, YDim> offset =
+        ResolveAlignmentOffset(bounds(), inner, alignment);
+    Rect actual = inner.translate(offset.first, offset.second);
     child->layout(actual);
     add(std::move(child), actual);
   }
 
  protected:
-  Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override {
+  Dimensions onMeasure(WidthSpec width, HeightSpec height) override {
     for (const auto& child : children()) {
       if (child->isLayoutRequested()) {
-        child->measure(MeasureSpec::Exactly(child->width()),
-                       MeasureSpec::Exactly(child->height()));
+        child->measure(WidthSpec::Exactly(child->width()),
+                       HeightSpec::Exactly(child->height()));
       }
     }
     return Dimensions(this->width(), this->height());

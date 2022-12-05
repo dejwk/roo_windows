@@ -9,8 +9,8 @@ class Blank : public BasicWidget {
   Blank(const Environment& env, Dimensions dims)
       : BasicWidget(env), dims_(dims) {}
 
-  bool paint(const Surface& s) override {
-    s.drawObject(roo_display::Clear());
+  bool paint(const Canvas& canvas) override {
+    canvas.clear();
     return true;
   }
 

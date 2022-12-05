@@ -11,7 +11,7 @@ class BatteryIndicator : public Widget {
 
   BatteryIndicator(const Environment& env, roo_display::Color color);
 
-  bool paint(const Surface& s) override;
+  bool paint(const Canvas& canvas) override;
 
   void setBatteryPercent(int percent);
   void setBatteryCharging(bool charging);

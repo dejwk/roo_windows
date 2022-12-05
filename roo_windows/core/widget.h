@@ -4,9 +4,9 @@
 #include <vector>
 
 #include "roo_display.h"
-#include "roo_display/core/box.h"
 #include "roo_display/filter/color_filter.h"
 #include "roo_display/image/image.h"
+#include "roo_windows/core/canvas.h"
 #include "roo_windows/core/clipper.h"
 #include "roo_windows/core/dimensions.h"
 #include "roo_windows/core/environment.h"
@@ -14,6 +14,7 @@
 #include "roo_windows/core/measure_spec.h"
 #include "roo_windows/core/padding.h"
 #include "roo_windows/core/preferred_size.h"
+#include "roo_windows/core/rect.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/core/touch_event.h"
 
@@ -30,9 +31,7 @@ typedef roo_display::RleImage4bppxBiased<roo_display::Alpha4,
                                          roo_display::PrgMemResource>
     MonoIcon;
 
-using roo_display::Box;
 using roo_display::Color;
-using roo_display::Surface;
 
 static const uint32_t kPressAnimationMillis = 200;
 
@@ -79,29 +78,29 @@ class Widget {
   // Causes the widget to request paint(). The widget decides which pixels
   // need re-drawing. Provides a hint to the framework as to which pixels do
   // need to be redrawn.
-  void markDirty(const Box& bounds);
+  void markDirty(const Rect& bounds);
 
   // Causes the widget to request paint(), replacing the entire rectangle area.
   void invalidateInterior();
 
   // Causes the widget to request paint(), replacing the specified area.
-  void invalidateInterior(const Box& box);
+  void invalidateInterior(const Rect& rect);
 
-  int16_t width() const { return parent_bounds_.width(); }
-  int16_t height() const { return parent_bounds_.height(); }
-  int16_t xOffset() const { return parent_bounds_.xMin(); }
-  int16_t yOffset() const { return parent_bounds_.yMin(); }
+  XDim width() const { return parent_bounds_.width(); }
+  YDim height() const { return parent_bounds_.height(); }
+  XDim xOffset() const { return parent_bounds_.xMin(); }
+  YDim yOffset() const { return parent_bounds_.yMin(); }
 
-  Box bounds() const { return Box(0, 0, width() - 1, height() - 1); }
+  Rect bounds() const { return Rect(0, 0, width() - 1, height() - 1); }
 
-  Box getSloppyTouchBounds() const;
+  Rect getSloppyTouchBounds() const;
 
   // Returns the rectangle that covers all of this widget and its descendants.
-  virtual Box maxBounds() const { return bounds(); }
+  virtual Rect maxBounds() const { return bounds(); }
 
   // Returns the rectangle that covers all of this widget and its descendants,
   // in the parent's coordinates.
-  virtual Box maxParentBounds() const { return parent_bounds(); }
+  virtual Rect maxParentBounds() const { return parent_bounds(); }
 
   virtual const Theme& theme() const;
 
@@ -121,27 +120,27 @@ class Widget {
     return theme().color.defaultColor(effectiveBackground());
   }
 
-  const Box& parent_bounds() const { return parent_bounds_; }
+  const Rect& parent_bounds() const { return parent_bounds_; }
 
   // The bounds (in parent's coordinates) extended, if needed, to some minimum
   // size that is a reasonable touch target. The bounds extended, if needed, to
   // some minimum size that is a reasonable touch target.
-  Box getSloppyTouchParentBounds() const;
+  Rect getSloppyTouchParentBounds() const;
 
   // Returns bounds in the device's coordinates.
-  void getAbsoluteBounds(Box& full, Box& visible) const;
+  void getAbsoluteBounds(Rect& full, Rect& visible) const;
 
   // Returns the offset in the device's coordinates.
-  void getAbsoluteOffset(int16_t& dx, int16_t& dy) const;
+  void getAbsoluteOffset(XDim& dx, YDim& dy) const;
 
   // Called as part of display update, for a visible, dirty widget.
-  // The Surface's offset and clipbox has been pre-initialized so that this
+  // The Canvas's offset and clipbox has been pre-initialized so that this
   // widget's top-left corner is painted at (0, 0), and the clip box is
   // constrained to this widget's bounds (and non-empty). Should return true if
   // the painting is considered done, or false if the widget wants to be
   // repainted again (e.g. because it is undergoing state change resulting in an
   // animation).
-  virtual bool paint(const Surface& s) { return true; }
+  virtual bool paint(const Canvas& s) { return true; }
 
   virtual MainWindow* getMainWindow();
   virtual const MainWindow* getMainWindow() const;
@@ -164,7 +163,7 @@ class Widget {
   // widget's background.
   Color effectiveBackground() const;
 
-  virtual Widget* dispatchTouchDownEvent(int16_t x, int16_t y);
+  virtual Widget* dispatchTouchDownEvent(XDim x, YDim y);
 
   // Called by the framework when on the first touch event within the bounds of
   // this widget. If the method returns false, the event will be redirected to
@@ -174,7 +173,7 @@ class Widget {
   // may then call more specific widget methods.
   //
   // Returns true if the event is handled, false otherwise.
-  virtual bool onTouchDown(int16_t x, int16_t y);
+  virtual bool onTouchDown(XDim x, YDim y);
 
   // Called by the framework upon the 'move' event. If the method returns false,
   // the event will be redirected to this widget's parent, and this widget will
@@ -183,7 +182,7 @@ class Widget {
   // the gesture detector which may then call more specific widget methods.
   //
   // Returns true if the event is handled, false otherwise.
-  virtual bool onTouchMove(int16_t x, int16_t y);
+  virtual bool onTouchMove(XDim x, YDim y);
 
   // Called by the framework upon the 'up' event. If the method returns false,
   // the event will be redirected to this widget's parent. Most widgets should
@@ -191,7 +190,7 @@ class Widget {
   // detector which may then call more specific widget methods.
   //
   // Returns true if the event is handled, false otherwise.
-  virtual bool onTouchUp(int16_t x, int16_t y);
+  virtual bool onTouchUp(XDim x, YDim y);
 
   // Called by the framework when onTouchMove returns false, indicating that
   // this widget is no longer the target of the gesture.
@@ -227,7 +226,7 @@ class Widget {
   //
   // Most widgets should not override this method. The default implementation
   // returns isClickable().
-  virtual bool onDown(int16_t x, int16_t y);
+  virtual bool onDown(XDim x, YDim y);
 
   // Called when the gesture is recognized as press, rather than scroll.
   // Contains the coordinates of the original 'down' event, relative to the
@@ -238,7 +237,7 @@ class Widget {
   // Most widgets should not override this method. The default implementation
   // handles state changes to show the widget as 'pressed', and to trigger click
   // animation.
-  virtual void onShowPress(int16_t x, int16_t y);
+  virtual void onShowPress(XDim x, YDim y);
 
   // Called when the gesture is recognized as a single tap, during the 'up'
   // event that ended the tap. Contains the coordinates of the 'up' event, in
@@ -254,7 +253,7 @@ class Widget {
   // If you would like to perform some additional action on the tap 'up', you
   // may want to override this method and call the superclass method at the
   // beginning of your implementation.
-  virtual bool onSingleTapUp(int16_t x, int16_t y);
+  virtual bool onSingleTapUp(XDim x, YDim y);
 
   // Should be overridden to return true by widgets that wish to handle the
   // onLongPoress events.
@@ -270,13 +269,13 @@ class Widget {
   // relative to the widget. It happens with some delay since the onShowPress(),
   // and only in case there was no significant movement. The gesture can no
   // longer turn into scroll.
-  virtual void onLongPress(int16_t x, int16_t y);
+  virtual void onLongPress(XDim x, YDim y);
 
   // Called when the long press has finished, and the widget is no longer
   // touched. Contains the coordinates of the 'up' event, in the widget's
   // coordinate system.  The widget must have returned true from
   // supportsLongPress() in order to receive this notification.
-  virtual void onLongPressFinished(int16_t x, int16_t y);
+  virtual void onLongPressFinished(XDim x, YDim y);
 
   // Called during the 'move' event, when the gesture is recognized as 'scroll'.
   // Contains the delta of coordinates since the last time onScroll was called
@@ -284,14 +283,14 @@ class Widget {
   //
   // Widgets that support scrolling should override this method. The default
   // implementation clears the 'press' state and returns false.
-  virtual bool onScroll(int16_t dx, int16_t dy);
+  virtual bool onScroll(XDim dx, YDim dy);
 
   // Called during the 'up' event, when the gesture is recognized as 'fling'.
   // Contains the velocity of the fling.
   //
   // Widgets that support fling (swipe) should override this method. The default
   // implementation clears the 'press' state and returns false.
-  virtual bool onFling(int16_t vx, int16_t vy);
+  virtual bool onFling(XDim vx, YDim vy);
 
   virtual void onCancel();
 
@@ -377,8 +376,8 @@ class Widget {
 
   virtual PreferredSize getPreferredSize() const {
     Dimensions d = getNaturalDimensions();
-    return PreferredSize(PreferredSize::Exact(d.width()),
-                         PreferredSize::Exact(d.height()));
+    return PreferredSize(PreferredSize::ExactWidth(d.width()),
+                         PreferredSize::ExactHeight(d.height()));
   }
 
   // Called to find out how big a widget should be. The parent supplies
@@ -386,7 +385,7 @@ class Widget {
   //
   // The actual measurement work of a view is performed in onMeasure(int, int),
   // called by this method.
-  Dimensions measure(MeasureSpec width, MeasureSpec height);
+  Dimensions measure(WidthSpec width, HeightSpec height);
 
   // Call this when something has changed which has invalidated the layout of
   // this widget. This will schedule a layout pass of the tree.
@@ -408,7 +407,7 @@ class Widget {
   // this method directly may get invalidated by the next layout pass. It is OK,
   // however, to call it on widgets belonging to a StaticLayout, since it does
   // nothing interesting in its layout pass.
-  void layout(const roo_display::Box& box);
+  void layout(const Rect& rect);
 
  protected:
   bool isOn() const { return (state_ & kWidgetOn) != 0; }
@@ -427,8 +426,8 @@ class Widget {
 
   // Marks the specified sub-area of this widget, and all its descendants, as
   // invalidated (needing full redraw).
-  virtual void invalidateDescending(const Box& box) {
-    if (!box.intersects(bounds())) return;
+  virtual void invalidateDescending(const Rect& rect) {
+    if (!rect.intersects(bounds())) return;
     markInvalidated();
   }
 
@@ -436,17 +435,17 @@ class Widget {
   // with lower 'Z' than the subject), propagating the invalidation rectangle.
   // Returns true when reaching subject on the iterative descent, which signals
   // that the iteration should be stopped.
-  virtual bool invalidateBeneathDescending(const Box& box,
+  virtual bool invalidateBeneathDescending(const Rect& rect,
                                            const Widget* subject) {
     if (subject == this) return true;
-    invalidateDescending(box);
+    invalidateDescending(rect);
     return false;
   }
 
   // Mark this widget and its descendants as non-dirty.
   virtual void markCleanDescending() { markClean(); }
 
-  // Responsible for drawing a widget to the specified surface, and updating the
+  // Responsible for drawing a widget to the specified canvas, and updating the
   // clipper to exclude the region covered by the widget from the clipper to
   // prevent it from being over-drawn. If called on a non-dirty widget, does not
   // need to draw anything, but it should still exclude the widget's area from
@@ -454,7 +453,7 @@ class Widget {
   // widget is actually dirty) to actually request the content to be drawn.
   // Widgets should generally not override this method, and override paint()
   // instead.
-  virtual void paintWidgetContents(const Surface& s, Clipper& clipper);
+  virtual void paintWidgetContents(const Canvas& s, Clipper& clipper);
 
   virtual void setParent(Panel* parent, bool is_owned);
 
@@ -463,13 +462,13 @@ class Widget {
   // The default implementation used getSuggestedMinimumDimensions() to
   // determine the 'natural' dimensions of the widget, and then returns
   // Dimensions that also takes into account the measure spec: for
-  // MeasureSpec::UNSPECIFIED, it returns the preferred minimum dimension, and
-  // for MeasureSpec::AT_MOST and MeasureSpec::EXACTLY, uses the value provided
-  // in the measure spec. (Consequently, the returned dimension may be greater
-  // than the preferred minimum if the measure spec allows it). For simple
-  // widgets, prefer overwriting getDefaultMinimumDimensions() and
+  // MeasureSpecKind::UNSPECIFIED, it returns the preferred minimum dimension,
+  // and for MeasureSpecKind::AT_MOST and MeasureSpecKind::EXACTLY, uses the
+  // value provided in the measure spec. (Consequently, the returned dimension
+  // may be greater than the preferred minimum if the measure spec allows it).
+  // For simple widgets, prefer overwriting getDefaultMinimumDimensions() and
   // getDefaultSize() to overriding this method, when possible.
-  virtual Dimensions onMeasure(MeasureSpec width, MeasureSpec height);
+  virtual Dimensions onMeasure(WidthSpec width, HeightSpec height);
 
   virtual void onRequestLayout();
 
@@ -478,13 +477,13 @@ class Widget {
   // did not change *and* the layout for this widget has not been explicitly
   // requested. When this method is called, the widget has already been moved to
   // the new position.
-  virtual void onLayout(bool changed, const roo_display::Box& box) {}
+  virtual void onLayout(bool changed, const Rect& rect) {}
 
   // Moves the widget to the new position, specified in the parent's
   // coordinates.
   //
   // This method should not be called during paint().
-  virtual void moveTo(const Box& parent_bounds);
+  virtual void moveTo(const Rect& parent_bounds);
 
   void markClean() { redraw_status_ &= ~(kDirty | kInvalidated); }
 
@@ -535,20 +534,20 @@ class Widget {
   friend class ScrollablePanel;
   friend class MainWindow;
 
-  // Called by the framework. Receives the parent's surface. Determines
+  // Called by the framework. Receives the parent's canvas. Determines
   // state-related overlays and filters (enabled/disabled, clicking, etc.),
-  // creates the new, offset surface with overlays and/or filters, and calls
+  // creates the new, offset canvas with overlays and/or filters, and calls
   // paintWidgetContents().
-  void paintWidget(const Surface& s, Clipper& clipper);
+  void paintWidget(const Canvas& s, Clipper& clipper);
 
   void markInvalidated() { redraw_status_ |= (kDirty | kInvalidated); }
 
   void markLayoutRequested() { redraw_status_ |= kLayoutRequested; }
 
-  void setParentBounds(const Box& parent_bounds);
+  void setParentBounds(const Rect& parent_bounds);
 
   Panel* parent_;
-  Box parent_bounds_;
+  Rect parent_bounds_;
   uint16_t state_;
 
   // kDirty | kInvalidated | kLayout{Requested|Required}

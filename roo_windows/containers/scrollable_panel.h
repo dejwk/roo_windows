@@ -34,11 +34,11 @@ class ScrollablePanel : public Panel {
 
   // Sets the relative position of the underlying content, relative to the the
   // visible rectangle.
-  void scrollTo(int16_t x, int16_t y);
+  void scrollTo(XDim x, YDim y);
 
   // Adjusts the relative position of the underlying content by the specified
   // offset.
-  void scrollBy(int16_t dx, int16_t dy) {
+  void scrollBy(XDim dx, YDim dy) {
     scrollTo(dx + contents()->xOffset(), dy + contents()->yOffset());
   }
 
@@ -48,28 +48,28 @@ class ScrollablePanel : public Panel {
 
   void update() { scrollBy(0, 0); }
 
-  void paintWidgetContents(const Surface& s, Clipper& clipper) override;
+  void paintWidgetContents(const Canvas& canvas, Clipper& clipper) override;
 
   bool onInterceptTouchEvent(const TouchEvent& event) override;
 
-  bool onDown(int16_t x, int16_t y) override;
-  bool onScroll(int16_t dx, int16_t dy) override;
-  bool onFling(int16_t vx, int16_t vy) override;
+  bool onDown(XDim x, YDim y) override;
+  bool onScroll(XDim dx, YDim dy) override;
+  bool onFling(XDim vx, YDim vy) override;
 
   bool supportsScrolling() const override { return true; }
 
  protected:
   PreferredSize getPreferredSize() const override {
-    return PreferredSize(direction_ != VERTICAL ? PreferredSize::WrapContent()
-                                                : PreferredSize::MatchParent(),
-                         direction_ != HORIZONTAL
-                             ? PreferredSize::WrapContent()
-                             : PreferredSize::MatchParent());
+    return PreferredSize(
+        direction_ != VERTICAL ? PreferredSize::WrapContentWidth()
+                               : PreferredSize::MatchParentWidth(),
+        direction_ != HORIZONTAL ? PreferredSize::WrapContentHeight()
+                                 : PreferredSize::MatchParentHeight());
   }
 
-  Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override;
+  Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
 
-  void onLayout(bool changed, const roo_display::Box& box) override;
+  void onLayout(bool changed, const Rect& rect) override;
 
  private:
   Direction direction_;
@@ -78,7 +78,8 @@ class ScrollablePanel : public Panel {
   Dimensions measured_;
 
   // Captured dx_ and dy_ during drag and scroll animations.
-  int16_t dxStart_, dyStart_;
+  XDim dxStart_;
+  YDim dyStart_;
 
   unsigned long scroll_start_time_;
   unsigned long scroll_end_time_;

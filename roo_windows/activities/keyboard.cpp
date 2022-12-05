@@ -122,13 +122,13 @@ class PressHighlighter : public Widget {
 
   void setTarget(const TextButton* target) { target_ = target; }
 
-  bool paint(const Surface& s) override;
+  bool paint(const Canvas& canvas) override;
   Dimensions getSuggestedMinimumDimensions() const override;
 
   const KeyboardPage* page() const;
   const KeyboardWidget* keyboard() const;
 
-  void moveTo(const Box& box) { Widget::moveTo(box); }
+  void moveTo(const Rect& rect) { Widget::moveTo(rect); }
 
  private:
   const TextButton* target_;
@@ -150,9 +150,9 @@ class KeyboardPage : public Panel {
   void capsStateUpdated();
 
  protected:
-  Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override;
+  Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
 
-  void onLayout(bool changed, const roo_display::Box& box) override;
+  void onLayout(bool changed, const Rect& rect) override;
 
  private:
   const KeyboardPageSpec* spec_;
@@ -181,9 +181,9 @@ class KeyboardWidget : public Panel {
   void setPage(int idx);
 
  protected:
-  Dimensions onMeasure(MeasureSpec width, MeasureSpec height) override;
+  Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
 
-  void onLayout(bool changed, const roo_display::Box& box) override;
+  void onLayout(bool changed, const Rect& rect) override;
 
  private:
   std::vector<KeyboardPage*> pages_;
@@ -212,7 +212,7 @@ class TextButton : public KeyboardButton {
 
   bool showClickAnimation() const override { return false; }
 
-  void onShowPress(int16_t x, int16_t y) override {
+  void onShowPress(XDim x, YDim y) override {
     ((KeyboardPage*)parent())->showHighlighter(*this);
     Button::onShowPress(x, y);
   }
@@ -227,7 +227,7 @@ class TextButton : public KeyboardButton {
     }
   }
 
-  bool onSingleTapUp(int16_t x, int16_t y) override {
+  bool onSingleTapUp(XDim x, YDim y) override {
     KeyboardPage* page = ((KeyboardPage*)parent());
     page->hideHighlighter();
     KeyboardListener* listener = page->keyboard()->listener();
@@ -256,7 +256,7 @@ class SpaceButton : public KeyboardButton {
 
   bool showClickAnimation() const override { return false; }
 
-  bool onSingleTapUp(int16_t x, int16_t y) override {
+  bool onSingleTapUp(XDim x, YDim y) override {
     KeyboardPage* page = ((KeyboardPage*)parent());
     KeyboardListener* listener = page->keyboard()->listener();
     if (listener != nullptr) {
@@ -273,7 +273,7 @@ class EnterButton : public KeyboardButton {
 
   bool showClickAnimation() const override { return false; }
 
-  bool onSingleTapUp(int16_t x, int16_t y) override {
+  bool onSingleTapUp(XDim x, YDim y) override {
     KeyboardPage* page = ((KeyboardPage*)parent());
     KeyboardListener* listener = page->keyboard()->listener();
     if (listener != nullptr) {
@@ -289,7 +289,7 @@ class ShiftButton : public KeyboardButton {
 
   bool showClickAnimation() const override { return false; }
 
-  void onShowPress(int16_t x, int16_t y) override {
+  void onShowPress(XDim x, YDim y) override {
     auto& kb = keyboard();
     switch (kb.caps_state()) {
       case CAPS_STATE_LOW: {
@@ -307,7 +307,7 @@ class ShiftButton : public KeyboardButton {
 
   bool supportsLongPress() override { return true; }
 
-  void onLongPress(int16_t x, int16_t y) {
+  void onLongPress(XDim x, YDim y) {
     auto& kb = keyboard();
     if (kb.caps_state() == CAPS_STATE_HIGH) {
       kb.setCapsState(CAPS_STATE_HIGH_LOCKED);
@@ -342,7 +342,7 @@ class DelButton : public KeyboardButton {
 
   bool showClickAnimation() const override { return false; }
 
-  bool onSingleTapUp(int16_t x, int16_t y) override {
+  bool onSingleTapUp(XDim x, YDim y) override {
     KeyboardPage* page = ((KeyboardPage*)parent());
     KeyboardListener* listener = page->keyboard()->listener();
     if (listener != nullptr) {
@@ -359,7 +359,7 @@ class PageSwitchButton : public KeyboardButton {
 
   bool showClickAnimation() const override { return false; }
 
-  void onShowPress(int16_t x, int16_t y) override {
+  void onShowPress(XDim x, YDim y) override {
     keyboard().setPage(target_);
     KeyboardButton::onShowPress(x, y);
   }
@@ -395,18 +395,18 @@ PreferredSize KeyboardWidget::getPreferredSize() const {
 PreferredSize KeyboardPage::getPreferredSize() const {
   Padding padding = getPadding();
   return PreferredSize(
-      PreferredSize::MatchParent(),
-      PreferredSize::Exact(spec_->row_count * kPreferredRowHeight +
-                           padding.top() + padding.bottom() +
-                           kExtraTopPaddingPx));
+      PreferredSize::MatchParentWidth(),
+      PreferredSize::ExactHeight(spec_->row_count * kPreferredRowHeight +
+                                 padding.top() + padding.bottom() +
+                                 kExtraTopPaddingPx));
 }
 
-Dimensions KeyboardWidget::onMeasure(MeasureSpec width, MeasureSpec height) {
+Dimensions KeyboardWidget::onMeasure(WidthSpec width, HeightSpec height) {
   return current_page_->measure(width, height);
 }
 
-void KeyboardWidget::onLayout(bool changed, const roo_display::Box& box) {
-  current_page_->layout(Box(0, 0, box.width() - 1, box.height() - 1));
+void KeyboardWidget::onLayout(bool changed, const Rect& rect) {
+  current_page_->layout(Rect(0, 0, rect.width() - 1, rect.height() - 1));
 }
 
 void KeyboardWidget::setCapsState(CapsState caps_state) {
@@ -491,13 +491,13 @@ KeyboardPage::KeyboardPage(const Environment& env, const KeyboardPageSpec* spec)
   add(highlighter_);
 }
 
-Dimensions KeyboardPage::onMeasure(MeasureSpec width, MeasureSpec height) {
+Dimensions KeyboardPage::onMeasure(WidthSpec width, HeightSpec height) {
   // Calculate grid size.
   Padding padding = getPadding();
   int16_t row_height;
   int16_t full_height;
   // int16_t top_offset;
-  if (height.kind() == MeasureSpec::UNSPECIFIED) {
+  if (height.kind() == UNSPECIFIED) {
     row_height = kPreferredRowHeight;
     full_height = row_height * spec_->row_count + padding.top() +
                   padding.bottom() + kExtraTopPaddingPx;
@@ -509,7 +509,7 @@ Dimensions KeyboardPage::onMeasure(MeasureSpec width, MeasureSpec height) {
   }
   int16_t cell_width;
   int16_t full_width;
-  if (width.kind() == MeasureSpec::UNSPECIFIED) {
+  if (width.kind() == UNSPECIFIED) {
     cell_width = kPreferredCellWidth;
     full_width =
         cell_width * spec_->row_width + padding.left() + padding.right();
@@ -531,29 +531,29 @@ Dimensions KeyboardPage::onMeasure(MeasureSpec width, MeasureSpec height) {
     for (int j = 0; j < row.key_count; ++j) {
       const auto& key = row.keys[j];
       Widget& w = child_at(child_idx++);
-      w.measure(MeasureSpec::Exactly(cell_width - 2 * v_key_margin * key.width),
-                MeasureSpec::Exactly(row_height - 2 * h_key_margin));
+      w.measure(WidthSpec::Exactly(cell_width - 2 * v_key_margin * key.width),
+                HeightSpec::Exactly(row_height - 2 * h_key_margin));
     }
   }
   // We skip the measurement of the highlighter.
   return Dimensions(full_height, full_width);
 }
 
-void KeyboardPage::onLayout(bool changed, const roo_display::Box& box) {
+void KeyboardPage::onLayout(bool changed, const Rect& rect) {
   // Recalculate now that we have a specific dimensions.
   Padding padding = getPadding();
   int16_t vspan =
-      box.height() - padding.top() - padding.bottom() - kExtraTopPaddingPx;
+      rect.height() - padding.top() - padding.bottom() - kExtraTopPaddingPx;
   int16_t row_height =
       std::max<int16_t>(kMinRowHeight, vspan / spec_->row_count);
   int16_t top_offset = std::max<int16_t>(
       0,
-      (box.height() - kExtraTopPaddingPx - spec_->row_count * row_height) / 2);
-  int16_t hspan = box.width() - padding.left() - padding.right();
+      (rect.height() - kExtraTopPaddingPx - spec_->row_count * row_height) / 2);
+  int16_t hspan = rect.width() - padding.left() - padding.right();
   int16_t cell_width =
       std::max<int16_t>(kMinCellWidth, hspan / spec_->row_width);
   int16_t left_offset =
-      std::max<int16_t>(0, (box.width() - spec_->row_width * cell_width) / 2);
+      std::max<int16_t>(0, (rect.width() - spec_->row_width * cell_width) / 2);
 
   int h_key_margin = row_height * kButtonMarginPercent / 100;
   if (h_key_margin < 1) h_key_margin = 1;
@@ -580,9 +580,9 @@ void KeyboardPage::onLayout(bool changed, const roo_display::Box& box) {
 }
 
 void KeyboardPage::showHighlighter(const TextButton& btn) {
-  const Box& bBounds = btn.parent_bounds();
-  highlighter_.moveTo(Box(bBounds.xMin(), bBounds.yMin() - kHighlighterHeight,
-                          bBounds.xMax(), bBounds.yMax() - 3));
+  const Rect& bBounds = btn.parent_bounds();
+  highlighter_.moveTo(Rect(bBounds.xMin(), bBounds.yMin() - kHighlighterHeight,
+                           bBounds.xMax(), bBounds.yMax() - 3));
   highlighter_.setTarget(&btn);
   highlighter_.setVisibility(VISIBLE);
 }
@@ -615,9 +615,9 @@ KeyboardWidget* Keyboard::contents() {
   return (KeyboardWidget*)contents_.get();
 }
 
-bool PressHighlighter::paint(const Surface& s) {
+bool PressHighlighter::paint(const Canvas& canvas) {
   if (target_ == nullptr) {
-    s.drawObject(roo_display::Clear());
+    canvas.drawObject(roo_display::Clear());
     return true;
   }
   const Theme& th = theme();
@@ -625,10 +625,10 @@ bool PressHighlighter::paint(const Surface& s) {
   Color overlay = roo_display::color::Black;
   overlay.set_a(th.pressedOpacity(kbTh.normalButton));
   Color bgcolor = roo_display::alphaBlend(kbTh.normalButton, overlay);
-  s.drawObject(roo_display::MakeTileOf(
+  canvas.drawObject(roo_display::MakeTileOf(
       roo_display::StringViewLabel(target_->label(), *th.font.body1,
                                    target_->textColor()),
-      bounds(), roo_display::kCenter | roo_display::kTop.shiftBy(3),
+      bounds().asBox(), roo_display::kCenter | roo_display::kTop.shiftBy(3),
       bgcolor));
   return true;
 }
@@ -660,7 +660,8 @@ void Keyboard::setListener(KeyboardListener* listener) {
 roo_display::Box Keyboard::getPreferredPlacement(const Task& task) {
   auto& window = task.getMainWindow();
   Dimensions dims(window.width(), window.height());
-  int16_t dx, dy;
+  XDim dx;
+  YDim dy;
   task.getAbsoluteOffset(dx, dy);
   return roo_display::Box(0, dims.height() / 2, dims.width() - 1,
                           dims.height() - 1)

@@ -27,12 +27,12 @@ void maybeAddColor(roo_display::internal::ColorSet& palette, Color color) {
 
 }  // namespace
 
-MainWindow::MainWindow(Application& app, const Box& bounds)
+MainWindow::MainWindow(Application& app, const roo_display::Box& bounds)
     : Panel(app.env(), app.env().theme().color.background),
       app_(app),
       redraw_bounds_(bounds),
       background_fill_buffer_(bounds.width(), bounds.height()) {
-  parent_bounds_ = bounds;
+  parent_bounds_ = Rect(bounds);
   invalidateDescending();
   const Environment& env = app.env();
   roo_display::internal::ColorSet color_set;
@@ -74,35 +74,34 @@ void MainWindow::tick() {
 
 void MainWindow::updateLayout() {
   if (isLayoutRequested()) {
-    measure(MeasureSpec::Exactly(width()), MeasureSpec::Exactly(height()));
+    measure(WidthSpec::Exactly(width()), HeightSpec::Exactly(height()));
     layout(bounds());
   }
 }
 
-void MainWindow::paintWindow(const Surface& s) {
+void MainWindow::paintWindow(const roo_display::Surface& s) {
   if (!isDirty()) return;
-  Surface news = s;
-  news.clipToExtents(redraw_bounds_);
-  redraw_bounds_ = Box(0, 0, -1, -1);
-  news.set_fill_mode(roo_display::FILL_MODE_RECTANGLE);
+  Canvas canvas(&s);
+  canvas.clipToExtents(redraw_bounds_);
+  redraw_bounds_ = roo_display::Box(0, 0, -1, -1);
   roo_display::BackgroundFillOptimizer bg_optimizer(s.out(),
                                                     background_fill_buffer_);
   Clipper clipper(clipper_state_, bg_optimizer);
-  news.set_out(clipper.out());
-  paintWidget(news, clipper);
+  canvas.set_out(clipper.out());
+  paintWidget(canvas, clipper);
 }
 
-void MainWindow::propagateDirty(const Widget* child, const Box& box) {
-  Box clipped(0, 0, -1, -1);
+void MainWindow::propagateDirty(const Widget* child, const Rect& rect) {
+  Rect clipped(0, 0, -1, -1);
   if (isVisible()) {
-    clipped = Box::intersect(box, bounds());
+    clipped = Rect::Intersect(rect, bounds());
   }
   markDirty(clipped);
   if (!clipped.empty()) {
     if (redraw_bounds_.empty()) {
       redraw_bounds_ = clipped;
     } else {
-      redraw_bounds_ = Box::extent(redraw_bounds_, clipped);
+      redraw_bounds_ = Rect::Extent(redraw_bounds_, clipped);
     }
   }
 }

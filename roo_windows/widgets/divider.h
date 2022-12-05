@@ -7,7 +7,7 @@ namespace roo_windows {
 class HorizontalDivider : public Widget {
  public:
   using Widget::Widget;
-  bool paint(const Surface& s) override;
+  bool paint(const Canvas& canvas) override;
 
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(0, 2);
@@ -16,14 +16,15 @@ class HorizontalDivider : public Widget {
   Margins getMargins() const override { return Margins(1); }
 
   PreferredSize getPreferredSize() const override {
-    return PreferredSize(PreferredSize::MatchParent(), PreferredSize::Exact(2));
+    return PreferredSize(PreferredSize::MatchParentWidth(),
+                         PreferredSize::ExactHeight(2));
   }
 };
 
 class VerticalDivider : public Widget {
  public:
   using Widget::Widget;
-  bool paint(const Surface& s) override;
+  bool paint(const Canvas& canvas) override;
 
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(2, 0);
@@ -34,7 +35,8 @@ class VerticalDivider : public Widget {
   Padding getPadding() const override { return Padding(0); }
 
   PreferredSize getPreferredSize() const override {
-    return PreferredSize(PreferredSize::Exact(2), PreferredSize::MatchParent());
+    return PreferredSize(PreferredSize::ExactWidth(2),
+                         PreferredSize::MatchParentHeight());
   }
 };
 

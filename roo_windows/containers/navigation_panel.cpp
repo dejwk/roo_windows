@@ -29,22 +29,23 @@ void NavigationPanel::setActive(int index) {
   }
 }
 
-Dimensions NavigationPanel::onMeasure(MeasureSpec width, MeasureSpec height) {
+Dimensions NavigationPanel::onMeasure(WidthSpec width, HeightSpec height) {
   PreferredSize rail_size = rail_.getPreferredSize();
   Dimensions rail =
-      rail_.measure(width.getChildMeasureSpec(0, rail_size.width()),
-                    height.getChildMeasureSpec(0, rail_size.height()));
-  MeasureSpec w =
-      width.getChildMeasureSpec(rail.width(), PreferredSize::MatchParent());
-  MeasureSpec h = width.getChildMeasureSpec(0, PreferredSize::MatchParent());
+      rail_.measure(width.getChildWidthSpec(0, rail_size.width()),
+                    height.getChildHeightSpec(0, rail_size.height()));
+  WidthSpec w =
+      width.getChildWidthSpec(rail.width(), PreferredSize::MatchParentWidth());
+  HeightSpec h =
+      height.getChildHeightSpec(0, PreferredSize::MatchParentHeight());
   Dimensions contents = contents_.measure(w, h);
   return Dimensions(rail.width() + contents.width(),
                     std::max(rail.height(), contents.height()));
 }
 
-void NavigationPanel::onLayout(bool changed, const roo_display::Box& box) {
-  rail_.layout(Box(0, 0, 71, box.yMax()));
-  contents_.layout(Box(72, 0, box.xMax(), box.yMax()));
+void NavigationPanel::onLayout(bool changed, const Rect& rect) {
+  rail_.layout(Rect(0, 0, 71, rect.yMax()));
+  contents_.layout(Rect(72, 0, rect.xMax(), rect.yMax()));
 }
 
 }  // namespace roo_windows

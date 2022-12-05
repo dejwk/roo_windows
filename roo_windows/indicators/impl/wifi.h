@@ -17,7 +17,7 @@ class WifiIndicator : public BasicWidget {
 
   WifiIndicator(const Environment& env, roo_display::Color color);
 
-  bool paint(const Surface& s) override;
+  bool paint(const Canvas& canvas) override;
   // Padding getPadding() const override { return Padding(0); }
 
   void setConnectionStatus(ConnectionStatus status);

@@ -8,15 +8,15 @@ namespace roo_windows {
 class CachedMeasure {
  public:
   CachedMeasure()
-      : last_width_(MeasureSpec::Exactly(0)),
-        last_height_(MeasureSpec::Exactly(0)),
+      : last_width_(WidthSpec::Exactly(0)),
+        last_height_(HeightSpec::Exactly(0)),
         cached_dimensions_() {}
 
-  bool valid(MeasureSpec width, MeasureSpec height) const {
+  bool valid(WidthSpec width, HeightSpec height) const {
     return width == last_width_ && height == last_height_;
   }
 
-  void update(MeasureSpec width, MeasureSpec height, Dimensions d) {
+  void update(WidthSpec width, HeightSpec height, Dimensions d) {
     last_width_ = width;
     last_height_ = height;
     cached_dimensions_ = d;
@@ -27,8 +27,8 @@ class CachedMeasure {
   int16_t height() const { return cached_dimensions_.height(); }
 
  private:
-  MeasureSpec last_width_;
-  MeasureSpec last_height_;
+  WidthSpec last_width_;
+  HeightSpec last_height_;
   Dimensions cached_dimensions_;
 };
 
