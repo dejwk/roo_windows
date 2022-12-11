@@ -247,12 +247,12 @@ class ListLayout : public Panel {
     int16_t h_margin = margins.left() + margins.right();
     int16_t v_margin = margins.top() + margins.bottom();
     PreferredSize preferred = prototype_.getPreferredSize();
-
     Dimensions d = prototype_.measure(
         width.getChildWidthSpec(h_padding + h_margin, preferred.width()),
-        HeightSpec::Unspecified(40));
-
-    int32_t h = d.height();
+        preferred.height().isExact()
+            ? HeightSpec::Exactly(preferred.height().value())
+            : HeightSpec::Unspecified(40));
+    YDim h = d.height();
     if (h == 0) {
       h = prototype_.getNaturalDimensions().height();
     }
