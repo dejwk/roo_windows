@@ -200,7 +200,7 @@ void printVertStripes(const Canvas& canvas, int16_t xMin, int16_t yMin,
       alpha4, color_mode);
   for (int i = 0; i < count; ++i) {
     Color c = stream.next();
-    canvas.drawObject(Line(xMin, yMin + i, xMax, yMin + i, c));
+    canvas.drawHLine(xMin, yMin + i, xMax, c);
   }
 }
 
@@ -212,7 +212,7 @@ void printHorizStripes(const Canvas& canvas, int16_t xMin, int16_t yMin,
       alpha4, color_mode);
   for (int i = 0; i < count; ++i) {
     Color c = stream.next();
-    canvas.drawObject(Line(xMin + i, yMin, xMin + i, yMax, c));
+    canvas.drawVLine(xMin + i, yMin, yMax, c);
   }
 }
 

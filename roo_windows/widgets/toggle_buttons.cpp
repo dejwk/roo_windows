@@ -5,6 +5,8 @@
 
 namespace roo_windows {
 
+using namespace roo_display;
+
 roo_windows::Widget& ToggleButtons::addButton(const MonoIcon& icon) {
   int16_t width = 0;
   int16_t height = 0;
@@ -29,24 +31,20 @@ bool ToggleButtons::paint(const Canvas& canvas) {
   Color border = theme().color.defaultColor(canvas.bgcolor());
   border.set_a(0x30);
   Dimensions d = getNaturalDimensions();
-  canvas.drawObject(
-      roo_display::Line(0, 0, 0, 0, roo_display::color::Transparent));
-  canvas.drawObject(roo_display::Line(0, 1, 0, d.height() - 2, border));
-  canvas.drawObject(roo_display::Line(0, d.height() - 1, 0, d.height() - 1,
-                                      roo_display::color::Transparent));
+  canvas.clearRect(0, 0, 0, 0);
+  canvas.drawVLine(0, 1, d.height() - 2, border);
+  canvas.drawVLine(0, d.height() - 1, d.height() - 1,
+                   roo_display::color::Background);
   int16_t x = d.width() - 1;
-  canvas.drawObject(
-      roo_display::Line(x, 0, x, 0, roo_display::color::Transparent));
-  canvas.drawObject(roo_display::Line(x, 1, x, d.height() - 2, border));
-  canvas.drawObject(roo_display::Line(x, d.height() - 1, x, d.height() - 1,
-                                      roo_display::color::Transparent));
+  canvas.clearRect(x, 0, x, 0);
+  canvas.drawVLine(x, 1, d.height() - 2, border);
+  canvas.drawVLine(x, d.height() - 1, d.height() - 1,
+                   roo_display::color::Background);
   if (d.width() < width()) {
-    canvas.drawObject(roo_display::FilledRect(d.width(), 0, width() - 1,
-                                              d.height() - 1, background()));
+    canvas.fillRect(d.width(), 0, width() - 1, d.height() - 1, background());
   }
   if (d.height() < height()) {
-    canvas.drawObject(roo_display::FilledRect(0, d.height(), width() - 1,
-                                              height() - 1, background()));
+    canvas.fillRect(0, d.height(), width() - 1, height() - 1, background());
   }
   return true;
 }
@@ -77,21 +75,17 @@ bool ToggleButtons::ToggleButton::paint(const Canvas& canvas) {
   internal_border.set_a(0x10);
   Color external_border = color;
   external_border.set_a(0x30);
-  canvas.drawObject(roo_display::Line(0, 0, width() - 1, 0, external_border));
-  canvas.drawObject(roo_display::Line(0, 1, 0, height() - 3, internal_border));
-  canvas.drawObject(roo_display::Line(1, 1, width() - 2, 1, internal_border));
+  canvas.drawHLine(0, 0, width() - 1, external_border);
+  canvas.drawVLine(0, 1, height() - 3, internal_border);
+  canvas.drawHLine(1, 1, width() - 2, internal_border);
   MonoIcon icon(icon_);
   icon.color_mode().setColor(color);
-  roo_display::Tile tile(
-      &icon,
-      roo_display::Box(bounds().xMin() + 1, bounds().yMin() + 2,
-                       bounds().xMax() - 1, bounds().yMax() - 2),
-      roo_display::kCenter | roo_display::kMiddle);
-  canvas.drawObject(tile);
-  canvas.drawObject(roo_display::Line(width() - 1, 0, width() - 1, height() - 3,
-                                      external_border));
-  canvas.drawObject(roo_display::FilledRect(0, height() - 2, width() - 1,
-                                            height() - 1, external_border));
+  canvas.drawTiled(icon,
+                   Rect(bounds().xMin() + 1, bounds().yMin() + 2,
+                        bounds().xMax() - 1, bounds().yMax() - 2),
+                   kCenter | kMiddle);
+  canvas.drawVLine(width() - 1, 0, height() - 3, external_border);
+  canvas.fillRect(0, height() - 2, width() - 1, height() - 1, external_border);
   return true;
 }
 

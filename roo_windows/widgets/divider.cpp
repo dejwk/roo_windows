@@ -10,11 +10,10 @@ bool HorizontalDivider::paint(const Canvas& canvas) {
   const Rect rect = bounds();
   Color color = theme().color.onBackground;
   color.set_a(0x40);
-  canvas.drawObject(roo_display::FilledRect(
-      rect.xMin(), rect.yMin(), rect.xMax(), rect.yMax() - 1, color));
+  canvas.fillRect(rect.xMin(), rect.yMin(), rect.xMax(), rect.yMax() - 1,
+                  color);
   color.set_a(0x20);
-  canvas.drawObject(roo_display::FilledRect(rect.xMin(), rect.yMax(),
-                                            rect.xMax(), rect.yMax(), color));
+  canvas.drawHLine(rect.xMin(), rect.yMax(), rect.xMax(), color);
   return true;
 }
 
@@ -23,11 +22,10 @@ bool VerticalDivider::paint(const Canvas& canvas) {
   const Rect rect = bounds();
   Color color = theme().color.onBackground;
   color.set_a(0x40);
-  canvas.drawObject(roo_display::FilledRect(
-      rect.xMin(), rect.yMin(), rect.xMax() - 1, rect.yMax(), color));
+  canvas.fillRect(rect.xMin(), rect.yMin(), rect.xMax() - 1, rect.yMax(),
+                  color);
   color.set_a(0x20);
-  canvas.drawObject(roo_display::FilledRect(rect.xMax(), rect.yMin(),
-                                            rect.xMax(), rect.yMax(), color));
+  canvas.drawVLine(rect.xMax(), rect.yMin(), rect.yMax(), color);
   return true;
 }
 

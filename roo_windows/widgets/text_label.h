@@ -29,9 +29,8 @@ class TextLabel : public BasicWidget {
   bool paint(const Canvas& canvas) override {
     roo_display::Color color =
         color_.a() == 0 ? parent()->defaultColor() : color_;
-    canvas.drawObject(roo_display::MakeTileOf(
-        roo_display::StringViewLabel(value_, font_, color), bounds().asBox(),
-        adjustAlignment(alignment_)));
+    canvas.drawTiled(roo_display::StringViewLabel(value_, font_, color),
+                     bounds(), adjustAlignment(alignment_));
     return true;
   }
 

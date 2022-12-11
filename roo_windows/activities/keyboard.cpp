@@ -617,7 +617,7 @@ KeyboardWidget* Keyboard::contents() {
 
 bool PressHighlighter::paint(const Canvas& canvas) {
   if (target_ == nullptr) {
-    canvas.drawObject(roo_display::Clear());
+    canvas.clear();
     return true;
   }
   const Theme& th = theme();

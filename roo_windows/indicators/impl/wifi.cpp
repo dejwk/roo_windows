@@ -5,6 +5,8 @@
 
 namespace roo_windows {
 
+using namespace roo_display;
+
 WifiIndicator::WifiIndicator(const Environment& env)
     : WifiIndicator(env, roo_display::color::Transparent) {}
 
@@ -20,9 +22,7 @@ bool WifiIndicator::paint(const Canvas& canvas) {
   roo_display::Color color =
       color_.a() == 0 ? parent()->defaultColor() : color_;
   icon.color_mode().setColor(color);
-  roo_display::Tile tile(&icon, bounds().asBox(),
-                         roo_display::kCenter | roo_display::kMiddle);
-  canvas.drawObject(tile);
+  canvas.drawTiled(icon, bounds(), kCenter | kMiddle, isInvalidated());
   return true;
 }
 

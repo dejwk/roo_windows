@@ -35,10 +35,28 @@ class Canvas {
 
   void clear() const;
 
+  void fillRect(XDim xMin, YDim yMin, XDim xMax, YDim yMax,
+                roo_display::Color color) const;
+
+  void fillRect(const roo_display::Box& rect, roo_display::Color color) const;
+
   void fillRect(const Rect& rect, roo_display::Color color) const;
 
-  //   void drawTiled(const roo_display::Drawable& object, const Rect& bounds,
-  //                  roo_display::Alignment alignment, bool draw_border);
+  void clearRect(XDim xMin, YDim yMin, XDim xMax, YDim yMax) const;
+
+  void clearRect(const roo_display::Box& rect) const;
+
+  void clearRect(const Rect& rect) const;
+
+  void drawTiled(const roo_display::Drawable& object, const Rect& bounds,
+                 roo_display::Alignment alignment,
+                 bool draw_border = true) const;
+
+  void drawHLine(XDim xMin, YDim yMin, XDim xMax,
+                 roo_display::Color color) const;
+
+  void drawVLine(XDim xMin, YDim yMin, YDim yMax,
+                 roo_display::Color color) const;
 
   void drawObject(const roo_display::Drawable& object) const {
     drawObject(object, 0, 0);

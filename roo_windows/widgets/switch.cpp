@@ -58,16 +58,8 @@ bool Switch::paint(const Canvas& canvas) {
   }
   auto composite = MakeDrawableRawStreamable(Overlay(
       slider, 4, 4, Overlay(shadow, xoffset, 0, circle, xoffset + 1, 1), 0, 0));
-  roo_display::Tile toggle(&composite, Box(0, 0, 42, 24),
-                           roo_display::kMiddle);
-  Alignment alignment = roo_display::kCenter | roo_display::kMiddle;
-  if (isInvalidated()) {
-    roo_display::Tile tile(&toggle, bounds().asBox(), alignment);
-    canvas.drawObject(tile);
-  } else {
-    auto offset = alignment.resolveOffset(bounds().asBox(), toggle.extents());
-    canvas.drawObject(toggle, offset.first, offset.second);
-  }
+  roo_display::Tile toggle(&composite, Box(0, 0, 42, 24), kMiddle);
+  canvas.drawTiled(toggle, bounds(), kCenter | kMiddle, isInvalidated());
   return finished;
 }
 

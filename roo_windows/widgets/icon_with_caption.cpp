@@ -34,30 +34,26 @@ bool IconWithCaption::paint(const Canvas& canvas) {
   }
   color = alphaBlend(canvas.bgcolor(), color);
   if (isInvalidated() && hi_border_ > 0) {
-    canvas.drawObject(
-        FilledRect(bounds().xMin(), bounds().yMin(), bounds().xMax(),
-                   bounds().yMin() + hi_border_ - 1, color::Transparent));
+    canvas.clearRect(bounds().xMin(), bounds().yMin(), bounds().xMax(),
+                    bounds().yMin() + hi_border_ - 1);
   }
 
-  Box icon_bounds(bounds().xMin(), hi_border_, bounds().xMax(),
-                  hi_border_ + icon_->extents().height() - 1);
+  Rect icon_bounds(bounds().xMin(), hi_border_, bounds().xMax(),
+                   hi_border_ + icon_->extents().height() - 1);
   MaterialIcon icon(*icon_);
   icon.color_mode().setColor(color);
-  canvas.drawObject(Tile(&icon, icon_bounds,
-                         kCenter | kBaseline.shiftBy(icon_bounds.yMin())));
+  canvas.drawTiled(icon, icon_bounds,
+                   kCenter | kBaseline.shiftBy(icon_bounds.yMin()));
 
-  roo_display::Box caption_bounds(
-      bounds().xMin(), icon_bounds.yMax() + 1, bounds().xMax(),
-      icon_bounds.yMax() + font_->metrics().maxHeight());
-  canvas.drawObject(
-      MakeTileOf(StringViewLabel(caption_, *font_, color), caption_bounds,
-                 kCenter | kBaseline.shiftBy(caption_bounds.yMin() +
-                                             font_->metrics().ascent())));
+  Rect caption_bounds(bounds().xMin(), icon_bounds.yMax() + 1, bounds().xMax(),
+                      icon_bounds.yMax() + font_->metrics().maxHeight());
+  canvas.drawTiled(StringViewLabel(caption_, *font_, color), caption_bounds,
+                   kCenter | kBaseline.shiftBy(caption_bounds.yMin() +
+                                               font_->metrics().ascent()));
 
   if (isInvalidated() && lo_border_ > 0) {
-    canvas.drawObject(
-        FilledRect(bounds().xMin(), bounds().yMax() - lo_border_ + 1,
-                   bounds().xMax(), bounds().yMax(), color::Transparent));
+    canvas.clearRect(bounds().xMin(), bounds().yMax() - lo_border_ + 1,
+                    bounds().xMax(), bounds().yMax());
   }
   return true;
 }

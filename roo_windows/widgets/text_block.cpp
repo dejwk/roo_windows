@@ -1,5 +1,7 @@
 #include "roo_windows/widgets/text_block.h"
 
+#include "roo_display/shape/basic_shapes.h"
+
 namespace roo_windows {
 
 namespace {
@@ -59,11 +61,10 @@ TextBlock::TextBlock(const Environment& env, std::string value,
 bool TextBlock::paint(const Canvas& canvas) {
   roo_display::Color color =
       color_.a() == 0 ? parent()->defaultColor() : color_;
-  canvas.drawObject(roo_display::MakeTileOf(
-      Interior(roo_display::Box(0, 0, text_dims_.width() - 1,
-                                text_dims_.height() - 1),
-               value_, font_, color),
-      bounds().asBox(), alignment_));
+  canvas.drawTiled(Interior(roo_display::Box(0, 0, text_dims_.width() - 1,
+                                             text_dims_.height() - 1),
+                            value_, font_, color),
+                   bounds(), alignment_);
   return true;
 }
 

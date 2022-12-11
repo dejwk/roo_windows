@@ -3,12 +3,27 @@
 #include "roo_display/core/color.h"
 #include "roo_display/core/device.h"
 #include "roo_display/core/drawable.h"
+#include "roo_display/ui/tile.h"
+#include "roo_windows/core/rect.h"
 
 namespace roo_windows {
 
 void Canvas::clear() const {
-  out().fillRect(surface_->paint_mode(), clip_box_,
-                 bgcolor());
+  out().fillRect(surface_->paint_mode(), clip_box_, bgcolor());
+}
+
+void Canvas::fillRect(XDim xMin, YDim yMin, XDim xMax, YDim yMax,
+                      roo_display::Color color) const {
+  fillRect(Rect(xMin, yMin, xMax, yMax), color);
+}
+
+void Canvas::fillRect(const roo_display::Box& rect,
+                      roo_display::Color color) const {
+  roo_display::Box b = rect.translate(dx_, dy_);
+  b.clip(clip_box_);
+  if (b.empty()) return;
+  color = alphaBlend(bgcolor(), color);
+  out().fillRect(surface_->paint_mode(), b, color);
 }
 
 void Canvas::fillRect(const Rect& rect, roo_display::Color color) const {
@@ -18,8 +33,46 @@ void Canvas::fillRect(const Rect& rect, roo_display::Color color) const {
   out().fillRect(surface_->paint_mode(), b, color);
 }
 
-// void Canvas::drawTiled(const roo_display::Drawable& object, const Rect&
-// bounds, roo_display::Alignment alignment, bool draw_border) {}
+void Canvas::clearRect(XDim xMin, YDim yMin, XDim xMax, YDim yMax) const {
+  clearRect(Rect(xMin, yMin, xMax, yMax));
+}
+
+void Canvas::clearRect(const roo_display::Box& rect) const {
+  roo_display::Box b = rect.translate(dx_, dy_);
+  b.clip(clip_box_);
+  if (b.empty()) return;
+  out().fillRect(surface_->paint_mode(), b, bgcolor());
+}
+
+void Canvas::clearRect(const Rect& rect) const {
+  roo_display::Box b = rect.translate(dx_, dy_).clip(clip_box_);
+  if (b.empty()) return;
+  out().fillRect(surface_->paint_mode(), b, bgcolor());
+}
+
+void Canvas::drawHLine(XDim xMin, YDim yMin, XDim xMax,
+                       roo_display::Color color) const {
+  fillRect(Rect(xMin, yMin, xMax, yMin), color);
+}
+
+void Canvas::drawVLine(XDim xMin, YDim yMin, YDim yMax,
+                       roo_display::Color color) const {
+  fillRect(Rect(xMin, yMin, xMin, yMax), color);
+}
+
+void Canvas::drawTiled(const roo_display::Drawable& object, const Rect& bounds,
+                       roo_display::Alignment alignment,
+                       bool draw_border) const {
+  // For now, just compatibility mode, not really supporting large canvases.
+  if (draw_border) {
+    roo_display::Tile tile(&object, bounds.asBox(), alignment);
+    drawObject(tile);
+  } else {
+    auto offset =
+        ResolveAlignmentOffset(bounds, Rect(object.anchorExtents()), alignment);
+    drawObject(object, offset.first, offset.second);
+  }
+}
 
 void Canvas::drawObject(const roo_display::Drawable& object, XDim dx,
                         YDim dy) const {

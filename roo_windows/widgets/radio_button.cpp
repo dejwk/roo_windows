@@ -20,14 +20,7 @@ bool RadioButton::paint(const Canvas& canvas) {
       isOn() ? ic_filled_24_toggle_radio_button_checked()
              : ic_filled_24_toggle_radio_button_unchecked();
   img.color_mode().setColor(color);
-  Alignment alignment = roo_display::kCenter | roo_display::kMiddle;
-  if (isInvalidated()) {
-    roo_display::Tile tile(&img, bounds().asBox(), alignment);
-    canvas.drawObject(tile, 0, 0);
-  } else {
-    auto offset = alignment.resolveOffset(bounds().asBox(), img.extents());
-    canvas.drawObject(img, offset.first, offset.second);
-  }
+  canvas.drawTiled(img, bounds(), kCenter | kMiddle, isInvalidated());
   return true;
 }
 

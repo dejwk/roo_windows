@@ -22,14 +22,7 @@ bool Checkbox::paint(const Canvas& canvas) {
       : state == OFF ? ic_filled_24_toggle_check_box_outline_blank()
                      : ic_filled_24_toggle_indeterminate_check_box();
   img.color_mode().setColor(color);
-  Alignment alignment = roo_display::kCenter | roo_display::kMiddle;
-  if (isInvalidated()) {
-    roo_display::Tile tile(&img, bounds().asBox(), alignment);
-    canvas.drawObject(tile);
-  } else {
-    auto offset = alignment.resolveOffset(bounds().asBox(), img.extents());
-    canvas.drawObject(img, offset.first, offset.second);
-  }
+  canvas.drawTiled(img, bounds(), kCenter | kMiddle, isInvalidated());
   return true;
 }
 
