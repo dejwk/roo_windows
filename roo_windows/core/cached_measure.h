@@ -23,8 +23,8 @@ class CachedMeasure {
   }
 
   Dimensions dimensions() const { return cached_dimensions_; }
-  int16_t width() const { return cached_dimensions_.width(); }
-  int16_t height() const { return cached_dimensions_.height(); }
+  XDim width() const { return cached_dimensions_.width(); }
+  YDim height() const { return cached_dimensions_.height(); }
 
  private:
   WidthSpec last_width_;
