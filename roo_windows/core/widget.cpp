@@ -49,7 +49,9 @@ Widget::Widget(const Widget& w)
       redraw_status_(kDirty | kInvalidated),
       on_clicked_(nullptr) {}
 
-MainWindow* Widget::getMainWindow() { return parent_->getMainWindow(); }
+MainWindow* Widget::getMainWindow() {
+  return parent_ == nullptr ? nullptr : parent_->getMainWindow();
+}
 
 Application* Widget::getApplication() {
   MainWindow* w = getMainWindow();
