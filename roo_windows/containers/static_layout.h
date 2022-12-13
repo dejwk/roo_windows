@@ -68,7 +68,7 @@ class StaticLayout : public Panel {
     return Dimensions(this->width(), this->height());
   }
 
-  void onLayout(bool changed, const roo_display::Box& box) {
+  void onLayout(bool changed, const Rect& rect) override {
     for (const auto& child : children()) {
       if (child->isLayoutRequired()) {
         child->layout(child->parent_bounds());
