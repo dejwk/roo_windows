@@ -102,7 +102,7 @@ bool Panel::paint(const Canvas& canvas) {
 
 Widget* Panel::dispatchTouchDownEvent(XDim x, YDim y) {
   if (onInterceptTouchEvent(TouchEvent(TouchEvent::DOWN, x, y))) {
-    return this;
+    return onTouchDown(x, y) ? this : nullptr;
   }
   bool within_bounds = bounds().contains(x, y);
   // Find if can delegate to a child.
