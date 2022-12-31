@@ -14,7 +14,7 @@ class Icon : public BasicWidget {
        Color color = roo_display::color::Transparent)
       : BasicWidget(env), icon_(&def), color_(color) {}
 
-  bool paint(const Canvas& canvas) override;
+  void paint(const Canvas& canvas) const override;
 
   const roo_display::MaterialIcon& icon() const { return *icon_; }
 

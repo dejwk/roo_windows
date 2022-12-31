@@ -5,8 +5,8 @@
 
 namespace roo_windows {
 
-bool HorizontalDivider::paint(const Canvas& canvas) {
-  if (!isInvalidated()) return true;
+void HorizontalDivider::paint(const Canvas& canvas) const {
+  if (!isInvalidated()) return;
   const Rect rect = bounds();
   Color color = theme().color.onBackground;
   color.set_a(0x40);
@@ -14,11 +14,10 @@ bool HorizontalDivider::paint(const Canvas& canvas) {
                   color);
   color.set_a(0x20);
   canvas.drawHLine(rect.xMin(), rect.yMax(), rect.xMax(), color);
-  return true;
 }
 
-bool VerticalDivider::paint(const Canvas& canvas) {
-  if (!isInvalidated()) return true;
+void VerticalDivider::paint(const Canvas& canvas) const {
+  if (!isInvalidated()) return;
   const Rect rect = bounds();
   Color color = theme().color.onBackground;
   color.set_a(0x40);
@@ -26,7 +25,6 @@ bool VerticalDivider::paint(const Canvas& canvas) {
                   color);
   color.set_a(0x20);
   canvas.drawVLine(rect.xMax(), rect.yMin(), rect.yMax(), color);
-  return true;
 }
 
 }  // namespace roo_windows

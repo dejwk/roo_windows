@@ -34,7 +34,7 @@ class VisibilityToggle : public BasicWidget {
     Widget::onClicked();
   }
 
-  bool paint(const Canvas& canvas) override;
+  void paint(const Canvas& canvas) const override;
 
   using Widget::isOff;
   using Widget::isOn;
@@ -177,7 +177,7 @@ class TextField : public BasicWidget {
                          PreferredSize::ExactHeight(preferred_height));
   }
 
-  bool paint(const Canvas& canvas) override;
+  void paint(const Canvas& canvas) const override;
 
   Dimensions getSuggestedMinimumDimensions() const override {
     auto metrics = font_.getHorizontalStringMetrics(value_);

@@ -15,7 +15,7 @@ class Image : public BasicWidget {
   Image(const Environment& env, const roo_display::Drawable& image)
       : BasicWidget(env), image_(image) {}
 
-  bool paint(const Canvas& canvas) override {
+  void paint(const Canvas& canvas) const override {
     canvas.drawTiled(image_, bounds(),
                      roo_display::kCenter | roo_display::kMiddle);
   }

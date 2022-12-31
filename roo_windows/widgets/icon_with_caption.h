@@ -19,7 +19,7 @@ class IconWithCaption : public BasicWidget {
   IconWithCaption(const Environment& env, const roo_display::MaterialIcon& def,
                   const std::string& caption, const roo_display::Font* font);
 
-  bool paint(const Canvas& canvas) override;
+  void paint(const Canvas& canvas) const override;
 
   Dimensions getSuggestedMinimumDimensions() const override;
 

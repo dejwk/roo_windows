@@ -23,7 +23,7 @@ void IconWithCaption::onLayout(bool changed, const Rect& rect) {
   lo_border_ = border - hi_border_;
 }
 
-bool IconWithCaption::paint(const Canvas& canvas) {
+void IconWithCaption::paint(const Canvas& canvas) const {
   Color color = color_;
   if (color == roo_display::color::Transparent) {
     const Theme& myTheme = theme();
@@ -55,7 +55,6 @@ bool IconWithCaption::paint(const Canvas& canvas) {
     canvas.clearRect(bounds().xMin(), bounds().yMax() - lo_border_ + 1,
                     bounds().xMax(), bounds().yMax());
   }
-  return true;
 }
 
 Dimensions IconWithCaption::getSuggestedMinimumDimensions() const {

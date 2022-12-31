@@ -6,7 +6,7 @@ namespace roo_windows {
 
 using namespace roo_display;
 
-bool Icon::paint(const Canvas& canvas) {
+void Icon::paint(const Canvas& canvas) const {
   Color color = color_;
   if (color == roo_display::color::Transparent) {
     const Theme& myTheme = theme();
@@ -17,12 +17,11 @@ bool Icon::paint(const Canvas& canvas) {
   }
   if (icon_ == nullptr) {
     canvas.clear();
-    return true;
+    return;
   }
   roo_display::MaterialIcon icon(*icon_);
   icon.color_mode().setColor(alphaBlend(canvas.bgcolor(), color));
   canvas.drawTiled(icon, bounds(), kCenter | kMiddle, isInvalidated());
-  return true;
 }
 
 void Icon::setIcon(const roo_display::MaterialIcon& icon) {

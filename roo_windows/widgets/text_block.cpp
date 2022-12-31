@@ -58,14 +58,13 @@ TextBlock::TextBlock(const Environment& env, std::string value,
   setContent(value);
 }
 
-bool TextBlock::paint(const Canvas& canvas) {
+void TextBlock::paint(const Canvas& canvas) const {
   roo_display::Color color =
       color_.a() == 0 ? parent()->defaultColor() : color_;
   canvas.drawTiled(Interior(roo_display::Box(0, 0, text_dims_.width() - 1,
                                              text_dims_.height() - 1),
                             value_, font_, color),
                    bounds(), alignment_);
-  return true;
 }
 
 Dimensions TextBlock::getSuggestedMinimumDimensions() const {

@@ -11,7 +11,7 @@ class BatteryIndicator : public Widget {
 
   BatteryIndicator(const Environment& env, roo_display::Color color);
 
-  bool paint(const Canvas& canvas) override;
+  void paint(const Canvas& canvas) const override;
 
   void setBatteryPercent(int percent);
   void setBatteryCharging(bool charging);
@@ -21,7 +21,7 @@ class BatteryIndicator : public Widget {
   // Padding getPadding() const override { return Padding(0); }
 
  protected:
-  virtual const roo_display::MaterialIcon* const* icons() = 0;
+  virtual const roo_display::MaterialIcon* const* icons() const = 0;
 
  private:
   enum BatteryLevel {
@@ -55,7 +55,7 @@ class BatteryIndicator : public Widget {
     BATTERY_UNKNOWN,
   };
 
-  BatteryStatus status();
+  BatteryStatus status() const;
 
   Color color_;  // If transparent, use parent's default content color.
   bool charging_;

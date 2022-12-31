@@ -244,10 +244,10 @@ Button::Button(const Environment& env, const MonoIcon* icon, std::string label,
 // BBBBBB_C_C_C_C_DDDDDD
 // BBBBBB_C_C_C_C_DDDDDD
 
-bool Button::paint(const Canvas& canvas) {
+void Button::paint(const Canvas& canvas) const {
   if (style() == TEXT) {
     paintInterior(canvas, bounds().asBox(), *this);
-    return true;
+    return;
   }
 
   const BorderSpec& spec =
@@ -348,7 +348,6 @@ bool Button::paint(const Canvas& canvas) {
         spec.data_bottom_right, Alpha4(outlineColor()));
     canvas.drawObject(br);
   }
-  return true;
 }
 
 Padding Button::getDefaultPadding() const { return Padding(14, 4); }

@@ -17,7 +17,7 @@ class WifiIndicator : public BasicWidget {
 
   WifiIndicator(const Environment& env, roo_display::Color color);
 
-  bool paint(const Canvas& canvas) override;
+  void paint(const Canvas& canvas) const override;
   // Padding getPadding() const override { return Padding(0); }
 
   void setConnectionStatus(ConnectionStatus status);
@@ -27,7 +27,7 @@ class WifiIndicator : public BasicWidget {
   void setWifiSignalStrength(int rssi);
 
  protected:
-  virtual const roo_display::MaterialIcon* const* icons() = 0;
+  virtual const roo_display::MaterialIcon* const* icons() const = 0;
 
  private:
   enum WifiStatus {
@@ -43,7 +43,7 @@ class WifiIndicator : public BasicWidget {
     WIFI_STATUS_CONNECTED_NO_INTERNET = 9
   };
 
-  WifiStatus status();
+  WifiStatus status() const;
 
   Color color_;  // If transparent, use parent's default content color.
   ConnectionStatus connection_status_;

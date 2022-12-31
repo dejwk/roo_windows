@@ -13,7 +13,7 @@ void Checkbox::onClicked() {
   Widget::onClicked();
 }
 
-bool Checkbox::paint(const Canvas& canvas) {
+void Checkbox::paint(const Canvas& canvas) const {
   OnOffState state = onOffState();
   Color color = state == ON ? theme().color.highlighterColor(canvas.bgcolor())
                             : theme().color.defaultColor(canvas.bgcolor());
@@ -23,7 +23,6 @@ bool Checkbox::paint(const Canvas& canvas) {
                      : ic_filled_24_toggle_indeterminate_check_box();
   img.color_mode().setColor(color);
   canvas.drawTiled(img, bounds(), kCenter | kMiddle, isInvalidated());
-  return true;
 }
 
 Dimensions Checkbox::getSuggestedMinimumDimensions() const {

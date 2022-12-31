@@ -71,7 +71,7 @@ class Button : public BasicWidget {
     invalidateInterior();
   }
 
-  bool paint(const Canvas& canvas) override;
+  void paint(const Canvas& canvas) const override;
 
   Dimensions getSuggestedMinimumDimensions() const override;
   Padding getDefaultPadding() const override;

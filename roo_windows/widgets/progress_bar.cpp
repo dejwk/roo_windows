@@ -8,7 +8,15 @@ using namespace roo_display;
 
 namespace roo_windows {
 
-bool ProgressBar::paint(const Canvas& canvas) {
+void ProgressBar::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
+  Widget::paintWidgetContents(canvas, clipper);
+  if (progress_ < 0) {
+    // Indeterminate. Continuous animation.
+    markDirty();
+  }
+}
+
+void ProgressBar::paint(const Canvas& canvas) const {
   const Theme& th = theme();
   Color c = (color_ == color::Transparent ? th.color.primary : color_);
   if (progress_ >= 0) {
@@ -23,7 +31,6 @@ bool ProgressBar::paint(const Canvas& canvas) {
       c.set_a(0x80);
       canvas.fillRect(xoffset_incomplete, 0, width() - 1, height() - 1, c);
     }
-    return true;
   } else {
     int16_t offset_start =
         (uint32_t)(millis() % (1024 + 400) - 200) * width() / 1024;
@@ -44,7 +51,6 @@ bool ProgressBar::paint(const Canvas& canvas) {
       c.set_a(0x80);
       canvas.fillRect(offset_end + 1, 0, width() - 1, height() - 1, c);
     }
-    return false;
   }
 }
 

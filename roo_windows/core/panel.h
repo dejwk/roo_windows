@@ -89,7 +89,7 @@ class Panel : public Widget {
   // Draws the surface area of this panel. The default implementation draws
   // a transparent rectangle. (Effectively, the rectangle is drawn in the
   // panel's background color, which is pre-set in the specified canvas).
-  bool paint(const Canvas& s) override;
+  void paint(const Canvas& s) const override;
 
   Widget* dispatchTouchDownEvent(XDim x, YDim y) override;
 

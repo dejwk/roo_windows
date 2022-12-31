@@ -136,11 +136,8 @@ class Widget {
   // Called as part of display update, for a visible, dirty widget.
   // The Canvas's offset and clipbox has been pre-initialized so that this
   // widget's top-left corner is painted at (0, 0), and the clip box is
-  // constrained to this widget's bounds (and non-empty). Should return true if
-  // the painting is considered done, or false if the widget wants to be
-  // repainted again (e.g. because it is undergoing state change resulting in an
-  // animation).
-  virtual bool paint(const Canvas& s) { return true; }
+  // constrained to this widget's bounds (and non-empty).
+  virtual void paint(const Canvas& s) const {}
 
   virtual MainWindow* getMainWindow();
   virtual const MainWindow* getMainWindow() const;
@@ -451,8 +448,14 @@ class Widget {
   // need to draw anything, but it should still exclude the widget's area from
   // the clipper. The default implementaion calls paint() (but only in case the)
   // widget is actually dirty) to actually request the content to be drawn.
+  //
   // Widgets should generally not override this method, and override paint()
-  // instead.
+  // instead. Two common scenarios when you might want to override this method
+  // include:
+  // * Animating widgets. Call the superclass method, and then conditionally
+  //   call markDirty() if the animation shall continue.
+  // * Mutating state - e.g. caching some paint-related values. Call the
+  //   superclass method, and then do the necessary caching.
   virtual void paintWidgetContents(const Canvas& s, Clipper& clipper);
 
   virtual void setParent(Panel* parent, bool is_owned);

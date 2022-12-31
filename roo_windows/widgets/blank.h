@@ -9,9 +9,8 @@ class Blank : public BasicWidget {
   Blank(const Environment& env, Dimensions dims)
       : BasicWidget(env), dims_(dims) {}
 
-  bool paint(const Canvas& canvas) override {
+  void paint(const Canvas& canvas) const override {
     canvas.clear();
-    return true;
   }
 
   Dimensions getSuggestedMinimumDimensions() const override {

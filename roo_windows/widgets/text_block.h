@@ -20,7 +20,7 @@ class TextBlock : public Widget {
             const roo_display::Font& font, roo_display::Color color,
             roo_display::Alignment alignment);
 
-  bool paint(const Canvas& s) override;
+  void paint(const Canvas& s) const override;
 
   Dimensions getSuggestedMinimumDimensions() const override;
 

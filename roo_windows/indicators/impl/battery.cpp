@@ -19,13 +19,12 @@ BatteryIndicator::BatteryIndicator(const Environment& env,
       unknown_(false),
       level_(LEVEL_20) {}
 
-bool BatteryIndicator::paint(const Canvas& canvas) {
+void BatteryIndicator::paint(const Canvas& canvas) const {
   roo_display::MaterialIcon icon(*icons()[status()]);
   roo_display::Color color =
       color_.a() == 0 ? parent()->defaultColor() : color_;
   icon.color_mode().setColor(color);
   canvas.drawTiled(icon, bounds(), kCenter | kMiddle, isInvalidated());
-  return true;
 }
 
 void BatteryIndicator::setBatteryPercent(int percent) {
@@ -66,7 +65,7 @@ void BatteryIndicator::setBatteryUnknown(bool unknown) {
   markDirty();
 }
 
-BatteryIndicator::BatteryStatus BatteryIndicator::status() {
+BatteryIndicator::BatteryStatus BatteryIndicator::status() const {
   if (alert_) {
     return BATTERY_ALERT;
   }

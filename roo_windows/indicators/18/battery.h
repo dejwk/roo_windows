@@ -16,7 +16,7 @@ class BatteryIndicator18x18 : public BatteryIndicator {
   }
 
  protected:
-  const roo_display::MaterialIcon* const* icons() override {
+  const roo_display::MaterialIcon* const* icons() const override {
     static const roo_display::MaterialIcon* icons[] = {
         &ic_filled_18_device_battery_charging_20(),
         &ic_filled_18_device_battery_charging_30(),

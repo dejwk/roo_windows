@@ -16,7 +16,7 @@ class WifiIndicator24x24 : public WifiIndicator {
   }
 
  protected:
-  const roo_display::MaterialIcon* const* icons() override {
+  const roo_display::MaterialIcon* const* icons() const override {
     static const roo_display::MaterialIcon* icons[] = {
         &ic_filled_24_device_signal_wifi_off(),
         &ic_filled_24_device_signal_wifi_1_bar(),

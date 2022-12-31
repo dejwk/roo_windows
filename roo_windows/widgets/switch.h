@@ -25,7 +25,9 @@ class Switch : public BasicWidget {
     }
   }
 
-  bool paint(const Canvas& canvas) override;
+  void paintWidgetContents(const Canvas& canvas, Clipper& clipper) override;
+
+  void paint(const Canvas& canvas) const override;
 
   Dimensions getSuggestedMinimumDimensions() const override;
 

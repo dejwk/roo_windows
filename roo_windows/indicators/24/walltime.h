@@ -17,14 +17,13 @@ class WalltimeIndicator24 : public WalltimeIndicator {
                       roo_time::TimeZone tz)
       : WalltimeIndicator(env, clock, tz) {}
 
-  bool paint(const roo_display::Surface& s) override {
+  void paint(const roo_display::Surface& s) const override {
     roo_display::Color color =
         color_.a() == 0 ? parent()->defaultColor() : color_;
     s.drawObject(roo_display::MakeTileOf(
         roo_display::StringViewLabel(roo_display::font_NotoSans_Regular_24(),
                                      val_, color),
         bounds(), roo_display::kMiddle));
-    return true;
   }
 
   Dimensions getSuggestedMinimumDimensions() const override {

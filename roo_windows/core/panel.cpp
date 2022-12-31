@@ -95,9 +95,8 @@ void Panel::paintChildren(const Canvas& canvas, Clipper& clipper) {
   }
 }
 
-bool Panel::paint(const Canvas& canvas) {
+void Panel::paint(const Canvas& canvas) const {
   canvas.clear();
-  return true;
 }
 
 Widget* Panel::dispatchTouchDownEvent(XDim x, YDim y) {

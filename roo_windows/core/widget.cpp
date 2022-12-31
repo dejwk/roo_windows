@@ -498,9 +498,8 @@ void Widget::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
       bounds().translate(canvas.dx(), canvas.dy()).clip(canvas.clip_box());
   if (isDirty()) {
     clipper.setBounds(absolute_bounds);
-    bool clean = paint(canvas);
+    paint(canvas);
     markClean();
-    if (!clean) markDirty();
   }
   clipper.addExclusion(absolute_bounds);
 }

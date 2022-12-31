@@ -7,7 +7,7 @@ namespace roo_windows {
 class HorizontalDivider : public Widget {
  public:
   using Widget::Widget;
-  bool paint(const Canvas& canvas) override;
+  void paint(const Canvas& canvas) const override;
 
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(0, 2);
@@ -24,7 +24,7 @@ class HorizontalDivider : public Widget {
 class VerticalDivider : public Widget {
  public:
   using Widget::Widget;
-  bool paint(const Canvas& canvas) override;
+  void paint(const Canvas& canvas) const override;
 
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(2, 0);

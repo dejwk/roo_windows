@@ -15,7 +15,7 @@ class ToggleButtons : public Panel {
   roo_windows::Widget& addButton(const MonoIcon& icon);
 
   // Draws left- and right-side framing around the togglebutton control.
-  bool paint(const Canvas& canvas) override;
+  void paint(const Canvas& canvas) const override;
 
   Dimensions getSuggestedMinimumDimensions() const override;
   Padding getPadding() const override { return Padding(0); }
@@ -45,7 +45,7 @@ class ToggleButtons : public Panel {
       Widget::onClicked();
     }
 
-    bool paint(const Canvas& canvas) override;
+    void paint(const Canvas& canvas) const override;
 
     Dimensions getSuggestedMinimumDimensions() const override {
       return Dimensions(icon_.extents().width() + 2,

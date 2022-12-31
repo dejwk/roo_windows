@@ -28,7 +28,21 @@ int16_t Switch::time_animating_ms() const {
   return (millis() & 0x7FFF) - (anim_ & 0x7FFF);
 }
 
-bool Switch::paint(const Canvas& canvas) {
+void Switch::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
+  if (isAnimating()) {
+    int16_t ms = time_animating_ms();
+    if (ms < 0 || ms > kSwitchAnimationMs) {
+      // Done animating.
+      anim_ = 0x8000;
+    }
+  }
+  Widget::paintWidgetContents(canvas, clipper);
+  if (isAnimating()) {
+    markDirty();
+  }
+}
+
+void Switch::paint(const Canvas& canvas) const {
   const Theme& th = theme();
   Color circleColor =
       isOn() ? th.color.highlighterColor(canvas.bgcolor()) : th.color.surface;
@@ -41,17 +55,13 @@ bool Switch::paint(const Canvas& canvas) {
   circle.color_mode().setColor(circleColor);
   // leaving shadow as black.
   int16_t xoffset;
-  bool finished = true;
   if (isAnimating()) {
     int16_t ms = time_animating_ms();
     if (ms < 0 || ms > kSwitchAnimationMs) {
-      anim_ = 0x8000;
       xoffset = isOn() ? 20 : 0;
     } else {
-      markDirty();
       int16_t progress = ms * 20 / kSwitchAnimationMs;
       xoffset = isOn() ? progress : 20 - progress;
-      finished = false;
     }
   } else {
     xoffset = isOn() ? 20 : 0;
@@ -60,7 +70,6 @@ bool Switch::paint(const Canvas& canvas) {
       slider, 4, 4, Overlay(shadow, xoffset, 0, circle, xoffset + 1, 1), 0, 0));
   roo_display::Tile toggle(&composite, Box(0, 0, 42, 24), kMiddle);
   canvas.drawTiled(toggle, bounds(), kCenter | kMiddle, isInvalidated());
-  return finished;
 }
 
 Dimensions Switch::getSuggestedMinimumDimensions() const {

@@ -27,7 +27,7 @@ roo_windows::Widget& ToggleButtons::addButton(const MonoIcon& icon) {
   return btn;
 }
 
-bool ToggleButtons::paint(const Canvas& canvas) {
+void ToggleButtons::paint(const Canvas& canvas) const {
   Color border = theme().color.defaultColor(canvas.bgcolor());
   border.set_a(0x30);
   Dimensions d = getNaturalDimensions();
@@ -46,7 +46,6 @@ bool ToggleButtons::paint(const Canvas& canvas) {
   if (d.height() < height()) {
     canvas.fillRect(0, d.height(), width() - 1, height() - 1, background());
   }
-  return true;
 }
 
 Dimensions ToggleButtons::getSuggestedMinimumDimensions() const {
@@ -69,7 +68,7 @@ void ToggleButtons::setActive(int index) {
   }
 }
 
-bool ToggleButtons::ToggleButton::paint(const Canvas& canvas) {
+void ToggleButtons::ToggleButton::paint(const Canvas& canvas) const {
   Color color = theme().color.defaultColor(canvas.bgcolor());
   Color internal_border = color;
   internal_border.set_a(0x10);
@@ -86,7 +85,6 @@ bool ToggleButtons::ToggleButton::paint(const Canvas& canvas) {
                    kCenter | kMiddle);
   canvas.drawVLine(width() - 1, 0, height() - 3, external_border);
   canvas.fillRect(0, height() - 2, width() - 1, height() - 1, external_border);
-  return true;
 }
 
 }  // namespace roo_windows

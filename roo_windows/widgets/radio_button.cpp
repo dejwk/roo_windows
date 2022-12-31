@@ -13,7 +13,7 @@ void RadioButton::onClicked() {
   Widget::onClicked();
 }
 
-bool RadioButton::paint(const Canvas& canvas) {
+void RadioButton::paint(const Canvas& canvas) const {
   Color color = isOn() ? theme().color.highlighterColor(canvas.bgcolor())
                        : theme().color.defaultColor(canvas.bgcolor());
   RleImage4bppxBiased<Alpha4, PrgMemResource> img =
@@ -21,7 +21,6 @@ bool RadioButton::paint(const Canvas& canvas) {
              : ic_filled_24_toggle_radio_button_unchecked();
   img.color_mode().setColor(color);
   canvas.drawTiled(img, bounds(), kCenter | kMiddle, isInvalidated());
-  return true;
 }
 
 Dimensions RadioButton::getSuggestedMinimumDimensions() const {

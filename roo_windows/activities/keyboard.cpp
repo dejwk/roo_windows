@@ -122,7 +122,7 @@ class PressHighlighter : public Widget {
 
   void setTarget(const TextButton* target) { target_ = target; }
 
-  bool paint(const Canvas& canvas) override;
+  void paint(const Canvas& canvas) const override;
   Dimensions getSuggestedMinimumDimensions() const override;
 
   const KeyboardPage* page() const;
@@ -615,10 +615,10 @@ KeyboardWidget* Keyboard::contents() {
   return (KeyboardWidget*)contents_.get();
 }
 
-bool PressHighlighter::paint(const Canvas& canvas) {
+void PressHighlighter::paint(const Canvas& canvas) const {
   if (target_ == nullptr) {
     canvas.clear();
-    return true;
+    return;
   }
   const Theme& th = theme();
   const KeyboardColorTheme& kbTh = keyboard()->color_theme();
@@ -630,7 +630,6 @@ bool PressHighlighter::paint(const Canvas& canvas) {
                                    target_->textColor()),
       bounds().asBox(), roo_display::kCenter | roo_display::kTop.shiftBy(3),
       bgcolor));
-  return true;
 }
 
 Dimensions PressHighlighter::getSuggestedMinimumDimensions() const {

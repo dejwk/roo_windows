@@ -7,13 +7,12 @@ namespace roo_windows {
 
 using namespace roo_display;
 
-bool VisibilityToggle::paint(const Canvas& canvas) {
+void VisibilityToggle::paint(const Canvas& canvas) const {
   MaterialIcon icon(isOn() ? ic_filled_24_action_visibility()
                            : ic_filled_24_action_visibility_off());
   Color color = parent()->defaultColor();
   icon.color_mode().setColor(color);
   canvas.drawTiled(icon, bounds(), kCenter | kMiddle, isInvalidated());
-  return true;
 }
 
 namespace {
@@ -100,7 +99,7 @@ class TextFieldInterior : public Drawable {
 
 }  // namespace
 
-bool TextField::paint(const Canvas& canvas) {
+void TextField::paint(const Canvas& canvas) const {
   Color color = text_color_.a() == 0 ? parent()->defaultColor() : text_color_;
   Color highlight_color = highlight_color_.a() == 0
                               ? parent()->theme().color.secondary
@@ -236,8 +235,6 @@ bool TextField::paint(const Canvas& canvas) {
   if (isInvalidated() && min_y_undrawn < height()) {
     canvas.clearRect(0, min_y_undrawn, width() - 1, height() - 1);
   }
-
-  return true;
 }
 
 void TextFieldEditor::edit(TextField* target) {

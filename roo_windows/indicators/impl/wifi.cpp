@@ -17,13 +17,12 @@ WifiIndicator::WifiIndicator(const Environment& env, roo_display::Color color)
       locked_(false),
       bar_count_(1) {}
 
-bool WifiIndicator::paint(const Canvas& canvas) {
+void WifiIndicator::paint(const Canvas& canvas) const {
   roo_display::MaterialIcon icon(*icons()[status()]);
   roo_display::Color color =
       color_.a() == 0 ? parent()->defaultColor() : color_;
   icon.color_mode().setColor(color);
   canvas.drawTiled(icon, bounds(), kCenter | kMiddle, isInvalidated());
-  return true;
 }
 
 void WifiIndicator::setConnectionStatus(ConnectionStatus status) {
@@ -52,7 +51,7 @@ void WifiIndicator::setWifiSignalStrength(int rssi) {
   markDirty();
 }
 
-WifiIndicator::WifiStatus WifiIndicator::status() {
+WifiIndicator::WifiStatus WifiIndicator::status() const {
   switch (connection_status_) {
     case DISCONNECTED:
       return WIFI_STATUS_OFF;

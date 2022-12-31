@@ -8,7 +8,9 @@ class ProgressBar : public Widget {
  public:
   ProgressBar(const Environment& env) : Widget(env), progress_(-1), color_(0) {}
 
-  bool paint(const Canvas& canvas) override;
+  void paintWidgetContents(const Canvas& canvas, Clipper& clipper) override;
+
+  void paint(const Canvas& canvas) const override;
 
   Dimensions getSuggestedMinimumDimensions() const override;
 
