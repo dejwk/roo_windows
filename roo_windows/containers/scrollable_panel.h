@@ -7,8 +7,8 @@
 
 namespace roo_windows {
 
-static const float decceleration = 1000.0;
-static const float maxVel = 1200.0;
+static const float decceleration = 650.0;
+static const float maxVel = 2000.0;
 
 class ScrollablePanel : public Panel {
  public:
