@@ -17,6 +17,10 @@ class Activity {
 
   virtual roo_display::Box getPreferredPlacement(const Task& task);
 
+  // Returns the task that this activity is part of, or nullptr if the activity
+  // is not on any task's stack.
+  Task* getTask();
+
   // Exits this activity. The activity must have been at the top of the task
   // stack, or else the behavior is undefined.
   void exit();

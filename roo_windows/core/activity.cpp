@@ -9,6 +9,8 @@ roo_display::Box Activity::getPreferredPlacement(const Task& task) {
   return roo_display::Box(0, 0, dims.width() - 1, dims.height() - 1);
 }
 
-void Activity::exit() { getContents().getTask()->exitActivity(); }
+Task* Activity::getTask() { return getContents().getTask(); }
+
+void Activity::exit() { getTask()->exitActivity(); }
 
 }  // namespace roo_windows
