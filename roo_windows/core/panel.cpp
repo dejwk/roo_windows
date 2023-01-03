@@ -95,9 +95,7 @@ void Panel::paintChildren(const Canvas& canvas, Clipper& clipper) {
   }
 }
 
-void Panel::paint(const Canvas& canvas) const {
-  canvas.clear();
-}
+void Panel::paint(const Canvas& canvas) const { canvas.clear(); }
 
 Widget* Panel::dispatchTouchDownEvent(XDim x, YDim y) {
   if (onInterceptTouchEvent(TouchEvent(TouchEvent::DOWN, x, y))) {
@@ -137,6 +135,11 @@ Widget* Panel::dispatchTouchDownEvent(XDim x, YDim y) {
 
 // Must propagate the 'dirty' flag even if the rect comes down empty. This is
 // so that paint can clear all the dirty flags.
+//
+// NOTE: we're NOT updating the 'invalid rect' when making a child dirty, in
+// order to minimize the invalid area in the scenario when one or more children
+// are dirty, but a relatively small area actually gets invalidated (e.g.
+// because something moved).
 void Panel::propagateDirty(const Widget* child, const Rect& rect) {
   if (isDirty() && invalid_region_.contains(rect)) {
     // Already fully invalidated, thus dirty.
