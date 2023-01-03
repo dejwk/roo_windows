@@ -423,6 +423,7 @@ void Widget::paintWidget(const Canvas& canvas, Clipper& clipper) {
   if (!isDirty()) {
     // Fast path to only include exclusion rect.
     paintWidgetContents(my_canvas, clipper);
+    return;
   }
   my_canvas.set_bgcolor(
       roo_display::alphaBlend(canvas.bgcolor(), background()));
