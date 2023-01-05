@@ -20,6 +20,7 @@ class PressOverlay : public roo_display::Rasterizable {
       int16_t dy = (*y++ - y_);
       int32_t delta = r_sq - (dx * dx + dy * dy);
       roo_display::Color c = bg_;
+      // Anti-alias the boundaries by drawing outer circles using paler colors.
       if (delta <= 0) {
         c = bg_;
       } else if (r_ >= 1 && delta <= 2 * r_ - 1) {
