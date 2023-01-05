@@ -42,7 +42,7 @@ MainWindow::MainWindow(Application& app, const roo_display::Box& bounds)
   maybeAddColor(color_set, env.theme().color.primaryVariant);
   maybeAddColor(color_set, env.theme().color.secondary);
   maybeAddColor(color_set, env.keyboardColorTheme().background);
-
+  maybeAddColor(color_set, env.theme().color.secondaryVariant);
   {
     Color c = env.theme().color.defaultColor(env.theme().color.surface);
     c.set_a(env.theme().pressAnimationOpacity(env.theme().color.surface));
@@ -52,6 +52,18 @@ MainWindow::MainWindow(Application& app, const roo_display::Box& bounds)
   {
     Color c = env.theme().color.highlighterColor(env.theme().color.surface);
     c.set_a(env.theme().pressAnimationOpacity(env.theme().color.surface));
+    c = alphaBlend(env.theme().color.surface, c);
+    maybeAddColor(color_set, c);
+  }
+  {
+    Color c = env.theme().color.primary;
+    c.set_a(env.theme().state.disabled);
+    c = alphaBlend(env.theme().color.surface, c);
+    maybeAddColor(color_set, c);
+  }
+  {
+    Color c = env.theme().color.secondary;
+    c.set_a(env.theme().state.disabled);
     c = alphaBlend(env.theme().color.surface, c);
     maybeAddColor(color_set, c);
   }
@@ -68,9 +80,7 @@ Application& MainWindow::app() { return app_; }
 const Application& MainWindow::app() const { return app_; }
 const Theme& MainWindow::theme() const { return app().env().theme(); }
 
-void MainWindow::tick() {
-  click_animation_.tick();
-}
+void MainWindow::tick() { click_animation_.tick(); }
 
 void MainWindow::updateLayout() {
   if (isLayoutRequested()) {
