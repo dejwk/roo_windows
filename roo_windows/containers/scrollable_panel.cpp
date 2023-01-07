@@ -10,6 +10,7 @@ namespace roo_windows {
 
 void ScrollablePanel::scrollTo(XDim x, YDim y) {
   Widget* c = contents();
+  if (c == nullptr) return;
   Margins m = c->getMargins();
   Rect inner_pane(m.left(), m.top(), width() - m.right() - 1,
                   height() - m.bottom() - 1);
@@ -38,6 +39,7 @@ void ScrollablePanel::scrollTo(XDim x, YDim y) {
 }
 
 void ScrollablePanel::scrollToBottom() {
+  if (contents() == nullptr) return;
   getMainWindow()->updateLayout();
   Margins m = contents()->getMargins();
   scrollTo(contents()->xOffset(),
@@ -45,6 +47,9 @@ void ScrollablePanel::scrollToBottom() {
 }
 
 Dimensions ScrollablePanel::onMeasure(WidthSpec width, HeightSpec height) {
+  if (contents() == nullptr) {
+    return Dimensions(width.resolveSize(0), height.resolveSize(0));
+  }
   Margins m = contents()->getMargins();
   PreferredSize s = contents()->getPreferredSize();
   WidthSpec child_width =
@@ -65,6 +70,7 @@ Dimensions ScrollablePanel::onMeasure(WidthSpec width, HeightSpec height) {
 
 void ScrollablePanel::onLayout(bool changed, const Rect& rect) {
   Widget* c = contents();
+  if (c == nullptr) return;
   Margins m = contents()->getMargins();
   Rect bounds(0, 0, measured_.width() - 1, measured_.height() - 1);
   bounds = bounds.translate(c->xOffset() + m.left(), c->yOffset() + m.top());
@@ -74,6 +80,7 @@ void ScrollablePanel::onLayout(bool changed, const Rect& rect) {
 
 void ScrollablePanel::paintWidgetContents(const Canvas& canvas,
                                           Clipper& clipper) {
+  if (contents() == nullptr) return;
   bool scroll_in_progress = (scroll_start_vx_ != 0 || scroll_start_vy_ != 0);
   // If scroll in progress, take it into account.
   if (scroll_in_progress) {
@@ -174,6 +181,7 @@ bool ScrollablePanel::onScroll(XDim dx, YDim dy) {
 }
 
 bool ScrollablePanel::onFling(XDim vx, YDim vy) {
+  if (contents() == nullptr) return true;
   Widget* c = contents();
   scroll_start_time_ = millis();
   scroll_start_vx_ = vx;

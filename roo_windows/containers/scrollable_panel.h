@@ -16,12 +16,28 @@ class ScrollablePanel : public Panel {
 
   ScrollablePanel(const Environment& env, WidgetRef contents,
                   Direction direction = VERTICAL)
+      : ScrollablePanel(env, direction) {
+    setContents(std::move(contents));
+  }
+
+  ScrollablePanel(const Environment& env, Direction direction = VERTICAL)
       : Panel(env),
         direction_(direction),
         alignment_(roo_display::kLeft | roo_display::kTop),
         scroll_start_vx_(0.0),
-        scroll_start_vy_(0.0) {
-    add(std::move(contents));
+        scroll_start_vy_(0.0) {}
+
+  void setContents(WidgetRef new_contents) {
+    if (contents() == &*new_contents &&
+        contents()->isOwnedByParent() == new_contents.is_owned()) {
+      return;
+    }
+    removeAll();
+    add(std::move(new_contents));
+  }
+
+  void clearContents() {
+    removeAll();
   }
 
   void setAlign(roo_display::Alignment alignment) {
@@ -29,8 +45,8 @@ class ScrollablePanel : public Panel {
     update();
   }
 
-  Widget* contents() { return children_[0]; }
-  const Widget& contents() const { return *children_[0]; }
+  Widget* contents() { return children_.empty() ? nullptr : children_[0]; }
+  const Widget* contents() const { return children_[0]; }
 
   // Sets the relative position of the underlying content, relative to the the
   // visible rectangle.
@@ -39,10 +55,14 @@ class ScrollablePanel : public Panel {
   // Adjusts the relative position of the underlying content by the specified
   // offset.
   void scrollBy(XDim dx, YDim dy) {
+    if (contents() == nullptr) return;
     scrollTo(dx + contents()->xOffset(), dy + contents()->yOffset());
   }
 
-  void scrollToTop() { scrollTo(contents()->xOffset(), 0); }
+  void scrollToTop() {
+    if (contents() == nullptr) return;
+    scrollTo(contents()->xOffset(), 0);
+  }
 
   void scrollToBottom();
 
