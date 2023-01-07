@@ -13,6 +13,11 @@ namespace roo_windows {
 class TextLabel : public BasicWidget {
  public:
   TextLabel(const Environment& env, std::string value,
+            const roo_display::Font& font)
+      : TextLabel(env, std::move(value), font,
+                  roo_display::kLeft | roo_display::kMiddle) {}
+
+  TextLabel(const Environment& env, std::string value,
             const roo_display::Font& font, roo_display::Alignment alignment)
       : TextLabel(env, std::move(value), font, roo_display::color::Transparent,
                   alignment) {}
