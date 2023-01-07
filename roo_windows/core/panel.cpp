@@ -115,6 +115,10 @@ Widget* Panel::dispatchTouchDownEvent(XDim x, YDim y) {
       Widget* w = (*child)->dispatchTouchDownEvent(x - (*child)->xOffset(),
                                                    y - (*child)->yOffset());
       if (w != nullptr) return w;
+      if ((*child)->parent_bounds().contains(x, y)) {
+        // Break the loop and do not dispatch to children that are obscured.
+        break;
+      }
     }
   }
   // See if can delegate assuming more loose bounds.
@@ -123,8 +127,11 @@ Widget* Panel::dispatchTouchDownEvent(XDim x, YDim y) {
     Rect ebounds = (*child)->getSloppyTouchParentBounds();
     // When re-checking with looser bounds, don't recurse - we have already
     // tried descendants with looser bounds.
-    if (ebounds.contains(x, y) && (*child)->onTouchDown(x, y)) {
-      return *child;
+    if (ebounds.contains(x, y)) {
+      if ((*child)->onTouchDown(x, y)) {
+        return *child;
+      }
+      break;
     }
   }
   if (bounds().contains(x, y)) {
