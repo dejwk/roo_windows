@@ -48,6 +48,8 @@ class WidgetRef {
     return result;
   }
 
+  bool is_owned() const { return is_owned_; }
+
  private:
   friend class Panel;
 
