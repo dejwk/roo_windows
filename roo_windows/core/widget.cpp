@@ -473,7 +473,7 @@ void Widget::paintWidget(const Canvas& canvas, Clipper& clipper) {
     }
     if (overlay.a() > 0) {
       roo_display::OverlayFilter filter(canvas.out(), overlay,
-                                        canvas.bgcolor());
+                                        roo_display::color::Transparent);
       my_canvas.set_out(&filter);
       paintWidgetContents(my_canvas, clipper);
     } else {
@@ -488,7 +488,7 @@ void Widget::paintWidget(const Canvas& canvas, Clipper& clipper) {
     }
   } else {
     roo_display::TranslucencyFilter disablement_filter(
-        canvas.out(), theme().state.disabled, canvas.bgcolor());
+        my_canvas.out(), theme().state.disabled, canvas.bgcolor());
     my_canvas.set_out(&disablement_filter);
     paintWidgetContents(my_canvas, clipper);
   }
