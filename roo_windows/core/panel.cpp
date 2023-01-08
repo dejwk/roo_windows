@@ -189,7 +189,8 @@ void Panel::invalidateDescending(const Rect& rect) {
 }
 
 void Panel::childHidden(const Widget* child) {
-  invalidateBeneath(child->parent_bounds(), child,
+  propagateDirty(child, child->maxParentBounds());
+  invalidateBeneath(child->maxParentBounds(), child,
                     child->getParentClipMode() == Widget::CLIPPED);
   if (child->getParentClipMode() == Widget::UNCLIPPED) {
     unclippedChildRectHidden(child->parent_bounds());
@@ -216,7 +217,7 @@ void Panel::unclippedChildRectHidden(const Rect& rect) {
     return;
   }
   invalidateCachedMaxBounds();
-  markDirty();
+  markDirty(rect);
   if (getParentClipMode() == UNCLIPPED && !parent()->bounds().contains(rect)) {
     // The rect sticks out beyond us; need to propagate to the parent.
     parent()->unclippedChildRectHidden(rect.translate(xOffset(), yOffset()));
@@ -239,7 +240,7 @@ void Panel::invalidateBeneath(const Rect& bounds, const Widget* widget,
                               bool clip) {
   Rect clipped = clip ? Rect::Intersect(bounds, this->bounds()) : bounds;
   if (clipped.empty()) return;
-  if (clip || this->bounds().contains(clipped)) {
+  if (clip || this->bounds().contains(clipped) || parent() == nullptr) {
     // Typical case: the hidden child will be overwritten by this panel.
     invalidateBeneathDescending(clipped, widget);
   } else {
@@ -255,7 +256,7 @@ bool Panel::invalidateBeneathDescending(const Rect& rect,
   Rect clipped = Rect::Intersect(rect, maxBounds());
   if (clipped.empty()) return false;
   markInvalidated();
-  markDirty();
+  markDirty(clipped);
   if (invalid_region_.empty()) {
     invalid_region_ = clipped;
   } else {
