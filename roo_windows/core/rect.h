@@ -50,7 +50,7 @@ class Rect {
   Rect& operator=(Rect&&) = default;
 
   inline static Rect MaximumRect() {
-    return Rect(-16384, -8388608, 16383, 8388607);
+    return Rect(-16384, -4194304, 16383, 4194303);
   }
 
   bool empty() const { return xMax() < xMin() || yMax() < yMin(); }
