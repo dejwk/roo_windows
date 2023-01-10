@@ -59,7 +59,7 @@ class WidgetRef {
 
 class Panel : public Widget {
  public:
-  Panel(const Environment& env) : Panel(env, env.theme().color.background) {}
+  Panel(const Environment& env) : Panel(env, roo_display::color::Transparent) {}
 
   Panel(const Environment& env, Color bgcolor);
 
