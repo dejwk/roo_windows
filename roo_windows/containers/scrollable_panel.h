@@ -36,9 +36,7 @@ class ScrollablePanel : public Panel {
     add(std::move(new_contents));
   }
 
-  void clearContents() {
-    removeAll();
-  }
+  void clearContents() { removeAll(); }
 
   void setAlign(roo_display::Alignment alignment) {
     alignment_ = alignment;
@@ -79,13 +77,7 @@ class ScrollablePanel : public Panel {
   bool supportsScrolling() const override { return true; }
 
  protected:
-  PreferredSize getPreferredSize() const override {
-    return PreferredSize(
-        direction_ != VERTICAL ? PreferredSize::WrapContentWidth()
-                               : PreferredSize::MatchParentWidth(),
-        direction_ != HORIZONTAL ? PreferredSize::WrapContentHeight()
-                                 : PreferredSize::MatchParentHeight());
-  }
+  PreferredSize getPreferredSize() const override;
 
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
 

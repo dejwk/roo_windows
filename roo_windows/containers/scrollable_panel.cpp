@@ -46,6 +46,38 @@ void ScrollablePanel::scrollToBottom() {
            height() - m.top() - m.bottom() - contents()->height() + 1);
 }
 
+PreferredSize ScrollablePanel::getPreferredSize() const {
+  // In the dimension that is scrolled over, we will just return 'match parent',
+  // For example, if the panel scrolls vertically, we report the preferred
+  // height as 'match parent height'. In the other dimension, we forward the
+  // preference of the contents, accounting for our padding and the content's
+  // margins (in case when the preference is exact).
+  Padding p = getPadding();
+  XDim ph = p.left() + p.right();
+  YDim pv = p.top() + p.bottom();
+  PreferredSize::Width w = PreferredSize::ExactWidth(ph);
+  PreferredSize::Height h = PreferredSize::ExactHeight(pv);
+  if (contents() != nullptr) {
+    PreferredSize c = contents()->getPreferredSize();
+    Margins m = contents()->getMargins();
+    XDim mh = m.left() + m.right();
+    YDim mv = m.top() + m.bottom();
+    if (c.width().isExact()) {
+      w = PreferredSize::ExactWidth(c.width().value() + ph + mh);
+    } else {
+      w = c.width();
+    }
+    if (c.height().isExact()) {
+      h = PreferredSize::ExactHeight(c.height().value() + pv + mv);
+    } else {
+      h = c.height();
+    }
+  }
+  return PreferredSize(
+      direction_ == VERTICAL ? w : PreferredSize::MatchParentWidth(),
+      direction_ == HORIZONTAL ? h : PreferredSize::MatchParentHeight());
+}
+
 Dimensions ScrollablePanel::onMeasure(WidthSpec width, HeightSpec height) {
   if (contents() == nullptr) {
     return Dimensions(width.resolveSize(0), height.resolveSize(0));
