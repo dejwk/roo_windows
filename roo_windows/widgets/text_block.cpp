@@ -54,7 +54,11 @@ class Interior : public roo_display::Drawable {
 TextBlock::TextBlock(const Environment& env, std::string value,
                      const roo_display::Font& font, roo_display::Color color,
                      roo_display::Alignment alignment)
-    : Widget(env), value_(), font_(font), color_(color), alignment_(alignment) {
+    : BasicWidget(env),
+      value_(),
+      font_(font),
+      color_(color),
+      alignment_(alignment) {
   setContent(value);
 }
 
@@ -64,7 +68,7 @@ void TextBlock::paint(const Canvas& canvas) const {
   canvas.drawTiled(Interior(roo_display::Box(0, 0, text_dims_.width() - 1,
                                              text_dims_.height() - 1),
                             value_, font_, color),
-                   bounds(), alignment_);
+                   bounds(), adjustAlignment(alignment_));
 }
 
 Dimensions TextBlock::getSuggestedMinimumDimensions() const {
@@ -104,6 +108,12 @@ void TextBlock::setContent(std::string value) {
 
   markDirty();
   requestLayout();
+}
+
+void TextBlock::setColor(roo_display::Color color) {
+  if (color_ == color) return;
+  color_ = color;
+  markDirty();
 }
 
 }  // namespace roo_windows
