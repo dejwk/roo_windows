@@ -5,6 +5,7 @@
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/widget.h"
+#include "roo_windows/dialogs/dialog.h"
 
 namespace roo_windows {
 
@@ -13,10 +14,22 @@ class TaskPanel;
 
 class Task {
  public:
-  Task() {}
+  Task();
 
   void enterActivity(Activity* activity);
   void exitActivity();
+
+  // Dialogs are modal, centered, and scrim the screen behind them.
+  // The callback gets called with the index of the option (e.g. button)
+  // selected in the dialog.
+  //
+  // While a dialog is showing, it is model - i.e. it is not possible to enter
+  // activities or show other dialogs.
+  //
+  // The dialog can be closed by user action, or programmatically by calling
+  // close(). Both of these paths result in callback_fn getting called, and the
+  // dialog getting removed from the task.
+  void showDialog(Dialog& dialog, Dialog::CallbackFn callback_fn);
 
   Dimensions getDimensions() const;
 
@@ -33,6 +46,7 @@ class Task {
 
   TaskPanel* panel_;
   std::vector<Activity*> activities_;
+  bool shows_dialog_;
 };
 
 class TaskPanel : public Panel {
