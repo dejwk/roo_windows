@@ -54,10 +54,9 @@ class Dialog : public VerticalLayout {
   std::vector<Button> buttons_;
   CallbackFn callback_fn_;
 
-  // For now, shadows are a bit ugly and slow, so the goal of adding support for
-  // elevation to any component is postponed. We keep it specific to dialogs.
+  // TODO: consider adding general support for elevation. For now, we keep it
+  //specific to dialogs.
   Shadow shadow_;
-  int depth_;
 };
 
 }  // namespace roo_windows

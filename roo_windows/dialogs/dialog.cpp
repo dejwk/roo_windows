@@ -38,11 +38,9 @@ Dialog::Dialog(const Environment& env,
       title_(env, "", *env.theme().font.h6),
       contents_(env),
       button_panel_(env),
-      shadow_(Rect(0, 0, 1, 1), 1),
-      depth_(1) {
+      shadow_() {
   body_.setPadding(Padding(PADDING_REGULAR, PADDING_REGULAR));
   title_.setPadding(PADDING_NONE, PADDING_NONE);
-  // title_.setMargins(MARGIN_NONE, MARGIN_NONE);
   body_.add(title_);
   body_.add(contents_, VerticalLayout::Params().setWeight(1));
   add(body_, VerticalLayout::Params().setWeight(1));
@@ -58,7 +56,6 @@ Dialog::Dialog(const Environment& env,
     button_panel_.add(buttons_.back());
     ++i;
   }
-  // setParentClipMode(Widget::UNCLIPPED);
 }
 
 void Dialog::setTitle(const std::string& title) { title_.setText(title); }
@@ -84,7 +81,7 @@ void Dialog::paintWidgetContents(const Canvas& s, Clipper& clipper) {
   Panel::paintWidgetContents(s, clipper);
   Rect full, visible;
   getAbsoluteBounds(full, visible);
-  shadow_ = Shadow(full, 8);
+  shadow_ = Shadow(full, 20);
   clipper.addOverlay(&shadow_, s.clip_box());
   clipper.addOverlay(&scrim(), s.clip_box());
 }
