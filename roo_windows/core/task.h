@@ -21,6 +21,16 @@ class Task {
   // close any open dialog).
   void enterActivity(Activity* activity);
 
+  // Removes the topmost activity from the stack. The task must not be showing a
+  // dialog. (You can call clearDialog() prior to this method to forcefully
+  // close any open dialog).
+  void exitActivity();
+
+  // Removes all activities. Closes any open dialogs.
+  // As the activities are removed from the stack, they don't get resumed; they
+  // go directly from 'paused' to 'stopped'.
+  void clear();
+
   // Dialogs are modal, centered, and scrim the screen behind them.
   // The callback gets called with the index of the option (e.g. button)
   // selected in the dialog.
@@ -32,16 +42,6 @@ class Task {
   // close(). Both of these paths result in callback_fn getting called, and the
   // dialog getting removed from the task.
   void showDialog(Dialog& dialog, Dialog::CallbackFn callback_fn);
-
-  // Removes the topmost activity from the stack. The task must not be showing a
-  // dialog. (You can call clearDialog() prior to this method to forcefully
-  // close any open dialog).
-  void exitActivity();
-
-  // Removes all activities. Closes any open dialogs.
-  // As the activities are removed from the stack, they don't get resumed; they
-  // go directly from 'paused' to 'stopped'.
-  void clear();
 
   // If a dialog is open, closes it. Otherwise, no-op.
   void clearDialog();
