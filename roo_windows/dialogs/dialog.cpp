@@ -31,8 +31,7 @@ const Scrim& scrim() {
 
 }  // namespace
 
-Dialog::Dialog(const Environment& env,
-               const std::initializer_list<std::string>& button_labels)
+Dialog::Dialog(const Environment& env, std::vector<std::string> button_labels)
     : VerticalLayout(env),
       body_(env),
       title_(env, "", *env.theme().font.h6),
@@ -50,15 +49,15 @@ Dialog::Dialog(const Environment& env,
       Gravity(kHorizontalGravityRight, kVerticalGravityMiddle));
   buttons_.reserve(button_labels.size());
   int i = 0;
-  for (const std::string& label : button_labels) {
-    buttons_.emplace_back(env, label, Button::TEXT);
+  for (std::string& label : button_labels) {
+    buttons_.emplace_back(env, std::move(label), Button::TEXT);
     buttons_.back().setOnClicked([this, i]() { actionTaken(i); });
     button_panel_.add(buttons_.back());
     ++i;
   }
 }
 
-void Dialog::setTitle(const std::string& title) { title_.setText(title); }
+void Dialog::setTitle(std::string title) { title_.setText(std::move(title)); }
 
 Widget* Dialog::dispatchTouchDownEvent(XDim x, YDim y) {
   Widget* result = Panel::dispatchTouchDownEvent(x, y);

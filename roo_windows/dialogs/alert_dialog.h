@@ -11,7 +11,7 @@ class AlertDialog : public Dialog {
   // the text.
   AlertDialog(const Environment& env, std::string title,
               std::string supporting_text,
-              const std::initializer_list<std::string>& button_labels);
+              std::vector<std::string> button_labels);
 
   void setSupportingText(std::string supporting_text);
 

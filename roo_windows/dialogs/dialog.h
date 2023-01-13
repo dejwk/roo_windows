@@ -3,7 +3,6 @@
 #include <functional>
 
 #include "roo_glog/logging.h"
-
 #include "roo_windows/containers/horizontal_layout.h"
 #include "roo_windows/containers/scrollable_panel.h"
 #include "roo_windows/containers/vertical_layout.h"
@@ -20,7 +19,7 @@ class Dialog : public VerticalLayout {
 
   Rect maxBounds() const override { return Rect::MaximumRect(); }
 
-  void setTitle(const std::string& title);
+  void setTitle(std::string title);
 
   // Intercept all touch events to ensure the dialog is modal.
   Widget* dispatchTouchDownEvent(XDim x, YDim y) override;
@@ -29,8 +28,7 @@ class Dialog : public VerticalLayout {
   void close();
 
  protected:
-  Dialog(const Environment& env,
-         const std::initializer_list<std::string>& button_labels);
+  Dialog(const Environment& env, const std::vector<std::string> button_labels);
 
   void paintWidgetContents(const Canvas& s, Clipper& clipper) override;
 
@@ -55,7 +53,7 @@ class Dialog : public VerticalLayout {
   CallbackFn callback_fn_;
 
   // TODO: consider adding general support for elevation. For now, we keep it
-  //specific to dialogs.
+  // specific to dialogs.
   Shadow shadow_;
 };
 
