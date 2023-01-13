@@ -22,6 +22,7 @@ void Task::enterActivity(Activity* activity) {
 }
 
 void Task::exitActivity() {
+  CHECK(!shows_dialog_);
   activities_.back()->onPause();
   panel_->exitActivity();
   activities_.back()->onStop();
@@ -31,14 +32,37 @@ void Task::exitActivity() {
   }
 }
 
+void Task::clearDialog() {
+  if (shows_dialog_) {
+    ((Dialog*)panel_->children().back())->close();
+  }
+}
+
+void Task::clear() {
+  clearDialog();
+  if (activities_.empty()) return;
+  activities_.back()->onPause();
+  // Now, all activities on the stack are paused.
+  while (!activities_.empty()) {
+    panel_->exitActivity();
+    activities_.back()->onStop();
+    activities_.pop_back();
+  }
+}
+
+Activity* Task::currentActivity() {
+  return activities_.empty() ? nullptr : activities_.back();
+}
+
 void Task::showDialog(Dialog& dialog, Dialog::CallbackFn callback_fn) {
   CHECK(!shows_dialog_) << "Can't show two dialogs at the same time";
   shows_dialog_ = true;
   dialog.setCallbackFn([this, callback_fn, &dialog](int id) {
-    dialog.setCallbackFn(nullptr);
     shows_dialog_ = false;
     panel_->removeLast();
-    callback_fn(id);
+    Dialog::CallbackFn fn = callback_fn;
+    dialog.setCallbackFn(nullptr);
+    fn(id);
   });
   Dimensions dims = dialog.measure(WidthSpec::AtMost(panel_->width()),
                                    HeightSpec::AtMost(panel_->height()));
@@ -62,6 +86,8 @@ void Task::getAbsoluteOffset(XDim& dx, YDim& dy) const {
 }
 
 MainWindow& Task::getMainWindow() const { return *panel_->getMainWindow(); }
+
+Application& Task::getApplication() const { return *panel_->getApplication(); }
 
 void TaskPanel::enterActivity(Activity* activity,
                               const roo_display::Box& bounds) {

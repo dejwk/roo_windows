@@ -76,8 +76,7 @@ MainWindow::MainWindow(Application& app, const roo_display::Box& bounds)
   background_fill_buffer_.setPalette(palette, color_set.size());
 }
 
-Application& MainWindow::app() { return app_; }
-const Application& MainWindow::app() const { return app_; }
+Application& MainWindow::app() const { return app_; }
 const Theme& MainWindow::theme() const { return app().env().theme(); }
 
 void MainWindow::tick() { click_animation_.tick(); }

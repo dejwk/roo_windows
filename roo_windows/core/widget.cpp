@@ -53,8 +53,8 @@ MainWindow* Widget::getMainWindow() {
   return parent_ == nullptr ? nullptr : parent_->getMainWindow();
 }
 
-Application* Widget::getApplication() {
-  MainWindow* w = getMainWindow();
+Application* Widget::getApplication() const {
+  const MainWindow* w = getMainWindow();
   return (w == nullptr) ? nullptr : &w->app();
 }
 

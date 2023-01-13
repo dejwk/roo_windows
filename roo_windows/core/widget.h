@@ -144,7 +144,7 @@ class Widget {
 
   virtual Task* getTask();
 
-  Application* getApplication();
+  Application* getApplication() const;
 
   ClickAnimation* getClickAnimation();
 

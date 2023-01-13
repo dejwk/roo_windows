@@ -3,7 +3,7 @@
 namespace roo_windows {
 
 AlertDialog::AlertDialog(
-    const Environment& env, std::string supporting_text,
+    const Environment& env, std::string title, std::string supporting_text,
     const std::initializer_list<std::string>& button_labels)
     : Dialog(env, button_labels),
       supporting_text_(env, std::move(supporting_text), *env.theme().font.body1,
@@ -13,6 +13,7 @@ AlertDialog::AlertDialog(
   on_surface.set_a(0xB0);
   supporting_text_.setColor(alphaBlend(env.theme().color.surface, on_surface));
   contents_.setContents(supporting_text_);
+  setTitle(std::move(title));
 }
 
 void AlertDialog::setSupportingText(std::string supporting_text) {

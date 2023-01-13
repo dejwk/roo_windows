@@ -1,4 +1,5 @@
 #include "roo_windows/core/activity.h"
+
 #include "roo_windows/core/task.h"
 
 namespace roo_windows {
@@ -10,6 +11,10 @@ roo_display::Box Activity::getPreferredPlacement(const Task& task) {
 }
 
 Task* Activity::getTask() { return getContents().getTask(); }
+
+Application* Activity::getApplication() {
+  return getContents().getApplication();
+}
 
 void Activity::exit() { getTask()->exitActivity(); }
 

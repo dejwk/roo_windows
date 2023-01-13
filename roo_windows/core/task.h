@@ -16,8 +16,10 @@ class Task {
  public:
   Task();
 
+  // Puts a new activity on top of the stack. The task must not be showing a
+  // dialog. (You can call clearDialog() prior to this method to forcefully
+  // close any open dialog).
   void enterActivity(Activity* activity);
-  void exitActivity();
 
   // Dialogs are modal, centered, and scrim the screen behind them.
   // The callback gets called with the index of the option (e.g. button)
@@ -31,6 +33,22 @@ class Task {
   // dialog getting removed from the task.
   void showDialog(Dialog& dialog, Dialog::CallbackFn callback_fn);
 
+  // Removes the topmost activity from the stack. The task must not be showing a
+  // dialog. (You can call clearDialog() prior to this method to forcefully
+  // close any open dialog).
+  void exitActivity();
+
+  // Removes all activities. Closes any open dialogs.
+  // As the activities are removed from the stack, they don't get resumed; they
+  // go directly from 'paused' to 'stopped'.
+  void clear();
+
+  // If a dialog is open, closes it. Otherwise, no-op.
+  void clearDialog();
+
+  // Returns the top-most activity, or nullptr if the task has no activities.
+  Activity* currentActivity();
+
   Dimensions getDimensions() const;
 
   void getAbsoluteBounds(Rect& full, Rect& visible) const;
@@ -38,6 +56,7 @@ class Task {
   void getAbsoluteOffset(XDim& dx, YDim& dy) const;
 
   MainWindow& getMainWindow() const;
+  Application& getApplication() const;
 
  private:
   friend class Application;

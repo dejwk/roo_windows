@@ -26,8 +26,7 @@ class MainWindow : public Panel {
 
   void paintWindow(const roo_display::Surface& s);
 
-  Application& app();
-  const Application& app() const;
+  Application& app() const;
   const Theme& theme() const override;
 
   void add(WidgetRef child, const Rect& rect) {
