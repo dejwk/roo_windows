@@ -32,7 +32,8 @@ Dimensions AlignedLayout::onMeasure(WidthSpec width, HeightSpec height) {
     max_height =
         std::max<YDim>(max_height, measure.latest().height() + v_margin);
   }
-  return Dimensions(max_width + h_padding, max_height + v_padding);
+  return Dimensions(width.resolveSize(max_width + h_padding),
+                    height.resolveSize(max_height + v_padding));
 }
 
 void AlignedLayout::onLayout(bool changed, const Rect& rect) {
@@ -53,7 +54,8 @@ void AlignedLayout::onLayout(bool changed, const Rect& rect) {
         children_space, child_with_margins, measure.alignment());
     w.layout(
         Rect(0, 0, measure.latest().width() - 1, measure.latest().height() - 1)
-            .translate(offset.first, offset.second));
+            .translate(offset.first + margins.left(),
+                       offset.second + margins.top()));
   }
 }
 
