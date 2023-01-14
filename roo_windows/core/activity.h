@@ -9,10 +9,16 @@
 namespace roo_windows {
 
 class Activity {
- protected:
-  Activity() : task_(nullptr) {}
-
  public:
+  enum State {
+    INACTIVE = 0,
+    STARTING = 1,
+    RESUMING = 2,
+    ACTIVE = 3,
+    PAUSING = 4,
+    STOPPING = 5,
+  };
+
   virtual Widget& getContents() = 0;
 
   virtual roo_display::Box getPreferredPlacement(const Task& task);
@@ -43,10 +49,16 @@ class Activity {
   // Called when the activity gets exited.
   virtual void onStop() {}
 
+ protected:
+  Activity() : task_(nullptr), state_(INACTIVE) {}
+
+  State state() const { return state_; }
+
  private:
   friend class Task;
 
   Task* task_;
+  State state_;
 };
 
 }  // namespace roo_windows

@@ -12,23 +12,62 @@ void Task::init(TaskPanel* panel) { panel_ = panel; }
 
 void Task::enterActivity(Activity* activity) {
   CHECK(!shows_dialog_) << "Can't enter new activities while a dialog is open";
+  CHECK_EQ(activity->state(), Activity::INACTIVE);
+  CHECK(activity->task_ == nullptr);
   roo_display::Box bounds = activity->getPreferredPlacement(*this);
   if (!activities_.empty()) {
     activities_.back()->onPause();
   }
+  activity->task_ = this;
+  activity->state_ = Activity::STARTING;
   activities_.push_back(activity);
-  activities_.back()->task_ = this;
   activities_.back()->onStart();
+  if (activities_.empty() || activities_.back() != activity) {
+    // Exited immediately.
+    CHECK_EQ(activity->state_, Activity::INACTIVE);
+    CHECK(activity->task_ == nullptr);
+    return;
+  }
   panel_->enterActivity(activity, bounds);
-  activities_.back()->onResume();
+  activity->state_ = Activity::RESUMING;
+  activity->onResume();
+  if (activities_.empty() || activities_.back() != activity) {
+    // Exited immediately.
+    CHECK_EQ(activity->state_, Activity::INACTIVE);
+    CHECK(activity->task_ == nullptr);
+    return;
+  }
+  activity->state_ = Activity::ACTIVE;
 }
 
 void Task::exitActivity() {
   CHECK(!shows_dialog_);
-  activities_.back()->onPause();
-  panel_->exitActivity();
-  activities_.back()->onStop();
-  activities_.back()->task_ = nullptr;
+  Activity* activity = activities_.back();
+  if (activity->state_ == Activity::INACTIVE ||
+      activity->state_ == Activity::STOPPING) {
+    // Ignore; the exit already done or in progress.
+    return;
+  }
+  // Remaining states are: ACTIVE, STARTING, RESUMING, PAUSING.
+  if (activity->state_ == Activity::ACTIVE) {
+    activity->state_ = Activity::PAUSING;
+    activity->onPause();
+    if (activities_.empty() || activities_.back() != activity) {
+      // Exited recursively from onPause.
+      CHECK_EQ(activity->state_, Activity::INACTIVE);
+      CHECK(activity->task_ == nullptr);
+      return;
+    }
+    panel_->exitActivity();
+  } else if (activity->state_ != Activity::STARTING) {
+    // If starting, we did not yet created the panel. But if resuming/pausing,
+    // we did.
+    panel_->exitActivity();
+  }
+  activity->state_ = Activity::STOPPING;
+  activity->onStop();
+  activity->state_ = Activity::INACTIVE;
+  activity->task_ = nullptr;
   activities_.pop_back();
   if (!activities_.empty()) {
     activities_.back()->onResume();
