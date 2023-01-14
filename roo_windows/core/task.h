@@ -43,6 +43,13 @@ class Task {
   // dialog getting removed from the task.
   void showDialog(Dialog& dialog, Dialog::CallbackFn callback_fn);
 
+  // Convenience function, showing a new, heap-allocated alert dialog with the
+  // specified contents. See showDialog(). The dialog is deleted after the
+  // callback has been called.
+  void showAlertDialog(std::string title, std::string supporting_text,
+                       std::vector<std::string> button_labels,
+                       Dialog::CallbackFn callback_fn);
+
   // If a dialog is open, closes it. Otherwise, no-op.
   void clearDialog();
 

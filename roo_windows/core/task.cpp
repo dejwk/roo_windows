@@ -1,6 +1,7 @@
 #include "roo_windows/core/task.h"
 
 #include "roo_windows/core/activity.h"
+#include "roo_windows/dialogs/alert_dialog.h"
 #include "roo_windows/dialogs/dialog.h"
 
 namespace roo_windows {
@@ -16,6 +17,7 @@ void Task::enterActivity(Activity* activity) {
     activities_.back()->onPause();
   }
   activities_.push_back(activity);
+  activities_.back()->task_ = this;
   activities_.back()->onStart();
   panel_->enterActivity(activity, bounds);
   activities_.back()->onResume();
@@ -26,6 +28,7 @@ void Task::exitActivity() {
   activities_.back()->onPause();
   panel_->exitActivity();
   activities_.back()->onStop();
+  activities_.back()->task_ = nullptr;
   activities_.pop_back();
   if (!activities_.empty()) {
     activities_.back()->onResume();
@@ -70,6 +73,18 @@ void Task::showDialog(Dialog& dialog, Dialog::CallbackFn callback_fn) {
   YDim yOffset = (panel_->height() - dims.height()) / 2;
   panel_->add(dialog, Rect(xOffset, yOffset, xOffset + dims.width() - 1,
                            yOffset + dims.height() - 1));
+}
+
+void Task::showAlertDialog(std::string title, std::string supporting_text,
+                           std::vector<std::string> button_labels,
+                           Dialog::CallbackFn callback_fn) {
+  Dialog* dialog =
+      new AlertDialog(getApplication().env(), std::move(title),
+                      std::move(supporting_text), std::move(button_labels));
+  showDialog(*dialog, [this, dialog, callback_fn](int id) {
+    callback_fn(id);
+    delete dialog;
+  });
 }
 
 Dimensions Task::getDimensions() const {

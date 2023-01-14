@@ -9,6 +9,9 @@
 namespace roo_windows {
 
 class Activity {
+ protected:
+  Activity() : task_(nullptr) {}
+
  public:
   virtual Widget& getContents() = 0;
 
@@ -16,7 +19,7 @@ class Activity {
 
   // Returns the task that this activity is part of, or nullptr if the activity
   // is not on any task's stack.
-  Task* getTask();
+  Task* getTask() { return task_; }
 
   // Returns the current application that this activity is part of, or nullptr
   // if the activity is not on any task's stack.
@@ -41,7 +44,9 @@ class Activity {
   virtual void onStop() {}
 
  private:
-  // const Context* context_;
+  friend class Task;
+
+  Task* task_;
 };
 
 }  // namespace roo_windows

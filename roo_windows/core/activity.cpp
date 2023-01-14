@@ -10,10 +10,8 @@ roo_display::Box Activity::getPreferredPlacement(const Task& task) {
   return roo_display::Box(0, 0, dims.width() - 1, dims.height() - 1);
 }
 
-Task* Activity::getTask() { return getContents().getTask(); }
-
 Application* Activity::getApplication() {
-  return getContents().getApplication();
+  return getTask() == nullptr ? nullptr : &getTask()->getApplication();
 }
 
 void Activity::exit() { getTask()->exitActivity(); }
