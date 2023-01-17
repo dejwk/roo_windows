@@ -99,93 +99,6 @@ static const PROGMEM BorderSpec kOutlinedBorder = {
     .data_bottom = kOutlinedBottomData,
     .data_bottom_right = kOutlinedBottomRightData};
 
-class Interior : public Drawable {
- public:
-  Interior(const Button& button, const Box& bounds)
-      : button_(button),
-        bounds_(bounds),
-        label_(button.label(), button.getFont(), button.contentColor(),
-               roo_display::FILL_MODE_RECTANGLE) {}
-
-  Box extents() const override { return bounds_; }
-
- private:
-  bool hasIcon() const { return button_.hasIcon(); }
-  bool hasText() const { return !label_.label().empty(); }
-
-  void drawTo(const Surface& s) const override {
-    if (!hasIcon() && !hasText()) {
-      s.drawObject(roo_display::FilledRect(bounds_.xMin(), bounds_.yMin(),
-                                           bounds_.xMax(), bounds_.yMax(),
-                                           button_.interiorColor()));
-      return;
-    }
-    if (!hasText()) {
-      // Icon only.
-      MonoIcon icon = button_.icon();
-      icon.color_mode().setColor(button_.contentColor());
-      roo_display::Tile tile(&icon, bounds_, kCenter | kMiddle,
-                             button_.interiorColor());
-      s.drawObject(tile);
-      return;
-    }
-    if (!hasIcon()) {
-      roo_display::Tile tile(&label_, bounds_, kCenter | kMiddle,
-                             button_.interiorColor());
-      s.drawObject(tile);
-      return;
-    }
-    // Both text and icon.
-    MonoIcon icon = button_.icon();
-    icon.color_mode().setColor(button_.contentColor());
-    int16_t gap = (icon.extents().width() / 2) & 0xFFFC;
-    int16_t x_offset = (bounds_.width() - icon.extents().width() -
-                        label_.extents().width() - gap) /
-                       2;
-    int16_t x_cursor = bounds_.xMin();
-    const int16_t yMin = bounds_.yMin();
-    const int16_t yMax = bounds_.yMax();
-    roo_display::Color c = button_.interiorColor();
-    // Left border.
-    if (x_offset > 0) {
-      s.drawObject(roo_display::FilledRect(x_cursor, yMin,
-                                           x_cursor + x_offset - 1, yMax, c));
-    }
-    x_cursor += x_offset;  // Note: x_offset may be negative.
-    // Icon.
-    {
-      roo_display::Box box(x_cursor, yMin,
-                           x_cursor + icon.extents().width() - 1, yMax);
-      roo_display::Tile tile(&icon, box, kCenter | kMiddle,
-                             button_.interiorColor());
-      s.drawObject(tile);
-    }
-    x_cursor += icon.extents().width();
-    // Gap.
-    s.drawObject(
-        roo_display::FilledRect(x_cursor, yMin, x_cursor + gap - 1, yMax, c));
-    x_cursor += gap;
-    // Text.
-    {
-      roo_display::Box box(x_cursor, yMin,
-                           x_cursor + label_.extents().width() - 1, yMax);
-      roo_display::Tile tile(&label_, box, kCenter | kMiddle,
-                             button_.interiorColor());
-      s.drawObject(tile);
-    }
-    x_cursor += label_.extents().width();
-    // Right border.
-    if (x_offset <= bounds_.xMax()) {
-      s.drawObject(
-          roo_display::FilledRect(x_cursor, yMin, bounds_.xMax(), yMax, c));
-    }
-  }
-
-  const Button& button_;
-  roo_display::Box bounds_;
-  roo_display::StringViewLabel label_;
-};
-
 void printVertStripes(const Canvas& canvas, int16_t xMin, int16_t yMin,
                       int16_t xMax, uint8_t count,
                       const uint8_t* PROGMEM alpha4, Color base_color) {
@@ -242,13 +155,16 @@ Button::Button(const Environment& env, const MonoIcon* icon, std::string label,
 // BBBBBB_C_C_C_C_DDDDDD
 
 void ButtonBase::paint(const Canvas& canvas) const {
+  Canvas interior_canvas = canvas;
+  interior_canvas.set_bgcolor(alphaBlend(canvas.bgcolor(), interiorColor()));
   if (style() == TEXT) {
-    paintInterior(canvas, bounds());
+    paintInterior(interior_canvas, bounds());
     return;
   }
 
   const BorderSpec& spec =
       (style() == CONTAINED ? kContainedBorder : kOutlinedBorder);
+  Color outline = (style() == CONTAINED ? interiorColor() : outlineColor());
   int16_t min_width = std::max(2 * spec.top_width, 2 * spec.bottom_width);
   int16_t full_width = std::max(width(), min_width);
   int16_t min_height = std::max(2 * spec.left_height, 2 * spec.right_height);
@@ -266,33 +182,33 @@ void ButtonBase::paint(const Canvas& canvas) const {
     if (top_bar_width > 0) {
       printVertStripes(canvas, spec.top_width, 0,
                        spec.top_width + top_bar_width - 1, spec.top_height,
-                       spec.data_top, outlineColor());
+                       spec.data_top, outline);
     }
     // Top right.
     RasterAlpha4<const uint8_t * PROGMEM> tr(
         Box(spec.top_width + top_bar_width, 0,
             2 * spec.top_width + top_bar_width - 1, spec.top_height - 1),
-        spec.data_top_right, Alpha4(outlineColor()));
+        spec.data_top_right, Alpha4(outline));
     canvas.drawObject(tr);
 
     // Left top.
     RasterAlpha4<const uint8_t * PROGMEM> lt(
         Box(0, spec.top_height, spec.left_width - 1,
             spec.top_height + spec.left_height - 1),
-        spec.data_left_top, Alpha4(outlineColor()));
+        spec.data_left_top, Alpha4(outline));
     canvas.drawObject(lt);
     // Left bar.
     int16_t left_bar_height = full_height - 2 * spec.left_height;
     if (left_bar_height > 0) {
       printHorizStripes(canvas, 0, spec.top_height + spec.left_height,
                         full_height - spec.bottom_height - spec.left_height - 1,
-                        spec.left_width, spec.data_left, outlineColor());
+                        spec.left_width, spec.data_left, outline);
     }
     // Left bottom.
     RasterAlpha4<const uint8_t * PROGMEM> lb(
         Box(0, full_height - spec.bottom_height - spec.left_height,
             spec.left_width - 1, full_height - spec.bottom_height - 1),
-        spec.data_left_bottom, Alpha4(outlineColor()));
+        spec.data_left_bottom, Alpha4(outline));
     canvas.drawObject(lb);
   }
 
@@ -300,14 +216,14 @@ void ButtonBase::paint(const Canvas& canvas) const {
   Rect extents(spec.left_width, spec.top_height,
                full_width - spec.right_width - 1,
                full_height - spec.bottom_height - 1);
-  paintInterior(canvas, extents);
+  paintInterior(interior_canvas, extents);
 
   if (isInvalidated()) {
     // Right top.
     RasterAlpha4<const uint8_t * PROGMEM> rt(
         Box(full_width - spec.right_width, spec.top_height, full_width - 1,
             spec.top_height + spec.right_height - 1),
-        spec.data_right_top, Alpha4(outlineColor()));
+        spec.data_right_top, Alpha4(outline));
     canvas.drawObject(rt);
     // Right bar.
     int16_t right_bar_height = full_height - 2 * spec.right_height;
@@ -315,21 +231,21 @@ void ButtonBase::paint(const Canvas& canvas) const {
       printHorizStripes(canvas, full_width - spec.right_width,
                         spec.top_height + spec.left_height,
                         full_height - spec.bottom_height - spec.left_height - 1,
-                        spec.right_width, spec.data_right, outlineColor());
+                        spec.right_width, spec.data_right, outline);
     }
     // Right bottom.
     RasterAlpha4<const uint8_t * PROGMEM> rb(
         Box(full_width - spec.right_width,
             full_height - spec.bottom_height - spec.left_height, full_width - 1,
             full_height - spec.bottom_height - 1),
-        spec.data_right_bottom, Alpha4(outlineColor()));
+        spec.data_right_bottom, Alpha4(outline));
     canvas.drawObject(rb);
 
     // Bottom left.
     RasterAlpha4<const uint8_t * PROGMEM> bl(
         Box(0, full_height - spec.bottom_height, spec.top_width - 1,
             full_height - 1),
-        spec.data_bottom_left, Alpha4(outlineColor()));
+        spec.data_bottom_left, Alpha4(outline));
     canvas.drawObject(bl);
     // Bottom bar.
     int16_t bottom_bar_width = full_width - 2 * spec.bottom_width;
@@ -337,14 +253,14 @@ void ButtonBase::paint(const Canvas& canvas) const {
       printVertStripes(canvas, spec.bottom_width,
                        full_height - spec.bottom_height,
                        spec.bottom_width + top_bar_width - 1,
-                       spec.bottom_height, spec.data_bottom, outlineColor());
+                       spec.bottom_height, spec.data_bottom, outline);
     }
     // Bottom right.
     RasterAlpha4<const uint8_t * PROGMEM> br(
         Box(spec.bottom_width + bottom_bar_width,
             full_height - spec.bottom_height,
             2 * spec.bottom_width + bottom_bar_width - 1, full_height - 1),
-        spec.data_bottom_right, Alpha4(outlineColor()));
+        spec.data_bottom_right, Alpha4(outline));
     canvas.drawObject(br);
   }
 }
@@ -360,8 +276,7 @@ Dimensions Button::getSuggestedMinimumDimensions() const {
   }
   // We must measure the text.
   auto metrics = font_->getHorizontalStringMetrics(label_);
-  int16_t text_height =
-      ((font_->metrics().maxHeight()) + 1) & ~1;
+  int16_t text_height = ((font_->metrics().maxHeight()) + 1) & ~1;
   if (!hasIcon()) {
     // Label only.
     return Dimensions(4 + metrics.width(), 4 + text_height);
@@ -373,8 +288,56 @@ Dimensions Button::getSuggestedMinimumDimensions() const {
 }
 
 void Button::paintInterior(const Canvas& canvas, Rect bounds) const {
-  Interior interior(*this, bounds.asBox());
-  canvas.drawObject(interior);
+  if (!hasIcon() && label().empty()) {
+    canvas.clearRect(bounds);
+    return;
+  }
+  if (label().empty()) {
+    // Icon only.
+    MonoIcon ic = icon();
+    ic.color_mode().setColor(contentColor());
+    canvas.drawTiled(ic, bounds, kCenter | kMiddle);
+    return;
+  }
+  if (!hasIcon()) {
+    canvas.drawTiled(StringViewLabel(label_, *font_, contentColor()), bounds,
+                     kCenter | kMiddle);
+    return;
+  }
+  // Both text and icon.
+  MonoIcon ic = icon();
+  StringViewLabel l(label_, *font_, contentColor());
+  ic.color_mode().setColor(contentColor());
+  int16_t gap = (ic.extents().width() / 2) & 0xFFFC;
+  int16_t x_offset =
+      (bounds.width() - ic.extents().width() - l.extents().width() - gap) / 2;
+  int16_t x_cursor = bounds.xMin();
+  const int16_t yMin = bounds.yMin();
+  const int16_t yMax = bounds.yMax();
+  // Left border.
+  if (x_offset > 0) {
+    canvas.clearRect(x_cursor, yMin, x_cursor + x_offset - 1, yMax);
+  }
+  x_cursor += x_offset;  // Note: x_offset may be negative.
+  // Icon.
+  {
+    Rect r(x_cursor, yMin, x_cursor + ic.extents().width() - 1, yMax);
+    canvas.drawTiled(ic, r, kCenter | kMiddle);
+  }
+  x_cursor += ic.extents().width();
+  // Gap.
+  canvas.clearRect(x_cursor, yMin, x_cursor + gap - 1, yMax);
+  x_cursor += gap;
+  // Text.
+  {
+    Rect r(x_cursor, yMin, x_cursor + l.extents().width() - 1, yMax);
+    canvas.drawTiled(l, r, kCenter | kMiddle);
+  }
+  x_cursor += l.extents().width();
+  // Right border.
+  if (x_offset <= bounds.xMax()) {
+    canvas.clearRect(x_cursor, yMin, bounds.xMax(), yMax);
+  }
 }
 
 }  // namespace roo_windows
