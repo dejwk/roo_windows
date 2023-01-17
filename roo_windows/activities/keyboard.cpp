@@ -480,7 +480,7 @@ KeyboardPage::KeyboardPage(const Environment& env, const KeyboardPageSpec* spec)
       }
       b->setInteriorColor(b_color);
       b->setOutlineColor(b_color);
-      b->setTextColor(roo_display::color::White);
+      b->setContentColor(roo_display::color::White);
       keys_.emplace_back(b);
       add(std::unique_ptr<Button>(b));
     }
@@ -627,7 +627,7 @@ void PressHighlighter::paint(const Canvas& canvas) const {
   Color bgcolor = roo_display::alphaBlend(kbTh.normalButton, overlay);
   canvas.drawObject(roo_display::MakeTileOf(
       roo_display::StringViewLabel(target_->label(), *th.font.body1,
-                                   target_->textColor()),
+                                   target_->contentColor()),
       bounds().asBox(), roo_display::kCenter | roo_display::kTop.shiftBy(3),
       bgcolor));
 }

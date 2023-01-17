@@ -6,10 +6,56 @@
 
 namespace roo_windows {
 
-class Button : public BasicWidget {
+class ButtonBase : public BasicWidget {
  public:
   enum Style { CONTAINED, OUTLINED, TEXT };
 
+  Style style() const { return style_; }
+
+  roo_display::Color interiorColor() const { return interior_color_; }
+
+  void setInteriorColor(roo_display::Color color) {
+    if (interior_color_ == color) return;
+    interior_color_ = color;
+    invalidateInterior();
+  }
+
+  roo_display::Color outlineColor() const { return outline_color_; }
+
+  void setOutlineColor(roo_display::Color color) {
+    if (outline_color_ == color) return;
+    outline_color_ = color;
+    invalidateInterior();
+  }
+
+  roo_display::Color contentColor() const { return content_color_; }
+
+  void setContentColor(roo_display::Color color) {
+    if (content_color_ == color) return;
+    content_color_ = color;
+    markDirty();
+  }
+
+  void paint(const Canvas& canvas) const override;
+
+  Padding getDefaultPadding() const override;
+
+  bool isClickable() const override { return true; }
+
+ protected:
+  ButtonBase(const Environment& env, Style style);
+
+  virtual void paintInterior(const Canvas& canvas, Rect bounds) const = 0;
+
+ private:
+  Style style_;
+  roo_display::Color outline_color_;
+  roo_display::Color interior_color_;
+  roo_display::Color content_color_;
+};
+
+class Button : public ButtonBase {
+ public:
   Button(const Environment& env, const MonoIcon& icon, Style style = CONTAINED)
       : Button(env, &icon, "", style) {}
 
@@ -41,42 +87,13 @@ class Button : public BasicWidget {
     markDirty();
   }
 
-  Style style() const { return style_; }
-
   virtual const roo_display::Font& getFont() const {
     return *env_.theme().font.button;
   }
 
-  roo_display::Color textColor() const { return textColor_; }
-
-  void setTextColor(roo_display::Color color) {
-    if (textColor_ == color) return;
-    textColor_ = color;
-    markDirty();
-  }
-
-  roo_display::Color interiorColor() const { return interiorColor_; }
-
-  void setInteriorColor(roo_display::Color color) {
-    if (interiorColor_ == color) return;
-    interiorColor_ = color;
-    invalidateInterior();
-  }
-
-  roo_display::Color outlineColor() const { return outlineColor_; }
-
-  void setOutlineColor(roo_display::Color color) {
-    if (outlineColor_ == color) return;
-    outlineColor_ = color;
-    invalidateInterior();
-  }
-
-  void paint(const Canvas& canvas) const override;
+  void paintInterior(const Canvas& canvas, Rect bounds) const override;
 
   Dimensions getSuggestedMinimumDimensions() const override;
-  Padding getDefaultPadding() const override;
-
-  bool isClickable() const override { return true; }
 
  protected:
   const Environment& env() const { return env_; }
@@ -86,12 +103,8 @@ class Button : public BasicWidget {
          Style style);
 
   const Environment& env_;
-  Style style_;
   std::string label_;
   const MonoIcon* icon_;
-  roo_display::Color outlineColor_;
-  roo_display::Color interiorColor_;
-  roo_display::Color textColor_;
 };
 
 }  // namespace roo_windows

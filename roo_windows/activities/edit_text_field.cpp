@@ -38,7 +38,7 @@ EditTextField::EditTextField(const Environment& env, TextFieldEditor& editor,
                                kVerticalGravityMiddle));
   content_pane_.add(
       enter_, HorizontalLayout::Params().setGravity(kVerticalGravityMiddle));
-  back_.setTextColor(env.theme().color.onSurface);
+  back_.setContentColor(env.theme().color.onSurface);
   back_.setOnClicked([&]() { cancel(); });
   enter_.setOnClicked([&]() { confirm(); });
 }

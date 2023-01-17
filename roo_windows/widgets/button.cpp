@@ -104,7 +104,7 @@ class Interior : public Drawable {
   Interior(const Button& button, const Box& bounds)
       : button_(button),
         bounds_(bounds),
-        label_(button.label(), button.getFont(), button.textColor(),
+        label_(button.label(), button.getFont(), button.contentColor(),
                roo_display::FILL_MODE_RECTANGLE) {}
 
   Box extents() const override { return bounds_; }
@@ -123,7 +123,7 @@ class Interior : public Drawable {
     if (!hasText()) {
       // Icon only.
       MonoIcon icon = button_.icon();
-      icon.color_mode().setColor(button_.textColor());
+      icon.color_mode().setColor(button_.contentColor());
       roo_display::Tile tile(&icon, bounds_, kCenter | kMiddle,
                              button_.interiorColor());
       s.drawObject(tile);
@@ -137,7 +137,7 @@ class Interior : public Drawable {
     }
     // Both text and icon.
     MonoIcon icon = button_.icon();
-    icon.color_mode().setColor(button_.textColor());
+    icon.color_mode().setColor(button_.contentColor());
     int16_t gap = (icon.extents().width() / 2) & 0xFFFC;
     int16_t x_offset = (bounds_.width() - icon.extents().width() -
                         label_.extents().width() - gap) /
@@ -186,12 +186,6 @@ class Interior : public Drawable {
   roo_display::StringViewLabel label_;
 };
 
-void paintInterior(const Canvas& canvas, const Box& bounds,
-                   const Button& button) {
-  Interior interior(button, bounds);
-  canvas.drawObject(interior);
-}
-
 void printVertStripes(const Canvas& canvas, int16_t xMin, int16_t yMin,
                       int16_t xMax, uint8_t count,
                       const uint8_t* PROGMEM alpha4, Color base_color) {
@@ -218,20 +212,23 @@ void printHorizStripes(const Canvas& canvas, int16_t xMin, int16_t yMin,
 
 }  // namespace
 
+ButtonBase::ButtonBase(const Environment& env, Style style)
+    : BasicWidget(env),
+      style_(style),
+      outline_color_(style == CONTAINED  ? env.theme().color.primary
+                     : style == OUTLINED ? env.theme().color.onBackground
+                                         : color::Transparent),
+      interior_color_(style == CONTAINED ? env.theme().color.primary
+                                         : env.theme().color.background),
+      content_color_(style == CONTAINED ? env.theme().color.onPrimary
+                                        : env.theme().color.primary) {}
+
 Button::Button(const Environment& env, const MonoIcon* icon, std::string label,
                Style style)
-    : BasicWidget(env),
+    : ButtonBase(env, style),
       env_(env),
-      style_(style),
       label_(std::move(label)),
-      icon_(icon),
-      outlineColor_(style == CONTAINED  ? env.theme().color.primary
-                    : style == OUTLINED ? env.theme().color.onBackground
-                                        : color::Transparent),
-      interiorColor_(style == CONTAINED ? env.theme().color.primary
-                                        : env.theme().color.background),
-      textColor_(style == CONTAINED ? env.theme().color.onPrimary
-                                    : env.theme().color.primary) {}
+      icon_(icon) {}
 
 // 111111_2_2_2_2_333333
 // 111111_2_2_2_2_333333
@@ -244,9 +241,9 @@ Button::Button(const Environment& env, const MonoIcon* icon, std::string label,
 // BBBBBB_C_C_C_C_DDDDDD
 // BBBBBB_C_C_C_C_DDDDDD
 
-void Button::paint(const Canvas& canvas) const {
+void ButtonBase::paint(const Canvas& canvas) const {
   if (style() == TEXT) {
-    paintInterior(canvas, bounds().asBox(), *this);
+    paintInterior(canvas, bounds());
     return;
   }
 
@@ -267,8 +264,9 @@ void Button::paint(const Canvas& canvas) const {
     canvas.drawObject(tl);
     // Top bar.
     if (top_bar_width > 0) {
-      printVertStripes(canvas, spec.top_width, 0, spec.top_width + top_bar_width - 1,
-                       spec.top_height, spec.data_top, outlineColor());
+      printVertStripes(canvas, spec.top_width, 0,
+                       spec.top_width + top_bar_width - 1, spec.top_height,
+                       spec.data_top, outlineColor());
     }
     // Top right.
     RasterAlpha4<const uint8_t * PROGMEM> tr(
@@ -299,10 +297,10 @@ void Button::paint(const Canvas& canvas) const {
   }
 
   // Main content.
-  Box extents(spec.left_width, spec.top_height,
-              full_width - spec.right_width - 1,
-              full_height - spec.bottom_height - 1);
-  paintInterior(canvas, extents, *this);
+  Rect extents(spec.left_width, spec.top_height,
+               full_width - spec.right_width - 1,
+               full_height - spec.bottom_height - 1);
+  paintInterior(canvas, extents);
 
   if (isInvalidated()) {
     // Right top.
@@ -336,7 +334,8 @@ void Button::paint(const Canvas& canvas) const {
     // Bottom bar.
     int16_t bottom_bar_width = full_width - 2 * spec.bottom_width;
     if (bottom_bar_width > 0) {
-      printVertStripes(canvas, spec.bottom_width, full_height - spec.bottom_height,
+      printVertStripes(canvas, spec.bottom_width,
+                       full_height - spec.bottom_height,
                        spec.bottom_width + top_bar_width - 1,
                        spec.bottom_height, spec.data_bottom, outlineColor());
     }
@@ -350,7 +349,7 @@ void Button::paint(const Canvas& canvas) const {
   }
 }
 
-Padding Button::getDefaultPadding() const { return Padding(14, 4); }
+Padding ButtonBase::getDefaultPadding() const { return Padding(14, 4); }
 
 Dimensions Button::getSuggestedMinimumDimensions() const {
   if (!hasLabel()) {
@@ -371,6 +370,11 @@ Dimensions Button::getSuggestedMinimumDimensions() const {
   int16_t gap = (icon().extents().width() / 2) & 0xFFFC;
   return Dimensions(4 + icon().extents().width() + gap + metrics.width(),
                     4 + std::max(icon().extents().height(), text_height));
+}
+
+void Button::paintInterior(const Canvas& canvas, Rect bounds) const {
+  Interior interior(*this, bounds.asBox());
+  canvas.drawObject(interior);
 }
 
 }  // namespace roo_windows
