@@ -226,7 +226,7 @@ ButtonBase::ButtonBase(const Environment& env, Style style)
 Button::Button(const Environment& env, const MonoIcon* icon, std::string label,
                Style style)
     : ButtonBase(env, style),
-      env_(env),
+      font_(env.theme().font.button),
       label_(std::move(label)),
       icon_(icon) {}
 
@@ -359,9 +359,9 @@ Dimensions Button::getSuggestedMinimumDimensions() const {
                       4 + icon().extents().height());
   }
   // We must measure the text.
-  auto metrics = env_.theme().font.button->getHorizontalStringMetrics(label_);
+  auto metrics = font_->getHorizontalStringMetrics(label_);
   int16_t text_height =
-      ((env_.theme().font.button->metrics().maxHeight()) + 1) & ~1;
+      ((font_->metrics().maxHeight()) + 1) & ~1;
   if (!hasIcon()) {
     // Label only.
     return Dimensions(4 + metrics.width(), 4 + text_height);

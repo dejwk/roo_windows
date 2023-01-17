@@ -87,22 +87,19 @@ class Button : public ButtonBase {
     markDirty();
   }
 
-  virtual const roo_display::Font& getFont() const {
-    return *env_.theme().font.button;
-  }
+  void setFont(const roo_display::Font& font) { font_ = &font; }
+
+  const roo_display::Font& getFont() const { return *font_; }
 
   void paintInterior(const Canvas& canvas, Rect bounds) const override;
 
   Dimensions getSuggestedMinimumDimensions() const override;
 
- protected:
-  const Environment& env() const { return env_; }
-
  private:
   Button(const Environment& env, const MonoIcon* icon, std::string label,
          Style style);
 
-  const Environment& env_;
+  const roo_display::Font* font_;
   std::string label_;
   const MonoIcon* icon_;
 };

@@ -208,7 +208,9 @@ class TextButton : public KeyboardButton {
   TextButton(const Environment& env, uint16_t rune, uint16_t rune_caps)
       : KeyboardButton(env, runeAsStr(rune)),
         rune_(rune),
-        rune_caps_(rune_caps) {}
+        rune_caps_(rune_caps) {
+    setFont(*env.theme().font.h6);
+  }
 
   bool showClickAnimation() const override { return false; }
 
@@ -240,10 +242,6 @@ class TextButton : public KeyboardButton {
       keyboard().setCapsState(CAPS_STATE_LOW);
     }
     return Button::onSingleTapUp(x, y);
-  }
-
-  const roo_display::Font& getFont() const override {
-    return *env().theme().font.h6;
   }
 
   uint16_t rune_;
