@@ -2,9 +2,6 @@
 
 #include "roo_display/core/color.h"
 #include "roo_display/font/font.h"
-#include "roo_display/ui/string_printer.h"
-#include "roo_display/ui/text_label.h"
-#include "roo_display/ui/tile.h"
 #include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/panel.h"
 
@@ -13,40 +10,18 @@ namespace roo_windows {
 class TextLabel : public BasicWidget {
  public:
   TextLabel(const Environment& env, std::string value,
-            const roo_display::Font& font)
-      : TextLabel(env, std::move(value), font,
-                  roo_display::kLeft | roo_display::kMiddle) {}
+            const roo_display::Font& font);
 
   TextLabel(const Environment& env, std::string value,
-            const roo_display::Font& font, roo_display::Alignment alignment)
-      : TextLabel(env, std::move(value), font, roo_display::color::Transparent,
-                  alignment) {}
+            const roo_display::Font& font, roo_display::Alignment alignment);
 
   TextLabel(const Environment& env, std::string value,
             const roo_display::Font& font, roo_display::Color color,
-            roo_display::Alignment alignment)
-      : BasicWidget(env),
-        value_(std::move(value)),
-        font_(font),
-        color_(color),
-        alignment_(alignment) {}
+            roo_display::Alignment alignment);
 
-  void paint(const Canvas& canvas) const override {
-    roo_display::Color color =
-        color_.a() == 0 ? parent()->defaultColor() : color_;
-    canvas.drawTiled(roo_display::StringViewLabel(value_, font_, color),
-                     bounds(), adjustAlignment(alignment_));
-  }
+  void paint(const Canvas& canvas) const override;
 
-  Dimensions getSuggestedMinimumDimensions() const override {
-    // NOTE: we could consider pre-calculating and storing these (and avoid
-    // re-measuring in paint), but it is an extra 20 bytes per label so it is
-    // not a clear win.
-    auto metrics = font_.getHorizontalStringMetrics(value_);
-    return Dimensions(metrics.advance(), font_.metrics().ascent() -
-                                             font_.metrics().descent() +
-                                             font_.metrics().linegap());
-  }
+  Dimensions getSuggestedMinimumDimensions() const override;
 
   const std::string& content() const { return value_; }
 
@@ -59,34 +34,15 @@ class TextLabel : public BasicWidget {
   // Deprecated. use setText.
   void setContent(roo_display::StringView value) { setText(value); }
 
-  void setText(std::string value) {
-    if (value_ == value) return;
-    value_ = std::move(value);
-    markDirty();
-    requestLayout();
-  }
+  void setText(std::string value);
 
-  void setText(const char* value) {
-    setContent(roo_display::StringView(value));
-  }
+  void setText(const char* value);
 
-  void setText(roo_display::StringView value) {
-    if (value_ == value) return;
-    value_ = std::string((const char*)value.data(), value.size());
-    markDirty();
-    requestLayout();
-  }
+  void setText(roo_display::StringView value);
 
-  void setTextf(const char* format, ...) {
-    va_list arg;
-    va_start(arg, format);
-    setTextvf(format, arg);
-    va_end(arg);
-  }
+  void setTextf(const char* format, ...);
 
-  void setTextvf(const char* format, va_list arg) {
-    setText(roo_display::StringVPrintf(format, arg));
-  }
+  void setTextvf(const char* format, va_list arg);
 
   const roo_display::Font& font() const { return font_; }
 
