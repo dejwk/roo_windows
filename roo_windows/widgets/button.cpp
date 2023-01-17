@@ -216,6 +216,7 @@ void ButtonBase::paint(const Canvas& canvas) const {
   Rect extents(spec.left_width, spec.top_height,
                full_width - spec.right_width - 1,
                full_height - spec.bottom_height - 1);
+  interior_canvas.clipToExtents(extents);
   paintInterior(interior_canvas, extents);
 
   if (isInvalidated()) {

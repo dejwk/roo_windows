@@ -43,7 +43,7 @@ class ButtonBase : public BasicWidget {
   bool isClickable() const override { return true; }
 
  protected:
-  ButtonBase(const Environment& env, Style style);
+  ButtonBase(const Environment& env, Style style = CONTAINED);
 
   virtual void paintInterior(const Canvas& canvas, Rect bounds) const = 0;
 
