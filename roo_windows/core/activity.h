@@ -16,7 +16,8 @@ class Activity {
     RESUMING = 2,
     ACTIVE = 3,
     PAUSING = 4,
-    STOPPING = 5,
+    PAUSED = 5,
+    STOPPING = 6,
   };
 
   virtual Widget& getContents() = 0;

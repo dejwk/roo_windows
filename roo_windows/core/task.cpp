@@ -16,7 +16,9 @@ void Task::enterActivity(Activity* activity) {
   CHECK(activity->task_ == nullptr);
   roo_display::Box bounds = activity->getPreferredPlacement(*this);
   if (!activities_.empty()) {
+    activities_.back()->state_ = Activity::PAUSING;
     activities_.back()->onPause();
+    activities_.back()->state_ = Activity::PAUSED;
   }
   activity->task_ = this;
   activity->state_ = Activity::STARTING;
@@ -32,9 +34,7 @@ void Task::enterActivity(Activity* activity) {
   activity->state_ = Activity::RESUMING;
   activity->onResume();
   if (activities_.empty() || activities_.back() != activity) {
-    // Exited immediately.
-    CHECK_EQ(activity->state_, Activity::INACTIVE);
-    CHECK(activity->task_ == nullptr);
+    // Either exited immediately, or started a new activity.
     return;
   }
   activity->state_ = Activity::ACTIVE;
@@ -58,6 +58,7 @@ void Task::exitActivity() {
       CHECK(activity->task_ == nullptr);
       return;
     }
+    activity->state_ = Activity::PAUSED;
     panel_->exitActivity();
   } else if (activity->state_ != Activity::STARTING) {
     // If starting, we did not yet created the panel. But if resuming/pausing,
