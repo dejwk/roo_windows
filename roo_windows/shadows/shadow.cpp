@@ -93,27 +93,31 @@ inline uint8_t calcAlpha(const ShadowSpec& spec, int16_t x, int16_t y) {
 
 Shadow::Shadow() : Shadow(Rect(0, 0, -1, -1), 0) {}
 
-Shadow::Shadow(Rect extents, int elevation) {
-  ambient_.radius_ = (elevation * 20 / 5 + 12) / 8;
-  ambient_.x_ = extents.xMin() - ambient_.radius_;
-  ambient_.y_ = extents.yMin() - ambient_.radius_;
+Shadow::Shadow(Rect extents, int elevation, int corner_radius) {
+  ambient_.radius_ = (elevation * 20 / 5 + 12) / 8 + corner_radius;
+  ambient_.x_ = extents.xMin() - ambient_.radius_ + corner_radius;
+  ambient_.y_ = extents.yMin() - ambient_.radius_ + corner_radius;
   // y_ += (elevation * 2) / 8 / 2;
-  ambient_.w_ = extents.width() + ambient_.radius_ * 2;
-  ambient_.h_ = extents.height() + ambient_.radius_ * 2;
+  ambient_.w_ = extents.width() + ambient_.radius_ * 2 - corner_radius * 2;
+  ambient_.h_ = extents.height() + ambient_.radius_ * 2 - corner_radius * 2;
   ambient_.alpha_start_ = 60 - elevation;
   ambient_.alpha_step_ =
-      ambient_.radius_ == 0 ? 0 : 256 * ambient_.alpha_start_ / ambient_.radius_;
-  ambient_.border_ = 0;
+      ambient_.radius_ == 0
+          ? 0
+          : 256 * ambient_.alpha_start_ / (ambient_.radius_ - corner_radius);
+  ambient_.border_ = corner_radius;
 
-  key_.radius_ = (elevation * 15 + 4) / 8;
-  key_.x_ = extents.xMin() - key_.radius_ / 2;
-  key_.y_ = extents.yMin() - key_.radius_ / 2 + (elevation * 8) / 8;
-  key_.w_ = extents.width() + key_.radius_;
-  key_.h_ = extents.height() + key_.radius_;
+  key_.radius_ = (elevation * 15 + 4) / 8 + corner_radius;
+  key_.x_ = extents.xMin() - key_.radius_ / 2 + corner_radius;
+  key_.y_ =
+      extents.yMin() - key_.radius_ / 2 + (elevation * 8) / 8 + corner_radius;
+  key_.w_ = extents.width() + key_.radius_ - 2 * corner_radius;
+  key_.h_ = extents.height() + key_.radius_ - 2 * corner_radius;
   key_.alpha_start_ = 90;
-  key_.alpha_step_ =
-      key_.radius_ == 0 ? 0 : 256 * key_.alpha_start_ / key_.radius_;
-  key_.border_ = 0;
+  key_.alpha_step_ = key_.radius_ == 0 ? 0
+                                       : 256 * key_.alpha_start_ /
+                                             (key_.radius_ - corner_radius);
+  key_.border_ = corner_radius;
 
   int16_t xMin = std::min(ambient_.x_, key_.x_);
   int16_t yMin = std::min(ambient_.y_, key_.y_);
@@ -129,11 +133,6 @@ void Shadow::ReadColors(const int16_t* x, const int16_t* y, uint32_t count,
     uint8_t alpha_ambient = calcAlpha(ambient_, *x, *y);
     ++x;
     ++y;
-    // *result++ = roo_display::Color((uint32_t)(alpha_key) << 24);
-    //*result++ = roo_display::Color((uint32_t)(std::max(alpha_key, alpha_ambient)) << 24);
-    // *result++ = roo_display::Color((uint32_t)(alpha_key + alpha_ambient) << 24);
-    // uint8_t combined = 255 - ((255 - alpha_key) * (255 - alpha_ambient)) / 256;
-    // uint8_t combined = std::max(alpha_key, alpha_ambient);
     uint8_t combined = alpha_key + alpha_ambient;
     *result++ = roo_display::Color((uint32_t)(combined) << 24);
   }

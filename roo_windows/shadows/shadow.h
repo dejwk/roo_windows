@@ -19,8 +19,9 @@ class Shadow : public roo_display::Rasterizable {
   Shadow();
 
   // Extents are given for the original area to which the shadow is to be
-  // applied. Elevation from 1 to 15.
-  Shadow(Rect extents, int elevation);
+  // applied. Elevation from 1 to 31. Corner radius specifies that the corners
+  // of the object casting the shadow are rounded with the specified radius.
+  Shadow(Rect extents, int elevation, int corner_radius = 0);
 
   roo_display::Box extents() const override { return extents_; }
 
