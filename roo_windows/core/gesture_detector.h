@@ -64,6 +64,12 @@ class GestureDetector {
 
   int16_t yTotalMoveDelta() const { return latest_.y() - initial_down_.y(); }
 
+  // Returns the widget that currently handles touch gesture (receiving touch
+  // events), or nullptr if no gesture is currently handled.
+  const Widget* currentGestureTarget() const {
+    return touch_target_path_.empty() ? nullptr : touch_target_path_.back();
+  }
+
  private:
   bool dispatch(TouchEvent::Type type);
   bool dispatchTo(Widget* target, TouchEvent::Type type);

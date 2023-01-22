@@ -509,6 +509,13 @@ Widget* Widget::dispatchTouchDownEvent(XDim x, YDim y) {
   return onTouchDown(x, y) ? this : nullptr;
 }
 
+bool Widget::isHandlingGesture() const {
+  const Application* app = getApplication();
+  return app == nullptr
+             ? false
+             : app->gesture_detector().currentGestureTarget() == this;
+}
+
 bool Widget::onTouchDown(XDim x, YDim y) {
   return getApplication()->gesture_detector().onTouchDown(*this, x, y);
 }

@@ -162,6 +162,9 @@ class Widget {
 
   virtual Widget* dispatchTouchDownEvent(XDim x, YDim y);
 
+  // Returns true if this widget is currently handling a touch gesture.
+  bool isHandlingGesture() const;
+
   // Called by the framework when on the first touch event within the bounds of
   // this widget. If the method returns false, the event will be redirected to
   // this widget's parent, and this widget will not receive any further touch
