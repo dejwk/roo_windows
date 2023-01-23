@@ -45,8 +45,14 @@ bool GestureDetector::tick() {
     }
     delta_x_ = x - latest_.x();
     delta_y_ = y - latest_.y();
-    velocity_x_ = 1000000 * (int32_t)delta_x_ / time_delta;
-    velocity_y_ = 1000000 * (int32_t)delta_y_ / time_delta;
+    velocity_x_ = (int16_t)(1000000 * (int32_t)delta_x_ / time_delta);
+    velocity_y_ = (int16_t)(1000000 * (int32_t)delta_y_ / time_delta);
+    if (velocity_y_ > kMaxFlingVelocity || velocity_x_ > kMaxFlingVelocity) {
+      // Bogus reading; disregard.
+      velocity_x_ = 0;
+      velocity_y_ = 0;
+      return false;
+    }
     latest_ = TouchPoint(x, y, now_us_);
     dispatch(TouchEvent::MOVE);
   }
@@ -105,7 +111,7 @@ bool GestureDetector::onTouchMove(Widget& widget, XDim x, YDim y) {
   bool handled = false;
   if (moved_outside_tap_region_) {
     if (supports_scrolling_) {
-      handled |= widget.onScroll(delta_x_, delta_y_);
+      handled |= widget.onScroll(x, y, delta_x_, delta_y_);
     }
   } else {
     if (supports_scrolling_) {
@@ -114,7 +120,7 @@ bool GestureDetector::onTouchMove(Widget& widget, XDim x, YDim y) {
       int32_t dist_square =
           total_move_x * total_move_x + total_move_y * total_move_y;
       if (dist_square > kTouchSlopSquare) {
-        handled |= widget.onScroll(delta_x_, delta_y_);
+        handled |= widget.onScroll(x, y, delta_x_, delta_y_);
         moved_outside_tap_region_ = true;
         cancelEvents();
       }
@@ -143,7 +149,7 @@ bool GestureDetector::onTouchUp(Widget& widget, XDim x, YDim y) {
     // We have been in 'scroll'. Perhaps a fling?
     int32_t v_square = velocity_x_ * velocity_x_ + velocity_y_ * velocity_y_;
     if (v_square > kMinFlingVelocitySquare) {
-      handled |= widget.onFling(velocity_x_, velocity_y_);
+      handled |= widget.onFling(x, y, velocity_x_, velocity_y_);
     }
   } else {
     // Moved outside bounds of a non-scrollable widget.

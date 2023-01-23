@@ -568,12 +568,12 @@ void Widget::onLongPress(XDim dx, YDim dy) {}
 
 void Widget::onLongPressFinished(XDim dx, YDim dy) { setPressed(false); }
 
-bool Widget::onScroll(XDim dx, YDim dy) {
+bool Widget::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
   setPressed(false);
   return false;
 }
 
-bool Widget::onFling(XDim vx, YDim vy) {
+bool Widget::onFling(XDim x, YDim y, XDim vx, YDim vy) {
   setPressed(false);
   return false;
 }

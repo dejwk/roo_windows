@@ -278,19 +278,19 @@ class Widget {
   virtual void onLongPressFinished(XDim x, YDim y);
 
   // Called during the 'move' event, when the gesture is recognized as 'scroll'.
-  // Contains the delta of coordinates since the last time onScroll was called
-  // as part of this gesture.
+  // Contains the latest coordinates along with a delta since the last time
+  // onScroll was called as part of this gesture.
   //
   // Widgets that support scrolling should override this method. The default
   // implementation clears the 'press' state and returns false.
-  virtual bool onScroll(XDim dx, YDim dy);
+  virtual bool onScroll(XDim x, YDim y, XDim dx, YDim dy);
 
   // Called during the 'up' event, when the gesture is recognized as 'fling'.
-  // Contains the velocity of the fling.
+  // Contains the latest coordinates along with the velocity of the fling.
   //
   // Widgets that support fling (swipe) should override this method. The default
   // implementation clears the 'press' state and returns false.
-  virtual bool onFling(XDim vx, YDim vy);
+  virtual bool onFling(XDim x, YDim y, XDim vx, YDim vy);
 
   virtual void onCancel();
 
