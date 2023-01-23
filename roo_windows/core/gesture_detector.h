@@ -24,28 +24,7 @@ static constexpr int32_t kTouchSlopSquare = kTouchSlop * kTouchSlop;
 // 50 pixels per second.
 static constexpr int32_t kMinFlingVelocitySquare = 50 * 50;
 
-// static constexpr int16_t kMaxFlingVelocity = 8000; // Pixels per second.
-
-class ScheduledEvent {
- public:
-  ScheduledEvent() : scheduled_(false), when_(0) {}
-
-  void schedule(unsigned long when) {
-    scheduled_ = true;
-    when_ = when;
-  }
-
-  void clear() { scheduled_ = false; }
-
-  bool isScheduled() const { return scheduled_; }
-  bool isDue(unsigned long now) const {
-    return scheduled_ && (long)(now - when_) >= 0;
-  }
-
- private:
-  boolean scheduled_;
-  unsigned long when_;
-};
+static constexpr int16_t kMaxFlingVelocity = 8000;  // Pixels per second.
 
 class GestureDetector {
  public:
@@ -71,6 +50,27 @@ class GestureDetector {
   }
 
  private:
+  class ScheduledEvent {
+   public:
+    ScheduledEvent() : scheduled_(false), when_(0) {}
+
+    void schedule(unsigned long when) {
+      scheduled_ = true;
+      when_ = when;
+    }
+
+    void clear() { scheduled_ = false; }
+
+    bool isScheduled() const { return scheduled_; }
+    bool isDue(unsigned long now) const {
+      return scheduled_ && (long)(now - when_) >= 0;
+    }
+
+   private:
+    boolean scheduled_;
+    unsigned long when_;
+  };
+
   bool dispatch(TouchEvent::Type type);
   bool dispatchTo(Widget* target, TouchEvent::Type type);
   bool offerIntercept(Panel* target, TouchEvent::Type type);
