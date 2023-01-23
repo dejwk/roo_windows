@@ -506,7 +506,7 @@ void Widget::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
 }
 
 Widget* Widget::dispatchTouchDownEvent(XDim x, YDim y) {
-  return onTouchDown(x, y) ? this : nullptr;
+  return bounds().contains(x, y) && onTouchDown(x, y) ? this : nullptr;
 }
 
 bool Widget::isHandlingGesture() const {
