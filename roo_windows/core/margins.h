@@ -9,6 +9,7 @@ enum MarginSize {
   MARGIN_REGULAR = 3,
   MARGIN_LARGE = 4,
   MARGIN_HUGE = 5,
+  MARGIN_HUMONGOUS = 6,
   MARGIN_NEGATIVE_SMALL = 7,
   MARGIN_NEGATIVE = 8,
 };
@@ -39,6 +40,8 @@ class Margins {
         return 8;
       case MARGIN_HUGE:
         return 12;
+      case MARGIN_HUMONGOUS:
+        return 20;
       case MARGIN_NEGATIVE_SMALL:
         return -2;
       case MARGIN_NEGATIVE:
