@@ -11,8 +11,10 @@ using roo_display::Display;
 // Do not refresh display more frequently than this (50 Hz).
 static constexpr long kMinRefreshTimeDeltaMs = 20;
 
-Application::Application(const Environment* env, Display& display)
+Application::Application(const Environment* env, Display& display,
+                         roo_scheduler::Scheduler& scheduler)
     : display_(display),
+      scheduler_(scheduler),
       env_(env),
       root_window_(*this, display.extents()),
       gesture_detector_(root_window_, display) {}
@@ -46,7 +48,7 @@ class Adapter : public roo_display::Drawable {
   MainWindow& window_;
 };
 
-}
+}  // namespace
 
 void Application::refresh() {
   root_window_.updateLayout();
