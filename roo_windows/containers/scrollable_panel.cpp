@@ -8,6 +8,68 @@
 
 namespace roo_windows {
 
+namespace {
+
+static const float kDecceleration = 650.0;
+static const float kMaxVel = 2000.0;
+static const roo_time::Interval kDelayHideScrollbar = roo_time::Millis(1200);
+
+// The area on the side of the panel whose touch is interpreted as an
+// interaction with the scroll bar.
+static const int kScrollBarTouchWidth = 50;
+
+// Scroll bar height is scaled on the basis of much much content there is to
+// scroll, but it will never be smaller than this number of pixels.
+static const int kScrollBarMinHeightPx = 20;
+
+}  // namespace
+
+void VerticalScrollBar::setRange(int16_t begin, int16_t end) {
+  if (begin == begin_ && end == end_) return;
+  begin_ = begin;
+  end_ = end;
+  markDirty();
+}
+
+void VerticalScrollBar::paint(const Canvas& canvas) const {
+  Color s = theme().color.onSurface;
+  s.set_a(0xC0);
+  s = alphaBlend(canvas.bgcolor(), s);
+  Color semi = theme().color.onSurface;
+  semi.set_a(0x40);
+  semi = alphaBlend(canvas.bgcolor(), semi);
+  if (begin_ > 0) {
+    canvas.fillRect(0, 0, width() - 1, begin_ - 1, semi);
+  }
+  canvas.fillRect(0, begin_, width() - 1, end_, s);
+  if (end_ + 1 < height()) {
+    canvas.fillRect(0, end_ + 1, width() - 1, height() - 1, semi);
+  }
+}
+
+YDim VerticalScrollBar::toOffset(YDim h) const {
+  if (h <= height()) {
+    // Nothing to scroll.
+    return 0;
+  }
+  // The difference in pixels between the minimum and maximum position of the
+  // scroll bar (i.e., the possible range of begin_).
+  YDim scroll_range = height() - (end_ - begin_ + 1);
+  // The difference in pixels between the minimum and maximum position of the
+  // scrolled content (i.e., the possible range of the offset).
+  YDim view_range = height() - h;
+  return -begin_ * view_range / scroll_range;
+}
+
+PreferredSize VerticalScrollBar::getPreferredSize() const {
+  return PreferredSize(PreferredSize::ExactWidth(4),
+                       PreferredSize::MatchParentHeight());
+}
+
+Dimensions VerticalScrollBar::getSuggestedMinimumDimensions() const {
+  return Dimensions(4, 4);
+}
+
 void ScrollablePanel::scrollTo(XDim x, YDim y) {
   Widget* c = contents();
   if (c == nullptr) return;
@@ -34,6 +96,17 @@ void ScrollablePanel::scrollTo(XDim x, YDim y) {
     // if (y < 0) y = 0;
     // if (y > height() - c->height()) y = height() - c->height();
     y = offset.second;
+  }
+  if (c->height() <= height()) {
+    scroll_bar_.setRange(0, height() - 1);
+  } else {
+    YDim scroll_pix_height =
+        std::max(kScrollBarMinHeightPx, height() * height() / c->height());
+    YDim scroll_pix_range = height() - scroll_pix_height;
+    YDim scroll_pix_begin =
+        -(scroll_pix_range) * (y + m.top()) / (c->height() - height());
+    scroll_bar_.setRange(scroll_pix_begin,
+                         scroll_pix_begin + scroll_pix_height - 1);
   }
   c->moveTo(c->bounds().translate(x + m.left(), y + m.top()));
 }
@@ -95,6 +168,7 @@ Dimensions ScrollablePanel::onMeasure(WidthSpec width, HeightSpec height) {
           : HeightSpec::Unspecified(
                 std::max(0, height.value() - m.top() - m.bottom()));
   measured_ = contents()->measure(child_width, child_height);
+  scroll_bar_.measure(width, height);
   return Dimensions(
       width.resolveSize(measured_.width() + m.left() + m.right()),
       height.resolveSize(measured_.height() + m.top() + m.bottom()));
@@ -107,6 +181,8 @@ void ScrollablePanel::onLayout(bool changed, const Rect& rect) {
   Rect bounds(0, 0, measured_.width() - 1, measured_.height() - 1);
   bounds = bounds.translate(c->xOffset() + m.left(), c->yOffset() + m.top());
   c->layout(bounds);
+  scroll_bar_.layout(
+      Rect(rect.width() - 4, 0, rect.width() - 1, rect.height() - 1));
   update();
 }
 
@@ -171,8 +247,14 @@ void ScrollablePanel::paintWidgetContents(const Canvas& canvas,
     if (scroll_start_vx_ == 0 && scroll_start_vy_ == 0) {
       scroll_in_progress = false;
     }
-    if (scroll_in_progress == false) {
+    if (!scroll_in_progress) {
       scroll_start_vx_ = scroll_start_vy_ = 0;
+      if (scroll_bar_presence_ == VerticalScrollBar::SHOWN_WHEN_SCROLLING) {
+        // Schedule hiding the scroll bar.
+        deadline_hide_scrollbar_ =
+            roo_time::Uptime::Now() + kDelayHideScrollbar;
+        getApplication()->scheduleAction(*this, kDelayHideScrollbar);
+      }
     }
   }
   Panel::paintWidgetContents(canvas, clipper);
@@ -189,7 +271,23 @@ bool ScrollablePanel::onInterceptTouchEvent(const TouchEvent& event) {
     // Scroll in progress. Capture all events, including touch down.
     return true;
   }
+  if (scroll_bar_presence_ != VerticalScrollBar::ALWAYS_HIDDEN &&
+      event.x() >= width() - kScrollBarTouchWidth) {
+    // Interaction with the right-side of the area gets interpreted as the
+    // intent to interact with the scroll bar, even if it is currently hidden.
+    // (Tapping on the area shows the scroll bar).
+    scroll_bar_gesture_ = true;
+    // We set a higher bar for recognizing the interaction as an actual touch of
+    // the scroll bar (leading to a scroll event on the scroll bar): the bar
+    // must already be visible, and the touch must happen in the right place.
+    is_scroll_bar_scrolled_ =
+        (scroll_bar_.isVisible() && event.y() >= scroll_bar_.begin() &&
+         event.y() <= scroll_bar_.end());
+    return true;
+  }
   if (event.type() == TouchEvent::MOVE) {
+    // If we detect drag motion in the scroll direction, intercept, and turn
+    // into a scroll event.
     const GestureDetector& gd = getApplication()->gesture_detector();
     int16_t dx = (direction_ == VERTICAL) ? 0 : gd.xTotalMoveDelta();
     int16_t dy = (direction_ == HORIZONTAL) ? 0 : gd.yTotalMoveDelta();
@@ -207,13 +305,67 @@ bool ScrollablePanel::onDown(XDim x, YDim y) {
   return true;
 }
 
-bool ScrollablePanel::onScroll(XDim dx, YDim dy) {
-  scrollBy(dx, dy);
+bool ScrollablePanel::onSingleTapUp(XDim x, YDim y) {
+  // We generally swallow and ignore tap events, except when tapping on
+  // a scrollbar area.
+  if (!scroll_bar_gesture_) return true;
+  if (scroll_bar_.isVisible()) {
+    // Interpret as an immediate jump.
+    // Calculate the difference in pixels between the minimum and maximum
+    // position of the scroll bar (i.e., the possible range of begin_).
+    YDim scroll_range =
+        height() - (scroll_bar_.end() - scroll_bar_.begin() + 1);
+    // Calculate the difference in pixels between the minimum and maximum
+    // position of the scrolled content (i.e., the possible range of the
+    // offset).
+    YDim view_range = contents()->height() - height();
+    YDim new_y = -(y - (scroll_bar_.end() - scroll_bar_.begin()) / 2) *
+                 view_range / scroll_range;
+    // The new y might be out of range, but that's ok - scrollTo will trim it.
+    scrollTo(contents()->xOffset(), new_y);
+  } else {
+    scroll_bar_.setVisibility(VISIBLE);
+  }
+  deadline_hide_scrollbar_ = roo_time::Uptime::Now() + kDelayHideScrollbar;
+  getApplication()->scheduleAction(*this, kDelayHideScrollbar);
   return true;
 }
 
-bool ScrollablePanel::onFling(XDim vx, YDim vy) {
+bool ScrollablePanel::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
+  if (contents() == nullptr || contents()->height() <= height()) {
+    // Nothing to scroll.
+    return false;
+  }
+  if (scroll_bar_gesture_) {
+    if (is_scroll_bar_scrolled_) {
+      // Calculate the difference in pixels between the minimum and maximum
+      // position of the scroll bar (i.e., the possible range of begin_).
+      YDim scroll_range =
+          height() - (scroll_bar_.end() - scroll_bar_.begin() + 1);
+      // Calculate the difference in pixels between the minimum and maximum
+      // position of the scrolled content (i.e., the possible range of the
+      // offset).
+      YDim view_range = contents()->height() - height();
+      YDim y_shift = -dy * view_range / scroll_range;
+      // The new y might be out of range, but that's ok - scrollBy will trim it.
+      scrollBy(contents()->xOffset(), y_shift);
+    }
+  } else {
+    scrollBy(dx, dy);
+  }
+  if (scroll_bar_presence_ == VerticalScrollBar::SHOWN_WHEN_SCROLLING) {
+    scroll_bar_.setVisibility(VISIBLE);
+    deadline_hide_scrollbar_ = roo_time::Uptime::Now() + roo_time::Hours(1);
+  }
+  return true;
+}
+
+bool ScrollablePanel::onFling(XDim x, YDim y, XDim vx, YDim vy) {
   if (contents() == nullptr) return true;
+  if (scroll_bar_gesture_) {
+    // No fling-animate on the scrollbar.
+    return true;
+  }
   Widget* c = contents();
   scroll_start_time_ = millis();
   scroll_start_vx_ = vx;
@@ -240,23 +392,34 @@ bool ScrollablePanel::onFling(XDim vx, YDim vy) {
   float v_abs = sqrtf(scroll_start_vx_ * scroll_start_vx_ +
                       scroll_start_vy_ * scroll_start_vy_);
   // Cap that scroll velocity if too large.
-  if (v_abs > maxVel) {
-    float mult = maxVel / v_abs;
+  if (v_abs > kMaxVel) {
+    float mult = kMaxVel / v_abs;
     scroll_start_vx_ *= mult;
     scroll_start_vy_ *= mult;
-    v_abs = maxVel;
+    v_abs = kMaxVel;
   }
   // Scroll is constantly deccelerating (with configured const
   // decceleration). Calculate the total scroll time until it stops on
   // its own if uninterrupted.
   unsigned long scroll_duration =
-      (unsigned long)(1000.0 * v_abs / decceleration);
+      (unsigned long)(1000.0 * v_abs / kDecceleration);
   scroll_end_time_ = scroll_start_time_ + scroll_duration;
   // Capture horizontal and vertical components of the decceleration.
-  scroll_decel_x_ = -decceleration * scroll_start_vx_ / v_abs;
-  scroll_decel_y_ = -decceleration * scroll_start_vy_ / v_abs;
+  scroll_decel_x_ = -kDecceleration * scroll_start_vx_ / v_abs;
+  scroll_decel_y_ = -kDecceleration * scroll_start_vy_ / v_abs;
   invalidateInterior();
   return true;
+}
+
+bool ScrollablePanel::onTouchUp(XDim vx, YDim vy) {
+  bool result = Widget::onTouchUp(vx, vy);
+  scroll_bar_gesture_ = false;
+  is_scroll_bar_scrolled_ = false;
+  if (scroll_bar_presence_ == VerticalScrollBar::SHOWN_WHEN_SCROLLING) {
+    deadline_hide_scrollbar_ = roo_time::Uptime::Now() + kDelayHideScrollbar;
+    getApplication()->scheduleAction(*this, kDelayHideScrollbar);
+  }
+  return result;
 }
 
 }  // namespace roo_windows
