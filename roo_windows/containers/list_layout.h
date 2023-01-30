@@ -27,9 +27,13 @@ class CircularBuffer {
   CircularBuffer(const Environment& env)
       : elements_(nullptr), capacity_(0), start_(0), count_(0) {}
 
-  ~CircularBuffer() {
-    operator delete[](elements_.release());
-  }
+  ~CircularBuffer() { operator delete[](elements_.release()); }
+
+  CircularBuffer(CircularBuffer&& other)
+      : elements_(other.elements_.release()),
+        capacity_(other.capacity_),
+        start_(other.start_),
+        count_(other.count_) {}
 
   void ensure_capacity(int capacity, const Element& prototype) {
     CHECK_EQ(count_, 0);
