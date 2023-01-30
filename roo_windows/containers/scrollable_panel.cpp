@@ -278,11 +278,11 @@ bool ScrollablePanel::onInterceptTouchEvent(const TouchEvent& event) {
     // (Tapping on the area shows the scroll bar).
     scroll_bar_gesture_ = true;
     // We set a higher bar for recognizing the interaction as an actual touch of
-    // the scroll bar (leading to a scroll event on the scroll bar): the bar
-    // must already be visible, and the touch must happen in the right place.
+    // the scroll bar (leading to a scroll event on the scroll bar): the touch
+    // must happen in the right place. (We still allow the scroll bar to not be
+    // visible at the moment).
     is_scroll_bar_scrolled_ =
-        (scroll_bar_.isVisible() && event.y() >= scroll_bar_.begin() &&
-         event.y() <= scroll_bar_.end());
+        (event.y() >= scroll_bar_.begin() && event.y() <= scroll_bar_.end());
     return true;
   }
   if (event.type() == TouchEvent::MOVE) {
