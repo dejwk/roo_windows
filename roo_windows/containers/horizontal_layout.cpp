@@ -3,6 +3,7 @@
 namespace roo_windows {
 
 Dimensions HorizontalLayout::onMeasure(WidthSpec width, HeightSpec height) {
+  Padding padding = getPadding();
   total_length_ = 0;
   YDim max_height = 0;
   // Used when the height spec is dynamic, and at least some children
@@ -20,8 +21,8 @@ Dimensions HorizontalLayout::onMeasure(WidthSpec width, HeightSpec height) {
   XDim largest_child_width = 0;
   XDim consumed_excess_space = 0;
 
-  int16_t h_padding = padding_.left() + padding_.right();
-  int16_t v_padding = padding_.top() + padding_.bottom();
+  int16_t h_padding = padding.left() + padding.right();
+  int16_t v_padding = padding.top() + padding.bottom();
   for (int i = 0; i < count; ++i) {
     Widget& w = child_at(i);
     if (w.isGone()) continue;
@@ -105,7 +106,7 @@ Dimensions HorizontalLayout::onMeasure(WidthSpec width, HeightSpec height) {
     }
   }
 
-  total_length_ += padding_.left() + padding_.right();
+  total_length_ += padding.left() + padding.right();
   Dimensions selfMinimum = getSuggestedMinimumDimensions();
   // Reconcile our calculated size with the widthMeasureSpec.
   XDim width_size =
@@ -126,7 +127,7 @@ Dimensions HorizontalLayout::onMeasure(WidthSpec width, HeightSpec height) {
       Margins margins = w.getMargins();
       int16_t h_margin = margins.left() + margins.right();
       int16_t v_margin = margins.top() + margins.bottom();
-      int16_t v_padding = padding_.top() + padding_.bottom();
+      int16_t v_padding = padding.top() + padding.bottom();
       int16_t child_weight = measure.params().weight();
       PreferredSize preferred = w.getPreferredSize();
       if (child_weight > 0) {
@@ -167,7 +168,7 @@ Dimensions HorizontalLayout::onMeasure(WidthSpec width, HeightSpec height) {
           total_length_, total_length_ + measure.latest().width() + h_margin);
     }
     // Add in our padding.
-    total_length_ += padding_.left() + padding_.right();
+    total_length_ += padding.left() + padding.right();
 
   } else {
     alternative_max_height =
@@ -193,7 +194,7 @@ Dimensions HorizontalLayout::onMeasure(WidthSpec width, HeightSpec height) {
   if (!all_match_parent && height.kind() != EXACTLY) {
     max_height = alternative_max_height;
   }
-  max_height += padding_.top() + padding_.bottom();
+  max_height += padding.top() + padding.bottom();
   max_height = std::max(max_height, selfMinimum.height());
   if (!match_height) {
     return Dimensions(width_size, height.resolveSize(max_height));
@@ -205,10 +206,11 @@ Dimensions HorizontalLayout::onMeasure(WidthSpec width, HeightSpec height) {
 }
 
 void HorizontalLayout::onLayout(bool changed, const Rect& rect) {
-  XDim child_xmin = padding_.left();
-  XDim child_ymax = rect.height() - padding_.bottom() - 1;
+  Padding padding = getPadding();
+  XDim child_xmin = padding.left();
+  XDim child_ymax = rect.height() - padding.bottom() - 1;
   int count = children().size();
-  YDim child_space = rect.height() - padding_.top() - padding_.bottom();
+  YDim child_space = rect.height() - padding.top() - padding.bottom();
   // Gravity::Axix major_gravity = gravity_.y();
   // Gravity::Axis minor_gravity = gravity_.x();
   if (gravity_.x().isRight()) {
@@ -229,7 +231,7 @@ void HorizontalLayout::onLayout(bool changed, const Rect& rect) {
     }
     YDim child_ymin;
     if (gravity.isMiddle()) {
-      child_ymin = padding_.top() +
+      child_ymin = padding.top() +
                    (child_space - measure.latest().height()) / 2 +
                    margins.top() - margins.bottom();
     } else if (gravity.isBottom()) {
@@ -237,7 +239,7 @@ void HorizontalLayout::onLayout(bool changed, const Rect& rect) {
           child_ymax + 1 - measure.latest().height() - margins.bottom();
     } else {
       // Left, or unspecified.
-      child_ymin = padding_.top() + margins.top();
+      child_ymin = padding.top() + margins.top();
     }
     child_xmin += margins.left();
     w.layout(Rect(child_xmin, child_ymin,

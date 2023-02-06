@@ -5,6 +5,7 @@ namespace roo_windows {
 namespace {}  // namespace
 
 Dimensions VerticalLayout::onMeasure(WidthSpec width, HeightSpec height) {
+  Padding padding = getPadding();
   total_length_ = 0;
   XDim max_width = 0;
   // Used when the width spec is dynamic, and at least some children
@@ -22,8 +23,8 @@ Dimensions VerticalLayout::onMeasure(WidthSpec width, HeightSpec height) {
   YDim largest_child_height = 0;
   YDim consumed_excess_space = 0;
 
-  int16_t h_padding = padding_.left() + padding_.right();
-  int16_t v_padding = padding_.top() + padding_.bottom();
+  int16_t h_padding = padding.left() + padding.right();
+  int16_t v_padding = padding.top() + padding.bottom();
   for (int i = 0; i < count; ++i) {
     Widget& w = child_at(i);
     if (w.isGone()) continue;
@@ -106,7 +107,7 @@ Dimensions VerticalLayout::onMeasure(WidthSpec width, HeightSpec height) {
     }
   }
 
-  total_length_ += padding_.top() + padding_.bottom();
+  total_length_ += padding.top() + padding.bottom();
   Dimensions selfMinimum = getSuggestedMinimumDimensions();
   // Reconcile our calculated size with the heightMeasureSpec.
   int16_t height_size =
@@ -128,7 +129,7 @@ Dimensions VerticalLayout::onMeasure(WidthSpec width, HeightSpec height) {
       Margins margins = w.getMargins();
       int16_t h_margin = margins.left() + margins.right();
       int16_t v_margin = margins.top() + margins.bottom();
-      int16_t h_padding = padding_.left() + padding_.right();
+      int16_t h_padding = padding.left() + padding.right();
       int16_t child_weight = measure.params().weight();
       PreferredSize preferred = w.getPreferredSize();
       if (child_weight > 0) {
@@ -169,7 +170,7 @@ Dimensions VerticalLayout::onMeasure(WidthSpec width, HeightSpec height) {
           total_length_, total_length_ + measure.latest().height() + v_margin);
     }
     // Add in our padding.
-    total_length_ += padding_.top() + padding_.bottom();
+    total_length_ += padding.top() + padding.bottom();
 
   } else {
     alternative_max_width =
@@ -195,7 +196,7 @@ Dimensions VerticalLayout::onMeasure(WidthSpec width, HeightSpec height) {
   if (!all_match_parent && width.kind() != EXACTLY) {
     max_width = alternative_max_width;
   }
-  max_width += padding_.left() + padding_.right();
+  max_width += padding.left() + padding.right();
   max_width = std::max(max_width, selfMinimum.width());
   if (!match_width) {
     return Dimensions(width.resolveSize(max_width), height_size);
@@ -207,10 +208,11 @@ Dimensions VerticalLayout::onMeasure(WidthSpec width, HeightSpec height) {
 }
 
 void VerticalLayout::onLayout(bool changed, const Rect& rect) {
-  int16_t child_ymin = padding_.top();
-  int16_t child_xmax = rect.width() - padding_.right() - 1;
+  Padding padding = getPadding();
+  int16_t child_ymin = padding.top();
+  int16_t child_xmax = rect.width() - padding.right() - 1;
   int count = children().size();
-  int16_t child_space = rect.width() - padding_.left() - padding_.right();
+  int16_t child_space = rect.width() - padding.left() - padding.right();
   // Gravity::Axix major_gravity = gravity_.y();
   // Gravity::Axis minor_gravity = gravity_.x();
   if (gravity_.y().isBottom()) {
@@ -231,14 +233,14 @@ void VerticalLayout::onLayout(bool changed, const Rect& rect) {
     }
     int16_t child_xmin;
     if (gravity.isCenter()) {
-      child_xmin = padding_.left() +
+      child_xmin = padding.left() +
                    (child_space - measure.latest().width()) / 2 +
                    margins.left() - margins.right();
     } else if (gravity.isRight()) {
       child_xmin = child_xmax + 1 - measure.latest().width() - margins.right();
     } else {
       // Left, or unspecified.
-      child_xmin = padding_.left() + margins.left();
+      child_xmin = padding.left() + margins.left();
     }
     child_ymin += margins.top();
     w.layout(Rect(child_xmin, child_ymin,
