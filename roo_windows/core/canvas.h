@@ -33,6 +33,10 @@ class Canvas {
     clip_box_ = extents.translate(dx_, dy_).clip(clip_box_);
   }
 
+  void clip(roo_display::Box box) {
+    clip_box_ = roo_display::Box::intersect(clip_box_, box);
+  }
+
   void clear() const;
 
   void fillRect(XDim xMin, YDim yMin, XDim xMax, YDim yMax,
