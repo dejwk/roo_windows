@@ -20,6 +20,29 @@ class PressOverlay : public roo_display::Rasterizable {
     }
   }
 
+  bool ReadColorRect(int16_t xMin, int16_t yMin, int16_t xMax, int16_t yMax,
+                     roo_display::Color* result) const override {
+    int32_t dx1_sq = (xMin - x_) * (xMin - x_);
+    int32_t dx2_sq = (xMax - x_) * (xMax - x_);
+    int32_t dy1_sq = (yMin - y_) * (yMin - y_);
+    int32_t dy2_sq = (yMax - y_) * (yMax - y_);
+    if (r_sq_ < std::min(dx1_sq, dx2_sq) + std::min(dy1_sq, dy2_sq)) {
+      *result = bg_;
+      return true;
+    }
+    if (r_ >= 3 && r_sq_ > std::max(dx1_sq, dx2_sq) + std::max(dy1_sq, dy2_sq) +
+                               6 * r_ - 9) {
+      *result = fg_;
+      return true;
+    }
+    for (int16_t y_cursor = yMin; y_cursor <= yMax; ++y_cursor) {
+      for (int16_t x_cursor = xMin; x_cursor <= xMax; ++x_cursor) {
+        *result++ = get(x_cursor, y_cursor);
+      }
+    }
+    return false;
+  }
+
   roo_display::Color get(int16_t x, int16_t y) const {
     int16_t dx = x - x_;
     int16_t dy = y - y_;
