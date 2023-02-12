@@ -24,6 +24,8 @@ class Canvas {
 
   const roo_display::Box& clip_box() const { return clip_box_; }
 
+  void set_clip_box(const roo_display::Box &clip_box) { clip_box_ = clip_box; }
+
   void shift(XDim dx, YDim dy) {
     dx_ += dx;
     dy_ += dy;
