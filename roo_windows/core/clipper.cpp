@@ -60,7 +60,6 @@ void OverlayStack::ReadColors(const int16_t* x, const int16_t* y,
 
 bool OverlayStack::ReadColorRect(int16_t xMin, int16_t yMin, int16_t xMax,
                                  int16_t yMax, Color* result) const {
-  const ClippedOverlay* r = end_;
   bool is_uniform_color = true;
   *result = color::Transparent;
   Box box(xMin, yMin, xMax, yMax);
