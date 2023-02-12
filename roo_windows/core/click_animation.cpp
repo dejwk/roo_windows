@@ -48,9 +48,7 @@ bool ClickAnimation::isClickAnimating() const {
   return click_anim_target_ != nullptr;
 }
 
-bool ClickAnimation::isClickConfirmed() const {
-  return click_confirmed_;
-}
+bool ClickAnimation::isClickConfirmed() const { return click_confirmed_; }
 
 void ClickAnimation::start(Widget* widget, int16_t x, int16_t y) {
   click_anim_target_ = widget;
@@ -60,9 +58,7 @@ void ClickAnimation::start(Widget* widget, int16_t x, int16_t y) {
   click_confirmed_ = false;
 }
 
-void ClickAnimation::cancel() {
-  click_anim_target_ = nullptr;
-}
+void ClickAnimation::cancel() { click_anim_target_ = nullptr; }
 
 void ClickAnimation::confirmClick(Widget* widget) {
   click_confirmed_ = true;
