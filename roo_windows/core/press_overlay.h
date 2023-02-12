@@ -5,6 +5,8 @@
 
 class PressOverlay : public roo_display::Rasterizable {
  public:
+  PressOverlay() : PressOverlay(0, 0, 0, roo_display::color::Transparent) {}
+
   PressOverlay(int16_t x, int16_t y, int16_t r, roo_display::Color fg,
                roo_display::Color bg = roo_display::color::Transparent)
       : x_(x), y_(y), r_(r), r_sq_(r * r), fg_(fg), bg_(bg) {}

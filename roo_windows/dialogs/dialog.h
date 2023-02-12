@@ -7,7 +7,6 @@
 #include "roo_windows/containers/scrollable_panel.h"
 #include "roo_windows/containers/vertical_layout.h"
 #include "roo_windows/core/panel.h"
-#include "roo_windows/shadows/shadow.h"
 #include "roo_windows/widgets/button.h"
 #include "roo_windows/widgets/text_label.h"
 
@@ -27,10 +26,19 @@ class Dialog : public VerticalLayout {
   // If the dialog is currently open, closes it and calls callback_fn(-1).
   void close();
 
+  // Dialog appear at a quite high elevation over the underlying content.
+  uint8_t getElevation() const override { return 20; }
+
+  // Use some round corners.
+  BorderStyle getBorderStyle() const override { return BorderStyle(5, 0); }
+
+  Padding getPadding() const override { return Padding(4, 4); }
+
  protected:
   Dialog(const Environment& env, const std::vector<std::string> button_labels);
 
-  void paintWidgetContents(const Canvas& s, Clipper& clipper) override;
+  void finalizePaintWidget(const Canvas& canvas, Clipper& clipper,
+                           const OverlaySpec& overlay_spec) const override;
 
   VerticalLayout body_;
   TextLabel title_;
@@ -51,10 +59,6 @@ class Dialog : public VerticalLayout {
   HorizontalLayout button_panel_;
   std::vector<Button> buttons_;
   CallbackFn callback_fn_;
-
-  // TODO: consider adding general support for elevation. For now, we keep it
-  // specific to dialogs.
-  Shadow shadow_;
 };
 
 }  // namespace roo_windows

@@ -1,7 +1,5 @@
 #include "roo_windows/core/widget.h"
 
-#include <cmath>
-
 #include "roo_display/filter/foreground.h"
 #include "roo_glog/logging.h"
 #include "roo_windows/core/application.h"
@@ -9,6 +7,7 @@
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/press_overlay.h"
 #include "roo_windows/core/rtti.h"
+#include "roo_windows/decoration/decoration.h"
 
 namespace roo_windows {
 
@@ -113,6 +112,10 @@ Rect slopify(Rect bounds) {
 
 }  // namespace
 
+Rect Widget::getParentBoundsOfShadow() const {
+  return CalculateShadowExtents(parent_bounds(), getElevation());
+}
+
 Rect Widget::getSloppyTouchParentBounds() const {
   return slopify(parent_bounds());
 }
@@ -140,12 +143,30 @@ void Widget::markDirty(const Rect& bounds) {
 
 void Widget::invalidateInterior() {
   invalidateDescending();
+  if (getBorderStyle().corner_radius() > 0 && parent() != nullptr) {
+    parent()->childInvalidatedRegion(this, maxParentBounds());
+  }
   markDirty();
 }
 
 void Widget::invalidateInterior(const Rect& rect) {
   invalidateDescending(rect);
+  if (getBorderStyle().corner_radius() > 0 && parent() != nullptr) {
+    parent()->childInvalidatedRegion(this,
+                                     rect.translate(xOffset(), yOffset()));
+  }
   markDirty(rect);
+}
+
+void Widget::elevationChanged(int higherElevation) {
+  if (higherElevation > 0 && parent_ != nullptr) {
+    // TODO: we can avoid marking dirty if we introduce a new flag specifically
+    // for elevation changed. This way we can avoid content redraws except for
+    // the bounds.
+    if (getBorderStyle().corner_radius() > 0) markDirty();
+    parent()->childInvalidatedRegion(
+        this, CalculateShadowExtents(parent_bounds(), higherElevation));
+  }
 }
 
 void Widget::requestLayout() {
@@ -358,128 +379,72 @@ uint8_t Widget::getOverlayOpacity() const {
   return overlay_opacity;
 }
 
-namespace {
-
-Color getOverlayColor(const Widget& widget, const Canvas& canvas) {
-  uint8_t overlay_opacity = widget.getOverlayOpacity();
-  if (overlay_opacity == 0) {
-    return roo_display::color::Transparent;
-  }
-  const Theme& myTheme = widget.theme();
-  Color overlay = widget.usesHighlighterColor()
-                      ? myTheme.color.highlighterColor(canvas.bgcolor())
-                      : myTheme.color.defaultColor(canvas.bgcolor());
-  overlay.set_a(overlay_opacity);
-  return overlay;
-}
-
-Color getClickAnimationColor(const Widget& widget, const Canvas& canvas) {
-  const Theme& myTheme = widget.theme();
-  Color color = widget.usesHighlighterColor()
-                    ? myTheme.color.highlighterColor(canvas.bgcolor())
-                    : myTheme.color.defaultColor(canvas.bgcolor());
-  color.set_a(myTheme.pressAnimationOpacity(canvas.bgcolor()));
-  return color;
-}
-
-static constexpr int64_t kMaxClickAnimRadius = 8192;
-
-inline int64_t dsquare(XDim x0, YDim y0, XDim x1, YDim y1) {
-  return (x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0);
-}
-
-inline int16_t animation_radius(const Rect& bounds, XDim x, XDim y,
-                                float progress) {
-  int64_t ul = dsquare(x, y, bounds.xMin(), bounds.yMin());
-  int64_t ur = dsquare(x, y, bounds.xMax(), bounds.yMin());
-  int64_t dl = dsquare(x, y, bounds.xMin(), bounds.yMax());
-  int64_t dr = dsquare(x, y, bounds.xMax(), bounds.yMax());
-  int64_t max = 0;
-  if (ul > max) max = ul;
-  if (ur > max) max = ur;
-  if (dl > max) max = dl;
-  if (dr > max) max = dr;
-  int32_t result = (int32_t)(std::sqrt(max) * progress + 1);
-  if (result > kMaxClickAnimRadius) {
-    result = kMaxClickAnimRadius;
-  }
-  return (int16_t)result;
-}
-
-}  // namespace
-
 void Widget::paintWidget(const Canvas& canvas, Clipper& clipper) {
   if (!isVisible()) {
     markCleanDescending();
     return;
   }
   Canvas my_canvas(canvas);
+  roo_display::Box orig_clip_box = canvas.clip_box();
   my_canvas.shift(xOffset(), yOffset());
   my_canvas.clipToExtents(maxBounds());
-  if (my_canvas.clip_box().empty()) {
+  Color bg = background();
+  if (!isEnabled()) {
+    bg.set_a(bg.a() / 2);
+  }
+  my_canvas.set_bgcolor(roo_display::alphaBlend(canvas.bgcolor(), bg));
+  OverlaySpec overlay_spec(*this, my_canvas);
+  if (!my_canvas.clip_box().empty() && isDirty()) {
+    paintWidgetInteriorWithOverlays(my_canvas, clipper, overlay_spec);
+    my_canvas.set_clip_box(orig_clip_box);
+    finalizePaintWidget(my_canvas, clipper, overlay_spec);
+  } else {
+    // Still need to handle exclusions and shadows over possibly changed
+    // siblings.
     markCleanDescending();
+    my_canvas.set_clip_box(orig_clip_box);
+    finalizePaintWidget(my_canvas, clipper, overlay_spec);
+  }
+}
+
+void Widget::paintWidgetInteriorWithOverlays(Canvas& canvas, Clipper& clipper,
+                                             const OverlaySpec& overlay_spec) {
+  if (!overlay_spec.is_modded()) {
+    paintWidgetContents(canvas, clipper);
     return;
   }
-  if (!isDirty()) {
-    // Fast path to only include exclusion rect.
-    paintWidgetContents(my_canvas, clipper);
-    return;
-  }
-  my_canvas.set_bgcolor(
-      roo_display::alphaBlend(canvas.bgcolor(), background()));
-  bool animation_continues = false;
-  if (isEnabled()) {
-    Color overlay = getOverlayColor(*this, canvas);
+  roo_display::DisplayOutput& orig = canvas.out();
+  if (!overlay_spec.is_disabled()) {
     // If click_animation is true, we need to redraw the overlay.
     bool click_animation = ((state_ & kWidgetClicking) != 0);
     if (click_animation) {
-      float click_progress;
-      int16_t click_x, click_y;
       // If click_animation_continues is true, we need to invalidate ourselves
       // after redrawing, so that we receive a subsequent paint request shortly.
-      animation_continues = click_animation &&
-                            getClickAnimation()->getProgress(
-                                this, &click_progress, &click_x, &click_y) &&
-                            click_progress < 1.0;
-      if (animation_continues) {
-        // Note that dx,dy might have changed since the click event, moving dim
-        // out of the int16_t horizon.
-        XDim cx = click_x + my_canvas.dx();
-        YDim cy = click_y + my_canvas.dy();
-        // See if the overlay would be visible.
-        int16_t r =
-            animation_radius(bounds(), click_x, click_y, click_progress);
-        Rect rect(cx - r, cy - r, cx + r, cy + r);
-        if (rect.intersects(my_canvas.clip_box())) {
-          // Need to draw the circular overlay. Combine the regular rect overlay
-          // into it.
-          Color animation_color = getClickAnimationColor(*this, my_canvas);
-          PressOverlay press_overlay(
-              cx, cy, r, alphaBlend(overlay, animation_color), overlay);
-          roo_display::ForegroundFilter filter(my_canvas.out(), &press_overlay);
-          my_canvas.set_out(&filter);
-          paintWidgetContents(my_canvas, clipper);
-          // Do not clear dirtiness.
-          invalidateInterior();
-          return;
-        }
+      if (overlay_spec.is_click_animation_in_progress()) {
+        // Need to draw the circular overlay.
+        roo_display::ForegroundFilter filter(orig,
+                                             overlay_spec.press_overlay());
+        canvas.set_out(&filter);
+        paintWidgetContents(canvas, clipper);
+        canvas.set_out(&orig);
+        // Do not clear dirtiness.
+        invalidateInterior();
+        return;
       } else {
-        // Full rect click overlay - just apply on top of the overlay as
-        // calculated so far.
         state_ &= ~kWidgetClicking;
-        Color animation_color = getClickAnimationColor(*this, my_canvas);
-        overlay = alphaBlend(overlay, animation_color);
       }
     }
-    if (overlay.a() > 0) {
-      roo_display::OverlayFilter filter(canvas.out(), overlay,
+    if (overlay_spec.base_overlay().a() > 0) {
+      roo_display::OverlayFilter filter(canvas.out(),
+                                        overlay_spec.base_overlay(),
                                         roo_display::color::Transparent);
-      my_canvas.set_out(&filter);
-      paintWidgetContents(my_canvas, clipper);
+      canvas.set_out(&filter);
+      paintWidgetContents(canvas, clipper);
+      canvas.set_out(&orig);
     } else {
-      paintWidgetContents(my_canvas, clipper);
+      paintWidgetContents(canvas, clipper);
     }
-    if (click_animation && !animation_continues) {
+    if (click_animation && !overlay_spec.is_click_animation_in_progress()) {
       // Make sure that the next paint is scheduled promptly, but that it does
       // not encounter click_animation, so that it just draws the widget in its
       // regular state (possibly pressed, but not click-animating anymore).
@@ -488,21 +453,52 @@ void Widget::paintWidget(const Canvas& canvas, Clipper& clipper) {
     }
   } else {
     roo_display::TranslucencyFilter disablement_filter(
-        my_canvas.out(), theme().state.disabled, canvas.bgcolor());
-    my_canvas.set_out(&disablement_filter);
-    paintWidgetContents(my_canvas, clipper);
+        canvas.out(), theme().state.disabled, canvas.bgcolor());
+    canvas.set_out(&disablement_filter);
+    paintWidgetContents(canvas, clipper);
+    canvas.set_out(&orig);
   }
 }
 
 void Widget::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
-  roo_display::Box absolute_bounds =
-      bounds().translate(canvas.dx(), canvas.dy()).clip(canvas.clip_box());
-  if (isDirty()) {
-    clipper.setBounds(absolute_bounds);
+  BorderStyle border_style = getBorderStyle().trim(width(), height());
+  uint8_t border_thickness = border_style.getThickness();
+  roo_display::Box inner_bounds(border_thickness + canvas.dx(),
+                                border_thickness + canvas.dy(),
+                                width() - border_thickness - 1 + canvas.dx(),
+                                height() - border_thickness - 1 + canvas.dy());
+  roo_display::Box clip_box =
+      roo_display::Box::intersect(inner_bounds, canvas.clip_box());
+  clipper.setBounds(clip_box);
+  if (!clip_box.contains(canvas.clip_box())) {
+    Canvas my_canvas = canvas;
+    my_canvas.clip(clip_box);
+    paint(my_canvas);
+  } else {
     paint(canvas);
-    markClean();
   }
-  clipper.addExclusion(absolute_bounds);
+  markClean();
+}
+
+void Widget::finalizePaintWidget(const Canvas& canvas, Clipper& clipper,
+                                 const OverlaySpec& overlay_spec) const {
+  BorderStyle border_style = getBorderStyle().trim(width(), height());
+  uint8_t border_thickness = border_style.getThickness();
+  roo_display::Box inner_bounds(border_thickness + canvas.dx(),
+                                border_thickness + canvas.dy(),
+                                width() - border_thickness - 1 + canvas.dx(),
+                                height() - border_thickness - 1 + canvas.dy());
+  uint8_t elevation = getElevation();
+  if (elevation != 0 || border_thickness != 0) {
+    roo_display::Box absolute_bounds(canvas.dx(), canvas.dy(),
+                                    width() - 1 + canvas.dx(),
+                                    height() - 1 + canvas.dy());
+    clipper.addDecoration(canvas.clip_box(), absolute_bounds, elevation,
+                          overlay_spec, canvas.bgcolor(),
+                          border_style.corner_radius(),
+                          border_style.outline_width(), getOutlineColor());
+  }
+  clipper.addExclusion(inner_bounds);
 }
 
 Widget* Widget::dispatchTouchDownEvent(XDim x, YDim y) {

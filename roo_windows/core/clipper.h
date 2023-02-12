@@ -1,5 +1,6 @@
 #pragma once
 
+#include <deque>
 #include <vector>
 
 #include "roo_display.h"
@@ -7,6 +8,7 @@
 #include "roo_display/core/rasterizable.h"
 #include "roo_display/filter/clip_exclude_rects.h"
 #include "roo_display/filter/foreground.h"
+#include "roo_windows/decoration/decoration.h"
 
 namespace roo_windows {
 
@@ -73,6 +75,10 @@ class ClipperState {
   std::vector<roo_display::Box> exclusions_;
   std::vector<roo_display::Box> bounded_exclusions_;
 
+  // Note: vector doesn't work, because we need to ensure that pointers don't
+  // get invalidated.
+  std::deque<Decoration> decorations_;
+
   std::vector<ClippedOverlay> overlays_;
   std::vector<ClippedOverlay> bounded_overlays_;
 };
@@ -84,6 +90,7 @@ class ClipperOutput : public roo_display::DisplayOutput {
         bounds_(0, 0, -1, -1),
         exclusions_(state.exclusions_),
         bounded_exclusions_(state.bounded_exclusions_),
+        decorations_(state.decorations_),
         overlays_(state.overlays_),
         bounded_overlays_(state.bounded_overlays_),
         valid_(true),
@@ -94,6 +101,7 @@ class ClipperOutput : public roo_display::DisplayOutput {
         output_(&rect_union_filter_) {
     exclusions_.clear();
     bounded_exclusions_.clear();
+    decorations_.clear();
     overlays_.clear();
     bounded_overlays_.clear();
   }
@@ -121,6 +129,16 @@ class ClipperOutput : public roo_display::DisplayOutput {
     }
 
     valid_ = false;
+  }
+
+  void addDecoration(roo_display::Box clip_box, roo_display::Box extents,
+                     int elevation, const OverlaySpec &overlay_spec,
+                     roo_display::Color bgcolor, uint8_t corner_radius,
+                     uint8_t outline_width, roo_display::Color outline_color) {
+    decorations_.emplace_back(std::move(extents), elevation, overlay_spec,
+                              bgcolor, corner_radius, outline_width,
+                              outline_color);
+    addOverlay(&decorations_.back(), clip_box);
   }
 
   void addOverlay(const roo_display::Rasterizable *overlay,
@@ -212,6 +230,7 @@ class ClipperOutput : public roo_display::DisplayOutput {
   roo_display::Box bounds_;
   std::vector<roo_display::Box> &exclusions_;
   std::vector<roo_display::Box> &bounded_exclusions_;
+  std::deque<Decoration> &decorations_;
   std::vector<ClippedOverlay> &overlays_;
   std::vector<ClippedOverlay> &bounded_overlays_;
   bool valid_;
@@ -248,6 +267,15 @@ class Clipper {
   void addOverlay(const roo_display::Rasterizable *overlay,
                   roo_display::Box clip_box) {
     out_.addOverlay(overlay, clip_box);
+  }
+
+  void addDecoration(roo_display::Box clip_box, Rect extents, int elevation,
+                     const OverlaySpec &overlay_spec,
+                     roo_display::Color bgcolor, uint8_t corner_radius,
+                     uint8_t outline_width, roo_display::Color outline_color) {
+    out_.addDecoration(std::move(clip_box), extents.asBox(), elevation,
+                       overlay_spec, bgcolor, corner_radius, outline_width,
+                       outline_color);
   }
 
   roo_display::DisplayOutput *out() { return &out_; }

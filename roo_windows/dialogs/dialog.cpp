@@ -36,9 +36,8 @@ Dialog::Dialog(const Environment& env, std::vector<std::string> button_labels)
       body_(env),
       title_(env, "", *env.theme().font.h6),
       contents_(env),
-      button_panel_(env),
-      shadow_() {
-  body_.setPadding(Padding(PADDING_REGULAR, PADDING_REGULAR));
+      button_panel_(env) {
+  body_.setPadding(Padding(PADDING_SMALL, PADDING_TINY));
   title_.setPadding(PADDING_NONE, PADDING_NONE);
   body_.add(title_);
   body_.add(contents_, VerticalLayout::Params().setWeight(1));
@@ -76,13 +75,10 @@ void Dialog::close() {
   }
 }
 
-void Dialog::paintWidgetContents(const Canvas& s, Clipper& clipper) {
-  Panel::paintWidgetContents(s, clipper);
-  Rect full, visible;
-  getAbsoluteBounds(full, visible);
-  shadow_ = Shadow(full, 20);
-  clipper.addOverlay(&shadow_, s.clip_box());
-  clipper.addOverlay(&scrim(), s.clip_box());
+void Dialog::finalizePaintWidget(const Canvas& canvas, Clipper& clipper,
+                                 const OverlaySpec& overlay_spec) const {
+  Panel::finalizePaintWidget(canvas, clipper, overlay_spec);
+  clipper.addOverlay(&scrim(), canvas.clip_box());
 }
 
 }  // namespace roo_windows

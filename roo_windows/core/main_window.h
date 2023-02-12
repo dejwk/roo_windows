@@ -35,6 +35,12 @@ class MainWindow : public Panel {
 
   ClickAnimation& click_animation() { return click_animation_; }
 
+  PressOverlay& press_overlay() { return press_overlay_; }
+
+  void set_press_overlay(PressOverlay press_overlay) {
+    press_overlay_ = std::move(press_overlay);
+  }
+
  protected:
   void propagateDirty(const Widget* child, const Rect& rect) override;
 
@@ -42,6 +48,9 @@ class MainWindow : public Panel {
   Application& app_;
 
   ClickAnimation click_animation_;
+
+  // Singleton used to draw circular 'click' overlay.
+  PressOverlay press_overlay_;
 
   // Stored as instance variable, to avoid vector reallocation on each paint.
   internal::ClipperState clipper_state_;

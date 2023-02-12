@@ -172,6 +172,10 @@ class Panel : public Widget {
   // Called on panel when its specified child gets shown (or moved).
   virtual void childShown(const Widget* child);
 
+  // Called on panel when a specified region has been invalidated by the child,
+  // and the child has some see-through border.
+  virtual void childInvalidatedRegion(const Widget* child, Rect rect);
+
   // Called recursively upwards, to extend the cached_max_bounds if needed,
   // when a descendant has been shown.
   void unclippedChildRectShown(const Rect& rect);

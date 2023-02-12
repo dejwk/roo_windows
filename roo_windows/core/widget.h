@@ -6,6 +6,7 @@
 #include "roo_display.h"
 #include "roo_display/filter/color_filter.h"
 #include "roo_display/image/image.h"
+#include "roo_windows/core/border_style.h"
 #include "roo_windows/core/canvas.h"
 #include "roo_windows/core/clipper.h"
 #include "roo_windows/core/dimensions.h"
@@ -93,6 +94,10 @@ class Widget {
 
   Rect bounds() const { return Rect(0, 0, width() - 1, height() - 1); }
 
+  // Returns bounds of the shadow, in the parent's coordinates. When no shadow
+  // (elevation = 0), equivalent to parent_bounds().
+  Rect getParentBoundsOfShadow() const;
+
   Rect getSloppyTouchBounds() const;
 
   // Returns the rectangle that covers all of this widget and its descendants.
@@ -159,6 +164,9 @@ class Widget {
   // color is the alpha-blend of the parent's effective background and this
   // widget's background.
   Color effectiveBackground() const;
+
+  // Has no effect when getBorderStyle() reports outline_width = 0.
+  virtual Color getOutlineColor() const { return theme().color.primary; }
 
   virtual Widget* dispatchTouchDownEvent(XDim x, YDim y);
 
@@ -366,6 +374,17 @@ class Widget {
   virtual Padding getPadding() const { return Padding(0); }
   virtual Margins getMargins() const { return Margins(0); }
 
+  // Returns the current elevation of the widget. Non-zero elevation causes a
+  // shadow to be drawn. The elevation can be in the range [0-31]. By default,
+  // widgets have elevation = 0. Subclasses can override. When the reported
+  // elevation changes in the subclass, elevationChanged() must be called to
+  // ensure that the screen is properly redrawn.
+  virtual uint8_t getElevation() const { return 0; }
+
+  // Returns the border style of this widget. By default, widgets have sharp
+  // corners and no outline. Subclasses can override.
+  virtual BorderStyle getBorderStyle() const { return BorderStyle(); }
+
   // Returns dimensions that make the widget 'look good'. Inclusive of padding.
   virtual Dimensions getNaturalDimensions() const {
     Dimensions d = getSuggestedMinimumDimensions();
@@ -420,6 +439,11 @@ class Widget {
   OnOffState onOffState() const;
   void setOnOffState(OnOffState state);
 
+  // Should be called by a child whose elevation has changed, and the child
+  // wants the shadow to be redrawn. The argument should indicate the higher of
+  // {before, after} elevations.
+  void elevationChanged(int higherElevation);
+
   // Marks the entire area of this widget, and all its descendants, as
   // invalidated (needing full redraw).
   virtual void invalidateDescending() { markInvalidated(); }
@@ -460,6 +484,10 @@ class Widget {
   // * Mutating state - e.g. caching some paint-related values. Call the
   //   superclass method, and then do the necessary caching.
   virtual void paintWidgetContents(const Canvas& s, Clipper& clipper);
+
+  // Draws borders and shadows, and applies exclusions.
+  virtual void finalizePaintWidget(const Canvas& s, Clipper& clipper,
+                                   const OverlaySpec& overlay_spec) const;
 
   virtual void setParent(Panel* parent, bool is_owned);
 
@@ -540,11 +568,17 @@ class Widget {
   friend class ScrollablePanel;
   friend class MainWindow;
 
+  friend class OverlaySpec;
+
   // Called by the framework. Receives the parent's canvas. Determines
   // state-related overlays and filters (enabled/disabled, clicking, etc.),
   // creates the new, offset canvas with overlays and/or filters, and calls
   // paintWidgetContents().
   void paintWidget(const Canvas& s, Clipper& clipper);
+
+  // Helper functions for paintWidget.
+  void paintWidgetInteriorWithOverlays(Canvas& s, Clipper& clipper,
+                                       const OverlaySpec& overlay_spec);
 
   void markInvalidated() { redraw_status_ |= (kDirty | kInvalidated); }
 

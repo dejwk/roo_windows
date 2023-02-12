@@ -68,21 +68,22 @@ void Panel::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
     // Draw the panel's children.
     paintChildren(canvas, clipper);
   }
-  // Paint the surface.
-  roo_display::Box absolute_bounds =
-      bounds().translate(canvas.dx(), canvas.dy()).clip(canvas.clip_box());
-  if (absolute_bounds.empty()) return;
   if (invalidated) {
+    // Paint the surface.
     Rect rect = Rect::Intersect(bounds(), invalid_region);
     Canvas my_canvas = canvas;
     my_canvas.clipToExtents(rect);
+    BorderStyle border_style = getBorderStyle().trim(width(), height());
+    uint8_t border_thickness = border_style.getThickness();
+    my_canvas.clipToExtents(roo_display::Box(border_thickness, border_thickness,
+                                             width() - border_thickness - 1,
+                                             height() - border_thickness - 1));
     if (!my_canvas.clip_box().empty()) {
       // Draw the panel's background.
       clipper.setBounds(my_canvas.clip_box());
       paint(my_canvas);
     }
   }
-  clipper.addExclusion(absolute_bounds);
 }
 
 void Panel::paintChildren(const Canvas& canvas, Clipper& clipper) {
@@ -189,18 +190,28 @@ void Panel::invalidateDescending(const Rect& rect) {
 }
 
 void Panel::childHidden(const Widget* child) {
-  propagateDirty(child, child->maxParentBounds());
-  invalidateBeneath(child->maxParentBounds(), child,
+  Rect invalid_rect =
+      Rect::Extent(child->maxParentBounds(), child->getParentBoundsOfShadow());
+  propagateDirty(child, invalid_rect);
+  invalidateBeneath(invalid_rect, child,
                     child->getParentClipMode() == Widget::CLIPPED);
   if (child->getParentClipMode() == Widget::UNCLIPPED) {
-    unclippedChildRectHidden(child->parent_bounds());
+    unclippedChildRectHidden(child->getParentBoundsOfShadow());
   }
 }
 
 void Panel::childShown(const Widget* child) {
+  if (child->getElevation() > 0 || child->getBorderStyle().corner_radius() > 0) {
+    invalidateBeneath(child->getParentBoundsOfShadow(), child,
+                      child->getParentClipMode() == Widget::CLIPPED);
+  }
   if (child->getParentClipMode() == Widget::UNCLIPPED) {
     unclippedChildRectShown(child->parent_bounds());
   }
+}
+
+void Panel::childInvalidatedRegion(const Widget* child, Rect rect) {
+  invalidateBeneath(rect, child, child->getParentClipMode() == Widget::CLIPPED);
 }
 
 void Panel::unclippedChildRectHidden(const Rect& rect) {
