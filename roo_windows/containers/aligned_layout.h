@@ -40,6 +40,11 @@ class AlignedLayout : public Panel {
 
   Dimensions getSuggestedMinimumDimensions() const override;
 
+  PreferredSize getPreferredSize() const override {
+    return PreferredSize(PreferredSize::MatchParentWidth(),
+                         PreferredSize::MatchParentHeight());
+  }
+
  protected:
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
   void onLayout(bool changed, const Rect& rect) override;
