@@ -17,8 +17,7 @@ class ClickAnimation {
   // otherwise. If returns true, updates progress, x_center, and y_center.
   // Progress is a value in the [0, 1] range that specifies how much the
   // animation is progressed. The x_center and y_center are the coordinates of
-  // the original click, in the device coordinates. (The widget can conver them
-  // to its local coordinates, by adjusting by the surface offsets).
+  // the original click, in the widget's coordinates.
   bool getProgress(const Widget* target, float* progress, int16_t* x_center,
                    int16_t* y_center) const;
 
