@@ -98,7 +98,7 @@ void MainWindow::paintWindow(const roo_display::Surface& s) {
   Clipper clipper(clipper_state_, bg_optimizer);
   canvas.set_out(clipper.out());
   paintWidget(canvas, clipper);
-  canvas.fillRect(canvas.clip_box(), roo_display::color::Black);
+  // canvas.fillRect(canvas.clip_box(), roo_display::color::Black);
 }
 
 void MainWindow::propagateDirty(const Widget* child, const Rect& rect) {
