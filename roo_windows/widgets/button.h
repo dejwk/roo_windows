@@ -36,6 +36,8 @@ class ButtonBase : public BasicWidget {
     markDirty();
   }
 
+  Color background() const override { return interior_color_; }
+
   void paint(const Canvas& canvas) const override;
 
   Padding getDefaultPadding() const override;
