@@ -264,40 +264,65 @@ void Widget::setVisibility(Visibility visibility) {
 
 void Widget::setEnabled(bool enabled) {
   if (isEnabled() == enabled) return;
+  uint8_t old_elevation = getElevation();
   state_ ^= kWidgetEnabled;
   if (!isVisible()) return;
   invalidateInterior();
+  uint8_t new_elevation = getElevation();
+  if (old_elevation != new_elevation) {
+    elevationChanged(std::max(old_elevation, new_elevation));
+  }
 }
 
 void Widget::setSelected(bool selected) {
   if (selected == isSelected()) return;
+  uint8_t old_elevation = getElevation();
   state_ ^= kWidgetSelected;
   if (!isVisible()) return;
   invalidateInterior();
+  uint8_t new_elevation = getElevation();
+  if (old_elevation != new_elevation) {
+    elevationChanged(std::max(old_elevation, new_elevation));
+  }
 }
 
 void Widget::setActivated(bool activated) {
   if (activated == isActivated()) return;
+  uint8_t old_elevation = getElevation();
   state_ ^= kWidgetActivated;
   if (!isVisible()) return;
   markDirty();
   if (useOverlayOnActivation()) {
     invalidateInterior();
   }
+  uint8_t new_elevation = getElevation();
+  if (old_elevation != new_elevation) {
+    elevationChanged(std::max(old_elevation, new_elevation));
+  }
 }
 
 void Widget::setPressed(bool pressed) {
   if (pressed == isPressed()) return;
+  uint8_t old_elevation = getElevation();
   state_ ^= kWidgetPressed;
   if (!isVisible()) return;
   invalidateInterior();
+  uint8_t new_elevation = getElevation();
+  if (old_elevation != new_elevation) {
+    elevationChanged(std::max(old_elevation, new_elevation));
+  }
 }
 
 void Widget::setDragged(bool dragged) {
   if (dragged == isDragged()) return;
+  uint8_t old_elevation = getElevation();
   state_ ^= kWidgetDragged;
   if (!isVisible()) return;
   invalidateInterior();
+  uint8_t new_elevation = getElevation();
+  if (old_elevation != new_elevation) {
+    elevationChanged(std::max(old_elevation, new_elevation));
+  }
 }
 
 Widget::OnOffState Widget::onOffState() const {
@@ -316,6 +341,7 @@ void Widget::toggle() {
 
 void Widget::setOnOffState(OnOffState state) {
   if (onOffState() == state) return;
+  uint8_t old_elevation = getElevation();
   state_ &= ~(kWidgetOn | kWidgetOff);
   if (state == Widget::ON) {
     state_ |= kWidgetOn;
@@ -323,9 +349,20 @@ void Widget::setOnOffState(OnOffState state) {
     state_ |= kWidgetOff;
   }
   markDirty();
+  uint8_t new_elevation = getElevation();
+  if (old_elevation != new_elevation) {
+    elevationChanged(std::max(old_elevation, new_elevation));
+  }
 }
 
-void Widget::setClicking() { state_ |= kWidgetClicking; }
+void Widget::setClicking() {
+  uint8_t old_elevation = getElevation();
+  state_ |= kWidgetClicking;
+  uint8_t new_elevation = getElevation();
+  if (old_elevation != new_elevation) {
+    elevationChanged(std::max(old_elevation, new_elevation));
+  }
+}
 
 void Widget::setParent(Panel* parent, bool owned) {
   CHECK(parent_ == nullptr || parent == nullptr)
