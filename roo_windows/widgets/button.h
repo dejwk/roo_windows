@@ -42,6 +42,12 @@ class ButtonBase : public BasicWidget {
 
   bool isClickable() const override { return true; }
 
+  void setElevation(uint8_t resting, uint8_t pressed);
+
+  uint8_t getElevation() const override {
+    return isPressed() ? elevation_pressed_ : elevation_resting_;
+  }
+
  protected:
   ButtonBase(const Environment& env, Style style = CONTAINED);
 
@@ -52,6 +58,9 @@ class ButtonBase : public BasicWidget {
   roo_display::Color outline_color_;
   roo_display::Color interior_color_;
   roo_display::Color content_color_;
+
+  uint8_t elevation_resting_;
+  uint8_t elevation_pressed_;
 };
 
 class Button : public ButtonBase {

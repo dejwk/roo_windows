@@ -134,7 +134,9 @@ ButtonBase::ButtonBase(const Environment& env, Style style)
       interior_color_(style == CONTAINED ? env.theme().color.primary
                                          : env.theme().color.background),
       content_color_(style == CONTAINED ? env.theme().color.onPrimary
-                                        : env.theme().color.primary) {}
+                                        : env.theme().color.primary),
+      elevation_resting_(0),
+      elevation_pressed_(0) {}
 
 Button::Button(const Environment& env, const MonoIcon* icon, std::string label,
                Style style)
@@ -153,6 +155,23 @@ Button::Button(const Environment& env, const MonoIcon* icon, std::string label,
 // 666_7___7___7___7_AAA
 // BBBBBB_C_C_C_C_DDDDDD
 // BBBBBB_C_C_C_C_DDDDDD
+
+void ButtonBase::setElevation(uint8_t resting, uint8_t pressed) {
+  if (elevation_resting_ != resting) {
+    uint8_t larger = std::max(elevation_resting_, resting);
+    elevation_resting_ = resting;
+    if (!isPressed()) {
+      elevationChanged(larger);
+    }
+  }
+  if (elevation_pressed_ != pressed) {
+    uint8_t larger = std::max(elevation_pressed_, pressed);
+    elevation_pressed_ = pressed;
+    if (isPressed()) {
+      elevationChanged(larger);
+    }
+  }
+}
 
 void ButtonBase::paint(const Canvas& canvas) const {
   Canvas interior_canvas = canvas;
