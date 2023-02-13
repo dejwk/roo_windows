@@ -163,7 +163,7 @@ void ButtonBase::paint(const Canvas& canvas) const {
 
   const BorderSpec& spec =
       (style() == CONTAINED ? kContainedBorder : kOutlinedBorder);
-  Color outline = (style() == CONTAINED ? interiorColor() : outlineColor());
+  Color outline = (style() == CONTAINED ? background() : getOutlineColor());
   int16_t min_width = std::max(2 * spec.top_width, 2 * spec.bottom_width);
   int16_t full_width = std::max(width(), min_width);
   int16_t min_height = std::max(2 * spec.left_height, 2 * spec.right_height);
@@ -175,7 +175,7 @@ void ButtonBase::paint(const Canvas& canvas) const {
     // Top left.
     RasterAlpha4<const uint8_t * PROGMEM> tl(
         Box(0, 0, spec.top_width - 1, spec.top_height - 1), spec.data_top_left,
-        Alpha4(outlineColor()));
+        Alpha4(getOutlineColor()));
     canvas.drawObject(tl);
     // Top bar.
     if (top_bar_width > 0) {

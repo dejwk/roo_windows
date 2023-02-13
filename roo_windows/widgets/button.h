@@ -12,15 +12,13 @@ class ButtonBase : public BasicWidget {
 
   Style style() const { return style_; }
 
-  roo_display::Color interiorColor() const { return interior_color_; }
-
   void setInteriorColor(roo_display::Color color) {
     if (interior_color_ == color) return;
     interior_color_ = color;
     invalidateInterior();
   }
 
-  roo_display::Color outlineColor() const { return outline_color_; }
+  roo_display::Color getOutlineColor() const override { return outline_color_; }
 
   void setOutlineColor(roo_display::Color color) {
     if (outline_color_ == color) return;
