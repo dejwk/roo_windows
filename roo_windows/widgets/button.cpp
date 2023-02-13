@@ -156,7 +156,6 @@ Button::Button(const Environment& env, const MonoIcon* icon, std::string label,
 
 void ButtonBase::paint(const Canvas& canvas) const {
   Canvas interior_canvas = canvas;
-  interior_canvas.set_bgcolor(alphaBlend(canvas.bgcolor(), interiorColor()));
   if (style() == TEXT) {
     paintInterior(interior_canvas, bounds());
     return;
