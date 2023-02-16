@@ -422,78 +422,65 @@ void Widget::paintWidget(const Canvas& canvas, Clipper& clipper) {
     return;
   }
   Canvas my_canvas(canvas);
-  roo_display::Box orig_clip_box = canvas.clip_box();
   my_canvas.shift(xOffset(), yOffset());
   my_canvas.clipToExtents(maxBounds());
-  Color bg = background();
-  if (!isEnabled()) {
-    bg.set_a(bg.a() / 2);
+  {
+    Color bg = background();
+    if (!isEnabled()) {
+      bg.set_a(bg.a() / 2);
+    }
+    my_canvas.set_bgcolor(roo_display::alphaBlend(canvas.bgcolor(), bg));
   }
-  my_canvas.set_bgcolor(roo_display::alphaBlend(canvas.bgcolor(), bg));
   OverlaySpec overlay_spec(*this, my_canvas);
-  if (!my_canvas.clip_box().empty() && isDirty()) {
-    paintWidgetInteriorWithOverlays(my_canvas, clipper, overlay_spec);
-    my_canvas.set_clip_box(orig_clip_box);
-    finalizePaintWidget(my_canvas, clipper, overlay_spec);
-  } else {
+  if (my_canvas.clip_box().empty() || !isDirty()) {
     // Still need to handle exclusions and shadows over possibly changed
     // siblings.
     markCleanDescending();
-    my_canvas.set_clip_box(orig_clip_box);
+    my_canvas.set_clip_box(canvas.clip_box());
     finalizePaintWidget(my_canvas, clipper, overlay_spec);
-  }
-}
-
-void Widget::paintWidgetInteriorWithOverlays(Canvas& canvas, Clipper& clipper,
-                                             const OverlaySpec& overlay_spec) {
-  if (!overlay_spec.is_modded()) {
-    paintWidgetContents(canvas, clipper);
-    return;
-  }
-  roo_display::DisplayOutput& orig = canvas.out();
-  if (!overlay_spec.is_disabled()) {
-    // If click_animation is true, we need to redraw the overlay.
-    bool click_animation = ((state_ & kWidgetClicking) != 0);
-    if (click_animation) {
-      // If click_animation_continues is true, we need to invalidate ourselves
-      // after redrawing, so that we receive a subsequent paint request shortly.
+  } else {
+    if (!overlay_spec.is_modded()) {
+      paintWidgetContents(my_canvas, clipper);
+    } else if (overlay_spec.is_disabled()) {
+      roo_display::TranslucencyFilter disablement_filter(
+          canvas.out(), theme().state.disabled, my_canvas.bgcolor());
+      my_canvas.set_out(&disablement_filter);
+      paintWidgetContents(my_canvas, clipper);
+      my_canvas.set_out(&canvas.out());
+    } else {
+      // If click_animation is true, we need to redraw the overlay.
+      bool click_animation = ((state_ & kWidgetClicking) != 0);
+      if (click_animation) {
+        // If click_animation_continues is true, we need to invalidate ourselves
+        // after redrawing, so that we receive a subsequent paint request
+        // shortly.
+        if (overlay_spec.is_click_animation_in_progress()) {
+          // Need to draw the circular overlay.
+          roo_display::ForegroundFilter filter(canvas.out(),
+                                               overlay_spec.press_overlay());
+          my_canvas.set_out(&filter);
+          paintWidgetContents(my_canvas, clipper);
+          my_canvas.set_out(&canvas.out());
+        } else {
+          state_ &= ~kWidgetClicking;
+        }
+      }
       if (overlay_spec.is_click_animation_in_progress()) {
-        // Need to draw the circular overlay.
-        roo_display::ForegroundFilter filter(orig,
-                                             overlay_spec.press_overlay());
-        canvas.set_out(&filter);
-        paintWidgetContents(canvas, clipper);
-        canvas.set_out(&orig);
-        // Do not clear dirtiness.
-        invalidateInterior();
-        return;
+        // Already drawn.
+      } else if (overlay_spec.base_overlay().a() > 0) {
+        roo_display::OverlayFilter filter(canvas.out(),
+                                          overlay_spec.base_overlay(),
+                                          roo_display::color::Transparent);
+        my_canvas.set_out(&filter);
+        paintWidgetContents(my_canvas, clipper);
+        my_canvas.set_out(&canvas.out());
       } else {
-        state_ &= ~kWidgetClicking;
+        paintWidgetContents(my_canvas, clipper);
       }
     }
-    if (overlay_spec.base_overlay().a() > 0) {
-      roo_display::OverlayFilter filter(canvas.out(),
-                                        overlay_spec.base_overlay(),
-                                        roo_display::color::Transparent);
-      canvas.set_out(&filter);
-      paintWidgetContents(canvas, clipper);
-      canvas.set_out(&orig);
-    } else {
-      paintWidgetContents(canvas, clipper);
-    }
-    if (click_animation && !overlay_spec.is_click_animation_in_progress()) {
-      // Make sure that the next paint is scheduled promptly, but that it does
-      // not encounter click_animation, so that it just draws the widget in its
-      // regular state (possibly pressed, but not click-animating anymore).
-      invalidateInterior();
-      return;
-    }
-  } else {
-    roo_display::TranslucencyFilter disablement_filter(
-        canvas.out(), theme().state.disabled, canvas.bgcolor());
-    canvas.set_out(&disablement_filter);
-    paintWidgetContents(canvas, clipper);
-    canvas.set_out(&orig);
+
+    my_canvas.set_clip_box(canvas.clip_box());
+    finalizePaintWidget(my_canvas, clipper, overlay_spec);
   }
 }
 
@@ -528,12 +515,13 @@ void Widget::finalizePaintWidget(const Canvas& canvas, Clipper& clipper,
   uint8_t elevation = getElevation();
   if (elevation != 0 || border_thickness != 0) {
     roo_display::Box absolute_bounds(canvas.dx(), canvas.dy(),
-                                    width() - 1 + canvas.dx(),
-                                    height() - 1 + canvas.dy());
+                                     width() - 1 + canvas.dx(),
+                                     height() - 1 + canvas.dy());
     clipper.addDecoration(canvas.clip_box(), absolute_bounds, elevation,
                           overlay_spec, canvas.bgcolor(),
                           border_style.corner_radius(),
-                          border_style.outline_width(), getOutlineColor());
+                          border_style.outline_width(),
+                          alphaBlend(canvas.bgcolor(), getOutlineColor()));
   }
   clipper.addExclusion(inner_bounds);
 }

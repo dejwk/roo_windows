@@ -26,9 +26,10 @@ void Application::add(WidgetRef child, const roo_display::Box& box) {
 void Application::tick() {
   root_window_.tick();
   if (!gesture_detector_.tick()) return;
-
-  unsigned long now = millis();
-  if ((long)(now - last_time_refreshed_ms_) < kMinRefreshTimeDeltaMs) return;
+  {
+    unsigned long now = millis();
+    if ((long)(now - last_time_refreshed_ms_) < kMinRefreshTimeDeltaMs) return;
+  }
   refresh();
 }
 

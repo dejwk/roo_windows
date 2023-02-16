@@ -59,16 +59,22 @@ void Panel::removeLast() {
 }
 
 void Panel::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
-  bool dirty = isDirty();
-  bool invalidated = isInvalidated();
-  Rect invalid_region = invalid_region_;
-  markClean();
-  invalid_region_ = Rect(0, 0, -1, -1);
-  if (dirty || !bounds().contains(maxBounds())) {
-    // Draw the panel's children.
-    paintChildren(canvas, clipper);
-  }
-  if (invalidated) {
+  if (!isInvalidated()) {
+    // Faster path with less stack overhead; repaint the children.
+    if (isDirty() || !bounds().contains(maxBounds())) {
+      markClean();
+      // Draw the panel's children.
+      paintChildren(canvas, clipper);
+    }
+  } else {
+    bool dirty = isDirty();
+    Rect invalid_region = invalid_region_;
+    markClean();
+    invalid_region_ = Rect(0, 0, -1, -1);
+    if (dirty || !bounds().contains(maxBounds())) {
+      // Draw the panel's children.
+      paintChildren(canvas, clipper);
+    }
     // Paint the surface.
     Rect rect = Rect::Intersect(bounds(), invalid_region);
     Canvas my_canvas = canvas;
@@ -87,9 +93,8 @@ void Panel::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
 }
 
 void Panel::paintChildren(const Canvas& canvas, Clipper& clipper) {
-  Rect rect = bounds();
   Canvas canvas_clipped = canvas;
-  canvas_clipped.clipToExtents(rect);
+  canvas_clipped.clipToExtents(bounds());
   for (auto child = children_.rbegin(); child != children_.rend(); ++child) {
     bool clipped = (*child)->getParentClipMode() == Widget::CLIPPED;
     (*child)->paintWidget(clipped ? canvas_clipped : canvas, clipper);
@@ -201,7 +206,8 @@ void Panel::childHidden(const Widget* child) {
 }
 
 void Panel::childShown(const Widget* child) {
-  if (child->getElevation() > 0 || child->getBorderStyle().corner_radius() > 0) {
+  if (child->getElevation() > 0 ||
+      child->getBorderStyle().corner_radius() > 0) {
     invalidateBeneath(child->getParentBoundsOfShadow(), child,
                       child->getParentClipMode() == Widget::CLIPPED);
   }

@@ -15,6 +15,9 @@ ClickAnimation::ClickAnimation()
 
 void ClickAnimation::tick() {
   unsigned long now = millis();
+  if (click_anim_target_ != nullptr) {
+    click_anim_target_->invalidateInterior();
+  }
   // If an in-progress click animation is expired, clear the animation target so
   // that other widgets can be clicked, and possibly deliver the delayed click
   // notification. This is done after the overall redraw, so that the click

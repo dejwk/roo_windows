@@ -2,6 +2,7 @@
 
 #include "roo_display/core/rasterizable.h"
 #include "roo_display/image/image.h"
+#include "roo_windows/core/number.h"
 #include "roo_windows/core/overlay_spec.h"
 #include "roo_windows/core/rect.h"
 
@@ -37,7 +38,7 @@ class Decoration : public roo_display::Rasterizable {
   // Outline may be zero.
   Decoration(roo_display::Box extents, int elevation,
              const OverlaySpec& overlay_spec, roo_display::Color bgcolor,
-             uint8_t corner_radius, uint8_t outline_width,
+             uint8_t corner_radius, SmallNumber outline_width,
              roo_display::Color outline_color);
 
   roo_display::Box extents() const override { return shadow_extents_; }
@@ -52,6 +53,7 @@ class Decoration : public roo_display::Rasterizable {
   roo_display::Color bgcolor_;
   uint8_t corner_radius_;
   uint8_t outline_width_;
+  uint8_t outline_width_frac_;
   roo_display::Color outline_color_;
   // const uint8_t* corner_alpha_raster_;
 

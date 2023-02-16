@@ -134,7 +134,7 @@ class ClipperOutput : public roo_display::DisplayOutput {
   void addDecoration(roo_display::Box clip_box, roo_display::Box extents,
                      int elevation, const OverlaySpec &overlay_spec,
                      roo_display::Color bgcolor, uint8_t corner_radius,
-                     uint8_t outline_width, roo_display::Color outline_color) {
+                     SmallNumber outline_width, roo_display::Color outline_color) {
     decorations_.emplace_back(std::move(extents), elevation, overlay_spec,
                               bgcolor, corner_radius, outline_width,
                               outline_color);
@@ -272,7 +272,7 @@ class Clipper {
   void addDecoration(roo_display::Box clip_box, Rect extents, int elevation,
                      const OverlaySpec &overlay_spec,
                      roo_display::Color bgcolor, uint8_t corner_radius,
-                     uint8_t outline_width, roo_display::Color outline_color) {
+                     SmallNumber outline_width, roo_display::Color outline_color) {
     out_.addDecoration(std::move(clip_box), extents.asBox(), elevation,
                        overlay_spec, bgcolor, corner_radius, outline_width,
                        outline_color);

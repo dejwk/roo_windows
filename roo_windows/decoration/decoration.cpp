@@ -82,7 +82,8 @@ static const uint8_t kBottomExtents[] = {
 // rectangle with the specified bounds and round corners with a given radius.
 inline uint8_t calcRoundRectAlpha(int16_t xMin, int16_t yMin, int16_t xMax,
                                   int16_t yMax, int16_t corner_radius,
-                                  int16_t x, int16_t y) {
+                                  uint8_t outline_width_frac, int16_t x,
+                                  int16_t y) {
   if (x < xMin || x > xMax || y < yMin || y > yMax) {
     // Outside the border.
     return 0;
@@ -98,15 +99,19 @@ inline uint8_t calcRoundRectAlpha(int16_t xMin, int16_t yMin, int16_t xMax,
     y = yMin + corner_radius - y;
   }
   if (x < 0 || y < 0) {
+    if (x == corner_radius || y == corner_radius) {
+      return outline_width_frac * 17;
+    }
     return 0xFF;
   }
 
   // Half of the time, we can avoid expensive calculations (multiplication,
   // sqrt), by observing that a triangle fits in a quarter-circle.
-  if (x + y <= corner_radius) return 0xFF;
+  // if (x + y <= corner_radius) return 0xFF;
 
   // '15' chosen experimentally to make full circle look the most round.
-  int16_t rd = corner_radius * 16 + 15 - isqrt24(256 * (x * x + y * y));
+  int16_t rd = corner_radius * 16 + outline_width_frac -
+               isqrt24(256 * (x * x + y * y));
   if (rd < 0) return 0;
   if (rd >= 16) return 0xFF;
   return rd * 17;
@@ -181,13 +186,16 @@ Decoration::Decoration()
 Decoration::Decoration(roo_display::Box extents, int elevation,
                        const OverlaySpec& overlay_spec,
                        roo_display::Color bgcolor, uint8_t corner_radius,
-                       uint8_t outline_width, roo_display::Color outline_color)
+                       SmallNumber outline_width,
+                       roo_display::Color outline_color)
     : widget_extents_(extents),
       bgcolor_(bgcolor),
-      outline_width_(outline_width),
+      outline_width_(outline_width.floor()),
+      outline_width_frac_(15 - outline_width.frac_16ths()),
       outline_color_(outline_color) {
   if (outline_color == bgcolor) {
     outline_width_ = 0;
+    outline_width_frac_ = 15;
   }
   if (overlay_spec.is_modded()) {
     bgcolor_ = alphaBlend(bgcolor_, overlay_spec.base_overlay());
@@ -356,14 +364,14 @@ Decoration::Decoration(roo_display::Box extents, int elevation,
 }
 
 void Decoration::ReadColors(const int16_t* x, const int16_t* y, uint32_t count,
-                        roo_display::Color* result) const {
+                            roo_display::Color* result) const {
   while (count-- > 0) {
-    uint8_t bg_alpha =
-        calcRoundRectAlpha(widget_extents_.xMin() + outline_width_,
-                           widget_extents_.yMin() + outline_width_,
-                           widget_extents_.xMax() - outline_width_,
-                           widget_extents_.yMax() - outline_width_,
-                           corner_radius_ - outline_width_, *x, *y);
+    uint8_t bg_alpha = calcRoundRectAlpha(
+        widget_extents_.xMin() + outline_width_,
+        widget_extents_.yMin() + outline_width_,
+        widget_extents_.xMax() - outline_width_,
+        widget_extents_.yMax() - outline_width_,
+        corner_radius_ - outline_width_, outline_width_frac_, *x, *y);
     uint8_t outline_alpha = bg_alpha;
     // Fast-path for the common-case: solid interior.
     if (bg_alpha == 0xFF && press_overlay_ == nullptr) {
@@ -384,7 +392,7 @@ void Decoration::ReadColors(const int16_t* x, const int16_t* y, uint32_t count,
       outline_alpha =
           calcRoundRectAlpha(widget_extents_.xMin(), widget_extents_.yMin(),
                              widget_extents_.xMax(), widget_extents_.yMax(),
-                             corner_radius_, *x, *y);
+                             corner_radius_, 15, *x, *y);
       if (outline_alpha != 0) {
         roo_display::Color outline = outline_color_;
         outline.set_a(outline_alpha);
