@@ -343,7 +343,7 @@ Decoration::Decoration(roo_display::Box extents, int elevation,
   ambient_shadow_.y = extents.yMin() - ambient_extent;
   ambient_shadow_.w = extents.width() + 2 * ambient_extent;
   ambient_shadow_.h = extents.height() + 2 * ambient_extent;
-  ambient_shadow_.alpha_start = 50 - elevation;
+  ambient_shadow_.alpha_start = 70 - elevation;
   ambient_shadow_.alpha_step =
       (ambient_extent == 0)
           ? 0
@@ -355,7 +355,7 @@ Decoration::Decoration(roo_display::Box extents, int elevation,
   key_shadow_.y = extents.yMin() - key_extent + key_shift;
   key_shadow_.w = extents.width() + 2 * key_extent;
   key_shadow_.h = extents.height() + 2 * key_extent;
-  key_shadow_.alpha_start = 70 - 2 * elevation;
+  key_shadow_.alpha_start = 90 - 2 * elevation;
   key_shadow_.alpha_step =
       (key_extent == 0) ? 0 : 256 * key_shadow_.alpha_start / key_extent;
   key_shadow_.border = corner_radius;
