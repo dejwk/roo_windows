@@ -95,7 +95,7 @@ void Panel::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
 void Panel::paintChildren(const Canvas& canvas, Clipper& clipper) {
   Canvas canvas_clipped = canvas;
   canvas_clipped.clipToExtents(bounds());
-  bool fast_render = respectsChildrenBoundaries();
+  bool fast_render = isDirty() && respectsChildrenBoundaries();
   for (auto child = children_.rbegin(); child != children_.rend(); ++child) {
     bool clipped = (*child)->getParentClipMode() == Widget::CLIPPED;
     (*child)->paintWidget(clipped ? canvas_clipped : canvas, clipper);
