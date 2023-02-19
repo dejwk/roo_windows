@@ -272,10 +272,8 @@ bool ScrollablePanel::onInterceptTouchEvent(const TouchEvent& event) {
     return true;
   }
   if (scroll_bar_presence_ != VerticalScrollBar::ALWAYS_HIDDEN &&
+      contents() != nullptr && contents()->height() > height() &&
       event.x() >= width() - kScrollBarTouchWidth) {
-    // Interaction with the right-side of the area gets interpreted as the
-    // intent to interact with the scroll bar, even if it is currently hidden.
-    // (Tapping on the area shows the scroll bar).
     scroll_bar_gesture_ = true;
     // We set a higher bar for recognizing the interaction as an actual touch of
     // the scroll bar (leading to a scroll event on the scroll bar): the touch
@@ -283,7 +281,7 @@ bool ScrollablePanel::onInterceptTouchEvent(const TouchEvent& event) {
     // visible at the moment).
     is_scroll_bar_scrolled_ =
         (event.y() >= scroll_bar_.begin() && event.y() <= scroll_bar_.end());
-    return true;
+    return is_scroll_bar_scrolled_ || scroll_bar_.isVisible();
   }
   if (event.type() == TouchEvent::MOVE) {
     // If we detect drag motion in the scroll direction, intercept, and turn
@@ -319,10 +317,12 @@ bool ScrollablePanel::onSingleTapUp(XDim x, YDim y) {
     // position of the scrolled content (i.e., the possible range of the
     // offset).
     YDim view_range = contents()->height() - height();
-    YDim new_y = -(y - (scroll_bar_.end() - scroll_bar_.begin()) / 2) *
-                 view_range / scroll_range;
-    // The new y might be out of range, but that's ok - scrollTo will trim it.
-    scrollTo(contents()->xOffset(), new_y);
+    if (scroll_range > 0) {
+      YDim new_y = -(y - (scroll_bar_.end() - scroll_bar_.begin()) / 2) *
+                  view_range / scroll_range;
+      // The new y might be out of range, but that's ok - scrollTo will trim it.
+      scrollTo(contents()->xOffset(), new_y);
+    }
   } else {
     scroll_bar_.setVisibility(VISIBLE);
   }
