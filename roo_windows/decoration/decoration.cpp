@@ -110,8 +110,8 @@ inline uint8_t calcRoundRectAlpha(int16_t xMin, int16_t yMin, int16_t xMax,
   // if (x + y <= corner_radius) return 0xFF;
 
   // '15' chosen experimentally to make full circle look the most round.
-  int16_t rd = corner_radius * 16 + outline_width_frac -
-               isqrt24(256 * (x * x + y * y));
+  int16_t rd =
+      corner_radius * 16 + outline_width_frac - isqrt24(256 * (x * x + y * y));
   if (rd < 0) return 0;
   if (rd >= 16) return 0xFF;
   return rd * 17;
@@ -366,54 +366,110 @@ Decoration::Decoration(roo_display::Box extents, int elevation,
 void Decoration::ReadColors(const int16_t* x, const int16_t* y, uint32_t count,
                             roo_display::Color* result) const {
   while (count-- > 0) {
-    uint8_t bg_alpha = calcRoundRectAlpha(
-        widget_extents_.xMin() + outline_width_,
-        widget_extents_.yMin() + outline_width_,
-        widget_extents_.xMax() - outline_width_,
-        widget_extents_.yMax() - outline_width_,
-        corner_radius_ - outline_width_, outline_width_frac_, *x, *y);
-    uint8_t outline_alpha = bg_alpha;
-    // Fast-path for the common-case: solid interior.
-    if (bg_alpha == 0xFF && press_overlay_ == nullptr) {
-      *result++ = bgcolor_;
-      ++x;
-      ++y;
-      continue;
+    *result++ = read(*x++, *y++);
+  }
+}
+
+roo_display::Color Decoration::read(int16_t x, int16_t y) const {
+  int16_t xMin_interior = widget_extents_.xMin() + outline_width_;
+  int16_t xMax_interior = widget_extents_.xMax() - outline_width_;
+  int16_t yMin_interior = widget_extents_.yMin() + outline_width_;
+  int16_t yMax_interior = widget_extents_.yMax() - outline_width_;
+  int16_t r_interior = corner_radius_ - outline_width_;
+  uint8_t bg_alpha =
+      calcRoundRectAlpha(xMin_interior, yMin_interior, xMax_interior,
+                         yMax_interior, r_interior, outline_width_frac_, x, y);
+  uint8_t outline_alpha = bg_alpha;
+  // Fast-path for the common-case: solid interior.
+  if (bg_alpha == 0xFF && press_overlay_ == nullptr) {
+    return bgcolor_;
+  }
+  // Calculate shadow alpha.
+  uint8_t key_shadow_alpha = calcShadowAlpha(key_shadow_, x, y);
+  uint8_t ambient_shadow_alpha = calcShadowAlpha(ambient_shadow_, x, y);
+  uint8_t combined_shadow_alpha = key_shadow_alpha + ambient_shadow_alpha;
+  // Shadow color.
+  roo_display::Color c =
+      roo_display::Color((uint32_t)(combined_shadow_alpha) << 24);
+  if (outline_width_ > 0) {
+    // We need to put the outline in front of the background.
+    outline_alpha = calcRoundRectAlpha(
+        widget_extents_.xMin(), widget_extents_.yMin(), widget_extents_.xMax(),
+        widget_extents_.yMax(), corner_radius_, 15, x, y);
+    if (outline_alpha != 0) {
+      roo_display::Color outline = outline_color_;
+      outline.set_a(outline_alpha);
+      c = alphaBlend(c, outline);
     }
-    // Calculate shadow alpha.
-    uint8_t key_shadow_alpha = calcShadowAlpha(key_shadow_, *x, *y);
-    uint8_t ambient_shadow_alpha = calcShadowAlpha(ambient_shadow_, *x, *y);
-    uint8_t combined_shadow_alpha = key_shadow_alpha + ambient_shadow_alpha;
-    // Shadow color.
-    roo_display::Color c =
-        roo_display::Color((uint32_t)(combined_shadow_alpha) << 24);
-    if (outline_width_ > 0) {
-      // We need to put the outline in front of the background.
-      outline_alpha =
-          calcRoundRectAlpha(widget_extents_.xMin(), widget_extents_.yMin(),
-                             widget_extents_.xMax(), widget_extents_.yMax(),
-                             corner_radius_, 15, *x, *y);
-      if (outline_alpha != 0) {
-        roo_display::Color outline = outline_color_;
-        outline.set_a(outline_alpha);
-        c = alphaBlend(c, outline);
+  }
+  if (bg_alpha != 0) {
+    // We need to put the background in front of the shadow.
+    roo_display::Color bg = bgcolor_;
+    bg.set_a(bg_alpha);
+    c = alphaBlend(c, bg);
+  }
+  if (press_overlay_ != nullptr) {
+    roo_display::Color o = press_overlay_->get(x, y);
+    o.set_a(o.a() * outline_alpha / 255);
+    c = alphaBlend(c, o);
+  }
+  return c;
+}
+
+bool Decoration::ReadColorRect(int16_t xMin, int16_t yMin, int16_t xMax,
+                               int16_t yMax, roo_display::Color* result) const {
+  int16_t xMin_interior = widget_extents_.xMin() + outline_width_;
+  int16_t xMax_interior = widget_extents_.xMax() - outline_width_;
+  int16_t yMin_interior = widget_extents_.yMin() + outline_width_;
+  int16_t yMax_interior = widget_extents_.yMax() - outline_width_;
+  int16_t r_interior = corner_radius_ - outline_width_;
+  if (xMin >= xMin_interior + r_interior &&
+      xMax <= xMax_interior - r_interior) {
+    bool frac = (outline_width_frac_ < 15);
+    if (yMin >= yMin_interior + frac && yMax <= yMax_interior - frac) {
+      *result = bgcolor_;
+      return true;
+    }
+    // Pixel color in this range does not depend on the specific x valud at all,
+    // so we can compute only one vertical stripe and replicate it.
+    for (int16_t y = yMin; y <= yMax; ++y) {
+      roo_display::Color c = read(xMin, y);
+      for (int16_t x = xMin; x <= xMax; ++x) {
+        *result++ = c;
       }
     }
-    if (bg_alpha != 0) {
-      // We need to put the background in front of the shadow.
-      roo_display::Color bg = bgcolor_;
-      bg.set_a(bg_alpha);
-      c = alphaBlend(c, bg);
+    return false;
+  } else if (yMin >= yMin_interior + r_interior &&
+             yMax <= yMax_interior - r_interior) {
+    bool frac = (outline_width_frac_ < 15);
+    if (xMin >= xMin_interior + frac && xMax <= xMax_interior - frac) {
+      *result = bgcolor_;
+      return true;
     }
-    if (press_overlay_ != nullptr) {
-      roo_display::Color o = press_overlay_->get(*x, *y);
-      o.set_a(o.a() * outline_alpha / 255);
-      c = alphaBlend(c, o);
+    // We have to exclude shadow, because the 'key' shadow is shifted
+    // vertically.
+    // TODO: maybe alternatively check if 'y' is outside the key shadow radius.
+    if (xMin >= widget_extents_.xMin() && xMax <= widget_extents_.xMax()) {
+      // Pixel color in this range does not depend on the specific x valud at
+      // all, so we can compute only one vertical stripe and replicate it.
+      for (int16_t x = xMin; x <= xMax; ++x) {
+        roo_display::Color c = read(x, yMin);
+        roo_display::Color* ptr = result++;
+        int16_t stride = (xMax - xMin + 1);
+        for (int16_t y = yMin; y <= yMax; ++y) {
+          *ptr = c;
+          ptr += stride;
+        }
+      }
+      return false;
     }
-    *result++ = c;
-    ++x;
-    ++y;
   }
+  for (int16_t y = yMin; y <= yMax; ++y) {
+    for (int16_t x = xMin; x <= xMax; ++x) {
+      *result++ = read(x, y);
+    }
+  }
+  return false;
 }
 
 }  // namespace roo_windows
