@@ -423,45 +423,47 @@ bool Decoration::ReadColorRect(int16_t xMin, int16_t yMin, int16_t xMax,
   int16_t yMin_interior = widget_extents_.yMin() + outline_width_;
   int16_t yMax_interior = widget_extents_.yMax() - outline_width_;
   int16_t r_interior = corner_radius_ - outline_width_;
-  if (xMin >= xMin_interior + r_interior &&
-      xMax <= xMax_interior - r_interior) {
-    bool frac = (outline_width_frac_ < 15);
-    if (yMin >= yMin_interior + frac && yMax <= yMax_interior - frac) {
-      *result = bgcolor_;
-      return true;
-    }
-    // Pixel color in this range does not depend on the specific x valud at all,
-    // so we can compute only one vertical stripe and replicate it.
-    for (int16_t y = yMin; y <= yMax; ++y) {
-      roo_display::Color c = read(xMin, y);
-      for (int16_t x = xMin; x <= xMax; ++x) {
-        *result++ = c;
+  if (press_overlay_ == nullptr) {
+    if (xMin >= xMin_interior + r_interior &&
+        xMax <= xMax_interior - r_interior) {
+      bool frac = (outline_width_frac_ < 15);
+      if (yMin >= yMin_interior + frac && yMax <= yMax_interior - frac) {
+        *result = bgcolor_;
+        return true;
       }
-    }
-    return false;
-  } else if (yMin >= yMin_interior + r_interior &&
-             yMax <= yMax_interior - r_interior) {
-    bool frac = (outline_width_frac_ < 15);
-    if (xMin >= xMin_interior + frac && xMax <= xMax_interior - frac) {
-      *result = bgcolor_;
-      return true;
-    }
-    // We have to exclude shadow, because the 'key' shadow is shifted
-    // vertically.
-    // TODO: maybe alternatively check if 'y' is outside the key shadow radius.
-    if (xMin >= widget_extents_.xMin() && xMax <= widget_extents_.xMax()) {
-      // Pixel color in this range does not depend on the specific x valud at
-      // all, so we can compute only one vertical stripe and replicate it.
-      for (int16_t x = xMin; x <= xMax; ++x) {
-        roo_display::Color c = read(x, yMin);
-        roo_display::Color* ptr = result++;
-        int16_t stride = (xMax - xMin + 1);
-        for (int16_t y = yMin; y <= yMax; ++y) {
-          *ptr = c;
-          ptr += stride;
+      // Pixel color in this range does not depend on the specific x valud at all,
+      // so we can compute only one vertical stripe and replicate it.
+      for (int16_t y = yMin; y <= yMax; ++y) {
+        roo_display::Color c = read(xMin, y);
+        for (int16_t x = xMin; x <= xMax; ++x) {
+          *result++ = c;
         }
       }
       return false;
+    } else if (yMin >= yMin_interior + r_interior &&
+              yMax <= yMax_interior - r_interior) {
+      bool frac = (outline_width_frac_ < 15);
+      if (xMin >= xMin_interior + frac && xMax <= xMax_interior - frac) {
+        *result = bgcolor_;
+        return true;
+      }
+      // We have to exclude shadow, because the 'key' shadow is shifted
+      // vertically.
+      // TODO: maybe alternatively check if 'y' is outside the key shadow radius.
+      if (xMin >= widget_extents_.xMin() && xMax <= widget_extents_.xMax()) {
+        // Pixel color in this range does not depend on the specific x valud at
+        // all, so we can compute only one vertical stripe and replicate it.
+        for (int16_t x = xMin; x <= xMax; ++x) {
+          roo_display::Color c = read(x, yMin);
+          roo_display::Color* ptr = result++;
+          int16_t stride = (xMax - xMin + 1);
+          for (int16_t y = yMin; y <= yMax; ++y) {
+            *ptr = c;
+            ptr += stride;
+          }
+        }
+        return false;
+      }
     }
   }
   for (int16_t y = yMin; y <= yMax; ++y) {
