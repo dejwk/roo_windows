@@ -28,6 +28,12 @@ class KeyboardWidget;
 
 class Keyboard : public Activity {
  public:
+  enum CapsState {
+    CAPS_STATE_LOW = 0,
+    CAPS_STATE_HIGH = 1,
+    CAPS_STATE_HIGH_LOCKED = 2,
+  };
+
   Keyboard(const Environment& env, const KeyboardSpec* spec);
 
   Widget& getContents() override;
@@ -39,8 +45,13 @@ class Keyboard : public Activity {
   void show();
   void hide();
 
+  void setPage(int idx);
+  CapsState caps_state() const;
+  void setCapsState(CapsState caps_state);
+
  private:
   KeyboardWidget* contents();
+  const KeyboardWidget* contents() const;
 
   std::unique_ptr<Widget> contents_;
 };

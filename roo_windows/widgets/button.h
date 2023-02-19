@@ -3,10 +3,12 @@
 #include <string>
 
 #include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/border_style.h"
 
 namespace roo_windows {
 
-class ButtonBase : public BasicWidget {
+// Implements basic button functionality: clickability, border, elevations.
+class Button : public BasicWidget {
  public:
   enum Style { CONTAINED, OUTLINED, TEXT };
 
@@ -19,11 +21,16 @@ class ButtonBase : public BasicWidget {
   }
 
   roo_display::Color getOutlineColor() const override { return outline_color_; }
+  Color background() const override { return interior_color_; }
 
   void setOutlineColor(roo_display::Color color) {
     if (outline_color_ == color) return;
     outline_color_ = color;
     invalidateInterior();
+  }
+
+  void setCornerRadius(uint8_t corner_radius) {
+    corner_radius_ = corner_radius;
   }
 
   roo_display::Color contentColor() const { return content_color_; }
@@ -33,10 +40,6 @@ class ButtonBase : public BasicWidget {
     content_color_ = color;
     markDirty();
   }
-
-  Color background() const override { return interior_color_; }
-
-  void paint(const Canvas& canvas) const override;
 
   Padding getDefaultPadding() const override;
 
@@ -48,10 +51,14 @@ class ButtonBase : public BasicWidget {
     return isPressed() ? elevation_pressed_ : elevation_resting_;
   }
 
- protected:
-  ButtonBase(const Environment& env, Style style = CONTAINED);
+  BorderStyle getBorderStyle() const override {
+    return BorderStyle(corner_radius_, style() == OUTLINED
+                                           ? SmallNumber::Of16ths(18)
+                                           : SmallNumber(0));
+  }
 
-  virtual void paintInterior(const Canvas& canvas, Rect bounds) const = 0;
+ protected:
+  Button(const Environment& env, Style style = CONTAINED);
 
  private:
   Style style_;
@@ -61,19 +68,25 @@ class ButtonBase : public BasicWidget {
 
   uint8_t elevation_resting_;
   uint8_t elevation_pressed_;
+  uint8_t corner_radius_;
 };
 
-class Button : public ButtonBase {
+// Button with a text label, an icon, or both.
+class SimpleButton : public Button {
  public:
-  Button(const Environment& env, const MonoIcon& icon, Style style = CONTAINED)
-      : Button(env, &icon, "", style) {}
+  SimpleButton(const Environment& env, const MonoIcon& icon,
+               Style style = CONTAINED)
+      : SimpleButton(env, &icon, "", style) {}
 
-  Button(const Environment& env, std::string label, Style style = CONTAINED)
-      : Button(env, nullptr, label, style) {}
+  SimpleButton(const Environment& env, std::string label,
+               Style style = CONTAINED)
+      : SimpleButton(env, nullptr, label, style) {}
 
-  Button(const Environment& env, const MonoIcon& icon, std::string label,
-         Style style = CONTAINED)
-      : Button(env, &icon, label, style) {}
+  SimpleButton(const Environment& env, const MonoIcon& icon, std::string label,
+               Style style = CONTAINED)
+      : SimpleButton(env, &icon, label, style) {}
+
+  Padding getDefaultPadding() const override;
 
   bool hasLabel() const { return !label_.empty(); }
 
@@ -100,13 +113,13 @@ class Button : public ButtonBase {
 
   const roo_display::Font& getFont() const { return *font_; }
 
-  void paintInterior(const Canvas& canvas, Rect bounds) const override;
+  void paint(const Canvas& canvas) const override;
 
   Dimensions getSuggestedMinimumDimensions() const override;
 
  private:
-  Button(const Environment& env, const MonoIcon* icon, std::string label,
-         Style style);
+  SimpleButton(const Environment& env, const MonoIcon* icon, std::string label,
+               Style style);
 
   const roo_display::Font* font_;
   std::string label_;

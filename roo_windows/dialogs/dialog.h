@@ -57,7 +57,7 @@ class Dialog : public VerticalLayout {
   void actionTaken(int id);
 
   HorizontalLayout button_panel_;
-  std::vector<Button> buttons_;
+  std::vector<SimpleButton> buttons_;
   CallbackFn callback_fn_;
 };
 

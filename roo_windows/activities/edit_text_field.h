@@ -54,9 +54,9 @@ class EditTextField : public Activity {
 
   VerticalLayout main_pane_;
   HorizontalLayout content_pane_;
-  Button back_;
+  SimpleButton back_;
   EditedTextField text_;
-  Button enter_;
+  SimpleButton enter_;
   bool editing_;
   std::function<void(const std::string&)> enter_fn_;
 };

@@ -96,21 +96,21 @@ class KeyboardPage;
 class TextButton;
 class KeyboardWidget;
 
-enum CapsState {
-  CAPS_STATE_LOW = 0,
-  CAPS_STATE_HIGH = 1,
-  CAPS_STATE_HIGH_LOCKED = 2,
-};
-
-class KeyboardButton : public Button {
+class KeyboardButton : public SimpleButton {
  public:
-  using Button::Button;
+  using SimpleButton::SimpleButton;
   virtual void capsStateUpdated() {}
 
   // bool onScroll(int16_t dx, int16_t dy) override;
   // bool onFling(int16_t vx, int16_t vy) override;
 
   void onCancel() override;
+
+  Margins getMargins() const override {
+    int16_t m =
+        std::max<int16_t>(width(), height()) * kButtonMarginPercent / 200;
+    return Margins(m);
+  }
 
  protected:
   KeyboardWidget& keyboard();
@@ -149,6 +149,8 @@ class KeyboardPage : public Panel {
 
   void capsStateUpdated();
 
+  bool respectsChildrenBoundaries() const override { return true; }
+
  protected:
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
 
@@ -174,9 +176,9 @@ class KeyboardWidget : public Panel {
 
   PreferredSize getPreferredSize() const override;
 
-  void setCapsState(CapsState caps_state);
+  void setCapsState(Keyboard::CapsState caps_state);
 
-  CapsState caps_state() const { return caps_state_; }
+  Keyboard::CapsState caps_state() const { return caps_state_; }
 
   void setPage(int idx);
 
@@ -188,7 +190,7 @@ class KeyboardWidget : public Panel {
  private:
   std::vector<KeyboardPage*> pages_;
   const KeyboardColorTheme& color_theme_;
-  CapsState caps_state_;
+  Keyboard::CapsState caps_state_;
   KeyboardPage* current_page_;
   KeyboardListener* listener_;
 };
@@ -221,8 +223,8 @@ class TextButton : public KeyboardButton {
 
   void capsStateUpdated() override {
     if (rune_ == rune_caps_) return;
-    CapsState caps = keyboard().caps_state();
-    if (caps == CAPS_STATE_LOW) {
+    Keyboard::CapsState caps = keyboard().caps_state();
+    if (caps == Keyboard::CAPS_STATE_LOW) {
       setLabel(runeAsStr(rune_));
     } else {
       setLabel(runeAsStr(rune_caps_));
@@ -233,13 +235,13 @@ class TextButton : public KeyboardButton {
     KeyboardPage* page = ((KeyboardPage*)parent());
     page->hideHighlighter();
     KeyboardListener* listener = page->keyboard()->listener();
-    CapsState caps = keyboard().caps_state();
+    Keyboard::CapsState caps = keyboard().caps_state();
     if (listener != nullptr) {
-      listener->rune(caps == CAPS_STATE_LOW ? rune_ : rune_caps_);
+      listener->rune(caps == Keyboard::CAPS_STATE_LOW ? rune_ : rune_caps_);
     }
-    if (caps == CAPS_STATE_HIGH) {
+    if (caps == Keyboard::CAPS_STATE_HIGH) {
       // Flip back.
-      keyboard().setCapsState(CAPS_STATE_LOW);
+      keyboard().setCapsState(Keyboard::CAPS_STATE_LOW);
     }
     return Button::onSingleTapUp(x, y);
   }
@@ -290,13 +292,13 @@ class ShiftButton : public KeyboardButton {
   void onShowPress(XDim x, YDim y) override {
     auto& kb = keyboard();
     switch (kb.caps_state()) {
-      case CAPS_STATE_LOW: {
-        kb.setCapsState(CAPS_STATE_HIGH);
+      case Keyboard::CAPS_STATE_LOW: {
+        kb.setCapsState(Keyboard::CAPS_STATE_HIGH);
         break;
       }
-      case CAPS_STATE_HIGH:
-      case CAPS_STATE_HIGH_LOCKED: {
-        kb.setCapsState(CAPS_STATE_LOW);
+      case Keyboard::CAPS_STATE_HIGH:
+      case Keyboard::CAPS_STATE_HIGH_LOCKED: {
+        kb.setCapsState(Keyboard::CAPS_STATE_LOW);
         break;
       }
     }
@@ -307,8 +309,8 @@ class ShiftButton : public KeyboardButton {
 
   void onLongPress(XDim x, YDim y) {
     auto& kb = keyboard();
-    if (kb.caps_state() == CAPS_STATE_HIGH) {
-      kb.setCapsState(CAPS_STATE_HIGH_LOCKED);
+    if (kb.caps_state() == Keyboard::CAPS_STATE_HIGH) {
+      kb.setCapsState(Keyboard::CAPS_STATE_HIGH_LOCKED);
       setIcon(&caps_lock_filled_24());
     }
     KeyboardButton::onLongPress(x, y);
@@ -317,15 +319,15 @@ class ShiftButton : public KeyboardButton {
   void capsStateUpdated() override {
     auto& kb = keyboard();
     switch (kb.caps_state()) {
-      case CAPS_STATE_LOW: {
+      case Keyboard::CAPS_STATE_LOW: {
         setIcon(&shift_24());
         break;
       }
-      case CAPS_STATE_HIGH: {
+      case Keyboard::CAPS_STATE_HIGH: {
         setIcon(&shift_filled_24());
         break;
       }
-      case CAPS_STATE_HIGH_LOCKED: {
+      case Keyboard::CAPS_STATE_HIGH_LOCKED: {
         setIcon(&caps_lock_filled_24());
         break;
       }
@@ -375,7 +377,7 @@ KeyboardWidget* KeyboardPage::keyboard() { return (KeyboardWidget*)parent(); }
 KeyboardWidget::KeyboardWidget(const Environment& env, const KeyboardSpec* spec)
     : Panel(env),
       color_theme_(env.keyboardColorTheme()),
-      caps_state_(CAPS_STATE_LOW),
+      caps_state_(Keyboard::CAPS_STATE_LOW),
       listener_(nullptr) {
   setParentClipMode(Widget::UNCLIPPED);
   for (int i = 0; i < spec->page_count; ++i) {
@@ -407,10 +409,10 @@ void KeyboardWidget::onLayout(bool changed, const Rect& rect) {
   current_page_->layout(Rect(0, 0, rect.width() - 1, rect.height() - 1));
 }
 
-void KeyboardWidget::setCapsState(CapsState caps_state) {
+void KeyboardWidget::setCapsState(Keyboard::CapsState caps_state) {
   if (caps_state == caps_state_) return;
-  bool caps_switched =
-      (caps_state == CAPS_STATE_LOW || caps_state_ == CAPS_STATE_LOW);
+  bool caps_switched = (caps_state == Keyboard::CAPS_STATE_LOW ||
+                        caps_state_ == Keyboard::CAPS_STATE_LOW);
   caps_state_ = caps_state;
   if (caps_switched) {
     for (auto& page : pages_) {
@@ -425,7 +427,7 @@ void KeyboardWidget::setPage(int idx) {
   for (int i = 0; i < pages_.size(); ++i) {
     pages_[i]->setVisibility(i == idx ? VISIBLE : GONE);
   }
-  setCapsState(CAPS_STATE_LOW);
+  setCapsState(Keyboard::CAPS_STATE_LOW);
   requestLayout();
 }
 
@@ -613,6 +615,10 @@ KeyboardWidget* Keyboard::contents() {
   return (KeyboardWidget*)contents_.get();
 }
 
+const KeyboardWidget* Keyboard::contents() const {
+  return (KeyboardWidget*)contents_.get();
+}
+
 void PressHighlighter::paint(const Canvas& canvas) const {
   if (target_ == nullptr) {
     canvas.clear();
@@ -663,6 +669,16 @@ roo_display::Box Keyboard::getPreferredPlacement(const Task& task) {
   return roo_display::Box(0, dims.height() / 2, dims.width() - 1,
                           dims.height() - 1)
       .translate(-dx, -dy);
+}
+
+void Keyboard::setPage(int idx) { contents()->setPage(idx); }
+
+Keyboard::CapsState Keyboard::caps_state() const {
+  return contents()->caps_state();
+}
+
+void Keyboard::setCapsState(CapsState caps_state) {
+  contents()->setCapsState(caps_state);
 }
 
 }  // namespace roo_windows
