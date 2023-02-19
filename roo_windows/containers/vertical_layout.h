@@ -103,6 +103,8 @@ class VerticalLayout : public Panel {
     return min_dimensions_;
   }
 
+  bool respectsChildrenBoundaries() const override { return true; }
+
  protected:
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
   void onLayout(bool changed, const Rect& rect) override;

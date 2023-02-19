@@ -172,6 +172,8 @@ class ListLayout : public Panel {
   // is laid out, with new elements appearning or gone elements disappearing.
   void modelItemChanged(int idx) { modelRangeChanged(idx, idx + 1); }
 
+  bool respectsChildrenBoundaries() const override { return true; }
+
  protected:
   void propagateDirty(const Widget* child, const Rect& rect) override {
     if (in_paint_children_) return;

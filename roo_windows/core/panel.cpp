@@ -95,9 +95,26 @@ void Panel::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
 void Panel::paintChildren(const Canvas& canvas, Clipper& clipper) {
   Canvas canvas_clipped = canvas;
   canvas_clipped.clipToExtents(bounds());
+  bool fast_render = respectsChildrenBoundaries();
   for (auto child = children_.rbegin(); child != children_.rend(); ++child) {
     bool clipped = (*child)->getParentClipMode() == Widget::CLIPPED;
     (*child)->paintWidget(clipped ? canvas_clipped : canvas, clipper);
+    if (fast_render && clipped) {
+      // Decorations are guaranteed not to overlap with siblings, so we can draw
+      // them right away.
+      Canvas myc = canvas_clipped;
+      // Minimize the redraw area so that we can take the most advantage of plan
+      // fill performance.
+      myc.clipToExtents((*child)->getParentBoundsOfShadow());
+      // Make sure we're not over-stepping.
+      Margins margins = (*child)->getMargins();
+      Rect rect = (*child)->parent_bounds();
+      myc.clipToExtents(
+          Rect(rect.xMin() - margins.left(), rect.yMin() - margins.top(),
+               rect.xMax() + margins.right(), rect.yMax() + margins.bottom()));
+      myc.clear();
+      clipper.addExclusion(myc.clip_box());
+    }
   }
 }
 

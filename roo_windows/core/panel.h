@@ -95,11 +95,10 @@ class Panel : public Widget {
 
   Widget* dispatchTouchDownEvent(XDim x, YDim y) override;
 
-  // Returns the minimum bounding rect, in this widget's coordinates, that covers
-  // all visible descendants, including those with parent clip mode = UNCLIPPED,
-  // i.e. sticking out of the normal bounds.
-  // In the common case, when there are no 'unclipped' descendants, equivalent
-  // to bounds().
+  // Returns the minimum bounding rect, in this widget's coordinates, that
+  // covers all visible descendants, including those with parent clip mode =
+  // UNCLIPPED, i.e. sticking out of the normal bounds. In the common case, when
+  // there are no 'unclipped' descendants, equivalent to bounds().
   Rect maxBounds() const override;
 
   Rect maxParentBounds() const override;
@@ -113,6 +112,15 @@ class Panel : public Widget {
   PreferredSize getPreferredSize() const override {
     return PreferredSize(PreferredSize::WrapContentWidth(),
                          PreferredSize::WrapContentHeight());
+  }
+
+  // Should be overriden to return true by panels whose children, along with
+  // their margins, are non-overlapping. In such case, decorations (borders and
+  // shadows) which fit into the margins are rendered immediately after drawing
+  // the child, which is faster than the general case where the rasterizables
+  // need to be combined.
+  virtual bool respectsChildrenBoundaries() const {
+    return children_.size() <= 1;
   }
 
   const std::vector<Widget*>& children() const { return children_; }
