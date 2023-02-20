@@ -34,10 +34,10 @@ void VerticalScrollBar::setRange(int16_t begin, int16_t end) {
 void VerticalScrollBar::paint(const Canvas& canvas) const {
   Color s = theme().color.onSurface;
   s.set_a(0xC0);
-  s = alphaBlend(canvas.bgcolor(), s);
+  s = AlphaBlend(canvas.bgcolor(), s);
   Color semi = theme().color.onSurface;
   semi.set_a(0x40);
-  semi = alphaBlend(canvas.bgcolor(), semi);
+  semi = AlphaBlend(canvas.bgcolor(), semi);
   if (begin_ > 0) {
     canvas.fillRect(0, 0, width() - 1, begin_ - 1, semi);
   }

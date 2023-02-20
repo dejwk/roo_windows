@@ -53,11 +53,11 @@ class PressOverlay : public roo_display::Rasterizable {
     if (delta <= 0) {
       return bg_;
     } else if (r_ >= 1 && delta <= 2 * r_ - 1) {
-      return averageColors(bg_, fg_, 96);
+      return AverageColors(bg_, fg_, 96);
     } else if (r_ >= 2 && delta <= 4 * r_ - 4) {
-      return averageColors(bg_, fg_, 64);
+      return AverageColors(bg_, fg_, 64);
     } else if (r_ >= 3 && delta <= 6 * r_ - 9) {
-      return averageColors(bg_, fg_, 32);
+      return AverageColors(bg_, fg_, 32);
     } else {
       return fg_;
     }

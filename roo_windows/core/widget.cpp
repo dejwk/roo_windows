@@ -126,7 +126,7 @@ Color Widget::effectiveBackground() const {
   roo_display::Color bgcolor = background();
   return bgcolor.opaque() || parent() == nullptr
              ? bgcolor
-             : roo_display::alphaBlend(parent()->effectiveBackground(),
+             : roo_display::AlphaBlend(parent()->effectiveBackground(),
                                        bgcolor);
 }
 
@@ -429,7 +429,7 @@ void Widget::paintWidget(const Canvas& canvas, Clipper& clipper) {
     if (!isEnabled()) {
       bg.set_a(bg.a() / 2);
     }
-    my_canvas.set_bgcolor(roo_display::alphaBlend(canvas.bgcolor(), bg));
+    my_canvas.set_bgcolor(roo_display::AlphaBlend(canvas.bgcolor(), bg));
   }
   OverlaySpec overlay_spec(*this, my_canvas);
   if (my_canvas.clip_box().empty() || !isDirty()) {
@@ -521,7 +521,7 @@ void Widget::finalizePaintWidget(const Canvas& canvas, Clipper& clipper,
                           overlay_spec, canvas.bgcolor(),
                           border_style.corner_radius(),
                           border_style.outline_width(),
-                          alphaBlend(canvas.bgcolor(), getOutlineColor()));
+                          AlphaBlend(canvas.bgcolor(), getOutlineColor()));
   }
   clipper.addExclusion(inner_bounds);
 }

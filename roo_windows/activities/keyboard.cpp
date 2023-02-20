@@ -628,7 +628,7 @@ void PressHighlighter::paint(const Canvas& canvas) const {
   const KeyboardColorTheme& kbTh = keyboard()->color_theme();
   Color overlay = roo_display::color::Black;
   overlay.set_a(th.pressedOpacity(kbTh.normalButton));
-  Color bgcolor = roo_display::alphaBlend(kbTh.normalButton, overlay);
+  Color bgcolor = roo_display::AlphaBlend(kbTh.normalButton, overlay);
   canvas.drawObject(roo_display::MakeTileOf(
       roo_display::StringViewLabel(target_->label(), *th.font.body1,
                                    target_->contentColor()),

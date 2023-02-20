@@ -50,7 +50,7 @@ void OverlayStack::ReadColors(const int16_t* x, const int16_t* y,
       for (uint32_t i = start_offset; i < offset; ++i) {
         if (buf_idx < buf_size && offsets[buf_idx] == i) {
           // Found point in the bounds for which we have the color.
-          result[i] = alphaBlend(result[i], newresult[buf_idx]);
+          result[i] = AlphaBlend(result[i], newresult[buf_idx]);
           ++buf_idx;
         }
       }
@@ -80,12 +80,12 @@ bool OverlayStack::ReadColorRect(int16_t xMin, int16_t yMin, int16_t xMax,
     if (r->ReadColorRect(clipped.xMin(), clipped.yMin(), clipped.xMax(),
                          clipped.yMax(), buffer)) {
       if (is_uniform_color) {
-        *result = alphaBlend(*result, *buffer);
+        *result = AlphaBlend(*result, *buffer);
       } else {
         for (int16_t y = clipped.yMin(); y <= clipped.yMax(); ++y) {
           Color* row = &result[(y - yMin) * box.width()];
           for (int16_t x = clipped.xMin(); x <= clipped.xMax(); ++x) {
-            row[x - xMin] = alphaBlend(row[x - xMin], *buffer);
+            row[x - xMin] = AlphaBlend(row[x - xMin], *buffer);
           }
         }
       }
@@ -98,7 +98,7 @@ bool OverlayStack::ReadColorRect(int16_t xMin, int16_t yMin, int16_t xMax,
       for (int16_t y = clipped.yMin(); y <= clipped.yMax(); ++y) {
         Color* row = &result[(y - yMin) * box.width()];
         for (int16_t x = clipped.xMin(); x <= clipped.xMax(); ++x) {
-          row[x - xMin] = alphaBlend(row[x - xMin], buffer[i++]);
+          row[x - xMin] = AlphaBlend(row[x - xMin], buffer[i++]);
         }
       }
     }

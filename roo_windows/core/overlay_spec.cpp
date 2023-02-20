@@ -92,7 +92,7 @@ OverlaySpec::OverlaySpec(Widget& widget, const Canvas& canvas)
       int16_t r =
           animation_radius(widget.bounds(), click_x, click_y, click_progress);
       roo_display::Color click_animation_overlay =
-          alphaBlend(base_overlay_, getClickAnimationColor(widget, canvas));
+          AlphaBlend(base_overlay_, getClickAnimationColor(widget, canvas));
       widget.getMainWindow()->set_press_overlay(
           PressOverlay(x, y, r, click_animation_overlay, base_overlay_));
       press_overlay_ = &widget.getMainWindow()->press_overlay();
@@ -100,7 +100,7 @@ OverlaySpec::OverlaySpec(Widget& widget, const Canvas& canvas)
       // Full rect click overlay - just apply on top of the overlay as
       // calculated so far.
       base_overlay_ =
-          alphaBlend(base_overlay_, getClickAnimationColor(widget, canvas));
+          AlphaBlend(base_overlay_, getClickAnimationColor(widget, canvas));
     }
   }
 }

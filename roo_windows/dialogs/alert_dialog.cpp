@@ -11,7 +11,7 @@ AlertDialog::AlertDialog(const Environment& env, std::string title,
   supporting_text_.setPadding(PADDING_NONE, PADDING_NONE);
   Color on_surface = env.theme().color.onSurface;
   on_surface.set_a(0xB0);
-  supporting_text_.setColor(alphaBlend(env.theme().color.surface, on_surface));
+  supporting_text_.setColor(AlphaBlend(env.theme().color.surface, on_surface));
   contents_.setContents(supporting_text_);
   setTitle(std::move(title));
 }

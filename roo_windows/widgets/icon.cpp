@@ -20,7 +20,7 @@ void Icon::paint(const Canvas& canvas) const {
     return;
   }
   roo_display::MaterialIcon icon(*icon_);
-  icon.color_mode().setColor(alphaBlend(canvas.bgcolor(), color));
+  icon.color_mode().setColor(AlphaBlend(canvas.bgcolor(), color));
   canvas.drawTiled(icon, bounds(), kCenter | kMiddle, isInvalidated());
 }
 

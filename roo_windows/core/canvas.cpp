@@ -22,14 +22,14 @@ void Canvas::fillRect(const roo_display::Box& rect,
   roo_display::Box b = rect.translate(dx_, dy_);
   b.clip(clip_box_);
   if (b.empty()) return;
-  color = alphaBlend(bgcolor(), color);
+  color = AlphaBlend(bgcolor(), color);
   out().fillRect(surface_->paint_mode(), b, color);
 }
 
 void Canvas::fillRect(const Rect& rect, roo_display::Color color) const {
   roo_display::Box b = rect.translate(dx_, dy_).clip(clip_box_);
   if (b.empty()) return;
-  color = alphaBlend(bgcolor(), color);
+  color = AlphaBlend(bgcolor(), color);
   out().fillRect(surface_->paint_mode(), b, color);
 }
 

@@ -70,7 +70,7 @@ class TextFieldInterior : public Drawable {
                          extents_.yMax());
       Surface news = s;
       news.clipToExtents(highlight_clip);
-      news.set_bgcolor(alphaBlend(s.bgcolor(), highlight_color_));
+      news.set_bgcolor(AlphaBlend(s.bgcolor(), highlight_color_));
       news.drawObject(tiled_text);
     }
     if (highlight_xmax_ < highlight_xmin_ ||
@@ -115,7 +115,7 @@ void TextField::paint(const Canvas& canvas) const {
     // Show hint with half the opacity.
     text = hint_;
     color.set_a(color.a() / 2);
-    color = alphaBlend(canvas.bgcolor(), color);
+    color = AlphaBlend(canvas.bgcolor(), color);
     starred = false;
   }
   Padding padding = getPadding();

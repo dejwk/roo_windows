@@ -32,7 +32,7 @@ void IconWithCaption::paint(const Canvas& canvas) const {
       color = myTheme.color.highlighterColor(canvas.bgcolor());
     }
   }
-  color = alphaBlend(canvas.bgcolor(), color);
+  color = AlphaBlend(canvas.bgcolor(), color);
   if (isInvalidated() && hi_border_ > 0) {
     canvas.clearRect(bounds().xMin(), bounds().yMin(), bounds().xMax(),
                     bounds().yMin() + hi_border_ - 1);

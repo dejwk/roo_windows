@@ -198,8 +198,8 @@ Decoration::Decoration(roo_display::Box extents, int elevation,
     outline_width_frac_ = 15;
   }
   if (overlay_spec.is_modded()) {
-    bgcolor_ = alphaBlend(bgcolor_, overlay_spec.base_overlay());
-    outline_color_ = alphaBlend(outline_color_, overlay_spec.base_overlay());
+    bgcolor_ = AlphaBlend(bgcolor_, overlay_spec.base_overlay());
+    outline_color_ = AlphaBlend(outline_color_, overlay_spec.base_overlay());
   }
   press_overlay_ = overlay_spec.press_overlay();
   // switch (corner_radius) {
@@ -399,19 +399,19 @@ roo_display::Color Decoration::read(int16_t x, int16_t y) const {
     if (outline_alpha != 0) {
       roo_display::Color outline = outline_color_;
       outline.set_a(outline_alpha);
-      c = alphaBlend(c, outline);
+      c = AlphaBlend(c, outline);
     }
   }
   if (bg_alpha != 0) {
     // We need to put the background in front of the shadow.
     roo_display::Color bg = bgcolor_;
     bg.set_a(bg_alpha);
-    c = alphaBlend(c, bg);
+    c = AlphaBlend(c, bg);
   }
   if (press_overlay_ != nullptr) {
     roo_display::Color o = press_overlay_->get(x, y);
     o.set_a(o.a() * outline_alpha / 255);
-    c = alphaBlend(c, o);
+    c = AlphaBlend(c, o);
   }
   return c;
 }

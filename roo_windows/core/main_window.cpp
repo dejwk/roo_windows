@@ -46,25 +46,25 @@ MainWindow::MainWindow(Application& app, const roo_display::Box& bounds)
   {
     Color c = env.theme().color.defaultColor(env.theme().color.surface);
     c.set_a(env.theme().pressAnimationOpacity(env.theme().color.surface));
-    c = alphaBlend(env.theme().color.surface, c);
+    c = AlphaBlend(env.theme().color.surface, c);
     maybeAddColor(color_set, c);
   }
   {
     Color c = env.theme().color.highlighterColor(env.theme().color.surface);
     c.set_a(env.theme().pressAnimationOpacity(env.theme().color.surface));
-    c = alphaBlend(env.theme().color.surface, c);
+    c = AlphaBlend(env.theme().color.surface, c);
     maybeAddColor(color_set, c);
   }
   {
     Color c = env.theme().color.primary;
     c.set_a(env.theme().state.disabled);
-    c = alphaBlend(env.theme().color.surface, c);
+    c = AlphaBlend(env.theme().color.surface, c);
     maybeAddColor(color_set, c);
   }
   {
     Color c = env.theme().color.secondary;
     c.set_a(env.theme().state.disabled);
-    c = alphaBlend(env.theme().color.surface, c);
+    c = AlphaBlend(env.theme().color.surface, c);
     maybeAddColor(color_set, c);
   }
 
