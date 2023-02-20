@@ -17,8 +17,6 @@ Button::Button(const Environment& env, Style style)
                                          : color::Transparent),
       interior_color_(style == CONTAINED ? env.theme().color.primary
                                          : env.theme().color.background),
-      content_color_(style == CONTAINED ? env.theme().color.onPrimary
-                                        : env.theme().color.primary),
       elevation_resting_(0),
       elevation_pressed_(0),
       corner_radius_(4) {
@@ -49,6 +47,8 @@ Padding SimpleButton::getDefaultPadding() const { return Padding(14, 4); }
 SimpleButton::SimpleButton(const Environment& env, const MonoIcon* icon,
                      std::string label, Style style)
     : Button(env, style),
+      content_color_(style == CONTAINED ? env.theme().color.onPrimary
+                                        : env.theme().color.primary),
       font_(env.theme().font.button),
       label_(std::move(label)),
       icon_(icon) {}

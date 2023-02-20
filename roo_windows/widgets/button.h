@@ -33,14 +33,6 @@ class Button : public BasicWidget {
     corner_radius_ = corner_radius;
   }
 
-  roo_display::Color contentColor() const { return content_color_; }
-
-  void setContentColor(roo_display::Color color) {
-    if (content_color_ == color) return;
-    content_color_ = color;
-    markDirty();
-  }
-
   Padding getDefaultPadding() const override;
 
   bool isClickable() const override { return true; }
@@ -64,7 +56,6 @@ class Button : public BasicWidget {
   Style style_;
   roo_display::Color outline_color_;
   roo_display::Color interior_color_;
-  roo_display::Color content_color_;
 
   uint8_t elevation_resting_;
   uint8_t elevation_pressed_;
@@ -87,6 +78,14 @@ class SimpleButton : public Button {
       : SimpleButton(env, &icon, label, style) {}
 
   Padding getDefaultPadding() const override;
+
+  roo_display::Color contentColor() const { return content_color_; }
+
+  void setContentColor(roo_display::Color color) {
+    if (content_color_ == color) return;
+    content_color_ = color;
+    markDirty();
+  }
 
   bool hasLabel() const { return !label_.empty(); }
 
@@ -121,6 +120,7 @@ class SimpleButton : public Button {
   SimpleButton(const Environment& env, const MonoIcon* icon, std::string label,
                Style style);
 
+  roo_display::Color content_color_;
   const roo_display::Font* font_;
   std::string label_;
   const MonoIcon* icon_;
