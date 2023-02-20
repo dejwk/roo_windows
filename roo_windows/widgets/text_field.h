@@ -48,10 +48,10 @@ class TextFieldEditor : public KeyboardListener {
   TextFieldEditor(roo_scheduler::Scheduler& scheduler, Keyboard& keyboard)
       : scheduler_(scheduler),
         keyboard_(keyboard),
-        cursor_blinker_(&scheduler, [this]() { blinkCursor(); }),
+        cursor_blinker_(scheduler, [this]() { blinkCursor(); }),
         blinking_cursor_is_on_(false),
         last_cursor_shown_time_(roo_time::Uptime::Now()),
-        last_glyph_hider_(&scheduler, [this]() { hideLastGlyph(); }),
+        last_glyph_hider_(scheduler, [this]() { hideLastGlyph(); }),
         last_glyph_recently_entered_(false),
         target_(nullptr),
         cursor_position_(0),
