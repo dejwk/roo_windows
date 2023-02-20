@@ -118,7 +118,7 @@ class Widget {
   // .primary[Variant*], .secondary[Variant*], or .error, in which case the
   // default color resolves to .onSurface, .onBackground, .onPrimary,
   // .onSecondary, or .onError, appropriately. If all else fails, returns
-  // .onBackground. NOTE: during the call to paint(const Surface& s), the
+  // .onBackground. NOTE: during the call to paint(const Canvas& canvas), the
   // default color can also be determined by calling
   // theme().color.defaultColor(s.bgcolor()).
   roo_display::Color defaultColor() const {
