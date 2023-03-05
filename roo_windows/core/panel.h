@@ -229,6 +229,11 @@ class Panel : public Widget {
  private:
   void invalidateCachedMaxBounds() { cached_max_bounds_ = Rect(0, 0, -1, -1); }
 
+  Canvas prepareCanvas(const Canvas& in, const Rect& invalid_region);
+
+  void fastDrawChildShadow(Widget& child, const Canvas& canvas,
+                           Clipper& clipper);
+
   friend class Widget;
   friend class ScrollablePanel;
 

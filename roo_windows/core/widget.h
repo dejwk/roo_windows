@@ -576,6 +576,12 @@ class Widget {
   // paintWidgetContents().
   void paintWidget(const Canvas& s, Clipper& clipper);
 
+  void paintWidgetModded(Canvas& canvas, const OverlaySpec& spec,
+                         Clipper& clipper);
+
+  Canvas prepareCanvas(const Canvas& in);
+  Canvas prepareContentsCanvas(const Canvas& in);
+
   // Helper functions for paintWidget.
   void paintWidgetInteriorWithOverlays(Canvas& s, Clipper& clipper,
                                        const OverlaySpec& overlay_spec);
