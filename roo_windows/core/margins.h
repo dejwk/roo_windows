@@ -1,5 +1,7 @@
 #pragma once
 
+#include "roo_windows/config.h"
+
 namespace roo_windows {
 
 enum MarginSize {
@@ -33,21 +35,21 @@ class Margins {
       case MARGIN_NONE:
         return 0;
       case MARGIN_SMALL:
-        return 2;
+        return Scaled(2);
       case MARGIN_REGULAR:
-        return 4;
+        return Scaled(4);
       case MARGIN_LARGE:
-        return 8;
+        return Scaled(8);
       case MARGIN_HUGE:
-        return 12;
+        return Scaled(12);
       case MARGIN_HUMONGOUS:
-        return 20;
+        return Scaled(20);
       case MARGIN_NEGATIVE_SMALL:
-        return -2;
+        return Scaled(-2);
       case MARGIN_NEGATIVE:
-        return -4;
+        return Scaled(-4);
       default:
-        return 12;
+        return Scaled(12);
     }
   }
 

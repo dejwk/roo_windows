@@ -5,11 +5,11 @@
 
 namespace roo_windows {
 
-class WifiIndicator36x36 : public WifiIndicator {
+class WifiIndicator36x36 : public WifiIndicatorBase {
  public:
-  using WifiIndicator::WifiIndicator;
+  using WifiIndicatorBase::WifiIndicatorBase;
 
-  WifiIndicator36x36(const Environment& env) : WifiIndicator(env) {}
+  WifiIndicator36x36(const Environment& env) : WifiIndicatorBase(env) {}
 
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(36, 36);

@@ -48,22 +48,6 @@ struct ColorTheme {
   }
 };
 
-struct FontTheme {
-  const roo_display::Font* h1;
-  const roo_display::Font* h2;
-  const roo_display::Font* h3;
-  const roo_display::Font* h4;
-  const roo_display::Font* h5;
-  const roo_display::Font* h6;
-  const roo_display::Font* subtitle1;
-  const roo_display::Font* subtitle2;
-  const roo_display::Font* body1;
-  const roo_display::Font* body2;
-  const roo_display::Font* button;
-  const roo_display::Font* caption;
-  const roo_display::Font* overline;
-};
-
 struct StateOpacityTheme {
   const uint8_t disabled;
 
@@ -106,7 +90,6 @@ struct StateOpacityTheme {
 
 struct Theme {
   struct ColorTheme color;
-  struct FontTheme font;
   struct StateOpacityTheme state;
 
   uint8_t hoverOpacity(roo_display::Color bg) const {

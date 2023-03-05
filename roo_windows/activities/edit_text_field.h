@@ -2,7 +2,6 @@
 
 #include <functional>
 
-#include "roo_material_icons/outlined/24/navigation.h"
 #include "roo_windows/activities/keyboard.h"
 #include "roo_windows/containers/horizontal_layout.h"
 #include "roo_windows/containers/vertical_layout.h"

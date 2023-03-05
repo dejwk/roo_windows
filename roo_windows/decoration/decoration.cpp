@@ -1,3 +1,5 @@
+#include "roo_windows/config.h"
+
 #include "roo_windows/decoration/decoration.h"
 
 // #include "roo_windows/shadows/quarter_circle.h"
@@ -10,20 +12,20 @@ namespace {
 
 // Returns the reach of the ambient shadow at the specified elevation.
 constexpr uint8_t CalculateAmbientExtent(int elevation) {
-  return elevation == 0 ? 0 : (elevation * 20 / 5 + 12) / 8;
+  return elevation == 0 ? 0 : Scaled(elevation * 20 / 5 + 12) / 8;
 }
 
 // Returns the reach of the 'key' (directional) shadow at the specified
 // elevation.
 constexpr uint8_t CalculateKeyExtent(int elevation) {
-  return elevation == 0 ? 0 : (elevation * 9 + 4) / 8;
+  return elevation == 0 ? 0 : Scaled(elevation * 9 + 4) / 8;
 }
 
 // Returns how much the 'key' (directional) shadow is shifted at the specified
 // elevation.
 constexpr uint8_t CalculateKeyShift(int elevation) {
   // Matching the ambient extent, so that the shadows transition nicely.
-  return elevation == 0 ? 0 : (elevation * 20 / 5 + 12) / 8 - 1;
+  return elevation == 0 ? 0 : Scaled(elevation * 20 / 5 + 12) / 8 - 1;
   // return (elevation * 8) / 8;
 }
 
@@ -343,7 +345,7 @@ Decoration::Decoration(roo_display::Box extents, int elevation,
   ambient_shadow_.y = extents.yMin() - ambient_extent;
   ambient_shadow_.w = extents.width() + 2 * ambient_extent;
   ambient_shadow_.h = extents.height() + 2 * ambient_extent;
-  ambient_shadow_.alpha_start = 70 - elevation;
+  ambient_shadow_.alpha_start = 60 - elevation;
   ambient_shadow_.alpha_step =
       (ambient_extent == 0)
           ? 0
@@ -355,7 +357,7 @@ Decoration::Decoration(roo_display::Box extents, int elevation,
   key_shadow_.y = extents.yMin() - key_extent + key_shift;
   key_shadow_.w = extents.width() + 2 * key_extent;
   key_shadow_.h = extents.height() + 2 * key_extent;
-  key_shadow_.alpha_start = 90 - 2 * elevation;
+  key_shadow_.alpha_start = 70 - 2 * elevation;
   key_shadow_.alpha_step =
       (key_extent == 0) ? 0 : 256 * key_shadow_.alpha_start / key_extent;
   key_shadow_.border = corner_radius;

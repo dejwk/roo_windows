@@ -1,7 +1,5 @@
 #include "application.h"
 
-#include <Arduino.h>
-
 #include "roo_display.h"
 
 namespace roo_windows {

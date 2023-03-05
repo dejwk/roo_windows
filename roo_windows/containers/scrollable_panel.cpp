@@ -62,12 +62,12 @@ YDim VerticalScrollBar::toOffset(YDim h) const {
 }
 
 PreferredSize VerticalScrollBar::getPreferredSize() const {
-  return PreferredSize(PreferredSize::ExactWidth(4),
+  return PreferredSize(PreferredSize::ExactWidth(Scaled(6)),
                        PreferredSize::MatchParentHeight());
 }
 
 Dimensions VerticalScrollBar::getSuggestedMinimumDimensions() const {
-  return Dimensions(4, 4);
+  return Dimensions(Scaled(6), Scaled(6));
 }
 
 void ScrollablePanel::scrollTo(XDim x, YDim y) {
@@ -182,7 +182,7 @@ void ScrollablePanel::onLayout(bool changed, const Rect& rect) {
   bounds = bounds.translate(c->xOffset() + m.left(), c->yOffset() + m.top());
   c->layout(bounds);
   scroll_bar_.layout(
-      Rect(rect.width() - 4, 0, rect.width() - 1, rect.height() - 1));
+      Rect(rect.width() - Scaled(6), 0, rect.width() - 1, rect.height() - 1));
   update();
 }
 

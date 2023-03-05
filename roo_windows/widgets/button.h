@@ -45,7 +45,7 @@ class Button : public BasicWidget {
 
   BorderStyle getBorderStyle() const override {
     return BorderStyle(corner_radius_, style() == OUTLINED
-                                           ? SmallNumber::Of16ths(18)
+                                           ? SmallNumber::Of16ths(Scaled(18))
                                            : SmallNumber(0));
   }
 

@@ -9,7 +9,7 @@ namespace roo_windows {
 
 class ToggleButtons : public Panel {
  public:
-  ToggleButtons(const Environment& env, int16_t padding = 12)
+  ToggleButtons(const Environment& env, int16_t padding = Scaled(12))
       : Panel(env), env_(env), padding_(padding), active_(-1) {}
 
   roo_windows::Widget& addButton(const MonoIcon& icon);

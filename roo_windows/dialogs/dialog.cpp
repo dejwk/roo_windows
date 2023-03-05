@@ -34,7 +34,7 @@ const Scrim& scrim() {
 Dialog::Dialog(const Environment& env, std::vector<std::string> button_labels)
     : VerticalLayout(env),
       body_(env),
-      title_(env, "", *env.theme().font.h6),
+      title_(env, "", font_h6()),
       contents_(env),
       button_panel_(env) {
   body_.setPadding(Padding(PADDING_SMALL, PADDING_TINY));

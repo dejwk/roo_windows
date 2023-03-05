@@ -1,8 +1,13 @@
+#include "roo_windows/config.h"
+
 #include "roo_windows/activities/edit_text_field.h"
 
 #include <inttypes.h>
 
-#include "roo_smooth_fonts/NotoSans_Regular/18.h"
+#include "roo_material_icons/outlined/18/navigation.h"
+#include "roo_material_icons/outlined/24/navigation.h"
+#include "roo_material_icons/outlined/36/navigation.h"
+#include "roo_material_icons/outlined/48/navigation.h"
 
 namespace roo_windows {
 
@@ -10,7 +15,7 @@ EditedTextField::EditedTextField(const Environment& env,
                                  TextFieldEditor& editor,
                                  const std::string& hint,
                                  EditTextField& activity)
-    : TextField(env, editor, roo_display::font_NotoSans_Regular_18(), hint,
+    : TextField(env, editor, roo_windows::font_body1(), hint,
                 roo_display::kLeft | roo_display::kMiddle, UNDERLINE),
       activity_(activity) {}
 
@@ -26,9 +31,9 @@ EditTextField::EditTextField(const Environment& env, TextFieldEditor& editor,
                              const std::string& hint)
     : main_pane_(env),
       content_pane_(env),
-      back_(env, ic_outlined_24_navigation_arrow_back(), Button::TEXT),
+      back_(env, SCALED_ROO_ICON(outlined, navigation_arrow_back), Button::TEXT),
       text_(env, editor, hint, *this),
-      enter_(env, ic_outlined_24_navigation_check()),
+      enter_(env, SCALED_ROO_ICON(outlined, navigation_check)),
       editing_(false),
       enter_fn_(nullptr) {
   main_pane_.add(content_pane_, VerticalLayout::Params());

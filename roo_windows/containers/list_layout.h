@@ -1,6 +1,7 @@
 #pragma once
 
 #include "roo_glog/logging.h"
+#include "roo_windows/config.h"
 #include "roo_windows/core/dimensions.h"
 #include "roo_windows/core/main_window.h"
 #include "roo_windows/core/measure_spec.h"
@@ -266,7 +267,7 @@ class ListLayout : public Panel {
     if (h == 0) {
       h = prototype_.getNaturalDimensions().height();
     }
-    if (h == 0) h = 15;
+    if (h == 0) h = Scaled(15);
     h += v_margin;
     return Dimensions(width.resolveSize(d.width() + h_margin + h_padding),
                       height.resolveSize(calculateHeight(h)));

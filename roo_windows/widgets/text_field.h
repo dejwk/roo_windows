@@ -1,5 +1,7 @@
 #pragma once
 
+#include "roo_windows/config.h"
+
 #include "roo_display/core/color.h"
 #include "roo_display/font/font.h"
 #include "roo_display/ui/text_label.h"
@@ -24,7 +26,7 @@ class VisibilityToggle : public BasicWidget {
   VisibilityToggle(const Environment& env) : BasicWidget(env) { setOff(); }
 
   Dimensions getSuggestedMinimumDimensions() const override {
-    return Dimensions(24, 24);
+    return Dimensions(ROO_WINDOWS_ICON_SIZE, ROO_WINDOWS_ICON_SIZE);
   }
 
   bool isClickable() const override { return true; }

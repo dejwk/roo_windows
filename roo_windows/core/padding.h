@@ -1,5 +1,7 @@
 #pragma once
 
+#include "roo_windows/config.h"
+
 namespace roo_windows {
 
 enum PaddingSize {
@@ -34,23 +36,23 @@ class Padding {
       case PADDING_NONE:
         return 0;
       case PADDING_TINY:
-        return 4;
+        return Scaled(4);
       case PADDING_SMALL:
-        return 8;
+        return Scaled(8);
       case PADDING_REGULAR:
-        return 12;
+        return Scaled(12);
       case PADDING_LARGE:
-        return 16;
+        return Scaled(16);
       case PADDING_HUGE:
-        return 24;
+        return Scaled(24);
       case PADDING_HUMONGOUS:
-        return 36;
+        return Scaled(36);
       case PADDING_NEGATIVE_TINY:
-        return -4;
+        return Scaled(-4);
       case PADDING_NEGATIVE_SMALL:
-        return -8;
+        return Scaled(-8);
       default:
-        return 12;
+        return Scaled(12);
     }
   }
 

@@ -1,15 +1,22 @@
+
+#include "roo_windows/config.h"
 #include "roo_windows/widgets/text_field.h"
 
 #include "roo_material_icons.h"
+#include "roo_material_icons/filled/18/action.h"
 #include "roo_material_icons/filled/24/action.h"
+#include "roo_material_icons/filled/36/action.h"
+#include "roo_material_icons/filled/48/action.h"
+#include "roo_windows/config.h"
 
 namespace roo_windows {
 
 using namespace roo_display;
 
 void VisibilityToggle::paint(const Canvas& canvas) const {
-  MaterialIcon icon(isOn() ? ic_filled_24_action_visibility()
-                           : ic_filled_24_action_visibility_off());
+  MaterialIcon icon(
+      isOn() ? SCALED_ROO_ICON(filled, action_visibility)
+             : SCALED_ROO_ICON(filled, action_visibility_off));
   Color color = parent()->defaultColor();
   icon.color_mode().setColor(color);
   canvas.drawTiled(icon, bounds(), kCenter | kMiddle, isInvalidated());
@@ -199,8 +206,8 @@ void TextField::paint(const Canvas& canvas) const {
     // We truncate the text on the advance boundaries, so that it appears
     // aligned with the decoration.
     my_canvas.clearRect(0, text_ymin, padding.left() - 1, text_ymax);
-    my_canvas.clearRect(text_ymax - padding.right() + 1, text_ymin,
-                        width() - 1, text_ymax);
+    my_canvas.clearRect(text_ymax - padding.right() + 1, text_ymin, width() - 1,
+                        text_ymax);
     text_clip_box =
         Box(padding.left(), text_clip_box.yMin(),
             text_clip_box.xMax() - padding.right(), text_clip_box.yMax());

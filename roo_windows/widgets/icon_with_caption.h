@@ -14,7 +14,7 @@ class IconWithCaption : public BasicWidget {
  public:
   IconWithCaption(const Environment& env, const roo_display::MaterialIcon& def,
                   const std::string& caption)
-      : IconWithCaption(env, def, caption, env.theme().font.caption) {}
+      : IconWithCaption(env, def, caption, &font_caption()) {}
 
   IconWithCaption(const Environment& env, const roo_display::MaterialIcon& def,
                   const std::string& caption, const roo_display::Font* font);

@@ -1,12 +1,20 @@
-#include "keyboard.h"
+#include "roo_windows/config.h"
+
+#include "roo_windows/activities/keyboard.h"
 
 #include <memory>
 #include <string>
 
 #include "roo_display/ui/text_label.h"
 #include "roo_display/ui/tile.h"
+#include "roo_material_icons/outlined/18/action.h"
 #include "roo_material_icons/outlined/24/action.h"
+#include "roo_material_icons/outlined/36/action.h"
+#include "roo_material_icons/outlined/48/action.h"
+#include "roo_material_icons/outlined/18/content.h"
 #include "roo_material_icons/outlined/24/content.h"
+#include "roo_material_icons/outlined/36/content.h"
+#include "roo_material_icons/outlined/48/content.h"
 #include "roo_windows/core/dimensions.h"
 #include "roo_windows/core/main_window.h"
 #include "roo_windows/core/task.h"
@@ -112,6 +120,10 @@ class KeyboardButton : public SimpleButton {
     return Margins(m);
   }
 
+  BorderStyle getBorderStyle() const override {
+    return BorderStyle(Scaled(3), 0);
+  }
+
  protected:
   KeyboardWidget& keyboard();
 };
@@ -211,7 +223,7 @@ class TextButton : public KeyboardButton {
       : KeyboardButton(env, runeAsStr(rune)),
         rune_(rune),
         rune_caps_(rune_caps) {
-    setFont(*env.theme().font.h6);
+    setFont(font_body1());
   }
 
   bool showClickAnimation() const override { return false; }
@@ -454,7 +466,8 @@ KeyboardPage::KeyboardPage(const Environment& env, const KeyboardPageSpec* spec)
           break;
         }
         case KeySpec::ENTER: {
-          b = new EnterButton(env, ic_outlined_24_action_done());
+          b = new EnterButton(
+              env, ic_outlined_24_action_done());
           b_color = env.keyboardColorTheme().acceptButton;
           break;
         }
@@ -464,7 +477,8 @@ KeyboardPage::KeyboardPage(const Environment& env, const KeyboardPageSpec* spec)
           break;
         }
         case KeySpec::DEL: {
-          b = new DelButton(env, ic_outlined_24_content_backspace());
+          b = new DelButton(
+              env, ic_outlined_24_content_backspace());
           b_color = env.keyboardColorTheme().modifierButton;
           break;
         }
@@ -630,7 +644,7 @@ void PressHighlighter::paint(const Canvas& canvas) const {
   overlay.set_a(th.pressedOpacity(kbTh.normalButton));
   Color bgcolor = roo_display::AlphaBlend(kbTh.normalButton, overlay);
   canvas.drawObject(roo_display::MakeTileOf(
-      roo_display::StringViewLabel(target_->label(), *th.font.body1,
+      roo_display::StringViewLabel(target_->label(), font_body1(),
                                    target_->contentColor()),
       bounds().asBox(), roo_display::kCenter | roo_display::kTop.shiftBy(3),
       bgcolor));

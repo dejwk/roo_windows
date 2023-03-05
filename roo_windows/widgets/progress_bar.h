@@ -16,7 +16,7 @@ class ProgressBar : public Widget {
 
   PreferredSize getPreferredSize() const override {
     return PreferredSize(PreferredSize::MatchParentWidth(),
-                         PreferredSize::ExactHeight(4));
+                         PreferredSize::ExactHeight(Scaled(4)));
   }
 
   Margins getMargins() const override { return Margins(0); }

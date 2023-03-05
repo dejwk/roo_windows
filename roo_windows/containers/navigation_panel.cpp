@@ -1,3 +1,4 @@
+#include "roo_windows/config.h"
 #include "roo_windows/containers/navigation_panel.h"
 
 namespace roo_windows {
@@ -44,8 +45,8 @@ Dimensions NavigationPanel::onMeasure(WidthSpec width, HeightSpec height) {
 }
 
 void NavigationPanel::onLayout(bool changed, const Rect& rect) {
-  rail_.layout(Rect(0, 0, 71, rect.yMax()));
-  contents_.layout(Rect(72, 0, rect.xMax(), rect.yMax()));
+  rail_.layout(Rect(0, 0, Scaled(72)-1, rect.yMax()));
+  contents_.layout(Rect(Scaled(72), 0, rect.xMax(), rect.yMax()));
 }
 
 }  // namespace roo_windows

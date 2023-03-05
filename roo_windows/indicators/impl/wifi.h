@@ -5,7 +5,7 @@
 
 namespace roo_windows {
 
-class WifiIndicator : public BasicWidget {
+class WifiIndicatorBase : public BasicWidget {
  public:
   enum ConnectionStatus {
     DISCONNECTED = 0,
@@ -13,9 +13,9 @@ class WifiIndicator : public BasicWidget {
     CONNECTED = 2,
   };
 
-  WifiIndicator(const Environment& env);
+  WifiIndicatorBase(const Environment& env);
 
-  WifiIndicator(const Environment& env, roo_display::Color color);
+  WifiIndicatorBase(const Environment& env, roo_display::Color color);
 
   void paint(const Canvas& canvas) const override;
   // Padding getPadding() const override { return Padding(0); }

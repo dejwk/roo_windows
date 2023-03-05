@@ -55,7 +55,7 @@ void ProgressBar::paint(const Canvas& canvas) const {
 }
 
 Dimensions ProgressBar::getSuggestedMinimumDimensions() const {
-  return Dimensions(20, 4);
+  return Dimensions(Scaled(20), Scaled(4));
 }
 
 }  // namespace roo_windows

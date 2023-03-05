@@ -19,7 +19,7 @@ Button::Button(const Environment& env, Style style)
                                          : env.theme().color.background),
       elevation_resting_(0),
       elevation_pressed_(0),
-      corner_radius_(4) {
+      corner_radius_(Scaled(4)) {
   outline_color_.set_a(0x80);
 }
 
@@ -49,7 +49,7 @@ SimpleButton::SimpleButton(const Environment& env, const MonoIcon* icon,
     : Button(env, style),
       content_color_(style == CONTAINED ? env.theme().color.onPrimary
                                         : env.theme().color.primary),
-      font_(env.theme().font.button),
+      font_(&font_button()),
       label_(std::move(label)),
       icon_(icon) {}
 
@@ -57,20 +57,20 @@ Dimensions SimpleButton::getSuggestedMinimumDimensions() const {
   if (!hasLabel()) {
     if (!hasIcon()) return Dimensions(0, 0);
     // Icon only.
-    return Dimensions(4 + icon().extents().width(),
-                      4 + icon().extents().height());
+    return Dimensions(Scaled(4) + icon().extents().width(),
+                      Scaled(4) + icon().extents().height());
   }
   // We must measure the text.
   auto metrics = font_->getHorizontalStringMetrics(label_);
   int16_t text_height = ((font_->metrics().maxHeight()) + 1) & ~1;
   if (!hasIcon()) {
     // Label only.
-    return Dimensions(4 + metrics.width(), 4 + text_height);
+    return Dimensions(Scaled(4) + metrics.width(), Scaled(4) + text_height);
   }
   // Both icon and label.
   int16_t gap = (icon().extents().width() / 2) & 0xFFFC;
-  return Dimensions(4 + icon().extents().width() + gap + metrics.width(),
-                    4 + std::max(icon().extents().height(), text_height));
+  return Dimensions(Scaled(4) + icon().extents().width() + gap + metrics.width(),
+                    Scaled(4) + std::max(icon().extents().height(), text_height));
 }
 
 void SimpleButton::paint(const Canvas& canvas) const {

@@ -7,17 +7,18 @@ namespace roo_windows {
 
 using namespace roo_display;
 
-WifiIndicator::WifiIndicator(const Environment& env)
-    : WifiIndicator(env, roo_display::color::Transparent) {}
+WifiIndicatorBase::WifiIndicatorBase(const Environment& env)
+    : WifiIndicatorBase(env, roo_display::color::Transparent) {}
 
-WifiIndicator::WifiIndicator(const Environment& env, roo_display::Color color)
+WifiIndicatorBase::WifiIndicatorBase(const Environment& env,
+                                     roo_display::Color color)
     : BasicWidget(env),
       color_(color),
       connection_status_(DISCONNECTED),
       locked_(false),
       bar_count_(1) {}
 
-void WifiIndicator::paint(const Canvas& canvas) const {
+void WifiIndicatorBase::paint(const Canvas& canvas) const {
   roo_display::MaterialIcon icon(*icons()[status()]);
   roo_display::Color color =
       color_.a() == 0 ? parent()->defaultColor() : color_;
@@ -25,19 +26,19 @@ void WifiIndicator::paint(const Canvas& canvas) const {
   canvas.drawTiled(icon, bounds(), kCenter | kMiddle, isInvalidated());
 }
 
-void WifiIndicator::setConnectionStatus(ConnectionStatus status) {
+void WifiIndicatorBase::setConnectionStatus(ConnectionStatus status) {
   if (status == connection_status_) return;
   connection_status_ = status;
   markDirty();
 }
 
-void WifiIndicator::setWifiLocked(bool locked) {
+void WifiIndicatorBase::setWifiLocked(bool locked) {
   if (locked == locked_) return;
   locked_ = locked;
   markDirty();
 }
 
-void WifiIndicator::setWifiSignalStrength(int rssi) {
+void WifiIndicatorBase::setWifiSignalStrength(int rssi) {
   int bar_count = 1;
   if (rssi > -55) {
     bar_count = 4;
@@ -51,7 +52,7 @@ void WifiIndicator::setWifiSignalStrength(int rssi) {
   markDirty();
 }
 
-WifiIndicator::WifiStatus WifiIndicator::status() const {
+WifiIndicatorBase::WifiStatus WifiIndicatorBase::status() const {
   switch (connection_status_) {
     case DISCONNECTED:
       return WIFI_STATUS_OFF;
