@@ -437,23 +437,19 @@ void Widget::paintWidget(const Canvas& canvas, Clipper& clipper) {
     return;
   }
   Canvas my_canvas = prepareCanvas(canvas);
-  OverlaySpec overlay_spec(*this, my_canvas);
-  if (my_canvas.clip_box().empty() || !isDirty()) {
-    // Still need to handle exclusions and shadows over possibly changed
-    // siblings.
+  if (my_canvas.clip_box().empty()) {
     markCleanDescending();
-    my_canvas.set_clip_box(canvas.clip_box());
-    finalizePaintWidget(my_canvas, clipper, overlay_spec);
-  } else {
-    if (!overlay_spec.is_modded()) {
-      paintWidgetContents(my_canvas, clipper);
-    } else {
-      paintWidgetModded(my_canvas, overlay_spec, clipper);
-    }
-
-    my_canvas.set_clip_box(canvas.clip_box());
-    finalizePaintWidget(my_canvas, clipper, overlay_spec);
+    return;
   }
+  OverlaySpec overlay_spec(*this, my_canvas);
+  if (!overlay_spec.is_modded()) {
+    paintWidgetContents(my_canvas, clipper);
+  } else {
+    paintWidgetModded(my_canvas, overlay_spec, clipper);
+  }
+
+  my_canvas.set_clip_box(canvas.clip_box());
+  finalizePaintWidget(my_canvas, clipper, overlay_spec);
 }
 
 void Widget::paintWidgetModded(Canvas& canvas, const OverlaySpec& overlay_spec,
@@ -502,6 +498,7 @@ void Widget::paintWidgetModded(Canvas& canvas, const OverlaySpec& overlay_spec,
 }
 
 void Widget::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
+  if (!isDirty()) return;
   Canvas my_canvas = prepareContentsCanvas(canvas);
   clipper.setBounds(my_canvas.clip_box());
   paint(my_canvas);
