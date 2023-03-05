@@ -53,7 +53,7 @@ class ScrollablePanel : public Panel, private roo_scheduler::Executable {
         alignment_(roo_display::kLeft | roo_display::kTop),
         scroll_start_vx_(0.0),
         scroll_start_vy_(0.0),
-        scroll_bar_presence_(VerticalScrollBar::SHOWN_WHEN_SCROLLING),
+        scroll_bar_presence_(VerticalScrollBar::ALWAYS_HIDDEN),
         scroll_bar_(env),
         scroll_bar_gesture_(false) {
     scroll_bar_.setVisibility(INVISIBLE);
