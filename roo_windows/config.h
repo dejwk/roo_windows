@@ -39,8 +39,6 @@
 #include "roo_windows/fonts/Roboto_Regular/72.h"
 #include "roo_windows/fonts/Roboto_Regular/96.h"
 
-#define ROO_WINDOWS_ZOOM 150
-
 #ifndef ROO_WINDOWS_ZOOM
 
 #ifdef ROO_DISPLAY_DPI
