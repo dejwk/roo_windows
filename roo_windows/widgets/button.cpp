@@ -45,7 +45,7 @@ Padding Button::getDefaultPadding() const { return Padding(4, 4); }
 Padding SimpleButton::getDefaultPadding() const { return Padding(14, 4); }
 
 SimpleButton::SimpleButton(const Environment& env, const MonoIcon* icon,
-                     std::string label, Style style)
+                           std::string label, Style style)
     : Button(env, style),
       content_color_(style == CONTAINED ? env.theme().color.onPrimary
                                         : env.theme().color.primary),
@@ -57,8 +57,8 @@ Dimensions SimpleButton::getSuggestedMinimumDimensions() const {
   if (!hasLabel()) {
     if (!hasIcon()) return Dimensions(0, 0);
     // Icon only.
-    return Dimensions(Scaled(4) + icon().extents().width(),
-                      Scaled(4) + icon().extents().height());
+    return Dimensions(Scaled(4) + icon().anchorExtents().width(),
+                      Scaled(4) + icon().anchorExtents().height());
   }
   // We must measure the text.
   auto metrics = font_->getHorizontalStringMetrics(label_);
@@ -68,9 +68,10 @@ Dimensions SimpleButton::getSuggestedMinimumDimensions() const {
     return Dimensions(Scaled(4) + metrics.width(), Scaled(4) + text_height);
   }
   // Both icon and label.
-  int16_t gap = (icon().extents().width() / 2) & 0xFFFC;
-  return Dimensions(Scaled(4) + icon().extents().width() + gap + metrics.width(),
-                    Scaled(4) + std::max(icon().extents().height(), text_height));
+  int16_t gap = (icon().anchorExtents().width() / 2) & 0xFFFC;
+  return Dimensions(
+      Scaled(4) + icon().anchorExtents().width() + gap + metrics.width(),
+      Scaled(4) + std::max(icon().anchorExtents().height(), text_height));
 }
 
 void SimpleButton::paint(const Canvas& canvas) const {
@@ -95,9 +96,10 @@ void SimpleButton::paint(const Canvas& canvas) const {
   MonoIcon ic = icon();
   StringViewLabel l(label_, *font_, contentColor());
   ic.color_mode().setColor(contentColor());
-  int16_t gap = (ic.extents().width() / 2) & 0xFFFC;
-  int16_t x_offset =
-      (bounds.width() - ic.extents().width() - l.extents().width() - gap) / 2;
+  int16_t gap = (ic.anchorExtents().width() / 2) & 0xFFFC;
+  int16_t x_offset = (bounds.width() - ic.anchorExtents().width() -
+                      l.anchorExtents().width() - gap) /
+                     2;
   int16_t x_cursor = bounds.xMin();
   const int16_t yMin = bounds.yMin();
   const int16_t yMax = bounds.yMax();
@@ -108,19 +110,19 @@ void SimpleButton::paint(const Canvas& canvas) const {
   x_cursor += x_offset;  // Note: x_offset may be negative.
   // Icon.
   {
-    Rect r(x_cursor, yMin, x_cursor + ic.extents().width() - 1, yMax);
+    Rect r(x_cursor, yMin, x_cursor + ic.anchorExtents().width() - 1, yMax);
     canvas.drawTiled(ic, r, kCenter | kMiddle);
   }
-  x_cursor += ic.extents().width();
+  x_cursor += ic.anchorExtents().width();
   // Gap.
   canvas.clearRect(x_cursor, yMin, x_cursor + gap - 1, yMax);
   x_cursor += gap;
   // Text.
   {
-    Rect r(x_cursor, yMin, x_cursor + l.extents().width() - 1, yMax);
+    Rect r(x_cursor, yMin, x_cursor + l.anchorExtents().width() - 1, yMax);
     canvas.drawTiled(l, r, kCenter | kMiddle);
   }
-  x_cursor += l.extents().width();
+  x_cursor += l.anchorExtents().width();
   // Right border.
   if (x_offset <= bounds.xMax()) {
     canvas.clearRect(x_cursor, yMin, bounds.xMax(), yMax);

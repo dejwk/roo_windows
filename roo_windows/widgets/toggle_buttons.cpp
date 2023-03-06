@@ -11,19 +11,19 @@ roo_windows::Widget& ToggleButtons::addButton(const MonoIcon& icon) {
   int16_t width = 0;
   int16_t height = 0;
   for (const auto& i : buttons_) {
-    const roo_display::Box& extents = i->icon().extents();
+    const roo_display::Box& extents = i->icon().anchorExtents();
     width += extents.width();
     width += 2 * padding_;
     height = std::max(height, extents.height());
   }
-  height = std::max(height, icon.extents().height());
+  height = std::max(height, icon.anchorExtents().height());
   height += 2 * padding_;
   int idx = buttons_.size();
   buttons_.emplace_back(new ToggleButton(env_, icon, *this, idx));
   auto& btn = *buttons_.back();
-  Panel::add(btn,
-             Rect(width + 1, 0, width + icon.extents().width() + 2 * padding_,
-                  icon.extents().height() + 2 * padding_ - 1));
+  Panel::add(btn, Rect(width + 1, 0,
+                       width + icon.anchorExtents().width() + 2 * padding_,
+                       icon.anchorExtents().height() + 2 * padding_ - 1));
   return btn;
 }
 
@@ -52,7 +52,7 @@ Dimensions ToggleButtons::getSuggestedMinimumDimensions() const {
   int16_t width = 0;
   int16_t height = 0;
   for (const auto& i : buttons_) {
-    const roo_display::Box& extents = i->icon().extents();
+    const roo_display::Box& extents = i->icon().anchorExtents();
     width += extents.width();
     width += 2;
     height = std::max(height, extents.height());

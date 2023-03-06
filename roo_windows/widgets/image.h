@@ -21,7 +21,7 @@ class Image : public BasicWidget {
   }
 
   Dimensions getSuggestedMinimumDimensions() const {
-    const roo_display::Box& extents = image_.extents();
+    const roo_display::Box& extents = image_.anchorExtents();
     return Dimensions(extents.width(), extents.height());
   }
 

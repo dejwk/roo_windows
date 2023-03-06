@@ -24,6 +24,11 @@ inline Dimensions DimensionsOf(const roo_display::Drawable& d) {
   return Dimensions(extents.width(), extents.height());
 }
 
+inline Dimensions AnchorDimensionsOf(const roo_display::Drawable& d) {
+  roo_display::Box extents = d.anchorExtents();
+  return Dimensions(extents.width(), extents.height());
+}
+
 }  // namespace roo_windows
 
 #if defined(__linux__) || defined(__linux) || defined(linux)

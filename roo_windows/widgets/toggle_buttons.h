@@ -48,8 +48,8 @@ class ToggleButtons : public Panel {
     void paint(const Canvas& canvas) const override;
 
     Dimensions getSuggestedMinimumDimensions() const override {
-      return Dimensions(icon_.extents().width() + 2,
-                        icon_.extents().height() + 2);
+      return Dimensions(icon_.anchorExtents().width() + 2,
+                        icon_.anchorExtents().height() + 2);
     }
 
     Padding getPadding() const override { return Padding(11); }

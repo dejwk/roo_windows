@@ -17,7 +17,7 @@ IconWithCaption::IconWithCaption(const Environment& env,
 
 void IconWithCaption::onLayout(bool changed, const Rect& rect) {
   int16_t total_height =
-      icon_->extents().height() + font_->metrics().maxHeight();
+      icon_->anchorExtents().height() + font_->metrics().maxHeight();
   YDim border = rect.height() - total_height;
   hi_border_ = border / 2;
   lo_border_ = border - hi_border_;
@@ -39,7 +39,7 @@ void IconWithCaption::paint(const Canvas& canvas) const {
   }
 
   Rect icon_bounds(bounds().xMin(), hi_border_, bounds().xMax(),
-                   hi_border_ + icon_->extents().height() - 1);
+                   hi_border_ + icon_->anchorExtents().height() - 1);
   MaterialIcon icon(*icon_);
   icon.color_mode().setColor(color);
   canvas.drawTiled(icon, icon_bounds,
@@ -60,8 +60,8 @@ void IconWithCaption::paint(const Canvas& canvas) const {
 Dimensions IconWithCaption::getSuggestedMinimumDimensions() const {
   auto metrics = font_->getHorizontalStringMetrics(caption_);
   return Dimensions(
-      std::max(icon_->extents().width(), (int16_t)metrics.width()),
-      icon_->extents().height() + font_->metrics().maxHeight());
+      std::max(icon_->anchorExtents().width(), (int16_t)metrics.width()),
+      icon_->anchorExtents().height() + font_->metrics().maxHeight());
 }
 
 }  // namespace roo_windows

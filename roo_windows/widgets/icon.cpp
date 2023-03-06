@@ -26,7 +26,7 @@ void Icon::paint(const Canvas& canvas) const {
 
 void Icon::setIcon(const roo_display::MaterialIcon& icon) {
   if (icon_ == &icon) return;
-  if (icon_ != nullptr && icon_->extents() != icon.extents()) {
+  if (icon_ != nullptr && icon_->anchorExtents() != icon.anchorExtents()) {
     requestLayout();
   }
   icon_ = &icon;
@@ -34,7 +34,7 @@ void Icon::setIcon(const roo_display::MaterialIcon& icon) {
 }
 
 Dimensions Icon::getSuggestedMinimumDimensions() const {
-  return icon_ == nullptr ? Dimensions(0, 0) : DimensionsOf(*icon_);
+  return icon_ == nullptr ? Dimensions(0, 0) : AnchorDimensionsOf(*icon_);
 }
 
 void Icon::setColor(roo_display::Color color) {
