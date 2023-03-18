@@ -13,51 +13,51 @@ namespace roo_windows {
 namespace {
 
 const ::roo_display::RleImage4bppxBiased<::roo_display::Alpha4,
-                                         ::roo_display::PrgMemResource>&
+                                         ::roo_display::ProgMemPtr>&
 circle_18();
 
 const ::roo_display::RleImage4bppxBiased<::roo_display::Alpha4,
-                                         ::roo_display::PrgMemResource>&
+                                         ::roo_display::ProgMemPtr>&
 circle_24();
 
 const ::roo_display::RleImage4bppxBiased<::roo_display::Alpha4,
-                                         ::roo_display::PrgMemResource>&
+                                         ::roo_display::ProgMemPtr>&
 circle_36();
 
 const ::roo_display::RleImage4bppxBiased<::roo_display::Alpha4,
-                                         ::roo_display::PrgMemResource>&
+                                         ::roo_display::ProgMemPtr>&
 circle_48();
 
 const ::roo_display::RleImage4bppxBiased<::roo_display::Alpha4,
-                                         ::roo_display::PrgMemResource>&
+                                         ::roo_display::ProgMemPtr>&
 shadow_18();
 
 const ::roo_display::RleImage4bppxBiased<::roo_display::Alpha4,
-                                         ::roo_display::PrgMemResource>&
+                                         ::roo_display::ProgMemPtr>&
 shadow_24();
 
 const ::roo_display::RleImage4bppxBiased<::roo_display::Alpha4,
-                                         ::roo_display::PrgMemResource>&
+                                         ::roo_display::ProgMemPtr>&
 shadow_36();
 
 const ::roo_display::RleImage4bppxBiased<::roo_display::Alpha4,
-                                         ::roo_display::PrgMemResource>&
+                                         ::roo_display::ProgMemPtr>&
 shadow_48();
 
 const ::roo_display::RleImage4bppxBiased<::roo_display::Alpha4,
-                                         ::roo_display::PrgMemResource>&
+                                         ::roo_display::ProgMemPtr>&
 slider_18();
 
 const ::roo_display::RleImage4bppxBiased<::roo_display::Alpha4,
-                                         ::roo_display::PrgMemResource>&
+                                         ::roo_display::ProgMemPtr>&
 slider_24();
 
 const ::roo_display::RleImage4bppxBiased<::roo_display::Alpha4,
-                                         ::roo_display::PrgMemResource>&
+                                         ::roo_display::ProgMemPtr>&
 slider_36();
 
 const ::roo_display::RleImage4bppxBiased<::roo_display::Alpha4,
-                                         ::roo_display::PrgMemResource>&
+                                         ::roo_display::ProgMemPtr>&
 slider_48();
 
 static constexpr int kSwitchAnimationMs = 120;
@@ -152,8 +152,8 @@ static const uint8_t circle_18_data[] PROGMEM = {
     0xEC, 0x0E, 0x08, 0x73, 0x82, 0x35, 0x53, 0x60,
 };
 
-const RleImage4bppxBiased<Alpha4, PrgMemResource>& circle_18() {
-  static RleImage4bppxBiased<Alpha4, PrgMemResource> value(
+const RleImage4bppxBiased<Alpha4, ProgMemPtr>& circle_18() {
+  static RleImage4bppxBiased<Alpha4, ProgMemPtr> value(
       Box(1, 1, 16, 16), Box(0, 0, 17, 17), circle_18_data,
       Alpha4(color::Black));
   return value;
@@ -170,8 +170,8 @@ static const uint8_t circle_24_data[] PROGMEM = {
     0xF9, 0x0C, 0x03, 0x73, 0x86, 0x38, 0xBD, 0xDB, 0x83, 0x60,
 };
 
-const RleImage4bppxBiased<Alpha4, PrgMemResource>& circle_24() {
-  static RleImage4bppxBiased<Alpha4, PrgMemResource> value(
+const RleImage4bppxBiased<Alpha4, ProgMemPtr>& circle_24() {
+  static RleImage4bppxBiased<Alpha4, ProgMemPtr> value(
       Box(2, 2, 21, 21), Box(0, 0, 23, 23), circle_24_data,
       Alpha4(color::Black));
   return value;
@@ -194,8 +194,8 @@ static const uint8_t circle_36_data[] PROGMEM = {
     0x89, 0x01, 0x69, 0xBC, 0xCB, 0x96, 0x17, 0x30,
 };
 
-const RleImage4bppxBiased<Alpha4, PrgMemResource>& circle_36() {
-  static RleImage4bppxBiased<Alpha4, PrgMemResource> value(
+const RleImage4bppxBiased<Alpha4, ProgMemPtr>& circle_36() {
+  static RleImage4bppxBiased<Alpha4, ProgMemPtr> value(
       Box(3, 3, 32, 32), Box(0, 0, 35, 35), circle_36_data,
       Alpha4(color::Black));
   return value;
@@ -224,8 +224,8 @@ static const uint8_t circle_48_data[] PROGMEM = {
     0x37, 0x77, 0x68, 0x90, 0x36, 0x8A, 0xBB, 0xA8, 0x63, 0x77, 0x10,
 };
 
-const RleImage4bppxBiased<Alpha4, PrgMemResource>& circle_48() {
-  static RleImage4bppxBiased<Alpha4, PrgMemResource> value(
+const RleImage4bppxBiased<Alpha4, ProgMemPtr>& circle_48() {
+  static RleImage4bppxBiased<Alpha4, ProgMemPtr> value(
       Box(4, 4, 43, 43), Box(0, 0, 47, 47), circle_48_data,
       Alpha4(color::Black));
   return value;
@@ -245,8 +245,8 @@ static const uint8_t shadow_18_data[] PROGMEM = {
     0x41, 0x78, 0x61, 0x24, 0x55, 0x54, 0x27, 0x50, 0x01, 0x71,
 };
 
-const RleImage4bppxBiased<Alpha4, PrgMemResource>& shadow_18() {
-  static RleImage4bppxBiased<Alpha4, PrgMemResource> value(
+const RleImage4bppxBiased<Alpha4, ProgMemPtr>& shadow_18() {
+  static RleImage4bppxBiased<Alpha4, ProgMemPtr> value(
       Box(1, 1, 17, 17), Box(0, 0, 17, 17), shadow_18_data,
       Alpha4(color::Black));
   return value;
@@ -273,8 +273,8 @@ static const uint8_t shadow_24_data[] PROGMEM = {
     0x16,
 };
 
-const RleImage4bppxBiased<Alpha4, PrgMemResource>& shadow_24() {
-  static RleImage4bppxBiased<Alpha4, PrgMemResource> value(
+const RleImage4bppxBiased<Alpha4, ProgMemPtr>& shadow_24() {
+  static RleImage4bppxBiased<Alpha4, ProgMemPtr> value(
       Box(1, 1, 22, 22), Box(0, 0, 23, 23), shadow_24_data,
       Alpha4(color::Black));
   return value;
@@ -318,8 +318,8 @@ static const uint8_t shadow_36_data[] PROGMEM = {
     0x04, 0x17, 0x50,
 };
 
-const RleImage4bppxBiased<Alpha4, PrgMemResource>& shadow_36() {
-  static RleImage4bppxBiased<Alpha4, PrgMemResource> value(
+const RleImage4bppxBiased<Alpha4, ProgMemPtr>& shadow_36() {
+  static RleImage4bppxBiased<Alpha4, ProgMemPtr> value(
       Box(2, 2, 34, 34), Box(0, 0, 35, 35), shadow_36_data,
       Alpha4(color::Black));
   return value;
@@ -386,8 +386,8 @@ static const uint8_t shadow_48_data[] PROGMEM = {
     0xF1, 0x77, 0x77, 0x68, 0x02, 0x17, 0x75,
 };
 
-const RleImage4bppxBiased<Alpha4, PrgMemResource>& shadow_48() {
-  static RleImage4bppxBiased<Alpha4, PrgMemResource> value(
+const RleImage4bppxBiased<Alpha4, ProgMemPtr>& shadow_48() {
+  static RleImage4bppxBiased<Alpha4, ProgMemPtr> value(
       Box(3, 3, 46, 46), Box(0, 0, 47, 47), shadow_48_data,
       Alpha4(color::Black));
   return value;
@@ -403,8 +403,8 @@ static const uint8_t slider_18_data[] PROGMEM = {
     0x38, 0x0A, 0x05, 0x03, 0x50, 0x18, 0x09, 0x63, 0x01, 0x30,
 };
 
-const RleImage4bppxBiased<Alpha4, PrgMemResource>& slider_18() {
-  static RleImage4bppxBiased<Alpha4, PrgMemResource> value(
+const RleImage4bppxBiased<Alpha4, ProgMemPtr>& slider_18() {
+  static RleImage4bppxBiased<Alpha4, ProgMemPtr> value(
       Box(0, 0, 25, 10), Box(0, 0, 25, 10), slider_18_data,
       Alpha4(color::Black));
   return value;
@@ -421,8 +421,8 @@ static const uint8_t slider_24_data[] PROGMEM = {
     0x02, 0x60, 0x30, 0x48, 0x0A, 0x25, 0x04, 0x03, 0x40,
 };
 
-const RleImage4bppxBiased<Alpha4, PrgMemResource>& slider_24() {
-  static RleImage4bppxBiased<Alpha4, PrgMemResource> value(
+const RleImage4bppxBiased<Alpha4, ProgMemPtr>& slider_24() {
+  static RleImage4bppxBiased<Alpha4, ProgMemPtr> value(
       Box(0, 0, 33, 13), Box(0, 0, 33, 13), slider_24_data,
       Alpha4(color::Black));
   return value;
@@ -445,8 +445,8 @@ static const uint8_t slider_36_data[] PROGMEM = {
     0xB4, 0x30, 0x20, 0x17, 0x10,
 };
 
-const RleImage4bppxBiased<Alpha4, PrgMemResource>& slider_36() {
-  static RleImage4bppxBiased<Alpha4, PrgMemResource> value(
+const RleImage4bppxBiased<Alpha4, ProgMemPtr>& slider_36() {
+  static RleImage4bppxBiased<Alpha4, ProgMemPtr> value(
       Box(0, 0, 51, 21), Box(0, 0, 51, 21), slider_36_data,
       Alpha4(color::Black));
   return value;
@@ -473,8 +473,8 @@ static const uint8_t slider_48_data[] PROGMEM = {
     0x81, 0x43, 0x17, 0x20,
 };
 
-const RleImage4bppxBiased<Alpha4, PrgMemResource>& slider_48() {
-  static RleImage4bppxBiased<Alpha4, PrgMemResource> value(
+const RleImage4bppxBiased<Alpha4, ProgMemPtr>& slider_48() {
+  static RleImage4bppxBiased<Alpha4, ProgMemPtr> value(
       Box(0, 0, 67, 27), Box(0, 0, 67, 27), slider_48_data,
       Alpha4(color::Black));
   return value;

@@ -22,7 +22,7 @@ void Checkbox::paint(const Canvas& canvas) const {
   OnOffState state = onOffState();
   Color color = state == ON ? theme().color.highlighterColor(canvas.bgcolor())
                             : theme().color.defaultColor(canvas.bgcolor());
-  RleImage4bppxBiased<Alpha4, PrgMemResource> img =
+  RleImage4bppxBiased<Alpha4, ProgMemPtr> img =
       state == ON ? SCALED_ROO_ICON(filled, toggle_check_box)
       : state == OFF
           ? SCALED_ROO_ICON(filled, toggle_check_box_outline_blank)

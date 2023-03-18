@@ -28,7 +28,7 @@ void WalltimeIndicator::update() {
   if (now.hour() == hour_ && now.minute() == minute_) return;
   hour_ = now.hour();
   minute_ = now.minute();
-  val_ = StringPrinter::sprintf("%02d:%02d", hour_, minute_);
+  val_ = roo_display::StringPrintf("%02d:%02d", hour_, minute_);
   markDirty();
 }
 

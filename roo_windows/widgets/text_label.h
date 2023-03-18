@@ -25,15 +25,6 @@ class TextLabel : public BasicWidget {
 
   const std::string& content() const { return value_; }
 
-  // Deprecated. use setText.
-  void setContent(std::string value) { setText(value); }
-
-  // Deprecated. use setText.
-  void setContent(const char* value) { setText(value); }
-
-  // Deprecated. use setText.
-  void setContent(roo_display::StringView value) { setText(value); }
-
   void setText(std::string value);
 
   void setText(const char* value);

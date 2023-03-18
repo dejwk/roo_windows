@@ -50,7 +50,7 @@ void TextLabel::setText(std::string value) {
 }
 
 void TextLabel::setText(const char* value) {
-  setContent(roo_display::StringView(value));
+  setText(roo_display::StringView(value));
 }
 
 void TextLabel::setText(roo_display::StringView value) {

@@ -39,8 +39,8 @@ static const uint8_t shift_24_data[] PROGMEM = {
     0x07, 0xFB, 0x08, 0x75, 0x01, 0x80, 0x62, 0x01, 0x80, 0x9C, 0x20,
 };
 
-const RleImage4bppxPolarized<Alpha4, PrgMemResource>& shift_24() {
-  static RleImage4bppxPolarized<Alpha4, PrgMemResource> value(
+const RleImage4bppxBiased<Alpha4, ProgMemPtr>& shift_24() {
+  static RleImage4bppxBiased<Alpha4, ProgMemPtr> value(
       24, 24, shift_24_data, Alpha4(color::Black));
   return value;
 }
@@ -57,8 +57,8 @@ static const uint8_t shift_filled_24_data[] PROGMEM = {
     0x08, 0x75, 0x01, 0x80, 0x62, 0x01, 0x80, 0x9C, 0x20,
 };
 
-const RleImage4bppxPolarized<Alpha4, PrgMemResource>& shift_filled_24() {
-  static RleImage4bppxPolarized<Alpha4, PrgMemResource> value(
+const RleImage4bppxBiased<Alpha4, ProgMemPtr>& shift_filled_24() {
+  static RleImage4bppxBiased<Alpha4, ProgMemPtr> value(
       24, 24, shift_filled_24_data, Alpha4(color::Black));
   return value;
 }
@@ -75,8 +75,8 @@ static const uint8_t caps_lock_filled_24_data[] PROGMEM = {
     0x06, 0x80, 0x6C, 0x07, 0x75, 0x07, 0x80, 0x6E, 0x08, 0x80, 0xE2, 0x00,
 };
 
-const RleImage4bppxPolarized<Alpha4, PrgMemResource>& caps_lock_filled_24() {
-  static RleImage4bppxPolarized<Alpha4, PrgMemResource> value(
+const RleImage4bppxBiased<Alpha4, ProgMemPtr>& caps_lock_filled_24() {
+  static RleImage4bppxBiased<Alpha4, ProgMemPtr> value(
       24, 24, caps_lock_filled_24_data, Alpha4(color::Black));
   return value;
 }

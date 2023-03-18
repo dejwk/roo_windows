@@ -21,7 +21,7 @@ void RadioButton::onClicked() {
 void RadioButton::paint(const Canvas& canvas) const {
   Color color = isOn() ? theme().color.highlighterColor(canvas.bgcolor())
                        : theme().color.defaultColor(canvas.bgcolor());
-  RleImage4bppxBiased<Alpha4, PrgMemResource> img =
+  RleImage4bppxBiased<Alpha4, ProgMemPtr> img =
       isOn()
           ? SCALED_ROO_ICON(filled, toggle_radio_button_checked)
           : SCALED_ROO_ICON(filled, toggle_radio_button_unchecked);

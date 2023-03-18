@@ -29,7 +29,7 @@ class Task;
 class Application;
 
 typedef roo_display::RleImage4bppxBiased<roo_display::Alpha4,
-                                         roo_display::PrgMemResource>
+                                         roo_display::ProgMemPtr>
     MonoIcon;
 
 using roo_display::Color;
