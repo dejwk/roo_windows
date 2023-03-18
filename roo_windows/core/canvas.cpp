@@ -68,9 +68,14 @@ void Canvas::drawTiled(const roo_display::Drawable& object, const Rect& bounds,
     roo_display::Tile tile(&object, bounds.asBox(), alignment);
     drawObject(tile);
   } else {
+    // Temporary fix to the icon overwrite issue: redraw at least the anchor
+    // extents.
     auto offset =
         ResolveAlignmentOffset(bounds, Rect(object.anchorExtents()), alignment);
-    drawObject(object, offset.first, offset.second);
+    roo_display::Box min_bounds =
+        roo_display::Box::extent(object.extents(), object.anchorExtents());
+    drawObject(roo_display::Tile(&object, min_bounds, roo_display::kNoAlign),
+               offset.first, offset.second);
   }
 }
 
