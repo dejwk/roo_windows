@@ -43,10 +43,10 @@ class Decoration : public roo_display::Rasterizable {
 
   roo_display::Box extents() const override { return shadow_extents_; }
 
-  void ReadColors(const int16_t* x, const int16_t* y, uint32_t count,
+  void readColors(const int16_t* x, const int16_t* y, uint32_t count,
                   roo_display::Color* result) const override;
 
-  bool ReadColorRect(int16_t xMin, int16_t yMin, int16_t xMax, int16_t yMax,
+  bool readColorRect(int16_t xMin, int16_t yMin, int16_t xMax, int16_t yMax,
                      roo_display::Color* result) const override;
 
  private:

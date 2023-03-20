@@ -15,14 +15,14 @@ class PressOverlay : public roo_display::Rasterizable {
     return roo_display::Box(x_ - r_ - 1, y_ - r_ - 1, x_ + r_ + 1, y_ + r_ + 1);
   };
 
-  virtual void ReadColors(const int16_t* x, const int16_t* y, uint32_t count,
+  virtual void readColors(const int16_t* x, const int16_t* y, uint32_t count,
                           roo_display::Color* result) const {
     while (count-- > 0) {
       *result++ = get(*x++, *y++);
     }
   }
 
-  bool ReadColorRect(int16_t xMin, int16_t yMin, int16_t xMax, int16_t yMax,
+  bool readColorRect(int16_t xMin, int16_t yMin, int16_t xMax, int16_t yMax,
                      roo_display::Color* result) const override {
     int32_t dx1_sq = (xMin - x_) * (xMin - x_);
     int32_t dx2_sq = (xMax - x_) * (xMax - x_);

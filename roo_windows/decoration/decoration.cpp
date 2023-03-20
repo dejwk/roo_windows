@@ -365,7 +365,7 @@ Decoration::Decoration(roo_display::Box extents, int elevation,
   shadow_extents_ = CalculateShadowExtents(extents, elevation).asBox();
 }
 
-void Decoration::ReadColors(const int16_t* x, const int16_t* y, uint32_t count,
+void Decoration::readColors(const int16_t* x, const int16_t* y, uint32_t count,
                             roo_display::Color* result) const {
   while (count-- > 0) {
     *result++ = read(*x++, *y++);
@@ -418,7 +418,7 @@ roo_display::Color Decoration::read(int16_t x, int16_t y) const {
   return c;
 }
 
-bool Decoration::ReadColorRect(int16_t xMin, int16_t yMin, int16_t xMax,
+bool Decoration::readColorRect(int16_t xMin, int16_t yMin, int16_t xMax,
                                int16_t yMax, roo_display::Color* result) const {
   int16_t xMin_interior = widget_extents_.xMin() + outline_width_;
   int16_t xMax_interior = widget_extents_.xMax() - outline_width_;

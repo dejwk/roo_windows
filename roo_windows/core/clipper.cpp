@@ -22,7 +22,7 @@ void OverlayStack::reset(const ClippedOverlay* begin,
   }
 }
 
-void OverlayStack::ReadColors(const int16_t* x, const int16_t* y,
+void OverlayStack::readColors(const int16_t* x, const int16_t* y,
                               uint32_t count, Color* result) const {
   Color::Fill(result, count, color::Transparent);
   int16_t newx[kMaxBufSize];
@@ -45,7 +45,7 @@ void OverlayStack::ReadColors(const int16_t* x, const int16_t* y,
         }
         offset++;
       } while (offset < count && buf_size < kMaxBufSize);
-      r->ReadColors(newx, newy, buf_size, newresult);
+      r->readColors(newx, newy, buf_size, newresult);
       int buf_idx = 0;
       for (uint32_t i = start_offset; i < offset; ++i) {
         if (buf_idx < buf_size && offsets[buf_idx] == i) {
@@ -58,7 +58,7 @@ void OverlayStack::ReadColors(const int16_t* x, const int16_t* y,
   }
 }
 
-bool OverlayStack::ReadColorRect(int16_t xMin, int16_t yMin, int16_t xMax,
+bool OverlayStack::readColorRect(int16_t xMin, int16_t yMin, int16_t xMax,
                                  int16_t yMax, Color* result) const {
   bool is_uniform_color = true;
   *result = color::Transparent;
@@ -77,7 +77,7 @@ bool OverlayStack::ReadColorRect(int16_t xMin, int16_t yMin, int16_t xMax,
       is_uniform_color = false;
       Color::Fill(&result[1], box.area() - 1, *result);
     }
-    if (r->ReadColorRect(clipped.xMin(), clipped.yMin(), clipped.xMax(),
+    if (r->readColorRect(clipped.xMin(), clipped.yMin(), clipped.xMax(),
                          clipped.yMax(), buffer)) {
       if (is_uniform_color) {
         *result = AlphaBlend(*result, *buffer);

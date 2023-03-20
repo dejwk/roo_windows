@@ -26,14 +26,14 @@ class ClippedOverlay : public roo_display::Rasterizable {
 
   roo_display::Box extents() const override { return extents_; }
 
-  void ReadColors(const int16_t *x, const int16_t *y, uint32_t count,
+  void readColors(const int16_t *x, const int16_t *y, uint32_t count,
                   roo_display::Color *result) const override {
-    delegate_->ReadColors(x, y, count, result);
+    delegate_->readColors(x, y, count, result);
   }
 
-  bool ReadColorRect(int16_t xMin, int16_t yMin, int16_t xMax, int16_t yMax,
+  bool readColorRect(int16_t xMin, int16_t yMin, int16_t xMax, int16_t yMax,
                      roo_display::Color *result) const override {
-    return delegate_->ReadColorRect(xMin, yMin, xMax, yMax, result);
+    return delegate_->readColorRect(xMin, yMin, xMax, yMax, result);
   }
 
  private:
@@ -52,10 +52,10 @@ class OverlayStack : public roo_display::Rasterizable {
 
   roo_display::Box extents() const override { return extents_; }
 
-  void ReadColors(const int16_t *x, const int16_t *y, uint32_t count,
+  void readColors(const int16_t *x, const int16_t *y, uint32_t count,
                   roo_display::Color *result) const override;
 
-  bool ReadColorRect(int16_t xMin, int16_t yMin, int16_t xMax, int16_t yMax,
+  bool readColorRect(int16_t xMin, int16_t yMin, int16_t xMax, int16_t yMax,
                      roo_display::Color *result) const override;
 
  private:
