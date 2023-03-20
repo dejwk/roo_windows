@@ -2,7 +2,7 @@
 
 #include "roo_windows/config.h"
 
-#include "roo_display/core/color.h"
+#include "roo_display/color/color.h"
 #include "roo_display/font/font.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_display/ui/tile.h"

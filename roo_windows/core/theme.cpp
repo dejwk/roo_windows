@@ -1,6 +1,6 @@
 #include "theme.h"
 
-#include "roo_display/core/color.h"
+#include "roo_display/color/color.h"
 #include "roo_smooth_fonts/NotoSans_CondensedBold/15.h"
 #include "roo_smooth_fonts/NotoSans_Regular/12.h"
 #include "roo_smooth_fonts/NotoSans_Regular/15.h"
@@ -74,7 +74,7 @@ const KeyboardColorTheme& DefaultKeyboardColorTheme() {
       .normalButton = roo_display::Color(0xFF4C4C4C),
       .modifierButton = roo_display::Color(0xFF3C3C3C),
       .acceptButton = roo_display::Color(0xFF018786),
-      .text = roo_display::color::White};
+      .text = roo_display::Color(0xFFFFFFFF)};
   return theme;
 }
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "roo_display/core/color.h"
+#include "roo_display/color/color.h"
 #include "roo_display/font/font.h"
 #include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/panel.h"

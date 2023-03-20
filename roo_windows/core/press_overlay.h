@@ -1,6 +1,6 @@
 #pragma once
 
-#include "roo_display/core/color.h"
+#include "roo_display/color/color.h"
 #include "roo_display/core/rasterizable.h"
 
 class PressOverlay : public roo_display::Rasterizable {

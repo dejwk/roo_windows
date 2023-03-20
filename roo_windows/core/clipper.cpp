@@ -24,7 +24,7 @@ void OverlayStack::reset(const ClippedOverlay* begin,
 
 void OverlayStack::readColors(const int16_t* x, const int16_t* y,
                               uint32_t count, Color* result) const {
-  Color::Fill(result, count, color::Transparent);
+  FillColor(result, count, color::Transparent);
   int16_t newx[kMaxBufSize];
   int16_t newy[kMaxBufSize];
   Color newresult[kMaxBufSize];
@@ -75,7 +75,7 @@ bool OverlayStack::readColorRect(int16_t xMin, int16_t yMin, int16_t xMax,
     if (is_uniform_color && !clipped.contains(box)) {
       // This rect does not fill the entire box; we can no longer use fast path.
       is_uniform_color = false;
-      Color::Fill(&result[1], box.area() - 1, *result);
+      FillColor(&result[1], box.area() - 1, *result);
     }
     if (r->readColorRect(clipped.xMin(), clipped.yMin(), clipped.xMax(),
                          clipped.yMax(), buffer)) {
@@ -92,7 +92,7 @@ bool OverlayStack::readColorRect(int16_t xMin, int16_t yMin, int16_t xMax,
     } else {
       if (is_uniform_color) {
         is_uniform_color = false;
-        Color::Fill(&result[1], box.area() - 1, *result);
+        FillColor(&result[1], box.area() - 1, *result);
       }
       uint32_t i = 0;
       for (int16_t y = clipped.yMin(); y <= clipped.yMax(); ++y) {

@@ -124,7 +124,7 @@ Rect Widget::getSloppyTouchBounds() const { return slopify(bounds()); }
 
 Color Widget::effectiveBackground() const {
   roo_display::Color bgcolor = background();
-  return bgcolor.opaque() || parent() == nullptr
+  return bgcolor.isOpaque() || parent() == nullptr
              ? bgcolor
              : roo_display::AlphaBlend(parent()->effectiveBackground(),
                                        bgcolor);

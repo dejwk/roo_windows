@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "roo_display.h"
-#include "roo_display/core/color.h"
+#include "roo_display/color/color.h"
 #include "roo_display/filter/foreground.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/theme.h"

@@ -2,7 +2,7 @@
 
 #include <inttypes.h>
 
-#include "roo_display/core/color.h"
+#include "roo_display/color/color.h"
 #include "roo_windows/core/press_overlay.h"
 
 namespace roo_windows {

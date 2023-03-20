@@ -10,7 +10,7 @@ class Scrim : public roo_display::Rasterizable {
  public:
   void readColors(const int16_t* x, const int16_t* y, uint32_t count,
                   Color* result) const override {
-    Color::Fill(result, count, Color(0x80000000));
+    FillColor(result, count, Color(0x80000000));
   }
 
   bool readColorRect(int16_t xMin, int16_t yMin, int16_t xMax, int16_t yMax,

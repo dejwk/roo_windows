@@ -1,6 +1,6 @@
 #pragma once
 
-#include "roo_display/core/color.h"
+#include "roo_display/color/color.h"
 #include "roo_display/font/smooth_font.h"
 
 namespace roo_windows {
