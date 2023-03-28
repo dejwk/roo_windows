@@ -10,8 +10,8 @@ namespace roo_windows {
 
 namespace {
 
-static const float kDecceleration = 650.0;
-static const float kMaxVel = 2000.0;
+static const float kDecceleration = 300.0;
+static const float kMaxVel = 5000.0;
 static const roo_time::Interval kDelayHideScrollbar = roo_time::Millis(1200);
 
 // The area on the side of the panel whose touch is interpreted as an
@@ -267,9 +267,10 @@ void ScrollablePanel::paintWidgetContents(const Canvas& canvas,
 }
 
 bool ScrollablePanel::onInterceptTouchEvent(const TouchEvent& event) {
+  bool intercept = false;
   if (scroll_start_vx_ != 0 || scroll_start_vy_ != 0) {
     // Scroll in progress. Capture all events, including touch down.
-    return true;
+    intercept = true;
   }
   if (scroll_bar_presence_ != VerticalScrollBar::ALWAYS_HIDDEN &&
       contents() != nullptr && contents()->height() > height() &&
@@ -293,7 +294,7 @@ bool ScrollablePanel::onInterceptTouchEvent(const TouchEvent& event) {
       return true;
     }
   }
-  return false;
+  return intercept;
 }
 
 bool ScrollablePanel::onDown(XDim x, YDim y) {
@@ -319,7 +320,7 @@ bool ScrollablePanel::onSingleTapUp(XDim x, YDim y) {
     YDim view_range = contents()->height() - height();
     if (scroll_range > 0) {
       YDim new_y = -(y - (scroll_bar_.end() - scroll_bar_.begin()) / 2) *
-                  view_range / scroll_range;
+                   view_range / scroll_range;
       // The new y might be out of range, but that's ok - scrollTo will trim it.
       scrollTo(contents()->xOffset(), new_y);
     }
@@ -415,7 +416,9 @@ bool ScrollablePanel::onTouchUp(XDim vx, YDim vy) {
   bool result = Widget::onTouchUp(vx, vy);
   scroll_bar_gesture_ = false;
   is_scroll_bar_scrolled_ = false;
-  if (scroll_bar_presence_ == VerticalScrollBar::SHOWN_WHEN_SCROLLING) {
+  bool scroll_in_progress = (scroll_start_vx_ != 0 || scroll_start_vy_ != 0);
+  if (scroll_bar_presence_ == VerticalScrollBar::SHOWN_WHEN_SCROLLING &&
+      !scroll_in_progress) {
     deadline_hide_scrollbar_ = roo_time::Uptime::Now() + kDelayHideScrollbar;
     getApplication()->scheduleAction(*this, kDelayHideScrollbar);
   }
