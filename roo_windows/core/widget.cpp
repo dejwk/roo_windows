@@ -538,7 +538,7 @@ void Widget::finalizePaintWidget(const Canvas& canvas, Clipper& clipper,
                                 width() - border_thickness - 1 + canvas.dx(),
                                 height() - border_thickness - 1 + canvas.dy());
   clipper.addExclusion(
-      roo_display::Box::intersect(inner_bounds, canvas.clip_box()));
+      roo_display::Box::Intersect(inner_bounds, canvas.clip_box()));
 }
 
 Widget* Widget::dispatchTouchDownEvent(XDim x, YDim y) {

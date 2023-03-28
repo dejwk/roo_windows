@@ -1,6 +1,6 @@
 #include "roo_windows/widgets/toggle_buttons.h"
 
-#include "roo_display/shape/basic_shapes.h"
+#include "roo_display/shape/basic.h"
 #include "roo_display/ui/tile.h"
 
 namespace roo_windows {

@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-#include "roo_display/shape/basic_shapes.h"
+#include "roo_display/shape/basic.h"
 
 using namespace roo_display;
 

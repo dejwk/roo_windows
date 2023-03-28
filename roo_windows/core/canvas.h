@@ -36,7 +36,7 @@ class Canvas {
   }
 
   void clip(roo_display::Box box) {
-    clip_box_ = roo_display::Box::intersect(clip_box_, box);
+    clip_box_ = roo_display::Box::Intersect(clip_box_, box);
   }
 
   void clear() const;
@@ -91,7 +91,7 @@ class Canvas {
     return nullptr;
   }
 
-  roo_display::Color getBgColor() const { return bgcolor_; }
+  roo_display::Color getBackgroundColor() const { return bgcolor_; }
 
   const roo_display::Surface* surface_;
   roo_display::DisplayOutput* out_;

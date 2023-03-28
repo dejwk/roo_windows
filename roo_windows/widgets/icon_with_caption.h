@@ -1,6 +1,6 @@
 #pragma once
 
-#include "roo_display/shape/basic_shapes.h"
+#include "roo_display/shape/basic.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_display/ui/tile.h"
 #include "roo_material_icons.h"

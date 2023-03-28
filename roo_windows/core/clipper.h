@@ -22,7 +22,7 @@ class ClippedOverlay : public roo_display::Rasterizable {
   ClippedOverlay(const roo_display::Rasterizable *delegate,
                  roo_display::Box clip_box)
       : delegate_(delegate),
-        extents_(roo_display::Box::intersect(delegate->extents(), clip_box)) {}
+        extents_(roo_display::Box::Intersect(delegate->extents(), clip_box)) {}
 
   roo_display::Box extents() const override { return extents_; }
 

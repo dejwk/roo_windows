@@ -1,7 +1,7 @@
 #include "roo_windows/widgets/divider.h"
 
 #include "roo_display.h"
-#include "roo_display/shape/basic_shapes.h"
+#include "roo_display/shape/basic.h"
 
 namespace roo_windows {
 

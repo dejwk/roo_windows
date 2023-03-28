@@ -18,7 +18,7 @@ void OverlayStack::reset(const ClippedOverlay* begin,
   extents_ = begin->extents();
   ++begin;
   for (const ClippedOverlay* r = begin; r != end; ++r) {
-    extents_ = Box::extent(extents_, r->extents());
+    extents_ = Box::Extent(extents_, r->extents());
   }
 }
 
@@ -67,7 +67,7 @@ bool OverlayStack::readColorRect(int16_t xMin, int16_t yMin, int16_t xMax,
   for (const ClippedOverlay* r = end_; r != begin_;) {
     --r;
     Box bounds = r->extents();
-    Box clipped = Box::intersect(bounds, box);
+    Box clipped = Box::Intersect(bounds, box);
     if (clipped.empty()) {
       // This rect does not contribute to the outcome.
       continue;
