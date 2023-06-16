@@ -1,45 +1,47 @@
 #pragma once
 
-#include "roo_windows/fonts/Roboto_Light/120.h"
-#include "roo_windows/fonts/Roboto_Light/144.h"
-#include "roo_windows/fonts/Roboto_Light/192.h"
-#include "roo_windows/fonts/Roboto_Light/45.h"
-#include "roo_windows/fonts/Roboto_Light/60.h"
-#include "roo_windows/fonts/Roboto_Light/72.h"
-#include "roo_windows/fonts/Roboto_Light/90.h"
-#include "roo_windows/fonts/Roboto_Light/96.h"
-#include "roo_windows/fonts/Roboto_Medium/11.h"
-#include "roo_windows/fonts/Roboto_Medium/14.h"
-#include "roo_windows/fonts/Roboto_Medium/15.h"
-#include "roo_windows/fonts/Roboto_Medium/20.h"
-#include "roo_windows/fonts/Roboto_Medium/21.h"
-#include "roo_windows/fonts/Roboto_Medium/28.h"
-#include "roo_windows/fonts/Roboto_Medium/30.h"
-#include "roo_windows/fonts/Roboto_Medium/40.h"
-#include "roo_windows/fonts/Roboto_Regular/8.h"
-#include "roo_windows/fonts/Roboto_Regular/9.h"
-#include "roo_windows/fonts/Roboto_Regular/10.h"
-#include "roo_windows/fonts/Roboto_Regular/11.h"
-#include "roo_windows/fonts/Roboto_Regular/12.h"
-#include "roo_windows/fonts/Roboto_Regular/14.h"
-#include "roo_windows/fonts/Roboto_Regular/15.h"
-#include "roo_windows/fonts/Roboto_Regular/16.h"
-#include "roo_windows/fonts/Roboto_Regular/18.h"
-#include "roo_windows/fonts/Roboto_Regular/20.h"
-#include "roo_windows/fonts/Roboto_Regular/21.h"
-#include "roo_windows/fonts/Roboto_Regular/24.h"
-#include "roo_windows/fonts/Roboto_Regular/26.h"
-#include "roo_windows/fonts/Roboto_Regular/28.h"
-#include "roo_windows/fonts/Roboto_Regular/32.h"
-#include "roo_windows/fonts/Roboto_Regular/34.h"
-#include "roo_windows/fonts/Roboto_Regular/36.h"
-#include "roo_windows/fonts/Roboto_Regular/48.h"
-#include "roo_windows/fonts/Roboto_Regular/51.h"
-#include "roo_windows/fonts/Roboto_Regular/68.h"
-#include "roo_windows/fonts/Roboto_Regular/72.h"
-#include "roo_windows/fonts/Roboto_Regular/96.h"
+#include "roo_windows/fonts/NotoSans_Light/120.h"
+#include "roo_windows/fonts/NotoSans_Light/144.h"
+#include "roo_windows/fonts/NotoSans_Light/192.h"
+#include "roo_windows/fonts/NotoSans_Light/45.h"
+#include "roo_windows/fonts/NotoSans_Light/60.h"
+#include "roo_windows/fonts/NotoSans_Light/72.h"
+#include "roo_windows/fonts/NotoSans_Light/90.h"
+#include "roo_windows/fonts/NotoSans_Light/96.h"
+#include "roo_windows/fonts/NotoSans_Medium/11.h"
+#include "roo_windows/fonts/NotoSans_Medium/14.h"
+#include "roo_windows/fonts/NotoSans_Medium/15.h"
+#include "roo_windows/fonts/NotoSans_Medium/20.h"
+#include "roo_windows/fonts/NotoSans_Medium/21.h"
+#include "roo_windows/fonts/NotoSans_Medium/28.h"
+#include "roo_windows/fonts/NotoSans_Medium/30.h"
+#include "roo_windows/fonts/NotoSans_Medium/40.h"
+#include "roo_windows/fonts/NotoSans_Regular/8.h"
+#include "roo_windows/fonts/NotoSans_Regular/9.h"
+#include "roo_windows/fonts/NotoSans_Regular/10.h"
+#include "roo_windows/fonts/NotoSans_Regular/11.h"
+#include "roo_windows/fonts/NotoSans_Regular/12.h"
+#include "roo_windows/fonts/NotoSans_Regular/14.h"
+#include "roo_windows/fonts/NotoSans_Regular/15.h"
+#include "roo_windows/fonts/NotoSans_Regular/16.h"
+#include "roo_windows/fonts/NotoSans_Regular/18.h"
+#include "roo_windows/fonts/NotoSans_Regular/20.h"
+#include "roo_windows/fonts/NotoSans_Regular/21.h"
+#include "roo_windows/fonts/NotoSans_Regular/24.h"
+#include "roo_windows/fonts/NotoSans_Regular/26.h"
+#include "roo_windows/fonts/NotoSans_Regular/28.h"
+#include "roo_windows/fonts/NotoSans_Regular/32.h"
+#include "roo_windows/fonts/NotoSans_Regular/34.h"
+#include "roo_windows/fonts/NotoSans_Regular/36.h"
+#include "roo_windows/fonts/NotoSans_Regular/48.h"
+#include "roo_windows/fonts/NotoSans_Regular/51.h"
+#include "roo_windows/fonts/NotoSans_Regular/68.h"
+#include "roo_windows/fonts/NotoSans_Regular/72.h"
+#include "roo_windows/fonts/NotoSans_Regular/96.h"
 
 #ifndef ROO_WINDOWS_ZOOM
+
+#define ROO_DISPLAY_DPI 180
 
 #ifdef ROO_DISPLAY_DPI
 
@@ -181,67 +183,67 @@ T constexpr Scaled(T in) {
 namespace roo_windows {
 
 inline const roo_display::Font& font_h1() {
-  return __ROO_CONCAT2(roo_display::font_Roboto_Light_,
+  return __ROO_CONCAT2(roo_display::font_NotoSans_Light_,
                        ROO_WINDOWS_FONT_SIZE_H1)();
 }
 
 inline const roo_display::Font& font_h2() {
-  return __ROO_CONCAT2(roo_display::font_Roboto_Light_,
+  return __ROO_CONCAT2(roo_display::font_NotoSans_Light_,
                        ROO_WINDOWS_FONT_SIZE_H2)();
 }
 
 inline const roo_display::Font& font_h3() {
-  return __ROO_CONCAT2(roo_display::font_Roboto_Regular_,
+  return __ROO_CONCAT2(roo_display::font_NotoSans_Regular_,
                        ROO_WINDOWS_FONT_SIZE_H3)();
 }
 
 inline const roo_display::Font& font_h4() {
-  return __ROO_CONCAT2(roo_display::font_Roboto_Regular_,
+  return __ROO_CONCAT2(roo_display::font_NotoSans_Regular_,
                        ROO_WINDOWS_FONT_SIZE_H4)();
 }
 
 inline const roo_display::Font& font_h5() {
-  return __ROO_CONCAT2(roo_display::font_Roboto_Regular_,
+  return __ROO_CONCAT2(roo_display::font_NotoSans_Regular_,
                        ROO_WINDOWS_FONT_SIZE_H5)();
 }
 
 inline const roo_display::Font& font_h6() {
-  return __ROO_CONCAT2(roo_display::font_Roboto_Medium_,
+  return __ROO_CONCAT2(roo_display::font_NotoSans_Medium_,
                        ROO_WINDOWS_FONT_SIZE_H6)();
 }
 
 inline const roo_display::Font& font_subtitle1() {
-  return __ROO_CONCAT2(roo_display::font_Roboto_Regular_,
+  return __ROO_CONCAT2(roo_display::font_NotoSans_Regular_,
                        ROO_WINDOWS_FONT_SIZE_SUBTITLE1)();
 }
 
 inline const roo_display::Font& font_subtitle2() {
-  return __ROO_CONCAT2(roo_display::font_Roboto_Medium_,
+  return __ROO_CONCAT2(roo_display::font_NotoSans_Medium_,
                        ROO_WINDOWS_FONT_SIZE_SUBTITLE2)();
 }
 
 inline const roo_display::Font& font_body1() {
-  return __ROO_CONCAT2(roo_display::font_Roboto_Regular_,
+  return __ROO_CONCAT2(roo_display::font_NotoSans_Regular_,
                        ROO_WINDOWS_FONT_SIZE_BODY1)();
 }
 
 inline const roo_display::Font& font_body2() {
-  return __ROO_CONCAT2(roo_display::font_Roboto_Regular_,
+  return __ROO_CONCAT2(roo_display::font_NotoSans_Regular_,
                        ROO_WINDOWS_FONT_SIZE_BODY2)();
 }
 
 inline const roo_display::Font& font_button() {
-  return __ROO_CONCAT2(roo_display::font_Roboto_Medium_,
+  return __ROO_CONCAT2(roo_display::font_NotoSans_Medium_,
                        ROO_WINDOWS_FONT_SIZE_BUTTON)();
 }
 
 inline const roo_display::Font& font_caption() {
-  return __ROO_CONCAT2(roo_display::font_Roboto_Regular_,
+  return __ROO_CONCAT2(roo_display::font_NotoSans_Regular_,
                        ROO_WINDOWS_FONT_SIZE_CAPTION)();
 }
 
 inline const roo_display::Font& font_overline() {
-  return __ROO_CONCAT2(roo_display::font_Roboto_Regular_,
+  return __ROO_CONCAT2(roo_display::font_NotoSans_Regular_,
                        ROO_WINDOWS_FONT_SIZE_OVERLINE)();
 }
 
