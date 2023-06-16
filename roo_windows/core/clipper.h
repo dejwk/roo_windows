@@ -134,7 +134,8 @@ class ClipperOutput : public roo_display::DisplayOutput {
   void addDecoration(roo_display::Box clip_box, roo_display::Box extents,
                      int elevation, const OverlaySpec &overlay_spec,
                      roo_display::Color bgcolor, uint8_t corner_radius,
-                     SmallNumber outline_width, roo_display::Color outline_color) {
+                     SmallNumber outline_width,
+                     roo_display::Color outline_color) {
     decorations_.emplace_back(std::move(extents), elevation, overlay_spec,
                               bgcolor, corner_radius, outline_width,
                               outline_color);
@@ -152,9 +153,9 @@ class ClipperOutput : public roo_display::DisplayOutput {
   }
 
   void setAddress(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1,
-                  roo_display::PaintMode mode) override {
+                  roo_display::BlendingMode blending_mode) override {
     sync();
-    output_->setAddress(x0, y0, x1, y1, mode);
+    output_->setAddress(x0, y0, x1, y1, blending_mode);
   }
 
   void write(roo_display::Color *color, uint32_t pixel_count) override {
@@ -162,30 +163,32 @@ class ClipperOutput : public roo_display::DisplayOutput {
     output_->write(color, pixel_count);
   }
 
-  void writePixels(roo_display::PaintMode mode, roo_display::Color *color,
-                   int16_t *x, int16_t *y, uint16_t pixel_count) override {
+  void writePixels(roo_display::BlendingMode blending_mode,
+                   roo_display::Color *color, int16_t *x, int16_t *y,
+                   uint16_t pixel_count) override {
     sync();
-    output_->writePixels(mode, color, x, y, pixel_count);
+    output_->writePixels(blending_mode, color, x, y, pixel_count);
   }
 
-  void fillPixels(roo_display::PaintMode mode, roo_display::Color color,
-                  int16_t *x, int16_t *y, uint16_t pixel_count) override {
+  void fillPixels(roo_display::BlendingMode blending_mode,
+                  roo_display::Color color, int16_t *x, int16_t *y,
+                  uint16_t pixel_count) override {
     sync();
-    output_->fillPixels(mode, color, x, y, pixel_count);
+    output_->fillPixels(blending_mode, color, x, y, pixel_count);
   }
 
-  void writeRects(roo_display::PaintMode mode, roo_display::Color *color,
-                  int16_t *x0, int16_t *y0, int16_t *x1, int16_t *y1,
-                  uint16_t count) override {
+  void writeRects(roo_display::BlendingMode blending_mode,
+                  roo_display::Color *color, int16_t *x0, int16_t *y0,
+                  int16_t *x1, int16_t *y1, uint16_t count) override {
     sync();
-    output_->writeRects(mode, color, x0, y0, x1, y1, count);
+    output_->writeRects(blending_mode, color, x0, y0, x1, y1, count);
   }
 
-  void fillRects(roo_display::PaintMode mode, roo_display::Color color,
-                 int16_t *x0, int16_t *y0, int16_t *x1, int16_t *y1,
-                 uint16_t count) override {
+  void fillRects(roo_display::BlendingMode blending_mode,
+                 roo_display::Color color, int16_t *x0, int16_t *y0,
+                 int16_t *x1, int16_t *y1, uint16_t count) override {
     sync();
-    output_->fillRects(mode, color, x0, y0, x1, y1, count);
+    output_->fillRects(blending_mode, color, x0, y0, x1, y1, count);
   }
 
  private:
@@ -272,7 +275,8 @@ class Clipper {
   void addDecoration(roo_display::Box clip_box, Rect extents, int elevation,
                      const OverlaySpec &overlay_spec,
                      roo_display::Color bgcolor, uint8_t corner_radius,
-                     SmallNumber outline_width, roo_display::Color outline_color) {
+                     SmallNumber outline_width,
+                     roo_display::Color outline_color) {
     out_.addDecoration(std::move(clip_box), extents.asBox(), elevation,
                        overlay_spec, bgcolor, corner_radius, outline_width,
                        outline_color);

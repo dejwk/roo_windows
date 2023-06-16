@@ -9,7 +9,7 @@
 namespace roo_windows {
 
 void Canvas::clear() const {
-  out().fillRect(surface_->paint_mode(), clip_box_, bgcolor());
+  out().fillRect(surface_->blending_mode(), clip_box_, bgcolor());
 }
 
 void Canvas::fillRect(XDim xMin, YDim yMin, XDim xMax, YDim yMax,
@@ -23,14 +23,14 @@ void Canvas::fillRect(const roo_display::Box& rect,
   b.clip(clip_box_);
   if (b.empty()) return;
   color = AlphaBlend(bgcolor(), color);
-  out().fillRect(surface_->paint_mode(), b, color);
+  out().fillRect(surface_->blending_mode(), b, color);
 }
 
 void Canvas::fillRect(const Rect& rect, roo_display::Color color) const {
   roo_display::Box b = rect.translate(dx_, dy_).clip(clip_box_);
   if (b.empty()) return;
   color = AlphaBlend(bgcolor(), color);
-  out().fillRect(surface_->paint_mode(), b, color);
+  out().fillRect(surface_->blending_mode(), b, color);
 }
 
 void Canvas::clearRect(XDim xMin, YDim yMin, XDim xMax, YDim yMax) const {
@@ -41,13 +41,13 @@ void Canvas::clearRect(const roo_display::Box& rect) const {
   roo_display::Box b = rect.translate(dx_, dy_);
   b.clip(clip_box_);
   if (b.empty()) return;
-  out().fillRect(surface_->paint_mode(), b, bgcolor());
+  out().fillRect(surface_->blending_mode(), b, bgcolor());
 }
 
 void Canvas::clearRect(const Rect& rect) const {
   roo_display::Box b = rect.translate(dx_, dy_).clip(clip_box_);
   if (b.empty()) return;
-  out().fillRect(surface_->paint_mode(), b, bgcolor());
+  out().fillRect(surface_->blending_mode(), b, bgcolor());
 }
 
 void Canvas::drawHLine(XDim xMin, YDim yMin, XDim xMax,
@@ -88,7 +88,7 @@ void Canvas::drawObject(const roo_display::Drawable& object, XDim dx,
   if (clip_box.empty()) return;
   roo_display::Surface s(out(), (int16_t)(dx_ + dx), int16_t(dy_ + dy),
                          clip_box, surface_->is_write_once(), bgcolor(),
-                         surface_->fill_mode(), surface_->paint_mode());
+                         surface_->fill_mode(), surface_->blending_mode());
   s.drawObject(object);
 }
 
