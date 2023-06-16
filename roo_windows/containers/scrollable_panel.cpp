@@ -267,10 +267,9 @@ void ScrollablePanel::paintWidgetContents(const Canvas& canvas,
 }
 
 bool ScrollablePanel::onInterceptTouchEvent(const TouchEvent& event) {
-  bool intercept = false;
   if (scroll_start_vx_ != 0 || scroll_start_vy_ != 0) {
     // Scroll in progress. Capture all events, including touch down.
-    intercept = true;
+    return true;
   }
   if (scroll_bar_presence_ != VerticalScrollBar::ALWAYS_HIDDEN &&
       contents() != nullptr && contents()->height() > height() &&
@@ -294,7 +293,7 @@ bool ScrollablePanel::onInterceptTouchEvent(const TouchEvent& event) {
       return true;
     }
   }
-  return intercept;
+  return false;
 }
 
 bool ScrollablePanel::onDown(XDim x, YDim y) {
@@ -320,7 +319,7 @@ bool ScrollablePanel::onSingleTapUp(XDim x, YDim y) {
     YDim view_range = contents()->height() - height();
     if (scroll_range > 0) {
       YDim new_y = -(y - (scroll_bar_.end() - scroll_bar_.begin()) / 2) *
-                   view_range / scroll_range;
+                  view_range / scroll_range;
       // The new y might be out of range, but that's ok - scrollTo will trim it.
       scrollTo(contents()->xOffset(), new_y);
     }
@@ -416,9 +415,7 @@ bool ScrollablePanel::onTouchUp(XDim vx, YDim vy) {
   bool result = Widget::onTouchUp(vx, vy);
   scroll_bar_gesture_ = false;
   is_scroll_bar_scrolled_ = false;
-  bool scroll_in_progress = (scroll_start_vx_ != 0 || scroll_start_vy_ != 0);
-  if (scroll_bar_presence_ == VerticalScrollBar::SHOWN_WHEN_SCROLLING &&
-      !scroll_in_progress) {
+  if (scroll_bar_presence_ == VerticalScrollBar::SHOWN_WHEN_SCROLLING) {
     deadline_hide_scrollbar_ = roo_time::Uptime::Now() + kDelayHideScrollbar;
     getApplication()->scheduleAction(*this, kDelayHideScrollbar);
   }
