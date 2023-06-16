@@ -3,6 +3,19 @@
 #include "roo_display/color/color.h"
 #include "roo_display/core/rasterizable.h"
 
+namespace internal {
+// Use ratio = 64 for the arithmetic average.
+inline constexpr roo_display::Color AverageColors(roo_display::Color c1,
+                                                  roo_display::Color c2,
+                                                  uint8_t ratio) {
+  return roo_display::Color(
+      (((uint8_t)c1.a() * ratio + (uint8_t)c2.a() * (128 - ratio)) >> 7) << 24 |
+      (((uint8_t)c1.r() * ratio + (uint8_t)c2.r() * (128 - ratio)) >> 7) << 16 |
+      (((uint8_t)c1.g() * ratio + (uint8_t)c2.g() * (128 - ratio)) >> 7) << 8 |
+      (((uint8_t)c1.b() * ratio + (uint8_t)c2.b() * (128 - ratio)) >> 7) << 0);
+}
+}  // namespace internal
+
 class PressOverlay : public roo_display::Rasterizable {
  public:
   PressOverlay() : PressOverlay(0, 0, 0, roo_display::color::Transparent) {}
@@ -53,11 +66,11 @@ class PressOverlay : public roo_display::Rasterizable {
     if (delta <= 0) {
       return bg_;
     } else if (r_ >= 1 && delta <= 2 * r_ - 1) {
-      return AverageColors(bg_, fg_, 96);
+      return internal::AverageColors(bg_, fg_, 96);
     } else if (r_ >= 2 && delta <= 4 * r_ - 4) {
-      return AverageColors(bg_, fg_, 64);
+      return internal::AverageColors(bg_, fg_, 64);
     } else if (r_ >= 3 && delta <= 6 * r_ - 9) {
-      return AverageColors(bg_, fg_, 32);
+      return internal::AverageColors(bg_, fg_, 32);
     } else {
       return fg_;
     }
