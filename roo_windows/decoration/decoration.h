@@ -19,7 +19,7 @@ struct ShadowSpec {
   // Generally the same as the corner radius of the widget casting the shadow.
   uint8_t border;
 
-  // The alpha at a point where the shadow is not diffuset.
+  // The alpha at a point where the shadow is not diffused.
   uint8_t alpha_start;
 
   // 256 * how much the alpha decreases per each pixel of distance.
