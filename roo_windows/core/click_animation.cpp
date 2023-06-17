@@ -34,7 +34,7 @@ void ClickAnimation::tick() {
   }
 
   if (deferred_click_ != nullptr) {
-    // We want to delier click only after the widget has been released and is no
+    // We want to deliver click only after the widget has been released and is no
     // longer animating. This way, the visual updates of the widget and its
     // resulting actions are distinct. This makes the widget feel more snappy,
     // and reduces the redraw area (by splitting the update into smaller
