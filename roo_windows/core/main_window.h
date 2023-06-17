@@ -34,6 +34,8 @@ class MainWindow : public Panel {
 
   ClickAnimation& click_animation() { return click_animation_; }
 
+  const ClickAnimation& click_animation() const { return click_animation_; }
+
   PressOverlay& press_overlay() { return press_overlay_; }
 
   void set_press_overlay(PressOverlay press_overlay) {

@@ -173,7 +173,7 @@ Widget* Panel::dispatchTouchDownEvent(XDim x, YDim y) {
       break;
     }
   }
-  if (bounds().contains(x, y)) {
+  if (within_bounds) {
     return Widget::dispatchTouchDownEvent(x, y);
   }
   return nullptr;

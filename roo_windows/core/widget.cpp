@@ -68,6 +68,11 @@ ClickAnimation* Widget::getClickAnimation() {
   return (w == nullptr) ? nullptr : &w->click_animation();
 }
 
+const ClickAnimation* Widget::getClickAnimation() const {
+  const MainWindow* w = getMainWindow();
+  return (w == nullptr) ? nullptr : &w->click_animation();
+}
+
 void Widget::getAbsoluteBounds(Rect& full, Rect& visible) const {
   if (parent() == nullptr) {
     full = visible = parent_bounds();
@@ -257,7 +262,7 @@ void Widget::setVisibility(Visibility visibility) {
     if (previous != VISIBLE && parent() != nullptr) parent()->childShown(this);
   } else {
     setPressed(false);
-    state_ &= ~kWidgetClicking;
+    clearClicking();
     if (previous == VISIBLE && parent() != nullptr) parent()->childHidden(this);
   }
 }
@@ -358,6 +363,15 @@ void Widget::setOnOffState(OnOffState state) {
 void Widget::setClicking() {
   uint8_t old_elevation = getElevation();
   state_ |= kWidgetClicking;
+  uint8_t new_elevation = getElevation();
+  if (old_elevation != new_elevation) {
+    elevationChanged(std::max(old_elevation, new_elevation));
+  }
+}
+
+void Widget::clearClicking() {
+  uint8_t old_elevation = getElevation();
+  state_ &= ~kWidgetClicking;
   uint8_t new_elevation = getElevation();
   if (old_elevation != new_elevation) {
     elevationChanged(std::max(old_elevation, new_elevation));
@@ -478,7 +492,7 @@ void Widget::paintWidgetModded(Canvas& canvas, const OverlaySpec& overlay_spec,
         paintWidgetContents(canvas, clipper);
         canvas.set_out(&out);
       } else {
-        state_ &= ~kWidgetClicking;
+        clearClicking();
       }
     }
     if (overlay_spec.is_click_animation_in_progress()) {
@@ -569,7 +583,13 @@ void Widget::onClicked() {
   on_clicked_();
 }
 
-bool Widget::onDown(XDim x, YDim y) { return isClickable(); }
+bool Widget::isClickable() const { return on_clicked_ != nullptr; }
+
+bool Widget::onDown(XDim x, YDim y) {
+  if (!isClickable()) return false;
+  const ClickAnimation* anim = getClickAnimation();
+  return !anim->isClickAnimating() && !anim->isClickConfirmed();
+}
 
 void Widget::onShowPress(XDim x, YDim y) {
   if (!isClickable()) return;
@@ -617,7 +637,7 @@ bool Widget::onFling(XDim x, YDim y, XDim vx, YDim vy) {
 void Widget::onCancel() {
   setPressed(false);
   if (kTerminateAnimationsOnCancel) {
-    state_ &= ~kWidgetClicking;
+    clearClicking();
     getClickAnimation()->cancel();
   }
 }

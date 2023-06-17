@@ -17,7 +17,16 @@ void ClickAnimation::tick() {
   unsigned long now = millis();
   if (click_anim_target_ != nullptr) {
     click_anim_target_->invalidateInterior();
+    long elapsed = millis() - click_anim_start_millis_;
+    if (elapsed > kClickAnimationMs + 100) {
+      // 100 ms is a grace period to allow the widget to draw the full click state
+      // and then mark itself as non-clicking. If the widget is dragging its feet,
+      // it may mean it became invisible or clipped out and is not refreshing
+      // anymore. In this case, we force the clicking status to false.
+      click_anim_target_->clearClicking();
+    }
   }
+
   // If an in-progress click animation is expired, clear the animation target so
   // that other widgets can be clicked, and possibly deliver the delayed click
   // notification. This is done after the overall redraw, so that the click
@@ -34,8 +43,8 @@ void ClickAnimation::tick() {
   }
 
   if (deferred_click_ != nullptr) {
-    // We want to deliver click only after the widget has been released and is no
-    // longer animating. This way, the visual updates of the widget and its
+    // We want to deliver click only after the widget has been released and is
+    // no longer animating. This way, the visual updates of the widget and its
     // resulting actions are distinct. This makes the widget feel more snappy,
     // and reduces the redraw area (by splitting the update into smaller
     // updates).

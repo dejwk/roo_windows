@@ -153,6 +153,8 @@ class Widget {
 
   ClickAnimation* getClickAnimation();
 
+  const ClickAnimation* getClickAnimation() const;
+
   // Returns this widget's background. Transparent by default. Normally
   // overridden by panels, which usually have opaque backgrounds.
   virtual Color background() const { return roo_display::color::Transparent; }
@@ -345,7 +347,9 @@ class Widget {
   virtual bool useOverlayOnActivation() const { return true; }
   virtual bool useOverlayOnPress() const { return true; }
   virtual bool useOverlayOnPressAnimation() const { return false; }
-  virtual bool isClickable() const { return on_clicked_ != nullptr; }
+
+  virtual bool isClickable() const;
+
   virtual bool showClickAnimation() const { return true; }
 
   virtual bool usesHighlighterColor() const { return false; }
@@ -567,8 +571,10 @@ class Widget {
   friend class Panel;
   friend class ScrollablePanel;
   friend class MainWindow;
-
   friend class OverlaySpec;
+  friend class ClickAnimation;
+
+  void clearClicking();
 
   // Called by the framework. Receives the parent's canvas. Determines
   // state-related overlays and filters (enabled/disabled, clicking, etc.),
