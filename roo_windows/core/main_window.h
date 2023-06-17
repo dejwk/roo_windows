@@ -9,7 +9,6 @@
 
 namespace roo_windows {
 
-class ModalWindow;
 class Application;
 
 class MainWindow : public Panel {
@@ -58,8 +57,6 @@ class MainWindow : public Panel {
   // Maintains the area that encapsulates all content that needs to be
   // (re)drawn.
   Rect redraw_bounds_;
-
-  ModalWindow* modal_window_;
 
   roo_display::BackgroundFillOptimizer::FrameBuffer background_fill_buffer_;
 };
