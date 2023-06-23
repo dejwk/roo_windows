@@ -19,7 +19,7 @@ WifiIndicatorBase::WifiIndicatorBase(const Environment& env,
       bar_count_(1) {}
 
 void WifiIndicatorBase::paint(const Canvas& canvas) const {
-  roo_display::MaterialIcon icon(*icons()[status()]);
+  roo_display::Pictogram icon(*icons()[status()]);
   roo_display::Color color =
       color_.a() == 0 ? parent()->defaultColor() : color_;
   icon.color_mode().setColor(color);

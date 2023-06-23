@@ -1,6 +1,5 @@
 #pragma once
 
-#include "roo_material_icons.h"
 #include "roo_windows/core/widget.h"
 
 namespace roo_windows {
@@ -21,7 +20,7 @@ class BatteryIndicator : public Widget {
   // Padding getPadding() const override { return Padding(0); }
 
  protected:
-  virtual const roo_display::MaterialIcon* const* icons() const = 0;
+  virtual const roo_display::Pictogram* const* icons() const = 0;
 
  private:
   enum BatteryLevel {

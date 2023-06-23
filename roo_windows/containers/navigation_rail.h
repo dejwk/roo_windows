@@ -3,7 +3,6 @@
 #include <memory>
 
 #include "roo_display/ui/alignment.h"
-#include "roo_material_icons.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/widgets/divider.h"
 #include "roo_windows/widgets/icon_with_caption.h"
@@ -15,7 +14,7 @@ class NavigationRail;
 
 class Destination : public IconWithCaption {
  public:
-  Destination(const Environment& env, const roo_display::MaterialIcon& icon,
+  Destination(const Environment& env, const roo_display::Pictogram& icon,
               std::string text, int idx, std::function<void()> activator)
       : IconWithCaption(env, std::move(icon), std::move(text)),
         idx_(idx),
@@ -47,7 +46,7 @@ class NavigationRail : public Panel {
                          PreferredSize::MatchParentHeight());
   }
 
-  void addDestination(const roo_display::MaterialIcon& icon, std::string text,
+  void addDestination(const roo_display::Pictogram& icon, std::string text,
                       std::function<void()> activator);
 
   // Returns the number of destinations.

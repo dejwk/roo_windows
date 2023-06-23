@@ -9,7 +9,7 @@ NavigationPanel::NavigationPanel(const Environment& env)
   add(contents_);
 }
 
-void NavigationPanel::addPage(const roo_display::MaterialIcon& icon,
+void NavigationPanel::addPage(const roo_display::Pictogram& icon,
                               std::string text, WidgetRef page) {
   int idx = page_count();
   rail_.addDestination(icon, text, [this, idx]() { setActive(idx); });

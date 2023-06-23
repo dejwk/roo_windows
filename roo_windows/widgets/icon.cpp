@@ -19,12 +19,12 @@ void Icon::paint(const Canvas& canvas) const {
     canvas.clear();
     return;
   }
-  roo_display::MaterialIcon icon(*icon_);
+  roo_display::Pictogram icon(*icon_);
   icon.color_mode().setColor(AlphaBlend(canvas.bgcolor(), color));
   canvas.drawTiled(icon, bounds(), kCenter | kMiddle, isInvalidated());
 }
 
-void Icon::setIcon(const roo_display::MaterialIcon& icon) {
+void Icon::setIcon(const roo_display::Pictogram& icon) {
   if (icon_ == &icon) return;
   if (icon_ != nullptr && icon_->anchorExtents() != icon.anchorExtents()) {
     requestLayout();

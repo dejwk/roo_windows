@@ -46,7 +46,7 @@ void NavigationRail::onLayout(bool changed, const Rect& rect) {
   }
 }
 
-void NavigationRail::addDestination(const roo_display::MaterialIcon& icon,
+void NavigationRail::addDestination(const roo_display::Pictogram& icon,
                                     std::string text,
                                     std::function<void()> activator) {
   Destination* dest = new Destination(

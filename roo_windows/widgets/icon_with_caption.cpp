@@ -5,7 +5,7 @@ using namespace roo_display;
 namespace roo_windows {
 
 IconWithCaption::IconWithCaption(const Environment& env,
-                                 const MaterialIcon& def,
+                                 const roo_display::Pictogram& def,
                                  const std::string& caption, const Font* font)
     : BasicWidget(env),
       icon_(&def),
@@ -40,7 +40,7 @@ void IconWithCaption::paint(const Canvas& canvas) const {
 
   Rect icon_bounds(bounds().xMin(), hi_border_, bounds().xMax(),
                    hi_border_ + icon_->anchorExtents().height() - 1);
-  MaterialIcon icon(*icon_);
+  roo_display::Pictogram icon(*icon_);
   icon.color_mode().setColor(color);
   canvas.drawTiled(icon, icon_bounds,
                    kCenter | kBaseline.shiftBy(icon_bounds.yMin()));

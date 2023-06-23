@@ -1,7 +1,7 @@
 #pragma once
 
+#include "roo_display/image/image.h"
 #include "roo_windows/core/basic_widget.h"
-#include "roo_material_icons.h"
 
 namespace roo_windows {
 
@@ -10,15 +10,15 @@ class Icon : public BasicWidget {
   Icon(const Environment& env, Color color = roo_display::color::Transparent)
       : BasicWidget(env), icon_(nullptr), color_(color) {}
 
-  Icon(const Environment& env, const roo_display::MaterialIcon& def,
+  Icon(const Environment& env, const roo_display::Pictogram& def,
        Color color = roo_display::color::Transparent)
       : BasicWidget(env), icon_(&def), color_(color) {}
 
   void paint(const Canvas& canvas) const override;
 
-  const roo_display::MaterialIcon& icon() const { return *icon_; }
+  const roo_display::Pictogram& icon() const { return *icon_; }
 
-  void setIcon(const roo_display::MaterialIcon& icon);
+  void setIcon(const roo_display::Pictogram& icon);
 
   Dimensions getSuggestedMinimumDimensions() const override;
 
@@ -27,7 +27,7 @@ class Icon : public BasicWidget {
   void setColor(roo_display::Color color);
 
  private:
-  const roo_display::MaterialIcon* icon_;
+  const roo_display::Pictogram* icon_;
   roo_display::Color color_;
 };
 

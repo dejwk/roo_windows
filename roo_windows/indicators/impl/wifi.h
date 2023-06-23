@@ -1,6 +1,5 @@
 #pragma once
 
-#include "roo_material_icons.h"
 #include "roo_windows/core/basic_widget.h"
 
 namespace roo_windows {
@@ -27,7 +26,7 @@ class WifiIndicatorBase : public BasicWidget {
   void setWifiSignalStrength(int rssi);
 
  protected:
-  virtual const roo_display::MaterialIcon* const* icons() const = 0;
+  virtual const roo_display::Pictogram* const* icons() const = 0;
 
  private:
   enum WifiStatus {

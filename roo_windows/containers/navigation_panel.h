@@ -3,7 +3,6 @@
 #include <memory>
 #include <vector>
 
-#include "roo_material_icons.h"
 #include "roo_windows/containers/navigation_rail.h"
 #include "roo_windows/containers/stacked_layout.h"
 
@@ -14,7 +13,7 @@ class NavigationPanel : public Panel {
  public:
   NavigationPanel(const Environment& env);
 
-  void addPage(const roo_display::MaterialIcon& icon, std::string text,
+  void addPage(const roo_display::Pictogram& icon, std::string text,
                WidgetRef page);
 
   void setActive(int index);

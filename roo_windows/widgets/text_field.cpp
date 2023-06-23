@@ -1,8 +1,8 @@
 
-#include "roo_windows/config.h"
 #include "roo_windows/widgets/text_field.h"
 
-#include "roo_material_icons.h"
+#include "roo_display/ui/text_label.h"
+
 #include "roo_material_icons/filled/18/action.h"
 #include "roo_material_icons/filled/24/action.h"
 #include "roo_material_icons/filled/36/action.h"
@@ -14,9 +14,8 @@ namespace roo_windows {
 using namespace roo_display;
 
 void VisibilityToggle::paint(const Canvas& canvas) const {
-  MaterialIcon icon(
-      isOn() ? SCALED_ROO_ICON(filled, action_visibility)
-             : SCALED_ROO_ICON(filled, action_visibility_off));
+  Pictogram icon(isOn() ? SCALED_ROO_ICON(filled, action_visibility)
+                        : SCALED_ROO_ICON(filled, action_visibility_off));
   Color color = parent()->defaultColor();
   icon.color_mode().setColor(color);
   canvas.drawTiled(icon, bounds(), kCenter | kMiddle, isInvalidated());
@@ -60,8 +59,9 @@ class TextFieldInterior : public Drawable {
       text = starred_text;
     }
 
-    auto tiled_text = MakeTileOf(StringViewLabel(text, *font_, text_color_),
-                                 extents_, kOrigin.shiftBy(x_offset_));
+    auto tiled_text =
+        MakeTileOf(roo_display::StringViewLabel(text, *font_, text_color_),
+                   extents_, kOrigin.shiftBy(x_offset_));
 
     if (highlight_xmin_ > 0) {
       // Draw the text before the selection window.

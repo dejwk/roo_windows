@@ -3,7 +3,6 @@
 #include "roo_display/shape/basic.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_display/ui/tile.h"
-#include "roo_material_icons.h"
 #include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/theme.h"
@@ -12,20 +11,20 @@ namespace roo_windows {
 
 class IconWithCaption : public BasicWidget {
  public:
-  IconWithCaption(const Environment& env, const roo_display::MaterialIcon& def,
+  IconWithCaption(const Environment& env, const roo_display::Pictogram& def,
                   const std::string& caption)
       : IconWithCaption(env, def, caption, &font_caption()) {}
 
-  IconWithCaption(const Environment& env, const roo_display::MaterialIcon& def,
+  IconWithCaption(const Environment& env, const roo_display::Pictogram& def,
                   const std::string& caption, const roo_display::Font* font);
 
   void paint(const Canvas& canvas) const override;
 
   Dimensions getSuggestedMinimumDimensions() const override;
 
-  const roo_display::MaterialIcon& icon() const { return *icon_; }
+  const roo_display::Pictogram& icon() const { return *icon_; }
 
-  void setIcon(const roo_display::MaterialIcon& icon) {
+  void setIcon(const roo_display::Pictogram& icon) {
     if (icon_ == &icon) return;
     icon_ = &icon;
     markDirty();
@@ -51,7 +50,7 @@ class IconWithCaption : public BasicWidget {
   void onLayout(bool changed, const Rect& rect) override;
 
  private:
-  const roo_display::MaterialIcon* icon_;
+  const roo_display::Pictogram* icon_;
   std::string caption_;
   const roo_display::Font* font_;
   Color color_;

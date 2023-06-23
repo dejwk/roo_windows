@@ -1,7 +1,6 @@
 #pragma once
 
 #include "roo_display/ui/tile.h"
-#include "roo_material_icons.h"
 #include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/canvas.h"
 #include "roo_windows/core/panel.h"
