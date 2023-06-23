@@ -1,4 +1,4 @@
-#include "roo_windows/config.h"
+#include "roo_windows/core/theme.h"
 
 #include "roo_windows/decoration/decoration.h"
 
