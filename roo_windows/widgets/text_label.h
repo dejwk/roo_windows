@@ -44,4 +44,34 @@ class TextLabel : public BasicWidget {
   roo_display::Alignment alignment_;
 };
 
+class StringViewLabel : public BasicWidget {
+ public:
+  StringViewLabel(const Environment& env, roo_display::StringView value,
+                  const roo_display::Font& font);
+
+  StringViewLabel(const Environment& env, roo_display::StringView value,
+                  const roo_display::Font& font,
+                  roo_display::Alignment alignment);
+
+  StringViewLabel(const Environment& env, roo_display::StringView value,
+                  const roo_display::Font& font, roo_display::Color color,
+                  roo_display::Alignment alignment);
+
+  void paint(const Canvas& canvas) const override;
+
+  Dimensions getSuggestedMinimumDimensions() const override;
+
+  roo_display::StringView content() const { return value_; }
+
+  void setText(roo_display::StringView value);
+
+  const roo_display::Font& font() const { return font_; }
+
+ private:
+  roo_display::StringView value_;
+  const roo_display::Font& font_;
+  roo_display::Color color_;
+  roo_display::Alignment alignment_;
+};
+
 }  // namespace roo_windows
