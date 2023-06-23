@@ -59,13 +59,26 @@ class StaticLayout : public Panel {
 
  protected:
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override {
+    int16_t max_x = 0;
+    int16_t max_y = 0;
     for (const auto& child : children()) {
+      int16_t child_max_x;
+      int16_t child_max_y;
       if (child->isLayoutRequested()) {
-        child->measure(WidthSpec::Exactly(child->width()),
-                       HeightSpec::Exactly(child->height()));
+        Dimensions dims = child->measure(WidthSpec::Exactly(child->width()),
+                                         HeightSpec::Exactly(child->height()));
+        child_max_x = child->xOffset() + dims.width() - 1;
+        child_max_y = child->yOffset() + dims.height() - 1;
+      } else {
+        child_max_x = child->parent_bounds().xMax();
+        child_max_y = child->parent_bounds().yMax();
       }
+      max_x = std::max(max_x, child_max_x);
+      max_y = std::max(max_y, child_max_y);
     }
-    return Dimensions(this->width(), this->height());
+    PreferredSize preferred = getPreferredSize();
+    return Dimensions(width.resolveSize(max_x + 1),
+                      height.resolveSize(max_y + 1));
   }
 
   void onLayout(bool changed, const Rect& rect) override {
