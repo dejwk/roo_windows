@@ -575,7 +575,11 @@ bool Widget::onTouchMove(XDim x, YDim y) {
 }
 
 bool Widget::onTouchUp(XDim x, YDim y) {
-  return getApplication()->gesture_detector().onTouchUp(*this, x, y);
+  bool handled = getApplication()->gesture_detector().onTouchUp(*this, x, y);
+  if (isPressed()) {
+    setPressed(false);
+  }
+  return handled;
 }
 
 void Widget::onClicked() {
