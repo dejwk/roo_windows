@@ -26,6 +26,10 @@ class Checkbox : public BasicWidget {
   bool isClickable() const override { return true; }
 
   void onClicked() override;
+
+  OverlayType getOverlayType() const override {
+    return OVERLAY_POINT;
+  }
 };
 
 }  // namespace roo_windows
