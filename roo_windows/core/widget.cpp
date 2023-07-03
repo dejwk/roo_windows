@@ -1,6 +1,7 @@
 #include "roo_windows/core/widget.h"
 
 #include "roo_display/filter/foreground.h"
+#include "roo_display/shape/smooth.h"
 #include "roo_glog/logging.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/main_window.h"
@@ -417,10 +418,8 @@ uint8_t Widget::getOverlayOpacity() const {
   if (isActivated() && useOverlayOnActivation()) {
     overlay_opacity += myTheme.activatedOpacity(bgcolor);
   }
-  if (isClicking()) {
-    if (useOverlayOnPressAnimation()) {
-      overlay_opacity += myTheme.pressedOpacity(bgcolor);
-    }
+  if (isClicking() && useOverlayOnPress()) {
+    overlay_opacity += myTheme.pressedOpacity(bgcolor);
   } else if (isPressed() && useOverlayOnPress()) {
     overlay_opacity += myTheme.pressedOpacity(bgcolor);
   }
@@ -499,12 +498,29 @@ void Widget::paintWidgetModded(Canvas& canvas, const OverlaySpec& overlay_spec,
       // Already drawn.
     } else if (overlay_spec.base_overlay().a() > 0) {
       roo_display::DisplayOutput& out = canvas.out();
-      roo_display::OverlayFilter filter(canvas.out(),
-                                        overlay_spec.base_overlay(),
-                                        roo_display::color::Transparent);
-      canvas.set_out(&filter);
-      paintWidgetContents(canvas, clipper);
-      canvas.set_out(&out);
+      switch (getOverlayType()) {
+        case OVERLAY_POINT: {
+          roo_display::FpPoint focus = getPointOverlayFocus();
+          XDim dx;
+          YDim dy;
+          getAbsoluteOffset(dx, dy);
+          auto circle = roo_display::SmoothFilledCircle(
+              {dx + focus.x, dy + focus.y}, kPointOverlayDiameter * 0.5f - 0.5f,
+              overlay_spec.base_overlay());
+          roo_display::ForegroundFilter filter(out, &circle);
+          canvas.set_out(&filter);
+          paintWidgetContents(canvas, clipper);
+          canvas.set_out(&out);
+        }
+        default: {
+          roo_display::OverlayFilter filter(canvas.out(),
+                                            overlay_spec.base_overlay(),
+                                            roo_display::color::Transparent);
+          canvas.set_out(&filter);
+          paintWidgetContents(canvas, clipper);
+          canvas.set_out(&out);
+        }
+      }
     } else {
       paintWidgetContents(canvas, clipper);
     }

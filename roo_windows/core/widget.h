@@ -6,6 +6,7 @@
 #include "roo_display.h"
 #include "roo_display/filter/color_filter.h"
 #include "roo_display/image/image.h"
+#include "roo_display/shape/point.h"
 #include "roo_windows/core/border_style.h"
 #include "roo_windows/core/canvas.h"
 #include "roo_windows/core/clipper.h"
@@ -344,9 +345,18 @@ class Widget {
 
   void setClicking();
 
+  enum OverlayType { OVERLAY_AREA, OVERLAY_POINT };
+
+  virtual OverlayType getOverlayType() const { return OVERLAY_AREA; }
+
+  virtual roo_display::FpPoint getPointOverlayFocus() const {
+    const Rect& r = parent_bounds();
+    return roo_display::FpPoint{(float)(r.xMax() - r.xMin()),
+                                (float)(r.yMax() - r.yMin())};
+  }
+
   virtual bool useOverlayOnActivation() const { return true; }
   virtual bool useOverlayOnPress() const { return true; }
-  virtual bool useOverlayOnPressAnimation() const { return false; }
 
   virtual bool isClickable() const;
 

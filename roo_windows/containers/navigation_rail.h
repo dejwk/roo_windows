@@ -21,7 +21,7 @@ class Destination : public IconWithCaption {
         activator_(std::move(activator)) {}
 
   bool useOverlayOnActivation() const override { return false; }
-  bool useOverlayOnPressAnimation() const override { return true; }
+
   bool isClickable() const override { return true; }
   bool usesHighlighterColor() const override { return true; }
 

@@ -84,18 +84,36 @@ OverlaySpec::OverlaySpec(Widget& widget, const Canvas& canvas)
         widget.getClickAnimation()->getProgress(&widget, &click_progress,
                                                 &click_x, &click_y) &&
         click_progress < 1.0;
+    Widget::OverlayType t = widget.getOverlayType();
     if (is_click_animation_in_progress) {
+      roo_display::FpPoint focus;
+      Rect anim_bounds = widget.bounds();
+      if (t == Widget::OVERLAY_POINT) {
+        focus = widget.getPointOverlayFocus();
+        anim_bounds = Rect(focus.x - kPointOverlayDiameter * 0.5f,
+                           focus.y - kPointOverlayDiameter * 0.5f,
+                           focus.x + kPointOverlayDiameter * 0.5f,
+                           focus.y + kPointOverlayDiameter * 0.5f);
+      }
       // Note that dx,dy might have changed since the click event, moving dim
       // out of the int16_t horizon.
       int16_t x = click_x + canvas.dx();
       int16_t y = click_y + canvas.dy();
       int16_t r =
-          animation_radius(widget.bounds(), click_x, click_y, click_progress);
+          animation_radius(anim_bounds, click_x, click_y, click_progress);
       roo_display::Color click_animation_overlay =
           AlphaBlend(base_overlay_, getClickAnimationColor(widget, canvas));
+      base_overlay_ = roo_display::color::Transparent;
       widget.getMainWindow()->set_press_overlay(
           PressOverlay(x, y, r, click_animation_overlay, base_overlay_));
       press_overlay_ = &widget.getMainWindow()->press_overlay();
+      if (t == Widget::OVERLAY_POINT) {
+        XDim dx;
+        YDim dy;
+        widget.getAbsoluteOffset(dx, dy);
+        press_overlay_->setClipCircle(dx + focus.x, dy + focus.y,
+                                      kPointOverlayDiameter * 0.5f);
+      }
     } else {
       // Full rect click overlay - just apply on top of the overlay as
       // calculated so far.

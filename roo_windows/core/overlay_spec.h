@@ -2,10 +2,13 @@
 
 #include <inttypes.h>
 
+#include "roo_windows/core/theme.h"
 #include "roo_display/color/color.h"
 #include "roo_windows/core/press_overlay.h"
 
 namespace roo_windows {
+
+static const int16_t kPointOverlayDiameter = Scaled(44);
 
 class Canvas;
 class Widget;
