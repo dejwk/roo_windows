@@ -100,7 +100,7 @@ bool GestureDetector::onTouchDown(Widget& widget, XDim x, YDim y) {
     long_press_event_.schedule(now_us_ + kLongPressTimeoutUs);
   }
   bool should_delay_press_state =
-      supports_scrolling_ || isScrollableContainer(widget.parent());
+      /*supports_scrolling_ || */isScrollableContainer(widget.parent());
   show_press_event_.schedule(
       now_us_ + (should_delay_press_state ? kShowPressTimeoutUs : 0));
   return handledOrCancel(widget.onDown(x, y));
