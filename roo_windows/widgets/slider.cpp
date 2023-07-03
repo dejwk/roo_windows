@@ -19,16 +19,25 @@ int16_t xoffset_from_pos(uint16_t pos, int16_t range, Padding p) {
   return kRadius + (((int32_t)pos * range + 32768) >> 16) + p.left();
 }
 
+int16_t range_from_width(int16_t width, Padding p) {
+  int16_t range = width - 2 * kRadius - p.left() - p.right();
+  if (range < 1) return 1;
+  return range;
+}
+
+uint16_t pos_from_x(XDim x, int16_t range, Padding p) {
+  int16_t pos = x + 1 - kRadius - p.left();
+  if (pos < 0) pos = 0;
+  if (pos >= range) pos = range - 1;
+  return ((pos << 16) + range / 2) / range;
+}
+
 }
 
 bool Slider::onDown(XDim x, YDim y) {
   Padding p = getPadding();
-  int16_t range = width() - 2 * kRadius - p.left() - p.right();
-  if (range < 1) return true;
-  int16_t pos = x + 1 - kRadius - p.left();
-  if (pos < 0) pos = 0;
-  if (pos >= range) pos = range - 1;
-  pos_ = ((pos << 16) + range / 2) / range;
+  int16_t range = range_from_width(width(), p);
+  pos_ = pos_from_x(x, range, p);
   invalidateInterior();
   return true;
 }
@@ -36,14 +45,9 @@ bool Slider::onDown(XDim x, YDim y) {
 bool Slider::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
   if (dy * dy > 400) return false;
   Padding p = getPadding();
-  int16_t range = width() - 2 * kRadius - p.left() - p.right();
-  if (range < 1) return true;
-  int16_t pos = x + 1 - kRadius - p.left();
-  if (pos < 0) pos = 0;
-  if (pos >= range) pos = range - 1;
-
+  int16_t range = range_from_width(width(), p);
   int16_t old_xoffset = xoffset_from_pos(pos_, range, p);
-  pos_ = ((pos << 16) + range / 2) / range;
+  pos_ = pos_from_x(x, range, p);
   int16_t new_xoffset = xoffset_from_pos(pos_, range, p);
   invalidateInterior(Rect(std::min(old_xoffset, new_xoffset) - kOverlayRadius,
                           height() / 2 - kOverlayRadius,
@@ -57,8 +61,7 @@ void Slider::paint(const Canvas& canvas) const {
   Color circleColor = th.color.highlighterColor(canvas.bgcolor());
   Padding p = getPadding();
 
-  int16_t range = width() - 2 * kRadius - p.left() - p.right();
-  if (range < 1) range = 1;
+  int16_t range = range_from_width(width(), p);
   int16_t xoffset = xoffset_from_pos(pos_, range, p);
 
 #if ROO_WINDOWS_ZOOM >= 200
@@ -109,10 +112,9 @@ roo_display::FpPoint Slider::getPointOverlayFocus() const {
   int16_t xoffset;
   Padding p = getPadding();
 
-  int16_t range = width() - 2 * kRadius - p.left() - p.right();
-  if (range < 1) range = 1;
+  int16_t range = range_from_width(width(), p);
   xoffset = xoffset_from_pos(pos_, range, p);
-  return roo_display::FpPoint{xoffset, height() * 0.5f};
+  return roo_display::FpPoint{xoffset, (height() - 1) * 0.5f};
 }
 
 }  // namespace roo_windows
