@@ -34,26 +34,33 @@ uint16_t pos_from_x(XDim x, int16_t range, Padding p) {
 
 }
 
-bool Slider::onDown(XDim x, YDim y) {
+void Slider::onShowPress(XDim x, YDim y) {
   Padding p = getPadding();
   int16_t range = range_from_width(width(), p);
-  pos_ = pos_from_x(x, range, p);
-  invalidateInterior();
-  return true;
+  setPos(pos_from_x(x, range, p));
+  Widget::onShowPress(x, y);
 }
 
 bool Slider::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
   if (dy * dy > 400) return false;
   Padding p = getPadding();
   int16_t range = range_from_width(width(), p);
+  setPos(pos_from_x(x, range, p));
+  return true;
+}
+
+void Slider::setPos(uint16_t pos) {
+  if (pos == pos_) return;
+  Padding p = getPadding();
+  int16_t range = range_from_width(width(), p);
   int16_t old_xoffset = xoffset_from_pos(pos_, range, p);
-  pos_ = pos_from_x(x, range, p);
+  pos_ = pos;
   int16_t new_xoffset = xoffset_from_pos(pos_, range, p);
+  if (old_xoffset == new_xoffset) return;
   invalidateInterior(Rect(std::min(old_xoffset, new_xoffset) - kOverlayRadius,
                           height() / 2 - kOverlayRadius,
                           std::max(old_xoffset, new_xoffset) + kOverlayRadius,
                           height() / 2 + kOverlayRadius - 1));
-  return true;
 }
 
 void Slider::paint(const Canvas& canvas) const {

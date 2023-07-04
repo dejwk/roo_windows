@@ -15,7 +15,7 @@ class Slider : public BasicWidget {
 
   bool isClickable() const override { return true; }
 
-  bool onDown(XDim x, YDim y) override;
+  void onShowPress(XDim x, YDim y) override;
 
   bool supportsScrolling() const override { return true; }
 
@@ -30,6 +30,9 @@ class Slider : public BasicWidget {
   }
 
   roo_display::FpPoint getPointOverlayFocus() const override;
+
+  // Uses full range.
+  void setPos(uint16_t pos);
 
  private:
   uint16_t pos_;
