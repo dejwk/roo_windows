@@ -44,8 +44,8 @@ EditTextField::EditTextField(const Environment& env, TextFieldEditor& editor,
   content_pane_.add(
       enter_, HorizontalLayout::Params().setGravity(kVerticalGravityMiddle));
   back_.setContentColor(env.theme().color.onSurface);
-  back_.setOnClicked([&]() { cancel(); });
-  enter_.setOnClicked([&]() { confirm(); });
+  back_.setOnInteractiveChange([&]() { cancel(); });
+  enter_.setOnInteractiveChange([&]() { confirm(); });
 }
 
 void EditTextField::confirm() {

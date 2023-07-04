@@ -212,23 +212,15 @@ class Widget {
   // triggered after the animation completes.
   virtual void onClicked();
 
-  void setOnClicked(std::function<void()> on_clicked) {
-    on_clicked_ = on_clicked;
+  // Sets a handler to be called when the state of this widget changes due to
+  // touch interaction. For simple clickable items, called by onClicked().
+  void setOnInteractiveChange(std::function<void()> handler) {
+    on_interactive_change_ = handler;
   }
 
-  void addOnClicked(std::function<void()> on_clicked) {
-    if (on_clicked_ == nullptr) {
-      on_clicked_ = on_clicked;
-    } else {
-      auto prev = on_clicked_;
-      on_clicked_ = [prev, on_clicked]() {
-        prev();
-        on_clicked();
-      };
-    }
+  std::function<void()> getOnInteractiveChange() const {
+    return on_interactive_change_;
   }
-
-  std::function<void()> getOnClicked() const { return on_clicked_; }
 
   // Called when the first 'down' event happens within the bounds of this
   // widget. Contains the touch coordinates relative to the widget. The widget
@@ -453,6 +445,8 @@ class Widget {
   OnOffState onOffState() const;
   void setOnOffState(OnOffState state);
 
+  void triggerInteractiveChange();
+
   // Should be called by a child whose elevation has changed, and the child
   // wants the shadow to be redrawn. The argument should indicate the higher of
   // {before, after} elevations.
@@ -615,7 +609,7 @@ class Widget {
   // kDirty | kInvalidated | kLayout{Requested|Required}
   uint8_t redraw_status_;
 
-  std::function<void()> on_clicked_;
+  std::function<void()> on_interactive_change_;
 };
 
 // TODO: adjust for different screen densities.

@@ -50,7 +50,7 @@ Dialog::Dialog(const Environment& env, std::vector<std::string> button_labels)
   int i = 0;
   for (std::string& label : button_labels) {
     buttons_.emplace_back(env, std::move(label), Button::TEXT);
-    buttons_.back().setOnClicked([this, i]() { actionTaken(i); });
+    buttons_.back().setOnInteractiveChange([this, i]() { actionTaken(i); });
     button_panel_.add(buttons_.back());
     ++i;
   }

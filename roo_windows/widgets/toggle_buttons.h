@@ -28,9 +28,13 @@ class ToggleButtons : public Panel {
 
   int getActive() const { return active_; }
 
-  void setActive(int index);
+  // Returns true if the active button changed; false if the button at index was
+  // already the active one.
+  bool setActive(int index);
 
  private:
+  void notifyButtonClicked(int index);
+
   class ToggleButton : public roo_windows::Widget {
    public:
     ToggleButton(const Environment& env, const MonoIcon& icon,
@@ -41,7 +45,7 @@ class ToggleButtons : public Panel {
     bool isClickable() const override { return true; }
 
     void onClicked() override {
-      group_.setActive(idx_);
+      group_.notifyButtonClicked(idx_);
       Widget::onClicked();
     }
 

@@ -40,14 +40,14 @@ Widget::Widget(const Environment& env)
       parent_bounds_(0, 0, -1, -1),
       state_(kWidgetEnabled),
       redraw_status_(kDirty | kInvalidated),
-      on_clicked_(nullptr) {}
+      on_interactive_change_(nullptr) {}
 
 Widget::Widget(const Widget& w)
     : parent_(nullptr),
       parent_bounds_(0, 0, -1, -1),
       state_(kWidgetEnabled),
       redraw_status_(kDirty | kInvalidated),
-      on_clicked_(nullptr) {}
+      on_interactive_change_(nullptr) {}
 
 MainWindow* Widget::getMainWindow() {
   return parent_ == nullptr ? nullptr : parent_->getMainWindow();
@@ -361,6 +361,11 @@ void Widget::setOnOffState(OnOffState state) {
   }
 }
 
+void Widget::triggerInteractiveChange() {
+  if (on_interactive_change_ == nullptr) return;
+  on_interactive_change_();
+}
+
 void Widget::setClicking() {
   uint8_t old_elevation = getElevation();
   state_ |= kWidgetClicking;
@@ -598,12 +603,9 @@ bool Widget::onTouchUp(XDim x, YDim y) {
   return handled;
 }
 
-void Widget::onClicked() {
-  if (on_clicked_ == nullptr) return;
-  on_clicked_();
-}
+void Widget::onClicked() { triggerInteractiveChange(); }
 
-bool Widget::isClickable() const { return on_clicked_ != nullptr; }
+bool Widget::isClickable() const { return on_interactive_change_ != nullptr; }
 
 bool Widget::onDown(XDim x, YDim y) {
   if (!isClickable()) return false;
