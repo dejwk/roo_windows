@@ -8,7 +8,7 @@
 #include "roo_windows/widgets/resources/circular_shadow.h"
 
 using namespace roo_display;
-#include "Arduino.h"
+
 namespace roo_windows {
 
 namespace {
