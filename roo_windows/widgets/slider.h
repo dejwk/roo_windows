@@ -31,6 +31,8 @@ class Slider : public BasicWidget {
 
   roo_display::FpPoint getPointOverlayFocus() const override;
 
+  uint16_t getPos() const { return pos_; }
+
   // Uses full range. Returns true if pos changed.
   bool setPos(uint16_t pos);
 
