@@ -351,8 +351,8 @@ class Widget {
 
   virtual roo_display::FpPoint getPointOverlayFocus() const {
     const Rect& r = parent_bounds();
-    return roo_display::FpPoint{(float)(r.xMax() - r.xMin()),
-                                (float)(r.yMax() - r.yMin())};
+    return roo_display::FpPoint{0.5f * (float)(r.xMax() - r.xMin()),
+                                0.5f * (float)(r.yMax() - r.yMin())};
   }
 
   virtual bool useOverlayOnActivation() const { return true; }
