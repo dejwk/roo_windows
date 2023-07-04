@@ -32,35 +32,42 @@ uint16_t pos_from_x(XDim x, int16_t range, Padding p) {
   return ((pos << 16) + range / 2) / range;
 }
 
-}
+}  // namespace
 
 void Slider::onShowPress(XDim x, YDim y) {
   Padding p = getPadding();
   int16_t range = range_from_width(width(), p);
-  setPos(pos_from_x(x, range, p));
+  if (setPos(pos_from_x(x, range, p))) {
+    triggerInteractiveChange();
+  }
   Widget::onShowPress(x, y);
+  triggerInteractiveChange();
 }
 
 bool Slider::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
   if (dy * dy > 400) return false;
   Padding p = getPadding();
   int16_t range = range_from_width(width(), p);
-  setPos(pos_from_x(x, range, p));
+  if (setPos(pos_from_x(x, range, p))) {
+    triggerInteractiveChange();
+  }
   return true;
 }
 
-void Slider::setPos(uint16_t pos) {
-  if (pos == pos_) return;
+bool Slider::setPos(uint16_t pos) {
+  if (pos == pos_) return false;
   Padding p = getPadding();
   int16_t range = range_from_width(width(), p);
   int16_t old_xoffset = xoffset_from_pos(pos_, range, p);
   pos_ = pos;
   int16_t new_xoffset = xoffset_from_pos(pos_, range, p);
-  if (old_xoffset == new_xoffset) return;
-  invalidateInterior(Rect(std::min(old_xoffset, new_xoffset) - kOverlayRadius,
-                          height() / 2 - kOverlayRadius,
-                          std::max(old_xoffset, new_xoffset) + kOverlayRadius,
-                          height() / 2 + kOverlayRadius - 1));
+  if (old_xoffset != new_xoffset) {
+    invalidateInterior(Rect(std::min(old_xoffset, new_xoffset) - kOverlayRadius,
+                            height() / 2 - kOverlayRadius,
+                            std::max(old_xoffset, new_xoffset) + kOverlayRadius,
+                            height() / 2 + kOverlayRadius - 1));
+  }
+  return true;
 }
 
 void Slider::paint(const Canvas& canvas) const {
