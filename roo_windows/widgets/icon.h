@@ -26,6 +26,8 @@ class Icon : public BasicWidget {
 
   void setColor(roo_display::Color color);
 
+  OverlayType getOverlayType() const override { return OVERLAY_POINT; }
+
  private:
   const roo_display::Pictogram* icon_;
   roo_display::Color color_;
