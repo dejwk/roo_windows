@@ -3,13 +3,13 @@ cc_library(
     visibility = ["//visibility:public"],
     srcs = glob(
         [
-            "**/*.cpp",
-            "**/*.h",
+            "src/**/*.cpp",
+            "src/**/*.h",
         ],
         exclude = ["test/**"],
     ),
     includes = [
-        ".",
+        "src",
     ],
     deps = [
         "//roo_testing:arduino",

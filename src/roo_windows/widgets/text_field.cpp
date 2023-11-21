@@ -271,8 +271,8 @@ bool TextFieldEditor::isEdited(const TextField* target) const {
 void TextFieldEditor::setSelection(int16_t selection_begin,
                                    int16_t selection_end) {
   if (target_ == nullptr) return;
-  if (selection_end > glyphs_.size()) {
-    selection_end = glyphs_.size();
+  if (selection_end > (int)glyphs_.size()) {
+    selection_end = (int)glyphs_.size();
   }
   if (selection_end < selection_begin) {
     selection_begin = selection_end;

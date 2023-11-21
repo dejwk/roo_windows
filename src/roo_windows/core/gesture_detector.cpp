@@ -163,7 +163,7 @@ bool GestureDetector::dispatch(TouchEvent::Type type) {
   // Give the ancestors a chance to intercept the event.
   // The last element may be a non-panel, and cannot intercept.
   if (touch_target_path_.size() > 1) {
-    for (int i = 0; i < touch_target_path_.size() - 1; ++i) {
+    for (size_t i = 0; i < touch_target_path_.size() - 1; ++i) {
       if (offerIntercept((Panel*)touch_target_path_[i], type)) {
         // Intercepted, indeed.
         // We need to cancel the current touch target.
