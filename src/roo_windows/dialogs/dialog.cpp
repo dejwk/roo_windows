@@ -36,7 +36,8 @@ Dialog::Dialog(const Environment& env, std::vector<std::string> button_labels)
       body_(env),
       title_(env, "", font_h6()),
       contents_(env),
-      button_panel_(env) {
+      button_panel_(env),
+      callback_fn_(nullptr) {
   body_.setPadding(Padding(PADDING_SMALL, PADDING_TINY));
   title_.setPadding(PADDING_NONE, PADDING_NONE);
   body_.add(title_);
