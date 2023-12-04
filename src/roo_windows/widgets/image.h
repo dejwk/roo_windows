@@ -9,6 +9,7 @@
 
 namespace roo_windows {
 
+// Image is an arbitrary static content, represented as a roo_display::Drawable.
 class Image : public BasicWidget {
  public:
   Image(const Environment& env, const roo_display::Drawable& image)
