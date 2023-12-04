@@ -122,7 +122,9 @@ void Task::showAlertDialog(std::string title, std::string supporting_text,
       new AlertDialog(getApplication().env(), std::move(title),
                       std::move(supporting_text), std::move(button_labels));
   showDialog(*dialog, [this, dialog, callback_fn](int id) {
-    callback_fn(id);
+    if (callback_fn != nullptr) {
+      callback_fn(id);
+    }
     delete dialog;
   });
 }
