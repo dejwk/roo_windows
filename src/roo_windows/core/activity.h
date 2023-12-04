@@ -62,4 +62,16 @@ class Activity {
   State state_;
 };
 
+// Helper for very simple cases when there is only one activity in a full-screen
+// task.
+class SingletonActivity : public Activity {
+ public:
+  SingletonActivity(Application& app, Widget& contents);
+
+  Widget& getContents() override { return contents_; }
+
+ private:
+  Widget& contents_;
+};
+
 }  // namespace roo_windows

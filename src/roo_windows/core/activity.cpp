@@ -16,4 +16,10 @@ Application* Activity::getApplication() {
 
 void Activity::exit() { getTask()->exitActivity(); }
 
+SingletonActivity::SingletonActivity(Application& app, Widget& contents)
+    : contents_(contents) {
+  Task* task = app.addTaskFullScreen();
+  task->enterActivity(this);
+}
+
 }  // namespace roo_windows
