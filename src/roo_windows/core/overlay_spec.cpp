@@ -26,11 +26,11 @@ roo_display::Color getOverlayColor(const Widget& widget, const Canvas& canvas) {
 roo_display::Color getClickAnimationColor(const Widget& widget,
                                           const Canvas& canvas) {
   const Theme& myTheme = widget.theme();
-  Color color = widget.usesHighlighterColor()
+  Color overlay = widget.usesHighlighterColor()
                     ? myTheme.color.highlighterColor(canvas.bgcolor())
                     : myTheme.color.defaultColor(canvas.bgcolor());
-  color.set_a(myTheme.pressAnimationOpacity(canvas.bgcolor()));
-  return color;
+  overlay.set_a(myTheme.pressAnimationOpacity(canvas.bgcolor()));
+  return overlay;
 }
 
 static constexpr int64_t kMaxClickAnimRadius = 8192;

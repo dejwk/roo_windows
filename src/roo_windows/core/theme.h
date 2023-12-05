@@ -415,15 +415,15 @@ struct Theme {
 
   uint8_t pressAnimationOpacity(roo_display::Color bg) const {
     if (bg == color.surface) {
-      return state.activatedOnSurface + state.pressedOnSurface;
+      return state.pressedOnSurface;
     } else if (bg == color.primary || bg == color.primaryVariant) {
-      return state.activatedOnPrimary + state.pressedOnPrimary;
+      return state.pressedOnPrimary;
     } else if (bg == color.secondary || bg == color.secondaryVariant) {
-      return state.activatedOnSecondary + state.pressedOnSecondary;
+      return state.pressedOnSecondary;
     } else if (bg == color.error) {
-      return state.activatedOnError + state.pressedOnError;
+      return state.pressedOnError;
     } else {
-      return state.activatedOnBackground + state.pressedOnBackground;
+      return state.pressedOnBackground;
     }
   }
 
