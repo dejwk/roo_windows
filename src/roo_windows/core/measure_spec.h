@@ -1,6 +1,5 @@
 #pragma once
 
-#include "roo_glog/logging.h"
 #include "roo_windows/core/preferred_size.h"
 
 namespace roo_windows {
@@ -44,7 +43,7 @@ class WidthSpec {
           // Child wants to be our size. So be it.
           return WidthSpec::Exactly(size);
         } else {
-          CHECK(childWidth.isWrapContent());
+          // CHECK(childWidth.isWrapContent());
           // Child wants to determine its own size. It can't be
           // bigger than us.
           return WidthSpec::AtMost(size);
@@ -125,7 +124,7 @@ class HeightSpec {
           // Child wants to be our size. So be it.
           return HeightSpec::Exactly(size);
         } else {
-          CHECK(childHeight.isWrapContent());
+          // CHECK(childHeight.isWrapContent());
           // Child wants to determine its own size. It can't be
           // bigger than us.
           return HeightSpec::AtMost(size);

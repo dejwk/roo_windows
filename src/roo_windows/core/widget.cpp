@@ -2,7 +2,6 @@
 
 #include "roo_display/filter/foreground.h"
 #include "roo_display/shape/smooth.h"
-#include "roo_glog/logging.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/main_window.h"
 #include "roo_windows/core/panel.h"

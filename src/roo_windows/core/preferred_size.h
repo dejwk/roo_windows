@@ -1,7 +1,5 @@
 #pragma once
 
-#include "roo_glog/logging.h"
-
 namespace roo_windows {
 
 // PreferredSize are used by views to tell their parents what is their preferred
@@ -96,9 +94,9 @@ inline bool operator==(PreferredSize::Height a, PreferredSize::Height b) {
 
 inline std::ostream& operator<<(std::ostream& os, PreferredSize::Width w) {
   if (w == PreferredSize::MatchParentWidth()) {
-    LOG(INFO) << "match-parent-width";
+    os << "match-parent-width";
   } else if (w == PreferredSize::WrapContentWidth()) {
-    LOG(INFO) << "wrap-content-width";
+    os << "wrap-content-width";
   } else {
     os << "width:" << w.value_;
   }
@@ -107,9 +105,9 @@ inline std::ostream& operator<<(std::ostream& os, PreferredSize::Width w) {
 
 inline std::ostream& operator<<(std::ostream& os, PreferredSize::Height h) {
   if (h == PreferredSize::MatchParentHeight()) {
-    LOG(INFO) << "match-parent-height";
+    os << "match-parent-height";
   } else if (h == PreferredSize::WrapContentHeight()) {
-    LOG(INFO) << "wrap-content-height";
+    os << "wrap-content-height";
   } else {
     os << "height:" << h.value_;
   }

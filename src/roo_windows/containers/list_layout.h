@@ -1,6 +1,5 @@
 #pragma once
 
-#include "roo_glog/logging.h"
 #include "roo_windows/config.h"
 #include "roo_windows/core/dimensions.h"
 #include "roo_windows/core/main_window.h"
