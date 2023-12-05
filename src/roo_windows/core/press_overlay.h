@@ -61,7 +61,7 @@ class PressOverlay : public roo_display::Rasterizable {
                   roo_display::Color* result) const override {
     if (clip_circle_) {
       while (count-- > 0) {
-        *result++ = get(*x++, *y++);
+        *result++ = get_with_clip_circle(*x++, *y++);
       }
     } else {
       while (count-- > 0) {
@@ -93,7 +93,7 @@ class PressOverlay : public roo_display::Rasterizable {
       }
       for (int16_t y_cursor = yMin; y_cursor <= yMax; ++y_cursor) {
         for (int16_t x_cursor = xMin; x_cursor <= xMax; ++x_cursor) {
-          *result++ = get(x_cursor, y_cursor);
+          *result++ = get_with_clip_circle(x_cursor, y_cursor);
         }
       }
     } else {
@@ -131,6 +131,10 @@ class PressOverlay : public roo_display::Rasterizable {
   }
 
   roo_display::Color get(int16_t x, int16_t y) const {
+    return clip_circle_ ? get_with_clip_circle(x, y) : get_no_clip_circle(x, y);
+  }
+
+  roo_display::Color get_with_clip_circle(int16_t x, int16_t y) const {
     float dx_clip = x - clip_circle_x_;
     float dy_clip = y - clip_circle_y_;
     float delta_clip =
