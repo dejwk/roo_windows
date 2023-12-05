@@ -13,8 +13,6 @@ namespace roo_windows {
 
 using roo_display::Display;
 
-static constexpr unsigned long kClickAnimationMs = 200;
-
 // Do not refresh display more frequently than this (50 Hz).
 static constexpr long kMinRefreshTimeDeltaMs = 20;
 
