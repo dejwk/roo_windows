@@ -2,7 +2,6 @@
 
 #include <functional>
 
-#include "roo_glog/logging.h"
 #include "roo_windows/containers/horizontal_layout.h"
 #include "roo_windows/containers/scrollable_panel.h"
 #include "roo_windows/containers/vertical_layout.h"

@@ -2,6 +2,7 @@
 
 #include "roo_display/filter/foreground.h"
 #include "roo_display/shape/smooth.h"
+#include "roo_logging.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/main_window.h"
 #include "roo_windows/core/panel.h"
@@ -663,9 +664,11 @@ void Widget::onCancel() {
   }
 }
 
-std::ostream& operator<<(std::ostream& os, const Widget& widget) {
+}  // namespace roo_windows
+
+::roo_logging::Stream& operator<<(::roo_logging::Stream& os,
+                                  const roo_windows::Widget& widget) {
   os << GetTypeName(widget) << "{ " << &widget << "}";
   return os;
 }
 
-}  // namespace roo_windows

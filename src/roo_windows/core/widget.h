@@ -7,6 +7,7 @@
 #include "roo_display/filter/color_filter.h"
 #include "roo_display/image/image.h"
 #include "roo_display/shape/point.h"
+#include "roo_logging.h"
 #include "roo_windows/core/border_style.h"
 #include "roo_windows/core/canvas.h"
 #include "roo_windows/core/clipper.h"
@@ -615,7 +616,7 @@ class Widget {
 // TODO: adjust for different screen densities.
 static const int gridSize = 4;
 
-// Debug support.
-std::ostream& operator<<(std::ostream& os, const Widget& widget);
-
 }  // namespace roo_windows
+
+roo_logging::Stream& operator<<(roo_logging::Stream& os,
+                                const roo_windows::Widget& widget);

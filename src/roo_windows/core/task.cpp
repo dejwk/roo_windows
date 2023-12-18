@@ -1,5 +1,6 @@
 #include "roo_windows/core/task.h"
 
+#include "roo_logging.h"
 #include "roo_windows/core/activity.h"
 #include "roo_windows/dialogs/alert_dialog.h"
 #include "roo_windows/dialogs/dialog.h"
