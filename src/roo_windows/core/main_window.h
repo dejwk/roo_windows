@@ -61,6 +61,8 @@ class MainWindow : public Panel {
   Rect redraw_bounds_;
 
   roo_display::BackgroundFillOptimizer::FrameBuffer background_fill_buffer_;
+
+  bool initialized_ = false;
 };
 
 }  // namespace roo_windows

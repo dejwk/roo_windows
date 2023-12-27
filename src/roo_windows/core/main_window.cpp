@@ -72,6 +72,7 @@ MainWindow::MainWindow(Application& app, const roo_display::Box& bounds)
   Color palette[color_set.size()];
   std::copy(color_set.begin(), color_set.end(), palette);
   background_fill_buffer_.setPalette(palette, color_set.size());
+  background_fill_buffer_.setPrefilled(env.theme().color.background);
 }
 
 Application& MainWindow::app() const { return app_; }
@@ -87,6 +88,10 @@ void MainWindow::updateLayout() {
 }
 
 void MainWindow::paintWindow(const roo_display::Surface& s) {
+  if (!initialized_) {
+    initialized_ = true;
+    s.drawObject(roo_display::Fill(theme().color.background));
+  }
   if (!isDirty()) return;
   Canvas canvas(&s);
   canvas.clipToExtents(redraw_bounds_);
