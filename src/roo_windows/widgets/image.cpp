@@ -6,14 +6,18 @@ namespace roo_windows {
 
 void Image::setImage(const roo_display::Drawable* image) {
   if (image == image_) return;
+  if (image_ == nullptr || image == nullptr ||
+      image_->anchorExtents() != image->anchorExtents()) {
+    requestLayout();
+  }
   image_ = image;
-  invalidateInterior();
+  markDirty();
 }
 
 void Image::setAlignment(roo_display::Alignment alignment) {
   if (alignment == alignment_) return;
   alignment_ = alignment;
-  if (image_ != nullptr) invalidateInterior();
+  if (image_ != nullptr) markDirty();
 }
 
 void Image::paint(const Canvas& canvas) const {

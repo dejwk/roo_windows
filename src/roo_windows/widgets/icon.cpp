@@ -26,7 +26,7 @@ void Icon::paint(const Canvas& canvas) const {
 
 void Icon::setIcon(const roo_display::Pictogram& icon) {
   if (icon_ == &icon) return;
-  if (icon_ != nullptr && icon_->anchorExtents() != icon.anchorExtents()) {
+  if (icon_ == nullptr || icon_->anchorExtents() != icon.anchorExtents()) {
     requestLayout();
   }
   icon_ = &icon;

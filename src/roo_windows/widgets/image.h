@@ -9,6 +9,10 @@
 namespace roo_windows {
 
 // Image is an arbitrary static content, represented as a roo_display::Drawable.
+//
+// Note: once set, the anchor extents of the underlying drawable should remain
+// constant. If they do change, however, call requestLayout() to make the image
+// aware of the changed dimensions.
 class Image : public BasicWidget {
  public:
   // Creates an empty image. You can set the content after construction by
