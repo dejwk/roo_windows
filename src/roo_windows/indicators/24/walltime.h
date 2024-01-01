@@ -3,7 +3,7 @@
 #include "roo_display.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_display/ui/tile.h"
-#include "roo_smooth_fonts/NotoSans_Regular/24.h"
+#include "roo_fonts/NotoSans_Regular/24.h"
 #include "roo_windows/indicators/impl/walltime.h"
 
 namespace roo_windows {

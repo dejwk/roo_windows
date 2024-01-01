@@ -1,14 +1,14 @@
 #include "theme.h"
 
 #include "roo_display/color/color.h"
-#include "roo_smooth_fonts/NotoSans_CondensedBold/15.h"
-#include "roo_smooth_fonts/NotoSans_Regular/12.h"
-#include "roo_smooth_fonts/NotoSans_Regular/15.h"
-#include "roo_smooth_fonts/NotoSans_Regular/18.h"
-#include "roo_smooth_fonts/NotoSans_Regular/27.h"
-#include "roo_smooth_fonts/NotoSans_Regular/40.h"
-#include "roo_smooth_fonts/NotoSans_Regular/60.h"
-#include "roo_smooth_fonts/NotoSans_Regular/90.h"
+#include "roo_fonts/NotoSans_CondensedBold/15.h"
+#include "roo_fonts/NotoSans_Regular/12.h"
+#include "roo_fonts/NotoSans_Regular/15.h"
+#include "roo_fonts/NotoSans_Regular/18.h"
+#include "roo_fonts/NotoSans_Regular/27.h"
+#include "roo_fonts/NotoSans_Regular/40.h"
+#include "roo_fonts/NotoSans_Regular/60.h"
+#include "roo_fonts/NotoSans_Regular/90.h"
 
 namespace roo_windows {
 
