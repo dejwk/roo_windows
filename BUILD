@@ -20,16 +20,3 @@ cc_library(
         "//lib/roo_scheduler",
     ],
 )
-
-#cc_test(
-#    name = "roo_time_test",
-#    srcs = [
-#        "test/roo_time_test.cpp",
-#    ],
-#    copts = ["-Iexternal/gtest/include"],
-#    linkstatic = 1,
-#    deps = [
-#        "//lib/roo_time",
-#        "@gtest//:gtest_main",
-#    ],
-#)
