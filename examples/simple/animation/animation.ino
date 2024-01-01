@@ -37,8 +37,8 @@ Display display(screen, touch,
 #include "roo_display/shape/smooth.h"
 #include "roo_display/ui/tile.h"
 #include "roo_logging.h"
-#include "roo_material_icons/filled/action.h"
-#include "roo_material_icons/filled/alert.h"
+#include "roo_icons/filled/action.h"
+#include "roo_icons/filled/alert.h"
 #include "roo_windows/widgets/icon.h"
 #include "roo_windows/widgets/image.h"
 

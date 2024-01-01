@@ -1,5 +1,3 @@
-#include "roo_windows/config.h"
-
 #include "roo_windows/activities/keyboard.h"
 
 #include <memory>
@@ -7,14 +5,9 @@
 
 #include "roo_display/ui/text_label.h"
 #include "roo_display/ui/tile.h"
-#include "roo_material_icons/outlined/18/action.h"
-#include "roo_material_icons/outlined/24/action.h"
-#include "roo_material_icons/outlined/36/action.h"
-#include "roo_material_icons/outlined/48/action.h"
-#include "roo_material_icons/outlined/18/content.h"
-#include "roo_material_icons/outlined/24/content.h"
-#include "roo_material_icons/outlined/36/content.h"
-#include "roo_material_icons/outlined/48/content.h"
+#include "roo_icons/outlined/action.h"
+#include "roo_icons/outlined/content.h"
+#include "roo_windows/config.h"
 #include "roo_windows/core/dimensions.h"
 #include "roo_windows/core/main_window.h"
 #include "roo_windows/core/task.h"
@@ -40,8 +33,8 @@ static const uint8_t shift_24_data[] PROGMEM = {
 };
 
 const RleImage4bppxBiased<Alpha4, ProgMemPtr>& shift_24() {
-  static RleImage4bppxBiased<Alpha4, ProgMemPtr> value(
-      24, 24, shift_24_data, Alpha4(color::Black));
+  static RleImage4bppxBiased<Alpha4, ProgMemPtr> value(24, 24, shift_24_data,
+                                                       Alpha4(color::Black));
   return value;
 }
 
@@ -466,8 +459,7 @@ KeyboardPage::KeyboardPage(const Environment& env, const KeyboardPageSpec* spec)
           break;
         }
         case KeySpec::ENTER: {
-          b = new EnterButton(
-              env, ic_outlined_24_action_done());
+          b = new EnterButton(env, ic_outlined_24_action_done());
           b_color = env.keyboardColorTheme().acceptButton;
           break;
         }
@@ -477,8 +469,7 @@ KeyboardPage::KeyboardPage(const Environment& env, const KeyboardPageSpec* spec)
           break;
         }
         case KeySpec::DEL: {
-          b = new DelButton(
-              env, ic_outlined_24_content_backspace());
+          b = new DelButton(env, ic_outlined_24_content_backspace());
           b_color = env.keyboardColorTheme().modifierButton;
           break;
         }

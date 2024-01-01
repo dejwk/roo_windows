@@ -1,6 +1,6 @@
 #pragma once
 
-#include "roo_material_icons/filled/18/device.h"
+#include "roo_icons/filled/18/device.h"
 #include "roo_windows/indicators/impl/battery.h"
 
 namespace roo_windows {

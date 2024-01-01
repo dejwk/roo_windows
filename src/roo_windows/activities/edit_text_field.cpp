@@ -1,13 +1,9 @@
-#include "roo_windows/config.h"
-
 #include "roo_windows/activities/edit_text_field.h"
 
 #include <inttypes.h>
 
-#include "roo_material_icons/outlined/18/navigation.h"
-#include "roo_material_icons/outlined/24/navigation.h"
-#include "roo_material_icons/outlined/36/navigation.h"
-#include "roo_material_icons/outlined/48/navigation.h"
+#include "roo_icons/outlined/navigation.h"
+#include "roo_windows/config.h"
 
 namespace roo_windows {
 
@@ -31,7 +27,8 @@ EditTextField::EditTextField(const Environment& env, TextFieldEditor& editor,
                              const std::string& hint)
     : main_pane_(env),
       content_pane_(env),
-      back_(env, SCALED_ROO_ICON(outlined, navigation_arrow_back), Button::TEXT),
+      back_(env, SCALED_ROO_ICON(outlined, navigation_arrow_back),
+            Button::TEXT),
       text_(env, editor, hint, *this),
       enter_(env, SCALED_ROO_ICON(outlined, navigation_check)),
       editing_(false),

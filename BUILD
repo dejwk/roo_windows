@@ -15,7 +15,7 @@ cc_library(
         "//roo_testing:arduino",
         "//lib/roo_display",
         "//lib/roo_logging",
-        "//lib/roo_material_icons",
+        "//lib/roo_icons",
         "//lib/roo_time",
         "//lib/roo_scheduler",
     ],

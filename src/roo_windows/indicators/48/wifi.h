@@ -1,6 +1,6 @@
 #pragma once
 
-#include "roo_material_icons/filled/48/device.h"
+#include "roo_icons/filled/48/device.h"
 #include "roo_windows/indicators/impl/wifi.h"
 
 namespace roo_windows {

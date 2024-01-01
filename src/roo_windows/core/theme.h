@@ -67,7 +67,7 @@
 #endif
 #endif
 
-// ROO_WINDOWS_ICON_SIZE defines the size of icons from roo_material_icons, used
+// ROO_WINDOWS_ICON_SIZE defines the size of icons from roo_icons, used
 // in clickable UI elements such as buttons.
 
 #if (ROO_WINDOWS_ZOOM >= 200)

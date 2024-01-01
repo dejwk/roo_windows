@@ -4,10 +4,7 @@
 
 #include "roo_display/image/image.h"
 #include "roo_display/ui/tile.h"
-#include "roo_material_icons/filled/18/toggle.h"
-#include "roo_material_icons/filled/24/toggle.h"
-#include "roo_material_icons/filled/36/toggle.h"
-#include "roo_material_icons/filled/48/toggle.h"
+#include "roo_icons/filled/toggle.h"
 
 using namespace roo_display;
 

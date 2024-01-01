@@ -1,7 +1,7 @@
 #include "Arduino.h"
 
 #include "roo_display.h"
-#include "roo_material_icons.h"
+#include "roo_icons.h"
 #include "roo_scheduler.h"
 #include "roo_windows.h"
 
@@ -32,7 +32,7 @@ Display display(screen, touch,
                 TouchCalibration(269, 249, 3829, 3684,
                                  Orientation::LeftDown()));
 
-#include "roo_material_icons/filled/24/action.h"
+#include "roo_icons/filled/24/action.h"
 #include "roo_windows/containers/vertical_layout.h"
 #include "roo_windows/dialogs/alert_dialog.h"
 #include "roo_windows/widgets/button.h"
