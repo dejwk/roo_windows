@@ -123,11 +123,11 @@ PreferredSize Slider::getPreferredSize() const {
 }
 
 roo_display::FpPoint Slider::getPointOverlayFocus() const {
-  int16_t xoffset;
+  float xoffset;
   Padding p = getPadding();
 
   int16_t range = range_from_width(width(), p);
-  xoffset = xoffset_from_pos(pos_, range, p);
+  xoffset = (float)xoffset_from_pos(pos_, range, p);
   return roo_display::FpPoint{xoffset, (height() - 1) * 0.5f};
 }
 
