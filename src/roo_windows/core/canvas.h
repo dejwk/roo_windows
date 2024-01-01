@@ -24,7 +24,7 @@ class Canvas {
 
   const roo_display::Box& clip_box() const { return clip_box_; }
 
-  void set_clip_box(const roo_display::Box &clip_box) { clip_box_ = clip_box; }
+  void set_clip_box(const roo_display::Box& clip_box) { clip_box_ = clip_box; }
 
   void shift(XDim dx, YDim dy) {
     dx_ += dx;
@@ -86,6 +86,11 @@ class Canvas {
   void nest() const {}
   void unnest() const {}
   bool is_write_once() const { return surface_->is_write_once(); }
+  roo_display::FillMode fill_mode() const { return surface_->fill_mode(); }
+
+  roo_display::BlendingMode blending_mode() const {
+    return surface_->blending_mode();
+  }
 
   const roo_display::Rasterizable* getRasterizableBackground() const {
     return nullptr;
