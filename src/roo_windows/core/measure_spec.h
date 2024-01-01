@@ -136,7 +136,8 @@ class HeightSpec {
         return HeightSpec::AtMost(size);
       }
       // Parent asked to see how big we want to be
-      case UNSPECIFIED: {
+      case UNSPECIFIED:
+      default: {
         // Child wants to be our size... find out how big it should
         // be
         return HeightSpec::Unspecified(size);
