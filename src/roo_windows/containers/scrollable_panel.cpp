@@ -192,78 +192,76 @@ void ScrollablePanel::execute(roo_scheduler::EventID id) {
   if (roo_time::Uptime::Now() >= deadline_hide_scrollbar_) {
     scroll_bar_.setVisibility(INVISIBLE);
   }
-  if (contents() == nullptr) return;
-  bool scroll_in_progress = (scroll_start_vx_ != 0 || scroll_start_vy_ != 0);
-  // If scroll in progress, take it into account.
+  bool scroll_in_progress =
+      (contents() != nullptr && scroll_start_vx_ != 0 || scroll_start_vy_ != 0);
+  if (!scroll_in_progress) return;
+
+  Widget* c = contents();
+  int16_t drag_x_delta = 0;
+  int16_t drag_y_delta = 0;
+
+  // Calculate the total offset to be moved.
+  unsigned long t_end = millis();
+  if ((long)(t_end - scroll_end_time_) >= 0) {
+    // The time to full stop elapsed; the scroll is certainly over now.
+    t_end = scroll_end_time_;
+    scroll_in_progress = false;
+  }
+  // Now, a little bit of physics. We calculate total distance traveled
+  // by the scrolled content, as S = vt * at^2 (where a < 0), seperately
+  // for the horizontal and vertical components.
+  // Note that when the scroll gets abruptly terminated in either
+  // horizontal or vertical direction because of bumping into a boundary,
+  // the corresponding start velocity is set to zero.
+  float t = (t_end - scroll_start_time_) / 1000.0;
+  if (scroll_start_vx_ != 0) {
+    // The scrolling continues horizontally.
+    int32_t scroll_x_total =
+        (int32_t)(scroll_start_vx_ * t + scroll_decel_x_ * t * t / 2);
+    drag_x_delta = scroll_x_total - (c->xOffset() - dxStart_);
+    // Don't move outside the boundary.
+    if (drag_x_delta < -c->xOffset() + width() - c->width()) {
+      drag_x_delta = -c->xOffset() + width() - c->width();
+      scroll_start_vx_ = 0;
+    }
+    if (drag_x_delta > -c->xOffset()) {
+      drag_x_delta = -c->xOffset();
+      scroll_start_vx_ = 0;
+    }
+  }
+  if (scroll_start_vy_ != 0) {
+    // The scrolling continues vertically.
+    int32_t scroll_y_total =
+        (int32_t)(scroll_start_vy_ * t + scroll_decel_y_ * t * t / 2);
+    drag_y_delta = scroll_y_total - (c->yOffset() - dyStart_);
+    // Don't move outside the boundary.
+    if (drag_y_delta < -c->yOffset() + height() - c->height()) {
+      drag_y_delta = -c->yOffset() + height() - c->height();
+      scroll_start_vy_ = 0;
+    }
+    if (drag_y_delta > -c->yOffset()) {
+      drag_y_delta = -c->yOffset();
+      scroll_start_vy_ = 0;
+    }
+  }
+  if (drag_x_delta != 0 || drag_y_delta != 0) {
+    scrollBy(drag_x_delta, drag_y_delta);
+    invalidateInterior();
+  }
+
+  // If we're done, e.g. due to bumping against both horizontal and
+  // vertical boundaries, then stop refreshing the view.
+  if (scroll_start_vx_ == 0 && scroll_start_vy_ == 0) {
+    scroll_in_progress = false;
+  }
   if (scroll_in_progress) {
-    Widget* c = contents();
-    int16_t drag_x_delta = 0;
-    int16_t drag_y_delta = 0;
-
-    // Calculate the total offset to be moved.
-    unsigned long t_end = millis();
-    if ((long)(t_end - scroll_end_time_) >= 0) {
-      // The time to full stop elapsed; the scroll is certainly over now.
-      t_end = scroll_end_time_;
-      scroll_in_progress = false;
-    }
-    // Now, a little bit of physics. We calculate total distance traveled
-    // by the scrolled content, as S = vt * at^2 (where a < 0), seperately
-    // for the horizontal and vertical components.
-    // Note that when the scroll gets abruptly terminated in either
-    // horizontal or vertical direction because of bumping into a boundary,
-    // the corresponding start velocity is set to zero.
-    float t = (t_end - scroll_start_time_) / 1000.0;
-    if (scroll_start_vx_ != 0) {
-      // The scrolling continues horizontally.
-      int32_t scroll_x_total =
-          (int32_t)(scroll_start_vx_ * t + scroll_decel_x_ * t * t / 2);
-      drag_x_delta = scroll_x_total - (c->xOffset() - dxStart_);
-      // Don't move outside the boundary.
-      if (drag_x_delta < -c->xOffset() + width() - c->width()) {
-        drag_x_delta = -c->xOffset() + width() - c->width();
-        scroll_start_vx_ = 0;
-      }
-      if (drag_x_delta > -c->xOffset()) {
-        drag_x_delta = -c->xOffset();
-        scroll_start_vx_ = 0;
-      }
-    }
-    if (scroll_start_vy_ != 0) {
-      // The scrolling continues vertically.
-      int32_t scroll_y_total =
-          (int32_t)(scroll_start_vy_ * t + scroll_decel_y_ * t * t / 2);
-      drag_y_delta = scroll_y_total - (c->yOffset() - dyStart_);
-      // Don't move outside the boundary.
-      if (drag_y_delta < -c->yOffset() + height() - c->height()) {
-        drag_y_delta = -c->yOffset() + height() - c->height();
-        scroll_start_vy_ = 0;
-      }
-      if (drag_y_delta > -c->yOffset()) {
-        drag_y_delta = -c->yOffset();
-        scroll_start_vy_ = 0;
-      }
-    }
-    if (drag_x_delta != 0 || drag_y_delta != 0) {
-      scrollBy(drag_x_delta, drag_y_delta);
-      invalidateInterior();
-    }
-
-    // If we're done, e.g. due to bumping against both horizontal and
-    // vertical boundaries, then stop refreshing the view.
-    if (scroll_start_vx_ == 0 && scroll_start_vy_ == 0) {
-      scroll_in_progress = false;
-    }
-    if (scroll_in_progress) {
-      scheduleScrollAnimationUpdate();
-    } else {
-      scroll_start_vx_ = scroll_start_vy_ = 0;
-      if (scroll_bar_presence_ == VerticalScrollBar::SHOWN_WHEN_SCROLLING) {
-        // Schedule hiding the scroll bar.
-        deadline_hide_scrollbar_ =
-            roo_time::Uptime::Now() + kDelayHideScrollbar;
-        scheduleHideScrollBarUpdate();
-      }
+    scheduleScrollAnimationUpdate();
+  } else {
+    scroll_start_vx_ = scroll_start_vy_ = 0;
+    if (scroll_bar_presence_ == VerticalScrollBar::SHOWN_WHEN_SCROLLING) {
+      // Schedule hiding the scroll bar.
+      deadline_hide_scrollbar_ = roo_time::Uptime::Now() + kDelayHideScrollbar;
+      scheduleHideScrollBarUpdate();
     }
   }
 }
