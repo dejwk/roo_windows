@@ -186,8 +186,11 @@ void ScrollablePanel::onLayout(bool changed, const Rect& rect) {
   update();
 }
 
-void ScrollablePanel::paintWidgetContents(const Canvas& canvas,
-                                          Clipper& clipper) {
+void ScrollablePanel::execute(roo_scheduler::EventID id) {
+  notification_id_ = -1;
+  if (roo_time::Uptime::Now() >= deadline_hide_scrollbar_) {
+    scroll_bar_.setVisibility(INVISIBLE);
+  }
   if (contents() == nullptr) return;
   bool scroll_in_progress = (scroll_start_vx_ != 0 || scroll_start_vy_ != 0);
   // If scroll in progress, take it into account.
@@ -240,31 +243,43 @@ void ScrollablePanel::paintWidgetContents(const Canvas& canvas,
         scroll_start_vy_ = 0;
       }
     }
-    scrollBy(drag_x_delta, drag_y_delta);
+    if (drag_x_delta != 0 || drag_y_delta != 0) {
+      scrollBy(drag_x_delta, drag_y_delta);
+      invalidateInterior();
+    }
 
     // If we're done, e.g. due to bumping against both horizontal and
     // vertical boundaries, then stop refreshing the view.
     if (scroll_start_vx_ == 0 && scroll_start_vy_ == 0) {
       scroll_in_progress = false;
     }
-    if (!scroll_in_progress) {
+    if (scroll_in_progress) {
+      scheduleScrollAnimationUpdate();
+    } else {
       scroll_start_vx_ = scroll_start_vy_ = 0;
       if (scroll_bar_presence_ == VerticalScrollBar::SHOWN_WHEN_SCROLLING) {
         // Schedule hiding the scroll bar.
         deadline_hide_scrollbar_ =
             roo_time::Uptime::Now() + kDelayHideScrollbar;
-        getApplication()->scheduleAction(*this, kDelayHideScrollbar);
+        scheduleHideScrollBarUpdate();
       }
     }
   }
-  Container::paintWidgetContents(canvas, clipper);
-
-  if (scroll_in_progress) {
-    // TODO: use a scheduler to cap the frequency of invalidation,
-    // to something like 50-60 fps.
-    invalidateInterior();
-  }
 }
+
+void ScrollablePanel::scheduleScrollAnimationUpdate() {
+  if (notification_id_ > 0) {
+    getApplication()->cancelAction(notification_id_);
+  }
+  notification_id_ =
+      getApplication()->scheduleAction(*this, roo_time::Millis(10));
+}
+
+void ScrollablePanel::scheduleHideScrollBarUpdate() {
+  CHECK_EQ(notification_id_, -1);
+  getApplication()->scheduleAction(*this, kDelayHideScrollbar);
+}
+
 
 bool ScrollablePanel::onInterceptTouchEvent(const TouchEvent& event) {
   if (scroll_start_vx_ != 0 || scroll_start_vy_ != 0) {
@@ -327,7 +342,7 @@ bool ScrollablePanel::onSingleTapUp(XDim x, YDim y) {
     scroll_bar_.setVisibility(VISIBLE);
   }
   deadline_hide_scrollbar_ = roo_time::Uptime::Now() + kDelayHideScrollbar;
-  getApplication()->scheduleAction(*this, kDelayHideScrollbar);
+  scheduleHideScrollBarUpdate();
   return true;
 }
 
@@ -407,7 +422,7 @@ bool ScrollablePanel::onFling(XDim x, YDim y, XDim vx, YDim vy) {
   // Capture horizontal and vertical components of the decceleration.
   scroll_decel_x_ = -kDecceleration * scroll_start_vx_ / v_abs;
   scroll_decel_y_ = -kDecceleration * scroll_start_vy_ / v_abs;
-  invalidateInterior();
+  scheduleScrollAnimationUpdate();
   return true;
 }
 
@@ -415,9 +430,10 @@ bool ScrollablePanel::onTouchUp(XDim vx, YDim vy) {
   bool result = Widget::onTouchUp(vx, vy);
   scroll_bar_gesture_ = false;
   is_scroll_bar_scrolled_ = false;
-  if (scroll_bar_presence_ == VerticalScrollBar::SHOWN_WHEN_SCROLLING) {
+  if (scroll_bar_presence_ == VerticalScrollBar::SHOWN_WHEN_SCROLLING &&
+      scroll_start_vx_ == 0 && scroll_start_vy_ == 0) {
     deadline_hide_scrollbar_ = roo_time::Uptime::Now() + kDelayHideScrollbar;
-    getApplication()->scheduleAction(*this, kDelayHideScrollbar);
+    scheduleHideScrollBarUpdate();
   }
   return result;
 }

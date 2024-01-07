@@ -45,9 +45,14 @@ class Application {
   friend class ScrollablePanel;
 
   // Keeping it private for now, to not commit to the API just yet.
-  void scheduleAction(roo_scheduler::Executable& task,
-                      roo_time::Interval delay = roo_time::Millis(0)) {
-    scheduler_.scheduleAfter(&task, delay);
+  roo_scheduler::ExecutionID scheduleAction(
+      roo_scheduler::Executable& task,
+      roo_time::Interval delay = roo_time::Millis(0)) {
+    return scheduler_.scheduleAfter(&task, delay);
+  }
+
+  void cancelAction(roo_scheduler::ExecutionID id) {
+    scheduler_.cancel(id);
   }
 
   roo_display::Display& display_;

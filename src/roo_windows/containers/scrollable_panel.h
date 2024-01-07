@@ -56,7 +56,8 @@ class ScrollablePanel : public Container, private roo_scheduler::Executable {
         scroll_bar_presence_(VerticalScrollBar::ALWAYS_HIDDEN),
         contents_(nullptr),
         scroll_bar_(env),
-        scroll_bar_gesture_(false) {
+        scroll_bar_gesture_(false),
+        notification_id_(-1) {
     scroll_bar_.setVisibility(INVISIBLE);
   }
 
@@ -164,7 +165,7 @@ class ScrollablePanel : public Container, private roo_scheduler::Executable {
 
   void update() { scrollBy(0, 0); }
 
-  void paintWidgetContents(const Canvas& canvas, Clipper& clipper) override;
+  // void paintWidgetContents(const Canvas& canvas, Clipper& clipper) override;
 
   bool onInterceptTouchEvent(const TouchEvent& event) override;
 
@@ -184,13 +185,12 @@ class ScrollablePanel : public Container, private roo_scheduler::Executable {
   void onLayout(bool changed, const Rect& rect) override;
 
  private:
-  void execute(roo_scheduler::EventID id) override {
-    if (roo_time::Uptime::Now() >= deadline_hide_scrollbar_) {
-      scroll_bar_.setVisibility(INVISIBLE);
-    }
-  }
+  void execute(roo_scheduler::EventID id) override;
 
   void scrollVertically(YDim yscroll);
+
+  void scheduleScrollAnimationUpdate();
+  void scheduleHideScrollBarUpdate();
 
   Direction direction_;
   roo_display::Alignment alignment_;
@@ -213,6 +213,7 @@ class ScrollablePanel : public Container, private roo_scheduler::Executable {
   VerticalScrollBar::Presence scroll_bar_presence_;
   VerticalScrollBar scroll_bar_;
   roo_time::Uptime deadline_hide_scrollbar_;
+  roo_scheduler::ExecutionID notification_id_;
 
   // Whether the 'down' event happened in the area reserved for the scroll bar.
   // In that case, the motion is never interpreted as anything else but possibly
