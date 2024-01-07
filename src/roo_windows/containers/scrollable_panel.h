@@ -121,6 +121,17 @@ class ScrollablePanel : public Panel, private roo_scheduler::Executable {
 
   void scrollToBottom();
 
+  struct ScrollPosition {
+    XDim x;
+    YDim y;
+  };
+
+  ScrollPosition getScrollPosition() const {
+    const Widget* w = contents();
+    if (w == nullptr) return {0, 0};
+    return {w->xOffset(), w->yOffset()};
+  }
+
   void update() { scrollBy(0, 0); }
 
   void paintWidgetContents(const Canvas& canvas, Clipper& clipper) override;
