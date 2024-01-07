@@ -137,6 +137,12 @@ class ListLayout : public Panel {
   // is laid out, with new elements appearning or gone elements disappearing.
   void modelChanged() { modelRangeChanged(first_, last_ + 1); }
 
+  // Returns the index of the first model item in the visible range.
+  int first() const { return first_; }
+
+  // Returns the index of the last model item in the visible range.
+  int last() const { return last_; }
+
   // Notifies this view that the range of the list has changed. Causes the range
   // to be updated and rendered. If the element count has changed, the list
   // is laid out, with new elements appearning or gone elements disappearing.
