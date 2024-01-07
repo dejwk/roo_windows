@@ -83,7 +83,7 @@ namespace {
 // Returns true if the given widget or any of its ancestors support scroll
 // events. Used to determine if down events can be interpreted as 'press' right
 // away, or should there be the tap delay to disambiguate from scrolling.
-bool isScrollableContainer(const Panel* p) {
+bool isScrollableContainer(const Container* p) {
   for (; p != nullptr; p = p->parent()) {
     if (p->supportsScrolling()) return true;
   }

@@ -384,8 +384,8 @@ void Widget::clearClicking() {
   }
 }
 
-void Widget::setParent(Panel* parent, bool owned) {
-  CHECK(parent_ == nullptr || parent == nullptr)
+void Widget::setParent(Container* parent, bool owned) {
+  CHECK(parent_ == nullptr || parent == nullptr || parent == parent_)
       << "widget " << *this << " being added, but"
       << " it already has a parent";
   parent_ = parent;

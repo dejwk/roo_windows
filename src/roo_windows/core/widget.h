@@ -24,7 +24,7 @@
 namespace roo_windows {
 
 class ClickAnimation;
-class Panel;
+class Container;
 class MainWindow;
 class GestureDetector;
 class Task;
@@ -359,8 +359,8 @@ class Widget {
 
   virtual uint8_t getOverlayOpacity() const;
 
-  const Panel* parent() const { return parent_; }
-  Panel* parent() { return parent_; }
+  const Container* parent() const { return parent_; }
+  Container* parent() { return parent_; }
 
   bool isDirty() const {
     return (redraw_status_ & (kDirty | kInvalidated)) != 0;
@@ -429,10 +429,10 @@ class Widget {
   // on each of their children.
   //
   // This method should generally not be called outside of the context of
-  // implementing onLayout() in a Panel. Any position changes made by calling
-  // this method directly may get invalidated by the next layout pass. It is OK,
-  // however, to call it on widgets belonging to a StaticLayout, since it does
-  // nothing interesting in its layout pass.
+  // implementing onLayout() in a Container. Any position changes made by
+  // calling this method directly may get invalidated by the next layout pass.
+  // It is OK, however, to call it on widgets belonging to a StaticLayout, since
+  // it does nothing interesting in its layout pass.
   void layout(const Rect& rect);
 
  protected:
@@ -498,7 +498,7 @@ class Widget {
   virtual void finalizePaintWidget(const Canvas& s, Clipper& clipper,
                                    const OverlaySpec& overlay_spec) const;
 
-  virtual void setParent(Panel* parent, bool is_owned);
+  virtual void setParent(Container* parent, bool is_owned);
 
   // Called to retrieve measurement information from the widget.
   //
@@ -573,7 +573,7 @@ class Widget {
   }
 
  private:
-  friend class Panel;
+  friend class Container;
   friend class ScrollablePanel;
   friend class MainWindow;
   friend class OverlaySpec;
@@ -603,7 +603,7 @@ class Widget {
 
   void setParentBounds(const Rect& parent_bounds);
 
-  Panel* parent_;
+  Container* parent_;
   Rect parent_bounds_;
   uint16_t state_;
 
