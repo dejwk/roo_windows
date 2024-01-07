@@ -257,7 +257,7 @@ void ScrollablePanel::paintWidgetContents(const Canvas& canvas,
       }
     }
   }
-  Panel::paintWidgetContents(canvas, clipper);
+  Container::paintWidgetContents(canvas, clipper);
 
   if (scroll_in_progress) {
     // TODO: use a scheduler to cap the frequency of invalidation,
@@ -319,7 +319,7 @@ bool ScrollablePanel::onSingleTapUp(XDim x, YDim y) {
     YDim view_range = contents()->height() - height();
     if (scroll_range > 0) {
       YDim new_y = -(y - (scroll_bar_.end() - scroll_bar_.begin()) / 2) *
-                  view_range / scroll_range;
+                   view_range / scroll_range;
       // The new y might be out of range, but that's ok - scrollTo will trim it.
       scrollTo(contents()->xOffset(), new_y);
     }

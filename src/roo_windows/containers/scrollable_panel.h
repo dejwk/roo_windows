@@ -37,7 +37,7 @@ class VerticalScrollBar : public Widget {
   int16_t end_;
 };
 
-class ScrollablePanel : public Panel, private roo_scheduler::Executable {
+class ScrollablePanel : public Container, private roo_scheduler::Executable {
  public:
   enum Direction { VERTICAL = 0, HORIZONTAL = 1, BOTH = 2 };
 
@@ -48,12 +48,13 @@ class ScrollablePanel : public Panel, private roo_scheduler::Executable {
   }
 
   ScrollablePanel(const Environment& env, Direction direction = VERTICAL)
-      : Panel(env),
+      : Container(env),
         direction_(direction),
         alignment_(roo_display::kLeft | roo_display::kTop),
         scroll_start_vx_(0.0),
         scroll_start_vy_(0.0),
         scroll_bar_presence_(VerticalScrollBar::ALWAYS_HIDDEN),
+        contents_(nullptr),
         scroll_bar_(env),
         scroll_bar_gesture_(false) {
     scroll_bar_.setVisibility(INVISIBLE);
@@ -64,12 +65,41 @@ class ScrollablePanel : public Panel, private roo_scheduler::Executable {
         contents()->isOwnedByParent() == new_contents.is_owned()) {
       return;
     }
-    removeAll();
-    add(std::move(new_contents));
-    add(scroll_bar_);
+    if (contents_ != nullptr) {
+      detachChild(contents_);
+      detachChild(&scroll_bar_);
+    }
+    contents_ = new_contents.get();
+    if (contents_ != nullptr) {
+      attachChild(std::move(new_contents));
+      attachChild(scroll_bar_);
+    }
   }
 
-  void clearContents() { removeAll(); }
+  void clearContents() { setContents(WidgetRef()); }
+  bool hasContents() const { return contents_ != nullptr; }
+
+  int getChildrenCount() const override { return hasContents() ? 2 : 0; }
+
+  Widget& getChild(int idx) {
+    switch (idx) {
+      case 0:
+        return *contents_;
+      case 1:
+      default:
+        return scroll_bar_;
+    }
+  }
+
+  const Widget& getChild(int idx) const {
+    switch (idx) {
+      case 0:
+        return *contents_;
+      case 1:
+      default:
+        return scroll_bar_;
+    }
+  }
 
   void setAlign(roo_display::Alignment alignment) {
     alignment_ = alignment;
@@ -100,8 +130,8 @@ class ScrollablePanel : public Panel, private roo_scheduler::Executable {
     scroll_bar_presence_ = presence;
   }
 
-  Widget* contents() { return children_.empty() ? nullptr : children_[0]; }
-  const Widget* contents() const { return children_[0]; }
+  Widget* contents() { return contents_; }
+  const Widget* contents() const { return contents_; }
 
   // Sets the relative position of the underlying content, relative to the the
   // visible rectangle.
@@ -178,6 +208,7 @@ class ScrollablePanel : public Panel, private roo_scheduler::Executable {
   float scroll_decel_x_;
   float scroll_decel_y_;
 
+  Widget* contents_;
   // TODO: consider also supporting horizontal bar when needed.
   VerticalScrollBar::Presence scroll_bar_presence_;
   VerticalScrollBar scroll_bar_;
