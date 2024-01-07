@@ -57,9 +57,12 @@ class ScrollablePanel : public Container, private roo_scheduler::Executable {
         contents_(nullptr),
         scroll_bar_(env),
         scroll_bar_gesture_(false),
+        scheduler_(env.scheduler()),
         notification_id_(-1) {
     scroll_bar_.setVisibility(INVISIBLE);
   }
+
+  ~ScrollablePanel() { cancelPendingUpdate(); }
 
   void setContents(WidgetRef new_contents) {
     if (contents() == &*new_contents &&
@@ -193,6 +196,7 @@ class ScrollablePanel : public Container, private roo_scheduler::Executable {
 
   void scrollVertically(YDim yscroll);
 
+  void cancelPendingUpdate();
   void scheduleScrollAnimationUpdate();
   void scheduleHideScrollBarUpdate();
 
@@ -217,6 +221,7 @@ class ScrollablePanel : public Container, private roo_scheduler::Executable {
   VerticalScrollBar::Presence scroll_bar_presence_;
   VerticalScrollBar scroll_bar_;
   roo_time::Uptime deadline_hide_scrollbar_;
+  roo_scheduler::Scheduler& scheduler_;
   roo_scheduler::ExecutionID notification_id_;
 
   // Whether the 'down' event happened in the area reserved for the scroll bar.

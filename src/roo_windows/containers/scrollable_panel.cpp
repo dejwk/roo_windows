@@ -268,19 +268,22 @@ void ScrollablePanel::execute(roo_scheduler::EventID id) {
   }
 }
 
-void ScrollablePanel::scheduleScrollAnimationUpdate() {
+void ScrollablePanel::cancelPendingUpdate() {
   if (notification_id_ > 0) {
-    getApplication()->cancelAction(notification_id_);
+    scheduler_.cancel(notification_id_);
+    notification_id_ = -1;
   }
-  notification_id_ =
-      getApplication()->scheduleAction(*this, roo_time::Millis(10));
+}
+
+void ScrollablePanel::scheduleScrollAnimationUpdate() {
+  cancelPendingUpdate();
+  notification_id_ = scheduler_.scheduleAfter(this, roo_time::Millis(10));
 }
 
 void ScrollablePanel::scheduleHideScrollBarUpdate() {
   CHECK_EQ(notification_id_, -1);
-  getApplication()->scheduleAction(*this, kDelayHideScrollbar);
+  scheduler_.scheduleAfter(this, kDelayHideScrollbar);
 }
-
 
 bool ScrollablePanel::onInterceptTouchEvent(const TouchEvent& event) {
   if (scroll_start_vx_ != 0 || scroll_start_vy_ != 0) {
