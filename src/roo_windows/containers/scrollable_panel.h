@@ -167,6 +167,10 @@ class ScrollablePanel : public Container, private roo_scheduler::Executable {
 
   // void paintWidgetContents(const Canvas& canvas, Clipper& clipper) override;
 
+  // Called when the position of the scroll changed, possibly due to an
+  // animation in progress.
+  virtual void onScrollPositionChanged() {}
+
   bool onInterceptTouchEvent(const TouchEvent& event) override;
 
   bool onDown(XDim x, YDim y) override;

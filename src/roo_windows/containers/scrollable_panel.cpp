@@ -109,6 +109,7 @@ void ScrollablePanel::scrollTo(XDim x, YDim y) {
                          scroll_pix_begin + scroll_pix_height - 1);
   }
   c->moveTo(c->bounds().translate(x + m.left(), y + m.top()));
+  onScrollPositionChanged();
 }
 
 void ScrollablePanel::scrollToBottom() {
