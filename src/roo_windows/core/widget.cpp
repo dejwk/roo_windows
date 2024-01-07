@@ -455,17 +455,19 @@ void Widget::paintWidget(const Canvas& canvas, Clipper& clipper) {
     return;
   }
   Canvas my_canvas = prepareCanvas(canvas);
-  if (my_canvas.clip_box().empty()) {
+  bool empty = my_canvas.clip_box().empty();
+  if (empty) {
     markCleanDescending();
-    return;
+    if (getElevation() == 0) return;
   }
   OverlaySpec overlay_spec(*this, my_canvas);
-  if (!overlay_spec.is_modded()) {
-    paintWidgetContents(my_canvas, clipper);
-  } else {
-    paintWidgetModded(my_canvas, overlay_spec, clipper);
+  if (!empty) {
+    if (!overlay_spec.is_modded()) {
+      paintWidgetContents(my_canvas, clipper);
+    } else {
+      paintWidgetModded(my_canvas, overlay_spec, clipper);
+    }
   }
-
   my_canvas.set_clip_box(canvas.clip_box());
   finalizePaintWidget(my_canvas, clipper, overlay_spec);
 }
@@ -671,4 +673,3 @@ void Widget::onCancel() {
   os << GetTypeName(widget) << "{ " << &widget << "}";
   return os;
 }
-
