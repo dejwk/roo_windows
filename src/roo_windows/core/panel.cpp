@@ -105,13 +105,15 @@ void Panel::paintChildren(const Canvas& canvas, Clipper& clipper) {
   Canvas canvas_clipped = canvas;
   canvas_clipped.clipToExtents(bounds());
   bool fast_render = isDirty() && respectsChildrenBoundaries();
-  for (auto child = children_.rbegin(); child != children_.rend(); ++child) {
-    bool clipped = (*child)->getParentClipMode() == Widget::CLIPPED;
-    (*child)->paintWidget(clipped ? canvas_clipped : canvas, clipper);
+  // for (auto child = children_.rbegin(); child != children_.rend(); ++child) {
+  for (int i = getChildrenCount() - 1; i >= 0; --i) {
+    Widget& child = getChild(i);
+    bool clipped = child.getParentClipMode() == Widget::CLIPPED;
+    child.paintWidget(clipped ? canvas_clipped : canvas, clipper);
     if (fast_render && clipped) {
       // Decorations are guaranteed not to overlap with siblings, so we can draw
       // them right away.
-      fastDrawChildShadow(**child, canvas_clipped, clipper);
+      fastDrawChildShadow(child, canvas_clipped, clipper);
     }
   }
 }
@@ -145,30 +147,34 @@ Widget* Panel::dispatchTouchDownEvent(XDim x, YDim y) {
   // Iterate backwards, because the order of children is assumed to represent
   // Z dimension (e.g., later added child is on top) so in case they are
   // overlapping, we want the right-most one receive the event.
-  for (auto child = children_.rbegin(); child != children_.rend(); child++) {
-    if (!(*child)->isVisible()) continue;
-    if (!within_bounds && (*child)->getParentClipMode() == Widget::CLIPPED) {
+  // for (auto child = children_.rbegin(); child != children_.rend(); child++) {
+  for (int i = getChildrenCount() - 1; i >= 0; --i) {
+    Widget& child = getChild(i);
+    if (!child.isVisible()) continue;
+    if (!within_bounds && child.getParentClipMode() == Widget::CLIPPED) {
       continue;
     }
-    if ((*child)->maxParentBounds().contains(x, y)) {
-      Widget* w = (*child)->dispatchTouchDownEvent(x - (*child)->xOffset(),
-                                                   y - (*child)->yOffset());
+    if (child.maxParentBounds().contains(x, y)) {
+      Widget* w = child.dispatchTouchDownEvent(x - child.xOffset(),
+                                               y - child.yOffset());
       if (w != nullptr) return w;
-      if ((*child)->parent_bounds().contains(x, y)) {
+      if (child.parent_bounds().contains(x, y)) {
         // Break the loop and do not dispatch to children that are obscured.
         break;
       }
     }
   }
   // See if can delegate assuming more loose bounds.
-  for (auto child = children_.rbegin(); child != children_.rend(); child++) {
-    if (!(*child)->isVisible()) continue;
-    Rect ebounds = (*child)->getSloppyTouchParentBounds();
+  // for (auto child = children_.rbegin(); child != children_.rend(); child++) {
+  for (int i = getChildrenCount() - 1; i >= 0; --i) {
+    Widget& child = getChild(i);
+    if (!child.isVisible()) continue;
+    Rect ebounds = child.getSloppyTouchParentBounds();
     // When re-checking with looser bounds, don't recurse - we have already
     // tried descendants with looser bounds.
     if (ebounds.contains(x, y)) {
-      if ((*child)->onTouchDown(x, y)) {
-        return *child;
+      if (child.onTouchDown(x, y)) {
+        return &child;
       }
       break;
     }
@@ -218,12 +224,14 @@ void Panel::invalidateDescending(const Rect& rect) {
   } else {
     invalid_region_ = Rect::Extent(invalid_region_, rect);
   }
-  for (auto& child : children_) {
-    Rect rect = Rect::Intersect(invalid_region_, child->parent_bounds());
+  // for (auto& child : children_) {
+  for (int i = 0; i < getChildrenCount(); ++i) {
+    Widget& child = getChild(i);
+    Rect rect = Rect::Intersect(invalid_region_, child.parent_bounds());
     if (rect.empty()) continue;
-    rect = rect.translate(-child->parent_bounds().xMin(),
-                          -child->parent_bounds().yMin());
-    child->invalidateDescending(rect);
+    rect = rect.translate(-child.parent_bounds().xMin(),
+                          -child.parent_bounds().yMin());
+    child.invalidateDescending(rect);
   }
 }
 
@@ -312,11 +320,13 @@ bool Panel::invalidateBeneathDescending(const Rect& rect,
   } else {
     invalid_region_ = Rect::Extent(invalid_region_, clipped);
   }
-  for (auto& child : children_) {
-    if (child == subject) return true;
-    if (child->isVisible()) {
-      Rect adjusted = clipped.translate(-child->xOffset(), -child->yOffset());
-      if (child->invalidateBeneathDescending(adjusted, subject)) return true;
+  // for (auto& child : children_) {
+  for (int i = 0; i < getChildrenCount(); ++i) {
+    Widget& child = getChild(i);
+    if (&child == subject) return true;
+    if (child.isVisible()) {
+      Rect adjusted = clipped.translate(-child.xOffset(), -child.yOffset());
+      if (child.invalidateBeneathDescending(adjusted, subject)) return true;
     }
   }
   return false;
@@ -370,7 +380,7 @@ Rect Panel::maxParentBounds() const {
 }
 
 Dimensions Panel::onMeasure(WidthSpec width, HeightSpec height) {
-  for (const auto& child : children()) {
+  for (const auto& child : children_) {
     if (child->isLayoutRequested()) {
       child->measure(WidthSpec::Exactly(child->width()),
                      HeightSpec::Exactly(child->height()));
@@ -380,7 +390,7 @@ Dimensions Panel::onMeasure(WidthSpec width, HeightSpec height) {
 }
 
 void Panel::onLayout(bool changed, const Rect& rect) {
-  for (const auto& child : children()) {
+  for (const auto& child : children_) {
     if (child->isLayoutRequired()) {
       child->layout(child->parent_bounds());
     }

@@ -120,7 +120,7 @@ class Panel : public Widget {
   // the child, which is faster than the general case where the rasterizables
   // need to be combined.
   virtual bool respectsChildrenBoundaries() const {
-    return children_.size() <= 1;
+    return getChildrenCount() <= 1;
   }
 
   const std::vector<Widget*>& children() const { return children_; }
@@ -219,6 +219,10 @@ class Panel : public Widget {
   void onLayout(bool changed, const Rect& rect) override;
 
   void moveTo(const Rect& parent_bounds) override;
+
+  virtual int getChildrenCount() const { return (int)children_.size(); }
+  virtual const Widget& getChild(int idx) const { return *children_[idx]; }
+  virtual Widget& getChild(int idx) { return *children_[idx]; }
 
  protected:
   // Subclasses should avoid mutating this vector directly, preferring accessor
