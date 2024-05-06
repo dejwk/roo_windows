@@ -101,7 +101,9 @@ Activity* Task::currentActivity() {
 void Task::showDialog(Dialog& dialog, Dialog::CallbackFn callback_fn) {
   CHECK(!shows_dialog_) << "Can't show two dialogs at the same time";
   shows_dialog_ = true;
+  dialog.onEnter();
   dialog.setCallbackFn([this, callback_fn, &dialog](int id) {
+    dialog.onExit(id);
     shows_dialog_ = false;
     panel_->removeLast();
     Dialog::CallbackFn fn = callback_fn;

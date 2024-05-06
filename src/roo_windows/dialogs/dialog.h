@@ -43,6 +43,9 @@ class Dialog : public VerticalLayout {
   TextLabel title_;
   ScrollablePanel contents_;
 
+  virtual void onEnter() {}
+  virtual void onExit(int result) {}
+
  private:
   friend class Task;
 
