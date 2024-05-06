@@ -8,9 +8,11 @@
 
 namespace roo_windows {
 
-template <typename Element>
+template <typename ElementType>
 class ListModel {
  public:
+  using Element = ElementType;
+
   ListModel() {}
   virtual ~ListModel() {}
 
