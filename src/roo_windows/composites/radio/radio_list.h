@@ -67,13 +67,28 @@ class RadioListItem : public roo_windows::HorizontalLayout {
 template <typename Model>
 class RadioListModel : public roo_windows::ListModel<RadioListItem<Model>> {
  public:
-  RadioListModel(Model& model) : model_(model), selected_(-1) {}
+  RadioListModel() : model_(nullptr), selected_(-1) {}
+  RadioListModel(Model& model) : model_(&model), selected_(-1) {}
 
-  int elementCount() override { return model_.elementCount(); }
+  int elementCount() const override {
+    return model_ == nullptr ? 0 : model_->elementCount();
+  }
 
-  void set(int idx, RadioListItem<Model>& dest) override {
-    model_.set(idx, dest.item_);
+  void set(int idx, RadioListItem<Model>& dest) const override {
+    // Note: set is not expected tobe called when model_ is nullptr, because we
+    // report zero element count in such case.
+    model_->set(idx, dest.item_);
     dest.set(idx, idx == selected_);
+  }
+
+  void setModel(Model& model) {
+    model_ = &model;
+    selected_ = -1;
+  }
+
+  void clearModel() {
+    model_ = nullptr;
+    selected_ = -1;
   }
 
   bool setSelected(int idx) {
@@ -85,7 +100,7 @@ class RadioListModel : public roo_windows::ListModel<RadioListItem<Model>> {
   int selected() const { return selected_; }
 
  private:
-  Model& model_;
+  const Model* model_;
   int selected_;
 };
 
@@ -94,12 +109,20 @@ class RadioList : public roo_windows::Holder {
  public:
   using RadioListWidget = roo_windows::ListLayout<RadioListItem<Model>>;
 
-  RadioList(const roo_windows::Environment& env, Model& model)
+  RadioList(const roo_windows::Environment& env)
       : Holder(env),
-        list_model_(model),
+        list_model_(),
         list_(env, list_model_, RadioListItem<Model>(env, [this](int idx) {
                 elementSelected(idx);
-              })) {
+              })) {}
+
+  RadioList(const roo_windows::Environment& env, Model& model)
+      : RadioList(env) {
+    setModel(model);
+  }
+
+  void setModel(Model& model) {
+    list_model_.setModel(model);
     setContents(list_);
   }
 
