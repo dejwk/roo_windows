@@ -17,10 +17,10 @@ class ListModel {
   virtual ~ListModel() {}
 
   // How many items in the list?
-  virtual int elementCount() = 0;
+  virtual int elementCount() const = 0;
 
   // Set the specified visual element to the ith item of the list.
-  virtual void set(int idx, Element& dest) = 0;
+  virtual void set(int idx, Element& dest) const = 0;
 };
 
 template <typename Element>
