@@ -192,8 +192,8 @@ void ScrollablePanel::execute(roo_scheduler::EventID id) {
   if (roo_time::Uptime::Now() >= deadline_hide_scrollbar_) {
     scroll_bar_.setVisibility(INVISIBLE);
   }
-  bool scroll_in_progress =
-      (contents() != nullptr && scroll_start_vx_ != 0 || scroll_start_vy_ != 0);
+  bool scroll_in_progress = (contents() != nullptr &&
+                             (scroll_start_vx_ != 0 || scroll_start_vy_ != 0));
   if (!scroll_in_progress) return;
 
   Widget* c = contents();
