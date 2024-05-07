@@ -228,8 +228,7 @@ class Widget {
   // should return true if it handled the event. Otherwise, the event, and the
   // subsequent events, will be redirected to the parent.
   //
-  // Most widgets should not override this method. The default implementation
-  // returns isClickable().
+  // Most widgets should not override this method.
   virtual bool onDown(XDim x, YDim y);
 
   // Called when the gesture is recognized as press, rather than scroll.

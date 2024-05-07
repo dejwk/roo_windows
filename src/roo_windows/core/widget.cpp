@@ -607,10 +607,10 @@ bool Widget::onTouchUp(XDim x, YDim y) {
 
 void Widget::onClicked() { triggerInteractiveChange(); }
 
-bool Widget::isClickable() const { return on_interactive_change_ != nullptr; }
+bool Widget::isClickable() const { return false; }
 
 bool Widget::onDown(XDim x, YDim y) {
-  if (!isClickable()) return false;
+  if (!isClickable() || !isEnabled()) return false;
   const ClickAnimation* anim = getClickAnimation();
   return !anim->isClickAnimating() && !anim->isClickConfirmed();
 }
