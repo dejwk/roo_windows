@@ -40,6 +40,10 @@ class BasicWidget : public Widget {
 
   void setMargins(MarginSize size) { setMargins(size, size); }
 
+  bool isClickable() const override {
+    return getOnInteractiveChange() != nullptr;
+  }
+
   Margins getMargins() const override {
     MarginSize hs = (MarginSize)(margins_ >> 4);
     MarginSize vs = (MarginSize)(margins_ & 15);
