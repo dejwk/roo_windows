@@ -39,6 +39,18 @@ class Dialog : public VerticalLayout {
   void finalizePaintWidget(const Canvas& canvas, Clipper& clipper,
                            const OverlaySpec& overlay_spec) const override;
 
+  int button_count() const { return buttons_.size(); }
+  SimpleButton& button(int idx) { return buttons_[idx]; }
+  const SimpleButton& button(int idx) const { return buttons_[idx]; }
+
+  SimpleButton& last_button() {
+    return buttons_[button_count() - 1];
+  }
+
+  const SimpleButton& last_button() const {
+    return buttons_[button_count() - 1];
+  }
+
   VerticalLayout body_;
   TextLabel title_;
   ScrollablePanel contents_;

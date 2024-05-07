@@ -121,6 +121,10 @@ class RadioList : public roo_windows::Holder {
     setModel(model);
   }
 
+  int selected() const {
+    return list_model_.selected();
+  }
+
   void setModel(Model& model) {
     list_model_.setModel(model);
     setContents(list_);
@@ -140,10 +144,12 @@ class RadioList : public roo_windows::Holder {
 
  private:
   void elementSelected(int idx) {
+    int old = list_model_.selected();
     if (list_model_.setSelected(idx)) {
-      list_.modelChanged();
+      if (idx >= 0) list_.modelItemChanged(idx);
       triggerInteractiveChange();
     }
+    if (old >= 0) list_.modelItemChanged(old);
   }
 
   RadioListModel<Model> list_model_;
