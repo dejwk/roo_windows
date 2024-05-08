@@ -1,6 +1,7 @@
 #pragma once
 
 #include "roo_windows/dialogs/dialog.h"
+#include "roo_windows/dialogs/string_constants.h"
 #include "roo_windows/widgets/text_block.h"
 
 namespace roo_windows {
@@ -11,7 +12,7 @@ class AlertDialog : public Dialog {
   // the text.
   AlertDialog(const Environment& env, std::string title,
               std::string supporting_text,
-              std::vector<std::string> button_labels);
+              std::vector<std::string> button_labels = {kStrDialogOK});
 
   void setSupportingText(std::string supporting_text);
 
