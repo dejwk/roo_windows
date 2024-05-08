@@ -181,7 +181,15 @@ void Widget::requestLayout() {
 }
 
 Dimensions Widget::measure(WidthSpec width, HeightSpec height) {
+#ifdef ROO_WINDOWS_LAYOUT_DEBUG
+  LOG(INFO) << "Measuring " << *this << " (" << width << ", " << height << ")";
+#endif
+
   Dimensions result = onMeasure(width, height);
+#ifdef ROO_WINDOWS_LAYOUT_DEBUG
+  LOG(INFO) << "Measuring " << *this << " returned " << result;
+#endif
+
   redraw_status_ |= kLayoutRequired;
   return result;
 }
@@ -189,6 +197,15 @@ Dimensions Widget::measure(WidthSpec width, HeightSpec height) {
 void Widget::layout(const Rect& rect) {
   bool changed = (rect != parent_bounds());
   if (changed || isLayoutRequired()) {
+#ifdef ROO_WINDOWS_LAYOUT_DEBUG
+    XDim dx = 0;
+    YDim dy = 0;
+    if (parent() != nullptr) {
+      parent()->getAbsoluteOffset(dx, dy);
+    }
+    LOG(INFO) << "Layout changed for " << *this << ": " << rect
+              << "; absolute: " << rect.translate(dx, dy);
+#endif
     moveTo(rect);
     onLayout(changed, rect);
   }
@@ -670,6 +687,6 @@ void Widget::onCancel() {
 
 ::roo_logging::Stream& operator<<(::roo_logging::Stream& os,
                                   const roo_windows::Widget& widget) {
-  os << GetTypeName(widget) << "{ " << &widget << "}";
+  os << GetTypeName(widget) << "{" << &widget << "}";
   return os;
 }
