@@ -121,9 +121,9 @@ void ScrollablePanel::scrollToBottom() {
 }
 
 PreferredSize ScrollablePanel::getPreferredSize() const {
-  // In the dimension that is scrolled over, we will just return 'match parent',
+  // In the dimension that is scrolled over, we will just return 'wrap contents',
   // For example, if the panel scrolls vertically, we report the preferred
-  // height as 'match parent height'. In the other dimension, we forward the
+  // height as 'wrap contents height'. In the other dimension, we forward the
   // preference of the contents, accounting for our padding and the content's
   // margins (in case when the preference is exact).
   Padding p = getPadding();
@@ -148,8 +148,8 @@ PreferredSize ScrollablePanel::getPreferredSize() const {
     }
   }
   return PreferredSize(
-      direction_ == VERTICAL ? w : PreferredSize::MatchParentWidth(),
-      direction_ == HORIZONTAL ? h : PreferredSize::MatchParentHeight());
+      direction_ == VERTICAL ? w : PreferredSize::WrapContentWidth(),
+      direction_ == HORIZONTAL ? h : PreferredSize::WrapContentHeight());
 }
 
 Dimensions ScrollablePanel::onMeasure(WidthSpec width, HeightSpec height) {
