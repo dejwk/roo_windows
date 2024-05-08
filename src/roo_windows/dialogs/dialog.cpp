@@ -38,8 +38,8 @@ Dialog::Dialog(const Environment& env, std::vector<std::string> button_labels)
       contents_(env),
       button_panel_(env),
       callback_fn_(nullptr) {
-  body_.setPadding(Padding(PADDING_SMALL, PADDING_TINY));
-  title_.setPadding(PADDING_NONE, PADDING_NONE);
+  body_.setPadding(Padding(PADDING_SMALL, PADDING_SMALL));
+  title_.setPadding(PADDING_SMALL, PADDING_TINY);
   body_.add(title_);
   body_.add(contents_, VerticalLayout::Params().setWeight(1));
   add(body_, VerticalLayout::Params().setWeight(1));
