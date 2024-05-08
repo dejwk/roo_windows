@@ -16,11 +16,7 @@ void Task::enterActivity(Activity* activity) {
   CHECK_EQ(activity->state(), Activity::INACTIVE);
   CHECK(activity->task_ == nullptr);
   roo_display::Box bounds = activity->getPreferredPlacement(*this);
-  if (!activities_.empty()) {
-    activities_.back()->state_ = Activity::PAUSING;
-    activities_.back()->onPause();
-    activities_.back()->state_ = Activity::PAUSED;
-  }
+  pauseCurrentActivity();
   activity->task_ = this;
   activity->state_ = Activity::STARTING;
   activities_.push_back(activity);
@@ -32,13 +28,7 @@ void Task::enterActivity(Activity* activity) {
     return;
   }
   panel_->enterActivity(activity, bounds);
-  activity->state_ = Activity::RESUMING;
-  activity->onResume();
-  if (activities_.empty() || activities_.back() != activity) {
-    // Either exited immediately, or started a new activity.
-    return;
-  }
-  activity->state_ = Activity::ACTIVE;
+  resumeCurrentActivity();
 }
 
 void Task::exitActivity() {
@@ -51,15 +41,7 @@ void Task::exitActivity() {
   }
   // Remaining states are: ACTIVE, STARTING, RESUMING, PAUSING.
   if (activity->state_ == Activity::ACTIVE) {
-    activity->state_ = Activity::PAUSING;
-    activity->onPause();
-    if (activities_.empty() || activities_.back() != activity) {
-      // Exited recursively from onPause.
-      CHECK_EQ(activity->state_, Activity::INACTIVE);
-      CHECK(activity->task_ == nullptr);
-      return;
-    }
-    activity->state_ = Activity::PAUSED;
+    if (!pauseCurrentActivity()) return;
     panel_->exitActivity();
   } else if (activity->state_ != Activity::STARTING) {
     // If starting, we did not yet created the panel. But if resuming/pausing,
@@ -71,21 +53,51 @@ void Task::exitActivity() {
   activity->state_ = Activity::INACTIVE;
   activity->task_ = nullptr;
   activities_.pop_back();
-  if (!activities_.empty()) {
-    activities_.back()->onResume();
+  resumeCurrentActivity();
+}
+
+bool Task::pauseCurrentActivity() {
+  if (activities_.empty()) return false;
+  Activity* activity = activities_.back();
+  CHECK_EQ(activity->state_, Activity::ACTIVE);
+  activity->state_ = Activity::PAUSING;
+  activity->onPause();
+  if (activities_.empty() || activities_.back() != activity) {
+    // Exited recursively from onPause.
+    CHECK_EQ(activity->state_, Activity::INACTIVE);
+    CHECK(activity->task_ == nullptr);
+    return false;
   }
+  activity->state_ = Activity::PAUSED;
+  return true;
+}
+
+bool Task::resumeCurrentActivity() {
+  if (activities_.empty()) return false;
+  Activity* activity = activities_.back();
+  CHECK(activity->state_ == Activity::STARTING ||
+        activity->state_ == Activity::PAUSED)
+      << activity->state_;
+  activity->state_ = Activity::RESUMING;
+  activity->onResume();
+  if (activities_.empty() || activities_.back() != activity) {
+    // Either exited immediately, or started a new activity.
+    return false;
+  }
+  activity->state_ = Activity::ACTIVE;
+  return true;
 }
 
 void Task::clearDialog() {
   if (shows_dialog_) {
     ((Dialog*)panel_->children().back())->close();
+    resumeCurrentActivity();
   }
 }
 
 void Task::clear() {
   clearDialog();
-  if (activities_.empty()) return;
-  activities_.back()->onPause();
+  pauseCurrentActivity();
   // Now, all activities on the stack are paused.
   while (!activities_.empty()) {
     panel_->exitActivity();
@@ -101,14 +113,18 @@ Activity* Task::currentActivity() {
 void Task::showDialog(Dialog& dialog, Dialog::CallbackFn callback_fn) {
   CHECK(!shows_dialog_) << "Can't show two dialogs at the same time";
   shows_dialog_ = true;
+  pauseCurrentActivity();
   dialog.onEnter();
   dialog.setCallbackFn([this, callback_fn, &dialog](int id) {
+    // Capture the task on the stack, because the callback self-destroys.
+    Task* task = this;
     dialog.onExit(id);
     shows_dialog_ = false;
     panel_->removeLast();
     Dialog::CallbackFn fn = callback_fn;
     dialog.setCallbackFn(nullptr);
     fn(id);
+    task->resumeCurrentActivity();
   });
   Dimensions dims = dialog.measure(WidthSpec::AtMost(panel_->width()),
                                    HeightSpec::AtMost(panel_->height()));

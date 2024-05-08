@@ -70,6 +70,16 @@ class Task {
 
   void init(TaskPanel* panel);
 
+  // Pauses the top-most activity if it exists. Returns true if the activity
+  // ends up in state 'paused'. (It can be not the case when the activity
+  // overrides onPause() and e.g. exits itself from it).
+  bool pauseCurrentActivity();
+
+  // Resumes the top-most activity if it exists. Returns true if the activity
+  // ends up in state 'active'. (It can be not the case when the activity
+  // overrides onResume() and e.g. exits itself from it).
+  bool resumeCurrentActivity();
+
   TaskPanel* panel_;
   std::vector<Activity*> activities_;
   bool shows_dialog_;
