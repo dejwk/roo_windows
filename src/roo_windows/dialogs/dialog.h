@@ -31,8 +31,6 @@ class Dialog : public VerticalLayout {
   // Use some round corners.
   BorderStyle getBorderStyle() const override { return BorderStyle(5, 0); }
 
-  Padding getPadding() const override { return Padding(4, 4); }
-
  protected:
   Dialog(const Environment& env, const std::vector<std::string> button_labels);
 
@@ -51,7 +49,6 @@ class Dialog : public VerticalLayout {
     return buttons_[button_count() - 1];
   }
 
-  VerticalLayout body_;
   TextLabel title_;
   ScrollablePanel contents_;
 

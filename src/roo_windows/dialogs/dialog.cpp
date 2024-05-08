@@ -33,16 +33,15 @@ const Scrim& scrim() {
 
 Dialog::Dialog(const Environment& env, std::vector<std::string> button_labels)
     : VerticalLayout(env),
-      body_(env),
       title_(env, "", font_h6()),
       contents_(env),
       button_panel_(env),
       callback_fn_(nullptr) {
-  body_.setPadding(Padding(PADDING_SMALL, PADDING_SMALL));
-  title_.setPadding(PADDING_SMALL, PADDING_TINY);
-  body_.add(title_);
-  body_.add(contents_, VerticalLayout::Params().setWeight(1));
-  add(body_, VerticalLayout::Params().setWeight(1));
+  title_.setPadding(PADDING_REGULAR);
+  title_.setMargins(MARGIN_SMALL);
+  add(title_);
+  add(contents_);
+  button_panel_.setPadding(PADDING_TINY);
   add(button_panel_,
       VerticalLayout::Params().setGravity(kHorizontalGravityRight));
   button_panel_.setGravity(
