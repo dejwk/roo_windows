@@ -2,6 +2,8 @@
 
 #include "roo_windows/core/preferred_size.h"
 
+#include "roo_logging.h"
+
 namespace roo_windows {
 
 enum MeasureSpecKind {
@@ -91,6 +93,8 @@ inline constexpr bool operator==(WidthSpec a, WidthSpec b) {
   return a.value_ == b.value_;
 }
 
+roo_logging::Stream& operator<<(roo_logging::Stream& os, WidthSpec spec);
+
 class HeightSpec {
  public:
   static constexpr HeightSpec Unspecified(YDim hint) {
@@ -172,58 +176,6 @@ inline constexpr bool operator==(HeightSpec a, HeightSpec b) {
   return a.value_ == b.value_;
 }
 
+roo_logging::Stream& operator<<(roo_logging::Stream& os, HeightSpec spec);
+
 }  // namespace roo_windows
-
-#if defined(__linux__) || defined(__linux) || defined(linux)
-#include <ostream>
-
-namespace roo_windows {
-inline std::ostream& operator<<(std::ostream& os,
-                                const roo_windows::WidthSpec& spec) {
-  switch (spec.kind()) {
-    case UNSPECIFIED: {
-      os << "width:UNSPECIFIED";
-      break;
-    }
-    case AT_MOST: {
-      os << "width:AT_MOST";
-      break;
-    }
-    case EXACTLY: {
-      os << "width:EXACTLY";
-      break;
-    }
-    default: {
-      os << "width:UNKNOWN";
-      break;
-    }
-  }
-  os << "(" << spec.value() << ")";
-  return os;
-}
-
-inline std::ostream& operator<<(std::ostream& os,
-                                const roo_windows::HeightSpec& spec) {
-  switch (spec.kind()) {
-    case UNSPECIFIED: {
-      os << "height:UNSPECIFIED";
-      break;
-    }
-    case AT_MOST: {
-      os << "height:AT_MOST";
-      break;
-    }
-    case EXACTLY: {
-      os << "height:EXACTLY";
-      break;
-    }
-    default: {
-      os << "height:UNKNOWN";
-      break;
-    }
-  }
-  os << "(" << spec.value() << ")";
-  return os;
-}
-}  // namespace roo_windows
-#endif  // defined(__linux__)

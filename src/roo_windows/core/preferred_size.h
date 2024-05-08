@@ -1,5 +1,7 @@
 #pragma once
 
+#include "roo_windows/core/rect.h"
+
 namespace roo_windows {
 
 // PreferredSize are used by views to tell their parents what is their preferred

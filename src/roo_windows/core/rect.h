@@ -4,6 +4,7 @@
 
 #include "roo_display/core/box.h"
 #include "roo_display/ui/alignment.h"
+#include "roo_logging.h"
 
 namespace roo_windows {
 
@@ -141,17 +142,11 @@ inline std::pair<XDim, YDim> ResolveAlignmentOffset(const Rect& outer,
                                             inner.yMin(), inner.yMax()));
 }
 
-}  // namespace roo_windows
-
-#if defined(__linux__) || defined(__linux) || defined(linux)
-#include <ostream>
-
-namespace roo_windows {
-inline std::ostream& operator<<(std::ostream& os,
-                                const roo_windows::Rect& rect) {
-  os << "[" << rect.xMin() << ", " << rect.yMin() << ", " << rect.xMax() << ", "
-     << rect.yMax() << "]";
+inline roo_logging::Stream& operator<<(roo_logging::Stream& os,
+                                       const Rect& rect) {
+  os.printf("[%d, %d, %d, %d]", rect.xMin(), rect.yMin(), rect.xMax(),
+            rect.yMax());
   return os;
 }
+
 }  // namespace roo_windows
-#endif  // defined(__linux__)
