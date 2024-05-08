@@ -8,7 +8,7 @@
 namespace roo_windows {
 
 template <typename T>
-const char* GetTypeName(const T& t) {
+std::string GetTypeName(const T& t) {
 #if defined(__GXX_RTTI)
   char out[256];  
   if (roo_logging::Demangle(typeid(t).name(), out, 256)) {
