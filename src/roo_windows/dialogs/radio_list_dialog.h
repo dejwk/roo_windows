@@ -14,6 +14,7 @@ class RadioListDialog : public Dialog {
     last_button().setEnabled(false);
     list_.setOnInteractiveChange([this](){
       last_button().setEnabled(selected() >= 0);
+      onChange();
     });
   }
 
@@ -32,9 +33,23 @@ class RadioListDialog : public Dialog {
     last_button().setEnabled(false);
   }
 
+  void setSelected(int selected) {
+    list_.setSelected(selected);
+    last_button().setEnabled(selected >= 0);
+  }
+
+  void contentsChanged() {
+    list_.modelChanged();
+  }
+
   RadioListDialog(const roo_windows::Environment& env, Model& model)
       : RadioListDialog(env) {
     setModel(model);
+  }
+
+ protected:
+  virtual void onChange() {
+    triggerInteractiveChange();
   }
 
  private:
