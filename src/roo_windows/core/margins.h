@@ -20,10 +20,10 @@ class Margins {
  public:
   Margins() : Margins(0) {}
 
-  Margins(int16_t margins) : value_(margins) {}
+  Margins(int16_t margins) : value_h_(margins + 32), value_v_(margins + 32) {}
 
   Margins(int16_t horizontal, int16_t vertical)
-      : value_((horizontal + vertical) / 2) {}
+      : value_h_(horizontal + 32), value_v_(vertical + 32) {}
 
   Margins(MarginSize size) : Margins(size, size) {}
 
@@ -53,17 +53,20 @@ class Margins {
     }
   }
 
-  int16_t top() const { return value_; }
-  int16_t left() const { return value_; }
-  int16_t right() const { return value_; }
-  int16_t bottom() const { return value_; }
+  int16_t top() const { return (int16_t)value_v_ - 32; }
+  int16_t left() const { return (int16_t)value_h_ - 32; }
+  int16_t right() const { return (int16_t)value_h_ - 32; }
+  int16_t bottom() const { return (int16_t)value_v_ - 32; }
 
  private:
   friend bool operator==(Margins a, Margins b);
 
-  int8_t value_;
+  uint8_t value_h_;
+  uint8_t value_v_;
 };
 
-inline bool operator==(Margins a, Margins b) { return a.value_ == b.value_; }
+inline bool operator==(Margins a, Margins b) {
+  return a.value_h_ == b.value_h_ && a.value_v_ == b.value_v_;
+}
 
 }  // namespace roo_windows
