@@ -41,9 +41,7 @@ class Dialog : public VerticalLayout {
   SimpleButton& button(int idx) { return buttons_[idx]; }
   const SimpleButton& button(int idx) const { return buttons_[idx]; }
 
-  SimpleButton& last_button() {
-    return buttons_[button_count() - 1];
-  }
+  SimpleButton& last_button() { return buttons_[button_count() - 1]; }
 
   const SimpleButton& last_button() const {
     return buttons_[button_count() - 1];
@@ -58,6 +56,16 @@ class Dialog : public VerticalLayout {
  private:
   friend class Task;
 
+  class FullWidthPanel : public HorizontalLayout {
+   public:
+    using HorizontalLayout::HorizontalLayout;
+
+    PreferredSize getPreferredSize() const override {
+      return PreferredSize(PreferredSize::MatchParentWidth(),
+                           PreferredSize::WrapContentHeight());
+    }
+  };
+
   // Called by a task.
   void setCallbackFn(CallbackFn callback_fn) {
     callback_fn_ = std::move(callback_fn);
@@ -67,7 +75,8 @@ class Dialog : public VerticalLayout {
   // Invokes the callback_fn, passing the ID.
   void actionTaken(int id);
 
-  HorizontalLayout button_panel_;
+  FullWidthPanel title_panel_;
+  FullWidthPanel button_panel_;
   std::vector<SimpleButton> buttons_;
   CallbackFn callback_fn_;
 };

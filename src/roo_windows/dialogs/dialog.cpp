@@ -35,13 +35,17 @@ Dialog::Dialog(const Environment& env, std::vector<std::string> button_labels)
     : VerticalLayout(env),
       title_(env, "", font_h6()),
       contents_(env),
+      title_panel_(env),
       button_panel_(env),
       callback_fn_(nullptr) {
-  title_.setPadding(PADDING_REGULAR);
-  title_.setMargins(MARGIN_SMALL);
-  add(title_);
+  title_panel_.setMargins(Margins(MARGIN_NONE, MARGIN_REGULAR));
+  add(title_panel_);
+  title_.setPadding(PADDING_LARGE, PADDING_SMALL);
+  title_.setMargins(MARGIN_NONE, MARGIN_NONE);
+  title_panel_.add(title_);
   add(contents_);
   button_panel_.setPadding(PADDING_TINY);
+  button_panel_.setMargins(Margins(MARGIN_NONE, MARGIN_REGULAR));
   add(button_panel_,
       VerticalLayout::Params().setGravity(kHorizontalGravityRight));
   button_panel_.setGravity(
