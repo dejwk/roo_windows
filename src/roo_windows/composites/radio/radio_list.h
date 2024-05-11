@@ -1,6 +1,7 @@
 #pragma once
 
 #include "roo_windows/containers/holder.h"
+#include "roo_windows/containers/horizontal_layout.h"
 #include "roo_windows/containers/list_layout.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/panel.h"
@@ -20,6 +21,7 @@ class RadioListItem : public roo_windows::HorizontalLayout {
       : HorizontalLayout(env), button_(env), item_(env), on_click_(on_click) {
     setGravity(roo_windows::Gravity(roo_windows::kHorizontalGravityNone,
                                     roo_windows::kVerticalGravityMiddle));
+    setPadding(Padding(PADDING_TINY, PADDING_NONE));
     button_.setMargins(roo_windows::MARGIN_NONE, roo_windows::MARGIN_SMALL);
     add(button_);
     item_.setMargins(roo_windows::MARGIN_NONE);
@@ -121,9 +123,7 @@ class RadioList : public roo_windows::Holder {
     setModel(model);
   }
 
-  int selected() const {
-    return list_model_.selected();
-  }
+  int selected() const { return list_model_.selected(); }
 
   void setModel(Model& model) {
     list_model_.setModel(model);
@@ -138,8 +138,20 @@ class RadioList : public roo_windows::Holder {
 
   void reset() {
     list_model_.setSelected(-1);
+    modelChanged();
+  }
+
+  void modelChanged() {
     list_.modelChanged();
     triggerInteractiveChange();
+  }
+
+  void setSelected(int selected) {
+    int selected_old = list_model_.selected();
+    if (list_model_.selected() == selected_old) return;
+    list_model_.setSelected(selected);
+    if (selected_old >= 0) list_.modelItemChanged(selected_old);
+    if (selected >= 0) list_.modelItemChanged(selected);
   }
 
  private:
