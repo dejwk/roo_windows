@@ -180,14 +180,27 @@ void Widget::requestLayout() {
   onRequestLayout();
 }
 
+#ifdef ROO_WINDOWS_LAYOUT_DEBUG
+static int indent_level = 0;
+
+const char* indent() {
+  static const char* spaces = "                                        ";
+  int offset = strlen(spaces) - indent_level;
+  if (offset < 0) offset = 0;
+  return spaces + offset;
+}
+#endif
+
 Dimensions Widget::measure(WidthSpec width, HeightSpec height) {
 #ifdef ROO_WINDOWS_LAYOUT_DEBUG
-  LOG(INFO) << "Measuring " << *this << " (" << width << ", " << height << ")";
+  LOG(INFO) << indent() << "Measuring " << *this << " (" << width << ", " << height << ")";
+  ++indent_level;
 #endif
 
   Dimensions result = onMeasure(width, height);
 #ifdef ROO_WINDOWS_LAYOUT_DEBUG
-  LOG(INFO) << "Measuring " << *this << " returned " << result;
+  --indent_level;
+  LOG(INFO) << indent() << "Measuring " << *this << " returned " << result;
 #endif
 
   redraw_status_ |= kLayoutRequired;
