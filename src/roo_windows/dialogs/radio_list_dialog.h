@@ -11,6 +11,7 @@ class RadioListDialog : public Dialog {
  public:
   RadioListDialog(const roo_windows::Environment& env)
       : Dialog(env, {kStrDialogCancel, kStrDialogOK}), list_(env) {
+    setDividersVisible(true);
     last_button().setEnabled(false);
     list_.setOnInteractiveChange([this](){
       last_button().setEnabled(selected() >= 0);

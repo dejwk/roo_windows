@@ -34,7 +34,9 @@ const Scrim& scrim() {
 Dialog::Dialog(const Environment& env, std::vector<std::string> button_labels)
     : VerticalLayout(env),
       title_(env, "", font_h6()),
+      divider1_(env),
       contents_(env),
+      divider2_(env),
       title_panel_(env),
       button_panel_(env),
       callback_fn_(nullptr) {
@@ -43,7 +45,11 @@ Dialog::Dialog(const Environment& env, std::vector<std::string> button_labels)
   title_.setPadding(PADDING_LARGE, PADDING_SMALL);
   title_.setMargins(MARGIN_NONE, MARGIN_NONE);
   title_panel_.add(title_);
-  add(contents_);
+  setDividersVisible(false);
+  add(divider1_);
+  contents_.setVerticalScrollBarPresence(VerticalScrollBar::SHOWN_WHEN_SCROLLING);
+  add(contents_, VerticalLayout::Params().setWeight(1));
+  add(divider2_);
   button_panel_.setPadding(PADDING_TINY);
   button_panel_.setMargins(Margins(MARGIN_NONE, MARGIN_REGULAR));
   add(button_panel_,

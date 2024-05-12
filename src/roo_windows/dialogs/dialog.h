@@ -8,6 +8,7 @@
 #include "roo_windows/core/panel.h"
 #include "roo_windows/widgets/button.h"
 #include "roo_windows/widgets/text_label.h"
+#include "roo_windows/widgets/divider.h"
 
 namespace roo_windows {
 
@@ -47,8 +48,15 @@ class Dialog : public VerticalLayout {
     return buttons_[button_count() - 1];
   }
 
+  void setDividersVisible(bool visible) {
+    divider1_.setVisibility(visible ? VISIBLE : GONE);
+    divider2_.setVisibility(visible ? VISIBLE : GONE);
+  }
+
   TextLabel title_;
+  HorizontalDivider divider1_;
   ScrollablePanel contents_;
+  HorizontalDivider divider2_;
 
   virtual void onEnter() {}
   virtual void onExit(int result) {}
