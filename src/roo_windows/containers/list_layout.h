@@ -285,9 +285,14 @@ class ListLayout : public Panel {
   }
 
   void onLayout(bool changed, const Rect& rect) override {
+    if (rect.height() <= 0) {
+      Panel::onLayout(changed, rect);
+      return;
+    }
     prototype_.setVisibility(VISIBLE);
-    prototype_.layout(
-        Rect(0, 0, rect.width() - 1, rect.height() / element_count_ - 1));
+    int16_t h =
+        (element_count_ == 0) ? rect.height() : rect.height() / element_count_;
+    prototype_.layout(Rect(0, 0, rect.width() - 1, h - 1));
     prototype_.setVisibility(GONE);
     bool moved = (rect.yMin() != parent_bounds().yMin() ||
                   rect.yMax() != parent_bounds().yMax());
