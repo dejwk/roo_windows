@@ -81,7 +81,9 @@ class CircularBuffer {
     return elements_[offset];
   }
 
-  Element& operator[](int idx) { return elements_[(start_ + idx) % capacity_]; }
+  int pos(int idx) const { return (start_ + idx) % capacity_; }
+
+  Element& operator[](int idx) { return elements_[pos(idx)]; }
 
   bool empty() const { return count_ == 0; }
 
@@ -303,6 +305,10 @@ class ListLayout : public Panel {
       }
       first_ = 0;
       last_ = -1;
+    } else {
+      for (int i = 0; i < elements_.count(); ++i) {
+        layoutElement(elements_.pos(i), elements_[i]);
+      }
     }
   }
 
@@ -316,6 +322,11 @@ class ListLayout : public Panel {
     }
     model_.set(pos, e);
     e.setVisibility(VISIBLE);
+    layoutElement(pos, e);
+  }
+
+  void layoutElement(int pos, Element& e) {
+    Margins m = prototype_.getMargins();
     int16_t h_padding = padding_.left() + padding_.right();
     int16_t v_padding = padding_.top() + padding_.bottom();
     Dimensions d = e.measure(
