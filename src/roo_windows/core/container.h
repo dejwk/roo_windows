@@ -82,6 +82,10 @@ class Container : public Widget {
 
   virtual bool onInterceptTouchEvent(const TouchEvent& event) { return false; }
 
+  // Returns true if this container or any of its ancestors support scroll
+  // events.
+  bool isScrollable() const;
+
  protected:
   Container(const Container& other)
       : Widget(other),

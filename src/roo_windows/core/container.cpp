@@ -390,4 +390,13 @@ void Container::onLayout(bool changed, const Rect& rect) {
   }
 }
 
+bool Container::isScrollable() const {
+  const Container* c = this;
+  do {
+    if (c->supportsScrolling()) return true;
+    c = c->parent();
+  } while (c != nullptr);
+  return false;
+}
+
 }  // namespace roo_windows
