@@ -48,6 +48,7 @@ bool Slider::onDown(XDim x, YDim y) {
 }
 
 void Slider::onShowPress(XDim x, YDim y) {
+  is_dragging_ = true;
   Padding p = getPadding();
   int16_t range = range_from_width(width(), p);
   if (setPos(pos_from_x(x, range, p))) {
@@ -58,10 +59,14 @@ void Slider::onShowPress(XDim x, YDim y) {
 }
 
 bool Slider::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
-  if (dy * dy > 400) return false;
+  if (!is_dragging_ && (dy * dy > dx * dx) && dy * dy > 25) {
+    return false;
+  }
+  // if (y < -20 || y > height() + 20) return false;
   Padding p = getPadding();
   int16_t range = range_from_width(width(), p);
   if (setPos(pos_from_x(x, range, p))) {
+    setPressed(true);
     triggerInteractiveChange();
   }
   return true;
@@ -142,6 +147,11 @@ roo_display::FpPoint Slider::getPointOverlayFocus() const {
   int16_t range = range_from_width(width(), p);
   xoffset = (float)xoffset_from_pos(pos_, range, p);
   return roo_display::FpPoint{xoffset, (height() - 1) * 0.5f};
+}
+
+void Slider::onCancel() {
+  BasicWidget::onCancel();
+  is_dragging_ = false;
 }
 
 }  // namespace roo_windows

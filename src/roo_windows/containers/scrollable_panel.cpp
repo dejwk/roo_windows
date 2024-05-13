@@ -121,11 +121,11 @@ void ScrollablePanel::scrollToBottom() {
 }
 
 PreferredSize ScrollablePanel::getPreferredSize() const {
-  // In the dimension that is scrolled over, we will just return 'wrap contents',
-  // For example, if the panel scrolls vertically, we report the preferred
-  // height as 'wrap contents height'. In the other dimension, we forward the
-  // preference of the contents, accounting for our padding and the content's
-  // margins (in case when the preference is exact).
+  // In the dimension that is scrolled over, we will just return 'wrap
+  // contents', For example, if the panel scrolls vertically, we report the
+  // preferred height as 'wrap contents height'. In the other dimension, we
+  // forward the preference of the contents, accounting for our padding and the
+  // content's margins (in case when the preference is exact).
   Padding p = getPadding();
   XDim ph = p.left() + p.right();
   YDim pv = p.top() + p.bottom();
@@ -300,16 +300,19 @@ bool ScrollablePanel::onInterceptTouchEvent(const TouchEvent& event) {
         (event.y() >= scroll_bar_.begin() && event.y() <= scroll_bar_.end());
     return is_scroll_bar_scrolled_ || scroll_bar_.isVisible();
   }
-  if (event.type() == TouchEvent::MOVE) {
-    // If we detect drag motion in the scroll direction, intercept, and turn
-    // into a scroll event.
-    const GestureDetector& gd = getApplication()->gesture_detector();
-    int16_t dx = (direction_ == VERTICAL) ? 0 : gd.xTotalMoveDelta();
-    int16_t dy = (direction_ == HORIZONTAL) ? 0 : gd.yTotalMoveDelta();
-    if (dx * dx + dy * dy > kTouchSlopSquare) {
-      return true;
-    }
-  }
+  // Don't intercept too aggressively, as it prevents the child to handle its
+  // own scrolling (which may be in a different direction.) Instead, rely on the
+  // child to relinquish control by returning false from onMove. if
+  // (event.type() == TouchEvent::MOVE) {
+  //   // If we detect drag motion in the scroll direction, intercept, and turn
+  //   // into a scroll event.
+  //   const GestureDetector& gd = getApplication()->gesture_detector();
+  //   int16_t dx = (direction_ == VERTICAL) ? 0 : gd.xTotalMoveDelta();
+  //   int16_t dy = (direction_ == HORIZONTAL) ? 0 : gd.yTotalMoveDelta();
+  //   if (dx * dx + dy * dy > kTouchSlopSquare) {
+  //     return true;
+  //   }
+  // }
   return false;
 }
 

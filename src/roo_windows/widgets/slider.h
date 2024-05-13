@@ -7,7 +7,7 @@ namespace roo_windows {
 class Slider : public BasicWidget {
  public:
   Slider(const Environment& env, uint16_t pos = 0)
-      : BasicWidget(env), pos_(pos) {}
+      : BasicWidget(env), pos_(pos), is_dragging_(false) {}
 
   void paint(const Canvas& canvas) const override;
 
@@ -25,6 +25,8 @@ class Slider : public BasicWidget {
 
   bool onScroll(XDim x, YDim y, XDim dx, YDim dy) override;
 
+  void onCancel() override;
+
   PreferredSize getPreferredSize() const override;
 
   OverlayType getOverlayType() const override { return OVERLAY_POINT; }
@@ -38,6 +40,7 @@ class Slider : public BasicWidget {
 
  private:
   uint16_t pos_;
+  bool is_dragging_;
 };
 
 }  // namespace roo_windows

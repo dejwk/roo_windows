@@ -109,10 +109,14 @@ bool GestureDetector::onTouchMove(Widget& widget, XDim x, YDim y) {
         handled |= widget.onScroll(x, y, delta_x_, delta_y_);
         moved_outside_tap_region_ = true;
         cancelEvents();
+      } else {
+        handled = true;
       }
     } else {
       // tap region = the sloppy bounds of the widget.
-      if (!widget.getSloppyTouchBounds().contains(x, y)) {
+      if (widget.getSloppyTouchBounds().contains(x, y)) {
+        handled = true;
+      } else {
         moved_outside_tap_region_ = true;
         cancelEvents();
         widget.setPressed(false);
@@ -160,9 +164,26 @@ bool GestureDetector::dispatch(TouchEvent::Type type) {
       }
     }
   }
-  if (!touch_target_path_.empty()) {
-    return dispatchTo(touch_target_path_.back(), type);
+
+  // This version does not allow a slider to give up to its parent when an
+  // initial vertical scroll is detected.
+  // if (!touch_target_path_.empty()) {
+  //   return dispatchTo(touch_target_path_.back(), type);
+  // }
+  //
+  // With this version, when moving a slider inside a vertical scroll panel,
+  // panel scroll and slider scroll both work at the same time (without lifting
+  // the touch), depending on where the touch gets dragged. for (auto i =
+  // touch_target_path_.rbegin(); i != touch_target_path_.rend(); ++i) {
+  //   if (dispatchTo(*i, type)) break;
+  // }
+
+  while (!touch_target_path_.empty()) {
+    if (dispatchTo(touch_target_path_.back(), type)) return true;
+    touch_target_path_.back()->onCancel();
+    touch_target_path_.pop_back();
   }
+
   return false;
 }
 
