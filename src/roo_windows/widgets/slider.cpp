@@ -4,6 +4,7 @@
 #include "roo_display/image/image.h"
 #include "roo_display/shape/smooth.h"
 #include "roo_display/ui/tile.h"
+#include "roo_windows/core/container.h"
 #include "roo_windows/widgets/resources/circle.h"
 #include "roo_windows/widgets/resources/circular_shadow.h"
 
@@ -14,6 +15,9 @@ namespace roo_windows {
 namespace {
 static constexpr int kRadius = Scaled(12);
 static constexpr int kOverlayRadius = Scaled(22);
+
+// How close must the click be to be recognized as clicking on the slider.
+static constexpr int kTouchSlopPixels = 10;
 
 int16_t xoffset_from_pos(uint16_t pos, int16_t range, Padding p) {
   return kRadius + (((int32_t)pos * range + 32768) >> 16) + p.left();
@@ -33,6 +37,15 @@ uint16_t pos_from_x(XDim x, int16_t range, Padding p) {
 }
 
 }  // namespace
+
+bool Slider::onDown(XDim x, YDim y) {
+  if (!parent()->isScrollable()) return true;
+  Padding p = getPadding();
+  int16_t range = range_from_width(width(), p);
+  uint16_t min_pos = pos_from_x(x - kTouchSlopPixels, range, p);
+  uint16_t max_pos = pos_from_x(x + kTouchSlopPixels, range, p);
+  return (getPos() >= min_pos) && getPos() <= max_pos;
+}
 
 void Slider::onShowPress(XDim x, YDim y) {
   Padding p = getPadding();
