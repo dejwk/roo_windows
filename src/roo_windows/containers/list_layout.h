@@ -171,8 +171,7 @@ class ListLayout : public Panel {
       pos += i;
     }
     while (pos <= last_ && pos < end && pos < element_count_) {
-      model_.set(pos, elements_[i]);
-      elements_[i].setVisibility(VISIBLE);
+      setFromModel(pos, elements_[i]);
       ++i;
       ++pos;
     }
@@ -285,8 +284,9 @@ class ListLayout : public Panel {
   }
 
   void onLayout(bool changed, const Rect& rect) override {
+    // NOTE: because we do deferred layout in paint, we don't actually call
+    // the superclass' onLayout from here.
     if (rect.height() <= 0) {
-      Panel::onLayout(changed, rect);
       return;
     }
     prototype_.setVisibility(VISIBLE);
@@ -296,11 +296,15 @@ class ListLayout : public Panel {
     prototype_.setVisibility(GONE);
     bool moved = (rect.yMin() != parent_bounds().yMin() ||
                   rect.yMax() != parent_bounds().yMax());
-    Panel::onLayout(changed, rect);
     int capacity = (getMainWindow()->height() - 2) / element_height() + 2;
     if (capacity != elements_.capacity() || moved) {
       // Invalidate all the children so that they get repositioned during next
       // paintChildren().
+      while (last_-- >= first_) {
+        elements_.pop_back().setVisibility(GONE);
+      }
+      removeAll();
+      if (element_count_ == 0) return;
       while (getChildrenCount() > 1) {
         removeLast();
       }
@@ -310,14 +314,17 @@ class ListLayout : public Panel {
       }
       first_ = 0;
       last_ = -1;
-    } else {
-      for (int i = 0; i < elements_.count(); ++i) {
-        layoutElement(elements_.pos(i), elements_[i]);
-      }
     }
   }
 
  private:
+  void setFromModel(int pos, Element& e) {
+    model_.set(pos, e);
+    if (e.isLayoutRequested()) {
+      layoutElement(pos, e);
+    }
+  }
+
   // Configures the given element to represent the item at the given pos.
   void show(int pos, Element& e) {
     Margins m = prototype_.getMargins();
@@ -325,9 +332,8 @@ class ListLayout : public Panel {
       // Won't fit anyway.
       return;
     }
-    model_.set(pos, e);
+    setFromModel(pos, e);
     e.setVisibility(VISIBLE);
-    layoutElement(pos, e);
   }
 
   void layoutElement(int pos, Element& e) {
