@@ -51,7 +51,7 @@ Dialog::Dialog(const Environment& env, std::vector<std::string> button_labels)
   add(contents_, VerticalLayout::Params().setWeight(1));
   add(divider2_);
   button_panel_.setPadding(PADDING_TINY);
-  button_panel_.setMargins(Margins(MARGIN_NONE, MARGIN_REGULAR));
+  button_panel_.setMargins(Margins(MARGIN_NONE, MARGIN_SMALL));
   add(button_panel_,
       VerticalLayout::Params().setGravity(kHorizontalGravityRight));
   button_panel_.setGravity(
