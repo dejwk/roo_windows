@@ -113,6 +113,18 @@ bool GestureDetector::onTouchMove(Widget& widget, XDim x, YDim y) {
       } else {
         handled = true;
       }
+    } else if (widget.parent() != nullptr && widget.parent()->isScrollable()) {
+      int16_t total_move_x = latest_.x() - initial_down_.x();
+      int16_t total_move_y = latest_.y() - initial_down_.y();
+      int32_t dist_square =
+          total_move_x * total_move_x + total_move_y * total_move_y;
+      if (dist_square > kTouchSlopSquare) {
+        handled = false;
+        moved_outside_tap_region_ = true;
+        cancelEvents();
+      } else {
+        handled = true;
+      }
     } else {
       // tap region = the sloppy bounds of the widget.
       if (widget.getSloppyTouchBounds().contains(x, y)) {
@@ -160,7 +172,6 @@ bool GestureDetector::dispatch(TouchEvent::Type type) {
         // We need to cancel the current touch target.
         touch_target_path_.back()->onCancel();
         touch_target_path_.resize(i + 1);
-        supports_scrolling_ = touch_target_path_.back()->supportsScrolling();
         break;
       }
     }
@@ -180,6 +191,7 @@ bool GestureDetector::dispatch(TouchEvent::Type type) {
   // }
 
   while (!touch_target_path_.empty()) {
+    supports_scrolling_ = touch_target_path_.back()->supportsScrolling();
     if (dispatchTo(touch_target_path_.back(), type)) return true;
     touch_target_path_.back()->onCancel();
     touch_target_path_.pop_back();
