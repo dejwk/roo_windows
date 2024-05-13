@@ -87,6 +87,8 @@ class CircularBuffer {
 
   size_t capacity() const { return capacity_; }
 
+  size_t count() const { return count_; }
+
  private:
   std::unique_ptr<Element[]> elements_;
   int capacity_;
@@ -281,26 +283,27 @@ class ListLayout : public Panel {
   }
 
   void onLayout(bool changed, const Rect& rect) override {
-    // Invalidate all the children so that they get repositioned during next
-    // paintChildren().
-    while (last_-- >= first_) {
-      elements_.pop_back().setVisibility(GONE);
-    }
-    removeAll();
-    if (element_count_ == 0) return;
-    add(prototype_);
     prototype_.setVisibility(VISIBLE);
     prototype_.layout(
         Rect(0, 0, rect.width() - 1, rect.height() / element_count_ - 1));
     prototype_.setVisibility(GONE);
+    bool moved = (rect.yMin() != parent_bounds().yMin() ||
+                  rect.yMax() != parent_bounds().yMax());
     Panel::onLayout(changed, rect);
     int capacity = (getMainWindow()->height() - 2) / element_height() + 2;
-    elements_.ensure_capacity(capacity, prototype_);
-    for (int i = 0; i < elements_.capacity(); i++) {
-      add(elements_[i]);
+    if (capacity != elements_.capacity() || moved) {
+      // Invalidate all the children so that they get repositioned during next
+      // paintChildren().
+      while (getChildrenCount() > 1) {
+        removeLast();
+      }
+      elements_.ensure_capacity(capacity, prototype_);
+      for (int i = 0; i < elements_.capacity(); i++) {
+        add(elements_[i]);
+      }
+      first_ = 0;
+      last_ = -1;
     }
-    first_ = 0;
-    last_ = -1;
   }
 
  private:
