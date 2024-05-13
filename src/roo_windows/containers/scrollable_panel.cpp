@@ -302,8 +302,8 @@ bool ScrollablePanel::onInterceptTouchEvent(const TouchEvent& event) {
   }
   // Don't intercept too aggressively, as it prevents the child to handle its
   // own scrolling (which may be in a different direction.) Instead, rely on the
-  // child to relinquish control by returning false from onMove. if
-  // (event.type() == TouchEvent::MOVE) {
+  // child to relinquish control by returning false from onMove.
+  // if (event.type() == TouchEvent::MOVE) {
   //   // If we detect drag motion in the scroll direction, intercept, and turn
   //   // into a scroll event.
   //   const GestureDetector& gd = getApplication()->gesture_detector();
