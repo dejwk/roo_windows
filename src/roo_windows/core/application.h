@@ -4,11 +4,13 @@
 #include <vector>
 
 #include "roo_time.h"
+#include "roo_windows/activities/keyboard.h"
 #include "roo_windows/core/activity.h"
 #include "roo_windows/core/click_animation.h"
 #include "roo_windows/core/gesture_detector.h"
 #include "roo_windows/core/main_window.h"
 #include "roo_windows/core/task.h"
+#include "roo_windows/widgets/text_field.h"
 
 namespace roo_windows {
 
@@ -39,6 +41,11 @@ class Application {
   GestureDetector& gesture_detector() { return gesture_detector_; }
   const GestureDetector& gesture_detector() const { return gesture_detector_; }
 
+  TextFieldEditor& text_field_editor() { return text_field_editor_; }
+  const TextFieldEditor& text_field_editor() const {
+    return text_field_editor_;
+  }
+
  private:
   roo_display::Display& display_;
   const Environment* env_;
@@ -49,6 +56,9 @@ class Application {
 
   std::vector<std::unique_ptr<Task>> tasks_;
   std::vector<std::unique_ptr<TaskPanel>> task_panels_;
+
+  Keyboard keyboard_;
+  TextFieldEditor text_field_editor_;
 };
 
 }  // namespace roo_windows

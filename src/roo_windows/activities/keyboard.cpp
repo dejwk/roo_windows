@@ -143,6 +143,8 @@ class KeyboardPage : public Panel {
  public:
   KeyboardPage(const Environment& env, const KeyboardPageSpec* spec);
 
+  void init(const Environment& env);
+
   void showHighlighter(const TextButton& btn);
   void hideHighlighter();
 
@@ -165,6 +167,7 @@ class KeyboardPage : public Panel {
   const KeyboardPageSpec* spec_;
   std::vector<KeyboardButton*> keys_;
   PressHighlighter highlighter_;
+  bool initialized_;
 };
 
 class KeyboardWidget : public Panel {
@@ -193,6 +196,7 @@ class KeyboardWidget : public Panel {
   void onLayout(bool changed, const Rect& rect) override;
 
  private:
+  const Environment* env_;
   std::vector<KeyboardPage*> pages_;
   const KeyboardColorTheme& color_theme_;
   Keyboard::CapsState caps_state_;
@@ -381,6 +385,7 @@ KeyboardWidget* KeyboardPage::keyboard() { return (KeyboardWidget*)parent(); }
 
 KeyboardWidget::KeyboardWidget(const Environment& env, const KeyboardSpec* spec)
     : Panel(env),
+      env_(&env),
       color_theme_(env.keyboardColorTheme()),
       caps_state_(Keyboard::CAPS_STATE_LOW),
       listener_(nullptr) {
@@ -390,11 +395,13 @@ KeyboardWidget::KeyboardWidget(const Environment& env, const KeyboardSpec* spec)
     add(std::unique_ptr<KeyboardPage>(page));
     pages_.push_back(page);
   }
-  setPage(0);
+  setPage(-1);
 }
 
 PreferredSize KeyboardWidget::getPreferredSize() const {
-  return current_page_->getPreferredSize();
+  return current_page_ == nullptr ? PreferredSize(PreferredSize::ExactWidth(0),
+                                                  PreferredSize::ExactHeight(0))
+                                  : current_page_->getPreferredSize();
 }
 
 PreferredSize KeyboardPage::getPreferredSize() const {
@@ -407,11 +414,14 @@ PreferredSize KeyboardPage::getPreferredSize() const {
 }
 
 Dimensions KeyboardWidget::onMeasure(WidthSpec width, HeightSpec height) {
-  return current_page_->measure(width, height);
+  return (current_page_ == nullptr) ? Dimensions()
+                                    : current_page_->measure(width, height);
 }
 
 void KeyboardWidget::onLayout(bool changed, const Rect& rect) {
-  current_page_->layout(Rect(0, 0, rect.width() - 1, rect.height() - 1));
+  if (current_page_ != nullptr) {
+    current_page_->layout(Rect(0, 0, rect.width() - 1, rect.height() - 1));
+  }
 }
 
 void KeyboardWidget::setCapsState(Keyboard::CapsState caps_state) {
@@ -427,8 +437,14 @@ void KeyboardWidget::setCapsState(Keyboard::CapsState caps_state) {
 }
 
 void KeyboardWidget::setPage(int idx) {
-  if (current_page_ == pages_[idx]) return;
-  current_page_ = pages_[idx];
+  if (idx < 0) {
+    if (current_page_ == nullptr) return;
+    current_page_ = nullptr;
+  } else {
+    if (current_page_ == pages_[idx]) return;
+    current_page_ = pages_[idx];
+    current_page_->init(*env_);
+  }
   for (int i = 0; i < pages_.size(); ++i) {
     pages_[i]->setVisibility(i == idx ? VISIBLE : GONE);
   }
@@ -437,11 +453,16 @@ void KeyboardWidget::setPage(int idx) {
 }
 
 KeyboardPage::KeyboardPage(const Environment& env, const KeyboardPageSpec* spec)
-    : Panel(env), spec_(spec), highlighter_(env) {
+    : Panel(env), spec_(spec), highlighter_(env), initialized_(false) {
   setBackground(env.keyboardColorTheme().background);
   setParentClipMode(Widget::UNCLIPPED);
-  for (int i = 0; i < spec->row_count; ++i) {
-    const auto& row = spec->rows[i];
+}
+
+void KeyboardPage::init(const Environment& env) {
+  if (initialized_) return;
+  initialized_ = true;
+  for (int i = 0; i < spec_->row_count; ++i) {
+    const auto& row = spec_->rows[i];
     for (int j = 0; j < row.key_count; ++j) {
       KeyboardButton* b;
       Color b_color;
@@ -652,11 +673,14 @@ Keyboard::Keyboard(const Environment& env, const KeyboardSpec* spec)
 
 Widget& Keyboard::getContents() { return *contents_; }
 
-void Keyboard::show() { contents_->setVisibility(Widget::VISIBLE); }
+void Keyboard::show() {
+  contents()->setPage(0);
+  contents()->setVisibility(Widget::VISIBLE);
+}
 
 void Keyboard::hide() {
   contents()->setVisibility(Widget::GONE);
-  contents()->setPage(0);
+  contents()->setPage(-1);
   contents()->setCapsState(CapsState::CAPS_STATE_LOW);
 }
 

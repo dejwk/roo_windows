@@ -1,6 +1,7 @@
 #include "application.h"
 
 #include "roo_display.h"
+#include "roo_windows/keyboard_layout/en_us.h"
 
 namespace roo_windows {
 
@@ -13,7 +14,12 @@ Application::Application(const Environment* env, Display& display)
     : display_(display),
       env_(env),
       root_window_(*this, display.extents()),
-      gesture_detector_(root_window_, display) {}
+      gesture_detector_(root_window_, display),
+      keyboard_(*env, kbEngUS()),
+      text_field_editor_(env->scheduler(), keyboard_) {
+  roo_windows::Task* kb_task = addTaskFloating();
+  kb_task->enterActivity(&keyboard_);
+}
 
 void Application::add(WidgetRef child, const roo_display::Box& box) {
   root_window_.add(std::move(child), box);

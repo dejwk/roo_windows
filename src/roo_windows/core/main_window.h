@@ -42,6 +42,18 @@ class MainWindow : public Panel {
     press_overlay_ = std::move(press_overlay);
   }
 
+  // Special handling for the keyboard. It gets added as the first child, yet we
+  // always want to render it on top (as the last child).
+  const Widget& getChild(int idx) const override {
+    return idx == getChildrenCount() - 1 ? Panel::getChild(0)
+                                         : Panel::getChild(idx + 1);
+  }
+
+  Widget& getChild(int idx) override {
+    return idx == getChildrenCount() - 1 ? Panel::getChild(0)
+                                         : Panel::getChild(idx + 1);
+  }
+
  protected:
   void propagateDirty(const Widget* child, const Rect& rect) override;
 

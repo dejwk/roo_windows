@@ -2,12 +2,12 @@
 
 #include <vector>
 
-#include "roo_windows/core/application.h"
 #include "roo_windows/core/task.h"
 #include "roo_windows/core/widget.h"
 
 namespace roo_windows {
 
+class Application;
 class Activity {
  public:
   enum State {

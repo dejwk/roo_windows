@@ -1,5 +1,6 @@
 #include "roo_windows/core/activity.h"
 
+#include "roo_windows/core/application.h"
 #include "roo_windows/core/task.h"
 
 namespace roo_windows {
