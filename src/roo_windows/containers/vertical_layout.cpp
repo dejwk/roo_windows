@@ -133,7 +133,7 @@ Dimensions VerticalLayout::onMeasure(WidthSpec width, HeightSpec height) {
       int16_t child_weight = measure.params().weight();
       PreferredSize preferred = w.getPreferredSize();
       if (child_weight > 0) {
-        int16_t share = ((uint32_t)child_weight * (uint32_t)remaining_excess) /
+        int16_t share = ((int32_t)child_weight * (int32_t)remaining_excess) /
                         remaining_weighted_sum;
         remaining_excess -= share;
         remaining_weighted_sum -= child_weight;
@@ -143,7 +143,7 @@ Dimensions VerticalLayout::onMeasure(WidthSpec width, HeightSpec height) {
         } else if (preferred.height().isZero()) {
           // This child needs to be laid out from scratch using only its share
           // of excess space.
-          child_weight = share;
+          child_height = share;
         } else {
           // This child had some intrinsic height to which we need to add its
           // share of excess space.
