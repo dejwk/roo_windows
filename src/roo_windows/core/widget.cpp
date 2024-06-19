@@ -238,6 +238,8 @@ static XDim getDefaultWidth(XDim width, WidthSpec spec) {
   switch (spec.kind()) {
     case UNSPECIFIED:
       return width;
+    case AT_MOST:
+      return width < spec.value() ? width : spec.value();
     default:
       return spec.value();
   }
@@ -250,6 +252,8 @@ static YDim getDefaultHeight(YDim height, HeightSpec spec) {
   switch (spec.kind()) {
     case UNSPECIFIED:
       return height;
+    case AT_MOST:
+      return height < spec.value() ? height : spec.value();
     default:
       return spec.value();
   }
