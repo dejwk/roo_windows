@@ -51,8 +51,12 @@ Dimensions VerticalLayout::onMeasure(WidthSpec width, HeightSpec height) {
       PreferredSize::Height pref_h = use_excess_space
                                          ? PreferredSize::WrapContentHeight()
                                          : preferred.height();
+      // Note: we give each child equal chance to report its preferred height,
+      // without capping prematurely. If there is not enough space, we will
+      // later squeeze children with non-zero weight; otherwise, we simply let
+      // things extend down.
       HeightSpec child_height_spec =
-          height.getChildHeightSpec(used_height + v_padding + v_margin, pref_h);
+          height.getChildHeightSpec(v_padding + v_margin, pref_h);
       if (w.isLayoutRequested() ||
           !measure.latest().valid(child_width_spec, child_height_spec)) {
         // Need to re-measure.

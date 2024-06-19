@@ -50,8 +50,12 @@ Dimensions HorizontalLayout::onMeasure(WidthSpec width, HeightSpec height) {
       PreferredSize::Width pref_w = use_excess_space
                                         ? PreferredSize::WrapContentWidth()
                                         : preferred.width();
+      // Note: we give each child equal chance to report its preferred width,
+      // without capping prematurely. If there is not enough space, we will
+      // later squeeze children with non-zero weight; otherwise, we simply let
+      // things extend right.
       WidthSpec child_width_spec =
-          width.getChildWidthSpec(used_width + h_padding + h_margin, pref_w);
+          width.getChildWidthSpec(h_padding + h_margin, pref_w);
       if (w.isLayoutRequested() ||
           !measure.latest().valid(child_width_spec, child_height_spec)) {
         // Need to re-measure.
