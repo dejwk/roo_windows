@@ -11,6 +11,10 @@ cc_library(
     includes = [
         "src",
     ],
+    defines = [
+#                 "MLOG_roo_windows_layout=1"
+
+    ],
     deps = [
         "//roo_testing:arduino",
         "//lib/roo_display",

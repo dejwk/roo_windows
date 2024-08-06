@@ -10,6 +10,10 @@
 #include "roo_windows/core/rtti.h"
 #include "roo_windows/decoration/decoration.h"
 
+#ifndef MLOG_roo_windows_layout
+#define MLOG_roo_windows_layout 0
+#endif
+
 namespace roo_windows {
 
 static int16_t kMinSloppyTouchTargetSpan = 50;
@@ -180,7 +184,7 @@ void Widget::requestLayout() {
   onRequestLayout();
 }
 
-#ifdef ROO_WINDOWS_LAYOUT_DEBUG
+#if MLOG_IS_ON(roo_windows_layout)
 static int indent_level = 0;
 
 const char* indent() {
@@ -192,15 +196,17 @@ const char* indent() {
 #endif
 
 Dimensions Widget::measure(WidthSpec width, HeightSpec height) {
-#ifdef ROO_WINDOWS_LAYOUT_DEBUG
-  LOG(INFO) << indent() << "Measuring " << *this << " (" << width << ", " << height << ")";
+#if MLOG_IS_ON(roo_windows_layout)
+  MLOG(roo_windows_layout) << indent() << "Measuring " << *this << " (" << width
+                           << ", " << height << ")";
   ++indent_level;
 #endif
 
   Dimensions result = onMeasure(width, height);
-#ifdef ROO_WINDOWS_LAYOUT_DEBUG
+#if MLOG_IS_ON(roo_windows_layout)
   --indent_level;
-  LOG(INFO) << indent() << "Measuring " << *this << " returned " << result;
+  MLOG(roo_windows_layout) << indent() << "Measuring " << *this << " returned "
+                           << result;
 #endif
 
   redraw_status_ |= kLayoutRequired;
@@ -210,14 +216,14 @@ Dimensions Widget::measure(WidthSpec width, HeightSpec height) {
 void Widget::layout(const Rect& rect) {
   bool changed = (rect != parent_bounds());
   if (changed || isLayoutRequired()) {
-#ifdef ROO_WINDOWS_LAYOUT_DEBUG
+#if MLOG_IS_ON(roo_windows_layout)
     XDim dx = 0;
     YDim dy = 0;
     if (parent() != nullptr) {
       parent()->getAbsoluteOffset(dx, dy);
     }
-    LOG(INFO) << "Layout changed for " << *this << ": " << rect
-              << "; absolute: " << rect.translate(dx, dy);
+    MLOG(roo_windows_layout) << "Layout changed for " << *this << ": " << rect
+                             << "; absolute: " << rect.translate(dx, dy);
 #endif
     moveTo(rect);
     onLayout(changed, rect);
