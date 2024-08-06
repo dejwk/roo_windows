@@ -13,7 +13,7 @@ class HorizontalDivider : public Widget {
     return Dimensions(0, 2);
   }
 
-  Margins getMargins() const override { return Margins(1); }
+  Margins getMargins() const override { return Margins(0); }
 
   PreferredSize getPreferredSize() const override {
     return PreferredSize(PreferredSize::MatchParentWidth(),
