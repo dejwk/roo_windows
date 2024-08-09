@@ -36,8 +36,8 @@ Display display(screen, touch,
 #include "roo_windows/widgets/text_label.h"
 
 roo_scheduler::Scheduler scheduler;
-Environment env;
-Application app(&env, display, scheduler);
+Environment env(scheduler);
+Application app(&env, display);
 TextLabel label(env, "Hello World!", font_caption(), kCenter | kMiddle);
 SingletonActivity activity(app, label);
 

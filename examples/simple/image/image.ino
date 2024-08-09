@@ -34,8 +34,8 @@ Display display(screen, touch,
 #include "roo_windows/widgets/image.h"
 
 roo_scheduler::Scheduler scheduler;
-Environment env;
-Application app(&env, display, scheduler);
+Environment env(scheduler);
+Application app(&env, display);
 
 // An 'image' really means any drawable, as understood by roo_display. We're
 // using a simple geometric shape here, but you can also draw images in various

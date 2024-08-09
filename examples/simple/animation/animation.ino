@@ -43,8 +43,8 @@ Display display(screen, touch,
 #include "roo_windows/widgets/image.h"
 
 Scheduler scheduler;
-Environment env;
-Application app(&env, display, scheduler);
+Environment env(scheduler);
+Application app(&env, display);
 
 // Animated image using a generic drawable (in this case, smooth thick arc).
 class AnimatedArc : public Image {

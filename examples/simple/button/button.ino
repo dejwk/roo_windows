@@ -36,8 +36,8 @@ Display display(screen, touch,
 #include "roo_windows/widgets/button.h"
 
 roo_scheduler::Scheduler scheduler;
-Environment env;
-Application app(&env, display, scheduler);
+Environment env(scheduler);
+Application app(&env, display);
 
 // Simple container to put our button in. (Without it, the button would take
 // full screen).
