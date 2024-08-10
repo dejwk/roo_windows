@@ -31,6 +31,8 @@ class GestureDetector {
   GestureDetector(Widget& root, roo_display::Display& display)
       : root_(root), display_(display), is_down_(false) {}
 
+  // Returns true if an interaction has been detected (and some methods on
+  // widgets, changing their state, have been called).
   bool tick();
 
   bool onTouchDown(Widget& widget, XDim x, YDim y);

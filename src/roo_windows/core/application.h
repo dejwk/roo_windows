@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 
+#include "roo_scheduler.h"
 #include "roo_time.h"
 #include "roo_windows/activities/keyboard.h"
 #include "roo_windows/core/activity.h"
@@ -18,9 +19,7 @@ class Application {
  public:
   Application(const Environment* env, roo_display::Display& display);
 
-  // Handles user input (touch, etc.), and calls refresh() periodically.
-  // The application code is expected to call this function frequently.
-  void tick();
+  void start();
 
   // Lays out and paints all dirty items. Does not handle user input.
   // Useful when you want to enforce some visual changes immediately,
@@ -47,6 +46,9 @@ class Application {
   }
 
  private:
+  // Handles user input (touch, etc.), and calls refresh() periodically.
+  void tick();
+
   roo_display::Display& display_;
   const Environment* env_;
   unsigned long last_time_refreshed_ms_;
@@ -59,6 +61,8 @@ class Application {
 
   Keyboard keyboard_;
   TextFieldEditor text_field_editor_;
+
+  roo_scheduler::RepetitiveTask ticker_;
 };
 
 }  // namespace roo_windows

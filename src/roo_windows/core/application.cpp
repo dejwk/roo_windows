@@ -16,13 +16,18 @@ Application::Application(const Environment* env, Display& display)
       root_window_(*this, display.extents()),
       gesture_detector_(root_window_, display),
       keyboard_(*env, kbEngUS()),
-      text_field_editor_(env->scheduler(), keyboard_) {
+      text_field_editor_(env->scheduler(), keyboard_),
+      ticker_(env->scheduler(), [this](){tick(); }, roo_time::Millis(5)) {
   roo_windows::Task* kb_task = addTaskFloating();
   kb_task->enterActivity(&keyboard_);
 }
 
 void Application::add(WidgetRef child, const roo_display::Box& box) {
   root_window_.add(std::move(child), box);
+}
+
+void Application::start() {
+  ticker_.start();
 }
 
 void Application::tick() {
