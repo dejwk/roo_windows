@@ -50,9 +50,10 @@ SingletonActivity activity(app, img);
 void setup() {
   SPI.begin();
   display.init();
+  app.start();
+
+  // Never exits.
+  scheduler.run();
 }
 
-void loop() {
-  app.tick();
-  scheduler.executeEligibleTasks(1);
-}
+void loop() {}

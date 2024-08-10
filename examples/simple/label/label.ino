@@ -4,7 +4,6 @@
 #include "roo_display.h"
 #include "roo_scheduler.h"
 #include "roo_windows.h"
-#include "roo_windows/widgets/text_label.h"
 
 using namespace roo_display;
 using namespace roo_windows;
@@ -44,9 +43,10 @@ SingletonActivity activity(app, label);
 void setup() {
   SPI.begin();
   display.init();
+  app.start();
+
+  // Never exits.
+  scheduler.run();
 }
 
-void loop() {
-  app.tick();
-  scheduler.executeEligibleTasks(1);
-}
+void loop() {}
