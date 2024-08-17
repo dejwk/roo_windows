@@ -78,7 +78,7 @@ MainWindow::MainWindow(Application& app, const roo_display::Box& bounds)
 Application& MainWindow::app() const { return app_; }
 const Theme& MainWindow::theme() const { return app().env().theme(); }
 
-void MainWindow::tick() { click_animation_.tick(); }
+void MainWindow::refreshClickAnimation() { click_animation_.tick(); }
 
 void MainWindow::updateLayout() {
   if (isLayoutRequested()) {

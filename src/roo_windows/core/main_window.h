@@ -15,7 +15,7 @@ class MainWindow : public Panel {
  public:
   MainWindow(Application& app, const roo_display::Box& bounds);
 
-  void tick();
+  void refreshClickAnimation();
 
   // Applies any pending layout requests.
   void updateLayout();
