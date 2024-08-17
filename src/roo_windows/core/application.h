@@ -62,7 +62,7 @@ class Application {
   Keyboard keyboard_;
   TextFieldEditor text_field_editor_;
 
-  roo_scheduler::RepetitiveTask ticker_;
+  roo_scheduler::SingletonTask ticker_;
 };
 
 }  // namespace roo_windows

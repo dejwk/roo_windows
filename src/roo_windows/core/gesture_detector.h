@@ -31,8 +31,8 @@ class GestureDetector {
   GestureDetector(Widget& root, roo_display::Display& display)
       : root_(root), display_(display), is_down_(false) {}
 
-  // Returns true if an interaction has been detected (and some methods on
-  // widgets, changing their state, have been called).
+  // Returns true if an interaction is in progress and touch event has been
+  // dispatched.
   bool tick();
 
   bool onTouchDown(Widget& widget, XDim x, YDim y);
@@ -49,6 +49,10 @@ class GestureDetector {
   // events), or nullptr if no gesture is currently handled.
   const Widget* currentGestureTarget() const {
     return touch_target_path_.empty() ? nullptr : touch_target_path_.back();
+  }
+
+  bool isTouchDown() const {
+    return is_down_;
   }
 
  private:

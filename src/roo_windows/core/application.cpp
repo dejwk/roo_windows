@@ -17,7 +17,7 @@ Application::Application(const Environment* env, Display& display)
       gesture_detector_(root_window_, display),
       keyboard_(*env, kbEngUS()),
       text_field_editor_(env->scheduler(), keyboard_),
-      ticker_(env->scheduler(), [this]() { tick(); }, roo_time::Millis(5)) {
+      ticker_(env->scheduler(), [this]() { tick(); }) {
   roo_windows::Task* kb_task = addTaskFloating();
   kb_task->enterActivity(&keyboard_);
 }
@@ -26,16 +26,26 @@ void Application::add(WidgetRef child, const roo_display::Box& box) {
   root_window_.add(std::move(child), box);
 }
 
-void Application::start() { ticker_.start(); }
+void Application::start() { ticker_.scheduleNow(); }
 
 void Application::tick() {
   root_window_.refreshClickAnimation();
-  if (!gesture_detector_.tick()) return;
-  {
-    unsigned long now = millis();
-    if ((long)(now - last_time_refreshed_ms_) < kMinRefreshTimeDeltaMs) return;
+  bool is_click_animating =
+      root_window_.getClickAnimation()->isClickAnimating();
+  bool gesture_dispatched = gesture_detector_.tick();
+  unsigned long now = millis();
+  if (gesture_dispatched ||
+      (now - last_time_refreshed_ms_) >= kMinRefreshTimeDeltaMs) {
+    refresh();
   }
-  refresh();
+  roo_scheduler::Priority priority =
+      is_click_animating || gesture_detector_.isTouchDown()
+          ? roo_scheduler::PRIORITY_ELEVATED
+          : roo_scheduler::PRIORITY_NORMAL;
+  roo_time::Interval delay = gesture_detector_.isTouchDown()
+                                 ? roo_time::Millis(0)
+                                 : roo_time::Millis(20);
+  ticker_.scheduleAfter(delay, priority);
 }
 
 namespace {
