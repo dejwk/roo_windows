@@ -84,6 +84,7 @@ class CircularBuffer {
   int pos(int idx) const { return (start_ + idx) % capacity_; }
 
   Element& operator[](int idx) { return elements_[pos(idx)]; }
+  const Element& operator[](int idx) const { return elements_[pos(idx)]; }
 
   bool empty() const { return count_ == 0; }
 
@@ -126,7 +127,8 @@ class ListLayout : public Panel {
         prototype_(std::move(prototype)),
         first_(0),
         last_(-1),
-        in_paint_children_(false) {
+        in_paint_children_(false),
+        paint_offset_(0) {
     element_count_ = model.elementCount();
   }
 
@@ -206,7 +208,18 @@ class ListLayout : public Panel {
     Widget::onRequestLayout();
   }
 
+  const Widget& getChild(int idx) const override {
+    return elements_[((elements_.capacity() - idx - 1) + paint_offset_) %
+                     elements_.capacity()];
+  }
+
+  Widget& getChild(int idx) override {
+    return elements_[((elements_.capacity() - idx - 1) + paint_offset_) %
+                     elements_.capacity()];
+  }
+
   void paintChildren(const Canvas& canvas, Clipper& clipper) override {
+    paint_offset_ = (paint_offset_ + 1) % elements_.capacity();
     CHECK(!in_paint_children_);
     in_paint_children_ = true;
     // NOTE: we are not just using clipbox, because it could result in removing
@@ -371,6 +384,7 @@ class ListLayout : public Panel {
   int first_;
   int last_;
   bool in_paint_children_;
+  int paint_offset_;
 };
 
 template <typename Element>
