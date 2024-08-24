@@ -281,7 +281,7 @@ void TextFieldEditor::setSelection(int16_t selection_begin,
   }
   selection_begin_ = selection_begin;
   selection_end_ = selection_end;
-  target_->markDirty();
+  target_->setDirty();
 }
 
 // Sets up glyphs_ to contain all the metrics of the value.
@@ -355,11 +355,11 @@ void TextFieldEditor::blinkCursor() {
   auto now = roo_time::Uptime::Now();
   if (now - last_cursor_shown_time_ > 2 * kCursorBlinkInterval) {
     restartCursor();
-    target_->markDirty();
+    target_->setDirty();
   }
   if (now - last_cursor_shown_time_ > kCursorBlinkInterval) {
     blinking_cursor_is_on_ = false;
-    target_->markDirty();
+    target_->setDirty();
     cursor_blinker_.scheduleAfter(kCursorBlinkInterval);
   }
 }
@@ -413,7 +413,7 @@ void TextFieldEditor::rune(uint32_t rune) {
   int16_t saved_pos = cursor_position_ + 1;
   measure();
   cursor_position_ = saved_pos;
-  target_->markDirty();
+  target_->setDirty();
 }
 
 void TextFieldEditor::enter() {
@@ -444,7 +444,7 @@ void TextFieldEditor::del() {
     int16_t saved_pos = selection_begin_;
     measure();
     cursor_position_ = saved_pos;
-    target_->markDirty();
+    target_->setDirty();
   } else if (cursor_position_ > 0) {
     std::string& val = target_->value_;
     if (cursor_position_ == offsets_.size()) {
@@ -456,7 +456,7 @@ void TextFieldEditor::del() {
     int16_t saved_pos = cursor_position_ - 1;
     measure();
     cursor_position_ = saved_pos;
-    target_->markDirty();
+    target_->setDirty();
   }
 }
 

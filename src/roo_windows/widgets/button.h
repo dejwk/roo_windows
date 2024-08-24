@@ -84,7 +84,7 @@ class SimpleButton : public Button {
   void setContentColor(roo_display::Color color) {
     if (content_color_ == color) return;
     content_color_ = color;
-    markDirty();
+    setDirty();
   }
 
   bool hasLabel() const { return !label_.empty(); }
@@ -94,7 +94,7 @@ class SimpleButton : public Button {
   void setLabel(const std::string& label) {
     if (label_ == label) return;
     label_ = label;
-    markDirty();
+    setDirty();
   }
 
   bool hasIcon() const { return icon_ != nullptr; }
@@ -105,7 +105,7 @@ class SimpleButton : public Button {
   void setIcon(const MonoIcon* icon) {
     if (icon_ == icon) return;
     icon_ = icon;
-    markDirty();
+    setDirty();
   }
 
   void setFont(const roo_display::Font& font) { font_ = &font; }

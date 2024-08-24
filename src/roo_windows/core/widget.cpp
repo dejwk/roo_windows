@@ -144,7 +144,7 @@ Color Widget::effectiveBackground() const {
 // (and, ultimately, to DefaultTheme(), if not otherwise specified).
 const Theme& Widget::theme() const { return parent_->theme(); }
 
-void Widget::markDirty(const Rect& bounds) {
+void Widget::setDirty(const Rect& bounds) {
   redraw_status_ |= kDirty;
   if (parent_ != nullptr) {
     parent_->propagateDirty(this, bounds.translate(xOffset(), yOffset()));
@@ -156,7 +156,7 @@ void Widget::invalidateInterior() {
   if (getBorderStyle().corner_radius() > 0 && parent() != nullptr) {
     parent()->childInvalidatedRegion(this, maxParentBounds());
   }
-  markDirty();
+  setDirty();
 }
 
 void Widget::invalidateInterior(const Rect& rect) {
@@ -165,7 +165,7 @@ void Widget::invalidateInterior(const Rect& rect) {
     parent()->childInvalidatedRegion(this,
                                      rect.translate(xOffset(), yOffset()));
   }
-  markDirty(rect);
+  setDirty(rect);
 }
 
 void Widget::elevationChanged(int higherElevation) {
@@ -173,7 +173,7 @@ void Widget::elevationChanged(int higherElevation) {
     // TODO: we can avoid marking dirty if we introduce a new flag specifically
     // for elevation changed. This way we can avoid content redraws except for
     // the bounds.
-    if (getBorderStyle().corner_radius() > 0) markDirty();
+    if (getBorderStyle().corner_radius() > 0) setDirty();
     parent()->childInvalidatedRegion(
         this, CalculateShadowExtents(parent_bounds(), higherElevation));
   }
@@ -337,7 +337,7 @@ void Widget::setActivated(bool activated) {
   uint8_t old_elevation = getElevation();
   state_ ^= kWidgetActivated;
   if (!isVisible()) return;
-  markDirty();
+  setDirty();
   if (useOverlayOnActivation()) {
     invalidateInterior();
   }
@@ -394,7 +394,7 @@ void Widget::setOnOffState(OnOffState state) {
   } else if (state == Widget::OFF) {
     state_ |= kWidgetOff;
   }
-  markDirty();
+  setDirty();
   uint8_t new_elevation = getElevation();
   if (old_elevation != new_elevation) {
     elevationChanged(std::max(old_elevation, new_elevation));
@@ -676,7 +676,7 @@ bool Widget::onSingleTapUp(XDim x, YDim y) {
     if (showClickAnimation()) {
       ClickAnimation* anim = getClickAnimation();
       setClicking();
-      markDirty();
+      setDirty();
       anim->start(this, x, y);
     }
   }

@@ -44,25 +44,25 @@ void BatteryIndicator::setBatteryPercent(int percent) {
   }
   if (level == level_) return;
   level_ = level;
-  markDirty();
+  setDirty();
 }
 
 void BatteryIndicator::setBatteryCharging(bool charging) {
   if (charging == charging_) return;
   charging_ = charging;
-  markDirty();
+  setDirty();
 }
 
 void BatteryIndicator::setBatteryAlert(bool alert) {
   if (alert == alert_) return;
   alert_ = alert;
-  markDirty();
+  setDirty();
 }
 
 void BatteryIndicator::setBatteryUnknown(bool unknown) {
   if (unknown == unknown_) return;
   unknown_ = unknown;
-  markDirty();
+  setDirty();
 }
 
 BatteryIndicator::BatteryStatus BatteryIndicator::status() const {

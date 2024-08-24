@@ -12,7 +12,7 @@ void ProgressBar::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
   Widget::paintWidgetContents(canvas, clipper);
   if (progress_ < 0) {
     // Indeterminate. Continuous animation.
-    markDirty();
+    setDirty();
   }
 }
 

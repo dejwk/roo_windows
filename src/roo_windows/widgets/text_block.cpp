@@ -106,14 +106,14 @@ void TextBlock::setContent(std::string value) {
         Dimensions(max_line_width, line_count * font_.metrics().maxHeight());
   }
 
-  markDirty();
+  setDirty();
   requestLayout();
 }
 
 void TextBlock::setColor(roo_display::Color color) {
   if (color_ == color) return;
   color_ = color;
-  markDirty();
+  setDirty();
 }
 
 }  // namespace roo_windows

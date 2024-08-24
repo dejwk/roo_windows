@@ -45,7 +45,7 @@ Dimensions TextLabel::getSuggestedMinimumDimensions() const {
 void TextLabel::setText(std::string value) {
   if (value_ == value) return;
   value_ = std::move(value);
-  markDirty();
+  setDirty();
   requestLayout();
 }
 
@@ -56,7 +56,7 @@ void TextLabel::setText(const char* value) {
 void TextLabel::setText(roo_display::StringView value) {
   if (value_ == value) return;
   value_ = std::string((const char*)value.data(), value.size());
-  markDirty();
+  setDirty();
   requestLayout();
 }
 
@@ -115,7 +115,7 @@ Dimensions StringViewLabel::getSuggestedMinimumDimensions() const {
 void StringViewLabel::setText(roo_display::StringView value) {
   if (value_ == value) return;
   value_ = std::move(value);
-  markDirty();
+  setDirty();
   requestLayout();
 }
 

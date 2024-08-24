@@ -27,7 +27,7 @@ class IconWithCaption : public BasicWidget {
   void setIcon(const roo_display::Pictogram& icon) {
     if (icon_ == &icon) return;
     icon_ = &icon;
-    markDirty();
+    setDirty();
   }
 
   roo_display::StringView caption() const { return caption_; }
@@ -35,7 +35,7 @@ class IconWithCaption : public BasicWidget {
   void setCaption(std::string caption) {
     if (caption_ == caption) return;
     caption_ = std::move(caption);
-    markDirty();
+    setDirty();
   }
 
   roo_display::Color color() const { return color_; }
@@ -43,7 +43,7 @@ class IconWithCaption : public BasicWidget {
   void setColor(roo_display::Color color) {
     if (color_ == color) return;
     color_ = color;
-    markDirty();
+    setDirty();
   }
 
  protected:

@@ -30,7 +30,7 @@ void Icon::setIcon(const roo_display::Pictogram& icon) {
     requestLayout();
   }
   icon_ = &icon;
-  markDirty();
+  setDirty();
 }
 
 Dimensions Icon::getSuggestedMinimumDimensions() const {
@@ -40,7 +40,7 @@ Dimensions Icon::getSuggestedMinimumDimensions() const {
 void Icon::setColor(roo_display::Color color) {
   if (color_ == color) return;
   color_ = color;
-  markDirty();
+  setDirty();
 }
 
 }  // namespace roo_windows

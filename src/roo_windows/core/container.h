@@ -122,7 +122,7 @@ class Container : public Widget {
   virtual void invalidateBeneath(const Rect& rect, const Widget* widget,
                                  bool clip);
 
-  // Called by markDirty(), to propagate the dirtiness through the ancestry.
+  // Called by setDirty(), to propagate the dirtiness through the ancestry.
   virtual void propagateDirty(const Widget* child, const Rect& rect);
 
   // Called on panel when its specified child gets hidden (or moved).

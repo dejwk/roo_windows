@@ -153,7 +153,7 @@ class TextField : public BasicWidget {
     if (starred == starred_) return;
     starred_ = starred;
     if (isEdited()) editor().measure();
-    markDirty();
+    setDirty();
   }
 
   const std::string& hint() const { return hint_; }
@@ -200,7 +200,7 @@ class TextField : public BasicWidget {
     if (value_ == value) return;
     value_ = std::move(value);
     if (isEdited()) editor().measure();
-    markDirty();
+    setDirty();
   }
 
   const roo_display::Font& font() const { return font_; }

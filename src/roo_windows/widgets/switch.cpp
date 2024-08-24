@@ -43,7 +43,7 @@ void Switch::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
   }
   Widget::paintWidgetContents(canvas, clipper);
   if (isAnimating()) {
-    markDirty();
+    setDirty();
   }
 }
 

@@ -31,7 +31,7 @@ class ProgressBar : public Widget {
     if (progress < -1) progress = -1;
     if (progress_ == progress) return;
     progress_ = progress;
-    markDirty();
+    setDirty();
   }
 
   bool isIndeterminate() const { return (progress_ < 0); }

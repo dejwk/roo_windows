@@ -11,13 +11,13 @@ void Image::setImage(const roo_display::Drawable* image) {
     requestLayout();
   }
   image_ = image;
-  markDirty();
+  setDirty();
 }
 
 void Image::setAlignment(roo_display::Alignment alignment) {
   if (alignment == alignment_) return;
   alignment_ = alignment;
-  if (image_ != nullptr) markDirty();
+  if (image_ != nullptr) setDirty();
 }
 
 void Image::paint(const Canvas& canvas) const {

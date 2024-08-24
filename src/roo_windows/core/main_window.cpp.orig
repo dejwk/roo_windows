@@ -32,7 +32,11 @@ MainWindow::MainWindow(Application& app, const roo_display::Box& bounds)
       app_(app),
       redraw_bounds_(bounds),
       background_fill_buffer_(bounds.width(), bounds.height()),
+<<<<<<< HEAD
+      paint_interval_(roo_time::Millis(20)) {
+=======
       paint_interval_(kMinRefreshDuration) {
+>>>>>>> main
   parent_bounds_ = Rect(bounds);
   invalidateDescending();
   const Environment& env = app.env();
@@ -110,7 +114,11 @@ void MainWindow::paintWindow(const roo_display::Surface& s) {
     paint_interval_ = paint_interval_ * 2;
     redraw_bounds_ = old_redraw_bounds;
   } else {
+<<<<<<< HEAD
+    paint_interval_ = roo_time::Millis(5);
+=======
     paint_interval_ = kMinRefreshDuration;
+>>>>>>> main
   }
   // canvas.fillRect(canvas.clip_box(), roo_display::color::Black);
 }

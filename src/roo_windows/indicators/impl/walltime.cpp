@@ -29,7 +29,7 @@ void WalltimeIndicator::update() {
   hour_ = now.hour();
   minute_ = now.minute();
   val_ = roo_display::StringPrintf("%02d:%02d", hour_, minute_);
-  markDirty();
+  setDirty();
 }
 
 }  // namespace roo_windows

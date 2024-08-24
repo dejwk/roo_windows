@@ -29,13 +29,13 @@ void WifiIndicatorBase::paint(const Canvas& canvas) const {
 void WifiIndicatorBase::setConnectionStatus(ConnectionStatus status) {
   if (status == connection_status_) return;
   connection_status_ = status;
-  markDirty();
+  setDirty();
 }
 
 void WifiIndicatorBase::setWifiLocked(bool locked) {
   if (locked == locked_) return;
   locked_ = locked;
-  markDirty();
+  setDirty();
 }
 
 void WifiIndicatorBase::setWifiSignalStrength(int rssi) {
@@ -49,7 +49,7 @@ void WifiIndicatorBase::setWifiSignalStrength(int rssi) {
   }
   if (bar_count == bar_count_) return;
   bar_count_ = bar_count;
-  markDirty();
+  setDirty();
 }
 
 WifiIndicatorBase::WifiStatus WifiIndicatorBase::status() const {

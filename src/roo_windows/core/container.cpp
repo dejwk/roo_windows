@@ -70,7 +70,7 @@ void Container::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
       // Draw the panel's children.
       paintChildren(canvas, clipper);
       if (clipper.isDeadlineExceeded()) {
-        markDirtyNoPropagate();
+        markDirty();
         return;
       }
     }
@@ -83,7 +83,7 @@ void Container::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
       // Draw the panel's children.
       paintChildren(canvas, clipper);
       if (clipper.isDeadlineExceeded()) {
-        markDirtyNoPropagate();
+        markDirty();
         markInvalidated();
         invalid_region_ = invalid_region;
         return;
@@ -202,7 +202,7 @@ void Container::propagateDirty(const Widget* child, const Rect& rect) {
       cached_max_bounds_ = Rect(0, 0, -1, -1);
     }
   }
-  markDirty(clipped);
+  setDirty(clipped);
 }
 
 void Container::invalidateDescending() {
@@ -272,7 +272,7 @@ void Container::unclippedChildRectHidden(const Rect& rect) {
     return;
   }
   invalidateCachedMaxBounds();
-  markDirty(rect);
+  setDirty(rect);
   if (getParentClipMode() == UNCLIPPED && !parent()->bounds().contains(rect)) {
     // The rect sticks out beyond us; need to propagate to the parent.
     parent()->unclippedChildRectHidden(rect.translate(xOffset(), yOffset()));
@@ -311,7 +311,7 @@ bool Container::invalidateBeneathDescending(const Rect& rect,
   Rect clipped = Rect::Intersect(rect, maxBounds());
   if (clipped.empty()) return false;
   markInvalidated();
-  markDirty(clipped);
+  setDirty(clipped);
   if (invalid_region_.empty()) {
     invalid_region_ = clipped;
   } else {

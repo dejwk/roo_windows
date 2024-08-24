@@ -177,7 +177,7 @@ class ListLayout : public Panel {
       ++i;
       ++pos;
     }
-    markDirty();
+    setDirty();
   }
 
   // Notifies this view that the specified list item has changed. Causes the

@@ -76,12 +76,12 @@ class Widget {
 
   // Causes the widget to request paint(). The widget decides which pixels
   // need re-drawing.
-  void markDirty() { markDirty(maxBounds()); }
+  void setDirty() { setDirty(maxBounds()); }
 
   // Causes the widget to request paint(). The widget decides which pixels
   // need re-drawing. Provides a hint to the framework as to which pixels do
   // need to be redrawn.
-  void markDirty(const Rect& bounds);
+  void setDirty(const Rect& bounds);
 
   // Causes the widget to request paint(), replacing the entire rectangle area.
   void invalidateInterior();
@@ -488,7 +488,7 @@ class Widget {
   // instead. Two common scenarios when you might want to override this method
   // include:
   // * Animating widgets. Call the superclass method, and then conditionally
-  //   call markDirty() if the animation shall continue.
+  //   call setDirty() if the animation shall continue.
   // * Mutating state - e.g. caching some paint-related values. Call the
   //   superclass method, and then do the necessary caching.
   virtual void paintWidgetContents(const Canvas& s, Clipper& clipper);
@@ -596,7 +596,7 @@ class Widget {
   void paintWidgetInteriorWithOverlays(Canvas& s, Clipper& clipper,
                                        const OverlaySpec& overlay_spec);
 
-  void markDirtyNoPropagate() { redraw_status_ |= kDirty; }
+  void markDirty() { redraw_status_ |= kDirty; }
   void markInvalidated() { redraw_status_ |= (kDirty | kInvalidated); }
 
   void markLayoutRequested() { redraw_status_ |= kLayoutRequested; }
