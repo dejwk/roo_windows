@@ -75,6 +75,8 @@ class MainWindow : public Panel {
   roo_display::BackgroundFillOptimizer::FrameBuffer background_fill_buffer_;
 
   bool initialized_ = false;
+
+  roo_time::Interval paint_interval_;
 };
 
 }  // namespace roo_windows

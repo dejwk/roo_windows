@@ -575,7 +575,7 @@ void Widget::paintWidgetModded(Canvas& canvas, const OverlaySpec& overlay_spec,
 }
 
 void Widget::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
-  if (!isDirty()) return;
+  if (!isDirty() || clipper.isDeadlineExceeded()) return;
   Canvas my_canvas = prepareContentsCanvas(canvas);
   clipper.setBounds(my_canvas.clip_box());
   paint(my_canvas);

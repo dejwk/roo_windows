@@ -250,8 +250,9 @@ class ClipperOutput : public roo_display::DisplayOutput {
 // excluded from subsequent drawing.
 class Clipper {
  public:
-  Clipper(internal::ClipperState &state, roo_display::DisplayOutput &out)
-      : out_(state, out) {}
+  Clipper(internal::ClipperState &state, roo_display::DisplayOutput &out,
+          roo_time::Uptime deadline)
+      : out_(state, out), deadline_(deadline) {}
 
   // Provides a hint to the underlying implementation that in the subsequent
   // draw operations, the specified bounds will be used as a clip box. This hint
@@ -284,8 +285,13 @@ class Clipper {
 
   roo_display::DisplayOutput *out() { return &out_; }
 
+  bool isDeadlineExceeded() const {
+    return roo_time::Uptime::Now() >= deadline_;
+  }
+
  private:
   internal::ClipperOutput out_;
+  roo_time::Uptime deadline_;
 };
 
 }  // namespace roo_windows

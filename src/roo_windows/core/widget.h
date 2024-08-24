@@ -596,6 +596,7 @@ class Widget {
   void paintWidgetInteriorWithOverlays(Canvas& s, Clipper& clipper,
                                        const OverlaySpec& overlay_spec);
 
+  void markDirtyNoPropagate() { redraw_status_ |= kDirty; }
   void markInvalidated() { redraw_status_ |= (kDirty | kInvalidated); }
 
   void markLayoutRequested() { redraw_status_ |= kLayoutRequested; }

@@ -69,6 +69,10 @@ void Container::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
       markClean();
       // Draw the panel's children.
       paintChildren(canvas, clipper);
+      if (clipper.isDeadlineExceeded()) {
+        markDirtyNoPropagate();
+        return;
+      }
     }
   } else {
     bool dirty = isDirty();
@@ -78,6 +82,12 @@ void Container::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
     if (dirty || !bounds().contains(maxBounds())) {
       // Draw the panel's children.
       paintChildren(canvas, clipper);
+      if (clipper.isDeadlineExceeded()) {
+        markDirtyNoPropagate();
+        markInvalidated();
+        invalid_region_ = invalid_region;
+        return;
+      }
     }
     // Paint the surface.
     Canvas my_canvas = prepareCanvas(canvas, invalid_region);
@@ -94,6 +104,7 @@ void Container::paintChildren(const Canvas& canvas, Clipper& clipper) {
   canvas_clipped.clipToExtents(bounds());
   bool fast_render = isDirty() && respectsChildrenBoundaries();
   for (int i = getChildrenCount() - 1; i >= 0; --i) {
+    if (clipper.isDeadlineExceeded()) return;
     Widget& child = getChild(i);
     bool clipped = child.getParentClipMode() == Widget::CLIPPED;
     child.paintWidget(clipped ? canvas_clipped : canvas, clipper);

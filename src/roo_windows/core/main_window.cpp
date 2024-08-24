@@ -16,6 +16,8 @@ using roo_display::Display;
 // Do not refresh display more frequently than this (50 Hz).
 static constexpr long kMinRefreshTimeDeltaMs = 20;
 
+static constexpr roo_time::Interval kMinRefreshDuration = roo_time::Millis(15);
+
 namespace {
 
 void maybeAddColor(roo_display::internal::ColorSet& palette, Color color) {
@@ -29,7 +31,8 @@ MainWindow::MainWindow(Application& app, const roo_display::Box& bounds)
     : Panel(app.env(), app.env().theme().color.background),
       app_(app),
       redraw_bounds_(bounds),
-      background_fill_buffer_(bounds.width(), bounds.height()) {
+      background_fill_buffer_(bounds.width(), bounds.height()),
+      paint_interval_(kMinRefreshDuration) {
   parent_bounds_ = Rect(bounds);
   invalidateDescending();
   const Environment& env = app.env();
@@ -95,12 +98,20 @@ void MainWindow::paintWindow(const roo_display::Surface& s) {
   if (!isDirty()) return;
   Canvas canvas(&s);
   canvas.clipToExtents(redraw_bounds_);
-  redraw_bounds_ = roo_display::Box(0, 0, -1, -1);
+  Rect old_redraw_bounds = redraw_bounds_;
+  redraw_bounds_ = Rect(0, 0, -1, -1);
   roo_display::BackgroundFillOptimizer bg_optimizer(s.out(),
                                                     background_fill_buffer_);
-  Clipper clipper(clipper_state_, bg_optimizer);
+  auto deadline = roo_time::Uptime::Now() + paint_interval_;
+  Clipper clipper(clipper_state_, bg_optimizer, deadline);
   canvas.set_out(clipper.out());
   paintWidget(canvas, clipper);
+  if (clipper.isDeadlineExceeded()) {
+    paint_interval_ = paint_interval_ * 2;
+    redraw_bounds_ = old_redraw_bounds;
+  } else {
+    paint_interval_ = kMinRefreshDuration;
+  }
   // canvas.fillRect(canvas.clip_box(), roo_display::color::Black);
 }
 
