@@ -29,11 +29,11 @@ void Application::add(WidgetRef child, const roo_display::Box& box) {
 void Application::start() { ticker_.scheduleNow(); }
 
 void Application::tick() {
+  unsigned long now = millis();
   root_window_.refreshClickAnimation();
   bool is_click_animating =
       root_window_.getClickAnimation()->isClickAnimating();
   bool gesture_dispatched = gesture_detector_.tick();
-  unsigned long now = millis();
   if (gesture_dispatched ||
       (now - last_time_refreshed_ms_) >= kMinRefreshTimeDeltaMs) {
     refresh();
