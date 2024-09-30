@@ -7,6 +7,8 @@ namespace roo_windows {
 
 using roo_display::Display;
 
+static constexpr roo_time::Interval kMinRefreshDuration = roo_time::Millis(30);
+
 // Do not refresh display more frequently than this (50 Hz).
 static constexpr long kMinRefreshTimeDeltaMs = 20;
 
@@ -17,7 +19,8 @@ Application::Application(const Environment* env, Display& display)
       gesture_detector_(root_window_, display),
       keyboard_(*env, kbEngUS()),
       text_field_editor_(env->scheduler(), keyboard_),
-      ticker_(env->scheduler(), [this]() { tick(); }) {
+      ticker_(env->scheduler(), [this]() { tick(); }),
+      paint_interval_(kMinRefreshDuration) {
   roo_windows::Task* kb_task = addTaskFloating();
   kb_task->enterActivity(&keyboard_);
 }
@@ -36,7 +39,12 @@ void Application::tick() {
   bool gesture_dispatched = gesture_detector_.tick();
   if (gesture_dispatched ||
       (now - last_time_refreshed_ms_) >= kMinRefreshTimeDeltaMs) {
-    refresh();
+    bool completed = refresh(roo_time::Uptime::Now() + paint_interval_);
+    if (!completed) {
+      paint_interval_ = kMinRefreshDuration;
+    } else {
+      paint_interval_ = paint_interval_ * 2;
+    }
   }
   roo_scheduler::Priority priority =
       is_click_animating || gesture_detector_.isTouchDown()
@@ -52,26 +60,35 @@ namespace {
 
 class Adapter : public roo_display::Drawable {
  public:
-  Adapter(MainWindow& window) : window_(window) {}
+  Adapter(MainWindow& window, roo_time::Uptime deadline)
+      : window_(window), deadline_(deadline), completed_(false) {}
 
   roo_display::Box extents() const override { return window_.bounds().asBox(); }
 
   void drawTo(const roo_display::Surface& s) const override {
-    window_.paintWindow(s);
+    if (window_.paintWindow(s, deadline_)) {
+      completed_ = true;
+    }
   }
+
+  bool completed() const { return completed_; }
 
  private:
   MainWindow& window_;
+  roo_time::Uptime deadline_;
+  mutable bool completed_;
 };
 
 }  // namespace
 
-void Application::refresh() {
+bool Application::refresh(roo_time::Uptime deadline) {
   root_window_.updateLayout();
   last_time_refreshed_ms_ = millis();
   roo_display::DrawingContext dc(display_);
   dc.setFillMode(roo_display::FILL_MODE_RECTANGLE);
-  dc.draw(Adapter(root_window_));
+  Adapter adapter(root_window_, deadline);
+  dc.draw(adapter);
+  return adapter.completed();
 }
 
 Task* Application::addTask(const roo_display::Box& bounds) {

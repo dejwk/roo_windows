@@ -23,7 +23,7 @@ class MainWindow : public Panel {
   MainWindow* getMainWindow() override { return this; }
   const MainWindow* getMainWindow() const override { return this; }
 
-  void paintWindow(const roo_display::Surface& s);
+  bool paintWindow(const roo_display::Surface& s, roo_time::Uptime deadline);
 
   Application& app() const;
   const Theme& theme() const override;
@@ -75,8 +75,6 @@ class MainWindow : public Panel {
   roo_display::BackgroundFillOptimizer::FrameBuffer background_fill_buffer_;
 
   bool initialized_ = false;
-
-  roo_time::Interval paint_interval_;
 };
 
 }  // namespace roo_windows

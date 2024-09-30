@@ -23,8 +23,10 @@ class Application {
 
   // Lays out and paints all dirty items. Does not handle user input.
   // Useful when you want to enforce some visual changes immediately,
-  // without waiting for the next tick().
-  void refresh();
+  // without waiting for the next tick(). Optionally, you can provide
+  // a redraw deadline. Returns whether the refresh completed, false
+  // when the refresh was terminated due to exceeded deadline.
+  bool refresh(roo_time::Uptime deadline = roo_time::Uptime::Max());
 
   const Environment& env() const { return *env_; }
 
@@ -63,6 +65,7 @@ class Application {
   TextFieldEditor text_field_editor_;
 
   roo_scheduler::SingletonTask ticker_;
+  roo_time::Interval paint_interval_;
 };
 
 }  // namespace roo_windows

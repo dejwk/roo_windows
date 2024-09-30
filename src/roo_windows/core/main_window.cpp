@@ -13,8 +13,6 @@ namespace roo_windows {
 
 using roo_display::Display;
 
-static constexpr roo_time::Interval kMinRefreshDuration = roo_time::Millis(15);
-
 namespace {
 
 void maybeAddColor(roo_display::internal::ColorSet& palette, Color color) {
@@ -28,8 +26,7 @@ MainWindow::MainWindow(Application& app, const roo_display::Box& bounds)
     : Panel(app.env(), app.env().theme().color.background),
       app_(app),
       redraw_bounds_(bounds),
-      background_fill_buffer_(bounds.width(), bounds.height()),
-      paint_interval_(kMinRefreshDuration) {
+      background_fill_buffer_(bounds.width(), bounds.height()) {
   parent_bounds_ = Rect(bounds);
   invalidateDescending();
   const Environment& env = app.env();
@@ -87,29 +84,27 @@ void MainWindow::updateLayout() {
   }
 }
 
-void MainWindow::paintWindow(const roo_display::Surface& s) {
+bool MainWindow::paintWindow(const roo_display::Surface& s,
+                             roo_time::Uptime deadline) {
   if (!initialized_) {
     initialized_ = true;
     s.drawObject(roo_display::Fill(theme().color.background));
   }
-  if (!isDirty()) return;
+  if (!isDirty()) return true;
   Canvas canvas(&s);
   canvas.clipToExtents(redraw_bounds_);
   Rect old_redraw_bounds = redraw_bounds_;
   redraw_bounds_ = Rect(0, 0, -1, -1);
   roo_display::BackgroundFillOptimizer bg_optimizer(s.out(),
                                                     background_fill_buffer_);
-  auto deadline = roo_time::Uptime::Now() + paint_interval_;
   Clipper clipper(clipper_state_, bg_optimizer, deadline);
   canvas.set_out(clipper.out());
   paintWidget(canvas, clipper);
   if (clipper.isDeadlineExceeded()) {
-    paint_interval_ = paint_interval_ * 2;
     redraw_bounds_ = old_redraw_bounds;
-  } else {
-    paint_interval_ = kMinRefreshDuration;
+    return false;
   }
-  // canvas.fillRect(canvas.clip_box(), roo_display::color::Black);
+  return true;
 }
 
 void MainWindow::propagateDirty(const Widget* child, const Rect& rect) {
