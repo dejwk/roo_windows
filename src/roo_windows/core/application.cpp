@@ -37,11 +37,13 @@ void Application::tick() {
   bool is_click_animating =
       root_window_.getClickAnimation()->isClickAnimating();
   bool gesture_dispatched = gesture_detector_.tick();
+  bool redraw_timeout = false;
   if (gesture_dispatched ||
       (now - last_time_refreshed_ms_) >= kMinRefreshTimeDeltaMs) {
     bool completed = refresh(roo_time::Uptime::Now() + paint_interval_);
     if (!completed) {
       paint_interval_ = kMinRefreshDuration;
+      redraw_timeout = true;
     } else {
       paint_interval_ = paint_interval_ * 2;
     }
@@ -50,7 +52,7 @@ void Application::tick() {
       is_click_animating || gesture_detector_.isTouchDown()
           ? roo_scheduler::PRIORITY_ELEVATED
           : roo_scheduler::PRIORITY_NORMAL;
-  roo_time::Interval delay = gesture_detector_.isTouchDown()
+  roo_time::Interval delay = gesture_detector_.isTouchDown() || redraw_timeout
                                  ? roo_time::Millis(0)
                                  : roo_time::Millis(20);
   ticker_.scheduleAfter(delay, priority);
