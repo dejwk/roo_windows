@@ -117,7 +117,7 @@ void ScrollablePanel::scrollToBottom() {
   getMainWindow()->updateLayout();
   Margins m = contents()->getMargins();
   scrollTo(contents()->offsetLeft(),
-           height() - m.top() - m.bottom() - contents()->height() + 1);
+           height() - m.top() - m.bottom() - contents()->height());
 }
 
 PreferredSize ScrollablePanel::getPreferredSize() const {
