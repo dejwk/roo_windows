@@ -6,6 +6,7 @@
 
 #include "roo_display/core/utf8.h"
 #include "roo_display/font/font.h"
+#include "roo_windows/containers/scrollable_panel.h"
 #include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/widget.h"
 
@@ -41,6 +42,8 @@ class Log : public roo_windows::BasicWidget {
 
   void paint(const roo_windows::Canvas& s) const override;
 
+  const roo_display::Font& font() const { return *font_; }
+
  private:
   int16_t maxLineWidth() const;
   int line_pos(int idx) const;
@@ -56,6 +59,34 @@ class Log : public roo_windows::BasicWidget {
   mutable int16_t max_line_width_;  // negative means need to be recalculated.
   int line_start_;
   int line_count_;
+};
+
+class ScrollableLog : public roo_windows::ScrollablePanel {
+ public:
+  enum AutoscrollMode {
+    AUTOSCROLL_NONE,     // Doesn't auto-scroll.
+    // AUTOSCROLL_DEFAULT,  // Auto-scrolls to bottom only if the content is at the
+    //                      // bottom.
+    AUTOSCROLL_ALWAYS    // Auto-scrolls to bottom whenever a new line gets
+                         // appended.
+  };
+
+  ScrollableLog(const roo_windows::Environment& env,
+                uint32_t buffer_size = 10 * 1024, size_t max_lines = 100);
+
+  void clear();
+
+  void appendLine(roo_display::StringView line);
+
+  void setFont(const roo_display::Font* font);
+
+  const roo_display::Font& font() const;
+
+ private:
+  void autoScroll();
+
+  Log log_;
+  AutoscrollMode autoscroll_mode_;
 };
 
 }  // namespace log

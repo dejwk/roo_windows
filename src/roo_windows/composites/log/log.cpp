@@ -108,7 +108,7 @@ void Log::appendLine(roo_display::StringView line) {
   int target_idx = line_pos(line_count_);
   lines_[target_idx] = roo_display::StringView(cursor_, s);
   setDirty(Box(0, line_count_ * font_->metrics().linespace(), width() - 1,
-                (line_count_ + 1) * font_->metrics().linespace() - 1));
+               (line_count_ + 1) * font_->metrics().linespace() - 1));
   ++line_count_;
   cursor_ += s;
   if (old_line_count != line_count_) {
@@ -157,6 +157,45 @@ void Log::paint(const Canvas& canvas) const {
   }
   if (y < height() - 1) {
     canvas.clearRect(0, y, width() - 1, height() - 1);
+  }
+}
+
+ScrollableLog::ScrollableLog(const roo_windows::Environment& env,
+                             uint32_t buffer_size, size_t max_lines)
+    : ScrollablePanel(env),
+      log_(env, buffer_size, max_lines),
+      autoscroll_mode_(AUTOSCROLL_ALWAYS) {
+  setContents(log_);
+  setVerticalScrollBarPresence(
+      roo_windows::VerticalScrollBar::SHOWN_WHEN_SCROLLING);
+}
+
+void ScrollableLog::clear() {
+  log_.clear();
+  scrollToBottom();
+}
+
+void ScrollableLog::appendLine(roo_display::StringView line) {
+  log_.appendLine(line);
+  autoScroll();
+}
+
+void ScrollableLog::setFont(const roo_display::Font* font) {
+  log_.setFont(font);
+}
+
+const roo_display::Font& ScrollableLog::font() const { return log_.font(); }
+
+void ScrollableLog::autoScroll() {
+  switch (autoscroll_mode_) {
+    case AUTOSCROLL_NONE: {
+      return;
+    }
+    case AUTOSCROLL_ALWAYS:
+    default: {
+      scrollToBottom();
+      return;
+    }
   }
 }
 
