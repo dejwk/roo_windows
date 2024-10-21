@@ -279,7 +279,7 @@ void ScrollablePanel::scheduleScrollAnimationUpdate() {
 }
 
 void ScrollablePanel::scheduleHideScrollBarUpdate() {
-  CHECK_EQ(notification_id_, -1);
+  cancelPendingUpdate();
   scheduler_.scheduleAfter(this, kDelayHideScrollbar);
 }
 
