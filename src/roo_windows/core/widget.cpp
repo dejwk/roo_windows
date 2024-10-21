@@ -122,6 +122,14 @@ Rect slopify(Rect bounds) {
 
 }  // namespace
 
+XDim Widget::offsetRight() const {
+  return parent()->width() - parent_bounds().xMax() - 1;
+}
+
+YDim Widget::offsetBottom() const {
+  return parent()->height() - parent_bounds().yMax() - 1;
+}
+
 Rect Widget::getParentBoundsOfShadow() const {
   return CalculateShadowExtents(parent_bounds(), getElevation());
 }
