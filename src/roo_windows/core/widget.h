@@ -91,8 +91,14 @@ class Widget {
 
   XDim width() const { return parent_bounds_.width(); }
   YDim height() const { return parent_bounds_.height(); }
-  XDim xOffset() const { return parent_bounds_.xMin(); }
-  YDim yOffset() const { return parent_bounds_.yMin(); }
+
+  // How many pixels from the left side of the parent to the left side of this
+  // widget. Can be negative, if the widget does not fit within the parent.
+  XDim offsetLeft() const { return parent_bounds_.xMin(); }
+
+  // How many pixels from the top side of the parent to the top side of this
+  // widget. Can be negative, if the widget does not fit within the parent.
+  YDim offsetTop() const { return parent_bounds_.yMin(); }
 
   Rect bounds() const { return Rect(0, 0, width() - 1, height() - 1); }
 

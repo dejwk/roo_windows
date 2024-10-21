@@ -67,8 +67,8 @@ class StaticLayout : public Panel {
       if (child->isLayoutRequested()) {
         Dimensions dims = child->measure(WidthSpec::Exactly(child->width()),
                                          HeightSpec::Exactly(child->height()));
-        child_max_x = child->xOffset() + dims.width() - 1;
-        child_max_y = child->yOffset() + dims.height() - 1;
+        child_max_x = child->offsetLeft() + dims.width() - 1;
+        child_max_y = child->offsetTop() + dims.height() - 1;
       } else {
         child_max_x = child->parent_bounds().xMax();
         child_max_y = child->parent_bounds().yMax();

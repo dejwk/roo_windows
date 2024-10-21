@@ -145,12 +145,12 @@ class ScrollablePanel : public Container, private roo_scheduler::Executable {
   // offset.
   void scrollBy(XDim dx, YDim dy) {
     if (contents() == nullptr) return;
-    scrollTo(dx + contents()->xOffset(), dy + contents()->yOffset());
+    scrollTo(dx + contents()->offsetLeft(), dy + contents()->offsetTop());
   }
 
   void scrollToTop() {
     if (contents() == nullptr) return;
-    scrollTo(contents()->xOffset(), 0);
+    scrollTo(contents()->offsetLeft(), 0);
   }
 
   void scrollToBottom();
@@ -163,7 +163,7 @@ class ScrollablePanel : public Container, private roo_scheduler::Executable {
   ScrollPosition getScrollPosition() const {
     const Widget* w = contents();
     if (w == nullptr) return {0, 0};
-    return {w->xOffset(), w->yOffset()};
+    return {w->offsetLeft(), w->offsetTop()};
   }
 
   void update() { scrollBy(0, 0); }

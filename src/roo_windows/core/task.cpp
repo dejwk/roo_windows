@@ -129,10 +129,10 @@ void Task::showDialog(Dialog& dialog, Dialog::CallbackFn callback_fn) {
   });
   Dimensions dims = dialog.measure(WidthSpec::AtMost(panel_->width()),
                                    HeightSpec::AtMost(panel_->height()));
-  XDim xOffset = (panel_->width() - dims.width()) / 2;
-  YDim yOffset = (panel_->height() - dims.height()) / 2;
-  panel_->add(dialog, Rect(xOffset, yOffset, xOffset + dims.width() - 1,
-                           yOffset + dims.height() - 1));
+  XDim offsetLeft = (panel_->width() - dims.width()) / 2;
+  YDim offsetTop = (panel_->height() - dims.height()) / 2;
+  panel_->add(dialog, Rect(offsetLeft, offsetTop, offsetLeft + dims.width() - 1,
+                           offsetTop + dims.height() - 1));
 }
 
 void Task::showAlertDialog(std::string title, std::string supporting_text,
@@ -176,8 +176,8 @@ void TaskPanel::exitActivity() { removeLast(); }
 Widget* TaskPanel::dispatchTouchDownEvent(XDim x, YDim y) {
   // Only the topmost activity gets to handle the gestures.
   Widget& activity = *children_.back();
-  return activity.dispatchTouchDownEvent(x - activity.xOffset(),
-                                         y - activity.yOffset());
+  return activity.dispatchTouchDownEvent(x - activity.offsetLeft(),
+                                         y - activity.offsetTop());
 }
 
 }  // namespace roo_windows

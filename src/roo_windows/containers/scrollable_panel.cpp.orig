@@ -119,7 +119,7 @@ void ScrollablePanel::scrollToBottom() {
   if (contents() == nullptr) return;
   getMainWindow()->updateLayout();
   Margins m = contents()->getMargins();
-  scrollTo(contents()->xOffset(),
+  scrollTo(contents()->offsetLeft(),
            height() - m.top() - m.bottom() - contents()->height() + 1);
 }
 
@@ -183,7 +183,7 @@ void ScrollablePanel::onLayout(bool changed, const Rect& rect) {
   if (c == nullptr) return;
   Margins m = contents()->getMargins();
   Rect bounds(0, 0, measured_.width() - 1, measured_.height() - 1);
-  bounds = bounds.translate(c->xOffset() + m.left(), c->yOffset() + m.top());
+  bounds = bounds.translate(c->offsetLeft() + m.left(), c->offsetTop() + m.top());
   c->layout(bounds);
   scroll_bar_.layout(
       Rect(rect.width() - Scaled(6), 0, rect.width() - 1, rect.height() - 1));
@@ -218,14 +218,14 @@ void ScrollablePanel::paintWidgetContents(const Canvas& canvas,
       // The scrolling continues horizontally.
       int32_t scroll_x_total =
           (int32_t)(scroll_start_vx_ * t + scroll_decel_x_ * t * t / 2);
-      drag_x_delta = scroll_x_total - (c->xOffset() - dxStart_);
+      drag_x_delta = scroll_x_total - (c->offsetLeft() - dxStart_);
       // Don't move outside the boundary.
-      if (drag_x_delta < -c->xOffset() + width() - c->width()) {
-        drag_x_delta = -c->xOffset() + width() - c->width();
+      if (drag_x_delta < -c->offsetLeft() + width() - c->width()) {
+        drag_x_delta = -c->offsetLeft() + width() - c->width();
         scroll_start_vx_ = 0;
       }
-      if (drag_x_delta > -c->xOffset()) {
-        drag_x_delta = -c->xOffset();
+      if (drag_x_delta > -c->offsetLeft()) {
+        drag_x_delta = -c->offsetLeft();
         scroll_start_vx_ = 0;
       }
     }
@@ -233,14 +233,14 @@ void ScrollablePanel::paintWidgetContents(const Canvas& canvas,
       // The scrolling continues vertically.
       int32_t scroll_y_total =
           (int32_t)(scroll_start_vy_ * t + scroll_decel_y_ * t * t / 2);
-      drag_y_delta = scroll_y_total - (c->yOffset() - dyStart_);
+      drag_y_delta = scroll_y_total - (c->offsetTop() - dyStart_);
       // Don't move outside the boundary.
-      if (drag_y_delta < -c->yOffset() + height() - c->height()) {
-        drag_y_delta = -c->yOffset() + height() - c->height();
+      if (drag_y_delta < -c->offsetTop() + height() - c->height()) {
+        drag_y_delta = -c->offsetTop() + height() - c->height();
         scroll_start_vy_ = 0;
       }
-      if (drag_y_delta > -c->yOffset()) {
-        drag_y_delta = -c->yOffset();
+      if (drag_y_delta > -c->offsetTop()) {
+        drag_y_delta = -c->offsetTop();
         scroll_start_vy_ = 0;
       }
     }
@@ -326,7 +326,7 @@ bool ScrollablePanel::onSingleTapUp(XDim x, YDim y) {
       YDim new_y = -(y - (scroll_bar_.end() - scroll_bar_.begin()) / 2) *
                    view_range / scroll_range;
       // The new y might be out of range, but that's ok - scrollTo will trim it.
-      scrollTo(contents()->xOffset(), new_y);
+      scrollTo(contents()->offsetLeft(), new_y);
     }
   } else {
     scroll_bar_.setVisibility(VISIBLE);
@@ -353,7 +353,7 @@ bool ScrollablePanel::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
       YDim view_range = contents()->height() - height();
       YDim y_shift = -dy * view_range / scroll_range;
       // The new y might be out of range, but that's ok - scrollBy will trim it.
-      scrollBy(contents()->xOffset(), y_shift);
+      scrollBy(contents()->offsetLeft(), y_shift);
     }
   } else {
     scrollBy(dx, dy);
@@ -375,20 +375,20 @@ bool ScrollablePanel::onFling(XDim x, YDim y, XDim vx, YDim vy) {
   scroll_start_time_ = millis();
   scroll_start_vx_ = vx;
   scroll_start_vy_ = vy;
-  dxStart_ = c->xOffset();
-  dyStart_ = c->yOffset();
+  dxStart_ = c->offsetLeft();
+  dyStart_ = c->offsetTop();
   // If we're already on the boundary and swiping outside of the bounded
   // region, cap the horizontal and/or vertical component of the scroll.
-  if (scroll_start_vx_ < 0 && c->xOffset() == 0) {
+  if (scroll_start_vx_ < 0 && c->offsetLeft() == 0) {
     scroll_start_vx_ = 0;
   }
-  if (scroll_start_vx_ > 0 && -c->xOffset() + width() == c->width()) {
+  if (scroll_start_vx_ > 0 && -c->offsetLeft() + width() == c->width()) {
     scroll_start_vx_ = 0;
   }
-  if (scroll_start_vy_ < 0 && c->yOffset() == 0) {
+  if (scroll_start_vy_ < 0 && c->offsetTop() == 0) {
     scroll_start_vy_ = 0;
   }
-  if (scroll_start_vy_ > 0 && -c->yOffset() + height() == c->height()) {
+  if (scroll_start_vy_ > 0 && -c->offsetTop() + height() == c->height()) {
     scroll_start_vy_ = 0;
   }
   // If the swipe is completely in the outside direction, ignore it.

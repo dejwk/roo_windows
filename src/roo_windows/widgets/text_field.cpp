@@ -137,7 +137,7 @@ void TextField::paint(const Canvas& canvas) const {
     }
   }
   Alignment padded = adjustAlignment(alignment_);
-  int16_t yOffset =
+  int16_t offsetTop =
       padded.v().resolveOffset(0, height() - 1, decorated_text_ymin - text_ymin,
                                decorated_text_ymax - text_ymin);
   int16_t available_width = width() - padding.left() - padding.right();
@@ -190,12 +190,12 @@ void TextField::paint(const Canvas& canvas) const {
     }
   }
 
-  if (isInvalidated() && yOffset > 0) {
-    canvas.clearRect(0, 0, width() - 1, yOffset - 1);
+  if (isInvalidated() && offsetTop > 0) {
+    canvas.clearRect(0, 0, width() - 1, offsetTop - 1);
   }
 
   Canvas my_canvas = canvas;
-  my_canvas.shift(0, yOffset - text_ymin);
+  my_canvas.shift(0, offsetTop - text_ymin);
   // int16_t text_height = font_.metrics().maxHeight();
   Box text_clip_box(0, text_ymin, width() - 1, text_ymax);
   if (is_x_offset) {
@@ -216,7 +216,7 @@ void TextField::paint(const Canvas& canvas) const {
       editor().lastGlyphRecentlyEntered(), xoffset, highlight_xmin,
       highlight_xmax, color, highlight_color));
 
-  int16_t min_y_undrawn = yOffset + text_clip_box.height();
+  int16_t min_y_undrawn = offsetTop + text_clip_box.height();
   // Draw the decoration.
   switch (decoration_) {
     case UNDERLINE: {

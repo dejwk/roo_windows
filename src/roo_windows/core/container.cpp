@@ -152,8 +152,8 @@ Widget* Container::dispatchTouchDownEvent(XDim x, YDim y) {
       continue;
     }
     if (child.maxParentBounds().contains(x, y)) {
-      Widget* w = child.dispatchTouchDownEvent(x - child.xOffset(),
-                                               y - child.yOffset());
+      Widget* w = child.dispatchTouchDownEvent(x - child.offsetLeft(),
+                                               y - child.offsetTop());
       if (w != nullptr) return w;
       if (child.parent_bounds().contains(x, y)) {
         // Break the loop and do not dispatch to children that are obscured.
@@ -169,7 +169,7 @@ Widget* Container::dispatchTouchDownEvent(XDim x, YDim y) {
     // When re-checking with looser bounds, don't recurse - we have already
     // tried descendants with looser bounds.
     if (!child.parent_bounds().contains(x, y) && ebounds.contains(x, y)) {
-      if (child.onTouchDown(x - child.xOffset(), y - child.yOffset())) {
+      if (child.onTouchDown(x - child.offsetLeft(), y - child.offsetTop())) {
         return &child;
       }
       break;
@@ -275,7 +275,8 @@ void Container::unclippedChildRectHidden(const Rect& rect) {
   setDirty(rect);
   if (getParentClipMode() == UNCLIPPED && !parent()->bounds().contains(rect)) {
     // The rect sticks out beyond us; need to propagate to the parent.
-    parent()->unclippedChildRectHidden(rect.translate(xOffset(), yOffset()));
+    parent()->unclippedChildRectHidden(
+        rect.translate(offsetLeft(), offsetTop()));
   }
 }
 
@@ -287,7 +288,8 @@ void Container::unclippedChildRectShown(const Rect& rect) {
   cached_max_bounds_ = Rect::Extent(cached_max_bounds_, rect);
   if (getParentClipMode() == UNCLIPPED && !bounds().contains(rect)) {
     // The rect sticks out beyond us; need to propagate to the parent.
-    parent()->unclippedChildRectShown(rect.translate(xOffset(), yOffset()));
+    parent()->unclippedChildRectShown(
+        rect.translate(offsetLeft(), offsetTop()));
   }
 }
 
@@ -301,8 +303,8 @@ void Container::invalidateBeneath(const Rect& bounds, const Widget* widget,
   } else {
     // The hidden child sticks out beyond the area that this panel is going to
     // fill; we need to propagate upwards.
-    parent()->invalidateBeneath(clipped.translate(xOffset(), yOffset()), widget,
-                                getParentClipMode() == Widget::CLIPPED);
+    parent()->invalidateBeneath(clipped.translate(offsetLeft(), offsetTop()),
+                                widget, getParentClipMode() == Widget::CLIPPED);
   }
 }
 
@@ -322,7 +324,8 @@ bool Container::invalidateBeneathDescending(const Rect& rect,
     Widget& child = getChild(i);
     if (&child == subject) return true;
     if (child.isVisible()) {
-      Rect adjusted = clipped.translate(-child.xOffset(), -child.yOffset());
+      Rect adjusted =
+          clipped.translate(-child.offsetLeft(), -child.offsetTop());
       if (child.invalidateBeneathDescending(adjusted, subject)) return true;
     }
   }
@@ -369,14 +372,14 @@ Rect Container::maxBounds() const {
       if (child.getParentClipMode() == Widget::CLIPPED) continue;
       cached_max_bounds_ = Rect::Extent(
           cached_max_bounds_,
-          child.maxBounds().translate(child.xOffset(), child.yOffset()));
+          child.maxBounds().translate(child.offsetLeft(), child.offsetTop()));
     }
   }
   return cached_max_bounds_;
 }
 
 Rect Container::maxParentBounds() const {
-  return maxBounds().translate(xOffset(), yOffset());
+  return maxBounds().translate(offsetLeft(), offsetTop());
 }
 
 Dimensions Container::onMeasure(WidthSpec width, HeightSpec height) {

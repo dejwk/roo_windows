@@ -96,8 +96,8 @@ void Widget::getAbsoluteOffset(XDim& dx, YDim& dy) const {
   } else {
     parent()->getAbsoluteOffset(dx, dy);
   }
-  dx += xOffset();
-  dy += yOffset();
+  dx += offsetLeft();
+  dy += offsetTop();
 }
 
 namespace {
@@ -147,7 +147,7 @@ const Theme& Widget::theme() const { return parent_->theme(); }
 void Widget::setDirty(const Rect& bounds) {
   redraw_status_ |= kDirty;
   if (parent_ != nullptr) {
-    parent_->propagateDirty(this, bounds.translate(xOffset(), yOffset()));
+    parent_->propagateDirty(this, bounds.translate(offsetLeft(), offsetTop()));
   }
 }
 
@@ -163,7 +163,7 @@ void Widget::invalidateInterior(const Rect& rect) {
   invalidateDescending(rect);
   if (getBorderStyle().corner_radius() > 0 && parent() != nullptr) {
     parent()->childInvalidatedRegion(this,
-                                     rect.translate(xOffset(), yOffset()));
+                                     rect.translate(offsetLeft(), offsetTop()));
   }
   setDirty(rect);
 }
@@ -477,7 +477,7 @@ uint8_t Widget::getOverlayOpacity() const {
 Canvas Widget::prepareCanvas(const Canvas& in) {
   // NOTE: keeping this in a separate method sheds 16 bytes from the stack.
   Canvas canvas(in);
-  canvas.shift(xOffset(), yOffset());
+  canvas.shift(offsetLeft(), offsetTop());
   canvas.clipToExtents(maxBounds());
   {
     Color bg = background();

@@ -104,8 +104,8 @@ inline Rect unclippedRegion(const Widget* w) {
   XDim dx = 0;
   YDim dy = 0;
   while (w->parent() != nullptr) {
-    dx -= w->xOffset();
-    dy -= w->yOffset();
+    dx -= w->offsetLeft();
+    dy -= w->offsetTop();
     if (w->getParentClipMode() == Widget::CLIPPED) {
       rect = Rect::Intersect(rect, w->parent()->bounds().translate(dx, dy));
     }
