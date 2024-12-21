@@ -17,7 +17,7 @@ void ClickAnimation::tick() {
   unsigned long now = millis();
   if (click_anim_target_ != nullptr) {
     click_anim_target_->invalidateInterior();
-    long elapsed = millis() - click_anim_start_millis_;
+    unsigned long elapsed = millis() - click_anim_start_millis_;
     if (elapsed > kClickAnimationMs + 100) {
       // 100 ms is a grace period to allow the widget to draw the full click state
       // and then mark itself as non-clicking. If the widget is dragging its feet,
