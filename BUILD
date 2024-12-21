@@ -20,6 +20,7 @@ cc_library(
         "//lib/roo_display",
         "//lib/roo_logging",
         "//lib/roo_icons",
+        "//lib/roo_io",
         "//lib/roo_time",
         "//lib/roo_scheduler",
     ],
