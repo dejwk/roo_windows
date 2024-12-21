@@ -60,6 +60,9 @@ void Task::exitActivity() {
 bool Task::pauseCurrentActivity() {
   if (activities_.empty()) return false;
   Activity* activity = activities_.back();
+  if (activity->state_ == Activity::PAUSED) {
+    return true;
+  }
   CHECK_EQ(activity->state_, Activity::ACTIVE);
   activity->state_ = Activity::PAUSING;
   activity->onPause();
@@ -76,6 +79,7 @@ bool Task::pauseCurrentActivity() {
 bool Task::resumeCurrentActivity() {
   if (activities_.empty()) return false;
   Activity* activity = activities_.back();
+  if (activity->state_ == Activity::ACTIVE) return true;
   CHECK(activity->state_ == Activity::STARTING ||
         activity->state_ == Activity::PAUSED)
       << activity->state_;
