@@ -44,7 +44,7 @@ Dimensions HorizontalLayout::onMeasure(WidthSpec width, HeightSpec height) {
           std::max<int16_t>(total_length_, total_length_ + h_margin);
       skipped_measure = true;
     } else {
-      XDim used_width = total_length_;
+      // XDim used_width = total_length_;
       HeightSpec child_height_spec =
           height.getChildHeightSpec(v_padding + v_margin, preferred.height());
       PreferredSize::Width pref_w = use_excess_space

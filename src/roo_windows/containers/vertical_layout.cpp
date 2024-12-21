@@ -45,7 +45,7 @@ Dimensions VerticalLayout::onMeasure(WidthSpec width, HeightSpec height) {
           std::max<int16_t>(total_length_, total_length_ + v_margin);
       skipped_measure = true;
     } else {
-      YDim used_height = total_length_;
+      // YDim used_height = total_length_;
       WidthSpec child_width_spec =
           width.getChildWidthSpec(h_padding + h_margin, preferred.width());
       PreferredSize::Height pref_h = use_excess_space
