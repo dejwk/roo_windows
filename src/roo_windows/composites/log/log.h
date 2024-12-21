@@ -50,10 +50,10 @@ class Log : public roo_windows::BasicWidget {
   void drop_first_line();
 
   size_t buffer_size_;
-  std::unique_ptr<uint8_t[]> buffer_;
+  std::unique_ptr<char[]> buffer_;
   const roo_display::Font* font_;
 
-  uint8_t* cursor_;
+  char* cursor_;
   std::vector<roo_display::StringView> lines_;
   std::vector<uint16_t> line_widths_;  // In pixels.
   mutable int16_t max_line_width_;  // negative means need to be recalculated.

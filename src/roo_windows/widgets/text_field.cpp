@@ -305,10 +305,10 @@ void TextFieldEditor::measure() {
     actual_size = target_->font().getHorizontalStringGlyphMetrics(
         s, &*glyphs_.begin(), 0, max_count);
     glyphs_.resize(actual_size);
-    Utf8Decoder decoder((const uint8_t*)s.c_str(), s.size());
+    Utf8Decoder decoder(s.c_str(), s.size());
     offsets_.resize(actual_size);
     for (int16_t i = 0; i < actual_size; ++i) {
-      offsets_[i] = decoder.data() - (const uint8_t*)s.c_str();
+      offsets_[i] = decoder.data() - s.c_str();
       decoder.next();
     }
   } else {

@@ -15,7 +15,7 @@ Log::Log(const roo_windows::Environment& env, uint32_t buffer_size,
          size_t max_lines)
     : roo_windows::BasicWidget(env),
       buffer_size_(buffer_size),
-      buffer_(new uint8_t[buffer_size]),
+      buffer_(new char[buffer_size]),
       font_(&font_NotoSans_Condensed_18()),
       cursor_(buffer_.get()),
       lines_(max_lines),

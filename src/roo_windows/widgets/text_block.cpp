@@ -19,10 +19,10 @@ class Interior : public roo_display::Drawable {
     if (value_.empty()) return;
     int16_t line_height = font_.metrics().maxHeight();
     int16_t y = 0;
-    const uint8_t* p = &*value_.begin();
-    const uint8_t* end = &*value_.end();
+    const char* p = &*value_.begin();
+    const char* end = &*value_.end();
     do {
-      const uint8_t* start = p;
+      const char* start = p;
       while (p != end && *p != '\n') {
         ++p;
       }
@@ -84,11 +84,11 @@ void TextBlock::setContent(std::string value) {
   } else {
     int16_t line_count = 0;
     int16_t max_line_width = 0;
-    const uint8_t* p = (const uint8_t*)&*value_.begin();
-    const uint8_t* end = (const uint8_t*)&*value_.end();
+    const char* p = &*value_.begin();
+    const char* end = &*value_.end();
     do {
       ++line_count;
-      const uint8_t* start = p;
+      const char* start = p;
       while (p != end && *p != '\n') {
         ++p;
       }
