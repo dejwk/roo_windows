@@ -7,6 +7,7 @@
 #include "roo_display/ui/tile.h"
 #include "roo_icons/outlined/action.h"
 #include "roo_icons/outlined/content.h"
+#include "roo_io/text/unicode.h"
 #include "roo_windows/config.h"
 #include "roo_windows/core/dimensions.h"
 #include "roo_windows/core/main_window.h"
@@ -85,10 +86,10 @@ static const int kPreferredCellWidth = 15;
 
 namespace {
 
-std::string runeAsStr(uint32_t rune) {
-  uint8_t buf[4];
-  int n = roo_display::EncodeRuneAsUtf8(rune, buf);
-  return std::string((const char*)buf, n);
+std::string runeAsStr(char32_t ch) {
+  char buf[4];
+  int n = roo_io::WriteUtf8Char(buf, ch);
+  return std::string(buf, n);
 }
 
 }  // namespace

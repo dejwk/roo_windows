@@ -9,6 +9,7 @@
 #include "roo_time.h"
 #include "roo_windows/activities/keyboard.h"
 #include "roo_windows/core/panel.h"
+#include "roo_io/base/string_view.h"
 
 namespace roo_windows {
 
@@ -158,7 +159,7 @@ class TextField : public BasicWidget {
 
   const std::string& hint() const { return hint_; }
 
-  void setHint(roo_display::StringView hint) {
+  void setHint(roo_io::string_view hint) {
     hint_ = std::string((const char*)hint.data(), hint.size());
   }
 

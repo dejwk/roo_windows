@@ -3,6 +3,8 @@
 
 #include "roo_display/ui/text_label.h"
 #include "roo_icons/filled/action.h"
+#include "roo_io/base/string_view.h"
+#include "roo_io/text/unicode.h"
 #include "roo_windows/config.h"
 
 namespace roo_windows {
@@ -23,11 +25,11 @@ namespace {
 // extents are externally provided, may be clipped and not contain all the text.
 class TextFieldInterior : public Drawable {
  public:
-  TextFieldInterior(const Font* font, const Box& extents, StringView text,
-                    bool edited, bool starred, bool show_last_glyph,
-                    int16_t x_offset, int16_t highlight_xmin,
-                    int16_t highlight_xmax, Color text_color,
-                    Color highlight_color)
+  TextFieldInterior(const Font* font, const Box& extents,
+                    roo_io::string_view text, bool edited, bool starred,
+                    bool show_last_glyph, int16_t x_offset,
+                    int16_t highlight_xmin, int16_t highlight_xmax,
+                    Color text_color, Color highlight_color)
       : font_(font),
         extents_(extents),
         text_(text),
@@ -45,7 +47,7 @@ class TextFieldInterior : public Drawable {
  private:
   void drawTo(const Surface& s) const override {
     std::string starred_text;
-    StringView text = text_;
+    roo_io::string_view text = text_;
     if (starred_ && !text_.empty()) {
       starred_text.resize(text_.size());
       for (size_t i = 0; i < starred_text.size() - 1; i++) {
@@ -89,7 +91,7 @@ class TextFieldInterior : public Drawable {
 
   const Font* font_;
   Box extents_;
-  const StringView text_;
+  const roo_io::string_view text_;
   bool edited_;
   bool starred_;
   bool show_last_glyph_;
@@ -111,7 +113,7 @@ void TextField::paint(const Canvas& canvas) const {
     highlight_color = parent()->theme().color.onSurface;
     highlight_color.set_a(0x20);
   }
-  StringView text = value_;
+  roo_io::string_view text = value_;
   bool starred = isStarred();
   // bool show_last_glyph = false;
   if (text.empty()) {
@@ -155,10 +157,10 @@ void TextField::paint(const Canvas& canvas) const {
       // Calculate the bounds as-if the string is all-star.
       GlyphMetrics metrics;
       font_.getGlyphMetrics('*', FONT_LAYOUT_HORIZONTAL, &metrics);
-      Utf8Decoder decoder(text);
+      roo_io::Utf8Decoder decoder(text);
       int length = 0;
-      while (decoder.has_next()) {
-        decoder.next();
+      char32_t ignored;
+      while (decoder.next(ignored)) {
         ++length;
       }
       advance_width = metrics.advance() * (length - 1);
@@ -305,29 +307,33 @@ void TextFieldEditor::measure() {
     actual_size = target_->font().getHorizontalStringGlyphMetrics(
         s, &*glyphs_.begin(), 0, max_count);
     glyphs_.resize(actual_size);
-    Utf8Decoder decoder(s.c_str(), s.size());
+    roo_io::Utf8Decoder decoder(s);
     offsets_.resize(actual_size);
+    char32_t ignored;
     for (int16_t i = 0; i < actual_size; ++i) {
-      offsets_[i] = decoder.data() - s.c_str();
-      decoder.next();
+      offsets_[i] = (const char*)decoder.data() - s.c_str();
+      decoder.next(ignored);
     }
   } else {
     GlyphMetrics star_metrics;
     target_->font().getGlyphMetrics('*', FONT_LAYOUT_HORIZONTAL, &star_metrics);
     GlyphMetrics last_rune_metrics = star_metrics;
     // Determine how many stars.
-    Utf8Decoder decoder((const uint8_t*)s.c_str(), s.size());
+    roo_io::Utf8Decoder decoder(s);
+    char32_t ch;
+    decoder.next(ch);
     while (true) {
       ++actual_size;
-      unicode_t rune = decoder.next();
-      if (!decoder.has_next()) {
+      char32_t next;
+      if (!decoder.next(next)) {
         // Last one; perhaps actually measure.
         if (last_glyph_recently_entered_) {
-          target_->font().getGlyphMetrics(rune, FONT_LAYOUT_HORIZONTAL,
+          target_->font().getGlyphMetrics(ch, FONT_LAYOUT_HORIZONTAL,
                                           &last_rune_metrics);
         }
         break;
       }
+      ch = next;
     }
     glyphs_.resize(actual_size);
     offsets_.resize(actual_size);
@@ -398,8 +404,8 @@ void TextFieldEditor::rune(uint32_t rune) {
               val.begin() + offsets_[selection_end_]);
     cursor_position_ = selection_begin_;
   }
-  uint8_t encoded[4];
-  int count = EncodeRuneAsUtf8(rune, encoded);
+  char encoded[4];
+  int count = roo_io::WriteUtf8Char(encoded, rune);
   if (cursor_position_ == offsets_.size()) {
     // At end of string.
     val.insert(val.end(), encoded, encoded + count);
