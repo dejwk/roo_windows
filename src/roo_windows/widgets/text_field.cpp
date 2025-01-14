@@ -169,6 +169,8 @@ void TextField::paint(const Canvas& canvas) const {
       GlyphMetrics metrics = font_.getHorizontalStringMetrics(text);
       advance_width = metrics.advance();
     }
+  } else {
+    advance_width = 0;
   }
   bool is_x_offset = (advance_width > available_width);
   int16_t highlight_xmin = 0;

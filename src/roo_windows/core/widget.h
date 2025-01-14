@@ -551,8 +551,8 @@ class Widget {
                                          roo_display::kCenter) const {
     if ((alignment.h().dst() == roo_display::ANCHOR_MID ||
          alignment.h().dst() == roo_display::ANCHOR_ORIGIN) &&
-            (alignment.v().dst() == roo_display::ANCHOR_MID) ||
-        (alignment.v().dst() == roo_display::ANCHOR_ORIGIN)) {
+        (alignment.v().dst() == roo_display::ANCHOR_MID ||
+         alignment.v().dst() == roo_display::ANCHOR_ORIGIN)) {
       return alignment;
     }
     roo_display::HAlign h = alignment.h();
