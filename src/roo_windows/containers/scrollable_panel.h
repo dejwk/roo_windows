@@ -51,10 +51,10 @@ class ScrollablePanel : public Container, private roo_scheduler::Executable {
       : Container(env),
         direction_(direction),
         alignment_(roo_display::kLeft | roo_display::kTop),
+        contents_(nullptr),
         scroll_start_vx_(0.0),
         scroll_start_vy_(0.0),
         scroll_bar_presence_(VerticalScrollBar::ALWAYS_HIDDEN),
-        contents_(nullptr),
         scroll_bar_(env),
         scroll_bar_gesture_(false),
         scheduler_(env.scheduler()),
@@ -111,7 +111,7 @@ class ScrollablePanel : public Container, private roo_scheduler::Executable {
   }
 
   void setVerticalScrollBarPresence(VerticalScrollBar::Presence presence) {
-    if (scroll_bar_presence_ = presence) return;
+    if (scroll_bar_presence_ == presence) return;
     switch (scroll_bar_presence_) {
       case VerticalScrollBar::ALWAYS_SHOWN: {
         scroll_bar_.setVisibility(VISIBLE);
@@ -209,6 +209,8 @@ class ScrollablePanel : public Container, private roo_scheduler::Executable {
   XDim dxStart_;
   YDim dyStart_;
 
+  Widget* contents_;
+
   unsigned long scroll_start_time_;
   unsigned long scroll_end_time_;
   float scroll_start_vx_;  // initial scroll velocity in pixels/s.
@@ -216,18 +218,18 @@ class ScrollablePanel : public Container, private roo_scheduler::Executable {
   float scroll_decel_x_;
   float scroll_decel_y_;
 
-  Widget* contents_;
   // TODO: consider also supporting horizontal bar when needed.
   VerticalScrollBar::Presence scroll_bar_presence_;
   VerticalScrollBar scroll_bar_;
   roo_time::Uptime deadline_hide_scrollbar_;
-  roo_scheduler::Scheduler& scheduler_;
-  roo_scheduler::ExecutionID notification_id_;
 
   // Whether the 'down' event happened in the area reserved for the scroll bar.
   // In that case, the motion is never interpreted as anything else but possibly
   // a scroll bar interaction.
   bool scroll_bar_gesture_;
+
+  roo_scheduler::Scheduler& scheduler_;
+  roo_scheduler::ExecutionID notification_id_;
 
   // Whether the 'down' event has been confirmed as a touch of the scroll bar in
   // its active region.

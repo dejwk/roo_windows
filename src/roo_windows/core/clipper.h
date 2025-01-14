@@ -94,9 +94,9 @@ class ClipperOutput : public roo_display::DisplayOutput {
         overlays_(state.overlays_),
         bounded_overlays_(state.bounded_overlays_),
         valid_(true),
-        rect_union_(nullptr, nullptr),
         overlay_stack_(),
         overlay_filter_(out, &overlay_stack_),
+        rect_union_(nullptr, nullptr),
         rect_union_filter_(overlay_filter_, &rect_union_),
         output_(&rect_union_filter_) {
     exclusions_.clear();

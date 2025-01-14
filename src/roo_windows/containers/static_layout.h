@@ -76,7 +76,7 @@ class StaticLayout : public Panel {
       max_x = std::max(max_x, child_max_x);
       max_y = std::max(max_y, child_max_y);
     }
-    PreferredSize preferred = getPreferredSize();
+    // PreferredSize preferred = getPreferredSize();
     return Dimensions(width.resolveSize(max_x + 1),
                       height.resolveSize(max_y + 1));
   }

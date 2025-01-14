@@ -101,9 +101,9 @@ class Canvas {
   const roo_display::Surface* surface_;
   roo_display::DisplayOutput* out_;
 
+  roo_display::Box clip_box_;
   XDim dx_;
   YDim dy_;
-  roo_display::Box clip_box_;
 
   roo_display::Color bgcolor_;
 };

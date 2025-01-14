@@ -28,7 +28,11 @@ class PressOverlay : public roo_display::Rasterizable {
         r_sq_(r * r),
         fg_(fg),
         bg_(bg),
-        clip_circle_(false) {}
+        clip_circle_(false),
+        clip_circle_x_(),
+        clip_circle_y_(),
+        clip_circle_r_(),
+        clip_circle_r_sq_() {}
 
   void unsetClipCircle() { clip_circle_ = false; }
 
