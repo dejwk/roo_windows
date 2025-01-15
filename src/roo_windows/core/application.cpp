@@ -7,7 +7,7 @@ namespace roo_windows {
 
 using roo_display::Display;
 
-static constexpr roo_time::Interval kMinRefreshDuration = roo_time::Millis(30);
+static constexpr roo_time::Interval kMinRefreshDuration = roo_time::Millis(300);
 
 // Do not refresh display more frequently than this (50 Hz).
 static constexpr long kMinRefreshTimeDeltaMs = 20;
