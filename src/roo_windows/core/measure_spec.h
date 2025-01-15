@@ -120,7 +120,7 @@ class HeightSpec {
     if (childHeight.isExact()) {
       return HeightSpec::Exactly(childHeight.value());
     }
-    YDim size = std::max(0, value() - padding);
+    YDim size = std::max((YDim)0, value() - padding);
     switch (kind()) {
       // Parent has imposed an exact size on us
       case EXACTLY: {

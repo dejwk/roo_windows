@@ -16,11 +16,11 @@ static const roo_time::Interval kDelayHideScrollbar = roo_time::Millis(1200);
 
 // The area on the side of the panel whose touch is interpreted as an
 // interaction with the scroll bar.
-static const int kScrollBarTouchWidth = 50;
+static const XDim kScrollBarTouchWidth = 50;
 
 // Scroll bar height is scaled on the basis of much much content there is to
 // scroll, but it will never be smaller than this number of pixels.
-static const int kScrollBarMinHeightPx = 20;
+static const YDim kScrollBarMinHeightPx = 20;
 
 }  // namespace
 
@@ -167,7 +167,7 @@ Dimensions ScrollablePanel::onMeasure(WidthSpec width, HeightSpec height) {
       (direction_ == HORIZONTAL)
           ? height.getChildHeightSpec(m.top() + m.bottom(), s.height())
           : HeightSpec::Unspecified(
-                std::max(0, height.value() - m.top() - m.bottom()));
+                std::max((YDim)0, height.value() - m.top() - m.bottom()));
   measured_ = contents()->measure(child_width, child_height);
   scroll_bar_.measure(width, height);
   return Dimensions(

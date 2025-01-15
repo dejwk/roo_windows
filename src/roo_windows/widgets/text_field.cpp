@@ -126,10 +126,10 @@ void TextField::paint(const Canvas& canvas) const {
   Padding padding = getPadding();
 
   // Determine our vertical position.
-  int16_t text_ymin = -font_.metrics().glyphYMax();
-  int16_t text_ymax = -font_.metrics().glyphYMin();
-  int16_t decorated_text_ymin = text_ymin;
-  int16_t decorated_text_ymax = text_ymax;
+  YDim text_ymin = -font_.metrics().glyphYMax();
+  XDim text_ymax = -font_.metrics().glyphYMin();
+  YDim decorated_text_ymin = text_ymin;
+  XDim decorated_text_ymax = text_ymax;
   switch (decoration_) {
     case UNDERLINE: {
       decorated_text_ymax += 6;
@@ -140,7 +140,7 @@ void TextField::paint(const Canvas& canvas) const {
   }
   Alignment padded = adjustAlignment(alignment_);
   int16_t offsetTop =
-      padded.v().resolveOffset(0, height() - 1, decorated_text_ymin - text_ymin,
+      padded.v().resolveOffset((YDim)0, height() - 1, decorated_text_ymin - text_ymin,
                                decorated_text_ymax - text_ymin);
   int16_t available_width = width() - padding.left() - padding.right();
   int16_t advance_width;
