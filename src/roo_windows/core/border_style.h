@@ -16,7 +16,7 @@ class BorderStyle {
   SmallNumber outline_width() const { return outline_width_; }
 
   // Returns the radius of the interior, without the outline.
-  constexpr SmallNumber getInnerCornerRadius() const {
+  inline SmallNumber getInnerCornerRadius() const {
     return corner_radius_ < outline_width_ ? 0
                                            : corner_radius_ - outline_width_;
   }
@@ -25,7 +25,7 @@ class BorderStyle {
   // of a widget so that the remains have a simple rectangular unicolor
   // background. That is, it specifies how much is needed for the round corners
   // and possibly the outline.
-  constexpr uint16_t getThickness() const {
+  inline uint16_t getThickness() const {
     // outline + (r - r / sqrt(2)).
     // Note: it is tempting to simplify this as ir * 75 / 256, but it produces
     // different results due to rounding up rather than down.
