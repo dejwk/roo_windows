@@ -62,8 +62,7 @@ void Holder::onLayout(bool changed, const Rect& rect) {
   XDim w = rect.width() - m.left() - m.right() - p.left() - p.right();
   YDim h = rect.height() - m.top() - m.bottom() - p.top() - p.bottom();
   Rect bounds(0, 0, w - 1, h - 1);
-  bounds = bounds.translate(c->offsetLeft() + m.left() + p.left(),
-                            c->offsetTop() + m.top() + p.top());
+  bounds = bounds.translate(m.left() + p.left(), m.top() + p.top());
   c->layout(bounds);
 }
 
