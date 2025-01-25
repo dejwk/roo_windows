@@ -11,17 +11,17 @@ class RadioListDialog : public Dialog {
  public:
   RadioListDialog(const roo_windows::Environment& env)
       : Dialog(env, {kStrDialogCancel, kStrDialogOK}), list_(env) {
-    setDividersVisible(true);
-    last_button().setEnabled(false);
-    list_.setOnInteractiveChange([this](){
-      last_button().setEnabled(selected() >= 0);
-      onChange();
-    });
+    init();
   }
 
-  int selected() const {
-    return list_.selected();
+  RadioListDialog(const roo_windows::Environment& env,
+                  const typename Model::Element& prototype)
+      : Dialog(env, {kStrDialogCancel, kStrDialogOK}),
+        list_(env, prototype) {
+    init();
   }
+
+  int selected() const { return list_.selected(); }
 
   void setModel(Model& model) {
     list_.setModel(model);
@@ -39,9 +39,7 @@ class RadioListDialog : public Dialog {
     last_button().setEnabled(selected >= 0);
   }
 
-  void contentsChanged() {
-    list_.modelChanged();
-  }
+  void contentsChanged() { list_.modelChanged(); }
 
   RadioListDialog(const roo_windows::Environment& env, Model& model)
       : RadioListDialog(env) {
@@ -49,11 +47,18 @@ class RadioListDialog : public Dialog {
   }
 
  protected:
-  virtual void onChange() {
-    triggerInteractiveChange();
-  }
+  virtual void onChange() { triggerInteractiveChange(); }
 
  private:
+  void init() {
+    setDividersVisible(true);
+    last_button().setEnabled(false);
+    list_.setOnInteractiveChange([this]() {
+      last_button().setEnabled(selected() >= 0);
+      onChange();
+    });
+  }
+
   roo_windows::RadioList<Model> list_;
 };
 

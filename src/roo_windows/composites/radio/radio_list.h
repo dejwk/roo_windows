@@ -16,28 +16,33 @@ class RadioListModel;
 template <typename Model>
 class RadioListItem : public roo_windows::HorizontalLayout {
  public:
+  using Element = typename Model::Element;
+
   RadioListItem(const roo_windows::Environment& env,
                 std::function<void(int idx)> on_click)
-      : HorizontalLayout(env), button_(env), item_(env), on_click_(on_click) {
-    setGravity(roo_windows::Gravity(roo_windows::kHorizontalGravityNone,
-                                    roo_windows::kVerticalGravityMiddle));
-    setPadding(Padding(PADDING_TINY, PADDING_NONE));
-    button_.setMargins(roo_windows::MARGIN_NONE, roo_windows::MARGIN_SMALL);
-    add(button_);
-    item_.setMargins(roo_windows::MARGIN_NONE);
-    item_.setPadding(roo_windows::PADDING_NONE);
-    add(item_, HorizontalLayout::Params().setWeight(1));
+      : HorizontalLayout(env), button_(env), item_(), on_click_(on_click) {
+    new (item_) Element(env);
+    init();
+  }
+
+  RadioListItem(const roo_windows::Environment& env,
+                const Element& prototype_item,
+                std::function<void(int idx)> on_click)
+      : HorizontalLayout(env), button_(env), item_(), on_click_(on_click) {
+    new (item_) Element(prototype_item);
+    init();
   }
 
   RadioListItem(const RadioListItem& other)
       : HorizontalLayout(other),
         button_(other.button_),
-        item_(other.item_),
+        item_(),
         on_click_(other.on_click_) {
-    add(button_);
-    button_.setOnInteractiveChange([this]() { on_click_(idx_); });
-    add(item_);
+    new (item_) Element(*((Element*)other.item_));
+    init();
   }
+
+  ~RadioListItem() { ((Element*)item_)->~Element(); }
 
   void set(int idx, bool is_on) {
     idx_ = idx;
@@ -57,12 +62,28 @@ class RadioListItem : public roo_windows::HorizontalLayout {
 
   void onClicked() override { on_click_(idx_); }
 
+  Element& item() { return *(Element*)item_; }
+
+  const Element& item() const { return *(Element*)item_; }
+
  private:
   friend class RadioListModel<Model>;
 
+  void init() {
+    item().setMargins(roo_windows::MARGIN_NONE);
+    item().setPadding(roo_windows::PADDING_NONE);
+    setGravity(roo_windows::Gravity(roo_windows::kHorizontalGravityNone,
+                                    roo_windows::kVerticalGravityMiddle));
+    setPadding(Padding(PADDING_TINY, PADDING_NONE));
+    button_.setMargins(roo_windows::MARGIN_NONE, roo_windows::MARGIN_SMALL);
+    add(button_);
+    add(item(), HorizontalLayout::Params().setWeight(1));
+    button_.setOnInteractiveChange([this]() { on_click_(idx_); });
+  }
+
   int idx_;
   RadioButton button_;
-  typename Model::Element item_;
+  unsigned char item_[sizeof(Element)];
   std::function<void(int idx)> on_click_;
 };
 
@@ -79,7 +100,7 @@ class RadioListModel : public roo_windows::ListModel<RadioListItem<Model>> {
   void set(int idx, RadioListItem<Model>& dest) const override {
     // Note: set is not expected tobe called when model_ is nullptr, because we
     // report zero element count in such case.
-    model_->set(idx, dest.item_);
+    model_->set(idx, dest.item());
     dest.set(idx, idx == selected_);
   }
 
@@ -111,6 +132,14 @@ class RadioList : public roo_windows::Holder {
  public:
   using RadioListWidget = roo_windows::ListLayout<RadioListItem<Model>>;
 
+  RadioList(const roo_windows::Environment& env,
+            const typename Model::Element& prototype)
+      : Holder(env),
+        list_model_(),
+        list_(env, list_model_,
+              RadioListItem<Model>(
+                  env, prototype, [this](int idx) { elementSelected(idx); })) {}
+
   RadioList(const roo_windows::Environment& env)
       : Holder(env),
         list_model_(),
@@ -120,6 +149,12 @@ class RadioList : public roo_windows::Holder {
 
   RadioList(const roo_windows::Environment& env, Model& model)
       : RadioList(env) {
+    setModel(model);
+  }
+
+  RadioList(const roo_windows::Environment& env, Model& model,
+            typename Model::Element prototype)
+      : RadioList(env, std::move(prototype)) {
     setModel(model);
   }
 
