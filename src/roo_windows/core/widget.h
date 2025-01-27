@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <memory>
 #include <vector>
 
 #include "roo_display.h"
@@ -629,6 +630,11 @@ class Widget {
 
 // TODO: adjust for different screen densities.
 static const int gridSize = 4;
+
+using WidgetCreatorFn = std::function<std::unique_ptr<Widget>()>;
+
+template <typename Src>
+using WidgetSetterFn = std::function<void(const Src& src, Widget& dest)>;
 
 }  // namespace roo_windows
 
