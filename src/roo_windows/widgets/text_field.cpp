@@ -3,7 +3,7 @@
 
 #include "roo_display/ui/text_label.h"
 #include "roo_icons/filled/action.h"
-#include "roo_io/base/string_view.h"
+#include "roo_backport/string_view.h"
 #include "roo_io/text/unicode.h"
 #include "roo_windows/config.h"
 
@@ -26,7 +26,7 @@ namespace {
 class TextFieldInterior : public Drawable {
  public:
   TextFieldInterior(const Font* font, const Box& extents,
-                    roo_io::string_view text, bool edited, bool starred,
+                    roo::string_view text, bool edited, bool starred,
                     bool show_last_glyph, int16_t x_offset,
                     int16_t highlight_xmin, int16_t highlight_xmax,
                     Color text_color, Color highlight_color)
@@ -47,7 +47,7 @@ class TextFieldInterior : public Drawable {
  private:
   void drawTo(const Surface& s) const override {
     std::string starred_text;
-    roo_io::string_view text = text_;
+    roo::string_view text = text_;
     if (starred_ && !text_.empty()) {
       starred_text.resize(text_.size());
       for (size_t i = 0; i < starred_text.size() - 1; i++) {
@@ -91,7 +91,7 @@ class TextFieldInterior : public Drawable {
 
   const Font* font_;
   Box extents_;
-  const roo_io::string_view text_;
+  const roo::string_view text_;
   bool edited_;
   bool starred_;
   bool show_last_glyph_;
@@ -113,7 +113,7 @@ void TextField::paint(const Canvas& canvas) const {
     highlight_color = parent()->theme().color.onSurface;
     highlight_color.set_a(0x20);
   }
-  roo_io::string_view text = value_;
+  roo::string_view text = value_;
   bool starred = isStarred();
   // bool show_last_glyph = false;
   if (text.empty()) {

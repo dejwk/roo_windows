@@ -2,7 +2,7 @@
 
 #include "roo_display/color/color.h"
 #include "roo_display/font/font.h"
-#include "roo_io/base/string_view.h"
+#include "roo_backport/string_view.h"
 #include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/panel.h"
 
@@ -30,7 +30,7 @@ class TextLabel : public BasicWidget {
 
   void setText(const char* value);
 
-  void setText(roo_io::string_view value);
+  void setText(roo::string_view value);
 
   void setTextf(const char* format, ...);
 
@@ -47,14 +47,14 @@ class TextLabel : public BasicWidget {
 
 class StringViewLabel : public BasicWidget {
  public:
-  StringViewLabel(const Environment& env, roo_io::string_view value,
+  StringViewLabel(const Environment& env, roo::string_view value,
                   const roo_display::Font& font);
 
-  StringViewLabel(const Environment& env, roo_io::string_view value,
+  StringViewLabel(const Environment& env, roo::string_view value,
                   const roo_display::Font& font,
                   roo_display::Alignment alignment);
 
-  StringViewLabel(const Environment& env, roo_io::string_view value,
+  StringViewLabel(const Environment& env, roo::string_view value,
                   const roo_display::Font& font, roo_display::Color color,
                   roo_display::Alignment alignment);
 
@@ -62,14 +62,14 @@ class StringViewLabel : public BasicWidget {
 
   Dimensions getSuggestedMinimumDimensions() const override;
 
-  roo_io::string_view content() const { return value_; }
+  roo::string_view content() const { return value_; }
 
-  void setText(roo_io::string_view value);
+  void setText(roo::string_view value);
 
   const roo_display::Font& font() const { return font_; }
 
  private:
-  roo_io::string_view value_;
+  roo::string_view value_;
   const roo_display::Font& font_;
   roo_display::Color color_;
   roo_display::Alignment alignment_;

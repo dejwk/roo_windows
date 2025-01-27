@@ -1,7 +1,7 @@
 #include "roo_display/ui/text_label.h"
 
 #include "roo_display/ui/string_printer.h"
-#include "roo_io/base/string_view.h"
+#include "roo_backport/string_view.h"
 #include "roo_windows/widgets/text_label.h"
 
 namespace roo_windows {
@@ -51,10 +51,10 @@ void TextLabel::setText(std::string value) {
 }
 
 void TextLabel::setText(const char* value) {
-  setText(roo_io::string_view(value));
+  setText(roo::string_view(value));
 }
 
-void TextLabel::setText(roo_io::string_view value) {
+void TextLabel::setText(roo::string_view value) {
   if (value_ == value) return;
   value_ = std::string((const char*)value.data(), value.size());
   setDirty();
@@ -73,20 +73,20 @@ void TextLabel::setTextvf(const char* format, va_list arg) {
 }
 
 StringViewLabel::StringViewLabel(const Environment& env,
-                                 roo_io::string_view value,
+                                 roo::string_view value,
                                  const roo_display::Font& font)
     : StringViewLabel(env, std::move(value), font,
                       roo_display::kLeft | roo_display::kMiddle) {}
 
 StringViewLabel::StringViewLabel(const Environment& env,
-                                 roo_io::string_view value,
+                                 roo::string_view value,
                                  const roo_display::Font& font,
                                  roo_display::Alignment alignment)
     : StringViewLabel(env, std::move(value), font,
                       roo_display::color::Transparent, alignment) {}
 
 StringViewLabel::StringViewLabel(const Environment& env,
-                                 roo_io::string_view value,
+                                 roo::string_view value,
                                  const roo_display::Font& font,
                                  roo_display::Color color,
                                  roo_display::Alignment alignment)
@@ -113,7 +113,7 @@ Dimensions StringViewLabel::getSuggestedMinimumDimensions() const {
                                            font_.metrics().linegap());
 }
 
-void StringViewLabel::setText(roo_io::string_view value) {
+void StringViewLabel::setText(roo::string_view value) {
   if (value_ == value) return;
   value_ = std::move(value);
   setDirty();

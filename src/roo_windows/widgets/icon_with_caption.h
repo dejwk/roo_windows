@@ -3,7 +3,7 @@
 #include "roo_display/shape/basic.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_display/ui/tile.h"
-#include "roo_io/base/string_view.h"
+#include "roo_backport/string_view.h"
 #include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/theme.h"
@@ -31,7 +31,7 @@ class IconWithCaption : public BasicWidget {
     setDirty();
   }
 
-  roo_io::string_view caption() const { return caption_; }
+  roo::string_view caption() const { return caption_; }
 
   void setCaption(std::string caption) {
     if (caption_ == caption) return;

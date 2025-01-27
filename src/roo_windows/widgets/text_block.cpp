@@ -1,7 +1,7 @@
 #include "roo_windows/widgets/text_block.h"
 
 #include "roo_display/shape/basic.h"
-#include "roo_io/base/string_view.h"
+#include "roo_backport/string_view.h"
 
 namespace roo_windows {
 
@@ -9,7 +9,7 @@ namespace {
 
 class Interior : public roo_display::Drawable {
  public:
-  Interior(roo_display::Box extents, roo_io::string_view value,
+  Interior(roo_display::Box extents, roo::string_view value,
            const roo_display::Font& font, roo_display::Color color)
       : extents_(extents), value_(value), font_(font), color_(color) {}
 
@@ -45,7 +45,7 @@ class Interior : public roo_display::Drawable {
   }
 
   roo_display::Box extents_;
-  const roo_io::string_view value_;
+  const roo::string_view value_;
   const roo_display::Font& font_;
   roo_display::Color color_;
 };
