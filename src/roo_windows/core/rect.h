@@ -13,6 +13,11 @@ typedef int32_t YDim;
 
 class Rect {
  public:
+  struct Dimensions {
+    XDim width;
+    YDim height;
+  };
+
   inline static Rect Intersect(const Rect& a, const Rect& b) {
     XDim xMin = std::max(a.xMin(), b.xMin());
     YDim yMin = std::max(a.yMin(), b.yMin());
@@ -42,6 +47,10 @@ class Rect {
     yMinHi_ = (int8_t)(yMin >> 16);
     yMaxHi_ = (int8_t)(yMax >> 16);
   }
+
+  Rect(XDim xMin, YDim yMin, Dimensions dimensions)
+      : Rect(xMin, yMin, xMin + dimensions.width - 1,
+             yMin + dimensions.height - 1) {}
 
   Rect(const Rect&) = default;
   Rect(Rect&&) = default;
