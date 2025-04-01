@@ -22,8 +22,10 @@ BaseSliderWithCaption::BaseSliderWithCaption(
                     roo_display::kRight.shiftBy(roo_windows::Scaled(-8)));
   add(text_section_);
   add(slider_);
-  slider_.setOnInteractiveChange(
-      [this]() { value_.setText(formatValue(slider_.getPos())); });
+  slider_.setOnInteractiveChange([this]() {
+    value_.setText(formatValue(slider_.getPos()));
+    triggerInteractiveChange();
+  });
 }
 
 NumericSliderWithCaption::NumericSliderWithCaption(
