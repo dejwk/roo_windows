@@ -18,6 +18,7 @@ cc_library(
     deps = [
         "//roo_testing:arduino",
         "//lib/roo_display",
+        "//lib/roo_locale",
         "//lib/roo_logging",
         "//lib/roo_icons",
         "//lib/roo_io",

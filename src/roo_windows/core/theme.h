@@ -181,8 +181,8 @@ T constexpr Scaled(T in) {
 #define SCALED_ROO_ICON(family, name) \
   __ROO_CONCAT6(ic_, family, _, ROO_WINDOWS_ICON_SIZE, _, name)()
 
-#ifndef ROO_WINDOWS_LANG
-#define ROO_WINDOWS_LANG ROO_WINDOWS_LANG_en
+#ifndef ROO_LANG
+#define ROO_LANG ROO_LANG_en
 #endif
 
 // NOTE: fonts (particularly, large fonts) take up a lot of PROGMEM space, which

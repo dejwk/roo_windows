@@ -3,7 +3,7 @@
 
 namespace roo_windows {
 
-#if (ROO_WINDOWS_LANG == ROO_WINDOWS_LANG_pl)
+#if (ROO_WINDOWS_LANG == ROO_LANG_pl)
 
 const char* kStrDialogOK = "OK";
 const char* kStrDialogConfirm = "POTWIERDŹ";
