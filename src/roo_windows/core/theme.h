@@ -1,5 +1,6 @@
 #pragma once
 
+#include "roo_display.h"
 #include "roo_display/color/color.h"
 #include "roo_display/font/smooth_font.h"
 
