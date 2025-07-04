@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "roo_backport.h"
+#include "roo_backport/string_view.h"
 #include "roo_display/core/utf8.h"
 #include "roo_display/font/font.h"
 #include "roo_windows/containers/scrollable_panel.h"
