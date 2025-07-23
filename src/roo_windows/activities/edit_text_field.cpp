@@ -2,6 +2,7 @@
 
 #include <inttypes.h>
 
+#include "roo_icons.h"
 #include "roo_icons/outlined/navigation.h"
 #include "roo_windows/config.h"
 
