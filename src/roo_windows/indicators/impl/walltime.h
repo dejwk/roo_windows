@@ -5,19 +5,25 @@
 
 namespace roo_windows {
 
-class WalltimeIndicator : public Widget {
+class WalltimeIndicatorBase : public Widget {
  public:
-  WalltimeIndicator(const Environment& env,
-                    const roo_time::WallTimeClock* clock,
-                    roo_time::TimeZone tz);
+  WalltimeIndicatorBase(const Environment& env,
+                        const roo_time::WallTimeClock* clock,
+                        roo_time::TimeZone tz);
 
-  WalltimeIndicator(const Environment& env, roo_display::Color color,
-                    const roo_time::WallTimeClock* clock,
-                    roo_time::TimeZone tz);
+  WalltimeIndicatorBase(const Environment& env, roo_display::Color color,
+                        const roo_time::WallTimeClock* clock,
+                        roo_time::TimeZone tz);
 
   void update();
 
+  void paint(const roo_windows::Canvas& canvas) const override;
+
+  Padding getPadding() const override { return Padding(0); }
+
  protected:
+  virtual const roo_display::Font& font() const = 0;
+
   Color color_;  // If transparent, use parent's default content color.
   const roo_time::WallTimeClock* clock_;
   roo_time::TimeZone tz_;

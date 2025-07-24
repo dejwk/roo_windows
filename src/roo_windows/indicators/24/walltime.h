@@ -1,36 +1,23 @@
 #pragma once
 
 #include "roo_display.h"
-#include "roo_display/ui/text_label.h"
-#include "roo_display/ui/tile.h"
-#include "roo_fonts/NotoSans_Regular/24.h"
+#include "roo_fonts/NotoSans_Regular/27.h"
 #include "roo_windows/indicators/impl/walltime.h"
 
 namespace roo_windows {
 
-class WalltimeIndicator24 : public WalltimeIndicator {
+class WalltimeIndicator24 : public WalltimeIndicatorBase {
  public:
-  using WalltimeIndicator::WalltimeIndicator;
-
-  WalltimeIndicator24(const Environment& env,
-                      const roo_time::WallTimeClock* clock,
-                      roo_time::TimeZone tz)
-      : WalltimeIndicator(env, clock, tz) {}
-
-  void paint(const roo_display::Surface& s) const override {
-    roo_display::Color color =
-        color_.a() == 0 ? parent()->defaultColor() : color_;
-    s.drawObject(roo_display::MakeTileOf(
-        roo_display::StringViewLabel(roo_display::font_NotoSans_Regular_24(),
-                                     val_, color),
-        bounds(), roo_display::kMiddle));
-  }
+  using WalltimeIndicatorBase::WalltimeIndicatorBase;
 
   Dimensions getSuggestedMinimumDimensions() const override {
-    return Dimensions(62, 24);
+    return Dimensions(70, 24);
   }
 
-  // Padding getPadding() const override { return Padding(0); }
+ protected:
+  const roo_display::Font& font() const override {
+    return roo_display::font_NotoSans_Regular_27();
+  }
 };
 
 }  // namespace roo_windows
