@@ -17,7 +17,7 @@ class BasicNavigationItem : public roo_windows::HorizontalLayout {
  public:
   BasicNavigationItem(const roo_windows::Environment& env,
                       const roo_display::Pictogram& icon,
-                      roo_display::StringView text,
+                      roo::string_view text,
                       roo_windows::Activity& target);
 
   bool isClickable() const override { return true; }
@@ -38,8 +38,8 @@ class BasicNavigationItemWithSubtext : public roo_windows::HorizontalLayout {
  public:
   BasicNavigationItemWithSubtext(const roo_windows::Environment& env,
                                  const roo_display::Pictogram& icon,
-                                 roo_display::StringView label,
-                                 roo_display::StringView subtext,
+                                 roo::string_view label,
+                                 roo::string_view subtext,
                                  roo_windows::Activity& target);
 
   bool isClickable() const override { return true; }

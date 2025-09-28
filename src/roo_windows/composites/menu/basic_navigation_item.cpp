@@ -5,7 +5,7 @@ namespace menu {
 
 BasicNavigationItem::BasicNavigationItem(const roo_windows::Environment& env,
                                          const roo_display::Pictogram& icon,
-                                         roo_display::StringView text,
+                                         roo::string_view text,
                                          roo_windows::Activity& target)
     : roo_windows::HorizontalLayout(env),
       icon_(env, icon),
@@ -23,7 +23,7 @@ BasicNavigationItem::BasicNavigationItem(const roo_windows::Environment& env,
 
 BasicNavigationItemWithSubtext::BasicNavigationItemWithSubtext(
     const roo_windows::Environment& env, const roo_display::Pictogram& icon,
-    roo_display::StringView label, roo_display::StringView subtext,
+    roo::string_view label, roo::string_view subtext,
     roo_windows::Activity& target)
     : roo_windows::HorizontalLayout(env),
       icon_(env, icon),

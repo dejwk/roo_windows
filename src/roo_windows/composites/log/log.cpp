@@ -1,5 +1,7 @@
 #include "roo_windows/composites/log/log.h"
 
+#include "roo_backport.h"
+#include "roo_backport/string_view.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_display/ui/tile.h"
 #include "roo_smooth_fonts/NotoSans_Condensed/18.h"
@@ -84,7 +86,7 @@ Dimensions Log::onMeasure(WidthSpec width, HeightSpec height) {
                          p.bottom()));
 }
 
-void Log::appendLine(roo_display::StringView line) {
+void Log::appendLine(roo::string_view line) {
   int old_line_count = line_count_;
   while (line_count_ > 0 && lines_[line_start_].data() > cursor_ &&
          lines_[line_start_].data() - cursor_ < (int)line.size()) {
@@ -106,7 +108,7 @@ void Log::appendLine(roo_display::StringView line) {
   if (s > space) s = space;
   memcpy(cursor_, line.data(), s);
   int target_idx = line_pos(line_count_);
-  lines_[target_idx] = roo_display::StringView(cursor_, s);
+  lines_[target_idx] = roo::string_view(cursor_, s);
   setDirty(Box(0, line_count_ * font_->metrics().linespace(), width() - 1,
                (line_count_ + 1) * font_->metrics().linespace() - 1));
   ++line_count_;
@@ -175,7 +177,7 @@ void ScrollableLog::clear() {
   scrollToBottom();
 }
 
-void ScrollableLog::appendLine(roo_display::StringView line) {
+void ScrollableLog::appendLine(roo::string_view line) {
   log_.appendLine(line);
   autoScroll();
 }

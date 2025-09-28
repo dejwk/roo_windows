@@ -56,7 +56,7 @@ class Log : public roo_windows::BasicWidget {
   const roo_display::Font* font_;
 
   char* cursor_;
-  std::vector<roo_display::StringView> lines_;
+  std::vector<roo::string_view> lines_;
   std::vector<uint16_t> line_widths_;  // In pixels.
   mutable int16_t max_line_width_;  // negative means need to be recalculated.
   int line_start_;
@@ -66,11 +66,12 @@ class Log : public roo_windows::BasicWidget {
 class ScrollableLog : public roo_windows::ScrollablePanel {
  public:
   enum AutoscrollMode {
-    AUTOSCROLL_NONE,     // Doesn't auto-scroll.
-    // AUTOSCROLL_DEFAULT,  // Auto-scrolls to bottom only if the content is at the
+    AUTOSCROLL_NONE,  // Doesn't auto-scroll.
+    // AUTOSCROLL_DEFAULT,  // Auto-scrolls to bottom only if the content is at
+    // the
     //                      // bottom.
-    AUTOSCROLL_ALWAYS    // Auto-scrolls to bottom whenever a new line gets
-                         // appended.
+    AUTOSCROLL_ALWAYS  // Auto-scrolls to bottom whenever a new line gets
+                       // appended.
   };
 
   ScrollableLog(const roo_windows::Environment& env,
@@ -78,7 +79,7 @@ class ScrollableLog : public roo_windows::ScrollablePanel {
 
   void clear();
 
-  void appendLine(roo_display::StringView line);
+  void appendLine(roo::string_view line);
 
   void setFont(const roo_display::Font* font);
 
