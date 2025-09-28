@@ -276,12 +276,12 @@ void ScrollablePanel::cancelPendingUpdate() {
 
 void ScrollablePanel::scheduleScrollAnimationUpdate() {
   cancelPendingUpdate();
-  notification_id_ = scheduler_.scheduleAfter(this, roo_time::Millis(10));
+  notification_id_ = scheduler_.scheduleAfter(roo_time::Millis(10), *this);
 }
 
 void ScrollablePanel::scheduleHideScrollBarUpdate() {
   cancelPendingUpdate();
-  scheduler_.scheduleAfter(this, kDelayHideScrollbar);
+  scheduler_.scheduleAfter(kDelayHideScrollbar, *this);
 }
 
 bool ScrollablePanel::onInterceptTouchEvent(const TouchEvent& event) {
