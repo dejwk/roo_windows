@@ -12,7 +12,7 @@ namespace {
 
 static const float kDecceleration = 300.0;
 static const float kMaxVel = 5000.0;
-static const roo_time::Interval kDelayHideScrollbar = roo_time::Millis(1200);
+static const roo_time::Duration kDelayHideScrollbar = roo_time::Millis(1200);
 
 // The area on the side of the panel whose touch is interpreted as an
 // interaction with the scroll bar.

@@ -7,7 +7,7 @@ namespace roo_windows {
 
 using roo_display::Display;
 
-static constexpr roo_time::Interval kMinRefreshDuration = roo_time::Millis(300);
+static constexpr roo_time::Duration kMinRefreshDuration = roo_time::Millis(300);
 
 // Do not refresh display more frequently than this (50 Hz).
 static constexpr long kMinRefreshTimeDeltaMs = 20;
@@ -52,7 +52,7 @@ void Application::tick() {
       is_click_animating || gesture_detector_.isTouchDown()
           ? roo_scheduler::PRIORITY_ELEVATED
           : roo_scheduler::PRIORITY_NORMAL;
-  roo_time::Interval delay = gesture_detector_.isTouchDown() || redraw_timeout
+  roo_time::Duration delay = gesture_detector_.isTouchDown() || redraw_timeout
                                  ? roo_time::Millis(0)
                                  : roo_time::Millis(20);
   ticker_.scheduleAfter(delay, priority);

@@ -15,10 +15,10 @@ namespace roo_windows {
 
 class TextField;
 
-static constexpr roo_time::Interval kCursorBlinkInterval =
+static constexpr roo_time::Duration kCursorBlinkInterval =
     roo_time::Millis(500);
 
-static constexpr roo_time::Interval kShowLastGlyphInterval =
+static constexpr roo_time::Duration kShowLastGlyphInterval =
     roo_time::Millis(1500);
 
 class VisibilityToggle : public BasicWidget {

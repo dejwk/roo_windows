@@ -65,7 +65,7 @@ class Application {
   TextFieldEditor text_field_editor_;
 
   roo_scheduler::SingletonTask ticker_;
-  roo_time::Interval paint_interval_;
+  roo_time::Duration paint_interval_;
 };
 
 }  // namespace roo_windows
