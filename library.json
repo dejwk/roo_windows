@@ -44,12 +44,13 @@
     "dependencies": {
         "SPI": ">0",
         "Wire": ">0",
-        "dejwk/roo_collections": ">=1.1.4",
-        "dejwk/roo_display": ">=1.3.0",
-        "dejwk/roo_locale": ">=1.0.0",
-        "dejwk/roo_logging": ">=1.0.1",
-        "dejwk/roo_icons": ">=1.0.0",
-        "dejwk/roo_io": ">=1.0.1",
-        "dejwk/roo_time": ">0"
+        "dejwk/roo_collections": ">=1.3.1",
+        "dejwk/roo_display": ">=2.2.2",
+        "dejwk/roo_locale": ">=1.1.0",
+        "dejwk/roo_logging": ">=1.4.0",
+        "dejwk/roo_icons": ">=1.2.0",
+        "dejwk/roo_io": ">=2.0.1",
+        "dejwk/roo_scheduler": ">=2.1.3",
+        "dejwk/roo_time": ">=1.3.0"
     }
 }

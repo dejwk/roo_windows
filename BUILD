@@ -16,13 +16,25 @@ cc_library(
 
     ],
     deps = [
-        "//roo_testing:arduino",
-        "//lib/roo_display",
-        "//lib/roo_locale",
-        "//lib/roo_logging",
-        "//lib/roo_icons",
-        "//lib/roo_io",
-        "//lib/roo_time",
-        "//lib/roo_scheduler",
+        "@roo_testing//:arduino",
+        "@roo_display",
+        "@roo_locale",
+        "@roo_logging",
+        "@roo_icons",
+        "@roo_io",
+        "@roo_time",
+        "@roo_scheduler",
+    ],
+)
+
+cc_test(
+    name = "roo_windows_test",
+    srcs = [
+        "test/roo_windows_test.cpp",
+    ],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
     ],
 )
