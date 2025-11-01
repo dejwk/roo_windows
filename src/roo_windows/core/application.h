@@ -55,14 +55,15 @@ class Application {
   const Environment* env_;
   unsigned long last_time_refreshed_ms_;
 
-  MainWindow root_window_;
-  GestureDetector gesture_detector_;
+  // Must be declared before task_panels_, because task_panels_ use it.
+  Keyboard keyboard_;
+  TextFieldEditor text_field_editor_;
 
   std::vector<std::unique_ptr<Task>> tasks_;
   std::vector<std::unique_ptr<TaskPanel>> task_panels_;
 
-  Keyboard keyboard_;
-  TextFieldEditor text_field_editor_;
+  MainWindow root_window_;
+  GestureDetector gesture_detector_;
 
   roo_scheduler::SingletonTask ticker_;
   roo_time::Duration paint_interval_;

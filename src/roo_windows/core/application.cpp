@@ -15,10 +15,10 @@ static constexpr long kMinRefreshTimeDeltaMs = 20;
 Application::Application(const Environment* env, Display& display)
     : display_(display),
       env_(env),
-      root_window_(*this, display.extents()),
-      gesture_detector_(root_window_, display),
       keyboard_(*env, kbEngUS()),
       text_field_editor_(env->scheduler(), keyboard_),
+      root_window_(*this, display.extents()),
+      gesture_detector_(root_window_, display),
       ticker_(env->scheduler(), [this]() { tick(); }),
       paint_interval_(kMinRefreshDuration) {
   roo_windows::Task* kb_task = addTaskFloating();
