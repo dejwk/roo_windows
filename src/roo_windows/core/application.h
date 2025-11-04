@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "roo_scheduler.h"
+#include "roo_threads.h"
 #include "roo_time.h"
 #include "roo_windows/activities/keyboard.h"
 #include "roo_windows/core/activity.h"
@@ -19,7 +20,11 @@ class Application {
  public:
   Application(const Environment* env, roo_display::Display& display);
 
+  // Deprecated? (Prefer run()).
   void start();
+
+  // Enters the main event loop. Does not return.
+  void run();
 
   // Lays out and paints all dirty items. Does not handle user input.
   // Useful when you want to enforce some visual changes immediately,
@@ -37,6 +42,20 @@ class Application {
   Task* addTaskFullScreen() { return addTask(display_.extents()); }
 
   Task* addTaskFloating() { return addTask(roo_display::Box(0, 0, -1, -1)); }
+
+  // Schedules the specified function to be executed in the UI thread.
+  // Blocks until the function completes. If called from the UI thread,
+  // executes the function immediately.
+  //
+  // The UI thread is defined as the one in which start() or run() was called.
+  //
+  // Since the function does not return until fn() completes, it is safe to
+  // pass references to local variables from the caller (e.g. use lambda with
+  // [&]).
+  //
+  // This method is intended for handling callbacks from non-UI threads that
+  // need to interact with the UI, without having to enqueue tasks in memory.
+  void executeInUIThread(std::function<void()> fn);
 
   MainWindow& root() { return root_window_; }
   GestureDetector& gesture_detector() { return gesture_detector_; }
@@ -67,6 +86,8 @@ class Application {
 
   roo_scheduler::SingletonTask ticker_;
   roo_time::Duration paint_interval_;
+
+  roo::thread::id ui_thread_id_;
 };
 
 }  // namespace roo_windows

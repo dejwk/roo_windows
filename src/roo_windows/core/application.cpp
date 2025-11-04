@@ -1,6 +1,8 @@
 #include "application.h"
 
 #include "roo_display.h"
+#include "roo_threads.h"
+#include "roo_threads/semaphore.h"
 #include "roo_windows/keyboard_layout/en_us.h"
 
 namespace roo_windows {
@@ -29,7 +31,15 @@ void Application::add(WidgetRef child, const roo_display::Box& box) {
   root_window_.add(std::move(child), box);
 }
 
-void Application::start() { ticker_.scheduleNow(); }
+void Application::start() {
+  ui_thread_id_ = roo::this_thread::get_id();
+  ticker_.scheduleNow();
+}
+
+void Application::run() {
+  start();
+  env_->scheduler().run();
+}
 
 void Application::tick() {
   unsigned long now = millis();
@@ -101,6 +111,37 @@ Task* Application::addTask(const roo_display::Box& bounds) {
   tasks_.push_back(std::move(task));
   task_panels_.push_back(std::move(task_panel));
   return tasks_.back().get();
+}
+
+namespace {
+
+class SyncTask : public roo_scheduler::Executable {
+ public:
+  SyncTask(std::function<void()> fn, roo::binary_semaphore& sem)
+      : fn_(std::move(fn)), sem_(sem) {}
+
+  void execute(roo_scheduler::ExecutionID id) override {
+    fn_();
+    sem_.release();
+  }
+
+ private:
+  std::function<void()> fn_;
+  roo::binary_semaphore& sem_;
+};
+
+}  // namespace
+
+void Application::executeInUIThread(std::function<void()> fn) {
+  if (roo::this_thread::get_id() == ui_thread_id_) {
+    fn();
+  } else {
+    roo::binary_semaphore sem(0);
+    SyncTask task(std::move(fn), sem);
+    env_->scheduler().scheduleNow(task);
+    // Wait until the task finishes.
+    sem.acquire();
+  }
 }
 
 }  // namespace roo_windows
