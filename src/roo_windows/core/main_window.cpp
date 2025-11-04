@@ -122,4 +122,30 @@ void MainWindow::propagateDirty(const Widget* child, const Rect& rect) {
   }
 }
 
+void MainWindow::showDialog(Dialog& dialog, Dialog::CallbackFn callback_fn) {
+  CHECK(active_dialog_ == nullptr) << "Can't show two dialogs at the same time";
+  active_dialog_ = &dialog;
+  dialog.onEnter();
+  dialog.setCallbackFn([this, callback_fn, &dialog](int id) {
+    dialog.onExit(id);
+    active_dialog_ = nullptr;
+    removeLast();
+    Dialog::CallbackFn fn = callback_fn;
+    dialog.setCallbackFn(nullptr);
+    fn(id);
+  });
+  Dimensions dims =
+      dialog.measure(WidthSpec::AtMost(width()), HeightSpec::AtMost(height()));
+  XDim offsetLeft = (width() - dims.width()) / 2;
+  YDim offsetTop = (height() - dims.height()) / 2;
+  add(dialog, Rect(offsetLeft, offsetTop, offsetLeft + dims.width() - 1,
+                   offsetTop + dims.height() - 1));
+}
+
+void MainWindow::clearDialog() {
+  if (active_dialog_ != nullptr) {
+    active_dialog_->close();
+  }
+}
+
 }  // namespace roo_windows

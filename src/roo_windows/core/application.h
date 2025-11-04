@@ -43,6 +43,28 @@ class Application {
 
   Task* addTaskFloating() { return addTask(roo_display::Box(0, 0, -1, -1)); }
 
+  // Dialogs are modal, centered, and scrim the screen behind them.
+  // The callback gets called with the index of the option (e.g. button)
+  // selected in the dialog.
+  //
+  // While a dialog is showing, it is model - i.e. it is not possible to enter
+  // activities or show other dialogs.
+  //
+  // The dialog can be closed by user action, or programmatically by calling
+  // close(). Both of these paths result in callback_fn getting called, and the
+  // dialog getting removed from the task.
+  void showDialog(Dialog& dialog, Dialog::CallbackFn callback_fn);
+
+  // Convenience function, showing a new, heap-allocated alert dialog with the
+  // specified contents. See showDialog(). The dialog is deleted after the
+  // callback has been called.
+  void showAlertDialog(std::string title, std::string supporting_text,
+                       std::vector<std::string> button_labels,
+                       Dialog::CallbackFn callback_fn);
+
+  // If a dialog is open, closes it. Otherwise, no-op.
+  void clearDialog();
+
   // Schedules the specified function to be executed in the UI thread.
   // Blocks until the function completes. If called from the UI thread,
   // executes the function immediately.

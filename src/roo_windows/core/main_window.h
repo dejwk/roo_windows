@@ -6,6 +6,7 @@
 #include "roo_windows/core/clipper.h"
 #include "roo_windows/core/gesture_detector.h"
 #include "roo_windows/core/panel.h"
+#include "roo_windows/dialogs/dialog.h"
 
 namespace roo_windows {
 
@@ -43,16 +44,33 @@ class MainWindow : public Panel {
   }
 
   // Special handling for the keyboard. It gets added as the first child, yet we
-  // always want to render it on top (as the last child).
+  // always want to render it on top (as the last child). With correction for
+  // an active dialog, if any.
   const Widget& getChild(int idx) const override {
-    return idx == getChildrenCount() - 1 ? Panel::getChild(0)
-                                         : Panel::getChild(idx + 1);
+    if (active_dialog_ != nullptr) {
+      return idx == getChildrenCount() - 1   ? *active_dialog_
+             : idx == getChildrenCount() - 2 ? Panel::getChild(0)
+                                             : Panel::getChild(idx + 1);
+    } else {
+      return idx == getChildrenCount() - 1 ? Panel::getChild(0)
+                                           : Panel::getChild(idx + 1);
+    }
   }
 
   Widget& getChild(int idx) override {
-    return idx == getChildrenCount() - 1 ? Panel::getChild(0)
-                                         : Panel::getChild(idx + 1);
+    if (active_dialog_ != nullptr) {
+      return idx == getChildrenCount() - 1   ? *active_dialog_
+             : idx == getChildrenCount() - 2 ? Panel::getChild(0)
+                                             : Panel::getChild(idx + 1);
+    } else {
+      return idx == getChildrenCount() - 1 ? Panel::getChild(0)
+                                           : Panel::getChild(idx + 1);
+    }
   }
+
+  void showDialog(Dialog& dialog, Dialog::CallbackFn callback_fn);
+
+  void clearDialog();
 
  protected:
   void propagateDirty(const Widget* child, const Rect& rect) override;
@@ -75,6 +93,8 @@ class MainWindow : public Panel {
   roo_display::BackgroundFillOptimizer::FrameBuffer background_fill_buffer_;
 
   bool initialized_ = false;
+
+  Dialog* active_dialog_ = nullptr;
 };
 
 }  // namespace roo_windows

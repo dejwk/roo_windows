@@ -3,6 +3,7 @@
 #include "roo_display.h"
 #include "roo_threads.h"
 #include "roo_threads/semaphore.h"
+#include "roo_windows/dialogs/alert_dialog.h"
 #include "roo_windows/keyboard_layout/en_us.h"
 
 namespace roo_windows {
@@ -112,6 +113,27 @@ Task* Application::addTask(const roo_display::Box& bounds) {
   task_panels_.push_back(std::move(task_panel));
   return tasks_.back().get();
 }
+
+void Application::showDialog(Dialog& dialog, Dialog::CallbackFn callback_fn) {
+  root_window_.showDialog(dialog, std::move(callback_fn));
+}
+
+void Application::showAlertDialog(std::string title,
+                                  std::string supporting_text,
+                                  std::vector<std::string> button_labels,
+                                  Dialog::CallbackFn callback_fn) {
+  Dialog* dialog =
+      new AlertDialog(env(), std::move(title), std::move(supporting_text),
+                      std::move(button_labels));
+  showDialog(*dialog, [this, dialog, callback_fn](int id) {
+    if (callback_fn != nullptr) {
+      callback_fn(id);
+    }
+    delete dialog;
+  });
+}
+
+void Application::clearDialog() { root_window_.clearDialog(); }
 
 namespace {
 

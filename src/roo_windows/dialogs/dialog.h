@@ -62,7 +62,7 @@ class Dialog : public VerticalLayout {
   virtual void onExit(int result) {}
 
  private:
-  friend class Task;
+  friend class MainWindow;
 
   class FullWidthPanel : public HorizontalLayout {
    public:

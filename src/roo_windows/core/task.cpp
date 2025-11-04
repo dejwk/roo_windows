@@ -3,17 +3,14 @@
 #include "roo_logging.h"
 #include "roo_windows/core/activity.h"
 #include "roo_windows/core/application.h"
-#include "roo_windows/dialogs/alert_dialog.h"
-#include "roo_windows/dialogs/dialog.h"
 
 namespace roo_windows {
 
-Task::Task() : panel_(nullptr), shows_dialog_(false) {}
+Task::Task() : panel_(nullptr) {}
 
 void Task::init(TaskPanel* panel) { panel_ = panel; }
 
 void Task::enterActivity(Activity* activity) {
-  CHECK(!shows_dialog_) << "Can't enter new activities while a dialog is open";
   CHECK_EQ(activity->state(), Activity::INACTIVE);
   CHECK(activity->task_ == nullptr);
   roo_display::Box bounds = activity->getPreferredPlacement(*this);
@@ -33,7 +30,6 @@ void Task::enterActivity(Activity* activity) {
 }
 
 void Task::exitActivity() {
-  CHECK(!shows_dialog_);
   Activity* activity = activities_.back();
   if (activity->state_ == Activity::INACTIVE ||
       activity->state_ == Activity::STOPPING) {
@@ -93,15 +89,7 @@ bool Task::resumeCurrentActivity() {
   return true;
 }
 
-void Task::clearDialog() {
-  if (shows_dialog_) {
-    ((Dialog*)panel_->children().back())->close();
-    resumeCurrentActivity();
-  }
-}
-
 void Task::clear() {
-  clearDialog();
   pauseCurrentActivity();
   // Now, all activities on the stack are paused.
   while (!activities_.empty()) {
@@ -113,44 +101,6 @@ void Task::clear() {
 
 Activity* Task::currentActivity() {
   return activities_.empty() ? nullptr : activities_.back();
-}
-
-void Task::showDialog(Dialog& dialog, Dialog::CallbackFn callback_fn) {
-  CHECK(!shows_dialog_) << "Can't show two dialogs at the same time";
-  shows_dialog_ = true;
-  pauseCurrentActivity();
-  dialog.onEnter();
-  dialog.setCallbackFn([this, callback_fn, &dialog](int id) {
-    // Capture the task on the stack, because the callback self-destroys.
-    Task* task = this;
-    dialog.onExit(id);
-    shows_dialog_ = false;
-    panel_->removeLast();
-    Dialog::CallbackFn fn = callback_fn;
-    dialog.setCallbackFn(nullptr);
-    fn(id);
-    task->resumeCurrentActivity();
-  });
-  Dimensions dims = dialog.measure(WidthSpec::AtMost(panel_->width()),
-                                   HeightSpec::AtMost(panel_->height()));
-  XDim offsetLeft = (panel_->width() - dims.width()) / 2;
-  YDim offsetTop = (panel_->height() - dims.height()) / 2;
-  panel_->add(dialog, Rect(offsetLeft, offsetTop, offsetLeft + dims.width() - 1,
-                           offsetTop + dims.height() - 1));
-}
-
-void Task::showAlertDialog(std::string title, std::string supporting_text,
-                           std::vector<std::string> button_labels,
-                           Dialog::CallbackFn callback_fn) {
-  Dialog* dialog =
-      new AlertDialog(getApplication().env(), std::move(title),
-                      std::move(supporting_text), std::move(button_labels));
-  showDialog(*dialog, [this, dialog, callback_fn](int id) {
-    if (callback_fn != nullptr) {
-      callback_fn(id);
-    }
-    delete dialog;
-  });
 }
 
 Dimensions Task::getDimensions() const {
