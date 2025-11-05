@@ -231,7 +231,7 @@ class Widget {
   // Sets a handler to be called when the state of this widget changes due to
   // touch interaction. For simple clickable items, called by onClicked().
   void setOnInteractiveChange(std::function<void()> handler) {
-    on_interactive_change_ = handler;
+    on_interactive_change_ = std::move(handler);
   }
 
   std::function<void()> getOnInteractiveChange() const {
