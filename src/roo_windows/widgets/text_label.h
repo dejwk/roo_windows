@@ -26,6 +26,8 @@ class TextLabel : public BasicWidget {
 
   const std::string& content() const { return value_; }
 
+  const std::string& text() const { return value_; }
+
   void setText(std::string value);
 
   void setText(const char* value);
@@ -35,6 +37,8 @@ class TextLabel : public BasicWidget {
   void setTextf(const char* format, ...);
 
   void setTextvf(const char* format, va_list arg);
+
+  void clearText();
 
   const roo_display::Font& font() const { return font_; }
 
@@ -64,7 +68,11 @@ class StringViewLabel : public BasicWidget {
 
   roo::string_view content() const { return value_; }
 
+  roo::string_view text() const { return value_; }
+
   void setText(roo::string_view value);
+
+  void clearText();
 
   const roo_display::Font& font() const { return font_; }
 

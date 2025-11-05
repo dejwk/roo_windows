@@ -70,6 +70,13 @@ void TextLabel::setTextvf(const char* format, va_list arg) {
   setText(roo_display::StringVPrintf(format, arg));
 }
 
+void TextLabel::clearText() {
+  if (value_.empty()) return;
+  value_.clear();
+  setDirty();
+  requestLayout();
+}
+
 StringViewLabel::StringViewLabel(const Environment& env, roo::string_view value,
                                  const roo_display::Font& font)
     : StringViewLabel(env, std::move(value), font,
@@ -111,6 +118,13 @@ Dimensions StringViewLabel::getSuggestedMinimumDimensions() const {
 void StringViewLabel::setText(roo::string_view value) {
   if (value_ == value) return;
   value_ = std::move(value);
+  setDirty();
+  requestLayout();
+}
+
+void StringViewLabel::clearText() {
+  if (value_.empty()) return;
+  value_ = "";
   setDirty();
   requestLayout();
 }
