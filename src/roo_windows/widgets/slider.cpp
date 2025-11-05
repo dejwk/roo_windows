@@ -39,33 +39,56 @@ uint16_t pos_from_x(XDim x, int16_t range, Padding p) {
 }  // namespace
 
 bool Slider::onDown(XDim x, YDim y) {
-  if (!parent()->isScrollable()) return true;
-  Padding p = getPadding();
-  int16_t range = range_from_width(width(), p);
-  uint16_t min_pos = pos_from_x(x - kTouchSlopPixels, range, p);
-  uint16_t max_pos = pos_from_x(x + kTouchSlopPixels, range, p);
-  return (getPos() >= min_pos) && getPos() <= max_pos;
+  // We want to allow single-taps to set slider values. Because of that,
+  // we cannot reject onDown() events that happen far from the current
+  // slider position.
+  return true;
 }
 
-void Slider::onShowPress(XDim x, YDim y) {
-  is_dragging_ = true;
+bool Slider::onSingleTapUp(XDim x, YDim y) {
+  BasicWidget::onSingleTapUp(x, y);
   Padding p = getPadding();
   int16_t range = range_from_width(width(), p);
   if (setPos(pos_from_x(x, range, p))) {
     triggerInteractiveChange();
   }
-  Widget::onShowPress(x, y);
-  triggerInteractiveChange();
+  return true;
+}
+
+void Slider::onShowPress(XDim x, YDim y) {
+  Padding p = getPadding();
+  int16_t range = range_from_width(width(), p);
+  uint16_t min_pos = pos_from_x(x - kTouchSlopPixels, range, p);
+  uint16_t max_pos = pos_from_x(x + kTouchSlopPixels, range, p);
+  bool is_within_bounds = (getPos() >= min_pos) && getPos() <= max_pos;
+  if (is_within_bounds) {
+    // Enough time was elapsed without vertical movement that we can commit
+    // that this is a horizontal drag of the slider.
+    is_dragging_ = true;
+    Padding p = getPadding();
+    int16_t range = range_from_width(width(), p);
+    if (setPos(pos_from_x(x, range, p))) {
+      triggerInteractiveChange();
+    }
+    Widget::onShowPress(x, y);
+  }
 }
 
 bool Slider::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
   if (!is_dragging_ && (dy * dy > dx * dx) && dy * dy > 25) {
+    //
     return false;
   }
   // if (y < -20 || y > height() + 20) return false;
   Padding p = getPadding();
   int16_t range = range_from_width(width(), p);
   if (setPos(pos_from_x(x, range, p))) {
+    // If the initial 'onDown' was outside the slider knob, we were not
+    // committed to dragging yet (we could have still withdraw and allow the
+    // gesture to be reinterpreted as vertical scroll in the parent component).
+    // But now that we have definite movement in the horizontal direction, we
+    // commit to dragging.
+    is_dragging_ = true;
     setPressed(true);
     triggerInteractiveChange();
   }

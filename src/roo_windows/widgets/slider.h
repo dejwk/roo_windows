@@ -17,6 +17,8 @@ class Slider : public BasicWidget {
 
   bool onDown(XDim x, YDim y) override;
 
+  bool onSingleTapUp(XDim x, YDim y) override;
+
   void onShowPress(XDim x, YDim y) override;
 
   bool supportsScrolling() const override { return true; }
