@@ -47,15 +47,14 @@ Dialog::Dialog(const Environment& env, std::vector<std::string> button_labels)
   title_panel_.add(title_);
   setDividersVisible(false);
   add(divider1_);
-  contents_.setVerticalScrollBarPresence(VerticalScrollBar::SHOWN_WHEN_SCROLLING);
-  add(contents_, VerticalLayout::Params().setWeight(1));
+  contents_.setVerticalScrollBarPresence(
+      VerticalScrollBar::SHOWN_WHEN_SCROLLING);
+  add(contents_, {weight : 1});
   add(divider2_);
   button_panel_.setPadding(PADDING_TINY);
   button_panel_.setMargins(Margins(MARGIN_NONE, MARGIN_SMALL));
-  add(button_panel_,
-      VerticalLayout::Params().setGravity(kHorizontalGravityRight));
-  button_panel_.setGravity(
-      Gravity(kHorizontalGravityRight, kVerticalGravityMiddle));
+  add(button_panel_, {gravity : kGravityRight});
+  button_panel_.setGravity(Gravity(kGravityRight, kGravityMiddle));
   buttons_.reserve(button_labels.size());
   int i = 0;
   for (std::string& label : button_labels) {

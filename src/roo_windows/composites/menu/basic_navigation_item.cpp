@@ -11,12 +11,11 @@ BasicNavigationItem::BasicNavigationItem(const roo_windows::Environment& env,
       icon_(env, icon),
       label_(env, text, roo_windows::font_subtitle1()),
       target_(target) {
-  setGravity(roo_windows::Gravity(roo_windows::kHorizontalGravityNone,
-                                  roo_windows::kVerticalGravityMiddle));
-  add(icon_, HorizontalLayout::Params());
+  setGravity(roo_windows::kGravityMiddle);
+  add(icon_);
   label_.setMargins(roo_windows::MARGIN_NONE);
   label_.setPadding(roo_windows::PADDING_TINY);
-  add(label_, HorizontalLayout::Params().setWeight(1));
+  add(label_, { weight : 1 });
 
   setOnInteractiveChange([&]() { getTask()->enterActivity(&target_); });
 }
@@ -31,9 +30,8 @@ BasicNavigationItemWithSubtext::BasicNavigationItemWithSubtext(
       label_(env, label, roo_windows::font_subtitle1()),
       subtext_(env, subtext, roo_windows::font_subtitle2()),
       target_(target) {
-  setGravity(roo_windows::Gravity(roo_windows::kHorizontalGravityNone,
-                                  roo_windows::kVerticalGravityMiddle));
-  add(icon_, HorizontalLayout::Params());
+  setGravity(roo_windows::kGravityMiddle);
+  add(icon_);
   label_.setMargins(roo_windows::MARGIN_NONE);
   label_.setPadding(roo_windows::PADDING_NONE);
   subtext_.setMargins(roo_windows::MARGIN_NONE);
@@ -42,7 +40,7 @@ BasicNavigationItemWithSubtext::BasicNavigationItemWithSubtext(
   content_.setPadding(roo_windows::PADDING_TINY);
   content_.add(label_);
   content_.add(subtext_);
-  add(content_, HorizontalLayout::Params().setWeight(1));
+  add(content_, { weight : 1 });
 
   setOnInteractiveChange([&]() { getTask()->enterActivity(&target_); });
 }

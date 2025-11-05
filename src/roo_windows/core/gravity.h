@@ -95,6 +95,10 @@ class Gravity {
   constexpr Gravity(HorizontalGravity x, VerticalGravity y)
       : value_(x.alignment_ | (y.alignment_ << 4)) {}
 
+  constexpr Gravity(HorizontalGravity x) : Gravity(x, VerticalGravity()) {}
+
+  constexpr Gravity(VerticalGravity y) : Gravity(HorizontalGravity(), y) {}
+
   constexpr HorizontalGravity x() const {
     return HorizontalGravity((GravityAxisAlignment)(value_ & 0xF));
   }
@@ -109,13 +113,13 @@ class Gravity {
 static constexpr HorizontalGravity kHorizontalGravityNone =
     HorizontalGravity(GravityAxisAlignment::NONE);
 
-static constexpr HorizontalGravity kHorizontalGravityLeft =
+static constexpr HorizontalGravity kGravityLeft =
     HorizontalGravity(GravityAxisAlignment::MIN);
 
-static constexpr HorizontalGravity kHorizontalGravityRight =
+static constexpr HorizontalGravity kGravityRight =
     HorizontalGravity(GravityAxisAlignment::MAX);
 
-static constexpr HorizontalGravity kHorizontalGravityCenter =
+static constexpr HorizontalGravity kGravityCenter =
     HorizontalGravity(GravityAxisAlignment::MIDDLE);
 
 // static constexpr HorizontalGravity kHorizontalGravityFill =
@@ -124,13 +128,13 @@ static constexpr HorizontalGravity kHorizontalGravityCenter =
 static constexpr VerticalGravity kVerticalGravityNone =
     VerticalGravity(GravityAxisAlignment::NONE);
 
-static constexpr VerticalGravity kVerticalGravityTop =
+static constexpr VerticalGravity kGravityTop =
     VerticalGravity(GravityAxisAlignment::MIN);
 
-static constexpr VerticalGravity kVerticalGravityBottom =
+static constexpr VerticalGravity kGravityBottom =
     VerticalGravity(GravityAxisAlignment::MAX);
 
-static constexpr VerticalGravity kVerticalGravityMiddle =
+static constexpr VerticalGravity kGravityMiddle =
     VerticalGravity(GravityAxisAlignment::MIDDLE);
 
 // static constexpr VerticalGravity kVerticalGravityFill =

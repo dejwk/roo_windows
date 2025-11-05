@@ -11,27 +11,9 @@ namespace roo_windows {
 
 class HorizontalLayout : public Panel {
  public:
-  class Params {
-   public:
-    Params() : gravity_(), weight_(0) {}
-
-    Params& setGravity(VerticalGravity gravity) {
-      gravity_ = gravity;
-      return *this;
-    }
-
-    VerticalGravity gravity() const { return gravity_; }
-
-    Params& setWeight(uint8_t weight) {
-      weight_ = weight;
-      return *this;
-    }
-
-    uint8_t weight() const { return weight_; }
-
-   private:
-    VerticalGravity gravity_;
-    uint8_t weight_;
+  struct Params {
+    VerticalGravity gravity = VerticalGravity();
+    uint8_t weight = 0;
   };
 
   // Layout parameters plus last cached measure for a child.
@@ -77,6 +59,12 @@ class HorizontalLayout : public Panel {
 
   void setGravity(Gravity gravity) { gravity_ = gravity; }
 
+  // Convenience method to set only the horizontal gravity.
+  void setGravity(HorizontalGravity gravity) { setGravity(Gravity(gravity)); }
+
+  // Convenience method to set only the vertical gravity.
+  void setGravity(VerticalGravity gravity) { setGravity(Gravity(gravity)); }
+
   const Gravity& gravity() const { return gravity_; }
 
   void setUseLargestChild(bool use_largest_child) {
@@ -89,7 +77,7 @@ class HorizontalLayout : public Panel {
 
   int16_t weight_sum() const { return weight_sum_; }
 
-  void add(WidgetRef child, Params params = Params()) {
+  void add(WidgetRef child, Params params = {kVerticalGravityNone, 0}) {
     child_measures_.emplace_back(params);
     Panel::add(std::move(child));
   }

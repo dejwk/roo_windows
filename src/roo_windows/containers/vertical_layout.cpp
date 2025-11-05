@@ -32,11 +32,11 @@ Dimensions VerticalLayout::onMeasure(WidthSpec width, HeightSpec height) {
     Margins margins = w.getMargins();
     int16_t h_margin = margins.left() + margins.right();
     int16_t v_margin = margins.top() + margins.bottom();
-    total_weight += measure.params().weight();
+    total_weight += measure.params().weight;
 
     PreferredSize preferred = w.getPreferredSize();
     bool use_excess_space =
-        preferred.height().isZero() && measure.params().weight() > 0;
+        preferred.height().isZero() && measure.params().weight > 0;
     if (height.kind() == EXACTLY && use_excess_space) {
       // Optimization: don't bother measuring children who are only laid out
       // using excess space. These views will get measured later if we have
@@ -87,7 +87,7 @@ Dimensions VerticalLayout::onMeasure(WidthSpec width, HeightSpec height) {
     XDim measured_width = measure.latest().width() + h_margin;
     max_width = std::max(max_width, measured_width);
     all_match_parent = all_match_parent && preferred.width().isMatchParent();
-    if (measure.params().weight() > 0) {
+    if (measure.params().weight > 0) {
       weighted_max_width =
           std::max(weighted_max_width,
                    match_width_locally ? (int16_t)h_margin : measured_width);
@@ -134,7 +134,7 @@ Dimensions VerticalLayout::onMeasure(WidthSpec width, HeightSpec height) {
       int16_t h_margin = margins.left() + margins.right();
       int16_t v_margin = margins.top() + margins.bottom();
       int16_t h_padding = padding.left() + padding.right();
-      int16_t child_weight = measure.params().weight();
+      int16_t child_weight = measure.params().weight;
       PreferredSize preferred = w.getPreferredSize();
       if (child_weight > 0) {
         int16_t share = ((int32_t)child_weight * (int32_t)remaining_excess) /
@@ -187,7 +187,7 @@ Dimensions VerticalLayout::onMeasure(WidthSpec width, HeightSpec height) {
         Widget& w = child_at(i);
         if (w.isGone()) continue;
         ChildMeasure& measure = child_measures_[i];
-        int16_t child_extra = measure.params().weight();
+        int16_t child_extra = measure.params().weight;
         if (child_extra > 0) {
           WidthSpec ws = WidthSpec::Exactly(measure.latest().width());
           HeightSpec hs = HeightSpec::Exactly(largest_child_height);
@@ -231,7 +231,7 @@ void VerticalLayout::onLayout(bool changed, const Rect& rect) {
     if (w.isGone()) continue;
     const ChildMeasure& measure = child_measures_[i];
     Margins margins = w.getMargins();
-    HorizontalGravity gravity = measure.params().gravity();
+    HorizontalGravity gravity = measure.params().gravity;
     if (!gravity.isSet()) {
       gravity = gravity_.x();
     }

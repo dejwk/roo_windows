@@ -72,12 +72,11 @@ class RadioListItem : public roo_windows::HorizontalLayout {
   void init() {
     item().setMargins(roo_windows::MARGIN_NONE);
     item().setPadding(roo_windows::PADDING_NONE);
-    setGravity(roo_windows::Gravity(roo_windows::kHorizontalGravityNone,
-                                    roo_windows::kVerticalGravityMiddle));
+    setGravity(roo_windows::kGravityMiddle);
     setPadding(Padding(PADDING_TINY, PADDING_NONE));
     button_.setMargins(roo_windows::MARGIN_NONE, roo_windows::MARGIN_SMALL);
     add(button_);
-    add(item(), HorizontalLayout::Params().setWeight(1));
+    add(item(), { weight : 1 });
     button_.setOnInteractiveChange([this]() { on_click_(idx_); });
   }
 
