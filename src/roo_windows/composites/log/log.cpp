@@ -25,7 +25,7 @@ Log::Log(const roo_windows::Environment& env, uint32_t buffer_size,
       max_line_width_(0),
       line_start_(0),
       line_count_(0) {
-  setPadding(PaddingSize::PADDING_TINY);
+  setPadding(PaddingSize::TINY);
 }
 
 void Log::clear() {

@@ -5,22 +5,21 @@
 namespace roo_windows {
 namespace menu {
 
-BaseSliderWithCaption::BaseSliderWithCaption(
-    const roo_windows::Environment& env, std::string caption)
+BaseSliderWithCaption::BaseSliderWithCaption(const Environment& env,
+                                             std::string caption)
     : VerticalLayout(env),
       text_section_(env),
-      caption_(env, std::move(caption), roo_windows::font_body1()),
-      value_(env, "", roo_windows::font_body1()),
+      caption_(env, std::move(caption), font_body1()),
+      value_(env, "", font_body1()),
       slider_(env) {
-  caption_.setMargins(roo_windows::MARGIN_LARGE, roo_windows::MARGIN_NONE);
-  value_.setMargins(roo_windows::MARGIN_LARGE, roo_windows::MARGIN_NONE);
-  caption_.setPadding(roo_windows::PADDING_DEFAULT, roo_windows::PADDING_NONE);
-  value_.setPadding(roo_windows::PADDING_DEFAULT, roo_windows::PADDING_NONE);
+  caption_.setMargins(MarginSize::LARGE, MarginSize::NONE);
+  value_.setMargins(MarginSize::LARGE, MarginSize::NONE);
+  caption_.setPadding(PaddingSize::REGULAR, PaddingSize::NONE);
+  value_.setPadding(PaddingSize::REGULAR, PaddingSize::NONE);
   text_section_.add(caption_, roo_display::kLeft);
   text_section_.add(value_, roo_display::kRight);
   add(text_section_);
-  slider_.setMargins(roo_windows::MARGIN_DEFAULT,
-                     roo_windows::MARGIN_NEGATIVE_SMALL);
+  slider_.setMargins(MarginSize::REGULAR, MarginSize::NEGATIVE_SMALL);
   add(slider_);
   slider_.setOnInteractiveChange([this]() {
     value_.setText(formatValue(slider_.getPos()));
@@ -28,8 +27,8 @@ BaseSliderWithCaption::BaseSliderWithCaption(
   });
 }
 
-NumericSliderWithCaption::NumericSliderWithCaption(
-    const roo_windows::Environment& env, std::string caption)
+NumericSliderWithCaption::NumericSliderWithCaption(const Environment& env,
+                                                   std::string caption)
     : BaseSliderWithCaption(env, std::move(caption)), min_(0.0f), max_(1.0f) {}
 
 void NumericSliderWithCaption::init(float min_val, float max_val, float val,

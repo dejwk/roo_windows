@@ -1,5 +1,7 @@
 #pragma once
 
+#include "roo_windows/core/margins.h"
+#include "roo_windows/core/padding.h"
 #include "roo_windows/core/widget.h"
 
 namespace roo_windows {
@@ -14,10 +16,17 @@ class BasicWidget : public Widget {
   BasicWidget(const BasicWidget& w)
       : Widget(w), padding_(w.padding_), margins_(w.margins_) {}
 
-  virtual Padding getDefaultPadding() const { return Padding(PADDING_REGULAR); }
-  virtual Margins getDefaultMargins() const { return Margins(MARGIN_REGULAR); }
+  virtual Padding getDefaultPadding() const {
+    return Padding(PaddingSize::REGULAR);
+  }
 
-  void setPadding(PaddingSize h, PaddingSize v) { padding_ = (h << 4) | v; }
+  virtual Margins getDefaultMargins() const {
+    return Margins(MarginSize::REGULAR);
+  }
+
+  void setPadding(PaddingSize h, PaddingSize v) {
+    padding_ = ((int)h << 4) | (int)v;
+  }
 
   void setPadding(PaddingSize size) { setPadding(size, size); }
 
@@ -26,17 +35,19 @@ class BasicWidget : public Widget {
     PaddingSize vs = (PaddingSize)(padding_ & 15);
     Padding def;
     int16_t h, v;
-    if (hs == PADDING_DEFAULT || vs == PADDING_DEFAULT) {
+    if (hs == PaddingSize::DEFAULT_SIZE || vs == PaddingSize::DEFAULT_SIZE) {
       def = getDefaultPadding();
     }
-    h = (hs == PADDING_DEFAULT) ? (def.left() + def.right()) / 2
-                                : Padding::DimensionForSize(hs);
-    v = (vs == PADDING_DEFAULT) ? (def.top() + def.bottom()) / 2
-                                : Padding::DimensionForSize(vs);
+    h = (hs == PaddingSize::DEFAULT_SIZE) ? (def.left() + def.right()) / 2
+                                          : Padding::DimensionForSize(hs);
+    v = (vs == PaddingSize::DEFAULT_SIZE) ? (def.top() + def.bottom()) / 2
+                                          : Padding::DimensionForSize(vs);
     return Padding(h, v);
   }
 
-  void setMargins(MarginSize h, MarginSize v) { margins_ = (h << 4) | v; }
+  void setMargins(MarginSize h, MarginSize v) {
+    margins_ = ((int)h << 4) | (int)v;
+  }
 
   void setMargins(MarginSize size) { setMargins(size, size); }
 
@@ -49,13 +60,13 @@ class BasicWidget : public Widget {
     MarginSize vs = (MarginSize)(margins_ & 15);
     Margins def;
     int16_t h, v;
-    if (hs == MARGIN_DEFAULT || vs == MARGIN_DEFAULT) {
+    if (hs == MarginSize::DEFAULT_SIZE || vs == MarginSize::DEFAULT_SIZE) {
       def = getDefaultMargins();
     }
-    h = (hs == MARGIN_DEFAULT) ? (def.left() + def.right()) / 2
-                               : Margins::DimensionForSize(hs);
-    v = (vs == MARGIN_DEFAULT) ? (def.top() + def.bottom()) / 2
-                               : Margins::DimensionForSize(vs);
+    h = (hs == MarginSize::DEFAULT_SIZE) ? (def.left() + def.right()) / 2
+                                         : Margins::DimensionForSize(hs);
+    v = (vs == MarginSize::DEFAULT_SIZE) ? (def.top() + def.bottom()) / 2
+                                         : Margins::DimensionForSize(vs);
     return Margins(h, v);
   }
 

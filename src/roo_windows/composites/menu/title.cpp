@@ -6,16 +6,16 @@
 namespace roo_windows {
 namespace menu {
 
-Title::Title(const roo_windows::Environment& env, std::string title)
+Title::Title(const Environment& env, std::string title)
     : HorizontalLayout(env),
       back_(env, SCALED_ROO_ICON(outlined, navigation_arrow_back)),
-      label_(env, std::move(title), roo_windows::font_h6(),
+      label_(env, std::move(title), font_h6(),
              roo_display::kLeft | roo_display::kMiddle) {
-  setGravity(roo_windows::kGravityMiddle);
-  label_.setMargins(roo_windows::MARGIN_NONE);
-  label_.setPadding(roo_windows::PADDING_TINY);
+  setGravity(kGravityMiddle);
+  label_.setMargins(MarginSize::NONE);
+  label_.setPadding(PaddingSize::TINY);
   add(back_);
-  add(label_, { weight : 1 });
+  add(label_, {weight : 1});
   back_.setOnInteractiveChange([&]() { getTask()->exitActivity(); });
 }
 

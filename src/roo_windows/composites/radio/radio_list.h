@@ -14,19 +14,17 @@ template <typename Model>
 class RadioListModel;
 
 template <typename Model>
-class RadioListItem : public roo_windows::HorizontalLayout {
+class RadioListItem : public HorizontalLayout {
  public:
   using Element = typename Model::Element;
 
-  RadioListItem(const roo_windows::Environment& env,
-                std::function<void(int idx)> on_click)
+  RadioListItem(const Environment& env, std::function<void(int idx)> on_click)
       : HorizontalLayout(env), button_(env), item_(), on_click_(on_click) {
     new (item_) Element(env);
     init();
   }
 
-  RadioListItem(const roo_windows::Environment& env,
-                const Element& prototype_item,
+  RadioListItem(const Environment& env, const Element& prototype_item,
                 std::function<void(int idx)> on_click)
       : HorizontalLayout(env), button_(env), item_(), on_click_(on_click) {
     new (item_) Element(prototype_item);
@@ -70,13 +68,13 @@ class RadioListItem : public roo_windows::HorizontalLayout {
   friend class RadioListModel<Model>;
 
   void init() {
-    item().setMargins(roo_windows::MARGIN_NONE);
-    item().setPadding(roo_windows::PADDING_NONE);
-    setGravity(roo_windows::kGravityMiddle);
-    setPadding(Padding(PADDING_TINY, PADDING_NONE));
-    button_.setMargins(roo_windows::MARGIN_NONE, roo_windows::MARGIN_SMALL);
+    item().setMargins(MarginSize::NONE);
+    item().setPadding(PaddingSize::NONE);
+    setGravity(kGravityMiddle);
+    setPadding(Padding(PaddingSize::TINY, PaddingSize::NONE));
+    button_.setMargins(MarginSize::NONE, MarginSize::SMALL);
     add(button_);
-    add(item(), { weight : 1 });
+    add(item(), {weight : 1});
     button_.setOnInteractiveChange([this]() { on_click_(idx_); });
   }
 
@@ -87,7 +85,7 @@ class RadioListItem : public roo_windows::HorizontalLayout {
 };
 
 template <typename Model>
-class RadioListModel : public roo_windows::ListModel<RadioListItem<Model>> {
+class RadioListModel : public ListModel<RadioListItem<Model>> {
  public:
   RadioListModel() : model_(nullptr), selected_(-1) {}
   RadioListModel(Model& model) : model_(&model), selected_(-1) {}
@@ -127,31 +125,29 @@ class RadioListModel : public roo_windows::ListModel<RadioListItem<Model>> {
 };
 
 template <typename Model>
-class RadioList : public roo_windows::Holder {
+class RadioList : public Holder {
  public:
-  using RadioListWidget = roo_windows::ListLayout<RadioListItem<Model>>;
+  using RadioListWidget = ListLayout<RadioListItem<Model>>;
 
-  RadioList(const roo_windows::Environment& env,
-            const typename Model::Element& prototype)
+  RadioList(const Environment& env, const typename Model::Element& prototype)
       : Holder(env),
         list_model_(),
         list_(env, list_model_,
               RadioListItem<Model>(
                   env, prototype, [this](int idx) { elementSelected(idx); })) {}
 
-  RadioList(const roo_windows::Environment& env)
+  RadioList(const Environment& env)
       : Holder(env),
         list_model_(),
         list_(env, list_model_, RadioListItem<Model>(env, [this](int idx) {
                 elementSelected(idx);
               })) {}
 
-  RadioList(const roo_windows::Environment& env, Model& model)
-      : RadioList(env) {
+  RadioList(const Environment& env, Model& model) : RadioList(env) {
     setModel(model);
   }
 
-  RadioList(const roo_windows::Environment& env, Model& model,
+  RadioList(const Environment& env, Model& model,
             typename Model::Element prototype)
       : RadioList(env, std::move(prototype)) {
     setModel(model);
@@ -164,10 +160,9 @@ class RadioList : public roo_windows::Holder {
     setContents(list_);
   }
 
-  roo_windows::PreferredSize getPreferredSize() const override {
-    return roo_windows::PreferredSize(
-        roo_windows::PreferredSize::MatchParentWidth(),
-        roo_windows::PreferredSize::WrapContentHeight());
+  PreferredSize getPreferredSize() const override {
+    return PreferredSize(PreferredSize::MatchParentWidth(),
+                         PreferredSize::WrapContentHeight());
   }
 
   void reset() {

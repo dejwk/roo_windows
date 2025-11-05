@@ -1,20 +1,21 @@
 #pragma once
 
-#include "roo_windows/config.h"
+#include <inttypes.h>
+#include "roo_windows/core/theme.h"
 
 namespace roo_windows {
 
-enum PaddingSize {
-  PADDING_DEFAULT = 0,
-  PADDING_NONE = 1,
-  PADDING_TINY = 2,
-  PADDING_SMALL = 3,
-  PADDING_REGULAR = 4,
-  PADDING_LARGE = 5,
-  PADDING_HUGE = 6,
-  PADDING_HUMONGOUS = 7,
-  PADDING_NEGATIVE_TINY = 8,
-  PADDING_NEGATIVE_SMALL = 9,
+enum class PaddingSize {
+  DEFAULT_SIZE = 0,
+  NONE = 1,
+  TINY = 2,
+  SMALL = 3,
+  REGULAR = 4,
+  LARGE = 5,
+  HUGE = 6,
+  HUMONGOUS = 7,
+  NEGATIVE_TINY = 8,
+  NEGATIVE_SMALL = 9,
 };
 
 class Padding {
@@ -33,23 +34,23 @@ class Padding {
 
   inline static int16_t DimensionForSize(PaddingSize size) {
     switch (size) {
-      case PADDING_NONE:
+      case PaddingSize::NONE:
         return 0;
-      case PADDING_TINY:
+      case PaddingSize::TINY:
         return Scaled(4);
-      case PADDING_SMALL:
+      case PaddingSize::SMALL:
         return Scaled(8);
-      case PADDING_REGULAR:
+      case PaddingSize::REGULAR:
         return Scaled(12);
-      case PADDING_LARGE:
+      case PaddingSize::LARGE:
         return Scaled(16);
-      case PADDING_HUGE:
+      case PaddingSize::HUGE:
         return Scaled(24);
-      case PADDING_HUMONGOUS:
+      case PaddingSize::HUMONGOUS:
         return Scaled(36);
-      case PADDING_NEGATIVE_TINY:
+      case PaddingSize::NEGATIVE_TINY:
         return Scaled(-4);
-      case PADDING_NEGATIVE_SMALL:
+      case PaddingSize::NEGATIVE_SMALL:
         return Scaled(-8);
       default:
         return Scaled(12);

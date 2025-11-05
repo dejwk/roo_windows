@@ -40,10 +40,10 @@ Dialog::Dialog(const Environment& env, std::vector<std::string> button_labels)
       title_panel_(env),
       button_panel_(env),
       callback_fn_(nullptr) {
-  title_panel_.setMargins(Margins(MARGIN_NONE, MARGIN_REGULAR));
+  title_panel_.setMargins(Margins(MarginSize::NONE, MarginSize::REGULAR));
   add(title_panel_);
-  title_.setPadding(PADDING_LARGE, PADDING_SMALL);
-  title_.setMargins(MARGIN_NONE, MARGIN_NONE);
+  title_.setPadding(PaddingSize::LARGE, PaddingSize::SMALL);
+  title_.setMargins(MarginSize::NONE, MarginSize::NONE);
   title_panel_.add(title_);
   setDividersVisible(false);
   add(divider1_);
@@ -51,8 +51,8 @@ Dialog::Dialog(const Environment& env, std::vector<std::string> button_labels)
       VerticalScrollBar::SHOWN_WHEN_SCROLLING);
   add(contents_, {weight : 1});
   add(divider2_);
-  button_panel_.setPadding(PADDING_TINY);
-  button_panel_.setMargins(Margins(MARGIN_NONE, MARGIN_SMALL));
+  button_panel_.setPadding(PaddingSize::TINY);
+  button_panel_.setMargins(Margins(MarginSize::NONE, MarginSize::SMALL));
   add(button_panel_, {gravity : kGravityRight});
   button_panel_.setGravity(Gravity(kGravityRight, kGravityMiddle));
   buttons_.reserve(button_labels.size());

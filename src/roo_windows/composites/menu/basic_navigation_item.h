@@ -15,48 +15,45 @@
 namespace roo_windows {
 namespace menu {
 
-class BasicNavigationItem : public roo_windows::HorizontalLayout {
+class BasicNavigationItem : public HorizontalLayout {
  public:
-  BasicNavigationItem(const roo_windows::Environment& env,
+  BasicNavigationItem(const Environment& env,
                       const roo_display::Pictogram& icon, roo::string_view text,
-                      roo_windows::Activity& target);
+                      Activity& target);
 
   bool isClickable() const override { return true; }
 
-  roo_windows::PreferredSize getPreferredSize() const override {
-    return roo_windows::PreferredSize(
-        roo_windows::PreferredSize::MatchParentWidth(),
-        roo_windows::PreferredSize::WrapContentHeight());
+  PreferredSize getPreferredSize() const override {
+    return PreferredSize(PreferredSize::MatchParentWidth(),
+                         PreferredSize::WrapContentHeight());
   }
 
  private:
-  roo_windows::Icon icon_;
-  roo_windows::StringViewLabel label_;
-  roo_windows::Activity& target_;
+  Icon icon_;
+  StringViewLabel label_;
+  Activity& target_;
 };
 
-class BasicNavigationItemWithSubtext : public roo_windows::HorizontalLayout {
+class BasicNavigationItemWithSubtext : public HorizontalLayout {
  public:
-  BasicNavigationItemWithSubtext(const roo_windows::Environment& env,
+  BasicNavigationItemWithSubtext(const Environment& env,
                                  const roo_display::Pictogram& icon,
                                  roo::string_view label,
-                                 roo::string_view subtext,
-                                 roo_windows::Activity& target);
+                                 roo::string_view subtext, Activity& target);
 
   bool isClickable() const override { return true; }
 
-  roo_windows::PreferredSize getPreferredSize() const override {
-    return roo_windows::PreferredSize(
-        roo_windows::PreferredSize::MatchParentWidth(),
-        roo_windows::PreferredSize::WrapContentHeight());
+  PreferredSize getPreferredSize() const override {
+    return PreferredSize(PreferredSize::MatchParentWidth(),
+                         PreferredSize::WrapContentHeight());
   }
 
  private:
-  roo_windows::Icon icon_;
-  roo_windows::VerticalLayout content_;
-  roo_windows::StringViewLabel label_;
-  roo_windows::StringViewLabel subtext_;
-  roo_windows::Activity& target_;
+  Icon icon_;
+  VerticalLayout content_;
+  StringViewLabel label_;
+  StringViewLabel subtext_;
+  Activity& target_;
 };
 
 }  // namespace menu

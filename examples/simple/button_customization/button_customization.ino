@@ -57,8 +57,8 @@ class MyPane : public VerticalLayout {
     button4_.setContentColor(roo_display::color::SaddleBrown);
     button4_.setCornerRadius(20);
     button4_.setElevation(10, 2);
-    button4_.setPadding(PADDING_LARGE);
-    button4_.setMargins(MARGIN_LARGE);
+    button4_.setPadding(PaddingSize::LARGE);
+    button4_.setMargins(MarginSize::LARGE);
     button4_.setFont(font_h5());
     // You can further customize the button by subclassing it. For example, you
     // can override getBorderStyle() to change the outline thickness.

@@ -33,8 +33,8 @@ class HorizontalLayout : public Panel {
 
   HorizontalLayout(const Environment& env)
       : Panel(env),
-        padding_(PADDING_NONE),
-        margins_(MARGIN_NONE),
+        padding_(PaddingSize::NONE),
+        margins_(MarginSize::NONE),
         gravity_(),
         use_largest_child_(false),
         weight_sum_(0),
