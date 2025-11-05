@@ -16,11 +16,11 @@ BaseSliderWithCaption::BaseSliderWithCaption(
   value_.setMargins(roo_windows::MARGIN_LARGE, roo_windows::MARGIN_NONE);
   caption_.setPadding(roo_windows::PADDING_DEFAULT, roo_windows::PADDING_NONE);
   value_.setPadding(roo_windows::PADDING_DEFAULT, roo_windows::PADDING_NONE);
-  text_section_.add(caption_,
-                    roo_display::kLeft.shiftBy(roo_windows::Scaled(8)));
-  text_section_.add(value_,
-                    roo_display::kRight.shiftBy(roo_windows::Scaled(-8)));
+  text_section_.add(caption_, roo_display::kLeft);
+  text_section_.add(value_, roo_display::kRight);
   add(text_section_);
+  slider_.setMargins(roo_windows::MARGIN_DEFAULT,
+                     roo_windows::MARGIN_NEGATIVE_SMALL);
   add(slider_);
   slider_.setOnInteractiveChange([this]() {
     value_.setText(formatValue(slider_.getPos()));

@@ -27,6 +27,8 @@ class BaseSliderWithCaption : public roo_windows::VerticalLayout {
 
   void setCaption(std::string caption) { caption_.setText(std::move(caption)); }
 
+  virtual Margins getMargins() const { return Margins(0, Scaled(8)); }
+
  protected:
   virtual std::string formatValue(uint16_t value) const = 0;
 
