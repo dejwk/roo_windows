@@ -297,7 +297,24 @@ void Container::invalidateBeneath(const Rect& bounds, const Widget* widget,
                                   bool clip) {
   Rect clipped = clip ? Rect::Intersect(bounds, this->bounds()) : bounds;
   if (clipped.empty()) return;
-  if (clip || this->bounds().contains(clipped) || parent() == nullptr) {
+  bool fully_overwritten = false;
+  if (parent() == nullptr) {
+    fully_overwritten = true;
+  } else {
+    uint16_t thickness = getBorderStyle().getThickness();
+    if (thickness == 0 && (clip || this->bounds().contains(clipped))) {
+      fully_overwritten = true;
+    } else if (clip) {
+      Rect inner = Rect(this->bounds().xMin() + thickness,
+                        this->bounds().yMin() + thickness,
+                        this->bounds().xMax() - thickness - 1,
+                        this->bounds().yMax() - thickness - 1);
+      if (inner.contains(clipped)) {
+        fully_overwritten = true;
+      }
+    }
+  }
+  if (fully_overwritten) {
     // Typical case: the hidden child will be overwritten by this panel.
     invalidateBeneathDescending(clipped, widget);
   } else {
