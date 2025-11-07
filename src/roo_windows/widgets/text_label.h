@@ -1,9 +1,10 @@
 #pragma once
 
+#include "roo_backport/string_view.h"
 #include "roo_display/color/color.h"
 #include "roo_display/font/font.h"
-#include "roo_backport/string_view.h"
 #include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/gravity.h"
 #include "roo_windows/core/panel.h"
 
 namespace roo_windows {
@@ -14,11 +15,11 @@ class TextLabel : public BasicWidget {
             const roo_display::Font& font);
 
   TextLabel(const Environment& env, std::string value,
-            const roo_display::Font& font, roo_display::Alignment alignment);
+            const roo_display::Font& font, Gravity gravity);
 
   TextLabel(const Environment& env, std::string value,
             const roo_display::Font& font, roo_display::Color color,
-            roo_display::Alignment alignment);
+            Gravity gravity);
 
   void paint(const Canvas& canvas) const override;
 
@@ -46,7 +47,7 @@ class TextLabel : public BasicWidget {
   std::string value_;
   const roo_display::Font& font_;
   roo_display::Color color_;
-  roo_display::Alignment alignment_;
+  Gravity gravity_;
 };
 
 class StringViewLabel : public BasicWidget {
@@ -55,12 +56,11 @@ class StringViewLabel : public BasicWidget {
                   const roo_display::Font& font);
 
   StringViewLabel(const Environment& env, roo::string_view value,
-                  const roo_display::Font& font,
-                  roo_display::Alignment alignment);
+                  const roo_display::Font& font, Gravity gravity);
 
   StringViewLabel(const Environment& env, roo::string_view value,
                   const roo_display::Font& font, roo_display::Color color,
-                  roo_display::Alignment alignment);
+                  Gravity gravity);
 
   void paint(const Canvas& canvas) const override;
 
@@ -80,7 +80,7 @@ class StringViewLabel : public BasicWidget {
   roo::string_view value_;
   const roo_display::Font& font_;
   roo_display::Color color_;
-  roo_display::Alignment alignment_;
+  Gravity gravity_;
 };
 
 }  // namespace roo_windows

@@ -8,29 +8,27 @@ namespace roo_windows {
 
 TextLabel::TextLabel(const Environment& env, std::string value,
                      const roo_display::Font& font)
-    : TextLabel(env, std::move(value), font,
-                roo_display::kLeft | roo_display::kMiddle) {}
+    : TextLabel(env, std::move(value), font, kGravityLeft | kGravityMiddle) {}
 
 TextLabel::TextLabel(const Environment& env, std::string value,
-                     const roo_display::Font& font,
-                     roo_display::Alignment alignment)
+                     const roo_display::Font& font, Gravity gravity)
     : TextLabel(env, std::move(value), font, roo_display::color::Transparent,
-                alignment) {}
+                gravity) {}
 
 TextLabel::TextLabel(const Environment& env, std::string value,
                      const roo_display::Font& font, roo_display::Color color,
-                     roo_display::Alignment alignment)
+                     Gravity gravity)
     : BasicWidget(env),
       value_(std::move(value)),
       font_(font),
       color_(color),
-      alignment_(alignment) {}
+      gravity_(gravity) {}
 
 void TextLabel::paint(const Canvas& canvas) const {
   roo_display::Color color =
       color_.a() == 0 ? parent()->defaultColor() : color_;
   canvas.drawTiled(roo_display::StringViewLabel(value_, font_, color), bounds(),
-                   adjustAlignment(alignment_));
+                   adjustAlignment(gravity_.asAlignment()));
 }
 
 Dimensions TextLabel::getSuggestedMinimumDimensions() const {
@@ -46,7 +44,8 @@ Dimensions TextLabel::getSuggestedMinimumDimensions() const {
 void TextLabel::setText(std::string value) {
   if (value_ == value) return;
   value_ = std::move(value);
-  setDirty();
+  // setDirty();
+  invalidateInterior();
   requestLayout();
 }
 
@@ -55,7 +54,8 @@ void TextLabel::setText(const char* value) { setText(roo::string_view(value)); }
 void TextLabel::setText(roo::string_view value) {
   if (value_ == value) return;
   value_ = std::string((const char*)value.data(), value.size());
-  setDirty();
+  // setDirty();
+  invalidateInterior();
   requestLayout();
 }
 
@@ -73,36 +73,35 @@ void TextLabel::setTextvf(const char* format, va_list arg) {
 void TextLabel::clearText() {
   if (value_.empty()) return;
   value_.clear();
-  setDirty();
+  // setDirty();
+  invalidateInterior();
   requestLayout();
 }
 
 StringViewLabel::StringViewLabel(const Environment& env, roo::string_view value,
                                  const roo_display::Font& font)
     : StringViewLabel(env, std::move(value), font,
-                      roo_display::kLeft | roo_display::kMiddle) {}
+                      kGravityLeft | kGravityMiddle) {}
 
 StringViewLabel::StringViewLabel(const Environment& env, roo::string_view value,
-                                 const roo_display::Font& font,
-                                 roo_display::Alignment alignment)
+                                 const roo_display::Font& font, Gravity gravity)
     : StringViewLabel(env, std::move(value), font,
-                      roo_display::color::Transparent, alignment) {}
+                      roo_display::color::Transparent, gravity) {}
 
 StringViewLabel::StringViewLabel(const Environment& env, roo::string_view value,
                                  const roo_display::Font& font,
-                                 roo_display::Color color,
-                                 roo_display::Alignment alignment)
+                                 roo_display::Color color, Gravity gravity)
     : BasicWidget(env),
       value_(std::move(value)),
       font_(font),
       color_(color),
-      alignment_(alignment) {}
+      gravity_(gravity) {}
 
 void StringViewLabel::paint(const Canvas& canvas) const {
   roo_display::Color color =
       color_.a() == 0 ? parent()->defaultColor() : color_;
   canvas.drawTiled(roo_display::StringViewLabel(value_, font_, color), bounds(),
-                   adjustAlignment(alignment_));
+                   adjustAlignment(gravity_.asAlignment()));
 }
 
 Dimensions StringViewLabel::getSuggestedMinimumDimensions() const {
@@ -118,14 +117,16 @@ Dimensions StringViewLabel::getSuggestedMinimumDimensions() const {
 void StringViewLabel::setText(roo::string_view value) {
   if (value_ == value) return;
   value_ = std::move(value);
-  setDirty();
+  // setDirty();
+  invalidateInterior();
   requestLayout();
 }
 
 void StringViewLabel::clearText() {
   if (value_.empty()) return;
   value_ = "";
-  setDirty();
+  // setDirty();
+  invalidateInterior();
   requestLayout();
 }
 

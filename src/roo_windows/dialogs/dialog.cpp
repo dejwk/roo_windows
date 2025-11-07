@@ -54,7 +54,7 @@ Dialog::Dialog(const Environment& env, std::vector<std::string> button_labels)
   button_panel_.setPadding(PaddingSize::TINY);
   button_panel_.setMargins(Margins(MarginSize::NONE, MarginSize::SMALL));
   add(button_panel_, {gravity : kGravityRight});
-  button_panel_.setGravity(Gravity(kGravityRight, kGravityMiddle));
+  button_panel_.setGravity(kGravityRight | kGravityMiddle);
   buttons_.reserve(button_labels.size());
   int i = 0;
   for (std::string& label : button_labels) {

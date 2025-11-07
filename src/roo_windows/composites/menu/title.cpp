@@ -9,8 +9,7 @@ namespace menu {
 Title::Title(const Environment& env, std::string title)
     : HorizontalLayout(env),
       back_(env, SCALED_ROO_ICON(outlined, navigation_arrow_back)),
-      label_(env, std::move(title), font_h6(),
-             roo_display::kLeft | roo_display::kMiddle) {
+      label_(env, std::move(title), font_h6(), kGravityLeft | kGravityMiddle) {
   setGravity(kGravityMiddle);
   label_.setMargins(MarginSize::NONE);
   label_.setPadding(PaddingSize::TINY);

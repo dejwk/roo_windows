@@ -1,5 +1,9 @@
 #pragma once
 
+#include <inttypes.h>
+
+#include "roo_display/ui/alignment.h"
+
 namespace roo_windows {
 
 static const uint8_t kGravityAxisSpecified = 1;
@@ -67,6 +71,13 @@ class HorizontalGravity : public GravityAxis {
 
   constexpr bool isRight() const { return isAxisMax(); }
 
+  constexpr roo_display::HAlign asAlignment() const {
+    return isLeft()     ? roo_display::kLeft
+           : isCenter() ? roo_display::kCenter
+           : isRight()  ? roo_display::kRight
+                        : roo_display::kOrigin;
+  }
+
  private:
   friend class Gravity;
 };
@@ -83,6 +94,13 @@ class VerticalGravity : public GravityAxis {
   constexpr bool isTop() const { return isAxisMin(); }
 
   constexpr bool isBottom() const { return isAxisMax(); }
+
+  constexpr roo_display::VAlign asAlignment() const {
+    return isTop()      ? roo_display::kTop
+           : isMiddle() ? roo_display::kMiddle
+           : isBottom() ? roo_display::kBottom
+                        : roo_display::kBaseline;
+  }
 
  private:
   friend class Gravity;
@@ -106,9 +124,25 @@ class Gravity {
     return VerticalGravity((GravityAxisAlignment)(value_ >> 4));
   }
 
+  roo_display::Alignment asAlignment() const {
+    return x().asAlignment() | y().asAlignment();
+  }
+
  private:
   uint8_t value_;
 };
+
+// Convenience methods to combine horizontal and vertical gravities into a
+// combined gravity using | operator.
+inline constexpr Gravity operator|(HorizontalGravity x, VerticalGravity y) {
+  return Gravity(x, y);
+}
+
+inline constexpr Gravity operator|(VerticalGravity y, HorizontalGravity x) {
+  return Gravity(x, y);
+}
+
+// Convenience gravity constants.
 
 static constexpr HorizontalGravity kHorizontalGravityNone =
     HorizontalGravity(GravityAxisAlignment::NONE);
