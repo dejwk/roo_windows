@@ -23,4 +23,13 @@ SingletonActivity::SingletonActivity(Application& app, Widget& contents)
   task->enterActivity(this);
 }
 
+  roo_display::Box SingletonActivity::getPreferredPlacement(const Task& task) {
+    // Respect widget's margins.
+    Margins margins = contents_.getMargins();
+    Dimensions dims = task.getDimensions();
+    return roo_display::Box(margins.left(), margins.top(),
+                            dims.width() - 1 - margins.right(),
+                            dims.height() - 1 - margins.bottom());
+  }
+
 }  // namespace roo_windows

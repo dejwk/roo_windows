@@ -70,6 +70,9 @@ class SingletonActivity : public Activity {
 
   Widget& getContents() override { return contents_; }
 
+  // Respect widget's margins.
+  roo_display::Box getPreferredPlacement(const Task& task) override;
+
  private:
   Widget& contents_;
 };
