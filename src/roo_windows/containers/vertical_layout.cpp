@@ -231,13 +231,16 @@ void VerticalLayout::onLayout(bool changed, const Rect& rect) {
     if (w.isGone()) continue;
     const ChildMeasure& measure = child_measures_[i];
     Margins margins = w.getMargins();
+    Rect trim(padding.left() + margins.left(), padding.top() + margins.top(),
+              rect.width() - padding.right() - margins.right() - 1,
+              rect.height() - padding.bottom() - margins.bottom() - 1);
     HorizontalGravity gravity = measure.params().gravity;
     if (!gravity.isSet()) {
       gravity = gravity_.x();
     }
     int16_t child_xmin;
     if (gravity.isCenter()) {
-      child_xmin = padding.left() +
+      child_xmin = padding.left() - padding.right() +
                    (child_space - measure.latest().width()) / 2 +
                    margins.left() - margins.right();
     } else if (gravity.isRight()) {
@@ -247,9 +250,10 @@ void VerticalLayout::onLayout(bool changed, const Rect& rect) {
       child_xmin = padding.left() + margins.left();
     }
     child_ymin += margins.top();
-    w.layout(Rect(child_xmin, child_ymin,
-                  child_xmin + measure.latest().width() - 1,
-                  child_ymin + measure.latest().height() - 1));
+    w.layout(Rect::Intersect(
+        Rect(child_xmin, child_ymin, child_xmin + measure.latest().width() - 1,
+             child_ymin + measure.latest().height() - 1),
+        trim));
     child_ymin += measure.latest().height() + margins.bottom();
   }
 }
