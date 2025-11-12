@@ -6,24 +6,18 @@
 
 namespace roo_windows {
 
-template <typename Model>
 class RadioListDialog : public Dialog {
  public:
-  RadioListDialog(const roo_windows::Environment& env)
-      : Dialog(env, {kStrDialogCancel, kStrDialogOK}), list_(env) {
-    init();
-  }
-
   RadioListDialog(const roo_windows::Environment& env,
-                  const typename Model::Element& prototype)
+                  std::function<std::unique_ptr<Widget>()> prototype_fn)
       : Dialog(env, {kStrDialogCancel, kStrDialogOK}),
-        list_(env, prototype) {
+        list_(env, prototype_fn) {
     init();
   }
 
   int selected() const { return list_.selected(); }
 
-  void setModel(Model& model) {
+  void setModel(RadioListModel& model) {
     list_.setModel(model);
     contents_.setContents(list_);
     last_button().setEnabled(false);
@@ -41,11 +35,6 @@ class RadioListDialog : public Dialog {
 
   void contentsChanged() { list_.modelChanged(); }
 
-  RadioListDialog(const roo_windows::Environment& env, Model& model)
-      : RadioListDialog(env) {
-    setModel(model);
-  }
-
  protected:
   virtual void onChange() { triggerInteractiveChange(); }
 
@@ -59,7 +48,7 @@ class RadioListDialog : public Dialog {
     });
   }
 
-  roo_windows::RadioList<Model> list_;
+  roo_windows::RadioList list_;
 };
 
 }  // namespace roo_windows

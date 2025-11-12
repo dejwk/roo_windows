@@ -8,11 +8,8 @@
 
 namespace roo_windows {
 
-template <typename ElementType>
 class ListModel {
  public:
-  using Element = ElementType;
-
   ListModel() {}
   virtual ~ListModel() {}
 
@@ -20,81 +17,76 @@ class ListModel {
   virtual int elementCount() const = 0;
 
   // Set the specified visual element to the ith item of the list.
-  virtual void set(int idx, Element& dest) const = 0;
+  virtual void set(int idx, Widget& dest) const = 0;
 };
 
-template <typename Element>
 class CircularBuffer {
  public:
-  CircularBuffer(const Environment& env)
-      : elements_(nullptr), capacity_(0), start_(0), count_(0) {}
-
-  ~CircularBuffer() { operator delete[](elements_.release()); }
+  CircularBuffer(const Environment& env) : elements_(), start_(0), count_(0) {}
 
   CircularBuffer(CircularBuffer&& other)
-      : elements_(other.elements_.release()),
-        capacity_(other.capacity_),
+      : elements_(std::move(other.elements_)),
         start_(other.start_),
         count_(other.count_) {}
 
-  void ensure_capacity(int capacity, const Element& prototype) {
+  void ensure_capacity(int capacity,
+                       std::function<std::unique_ptr<Widget>()>& prototype_fn) {
     CHECK_EQ(count_, 0);
-    if (capacity <= capacity_) return;
-    elements_.reset(
-        static_cast<Element*>(::operator new[](capacity * sizeof(Element))));
-    capacity_ = capacity;
+    if (capacity <= this->capacity()) return;
     start_ = 0;
     count_ = 0;
-    for (int i = 0; i < capacity; ++i) {
-      new (&elements_[i]) Element(prototype);
+    int i = this->capacity();
+    while (i < capacity) {
+      elements_.push_back(prototype_fn());
+      ++i;
     }
   }
 
-  Element& push_back() {
-    CHECK_LT(count_, capacity_);
-    int offset = (start_ + count_) % capacity_;
+  Widget& push_back() {
+    CHECK_LT(count_, capacity());
+    int offset = (start_ + count_) % capacity();
     ++count_;
-    return elements_[offset];
+    return *elements_[offset];
   }
 
-  Element& pop_back() {
+  Widget& pop_back() {
     CHECK_GT(count_, 0);
     --count_;
-    int offset = (start_ + count_) % capacity_;
-    return elements_[offset];
+    int offset = (start_ + count_) % capacity();
+    return *elements_[offset];
   }
 
-  Element& push_front() {
-    CHECK_LT(count_, capacity_);
+  Widget& push_front() {
+    CHECK_LT(count_, capacity());
     --start_;
-    if (start_ < 0) start_ += capacity_;
+    if (start_ < 0) start_ += capacity();
     ++count_;
-    return elements_[start_];
+    return *elements_[start_];
   }
 
-  Element& pop_front() {
+  Widget& pop_front() {
     CHECK_GT(count_, 0);
     int offset = start_;
     ++start_;
-    if (start_ >= capacity_) start_ -= capacity_;
+    if (start_ >= capacity()) start_ -= capacity();
     --count_;
-    return elements_[offset];
+    return *elements_[offset];
   }
 
-  int pos(int idx) const { return (start_ + idx) % capacity_; }
+  int pos(int idx) const { return (start_ + idx) % capacity(); }
 
-  Element& operator[](int idx) { return elements_[pos(idx)]; }
-  const Element& operator[](int idx) const { return elements_[pos(idx)]; }
+  Widget& operator[](int idx) { return *elements_[pos(idx)]; }
+  const Widget& operator[](int idx) const { return *elements_[pos(idx)]; }
 
   bool empty() const { return count_ == 0; }
 
-  size_t capacity() const { return capacity_; }
+  size_t capacity() const { return elements_.size(); }
 
   size_t count() const { return count_; }
 
  private:
-  std::unique_ptr<Element[]> elements_;
-  int capacity_;
+  std::vector<std::unique_ptr<Widget>> elements_;
+  // int capacity_;
   int start_;
   int count_;
 };
@@ -114,17 +106,18 @@ inline Rect unclippedRegion(const Widget* w) {
   return rect;
 }
 
-template <typename Element>
 class ListLayout : public Panel {
  public:
+  using PrototypeFn = std::function<std::unique_ptr<Widget>()>;
+
   // Creates a list layout that uses the specified prototype element.
-  ListLayout(const Environment& env, ListModel<Element>& model,
-             Element prototype)
+  ListLayout(const Environment& env, ListModel& model, PrototypeFn prototype_fn)
       : Panel(env),
         padding_(),
         model_(model),
         elements_(env),
-        prototype_(std::move(prototype)),
+        prototype_fn_(std::move(prototype_fn)),
+        prototype_(prototype_fn_()),
         first_(0),
         last_(-1),
         in_paint_children_(false),
@@ -264,7 +257,7 @@ class ListLayout : public Panel {
   }
 
   PreferredSize getPreferredSize() const override {
-    PreferredSize element = prototype_.getPreferredSize();
+    PreferredSize element = prototype_->getPreferredSize();
     return PreferredSize(PreferredSize::MatchParentWidth(),
                          element.height().isExact()
                              ? PreferredSize::ExactHeight(
@@ -277,18 +270,18 @@ class ListLayout : public Panel {
     int16_t v_padding = padding_.top() + padding_.bottom();
     // Measure the element under new constraints, and see how many max instances
     // will fit on the screen.
-    Margins margins = prototype_.getMargins();
+    Margins margins = prototype_->getMargins();
     int16_t h_margin = margins.left() + margins.right();
     int16_t v_margin = margins.top() + margins.bottom();
-    PreferredSize preferred = prototype_.getPreferredSize();
-    Dimensions d = prototype_.measure(
+    PreferredSize preferred = prototype_->getPreferredSize();
+    Dimensions d = prototype_->measure(
         width.getChildWidthSpec(h_padding + h_margin, preferred.width()),
         preferred.height().isExact()
             ? HeightSpec::Exactly(preferred.height().value())
             : HeightSpec::Unspecified(40));
     YDim h = d.height();
     if (h == 0) {
-      h = prototype_.getNaturalDimensions().height();
+      h = prototype_->getNaturalDimensions().height();
     }
     if (h == 0) h = Scaled(15);
     h += v_margin;
@@ -302,11 +295,11 @@ class ListLayout : public Panel {
     if (rect.height() <= 0) {
       return;
     }
-    prototype_.setVisibility(VISIBLE);
+    prototype_->setVisibility(VISIBLE);
     int16_t h =
         (element_count_ == 0) ? rect.height() : rect.height() / element_count_;
-    prototype_.layout(Rect(0, 0, rect.width() - 1, h - 1));
-    prototype_.setVisibility(GONE);
+    prototype_->layout(Rect(0, 0, rect.width() - 1, h - 1));
+    prototype_->setVisibility(GONE);
     bool moved = (rect.yMin() != parent_bounds().yMin() ||
                   rect.yMax() != parent_bounds().yMax());
     int capacity = (getMainWindow()->height() - 2) / element_height() + 2;
@@ -321,7 +314,7 @@ class ListLayout : public Panel {
       while (getChildrenCount() > 1) {
         removeLast();
       }
-      elements_.ensure_capacity(capacity, prototype_);
+      elements_.ensure_capacity(capacity, prototype_fn_);
       for (int i = 0; i < elements_.capacity(); i++) {
         add(elements_[i]);
       }
@@ -331,7 +324,7 @@ class ListLayout : public Panel {
   }
 
  private:
-  void setFromModel(int pos, Element& e) {
+  void setFromModel(int pos, Widget& e) {
     model_.set(pos, e);
     if (e.isLayoutRequested()) {
       layoutElement(pos, e);
@@ -339,8 +332,8 @@ class ListLayout : public Panel {
   }
 
   // Configures the given element to represent the item at the given pos.
-  void show(int pos, Element& e) {
-    Margins m = prototype_.getMargins();
+  void show(int pos, Widget& e) {
+    Margins m = prototype_->getMargins();
     if (element_height() <= m.top() + m.bottom()) {
       // Won't fit anyway.
       return;
@@ -349,8 +342,8 @@ class ListLayout : public Panel {
     e.setVisibility(VISIBLE);
   }
 
-  void layoutElement(int pos, Element& e) {
-    Margins m = prototype_.getMargins();
+  void layoutElement(int pos, Widget& e) {
+    Margins m = prototype_->getMargins();
     int16_t h_padding = padding_.left() + padding_.right();
     int16_t v_padding = padding_.top() + padding_.bottom();
     Dimensions d = e.measure(
@@ -373,12 +366,13 @@ class ListLayout : public Panel {
     return desired_element_height * element_count_ + v_padding;
   }
 
-  int element_height() const { return prototype_.height(); }
+  int element_height() const { return prototype_->height(); }
 
   Padding padding_;
-  ListModel<Element>& model_;
-  CircularBuffer<Element> elements_;
-  Element prototype_;
+  ListModel& model_;
+  CircularBuffer elements_;
+  std::function<std::unique_ptr<Widget>()> prototype_fn_;
+  std::unique_ptr<Widget> prototype_;
   int element_count_;
   int element_height_;
   int first_;
@@ -386,13 +380,5 @@ class ListLayout : public Panel {
   bool in_paint_children_;
   int paint_offset_;
 };
-
-template <typename Element>
-ListLayout<Element> MakeListLayout(const Environment& env,
-                                   ListModel<Element>& model,
-                                   Element prototype) {
-  ListLayout<Element> layout(env, model, std::move(prototype));
-  return std::move(layout);
-}
 
 }  // namespace roo_windows

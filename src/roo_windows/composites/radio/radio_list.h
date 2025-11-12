@@ -10,37 +10,18 @@
 
 namespace roo_windows {
 
-template <typename Model>
 class RadioListModel;
 
-template <typename Model>
 class RadioListItem : public HorizontalLayout {
  public:
-  using Element = typename Model::Element;
-
-  RadioListItem(const Environment& env, std::function<void(int idx)> on_click)
-      : HorizontalLayout(env), button_(env), item_(), on_click_(on_click) {
-    new (item_) Element(env);
-    init();
-  }
-
-  RadioListItem(const Environment& env, const Element& prototype_item,
+  RadioListItem(const Environment& env, std::unique_ptr<Widget> item,
                 std::function<void(int idx)> on_click)
-      : HorizontalLayout(env), button_(env), item_(), on_click_(on_click) {
-    new (item_) Element(prototype_item);
+      : HorizontalLayout(env),
+        button_(env),
+        item_(std::move(item)),
+        on_click_(on_click) {
     init();
   }
-
-  RadioListItem(const RadioListItem& other)
-      : HorizontalLayout(other),
-        button_(other.button_),
-        item_(),
-        on_click_(other.on_click_) {
-    new (item_) Element(*((Element*)other.item_));
-    init();
-  }
-
-  ~RadioListItem() { ((Element*)item_)->~Element(); }
 
   void set(int idx, bool is_on) {
     idx_ = idx;
@@ -60,16 +41,16 @@ class RadioListItem : public HorizontalLayout {
 
   void onClicked() override { on_click_(idx_); }
 
-  Element& item() { return *(Element*)item_; }
+  Widget& item() { return *item_; }
 
-  const Element& item() const { return *(Element*)item_; }
+  const Widget& item() const { return *item_; }
 
  private:
-  friend class RadioListModel<Model>;
+  friend class RadioListModel;
 
   void init() {
-    item().setMargins(MarginSize::NONE);
-    item().setPadding(PaddingSize::NONE);
+    // item().setMargins(MarginSize::NONE);
+    // item().setPadding(PaddingSize::NONE);
     setGravity(kGravityMiddle);
     setPadding(Padding(PaddingSize::TINY, PaddingSize::NONE));
     button_.setMargins(MarginSize::NONE, MarginSize::SMALL);
@@ -80,28 +61,27 @@ class RadioListItem : public HorizontalLayout {
 
   int idx_;
   RadioButton button_;
-  unsigned char item_[sizeof(Element)];
+  std::unique_ptr<Widget> item_;
   std::function<void(int idx)> on_click_;
 };
 
-template <typename Model>
-class RadioListModel : public ListModel<RadioListItem<Model>> {
+class RadioListModel : public ListModel {
  public:
   RadioListModel() : model_(nullptr), selected_(-1) {}
-  RadioListModel(Model& model) : model_(&model), selected_(-1) {}
+  RadioListModel(ListModel& model) : model_(&model), selected_(-1) {}
 
   int elementCount() const override {
     return model_ == nullptr ? 0 : model_->elementCount();
   }
 
-  void set(int idx, RadioListItem<Model>& dest) const override {
+  void set(int idx, Widget& dest) const override {
     // Note: set is not expected tobe called when model_ is nullptr, because we
     // report zero element count in such case.
-    model_->set(idx, dest.item());
-    dest.set(idx, idx == selected_);
+    model_->set(idx, ((RadioListItem&)dest).item());
+    ((RadioListItem&)dest).set(idx, idx == selected_);
   }
 
-  void setModel(Model& model) {
+  void setModel(ListModel& model) {
     model_ = &model;
     selected_ = -1;
   }
@@ -120,42 +100,30 @@ class RadioListModel : public ListModel<RadioListItem<Model>> {
   int selected() const { return selected_; }
 
  private:
-  const Model* model_;
+  const ListModel* model_;
   int selected_;
 };
 
-template <typename Model>
 class RadioList : public Holder {
  public:
-  using RadioListWidget = ListLayout<RadioListItem<Model>>;
-
-  RadioList(const Environment& env, const typename Model::Element& prototype)
+  RadioList(const Environment& env,
+            std::function<std::unique_ptr<Widget>()> prototype_fn)
       : Holder(env),
         list_model_(),
-        list_(env, list_model_,
-              RadioListItem<Model>(
-                  env, prototype, [this](int idx) { elementSelected(idx); })) {}
+        list_(env, list_model_, [&, prototype_fn]() {
+          return std::make_unique<RadioListItem>(
+              env, prototype_fn(), [this](int idx) { elementSelected(idx); });
+        }) {}
 
-  RadioList(const Environment& env)
-      : Holder(env),
-        list_model_(),
-        list_(env, list_model_, RadioListItem<Model>(env, [this](int idx) {
-                elementSelected(idx);
-              })) {}
-
-  RadioList(const Environment& env, Model& model) : RadioList(env) {
-    setModel(model);
-  }
-
-  RadioList(const Environment& env, Model& model,
-            typename Model::Element prototype)
-      : RadioList(env, std::move(prototype)) {
+  RadioList(const Environment& env, RadioListModel& model,
+            const std::function<std::unique_ptr<Widget>()>& prototype_fn)
+      : RadioList(env, prototype_fn) {
     setModel(model);
   }
 
   int selected() const { return list_model_.selected(); }
 
-  void setModel(Model& model) {
+  void setModel(RadioListModel& model) {
     list_model_.setModel(model);
     setContents(list_);
   }
@@ -193,8 +161,8 @@ class RadioList : public Holder {
     if (old >= 0) list_.modelItemChanged(old);
   }
 
-  RadioListModel<Model> list_model_;
-  RadioListWidget list_;
+  RadioListModel list_model_;
+  ListLayout list_;
 };
 
 }  // namespace roo_windows

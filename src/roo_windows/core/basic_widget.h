@@ -13,9 +13,6 @@ class BasicWidget : public Widget {
  public:
   BasicWidget(const Environment& env) : Widget(env), padding_(0), margins_(0) {}
 
-  BasicWidget(const BasicWidget& w)
-      : Widget(w), padding_(w.padding_), margins_(w.margins_) {}
-
   virtual Padding getDefaultPadding() const {
     return Padding(PaddingSize::REGULAR);
   }

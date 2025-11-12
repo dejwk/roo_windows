@@ -47,13 +47,6 @@ Widget::Widget(const Environment& env)
       redraw_status_(kDirty | kInvalidated),
       on_interactive_change_(nullptr) {}
 
-Widget::Widget(const Widget& w)
-    : parent_(nullptr),
-      parent_bounds_(0, 0, -1, -1),
-      state_(kWidgetEnabled),
-      redraw_status_(kDirty | kInvalidated),
-      on_interactive_change_(nullptr) {}
-
 MainWindow* Widget::getMainWindow() {
   return parent_ == nullptr ? nullptr : parent_->getMainWindow();
 }

@@ -72,7 +72,8 @@ class Widget {
   enum Visibility { VISIBLE, INVISIBLE, GONE };
 
   Widget(const Environment& env);
-  Widget(const Widget& w);
+  Widget(const Widget& w) = delete;
+  Widget(Widget&& w) = default;
   virtual ~Widget() {}
 
   // Causes the widget to request paint(). The widget decides which pixels

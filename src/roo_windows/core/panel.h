@@ -33,8 +33,6 @@ class Panel : public Container {
   virtual bool onInterceptTouchEvent(const TouchEvent& event) { return false; }
 
  protected:
-  Panel(const Panel& other) : Container(other) {}
-
   // Adds a child to this panel.
   void add(WidgetRef child, const Rect& bounds = Rect(0, 0, -1, -1));
 

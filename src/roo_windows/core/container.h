@@ -87,12 +87,6 @@ class Container : public Widget {
   bool isScrollable() const;
 
  protected:
-  Container(const Container& other)
-      : Widget(other),
-        bgcolor_(other.bgcolor_),
-        invalid_region_(0, 0, -1, -1),
-        cached_max_bounds_(0, 0, -1, -1) {}
-
   void attachChild(WidgetRef child,
                    const Rect& initial_bounds = Rect(0, 0, -1, -1));
 

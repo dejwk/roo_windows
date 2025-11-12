@@ -19,8 +19,6 @@ class Holder : public Container {
 
   Holder(const Environment& env) : Container(env), contents_(nullptr) {}
 
-  Holder(const Holder& h) : Container(h) { contents_ = nullptr; }
-
   void setContents(WidgetRef new_contents) {
     if (contents() == &*new_contents &&
         contents()->isOwnedByParent() == new_contents.is_owned()) {
