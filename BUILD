@@ -1,6 +1,8 @@
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+
 cc_library(
     name = "roo_windows",
-    visibility = ["//visibility:public"],
     srcs = glob(
         [
             "src/**/*.cpp",
@@ -8,22 +10,22 @@ cc_library(
         ],
         exclude = ["test/**"],
     ),
+    defines = [
+        #                 "MLOG_roo_windows_layout=1"
+    ],
     includes = [
         "src",
     ],
-    defines = [
-#                 "MLOG_roo_windows_layout=1"
-
-    ],
+    visibility = ["//visibility:public"],
     deps = [
-        "@roo_testing//:arduino",
         "@roo_display",
-        "@roo_locale",
-        "@roo_logging",
         "@roo_icons",
         "@roo_io",
-        "@roo_time",
+        "@roo_locale",
+        "@roo_logging",
         "@roo_scheduler",
+        "@roo_testing//:arduino",
+        "@roo_time",
     ],
 )
 

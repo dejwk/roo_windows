@@ -42,13 +42,13 @@
         "examples/**/*.ino"
     ],
     "dependencies": {
-        "dejwk/roo_collections": ">=1.4.0",
+        "dejwk/roo_collections": ">=1.4.1",
         "dejwk/roo_display": ">=2.3.2",
         "dejwk/roo_locale": ">=1.1.1",
-        "dejwk/roo_logging": ">=1.5.2",
+        "dejwk/roo_logging": ">=1.5.3",
         "dejwk/roo_icons": ">=1.2.1",
-        "dejwk/roo_io": ">=2.1.2",
-        "dejwk/roo_scheduler": ">=2.1.6",
-        "dejwk/roo_time": ">=1.4.0"
+        "dejwk/roo_io": ">=2.1.4",
+        "dejwk/roo_scheduler": ">=2.1.7",
+        "dejwk/roo_time": ">=1.4.1"
     }
 }
