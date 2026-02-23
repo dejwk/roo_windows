@@ -1,7 +1,6 @@
 #pragma once
 
 #include "roo_display.h"
-#include "roo_display/filter/background_fill_optimizer.h"
 #include "roo_windows/core/click_animation.h"
 #include "roo_windows/core/clipper.h"
 #include "roo_windows/core/gesture_detector.h"
@@ -89,8 +88,6 @@ class MainWindow : public Panel {
   // Maintains the area that encapsulates all content that needs to be
   // (re)drawn.
   Rect redraw_bounds_;
-
-  roo_display::BackgroundFillOptimizer::FrameBuffer background_fill_buffer_;
 
   bool initialized_ = false;
 
