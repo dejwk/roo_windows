@@ -191,6 +191,10 @@ class ClipperOutput : public roo_display::DisplayOutput {
     output_->fillRects(blending_mode, color, x0, y0, x1, y1, count);
   }
 
+  const ColorFormat &getColorFormat() const override {
+    return output_->getColorFormat();
+  }
+
  private:
   void sync() {
     if (valid_) return;
