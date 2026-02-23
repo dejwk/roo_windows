@@ -29,13 +29,13 @@ class CircularBuffer {
         start_(other.start_),
         count_(other.count_) {}
 
-  void ensure_capacity(int capacity,
+  void ensure_capacity(size_t capacity,
                        std::function<std::unique_ptr<Widget>()>& prototype_fn) {
     CHECK_EQ(count_, 0);
     if (capacity <= this->capacity()) return;
     start_ = 0;
     count_ = 0;
-    int i = this->capacity();
+    size_t i = this->capacity();
     while (i < capacity) {
       elements_.push_back(prototype_fn());
       ++i;
@@ -43,7 +43,7 @@ class CircularBuffer {
   }
 
   Widget& push_back() {
-    CHECK_LT(count_, capacity());
+    CHECK_LT(count_, (int)capacity());
     int offset = (start_ + count_) % capacity();
     ++count_;
     return *elements_[offset];
@@ -57,7 +57,7 @@ class CircularBuffer {
   }
 
   Widget& push_front() {
-    CHECK_LT(count_, capacity());
+    CHECK_LT(count_, (int)capacity());
     --start_;
     if (start_ < 0) start_ += capacity();
     ++count_;
@@ -68,7 +68,7 @@ class CircularBuffer {
     CHECK_GT(count_, 0);
     int offset = start_;
     ++start_;
-    if (start_ >= capacity()) start_ -= capacity();
+    if ((size_t)start_ >= capacity()) start_ -= capacity();
     --count_;
     return *elements_[offset];
   }
@@ -267,7 +267,7 @@ class ListLayout : public Panel {
 
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override {
     int16_t h_padding = padding_.left() + padding_.right();
-    int16_t v_padding = padding_.top() + padding_.bottom();
+    // int16_t v_padding = padding_.top() + padding_.bottom();
     // Measure the element under new constraints, and see how many max instances
     // will fit on the screen.
     Margins margins = prototype_->getMargins();
@@ -302,7 +302,7 @@ class ListLayout : public Panel {
     prototype_->setVisibility(GONE);
     bool moved = (rect.yMin() != parent_bounds().yMin() ||
                   rect.yMax() != parent_bounds().yMax());
-    int capacity = (getMainWindow()->height() - 2) / element_height() + 2;
+    size_t capacity = (getMainWindow()->height() - 2) / element_height() + 2;
     if (capacity != elements_.capacity() || moved) {
       // Invalidate all the children so that they get repositioned during next
       // paintChildren().
@@ -315,7 +315,7 @@ class ListLayout : public Panel {
         removeLast();
       }
       elements_.ensure_capacity(capacity, prototype_fn_);
-      for (int i = 0; i < elements_.capacity(); i++) {
+      for (size_t i = 0; i < elements_.capacity(); i++) {
         add(elements_[i]);
       }
       first_ = 0;
@@ -345,7 +345,7 @@ class ListLayout : public Panel {
   void layoutElement(int pos, Widget& e) {
     Margins m = prototype_->getMargins();
     int16_t h_padding = padding_.left() + padding_.right();
-    int16_t v_padding = padding_.top() + padding_.bottom();
+    // int16_t v_padding = padding_.top() + padding_.bottom();
     Dimensions d = e.measure(
         WidthSpec::Exactly(width() - m.left() - m.right() - h_padding),
         HeightSpec::Exactly(element_height() - m.top() - m.bottom()));
