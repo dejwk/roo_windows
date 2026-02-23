@@ -8,7 +8,6 @@
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/press_overlay.h"
 #include "roo_windows/core/rtti.h"
-#include "roo_windows/core/main_window.h"
 #include "roo_windows/decoration/decoration.h"
 
 #ifndef MLOG_roo_windows_layout
