@@ -24,30 +24,33 @@ class Activity {
 
   virtual roo_display::Box getPreferredPlacement(const Task& task);
 
-  // Returns the task that this activity is part of, or nullptr if the activity
-  // is not on any task's stack.
+  /// Returns task this activity belongs to, or nullptr if detached.
   Task* getTask() { return task_; }
 
-  // Returns the current application that this activity is part of, or nullptr
-  // if the activity is not on any task's stack.
+  /// Returns application this activity belongs to, or nullptr if detached.
   Application* getApplication();
 
-  // Exits this activity. The activity must have been at the top of the task
-  // stack, or else the behavior is undefined.
+  /// Exits this activity.
+  ///
+  /// Activity must be top of task stack; otherwise behavior is undefined.
   void exit();
 
-  // Called when the activity gets entered.
+  /// Called when activity is entered.
   virtual void onStart() {}
 
-  // Called when the activity resumes focus (after start, or after a child
-  // activity has exited).
+  /// Called when activity gains/resumes focus.
+  ///
+  /// This happens after start, or after a child activity is exited and focus
+  /// returns to this activity.
   virtual void onResume() {}
 
-  // Called when the activity loses focus (just before it stops, or when a child
-  // activity has started).
+  /// Called when activity loses focus.
+  ///
+  /// This happens before a child activity is entered and takes focus, or before
+  /// this activity is exited and removed from the stack.
   virtual void onPause() {}
 
-  // Called when the activity gets exited.
+  /// Called when activity is exited.
   virtual void onStop() {}
 
  protected:
@@ -62,15 +65,14 @@ class Activity {
   State state_;
 };
 
-// Helper for very simple cases when there is only one activity in a full-screen
-// task.
+/// Convenience activity for simple single-activity full-screen tasks.
 class SingletonActivity : public Activity {
  public:
   SingletonActivity(Application& app, Widget& contents);
 
   Widget& getContents() override { return contents_; }
 
-  // Respect widget's margins.
+  /// Returns placement honoring widget margins.
   roo_display::Box getPreferredPlacement(const Task& task) override;
 
  private:

@@ -4,15 +4,14 @@
 
 namespace roo_windows {
 
-// PreferredSize are used by views to tell their parents what is their preferred
-// width and height. For each dimension, it can specify one of:
-//
-// + MATCH_PARENT, which means that the view wants to be as big as its parent
-//   (minus padding)
-// + WRAP_CONTENT, which means that the view wants to be just big enough to
-//   enclose its content (plus padding)
-// + an exact number
-//
+/// Preferred size hints used by views during layout.
+///
+/// Views use this to communicate preferred width/height to their parent.
+///
+/// For each dimension, value can be:
+/// - `MATCH_PARENT`: fill parent (minus padding),
+/// - `WRAP_CONTENT`: fit content (plus padding),
+/// - exact numeric size.
 class PreferredSize {
  public:
   class Width {
@@ -73,7 +72,7 @@ class PreferredSize {
 
   constexpr static inline Height WrapContentHeight() { return Height(-2); }
 
-  // Creates a new preferred size with the specified width and height.
+  /// Creates preferred size from width and height hints.
   PreferredSize(Width width, Height height) : width_(width), height_(height) {}
 
   Width width() const { return width_; }

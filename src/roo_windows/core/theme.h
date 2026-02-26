@@ -3,7 +3,7 @@
 #include "roo_display.h"
 #include "roo_display/color/color.h"
 #include "roo_display/font/smooth_font.h"
-
+#include "roo_windows/config.h"
 #include "roo_windows/fonts/NotoSans_Light/120.h"
 #include "roo_windows/fonts/NotoSans_Light/144.h"
 #include "roo_windows/fonts/NotoSans_Light/192.h"
@@ -20,8 +20,6 @@
 #include "roo_windows/fonts/NotoSans_Medium/28.h"
 #include "roo_windows/fonts/NotoSans_Medium/30.h"
 #include "roo_windows/fonts/NotoSans_Medium/40.h"
-#include "roo_windows/fonts/NotoSans_Regular/8.h"
-#include "roo_windows/fonts/NotoSans_Regular/9.h"
 #include "roo_windows/fonts/NotoSans_Regular/10.h"
 #include "roo_windows/fonts/NotoSans_Regular/11.h"
 #include "roo_windows/fonts/NotoSans_Regular/12.h"
@@ -41,9 +39,9 @@
 #include "roo_windows/fonts/NotoSans_Regular/51.h"
 #include "roo_windows/fonts/NotoSans_Regular/68.h"
 #include "roo_windows/fonts/NotoSans_Regular/72.h"
+#include "roo_windows/fonts/NotoSans_Regular/8.h"
+#include "roo_windows/fonts/NotoSans_Regular/9.h"
 #include "roo_windows/fonts/NotoSans_Regular/96.h"
-
-#include "roo_windows/config.h"
 
 #ifndef ROO_WINDOWS_ZOOM
 
@@ -68,8 +66,8 @@
 #endif
 #endif
 
-// ROO_WINDOWS_ICON_SIZE defines the size of icons from roo_icons, used
-// in clickable UI elements such as buttons.
+/// `ROO_WINDOWS_ICON_SIZE` defines icon size (from roo_icons) used by
+/// clickable UI elements such as buttons.
 
 #if (ROO_WINDOWS_ZOOM >= 200)
 #define ROO_WINDOWS_ICON_SIZE 48

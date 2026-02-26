@@ -132,8 +132,7 @@ class Gravity {
   uint8_t value_;
 };
 
-// Convenience methods to combine horizontal and vertical gravities into a
-// combined gravity using | operator.
+/// Convenience operators to combine horizontal and vertical gravity via `|`.
 inline constexpr Gravity operator|(HorizontalGravity x, VerticalGravity y) {
   return Gravity(x, y);
 }
@@ -142,7 +141,7 @@ inline constexpr Gravity operator|(VerticalGravity y, HorizontalGravity x) {
   return Gravity(x, y);
 }
 
-// Convenience gravity constants.
+/// Convenience gravity constants.
 
 static constexpr HorizontalGravity kHorizontalGravityNone =
     HorizontalGravity(GravityAxisAlignment::NONE);
