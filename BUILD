@@ -19,6 +19,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "@roo_display",
+        "@roo_fonts_basic",
         "@roo_icons",
         "@roo_io",
         "@roo_locale",
