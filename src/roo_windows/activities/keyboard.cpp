@@ -446,7 +446,7 @@ void KeyboardWidget::setPage(int idx) {
     current_page_ = pages_[idx];
     current_page_->init(*env_);
   }
-  for (int i = 0; i < pages_.size(); ++i) {
+  for (int i = 0; i < static_cast<int>(pages_.size()); ++i) {
     pages_[i]->setVisibility(i == idx ? VISIBLE : GONE);
   }
   setCapsState(Keyboard::CAPS_STATE_LOW);

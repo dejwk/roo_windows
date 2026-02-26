@@ -340,7 +340,7 @@ void TextFieldEditor::measure() {
     glyphs_.resize(actual_size);
     offsets_.resize(actual_size);
     int16_t xpos = 0;
-    for (size_t i = 0; i < actual_size - 1; ++i) {
+    for (int i = 0; i < actual_size - 1; ++i) {
       glyphs_[i] = GlyphMetrics(
           star_metrics.glyphXMin() + xpos, star_metrics.glyphYMin(),
           star_metrics.glyphXMax() + xpos, star_metrics.glyphYMax(),
@@ -376,7 +376,8 @@ void TextFieldEditor::restartLastGlyphRecentlyEntered() {
   if (target_ == nullptr) return;
   // Note: need to check for empty as a special case, because we may
   // be showing the hint.
-  if (target_->content().empty() || cursor_position() == glyphs_.size()) {
+  if (target_->content().empty() ||
+      static_cast<size_t>(cursor_position()) == glyphs_.size()) {
     last_glyph_recently_entered_ = true;
     last_glyph_hider_.scheduleAfter(kShowLastGlyphInterval);
   }
@@ -408,7 +409,7 @@ void TextFieldEditor::rune(uint32_t rune) {
   }
   char encoded[4];
   int count = roo_io::WriteUtf8Char(encoded, rune);
-  if (cursor_position_ == offsets_.size()) {
+  if (static_cast<size_t>(cursor_position_) == offsets_.size()) {
     // At end of string.
     val.insert(val.end(), encoded, encoded + count);
   } else {
@@ -455,7 +456,7 @@ void TextFieldEditor::del() {
     target_->setDirty();
   } else if (cursor_position_ > 0) {
     std::string& val = target_->value_;
-    if (cursor_position_ == offsets_.size()) {
+    if (static_cast<size_t>(cursor_position_) == offsets_.size()) {
       val.erase(val.begin() + offsets_[cursor_position_ - 1], val.end());
     } else {
       val.erase(val.begin() + offsets_[cursor_position_ - 1],

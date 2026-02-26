@@ -37,7 +37,7 @@ void Log::clear() {
 
 int Log::line_pos(int idx) const {
   idx += line_start_;
-  if (idx > lines_.size()) idx -= lines_.size();
+  if (idx > static_cast<int>(lines_.size())) idx -= lines_.size();
   return idx;
 }
 
