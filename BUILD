@@ -20,6 +20,7 @@ cc_library(
     deps = [
         "@roo_display",
         "@roo_fonts_basic",
+        "@roo_fonts_material",
         "@roo_icons",
         "@roo_io",
         "@roo_locale",
