@@ -1,9 +1,9 @@
 
 #include "roo_windows/widgets/text_field.h"
 
+#include "roo_backport/string_view.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_icons/filled/action.h"
-#include "roo_backport/string_view.h"
 #include "roo_io/text/unicode.h"
 #include "roo_windows/config.h"
 
@@ -25,11 +25,11 @@ namespace {
 // extents are externally provided, may be clipped and not contain all the text.
 class TextFieldInterior : public Drawable {
  public:
-  TextFieldInterior(const Font* font, const Box& extents,
-                    roo::string_view text, bool edited, bool starred,
-                    bool show_last_glyph, int16_t x_offset,
-                    int16_t highlight_xmin, int16_t highlight_xmax,
-                    Color text_color, Color highlight_color)
+  TextFieldInterior(const Font* font, const Box& extents, roo::string_view text,
+                    bool edited, bool starred, bool show_last_glyph,
+                    int16_t x_offset, int16_t highlight_xmin,
+                    int16_t highlight_xmax, Color text_color,
+                    Color highlight_color)
       : font_(font),
         extents_(extents),
         text_(text),
@@ -139,9 +139,9 @@ void TextField::paint(const Canvas& canvas) const {
     }
   }
   Alignment padded = adjustAlignment(alignment_);
-  int16_t offsetTop =
-      padded.v().resolveOffset((YDim)0, height() - 1, decorated_text_ymin - text_ymin,
-                               decorated_text_ymax - text_ymin);
+  int16_t offsetTop = padded.v().resolveOffset((YDim)0, height() - 1,
+                                               decorated_text_ymin - text_ymin,
+                                               decorated_text_ymax - text_ymin);
   int16_t available_width = width() - padding.left() - padding.right();
   int16_t advance_width;
   if (isEdited()) {
@@ -156,7 +156,7 @@ void TextField::paint(const Canvas& canvas) const {
     if (starred) {
       // Calculate the bounds as-if the string is all-star.
       GlyphMetrics metrics;
-      font_.getGlyphMetrics('*', FONT_LAYOUT_HORIZONTAL, &metrics);
+      font_.getGlyphMetrics('*', FontLayout::kHorizontal, &metrics);
       roo_io::Utf8Decoder decoder(text);
       int length = 0;
       char32_t ignored;
@@ -318,7 +318,8 @@ void TextFieldEditor::measure() {
     }
   } else {
     GlyphMetrics star_metrics;
-    target_->font().getGlyphMetrics('*', FONT_LAYOUT_HORIZONTAL, &star_metrics);
+    target_->font().getGlyphMetrics('*', FontLayout::kHorizontal,
+                                    &star_metrics);
     GlyphMetrics last_rune_metrics = star_metrics;
     // Determine how many stars.
     roo_io::Utf8Decoder decoder(s);
@@ -330,7 +331,7 @@ void TextFieldEditor::measure() {
       if (!decoder.next(next)) {
         // Last one; perhaps actually measure.
         if (last_glyph_recently_entered_) {
-          target_->font().getGlyphMetrics(ch, FONT_LAYOUT_HORIZONTAL,
+          target_->font().getGlyphMetrics(ch, FontLayout::kHorizontal,
                                           &last_rune_metrics);
         }
         break;

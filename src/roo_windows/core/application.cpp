@@ -98,7 +98,7 @@ bool Application::refresh(roo_time::Uptime deadline) {
   root_window_.updateLayout();
   last_time_refreshed_ms_ = millis();
   roo_display::DrawingContext dc(display_);
-  dc.setFillMode(roo_display::FILL_MODE_RECTANGLE);
+  dc.setFillMode(roo_display::FillMode::kExtents);
   Adapter adapter(root_window_, deadline);
   dc.draw(adapter);
   return adapter.completed();
