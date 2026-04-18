@@ -73,7 +73,16 @@ bool OverlayStack::readColorRect(int16_t xMin, int16_t yMin, int16_t xMax,
       continue;
     }
     if (is_uniform_color && !clipped.contains(box)) {
-      // This rect does not fill the entire box; we can no longer use fast path.
+      // Check if the partial layer is transparent, in which case it can be
+      // skipped entirely.
+      Color layer_color;
+      if (r->readUniformColorRect(clipped.xMin(), clipped.yMin(),
+                                  clipped.xMax(), clipped.yMax(),
+                                  &layer_color) &&
+          layer_color.a() == 0) {
+        continue;
+      }
+      // Non-transparent partial coverage breaks uniformity.
       is_uniform_color = false;
       FillColor(&result[1], box.area() - 1, *result);
     }
@@ -118,19 +127,20 @@ bool OverlayStack::readUniformColorRect(int16_t xMin, int16_t yMin,
     if (clipped.empty()) {
       continue;
     }
-    if (!clipped.contains(box)) {
-      // This layer doesn't cover the full rect, so the result can't be uniform
-      // (unless this layer is transparent, but we can't cheaply check that).
-      return false;
-    }
     Color layer_color;
-    if (!r->readUniformColorRect(clipped.xMin(), clipped.yMin(), clipped.xMax(),
-                                 clipped.yMax(), &layer_color)) {
-      return false;
-    }
-    if (layer_color.a() == 0) {
+    bool layer_uniform =
+        r->readUniformColorRect(clipped.xMin(), clipped.yMin(), clipped.xMax(),
+                                clipped.yMax(), &layer_color);
+    if (layer_uniform && layer_color.a() == 0) {
       // Transparent layer doesn't affect the result.
       continue;
+    }
+    if (!clipped.contains(box)) {
+      // This layer doesn't cover the full rect and is not transparent.
+      return false;
+    }
+    if (!layer_uniform) {
+      return false;
     }
     *result = AlphaBlend(*result, layer_color);
   }
