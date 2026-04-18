@@ -49,6 +49,10 @@ class Decoration : public roo_display::Rasterizable {
   bool readColorRect(int16_t xMin, int16_t yMin, int16_t xMax, int16_t yMax,
                      roo_display::Color* result) const override;
 
+  bool readUniformColorRect(int16_t xMin, int16_t yMin, int16_t xMax,
+                            int16_t yMax,
+                            roo_display::Color* result) const override;
+
  private:
   roo_display::Color read(int16_t x, int16_t y) const;
 

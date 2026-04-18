@@ -74,24 +74,66 @@ class PressOverlay : public roo_display::Rasterizable {
     }
   }
 
+  bool readUniformColorRect(int16_t xMin, int16_t yMin, int16_t xMax,
+                            int16_t yMax,
+                            roo_display::Color* result) const override {
+    int32_t dx1_sq = (int32_t)(xMin - x_) * (xMin - x_);
+    int32_t dx2_sq = (int32_t)(xMax - x_) * (xMax - x_);
+    int32_t dy1_sq = (int32_t)(yMin - y_) * (yMin - y_);
+    int32_t dy2_sq = (int32_t)(yMax - y_) * (yMax - y_);
+    if (r_sq_ < std::min(dx1_sq, dx2_sq) + std::min(dy1_sq, dy2_sq)) {
+      // Entirely outside the circle.
+      *result = roo_display::Color(0);
+      return true;
+    }
+    if (clip_circle_) {
+      int32_t cdx1_sq =
+          (int32_t)(xMin - clip_circle_x_) * (xMin - clip_circle_x_);
+      int32_t cdx2_sq =
+          (int32_t)(xMax - clip_circle_x_) * (xMax - clip_circle_x_);
+      int32_t cdy1_sq =
+          (int32_t)(yMin - clip_circle_y_) * (yMin - clip_circle_y_);
+      int32_t cdy2_sq =
+          (int32_t)(yMax - clip_circle_y_) * (yMax - clip_circle_y_);
+      if (clip_circle_r_sq_ <
+          (std::min(cdx1_sq, cdx2_sq) + std::min(cdy1_sq, cdy2_sq))) {
+        // Entirely outside the clip circle.
+        *result = roo_display::Color(0);
+        return true;
+      }
+      return false;
+    }
+    if (r_ >= 3 && r_sq_ > std::max(dx1_sq, dx2_sq) + std::max(dy1_sq, dy2_sq) +
+                               6 * r_ - 9) {
+      // Entirely inside the circle interior.
+      *result = fg_;
+      return true;
+    }
+    return false;
+  }
+
   bool readColorRect(int16_t xMin, int16_t yMin, int16_t xMax, int16_t yMax,
                      roo_display::Color* result) const override {
-    int32_t dx1_sq = (xMin - x_) * (xMin - x_);
-    int32_t dx2_sq = (xMax - x_) * (xMax - x_);
-    int32_t dy1_sq = (yMin - y_) * (yMin - y_);
-    int32_t dy2_sq = (yMax - y_) * (yMax - y_);
+    int32_t dx1_sq = (int32_t)(xMin - x_) * (xMin - x_);
+    int32_t dx2_sq = (int32_t)(xMax - x_) * (xMax - x_);
+    int32_t dy1_sq = (int32_t)(yMin - y_) * (yMin - y_);
+    int32_t dy2_sq = (int32_t)(yMax - y_) * (yMax - y_);
     if (r_sq_ < std::min(dx1_sq, dx2_sq) + std::min(dy1_sq, dy2_sq)) {
       // Outside.
       *result = roo_display::Color(0);
       return true;
     }
     if (clip_circle_) {
-      int32_t dx1_sq = (xMin - clip_circle_x_) * (xMin - clip_circle_x_);
-      int32_t dx2_sq = (xMax - clip_circle_x_) * (xMax - clip_circle_x_);
-      int32_t dy1_sq = (yMin - clip_circle_y_) * (yMin - clip_circle_y_);
-      int32_t dy2_sq = (yMax - clip_circle_y_) * (yMax - clip_circle_y_);
+      int32_t cdx1_sq =
+          (int32_t)(xMin - clip_circle_x_) * (xMin - clip_circle_x_);
+      int32_t cdx2_sq =
+          (int32_t)(xMax - clip_circle_x_) * (xMax - clip_circle_x_);
+      int32_t cdy1_sq =
+          (int32_t)(yMin - clip_circle_y_) * (yMin - clip_circle_y_);
+      int32_t cdy2_sq =
+          (int32_t)(yMax - clip_circle_y_) * (yMax - clip_circle_y_);
       if (clip_circle_r_sq_ <
-          (std::min(dx1_sq, dx2_sq) + std::min(dy1_sq, dy2_sq))) {
+          (std::min(cdx1_sq, cdx2_sq) + std::min(cdy1_sq, cdy2_sq))) {
         *result = roo_display::Color(0);
         return true;
       }

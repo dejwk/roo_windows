@@ -106,5 +106,36 @@ bool OverlayStack::readColorRect(int16_t xMin, int16_t yMin, int16_t xMax,
   return is_uniform_color;
 }
 
+bool OverlayStack::readUniformColorRect(int16_t xMin, int16_t yMin,
+                                        int16_t xMax, int16_t yMax,
+                                        Color* result) const {
+  *result = color::Transparent;
+  Box box(xMin, yMin, xMax, yMax);
+  for (const ClippedOverlay* r = end_; r != begin_;) {
+    --r;
+    Box bounds = r->extents();
+    Box clipped = Box::Intersect(bounds, box);
+    if (clipped.empty()) {
+      continue;
+    }
+    if (!clipped.contains(box)) {
+      // This layer doesn't cover the full rect, so the result can't be uniform
+      // (unless this layer is transparent, but we can't cheaply check that).
+      return false;
+    }
+    Color layer_color;
+    if (!r->readUniformColorRect(clipped.xMin(), clipped.yMin(), clipped.xMax(),
+                                 clipped.yMax(), &layer_color)) {
+      return false;
+    }
+    if (layer_color.a() == 0) {
+      // Transparent layer doesn't affect the result.
+      continue;
+    }
+    *result = AlphaBlend(*result, layer_color);
+  }
+  return true;
+}
+
 }  // namespace internal
 }  // namespace roo_windows
