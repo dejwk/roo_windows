@@ -108,7 +108,8 @@ class ClipperOutput : public roo_display::DisplayOutput {
         overlay_filter_(out, &overlay_stack_),
         rect_union_(nullptr, nullptr),
         rect_union_filter_(overlay_filter_, &rect_union_),
-        output_(&rect_union_filter_) {
+        output_(&rect_union_filter_),
+        capabilities_(out.getCapabilities().supportsBlending(), false) {
     exclusions_.clear();
     bounded_exclusions_.clear();
     decorations_.clear();
@@ -205,6 +206,14 @@ class ClipperOutput : public roo_display::DisplayOutput {
     return output_->getColorFormat();
   }
 
+  const Capabilities &getCapabilities() const override { return capabilities_; }
+
+  const std::vector<roo_display::Box> &exclusions() const {
+    return exclusions_;
+  }
+
+  roo_display::DisplayOutput &rawOut() { return orig_output_; }
+
  private:
   void sync() {
     if (valid_) return;
@@ -256,6 +265,8 @@ class ClipperOutput : public roo_display::DisplayOutput {
   roo_display::RectUnion rect_union_;
   roo_display::RectUnionFilter rect_union_filter_;
   roo_display::DisplayOutput *output_;
+
+  roo_display::DisplayOutput::Capabilities capabilities_;
 };
 
 }  // namespace internal
@@ -298,6 +309,12 @@ class Clipper {
   }
 
   roo_display::DisplayOutput *out() { return &out_; }
+
+  roo_display::DisplayOutput &rawOut() { return out_.rawOut(); }
+
+  const std::vector<roo_display::Box> &exclusions() const {
+    return out_.exclusions();
+  }
 
   bool isDeadlineExceeded() const {
     return roo_time::Uptime::Now() >= deadline_;
