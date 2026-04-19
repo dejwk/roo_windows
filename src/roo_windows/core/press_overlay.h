@@ -3,6 +3,8 @@
 #include "roo_display/color/color.h"
 #include "roo_display/core/rasterizable.h"
 
+namespace roo_windows {
+
 namespace internal {
 // Use ratio = 64 for the arithmetic average.
 inline constexpr roo_display::Color AverageColors(roo_display::Color c1,
@@ -229,3 +231,5 @@ class PressOverlay : public roo_display::Rasterizable {
   float clip_circle_r_;
   float clip_circle_r_sq_;
 };
+
+}  // namespace roo_windows
