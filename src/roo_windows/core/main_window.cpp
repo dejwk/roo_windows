@@ -25,7 +25,8 @@ void maybeAddColor(roo_display::internal::ColorSet& palette, Color color) {
 MainWindow::MainWindow(Application& app, const roo_display::Box& bounds)
     : Panel(app.env(), app.env().theme().color.background),
       app_(app),
-      redraw_bounds_(bounds) {
+      redraw_bounds_(bounds),
+      scrim_(app.env()) {
   parent_bounds_ = Rect(bounds);
   invalidateDescending();
   const Environment& env = app.env();
@@ -89,6 +90,15 @@ bool MainWindow::paintWindow(const roo_display::Surface& s,
     initialized_ = true;
     s.drawObject(roo_display::Fill(theme().color.background));
   }
+  if (pending_scrim_blit_) {
+    pending_scrim_blit_ = false;
+    if (s.out().getCapabilities().supportsBlending()) {
+      s.out().fillRect(roo_display::BlendingMode::kSourceOver,
+                       bounds().asBox(), scrim_.color());
+    } else {
+      invalidateBeneath(bounds(), &scrim_, /*clip=*/true);
+    }
+  }
   if (!isDirty()) return true;
   Canvas canvas(&s);
   canvas.clipToExtents(redraw_bounds_);
@@ -124,11 +134,16 @@ void MainWindow::propagateDirty(const Widget* child, const Rect& rect) {
 void MainWindow::showDialog(Dialog& dialog, Dialog::CallbackFn callback_fn) {
   CHECK(active_dialog_ == nullptr) << "Can't show two dialogs at the same time";
   active_dialog_ = &dialog;
+  add(scrim_, bounds());
+  pending_scrim_blit_ = true;
   dialog.onEnter();
   dialog.setCallbackFn([this, callback_fn, &dialog](int id) {
     dialog.onExit(id);
     active_dialog_ = nullptr;
+    pending_scrim_blit_ = false;
     removeLast();
+    removeLast();
+    invalidateInterior();
     Dialog::CallbackFn fn = callback_fn;
     dialog.setCallbackFn(nullptr);
     fn(id);

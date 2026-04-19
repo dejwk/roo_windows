@@ -6,6 +6,7 @@
 #include "roo_windows/core/gesture_detector.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/dialogs/dialog.h"
+#include "roo_windows/widgets/scrim.h"
 
 namespace roo_windows {
 
@@ -42,28 +43,31 @@ class MainWindow : public Panel {
     press_overlay_ = std::move(press_overlay);
   }
 
-  // Special handling for the keyboard. It gets added as the first child, yet we
-  // always want to render it on top (as the last child). With correction for
-  // an active dialog, if any.
+  // Special handling for the keyboard. It gets added as the first child, yet
+  // The keyboard is always the first Panel child (index 0), but we want it
+  // rendered on top of regular children yet behind an active dialog and its
+  // scrim (which are the last two Panel children when present).
   const Widget& getChild(int idx) const override {
+    int n = Panel::getChildrenCount();
     if (active_dialog_ != nullptr) {
-      return idx == getChildrenCount() - 1   ? *active_dialog_
-             : idx == getChildrenCount() - 2 ? Panel::getChild(0)
-                                             : Panel::getChild(idx + 1);
+      return idx >= n - 2   ? Panel::getChild(idx)
+             : idx == n - 3 ? Panel::getChild(0)
+                            : Panel::getChild(idx + 1);
     } else {
-      return idx == getChildrenCount() - 1 ? Panel::getChild(0)
-                                           : Panel::getChild(idx + 1);
+      return idx == n - 1 ? Panel::getChild(0)
+                          : Panel::getChild(idx + 1);
     }
   }
 
   Widget& getChild(int idx) override {
+    int n = Panel::getChildrenCount();
     if (active_dialog_ != nullptr) {
-      return idx == getChildrenCount() - 1   ? *active_dialog_
-             : idx == getChildrenCount() - 2 ? Panel::getChild(0)
-                                             : Panel::getChild(idx + 1);
+      return idx >= n - 2   ? Panel::getChild(idx)
+             : idx == n - 3 ? Panel::getChild(0)
+                            : Panel::getChild(idx + 1);
     } else {
-      return idx == getChildrenCount() - 1 ? Panel::getChild(0)
-                                           : Panel::getChild(idx + 1);
+      return idx == n - 1 ? Panel::getChild(0)
+                          : Panel::getChild(idx + 1);
     }
   }
 
@@ -92,6 +96,10 @@ class MainWindow : public Panel {
   bool initialized_ = false;
 
   Dialog* active_dialog_ = nullptr;
+
+  bool pending_scrim_blit_ = false;
+
+  Scrim scrim_;
 };
 
 }  // namespace roo_windows

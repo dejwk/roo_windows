@@ -16,8 +16,6 @@ class Dialog : public VerticalLayout {
  public:
   typedef std::function<void(int action_idx)> CallbackFn;
 
-  Rect maxBounds() const override { return Rect::MaximumRect(); }
-
   void setTitle(std::string title);
 
   // Intercept all touch events to ensure the dialog is modal.
@@ -34,9 +32,6 @@ class Dialog : public VerticalLayout {
 
  protected:
   Dialog(const Environment& env, const std::vector<std::string> button_labels);
-
-  void finalizePaintWidget(const Canvas& canvas, Clipper& clipper,
-                           const OverlaySpec& overlay_spec) const override;
 
   int button_count() const { return buttons_.size(); }
   SimpleButton& button(int idx) { return buttons_[idx]; }

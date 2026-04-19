@@ -4,15 +4,6 @@
 
 namespace roo_windows {
 
-namespace {
-
-const roo_display::Rasterizable& scrim() {
-  static roo_display::Scrim scrim;
-  return scrim;
-}
-
-}  // namespace
-
 Dialog::Dialog(const Environment& env, std::vector<std::string> button_labels)
     : VerticalLayout(env),
       title_(env, "", font_h6()),
@@ -64,12 +55,6 @@ void Dialog::close() {
   if (callback_fn_ != nullptr) {
     callback_fn_(-1);
   }
-}
-
-void Dialog::finalizePaintWidget(const Canvas& canvas, Clipper& clipper,
-                                 const OverlaySpec& overlay_spec) const {
-  Panel::finalizePaintWidget(canvas, clipper, overlay_spec);
-  clipper.addOverlay(&scrim(), canvas.clip_box());
 }
 
 }  // namespace roo_windows
