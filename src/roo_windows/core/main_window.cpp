@@ -93,7 +93,7 @@ bool MainWindow::paintWindow(const roo_display::Surface& s,
   if (pending_scrim_blit_) {
     pending_scrim_blit_ = false;
     if (s.out().getCapabilities().supportsBlending()) {
-      s.out().fillRect(roo_display::BlendingMode::kSourceOver,
+      s.out().fillRect(roo_display::BlendingMode::kSourceOverOpaque,
                        bounds().asBox(), scrim_.color());
     } else {
       invalidateBeneath(bounds(), &scrim_, /*clip=*/true);
