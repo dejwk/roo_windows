@@ -3,6 +3,7 @@
 #include "roo_display/ui/alignment.h"
 #include "roo_scheduler.h"
 #include "roo_time.h"
+#include "roo_windows/containers/blit_cache_container.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/widget.h"
@@ -37,17 +38,18 @@ class VerticalScrollBar : public Widget {
   int16_t end_;
 };
 
-class ScrollablePanel : public Container, private roo_scheduler::Executable {
+class SimpleScrollablePanel : public Container,
+                              private roo_scheduler::Executable {
  public:
   enum Direction { VERTICAL = 0, HORIZONTAL = 1, BOTH = 2 };
 
-  ScrollablePanel(const Environment& env, WidgetRef contents,
-                  Direction direction = VERTICAL)
-      : ScrollablePanel(env, direction) {
+  SimpleScrollablePanel(const Environment& env, WidgetRef contents,
+                        Direction direction = VERTICAL)
+      : SimpleScrollablePanel(env, direction) {
     setContents(std::move(contents));
   }
 
-  ScrollablePanel(const Environment& env, Direction direction = VERTICAL)
+  SimpleScrollablePanel(const Environment& env, Direction direction = VERTICAL)
       : Container(env),
         direction_(direction),
         alignment_(roo_display::kLeft | roo_display::kTop),
@@ -62,7 +64,7 @@ class ScrollablePanel : public Container, private roo_scheduler::Executable {
     scroll_bar_.setVisibility(INVISIBLE);
   }
 
-  ~ScrollablePanel() { cancelPendingUpdate(); }
+  ~SimpleScrollablePanel() { cancelPendingUpdate(); }
 
   void setContents(WidgetRef new_contents) {
     if (contents() == &*new_contents &&
@@ -85,7 +87,7 @@ class ScrollablePanel : public Container, private roo_scheduler::Executable {
 
   int getChildrenCount() const override { return hasContents() ? 2 : 0; }
 
-  Widget& getChild(int idx) {
+  Widget& getChild(int idx) override {
     switch (idx) {
       case 0:
         return *contents_;
@@ -95,7 +97,7 @@ class ScrollablePanel : public Container, private roo_scheduler::Executable {
     }
   }
 
-  const Widget& getChild(int idx) const {
+  const Widget& getChild(int idx) const override {
     switch (idx) {
       case 0:
         return *contents_;
@@ -235,5 +237,30 @@ class ScrollablePanel : public Container, private roo_scheduler::Executable {
   // its active region.
   bool is_scroll_bar_scrolled_;
 };
+
+// SimpleScrollablePanel variant that wraps the content in a BlitCacheContainer,
+// enabling fast-blit scroll optimization for displays with framebuffer blit
+// support.
+class ScrollableBlitPanel : public SimpleScrollablePanel {
+ public:
+  ScrollableBlitPanel(const Environment& env, WidgetRef contents,
+                      Direction direction = VERTICAL)
+      : ScrollableBlitPanel(env, direction) {
+    setContents(std::move(contents));
+  }
+
+  ScrollableBlitPanel(const Environment& env, Direction direction = VERTICAL)
+      : SimpleScrollablePanel(env, direction), blit_cache_(env) {}
+
+  void setContents(WidgetRef new_contents) {
+    blit_cache_.setChild(std::move(new_contents));
+    SimpleScrollablePanel::setContents(WidgetRef(blit_cache_));
+  }
+
+ private:
+  BlitCacheContainer blit_cache_;
+};
+
+using ScrollablePanel = ScrollableBlitPanel;
 
 }  // namespace roo_windows

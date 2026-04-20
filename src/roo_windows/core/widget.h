@@ -589,7 +589,8 @@ class Widget {
 
  private:
   friend class Container;
-  friend class ScrollablePanel;
+  friend class SimpleScrollablePanel;
+  friend class ScrollableBlitPanel;
   friend class MainWindow;
   friend class OverlaySpec;
   friend class ClickAnimation;

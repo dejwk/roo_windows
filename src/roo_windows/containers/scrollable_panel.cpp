@@ -70,7 +70,7 @@ Dimensions VerticalScrollBar::getSuggestedMinimumDimensions() const {
   return Dimensions(Scaled(6), Scaled(6));
 }
 
-void ScrollablePanel::scrollTo(XDim x, YDim y) {
+void SimpleScrollablePanel::scrollTo(XDim x, YDim y) {
   Widget* c = contents();
   if (c == nullptr) return;
   Margins m = c->getMargins();
@@ -108,7 +108,7 @@ void ScrollablePanel::scrollTo(XDim x, YDim y) {
   onScrollPositionChanged();
 }
 
-void ScrollablePanel::scrollToBottom() {
+void SimpleScrollablePanel::scrollToBottom() {
   if (contents() == nullptr) return;
   getMainWindow()->updateLayout();
   Margins m = contents()->getMargins();
@@ -116,7 +116,7 @@ void ScrollablePanel::scrollToBottom() {
            height() - m.top() - m.bottom() - contents()->height());
 }
 
-PreferredSize ScrollablePanel::getPreferredSize() const {
+PreferredSize SimpleScrollablePanel::getPreferredSize() const {
   // In the dimension that is scrolled over, we will just return 'wrap
   // contents', For example, if the panel scrolls vertically, we report the
   // preferred height as 'wrap contents height'. In the other dimension, we
@@ -148,7 +148,8 @@ PreferredSize ScrollablePanel::getPreferredSize() const {
       direction_ == HORIZONTAL ? h : PreferredSize::WrapContentHeight());
 }
 
-Dimensions ScrollablePanel::onMeasure(WidthSpec width, HeightSpec height) {
+Dimensions SimpleScrollablePanel::onMeasure(WidthSpec width,
+                                            HeightSpec height) {
   if (contents() == nullptr) {
     return Dimensions(width.resolveSize(0), height.resolveSize(0));
   }
@@ -171,7 +172,7 @@ Dimensions ScrollablePanel::onMeasure(WidthSpec width, HeightSpec height) {
       height.resolveSize(measured_.height() + m.top() + m.bottom()));
 }
 
-void ScrollablePanel::onLayout(bool changed, const Rect& rect) {
+void SimpleScrollablePanel::onLayout(bool changed, const Rect& rect) {
   Widget* c = contents();
   if (c == nullptr) return;
   Margins m = contents()->getMargins();
@@ -184,7 +185,7 @@ void ScrollablePanel::onLayout(bool changed, const Rect& rect) {
   update();
 }
 
-void ScrollablePanel::execute(roo_scheduler::EventID id) {
+void SimpleScrollablePanel::execute(roo_scheduler::EventID id) {
   notification_id_ = -1;
   if (roo_time::Uptime::Now() >= deadline_hide_scrollbar_) {
     scroll_bar_.setVisibility(INVISIBLE);
@@ -262,24 +263,24 @@ void ScrollablePanel::execute(roo_scheduler::EventID id) {
   }
 }
 
-void ScrollablePanel::cancelPendingUpdate() {
+void SimpleScrollablePanel::cancelPendingUpdate() {
   if (notification_id_ > 0) {
     scheduler_.cancel(notification_id_);
     notification_id_ = -1;
   }
 }
 
-void ScrollablePanel::scheduleScrollAnimationUpdate() {
+void SimpleScrollablePanel::scheduleScrollAnimationUpdate() {
   cancelPendingUpdate();
   notification_id_ = scheduler_.scheduleAfter(roo_time::Millis(10), *this);
 }
 
-void ScrollablePanel::scheduleHideScrollBarUpdate() {
+void SimpleScrollablePanel::scheduleHideScrollBarUpdate() {
   cancelPendingUpdate();
   scheduler_.scheduleAfter(kDelayHideScrollbar, *this);
 }
 
-bool ScrollablePanel::onInterceptTouchEvent(const TouchEvent& event) {
+bool SimpleScrollablePanel::onInterceptTouchEvent(const TouchEvent& event) {
   if (scroll_start_vx_ != 0 || scroll_start_vy_ != 0) {
     // Scroll in progress. Capture all events, including touch down.
     return true;
@@ -312,14 +313,14 @@ bool ScrollablePanel::onInterceptTouchEvent(const TouchEvent& event) {
   return false;
 }
 
-bool ScrollablePanel::onDown(XDim x, YDim y) {
+bool SimpleScrollablePanel::onDown(XDim x, YDim y) {
   // Stop the scroll.
   scroll_start_vx_ = 0;
   scroll_start_vy_ = 0;
   return true;
 }
 
-bool ScrollablePanel::onSingleTapUp(XDim x, YDim y) {
+bool SimpleScrollablePanel::onSingleTapUp(XDim x, YDim y) {
   // We generally swallow and ignore tap events, except when tapping on
   // a scrollbar area.
   if (!scroll_bar_gesture_) return true;
@@ -347,7 +348,7 @@ bool ScrollablePanel::onSingleTapUp(XDim x, YDim y) {
   return true;
 }
 
-bool ScrollablePanel::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
+bool SimpleScrollablePanel::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
   if (contents() == nullptr || contents()->height() <= height()) {
     // Nothing to scroll.
     return false;
@@ -376,7 +377,7 @@ bool ScrollablePanel::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
   return true;
 }
 
-bool ScrollablePanel::onFling(XDim x, YDim y, XDim vx, YDim vy) {
+bool SimpleScrollablePanel::onFling(XDim x, YDim y, XDim vx, YDim vy) {
   if (contents() == nullptr) return true;
   if (scroll_bar_gesture_) {
     // No fling-animate on the scrollbar.
@@ -437,7 +438,7 @@ bool ScrollablePanel::onFling(XDim x, YDim y, XDim vx, YDim vy) {
   return true;
 }
 
-bool ScrollablePanel::onTouchUp(XDim vx, YDim vy) {
+bool SimpleScrollablePanel::onTouchUp(XDim vx, YDim vy) {
   bool result = Widget::onTouchUp(vx, vy);
   scroll_bar_gesture_ = false;
   is_scroll_bar_scrolled_ = false;

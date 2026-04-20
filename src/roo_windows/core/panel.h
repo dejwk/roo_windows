@@ -53,7 +53,8 @@ class Panel : public Container {
   std::vector<Widget*> children_;
 
  private:
-  friend class ScrollablePanel;
+  friend class SimpleScrollablePanel;
+  friend class ScrollableBlitPanel;
 
   void addChild(Widget* child);
 };
