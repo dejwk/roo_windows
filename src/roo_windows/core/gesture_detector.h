@@ -51,9 +51,7 @@ class GestureDetector {
     return touch_target_path_.empty() ? nullptr : touch_target_path_.back();
   }
 
-  bool isTouchDown() const {
-    return is_down_;
-  }
+  bool isTouchDown() const { return is_down_; }
 
  private:
   class ScheduledEvent {
@@ -112,6 +110,7 @@ class GestureDetector {
   int16_t delta_y_;
   int16_t velocity_x_;
   int16_t velocity_y_;
+  unsigned long last_velocity_update_us_;
 
   ScheduledEvent show_press_event_;
   ScheduledEvent tap_event_;

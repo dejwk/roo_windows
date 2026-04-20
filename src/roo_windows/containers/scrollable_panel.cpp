@@ -83,8 +83,6 @@ void ScrollablePanel::scrollTo(XDim x, YDim y) {
       x = inner_pane.width() - c->width();
     }
   } else {
-    // if (x < 0) x = 0;
-    // if (x > width() - c->width()) x = width() - c->width();
     x = offset.first;
   }
   if (c->height() >= inner_pane.height()) {
@@ -93,8 +91,6 @@ void ScrollablePanel::scrollTo(XDim x, YDim y) {
       y = inner_pane.height() - c->height();
     }
   } else {
-    // if (y < 0) y = 0;
-    // if (y > height() - c->height()) y = height() - c->height();
     y = offset.second;
   }
   if (c->height() <= height()) {
@@ -247,7 +243,6 @@ void ScrollablePanel::execute(roo_scheduler::EventID id) {
   }
   if (drag_x_delta != 0 || drag_y_delta != 0) {
     scrollBy(drag_x_delta, drag_y_delta);
-    invalidateInterior();
   }
 
   // If we're done, e.g. due to bumping against both horizontal and
@@ -419,7 +414,7 @@ bool ScrollablePanel::onFling(XDim x, YDim y, XDim vx, YDim vy) {
     scroll_start_vy_ *= mult;
     v_abs = kMaxVel;
   }
-  // Scroll is constantly deccelerating (with configured const
+  // Scroll is constantly deccelerating (with configured constant
   // decceleration). Calculate the total scroll time until it stops on
   // its own if uninterrupted.
   unsigned long scroll_duration =
@@ -428,6 +423,16 @@ bool ScrollablePanel::onFling(XDim x, YDim y, XDim vx, YDim vy) {
   // Capture horizontal and vertical components of the decceleration.
   scroll_decel_x_ = -kDecceleration * scroll_start_vx_ / v_abs;
   scroll_decel_y_ = -kDecceleration * scroll_start_vy_ / v_abs;
+  // Apply a small initial scroll step immediately, so that the render
+  // happening in the same tick() already shows the beginning of the fling.
+  // Without this, the first animation frame is delayed until after the
+  // render completes, causing a visible hesitation.
+  // The physics in execute() self-corrects via (offsetTop - dyStart_).
+  int16_t kick_dx = (int16_t)(scroll_start_vx_ * 0.02f);
+  int16_t kick_dy = (int16_t)(scroll_start_vy_ * 0.02f);
+  if (kick_dx != 0 || kick_dy != 0) {
+    scrollBy(kick_dx, kick_dy);
+  }
   scheduleScrollAnimationUpdate();
   return true;
 }

@@ -10,10 +10,15 @@ namespace roo_windows {
 
 using roo_display::Display;
 
-static constexpr roo_time::Duration kMinRefreshDuration = roo_time::Millis(300);
+static constexpr roo_time::Duration kMinRefreshDuration = roo_time::Millis(200);
 
 // Do not refresh display more frequently than this (50 Hz).
 static constexpr long kMinRefreshTimeDeltaMs = 20;
+
+// During active touch-down, only refresh at this interval, to keep touch
+// polling responsive (otherwise render blocks touch sampling, often for
+// >100ms).
+static constexpr long kTouchActiveRefreshTimeDeltaMs = 50;
 
 Application::Application(const Environment* env, Display& display)
     : display_(display),
@@ -48,22 +53,26 @@ void Application::tick() {
   bool is_click_animating =
       root_window_.getClickAnimation()->isClickAnimating();
   bool gesture_dispatched = gesture_detector_.tick();
+  bool touch_active = gesture_detector_.isTouchDown();
+  // During active touch, throttle rendering so that touch polling stays
+  // responsive.  Otherwise the render blocks touch sampling, causing
+  // velocity estimation to degrade and fling detection to fail.
+  long refresh_interval =
+      touch_active ? kTouchActiveRefreshTimeDeltaMs : kMinRefreshTimeDeltaMs;
   bool redraw_timeout = false;
-  if (gesture_dispatched ||
-      (now - last_time_refreshed_ms_) >= kMinRefreshTimeDeltaMs) {
+  if ((now - last_time_refreshed_ms_) >= refresh_interval) {
     bool completed = refresh(roo_time::Uptime::Now() + paint_interval_);
     if (!completed) {
-      paint_interval_ = kMinRefreshDuration;
+      paint_interval_ = paint_interval_ * 2;
       redraw_timeout = true;
     } else {
-      paint_interval_ = paint_interval_ * 2;
+      paint_interval_ = kMinRefreshDuration;
     }
   }
-  roo_scheduler::Priority priority =
-      is_click_animating || gesture_detector_.isTouchDown()
-          ? roo_scheduler::PRIORITY_ELEVATED
-          : roo_scheduler::PRIORITY_NORMAL;
-  roo_time::Duration delay = gesture_detector_.isTouchDown() || redraw_timeout
+  roo_scheduler::Priority priority = is_click_animating || touch_active
+                                         ? roo_scheduler::PRIORITY_NORMAL
+                                         : roo_scheduler::PRIORITY_NORMAL;
+  roo_time::Duration delay = touch_active || redraw_timeout
                                  ? roo_time::Millis(0)
                                  : roo_time::Millis(20);
   ticker_.scheduleAfter(delay, priority);

@@ -7,6 +7,10 @@ namespace roo_windows {
 // Ignore 'move' events that come more frequently than this (50 Hz).
 static constexpr long kMinMoveTimeDeltaMs = 20;
 
+// If the last actual movement was longer ago than this, consider the velocity
+// stale and don't trigger a fling.
+static constexpr unsigned long kMaxVelocityAgeUs = 300000;
+
 namespace {
 
 void fillTargetPath(Widget* target, std::vector<Widget*>& path) {
@@ -40,21 +44,25 @@ bool GestureDetector::tick() {
   } else if (is_down_) {
     // Move.
     long time_delta = now_us_ - latest_.when_micros();
-    if ((time_delta / 1000) < kMinMoveTimeDeltaMs) {
-      return false;
+    if ((time_delta / 1000) >= kMinMoveTimeDeltaMs) {
+      delta_x_ = x - latest_.x();
+      delta_y_ = y - latest_.y();
+      if (delta_x_ != 0 || delta_y_ != 0) {
+        // Position changed; update velocity and dispatch move event.
+        int16_t new_vx = (int16_t)(1000000 * (int32_t)delta_x_ / time_delta);
+        int16_t new_vy = (int16_t)(1000000 * (int32_t)delta_y_ / time_delta);
+        if (abs(new_vy) <= kMaxFlingVelocity &&
+            abs(new_vx) <= kMaxFlingVelocity) {
+          velocity_x_ = new_vx;
+          velocity_y_ = new_vy;
+          last_velocity_update_us_ = now_us_;
+        }
+      }
+      latest_ = TouchPoint(x, y, now_us_);
+      if (delta_x_ != 0 || delta_y_ != 0) {
+        dispatch(TouchEvent::MOVE);
+      }
     }
-    delta_x_ = x - latest_.x();
-    delta_y_ = y - latest_.y();
-    velocity_x_ = (int16_t)(1000000 * (int32_t)delta_x_ / time_delta);
-    velocity_y_ = (int16_t)(1000000 * (int32_t)delta_y_ / time_delta);
-    if (velocity_y_ > kMaxFlingVelocity || velocity_x_ > kMaxFlingVelocity) {
-      // Bogus reading; disregard.
-      velocity_x_ = 0;
-      velocity_y_ = 0;
-      return false;
-    }
-    latest_ = TouchPoint(x, y, now_us_);
-    dispatch(TouchEvent::MOVE);
   }
 
   if (!touch_target_path_.empty()) {
@@ -150,6 +158,12 @@ bool GestureDetector::onTouchUp(Widget& widget, XDim x, YDim y) {
     handled |= widget.onSingleTapUp(x, y);
   } else if (supports_scrolling_) {
     // We have been in 'scroll'. Perhaps a fling?
+    // Check that the velocity isn't stale (e.g. touch was held stationary
+    // before release).
+    if ((long)(now_us_ - last_velocity_update_us_) > (long)kMaxVelocityAgeUs) {
+      velocity_x_ = 0;
+      velocity_y_ = 0;
+    }
     int32_t v_square = velocity_x_ * velocity_x_ + velocity_y_ * velocity_y_;
     if (v_square > kMinFlingVelocitySquare) {
       handled |= widget.onFling(x, y, velocity_x_, velocity_y_);
