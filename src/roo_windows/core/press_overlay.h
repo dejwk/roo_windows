@@ -79,34 +79,26 @@ class PressOverlay : public roo_display::Rasterizable {
   bool readUniformColorRect(int16_t xMin, int16_t yMin, int16_t xMax,
                             int16_t yMax,
                             roo_display::Color* result) const override {
-    int32_t dx1_sq = (int32_t)(xMin - x_) * (xMin - x_);
-    int32_t dx2_sq = (int32_t)(xMax - x_) * (xMax - x_);
-    int32_t dy1_sq = (int32_t)(yMin - y_) * (yMin - y_);
-    int32_t dy2_sq = (int32_t)(yMax - y_) * (yMax - y_);
-    if (r_sq_ < std::min(dx1_sq, dx2_sq) + std::min(dy1_sq, dy2_sq)) {
+    int32_t min_dx_sq = minDistanceSq(xMin, xMax, x_);
+    int32_t min_dy_sq = minDistanceSq(yMin, yMax, y_);
+    if (r_sq_ < min_dx_sq + min_dy_sq) {
       // Entirely outside the circle.
       *result = roo_display::Color(0);
       return true;
     }
     if (clip_circle_) {
-      int32_t cdx1_sq =
-          (int32_t)(xMin - clip_circle_x_) * (xMin - clip_circle_x_);
-      int32_t cdx2_sq =
-          (int32_t)(xMax - clip_circle_x_) * (xMax - clip_circle_x_);
-      int32_t cdy1_sq =
-          (int32_t)(yMin - clip_circle_y_) * (yMin - clip_circle_y_);
-      int32_t cdy2_sq =
-          (int32_t)(yMax - clip_circle_y_) * (yMax - clip_circle_y_);
-      if (clip_circle_r_sq_ <
-          (std::min(cdx1_sq, cdx2_sq) + std::min(cdy1_sq, cdy2_sq))) {
+      float cmin_dx_sq = minDistanceSq(xMin, xMax, clip_circle_x_);
+      float cmin_dy_sq = minDistanceSq(yMin, yMax, clip_circle_y_);
+      if (clip_circle_r_sq_ < cmin_dx_sq + cmin_dy_sq) {
         // Entirely outside the clip circle.
         *result = roo_display::Color(0);
         return true;
       }
       return false;
     }
-    if (r_ >= 3 && r_sq_ > std::max(dx1_sq, dx2_sq) + std::max(dy1_sq, dy2_sq) +
-                               6 * r_ - 9) {
+    int32_t max_dx_sq = maxDistanceSq(xMin, xMax, x_);
+    int32_t max_dy_sq = maxDistanceSq(yMin, yMax, y_);
+    if (r_ >= 3 && r_sq_ > max_dx_sq + max_dy_sq + 6 * r_ - 9) {
       // Entirely inside the circle interior.
       *result = fg_;
       return true;
@@ -116,26 +108,17 @@ class PressOverlay : public roo_display::Rasterizable {
 
   bool readColorRect(int16_t xMin, int16_t yMin, int16_t xMax, int16_t yMax,
                      roo_display::Color* result) const override {
-    int32_t dx1_sq = (int32_t)(xMin - x_) * (xMin - x_);
-    int32_t dx2_sq = (int32_t)(xMax - x_) * (xMax - x_);
-    int32_t dy1_sq = (int32_t)(yMin - y_) * (yMin - y_);
-    int32_t dy2_sq = (int32_t)(yMax - y_) * (yMax - y_);
-    if (r_sq_ < std::min(dx1_sq, dx2_sq) + std::min(dy1_sq, dy2_sq)) {
+    int32_t min_dx_sq = minDistanceSq(xMin, xMax, x_);
+    int32_t min_dy_sq = minDistanceSq(yMin, yMax, y_);
+    if (r_sq_ < min_dx_sq + min_dy_sq) {
       // Outside.
       *result = roo_display::Color(0);
       return true;
     }
     if (clip_circle_) {
-      int32_t cdx1_sq =
-          (int32_t)(xMin - clip_circle_x_) * (xMin - clip_circle_x_);
-      int32_t cdx2_sq =
-          (int32_t)(xMax - clip_circle_x_) * (xMax - clip_circle_x_);
-      int32_t cdy1_sq =
-          (int32_t)(yMin - clip_circle_y_) * (yMin - clip_circle_y_);
-      int32_t cdy2_sq =
-          (int32_t)(yMax - clip_circle_y_) * (yMax - clip_circle_y_);
-      if (clip_circle_r_sq_ <
-          (std::min(cdx1_sq, cdx2_sq) + std::min(cdy1_sq, cdy2_sq))) {
+      float cmin_dx_sq = minDistanceSq(xMin, xMax, clip_circle_x_);
+      float cmin_dy_sq = minDistanceSq(yMin, yMax, clip_circle_y_);
+      if (clip_circle_r_sq_ < cmin_dx_sq + cmin_dy_sq) {
         *result = roo_display::Color(0);
         return true;
       }
@@ -145,8 +128,9 @@ class PressOverlay : public roo_display::Rasterizable {
         }
       }
     } else {
-      if (r_ >= 3 && r_sq_ > std::max(dx1_sq, dx2_sq) +
-                                 std::max(dy1_sq, dy2_sq) + 6 * r_ - 9) {
+      int32_t max_dx_sq = maxDistanceSq(xMin, xMax, x_);
+      int32_t max_dy_sq = maxDistanceSq(yMin, yMax, y_);
+      if (r_ >= 3 && r_sq_ > max_dx_sq + max_dy_sq + 6 * r_ - 9) {
         // Interior.
         *result = fg_;
         return true;
@@ -219,6 +203,41 @@ class PressOverlay : public roo_display::Rasterizable {
   }
 
  private:
+  static int32_t minDistanceSq(int16_t rect_min, int16_t rect_max,
+                               int16_t center) {
+    if (center < rect_min) {
+      int32_t delta = rect_min - center;
+      return delta * delta;
+    }
+    if (center > rect_max) {
+      int32_t delta = center - rect_max;
+      return delta * delta;
+    }
+    return 0;
+  }
+
+  static float minDistanceSq(int16_t rect_min, int16_t rect_max, float center) {
+    if (center < rect_min) {
+      float delta = rect_min - center;
+      return delta * delta;
+    }
+    if (center > rect_max) {
+      float delta = center - rect_max;
+      return delta * delta;
+    }
+    return 0;
+  }
+
+  static int32_t maxDistanceSq(int16_t rect_min, int16_t rect_max,
+                               int16_t center) {
+    int32_t delta_min = rect_min - center;
+    if (delta_min < 0) delta_min = -delta_min;
+    int32_t delta_max = rect_max - center;
+    if (delta_max < 0) delta_max = -delta_max;
+    int32_t distance = std::max(delta_min, delta_max);
+    return distance * distance;
+  }
+
   int16_t x_;
   int16_t y_;
   int16_t r_;

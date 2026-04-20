@@ -30,6 +30,7 @@
 #include "roo_windows/widgets/text_field.h"
 #include "roo_windows/widgets/text_label.h"
 #include "roo_windows/widgets/toggle_buttons.h"
+#include "roo_windows/core/press_overlay.h"
 
 using namespace roo_display;
 using namespace roo_windows;
@@ -43,6 +44,17 @@ TEST(Windows, BasicCompilation) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
   Application app(&env, display);
+}
+
+TEST(PressOverlay, WideTopStripCrossingCenterIsNotUniformTransparent) {
+  PressOverlay overlay(0, 0, 10, color::Red);
+
+  Color uniform;
+  EXPECT_FALSE(overlay.readUniformColorRect(-11, -9, 11, -9, &uniform));
+
+  Color colors[23];
+  EXPECT_FALSE(overlay.readColorRect(-11, -9, 11, -9, colors));
+  EXPECT_NE(colors[11], color::Transparent);
 }
 
 }  // namespace roo_windows
