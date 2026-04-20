@@ -12,6 +12,7 @@
 #include "roo_windows/core/gesture_detector.h"
 #include "roo_windows/core/main_window.h"
 #include "roo_windows/core/task.h"
+#include "roo_windows/core/touch_sensor.h"
 #include "roo_windows/widgets/text_field.h"
 
 namespace roo_windows {
@@ -104,6 +105,7 @@ class Application {
   std::vector<std::unique_ptr<TaskPanel>> task_panels_;
 
   MainWindow root_window_;
+  TouchSensor touch_sensor_;
   GestureDetector gesture_detector_;
 
   roo_scheduler::SingletonTask ticker_;

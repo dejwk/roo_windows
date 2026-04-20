@@ -6,6 +6,7 @@
 #include <iostream>
 
 #include "roo_windows/core/panel.h"
+#include "roo_windows/core/touch_sensor.h"
 #include "roo_windows/core/widget.h"
 
 namespace roo_windows {
@@ -28,8 +29,8 @@ static constexpr int16_t kMaxFlingVelocity = 8000;  // Pixels per second.
 
 class GestureDetector {
  public:
-  GestureDetector(Widget& root, roo_display::Display& display)
-      : root_(root), display_(display), is_down_(false) {}
+  GestureDetector(Widget& root, TouchSensor& sensor)
+      : root_(root), sensor_(sensor), is_down_(false) {}
 
   // Returns true if an interaction is in progress and touch event has been
   // dispatched.
@@ -91,7 +92,7 @@ class GestureDetector {
   }
 
   Widget& root_;
-  roo_display::Display& display_;
+  TouchSensor& sensor_;
 
   unsigned long now_us_;
   bool is_down_;
