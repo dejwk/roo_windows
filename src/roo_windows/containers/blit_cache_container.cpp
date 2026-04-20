@@ -104,7 +104,6 @@ void BlitCacheContainer::invalidateDescending(const Rect& rect) {
 
 void BlitCacheContainer::propagateDirty(const Widget* child, const Rect& rect) {
   if (!moving_ && child == child_) {
-    auto old_safe = blit_safe_region_;
     shrinkSafeRegion(rect);
   }
   Container::propagateDirty(child, rect);
@@ -369,8 +368,6 @@ void BlitCacheContainer::paintWidgetContents(const Canvas& canvas,
                          usable_src.xMax(), usable_src.yMax(),
                          usable_dest.xMin(), usable_dest.yMin());
             unsigned long blit_t1 = micros();
-            LOG(INFO) << "BlitCache: blitCopy " << (blit_t1 - blit_t0)
-                      << " us, area=" << usable_area;
             // Mark the blitted destination as an exclusion so the
             // subsequent child paint skips the already-correct pixels.
             clipper.addExclusion(usable_dest);
