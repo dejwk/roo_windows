@@ -104,8 +104,6 @@ bool MainWindow::paintWindow(const roo_display::Surface& s,
   canvas.clipToExtents(redraw_bounds_);
   Rect old_redraw_bounds = redraw_bounds_;
   redraw_bounds_ = Rect(0, 0, -1, -1);
-  // roo_display::BackgroundFillOptimizer bg_optimizer(s.out(),
-  //                                                   background_fill_buffer_);
   Clipper clipper(clipper_state_, s.out(), deadline);
   canvas.set_out(clipper.out());
   paintWidget(canvas, clipper);
