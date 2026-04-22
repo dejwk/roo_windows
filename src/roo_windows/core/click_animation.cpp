@@ -19,10 +19,11 @@ void ClickAnimation::tick() {
     click_anim_target_->invalidateInterior();
     unsigned long elapsed = millis() - click_anim_start_millis_;
     if (elapsed > kClickAnimationMs + 100) {
-      // 100 ms is a grace period to allow the widget to draw the full click state
-      // and then mark itself as non-clicking. If the widget is dragging its feet,
-      // it may mean it became invisible or clipped out and is not refreshing
-      // anymore. In this case, we force the clicking status to false.
+      // 100 ms is a grace period to allow the widget to draw the full click
+      // state and then mark itself as non-clicking. If the widget is dragging
+      // its feet, it may mean it became invisible or clipped out and is not
+      // refreshing anymore. In this case, we force the clicking status to
+      // false.
       click_anim_target_->clearClicking();
     }
   }

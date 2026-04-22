@@ -2,11 +2,82 @@
 
 #include <algorithm>
 
-#include "roo_logging.h"
 #include "roo_windows/core/canvas.h"
 #include "roo_windows/core/clipper.h"
 
 namespace roo_windows {
+
+namespace {
+
+// Computes a single-rectangle repaint region for (panel - copied).
+//
+// Arguments:
+// - panel: The full panel area in device coordinates that may need repaint.
+// - copied: The destination rectangle that has already been fixed by blitCopy
+//   and should therefore be excluded from repaint. It is expected to be in the
+//   same coordinate space as `panel`, and to be fully contained within
+//   `panel`.
+// - out_repaint: Output parameter. Set to the repaint rectangle only when this
+//   function returns true.
+//
+// Return value:
+// - true: (`panel` - `copied`) can be represented as one rectangle;
+//   `out_repaint` is filled with that rectangle. This happens when copied is
+//   empty, or when it is a full-width strip anchored to top/bottom, or a
+//   full-height strip anchored to left/right.
+// - false: The uncovered region is empty or non-rectangular (e.g. interior
+//   hole/L-shape). In this case, a smaller single rectangular clip is not
+//   meaningful; caller should clip to `panel` and add `copied` as an
+//   exclusion.
+bool computeSingleRectRemainder(const roo_display::Box& panel,
+                                const roo_display::Box& copied,
+                                roo_display::Box& out_repaint) {
+  if (panel.empty()) return false;
+  if (copied.empty()) {
+    out_repaint = panel;
+    return true;
+  }
+
+  // If `copied` spans full width, the repaint is rectangular only when the
+  // `copied` rect is anchored to top or bottom (single horizontal strip).
+  if (copied.xMin() == panel.xMin() && copied.xMax() == panel.xMax()) {
+    if (copied.yMin() == panel.yMin()) {
+      if (copied.yMax() == panel.yMax()) {
+        out_repaint = roo_display::Box(0, 0, -1, -1);
+        return true;
+      }
+      out_repaint = roo_display::Box(panel.xMin(), copied.yMax() + 1,
+                                     panel.xMax(), panel.yMax());
+      return !out_repaint.empty();
+    }
+    if (copied.yMax() == panel.yMax()) {
+      out_repaint = roo_display::Box(panel.xMin(), panel.yMin(), panel.xMax(),
+                                     copied.yMin() - 1);
+      return !out_repaint.empty();
+    }
+    return false;
+  }
+
+  // If `copied` spans full height, the repaint is rectangular only when the
+  // `copied` rect is anchored to left or right (single vertical strip).
+  if (copied.yMin() == panel.yMin() && copied.yMax() == panel.yMax()) {
+    if (copied.xMin() == panel.xMin()) {
+      out_repaint = roo_display::Box(copied.xMax() + 1, panel.yMin(),
+                                     panel.xMax(), panel.yMax());
+      return !out_repaint.empty();
+    }
+    if (copied.xMax() == panel.xMax()) {
+      out_repaint = roo_display::Box(panel.xMin(), panel.yMin(),
+                                     copied.xMin() - 1, panel.yMax());
+      return !out_repaint.empty();
+    }
+    return false;
+  }
+
+  return false;
+}
+
+}  // namespace
 
 BlitCacheContainer::BlitCacheContainer(const Environment& env)
     : Container(env),
@@ -132,42 +203,59 @@ void BlitCacheContainer::childShown(const Widget* child) {
 void BlitCacheContainer::shrinkSafeRegion(const Rect& dirty) {
   if (blit_safe_region_.empty()) return;
 
-  // The blit_safe_region_ is a band (full-width or full-height).
-  // If the dirty rect overlaps it, trim from the nearest edge, or keep the
-  // larger remaining portion if it's in the middle.
+  // blit_safe_region_ is kept in device coordinates, while dirty is local.
+  XDim abs_x = 0;
+  YDim abs_y = 0;
+  getAbsoluteOffset(abs_x, abs_y);
+  Rect dirty_dev = dirty.translate(abs_x, abs_y);
+
+  // During pending blit, the safe region still refers to the source frame
+  // (pre-move) device coordinates. Map dirty rect back into that frame before
+  // intersecting/trimming, otherwise we may falsely keep stale source pixels.
+  if (has_pending_blit_) {
+    dirty_dev = dirty_dev.translate(-pending_dx_, -pending_dy_);
+  }
+
+  // Keep the safe region as a single rectangle by subtracting dirty_dev and
+  // retaining the largest remaining rectangle.
   int16_t sy0 = blit_safe_region_.yMin();
   int16_t sy1 = blit_safe_region_.yMax();
   int16_t sx0 = blit_safe_region_.xMin();
   int16_t sx1 = blit_safe_region_.xMax();
 
-  // Check if dirty rect overlaps the safe region at all.
-  if (dirty.xMax() < sx0 || dirty.xMin() > sx1 || dirty.yMax() < sy0 ||
-      dirty.yMin() > sy1) {
+  roo_display::Box overlap =
+      roo_display::Box::Intersect(blit_safe_region_, dirty_dev.asBox());
+  if (overlap.empty()) {
     return;  // No overlap.
   }
 
-  // For a full-width band, trim in the Y dimension.
-  if (sx0 == blit_safe_region_.xMin() && sx1 == blit_safe_region_.xMax()) {
-    int32_t top_portion = dirty.yMin() - sy0;
-    int32_t bottom_portion = sy1 - dirty.yMax();
+  roo_display::Box candidates[4] = {
+      roo_display::Box(sx0, sy0, sx1, overlap.yMin() - 1),
+      roo_display::Box(sx0, overlap.yMax() + 1, sx1, sy1),
+      roo_display::Box(sx0, sy0, overlap.xMin() - 1, sy1),
+      roo_display::Box(overlap.xMax() + 1, sy0, sx1, sy1),
+  };
 
-    if (top_portion <= 0 && bottom_portion <= 0) {
-      // Dirty rect covers the entire band.
-      blit_safe_region_ = roo_display::Box(0, 0, -1, -1);
-    } else if (top_portion >= bottom_portion) {
-      // Keep the top portion.
-      blit_safe_region_ = roo_display::Box(sx0, sy0, sx1, dirty.yMin() - 1);
-    } else {
-      // Keep the bottom portion.
-      blit_safe_region_ = roo_display::Box(sx0, dirty.yMax() + 1, sx1, sy1);
+  roo_display::Box best(0, 0, -1, -1);
+  int32_t best_area = 0;
+  for (const auto& c : candidates) {
+    if (c.empty()) continue;
+    int32_t area = (int32_t)c.width() * c.height();
+    if (area > best_area) {
+      best_area = area;
+      best = c;
     }
   }
+
+  blit_safe_region_ = best;
 }
 
 roo_display::Box BlitCacheContainer::computeCleanBand(
     const roo_display::Box& panel_device,
     const std::vector<roo_display::Box>& excl, size_t excl_count,
     bool vertical) const {
+  static constexpr int kMaxSplits = 128;
+
   if (vertical) {
     // Find the largest contiguous full-width Y band not overlapping any
     // exclusion's Y projection (for exclusions that overlap the panel's X
@@ -177,7 +265,7 @@ roo_display::Box BlitCacheContainer::computeCleanBand(
 
     // Collect Y-splits from exclusions that overlap our X range.
     // Use a small inline buffer to avoid allocation.
-    int16_t splits[16];
+    int16_t splits[kMaxSplits];
     int n_splits = 0;
     splits[n_splits++] = band_y0;
     for (size_t ei = 0; ei < excl_count; ++ei) {
@@ -188,7 +276,7 @@ roo_display::Box BlitCacheContainer::computeCleanBand(
       if (e.yMax() < band_y0 || e.yMin() > band_y1) {
         continue;  // Exclusion doesn't overlap our Y range.
       }
-      if (n_splits < 14) {
+      if (n_splits + 2 < kMaxSplits) {
         splits[n_splits++] = e.yMin();
         splits[n_splits++] = e.yMax() + 1;
       } else {
@@ -236,7 +324,7 @@ roo_display::Box BlitCacheContainer::computeCleanBand(
     int16_t band_x0 = panel_device.xMin();
     int16_t band_x1 = panel_device.xMax();
 
-    int16_t splits[16];
+    int16_t splits[kMaxSplits];
     int n_splits = 0;
     splits[n_splits++] = band_x0;
     for (size_t ei = 0; ei < excl_count; ++ei) {
@@ -247,7 +335,7 @@ roo_display::Box BlitCacheContainer::computeCleanBand(
       if (e.xMax() < band_x0 || e.xMin() > band_x1) {
         continue;
       }
-      if (n_splits < 14) {
+      if (n_splits + 2 < kMaxSplits) {
         splits[n_splits++] = e.xMin();
         splits[n_splits++] = e.xMax() + 1;
       } else {
@@ -306,8 +394,6 @@ void BlitCacheContainer::paintWidgetContents(const Canvas& canvas,
   bool did_blit = false;
   Box blit_dest;
   Box blit_panel;
-  int16_t saved_dx = 0;
-  int32_t saved_dy = 0;
   if (!has_pending_blit_) {
     // No moveTo since last paint; nothing to blit.
   } else if (blit_supported_ != 1) {
@@ -363,18 +449,14 @@ void BlitCacheContainer::paintWidgetContents(const Canvas& canvas,
           if (usable_area > panel_area / 2) {
             // Execute the blit on the raw device.
             roo_display::DisplayOutput& raw = clipper.rawOut();
-            unsigned long blit_t0 = micros();
             raw.blitCopy(usable_src.xMin(), usable_src.yMin(),
                          usable_src.xMax(), usable_src.yMax(),
                          usable_dest.xMin(), usable_dest.yMin());
-            unsigned long blit_t1 = micros();
             // Mark the blitted destination as an exclusion so the
-            // subsequent child paint skips the already-correct pixels.
-            clipper.addExclusion(usable_dest);
+            // subsequent child paint can skip the already-correct pixels
+            // when we cannot express repaint as a single rectangular clip.
             blit_dest = usable_dest;
             blit_panel = panel_device;
-            saved_dx = pending_dx_;
-            saved_dy = pending_dy_;
             did_blit = true;
           }
         }
@@ -386,34 +468,33 @@ void BlitCacheContainer::paintWidgetContents(const Canvas& canvas,
     pending_dy_ = 0;
   }
 
-  // Delegate to standard Container paint.  After a successful blit, clip the
-  // canvas to only the revealed strip so that widgets fully within the blitted
-  // area short-circuit immediately (empty clip box → markCleanDescending).
+  // Delegate to standard Container paint. After a successful blit, prefer a
+  // rectangular repaint clip that omits the copied destination. If that is not
+  // representable by a single rectangle, fall back to panel clip + exclusion.
   Canvas paint_canvas(canvas);
   if (did_blit) {
-    if (saved_dx == 0 && saved_dy < 0) {
-      // Scrolled up: new content revealed at bottom.
-      paint_canvas.clip(Box(blit_panel.xMin(), blit_dest.yMax() + 1,
-                            blit_panel.xMax(), blit_panel.yMax()));
-    } else if (saved_dx == 0 && saved_dy > 0) {
-      // Scrolled down: new content revealed at top.
-      paint_canvas.clip(Box(blit_panel.xMin(), blit_panel.yMin(),
-                            blit_panel.xMax(), blit_dest.yMin() - 1));
-    } else if (saved_dy == 0 && saved_dx < 0) {
-      // Scrolled left: new content revealed at right.
-      paint_canvas.clip(Box(blit_dest.xMax() + 1, blit_panel.yMin(),
-                            blit_panel.xMax(), blit_panel.yMax()));
-    } else if (saved_dy == 0 && saved_dx > 0) {
-      // Scrolled right: new content revealed at left.
-      paint_canvas.clip(Box(blit_panel.xMin(), blit_panel.yMin(),
-                            blit_dest.xMin() - 1, blit_panel.yMax()));
+    Box repaint;
+    if (computeSingleRectRemainder(blit_panel, blit_dest, repaint)) {
+      paint_canvas.clip(repaint);
+    } else {
+      paint_canvas.clip(blit_panel);
+      clipper.addExclusion(blit_dest);
     }
-    // Diagonal scroll: no extra clipping (full paint fallback).
   }
   Container::paintWidgetContents(paint_canvas, clipper);
 
+  if (clipper.isDeadlineExceeded()) {
+    // Preserve incremental frame recovery but disable blit reuse after an
+    // aborted frame; the exclusions/content set may be only partially updated.
+    blit_safe_region_ = Box(0, 0, -1, -1);
+    return;
+  }
+
   // After painting, update blit_safe_region_ for next frame.
-  if (blit_supported_ == 1) {
+  // For non-blit paints with an existing safe region, shrinkSafeRegion()
+  // already accounted for dirty areas. Recomputing from the current (possibly
+  // narrow) clip can collapse safe region to the dirty stripe.
+  if (blit_supported_ == 1 && (did_blit || blit_safe_region_.empty())) {
     Box panel_device = Box::Intersect(
         Box(bounds().xMin() + canvas.dx(), bounds().yMin() + canvas.dy(),
             bounds().xMax() + canvas.dx(), bounds().yMax() + canvas.dy()),

@@ -108,6 +108,8 @@ bool MainWindow::paintWindow(const roo_display::Surface& s,
   canvas.set_out(clipper.out());
   paintWidget(canvas, clipper);
   if (clipper.isDeadlineExceeded()) {
+    // Preserve incremental timeout recovery: keep pending redraw scope and
+    // continue from partially drawn state in the next frame.
     redraw_bounds_ = old_redraw_bounds;
     return false;
   }
