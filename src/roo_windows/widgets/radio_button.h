@@ -6,10 +6,9 @@ namespace roo_windows {
 
 class RadioButton : public BasicWidget {
  public:
-  RadioButton(const Environment& env, bool on = false)
-      : BasicWidget(env) {
-        setOnOffState(on ? ON : OFF);
-      }
+  RadioButton(const Environment& env, bool on = false) : BasicWidget(env) {
+    setOnOffState(on ? OnOffState::kOn : OnOffState::kOff);
+  }
 
   using Widget::isOff;
   using Widget::isOn;
@@ -21,9 +20,7 @@ class RadioButton : public BasicWidget {
 
   Dimensions getSuggestedMinimumDimensions() const override;
 
-  OverlayType getOverlayType() const override {
-    return OVERLAY_POINT;
-  }
+  OverlayType getOverlayType() const override { return OVERLAY_POINT; }
 
   bool isClickable() const override { return true; }
 

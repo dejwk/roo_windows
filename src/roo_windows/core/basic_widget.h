@@ -14,11 +14,11 @@ class BasicWidget : public Widget {
   BasicWidget(const Environment& env) : Widget(env), padding_(0), margins_(0) {}
 
   virtual Padding getDefaultPadding() const {
-    return Padding(PaddingSize::REGULAR);
+    return Padding(PaddingSize::kRegular);
   }
 
   virtual Margins getDefaultMargins() const {
-    return Margins(MarginSize::REGULAR);
+    return Margins(MarginSize::kRegular);
   }
 
   void setPadding(PaddingSize h, PaddingSize v) {
@@ -32,13 +32,13 @@ class BasicWidget : public Widget {
     PaddingSize vs = (PaddingSize)(padding_ & 15);
     Padding def;
     int16_t h, v;
-    if (hs == PaddingSize::DEFAULT_SIZE || vs == PaddingSize::DEFAULT_SIZE) {
+    if (hs == PaddingSize::kDefault || vs == PaddingSize::kDefault) {
       def = getDefaultPadding();
     }
-    h = (hs == PaddingSize::DEFAULT_SIZE) ? (def.left() + def.right()) / 2
-                                          : Padding::DimensionForSize(hs);
-    v = (vs == PaddingSize::DEFAULT_SIZE) ? (def.top() + def.bottom()) / 2
-                                          : Padding::DimensionForSize(vs);
+    h = (hs == PaddingSize::kDefault) ? (def.left() + def.right()) / 2
+                                      : Padding::DimensionForSize(hs);
+    v = (vs == PaddingSize::kDefault) ? (def.top() + def.bottom()) / 2
+                                      : Padding::DimensionForSize(vs);
     return Padding(h, v);
   }
 
@@ -57,13 +57,13 @@ class BasicWidget : public Widget {
     MarginSize vs = (MarginSize)(margins_ & 15);
     Margins def;
     int16_t h, v;
-    if (hs == MarginSize::DEFAULT_SIZE || vs == MarginSize::DEFAULT_SIZE) {
+    if (hs == MarginSize::kDefault || vs == MarginSize::kDefault) {
       def = getDefaultMargins();
     }
-    h = (hs == MarginSize::DEFAULT_SIZE) ? (def.left() + def.right()) / 2
-                                         : Margins::DimensionForSize(hs);
-    v = (vs == MarginSize::DEFAULT_SIZE) ? (def.top() + def.bottom()) / 2
-                                         : Margins::DimensionForSize(vs);
+    h = (hs == MarginSize::kDefault) ? (def.left() + def.right()) / 2
+                                     : Margins::DimensionForSize(hs);
+    v = (vs == MarginSize::kDefault) ? (def.top() + def.bottom()) / 2
+                                     : Margins::DimensionForSize(vs);
     return Margins(h, v);
   }
 

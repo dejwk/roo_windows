@@ -106,7 +106,7 @@ void Container::paintChildren(const Canvas& canvas, Clipper& clipper) {
   for (int i = getChildrenCount() - 1; i >= 0; --i) {
     if (clipper.isDeadlineExceeded()) return;
     Widget& child = getChild(i);
-    bool clipped = child.getParentClipMode() == Widget::CLIPPED;
+    bool clipped = child.getParentClipMode() == ParentClipMode::kClipped;
     child.paintWidget(clipped ? canvas_clipped : canvas, clipper);
     if (fast_render && clipped) {
       // Decorations are guaranteed not to overlap with siblings, so we can draw
@@ -148,7 +148,8 @@ Widget* Container::dispatchTouchDownEvent(XDim x, YDim y) {
   for (int i = getChildrenCount() - 1; i >= 0; --i) {
     Widget& child = getChild(i);
     if (!child.isVisible()) continue;
-    if (!within_bounds && child.getParentClipMode() == Widget::CLIPPED) {
+    if (!within_bounds &&
+        child.getParentClipMode() == ParentClipMode::kClipped) {
       continue;
     }
     if (child.maxParentBounds().contains(x, y)) {
@@ -196,7 +197,7 @@ void Container::propagateDirty(const Widget* child, const Rect& rect) {
   Rect clipped(0, 0, -1, -1);
   if (isVisible()) {
     clipped = rect;
-    if (child->getParentClipMode() == Widget::CLIPPED) {
+    if (child->getParentClipMode() == ParentClipMode::kClipped) {
       clipped = Rect::Intersect(rect, bounds());
     } else if (!bounds().contains(clipped)) {
       cached_max_bounds_ = Rect(0, 0, -1, -1);
@@ -237,8 +238,8 @@ void Container::childHidden(const Widget* child) {
       Rect::Extent(child->maxParentBounds(), child->getParentBoundsOfShadow());
   propagateDirty(child, invalid_rect);
   invalidateBeneath(invalid_rect, child,
-                    child->getParentClipMode() == Widget::CLIPPED);
-  if (child->getParentClipMode() == Widget::UNCLIPPED) {
+                    child->getParentClipMode() == ParentClipMode::kClipped);
+  if (child->getParentClipMode() == ParentClipMode::kUnclipped) {
     unclippedChildRectHidden(child->getParentBoundsOfShadow());
   }
 }
@@ -247,15 +248,16 @@ void Container::childShown(const Widget* child) {
   if (child->getElevation() > 0 ||
       child->getBorderStyle().corner_radius() > 0) {
     invalidateBeneath(child->getParentBoundsOfShadow(), child,
-                      child->getParentClipMode() == Widget::CLIPPED);
+                      child->getParentClipMode() == ParentClipMode::kClipped);
   }
-  if (child->getParentClipMode() == Widget::UNCLIPPED) {
+  if (child->getParentClipMode() == ParentClipMode::kUnclipped) {
     unclippedChildRectShown(child->parent_bounds());
   }
 }
 
 void Container::childInvalidatedRegion(const Widget* child, Rect rect) {
-  invalidateBeneath(rect, child, child->getParentClipMode() == Widget::CLIPPED);
+  invalidateBeneath(rect, child,
+                    child->getParentClipMode() == ParentClipMode::kClipped);
 }
 
 void Container::unclippedChildRectHidden(const Rect& rect) {
@@ -273,7 +275,8 @@ void Container::unclippedChildRectHidden(const Rect& rect) {
   }
   invalidateCachedMaxBounds();
   setDirty(rect);
-  if (getParentClipMode() == UNCLIPPED && !parent()->bounds().contains(rect)) {
+  if (getParentClipMode() == ParentClipMode::kUnclipped &&
+      !parent()->bounds().contains(rect)) {
     // The rect sticks out beyond us; need to propagate to the parent.
     parent()->unclippedChildRectHidden(
         rect.translate(offsetLeft(), offsetTop()));
@@ -286,7 +289,8 @@ void Container::unclippedChildRectShown(const Rect& rect) {
     return;
   }
   cached_max_bounds_ = Rect::Extent(cached_max_bounds_, rect);
-  if (getParentClipMode() == UNCLIPPED && !bounds().contains(rect)) {
+  if (getParentClipMode() == ParentClipMode::kUnclipped &&
+      !bounds().contains(rect)) {
     // The rect sticks out beyond us; need to propagate to the parent.
     parent()->unclippedChildRectShown(
         rect.translate(offsetLeft(), offsetTop()));
@@ -320,8 +324,9 @@ void Container::invalidateBeneath(const Rect& bounds, const Widget* widget,
   } else {
     // The hidden child sticks out beyond the area that this panel is going to
     // fill; we need to propagate upwards.
-    parent()->invalidateBeneath(clipped.translate(offsetLeft(), offsetTop()),
-                                widget, getParentClipMode() == Widget::CLIPPED);
+    parent()->invalidateBeneath(
+        clipped.translate(offsetLeft(), offsetTop()), widget,
+        getParentClipMode() == ParentClipMode::kClipped);
   }
 }
 
@@ -386,7 +391,7 @@ Rect Container::maxBounds() const {
     for (int i = 0; i < count; ++i) {
       const Widget& child = getChild(i);
       if (!child.isVisible()) continue;
-      if (child.getParentClipMode() == Widget::CLIPPED) continue;
+      if (child.getParentClipMode() == ParentClipMode::kClipped) continue;
       cached_max_bounds_ = Rect::Extent(
           cached_max_bounds_,
           child.maxBounds().translate(child.offsetLeft(), child.offsetTop()));

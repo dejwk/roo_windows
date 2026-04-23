@@ -278,11 +278,11 @@ void Widget::setParentClipMode(ParentClipMode mode) {
   if (mode == getParentClipMode()) return;
   bool visible = isVisible();
   if (visible) {
-    setVisibility(INVISIBLE);
+    setVisibility(Visibility::kInvisible);
   }
   state_ ^= kWidgetClippedInParent;
   if (visible) {
-    setVisibility(VISIBLE);
+    setVisibility(Visibility::kVisible);
   }
 }
 
@@ -290,22 +290,24 @@ void Widget::setVisibility(Visibility visibility) {
   Visibility previous = this->visibility();
   if (visibility == previous) return;
   state_ &= ~(kWidgetHidden | kWidgetGone);
-  state_ |= (kWidgetHidden * (visibility == INVISIBLE));
-  state_ |= (kWidgetGone * (visibility == GONE));
-  if (previous == GONE) {
+  state_ |= (kWidgetHidden * (visibility == Visibility::kInvisible));
+  state_ |= (kWidgetGone * (visibility == Visibility::kGone));
+  if (previous == Visibility::kGone) {
     // Layout might have been skipped before, leaving the request pending.
     if (parent() != nullptr && isLayoutRequested()) parent()->requestLayout();
     requestLayout();
-  } else if (visibility == GONE) {
+  } else if (visibility == Visibility::kGone) {
     if (parent() != nullptr) parent()->requestLayout();
   }
-  if (visibility == VISIBLE) {
+  if (visibility == Visibility::kVisible) {
     invalidateInterior();
-    if (previous != VISIBLE && parent() != nullptr) parent()->childShown(this);
+    if (previous != Visibility::kVisible && parent() != nullptr)
+      parent()->childShown(this);
   } else {
     setPressed(false);
     clearClicking();
-    if (previous == VISIBLE && parent() != nullptr) parent()->childHidden(this);
+    if (previous == Visibility::kVisible && parent() != nullptr)
+      parent()->childHidden(this);
   }
 }
 
@@ -372,16 +374,16 @@ void Widget::setDragged(bool dragged) {
   }
 }
 
-Widget::OnOffState Widget::onOffState() const {
-  return isOn() ? (!isOff() ? Widget::ON : Widget::INDETERMINATE)
-                : (isOff() ? Widget::OFF : Widget::INDETERMINATE);
+OnOffState Widget::onOffState() const {
+  return isOn() ? (!isOff() ? OnOffState::kOn : OnOffState::kIndeterminate)
+                : (isOff() ? OnOffState::kOff : OnOffState::kIndeterminate);
 }
 
 void Widget::toggle() {
   OnOffState state = onOffState();
-  if (state == Widget::ON) {
+  if (state == OnOffState::kOn) {
     setOff();
-  } else if (state == Widget::OFF) {
+  } else if (state == OnOffState::kOff) {
     setOn();
   }
 }
@@ -390,9 +392,9 @@ void Widget::setOnOffState(OnOffState state) {
   if (onOffState() == state) return;
   uint8_t old_elevation = getElevation();
   state_ &= ~(kWidgetOn | kWidgetOff);
-  if (state == Widget::ON) {
+  if (state == OnOffState::kOn) {
     state_ |= kWidgetOn;
-  } else if (state == Widget::OFF) {
+  } else if (state == OnOffState::kOff) {
     state_ |= kWidgetOff;
   }
   setDirty();

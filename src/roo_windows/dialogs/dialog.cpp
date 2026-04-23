@@ -13,19 +13,19 @@ Dialog::Dialog(const Environment& env, std::vector<std::string> button_labels)
       title_panel_(env),
       button_panel_(env),
       callback_fn_(nullptr) {
-  title_panel_.setMargins(Margins(MarginSize::NONE, MarginSize::REGULAR));
+  title_panel_.setMargins(Margins(MarginSize::kNone, MarginSize::kRegular));
   add(title_panel_);
-  title_.setPadding(PaddingSize::LARGE, PaddingSize::SMALL);
-  title_.setMargins(MarginSize::NONE, MarginSize::NONE);
+  title_.setPadding(PaddingSize::kLarge, PaddingSize::kSmall);
+  title_.setMargins(MarginSize::kNone, MarginSize::kNone);
   title_panel_.add(title_);
   setDividersVisible(false);
   add(divider1_);
   contents_.setVerticalScrollBarPresence(
-      VerticalScrollBar::SHOWN_WHEN_SCROLLING);
+      VerticalScrollBar::Presence::kShownWhenScrolling);
   add(contents_, {weight : 1});
   add(divider2_);
-  button_panel_.setPadding(PaddingSize::TINY);
-  button_panel_.setMargins(Margins(MarginSize::NONE, MarginSize::SMALL));
+  button_panel_.setPadding(PaddingSize::kTiny);
+  button_panel_.setMargins(Margins(MarginSize::kNone, MarginSize::kSmall));
   add(button_panel_, {gravity : kGravityRight});
   button_panel_.setGravity(kGravityRight | kGravityMiddle);
   buttons_.reserve(button_labels.size());

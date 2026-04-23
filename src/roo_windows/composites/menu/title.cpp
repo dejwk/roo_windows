@@ -11,8 +11,8 @@ Title::Title(const Environment& env, std::string title)
       back_(env, SCALED_ROO_ICON(outlined, navigation_arrow_back)),
       label_(env, std::move(title), font_h6(), kGravityLeft | kGravityMiddle) {
   setGravity(kGravityMiddle);
-  label_.setMargins(MarginSize::NONE);
-  label_.setPadding(PaddingSize::TINY);
+  label_.setMargins(MarginSize::kNone);
+  label_.setPadding(PaddingSize::kTiny);
   add(back_);
   add(label_, {weight : 1});
   back_.setOnInteractiveChange([&]() { getTask()->exitActivity(); });

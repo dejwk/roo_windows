@@ -1,5 +1,6 @@
-#include "roo_windows/config.h"
 #include "roo_windows/containers/navigation_panel.h"
+
+#include "roo_windows/config.h"
 
 namespace roo_windows {
 
@@ -19,14 +20,16 @@ void NavigationPanel::addPage(const roo_display::Pictogram& icon,
   if (first) {
     setActive(0);
   } else {
-    w.setVisibility(GONE);
+    w.setVisibility(roo_windows::Visibility::kGone);
   }
 }
 
 void NavigationPanel::setActive(int index) {
   rail_.setActive(index);
   for (size_t i = 0; i < page_count(); ++i) {
-    page(i)->setVisibility(i == (size_t)index ? VISIBLE : GONE);
+    page(i)->setVisibility(i == (size_t)index
+                               ? roo_windows::Visibility::kVisible
+                               : roo_windows::Visibility::kGone);
   }
 }
 
@@ -45,7 +48,7 @@ Dimensions NavigationPanel::onMeasure(WidthSpec width, HeightSpec height) {
 }
 
 void NavigationPanel::onLayout(bool changed, const Rect& rect) {
-  rail_.layout(Rect(0, 0, Scaled(72)-1, rect.yMax()));
+  rail_.layout(Rect(0, 0, Scaled(72) - 1, rect.yMax()));
   contents_.layout(Rect(Scaled(72), 0, rect.xMax(), rect.yMax()));
 }
 

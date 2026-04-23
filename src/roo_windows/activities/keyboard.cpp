@@ -390,7 +390,7 @@ KeyboardWidget::KeyboardWidget(const Environment& env, const KeyboardSpec* spec)
       color_theme_(env.keyboardColorTheme()),
       caps_state_(Keyboard::CAPS_STATE_LOW),
       listener_(nullptr) {
-  setParentClipMode(Widget::UNCLIPPED);
+  setParentClipMode(ParentClipMode::kUnclipped);
   for (int i = 0; i < spec->page_count; ++i) {
     auto page = new KeyboardPage(env, &spec->pages[i]);
     add(std::unique_ptr<KeyboardPage>(page));
@@ -447,7 +447,8 @@ void KeyboardWidget::setPage(int idx) {
     current_page_->init(*env_);
   }
   for (int i = 0; i < static_cast<int>(pages_.size()); ++i) {
-    pages_[i]->setVisibility(i == idx ? VISIBLE : GONE);
+    pages_[i]->setVisibility(i == idx ? Visibility::kVisible
+                                      : Visibility::kGone);
   }
   setCapsState(Keyboard::CAPS_STATE_LOW);
   requestLayout();
@@ -456,7 +457,7 @@ void KeyboardWidget::setPage(int idx) {
 KeyboardPage::KeyboardPage(const Environment& env, const KeyboardPageSpec* spec)
     : Panel(env), spec_(spec), highlighter_(env), initialized_(false) {
   setBackground(env.keyboardColorTheme().background);
-  setParentClipMode(Widget::UNCLIPPED);
+  setParentClipMode(ParentClipMode::kUnclipped);
 }
 
 void KeyboardPage::init(const Environment& env) {
@@ -513,8 +514,8 @@ void KeyboardPage::init(const Environment& env) {
     }
   }
   // Note: highlighter must be added last to be on top of all children.
-  highlighter_.setVisibility(INVISIBLE);
-  highlighter_.setParentClipMode(Widget::UNCLIPPED);
+  highlighter_.setVisibility(Visibility::kInvisible);
+  highlighter_.setParentClipMode(ParentClipMode::kUnclipped);
   add(highlighter_);
 }
 
@@ -611,12 +612,13 @@ void KeyboardPage::showHighlighter(const TextButton& btn) {
   highlighter_.moveTo(Rect(bBounds.xMin(), bBounds.yMin() - kHighlighterHeight,
                            bBounds.xMax(), bBounds.yMax() - 3));
   highlighter_.setTarget(&btn);
-  highlighter_.setVisibility(VISIBLE);
+  highlighter_.setVisibility(Visibility::kVisible);
 }
 
 void KeyboardPage::hideHighlighter() {
-  // Use INVISIBLE to avoid needlessly re-measuring the keyboard page.
-  highlighter_.setVisibility(INVISIBLE);
+  // Use Visibility::kInvisible to avoid needlessly re-measuring the keyboard
+  // page.
+  highlighter_.setVisibility(Visibility::kInvisible);
   highlighter_.setTarget(nullptr);
 }
 
@@ -627,7 +629,7 @@ void KeyboardPage::capsStateUpdated() {
 }
 
 PressHighlighter::PressHighlighter(const Environment& env) : Widget(env) {
-  setParentClipMode(Widget::UNCLIPPED);
+  setParentClipMode(ParentClipMode::kUnclipped);
 }
 
 const KeyboardPage* PressHighlighter::page() const {
@@ -669,18 +671,18 @@ Dimensions PressHighlighter::getSuggestedMinimumDimensions() const {
 
 Keyboard::Keyboard(const Environment& env, const KeyboardSpec* spec)
     : contents_(new KeyboardWidget(env, spec)) {
-  contents_->setVisibility(Widget::GONE);
+  contents_->setVisibility(Visibility::kGone);
 }
 
 Widget& Keyboard::getContents() { return *contents_; }
 
 void Keyboard::show() {
   contents()->setPage(0);
-  contents()->setVisibility(Widget::VISIBLE);
+  contents()->setVisibility(Visibility::kVisible);
 }
 
 void Keyboard::hide() {
-  contents()->setVisibility(Widget::GONE);
+  contents()->setVisibility(Visibility::kGone);
   contents()->setPage(-1);
   contents()->setCapsState(CapsState::CAPS_STATE_LOW);
 }

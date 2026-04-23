@@ -5,15 +5,15 @@
 namespace roo_windows {
 
 enum class MarginSize {
-  DEFAULT_SIZE = 0,
-  NONE = 1,
-  SMALL = 2,
-  REGULAR = 3,
-  LARGE = 4,
-  HUGE = 5,
-  HUMONGOUS = 6,
-  NEGATIVE_SMALL = 7,
-  NEGATIVE = 8,
+  kDefault = 0,
+  kNone = 1,
+  kSmall = 2,
+  kRegular = 3,
+  kLarge = 4,
+  kHuge = 5,
+  kHumongous = 6,
+  kNegativeSmall = 7,
+  kNegative = 8,
 };
 
 class Margins {
@@ -32,21 +32,21 @@ class Margins {
 
   inline static int16_t DimensionForSize(MarginSize size) {
     switch (size) {
-      case MarginSize::NONE:
+      case MarginSize::kNone:
         return 0;
-      case MarginSize::SMALL:
+      case MarginSize::kSmall:
         return Scaled(2);
-      case MarginSize::REGULAR:
+      case MarginSize::kRegular:
         return Scaled(4);
-      case MarginSize::LARGE:
+      case MarginSize::kLarge:
         return Scaled(8);
-      case MarginSize::HUGE:
+      case MarginSize::kHuge:
         return Scaled(12);
-      case MarginSize::HUMONGOUS:
+      case MarginSize::kHumongous:
         return Scaled(20);
-      case MarginSize::NEGATIVE_SMALL:
+      case MarginSize::kNegativeSmall:
         return Scaled(-2);
-      case MarginSize::NEGATIVE:
+      case MarginSize::kNegative:
         return Scaled(-4);
       default:
         return Scaled(4);

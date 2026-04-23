@@ -25,7 +25,7 @@ Log::Log(const roo_windows::Environment& env, uint32_t buffer_size,
       max_line_width_(0),
       line_start_(0),
       line_count_(0) {
-  setPadding(PaddingSize::TINY);
+  setPadding(PaddingSize::kTiny);
 }
 
 void Log::clear() {
@@ -166,10 +166,10 @@ ScrollableLog::ScrollableLog(const roo_windows::Environment& env,
                              uint32_t buffer_size, size_t max_lines)
     : ScrollablePanel(env),
       log_(env, buffer_size, max_lines),
-      autoscroll_mode_(AUTOSCROLL_ALWAYS) {
+      autoscroll_mode_(AutoscrollMode::kAlways) {
   setContents(log_);
   setVerticalScrollBarPresence(
-      roo_windows::VerticalScrollBar::SHOWN_WHEN_SCROLLING);
+      roo_windows::VerticalScrollBar::Presence::kShownWhenScrolling);
 }
 
 void ScrollableLog::clear() {
@@ -190,10 +190,10 @@ const roo_display::Font& ScrollableLog::font() const { return log_.font(); }
 
 void ScrollableLog::autoScroll() {
   switch (autoscroll_mode_) {
-    case AUTOSCROLL_NONE: {
+    case AutoscrollMode::kNone: {
       return;
     }
-    case AUTOSCROLL_ALWAYS:
+    case AutoscrollMode::kAlways:
     default: {
       scrollToBottom();
       return;

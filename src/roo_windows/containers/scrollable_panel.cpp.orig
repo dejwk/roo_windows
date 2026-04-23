@@ -329,7 +329,7 @@ bool ScrollablePanel::onSingleTapUp(XDim x, YDim y) {
       scrollTo(contents()->offsetLeft(), new_y);
     }
   } else {
-    scroll_bar_.setVisibility(VISIBLE);
+    scroll_bar_.setVisibility(Visibility::kVisible);
   }
   deadline_hide_scrollbar_ = roo_time::Uptime::Now() + kDelayHideScrollbar;
   getApplication()->scheduleAction(*this, kDelayHideScrollbar);
@@ -359,7 +359,7 @@ bool ScrollablePanel::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
     scrollBy(dx, dy);
   }
   if (scroll_bar_presence_ == VerticalScrollBar::SHOWN_WHEN_SCROLLING) {
-    scroll_bar_.setVisibility(VISIBLE);
+    scroll_bar_.setVisibility(Visibility::kVisible);
     deadline_hide_scrollbar_ = roo_time::Uptime::Now() + roo_time::Hours(1);
   }
   return true;

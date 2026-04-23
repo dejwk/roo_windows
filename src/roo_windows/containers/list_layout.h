@@ -98,7 +98,7 @@ inline Rect unclippedRegion(const Widget* w) {
   while (w->parent() != nullptr) {
     dx -= w->offsetLeft();
     dy -= w->offsetTop();
-    if (w->getParentClipMode() == Widget::CLIPPED) {
+    if (w->getParentClipMode() == ParentClipMode::kClipped) {
       rect = Rect::Intersect(rect, w->parent()->bounds().translate(dx, dy));
     }
     w = w->parent();
@@ -229,11 +229,11 @@ class ListLayout : public Panel {
 
     // First, see if we need to shrink the list from any side.
     while (first_ < new_first && first_ <= last_) {
-      elements_.pop_front().setVisibility(GONE);
+      elements_.pop_front().setVisibility(Visibility::kGone);
       ++first_;
     }
     while (new_last < last_ && first_ <= last_) {
-      elements_.pop_back().setVisibility(GONE);
+      elements_.pop_back().setVisibility(Visibility::kGone);
       --last_;
     }
     if (first_ > last_) {
@@ -295,11 +295,11 @@ class ListLayout : public Panel {
     if (rect.height() <= 0) {
       return;
     }
-    prototype_->setVisibility(VISIBLE);
+    prototype_->setVisibility(Visibility::kVisible);
     int16_t h =
         (element_count_ == 0) ? rect.height() : rect.height() / element_count_;
     prototype_->layout(Rect(0, 0, rect.width() - 1, h - 1));
-    prototype_->setVisibility(GONE);
+    prototype_->setVisibility(Visibility::kGone);
     bool moved = (rect.yMin() != parent_bounds().yMin() ||
                   rect.yMax() != parent_bounds().yMax());
     size_t capacity = (getMainWindow()->height() - 2) / element_height() + 2;
@@ -307,7 +307,7 @@ class ListLayout : public Panel {
       // Invalidate all the children so that they get repositioned during next
       // paintChildren().
       while (last_-- >= first_) {
-        elements_.pop_back().setVisibility(GONE);
+        elements_.pop_back().setVisibility(Visibility::kGone);
       }
       removeAll();
       if (element_count_ == 0) return;
@@ -339,7 +339,7 @@ class ListLayout : public Panel {
       return;
     }
     setFromModel(pos, e);
-    e.setVisibility(VISIBLE);
+    e.setVisibility(Visibility::kVisible);
   }
 
   void layoutElement(int pos, Widget& e) {

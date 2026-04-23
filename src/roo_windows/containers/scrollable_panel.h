@@ -14,7 +14,7 @@ namespace roo_windows {
 // vertical scrolling, and enables quick scrolling.
 class VerticalScrollBar : public Widget {
  public:
-  enum Presence { ALWAYS_SHOWN, SHOWN_WHEN_SCROLLING, ALWAYS_HIDDEN };
+  enum class Presence { kAlwaysShown, kShownWhenScrolling, kAlwaysHidden };
 
   VerticalScrollBar(const Environment& env) : Widget(env), begin_(0), end_(0) {}
 
@@ -41,27 +41,28 @@ class VerticalScrollBar : public Widget {
 class SimpleScrollablePanel : public Container,
                               private roo_scheduler::Executable {
  public:
-  enum Direction { VERTICAL = 0, HORIZONTAL = 1, BOTH = 2 };
+  enum class Direction { kVertical = 0, kHorizontal = 1, kBoth = 2 };
 
   SimpleScrollablePanel(const Environment& env, WidgetRef contents,
-                        Direction direction = VERTICAL)
+                        Direction direction = Direction::kVertical)
       : SimpleScrollablePanel(env, direction) {
     setContents(std::move(contents));
   }
 
-  SimpleScrollablePanel(const Environment& env, Direction direction = VERTICAL)
+  SimpleScrollablePanel(const Environment& env,
+                        Direction direction = Direction::kVertical)
       : Container(env),
         direction_(direction),
         alignment_(roo_display::kLeft | roo_display::kTop),
         contents_(nullptr),
-        scroll_bar_presence_(VerticalScrollBar::ALWAYS_HIDDEN),
+        scroll_bar_presence_(VerticalScrollBar::Presence::kAlwaysHidden),
         scroll_bar_(env),
         scroll_bar_gesture_(false),
         scheduler_(env.scheduler()),
         notification_id_(-1),
         animation_(ScrollAnimation::IDLE),
         anim_{} {
-    scroll_bar_.setVisibility(INVISIBLE);
+    scroll_bar_.setVisibility(Visibility::kInvisible);
   }
 
   ~SimpleScrollablePanel() { cancelPendingUpdate(); }
@@ -115,20 +116,20 @@ class SimpleScrollablePanel : public Container,
   void setVerticalScrollBarPresence(VerticalScrollBar::Presence presence) {
     if (scroll_bar_presence_ == presence) return;
     switch (scroll_bar_presence_) {
-      case VerticalScrollBar::ALWAYS_SHOWN: {
-        scroll_bar_.setVisibility(VISIBLE);
+      case VerticalScrollBar::Presence::kAlwaysShown: {
+        scroll_bar_.setVisibility(Visibility::kVisible);
         break;
       }
-      case VerticalScrollBar::ALWAYS_HIDDEN: {
-        scroll_bar_.setVisibility(INVISIBLE);
+      case VerticalScrollBar::Presence::kAlwaysHidden: {
+        scroll_bar_.setVisibility(Visibility::kInvisible);
         break;
       }
       default: {
         if (animation_ == ScrollAnimation::FLINGING || isHandlingGesture()) {
           // Currently scrolling or moving.
-          scroll_bar_.setVisibility(VISIBLE);
+          scroll_bar_.setVisibility(Visibility::kVisible);
         } else {
-          scroll_bar_.setVisibility(INVISIBLE);
+          scroll_bar_.setVisibility(Visibility::kInvisible);
         }
       }
     }
@@ -283,12 +284,13 @@ class SimpleScrollablePanel : public Container,
 class ScrollableBlitPanel : public SimpleScrollablePanel {
  public:
   ScrollableBlitPanel(const Environment& env, WidgetRef contents,
-                      Direction direction = VERTICAL)
+                      Direction direction = Direction::kVertical)
       : ScrollableBlitPanel(env, direction) {
     setContents(std::move(contents));
   }
 
-  ScrollableBlitPanel(const Environment& env, Direction direction = VERTICAL)
+  ScrollableBlitPanel(const Environment& env,
+                      Direction direction = Direction::kVertical)
       : SimpleScrollablePanel(env, direction), blit_cache_(env) {}
 
   void setContents(WidgetRef new_contents) {

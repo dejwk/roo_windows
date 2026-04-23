@@ -7,8 +7,8 @@
 #include "roo_windows/containers/vertical_layout.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/widgets/button.h"
-#include "roo_windows/widgets/text_label.h"
 #include "roo_windows/widgets/divider.h"
+#include "roo_windows/widgets/text_label.h"
 
 namespace roo_windows {
 
@@ -44,8 +44,8 @@ class Dialog : public VerticalLayout {
   }
 
   void setDividersVisible(bool visible) {
-    divider1_.setVisibility(visible ? VISIBLE : GONE);
-    divider2_.setVisibility(visible ? VISIBLE : GONE);
+    divider1_.setVisibility(visible ? Visibility::kVisible : Visibility::kGone);
+    divider2_.setVisibility(visible ? Visibility::kVisible : Visibility::kGone);
   }
 
   TextLabel title_;

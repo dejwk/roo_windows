@@ -49,11 +49,11 @@ class RadioListItem : public HorizontalLayout {
   friend class RadioListModel;
 
   void init() {
-    // item().setMargins(MarginSize::NONE);
-    // item().setPadding(PaddingSize::NONE);
+    // item().setMargins(MarginSize::kNone);
+    // item().setPadding(PaddingSize::kNone);
     setGravity(kGravityMiddle);
-    setPadding(Padding(PaddingSize::TINY, PaddingSize::NONE));
-    button_.setMargins(MarginSize::NONE, MarginSize::SMALL);
+    setPadding(Padding(PaddingSize::kTiny, PaddingSize::kNone));
+    button_.setMargins(MarginSize::kNone, MarginSize::kSmall);
     add(button_);
     add(item(), {weight : 1});
     button_.setOnInteractiveChange([this]() { on_click_(idx_); });

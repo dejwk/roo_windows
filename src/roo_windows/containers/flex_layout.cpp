@@ -59,8 +59,8 @@ FlexLayout::FlexLayout(const Environment& env, FlexDirection direction)
       align_content_(AlignContent::kStretch),
       column_gap_(0),
       row_gap_(0),
-      padding_(PaddingSize::NONE),
-      margins_(MarginSize::NONE),
+      padding_(PaddingSize::kNone),
+      margins_(MarginSize::kNone),
       min_dimensions_(0, 0) {}
 
 // ---------------------------------------------------------------------------

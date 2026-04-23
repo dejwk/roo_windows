@@ -65,13 +65,10 @@ class Log : public roo_windows::BasicWidget {
 
 class ScrollableLog : public roo_windows::ScrollablePanel {
  public:
-  enum AutoscrollMode {
-    AUTOSCROLL_NONE,  // Doesn't auto-scroll.
-    // AUTOSCROLL_DEFAULT,  // Auto-scrolls to bottom only if the content is at
-    // the
-    //                      // bottom.
-    AUTOSCROLL_ALWAYS  // Auto-scrolls to bottom whenever a new line gets
-                       // appended.
+  enum class AutoscrollMode {
+    kNone,   // Doesn't auto-scroll.
+    kAlways  // Auto-scrolls to bottom whenever a new line gets
+             // appended.
   };
 
   ScrollableLog(const roo_windows::Environment& env,

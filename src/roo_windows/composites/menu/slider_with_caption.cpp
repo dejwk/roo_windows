@@ -12,14 +12,14 @@ BaseSliderWithCaption::BaseSliderWithCaption(const Environment& env,
       caption_(env, std::move(caption), font_body1()),
       value_(env, "", font_body1()),
       slider_(env) {
-  caption_.setMargins(MarginSize::LARGE, MarginSize::NONE);
-  value_.setMargins(MarginSize::LARGE, MarginSize::NONE);
-  caption_.setPadding(PaddingSize::REGULAR, PaddingSize::NONE);
-  value_.setPadding(PaddingSize::REGULAR, PaddingSize::NONE);
+  caption_.setMargins(MarginSize::kLarge, MarginSize::kNone);
+  value_.setMargins(MarginSize::kLarge, MarginSize::kNone);
+  caption_.setPadding(PaddingSize::kRegular, PaddingSize::kNone);
+  value_.setPadding(PaddingSize::kRegular, PaddingSize::kNone);
   text_section_.add(caption_, roo_display::kLeft);
   text_section_.add(value_, roo_display::kRight);
   add(text_section_);
-  slider_.setMargins(MarginSize::REGULAR, MarginSize::NEGATIVE_SMALL);
+  slider_.setMargins(MarginSize::kRegular, MarginSize::kNegativeSmall);
   add(slider_);
   slider_.setOnInteractiveChange([this]() {
     value_.setText(formatValue(slider_.getPos()));

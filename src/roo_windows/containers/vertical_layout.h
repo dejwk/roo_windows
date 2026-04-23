@@ -34,8 +34,8 @@ class VerticalLayout : public Panel {
 
   VerticalLayout(const Environment& env)
       : Panel(env),
-        padding_(PaddingSize::NONE),
-        margins_(MarginSize::NONE),
+        padding_(PaddingSize::kNone),
+        margins_(MarginSize::kNone),
         gravity_(),
         use_largest_child_(false),
         weight_sum_(0),

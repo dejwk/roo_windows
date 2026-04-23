@@ -65,12 +65,12 @@ static const uint8_t kInvalidated = 0x02;
 static const uint8_t kLayoutRequested = 0x04;
 static const uint8_t kLayoutRequired = 0x08;
 
+enum class ParentClipMode { kClipped, kUnclipped };
+enum class OnOffState { kOff, kIndeterminate, kOn };
+enum class Visibility { kVisible, kInvisible, kGone };
+
 class Widget {
  public:
-  enum ParentClipMode { CLIPPED, UNCLIPPED };
-  enum OnOffState { OFF, INDETERMINATE, ON };
-  enum Visibility { VISIBLE, INVISIBLE, GONE };
-
   Widget(const Environment& env);
   Widget(const Widget& w) = delete;
   Widget(Widget&& w) = default;
@@ -314,8 +314,8 @@ class Widget {
   virtual void onCancel();
 
   ParentClipMode getParentClipMode() const {
-    return (state_ & kWidgetClippedInParent) != 0 ? Widget::UNCLIPPED
-                                                  : Widget::CLIPPED;
+    return (state_ & kWidgetClippedInParent) != 0 ? ParentClipMode::kUnclipped
+                                                  : ParentClipMode::kClipped;
   }
 
   void setParentClipMode(ParentClipMode mode);
@@ -323,7 +323,9 @@ class Widget {
   bool isOwnedByParent() const { return (state_ & kWidgetOwnedByParent) != 0; }
 
   Visibility visibility() const {
-    return isGone() ? GONE : isVisible() ? VISIBLE : INVISIBLE;
+    return isGone()      ? Visibility::kGone
+           : isVisible() ? Visibility::kVisible
+                         : Visibility::kInvisible;
   }
 
   bool isVisible() const {
@@ -454,8 +456,8 @@ class Widget {
   bool isOn() const { return (state_ & kWidgetOn) != 0; }
   bool isOff() const { return (state_ & kWidgetOff) != 0; }
 
-  void setOn() { setOnOffState(Widget::ON); }
-  void setOff() { setOnOffState(Widget::OFF); }
+  void setOn() { setOnOffState(OnOffState::kOn); }
+  void setOff() { setOnOffState(OnOffState::kOff); }
   void toggle();
 
   OnOffState onOffState() const;
@@ -551,21 +553,21 @@ class Widget {
   roo_display::Alignment adjustAlignment(
       roo_display::Alignment alignment = roo_display::kMiddle |
                                          roo_display::kCenter) const {
-    if ((alignment.h().dst() == roo_display::ANCHOR_MID ||
-         alignment.h().dst() == roo_display::ANCHOR_ORIGIN) &&
-        (alignment.v().dst() == roo_display::ANCHOR_MID ||
-         alignment.v().dst() == roo_display::ANCHOR_ORIGIN)) {
+    if ((alignment.h().dst() == roo_display::Anchor::kMid ||
+         alignment.h().dst() == roo_display::Anchor::kOrigin) &&
+        (alignment.v().dst() == roo_display::Anchor::kMid ||
+         alignment.v().dst() == roo_display::Anchor::kOrigin)) {
       return alignment;
     }
     roo_display::HAlign h = alignment.h();
     roo_display::VAlign v = alignment.v();
     Padding p = getPadding();
     switch (h.dst()) {
-      case roo_display::ANCHOR_MIN: {
+      case roo_display::Anchor::kMin: {
         h = h.shiftBy(p.left());
         break;
       }
-      case roo_display::ANCHOR_MAX: {
+      case roo_display::Anchor::kMax: {
         h = h.shiftBy(-p.right());
         break;
       }
@@ -573,11 +575,11 @@ class Widget {
       }
     }
     switch (v.dst()) {
-      case roo_display::ANCHOR_MIN: {
+      case roo_display::Anchor::kMin: {
         v = v.shiftBy(p.top());
         break;
       }
-      case roo_display::ANCHOR_MAX: {
+      case roo_display::Anchor::kMax: {
         v = v.shiftBy(-p.bottom());
         break;
       }

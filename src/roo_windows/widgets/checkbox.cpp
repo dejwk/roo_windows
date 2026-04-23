@@ -17,15 +17,16 @@ void Checkbox::onClicked() {
 void Checkbox::paint(const Canvas& canvas) const {
   OnOffState state = onOffState();
   Color color =
-      state == ON
+      state == OnOffState::kOn
           ? theme().color.highlighterColor(canvas.bgcolor())
           : AlphaBlend(
                 canvas.bgcolor(),
                 theme().color.defaultColor(canvas.bgcolor()).withA(0x90));
   RleImage4bppxBiased<Alpha4, ProgMemPtr> img =
-      state == ON    ? SCALED_ROO_ICON(filled, toggle_check_box)
-      : state == OFF ? SCALED_ROO_ICON(filled, toggle_check_box_outline_blank)
-                     : SCALED_ROO_ICON(filled, toggle_indeterminate_check_box);
+      state == OnOffState::kOn ? SCALED_ROO_ICON(filled, toggle_check_box)
+      : state == OnOffState::kOff
+          ? SCALED_ROO_ICON(filled, toggle_check_box_outline_blank)
+          : SCALED_ROO_ICON(filled, toggle_indeterminate_check_box);
   img.color_mode().setColor(color);
   canvas.drawTiled(img, bounds(), kCenter | kMiddle, isInvalidated());
 }

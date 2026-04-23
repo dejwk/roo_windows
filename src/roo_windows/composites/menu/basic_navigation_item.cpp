@@ -13,8 +13,8 @@ BasicNavigationItem::BasicNavigationItem(const Environment& env,
       target_(target) {
   setGravity(kGravityMiddle);
   add(icon_);
-  label_.setMargins(MarginSize::NONE);
-  label_.setPadding(PaddingSize::TINY);
+  label_.setMargins(MarginSize::kNone);
+  label_.setPadding(PaddingSize::kTiny);
   add(label_, {weight : 1});
 
   setOnInteractiveChange([&]() { getTask()->enterActivity(&target_); });
@@ -31,12 +31,12 @@ BasicNavigationItemWithSubtext::BasicNavigationItemWithSubtext(
       target_(target) {
   setGravity(kGravityMiddle);
   add(icon_);
-  label_.setMargins(MarginSize::NONE);
-  label_.setPadding(PaddingSize::NONE);
-  subtext_.setMargins(MarginSize::NONE);
-  subtext_.setPadding(PaddingSize::NONE);
-  content_.setMargins(MarginSize::NONE);
-  content_.setPadding(PaddingSize::TINY);
+  label_.setMargins(MarginSize::kNone);
+  label_.setPadding(PaddingSize::kNone);
+  subtext_.setMargins(MarginSize::kNone);
+  subtext_.setPadding(PaddingSize::kNone);
+  content_.setMargins(MarginSize::kNone);
+  content_.setPadding(PaddingSize::kTiny);
   content_.add(label_);
   content_.add(subtext_);
   add(content_, {weight : 1});

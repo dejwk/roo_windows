@@ -6,18 +6,18 @@ namespace roo_windows {
 
 class Checkbox : public BasicWidget {
  public:
-  Checkbox(const Environment& env, OnOffState state = Widget::OFF)
+  Checkbox(const Environment& env, OnOffState state = OnOffState::kOff)
       : BasicWidget(env) {
     setOnOffState(state);
   }
 
-  using Widget::isOn;
   using Widget::isOff;
-  using Widget::setOn;
-  using Widget::setOff;
-  using Widget::toggle;
-  using Widget::setOnOffState;
+  using Widget::isOn;
   using Widget::onOffState;
+  using Widget::setOff;
+  using Widget::setOn;
+  using Widget::setOnOffState;
+  using Widget::toggle;
 
   void paint(const Canvas& canvas) const override;
 
@@ -27,9 +27,7 @@ class Checkbox : public BasicWidget {
 
   void onClicked() override;
 
-  OverlayType getOverlayType() const override {
-    return OVERLAY_POINT;
-  }
+  OverlayType getOverlayType() const override { return OVERLAY_POINT; }
 };
 
 }  // namespace roo_windows

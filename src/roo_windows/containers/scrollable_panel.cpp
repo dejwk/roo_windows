@@ -245,9 +245,12 @@ PreferredSize SimpleScrollablePanel::getPreferredSize() const {
       h = c.height();
     }
   }
-  return PreferredSize(
-      direction_ == VERTICAL ? w : PreferredSize::WrapContentWidth(),
-      direction_ == HORIZONTAL ? h : PreferredSize::WrapContentHeight());
+  return PreferredSize(direction_ == Direction::kVertical
+                           ? w
+                           : PreferredSize::WrapContentWidth(),
+                       direction_ == Direction::kHorizontal
+                           ? h
+                           : PreferredSize::WrapContentHeight());
 }
 
 Dimensions SimpleScrollablePanel::onMeasure(WidthSpec width,
@@ -258,12 +261,12 @@ Dimensions SimpleScrollablePanel::onMeasure(WidthSpec width,
   Margins m = contents()->getMargins();
   PreferredSize s = contents()->getPreferredSize();
   WidthSpec child_width =
-      (direction_ == VERTICAL)
+      (direction_ == Direction::kVertical)
           ? width.getChildWidthSpec(m.left() + m.right(), s.width())
           : WidthSpec::Unspecified(
                 std::max(0, width.value() - m.left() - m.right()));
   HeightSpec child_height =
-      (direction_ == HORIZONTAL)
+      (direction_ == Direction::kHorizontal)
           ? height.getChildHeightSpec(m.top() + m.bottom(), s.height())
           : HeightSpec::Unspecified(
                 std::max((YDim)0, height.value() - m.top() - m.bottom()));
@@ -299,7 +302,8 @@ void SimpleScrollablePanel::execute(roo_scheduler::EventID id) {
       // Animation complete: snap to exact boundary.
       animation_ = ScrollAnimation::IDLE;
       scrollTo(anim_.springback.target_x, anim_.springback.target_y);
-      if (scroll_bar_presence_ == VerticalScrollBar::SHOWN_WHEN_SCROLLING) {
+      if (scroll_bar_presence_ ==
+          VerticalScrollBar::Presence::kShownWhenScrolling) {
         deadline_hide_scrollbar_ =
             roo_time::Uptime::Now() + kDelayHideScrollbar;
         scheduleHideScrollBarUpdate();
@@ -318,7 +322,7 @@ void SimpleScrollablePanel::execute(roo_scheduler::EventID id) {
   }
 
   if (roo_time::Uptime::Now() >= deadline_hide_scrollbar_) {
-    scroll_bar_.setVisibility(INVISIBLE);
+    scroll_bar_.setVisibility(Visibility::kInvisible);
   }
   bool scroll_in_progress =
       (contents() != nullptr && animation_ == ScrollAnimation::FLINGING);
@@ -342,8 +346,8 @@ void SimpleScrollablePanel::execute(roo_scheduler::EventID id) {
   // horizontal or vertical direction because of bumping into a boundary,
   // the corresponding start velocity is set to zero.
   float t = (t_end - anim_.fling.start_time) / 1000.0;
-  const bool overshoot_x = (direction_ != VERTICAL);
-  const bool overshoot_y = (direction_ != HORIZONTAL);
+  const bool overshoot_x = (direction_ != Direction::kVertical);
+  const bool overshoot_y = (direction_ != Direction::kHorizontal);
   if (anim_.fling.start_vx != 0) {
     // The scrolling continues horizontally.
     int32_t scroll_x_total =
@@ -419,7 +423,8 @@ void SimpleScrollablePanel::execute(roo_scheduler::EventID id) {
     // If fling left content in overshoot, spring back to the boundary.
     startSpringBack();
     if (animation_ != ScrollAnimation::SPRING_BACK) {
-      if (scroll_bar_presence_ == VerticalScrollBar::SHOWN_WHEN_SCROLLING) {
+      if (scroll_bar_presence_ ==
+          VerticalScrollBar::Presence::kShownWhenScrolling) {
         // Schedule hiding the scroll bar.
         deadline_hide_scrollbar_ =
             roo_time::Uptime::Now() + kDelayHideScrollbar;
@@ -453,7 +458,7 @@ bool SimpleScrollablePanel::onInterceptTouchEvent(const TouchEvent& event) {
     // down, so that onDown is called on the panel and can stop the animation.
     return true;
   }
-  if (scroll_bar_presence_ != VerticalScrollBar::ALWAYS_HIDDEN &&
+  if (scroll_bar_presence_ != VerticalScrollBar::Presence::kAlwaysHidden &&
       contents() != nullptr && contents()->height() > height() &&
       event.x() >= width() - kScrollBarTouchWidth) {
     scroll_bar_gesture_ = true;
@@ -518,7 +523,7 @@ bool SimpleScrollablePanel::onSingleTapUp(XDim x, YDim y) {
       scrollTo(contents()->offsetLeft(), new_y);
     }
   } else {
-    scroll_bar_.setVisibility(VISIBLE);
+    scroll_bar_.setVisibility(Visibility::kVisible);
   }
   deadline_hide_scrollbar_ = roo_time::Uptime::Now() + kDelayHideScrollbar;
   scheduleHideScrollBarUpdate();
@@ -562,8 +567,8 @@ bool SimpleScrollablePanel::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
     anim_.drag.raw_x += dx;
     anim_.drag.raw_y += dy;
     // Only overshoot in the panel's scrollable direction(s).
-    const bool overshoot_x = (direction_ != VERTICAL);
-    const bool overshoot_y = (direction_ != HORIZONTAL);
+    const bool overshoot_x = (direction_ != Direction::kVertical);
+    const bool overshoot_y = (direction_ != Direction::kHorizontal);
     // Compute target X.
     XDim target_x;
     if (c->width() >= inner_pane.width()) {
@@ -602,8 +607,9 @@ bool SimpleScrollablePanel::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
     }
     scrollToRaw(target_x, target_y);
   }
-  if (scroll_bar_presence_ == VerticalScrollBar::SHOWN_WHEN_SCROLLING) {
-    scroll_bar_.setVisibility(VISIBLE);
+  if (scroll_bar_presence_ ==
+      VerticalScrollBar::Presence::kShownWhenScrolling) {
+    scroll_bar_.setVisibility(Visibility::kVisible);
     deadline_hide_scrollbar_ = roo_time::Uptime::Now() + roo_time::Hours(1);
   }
   return true;
@@ -689,7 +695,8 @@ bool SimpleScrollablePanel::onTouchUp(XDim vx, YDim vy) {
     animation_ = ScrollAnimation::IDLE;
     startSpringBack();
     if (animation_ != ScrollAnimation::SPRING_BACK) {
-      if (scroll_bar_presence_ == VerticalScrollBar::SHOWN_WHEN_SCROLLING) {
+      if (scroll_bar_presence_ ==
+          VerticalScrollBar::Presence::kShownWhenScrolling) {
         deadline_hide_scrollbar_ =
             roo_time::Uptime::Now() + kDelayHideScrollbar;
         scheduleHideScrollBarUpdate();
