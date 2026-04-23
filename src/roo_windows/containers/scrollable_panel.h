@@ -54,13 +54,13 @@ class SimpleScrollablePanel : public Container,
         direction_(direction),
         alignment_(roo_display::kLeft | roo_display::kTop),
         contents_(nullptr),
-        scroll_start_vx_(0.0),
-        scroll_start_vy_(0.0),
         scroll_bar_presence_(VerticalScrollBar::ALWAYS_HIDDEN),
         scroll_bar_(env),
         scroll_bar_gesture_(false),
         scheduler_(env.scheduler()),
-        notification_id_(-1) {
+        notification_id_(-1),
+        animation_(ScrollAnimation::IDLE),
+        anim_{} {
     scroll_bar_.setVisibility(INVISIBLE);
   }
 
@@ -124,8 +124,7 @@ class SimpleScrollablePanel : public Container,
         break;
       }
       default: {
-        if (scroll_start_vx_ != 0 || scroll_start_vy_ != 0 ||
-            isHandlingGesture()) {
+        if (animation_ == ScrollAnimation::FLINGING || isHandlingGesture()) {
           // Currently scrolling or moving.
           scroll_bar_.setVisibility(VISIBLE);
         } else {
@@ -202,23 +201,24 @@ class SimpleScrollablePanel : public Container,
   void scheduleScrollAnimationUpdate();
   void scheduleHideScrollBarUpdate();
 
+  // Moves content to (x, y) without boundary clamping, for overshoot rendering.
+  // Scroll bar is updated as if content were at the nearest boundary.
+  void scrollToRaw(XDim x, YDim y);
+
+  // Returns true if the content is currently positioned beyond a scroll
+  // boundary (i.e., it has been dragged or flung into overshoot).
+  bool isInOvershoot() const;
+
+  // If the content is currently beyond a scroll boundary (in overshoot),
+  // initiates a spring-back animation to return it to the boundary.
+  void startSpringBack();
+
   Direction direction_;
   roo_display::Alignment alignment_;
 
   Dimensions measured_;
 
-  // Captured dx_ and dy_ during drag and scroll animations.
-  XDim dxStart_;
-  YDim dyStart_;
-
   Widget* contents_;
-
-  unsigned long scroll_start_time_;
-  unsigned long scroll_end_time_;
-  float scroll_start_vx_;  // initial scroll velocity in pixels/s.
-  float scroll_start_vy_;  // initial scroll velocity in pixels/s.
-  float scroll_decel_x_;
-  float scroll_decel_y_;
 
   // TODO: consider also supporting horizontal bar when needed.
   VerticalScrollBar::Presence scroll_bar_presence_;
@@ -236,6 +236,45 @@ class SimpleScrollablePanel : public Container,
   // Whether the 'down' event has been confirmed as a touch of the scroll bar in
   // its active region.
   bool is_scroll_bar_scrolled_;
+
+  // Discriminates which animation state is currently active. DRAGGING,
+  // FLINGING, and SPRING_BACK are mutually exclusive, allowing their data to
+  // share a single union.
+  enum class ScrollAnimation : uint8_t {
+    IDLE,
+    DRAGGING,
+    FLINGING,
+    SPRING_BACK
+  };
+  ScrollAnimation animation_;
+
+  // Per-state data. Only the member corresponding to animation_ is valid.
+  union {
+    // Valid when animation_ == DRAGGING.
+    struct {
+      XDim raw_x;  // Raw (unclamped) intended scroll position.
+      YDim raw_y;
+    } drag;
+    // Valid when animation_ == FLINGING.
+    struct {
+      unsigned long start_time;
+      unsigned long end_time;
+      float start_vx;  // Initial scroll velocity in pixels/s.
+      float start_vy;
+      float decel_x;
+      float decel_y;
+      XDim dx_start;  // Content offset at fling start.
+      YDim dy_start;
+    } fling;
+    // Valid when animation_ == SPRING_BACK.
+    struct {
+      unsigned long start_time_ms;
+      XDim start_ox;  // Initial X overshoot at animation start (scroll coords).
+      YDim start_oy;  // Initial Y overshoot at animation start (scroll coords).
+      XDim target_x;  // Clamped scroll-coord X to spring back to.
+      YDim target_y;  // Clamped scroll-coord Y to spring back to.
+    } springback;
+  } anim_;
 };
 
 // SimpleScrollablePanel variant that wraps the content in a BlitCacheContainer,
