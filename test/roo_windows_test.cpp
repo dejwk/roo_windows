@@ -14,6 +14,7 @@
 #include "roo_windows/containers/stacked_layout.h"
 #include "roo_windows/containers/static_layout.h"
 #include "roo_windows/containers/vertical_layout.h"
+#include "roo_windows/core/press_overlay.h"
 #include "roo_windows/dialogs/alert_dialog.h"
 #include "roo_windows/dialogs/radio_list_dialog.h"
 #include "roo_windows/widgets/blank.h"
@@ -30,7 +31,6 @@
 #include "roo_windows/widgets/text_field.h"
 #include "roo_windows/widgets/text_label.h"
 #include "roo_windows/widgets/toggle_buttons.h"
-#include "roo_windows/core/press_overlay.h"
 
 using namespace roo_display;
 using namespace roo_windows;
@@ -134,10 +134,10 @@ TEST(PressOverlay, WideTopStripCrossingCenterIsNotUniformTransparent) {
 }
 
 TEST_F(RooWindowsRenderTest, LaterAddedChildPaintsOnTop) {
-  auto back = std::make_unique<ColorBoxWidget>(env_, color::Red,
-                                               Dimensions(20, 20));
-  auto front = std::make_unique<ColorBoxWidget>(env_, color::Blue,
-                                                Dimensions(20, 20));
+  auto back =
+      std::make_unique<ColorBoxWidget>(env_, color::Red, Dimensions(20, 20));
+  auto front =
+      std::make_unique<ColorBoxWidget>(env_, color::Blue, Dimensions(20, 20));
 
   app_.add(WidgetRef(std::move(back)), Box(4, 4, 30, 30));
   app_.add(WidgetRef(std::move(front)), Box(16, 16, 40, 40));
@@ -148,10 +148,10 @@ TEST_F(RooWindowsRenderTest, LaterAddedChildPaintsOnTop) {
 }
 
 TEST_F(RooWindowsRenderTest, HideAndShowRestoresUnderlyingContent) {
-  auto back = std::make_unique<ColorBoxWidget>(env_, color::Red,
-                                               Dimensions(20, 20));
-  auto front = std::make_unique<ColorBoxWidget>(env_, color::Blue,
-                                                Dimensions(20, 20));
+  auto back =
+      std::make_unique<ColorBoxWidget>(env_, color::Red, Dimensions(20, 20));
+  auto front =
+      std::make_unique<ColorBoxWidget>(env_, color::Blue, Dimensions(20, 20));
   ColorBoxWidget* front_ptr = front.get();
 
   app_.add(WidgetRef(std::move(back)), Box(4, 4, 30, 30));
@@ -191,8 +191,8 @@ TEST_F(RooWindowsRenderTest, TouchDispatchPrefersTopmostVisibleChild) {
 }
 
 TEST_F(RooWindowsRenderTest, RefreshCanResumeAfterDeadlineExceeded) {
-  auto box = std::make_unique<ColorBoxWidget>(env_, color::Green,
-                                              Dimensions(20, 20));
+  auto box =
+      std::make_unique<ColorBoxWidget>(env_, color::Green, Dimensions(20, 20));
   app_.add(WidgetRef(std::move(box)), Box(8, 8, 36, 36));
 
   EXPECT_FALSE(refresh(roo_time::Uptime::Start()));
