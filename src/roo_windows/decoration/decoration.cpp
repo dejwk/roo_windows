@@ -1,5 +1,7 @@
 #include "roo_windows/decoration/decoration.h"
 
+#include <algorithm>
+
 #include "roo_windows/core/theme.h"
 
 // #include "roo_windows/shadows/quarter_circle.h"
@@ -377,7 +379,7 @@ roo_display::Color Decoration::read(int16_t x, int16_t y) const {
   int16_t xMax_interior = widget_extents_.xMax() - outline_width_;
   int16_t yMin_interior = widget_extents_.yMin() + outline_width_;
   int16_t yMax_interior = widget_extents_.yMax() - outline_width_;
-  int16_t r_interior = corner_radius_ - outline_width_;
+  int16_t r_interior = std::max<int16_t>(0, corner_radius_ - outline_width_);
   uint8_t bg_alpha =
       calcRoundRectAlpha(xMin_interior, yMin_interior, xMax_interior,
                          yMax_interior, r_interior, outline_width_frac_, x, y);
@@ -426,7 +428,7 @@ bool Decoration::readUniformColorRect(int16_t xMin, int16_t yMin, int16_t xMax,
   int16_t xMax_interior = widget_extents_.xMax() - outline_width_;
   int16_t yMin_interior = widget_extents_.yMin() + outline_width_;
   int16_t yMax_interior = widget_extents_.yMax() - outline_width_;
-  int16_t r_interior = corner_radius_ - outline_width_;
+  int16_t r_interior = std::max<int16_t>(0, corner_radius_ - outline_width_);
   bool frac = (outline_width_frac_ < 15);
   if (xMin >= xMin_interior + r_interior &&
       xMax <= xMax_interior - r_interior && yMin >= yMin_interior + frac &&
@@ -449,7 +451,7 @@ bool Decoration::readColorRect(int16_t xMin, int16_t yMin, int16_t xMax,
   int16_t xMax_interior = widget_extents_.xMax() - outline_width_;
   int16_t yMin_interior = widget_extents_.yMin() + outline_width_;
   int16_t yMax_interior = widget_extents_.yMax() - outline_width_;
-  int16_t r_interior = corner_radius_ - outline_width_;
+  int16_t r_interior = std::max<int16_t>(0, corner_radius_ - outline_width_);
   if (press_overlay_ == nullptr) {
     if (xMin >= xMin_interior + r_interior &&
         xMax <= xMax_interior - r_interior) {
