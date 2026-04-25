@@ -160,11 +160,11 @@ TEST_F(RooWindowsRenderTest, HideAndShowRestoresUnderlyingContent) {
   ASSERT_TRUE(refresh());
   EXPECT_EQ(QuantizeToArgb4444(color::Blue), pixelAt(20, 20));
 
-  front_ptr->setVisibility(Widget::INVISIBLE);
+  front_ptr->setVisibility(Visibility::kInvisible);
   ASSERT_TRUE(refresh());
   EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(20, 20));
 
-  front_ptr->setVisibility(Widget::VISIBLE);
+  front_ptr->setVisibility(Visibility::kVisible);
   ASSERT_TRUE(refresh());
   EXPECT_EQ(QuantizeToArgb4444(color::Blue), pixelAt(20, 20));
 }
@@ -183,7 +183,7 @@ TEST_F(RooWindowsRenderTest, TouchDispatchPrefersTopmostVisibleChild) {
   EXPECT_EQ(1, front_ptr->touch_down_count());
   EXPECT_EQ(0, back_ptr->touch_down_count());
 
-  front_ptr->setVisibility(Widget::INVISIBLE);
+  front_ptr->setVisibility(Visibility::kInvisible);
   target = app_.root().dispatchTouchDownEvent(15, 15);
   ASSERT_EQ(back_ptr, target);
   EXPECT_EQ(1, front_ptr->touch_down_count());

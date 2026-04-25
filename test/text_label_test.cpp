@@ -122,8 +122,8 @@ TEST_F(TextLabelRenderTest, GravityChangesHorizontalPlacement) {
                                           kGravityLeft | kGravityMiddle);
   auto right = std::make_unique<TextLabel>(env_, "WWW", font_body2(),
                                            kGravityRight | kGravityMiddle);
-  left->setPadding(PaddingSize::NONE);
-  right->setPadding(PaddingSize::NONE);
+  left->setPadding(PaddingSize::kNone);
+  right->setPadding(PaddingSize::kNone);
 
   app_.add(WidgetRef(std::move(left)), Box(4, 6, 44, 28));
   app_.add(WidgetRef(std::move(right)), Box(4, 34, 44, 56));
