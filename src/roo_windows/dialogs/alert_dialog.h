@@ -8,8 +8,6 @@ namespace roo_windows {
 
 class AlertDialog : public Dialog {
  public:
-  // Supporting text must currently explicitly use newline characters to break
-  // the text.
   AlertDialog(const Environment& env, std::string title,
               std::string supporting_text,
               std::vector<std::string> button_labels = {kStrDialogOK});
