@@ -231,8 +231,8 @@ std::string ResolveGoldenReadPath(const std::string& rel) {
   const char* test_srcdir = std::getenv("TEST_SRCDIR");
   const char* test_workspace = std::getenv("TEST_WORKSPACE");
   if (test_srcdir != nullptr && test_workspace != nullptr) {
-    candidates.push_back(std::string(test_srcdir) + "/" + test_workspace +
-                         "/" + rel);
+    candidates.push_back(std::string(test_srcdir) + "/" + test_workspace + "/" +
+                         rel);
     if (package_rel != rel) {
       candidates.push_back(std::string(test_srcdir) + "/" + test_workspace +
                            "/" + package_rel);
@@ -241,8 +241,7 @@ std::string ResolveGoldenReadPath(const std::string& rel) {
   if (test_srcdir != nullptr) {
     candidates.push_back(std::string(test_srcdir) + "/_main/" + rel);
     if (package_rel != rel) {
-      candidates.push_back(std::string(test_srcdir) + "/_main/" +
-                           package_rel);
+      candidates.push_back(std::string(test_srcdir) + "/_main/" + package_rel);
     }
   }
 
