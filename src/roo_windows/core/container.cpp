@@ -246,7 +246,7 @@ void Container::childHidden(const Widget* child) {
 
 void Container::childShown(const Widget* child) {
   if (child->getElevation() > 0 ||
-      child->getBorderStyle().corner_radius() > 0) {
+      child->getBorderStyle().hasRoundedCorners()) {
     invalidateBeneath(child->getParentBoundsOfShadow(), child,
                       child->getParentClipMode() == ParentClipMode::kClipped);
   }

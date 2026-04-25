@@ -154,7 +154,7 @@ void Widget::setDirty(const Rect& bounds) {
 
 void Widget::invalidateInterior() {
   invalidateDescending();
-  if (getBorderStyle().corner_radius() > 0 && parent() != nullptr) {
+  if (getBorderStyle().hasRoundedCorners() && parent() != nullptr) {
     parent()->childInvalidatedRegion(this, maxParentBounds());
   }
   setDirty();
@@ -162,7 +162,7 @@ void Widget::invalidateInterior() {
 
 void Widget::invalidateInterior(const Rect& rect) {
   invalidateDescending(rect);
-  if (getBorderStyle().corner_radius() > 0 && parent() != nullptr) {
+  if (getBorderStyle().hasRoundedCorners() && parent() != nullptr) {
     parent()->childInvalidatedRegion(this,
                                      rect.translate(offsetLeft(), offsetTop()));
   }
@@ -174,7 +174,7 @@ void Widget::elevationChanged(int higherElevation) {
     // TODO: we can avoid marking dirty if we introduce a new flag specifically
     // for elevation changed. This way we can avoid content redraws except for
     // the bounds.
-    if (getBorderStyle().corner_radius() > 0) setDirty();
+    if (getBorderStyle().hasRoundedCorners()) setDirty();
     parent()->childInvalidatedRegion(
         this, CalculateShadowExtents(parent_bounds(), higherElevation));
   }
@@ -609,7 +609,7 @@ void Widget::finalizePaintWidget(const Canvas& canvas, Clipper& clipper,
                                      height() - 1 + canvas.dy());
     clipper.addDecoration(canvas.clip_box(), absolute_bounds, elevation,
                           overlay_spec, canvas.bgcolor(),
-                          border_style.corner_radius(),
+                          border_style.corner_radii(),
                           border_style.outline_width(),
                           AlphaBlend(canvas.bgcolor(), getOutlineColor()));
   }

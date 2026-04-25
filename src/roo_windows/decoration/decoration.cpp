@@ -84,24 +84,8 @@ static const uint8_t kBottomExtents[] = {
 
 // Returns the alpha component of a color of a specified (x, y) pixel of a
 // rectangle with the specified bounds and round corners with a given radius.
-inline uint8_t calcRoundRectAlpha(int16_t xMin, int16_t yMin, int16_t xMax,
-                                  int16_t yMax, int16_t corner_radius,
-                                  uint8_t outline_width_frac, int16_t x,
-                                  int16_t y) {
-  if (x < xMin || x > xMax || y < yMin || y > yMax) {
-    // Outside the border.
-    return 0;
-  }
-  if (x >= xMax - corner_radius) {
-    x = x + corner_radius - xMax;
-  } else {
-    x = xMin + corner_radius - x;
-  }
-  if (y >= yMax - corner_radius) {
-    y = y + corner_radius - yMax;
-  } else {
-    y = yMin + corner_radius - y;
-  }
+inline uint8_t calcRoundCornerAlpha(int16_t x, int16_t y, int16_t corner_radius,
+                                    uint8_t outline_width_frac) {
   if (x < 0 || y < 0) {
     if (x == corner_radius || y == corner_radius) {
       return outline_width_frac * 17;
@@ -121,53 +105,144 @@ inline uint8_t calcRoundRectAlpha(int16_t xMin, int16_t yMin, int16_t xMax,
   return rd * 17;
 }
 
+inline uint8_t calcRoundRectAlpha(int16_t xMin, int16_t yMin, int16_t xMax,
+                                  int16_t yMax,
+                                  BorderStyle::CornerRadii corner_radii,
+                                  uint8_t outline_width_frac, int16_t x,
+                                  int16_t y) {
+  if (x < xMin || x > xMax || y < yMin || y > yMax) {
+    // Outside the border.
+    return 0;
+  }
+
+  if (corner_radii.top_left > 0 && x <= xMin + corner_radii.top_left &&
+      y <= yMin + corner_radii.top_left) {
+    return calcRoundCornerAlpha(xMin + corner_radii.top_left - x,
+                                yMin + corner_radii.top_left - y,
+                                corner_radii.top_left, outline_width_frac);
+  }
+
+  if (corner_radii.top_right > 0 && x >= xMax - corner_radii.top_right &&
+      y <= yMin + corner_radii.top_right) {
+    return calcRoundCornerAlpha(x + corner_radii.top_right - xMax,
+                                yMin + corner_radii.top_right - y,
+                                corner_radii.top_right, outline_width_frac);
+  }
+
+  if (corner_radii.bottom_right > 0 && x >= xMax - corner_radii.bottom_right &&
+      y >= yMax - corner_radii.bottom_right) {
+    return calcRoundCornerAlpha(x + corner_radii.bottom_right - xMax,
+                                y + corner_radii.bottom_right - yMax,
+                                corner_radii.bottom_right, outline_width_frac);
+  }
+
+  if (corner_radii.bottom_left > 0 && x <= xMin + corner_radii.bottom_left &&
+      y >= yMax - corner_radii.bottom_left) {
+    return calcRoundCornerAlpha(xMin + corner_radii.bottom_left - x,
+                                y + corner_radii.bottom_left - yMax,
+                                corner_radii.bottom_left, outline_width_frac);
+  }
+
+  if (outline_width_frac < 15 &&
+      (x == xMin || x == xMax || y == yMin || y == yMax)) {
+    return outline_width_frac * 17;
+  }
+  return 0xFF;
+}
+
 // Returns the diffusion of the shadow at the specified (x, y) pixel within a
 // shadow given by the spec. Returned value is from 0 (no diffusion) to 16 *
 // extents.
 inline uint16_t calcShadowDiffusion(const ShadowSpec& spec, int16_t x,
-                                    int16_t y) {
-  x -= spec.x;
-  y -= spec.y;
+                                    int16_t y, uint8_t& radius,
+                                    uint8_t& border) {
+  // Work in shadow-local coordinates so all computations are relative to the
+  // shadow rect origin.
+  int16_t local_x = x - spec.x;
+  int16_t local_y = y - spec.y;
 
-  // We need to consider 9 cases:
-  //
-  // 123
-  // 456
-  // 789
-  //
-  // We will fold them to
-  //
-  // 12
-  // 34
-  if (x >= spec.w - spec.radius) {
-    x += spec.radius - spec.w + 1;
-  } else {
-    x = spec.radius - x;
+  // Identify the half (left/right, top/bottom) where the point lies. This
+  // selects which corner radii/borders are relevant around that point.
+  bool right_half = 2 * local_x >= spec.w;
+  bool bottom_half = 2 * local_y >= spec.h;
+
+  uint8_t left_radius =
+      bottom_half ? spec.radius.bottom_left : spec.radius.top_left;
+  uint8_t right_radius =
+      bottom_half ? spec.radius.bottom_right : spec.radius.top_right;
+  uint8_t top_radius =
+      right_half ? spec.radius.top_right : spec.radius.top_left;
+  uint8_t bottom_radius =
+      right_half ? spec.radius.bottom_right : spec.radius.bottom_left;
+
+  // Fold coordinates so we can treat all 4 corners symmetrically.
+  // folded_x/folded_y are distances (in px) from the nearest rounded-corner
+  // square boundary: <= 0 means away from that corner axis, > 0 means inside
+  // the corner square where radial distance matters.
+  bool from_right = local_x >= spec.w - right_radius;
+  bool from_bottom = local_y >= spec.h - bottom_radius;
+  int16_t folded_x =
+      from_right ? local_x + right_radius - spec.w + 1 : left_radius - local_x;
+  int16_t folded_y =
+      from_bottom ? local_y + bottom_radius - spec.h + 1 : top_radius - local_y;
+
+  // Four regions in folded space:
+  // 1) folded_x > 0, folded_y > 0: corner zone -> radial distance.
+  // 2) folded_x <= 0, folded_y > 0: top/bottom strip -> vertical distance.
+  // 3) folded_x > 0, folded_y <= 0: left/right strip -> horizontal distance.
+  // 4) folded_x <= 0, folded_y <= 0: fully inside shape -> zero diffusion.
+  // Distances are returned in 1/16 px units to keep fixed-point precision.
+  if (folded_x <= 0) {
+    if (folded_y > 0) {
+      radius = from_bottom ? bottom_radius : top_radius;
+      border = from_bottom ? (right_half ? spec.border.bottom_right
+                                         : spec.border.bottom_left)
+                           : (right_half ? spec.border.top_right
+                                         : spec.border.top_left);
+      return 16 * folded_y;  // Case 2.
+    }
+    radius =
+        right_half
+            ? (bottom_half ? spec.radius.bottom_right : spec.radius.top_right)
+            : (bottom_half ? spec.radius.bottom_left : spec.radius.top_left);
+    border =
+        right_half
+            ? (bottom_half ? spec.border.bottom_right : spec.border.top_right)
+            : (bottom_half ? spec.border.bottom_left : spec.border.top_left);
+    return 0;  // Case 4.
   }
-  if (y >= spec.h - spec.radius) {
-    y += spec.radius - spec.h + 1;
-  } else {
-    y = spec.radius - y;
+  if (folded_y <= 0) {
+    radius = from_right ? right_radius : left_radius;
+    border =
+        from_right
+            ? (bottom_half ? spec.border.bottom_right : spec.border.top_right)
+            : (bottom_half ? spec.border.bottom_left : spec.border.top_left);
+    return 16 * folded_x;  // Case 3.
   }
-  if (x <= 0) {
-    if (y > 0) return 16 * y;  // Case 2.
-    return 0;                  // Case 4.
-  }
-  if (y <= 0) return 16 * x;  // Case 3.
   // Now what's left is Case 1.
-  return isqrt24(256 * (x * x + y * y));
+  radius =
+      from_right
+          ? (from_bottom ? spec.radius.bottom_right : spec.radius.top_right)
+          : (from_bottom ? spec.radius.bottom_left : spec.radius.top_left);
+  border =
+      from_right
+          ? (from_bottom ? spec.border.bottom_right : spec.border.top_right)
+          : (from_bottom ? spec.border.bottom_left : spec.border.top_left);
+  return isqrt24(256 * (folded_x * folded_x + folded_y * folded_y));
 }
 
 // Claculates alpha component of the specified (x, y) point within a shadow
 // given by the spec.
 inline uint8_t calcShadowAlpha(const ShadowSpec& spec, int16_t x, int16_t y) {
-  uint16_t d = calcShadowDiffusion(spec, x, y);
-  if (d > spec.border * 16) {
-    if (d > spec.radius * 16) {
+  uint8_t radius = 0;
+  uint8_t border = 0;
+  uint16_t d = calcShadowDiffusion(spec, x, y, radius, border);
+  if (d > border * 16) {
+    if (d > radius * 16) {
       return 0;
     } else {
       return spec.alpha_start -
-             ((uint32_t)((d - spec.border * 16) * spec.alpha_step) / 256 / 16);
+             ((uint32_t)((d - border * 16) * spec.alpha_step) / 256 / 16);
     }
   }
   return spec.alpha_start;
@@ -184,16 +259,19 @@ Rect CalculateShadowExtents(const Rect& extents, int elevation) {
 
 Decoration::Decoration()
     : Decoration(roo_display::Box(0, 0, -1, -1), 0, OverlaySpec(),
-                 roo_display::color::Transparent, 0, 0,
+                 roo_display::color::Transparent,
+                 BorderStyle::CornerRadii{0, 0, 0, 0}, 0,
                  roo_display::color::Transparent) {}
 
 Decoration::Decoration(roo_display::Box extents, int elevation,
                        const OverlaySpec& overlay_spec,
-                       roo_display::Color bgcolor, uint8_t corner_radius,
+                       roo_display::Color bgcolor,
+                       BorderStyle::CornerRadii corner_radii,
                        SmallNumber outline_width,
                        roo_display::Color outline_color)
     : widget_extents_(extents),
       bgcolor_(bgcolor),
+      corner_radii_(corner_radii),
       outline_width_(outline_width.floor()),
       outline_width_frac_(15 - outline_width.frac_16ths()),
       outline_color_(outline_color) {
@@ -336,13 +414,18 @@ Decoration::Decoration(roo_display::Box extents, int elevation,
   //     corner_radius = 64;
   //   }
   // }
-  corner_radius_ = corner_radius;
+  inner_corner_radii_ = corner_radii_.inset(outline_width_);
 
   int ambient_extent = CalculateAmbientExtent(elevation);
   int key_extent = CalculateKeyExtent(elevation);
   int key_shift = CalculateKeyShift(elevation);
 
-  ambient_shadow_.radius = ambient_extent + corner_radius;
+  ambient_shadow_.radius = BorderStyle::CornerRadii{
+      (uint8_t)std::min<int>(255, corner_radii_.top_left + ambient_extent),
+      (uint8_t)std::min<int>(255, corner_radii_.top_right + ambient_extent),
+      (uint8_t)std::min<int>(255, corner_radii_.bottom_right + ambient_extent),
+      (uint8_t)std::min<int>(255, corner_radii_.bottom_left + ambient_extent),
+  };
   ambient_shadow_.x = extents.xMin() - ambient_extent;
   ambient_shadow_.y = extents.yMin() - ambient_extent;
   ambient_shadow_.w = extents.width() + 2 * ambient_extent;
@@ -352,9 +435,14 @@ Decoration::Decoration(roo_display::Box extents, int elevation,
       (ambient_extent == 0)
           ? 0
           : 256 * ambient_shadow_.alpha_start / ambient_extent;
-  ambient_shadow_.border = corner_radius;
+  ambient_shadow_.border = corner_radii_;
 
-  key_shadow_.radius = key_extent + corner_radius;
+  key_shadow_.radius = BorderStyle::CornerRadii{
+      (uint8_t)std::min<int>(255, corner_radii_.top_left + key_extent),
+      (uint8_t)std::min<int>(255, corner_radii_.top_right + key_extent),
+      (uint8_t)std::min<int>(255, corner_radii_.bottom_right + key_extent),
+      (uint8_t)std::min<int>(255, corner_radii_.bottom_left + key_extent),
+  };
   key_shadow_.x = extents.xMin() - key_extent;
   key_shadow_.y = extents.yMin() - key_extent + key_shift;
   key_shadow_.w = extents.width() + 2 * key_extent;
@@ -362,7 +450,7 @@ Decoration::Decoration(roo_display::Box extents, int elevation,
   key_shadow_.alpha_start = 70 - 2 * elevation;
   key_shadow_.alpha_step =
       (key_extent == 0) ? 0 : 256 * key_shadow_.alpha_start / key_extent;
-  key_shadow_.border = corner_radius;
+  key_shadow_.border = corner_radii_;
 
   shadow_extents_ = CalculateShadowExtents(extents, elevation).asBox();
 }
@@ -379,10 +467,9 @@ roo_display::Color Decoration::read(int16_t x, int16_t y) const {
   int16_t xMax_interior = widget_extents_.xMax() - outline_width_;
   int16_t yMin_interior = widget_extents_.yMin() + outline_width_;
   int16_t yMax_interior = widget_extents_.yMax() - outline_width_;
-  int16_t r_interior = std::max<int16_t>(0, corner_radius_ - outline_width_);
-  uint8_t bg_alpha =
-      calcRoundRectAlpha(xMin_interior, yMin_interior, xMax_interior,
-                         yMax_interior, r_interior, outline_width_frac_, x, y);
+  uint8_t bg_alpha = calcRoundRectAlpha(
+      xMin_interior, yMin_interior, xMax_interior, yMax_interior,
+      inner_corner_radii_, outline_width_frac_, x, y);
   uint8_t outline_alpha = bg_alpha;
   // Fast-path for the common-case: solid interior.
   if (bg_alpha == 0xFF && press_overlay_ == nullptr) {
@@ -399,7 +486,7 @@ roo_display::Color Decoration::read(int16_t x, int16_t y) const {
     // We need to put the outline in front of the background.
     outline_alpha = calcRoundRectAlpha(
         widget_extents_.xMin(), widget_extents_.yMin(), widget_extents_.xMax(),
-        widget_extents_.yMax(), corner_radius_, 15, x, y);
+        widget_extents_.yMax(), corner_radii_, 15, x, y);
     if (outline_alpha != 0) {
       roo_display::Color outline = outline_color_;
       outline.set_a(outline_alpha);
@@ -428,14 +515,19 @@ bool Decoration::readUniformColorRect(int16_t xMin, int16_t yMin, int16_t xMax,
   int16_t xMax_interior = widget_extents_.xMax() - outline_width_;
   int16_t yMin_interior = widget_extents_.yMin() + outline_width_;
   int16_t yMax_interior = widget_extents_.yMax() - outline_width_;
-  int16_t r_interior = std::max<int16_t>(0, corner_radius_ - outline_width_);
+  int16_t r_interior = inner_corner_radii_.max();
   bool frac = (outline_width_frac_ < 15);
+  // Fast path 1: rect lies in the "wide" interior band. Horizontally we stay
+  // away from rounded corners by max radius, and vertically we stay away from
+  // fractional-outline edge pixels, so every pixel is solid background.
   if (xMin >= xMin_interior + r_interior &&
       xMax <= xMax_interior - r_interior && yMin >= yMin_interior + frac &&
       yMax <= yMax_interior - frac) {
     *result = bgcolor_;
     return true;
   }
+  // Fast path 2: rect lies in the "tall" interior band (same reasoning as
+  // above, with x/y roles swapped).
   if (yMin >= yMin_interior + r_interior &&
       yMax <= yMax_interior - r_interior && xMin >= xMin_interior + frac &&
       xMax <= xMax_interior - frac) {
@@ -451,8 +543,11 @@ bool Decoration::readColorRect(int16_t xMin, int16_t yMin, int16_t xMax,
   int16_t xMax_interior = widget_extents_.xMax() - outline_width_;
   int16_t yMin_interior = widget_extents_.yMin() + outline_width_;
   int16_t yMax_interior = widget_extents_.yMax() - outline_width_;
-  int16_t r_interior = std::max<int16_t>(0, corner_radius_ - outline_width_);
+  int16_t r_interior = inner_corner_radii_.max();
   if (press_overlay_ == nullptr) {
+    // Fast path 1: rect lies in the "wide" interior band. We are outside
+    // rounded corners horizontally, so color depends only on y. This lets us
+    // fill by rows (or return uniform color for a fully interior y range).
     if (xMin >= xMin_interior + r_interior &&
         xMax <= xMax_interior - r_interior) {
       bool frac = (outline_width_frac_ < 15);
@@ -469,6 +564,9 @@ bool Decoration::readColorRect(int16_t xMin, int16_t yMin, int16_t xMax,
         }
       }
       return false;
+      // Fast path 2: rect lies in the "tall" interior band (x/y swapped). Here
+      // color depends only on x, so we can compute one horizontal stripe and
+      // replicate it vertically when shadow does not vary with y.
     } else if (yMin >= yMin_interior + r_interior &&
                yMax <= yMax_interior - r_interior) {
       bool frac = (outline_width_frac_ < 15);

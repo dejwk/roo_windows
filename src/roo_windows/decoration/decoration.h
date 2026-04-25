@@ -2,6 +2,7 @@
 
 #include "roo_display/core/rasterizable.h"
 #include "roo_display/image/image.h"
+#include "roo_windows/core/border_style.h"
 #include "roo_windows/core/number.h"
 #include "roo_windows/core/overlay_spec.h"
 #include "roo_windows/core/rect.h"
@@ -13,11 +14,11 @@ struct ShadowSpec {
   int16_t x, y, w, h;
 
   // External radius of the shadow at full extents.
-  uint8_t radius;
+  BorderStyle::CornerRadii radius;
 
   // 'Internal' shadow radius, within which the shadow is not diffused.
   // Generally the same as the corner radius of the widget casting the shadow.
-  uint8_t border;
+  BorderStyle::CornerRadii border;
 
   // The alpha at a point where the shadow is not diffused.
   uint8_t alpha_start;
@@ -38,7 +39,7 @@ class Decoration : public roo_display::Rasterizable {
   // Outline may be zero.
   Decoration(roo_display::Box extents, int elevation,
              const OverlaySpec& overlay_spec, roo_display::Color bgcolor,
-             uint8_t corner_radius, SmallNumber outline_width,
+             BorderStyle::CornerRadii corner_radii, SmallNumber outline_width,
              roo_display::Color outline_color);
 
   roo_display::Box extents() const override { return shadow_extents_; }
@@ -60,7 +61,8 @@ class Decoration : public roo_display::Rasterizable {
   roo_display::Box shadow_extents_;  // In device coordinates.
 
   roo_display::Color bgcolor_;
-  uint8_t corner_radius_;
+  BorderStyle::CornerRadii corner_radii_;
+  BorderStyle::CornerRadii inner_corner_radii_;
   uint8_t outline_width_;
   uint8_t outline_width_frac_;
   roo_display::Color outline_color_;
