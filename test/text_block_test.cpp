@@ -1,10 +1,10 @@
 #include "roo_windows/widgets/text_block.h"
 
+#include "golden_image.h"
 #include "gtest/gtest.h"
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
-#include "test/golden_image.h"
 #include "roo_windows.h"
 #include "roo_windows/core/environment.h"
 
@@ -60,8 +60,7 @@ class TextBlockGoldenTest : public testing::Test {
 
   roo_display::Offscreen<roo_display::Rgb888> RenderBlock(
       const std::string& text, TextAlign align, int16_t box_width,
-      int16_t max_height = 0, uint16_t max_lines = 0,
-      bool ellipsize = false) {
+      int16_t max_height = 0, uint16_t max_lines = 0, bool ellipsize = false) {
     TextBlock block(env_, text, font_body2(),
                     roo_display::kLeft | roo_display::kTop);
     block.setPadding(PaddingSize::kNone);
@@ -72,8 +71,8 @@ class TextBlockGoldenTest : public testing::Test {
     }
     block.setEllipsize(ellipsize);
 
-    Dimensions measured =
-        block.measure(WidthSpec::Exactly(box_width), HeightSpec::Unspecified(kHeight));
+    Dimensions measured = block.measure(WidthSpec::Exactly(box_width),
+                                        HeightSpec::Unspecified(kHeight));
     int16_t render_height = measured.height();
     if (max_height > 0) {
       render_height = std::min<int16_t>(render_height, max_height);
@@ -101,7 +100,7 @@ TEST_F(TextBlockGoldenTest, JustifyParagraphGolden) {
       TextAlign::kJustify, 300);
 
   EXPECT_TRUE(test::CompareOrUpdateGolden(
-      image, "lib/roo_windows/test/goldens/text_block/justify_paragraph.ppm",
+      image, "test/goldens/text_block/justify_paragraph.ppm",
       "text_block_justify_paragraph"));
 }
 
@@ -111,11 +110,10 @@ TEST_F(TextBlockGoldenTest, JustifyExplicitParagraphBreakGolden) {
       "Short final line.",
       TextAlign::kJustify, 300);
 
-  EXPECT_TRUE(
-      test::CompareOrUpdateGolden(
-          image,
-          "lib/roo_windows/test/goldens/text_block/justify_paragraph_break.ppm",
-          "text_block_justify_paragraph_break"));
+  EXPECT_TRUE(test::CompareOrUpdateGolden(
+      image,
+      "test/goldens/text_block/justify_paragraph_break.ppm",
+      "text_block_justify_paragraph_break"));
 }
 
 TEST_F(TextBlockGoldenTest, NonJustifiedMultilineGolden) {
@@ -125,7 +123,8 @@ TEST_F(TextBlockGoldenTest, NonJustifiedMultilineGolden) {
       TextAlign::kStart, 300);
 
   EXPECT_TRUE(test::CompareOrUpdateGolden(
-      image, "lib/roo_windows/test/goldens/text_block/non_justify_multiline.ppm",
+      image,
+      "test/goldens/text_block/non_justify_multiline.ppm",
       "text_block_non_justify_multiline"));
 }
 
@@ -136,21 +135,21 @@ TEST_F(TextBlockGoldenTest, JustifyParagraphClippedBottomGolden) {
       TextAlign::kJustify, 120, 72);
 
   EXPECT_TRUE(test::CompareOrUpdateGolden(
-    image,
-    "lib/roo_windows/test/goldens/text_block/justify_paragraph_clipped.ppm",
-    "text_block_justify_paragraph_clipped"));
+      image,
+      "test/goldens/text_block/justify_paragraph_clipped.ppm",
+      "text_block_justify_paragraph_clipped"));
 }
 
-  TEST_F(TextBlockGoldenTest, EllipsizeGolden) {
-    auto image = RenderBlock(
+TEST_F(TextBlockGoldenTest, EllipsizeGolden) {
+  auto image = RenderBlock(
       "This text should wrap to multiple lines but get truncated with an "
       "ellipsis once the max lines limit is reached.",
       TextAlign::kStart, 220, 0, 2, true);
 
-    EXPECT_TRUE(test::CompareOrUpdateGolden(
-      image, "lib/roo_windows/test/goldens/text_block/ellipsize.ppm",
+  EXPECT_TRUE(test::CompareOrUpdateGolden(
+      image, "test/goldens/text_block/ellipsize.ppm",
       "text_block_ellipsize"));
-  }
+}
 
 }  // namespace
 }  // namespace roo_windows

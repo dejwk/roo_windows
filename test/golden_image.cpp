@@ -1,4 +1,4 @@
-#include "test/golden_image.h"
+#include "golden_image.h"
 
 #include <array>
 #include <cctype>
@@ -13,6 +13,10 @@
 namespace roo_windows {
 namespace test {
 namespace {
+
+#ifndef ROO_WINDOWS_BAZEL_PACKAGE
+#define ROO_WINDOWS_BAZEL_PACKAGE ""
+#endif
 
 bool IsTruthyEnv(const char* value) {
   if (value == nullptr) return false;
@@ -33,6 +37,22 @@ std::string SanitizeStem(const std::string& stem) {
     }
   }
   return out;
+}
+
+std::string GoldenPackagePath() {
+  return std::string(ROO_WINDOWS_BAZEL_PACKAGE);
+}
+
+std::string GoldenRunfilesPath(const std::string& rel) {
+  if (rel.empty() || rel[0] == '/') return rel;
+
+  std::string pkg = GoldenPackagePath();
+  if (pkg.empty()) return rel;
+
+  std::string prefix = pkg + "/";
+  if (rel.rfind(prefix, 0) == 0) return rel;
+
+  return prefix + rel;
 }
 
 void EnsureParentDir(const std::string& path) {
@@ -202,35 +222,60 @@ bool WritePpm(const std::string& path, const roo_display::Rasterizable& image,
 }
 
 std::string ResolveGoldenReadPath(const std::string& rel) {
+  std::string package_rel = GoldenRunfilesPath(rel);
   std::vector<std::string> candidates;
+
   candidates.push_back(rel);
+  if (package_rel != rel) candidates.push_back(package_rel);
 
   const char* test_srcdir = std::getenv("TEST_SRCDIR");
   const char* test_workspace = std::getenv("TEST_WORKSPACE");
   if (test_srcdir != nullptr && test_workspace != nullptr) {
-    candidates.push_back(std::string(test_srcdir) + "/" + test_workspace + "/" +
-                         rel);
+    candidates.push_back(std::string(test_srcdir) + "/" + test_workspace +
+                         "/" + rel);
+    if (package_rel != rel) {
+      candidates.push_back(std::string(test_srcdir) + "/" + test_workspace +
+                           "/" + package_rel);
+    }
   }
   if (test_srcdir != nullptr) {
     candidates.push_back(std::string(test_srcdir) + "/_main/" + rel);
+    if (package_rel != rel) {
+      candidates.push_back(std::string(test_srcdir) + "/_main/" +
+                           package_rel);
+    }
   }
 
   for (const auto& c : candidates) {
     if (std::filesystem::exists(c)) return c;
   }
 
-  return rel;
+  return package_rel;
 }
 
 std::string ResolveGoldenUpdatePath(const std::string& rel) {
+  std::string package_rel = GoldenRunfilesPath(rel);
+
   const char* ws_dir = std::getenv("BUILD_WORKSPACE_DIRECTORY");
   if (ws_dir != nullptr && ws_dir[0] != '\0') {
-    return std::string(ws_dir) + "/" + rel;
+    std::string package_path = std::string(ws_dir) + "/" + package_rel;
+    if (std::filesystem::exists(package_path)) return package_path;
+
+    std::string rel_path = std::string(ws_dir) + "/" + rel;
+    if (std::filesystem::exists(rel_path)) return rel_path;
+
+    return package_path;
   }
 
   const char* root = std::getenv("ROO_GOLDEN_UPDATE_ROOT");
   if (root != nullptr && root[0] != '\0') {
-    return std::string(root) + "/" + rel;
+    std::string package_path = std::string(root) + "/" + package_rel;
+    if (std::filesystem::exists(package_path)) return package_path;
+
+    std::string rel_path = std::string(root) + "/" + rel;
+    if (std::filesystem::exists(rel_path)) return rel_path;
+
+    return package_path;
   }
 
   return std::string();

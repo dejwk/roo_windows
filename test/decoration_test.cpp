@@ -1,9 +1,9 @@
+#include "golden_image.h"
 #include "gtest/gtest.h"
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
 #include "roo_windows.h"
-#include "test/golden_image.h"
 
 namespace roo_windows {
 namespace {
@@ -95,7 +95,7 @@ class DecorationGoldenTest : public testing::Test {
 TEST_F(DecorationGoldenTest, SharpNoOutlineElevation0) {
   auto image = Render(BorderStyle(0, 0), 0);
   EXPECT_TRUE(test::CompareOrUpdateGolden(
-      image, "lib/roo_windows/test/goldens/decoration/sharp_no_outline_e0.ppm",
+      image, "test/goldens/decoration/sharp_no_outline_e0.ppm",
       "decoration_sharp_no_outline_e0"));
 }
 
@@ -103,7 +103,7 @@ TEST_F(DecorationGoldenTest, RoundUniformNoOutlineElevation0) {
   auto image = Render(BorderStyle(14, 0), 0);
   EXPECT_TRUE(test::CompareOrUpdateGolden(
       image,
-      "lib/roo_windows/test/goldens/decoration/round_uniform_no_outline_e0.ppm",
+      "test/goldens/decoration/round_uniform_no_outline_e0.ppm",
       "decoration_round_uniform_no_outline_e0"));
 }
 
@@ -111,7 +111,7 @@ TEST_F(DecorationGoldenTest, RoundVariableNoOutlineElevation0) {
   auto image = Render(BorderStyle(4, 12, 18, 8, 0), 0);
   EXPECT_TRUE(
       test::CompareOrUpdateGolden(image,
-                                  "lib/roo_windows/test/goldens/decoration/"
+                                  "test/goldens/decoration/"
                                   "round_variable_no_outline_e0.ppm",
                                   "decoration_round_variable_no_outline_e0"));
 }
@@ -119,7 +119,7 @@ TEST_F(DecorationGoldenTest, RoundVariableNoOutlineElevation0) {
 TEST_F(DecorationGoldenTest, SharpOutlineElevation0) {
   auto image = Render(BorderStyle(0, SmallNumber::Of16ths(36)), 0);
   EXPECT_TRUE(test::CompareOrUpdateGolden(
-      image, "lib/roo_windows/test/goldens/decoration/sharp_outline_e0.ppm",
+      image, "test/goldens/decoration/sharp_outline_e0.ppm",
       "decoration_sharp_outline_e0"));
 }
 
@@ -127,7 +127,7 @@ TEST_F(DecorationGoldenTest, RoundUniformOutlineElevation0) {
   auto image = Render(BorderStyle(14, SmallNumber::Of16ths(36)), 0);
   EXPECT_TRUE(test::CompareOrUpdateGolden(
       image,
-      "lib/roo_windows/test/goldens/decoration/round_uniform_outline_e0.ppm",
+      "test/goldens/decoration/round_uniform_outline_e0.ppm",
       "decoration_round_uniform_outline_e0"));
 }
 
@@ -135,7 +135,7 @@ TEST_F(DecorationGoldenTest, RoundVariableOutlineElevation0) {
   auto image = Render(BorderStyle(4, 12, 18, 8, SmallNumber::Of16ths(36)), 0);
   EXPECT_TRUE(test::CompareOrUpdateGolden(
       image,
-      "lib/roo_windows/test/goldens/decoration/round_variable_outline_e0.ppm",
+      "test/goldens/decoration/round_variable_outline_e0.ppm",
       "decoration_round_variable_outline_e0"));
 }
 
@@ -143,7 +143,7 @@ TEST_F(DecorationGoldenTest, RoundVariableOutlineElevation4) {
   auto image = Render(BorderStyle(4, 12, 18, 8, SmallNumber::Of16ths(36)), 4);
   EXPECT_TRUE(test::CompareOrUpdateGolden(
       image,
-      "lib/roo_windows/test/goldens/decoration/round_variable_outline_e4.ppm",
+      "test/goldens/decoration/round_variable_outline_e4.ppm",
       "decoration_round_variable_outline_e4"));
 }
 
@@ -151,7 +151,7 @@ TEST_F(DecorationGoldenTest, RoundVariableOutlineElevation12) {
   auto image = Render(BorderStyle(4, 12, 18, 8, SmallNumber::Of16ths(36)), 12);
   EXPECT_TRUE(test::CompareOrUpdateGolden(
       image,
-      "lib/roo_windows/test/goldens/decoration/round_variable_outline_e12.ppm",
+      "test/goldens/decoration/round_variable_outline_e12.ppm",
       "decoration_round_variable_outline_e12"));
 }
 
