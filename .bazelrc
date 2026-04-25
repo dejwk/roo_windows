@@ -14,3 +14,9 @@ build:asan --copt -g
 build:asan --copt -fno-omit-frame-pointer
 build:asan --linkopt -fsanitize=address
 build:asan --copt -DARDUINO=10308
+
+# Optimized build with debug symbols and frame pointers
+build:profile -c opt
+build:profile --copt=-g
+build:profile --copt=-fno-omit-frame-pointer
+build:profile --strip=never
