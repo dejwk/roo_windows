@@ -256,6 +256,7 @@ inline const roo_display::Font& font_overline() {
 }
 
 enum class ColorRole {
+  kUndefined,  // No explicit role; inherit from parent.
   kPrimary,
   kOnPrimary,
   kPrimaryContainer,
@@ -329,6 +330,8 @@ struct ColorTheme {
 
   roo_display::Color role(ColorRole role) const {
     switch (role) {
+      case ColorRole::kUndefined:
+        return roo_display::color::Transparent;
       case ColorRole::kPrimary:
         return primary;
       case ColorRole::kOnPrimary:

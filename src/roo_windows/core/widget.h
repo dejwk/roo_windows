@@ -140,8 +140,12 @@ class Widget {
   // default color can also be determined by calling
   // theme().color.defaultColor(s.bgcolor()).
   roo_display::Color defaultColor() const {
-    return theme().color.defaultColor(effectiveBackground());
+    return theme().color.contentColorFor(effectiveContainerRole());
   }
+
+  virtual ColorRole containerRole() const;
+
+  ColorRole effectiveContainerRole() const;
 
   const Rect& parent_bounds() const { return parent_bounds_; }
 
