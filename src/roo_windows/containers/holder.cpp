@@ -39,19 +39,22 @@ PreferredSize Holder::getPreferredSize() const {
 }
 
 Dimensions Holder::onMeasure(WidthSpec width, HeightSpec height) {
+  Padding p = getPadding();
+  XDim ph = p.left() + p.right();
+  YDim pv = p.top() + p.bottom();
   if (contents() == nullptr) {
-    return Dimensions(width.resolveSize(0), height.resolveSize(0));
+    return Dimensions(width.resolveSize(ph), height.resolveSize(pv));
   }
   Margins m = contents()->getMargins();
   PreferredSize s = contents()->getPreferredSize();
   WidthSpec child_width =
-      width.getChildWidthSpec(m.left() + m.right(), s.width());
+      width.getChildWidthSpec(m.left() + m.right() + ph, s.width());
   HeightSpec child_height =
-      height.getChildHeightSpec(m.top() + m.bottom(), s.height());
+      height.getChildHeightSpec(m.top() + m.bottom() + pv, s.height());
   Dimensions measured = contents()->measure(child_width, child_height);
   return Dimensions(
-      width.resolveSize(measured.width() + m.left() + m.right()),
-      height.resolveSize(measured.height() + m.top() + m.bottom()));
+      width.resolveSize(measured.width() + m.left() + m.right() + ph),
+      height.resolveSize(measured.height() + m.top() + m.bottom() + pv));
 }
 
 void Holder::onLayout(bool changed, const Rect& rect) {

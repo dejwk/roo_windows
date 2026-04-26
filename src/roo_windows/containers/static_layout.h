@@ -29,9 +29,7 @@ class StaticLayout : public Panel {
   void add(WidgetRef child, XDim x, YDim y) {
     Dimensions d =
         child->measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
-    Padding p = child->getPadding();
-    Rect inner(0, 0, d.width() + p.left() + p.right() - 1,
-               d.height() + p.top() + p.bottom() - 1);
+    Rect inner(0, 0, d.width() - 1, d.height() - 1);
     Rect actual = inner.translate(x, y);
     child->layout(actual);
     add(std::move(child), actual);
@@ -44,9 +42,7 @@ class StaticLayout : public Panel {
   void add(WidgetRef child, roo_display::Alignment alignment) {
     Dimensions d =
         child->measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
-    Padding p = child->getPadding();
-    Rect inner(0, 0, d.width() + p.left() + p.right() - 1,
-               d.height() + p.top() + p.bottom() - 1);
+    Rect inner(0, 0, d.width() - 1, d.height() - 1);
     std::pair<XDim, YDim> offset =
         ResolveAlignmentOffset(bounds(), inner, alignment);
     Rect actual = inner.translate(offset.first, offset.second);
