@@ -149,15 +149,6 @@ ColorRole Widget::effectiveContainerRole() const {
     return role;
   }
 
-  // Compatibility fallback: infer role from explicit local background color
-  // for non-container widgets that don't provide a semantic role.
-  if (dynamic_cast<const Container*>(this) == nullptr) {
-    Color bg = background();
-    if (bg.a() != 0) {
-      return theme().color.roleForColor(bg);
-    }
-  }
-
   return parent() != nullptr ? parent()->effectiveContainerRole()
                              : ColorRole::kBackground;
 }
