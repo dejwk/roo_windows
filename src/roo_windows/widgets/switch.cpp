@@ -48,10 +48,11 @@ void Switch::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
 
 void Switch::paint(const Canvas& canvas) const {
   const Theme& th = theme();
-  Color circleColor =
-      isOn() ? th.color.highlighterColor(canvas.bgcolor()) : th.color.surface;
-  Color sliderColor = isOn() ? th.color.highlighterColor(canvas.bgcolor())
-                             : th.color.defaultColor(canvas.bgcolor());
+  ColorRole bg_role = th.color.roleForColor(canvas.bgcolor());
+  Color circleColor = isOn() ? th.color.accentColorFor(bg_role)
+                             : th.color.role(ColorRole::kSurface);
+  Color sliderColor = isOn() ? th.color.accentColorFor(bg_role)
+                             : th.color.contentColorFor(bg_role);
   int16_t xoffset;
   if (isAnimating()) {
     int16_t ms = time_animating_ms();

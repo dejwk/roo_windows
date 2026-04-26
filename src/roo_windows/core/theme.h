@@ -445,60 +445,40 @@ struct ColorTheme {
     }
   }
 
-  roo_display::Color defaultColor(roo_display::Color bg) const {
+  ColorRole roleForColor(roo_display::Color bg) const {
     if (bg == surface) {
-      return onSurface;
+      return ColorRole::kSurface;
     } else if (bg == surfaceVariant) {
-      return onSurfaceVariant;
+      return ColorRole::kSurfaceVariant;
     } else if (bg == primary || bg == primaryVariant) {
-      return onPrimary;
+      return ColorRole::kPrimary;
     } else if (bg == primaryContainer) {
-      return onPrimaryContainer;
+      return ColorRole::kPrimaryContainer;
     } else if (bg == secondary || bg == secondaryVariant) {
-      return onSecondary;
+      return ColorRole::kSecondary;
     } else if (bg == secondaryContainer) {
-      return onSecondaryContainer;
+      return ColorRole::kSecondaryContainer;
     } else if (bg == tertiary) {
-      return onTertiary;
+      return ColorRole::kTertiary;
     } else if (bg == tertiaryContainer) {
-      return onTertiaryContainer;
+      return ColorRole::kTertiaryContainer;
     } else if (bg == error) {
-      return onError;
+      return ColorRole::kError;
     } else if (bg == errorContainer) {
-      return onErrorContainer;
+      return ColorRole::kErrorContainer;
     } else if (bg == inverseSurface) {
-      return inverseOnSurface;
+      return ColorRole::kInverseSurface;
     } else {
-      return onBackground;
+      return ColorRole::kBackground;
     }
   }
 
+  roo_display::Color defaultColor(roo_display::Color bg) const {
+    return contentColorFor(roleForColor(bg));
+  }
+
   roo_display::Color highlighterColor(roo_display::Color bg) const {
-    if (bg == surface) {
-      return primary;
-    } else if (bg == surfaceVariant) {
-      return primary;
-    } else if (bg == primary || bg == primaryVariant) {
-      return onPrimary;
-    } else if (bg == primaryContainer) {
-      return onPrimaryContainer;
-    } else if (bg == secondary || bg == secondaryVariant) {
-      return onSecondary;
-    } else if (bg == secondaryContainer) {
-      return onSecondaryContainer;
-    } else if (bg == tertiary) {
-      return onTertiary;
-    } else if (bg == tertiaryContainer) {
-      return onTertiaryContainer;
-    } else if (bg == error) {
-      return onError;
-    } else if (bg == errorContainer) {
-      return onErrorContainer;
-    } else if (bg == inverseSurface) {
-      return inversePrimary;
-    } else {
-      return primary;
-    }
+    return accentColorFor(roleForColor(bg));
   }
 };
 
