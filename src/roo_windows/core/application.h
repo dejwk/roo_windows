@@ -38,11 +38,19 @@ class Application {
 
   void add(WidgetRef child, const roo_display::Box& box);
 
+  void addPopup(WidgetRef child, const roo_display::Box& box);
+
   Task* addTask(const roo_display::Box& bounds);
+
+  Task* addPopupTask(const roo_display::Box& bounds);
 
   Task* addTaskFullScreen() { return addTask(display_.extents()); }
 
   Task* addTaskFloating() { return addTask(roo_display::Box(0, 0, -1, -1)); }
+
+  Task* addPopupTaskFloating() {
+    return addPopupTask(roo_display::Box(0, 0, -1, -1));
+  }
 
   // Dialogs are modal, centered, and scrim the screen behind them.
   // The callback gets called with the index of the option (e.g. button)

@@ -23,7 +23,7 @@ void maybeAddColor(roo_display::internal::ColorSet& palette, Color color) {
 }  // namespace
 
 MainWindow::MainWindow(Application& app, const roo_display::Box& bounds)
-    : Panel(app.env(), app.env().theme().color.background),
+    : Container(app.env(), app.env().theme().color.background),
       app_(app),
       redraw_bounds_(bounds),
       scrim_(app.env()) {
@@ -72,8 +72,37 @@ MainWindow::MainWindow(Application& app, const roo_display::Box& bounds)
   // background_fill_buffer_.setPrefilled(env.theme().color.background);
 }
 
+MainWindow::~MainWindow() {
+  if (active_dialog_ != nullptr) {
+    detachChild(active_dialog_);
+    detachChild(&scrim_);
+    active_dialog_ = nullptr;
+  }
+  while (!popups_.empty()) {
+    removeLastFromLayer(popups_);
+  }
+  while (!tasks_.empty()) {
+    removeLastFromLayer(tasks_);
+  }
+}
+
 Application& MainWindow::app() const { return app_; }
 const Theme& MainWindow::theme() const { return app().env().theme(); }
+
+void MainWindow::addToLayer(std::vector<Widget*>& layer, WidgetRef child,
+                            const Rect& rect) {
+  Widget* widget = child.get();
+  layer.push_back(widget);
+  attachChild(std::move(child), rect);
+}
+
+void MainWindow::addTask(WidgetRef child, const Rect& rect) {
+  addToLayer(tasks_, std::move(child), rect);
+}
+
+void MainWindow::addPopup(WidgetRef child, const Rect& rect) {
+  addToLayer(popups_, std::move(child), rect);
+}
 
 void MainWindow::refreshClickAnimation() { click_animation_.tick(); }
 
@@ -131,18 +160,24 @@ void MainWindow::propagateDirty(const Widget* child, const Rect& rect) {
   }
 }
 
+void MainWindow::removeLastFromLayer(std::vector<Widget*>& layer) {
+  Widget* widget = layer.back();
+  layer.pop_back();
+  detachChild(widget);
+}
+
 void MainWindow::showDialog(Dialog& dialog, Dialog::CallbackFn callback_fn) {
   CHECK(active_dialog_ == nullptr) << "Can't show two dialogs at the same time";
   active_dialog_ = &dialog;
-  add(scrim_, bounds());
+  attachChild(scrim_, bounds());
   pending_scrim_blit_ = true;
   dialog.onEnter();
   dialog.setCallbackFn([this, callback_fn, &dialog](int id) {
     dialog.onExit(id);
     active_dialog_ = nullptr;
     pending_scrim_blit_ = false;
-    removeLast();
-    removeLast();
+    detachChild(&dialog);
+    detachChild(&scrim_);
     invalidateInterior();
     Dialog::CallbackFn fn = callback_fn;
     dialog.setCallbackFn(nullptr);
@@ -152,8 +187,8 @@ void MainWindow::showDialog(Dialog& dialog, Dialog::CallbackFn callback_fn) {
       dialog.measure(WidthSpec::AtMost(width()), HeightSpec::AtMost(height()));
   XDim offsetLeft = (width() - dims.width()) / 2;
   YDim offsetTop = (height() - dims.height()) / 2;
-  add(dialog, Rect(offsetLeft, offsetTop, offsetLeft + dims.width() - 1,
-                   offsetTop + dims.height() - 1));
+  attachChild(dialog, Rect(offsetLeft, offsetTop, offsetLeft + dims.width() - 1,
+                           offsetTop + dims.height() - 1));
 }
 
 void MainWindow::clearDialog() {

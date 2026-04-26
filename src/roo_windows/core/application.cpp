@@ -25,12 +25,16 @@ Application::Application(const Environment* env, Display& display)
       gesture_detector_(root_window_, touch_sensor_),
       ticker_(env->scheduler(), [this]() { tick(); }),
       paint_interval_(kMinRefreshDuration) {
-  roo_windows::Task* kb_task = addTaskFloating();
+  roo_windows::Task* kb_task = addPopupTaskFloating();
   kb_task->enterActivity(&keyboard_);
 }
 
 void Application::add(WidgetRef child, const roo_display::Box& box) {
-  root_window_.add(std::move(child), box);
+  root_window_.addTask(std::move(child), box);
+}
+
+void Application::addPopup(WidgetRef child, const roo_display::Box& box) {
+  root_window_.addPopup(std::move(child), box);
 }
 
 void Application::start() {
@@ -113,7 +117,17 @@ Task* Application::addTask(const roo_display::Box& bounds) {
   auto task = std::unique_ptr<Task>(new Task());
   auto task_panel = std::unique_ptr<TaskPanel>(new TaskPanel(*env_, *task));
   task->init(task_panel.get());
-  root_window_.add(*task_panel, bounds);
+  root_window_.addTask(*task_panel, bounds);
+  tasks_.push_back(std::move(task));
+  task_panels_.push_back(std::move(task_panel));
+  return tasks_.back().get();
+}
+
+Task* Application::addPopupTask(const roo_display::Box& bounds) {
+  auto task = std::unique_ptr<Task>(new Task());
+  auto task_panel = std::unique_ptr<TaskPanel>(new TaskPanel(*env_, *task));
+  task->init(task_panel.get());
+  root_window_.addPopup(*task_panel, bounds);
   tasks_.push_back(std::move(task));
   task_panels_.push_back(std::move(task_panel));
   return tasks_.back().get();
