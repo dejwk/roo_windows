@@ -23,7 +23,7 @@ void maybeAddColor(roo_display::internal::ColorSet& palette, Color color) {
 }  // namespace
 
 MainWindow::MainWindow(Application& app, const roo_display::Box& bounds)
-  : Container(app.env()),
+    : Container(app.env()),
       app_(app),
       redraw_bounds_(bounds),
       scrim_(app.env()) {

@@ -141,9 +141,7 @@ Color Widget::effectiveBackground() const {
                                        bgcolor);
 }
 
-ColorRole Widget::containerRole() const {
-  return ColorRole::kUndefined;
-}
+ColorRole Widget::containerRole() const { return ColorRole::kUndefined; }
 
 ColorRole Widget::effectiveContainerRole() const {
   ColorRole role = containerRole();

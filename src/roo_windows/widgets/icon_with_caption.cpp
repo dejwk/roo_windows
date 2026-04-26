@@ -36,7 +36,7 @@ void IconWithCaption::paint(const Canvas& canvas) const {
   color = AlphaBlend(canvas.bgcolor(), color);
   if (isInvalidated() && hi_border_ > 0) {
     canvas.clearRect(bounds().xMin(), bounds().yMin(), bounds().xMax(),
-                    bounds().yMin() + hi_border_ - 1);
+                     bounds().yMin() + hi_border_ - 1);
   }
 
   Rect icon_bounds(bounds().xMin(), hi_border_, bounds().xMax(),
@@ -54,7 +54,7 @@ void IconWithCaption::paint(const Canvas& canvas) const {
 
   if (isInvalidated() && lo_border_ > 0) {
     canvas.clearRect(bounds().xMin(), bounds().yMax() - lo_border_ + 1,
-                    bounds().xMax(), bounds().yMax());
+                     bounds().xMax(), bounds().yMax());
   }
 }
 
