@@ -93,6 +93,11 @@ const Theme& DefaultTheme() {
 
 const KeyboardColorTheme& DefaultKeyboardColorTheme() {
   static KeyboardColorTheme theme = {
+  .backgroundRole = ColorRole::kSurfaceContainer,
+  .normalButtonRole = ColorRole::kSurfaceContainerHigh,
+  .modifierButtonRole = ColorRole::kSurfaceContainerHighest,
+  .acceptButtonRole = ColorRole::kPrimaryContainer,
+  .textRole = ColorRole::kOnSurface,
       .background = roo_display::Color(0xFF303030),
       .normalButton = roo_display::Color(0xFF4C4C4C),
       .modifierButton = roo_display::Color(0xFF3C3C3C),

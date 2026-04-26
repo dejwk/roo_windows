@@ -36,7 +36,7 @@ MainWindow::MainWindow(Application& app, const roo_display::Box& bounds)
   maybeAddColor(color_set, env.theme().color.primary);
   maybeAddColor(color_set, env.theme().color.primaryVariant);
   maybeAddColor(color_set, env.theme().color.secondary);
-  maybeAddColor(color_set, env.keyboardColorTheme().background);
+  maybeAddColor(color_set, env.keyboardColorTheme().backgroundColor(env.theme()));
   maybeAddColor(color_set, env.theme().color.secondaryVariant);
   {
     Color c = env.theme().color.contentColorFor(ColorRole::kSurface);
@@ -65,9 +65,11 @@ MainWindow::MainWindow(Application& app, const roo_display::Box& bounds)
     maybeAddColor(color_set, c);
   }
 
-  maybeAddColor(color_set, env.keyboardColorTheme().normalButton);
+  maybeAddColor(color_set,
+                env.keyboardColorTheme().normalButtonColor(env.theme()));
   maybeAddColor(color_set, env.theme().color.error);
-  maybeAddColor(color_set, env.keyboardColorTheme().modifierButton);
+  maybeAddColor(color_set,
+                env.keyboardColorTheme().modifierButtonColor(env.theme()));
   Color palette[color_set.size()];
   std::copy(color_set.begin(), color_set.end(), palette);
   // background_fill_buffer_.setPalette(palette, color_set.size());
