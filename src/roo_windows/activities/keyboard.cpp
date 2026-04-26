@@ -101,6 +101,7 @@ class KeyboardWidget;
 class KeyboardButton : public SimpleButton {
  public:
   using SimpleButton::SimpleButton;
+
   virtual void capsStateUpdated() {}
 
   // bool onScroll(int16_t dx, int16_t dy) override;
@@ -144,9 +145,7 @@ class KeyboardPage : public Panel {
  public:
   KeyboardPage(const Environment& env, const KeyboardPageSpec* spec);
 
-  ColorRole containerRole() const override {
-    return ColorRole::kSurfaceContainer;
-  }
+  Color background() const override;
 
   void init(const Environment& env);
 
@@ -283,7 +282,7 @@ class SpaceButton : public KeyboardButton {
 class EnterButton : public KeyboardButton {
  public:
   EnterButton(const Environment& env, const MonoIcon& icon)
-      : KeyboardButton(env, icon) {}
+  : KeyboardButton(env, icon) {}
 
   bool showClickAnimation() const override { return false; }
 
@@ -352,7 +351,7 @@ class ShiftButton : public KeyboardButton {
 class DelButton : public KeyboardButton {
  public:
   DelButton(const Environment& env, const MonoIcon& icon)
-      : KeyboardButton(env, icon) {}
+  : KeyboardButton(env, icon) {}
 
   bool showClickAnimation() const override { return false; }
 
@@ -369,7 +368,7 @@ class DelButton : public KeyboardButton {
 class PageSwitchButton : public KeyboardButton {
  public:
   PageSwitchButton(const Environment& env, std::string label, uint8_t target)
-      : KeyboardButton(env, label), target_(target) {}
+  : KeyboardButton(env, std::move(label)), target_(target) {}
 
   bool showClickAnimation() const override { return false; }
 
@@ -463,6 +462,10 @@ KeyboardPage::KeyboardPage(const Environment& env, const KeyboardPageSpec* spec)
   setParentClipMode(ParentClipMode::kUnclipped);
 }
 
+Color KeyboardPage::background() const {
+  return keyboard()->color_theme().background;
+}
+
 void KeyboardPage::init(const Environment& env) {
   if (initialized_) return;
   initialized_ = true;
@@ -476,27 +479,27 @@ void KeyboardPage::init(const Environment& env) {
       switch (key.function) {
         case KeySpec::TEXT: {
           b = new TextButton(env, key.data, key_caps.data);
-          b_color = env.keyboardColorTheme().normalButtonColor(env.theme());
+          b_color = env.keyboardColorTheme().normalButton;
           break;
         }
         case KeySpec::SPACE: {
           b = new SpaceButton(env);
-          b_color = env.keyboardColorTheme().normalButtonColor(env.theme());
+          b_color = env.keyboardColorTheme().normalButton;
           break;
         }
         case KeySpec::ENTER: {
           b = new EnterButton(env, ic_outlined_24_action_done());
-          b_color = env.keyboardColorTheme().acceptButtonColor(env.theme());
+          b_color = env.keyboardColorTheme().acceptButton;
           break;
         }
         case KeySpec::SHIFT: {
           b = new ShiftButton(env);
-          b_color = env.keyboardColorTheme().modifierButtonColor(env.theme());
+          b_color = env.keyboardColorTheme().modifierButton;
           break;
         }
         case KeySpec::DEL: {
           b = new DelButton(env, ic_outlined_24_content_backspace());
-          b_color = env.keyboardColorTheme().modifierButtonColor(env.theme());
+          b_color = env.keyboardColorTheme().modifierButton;
           break;
         }
         case KeySpec::SWITCH_PAGE: {
@@ -505,13 +508,13 @@ void KeyboardPage::init(const Environment& env) {
               std::string(row.pageswitch_key_labels + ((key.data >> 8) & 0xFF),
                           key.data >> 16),
               (key.data & 0xFF));
-          b_color = env.keyboardColorTheme().modifierButtonColor(env.theme());
+          b_color = env.keyboardColorTheme().modifierButton;
           break;
         }
       }
       b->setInteriorColor(b_color);
       b->setOutlineColor(b_color);
-      b->setContentColor(env.keyboardColorTheme().textColor(env.theme()));
+      b->setContentColor(env.keyboardColorTheme().text);
       keys_.emplace_back(b);
       add(std::unique_ptr<Button>(b));
     }
@@ -659,8 +662,8 @@ void PressHighlighter::paint(const Canvas& canvas) const {
   const Theme& th = theme();
   const KeyboardColorTheme& kbTh = keyboard()->color_theme();
   Color overlay = roo_display::color::Black;
-  overlay.set_a(th.pressedOpacity(kbTh.resolvedNormalButtonRole(th)));
-  Color bgcolor = roo_display::AlphaBlend(kbTh.normalButtonColor(th), overlay);
+  overlay.set_a(th.pressedOpacity(kbTh.normalButton));
+  Color bgcolor = roo_display::AlphaBlend(kbTh.normalButton, overlay);
   canvas.drawObject(roo_display::MakeTileOf(
       roo_display::StringViewLabel(target_->label(), font_body1(),
                                    target_->contentColor()),

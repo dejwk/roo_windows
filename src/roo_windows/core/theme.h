@@ -786,75 +786,11 @@ struct Theme {
 };
 
 struct KeyboardColorTheme {
-  ColorRole backgroundRole;
-  ColorRole normalButtonRole;
-  ColorRole modifierButtonRole;
-  ColorRole acceptButtonRole;
-  ColorRole textRole;
-
   roo_display::Color background;
   roo_display::Color normalButton;
   roo_display::Color modifierButton;
   roo_display::Color acceptButton;
   roo_display::Color text;
-
-  ColorRole resolvedBackgroundRole(const Theme& theme) const {
-    return backgroundRole != ColorRole::kUndefined
-               ? backgroundRole
-               : theme.color.roleForColor(background);
-  }
-
-  ColorRole resolvedNormalButtonRole(const Theme& theme) const {
-    return normalButtonRole != ColorRole::kUndefined
-               ? normalButtonRole
-               : theme.color.roleForColor(normalButton);
-  }
-
-  ColorRole resolvedModifierButtonRole(const Theme& theme) const {
-    return modifierButtonRole != ColorRole::kUndefined
-               ? modifierButtonRole
-               : theme.color.roleForColor(modifierButton);
-  }
-
-  ColorRole resolvedAcceptButtonRole(const Theme& theme) const {
-    return acceptButtonRole != ColorRole::kUndefined
-               ? acceptButtonRole
-               : theme.color.roleForColor(acceptButton);
-  }
-
-  ColorRole resolvedTextRole(const Theme& theme) const {
-    return textRole != ColorRole::kUndefined
-               ? textRole
-               : theme.color.roleForColor(text);
-  }
-
-  roo_display::Color backgroundColor(const Theme& theme) const {
-    return background.a() != 0 ? background
-                               : theme.color.role(resolvedBackgroundRole(theme));
-  }
-
-  roo_display::Color normalButtonColor(const Theme& theme) const {
-    return normalButton.a() != 0
-               ? normalButton
-               : theme.color.role(resolvedNormalButtonRole(theme));
-  }
-
-  roo_display::Color modifierButtonColor(const Theme& theme) const {
-    return modifierButton.a() != 0
-               ? modifierButton
-               : theme.color.role(resolvedModifierButtonRole(theme));
-  }
-
-  roo_display::Color acceptButtonColor(const Theme& theme) const {
-    return acceptButton.a() != 0
-               ? acceptButton
-               : theme.color.role(resolvedAcceptButtonRole(theme));
-  }
-
-  roo_display::Color textColor(const Theme& theme) const {
-    return text.a() != 0 ? text
-                         : theme.color.role(resolvedTextRole(theme));
-  }
 };
 
 const Theme& DefaultTheme();
