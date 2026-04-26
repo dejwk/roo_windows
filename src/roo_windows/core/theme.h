@@ -511,12 +511,20 @@ struct ColorTheme {
     }
   }
 
+  roo_display::Color defaultColor(ColorRole bg_role) const {
+    return contentColorFor(bg_role);
+  }
+
   roo_display::Color defaultColor(roo_display::Color bg) const {
-    return contentColorFor(roleForColor(bg));
+    return defaultColor(roleForColor(bg));
+  }
+
+  roo_display::Color highlighterColor(ColorRole bg_role) const {
+    return accentColorFor(bg_role);
   }
 
   roo_display::Color highlighterColor(roo_display::Color bg) const {
-    return accentColorFor(roleForColor(bg));
+    return highlighterColor(roleForColor(bg));
   }
 };
 
@@ -720,186 +728,60 @@ struct Theme {
     return state.pressedOnBackground;
   }
 
+  uint8_t hoverOpacity(ColorRole bg_role) const {
+    return opacity(bg_role, InteractionState::kHover);
+  }
+
+  uint8_t focusOpacity(ColorRole bg_role) const {
+    return opacity(bg_role, InteractionState::kFocus);
+  }
+
+  uint8_t selectedOpacity(ColorRole bg_role) const {
+    return opacity(bg_role, InteractionState::kSelected);
+  }
+
+  uint8_t activatedOpacity(ColorRole bg_role) const {
+    return opacity(bg_role, InteractionState::kActivated);
+  }
+
+  uint8_t pressedOpacity(ColorRole bg_role) const {
+    return opacity(bg_role, InteractionState::kPressed);
+  }
+
+  uint8_t pressAnimationOpacity(ColorRole bg_role) const {
+    return opacity(bg_role, InteractionState::kPressed);
+  }
+
+  uint8_t draggedOpacity(ColorRole bg_role) const {
+    return opacity(bg_role, InteractionState::kDragged);
+  }
+
   uint8_t hoverOpacity(roo_display::Color bg) const {
-    if (bg == color.surface || bg == color.surfaceContainerLowest ||
-        bg == color.surfaceContainerLow || bg == color.surfaceContainer ||
-        bg == color.surfaceContainerHigh ||
-        bg == color.surfaceContainerHighest) {
-      return state.hoverOnSurface;
-    } else if (bg == color.surfaceVariant || bg == color.inverseSurface) {
-      return state.hoverOnSurface;
-    } else if (bg == color.primary || bg == color.primaryVariant) {
-      return state.hoverOnPrimary;
-    } else if (bg == color.primaryContainer) {
-      return state.hoverOnPrimary;
-    } else if (bg == color.secondary || bg == color.secondaryVariant) {
-      return state.hoverOnSecondary;
-    } else if (bg == color.secondaryContainer || bg == color.tertiary ||
-               bg == color.tertiaryContainer) {
-      return state.hoverOnSecondary;
-    } else if (bg == color.error) {
-      return state.hoverOnError;
-    } else if (bg == color.errorContainer) {
-      return state.hoverOnError;
-    } else {
-      return state.hoverOnBackground;
-    }
+    return hoverOpacity(color.roleForColor(bg));
   }
 
   uint8_t focusOpacity(roo_display::Color bg) const {
-    if (bg == color.surface || bg == color.surfaceContainerLowest ||
-        bg == color.surfaceContainerLow || bg == color.surfaceContainer ||
-        bg == color.surfaceContainerHigh ||
-        bg == color.surfaceContainerHighest) {
-      return state.focusOnSurface;
-    } else if (bg == color.surfaceVariant || bg == color.inverseSurface) {
-      return state.focusOnSurface;
-    } else if (bg == color.primary || bg == color.primaryVariant) {
-      return state.focusOnPrimary;
-    } else if (bg == color.primaryContainer) {
-      return state.focusOnPrimary;
-    } else if (bg == color.secondary || bg == color.secondaryVariant) {
-      return state.focusOnSecondary;
-    } else if (bg == color.secondaryContainer || bg == color.tertiary ||
-               bg == color.tertiaryContainer) {
-      return state.focusOnSecondary;
-    } else if (bg == color.error) {
-      return state.focusOnError;
-    } else if (bg == color.errorContainer) {
-      return state.focusOnError;
-    } else {
-      return state.focusOnBackground;
-    }
+    return focusOpacity(color.roleForColor(bg));
   }
 
   uint8_t selectedOpacity(roo_display::Color bg) const {
-    if (bg == color.surface || bg == color.surfaceContainerLowest ||
-        bg == color.surfaceContainerLow || bg == color.surfaceContainer ||
-        bg == color.surfaceContainerHigh ||
-        bg == color.surfaceContainerHighest) {
-      return state.selectedOnSurface;
-    } else if (bg == color.surfaceVariant || bg == color.inverseSurface) {
-      return state.selectedOnSurface;
-    } else if (bg == color.primary || bg == color.primaryVariant) {
-      return state.selectedOnPrimary;
-    } else if (bg == color.primaryContainer) {
-      return state.selectedOnPrimary;
-    } else if (bg == color.secondary || bg == color.secondaryVariant) {
-      return state.selectedOnSecondary;
-    } else if (bg == color.secondaryContainer || bg == color.tertiary ||
-               bg == color.tertiaryContainer) {
-      return state.selectedOnSecondary;
-    } else if (bg == color.error) {
-      return state.selectedOnError;
-    } else if (bg == color.errorContainer) {
-      return state.selectedOnError;
-    } else {
-      return state.selectedOnBackground;
-    }
+    return selectedOpacity(color.roleForColor(bg));
   }
 
   uint8_t activatedOpacity(roo_display::Color bg) const {
-    if (bg == color.surface || bg == color.surfaceContainerLowest ||
-        bg == color.surfaceContainerLow || bg == color.surfaceContainer ||
-        bg == color.surfaceContainerHigh ||
-        bg == color.surfaceContainerHighest) {
-      return state.activatedOnSurface;
-    } else if (bg == color.surfaceVariant || bg == color.inverseSurface) {
-      return state.activatedOnSurface;
-    } else if (bg == color.primary || bg == color.primaryVariant) {
-      return state.activatedOnPrimary;
-    } else if (bg == color.primaryContainer) {
-      return state.activatedOnPrimary;
-    } else if (bg == color.secondary || bg == color.secondaryVariant) {
-      return state.activatedOnSecondary;
-    } else if (bg == color.secondaryContainer || bg == color.tertiary ||
-               bg == color.tertiaryContainer) {
-      return state.activatedOnSecondary;
-    } else if (bg == color.error) {
-      return state.activatedOnError;
-    } else if (bg == color.errorContainer) {
-      return state.activatedOnError;
-    } else {
-      return state.activatedOnBackground;
-    }
+    return activatedOpacity(color.roleForColor(bg));
   }
 
   uint8_t pressedOpacity(roo_display::Color bg) const {
-    if (bg == color.surface || bg == color.surfaceContainerLowest ||
-        bg == color.surfaceContainerLow || bg == color.surfaceContainer ||
-        bg == color.surfaceContainerHigh ||
-        bg == color.surfaceContainerHighest) {
-      return state.pressedOnSurface;
-    } else if (bg == color.surfaceVariant || bg == color.inverseSurface) {
-      return state.pressedOnSurface;
-    } else if (bg == color.primary || bg == color.primaryVariant) {
-      return state.pressedOnPrimary;
-    } else if (bg == color.primaryContainer) {
-      return state.pressedOnPrimary;
-    } else if (bg == color.secondary || bg == color.secondaryVariant) {
-      return state.pressedOnSecondary;
-    } else if (bg == color.secondaryContainer || bg == color.tertiary ||
-               bg == color.tertiaryContainer) {
-      return state.pressedOnSecondary;
-    } else if (bg == color.error) {
-      return state.pressedOnError;
-    } else if (bg == color.errorContainer) {
-      return state.pressedOnError;
-    } else {
-      return state.pressedOnBackground;
-    }
+    return pressedOpacity(color.roleForColor(bg));
   }
 
   uint8_t pressAnimationOpacity(roo_display::Color bg) const {
-    if (bg == color.surface || bg == color.surfaceContainerLowest ||
-        bg == color.surfaceContainerLow || bg == color.surfaceContainer ||
-        bg == color.surfaceContainerHigh ||
-        bg == color.surfaceContainerHighest) {
-      return state.pressedOnSurface;
-    } else if (bg == color.surfaceVariant || bg == color.inverseSurface) {
-      return state.pressedOnSurface;
-    } else if (bg == color.primary || bg == color.primaryVariant) {
-      return state.pressedOnPrimary;
-    } else if (bg == color.primaryContainer) {
-      return state.pressedOnPrimary;
-    } else if (bg == color.secondary || bg == color.secondaryVariant) {
-      return state.pressedOnSecondary;
-    } else if (bg == color.secondaryContainer || bg == color.tertiary ||
-               bg == color.tertiaryContainer) {
-      return state.pressedOnSecondary;
-    } else if (bg == color.error) {
-      return state.pressedOnError;
-    } else if (bg == color.errorContainer) {
-      return state.pressedOnError;
-    } else {
-      return state.pressedOnBackground;
-    }
+    return pressAnimationOpacity(color.roleForColor(bg));
   }
 
   uint8_t draggedOpacity(roo_display::Color bg) const {
-    if (bg == color.surface || bg == color.surfaceContainerLowest ||
-        bg == color.surfaceContainerLow || bg == color.surfaceContainer ||
-        bg == color.surfaceContainerHigh ||
-        bg == color.surfaceContainerHighest) {
-      return state.draggedOnSurface;
-    } else if (bg == color.surfaceVariant || bg == color.inverseSurface) {
-      return state.draggedOnSurface;
-    } else if (bg == color.primary || bg == color.primaryVariant) {
-      return state.draggedOnPrimary;
-    } else if (bg == color.primaryContainer) {
-      return state.draggedOnPrimary;
-    } else if (bg == color.secondary || bg == color.secondaryVariant) {
-      return state.draggedOnSecondary;
-    } else if (bg == color.secondaryContainer || bg == color.tertiary ||
-               bg == color.tertiaryContainer) {
-      return state.draggedOnSecondary;
-    } else if (bg == color.error) {
-      return state.draggedOnError;
-    } else if (bg == color.errorContainer) {
-      return state.draggedOnError;
-    } else {
-      return state.draggedOnBackground;
-    }
+    return draggedOpacity(color.roleForColor(bg));
   }
 };
 
