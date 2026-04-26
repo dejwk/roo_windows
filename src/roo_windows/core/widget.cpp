@@ -141,6 +141,19 @@ Color Widget::effectiveBackground() const {
                                        bgcolor);
 }
 
+ColorRole Widget::containerRole() const {
+  return ColorRole::kUndefined;
+}
+
+ColorRole Widget::effectiveContainerRole() const {
+  ColorRole role = containerRole();
+  if (role != ColorRole::kUndefined) {
+    return role;
+  }
+  return parent() != nullptr ? parent()->effectiveContainerRole()
+                             : ColorRole::kBackground;
+}
+
 // Returns the theme used by this widget. Defaults to the parent's theme
 // (and, ultimately, to DefaultTheme(), if not otherwise specified).
 const Theme& Widget::theme() const { return parent_->theme(); }
