@@ -148,6 +148,16 @@ ColorRole Widget::effectiveContainerRole() const {
   if (role != ColorRole::kUndefined) {
     return role;
   }
+
+  // Compatibility fallback: infer role from explicit local background color
+  // for non-container widgets that don't provide a semantic role.
+  if (dynamic_cast<const Container*>(this) == nullptr) {
+    Color bg = background();
+    if (bg.a() != 0) {
+      return theme().color.roleForColor(bg);
+    }
+  }
+
   return parent() != nullptr ? parent()->effectiveContainerRole()
                              : ColorRole::kBackground;
 }
@@ -468,21 +478,29 @@ void Widget::moveTo(const Rect& parent_bounds) {
 }
 
 uint8_t Widget::getOverlayOpacity() const {
-  Color bgcolor = background();
+  ColorRole bg_role = effectiveContainerRole();
   uint16_t overlay_opacity = 0;
   const Theme& myTheme = theme();
-  if (isHover()) overlay_opacity += myTheme.hoverOpacity(bgcolor);
-  if (isFocused()) overlay_opacity += myTheme.focusOpacity(bgcolor);
-  if (isSelected()) overlay_opacity += myTheme.selectedOpacity(bgcolor);
+  if (isHover()) {
+    overlay_opacity += myTheme.opacity(bg_role, InteractionState::kHover);
+  }
+  if (isFocused()) {
+    overlay_opacity += myTheme.opacity(bg_role, InteractionState::kFocus);
+  }
+  if (isSelected()) {
+    overlay_opacity += myTheme.opacity(bg_role, InteractionState::kSelected);
+  }
   if (isActivated() && useOverlayOnActivation()) {
-    overlay_opacity += myTheme.activatedOpacity(bgcolor);
+    overlay_opacity += myTheme.opacity(bg_role, InteractionState::kActivated);
   }
   if (isClicking() && useOverlayOnPress()) {
-    overlay_opacity += myTheme.pressedOpacity(bgcolor);
+    overlay_opacity += myTheme.opacity(bg_role, InteractionState::kPressed);
   } else if (isPressed() && useOverlayOnPress()) {
-    overlay_opacity += myTheme.pressedOpacity(bgcolor);
+    overlay_opacity += myTheme.opacity(bg_role, InteractionState::kPressed);
   }
-  if (isDragged()) overlay_opacity += myTheme.draggedOpacity(bgcolor);
+  if (isDragged()) {
+    overlay_opacity += myTheme.opacity(bg_role, InteractionState::kDragged);
+  }
   if (overlay_opacity > 255) overlay_opacity = 255;
   if (overlay_opacity == 0) return 0;  // roo_display::color::Transparent;
   return overlay_opacity;
