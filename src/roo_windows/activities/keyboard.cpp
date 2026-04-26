@@ -145,7 +145,7 @@ class KeyboardPage : public Panel {
   KeyboardPage(const Environment& env, const KeyboardPageSpec* spec);
 
   ColorRole containerRole() const override {
-    return ColorRole::kSurfaceVariant;
+    return ColorRole::kSurfaceContainer;
   }
 
   void init(const Environment& env);

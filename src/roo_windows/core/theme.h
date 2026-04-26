@@ -272,6 +272,11 @@ enum class ColorRole {
   kBackground,
   kOnBackground,
   kSurface,
+  kSurfaceContainerLowest,
+  kSurfaceContainerLow,
+  kSurfaceContainer,
+  kSurfaceContainerHigh,
+  kSurfaceContainerHighest,
   kOnSurface,
   kSurfaceVariant,
   kOnSurfaceVariant,
@@ -312,6 +317,11 @@ struct ColorTheme {
   roo_display::Color background;
   roo_display::Color onBackground;
   roo_display::Color surface;
+  roo_display::Color surfaceContainerLowest;
+  roo_display::Color surfaceContainerLow;
+  roo_display::Color surfaceContainer;
+  roo_display::Color surfaceContainerHigh;
+  roo_display::Color surfaceContainerHighest;
   roo_display::Color onSurface;
   roo_display::Color surfaceVariant;
   roo_display::Color onSurfaceVariant;
@@ -362,6 +372,16 @@ struct ColorTheme {
         return onBackground;
       case ColorRole::kSurface:
         return surface;
+      case ColorRole::kSurfaceContainerLowest:
+        return surfaceContainerLowest;
+      case ColorRole::kSurfaceContainerLow:
+        return surfaceContainerLow;
+      case ColorRole::kSurfaceContainer:
+        return surfaceContainer;
+      case ColorRole::kSurfaceContainerHigh:
+        return surfaceContainerHigh;
+      case ColorRole::kSurfaceContainerHighest:
+        return surfaceContainerHighest;
       case ColorRole::kOnSurface:
         return onSurface;
       case ColorRole::kSurfaceVariant:
@@ -411,6 +431,11 @@ struct ColorTheme {
       case ColorRole::kErrorContainer:
         return onErrorContainer;
       case ColorRole::kSurface:
+      case ColorRole::kSurfaceContainerLowest:
+      case ColorRole::kSurfaceContainerLow:
+      case ColorRole::kSurfaceContainer:
+      case ColorRole::kSurfaceContainerHigh:
+      case ColorRole::kSurfaceContainerHighest:
         return onSurface;
       case ColorRole::kSurfaceVariant:
         return onSurfaceVariant;
@@ -451,6 +476,16 @@ struct ColorTheme {
   ColorRole roleForColor(roo_display::Color bg) const {
     if (bg == surface) {
       return ColorRole::kSurface;
+    } else if (bg == surfaceContainerLowest) {
+      return ColorRole::kSurfaceContainerLowest;
+    } else if (bg == surfaceContainerLow) {
+      return ColorRole::kSurfaceContainerLow;
+    } else if (bg == surfaceContainer) {
+      return ColorRole::kSurfaceContainer;
+    } else if (bg == surfaceContainerHigh) {
+      return ColorRole::kSurfaceContainerHigh;
+    } else if (bg == surfaceContainerHighest) {
+      return ColorRole::kSurfaceContainerHighest;
     } else if (bg == surfaceVariant) {
       return ColorRole::kSurfaceVariant;
     } else if (bg == primary || bg == primaryVariant) {
@@ -545,6 +580,11 @@ struct Theme {
           case ColorRole::kErrorContainer:
             return state.hoverOnError;
           case ColorRole::kSurface:
+          case ColorRole::kSurfaceContainerLowest:
+          case ColorRole::kSurfaceContainerLow:
+          case ColorRole::kSurfaceContainer:
+          case ColorRole::kSurfaceContainerHigh:
+          case ColorRole::kSurfaceContainerHighest:
           case ColorRole::kSurfaceVariant:
           case ColorRole::kInverseSurface:
             return state.hoverOnSurface;
@@ -565,6 +605,11 @@ struct Theme {
           case ColorRole::kErrorContainer:
             return state.focusOnError;
           case ColorRole::kSurface:
+          case ColorRole::kSurfaceContainerLowest:
+          case ColorRole::kSurfaceContainerLow:
+          case ColorRole::kSurfaceContainer:
+          case ColorRole::kSurfaceContainerHigh:
+          case ColorRole::kSurfaceContainerHighest:
           case ColorRole::kSurfaceVariant:
           case ColorRole::kInverseSurface:
             return state.focusOnSurface;
@@ -585,6 +630,11 @@ struct Theme {
           case ColorRole::kErrorContainer:
             return state.selectedOnError;
           case ColorRole::kSurface:
+          case ColorRole::kSurfaceContainerLowest:
+          case ColorRole::kSurfaceContainerLow:
+          case ColorRole::kSurfaceContainer:
+          case ColorRole::kSurfaceContainerHigh:
+          case ColorRole::kSurfaceContainerHighest:
           case ColorRole::kSurfaceVariant:
           case ColorRole::kInverseSurface:
             return state.selectedOnSurface;
@@ -605,6 +655,11 @@ struct Theme {
           case ColorRole::kErrorContainer:
             return state.activatedOnError;
           case ColorRole::kSurface:
+          case ColorRole::kSurfaceContainerLowest:
+          case ColorRole::kSurfaceContainerLow:
+          case ColorRole::kSurfaceContainer:
+          case ColorRole::kSurfaceContainerHigh:
+          case ColorRole::kSurfaceContainerHighest:
           case ColorRole::kSurfaceVariant:
           case ColorRole::kInverseSurface:
             return state.activatedOnSurface;
@@ -625,6 +680,11 @@ struct Theme {
           case ColorRole::kErrorContainer:
             return state.pressedOnError;
           case ColorRole::kSurface:
+          case ColorRole::kSurfaceContainerLowest:
+          case ColorRole::kSurfaceContainerLow:
+          case ColorRole::kSurfaceContainer:
+          case ColorRole::kSurfaceContainerHigh:
+          case ColorRole::kSurfaceContainerHighest:
           case ColorRole::kSurfaceVariant:
           case ColorRole::kInverseSurface:
             return state.pressedOnSurface;
@@ -645,6 +705,11 @@ struct Theme {
           case ColorRole::kErrorContainer:
             return state.draggedOnError;
           case ColorRole::kSurface:
+          case ColorRole::kSurfaceContainerLowest:
+          case ColorRole::kSurfaceContainerLow:
+          case ColorRole::kSurfaceContainer:
+          case ColorRole::kSurfaceContainerHigh:
+          case ColorRole::kSurfaceContainerHighest:
           case ColorRole::kSurfaceVariant:
           case ColorRole::kInverseSurface:
             return state.draggedOnSurface;
@@ -656,7 +721,10 @@ struct Theme {
   }
 
   uint8_t hoverOpacity(roo_display::Color bg) const {
-    if (bg == color.surface) {
+    if (bg == color.surface || bg == color.surfaceContainerLowest ||
+        bg == color.surfaceContainerLow || bg == color.surfaceContainer ||
+        bg == color.surfaceContainerHigh ||
+        bg == color.surfaceContainerHighest) {
       return state.hoverOnSurface;
     } else if (bg == color.surfaceVariant || bg == color.inverseSurface) {
       return state.hoverOnSurface;
@@ -679,7 +747,10 @@ struct Theme {
   }
 
   uint8_t focusOpacity(roo_display::Color bg) const {
-    if (bg == color.surface) {
+    if (bg == color.surface || bg == color.surfaceContainerLowest ||
+        bg == color.surfaceContainerLow || bg == color.surfaceContainer ||
+        bg == color.surfaceContainerHigh ||
+        bg == color.surfaceContainerHighest) {
       return state.focusOnSurface;
     } else if (bg == color.surfaceVariant || bg == color.inverseSurface) {
       return state.focusOnSurface;
@@ -702,7 +773,10 @@ struct Theme {
   }
 
   uint8_t selectedOpacity(roo_display::Color bg) const {
-    if (bg == color.surface) {
+    if (bg == color.surface || bg == color.surfaceContainerLowest ||
+        bg == color.surfaceContainerLow || bg == color.surfaceContainer ||
+        bg == color.surfaceContainerHigh ||
+        bg == color.surfaceContainerHighest) {
       return state.selectedOnSurface;
     } else if (bg == color.surfaceVariant || bg == color.inverseSurface) {
       return state.selectedOnSurface;
@@ -725,7 +799,10 @@ struct Theme {
   }
 
   uint8_t activatedOpacity(roo_display::Color bg) const {
-    if (bg == color.surface) {
+    if (bg == color.surface || bg == color.surfaceContainerLowest ||
+        bg == color.surfaceContainerLow || bg == color.surfaceContainer ||
+        bg == color.surfaceContainerHigh ||
+        bg == color.surfaceContainerHighest) {
       return state.activatedOnSurface;
     } else if (bg == color.surfaceVariant || bg == color.inverseSurface) {
       return state.activatedOnSurface;
@@ -748,7 +825,10 @@ struct Theme {
   }
 
   uint8_t pressedOpacity(roo_display::Color bg) const {
-    if (bg == color.surface) {
+    if (bg == color.surface || bg == color.surfaceContainerLowest ||
+        bg == color.surfaceContainerLow || bg == color.surfaceContainer ||
+        bg == color.surfaceContainerHigh ||
+        bg == color.surfaceContainerHighest) {
       return state.pressedOnSurface;
     } else if (bg == color.surfaceVariant || bg == color.inverseSurface) {
       return state.pressedOnSurface;
@@ -771,7 +851,10 @@ struct Theme {
   }
 
   uint8_t pressAnimationOpacity(roo_display::Color bg) const {
-    if (bg == color.surface) {
+    if (bg == color.surface || bg == color.surfaceContainerLowest ||
+        bg == color.surfaceContainerLow || bg == color.surfaceContainer ||
+        bg == color.surfaceContainerHigh ||
+        bg == color.surfaceContainerHighest) {
       return state.pressedOnSurface;
     } else if (bg == color.surfaceVariant || bg == color.inverseSurface) {
       return state.pressedOnSurface;
@@ -794,7 +877,10 @@ struct Theme {
   }
 
   uint8_t draggedOpacity(roo_display::Color bg) const {
-    if (bg == color.surface) {
+    if (bg == color.surface || bg == color.surfaceContainerLowest ||
+        bg == color.surfaceContainerLow || bg == color.surfaceContainer ||
+        bg == color.surfaceContainerHigh ||
+        bg == color.surfaceContainerHighest) {
       return state.draggedOnSurface;
     } else if (bg == color.surfaceVariant || bg == color.inverseSurface) {
       return state.draggedOnSurface;
