@@ -255,29 +255,219 @@ inline const roo_display::Font& font_overline() {
                        ROO_WINDOWS_FONT_SIZE_OVERLINE)();
 }
 
+enum class ColorRole {
+  kPrimary,
+  kOnPrimary,
+  kPrimaryContainer,
+  kOnPrimaryContainer,
+  kSecondary,
+  kOnSecondary,
+  kSecondaryContainer,
+  kOnSecondaryContainer,
+  kTertiary,
+  kOnTertiary,
+  kTertiaryContainer,
+  kOnTertiaryContainer,
+  kBackground,
+  kOnBackground,
+  kSurface,
+  kOnSurface,
+  kSurfaceVariant,
+  kOnSurfaceVariant,
+  kError,
+  kOnError,
+  kErrorContainer,
+  kOnErrorContainer,
+  kOutline,
+  kOutlineVariant,
+  kInverseSurface,
+  kInverseOnSurface,
+  kInversePrimary,
+  kSurfaceTint,
+};
+
+enum class InteractionState {
+  kHover,
+  kFocus,
+  kSelected,
+  kActivated,
+  kPressed,
+  kDragged,
+};
+
 struct ColorTheme {
   roo_display::Color primary;
   roo_display::Color primaryVariant;
+  roo_display::Color primaryContainer;
+  roo_display::Color onPrimaryContainer;
   roo_display::Color secondary;
   roo_display::Color secondaryVariant;
+  roo_display::Color secondaryContainer;
+  roo_display::Color onSecondaryContainer;
+  roo_display::Color tertiary;
+  roo_display::Color onTertiary;
+  roo_display::Color tertiaryContainer;
+  roo_display::Color onTertiaryContainer;
   roo_display::Color background;
+  roo_display::Color onBackground;
   roo_display::Color surface;
+  roo_display::Color onSurface;
+  roo_display::Color surfaceVariant;
+  roo_display::Color onSurfaceVariant;
   roo_display::Color error;
+  roo_display::Color errorContainer;
   roo_display::Color onPrimary;
   roo_display::Color onSecondary;
-  roo_display::Color onBackground;
-  roo_display::Color onSurface;
   roo_display::Color onError;
+  roo_display::Color onErrorContainer;
+  roo_display::Color outline;
+  roo_display::Color outlineVariant;
+  roo_display::Color inverseSurface;
+  roo_display::Color inverseOnSurface;
+  roo_display::Color inversePrimary;
+  roo_display::Color surfaceTint;
+
+  roo_display::Color role(ColorRole role) const {
+    switch (role) {
+      case ColorRole::kPrimary:
+        return primary;
+      case ColorRole::kOnPrimary:
+        return onPrimary;
+      case ColorRole::kPrimaryContainer:
+        return primaryContainer;
+      case ColorRole::kOnPrimaryContainer:
+        return onPrimaryContainer;
+      case ColorRole::kSecondary:
+        return secondary;
+      case ColorRole::kOnSecondary:
+        return onSecondary;
+      case ColorRole::kSecondaryContainer:
+        return secondaryContainer;
+      case ColorRole::kOnSecondaryContainer:
+        return onSecondaryContainer;
+      case ColorRole::kTertiary:
+        return tertiary;
+      case ColorRole::kOnTertiary:
+        return onTertiary;
+      case ColorRole::kTertiaryContainer:
+        return tertiaryContainer;
+      case ColorRole::kOnTertiaryContainer:
+        return onTertiaryContainer;
+      case ColorRole::kBackground:
+        return background;
+      case ColorRole::kOnBackground:
+        return onBackground;
+      case ColorRole::kSurface:
+        return surface;
+      case ColorRole::kOnSurface:
+        return onSurface;
+      case ColorRole::kSurfaceVariant:
+        return surfaceVariant;
+      case ColorRole::kOnSurfaceVariant:
+        return onSurfaceVariant;
+      case ColorRole::kError:
+        return error;
+      case ColorRole::kOnError:
+        return onError;
+      case ColorRole::kErrorContainer:
+        return errorContainer;
+      case ColorRole::kOnErrorContainer:
+        return onErrorContainer;
+      case ColorRole::kOutline:
+        return outline;
+      case ColorRole::kOutlineVariant:
+        return outlineVariant;
+      case ColorRole::kInverseSurface:
+        return inverseSurface;
+      case ColorRole::kInverseOnSurface:
+        return inverseOnSurface;
+      case ColorRole::kInversePrimary:
+        return inversePrimary;
+      case ColorRole::kSurfaceTint:
+        return surfaceTint;
+    }
+    return background;
+  }
+
+  roo_display::Color contentColorFor(ColorRole bg_role) const {
+    switch (bg_role) {
+      case ColorRole::kPrimary:
+        return onPrimary;
+      case ColorRole::kPrimaryContainer:
+        return onPrimaryContainer;
+      case ColorRole::kSecondary:
+        return onSecondary;
+      case ColorRole::kSecondaryContainer:
+        return onSecondaryContainer;
+      case ColorRole::kTertiary:
+        return onTertiary;
+      case ColorRole::kTertiaryContainer:
+        return onTertiaryContainer;
+      case ColorRole::kError:
+        return onError;
+      case ColorRole::kErrorContainer:
+        return onErrorContainer;
+      case ColorRole::kSurface:
+        return onSurface;
+      case ColorRole::kSurfaceVariant:
+        return onSurfaceVariant;
+      case ColorRole::kInverseSurface:
+        return inverseOnSurface;
+      case ColorRole::kBackground:
+        return onBackground;
+      default:
+        return onBackground;
+    }
+  }
+
+  roo_display::Color accentColorFor(ColorRole bg_role) const {
+    switch (bg_role) {
+      case ColorRole::kPrimary:
+        return onPrimary;
+      case ColorRole::kPrimaryContainer:
+        return onPrimaryContainer;
+      case ColorRole::kSecondary:
+        return onSecondary;
+      case ColorRole::kSecondaryContainer:
+        return onSecondaryContainer;
+      case ColorRole::kTertiary:
+        return onTertiary;
+      case ColorRole::kTertiaryContainer:
+        return onTertiaryContainer;
+      case ColorRole::kError:
+        return onError;
+      case ColorRole::kErrorContainer:
+        return onErrorContainer;
+      case ColorRole::kInverseSurface:
+        return inversePrimary;
+      default:
+        return primary;
+    }
+  }
 
   roo_display::Color defaultColor(roo_display::Color bg) const {
     if (bg == surface) {
       return onSurface;
+    } else if (bg == surfaceVariant) {
+      return onSurfaceVariant;
     } else if (bg == primary || bg == primaryVariant) {
       return onPrimary;
+    } else if (bg == primaryContainer) {
+      return onPrimaryContainer;
     } else if (bg == secondary || bg == secondaryVariant) {
       return onSecondary;
+    } else if (bg == secondaryContainer) {
+      return onSecondaryContainer;
+    } else if (bg == tertiary) {
+      return onTertiary;
+    } else if (bg == tertiaryContainer) {
+      return onTertiaryContainer;
     } else if (bg == error) {
       return onError;
+    } else if (bg == errorContainer) {
+      return onErrorContainer;
+    } else if (bg == inverseSurface) {
+      return inverseOnSurface;
     } else {
       return onBackground;
     }
@@ -286,12 +476,26 @@ struct ColorTheme {
   roo_display::Color highlighterColor(roo_display::Color bg) const {
     if (bg == surface) {
       return primary;
+    } else if (bg == surfaceVariant) {
+      return primary;
     } else if (bg == primary || bg == primaryVariant) {
       return onPrimary;
+    } else if (bg == primaryContainer) {
+      return onPrimaryContainer;
     } else if (bg == secondary || bg == secondaryVariant) {
       return onSecondary;
+    } else if (bg == secondaryContainer) {
+      return onSecondaryContainer;
+    } else if (bg == tertiary) {
+      return onTertiary;
+    } else if (bg == tertiaryContainer) {
+      return onTertiaryContainer;
     } else if (bg == error) {
       return onError;
+    } else if (bg == errorContainer) {
+      return onErrorContainer;
+    } else if (bg == inverseSurface) {
+      return inversePrimary;
     } else {
       return primary;
     }
@@ -342,14 +546,149 @@ struct Theme {
   struct ColorTheme color;
   struct StateOpacityTheme state;
 
+  uint8_t opacity(ColorRole bg_role, InteractionState interaction) const {
+    switch (interaction) {
+      case InteractionState::kHover:
+        switch (bg_role) {
+          case ColorRole::kPrimary:
+          case ColorRole::kPrimaryContainer:
+            return state.hoverOnPrimary;
+          case ColorRole::kSecondary:
+          case ColorRole::kSecondaryContainer:
+          case ColorRole::kTertiary:
+          case ColorRole::kTertiaryContainer:
+            return state.hoverOnSecondary;
+          case ColorRole::kError:
+          case ColorRole::kErrorContainer:
+            return state.hoverOnError;
+          case ColorRole::kSurface:
+          case ColorRole::kSurfaceVariant:
+          case ColorRole::kInverseSurface:
+            return state.hoverOnSurface;
+          default:
+            return state.hoverOnBackground;
+        }
+      case InteractionState::kFocus:
+        switch (bg_role) {
+          case ColorRole::kPrimary:
+          case ColorRole::kPrimaryContainer:
+            return state.focusOnPrimary;
+          case ColorRole::kSecondary:
+          case ColorRole::kSecondaryContainer:
+          case ColorRole::kTertiary:
+          case ColorRole::kTertiaryContainer:
+            return state.focusOnSecondary;
+          case ColorRole::kError:
+          case ColorRole::kErrorContainer:
+            return state.focusOnError;
+          case ColorRole::kSurface:
+          case ColorRole::kSurfaceVariant:
+          case ColorRole::kInverseSurface:
+            return state.focusOnSurface;
+          default:
+            return state.focusOnBackground;
+        }
+      case InteractionState::kSelected:
+        switch (bg_role) {
+          case ColorRole::kPrimary:
+          case ColorRole::kPrimaryContainer:
+            return state.selectedOnPrimary;
+          case ColorRole::kSecondary:
+          case ColorRole::kSecondaryContainer:
+          case ColorRole::kTertiary:
+          case ColorRole::kTertiaryContainer:
+            return state.selectedOnSecondary;
+          case ColorRole::kError:
+          case ColorRole::kErrorContainer:
+            return state.selectedOnError;
+          case ColorRole::kSurface:
+          case ColorRole::kSurfaceVariant:
+          case ColorRole::kInverseSurface:
+            return state.selectedOnSurface;
+          default:
+            return state.selectedOnBackground;
+        }
+      case InteractionState::kActivated:
+        switch (bg_role) {
+          case ColorRole::kPrimary:
+          case ColorRole::kPrimaryContainer:
+            return state.activatedOnPrimary;
+          case ColorRole::kSecondary:
+          case ColorRole::kSecondaryContainer:
+          case ColorRole::kTertiary:
+          case ColorRole::kTertiaryContainer:
+            return state.activatedOnSecondary;
+          case ColorRole::kError:
+          case ColorRole::kErrorContainer:
+            return state.activatedOnError;
+          case ColorRole::kSurface:
+          case ColorRole::kSurfaceVariant:
+          case ColorRole::kInverseSurface:
+            return state.activatedOnSurface;
+          default:
+            return state.activatedOnBackground;
+        }
+      case InteractionState::kPressed:
+        switch (bg_role) {
+          case ColorRole::kPrimary:
+          case ColorRole::kPrimaryContainer:
+            return state.pressedOnPrimary;
+          case ColorRole::kSecondary:
+          case ColorRole::kSecondaryContainer:
+          case ColorRole::kTertiary:
+          case ColorRole::kTertiaryContainer:
+            return state.pressedOnSecondary;
+          case ColorRole::kError:
+          case ColorRole::kErrorContainer:
+            return state.pressedOnError;
+          case ColorRole::kSurface:
+          case ColorRole::kSurfaceVariant:
+          case ColorRole::kInverseSurface:
+            return state.pressedOnSurface;
+          default:
+            return state.pressedOnBackground;
+        }
+      case InteractionState::kDragged:
+        switch (bg_role) {
+          case ColorRole::kPrimary:
+          case ColorRole::kPrimaryContainer:
+            return state.draggedOnPrimary;
+          case ColorRole::kSecondary:
+          case ColorRole::kSecondaryContainer:
+          case ColorRole::kTertiary:
+          case ColorRole::kTertiaryContainer:
+            return state.draggedOnSecondary;
+          case ColorRole::kError:
+          case ColorRole::kErrorContainer:
+            return state.draggedOnError;
+          case ColorRole::kSurface:
+          case ColorRole::kSurfaceVariant:
+          case ColorRole::kInverseSurface:
+            return state.draggedOnSurface;
+          default:
+            return state.draggedOnBackground;
+        }
+    }
+    return state.pressedOnBackground;
+  }
+
   uint8_t hoverOpacity(roo_display::Color bg) const {
     if (bg == color.surface) {
       return state.hoverOnSurface;
+    } else if (bg == color.surfaceVariant || bg == color.inverseSurface) {
+      return state.hoverOnSurface;
     } else if (bg == color.primary || bg == color.primaryVariant) {
+      return state.hoverOnPrimary;
+    } else if (bg == color.primaryContainer) {
       return state.hoverOnPrimary;
     } else if (bg == color.secondary || bg == color.secondaryVariant) {
       return state.hoverOnSecondary;
+    } else if (bg == color.secondaryContainer || bg == color.tertiary ||
+               bg == color.tertiaryContainer) {
+      return state.hoverOnSecondary;
     } else if (bg == color.error) {
+      return state.hoverOnError;
+    } else if (bg == color.errorContainer) {
       return state.hoverOnError;
     } else {
       return state.hoverOnBackground;
@@ -359,11 +698,20 @@ struct Theme {
   uint8_t focusOpacity(roo_display::Color bg) const {
     if (bg == color.surface) {
       return state.focusOnSurface;
+    } else if (bg == color.surfaceVariant || bg == color.inverseSurface) {
+      return state.focusOnSurface;
     } else if (bg == color.primary || bg == color.primaryVariant) {
+      return state.focusOnPrimary;
+    } else if (bg == color.primaryContainer) {
       return state.focusOnPrimary;
     } else if (bg == color.secondary || bg == color.secondaryVariant) {
       return state.focusOnSecondary;
+    } else if (bg == color.secondaryContainer || bg == color.tertiary ||
+               bg == color.tertiaryContainer) {
+      return state.focusOnSecondary;
     } else if (bg == color.error) {
+      return state.focusOnError;
+    } else if (bg == color.errorContainer) {
       return state.focusOnError;
     } else {
       return state.focusOnBackground;
@@ -373,11 +721,20 @@ struct Theme {
   uint8_t selectedOpacity(roo_display::Color bg) const {
     if (bg == color.surface) {
       return state.selectedOnSurface;
+    } else if (bg == color.surfaceVariant || bg == color.inverseSurface) {
+      return state.selectedOnSurface;
     } else if (bg == color.primary || bg == color.primaryVariant) {
+      return state.selectedOnPrimary;
+    } else if (bg == color.primaryContainer) {
       return state.selectedOnPrimary;
     } else if (bg == color.secondary || bg == color.secondaryVariant) {
       return state.selectedOnSecondary;
+    } else if (bg == color.secondaryContainer || bg == color.tertiary ||
+               bg == color.tertiaryContainer) {
+      return state.selectedOnSecondary;
     } else if (bg == color.error) {
+      return state.selectedOnError;
+    } else if (bg == color.errorContainer) {
       return state.selectedOnError;
     } else {
       return state.selectedOnBackground;
@@ -387,11 +744,20 @@ struct Theme {
   uint8_t activatedOpacity(roo_display::Color bg) const {
     if (bg == color.surface) {
       return state.activatedOnSurface;
+    } else if (bg == color.surfaceVariant || bg == color.inverseSurface) {
+      return state.activatedOnSurface;
     } else if (bg == color.primary || bg == color.primaryVariant) {
+      return state.activatedOnPrimary;
+    } else if (bg == color.primaryContainer) {
       return state.activatedOnPrimary;
     } else if (bg == color.secondary || bg == color.secondaryVariant) {
       return state.activatedOnSecondary;
+    } else if (bg == color.secondaryContainer || bg == color.tertiary ||
+               bg == color.tertiaryContainer) {
+      return state.activatedOnSecondary;
     } else if (bg == color.error) {
+      return state.activatedOnError;
+    } else if (bg == color.errorContainer) {
       return state.activatedOnError;
     } else {
       return state.activatedOnBackground;
@@ -401,11 +767,20 @@ struct Theme {
   uint8_t pressedOpacity(roo_display::Color bg) const {
     if (bg == color.surface) {
       return state.pressedOnSurface;
+    } else if (bg == color.surfaceVariant || bg == color.inverseSurface) {
+      return state.pressedOnSurface;
     } else if (bg == color.primary || bg == color.primaryVariant) {
+      return state.pressedOnPrimary;
+    } else if (bg == color.primaryContainer) {
       return state.pressedOnPrimary;
     } else if (bg == color.secondary || bg == color.secondaryVariant) {
       return state.pressedOnSecondary;
+    } else if (bg == color.secondaryContainer || bg == color.tertiary ||
+               bg == color.tertiaryContainer) {
+      return state.pressedOnSecondary;
     } else if (bg == color.error) {
+      return state.pressedOnError;
+    } else if (bg == color.errorContainer) {
       return state.pressedOnError;
     } else {
       return state.pressedOnBackground;
@@ -415,11 +790,20 @@ struct Theme {
   uint8_t pressAnimationOpacity(roo_display::Color bg) const {
     if (bg == color.surface) {
       return state.pressedOnSurface;
+    } else if (bg == color.surfaceVariant || bg == color.inverseSurface) {
+      return state.pressedOnSurface;
     } else if (bg == color.primary || bg == color.primaryVariant) {
+      return state.pressedOnPrimary;
+    } else if (bg == color.primaryContainer) {
       return state.pressedOnPrimary;
     } else if (bg == color.secondary || bg == color.secondaryVariant) {
       return state.pressedOnSecondary;
+    } else if (bg == color.secondaryContainer || bg == color.tertiary ||
+               bg == color.tertiaryContainer) {
+      return state.pressedOnSecondary;
     } else if (bg == color.error) {
+      return state.pressedOnError;
+    } else if (bg == color.errorContainer) {
       return state.pressedOnError;
     } else {
       return state.pressedOnBackground;
@@ -429,11 +813,20 @@ struct Theme {
   uint8_t draggedOpacity(roo_display::Color bg) const {
     if (bg == color.surface) {
       return state.draggedOnSurface;
+    } else if (bg == color.surfaceVariant || bg == color.inverseSurface) {
+      return state.draggedOnSurface;
     } else if (bg == color.primary || bg == color.primaryVariant) {
+      return state.draggedOnPrimary;
+    } else if (bg == color.primaryContainer) {
       return state.draggedOnPrimary;
     } else if (bg == color.secondary || bg == color.secondaryVariant) {
       return state.draggedOnSecondary;
+    } else if (bg == color.secondaryContainer || bg == color.tertiary ||
+               bg == color.tertiaryContainer) {
+      return state.draggedOnSecondary;
     } else if (bg == color.error) {
+      return state.draggedOnError;
+    } else if (bg == color.errorContainer) {
       return state.draggedOnError;
     } else {
       return state.draggedOnBackground;
