@@ -88,6 +88,18 @@ cc_test(
     ],
 )
 
+cc_test(
+    name = "flex_card_test",
+    srcs = [
+        "test/flex_card_test.cpp",
+    ],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
 cc_binary(
     name = "shadow_benchmark",
     srcs = [
