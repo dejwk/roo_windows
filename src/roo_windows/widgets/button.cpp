@@ -34,7 +34,8 @@ roo_display::Color ButtonOutlineColor(const Theme& theme, Button::Style style) {
   return color::Transparent;
 }
 
-roo_display::Color ButtonInteriorColor(const Theme& theme, Button::Style style) {
+roo_display::Color ButtonInteriorColor(const Theme& theme,
+                                       Button::Style style) {
   return theme.color.role(ButtonContainerRole(style));
 }
 
@@ -86,7 +87,7 @@ Padding SimpleButton::getDefaultPadding() const { return Padding(14, 4); }
 SimpleButton::SimpleButton(const Environment& env, const MonoIcon* icon,
                            std::string label, Style style)
     : Button(env, style),
-  content_color_(ButtonContentColor(env.theme(), style)),
+      content_color_(ButtonContentColor(env.theme(), style)),
       font_(&font_button()),
       label_(std::move(label)),
       icon_(icon) {}

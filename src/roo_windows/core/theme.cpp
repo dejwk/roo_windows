@@ -15,11 +15,11 @@ namespace roo_windows {
 const Theme& DefaultTheme() {
   static Theme theme = {
       .color = {.primary = roo_display::Color(0xFF6200EE),
-          .primaryVariant = roo_display::Color(0xFF3700B3),
+                .primaryVariant = roo_display::Color(0xFF3700B3),
                 .primaryContainer = roo_display::Color(0xFFEADDFF),
                 .onPrimaryContainer = roo_display::Color(0xFF21005D),
                 .secondary = roo_display::Color(0xFF03DAC6),
-          .secondaryVariant = roo_display::Color(0xFF018786),
+                .secondaryVariant = roo_display::Color(0xFF018786),
                 .secondaryContainer = roo_display::Color(0xFFE8DEF8),
                 .onSecondaryContainer = roo_display::Color(0xFF1D192B),
                 .tertiary = roo_display::Color(0xFF7D5260),
