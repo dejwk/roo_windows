@@ -105,12 +105,15 @@ class TextFieldInterior : public Drawable {
 }  // namespace
 
 void TextField::paint(const Canvas& canvas) const {
-  Color color = text_color_.a() == 0 ? parent()->defaultColor() : text_color_;
+  ColorRole bg_role = parent()->theme().color.roleForColor(canvas.bgcolor());
+  Color color = text_color_.a() == 0
+                    ? parent()->theme().color.contentColorFor(bg_role)
+                    : text_color_;
   Color highlight_color = highlight_color_.a() == 0
-                              ? parent()->theme().color.secondary
+                              ? parent()->theme().color.accentColorFor(bg_role)
                               : highlight_color_;
   if (!isEdited()) {
-    highlight_color = parent()->theme().color.onSurface;
+    highlight_color = parent()->theme().color.contentColorFor(bg_role);
     highlight_color.set_a(0x20);
   }
   roo::string_view text = value_;
