@@ -15,7 +15,7 @@ void RadioButton::onClicked() {
 }
 
 void RadioButton::paint(const Canvas& canvas) const {
-  ColorRole bg_role = theme().color.roleForColor(canvas.bgcolor());
+  ColorRole bg_role = effectiveContainerRole();
   Color color =
       isOn() ? theme().color.accentColorFor(bg_role)
              : AlphaBlend(canvas.bgcolor(),

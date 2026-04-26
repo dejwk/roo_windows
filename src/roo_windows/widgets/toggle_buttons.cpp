@@ -28,7 +28,7 @@ roo_windows::Widget& ToggleButtons::addButton(const MonoIcon& icon) {
 }
 
 void ToggleButtons::paint(const Canvas& canvas) const {
-  Color border = theme().color.defaultColor(canvas.bgcolor());
+  Color border = theme().color.contentColorFor(effectiveContainerRole());
   border.set_a(0x30);
   Dimensions d = getNaturalDimensions();
   canvas.clearRect(0, 0, 0, 0);
@@ -76,7 +76,7 @@ void ToggleButtons::notifyButtonClicked(int index) {
 }
 
 void ToggleButtons::ToggleButton::paint(const Canvas& canvas) const {
-  Color color = theme().color.defaultColor(canvas.bgcolor());
+  Color color = theme().color.contentColorFor(effectiveContainerRole());
   Color internal_border = color;
   internal_border.set_a(0x10);
   Color external_border = color;

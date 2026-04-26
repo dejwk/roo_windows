@@ -16,7 +16,7 @@ void Checkbox::onClicked() {
 
 void Checkbox::paint(const Canvas& canvas) const {
   OnOffState state = onOffState();
-  ColorRole bg_role = theme().color.roleForColor(canvas.bgcolor());
+  ColorRole bg_role = effectiveContainerRole();
   Color color =
       state == OnOffState::kOn
           ? theme().color.accentColorFor(bg_role)

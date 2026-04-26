@@ -105,7 +105,7 @@ class TextFieldInterior : public Drawable {
 }  // namespace
 
 void TextField::paint(const Canvas& canvas) const {
-  ColorRole bg_role = parent()->theme().color.roleForColor(canvas.bgcolor());
+  ColorRole bg_role = effectiveContainerRole();
   Color color = text_color_.a() == 0
                     ? parent()->theme().color.contentColorFor(bg_role)
                     : text_color_;

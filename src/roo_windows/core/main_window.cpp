@@ -39,14 +39,16 @@ MainWindow::MainWindow(Application& app, const roo_display::Box& bounds)
   maybeAddColor(color_set, env.keyboardColorTheme().background);
   maybeAddColor(color_set, env.theme().color.secondaryVariant);
   {
-    Color c = env.theme().color.defaultColor(env.theme().color.surface);
-    c.set_a(env.theme().pressAnimationOpacity(env.theme().color.surface));
+    Color c = env.theme().color.contentColorFor(ColorRole::kSurface);
+    c.set_a(
+        env.theme().opacity(ColorRole::kSurface, InteractionState::kPressed));
     c = AlphaBlend(env.theme().color.surface, c);
     maybeAddColor(color_set, c);
   }
   {
-    Color c = env.theme().color.highlighterColor(env.theme().color.surface);
-    c.set_a(env.theme().pressAnimationOpacity(env.theme().color.surface));
+    Color c = env.theme().color.accentColorFor(ColorRole::kSurface);
+    c.set_a(
+        env.theme().opacity(ColorRole::kSurface, InteractionState::kPressed));
     c = AlphaBlend(env.theme().color.surface, c);
     maybeAddColor(color_set, c);
   }

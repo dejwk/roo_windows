@@ -16,9 +16,10 @@ roo_display::Color getOverlayColor(const Widget& widget, const Canvas& canvas) {
     return roo_display::color::Transparent;
   }
   const Theme& myTheme = widget.theme();
+  ColorRole bg_role = widget.effectiveContainerRole();
   Color overlay = widget.usesHighlighterColor()
-                      ? myTheme.color.highlighterColor(canvas.bgcolor())
-                      : myTheme.color.defaultColor(canvas.bgcolor());
+                      ? myTheme.color.accentColorFor(bg_role)
+                      : myTheme.color.contentColorFor(bg_role);
   overlay.set_a(overlay_opacity);
   return overlay;
 }
@@ -26,10 +27,11 @@ roo_display::Color getOverlayColor(const Widget& widget, const Canvas& canvas) {
 roo_display::Color getClickAnimationColor(const Widget& widget,
                                           const Canvas& canvas) {
   const Theme& myTheme = widget.theme();
+  ColorRole bg_role = widget.effectiveContainerRole();
   Color overlay = widget.usesHighlighterColor()
-                    ? myTheme.color.highlighterColor(canvas.bgcolor())
-                    : myTheme.color.defaultColor(canvas.bgcolor());
-  overlay.set_a(myTheme.pressAnimationOpacity(canvas.bgcolor()));
+                      ? myTheme.color.accentColorFor(bg_role)
+                      : myTheme.color.contentColorFor(bg_role);
+  overlay.set_a(myTheme.opacity(bg_role, InteractionState::kPressed));
   return overlay;
 }
 

@@ -27,7 +27,7 @@ void IconWithCaption::paint(const Canvas& canvas) const {
   Color color = color_;
   if (color == roo_display::color::Transparent) {
     const Theme& myTheme = theme();
-    ColorRole bg_role = myTheme.color.roleForColor(canvas.bgcolor());
+    ColorRole bg_role = effectiveContainerRole();
     color = myTheme.color.contentColorFor(bg_role);
     if (isActivated() && usesHighlighterColor()) {
       color = myTheme.color.accentColorFor(bg_role);

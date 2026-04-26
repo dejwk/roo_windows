@@ -48,7 +48,7 @@ void Switch::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
 
 void Switch::paint(const Canvas& canvas) const {
   const Theme& th = theme();
-  ColorRole bg_role = th.color.roleForColor(canvas.bgcolor());
+  ColorRole bg_role = effectiveContainerRole();
   Color circleColor = isOn() ? th.color.accentColorFor(bg_role)
                              : th.color.role(ColorRole::kSurface);
   Color sliderColor = isOn() ? th.color.accentColorFor(bg_role)
