@@ -27,9 +27,10 @@ void IconWithCaption::paint(const Canvas& canvas) const {
   Color color = color_;
   if (color == roo_display::color::Transparent) {
     const Theme& myTheme = theme();
-    color = myTheme.color.defaultColor(canvas.bgcolor());
+    ColorRole bg_role = myTheme.color.roleForColor(canvas.bgcolor());
+    color = myTheme.color.contentColorFor(bg_role);
     if (isActivated() && usesHighlighterColor()) {
-      color = myTheme.color.highlighterColor(canvas.bgcolor());
+      color = myTheme.color.accentColorFor(bg_role);
     }
   }
   color = AlphaBlend(canvas.bgcolor(), color);
