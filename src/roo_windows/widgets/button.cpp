@@ -63,6 +63,8 @@ Button::Button(const Environment& env, Style style)
   outline_color_.set_a(0x80);
 }
 
+ColorRole Button::containerRole() const { return ButtonContainerRole(style()); }
+
 void Button::setElevation(uint8_t resting, uint8_t pressed) {
   if (elevation_resting_ != resting) {
     uint8_t larger = std::max(elevation_resting_, resting);

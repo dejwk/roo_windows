@@ -144,6 +144,10 @@ class KeyboardPage : public Panel {
  public:
   KeyboardPage(const Environment& env, const KeyboardPageSpec* spec);
 
+  ColorRole containerRole() const override {
+    return ColorRole::kSurfaceVariant;
+  }
+
   void init(const Environment& env);
 
   void showHighlighter(const TextButton& btn);
@@ -456,7 +460,6 @@ void KeyboardWidget::setPage(int idx) {
 
 KeyboardPage::KeyboardPage(const Environment& env, const KeyboardPageSpec* spec)
     : Panel(env), spec_(spec), highlighter_(env), initialized_(false) {
-  setBackground(env.keyboardColorTheme().background);
   setParentClipMode(ParentClipMode::kUnclipped);
 }
 

@@ -39,6 +39,8 @@ class Button : public BasicWidget {
 
   void setElevation(uint8_t resting, uint8_t pressed);
 
+  ColorRole containerRole() const override;
+
   uint8_t getElevation() const override {
     return isPressed() ? elevation_pressed_ : elevation_resting_;
   }
