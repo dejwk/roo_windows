@@ -18,9 +18,7 @@ using roo_display::Color;
 
 class Panel : public Container {
  public:
-  Panel(const Environment& env) : Panel(env, roo_display::color::Transparent) {}
-
-  Panel(const Environment& env, Color bgcolor);
+  Panel(const Environment& env) : Container(env) {}
 
   ~Panel();
 

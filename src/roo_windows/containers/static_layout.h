@@ -11,9 +11,6 @@ namespace roo_windows {
  */
 class StaticLayout : public Panel {
  public:
-  StaticLayout(const Environment& env, roo_display::Color bgcolor)
-      : Panel(env, bgcolor) {}
-
   StaticLayout(const Environment& env) : Panel(env) {}
 
   /**

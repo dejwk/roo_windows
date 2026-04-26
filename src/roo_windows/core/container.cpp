@@ -13,9 +13,8 @@ namespace roo_windows {
 using roo_display::Color;
 using roo_display::DisplayOutput;
 
-Container::Container(const Environment& env, roo_display::Color bgcolor)
+Container::Container(const Environment& env)
     : Widget(env),
-      bgcolor_(bgcolor),
       invalid_region_(0, 0, -1, -1),
       cached_max_bounds_(0, 0, -1, -1) {}
 

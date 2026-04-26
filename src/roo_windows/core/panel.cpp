@@ -12,9 +12,6 @@ namespace roo_windows {
 using roo_display::Color;
 using roo_display::DisplayOutput;
 
-Panel::Panel(const Environment& env, roo_display::Color bgcolor)
-    : Container(env, bgcolor) {}
-
 Panel::~Panel() {
   for (auto* c : children_) {
     if (c->isOwnedByParent()) delete c;

@@ -17,18 +17,11 @@ using roo_display::Color;
 
 class Container : public Widget {
  public:
-  Container(const Environment& env)
-      : Container(env, roo_display::color::Transparent) {}
+  Container(const Environment& env);
 
-  Container(const Environment& env, Color bgcolor);
-
-  void setBackground(Color bgcolor) {
-    if (bgcolor_ == bgcolor) return;
-    bgcolor_ = bgcolor;
-    invalidateInterior();
+  Color background() const override {
+    return theme().color.role(effectiveContainerRole());
   }
-
-  Color background() const override { return bgcolor_; }
 
   const Theme& theme() const override { return parent()->theme(); }
 
@@ -180,7 +173,6 @@ class Container : public Widget {
   friend class Widget;
   friend class ScrollableContainer;
 
-  Color bgcolor_;
   Rect invalid_region_;
   mutable Rect cached_max_bounds_;
 };
