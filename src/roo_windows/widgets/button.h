@@ -54,6 +54,8 @@ class Button : public BasicSurfaceWidget {
  protected:
   Button(const Environment& env, Style style = CONTAINED);
 
+  void notifyStateChanged() override;
+
  private:
   Style style_;
   roo_display::Color outline_color_;
@@ -61,6 +63,7 @@ class Button : public BasicSurfaceWidget {
 
   uint8_t elevation_resting_;
   uint8_t elevation_pressed_;
+  uint8_t current_elevation_;
   uint8_t corner_radius_;
 };
 

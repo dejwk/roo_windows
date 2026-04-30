@@ -456,6 +456,10 @@ class Widget {
 
   void notifyParentInvalidatedRegion(const Rect& rect);
 
+  // Called after any widget-state flag mutation. Subclasses may use this to
+  // react to state-driven visual changes without overriding the full setter.
+  virtual void notifyStateChanged() {}
+
   // Should be called by a child whose elevation has changed, and the child
   // wants the shadow to be redrawn. The argument should indicate the higher of
   // {before, after} elevations.

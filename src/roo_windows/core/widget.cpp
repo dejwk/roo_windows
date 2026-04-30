@@ -334,65 +334,50 @@ void Widget::setVisibility(Visibility visibility) {
 
 void Widget::setEnabled(bool enabled) {
   if (isEnabled() == enabled) return;
-  uint8_t old_elevation = getElevation();
   state_ ^= kWidgetEnabled;
-  if (!isVisible()) return;
-  invalidateInterior();
-  uint8_t new_elevation = getElevation();
-  if (old_elevation != new_elevation) {
-    elevationChanged(std::max(old_elevation, new_elevation));
+  if (isVisible()) {
+    invalidateInterior();
   }
+  notifyStateChanged();
 }
 
 void Widget::setSelected(bool selected) {
   if (selected == isSelected()) return;
-  uint8_t old_elevation = getElevation();
   state_ ^= kWidgetSelected;
-  if (!isVisible()) return;
-  invalidateInterior();
-  uint8_t new_elevation = getElevation();
-  if (old_elevation != new_elevation) {
-    elevationChanged(std::max(old_elevation, new_elevation));
+  if (isVisible()) {
+    invalidateInterior();
   }
+  notifyStateChanged();
 }
 
 void Widget::setActivated(bool activated) {
   if (activated == isActivated()) return;
-  uint8_t old_elevation = getElevation();
   state_ ^= kWidgetActivated;
-  if (!isVisible()) return;
-  setDirty();
-  if (useOverlayOnActivation()) {
-    invalidateInterior();
+  if (isVisible()) {
+    setDirty();
+    if (useOverlayOnActivation()) {
+      invalidateInterior();
+    }
   }
-  uint8_t new_elevation = getElevation();
-  if (old_elevation != new_elevation) {
-    elevationChanged(std::max(old_elevation, new_elevation));
-  }
+  notifyStateChanged();
 }
 
 void Widget::setPressed(bool pressed) {
   if (pressed == isPressed()) return;
-  uint8_t old_elevation = getElevation();
   state_ ^= kWidgetPressed;
-  if (!isVisible()) return;
-  invalidateInterior();
-  uint8_t new_elevation = getElevation();
-  if (old_elevation != new_elevation) {
-    elevationChanged(std::max(old_elevation, new_elevation));
+  if (isVisible()) {
+    invalidateInterior();
   }
+  notifyStateChanged();
 }
 
 void Widget::setDragged(bool dragged) {
   if (dragged == isDragged()) return;
-  uint8_t old_elevation = getElevation();
   state_ ^= kWidgetDragged;
-  if (!isVisible()) return;
-  invalidateInterior();
-  uint8_t new_elevation = getElevation();
-  if (old_elevation != new_elevation) {
-    elevationChanged(std::max(old_elevation, new_elevation));
+  if (isVisible()) {
+    invalidateInterior();
   }
+  notifyStateChanged();
 }
 
 OnOffState Widget::onOffState() const {
@@ -411,7 +396,6 @@ void Widget::toggle() {
 
 void Widget::setOnOffState(OnOffState state) {
   if (onOffState() == state) return;
-  uint8_t old_elevation = getElevation();
   state_ &= ~(kWidgetOn | kWidgetOff);
   if (state == OnOffState::kOn) {
     state_ |= kWidgetOn;
@@ -419,10 +403,7 @@ void Widget::setOnOffState(OnOffState state) {
     state_ |= kWidgetOff;
   }
   setDirty();
-  uint8_t new_elevation = getElevation();
-  if (old_elevation != new_elevation) {
-    elevationChanged(std::max(old_elevation, new_elevation));
-  }
+  notifyStateChanged();
 }
 
 void Widget::triggerInteractiveChange() {
@@ -436,21 +417,13 @@ void Widget::notifyParentInvalidatedRegion(const Rect& rect) {
 }
 
 void Widget::setClicking() {
-  uint8_t old_elevation = getElevation();
   state_ |= kWidgetClicking;
-  uint8_t new_elevation = getElevation();
-  if (old_elevation != new_elevation) {
-    elevationChanged(std::max(old_elevation, new_elevation));
-  }
+  notifyStateChanged();
 }
 
 void Widget::clearClicking() {
-  uint8_t old_elevation = getElevation();
   state_ &= ~kWidgetClicking;
-  uint8_t new_elevation = getElevation();
-  if (old_elevation != new_elevation) {
-    elevationChanged(std::max(old_elevation, new_elevation));
-  }
+  notifyStateChanged();
 }
 
 void Widget::setParent(Container* parent, bool owned) {

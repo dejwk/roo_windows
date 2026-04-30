@@ -59,26 +59,35 @@ Button::Button(const Environment& env, Style style)
       interior_color_(ButtonInteriorColor(env.theme(), style)),
       elevation_resting_(0),
       elevation_pressed_(0),
+      current_elevation_(0),
       corner_radius_(Scaled(4)) {
   outline_color_.set_a(0x80);
 }
 
 ColorRole Button::containerRole() const { return ButtonContainerRole(style()); }
 
-void Button::setElevation(uint8_t resting, uint8_t pressed) {
-  if (elevation_resting_ != resting) {
-    uint8_t larger = std::max(elevation_resting_, resting);
-    elevation_resting_ = resting;
-    if (!isPressed()) {
-      elevationChanged(larger);
-    }
+void Button::notifyStateChanged() {
+  uint8_t new_elevation = getElevation();
+  if (new_elevation == current_elevation_) return;
+  uint8_t higher = std::max(current_elevation_, new_elevation);
+  current_elevation_ = new_elevation;
+  if (isVisible()) {
+    elevationChanged(higher);
   }
-  if (elevation_pressed_ != pressed) {
-    uint8_t larger = std::max(elevation_pressed_, pressed);
-    elevation_pressed_ = pressed;
-    if (isPressed()) {
-      elevationChanged(larger);
-    }
+}
+
+void Button::setElevation(uint8_t resting, uint8_t pressed) {
+  uint8_t old_elevation = current_elevation_;
+  if (elevation_resting_ == resting && elevation_pressed_ == pressed) {
+    return;
+  }
+  elevation_resting_ = resting;
+  elevation_pressed_ = pressed;
+  uint8_t new_elevation = getElevation();
+  if (old_elevation == new_elevation) return;
+  current_elevation_ = new_elevation;
+  if (isVisible()) {
+    elevationChanged(std::max(old_elevation, new_elevation));
   }
 }
 
