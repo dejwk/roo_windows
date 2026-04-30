@@ -153,10 +153,7 @@ Color SurfaceWidget::effectiveBackground() const {
 }
 
 bool Widget::ownsSurface() const {
-  BorderStyle border_style = getBorderStyle().trim(width(), height());
-  return background().a() != 0 || getElevation() != 0 ||
-         border_style.hasRoundedCorners() || border_style.getThickness() != 0 ||
-      border_style.outline_width() != SmallNumber(0);
+  return false;
 }
 
 ColorRole Widget::containerRole() const { return ColorRole::kUndefined; }
@@ -671,10 +668,10 @@ void Widget::finalizePaintWidget(const Canvas& canvas, Clipper& clipper,
                             border_style.outline_width(),
                             AlphaBlend(canvas.bgcolor(), getOutlineColor()));
     }
-    roo_display::Box inner_bounds(border_thickness + canvas.dx(),
-                                  border_thickness + canvas.dy(),
-                                  width() - border_thickness - 1 + canvas.dx(),
-                                  height() - border_thickness - 1 + canvas.dy());
+    roo_display::Box inner_bounds(
+        border_thickness + canvas.dx(), border_thickness + canvas.dy(),
+        width() - border_thickness - 1 + canvas.dx(),
+        height() - border_thickness - 1 + canvas.dy());
     clipper.addExclusion(
         roo_display::Box::Intersect(inner_bounds, canvas.clip_box()));
     return;

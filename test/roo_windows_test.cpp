@@ -44,10 +44,10 @@ Color QuantizeToArgb4444(Color color) {
   return mode.toArgbColor(mode.fromArgbColor(color));
 }
 
-class ColorBoxWidget : public BasicWidget {
+class ColorBoxWidget : public BasicSurfaceWidget {
  public:
   ColorBoxWidget(const Environment& env, Color color, Dimensions dims)
-      : BasicWidget(env), color_(color), dims_(dims) {}
+      : BasicSurfaceWidget(env), color_(color), dims_(dims) {}
 
   Color background() const override { return color_; }
 

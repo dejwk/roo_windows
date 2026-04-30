@@ -62,12 +62,12 @@ namespace {
 //   Dimensions dims_;
 // };
 
-class DecoratedWidget : public BasicWidget {
+class DecoratedWidget : public BasicSurfaceWidget {
  public:
   DecoratedWidget(const Environment& env, roo_display::Color fill_color,
                   roo_display::Color outline_color, BorderStyle border_style,
                   uint8_t elevation, Dimensions dims)
-      : BasicWidget(env),
+      : BasicSurfaceWidget(env),
         fill_color_(fill_color),
         outline_color_(outline_color),
         border_style_(border_style),

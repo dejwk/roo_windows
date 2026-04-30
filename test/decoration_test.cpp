@@ -10,10 +10,10 @@ namespace {
 
 using roo_display::Color;
 
-class SolidWidget : public BasicWidget {
+class SolidWidget : public BasicSurfaceWidget {
  public:
   SolidWidget(const Environment& env, Color color, Dimensions dims)
-      : BasicWidget(env), color_(color), dims_(dims) {}
+      : BasicSurfaceWidget(env), color_(color), dims_(dims) {}
 
   Color background() const override { return color_; }
 
@@ -26,11 +26,11 @@ class SolidWidget : public BasicWidget {
   Dimensions dims_;
 };
 
-class DecoratedWidget : public BasicWidget {
+class DecoratedWidget : public BasicSurfaceWidget {
  public:
   DecoratedWidget(const Environment& env, Color fill_color, Color outline_color,
                   BorderStyle border_style, uint8_t elevation, Dimensions dims)
-      : BasicWidget(env),
+      : BasicSurfaceWidget(env),
         fill_color_(fill_color),
         outline_color_(outline_color),
         border_style_(border_style),
@@ -102,8 +102,7 @@ TEST_F(DecorationGoldenTest, SharpNoOutlineElevation0) {
 TEST_F(DecorationGoldenTest, RoundUniformNoOutlineElevation0) {
   auto image = Render(BorderStyle(14, 0), 0);
   EXPECT_TRUE(test::CompareOrUpdateGolden(
-      image,
-      "test/goldens/decoration/round_uniform_no_outline_e0.ppm",
+      image, "test/goldens/decoration/round_uniform_no_outline_e0.ppm",
       "decoration_round_uniform_no_outline_e0"));
 }
 
@@ -126,32 +125,28 @@ TEST_F(DecorationGoldenTest, SharpOutlineElevation0) {
 TEST_F(DecorationGoldenTest, RoundUniformOutlineElevation0) {
   auto image = Render(BorderStyle(14, SmallNumber::Of16ths(36)), 0);
   EXPECT_TRUE(test::CompareOrUpdateGolden(
-      image,
-      "test/goldens/decoration/round_uniform_outline_e0.ppm",
+      image, "test/goldens/decoration/round_uniform_outline_e0.ppm",
       "decoration_round_uniform_outline_e0"));
 }
 
 TEST_F(DecorationGoldenTest, RoundVariableOutlineElevation0) {
   auto image = Render(BorderStyle(4, 12, 18, 8, SmallNumber::Of16ths(36)), 0);
   EXPECT_TRUE(test::CompareOrUpdateGolden(
-      image,
-      "test/goldens/decoration/round_variable_outline_e0.ppm",
+      image, "test/goldens/decoration/round_variable_outline_e0.ppm",
       "decoration_round_variable_outline_e0"));
 }
 
 TEST_F(DecorationGoldenTest, RoundVariableOutlineElevation4) {
   auto image = Render(BorderStyle(4, 12, 18, 8, SmallNumber::Of16ths(36)), 4);
   EXPECT_TRUE(test::CompareOrUpdateGolden(
-      image,
-      "test/goldens/decoration/round_variable_outline_e4.ppm",
+      image, "test/goldens/decoration/round_variable_outline_e4.ppm",
       "decoration_round_variable_outline_e4"));
 }
 
 TEST_F(DecorationGoldenTest, RoundVariableOutlineElevation12) {
   auto image = Render(BorderStyle(4, 12, 18, 8, SmallNumber::Of16ths(36)), 12);
   EXPECT_TRUE(test::CompareOrUpdateGolden(
-      image,
-      "test/goldens/decoration/round_variable_outline_e12.ppm",
+      image, "test/goldens/decoration/round_variable_outline_e12.ppm",
       "decoration_round_variable_outline_e12"));
 }
 
