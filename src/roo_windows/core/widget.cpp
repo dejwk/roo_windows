@@ -124,6 +124,13 @@ YDim Widget::offsetBottom() const {
 }
 
 Rect Widget::getParentBoundsOfShadow() const {
+  if (ownsSurface()) {
+    return CalculateShadowExtents(parent_bounds(), getElevation());
+  }
+  return parent_bounds();
+}
+
+Rect SurfaceWidget::getParentBoundsOfShadow() const {
   return CalculateShadowExtents(parent_bounds(), getElevation());
 }
 
@@ -139,6 +146,17 @@ Color Widget::effectiveBackground() const {
              ? bgcolor
              : roo_display::AlphaBlend(parent()->effectiveBackground(),
                                        bgcolor);
+}
+
+Color SurfaceWidget::effectiveBackground() const {
+  return Widget::effectiveBackground();
+}
+
+bool Widget::ownsSurface() const {
+  BorderStyle border_style = getBorderStyle().trim(width(), height());
+  return background().a() != 0 || getElevation() != 0 ||
+         border_style.hasRoundedCorners() || border_style.getThickness() != 0 ||
+      border_style.outline_width() != SmallNumber(0);
 }
 
 ColorRole Widget::containerRole() const { return ColorRole::kUndefined; }
@@ -166,30 +184,35 @@ void Widget::setDirty(const Rect& bounds) {
 
 void Widget::invalidateInterior() {
   invalidateDescending();
-  if (getBorderStyle().hasRoundedCorners() && parent() != nullptr) {
-    parent()->childInvalidatedRegion(this, maxParentBounds());
+  if (ownsSurface() && getBorderStyle().hasRoundedCorners()) {
+    notifyParentInvalidatedRegion(maxParentBounds());
   }
   setDirty();
 }
 
+void SurfaceWidget::invalidateInterior() { Widget::invalidateInterior(); }
+
 void Widget::invalidateInterior(const Rect& rect) {
   invalidateDescending(rect);
-  if (getBorderStyle().hasRoundedCorners() && parent() != nullptr) {
-    parent()->childInvalidatedRegion(this,
-                                     rect.translate(offsetLeft(), offsetTop()));
+  if (ownsSurface() && getBorderStyle().hasRoundedCorners()) {
+    notifyParentInvalidatedRegion(rect.translate(offsetLeft(), offsetTop()));
   }
   setDirty(rect);
 }
 
+void SurfaceWidget::invalidateInterior(const Rect& rect) {
+  Widget::invalidateInterior(rect);
+}
+
 void Widget::elevationChanged(int higherElevation) {
-  if (higherElevation > 0 && parent_ != nullptr) {
-    // TODO: we can avoid marking dirty if we introduce a new flag specifically
-    // for elevation changed. This way we can avoid content redraws except for
-    // the bounds.
-    if (getBorderStyle().hasRoundedCorners()) setDirty();
-    parent()->childInvalidatedRegion(
-        this, CalculateShadowExtents(parent_bounds(), higherElevation));
-  }
+  if (!ownsSurface() || higherElevation <= 0 || parent() == nullptr) return;
+  if (getBorderStyle().hasRoundedCorners()) setDirty();
+  notifyParentInvalidatedRegion(
+      CalculateShadowExtents(parent_bounds(), higherElevation));
+}
+
+void SurfaceWidget::elevationChanged(int higherElevation) {
+  Widget::elevationChanged(higherElevation);
 }
 
 void Widget::requestLayout() {
@@ -421,6 +444,11 @@ void Widget::triggerInteractiveChange() {
   on_interactive_change_();
 }
 
+void Widget::notifyParentInvalidatedRegion(const Rect& rect) {
+  if (parent() == nullptr) return;
+  parent()->childInvalidatedRegion(this, rect);
+}
+
 void Widget::setClicking() {
   uint8_t old_elevation = getElevation();
   state_ |= kWidgetClicking;
@@ -502,7 +530,7 @@ Canvas Widget::prepareCanvas(const Canvas& in) {
   Canvas canvas(in);
   canvas.shift(offsetLeft(), offsetTop());
   canvas.clipToExtents(maxBounds());
-  {
+  if (ownsSurface()) {
     Color bg = background();
     if (!isEnabled()) {
       bg.set_a(bg.a() / 2);
@@ -510,6 +538,10 @@ Canvas Widget::prepareCanvas(const Canvas& in) {
     canvas.set_bgcolor(roo_display::AlphaBlend(canvas.bgcolor(), bg));
   }
   return canvas;
+}
+
+Canvas SurfaceWidget::prepareCanvas(const Canvas& in) {
+  return Widget::prepareCanvas(in);
 }
 
 void Widget::paintWidget(const Canvas& canvas, Clipper& clipper) {
@@ -606,6 +638,7 @@ void Widget::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
 }
 
 Canvas Widget::prepareContentsCanvas(const Canvas& in) {
+  if (!ownsSurface()) return in;
   Canvas canvas = in;
   BorderStyle border_style = getBorderStyle().trim(width(), height());
   uint8_t border_thickness = border_style.getThickness();
@@ -618,27 +651,45 @@ Canvas Widget::prepareContentsCanvas(const Canvas& in) {
   return canvas;
 }
 
+Canvas SurfaceWidget::prepareContentsCanvas(const Canvas& in) {
+  return Widget::prepareContentsCanvas(in);
+}
+
 void Widget::finalizePaintWidget(const Canvas& canvas, Clipper& clipper,
                                  const OverlaySpec& overlay_spec) const {
-  BorderStyle border_style = getBorderStyle().trim(width(), height());
-  uint8_t border_thickness = border_style.getThickness();
-  uint8_t elevation = getElevation();
-  if (elevation != 0 || border_thickness != 0) {
-    roo_display::Box absolute_bounds(canvas.dx(), canvas.dy(),
-                                     width() - 1 + canvas.dx(),
-                                     height() - 1 + canvas.dy());
-    clipper.addDecoration(canvas.clip_box(), absolute_bounds, elevation,
-                          overlay_spec, canvas.bgcolor(),
-                          border_style.corner_radii(),
-                          border_style.outline_width(),
-                          AlphaBlend(canvas.bgcolor(), getOutlineColor()));
+  if (ownsSurface()) {
+    BorderStyle border_style = getBorderStyle().trim(width(), height());
+    uint8_t border_thickness = border_style.getThickness();
+    uint8_t elevation = getElevation();
+    if (elevation != 0 || border_thickness != 0) {
+      roo_display::Box absolute_bounds(canvas.dx(), canvas.dy(),
+                                       width() - 1 + canvas.dx(),
+                                       height() - 1 + canvas.dy());
+      clipper.addDecoration(canvas.clip_box(), absolute_bounds, elevation,
+                            overlay_spec, canvas.bgcolor(),
+                            border_style.corner_radii(),
+                            border_style.outline_width(),
+                            AlphaBlend(canvas.bgcolor(), getOutlineColor()));
+    }
+    roo_display::Box inner_bounds(border_thickness + canvas.dx(),
+                                  border_thickness + canvas.dy(),
+                                  width() - border_thickness - 1 + canvas.dx(),
+                                  height() - border_thickness - 1 + canvas.dy());
+    clipper.addExclusion(
+        roo_display::Box::Intersect(inner_bounds, canvas.clip_box()));
+    return;
   }
-  roo_display::Box inner_bounds(border_thickness + canvas.dx(),
-                                border_thickness + canvas.dy(),
-                                width() - border_thickness - 1 + canvas.dx(),
-                                height() - border_thickness - 1 + canvas.dy());
+  (void)overlay_spec;
+  roo_display::Box absolute_bounds(canvas.dx(), canvas.dy(),
+                                   width() - 1 + canvas.dx(),
+                                   height() - 1 + canvas.dy());
   clipper.addExclusion(
-      roo_display::Box::Intersect(inner_bounds, canvas.clip_box()));
+      roo_display::Box::Intersect(absolute_bounds, canvas.clip_box()));
+}
+
+void SurfaceWidget::finalizePaintWidget(const Canvas& canvas, Clipper& clipper,
+                                        const OverlaySpec& overlay_spec) const {
+  Widget::finalizePaintWidget(canvas, clipper, overlay_spec);
 }
 
 Widget* Widget::dispatchTouchDownEvent(XDim x, YDim y) {

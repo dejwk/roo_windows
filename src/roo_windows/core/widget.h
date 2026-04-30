@@ -86,10 +86,10 @@ class Widget {
   void setDirty(const Rect& bounds);
 
   // Causes the widget to request paint(), replacing the entire rectangle area.
-  void invalidateInterior();
+  virtual void invalidateInterior();
 
   // Causes the widget to request paint(), replacing the specified area.
-  void invalidateInterior(const Rect& rect);
+  virtual void invalidateInterior(const Rect& rect);
 
   XDim width() const { return parent_bounds_.width(); }
   YDim height() const { return parent_bounds_.height(); }
@@ -114,7 +114,7 @@ class Widget {
 
   // Returns bounds of the shadow, in the parent's coordinates. When no shadow
   // (elevation = 0), equivalent to parent_bounds().
-  Rect getParentBoundsOfShadow() const;
+  virtual Rect getParentBoundsOfShadow() const;
 
   Rect getSloppyTouchBounds() const;
 
@@ -186,7 +186,9 @@ class Widget {
   // Otherwise, if this widget has a semi-transparent background, the returned
   // color is the alpha-blend of the parent's effective background and this
   // widget's background.
-  Color effectiveBackground() const;
+  virtual Color effectiveBackground() const;
+
+  virtual bool ownsSurface() const;
 
   // Has no effect when getBorderStyle() reports outline_width = 0.
   virtual Color getOutlineColor() const { return theme().color.primary; }
@@ -468,10 +470,12 @@ class Widget {
 
   void triggerInteractiveChange();
 
+  void notifyParentInvalidatedRegion(const Rect& rect);
+
   // Should be called by a child whose elevation has changed, and the child
   // wants the shadow to be redrawn. The argument should indicate the higher of
   // {before, after} elevations.
-  void elevationChanged(int higherElevation);
+  virtual void elevationChanged(int higherElevation);
 
   // Marks the entire area of this widget, and all its descendants, as
   // invalidated (needing full redraw).
@@ -514,9 +518,12 @@ class Widget {
   //   superclass method, and then do the necessary caching.
   virtual void paintWidgetContents(const Canvas& s, Clipper& clipper);
 
-  // Draws borders and shadows, and applies exclusions.
+  // Applies exclusions and any final paint decorations.
   virtual void finalizePaintWidget(const Canvas& s, Clipper& clipper,
                                    const OverlaySpec& overlay_spec) const;
+
+  virtual Canvas prepareCanvas(const Canvas& in);
+  virtual Canvas prepareContentsCanvas(const Canvas& in);
 
   virtual void setParent(Container* parent, bool is_owned);
 
@@ -611,9 +618,6 @@ class Widget {
   void paintWidgetModded(Canvas& canvas, const OverlaySpec& spec,
                          Clipper& clipper);
 
-  Canvas prepareCanvas(const Canvas& in);
-  Canvas prepareContentsCanvas(const Canvas& in);
-
   // Helper functions for paintWidget.
   void paintWidgetInteriorWithOverlays(Canvas& s, Clipper& clipper,
                                        const OverlaySpec& overlay_spec);
@@ -640,6 +644,26 @@ class Widget {
 class SurfaceWidget : public Widget {
  public:
   using Widget::Widget;
+
+  bool ownsSurface() const override { return true; }
+
+  Rect getParentBoundsOfShadow() const override;
+
+  Color effectiveBackground() const override;
+
+  void invalidateInterior() override;
+
+  void invalidateInterior(const Rect& rect) override;
+
+ protected:
+  void elevationChanged(int higherElevation) override;
+
+  void finalizePaintWidget(const Canvas& s, Clipper& clipper,
+                           const OverlaySpec& overlay_spec) const override;
+
+  Canvas prepareCanvas(const Canvas& in) override;
+
+  Canvas prepareContentsCanvas(const Canvas& in) override;
 };
 
 // TODO: adjust for different screen densities.
