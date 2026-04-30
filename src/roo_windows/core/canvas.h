@@ -12,9 +12,11 @@ class Canvas {
  public:
   Canvas(const roo_display::Surface* surface)
       : surface_(surface),
+        out_(&surface->out()),
         clip_box_(surface->clip_box()),
         dx_(surface->dx()),
-        dy_(surface->dy()) {}
+        dy_(surface->dy()),
+        bgcolor_(surface->bgcolor()) {}
 
   Canvas(Canvas&& other) = default;
   Canvas(const Canvas& other) = default;
