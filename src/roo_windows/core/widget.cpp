@@ -123,12 +123,7 @@ YDim Widget::offsetBottom() const {
   return parent()->height() - parent_bounds().yMax() - 1;
 }
 
-Rect Widget::getParentBoundsOfShadow() const {
-  if (ownsSurface()) {
-    return CalculateShadowExtents(parent_bounds(), getElevation());
-  }
-  return parent_bounds();
-}
+Rect Widget::getParentBoundsOfShadow() const { return parent_bounds(); }
 
 Rect SurfaceWidget::getParentBoundsOfShadow() const {
   return CalculateShadowExtents(parent_bounds(), getElevation());
@@ -152,9 +147,7 @@ Color SurfaceWidget::effectiveBackground() const {
   return Widget::effectiveBackground();
 }
 
-bool Widget::ownsSurface() const {
-  return false;
-}
+bool Widget::ownsSurface() const { return false; }
 
 ColorRole Widget::containerRole() const { return ColorRole::kUndefined; }
 
@@ -181,35 +174,37 @@ void Widget::setDirty(const Rect& bounds) {
 
 void Widget::invalidateInterior() {
   invalidateDescending();
-  if (ownsSurface() && getBorderStyle().hasRoundedCorners()) {
+  setDirty();
+}
+
+void SurfaceWidget::invalidateInterior() {
+  invalidateDescending();
+  if (getBorderStyle().hasRoundedCorners()) {
     notifyParentInvalidatedRegion(maxParentBounds());
   }
   setDirty();
 }
 
-void SurfaceWidget::invalidateInterior() { Widget::invalidateInterior(); }
-
 void Widget::invalidateInterior(const Rect& rect) {
   invalidateDescending(rect);
-  if (ownsSurface() && getBorderStyle().hasRoundedCorners()) {
+  setDirty(rect);
+}
+
+void SurfaceWidget::invalidateInterior(const Rect& rect) {
+  invalidateDescending(rect);
+  if (getBorderStyle().hasRoundedCorners()) {
     notifyParentInvalidatedRegion(rect.translate(offsetLeft(), offsetTop()));
   }
   setDirty(rect);
 }
 
-void SurfaceWidget::invalidateInterior(const Rect& rect) {
-  Widget::invalidateInterior(rect);
-}
+void Widget::elevationChanged(int higherElevation) { (void)higherElevation; }
 
-void Widget::elevationChanged(int higherElevation) {
-  if (!ownsSurface() || higherElevation <= 0 || parent() == nullptr) return;
+void SurfaceWidget::elevationChanged(int higherElevation) {
+  if (higherElevation <= 0 || parent() == nullptr) return;
   if (getBorderStyle().hasRoundedCorners()) setDirty();
   notifyParentInvalidatedRegion(
       CalculateShadowExtents(parent_bounds(), higherElevation));
-}
-
-void SurfaceWidget::elevationChanged(int higherElevation) {
-  Widget::elevationChanged(higherElevation);
 }
 
 void Widget::requestLayout() {
@@ -633,9 +628,7 @@ void Widget::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
   markClean();
 }
 
-Canvas Widget::prepareContentsCanvas(const Canvas& in) {
-  return in;
-}
+Canvas Widget::prepareContentsCanvas(const Canvas& in) { return in; }
 
 Canvas SurfaceWidget::prepareContentsCanvas(const Canvas& in) {
   Canvas canvas = in;
@@ -675,10 +668,10 @@ void SurfaceWidget::finalizePaintWidget(const Canvas& canvas, Clipper& clipper,
                           border_style.outline_width(),
                           AlphaBlend(canvas.bgcolor(), getOutlineColor()));
   }
-  roo_display::Box inner_bounds(
-      border_thickness + canvas.dx(), border_thickness + canvas.dy(),
-      width() - border_thickness - 1 + canvas.dx(),
-      height() - border_thickness - 1 + canvas.dy());
+  roo_display::Box inner_bounds(border_thickness + canvas.dx(),
+                                border_thickness + canvas.dy(),
+                                width() - border_thickness - 1 + canvas.dx(),
+                                height() - border_thickness - 1 + canvas.dy());
   clipper.addExclusion(
       roo_display::Box::Intersect(inner_bounds, canvas.clip_box()));
 }

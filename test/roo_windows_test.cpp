@@ -60,6 +60,18 @@ class ColorBoxWidget : public BasicSurfaceWidget {
   Dimensions dims_;
 };
 
+class ElevatedColorBoxWidget : public ColorBoxWidget {
+ public:
+  ElevatedColorBoxWidget(const Environment& env, Color color, Dimensions dims,
+                         uint8_t elevation)
+      : ColorBoxWidget(env, color, dims), elevation_(elevation) {}
+
+  uint8_t getElevation() const override { return elevation_; }
+
+ private:
+  uint8_t elevation_;
+};
+
 class TouchSpyWidget : public BasicWidget {
  public:
   explicit TouchSpyWidget(const Environment& env, Dimensions dims)
@@ -167,6 +179,27 @@ TEST_F(RooWindowsRenderTest, HideAndShowRestoresUnderlyingContent) {
   front_ptr->setVisibility(Visibility::kVisible);
   ASSERT_TRUE(refresh());
   EXPECT_EQ(QuantizeToArgb4444(color::Blue), pixelAt(20, 20));
+}
+
+TEST_F(RooWindowsRenderTest, SurfaceWidgetShadowBoundsExtendPastParentBounds) {
+  auto surface = std::make_unique<ElevatedColorBoxWidget>(
+      env_, color::Blue, Dimensions(20, 20), 12);
+  auto plain = std::make_unique<TouchSpyWidget>(env_, Dimensions(20, 20));
+
+  ElevatedColorBoxWidget* surface_ptr = surface.get();
+  TouchSpyWidget* plain_ptr = plain.get();
+
+  app_.add(WidgetRef(std::move(surface)), Box(16, 16, 40, 40));
+  app_.add(WidgetRef(std::move(plain)), Box(2, 2, 12, 12));
+
+  Rect surface_bounds = surface_ptr->parent_bounds();
+  Rect shadow_bounds = surface_ptr->getParentBoundsOfShadow();
+  EXPECT_LT(shadow_bounds.xMin(), surface_bounds.xMin());
+  EXPECT_LT(shadow_bounds.yMin(), surface_bounds.yMin());
+  EXPECT_GT(shadow_bounds.xMax(), surface_bounds.xMax());
+  EXPECT_GT(shadow_bounds.yMax(), surface_bounds.yMax());
+
+  EXPECT_EQ(plain_ptr->parent_bounds(), plain_ptr->getParentBoundsOfShadow());
 }
 
 TEST_F(RooWindowsRenderTest, TouchDispatchPrefersTopmostVisibleChild) {
