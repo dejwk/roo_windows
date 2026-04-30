@@ -15,7 +15,7 @@ namespace roo_windows {
 
 using roo_display::Color;
 
-class Container : public Widget {
+class Container : public SurfaceWidget {
  public:
   Container(const Environment& env);
 

@@ -2,13 +2,13 @@
 
 #include <string>
 
-#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/basic_surface_widget.h"
 #include "roo_windows/core/border_style.h"
 
 namespace roo_windows {
 
 // Implements basic button functionality: clickability, border, elevations.
-class Button : public BasicWidget {
+class Button : public BasicSurfaceWidget {
  public:
   enum Style { CONTAINED, OUTLINED, TEXT };
 

@@ -635,6 +635,13 @@ class Widget {
   std::function<void()> on_interactive_change_;
 };
 
+// Explicit branch for widgets that own surface semantics such as background,
+// border, outline, elevation, and exclusion.
+class SurfaceWidget : public Widget {
+ public:
+  using Widget::Widget;
+};
+
 // TODO: adjust for different screen densities.
 static const int gridSize = 4;
 

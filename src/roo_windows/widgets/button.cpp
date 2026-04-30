@@ -53,7 +53,7 @@ roo_display::Color ButtonContentColor(const Theme& theme, Button::Style style) {
 }  // namespace
 
 Button::Button(const Environment& env, Style style)
-    : BasicWidget(env),
+    : BasicSurfaceWidget(env),
       style_(style),
       outline_color_(ButtonOutlineColor(env.theme(), style)),
       interior_color_(ButtonInteriorColor(env.theme(), style)),

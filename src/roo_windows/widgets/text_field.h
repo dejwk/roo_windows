@@ -8,6 +8,7 @@
 #include "roo_scheduler.h"
 #include "roo_time.h"
 #include "roo_windows/activities/keyboard.h"
+#include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/panel.h"
 #include "roo_backport/string_view.h"
 
