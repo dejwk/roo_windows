@@ -122,7 +122,7 @@ void Container::fastDrawChildShadow(Widget& child, const Canvas& canvas,
   Canvas myc = canvas;
   // Minimize the redraw area so that we can take the most advantage of plan
   // fill performance.
-  myc.clipToExtents(child.getParentBoundsOfShadow());
+  myc.clipToExtents(child.getParentVisualBounds());
   // Make sure we're not over-stepping.
   Margins margins = child.getMargins();
   Rect rect = child.parent_bounds();
@@ -234,19 +234,19 @@ void Container::invalidateDescending(const Rect& rect) {
 
 void Container::childHidden(const Widget* child) {
   Rect invalid_rect =
-      Rect::Extent(child->maxParentBounds(), child->getParentBoundsOfShadow());
+      Rect::Extent(child->maxParentBounds(), child->getParentVisualBounds());
   propagateDirty(child, invalid_rect);
   invalidateBeneath(invalid_rect, child,
                     child->getParentClipMode() == ParentClipMode::kClipped);
   if (child->getParentClipMode() == ParentClipMode::kUnclipped) {
-    unclippedChildRectHidden(child->getParentBoundsOfShadow());
+    unclippedChildRectHidden(child->getParentVisualBounds());
   }
 }
 
 void Container::childShown(const Widget* child) {
   if (child->getElevation() > 0 ||
       child->getBorderStyle().hasRoundedCorners()) {
-    invalidateBeneath(child->getParentBoundsOfShadow(), child,
+    invalidateBeneath(child->getParentVisualBounds(), child,
                       child->getParentClipMode() == ParentClipMode::kClipped);
   }
   if (child->getParentClipMode() == ParentClipMode::kUnclipped) {

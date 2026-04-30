@@ -123,9 +123,9 @@ YDim Widget::offsetBottom() const {
   return parent()->height() - parent_bounds().yMax() - 1;
 }
 
-Rect Widget::getParentBoundsOfShadow() const { return parent_bounds(); }
+Rect Widget::getParentVisualBounds() const { return parent_bounds(); }
 
-Rect SurfaceWidget::getParentBoundsOfShadow() const {
+Rect SurfaceWidget::getParentVisualBounds() const {
   return CalculateShadowExtents(parent_bounds(), getElevation());
 }
 

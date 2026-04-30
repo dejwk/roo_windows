@@ -193,13 +193,13 @@ TEST_F(RooWindowsRenderTest, SurfaceWidgetShadowBoundsExtendPastParentBounds) {
   app_.add(WidgetRef(std::move(plain)), Box(2, 2, 12, 12));
 
   Rect surface_bounds = surface_ptr->parent_bounds();
-  Rect shadow_bounds = surface_ptr->getParentBoundsOfShadow();
+  Rect shadow_bounds = surface_ptr->getParentVisualBounds();
   EXPECT_LT(shadow_bounds.xMin(), surface_bounds.xMin());
   EXPECT_LT(shadow_bounds.yMin(), surface_bounds.yMin());
   EXPECT_GT(shadow_bounds.xMax(), surface_bounds.xMax());
   EXPECT_GT(shadow_bounds.yMax(), surface_bounds.yMax());
 
-  EXPECT_EQ(plain_ptr->parent_bounds(), plain_ptr->getParentBoundsOfShadow());
+  EXPECT_EQ(plain_ptr->parent_bounds(), plain_ptr->getParentVisualBounds());
 }
 
 TEST_F(RooWindowsRenderTest, TouchDispatchPrefersTopmostVisibleChild) {

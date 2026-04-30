@@ -112,9 +112,10 @@ class Widget {
 
   Rect bounds() const { return Rect(0, 0, width() - 1, height() - 1); }
 
-  // Returns bounds of the shadow, in the parent's coordinates. When no shadow
-  // (elevation = 0), equivalent to parent_bounds().
-  virtual Rect getParentBoundsOfShadow() const;
+  // Returns this widget's visual footprint in the parent's coordinates.
+  // For plain widgets, this is just parent_bounds(). Surface-owning widgets may
+  // expand it to include decoration overflow such as shadows.
+  virtual Rect getParentVisualBounds() const;
 
   Rect getSloppyTouchBounds() const;
 
@@ -643,7 +644,7 @@ class SurfaceWidget : public Widget {
   // Has no effect when getBorderStyle() reports outline_width = 0.
   virtual Color getOutlineColor() const { return theme().color.primary; }
 
-  Rect getParentBoundsOfShadow() const override;
+  Rect getParentVisualBounds() const override;
 
   void invalidateInterior() override;
 
