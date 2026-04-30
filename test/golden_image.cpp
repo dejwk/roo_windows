@@ -286,6 +286,39 @@ std::string ArtifactDir() {
   return "/tmp";
 }
 
+std::string StableArtifactPath(const std::string& file_name) {
+  const char* target = std::getenv("TEST_TARGET");
+  if (target == nullptr || target[0] == '\0') return std::string();
+
+  std::string test_target(target);
+  if (test_target.rfind("//", 0) != 0) return std::string();
+
+  size_t colon = test_target.find(':');
+  if (colon == std::string::npos || colon + 1 >= test_target.size()) {
+    return std::string();
+  }
+
+  std::string package = test_target.substr(2, colon - 2);
+  std::string test_name = test_target.substr(colon + 1);
+
+  std::string path = "bazel-testlogs/";
+  if (!package.empty()) {
+    path += package;
+    path += "/";
+  }
+  path += test_name;
+  path += "/test.outputs/";
+  path += file_name;
+  return path;
+}
+
+std::string DisplayArtifactPath(const std::string& runtime_path) {
+  std::filesystem::path runtime(runtime_path);
+  std::string stable = StableArtifactPath(runtime.filename().string());
+  if (!stable.empty()) return stable;
+  return runtime_path;
+}
+
 void ReadColorRectExpanded(const roo_display::Rasterizable& image,
                            int16_t x_min, int16_t y_min, int16_t width,
                            int16_t height, roo_display::Color* out) {
@@ -434,13 +467,14 @@ roo_display::Offscreen<roo_display::Rgb888> DiffImage(
     std::string artifact_base =
         ArtifactDir() + "/" + SanitizeStem(artifact_stem);
     std::string actual_path = artifact_base + "_actual.ppm";
+    std::string actual_display_path = DisplayArtifactPath(actual_path);
     std::string write_error;
     WritePpm(actual_path, actual, write_error);
 
     return ::testing::AssertionFailure()
            << "Missing/unreadable golden: " << expected_path << " ("
            << read_error << ")\n"
-           << "Wrote actual image to: " << actual_path << "\n"
+           << "Wrote actual image to: " << actual_display_path << "\n"
            << "To regenerate goldens: ROO_UPDATE_GOLDENS=1 bazel test ...";
   }
 
@@ -455,16 +489,21 @@ roo_display::Offscreen<roo_display::Rgb888> DiffImage(
   }
 
   std::string artifact_base = ArtifactDir() + "/" + SanitizeStem(artifact_stem);
+  std::string actual_path = artifact_base + "_actual.ppm";
   std::string xor_path = artifact_base + "_xor.ppm";
+  std::string actual_display_path = DisplayArtifactPath(actual_path);
+  std::string xor_display_path = DisplayArtifactPath(xor_path);
 
   std::string write_error;
+  WritePpm(actual_path, actual, write_error);
   WritePpm(xor_path, diff, write_error);
 
   return ::testing::AssertionFailure()
          << "Golden mismatch for " << golden_relative_path << "\n"
          << "First differing pixel: (" << diff_x << ", " << diff_y << ")\n"
          << "Differing pixel count: " << diff_pixel_count << "\n"
-         << "XOR diff: " << xor_path;
+         << "Actual render: " << actual_display_path << "\n"
+         << "XOR diff: " << xor_display_path;
 }
 
 }  // namespace test
