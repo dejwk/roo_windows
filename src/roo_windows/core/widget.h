@@ -176,21 +176,6 @@ class Widget {
 
   const ClickAnimation* getClickAnimation() const;
 
-  // Returns this widget's background. Transparent by default. Normally
-  // overridden by panels, which usually have opaque backgrounds.
-  virtual Color background() const { return roo_display::color::Transparent; }
-
-  // Returns the effective background color of this widget. If this widget has a
-  // non-opaque background, it is returned. If this widget has a fully
-  // transparent background, the parent's effective background is returned.
-  // Otherwise, if this widget has a semi-transparent background, the returned
-  // color is the alpha-blend of the parent's effective background and this
-  // widget's background.
-  virtual Color effectiveBackground() const;
-
-  // Has no effect when getBorderStyle() reports outline_width = 0.
-  virtual Color getOutlineColor() const { return theme().color.primary; }
-
   virtual Widget* dispatchTouchDownEvent(XDim x, YDim y);
 
   // Returns true if this widget is currently handling a touch gesture.
@@ -642,6 +627,21 @@ class Widget {
 class SurfaceWidget : public Widget {
  public:
   using Widget::Widget;
+
+  // Returns this widget's background. Transparent by default. Normally
+  // overridden by panels, which usually have opaque backgrounds.
+  virtual Color background() const { return roo_display::color::Transparent; }
+
+  // Returns the effective background color of this widget. If this widget has a
+  // non-opaque background, it is returned. If this widget has a fully
+  // transparent background, the parent's effective background is returned.
+  // Otherwise, if this widget has a semi-transparent background, the returned
+  // color is the alpha-blend of the parent's effective background and this
+  // widget's background.
+  virtual Color effectiveBackground() const;
+
+  // Has no effect when getBorderStyle() reports outline_width = 0.
+  virtual Color getOutlineColor() const { return theme().color.primary; }
 
   Rect getParentBoundsOfShadow() const override;
 

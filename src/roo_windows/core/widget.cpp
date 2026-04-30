@@ -135,7 +135,7 @@ Rect Widget::getSloppyTouchParentBounds() const {
 
 Rect Widget::getSloppyTouchBounds() const { return slopify(bounds()); }
 
-Color Widget::effectiveBackground() const {
+Color SurfaceWidget::effectiveBackground() const {
   roo_display::Color bgcolor = background();
   return bgcolor.isOpaque() || parent() == nullptr
              ? bgcolor
