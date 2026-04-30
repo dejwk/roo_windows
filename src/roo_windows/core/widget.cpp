@@ -527,18 +527,17 @@ Canvas Widget::prepareCanvas(const Canvas& in) {
   Canvas canvas(in);
   canvas.shift(offsetLeft(), offsetTop());
   canvas.clipToExtents(maxBounds());
-  if (ownsSurface()) {
-    Color bg = background();
-    if (!isEnabled()) {
-      bg.set_a(bg.a() / 2);
-    }
-    canvas.set_bgcolor(roo_display::AlphaBlend(canvas.bgcolor(), bg));
-  }
   return canvas;
 }
 
 Canvas SurfaceWidget::prepareCanvas(const Canvas& in) {
-  return Widget::prepareCanvas(in);
+  Canvas canvas = Widget::prepareCanvas(in);
+  Color bg = background();
+  if (!isEnabled()) {
+    bg.set_a(bg.a() / 2);
+  }
+  canvas.set_bgcolor(roo_display::AlphaBlend(canvas.bgcolor(), bg));
+  return canvas;
 }
 
 void Widget::paintWidget(const Canvas& canvas, Clipper& clipper) {
@@ -635,7 +634,10 @@ void Widget::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
 }
 
 Canvas Widget::prepareContentsCanvas(const Canvas& in) {
-  if (!ownsSurface()) return in;
+  return in;
+}
+
+Canvas SurfaceWidget::prepareContentsCanvas(const Canvas& in) {
   Canvas canvas = in;
   BorderStyle border_style = getBorderStyle().trim(width(), height());
   uint8_t border_thickness = border_style.getThickness();
@@ -648,34 +650,8 @@ Canvas Widget::prepareContentsCanvas(const Canvas& in) {
   return canvas;
 }
 
-Canvas SurfaceWidget::prepareContentsCanvas(const Canvas& in) {
-  return Widget::prepareContentsCanvas(in);
-}
-
 void Widget::finalizePaintWidget(const Canvas& canvas, Clipper& clipper,
                                  const OverlaySpec& overlay_spec) const {
-  if (ownsSurface()) {
-    BorderStyle border_style = getBorderStyle().trim(width(), height());
-    uint8_t border_thickness = border_style.getThickness();
-    uint8_t elevation = getElevation();
-    if (elevation != 0 || border_thickness != 0) {
-      roo_display::Box absolute_bounds(canvas.dx(), canvas.dy(),
-                                       width() - 1 + canvas.dx(),
-                                       height() - 1 + canvas.dy());
-      clipper.addDecoration(canvas.clip_box(), absolute_bounds, elevation,
-                            overlay_spec, canvas.bgcolor(),
-                            border_style.corner_radii(),
-                            border_style.outline_width(),
-                            AlphaBlend(canvas.bgcolor(), getOutlineColor()));
-    }
-    roo_display::Box inner_bounds(
-        border_thickness + canvas.dx(), border_thickness + canvas.dy(),
-        width() - border_thickness - 1 + canvas.dx(),
-        height() - border_thickness - 1 + canvas.dy());
-    clipper.addExclusion(
-        roo_display::Box::Intersect(inner_bounds, canvas.clip_box()));
-    return;
-  }
   (void)overlay_spec;
   roo_display::Box absolute_bounds(canvas.dx(), canvas.dy(),
                                    width() - 1 + canvas.dx(),
@@ -686,7 +662,25 @@ void Widget::finalizePaintWidget(const Canvas& canvas, Clipper& clipper,
 
 void SurfaceWidget::finalizePaintWidget(const Canvas& canvas, Clipper& clipper,
                                         const OverlaySpec& overlay_spec) const {
-  Widget::finalizePaintWidget(canvas, clipper, overlay_spec);
+  BorderStyle border_style = getBorderStyle().trim(width(), height());
+  uint8_t border_thickness = border_style.getThickness();
+  uint8_t elevation = getElevation();
+  if (elevation != 0 || border_thickness != 0) {
+    roo_display::Box absolute_bounds(canvas.dx(), canvas.dy(),
+                                     width() - 1 + canvas.dx(),
+                                     height() - 1 + canvas.dy());
+    clipper.addDecoration(canvas.clip_box(), absolute_bounds, elevation,
+                          overlay_spec, canvas.bgcolor(),
+                          border_style.corner_radii(),
+                          border_style.outline_width(),
+                          AlphaBlend(canvas.bgcolor(), getOutlineColor()));
+  }
+  roo_display::Box inner_bounds(
+      border_thickness + canvas.dx(), border_thickness + canvas.dy(),
+      width() - border_thickness - 1 + canvas.dx(),
+      height() - border_thickness - 1 + canvas.dy());
+  clipper.addExclusion(
+      roo_display::Box::Intersect(inner_bounds, canvas.clip_box()));
 }
 
 Widget* Widget::dispatchTouchDownEvent(XDim x, YDim y) {
