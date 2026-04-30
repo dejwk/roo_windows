@@ -143,12 +143,6 @@ Color Widget::effectiveBackground() const {
                                        bgcolor);
 }
 
-Color SurfaceWidget::effectiveBackground() const {
-  return Widget::effectiveBackground();
-}
-
-bool Widget::ownsSurface() const { return false; }
-
 ColorRole Widget::containerRole() const { return ColorRole::kUndefined; }
 
 ColorRole Widget::effectiveContainerRole() const {

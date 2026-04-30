@@ -188,8 +188,6 @@ class Widget {
   // widget's background.
   virtual Color effectiveBackground() const;
 
-  virtual bool ownsSurface() const;
-
   // Has no effect when getBorderStyle() reports outline_width = 0.
   virtual Color getOutlineColor() const { return theme().color.primary; }
 
@@ -645,11 +643,7 @@ class SurfaceWidget : public Widget {
  public:
   using Widget::Widget;
 
-  bool ownsSurface() const override { return true; }
-
   Rect getParentBoundsOfShadow() const override;
-
-  Color effectiveBackground() const override;
 
   void invalidateInterior() override;
 
