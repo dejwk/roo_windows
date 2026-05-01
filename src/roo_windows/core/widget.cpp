@@ -731,10 +731,10 @@ void Widget::onCancel() {
   }
 }
 
-}  // namespace roo_windows
-
-::roo_logging::Stream& operator<<(::roo_logging::Stream& os,
-                                  const roo_windows::Widget& widget) {
+roo_logging::Stream& operator<<(roo_logging::Stream& os,
+                                const Widget& widget) {
   os << GetTypeName(widget) << "{" << &widget << "}";
   return os;
 }
+
+}  // namespace roo_windows

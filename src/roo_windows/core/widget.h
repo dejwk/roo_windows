@@ -672,8 +672,7 @@ using WidgetCreatorFn = std::function<std::unique_ptr<Widget>()>;
 
 template <typename Src>
 using WidgetSetterFn = std::function<void(const Src& src, Widget& dest)>;
+roo_logging::Stream& operator<<(roo_logging::Stream& os,
+                                const Widget& widget);
 
 }  // namespace roo_windows
-
-roo_logging::Stream& operator<<(roo_logging::Stream& os,
-                                const roo_windows::Widget& widget);
