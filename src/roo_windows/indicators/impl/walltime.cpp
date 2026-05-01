@@ -8,7 +8,6 @@
 namespace roo_windows {
 
 using roo_display::Color;
-using roo_display::StringPrinter;
 using roo_time::TimeZone;
 using roo_time::WallTimeClock;
 
