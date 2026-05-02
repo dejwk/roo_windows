@@ -9,13 +9,17 @@
 
 /// roo_windows supports four zoom levels.
 ///
-/// Select one explicitly by uncommenting one `ROO_DISPLAY_ZOOM` line below, or
-/// define `ROO_DISPLAY_DPI` and let the library choose automatically.
+/// Select one explicitly by uncommenting one `ROO_WINDOWS_ZOOM` line below, or
+/// define `ROO_WINDOWS_DPI` and let the library choose automatically.
 
-// #define ROO_DISPLAY_ZOOM 75
-#define ROO_DISPLAY_ZOOM 100
-// #define ROO_DISPLAY_ZOOM 150
-// #define ROO_DISPLAY_ZOOM 200
+#ifndef ROO_WINDOWS_ZOOM
 
-// #define ROO_DISPLAY_DPI 180
-// (used only when no explicit ROO_DISPLAY_ZOOM is selected)
+// #define ROO_WINDOWS_ZOOM 75
+#define ROO_WINDOWS_ZOOM 100
+// #define ROO_WINDOWS_ZOOM 150
+// #define ROO_WINDOWS_ZOOM 200
+
+// #define ROO_WINDOWS_DPI 180
+// (used only when no explicit ROO_WINDOWS_ZOOM is selected)
+
+#endif

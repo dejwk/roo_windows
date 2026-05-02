@@ -15,18 +15,18 @@ static const float kMaxVel = 5000.0;
 static const roo_time::Duration kDelayHideScrollbar = roo_time::Millis(1200);
 
 // Maximum visual overshoot distance in pixels, for both drag and fling.
-static const int16_t kMaxOvershootPx = 40;
+static const int16_t kMaxOvershootPx = Scaled(40);
 
 // Duration of the spring-back animation (milliseconds).
 static const unsigned long kSpringBackDurationMs = 500;
 
 // The area on the side of the panel whose touch is interpreted as an
 // interaction with the scroll bar.
-static const XDim kScrollBarTouchWidth = 50;
+static const XDim kScrollBarTouchWidth = Scaled(50);
 
 // Scroll bar height is scaled on the basis of much much content there is to
 // scroll, but it will never be smaller than this number of pixels.
-static const YDim kScrollBarMinHeightPx = 20;
+static const YDim kScrollBarMinHeightPx = Scaled(20);
 
 template <typename T>
 T clamp(T input, T min_val, T max_val) {
