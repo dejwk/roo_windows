@@ -36,6 +36,20 @@ cc_test(
     name = "roo_windows_test",
     srcs = [
         "test/roo_windows_test.cpp",
+        "test/roo_windows_render_test_support.h",
+    ],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
+cc_test(
+    name = "overlay_test",
+    srcs = [
+        "test/overlay_test.cpp",
+        "test/roo_windows_render_test_support.h",
     ],
     linkstatic = 1,
     deps = [
