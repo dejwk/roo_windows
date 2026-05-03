@@ -595,12 +595,20 @@ void Widget::paintWidgetModded(Canvas& canvas, const OverlaySpec& overlay_spec,
       // shortly.
       if (overlay_spec.is_click_animation_in_progress()) {
         Rect repaint_bounds = maxParentBounds();
-        roo_display::DisplayOutput& out = canvas.out();
-        roo_display::ForegroundFilter filter(canvas.out(),
-                                             overlay_spec.press_overlay());
-        canvas.set_out(&filter);
+        if (getOverlayType() == OVERLAY_POINT) {
+          clipper.addOverlay(overlay_spec.press_overlay(), canvas.clip_box());
+        } else {
+          roo_display::DisplayOutput& out = canvas.out();
+          roo_display::ForegroundFilter filter(canvas.out(),
+                                               overlay_spec.press_overlay());
+          canvas.set_out(&filter);
+          paintWidgetContents(canvas, clipper);
+          canvas.set_out(&out);
+          setDirty();
+          notifyParentInvalidatedRegion(repaint_bounds);
+          return;
+        }
         paintWidgetContents(canvas, clipper);
-        canvas.set_out(&out);
         setDirty();
         notifyParentInvalidatedRegion(repaint_bounds);
       } else {
@@ -612,13 +620,10 @@ void Widget::paintWidgetModded(Canvas& canvas, const OverlaySpec& overlay_spec,
     } else if (overlay_spec.base_overlay().a() > 0) {
       switch (getOverlayType()) {
         case OVERLAY_POINT: {
-          auto point_overlay =
-              MakePointOverlay(*this, canvas, overlay_spec.base_overlay());
-          roo_display::DisplayOutput& out = canvas.out();
-          roo_display::ForegroundFilter filter(canvas.out(), &point_overlay);
-          canvas.set_out(&filter);
+          clipper.addOverlayShape(
+              MakePointOverlay(*this, canvas, overlay_spec.base_overlay()),
+              canvas.clip_box());
           paintWidgetContents(canvas, clipper);
-          canvas.set_out(&out);
           break;
         }
         default: {
@@ -653,15 +658,7 @@ Canvas Widget::prepareContentsCanvas(const Canvas& in) {
 
 void Widget::finalizePaintWidget(const Canvas& canvas, Clipper& clipper,
                                  const OverlaySpec& overlay_spec) const {
-  if (!overlay_spec.is_disabled() && getOverlayType() == OVERLAY_POINT) {
-    if (overlay_spec.is_click_animation_in_progress()) {
-      clipper.addOverlay(overlay_spec.press_overlay(), canvas.clip_box());
-    } else if (overlay_spec.base_overlay().a() > 0) {
-      clipper.addOverlayShape(
-          MakePointOverlay(*this, canvas, overlay_spec.base_overlay()),
-          canvas.clip_box());
-    }
-  }
+  (void)overlay_spec;
   Rect exclusion = getDirectPaintExclusionBounds();
   roo_display::Box absolute_bounds(
       canvas.dx() + exclusion.xMin(), canvas.dy() + exclusion.yMin(),
