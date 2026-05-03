@@ -132,6 +132,28 @@ class TextLabelGoldenTest : public testing::Test {
   Environment env_;
 };
 
+class RecordingPanel : public Panel {
+ public:
+  explicit RecordingPanel(const Environment& env) : Panel(env) {}
+
+  using Panel::add;
+
+  std::vector<Rect> invalidated_regions;
+
+ protected:
+  void childShown(const Widget* child) override { (void)child; }
+
+  void propagateDirty(const Widget* child, const Rect& rect) override {
+    (void)child;
+    (void)rect;
+  }
+
+  void childInvalidatedRegion(const Widget* child, Rect rect) override {
+    (void)child;
+    invalidated_regions.push_back(rect);
+  }
+};
+
 }  // namespace
 
 TEST(TextLabel, SuggestedMinimumDimensionsMatchFontMetrics) {
@@ -161,12 +183,59 @@ TEST(TextLabel, ContentBoundsFollowDrawableInkExtents) {
   auto metrics = font.getHorizontalStringMetrics("abc");
   Rect anchor_bounds(0, -font.metrics().ascent() - font.metrics().linegap(),
                      metrics.advance() - 1, -font.metrics().descent());
-  auto offset = ResolveAlignmentOffset(
-      label.bounds(), anchor_bounds, roo_display::kLeft | roo_display::kMiddle);
-  Rect expected =
-      Rect(metrics.screen_extents()).translate(offset.first, offset.second);
+  auto offset = ResolveAlignmentOffset(label.bounds(), anchor_bounds,
+                                       roo_display::kLeft | roo_display::kMiddle);
+  Rect expected = Rect(metrics.screen_extents()).translate(offset.first,
+                                                           offset.second);
 
   EXPECT_EQ(expected, label.getContentBounds());
+}
+
+TEST(TextLabel, EmptyTextHasZeroInkInsets) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  const auto& font = font_body2();
+
+  TextLabel label(env, "", font, kGravityLeft | kGravityMiddle);
+  StringViewLabel string_view_label(env, roo::string_view(), font,
+                                    kGravityLeft | kGravityMiddle);
+
+  EXPECT_EQ(Insets::Zero(), label.getInkInsets());
+  EXPECT_EQ(Insets::Zero(), string_view_label.getInkInsets());
+}
+
+TEST(TextLabel, EmptyToNonEmptyDoesNotInvalidateParentBeneath) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  RecordingPanel panel(env);
+
+  auto label = std::make_unique<TextLabel>(env, "", font_body2(),
+                                           kGravityCenter | kGravityMiddle);
+  TextLabel* label_ptr = label.get();
+  panel.add(std::move(label), Rect(0, 0, 119, 19));
+  panel.invalidated_regions.clear();
+
+  label_ptr->setText("42.0");
+
+  EXPECT_TRUE(panel.invalidated_regions.empty());
+}
+
+TEST(TextLabel, TextChangeInvalidatesOnlyOldVisualBounds) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  RecordingPanel panel(env);
+
+  auto label = std::make_unique<TextLabel>(env, "A", font_body2(),
+                                           kGravityCenter | kGravityMiddle);
+  TextLabel* label_ptr = label.get();
+  panel.add(std::move(label), Rect(0, 0, 119, 19));
+  Rect old_bounds = label_ptr->maxParentBounds();
+  panel.invalidated_regions.clear();
+
+  label_ptr->setText("MMMMMMMM");
+
+  ASSERT_EQ(1u, panel.invalidated_regions.size());
+  EXPECT_EQ(old_bounds, panel.invalidated_regions.front());
 }
 
 TEST_F(TextLabelRenderTest, SetTextAndClearTextAffectRenderedPixels) {

@@ -56,6 +56,7 @@ void TextLabel::paint(const Canvas& canvas) const {
 }
 
 Insets TextLabel::getInkInsets() const {
+  if (value_.empty()) return Insets::Zero();
   return InsetsFromContentBounds(
       bounds(),
       ResolveLabelContentBounds(bounds(), font_, value_,
@@ -74,10 +75,13 @@ Dimensions TextLabel::getSuggestedMinimumDimensions() const {
 
 void TextLabel::setText(std::string value) {
   if (value_ == value) return;
-  Rect old_bounds = maxParentBounds();
+  bool had_old_content = !value_.empty();
+  Rect old_bounds = had_old_content ? maxParentBounds() : Rect(0, 0, -1, -1);
   value_ = std::move(value);
   invalidateInterior();
-  notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
+  if (had_old_content) {
+    notifyParentInvalidatedRegion(old_bounds);
+  }
   requestLayout();
 }
 
@@ -85,10 +89,13 @@ void TextLabel::setText(const char* value) { setText(roo::string_view(value)); }
 
 void TextLabel::setText(roo::string_view value) {
   if (value_ == value) return;
-  Rect old_bounds = maxParentBounds();
+  bool had_old_content = !value_.empty();
+  Rect old_bounds = had_old_content ? maxParentBounds() : Rect(0, 0, -1, -1);
   value_ = std::string((const char*)value.data(), value.size());
   invalidateInterior();
-  notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
+  if (had_old_content) {
+    notifyParentInvalidatedRegion(old_bounds);
+  }
   requestLayout();
 }
 
@@ -108,7 +115,7 @@ void TextLabel::clearText() {
   Rect old_bounds = maxParentBounds();
   value_.clear();
   invalidateInterior();
-  notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
+  notifyParentInvalidatedRegion(old_bounds);
   requestLayout();
 }
 
@@ -139,6 +146,7 @@ void StringViewLabel::paint(const Canvas& canvas) const {
 }
 
 Insets StringViewLabel::getInkInsets() const {
+  if (value_.empty()) return Insets::Zero();
   return InsetsFromContentBounds(
       bounds(),
       ResolveLabelContentBounds(bounds(), font_, value_,
@@ -157,10 +165,13 @@ Dimensions StringViewLabel::getSuggestedMinimumDimensions() const {
 
 void StringViewLabel::setText(roo::string_view value) {
   if (value_ == value) return;
-  Rect old_bounds = maxParentBounds();
+  bool had_old_content = !value_.empty();
+  Rect old_bounds = had_old_content ? maxParentBounds() : Rect(0, 0, -1, -1);
   value_ = std::move(value);
   invalidateInterior();
-  notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
+  if (had_old_content) {
+    notifyParentInvalidatedRegion(old_bounds);
+  }
   requestLayout();
 }
 
@@ -169,7 +180,7 @@ void StringViewLabel::clearText() {
   Rect old_bounds = maxParentBounds();
   value_ = "";
   invalidateInterior();
-  notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
+  notifyParentInvalidatedRegion(old_bounds);
   requestLayout();
 }
 

@@ -21,6 +21,28 @@ FlexLayout::Params FillWidthParams() {
   return params;
 }
 
+class RecordingPanel : public Panel {
+ public:
+  explicit RecordingPanel(const Environment& env) : Panel(env) {}
+
+  using Panel::add;
+
+  std::vector<Rect> invalidated_regions;
+
+ protected:
+  void childShown(const Widget* child) override { (void)child; }
+
+  void propagateDirty(const Widget* child, const Rect& rect) override {
+    (void)child;
+    (void)rect;
+  }
+
+  void childInvalidatedRegion(const Widget* child, Rect rect) override {
+    (void)child;
+    invalidated_regions.push_back(rect);
+  }
+};
+
 TEST(TextBlock, WordWrapIncreasesHeightWithNarrowWidth) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -119,6 +141,23 @@ TEST(TextBlock, SetPaddingRequestsLayoutAndUpdatesContentBounds) {
   EXPECT_NE(without_padding, block.getContentBounds());
   EXPECT_GT(block.getContentBounds().xMin(), without_padding.xMin());
   EXPECT_GT(block.getContentBounds().yMin(), without_padding.yMin());
+}
+
+TEST(TextBlock, EmptyToNonEmptyDoesNotInvalidateParentBeneath) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  RecordingPanel panel(env);
+
+  auto block = std::make_unique<TextBlock>(env, "", font_body2(),
+                                           roo_display::kCenter |
+                                               roo_display::kMiddle);
+  TextBlock* block_ptr = block.get();
+  panel.add(std::move(block), Rect(0, 0, 159, 39));
+  panel.invalidated_regions.clear();
+
+  block_ptr->setText("42.0 C");
+
+  EXPECT_TRUE(panel.invalidated_regions.empty());
 }
 
 class TextBlockGoldenTest : public testing::Test {

@@ -497,13 +497,16 @@ void TextBlock::onLayout(bool changed, const Rect& rect) {
 
 void TextBlock::setText(std::string value) {
   if (value_ == value) return;
-  Rect old_bounds = maxParentBounds();
+  bool had_old_content = !value_.empty();
+  Rect old_bounds = had_old_content ? maxParentBounds() : Rect(0, 0, -1, -1);
   value_ = std::move(value);
   invalidateLayoutCache();
   recalculateNaturalDimensions();
   setConservativeInkInsets();
   invalidateInterior();
-  notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
+  if (had_old_content) {
+    notifyParentInvalidatedRegion(old_bounds);
+  }
   requestLayout();
 }
 
@@ -515,55 +518,70 @@ void TextBlock::setColor(roo_display::Color color) {
 
 void TextBlock::setAlignment(roo_display::Alignment alignment) {
   if (alignment_ == alignment) return;
-  Rect old_bounds = maxParentBounds();
+  bool had_old_content = !value_.empty();
+  Rect old_bounds = had_old_content ? maxParentBounds() : Rect(0, 0, -1, -1);
   alignment_ = alignment;
   updateCachedInkInsetsFromCurrentBounds();
   invalidateInterior();
-  notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
+  if (had_old_content) {
+    notifyParentInvalidatedRegion(old_bounds);
+  }
 }
 
 void TextBlock::setWrapMode(TextWrapMode wrap_mode) {
   if (wrap_mode_ == wrap_mode) return;
-  Rect old_bounds = maxParentBounds();
+  bool had_old_content = !value_.empty();
+  Rect old_bounds = had_old_content ? maxParentBounds() : Rect(0, 0, -1, -1);
   wrap_mode_ = wrap_mode;
   invalidateLayoutCache();
   recalculateNaturalDimensions();
   setConservativeInkInsets();
   invalidateInterior();
-  notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
+  if (had_old_content) {
+    notifyParentInvalidatedRegion(old_bounds);
+  }
   requestLayout();
 }
 
 void TextBlock::setTextAlign(TextAlign text_align) {
   if (text_align_ == text_align) return;
-  Rect old_bounds = maxParentBounds();
+  bool had_old_content = !value_.empty();
+  Rect old_bounds = had_old_content ? maxParentBounds() : Rect(0, 0, -1, -1);
   text_align_ = text_align;
   updateCachedInkInsetsFromCurrentBounds();
   invalidateInterior();
-  notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
+  if (had_old_content) {
+    notifyParentInvalidatedRegion(old_bounds);
+  }
 }
 
 void TextBlock::setMaxLines(uint16_t max_lines) {
   if (max_lines_ == max_lines) return;
-  Rect old_bounds = maxParentBounds();
+  bool had_old_content = !value_.empty();
+  Rect old_bounds = had_old_content ? maxParentBounds() : Rect(0, 0, -1, -1);
   max_lines_ = max_lines;
   invalidateLayoutCache();
   recalculateNaturalDimensions();
   setConservativeInkInsets();
   invalidateInterior();
-  notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
+  if (had_old_content) {
+    notifyParentInvalidatedRegion(old_bounds);
+  }
   requestLayout();
 }
 
 void TextBlock::setEllipsize(bool ellipsize) {
   if (ellipsize_ == ellipsize) return;
-  Rect old_bounds = maxParentBounds();
+  bool had_old_content = !value_.empty();
+  Rect old_bounds = had_old_content ? maxParentBounds() : Rect(0, 0, -1, -1);
   ellipsize_ = ellipsize;
   invalidateLayoutCache();
   recalculateNaturalDimensions();
   setConservativeInkInsets();
   invalidateInterior();
-  notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
+  if (had_old_content) {
+    notifyParentInvalidatedRegion(old_bounds);
+  }
   requestLayout();
 }
 
