@@ -6,9 +6,9 @@
 
 namespace roo_windows {
 
-// Base class for widgets that wish to support some basic anc cheap padding and
-// margin customization. Custom implementation spares 2 bytes per instance to
-// keep the padding and margin information.
+// Base class for widgets that want cheap stored padding and margin
+// customization. Minimal painted leaves should stay on Widget when they do not
+// need that storage or when their clickability semantics are custom.
 class BasicWidget : public Widget {
  public:
   BasicWidget(const Environment& env) : Widget(env), padding_(0), margins_(0) {}
