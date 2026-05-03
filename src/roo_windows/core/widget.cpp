@@ -623,12 +623,15 @@ Canvas SurfaceWidget::prepareContentsCanvas(const Canvas& in) {
 void Widget::finalizePaintWidget(const Canvas& canvas, Clipper& clipper,
                                  const OverlaySpec& overlay_spec) const {
   (void)overlay_spec;
-  roo_display::Box absolute_bounds(canvas.dx(), canvas.dy(),
-                                   width() - 1 + canvas.dx(),
-                                   height() - 1 + canvas.dy());
+  Rect exclusion = getExclusionBounds();
+  roo_display::Box absolute_bounds(
+      canvas.dx() + exclusion.xMin(), canvas.dy() + exclusion.yMin(),
+      canvas.dx() + exclusion.xMax(), canvas.dy() + exclusion.yMax());
   clipper.addExclusion(
       roo_display::Box::Intersect(absolute_bounds, canvas.clip_box()));
 }
+
+Rect Widget::getExclusionBounds() const { return bounds(); }
 
 void SurfaceWidget::finalizePaintWidget(const Canvas& canvas, Clipper& clipper,
                                         const OverlaySpec& overlay_spec) const {
@@ -645,12 +648,14 @@ void SurfaceWidget::finalizePaintWidget(const Canvas& canvas, Clipper& clipper,
                           border_style.outline_width(),
                           AlphaBlend(canvas.bgcolor(), getOutlineColor()));
   }
-  roo_display::Box inner_bounds(border_thickness + canvas.dx(),
-                                border_thickness + canvas.dy(),
-                                width() - border_thickness - 1 + canvas.dx(),
-                                height() - border_thickness - 1 + canvas.dy());
-  clipper.addExclusion(
-      roo_display::Box::Intersect(inner_bounds, canvas.clip_box()));
+  Widget::finalizePaintWidget(canvas, clipper, overlay_spec);
+}
+
+Rect SurfaceWidget::getExclusionBounds() const {
+  BorderStyle border_style = getBorderStyle().trim(width(), height());
+  uint8_t border_thickness = border_style.getThickness();
+  return Rect(border_thickness, border_thickness,
+              width() - border_thickness - 1, height() - border_thickness - 1);
 }
 
 Widget* Widget::dispatchTouchDownEvent(XDim x, YDim y) {
