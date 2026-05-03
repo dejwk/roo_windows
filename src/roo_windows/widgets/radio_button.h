@@ -20,8 +20,6 @@ class RadioButton : public BasicWidget {
 
   Dimensions getSuggestedMinimumDimensions() const override;
 
-  OverlayType getOverlayType() const override { return OVERLAY_POINT; }
-
   bool isClickable() const override { return true; }
 
   void onClicked() override;

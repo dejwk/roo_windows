@@ -1,6 +1,9 @@
 #include "roo_windows_render_test_support.h"
 
 #include "roo_windows/core/press_overlay.h"
+#include "roo_windows/widgets/icon.h"
+#include "roo_windows/widgets/radio_button.h"
+#include "roo_windows/widgets/slider.h"
 #include "roo_windows/widgets/checkbox.h"
 
 using namespace roo_display;
@@ -9,6 +12,15 @@ using namespace roo_windows::test_support;
 
 namespace roo_windows {
 namespace {
+
+class ClickableSurfaceBoxWidget : public test_support::ColorBoxWidget {
+ public:
+  ClickableSurfaceBoxWidget(const Environment& env, roo_display::Color color,
+                            Dimensions dims)
+      : ColorBoxWidget(env, color, dims) {}
+
+  bool isClickable() const override { return true; }
+};
 
 TEST(PressOverlay, WideTopStripCrossingCenterIsNotUniformTransparent) {
   PressOverlay overlay(0, 0, 10, color::Red);
@@ -19,6 +31,24 @@ TEST(PressOverlay, WideTopStripCrossingCenterIsNotUniformTransparent) {
   Color colors[23];
   EXPECT_FALSE(overlay.readColorRect(-11, -9, 11, -9, colors));
   EXPECT_NE(colors[11], color::Transparent);
+}
+
+TEST_F(RooWindowsRenderTest, OverlayPolicyDefaultsFollowWidgetHierarchy) {
+  Checkbox checkbox(env_);
+  RadioButton radio(env_);
+  Slider slider(env_);
+  Icon idle_icon(env_);
+  Icon interactive_icon(env_);
+  ClickableSurfaceBoxWidget surface(env_, color::Blue, Dimensions(18, 18));
+
+  interactive_icon.setOnInteractiveChange([]() {});
+
+  EXPECT_EQ(Widget::OVERLAY_POINT, checkbox.getOverlayType());
+  EXPECT_EQ(Widget::OVERLAY_POINT, radio.getOverlayType());
+  EXPECT_EQ(Widget::OVERLAY_POINT, slider.getOverlayType());
+  EXPECT_EQ(Widget::OVERLAY_AREA, idle_icon.getOverlayType());
+  EXPECT_EQ(Widget::OVERLAY_POINT, interactive_icon.getOverlayType());
+  EXPECT_EQ(Widget::OVERLAY_AREA, surface.getOverlayType());
 }
 
 TEST_F(RooWindowsRenderTest, PointOverlayBoundsExpandOnlyWhileOverlayIsActive) {

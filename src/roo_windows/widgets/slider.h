@@ -31,8 +31,6 @@ class Slider : public BasicWidget {
 
   PreferredSize getPreferredSize() const override;
 
-  OverlayType getOverlayType() const override { return OVERLAY_POINT; }
-
   roo_display::FpPoint getPointOverlayFocus() const override;
 
   uint16_t getPos() const { return pos_; }

@@ -410,7 +410,9 @@ class Widget {
 
   enum OverlayType { OVERLAY_AREA, OVERLAY_POINT };
 
-  virtual OverlayType getOverlayType() const { return OVERLAY_AREA; }
+  virtual OverlayType getOverlayType() const {
+    return OVERLAY_POINT;
+  }
 
   virtual roo_display::FpPoint getPointOverlayFocus() const {
     const Rect& r = parent_bounds();
@@ -423,8 +425,9 @@ class Widget {
   // zero means transient interaction paint stays within bounds().
   //
   // The default implementation uses the point-overlay circle implied by
-  // getOverlayType() and getPointOverlayFocus(). Widgets may override this to
-  // describe other transient interaction paint that can escape bounds().
+  // getOverlayType() and getPointOverlayFocus(). SurfaceWidget overrides the
+  // overlay policy to keep surface overlays bounded. Widgets may override this
+  // to describe other transient interaction paint that can escape bounds().
   virtual Insets getInteractionInsets() const;
 
   virtual bool useOverlayOnActivation() const { return true; }

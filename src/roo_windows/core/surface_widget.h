@@ -44,6 +44,8 @@ class SurfaceWidget : public Widget {
   // called to ensure that the screen is properly redrawn.
   virtual uint8_t getElevation() const { return 0; }
 
+  OverlayType getOverlayType() const override { return OVERLAY_AREA; }
+
   bool fullyCoversBoundsWithOpaqueColors() const override {
     // By default, surface widgets are treated as opaquely covering their
     // rectangular interior whenever their shape is rectangular. This keeps the
