@@ -40,6 +40,8 @@ class TextBlock : public BasicWidget {
 
   void paint(const Canvas& s) const override;
 
+  Insets getInkInsets() const override;
+
   Dimensions getSuggestedMinimumDimensions() const override;
 
   PreferredSize getPreferredSize() const override {
@@ -48,6 +50,8 @@ class TextBlock : public BasicWidget {
   }
 
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
+
+  void onLayout(bool changed, const Rect& rect) override;
 
   const std::string& content() const { return value_; }
 
@@ -92,9 +96,16 @@ class TextBlock : public BasicWidget {
 
   void recalculateNaturalDimensions();
 
+  void setConservativeInkInsets();
+
+  void updateCachedInkInsetsFromCurrentBounds();
+
   void ensureLayout(XDim width_limit) const;
 
+  Rect getRenderedTextBounds() const;
+
   std::string value_;
+  Insets ink_insets_;
   Dimensions text_dims_;
   mutable Dimensions layout_dims_;
   mutable std::vector<LineLayout> layout_lines_;

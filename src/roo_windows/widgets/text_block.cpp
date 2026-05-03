@@ -64,6 +64,19 @@ uint16_t CountSpaces(roo::string_view text) {
   return count;
 }
 
+Insets InsetsFromContentBounds(const Rect& logical_bounds,
+                               const Rect& content_bounds) {
+  return Insets(content_bounds.xMin() - logical_bounds.xMin(),
+                content_bounds.yMin() - logical_bounds.yMin(),
+                logical_bounds.xMax() - content_bounds.xMax(),
+                logical_bounds.yMax() - content_bounds.yMax());
+}
+
+Insets ResolveConservativeTextInsets(const roo_display::Font& font) {
+  return Insets(std::min<int16_t>(0, font.metrics().glyphXMin()), 0,
+                std::min<int16_t>(0, font.metrics().minRsb()), 0);
+}
+
 void EllipsizeLine(TextBlock::LineLayout& line, const roo_display::Font& font,
                    int16_t max_width) {
   line.ellipsis_chars = 0;
@@ -344,6 +357,7 @@ TextBlock::TextBlock(const Environment& env, std::string value,
                      roo_display::Alignment alignment)
     : BasicWidget(env),
       value_(),
+      ink_insets_(Insets::Zero()),
       text_dims_(0, 0),
       layout_dims_(0, 0),
       layout_lines_(),
@@ -367,6 +381,20 @@ void TextBlock::invalidateLayoutCache() {
 void TextBlock::recalculateNaturalDimensions() {
   ensureLayout(0);
   text_dims_ = layout_dims_;
+}
+
+void TextBlock::setConservativeInkInsets() {
+  ink_insets_ =
+      value_.empty() ? Insets::Zero() : ResolveConservativeTextInsets(font_);
+}
+
+void TextBlock::updateCachedInkInsetsFromCurrentBounds() {
+  if (width() <= 0 || height() <= 0 || value_.empty()) {
+    ink_insets_ = Insets::Zero();
+    return;
+  }
+
+  ink_insets_ = InsetsFromContentBounds(bounds(), getRenderedTextBounds());
 }
 
 void TextBlock::ensureLayout(XDim width_limit) const {
@@ -444,6 +472,8 @@ void TextBlock::paint(const Canvas& canvas) const {
                    bounds(), adjustAlignment(alignment_));
 }
 
+Insets TextBlock::getInkInsets() const { return ink_insets_; }
+
 Dimensions TextBlock::getSuggestedMinimumDimensions() const {
   return text_dims_;
 }
@@ -459,12 +489,21 @@ Dimensions TextBlock::onMeasure(WidthSpec width, HeightSpec height) {
                     height.resolveSize(desired.height()));
 }
 
+void TextBlock::onLayout(bool changed, const Rect& rect) {
+  (void)changed;
+  (void)rect;
+  updateCachedInkInsetsFromCurrentBounds();
+}
+
 void TextBlock::setText(std::string value) {
   if (value_ == value) return;
+  Rect old_bounds = maxParentBounds();
   value_ = std::move(value);
   invalidateLayoutCache();
   recalculateNaturalDimensions();
-  setDirty();
+  setConservativeInkInsets();
+  invalidateInterior();
+  notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
   requestLayout();
 }
 
@@ -476,41 +515,107 @@ void TextBlock::setColor(roo_display::Color color) {
 
 void TextBlock::setAlignment(roo_display::Alignment alignment) {
   if (alignment_ == alignment) return;
+  Rect old_bounds = maxParentBounds();
   alignment_ = alignment;
-  setDirty();
+  updateCachedInkInsetsFromCurrentBounds();
+  invalidateInterior();
+  notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
 }
 
 void TextBlock::setWrapMode(TextWrapMode wrap_mode) {
   if (wrap_mode_ == wrap_mode) return;
+  Rect old_bounds = maxParentBounds();
   wrap_mode_ = wrap_mode;
   invalidateLayoutCache();
   recalculateNaturalDimensions();
-  setDirty();
+  setConservativeInkInsets();
+  invalidateInterior();
+  notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
   requestLayout();
 }
 
 void TextBlock::setTextAlign(TextAlign text_align) {
   if (text_align_ == text_align) return;
+  Rect old_bounds = maxParentBounds();
   text_align_ = text_align;
-  setDirty();
+  updateCachedInkInsetsFromCurrentBounds();
+  invalidateInterior();
+  notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
 }
 
 void TextBlock::setMaxLines(uint16_t max_lines) {
   if (max_lines_ == max_lines) return;
+  Rect old_bounds = maxParentBounds();
   max_lines_ = max_lines;
   invalidateLayoutCache();
   recalculateNaturalDimensions();
-  setDirty();
+  setConservativeInkInsets();
+  invalidateInterior();
+  notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
   requestLayout();
 }
 
 void TextBlock::setEllipsize(bool ellipsize) {
   if (ellipsize_ == ellipsize) return;
+  Rect old_bounds = maxParentBounds();
   ellipsize_ = ellipsize;
   invalidateLayoutCache();
   recalculateNaturalDimensions();
-  setDirty();
+  setConservativeInkInsets();
+  invalidateInterior();
+  notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
   requestLayout();
+}
+
+Rect TextBlock::getRenderedTextBounds() const {
+  if (width() <= 0 || height() <= 0 || value_.empty()) {
+    return bounds();
+  }
+
+  XDim width_limit = wrap_mode_ == TextWrapMode::kWordWrap
+                         ? width()
+                         : (ellipsize_ ? width() : 0);
+  ensureLayout(width_limit);
+  if (layout_lines_.empty() || layout_dims_.width() <= 0 ||
+      layout_dims_.height() <= 0) {
+    return bounds();
+  }
+
+  auto block_offset = ResolveAlignmentOffset(
+      bounds(), Rect(0, 0, layout_dims_.width() - 1, layout_dims_.height() - 1),
+      adjustAlignment(alignment_));
+  Rect rendered(block_offset.first, block_offset.second, block_offset.first,
+                block_offset.second);
+  bool has_rendered_pixels = false;
+  int16_t line_height = font_.metrics().maxHeight();
+
+  for (size_t i = 0; i < layout_lines_.size(); ++i) {
+    const auto& line = layout_lines_[i];
+    if (line.text.empty() && line.ellipsis_chars == 0) continue;
+
+    int16_t line_width = line.width;
+    if (text_align_ == TextAlign::kJustify && !line.ends_paragraph &&
+        line.spaces > 0 && layout_dims_.width() > line.width) {
+      line_width = layout_dims_.width();
+    }
+    int16_t line_x =
+        block_offset.first +
+        ResolveLineXOffset(line.width, layout_dims_.width(), text_align_);
+    int16_t line_y =
+        block_offset.second + static_cast<int16_t>(i) * line_height;
+
+    auto line_metrics = font_.getHorizontalStringMetrics(line.text);
+    int16_t line_left = line_x + std::min<int16_t>(0, line_metrics.glyphXMin());
+    int16_t line_right =
+        line_x + std::max<int16_t>(line_width - 1, line_metrics.glyphXMax());
+    Rect line_bounds(line_left, line_y, line_right,
+                     line_y + font_.metrics().maxHeight() - 1);
+    rendered =
+        has_rendered_pixels ? Rect::Extent(rendered, line_bounds) : line_bounds;
+    has_rendered_pixels = true;
+  }
+
+  return has_rendered_pixels ? rendered : bounds();
 }
 
 }  // namespace roo_windows

@@ -48,6 +48,43 @@ TEST(TextBlock, MaxLinesLimitsMeasuredHeight) {
   EXPECT_LE(dims.height(), 2 * block.font().metrics().maxHeight());
 }
 
+TEST(TextBlock, SingleLineContentBoundsReflectFontInk) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  const auto& font = font_body2();
+  TextBlock block(env, "abc", font, roo_display::kLeft | roo_display::kTop);
+  block.setPadding(PaddingSize::kNone);
+  block.setWrapMode(TextWrapMode::kNoWrap);
+
+  auto metrics = font.getHorizontalStringMetrics("abc");
+  int16_t advance = metrics.advance();
+  int16_t line_height = font.metrics().maxHeight();
+  block.layout(Rect(0, 0, advance - 1, line_height - 1));
+
+  EXPECT_EQ(Rect(std::min<int16_t>(0, metrics.glyphXMin()), 0,
+                 std::max<int16_t>(advance - 1, metrics.glyphXMax()),
+                 line_height - 1),
+            block.getContentBounds());
+}
+
+TEST(TextBlock, PendingWrappedLayoutUsesConservativeFontBounds) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  const auto& font = font_body2();
+  TextBlock block(env, "abc", font, roo_display::kLeft | roo_display::kTop);
+  block.setPadding(PaddingSize::kNone);
+
+  int16_t line_height = font.metrics().maxHeight();
+  block.layout(Rect(0, 0, 79, 2 * line_height - 1));
+
+  block.setText("ab");
+
+  EXPECT_EQ(Rect(std::min<int16_t>(0, font.metrics().glyphXMin()), 0,
+                 79 + std::max<int16_t>(0, -font.metrics().minRsb()),
+                 2 * line_height - 1),
+            block.getContentBounds());
+}
+
 class TextBlockGoldenTest : public testing::Test {
  protected:
   static constexpr int16_t kWidth = 360;
@@ -79,7 +116,7 @@ class TextBlockGoldenTest : public testing::Test {
     }
 
     Application app(&env_, display_);
-    app.add(WidgetRef(block),
+    app.add(block,
             roo_display::Box(8, 8, 8 + box_width - 1, 8 + render_height - 1));
     EXPECT_TRUE(app.refresh());
     return test::CaptureRgb(offscreen_.raster(), 8, 8, box_width,
@@ -111,8 +148,7 @@ TEST_F(TextBlockGoldenTest, JustifyExplicitParagraphBreakGolden) {
       TextAlign::kJustify, 300);
 
   EXPECT_TRUE(test::CompareOrUpdateGolden(
-      image,
-      "test/goldens/text_block/justify_paragraph_break.ppm",
+      image, "test/goldens/text_block/justify_paragraph_break.ppm",
       "text_block_justify_paragraph_break"));
 }
 
@@ -123,8 +159,7 @@ TEST_F(TextBlockGoldenTest, NonJustifiedMultilineGolden) {
       TextAlign::kStart, 300);
 
   EXPECT_TRUE(test::CompareOrUpdateGolden(
-      image,
-      "test/goldens/text_block/non_justify_multiline.ppm",
+      image, "test/goldens/text_block/non_justify_multiline.ppm",
       "text_block_non_justify_multiline"));
 }
 
@@ -135,8 +170,7 @@ TEST_F(TextBlockGoldenTest, JustifyParagraphClippedBottomGolden) {
       TextAlign::kJustify, 120, 72);
 
   EXPECT_TRUE(test::CompareOrUpdateGolden(
-      image,
-      "test/goldens/text_block/justify_paragraph_clipped.ppm",
+      image, "test/goldens/text_block/justify_paragraph_clipped.ppm",
       "text_block_justify_paragraph_clipped"));
 }
 
@@ -147,8 +181,7 @@ TEST_F(TextBlockGoldenTest, EllipsizeGolden) {
       TextAlign::kStart, 220, 0, 2, true);
 
   EXPECT_TRUE(test::CompareOrUpdateGolden(
-      image, "test/goldens/text_block/ellipsize.ppm",
-      "text_block_ellipsize"));
+      image, "test/goldens/text_block/ellipsize.ppm", "text_block_ellipsize"));
 }
 
 }  // namespace

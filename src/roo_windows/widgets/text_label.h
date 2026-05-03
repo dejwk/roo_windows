@@ -23,6 +23,8 @@ class TextLabel : public BasicWidget {
 
   void paint(const Canvas& canvas) const override;
 
+  Insets getInkInsets() const override;
+
   Dimensions getSuggestedMinimumDimensions() const override;
 
   const std::string& content() const { return value_; }
@@ -63,6 +65,8 @@ class StringViewLabel : public BasicWidget {
                   Gravity gravity);
 
   void paint(const Canvas& canvas) const override;
+
+  Insets getInkInsets() const override;
 
   Dimensions getSuggestedMinimumDimensions() const override;
 

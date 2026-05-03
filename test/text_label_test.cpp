@@ -5,6 +5,7 @@
 #include "gtest/gtest.h"
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
+#include "roo_display/ui/text_label.h"
 #include "roo_scheduler.h"
 #include "roo_windows.h"
 
@@ -95,10 +96,31 @@ TEST(TextLabel, SuggestedMinimumDimensionsMatchFontMetrics) {
             dims.height());
 }
 
+TEST(TextLabel, ContentBoundsFollowDrawableInkExtents) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  const auto& font = font_body2();
+  TextLabel label(env, "abc", font, kGravityLeft | kGravityMiddle);
+  label.setPadding(PaddingSize::kNone);
+
+  Dimensions dims = label.getSuggestedMinimumDimensions();
+  label.layout(Rect(0, 0, dims.width() - 1, dims.height() - 1));
+
+  auto metrics = font.getHorizontalStringMetrics("abc");
+  Rect anchor_bounds(0, -font.metrics().ascent() - font.metrics().linegap(),
+                     metrics.advance() - 1, -font.metrics().descent());
+  auto offset = ResolveAlignmentOffset(label.bounds(), anchor_bounds,
+                                       roo_display::kLeft | roo_display::kMiddle);
+  Rect expected = Rect(metrics.screen_extents()).translate(offset.first,
+                                                           offset.second);
+
+  EXPECT_EQ(expected, label.getContentBounds());
+}
+
 TEST_F(TextLabelRenderTest, SetTextAndClearTextAffectRenderedPixels) {
   auto label = std::make_unique<TextLabel>(env_, "A", font_body2());
   TextLabel* label_ptr = label.get();
-  app_.add(WidgetRef(std::move(label)), Box(8, 8, 80, 32));
+  app_.add(std::move(label), Box(8, 8, 80, 32));
 
   ASSERT_TRUE(refresh());
   Color bg = QuantizeToArgb4444(env_.theme().color.background);
@@ -125,8 +147,8 @@ TEST_F(TextLabelRenderTest, GravityChangesHorizontalPlacement) {
   left->setPadding(PaddingSize::kNone);
   right->setPadding(PaddingSize::kNone);
 
-  app_.add(WidgetRef(std::move(left)), Box(4, 6, 44, 28));
-  app_.add(WidgetRef(std::move(right)), Box(4, 34, 44, 56));
+  app_.add(std::move(left), Box(4, 6, 44, 28));
+  app_.add(std::move(right), Box(4, 34, 44, 56));
 
   ASSERT_TRUE(refresh());
   Color bg = QuantizeToArgb4444(env_.theme().color.background);
@@ -145,8 +167,8 @@ TEST_F(TextLabelRenderTest, TransparentColorMatchesExplicitDefaultColor) {
       env_, "Hi", font_body2(), env_.theme().color.onBackground,
       kGravityLeft | kGravityMiddle);
 
-  app_.add(WidgetRef(std::move(implicit)), Box(4, 6, 44, 28));
-  app_.add(WidgetRef(std::move(explicit_default)), Box(4, 34, 44, 56));
+  app_.add(std::move(implicit), Box(4, 6, 44, 28));
+  app_.add(std::move(explicit_default), Box(4, 34, 44, 56));
 
   ASSERT_TRUE(refresh());
   Color bg = QuantizeToArgb4444(env_.theme().color.background);

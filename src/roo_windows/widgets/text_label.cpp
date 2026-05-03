@@ -6,6 +6,30 @@
 
 namespace roo_windows {
 
+namespace {
+
+Insets InsetsFromContentBounds(const Rect& logical_bounds,
+                               const Rect& content_bounds) {
+  return Insets(content_bounds.xMin() - logical_bounds.xMin(),
+                content_bounds.yMin() - logical_bounds.yMin(),
+                logical_bounds.xMax() - content_bounds.xMax(),
+                logical_bounds.yMax() - content_bounds.yMax());
+}
+
+Rect ResolveLabelContentBounds(const Rect& logical_bounds,
+                               const roo_display::Font& font,
+                               roo::string_view text,
+                               roo_display::Alignment alignment) {
+  auto metrics = font.getHorizontalStringMetrics(text);
+  Rect anchor_bounds(0, -font.metrics().ascent() - font.metrics().linegap(),
+                     metrics.advance() - 1, -font.metrics().descent());
+  auto offset =
+      ResolveAlignmentOffset(logical_bounds, anchor_bounds, alignment);
+  return Rect(metrics.screen_extents()).translate(offset.first, offset.second);
+}
+
+}  // namespace
+
 TextLabel::TextLabel(const Environment& env, std::string value,
                      const roo_display::Font& font)
     : TextLabel(env, std::move(value), font, kGravityLeft | kGravityMiddle) {}
@@ -31,6 +55,13 @@ void TextLabel::paint(const Canvas& canvas) const {
                    adjustAlignment(gravity_.asAlignment()));
 }
 
+Insets TextLabel::getInkInsets() const {
+  return InsetsFromContentBounds(
+      bounds(),
+      ResolveLabelContentBounds(bounds(), font_, value_,
+                                adjustAlignment(gravity_.asAlignment())));
+}
+
 Dimensions TextLabel::getSuggestedMinimumDimensions() const {
   // NOTE: we could consider pre-calculating and storing these (and avoid
   // re-measuring in paint), but it is an extra 20 bytes per label so it is
@@ -43,9 +74,10 @@ Dimensions TextLabel::getSuggestedMinimumDimensions() const {
 
 void TextLabel::setText(std::string value) {
   if (value_ == value) return;
+  Rect old_bounds = maxParentBounds();
   value_ = std::move(value);
-  // setDirty();
   invalidateInterior();
+  notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
   requestLayout();
 }
 
@@ -53,9 +85,10 @@ void TextLabel::setText(const char* value) { setText(roo::string_view(value)); }
 
 void TextLabel::setText(roo::string_view value) {
   if (value_ == value) return;
+  Rect old_bounds = maxParentBounds();
   value_ = std::string((const char*)value.data(), value.size());
-  // setDirty();
   invalidateInterior();
+  notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
   requestLayout();
 }
 
@@ -72,9 +105,10 @@ void TextLabel::setTextvf(const char* format, va_list arg) {
 
 void TextLabel::clearText() {
   if (value_.empty()) return;
+  Rect old_bounds = maxParentBounds();
   value_.clear();
-  // setDirty();
   invalidateInterior();
+  notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
   requestLayout();
 }
 
@@ -104,6 +138,13 @@ void StringViewLabel::paint(const Canvas& canvas) const {
                    adjustAlignment(gravity_.asAlignment()));
 }
 
+Insets StringViewLabel::getInkInsets() const {
+  return InsetsFromContentBounds(
+      bounds(),
+      ResolveLabelContentBounds(bounds(), font_, value_,
+                                adjustAlignment(gravity_.asAlignment())));
+}
+
 Dimensions StringViewLabel::getSuggestedMinimumDimensions() const {
   // NOTE: we could consider pre-calculating and storing these (and avoid
   // re-measuring in paint), but it is an extra 20 bytes per label so it is
@@ -116,17 +157,19 @@ Dimensions StringViewLabel::getSuggestedMinimumDimensions() const {
 
 void StringViewLabel::setText(roo::string_view value) {
   if (value_ == value) return;
+  Rect old_bounds = maxParentBounds();
   value_ = std::move(value);
-  // setDirty();
   invalidateInterior();
+  notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
   requestLayout();
 }
 
 void StringViewLabel::clearText() {
   if (value_.empty()) return;
+  Rect old_bounds = maxParentBounds();
   value_ = "";
-  // setDirty();
   invalidateInterior();
+  notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
   requestLayout();
 }
 
