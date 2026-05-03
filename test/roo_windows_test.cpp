@@ -195,8 +195,8 @@ TEST_F(RooWindowsRenderTest, LaterAddedChildPaintsOnTop) {
   auto front =
       std::make_unique<ColorBoxWidget>(env_, color::Blue, Dimensions(20, 20));
 
-  app_.add(WidgetRef(std::move(back)), Box(4, 4, 30, 30));
-  app_.add(WidgetRef(std::move(front)), Box(16, 16, 40, 40));
+  app_.add(std::move(back), Box(4, 4, 30, 30));
+  app_.add(std::move(front), Box(16, 16, 40, 40));
 
   ASSERT_TRUE(refresh());
   EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(8, 8));
@@ -210,8 +210,8 @@ TEST_F(RooWindowsRenderTest, HideAndShowRestoresUnderlyingContent) {
       std::make_unique<ColorBoxWidget>(env_, color::Blue, Dimensions(20, 20));
   ColorBoxWidget* front_ptr = front.get();
 
-  app_.add(WidgetRef(std::move(back)), Box(4, 4, 30, 30));
-  app_.add(WidgetRef(std::move(front)), Box(16, 16, 40, 40));
+  app_.add(std::move(back), Box(4, 4, 30, 30));
+  app_.add(std::move(front), Box(16, 16, 40, 40));
 
   ASSERT_TRUE(refresh());
   EXPECT_EQ(QuantizeToArgb4444(color::Blue), pixelAt(20, 20));
@@ -233,8 +233,8 @@ TEST_F(RooWindowsRenderTest, SurfaceWidgetShadowBoundsExtendPastParentBounds) {
   ElevatedColorBoxWidget* surface_ptr = surface.get();
   TouchSpyWidget* plain_ptr = plain.get();
 
-  app_.add(WidgetRef(std::move(surface)), Box(16, 16, 40, 40));
-  app_.add(WidgetRef(std::move(plain)), Box(2, 2, 12, 12));
+  app_.add(std::move(surface), Box(16, 16, 40, 40));
+  app_.add(std::move(plain), Box(2, 2, 12, 12));
 
   Rect surface_bounds = surface_ptr->parent_bounds();
   Rect shadow_bounds = surface_ptr->getParentDecorationBounds();
@@ -273,7 +273,7 @@ TEST_F(RooWindowsRenderTest, UnclippedChildMaxBoundsIncludeInkOverflow) {
   InkBoundsWidget* child_ptr = child.get();
   child_ptr->setParentClipMode(ParentClipMode::kUnclipped);
 
-  app_.add(WidgetRef(std::move(child)), Box(1, 6, 10, 13));
+  app_.add(std::move(child), Box(1, 6, 10, 13));
 
   EXPECT_EQ(Rect(-2, 6, 10, 13), child_ptr->maxParentBounds());
   EXPECT_EQ(Rect(-2, 0, 63, 47), app_.root().maxBounds());
@@ -286,8 +286,8 @@ TEST_F(RooWindowsRenderTest, HideAndShowRestoresShadowOverflowRegion) {
                                                         Dimensions(20, 20), 12);
   ElevatedColorBoxWidget* front_ptr = front.get();
 
-  app_.add(WidgetRef(std::move(back)), Box(0, 0, 47, 39));
-  app_.add(WidgetRef(std::move(front)), Box(16, 12, 35, 31));
+  app_.add(std::move(back), Box(0, 0, 47, 39));
+  app_.add(std::move(front), Box(16, 12, 35, 31));
 
   ASSERT_TRUE(refresh());
   Color shadow_pixel = pixelAt(14, 22);
@@ -309,8 +309,8 @@ TEST_F(RooWindowsRenderTest, RoundedSurfaceInvalidationRestoresExposedCorners) {
       env_, color::Blue, Dimensions(20, 20));
   MutableShapeColorBoxWidget* front_ptr = front.get();
 
-  app_.add(WidgetRef(std::move(back)), Box(0, 0, 47, 39));
-  app_.add(WidgetRef(std::move(front)), Box(16, 12, 35, 31));
+  app_.add(std::move(back), Box(0, 0, 47, 39));
+  app_.add(std::move(front), Box(16, 12, 35, 31));
 
   ASSERT_TRUE(refresh());
   EXPECT_EQ(QuantizeToArgb4444(color::Blue), pixelAt(16, 12));
@@ -326,8 +326,8 @@ TEST_F(RooWindowsRenderTest, TouchDispatchPrefersTopmostVisibleChild) {
   TouchSpyWidget* back_ptr = back.get();
   TouchSpyWidget* front_ptr = front.get();
 
-  app_.add(WidgetRef(std::move(back)), Box(0, 0, 24, 24));
-  app_.add(WidgetRef(std::move(front)), Box(10, 10, 34, 34));
+  app_.add(std::move(back), Box(0, 0, 24, 24));
+  app_.add(std::move(front), Box(10, 10, 34, 34));
 
   Widget* target = app_.root().dispatchTouchDownEvent(15, 15);
   ASSERT_EQ(front_ptr, target);
@@ -344,7 +344,7 @@ TEST_F(RooWindowsRenderTest, TouchDispatchPrefersTopmostVisibleChild) {
 TEST_F(RooWindowsRenderTest, RefreshCanResumeAfterDeadlineExceeded) {
   auto box =
       std::make_unique<ColorBoxWidget>(env_, color::Green, Dimensions(20, 20));
-  app_.add(WidgetRef(std::move(box)), Box(8, 8, 36, 36));
+  app_.add(std::move(box), Box(8, 8, 36, 36));
 
   EXPECT_FALSE(refresh(roo_time::Uptime::Start()));
   EXPECT_NE(QuantizeToArgb4444(color::Green), pixelAt(16, 16));
