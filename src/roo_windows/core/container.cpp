@@ -244,7 +244,12 @@ void Container::childHidden(const Widget* child) {
 }
 
 void Container::childShown(const Widget* child) {
-  if (child->getElevation() > 0 ||
+  // Do not key this off elevation alone: the generic container path only cares
+  // whether the child's visual footprint extends beyond parent_bounds(), not
+  // why it does so. Rounded corners remain a separate case because they can
+  // expose underlying content without enlarging the bounding rectangle.
+  // This still assumes transient overlays stay within logical bounds.
+  if (child->getParentVisualBounds() != child->parent_bounds() ||
       child->getBorderStyle().hasRoundedCorners()) {
     invalidateBeneath(child->getParentVisualBounds(), child,
                       child->getParentClipMode() == ParentClipMode::kClipped);

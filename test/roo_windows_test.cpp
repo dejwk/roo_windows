@@ -202,6 +202,29 @@ TEST_F(RooWindowsRenderTest, SurfaceWidgetShadowBoundsExtendPastParentBounds) {
   EXPECT_EQ(plain_ptr->parent_bounds(), plain_ptr->getParentVisualBounds());
 }
 
+TEST_F(RooWindowsRenderTest, HideAndShowRestoresShadowOverflowRegion) {
+  auto back =
+      std::make_unique<ColorBoxWidget>(env_, color::Red, Dimensions(48, 40));
+  auto front = std::make_unique<ElevatedColorBoxWidget>(
+      env_, color::Blue, Dimensions(20, 20), 12);
+  ElevatedColorBoxWidget* front_ptr = front.get();
+
+  app_.add(WidgetRef(std::move(back)), Box(0, 0, 47, 39));
+  app_.add(WidgetRef(std::move(front)), Box(16, 12, 35, 31));
+
+  ASSERT_TRUE(refresh());
+  Color shadow_pixel = pixelAt(14, 22);
+  EXPECT_NE(QuantizeToArgb4444(color::Red), shadow_pixel);
+
+  front_ptr->setVisibility(Visibility::kInvisible);
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(14, 22));
+
+  front_ptr->setVisibility(Visibility::kVisible);
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(shadow_pixel, pixelAt(14, 22));
+}
+
 TEST_F(RooWindowsRenderTest, TouchDispatchPrefersTopmostVisibleChild) {
   auto back = std::make_unique<TouchSpyWidget>(env_, Dimensions(20, 20));
   auto front = std::make_unique<TouchSpyWidget>(env_, Dimensions(20, 20));

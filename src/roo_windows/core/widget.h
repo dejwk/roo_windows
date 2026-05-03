@@ -114,8 +114,22 @@ class Widget {
 
   // Returns this widget's visual footprint in the parent's coordinates.
   // For plain widgets, this is just parent_bounds(). Surface-owning widgets may
-  // expand it to include decoration overflow such as shadows.
+  // expand it to include persistent decoration overflow such as shadows.
+  //
+  // Important: this is intentionally narrower than "everything paint() might
+  // ever touch". Today it is used by shared clipping/invalidation code for
+  // surface overflow. It does not include transient overlays, which are still
+  // assumed to stay within logical bounds. If a future clipping redesign lets
+  // non-surface widgets paint outside bounds, that should likely use a
+  // separate contract rather than silently widening this one.
   virtual Rect getParentVisualBounds() const;
+
+  // Returns this widget's visual footprint in the widget's local coordinates.
+  // Kept as a helper so generic paint code can reason about overflow without
+  // hard-coding surface concepts such as elevation.
+  Rect getVisualBounds() const {
+    return getParentVisualBounds().translate(-offsetLeft(), -offsetTop());
+  }
 
   Rect getSloppyTouchBounds() const;
 

@@ -176,7 +176,10 @@ void SurfaceWidget::invalidateInterior() {
   if (getBorderStyle().hasRoundedCorners()) {
     notifyParentInvalidatedRegion(maxParentBounds());
   }
-  setDirty();
+  // Full surface invalidation must dirty decoration overflow as well.
+  // Parent invalidation above repaints what lies underneath the overflow;
+  // this makes the surface repaint the overflow pixels themselves.
+  setDirty(Rect::Extent(maxBounds(), getVisualBounds()));
 }
 
 void Widget::invalidateInterior(const Rect& rect) {
@@ -510,8 +513,12 @@ void Widget::paintWidget(const Canvas& canvas, Clipper& clipper) {
   Canvas my_canvas = prepareCanvas(canvas);
   bool empty = my_canvas.clip_box().empty();
   if (empty) {
+    // Nothing remains inside logical bounds. If the visual footprint is
+    // larger, finalizePaintWidget() may still need to repaint or exclude the
+    // overflow region (currently surface decoration overflow such as shadow).
+    // This intentionally does not treat overlays as overflow.
     markCleanDescending();
-    if (getElevation() == 0) return;
+    if (getVisualBounds() == bounds()) return;
   }
   OverlaySpec overlay_spec(*this, my_canvas);
   if (!empty) {
