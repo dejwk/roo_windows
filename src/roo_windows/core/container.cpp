@@ -262,6 +262,10 @@ void Container::childShown(const Widget* child) {
 void Container::childInvalidatedRegion(const Widget* child, Rect rect) {
   invalidateBeneath(rect, child,
                     child->getParentClipMode() == ParentClipMode::kClipped);
+  if (child->getParentClipMode() == ParentClipMode::kUnclipped &&
+      parent() != nullptr && !bounds().contains(rect)) {
+    notifyParentInvalidatedRegion(rect.translate(offsetLeft(), offsetTop()));
+  }
 }
 
 void Container::unclippedChildRectHidden(const Rect& rect) {

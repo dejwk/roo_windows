@@ -1,4 +1,5 @@
 #include "roo_windows/core/press_overlay.h"
+#include "roo_windows/containers/flex_layout.h"
 #include "roo_windows/widgets/checkbox.h"
 #include "roo_windows/widgets/icon.h"
 #include "roo_windows/widgets/radio_button.h"
@@ -172,6 +173,92 @@ TEST_F(RooWindowsRenderTest, PointClickAnimationSettlesIntoStaticPressOverlay) {
   ASSERT_TRUE(refresh());
   EXPECT_EQ(outer_background_pixel, pixelAt(12, 20));
   EXPECT_EQ(center_background_pixel, pixelAt(28, 20));
+}
+
+TEST_F(RooWindowsRenderTest, PointOverlayCanTintFlexOwnedGapSpace) {
+  auto layout = std::make_unique<FlexLayout>(env_, FlexDirection::kRow);
+  layout->setJustifyContent(JustifyContent::kCenter);
+  layout->setAlignItems(AlignItems::kCenter);
+  FlexLayout* layout_ptr = layout.get();
+
+  auto front = std::make_unique<PointOverlayBoxWidget>(env_, color::Blue,
+                                                       Dimensions(18, 18));
+  PointOverlayBoxWidget* front_ptr = front.get();
+  layout->add(std::move(front));
+
+  app_.add(std::move(layout), Box(8, 8, 55, 39));
+
+  ASSERT_TRUE(refresh());
+
+  XDim abs_x;
+  YDim abs_y;
+  front_ptr->getAbsoluteOffset(abs_x, abs_y);
+  Rect interaction_bounds = front_ptr->getInteractionBounds().translate(abs_x, abs_y);
+  Rect logical_bounds = front_ptr->bounds().translate(abs_x, abs_y);
+  Rect layout_bounds = layout_ptr->parent_bounds();
+
+  int16_t gap_x =
+      (interaction_bounds.xMin() > layout_bounds.xMin()
+           ? interaction_bounds.xMin()
+           : layout_bounds.xMin()) +
+      1;
+  int16_t gap_y = logical_bounds.yMin() + logical_bounds.height() / 2;
+  ASSERT_TRUE(interaction_bounds.contains(gap_x, gap_y));
+  ASSERT_FALSE(logical_bounds.contains(gap_x, gap_y));
+  ASSERT_TRUE(layout_bounds.contains(gap_x, gap_y));
+
+  Color gap_background_pixel = pixelAt(gap_x, gap_y);
+
+  front_ptr->setActivated(true);
+  ASSERT_TRUE(refresh());
+  EXPECT_NE(gap_background_pixel, pixelAt(gap_x, gap_y));
+
+  front_ptr->setActivated(false);
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(gap_background_pixel, pixelAt(gap_x, gap_y));
+}
+
+TEST_F(RooWindowsRenderTest,
+       UnclippedPointOverlayPropagatesPastContainerBounds) {
+  auto back =
+      std::make_unique<ColorBoxWidget>(env_, color::Red, Dimensions(64, 48));
+  auto layout = std::make_unique<FlexLayout>(env_, FlexDirection::kRow);
+  layout->setJustifyContent(JustifyContent::kCenter);
+  layout->setAlignItems(AlignItems::kCenter);
+  FlexLayout* layout_ptr = layout.get();
+
+  auto front = std::make_unique<PointOverlayBoxWidget>(env_, color::Blue,
+                                                       Dimensions(18, 18));
+  PointOverlayBoxWidget* front_ptr = front.get();
+  front_ptr->setParentClipMode(ParentClipMode::kUnclipped);
+  layout->add(std::move(front));
+
+  app_.add(std::move(back), Box(0, 0, 63, 47));
+  app_.add(std::move(layout), Box(20, 12, 37, 29));
+
+  ASSERT_TRUE(refresh());
+
+  XDim abs_x;
+  YDim abs_y;
+  front_ptr->getAbsoluteOffset(abs_x, abs_y);
+  Rect interaction_bounds = front_ptr->getInteractionBounds().translate(abs_x, abs_y);
+  Rect layout_bounds = layout_ptr->parent_bounds();
+
+  int16_t overflow_x = layout_bounds.xMin() - 1;
+  int16_t overflow_y = layout_bounds.yMin() + layout_bounds.height() / 2;
+  ASSERT_TRUE(interaction_bounds.contains(overflow_x, overflow_y));
+  ASSERT_FALSE(layout_bounds.contains(overflow_x, overflow_y));
+
+  Color outside_background_pixel = pixelAt(overflow_x, overflow_y);
+  EXPECT_EQ(QuantizeToArgb4444(color::Red), outside_background_pixel);
+
+  front_ptr->setActivated(true);
+  ASSERT_TRUE(refresh());
+  EXPECT_NE(outside_background_pixel, pixelAt(overflow_x, overflow_y));
+
+  front_ptr->setActivated(false);
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(outside_background_pixel, pixelAt(overflow_x, overflow_y));
 }
 
 }  // namespace
