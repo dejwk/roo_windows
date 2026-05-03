@@ -8,7 +8,6 @@
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/press_overlay.h"
 #include "roo_windows/core/rtti.h"
-#include "roo_windows/decoration/decoration.h"
 
 #ifndef MLOG_roo_windows_layout
 #define MLOG_roo_windows_layout 0
@@ -125,37 +124,13 @@ YDim Widget::offsetBottom() const {
 
 Rect Widget::getParentDecorationBounds() const { return parent_bounds(); }
 
-bool SurfaceWidget::hasDecorationOverflow() const { return getElevation() > 0; }
-
-Rect SurfaceWidget::getParentDecorationBounds() const {
-  return CalculateShadowExtents(parent_bounds(), getElevation());
-}
-
 Rect Widget::getSloppyTouchParentBounds() const {
   return slopify(parent_bounds());
 }
 
 Rect Widget::getSloppyTouchBounds() const { return slopify(bounds()); }
 
-Color SurfaceWidget::effectiveBackground() const {
-  roo_display::Color bgcolor = background();
-  return bgcolor.isOpaque() || parent() == nullptr
-             ? bgcolor
-             : roo_display::AlphaBlend(parent()->effectiveBackground(),
-                                       bgcolor);
-}
-
 ColorRole Widget::effectiveContainerRole() const {
-  return parent() != nullptr ? parent()->effectiveContainerRole()
-                             : ColorRole::kBackground;
-}
-
-ColorRole SurfaceWidget::effectiveContainerRole() const {
-  ColorRole role = containerRole();
-  if (role != ColorRole::kUndefined) {
-    return role;
-  }
-
   return parent() != nullptr ? parent()->effectiveContainerRole()
                              : ColorRole::kBackground;
 }
@@ -176,36 +151,9 @@ void Widget::invalidateInterior() {
   setDirty();
 }
 
-void SurfaceWidget::invalidateInterior() {
-  invalidateDescending();
-  if (getBorderStyle().hasRoundedCorners()) {
-    notifyParentInvalidatedRegion(maxParentBounds());
-  }
-  // A full repaint of a surface widget must dirty persistent decoration
-  // overflow as well. Parent invalidation above repaints what lies underneath
-  // the overflow; this makes the widget repaint the overflow pixels
-  // themselves.
-  setDirty(Rect::Extent(maxBounds(), getDecorationBounds()));
-}
-
 void Widget::invalidateInterior(const Rect& rect) {
   invalidateDescending(rect);
   setDirty(rect);
-}
-
-void SurfaceWidget::invalidateInterior(const Rect& rect) {
-  invalidateDescending(rect);
-  if (getBorderStyle().hasRoundedCorners()) {
-    notifyParentInvalidatedRegion(rect.translate(offsetLeft(), offsetTop()));
-  }
-  setDirty(rect);
-}
-
-void SurfaceWidget::elevationChanged(int higherElevation) {
-  if (higherElevation <= 0 || parent() == nullptr) return;
-  if (getBorderStyle().hasRoundedCorners()) setDirty();
-  notifyParentInvalidatedRegion(
-      CalculateShadowExtents(parent_bounds(), higherElevation));
 }
 
 void Widget::requestLayout() {
@@ -499,16 +447,6 @@ Canvas Widget::prepareCanvas(const Canvas& in) {
   return canvas;
 }
 
-Canvas SurfaceWidget::prepareCanvas(const Canvas& in) {
-  Canvas canvas = Widget::prepareCanvas(in);
-  Color bg = background();
-  if (!isEnabled()) {
-    bg.set_a(bg.a() / 2);
-  }
-  canvas.set_bgcolor(roo_display::AlphaBlend(canvas.bgcolor(), bg));
-  return canvas;
-}
-
 void Widget::paintWidget(const Canvas& canvas, Clipper& clipper) {
   if (!isVisible()) {
     markCleanDescending();
@@ -608,19 +546,6 @@ void Widget::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
 
 Canvas Widget::prepareContentsCanvas(const Canvas& in) { return in; }
 
-Canvas SurfaceWidget::prepareContentsCanvas(const Canvas& in) {
-  Canvas canvas = in;
-  BorderStyle border_style = getBorderStyle().trim(width(), height());
-  uint8_t border_thickness = border_style.getThickness();
-  if (border_thickness > 0) {
-    canvas.clip(roo_display::Box(
-        border_thickness + canvas.dx(), border_thickness + canvas.dy(),
-        width() - border_thickness - 1 + canvas.dx(),
-        height() - border_thickness - 1 + canvas.dy()));
-  }
-  return canvas;
-}
-
 void Widget::finalizePaintWidget(const Canvas& canvas, Clipper& clipper,
                                  const OverlaySpec& overlay_spec) const {
   (void)overlay_spec;
@@ -633,37 +558,6 @@ void Widget::finalizePaintWidget(const Canvas& canvas, Clipper& clipper,
 }
 
 Rect Widget::getDirectPaintExclusionBounds() const { return bounds(); }
-
-void SurfaceWidget::finalizePaintWidget(const Canvas& canvas, Clipper& clipper,
-                                        const OverlaySpec& overlay_spec) const {
-  emitSurfaceDecoration(canvas, clipper, overlay_spec);
-  Widget::finalizePaintWidget(canvas, clipper, overlay_spec);
-}
-
-void SurfaceWidget::emitSurfaceDecoration(
-    const Canvas& canvas, Clipper& clipper,
-    const OverlaySpec& overlay_spec) const {
-  BorderStyle border_style = getBorderStyle().trim(width(), height());
-  uint8_t border_thickness = border_style.getThickness();
-  uint8_t elevation = getElevation();
-  if (elevation != 0 || border_thickness != 0) {
-    roo_display::Box absolute_bounds(canvas.dx(), canvas.dy(),
-                                     width() - 1 + canvas.dx(),
-                                     height() - 1 + canvas.dy());
-    clipper.addDecoration(canvas.clip_box(), absolute_bounds, elevation,
-                          overlay_spec, canvas.bgcolor(),
-                          border_style.corner_radii(),
-                          border_style.outline_width(),
-                          AlphaBlend(canvas.bgcolor(), getOutlineColor()));
-  }
-}
-
-Rect SurfaceWidget::getDirectPaintExclusionBounds() const {
-  BorderStyle border_style = getBorderStyle().trim(width(), height());
-  uint8_t border_thickness = border_style.getThickness();
-  return Rect(border_thickness, border_thickness,
-              width() - border_thickness - 1, height() - border_thickness - 1);
-}
 
 Widget* Widget::dispatchTouchDownEvent(XDim x, YDim y) {
   return bounds().contains(x, y) && onTouchDown(x, y) ? this : nullptr;

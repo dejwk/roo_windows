@@ -7,8 +7,8 @@
 #include "roo_display/color/color.h"
 #include "roo_display/filter/foreground.h"
 #include "roo_windows/core/environment.h"
+#include "roo_windows/core/surface_widget.h"
 #include "roo_windows/core/theme.h"
-#include "roo_windows/core/widget.h"
 #include "roo_windows/core/widget_ref.h"
 
 namespace roo_windows {

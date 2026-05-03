@@ -1,0 +1,88 @@
+#pragma once
+
+#include "roo_windows/core/widget.h"
+
+namespace roo_windows {
+
+// Explicit branch for widgets that own surface semantics such as background,
+// border, outline, elevation, and surface-specific exclusion geometry.
+class SurfaceWidget : public Widget {
+ public:
+  using Widget::Widget;
+
+  // Returns this widget's background. Transparent by default. Normally
+  // overridden by panels, which usually have opaque backgrounds.
+  virtual Color background() const { return roo_display::color::Transparent; }
+
+  // Returns the semantic container role owned by this surface widget. This is
+  // the surface-facing public accessor. Returning kUndefined means that this
+  // surface does not introduce a new role and instead inherits the effective
+  // role from its ancestors.
+  virtual ColorRole containerRole() const { return ColorRole::kUndefined; }
+
+  ColorRole effectiveContainerRole() const override;
+
+  // Returns the effective background color of this widget. If this widget has a
+  // non-opaque background, it is returned. If this widget has a fully
+  // transparent background, the parent's effective background is returned.
+  // Otherwise, if this widget has a semi-transparent background, the returned
+  // color is the alpha-blend of the parent's effective background and this
+  // widget's background.
+  virtual Color effectiveBackground() const;
+
+  // Has no effect when getBorderStyle() reports outline_width = 0.
+  virtual Color getOutlineColor() const { return theme().color.primary; }
+
+  // Returns the border style of this widget. By default, surface widgets have
+  // sharp corners and no outline. Subclasses can override.
+  virtual BorderStyle getBorderStyle() const { return BorderStyle(); }
+
+  // Returns the current elevation of the widget. Non-zero elevation causes a
+  // shadow to be drawn. The elevation can be in the range [0-31]. By default,
+  // surface widgets have elevation = 0. Subclasses can override. When the
+  // reported elevation changes in the subclass, elevationChanged() must be
+  // called to ensure that the screen is properly redrawn.
+  virtual uint8_t getElevation() const { return 0; }
+
+  bool fullyCoversBoundsWithOpaqueColors() const override {
+    // By default, surface widgets are treated as opaquely covering their
+    // rectangular interior whenever their shape is rectangular. This keeps the
+    // generic attach-time invalidation path independent from background()
+    // lookups. Surface widgets that intentionally use translucent fills must
+    // override this hook explicitly.
+    return !getBorderStyle().hasRoundedCorners();
+  }
+
+  bool hasDecorationOverflow() const override;
+
+  Rect getParentDecorationBounds() const override;
+
+  void invalidateInterior() override;
+
+  void invalidateInterior(const Rect& rect) override;
+
+ protected:
+  // Should be called by a child whose elevation has changed, and the child
+  // wants the shadow to be redrawn. The argument should indicate the higher of
+  // {before, after} elevations.
+  void elevationChanged(int higherElevation);
+
+  void finalizePaintWidget(const Canvas& s, Clipper& clipper,
+                           const OverlaySpec& overlay_spec) const override;
+
+  Canvas prepareCanvas(const Canvas& in) override;
+
+  Canvas prepareContentsCanvas(const Canvas& in) override;
+
+  // Surface widgets refine the generic exclusion contract to the surface
+  // interior they actually own.
+  Rect getDirectPaintExclusionBounds() const override;
+
+ private:
+  // Emits surface-owned decoration such as shadow and outline. The generic
+  // Widget finalization path intentionally does not know about these effects.
+  void emitSurfaceDecoration(const Canvas& s, Clipper& clipper,
+                             const OverlaySpec& overlay_spec) const;
+};
+
+}  // namespace roo_windows

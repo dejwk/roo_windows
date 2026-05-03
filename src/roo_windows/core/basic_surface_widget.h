@@ -2,7 +2,7 @@
 
 #include "roo_windows/core/margins.h"
 #include "roo_windows/core/padding.h"
-#include "roo_windows/core/widget.h"
+#include "roo_windows/core/surface_widget.h"
 
 namespace roo_windows {
 
