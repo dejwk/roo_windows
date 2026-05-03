@@ -85,6 +85,32 @@ TEST(TextBlock, PendingWrappedLayoutUsesConservativeFontBounds) {
             block.getContentBounds());
 }
 
+TEST(TextBlock, SetPaddingRequestsLayoutAndUpdatesContentBounds) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  const auto& font = font_body2();
+  TextBlock block(env, "abc", font, roo_display::kLeft | roo_display::kTop);
+  block.setWrapMode(TextWrapMode::kNoWrap);
+  block.setPadding(PaddingSize::kNone);
+
+  auto metrics = font.getHorizontalStringMetrics("abc");
+  int16_t advance = metrics.advance();
+  int16_t line_height = font.metrics().maxHeight();
+  block.layout(Rect(0, 0, advance + 15, line_height + 11));
+
+  Rect without_padding = block.getContentBounds();
+
+  block.setPadding(PaddingSize::kSmall);
+  EXPECT_TRUE(block.isLayoutRequested());
+  block.measure(WidthSpec::Exactly(advance + 16),
+                HeightSpec::Exactly(line_height + 12));
+  block.layout(block.parent_bounds());
+
+  EXPECT_NE(without_padding, block.getContentBounds());
+  EXPECT_GT(block.getContentBounds().xMin(), without_padding.xMin());
+  EXPECT_GT(block.getContentBounds().yMin(), without_padding.yMin());
+}
+
 class TextBlockGoldenTest : public testing::Test {
  protected:
   static constexpr int16_t kWidth = 360;

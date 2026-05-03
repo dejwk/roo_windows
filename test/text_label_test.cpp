@@ -109,10 +109,10 @@ TEST(TextLabel, ContentBoundsFollowDrawableInkExtents) {
   auto metrics = font.getHorizontalStringMetrics("abc");
   Rect anchor_bounds(0, -font.metrics().ascent() - font.metrics().linegap(),
                      metrics.advance() - 1, -font.metrics().descent());
-  auto offset = ResolveAlignmentOffset(label.bounds(), anchor_bounds,
-                                       roo_display::kLeft | roo_display::kMiddle);
-  Rect expected = Rect(metrics.screen_extents()).translate(offset.first,
-                                                           offset.second);
+  auto offset = ResolveAlignmentOffset(
+      label.bounds(), anchor_bounds, roo_display::kLeft | roo_display::kMiddle);
+  Rect expected =
+      Rect(metrics.screen_extents()).translate(offset.first, offset.second);
 
   EXPECT_EQ(expected, label.getContentBounds());
 }

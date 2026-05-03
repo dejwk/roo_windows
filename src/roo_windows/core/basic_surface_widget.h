@@ -21,7 +21,11 @@ class BasicSurfaceWidget : public SurfaceWidget {
   }
 
   void setPadding(PaddingSize h, PaddingSize v) {
-    padding_ = ((int)h << 4) | (int)v;
+    uint8_t padding = ((int)h << 4) | (int)v;
+    if (padding_ == padding) return;
+    padding_ = padding;
+    invalidateInterior();
+    requestLayout();
   }
 
   void setPadding(PaddingSize size) { setPadding(size, size); }
