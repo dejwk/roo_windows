@@ -81,6 +81,8 @@ class MainWindow : public Container {
 
   void propagateDirty(const Widget* child, const Rect& rect) override;
 
+  void childInvalidatedRegion(const Widget* child, Rect rect) override;
+
  private:
   void addToLayer(std::vector<Widget*>& layer, WidgetRef child,
                   const Rect& rect);

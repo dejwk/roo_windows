@@ -160,6 +160,18 @@ void MainWindow::propagateDirty(const Widget* child, const Rect& rect) {
   }
 }
 
+void MainWindow::childInvalidatedRegion(const Widget* child, Rect rect) {
+  rect = Rect::Intersect(rect, bounds());
+  if (!rect.empty()) {
+    if (redraw_bounds_.empty()) {
+      redraw_bounds_ = rect;
+    } else {
+      redraw_bounds_ = Rect::Extent(redraw_bounds_, rect);
+    }
+  }
+  Container::childInvalidatedRegion(child, rect);
+}
+
 void MainWindow::removeLastFromLayer(std::vector<Widget*>& layer) {
   Widget* widget = layer.back();
   layer.pop_back();
