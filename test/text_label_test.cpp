@@ -2,11 +2,13 @@
 
 #include <algorithm>
 
+#include "golden_image.h"
 #include "gtest/gtest.h"
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_scheduler.h"
+#include "roo_windows/containers/flex_layout.h"
 #include "roo_windows.h"
 
 using namespace roo_display;
@@ -15,9 +17,18 @@ using namespace roo_windows;
 namespace roo_windows {
 namespace {
 
+constexpr char kOverhangText[] = "jQy/";
+
 Color QuantizeToArgb4444(Color color) {
   Argb4444 mode;
   return mode.toArgbColor(mode.fromArgbColor(color));
+}
+
+FlexLayout::Params FillWidthParams() {
+  FlexLayout::Params params;
+  params.flex_grow = 1;
+  params.flex_basis = FlexBasis::kZero;
+  return params;
 }
 
 struct PixelBounds {
@@ -78,6 +89,47 @@ class TextLabelRenderTest : public testing::Test {
   roo_scheduler::Scheduler scheduler_;
   Environment env_;
   Application app_;
+};
+
+class TextLabelGoldenTest : public testing::Test {
+ protected:
+  static constexpr int16_t kWidth = 128;
+  static constexpr int16_t kHeight = 80;
+  static constexpr int16_t kLayoutX = 8;
+  static constexpr int16_t kLayoutY = 8;
+  static constexpr int16_t kLayoutWidth = 96;
+  static constexpr int16_t kLayoutHeight = 40;
+
+  TextLabelGoldenTest()
+      : offscreen_(kWidth, kHeight, raster_, Argb4444()),
+        display_(offscreen_),
+        env_(scheduler_) {}
+
+  Offscreen<Rgb888> RenderFlexLabel(Gravity gravity,
+                                    const FlexLayout::Params& params,
+                                    PaddingSize padding = PaddingSize::kNone) {
+    FlexLayout layout(env_, FlexDirection::kRow);
+    layout.setPadding(Padding(12, 8));
+    layout.setJustifyContent(JustifyContent::kCenter);
+    layout.setAlignItems(AlignItems::kCenter);
+
+    TextLabel label(env_, kOverhangText, font_body2(), gravity);
+    label.setPadding(padding);
+    layout.add(label, params);
+
+    Application app(&env_, display_);
+    app.add(layout, Box(kLayoutX, kLayoutY, kLayoutX + kLayoutWidth - 1,
+                        kLayoutY + kLayoutHeight - 1));
+    EXPECT_TRUE(app.refresh());
+    return test::CaptureRgb(offscreen_.raster(), kLayoutX, kLayoutY,
+                            kLayoutWidth, kLayoutHeight);
+  }
+
+  roo::byte raster_[kWidth * kHeight * 2];
+  OffscreenDevice<Argb4444> offscreen_;
+  Display display_;
+  roo_scheduler::Scheduler scheduler_;
+  Environment env_;
 };
 
 }  // namespace
@@ -180,6 +232,51 @@ TEST_F(TextLabelRenderTest, TransparentColorMatchesExplicitDefaultColor) {
   int16_t dx = top.x_min - 4;
   int16_t dy = top.y_min - 6;
   EXPECT_EQ(pixelAt(top.x_min, top.y_min), pixelAt(4 + dx, 34 + dy));
+}
+
+TEST_F(TextLabelGoldenTest, CenteredNaturalSizeOverhangGolden) {
+  auto image =
+      RenderFlexLabel(kGravityCenter | kGravityMiddle, FlexLayout::Params{});
+
+  EXPECT_TRUE(test::CompareOrUpdateGolden(
+      image, "test/goldens/text_label/flex_center_natural.ppm",
+      "text_label_flex_center_natural"));
+}
+
+TEST_F(TextLabelGoldenTest, FillWidthLeftGravityOverhangGolden) {
+  auto image = RenderFlexLabel(kGravityLeft | kGravityMiddle,
+                               FillWidthParams());
+
+  EXPECT_TRUE(test::CompareOrUpdateGolden(
+      image, "test/goldens/text_label/flex_fill_left.ppm",
+      "text_label_flex_fill_left"));
+}
+
+TEST_F(TextLabelGoldenTest, FillWidthCenterGravityOverhangGolden) {
+  auto image = RenderFlexLabel(kGravityCenter | kGravityMiddle,
+                               FillWidthParams());
+
+  EXPECT_TRUE(test::CompareOrUpdateGolden(
+      image, "test/goldens/text_label/flex_fill_center.ppm",
+      "text_label_flex_fill_center"));
+}
+
+TEST_F(TextLabelGoldenTest, FillWidthRightGravityOverhangGolden) {
+  auto image = RenderFlexLabel(kGravityRight | kGravityMiddle,
+                               FillWidthParams());
+
+  EXPECT_TRUE(test::CompareOrUpdateGolden(
+      image, "test/goldens/text_label/flex_fill_right.ppm",
+      "text_label_flex_fill_right"));
+}
+
+TEST_F(TextLabelGoldenTest, FillWidthLeftGravityWithWidgetPaddingGolden) {
+  auto image = RenderFlexLabel(kGravityLeft | kGravityMiddle,
+                               FillWidthParams(), PaddingSize::kSmall);
+
+  EXPECT_TRUE(test::CompareOrUpdateGolden(
+      image, "test/goldens/text_label/flex_fill_left_widget_padding.ppm",
+      "text_label_flex_fill_left_widget_padding"));
 }
 
 }  // namespace roo_windows

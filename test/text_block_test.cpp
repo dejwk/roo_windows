@@ -5,11 +5,21 @@
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
+#include "roo_windows/containers/flex_layout.h"
 #include "roo_windows.h"
 #include "roo_windows/core/environment.h"
 
 namespace roo_windows {
 namespace {
+
+constexpr char kOverhangText[] = "jQy/";
+
+FlexLayout::Params FillWidthParams() {
+  FlexLayout::Params params;
+  params.flex_grow = 1;
+  params.flex_basis = FlexBasis::kZero;
+  return params;
+}
 
 TEST(TextBlock, WordWrapIncreasesHeightWithNarrowWidth) {
   roo_scheduler::Scheduler scheduler;
@@ -115,6 +125,10 @@ class TextBlockGoldenTest : public testing::Test {
  protected:
   static constexpr int16_t kWidth = 360;
   static constexpr int16_t kHeight = 200;
+  static constexpr int16_t kFlexLayoutX = 8;
+  static constexpr int16_t kFlexLayoutY = 8;
+  static constexpr int16_t kFlexLayoutWidth = 128;
+  static constexpr int16_t kFlexLayoutHeight = 48;
 
   TextBlockGoldenTest()
       : offscreen_(kWidth, kHeight, raster_, roo_display::Argb4444()),
@@ -147,6 +161,29 @@ class TextBlockGoldenTest : public testing::Test {
     EXPECT_TRUE(app.refresh());
     return test::CaptureRgb(offscreen_.raster(), 8, 8, box_width,
                             render_height);
+  }
+
+  roo_display::Offscreen<roo_display::Rgb888> RenderFlexBlock(
+      roo_display::Alignment alignment, const FlexLayout::Params& params,
+      PaddingSize padding = PaddingSize::kNone) {
+    TextBlock block(env_, kOverhangText, font_body2(), alignment);
+    block.setPadding(padding);
+    block.setWrapMode(TextWrapMode::kNoWrap);
+
+    FlexLayout layout(env_, FlexDirection::kRow);
+    layout.setPadding(Padding(12, 8));
+    layout.setJustifyContent(JustifyContent::kCenter);
+    layout.setAlignItems(AlignItems::kCenter);
+    layout.add(block, params);
+
+    Application app(&env_, display_);
+    app.add(layout,
+            roo_display::Box(kFlexLayoutX, kFlexLayoutY,
+                             kFlexLayoutX + kFlexLayoutWidth - 1,
+                             kFlexLayoutY + kFlexLayoutHeight - 1));
+    EXPECT_TRUE(app.refresh());
+    return test::CaptureRgb(offscreen_.raster(), kFlexLayoutX, kFlexLayoutY,
+                            kFlexLayoutWidth, kFlexLayoutHeight);
   }
 
   roo::byte raster_[kWidth * kHeight * 2];
@@ -208,6 +245,54 @@ TEST_F(TextBlockGoldenTest, EllipsizeGolden) {
 
   EXPECT_TRUE(test::CompareOrUpdateGolden(
       image, "test/goldens/text_block/ellipsize.ppm", "text_block_ellipsize"));
+}
+
+TEST_F(TextBlockGoldenTest, CenteredNaturalSizeOverhangGolden) {
+  auto image = RenderFlexBlock(roo_display::kCenter | roo_display::kMiddle,
+                               FlexLayout::Params{});
+
+  EXPECT_TRUE(test::CompareOrUpdateGolden(
+      image, "test/goldens/text_block/flex_center_natural.ppm",
+      "text_block_flex_center_natural"));
+}
+
+TEST_F(TextBlockGoldenTest, FillWidthLeftGravityOverhangGolden) {
+  auto image =
+      RenderFlexBlock(roo_display::kLeft | roo_display::kMiddle,
+                      FillWidthParams());
+
+  EXPECT_TRUE(test::CompareOrUpdateGolden(
+      image, "test/goldens/text_block/flex_fill_left.ppm",
+      "text_block_flex_fill_left"));
+}
+
+TEST_F(TextBlockGoldenTest, FillWidthCenterGravityOverhangGolden) {
+  auto image =
+      RenderFlexBlock(roo_display::kCenter | roo_display::kMiddle,
+                      FillWidthParams());
+
+  EXPECT_TRUE(test::CompareOrUpdateGolden(
+      image, "test/goldens/text_block/flex_fill_center.ppm",
+      "text_block_flex_fill_center"));
+}
+
+TEST_F(TextBlockGoldenTest, FillWidthRightGravityOverhangGolden) {
+  auto image =
+      RenderFlexBlock(roo_display::kRight | roo_display::kMiddle,
+                      FillWidthParams());
+
+  EXPECT_TRUE(test::CompareOrUpdateGolden(
+      image, "test/goldens/text_block/flex_fill_right.ppm",
+      "text_block_flex_fill_right"));
+}
+
+TEST_F(TextBlockGoldenTest, FillWidthLeftGravityWithWidgetPaddingGolden) {
+  auto image = RenderFlexBlock(roo_display::kLeft | roo_display::kMiddle,
+                               FillWidthParams(), PaddingSize::kSmall);
+
+  EXPECT_TRUE(test::CompareOrUpdateGolden(
+      image, "test/goldens/text_block/flex_fill_left_widget_padding.ppm",
+      "text_block_flex_fill_left_widget_padding"));
 }
 
 }  // namespace
