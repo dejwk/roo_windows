@@ -92,6 +92,22 @@ class TouchSpyWidget : public BasicWidget {
   int touch_down_count_;
 };
 
+class InkBoundsWidget : public BasicWidget {
+ public:
+  InkBoundsWidget(const Environment& env, Dimensions dims, Insets ink_insets)
+      : BasicWidget(env), dims_(dims), ink_insets_(ink_insets) {}
+
+  Dimensions getSuggestedMinimumDimensions() const override { return dims_; }
+
+  Insets getInkInsets() const override { return ink_insets_; }
+
+  Rect exclusionBounds() const { return getDirectPaintExclusionBounds(); }
+
+ private:
+  Dimensions dims_;
+  Insets ink_insets_;
+};
+
 class RooWindowsRenderTest : public testing::Test {
  protected:
   static constexpr int16_t kWidth = 64;
@@ -208,6 +224,31 @@ TEST_F(RooWindowsRenderTest, SurfaceWidgetShadowBoundsExtendPastParentBounds) {
             surface_ptr->getParentTransientPaintBounds());
   EXPECT_EQ(plain_ptr->parent_bounds(),
             plain_ptr->getParentTransientPaintBounds());
+}
+
+TEST_F(RooWindowsRenderTest, InkInsetsDriveContentAndVisualBounds) {
+  InkBoundsWidget widget(env_, Dimensions(20, 10), Insets(-2, 1, 3, -4));
+  widget.layout(Rect(12, 8, 31, 17));
+
+  EXPECT_EQ(Rect(-2, 1, 16, 13), widget.getContentBounds());
+  EXPECT_EQ(Rect(10, 9, 28, 21), widget.getParentContentBounds());
+  EXPECT_EQ(Rect(-2, 0, 19, 13), widget.getVisualBounds());
+  EXPECT_EQ(Rect(10, 8, 31, 21), widget.getParentVisualBounds());
+  EXPECT_EQ(widget.getVisualBounds(), widget.maxBounds());
+  EXPECT_EQ(widget.getParentVisualBounds(), widget.maxParentBounds());
+  EXPECT_EQ(widget.getContentBounds(), widget.exclusionBounds());
+}
+
+TEST_F(RooWindowsRenderTest, UnclippedChildMaxBoundsIncludeInkOverflow) {
+  auto child =
+      std::make_unique<InkBoundsWidget>(env_, Dimensions(10, 8), Insets(-3, 0, 0, 0));
+  InkBoundsWidget* child_ptr = child.get();
+  child_ptr->setParentClipMode(ParentClipMode::kUnclipped);
+
+  app_.add(WidgetRef(std::move(child)), Box(1, 6, 10, 13));
+
+  EXPECT_EQ(Rect(-2, 6, 10, 13), child_ptr->maxParentBounds());
+  EXPECT_EQ(Rect(-2, 0, 63, 47), app_.root().maxBounds());
 }
 
 TEST_F(RooWindowsRenderTest, HideAndShowRestoresShadowOverflowRegion) {

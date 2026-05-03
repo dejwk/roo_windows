@@ -224,7 +224,7 @@ void Container::invalidateDescending(const Rect& rect) {
   int count = getChildrenCount();
   for (int i = 0; i < count; ++i) {
     Widget& child = getChild(i);
-    Rect rect = Rect::Intersect(invalid_region_, child.parent_bounds());
+    Rect rect = Rect::Intersect(invalid_region_, child.maxParentBounds());
     if (rect.empty()) continue;
     rect = rect.translate(-child.parent_bounds().xMin(),
                           -child.parent_bounds().yMin());
@@ -233,13 +233,12 @@ void Container::invalidateDescending(const Rect& rect) {
 }
 
 void Container::childHidden(const Widget* child) {
-  Rect invalid_rect = Rect::Extent(child->maxParentBounds(),
-                                   child->getParentDecorationBounds());
+  Rect invalid_rect = child->maxParentBounds();
   propagateDirty(child, invalid_rect);
   invalidateBeneath(invalid_rect, child,
                     child->getParentClipMode() == ParentClipMode::kClipped);
   if (child->getParentClipMode() == ParentClipMode::kUnclipped) {
-    unclippedChildRectHidden(child->getParentDecorationBounds());
+    unclippedChildRectHidden(child->maxParentBounds());
   }
 }
 
@@ -249,14 +248,14 @@ void Container::childShown(const Widget* child) {
   // A widget that does not fully cover its own rectangular bounds opaquely
   // remains a separate case because underlying content may still be visible
   // without any rectangle expansion.
-  // Transient overflow has a separate contract and is not handled here yet.
-  if (child->hasDecorationOverflow() ||
+  Rect visual_bounds = child->maxParentBounds();
+  if (visual_bounds != child->parent_bounds() ||
       !child->fullyCoversBoundsWithOpaqueColors()) {
-    invalidateBeneath(child->getParentDecorationBounds(), child,
+    invalidateBeneath(visual_bounds, child,
                       child->getParentClipMode() == ParentClipMode::kClipped);
   }
   if (child->getParentClipMode() == ParentClipMode::kUnclipped) {
-    unclippedChildRectShown(child->parent_bounds());
+    unclippedChildRectShown(visual_bounds);
   }
 }
 

@@ -124,6 +124,29 @@ YDim Widget::offsetBottom() const {
 
 Rect Widget::getParentDecorationBounds() const { return parent_bounds(); }
 
+Rect Widget::getContentBounds() const { return getInkInsets().applyTo(bounds()); }
+
+namespace {
+
+Rect UnionRects(const Rect& a, const Rect& b) {
+  if (a.empty()) return b;
+  if (b.empty()) return a;
+  return Rect::Extent(a, b);
+}
+
+}  // namespace
+
+Rect Widget::getVisualBounds() const {
+  return UnionRects(UnionRects(getContentBounds(), getDecorationBounds()),
+                    getTransientPaintBounds());
+}
+
+Rect Widget::getParentVisualBounds() const {
+  return UnionRects(
+      UnionRects(getParentContentBounds(), getParentDecorationBounds()),
+      getParentTransientPaintBounds());
+}
+
 Rect Widget::getSloppyTouchParentBounds() const {
   return slopify(parent_bounds());
 }
@@ -544,7 +567,11 @@ void Widget::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
   markClean();
 }
 
-Canvas Widget::prepareContentsCanvas(const Canvas& in) { return in; }
+Canvas Widget::prepareContentsCanvas(const Canvas& in) {
+  Canvas canvas = in;
+  canvas.clipToExtents(getContentBounds());
+  return canvas;
+}
 
 void Widget::finalizePaintWidget(const Canvas& canvas, Clipper& clipper,
                                  const OverlaySpec& overlay_spec) const {
@@ -557,7 +584,9 @@ void Widget::finalizePaintWidget(const Canvas& canvas, Clipper& clipper,
       roo_display::Box::Intersect(absolute_bounds, canvas.clip_box()));
 }
 
-Rect Widget::getDirectPaintExclusionBounds() const { return bounds(); }
+Rect Widget::getDirectPaintExclusionBounds() const {
+  return getContentBounds();
+}
 
 Widget* Widget::dispatchTouchDownEvent(XDim x, YDim y) {
   return bounds().contains(x, y) && onTouchDown(x, y) ? this : nullptr;

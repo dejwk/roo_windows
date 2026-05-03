@@ -14,6 +14,7 @@
 #include "roo_windows/core/clipper.h"
 #include "roo_windows/core/dimensions.h"
 #include "roo_windows/core/environment.h"
+#include "roo_windows/core/insets.h"
 #include "roo_windows/core/margins.h"
 #include "roo_windows/core/measure_spec.h"
 #include "roo_windows/core/padding.h"
@@ -158,14 +159,29 @@ class Widget {
                                                      -offsetTop());
   }
 
+  // Returns signed insets that derive foreground content bounds from logical
+  // bounds. Positive values contract the content region; negative values
+  // expand it.
+  virtual Insets getInkInsets() const { return Insets::Zero(); }
+
+  Rect getContentBounds() const;
+
+  Rect getParentContentBounds() const {
+    return getContentBounds().translate(offsetLeft(), offsetTop());
+  }
+
+  Rect getVisualBounds() const;
+
+  Rect getParentVisualBounds() const;
+
   Rect getSloppyTouchBounds() const;
 
   // Returns the rectangle that covers all of this widget and its descendants.
-  virtual Rect maxBounds() const { return bounds(); }
+  virtual Rect maxBounds() const { return getVisualBounds(); }
 
   // Returns the rectangle that covers all of this widget and its descendants,
   // in the parent's coordinates.
-  virtual Rect maxParentBounds() const { return parent_bounds(); }
+  virtual Rect maxParentBounds() const { return getParentVisualBounds(); }
 
   virtual const Theme& theme() const;
 
@@ -548,9 +564,10 @@ class Widget {
   virtual Canvas prepareContentsCanvas(const Canvas& in);
 
   // Returns the local bounds that should be excluded after painting. Generic
-  // widgets exclude the core area they draw into; the default is the logical
-  // bounds. Surface-owning widgets can refine this through their own hooks
-  // while leaving the shared finalization path generic.
+  // widgets exclude the core area they draw into; the default follows the
+  // content bounds derived from signed ink insets. Surface-owning widgets can
+  // refine this through their own hooks while leaving the shared finalization
+  // path generic.
   virtual Rect getDirectPaintExclusionBounds() const;
 
   virtual void setParent(Container* parent, bool is_owned);
