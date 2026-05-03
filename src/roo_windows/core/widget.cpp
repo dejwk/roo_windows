@@ -181,9 +181,10 @@ void SurfaceWidget::invalidateInterior() {
   if (getBorderStyle().hasRoundedCorners()) {
     notifyParentInvalidatedRegion(maxParentBounds());
   }
-  // Full surface invalidation must dirty decoration overflow as well.
-  // Parent invalidation above repaints what lies underneath the overflow;
-  // this makes the surface repaint the overflow pixels themselves.
+  // A full repaint of a surface widget must dirty persistent decoration
+  // overflow as well. Parent invalidation above repaints what lies underneath
+  // the overflow; this makes the widget repaint the overflow pixels
+  // themselves.
   setDirty(Rect::Extent(maxBounds(), getDecorationBounds()));
 }
 
@@ -516,9 +517,9 @@ void Widget::paintWidget(const Canvas& canvas, Clipper& clipper) {
   Canvas my_canvas = prepareCanvas(canvas);
   bool empty = my_canvas.clip_box().empty();
   if (empty) {
-    // Nothing remains inside logical bounds. If the visual footprint is
-    // larger, finalizePaintWidget() may still need to repaint or exclude the
-    // persistent decoration overflow region (currently surface shadow).
+    // Nothing remains inside logical bounds. If persistent decoration paint
+    // extends farther, finalizePaintWidget() may still need to repaint or
+    // exclude that decoration overflow region (currently surface shadow).
     // Transient overflow is modeled separately and is not consumed here yet.
     markCleanDescending();
     if (!hasDecorationOverflow()) return;
@@ -639,9 +640,9 @@ void SurfaceWidget::finalizePaintWidget(const Canvas& canvas, Clipper& clipper,
   Widget::finalizePaintWidget(canvas, clipper, overlay_spec);
 }
 
-void SurfaceWidget::emitSurfaceDecoration(const Canvas& canvas,
-                                          Clipper& clipper,
-                                          const OverlaySpec& overlay_spec) const {
+void SurfaceWidget::emitSurfaceDecoration(
+    const Canvas& canvas, Clipper& clipper,
+    const OverlaySpec& overlay_spec) const {
   BorderStyle border_style = getBorderStyle().trim(width(), height());
   uint8_t border_thickness = border_style.getThickness();
   uint8_t elevation = getElevation();
