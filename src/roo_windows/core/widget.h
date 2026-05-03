@@ -708,7 +708,12 @@ class SurfaceWidget : public Widget {
   virtual uint8_t getElevation() const { return 0; }
 
   bool fullyCoversBoundsWithOpaqueColors() const override {
-    return background().isOpaque() && !getBorderStyle().hasRoundedCorners();
+    // By default, surface widgets are treated as opaquely covering their
+    // rectangular interior whenever their shape is rectangular. This keeps the
+    // generic attach-time invalidation path independent from background()
+    // lookups. Surface widgets that intentionally use translucent fills must
+    // override this hook explicitly.
+    return !getBorderStyle().hasRoundedCorners();
   }
 
   bool hasDecorationOverflow() const override;
