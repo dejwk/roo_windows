@@ -112,23 +112,50 @@ class Widget {
 
   Rect bounds() const { return Rect(0, 0, width() - 1, height() - 1); }
 
-  // Returns this widget's visual footprint in the parent's coordinates.
-  // For plain widgets, this is just parent_bounds(). Surface-owning widgets may
-  // expand it to include persistent decoration overflow such as shadows.
+  // Returns true if this widget can paint persistent decoration outside
+  // parent_bounds(). Shared code uses this as a cheap fast path, so overrides
+  // must keep it consistent with getParentDecorationBounds().
+  //
+  // This is intentionally about rectangle-expanding persistent decoration
+  // overflow only. It does not cover rounded-corner exposure inside the same
+  // bounding rectangle, and it does not cover transient effects.
+  virtual bool hasDecorationOverflow() const { return false; }
+
+  // Returns the bounds of persistent decoration paint in the parent's
+  // coordinates. For plain widgets, this is just parent_bounds().
   //
   // Important: this is intentionally narrower than "everything paint() might
-  // ever touch". Today it is used by shared clipping/invalidation code for
-  // surface overflow. It does not include transient overlays, which are still
-  // assumed to stay within logical bounds. If a future clipping redesign lets
-  // non-surface widgets paint outside bounds, that should likely use a
-  // separate contract rather than silently widening this one.
-  virtual Rect getParentVisualBounds() const;
+  // ever touch". It covers persistent decoration overflow such as shadows, but
+  // it does not include transient overlays or future non-surface paint that may
+  // escape logical bounds.
+  virtual Rect getParentDecorationBounds() const;
 
-  // Returns this widget's visual footprint in the widget's local coordinates.
-  // Kept as a helper so generic paint code can reason about overflow without
-  // hard-coding surface concepts such as elevation.
-  Rect getVisualBounds() const {
-    return getParentVisualBounds().translate(-offsetLeft(), -offsetTop());
+  // Returns the persistent decoration paint bounds in the widget's local
+  // coordinates. Shared paint/invalidation code uses this to reason about
+  // decoration overflow without hard-coding surface concepts such as
+  // elevation.
+  Rect getDecorationBounds() const {
+    return getParentDecorationBounds().translate(-offsetLeft(), -offsetTop());
+  }
+
+  // Returns true if transient paint may escape parent_bounds(). This stays
+  // separate from decoration overflow so future clipping work can broaden
+  // transient paint without changing persistent decoration contracts.
+  virtual bool hasTransientPaintOverflow() const { return false; }
+
+  // Returns the bounds touched by transient, non-persistent paint in the
+  // parent's coordinates. The default stays within logical bounds.
+  //
+  // This contract is introduced now to make the separation explicit, but the
+  // generic paint pipeline still assumes transient paint remains within logical
+  // bounds.
+  virtual Rect getParentTransientPaintBounds() const { return parent_bounds(); }
+
+  // Returns the bounds touched by transient, non-persistent paint in the
+  // widget's local coordinates.
+  Rect getTransientPaintBounds() const {
+    return getParentTransientPaintBounds().translate(-offsetLeft(),
+                                                     -offsetTop());
   }
 
   Rect getSloppyTouchBounds() const;
@@ -662,7 +689,9 @@ class SurfaceWidget : public Widget {
   // Has no effect when getBorderStyle() reports outline_width = 0.
   virtual Color getOutlineColor() const { return theme().color.primary; }
 
-  Rect getParentVisualBounds() const override;
+  bool hasDecorationOverflow() const override;
+
+  Rect getParentDecorationBounds() const override;
 
   void invalidateInterior() override;
 
@@ -686,7 +715,6 @@ using WidgetCreatorFn = std::function<std::unique_ptr<Widget>()>;
 
 template <typename Src>
 using WidgetSetterFn = std::function<void(const Src& src, Widget& dest)>;
-roo_logging::Stream& operator<<(roo_logging::Stream& os,
-                                const Widget& widget);
+roo_logging::Stream& operator<<(roo_logging::Stream& os, const Widget& widget);
 
 }  // namespace roo_windows

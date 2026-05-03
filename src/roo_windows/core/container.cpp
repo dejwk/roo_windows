@@ -122,7 +122,7 @@ void Container::fastDrawChildShadow(Widget& child, const Canvas& canvas,
   Canvas myc = canvas;
   // Minimize the redraw area so that we can take the most advantage of plan
   // fill performance.
-  myc.clipToExtents(child.getParentVisualBounds());
+  myc.clipToExtents(child.getParentDecorationBounds());
   // Make sure we're not over-stepping.
   Margins margins = child.getMargins();
   Rect rect = child.parent_bounds();
@@ -233,25 +233,25 @@ void Container::invalidateDescending(const Rect& rect) {
 }
 
 void Container::childHidden(const Widget* child) {
-  Rect invalid_rect =
-      Rect::Extent(child->maxParentBounds(), child->getParentVisualBounds());
+  Rect invalid_rect = Rect::Extent(child->maxParentBounds(),
+                                   child->getParentDecorationBounds());
   propagateDirty(child, invalid_rect);
   invalidateBeneath(invalid_rect, child,
                     child->getParentClipMode() == ParentClipMode::kClipped);
   if (child->getParentClipMode() == ParentClipMode::kUnclipped) {
-    unclippedChildRectHidden(child->getParentVisualBounds());
+    unclippedChildRectHidden(child->getParentDecorationBounds());
   }
 }
 
 void Container::childShown(const Widget* child) {
   // Do not key this off elevation alone: the generic container path only cares
-  // whether the child's visual footprint extends beyond parent_bounds(), not
-  // why it does so. Rounded corners remain a separate case because they can
-  // expose underlying content without enlarging the bounding rectangle.
-  // This still assumes transient overlays stay within logical bounds.
-  if (child->getParentVisualBounds() != child->parent_bounds() ||
+  // whether persistent decoration escapes parent_bounds(), not why it does so.
+  // Rounded corners remain a separate case because they can expose underlying
+  // content without enlarging the bounding rectangle.
+  // Transient overflow has a separate contract and is not handled here yet.
+  if (child->hasDecorationOverflow() ||
       child->getBorderStyle().hasRoundedCorners()) {
-    invalidateBeneath(child->getParentVisualBounds(), child,
+    invalidateBeneath(child->getParentDecorationBounds(), child,
                       child->getParentClipMode() == ParentClipMode::kClipped);
   }
   if (child->getParentClipMode() == ParentClipMode::kUnclipped) {

@@ -123,9 +123,11 @@ YDim Widget::offsetBottom() const {
   return parent()->height() - parent_bounds().yMax() - 1;
 }
 
-Rect Widget::getParentVisualBounds() const { return parent_bounds(); }
+Rect Widget::getParentDecorationBounds() const { return parent_bounds(); }
 
-Rect SurfaceWidget::getParentVisualBounds() const {
+bool SurfaceWidget::hasDecorationOverflow() const { return getElevation() > 0; }
+
+Rect SurfaceWidget::getParentDecorationBounds() const {
   return CalculateShadowExtents(parent_bounds(), getElevation());
 }
 
@@ -179,7 +181,7 @@ void SurfaceWidget::invalidateInterior() {
   // Full surface invalidation must dirty decoration overflow as well.
   // Parent invalidation above repaints what lies underneath the overflow;
   // this makes the surface repaint the overflow pixels themselves.
-  setDirty(Rect::Extent(maxBounds(), getVisualBounds()));
+  setDirty(Rect::Extent(maxBounds(), getDecorationBounds()));
 }
 
 void Widget::invalidateInterior(const Rect& rect) {
@@ -515,10 +517,10 @@ void Widget::paintWidget(const Canvas& canvas, Clipper& clipper) {
   if (empty) {
     // Nothing remains inside logical bounds. If the visual footprint is
     // larger, finalizePaintWidget() may still need to repaint or exclude the
-    // overflow region (currently surface decoration overflow such as shadow).
-    // This intentionally does not treat overlays as overflow.
+    // persistent decoration overflow region (currently surface shadow).
+    // Transient overflow is modeled separately and is not consumed here yet.
     markCleanDescending();
-    if (getVisualBounds() == bounds()) return;
+    if (!hasDecorationOverflow()) return;
   }
   OverlaySpec overlay_spec(*this, my_canvas);
   if (!empty) {
@@ -738,8 +740,7 @@ void Widget::onCancel() {
   }
 }
 
-roo_logging::Stream& operator<<(roo_logging::Stream& os,
-                                const Widget& widget) {
+roo_logging::Stream& operator<<(roo_logging::Stream& os, const Widget& widget) {
   os << GetTypeName(widget) << "{" << &widget << "}";
   return os;
 }
