@@ -623,7 +623,7 @@ Canvas SurfaceWidget::prepareContentsCanvas(const Canvas& in) {
 void Widget::finalizePaintWidget(const Canvas& canvas, Clipper& clipper,
                                  const OverlaySpec& overlay_spec) const {
   (void)overlay_spec;
-  Rect exclusion = getExclusionBounds();
+  Rect exclusion = getDirectPaintExclusionBounds();
   roo_display::Box absolute_bounds(
       canvas.dx() + exclusion.xMin(), canvas.dy() + exclusion.yMin(),
       canvas.dx() + exclusion.xMax(), canvas.dy() + exclusion.yMax());
@@ -631,10 +631,17 @@ void Widget::finalizePaintWidget(const Canvas& canvas, Clipper& clipper,
       roo_display::Box::Intersect(absolute_bounds, canvas.clip_box()));
 }
 
-Rect Widget::getExclusionBounds() const { return bounds(); }
+Rect Widget::getDirectPaintExclusionBounds() const { return bounds(); }
 
 void SurfaceWidget::finalizePaintWidget(const Canvas& canvas, Clipper& clipper,
                                         const OverlaySpec& overlay_spec) const {
+  emitSurfaceDecoration(canvas, clipper, overlay_spec);
+  Widget::finalizePaintWidget(canvas, clipper, overlay_spec);
+}
+
+void SurfaceWidget::emitSurfaceDecoration(const Canvas& canvas,
+                                          Clipper& clipper,
+                                          const OverlaySpec& overlay_spec) const {
   BorderStyle border_style = getBorderStyle().trim(width(), height());
   uint8_t border_thickness = border_style.getThickness();
   uint8_t elevation = getElevation();
@@ -648,10 +655,9 @@ void SurfaceWidget::finalizePaintWidget(const Canvas& canvas, Clipper& clipper,
                           border_style.outline_width(),
                           AlphaBlend(canvas.bgcolor(), getOutlineColor()));
   }
-  Widget::finalizePaintWidget(canvas, clipper, overlay_spec);
 }
 
-Rect SurfaceWidget::getExclusionBounds() const {
+Rect SurfaceWidget::getDirectPaintExclusionBounds() const {
   BorderStyle border_style = getBorderStyle().trim(width(), height());
   uint8_t border_thickness = border_style.getThickness();
   return Rect(border_thickness, border_thickness,

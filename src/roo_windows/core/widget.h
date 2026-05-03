@@ -540,8 +540,7 @@ class Widget {
   // Applies any final paint-side effects after the widget contents have been
   // drawn. All widgets contribute an exclusion region because rendering walks
   // the z-order directly into the framebuffer; pixels not excluded remain
-  // available only to later overlays or future redraws. SurfaceWidget refines
-  // this generic exclusion contract to the interior owned by the surface.
+  // available only to later overlays or future redraws.
   virtual void finalizePaintWidget(const Canvas& s, Clipper& clipper,
                                    const OverlaySpec& overlay_spec) const;
 
@@ -550,8 +549,9 @@ class Widget {
 
   // Returns the local bounds that should be excluded after painting. Generic
   // widgets exclude the core area they draw into; the default is the logical
-  // bounds. SurfaceWidget narrows this to the interior owned by the surface.
-  virtual Rect getExclusionBounds() const;
+  // bounds. Surface-owning widgets can refine this through their own hooks
+  // while leaving the shared finalization path generic.
+  virtual Rect getDirectPaintExclusionBounds() const;
 
   virtual void setParent(Container* parent, bool is_owned);
 
@@ -737,7 +737,15 @@ class SurfaceWidget : public Widget {
 
   Canvas prepareContentsCanvas(const Canvas& in) override;
 
-  Rect getExclusionBounds() const override;
+  // Surface widgets refine the generic exclusion contract to the surface
+  // interior they actually own.
+  Rect getDirectPaintExclusionBounds() const override;
+
+ private:
+  // Emits surface-owned decoration such as shadow and outline. The generic
+  // Widget finalization path intentionally does not know about these effects.
+  void emitSurfaceDecoration(const Canvas& s, Clipper& clipper,
+                             const OverlaySpec& overlay_spec) const;
 };
 
 // TODO: adjust for different screen densities.
