@@ -184,9 +184,7 @@ class Widget {
     return theme().color.contentColorFor(effectiveContainerRole());
   }
 
-  virtual ColorRole containerRole() const;
-
-  ColorRole effectiveContainerRole() const;
+  virtual ColorRole effectiveContainerRole() const;
 
   const Rect& parent_bounds() const { return parent_bounds_; }
 
@@ -428,16 +426,13 @@ class Widget {
   virtual Padding getPadding() const { return Padding(0); }
   virtual Margins getMargins() const { return Margins(0); }
 
-  // Returns the current elevation of the widget. Non-zero elevation causes a
-  // shadow to be drawn. The elevation can be in the range [0-31]. By default,
-  // widgets have elevation = 0. Subclasses can override. When the reported
-  // elevation changes in the subclass, elevationChanged() must be called to
-  // ensure that the screen is properly redrawn.
-  virtual uint8_t getElevation() const { return 0; }
-
-  // Returns the border style of this widget. By default, widgets have sharp
-  // corners and no outline. Subclasses can override.
-  virtual BorderStyle getBorderStyle() const { return BorderStyle(); }
+  // Returns true when the widget can be treated as fully covering its logical
+  // rectangular bounds with opaque colors. Shared invalidation and exclusion
+  // logic can use this as a conservative ownership signal.
+  //
+  // The default is false: generic widgets are assumed not to provide full
+  // opaque rectangular coverage unless they opt in explicitly.
+  virtual bool fullyCoversBoundsWithOpaqueColors() const { return false; }
 
   // Returns dimensions that make the widget 'look good'. Inclusive of padding.
   virtual Dimensions getNaturalDimensions() const {
@@ -500,11 +495,6 @@ class Widget {
   // Called after any widget-state flag mutation. Subclasses may use this to
   // react to state-driven visual changes without overriding the full setter.
   virtual void notifyStateChanged() {}
-
-  // Should be called by a child whose elevation has changed, and the child
-  // wants the shadow to be redrawn. The argument should indicate the higher of
-  // {before, after} elevations.
-  virtual void elevationChanged(int higherElevation);
 
   // Marks the entire area of this widget, and all its descendants, as
   // invalidated (needing full redraw).
@@ -678,6 +668,14 @@ class SurfaceWidget : public Widget {
   // overridden by panels, which usually have opaque backgrounds.
   virtual Color background() const { return roo_display::color::Transparent; }
 
+  // Returns the semantic container role owned by this surface widget. This is
+  // the surface-facing public accessor. Returning kUndefined means that this
+  // surface does not introduce a new role and instead inherits the effective
+  // role from its ancestors.
+  virtual ColorRole containerRole() const { return ColorRole::kUndefined; }
+
+  ColorRole effectiveContainerRole() const override;
+
   // Returns the effective background color of this widget. If this widget has a
   // non-opaque background, it is returned. If this widget has a fully
   // transparent background, the parent's effective background is returned.
@@ -689,6 +687,21 @@ class SurfaceWidget : public Widget {
   // Has no effect when getBorderStyle() reports outline_width = 0.
   virtual Color getOutlineColor() const { return theme().color.primary; }
 
+  // Returns the border style of this widget. By default, surface widgets have
+  // sharp corners and no outline. Subclasses can override.
+  virtual BorderStyle getBorderStyle() const { return BorderStyle(); }
+
+  // Returns the current elevation of the widget. Non-zero elevation causes a
+  // shadow to be drawn. The elevation can be in the range [0-31]. By default,
+  // surface widgets have elevation = 0. Subclasses can override. When the
+  // reported elevation changes in the subclass, elevationChanged() must be
+  // called to ensure that the screen is properly redrawn.
+  virtual uint8_t getElevation() const { return 0; }
+
+  bool fullyCoversBoundsWithOpaqueColors() const override {
+    return background().isOpaque() && !getBorderStyle().hasRoundedCorners();
+  }
+
   bool hasDecorationOverflow() const override;
 
   Rect getParentDecorationBounds() const override;
@@ -698,7 +711,10 @@ class SurfaceWidget : public Widget {
   void invalidateInterior(const Rect& rect) override;
 
  protected:
-  void elevationChanged(int higherElevation) override;
+  // Should be called by a child whose elevation has changed, and the child
+  // wants the shadow to be redrawn. The argument should indicate the higher of
+  // {before, after} elevations.
+  void elevationChanged(int higherElevation);
 
   void finalizePaintWidget(const Canvas& s, Clipper& clipper,
                            const OverlaySpec& overlay_spec) const override;

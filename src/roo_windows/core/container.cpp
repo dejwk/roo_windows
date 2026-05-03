@@ -246,11 +246,12 @@ void Container::childHidden(const Widget* child) {
 void Container::childShown(const Widget* child) {
   // Do not key this off elevation alone: the generic container path only cares
   // whether persistent decoration escapes parent_bounds(), not why it does so.
-  // Rounded corners remain a separate case because they can expose underlying
-  // content without enlarging the bounding rectangle.
+  // A widget that does not fully cover its own rectangular bounds opaquely
+  // remains a separate case because underlying content may still be visible
+  // without any rectangle expansion.
   // Transient overflow has a separate contract and is not handled here yet.
   if (child->hasDecorationOverflow() ||
-      child->getBorderStyle().hasRoundedCorners()) {
+      !child->fullyCoversBoundsWithOpaqueColors()) {
     invalidateBeneath(child->getParentDecorationBounds(), child,
                       child->getParentClipMode() == ParentClipMode::kClipped);
   }

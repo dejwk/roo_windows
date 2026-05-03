@@ -145,9 +145,12 @@ Color SurfaceWidget::effectiveBackground() const {
                                        bgcolor);
 }
 
-ColorRole Widget::containerRole() const { return ColorRole::kUndefined; }
-
 ColorRole Widget::effectiveContainerRole() const {
+  return parent() != nullptr ? parent()->effectiveContainerRole()
+                             : ColorRole::kBackground;
+}
+
+ColorRole SurfaceWidget::effectiveContainerRole() const {
   ColorRole role = containerRole();
   if (role != ColorRole::kUndefined) {
     return role;
@@ -196,8 +199,6 @@ void SurfaceWidget::invalidateInterior(const Rect& rect) {
   }
   setDirty(rect);
 }
-
-void Widget::elevationChanged(int higherElevation) { (void)higherElevation; }
 
 void SurfaceWidget::elevationChanged(int higherElevation) {
   if (higherElevation <= 0 || parent() == nullptr) return;
