@@ -176,7 +176,7 @@ Rect Widget::getParentTransientPaintBounds() const {
       !MayHaveNonTransparentOverlayOutsideBounds(*this)) {
     return parent_bounds();
   }
-  return getInteractionInsets().applyTo(parent_bounds());
+  return getParentInteractionBounds();
 }
 
 Rect Widget::getContentBounds() const {

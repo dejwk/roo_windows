@@ -88,14 +88,9 @@ OverlaySpec::OverlaySpec(Widget& widget, const Canvas& canvas)
         click_progress < 1.0;
     Widget::OverlayType t = widget.getOverlayType();
     if (is_click_animation_in_progress) {
-      roo_display::FpPoint focus;
       Rect anim_bounds = widget.bounds();
       if (t == Widget::OVERLAY_POINT) {
-        focus = widget.getPointOverlayFocus();
-        anim_bounds = Rect(focus.x - kPointOverlayDiameter * 0.5f,
-                           focus.y - kPointOverlayDiameter * 0.5f,
-                           focus.x + kPointOverlayDiameter * 0.5f,
-                           focus.y + kPointOverlayDiameter * 0.5f);
+        anim_bounds = widget.getInteractionBounds();
       }
       // Note that dx,dy might have changed since the click event, moving dim
       // out of the int16_t horizon.
@@ -110,6 +105,7 @@ OverlaySpec::OverlaySpec(Widget& widget, const Canvas& canvas)
           PressOverlay(x, y, r, click_animation_overlay, base_overlay_));
       press_overlay_ = &widget.getMainWindow()->press_overlay();
       if (t == Widget::OVERLAY_POINT) {
+        roo_display::FpPoint focus = widget.getPointOverlayFocus();
         XDim dx;
         YDim dy;
         widget.getAbsoluteOffset(dx, dy);

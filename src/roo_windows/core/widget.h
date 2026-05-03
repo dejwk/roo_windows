@@ -428,6 +428,14 @@ class Widget {
   // to describe other transient interaction paint that can escape bounds().
   virtual Insets getInteractionInsets() const;
 
+  Rect getInteractionBounds() const {
+    return getInteractionInsets().applyTo(bounds());
+  }
+
+  Rect getParentInteractionBounds() const {
+    return getInteractionBounds().translate(offsetLeft(), offsetTop());
+  }
+
   virtual bool useOverlayOnActivation() const { return true; }
   virtual bool useOverlayOnPress() const { return true; }
 
