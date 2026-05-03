@@ -94,7 +94,7 @@ void Widget::getAbsoluteOffset(XDim& dx, YDim& dy) const {
 
 namespace {
 
-Rect slopify(Rect bounds) {
+Rect Slopify(Rect bounds) {
   XDim w = bounds.width();
   YDim h = bounds.height();
   XDim xMin = bounds.xMin();
@@ -124,7 +124,64 @@ YDim Widget::offsetBottom() const {
 
 Rect Widget::getParentDecorationBounds() const { return parent_bounds(); }
 
-Rect Widget::getContentBounds() const { return getInkInsets().applyTo(bounds()); }
+Insets Widget::getInteractionInsets() const {
+  if (getOverlayType() != OVERLAY_POINT) return Insets::Zero();
+
+  const Rect logical_bounds = bounds();
+  roo_display::FpPoint focus = getPointOverlayFocus();
+  Rect overlay_bounds(focus.x - kPointOverlayDiameter * 0.5f,
+                      focus.y - kPointOverlayDiameter * 0.5f,
+                      focus.x + kPointOverlayDiameter * 0.5f,
+                      focus.y + kPointOverlayDiameter * 0.5f);
+  return Insets(
+      std::min<int16_t>(0, overlay_bounds.xMin() - logical_bounds.xMin()),
+      std::min<int16_t>(0, overlay_bounds.yMin() - logical_bounds.yMin()),
+      std::min<int16_t>(0, logical_bounds.xMax() - overlay_bounds.xMax()),
+      std::min<int16_t>(0, logical_bounds.yMax() - overlay_bounds.yMax()));
+}
+
+namespace {
+
+roo_display::SmoothShape MakePointOverlay(const Widget& widget,
+                                          const Canvas& canvas,
+                                          roo_display::Color color) {
+  roo_display::FpPoint focus = widget.getPointOverlayFocus();
+  return roo_display::SmoothFilledCircle(
+      {canvas.dx() + focus.x, canvas.dy() + focus.y},
+      kPointOverlayDiameter * 0.5f - 0.5f, color);
+}
+
+bool MayHaveNonTransparentOverlayOutsideBounds(const Widget& widget) {
+  if (widget.getOverlayType() != Widget::OVERLAY_POINT) return false;
+  if (widget.isHover()) return true;
+  if (widget.isFocused()) return true;
+  if (widget.isSelected()) return true;
+  if (widget.isDragged()) return true;
+  if (widget.isActivated() && widget.useOverlayOnActivation()) return true;
+  if ((widget.isPressed() || widget.isClicking()) &&
+      widget.useOverlayOnPress()) {
+    return true;
+  }
+  return false;
+}
+
+}  // namespace
+
+bool Widget::hasTransientPaintOverflow() const {
+  return getParentTransientPaintBounds() != parent_bounds();
+}
+
+Rect Widget::getParentTransientPaintBounds() const {
+  if (parent() == nullptr ||
+      !MayHaveNonTransparentOverlayOutsideBounds(*this)) {
+    return parent_bounds();
+  }
+  return getInteractionInsets().applyTo(parent_bounds());
+}
+
+Rect Widget::getContentBounds() const {
+  return getInkInsets().applyTo(bounds());
+}
 
 namespace {
 
@@ -148,19 +205,23 @@ Rect Widget::getParentVisualBounds() const {
 }
 
 Rect Widget::getSloppyTouchParentBounds() const {
-  return slopify(parent_bounds());
+  return Slopify(parent_bounds());
 }
 
-Rect Widget::getSloppyTouchBounds() const { return slopify(bounds()); }
+Rect Widget::getSloppyTouchBounds() const { return Slopify(bounds()); }
 
 ColorRole Widget::effectiveContainerRole() const {
   return parent() != nullptr ? parent()->effectiveContainerRole()
                              : ColorRole::kBackground;
 }
 
-// Returns the theme used by this widget. Defaults to the parent's theme
-// (and, ultimately, to DefaultTheme(), if not otherwise specified).
-const Theme& Widget::theme() const { return parent_->theme(); }
+// Returns the theme used by this widget's app. Must not be called outside of
+// the paint() flow.
+const Theme& Widget::theme() const {
+  CHECK(parent_ != nullptr)
+      << "Widget::theme() should only be called from paint()";
+  return parent_->theme();
+}
 
 void Widget::setDirty(const Rect& bounds) {
   redraw_status_ |= kDirty;
@@ -187,7 +248,7 @@ void Widget::requestLayout() {
 #if MLOG_IS_ON(roo_windows_layout)
 static int indent_level = 0;
 
-const char* indent() {
+const char* Indent() {
   static const char* spaces = "                                        ";
   int offset = strlen(spaces) - indent_level;
   if (offset < 0) offset = 0;
@@ -197,7 +258,7 @@ const char* indent() {
 
 Dimensions Widget::measure(WidthSpec width, HeightSpec height) {
 #if MLOG_IS_ON(roo_windows_layout)
-  MLOG(roo_windows_layout) << indent() << "Measuring " << *this << " (" << width
+  MLOG(roo_windows_layout) << Indent() << "Measuring " << *this << " (" << width
                            << ", " << height << ")";
   ++indent_level;
 #endif
@@ -205,7 +266,7 @@ Dimensions Widget::measure(WidthSpec width, HeightSpec height) {
   Dimensions result = onMeasure(width, height);
 #if MLOG_IS_ON(roo_windows_layout)
   --indent_level;
-  MLOG(roo_windows_layout) << indent() << "Measuring " << *this << " returned "
+  MLOG(roo_windows_layout) << Indent() << "Measuring " << *this << " returned "
                            << result;
 #endif
 
@@ -240,7 +301,7 @@ namespace {
 
 // Utility to return a default width. Uses the supplied width if the WidthSpec
 // imposed no constraints. Will get larger if allowed by the WidthSpec.
-static XDim getDefaultWidth(XDim width, WidthSpec spec) {
+static XDim GetDefaultWidth(XDim width, WidthSpec spec) {
   switch (spec.kind()) {
     case UNSPECIFIED:
       return width;
@@ -254,7 +315,7 @@ static XDim getDefaultWidth(XDim width, WidthSpec spec) {
 // Utility to return a default height. Uses the supplied height if the
 // HeightSpec imposed no constraints. Will get larger if allowed by the
 // HeightSpec.
-static YDim getDefaultHeight(YDim height, HeightSpec spec) {
+static YDim GetDefaultHeight(YDim height, HeightSpec spec) {
   switch (spec.kind()) {
     case UNSPECIFIED:
       return height;
@@ -269,8 +330,8 @@ static YDim getDefaultHeight(YDim height, HeightSpec spec) {
 
 Dimensions Widget::onMeasure(WidthSpec width, HeightSpec height) {
   Dimensions suggestedMin = getSuggestedMinimumDimensions();
-  return Dimensions(getDefaultWidth(suggestedMin.width(), width),
-                    getDefaultHeight(suggestedMin.height(), height));
+  return Dimensions(GetDefaultWidth(suggestedMin.width(), width),
+                    GetDefaultHeight(suggestedMin.height(), height));
 }
 
 void Widget::setParentClipMode(ParentClipMode mode) {
@@ -321,39 +382,47 @@ void Widget::setEnabled(bool enabled) {
 
 void Widget::setSelected(bool selected) {
   if (selected == isSelected()) return;
+  Rect old_bounds = maxParentBounds();
   state_ ^= kWidgetSelected;
   if (isVisible()) {
     invalidateInterior();
+    notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
   }
   notifyStateChanged();
 }
 
 void Widget::setActivated(bool activated) {
   if (activated == isActivated()) return;
+  Rect old_bounds = maxParentBounds();
   state_ ^= kWidgetActivated;
   if (isVisible()) {
     setDirty();
     if (useOverlayOnActivation()) {
       invalidateInterior();
     }
+    notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
   }
   notifyStateChanged();
 }
 
 void Widget::setPressed(bool pressed) {
   if (pressed == isPressed()) return;
+  Rect old_bounds = maxParentBounds();
   state_ ^= kWidgetPressed;
   if (isVisible()) {
     invalidateInterior();
+    notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
   }
   notifyStateChanged();
 }
 
 void Widget::setDragged(bool dragged) {
   if (dragged == isDragged()) return;
+  Rect old_bounds = maxParentBounds();
   state_ ^= kWidgetDragged;
   if (isVisible()) {
     invalidateInterior();
+    notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
   }
   notifyStateChanged();
 }
@@ -395,12 +464,22 @@ void Widget::notifyParentInvalidatedRegion(const Rect& rect) {
 }
 
 void Widget::setClicking() {
+  Rect old_bounds = maxParentBounds();
   state_ |= kWidgetClicking;
+  if (isVisible()) {
+    invalidateInterior();
+    notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
+  }
   notifyStateChanged();
 }
 
 void Widget::clearClicking() {
+  Rect old_bounds = maxParentBounds();
   state_ &= ~kWidgetClicking;
+  if (isVisible()) {
+    invalidateInterior();
+    notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
+  }
   notifyStateChanged();
 }
 
@@ -515,13 +594,15 @@ void Widget::paintWidgetModded(Canvas& canvas, const OverlaySpec& overlay_spec,
       // after redrawing, so that we receive a subsequent paint request
       // shortly.
       if (overlay_spec.is_click_animation_in_progress()) {
-        // Need to draw the circular overlay.
+        Rect repaint_bounds = maxParentBounds();
         roo_display::DisplayOutput& out = canvas.out();
         roo_display::ForegroundFilter filter(canvas.out(),
                                              overlay_spec.press_overlay());
         canvas.set_out(&filter);
         paintWidgetContents(canvas, clipper);
         canvas.set_out(&out);
+        setDirty();
+        notifyParentInvalidatedRegion(repaint_bounds);
       } else {
         clearClicking();
       }
@@ -529,22 +610,19 @@ void Widget::paintWidgetModded(Canvas& canvas, const OverlaySpec& overlay_spec,
     if (overlay_spec.is_click_animation_in_progress()) {
       // Already drawn.
     } else if (overlay_spec.base_overlay().a() > 0) {
-      roo_display::DisplayOutput& out = canvas.out();
       switch (getOverlayType()) {
         case OVERLAY_POINT: {
-          roo_display::FpPoint focus = getPointOverlayFocus();
-          XDim dx;
-          YDim dy;
-          getAbsoluteOffset(dx, dy);
-          auto circle = roo_display::SmoothFilledCircle(
-              {dx + focus.x, dy + focus.y}, kPointOverlayDiameter * 0.5f - 0.5f,
-              overlay_spec.base_overlay());
-          roo_display::ForegroundFilter filter(out, &circle);
+          auto point_overlay =
+              MakePointOverlay(*this, canvas, overlay_spec.base_overlay());
+          roo_display::DisplayOutput& out = canvas.out();
+          roo_display::ForegroundFilter filter(canvas.out(), &point_overlay);
           canvas.set_out(&filter);
           paintWidgetContents(canvas, clipper);
           canvas.set_out(&out);
+          break;
         }
         default: {
+          roo_display::DisplayOutput& out = canvas.out();
           roo_display::OverlayFilter filter(canvas.out(),
                                             overlay_spec.base_overlay(),
                                             roo_display::color::Transparent);
@@ -575,7 +653,15 @@ Canvas Widget::prepareContentsCanvas(const Canvas& in) {
 
 void Widget::finalizePaintWidget(const Canvas& canvas, Clipper& clipper,
                                  const OverlaySpec& overlay_spec) const {
-  (void)overlay_spec;
+  if (!overlay_spec.is_disabled() && getOverlayType() == OVERLAY_POINT) {
+    if (overlay_spec.is_click_animation_in_progress()) {
+      clipper.addOverlay(overlay_spec.press_overlay(), canvas.clip_box());
+    } else if (overlay_spec.base_overlay().a() > 0) {
+      clipper.addOverlayShape(
+          MakePointOverlay(*this, canvas, overlay_spec.base_overlay()),
+          canvas.clip_box());
+    }
+  }
   Rect exclusion = getDirectPaintExclusionBounds();
   roo_display::Box absolute_bounds(
       canvas.dx() + exclusion.xMin(), canvas.dy() + exclusion.yMin(),

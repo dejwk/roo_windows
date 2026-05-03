@@ -142,7 +142,7 @@ class Widget {
   // Returns true if transient paint may escape parent_bounds(). This stays
   // separate from decoration overflow so future clipping work can broaden
   // transient paint without changing persistent decoration contracts.
-  virtual bool hasTransientPaintOverflow() const { return false; }
+  virtual bool hasTransientPaintOverflow() const;
 
   // Returns the bounds touched by transient, non-persistent paint in the
   // parent's coordinates. The default stays within logical bounds.
@@ -150,7 +150,7 @@ class Widget {
   // This contract is introduced now to make the separation explicit, but the
   // generic paint pipeline still assumes transient paint remains within logical
   // bounds.
-  virtual Rect getParentTransientPaintBounds() const { return parent_bounds(); }
+  virtual Rect getParentTransientPaintBounds() const;
 
   // Returns the bounds touched by transient, non-persistent paint in the
   // widget's local coordinates.
@@ -183,6 +183,10 @@ class Widget {
   // in the parent's coordinates.
   virtual Rect maxParentBounds() const { return getParentVisualBounds(); }
 
+  // Returns the effective theme for this widget.
+  //
+  // Paint-pipeline only: this resolves through the parent chain and therefore
+  // requires the widget to already be attached to a parent/application tree.
   virtual const Theme& theme() const;
 
   // Returns default color that should be used by monochromatic content.
@@ -194,8 +198,13 @@ class Widget {
   // .primary[Variant*], .secondary[Variant*], or .error, in which case the
   // default color resolves to .onSurface, .onBackground, .onPrimary,
   // .onSecondary, or .onError, appropriately. If all else fails, returns
-  // .onBackground. NOTE: during the call to paint(const Canvas& canvas), the
-  // Default foreground color is derived from the effective container role.
+  // .onBackground.
+  //
+  // Paint-pipeline only: this depends on theme(), so it is valid only after
+  // the widget is attached to the parent/application tree.
+  //
+  // NOTE: during the call to paint(const Canvas& canvas), the default
+  // foreground color is derived from the effective container role.
   roo_display::Color defaultColor() const {
     return theme().color.contentColorFor(effectiveContainerRole());
   }
@@ -409,6 +418,15 @@ class Widget {
                                 0.5f * (float)(r.yMax() - r.yMin())};
   }
 
+  // Returns signed insets that extend the logical bounds to cover transient
+  // interaction paint. Negative values expand the painted region outward;
+  // zero means transient interaction paint stays within bounds().
+  //
+  // The default implementation uses the point-overlay circle implied by
+  // getOverlayType() and getPointOverlayFocus(). Widgets may override this to
+  // describe other transient interaction paint that can escape bounds().
+  virtual Insets getInteractionInsets() const;
+
   virtual bool useOverlayOnActivation() const { return true; }
   virtual bool useOverlayOnPress() const { return true; }
 
@@ -418,6 +436,11 @@ class Widget {
 
   virtual bool usesHighlighterColor() const { return false; }
 
+  // Computes the current area-overlay opacity from the widget theme and
+  // interaction state.
+  //
+  // Paint-pipeline only: this depends on theme(), so it is valid only after
+  // the widget is attached to the parent/application tree.
   virtual uint8_t getOverlayOpacity() const;
 
   const Container* parent() const { return parent_; }

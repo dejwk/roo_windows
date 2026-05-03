@@ -8,6 +8,7 @@
 #include "roo_display/core/rasterizable.h"
 #include "roo_display/filter/clip_exclude_rects.h"
 #include "roo_display/filter/foreground.h"
+#include "roo_display/shape/smooth.h"
 #include "roo_windows/decoration/decoration.h"
 
 namespace roo_windows {
@@ -88,6 +89,7 @@ class ClipperState {
   // Note: vector doesn't work, because we need to ensure that pointers don't
   // get invalidated.
   std::deque<Decoration> decorations_;
+  std::deque<roo_display::SmoothShape> shape_overlays_;
 
   std::vector<ClippedOverlay> overlays_;
   std::vector<ClippedOverlay> bounded_overlays_;
@@ -101,6 +103,7 @@ class ClipperOutput : public roo_display::DisplayOutput {
         exclusions_(state.exclusions_),
         bounded_exclusions_(state.bounded_exclusions_),
         decorations_(state.decorations_),
+        shape_overlays_(state.shape_overlays_),
         overlays_(state.overlays_),
         bounded_overlays_(state.bounded_overlays_),
         valid_(true),
@@ -113,6 +116,7 @@ class ClipperOutput : public roo_display::DisplayOutput {
     exclusions_.clear();
     bounded_exclusions_.clear();
     decorations_.clear();
+    shape_overlays_.clear();
     overlays_.clear();
     bounded_overlays_.clear();
   }
@@ -162,6 +166,12 @@ class ClipperOutput : public roo_display::DisplayOutput {
       return;
     }
     valid_ = false;
+  }
+
+  void addOverlayShape(roo_display::SmoothShape overlay,
+                       roo_display::Box clip_box) {
+    shape_overlays_.push_back(std::move(overlay));
+    addOverlay(&shape_overlays_.back(), clip_box);
   }
 
   void setAddress(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1,
@@ -258,6 +268,7 @@ class ClipperOutput : public roo_display::DisplayOutput {
   std::vector<roo_display::Box> &exclusions_;
   std::vector<roo_display::Box> &bounded_exclusions_;
   std::deque<Decoration> &decorations_;
+  std::deque<roo_display::SmoothShape> &shape_overlays_;
   std::vector<ClippedOverlay> &overlays_;
   std::vector<ClippedOverlay> &bounded_overlays_;
   bool valid_;
@@ -297,6 +308,11 @@ class Clipper {
   void addOverlay(const roo_display::Rasterizable *overlay,
                   roo_display::Box clip_box) {
     out_.addOverlay(overlay, clip_box);
+  }
+
+  void addOverlayShape(roo_display::SmoothShape overlay,
+                       roo_display::Box clip_box) {
+    out_.addOverlayShape(std::move(overlay), clip_box);
   }
 
   void addDecoration(roo_display::Box clip_box, Rect extents, int elevation,
