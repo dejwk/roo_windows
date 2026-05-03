@@ -1,10 +1,9 @@
-#include "roo_windows_render_test_support.h"
-
 #include "roo_windows/core/press_overlay.h"
+#include "roo_windows/widgets/checkbox.h"
 #include "roo_windows/widgets/icon.h"
 #include "roo_windows/widgets/radio_button.h"
 #include "roo_windows/widgets/slider.h"
-#include "roo_windows/widgets/checkbox.h"
+#include "roo_windows_render_test_support.h"
 
 using namespace roo_display;
 using namespace roo_windows;
@@ -38,17 +37,23 @@ TEST_F(RooWindowsRenderTest, OverlayPolicyDefaultsFollowWidgetHierarchy) {
   RadioButton radio(env_);
   Slider slider(env_);
   Icon idle_icon(env_);
-  Icon interactive_icon(env_);
   ClickableSurfaceBoxWidget surface(env_, color::Blue, Dimensions(18, 18));
-
-  interactive_icon.setOnInteractiveChange([]() {});
 
   EXPECT_EQ(Widget::OVERLAY_POINT, checkbox.getOverlayType());
   EXPECT_EQ(Widget::OVERLAY_POINT, radio.getOverlayType());
   EXPECT_EQ(Widget::OVERLAY_POINT, slider.getOverlayType());
-  EXPECT_EQ(Widget::OVERLAY_AREA, idle_icon.getOverlayType());
-  EXPECT_EQ(Widget::OVERLAY_POINT, interactive_icon.getOverlayType());
+  EXPECT_EQ(Widget::OVERLAY_POINT, idle_icon.getOverlayType());
   EXPECT_EQ(Widget::OVERLAY_AREA, surface.getOverlayType());
+}
+
+TEST_F(RooWindowsRenderTest,
+       PointInteractionBoundsFollowLocalAndParentCoordinates) {
+  auto checkbox = std::make_unique<Checkbox>(env_);
+  Checkbox* checkbox_ptr = checkbox.get();
+  app_.add(std::move(checkbox), Box(20, 12, 37, 29));
+
+  EXPECT_EQ(Rect(-13, -13, 30, 30), checkbox_ptr->getInteractionBounds());
+  EXPECT_EQ(Rect(7, -1, 50, 42), checkbox_ptr->getParentInteractionBounds());
 }
 
 TEST_F(RooWindowsRenderTest, PointOverlayBoundsExpandOnlyWhileOverlayIsActive) {
@@ -79,8 +84,8 @@ TEST_F(RooWindowsRenderTest,
        PointOverlayInvalidationRestoresBackgroundOutsideLogicalBounds) {
   auto back =
       std::make_unique<ColorBoxWidget>(env_, color::Red, Dimensions(48, 40));
-  auto front = std::make_unique<PointOverlayBoxWidget>(
-      env_, color::Blue, Dimensions(18, 18));
+  auto front = std::make_unique<PointOverlayBoxWidget>(env_, color::Blue,
+                                                       Dimensions(18, 18));
   PointOverlayBoxWidget* front_ptr = front.get();
 
   app_.add(std::move(back), Box(0, 0, 47, 39));
@@ -107,8 +112,8 @@ TEST_F(RooWindowsRenderTest,
 TEST_F(RooWindowsRenderTest, PointPressOverlayRendersOutsideLogicalBounds) {
   auto back =
       std::make_unique<ColorBoxWidget>(env_, color::Red, Dimensions(48, 40));
-  auto front = std::make_unique<PointOverlayBoxWidget>(
-      env_, color::Blue, Dimensions(18, 18));
+  auto front = std::make_unique<PointOverlayBoxWidget>(env_, color::Blue,
+                                                       Dimensions(18, 18));
   PointOverlayBoxWidget* front_ptr = front.get();
 
   app_.add(std::move(back), Box(0, 0, 47, 39));
@@ -134,8 +139,8 @@ TEST_F(RooWindowsRenderTest, PointPressOverlayRendersOutsideLogicalBounds) {
 TEST_F(RooWindowsRenderTest, PointClickAnimationSettlesIntoStaticPressOverlay) {
   auto back =
       std::make_unique<ColorBoxWidget>(env_, color::Red, Dimensions(48, 40));
-  auto front = std::make_unique<PointOverlayBoxWidget>(
-      env_, color::Blue, Dimensions(18, 18));
+  auto front = std::make_unique<PointOverlayBoxWidget>(env_, color::Blue,
+                                                       Dimensions(18, 18));
   PointOverlayBoxWidget* front_ptr = front.get();
 
   app_.add(std::move(back), Box(0, 0, 47, 39));

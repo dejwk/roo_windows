@@ -410,9 +410,7 @@ class Widget {
 
   enum OverlayType { OVERLAY_AREA, OVERLAY_POINT };
 
-  virtual OverlayType getOverlayType() const {
-    return OVERLAY_POINT;
-  }
+  virtual OverlayType getOverlayType() const { return OVERLAY_POINT; }
 
   virtual roo_display::FpPoint getPointOverlayFocus() const {
     const Rect& r = parent_bounds();
