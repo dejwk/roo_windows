@@ -115,7 +115,7 @@ class RadioList : public Holder {
               env, prototype_fn(), [this](int idx) { elementSelected(idx); });
         }) {}
 
-  RadioList(const Environment& env, RadioListModel& model,
+  RadioList(const Environment& env, ListModel& model,
             const std::function<std::unique_ptr<Widget>()>& prototype_fn)
       : RadioList(env, prototype_fn) {
     setModel(model);
@@ -123,10 +123,12 @@ class RadioList : public Holder {
 
   int selected() const { return list_model_.selected(); }
 
-  void setModel(RadioListModel& model) {
+  void setModel(ListModel& model) {
     list_model_.setModel(model);
     setContents(list_);
   }
+
+  void setModel(RadioListModel& model) = delete;
 
   PreferredSize getPreferredSize() const override {
     return PreferredSize(PreferredSize::MatchParentWidth(),

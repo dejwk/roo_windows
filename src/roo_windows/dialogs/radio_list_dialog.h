@@ -17,11 +17,13 @@ class RadioListDialog : public Dialog {
 
   int selected() const { return list_.selected(); }
 
-  void setModel(RadioListModel& model) {
+  void setModel(ListModel& model) {
     list_.setModel(model);
     contents_.setContents(list_);
     last_button().setEnabled(false);
   }
+
+  void setModel(RadioListModel& model) = delete;
 
   void reset() {
     list_.reset();
