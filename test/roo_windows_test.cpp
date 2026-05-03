@@ -72,6 +72,34 @@ class ElevatedColorBoxWidget : public ColorBoxWidget {
   uint8_t elevation_;
 };
 
+class MutableShapeColorBoxWidget : public BasicSurfaceWidget {
+ public:
+  MutableShapeColorBoxWidget(const Environment& env, Color color,
+                             Dimensions dims)
+      : BasicSurfaceWidget(env), color_(color), dims_(dims), rounded_(false) {}
+
+  Color background() const override { return color_; }
+
+  BorderStyle getBorderStyle() const override {
+    return rounded_ ? BorderStyle(10, 0) : BorderStyle(0, 0);
+  }
+
+  void paint(const Canvas& canvas) const override { canvas.clear(); }
+
+  Dimensions getSuggestedMinimumDimensions() const override { return dims_; }
+
+  void setRounded(bool rounded) {
+    if (rounded == rounded_) return;
+    rounded_ = rounded;
+    invalidateInterior();
+  }
+
+ private:
+  Color color_;
+  Dimensions dims_;
+  bool rounded_;
+};
+
 class TouchSpyWidget : public BasicWidget {
  public:
   explicit TouchSpyWidget(const Environment& env, Dimensions dims)
@@ -272,6 +300,24 @@ TEST_F(RooWindowsRenderTest, HideAndShowRestoresShadowOverflowRegion) {
   front_ptr->setVisibility(Visibility::kVisible);
   ASSERT_TRUE(refresh());
   EXPECT_EQ(shadow_pixel, pixelAt(14, 22));
+}
+
+TEST_F(RooWindowsRenderTest, RoundedSurfaceInvalidationRestoresExposedCorners) {
+  auto back =
+      std::make_unique<ColorBoxWidget>(env_, color::Red, Dimensions(48, 40));
+  auto front = std::make_unique<MutableShapeColorBoxWidget>(
+      env_, color::Blue, Dimensions(20, 20));
+  MutableShapeColorBoxWidget* front_ptr = front.get();
+
+  app_.add(WidgetRef(std::move(back)), Box(0, 0, 47, 39));
+  app_.add(WidgetRef(std::move(front)), Box(16, 12, 35, 31));
+
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(QuantizeToArgb4444(color::Blue), pixelAt(16, 12));
+
+  front_ptr->setRounded(true);
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(16, 12));
 }
 
 TEST_F(RooWindowsRenderTest, TouchDispatchPrefersTopmostVisibleChild) {
