@@ -182,11 +182,18 @@ void Switch::paint(const Canvas& canvas) const {
       roo_display::Box(0, 0, kTrackWidth - 1, kTrackHeight - 1));
   composite.addInput(&track);
 
+  SmoothShape border_shape;
+  bool has_border_shape = false;
+
   if (tokens.border.a() != 0) {
-    auto border = SmoothThickRoundRect(0, 0, kTrackWidth - 1, kTrackHeight - 1,
-                                       kTrackRadius - 0.5f, kTrackOutlineWidth,
-                                       tokens.border);
-    composite.addInput(&border);
+    border_shape = SmoothThickRoundRect(0, 0, kTrackWidth - 1, kTrackHeight - 1,
+                                        kTrackRadius - 0.5f, kTrackOutlineWidth,
+                                        tokens.border);
+    has_border_shape = true;
+  }
+
+  if (has_border_shape) {
+    composite.addInput(&border_shape);
   }
 
   int16_t thumb_diameter = currentThumbDiameter();
@@ -200,7 +207,7 @@ void Switch::paint(const Canvas& canvas) const {
 
   const MonoIcon* icon = currentThumbIcon();
   if (icon != nullptr) {
-    MonoIcon thumb_icon = *icon;
+    MonoIcon thumb_icon(*icon);
     thumb_icon.color_mode().setColor(tokens.icon);
     roo_display::Box thumb_bounds(thumb_left, thumb_top,
                                   thumb_left + thumb_diameter - 1,
@@ -209,6 +216,8 @@ void Switch::paint(const Canvas& canvas) const {
         (kCenter | kMiddle)
             .resolveOffset(thumb_bounds, thumb_icon.anchorExtents());
     composite.addInput(&thumb_icon, thumb_icon_offset.dx, thumb_icon_offset.dy);
+    canvas.drawTiled(composite, bounds(), kCenter | kMiddle, isInvalidated());
+    return;
   }
 
   canvas.drawTiled(composite, bounds(), kCenter | kMiddle, isInvalidated());
