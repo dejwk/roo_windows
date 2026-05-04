@@ -20,8 +20,14 @@ namespace material3 {
 namespace {
 
 static constexpr int kContainerSize = Scaled(18);
-static constexpr int kOutlineWidth = (Scaled(2) > 0 ? Scaled(2) : 1);
-static constexpr float kCornerRadius = Scaled(2) - 0.5f;
+static constexpr float kOuterBoxMin = -0.5f;
+static constexpr float kOuterBoxMax = (float)kContainerSize - 0.5f;
+static constexpr float kOutlineWidth = Scaled(2.0f);
+static constexpr float kOuterCornerRadius = Scaled(2.0f);
+static constexpr float kOutlineInset = 0.5f * kOutlineWidth;
+static constexpr float kBorderCornerRadius =
+    kOuterCornerRadius - kOutlineInset > 0 ? kOuterCornerRadius - kOutlineInset
+                                           : 0;
 
 Color DisabledComposite(Color fg, uint8_t alpha, const Theme& theme) {
   return AlphaBlend(theme.color.surface, fg.withA(alpha));
@@ -108,14 +114,15 @@ void Checkbox::paint(const Canvas& canvas) const {
   bool has_container_shape = false;
 
   if (tokens.box.a() != 0) {
-    container_shape =
-        SmoothFilledRoundRect(0, 0, kContainerSize - 1, kContainerSize - 1,
-                              kCornerRadius, tokens.box);
+    container_shape = SmoothFilledRoundRect(
+        kOuterBoxMin, kOuterBoxMin, kOuterBoxMax, kOuterBoxMax,
+        kOuterCornerRadius, tokens.box);
     has_container_shape = true;
   } else if (tokens.border.a() != 0) {
-    container_shape =
-        SmoothThickRoundRect(0, 0, kContainerSize - 1, kContainerSize - 1,
-                             kCornerRadius, kOutlineWidth, tokens.border);
+    container_shape = SmoothThickRoundRect(
+        kOuterBoxMin + kOutlineInset, kOuterBoxMin + kOutlineInset,
+        kOuterBoxMax - kOutlineInset, kOuterBoxMax - kOutlineInset,
+        kBorderCornerRadius, kOutlineWidth, tokens.border);
     has_container_shape = true;
   }
 
