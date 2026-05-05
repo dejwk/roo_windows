@@ -13,6 +13,7 @@ cc_binary(
         "@roo_windows",
         "@roo_testing//:arduino_main",
         "@roo_testing//roo_testing/devices/display/ili9341:spi",
+        "@roo_testing//roo_testing/devices/touch/xpt2046:spi",
         "@roo_testing//roo_testing/transducers/ui/viewport/fltk",
         "@roo_testing//roo_testing/transducers/ui/viewport:flex",
     ],
