@@ -114,9 +114,9 @@ void Checkbox::paint(const Canvas& canvas) const {
   bool has_container_shape = false;
 
   if (tokens.box.a() != 0) {
-    container_shape = SmoothFilledRoundRect(
-        kOuterBoxMin, kOuterBoxMin, kOuterBoxMax, kOuterBoxMax,
-        kOuterCornerRadius, tokens.box);
+    container_shape =
+        SmoothFilledRoundRect(kOuterBoxMin, kOuterBoxMin, kOuterBoxMax,
+                              kOuterBoxMax, kOuterCornerRadius, tokens.box);
     has_container_shape = true;
   } else if (tokens.border.a() != 0) {
     container_shape = SmoothThickRoundRect(

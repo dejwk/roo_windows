@@ -61,16 +61,16 @@ void RadioButton::paint(const Canvas& canvas) const {
   roo_display::StreamableStack composite(
       roo_display::Box(0, 0, kContainerSize - 1, kContainerSize - 1));
 
-  auto ring = SmoothThickCircle({kCircleCenter, kCircleCenter},
-                                kCenterlineRadius, kOutlineWidth, tokens.ring,
-                                color::Transparent);
+  auto ring =
+      SmoothThickCircle({kCircleCenter, kCircleCenter}, kCenterlineRadius,
+                        kOutlineWidth, tokens.ring, color::Transparent);
   composite.addInput(&ring);
 
   SmoothShape dot_shape;
   bool has_dot_shape = false;
   if (tokens.dot.a() != 0) {
     dot_shape = SmoothFilledCircle({kCircleCenter, kCircleCenter}, kDotRadius,
-                     tokens.dot);
+                                   tokens.dot);
     has_dot_shape = true;
   }
 
