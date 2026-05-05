@@ -103,8 +103,9 @@ class Toolbar : public FlexLayout {
         settings_(env, ic_filled_24_action_settings()),
         overflow_(env, ic_filled_24_navigation_more_vert()) {
     setAlignItems(AlignItems::kCenter);
-    setPadding(Padding(PaddingSize::kSmall, PaddingSize::kNone));
-    setGap(Scaled(4));
+    setAlignContent(AlignContent::kFlexEnd);
+    setPadding(Padding(PaddingSize::kRegular, PaddingSize::kRegular));
+    setGap(Scaled(12));
     add(back_, {.flex_grow = 0, .flex_shrink = 0});
     add(title_, {.flex_grow = 1, .flex_shrink = 1});
     add(search_, {.flex_grow = 0, .flex_shrink = 0});
