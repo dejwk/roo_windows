@@ -104,7 +104,7 @@ class Toolbar : public FlexLayout {
         overflow_(env, ic_filled_24_navigation_more_vert()) {
     setAlignItems(AlignItems::kCenter);
     setAlignContent(AlignContent::kFlexEnd);
-    setPadding(Padding(PaddingSize::kRegular, PaddingSize::kRegular));
+    setPadding(Scaled(12));
     setGap(Scaled(12));
     add(back_, {.flex_grow = 0, .flex_shrink = 0});
     add(title_, {.flex_grow = 1, .flex_shrink = 1});

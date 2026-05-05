@@ -101,7 +101,7 @@ class SettingRow : public FlexLayout {
         secondary_(env, secondary, font_caption()),
         toggle_(env, initial_on) {
     setAlignItems(AlignItems::kCenter);
-    setPadding(Padding(PaddingSize::kRegular, PaddingSize::kSmall));
+    setPadding(Padding(Scaled(12), Scaled(8)));
     setGap(Scaled(12));
     add(icon_, {.flex_grow = 0, .flex_shrink = 0});
     labels_.setAlignItems(AlignItems::kFlexStart);

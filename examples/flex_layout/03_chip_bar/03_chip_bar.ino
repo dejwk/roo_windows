@@ -103,7 +103,7 @@ class ChipBar : public FlexLayout {
     setJustifyContent(JustifyContent::kFlexStart);
     setAlignContent(AlignContent::kFlexStart);
     setAlignItems(AlignItems::kCenter);
-    setPadding(Padding(PaddingSize::kSmall));
+    setPadding(Scaled(8));
     setColumnGap(Scaled(8));
     setRowGap(Scaled(8));
 

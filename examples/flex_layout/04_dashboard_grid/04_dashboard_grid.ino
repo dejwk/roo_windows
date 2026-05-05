@@ -89,7 +89,7 @@ class MetricCard : public FlexLayout {
  public:
   MetricCard(const Environment& env, const char* value, const char* caption)
       : FlexLayout(env, FlexDirection::kColumn),
-        value_(env, value, font_h5()),
+        value_(env, value, font_h6()),
         caption_(env, caption, font_caption()) {
     setAlignItems(AlignItems::kStretch);
     setJustifyContent(JustifyContent::kCenter);
@@ -111,7 +111,7 @@ class DashboardGrid : public FlexLayout {
         temp_(env, "23 °C", "Temperature"),
         humidity_(env, "61 %", "Humidity"),
         pressure_(env, "1013 hPa", "Pressure"),
-        co2_(env, "412 ppm", "CO₂"),
+        co2_(env, "412 ppm", "CO2"),
         wind_(env, "14 km/h", "Wind"),
         uv_(env, "3", "UV index") {
     setFlexWrap(FlexWrap::kWrap);
