@@ -28,11 +28,11 @@ namespace roo_windows {
 ///
 /// Each axis has a *start* edge and an *end* edge:
 /// | Direction      | main-start | main-end | cross-start | cross-end |
-/// |----------------|-----------|---------|------------|---------|
-/// | kRow           | left      | right   | top        | bottom  |
-/// | kRowReverse    | right     | left    | top        | bottom  |
-/// | kColumn        | top       | bottom  | left       | right   |
-/// | kColumnReverse | bottom    | top     | left       | right   |
+/// |----------------|------------|---------|--------------|-----------|
+/// | kRow           | left       | right   | top          | bottom    |
+/// | kRowReverse    | right      | left    | top          | bottom    |
+/// | kColumn        | top        | bottom  | left         | right     |
+/// | kColumnReverse | bottom     | top     | left         | right     |
 ///
 /// ---
 /// ### Flex lines
