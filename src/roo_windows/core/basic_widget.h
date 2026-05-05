@@ -14,11 +14,11 @@ class BasicWidget : public Widget {
   BasicWidget(const Environment& env) : Widget(env), padding_(0), margins_(0) {}
 
   virtual Padding getDefaultPadding() const {
-    return Padding(PaddingSize::kRegular);
+    return Padding(PaddingSize::kNone);
   }
 
   virtual Margins getDefaultMargins() const {
-    return Margins(MarginSize::kRegular);
+    return Margins(MarginSize::kNone);
   }
 
   void setPadding(PaddingSize h, PaddingSize v) {
