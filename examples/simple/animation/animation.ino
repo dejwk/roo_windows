@@ -1,10 +1,42 @@
+// *************** EMULATOR SETUP BEGIN
+
+#ifdef ROO_TESTING
+
+#include "roo_testing/devices/display/ili9341/ili9341spi.h"
+#include "roo_testing/microcontrollers/esp32/fake_esp32.h"
+#include "roo_testing/transducers/ui/viewport/flex_viewport.h"
+#include "roo_testing/transducers/ui/viewport/fltk/fltk_viewport.h"
+
+using roo_testing_transducers::FlexViewport;
+using roo_testing_transducers::FltkViewport;
+
+struct Emulator {
+  FltkViewport viewport;
+  FlexViewport flexViewport;
+
+  FakeIli9341Spi display;
+
+  Emulator()
+      : viewport(),
+        flexViewport(viewport, 1, FlexViewport::kRotationRight),
+        display(flexViewport) {
+    FakeEsp32().attachSpiDevice(display, 4, 5, 6);
+    FakeEsp32().gpio.attachOutput(7, display.cs());
+    FakeEsp32().gpio.attachOutput(2, display.dc());
+    FakeEsp32().gpio.attachOutput(3, display.rst());
+  }
+} emulator;
+
+#endif
+
+// *************** DISPLAY SETUP BEGIN
+
 #include "Arduino.h"
 #include "roo_display.h"
 #include "roo_scheduler.h"
 #include "roo_windows.h"
 
 using namespace roo_display;
-using namespace roo_scheduler;
 using namespace roo_windows;
 using namespace roo_time;
 
@@ -13,17 +45,21 @@ using namespace roo_time;
 #include "roo_display/driver/touch_xpt2046.h"
 
 // Set your configuration for the driver.
-static constexpr int kCsPin = 5;
-static constexpr int kDcPin = 17;
-static constexpr int kRstPin = 27;
-static constexpr int kBlPin = 16;
+static constexpr int kCsPin = 7;
+static constexpr int kDcPin = 2;
+static constexpr int kRstPin = 3;
+static constexpr int kBlPin = 20;
 
-static constexpr int kTouchCsPin = 2;
+static constexpr int kSpiSckPin = 4;
+static constexpr int kSpiMisoPin = 5;
+static constexpr int kSpiMosiPin = 6;
+
+static constexpr int kTouchCsPin = 1;
 
 // Uncomment if you have connected the BL pin to GPIO.
 
-#include "roo_display/backlit/esp32_ledc.h"
-LedcBacklit backlit(kBlPin, /* ledc channel */ 0);
+// #include "roo_display/backlit/esp32_ledc.h"
+// LedcBacklit backlit(kBlPin, /* ledc channel */ 0);
 
 Ili9341spi<kCsPin, kDcPin, kRstPin> screen(Orientation().rotateLeft());
 TouchXpt2046<kTouchCsPin> touch;
@@ -32,17 +68,24 @@ Display display(screen, touch,
                 TouchCalibration(269, 249, 3829, 3684,
                                  Orientation::LeftDown()));
 
+void initDisplay() {
+  SPI.begin(kSpiSckPin, kSpiMisoPin, kSpiMosiPin);
+  display.init();
+}
+
+// *************** EXAMPLE STARTS HERE
+
 #include "roo_display/color/color_mode_indexed.h"
 #include "roo_display/core/raster.h"
 #include "roo_display/shape/smooth.h"
 #include "roo_display/ui/tile.h"
-#include "roo_logging.h"
 #include "roo_icons/filled/action.h"
 #include "roo_icons/filled/alert.h"
+#include "roo_logging.h"
 #include "roo_windows/widgets/icon.h"
 #include "roo_windows/widgets/image.h"
 
-Scheduler scheduler;
+roo_scheduler::Scheduler scheduler;
 Environment env(scheduler);
 Application app(&env, display);
 
@@ -54,8 +97,7 @@ class AnimatedArc : public Image {
         // Initial condition; doesn't matter much (as long as we're using the
         // correct extents) since we're updating it quickly.
         arc_(SmoothShape(), arc_extents(), kNoAlign),
-        updater_(
-            scheduler, [this]() { update(); }, Millis(20)) {
+        updater_(scheduler, [this]() { update(); }, Millis(20)) {
     setImage(&arc_);
     updater_.startInstantly();
   }
@@ -147,9 +189,7 @@ class Ghost : public Drawable {
 class GhostImage : public Image {
  public:
   GhostImage(const Environment& env, roo_scheduler::Scheduler& scheduler)
-      : Image(env),
-        updater_(
-            scheduler, [this] { update(); }, Seconds(0.04)) {
+      : Image(env), updater_(scheduler, [this] { update(); }, Seconds(0.04)) {
     setImage(&ghost_);
     updater_.start();
   }
@@ -173,13 +213,12 @@ class GhostImage : public Image {
 // rather, by controlling the animation from its container.
 class MyPane : public VerticalLayout {
  public:
-  MyPane(const Environment& env, Scheduler& scheduler)
+  MyPane(const Environment& env, roo_scheduler::Scheduler& scheduler)
       : VerticalLayout(env),
         arc_(env, scheduler),
         ghost_(env, scheduler),
         warning_icon_(env, ic_filled_36_alert_warning(), color::DarkOrange),
-        icon_updater_(
-            scheduler, [this]() { updateIcon(); }, Seconds(0.25)) {
+        icon_updater_(scheduler, [this]() { updateIcon(); }, Seconds(0.25)) {
     add(arc_);
     add(ghost_);
 
@@ -191,8 +230,9 @@ class MyPane : public VerticalLayout {
   // Called periodically to toggle icon visibility.
   void updateIcon() {
     // Toggle visibility.
-    warning_icon_.setVisibility(warning_icon_.isVisible() ? INVISIBLE
-                                                          : VISIBLE);
+    warning_icon_.setVisibility(warning_icon_.isVisible()
+                                    ? Visibility::kInvisible
+                                    : Visibility::kVisible);
   }
 
   AnimatedArc arc_;
@@ -210,9 +250,9 @@ MyPane my_pane(env, scheduler);
 SingletonActivity activity(app, my_pane);
 
 void setup() {
-  SPI.begin();
-  display.init();
+  initDisplay();
   app.start();
+
   // Never exits.
   scheduler.run();
 }
