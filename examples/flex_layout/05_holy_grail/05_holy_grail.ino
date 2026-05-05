@@ -88,32 +88,39 @@ void initDisplay() {
 
 class NamedPanel : public FlexLayout {
  public:
-  NamedPanel(const Environment& env, const char* name)
-      : FlexLayout(env, FlexDirection::kRow), label_(env, name, font_body1()) {
+  NamedPanel(const Environment& env, const char* name,
+             ColorRole role = ColorRole::kSurfaceContainer)
+      : FlexLayout(env, FlexDirection::kRow),
+        label_(env, name, font_body1()),
+        role_(role) {
     setJustifyContent(JustifyContent::kCenter);
     setAlignItems(AlignItems::kCenter);
     add(label_);
   }
 
-  PreferredSize getPreferredSize() const override {
-    return PreferredSize(PreferredSize::MatchParentWidth(),
-                         PreferredSize::MatchParentHeight());
+  ColorRole containerRole() const override { return role_; }
+
+  BorderStyle getBorderStyle() const override { return BorderStyle(0, 1); }
+
+  Color getOutlineColor() const override {
+    return theme().color.outlineVariant;
   }
 
  private:
   TextLabel label_;
+  ColorRole role_;
 };
 
 class HolyGrail : public FlexLayout {
  public:
   HolyGrail(const Environment& env)
       : FlexLayout(env, FlexDirection::kColumn),
-        header_(env, "Header"),
+        header_(env, "Header", ColorRole::kSurfaceContainerHigh),
         middle_(env, FlexDirection::kRow),
-        nav_(env, "Nav"),
-        content_(env, "Content"),
-        sidebar_(env, "Sidebar"),
-        footer_(env, "Footer") {
+        nav_(env, "Nav", ColorRole::kSecondaryContainer),
+        content_(env, "Content", ColorRole::kPrimaryContainer),
+        sidebar_(env, "Sidebar", ColorRole::kTertiaryContainer),
+        footer_(env, "Footer", ColorRole::kSurfaceContainerHigh) {
     setAlignItems(AlignItems::kStretch);
 
     add(header_, {.flex_grow = 0, .flex_shrink = 0});

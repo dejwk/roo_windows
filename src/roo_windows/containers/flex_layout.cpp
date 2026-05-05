@@ -847,6 +847,7 @@ void FlexLayout::onLayout(bool changed, const Rect& rect) {
               : static_cast<AlignItems>(static_cast<int>(self) - 1);
 
       int16_t line_cross_inner = line.cross_size - it.mcs - it.mce;
+      int16_t item_cross_size = it.cross;
       int16_t item_cross_start;
       switch (effective) {
         case AlignItems::kFlexEnd:
@@ -857,12 +858,25 @@ void FlexLayout::onLayout(bool changed, const Rect& rect) {
               cross_cursor + it.mcs + (line_cross_inner - it.cross) / 2;
           break;
         case AlignItems::kStretch:
+          // Stretch to the final line cross size after align-content is
+          // applied, unless the widget has an exact preferred cross size.
+          if (horiz) {
+            if (!w.getPreferredSize().height().isExact()) {
+              item_cross_size = std::max<int16_t>(0, line_cross_inner);
+            }
+          } else {
+            if (!w.getPreferredSize().width().isExact()) {
+              item_cross_size = std::max<int16_t>(0, line_cross_inner);
+            }
+          }
+          item_cross_start = cross_cursor + it.mcs;
+          break;
         case AlignItems::kFlexStart:
         default:
           item_cross_start = cross_cursor + it.mcs;
           break;
       }
-      int16_t item_cross_end = item_cross_start + it.cross - 1;
+      int16_t item_cross_end = item_cross_start + item_cross_size - 1;
 
       // Build the physical Rect.
       XDim x0, y0, x1, y1;
