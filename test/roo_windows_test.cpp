@@ -6,10 +6,6 @@ using namespace roo_windows::test_support;
 
 namespace roo_windows {
 
-namespace {
-
-}  // namespace
-
 TEST(Windows, BasicCompilation) {
   roo::byte raster[320 * 240 * 2];
   OffscreenDevice<Argb4444> offscreen(320, 240, raster, Argb4444());
@@ -98,8 +94,8 @@ TEST_F(RooWindowsRenderTest, InkInsetsDriveContentAndVisualBounds) {
 }
 
 TEST_F(RooWindowsRenderTest, UnclippedChildMaxBoundsIncludeInkOverflow) {
-  auto child =
-      std::make_unique<InkBoundsWidget>(env_, Dimensions(10, 8), Insets(-3, 0, 0, 0));
+  auto child = std::make_unique<InkBoundsWidget>(env_, Dimensions(10, 8),
+                                                 Insets(-3, 0, 0, 0));
   InkBoundsWidget* child_ptr = child.get();
   child_ptr->setParentClipMode(ParentClipMode::kUnclipped);
 
@@ -135,8 +131,8 @@ TEST_F(RooWindowsRenderTest, HideAndShowRestoresShadowOverflowRegion) {
 TEST_F(RooWindowsRenderTest, RoundedSurfaceInvalidationRestoresExposedCorners) {
   auto back =
       std::make_unique<ColorBoxWidget>(env_, color::Red, Dimensions(48, 40));
-  auto front = std::make_unique<MutableShapeColorBoxWidget>(
-      env_, color::Blue, Dimensions(20, 20));
+  auto front = std::make_unique<MutableShapeColorBoxWidget>(env_, color::Blue,
+                                                            Dimensions(20, 20));
   MutableShapeColorBoxWidget* front_ptr = front.get();
 
   app_.add(std::move(back), Box(0, 0, 47, 39));
