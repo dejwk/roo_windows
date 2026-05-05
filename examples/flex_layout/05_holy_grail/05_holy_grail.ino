@@ -1,45 +1,98 @@
+// *************** EMULATOR SETUP BEGIN
+
+#ifdef ROO_TESTING
+
+#include "roo_testing/devices/display/ili9341/ili9341spi.h"
+#include "roo_testing/devices/touch/xpt2046/xpt2046spi.h"
+#include "roo_testing/microcontrollers/esp32/fake_esp32.h"
+#include "roo_testing/transducers/ui/viewport/flex_viewport.h"
+#include "roo_testing/transducers/ui/viewport/fltk/fltk_viewport.h"
+
+using roo_testing_transducers::FlexViewport;
+using roo_testing_transducers::FltkViewport;
+
+struct Emulator {
+  FltkViewport viewport;
+  FlexViewport flexViewport;
+
+  FakeIli9341Spi display;
+  FakeXpt2046Spi touch;
+
+  Emulator()
+      : viewport(),
+        flexViewport(viewport, 1, FlexViewport::kRotationRight),
+        display(flexViewport),
+        touch(flexViewport, FakeXpt2046Spi::Calibration(269, 249, 3829, 3684,
+                                                        true, false, false)) {
+    FakeEsp32().attachSpiDevice(display, 4, 5, 6);
+    FakeEsp32().gpio.attachOutput(7, display.cs());
+    FakeEsp32().gpio.attachOutput(2, display.dc());
+    FakeEsp32().gpio.attachOutput(3, display.rst());
+    FakeEsp32().attachSpiDevice(touch, 4, 5, 6);
+    FakeEsp32().gpio.attachOutput(1, touch.cs());
+  }
+} emulator;
+
+#endif
+
+// *************** DISPLAY SETUP BEGIN
+
+#include "Arduino.h"
+#include "roo_display.h"
+#include "roo_scheduler.h"
+#include "roo_windows.h"
+
+using namespace roo_display;
+using namespace roo_windows;
+
+// Select the driver to match your display device.
+#include "roo_display/driver/ili9341.h"
+#include "roo_display/driver/touch_xpt2046.h"
+
+// Set your configuration for the driver.
+static constexpr int kCsPin = 7;
+static constexpr int kDcPin = 2;
+static constexpr int kRstPin = 3;
+static constexpr int kBlPin = 20;
+
+static constexpr int kSpiSckPin = 4;
+static constexpr int kSpiMisoPin = 5;
+static constexpr int kSpiMosiPin = 6;
+
+static constexpr int kTouchCsPin = 1;
+
+// Uncomment if you have connected the BL pin to GPIO.
+
+// #include "roo_display/backlit/esp32_ledc.h"
+// LedcBacklit backlit(kBlPin, /* ledc channel */ 0);
+
+Ili9341spi<kCsPin, kDcPin, kRstPin> screen(Orientation().rotateLeft());
+TouchXpt2046<kTouchCsPin> touch;
+
+Display display(screen, touch,
+                TouchCalibration(269, 249, 3829, 3684,
+                                 Orientation::LeftDown()));
+
+void initDisplay() {
+  SPI.begin(kSpiSckPin, kSpiMisoPin, kSpiMosiPin);
+  display.init();
+}
+
+// *************** EXAMPLE STARTS HERE
+
 // Example 5: Full-screen "Holy Grail" layout
-//
-// A classic web layout adapted to an embedded screen:
-//
-//   ┌──────────────────────────────────┐
-//   │           header (fixed)         │
-//   ├────────┬─────────────┬───────────┤
-//   │  nav   │   content   │  sidebar  │
-//   │(fixed) │  (flex: 1)  │ (fixed)   │
-//   ├────────┴─────────────┴───────────┤
-//   │           footer (fixed)         │
-//   └──────────────────────────────────┘
-//
-// The outer container is a column; the middle band is a row.
-// The centre column inside the row consumes all leftover width via flex-grow.
-// The outer column's middle row consumes all leftover height via flex-grow.
-//
-// Demonstrates:
-//   Bidirectional nesting (column → row)
-//   flex-grow = 1 for space-filling in both axes
-//   AlignItems::kStretch so the side panels match the content height
 
 #include "roo_windows/containers/flex_layout.h"
-#include "roo_windows/core/application.h"
-#include "roo_windows/core/environment.h"
 #include "roo_windows/widgets/blank.h"
 #include "roo_windows/widgets/text_label.h"
 
-using namespace roo_windows;
-
-// ─── Placeholder panels ──────────────────────────────────────────────────────
-
-// A solid-colour panel with a centred label, used as a stand-in for real
-// content.  Stretches to fill whatever space it is given.
 class NamedPanel : public FlexLayout {
  public:
   NamedPanel(const Environment& env, const char* name)
-      : FlexLayout(env, FlexDirection::kRow),
-        label_(env, name, font_body1()) {
+      : FlexLayout(env, FlexDirection::kRow), label_(env, name, font_body1()) {
     setJustifyContent(JustifyContent::kCenter);
     setAlignItems(AlignItems::kCenter);
-    add(WidgetRef(label_));
+    add(label_);
   }
 
   PreferredSize getPreferredSize() const override {
@@ -51,43 +104,27 @@ class NamedPanel : public FlexLayout {
   TextLabel label_;
 };
 
-// ─── Holy Grail ──────────────────────────────────────────────────────────────
-
 class HolyGrail : public FlexLayout {
  public:
   HolyGrail(const Environment& env)
       : FlexLayout(env, FlexDirection::kColumn),
         header_(env, "Header"),
         middle_(env, FlexDirection::kRow),
-        nav_(env,     "Nav"),
+        nav_(env, "Nav"),
         content_(env, "Content"),
         sidebar_(env, "Sidebar"),
         footer_(env, "Footer") {
-    // Outer column: fill the whole screen.
     setAlignItems(AlignItems::kStretch);
 
-    // Header and footer: fixed intrinsic height, full width.
-    add(WidgetRef(header_), {.flex_grow = 0, .flex_shrink = 0});
-
-    // Middle band: grows to absorb all remaining vertical space.
+    add(header_, {.flex_grow = 0, .flex_shrink = 0});
     middle_.setAlignItems(AlignItems::kStretch);
-
-    // Nav: fixed 60 px wide, full height of the band.
     nav_.setMinimumDimensions(Dimensions(Scaled(60), 0));
-    middle_.add(WidgetRef(nav_),
-                {.flex_grow = 0, .flex_shrink = 0});
-
-    // Content: takes up all leftover width.
-    middle_.add(WidgetRef(content_), {.flex_grow = 1, .flex_shrink = 1});
-
-    // Sidebar: fixed 80 px wide.
+    middle_.add(nav_, {.flex_grow = 0, .flex_shrink = 0});
+    middle_.add(content_, {.flex_grow = 1, .flex_shrink = 1});
     sidebar_.setMinimumDimensions(Dimensions(Scaled(80), 0));
-    middle_.add(WidgetRef(sidebar_),
-                {.flex_grow = 0, .flex_shrink = 0});
-
-    add(WidgetRef(middle_), {.flex_grow = 1, .flex_shrink = 1});
-
-    add(WidgetRef(footer_), {.flex_grow = 0, .flex_shrink = 0});
+    middle_.add(sidebar_, {.flex_grow = 0, .flex_shrink = 0});
+    add(middle_, {.flex_grow = 1, .flex_shrink = 1});
+    add(footer_, {.flex_grow = 0, .flex_shrink = 0});
   }
 
   PreferredSize getPreferredSize() const override {
@@ -103,3 +140,19 @@ class HolyGrail : public FlexLayout {
   NamedPanel sidebar_;
   NamedPanel footer_;
 };
+
+roo_scheduler::Scheduler scheduler;
+Environment env(scheduler);
+Application app(&env, display);
+HolyGrail holy_grail(env);
+SingletonActivity activity(app, holy_grail);
+
+void setup() {
+  initDisplay();
+  app.start();
+
+  // Never exits.
+  scheduler.run();
+}
+
+void loop() {}

@@ -1,25 +1,89 @@
-// Example 4: Dashboard card grid
-//
-// A 2×N grid of metric cards. Each card is a column-direction flex container
-// with a large value label (grow) and a small caption below.  The outer
-// container wraps cards row-by-row.  Cards have equal flex-basis (0 + grow=1)
-// so each row divides the available width exactly in half.
-//
-// Demonstrates:
-//   FlexWrap::kWrap with flex-basis 0 + flex-grow for equal-width columns
-//   JustifyContent::kSpaceBetween   — two columns per row, no gaps at edges
-//   AlignContent::kFlexStart        — rows packed to the top
-//   AlignItems::kStretch            — cards stretch to match the tallest in row
-//   Per-item flex_basis = FlexBasis::kZero
+// *************** EMULATOR SETUP BEGIN
 
-#include "roo_windows/containers/flex_layout.h"
-#include "roo_windows/core/application.h"
-#include "roo_windows/core/environment.h"
-#include "roo_windows/widgets/text_label.h"
+#ifdef ROO_TESTING
 
+#include "roo_testing/devices/display/ili9341/ili9341spi.h"
+#include "roo_testing/devices/touch/xpt2046/xpt2046spi.h"
+#include "roo_testing/microcontrollers/esp32/fake_esp32.h"
+#include "roo_testing/transducers/ui/viewport/flex_viewport.h"
+#include "roo_testing/transducers/ui/viewport/fltk/fltk_viewport.h"
+
+using roo_testing_transducers::FlexViewport;
+using roo_testing_transducers::FltkViewport;
+
+struct Emulator {
+  FltkViewport viewport;
+  FlexViewport flexViewport;
+
+  FakeIli9341Spi display;
+  FakeXpt2046Spi touch;
+
+  Emulator()
+      : viewport(),
+        flexViewport(viewport, 1, FlexViewport::kRotationRight),
+        display(flexViewport),
+        touch(flexViewport, FakeXpt2046Spi::Calibration(269, 249, 3829, 3684,
+                                                        true, false, false)) {
+    FakeEsp32().attachSpiDevice(display, 4, 5, 6);
+    FakeEsp32().gpio.attachOutput(7, display.cs());
+    FakeEsp32().gpio.attachOutput(2, display.dc());
+    FakeEsp32().gpio.attachOutput(3, display.rst());
+    FakeEsp32().attachSpiDevice(touch, 4, 5, 6);
+    FakeEsp32().gpio.attachOutput(1, touch.cs());
+  }
+} emulator;
+
+#endif
+
+// *************** DISPLAY SETUP BEGIN
+
+#include "Arduino.h"
+#include "roo_display.h"
+#include "roo_scheduler.h"
+#include "roo_windows.h"
+
+using namespace roo_display;
 using namespace roo_windows;
 
-// ─── A single metric card ────────────────────────────────────────────────────
+// Select the driver to match your display device.
+#include "roo_display/driver/ili9341.h"
+#include "roo_display/driver/touch_xpt2046.h"
+
+// Set your configuration for the driver.
+static constexpr int kCsPin = 7;
+static constexpr int kDcPin = 2;
+static constexpr int kRstPin = 3;
+static constexpr int kBlPin = 20;
+
+static constexpr int kSpiSckPin = 4;
+static constexpr int kSpiMisoPin = 5;
+static constexpr int kSpiMosiPin = 6;
+
+static constexpr int kTouchCsPin = 1;
+
+// Uncomment if you have connected the BL pin to GPIO.
+
+// #include "roo_display/backlit/esp32_ledc.h"
+// LedcBacklit backlit(kBlPin, /* ledc channel */ 0);
+
+Ili9341spi<kCsPin, kDcPin, kRstPin> screen(Orientation().rotateLeft());
+TouchXpt2046<kTouchCsPin> touch;
+
+Display display(screen, touch,
+                TouchCalibration(269, 249, 3829, 3684,
+                                 Orientation::LeftDown()));
+
+void initDisplay() {
+  SPI.begin(kSpiSckPin, kSpiMisoPin, kSpiMosiPin);
+  display.init();
+}
+
+// *************** EXAMPLE STARTS HERE
+
+// Example 4: Dashboard card grid
+
+#include "roo_windows/containers/flex_layout.h"
+#include "roo_windows/widgets/text_label.h"
 
 class MetricCard : public FlexLayout {
  public:
@@ -29,7 +93,7 @@ class MetricCard : public FlexLayout {
         caption_(env, caption, font_caption()) {
     setAlignItems(AlignItems::kStretch);
     setJustifyContent(JustifyContent::kCenter);
-    setPadding(Padding(PaddingSize::REGULAR));
+    setPadding(Padding(PaddingSize::kRegular));
 
     add(value_, {.flex_grow = 0});
     add(caption_, {.flex_grow = 0});
@@ -39,8 +103,6 @@ class MetricCard : public FlexLayout {
   TextLabel value_;
   TextLabel caption_;
 };
-
-// ─── Dashboard grid ──────────────────────────────────────────────────────────
 
 class DashboardGrid : public FlexLayout {
  public:
@@ -58,8 +120,6 @@ class DashboardGrid : public FlexLayout {
     setAlignItems(AlignItems::kStretch);
     setRowGap(Scaled(8));
 
-    // flex-basis 0 + flex-grow 1: every card in the same row gets exactly half
-    // the container width (two cards per row).
     FlexLayout::Params card_params{
         .flex_grow = 1,
         .flex_shrink = 1,
@@ -82,3 +142,19 @@ class DashboardGrid : public FlexLayout {
   MetricCard wind_;
   MetricCard uv_;
 };
+
+roo_scheduler::Scheduler scheduler;
+Environment env(scheduler);
+Application app(&env, display);
+DashboardGrid dashboard_grid(env);
+SingletonActivity activity(app, dashboard_grid);
+
+void setup() {
+  initDisplay();
+  app.start();
+
+  // Never exits.
+  scheduler.run();
+}
+
+void loop() {}

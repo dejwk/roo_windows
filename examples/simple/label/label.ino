@@ -4,6 +4,7 @@
 #ifdef ROO_TESTING
 
 #include "roo_testing/devices/display/ili9341/ili9341spi.h"
+#include "roo_testing/devices/touch/xpt2046/xpt2046spi.h"
 #include "roo_testing/microcontrollers/esp32/fake_esp32.h"
 #include "roo_testing/transducers/ui/viewport/flex_viewport.h"
 #include "roo_testing/transducers/ui/viewport/fltk/fltk_viewport.h"
@@ -16,15 +17,20 @@ struct Emulator {
   FlexViewport flexViewport;
 
   FakeIli9341Spi display;
+  FakeXpt2046Spi touch;
 
   Emulator()
       : viewport(),
         flexViewport(viewport, 1, FlexViewport::kRotationRight),
-        display(flexViewport) {
+        display(flexViewport),
+        touch(flexViewport, FakeXpt2046Spi::Calibration(269, 249, 3829, 3684,
+                                                        true, false, false)) {
     FakeEsp32().attachSpiDevice(display, 4, 5, 6);
     FakeEsp32().gpio.attachOutput(7, display.cs());
     FakeEsp32().gpio.attachOutput(2, display.dc());
     FakeEsp32().gpio.attachOutput(3, display.rst());
+    FakeEsp32().attachSpiDevice(touch, 4, 5, 6);
+    FakeEsp32().gpio.attachOutput(1, touch.cs());
   }
 } emulator;
 
