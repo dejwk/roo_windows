@@ -31,6 +31,26 @@ int16_t Switch::time_animating_ms() const {
   return (millis() & 0x7FFF) - (anim_ & 0x7FFF);
 }
 
+int16_t Switch::currentThumbOffsetX() const {
+  if (isAnimating()) {
+    int16_t ms = time_animating_ms();
+    if (ms < 0 || ms > kSwitchAnimationMs) {
+      return isOn() ? Scaled(19) : 0;
+    }
+    int16_t progress = Scaled(ms * 19) / kSwitchAnimationMs;
+    return isOn() ? progress : Scaled(19) - progress;
+  }
+  return isOn() ? Scaled(19) : 0;
+}
+
+roo_display::FpPoint Switch::getPointOverlayFocus() const {
+  int16_t content_left = (width() - Scaled(42)) / 2;
+  int16_t content_top = (height() - Scaled(24)) / 2;
+  return roo_display::FpPoint{
+      content_left + 0.5f * (float)(Scaled(24) - 1) + currentThumbOffsetX(),
+      content_top + 0.5f * (float)(Scaled(24) - 1)};
+}
+
 void Switch::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
   if (isAnimating()) {
     int16_t ms = time_animating_ms();
@@ -52,18 +72,7 @@ void Switch::paint(const Canvas& canvas) const {
                              : th.color.role(ColorRole::kSurface);
   Color sliderColor = isOn() ? th.color.accentColorFor(bg_role)
                              : th.color.contentColorFor(bg_role);
-  int16_t xoffset;
-  if (isAnimating()) {
-    int16_t ms = time_animating_ms();
-    if (ms < 0 || ms > kSwitchAnimationMs) {
-      xoffset = isOn() ? Scaled(19) : 0;
-    } else {
-      int16_t progress = Scaled(ms * 19) / kSwitchAnimationMs;
-      xoffset = isOn() ? progress : Scaled(19) - progress;
-    }
-  } else {
-    xoffset = isOn() ? Scaled(19) : 0;
-  }
+  int16_t xoffset = currentThumbOffsetX();
 #if ROO_WINDOWS_ZOOM >= 200
   auto slider = slider_48();
   auto circle = circle_48();

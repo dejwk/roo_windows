@@ -33,11 +33,14 @@ class Switch : public BasicWidget {
 
   bool isClickable() const override { return true; }
 
+  roo_display::FpPoint getPointOverlayFocus() const override;
+
   bool onSingleTapUp(XDim x, YDim y) override;
 
  private:
   bool isAnimating() const { return (anim_ & 0x8000) == 0; }
   int16_t time_animating_ms() const;
+  int16_t currentThumbOffsetX() const;
 
   // The topmost bit = 1 means 'no animation'.
   // Otherwise, the remaining 15 bits are millis, LSB.
