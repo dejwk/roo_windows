@@ -103,12 +103,12 @@ class SettingRow : public FlexLayout {
     setAlignItems(AlignItems::kCenter);
     setPadding(Padding(PaddingSize::kRegular, PaddingSize::kSmall));
     setGap(Scaled(12));
-    add(WidgetRef(icon_), {.flex_grow = 0, .flex_shrink = 0});
+    add(icon_, {.flex_grow = 0, .flex_shrink = 0});
     labels_.setAlignItems(AlignItems::kFlexStart);
-    labels_.add(WidgetRef(primary_), {.flex_grow = 0});
-    labels_.add(WidgetRef(secondary_), {.flex_grow = 0});
-    add(WidgetRef(labels_), {.flex_grow = 1, .flex_shrink = 1});
-    add(WidgetRef(toggle_), {.flex_grow = 0, .flex_shrink = 0});
+    labels_.add(primary_, {.flex_grow = 0});
+    labels_.add(secondary_, {.flex_grow = 0});
+    add(labels_, {.flex_grow = 1, .flex_shrink = 1});
+    add(toggle_, {.flex_grow = 0, .flex_shrink = 0});
   }
 
  private:
@@ -130,11 +130,11 @@ class SettingsScreen : public FlexLayout {
         div2_(env),
         brightness_(env, ic_filled_24_device_brightness_medium(), "Brightness",
                     "70 %", true) {
-    add(WidgetRef(wifi_));
-    add(WidgetRef(div1_));
-    add(WidgetRef(bt_));
-    add(WidgetRef(div2_));
-    add(WidgetRef(brightness_));
+    add(wifi_);
+    add(div1_);
+    add(bt_);
+    add(div2_);
+    add(brightness_);
   }
 
  private:

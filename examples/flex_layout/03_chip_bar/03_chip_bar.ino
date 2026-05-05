@@ -108,7 +108,7 @@ class ChipBar : public FlexLayout {
     setRowGap(Scaled(8));
 
     for (auto& chip : chips_) {
-      add(WidgetRef(chip), {.flex_grow = 0, .flex_shrink = 0});
+      add(chip, {.flex_grow = 0, .flex_shrink = 0});
     }
   }
 
