@@ -30,6 +30,7 @@ Use this skill when working in the `roo_windows` repo or package and you need to
 
 - Keep tests and goldens in the `roo_windows` package itself, not in an unrelated parent workspace root.
 - Prefer small smoke matrices over exhaustive combinations unless the widget is especially stateful.
+- Prefer stack-allocating temporary test widgets when the host container does not outlive the test scope; pass them to `add()` or similar APIs via non-owning `WidgetRef` instead of defaulting to heap allocation.
 - Transfer ownership to `Application::add()` with `std::move(unique_ptr)` and rely on implicit `WidgetRef` construction.
 - If a widget needs a backdrop or host surface, a tiny `BasicSurfaceWidget` fixture is usually enough.
 - Golden image paths should be package-relative like `test/goldens/<group>/<name>.ppm`.

@@ -40,7 +40,9 @@ class Image : public BasicWidget {
 
   void paint(const Canvas& canvas) const override;
 
-  Dimensions getSuggestedMinimumDimensions() const;
+  Insets getInkInsets() const override;
+
+  Dimensions getSuggestedMinimumDimensions() const override;
 
  private:
   const roo_display::Drawable* image_;

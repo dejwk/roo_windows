@@ -46,6 +46,30 @@ cc_test(
 )
 
 cc_test(
+    name = "image_test",
+    srcs = [
+        "test/image_test.cpp",
+    ],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
+cc_test(
+    name = "icon_test",
+    srcs = [
+        "test/icon_test.cpp",
+    ],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
+cc_test(
     name = "overlay_test",
     srcs = [
         "test/overlay_test.cpp",

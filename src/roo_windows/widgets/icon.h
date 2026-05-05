@@ -20,6 +20,8 @@ class Icon : public BasicWidget {
 
   void setIcon(const roo_display::Pictogram& icon);
 
+  Insets getInkInsets() const override;
+
   Dimensions getSuggestedMinimumDimensions() const override;
 
   roo_display::Color color() const { return color_; }
