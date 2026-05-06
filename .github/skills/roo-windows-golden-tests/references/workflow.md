@@ -59,33 +59,45 @@ Notes:
 
 Do not depend on `bazel test` inside the linux sandbox to write workspace `.ppm` files.
 
-Preferred update flow:
+Preferred update flow (artifact-copy strategy):
 
-1. Build or test the target once so the binary exists.
-2. Run the built binary directly from whichever workspace root produced it.
-3. Set:
+1. Run the focused test normally so mismatches generate `*_actual.ppm` artifacts.
+
+```sh
+bazel test //:your_golden_test --test_output=errors --cache_test_results=no
+```
+
+2. Promote actual renders into goldens:
+
+```sh
+test/goldens/promote_golden_actuals.sh --test <target_name>
+```
+
+For a quick preview without writes:
+
+```sh
+test/goldens/promote_golden_actuals.sh --dry-run --test <target_name>
+```
+
+You can still copy manually from `bazel-testlogs/<test>/test.outputs/*_actual.ppm` for one-off updates.
+
+3. Re-run the same Bazel target to confirm the refreshed goldens now pass.
+
+Why this is default in this repo:
+
+- Forwarding `ROO_UPDATE_GOLDENS=1` through `bazel test` often still cannot write files (`cannot open file for write`) due sandbox write restrictions.
+- The mismatch artifacts are reliably produced and are safe to promote intentionally.
+
+Secondary option (only when write-through is known to work):
+
+1. Build or test once so the binary exists.
+2. Run the built binary directly and set update env vars.
 
 ```sh
 BUILD_WORKSPACE_DIRECTORY=$PWD ROO_UPDATE_GOLDENS=1 ./bazel-bin/<target>
 ```
 
-Examples:
-
-```sh
-cd /path/to/lib/roo_windows
-BUILD_WORKSPACE_DIRECTORY=$PWD \
-ROO_UPDATE_GOLDENS=1 \
-./bazel-bin/material3_checkbox_golden_test
-```
-
-```sh
-cd /path/to/outer-workspace
-BUILD_WORKSPACE_DIRECTORY=$PWD \
-ROO_UPDATE_GOLDENS=1 \
-./bazel-bin/lib/roo_windows/material3_checkbox_golden_test
-```
-
-If you use Bazel test env forwarding instead, verify that the test process actually sees those env vars; cached or sandboxed runs can still leave you with missing-golden failures.
+If using this mode, validate by re-running `bazel test` without update vars.
 
 ## Validation Sequence
 
@@ -101,8 +113,8 @@ or
 bazel test //lib/roo_windows:your_golden_test
 ```
 
-2. Direct-binary golden update if baselines are missing or stale.
-3. Re-run the same target with `--nocache_test_results` to verify the committed goldens.
+2. Run `test/goldens/promote_golden_actuals.sh --test <target_name>`.
+3. Re-run the same target with `--cache_test_results=no` to verify the committed goldens.
 
 ## Good Smoke Coverage
 
