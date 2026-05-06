@@ -1,0 +1,8 @@
+bazel-bin
+bazel-out
+bazel-testlogs
+bazel-roo_windows
+emulation/bazel-bin
+emulation/bazel-out
+emulation/bazel-testlogs
+emulation/bazel-emulation

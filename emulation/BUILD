@@ -9,6 +9,7 @@ cc_binary(
         "ROO_LOGGING_COLORLOGTOSTDERR=1",
     ],
     linkstatic = 1,
+    tags = ["manual"],
     deps = [
         "@roo_windows",
         "@roo_testing//:arduino_main",
