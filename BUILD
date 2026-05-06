@@ -232,6 +232,7 @@ cc_binary(
         "ROO_TESTING"
     ],
     linkstatic = 1,
+    tags = ["manual"],
     deps = [
         ":roo_windows",
         "@roo_testing//:arduino_main",
