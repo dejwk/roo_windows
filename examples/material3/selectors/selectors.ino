@@ -19,7 +19,7 @@ struct Emulator {
   FakeXpt2046Spi touch;
 
   Emulator()
-      : viewport({.noise_bits = 6}),
+      : viewport(),
         flexViewport(viewport, 1, FlexViewport::kRotationRight),
         display(flexViewport),
         touch(flexViewport, FakeXpt2046Spi::Calibration(269, 249, 3829, 3684,
