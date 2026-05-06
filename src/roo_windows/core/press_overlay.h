@@ -57,9 +57,9 @@ class PressOverlay : public roo_display::Rasterizable {
           std::max<int16_t>(y_ - r_ - 1, (int16_t)floorf(clip_circle_y_ -
                                                          clip_circle_r_ + 1)),
           std::min<int16_t>(
-              x_ + r_ + 1, (int16_t)ceilf(clip_circle_x_ + clip_circle_r_ + 1)),
+            x_ + r_ + 1, (int16_t)ceilf(clip_circle_x_ + clip_circle_r_ - 1)),
           std::min<int16_t>(y_ + r_ + 1, (int16_t)ceilf(clip_circle_y_ +
-                                                        clip_circle_r_ + 1)));
+                                clip_circle_r_ - 1)));
     }
   };
 
