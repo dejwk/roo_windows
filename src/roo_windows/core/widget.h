@@ -210,6 +210,7 @@ class Widget {
   }
 
   virtual ColorRole effectiveContainerRole() const;
+  ColorRole effectiveOverlayColorRole() const;
 
   const Rect& parent_bounds() const { return parent_bounds_; }
 

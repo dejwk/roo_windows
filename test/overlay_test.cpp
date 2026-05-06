@@ -1,5 +1,5 @@
-#include "roo_windows/core/press_overlay.h"
 #include "roo_windows/containers/flex_layout.h"
+#include "roo_windows/core/press_overlay.h"
 #include "roo_windows/widgets/checkbox.h"
 #include "roo_windows/widgets/icon.h"
 #include "roo_windows/widgets/radio_button.h"
@@ -20,6 +20,33 @@ class ClickableSurfaceBoxWidget : public test_support::ColorBoxWidget {
       : ColorBoxWidget(env, color, dims) {}
 
   bool isClickable() const override { return true; }
+};
+
+class RolePanel : public Panel {
+ public:
+  RolePanel(const Environment& env, ColorRole role) : Panel(env), role_(role) {}
+
+  void addChild(WidgetRef child, const Rect& bounds) {
+    add(std::move(child), bounds);
+  }
+
+  ColorRole containerRole() const override { return role_; }
+
+ private:
+  ColorRole role_;
+};
+
+class RoleOverridingPointOverlayWidget : public PointOverlayBoxWidget {
+ public:
+  RoleOverridingPointOverlayWidget(const Environment& env,
+                                   roo_display::Color color, Dimensions dims,
+                                   ColorRole role)
+      : PointOverlayBoxWidget(env, color, dims), role_(role) {}
+
+  ColorRole effectiveContainerRole() const override { return role_; }
+
+ private:
+  ColorRole role_;
 };
 
 TEST(PressOverlay, WideTopStripCrossingCenterIsNotUniformTransparent) {
@@ -110,6 +137,32 @@ TEST_F(RooWindowsRenderTest,
   EXPECT_EQ(center_background_pixel, pixelAt(28, 20));
 }
 
+TEST_F(RooWindowsRenderTest,
+       PointOverlayColorUsesParentRoleWhenChildOverridesContainerRole) {
+  auto back =
+      std::make_unique<RolePanel>(env_, ColorRole::kSurfaceContainerHighest);
+  auto front = std::make_unique<RoleOverridingPointOverlayWidget>(
+      env_, color::Blue, Dimensions(18, 18), ColorRole::kPrimary);
+  RoleOverridingPointOverlayWidget* front_ptr = front.get();
+
+  back->addChild(std::move(front), Box(20, 12, 37, 29));
+  app_.add(std::move(back), Box(0, 0, 47, 39));
+
+  ASSERT_TRUE(refresh());
+
+  front_ptr->setActivated(true);
+  ASSERT_TRUE(refresh());
+
+  ColorRole parent_role = ColorRole::kSurfaceContainerHighest;
+  Color overlay = front_ptr->theme().color.contentColorFor(parent_role);
+  overlay.set_a(
+      front_ptr->theme().opacity(parent_role, InteractionState::kActivated));
+  Color expected = QuantizeToArgb4444(
+      AlphaBlend(front_ptr->theme().color.role(parent_role), overlay));
+
+  EXPECT_EQ(expected, pixelAt(12, 20));
+}
+
 TEST_F(RooWindowsRenderTest, PointPressOverlayRendersOutsideLogicalBounds) {
   auto back =
       std::make_unique<ColorBoxWidget>(env_, color::Red, Dimensions(48, 40));
@@ -193,15 +246,15 @@ TEST_F(RooWindowsRenderTest, PointOverlayCanTintFlexOwnedGapSpace) {
   XDim abs_x;
   YDim abs_y;
   front_ptr->getAbsoluteOffset(abs_x, abs_y);
-  Rect interaction_bounds = front_ptr->getInteractionBounds().translate(abs_x, abs_y);
+  Rect interaction_bounds =
+      front_ptr->getInteractionBounds().translate(abs_x, abs_y);
   Rect logical_bounds = front_ptr->bounds().translate(abs_x, abs_y);
   Rect layout_bounds = layout_ptr->parent_bounds();
 
-  int16_t gap_x =
-      (interaction_bounds.xMin() > layout_bounds.xMin()
-           ? interaction_bounds.xMin()
-           : layout_bounds.xMin()) +
-      1;
+  int16_t gap_x = (interaction_bounds.xMin() > layout_bounds.xMin()
+                       ? interaction_bounds.xMin()
+                       : layout_bounds.xMin()) +
+                  1;
   int16_t gap_y = logical_bounds.yMin() + logical_bounds.height() / 2;
   ASSERT_TRUE(interaction_bounds.contains(gap_x, gap_y));
   ASSERT_FALSE(logical_bounds.contains(gap_x, gap_y));
@@ -241,7 +294,8 @@ TEST_F(RooWindowsRenderTest,
   XDim abs_x;
   YDim abs_y;
   front_ptr->getAbsoluteOffset(abs_x, abs_y);
-  Rect interaction_bounds = front_ptr->getInteractionBounds().translate(abs_x, abs_y);
+  Rect interaction_bounds =
+      front_ptr->getInteractionBounds().translate(abs_x, abs_y);
   Rect layout_bounds = layout_ptr->parent_bounds();
 
   int16_t overflow_x = layout_bounds.xMin() - 1;

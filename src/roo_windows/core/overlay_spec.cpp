@@ -16,7 +16,7 @@ roo_display::Color getOverlayColor(const Widget& widget, const Canvas& canvas) {
     return roo_display::color::Transparent;
   }
   const Theme& myTheme = widget.theme();
-  ColorRole bg_role = widget.effectiveContainerRole();
+  ColorRole bg_role = widget.effectiveOverlayColorRole();
   Color overlay = widget.usesHighlighterColor()
                       ? myTheme.color.accentColorFor(bg_role)
                       : myTheme.color.contentColorFor(bg_role);
@@ -27,7 +27,7 @@ roo_display::Color getOverlayColor(const Widget& widget, const Canvas& canvas) {
 roo_display::Color getClickAnimationColor(const Widget& widget,
                                           const Canvas& canvas) {
   const Theme& myTheme = widget.theme();
-  ColorRole bg_role = widget.effectiveContainerRole();
+  ColorRole bg_role = widget.effectiveOverlayColorRole();
   Color overlay = widget.usesHighlighterColor()
                       ? myTheme.color.accentColorFor(bg_role)
                       : myTheme.color.contentColorFor(bg_role);

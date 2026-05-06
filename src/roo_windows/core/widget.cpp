@@ -512,8 +512,15 @@ void Widget::moveTo(const Rect& parent_bounds) {
   setParentBounds(parent_bounds);
 }
 
+ColorRole Widget::effectiveOverlayColorRole() const {
+  if (getOverlayType() == Widget::OVERLAY_POINT && parent() != nullptr) {
+    return parent()->effectiveContainerRole();
+  }
+  return effectiveContainerRole();
+}
+
 uint8_t Widget::getOverlayOpacity() const {
-  ColorRole bg_role = effectiveContainerRole();
+  ColorRole bg_role = effectiveOverlayColorRole();
   uint16_t overlay_opacity = 0;
   const Theme& myTheme = theme();
   if (isHover()) {

@@ -1,8 +1,7 @@
-#include "roo_windows/material3/switch/switch.h"
-
 #include "gtest/gtest.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/environment.h"
+#include "roo_windows/material3/switch/switch.h"
 
 namespace roo_windows {
 namespace material3 {
@@ -23,9 +22,9 @@ TEST(Material3Switch, UsesThumbCenteredPointOverlay) {
 
   sw.setOn(true);
   roo_display::FpPoint on_focus = sw.getPointOverlayFocus();
-  EXPECT_FLOAT_EQ(0.5f * (float)(Scaled(32) - 1) +
-                      (float)(Scaled(52) - Scaled(32)),
-                  on_focus.x);
+  EXPECT_FLOAT_EQ(
+      0.5f * (float)(Scaled(32) - 1) + (float)(Scaled(52) - Scaled(32)),
+      on_focus.x);
   EXPECT_FLOAT_EQ(0.5f * (float)(Scaled(32) - 1), on_focus.y);
 }
 

@@ -8,7 +8,9 @@ namespace material3 {
 class Switch : public BasicWidget {
  public:
   explicit Switch(const Environment& env, bool on = false)
-      : BasicWidget(env), anim_(0x8000), selected_icon_(nullptr),
+      : BasicWidget(env),
+        anim_(0x8000),
+        selected_icon_(nullptr),
         unselected_icon_(nullptr) {
     setOnOffState(on ? OnOffState::kOn : OnOffState::kOff);
   }
