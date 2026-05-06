@@ -175,8 +175,9 @@ void Switch::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
 
 void Switch::paint(const Canvas& canvas) const {
   Tokens tokens = ResolveTokens(*this);
-  auto track = SmoothFilledRoundRect(0, 0, kTrackWidth - 1, kTrackHeight - 1,
-                                     kTrackRadius - 0.5f, tokens.track);
+  auto track =
+      SmoothFilledRoundRect(-0.5f, -0.5f, kTrackWidth - 0.5f,
+                            kTrackHeight - 0.5f, kTrackRadius, tokens.track);
 
   roo_display::StreamableStack composite(
       roo_display::Box(0, 0, kTrackWidth - 1, kTrackHeight - 1));
@@ -186,9 +187,15 @@ void Switch::paint(const Canvas& canvas) const {
   bool has_border_shape = false;
 
   if (tokens.border.a() != 0) {
-    border_shape = SmoothThickRoundRect(0, 0, kTrackWidth - 1, kTrackHeight - 1,
-                                        kTrackRadius - 0.5f, kTrackOutlineWidth,
-                                        tokens.border);
+    float outline_inset = 0.5f * kTrackOutlineWidth;
+    float border_radius = kTrackRadius - outline_inset;
+    if (border_radius < 0) {
+      border_radius = 0;
+    }
+    border_shape = SmoothThickRoundRect(
+        -0.5f + outline_inset, -0.5f + outline_inset,
+        kTrackWidth - 0.5f - outline_inset, kTrackHeight - 0.5f - outline_inset,
+        border_radius, kTrackOutlineWidth, tokens.border);
     has_border_shape = true;
   }
 
