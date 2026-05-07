@@ -36,6 +36,14 @@ void ClickAnimation::tick() {
   if (click_anim_target_ != nullptr &&
       now - click_anim_start_millis_ >= kClickAnimationMs &&
       !click_anim_target_->isClicking()) {
+    if (click_anim_target_->getOverlayType() == Widget::OVERLAY_POINT) {
+      // The final paint frame may still use the pre-clear overlay state and
+      // therefore redraw the settled point overlay once more. Invalidate the
+      // full interaction spill region before delivering the deferred click so
+      // that siblings underneath the spill are refreshed as well.
+      click_anim_target_->notifyParentInvalidatedRegion(
+          click_anim_target_->getParentInteractionBounds());
+    }
     if (click_confirmed_) {
       click_confirmed_ = false;
       clickWidget(click_anim_target_);

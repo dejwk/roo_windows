@@ -620,6 +620,11 @@ void Widget::paintWidgetModded(Canvas& canvas, const OverlaySpec& overlay_spec,
         notifyParentInvalidatedRegion(repaint_bounds);
       } else {
         clearClicking();
+        // overlay_spec was computed before clearClicking(), so this frame may
+        // still draw the full settled overlay even though the widget is no
+        // longer marked clicking. ClickAnimation::tick() compensates by
+        // invalidating the full interaction spill region before delivering the
+        // deferred click, which refreshes any siblings we may have tinted.
       }
     }
     if (overlay_spec.is_click_animation_in_progress()) {

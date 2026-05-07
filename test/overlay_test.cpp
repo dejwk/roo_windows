@@ -1,9 +1,13 @@
 #include "roo_windows/containers/flex_layout.h"
+#include "roo_windows/core/overlay_spec.h"
 #include "roo_windows/core/press_overlay.h"
+#include "roo_windows/core/theme.h"
+#include "roo_windows/material3/checkbox/checkbox.h"
 #include "roo_windows/widgets/checkbox.h"
 #include "roo_windows/widgets/icon.h"
 #include "roo_windows/widgets/radio_button.h"
 #include "roo_windows/widgets/slider.h"
+#include "roo_windows/widgets/text_label.h"
 #include "roo_windows_render_test_support.h"
 
 using namespace roo_display;
@@ -12,6 +16,8 @@ using namespace roo_windows::test_support;
 
 namespace roo_windows {
 namespace {
+
+using Material3Checkbox = material3::Checkbox;
 
 class ClickableSurfaceBoxWidget : public test_support::ColorBoxWidget {
  public:
@@ -82,6 +88,154 @@ TEST_F(RooWindowsRenderTest,
 
   EXPECT_EQ(Rect(-13, -13, 30, 30), checkbox_ptr->getInteractionBounds());
   EXPECT_EQ(Rect(7, -1, 50, 42), checkbox_ptr->getParentInteractionBounds());
+}
+
+TEST_F(RooWindowsRenderTest,
+       Material3CheckboxInteractionBoundsMatchStaticPointOverlayExtents) {
+  auto checkbox = std::make_unique<Material3Checkbox>(env_);
+  Material3Checkbox* checkbox_ptr = checkbox.get();
+  app_.add(std::move(checkbox), Box(20, 12, 37, 29));
+
+  roo_display::FpPoint focus = checkbox_ptr->getPointOverlayFocus();
+  roo_display::SmoothShape overlay = roo_display::SmoothFilledCircle(
+      focus, kPointOverlayDiameter * 0.5f - 0.5f, color::Red);
+
+  EXPECT_EQ(checkbox_ptr->getInteractionBounds().asBox(), overlay.extents());
+}
+
+TEST_F(RooWindowsRenderTest,
+       Material3CheckboxTransientBoundsMatchClickOverlayClipExtents) {
+  auto checkbox = std::make_unique<Material3Checkbox>(env_);
+  Material3Checkbox* checkbox_ptr = checkbox.get();
+  app_.add(std::move(checkbox), Box(20, 12, 37, 29));
+
+  XDim abs_x;
+  YDim abs_y;
+  checkbox_ptr->getAbsoluteOffset(abs_x, abs_y);
+  roo_display::FpPoint focus = checkbox_ptr->getPointOverlayFocus();
+
+  PressOverlay overlay(abs_x + checkbox_ptr->width() / 2,
+                       abs_y + checkbox_ptr->height() / 2, 100, color::Red);
+  overlay.setClipCircle(abs_x + focus.x, abs_y + focus.y,
+                        kPointOverlayDiameter * 0.5f);
+
+  EXPECT_EQ(checkbox_ptr->getParentInteractionBounds().asBox(),
+            overlay.extents());
+}
+
+TEST_F(RooWindowsRenderTest,
+       Material3CheckboxQuickReleaseClearsLeftmostInteractionColumn) {
+  auto back =
+      std::make_unique<ColorBoxWidget>(env_, color::Red, Dimensions(48, 40));
+  auto front = std::make_unique<Material3Checkbox>(env_);
+  Material3Checkbox* front_ptr = front.get();
+
+  app_.add(std::move(back), Box(0, 0, 47, 39));
+  app_.add(std::move(front), Box(20, 12, 37, 29));
+
+  ASSERT_TRUE(refresh());
+
+  XDim abs_x;
+  YDim abs_y;
+  front_ptr->getAbsoluteOffset(abs_x, abs_y);
+  Rect interaction_bounds =
+      front_ptr->getInteractionBounds().translate(abs_x, abs_y);
+  Rect logical_bounds = front_ptr->bounds().translate(abs_x, abs_y);
+  int16_t probe_x = interaction_bounds.xMin();
+  int16_t probe_y = abs_y + front_ptr->height() / 2;
+
+  ASSERT_TRUE(interaction_bounds.contains(probe_x, probe_y));
+  ASSERT_FALSE(logical_bounds.contains(probe_x, probe_y));
+
+  Color background_pixel = pixelAt(probe_x, probe_y);
+  EXPECT_EQ(QuantizeToArgb4444(color::Red), background_pixel);
+
+  front_ptr->onSingleTapUp(front_ptr->width() / 2, front_ptr->height() / 2);
+  ASSERT_TRUE(refresh());
+
+  delay(kPressAnimationMillis + 20);
+  ASSERT_TRUE(refresh());
+
+  app_.root().refreshClickAnimation();
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(background_pixel, pixelAt(probe_x, probe_y));
+
+  app_.root().refreshClickAnimation();
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(background_pixel, pixelAt(probe_x, probe_y));
+}
+
+TEST_F(RooWindowsRenderTest,
+       Material3CheckboxStateChangeStaysWithinLogicalBounds) {
+  auto back =
+      std::make_unique<ColorBoxWidget>(env_, color::Red, Dimensions(48, 40));
+  auto front = std::make_unique<Material3Checkbox>(env_, OnOffState::kOff);
+  Material3Checkbox* front_ptr = front.get();
+
+  app_.add(std::move(back), Box(0, 0, 47, 39));
+  app_.add(std::move(front), Box(20, 12, 37, 29));
+
+  ASSERT_TRUE(refresh());
+
+  XDim abs_x;
+  YDim abs_y;
+  front_ptr->getAbsoluteOffset(abs_x, abs_y);
+  Rect logical_bounds = front_ptr->bounds().translate(abs_x, abs_y);
+  int16_t spill_x = logical_bounds.xMin() - 1;
+  int16_t spill_y = abs_y + front_ptr->height() / 2;
+
+  Color background_pixel = pixelAt(spill_x, spill_y);
+  EXPECT_EQ(QuantizeToArgb4444(color::Red), background_pixel);
+
+  front_ptr->setOn();
+  ASSERT_TRUE(refresh());
+
+  EXPECT_EQ(background_pixel, pixelAt(spill_x, spill_y));
+}
+
+TEST_F(
+    RooWindowsRenderTest,
+    Material3CheckboxQuickReleaseSpillStaysClearedAfterDeferredClickInBareScene) {
+  auto back = std::make_unique<ColorBoxWidget>(
+      env_, env_.theme().color.background, Dimensions(48, 40));
+  auto front = std::make_unique<Material3Checkbox>(env_, OnOffState::kOff);
+  Material3Checkbox* front_ptr = front.get();
+
+  app_.add(std::move(back), Box(0, 0, 47, 39));
+  app_.add(std::move(front), Box(20, 12, 37, 29));
+
+  ASSERT_TRUE(refresh());
+
+  XDim abs_x;
+  YDim abs_y;
+  front_ptr->getAbsoluteOffset(abs_x, abs_y);
+  Rect logical_bounds = front_ptr->bounds().translate(abs_x, abs_y);
+  int16_t spill_x = logical_bounds.xMin() - 1;
+  int16_t spill_y = abs_y + front_ptr->height() / 2;
+  int16_t inside_x = abs_x + 3;
+  int16_t inside_y = abs_y + 3;
+
+  Color background_pixel = pixelAt(spill_x, spill_y);
+  Color initial_inside_pixel = pixelAt(inside_x, inside_y);
+
+  front_ptr->onSingleTapUp(front_ptr->width() / 2, front_ptr->height() / 2);
+  ASSERT_TRUE(refresh());
+
+  delay(kPressAnimationMillis + 20);
+  ASSERT_TRUE(refresh());
+
+  app_.root().refreshClickAnimation();
+  ASSERT_TRUE(refresh());
+  Color cleared_pixel = pixelAt(spill_x, spill_y);
+
+  app_.root().refreshClickAnimation();
+  ASSERT_TRUE(refresh());
+  Color post_click_pixel = pixelAt(spill_x, spill_y);
+  Color post_click_inside_pixel = pixelAt(inside_x, inside_y);
+
+  EXPECT_EQ(background_pixel, cleared_pixel);
+  EXPECT_NE(initial_inside_pixel, post_click_inside_pixel);
+  EXPECT_EQ(background_pixel, post_click_pixel);
 }
 
 TEST_F(RooWindowsRenderTest, PointOverlayBoundsExpandOnlyWhileOverlayIsActive) {
