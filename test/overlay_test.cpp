@@ -1,8 +1,10 @@
 #include "roo_windows/containers/flex_layout.h"
+#include "roo_windows/containers/scrollable_panel.h"
 #include "roo_windows/core/overlay_spec.h"
 #include "roo_windows/core/press_overlay.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/material3/checkbox/checkbox.h"
+#include "roo_windows/material3/slider/slider.h"
 #include "roo_windows/widgets/checkbox.h"
 #include "roo_windows/widgets/icon.h"
 #include "roo_windows/widgets/radio_button.h"
@@ -55,6 +57,106 @@ class RoleOverridingPointOverlayWidget : public PointOverlayBoxWidget {
   ColorRole role_;
 };
 
+class FullWidthColumnWidget : public FlexLayout {
+ public:
+  explicit FullWidthColumnWidget(const Environment& env)
+      : FlexLayout(env, FlexDirection::kColumn) {}
+
+  using FlexLayout::add;
+
+  PreferredSize getPreferredSize() const override {
+    return PreferredSize(PreferredSize::MatchParentWidth(),
+                         PreferredSize::WrapContentHeight());
+  }
+};
+
+int ExamplePercentFromPos(uint16_t pos) {
+  return ((uint32_t)pos * 100u + 32767u) / 65535u;
+}
+
+uint16_t ExamplePosFromPercent(int percent) {
+  if (percent < 0) percent = 0;
+  if (percent > 100) percent = 100;
+  return ((uint32_t)percent * 65535u + 50u) / 100u;
+}
+
+class ExampleSliderRow : public FlexLayout {
+ public:
+  ExampleSliderRow(const Environment& env, const char* primary,
+                   const char* secondary, int initial_percent)
+      : FlexLayout(env, FlexDirection::kColumn),
+        header_(env, FlexDirection::kRow),
+        labels_(env, FlexDirection::kColumn),
+        primary_(env, primary, font_body1()),
+        secondary_(env, secondary, font_caption()),
+        value_(env, "", font_body1()),
+        slider_(env, ExamplePosFromPercent(initial_percent)) {
+    setPadding(Padding(Scaled(12), Scaled(8)));
+    setGap(Scaled(8));
+
+    header_.setAlignItems(AlignItems::kCenter);
+    header_.setGap(Scaled(12));
+
+    labels_.setAlignItems(AlignItems::kFlexStart);
+    labels_.add(primary_, {.flex_grow = 0, .flex_shrink = 0});
+    labels_.add(secondary_, {.flex_grow = 0, .flex_shrink = 0});
+
+    header_.add(labels_, {.flex_grow = 1, .flex_shrink = 1});
+    header_.add(value_, {.flex_grow = 0, .flex_shrink = 0});
+
+    add(header_, {.flex_grow = 0, .flex_shrink = 0});
+    add(slider_, {.flex_grow = 0, .flex_shrink = 1});
+
+    value_.setTextf("%d%%", ExamplePercentFromPos(slider_.getPos()));
+  }
+
+  material3::Slider& slider() { return slider_; }
+  FlexLayout& header() { return header_; }
+
+ private:
+  FlexLayout header_;
+  FlexLayout labels_;
+  TextLabel primary_;
+  TextLabel secondary_;
+  TextLabel value_;
+  material3::Slider slider_;
+};
+
+class ExampleSliderScreen : public SimpleScrollablePanel {
+ public:
+  explicit ExampleSliderScreen(const Environment& env)
+      : SimpleScrollablePanel(env),
+        content_(env),
+        title_(env, "Material 3 sliders", font_body1()),
+        subtitle_(env, "Drag the handles or tap the track to set a value.",
+                  font_caption()),
+        divider_(env),
+        summary_(env, "Average level: 55%", font_caption()),
+        media_(env, "Media volume", "Speaker output for videos and games", 72) {
+    content_.setPadding(Scaled(12));
+    content_.setGap(Scaled(4));
+    content_.add(title_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(subtitle_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(divider_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(summary_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(media_, {.flex_grow = 0, .flex_shrink = 0});
+    setContents(content_);
+  }
+
+  HorizontalDivider& divider() { return divider_; }
+  material3::Slider& slider() { return media_.slider(); }
+  FullWidthColumnWidget& content() { return content_; }
+  ExampleSliderRow& media() { return media_; }
+
+ private:
+  FullWidthColumnWidget content_;
+  TextLabel title_;
+  TextLabel subtitle_;
+  HorizontalDivider divider_;
+  TextLabel summary_;
+  ExampleSliderRow media_;
+};
+
 TEST(PressOverlay, WideTopStripCrossingCenterIsNotUniformTransparent) {
   PressOverlay overlay(0, 0, 10, color::Red);
 
@@ -86,8 +188,11 @@ TEST_F(RooWindowsRenderTest,
   Checkbox* checkbox_ptr = checkbox.get();
   app_.add(std::move(checkbox), Box(20, 12, 37, 29));
 
-  EXPECT_EQ(Rect(-13, -13, 30, 30), checkbox_ptr->getInteractionBounds());
-  EXPECT_EQ(Rect(7, -1, 50, 42), checkbox_ptr->getParentInteractionBounds());
+  // kPointOverlayDiameter is Scaled(40); at default zoom 100 the halo extends
+  // ~11 px beyond the 18x18 widget on every side (truncation of the 0.5-px
+  // sub-pixel center toward zero).
+  EXPECT_EQ(Rect(-11, -11, 28, 28), checkbox_ptr->getInteractionBounds());
+  EXPECT_EQ(Rect(9, 1, 48, 40), checkbox_ptr->getParentInteractionBounds());
 }
 
 TEST_F(RooWindowsRenderTest,
@@ -121,6 +226,72 @@ TEST_F(RooWindowsRenderTest,
 
   EXPECT_EQ(checkbox_ptr->getParentInteractionBounds().asBox(),
             overlay.extents());
+}
+
+TEST_F(
+    RooWindowsRenderTest,
+    ScrollablePanelPaddedDividerDoesNotPaintToScreenEdgeWhenContentFillsWidth) {
+  auto content = std::make_unique<FullWidthColumnWidget>(env_);
+  FullWidthColumnWidget* content_ptr = content.get();
+  content_ptr->setPadding(Padding(12));
+
+  auto divider = std::make_unique<HorizontalDivider>(env_);
+  HorizontalDivider* divider_ptr = divider.get();
+  content_ptr->add(std::move(divider), {.flex_grow = 0, .flex_shrink = 0});
+
+  auto panel =
+      std::make_unique<SimpleScrollablePanel>(env_, std::move(content));
+  app_.add(std::move(panel), Box(0, 0, kWidth - 1, kHeight - 1));
+
+  ASSERT_TRUE(refresh());
+
+  XDim divider_x;
+  YDim divider_y;
+  divider_ptr->getAbsoluteOffset(divider_x, divider_y);
+
+  EXPECT_EQ(12, divider_x);
+  EXPECT_EQ(kWidth - 24, divider_ptr->width());
+
+  Color bg = QuantizeToArgb4444(env_.theme().color.background);
+  EXPECT_NE(bg, pixelAt(divider_x, divider_y));
+  EXPECT_EQ(bg, pixelAt(kWidth - 1, divider_y));
+}
+
+using ExampleSliderRenderTest =
+    test_support::RooWindowsRenderTestSized<240, 320>;
+
+TEST_F(ExampleSliderRenderTest,
+       ExampleSliderScreenLeavesRightEdgeBackgroundForDividerAndSlider) {
+  auto screen = std::make_unique<ExampleSliderScreen>(env_);
+  ExampleSliderScreen* screen_ptr = screen.get();
+  app_.add(std::move(screen), Box(0, 0, kWidth - 1, kHeight - 1));
+
+  ASSERT_TRUE(refresh());
+
+  Color bg = QuantizeToArgb4444(env_.theme().color.background);
+
+  XDim divider_x;
+  YDim divider_y;
+  screen_ptr->divider().getAbsoluteOffset(divider_x, divider_y);
+  EXPECT_EQ(screen_ptr->width(), screen_ptr->content().width());
+  EXPECT_EQ(screen_ptr->width() - 24, screen_ptr->media().width());
+  EXPECT_EQ(screen_ptr->media().width() - 24,
+            screen_ptr->media().header().width());
+  EXPECT_TRUE(screen_ptr->divider().getPreferredSize().width().isMatchParent());
+  EXPECT_FALSE(screen_ptr->divider().getPreferredSize().width().isExact());
+  EXPECT_TRUE(screen_ptr->slider().getPreferredSize().width().isMatchParent());
+  EXPECT_FALSE(screen_ptr->slider().getPreferredSize().width().isExact());
+  EXPECT_EQ(12, divider_x);
+  EXPECT_EQ(screen_ptr->width() - 24, screen_ptr->divider().width());
+  EXPECT_EQ(bg, pixelAt(kWidth - 1, divider_y));
+
+  XDim slider_x;
+  YDim slider_y;
+  screen_ptr->slider().getAbsoluteOffset(slider_x, slider_y);
+  EXPECT_EQ(24, slider_x);
+  EXPECT_EQ(screen_ptr->width() - 48, screen_ptr->slider().width());
+  YDim slider_mid_y = slider_y + screen_ptr->slider().height() / 2;
+  EXPECT_EQ(bg, pixelAt(kWidth - 1, slider_mid_y));
 }
 
 TEST_F(RooWindowsRenderTest,
@@ -391,6 +562,11 @@ TEST_F(RooWindowsRenderTest, PointOverlayCanTintFlexOwnedGapSpace) {
   auto front = std::make_unique<PointOverlayBoxWidget>(env_, color::Blue,
                                                        Dimensions(18, 18));
   PointOverlayBoxWidget* front_ptr = front.get();
+  // Strip the BasicSurfaceWidget default padding so the widget's logical
+  // bounds match the supplied 18x18 dimensions; otherwise the kPointOverlay
+  // halo is fully inside the widget and there is no gap-space to test.
+  front_ptr->setPadding(PaddingSize::kNone);
+  front_ptr->setMargins(MarginSize::kNone);
   layout->add(std::move(front));
 
   app_.add(std::move(layout), Box(8, 8, 55, 39));
