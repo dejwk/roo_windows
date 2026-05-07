@@ -148,4 +148,36 @@ class RooWindowsRenderTest : public testing::Test {
   Application app_;
 };
 
+template <int16_t W, int16_t H>
+class RooWindowsRenderTestSized : public testing::Test {
+ protected:
+  static constexpr int16_t kWidth = W;
+  static constexpr int16_t kHeight = H;
+
+  RooWindowsRenderTestSized()
+      : offscreen_(kWidth, kHeight, raster_, roo_display::Argb4444()),
+        display_(offscreen_),
+        env_(scheduler_),
+        app_(&env_, display_) {}
+
+  roo_display::Color pixelAt(int16_t x, int16_t y) const {
+    int16_t px[] = {x};
+    int16_t py[] = {y};
+    roo_display::Color color[1];
+    offscreen_.raster().readColors(px, py, 1, color);
+    return color[0];
+  }
+
+  bool refresh(roo_time::Uptime deadline = roo_time::Uptime::Max()) {
+    return app_.refresh(deadline);
+  }
+
+  roo::byte raster_[kWidth * kHeight * 2];
+  roo_display::OffscreenDevice<roo_display::Argb4444> offscreen_;
+  roo_display::Display display_;
+  roo_scheduler::Scheduler scheduler_;
+  Environment env_;
+  Application app_;
+};
+
 }  // namespace roo_windows::test_support

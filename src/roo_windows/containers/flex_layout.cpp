@@ -603,6 +603,10 @@ Dimensions FlexLayout::onMeasure(WidthSpec width_spec, HeightSpec height_spec) {
     }
     line.cross_size = new_cross;
 
+    if (cross_kind != UNSPECIFIED && flex_wrap_ == FlexWrap::kNowrap) {
+      line.cross_size = std::min<int16_t>(line.cross_size, available_cross);
+    }
+
     // Second pass: apply align-items:stretch/align-self:stretch now that line
     // cross size is final.
     for (int k = line.begin; k < line.end; ++k) {
@@ -783,6 +787,13 @@ void FlexLayout::onLayout(bool changed, const Rect& rect) {
             std::max(line_cross,
                      (int16_t)(items[k].cross + items[k].mcs + items[k].mce));
       }
+      // Mirror onMeasure: an item whose intrinsic cross size exceeds the
+      // available cross-axis space (e.g., a long TextLabel with an exact
+      // preferred width wider than the container) must not cause the line
+      // (and therefore stretching siblings) to grow past available_cross.
+      if (flex_wrap_ == FlexWrap::kNowrap) {
+        line_cross = std::min<int16_t>(line_cross, available_cross);
+      }
       lines.push_back({start, end, line_main, line_cross});
       start = end;
     }
@@ -891,7 +902,19 @@ void FlexLayout::onLayout(bool changed, const Rect& rect) {
         y0 = item_main_start;
         y1 = item_main_end;
       }
-      w.layout(Rect(x0, y0, x1, y1));
+      // Mirror VerticalLayout/HorizontalLayout: clip the child's laid-out rect
+      // to the container's content area (bounds minus padding minus the
+      // child's own margins). This prevents a child whose intrinsic cross
+      // size exceeds the available cross-axis space (e.g. a long TextLabel
+      // with an exact preferred width wider than the column) from extending
+      // past the container, which would otherwise leave the right/bottom
+      // edge unpainted by the container's background.
+      Margins child_margins = w.getMargins();
+      Rect trim(padding.left() + child_margins.left(),
+                padding.top() + child_margins.top(),
+                rect.width() - padding.right() - child_margins.right() - 1,
+                rect.height() - padding.bottom() - child_margins.bottom() - 1);
+      w.layout(Rect::Intersect(Rect(x0, y0, x1, y1), trim));
 
       main_cursor += it.mms + it.main + it.mme + main_between;
     }
