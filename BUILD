@@ -191,6 +191,18 @@ cc_test(
 )
 
 cc_test(
+    name = "material3_slider_test",
+    srcs = [
+        "test/material3_slider_test.cpp",
+    ],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
+cc_test(
     name = "material3_checkbox_golden_test",
     srcs = [
         "test/material3_checkbox_golden_test.cpp",
