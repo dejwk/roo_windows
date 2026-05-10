@@ -57,8 +57,8 @@ class Slider : public BasicWidget {
   bool setPos(uint16_t pos);
 
  private:
-  float value_;
   SliderRange range_;
+  float value_;
   bool is_dragging_;
 };
 

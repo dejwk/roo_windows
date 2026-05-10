@@ -58,6 +58,11 @@ SliderRange NormalizeRangeOrDefault(SliderRange range) {
   return SliderRange{};
 }
 
+float NormalizeValueForRange(float value, const SliderRange& range) {
+  return internal::NormalizeSliderValueForRange(value, range.from, range.to,
+                                                range.step);
+}
+
 }  // namespace
 
 Slider::Slider(const Environment& env, uint16_t pos)
@@ -66,10 +71,8 @@ Slider::Slider(const Environment& env, uint16_t pos)
 
 Slider::Slider(const Environment& env, SliderRange range, float value)
     : BasicWidget(env),
-      value_(internal::ClampSliderValue(
-          value, NormalizeRangeOrDefault(range).from,
-          NormalizeRangeOrDefault(range).to)),
       range_(NormalizeRangeOrDefault(range)),
+    value_(NormalizeValueForRange(value, range_)),
       is_dragging_(false) {}
 
 bool Slider::onDown(XDim x, YDim y) {
@@ -129,13 +132,17 @@ void Slider::onCancel() {
 bool Slider::setPos(uint16_t pos) {
   uint16_t old_pos = getPos();
   if (pos == old_pos) return false;
-  value_ = internal::SliderValueFromNormalizedPos(range_.from, range_.to, pos);
+  value_ = NormalizeValueForRange(
+      internal::SliderValueFromNormalizedPos(range_.from, range_.to, pos),
+      range_);
+  uint16_t new_pos = getPos();
+  if (new_pos == old_pos) return false;
   if (width() <= 0 || height() <= 0) {
     return true;
   }
   internal::SliderAxisMetrics axis(width(), height(), kHandleWidth,
                                    kInteractionRadius);
-  invalidateInterior(axis.invalidationRectForPosChange(old_pos, pos));
+  invalidateInterior(axis.invalidationRectForPosChange(old_pos, new_pos));
   return true;
 }
 
@@ -144,7 +151,7 @@ bool Slider::setRange(SliderRange range) {
     return false;
   }
   uint16_t old_pos = getPos();
-  float new_value = internal::ClampSliderValue(value_, range.from, range.to);
+  float new_value = NormalizeValueForRange(value_, range);
   bool changed = range_.from != range.from || range_.to != range.to ||
                  range_.step != range.step || value_ != new_value;
   if (!changed) return false;
@@ -162,7 +169,7 @@ bool Slider::setRange(SliderRange range) {
 }
 
 bool Slider::setValue(float value) {
-  float new_value = internal::ClampSliderValue(value, range_.from, range_.to);
+  float new_value = NormalizeValueForRange(value, range_);
   if (value_ == new_value) return false;
 
   uint16_t old_pos = getPos();

@@ -201,6 +201,38 @@ TEST(Material3Slider, SetValueClampsIntoConfiguredDomain) {
   EXPECT_EQ(65535, slider.getPos());
 }
 
+TEST(Material3Slider, DiscreteConstructorSnapsInitialValue) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+
+  Slider slider(env, SliderRange{0.0f, 5.0f, 1.0f}, 3.6f);
+
+  EXPECT_FLOAT_EQ(4.0f, slider.value());
+  EXPECT_EQ((uint16_t)52428, slider.getPos());
+}
+
+TEST(Material3Slider, SetValueSnapsToNearestDiscreteStep) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+
+  Slider slider(env, SliderRange{0.0f, 5.0f, 1.0f}, 2.0f);
+
+  EXPECT_TRUE(slider.setValue(3.6f));
+  EXPECT_FLOAT_EQ(4.0f, slider.value());
+  EXPECT_EQ((uint16_t)52428, slider.getPos());
+}
+
+TEST(Material3Slider, SetPosSnapsToNearestDiscreteStep) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+
+  Slider slider(env, SliderRange{0.0f, 5.0f, 1.0f}, 2.0f);
+
+  EXPECT_TRUE(slider.setPos((uint16_t)47185));
+  EXPECT_FLOAT_EQ(4.0f, slider.value());
+  EXPECT_EQ((uint16_t)52428, slider.getPos());
+}
+
 TEST(Material3Slider, SetRangeClampsCurrentValueIntoNewDomain) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -227,6 +259,29 @@ TEST(Material3Slider, InvalidRangeIsRejectedWithoutChangingState) {
   EXPECT_EQ(32768, slider.getPos());
 }
 
+TEST(Material3Slider, IncompatibleDiscreteStepIsRejected) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+
+  Slider slider(env, SliderRange{0.0f, 5.0f, 1.0f}, 2.0f);
+
+  EXPECT_FALSE(slider.setRange(SliderRange{0.0f, 5.0f, 2.0f}));
+  EXPECT_FLOAT_EQ(0.0f, slider.range().from);
+  EXPECT_FLOAT_EQ(5.0f, slider.range().to);
+  EXPECT_FLOAT_EQ(1.0f, slider.range().step);
+  EXPECT_FLOAT_EQ(2.0f, slider.value());
+}
+
+TEST(Material3Slider, NegativeStepIsRejected) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+
+  Slider slider(env, SliderRange{0.0f, 5.0f, 1.0f}, 2.0f);
+
+  EXPECT_FALSE(slider.setRange(SliderRange{0.0f, 5.0f, -1.0f}));
+  EXPECT_FLOAT_EQ(1.0f, slider.range().step);
+}
+
 TEST_F(Material3SliderAppTest, HorizontalScrollUpdatesPosition) {
   Slider& slider = addSlider(0);
 
@@ -247,6 +302,20 @@ TEST_F(Material3SliderAppTest, TapToJumpUsesCurrentNormalizedMapping) {
 
   EXPECT_TRUE(slider.onSingleTapUp(Scaled(48) - 1, slider.height() / 2));
   EXPECT_EQ(32768, slider.getPos());
+}
+
+TEST_F(Material3SliderAppTest, TapToJumpSnapsToNearestDiscreteStep) {
+  auto discrete_slider = std::make_unique<Slider>(
+      env_, SliderRange{0.0f, 5.0f, 1.0f}, 0.0f);
+  slider_ = discrete_slider.get();
+  app_.add(std::move(discrete_slider),
+           roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
+                            kSliderY + kSliderHeight - 1));
+  ASSERT_TRUE(app_.refresh());
+
+  EXPECT_TRUE(slider().onSingleTapUp(Scaled(70), slider().height() / 2));
+  EXPECT_FLOAT_EQ(4.0f, slider().value());
+  EXPECT_EQ((uint16_t)52428, slider().getPos());
 }
 
 TEST_F(Material3SliderAppTest,

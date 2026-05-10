@@ -10,9 +10,21 @@ namespace roo_windows {
 namespace material3 {
 namespace internal {
 
+static constexpr float kSliderStepDivisibilityTolerance = 1e-4f;
+
+inline bool IsDiscreteSliderRange(float step) { return step > 0.0f; }
+
+inline bool IsCompatibleSliderStep(float from, float to, float step) {
+  if (!IsDiscreteSliderRange(step)) return true;
+  float steps = (to - from) / step;
+  return std::fabs(steps - roundf(steps)) <=
+         kSliderStepDivisibilityTolerance;
+}
+
 inline bool IsValidSliderRange(float from, float to, float step) {
   return std::isfinite(from) && std::isfinite(to) && std::isfinite(step) &&
-         from < to && step >= 0.0f;
+         from < to && step >= 0.0f &&
+         IsCompatibleSliderStep(from, to, step);
 }
 
 inline float ClampSliderValue(float value, float from, float to) {
@@ -20,6 +32,20 @@ inline float ClampSliderValue(float value, float from, float to) {
   if (value < from) return from;
   if (value > to) return to;
   return value;
+}
+
+inline float SnapSliderValueToRange(float value, float from, float to,
+                                    float step) {
+  float clamped = ClampSliderValue(value, from, to);
+  if (!IsDiscreteSliderRange(step)) return clamped;
+  float steps = roundf((clamped - from) / step);
+  float snapped = from + steps * step;
+  return ClampSliderValue(snapped, from, to);
+}
+
+inline float NormalizeSliderValueForRange(float value, float from, float to,
+                                          float step) {
+  return SnapSliderValueToRange(value, from, to, step);
 }
 
 inline float SliderValueFromNormalizedPos(float from, float to, uint16_t pos) {
