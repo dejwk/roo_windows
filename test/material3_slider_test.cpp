@@ -494,6 +494,40 @@ TEST(Material3RangeSlider, NegativeMinimumSeparationIsRejected) {
   EXPECT_FLOAT_EQ(0.0f, slider.minSeparation());
 }
 
+TEST_F(Material3SliderAppTest,
+       RangeSliderOverlayFocusTracksTappedAndDraggedThumb) {
+  auto tracking_slider = std::make_unique<TrackingRangeSlider>(
+      env_, SliderRange{0.0f, 100.0f}, 25.0f, 75.0f);
+  TrackingRangeSlider* tracking = tracking_slider.get();
+  app_.add(std::move(tracking_slider),
+           roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
+                            kSliderY + kSliderHeight - 1));
+  ASSERT_TRUE(app_.refresh());
+
+  internal::SliderAxisMetrics axis(tracking->width(), tracking->height(),
+                                   Scaled(4), Scaled(20));
+
+  XDim tap_x = Scaled(84);
+  ASSERT_TRUE(tracking->onSingleTapUp(tap_x, tracking->height() / 2));
+  roo_display::FpPoint tapped_focus = tracking->getPointOverlayFocus();
+  EXPECT_FLOAT_EQ(axis.centerFromPos(internal::SliderPosFromValue(
+                      0.0f, 100.0f, tracking->endValue())),
+                  tapped_focus.x);
+  EXPECT_FLOAT_EQ(0.5f * (float)(tracking->height() - 1), tapped_focus.y);
+
+  XDim start_thumb_center = (XDim)roundf(axis.centerFromPos(
+      internal::SliderPosFromValue(0.0f, 100.0f, tracking->startValue())));
+  tracking->onShowPress(start_thumb_center, tracking->height() / 2);
+  ASSERT_TRUE(tracking->onScroll(Scaled(42), tracking->height() / 2,
+                                 Scaled(8), 0));
+
+  roo_display::FpPoint dragged_focus = tracking->getPointOverlayFocus();
+  EXPECT_FLOAT_EQ(axis.centerFromPos(internal::SliderPosFromValue(
+                      0.0f, 100.0f, tracking->startValue())),
+                  dragged_focus.x);
+  EXPECT_FLOAT_EQ(0.5f * (float)(tracking->height() - 1), dragged_focus.y);
+}
+
 TEST_F(Material3SliderAppTest, HorizontalScrollUpdatesPosition) {
   Slider& slider = addSlider(0);
 

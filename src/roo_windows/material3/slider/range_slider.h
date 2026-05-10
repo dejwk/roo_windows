@@ -19,6 +19,8 @@ class RangeSlider : public BasicWidget {
 
   PreferredSize getPreferredSize() const override;
 
+  roo_display::FpPoint getPointOverlayFocus() const override;
+
   bool isClickable() const override { return true; }
 
   bool onDown(XDim x, YDim y) override;
@@ -69,6 +71,7 @@ class RangeSlider : public BasicWidget {
   float end_value_;
   float min_separation_;
   int8_t active_thumb_;
+  int8_t overlay_thumb_;
   bool is_dragging_;
   bool awaiting_direction_;
 };

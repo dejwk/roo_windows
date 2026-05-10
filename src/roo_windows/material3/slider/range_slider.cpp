@@ -206,6 +206,7 @@ RangeSlider::RangeSlider(const Environment& env, SliderRange range,
       end_value_(range_.to),
       min_separation_(0.0f),
       active_thumb_(kNoActiveThumb),
+  overlay_thumb_(kNoActiveThumb),
       is_dragging_(false),
       awaiting_direction_(false) {
   NormalizeOrderedValuesWithSeparation(range_, start_value, end_value,
@@ -221,7 +222,6 @@ bool RangeSlider::onDown(XDim x, YDim y) {
 
 bool RangeSlider::onSingleTapUp(XDim x, YDim y) {
   if (!isEnabled()) return false;
-  BasicWidget::onSingleTapUp(x, y);
   internal::SliderAxisMetrics axis(width(), height(), kHandleWidth,
                                    kInteractionRadius);
   uint16_t start_pos =
@@ -229,7 +229,9 @@ bool RangeSlider::onSingleTapUp(XDim x, YDim y) {
   uint16_t end_pos =
       internal::SliderPosFromValue(range_.from, range_.to, end_value_);
   active_thumb_ = ResolveNearestThumb(axis, start_pos, end_pos, x);
+  overlay_thumb_ = active_thumb_;
   awaiting_direction_ = false;
+  BasicWidget::onSingleTapUp(x, y);
   onInteractionStart(active_thumb_);
   if (setActiveThumbPos(axis.posFromPrimaryCoord(x))) {
     triggerInteractiveChange();
@@ -259,6 +261,7 @@ void RangeSlider::onShowPress(XDim x, YDim y) {
   if (thumb == kNoActiveThumb) return;
 
   active_thumb_ = thumb;
+  overlay_thumb_ = thumb;
   awaiting_direction_ = false;
   if (!is_dragging_) {
     is_dragging_ = true;
@@ -288,6 +291,7 @@ bool RangeSlider::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
     } else {
       return true;
     }
+    overlay_thumb_ = active_thumb_;
     awaiting_direction_ = false;
     is_dragging_ = true;
     onInteractionStart(active_thumb_);
@@ -297,6 +301,7 @@ bool RangeSlider::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
     uint16_t end_pos =
         internal::SliderPosFromValue(range_.from, range_.to, end_value_);
     active_thumb_ = ResolveNearestThumb(axis, start_pos, end_pos, x);
+    overlay_thumb_ = active_thumb_;
     is_dragging_ = true;
     onInteractionStart(active_thumb_);
   }
@@ -519,6 +524,21 @@ Dimensions RangeSlider::getSuggestedMinimumDimensions() const {
 PreferredSize RangeSlider::getPreferredSize() const {
   return PreferredSize(PreferredSize::MatchParentWidth(),
                        PreferredSize::ExactHeight(kHandleHeight));
+}
+
+roo_display::FpPoint RangeSlider::getPointOverlayFocus() const {
+  internal::SliderAxisMetrics axis(width(), height(), kHandleWidth,
+                                   kInteractionRadius);
+  uint16_t start_pos =
+      internal::SliderPosFromValue(range_.from, range_.to, start_value_);
+  uint16_t end_pos =
+      internal::SliderPosFromValue(range_.from, range_.to, end_value_);
+  int thumb = active_thumb_;
+  if (thumb == kNoActiveThumb) {
+    thumb = overlay_thumb_;
+  }
+  float focus_primary = axis.centerFromPos(thumb == 1 ? end_pos : start_pos);
+  return roo_display::FpPoint{focus_primary, 0.5f * (float)(height() - 1)};
 }
 
 ColorRole RangeSlider::effectiveContainerRole() const {
