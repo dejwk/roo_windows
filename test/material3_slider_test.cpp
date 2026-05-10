@@ -5,6 +5,7 @@
 #include "roo_windows.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/measure_spec.h"
+#include "roo_windows/material3/slider/range_slider.h"
 #include "roo_windows/material3/slider/slider.h"
 
 namespace roo_windows {
@@ -375,6 +376,55 @@ TEST(Material3Slider, ProgrammaticPositionChangeFiresOnlyValueChangeHook) {
   EXPECT_FLOAT_EQ(5.0000763f, slider.values[0]);
 }
 
+TEST(Material3RangeSlider, ConstructorOrdersAndSnapsInitialValues) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+
+  RangeSlider slider(env, SliderRange{0.0f, 5.0f, 1.0f}, 4.6f, 1.2f);
+
+  EXPECT_FLOAT_EQ(0.0f, slider.range().from);
+  EXPECT_FLOAT_EQ(5.0f, slider.range().to);
+  EXPECT_FLOAT_EQ(1.0f, slider.startValue());
+  EXPECT_FLOAT_EQ(5.0f, slider.endValue());
+}
+
+TEST(Material3RangeSlider, SetValuesClampsSnapsAndOrdersIntoDomain) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+
+  RangeSlider slider(env, SliderRange{10.0f, 40.0f, 5.0f}, 15.0f, 30.0f);
+
+  EXPECT_TRUE(slider.setValues(42.0f, 11.0f));
+  EXPECT_FLOAT_EQ(10.0f, slider.startValue());
+  EXPECT_FLOAT_EQ(40.0f, slider.endValue());
+}
+
+TEST(Material3RangeSlider, SetRangeClampsExistingValuesIntoNewDomain) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+
+  RangeSlider slider(env, SliderRange{10.0f, 40.0f}, 15.0f, 35.0f);
+
+  EXPECT_TRUE(slider.setRange(SliderRange{20.0f, 30.0f}));
+  EXPECT_FLOAT_EQ(20.0f, slider.range().from);
+  EXPECT_FLOAT_EQ(30.0f, slider.range().to);
+  EXPECT_FLOAT_EQ(20.0f, slider.startValue());
+  EXPECT_FLOAT_EQ(30.0f, slider.endValue());
+}
+
+TEST(Material3RangeSlider, InvalidRangeIsRejectedWithoutChangingState) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+
+  RangeSlider slider(env, SliderRange{10.0f, 40.0f}, 15.0f, 35.0f);
+
+  EXPECT_FALSE(slider.setRange(SliderRange{40.0f, 10.0f}));
+  EXPECT_FLOAT_EQ(10.0f, slider.range().from);
+  EXPECT_FLOAT_EQ(40.0f, slider.range().to);
+  EXPECT_FLOAT_EQ(15.0f, slider.startValue());
+  EXPECT_FLOAT_EQ(35.0f, slider.endValue());
+}
+
 TEST_F(Material3SliderAppTest, HorizontalScrollUpdatesPosition) {
   Slider& slider = addSlider(0);
 
@@ -543,6 +593,32 @@ TEST_F(Material3SliderRenderTest,
   EXPECT_EQ(inactive, pixelAt(kSliderX + 25, kSliderY + kSliderHeight / 2));
   EXPECT_EQ(primary, pixelAt(kSliderX + 45, kSliderY + kSliderHeight / 2));
   EXPECT_EQ(inactive, pixelAt(kSliderX + 60, kSliderY + kSliderHeight / 2));
+}
+
+TEST_F(Material3SliderRenderTest,
+       RangeSliderPaintsActiveTrackBetweenThumbs) {
+  constexpr Color kBackdropColor(0xFFF3EFE7);
+
+  auto backdrop = std::make_unique<SolidBackdrop>(
+      env_, kBackdropColor, Dimensions(kWidth, kHeight));
+  auto slider = std::make_unique<RangeSlider>(
+      env_, SliderRange{0.0f, 100.0f}, 25.0f, 75.0f);
+
+  app_.add(std::move(backdrop), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
+  app_.add(std::move(slider),
+           roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
+                            kSliderY + kSliderHeight - 1));
+
+  ASSERT_TRUE(app_.refresh());
+
+  Color primary = QuantizeToArgb4444(env_.theme().color.primary);
+  Color inactive = QuantizeToArgb4444(env_.theme().color.secondaryContainer);
+
+  EXPECT_EQ(inactive, pixelAt(kSliderX + 10, kSliderY + kSliderHeight / 2));
+  EXPECT_EQ(primary, pixelAt(kSliderX + 48, kSliderY + kSliderHeight / 2));
+  EXPECT_EQ(inactive, pixelAt(kSliderX + 85, kSliderY + kSliderHeight / 2));
+  EXPECT_EQ(primary, pixelAt(kSliderX + 24, kSliderY + 5));
+  EXPECT_EQ(primary, pixelAt(kSliderX + 70, kSliderY + 5));
 }
 
 }  // namespace
