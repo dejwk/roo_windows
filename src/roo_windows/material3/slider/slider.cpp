@@ -51,7 +51,26 @@ Tokens ResolveTokens(const Slider& widget) {
   };
 }
 
+SliderRange NormalizeRangeOrDefault(SliderRange range) {
+  if (internal::IsValidSliderRange(range.from, range.to, range.step)) {
+    return range;
+  }
+  return SliderRange{};
+}
+
 }  // namespace
+
+Slider::Slider(const Environment& env, uint16_t pos)
+    : Slider(env, SliderRange{},
+             internal::SliderValueFromNormalizedPos(0.0f, 1.0f, pos)) {}
+
+Slider::Slider(const Environment& env, SliderRange range, float value)
+    : BasicWidget(env),
+      value_(internal::ClampSliderValue(
+          value, NormalizeRangeOrDefault(range).from,
+          NormalizeRangeOrDefault(range).to)),
+      range_(NormalizeRangeOrDefault(range)),
+      is_dragging_(false) {}
 
 bool Slider::onDown(XDim x, YDim y) {
   (void)x;
@@ -108,16 +127,58 @@ void Slider::onCancel() {
 }
 
 bool Slider::setPos(uint16_t pos) {
-  if (pos == pos_) return false;
-  internal::SliderAxisMetrics axis(width(), height(), kHandleWidth,
-                                   kInteractionRadius);
-  uint16_t old_pos = pos_;
-  pos_ = pos;
+  uint16_t old_pos = getPos();
+  if (pos == old_pos) return false;
+  value_ = internal::SliderValueFromNormalizedPos(range_.from, range_.to, pos);
   if (width() <= 0 || height() <= 0) {
     return true;
   }
-  invalidateInterior(axis.invalidationRectForPosChange(old_pos, pos_));
+  internal::SliderAxisMetrics axis(width(), height(), kHandleWidth,
+                                   kInteractionRadius);
+  invalidateInterior(axis.invalidationRectForPosChange(old_pos, pos));
   return true;
+}
+
+bool Slider::setRange(SliderRange range) {
+  if (!internal::IsValidSliderRange(range.from, range.to, range.step)) {
+    return false;
+  }
+  uint16_t old_pos = getPos();
+  float new_value = internal::ClampSliderValue(value_, range.from, range.to);
+  bool changed = range_.from != range.from || range_.to != range.to ||
+                 range_.step != range.step || value_ != new_value;
+  if (!changed) return false;
+
+  range_ = range;
+  value_ = new_value;
+
+  uint16_t new_pos = getPos();
+  if (width() > 0 && height() > 0 && old_pos != new_pos) {
+    internal::SliderAxisMetrics axis(width(), height(), kHandleWidth,
+                                     kInteractionRadius);
+    invalidateInterior(axis.invalidationRectForPosChange(old_pos, new_pos));
+  }
+  return true;
+}
+
+bool Slider::setValue(float value) {
+  float new_value = internal::ClampSliderValue(value, range_.from, range_.to);
+  if (value_ == new_value) return false;
+
+  uint16_t old_pos = getPos();
+  value_ = new_value;
+  uint16_t new_pos = getPos();
+
+  if (width() > 0 && height() > 0 && old_pos != new_pos) {
+    internal::SliderAxisMetrics axis(width(), height(), kHandleWidth,
+                                     kInteractionRadius);
+    invalidateInterior(axis.invalidationRectForPosChange(old_pos, new_pos));
+  }
+  return true;
+}
+
+uint16_t Slider::getPos() const {
+  return internal::SliderPosFromValue(range_.from, range_.to, value_);
 }
 
 void Slider::paint(const Canvas& canvas) const {
@@ -126,7 +187,7 @@ void Slider::paint(const Canvas& canvas) const {
                                    kInteractionRadius);
   internal::SliderVisualMetrics layout =
       internal::ResolveHorizontalSliderVisualMetrics(
-          axis, pos_, kTrackHeight, kTrackHandleGap, kHandleHeight);
+          axis, getPos(), kTrackHeight, kTrackHandleGap, kHandleHeight);
 
   roo_display::Box active_clip(0, layout.track_cross_start,
                                layout.activeClipMax(width()),
@@ -172,7 +233,7 @@ PreferredSize Slider::getPreferredSize() const {
 roo_display::FpPoint Slider::getPointOverlayFocus() const {
   internal::SliderAxisMetrics axis(width(), height(), kHandleWidth,
                                    kInteractionRadius);
-  return roo_display::FpPoint{axis.centerFromPos(pos_),
+  return roo_display::FpPoint{axis.centerFromPos(getPos()),
                               0.5f * (float)(height() - 1)};
 }
 

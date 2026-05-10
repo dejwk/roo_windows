@@ -5,10 +5,17 @@
 namespace roo_windows {
 namespace material3 {
 
+struct SliderRange {
+  float from = 0.0f;
+  float to = 1.0f;
+  float step = 0.0f;
+};
+
 class Slider : public BasicWidget {
  public:
-  explicit Slider(const Environment& env, uint16_t pos = 0)
-      : BasicWidget(env), pos_(pos), is_dragging_(false) {}
+  explicit Slider(const Environment& env, uint16_t pos = 0);
+
+  Slider(const Environment& env, SliderRange range, float value = 0.0f);
 
   Padding getDefaultPadding() const override { return Padding(0); }
   Margins getDefaultMargins() const override { return Margins(0); }
@@ -37,12 +44,21 @@ class Slider : public BasicWidget {
 
   ColorRole effectiveContainerRole() const override;
 
-  uint16_t getPos() const { return pos_; }
+  const SliderRange& range() const { return range_; }
+
+  bool setRange(SliderRange range);
+
+  float value() const { return value_; }
+
+  bool setValue(float value);
+
+  uint16_t getPos() const;
 
   bool setPos(uint16_t pos);
 
  private:
-  uint16_t pos_;
+  float value_;
+  SliderRange range_;
   bool is_dragging_;
 };
 

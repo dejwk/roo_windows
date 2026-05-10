@@ -165,6 +165,68 @@ TEST(Material3Slider, EffectiveContainerRoleIsPrimary) {
   EXPECT_EQ(ColorRole::kPrimary, slider.effectiveContainerRole());
 }
 
+TEST(Material3Slider, CompatibilityConstructorUsesUnitRangeAndValueMapping) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+
+  Slider slider(env, 32768);
+
+  EXPECT_FLOAT_EQ(0.0f, slider.range().from);
+  EXPECT_FLOAT_EQ(1.0f, slider.range().to);
+  EXPECT_FLOAT_EQ(0.0f, slider.range().step);
+  EXPECT_FLOAT_EQ(32768.0f / 65535.0f, slider.value());
+  EXPECT_EQ(32768, slider.getPos());
+}
+
+TEST(Material3Slider, SemanticConstructorMapsValueToNormalizedPosition) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+
+  Slider slider(env, SliderRange{10.0f, 40.0f}, 25.0f);
+
+  EXPECT_FLOAT_EQ(10.0f, slider.range().from);
+  EXPECT_FLOAT_EQ(40.0f, slider.range().to);
+  EXPECT_FLOAT_EQ(25.0f, slider.value());
+  EXPECT_EQ(32768, slider.getPos());
+}
+
+TEST(Material3Slider, SetValueClampsIntoConfiguredDomain) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+
+  Slider slider(env, SliderRange{10.0f, 40.0f}, 25.0f);
+
+  EXPECT_TRUE(slider.setValue(100.0f));
+  EXPECT_FLOAT_EQ(40.0f, slider.value());
+  EXPECT_EQ(65535, slider.getPos());
+}
+
+TEST(Material3Slider, SetRangeClampsCurrentValueIntoNewDomain) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+
+  Slider slider(env, SliderRange{10.0f, 40.0f}, 25.0f);
+
+  EXPECT_TRUE(slider.setRange(SliderRange{30.0f, 50.0f}));
+  EXPECT_FLOAT_EQ(30.0f, slider.range().from);
+  EXPECT_FLOAT_EQ(50.0f, slider.range().to);
+  EXPECT_FLOAT_EQ(30.0f, slider.value());
+  EXPECT_EQ(0, slider.getPos());
+}
+
+TEST(Material3Slider, InvalidRangeIsRejectedWithoutChangingState) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+
+  Slider slider(env, SliderRange{10.0f, 40.0f}, 25.0f);
+
+  EXPECT_FALSE(slider.setRange(SliderRange{40.0f, 10.0f}));
+  EXPECT_FLOAT_EQ(10.0f, slider.range().from);
+  EXPECT_FLOAT_EQ(40.0f, slider.range().to);
+  EXPECT_FLOAT_EQ(25.0f, slider.value());
+  EXPECT_EQ(32768, slider.getPos());
+}
+
 TEST_F(Material3SliderAppTest, HorizontalScrollUpdatesPosition) {
   Slider& slider = addSlider(0);
 

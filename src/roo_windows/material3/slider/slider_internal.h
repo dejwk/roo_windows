@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cmath>
 #include <stdint.h>
 
 #include "roo_windows/core/rect.h"
@@ -8,6 +9,32 @@
 namespace roo_windows {
 namespace material3 {
 namespace internal {
+
+inline bool IsValidSliderRange(float from, float to, float step) {
+  return std::isfinite(from) && std::isfinite(to) && std::isfinite(step) &&
+         from < to && step >= 0.0f;
+}
+
+inline float ClampSliderValue(float value, float from, float to) {
+  if (std::isnan(value)) return from;
+  if (value < from) return from;
+  if (value > to) return to;
+  return value;
+}
+
+inline float SliderValueFromNormalizedPos(float from, float to, uint16_t pos) {
+  return from + (to - from) * ((float)pos / 65535.0f);
+}
+
+inline uint16_t SliderPosFromValue(float from, float to, float value) {
+  if (!(to > from)) return 0;
+  float clamped = ClampSliderValue(value, from, to);
+  float normalized = (clamped - from) / (to - from);
+  int32_t pos = (int32_t)floorf(normalized * 65535.0f + 0.5f);
+  if (pos < 0) pos = 0;
+  if (pos > 65535) pos = 65535;
+  return (uint16_t)pos;
+}
 
 struct SliderAxisMetrics {
   SliderAxisMetrics(int16_t primary_span, int16_t cross_span,
