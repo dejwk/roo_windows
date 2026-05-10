@@ -63,6 +63,12 @@ float NormalizeValueForRange(float value, const SliderRange& range) {
                                                 range.step);
 }
 
+float TrackShapeMinPrimary(float visible_min_primary) {
+  return visible_min_primary <= 0.0f
+             ? -0.5f
+             : visible_min_primary - (float)kTrackRadius;
+}
+
 }  // namespace
 
 Slider::Slider(const Environment& env, uint16_t pos)
@@ -255,11 +261,11 @@ void Slider::paint(const Canvas& canvas) const {
   }
 
   auto inactive_track = SmoothFilledRoundRect(
-      inactive_track_min_primary - (float)kTrackRadius,
-      layout.track_min_cross, width() - 0.5f, layout.track_max_cross,
+      TrackShapeMinPrimary(inactive_track_min_primary), layout.track_min_cross,
+      width() - 0.5f, layout.track_max_cross,
       kTrackRadius, tokens.inactive_track);
   auto active_track = SmoothFilledRoundRect(
-    active_track_min_primary - (float)kTrackRadius, layout.track_min_cross,
+    TrackShapeMinPrimary(active_track_min_primary), layout.track_min_cross,
     active_track_max_primary + (float)kTrackRadius,
       layout.track_max_cross, kTrackRadius, tokens.active_track);
   auto handle =

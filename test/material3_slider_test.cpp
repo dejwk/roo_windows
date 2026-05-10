@@ -739,6 +739,7 @@ TEST_F(Material3SliderRenderTest,
   Color background = QuantizeToArgb4444(env_.theme().color.background);
 
   EXPECT_EQ(backdrop_color, pixelAt(2, 2));
+  EXPECT_EQ(background, pixelAt(kSliderX, kSliderY + 14));
   EXPECT_EQ(primary, pixelAt(kSliderX + 20, kSliderY + kSliderHeight / 2));
   EXPECT_EQ(inactive,
             pixelAt(kSliderX + 70, kSliderY + kSliderHeight / 2));
@@ -789,7 +790,9 @@ TEST_F(Material3SliderRenderTest,
 
   Color primary = QuantizeToArgb4444(env_.theme().color.primary);
   Color inactive = QuantizeToArgb4444(env_.theme().color.secondaryContainer);
+  Color background = QuantizeToArgb4444(env_.theme().color.background);
 
+  EXPECT_EQ(background, pixelAt(kSliderX, kSliderY + 14));
   EXPECT_EQ(inactive, pixelAt(kSliderX + 10, kSliderY + kSliderHeight / 2));
   EXPECT_EQ(primary, pixelAt(kSliderX + 48, kSliderY + kSliderHeight / 2));
   EXPECT_EQ(inactive, pixelAt(kSliderX + 85, kSliderY + kSliderHeight / 2));

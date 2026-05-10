@@ -196,6 +196,12 @@ Rect InvalidationRectForValueChange(const internal::SliderAxisMetrics& axis,
       axis.invalidationRectForPosChange(old_end_pos, new_end_pos));
 }
 
+    float TrackShapeMinPrimary(float visible_min_primary) {
+      return visible_min_primary <= 0.0f
+         ? -0.5f
+         : visible_min_primary - (float)kTrackRadius;
+    }
+
 }  // namespace
 
 RangeSlider::RangeSlider(const Environment& env, SliderRange range,
@@ -489,11 +495,11 @@ void RangeSlider::paint(const Canvas& canvas) const {
                                    kTrackHeight - 1);
 
   auto inactive_track = SmoothFilledRoundRect(
-      -(float)kTrackRadius - 0.5f, start_layout.track_min_cross,
+      TrackShapeMinPrimary(0.0f), start_layout.track_min_cross,
       width() - 0.5f, start_layout.track_max_cross, kTrackRadius,
       tokens.inactive_track);
   auto active_track = SmoothFilledRoundRect(
-      active_track_min_primary - (float)kTrackRadius,
+      TrackShapeMinPrimary(active_track_min_primary),
       start_layout.track_min_cross,
       active_track_max_primary + (float)kTrackRadius,
       start_layout.track_max_cross, kTrackRadius, tokens.active_track);
