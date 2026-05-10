@@ -68,7 +68,15 @@ class Slider : public BasicWidget {
 
   bool setPos(uint16_t pos);
 
+  virtual void onValueChange(float value, bool from_user) {}
+
+  virtual void onInteractionStart() {}
+
+  virtual void onInteractionEnd(float value) {}
+
  private:
+  bool setPosInternal(uint16_t pos, bool from_user);
+
   SliderRange range_;
   SliderVariant variant_;
   float value_;

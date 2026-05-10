@@ -74,7 +74,7 @@ Slider::Slider(const Environment& env, SliderRange range, float value,
     : BasicWidget(env),
       range_(NormalizeRangeOrDefault(range)),
       variant_(variant),
-    value_(NormalizeValueForRange(value, range_)),
+      value_(NormalizeValueForRange(value, range_)),
       is_dragging_(false) {}
 
 bool Slider::onDown(XDim x, YDim y) {
@@ -89,9 +89,11 @@ bool Slider::onSingleTapUp(XDim x, YDim y) {
   internal::SliderAxisMetrics axis(width(), height(), kHandleWidth,
                                    kInteractionRadius);
   uint16_t pos = axis.posFromPrimaryCoord(x);
-  if (setPos(pos)) {
+  onInteractionStart();
+  if (setPosInternal(pos, true)) {
     triggerInteractiveChange();
   }
+  onInteractionEnd(value_);
   return true;
 }
 
@@ -102,8 +104,11 @@ void Slider::onShowPress(XDim x, YDim y) {
                                    kInteractionRadius);
   if (!axis.hitsThumb(getPos(), x, kTouchSlopPixels)) return;
 
-  is_dragging_ = true;
-  if (setPos(axis.posFromPrimaryCoord(x))) {
+  if (!is_dragging_) {
+    is_dragging_ = true;
+    onInteractionStart();
+  }
+  if (setPosInternal(axis.posFromPrimaryCoord(x), true)) {
     triggerInteractiveChange();
   }
   Widget::onShowPress(x, y);
@@ -118,20 +123,33 @@ bool Slider::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
 
   internal::SliderAxisMetrics axis(width(), height(), kHandleWidth,
                                    kInteractionRadius);
-  if (setPos(axis.posFromPrimaryCoord(x))) {
+  bool was_dragging = is_dragging_;
+  if (setPosInternal(axis.posFromPrimaryCoord(x), true)) {
+    if (!was_dragging) {
+      onInteractionStart();
+    }
     is_dragging_ = true;
     setPressed(true);
     triggerInteractiveChange();
+  } else if (was_dragging) {
+    is_dragging_ = true;
   }
   return true;
 }
 
 void Slider::onCancel() {
+  if (is_dragging_) {
+    onInteractionEnd(value_);
+  }
   BasicWidget::onCancel();
   is_dragging_ = false;
 }
 
 bool Slider::setPos(uint16_t pos) {
+  return setPosInternal(pos, false);
+}
+
+bool Slider::setPosInternal(uint16_t pos, bool from_user) {
   uint16_t old_pos = getPos();
   if (pos == old_pos) return false;
   value_ = NormalizeValueForRange(
@@ -139,6 +157,7 @@ bool Slider::setPos(uint16_t pos) {
       range_);
   uint16_t new_pos = getPos();
   if (new_pos == old_pos) return false;
+  onValueChange(value_, from_user);
   if (width() <= 0 || height() <= 0) {
     return true;
   }
@@ -160,6 +179,7 @@ bool Slider::setRange(SliderRange range) {
 
   range_ = range;
   value_ = new_value;
+  onValueChange(value_, false);
 
   uint16_t new_pos = getPos();
   if (width() > 0 && height() > 0 && old_pos != new_pos) {
@@ -183,6 +203,7 @@ bool Slider::setValue(float value) {
 
   uint16_t old_pos = getPos();
   value_ = new_value;
+  onValueChange(value_, false);
   uint16_t new_pos = getPos();
 
   if (width() > 0 && height() > 0 && old_pos != new_pos) {
