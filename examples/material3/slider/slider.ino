@@ -85,6 +85,7 @@ void initDisplay() {
 
 #include "roo_windows/containers/flex_layout.h"
 #include "roo_windows/containers/scrollable_panel.h"
+#include "roo_windows/material3/slider/range_slider.h"
 #include "roo_windows/material3/slider/slider.h"
 #include "roo_windows/widgets/divider.h"
 #include "roo_windows/widgets/text_label.h"
@@ -101,10 +102,10 @@ uint16_t PosFromPercent(int percent) {
   return ((uint32_t)percent * 65535u + 50u) / 100u;
 }
 
-class SliderRow : public FlexLayout {
+class LegacySliderRow : public FlexLayout {
  public:
-  SliderRow(const Environment& env, const char* primary, const char* secondary,
-            int initial_percent)
+  LegacySliderRow(const Environment& env, const char* primary,
+                  const char* secondary, int initial_percent)
       : FlexLayout(env, FlexDirection::kColumn),
         header_(env, FlexDirection::kRow),
         labels_(env, FlexDirection::kColumn),
@@ -157,6 +158,162 @@ class SliderRow : public FlexLayout {
   std::function<void()> on_change_;
 };
 
+using SliderValueFormatter =
+    std::function<void(TextLabel&, const material3::Slider&)>;
+
+class SemanticSliderRow : public FlexLayout {
+ public:
+  SemanticSliderRow(const Environment& env, const char* primary,
+                    const char* secondary, material3::SliderRange range,
+                    float initial_value, SliderValueFormatter formatter,
+                    material3::SliderVariant variant =
+                        material3::SliderVariant::kStandard)
+      : FlexLayout(env, FlexDirection::kColumn),
+        header_(env, FlexDirection::kRow),
+        labels_(env, FlexDirection::kColumn),
+        primary_(env, primary, font_body1()),
+        secondary_(env, secondary, font_caption()),
+        value_(env, "", font_body1()),
+        slider_(env, range, initial_value, variant),
+        formatter_(std::move(formatter)) {
+    setPadding(Padding(Scaled(12), Scaled(8)));
+    setGap(Scaled(8));
+
+    header_.setAlignItems(AlignItems::kCenter);
+    header_.setGap(Scaled(12));
+
+    labels_.setAlignItems(AlignItems::kFlexStart);
+    labels_.add(primary_, {.flex_grow = 0, .flex_shrink = 0});
+    labels_.add(secondary_, {.flex_grow = 0, .flex_shrink = 0});
+
+    header_.add(labels_, {.flex_grow = 1, .flex_shrink = 1});
+    header_.add(value_, {.flex_grow = 0, .flex_shrink = 0});
+
+    add(header_, {.flex_grow = 0, .flex_shrink = 0});
+    add(slider_, {.flex_grow = 0, .flex_shrink = 1});
+
+    slider_.setOnInteractiveChange([this]() { handleInteractiveChange(); });
+    updateValue();
+  }
+
+ private:
+  void updateValue() { formatter_(value_, slider_); }
+
+  void handleInteractiveChange() { updateValue(); }
+
+  FlexLayout header_;
+  FlexLayout labels_;
+  TextLabel primary_;
+  TextLabel secondary_;
+  TextLabel value_;
+  material3::Slider slider_;
+  SliderValueFormatter formatter_;
+};
+
+class DemoRangeSlider : public material3::RangeSlider {
+ public:
+  using UpdateHandler = std::function<void()>;
+
+  DemoRangeSlider(const Environment& env, material3::SliderRange range,
+                  float start_value, float end_value)
+      : material3::RangeSlider(env, range, start_value, end_value) {}
+
+  void setOnStateChange(UpdateHandler handler) {
+    on_state_change_ = std::move(handler);
+  }
+
+  void onValueChange(float start, float end, int active_thumb,
+                     bool from_user) override {
+    (void)start;
+    (void)end;
+    (void)active_thumb;
+    (void)from_user;
+    notifyStateChange();
+  }
+
+  void onInteractionStart(int active_thumb) override {
+    (void)active_thumb;
+    notifyStateChange();
+  }
+
+  void onInteractionEnd(float start, float end) override {
+    (void)start;
+    (void)end;
+    notifyStateChange();
+  }
+
+ private:
+  void notifyStateChange() {
+    if (on_state_change_ != nullptr) {
+      on_state_change_();
+    }
+  }
+
+  UpdateHandler on_state_change_;
+};
+
+class RangeSliderRow : public FlexLayout {
+ public:
+  RangeSliderRow(const Environment& env, const char* primary,
+                 const char* secondary, material3::SliderRange range,
+                 float start_value, float end_value, float min_separation)
+      : FlexLayout(env, FlexDirection::kColumn),
+        header_(env, FlexDirection::kRow),
+        labels_(env, FlexDirection::kColumn),
+        primary_(env, primary, font_body1()),
+        secondary_(env, secondary, font_caption()),
+        value_(env, "", font_body1()),
+        slider_(env, range, start_value, end_value),
+        status_(env, "", font_caption()),
+        min_separation_(min_separation) {
+    setPadding(Padding(Scaled(12), Scaled(8)));
+    setGap(Scaled(8));
+
+    header_.setAlignItems(AlignItems::kCenter);
+    header_.setGap(Scaled(12));
+
+    labels_.setAlignItems(AlignItems::kFlexStart);
+    labels_.add(primary_, {.flex_grow = 0, .flex_shrink = 0});
+    labels_.add(secondary_, {.flex_grow = 0, .flex_shrink = 0});
+
+    header_.add(labels_, {.flex_grow = 1, .flex_shrink = 1});
+    header_.add(value_, {.flex_grow = 0, .flex_shrink = 0});
+
+    add(header_, {.flex_grow = 0, .flex_shrink = 0});
+    add(slider_, {.flex_grow = 0, .flex_shrink = 1});
+    add(status_, {.flex_grow = 0, .flex_shrink = 0});
+
+    slider_.setMinSeparation(min_separation);
+    slider_.setOnStateChange([this]() { updateLabels(); });
+    slider_.setOnInteractiveChange([this]() { updateLabels(); });
+    updateLabels();
+  }
+
+ private:
+  const char* ActiveThumbLabel() const {
+    int active_thumb = slider_.activeThumbIndex();
+    if (active_thumb == 0) return "adjusting start thumb";
+    if (active_thumb == 1) return "adjusting end thumb";
+    return "idle";
+  }
+
+  void updateLabels() {
+    value_.setTextf("%02d:00-%02d:00", (int)slider_.startValue(),
+                    (int)slider_.endValue());
+    status_.setTextf("%s · minimum gap %dh", ActiveThumbLabel(),
+                     (int)min_separation_);
+  }
+
+  FlexLayout header_;
+  FlexLayout labels_;
+  TextLabel primary_;
+  TextLabel secondary_;
+  TextLabel value_;
+  DemoRangeSlider slider_;
+  TextLabel status_;
+  float min_separation_;
+};
+
 class FullWidthColumn : public FlexLayout {
  public:
   explicit FullWidthColumn(const Environment& env)
@@ -174,17 +331,40 @@ class SliderScreen : public SimpleScrollablePanel {
       : SimpleScrollablePanel(env),
         content_(env),
         title_(env, "Material 3 sliders", font_body1()),
-        subtitle_(env, "Drag the handles or tap the track to set a value.",
+        subtitle_(env,
+                  "Compatibility, semantic, discrete, centered, and range "
+                  "slider behavior in one demo.",
                   font_caption()),
         divider_(env),
-        summary_(env, "", font_caption()),
-        media_(env, "Media volume", "Speaker output for videos and games", 72),
-        brightness_(env, "Screen brightness",
-                    "Balances visibility and battery life", 58),
-        warmth_(env, "Color warmth", "Moves the panel from cool to warm tones",
-                36),
+        migration_(env,
+                   "The first row still uses Slider(env, pos). The rest use "
+                   "semantic ranges.",
+                   font_caption()),
+        legacy_(env, "Legacy compatibility",
+                "Normalized position constructor mapped to a percentage", 72),
+        fan_speed_(env, "Discrete fan speed",
+                   "Whole-step snapping on taps and drags",
+                   material3::SliderRange{0.0f, 5.0f, 1.0f}, 2.0f,
+                   [](TextLabel& label, const material3::Slider& slider) {
+                     label.setTextf("%.0fx", slider.value());
+                   }),
+        balance_(env, "Centered balance",
+                 "Active track grows away from the midpoint anchor",
+                 material3::SliderRange{-100.0f, 100.0f, 5.0f}, -20.0f,
+                 [](TextLabel& label, const material3::Slider& slider) {
+                   label.setTextf("%+.0f", slider.value());
+                 },
+                 material3::SliderVariant::kCentered),
+        quiet_hours_(env, "Quiet hours",
+                     "Range slider with active thumb state and 2h minimum "
+                     "separation",
+                     material3::SliderRange{0.0f, 24.0f, 1.0f}, 8.0f, 18.0f,
+                     2.0f),
         footer_divider_(env),
-        note_(env, "This demo uses the standard continuous Material 3 slider.",
+        note_(env,
+              "Value indicators and richer styling are intentionally left for "
+              "later steps. This screen is for visually confirming the "
+              "behavior implemented so far.",
               font_caption()) {
     content_.setPadding(Scaled(12));
     content_.setGap(Scaled(4));
@@ -192,36 +372,26 @@ class SliderScreen : public SimpleScrollablePanel {
     content_.add(title_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(subtitle_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(divider_, {.flex_grow = 0, .flex_shrink = 0});
-    content_.add(summary_, {.flex_grow = 0, .flex_shrink = 0});
-    content_.add(media_, {.flex_grow = 0, .flex_shrink = 0});
-    content_.add(brightness_, {.flex_grow = 0, .flex_shrink = 0});
-    content_.add(warmth_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(migration_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(legacy_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(fan_speed_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(balance_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(quiet_hours_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(footer_divider_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(note_, {.flex_grow = 0, .flex_shrink = 0});
 
-    media_.setOnInteractiveChange([this]() { updateSummary(); });
-    brightness_.setOnInteractiveChange([this]() { updateSummary(); });
-    warmth_.setOnInteractiveChange([this]() { updateSummary(); });
-
     setContents(content_);
-    updateSummary();
-  }
-
- private:
-  void updateSummary() {
-    int average =
-        (media_.percent() + brightness_.percent() + warmth_.percent()) / 3;
-    summary_.setTextf("Average level: %d%%", average);
   }
 
   FullWidthColumn content_;
   TextLabel title_;
   TextLabel subtitle_;
   HorizontalDivider divider_;
-  TextLabel summary_;
-  SliderRow media_;
-  SliderRow brightness_;
-  SliderRow warmth_;
+  TextLabel migration_;
+  LegacySliderRow legacy_;
+  SemanticSliderRow fan_speed_;
+  SemanticSliderRow balance_;
+  RangeSliderRow quiet_hours_;
   HorizontalDivider footer_divider_;
   TextLabel note_;
 };
