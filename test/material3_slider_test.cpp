@@ -7,6 +7,7 @@
 #include "roo_windows/core/measure_spec.h"
 #include "roo_windows/material3/slider/range_slider.h"
 #include "roo_windows/material3/slider/slider.h"
+#include "roo_windows/material3/slider/slider_internal.h"
 
 namespace roo_windows {
 namespace material3 {
@@ -114,6 +115,35 @@ class TrackingSlider : public Slider {
 
   std::vector<const char*> events;
   std::vector<float> values;
+};
+
+class TrackingRangeSlider : public RangeSlider {
+ public:
+  using RangeSlider::RangeSlider;
+
+  void onValueChange(float start, float end, int active_thumb,
+                     bool from_user) override {
+    events.push_back(from_user ? "value:user:" : "value:program:");
+    active_thumbs.push_back(active_thumb);
+    start_values.push_back(start);
+    end_values.push_back(end);
+  }
+
+  void onInteractionStart(int active_thumb) override {
+    events.push_back("start");
+    active_thumbs.push_back(active_thumb);
+  }
+
+  void onInteractionEnd(float start, float end) override {
+    events.push_back("end");
+    start_values.push_back(start);
+    end_values.push_back(end);
+  }
+
+  std::vector<const char*> events;
+  std::vector<int> active_thumbs;
+  std::vector<float> start_values;
+  std::vector<float> end_values;
 };
 
 TEST(Material3Slider, UsesZeroDefaultInsets) {
@@ -425,6 +455,45 @@ TEST(Material3RangeSlider, InvalidRangeIsRejectedWithoutChangingState) {
   EXPECT_FLOAT_EQ(35.0f, slider.endValue());
 }
 
+TEST(Material3RangeSlider, ProgrammaticSetValuesFiresOnlyValueChangeHook) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+
+  TrackingRangeSlider slider(env, SliderRange{0.0f, 100.0f}, 25.0f, 75.0f);
+
+  EXPECT_TRUE(slider.setValues(30.0f, 70.0f));
+  ASSERT_EQ(1u, slider.events.size());
+  EXPECT_STREQ("value:program:", slider.events[0]);
+  ASSERT_EQ(1u, slider.active_thumbs.size());
+  EXPECT_EQ(-1, slider.active_thumbs[0]);
+  ASSERT_EQ(1u, slider.start_values.size());
+  EXPECT_FLOAT_EQ(30.0f, slider.start_values[0]);
+  EXPECT_FLOAT_EQ(70.0f, slider.end_values[0]);
+}
+
+TEST(Material3RangeSlider, MinimumSeparationIsEnforcedInDiscreteMode) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+
+  RangeSlider slider(env, SliderRange{0.0f, 10.0f, 2.0f}, 2.0f, 8.0f);
+
+  EXPECT_TRUE(slider.setMinSeparation(5.0f));
+  EXPECT_FLOAT_EQ(5.0f, slider.minSeparation());
+  EXPECT_TRUE(slider.setValues(4.0f, 6.0f));
+  EXPECT_FLOAT_EQ(4.0f, slider.startValue());
+  EXPECT_FLOAT_EQ(10.0f, slider.endValue());
+}
+
+TEST(Material3RangeSlider, NegativeMinimumSeparationIsRejected) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+
+  RangeSlider slider(env, SliderRange{0.0f, 10.0f}, 2.0f, 8.0f);
+
+  EXPECT_FALSE(slider.setMinSeparation(-1.0f));
+  EXPECT_FLOAT_EQ(0.0f, slider.minSeparation());
+}
+
 TEST_F(Material3SliderAppTest, HorizontalScrollUpdatesPosition) {
   Slider& slider = addSlider(0);
 
@@ -539,6 +608,79 @@ TEST_F(Material3SliderAppTest,
   ASSERT_EQ(2u, tracking->values.size());
   EXPECT_GT(tracking->values[0], 0.9f);
   EXPECT_FLOAT_EQ(tracking->values[0], tracking->values[1]);
+}
+
+TEST_F(Material3SliderAppTest,
+       RangeSliderDragRespectsMinimumSeparationAndReportsActiveThumb) {
+  auto tracking_slider = std::make_unique<TrackingRangeSlider>(
+      env_, SliderRange{0.0f, 100.0f}, 25.0f, 75.0f);
+  TrackingRangeSlider* tracking = tracking_slider.get();
+  tracking->setMinSeparation(20.0f);
+  int interactive_change_count = 0;
+  tracking->setOnInteractiveChange([&]() { ++interactive_change_count; });
+  app_.add(std::move(tracking_slider),
+           roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
+                            kSliderY + kSliderHeight - 1));
+  ASSERT_TRUE(app_.refresh());
+
+  internal::SliderAxisMetrics axis(tracking->width(), tracking->height(),
+                                   Scaled(4), 0);
+  XDim start_thumb_center = (XDim)roundf(axis.centerFromPos(
+      internal::SliderPosFromValue(0.0f, 100.0f, tracking->startValue())));
+  tracking->onShowPress(start_thumb_center, kSliderHeight / 2);
+  ASSERT_FALSE(tracking->events.empty());
+  EXPECT_STREQ("start", tracking->events[0]);
+  ASSERT_FALSE(tracking->active_thumbs.empty());
+  EXPECT_EQ(0, tracking->active_thumbs[0]);
+  EXPECT_EQ(0, tracking->activeThumbIndex());
+
+  EXPECT_TRUE(tracking->onScroll(Scaled(90), kSliderHeight / 2, Scaled(20), 0));
+  ASSERT_GE(tracking->events.size(), 2u);
+  EXPECT_STREQ("value:user:", tracking->events.back());
+  ASSERT_GE(tracking->active_thumbs.size(), 2u);
+  EXPECT_EQ(0, tracking->active_thumbs.back());
+  EXPECT_GE(interactive_change_count, 1);
+  EXPECT_FLOAT_EQ(55.0f, tracking->startValue());
+  EXPECT_FLOAT_EQ(75.0f, tracking->endValue());
+
+  tracking->onCancel();
+  ASSERT_GE(tracking->events.size(), 3u);
+  EXPECT_STREQ("end", tracking->events.back());
+  EXPECT_EQ(-1, tracking->activeThumbIndex());
+  ASSERT_FALSE(tracking->start_values.empty());
+  EXPECT_FLOAT_EQ(55.0f, tracking->start_values.back());
+  EXPECT_FLOAT_EQ(75.0f, tracking->end_values.back());
+}
+
+TEST_F(Material3SliderAppTest,
+       OverlappingRangeThumbsWaitForDirectionalIntent) {
+  auto tracking_slider = std::make_unique<TrackingRangeSlider>(
+      env_, SliderRange{0.0f, 100.0f}, 50.0f, 50.0f);
+  TrackingRangeSlider* tracking = tracking_slider.get();
+  app_.add(std::move(tracking_slider),
+           roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
+                            kSliderY + kSliderHeight - 1));
+  ASSERT_TRUE(app_.refresh());
+
+  tracking->onShowPress(Scaled(48) - 1, kSliderHeight / 2);
+  EXPECT_TRUE(tracking->events.empty());
+  EXPECT_EQ(-1, tracking->activeThumbIndex());
+
+  EXPECT_TRUE(tracking->onScroll(Scaled(70), kSliderHeight / 2, Scaled(12), 0));
+  ASSERT_EQ(2u, tracking->events.size());
+  EXPECT_STREQ("start", tracking->events[0]);
+  EXPECT_STREQ("value:user:", tracking->events[1]);
+  ASSERT_EQ(2u, tracking->active_thumbs.size());
+  EXPECT_EQ(1, tracking->active_thumbs[0]);
+  EXPECT_EQ(1, tracking->active_thumbs[1]);
+  EXPECT_EQ(1, tracking->activeThumbIndex());
+  EXPECT_FLOAT_EQ(50.0f, tracking->startValue());
+  EXPECT_GT(tracking->endValue(), 70.0f);
+
+  tracking->onCancel();
+  ASSERT_EQ(3u, tracking->events.size());
+  EXPECT_STREQ("end", tracking->events[2]);
+  EXPECT_EQ(-1, tracking->activeThumbIndex());
 }
 
 TEST_F(Material3SliderRenderTest,
