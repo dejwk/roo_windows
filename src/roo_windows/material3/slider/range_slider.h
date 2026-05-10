@@ -21,6 +21,10 @@ class RangeSlider : public BasicWidget {
 
   roo_display::FpPoint getPointOverlayFocus() const override;
 
+  bool useOverlayOnPress() const override { return false; }
+
+  bool showClickAnimation() const override { return false; }
+
   bool isClickable() const override { return true; }
 
   bool onDown(XDim x, YDim y) override;

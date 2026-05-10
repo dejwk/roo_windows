@@ -227,6 +227,16 @@ TEST(Material3Slider, EffectiveContainerRoleIsPrimary) {
   EXPECT_EQ(ColorRole::kPrimary, slider.effectiveContainerRole());
 }
 
+TEST(Material3Slider, PressStateDoesNotUseOverlayOrClickAnimation) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+
+  Slider slider(env);
+
+  EXPECT_FALSE(slider.useOverlayOnPress());
+  EXPECT_FALSE(slider.showClickAnimation());
+}
+
 TEST(Material3Slider, CompatibilityConstructorUsesUnitRangeAndValueMapping) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -492,6 +502,16 @@ TEST(Material3RangeSlider, NegativeMinimumSeparationIsRejected) {
 
   EXPECT_FALSE(slider.setMinSeparation(-1.0f));
   EXPECT_FLOAT_EQ(0.0f, slider.minSeparation());
+}
+
+TEST(Material3RangeSlider, PressStateDoesNotUseOverlayOrClickAnimation) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+
+  RangeSlider slider(env, SliderRange{0.0f, 10.0f}, 2.0f, 8.0f);
+
+  EXPECT_FALSE(slider.useOverlayOnPress());
+  EXPECT_FALSE(slider.showClickAnimation());
 }
 
 TEST_F(Material3SliderAppTest,
@@ -766,9 +786,11 @@ TEST_F(Material3SliderRenderTest,
 
   Color primary = QuantizeToArgb4444(env_.theme().color.primary);
   Color inactive = QuantizeToArgb4444(env_.theme().color.secondaryContainer);
+  Color background = QuantizeToArgb4444(env_.theme().color.background);
 
   EXPECT_EQ(inactive, pixelAt(kSliderX + 25, kSliderY + kSliderHeight / 2));
-  EXPECT_EQ(primary, pixelAt(kSliderX + 45, kSliderY + kSliderHeight / 2));
+  EXPECT_EQ(background, pixelAt(kSliderX + 45, kSliderY + kSliderHeight / 2));
+  EXPECT_EQ(primary, pixelAt(kSliderX + 47, kSliderY + kSliderHeight / 2));
   EXPECT_EQ(inactive, pixelAt(kSliderX + 60, kSliderY + kSliderHeight / 2));
 }
 
@@ -797,6 +819,65 @@ TEST_F(Material3SliderRenderTest,
   EXPECT_EQ(primary, pixelAt(kSliderX + 48, kSliderY + kSliderHeight / 2));
   EXPECT_EQ(inactive, pixelAt(kSliderX + 85, kSliderY + kSliderHeight / 2));
   EXPECT_EQ(primary, pixelAt(kSliderX + 24, kSliderY + 5));
+  EXPECT_EQ(primary, pixelAt(kSliderX + 70, kSliderY + 5));
+}
+
+TEST_F(Material3SliderRenderTest,
+       PressedSliderNarrowsThumbAndTightensTrackGap) {
+  constexpr Color kBackdropColor(0xFFF3EFE7);
+
+  auto backdrop = std::make_unique<SolidBackdrop>(
+      env_, kBackdropColor, Dimensions(kWidth, kHeight));
+  auto pressed_slider = std::make_unique<Slider>(env_, 32768);
+  slider_ = pressed_slider.get();
+
+  app_.add(std::move(backdrop), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
+  app_.add(std::move(pressed_slider),
+           roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
+                            kSliderY + kSliderHeight - 1));
+
+  ASSERT_TRUE(app_.refresh());
+  slider().onShowPress((XDim)slider().getPointOverlayFocus().x,
+                       slider().height() / 2);
+  ASSERT_TRUE(app_.refresh());
+
+  Color primary = QuantizeToArgb4444(env_.theme().color.primary);
+  Color background = QuantizeToArgb4444(env_.theme().color.background);
+
+  EXPECT_EQ(background, pixelAt(kSliderX + 45, kSliderY + 5));
+  EXPECT_EQ(primary, pixelAt(kSliderX + 47, kSliderY + kSliderHeight / 2));
+}
+
+TEST_F(Material3SliderRenderTest,
+       PressedRangeSliderNarrowsOnlyActiveThumbAndTightensGap) {
+  constexpr Color kBackdropColor(0xFFF3EFE7);
+
+  auto backdrop = std::make_unique<SolidBackdrop>(
+      env_, kBackdropColor, Dimensions(kWidth, kHeight));
+  auto slider = std::make_unique<RangeSlider>(
+      env_, SliderRange{0.0f, 100.0f}, 25.0f, 75.0f);
+  RangeSlider* slider_ptr = slider.get();
+
+  app_.add(std::move(backdrop), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
+  app_.add(std::move(slider),
+           roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
+                            kSliderY + kSliderHeight - 1));
+
+  ASSERT_TRUE(app_.refresh());
+
+  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
+                                   Scaled(4), Scaled(20));
+  XDim start_thumb_center = (XDim)roundf(axis.centerFromPos(
+      internal::SliderPosFromValue(0.0f, 100.0f, slider_ptr->startValue())));
+  slider_ptr->onShowPress(start_thumb_center, slider_ptr->height() / 2);
+  ASSERT_TRUE(app_.refresh());
+
+  Color primary = QuantizeToArgb4444(env_.theme().color.primary);
+  Color background = QuantizeToArgb4444(env_.theme().color.background);
+
+  EXPECT_EQ(background, pixelAt(kSliderX + 22, kSliderY + 5));
+  EXPECT_EQ(background, pixelAt(kSliderX + 30, kSliderY + kSliderHeight / 2));
+  EXPECT_EQ(primary, pixelAt(kSliderX + 48, kSliderY + kSliderHeight / 2));
   EXPECT_EQ(primary, pixelAt(kSliderX + 70, kSliderY + 5));
 }
 

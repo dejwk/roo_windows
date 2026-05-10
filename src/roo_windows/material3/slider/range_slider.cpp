@@ -16,13 +16,14 @@ namespace {
 
 static constexpr int kTrackHeight = Scaled(16);
 static constexpr int kTrackRadius = kTrackHeight / 2;
-static constexpr int kTrackHandleGap = Scaled(2);
+static constexpr int kTrackHandleGap = Scaled(6);
 static constexpr int kHandleWidth = Scaled(4);
 static constexpr int kHandleHeight = Scaled(44);
 static constexpr float kHandleCornerRadius = 0.5f * (float)kHandleWidth;
 static constexpr int kTouchSlopPixels = Scaled(20);
 static constexpr int kInteractionRadius = kPointOverlayDiameter / 2;
 static constexpr int8_t kNoActiveThumb = -1;
+static constexpr float kPressedThumbWidthRatio = 0.5f;
 
 Color DisabledComposite(Color fg, uint8_t alpha, const Theme& theme) {
   return AlphaBlend(theme.color.surface, fg.withA(alpha));
@@ -200,6 +201,44 @@ Rect InvalidationRectForValueChange(const internal::SliderAxisMetrics& axis,
       return visible_min_primary <= 0.0f
          ? -0.5f
          : visible_min_primary - (float)kTrackRadius;
+    }
+
+    int16_t ThumbWidthForState(bool pressed) {
+      if (!pressed) return kHandleWidth;
+      int16_t width = (int16_t)roundf((float)kHandleWidth * kPressedThumbWidthRatio);
+      return width < 1 ? 1 : width;
+    }
+
+    int16_t TrackGapForThumbWidth(int16_t thumb_width) {
+      int16_t gap = kTrackHandleGap - (kHandleWidth - thumb_width) / 2;
+      return gap < 0 ? 0 : gap;
+    }
+
+    internal::SliderVisualMetrics ResolveVisualMetrics(
+        const internal::SliderAxisMetrics& axis, float thumb_center_primary,
+        int16_t thumb_width, int16_t track_gap, int16_t thumb_cross_span) {
+      int16_t track_cross_start = axis.centeredCrossStart(kTrackHeight);
+      float track_min_cross = track_cross_start - 0.5f;
+      float track_max_cross = track_cross_start + kTrackHeight - 0.5f;
+      float thumb_min_primary =
+          thumb_center_primary - 0.5f * (float)(thumb_width - 1) - 0.5f;
+      float thumb_max_primary = thumb_min_primary + thumb_width;
+      int16_t thumb_cross_start = axis.centeredCrossStart(thumb_cross_span);
+      float thumb_min_cross = thumb_cross_start - 0.5f;
+      float thumb_max_cross = thumb_min_cross + thumb_cross_span;
+      float active_track_max_primary = thumb_min_primary - (float)track_gap;
+      float inactive_track_min_primary = thumb_max_primary + (float)track_gap;
+      return internal::SliderVisualMetrics{thumb_center_primary,
+                                           track_cross_start,
+                                           track_min_cross,
+                                           track_max_cross,
+                                           thumb_min_primary,
+                                           thumb_max_primary,
+                                           thumb_cross_start,
+                                           thumb_min_cross,
+                                           thumb_max_cross,
+                                           active_track_max_primary,
+                                           inactive_track_min_primary};
     }
 
 }  // namespace
@@ -475,12 +514,15 @@ void RangeSlider::paint(const Canvas& canvas) const {
       internal::SliderPosFromValue(range_.from, range_.to, start_value_);
   uint16_t end_pos = internal::SliderPosFromValue(range_.from, range_.to,
                                                   end_value_);
-  internal::SliderVisualMetrics start_layout =
-      internal::ResolveHorizontalSliderVisualMetrics(
-          axis, start_pos, kTrackHeight, kTrackHandleGap, kHandleHeight);
-  internal::SliderVisualMetrics end_layout =
-      internal::ResolveHorizontalSliderVisualMetrics(
-          axis, end_pos, kTrackHeight, kTrackHandleGap, kHandleHeight);
+  int16_t start_thumb_width =
+      ThumbWidthForState(isPressed() && active_thumb_ == 0);
+  int16_t end_thumb_width = ThumbWidthForState(isPressed() && active_thumb_ == 1);
+  internal::SliderVisualMetrics start_layout = ResolveVisualMetrics(
+      axis, axis.centerFromPos(start_pos), start_thumb_width,
+      TrackGapForThumbWidth(start_thumb_width), kHandleHeight);
+  internal::SliderVisualMetrics end_layout = ResolveVisualMetrics(
+      axis, axis.centerFromPos(end_pos), end_thumb_width,
+      TrackGapForThumbWidth(end_thumb_width), kHandleHeight);
 
   float active_track_min_primary = start_layout.inactive_track_min_primary;
   float active_track_max_primary = end_layout.active_track_max_primary;
@@ -493,6 +535,28 @@ void RangeSlider::paint(const Canvas& canvas) const {
                                active_clip_max,
                                start_layout.track_cross_start +
                                    kTrackHeight - 1);
+  bool has_left_inactive_clip = true;
+  int16_t left_inactive_max = (int16_t)floorf(start_layout.active_track_max_primary);
+  roo_display::Box left_inactive_clip;
+  if (left_inactive_max < 0) {
+    has_left_inactive_clip = false;
+  } else {
+    if (left_inactive_max >= width()) left_inactive_max = width() - 1;
+    left_inactive_clip = roo_display::Box(
+        0, start_layout.track_cross_start, left_inactive_max,
+        start_layout.track_cross_start + kTrackHeight - 1);
+  }
+  bool has_right_inactive_clip = true;
+  int16_t right_inactive_min = (int16_t)ceilf(end_layout.inactive_track_min_primary);
+  roo_display::Box right_inactive_clip;
+  if (right_inactive_min >= width()) {
+    has_right_inactive_clip = false;
+  } else {
+    if (right_inactive_min < 0) right_inactive_min = 0;
+    right_inactive_clip = roo_display::Box(
+        right_inactive_min, start_layout.track_cross_start, width() - 1,
+        start_layout.track_cross_start + kTrackHeight - 1);
+  }
 
   auto inactive_track = SmoothFilledRoundRect(
       TrackShapeMinPrimary(0.0f), start_layout.track_min_cross,
@@ -514,7 +578,12 @@ void RangeSlider::paint(const Canvas& canvas) const {
 
   roo_display::StreamableStack composite(
       roo_display::Box(0, 0, width() - 1, height() - 1));
-  composite.addInput(&inactive_track);
+  if (has_left_inactive_clip) {
+    composite.addInput(&inactive_track, left_inactive_clip);
+  }
+  if (has_right_inactive_clip) {
+    composite.addInput(&inactive_track, right_inactive_clip);
+  }
   if (!active_clip.empty()) {
     composite.addInput(&active_track, active_clip);
   }

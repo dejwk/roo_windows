@@ -17,12 +17,13 @@ namespace {
 
 static constexpr int kTrackHeight = Scaled(16);
 static constexpr int kTrackRadius = kTrackHeight / 2;
-static constexpr int kTrackHandleGap = Scaled(2);
+static constexpr int kTrackHandleGap = Scaled(6);
 static constexpr int kHandleWidth = Scaled(4);
 static constexpr int kHandleHeight = Scaled(44);
 static constexpr float kHandleCornerRadius = 0.5f * (float)kHandleWidth;
 static constexpr int kTouchSlopPixels = Scaled(20);
 static constexpr int kInteractionRadius = kPointOverlayDiameter / 2;
+static constexpr float kPressedThumbWidthRatio = 0.5f;
 
 Color DisabledComposite(Color fg, uint8_t alpha, const Theme& theme) {
   return AlphaBlend(theme.color.surface, fg.withA(alpha));
@@ -67,6 +68,44 @@ float TrackShapeMinPrimary(float visible_min_primary) {
   return visible_min_primary <= 0.0f
              ? -0.5f
              : visible_min_primary - (float)kTrackRadius;
+}
+
+int16_t ThumbWidthForState(bool pressed) {
+  if (!pressed) return kHandleWidth;
+  int16_t width = (int16_t)roundf((float)kHandleWidth * kPressedThumbWidthRatio);
+  return width < 1 ? 1 : width;
+}
+
+int16_t TrackGapForThumbWidth(int16_t thumb_width) {
+  int16_t gap = kTrackHandleGap - (kHandleWidth - thumb_width) / 2;
+  return gap < 0 ? 0 : gap;
+}
+
+internal::SliderVisualMetrics ResolveVisualMetrics(
+    const internal::SliderAxisMetrics& axis, float thumb_center_primary,
+    int16_t thumb_width, int16_t track_gap, int16_t thumb_cross_span) {
+  int16_t track_cross_start = axis.centeredCrossStart(kTrackHeight);
+  float track_min_cross = track_cross_start - 0.5f;
+  float track_max_cross = track_cross_start + kTrackHeight - 0.5f;
+  float thumb_min_primary =
+      thumb_center_primary - 0.5f * (float)(thumb_width - 1) - 0.5f;
+  float thumb_max_primary = thumb_min_primary + thumb_width;
+  int16_t thumb_cross_start = axis.centeredCrossStart(thumb_cross_span);
+  float thumb_min_cross = thumb_cross_start - 0.5f;
+  float thumb_max_cross = thumb_min_cross + thumb_cross_span;
+  float active_track_max_primary = thumb_min_primary - (float)track_gap;
+  float inactive_track_min_primary = thumb_max_primary + (float)track_gap;
+  return internal::SliderVisualMetrics{thumb_center_primary,
+                                       track_cross_start,
+                                       track_min_cross,
+                                       track_max_cross,
+                                       thumb_min_primary,
+                                       thumb_max_primary,
+                                       thumb_cross_start,
+                                       thumb_min_cross,
+                                       thumb_max_cross,
+                                       active_track_max_primary,
+                                       inactive_track_min_primary};
 }
 
 }  // namespace
@@ -229,39 +268,80 @@ void Slider::paint(const Canvas& canvas) const {
   internal::SliderAxisMetrics axis(width(), height(), kHandleWidth,
                                    kInteractionRadius);
   float center_anchor_primary = axis.centerFromPos(32768);
-  internal::SliderVisualMetrics layout =
-      internal::ResolveHorizontalSliderVisualMetrics(
-          axis, getPos(), kTrackHeight, kTrackHandleGap, kHandleHeight);
+  bool thumb_on_or_right_of_center = axis.centerFromPos(getPos()) >= center_anchor_primary;
+  int16_t thumb_width = ThumbWidthForState(isPressed());
+  int16_t track_gap = TrackGapForThumbWidth(thumb_width);
+  internal::SliderVisualMetrics layout = ResolveVisualMetrics(
+      axis, axis.centerFromPos(getPos()), thumb_width, track_gap,
+      kHandleHeight);
 
-  float inactive_track_min_primary = layout.inactive_track_min_primary;
   float active_track_min_primary = -0.5f;
   float active_track_max_primary = layout.active_track_max_primary;
   roo_display::Box active_clip(0, layout.track_cross_start,
                  layout.activeClipMax(width()),
                  layout.track_cross_start + kTrackHeight - 1);
+  bool has_left_inactive_clip = false;
+  bool has_right_inactive_clip = true;
+  roo_display::Box left_inactive_clip;
+  roo_display::Box right_inactive_clip(
+      (int16_t)ceilf(layout.inactive_track_min_primary),
+      layout.track_cross_start, width() - 1,
+      layout.track_cross_start + kTrackHeight - 1);
 
   if (variant_ == SliderVariant::kCentered) {
-    inactive_track_min_primary = -0.5f;
-  bool thumb_on_or_right_of_center =
-    layout.thumb_center_primary >= center_anchor_primary;
-  active_track_min_primary = thumb_on_or_right_of_center
-                   ? center_anchor_primary
-                   : layout.inactive_track_min_primary;
-  active_track_max_primary = thumb_on_or_right_of_center
-                   ? layout.active_track_max_primary
-                   : center_anchor_primary;
+    active_track_min_primary = thumb_on_or_right_of_center
+                                   ? center_anchor_primary
+                                   : layout.inactive_track_min_primary;
+    active_track_max_primary = thumb_on_or_right_of_center
+                                   ? layout.active_track_max_primary
+                                   : center_anchor_primary;
 
-  int16_t active_clip_min = (int16_t)ceilf(active_track_min_primary);
-  int16_t active_clip_max = (int16_t)floorf(active_track_max_primary);
-  if (active_clip_min < 0) active_clip_min = 0;
-  if (active_clip_max >= width()) active_clip_max = width() - 1;
-  active_clip = roo_display::Box(active_clip_min, layout.track_cross_start,
-                   active_clip_max,
-                   layout.track_cross_start + kTrackHeight - 1);
+    int16_t active_clip_min = (int16_t)ceilf(active_track_min_primary);
+    int16_t active_clip_max = (int16_t)floorf(active_track_max_primary);
+    if (active_clip_min < 0) active_clip_min = 0;
+    if (active_clip_max >= width()) active_clip_max = width() - 1;
+    active_clip = roo_display::Box(active_clip_min, layout.track_cross_start,
+                     active_clip_max,
+                     layout.track_cross_start + kTrackHeight - 1);
+
+    has_left_inactive_clip = true;
+    int16_t left_inactive_max = thumb_on_or_right_of_center
+                                    ? (int16_t)floorf(center_anchor_primary)
+                                    : (int16_t)floorf(layout.active_track_max_primary);
+    if (left_inactive_max < 0) {
+      has_left_inactive_clip = false;
+    } else {
+      left_inactive_clip = roo_display::Box(
+          0, layout.track_cross_start,
+          left_inactive_max >= width() ? width() - 1 : left_inactive_max,
+          layout.track_cross_start + kTrackHeight - 1);
+    }
+
+    int16_t right_inactive_min = thumb_on_or_right_of_center
+                                     ? (int16_t)ceilf(layout.inactive_track_min_primary)
+                                     : (int16_t)ceilf(center_anchor_primary);
+    if (right_inactive_min >= width()) {
+      has_right_inactive_clip = false;
+    } else {
+      if (right_inactive_min < 0) right_inactive_min = 0;
+      right_inactive_clip = roo_display::Box(
+          right_inactive_min, layout.track_cross_start, width() - 1,
+          layout.track_cross_start + kTrackHeight - 1);
+    }
+  } else {
+    int16_t right_inactive_min = (int16_t)ceilf(layout.inactive_track_min_primary);
+    if (right_inactive_min >= width()) {
+      has_right_inactive_clip = false;
+    } else {
+      if (right_inactive_min < 0) right_inactive_min = 0;
+      right_inactive_clip = roo_display::Box(
+          right_inactive_min, layout.track_cross_start, width() - 1,
+          layout.track_cross_start + kTrackHeight - 1);
+    }
   }
 
   auto inactive_track = SmoothFilledRoundRect(
-      TrackShapeMinPrimary(inactive_track_min_primary), layout.track_min_cross,
+      TrackShapeMinPrimary(0.0f), layout.track_min_cross,
       width() - 0.5f, layout.track_max_cross,
       kTrackRadius, tokens.inactive_track);
   auto active_track = SmoothFilledRoundRect(
@@ -275,7 +355,12 @@ void Slider::paint(const Canvas& canvas) const {
 
   roo_display::StreamableStack composite(
       roo_display::Box(0, 0, width() - 1, height() - 1));
-  composite.addInput(&inactive_track);
+  if (has_left_inactive_clip) {
+    composite.addInput(&inactive_track, left_inactive_clip);
+  }
+  if (has_right_inactive_clip) {
+    composite.addInput(&inactive_track, right_inactive_clip);
+  }
   if (!active_clip.empty()) {
     composite.addInput(&active_track, active_clip);
   }
