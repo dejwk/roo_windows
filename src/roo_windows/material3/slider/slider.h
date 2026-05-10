@@ -1,9 +1,16 @@
 #pragma once
 
+#include <stdint.h>
+
 #include "roo_windows/core/basic_widget.h"
 
 namespace roo_windows {
 namespace material3 {
+
+enum class SliderVariant : uint8_t {
+  kStandard,
+  kCentered,
+};
 
 struct SliderRange {
   float from = 0.0f;
@@ -15,7 +22,8 @@ class Slider : public BasicWidget {
  public:
   explicit Slider(const Environment& env, uint16_t pos = 0);
 
-  Slider(const Environment& env, SliderRange range, float value = 0.0f);
+  Slider(const Environment& env, SliderRange range, float value = 0.0f,
+         SliderVariant variant = SliderVariant::kStandard);
 
   Padding getDefaultPadding() const override { return Padding(0); }
   Margins getDefaultMargins() const override { return Margins(0); }
@@ -48,6 +56,10 @@ class Slider : public BasicWidget {
 
   bool setRange(SliderRange range);
 
+  SliderVariant variant() const { return variant_; }
+
+  bool setVariant(SliderVariant variant);
+
   float value() const { return value_; }
 
   bool setValue(float value);
@@ -58,6 +70,7 @@ class Slider : public BasicWidget {
 
  private:
   SliderRange range_;
+  SliderVariant variant_;
   float value_;
   bool is_dragging_;
 };

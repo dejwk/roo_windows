@@ -60,6 +60,17 @@ class Material3SliderAppTest : public testing::Test {
     return *slider_;
   }
 
+  Slider& addSlider(SliderRange range, float value,
+                    SliderVariant variant = SliderVariant::kStandard) {
+    auto slider = std::make_unique<Slider>(env_, range, value, variant);
+    slider_ = slider.get();
+    app_.add(std::move(slider),
+             roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
+                              kSliderY + kSliderHeight - 1));
+    EXPECT_TRUE(app_.refresh());
+    return *slider_;
+  }
+
   Slider& slider() {
     EXPECT_NE(nullptr, slider_);
     return *slider_;
@@ -282,6 +293,42 @@ TEST(Material3Slider, NegativeStepIsRejected) {
   EXPECT_FLOAT_EQ(1.0f, slider.range().step);
 }
 
+TEST(Material3Slider, CenteredVariantPreservesValueMapping) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+
+  Slider slider(env, SliderRange{-100.0f, 100.0f}, -20.0f,
+                SliderVariant::kCentered);
+
+  EXPECT_EQ(SliderVariant::kCentered, slider.variant());
+  EXPECT_FLOAT_EQ(-20.0f, slider.value());
+  EXPECT_EQ((uint16_t)26214, slider.getPos());
+}
+
+TEST(Material3Slider, SetVariantUpdatesSemanticVariantOnly) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+
+  Slider slider(env, SliderRange{-100.0f, 100.0f}, -20.0f);
+
+  EXPECT_TRUE(slider.setVariant(SliderVariant::kCentered));
+  EXPECT_EQ(SliderVariant::kCentered, slider.variant());
+  EXPECT_FLOAT_EQ(-20.0f, slider.value());
+  EXPECT_EQ((uint16_t)26214, slider.getPos());
+}
+
+TEST(Material3Slider, CenteredDiscreteVariantStillSnapsValues) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+
+  Slider slider(env, SliderRange{-5.0f, 5.0f, 0.5f}, 0.0f,
+                SliderVariant::kCentered);
+
+  EXPECT_TRUE(slider.setValue(1.3f));
+  EXPECT_FLOAT_EQ(1.5f, slider.value());
+  EXPECT_EQ((uint16_t)42598, slider.getPos());
+}
+
 TEST_F(Material3SliderAppTest, HorizontalScrollUpdatesPosition) {
   Slider& slider = addSlider(0);
 
@@ -373,6 +420,31 @@ TEST_F(Material3SliderRenderTest,
             pixelAt(kSliderX + 70, kSliderY + kSliderHeight / 2));
   EXPECT_EQ(primary, pixelAt(kSliderX + 47, kSliderY + 5));
   EXPECT_EQ(background, pixelAt(kSliderX + 20, kSliderY + 5));
+}
+
+TEST_F(Material3SliderRenderTest,
+       CenteredVariantPaintsActiveTrackFromVisualMidpoint) {
+  constexpr Color kBackdropColor(0xFFF3EFE7);
+
+  auto backdrop = std::make_unique<SolidBackdrop>(
+      env_, kBackdropColor, Dimensions(kWidth, kHeight));
+  auto slider = std::make_unique<Slider>(
+      env_, SliderRange{-100.0f, 100.0f}, -20.0f, SliderVariant::kCentered);
+  slider_ = slider.get();
+
+  app_.add(std::move(backdrop), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
+  app_.add(std::move(slider),
+           roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
+                            kSliderY + kSliderHeight - 1));
+
+  ASSERT_TRUE(app_.refresh());
+
+  Color primary = QuantizeToArgb4444(env_.theme().color.primary);
+  Color inactive = QuantizeToArgb4444(env_.theme().color.secondaryContainer);
+
+  EXPECT_EQ(inactive, pixelAt(kSliderX + 25, kSliderY + kSliderHeight / 2));
+  EXPECT_EQ(primary, pixelAt(kSliderX + 45, kSliderY + kSliderHeight / 2));
+  EXPECT_EQ(inactive, pixelAt(kSliderX + 60, kSliderY + kSliderHeight / 2));
 }
 
 }  // namespace

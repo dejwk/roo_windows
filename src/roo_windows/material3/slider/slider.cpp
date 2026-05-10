@@ -69,9 +69,11 @@ Slider::Slider(const Environment& env, uint16_t pos)
     : Slider(env, SliderRange{},
              internal::SliderValueFromNormalizedPos(0.0f, 1.0f, pos)) {}
 
-Slider::Slider(const Environment& env, SliderRange range, float value)
+Slider::Slider(const Environment& env, SliderRange range, float value,
+               SliderVariant variant)
     : BasicWidget(env),
       range_(NormalizeRangeOrDefault(range)),
+      variant_(variant),
     value_(NormalizeValueForRange(value, range_)),
       is_dragging_(false) {}
 
@@ -168,6 +170,13 @@ bool Slider::setRange(SliderRange range) {
   return true;
 }
 
+bool Slider::setVariant(SliderVariant variant) {
+  if (variant_ == variant) return false;
+  variant_ = variant;
+  invalidateInterior();
+  return true;
+}
+
 bool Slider::setValue(float value) {
   float new_value = NormalizeValueForRange(value, range_);
   if (value_ == new_value) return false;
@@ -192,24 +201,45 @@ void Slider::paint(const Canvas& canvas) const {
   Tokens tokens = ResolveTokens(*this);
   internal::SliderAxisMetrics axis(width(), height(), kHandleWidth,
                                    kInteractionRadius);
+  float center_anchor_primary = axis.centerFromPos(32768);
   internal::SliderVisualMetrics layout =
       internal::ResolveHorizontalSliderVisualMetrics(
           axis, getPos(), kTrackHeight, kTrackHandleGap, kHandleHeight);
 
+  float inactive_track_min_primary = layout.inactive_track_min_primary;
+  float active_track_min_primary = -0.5f;
+  float active_track_max_primary = layout.active_track_max_primary;
   roo_display::Box active_clip(0, layout.track_cross_start,
-                               layout.activeClipMax(width()),
-                               layout.track_cross_start + kTrackHeight - 1);
-  roo_display::Box inactive_clip(layout.inactiveClipMin(width()),
-                                 layout.track_cross_start, width() - 1,
-                                 layout.track_cross_start + kTrackHeight - 1);
+                 layout.activeClipMax(width()),
+                 layout.track_cross_start + kTrackHeight - 1);
+
+  if (variant_ == SliderVariant::kCentered) {
+    inactive_track_min_primary = -0.5f;
+  bool thumb_on_or_right_of_center =
+    layout.thumb_center_primary >= center_anchor_primary;
+  active_track_min_primary = thumb_on_or_right_of_center
+                   ? center_anchor_primary
+                   : layout.inactive_track_min_primary;
+  active_track_max_primary = thumb_on_or_right_of_center
+                   ? layout.active_track_max_primary
+                   : center_anchor_primary;
+
+  int16_t active_clip_min = (int16_t)ceilf(active_track_min_primary);
+  int16_t active_clip_max = (int16_t)floorf(active_track_max_primary);
+  if (active_clip_min < 0) active_clip_min = 0;
+  if (active_clip_max >= width()) active_clip_max = width() - 1;
+  active_clip = roo_display::Box(active_clip_min, layout.track_cross_start,
+                   active_clip_max,
+                   layout.track_cross_start + kTrackHeight - 1);
+  }
 
   auto inactive_track = SmoothFilledRoundRect(
-      layout.inactive_track_min_primary - (float)kTrackRadius,
+      inactive_track_min_primary - (float)kTrackRadius,
       layout.track_min_cross, width() - 0.5f, layout.track_max_cross,
       kTrackRadius, tokens.inactive_track);
   auto active_track = SmoothFilledRoundRect(
-      -0.5f, layout.track_min_cross,
-      layout.active_track_max_primary + (float)kTrackRadius,
+    active_track_min_primary - (float)kTrackRadius, layout.track_min_cross,
+    active_track_max_primary + (float)kTrackRadius,
       layout.track_max_cross, kTrackRadius, tokens.active_track);
   auto handle =
       SmoothFilledRoundRect(layout.thumb_min_primary, layout.thumb_min_cross,
@@ -218,9 +248,7 @@ void Slider::paint(const Canvas& canvas) const {
 
   roo_display::StreamableStack composite(
       roo_display::Box(0, 0, width() - 1, height() - 1));
-  if (!inactive_clip.empty()) {
-    composite.addInput(&inactive_track, inactive_clip);
-  }
+  composite.addInput(&inactive_track);
   if (!active_clip.empty()) {
     composite.addInput(&active_track, active_clip);
   }
