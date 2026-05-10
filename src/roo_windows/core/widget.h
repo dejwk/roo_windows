@@ -293,6 +293,10 @@ class Widget {
     return on_interactive_change_;
   }
 
+  // Gesture lifecycle callbacks below are dispatched by Application's gesture
+  // detector. Implementations may assume the widget is attached to an
+  // Application/MainWindow while they run.
+
   // Called when the first 'down' event happens within the bounds of this
   // widget. Contains the touch coordinates relative to the widget. The widget
   // should return true if it handled the event. Otherwise, the event, and the
