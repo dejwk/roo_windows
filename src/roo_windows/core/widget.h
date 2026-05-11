@@ -174,6 +174,8 @@ class Widget {
 
   Rect getParentVisualBounds() const;
 
+  // The bounds (in local coordinates) extended, if needed, to some minimum size
+  // that is a reasonable touch target.
   Rect getSloppyTouchBounds() const;
 
   // Returns the rectangle that covers all of this widget and its descendants.
@@ -215,8 +217,7 @@ class Widget {
   const Rect& parent_bounds() const { return parent_bounds_; }
 
   // The bounds (in parent's coordinates) extended, if needed, to some minimum
-  // size that is a reasonable touch target. The bounds extended, if needed, to
-  // some minimum size that is a reasonable touch target.
+  // size that is a reasonable touch target.
   Rect getSloppyTouchParentBounds() const;
 
   // Returns bounds in the device's coordinates.
