@@ -131,6 +131,37 @@ That argues against copying the entire Android setter matrix directly. Instead,
 `roo_windows` should expose a compact semantic API first, plus a grouped
 appearance override surface where needed.
 
+#### RAM Budget Is the Dominant Constraint
+
+ESP32-class targets typically have ~4-16 MB of flash but only ~320 KB of
+static RAM. Every widget instance lives in RAM, while vtables, default themes,
+and const configuration structs live in flash. The `roo_windows` widget
+catalog therefore follows three rules of thumb:
+
+1. Per-instance RAM cost of the base case must stay close to the size of the
+   `Widget` base class. Optional features must not enlarge instances that do
+   not use them.
+2. Optional behavior is added by subclassing or by overriding virtual
+   no-op hooks, not by storing more `std::function` callbacks or option
+   structs in the base. A `std::function` slot costs ~16 bytes on Xtensa
+   even when empty, while an unused virtual hook costs zero per instance.
+3. Configuration that is naturally shared across many instances (themes,
+   geometry token sets, color palettes) is referenced by pointer to a
+   shared, often `constexpr`/`PROGMEM` struct, instead of being copied into
+   every widget.
+
+The slider design must therefore be evaluated on per-instance RAM footprint,
+not only API ergonomics. Approximate sizes assumed in this document:
+
+- pointer / `vptr` / `Widget*`: 4 B,
+- `std::function<...>`: ~16 B even when empty,
+- `Widget` base: ~36 B,
+- `BasicWidget`: ~40 B (with padding/margin storage and alignment),
+- the existing single-thumb `material3::Slider`: ~44 B.
+
+All "per-instance cost" numbers below are approximate ESP32 (Xtensa, 32-bit,
+`libstdc++` `std::function`) figures, rounded to natural alignment.
+
 ## Requirements
 
 ### Functional Requirements
@@ -168,25 +199,46 @@ appearance override surface where needed.
 
 1. Do not require heap allocation for the common slider path.
 2. Keep default construction cheap.
-3. Prefer grouped configuration structs over dozens of independent virtual or
-   stateful objects.
-4. Avoid API choices that force dynamic string allocation during dragging.
+3. Keep the per-instance RAM footprint of the base `Slider` as close as
+   practical to the existing ~44 B baseline. Optional features must not
+   enlarge sliders that do not use them.
+4. Move features that are off-by-default and rarely used (icons, multiple
+   interaction-lifecycle callbacks, broad appearance overrides) into
+   subclasses, virtual no-op hooks, or shared theme references rather than
+   into the base widget's stored state.
+5. Prefer grouped configuration structs that can be `constexpr`/`PROGMEM`
+   and shared by pointer over per-instance copies.
+6. Avoid API choices that force dynamic string allocation during dragging.
 
 ## Design Overview
 
 The proposed public surface has three layers:
 
-1. semantic configuration,
-2. value and interaction API,
-3. optional appearance overrides.
+1. semantic configuration on the base widget,
+2. value and interaction API on the base widget,
+3. optional features added by subclassing or by referencing shared,
+   often `constexpr` configuration structs.
 
-The family should be split into two public widgets:
+The family is split into two public widgets:
 
 1. `material3::Slider` for standard and centered single-value sliders,
 2. `material3::RangeSlider` for range selection.
 
 This follows both Material 3 variant semantics and Android's class split. It is
 cleaner than a single widget whose meaning changes based on thumb count.
+
+Layered widgets within each family:
+
+- `Slider` / `RangeSlider` are the small base widgets. Optional features that
+  carry per-instance RAM cost only when used are added by subclasses
+  (`SliderWithIcons`, `SliderWithLabel`, etc.).
+- Customization that is naturally shared (color overrides, geometry token
+  sets, icon sets) is defined as `const`/`constexpr` structs and referenced
+  by pointer, defaulting to the active `Theme`.
+- Slider-specific interaction events are exposed as virtual no-op hooks
+  rather than as stored `std::function` slots, matching the framework's
+  existing pattern (`onLayout`, `onTouchCanceled`, `onEditFinished`,
+  `onEnter`, etc.).
 
 ## Proposed Public API
 
@@ -237,51 +289,52 @@ struct SliderRange {
   float step = 0.0f;
 };
 
+// Compact, packed semantic style. Designed to fit into ~2 B and to be passed
+// by value cheaply.
+struct SliderStyle {
+  SliderOrientation orientation : 1;
+  SliderSize size : 3;
+  SliderValueIndicatorBehavior value_indicator : 2;
+  SliderTickMode tick_mode : 2;
+  bool show_stop_indicators : 1;
+  // Reserved bits left for future expansion.
+};
+
+// Optional, normally `constexpr` and shared. A non-owning pointer to one
+// of these structs lives in the slider; `nullptr` means "use the active
+// theme defaults". Putting overrides behind a pointer keeps unconfigured
+// sliders at the base ~4 B cost rather than copying ~50+ B per instance.
+struct SliderAppearance {
+  // Optional value-bearing colors. A field with `has_*` set to false
+  // falls back to the theme.
+  Color active_track;
+  Color inactive_track;
+  Color thumb;
+  Color tick_active;
+  Color tick_inactive;
+  Color halo;
+  // Geometry overrides. Negative values mean "use theme default".
+  int16_t track_height = -1;
+  int16_t thumb_width = -1;
+  int16_t thumb_height = -1;
+  int16_t thumb_track_gap = -1;
+  int16_t track_corner_size = -1;
+  int16_t track_inside_corner_size = -1;
+  int16_t stop_indicator_size = -1;
+  // Bitfield indicating which color fields are populated.
+  uint8_t has_colors = 0;  // bit 0..5 for the six color fields above
+};
+
+// Optional, normally `constexpr` and shared. Stored by pointer in the
+// `SliderWithIcons` subclass only; the base `Slider` does not pay for it.
 struct SliderTrackIcons {
-  // All pointers are non-owning. Each referenced `Drawable` must outlive the
-  // slider that uses it. `nullptr` means "no icon in this slot".
+  // All pointers are non-owning. Each referenced `Drawable` must outlive
+  // the slider that uses it. `nullptr` means "no icon in this slot".
   const roo_display::Drawable* inset = nullptr;
   const roo_display::Drawable* active_start = nullptr;
   const roo_display::Drawable* active_end = nullptr;
   const roo_display::Drawable* inactive_start = nullptr;
   const roo_display::Drawable* inactive_end = nullptr;
-};
-
-struct SliderStyle {
-  SliderOrientation orientation = SliderOrientation::kHorizontal;
-  SliderSize size = SliderSize::kExtraSmall;
-  SliderValueIndicatorBehavior value_indicator =
-      SliderValueIndicatorBehavior::kHidden;
-  SliderTickMode tick_mode = SliderTickMode::kAuto;
-  // Stop indicators are the small marks Material 3 paints at the ends of the
-  // inactive track segment. They are independent from discrete tick marks,
-  // which are controlled by `tick_mode`, and are visible on continuous
-  // sliders too.
-  bool show_stop_indicators = true;
-  SliderTrackIcons icons;
-};
-
-struct SliderAppearanceOverrides {
-  std::optional<roo_display::Color> active_track;
-  std::optional<roo_display::Color> inactive_track;
-  std::optional<roo_display::Color> thumb;
-  std::optional<roo_display::Color> tick_active;
-  std::optional<roo_display::Color> tick_inactive;
-  std::optional<roo_display::Color> halo;
-  std::optional<int16_t> track_height;
-  std::optional<int16_t> thumb_width;
-  std::optional<int16_t> thumb_height;
-  std::optional<int16_t> thumb_track_gap;
-  std::optional<int16_t> track_corner_size;
-  std::optional<int16_t> track_inside_corner_size;
-  std::optional<int16_t> stop_indicator_size;
-};
-
-class SliderLabelFormatter {
- public:
-  virtual ~SliderLabelFormatter() = default;
-  virtual roo_display::StringView format(
-      float value, char* scratch, size_t scratch_size) const = 0;
 };
 
 }  // namespace material3
@@ -290,38 +343,97 @@ class SliderLabelFormatter {
 
 ### Single-Value Slider
 
+The base `Slider` widget keeps its public API focused on the common path.
+Optional features are added either by overriding virtual no-op hooks or by
+using a derived class.
+
 ```cpp
 class Slider : public BasicWidget {
  public:
+  // Compatibility constructor. Equivalent to constructing with
+  // SliderRange{0.0f, 1.0f} and value = pos / 65535.0f.
   explicit Slider(const Environment& env, uint16_t pos = 0);
 
   Slider(const Environment& env, SliderRange range, float value = 0.0f,
          SliderVariant variant = SliderVariant::kStandard,
          SliderStyle style = {});
 
+  // --- Semantic configuration. ---
   const SliderRange& range() const;
   bool setRange(SliderRange range);
 
   SliderVariant variant() const;
   bool setVariant(SliderVariant variant);
 
-  const SliderStyle& style() const;
+  SliderStyle style() const;
   bool setStyle(SliderStyle style);
 
+  // --- Value access. ---
   float value() const;
   bool setValue(float value);
 
+  // Compatibility helpers; see SliderRange-based API for the primary surface.
   uint16_t getPos() const;
   bool setPos(uint16_t pos);
 
-  // Non-owning. The pointed-to formatter must outlive the slider, or be
-  // cleared with `setLabelFormatter(nullptr)` before destruction.
-  void setLabelFormatter(const SliderLabelFormatter* formatter);
-  bool setAppearanceOverrides(SliderAppearanceOverrides overrides);
+  // --- Optional shared appearance overrides. ---
+  // Non-owning. The pointed-to struct must outlive the slider, or be cleared
+  // with setAppearance(nullptr) before destruction. Defaults to nullptr,
+  // which means "use the active theme".
+  void setAppearance(const SliderAppearance* appearance);
+  const SliderAppearance* appearance() const;
 
-  void setOnValueChange(std::function<void(float value, bool from_user)> cb);
-  void setOnInteractionStart(std::function<void()> cb);
-  void setOnInteractionEnd(std::function<void(float value)> cb);
+  // --- Optional interaction lifecycle hooks. ---
+  // Override in a subclass. Default implementations are empty and cost zero
+  // bytes per instance. setOnInteractiveChange() (inherited from Widget)
+  // continues to fire for user-originated value changes.
+  virtual void onValueChange(float value, bool from_user) {}
+  virtual void onInteractionStart() {}
+  virtual void onInteractionEnd(float value) {}
+
+  // --- Optional value label formatting. ---
+  // Override in a subclass to customize the value indicator text. The default
+  // implementation writes a compact decimal representation of `value` into
+  // `scratch` and returns a view into it. Always allocation-free.
+  virtual roo_display::StringView formatLabel(
+      float value, char* scratch, size_t scratch_size) const;
+
+ private:
+  // Approximate per-instance layout (ESP32, 32-bit):
+  //   BasicWidget                  ~40 B (vptr, parent*, Rect, state, std::function)
+  //   float value_                    4 B
+  //   SliderRange range_             12 B (3 floats)
+  //   const SliderAppearance* app_    4 B  (nullptr unless overridden)
+  //   SliderVariant variant_          1 B
+  //   SliderStyle style_              2 B  (packed bitfield)
+  //   bool is_dragging_               1 B  (or folded into Widget::state_)
+  //   alignment padding              ~4 B
+  //   ---------------------------------
+  //   Total:                        ~68 B
+  //
+  // Adding a SliderAppearance override or overriding any virtual hook
+  // does not increase per-instance size.
+};
+```
+
+### Single-Value Slider with Icons
+
+Icons are an optional feature that costs RAM only when actually used.
+
+```cpp
+// Adds Material 3 inset icon and Android-style track endpoint icons.
+// Per-instance overhead beyond Slider: 4 B (one pointer to a shared,
+// usually constexpr SliderTrackIcons struct).
+class SliderWithIcons : public Slider {
+ public:
+  using Slider::Slider;
+
+  // Non-owning. The pointed-to struct must outlive this widget.
+  void setIcons(const SliderTrackIcons* icons);
+  const SliderTrackIcons* icons() const;
+
+ private:
+  const SliderTrackIcons* icons_ = nullptr;  // ~4 B
 };
 ```
 
@@ -337,7 +449,7 @@ class RangeSlider : public BasicWidget {
   const SliderRange& range() const;
   bool setRange(SliderRange range);
 
-  const SliderStyle& style() const;
+  SliderStyle style() const;
   bool setStyle(SliderStyle style);
 
   float startValue() const;
@@ -351,17 +463,51 @@ class RangeSlider : public BasicWidget {
   // is currently being interacted with.
   int activeThumbIndex() const;
 
-  void setLabelFormatter(const SliderLabelFormatter* formatter);
-  bool setAppearanceOverrides(SliderAppearanceOverrides overrides);
+  void setAppearance(const SliderAppearance* appearance);
+  const SliderAppearance* appearance() const;
 
-  void setOnValueChange(
-      std::function<void(float start, float end, int active_thumb,
-                         bool from_user)> cb);
-  void setOnInteractionStart(std::function<void(int active_thumb)> cb);
-  void setOnInteractionEnd(
-      std::function<void(float start, float end)> cb);
+  // Optional virtual hooks; default to no-op.
+  virtual void onValueChange(float start, float end, int active_thumb,
+                             bool from_user) {}
+  virtual void onInteractionStart(int active_thumb) {}
+  virtual void onInteractionEnd(float start, float end) {}
+
+  virtual roo_display::StringView formatLabel(
+      float value, char* scratch, size_t scratch_size) const;
+
+ private:
+  // Approximate per-instance layout (ESP32):
+  //   BasicWidget                  ~40 B
+  //   float start_value_              4 B
+  //   float end_value_                4 B
+  //   float min_separation_           4 B
+  //   SliderRange range_             12 B
+  //   const SliderAppearance* app_    4 B
+  //   SliderStyle style_              2 B
+  //   int8_t active_thumb_            1 B
+  //   uint8_t flags_                  1 B  (is_dragging, etc.)
+  //   alignment padding              ~4 B
+  //   ---------------------------------
+  //   Total:                        ~76 B
 };
 ```
+
+### Per-Instance Footprint Summary
+
+| Widget                       | ESP32 size | Compared to current `Slider` |
+|------------------------------|-----------:|-----------------------------:|
+| Existing `material3::Slider` |     ~44 B  |                          ref |
+| New `Slider` (base)          |     ~68 B  |                       +24 B  |
+| `SliderWithIcons`            |     ~72 B  |                       +28 B  |
+| `RangeSlider`                |     ~76 B  |                       +32 B  |
+
+The extra ~24 B on the base `Slider` pays for the semantic value domain
+(`float value_` + `SliderRange`) and the slot for an optional shared
+appearance pointer. A naive translation of the Android setter matrix
+(value-stored `SliderTrackIcons` + value-stored `SliderAppearanceOverrides`
+with ~13 `std::optional` fields + three `std::function` callbacks) would
+add well over 150 B per instance even in unconfigured sliders, which is not
+acceptable for this library.
 
 ## Key Decisions
 
@@ -374,11 +520,12 @@ Rationale:
 - Material 3 and Android both define sliders in terms of a value range,
 - step validation belongs with the slider, not every caller,
 - range sliders need domain-aware validation anyway,
-- the implementation can still map everything to the current normalized
-  `uint16_t` representation internally.
+- the implementation can still map everything to a normalized fixed-point
+  representation internally if useful.
 
-`getPos()` / `setPos()` remain as compatibility APIs and should be documented as
-normalized helpers rather than the primary interface.
+`getPos()` / `setPos()` remain as compatibility APIs and should be documented
+as normalized helpers rather than the primary interface. They are scheduled
+for removal in the final implementation step (see Step 13).
 
 ### 2. Range Slider Is a Separate Class
 
@@ -387,9 +534,10 @@ normalized helpers rather than the primary interface.
 Rationale:
 
 - the semantic payload differs,
-- the callback signatures differ,
+- the virtual hook signatures differ,
 - minimum separation and active-thumb handling are range-only concerns,
-- it mirrors Android and keeps call sites more readable.
+- it mirrors Android and keeps call sites more readable,
+- it avoids paying for a second value's storage in every single-value slider.
 
 ### 3. Centered Mode Stays on `Slider`
 
@@ -404,50 +552,86 @@ Its behavior is:
 - the center anchor is purely visual and is not required to coincide with a
   valid step in discrete mode.
 
-Future extension can add an explicit `center_value` if a real product case needs
-it, but the initial API should not overfit that case.
+Future extension can add an explicit `center_value` if a real product case
+needs it, but the initial API should not overfit that case.
 
-### 4. Use Grouped Style Structs Instead of Android's Full Setter Matrix
+### 4. Optional Features Are Added by Subclassing or Virtual Hooks, Not Stored Slots
 
-`roo_windows` should not expose every Android appearance setter directly in the
-first version.
+The base `Slider` and `RangeSlider` classes should not pay RAM for features
+that most instances never use.
 
-Instead, the first public style layer should group the stable concepts:
+Applied here:
 
-- orientation,
-- size,
-- value indicator behavior,
-- tick and stop-indicator policy,
-- and icon slots.
+- track icons live on a derived `SliderWithIcons` class (~4 B for one
+  pointer to a shared `SliderTrackIcons`), not on the base. Sliders without
+  icons pay zero,
+- value indicator label formatting is a virtual `formatLabel()` method on
+  the widget itself. Customization happens by subclassing, not by storing a
+  `SliderLabelFormatter*`. Cost when not customized: zero,
+- interaction-lifecycle events (`onValueChange`, `onInteractionStart`,
+  `onInteractionEnd`) are virtual no-op methods, not stored
+  `std::function`s. Three `std::function` slots would have cost ~48 B per
+  instance even when empty,
+- `setOnInteractiveChange()` (already on `Widget`) keeps working unchanged
+  and remains the cheap path for callers that want to stay with lambdas.
 
-If a second layer of appearance overrides becomes necessary, it should also be
-struct-based, as shown in `SliderAppearanceOverrides` above.
+This matches the framework's existing convention: see `onLayout`,
+`onTouchCanceled`, `onEditFinished`, `onEnter`, `onExit`, etc.
 
-This keeps the public design open to Android-equivalent richness without making
-the main semantic API noisy.
+### 5. Appearance Overrides Are Shared, Not Copied
 
-### 5. Value Labels Need a Formatter Interface, Not a `std::string` Contract
+Appearance overrides should be referenced by pointer to a const, often
+`constexpr`/`PROGMEM` `SliderAppearance` struct, not stored by value.
 
-Dragging a slider can update every frame. The label formatter therefore should
-not require allocating a new string on every change.
+Rationale:
 
-The formatter interface should write into caller-provided scratch storage and
-return a lightweight view. That keeps the common path allocation-free while
-still allowing application-defined formatting.
+- a UI typically has at most a handful of distinct slider appearances;
+  copying ~50+ B into every slider instance is wasteful,
+- the same `SliderAppearance` instance can be shared across many sliders
+  without per-instance cost beyond a single 4 B pointer,
+- `nullptr` means "use the active theme", which is also the natural place
+  for library-wide defaults to live,
+- this mirrors how `Theme` itself is consumed via `Environment` rather than
+  copied per widget.
 
-### 6. Slider-Specific Lifecycle Callbacks Should Complement, Not Replace, `setOnInteractiveChange()`
+When a single slider needs a one-off override, the application can construct
+a local `static constexpr SliderAppearance` next to the widget and point at
+it; the struct lives in flash, not RAM.
 
-Existing code already relies on `setOnInteractiveChange()`. That callback should
-continue to fire for user-originated value changes.
+### 6. Visual Style Stays Inline as a Compact Bitfield
 
-The new slider-specific callbacks add the missing Android-like lifecycle:
+Unlike appearance overrides, the small enums on `SliderStyle` (orientation,
+size, value-indicator behavior, tick mode, stop-indicator policy) are part
+of the slider's identity and read on every paint. Storing them as a packed
+2 B bitfield inside the widget is cheaper than indirection, and they do not
+benefit from sharing.
+
+### 7. Value Labels Use a Virtual Method, Not a Pointer to a Formatter Object
+
+Dragging a slider can update every frame, so the label formatter must not
+allocate per-change.
+
+The formatter is exposed as a virtual `formatLabel(value, scratch, n)`
+method that writes into caller-provided scratch storage and returns a
+lightweight view. Customization happens by subclassing, which costs zero
+per-instance bytes when not used (vs. ~4 B for a stored
+`SliderLabelFormatter*`).
+
+### 8. Slider-Specific Lifecycle Hooks Complement, Not Replace, `setOnInteractiveChange()`
+
+Existing code already relies on `Widget::setOnInteractiveChange()`. That
+callback should continue to fire for user-originated value changes.
+
+The new slider-specific virtual hooks add the missing Android-like
+lifecycle:
 
 1. start of interaction,
 2. value changes with `from_user`,
 3. end of interaction.
 
-This avoids forcing a framework-wide callback redesign just to support slider
-behavior.
+This avoids forcing a framework-wide callback redesign just to support
+slider behavior, and keeps the per-instance cost at zero for sliders that
+only need the existing `setOnInteractiveChange()` path.
 
 ## Behavior Details
 
@@ -541,20 +725,23 @@ Existing code such as:
 material3::Slider slider(env, 32768);
 ```
 
-continues to work unchanged.
+continues to work through Steps 0-12. Step 13 then removes the shim.
 
-Compatibility behavior:
+Compatibility behavior during Steps 0-12:
 
 - the existing constructor remains,
 - it maps to a normalized single-value slider with range `[0.0f, 1.0f]`,
 - `getPos()` / `setPos()` continue to work,
 - `setOnInteractiveChange()` keeps its current meaning, firing only for
   user-originated changes,
-- programmatic `setValue()` / `setPos()` updates fire `setOnValueChange()`
+- programmatic `setValue()` / `setPos()` updates fire `onValueChange()`
   with `from_user == false` and do not fire the interaction lifecycle
-  callbacks or `setOnInteractiveChange()`.
+  hooks or `setOnInteractiveChange()`.
 
-New code should prefer the semantic constructors and `setValue()` / `value()`.
+After Step 13:
+
+- the legacy constructor and `getPos()` / `setPos()` are removed,
+- callers use `SliderRange` and `value()` / `setValue()` exclusively.
 
 ## Implementation Plan
 
@@ -578,6 +765,8 @@ Deliverable:
 
 - no public API change yet,
 - a baseline test suite that fails if the compatibility path regresses.
+
+Incremental per-instance RAM cost: **0 B** (no fields added).
 
 Example usage after this step:
 
@@ -610,6 +799,9 @@ Deliverable:
 - lower-risk foundation for subsequent API additions,
 - tests proving the refactor preserves legacy behavior.
 
+Incremental per-instance RAM cost: **0 B** (refactor only). Total Slider
+footprint: ~44 B.
+
 Example usage after this step:
 
 ```cpp
@@ -640,6 +832,10 @@ Deliverable:
 - new callers can stop doing their own float-to-`uint16_t` mapping,
 - tests cover value-to-position round-tripping.
 
+Incremental per-instance RAM cost: **+16 B** (`float value_` 4 B +
+`SliderRange range_` 12 B), replacing the existing 2 B `pos_`. Total Slider
+footprint: ~58 B.
+
 Example usage after this step:
 
 ```cpp
@@ -669,6 +865,9 @@ Deliverable:
 
 - continuous and discrete `Slider` variants both work,
 - snapping logic is covered before range or value labels are added.
+
+Incremental per-instance RAM cost: **0 B** (`step` already lives in
+`SliderRange`).
 
 Example usage after this step:
 
@@ -701,6 +900,10 @@ Deliverable:
   variants,
 - no range-slider complexity is introduced yet.
 
+Incremental per-instance RAM cost: **+1 B** (`SliderVariant variant_`,
+likely absorbed by existing alignment padding for net 0 B). Total Slider
+footprint: ~58-60 B.
+
 Example usage after this step:
 
 ```cpp
@@ -717,38 +920,48 @@ material3::Slider balance(
 
 ### Step 5: Add Slider-Specific Interaction Lifecycle
 
-Add explicit start and end callbacks after the value model is stable, so the
-new interaction API lands on top of already-correct value updates.
+Add explicit start and end virtual hooks after the value model is stable, so
+the new interaction API lands on top of already-correct value updates.
 
 Scope:
 
-1. add `setOnValueChange()`, `setOnInteractionStart()`, and
-  `setOnInteractionEnd()` for `Slider`,
+1. add `virtual void onValueChange(float, bool)`,
+   `virtual void onInteractionStart()`, and
+   `virtual void onInteractionEnd(float)` to `Slider`, all defaulting to
+   no-op,
 2. keep `setOnInteractiveChange()` firing for compatibility,
 3. ensure callback order is deterministic,
-4. define whether programmatic changes trigger only value-change callbacks or no
-  interaction lifecycle at all.
+4. define whether programmatic changes trigger only `onValueChange` or no
+   interaction lifecycle at all.
 
 Deliverable:
 
 - Android-like interaction lifecycle for the single-value slider,
 - backward compatibility for existing widget-level listeners.
 
+Incremental per-instance RAM cost: **0 B** (virtual no-op hooks share the
+existing `vptr`; no per-instance storage is added). This is the key win
+over storing three `std::function` slots, which would have added ~48 B.
+
 Example usage after this step:
 
 ```cpp
-material3::Slider volume(env, material3::SliderRange{0.0f, 100.0f}, 35.0f);
-volume.setOnInteractionStart([]() { LOG(INFO) << "Volume drag start"; });
-volume.setOnValueChange([](float value, bool from_user) {
-  if (from_user) audio.setVolume(value);
-});
+class VolumeSlider : public material3::Slider {
+ public:
+  using material3::Slider::Slider;
+  void onInteractionStart() override { LOG(INFO) << "Volume drag start"; }
+  void onValueChange(float value, bool from_user) override {
+    if (from_user) audio.setVolume(value);
+  }
+};
 ```
 
 ```cpp
-material3::Slider volume(env, material3::SliderRange{0.0f, 100.0f}, 35.0f);
-volume.setOnInteractionEnd([](float value) {
-  prefs::save_volume(value);
-});
+class PersistedVolumeSlider : public material3::Slider {
+ public:
+  using material3::Slider::Slider;
+  void onInteractionEnd(float value) override { prefs::save_volume(value); }
+};
 ```
 
 ### Step 6: Add `RangeSlider` Core Semantics
@@ -768,6 +981,10 @@ Deliverable:
 - the library now supports Material 3's range variant,
 - the new widget reuses the same value and gesture foundation rather than
   duplicating logic.
+
+Per-instance RAM cost: a `RangeSlider` instance is approximately ~76 B (see
+the per-instance footprint summary above). Existing `Slider` instances are
+not affected.
 
 Example usage after this step:
 
@@ -789,7 +1006,8 @@ that are specific to multiple thumbs.
 
 Scope:
 
-1. expose `activeThumbIndex()` and range-specific interaction callbacks,
+1. expose `activeThumbIndex()` and range-specific virtual interaction hooks
+   (`onValueChange`, `onInteractionStart`, `onInteractionEnd`),
 2. add `minSeparation()` and `setMinSeparation()`,
 3. implement overlap resolution and directional-intent thumb selection,
 4. ensure discrete mode and minimum separation interact predictably.
@@ -798,6 +1016,10 @@ Deliverable:
 
 - range dragging feels intentional rather than ambiguous,
 - applications can enforce meaningful minimum intervals.
+
+Incremental per-instance RAM cost on `RangeSlider`: **+4 B** for
+`min_separation_` (already accounted for in the ~76 B summary above; the
+active thumb index and dragging flag share an existing flags byte).
 
 Example usage after this step:
 
@@ -808,12 +1030,14 @@ operating_band.setMinSeparation(2.0f);
 ```
 
 ```cpp
-material3::RangeSlider operating_band(
-    env, material3::SliderRange{10.0f, 40.0f, 0.5f}, 22.0f, 30.0f);
-operating_band.setOnValueChange(
-    [](float start, float end, int active_thumb, bool from_user) {
-      LOG(INFO) << "Thumb " << active_thumb << ": " << start << " - " << end;
-    });
+class OperatingBandSlider : public material3::RangeSlider {
+ public:
+  using material3::RangeSlider::RangeSlider;
+  void onValueChange(float start, float end, int active_thumb,
+                     bool from_user) override {
+    LOG(INFO) << "Thumb " << active_thumb << ": " << start << " - " << end;
+  }
+};
 ```
 
 ### Step 8: Add Value Indicators and Label Formatting
@@ -823,21 +1047,27 @@ since labels depend on both the active thumb and the current interaction state.
 
 Scope:
 
-1. add `SliderValueIndicatorBehavior`,
-2. add `SliderLabelFormatter`,
+1. add `SliderValueIndicatorBehavior` (already part of the packed
+   `SliderStyle` bitfield),
+2. add the virtual `formatLabel(value, scratch, n)` method on `Slider` and
+   `RangeSlider`, with an allocation-free decimal default,
 3. show only the active thumb label for `RangeSlider`,
-4. provide a default allocation-free formatter path,
-5. define indicator layout and clipping rules for small slider sizes.
+4. define indicator layout and clipping rules for small slider sizes.
 
 Deliverable:
 
 - both widgets can display values during interaction,
-- product code can customize formatting without per-frame allocations.
+- product code can customize formatting without per-frame allocations and
+  without paying for a stored formatter pointer.
+
+Incremental per-instance RAM cost: **0 B**. The indicator behavior is part
+of the already-allocated `SliderStyle` bitfield, and label formatting is a
+virtual method that costs zero per instance until overridden.
 
 Example usage after this step:
 
 ```cpp
-material3::SliderStyle style;
+material3::SliderStyle style{};
 style.value_indicator =
   material3::SliderValueIndicatorBehavior::kShowOnInteraction;
 material3::Slider temperature(env, material3::SliderRange{20.0f, 40.0f}, 28.0f,
@@ -845,15 +1075,12 @@ material3::Slider temperature(env, material3::SliderRange{20.0f, 40.0f}, 28.0f,
 ```
 
 ```cpp
-class CelsiusFormatter : public material3::SliderLabelFormatter {
+class CelsiusSlider : public material3::Slider {
  public:
-  roo_display::StringView format(
-    float value, char* scratch, size_t scratch_size) const override;
+  using material3::Slider::Slider;
+  roo_display::StringView formatLabel(
+      float value, char* scratch, size_t scratch_size) const override;
 };
-
-material3::Slider temperature(env, material3::SliderRange{20.0f, 40.0f}, 28.0f);
-CelsiusFormatter celsius_formatter;
-temperature.setLabelFormatter(&celsius_formatter);
 ```
 
 ### Step 9: Add Orientation Support
@@ -874,45 +1101,59 @@ Deliverable:
 - the API now covers the Material 3 orientation surface,
 - gesture logic remains shared rather than forked per widget.
 
+Incremental per-instance RAM cost: **0 B** (orientation lives in the
+`SliderStyle` bitfield).
+
 Example usage after this step:
 
 ```cpp
-material3::SliderStyle style;
+material3::SliderStyle style{};
 style.orientation = material3::SliderOrientation::kVertical;
 material3::Slider tank_level(env, material3::SliderRange{0.0f, 100.0f}, 62.0f,
                              material3::SliderVariant::kStandard, style);
 ```
 
 ```cpp
-material3::SliderStyle style;
+material3::SliderStyle style{};
 style.orientation = material3::SliderOrientation::kVertical;
 material3::RangeSlider humidity_band(
   env, material3::SliderRange{0.0f, 100.0f}, 35.0f, 55.0f, style);
 ```
 
-### Step 10: Add Size Presets, Ticks, Stop Indicators, and Icons
+### Step 10: Add Size Presets, Ticks, Stop Indicators, and Track Icons
 
 After the semantic and gesture surface is complete, expand the visual feature
-set in one pass around a stable style struct.
+set in one pass around a stable style struct, and add the optional
+`SliderWithIcons` subclass.
 
 Scope:
 
-1. add `SliderSize`, `SliderTickMode`, and stop-indicator policy,
-2. define geometry tokens for XS through XL,
-3. add inset-icon and track-endpoint icon slots,
+1. add `SliderSize`, `SliderTickMode`, and stop-indicator policy (already
+   part of the packed `SliderStyle` bitfield),
+2. define geometry tokens for XS through XL, stored as shared `constexpr`
+   tables in flash and selected by `SliderSize`,
+3. introduce `material3::SliderWithIcons` with a `const SliderTrackIcons*`
+   slot for inset and track-endpoint icons,
 4. restrict icon rendering to variants and sizes where it fits,
 5. verify that discrete ticks render consistently with snapping behavior.
 
 Deliverable:
 
 - the slider family now covers the major missing Material 3 visual variants,
-- styling still flows through a compact configuration surface instead of many
-  one-off setters.
+- styling still flows through a compact configuration surface plus a
+  shared, flash-resident icon struct.
+
+Incremental per-instance RAM cost:
+
+- on the base `Slider`: **0 B** (size/tick/stop policy live in the existing
+  `SliderStyle` bitfield),
+- on `SliderWithIcons`: **+4 B** for one shared `const SliderTrackIcons*`.
+  The pointed-to struct itself lives in flash when defined `constexpr`.
 
 Example usage after this step:
 
 ```cpp
-material3::SliderStyle style;
+material3::SliderStyle style{};
 style.size = material3::SliderSize::kMedium;
 style.tick_mode = material3::SliderTickMode::kShowStops;
 style.show_stop_indicators = true;
@@ -921,11 +1162,15 @@ material3::Slider speed(env, material3::SliderRange{0.0f, 10.0f, 1.0f}, 4.0f,
 ```
 
 ```cpp
-material3::SliderStyle style;
+static constexpr material3::SliderTrackIcons kHeatingIcons{
+  /*inset=*/&kThermostatDrawable,
+};
+material3::SliderStyle style{};
 style.size = material3::SliderSize::kExtraLarge;
-style.icons.inset = &kThermostatDrawable;
-material3::Slider heating(env, material3::SliderRange{18.0f, 30.0f}, 24.0f,
-                          material3::SliderVariant::kStandard, style);
+material3::SliderWithIcons heating(env,
+                                   material3::SliderRange{18.0f, 30.0f}, 24.0f,
+                                   material3::SliderVariant::kStandard, style);
+heating.setIcons(&kHeatingIcons);
 ```
 
 ### Step 11: Add Optional Appearance Overrides
@@ -935,39 +1180,55 @@ model are proven stable.
 
 Scope:
 
-1. add a grouped override struct rather than a large Android-style setter
-  matrix,
-2. expose only the override points that are justified by real product needs,
-3. keep token defaults as the primary path,
-4. avoid expanding override support into separate per-state object graphs.
+1. introduce the `SliderAppearance` struct as a shared, normally
+   `constexpr` configuration object,
+2. add a `setAppearance(const SliderAppearance*)` slot on `Slider` and
+   `RangeSlider` (default `nullptr` falls back to the active `Theme`),
+3. expose only the override points that are justified by real product
+   needs,
+4. keep token defaults as the primary path,
+5. avoid expanding override support into separate per-state object graphs.
 
 Deliverable:
 
 - advanced callers can customize the widget beyond Material defaults,
-- the common API remains small and embedded-friendly.
+- the common API remains small and embedded-friendly,
+- a single `SliderAppearance` instance can be shared by any number of
+  sliders without duplication.
+
+Incremental per-instance RAM cost: **+4 B** (one `const SliderAppearance*`
+slot, already accounted for in the per-instance footprint summary). The
+struct it points to lives in flash when declared `constexpr`.
 
 Example usage after this step:
 
 ```cpp
-material3::SliderAppearanceOverrides overrides;
-overrides.active_track = roo_display::color::Blue;
-overrides.thumb = roo_display::color::Orange;
+static constexpr material3::SliderAppearance kBlueOrangeSlider{
+  /*active_track=*/roo_display::color::Blue,
+  /*inactive_track=*/{},
+  /*thumb=*/roo_display::color::Orange,
+  // ...remaining fields default.
+  /*has_colors=*/0b000101,  // active_track + thumb
+};
 material3::Slider slider(env, material3::SliderRange{0.0f, 100.0f}, 50.0f);
-slider.setAppearanceOverrides(overrides);
+slider.setAppearance(&kBlueOrangeSlider);
 ```
 
 ```cpp
-material3::SliderAppearanceOverrides overrides;
-overrides.track_height = 8;
-overrides.stop_indicator_size = 6;
+static constexpr material3::SliderAppearance kCompactRangeSlider{
+  // colors default,
+  /*track_height=*/8,
+  // ...
+  /*stop_indicator_size=*/6,
+};
 material3::RangeSlider range_slider(
   env, material3::SliderRange{0.0f, 10.0f, 1.0f}, 2.0f, 7.0f);
-range_slider.setAppearanceOverrides(overrides);
+range_slider.setAppearance(&kCompactRangeSlider);
 ```
 
 ### Step 12: Finish Documentation and Example Coverage
 
-Every public step above should land with tests, but the final step should make
+Every public step above should land with tests, but this step should make
 the new feature family discoverable and easy to adopt.
 
 Scope:
@@ -979,8 +1240,11 @@ Scope:
 
 Deliverable:
 
-- the feature rollout is complete from both API and adoption perspectives,
-- callers can migrate incrementally instead of rewriting existing slider code.
+- the feature family is discoverable from both API and adoption perspectives,
+- callers can migrate incrementally before the compatibility shims are
+  removed in Step 13.
+
+Incremental per-instance RAM cost: **0 B** (documentation and examples).
 
 Example usage after this step:
 
@@ -995,6 +1259,45 @@ material3::RangeSlider schedule(
 schedule.setMinSeparation(2.0f);
 ```
 
+### Step 13: Remove Compatibility Shims
+
+After all callers have migrated to the semantic API (verified in-repo since
+the library owner controls all usages), remove the legacy normalized-position
+surface so the slider family carries no long-term compatibility cost.
+
+Scope:
+
+1. remove the `Slider(const Environment& env, uint16_t pos)` constructor,
+2. remove `getPos()` and `setPos()` from `Slider`,
+3. remove the special-case handling that treated the legacy constructor as
+   `SliderRange{0.0f, 1.0f}`,
+4. delete tests that exclusively cover the legacy normalized API,
+5. update the example at `examples/material3/slider/slider.ino` to use only
+   the semantic API,
+6. note the breaking change in the changelog.
+
+Deliverable:
+
+- a single, semantic public API surface,
+- no compatibility shims to maintain or document going forward.
+
+Incremental per-instance RAM cost: **negligible, possibly slightly
+negative**. The widget no longer needs to retain any normalized
+`uint16_t pos_` mirror, and small amounts of conversion code can be removed
+from flash.
+
+Example usage after this step:
+
+```cpp
+material3::Slider brightness(env, material3::SliderRange{0.0f, 1.0f}, 0.5f);
+brightness.setValue(0.75f);
+```
+
+```cpp
+material3::RangeSlider quiet_hours(
+  env, material3::SliderRange{0.0f, 24.0f, 0.5f}, 22.0f, 6.0f + 24.0f);
+```
+
 ### Suggested Review Boundaries
 
 For code review and release management, the steps above should be grouped into
@@ -1002,11 +1305,13 @@ small PR-sized increments:
 
 1. baseline tests plus internal refactor,
 2. semantic single-value API plus discrete mode,
-3. centered mode plus slider lifecycle callbacks,
+3. centered mode plus slider lifecycle hooks,
 4. range slider plus active-thumb and separation logic,
 5. value indicators plus orientation,
-6. size presets, icons, ticks, and stop indicators,
-7. optional appearance overrides, examples, and final documentation.
+6. size presets, ticks, stop indicators, and `SliderWithIcons`,
+7. shared appearance overrides, examples, and final documentation,
+8. removal of compatibility shims (final, separately reviewed breaking
+   change).
 
 ## Test Plan
 
@@ -1040,13 +1345,19 @@ The recommended direction is:
 1. keep `material3::Slider` as the single-value widget,
 2. add `material3::RangeSlider` for the range variant,
 3. move the public API from normalized position to semantic value ranges,
-4. preserve the current normalized API as a compatibility layer,
-5. use compact configuration structs rather than mirroring Android's entire
-   setter surface,
-6. cover Material 3's missing variants and Android's interaction model first,
-7. leave room for richer appearance overrides without making the first API too
-   large.
+4. preserve the current normalized API as a compatibility layer through
+   Step 12, then remove it in Step 13,
+5. keep the base `Slider` near the existing ~44-68 B per-instance footprint
+   by adding optional features through subclassing
+   (`SliderWithIcons`, custom `formatLabel()` / `onValueChange()` overrides)
+   and through shared, normally-`constexpr` configuration objects
+   (`SliderAppearance`, `SliderTrackIcons`),
+6. expose interaction-lifecycle events as virtual no-op hooks rather than
+   stored `std::function` slots,
+7. cover Material 3's missing variants and Android's interaction model
+   first, and leave room for richer appearance overrides without making the
+   first API too large.
 
 That gives `roo_windows` a slider family that is materially closer to Material 3
-and Android, while still fitting the library's low-allocation, embedded-first
-design constraints.
+and Android, while still fitting the library's low-allocation, RAM-first
+embedded design constraints.
