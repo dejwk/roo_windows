@@ -111,8 +111,8 @@ float LargestValidValueAtOrBelow(const SliderRange& range, float value) {
 }
 
 void NormalizeOrderedValues(const SliderRange& range, float start_value,
-                           float end_value, float& normalized_start,
-                           float& normalized_end) {
+                            float end_value, float& normalized_start,
+                            float& normalized_end) {
   normalized_start = NormalizeValueForRange(start_value, range);
   normalized_end = NormalizeValueForRange(end_value, range);
   if (normalized_start > normalized_end) {
@@ -121,19 +121,17 @@ void NormalizeOrderedValues(const SliderRange& range, float start_value,
 }
 
 void NormalizeOrderedValuesWithSeparation(const SliderRange& range,
-                                         float start_value, float end_value,
-                                         float min_separation,
-                                         int active_thumb,
-                                         float& normalized_start,
-                                         float& normalized_end) {
-  float effective_min_separation =
-      ClampMinSeparation(range, min_separation);
+                                          float start_value, float end_value,
+                                          float min_separation,
+                                          int active_thumb,
+                                          float& normalized_start,
+                                          float& normalized_end) {
+  float effective_min_separation = ClampMinSeparation(range, min_separation);
 
   if (active_thumb == 0) {
     normalized_end = NormalizeValueForRange(end_value, range);
     normalized_start = NormalizeValueForRange(start_value, range);
-    if (normalized_start <=
-        normalized_end - effective_min_separation) {
+    if (normalized_start <= normalized_end - effective_min_separation) {
       return;
     }
     normalized_start = LargestValidValueAtOrBelow(
@@ -143,8 +141,7 @@ void NormalizeOrderedValuesWithSeparation(const SliderRange& range,
   if (active_thumb == 1) {
     normalized_start = NormalizeValueForRange(start_value, range);
     normalized_end = NormalizeValueForRange(end_value, range);
-    if (normalized_end >=
-        normalized_start + effective_min_separation) {
+    if (normalized_end >= normalized_start + effective_min_separation) {
       return;
     }
     normalized_end = SmallestValidValueAtOrAbove(
@@ -177,8 +174,8 @@ Rect UnionRects(const Rect& a, const Rect& b) {
 }
 
 int ResolveNearestThumb(const internal::SliderAxisMetrics& axis,
-                       uint16_t start_pos, uint16_t end_pos,
-                       int16_t primary_coord) {
+                        uint16_t start_pos, uint16_t end_pos,
+                        int16_t primary_coord) {
   float start_center = axis.centerFromPos(start_pos);
   float end_center = axis.centerFromPos(end_pos);
   float start_distance = std::fabs((float)primary_coord - start_center);
@@ -189,8 +186,8 @@ int ResolveNearestThumb(const internal::SliderAxisMetrics& axis,
 }
 
 int ResolveThumbForPress(const internal::SliderAxisMetrics& axis,
-                        uint16_t start_pos, uint16_t end_pos,
-                        int16_t primary_coord, bool& awaiting_direction) {
+                         uint16_t start_pos, uint16_t end_pos,
+                         int16_t primary_coord, bool& awaiting_direction) {
   bool start_hit = axis.hitsThumb(start_pos, primary_coord, kTouchSlopPixels);
   bool end_hit = axis.hitsThumb(end_pos, primary_coord, kTouchSlopPixels);
   awaiting_direction = false;
@@ -216,55 +213,49 @@ Rect InvalidationRectForValueChange(const internal::SliderAxisMetrics& axis,
       axis.invalidationRectForPosChange(old_end_pos, new_end_pos));
 }
 
-    float TrackShapeMinPrimary(float visible_min_primary) {
-      return visible_min_primary <= 0.0f
-         ? -0.5f
-         : visible_min_primary - (float)kTrackRadius;
-    }
+float TrackShapeMinPrimary(float visible_min_primary) {
+  return visible_min_primary <= 0.0f
+             ? -0.5f
+             : visible_min_primary - (float)kTrackRadius;
+}
 
-    int16_t ThumbWidthForState(bool pressed) {
-      if (!pressed) return kHandleWidth;
-      int16_t width = (int16_t)roundf((float)kHandleWidth * kPressedThumbWidthRatio);
-      return width < 1 ? 1 : width;
-    }
+int16_t ThumbWidthForState(bool pressed) {
+  if (!pressed) return kHandleWidth;
+  int16_t width =
+      (int16_t)roundf((float)kHandleWidth * kPressedThumbWidthRatio);
+  return width < 1 ? 1 : width;
+}
 
-    int16_t TrackGapForThumbWidth(int16_t thumb_width) {
-      int16_t gap = kTrackHandleGap - (kHandleWidth - thumb_width) / 2;
-      return gap < 0 ? 0 : gap;
-    }
+int16_t TrackGapForThumbWidth(int16_t thumb_width) {
+  int16_t gap = kTrackHandleGap - (kHandleWidth - thumb_width) / 2;
+  return gap < 0 ? 0 : gap;
+}
 
-    internal::SliderVisualMetrics ResolveVisualMetrics(
-        const internal::SliderAxisMetrics& axis, float thumb_center_primary,
-        int16_t thumb_width, int16_t track_gap, int16_t thumb_cross_span) {
-      int16_t track_cross_start = axis.centeredCrossStart(kTrackHeight);
-      float track_min_cross = track_cross_start - 0.5f;
-      float track_max_cross = track_cross_start + kTrackHeight - 0.5f;
-      float thumb_min_primary =
-          thumb_center_primary - 0.5f * (float)(thumb_width - 1) - 0.5f;
-      float thumb_max_primary = thumb_min_primary + thumb_width;
-      int16_t thumb_cross_start = axis.centeredCrossStart(thumb_cross_span);
-      float thumb_min_cross = thumb_cross_start - 0.5f;
-      float thumb_max_cross = thumb_min_cross + thumb_cross_span;
-      float active_track_max_primary = thumb_min_primary - (float)track_gap;
-      float inactive_track_min_primary = thumb_max_primary + (float)track_gap;
-      return internal::SliderVisualMetrics{thumb_center_primary,
-                                           track_cross_start,
-                                           track_min_cross,
-                                           track_max_cross,
-                                           thumb_min_primary,
-                                           thumb_max_primary,
-                                           thumb_cross_start,
-                                           thumb_min_cross,
-                                           thumb_max_cross,
-                                           active_track_max_primary,
-                                           inactive_track_min_primary};
-    }
+internal::SliderVisualMetrics ResolveVisualMetrics(
+    const internal::SliderAxisMetrics& axis, float thumb_center_primary,
+    int16_t thumb_width, int16_t track_gap, int16_t thumb_cross_span) {
+  int16_t track_cross_start = axis.centeredCrossStart(kTrackHeight);
+  float track_min_cross = track_cross_start - 0.5f;
+  float track_max_cross = track_cross_start + kTrackHeight - 0.5f;
+  float thumb_min_primary =
+      thumb_center_primary - 0.5f * (float)(thumb_width - 1) - 0.5f;
+  float thumb_max_primary = thumb_min_primary + thumb_width;
+  int16_t thumb_cross_start = axis.centeredCrossStart(thumb_cross_span);
+  float thumb_min_cross = thumb_cross_start - 0.5f;
+  float thumb_max_cross = thumb_min_cross + thumb_cross_span;
+  float active_track_max_primary = thumb_min_primary - (float)track_gap;
+  float inactive_track_min_primary = thumb_max_primary + (float)track_gap;
+  return internal::SliderVisualMetrics{
+      thumb_center_primary,     track_cross_start,         track_min_cross,
+      track_max_cross,          thumb_min_primary,         thumb_max_primary,
+      thumb_cross_start,        thumb_min_cross,           thumb_max_cross,
+      active_track_max_primary, inactive_track_min_primary};
+}
 
 }  // namespace
 
 RangeSlider::RangeSlider(const Environment& env, SliderRange range,
-                         float start_value, float end_value,
-                         SliderStyle style)
+                         float start_value, float end_value, SliderStyle style)
     : BasicWidget(env),
       range_(NormalizeRangeOrDefault(range)),
       style_(style),
@@ -320,8 +311,8 @@ void RangeSlider::onShowPress(XDim x, YDim y) {
   uint16_t end_pos =
       internal::SliderPosFromValue(range_.from, range_.to, end_value_);
   bool awaiting_direction = false;
-  int thumb = ResolveThumbForPress(axis, start_pos, end_pos, x,
-                                   awaiting_direction);
+  int thumb =
+      ResolveThumbForPress(axis, start_pos, end_pos, x, awaiting_direction);
   if (awaiting_direction) {
     active_thumb_ = kNoActiveThumb;
     awaiting_direction_ = true;
@@ -411,7 +402,8 @@ bool RangeSlider::setRange(SliderRange range) {
                                        new_start_value, new_end_value);
 
   bool changed = range_.from != range.from || range_.to != range.to ||
-                 range_.step != range.step || min_separation_ != new_min_separation ||
+                 range_.step != range.step ||
+                 min_separation_ != new_min_separation ||
                  start_value_ != new_start_value || end_value_ != new_end_value;
   if (!changed) return false;
 
@@ -419,10 +411,10 @@ bool RangeSlider::setRange(SliderRange range) {
   min_separation_ = new_min_separation;
   start_value_ = new_start_value;
   end_value_ = new_end_value;
-  if (old_start_pos != internal::SliderPosFromValue(range_.from, range_.to,
-                                                    start_value_) ||
-      old_end_pos != internal::SliderPosFromValue(range_.from, range_.to,
-                                                  end_value_)) {
+  if (old_start_pos !=
+          internal::SliderPosFromValue(range_.from, range_.to, start_value_) ||
+      old_end_pos !=
+          internal::SliderPosFromValue(range_.from, range_.to, end_value_)) {
     onValueChange(start_value_, end_value_, kNoActiveThumb, false);
   }
 
@@ -459,10 +451,10 @@ bool RangeSlider::setMinSeparation(float value) {
   min_separation_ = effective_value;
   start_value_ = new_start_value;
   end_value_ = new_end_value;
-  if (old_start_pos != internal::SliderPosFromValue(range_.from, range_.to,
-                                                    start_value_) ||
-      old_end_pos != internal::SliderPosFromValue(range_.from, range_.to,
-                                                  end_value_)) {
+  if (old_start_pos !=
+          internal::SliderPosFromValue(range_.from, range_.to, start_value_) ||
+      old_end_pos !=
+          internal::SliderPosFromValue(range_.from, range_.to, end_value_)) {
     onValueChange(start_value_, end_value_, kNoActiveThumb, false);
   }
 
@@ -557,11 +549,12 @@ void RangeSlider::paint(const Canvas& canvas) const {
                                    kInteractionRadius);
   uint16_t start_pos =
       internal::SliderPosFromValue(range_.from, range_.to, start_value_);
-  uint16_t end_pos = internal::SliderPosFromValue(range_.from, range_.to,
-                                                  end_value_);
+  uint16_t end_pos =
+      internal::SliderPosFromValue(range_.from, range_.to, end_value_);
   int16_t start_thumb_width =
       ThumbWidthForState(isPressed() && active_thumb_ == 0);
-  int16_t end_thumb_width = ThumbWidthForState(isPressed() && active_thumb_ == 1);
+  int16_t end_thumb_width =
+      ThumbWidthForState(isPressed() && active_thumb_ == 1);
   internal::SliderVisualMetrics start_layout = ResolveVisualMetrics(
       axis, axis.centerFromPos(start_pos), start_thumb_width,
       TrackGapForThumbWidth(start_thumb_width), kHandleHeight);
@@ -576,23 +569,24 @@ void RangeSlider::paint(const Canvas& canvas) const {
   if (active_clip_min < 0) active_clip_min = 0;
   if (active_clip_max >= width()) active_clip_max = width() - 1;
 
-  roo_display::Box active_clip(active_clip_min, start_layout.track_cross_start,
-                               active_clip_max,
-                               start_layout.track_cross_start +
-                                   kTrackHeight - 1);
+  roo_display::Box active_clip(
+      active_clip_min, start_layout.track_cross_start, active_clip_max,
+      start_layout.track_cross_start + kTrackHeight - 1);
   bool has_left_inactive_clip = true;
-  int16_t left_inactive_max = (int16_t)floorf(start_layout.active_track_max_primary);
+  int16_t left_inactive_max =
+      (int16_t)floorf(start_layout.active_track_max_primary);
   roo_display::Box left_inactive_clip;
   if (left_inactive_max < 0) {
     has_left_inactive_clip = false;
   } else {
     if (left_inactive_max >= width()) left_inactive_max = width() - 1;
-    left_inactive_clip = roo_display::Box(
-        0, start_layout.track_cross_start, left_inactive_max,
-        start_layout.track_cross_start + kTrackHeight - 1);
+    left_inactive_clip =
+        roo_display::Box(0, start_layout.track_cross_start, left_inactive_max,
+                         start_layout.track_cross_start + kTrackHeight - 1);
   }
   bool has_right_inactive_clip = true;
-  int16_t right_inactive_min = (int16_t)ceilf(end_layout.inactive_track_min_primary);
+  int16_t right_inactive_min =
+      (int16_t)ceilf(end_layout.inactive_track_min_primary);
   roo_display::Box right_inactive_clip;
   if (right_inactive_min >= width()) {
     has_right_inactive_clip = false;
@@ -604,9 +598,8 @@ void RangeSlider::paint(const Canvas& canvas) const {
   }
 
   auto inactive_track = SmoothFilledRoundRect(
-      TrackShapeMinPrimary(0.0f), start_layout.track_min_cross,
-      width() - 0.5f, start_layout.track_max_cross, kTrackRadius,
-      tokens.inactive_track);
+      TrackShapeMinPrimary(0.0f), start_layout.track_min_cross, width() - 0.5f,
+      start_layout.track_max_cross, kTrackRadius, tokens.inactive_track);
   auto active_track = SmoothFilledRoundRect(
       TrackShapeMinPrimary(active_track_min_primary),
       start_layout.track_min_cross,
@@ -707,8 +700,8 @@ void RangeSlider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
     roo::string_view text = formatLabel(thumb_value, scratch, sizeof(scratch));
 
     const Theme& th = theme();
-    Color bubble_color = isEnabled() ? th.color.inverseSurface
-                                     : th.color.onSurface.withA(0x3D);
+    Color bubble_color =
+        isEnabled() ? th.color.inverseSurface : th.color.onSurface.withA(0x3D);
     Color text_color =
         isEnabled() ? th.color.inverseOnSurface : th.color.surface;
 
@@ -717,8 +710,8 @@ void RangeSlider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
     uint16_t pos =
         internal::SliderPosFromValue(range_.from, range_.to, thumb_value);
     float thumb_center = axis.centerFromPos(pos);
-    bool clamp = style_.value_indicator ==
-                 SliderValueIndicatorBehavior::kWithinBounds;
+    bool clamp =
+        style_.value_indicator == SliderValueIndicatorBehavior::kWithinBounds;
 
     ValueIndicatorBubble bubble;
     if (bubble.layout(width(), thumb_center, text, clamp, bubble_color,

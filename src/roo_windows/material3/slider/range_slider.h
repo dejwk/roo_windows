@@ -64,7 +64,9 @@ class RangeSlider : public BasicWidget {
 
   bool setValues(float start_value, float end_value);
 
-  int activeThumbIndex() const { return active_thumb_ >= 0 ? active_thumb_ : -1; }
+  int activeThumbIndex() const {
+    return active_thumb_ >= 0 ? active_thumb_ : -1;
+  }
 
   virtual void onValueChange(float start, float end, int active_thumb,
                              bool from_user) {}

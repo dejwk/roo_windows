@@ -538,8 +538,8 @@ TEST_F(Material3SliderAppTest,
   XDim start_thumb_center = (XDim)roundf(axis.centerFromPos(
       internal::SliderPosFromValue(0.0f, 100.0f, tracking->startValue())));
   tracking->onShowPress(start_thumb_center, tracking->height() / 2);
-  ASSERT_TRUE(tracking->onScroll(Scaled(42), tracking->height() / 2,
-                                 Scaled(8), 0));
+  ASSERT_TRUE(
+      tracking->onScroll(Scaled(42), tracking->height() / 2, Scaled(8), 0));
 
   roo_display::FpPoint dragged_focus = tracking->getPointOverlayFocus();
   EXPECT_FLOAT_EQ(axis.centerFromPos(internal::SliderPosFromValue(
@@ -571,8 +571,8 @@ TEST_F(Material3SliderAppTest, TapToJumpUsesCurrentNormalizedMapping) {
 }
 
 TEST_F(Material3SliderAppTest, TapToJumpSnapsToNearestDiscreteStep) {
-  auto discrete_slider = std::make_unique<Slider>(
-      env_, SliderRange{0.0f, 5.0f, 1.0f}, 0.0f);
+  auto discrete_slider =
+      std::make_unique<Slider>(env_, SliderRange{0.0f, 5.0f, 1.0f}, 0.0f);
   slider_ = discrete_slider.get();
   app_.add(std::move(discrete_slider),
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
@@ -597,17 +597,15 @@ TEST_F(Material3SliderAppTest,
   slider.setPos(0);
   EXPECT_EQ(0, interactive_change_count);
 
-  EXPECT_TRUE(
-      slider.onSingleTapUp(Scaled(48) - 1, slider.height() / 2));
+  EXPECT_TRUE(slider.onSingleTapUp(Scaled(48) - 1, slider.height() / 2));
   EXPECT_EQ(1, interactive_change_count);
   EXPECT_EQ(32768, slider.getPos());
 
-  EXPECT_TRUE(
-      slider.onSingleTapUp(Scaled(48) - 1, slider.height() / 2));
+  EXPECT_TRUE(slider.onSingleTapUp(Scaled(48) - 1, slider.height() / 2));
   EXPECT_EQ(1, interactive_change_count);
 
-  EXPECT_TRUE(slider.onScroll(Scaled(96) - 1, slider.height() / 2,
-                              Scaled(12), 0));
+  EXPECT_TRUE(
+      slider.onScroll(Scaled(96) - 1, slider.height() / 2, Scaled(12), 0));
   EXPECT_EQ(2, interactive_change_count);
   EXPECT_GT(slider.getPos(), 60000);
 }
@@ -636,8 +634,7 @@ TEST_F(Material3SliderAppTest,
   EXPECT_FLOAT_EQ(32768.0f / 65535.0f, tracking->values[1]);
 }
 
-TEST_F(Material3SliderAppTest,
-       DragLifecycleFiresSingleStartAndEndsOnCancel) {
+TEST_F(Material3SliderAppTest, DragLifecycleFiresSingleStartAndEndsOnCancel) {
   auto tracking_slider = std::make_unique<TrackingSlider>(env_, 0);
   slider_ = tracking_slider.get();
   TrackingSlider* tracking = tracking_slider.get();
@@ -706,8 +703,7 @@ TEST_F(Material3SliderAppTest,
   EXPECT_FLOAT_EQ(75.0f, tracking->end_values.back());
 }
 
-TEST_F(Material3SliderAppTest,
-       OverlappingRangeThumbsWaitForDirectionalIntent) {
+TEST_F(Material3SliderAppTest, OverlappingRangeThumbsWaitForDirectionalIntent) {
   auto tracking_slider = std::make_unique<TrackingRangeSlider>(
       env_, SliderRange{0.0f, 100.0f}, 50.0f, 50.0f);
   TrackingRangeSlider* tracking = tracking_slider.get();
@@ -741,12 +737,13 @@ TEST_F(Material3SliderRenderTest,
        PaintsCurrentTrackAndHandleGeometryAtMidpointPosition) {
   constexpr Color kBackdropColor(0xFFF3EFE7);
 
-  auto backdrop = std::make_unique<SolidBackdrop>(
-      env_, kBackdropColor, Dimensions(kWidth, kHeight));
+  auto backdrop = std::make_unique<SolidBackdrop>(env_, kBackdropColor,
+                                                  Dimensions(kWidth, kHeight));
   auto slider = std::make_unique<Slider>(env_, 32768);
   slider_ = slider.get();
 
-  app_.add(std::move(backdrop), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
+  app_.add(std::move(backdrop),
+           roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
   app_.add(std::move(slider),
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                             kSliderY + kSliderHeight - 1));
@@ -761,8 +758,7 @@ TEST_F(Material3SliderRenderTest,
   EXPECT_EQ(backdrop_color, pixelAt(2, 2));
   EXPECT_EQ(background, pixelAt(kSliderX, kSliderY + 14));
   EXPECT_EQ(primary, pixelAt(kSliderX + 20, kSliderY + kSliderHeight / 2));
-  EXPECT_EQ(inactive,
-            pixelAt(kSliderX + 70, kSliderY + kSliderHeight / 2));
+  EXPECT_EQ(inactive, pixelAt(kSliderX + 70, kSliderY + kSliderHeight / 2));
   EXPECT_EQ(primary, pixelAt(kSliderX + 47, kSliderY + 5));
   EXPECT_EQ(background, pixelAt(kSliderX + 20, kSliderY + 5));
 }
@@ -771,13 +767,14 @@ TEST_F(Material3SliderRenderTest,
        CenteredVariantPaintsActiveTrackFromVisualMidpoint) {
   constexpr Color kBackdropColor(0xFFF3EFE7);
 
-  auto backdrop = std::make_unique<SolidBackdrop>(
-      env_, kBackdropColor, Dimensions(kWidth, kHeight));
-  auto slider = std::make_unique<Slider>(
-      env_, SliderRange{-100.0f, 100.0f}, -20.0f, SliderVariant::kCentered);
+  auto backdrop = std::make_unique<SolidBackdrop>(env_, kBackdropColor,
+                                                  Dimensions(kWidth, kHeight));
+  auto slider = std::make_unique<Slider>(env_, SliderRange{-100.0f, 100.0f},
+                                         -20.0f, SliderVariant::kCentered);
   slider_ = slider.get();
 
-  app_.add(std::move(backdrop), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
+  app_.add(std::move(backdrop),
+           roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
   app_.add(std::move(slider),
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                             kSliderY + kSliderHeight - 1));
@@ -794,16 +791,16 @@ TEST_F(Material3SliderRenderTest,
   EXPECT_EQ(inactive, pixelAt(kSliderX + 60, kSliderY + kSliderHeight / 2));
 }
 
-TEST_F(Material3SliderRenderTest,
-       RangeSliderPaintsActiveTrackBetweenThumbs) {
+TEST_F(Material3SliderRenderTest, RangeSliderPaintsActiveTrackBetweenThumbs) {
   constexpr Color kBackdropColor(0xFFF3EFE7);
 
-  auto backdrop = std::make_unique<SolidBackdrop>(
-      env_, kBackdropColor, Dimensions(kWidth, kHeight));
-  auto slider = std::make_unique<RangeSlider>(
-      env_, SliderRange{0.0f, 100.0f}, 25.0f, 75.0f);
+  auto backdrop = std::make_unique<SolidBackdrop>(env_, kBackdropColor,
+                                                  Dimensions(kWidth, kHeight));
+  auto slider = std::make_unique<RangeSlider>(env_, SliderRange{0.0f, 100.0f},
+                                              25.0f, 75.0f);
 
-  app_.add(std::move(backdrop), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
+  app_.add(std::move(backdrop),
+           roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
   app_.add(std::move(slider),
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                             kSliderY + kSliderHeight - 1));
@@ -826,12 +823,13 @@ TEST_F(Material3SliderRenderTest,
        PressedSliderNarrowsThumbAndTightensTrackGap) {
   constexpr Color kBackdropColor(0xFFF3EFE7);
 
-  auto backdrop = std::make_unique<SolidBackdrop>(
-      env_, kBackdropColor, Dimensions(kWidth, kHeight));
+  auto backdrop = std::make_unique<SolidBackdrop>(env_, kBackdropColor,
+                                                  Dimensions(kWidth, kHeight));
   auto pressed_slider = std::make_unique<Slider>(env_, 32768);
   slider_ = pressed_slider.get();
 
-  app_.add(std::move(backdrop), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
+  app_.add(std::move(backdrop),
+           roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
   app_.add(std::move(pressed_slider),
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                             kSliderY + kSliderHeight - 1));
@@ -852,13 +850,14 @@ TEST_F(Material3SliderRenderTest,
        PressedRangeSliderNarrowsOnlyActiveThumbAndTightensGap) {
   constexpr Color kBackdropColor(0xFFF3EFE7);
 
-  auto backdrop = std::make_unique<SolidBackdrop>(
-      env_, kBackdropColor, Dimensions(kWidth, kHeight));
-  auto slider = std::make_unique<RangeSlider>(
-      env_, SliderRange{0.0f, 100.0f}, 25.0f, 75.0f);
+  auto backdrop = std::make_unique<SolidBackdrop>(env_, kBackdropColor,
+                                                  Dimensions(kWidth, kHeight));
+  auto slider = std::make_unique<RangeSlider>(env_, SliderRange{0.0f, 100.0f},
+                                              25.0f, 75.0f);
   RangeSlider* slider_ptr = slider.get();
 
-  app_.add(std::move(backdrop), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
+  app_.add(std::move(backdrop),
+           roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
   app_.add(std::move(slider),
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                             kSliderY + kSliderHeight - 1));
@@ -880,7 +879,6 @@ TEST_F(Material3SliderRenderTest,
   EXPECT_EQ(primary, pixelAt(kSliderX + 48, kSliderY + kSliderHeight / 2));
   EXPECT_EQ(primary, pixelAt(kSliderX + 70, kSliderY + 5));
 }
-
 
 namespace {
 class FmtSlider : public Slider {
@@ -904,9 +902,8 @@ TEST(Material3SliderValueIndicator, DefaultFormatLabelFormatsCompactly) {
   EXPECT_EQ("4", slider.formatLabel(4.0f, scratch, sizeof(scratch)));
   EXPECT_EQ("3.14", slider.formatLabel(3.14f, scratch, sizeof(scratch)));
   EXPECT_EQ("0.5", slider.formatLabel(0.50f, scratch, sizeof(scratch)));
-  EXPECT_EQ("?", slider.formatLabel(
-                     std::numeric_limits<float>::infinity(), scratch,
-                     sizeof(scratch)));
+  EXPECT_EQ("?", slider.formatLabel(std::numeric_limits<float>::infinity(),
+                                    scratch, sizeof(scratch)));
 }
 
 TEST(Material3SliderValueIndicator, CustomFormatLabelIsCalled) {
@@ -947,8 +944,7 @@ TEST(Material3SliderValueIndicator, SetStyleTogglesParentClipMode) {
   EXPECT_EQ(ParentClipMode::kClipped, slider.getParentClipMode());
 }
 
-TEST(Material3SliderValueIndicator,
-     TransientPaintBoundsExpandAboveWhenAlways) {
+TEST(Material3SliderValueIndicator, TransientPaintBoundsExpandAboveWhenAlways) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
   SliderStyle s{};
