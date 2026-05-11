@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "roo_logging.h"
 #include "roo_windows/core/rect.h"
 
 namespace roo_windows {
@@ -24,6 +25,12 @@ inline bool IsCompatibleSliderStep(float from, float to, float step) {
 inline bool IsValidSliderRange(float from, float to, float step) {
   return std::isfinite(from) && std::isfinite(to) && std::isfinite(step) &&
          from < to && step >= 0.0f && IsCompatibleSliderStep(from, to, step);
+}
+
+inline void CheckValidSliderRange(float from, float to, float step) {
+  CHECK(IsValidSliderRange(from, to, step))
+      << "Invalid slider range: from=" << from << ", to=" << to
+      << ", step=" << step;
 }
 
 inline float ClampSliderValue(float value, float from, float to) {
@@ -148,16 +155,16 @@ struct SliderVisualMetrics {
   }
 };
 
-inline SliderVisualMetrics ResolveHorizontalSliderVisualMetrics(
-    const SliderAxisMetrics& axis, uint16_t pos, int16_t track_cross_span,
+inline SliderVisualMetrics ResolveSliderVisualMetrics(
+    const SliderAxisMetrics& axis, float thumb_center_primary,
+    int16_t thumb_primary_span, int16_t track_cross_span,
     int16_t track_handle_gap, int16_t thumb_cross_span) {
-  float thumb_center_primary = axis.centerFromPos(pos);
   int16_t track_cross_start = axis.centeredCrossStart(track_cross_span);
   float track_min_cross = track_cross_start - 0.5f;
   float track_max_cross = track_cross_start + track_cross_span - 0.5f;
   float thumb_min_primary =
-      thumb_center_primary - 0.5f * (float)(axis.thumb_primary_span - 1) - 0.5f;
-  float thumb_max_primary = thumb_min_primary + axis.thumb_primary_span;
+      thumb_center_primary - 0.5f * (float)(thumb_primary_span - 1) - 0.5f;
+  float thumb_max_primary = thumb_min_primary + thumb_primary_span;
   int16_t thumb_cross_start = axis.centeredCrossStart(thumb_cross_span);
   float thumb_min_cross = thumb_cross_start - 0.5f;
   float thumb_max_cross = thumb_min_cross + thumb_cross_span;
@@ -169,6 +176,14 @@ inline SliderVisualMetrics ResolveHorizontalSliderVisualMetrics(
       track_max_cross,          thumb_min_primary,         thumb_max_primary,
       thumb_cross_start,        thumb_min_cross,           thumb_max_cross,
       active_track_max_primary, inactive_track_min_primary};
+}
+
+inline SliderVisualMetrics ResolveHorizontalSliderVisualMetrics(
+    const SliderAxisMetrics& axis, uint16_t pos, int16_t track_cross_span,
+    int16_t track_handle_gap, int16_t thumb_cross_span) {
+  return ResolveSliderVisualMetrics(axis, axis.centerFromPos(pos),
+                                    axis.thumb_primary_span, track_cross_span,
+                                    track_handle_gap, thumb_cross_span);
 }
 
 }  // namespace internal

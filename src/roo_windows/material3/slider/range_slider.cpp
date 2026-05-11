@@ -54,18 +54,6 @@ Tokens ResolveTokens(const RangeSlider& widget) {
   };
 }
 
-SliderRange NormalizeRangeOrDefault(SliderRange range) {
-  if (internal::IsValidSliderRange(range.from, range.to, range.step)) {
-    return range;
-  }
-  return SliderRange{};
-}
-
-float NormalizeValueForRange(float value, const SliderRange& range) {
-  return internal::NormalizeSliderValueForRange(value, range.from, range.to,
-                                                range.step);
-}
-
 // True iff the indicator should be drawn this frame. Range sliders show the
 // bubble only above the currently-active thumb during interaction; when no
 // thumb is active there is nothing to anchor on, even with kAlways.
@@ -113,8 +101,10 @@ float LargestValidValueAtOrBelow(const SliderRange& range, float value) {
 void NormalizeOrderedValues(const SliderRange& range, float start_value,
                             float end_value, float& normalized_start,
                             float& normalized_end) {
-  normalized_start = NormalizeValueForRange(start_value, range);
-  normalized_end = NormalizeValueForRange(end_value, range);
+  normalized_start = internal::NormalizeSliderValueForRange(
+      start_value, range.from, range.to, range.step);
+  normalized_end = internal::NormalizeSliderValueForRange(end_value, range.from,
+                                                          range.to, range.step);
   if (normalized_start > normalized_end) {
     std::swap(normalized_start, normalized_end);
   }
@@ -129,8 +119,10 @@ void NormalizeOrderedValuesWithSeparation(const SliderRange& range,
   float effective_min_separation = ClampMinSeparation(range, min_separation);
 
   if (active_thumb == 0) {
-    normalized_end = NormalizeValueForRange(end_value, range);
-    normalized_start = NormalizeValueForRange(start_value, range);
+    normalized_end = internal::NormalizeSliderValueForRange(
+        end_value, range.from, range.to, range.step);
+    normalized_start = internal::NormalizeSliderValueForRange(
+        start_value, range.from, range.to, range.step);
     if (normalized_start <= normalized_end - effective_min_separation) {
       return;
     }
@@ -139,8 +131,10 @@ void NormalizeOrderedValuesWithSeparation(const SliderRange& range,
     return;
   }
   if (active_thumb == 1) {
-    normalized_start = NormalizeValueForRange(start_value, range);
-    normalized_end = NormalizeValueForRange(end_value, range);
+    normalized_start = internal::NormalizeSliderValueForRange(
+        start_value, range.from, range.to, range.step);
+    normalized_end = internal::NormalizeSliderValueForRange(
+        end_value, range.from, range.to, range.step);
     if (normalized_end >= normalized_start + effective_min_separation) {
       return;
     }
@@ -231,41 +225,21 @@ int16_t TrackGapForThumbWidth(int16_t thumb_width) {
   return gap < 0 ? 0 : gap;
 }
 
-internal::SliderVisualMetrics ResolveVisualMetrics(
-    const internal::SliderAxisMetrics& axis, float thumb_center_primary,
-    int16_t thumb_width, int16_t track_gap, int16_t thumb_cross_span) {
-  int16_t track_cross_start = axis.centeredCrossStart(kTrackHeight);
-  float track_min_cross = track_cross_start - 0.5f;
-  float track_max_cross = track_cross_start + kTrackHeight - 0.5f;
-  float thumb_min_primary =
-      thumb_center_primary - 0.5f * (float)(thumb_width - 1) - 0.5f;
-  float thumb_max_primary = thumb_min_primary + thumb_width;
-  int16_t thumb_cross_start = axis.centeredCrossStart(thumb_cross_span);
-  float thumb_min_cross = thumb_cross_start - 0.5f;
-  float thumb_max_cross = thumb_min_cross + thumb_cross_span;
-  float active_track_max_primary = thumb_min_primary - (float)track_gap;
-  float inactive_track_min_primary = thumb_max_primary + (float)track_gap;
-  return internal::SliderVisualMetrics{
-      thumb_center_primary,     track_cross_start,         track_min_cross,
-      track_max_cross,          thumb_min_primary,         thumb_max_primary,
-      thumb_cross_start,        thumb_min_cross,           thumb_max_cross,
-      active_track_max_primary, inactive_track_min_primary};
-}
-
 }  // namespace
 
 RangeSlider::RangeSlider(const Environment& env, SliderRange range,
                          float start_value, float end_value, SliderStyle style)
     : BasicWidget(env),
-      range_(NormalizeRangeOrDefault(range)),
+      range_(range),
       style_(style),
-      start_value_(range_.from),
-      end_value_(range_.to),
+      start_value_(0.0f),
+      end_value_(0.0f),
       min_separation_(0.0f),
       active_thumb_(kNoActiveThumb),
       overlay_thumb_(kNoActiveThumb),
       is_dragging_(false),
       awaiting_direction_(false) {
+  internal::CheckValidSliderRange(range_.from, range_.to, range_.step);
   NormalizeOrderedValuesWithSeparation(range_, start_value, end_value,
                                        min_separation_, kNoActiveThumb,
                                        start_value_, end_value_);
@@ -555,12 +529,14 @@ void RangeSlider::paint(const Canvas& canvas) const {
       ThumbWidthForState(isPressed() && active_thumb_ == 0);
   int16_t end_thumb_width =
       ThumbWidthForState(isPressed() && active_thumb_ == 1);
-  internal::SliderVisualMetrics start_layout = ResolveVisualMetrics(
-      axis, axis.centerFromPos(start_pos), start_thumb_width,
-      TrackGapForThumbWidth(start_thumb_width), kHandleHeight);
-  internal::SliderVisualMetrics end_layout = ResolveVisualMetrics(
-      axis, axis.centerFromPos(end_pos), end_thumb_width,
-      TrackGapForThumbWidth(end_thumb_width), kHandleHeight);
+  internal::SliderVisualMetrics start_layout =
+      internal::ResolveSliderVisualMetrics(
+          axis, axis.centerFromPos(start_pos), start_thumb_width, kTrackHeight,
+          TrackGapForThumbWidth(start_thumb_width), kHandleHeight);
+  internal::SliderVisualMetrics end_layout =
+      internal::ResolveSliderVisualMetrics(
+          axis, axis.centerFromPos(end_pos), end_thumb_width, kTrackHeight,
+          TrackGapForThumbWidth(end_thumb_width), kHandleHeight);
 
   float active_track_min_primary = start_layout.inactive_track_min_primary;
   float active_track_max_primary = end_layout.active_track_max_primary;

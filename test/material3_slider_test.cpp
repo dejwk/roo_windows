@@ -331,6 +331,18 @@ TEST(Material3Slider, InvalidRangeIsRejectedWithoutChangingState) {
   EXPECT_EQ(32768, slider.getPos());
 }
 
+TEST(Material3Slider, InvalidConstructorRangeFailsFast) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+
+  EXPECT_DEATH_IF_SUPPORTED(
+      {
+        Slider slider(env, SliderRange{40.0f, 10.0f}, 25.0f);
+        (void)slider;
+      },
+      "Invalid slider range");
+}
+
 TEST(Material3Slider, IncompatibleDiscreteStepIsRejected) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -463,6 +475,18 @@ TEST(Material3RangeSlider, InvalidRangeIsRejectedWithoutChangingState) {
   EXPECT_FLOAT_EQ(40.0f, slider.range().to);
   EXPECT_FLOAT_EQ(15.0f, slider.startValue());
   EXPECT_FLOAT_EQ(35.0f, slider.endValue());
+}
+
+TEST(Material3RangeSlider, InvalidConstructorRangeFailsFast) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+
+  EXPECT_DEATH_IF_SUPPORTED(
+      {
+        RangeSlider slider(env, SliderRange{0.0f, 5.0f, 2.0f}, 1.0f, 4.0f);
+        (void)slider;
+      },
+      "Invalid slider range");
 }
 
 TEST(Material3RangeSlider, ProgrammaticSetValuesFiresOnlyValueChangeHook) {

@@ -53,18 +53,6 @@ Tokens ResolveTokens(const Slider& widget) {
   };
 }
 
-SliderRange NormalizeRangeOrDefault(SliderRange range) {
-  if (internal::IsValidSliderRange(range.from, range.to, range.step)) {
-    return range;
-  }
-  return SliderRange{};
-}
-
-float NormalizeValueForRange(float value, const SliderRange& range) {
-  return internal::NormalizeSliderValueForRange(value, range.from, range.to,
-                                                range.step);
-}
-
 // True iff the indicator should be drawn this frame given the current
 // interaction state and behavior. kAlways shows the bubble at all times;
 // the on-interaction policies show it only while pressed or dragged.
@@ -99,27 +87,6 @@ int16_t TrackGapForThumbWidth(int16_t thumb_width) {
   return gap < 0 ? 0 : gap;
 }
 
-internal::SliderVisualMetrics ResolveVisualMetrics(
-    const internal::SliderAxisMetrics& axis, float thumb_center_primary,
-    int16_t thumb_width, int16_t track_gap, int16_t thumb_cross_span) {
-  int16_t track_cross_start = axis.centeredCrossStart(kTrackHeight);
-  float track_min_cross = track_cross_start - 0.5f;
-  float track_max_cross = track_cross_start + kTrackHeight - 0.5f;
-  float thumb_min_primary =
-      thumb_center_primary - 0.5f * (float)(thumb_width - 1) - 0.5f;
-  float thumb_max_primary = thumb_min_primary + thumb_width;
-  int16_t thumb_cross_start = axis.centeredCrossStart(thumb_cross_span);
-  float thumb_min_cross = thumb_cross_start - 0.5f;
-  float thumb_max_cross = thumb_min_cross + thumb_cross_span;
-  float active_track_max_primary = thumb_min_primary - (float)track_gap;
-  float inactive_track_min_primary = thumb_max_primary + (float)track_gap;
-  return internal::SliderVisualMetrics{
-      thumb_center_primary,     track_cross_start,         track_min_cross,
-      track_max_cross,          thumb_min_primary,         thumb_max_primary,
-      thumb_cross_start,        thumb_min_cross,           thumb_max_cross,
-      active_track_max_primary, inactive_track_min_primary};
-}
-
 }  // namespace
 
 Slider::Slider(const Environment& env, uint16_t pos)
@@ -129,11 +96,14 @@ Slider::Slider(const Environment& env, uint16_t pos)
 Slider::Slider(const Environment& env, SliderRange range, float value,
                SliderVariant variant, SliderStyle style)
     : BasicWidget(env),
-      range_(NormalizeRangeOrDefault(range)),
+      range_(range),
       variant_(variant),
       style_(style),
-      value_(NormalizeValueForRange(value, range_)),
+      value_(0.0f),
       is_dragging_(false) {
+  internal::CheckValidSliderRange(range_.from, range_.to, range_.step);
+  value_ = internal::NormalizeSliderValueForRange(value, range_.from, range_.to,
+                                                  range_.step);
   if (IndicatorEnabled(style_)) {
     setParentClipMode(ParentClipMode::kUnclipped);
   }
@@ -213,9 +183,9 @@ bool Slider::setPosInternal(uint16_t pos, bool from_user) {
   uint16_t old_pos = getPos();
   if (pos == old_pos) return false;
   Rect old_bounds = IndicatorEnabled(style_) ? maxParentBounds() : Rect();
-  value_ = NormalizeValueForRange(
+  value_ = internal::NormalizeSliderValueForRange(
       internal::SliderValueFromNormalizedPos(range_.from, range_.to, pos),
-      range_);
+      range_.from, range_.to, range_.step);
   uint16_t new_pos = getPos();
   if (new_pos == old_pos) return false;
   onValueChange(value_, from_user);
@@ -237,7 +207,8 @@ bool Slider::setRange(SliderRange range) {
   }
   uint16_t old_pos = getPos();
   Rect old_bounds = IndicatorEnabled(style_) ? maxParentBounds() : Rect();
-  float new_value = NormalizeValueForRange(value_, range);
+  float new_value = internal::NormalizeSliderValueForRange(
+      value_, range.from, range.to, range.step);
   bool changed = range_.from != range.from || range_.to != range.to ||
                  range_.step != range.step || value_ != new_value;
   if (!changed) return false;
@@ -282,7 +253,8 @@ bool Slider::setStyle(SliderStyle style) {
 }
 
 bool Slider::setValue(float value) {
-  float new_value = NormalizeValueForRange(value, range_);
+  float new_value = internal::NormalizeSliderValueForRange(
+      value, range_.from, range_.to, range_.step);
   if (value_ == new_value) return false;
 
   uint16_t old_pos = getPos();
@@ -316,9 +288,9 @@ void Slider::paint(const Canvas& canvas) const {
       axis.centerFromPos(getPos()) >= center_anchor_primary;
   int16_t thumb_width = ThumbWidthForState(isPressed());
   int16_t track_gap = TrackGapForThumbWidth(thumb_width);
-  internal::SliderVisualMetrics layout =
-      ResolveVisualMetrics(axis, axis.centerFromPos(getPos()), thumb_width,
-                           track_gap, kHandleHeight);
+  internal::SliderVisualMetrics layout = internal::ResolveSliderVisualMetrics(
+      axis, axis.centerFromPos(getPos()), thumb_width, kTrackHeight, track_gap,
+      kHandleHeight);
 
   float active_track_min_primary = -0.5f;
   float active_track_max_primary = layout.active_track_max_primary;
