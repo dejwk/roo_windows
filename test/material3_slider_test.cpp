@@ -8,6 +8,7 @@
 #include "roo_windows/material3/slider/range_slider.h"
 #include "roo_windows/material3/slider/slider.h"
 #include "roo_windows/material3/slider/slider_internal.h"
+#include "roo_windows/material3/slider/value_indicator.h"
 
 namespace roo_windows {
 namespace material3 {
@@ -144,6 +145,30 @@ class TrackingRangeSlider : public RangeSlider {
   std::vector<int> active_thumbs;
   std::vector<float> start_values;
   std::vector<float> end_values;
+};
+
+class ClipTrackingSlider : public Slider {
+ public:
+  using Slider::Slider;
+
+  void clearPaintObservation() {
+    paint_calls_ = 0;
+    last_paint_clip_ = Rect(0, 0, -1, -1);
+  }
+
+  int paintCalls() const { return paint_calls_; }
+
+  Rect lastPaintClip() const { return last_paint_clip_; }
+
+  void paint(const Canvas& canvas) const override {
+    ++paint_calls_;
+    const roo_display::Box& box = canvas.clip_box();
+    last_paint_clip_ = Rect(box.xMin(), box.yMin(), box.xMax(), box.yMax());
+  }
+
+ private:
+  mutable int paint_calls_ = 0;
+  mutable Rect last_paint_clip_ = Rect(0, 0, -1, -1);
 };
 
 TEST(Material3Slider, UsesZeroDefaultInsets) {
@@ -902,6 +927,49 @@ TEST_F(Material3SliderRenderTest,
   EXPECT_EQ(background, pixelAt(kSliderX + 30, kSliderY + kSliderHeight / 2));
   EXPECT_EQ(primary, pixelAt(kSliderX + 48, kSliderY + kSliderHeight / 2));
   EXPECT_EQ(primary, pixelAt(kSliderX + 70, kSliderY + 5));
+}
+
+TEST_F(Material3SliderRenderTest,
+       ValueIndicatorValueChangePaintIsClippedToDirtySlice) {
+  SliderStyle style{};
+  style.value_indicator = SliderValueIndicatorBehavior::kAlways;
+
+  auto slider = std::make_unique<ClipTrackingSlider>(
+      env_, SliderRange{0.0f, 1.0f}, 0.2f, SliderVariant::kStandard, style);
+  ClipTrackingSlider* slider_ptr = slider.get();
+  slider_ = slider_ptr;
+
+  app_.add(std::move(slider),
+           roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
+                            kSliderY + kSliderHeight - 1));
+
+  ASSERT_TRUE(app_.refresh());
+  slider_ptr->clearPaintObservation();
+
+  ASSERT_TRUE(slider_ptr->setValue(0.8f));
+  ASSERT_TRUE(app_.refresh());
+
+  ASSERT_EQ(1, slider_ptr->paintCalls());
+
+  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
+                                   Scaled(4), kPointOverlayDiameter / 2);
+  uint16_t old_pos = internal::SliderPosFromValue(0.0f, 1.0f, 0.2f);
+  uint16_t new_pos = internal::SliderPosFromValue(0.0f, 1.0f, 0.8f);
+  Rect thumb_rect = axis.invalidationRectForPosChange(old_pos, new_pos);
+  Rect bubble_rect = ValueIndicatorBubble::EnvelopeForCenterRange(
+      slider_ptr->width(), slider_ptr->height(),
+      std::min(axis.centerFromPos(old_pos), axis.centerFromPos(new_pos)),
+      std::max(axis.centerFromPos(old_pos), axis.centerFromPos(new_pos)),
+      style.value_indicator);
+  Rect expected_clip =
+      Rect::Intersect(Rect::Extent(thumb_rect, bubble_rect),
+                      slider_ptr->bounds())
+          .translate(kSliderX, kSliderY);
+
+  EXPECT_EQ(expected_clip, slider_ptr->lastPaintClip());
+
+  Rect full_indicator_envelope = slider_ptr->getParentTransientPaintBounds();
+  EXPECT_LT(expected_clip.width(), full_indicator_envelope.width());
 }
 
 namespace {

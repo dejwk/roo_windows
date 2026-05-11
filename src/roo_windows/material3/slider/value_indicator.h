@@ -74,6 +74,22 @@ class ValueIndicatorBubble {
                                  int16_t horizontal_overhang,
                                  SliderValueIndicatorBehavior behavior);
 
+  // Tight bounding rectangle (in widget-local coordinates) for a bubble
+  // whose thumb-center varies over [center_min, center_max] along the
+  // primary axis. Uses the conservative `kBubbleMaxWidth` for the bubble
+  // size, so callers do not need to measure the label. Returns an empty
+  // rect if the behavior is kHidden or the parent dimensions are
+  // non-positive.
+  //
+  // Used by Slider/RangeSlider on per-value-change invalidation, to mark
+  // only the bubble strip above the swept thumb range as dirty (and to
+  // notify the parent of the same region), instead of the full
+  // ConservativeBounds envelope used at layout time.
+  static Rect EnvelopeForCenterRange(int16_t parent_width,
+                                     int16_t parent_height, float center_min,
+                                     float center_max,
+                                     SliderValueIndicatorBehavior behavior);
+
   // Inset, in pixels, consumed by the rounded corners on each side of the
   // bubble. The inscribed inner rectangle (`bounds()` minus this on each
   // side) is what paint() fills as a fast solid block, and what decorate()
@@ -89,9 +105,8 @@ class ValueIndicatorBubble {
   // case paint() and decorate() are no-ops).
   //
   // `text` must remain valid until paint() returns.
-  bool layout(int16_t parent_width, float thumb_center,
-              roo::string_view text, bool clamp_to_bounds,
-              roo_display::Color bubble_color,
+  bool layout(int16_t parent_width, float thumb_center, roo::string_view text,
+              bool clamp_to_bounds, roo_display::Color bubble_color,
               roo_display::Color text_color);
 
   // The bubble's bounding rectangle in the owning slider's local

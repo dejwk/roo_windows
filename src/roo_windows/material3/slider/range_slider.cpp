@@ -238,7 +238,8 @@ RangeSlider::RangeSlider(const Environment& env, SliderRange range,
       active_thumb_(kNoActiveThumb),
       overlay_thumb_(kNoActiveThumb),
       is_dragging_(false),
-      awaiting_direction_(false) {
+      awaiting_direction_(false),
+      pending_dirty_rect_(0, 0, -1, -1) {
   internal::CheckValidSliderRange(range_.from, range_.to, range_.step);
   NormalizeOrderedValuesWithSeparation(range_, start_value, end_value,
                                        min_separation_, kNoActiveThumb,
@@ -399,9 +400,8 @@ bool RangeSlider::setRange(SliderRange range) {
         internal::SliderPosFromValue(range_.from, range_.to, end_value_);
     internal::SliderAxisMetrics axis(width(), height(), kHandleWidth,
                                      kInteractionRadius);
-    Rect invalidation = InvalidationRectForValueChange(
-        axis, old_start_pos, old_end_pos, new_start_pos, new_end_pos);
-    invalidateInterior(invalidation);
+    invalidateValueChange(axis, old_start_pos, old_end_pos, new_start_pos,
+                          new_end_pos);
   }
   return true;
 }
@@ -439,8 +439,8 @@ bool RangeSlider::setMinSeparation(float value) {
         internal::SliderPosFromValue(range_.from, range_.to, end_value_);
     internal::SliderAxisMetrics axis(width(), height(), kHandleWidth,
                                      kInteractionRadius);
-    invalidateInterior(InvalidationRectForValueChange(
-        axis, old_start_pos, old_end_pos, new_start_pos, new_end_pos));
+    invalidateValueChange(axis, old_start_pos, old_end_pos, new_start_pos,
+                          new_end_pos);
   }
   return true;
 }
@@ -485,8 +485,6 @@ bool RangeSlider::setValuesInternal(float start_value, float end_value,
   onValueChange(start_value_, end_value_, active_thumb,
                 from_user && active_thumb != kNoActiveThumb);
 
-  Rect old_indicator_bounds =
-      IndicatorEnabled(style_) ? maxParentBounds() : Rect();
   if (width() > 0 && height() > 0) {
     uint16_t new_start_pos =
         internal::SliderPosFromValue(range_.from, range_.to, start_value_);
@@ -494,13 +492,8 @@ bool RangeSlider::setValuesInternal(float start_value, float end_value,
         internal::SliderPosFromValue(range_.from, range_.to, end_value_);
     internal::SliderAxisMetrics axis(width(), height(), kHandleWidth,
                                      kInteractionRadius);
-    Rect invalidation = InvalidationRectForValueChange(
-        axis, old_start_pos, old_end_pos, new_start_pos, new_end_pos);
-    invalidateInterior(invalidation);
-    if (IndicatorEnabled(style_) && ShowsValueIndicator(*this)) {
-      notifyParentInvalidatedRegion(
-          Rect::Extent(old_indicator_bounds, maxParentBounds()));
-    }
+    invalidateValueChange(axis, old_start_pos, old_end_pos, new_start_pos,
+                          new_end_pos);
   }
   return true;
 }
@@ -515,6 +508,50 @@ bool RangeSlider::setActiveThumbPos(uint16_t pos) {
     return setValuesInternal(start_value_, value, true, 1);
   }
   return false;
+}
+
+// Marks the minimal area that needs to be redrawn for a value change.
+// Mirrors Slider::invalidatePosChange(): uses setDirty() rather than
+// invalidateInterior() so the slider is not marked invalidated (paint()
+// will only redraw the dirty slice), and notifies the parent only of the
+// tight bubble envelope swept by the active thumb rather than the
+// conservative full-width envelope reported by
+// getParentTransientPaintBounds(). For range sliders the bubble only
+// follows the active thumb, so only that thumb's old/new positions
+// contribute to the bubble envelope.
+void RangeSlider::invalidateValueChange(const internal::SliderAxisMetrics& axis,
+                                        uint16_t old_start_pos,
+                                        uint16_t old_end_pos,
+                                        uint16_t new_start_pos,
+                                        uint16_t new_end_pos) {
+  Rect thumb_rect = InvalidationRectForValueChange(
+      axis, old_start_pos, old_end_pos, new_start_pos, new_end_pos);
+  Rect dirty_rect = thumb_rect;
+  Rect bubble_envelope;
+  if (IndicatorEnabled(style_) && ShowsValueIndicator(*this)) {
+    uint16_t old_active_pos =
+        (active_thumb_ == 1) ? old_end_pos : old_start_pos;
+    uint16_t new_active_pos =
+        (active_thumb_ == 1) ? new_end_pos : new_start_pos;
+    float c_old = axis.centerFromPos(old_active_pos);
+    float c_new = axis.centerFromPos(new_active_pos);
+    bubble_envelope = ValueIndicatorBubble::EnvelopeForCenterRange(
+        width(), height(), std::min(c_old, c_new), std::max(c_old, c_new),
+        style_.value_indicator);
+    if (!bubble_envelope.empty()) {
+      dirty_rect = Rect::Extent(dirty_rect, bubble_envelope);
+    }
+  }
+  if (pending_dirty_rect_.empty()) {
+    pending_dirty_rect_ = dirty_rect;
+  } else {
+    pending_dirty_rect_ = Rect::Extent(pending_dirty_rect_, dirty_rect);
+  }
+  setDirty(dirty_rect);
+  if (!bubble_envelope.empty()) {
+    notifyParentInvalidatedRegion(
+        bubble_envelope.translate(offsetLeft(), offsetTop()));
+  }
 }
 
 void RangeSlider::paint(const Canvas& canvas) const {
@@ -660,6 +697,19 @@ Rect RangeSlider::getParentTransientPaintBounds() const {
 }
 
 void RangeSlider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
+  // See Slider::paintWidgetContents() for the rationale on ordering and
+  // on narrowing the canvas clip when the repaint is driven by a
+  // value/style state change (rather than a forced full invalidation).
+  Rect pending = pending_dirty_rect_;
+  pending_dirty_rect_ = Rect(0, 0, -1, -1);
+  Canvas my_canvas = canvas;
+  if (!isInvalidated() && !pending.empty()) {
+    my_canvas.clipToExtents(pending);
+    if (my_canvas.clip_box().empty()) {
+      BasicWidget::paintWidgetContents(canvas, clipper);
+      return;
+    }
+  }
   // Pre-paint the active thumb's value indicator bubble before the slider
   // contents. See Slider::paintWidgetContents() for the rationale on
   // ordering and the role of paint() vs decorate(). The canvas is already
@@ -692,11 +742,11 @@ void RangeSlider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
     ValueIndicatorBubble bubble;
     if (bubble.layout(width(), thumb_center, text, clamp, bubble_color,
                       text_color)) {
-      bubble.paint(canvas);
-      bubble.decorate(canvas, clipper, OverlaySpec());
+      bubble.paint(my_canvas);
+      bubble.decorate(my_canvas, clipper, OverlaySpec());
     }
   }
-  BasicWidget::paintWidgetContents(canvas, clipper);
+  BasicWidget::paintWidgetContents(my_canvas, clipper);
 }
 
 }  // namespace material3

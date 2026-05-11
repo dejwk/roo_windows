@@ -9,6 +9,10 @@
 namespace roo_windows {
 namespace material3 {
 
+namespace internal {
+struct SliderAxisMetrics;
+}  // namespace internal
+
 enum class SliderVariant : uint8_t {
   kStandard,
   kCentered,
@@ -150,11 +154,24 @@ class Slider : public BasicWidget {
  private:
   bool setPosInternal(uint16_t pos, bool from_user);
 
+  // Marks the minimal local-coord region that needs to be redrawn for a
+  // thumb position change. See implementation for details.
+  void invalidatePosChange(const internal::SliderAxisMetrics& axis,
+                           uint16_t old_pos, uint16_t new_pos);
+
   SliderRange range_;
   SliderVariant variant_;
   SliderStyle style_;
   float value_;
   bool is_dragging_;
+  // Tight bounding rect (widget-local) of the area that needs repainting
+  // due to value/style state changes since the last paint. Used by
+  // paintWidgetContents() to narrow the canvas clip when this widget was
+  // dirtied without being fully invalidated, so paint() draws only the
+  // narrow column around the moving thumb instead of the full conservative
+  // envelope reported by getParentTransientPaintBounds(). Reset to empty
+  // at the start of each paintWidgetContents() call.
+  Rect pending_dirty_rect_;
 };
 
 }  // namespace material3

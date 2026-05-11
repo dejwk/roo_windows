@@ -100,7 +100,8 @@ Slider::Slider(const Environment& env, SliderRange range, float value,
       variant_(variant),
       style_(style),
       value_(0.0f),
-      is_dragging_(false) {
+      is_dragging_(false),
+      pending_dirty_rect_(0, 0, -1, -1) {
   internal::CheckValidSliderRange(range_.from, range_.to, range_.step);
   value_ = internal::NormalizeSliderValueForRange(value, range_.from, range_.to,
                                                   range_.step);
@@ -182,7 +183,6 @@ bool Slider::setPos(uint16_t pos) { return setPosInternal(pos, false); }
 bool Slider::setPosInternal(uint16_t pos, bool from_user) {
   uint16_t old_pos = getPos();
   if (pos == old_pos) return false;
-  Rect old_bounds = IndicatorEnabled(style_) ? maxParentBounds() : Rect();
   value_ = internal::NormalizeSliderValueForRange(
       internal::SliderValueFromNormalizedPos(range_.from, range_.to, pos),
       range_.from, range_.to, range_.step);
@@ -194,10 +194,7 @@ bool Slider::setPosInternal(uint16_t pos, bool from_user) {
   }
   internal::SliderAxisMetrics axis(width(), height(), kHandleWidth,
                                    kInteractionRadius);
-  invalidateInterior(axis.invalidationRectForPosChange(old_pos, new_pos));
-  if (IndicatorEnabled(style_) && ShowsValueIndicator(*this)) {
-    notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
-  }
+  invalidatePosChange(axis, old_pos, new_pos);
   return true;
 }
 
@@ -206,7 +203,6 @@ bool Slider::setRange(SliderRange range) {
     return false;
   }
   uint16_t old_pos = getPos();
-  Rect old_bounds = IndicatorEnabled(style_) ? maxParentBounds() : Rect();
   float new_value = internal::NormalizeSliderValueForRange(
       value_, range.from, range.to, range.step);
   bool changed = range_.from != range.from || range_.to != range.to ||
@@ -221,11 +217,7 @@ bool Slider::setRange(SliderRange range) {
   if (width() > 0 && height() > 0 && old_pos != new_pos) {
     internal::SliderAxisMetrics axis(width(), height(), kHandleWidth,
                                      kInteractionRadius);
-    invalidateInterior(axis.invalidationRectForPosChange(old_pos, new_pos));
-    if (IndicatorEnabled(style_) && ShowsValueIndicator(*this)) {
-      notifyParentInvalidatedRegion(
-          Rect::Extent(old_bounds, maxParentBounds()));
-    }
+    invalidatePosChange(axis, old_pos, new_pos);
   }
   return true;
 }
@@ -258,7 +250,6 @@ bool Slider::setValue(float value) {
   if (value_ == new_value) return false;
 
   uint16_t old_pos = getPos();
-  Rect old_bounds = IndicatorEnabled(style_) ? maxParentBounds() : Rect();
   value_ = new_value;
   onValueChange(value_, false);
   uint16_t new_pos = getPos();
@@ -266,13 +257,46 @@ bool Slider::setValue(float value) {
   if (width() > 0 && height() > 0 && old_pos != new_pos) {
     internal::SliderAxisMetrics axis(width(), height(), kHandleWidth,
                                      kInteractionRadius);
-    invalidateInterior(axis.invalidationRectForPosChange(old_pos, new_pos));
-    if (IndicatorEnabled(style_) && ShowsValueIndicator(*this)) {
-      notifyParentInvalidatedRegion(
-          Rect::Extent(old_bounds, maxParentBounds()));
-    }
+    invalidatePosChange(axis, old_pos, new_pos);
   }
   return true;
+}
+
+// Marks the minimal area that needs to be redrawn for a thumb move from
+// `old_pos` to `new_pos`. Uses setDirty() (not invalidateInterior()) so
+// the slider itself is not marked invalidated: paint() can rely on
+// isInvalidated() being false here and let the canvas clip restrict
+// drawing to the dirty slice. When the value indicator is visible, the
+// dirty rect is extended upward to include the bubble strip swept by the
+// two thumb positions (rather than the conservative full-width envelope
+// reported by getParentTransientPaintBounds()), and the parent is told
+// to invalidate only that strip so siblings beneath repaint just the
+// area the old bubble vacated.
+void Slider::invalidatePosChange(const internal::SliderAxisMetrics& axis,
+                                 uint16_t old_pos, uint16_t new_pos) {
+  Rect thumb_rect = axis.invalidationRectForPosChange(old_pos, new_pos);
+  Rect dirty_rect = thumb_rect;
+  Rect bubble_envelope;
+  if (IndicatorEnabled(style_) && ShowsValueIndicator(*this)) {
+    float c_old = axis.centerFromPos(old_pos);
+    float c_new = axis.centerFromPos(new_pos);
+    bubble_envelope = ValueIndicatorBubble::EnvelopeForCenterRange(
+        width(), height(), std::min(c_old, c_new), std::max(c_old, c_new),
+        style_.value_indicator);
+    if (!bubble_envelope.empty()) {
+      dirty_rect = Rect::Extent(dirty_rect, bubble_envelope);
+    }
+  }
+  if (pending_dirty_rect_.empty()) {
+    pending_dirty_rect_ = dirty_rect;
+  } else {
+    pending_dirty_rect_ = Rect::Extent(pending_dirty_rect_, dirty_rect);
+  }
+  setDirty(dirty_rect);
+  if (!bubble_envelope.empty()) {
+    notifyParentInvalidatedRegion(
+        bubble_envelope.translate(offsetLeft(), offsetTop()));
+  }
 }
 
 uint16_t Slider::getPos() const {
@@ -433,6 +457,26 @@ Rect Slider::getParentTransientPaintBounds() const {
 }
 
 void Slider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
+  // The canvas we receive is clipped to maxBounds(), which (via our
+  // getParentTransientPaintBounds() override) covers the full bubble
+  // conservative envelope when the indicator is showing. If the only
+  // reason we're being repainted is a value/style state change that
+  // dirtied a tight rectangle (set by invalidatePosChange()), narrow the
+  // canvas clip to that rectangle so paint() does not redraw the entire
+  // envelope. isInvalidated() being true means the framework asked us to
+  // fully repaint (e.g. style change, visibility toggle), in which case
+  // we keep the full clip.
+  Rect pending = pending_dirty_rect_;
+  pending_dirty_rect_ = Rect(0, 0, -1, -1);
+  Canvas my_canvas = canvas;
+  if (!isInvalidated() && !pending.empty()) {
+    my_canvas.clipToExtents(pending);
+    if (my_canvas.clip_box().empty()) {
+      // Nothing to do, but still need to clear the dirty flag.
+      BasicWidget::paintWidgetContents(canvas, clipper);
+      return;
+    }
+  }
   if (ShowsValueIndicator(*this) && width() > 0 && height() > 0) {
     // Pre-paint the value indicator bubble BEFORE the slider's track and
     // thumb. This way, even if the bubble's geometry overlapped the slider's
@@ -467,8 +511,8 @@ void Slider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
     ValueIndicatorBubble bubble;
     if (bubble.layout(width(), thumb_center, text, clamp, bubble_color,
                       text_color)) {
-      bubble.paint(canvas);
-      bubble.decorate(canvas, clipper, OverlaySpec());
+      bubble.paint(my_canvas);
+      bubble.decorate(my_canvas, clipper, OverlaySpec());
     }
   }
 
@@ -478,7 +522,7 @@ void Slider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
   // overlay/exclusion stack, so any pixels it would otherwise put inside
   // the bubble's inscribed rectangle are dropped, and any pixels under the
   // bubble's rounded mask have the bubble color alpha-composited on top.
-  BasicWidget::paintWidgetContents(canvas, clipper);
+  BasicWidget::paintWidgetContents(my_canvas, clipper);
 }
 
 }  // namespace material3

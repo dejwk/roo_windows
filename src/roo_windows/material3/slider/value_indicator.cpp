@@ -94,6 +94,41 @@ Rect ValueIndicatorBubble::ConservativeBounds(
   return Rect(left, top, right, bottom);
 }
 
+// static
+Rect ValueIndicatorBubble::EnvelopeForCenterRange(
+    int16_t parent_width, int16_t parent_height, float center_min,
+    float center_max, SliderValueIndicatorBehavior behavior) {
+  if (behavior == SliderValueIndicatorBehavior::kHidden || parent_width <= 0 ||
+      parent_height <= 0) {
+    return Rect();
+  }
+  if (center_min > center_max) std::swap(center_min, center_max);
+  int16_t bw = kBubbleMaxWidth;
+  int16_t bh = 2 * kPaddingV + kCaptionHeight;
+  bool clamp = behavior == SliderValueIndicatorBehavior::kWithinBounds;
+  if (clamp && bw > parent_width) bw = parent_width;
+  // The bubble's left edge for a thumb at `center` is
+  // `round(center) - bw / 2` (see layout()). Use floor/ceil with a 1-pixel
+  // safety margin to be robust to rounding when the center range came from
+  // float math.
+  int16_t l_min = (int16_t)floorf(center_min) - bw / 2 - 1;
+  int16_t l_max = (int16_t)ceilf(center_max) - bw / 2 + 1;
+  if (clamp) {
+    int16_t l_clamp_min = 0;
+    int16_t l_clamp_max = parent_width - bw;
+    if (l_clamp_max < 0) l_clamp_max = 0;
+    if (l_min < l_clamp_min) l_min = l_clamp_min;
+    if (l_min > l_clamp_max) l_min = l_clamp_max;
+    if (l_max < l_clamp_min) l_max = l_clamp_min;
+    if (l_max > l_clamp_max) l_max = l_clamp_max;
+  }
+  int16_t left = l_min;
+  int16_t right = l_max + bw - 1;
+  int16_t top = -kGap - bh;
+  int16_t bottom = -kGap - 1;
+  return Rect(left, top, right, bottom);
+}
+
 bool ValueIndicatorBubble::layout(int16_t parent_width, float thumb_center,
                                   roo::string_view text, bool clamp_to_bounds,
                                   roo_display::Color bubble_color,

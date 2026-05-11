@@ -8,6 +8,10 @@
 namespace roo_windows {
 namespace material3 {
 
+namespace internal {
+struct SliderAxisMetrics;
+}  // namespace internal
+
 class RangeSlider : public BasicWidget {
  public:
   RangeSlider(const Environment& env, SliderRange range, float start_value,
@@ -90,6 +94,13 @@ class RangeSlider : public BasicWidget {
 
   bool setActiveThumbPos(uint16_t pos);
 
+  // Marks the minimal local-coord region that needs to be redrawn for a
+  // value change between (old_start_pos, old_end_pos) and
+  // (new_start_pos, new_end_pos). See implementation for details.
+  void invalidateValueChange(const internal::SliderAxisMetrics& axis,
+                             uint16_t old_start_pos, uint16_t old_end_pos,
+                             uint16_t new_start_pos, uint16_t new_end_pos);
+
   SliderRange range_;
   SliderStyle style_;
   float start_value_;
@@ -99,6 +110,10 @@ class RangeSlider : public BasicWidget {
   int8_t overlay_thumb_;
   bool is_dragging_;
   bool awaiting_direction_;
+  // Tight bounding rect (widget-local) of the area that needs repainting
+  // due to value/style state changes since the last paint. See
+  // Slider::pending_dirty_rect_ for details.
+  Rect pending_dirty_rect_;
 };
 
 }  // namespace material3
