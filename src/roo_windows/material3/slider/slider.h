@@ -1,7 +1,9 @@
 #pragma once
 
+#include <stddef.h>
 #include <stdint.h>
 
+#include "roo_backport/string_view.h"
 #include "roo_windows/core/basic_widget.h"
 
 namespace roo_windows {
@@ -10,6 +12,56 @@ namespace material3 {
 enum class SliderVariant : uint8_t {
   kStandard,
   kCentered,
+};
+
+enum class SliderOrientation : uint8_t {
+  kHorizontal,
+  kVertical,
+};
+
+enum class SliderSize : uint8_t {
+  kExtraSmall,
+  kSmall,
+  kMedium,
+  kLarge,
+  kExtraLarge,
+};
+
+enum class SliderValueIndicatorBehavior : uint8_t {
+  kHidden,
+  kShowOnInteraction,
+  kWithinBounds,
+  kAlways,
+};
+
+enum class SliderTickMode : uint8_t {
+  kAuto,
+  kHidden,
+  kShowStops,
+};
+
+// Compact packed style state. Read on every paint, so kept inline. Reserved
+// bits leave room for later steps.
+struct SliderStyle {
+  SliderOrientation orientation : 1;
+  SliderSize size : 3;
+  SliderValueIndicatorBehavior value_indicator : 2;
+  SliderTickMode tick_mode : 2;
+  bool show_stop_indicators : 1;
+
+  constexpr SliderStyle()
+      : orientation(SliderOrientation::kHorizontal),
+        size(SliderSize::kExtraSmall),
+        value_indicator(SliderValueIndicatorBehavior::kHidden),
+        tick_mode(SliderTickMode::kAuto),
+        show_stop_indicators(false) {}
+
+  bool operator==(const SliderStyle& o) const {
+    return orientation == o.orientation && size == o.size &&
+           value_indicator == o.value_indicator && tick_mode == o.tick_mode &&
+           show_stop_indicators == o.show_stop_indicators;
+  }
+  bool operator!=(const SliderStyle& o) const { return !(*this == o); }
 };
 
 struct SliderRange {
@@ -23,7 +75,8 @@ class Slider : public BasicWidget {
   explicit Slider(const Environment& env, uint16_t pos = 0);
 
   Slider(const Environment& env, SliderRange range, float value = 0.0f,
-         SliderVariant variant = SliderVariant::kStandard);
+         SliderVariant variant = SliderVariant::kStandard,
+         SliderStyle style = {});
 
   Padding getDefaultPadding() const override { return Padding(0); }
   Margins getDefaultMargins() const override { return Margins(0); }
@@ -56,6 +109,8 @@ class Slider : public BasicWidget {
 
   ColorRole effectiveContainerRole() const override;
 
+  Rect getParentTransientPaintBounds() const override;
+
   const SliderRange& range() const { return range_; }
 
   bool setRange(SliderRange range);
@@ -63,6 +118,10 @@ class Slider : public BasicWidget {
   SliderVariant variant() const { return variant_; }
 
   bool setVariant(SliderVariant variant);
+
+  const SliderStyle& style() const { return style_; }
+
+  bool setStyle(SliderStyle style);
 
   float value() const { return value_; }
 
@@ -78,11 +137,22 @@ class Slider : public BasicWidget {
 
   virtual void onInteractionEnd(float value) {}
 
+  // Format a numeric slider value into a short, human-readable label. Writes
+  // into the caller-provided scratch buffer (which must remain valid for the
+  // lifetime of the returned view) and returns a view into it. Must not
+  // allocate. Override in a subclass to customize formatting.
+  virtual roo::string_view formatLabel(float value, char* scratch,
+                                       size_t scratch_size) const;
+
+ protected:
+  void paintWidgetContents(const Canvas& s, Clipper& clipper) override;
+
  private:
   bool setPosInternal(uint16_t pos, bool from_user);
 
   SliderRange range_;
   SliderVariant variant_;
+  SliderStyle style_;
   float value_;
   bool is_dragging_;
 };

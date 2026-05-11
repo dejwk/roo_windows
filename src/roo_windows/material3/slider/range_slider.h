@@ -1,5 +1,8 @@
 #pragma once
 
+#include <stddef.h>
+
+#include "roo_backport/string_view.h"
 #include "roo_windows/material3/slider/slider.h"
 
 namespace roo_windows {
@@ -8,7 +11,7 @@ namespace material3 {
 class RangeSlider : public BasicWidget {
  public:
   RangeSlider(const Environment& env, SliderRange range, float start_value,
-              float end_value);
+              float end_value, SliderStyle style = {});
 
   Padding getDefaultPadding() const override { return Padding(0); }
   Margins getDefaultMargins() const override { return Margins(0); }
@@ -41,9 +44,15 @@ class RangeSlider : public BasicWidget {
 
   ColorRole effectiveContainerRole() const override;
 
+  Rect getParentTransientPaintBounds() const override;
+
   const SliderRange& range() const { return range_; }
 
   bool setRange(SliderRange range);
+
+  const SliderStyle& style() const { return style_; }
+
+  bool setStyle(SliderStyle style);
 
   float minSeparation() const { return min_separation_; }
 
@@ -64,6 +73,15 @@ class RangeSlider : public BasicWidget {
 
   virtual void onInteractionEnd(float start, float end) {}
 
+  // Format a numeric slider value into a short human-readable label. Writes
+  // into the caller-provided scratch buffer; must not allocate. The default
+  // formatter renders a compact decimal. Override to customize.
+  virtual roo::string_view formatLabel(float value, char* scratch,
+                                       size_t scratch_size) const;
+
+ protected:
+  void paintWidgetContents(const Canvas& s, Clipper& clipper) override;
+
  private:
   bool setValuesInternal(float start_value, float end_value, bool from_user,
                          int active_thumb);
@@ -71,6 +89,7 @@ class RangeSlider : public BasicWidget {
   bool setActiveThumbPos(uint16_t pos);
 
   SliderRange range_;
+  SliderStyle style_;
   float start_value_;
   float end_value_;
   float min_separation_;

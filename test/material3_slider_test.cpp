@@ -881,6 +881,113 @@ TEST_F(Material3SliderRenderTest,
   EXPECT_EQ(primary, pixelAt(kSliderX + 70, kSliderY + 5));
 }
 
+
+namespace {
+class FmtSlider : public Slider {
+ public:
+  using Slider::Slider;
+  roo::string_view formatLabel(float value, char* scratch,
+                               size_t scratch_size) const override {
+    int n = snprintf(scratch, scratch_size, "%.0f%%", value);
+    if (n < 0) n = 0;
+    if ((size_t)n >= scratch_size) n = scratch_size - 1;
+    return roo::string_view(scratch, (size_t)n);
+  }
+};
+}  // namespace
+
+TEST(Material3SliderValueIndicator, DefaultFormatLabelFormatsCompactly) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  Slider slider(env);
+  char scratch[16];
+  EXPECT_EQ("4", slider.formatLabel(4.0f, scratch, sizeof(scratch)));
+  EXPECT_EQ("3.14", slider.formatLabel(3.14f, scratch, sizeof(scratch)));
+  EXPECT_EQ("0.5", slider.formatLabel(0.50f, scratch, sizeof(scratch)));
+  EXPECT_EQ("?", slider.formatLabel(
+                     std::numeric_limits<float>::infinity(), scratch,
+                     sizeof(scratch)));
+}
+
+TEST(Material3SliderValueIndicator, CustomFormatLabelIsCalled) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  FmtSlider slider(env);
+  char scratch[16];
+  EXPECT_EQ("42%", slider.formatLabel(42.0f, scratch, sizeof(scratch)));
+}
+
+TEST(Material3SliderValueIndicator, EnabledStyleSetsUnclippedParentMode) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  Slider hidden(env, SliderRange{0.0f, 1.0f}, 0.5f, SliderVariant::kStandard,
+                SliderStyle{});  // default kHidden
+  EXPECT_EQ(ParentClipMode::kClipped, hidden.getParentClipMode());
+
+  SliderStyle on_interaction{};
+  on_interaction.value_indicator =
+      SliderValueIndicatorBehavior::kShowOnInteraction;
+  Slider shown(env, SliderRange{0.0f, 1.0f}, 0.5f, SliderVariant::kStandard,
+               on_interaction);
+  EXPECT_EQ(ParentClipMode::kUnclipped, shown.getParentClipMode());
+}
+
+TEST(Material3SliderValueIndicator, SetStyleTogglesParentClipMode) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  Slider slider(env);
+  EXPECT_EQ(ParentClipMode::kClipped, slider.getParentClipMode());
+  SliderStyle s{};
+  s.value_indicator = SliderValueIndicatorBehavior::kAlways;
+  EXPECT_TRUE(slider.setStyle(s));
+  EXPECT_EQ(ParentClipMode::kUnclipped, slider.getParentClipMode());
+  EXPECT_FALSE(slider.setStyle(s));
+  SliderStyle hidden{};
+  EXPECT_TRUE(slider.setStyle(hidden));
+  EXPECT_EQ(ParentClipMode::kClipped, slider.getParentClipMode());
+}
+
+TEST(Material3SliderValueIndicator,
+     TransientPaintBoundsExpandAboveWhenAlways) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  SliderStyle s{};
+  s.value_indicator = SliderValueIndicatorBehavior::kAlways;
+  Slider slider(env, SliderRange{0.0f, 1.0f}, 0.5f, SliderVariant::kStandard,
+                s);
+  slider.measure(WidthSpec::Exactly(Scaled(96)),
+                 HeightSpec::Exactly(Scaled(44)));
+  slider.layout(Rect(0, 0, Scaled(96) - 1, Scaled(44) - 1));
+  Rect base = slider.getParentTransientPaintBounds();
+  // The bubble extends above y=0 in widget-local coords; in parent coords this
+  // means above offsetTop(). Since the widget is at (0,0) offsets are zero, so
+  // bubble extends into negative y.
+  EXPECT_LT(base.yMin(), 0);
+}
+
+TEST(Material3RangeSliderValueIndicator, FormatLabelDefault) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  RangeSlider slider(env, SliderRange{0.0f, 10.0f}, 0.0f, 10.0f);
+  char scratch[16];
+  EXPECT_EQ("7", slider.formatLabel(7.0f, scratch, sizeof(scratch)));
+}
+
+TEST(Material3RangeSliderValueIndicator,
+     TransientPaintBoundsUnchangedWithoutActivity) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  SliderStyle s{};
+  s.value_indicator = SliderValueIndicatorBehavior::kShowOnInteraction;
+  RangeSlider slider(env, SliderRange{0.0f, 10.0f}, 2.0f, 8.0f, s);
+  slider.measure(WidthSpec::Exactly(Scaled(96)),
+                 HeightSpec::Exactly(Scaled(44)));
+  slider.layout(Rect(0, 0, Scaled(96) - 1, Scaled(44) - 1));
+  Rect bounds = slider.getParentTransientPaintBounds();
+  // Not pressed/dragged and not kAlways: no extra expansion above the widget.
+  EXPECT_GE(bounds.yMin(), 0);
+}
+
 }  // namespace
 }  // namespace material3
 }  // namespace roo_windows

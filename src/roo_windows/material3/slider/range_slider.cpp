@@ -5,7 +5,9 @@
 
 #include "roo_display/composition/streamable_stack.h"
 #include "roo_display/shape/smooth.h"
+#include "roo_windows/core/overlay_spec.h"
 #include "roo_windows/material3/slider/slider_internal.h"
+#include "roo_windows/material3/slider/value_indicator.h"
 
 using namespace roo_display;
 
@@ -62,6 +64,23 @@ SliderRange NormalizeRangeOrDefault(SliderRange range) {
 float NormalizeValueForRange(float value, const SliderRange& range) {
   return internal::NormalizeSliderValueForRange(value, range.from, range.to,
                                                 range.step);
+}
+
+// True iff the indicator should be drawn this frame. Range sliders show the
+// bubble only above the currently-active thumb during interaction; when no
+// thumb is active there is nothing to anchor on, even with kAlways.
+bool ShowsValueIndicator(const RangeSlider& widget) {
+  if (widget.activeThumbIndex() < 0) return false;
+  switch (widget.style().value_indicator) {
+    case SliderValueIndicatorBehavior::kHidden:
+      return false;
+    case SliderValueIndicatorBehavior::kShowOnInteraction:
+    case SliderValueIndicatorBehavior::kWithinBounds:
+      return widget.isPressed() || widget.isDragged();
+    case SliderValueIndicatorBehavior::kAlways:
+      return true;
+  }
+  return false;
 }
 
 float ClampMinSeparation(const SliderRange& range, float min_separation) {
@@ -244,19 +263,24 @@ Rect InvalidationRectForValueChange(const internal::SliderAxisMetrics& axis,
 }  // namespace
 
 RangeSlider::RangeSlider(const Environment& env, SliderRange range,
-                         float start_value, float end_value)
+                         float start_value, float end_value,
+                         SliderStyle style)
     : BasicWidget(env),
       range_(NormalizeRangeOrDefault(range)),
+      style_(style),
       start_value_(range_.from),
       end_value_(range_.to),
       min_separation_(0.0f),
       active_thumb_(kNoActiveThumb),
-  overlay_thumb_(kNoActiveThumb),
+      overlay_thumb_(kNoActiveThumb),
       is_dragging_(false),
       awaiting_direction_(false) {
   NormalizeOrderedValuesWithSeparation(range_, start_value, end_value,
                                        min_separation_, kNoActiveThumb,
                                        start_value_, end_value_);
+  if (IndicatorEnabled(style_)) {
+    setParentClipMode(ParentClipMode::kUnclipped);
+  }
 }
 
 bool RangeSlider::onDown(XDim x, YDim y) {
@@ -455,6 +479,21 @@ bool RangeSlider::setMinSeparation(float value) {
   return true;
 }
 
+bool RangeSlider::setStyle(SliderStyle style) {
+  if (style_ == style) return false;
+  Rect old_bounds = IndicatorEnabled(style_) ? maxParentBounds() : Rect();
+  bool was_enabled = IndicatorEnabled(style_);
+  style_ = style;
+  bool is_enabled = IndicatorEnabled(style_);
+  setParentClipMode(is_enabled ? ParentClipMode::kUnclipped
+                               : ParentClipMode::kClipped);
+  invalidateInterior();
+  if (was_enabled || is_enabled) {
+    notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
+  }
+  return true;
+}
+
 bool RangeSlider::setValues(float start_value, float end_value) {
   return setValuesInternal(start_value, end_value, false, kNoActiveThumb);
 }
@@ -480,6 +519,8 @@ bool RangeSlider::setValuesInternal(float start_value, float end_value,
   onValueChange(start_value_, end_value_, active_thumb,
                 from_user && active_thumb != kNoActiveThumb);
 
+  Rect old_indicator_bounds =
+      IndicatorEnabled(style_) ? maxParentBounds() : Rect();
   if (width() > 0 && height() > 0) {
     uint16_t new_start_pos =
         internal::SliderPosFromValue(range_.from, range_.to, start_value_);
@@ -490,6 +531,10 @@ bool RangeSlider::setValuesInternal(float start_value, float end_value,
     Rect invalidation = InvalidationRectForValueChange(
         axis, old_start_pos, old_end_pos, new_start_pos, new_end_pos);
     invalidateInterior(invalidation);
+    if (IndicatorEnabled(style_) && ShowsValueIndicator(*this)) {
+      notifyParentInvalidatedRegion(
+          Rect::Extent(old_indicator_bounds, maxParentBounds()));
+    }
   }
   return true;
 }
@@ -618,6 +663,71 @@ roo_display::FpPoint RangeSlider::getPointOverlayFocus() const {
 
 ColorRole RangeSlider::effectiveContainerRole() const {
   return ColorRole::kPrimary;
+}
+
+roo::string_view RangeSlider::formatLabel(float value, char* scratch,
+                                          size_t scratch_size) const {
+  return ValueIndicatorBubble::FormatDefault(value, scratch, scratch_size);
+}
+
+Rect RangeSlider::getParentTransientPaintBounds() const {
+  // Same logic as Slider::getParentTransientPaintBounds(): union the base
+  // bounds with a conservative envelope big enough to cover the bubble at
+  // any thumb position. The framework uses this to invalidate the bubble
+  // area in the parent when isPressed/isDragged flips.
+  Rect base = BasicWidget::getParentTransientPaintBounds();
+  if (style_.value_indicator == SliderValueIndicatorBehavior::kHidden) {
+    return base;
+  }
+  bool may_show =
+      style_.value_indicator == SliderValueIndicatorBehavior::kAlways ||
+      isPressed() || isDragged();
+  if (!may_show || width() <= 0 || height() <= 0) return base;
+  Rect bubble_local = ValueIndicatorBubble::ConservativeBounds(
+      width(), height(), kHandleWidth, style_.value_indicator);
+  if (bubble_local.empty()) return base;
+  Rect bubble_parent = bubble_local.translate(offsetLeft(), offsetTop());
+  return Rect::Extent(base, bubble_parent);
+}
+
+void RangeSlider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
+  // Pre-paint the active thumb's value indicator bubble before the slider
+  // contents. See Slider::paintWidgetContents() for the rationale on
+  // ordering and the role of paint() vs decorate(). The canvas is already
+  // clipped to maxBounds(), which (via getVisualBounds() ->
+  // getTransientPaintBounds() -> our getParentTransientPaintBounds()
+  // override) already covers the bubble's conservative envelope when the
+  // indicator is showing.
+  if (ShowsValueIndicator(*this) && width() > 0 && height() > 0) {
+    // ShowsValueIndicator() guarantees activeThumbIndex() >= 0.
+    int thumb = active_thumb_;
+    float thumb_value = (thumb == 1) ? end_value_ : start_value_;
+
+    char scratch[16];
+    roo::string_view text = formatLabel(thumb_value, scratch, sizeof(scratch));
+
+    const Theme& th = theme();
+    Color bubble_color = isEnabled() ? th.color.inverseSurface
+                                     : th.color.onSurface.withA(0x3D);
+    Color text_color =
+        isEnabled() ? th.color.inverseOnSurface : th.color.surface;
+
+    internal::SliderAxisMetrics axis(width(), height(), kHandleWidth,
+                                     kInteractionRadius);
+    uint16_t pos =
+        internal::SliderPosFromValue(range_.from, range_.to, thumb_value);
+    float thumb_center = axis.centerFromPos(pos);
+    bool clamp = style_.value_indicator ==
+                 SliderValueIndicatorBehavior::kWithinBounds;
+
+    ValueIndicatorBubble bubble;
+    if (bubble.layout(width(), thumb_center, text, clamp, bubble_color,
+                      text_color)) {
+      bubble.paint(canvas);
+      bubble.decorate(canvas, clipper, OverlaySpec());
+    }
+  }
+  BasicWidget::paintWidgetContents(canvas, clipper);
 }
 
 }  // namespace material3

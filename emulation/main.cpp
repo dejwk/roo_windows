@@ -1,10 +1,9 @@
-// This is a copy of the 'simple/label' example (label.ino).
-
 // *************** EMULATOR SETUP BEGIN
 
 #ifdef ROO_TESTING
 
 #include "roo_testing/devices/display/ili9341/ili9341spi.h"
+#include "roo_testing/devices/touch/xpt2046/xpt2046spi.h"
 #include "roo_testing/microcontrollers/esp32/fake_esp32.h"
 #include "roo_testing/transducers/ui/viewport/flex_viewport.h"
 #include "roo_testing/transducers/ui/viewport/fltk/fltk_viewport.h"
@@ -17,15 +16,20 @@ struct Emulator {
   FlexViewport flexViewport;
 
   FakeIli9341Spi display;
+  FakeXpt2046Spi touch;
 
   Emulator()
-      : viewport(),
-        flexViewport(viewport, 1, FlexViewport::kRotationRight),
-        display(flexViewport) {
+      : viewport({.noise_bits=4}),
+        flexViewport(viewport, 4, FlexViewport::kRotationRight),
+        display(flexViewport),
+        touch(flexViewport, FakeXpt2046Spi::Calibration(269, 249, 3829, 3684,
+                                                        true, false, false)) {
     FakeEsp32().attachSpiDevice(display, 4, 5, 6);
     FakeEsp32().gpio.attachOutput(7, display.cs());
     FakeEsp32().gpio.attachOutput(2, display.dc());
     FakeEsp32().gpio.attachOutput(3, display.rst());
+    FakeEsp32().attachSpiDevice(touch, 4, 5, 6);
+    FakeEsp32().gpio.attachOutput(1, touch.cs());
   }
 } emulator;
 
@@ -33,10 +37,15 @@ struct Emulator {
 
 // *************** DISPLAY SETUP BEGIN
 
+#include <functional>
+
 #include "Arduino.h"
 #include "roo_display.h"
+#include "roo_scheduler.h"
+#include "roo_windows.h"
 
 using namespace roo_display;
+using namespace roo_windows;
 
 // Select the driver to match your display device.
 #include "roo_display/driver/ili9341.h"
@@ -68,24 +77,414 @@ Display display(screen, touch,
 
 void initDisplay() {
   SPI.begin(kSpiSckPin, kSpiMisoPin, kSpiMosiPin);
+  display.enableTurbo();
   display.init();
 }
 
 // *************** EXAMPLE STARTS HERE
 
-#include "roo_scheduler.h"
-#include "roo_windows.h"
-
-using namespace roo_windows;
-
+#include "roo_windows/containers/flex_layout.h"
+#include "roo_windows/containers/scrollable_panel.h"
+#include "roo_windows/material3/slider/range_slider.h"
+#include "roo_windows/material3/slider/slider.h"
+#include "roo_windows/widgets/divider.h"
 #include "roo_windows/widgets/text_label.h"
+
+namespace {
+
+int PercentFromPos(uint16_t pos) {
+  return ((uint32_t)pos * 100u + 32767u) / 65535u;
+}
+
+uint16_t PosFromPercent(int percent) {
+  if (percent < 0) percent = 0;
+  if (percent > 100) percent = 100;
+  return ((uint32_t)percent * 65535u + 50u) / 100u;
+}
+
+class LegacySliderRow : public FlexLayout {
+ public:
+  LegacySliderRow(const Environment& env, const char* primary,
+                  const char* secondary, int initial_percent)
+      : FlexLayout(env, FlexDirection::kColumn),
+        header_(env, FlexDirection::kRow),
+        labels_(env, FlexDirection::kColumn),
+        primary_(env, primary, font_body1()),
+        secondary_(env, secondary, font_caption()),
+        value_(env, "", font_body1()),
+        slider_(env, PosFromPercent(initial_percent)) {
+    setPadding(Padding(Scaled(12), Scaled(8)));
+    setGap(Scaled(8));
+
+    header_.setAlignItems(AlignItems::kCenter);
+    header_.setGap(Scaled(12));
+
+    labels_.setAlignItems(AlignItems::kFlexStart);
+    labels_.add(primary_, {.flex_grow = 0, .flex_shrink = 0});
+    labels_.add(secondary_, {.flex_grow = 0, .flex_shrink = 0});
+
+    header_.add(labels_, {.flex_grow = 1, .flex_shrink = 1});
+    header_.add(value_, {.flex_grow = 0, .flex_shrink = 0});
+
+    add(header_, {.flex_grow = 0, .flex_shrink = 0});
+    add(slider_, {.flex_grow = 0, .flex_shrink = 1});
+
+    slider_.setOnInteractiveChange([this]() { handleInteractiveChange(); });
+    updateValue();
+  }
+
+  void setOnInteractiveChange(std::function<void()> handler) {
+    on_change_ = std::move(handler);
+  }
+
+  int percent() const { return PercentFromPos(slider_.getPos()); }
+
+ private:
+  void updateValue() { value_.setTextf("%d%%", percent()); }
+
+  void handleInteractiveChange() {
+    updateValue();
+    if (on_change_ != nullptr) {
+      on_change_();
+    }
+  }
+
+  FlexLayout header_;
+  FlexLayout labels_;
+  TextLabel primary_;
+  TextLabel secondary_;
+  TextLabel value_;
+  material3::Slider slider_;
+  std::function<void()> on_change_;
+};
+
+using SliderValueFormatter =
+    std::function<void(TextLabel&, const material3::Slider&)>;
+
+// Slider subclass that lets the demo install a custom formatLabel function
+// to render the value indicator bubble (e.g. "3x", "+25") shown above the
+// thumb during interaction.
+class DemoSlider : public material3::Slider {
+ public:
+  using LabelFormatter =
+      std::function<roo::string_view(float, char*, size_t)>;
+
+  DemoSlider(const Environment& env, material3::SliderRange range,
+             float initial_value, material3::SliderVariant variant,
+             material3::SliderStyle style)
+      : material3::Slider(env, range, initial_value, variant, style) {}
+
+  void setLabelFormatter(LabelFormatter formatter) {
+    label_formatter_ = std::move(formatter);
+  }
+
+  roo::string_view formatLabel(float value, char* scratch,
+                               size_t scratch_size) const override {
+    if (label_formatter_ != nullptr) {
+      return label_formatter_(value, scratch, scratch_size);
+    }
+    return material3::Slider::formatLabel(value, scratch, scratch_size);
+  }
+
+ private:
+  LabelFormatter label_formatter_;
+};
+
+class SemanticSliderRow : public FlexLayout {
+ public:
+  using LabelFormatter = DemoSlider::LabelFormatter;
+
+  SemanticSliderRow(const Environment& env, const char* primary,
+                    const char* secondary, material3::SliderRange range,
+                    float initial_value, SliderValueFormatter formatter,
+                    material3::SliderVariant variant =
+                        material3::SliderVariant::kStandard,
+                    material3::SliderStyle style = {},
+                    LabelFormatter label_formatter = nullptr)
+      : FlexLayout(env, FlexDirection::kColumn),
+        header_(env, FlexDirection::kRow),
+        labels_(env, FlexDirection::kColumn),
+        primary_(env, primary, font_body1()),
+        secondary_(env, secondary, font_caption()),
+        value_(env, "", font_body1()),
+        slider_(env, range, initial_value, variant, style),
+        formatter_(std::move(formatter)) {
+    if (label_formatter != nullptr) {
+      slider_.setLabelFormatter(std::move(label_formatter));
+    }
+    setPadding(Padding(Scaled(12), Scaled(8)));
+    setGap(Scaled(8));
+
+    header_.setAlignItems(AlignItems::kCenter);
+    header_.setGap(Scaled(12));
+
+    labels_.setAlignItems(AlignItems::kFlexStart);
+    labels_.add(primary_, {.flex_grow = 0, .flex_shrink = 0});
+    labels_.add(secondary_, {.flex_grow = 0, .flex_shrink = 0});
+
+    header_.add(labels_, {.flex_grow = 1, .flex_shrink = 1});
+    header_.add(value_, {.flex_grow = 0, .flex_shrink = 0});
+
+    add(header_, {.flex_grow = 0, .flex_shrink = 0});
+    add(slider_, {.flex_grow = 0, .flex_shrink = 1});
+
+    slider_.setOnInteractiveChange([this]() { handleInteractiveChange(); });
+    updateValue();
+  }
+
+ private:
+  void updateValue() { formatter_(value_, slider_); }
+
+  void handleInteractiveChange() { updateValue(); }
+
+  FlexLayout header_;
+  FlexLayout labels_;
+  TextLabel primary_;
+  TextLabel secondary_;
+  TextLabel value_;
+  DemoSlider slider_;
+  SliderValueFormatter formatter_;
+};
+
+class DemoRangeSlider : public material3::RangeSlider {
+ public:
+  using UpdateHandler = std::function<void()>;
+
+  DemoRangeSlider(const Environment& env, material3::SliderRange range,
+                  float start_value, float end_value,
+                  material3::SliderStyle style)
+      : material3::RangeSlider(env, range, start_value, end_value, style) {}
+
+  // Render bubble values as "08:00" / "18:00" rather than the default decimal.
+  roo::string_view formatLabel(float value, char* scratch,
+                               size_t scratch_size) const override {
+    int hours = (int)value;
+    int n = snprintf(scratch, scratch_size, "%02d:00", hours);
+    if (n < 0) n = 0;
+    if ((size_t)n >= scratch_size) n = (int)scratch_size - 1;
+    return roo::string_view(scratch, (size_t)n);
+  }
+
+  void setOnStateChange(UpdateHandler handler) {
+    on_state_change_ = std::move(handler);
+  }
+
+  void onValueChange(float start, float end, int active_thumb,
+                     bool from_user) override {
+    (void)start;
+    (void)end;
+    (void)active_thumb;
+    (void)from_user;
+    notifyStateChange();
+  }
+
+  void onInteractionStart(int active_thumb) override {
+    (void)active_thumb;
+    notifyStateChange();
+  }
+
+  void onInteractionEnd(float start, float end) override {
+    (void)start;
+    (void)end;
+    notifyStateChange();
+  }
+
+ private:
+  void notifyStateChange() {
+    if (on_state_change_ != nullptr) {
+      on_state_change_();
+    }
+  }
+
+  UpdateHandler on_state_change_;
+};
+
+class RangeSliderRow : public FlexLayout {
+ public:
+  RangeSliderRow(const Environment& env, const char* primary,
+                 const char* secondary, material3::SliderRange range,
+                 float start_value, float end_value, float min_separation,
+                 material3::SliderStyle style = {})
+      : FlexLayout(env, FlexDirection::kColumn),
+        header_(env, FlexDirection::kRow),
+        labels_(env, FlexDirection::kColumn),
+        primary_(env, primary, font_body1()),
+        secondary_(env, secondary, font_caption()),
+        value_(env, "", font_body1()),
+        slider_(env, range, start_value, end_value, style),
+        status_(env, "", font_caption()),
+        min_separation_(min_separation) {
+    setPadding(Padding(Scaled(12), Scaled(8)));
+    setGap(Scaled(8));
+
+    header_.setAlignItems(AlignItems::kCenter);
+    header_.setGap(Scaled(12));
+
+    labels_.setAlignItems(AlignItems::kFlexStart);
+    labels_.add(primary_, {.flex_grow = 0, .flex_shrink = 0});
+    labels_.add(secondary_, {.flex_grow = 0, .flex_shrink = 0});
+
+    header_.add(labels_, {.flex_grow = 1, .flex_shrink = 1});
+    header_.add(value_, {.flex_grow = 0, .flex_shrink = 0});
+
+    add(header_, {.flex_grow = 0, .flex_shrink = 0});
+    add(slider_, {.flex_grow = 0, .flex_shrink = 1});
+    add(status_, {.flex_grow = 0, .flex_shrink = 0});
+
+    slider_.setMinSeparation(min_separation);
+    slider_.setOnStateChange([this]() { updateLabels(); });
+    slider_.setOnInteractiveChange([this]() { updateLabels(); });
+    updateLabels();
+  }
+
+ private:
+  const char* ActiveThumbLabel() const {
+    int active_thumb = slider_.activeThumbIndex();
+    if (active_thumb == 0) return "adjusting start thumb";
+    if (active_thumb == 1) return "adjusting end thumb";
+    return "idle";
+  }
+
+  void updateLabels() {
+    value_.setTextf("%02d:00-%02d:00", (int)slider_.startValue(),
+                    (int)slider_.endValue());
+    status_.setTextf("%s · minimum gap %dh", ActiveThumbLabel(),
+                     (int)min_separation_);
+  }
+
+  FlexLayout header_;
+  FlexLayout labels_;
+  TextLabel primary_;
+  TextLabel secondary_;
+  TextLabel value_;
+  DemoRangeSlider slider_;
+  TextLabel status_;
+  float min_separation_;
+};
+
+class FullWidthColumn : public FlexLayout {
+ public:
+  explicit FullWidthColumn(const Environment& env)
+      : FlexLayout(env, FlexDirection::kColumn) {}
+
+  PreferredSize getPreferredSize() const override {
+    return PreferredSize(PreferredSize::MatchParentWidth(),
+                         PreferredSize::WrapContentHeight());
+  }
+};
+
+// Style builders kept out-of-line so they can be passed by value into row
+// constructors.
+constexpr material3::SliderStyle FanSpeedStyle() {
+  material3::SliderStyle s{};
+  s.value_indicator = material3::SliderValueIndicatorBehavior::kShowOnInteraction;
+  return s;
+}
+
+constexpr material3::SliderStyle BalanceStyle() {
+  material3::SliderStyle s{};
+  s.value_indicator = material3::SliderValueIndicatorBehavior::kWithinBounds;
+  return s;
+}
+
+constexpr material3::SliderStyle QuietHoursStyle() {
+  material3::SliderStyle s{};
+  s.value_indicator = material3::SliderValueIndicatorBehavior::kShowOnInteraction;
+  return s;
+}
+
+class SliderScreen : public SimpleScrollablePanel {
+ public:
+  SliderScreen(const Environment& env)
+      : SimpleScrollablePanel(env),
+        content_(env),
+        title_(env, "Material 3 sliders", font_body1()),
+        subtitle_(env,
+                  "Compatibility, semantic, discrete, centered, and range "
+                  "sliders, with custom value indicator labels.",
+                  font_caption()),
+        divider_(env),
+        migration_(env,
+                   "The first row still uses Slider(env, pos). The rest use "
+                   "semantic ranges.",
+                   font_caption()),
+        legacy_(env, "Legacy compatibility",
+                "Normalized position constructor mapped to a percentage", 72),
+        fan_speed_(env, "Discrete fan speed",
+                   "Custom \"Nx\" indicator on press/drag",
+                   material3::SliderRange{0.0f, 5.0f, 1.0f}, 2.0f,
+                   [](TextLabel& label, const material3::Slider& slider) {
+                     label.setTextf("%.0fx", slider.value());
+                   },
+                   material3::SliderVariant::kStandard,
+                   FanSpeedStyle(),
+                   [](float value, char* scratch, size_t n) {
+                     int len = snprintf(scratch, n, "%.0fx", value);
+                     if (len < 0) len = 0;
+                     if ((size_t)len >= n) len = (int)n - 1;
+                     return roo::string_view(scratch, (size_t)len);
+                   }),
+        balance_(env, "Centered balance",
+                 "kWithinBounds: bubble clamped inside the track",
+                 material3::SliderRange{-100.0f, 100.0f, 5.0f}, -20.0f,
+                 [](TextLabel& label, const material3::Slider& slider) {
+                   label.setTextf("%+.0f", slider.value());
+                 },
+                 material3::SliderVariant::kCentered,
+                 BalanceStyle(),
+                 [](float value, char* scratch, size_t n) {
+                   int len = snprintf(scratch, n, "%+.0f", value);
+                   if (len < 0) len = 0;
+                   if ((size_t)len >= n) len = (int)n - 1;
+                   return roo::string_view(scratch, (size_t)len);
+                 }),
+        quiet_hours_(env, "Quiet hours",
+                     "Range slider: HH:00 indicator on the active thumb",
+                     material3::SliderRange{0.0f, 24.0f, 1.0f}, 8.0f, 18.0f,
+                     2.0f, QuietHoursStyle()),
+        footer_divider_(env),
+        note_(env,
+              "Drag a thumb to see the value indicator bubble float above it. "
+              "Subclasses override formatLabel() to format their own values; "
+              "kWithinBounds keeps the bubble clipped to the slider extent.",
+              font_caption()) {
+    content_.setPadding(Scaled(12));
+    content_.setGap(Scaled(4));
+
+    content_.add(title_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(subtitle_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(divider_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(migration_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(legacy_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(fan_speed_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(balance_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(quiet_hours_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(footer_divider_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(note_, {.flex_grow = 0, .flex_shrink = 0});
+
+    setContents(content_);
+  }
+
+  FullWidthColumn content_;
+  TextLabel title_;
+  TextLabel subtitle_;
+  HorizontalDivider divider_;
+  TextLabel migration_;
+  LegacySliderRow legacy_;
+  SemanticSliderRow fan_speed_;
+  SemanticSliderRow balance_;
+  RangeSliderRow quiet_hours_;
+  HorizontalDivider footer_divider_;
+  TextLabel note_;
+};
+
+}  // namespace
 
 roo_scheduler::Scheduler scheduler;
 Environment env(scheduler);
 Application app(&env, display);
-TextLabel label(env, "Hello World!", font_caption(),
-                kGravityCenter | kGravityMiddle);
-SingletonActivity activity(app, label);
+SliderScreen slider_screen(env);
+SingletonActivity activity(app, slider_screen);
 
 void setup() {
   initDisplay();

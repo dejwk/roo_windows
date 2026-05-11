@@ -161,21 +161,57 @@ class LegacySliderRow : public FlexLayout {
 using SliderValueFormatter =
     std::function<void(TextLabel&, const material3::Slider&)>;
 
+// Slider subclass that lets the demo install a custom formatLabel function
+// to render the value indicator bubble (e.g. "3x", "+25") shown above the
+// thumb during interaction.
+class DemoSlider : public material3::Slider {
+ public:
+  using LabelFormatter =
+      std::function<roo::string_view(float, char*, size_t)>;
+
+  DemoSlider(const Environment& env, material3::SliderRange range,
+             float initial_value, material3::SliderVariant variant,
+             material3::SliderStyle style)
+      : material3::Slider(env, range, initial_value, variant, style) {}
+
+  void setLabelFormatter(LabelFormatter formatter) {
+    label_formatter_ = std::move(formatter);
+  }
+
+  roo::string_view formatLabel(float value, char* scratch,
+                               size_t scratch_size) const override {
+    if (label_formatter_ != nullptr) {
+      return label_formatter_(value, scratch, scratch_size);
+    }
+    return material3::Slider::formatLabel(value, scratch, scratch_size);
+  }
+
+ private:
+  LabelFormatter label_formatter_;
+};
+
 class SemanticSliderRow : public FlexLayout {
  public:
+  using LabelFormatter = DemoSlider::LabelFormatter;
+
   SemanticSliderRow(const Environment& env, const char* primary,
                     const char* secondary, material3::SliderRange range,
                     float initial_value, SliderValueFormatter formatter,
                     material3::SliderVariant variant =
-                        material3::SliderVariant::kStandard)
+                        material3::SliderVariant::kStandard,
+                    material3::SliderStyle style = {},
+                    LabelFormatter label_formatter = nullptr)
       : FlexLayout(env, FlexDirection::kColumn),
         header_(env, FlexDirection::kRow),
         labels_(env, FlexDirection::kColumn),
         primary_(env, primary, font_body1()),
         secondary_(env, secondary, font_caption()),
         value_(env, "", font_body1()),
-        slider_(env, range, initial_value, variant),
+        slider_(env, range, initial_value, variant, style),
         formatter_(std::move(formatter)) {
+    if (label_formatter != nullptr) {
+      slider_.setLabelFormatter(std::move(label_formatter));
+    }
     setPadding(Padding(Scaled(12), Scaled(8)));
     setGap(Scaled(8));
 
@@ -206,7 +242,7 @@ class SemanticSliderRow : public FlexLayout {
   TextLabel primary_;
   TextLabel secondary_;
   TextLabel value_;
-  material3::Slider slider_;
+  DemoSlider slider_;
   SliderValueFormatter formatter_;
 };
 
@@ -215,8 +251,19 @@ class DemoRangeSlider : public material3::RangeSlider {
   using UpdateHandler = std::function<void()>;
 
   DemoRangeSlider(const Environment& env, material3::SliderRange range,
-                  float start_value, float end_value)
-      : material3::RangeSlider(env, range, start_value, end_value) {}
+                  float start_value, float end_value,
+                  material3::SliderStyle style)
+      : material3::RangeSlider(env, range, start_value, end_value, style) {}
+
+  // Render bubble values as "08:00" / "18:00" rather than the default decimal.
+  roo::string_view formatLabel(float value, char* scratch,
+                               size_t scratch_size) const override {
+    int hours = (int)value;
+    int n = snprintf(scratch, scratch_size, "%02d:00", hours);
+    if (n < 0) n = 0;
+    if ((size_t)n >= scratch_size) n = (int)scratch_size - 1;
+    return roo::string_view(scratch, (size_t)n);
+  }
 
   void setOnStateChange(UpdateHandler handler) {
     on_state_change_ = std::move(handler);
@@ -256,14 +303,15 @@ class RangeSliderRow : public FlexLayout {
  public:
   RangeSliderRow(const Environment& env, const char* primary,
                  const char* secondary, material3::SliderRange range,
-                 float start_value, float end_value, float min_separation)
+                 float start_value, float end_value, float min_separation,
+                 material3::SliderStyle style = {})
       : FlexLayout(env, FlexDirection::kColumn),
         header_(env, FlexDirection::kRow),
         labels_(env, FlexDirection::kColumn),
         primary_(env, primary, font_body1()),
         secondary_(env, secondary, font_caption()),
         value_(env, "", font_body1()),
-        slider_(env, range, start_value, end_value),
+        slider_(env, range, start_value, end_value, style),
         status_(env, "", font_caption()),
         min_separation_(min_separation) {
     setPadding(Padding(Scaled(12), Scaled(8)));
@@ -325,6 +373,26 @@ class FullWidthColumn : public FlexLayout {
   }
 };
 
+// Style builders kept out-of-line so they can be passed by value into row
+// constructors.
+constexpr material3::SliderStyle FanSpeedStyle() {
+  material3::SliderStyle s{};
+  s.value_indicator = material3::SliderValueIndicatorBehavior::kShowOnInteraction;
+  return s;
+}
+
+constexpr material3::SliderStyle BalanceStyle() {
+  material3::SliderStyle s{};
+  s.value_indicator = material3::SliderValueIndicatorBehavior::kWithinBounds;
+  return s;
+}
+
+constexpr material3::SliderStyle QuietHoursStyle() {
+  material3::SliderStyle s{};
+  s.value_indicator = material3::SliderValueIndicatorBehavior::kShowOnInteraction;
+  return s;
+}
+
 class SliderScreen : public SimpleScrollablePanel {
  public:
   SliderScreen(const Environment& env)
@@ -333,7 +401,7 @@ class SliderScreen : public SimpleScrollablePanel {
         title_(env, "Material 3 sliders", font_body1()),
         subtitle_(env,
                   "Compatibility, semantic, discrete, centered, and range "
-                  "slider behavior in one demo.",
+                  "sliders, with custom value indicator labels.",
                   font_caption()),
         divider_(env),
         migration_(env,
@@ -343,28 +411,42 @@ class SliderScreen : public SimpleScrollablePanel {
         legacy_(env, "Legacy compatibility",
                 "Normalized position constructor mapped to a percentage", 72),
         fan_speed_(env, "Discrete fan speed",
-                   "Whole-step snapping on taps and drags",
+                   "Custom \"Nx\" indicator on press/drag",
                    material3::SliderRange{0.0f, 5.0f, 1.0f}, 2.0f,
                    [](TextLabel& label, const material3::Slider& slider) {
                      label.setTextf("%.0fx", slider.value());
+                   },
+                   material3::SliderVariant::kStandard,
+                   FanSpeedStyle(),
+                   [](float value, char* scratch, size_t n) {
+                     int len = snprintf(scratch, n, "%.0fx", value);
+                     if (len < 0) len = 0;
+                     if ((size_t)len >= n) len = (int)n - 1;
+                     return roo::string_view(scratch, (size_t)len);
                    }),
         balance_(env, "Centered balance",
-                 "Active track grows away from the midpoint anchor",
+                 "kWithinBounds: bubble clamped inside the track",
                  material3::SliderRange{-100.0f, 100.0f, 5.0f}, -20.0f,
                  [](TextLabel& label, const material3::Slider& slider) {
                    label.setTextf("%+.0f", slider.value());
                  },
-                 material3::SliderVariant::kCentered),
+                 material3::SliderVariant::kCentered,
+                 BalanceStyle(),
+                 [](float value, char* scratch, size_t n) {
+                   int len = snprintf(scratch, n, "%+.0f", value);
+                   if (len < 0) len = 0;
+                   if ((size_t)len >= n) len = (int)n - 1;
+                   return roo::string_view(scratch, (size_t)len);
+                 }),
         quiet_hours_(env, "Quiet hours",
-                     "Range slider with active thumb state and 2h minimum "
-                     "separation",
+                     "Range slider: HH:00 indicator on the active thumb",
                      material3::SliderRange{0.0f, 24.0f, 1.0f}, 8.0f, 18.0f,
-                     2.0f),
+                     2.0f, QuietHoursStyle()),
         footer_divider_(env),
         note_(env,
-              "Value indicators and richer styling are intentionally left for "
-              "later steps. This screen is for visually confirming the "
-              "behavior implemented so far.",
+              "Drag a thumb to see the value indicator bubble float above it. "
+              "Subclasses override formatLabel() to format their own values; "
+              "kWithinBounds keeps the bubble clipped to the slider extent.",
               font_caption()) {
     content_.setPadding(Scaled(12));
     content_.setGap(Scaled(4));
