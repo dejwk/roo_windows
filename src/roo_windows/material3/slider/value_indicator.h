@@ -46,9 +46,10 @@ namespace material3 {
 // rectangular bounds (it does not today), the bubble would still appear in
 // front of the slider via the decoration overlay.
 //
-// The bubble lives in widget-local coordinates of the owning slider, with
-// the thumb top at local y == 0 and the bubble drawn entirely above
-// (negative y). The slider must be configured with
+// The bubble lives in widget-local coordinates of the owning slider. For
+// horizontal sliders it is drawn above the track; for vertical sliders it is
+// drawn on the leading side of the track (left side in the current LTR-only
+// implementation). The slider must be configured with
 // ParentClipMode::kUnclipped for the bubble to escape its own bounds; see
 // surface_widget_refactor_design.md.
 class ValueIndicatorBubble {
@@ -66,13 +67,15 @@ class ValueIndicatorBubble {
   // transient paint envelope without paying for a per-frame text
   // measurement.
   //
-  // For kWithinBounds, the envelope is clamped to [0, parent_width); for
-  // other behaviors, it allows the bubble to overhang either side of the
-  // slider by half of the conservative bubble width plus the thumb
-  // half-width (passed in via `horizontal_overhang`).
+  // For horizontal sliders, kWithinBounds clamps the bubble horizontally to
+  // [0, parent_width). For vertical sliders, kWithinBounds clamps the bubble
+  // vertically to [0, parent_height). In both orientations, non-clamped
+  // behaviors allow the bubble to overhang the travel axis by roughly half the
+  // conservative bubble span plus a small thumb overhang.
   static Rect ConservativeBounds(int16_t parent_width, int16_t parent_height,
-                                 int16_t horizontal_overhang,
-                                 SliderValueIndicatorBehavior behavior);
+                                 int16_t thumb_overhang,
+                                 SliderValueIndicatorBehavior behavior,
+                                 SliderOrientation orientation);
 
   // Tight bounding rectangle (in widget-local coordinates) for a bubble
   // whose thumb-center varies over [center_min, center_max] along the
@@ -81,14 +84,15 @@ class ValueIndicatorBubble {
   // rect if the behavior is kHidden or the parent dimensions are
   // non-positive.
   //
-  // Used by Slider/RangeSlider on per-value-change invalidation, to mark
-  // only the bubble strip above the swept thumb range as dirty (and to
-  // notify the parent of the same region), instead of the full
+  // Used by Slider/RangeSlider on per-value-change invalidation, to mark only
+  // the bubble strip swept by the thumb range as dirty (and to notify the
+  // parent of the same region), instead of the full
   // ConservativeBounds envelope used at layout time.
   static Rect EnvelopeForCenterRange(int16_t parent_width,
                                      int16_t parent_height, float center_min,
                                      float center_max,
-                                     SliderValueIndicatorBehavior behavior);
+                                     SliderValueIndicatorBehavior behavior,
+                                     SliderOrientation orientation);
 
   // Inset, in pixels, consumed by the rounded corners on each side of the
   // bubble. The inscribed inner rectangle (`bounds()` minus this on each
@@ -99,13 +103,15 @@ class ValueIndicatorBubble {
 
   ValueIndicatorBubble() = default;
 
-  // Computes the bubble rectangle for the given thumb position and label
-  // text, and prepares the paint state. Returns true if the bubble has a
-  // non-empty area; returns false if there is nothing to draw (in which
-  // case paint() and decorate() are no-ops).
+  // Computes the bubble rectangle for the given thumb position and label text,
+  // and prepares the paint state. `thumb_center` is in display coordinates on
+  // the thumb-travel axis: x for horizontal sliders, y for vertical sliders.
+  // Returns true if the bubble has a non-empty area; returns false if there is
+  // nothing to draw (in which case paint() and decorate() are no-ops).
   //
   // `text` must remain valid until paint() returns.
-  bool layout(int16_t parent_width, float thumb_center, roo::string_view text,
+  bool layout(int16_t parent_width, int16_t parent_height, float thumb_center,
+              SliderOrientation orientation, roo::string_view text,
               bool clamp_to_bounds, roo_display::Color bubble_color,
               roo_display::Color text_color);
 

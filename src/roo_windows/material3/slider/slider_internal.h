@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "roo_display/core/box.h"
 #include "roo_logging.h"
 #include "roo_windows/core/rect.h"
 
@@ -68,33 +69,98 @@ inline uint16_t SliderPosFromValue(float from, float to, float value) {
   return (uint16_t)pos;
 }
 
-struct SliderAxisMetrics {
-  SliderAxisMetrics(int16_t primary_span, int16_t cross_span,
-                    int16_t thumb_primary_span, int16_t interaction_radius)
-      : primary_span(primary_span),
-        cross_span(cross_span),
-        thumb_primary_span(thumb_primary_span),
-        interaction_radius(interaction_radius) {}
+// Orientation-aware geometry adapter for slider math. It lets the slider and
+// range slider express movement and painting in a single logical primary axis
+// while converting to widget-local display coordinates for horizontal and
+// vertical layouts.
+class SliderAxisMetrics {
+ public:
+  struct PaintRect {
+    float x_min;
+    float y_min;
+    float x_max;
+    float y_max;
+  };
 
-  int16_t normalizedRange() const {
-    int16_t range = primary_span - thumb_primary_span;
-    return range < 1 ? 1 : range;
-  }
+  // Builds axis metrics for a slider surface. `thumb_primary_span` is the
+  // thumb length along the travel axis. `interaction_radius` is the extra
+  // padding used when computing the dirty slice for thumb movement.
+  SliderAxisMetrics(int16_t width, int16_t height, int16_t thumb_primary_span,
+                    int16_t interaction_radius, bool vertical = false)
+      : primary_span_(vertical ? height : width),
+        cross_span_(vertical ? width : height),
+        thumb_primary_span_(thumb_primary_span),
+        interaction_radius_(interaction_radius),
+        vertical_(vertical) {}
 
+  // Returns the widget extent along the slider's travel axis.
+  int16_t primarySpan() const { return primary_span_; }
+
+  // Returns the widget extent perpendicular to the slider's travel axis.
+  int16_t crossSpan() const { return cross_span_; }
+
+  // Returns the thumb length along the logical travel axis.
+  int16_t thumbPrimarySpan() const { return thumb_primary_span_; }
+
+  // Returns the dirty-region padding used around moving thumbs.
+  int16_t interactionRadius() const { return interaction_radius_; }
+
+  // Returns whether display coordinates are mapped vertically.
+  bool isVertical() const { return vertical_; }
+
+  // Converts a normalized 16-bit position into the thumb center in logical
+  // primary-axis coordinates.
   float centerFromPos(uint16_t pos) const {
-    return 0.5f * (float)(thumb_primary_span - 1) +
+    return 0.5f * (float)(thumb_primary_span_ - 1) +
            (float)(((uint32_t)pos * (uint32_t)normalizedRange() + 32768u) >>
                    16);
   }
 
+  // Converts a normalized 16-bit position into the thumb center in
+  // display-space coordinates on the travel axis.
+  float displayCenterFromPos(uint16_t pos) const {
+    return displayPrimary(centerFromPos(pos));
+  }
+
+  // Converts a logical primary coordinate into a display-space coordinate.
+  // Vertical sliders invert the primary axis so larger logical values paint
+  // higher on screen.
+  float displayPrimary(float primary) const {
+    return vertical_ ? (float)(primary_span_ - 1) - primary : primary;
+  }
+
+  // Converts a display-space primary coordinate back into a normalized 16-bit
+  // slider position, clamping to the valid travel range.
   uint16_t posFromPrimaryCoord(int16_t primary_coord) const {
-    int32_t pos = primary_coord + 1 - thumb_primary_span / 2;
+    int32_t pos = primary_coord + 1 - thumb_primary_span_ / 2;
     int16_t range = normalizedRange();
     if (pos < 0) pos = 0;
     if (pos >= range) pos = range - 1;
     return (((uint32_t)pos << 16) + (uint32_t)(range / 2)) / (uint32_t)range;
   }
 
+  // Extracts the display-space coordinate on the travel axis from a widget
+  // point.
+  int16_t primaryCoordFromPoint(XDim x, YDim y) const {
+    return vertical_ ? (primary_span_ - 1 - y) : x;
+  }
+
+  // Projects a display-space drag delta onto the logical travel axis.
+  int16_t primaryDelta(XDim dx, YDim dy) const {
+    return vertical_ ? -dy : dx;
+  }
+
+  // Returns whether a scroll gesture should be captured by the slider based on
+  // the dominant gesture direction and current drag state.
+  bool shouldCaptureScroll(bool is_dragging, XDim dx, YDim dy) const {
+    if (!vertical_) {
+      return is_dragging || !((dy * dy > dx * dx) && dy * dy > 25);
+    }
+    return is_dragging || !((dx * dx > dy * dy) && dx * dx > 25);
+  }
+
+  // Returns whether the thumb at `pos` should be considered hit by a press at
+  // `primary_coord`, expanded by `touch_slop` pixels on both sides.
   bool hitsThumb(uint16_t pos, int16_t primary_coord,
                  int16_t touch_slop) const {
     uint16_t min_pos = posFromPrimaryCoord(primary_coord - touch_slop);
@@ -102,29 +168,102 @@ struct SliderAxisMetrics {
     return pos >= min_pos && pos <= max_pos;
   }
 
+  // Returns the widget-local dirty rectangle that covers the thumb sweep
+  // between `old_pos` and `new_pos`, padded by the interaction radius.
   Rect invalidationRectForPosChange(uint16_t old_pos, uint16_t new_pos) const {
     float old_center = centerFromPos(old_pos);
     float new_center = centerFromPos(new_pos);
     int16_t min_primary =
-        (int16_t)std::min(old_center, new_center) - interaction_radius;
+        (int16_t)std::min(old_center, new_center) - interaction_radius_;
     int16_t max_primary =
-        (int16_t)std::max(old_center, new_center) + interaction_radius;
-    return Rect(min_primary, 0, max_primary, cross_span - 1);
+        (int16_t)std::max(old_center, new_center) + interaction_radius_;
+    return rectFromPrimaryCross(min_primary, 0, max_primary, cross_span_ - 1);
+  }
+
+  // Returns the cross-axis center in display coordinates.
+  float centeredCross() const { return 0.5f * (float)(cross_span_ - 1); }
+
+  // Converts a logical primary/cross box into a display-space box.
+  roo_display::Box boxFromPrimaryCross(int16_t min_primary, int16_t min_cross,
+                                       int16_t max_primary,
+                                       int16_t max_cross) const {
+    Rect rect =
+        rectFromPrimaryCross(min_primary, min_cross, max_primary, max_cross);
+    return roo_display::Box(rect.xMin(), rect.yMin(), rect.xMax(), rect.yMax());
+  }
+
+  // Converts logical primary/cross paint bounds into display-space floating
+  // rectangle coordinates.
+  PaintRect paintRectFromPrimaryCross(float min_primary, float min_cross,
+                                      float max_primary,
+                                      float max_cross) const {
+    if (!vertical_) {
+      return PaintRect{min_primary, min_cross, max_primary, max_cross};
+    }
+    return PaintRect{min_cross, displayPrimary(max_primary), max_cross,
+                     displayPrimary(min_primary)};
+  }
+
+ private:
+  int16_t normalizedRange() const {
+    int16_t range = primary_span_ - thumb_primary_span_;
+    return range < 1 ? 1 : range;
   }
 
   int16_t centeredCrossStart(int16_t span) const {
-    return (cross_span - span) / 2;
+    return (cross_span_ - span) / 2;
   }
 
-  int16_t primary_span;
-  int16_t cross_span;
-  int16_t thumb_primary_span;
-  int16_t interaction_radius;
+  Rect rectFromPrimaryCross(int16_t min_primary, int16_t min_cross,
+                            int16_t max_primary, int16_t max_cross) const {
+    if (!vertical_) {
+      return Rect(min_primary, min_cross, max_primary, max_cross);
+    }
+    return Rect(min_cross, primary_span_ - 1 - max_primary, max_cross,
+                primary_span_ - 1 - min_primary);
+  }
+
+  int16_t primary_span_;
+  int16_t cross_span_;
+  int16_t thumb_primary_span_;
+  int16_t interaction_radius_;
+  bool vertical_;
 };
 
-inline bool ShouldCaptureHorizontalSliderScroll(bool is_dragging, XDim dx,
-                                                YDim dy) {
-  return is_dragging || !((dy * dy > dx * dx) && dy * dy > 25);
+struct DirtySpan {
+  DirtySpan() : min_coord(0), max_coord(-1) {}
+  DirtySpan(int16_t min_coord, int16_t max_coord)
+      : min_coord(min_coord), max_coord(max_coord) {}
+
+  bool empty() const { return max_coord < min_coord; }
+
+  void include(const DirtySpan& other) {
+    if (other.empty()) return;
+    if (empty()) {
+      *this = other;
+      return;
+    }
+    if (other.min_coord < min_coord) min_coord = other.min_coord;
+    if (other.max_coord > max_coord) max_coord = other.max_coord;
+  }
+
+  int16_t min_coord;
+  int16_t max_coord;
+};
+
+inline DirtySpan DisplayMainSpanFromRect(const Rect& rect, bool vertical) {
+  if (rect.empty()) return DirtySpan();
+  return vertical ? DirtySpan((int16_t)rect.yMin(), (int16_t)rect.yMax())
+                  : DirtySpan(rect.xMin(), rect.xMax());
+}
+
+inline Rect ContentRectFromDisplayMainSpan(const DirtySpan& span, int16_t width,
+                                           int16_t height, bool vertical) {
+  if (span.empty() || width <= 0 || height <= 0) return Rect(0, 0, -1, -1);
+  if (vertical) {
+    return Rect(0, span.min_coord, width - 1, span.max_coord);
+  }
+  return Rect(span.min_coord, 0, span.max_coord, height - 1);
 }
 
 struct SliderVisualMetrics {
@@ -159,13 +298,13 @@ inline SliderVisualMetrics ResolveSliderVisualMetrics(
     const SliderAxisMetrics& axis, float thumb_center_primary,
     int16_t thumb_primary_span, int16_t track_cross_span,
     int16_t track_handle_gap, int16_t thumb_cross_span) {
-  int16_t track_cross_start = axis.centeredCrossStart(track_cross_span);
+  int16_t track_cross_start = (axis.crossSpan() - track_cross_span) / 2;
   float track_min_cross = track_cross_start - 0.5f;
   float track_max_cross = track_cross_start + track_cross_span - 0.5f;
   float thumb_min_primary =
       thumb_center_primary - 0.5f * (float)(thumb_primary_span - 1) - 0.5f;
   float thumb_max_primary = thumb_min_primary + thumb_primary_span;
-  int16_t thumb_cross_start = axis.centeredCrossStart(thumb_cross_span);
+  int16_t thumb_cross_start = (axis.crossSpan() - thumb_cross_span) / 2;
   float thumb_min_cross = thumb_cross_start - 0.5f;
   float thumb_max_cross = thumb_min_cross + thumb_cross_span;
   float active_track_max_primary = thumb_min_primary - (float)track_handle_gap;
@@ -182,7 +321,7 @@ inline SliderVisualMetrics ResolveHorizontalSliderVisualMetrics(
     const SliderAxisMetrics& axis, uint16_t pos, int16_t track_cross_span,
     int16_t track_handle_gap, int16_t thumb_cross_span) {
   return ResolveSliderVisualMetrics(axis, axis.centerFromPos(pos),
-                                    axis.thumb_primary_span, track_cross_span,
+                                    axis.thumbPrimarySpan(), track_cross_span,
                                     track_handle_gap, thumb_cross_span);
 }
 

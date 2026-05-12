@@ -84,6 +84,7 @@ void initDisplay() {
 // *************** EXAMPLE STARTS HERE
 
 #include "roo_windows/containers/flex_layout.h"
+#include "roo_windows/containers/holder.h"
 #include "roo_windows/containers/scrollable_panel.h"
 #include "roo_windows/material3/slider/range_slider.h"
 #include "roo_windows/material3/slider/slider.h"
@@ -362,6 +363,114 @@ class RangeSliderRow : public FlexLayout {
   float min_separation_;
 };
 
+class FixedSizeHolder : public Holder {
+ public:
+  FixedSizeHolder(const Environment& env, XDim width, YDim height,
+                  XDim left_inset = 0, YDim top_inset = 0)
+      : Holder(env),
+        width_(width),
+        height_(height),
+        left_inset_(left_inset),
+        top_inset_(top_inset) {}
+
+ protected:
+  PreferredSize getPreferredSize() const override {
+    return PreferredSize(PreferredSize::ExactWidth(width_),
+                         PreferredSize::ExactHeight(height_));
+  }
+
+  void onLayout(bool changed, const Rect& rect) override {
+    (void)changed;
+    Widget* c = contents();
+    if (c == nullptr) return;
+    Margins m = c->getMargins();
+    Padding p = getPadding();
+    XDim w = rect.width() - m.left() - m.right() - p.left() - p.right() -
+             left_inset_;
+    YDim h = rect.height() - m.top() - m.bottom() - p.top() - p.bottom() -
+             top_inset_;
+    if (w < 0) w = 0;
+    if (h < 0) h = 0;
+    Rect bounds(left_inset_, top_inset_, left_inset_ + w - 1,
+                top_inset_ + h - 1);
+    bounds = bounds.translate(m.left() + p.left(), m.top() + p.top());
+    c->layout(bounds);
+  }
+
+ private:
+  XDim width_;
+  YDim height_;
+  XDim left_inset_;
+  YDim top_inset_;
+};
+
+class VerticalSliderShowcase : public FlexLayout {
+ public:
+  using LabelFormatter = DemoSlider::LabelFormatter;
+
+  VerticalSliderShowcase(const Environment& env, const char* primary,
+                         const char* secondary, const char* detail,
+                         material3::SliderRange range, float initial_value,
+                         SliderValueFormatter formatter,
+                         material3::SliderStyle style = {},
+                         LabelFormatter label_formatter = nullptr)
+      : FlexLayout(env, FlexDirection::kColumn),
+        header_(env, FlexDirection::kRow),
+        labels_(env, FlexDirection::kColumn),
+        primary_(env, primary, font_body1()),
+        secondary_(env, secondary, font_caption()),
+        value_(env, "", font_body1()),
+        body_(env, FlexDirection::kRow),
+        slider_slot_(env, Scaled(104), Scaled(168), Scaled(56)),
+        slider_(env, range, initial_value, material3::SliderVariant::kStandard,
+                style),
+        detail_(env, detail, font_caption()),
+        formatter_(std::move(formatter)) {
+    if (label_formatter != nullptr) {
+      slider_.setLabelFormatter(std::move(label_formatter));
+    }
+
+    setPadding(Padding(Scaled(12), Scaled(8)));
+    setGap(Scaled(8));
+
+    header_.setAlignItems(AlignItems::kCenter);
+    header_.setGap(Scaled(12));
+
+    labels_.setAlignItems(AlignItems::kFlexStart);
+    labels_.add(primary_, {.flex_grow = 0, .flex_shrink = 0});
+    labels_.add(secondary_, {.flex_grow = 0, .flex_shrink = 0});
+
+    header_.add(labels_, {.flex_grow = 1, .flex_shrink = 1});
+    header_.add(value_, {.flex_grow = 0, .flex_shrink = 0});
+
+    body_.setAlignItems(AlignItems::kCenter);
+    body_.setGap(Scaled(16));
+    slider_slot_.setContents(WidgetRef(slider_));
+    body_.add(slider_slot_, {.flex_grow = 0, .flex_shrink = 0});
+    body_.add(detail_, {.flex_grow = 1, .flex_shrink = 1});
+
+    add(header_, {.flex_grow = 0, .flex_shrink = 0});
+    add(body_, {.flex_grow = 0, .flex_shrink = 0});
+
+    slider_.setOnInteractiveChange([this]() { updateValue(); });
+    updateValue();
+  }
+
+ private:
+  void updateValue() { formatter_(value_, slider_); }
+
+  FlexLayout header_;
+  FlexLayout labels_;
+  TextLabel primary_;
+  TextLabel secondary_;
+  TextLabel value_;
+  FlexLayout body_;
+  FixedSizeHolder slider_slot_;
+  DemoSlider slider_;
+  TextLabel detail_;
+  SliderValueFormatter formatter_;
+};
+
 class FullWidthColumn : public FlexLayout {
  public:
   explicit FullWidthColumn(const Environment& env)
@@ -393,6 +502,13 @@ constexpr material3::SliderStyle QuietHoursStyle() {
   return s;
 }
 
+constexpr material3::SliderStyle TankLevelStyle() {
+  material3::SliderStyle s{};
+  s.orientation = material3::SliderOrientation::kVertical;
+  s.value_indicator = material3::SliderValueIndicatorBehavior::kShowOnInteraction;
+  return s;
+}
+
 class SliderScreen : public SimpleScrollablePanel {
  public:
   SliderScreen(const Environment& env)
@@ -400,8 +516,8 @@ class SliderScreen : public SimpleScrollablePanel {
         content_(env),
         title_(env, "Material 3 sliders", font_body1()),
         subtitle_(env,
-                  "Compatibility, semantic, discrete, centered, and range "
-                  "sliders, with custom value indicator labels.",
+                  "Compatibility, semantic, discrete, centered, vertical, "
+                  "and range sliders, with custom value indicator labels.",
                   font_caption()),
         divider_(env),
         migration_(env,
@@ -438,15 +554,31 @@ class SliderScreen : public SimpleScrollablePanel {
                    if ((size_t)len >= n) len = (int)n - 1;
                    return roo::string_view(scratch, (size_t)len);
                  }),
+        tank_level_(env, "Vertical tank level",
+                    "Orientation support: drag up to increase",
+                    "Tap anywhere on the column to jump; the same value "
+                    "domain and label formatting still apply.",
+                    material3::SliderRange{0.0f, 100.0f, 1.0f}, 62.0f,
+                    [](TextLabel& label, const material3::Slider& slider) {
+                      label.setTextf("%.0f%%", slider.value());
+                    },
+                    TankLevelStyle(), [](float value, char* scratch, size_t n) {
+                      int len = snprintf(scratch, n, "%.0f%%", value);
+                      if (len < 0) len = 0;
+                      if ((size_t)len >= n) len = (int)n - 1;
+                      return roo::string_view(scratch, (size_t)len);
+                    }),
         quiet_hours_(env, "Quiet hours",
                      "Range slider: HH:00 indicator on the active thumb",
                      material3::SliderRange{0.0f, 24.0f, 1.0f}, 8.0f, 18.0f,
                      2.0f, QuietHoursStyle()),
         footer_divider_(env),
         note_(env,
-              "Drag a thumb to see the value indicator bubble float above it. "
+            "Drag a thumb to see the value indicator bubble float next to "
+            "the active thumb. "
               "Subclasses override formatLabel() to format their own values; "
-              "kWithinBounds keeps the bubble clipped to the slider extent.",
+            "kWithinBounds keeps the bubble clipped to the slider extent, "
+            "and vertical sliders reverse the drag axis so up increases.",
               font_caption()) {
     content_.setPadding(Scaled(12));
     content_.setGap(Scaled(4));
@@ -458,6 +590,7 @@ class SliderScreen : public SimpleScrollablePanel {
     content_.add(legacy_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(fan_speed_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(balance_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(tank_level_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(quiet_hours_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(footer_divider_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(note_, {.flex_grow = 0, .flex_shrink = 0});
@@ -473,6 +606,7 @@ class SliderScreen : public SimpleScrollablePanel {
   LegacySliderRow legacy_;
   SemanticSliderRow fan_speed_;
   SemanticSliderRow balance_;
+  VerticalSliderShowcase tank_level_;
   RangeSliderRow quiet_hours_;
   HorizontalDivider footer_divider_;
   TextLabel note_;

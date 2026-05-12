@@ -9,9 +9,11 @@ namespace roo_windows {
 namespace material3 {
 
 namespace internal {
-struct SliderAxisMetrics;
+class SliderAxisMetrics;
 }  // namespace internal
 
+// Supports both horizontal and vertical range selection. Material 3 guidance
+// discourages the vertical range variant, but it is kept for API completeness.
 class RangeSlider : public BasicWidget {
  public:
   RangeSlider(const Environment& env, SliderRange range, float start_value,
@@ -110,10 +112,14 @@ class RangeSlider : public BasicWidget {
   int8_t overlay_thumb_;
   bool is_dragging_;
   bool awaiting_direction_;
-  // Tight bounding rect (widget-local) of the area that needs repainting
-  // due to value/style state changes since the last paint. See
-  // Slider::pending_dirty_rect_ for details.
-  Rect pending_dirty_rect_;
+  // Tight bounding span (widget-local, within bounds()) of the slider track
+  // and thumbs area that needs repainting due to a value/style state change.
+  internal::DirtySpan pending_content_dirty_span_;
+  // Tight bounding span (widget-local, possibly outside bounds()) of the
+  // active value indicator area that needs repainting. Kept separate from the
+  // content dirty span because the indicator repaint region is typically
+  // disjoint from the track/thumb repaint region in both orientations.
+  internal::DirtySpan pending_indicator_dirty_span_;
 };
 
 }  // namespace material3

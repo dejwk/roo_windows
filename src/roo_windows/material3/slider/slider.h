@@ -5,13 +5,10 @@
 
 #include "roo_backport/string_view.h"
 #include "roo_windows/core/basic_widget.h"
+#include "roo_windows/material3/slider/slider_internal.h"
 
 namespace roo_windows {
 namespace material3 {
-
-namespace internal {
-struct SliderAxisMetrics;
-}  // namespace internal
 
 enum class SliderVariant : uint8_t {
   kStandard,
@@ -164,14 +161,15 @@ class Slider : public BasicWidget {
   SliderStyle style_;
   float value_;
   bool is_dragging_;
-  // Tight bounding rect (widget-local) of the area that needs repainting
-  // due to value/style state changes since the last paint. Used by
-  // paintWidgetContents() to narrow the canvas clip when this widget was
-  // dirtied without being fully invalidated, so paint() draws only the
-  // narrow column around the moving thumb instead of the full conservative
-  // envelope reported by getParentTransientPaintBounds(). Reset to empty
-  // at the start of each paintWidgetContents() call.
-  Rect pending_dirty_rect_;
+  // Tight bounding span (widget-local, within bounds()) of the slider track
+  // and thumb area that needs repainting due to a value/style state change.
+  // Used by paintWidgetContents() to narrow the clip passed to paint().
+  internal::DirtySpan pending_content_dirty_span_;
+  // Tight bounding span (widget-local, possibly outside bounds()) of the
+  // value indicator area that needs repainting. Kept separate from the
+  // content dirty rect because the indicator repaint region is typically
+  // disjoint from the track/thumb repaint region in both orientations.
+  internal::DirtySpan pending_indicator_dirty_span_;
 };
 
 }  // namespace material3

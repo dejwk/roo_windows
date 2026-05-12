@@ -225,6 +225,12 @@ int16_t TrackGapForThumbWidth(int16_t thumb_width) {
   return gap < 0 ? 0 : gap;
 }
 
+internal::SliderAxisMetrics MakeSliderAxisMetrics(const RangeSlider& slider) {
+  return internal::SliderAxisMetrics(
+      slider.width(), slider.height(), kHandleWidth, kInteractionRadius,
+      slider.style().orientation == SliderOrientation::kVertical);
+}
+
 }  // namespace
 
 RangeSlider::RangeSlider(const Environment& env, SliderRange range,
@@ -239,7 +245,8 @@ RangeSlider::RangeSlider(const Environment& env, SliderRange range,
       overlay_thumb_(kNoActiveThumb),
       is_dragging_(false),
       awaiting_direction_(false),
-      pending_dirty_rect_(0, 0, -1, -1) {
+      pending_content_dirty_span_(),
+      pending_indicator_dirty_span_() {
   internal::CheckValidSliderRange(range_.from, range_.to, range_.step);
   NormalizeOrderedValuesWithSeparation(range_, start_value, end_value,
                                        min_separation_, kNoActiveThumb,
@@ -257,18 +264,18 @@ bool RangeSlider::onDown(XDim x, YDim y) {
 
 bool RangeSlider::onSingleTapUp(XDim x, YDim y) {
   if (!isEnabled()) return false;
-  internal::SliderAxisMetrics axis(width(), height(), kHandleWidth,
-                                   kInteractionRadius);
+  internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
+  int16_t primary_coord = axis.primaryCoordFromPoint(x, y);
   uint16_t start_pos =
       internal::SliderPosFromValue(range_.from, range_.to, start_value_);
   uint16_t end_pos =
       internal::SliderPosFromValue(range_.from, range_.to, end_value_);
-  active_thumb_ = ResolveNearestThumb(axis, start_pos, end_pos, x);
+  active_thumb_ = ResolveNearestThumb(axis, start_pos, end_pos, primary_coord);
   overlay_thumb_ = active_thumb_;
   awaiting_direction_ = false;
   BasicWidget::onSingleTapUp(x, y);
   onInteractionStart(active_thumb_);
-  if (setActiveThumbPos(axis.posFromPrimaryCoord(x))) {
+  if (setActiveThumbPos(axis.posFromPrimaryCoord(primary_coord))) {
     triggerInteractiveChange();
   }
   onInteractionEnd(start_value_, end_value_);
@@ -279,15 +286,15 @@ bool RangeSlider::onSingleTapUp(XDim x, YDim y) {
 
 void RangeSlider::onShowPress(XDim x, YDim y) {
   if (!isEnabled()) return;
-  internal::SliderAxisMetrics axis(width(), height(), kHandleWidth,
-                                   kInteractionRadius);
+  internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
   uint16_t start_pos =
       internal::SliderPosFromValue(range_.from, range_.to, start_value_);
   uint16_t end_pos =
       internal::SliderPosFromValue(range_.from, range_.to, end_value_);
   bool awaiting_direction = false;
-  int thumb =
-      ResolveThumbForPress(axis, start_pos, end_pos, x, awaiting_direction);
+  int thumb = ResolveThumbForPress(axis, start_pos, end_pos,
+                                   axis.primaryCoordFromPoint(x, y),
+                                   awaiting_direction);
   if (awaiting_direction) {
     active_thumb_ = kNoActiveThumb;
     awaiting_direction_ = true;
@@ -302,26 +309,25 @@ void RangeSlider::onShowPress(XDim x, YDim y) {
     is_dragging_ = true;
     onInteractionStart(active_thumb_);
   }
-  if (setActiveThumbPos(axis.posFromPrimaryCoord(x))) {
+  if (setActiveThumbPos(
+          axis.posFromPrimaryCoord(axis.primaryCoordFromPoint(x, y)))) {
     triggerInteractiveChange();
   }
   Widget::onShowPress(x, y);
 }
 
 bool RangeSlider::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
-  (void)y;
   if (!isEnabled()) return false;
-  if (!internal::ShouldCaptureHorizontalSliderScroll(
-          is_dragging_ || awaiting_direction_, dx, dy)) {
+  internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
+  if (!axis.shouldCaptureScroll(is_dragging_ || awaiting_direction_, dx, dy)) {
     return false;
   }
 
-  internal::SliderAxisMetrics axis(width(), height(), kHandleWidth,
-                                   kInteractionRadius);
   if (awaiting_direction_) {
-    if (dx < 0) {
+    int16_t primary_delta = axis.primaryDelta(dx, dy);
+    if (primary_delta < 0) {
       active_thumb_ = 0;
-    } else if (dx > 0) {
+    } else if (primary_delta > 0) {
       active_thumb_ = 1;
     } else {
       return true;
@@ -335,13 +341,15 @@ bool RangeSlider::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
         internal::SliderPosFromValue(range_.from, range_.to, start_value_);
     uint16_t end_pos =
         internal::SliderPosFromValue(range_.from, range_.to, end_value_);
-    active_thumb_ = ResolveNearestThumb(axis, start_pos, end_pos, x);
+    active_thumb_ = ResolveNearestThumb(axis, start_pos, end_pos,
+                                        axis.primaryCoordFromPoint(x, y));
     overlay_thumb_ = active_thumb_;
     is_dragging_ = true;
     onInteractionStart(active_thumb_);
   }
 
-  bool changed = setActiveThumbPos(axis.posFromPrimaryCoord(x));
+  bool changed = setActiveThumbPos(
+      axis.posFromPrimaryCoord(axis.primaryCoordFromPoint(x, y)));
   if (changed) {
     setPressed(true);
     triggerInteractiveChange();
@@ -398,8 +406,7 @@ bool RangeSlider::setRange(SliderRange range) {
         internal::SliderPosFromValue(range_.from, range_.to, start_value_);
     uint16_t new_end_pos =
         internal::SliderPosFromValue(range_.from, range_.to, end_value_);
-    internal::SliderAxisMetrics axis(width(), height(), kHandleWidth,
-                                     kInteractionRadius);
+    internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
     invalidateValueChange(axis, old_start_pos, old_end_pos, new_start_pos,
                           new_end_pos);
   }
@@ -437,8 +444,7 @@ bool RangeSlider::setMinSeparation(float value) {
         internal::SliderPosFromValue(range_.from, range_.to, start_value_);
     uint16_t new_end_pos =
         internal::SliderPosFromValue(range_.from, range_.to, end_value_);
-    internal::SliderAxisMetrics axis(width(), height(), kHandleWidth,
-                                     kInteractionRadius);
+    internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
     invalidateValueChange(axis, old_start_pos, old_end_pos, new_start_pos,
                           new_end_pos);
   }
@@ -490,8 +496,7 @@ bool RangeSlider::setValuesInternal(float start_value, float end_value,
         internal::SliderPosFromValue(range_.from, range_.to, start_value_);
     uint16_t new_end_pos =
         internal::SliderPosFromValue(range_.from, range_.to, end_value_);
-    internal::SliderAxisMetrics axis(width(), height(), kHandleWidth,
-                                     kInteractionRadius);
+    internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
     invalidateValueChange(axis, old_start_pos, old_end_pos, new_start_pos,
                           new_end_pos);
   }
@@ -526,38 +531,50 @@ void RangeSlider::invalidateValueChange(const internal::SliderAxisMetrics& axis,
                                         uint16_t new_end_pos) {
   Rect thumb_rect = InvalidationRectForValueChange(
       axis, old_start_pos, old_end_pos, new_start_pos, new_end_pos);
-  Rect dirty_rect = thumb_rect;
-  Rect bubble_envelope;
+  Rect bubble_envelope(0, 0, -1, -1);
   if (IndicatorEnabled(style_) && ShowsValueIndicator(*this)) {
     uint16_t old_active_pos =
         (active_thumb_ == 1) ? old_end_pos : old_start_pos;
     uint16_t new_active_pos =
         (active_thumb_ == 1) ? new_end_pos : new_start_pos;
-    float c_old = axis.centerFromPos(old_active_pos);
-    float c_new = axis.centerFromPos(new_active_pos);
+    float c_old = axis.displayCenterFromPos(old_active_pos);
+    float c_new = axis.displayCenterFromPos(new_active_pos);
     bubble_envelope = ValueIndicatorBubble::EnvelopeForCenterRange(
         width(), height(), std::min(c_old, c_new), std::max(c_old, c_new),
-        style_.value_indicator);
-    if (!bubble_envelope.empty()) {
-      dirty_rect = Rect::Extent(dirty_rect, bubble_envelope);
-    }
+        style_.value_indicator, style_.orientation);
   }
-  if (pending_dirty_rect_.empty()) {
-    pending_dirty_rect_ = dirty_rect;
-  } else {
-    pending_dirty_rect_ = Rect::Extent(pending_dirty_rect_, dirty_rect);
-  }
-  setDirty(dirty_rect);
+  pending_content_dirty_span_.include(
+      internal::DisplayMainSpanFromRect(thumb_rect, axis.isVertical()));
+  pending_indicator_dirty_span_.include(
+      internal::DisplayMainSpanFromRect(bubble_envelope, axis.isVertical()));
+  setDirty(thumb_rect);
   if (!bubble_envelope.empty()) {
     notifyParentInvalidatedRegion(
         bubble_envelope.translate(offsetLeft(), offsetTop()));
   }
 }
 
+namespace {
+
+Rect IndicatorDirtyRectFromSpan(const internal::DirtySpan& span, int16_t width,
+                                int16_t height, SliderStyle style) {
+  if (span.empty() || width <= 0 || height <= 0) return Rect(0, 0, -1, -1);
+  Rect conservative = ValueIndicatorBubble::ConservativeBounds(
+      width, height, kHandleWidth, style.value_indicator, style.orientation);
+  if (conservative.empty()) return Rect(0, 0, -1, -1);
+  if (style.orientation == SliderOrientation::kVertical) {
+    return Rect(conservative.xMin(), span.min_coord, conservative.xMax(),
+                span.max_coord);
+  }
+  return Rect(span.min_coord, conservative.yMin(), span.max_coord,
+              conservative.yMax());
+}
+
+}  // namespace
+
 void RangeSlider::paint(const Canvas& canvas) const {
   Tokens tokens = ResolveTokens(*this);
-  internal::SliderAxisMetrics axis(width(), height(), kHandleWidth,
-                                   kInteractionRadius);
+  internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
   uint16_t start_pos =
       internal::SliderPosFromValue(range_.from, range_.to, start_value_);
   uint16_t end_pos =
@@ -580,9 +597,11 @@ void RangeSlider::paint(const Canvas& canvas) const {
   int16_t active_clip_min = (int16_t)ceilf(active_track_min_primary);
   int16_t active_clip_max = (int16_t)floorf(active_track_max_primary);
   if (active_clip_min < 0) active_clip_min = 0;
-  if (active_clip_max >= width()) active_clip_max = width() - 1;
+  if (active_clip_max >= axis.primarySpan()) {
+    active_clip_max = axis.primarySpan() - 1;
+  }
 
-  roo_display::Box active_clip(
+  roo_display::Box active_clip = axis.boxFromPrimaryCross(
       active_clip_min, start_layout.track_cross_start, active_clip_max,
       start_layout.track_cross_start + kTrackHeight - 1);
   bool has_left_inactive_clip = true;
@@ -592,40 +611,57 @@ void RangeSlider::paint(const Canvas& canvas) const {
   if (left_inactive_max < 0) {
     has_left_inactive_clip = false;
   } else {
-    if (left_inactive_max >= width()) left_inactive_max = width() - 1;
-    left_inactive_clip =
-        roo_display::Box(0, start_layout.track_cross_start, left_inactive_max,
-                         start_layout.track_cross_start + kTrackHeight - 1);
+    if (left_inactive_max >= axis.primarySpan()) {
+      left_inactive_max = axis.primarySpan() - 1;
+    }
+    left_inactive_clip = axis.boxFromPrimaryCross(
+        0, start_layout.track_cross_start, left_inactive_max,
+        start_layout.track_cross_start + kTrackHeight - 1);
   }
   bool has_right_inactive_clip = true;
   int16_t right_inactive_min =
       (int16_t)ceilf(end_layout.inactive_track_min_primary);
   roo_display::Box right_inactive_clip;
-  if (right_inactive_min >= width()) {
+  if (right_inactive_min >= axis.primarySpan()) {
     has_right_inactive_clip = false;
   } else {
     if (right_inactive_min < 0) right_inactive_min = 0;
-    right_inactive_clip = roo_display::Box(
-        right_inactive_min, start_layout.track_cross_start, width() - 1,
+    right_inactive_clip = axis.boxFromPrimaryCross(
+        right_inactive_min, start_layout.track_cross_start,
+        axis.primarySpan() - 1,
         start_layout.track_cross_start + kTrackHeight - 1);
   }
 
-  auto inactive_track = SmoothFilledRoundRect(
-      TrackShapeMinPrimary(0.0f), start_layout.track_min_cross, width() - 0.5f,
-      start_layout.track_max_cross, kTrackRadius, tokens.inactive_track);
-  auto active_track = SmoothFilledRoundRect(
+  auto inactive_track_bounds = axis.paintRectFromPrimaryCross(
+      TrackShapeMinPrimary(0.0f), start_layout.track_min_cross,
+      axis.primarySpan() - 0.5f, start_layout.track_max_cross);
+  auto active_track_bounds = axis.paintRectFromPrimaryCross(
       TrackShapeMinPrimary(active_track_min_primary),
       start_layout.track_min_cross,
       active_track_max_primary + (float)kTrackRadius,
-      start_layout.track_max_cross, kTrackRadius, tokens.active_track);
-  auto start_handle = SmoothFilledRoundRect(
+      start_layout.track_max_cross);
+  auto start_handle_bounds = axis.paintRectFromPrimaryCross(
       start_layout.thumb_min_primary, start_layout.thumb_min_cross,
-      start_layout.thumb_max_primary, start_layout.thumb_max_cross,
-      kHandleCornerRadius, tokens.handle);
-  auto end_handle = SmoothFilledRoundRect(
+      start_layout.thumb_max_primary, start_layout.thumb_max_cross);
+  auto end_handle_bounds = axis.paintRectFromPrimaryCross(
       end_layout.thumb_min_primary, end_layout.thumb_min_cross,
-      end_layout.thumb_max_primary, end_layout.thumb_max_cross,
-      kHandleCornerRadius, tokens.handle);
+      end_layout.thumb_max_primary, end_layout.thumb_max_cross);
+
+  auto inactive_track = SmoothFilledRoundRect(
+      inactive_track_bounds.x_min, inactive_track_bounds.y_min,
+      inactive_track_bounds.x_max, inactive_track_bounds.y_max, kTrackRadius,
+      tokens.inactive_track);
+  auto active_track = SmoothFilledRoundRect(
+      active_track_bounds.x_min, active_track_bounds.y_min,
+      active_track_bounds.x_max, active_track_bounds.y_max, kTrackRadius,
+      tokens.active_track);
+  auto start_handle = SmoothFilledRoundRect(
+      start_handle_bounds.x_min, start_handle_bounds.y_min,
+      start_handle_bounds.x_max, start_handle_bounds.y_max, kHandleCornerRadius,
+      tokens.handle);
+  auto end_handle = SmoothFilledRoundRect(
+      end_handle_bounds.x_min, end_handle_bounds.y_min, end_handle_bounds.x_max,
+      end_handle_bounds.y_max, kHandleCornerRadius, tokens.handle);
 
   roo_display::StreamableStack composite(
       roo_display::Box(0, 0, width() - 1, height() - 1));
@@ -648,13 +684,16 @@ Dimensions RangeSlider::getSuggestedMinimumDimensions() const {
 }
 
 PreferredSize RangeSlider::getPreferredSize() const {
+  if (style_.orientation == SliderOrientation::kVertical) {
+    return PreferredSize(PreferredSize::ExactWidth(kHandleHeight),
+                         PreferredSize::MatchParentHeight());
+  }
   return PreferredSize(PreferredSize::MatchParentWidth(),
                        PreferredSize::ExactHeight(kHandleHeight));
 }
 
 roo_display::FpPoint RangeSlider::getPointOverlayFocus() const {
-  internal::SliderAxisMetrics axis(width(), height(), kHandleWidth,
-                                   kInteractionRadius);
+  internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
   uint16_t start_pos =
       internal::SliderPosFromValue(range_.from, range_.to, start_value_);
   uint16_t end_pos =
@@ -663,8 +702,14 @@ roo_display::FpPoint RangeSlider::getPointOverlayFocus() const {
   if (thumb == kNoActiveThumb) {
     thumb = overlay_thumb_;
   }
-  float focus_primary = axis.centerFromPos(thumb == 1 ? end_pos : start_pos);
-  return roo_display::FpPoint{focus_primary, 0.5f * (float)(height() - 1)};
+  if (style_.orientation == SliderOrientation::kVertical) {
+    return roo_display::FpPoint{axis.centeredCross(),
+                                axis.displayCenterFromPos(thumb == 1 ? end_pos
+                                                                   : start_pos)};
+  }
+  return roo_display::FpPoint{axis.displayCenterFromPos(thumb == 1 ? end_pos
+                                                                  : start_pos),
+                              axis.centeredCross()};
 }
 
 ColorRole RangeSlider::effectiveContainerRole() const {
@@ -690,7 +735,8 @@ Rect RangeSlider::getParentTransientPaintBounds() const {
       isPressed() || isDragged();
   if (!may_show || width() <= 0 || height() <= 0) return base;
   Rect bubble_local = ValueIndicatorBubble::ConservativeBounds(
-      width(), height(), kHandleWidth, style_.value_indicator);
+      width(), height(), kHandleWidth, style_.value_indicator,
+      style_.orientation);
   if (bubble_local.empty()) return base;
   Rect bubble_parent = bubble_local.translate(offsetLeft(), offsetTop());
   return Rect::Extent(base, bubble_parent);
@@ -700,16 +746,16 @@ void RangeSlider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
   // See Slider::paintWidgetContents() for the rationale on ordering and
   // on narrowing the canvas clip when the repaint is driven by a
   // value/style state change (rather than a forced full invalidation).
-  Rect pending = pending_dirty_rect_;
-  pending_dirty_rect_ = Rect(0, 0, -1, -1);
-  Canvas my_canvas = canvas;
-  if (!isInvalidated() && !pending.empty()) {
-    my_canvas.clipToExtents(pending);
-    if (my_canvas.clip_box().empty()) {
-      BasicWidget::paintWidgetContents(canvas, clipper);
-      return;
-    }
-  }
+  internal::DirtySpan pending_content_span = pending_content_dirty_span_;
+  internal::DirtySpan pending_indicator_span = pending_indicator_dirty_span_;
+  pending_content_dirty_span_ = internal::DirtySpan();
+  pending_indicator_dirty_span_ = internal::DirtySpan();
+
+  Rect pending_content = internal::ContentRectFromDisplayMainSpan(
+      pending_content_span, width(), height(),
+      style_.orientation == SliderOrientation::kVertical);
+  Rect pending_indicator = IndicatorDirtyRectFromSpan(
+      pending_indicator_span, width(), height(), style_);
   // Pre-paint the active thumb's value indicator bubble before the slider
   // contents. See Slider::paintWidgetContents() for the rationale on
   // ordering and the role of paint() vs decorate(). The canvas is already
@@ -717,7 +763,8 @@ void RangeSlider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
   // getTransientPaintBounds() -> our getParentTransientPaintBounds()
   // override) already covers the bubble's conservative envelope when the
   // indicator is showing.
-  if (ShowsValueIndicator(*this) && width() > 0 && height() > 0) {
+  auto paint_indicator = [&](const Canvas& indicator_canvas) {
+    if (!ShowsValueIndicator(*this) || width() <= 0 || height() <= 0) return;
     // ShowsValueIndicator() guarantees activeThumbIndex() >= 0.
     int thumb = active_thumb_;
     float thumb_value = (thumb == 1) ? end_value_ : start_value_;
@@ -731,21 +778,44 @@ void RangeSlider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
     Color text_color =
         isEnabled() ? th.color.inverseOnSurface : th.color.surface;
 
-    internal::SliderAxisMetrics axis(width(), height(), kHandleWidth,
-                                     kInteractionRadius);
+    internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
     uint16_t pos =
         internal::SliderPosFromValue(range_.from, range_.to, thumb_value);
-    float thumb_center = axis.centerFromPos(pos);
+    float thumb_center = axis.displayCenterFromPos(pos);
     bool clamp =
         style_.value_indicator == SliderValueIndicatorBehavior::kWithinBounds;
 
     ValueIndicatorBubble bubble;
-    if (bubble.layout(width(), thumb_center, text, clamp, bubble_color,
-                      text_color)) {
-      bubble.paint(my_canvas);
-      bubble.decorate(my_canvas, clipper, OverlaySpec());
+    if (bubble.layout(width(), height(), thumb_center, style_.orientation, text,
+                      clamp, bubble_color, text_color)) {
+      bubble.paint(indicator_canvas);
+      bubble.decorate(indicator_canvas, clipper, OverlaySpec());
     }
+  };
+
+  if (!isInvalidated()) {
+    if (!pending_indicator.empty()) {
+      Canvas indicator_canvas = canvas;
+      indicator_canvas.clipToExtents(pending_indicator);
+      if (!indicator_canvas.clip_box().empty()) {
+        paint_indicator(indicator_canvas);
+      }
+    }
+
+    Canvas content_canvas = prepareContentsCanvas(canvas);
+    if (!pending_content.empty()) {
+      content_canvas.clipToExtents(pending_content);
+    }
+    if (!content_canvas.clip_box().empty()) {
+      clipper.setBounds(content_canvas.clip_box());
+      paint(content_canvas);
+    }
+    markClean();
+    return;
   }
+
+  Canvas my_canvas = canvas;
+  paint_indicator(my_canvas);
   BasicWidget::paintWidgetContents(my_canvas, clipper);
 }
 

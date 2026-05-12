@@ -612,6 +612,70 @@ TEST_F(Material3SliderAppTest,
   EXPECT_EQ(12345, slider.getPos());
 }
 
+TEST(Material3SliderOrientation, VerticalPreferredSizeSwapsMajorAxis) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+
+  SliderStyle style{};
+  style.orientation = SliderOrientation::kVertical;
+  Slider slider(env, SliderRange{0.0f, 1.0f}, 0.5f, SliderVariant::kStandard,
+                style);
+
+  PreferredSize preferred = slider.getPreferredSize();
+
+  EXPECT_TRUE(preferred.width().isExact());
+  EXPECT_EQ(Scaled(44), preferred.width().value());
+  EXPECT_TRUE(preferred.height().isMatchParent());
+}
+
+TEST_F(Material3SliderAppTest, VerticalSliderScrollUpUpdatesPosition) {
+  SliderStyle style{};
+  style.orientation = SliderOrientation::kVertical;
+  auto vertical_slider = std::make_unique<Slider>(
+      env_, SliderRange{0.0f, 1.0f}, 0.0f, SliderVariant::kStandard, style);
+  slider_ = vertical_slider.get();
+  app_.add(std::move(vertical_slider),
+           roo_display::Box(kSliderX, kSliderY, kSliderX + Scaled(44) - 1,
+                            kSliderY + Scaled(60) - 1));
+  ASSERT_TRUE(app_.refresh());
+
+  EXPECT_TRUE(slider().onScroll(slider().width() / 2, 2, 0, -Scaled(12)));
+  EXPECT_GT(slider().getPos(), 60000);
+}
+
+TEST_F(Material3SliderAppTest,
+       VerticalSliderHorizontalDominantScrollDoesNotCaptureWhenNotDragging) {
+  SliderStyle style{};
+  style.orientation = SliderOrientation::kVertical;
+  auto vertical_slider = std::make_unique<Slider>(
+      env_, SliderRange{0.0f, 1.0f}, 0.4f, SliderVariant::kStandard, style);
+  slider_ = vertical_slider.get();
+  app_.add(std::move(vertical_slider),
+           roo_display::Box(kSliderX, kSliderY, kSliderX + Scaled(44) - 1,
+                            kSliderY + Scaled(60) - 1));
+  ASSERT_TRUE(app_.refresh());
+
+  uint16_t old_pos = slider().getPos();
+  EXPECT_FALSE(slider().onScroll(slider().width() / 2, slider().height() / 2,
+                                 Scaled(8), 1));
+  EXPECT_EQ(old_pos, slider().getPos());
+}
+
+TEST_F(Material3SliderAppTest, VerticalTapToJumpUsesReversedYMapping) {
+  SliderStyle style{};
+  style.orientation = SliderOrientation::kVertical;
+  auto vertical_slider = std::make_unique<Slider>(
+      env_, SliderRange{0.0f, 1.0f}, 0.0f, SliderVariant::kStandard, style);
+  slider_ = vertical_slider.get();
+  app_.add(std::move(vertical_slider),
+           roo_display::Box(kSliderX, kSliderY, kSliderX + Scaled(44) - 1,
+                            kSliderY + Scaled(60) - 1));
+  ASSERT_TRUE(app_.refresh());
+
+  EXPECT_TRUE(slider().onSingleTapUp(slider().width() / 2, 1));
+  EXPECT_GT(slider().getPos(), 62000);
+}
+
 TEST_F(Material3SliderAppTest, TapToJumpUsesCurrentNormalizedMapping) {
   Slider& slider = addSlider(0);
 
@@ -930,6 +994,57 @@ TEST_F(Material3SliderRenderTest,
 }
 
 TEST_F(Material3SliderRenderTest,
+       VerticalSliderPaintsActiveTrackFromBottomToThumb) {
+  constexpr Color kBackdropColor(0xFFF3EFE7);
+  constexpr int16_t kVerticalWidth = Scaled(44);
+  constexpr int16_t kVerticalHeight = Scaled(60);
+
+  SliderStyle style{};
+  style.orientation = SliderOrientation::kVertical;
+
+  auto backdrop = std::make_unique<SolidBackdrop>(env_, kBackdropColor,
+                                                  Dimensions(kWidth, kHeight));
+  auto slider = std::make_unique<Slider>(env_, SliderRange{0.0f, 1.0f}, 0.5f,
+                                         SliderVariant::kStandard, style);
+  Slider* slider_ptr = slider.get();
+  slider_ = slider_ptr;
+
+  app_.add(std::move(backdrop),
+           roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
+  app_.add(std::move(slider),
+           roo_display::Box(kSliderX, kSliderY, kSliderX + kVerticalWidth - 1,
+                            kSliderY + kVerticalHeight - 1));
+
+  ASSERT_TRUE(app_.refresh());
+
+  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
+                                   Scaled(4), Scaled(20), true);
+  internal::SliderVisualMetrics layout = internal::ResolveSliderVisualMetrics(
+      axis, axis.centerFromPos(slider_ptr->getPos()), Scaled(4), Scaled(16),
+      Scaled(6), Scaled(44));
+
+  Rect active_rect(
+      axis.boxFromPrimaryCross(0, layout.track_cross_start,
+                               (int16_t)floorf(layout.active_track_max_primary),
+                               layout.track_cross_start + Scaled(16) - 1));
+  Rect inactive_rect(axis.boxFromPrimaryCross(
+      (int16_t)ceilf(layout.inactive_track_min_primary),
+      layout.track_cross_start, axis.primarySpan() - 1,
+      layout.track_cross_start + Scaled(16) - 1));
+
+  Color primary = QuantizeToArgb4444(env_.theme().color.primary);
+  Color inactive = QuantizeToArgb4444(env_.theme().color.secondaryContainer);
+
+  EXPECT_EQ(primary,
+            pixelAt(kSliderX + active_rect.xMin() + active_rect.width() / 2,
+                    kSliderY + active_rect.yMin() + active_rect.height() / 2));
+  EXPECT_EQ(
+      inactive,
+      pixelAt(kSliderX + inactive_rect.xMin() + inactive_rect.width() / 2,
+              kSliderY + inactive_rect.yMin() + inactive_rect.height() / 2));
+}
+
+TEST_F(Material3SliderRenderTest,
        ValueIndicatorValueChangePaintIsClippedToDirtySlice) {
   SliderStyle style{};
   style.value_indicator = SliderValueIndicatorBehavior::kAlways;
@@ -956,20 +1071,50 @@ TEST_F(Material3SliderRenderTest,
   uint16_t old_pos = internal::SliderPosFromValue(0.0f, 1.0f, 0.2f);
   uint16_t new_pos = internal::SliderPosFromValue(0.0f, 1.0f, 0.8f);
   Rect thumb_rect = axis.invalidationRectForPosChange(old_pos, new_pos);
-  Rect bubble_rect = ValueIndicatorBubble::EnvelopeForCenterRange(
-      slider_ptr->width(), slider_ptr->height(),
-      std::min(axis.centerFromPos(old_pos), axis.centerFromPos(new_pos)),
-      std::max(axis.centerFromPos(old_pos), axis.centerFromPos(new_pos)),
-      style.value_indicator);
-  Rect expected_clip =
-      Rect::Intersect(Rect::Extent(thumb_rect, bubble_rect),
-                      slider_ptr->bounds())
-          .translate(kSliderX, kSliderY);
+  Rect expected_clip = Rect::Intersect(thumb_rect, slider_ptr->bounds())
+                           .translate(kSliderX, kSliderY);
 
   EXPECT_EQ(expected_clip, slider_ptr->lastPaintClip());
 
   Rect full_indicator_envelope = slider_ptr->getParentTransientPaintBounds();
   EXPECT_LT(expected_clip.width(), full_indicator_envelope.width());
+}
+
+TEST_F(Material3SliderRenderTest,
+       VerticalValueIndicatorValueChangePaintIsClippedToThumbSlice) {
+  SliderStyle style{};
+  style.orientation = SliderOrientation::kVertical;
+  style.value_indicator = SliderValueIndicatorBehavior::kAlways;
+
+  auto slider = std::make_unique<ClipTrackingSlider>(
+      env_, SliderRange{0.0f, 1.0f}, 0.2f, SliderVariant::kStandard, style);
+  ClipTrackingSlider* slider_ptr = slider.get();
+  slider_ = slider_ptr;
+
+  app_.add(std::move(slider),
+           roo_display::Box(kSliderX, kSliderY, kSliderX + Scaled(44) - 1,
+                            kSliderY + Scaled(56) - 1));
+
+  ASSERT_TRUE(app_.refresh());
+  slider_ptr->clearPaintObservation();
+
+  ASSERT_TRUE(slider_ptr->setValue(0.8f));
+  ASSERT_TRUE(app_.refresh());
+
+  ASSERT_EQ(1, slider_ptr->paintCalls());
+
+  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
+                                   Scaled(4), kPointOverlayDiameter / 2, true);
+  uint16_t old_pos = internal::SliderPosFromValue(0.0f, 1.0f, 0.2f);
+  uint16_t new_pos = internal::SliderPosFromValue(0.0f, 1.0f, 0.8f);
+  Rect thumb_rect = axis.invalidationRectForPosChange(old_pos, new_pos);
+  Rect expected_clip = Rect::Intersect(thumb_rect, slider_ptr->bounds())
+                           .translate(kSliderX, kSliderY);
+
+  EXPECT_EQ(expected_clip, slider_ptr->lastPaintClip());
+
+  Rect full_indicator_envelope = slider_ptr->getParentTransientPaintBounds();
+  EXPECT_LT(expected_clip.height(), full_indicator_envelope.height());
 }
 
 namespace {
@@ -1053,6 +1198,23 @@ TEST(Material3SliderValueIndicator, TransientPaintBoundsExpandAboveWhenAlways) {
   EXPECT_LT(base.yMin(), 0);
 }
 
+TEST(Material3SliderValueIndicator,
+     VerticalTransientPaintBoundsExpandLeftWhenAlways) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  SliderStyle s{};
+  s.orientation = SliderOrientation::kVertical;
+  s.value_indicator = SliderValueIndicatorBehavior::kAlways;
+  Slider slider(env, SliderRange{0.0f, 1.0f}, 0.5f, SliderVariant::kStandard,
+                s);
+  slider.measure(WidthSpec::Exactly(Scaled(44)),
+                 HeightSpec::Exactly(Scaled(96)));
+  slider.layout(Rect(0, 0, Scaled(44) - 1, Scaled(96) - 1));
+  Rect base = slider.getParentTransientPaintBounds();
+  EXPECT_LT(base.xMin(), 0);
+  EXPECT_LT(base.yMin(), 0);
+}
+
 TEST(Material3RangeSliderValueIndicator, FormatLabelDefault) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -1074,6 +1236,27 @@ TEST(Material3RangeSliderValueIndicator,
   Rect bounds = slider.getParentTransientPaintBounds();
   // Not pressed/dragged and not kAlways: no extra expansion above the widget.
   EXPECT_GE(bounds.yMin(), 0);
+}
+
+TEST_F(Material3SliderAppTest,
+       VerticalRangeSingleTapChoosesNearestThumbByYPosition) {
+  SliderStyle style{};
+  style.orientation = SliderOrientation::kVertical;
+  auto tracking_slider = std::make_unique<TrackingRangeSlider>(
+      env_, SliderRange{0.0f, 100.0f}, 20.0f, 80.0f, style);
+  TrackingRangeSlider* tracking = tracking_slider.get();
+  app_.add(std::move(tracking_slider),
+           roo_display::Box(kSliderX, kSliderY, kSliderX + Scaled(44) - 1,
+                            kSliderY + Scaled(60) - 1));
+  ASSERT_TRUE(app_.refresh());
+
+  ASSERT_TRUE(tracking->onSingleTapUp(tracking->width() / 2, 2));
+  ASSERT_GE(tracking->events.size(), 2u);
+  EXPECT_STREQ("start", tracking->events[0]);
+  EXPECT_STREQ("value:user:", tracking->events[1]);
+  ASSERT_GE(tracking->active_thumbs.size(), 2u);
+  EXPECT_EQ(1, tracking->active_thumbs[0]);
+  EXPECT_EQ(1, tracking->active_thumbs[1]);
 }
 
 }  // namespace

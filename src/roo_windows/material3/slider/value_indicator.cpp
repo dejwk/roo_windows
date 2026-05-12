@@ -70,8 +70,8 @@ roo::string_view ValueIndicatorBubble::FormatDefault(float value, char* scratch,
 
 // static
 Rect ValueIndicatorBubble::ConservativeBounds(
-    int16_t parent_width, int16_t parent_height, int16_t horizontal_overhang,
-    SliderValueIndicatorBehavior behavior) {
+    int16_t parent_width, int16_t parent_height, int16_t thumb_overhang,
+    SliderValueIndicatorBehavior behavior, SliderOrientation orientation) {
   if (behavior == SliderValueIndicatorBehavior::kHidden || parent_width <= 0 ||
       parent_height <= 0) {
     return Rect();
@@ -79,13 +79,28 @@ Rect ValueIndicatorBubble::ConservativeBounds(
   int16_t bw = kBubbleMaxWidth;
   int16_t bh = 2 * kPaddingV + kCaptionHeight;
   bool clamp = behavior == SliderValueIndicatorBehavior::kWithinBounds;
+  if (orientation == SliderOrientation::kVertical) {
+    if (clamp && bh > parent_height) bh = parent_height;
+    int16_t top, bottom;
+    if (clamp) {
+      top = 0;
+      bottom = parent_height - 1;
+    } else {
+      int16_t margin = bh / 2 + thumb_overhang;
+      top = -margin;
+      bottom = parent_height - 1 + margin;
+    }
+    int16_t right = -kGap - 1;
+    int16_t left = right - bw + 1;
+    return Rect(left, top, right, bottom);
+  }
   if (clamp && bw > parent_width) bw = parent_width;
   int16_t left, right;
   if (clamp) {
     left = 0;
     right = parent_width - 1;
   } else {
-    int16_t margin = bw / 2 + horizontal_overhang;
+    int16_t margin = bw / 2 + thumb_overhang;
     left = -margin;
     right = parent_width - 1 + margin;
   }
@@ -97,7 +112,8 @@ Rect ValueIndicatorBubble::ConservativeBounds(
 // static
 Rect ValueIndicatorBubble::EnvelopeForCenterRange(
     int16_t parent_width, int16_t parent_height, float center_min,
-    float center_max, SliderValueIndicatorBehavior behavior) {
+    float center_max, SliderValueIndicatorBehavior behavior,
+    SliderOrientation orientation) {
   if (behavior == SliderValueIndicatorBehavior::kHidden || parent_width <= 0 ||
       parent_height <= 0) {
     return Rect();
@@ -106,6 +122,25 @@ Rect ValueIndicatorBubble::EnvelopeForCenterRange(
   int16_t bw = kBubbleMaxWidth;
   int16_t bh = 2 * kPaddingV + kCaptionHeight;
   bool clamp = behavior == SliderValueIndicatorBehavior::kWithinBounds;
+  if (orientation == SliderOrientation::kVertical) {
+    if (clamp && bh > parent_height) bh = parent_height;
+    int16_t t_min = (int16_t)floorf(center_min) - bh / 2 - 1;
+    int16_t t_max = (int16_t)ceilf(center_max) - bh / 2 + 1;
+    if (clamp) {
+      int16_t t_clamp_min = 0;
+      int16_t t_clamp_max = parent_height - bh;
+      if (t_clamp_max < 0) t_clamp_max = 0;
+      if (t_min < t_clamp_min) t_min = t_clamp_min;
+      if (t_min > t_clamp_max) t_min = t_clamp_max;
+      if (t_max < t_clamp_min) t_max = t_clamp_min;
+      if (t_max > t_clamp_max) t_max = t_clamp_max;
+    }
+    int16_t right = -kGap - 1;
+    int16_t left = right - bw + 1;
+    int16_t top = t_min;
+    int16_t bottom = t_max + bh - 1;
+    return Rect(left, top, right, bottom);
+  }
   if (clamp && bw > parent_width) bw = parent_width;
   // The bubble's left edge for a thumb at `center` is
   // `round(center) - bw / 2` (see layout()). Use floor/ceil with a 1-pixel
@@ -129,13 +164,15 @@ Rect ValueIndicatorBubble::EnvelopeForCenterRange(
   return Rect(left, top, right, bottom);
 }
 
-bool ValueIndicatorBubble::layout(int16_t parent_width, float thumb_center,
+bool ValueIndicatorBubble::layout(int16_t parent_width, int16_t parent_height,
+                                  float thumb_center,
+                                  SliderOrientation orientation,
                                   roo::string_view text, bool clamp_to_bounds,
                                   roo_display::Color bubble_color,
                                   roo_display::Color text_color) {
   valid_ = false;
   bounds_ = Rect();
-  if (parent_width <= 0) return false;
+  if (parent_width <= 0 || parent_height <= 0) return false;
 
   // Measure the label so we can size the pill snugly around it. The label
   // is re-measured inside paint() to draw the text; this small duplication
@@ -148,6 +185,29 @@ bool ValueIndicatorBubble::layout(int16_t parent_width, float thumb_center,
 
   int16_t bw = text_w + 2 * kPaddingH;
   int16_t bh = text_h + 2 * kPaddingV;
+  if (orientation == SliderOrientation::kVertical) {
+    int16_t right = -kGap - 1;
+    int16_t left = right - bw + 1;
+    int16_t top = (int16_t)roundf(thumb_center) - bh / 2;
+    if (clamp_to_bounds) {
+      if (bh > parent_height) {
+        top = 0;
+        bh = parent_height;
+      } else {
+        if (top < 0) top = 0;
+        if (top + bh > parent_height) top = parent_height - bh;
+      }
+    }
+    if (bw <= 0 || bh <= 0) return false;
+
+    bounds_ = Rect(left, top, right, top + bh - 1);
+    text_ = text;
+    bubble_color_ = bubble_color;
+    text_color_ = text_color;
+    valid_ = true;
+    return true;
+  }
+
   int16_t left = (int16_t)roundf(thumb_center) - bw / 2;
   int16_t top = -kGap - bh;
   if (clamp_to_bounds) {
