@@ -54,7 +54,7 @@ class Button : public BasicSurfaceWidget {
  protected:
   Button(const Environment& env, Style style = CONTAINED);
 
-  void notifyStateChanged() override;
+  void notifyStateChanged(uint16_t state_diff) override;
 
  private:
   Style style_;

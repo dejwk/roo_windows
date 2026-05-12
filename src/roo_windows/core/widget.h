@@ -548,7 +548,8 @@ class Widget {
 
   // Called after any widget-state flag mutation. Subclasses may use this to
   // react to state-driven visual changes without overriding the full setter.
-  virtual void notifyStateChanged() {}
+  // state_diff is the xor of the old and new state bitfields.
+  virtual void notifyStateChanged(uint16_t state_diff) { (void)state_diff; }
 
   // Marks the entire area of this widget, and all its descendants, as
   // invalidated (needing full redraw).

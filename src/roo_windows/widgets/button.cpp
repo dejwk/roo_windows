@@ -68,7 +68,8 @@ ColorRole Button::containerRole() const {
   return ButtonContainerRole(style());
 }
 
-void Button::notifyStateChanged() {
+void Button::notifyStateChanged(uint16_t state_diff) {
+  (void)state_diff;
   uint8_t new_elevation = getElevation();
   if (new_elevation == current_elevation_) return;
   uint8_t higher = std::max(current_elevation_, new_elevation);

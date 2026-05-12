@@ -377,7 +377,7 @@ void Widget::setEnabled(bool enabled) {
   if (isVisible()) {
     invalidateInterior();
   }
-  notifyStateChanged();
+  notifyStateChanged(kWidgetEnabled);
 }
 
 void Widget::setSelected(bool selected) {
@@ -388,7 +388,7 @@ void Widget::setSelected(bool selected) {
     invalidateInterior();
     notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
   }
-  notifyStateChanged();
+  notifyStateChanged(kWidgetSelected);
 }
 
 void Widget::setActivated(bool activated) {
@@ -402,7 +402,7 @@ void Widget::setActivated(bool activated) {
     }
     notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
   }
-  notifyStateChanged();
+  notifyStateChanged(kWidgetActivated);
 }
 
 void Widget::setPressed(bool pressed) {
@@ -413,7 +413,7 @@ void Widget::setPressed(bool pressed) {
     invalidateInterior();
     notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
   }
-  notifyStateChanged();
+  notifyStateChanged(kWidgetPressed);
 }
 
 void Widget::setDragged(bool dragged) {
@@ -424,7 +424,7 @@ void Widget::setDragged(bool dragged) {
     invalidateInterior();
     notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
   }
-  notifyStateChanged();
+  notifyStateChanged(kWidgetDragged);
 }
 
 OnOffState Widget::onOffState() const {
@@ -443,6 +443,7 @@ void Widget::toggle() {
 
 void Widget::setOnOffState(OnOffState state) {
   if (onOffState() == state) return;
+  uint16_t old_state = state_;
   state_ &= ~(kWidgetOn | kWidgetOff);
   if (state == OnOffState::kOn) {
     state_ |= kWidgetOn;
@@ -450,7 +451,7 @@ void Widget::setOnOffState(OnOffState state) {
     state_ |= kWidgetOff;
   }
   setDirty();
-  notifyStateChanged();
+  notifyStateChanged(old_state ^ state_);
 }
 
 void Widget::triggerInteractiveChange() {
@@ -464,23 +465,25 @@ void Widget::notifyParentInvalidatedRegion(const Rect& rect) {
 }
 
 void Widget::setClicking() {
+  if (isClicking()) return;
   Rect old_bounds = maxParentBounds();
   state_ |= kWidgetClicking;
   if (isVisible()) {
     invalidateInterior();
     notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
   }
-  notifyStateChanged();
+  notifyStateChanged(kWidgetClicking);
 }
 
 void Widget::clearClicking() {
+  if (!isClicking()) return;
   Rect old_bounds = maxParentBounds();
   state_ &= ~kWidgetClicking;
   if (isVisible()) {
     invalidateInterior();
     notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
   }
-  notifyStateChanged();
+  notifyStateChanged(kWidgetClicking);
 }
 
 void Widget::setParent(Container* parent, bool owned) {
