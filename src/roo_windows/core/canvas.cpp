@@ -72,10 +72,17 @@ void Canvas::drawTiled(const roo_display::Drawable& object, const Rect& bounds,
     // extents.
     auto offset =
         ResolveAlignmentOffset(bounds, Rect(object.anchorExtents()), alignment);
-    roo_display::Box min_bounds =
-        roo_display::Box::Extent(object.extents(), object.anchorExtents());
-    drawObject(roo_display::Tile(&object, min_bounds, roo_display::kNoAlign),
-               offset.first, offset.second);
+    Rect min_bounds(
+        roo_display::Box::Extent(object.extents(), object.anchorExtents()));
+    Rect clipped_bounds = Rect::Intersect(
+        min_bounds.translate(offset.first, offset.second), bounds);
+    if (clipped_bounds.empty()) return;
+    drawObject(
+        roo_display::Tile(
+            &object,
+            clipped_bounds.translate(-offset.first, -offset.second).asBox(),
+            roo_display::kNoAlign),
+        offset.first, offset.second);
   }
 }
 

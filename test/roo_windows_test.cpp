@@ -1,3 +1,4 @@
+#include "roo_display/shape/basic.h"
 #include "roo_windows_render_test_support.h"
 
 using namespace roo_display;
@@ -5,6 +6,30 @@ using namespace roo_windows;
 using namespace roo_windows::test_support;
 
 namespace roo_windows {
+
+class TiledRectWidget : public BasicSurfaceWidget {
+ public:
+  TiledRectWidget(const Environment& env, Rect tile_bounds, bool draw_border)
+      : BasicSurfaceWidget(env),
+        tile_bounds_(tile_bounds),
+        draw_border_(draw_border) {}
+
+  Color background() const override { return color::Black; }
+
+  void paint(const Canvas& canvas) const override {
+    canvas.clear();
+    auto rect = FilledRect(0, 0, 5, 5, color::White);
+    canvas.drawTiled(rect, tile_bounds_, kNoAlign, draw_border_);
+  }
+
+  Dimensions getSuggestedMinimumDimensions() const override {
+    return Dimensions(12, 12);
+  }
+
+ private:
+  Rect tile_bounds_;
+  bool draw_border_;
+};
 
 TEST(Windows, BasicCompilation) {
   roo::byte raster[320 * 240 * 2];
@@ -177,6 +202,43 @@ TEST_F(RooWindowsRenderTest, RefreshCanResumeAfterDeadlineExceeded) {
 
   EXPECT_TRUE(refresh());
   EXPECT_EQ(QuantizeToArgb4444(color::Green), pixelAt(16, 16));
+}
+
+TEST_F(RooWindowsRenderTest, DrawTiledClipsOversizedContentToTileBounds) {
+  auto tile = std::make_unique<TiledRectWidget>(env_, Rect(4, 4, 6, 6), true);
+
+  app_.add(std::move(tile), Box(8, 8, 19, 19));
+
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(QuantizeToArgb4444(color::White), pixelAt(12, 12));
+  EXPECT_EQ(QuantizeToArgb4444(color::White), pixelAt(13, 13));
+  EXPECT_EQ(QuantizeToArgb4444(color::Black), pixelAt(11, 12));
+  EXPECT_EQ(QuantizeToArgb4444(color::Black), pixelAt(14, 12));
+  EXPECT_EQ(QuantizeToArgb4444(color::Black), pixelAt(12, 14));
+}
+
+TEST_F(RooWindowsRenderTest,
+       DrawTiledWithoutBorderClipsOversizedContentToTileBounds) {
+  auto tile = std::make_unique<TiledRectWidget>(env_, Rect(4, 4, 6, 6), false);
+
+  app_.add(std::move(tile), Box(8, 8, 19, 19));
+
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(QuantizeToArgb4444(color::White), pixelAt(12, 12));
+  EXPECT_EQ(QuantizeToArgb4444(color::White), pixelAt(13, 13));
+  EXPECT_EQ(QuantizeToArgb4444(color::Black), pixelAt(11, 12));
+  EXPECT_EQ(QuantizeToArgb4444(color::Black), pixelAt(14, 12));
+  EXPECT_EQ(QuantizeToArgb4444(color::Black), pixelAt(12, 14));
+}
+
+TEST_F(RooWindowsRenderTest, DrawTiledIgnoresEmptyBoundsWithoutBorder) {
+  auto tile = std::make_unique<TiledRectWidget>(env_, Rect(4, 4, 3, 6), false);
+
+  app_.add(std::move(tile), Box(8, 8, 19, 19));
+
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(QuantizeToArgb4444(color::Black), pixelAt(12, 12));
+  EXPECT_EQ(QuantizeToArgb4444(color::Black), pixelAt(8, 8));
 }
 
 }  // namespace roo_windows
