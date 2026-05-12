@@ -8,8 +8,8 @@
 #include "roo_display/core/offscreen.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_scheduler.h"
-#include "roo_windows/containers/flex_layout.h"
 #include "roo_windows.h"
+#include "roo_windows/containers/flex_layout.h"
 
 using namespace roo_display;
 using namespace roo_windows;
@@ -183,10 +183,10 @@ TEST(TextLabel, ContentBoundsFollowDrawableInkExtents) {
   auto metrics = font.getHorizontalStringMetrics("abc");
   Rect anchor_bounds(0, -font.metrics().ascent() - font.metrics().linegap(),
                      metrics.advance() - 1, -font.metrics().descent());
-  auto offset = ResolveAlignmentOffset(label.bounds(), anchor_bounds,
-                                       roo_display::kLeft | roo_display::kMiddle);
-  Rect expected = Rect(metrics.screen_extents()).translate(offset.first,
-                                                           offset.second);
+  auto offset = ResolveAlignmentOffset(
+      label.bounds(), anchor_bounds, roo_display::kLeft | roo_display::kMiddle);
+  Rect expected =
+      Rect(metrics.screen_extents()).translate(offset.first, offset.second);
 
   EXPECT_EQ(expected, label.getContentBounds());
 }
@@ -355,8 +355,8 @@ TEST_F(TextLabelGoldenTest, CenteredNaturalSizeOverhangGolden) {
 }
 
 TEST_F(TextLabelGoldenTest, FillWidthLeftGravityOverhangGolden) {
-  auto image = RenderFlexLabel(kGravityLeft | kGravityMiddle,
-                               FillWidthParams());
+  auto image =
+      RenderFlexLabel(kGravityLeft | kGravityMiddle, FillWidthParams());
 
   EXPECT_TRUE(test::CompareOrUpdateGolden(
       image, "test/goldens/text_label/flex_fill_left.ppm",
@@ -364,8 +364,8 @@ TEST_F(TextLabelGoldenTest, FillWidthLeftGravityOverhangGolden) {
 }
 
 TEST_F(TextLabelGoldenTest, FillWidthCenterGravityOverhangGolden) {
-  auto image = RenderFlexLabel(kGravityCenter | kGravityMiddle,
-                               FillWidthParams());
+  auto image =
+      RenderFlexLabel(kGravityCenter | kGravityMiddle, FillWidthParams());
 
   EXPECT_TRUE(test::CompareOrUpdateGolden(
       image, "test/goldens/text_label/flex_fill_center.ppm",
@@ -373,8 +373,8 @@ TEST_F(TextLabelGoldenTest, FillWidthCenterGravityOverhangGolden) {
 }
 
 TEST_F(TextLabelGoldenTest, FillWidthRightGravityOverhangGolden) {
-  auto image = RenderFlexLabel(kGravityRight | kGravityMiddle,
-                               FillWidthParams());
+  auto image =
+      RenderFlexLabel(kGravityRight | kGravityMiddle, FillWidthParams());
 
   EXPECT_TRUE(test::CompareOrUpdateGolden(
       image, "test/goldens/text_label/flex_fill_right.ppm",
@@ -382,8 +382,8 @@ TEST_F(TextLabelGoldenTest, FillWidthRightGravityOverhangGolden) {
 }
 
 TEST_F(TextLabelGoldenTest, FillWidthLeftGravityWithWidgetPaddingGolden) {
-  auto image = RenderFlexLabel(kGravityLeft | kGravityMiddle,
-                               FillWidthParams(), PaddingSize::kSmall);
+  auto image = RenderFlexLabel(kGravityLeft | kGravityMiddle, FillWidthParams(),
+                               PaddingSize::kSmall);
 
   EXPECT_TRUE(test::CompareOrUpdateGolden(
       image, "test/goldens/text_label/flex_fill_left_widget_padding.ppm",
