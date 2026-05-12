@@ -146,9 +146,7 @@ class SliderAxisMetrics {
   }
 
   // Projects a display-space drag delta onto the logical travel axis.
-  int16_t primaryDelta(XDim dx, YDim dy) const {
-    return vertical_ ? -dy : dx;
-  }
+  int16_t primaryDelta(XDim dx, YDim dy) const { return vertical_ ? -dy : dx; }
 
   // Returns whether a scroll gesture should be captured by the slider based on
   // the dominant gesture direction and current drag state.
