@@ -88,6 +88,8 @@ class Slider : public BasicWidget {
 
   PreferredSize getPreferredSize() const override;
 
+  OverlayType getOverlayType() const override { return OVERLAY_NONE; }
+
   bool useOverlayOnPress() const override { return false; }
 
   bool showClickAnimation() const override { return false; }
@@ -149,6 +151,7 @@ class Slider : public BasicWidget {
 
  protected:
   void paintWidgetContents(const Canvas& s, Clipper& clipper) override;
+  void notifyStateChanged(uint16_t state_diff) override;
 
  private:
   bool setPosInternal(uint16_t pos, bool from_user);

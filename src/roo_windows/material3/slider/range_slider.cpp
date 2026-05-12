@@ -600,6 +600,47 @@ void RangeSlider::invalidateValueChange(const internal::SliderAxisMetrics& axis,
   }
 }
 
+void RangeSlider::notifyStateChanged(uint16_t state_diff) {
+  if ((state_diff & kWidgetPressed) == 0) {
+    Widget::notifyStateChanged(state_diff);
+    return;
+  }
+
+  bool was_pressed = !isPressed();
+
+  if (width() <= 0 || height() <= 0 || active_thumb_ == kNoActiveThumb) {
+    setDirty();
+    return;
+  }
+
+  internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
+  float active_value = active_thumb_ == 1 ? end_value_ : start_value_;
+  uint16_t pos =
+      internal::SliderPosFromValue(range_.from, range_.to, active_value);
+  Rect thumb_rect = axis.invalidationRectForPosChange(pos, pos);
+
+  bool old_indicator_visible =
+      style_.value_indicator == SliderValueIndicatorBehavior::kAlways ||
+      was_pressed || isDragged();
+  bool new_indicator_visible = ShowsValueIndicator(*this);
+
+  Rect bubble_envelope(0, 0, -1, -1);
+  if (old_indicator_visible != new_indicator_visible) {
+    float center = axis.displayCenterFromPos(pos);
+    bubble_envelope = ValueIndicatorBubble::EnvelopeForCenterRange(
+        width(), height(), center, center, style_.value_indicator,
+        style_.orientation);
+  }
+
+  pending_content_dirty_span_.include(
+      internal::DisplayMainSpanFromRect(thumb_rect, axis.isVertical()));
+  pending_indicator_dirty_span_.include(
+      internal::DisplayMainSpanFromRect(bubble_envelope, axis.isVertical()));
+
+  setDirty(bubble_envelope.empty() ? thumb_rect
+                                   : Rect::Extent(thumb_rect, bubble_envelope));
+}
+
 namespace {
 
 Rect IndicatorDirtyRectFromSpan(const internal::DirtySpan& span, int16_t width,

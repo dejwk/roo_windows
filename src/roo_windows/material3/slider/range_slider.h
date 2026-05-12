@@ -28,6 +28,8 @@ class RangeSlider : public BasicWidget {
 
   PreferredSize getPreferredSize() const override;
 
+  OverlayType getOverlayType() const override { return OVERLAY_NONE; }
+
   roo_display::FpPoint getPointOverlayFocus() const override;
 
   bool useOverlayOnPress() const override { return false; }
@@ -91,6 +93,7 @@ class RangeSlider : public BasicWidget {
 
  protected:
   void paintWidgetContents(const Canvas& s, Clipper& clipper) override;
+  void notifyStateChanged(uint16_t state_diff) override;
 
  private:
   bool setValuesInternal(float start_value, float end_value, bool from_user,
