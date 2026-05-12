@@ -325,9 +325,10 @@ bool RangeSlider::onSingleTapUp(XDim x, YDim y) {
   if (setActiveThumbPos(axis.posFromPrimaryCoord(primary_coord))) {
     triggerInteractiveChange();
   }
-  onInteractionEnd(start_value_, end_value_);
   active_thumb_ = kNoActiveThumb;
+  awaiting_direction_ = false;
   is_dragging_ = false;
+  onInteractionEnd(start_value_, end_value_);
   return true;
 }
 
@@ -408,29 +409,30 @@ bool RangeSlider::onTouchUp(XDim x, YDim y) {
   (void)x;
   (void)y;
   if (active_thumb_ != kNoActiveThumb || is_dragging_ || awaiting_direction_) {
+    bool had_active_thumb = active_thumb_ != kNoActiveThumb;
     if (isPressed()) {
       setPressed(false);
     }
-    if (active_thumb_ != kNoActiveThumb) {
-      onInteractionEnd(start_value_, end_value_);
-    }
     active_thumb_ = kNoActiveThumb;
-    overlay_thumb_ = kNoActiveThumb;
     is_dragging_ = false;
     awaiting_direction_ = false;
+    if (had_active_thumb) {
+      onInteractionEnd(start_value_, end_value_);
+    }
     return true;
   }
   return Widget::onTouchUp(x, y);
 }
 
 void RangeSlider::onCancel() {
-  if (active_thumb_ != kNoActiveThumb) {
-    onInteractionEnd(start_value_, end_value_);
-  }
+  bool had_active_thumb = active_thumb_ != kNoActiveThumb;
   BasicWidget::onCancel();
   active_thumb_ = kNoActiveThumb;
   is_dragging_ = false;
   awaiting_direction_ = false;
+  if (had_active_thumb) {
+    onInteractionEnd(start_value_, end_value_);
+  }
 }
 
 bool RangeSlider::setRange(SliderRange range) {

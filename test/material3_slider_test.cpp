@@ -137,12 +137,14 @@ class TrackingRangeSlider : public RangeSlider {
 
   void onInteractionEnd(float start, float end) override {
     events.push_back("end");
+    end_active_thumbs.push_back(activeThumbIndex());
     start_values.push_back(start);
     end_values.push_back(end);
   }
 
   std::vector<const char*> events;
   std::vector<int> active_thumbs;
+  std::vector<int> end_active_thumbs;
   std::vector<float> start_values;
   std::vector<float> end_values;
 };
@@ -913,6 +915,8 @@ TEST_F(Material3SliderAppTest, RangeSliderDragTouchUpIsConsumedAndEnds) {
   EXPECT_TRUE(tracking->onTouchUp(Scaled(90), kSliderHeight / 2));
   ASSERT_GE(tracking->events.size(), 3u);
   EXPECT_STREQ("end", tracking->events.back());
+  ASSERT_FALSE(tracking->end_active_thumbs.empty());
+  EXPECT_EQ(-1, tracking->end_active_thumbs.back());
   EXPECT_EQ(-1, tracking->activeThumbIndex());
   EXPECT_FALSE(tracking->isPressed());
 }
