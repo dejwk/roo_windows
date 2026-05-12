@@ -1176,6 +1176,38 @@ TEST_F(Material3SliderRenderTest, PressStateChangePaintIsClippedToHandleSlice) {
 }
 
 TEST_F(Material3SliderRenderTest,
+       PressStateChangePaintIsClippedToHandleSlice) {
+  auto slider = std::make_unique<ClipTrackingSlider>(env_, SliderRange{}, 0.5f);
+  ClipTrackingSlider* slider_ptr = slider.get();
+  slider_ = slider_ptr;
+
+  app_.add(std::move(slider),
+           roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
+                            kSliderY + kSliderHeight - 1));
+
+  ASSERT_TRUE(app_.refresh());
+  slider_ptr->clearPaintObservation();
+
+  roo_display::FpPoint focus = slider_ptr->getPointOverlayFocus();
+  slider_ptr->onShowPress((XDim)focus.x, (YDim)focus.y);
+  ASSERT_TRUE(app_.refresh());
+  ASSERT_EQ(1, slider_ptr->paintCalls());
+
+  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
+                                   Scaled(4), Scaled(6));
+  Rect expected_clip =
+      axis.invalidationRectForPosChange(slider_ptr->getPos(), slider_ptr->getPos())
+          .translate(kSliderX, kSliderY);
+  EXPECT_EQ(expected_clip, slider_ptr->lastPaintClip());
+
+  slider_ptr->clearPaintObservation();
+  ASSERT_TRUE(slider_ptr->onTouchUp((XDim)focus.x, (YDim)focus.y));
+  ASSERT_TRUE(app_.refresh());
+  ASSERT_EQ(1, slider_ptr->paintCalls());
+  EXPECT_EQ(expected_clip, slider_ptr->lastPaintClip());
+}
+
+TEST_F(Material3SliderRenderTest,
        VerticalValueIndicatorValueChangePaintIsClippedToThumbSlice) {
   SliderStyle style{};
   style.orientation = SliderOrientation::kVertical;
