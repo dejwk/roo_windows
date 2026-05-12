@@ -978,7 +978,7 @@ TEST_F(Material3SliderRenderTest,
   ASSERT_TRUE(app_.refresh());
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
-                                   Scaled(4), Scaled(20));
+                                   Scaled(4), Scaled(6));
   XDim start_thumb_center = (XDim)roundf(axis.centerFromPos(
       internal::SliderPosFromValue(0.0f, 100.0f, slider_ptr->startValue())));
   slider_ptr->onShowPress(start_thumb_center, slider_ptr->height() / 2);
@@ -1018,7 +1018,7 @@ TEST_F(Material3SliderRenderTest,
   ASSERT_TRUE(app_.refresh());
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
-                                   Scaled(4), Scaled(20), true);
+                                   Scaled(4), Scaled(6), true);
   internal::SliderVisualMetrics layout = internal::ResolveSliderVisualMetrics(
       axis, axis.centerFromPos(slider_ptr->getPos()), Scaled(4), Scaled(16),
       Scaled(6), Scaled(44));
@@ -1067,14 +1067,23 @@ TEST_F(Material3SliderRenderTest,
   ASSERT_EQ(1, slider_ptr->paintCalls());
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
-                                   Scaled(4), kPointOverlayDiameter / 2);
+                                   Scaled(4), Scaled(6));
   uint16_t old_pos = internal::SliderPosFromValue(0.0f, 1.0f, 0.2f);
   uint16_t new_pos = internal::SliderPosFromValue(0.0f, 1.0f, 0.8f);
   Rect thumb_rect = axis.invalidationRectForPosChange(old_pos, new_pos);
   Rect expected_clip = Rect::Intersect(thumb_rect, slider_ptr->bounds())
                            .translate(kSliderX, kSliderY);
+  internal::SliderAxisMetrics old_overlay_axis(slider_ptr->width(),
+                                               slider_ptr->height(), Scaled(4),
+                                               kPointOverlayDiameter / 2);
+  Rect old_overlay_clip =
+      Rect::Intersect(
+          old_overlay_axis.invalidationRectForPosChange(old_pos, new_pos),
+          slider_ptr->bounds())
+          .translate(kSliderX, kSliderY);
 
   EXPECT_EQ(expected_clip, slider_ptr->lastPaintClip());
+  EXPECT_LT(expected_clip.width(), old_overlay_clip.width());
 
   Rect full_indicator_envelope = slider_ptr->getParentTransientPaintBounds();
   EXPECT_LT(expected_clip.width(), full_indicator_envelope.width());
@@ -1104,14 +1113,23 @@ TEST_F(Material3SliderRenderTest,
   ASSERT_EQ(1, slider_ptr->paintCalls());
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
-                                   Scaled(4), kPointOverlayDiameter / 2, true);
+                                   Scaled(4), Scaled(6), true);
   uint16_t old_pos = internal::SliderPosFromValue(0.0f, 1.0f, 0.2f);
   uint16_t new_pos = internal::SliderPosFromValue(0.0f, 1.0f, 0.8f);
   Rect thumb_rect = axis.invalidationRectForPosChange(old_pos, new_pos);
   Rect expected_clip = Rect::Intersect(thumb_rect, slider_ptr->bounds())
                            .translate(kSliderX, kSliderY);
+  internal::SliderAxisMetrics old_overlay_axis(slider_ptr->width(),
+                                               slider_ptr->height(), Scaled(4),
+                                               kPointOverlayDiameter / 2, true);
+  Rect old_overlay_clip =
+      Rect::Intersect(
+          old_overlay_axis.invalidationRectForPosChange(old_pos, new_pos),
+          slider_ptr->bounds())
+          .translate(kSliderX, kSliderY);
 
   EXPECT_EQ(expected_clip, slider_ptr->lastPaintClip());
+  EXPECT_LT(expected_clip.height(), old_overlay_clip.height());
 
   Rect full_indicator_envelope = slider_ptr->getParentTransientPaintBounds();
   EXPECT_LT(expected_clip.height(), full_indicator_envelope.height());

@@ -22,7 +22,6 @@ static constexpr int kHandleWidth = Scaled(4);
 static constexpr int kHandleHeight = Scaled(44);
 static constexpr float kHandleCornerRadius = 0.5f * (float)kHandleWidth;
 static constexpr int kTouchSlopPixels = Scaled(20);
-static constexpr int kInteractionRadius = kPointOverlayDiameter / 2;
 static constexpr float kPressedThumbWidthRatio = 0.5f;
 
 Color DisabledComposite(Color fg, uint8_t alpha, const Theme& theme) {
@@ -117,7 +116,7 @@ void DrawTrackPiece(const Canvas& canvas, const roo_display::Drawable& piece,
 
 internal::SliderAxisMetrics MakeSliderAxisMetrics(const Slider& slider) {
   return internal::SliderAxisMetrics(
-      slider.width(), slider.height(), kHandleWidth, kInteractionRadius,
+      slider.width(), slider.height(), kHandleWidth, kTrackHandleGap,
       slider.style().orientation == SliderOrientation::kVertical);
 }
 

@@ -83,14 +83,15 @@ class SliderAxisMetrics {
   };
 
   // Builds axis metrics for a slider surface. `thumb_primary_span` is the
-  // thumb length along the travel axis. `interaction_radius` is the extra
-  // padding used when computing the dirty slice for thumb movement.
+  // thumb length along the travel axis. `track_handle_gap` is the painted gap
+  // between the track and the handle and is used to compute the tight dirty
+  // slice for thumb movement.
   SliderAxisMetrics(int16_t width, int16_t height, int16_t thumb_primary_span,
-                    int16_t interaction_radius, bool vertical = false)
+                    int16_t track_handle_gap, bool vertical = false)
       : primary_span_(vertical ? height : width),
         cross_span_(vertical ? width : height),
         thumb_primary_span_(thumb_primary_span),
-        interaction_radius_(interaction_radius),
+        track_handle_gap_(track_handle_gap),
         vertical_(vertical) {}
 
   // Returns the widget extent along the slider's travel axis.
@@ -101,9 +102,6 @@ class SliderAxisMetrics {
 
   // Returns the thumb length along the logical travel axis.
   int16_t thumbPrimarySpan() const { return thumb_primary_span_; }
-
-  // Returns the dirty-region padding used around moving thumbs.
-  int16_t interactionRadius() const { return interaction_radius_; }
 
   // Returns whether display coordinates are mapped vertically.
   bool isVertical() const { return vertical_; }
@@ -166,15 +164,17 @@ class SliderAxisMetrics {
     return pos >= min_pos && pos <= max_pos;
   }
 
-  // Returns the widget-local dirty rectangle that covers the thumb sweep
-  // between `old_pos` and `new_pos`, padded by the interaction radius.
+  // Returns the widget-local dirty rectangle that covers the painted handle
+  // tile sweep between `old_pos` and `new_pos`.
   Rect invalidationRectForPosChange(uint16_t old_pos, uint16_t new_pos) const {
     float old_center = centerFromPos(old_pos);
     float new_center = centerFromPos(new_pos);
-    int16_t min_primary =
-        (int16_t)std::min(old_center, new_center) - interaction_radius_;
-    int16_t max_primary =
-        (int16_t)std::max(old_center, new_center) + interaction_radius_;
+    int16_t min_primary = (int16_t)ceilf(std::min(old_center, new_center) -
+                                         0.5f * (float)thumb_primary_span_) -
+                          track_handle_gap_;
+    int16_t max_primary = (int16_t)floorf(std::max(old_center, new_center) +
+                                          0.5f * (float)thumb_primary_span_) +
+                          track_handle_gap_;
     return rectFromPrimaryCross(min_primary, 0, max_primary, cross_span_ - 1);
   }
 
@@ -224,7 +224,7 @@ class SliderAxisMetrics {
   int16_t primary_span_;
   int16_t cross_span_;
   int16_t thumb_primary_span_;
-  int16_t interaction_radius_;
+  int16_t track_handle_gap_;
   bool vertical_;
 };
 
