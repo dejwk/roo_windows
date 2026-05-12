@@ -64,9 +64,7 @@ Button::Button(const Environment& env, Style style)
   outline_color_.set_a(0x80);
 }
 
-ColorRole Button::containerRole() const {
-  return ButtonContainerRole(style());
-}
+ColorRole Button::containerRole() const { return ButtonContainerRole(style()); }
 
 void Button::notifyStateChanged(uint16_t state_diff) {
   (void)state_diff;
