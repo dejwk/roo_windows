@@ -94,6 +94,21 @@ class ValueIndicatorBubble {
                                      SliderValueIndicatorBehavior behavior,
                                      SliderOrientation orientation);
 
+  // Measures the actual bubble size that layout() would use for `text`
+  // before any clamp-to-bounds adjustments.
+  static void MeasureBubbleSize(roo::string_view text, int16_t& bubble_width,
+                                int16_t& bubble_height);
+
+  // Tight bounding rectangle for a bubble sweep using a caller-supplied
+  // measured bubble size rather than the conservative maximum width.
+  static Rect EnvelopeForCenterRange(int16_t parent_width,
+                                     int16_t parent_height, float center_min,
+                                     float center_max,
+                                     SliderValueIndicatorBehavior behavior,
+                                     SliderOrientation orientation,
+                                     int16_t bubble_width,
+                                     int16_t bubble_height);
+
   // Inset, in pixels, consumed by the rounded corners on each side of the
   // bubble. The inscribed inner rectangle (`bounds()` minus this on each
   // side) is what paint() fills as a fast solid block, and what decorate()

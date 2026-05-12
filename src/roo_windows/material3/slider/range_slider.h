@@ -106,7 +106,8 @@ class RangeSlider : public BasicWidget {
   // (new_start_pos, new_end_pos). See implementation for details.
   void invalidateValueChange(const internal::SliderAxisMetrics& axis,
                              uint16_t old_start_pos, uint16_t old_end_pos,
-                             uint16_t new_start_pos, uint16_t new_end_pos);
+                             uint16_t new_start_pos, uint16_t new_end_pos,
+                             float new_start_value, float new_end_value);
 
   SliderRange range_;
   SliderStyle style_;
@@ -120,10 +121,11 @@ class RangeSlider : public BasicWidget {
   // Tight bounding span (widget-local, within bounds()) of the slider track
   // and thumbs area that needs repainting due to a value/style state change.
   internal::DirtySpan pending_content_dirty_span_;
-  // Tight bounding span (widget-local, possibly outside bounds()) of the
-  // active value indicator area that needs repainting. Kept separate from the
-  // content dirty span because the indicator repaint region is typically
-  // disjoint from the track/thumb repaint region in both orientations.
+  // Indicator span state. When the range slider is clean, this stores the
+  // current on-screen indicator footprint. Once the range slider is dirty, the
+  // same field is reused as the indicator repaint span so coalesced updates
+  // can union the next bubble bounds against the previously shown footprint
+  // without a second cached span.
   internal::DirtySpan pending_indicator_dirty_span_;
 };
 

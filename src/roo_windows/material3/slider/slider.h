@@ -159,7 +159,7 @@ class Slider : public BasicWidget {
   // Marks the minimal local-coord region that needs to be redrawn for a
   // thumb position change. See implementation for details.
   void invalidatePosChange(const internal::SliderAxisMetrics& axis,
-                           uint16_t old_pos, uint16_t new_pos);
+                           uint16_t old_pos, uint16_t new_pos, float new_value);
 
   SliderRange range_;
   SliderVariant variant_;
@@ -170,10 +170,11 @@ class Slider : public BasicWidget {
   // and thumb area that needs repainting due to a value/style state change.
   // Used by paintWidgetContents() to narrow the clip passed to paint().
   internal::DirtySpan pending_content_dirty_span_;
-  // Tight bounding span (widget-local, possibly outside bounds()) of the
-  // value indicator area that needs repainting. Kept separate from the
-  // content dirty rect because the indicator repaint region is typically
-  // disjoint from the track/thumb repaint region in both orientations.
+  // Indicator span state. When the slider is clean, this stores the current
+  // on-screen indicator footprint. Once the slider is dirty, the same field is
+  // reused as the indicator repaint span so coalesced updates can union the
+  // next bubble bounds against the previously shown footprint without a second
+  // cached span.
   internal::DirtySpan pending_indicator_dirty_span_;
 };
 

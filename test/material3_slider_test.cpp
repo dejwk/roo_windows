@@ -1166,6 +1166,83 @@ TEST_F(Material3SliderRenderTest,
   EXPECT_LT(expected_clip.width(), full_indicator_envelope.width());
 }
 
+TEST_F(Material3SliderRenderTest,
+       ValueChangeInvalidatesMeasuredIndicatorEnvelopeOutsideBounds) {
+  SliderStyle style{};
+  style.value_indicator = SliderValueIndicatorBehavior::kAlways;
+
+  auto panel = std::make_unique<RecordingPanel>(env_);
+  RecordingPanel* panel_ptr = panel.get();
+
+  auto slider = std::make_unique<Slider>(env_, SliderRange{0.0f, 1.0f}, 0.2f,
+                                         SliderVariant::kStandard, style);
+  Slider* slider_ptr = slider.get();
+  panel_ptr->add(std::move(slider),
+                 Rect(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
+                      kSliderY + kSliderHeight - 1));
+
+  app_.add(std::move(panel), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
+  ASSERT_TRUE(app_.refresh());
+
+  panel_ptr->invalidated_regions.clear();
+  ASSERT_TRUE(slider_ptr->setValue(0.8f));
+  ASSERT_EQ(1u, panel_ptr->invalidated_regions.size());
+
+  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
+                                   Scaled(4), Scaled(6));
+  uint16_t old_pos = internal::SliderPosFromValue(0.0f, 1.0f, 0.2f);
+  uint16_t new_pos = internal::SliderPosFromValue(0.0f, 1.0f, 0.8f);
+  float c_old = axis.displayCenterFromPos(old_pos);
+  float c_new = axis.displayCenterFromPos(new_pos);
+
+  char old_scratch[64];
+  char new_scratch[64];
+  roo::string_view old_text =
+      slider_ptr->formatLabel(0.2f, old_scratch, sizeof(old_scratch));
+  roo::string_view new_text =
+      slider_ptr->formatLabel(0.8f, new_scratch, sizeof(new_scratch));
+  const Theme& th = env_.theme();
+  bool clamp =
+      style.value_indicator == SliderValueIndicatorBehavior::kWithinBounds;
+  int16_t old_bubble_width;
+  int16_t old_bubble_height;
+  int16_t new_bubble_width;
+  int16_t new_bubble_height;
+  ValueIndicatorBubble::MeasureBubbleSize(old_text, old_bubble_width,
+                                          old_bubble_height);
+  ValueIndicatorBubble::MeasureBubbleSize(new_text, new_bubble_width,
+                                          new_bubble_height);
+
+  ValueIndicatorBubble old_bubble;
+  ASSERT_TRUE(old_bubble.layout(
+      slider_ptr->width(), slider_ptr->height(), c_old, style.orientation,
+      old_text, clamp, th.color.inverseSurface, th.color.inverseOnSurface));
+
+  Rect old_indicator = old_bubble.bounds().translate(kSliderX, kSliderY);
+  Rect new_indicator = ValueIndicatorBubble::EnvelopeForCenterRange(
+                           slider_ptr->width(), slider_ptr->height(), c_new,
+                           c_new, style.value_indicator, style.orientation,
+                           new_bubble_width, new_bubble_height)
+                           .translate(kSliderX, kSliderY);
+  Rect expected = Rect::Extent(old_indicator, new_indicator);
+  Rect max_width_sweep =
+      ValueIndicatorBubble::EnvelopeForCenterRange(
+          slider_ptr->width(), slider_ptr->height(), std::min(c_old, c_new),
+          std::max(c_old, c_new), style.value_indicator, style.orientation,
+          std::max(old_bubble_width, new_bubble_width),
+          std::max(old_bubble_height, new_bubble_height))
+          .translate(kSliderX, kSliderY);
+  Rect conservative =
+      ValueIndicatorBubble::EnvelopeForCenterRange(
+          slider_ptr->width(), slider_ptr->height(), std::min(c_old, c_new),
+          std::max(c_old, c_new), style.value_indicator, style.orientation)
+          .translate(kSliderX, kSliderY);
+
+  EXPECT_EQ(expected, panel_ptr->invalidated_regions.front());
+  EXPECT_LT(expected.width(), max_width_sweep.width());
+  EXPECT_LT(expected.width(), conservative.width());
+}
+
 TEST_F(Material3SliderRenderTest, PressStateChangePaintIsClippedToHandleSlice) {
   auto slider = std::make_unique<ClipTrackingSlider>(env_, SliderRange{}, 0.5f);
   ClipTrackingSlider* slider_ptr = slider.get();
@@ -1223,11 +1300,10 @@ TEST_F(Material3SliderRenderTest,
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
                                    Scaled(4), Scaled(6));
   float center = axis.displayCenterFromPos(slider_ptr->getPos());
-  Rect expected =
-      ValueIndicatorBubble::EnvelopeForCenterRange(
-          slider_ptr->width(), slider_ptr->height(), center, center,
-          style.value_indicator, style.orientation)
-          .translate(kSliderX, kSliderY);
+  Rect expected = ValueIndicatorBubble::EnvelopeForCenterRange(
+                      slider_ptr->width(), slider_ptr->height(), center, center,
+                      style.value_indicator, style.orientation)
+                      .translate(kSliderX, kSliderY);
   EXPECT_EQ(expected, panel_ptr->invalidated_regions.front());
   EXPECT_LT(expected.width(), slider_ptr->maxParentBounds().width());
 

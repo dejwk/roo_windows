@@ -42,6 +42,16 @@ constexpr int16_t kCornerInset = kCornerRadius - (181 * kCornerRadius) / 256;
 }  // namespace
 
 // static
+void ValueIndicatorBubble::MeasureBubbleSize(roo::string_view text,
+                                             int16_t& bubble_width,
+                                             int16_t& bubble_height) {
+  StringViewLabel label(text, font_caption(), roo_display::color::Black);
+  Box label_extents = label.anchorExtents();
+  bubble_width = label_extents.width() + 2 * kPaddingH;
+  bubble_height = label_extents.height() + 2 * kPaddingV;
+}
+
+// static
 roo::string_view ValueIndicatorBubble::FormatDefault(float value, char* scratch,
                                                      size_t scratch_size) {
   if (scratch == nullptr || scratch_size == 0) return roo::string_view();
@@ -114,13 +124,24 @@ Rect ValueIndicatorBubble::EnvelopeForCenterRange(
     int16_t parent_width, int16_t parent_height, float center_min,
     float center_max, SliderValueIndicatorBehavior behavior,
     SliderOrientation orientation) {
+  return EnvelopeForCenterRange(
+      parent_width, parent_height, center_min, center_max, behavior,
+      orientation, kBubbleMaxWidth, 2 * kPaddingV + kCaptionHeight);
+}
+
+// static
+Rect ValueIndicatorBubble::EnvelopeForCenterRange(
+    int16_t parent_width, int16_t parent_height, float center_min,
+    float center_max, SliderValueIndicatorBehavior behavior,
+    SliderOrientation orientation, int16_t bubble_width,
+    int16_t bubble_height) {
   if (behavior == SliderValueIndicatorBehavior::kHidden || parent_width <= 0 ||
-      parent_height <= 0) {
+      parent_height <= 0 || bubble_width <= 0 || bubble_height <= 0) {
     return Rect();
   }
   if (center_min > center_max) std::swap(center_min, center_max);
-  int16_t bw = kBubbleMaxWidth;
-  int16_t bh = 2 * kPaddingV + kCaptionHeight;
+  int16_t bw = bubble_width;
+  int16_t bh = bubble_height;
   bool clamp = behavior == SliderValueIndicatorBehavior::kWithinBounds;
   if (orientation == SliderOrientation::kVertical) {
     if (clamp && bh > parent_height) bh = parent_height;
@@ -178,13 +199,9 @@ bool ValueIndicatorBubble::layout(int16_t parent_width, int16_t parent_height,
   // is re-measured inside paint() to draw the text; this small duplication
   // keeps the geometry visible at layout time without storing measurement
   // state.
-  StringViewLabel label(text, font_caption(), text_color);
-  Box label_extents = label.anchorExtents();
-  int16_t text_w = label_extents.width();
-  int16_t text_h = label_extents.height();
-
-  int16_t bw = text_w + 2 * kPaddingH;
-  int16_t bh = text_h + 2 * kPaddingV;
+  int16_t bw;
+  int16_t bh;
+  MeasureBubbleSize(text, bw, bh);
   if (orientation == SliderOrientation::kVertical) {
     int16_t right = -kGap - 1;
     int16_t left = right - bw + 1;

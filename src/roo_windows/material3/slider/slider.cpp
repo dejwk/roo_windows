@@ -120,6 +120,20 @@ internal::SliderAxisMetrics MakeSliderAxisMetrics(const Slider& slider) {
       slider.style().orientation == SliderOrientation::kVertical);
 }
 
+Rect IndicatorDirtyRectFromSpan(const internal::DirtySpan& span, int16_t width,
+                                int16_t height, SliderStyle style) {
+  if (span.empty() || width <= 0 || height <= 0) return Rect(0, 0, -1, -1);
+  Rect conservative = ValueIndicatorBubble::ConservativeBounds(
+      width, height, kHandleWidth, style.value_indicator, style.orientation);
+  if (conservative.empty()) return Rect(0, 0, -1, -1);
+  if (style.orientation == SliderOrientation::kVertical) {
+    return Rect(conservative.xMin(), span.min_coord, conservative.xMax(),
+                span.max_coord);
+  }
+  return Rect(span.min_coord, conservative.yMin(), span.max_coord,
+              conservative.yMax());
+}
+
 }  // namespace
 
 Slider::Slider(const Environment& env, uint16_t pos)
@@ -236,7 +250,7 @@ bool Slider::setPosInternal(uint16_t pos, bool from_user) {
     return true;
   }
   internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
-  invalidatePosChange(axis, old_pos, new_pos);
+  invalidatePosChange(axis, old_pos, new_pos, value_);
   return true;
 }
 
@@ -258,7 +272,7 @@ bool Slider::setRange(SliderRange range) {
   uint16_t new_pos = getPos();
   if (width() > 0 && height() > 0 && old_pos != new_pos) {
     internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
-    invalidatePosChange(axis, old_pos, new_pos);
+    invalidatePosChange(axis, old_pos, new_pos, value_);
   }
   return true;
 }
@@ -297,7 +311,7 @@ bool Slider::setValue(float value) {
 
   if (width() > 0 && height() > 0 && old_pos != new_pos) {
     internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
-    invalidatePosChange(axis, old_pos, new_pos);
+    invalidatePosChange(axis, old_pos, new_pos, value_);
   }
   return true;
 }
@@ -312,15 +326,25 @@ bool Slider::setValue(float value) {
 // getParentTransientPaintBounds()), and the parent is told to invalidate only
 // that strip so siblings beneath repaint just the area the old bubble vacated.
 void Slider::invalidatePosChange(const internal::SliderAxisMetrics& axis,
-                                 uint16_t old_pos, uint16_t new_pos) {
+                                 uint16_t old_pos, uint16_t new_pos,
+                                 float new_value) {
   Rect thumb_rect = axis.invalidationRectForPosChange(old_pos, new_pos);
   Rect bubble_envelope(0, 0, -1, -1);
   if (IndicatorEnabled(style_) && ShowsValueIndicator(*this)) {
-    float c_old = axis.displayCenterFromPos(old_pos);
     float c_new = axis.displayCenterFromPos(new_pos);
-    bubble_envelope = ValueIndicatorBubble::EnvelopeForCenterRange(
-        width(), height(), std::min(c_old, c_new), std::max(c_old, c_new),
-        style_.value_indicator, style_.orientation);
+    char new_scratch[64];
+    roo::string_view new_text =
+        formatLabel(new_value, new_scratch, sizeof(new_scratch));
+    int16_t new_bubble_width;
+    int16_t new_bubble_height;
+    ValueIndicatorBubble::MeasureBubbleSize(new_text, new_bubble_width,
+                                            new_bubble_height);
+    Rect new_indicator = ValueIndicatorBubble::EnvelopeForCenterRange(
+        width(), height(), c_new, c_new, style_.value_indicator,
+        style_.orientation, new_bubble_width, new_bubble_height);
+    Rect old_indicator = IndicatorDirtyRectFromSpan(
+        pending_indicator_dirty_span_, width(), height(), style_);
+    bubble_envelope = Rect::Extent(old_indicator, new_indicator);
   }
   pending_content_dirty_span_.include(
       internal::DisplayMainSpanFromRect(thumb_rect, axis.isVertical()));
@@ -375,24 +399,6 @@ void Slider::notifyStateChanged(uint16_t state_diff) {
         bubble_envelope.translate(offsetLeft(), offsetTop()));
   }
 }
-
-namespace {
-
-Rect IndicatorDirtyRectFromSpan(const internal::DirtySpan& span, int16_t width,
-                                int16_t height, SliderStyle style) {
-  if (span.empty() || width <= 0 || height <= 0) return Rect(0, 0, -1, -1);
-  Rect conservative = ValueIndicatorBubble::ConservativeBounds(
-      width, height, kHandleWidth, style.value_indicator, style.orientation);
-  if (conservative.empty()) return Rect(0, 0, -1, -1);
-  if (style.orientation == SliderOrientation::kVertical) {
-    return Rect(conservative.xMin(), span.min_coord, conservative.xMax(),
-                span.max_coord);
-  }
-  return Rect(span.min_coord, conservative.yMin(), span.max_coord,
-              conservative.yMax());
-}
-
-}  // namespace
 
 uint16_t Slider::getPos() const {
   return internal::SliderPosFromValue(range_.from, range_.to, value_);
@@ -587,13 +593,14 @@ void Slider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
   internal::DirtySpan pending_content_span = pending_content_dirty_span_;
   internal::DirtySpan pending_indicator_span = pending_indicator_dirty_span_;
   pending_content_dirty_span_ = internal::DirtySpan();
-  pending_indicator_dirty_span_ = internal::DirtySpan();
 
   Rect pending_content = internal::ContentRectFromDisplayMainSpan(
       pending_content_span, width(), height(),
       style_.orientation == SliderOrientation::kVertical);
   Rect pending_indicator = IndicatorDirtyRectFromSpan(
       pending_indicator_span, width(), height(), style_);
+
+  internal::DirtySpan current_indicator_span = pending_indicator_span;
 
   auto paint_indicator = [&](const Canvas& indicator_canvas) {
     if (!ShowsValueIndicator(*this) || width() <= 0 || height() <= 0) return;
@@ -629,6 +636,8 @@ void Slider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
     ValueIndicatorBubble bubble;
     if (bubble.layout(width(), height(), thumb_center, style_.orientation, text,
                       clamp, bubble_color, text_color)) {
+      current_indicator_span = internal::DisplayMainSpanFromRect(
+          bubble.bounds(), style_.orientation == SliderOrientation::kVertical);
       bubble.paint(indicator_canvas);
       bubble.decorate(indicator_canvas, clipper, OverlaySpec());
     }
@@ -651,6 +660,9 @@ void Slider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
       clipper.setBounds(content_canvas.clip_box());
       paint(content_canvas);
     }
+    pending_indicator_dirty_span_ = ShowsValueIndicator(*this)
+                                        ? current_indicator_span
+                                        : internal::DirtySpan();
     markClean();
     return;
   }
@@ -664,6 +676,9 @@ void Slider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
   // overlay/exclusion stack, so any pixels it would otherwise put inside
   // the bubble's inscribed rectangle are dropped, and any pixels under the
   // bubble's rounded mask have the bubble color alpha-composited on top.
+  pending_indicator_dirty_span_ = ShowsValueIndicator(*this)
+                                      ? current_indicator_span
+                                      : internal::DirtySpan();
   BasicWidget::paintWidgetContents(my_canvas, clipper);
 }
 

@@ -258,6 +258,20 @@ internal::SliderAxisMetrics MakeSliderAxisMetrics(const RangeSlider& slider) {
       slider.style().orientation == SliderOrientation::kVertical);
 }
 
+Rect IndicatorDirtyRectFromSpan(const internal::DirtySpan& span, int16_t width,
+                                int16_t height, SliderStyle style) {
+  if (span.empty() || width <= 0 || height <= 0) return Rect(0, 0, -1, -1);
+  Rect conservative = ValueIndicatorBubble::ConservativeBounds(
+      width, height, kHandleWidth, style.value_indicator, style.orientation);
+  if (conservative.empty()) return Rect(0, 0, -1, -1);
+  if (style.orientation == SliderOrientation::kVertical) {
+    return Rect(conservative.xMin(), span.min_coord, conservative.xMax(),
+                span.max_coord);
+  }
+  return Rect(span.min_coord, conservative.yMin(), span.max_coord,
+              conservative.yMax());
+}
+
 }  // namespace
 
 RangeSlider::RangeSlider(const Environment& env, SliderRange range,
@@ -454,7 +468,7 @@ bool RangeSlider::setRange(SliderRange range) {
         internal::SliderPosFromValue(range_.from, range_.to, end_value_);
     internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
     invalidateValueChange(axis, old_start_pos, old_end_pos, new_start_pos,
-                          new_end_pos);
+                          new_end_pos, start_value_, end_value_);
   }
   return true;
 }
@@ -492,7 +506,7 @@ bool RangeSlider::setMinSeparation(float value) {
         internal::SliderPosFromValue(range_.from, range_.to, end_value_);
     internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
     invalidateValueChange(axis, old_start_pos, old_end_pos, new_start_pos,
-                          new_end_pos);
+                          new_end_pos, start_value_, end_value_);
   }
   return true;
 }
@@ -544,7 +558,7 @@ bool RangeSlider::setValuesInternal(float start_value, float end_value,
         internal::SliderPosFromValue(range_.from, range_.to, end_value_);
     internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
     invalidateValueChange(axis, old_start_pos, old_end_pos, new_start_pos,
-                          new_end_pos);
+                          new_end_pos, start_value_, end_value_);
   }
   return true;
 }
@@ -570,24 +584,32 @@ bool RangeSlider::setActiveThumbPos(uint16_t pos) {
 // getParentTransientPaintBounds(). For range sliders the bubble only
 // follows the active thumb, so only that thumb's old/new positions
 // contribute to the bubble envelope.
-void RangeSlider::invalidateValueChange(const internal::SliderAxisMetrics& axis,
-                                        uint16_t old_start_pos,
-                                        uint16_t old_end_pos,
-                                        uint16_t new_start_pos,
-                                        uint16_t new_end_pos) {
+void RangeSlider::invalidateValueChange(
+    const internal::SliderAxisMetrics& axis, uint16_t old_start_pos,
+    uint16_t old_end_pos, uint16_t new_start_pos, uint16_t new_end_pos,
+    float new_start_value, float new_end_value) {
   Rect thumb_rect = InvalidationRectForValueChange(
       axis, old_start_pos, old_end_pos, new_start_pos, new_end_pos);
   Rect bubble_envelope(0, 0, -1, -1);
   if (IndicatorEnabled(style_) && ShowsValueIndicator(*this)) {
-    uint16_t old_active_pos =
-        (active_thumb_ == 1) ? old_end_pos : old_start_pos;
     uint16_t new_active_pos =
         (active_thumb_ == 1) ? new_end_pos : new_start_pos;
-    float c_old = axis.displayCenterFromPos(old_active_pos);
+    float new_active_value =
+        (active_thumb_ == 1) ? new_end_value : new_start_value;
     float c_new = axis.displayCenterFromPos(new_active_pos);
-    bubble_envelope = ValueIndicatorBubble::EnvelopeForCenterRange(
-        width(), height(), std::min(c_old, c_new), std::max(c_old, c_new),
-        style_.value_indicator, style_.orientation);
+    char new_scratch[64];
+    roo::string_view new_text =
+        formatLabel(new_active_value, new_scratch, sizeof(new_scratch));
+    int16_t new_bubble_width;
+    int16_t new_bubble_height;
+    ValueIndicatorBubble::MeasureBubbleSize(new_text, new_bubble_width,
+                                            new_bubble_height);
+    Rect new_indicator = ValueIndicatorBubble::EnvelopeForCenterRange(
+        width(), height(), c_new, c_new, style_.value_indicator,
+        style_.orientation, new_bubble_width, new_bubble_height);
+    Rect old_indicator = IndicatorDirtyRectFromSpan(
+        pending_indicator_dirty_span_, width(), height(), style_);
+    bubble_envelope = Rect::Extent(old_indicator, new_indicator);
   }
   pending_content_dirty_span_.include(
       internal::DisplayMainSpanFromRect(thumb_rect, axis.isVertical()));
@@ -644,24 +666,6 @@ void RangeSlider::notifyStateChanged(uint16_t state_diff) {
         bubble_envelope.translate(offsetLeft(), offsetTop()));
   }
 }
-
-namespace {
-
-Rect IndicatorDirtyRectFromSpan(const internal::DirtySpan& span, int16_t width,
-                                int16_t height, SliderStyle style) {
-  if (span.empty() || width <= 0 || height <= 0) return Rect(0, 0, -1, -1);
-  Rect conservative = ValueIndicatorBubble::ConservativeBounds(
-      width, height, kHandleWidth, style.value_indicator, style.orientation);
-  if (conservative.empty()) return Rect(0, 0, -1, -1);
-  if (style.orientation == SliderOrientation::kVertical) {
-    return Rect(conservative.xMin(), span.min_coord, conservative.xMax(),
-                span.max_coord);
-  }
-  return Rect(span.min_coord, conservative.yMin(), span.max_coord,
-              conservative.yMax());
-}
-
-}  // namespace
 
 void RangeSlider::paint(const Canvas& canvas) const {
   Tokens tokens = ResolveTokens(*this);
@@ -848,13 +852,13 @@ void RangeSlider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
   internal::DirtySpan pending_content_span = pending_content_dirty_span_;
   internal::DirtySpan pending_indicator_span = pending_indicator_dirty_span_;
   pending_content_dirty_span_ = internal::DirtySpan();
-  pending_indicator_dirty_span_ = internal::DirtySpan();
 
   Rect pending_content = internal::ContentRectFromDisplayMainSpan(
       pending_content_span, width(), height(),
       style_.orientation == SliderOrientation::kVertical);
   Rect pending_indicator = IndicatorDirtyRectFromSpan(
       pending_indicator_span, width(), height(), style_);
+  internal::DirtySpan current_indicator_span = pending_indicator_span;
   // Pre-paint the active thumb's value indicator bubble before the slider
   // contents. See Slider::paintWidgetContents() for the rationale on
   // ordering and the role of paint() vs decorate(). The canvas is already
@@ -887,6 +891,8 @@ void RangeSlider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
     ValueIndicatorBubble bubble;
     if (bubble.layout(width(), height(), thumb_center, style_.orientation, text,
                       clamp, bubble_color, text_color)) {
+      current_indicator_span = internal::DisplayMainSpanFromRect(
+          bubble.bounds(), style_.orientation == SliderOrientation::kVertical);
       bubble.paint(indicator_canvas);
       bubble.decorate(indicator_canvas, clipper, OverlaySpec());
     }
@@ -909,12 +915,18 @@ void RangeSlider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
       clipper.setBounds(content_canvas.clip_box());
       paint(content_canvas);
     }
+    pending_indicator_dirty_span_ = ShowsValueIndicator(*this)
+                                        ? current_indicator_span
+                                        : internal::DirtySpan();
     markClean();
     return;
   }
 
   Canvas my_canvas = canvas;
   paint_indicator(my_canvas);
+  pending_indicator_dirty_span_ = ShowsValueIndicator(*this)
+                                      ? current_indicator_span
+                                      : internal::DirtySpan();
   BasicWidget::paintWidgetContents(my_canvas, clipper);
 }
 
