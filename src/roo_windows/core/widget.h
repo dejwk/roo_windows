@@ -414,7 +414,7 @@ class Widget {
 
   void setClicking();
 
-  enum OverlayType { OVERLAY_AREA, OVERLAY_POINT };
+  enum OverlayType { OVERLAY_NONE, OVERLAY_AREA, OVERLAY_POINT };
 
   virtual OverlayType getOverlayType() const { return OVERLAY_POINT; }
 

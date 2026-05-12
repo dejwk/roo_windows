@@ -72,6 +72,10 @@ OverlaySpec::OverlaySpec(Widget& widget, const Canvas& canvas)
     base_overlay_ = roo_display::color::Transparent;
     return;
   }
+  if (widget.getOverlayType() == Widget::OVERLAY_NONE) {
+    base_overlay_ = roo_display::color::Transparent;
+    return;
+  }
   base_overlay_ = getOverlayColor(widget, canvas);
   is_modded_ = (base_overlay_.a() != 0);
 

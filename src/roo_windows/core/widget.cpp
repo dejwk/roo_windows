@@ -410,7 +410,10 @@ void Widget::setPressed(bool pressed) {
   Rect old_bounds = maxParentBounds();
   state_ ^= kWidgetPressed;
   if (isVisible()) {
-    invalidateInterior();
+    setDirty();
+    if (getOverlayType() != OVERLAY_NONE) {
+      invalidateInterior();
+    }
     notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
   }
   notifyStateChanged(kWidgetPressed);
@@ -523,6 +526,7 @@ ColorRole Widget::effectiveOverlayColorRole() const {
 }
 
 uint8_t Widget::getOverlayOpacity() const {
+  if (getOverlayType() == OVERLAY_NONE) return 0;
   ColorRole bg_role = effectiveOverlayColorRole();
   uint16_t overlay_opacity = 0;
   const Theme& myTheme = theme();
