@@ -382,50 +382,44 @@ void Widget::setEnabled(bool enabled) {
 
 void Widget::setSelected(bool selected) {
   if (selected == isSelected()) return;
-  Rect old_bounds = maxParentBounds();
   state_ ^= kWidgetSelected;
   if (isVisible()) {
     invalidateInterior();
-    notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
+    notifyParentInvalidatedRegion(getParentInteractionBounds());
   }
   notifyStateChanged(kWidgetSelected);
 }
 
 void Widget::setActivated(bool activated) {
   if (activated == isActivated()) return;
-  Rect old_bounds = maxParentBounds();
   state_ ^= kWidgetActivated;
-  if (isVisible()) {
-    setDirty();
-    if (useOverlayOnActivation()) {
+  if (isVisible() && useOverlayOnActivation()) {
+    if (getOverlayType() != OVERLAY_NONE) {
       invalidateInterior();
     }
-    notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
+    notifyParentInvalidatedRegion(getParentInteractionBounds());
   }
   notifyStateChanged(kWidgetActivated);
 }
 
 void Widget::setPressed(bool pressed) {
   if (pressed == isPressed()) return;
-  Rect old_bounds = maxParentBounds();
   state_ ^= kWidgetPressed;
-  if (isVisible()) {
-    setDirty();
+  if (isVisible() && useOverlayOnPress()) {
     if (getOverlayType() != OVERLAY_NONE) {
       invalidateInterior();
-      notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
     }
+    notifyParentInvalidatedRegion(getParentInteractionBounds());
   }
   notifyStateChanged(kWidgetPressed);
 }
 
 void Widget::setDragged(bool dragged) {
   if (dragged == isDragged()) return;
-  Rect old_bounds = maxParentBounds();
   state_ ^= kWidgetDragged;
   if (isVisible()) {
     invalidateInterior();
-    notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
+    notifyParentInvalidatedRegion(getParentInteractionBounds());
   }
   notifyStateChanged(kWidgetDragged);
 }
@@ -469,22 +463,24 @@ void Widget::notifyParentInvalidatedRegion(const Rect& rect) {
 
 void Widget::setClicking() {
   if (isClicking()) return;
-  Rect old_bounds = maxParentBounds();
   state_ |= kWidgetClicking;
-  if (isVisible()) {
-    invalidateInterior();
-    notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
+  if (isVisible() && useOverlayOnPress()) {
+    if (getOverlayType() != OVERLAY_NONE) {
+      invalidateInterior();
+    }
+    notifyParentInvalidatedRegion(getParentInteractionBounds());
   }
   notifyStateChanged(kWidgetClicking);
 }
 
 void Widget::clearClicking() {
   if (!isClicking()) return;
-  Rect old_bounds = maxParentBounds();
   state_ &= ~kWidgetClicking;
-  if (isVisible()) {
-    invalidateInterior();
-    notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
+  if (isVisible() && useOverlayOnPress()) {
+    if (getOverlayType() != OVERLAY_NONE) {
+      invalidateInterior();
+    }
+    notifyParentInvalidatedRegion(getParentInteractionBounds());
   }
   notifyStateChanged(kWidgetClicking);
 }
