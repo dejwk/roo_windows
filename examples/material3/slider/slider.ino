@@ -167,8 +167,7 @@ using SliderValueFormatter =
 // thumb during interaction.
 class DemoSlider : public material3::Slider {
  public:
-  using LabelFormatter =
-      std::function<roo::string_view(float, char*, size_t)>;
+  using LabelFormatter = std::function<roo::string_view(float, char*, size_t)>;
 
   DemoSlider(const Environment& env, material3::SliderRange range,
              float initial_value, material3::SliderVariant variant,
@@ -195,13 +194,13 @@ class SemanticSliderRow : public FlexLayout {
  public:
   using LabelFormatter = DemoSlider::LabelFormatter;
 
-  SemanticSliderRow(const Environment& env, const char* primary,
-                    const char* secondary, material3::SliderRange range,
-                    float initial_value, SliderValueFormatter formatter,
-                    material3::SliderVariant variant =
-                        material3::SliderVariant::kStandard,
-                    material3::SliderStyle style = {},
-                    LabelFormatter label_formatter = nullptr)
+  SemanticSliderRow(
+      const Environment& env, const char* primary, const char* secondary,
+      material3::SliderRange range, float initial_value,
+      SliderValueFormatter formatter,
+      material3::SliderVariant variant = material3::SliderVariant::kStandard,
+      material3::SliderStyle style = {},
+      LabelFormatter label_formatter = nullptr)
       : FlexLayout(env, FlexDirection::kColumn),
         header_(env, FlexDirection::kRow),
         labels_(env, FlexDirection::kColumn),
@@ -486,7 +485,8 @@ class FullWidthColumn : public FlexLayout {
 // constructors.
 constexpr material3::SliderStyle FanSpeedStyle() {
   material3::SliderStyle s{};
-  s.value_indicator = material3::SliderValueIndicatorBehavior::kShowOnInteraction;
+  s.value_indicator =
+      material3::SliderValueIndicatorBehavior::kShowOnInteraction;
   return s;
 }
 
@@ -498,14 +498,16 @@ constexpr material3::SliderStyle BalanceStyle() {
 
 constexpr material3::SliderStyle QuietHoursStyle() {
   material3::SliderStyle s{};
-  s.value_indicator = material3::SliderValueIndicatorBehavior::kShowOnInteraction;
+  s.value_indicator =
+      material3::SliderValueIndicatorBehavior::kShowOnInteraction;
   return s;
 }
 
 constexpr material3::SliderStyle TankLevelStyle() {
   material3::SliderStyle s{};
   s.orientation = material3::SliderOrientation::kVertical;
-  s.value_indicator = material3::SliderValueIndicatorBehavior::kShowOnInteraction;
+  s.value_indicator =
+      material3::SliderValueIndicatorBehavior::kShowOnInteraction;
   return s;
 }
 
@@ -526,59 +528,60 @@ class SliderScreen : public SimpleScrollablePanel {
                    font_caption()),
         legacy_(env, "Legacy compatibility",
                 "Normalized position constructor mapped to a percentage", 72),
-        fan_speed_(env, "Discrete fan speed",
-                   "Custom \"Nx\" indicator on press/drag",
-                   material3::SliderRange{0.0f, 5.0f, 1.0f}, 2.0f,
-                   [](TextLabel& label, const material3::Slider& slider) {
-                     label.setTextf("%.0fx", slider.value());
-                   },
-                   material3::SliderVariant::kStandard,
-                   FanSpeedStyle(),
-                   [](float value, char* scratch, size_t n) {
-                     int len = snprintf(scratch, n, "%.0fx", value);
-                     if (len < 0) len = 0;
-                     if ((size_t)len >= n) len = (int)n - 1;
-                     return roo::string_view(scratch, (size_t)len);
-                   }),
-        balance_(env, "Centered balance",
-                 "kWithinBounds: bubble clamped inside the track",
-                 material3::SliderRange{-100.0f, 100.0f, 5.0f}, -20.0f,
-                 [](TextLabel& label, const material3::Slider& slider) {
-                   label.setTextf("%+.0f", slider.value());
-                 },
-                 material3::SliderVariant::kCentered,
-                 BalanceStyle(),
-                 [](float value, char* scratch, size_t n) {
-                   int len = snprintf(scratch, n, "%+.0f", value);
-                   if (len < 0) len = 0;
-                   if ((size_t)len >= n) len = (int)n - 1;
-                   return roo::string_view(scratch, (size_t)len);
-                 }),
-        tank_level_(env, "Vertical tank level",
-                    "Orientation support: drag up to increase",
-                    "Tap anywhere on the column to jump; the same value "
-                    "domain and label formatting still apply.",
-                    material3::SliderRange{0.0f, 100.0f, 1.0f}, 62.0f,
-                    [](TextLabel& label, const material3::Slider& slider) {
-                      label.setTextf("%.0f%%", slider.value());
-                    },
-                    TankLevelStyle(), [](float value, char* scratch, size_t n) {
-                      int len = snprintf(scratch, n, "%.0f%%", value);
-                      if (len < 0) len = 0;
-                      if ((size_t)len >= n) len = (int)n - 1;
-                      return roo::string_view(scratch, (size_t)len);
-                    }),
+        fan_speed_(
+            env, "Discrete fan speed", "Custom \"Nx\" indicator on press/drag",
+            material3::SliderRange{0.0f, 5.0f, 1.0f}, 2.0f,
+            [](TextLabel& label, const material3::Slider& slider) {
+              label.setTextf("%.0fx", slider.value());
+            },
+            material3::SliderVariant::kStandard, FanSpeedStyle(),
+            [](float value, char* scratch, size_t n) {
+              int len = snprintf(scratch, n, "%.0fx", value);
+              if (len < 0) len = 0;
+              if ((size_t)len >= n) len = (int)n - 1;
+              return roo::string_view(scratch, (size_t)len);
+            }),
+        balance_(
+            env, "Centered balance",
+            "kWithinBounds: bubble clamped inside the track",
+            material3::SliderRange{-100.0f, 100.0f, 5.0f}, -20.0f,
+            [](TextLabel& label, const material3::Slider& slider) {
+              label.setTextf("%+.0f", slider.value());
+            },
+            material3::SliderVariant::kCentered, BalanceStyle(),
+            [](float value, char* scratch, size_t n) {
+              int len = snprintf(scratch, n, "%+.0f", value);
+              if (len < 0) len = 0;
+              if ((size_t)len >= n) len = (int)n - 1;
+              return roo::string_view(scratch, (size_t)len);
+            }),
+        tank_level_(
+            env, "Vertical tank level",
+            "Orientation support: drag up to increase",
+            "Tap anywhere on the column to jump; the same value "
+            "domain and label formatting still apply.",
+            material3::SliderRange{0.0f, 100.0f, 1.0f}, 62.0f,
+            [](TextLabel& label, const material3::Slider& slider) {
+              label.setTextf("%.0f%%", slider.value());
+            },
+            TankLevelStyle(),
+            [](float value, char* scratch, size_t n) {
+              int len = snprintf(scratch, n, "%.0f%%", value);
+              if (len < 0) len = 0;
+              if ((size_t)len >= n) len = (int)n - 1;
+              return roo::string_view(scratch, (size_t)len);
+            }),
         quiet_hours_(env, "Quiet hours",
                      "Range slider: HH:00 indicator on the active thumb",
                      material3::SliderRange{0.0f, 24.0f, 1.0f}, 8.0f, 18.0f,
                      2.0f, QuietHoursStyle()),
         footer_divider_(env),
         note_(env,
-            "Drag a thumb to see the value indicator bubble float next to "
-            "the active thumb. "
+              "Drag a thumb to see the value indicator bubble float next to "
+              "the active thumb. "
               "Subclasses override formatLabel() to format their own values; "
-            "kWithinBounds keeps the bubble clipped to the slider extent, "
-            "and vertical sliders reverse the drag axis so up increases.",
+              "kWithinBounds keeps the bubble clipped to the slider extent, "
+              "and vertical sliders reverse the drag axis so up increases.",
               font_caption()) {
     content_.setPadding(Scaled(12));
     content_.setGap(Scaled(4));
