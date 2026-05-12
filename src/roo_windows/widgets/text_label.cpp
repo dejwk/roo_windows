@@ -8,6 +8,18 @@ namespace roo_windows {
 
 namespace {
 
+Dimensions MeasureLabelText(const roo_display::Font& font,
+                            roo::string_view text) {
+  auto metrics = font.getHorizontalStringMetrics(text);
+  return Dimensions(metrics.advance(), font.metrics().ascent() -
+                                           font.metrics().descent() +
+                                           font.metrics().linegap());
+}
+
+bool DimensionsDiffer(const Dimensions& a, const Dimensions& b) {
+  return a.width() != b.width() || a.height() != b.height();
+}
+
 Insets InsetsFromContentBounds(const Rect& logical_bounds,
                                const Rect& content_bounds) {
   return Insets(content_bounds.xMin() - logical_bounds.xMin(),
@@ -67,22 +79,23 @@ Dimensions TextLabel::getSuggestedMinimumDimensions() const {
   // NOTE: we could consider pre-calculating and storing these (and avoid
   // re-measuring in paint), but it is an extra 20 bytes per label so it is
   // not a clear win.
-  auto metrics = font_.getHorizontalStringMetrics(value_);
-  return Dimensions(metrics.advance(), font_.metrics().ascent() -
-                                           font_.metrics().descent() +
-                                           font_.metrics().linegap());
+  return MeasureLabelText(font_, value_);
 }
 
 void TextLabel::setText(std::string value) {
   if (value_ == value) return;
   bool had_old_content = !value_.empty();
   Rect old_bounds = had_old_content ? maxParentBounds() : Rect(0, 0, -1, -1);
+  Dimensions old_dimensions = MeasureLabelText(font_, value_);
+  Dimensions new_dimensions = MeasureLabelText(font_, value);
   value_ = std::move(value);
   invalidateInterior();
   if (had_old_content) {
     notifyParentInvalidatedRegion(old_bounds);
   }
-  requestLayout();
+  if (DimensionsDiffer(old_dimensions, new_dimensions)) {
+    requestLayout();
+  }
 }
 
 void TextLabel::setText(const char* value) { setText(roo::string_view(value)); }
@@ -91,12 +104,16 @@ void TextLabel::setText(roo::string_view value) {
   if (value_ == value) return;
   bool had_old_content = !value_.empty();
   Rect old_bounds = had_old_content ? maxParentBounds() : Rect(0, 0, -1, -1);
+  Dimensions old_dimensions = MeasureLabelText(font_, value_);
+  Dimensions new_dimensions = MeasureLabelText(font_, value);
   value_ = std::string((const char*)value.data(), value.size());
   invalidateInterior();
   if (had_old_content) {
     notifyParentInvalidatedRegion(old_bounds);
   }
-  requestLayout();
+  if (DimensionsDiffer(old_dimensions, new_dimensions)) {
+    requestLayout();
+  }
 }
 
 void TextLabel::setTextf(const char* format, ...) {
@@ -157,22 +174,23 @@ Dimensions StringViewLabel::getSuggestedMinimumDimensions() const {
   // NOTE: we could consider pre-calculating and storing these (and avoid
   // re-measuring in paint), but it is an extra 20 bytes per label so it is
   // not a clear win.
-  auto metrics = font_.getHorizontalStringMetrics(value_);
-  return Dimensions(metrics.advance(), font_.metrics().ascent() -
-                                           font_.metrics().descent() +
-                                           font_.metrics().linegap());
+  return MeasureLabelText(font_, value_);
 }
 
 void StringViewLabel::setText(roo::string_view value) {
   if (value_ == value) return;
   bool had_old_content = !value_.empty();
   Rect old_bounds = had_old_content ? maxParentBounds() : Rect(0, 0, -1, -1);
+  Dimensions old_dimensions = MeasureLabelText(font_, value_);
+  Dimensions new_dimensions = MeasureLabelText(font_, value);
   value_ = std::move(value);
   invalidateInterior();
   if (had_old_content) {
     notifyParentInvalidatedRegion(old_bounds);
   }
-  requestLayout();
+  if (DimensionsDiffer(old_dimensions, new_dimensions)) {
+    requestLayout();
+  }
 }
 
 void StringViewLabel::clearText() {

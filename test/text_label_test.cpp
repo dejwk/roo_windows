@@ -238,6 +238,48 @@ TEST(TextLabel, TextChangeInvalidatesOnlyOldVisualBounds) {
   EXPECT_EQ(old_bounds, panel.invalidated_regions.front());
 }
 
+TEST(TextLabel, SameMeasuredSizeTextChangeDoesNotRequestLayout) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  const auto& font = font_body2();
+  TextLabel label(env, "72%", font, kGravityLeft | kGravityMiddle);
+  TextLabel comparison(env, "73%", font, kGravityLeft | kGravityMiddle);
+
+  Dimensions initial = label.getSuggestedMinimumDimensions();
+  Dimensions updated = comparison.getSuggestedMinimumDimensions();
+  ASSERT_EQ(initial.width(), updated.width());
+  ASSERT_EQ(initial.height(), updated.height());
+
+  label.measure(WidthSpec::Exactly(64), HeightSpec::Exactly(24));
+  label.layout(Rect(0, 0, 63, 23));
+
+  label.setText("73%");
+
+  EXPECT_FALSE(label.isLayoutRequested());
+}
+
+TEST(StringViewLabel, SameMeasuredSizeTextChangeDoesNotRequestLayout) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  const auto& font = font_body2();
+  StringViewLabel label(env, roo::string_view("72%"), font,
+                        kGravityLeft | kGravityMiddle);
+  StringViewLabel comparison(env, roo::string_view("73%"), font,
+                             kGravityLeft | kGravityMiddle);
+
+  Dimensions initial = label.getSuggestedMinimumDimensions();
+  Dimensions updated = comparison.getSuggestedMinimumDimensions();
+  ASSERT_EQ(initial.width(), updated.width());
+  ASSERT_EQ(initial.height(), updated.height());
+
+  label.measure(WidthSpec::Exactly(64), HeightSpec::Exactly(24));
+  label.layout(Rect(0, 0, 63, 23));
+
+  label.setText(roo::string_view("73%"));
+
+  EXPECT_FALSE(label.isLayoutRequested());
+}
+
 TEST_F(TextLabelRenderTest, SetTextAndClearTextAffectRenderedPixels) {
   auto label = std::make_unique<TextLabel>(env_, "A", font_body2());
   TextLabel* label_ptr = label.get();
