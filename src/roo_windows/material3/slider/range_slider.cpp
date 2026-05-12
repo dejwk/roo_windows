@@ -639,6 +639,10 @@ void RangeSlider::notifyStateChanged(uint16_t state_diff) {
 
   setDirty(bubble_envelope.empty() ? thumb_rect
                                    : Rect::Extent(thumb_rect, bubble_envelope));
+  if (!bubble_envelope.empty()) {
+    notifyParentInvalidatedRegion(
+        bubble_envelope.translate(offsetLeft(), offsetTop()));
+  }
 }
 
 namespace {

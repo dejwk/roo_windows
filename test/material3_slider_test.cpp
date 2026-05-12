@@ -171,6 +171,28 @@ class ClipTrackingSlider : public Slider {
   mutable Rect last_paint_clip_ = Rect(0, 0, -1, -1);
 };
 
+class RecordingPanel : public Panel {
+ public:
+  explicit RecordingPanel(const Environment& env) : Panel(env) {}
+
+  using Panel::add;
+
+  std::vector<Rect> invalidated_regions;
+
+ protected:
+  void childShown(const Widget* child) override { (void)child; }
+
+  void propagateDirty(const Widget* child, const Rect& rect) override {
+    (void)child;
+    (void)rect;
+  }
+
+  void childInvalidatedRegion(const Widget* child, Rect rect) override {
+    (void)child;
+    invalidated_regions.push_back(rect);
+  }
+};
+
 TEST(Material3Slider, UsesZeroDefaultInsets) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -1176,35 +1198,43 @@ TEST_F(Material3SliderRenderTest, PressStateChangePaintIsClippedToHandleSlice) {
 }
 
 TEST_F(Material3SliderRenderTest,
-       PressStateChangePaintIsClippedToHandleSlice) {
-  auto slider = std::make_unique<ClipTrackingSlider>(env_, SliderRange{}, 0.5f);
-  ClipTrackingSlider* slider_ptr = slider.get();
-  slider_ = slider_ptr;
+       PressStateChangeInvalidatesOnlyIndicatorEnvelopeOutsideBounds) {
+  SliderStyle style{};
+  style.value_indicator = SliderValueIndicatorBehavior::kShowOnInteraction;
 
-  app_.add(std::move(slider),
-           roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
-                            kSliderY + kSliderHeight - 1));
+  auto panel = std::make_unique<RecordingPanel>(env_);
+  RecordingPanel* panel_ptr = panel.get();
 
+  auto slider = std::make_unique<Slider>(env_, SliderRange{}, 0.5f,
+                                         SliderVariant::kStandard, style);
+  Slider* slider_ptr = slider.get();
+  panel_ptr->add(std::move(slider),
+                 Rect(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
+                      kSliderY + kSliderHeight - 1));
+
+  app_.add(std::move(panel), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
   ASSERT_TRUE(app_.refresh());
-  slider_ptr->clearPaintObservation();
 
+  panel_ptr->invalidated_regions.clear();
   roo_display::FpPoint focus = slider_ptr->getPointOverlayFocus();
   slider_ptr->onShowPress((XDim)focus.x, (YDim)focus.y);
-  ASSERT_TRUE(app_.refresh());
-  ASSERT_EQ(1, slider_ptr->paintCalls());
+  ASSERT_EQ(1u, panel_ptr->invalidated_regions.size());
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
                                    Scaled(4), Scaled(6));
-  Rect expected_clip =
-      axis.invalidationRectForPosChange(slider_ptr->getPos(), slider_ptr->getPos())
+  float center = axis.displayCenterFromPos(slider_ptr->getPos());
+  Rect expected =
+      ValueIndicatorBubble::EnvelopeForCenterRange(
+          slider_ptr->width(), slider_ptr->height(), center, center,
+          style.value_indicator, style.orientation)
           .translate(kSliderX, kSliderY);
-  EXPECT_EQ(expected_clip, slider_ptr->lastPaintClip());
+  EXPECT_EQ(expected, panel_ptr->invalidated_regions.front());
+  EXPECT_LT(expected.width(), slider_ptr->maxParentBounds().width());
 
-  slider_ptr->clearPaintObservation();
+  panel_ptr->invalidated_regions.clear();
   ASSERT_TRUE(slider_ptr->onTouchUp((XDim)focus.x, (YDim)focus.y));
-  ASSERT_TRUE(app_.refresh());
-  ASSERT_EQ(1, slider_ptr->paintCalls());
-  EXPECT_EQ(expected_clip, slider_ptr->lastPaintClip());
+  ASSERT_EQ(1u, panel_ptr->invalidated_regions.size());
+  EXPECT_EQ(expected, panel_ptr->invalidated_regions.front());
 }
 
 TEST_F(Material3SliderRenderTest,

@@ -413,8 +413,8 @@ void Widget::setPressed(bool pressed) {
     setDirty();
     if (getOverlayType() != OVERLAY_NONE) {
       invalidateInterior();
+      notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
     }
-    notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
   }
   notifyStateChanged(kWidgetPressed);
 }
