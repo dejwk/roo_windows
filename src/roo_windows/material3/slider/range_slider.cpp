@@ -200,9 +200,15 @@ Rect InvalidationRectForValueChange(const internal::SliderAxisMetrics& axis,
                                     uint16_t old_end_pos,
                                     uint16_t new_start_pos,
                                     uint16_t new_end_pos) {
-  return UnionRects(
-      axis.invalidationRectForPosChange(old_start_pos, new_start_pos),
-      axis.invalidationRectForPosChange(old_end_pos, new_end_pos));
+  Rect start_rect =
+      old_start_pos == new_start_pos
+          ? Rect(0, 0, -1, -1)
+          : axis.invalidationRectForPosChange(old_start_pos, new_start_pos);
+  Rect end_rect =
+      old_end_pos == new_end_pos
+          ? Rect(0, 0, -1, -1)
+          : axis.invalidationRectForPosChange(old_end_pos, new_end_pos);
+  return UnionRects(start_rect, end_rect);
 }
 
 float TrackShapeMinPrimary(float visible_min_primary) {

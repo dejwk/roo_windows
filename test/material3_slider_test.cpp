@@ -171,6 +171,30 @@ class ClipTrackingSlider : public Slider {
   mutable Rect last_paint_clip_ = Rect(0, 0, -1, -1);
 };
 
+class ClipTrackingRangeSlider : public RangeSlider {
+ public:
+  using RangeSlider::RangeSlider;
+
+  void clearPaintObservation() {
+    paint_calls_ = 0;
+    last_paint_clip_ = Rect(0, 0, -1, -1);
+  }
+
+  int paintCalls() const { return paint_calls_; }
+
+  Rect lastPaintClip() const { return last_paint_clip_; }
+
+  void paint(const Canvas& canvas) const override {
+    ++paint_calls_;
+    const roo_display::Box& box = canvas.clip_box();
+    last_paint_clip_ = Rect(box.xMin(), box.yMin(), box.xMax(), box.yMax());
+  }
+
+ private:
+  mutable int paint_calls_ = 0;
+  mutable Rect last_paint_clip_ = Rect(0, 0, -1, -1);
+};
+
 class RecordingPanel : public Panel {
  public:
   explicit RecordingPanel(const Environment& env) : Panel(env) {}
@@ -1164,6 +1188,42 @@ TEST_F(Material3SliderRenderTest,
 
   Rect full_indicator_envelope = slider_ptr->getParentTransientPaintBounds();
   EXPECT_LT(expected_clip.width(), full_indicator_envelope.width());
+}
+
+TEST_F(Material3SliderRenderTest,
+       RangeSliderSingleThumbMovePaintIsClippedToMovedThumbSweep) {
+  auto slider = std::make_unique<ClipTrackingRangeSlider>(
+      env_, SliderRange{0.0f, 100.0f}, 25.0f, 75.0f);
+  ClipTrackingRangeSlider* slider_ptr = slider.get();
+
+  app_.add(std::move(slider),
+           roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
+                            kSliderY + kSliderHeight - 1));
+
+  ASSERT_TRUE(app_.refresh());
+  slider_ptr->clearPaintObservation();
+
+  ASSERT_TRUE(slider_ptr->setValues(35.0f, 75.0f));
+  ASSERT_TRUE(app_.refresh());
+  ASSERT_EQ(1, slider_ptr->paintCalls());
+
+  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
+                                   Scaled(4), Scaled(6));
+  uint16_t old_start_pos = internal::SliderPosFromValue(0.0f, 100.0f, 25.0f);
+  uint16_t new_start_pos = internal::SliderPosFromValue(0.0f, 100.0f, 35.0f);
+  uint16_t end_pos = internal::SliderPosFromValue(0.0f, 100.0f, 75.0f);
+
+  Rect expected_clip =
+      axis.invalidationRectForPosChange(old_start_pos, new_start_pos)
+          .translate(kSliderX, kSliderY);
+  Rect old_broad_clip =
+      Rect::Extent(
+          axis.invalidationRectForPosChange(old_start_pos, new_start_pos),
+          axis.invalidationRectForPosChange(end_pos, end_pos))
+          .translate(kSliderX, kSliderY);
+
+  EXPECT_EQ(expected_clip, slider_ptr->lastPaintClip());
+  EXPECT_LT(expected_clip.width(), old_broad_clip.width());
 }
 
 TEST_F(Material3SliderRenderTest,
