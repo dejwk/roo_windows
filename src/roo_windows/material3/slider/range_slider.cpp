@@ -384,6 +384,25 @@ bool RangeSlider::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
   return true;
 }
 
+bool RangeSlider::onTouchUp(XDim x, YDim y) {
+  (void)x;
+  (void)y;
+  if (active_thumb_ != kNoActiveThumb || is_dragging_ || awaiting_direction_) {
+    if (isPressed()) {
+      setPressed(false);
+    }
+    if (active_thumb_ != kNoActiveThumb) {
+      onInteractionEnd(start_value_, end_value_);
+    }
+    active_thumb_ = kNoActiveThumb;
+    overlay_thumb_ = kNoActiveThumb;
+    is_dragging_ = false;
+    awaiting_direction_ = false;
+    return true;
+  }
+  return Widget::onTouchUp(x, y);
+}
+
 void RangeSlider::onCancel() {
   if (active_thumb_ != kNoActiveThumb) {
     onInteractionEnd(start_value_, end_value_);

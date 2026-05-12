@@ -774,6 +774,33 @@ TEST_F(Material3SliderAppTest, DragLifecycleFiresSingleStartAndEndsOnCancel) {
   EXPECT_FLOAT_EQ(tracking->values[0], tracking->values[1]);
 }
 
+TEST_F(Material3SliderAppTest, DragTouchUpIsConsumedAndEndsInteraction) {
+  auto tracking_slider = std::make_unique<TrackingSlider>(env_, 0);
+  slider_ = tracking_slider.get();
+  TrackingSlider* tracking = tracking_slider.get();
+  app_.add(std::move(tracking_slider),
+           roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
+                            kSliderY + kSliderHeight - 1));
+  ASSERT_TRUE(app_.refresh());
+
+  tracking->onShowPress((XDim)tracking->getPointOverlayFocus().x,
+                        tracking->height() / 2);
+  ASSERT_EQ(1u, tracking->events.size());
+  EXPECT_STREQ("start", tracking->events[0]);
+
+  EXPECT_TRUE(tracking->onScroll(Scaled(96) - 1, tracking->height() / 2,
+                                 Scaled(12), 0));
+  ASSERT_EQ(2u, tracking->events.size());
+  EXPECT_STREQ("value:user:", tracking->events[1]);
+
+  EXPECT_TRUE(tracking->onTouchUp(Scaled(96) - 1, tracking->height() / 2));
+  ASSERT_EQ(3u, tracking->events.size());
+  EXPECT_STREQ("end", tracking->events[2]);
+  ASSERT_EQ(2u, tracking->values.size());
+  EXPECT_FLOAT_EQ(tracking->values[0], tracking->values[1]);
+  EXPECT_FALSE(tracking->isPressed());
+}
+
 TEST_F(Material3SliderAppTest,
        RangeSliderDragRespectsMinimumSeparationAndReportsActiveThumb) {
   auto tracking_slider = std::make_unique<TrackingRangeSlider>(
@@ -814,6 +841,34 @@ TEST_F(Material3SliderAppTest,
   ASSERT_FALSE(tracking->start_values.empty());
   EXPECT_FLOAT_EQ(55.0f, tracking->start_values.back());
   EXPECT_FLOAT_EQ(75.0f, tracking->end_values.back());
+}
+
+TEST_F(Material3SliderAppTest, RangeSliderDragTouchUpIsConsumedAndEnds) {
+  auto tracking_slider = std::make_unique<TrackingRangeSlider>(
+      env_, SliderRange{0.0f, 100.0f}, 25.0f, 75.0f);
+  TrackingRangeSlider* tracking = tracking_slider.get();
+  app_.add(std::move(tracking_slider),
+           roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
+                            kSliderY + kSliderHeight - 1));
+  ASSERT_TRUE(app_.refresh());
+
+  internal::SliderAxisMetrics axis(tracking->width(), tracking->height(),
+                                   Scaled(4), 0);
+  XDim start_thumb_center = (XDim)roundf(axis.centerFromPos(
+      internal::SliderPosFromValue(0.0f, 100.0f, tracking->startValue())));
+  tracking->onShowPress(start_thumb_center, kSliderHeight / 2);
+  ASSERT_FALSE(tracking->events.empty());
+  EXPECT_STREQ("start", tracking->events[0]);
+
+  EXPECT_TRUE(tracking->onScroll(Scaled(90), kSliderHeight / 2, Scaled(20), 0));
+  ASSERT_GE(tracking->events.size(), 2u);
+  EXPECT_STREQ("value:user:", tracking->events.back());
+
+  EXPECT_TRUE(tracking->onTouchUp(Scaled(90), kSliderHeight / 2));
+  ASSERT_GE(tracking->events.size(), 3u);
+  EXPECT_STREQ("end", tracking->events.back());
+  EXPECT_EQ(-1, tracking->activeThumbIndex());
+  EXPECT_FALSE(tracking->isPressed());
 }
 
 TEST_F(Material3SliderAppTest, OverlappingRangeThumbsWaitForDirectionalIntent) {

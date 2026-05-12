@@ -201,6 +201,18 @@ bool Slider::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
   return true;
 }
 
+bool Slider::onTouchUp(XDim x, YDim y) {
+  if (is_dragging_) {
+    if (isPressed()) {
+      setPressed(false);
+    }
+    onInteractionEnd(value_);
+    is_dragging_ = false;
+    return true;
+  }
+  return Widget::onTouchUp(x, y);
+}
+
 void Slider::onCancel() {
   if (is_dragging_) {
     onInteractionEnd(value_);

@@ -46,6 +46,8 @@ class RangeSlider : public BasicWidget {
 
   bool onScroll(XDim x, YDim y, XDim dx, YDim dy) override;
 
+  bool onTouchUp(XDim x, YDim y) override;
+
   void onCancel() override;
 
   ColorRole effectiveContainerRole() const override;

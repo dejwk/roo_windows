@@ -104,6 +104,8 @@ class Slider : public BasicWidget {
 
   bool onScroll(XDim x, YDim y, XDim dx, YDim dy) override;
 
+  bool onTouchUp(XDim x, YDim y) override;
+
   void onCancel() override;
 
   roo_display::FpPoint getPointOverlayFocus() const override;
