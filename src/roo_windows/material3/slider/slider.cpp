@@ -6,6 +6,7 @@
 #include "roo_display/shape/smooth.h"
 #include "roo_windows/core/overlay_spec.h"
 #include "roo_windows/material3/slider/slider_internal.h"
+#include "roo_windows/material3/slider/slider_size_internal.h"
 #include "roo_windows/material3/slider/value_indicator.h"
 
 using namespace roo_display;
@@ -15,12 +16,6 @@ namespace material3 {
 
 namespace {
 
-static constexpr int kTrackHeight = Scaled(16);
-static constexpr int kTrackRadius = kTrackHeight / 2;
-static constexpr int kTrackHandleGap = Scaled(6);
-static constexpr int kHandleWidth = Scaled(4);
-static constexpr int kHandleHeight = Scaled(44);
-static constexpr float kHandleCornerRadius = 0.5f * (float)kHandleWidth;
 static constexpr int kTouchSlopPixels = Scaled(20);
 static constexpr float kPressedThumbWidthRatio = 0.5f;
 
@@ -67,21 +62,23 @@ bool ShowsValueIndicator(const Slider& widget) {
   return false;
 }
 
-float TrackShapeMinPrimary(float visible_min_primary) {
+float TrackShapeMinPrimary(float visible_min_primary, int16_t track_radius) {
   return visible_min_primary <= 0.0f
              ? -0.5f
-             : visible_min_primary - (float)kTrackRadius;
+             : visible_min_primary - (float)track_radius;
 }
 
-int16_t ThumbWidthForState(bool pressed) {
-  if (!pressed) return kHandleWidth;
+int16_t ThumbWidthForState(int16_t nominal_width, bool pressed) {
+  if (!pressed) return nominal_width;
   int16_t width =
-      (int16_t)roundf((float)kHandleWidth * kPressedThumbWidthRatio);
+      (int16_t)roundf((float)nominal_width * kPressedThumbWidthRatio);
   return width < 1 ? 1 : width;
 }
 
-int16_t TrackGapForThumbWidth(int16_t thumb_width) {
-  int16_t gap = kTrackHandleGap - (kHandleWidth - thumb_width) / 2;
+int16_t TrackGapForThumbWidth(const internal::SliderSizeMetrics& size_metrics,
+                              int16_t thumb_width) {
+  int16_t gap = size_metrics.track_handle_gap -
+                (size_metrics.handle_width - thumb_width) / 2;
   return gap < 0 ? 0 : gap;
 }
 
@@ -115,16 +112,22 @@ void DrawTrackPiece(const Canvas& canvas, const roo_display::Drawable& piece,
 }
 
 internal::SliderAxisMetrics MakeSliderAxisMetrics(const Slider& slider) {
+  const internal::SliderSizeMetrics& size_metrics =
+      internal::ResolveSliderSizeMetrics(slider.style().size);
   return internal::SliderAxisMetrics(
-      slider.width(), slider.height(), kHandleWidth, kTrackHandleGap,
+      slider.width(), slider.height(), size_metrics.handle_width,
+      size_metrics.track_handle_gap,
       slider.style().orientation == SliderOrientation::kVertical);
 }
 
 Rect IndicatorDirtyRectFromSpan(const internal::DirtySpan& span, int16_t width,
                                 int16_t height, SliderStyle style) {
   if (span.empty() || width <= 0 || height <= 0) return Rect(0, 0, -1, -1);
+  const internal::SliderSizeMetrics& size_metrics =
+      internal::ResolveSliderSizeMetrics(style.size);
   Rect conservative = ValueIndicatorBubble::ConservativeBounds(
-      width, height, kHandleWidth, style.value_indicator, style.orientation);
+      width, height, size_metrics.handle_width, style.value_indicator,
+      style.orientation);
   if (conservative.empty()) return Rect(0, 0, -1, -1);
   if (style.orientation == SliderOrientation::kVertical) {
     return Rect(conservative.xMin(), span.min_coord, conservative.xMax(),
@@ -406,28 +409,31 @@ uint16_t Slider::getPos() const {
 
 void Slider::paint(const Canvas& canvas) const {
   Tokens tokens = ResolveTokens(*this);
+  const internal::SliderSizeMetrics& size_metrics =
+      internal::ResolveSliderSizeMetrics(style_.size);
   internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
   float center_anchor_primary = axis.centerFromPos(32768);
   bool thumb_on_or_right_of_center =
       axis.centerFromPos(getPos()) >= center_anchor_primary;
-  int16_t thumb_width = ThumbWidthForState(isPressed());
-  int16_t track_gap = TrackGapForThumbWidth(thumb_width);
+  int16_t thumb_width =
+      ThumbWidthForState(size_metrics.handle_width, isPressed());
+  int16_t track_gap = TrackGapForThumbWidth(size_metrics, thumb_width);
   internal::SliderVisualMetrics layout = internal::ResolveSliderVisualMetrics(
-      axis, axis.centerFromPos(getPos()), thumb_width, kTrackHeight, track_gap,
-      kHandleHeight);
+      axis, axis.centerFromPos(getPos()), thumb_width,
+      size_metrics.track_height, track_gap, size_metrics.handle_height);
 
   float active_track_min_primary = -0.5f;
   float active_track_max_primary = layout.active_track_max_primary;
   roo_display::Box active_clip = axis.boxFromPrimaryCross(
       0, layout.track_cross_start, layout.activeClipMax(axis.primarySpan()),
-      layout.track_cross_start + kTrackHeight - 1);
+      layout.track_cross_start + size_metrics.track_height - 1);
   bool has_left_inactive_clip = false;
   bool has_right_inactive_clip = true;
   roo_display::Box left_inactive_clip;
   roo_display::Box right_inactive_clip = axis.boxFromPrimaryCross(
       (int16_t)ceilf(layout.inactive_track_min_primary),
       layout.track_cross_start, axis.primarySpan() - 1,
-      layout.track_cross_start + kTrackHeight - 1);
+      layout.track_cross_start + size_metrics.track_height - 1);
 
   if (variant_ == SliderVariant::kCentered) {
     active_track_min_primary = thumb_on_or_right_of_center
@@ -445,7 +451,7 @@ void Slider::paint(const Canvas& canvas) const {
     }
     active_clip = axis.boxFromPrimaryCross(
         active_clip_min, layout.track_cross_start, active_clip_max,
-        layout.track_cross_start + kTrackHeight - 1);
+        layout.track_cross_start + size_metrics.track_height - 1);
 
     has_left_inactive_clip = true;
     int16_t left_inactive_max =
@@ -459,7 +465,7 @@ void Slider::paint(const Canvas& canvas) const {
           0, layout.track_cross_start,
           left_inactive_max >= axis.primarySpan() ? axis.primarySpan() - 1
                                                   : left_inactive_max,
-          layout.track_cross_start + kTrackHeight - 1);
+          layout.track_cross_start + size_metrics.track_height - 1);
     }
 
     int16_t right_inactive_min =
@@ -472,7 +478,7 @@ void Slider::paint(const Canvas& canvas) const {
       if (right_inactive_min < 0) right_inactive_min = 0;
       right_inactive_clip = axis.boxFromPrimaryCross(
           right_inactive_min, layout.track_cross_start, axis.primarySpan() - 1,
-          layout.track_cross_start + kTrackHeight - 1);
+          layout.track_cross_start + size_metrics.track_height - 1);
     }
   } else {
     int16_t right_inactive_min =
@@ -483,31 +489,34 @@ void Slider::paint(const Canvas& canvas) const {
       if (right_inactive_min < 0) right_inactive_min = 0;
       right_inactive_clip = axis.boxFromPrimaryCross(
           right_inactive_min, layout.track_cross_start, axis.primarySpan() - 1,
-          layout.track_cross_start + kTrackHeight - 1);
+          layout.track_cross_start + size_metrics.track_height - 1);
     }
   }
 
   auto inactive_track_bounds = axis.paintRectFromPrimaryCross(
-      TrackShapeMinPrimary(0.0f), layout.track_min_cross,
-      axis.primarySpan() - 0.5f, layout.track_max_cross);
+      TrackShapeMinPrimary(0.0f, size_metrics.track_radius),
+      layout.track_min_cross, axis.primarySpan() - 0.5f,
+      layout.track_max_cross);
   auto active_track_bounds = axis.paintRectFromPrimaryCross(
-      TrackShapeMinPrimary(active_track_min_primary), layout.track_min_cross,
-      active_track_max_primary + (float)kTrackRadius, layout.track_max_cross);
+      TrackShapeMinPrimary(active_track_min_primary, size_metrics.track_radius),
+      layout.track_min_cross,
+      active_track_max_primary + (float)size_metrics.track_radius,
+      layout.track_max_cross);
   auto handle_bounds = axis.paintRectFromPrimaryCross(
       layout.thumb_min_primary, layout.thumb_min_cross,
       layout.thumb_max_primary, layout.thumb_max_cross);
 
   auto inactive_track = SmoothFilledRoundRect(
       inactive_track_bounds.x_min, inactive_track_bounds.y_min,
-      inactive_track_bounds.x_max, inactive_track_bounds.y_max, kTrackRadius,
-      tokens.inactive_track);
+      inactive_track_bounds.x_max, inactive_track_bounds.y_max,
+      size_metrics.track_radius, tokens.inactive_track);
   auto active_track = SmoothFilledRoundRect(
       active_track_bounds.x_min, active_track_bounds.y_min,
-      active_track_bounds.x_max, active_track_bounds.y_max, kTrackRadius,
-      tokens.active_track);
-  auto handle = SmoothFilledRoundRect(handle_bounds.x_min, handle_bounds.y_min,
-                                      handle_bounds.x_max, handle_bounds.y_max,
-                                      kHandleCornerRadius, tokens.handle);
+      active_track_bounds.x_max, active_track_bounds.y_max,
+      size_metrics.track_radius, tokens.active_track);
+  auto handle = SmoothFilledRoundRect(
+      handle_bounds.x_min, handle_bounds.y_min, handle_bounds.x_max,
+      handle_bounds.y_max, size_metrics.handleCornerRadius(), tokens.handle);
   Rect widget_bounds = bounds();
   Rect handle_tile_bounds = GetHandleTileBounds(widget_bounds, handle.extents(),
                                                 track_gap, axis.isVertical());
@@ -528,16 +537,20 @@ void Slider::paint(const Canvas& canvas) const {
 }
 
 Dimensions Slider::getSuggestedMinimumDimensions() const {
-  return Dimensions(kHandleHeight, kHandleHeight);
+  const internal::SliderSizeMetrics& size_metrics =
+      internal::ResolveSliderSizeMetrics(style_.size);
+  return Dimensions(size_metrics.handle_height, size_metrics.handle_height);
 }
 
 PreferredSize Slider::getPreferredSize() const {
+  const internal::SliderSizeMetrics& size_metrics =
+      internal::ResolveSliderSizeMetrics(style_.size);
   if (style_.orientation == SliderOrientation::kVertical) {
-    return PreferredSize(PreferredSize::ExactWidth(kHandleHeight),
+    return PreferredSize(PreferredSize::ExactWidth(size_metrics.handle_height),
                          PreferredSize::MatchParentHeight());
   }
   return PreferredSize(PreferredSize::MatchParentWidth(),
-                       PreferredSize::ExactHeight(kHandleHeight));
+                       PreferredSize::ExactHeight(size_metrics.handle_height));
 }
 
 roo_display::FpPoint Slider::getPointOverlayFocus() const {
@@ -572,8 +585,10 @@ Rect Slider::getParentTransientPaintBounds() const {
       style_.value_indicator == SliderValueIndicatorBehavior::kAlways ||
       isPressed() || isDragged();
   if (!may_show || width() <= 0 || height() <= 0) return base;
+  const internal::SliderSizeMetrics& size_metrics =
+      internal::ResolveSliderSizeMetrics(style_.size);
   Rect bubble_local = ValueIndicatorBubble::ConservativeBounds(
-      width(), height(), kHandleWidth, style_.value_indicator,
+      width(), height(), size_metrics.handle_width, style_.value_indicator,
       style_.orientation);
   if (bubble_local.empty()) return base;
   Rect bubble_parent = bubble_local.translate(offsetLeft(), offsetTop());

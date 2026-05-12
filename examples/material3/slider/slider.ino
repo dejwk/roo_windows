@@ -485,6 +485,7 @@ class FullWidthColumn : public FlexLayout {
 // constructors.
 constexpr material3::SliderStyle FanSpeedStyle() {
   material3::SliderStyle s{};
+  s.size = material3::SliderSize::kLarge;
   s.value_indicator =
       material3::SliderValueIndicatorBehavior::kShowOnInteraction;
   return s;

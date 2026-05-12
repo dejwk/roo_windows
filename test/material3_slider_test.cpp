@@ -291,6 +291,46 @@ TEST(Material3Slider, ReportsMatchParentPreferredWidthAndExactHeight) {
   EXPECT_EQ(Scaled(44), preferred.height().value());
 }
 
+TEST(Material3Slider, SizePresetUpdatesMeasuredAndPreferredDimensions) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+
+  SliderStyle style{};
+  style.size = SliderSize::kLarge;
+  Slider slider(env, SliderRange{0.0f, 100.0f}, 50.0f, SliderVariant::kStandard,
+                style);
+
+  Dimensions suggested = slider.getSuggestedMinimumDimensions();
+  Dimensions measured =
+      slider.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+  PreferredSize preferred = slider.getPreferredSize();
+
+  EXPECT_EQ(Scaled(68), suggested.width());
+  EXPECT_EQ(Scaled(68), suggested.height());
+  EXPECT_EQ(Scaled(68), measured.width());
+  EXPECT_EQ(Scaled(68), measured.height());
+  EXPECT_TRUE(preferred.width().isMatchParent());
+  EXPECT_TRUE(preferred.height().isExact());
+  EXPECT_EQ(Scaled(68), preferred.height().value());
+}
+
+TEST(Material3Slider, VerticalSizePresetUsesExactWidthFromPreset) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+
+  SliderStyle style{};
+  style.orientation = SliderOrientation::kVertical;
+  style.size = SliderSize::kMedium;
+  Slider slider(env, SliderRange{0.0f, 100.0f}, 50.0f, SliderVariant::kStandard,
+                style);
+
+  PreferredSize preferred = slider.getPreferredSize();
+
+  EXPECT_TRUE(preferred.width().isExact());
+  EXPECT_EQ(Scaled(52), preferred.width().value());
+  EXPECT_TRUE(preferred.height().isMatchParent());
+}
+
 TEST(Material3Slider, EffectiveContainerRoleIsPrimary) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -609,6 +649,28 @@ TEST(Material3RangeSlider, PressStateDoesNotUseOverlayOrClickAnimation) {
 
   EXPECT_FALSE(slider.useOverlayOnPress());
   EXPECT_FALSE(slider.showClickAnimation());
+}
+
+TEST(Material3RangeSlider, SizePresetUpdatesMeasuredAndPreferredDimensions) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+
+  SliderStyle style{};
+  style.size = SliderSize::kExtraLarge;
+  RangeSlider slider(env, SliderRange{0.0f, 100.0f}, 25.0f, 75.0f, style);
+
+  Dimensions suggested = slider.getSuggestedMinimumDimensions();
+  Dimensions measured =
+      slider.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+  PreferredSize preferred = slider.getPreferredSize();
+
+  EXPECT_EQ(Scaled(108), suggested.width());
+  EXPECT_EQ(Scaled(108), suggested.height());
+  EXPECT_EQ(Scaled(108), measured.width());
+  EXPECT_EQ(Scaled(108), measured.height());
+  EXPECT_TRUE(preferred.width().isMatchParent());
+  EXPECT_TRUE(preferred.height().isExact());
+  EXPECT_EQ(Scaled(108), preferred.height().value());
 }
 
 TEST_F(Material3SliderAppTest,
