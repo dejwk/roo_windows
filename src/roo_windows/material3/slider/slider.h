@@ -156,6 +156,8 @@ class Slider : public BasicWidget {
   void notifyStateChanged(uint16_t state_diff) override;
 
  private:
+  void paintStops(const Canvas& canvas, Clipper& clipper) const;
+
   bool setPosInternal(uint16_t pos, bool from_user);
 
   // Marks the minimal local-coord region that needs to be redrawn for a

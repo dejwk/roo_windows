@@ -1164,6 +1164,133 @@ TEST_F(Material3SliderRenderTest, RangeSliderPaintsActiveTrackBetweenThumbs) {
 }
 
 TEST_F(Material3SliderRenderTest,
+       DiscreteSliderPaintsActiveAndInactiveStopMarks) {
+  constexpr Color kBackdropColor(0xFFF3EFE7);
+
+  SliderStyle style{};
+  style.tick_mode = SliderTickMode::kShowStops;
+
+  auto backdrop = std::make_unique<SolidBackdrop>(env_, kBackdropColor,
+                                                  Dimensions(kWidth, kHeight));
+  auto slider = std::make_unique<Slider>(env_, SliderRange{0.0f, 1.0f, 0.2f},
+                                         0.4f, SliderVariant::kStandard, style);
+  Slider* slider_ptr = slider.get();
+  slider_ = slider_ptr;
+
+  app_.add(std::move(backdrop),
+           roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
+  app_.add(std::move(slider),
+           roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
+                            kSliderY + kSliderHeight - 1));
+
+  ASSERT_TRUE(app_.refresh());
+
+  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
+                                   Scaled(4), Scaled(6));
+  int16_t center_y = kSliderY + slider_ptr->height() / 2;
+  int active_stop_x =
+      kSliderX + (int)roundf(axis.centerFromPos(
+                     internal::SliderPosFromValue(0.0f, 1.0f, 0.2f)));
+  int inactive_stop_x =
+      kSliderX + (int)roundf(axis.centerFromPos(
+                     internal::SliderPosFromValue(0.0f, 1.0f, 0.8f)));
+
+  Color active_stop = QuantizeToArgb4444(env_.theme().color.onPrimary);
+  Color inactive_stop =
+      QuantizeToArgb4444(env_.theme().color.onSecondaryContainer);
+
+  EXPECT_EQ(active_stop, pixelAt(active_stop_x, center_y));
+  EXPECT_EQ(inactive_stop, pixelAt(inactive_stop_x, center_y));
+}
+
+TEST_F(Material3SliderRenderTest,
+       CenteredDiscreteSliderLeavesCenterGapWithoutStopMark) {
+  constexpr Color kBackdropColor(0xFFF3EFE7);
+
+  SliderStyle style{};
+  style.tick_mode = SliderTickMode::kShowStops;
+
+  auto backdrop = std::make_unique<SolidBackdrop>(env_, kBackdropColor,
+                                                  Dimensions(kWidth, kHeight));
+  auto slider =
+      std::make_unique<Slider>(env_, SliderRange{-2.0f, 2.0f, 1.0f}, -2.0f,
+                               SliderVariant::kCentered, style);
+  Slider* slider_ptr = slider.get();
+  slider_ = slider_ptr;
+
+  app_.add(std::move(backdrop),
+           roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
+  app_.add(std::move(slider),
+           roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
+                            kSliderY + kSliderHeight - 1));
+
+  ASSERT_TRUE(app_.refresh());
+
+  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
+                                   Scaled(4), Scaled(6));
+  int16_t center_y = kSliderY + slider_ptr->height() / 2;
+  int active_stop_x =
+      kSliderX + (int)roundf(axis.centerFromPos(
+                     internal::SliderPosFromValue(-2.0f, 2.0f, -1.0f)));
+  int center_gap_x = kSliderX + (int)roundf(axis.centerFromPos(32768));
+  int inactive_stop_x =
+      kSliderX + (int)roundf(axis.centerFromPos(
+                     internal::SliderPosFromValue(-2.0f, 2.0f, 1.0f)));
+
+  Color active_stop = QuantizeToArgb4444(env_.theme().color.onPrimary);
+  Color inactive_stop =
+      QuantizeToArgb4444(env_.theme().color.onSecondaryContainer);
+  Color background = QuantizeToArgb4444(env_.theme().color.background);
+
+  EXPECT_EQ(active_stop, pixelAt(active_stop_x, center_y));
+  EXPECT_EQ(background, pixelAt(center_gap_x, center_y));
+  EXPECT_EQ(inactive_stop, pixelAt(inactive_stop_x, center_y));
+}
+
+TEST_F(Material3SliderRenderTest,
+       DiscreteRangeSliderPaintsStopMarksPerTrackSegment) {
+  constexpr Color kBackdropColor(0xFFF3EFE7);
+
+  SliderStyle style{};
+  style.tick_mode = SliderTickMode::kShowStops;
+
+  auto backdrop = std::make_unique<SolidBackdrop>(env_, kBackdropColor,
+                                                  Dimensions(kWidth, kHeight));
+  auto slider = std::make_unique<RangeSlider>(
+      env_, SliderRange{0.0f, 1.0f, 0.2f}, 0.2f, 0.8f, style);
+  RangeSlider* slider_ptr = slider.get();
+
+  app_.add(std::move(backdrop),
+           roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
+  app_.add(std::move(slider),
+           roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
+                            kSliderY + kSliderHeight - 1));
+
+  ASSERT_TRUE(app_.refresh());
+
+  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
+                                   Scaled(4), Scaled(6));
+  int16_t center_y = kSliderY + slider_ptr->height() / 2;
+  int left_inactive_stop_x =
+      kSliderX + (int)roundf(axis.centerFromPos(
+                     internal::SliderPosFromValue(0.0f, 1.0f, 0.0f)));
+  int active_stop_x =
+      kSliderX + (int)roundf(axis.centerFromPos(
+                     internal::SliderPosFromValue(0.0f, 1.0f, 0.4f)));
+  int right_inactive_stop_x =
+      kSliderX + (int)roundf(axis.centerFromPos(
+                     internal::SliderPosFromValue(0.0f, 1.0f, 1.0f)));
+
+  Color active_stop = QuantizeToArgb4444(env_.theme().color.onPrimary);
+  Color inactive_stop =
+      QuantizeToArgb4444(env_.theme().color.onSecondaryContainer);
+
+  EXPECT_EQ(inactive_stop, pixelAt(left_inactive_stop_x, center_y));
+  EXPECT_EQ(active_stop, pixelAt(active_stop_x, center_y));
+  EXPECT_EQ(inactive_stop, pixelAt(right_inactive_stop_x, center_y));
+}
+
+TEST_F(Material3SliderRenderTest,
        PressedSliderNarrowsThumbAndTightensTrackGap) {
   constexpr Color kBackdropColor(0xFFF3EFE7);
 
@@ -1188,6 +1315,46 @@ TEST_F(Material3SliderRenderTest,
 
   EXPECT_EQ(background, pixelAt(kSliderX + 45, kSliderY + 5));
   EXPECT_EQ(primary, pixelAt(kSliderX + 47, kSliderY + kSliderHeight / 2));
+}
+
+TEST_F(Material3SliderRenderTest,
+       PressedDiscreteStopsStayInsideTrackNearThumbGap) {
+  constexpr Color kBackdropColor(0xFFF3EFE7);
+
+  SliderStyle style{};
+  style.tick_mode = SliderTickMode::kShowStops;
+
+  auto backdrop = std::make_unique<SolidBackdrop>(env_, kBackdropColor,
+                                                  Dimensions(kWidth, kHeight));
+  auto pressed_slider =
+      std::make_unique<Slider>(env_, SliderRange{0.0f, 1.0f, 0.1f}, 0.5f,
+                               SliderVariant::kStandard, style);
+  Slider* slider_ptr = pressed_slider.get();
+  slider_ = slider_ptr;
+
+  app_.add(std::move(backdrop),
+           roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
+  app_.add(std::move(pressed_slider),
+           roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
+                            kSliderY + kSliderHeight - 1));
+
+  ASSERT_TRUE(app_.refresh());
+  slider_ptr->onShowPress((XDim)slider_ptr->getPointOverlayFocus().x,
+                          slider_ptr->height() / 2);
+  ASSERT_TRUE(app_.refresh());
+
+  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
+                                   Scaled(4), Scaled(6));
+  int16_t pressed_thumb_width = Scaled(2);
+  int16_t pressed_track_gap = Scaled(5);
+  internal::SliderVisualMetrics layout = internal::ResolveSliderVisualMetrics(
+      axis, axis.centerFromPos(slider_ptr->getPos()), pressed_thumb_width,
+      Scaled(16), pressed_track_gap, Scaled(44));
+  int gap_x = kSliderX + (int)floorf(layout.active_track_max_primary) + 1;
+  int gap_y = kSliderY + slider_ptr->height() / 2;
+
+  Color background = QuantizeToArgb4444(env_.theme().color.background);
+  EXPECT_EQ(background, pixelAt(gap_x, gap_y));
 }
 
 TEST_F(Material3SliderRenderTest,

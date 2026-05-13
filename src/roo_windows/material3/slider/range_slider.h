@@ -98,6 +98,8 @@ class RangeSlider : public BasicWidget {
   void notifyStateChanged(uint16_t state_diff) override;
 
  private:
+  void paintStops(const Canvas& canvas, Clipper& clipper) const;
+
   bool setValuesInternal(float start_value, float end_value, bool from_user,
                          int active_thumb);
 

@@ -19,6 +19,8 @@ namespace {
 static constexpr int kTouchSlopPixels = Scaled(20);
 static constexpr int8_t kNoActiveThumb = -1;
 static constexpr float kPressedThumbWidthRatio = 0.5f;
+static constexpr int16_t kStopMarkRadiusPixels = Scaled(2);
+static constexpr int16_t kStopMarkSpanPixels = Scaled(4);
 
 Color DisabledComposite(Color fg, uint8_t alpha, const Theme& theme) {
   return AlphaBlend(theme.color.surface, fg.withA(alpha));
@@ -28,6 +30,8 @@ struct Tokens {
   Color active_track;
   Color inactive_track;
   Color handle;
+  Color active_stop;
+  Color inactive_stop;
 };
 
 Tokens ResolveTokens(const RangeSlider& widget) {
@@ -37,6 +41,8 @@ Tokens ResolveTokens(const RangeSlider& widget) {
         DisabledComposite(theme.color.onSurface, 0x61, theme),
         DisabledComposite(theme.color.onSurface, 0x1F, theme),
         DisabledComposite(theme.color.onSurface, 0x61, theme),
+        theme.color.surface,
+        theme.color.surface,
     };
   }
 
@@ -44,7 +50,14 @@ Tokens ResolveTokens(const RangeSlider& widget) {
       theme.color.primary,
       theme.color.secondaryContainer,
       theme.color.primary,
+      theme.color.onPrimary,
+      theme.color.onSecondaryContainer,
   };
+}
+
+bool ShouldRenderStops(const RangeSlider& widget) {
+  if (!internal::IsDiscreteSliderRange(widget.range().step)) return false;
+  return widget.style().tick_mode != SliderTickMode::kHidden;
 }
 
 // True iff the indicator should be drawn this frame. Range sliders show the
@@ -279,6 +292,69 @@ Rect IndicatorDirtyRectFromSpan(const internal::DirtySpan& span, int16_t width,
   }
   return Rect(span.min_coord, conservative.yMin(), span.max_coord,
               conservative.yMax());
+}
+
+struct StopSegment {
+  float min_primary;
+  float max_primary;
+  Color track_color;
+  Color stop_color;
+};
+
+struct StopRun {
+  bool has_marks = false;
+  int16_t min_primary = 0;
+  int16_t max_primary = -1;
+};
+
+struct StopSpan {
+  int16_t min_primary;
+  int16_t max_primary;
+};
+
+roo_display::Box StopSegmentClipBox(const internal::SliderAxisMetrics& axis,
+                                    const StopSegment& segment) {
+  int16_t min_primary = (int16_t)ceilf(segment.min_primary);
+  int16_t max_primary = (int16_t)floorf(segment.max_primary);
+  if (min_primary < 0) min_primary = 0;
+  if (max_primary >= axis.primarySpan()) max_primary = axis.primarySpan() - 1;
+  if (max_primary < min_primary) return roo_display::Box(0, 0, -1, -1);
+  int16_t cross_start = (axis.crossSpan() - kStopMarkSpanPixels) / 2;
+  return axis.boxFromPrimaryCross(min_primary, cross_start, max_primary,
+                                  cross_start + kStopMarkSpanPixels - 1);
+}
+
+inline bool SegmentContains(const StopSegment& segment, float primary) {
+  return primary >= segment.min_primary - 0.01f &&
+         primary <= segment.max_primary + 0.01f;
+}
+
+roo_display::FpPoint StopMarkCenter(const internal::SliderAxisMetrics& axis,
+                                    float primary_center) {
+  float cross_center = 0.5f * (float)axis.crossSpan() - 0.5f;
+  if (axis.isVertical()) {
+    return roo_display::FpPoint{cross_center,
+                                axis.displayPrimary(primary_center)};
+  }
+  return roo_display::FpPoint{primary_center, cross_center};
+}
+
+void IncludeStopExtentsInRun(const internal::SliderAxisMetrics& axis,
+                             const roo_display::Box& stop_extents,
+                             StopRun& run) {
+  StopSpan span =
+      axis.isVertical()
+          ? StopSpan{(int16_t)(axis.primarySpan() - 1 - stop_extents.yMax()),
+                     (int16_t)(axis.primarySpan() - 1 - stop_extents.yMin())}
+          : StopSpan{stop_extents.xMin(), stop_extents.xMax()};
+  if (!run.has_marks) {
+    run.has_marks = true;
+    run.min_primary = span.min_primary;
+    run.max_primary = span.max_primary;
+    return;
+  }
+  if (span.min_primary < run.min_primary) run.min_primary = span.min_primary;
+  if (span.max_primary > run.max_primary) run.max_primary = span.max_primary;
 }
 
 }  // namespace
@@ -799,6 +875,143 @@ void RangeSlider::paint(const Canvas& canvas) const {
   canvas.drawTiled(end_handle, end_handle_tile_bounds, kNoAlign);
 }
 
+void RangeSlider::paintStops(const Canvas& canvas, Clipper& clipper) const {
+  if (!ShouldRenderStops(*this) || width() <= 0 || height() <= 0) return;
+
+  Tokens tokens = ResolveTokens(*this);
+  const internal::SliderSizeMetrics& size_metrics =
+      internal::ResolveSliderSizeMetrics(style_.size);
+  internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
+  uint16_t start_pos =
+      internal::SliderPosFromValue(range_.from, range_.to, start_value_);
+  uint16_t end_pos =
+      internal::SliderPosFromValue(range_.from, range_.to, end_value_);
+  int16_t start_thumb_width = ThumbWidthForState(
+      size_metrics.handle_width, isPressed() && active_thumb_ == 0);
+  int16_t end_thumb_width = ThumbWidthForState(
+      size_metrics.handle_width, isPressed() && active_thumb_ == 1);
+  int16_t start_track_gap =
+      TrackGapForThumbWidth(size_metrics, start_thumb_width);
+  int16_t end_track_gap = TrackGapForThumbWidth(size_metrics, end_thumb_width);
+  internal::SliderVisualMetrics start_layout =
+      internal::ResolveSliderVisualMetrics(
+          axis, axis.centerFromPos(start_pos), start_thumb_width,
+          size_metrics.track_height, start_track_gap,
+          size_metrics.handle_height);
+  internal::SliderVisualMetrics end_layout =
+      internal::ResolveSliderVisualMetrics(
+          axis, axis.centerFromPos(end_pos), end_thumb_width,
+          size_metrics.track_height, end_track_gap, size_metrics.handle_height);
+
+  StopSegment segments[3];
+  int segment_count = 0;
+
+  int16_t left_inactive_max =
+      (int16_t)floorf(start_layout.active_track_max_primary);
+  if (left_inactive_max >= 0) {
+    segments[segment_count++] = StopSegment{
+        0.0f,
+        (float)std::min<int16_t>(left_inactive_max, axis.primarySpan() - 1),
+        tokens.inactive_track, tokens.inactive_stop};
+  }
+
+  float active_track_min_primary = start_layout.inactive_track_min_primary;
+  float active_track_max_primary = end_layout.active_track_max_primary;
+  if (active_track_max_primary >= active_track_min_primary) {
+    segments[segment_count++] =
+        StopSegment{active_track_min_primary, active_track_max_primary,
+                    tokens.active_track, tokens.active_stop};
+  }
+
+  int16_t right_inactive_min =
+      (int16_t)ceilf(end_layout.inactive_track_min_primary);
+  if (right_inactive_min < axis.primarySpan()) {
+    segments[segment_count++] =
+        StopSegment{(float)std::max<int16_t>(0, right_inactive_min),
+                    (float)(axis.primarySpan() - 1), tokens.inactive_track,
+                    tokens.inactive_stop};
+  }
+
+  if (segment_count == 0) return;
+
+  StopRun runs[3];
+  int32_t stop_count =
+      (int32_t)lroundf((range_.to - range_.from) / range_.step);
+  for (int32_t i = 0; i <= stop_count; ++i) {
+    float value = (i == stop_count) ? range_.to : range_.from + i * range_.step;
+    uint16_t pos = internal::SliderPosFromValue(range_.from, range_.to, value);
+    if (pos == start_pos || pos == end_pos) continue;
+    float primary_center = axis.centerFromPos(pos);
+    for (int segment_index = 0; segment_index < segment_count;
+         ++segment_index) {
+      if (!SegmentContains(segments[segment_index], primary_center)) continue;
+      auto stop = SmoothFilledCircle(StopMarkCenter(axis, primary_center),
+                                     kStopMarkRadiusPixels,
+                                     segments[segment_index].stop_color);
+      IncludeStopExtentsInRun(axis, stop.extents(), runs[segment_index]);
+      break;
+    }
+  }
+
+  for (int segment_index = 0; segment_index < segment_count; ++segment_index) {
+    if (!runs[segment_index].has_marks) continue;
+    roo_display::Box segment_clip_box =
+        StopSegmentClipBox(axis, segments[segment_index]);
+    if (segment_clip_box.empty()) continue;
+    int16_t cross_start = (axis.crossSpan() - kStopMarkSpanPixels) / 2;
+    roo_display::Box run_box = axis.boxFromPrimaryCross(
+        runs[segment_index].min_primary, cross_start,
+        runs[segment_index].max_primary, cross_start + kStopMarkSpanPixels - 1);
+    run_box = roo_display::Box::Intersect(run_box, segment_clip_box);
+    if (run_box.empty()) continue;
+
+    Canvas stop_canvas = canvas;
+    stop_canvas.set_bgcolor(segments[segment_index].track_color);
+    stop_canvas.clip(segment_clip_box.translate(canvas.dx(), canvas.dy()));
+    bool has_previous_stop = false;
+    StopSpan previous_span{0, -1};
+    for (int32_t i = 0; i <= stop_count; ++i) {
+      float value =
+          (i == stop_count) ? range_.to : range_.from + i * range_.step;
+      uint16_t pos =
+          internal::SliderPosFromValue(range_.from, range_.to, value);
+      if (pos == start_pos || pos == end_pos) continue;
+      float primary_center = axis.centerFromPos(pos);
+      if (!SegmentContains(segments[segment_index], primary_center)) continue;
+      auto stop = SmoothFilledCircle(StopMarkCenter(axis, primary_center),
+                                     kStopMarkRadiusPixels,
+                                     segments[segment_index].stop_color);
+      StopSpan current_span =
+          axis.isVertical()
+              ? StopSpan{(int16_t)(axis.primarySpan() - 1 -
+                                   stop.extents().yMax()),
+                         (int16_t)(axis.primarySpan() - 1 -
+                                   stop.extents().yMin())}
+              : StopSpan{stop.extents().xMin(), stop.extents().xMax()};
+      if (has_previous_stop) {
+        int16_t gap_min_primary = previous_span.max_primary + 1;
+        int16_t gap_max_primary = current_span.min_primary - 1;
+        if (gap_max_primary >= gap_min_primary) {
+          stop_canvas.fillRect(
+              axis.boxFromPrimaryCross(gap_min_primary, cross_start,
+                                       gap_max_primary,
+                                       cross_start + kStopMarkSpanPixels - 1),
+              segments[segment_index].track_color);
+        }
+      }
+      stop_canvas.drawObject(stop);
+      previous_span = current_span;
+      has_previous_stop = true;
+    }
+
+    roo_display::Box run_device_box = roo_display::Box::Intersect(
+        run_box.translate(canvas.dx(), canvas.dy()), canvas.clip_box());
+    if (!run_device_box.empty()) {
+      clipper.addExclusion(run_device_box);
+    }
+  }
+}
+
 Dimensions RangeSlider::getSuggestedMinimumDimensions() const {
   const internal::SliderSizeMetrics& size_metrics =
       internal::ResolveSliderSizeMetrics(style_.size);
@@ -946,6 +1159,7 @@ void RangeSlider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
     }
     if (!content_canvas.clip_box().empty()) {
       clipper.setBounds(content_canvas.clip_box());
+      paintStops(content_canvas, clipper);
       paint(content_canvas);
     }
     pending_indicator_dirty_span_ = ShowsValueIndicator(*this)
@@ -957,10 +1171,16 @@ void RangeSlider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
 
   Canvas my_canvas = canvas;
   paint_indicator(my_canvas);
+  Canvas content_canvas = prepareContentsCanvas(my_canvas);
+  if (!content_canvas.clip_box().empty()) {
+    clipper.setBounds(content_canvas.clip_box());
+    paintStops(content_canvas, clipper);
+    paint(content_canvas);
+  }
   pending_indicator_dirty_span_ = ShowsValueIndicator(*this)
                                       ? current_indicator_span
                                       : internal::DirtySpan();
-  BasicWidget::paintWidgetContents(my_canvas, clipper);
+  markClean();
 }
 
 }  // namespace material3
