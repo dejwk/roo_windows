@@ -18,6 +18,7 @@ namespace {
 
 static constexpr int kTouchSlopPixels = Scaled(20);
 static constexpr float kPressedThumbWidthRatio = 0.5f;
+static constexpr int16_t kCenterGapHalfPixels = Scaled(2);
 
 Color DisabledComposite(Color fg, uint8_t alpha, const Theme& theme) {
   return AlphaBlend(theme.color.surface, fg.withA(alpha));
@@ -415,6 +416,8 @@ void Slider::paint(const Canvas& canvas) const {
   float center_anchor_primary = axis.centerFromPos(32768);
   bool thumb_on_or_right_of_center =
       axis.centerFromPos(getPos()) >= center_anchor_primary;
+  float center_left_edge = center_anchor_primary - (float)kCenterGapHalfPixels;
+  float center_right_edge = center_anchor_primary + (float)kCenterGapHalfPixels;
   int16_t thumb_width =
       ThumbWidthForState(size_metrics.handle_width, isPressed());
   int16_t track_gap = TrackGapForThumbWidth(size_metrics, thumb_width);
@@ -437,11 +440,11 @@ void Slider::paint(const Canvas& canvas) const {
 
   if (variant_ == SliderVariant::kCentered) {
     active_track_min_primary = thumb_on_or_right_of_center
-                                   ? center_anchor_primary
+                                   ? center_right_edge
                                    : layout.inactive_track_min_primary;
     active_track_max_primary = thumb_on_or_right_of_center
                                    ? layout.active_track_max_primary
-                                   : center_anchor_primary;
+                                   : center_left_edge;
 
     int16_t active_clip_min = (int16_t)ceilf(active_track_min_primary);
     int16_t active_clip_max = (int16_t)floorf(active_track_max_primary);
@@ -449,15 +452,21 @@ void Slider::paint(const Canvas& canvas) const {
     if (active_clip_max >= axis.primarySpan()) {
       active_clip_max = axis.primarySpan() - 1;
     }
-    active_clip = axis.boxFromPrimaryCross(
-        active_clip_min, layout.track_cross_start, active_clip_max,
-        layout.track_cross_start + size_metrics.track_height - 1);
+    if (active_clip_max >= active_clip_min) {
+      active_clip = axis.boxFromPrimaryCross(
+          active_clip_min, layout.track_cross_start, active_clip_max,
+          layout.track_cross_start + size_metrics.track_height - 1);
+    } else {
+      active_clip = roo_display::Box(0, 0, -1, -1);
+    }
 
     has_left_inactive_clip = true;
+    int16_t handle_left_edge = (int16_t)floorf(layout.active_track_max_primary);
+    int16_t center_left_edge_i = (int16_t)floorf(center_left_edge);
     int16_t left_inactive_max =
         thumb_on_or_right_of_center
-            ? (int16_t)floorf(center_anchor_primary)
-            : (int16_t)floorf(layout.active_track_max_primary);
+            ? std::min(handle_left_edge, center_left_edge_i)
+            : handle_left_edge;
     if (left_inactive_max < 0) {
       has_left_inactive_clip = false;
     } else {
@@ -468,10 +477,13 @@ void Slider::paint(const Canvas& canvas) const {
           layout.track_cross_start + size_metrics.track_height - 1);
     }
 
+    int16_t handle_right_edge =
+        (int16_t)ceilf(layout.inactive_track_min_primary);
+    int16_t center_right_edge_i = (int16_t)ceilf(center_right_edge);
     int16_t right_inactive_min =
         thumb_on_or_right_of_center
-            ? (int16_t)ceilf(layout.inactive_track_min_primary)
-            : (int16_t)ceilf(center_anchor_primary);
+            ? handle_right_edge
+            : std::max(handle_right_edge, center_right_edge_i);
     if (right_inactive_min >= axis.primarySpan()) {
       has_right_inactive_clip = false;
     } else {
@@ -532,6 +544,22 @@ void Slider::paint(const Canvas& canvas) const {
   if (!active_clip.empty()) {
     DrawTrackPiece(canvas, active_track, widget_bounds, active_clip,
                    axis.isVertical());
+  }
+  if (variant_ == SliderVariant::kCentered) {
+    int16_t gap_min =
+        (int16_t)floorf(center_anchor_primary - (float)kCenterGapHalfPixels) +
+        1;
+    int16_t gap_max =
+        (int16_t)ceilf(center_anchor_primary + (float)kCenterGapHalfPixels) - 1;
+    if (gap_min < 0) gap_min = 0;
+    if (gap_max >= axis.primarySpan()) gap_max = axis.primarySpan() - 1;
+    if (gap_min <= gap_max) {
+      Rect gap_rect = axis.isVertical()
+                          ? Rect(0, axis.primarySpan() - 1 - gap_max,
+                                 width() - 1, axis.primarySpan() - 1 - gap_min)
+                          : Rect(gap_min, 0, gap_max, height() - 1);
+      canvas.fillRect(gap_rect, canvas.bgcolor());
+    }
   }
   canvas.drawTiled(handle, handle_tile_bounds, kNoAlign);
 }

@@ -1120,6 +1120,8 @@ TEST_F(Material3SliderRenderTest,
 
   EXPECT_EQ(inactive, pixelAt(left_inactive_x, kSliderY + kSliderHeight / 2));
   EXPECT_EQ(background, pixelAt(gap_x, kSliderY + kSliderHeight / 2));
+  EXPECT_EQ(background, pixelAt(gap_x, kSliderY + 2));
+  EXPECT_EQ(background, pixelAt(gap_x, kSliderY + kSliderHeight - 3));
   EXPECT_EQ(primary, pixelAt(active_x, kSliderY + kSliderHeight / 2));
   EXPECT_EQ(inactive, pixelAt(right_inactive_x, kSliderY + kSliderHeight / 2));
 }
