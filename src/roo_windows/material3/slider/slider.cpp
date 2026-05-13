@@ -565,6 +565,16 @@ roo_display::FpPoint Slider::getPointOverlayFocus() const {
 
 ColorRole Slider::effectiveContainerRole() const { return ColorRole::kPrimary; }
 
+Rect Slider::getSloppyTouchParentBounds() const {
+  Rect bounds = Widget::getSloppyTouchParentBounds();
+  if (style_.orientation == SliderOrientation::kVertical) {
+    return Rect(bounds.xMin(), bounds.yMin() - kTouchSlopPixels, bounds.xMax(),
+                bounds.yMax() + kTouchSlopPixels);
+  }
+  return Rect(bounds.xMin() - kTouchSlopPixels, bounds.yMin(),
+              bounds.xMax() + kTouchSlopPixels, bounds.yMax());
+}
+
 roo::string_view Slider::formatLabel(float value, char* scratch,
                                      size_t scratch_size) const {
   return ValueIndicatorBubble::FormatDefault(value, scratch, scratch_size);

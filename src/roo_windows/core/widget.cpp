@@ -208,7 +208,9 @@ Rect Widget::getSloppyTouchParentBounds() const {
   return Slopify(parent_bounds());
 }
 
-Rect Widget::getSloppyTouchBounds() const { return Slopify(bounds()); }
+Rect Widget::getSloppyTouchBounds() const {
+  return getSloppyTouchParentBounds().translate(-offsetLeft(), -offsetTop());
+}
 
 ColorRole Widget::effectiveContainerRole() const {
   return parent() != nullptr ? parent()->effectiveContainerRole()

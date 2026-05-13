@@ -54,6 +54,8 @@ class RangeSlider : public BasicWidget {
 
   ColorRole effectiveContainerRole() const override;
 
+  Rect getSloppyTouchParentBounds() const override;
+
   Rect getParentTransientPaintBounds() const override;
 
   const SliderRange& range() const { return range_; }

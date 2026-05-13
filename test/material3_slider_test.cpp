@@ -265,6 +265,41 @@ TEST(Material3Slider, ReportsMaterial3MinimumSize) {
   EXPECT_EQ(Scaled(44), dims.height());
 }
 
+TEST(Material3Slider, HorizontalSloppyTouchBoundsExtendPrimaryAxis) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+
+  Slider slider(env, 65535);
+  slider.layout(Rect(0, 0, Scaled(96) - 1, Scaled(44) - 1));
+
+  Rect touch_bounds = slider.getSloppyTouchBounds();
+
+  EXPECT_EQ(-Scaled(20), touch_bounds.xMin());
+  EXPECT_EQ(Scaled(96) - 1 + Scaled(20), touch_bounds.xMax());
+  EXPECT_EQ(-3, touch_bounds.yMin());
+  EXPECT_EQ(Scaled(44) - 1 + 3, touch_bounds.yMax());
+}
+
+TEST(Material3Slider, VerticalRangeSliderSloppyBoundsTrackParentOverride) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+
+  SliderStyle style{};
+  style.orientation = SliderOrientation::kVertical;
+
+  RangeSlider slider(env, SliderRange{}, 0.25f, 0.75f, style);
+  slider.layout(Rect(7, 9, 7 + Scaled(44) - 1, 9 + Scaled(96) - 1));
+
+  Rect local_touch = slider.getSloppyTouchBounds();
+  Rect parent_touch = slider.getSloppyTouchParentBounds();
+
+  EXPECT_EQ(
+      Rect(-3, -Scaled(20), Scaled(44) - 1 + 3, Scaled(96) - 1 + Scaled(20)),
+      local_touch);
+  EXPECT_EQ(local_touch.translate(slider.offsetLeft(), slider.offsetTop()),
+            parent_touch);
+}
+
 TEST(Material3Slider, ReportsNaturalMeasureAsFortyFourByFortyFour) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
