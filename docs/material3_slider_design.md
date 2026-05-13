@@ -687,6 +687,15 @@ only need the existing `setOnInteractiveChange()` path.
 
 The default remains `kExtraSmall`, preserving the current visual footprint.
 
+At the travel extremes, the thumb center should align to the terminal stop
+mark, not to the widget edge or to half the thumb width. In the current
+Material 3 geometry this means the endpoint center sits `Scaled(6)` from the
+widget edge, not `Scaled(2)` for a `Scaled(4)` handle. This is backed by
+observation of stop-mark placement and endpoint behavior in the Material Figma
+assets. At those extremes only the inboard side of the track should remain
+visible: the visual gap from the widget edge to the handle edge is
+`Scaled(4)`, while the track-to-handle gap remains `Scaled(6)`.
+
 ### Track Icons
 
 The API should cover both:

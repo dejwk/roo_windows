@@ -239,7 +239,7 @@ TEST(Material3Slider, UsesNoOverlayAndHandleCenteredFocus) {
   EXPECT_EQ(Widget::OVERLAY_NONE, slider.getOverlayType());
 
   roo_display::FpPoint start_focus = slider.getPointOverlayFocus();
-  EXPECT_FLOAT_EQ(0.5f * (float)(Scaled(4) - 1), start_focus.x);
+  EXPECT_FLOAT_EQ((float)Scaled(6) - 0.5f, start_focus.x);
   EXPECT_FLOAT_EQ(0.5f * (float)(Scaled(44) - 1), start_focus.y);
 
   slider.setPos(32768);
@@ -249,8 +249,7 @@ TEST(Material3Slider, UsesNoOverlayAndHandleCenteredFocus) {
 
   slider.setPos(65535);
   roo_display::FpPoint end_focus = slider.getPointOverlayFocus();
-  EXPECT_FLOAT_EQ((float)(Scaled(96) - 1) - 0.5f * (float)(Scaled(4) - 1),
-                  end_focus.x);
+  EXPECT_FLOAT_EQ((float)(Scaled(96) - Scaled(6)) - 0.5f, end_focus.x);
   EXPECT_FLOAT_EQ(0.5f * (float)(Scaled(44) - 1), end_focus.y);
 }
 
@@ -719,7 +718,7 @@ TEST_F(Material3SliderAppTest,
   ASSERT_TRUE(app_.refresh());
 
   internal::SliderAxisMetrics axis(tracking->width(), tracking->height(),
-                                   Scaled(4), Scaled(20));
+                                   Scaled(4), Scaled(6));
 
   XDim tap_x = Scaled(84);
   ASSERT_TRUE(tracking->onSingleTapUp(tap_x, tracking->height() / 2));
@@ -960,7 +959,7 @@ TEST_F(Material3SliderAppTest,
   ASSERT_TRUE(app_.refresh());
 
   internal::SliderAxisMetrics axis(tracking->width(), tracking->height(),
-                                   Scaled(4), 0);
+                                   Scaled(4), Scaled(6));
   XDim start_thumb_center = (XDim)roundf(axis.centerFromPos(
       internal::SliderPosFromValue(0.0f, 100.0f, tracking->startValue())));
   tracking->onShowPress(start_thumb_center, kSliderHeight / 2);
@@ -998,7 +997,7 @@ TEST_F(Material3SliderAppTest, RangeSliderDragTouchUpIsConsumedAndEnds) {
   ASSERT_TRUE(app_.refresh());
 
   internal::SliderAxisMetrics axis(tracking->width(), tracking->height(),
-                                   Scaled(4), 0);
+                                   Scaled(4), Scaled(6));
   XDim start_thumb_center = (XDim)roundf(axis.centerFromPos(
       internal::SliderPosFromValue(0.0f, 100.0f, tracking->startValue())));
   tracking->onShowPress(start_thumb_center, kSliderHeight / 2);
@@ -1085,7 +1084,7 @@ TEST_F(Material3SliderRenderTest,
   auto backdrop = std::make_unique<SolidBackdrop>(env_, kBackdropColor,
                                                   Dimensions(kWidth, kHeight));
   auto slider = std::make_unique<Slider>(env_, SliderRange{-100.0f, 100.0f},
-                                         -20.0f, SliderVariant::kCentered);
+                                         -40.0f, SliderVariant::kCentered);
   slider_ = slider.get();
 
   app_.add(std::move(backdrop),
@@ -1100,10 +1099,29 @@ TEST_F(Material3SliderRenderTest,
   Color inactive = QuantizeToArgb4444(env_.theme().color.secondaryContainer);
   Color background = QuantizeToArgb4444(env_.theme().color.background);
 
-  EXPECT_EQ(inactive, pixelAt(kSliderX + 25, kSliderY + kSliderHeight / 2));
-  EXPECT_EQ(background, pixelAt(kSliderX + 45, kSliderY + kSliderHeight / 2));
-  EXPECT_EQ(primary, pixelAt(kSliderX + 47, kSliderY + kSliderHeight / 2));
-  EXPECT_EQ(inactive, pixelAt(kSliderX + 60, kSliderY + kSliderHeight / 2));
+  internal::SliderAxisMetrics axis(slider_->width(), slider_->height(),
+                                   Scaled(4), Scaled(6));
+  internal::SliderVisualMetrics layout = internal::ResolveSliderVisualMetrics(
+      axis, axis.centerFromPos(slider_->getPos()), Scaled(4), Scaled(16),
+      Scaled(6), Scaled(44));
+  float center_anchor_primary = axis.centerFromPos(32768);
+
+  int left_inactive_x =
+      kSliderX + (int)roundf(0.5f * layout.active_track_max_primary);
+  int gap_x =
+      kSliderX + (int)roundf(0.5f * (layout.thumb_max_primary +
+                                     layout.inactive_track_min_primary));
+  int active_x =
+      kSliderX + (int)roundf(0.5f * (layout.inactive_track_min_primary +
+                                     center_anchor_primary));
+  int right_inactive_x =
+      kSliderX +
+      (int)roundf(0.5f * (center_anchor_primary + (float)(kSliderWidth - 1)));
+
+  EXPECT_EQ(inactive, pixelAt(left_inactive_x, kSliderY + kSliderHeight / 2));
+  EXPECT_EQ(background, pixelAt(gap_x, kSliderY + kSliderHeight / 2));
+  EXPECT_EQ(primary, pixelAt(active_x, kSliderY + kSliderHeight / 2));
+  EXPECT_EQ(inactive, pixelAt(right_inactive_x, kSliderY + kSliderHeight / 2));
 }
 
 TEST_F(Material3SliderRenderTest, RangeSliderPaintsActiveTrackBetweenThumbs) {
@@ -1113,6 +1131,7 @@ TEST_F(Material3SliderRenderTest, RangeSliderPaintsActiveTrackBetweenThumbs) {
                                                   Dimensions(kWidth, kHeight));
   auto slider = std::make_unique<RangeSlider>(env_, SliderRange{0.0f, 100.0f},
                                               25.0f, 75.0f);
+  RangeSlider* slider_ptr = slider.get();
 
   app_.add(std::move(backdrop),
            roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
@@ -1125,13 +1144,21 @@ TEST_F(Material3SliderRenderTest, RangeSliderPaintsActiveTrackBetweenThumbs) {
   Color primary = QuantizeToArgb4444(env_.theme().color.primary);
   Color inactive = QuantizeToArgb4444(env_.theme().color.secondaryContainer);
   Color background = QuantizeToArgb4444(env_.theme().color.background);
+  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
+                                   Scaled(4), Scaled(6));
+  int start_handle_x =
+      kSliderX + (int)roundf(axis.centerFromPos(internal::SliderPosFromValue(
+                     0.0f, 100.0f, slider_ptr->startValue())));
+  int end_handle_x =
+      kSliderX + (int)roundf(axis.centerFromPos(internal::SliderPosFromValue(
+                     0.0f, 100.0f, slider_ptr->endValue())));
 
   EXPECT_EQ(background, pixelAt(kSliderX, kSliderY + 14));
   EXPECT_EQ(inactive, pixelAt(kSliderX + 10, kSliderY + kSliderHeight / 2));
   EXPECT_EQ(primary, pixelAt(kSliderX + 48, kSliderY + kSliderHeight / 2));
   EXPECT_EQ(inactive, pixelAt(kSliderX + 85, kSliderY + kSliderHeight / 2));
-  EXPECT_EQ(primary, pixelAt(kSliderX + 24, kSliderY + 5));
-  EXPECT_EQ(primary, pixelAt(kSliderX + 70, kSliderY + 5));
+  EXPECT_EQ(primary, pixelAt(start_handle_x, kSliderY + 5));
+  EXPECT_EQ(primary, pixelAt(end_handle_x, kSliderY + 5));
 }
 
 TEST_F(Material3SliderRenderTest,

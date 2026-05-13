@@ -83,9 +83,9 @@ class SliderAxisMetrics {
   };
 
   // Builds axis metrics for a slider surface. `thumb_primary_span` is the
-  // thumb length along the travel axis. `track_handle_gap` is the painted gap
-  // between the track and the handle and is used to compute the tight dirty
-  // slice for thumb movement.
+  // thumb length along the travel axis. `track_handle_gap` is both the
+  // painted gap between the track and the handle and the logical stop-mark
+  // offset from each widget edge.
   SliderAxisMetrics(int16_t width, int16_t height, int16_t thumb_primary_span,
                     int16_t track_handle_gap, bool vertical = false)
       : primary_span_(vertical ? height : width),
@@ -109,7 +109,7 @@ class SliderAxisMetrics {
   // Converts a normalized 16-bit position into the thumb center in logical
   // primary-axis coordinates.
   float centerFromPos(uint16_t pos) const {
-    return 0.5f * (float)(thumb_primary_span_ - 1) +
+    return (float)track_handle_gap_ - 0.5f +
            (float)(((uint32_t)pos * (uint32_t)normalizedRange() + 32768u) >>
                    16);
   }
@@ -130,10 +130,11 @@ class SliderAxisMetrics {
   // Converts a display-space primary coordinate back into a normalized 16-bit
   // slider position, clamping to the valid travel range.
   uint16_t posFromPrimaryCoord(int16_t primary_coord) const {
-    int32_t pos = primary_coord + 1 - thumb_primary_span_ / 2;
     int16_t range = normalizedRange();
-    if (pos < 0) pos = 0;
-    if (pos >= range) pos = range - 1;
+    if (range <= 0) return 0;
+    int32_t pos = primary_coord + 1 - track_handle_gap_;
+    if (pos <= 0) return 0;
+    if (pos >= range) return 65535;
     return (((uint32_t)pos << 16) + (uint32_t)(range / 2)) / (uint32_t)range;
   }
 
@@ -204,8 +205,8 @@ class SliderAxisMetrics {
 
  private:
   int16_t normalizedRange() const {
-    int16_t range = primary_span_ - thumb_primary_span_;
-    return range < 1 ? 1 : range;
+    int16_t range = primary_span_ - 2 * track_handle_gap_;
+    return range < 0 ? 0 : range;
   }
 
   int16_t centeredCrossStart(int16_t span) const {
