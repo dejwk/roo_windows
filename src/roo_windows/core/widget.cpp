@@ -15,8 +15,6 @@
 
 namespace roo_windows {
 
-static int16_t kMinSloppyTouchTargetSpan = 50;
-
 // If the end-to-end duration of touch it shorted than this threshold,
 // it is always interpreted as a 'click' rather than 'drag'; i.e.
 // it is registered in the target component even if the exit coordinates
@@ -101,13 +99,13 @@ Rect Slopify(Rect bounds) {
   YDim yMin = bounds.yMin();
   XDim xMax = bounds.xMax();
   YDim yMax = bounds.yMax();
-  if (w < kMinSloppyTouchTargetSpan) {
-    xMin -= (kMinSloppyTouchTargetSpan - w) / 2;
-    xMax = xMin + kMinSloppyTouchTargetSpan - 1;
+  if (w < Widget::kMinSloppyTouchTargetSpan) {
+    xMin -= (Widget::kMinSloppyTouchTargetSpan - w) / 2;
+    xMax = xMin + Widget::kMinSloppyTouchTargetSpan - 1;
   }
-  if (h < kMinSloppyTouchTargetSpan) {
-    yMin -= (kMinSloppyTouchTargetSpan - h) / 2;
-    yMax = yMin + kMinSloppyTouchTargetSpan - 1;
+  if (h < Widget::kMinSloppyTouchTargetSpan) {
+    yMin -= (Widget::kMinSloppyTouchTargetSpan - h) / 2;
+    yMax = yMin + Widget::kMinSloppyTouchTargetSpan - 1;
   }
   return Rect(xMin, yMin, xMax, yMax);
 }
@@ -690,6 +688,11 @@ Rect Widget::getDirectPaintExclusionBounds() const {
 
 Widget* Widget::dispatchTouchDownEvent(XDim x, YDim y) {
   return bounds().contains(x, y) && onTouchDown(x, y) ? this : nullptr;
+}
+
+Widget* Widget::dispatchSloppyTouchDownEvent(XDim x, YDim y) {
+  return getSloppyTouchBounds().contains(x, y) && onTouchDown(x, y) ? this
+                                                                    : nullptr;
 }
 
 bool Widget::isHandlingGesture() const {

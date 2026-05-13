@@ -45,6 +45,10 @@ class Container : public SurfaceWidget {
 
   Widget* dispatchTouchDownEvent(XDim x, YDim y) override;
 
+  Widget* dispatchSloppyTouchDownEvent(XDim x, YDim y) override;
+
+  Rect getMaxSloppyTouchParentBounds() const override;
+
   // Returns the minimum bounding rect, in this widget's coordinates, that
   // covers all visible descendants, including those with parent clip mode =
   // UNCLIPPED, i.e. sticking out of the normal bounds. In the common case, when

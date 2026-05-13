@@ -13,6 +13,18 @@ namespace roo_windows {
 using roo_display::Color;
 using roo_display::DisplayOutput;
 
+namespace {
+
+Rect ExpandBySloppyTouchHalfExtent(const Rect& rect) {
+  if (rect.empty()) return rect;
+  return Rect(rect.xMin() - Widget::kMaxSloppyTouchHalfExtent,
+              rect.yMin() - Widget::kMaxSloppyTouchHalfExtent,
+              rect.xMax() + Widget::kMaxSloppyTouchHalfExtent,
+              rect.yMax() + Widget::kMaxSloppyTouchHalfExtent);
+}
+
+}  // namespace
+
 Container::Container(const Environment& env)
     : SurfaceWidget(env),
       invalid_region_(0, 0, -1, -1),
@@ -165,13 +177,12 @@ Widget* Container::dispatchTouchDownEvent(XDim x, YDim y) {
   for (int i = getChildrenCount() - 1; i >= 0; --i) {
     Widget& child = getChild(i);
     if (!child.isVisible()) continue;
-    Rect ebounds = child.getSloppyTouchParentBounds();
-    // When re-checking with looser bounds, don't recurse - we have already
-    // tried descendants with looser bounds.
-    if (!child.parent_bounds().contains(x, y) && ebounds.contains(x, y)) {
-      if (child.onTouchDown(x - child.offsetLeft(), y - child.offsetTop())) {
-        return &child;
-      }
+    if (child.parent_bounds().contains(x, y)) continue;
+    if (!child.getMaxSloppyTouchParentBounds().contains(x, y)) continue;
+    Widget* w = child.dispatchSloppyTouchDownEvent(x - child.offsetLeft(),
+                                                   y - child.offsetTop());
+    if (w != nullptr) return w;
+    if (child.getSloppyTouchParentBounds().contains(x, y)) {
       break;
     }
   }
@@ -179,6 +190,33 @@ Widget* Container::dispatchTouchDownEvent(XDim x, YDim y) {
     return Widget::dispatchTouchDownEvent(x, y);
   }
   return nullptr;
+}
+
+Widget* Container::dispatchSloppyTouchDownEvent(XDim x, YDim y) {
+  if (onInterceptTouchEvent(TouchEvent(TouchEvent::DOWN, x, y))) {
+    return onTouchDown(x, y) ? this : nullptr;
+  }
+  for (int i = getChildrenCount() - 1; i >= 0; --i) {
+    Widget& child = getChild(i);
+    if (!child.isVisible()) continue;
+    if (!child.getMaxSloppyTouchParentBounds().contains(x, y)) continue;
+    Widget* w = child.parent_bounds().contains(x, y)
+                    ? child.dispatchTouchDownEvent(x - child.offsetLeft(),
+                                                   y - child.offsetTop())
+                    : child.dispatchSloppyTouchDownEvent(x - child.offsetLeft(),
+                                                         y - child.offsetTop());
+    if (w != nullptr) return w;
+    if (child.parent_bounds().contains(x, y) ||
+        child.getSloppyTouchParentBounds().contains(x, y)) {
+      break;
+    }
+  }
+  return Widget::dispatchSloppyTouchDownEvent(x, y);
+}
+
+Rect Container::getMaxSloppyTouchParentBounds() const {
+  return Rect::Extent(getSloppyTouchParentBounds(),
+                      ExpandBySloppyTouchHalfExtent(maxParentBounds()));
 }
 
 // Must propagate the 'dirty' flag even if the rect comes down empty. This is

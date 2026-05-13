@@ -31,6 +31,43 @@ class TiledRectWidget : public BasicSurfaceWidget {
   bool draw_border_;
 };
 
+class ExposedPanel : public Panel {
+ public:
+  using Panel::add;
+  using Panel::Panel;
+};
+
+class SloppyTouchSpyWidget : public BasicWidget {
+ public:
+  SloppyTouchSpyWidget(const Environment& env, Dimensions dims,
+                       int16_t right_slop)
+      : BasicWidget(env),
+        dims_(dims),
+        right_slop_(right_slop),
+        touch_down_count_(0) {}
+
+  Dimensions getSuggestedMinimumDimensions() const override { return dims_; }
+
+  Rect getSloppyTouchParentBounds() const override {
+    return Rect(parent_bounds().xMin(), parent_bounds().yMin(),
+                parent_bounds().xMax() + right_slop_, parent_bounds().yMax());
+  }
+
+  bool onTouchDown(XDim x, YDim y) override {
+    (void)x;
+    (void)y;
+    ++touch_down_count_;
+    return true;
+  }
+
+  int touch_down_count() const { return touch_down_count_; }
+
+ private:
+  Dimensions dims_;
+  int16_t right_slop_;
+  int touch_down_count_;
+};
+
 TEST(Windows, BasicCompilation) {
   roo::byte raster[320 * 240 * 2];
   OffscreenDevice<Argb4444> offscreen(320, 240, raster, Argb4444());
@@ -190,6 +227,24 @@ TEST_F(RooWindowsRenderTest, TouchDispatchPrefersTopmostVisibleChild) {
   ASSERT_EQ(back_ptr, target);
   EXPECT_EQ(1, front_ptr->touch_down_count());
   EXPECT_EQ(1, back_ptr->touch_down_count());
+}
+
+TEST_F(RooWindowsRenderTest, SloppyTouchDispatchRecursesThroughContainers) {
+  auto outer = std::make_unique<ExposedPanel>(env_);
+  ExposedPanel* outer_ptr = outer.get();
+  auto inner = std::make_unique<ExposedPanel>(env_);
+  ExposedPanel* inner_ptr = inner.get();
+  auto leaf = std::make_unique<SloppyTouchSpyWidget>(env_, Dimensions(4, 4), 8);
+  SloppyTouchSpyWidget* leaf_ptr = leaf.get();
+
+  inner_ptr->add(std::move(leaf), Rect(0, 0, 3, 3));
+  outer_ptr->add(std::move(inner), Rect(2, 2, 5, 5));
+  app_.add(std::move(outer), Box(4, 4, 23, 23));
+
+  Widget* target = app_.root().dispatchTouchDownEvent(14, 7);
+
+  ASSERT_EQ(leaf_ptr, target);
+  EXPECT_EQ(1, leaf_ptr->touch_down_count());
 }
 
 TEST_F(RooWindowsRenderTest, RefreshCanResumeAfterDeadlineExceeded) {

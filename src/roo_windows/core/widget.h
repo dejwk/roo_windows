@@ -72,6 +72,10 @@ enum class Visibility { kVisible, kInvisible, kGone };
 
 class Widget {
  public:
+  static constexpr int16_t kMinSloppyTouchTargetSpan = 50;
+  static constexpr int16_t kMaxSloppyTouchHalfExtent =
+      (kMinSloppyTouchTargetSpan + 1) / 2;
+
   Widget(const Environment& env);
   Widget(const Widget& w) = delete;
   Widget(Widget&& w) = default;
@@ -220,6 +224,13 @@ class Widget {
   // size that is a reasonable touch target.
   virtual Rect getSloppyTouchParentBounds() const;
 
+  // Conservative envelope used to prune sloppy-hit descent through this widget
+  // and its descendants. Leaf widgets return their own sloppy touch bounds;
+  // containers may return a broader over-approximation.
+  virtual Rect getMaxSloppyTouchParentBounds() const {
+    return getSloppyTouchParentBounds();
+  }
+
   // Returns bounds in the device's coordinates.
   void getAbsoluteBounds(Rect& full, Rect& visible) const;
 
@@ -244,6 +255,8 @@ class Widget {
   const ClickAnimation* getClickAnimation() const;
 
   virtual Widget* dispatchTouchDownEvent(XDim x, YDim y);
+
+  virtual Widget* dispatchSloppyTouchDownEvent(XDim x, YDim y);
 
   // Returns true if this widget is currently handling a touch gesture.
   bool isHandlingGesture() const;
