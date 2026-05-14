@@ -780,10 +780,10 @@ void RangeSlider::paint(const Canvas& canvas) const {
           axis, axis.centerFromPos(end_pos), end_thumb_width,
           size_metrics.track_height, end_track_gap, size_metrics.handle_height);
 
-  float active_track_min_primary = start_layout.inactive_track_min_primary;
-  float active_track_max_primary = end_layout.active_track_max_primary;
-  int16_t active_clip_min = (int16_t)ceilf(active_track_min_primary);
-  int16_t active_clip_max = (int16_t)floorf(active_track_max_primary);
+  int16_t active_clip_min =
+      (int16_t)ceilf(start_layout.inactive_track_min_primary);
+  int16_t active_clip_max =
+      (int16_t)floorf(end_layout.active_track_max_primary);
   if (active_clip_min < 0) active_clip_min = 0;
   if (active_clip_max >= axis.primarySpan()) {
     active_clip_max = axis.primarySpan() - 1;
@@ -820,14 +820,9 @@ void RangeSlider::paint(const Canvas& canvas) const {
         start_layout.track_cross_start + size_metrics.track_height - 1);
   }
 
-  auto inactive_track_bounds = axis.paintRectFromPrimaryCross(
+  auto track_bounds = axis.paintRectFromPrimaryCross(
       TrackShapeMinPrimary(0.0f, size_metrics.track_radius),
       start_layout.track_min_cross, axis.primarySpan() - 0.5f,
-      start_layout.track_max_cross);
-  auto active_track_bounds = axis.paintRectFromPrimaryCross(
-      TrackShapeMinPrimary(active_track_min_primary, size_metrics.track_radius),
-      start_layout.track_min_cross,
-      active_track_max_primary + (float)size_metrics.track_radius,
       start_layout.track_max_cross);
   auto start_handle_bounds = axis.paintRectFromPrimaryCross(
       start_layout.thumb_min_primary, start_layout.thumb_min_cross,
@@ -837,13 +832,11 @@ void RangeSlider::paint(const Canvas& canvas) const {
       end_layout.thumb_max_primary, end_layout.thumb_max_cross);
 
   auto inactive_track = SmoothFilledRoundRect(
-      inactive_track_bounds.x_min, inactive_track_bounds.y_min,
-      inactive_track_bounds.x_max, inactive_track_bounds.y_max,
-      size_metrics.track_radius, tokens.inactive_track);
+      track_bounds.x_min, track_bounds.y_min, track_bounds.x_max,
+      track_bounds.y_max, size_metrics.track_radius, tokens.inactive_track);
   auto active_track = SmoothFilledRoundRect(
-      active_track_bounds.x_min, active_track_bounds.y_min,
-      active_track_bounds.x_max, active_track_bounds.y_max,
-      size_metrics.track_radius, tokens.active_track);
+      track_bounds.x_min, track_bounds.y_min, track_bounds.x_max,
+      track_bounds.y_max, size_metrics.track_radius, tokens.active_track);
   auto start_handle = SmoothFilledRoundRect(
       start_handle_bounds.x_min, start_handle_bounds.y_min,
       start_handle_bounds.x_max, start_handle_bounds.y_max,

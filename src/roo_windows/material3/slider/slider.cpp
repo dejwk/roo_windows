@@ -581,27 +581,20 @@ void Slider::paint(const Canvas& canvas) const {
     }
   }
 
-  auto inactive_track_bounds = axis.paintRectFromPrimaryCross(
+  auto track_bounds = axis.paintRectFromPrimaryCross(
       TrackShapeMinPrimary(0.0f, size_metrics.track_radius),
       layout.track_min_cross, axis.primarySpan() - 0.5f,
-      layout.track_max_cross);
-  auto active_track_bounds = axis.paintRectFromPrimaryCross(
-      TrackShapeMinPrimary(active_track_min_primary, size_metrics.track_radius),
-      layout.track_min_cross,
-      active_track_max_primary + (float)size_metrics.track_radius,
       layout.track_max_cross);
   auto handle_bounds = axis.paintRectFromPrimaryCross(
       layout.thumb_min_primary, layout.thumb_min_cross,
       layout.thumb_max_primary, layout.thumb_max_cross);
 
   auto inactive_track = SmoothFilledRoundRect(
-      inactive_track_bounds.x_min, inactive_track_bounds.y_min,
-      inactive_track_bounds.x_max, inactive_track_bounds.y_max,
-      size_metrics.track_radius, tokens.inactive_track);
+      track_bounds.x_min, track_bounds.y_min, track_bounds.x_max,
+      track_bounds.y_max, size_metrics.track_radius, tokens.inactive_track);
   auto active_track = SmoothFilledRoundRect(
-      active_track_bounds.x_min, active_track_bounds.y_min,
-      active_track_bounds.x_max, active_track_bounds.y_max,
-      size_metrics.track_radius, tokens.active_track);
+      track_bounds.x_min, track_bounds.y_min, track_bounds.x_max,
+      track_bounds.y_max, size_metrics.track_radius, tokens.active_track);
   auto handle = SmoothFilledRoundRect(
       handle_bounds.x_min, handle_bounds.y_min, handle_bounds.x_max,
       handle_bounds.y_max, size_metrics.handleCornerRadius(), tokens.handle);
