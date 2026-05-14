@@ -58,6 +58,10 @@ class Rect {
 
   Rect& operator=(const Rect&) = default;
   Rect& operator=(Rect&&) = default;
+  Rect& operator=(const roo_display::Box& box) {
+    *this = Rect(box);
+    return *this;
+  }
 
   inline static Rect MaximumRect() {
     return Rect(-16384, -4194304, 16383, 4194303);
