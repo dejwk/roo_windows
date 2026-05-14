@@ -312,6 +312,28 @@ struct StopSpan {
   int16_t max_primary;
 };
 
+struct ThumbPaintMetrics {
+  uint16_t pos;
+  int16_t track_gap;
+  internal::SliderVisualMetrics layout;
+};
+
+ThumbPaintMetrics ResolveThumbPaintMetrics(
+    const SliderRange& range, float value,
+    const internal::SliderAxisMetrics& axis,
+    const internal::SliderSizeMetrics& size_metrics, bool pressed) {
+  uint16_t pos = internal::SliderPosFromValue(range.from, range.to, value);
+  int16_t thumb_width = ThumbWidthForState(size_metrics.handle_width, pressed);
+  int16_t track_gap = TrackGapForThumbWidth(size_metrics, thumb_width);
+  return ThumbPaintMetrics{
+      pos,
+      track_gap,
+      internal::ResolveSliderVisualMetrics(
+          axis, axis.centerFromPos(pos), thumb_width, size_metrics.track_height,
+          track_gap, size_metrics.handle_height),
+  };
+}
+
 roo_display::Box StopSegmentClipBox(const internal::SliderAxisMetrics& axis,
                                     const StopSegment& segment) {
   int16_t min_primary = (int16_t)ceilf(segment.min_primary);
@@ -759,42 +781,28 @@ void RangeSlider::paint(const Canvas& canvas) const {
   const internal::SliderSizeMetrics& size_metrics =
       internal::ResolveSliderSizeMetrics(style_.size);
   internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
-  uint16_t start_pos =
-      internal::SliderPosFromValue(range_.from, range_.to, start_value_);
-  uint16_t end_pos =
-      internal::SliderPosFromValue(range_.from, range_.to, end_value_);
-  int16_t start_thumb_width = ThumbWidthForState(
-      size_metrics.handle_width, isPressed() && active_thumb_ == 0);
-  int16_t end_thumb_width = ThumbWidthForState(
-      size_metrics.handle_width, isPressed() && active_thumb_ == 1);
-  int16_t start_track_gap =
-      TrackGapForThumbWidth(size_metrics, start_thumb_width);
-  int16_t end_track_gap = TrackGapForThumbWidth(size_metrics, end_thumb_width);
-  internal::SliderVisualMetrics start_layout =
-      internal::ResolveSliderVisualMetrics(
-          axis, axis.centerFromPos(start_pos), start_thumb_width,
-          size_metrics.track_height, start_track_gap,
-          size_metrics.handle_height);
-  internal::SliderVisualMetrics end_layout =
-      internal::ResolveSliderVisualMetrics(
-          axis, axis.centerFromPos(end_pos), end_thumb_width,
-          size_metrics.track_height, end_track_gap, size_metrics.handle_height);
+  ThumbPaintMetrics start =
+      ResolveThumbPaintMetrics(range_, start_value_, axis, size_metrics,
+                               isPressed() && active_thumb_ == 0);
+  ThumbPaintMetrics end =
+      ResolveThumbPaintMetrics(range_, end_value_, axis, size_metrics,
+                               isPressed() && active_thumb_ == 1);
 
   int16_t active_clip_min =
-      (int16_t)ceilf(start_layout.inactive_track_min_primary);
+      (int16_t)ceilf(start.layout.inactive_track_min_primary);
   int16_t active_clip_max =
-      (int16_t)floorf(end_layout.active_track_max_primary);
+      (int16_t)floorf(end.layout.active_track_max_primary);
   if (active_clip_min < 0) active_clip_min = 0;
   if (active_clip_max >= axis.primarySpan()) {
     active_clip_max = axis.primarySpan() - 1;
   }
 
   roo_display::Box active_clip = axis.boxFromPrimaryCross(
-      active_clip_min, start_layout.track_cross_start, active_clip_max,
-      start_layout.track_cross_start + size_metrics.track_height - 1);
+      active_clip_min, start.layout.track_cross_start, active_clip_max,
+      start.layout.track_cross_start + size_metrics.track_height - 1);
   bool has_left_inactive_clip = true;
   int16_t left_inactive_max =
-      (int16_t)floorf(start_layout.active_track_max_primary);
+      (int16_t)floorf(start.layout.active_track_max_primary);
   roo_display::Box left_inactive_clip;
   if (left_inactive_max < 0) {
     has_left_inactive_clip = false;
@@ -803,33 +811,33 @@ void RangeSlider::paint(const Canvas& canvas) const {
       left_inactive_max = axis.primarySpan() - 1;
     }
     left_inactive_clip = axis.boxFromPrimaryCross(
-        0, start_layout.track_cross_start, left_inactive_max,
-        start_layout.track_cross_start + size_metrics.track_height - 1);
+        0, start.layout.track_cross_start, left_inactive_max,
+        start.layout.track_cross_start + size_metrics.track_height - 1);
   }
   bool has_right_inactive_clip = true;
   int16_t right_inactive_min =
-      (int16_t)ceilf(end_layout.inactive_track_min_primary);
+      (int16_t)ceilf(end.layout.inactive_track_min_primary);
   roo_display::Box right_inactive_clip;
   if (right_inactive_min >= axis.primarySpan()) {
     has_right_inactive_clip = false;
   } else {
     if (right_inactive_min < 0) right_inactive_min = 0;
     right_inactive_clip = axis.boxFromPrimaryCross(
-        right_inactive_min, start_layout.track_cross_start,
+        right_inactive_min, start.layout.track_cross_start,
         axis.primarySpan() - 1,
-        start_layout.track_cross_start + size_metrics.track_height - 1);
+        start.layout.track_cross_start + size_metrics.track_height - 1);
   }
 
   auto track_bounds = axis.paintRectFromPrimaryCross(
       TrackShapeMinPrimary(0.0f, size_metrics.track_radius),
-      start_layout.track_min_cross, axis.primarySpan() - 0.5f,
-      start_layout.track_max_cross);
+      start.layout.track_min_cross, axis.primarySpan() - 0.5f,
+      start.layout.track_max_cross);
   auto start_handle_bounds = axis.paintRectFromPrimaryCross(
-      start_layout.thumb_min_primary, start_layout.thumb_min_cross,
-      start_layout.thumb_max_primary, start_layout.thumb_max_cross);
+      start.layout.thumb_min_primary, start.layout.thumb_min_cross,
+      start.layout.thumb_max_primary, start.layout.thumb_max_cross);
   auto end_handle_bounds = axis.paintRectFromPrimaryCross(
-      end_layout.thumb_min_primary, end_layout.thumb_min_cross,
-      end_layout.thumb_max_primary, end_layout.thumb_max_cross);
+      end.layout.thumb_min_primary, end.layout.thumb_min_cross,
+      end.layout.thumb_max_primary, end.layout.thumb_max_cross);
 
   auto inactive_track = SmoothFilledRoundRect(
       track_bounds.x_min, track_bounds.y_min, track_bounds.x_max,
@@ -848,9 +856,9 @@ void RangeSlider::paint(const Canvas& canvas) const {
   Rect widget_bounds = bounds();
   Rect start_handle_tile_bounds =
       GetHandleTileBounds(widget_bounds, start_handle.extents(),
-                          start_track_gap, axis.isVertical());
+                          start.track_gap, axis.isVertical());
   Rect end_handle_tile_bounds = GetHandleTileBounds(
-      widget_bounds, end_handle.extents(), end_track_gap, axis.isVertical());
+      widget_bounds, end_handle.extents(), end.track_gap, axis.isVertical());
 
   if (has_left_inactive_clip) {
     DrawTrackPiece(canvas, inactive_track, widget_bounds, left_inactive_clip,
@@ -875,32 +883,18 @@ void RangeSlider::paintStops(const Canvas& canvas, Clipper& clipper) const {
   const internal::SliderSizeMetrics& size_metrics =
       internal::ResolveSliderSizeMetrics(style_.size);
   internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
-  uint16_t start_pos =
-      internal::SliderPosFromValue(range_.from, range_.to, start_value_);
-  uint16_t end_pos =
-      internal::SliderPosFromValue(range_.from, range_.to, end_value_);
-  int16_t start_thumb_width = ThumbWidthForState(
-      size_metrics.handle_width, isPressed() && active_thumb_ == 0);
-  int16_t end_thumb_width = ThumbWidthForState(
-      size_metrics.handle_width, isPressed() && active_thumb_ == 1);
-  int16_t start_track_gap =
-      TrackGapForThumbWidth(size_metrics, start_thumb_width);
-  int16_t end_track_gap = TrackGapForThumbWidth(size_metrics, end_thumb_width);
-  internal::SliderVisualMetrics start_layout =
-      internal::ResolveSliderVisualMetrics(
-          axis, axis.centerFromPos(start_pos), start_thumb_width,
-          size_metrics.track_height, start_track_gap,
-          size_metrics.handle_height);
-  internal::SliderVisualMetrics end_layout =
-      internal::ResolveSliderVisualMetrics(
-          axis, axis.centerFromPos(end_pos), end_thumb_width,
-          size_metrics.track_height, end_track_gap, size_metrics.handle_height);
+  ThumbPaintMetrics start =
+      ResolveThumbPaintMetrics(range_, start_value_, axis, size_metrics,
+                               isPressed() && active_thumb_ == 0);
+  ThumbPaintMetrics end =
+      ResolveThumbPaintMetrics(range_, end_value_, axis, size_metrics,
+                               isPressed() && active_thumb_ == 1);
 
   StopSegment segments[3];
   int segment_count = 0;
 
   int16_t left_inactive_max =
-      (int16_t)floorf(start_layout.active_track_max_primary);
+      (int16_t)floorf(start.layout.active_track_max_primary);
   if (left_inactive_max >= 0) {
     segments[segment_count++] = StopSegment{
         0.0f,
@@ -908,8 +902,8 @@ void RangeSlider::paintStops(const Canvas& canvas, Clipper& clipper) const {
         tokens.inactive_track, tokens.inactive_stop};
   }
 
-  float active_track_min_primary = start_layout.inactive_track_min_primary;
-  float active_track_max_primary = end_layout.active_track_max_primary;
+  float active_track_min_primary = start.layout.inactive_track_min_primary;
+  float active_track_max_primary = end.layout.active_track_max_primary;
   if (active_track_max_primary >= active_track_min_primary) {
     segments[segment_count++] =
         StopSegment{active_track_min_primary, active_track_max_primary,
@@ -917,7 +911,7 @@ void RangeSlider::paintStops(const Canvas& canvas, Clipper& clipper) const {
   }
 
   int16_t right_inactive_min =
-      (int16_t)ceilf(end_layout.inactive_track_min_primary);
+      (int16_t)ceilf(end.layout.inactive_track_min_primary);
   if (right_inactive_min < axis.primarySpan()) {
     segments[segment_count++] =
         StopSegment{(float)std::max<int16_t>(0, right_inactive_min),
@@ -933,7 +927,7 @@ void RangeSlider::paintStops(const Canvas& canvas, Clipper& clipper) const {
   for (int32_t i = 0; i <= stop_count; ++i) {
     float value = (i == stop_count) ? range_.to : range_.from + i * range_.step;
     uint16_t pos = internal::SliderPosFromValue(range_.from, range_.to, value);
-    if (pos == start_pos || pos == end_pos) continue;
+    if (pos == start.pos || pos == end.pos) continue;
     float primary_center = axis.centerFromPos(pos);
     for (int segment_index = 0; segment_index < segment_count;
          ++segment_index) {
@@ -968,7 +962,7 @@ void RangeSlider::paintStops(const Canvas& canvas, Clipper& clipper) const {
           (i == stop_count) ? range_.to : range_.from + i * range_.step;
       uint16_t pos =
           internal::SliderPosFromValue(range_.from, range_.to, value);
-      if (pos == start_pos || pos == end_pos) continue;
+      if (pos == start.pos || pos == end.pos) continue;
       float primary_center = axis.centerFromPos(pos);
       if (!SegmentContains(segments[segment_index], primary_center)) continue;
       auto stop = SmoothFilledCircle(StopMarkCenter(axis, primary_center),
