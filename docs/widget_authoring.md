@@ -163,6 +163,135 @@ Every new widget design document should include:
 A worked example of this format lives in
 [material3_slider_design.md](material3_slider_design.md).
 
+## Painting Model
+
+### Dirty vs Invalidated
+
+`roo_windows` distinguishes between a widget being **dirty** and being
+**invalidated**.
+
+- **Dirty** means the widget changed its own state through its API, but it did
+  not move, and no external occlusion/reveal happened. In this case the widget
+  should make a best effort to redraw only the pixels whose final value may
+  have changed.
+- **Invalidated** means some part of the widget's area may need repaint even if
+  the widget state itself did not change. Typical causes are layout, moving the
+  widget, or a region being revealed. In this case the widget must
+  repaint every pixel in the invalid region, while still applying any
+  state-driven dirty updates it needs.
+
+Containers already track invalid regions explicitly. Small widgets may choose a
+coarser strategy and simply repaint the full clipped region when invalidated,
+but even then they should avoid writing the same pixel more than once within a
+single paint pass.
+
+The core rule is: **draw only the final value of a pixel color; do not redraw
+using different colors**. Violation is a correctness bug and causes visible
+flicker, because the draws are generally unbuffered and go directly to the
+display device. Redrawing with the same color is still worth avoiding, but that
+is a performance issue rather than a correctness issue.
+
+### Prefer `paint()` for Simple Widgets
+
+Simple widgets should override `paint(const Canvas&)`.
+
+The default [Widget::paintWidgetContents](../src/roo_windows/core/widget.cpp)
+implementation already performs the common bookkeeping:
+
+- it clips to the widget content bounds,
+- it calls `clipper.setBounds(...)` for the active clip,
+- it invokes `paint(...)`,
+- and after `paintWidgetContents()` returns,
+  `finalizePaintWidget()` contributes the widget's exclusion region.
+
+This is the right path for widgets whose content can be painted in a single
+paint plan where each pixel receives its final value directly. That paint plan
+may still branch on dirty versus invalidated state; separate handling of dirty
+and invalidated repaint does **not** require overriding
+`paintWidgetContents()`.
+
+### Override `paintWidgetContents()` for Complex Paint Ordering
+
+Widgets with more complicated paint structure may override
+`paintWidgetContents()` directly.
+
+Use this path when you need one or more of the following:
+
+- custom foreground/background ordering,
+- a composable stack of contents that must be settled in multiple stages,
+- early exclusions so later paint does not redraw settled pixels,
+- decoration or overlay composition through the `Clipper` pipeline.
+
+Reference implementations:
+
+- [Widget](../src/roo_windows/core/widget.cpp) for the default simple path.
+- [Container](../src/roo_windows/core/container.cpp) for invalid-region-aware
+  painting and early exclusions.
+
+### Foreground-First Exclusion Rule
+
+Rendering walks the z-order directly into the framebuffer. Exclusions only
+protect **later** paint. That means a complex widget should usually paint in
+this order:
+
+1. Paint the front-most geometry first.
+2. Add exclusion for the area whose final pixels are now settled.
+3. Possibly add translucent overlays that are supposed to appear behind that
+   geometry but above background geometry.
+4. Paint the background geometry.
+
+This is the correct pattern for things like thumbs, stop marks, icons, and
+other foreground details that sit on top of a background track or panel.
+
+Important constraint: only exclude an area after that area has been fully
+resolved. If the foreground asset has transparent pixels, the draw that
+produces it must also provide the correct background for those transparent
+pixels. Do **not** prefill a rectangle and then draw the foreground on top of
+it as a separate pass; if the second pass can change the color that was just
+written, that is exactly the kind of pattern that causes flicker.
+
+### Single-Pass Paint Strategies
+
+Use strategies that compute the final pixel color in one draw operation instead
+of layering several writes into the framebuffer.
+
+- Use `Canvas::drawTiled()` when a drawable should occupy a specific rectangle
+  with a known solid background.
+  Set the canvas background first with `canvas.set_bgcolor(...)`, then draw the
+  tiled content into the prescribed bounds so transparent pixels resolve
+  against the intended background in the same draw.
+- Use `roo_display::RasterizableStack` for eligible rasterizable content when
+  several shapes should be composed first and then emitted as one draw.
+- Use `roo_display::StreamableStack` for eligible streamable content, such as
+  RLE images, when you need the same single-pass property for streamed assets.
+- When composition rules matter, these stacks can use the `roo_display`
+  blending and Porter-Duff operators so the composed result is still drawn as a
+  single settled image.
+
+### Decorations and Semi-Transparent Effects
+
+For shadows, rounded-rect overlays, and other semi-transparent effects, prefer
+the dedicated `Clipper` helpers instead of manual multi-pass redraw:
+
+- `addDecoration(...)`
+- `addOverlay(...)`
+- `addOverlayShape(...)`
+
+See [Container::paintWidgetContents](../src/roo_windows/core/container.cpp)
+and `fastDrawChildShadow()` for the expected composition style.
+
+### Painting Checklist
+
+Before finalizing a custom widget paint path, verify:
+
+- dirty paint redraws only the pixels whose final value changed,
+- invalidated paint covers every pixel in the invalid region,
+- no pixel is written more than once with a different color in the same paint
+  pass,
+- exclusions are added only after the excluded area is already final,
+- semi-transparent effects are expressed through decorations/overlays rather
+  than ad hoc repaint passes.
+
 ## Checklist for New Widgets
 
 Before sending a widget design or implementation for review:
