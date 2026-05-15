@@ -41,6 +41,7 @@ struct Emulator {
 
 #include "Arduino.h"
 #include "roo_display.h"
+#include "roo_icons/outlined/24/device.h"
 #include "roo_scheduler.h"
 #include "roo_windows.h"
 
@@ -190,6 +191,32 @@ class DemoSlider : public material3::Slider {
   LabelFormatter label_formatter_;
 };
 
+class DemoIconSlider : public material3::SliderWithIcons {
+ public:
+  using LabelFormatter = DemoSlider::LabelFormatter;
+
+  DemoIconSlider(const Environment& env, material3::SliderRange range,
+                 float initial_value, material3::SliderVariant variant,
+                 material3::SliderStyle style)
+      : material3::SliderWithIcons(env, range, initial_value, variant, style) {}
+
+  void setLabelFormatter(LabelFormatter formatter) {
+    label_formatter_ = std::move(formatter);
+  }
+
+  roo::string_view formatLabel(float value, char* scratch,
+                               size_t scratch_size) const override {
+    if (label_formatter_ != nullptr) {
+      return label_formatter_(value, scratch, scratch_size);
+    }
+    return material3::SliderWithIcons::formatLabel(value, scratch,
+                                                   scratch_size);
+  }
+
+ private:
+  LabelFormatter label_formatter_;
+};
+
 class SemanticSliderRow : public FlexLayout {
  public:
   using LabelFormatter = DemoSlider::LabelFormatter;
@@ -243,6 +270,65 @@ class SemanticSliderRow : public FlexLayout {
   TextLabel secondary_;
   TextLabel value_;
   DemoSlider slider_;
+  SliderValueFormatter formatter_;
+};
+
+class IconSliderRow : public FlexLayout {
+ public:
+  using LabelFormatter = DemoIconSlider::LabelFormatter;
+
+  IconSliderRow(const Environment& env, const char* primary,
+                const char* secondary, material3::SliderRange range,
+                float initial_value, SliderValueFormatter formatter,
+                const material3::SliderTrackIcons* icons,
+                material3::SliderStyle style = {},
+                LabelFormatter label_formatter = nullptr)
+      : FlexLayout(env, FlexDirection::kColumn),
+        header_(env, FlexDirection::kRow),
+        labels_(env, FlexDirection::kColumn),
+        primary_(env, primary, font_body1()),
+        secondary_(env, secondary, font_caption()),
+        value_(env, "", font_body1()),
+        slider_(env, range, initial_value, material3::SliderVariant::kStandard,
+                style),
+        formatter_(std::move(formatter)) {
+    if (icons != nullptr) {
+      slider_.setIcons(icons);
+    }
+    if (label_formatter != nullptr) {
+      slider_.setLabelFormatter(std::move(label_formatter));
+    }
+    setPadding(Padding(Scaled(12), Scaled(8)));
+    setGap(Scaled(8));
+
+    header_.setAlignItems(AlignItems::kCenter);
+    header_.setGap(Scaled(12));
+
+    labels_.setAlignItems(AlignItems::kFlexStart);
+    labels_.add(primary_, {.flex_grow = 0, .flex_shrink = 0});
+    labels_.add(secondary_, {.flex_grow = 0, .flex_shrink = 0});
+
+    header_.add(labels_, {.flex_grow = 1, .flex_shrink = 1});
+    header_.add(value_, {.flex_grow = 0, .flex_shrink = 0});
+
+    add(header_, {.flex_grow = 0, .flex_shrink = 0});
+    add(slider_, {.flex_grow = 0, .flex_shrink = 1});
+
+    slider_.setOnInteractiveChange([this]() { handleInteractiveChange(); });
+    updateValue();
+  }
+
+ private:
+  void updateValue() { formatter_(value_, slider_); }
+
+  void handleInteractiveChange() { updateValue(); }
+
+  FlexLayout header_;
+  FlexLayout labels_;
+  TextLabel primary_;
+  TextLabel secondary_;
+  TextLabel value_;
+  DemoIconSlider slider_;
   SliderValueFormatter formatter_;
 };
 
@@ -512,6 +598,35 @@ constexpr material3::SliderStyle TankLevelStyle() {
   return s;
 }
 
+constexpr material3::SliderStyle TemperatureIconStyle() {
+  material3::SliderStyle s{};
+  s.size = material3::SliderSize::kLarge;
+  s.value_indicator =
+      material3::SliderValueIndicatorBehavior::kShowOnInteraction;
+  return s;
+}
+
+constexpr material3::SliderStyle BrightnessIconStyle() {
+  material3::SliderStyle s{};
+  s.size = material3::SliderSize::kMedium;
+  s.value_indicator =
+      material3::SliderValueIndicatorBehavior::kShowOnInteraction;
+  return s;
+}
+
+const material3::SliderTrackIcons* ThermostatIcons() {
+  static const material3::SliderTrackIcons icons = {
+      &ic_outlined_24_device_thermostat()};
+  return &icons;
+}
+
+const material3::SliderTrackIcons* BrightnessIcons() {
+  static const material3::SliderTrackIcons icons = {
+      &ic_outlined_24_device_brightness_high(),
+  };
+  return &icons;
+}
+
 class SliderScreen : public SimpleScrollablePanel {
  public:
   SliderScreen(const Environment& env)
@@ -520,7 +635,8 @@ class SliderScreen : public SimpleScrollablePanel {
         title_(env, "Material 3 sliders", font_body1()),
         subtitle_(env,
                   "Compatibility, semantic, discrete, centered, vertical, "
-                  "and range sliders, with custom value indicator labels.",
+                  "range, and iconized sliders, with custom value indicator "
+                  "labels.",
                   font_caption()),
         divider_(env),
         migration_(env,
@@ -556,6 +672,33 @@ class SliderScreen : public SimpleScrollablePanel {
               if ((size_t)len >= n) len = (int)n - 1;
               return roo::string_view(scratch, (size_t)len);
             }),
+        heating_(
+            env, "Heating setpoint", "Large slider with a leading inset icon",
+            material3::SliderRange{18.0f, 30.0f, 1.0f}, 24.0f,
+            [](TextLabel& label, const material3::Slider& slider) {
+              label.setTextf("%.0f C", slider.value());
+            },
+            ThermostatIcons(), TemperatureIconStyle(),
+            [](float value, char* scratch, size_t n) {
+              int len = snprintf(scratch, n, "%.0f C", value);
+              if (len < 0) len = 0;
+              if ((size_t)len >= n) len = (int)n - 1;
+              return roo::string_view(scratch, (size_t)len);
+            }),
+        brightness_(
+            env, "Desk lamp brightness",
+            "Large slider with a leading inset brightness icon",
+            material3::SliderRange{0.0f, 100.0f, 5.0f}, 65.0f,
+            [](TextLabel& label, const material3::Slider& slider) {
+              label.setTextf("%.0f%%", slider.value());
+            },
+            BrightnessIcons(), BrightnessIconStyle(),
+            [](float value, char* scratch, size_t n) {
+              int len = snprintf(scratch, n, "%.0f%%", value);
+              if (len < 0) len = 0;
+              if ((size_t)len >= n) len = (int)n - 1;
+              return roo::string_view(scratch, (size_t)len);
+            }),
         tank_level_(
             env, "Vertical tank level",
             "Orientation support: drag up to increase",
@@ -579,10 +722,9 @@ class SliderScreen : public SimpleScrollablePanel {
         footer_divider_(env),
         note_(env,
               "Drag a thumb to see the value indicator bubble float next to "
-              "the active thumb. "
-              "Subclasses override formatLabel() to format their own values; "
-              "kWithinBounds keeps the bubble clipped to the slider extent, "
-              "and vertical sliders reverse the drag axis so up increases.",
+              "the active thumb. Inset icons are available on larger standard "
+              "sliders, and vertical sliders reverse the drag axis so up "
+              "increases.",
               font_caption()) {
     content_.setPadding(Scaled(12));
     content_.setGap(Scaled(4));
@@ -594,6 +736,8 @@ class SliderScreen : public SimpleScrollablePanel {
     content_.add(legacy_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(fan_speed_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(balance_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(heating_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(brightness_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(tank_level_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(quiet_hours_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(footer_divider_, {.flex_grow = 0, .flex_shrink = 0});
@@ -610,6 +754,8 @@ class SliderScreen : public SimpleScrollablePanel {
   LegacySliderRow legacy_;
   SemanticSliderRow fan_speed_;
   SemanticSliderRow balance_;
+  IconSliderRow heating_;
+  IconSliderRow brightness_;
   VerticalSliderShowcase tank_level_;
   RangeSliderRow quiet_hours_;
   HorizontalDivider footer_divider_;

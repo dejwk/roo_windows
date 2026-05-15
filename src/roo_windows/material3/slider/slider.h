@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "roo_backport/string_view.h"
+#include "roo_display/image/image.h"
 #include "roo_windows/core/basic_widget.h"
 #include "roo_windows/material3/slider/slider_internal.h"
 
@@ -41,6 +42,11 @@ enum class SliderTickMode : uint8_t {
   kShowStops,
 };
 
+enum class SliderTrackIconAnchor : uint8_t {
+  kStart,
+  kEnd,
+};
+
 // Compact packed style state. Read on every paint, so kept inline. Reserved
 // bits leave room for later steps.
 struct SliderStyle {
@@ -69,6 +75,11 @@ struct SliderRange {
   float from = 0.0f;
   float to = 1.0f;
   float step = 0.0f;
+};
+
+struct SliderTrackIcons {
+  const roo_display::Pictogram* inset = nullptr;
+  SliderTrackIconAnchor inset_anchor = SliderTrackIconAnchor::kStart;
 };
 
 class Slider : public BasicWidget {
@@ -154,9 +165,26 @@ class Slider : public BasicWidget {
  protected:
   void paintWidgetContents(const Canvas& s, Clipper& clipper) override;
   void notifyStateChanged(uint16_t state_diff) override;
+  virtual const SliderTrackIcons* trackIcons() const { return nullptr; }
 
  private:
-  void paintStops(const Canvas& canvas, Clipper& clipper) const;
+  struct PaintContext;
+
+  PaintContext buildPaintContext() const;
+  PaintContext buildPaintContext(uint16_t pos, bool pressed) const;
+
+  Rect trackIconRect(const PaintContext& context) const;
+  Rect trackIconReservedRect(const PaintContext& context) const;
+  Rect trackIconDirtyRect(const PaintContext& context) const;
+
+  void paintTrackAndThumb(const Canvas& canvas,
+                          const PaintContext& context) const;
+
+  void paintTrackIcons(const Canvas& canvas, Clipper& clipper,
+                       const PaintContext& context) const;
+
+  void paintStops(const Canvas& canvas, Clipper& clipper,
+                  const PaintContext& context) const;
 
   bool setPosInternal(uint16_t pos, bool from_user);
 
@@ -180,6 +208,19 @@ class Slider : public BasicWidget {
   // next bubble bounds against the previously shown footprint without a second
   // cached span.
   internal::DirtySpan pending_indicator_dirty_span_;
+};
+
+class SliderWithIcons : public Slider {
+ public:
+  using Slider::Slider;
+
+  void setIcons(const SliderTrackIcons* icons);
+
+ protected:
+  const SliderTrackIcons* trackIcons() const override { return icons_; }
+
+ private:
+  const SliderTrackIcons* icons_ = nullptr;
 };
 
 }  // namespace material3

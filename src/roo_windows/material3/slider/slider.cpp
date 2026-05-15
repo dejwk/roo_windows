@@ -19,6 +19,9 @@ namespace {
 static constexpr int kTouchSlopPixels = Scaled(20);
 static constexpr float kPressedThumbWidthRatio = 0.5f;
 static constexpr int16_t kCenterGapHalfPixels = Scaled(2);
+static constexpr int16_t kTrackIconEdgeOffsetPixels = Scaled(4);
+static constexpr int16_t kTrackIconMinHandleCenterDistancePixels = Scaled(12);
+static constexpr int16_t kTrackIconStopPaddingPixels = Scaled(4);
 static constexpr int16_t kStopMarkRadiusPixels = Scaled(2);
 static constexpr int16_t kStopMarkSpanPixels = Scaled(4);
 
@@ -117,6 +120,31 @@ Rect GetHandleTileBounds(const Rect& widget_bounds,
   return Rect::Intersect(expanded, widget_bounds);
 }
 
+int16_t IconPrimarySpan(const roo_display::Pictogram& icon, bool vertical) {
+  roo_display::Box extents = icon.anchorExtents();
+  return vertical ? extents.height() : extents.width();
+}
+
+int16_t IconCrossSpan(const roo_display::Pictogram& icon, bool vertical) {
+  roo_display::Box extents = icon.anchorExtents();
+  return vertical ? extents.width() : extents.height();
+}
+
+bool IconFitsWithinSlot(const roo_display::Pictogram* icon, int16_t slot_size,
+                        bool vertical) {
+  if (icon == nullptr || slot_size <= 0) return false;
+  roo_display::Box extents = icon->anchorExtents();
+  int16_t primary_span = vertical ? extents.height() : extents.width();
+  int16_t cross_span = vertical ? extents.width() : extents.height();
+  return primary_span <= slot_size && cross_span <= slot_size;
+}
+
+bool CanPaintInsetIcon(const Slider& slider,
+                       const internal::SliderSizeMetrics& size_metrics) {
+  return slider.variant() == SliderVariant::kStandard &&
+         size_metrics.supports_inset_icon && size_metrics.icon_size > 0;
+}
+
 void DrawTrackPiece(const Canvas& canvas, const roo_display::Drawable& piece,
                     const Rect& widget_bounds,
                     const roo_display::Box& clip_bounds, bool vertical) {
@@ -156,6 +184,7 @@ struct StopSegment {
   float max_primary;
   Color track_color;
   Color stop_color;
+  bool active;
 };
 
 struct StopRun {
@@ -186,6 +215,161 @@ inline bool SegmentContains(const StopSegment& segment, float primary) {
          primary <= segment.max_primary + 0.01f;
 }
 
+inline bool SegmentContainsRange(const StopSegment& segment, float min_primary,
+                                 float max_primary) {
+  return min_primary >= segment.min_primary - 0.01f &&
+         max_primary <= segment.max_primary + 0.01f;
+}
+
+void BuildTrackSegments(const Slider& slider, const Tokens& tokens,
+                        const internal::SliderAxisMetrics& axis,
+                        const internal::SliderVisualMetrics& layout,
+                        StopSegment* segments, int& segment_count) {
+  segment_count = 0;
+  float center_anchor_primary = axis.centerFromPos(32768);
+  bool thumb_on_or_right_of_center =
+      axis.centerFromPos(slider.getPos()) >= center_anchor_primary;
+  float center_left_edge = center_anchor_primary - (float)kCenterGapHalfPixels;
+  float center_right_edge = center_anchor_primary + (float)kCenterGapHalfPixels;
+
+  if (slider.variant() == SliderVariant::kCentered) {
+    int16_t handle_left_edge = (int16_t)floorf(layout.active_track_max_primary);
+    int16_t center_left_edge_i = (int16_t)floorf(center_left_edge);
+    int16_t left_inactive_max =
+        thumb_on_or_right_of_center
+            ? std::min(handle_left_edge, center_left_edge_i)
+            : handle_left_edge;
+    if (left_inactive_max >= 0) {
+      segments[segment_count++] = StopSegment{
+          0.0f,
+          (float)std::min<int16_t>(left_inactive_max, axis.primarySpan() - 1),
+          tokens.inactive_track, tokens.inactive_stop, false};
+    }
+
+    float active_track_min_primary = thumb_on_or_right_of_center
+                                         ? center_right_edge
+                                         : layout.inactive_track_min_primary;
+    float active_track_max_primary = thumb_on_or_right_of_center
+                                         ? layout.active_track_max_primary
+                                         : center_left_edge;
+    if (active_track_max_primary >= active_track_min_primary) {
+      segments[segment_count++] =
+          StopSegment{active_track_min_primary, active_track_max_primary,
+                      tokens.active_track, tokens.active_stop, true};
+    }
+
+    int16_t handle_right_edge =
+        (int16_t)ceilf(layout.inactive_track_min_primary);
+    int16_t center_right_edge_i = (int16_t)ceilf(center_right_edge);
+    int16_t right_inactive_min =
+        thumb_on_or_right_of_center
+            ? handle_right_edge
+            : std::max(handle_right_edge, center_right_edge_i);
+    if (right_inactive_min < axis.primarySpan()) {
+      segments[segment_count++] =
+          StopSegment{(float)std::max<int16_t>(0, right_inactive_min),
+                      (float)(axis.primarySpan() - 1), tokens.inactive_track,
+                      tokens.inactive_stop, false};
+    }
+    return;
+  }
+
+  if (layout.active_track_max_primary >= 0.0f) {
+    segments[segment_count++] =
+        StopSegment{0.0f, layout.active_track_max_primary, tokens.active_track,
+                    tokens.active_stop, true};
+  }
+  if (layout.inactive_track_min_primary < axis.primarySpan()) {
+    segments[segment_count++] = StopSegment{
+        layout.inactive_track_min_primary, (float)(axis.primarySpan() - 1),
+        tokens.inactive_track, tokens.inactive_stop, false};
+  }
+}
+
+const StopSegment* FindSegmentContainingRange(const StopSegment* segments,
+                                              int segment_count,
+                                              float min_primary,
+                                              float max_primary) {
+  for (int i = 0; i < segment_count; ++i) {
+    if (SegmentContainsRange(segments[i], min_primary, max_primary)) {
+      return &segments[i];
+    }
+  }
+  return nullptr;
+}
+
+bool ResolveTrackIconBounds(const internal::SliderAxisMetrics& axis,
+                            const internal::SliderVisualMetrics& layout,
+                            const internal::SliderSizeMetrics& size_metrics,
+                            const roo_display::Pictogram& icon, bool at_start,
+                            const StopSegment* segments, int segment_count,
+                            roo_display::Box& icon_bounds,
+                            const StopSegment*& icon_segment) {
+  int16_t max_slot_span = size_metrics.icon_size > 0
+                              ? size_metrics.icon_size
+                              : size_metrics.track_height;
+  if (!IconFitsWithinSlot(&icon, max_slot_span, axis.isVertical())) {
+    return false;
+  }
+
+  int16_t icon_primary_span = IconPrimarySpan(icon, axis.isVertical());
+  int16_t icon_cross_span = IconCrossSpan(icon, axis.isVertical());
+  if (icon_primary_span <= 0 || icon_cross_span <= 0 ||
+      icon_cross_span > size_metrics.track_height ||
+      icon_primary_span > axis.primarySpan()) {
+    return false;
+  }
+
+  int16_t cross_start = layout.track_cross_start +
+                        (size_metrics.track_height - icon_cross_span) / 2;
+  if (cross_start < 0 || cross_start + icon_cross_span > axis.crossSpan()) {
+    return false;
+  }
+
+  auto try_candidate = [&](int16_t min_primary) -> bool {
+    int16_t max_primary = min_primary + icon_primary_span - 1;
+    if (min_primary < 0 || max_primary >= axis.primarySpan()) return false;
+    int16_t max_left_boundary =
+        (int16_t)floorf(layout.thumb_center_primary -
+                        (float)kTrackIconMinHandleCenterDistancePixels);
+    int16_t min_right_boundary =
+        (int16_t)ceilf(layout.thumb_center_primary +
+                       (float)kTrackIconMinHandleCenterDistancePixels);
+    if (max_primary > max_left_boundary && min_primary < min_right_boundary) {
+      return false;
+    }
+    const StopSegment* containing = FindSegmentContainingRange(
+        segments, segment_count, (float)min_primary, (float)max_primary);
+    if (containing == nullptr) return false;
+    icon_bounds =
+        axis.boxFromPrimaryCross(min_primary, cross_start, max_primary,
+                                 cross_start + icon_cross_span - 1);
+    icon_segment = containing;
+    return true;
+  };
+
+  int16_t edge_candidate =
+      at_start
+          ? kTrackIconEdgeOffsetPixels
+          : axis.primarySpan() - kTrackIconEdgeOffsetPixels - icon_primary_span;
+  if (try_candidate(edge_candidate)) return true;
+
+  int16_t jump_candidate =
+      at_start
+          ? std::max<int16_t>(
+                (int16_t)ceilf(layout.inactive_track_min_primary),
+                (int16_t)ceilf(layout.thumb_center_primary +
+                               (float)kTrackIconMinHandleCenterDistancePixels))
+          : std::min<int16_t>(
+                (int16_t)floorf(layout.active_track_max_primary) -
+                    icon_primary_span + 1,
+                (int16_t)floorf(
+                    layout.thumb_center_primary -
+                    (float)kTrackIconMinHandleCenterDistancePixels) -
+                    icon_primary_span + 1);
+  return try_candidate(jump_candidate);
+}
+
 roo_display::FpPoint StopMarkCenter(const internal::SliderAxisMetrics& axis,
                                     float primary_center) {
   float cross_center = 0.5f * (float)axis.crossSpan() - 0.5f;
@@ -214,7 +398,140 @@ void IncludeStopExtentsInRun(const internal::SliderAxisMetrics& axis,
   if (span.max_primary > run.max_primary) run.max_primary = span.max_primary;
 }
 
+Rect ExpandTrackIconPrimaryRect(const Rect& icon_rect, bool vertical,
+                                int16_t primary_span, int16_t primary_padding) {
+  if (icon_rect.empty()) return icon_rect;
+  if (vertical) {
+    return Rect(
+        icon_rect.xMin(), std::max<YDim>(0, icon_rect.yMin() - primary_padding),
+        icon_rect.xMax(),
+        std::min<YDim>(primary_span - 1, icon_rect.yMax() + primary_padding));
+  }
+  return Rect(
+      std::max<XDim>(0, icon_rect.xMin() - primary_padding), icon_rect.yMin(),
+      std::min<XDim>(primary_span - 1, icon_rect.xMax() + primary_padding),
+      icon_rect.yMax());
+}
+
 }  // namespace
+
+struct Slider::PaintContext {
+  Tokens tokens;
+  internal::SliderSizeMetrics size_metrics;
+  internal::SliderAxisMetrics axis;
+  int16_t thumb_width;
+  int16_t track_gap;
+  internal::SliderVisualMetrics layout;
+  StopSegment segments[3];
+  int segment_count;
+};
+
+Slider::PaintContext Slider::buildPaintContext() const {
+  return buildPaintContext(getPos(), isPressed());
+}
+
+Slider::PaintContext Slider::buildPaintContext(uint16_t pos,
+                                               bool pressed) const {
+  PaintContext context{
+      .tokens = ResolveTokens(*this),
+      .size_metrics = internal::ResolveSliderSizeMetrics(style_.size),
+      .axis = MakeSliderAxisMetrics(*this),
+      .thumb_width = 0,
+      .track_gap = 0,
+      .layout = internal::SliderVisualMetrics(),
+      .segments = {},
+      .segment_count = 0,
+  };
+  context.thumb_width =
+      ThumbWidthForState(context.size_metrics.handle_width, pressed);
+  context.track_gap =
+      TrackGapForThumbWidth(context.size_metrics, context.thumb_width);
+  context.layout = internal::ResolveSliderVisualMetrics(
+      context.axis, context.axis.centerFromPos(pos), context.thumb_width,
+      context.size_metrics.track_height, context.track_gap,
+      context.size_metrics.handle_height);
+  BuildTrackSegments(*this, context.tokens, context.axis, context.layout,
+                     context.segments, context.segment_count);
+  return context;
+}
+
+Rect Slider::trackIconRect(const PaintContext& context) const {
+  const SliderTrackIcons* icons = trackIcons();
+  if (icons == nullptr || icons->inset == nullptr ||
+      context.segment_count == 0) {
+    return Rect(0, 0, -1, -1);
+  }
+
+  roo_display::Box inset_bounds;
+  const StopSegment* inset_segment = nullptr;
+  bool inset_at_start = icons->inset_anchor == SliderTrackIconAnchor::kStart;
+  if (!CanPaintInsetIcon(*this, context.size_metrics) ||
+      !IconFitsWithinSlot(icons->inset, context.size_metrics.icon_size,
+                          context.axis.isVertical()) ||
+      !ResolveTrackIconBounds(
+          context.axis, context.layout, context.size_metrics, *icons->inset,
+          inset_at_start, context.segments, context.segment_count, inset_bounds,
+          inset_segment)) {
+    return Rect(0, 0, -1, -1);
+  }
+  return Rect(inset_bounds);
+}
+
+Rect Slider::trackIconReservedRect(const PaintContext& context) const {
+  return ExpandTrackIconPrimaryRect(
+      trackIconRect(context), context.axis.isVertical(),
+      context.axis.primarySpan(), kTrackIconStopPaddingPixels);
+}
+
+Rect Slider::trackIconDirtyRect(const PaintContext& context) const {
+  return ExpandTrackIconPrimaryRect(
+      trackIconReservedRect(context), context.axis.isVertical(),
+      context.axis.primarySpan(), kStopMarkRadiusPixels);
+}
+
+void Slider::paintTrackIcons(const Canvas& canvas, Clipper& clipper,
+                             const PaintContext& context) const {
+  const SliderTrackIcons* icons = trackIcons();
+  if (icons == nullptr || icons->inset == nullptr ||
+      context.segment_count == 0) {
+    return;
+  }
+
+  auto paint_icon = [&](const roo_display::Pictogram& icon,
+                        const roo_display::Box& icon_bounds,
+                        const StopSegment& segment) {
+    Canvas icon_canvas = canvas;
+    icon_canvas.set_bgcolor(segment.track_color);
+    icon_canvas.clip(icon_bounds.translate(canvas.dx(), canvas.dy()));
+    if (icon_canvas.clip_box().empty()) return;
+    roo_display::Pictogram tinted_icon(icon);
+    tinted_icon.color_mode().setColor(segment.stop_color);
+    icon_canvas.drawTiled(tinted_icon, Rect(icon_bounds), kCenter | kMiddle,
+                          false);
+    roo_display::Box device_box = roo_display::Box::Intersect(
+        icon_bounds.translate(canvas.dx(), canvas.dy()), canvas.clip_box());
+    if (!device_box.empty()) {
+      clipper.addExclusion(device_box);
+    }
+  };
+
+  Rect inset_rect = trackIconRect(context);
+  if (!inset_rect.empty()) {
+    float min_primary =
+        context.axis.isVertical()
+            ? (float)(context.axis.primarySpan() - 1 - inset_rect.yMax())
+            : (float)inset_rect.xMin();
+    float max_primary =
+        context.axis.isVertical()
+            ? (float)(context.axis.primarySpan() - 1 - inset_rect.yMin())
+            : (float)inset_rect.xMax();
+    const StopSegment* inset_segment = FindSegmentContainingRange(
+        context.segments, context.segment_count, min_primary, max_primary);
+    if (inset_segment != nullptr) {
+      paint_icon(*icons->inset, inset_rect.asBox(), *inset_segment);
+    }
+  }
+}
 
 Slider::Slider(const Environment& env, uint16_t pos)
     : Slider(env, SliderRange{},
@@ -409,6 +726,15 @@ void Slider::invalidatePosChange(const internal::SliderAxisMetrics& axis,
                                  uint16_t old_pos, uint16_t new_pos,
                                  float new_value) {
   Rect thumb_rect = axis.invalidationRectForPosChange(old_pos, new_pos);
+  Rect icon_envelope(0, 0, -1, -1);
+  Rect old_icon = trackIconDirtyRect(buildPaintContext(old_pos, isPressed()));
+  Rect new_icon = trackIconDirtyRect(buildPaintContext(new_pos, isPressed()));
+  if (!old_icon.empty() || !new_icon.empty()) {
+    icon_envelope = Rect::Extent(old_icon, new_icon);
+  }
+  Rect content_envelope = icon_envelope.empty()
+                              ? thumb_rect
+                              : Rect::Extent(thumb_rect, icon_envelope);
   Rect bubble_envelope(0, 0, -1, -1);
   if (IndicatorEnabled(style_) && ShowsValueIndicator(*this)) {
     float c_new = axis.displayCenterFromPos(new_pos);
@@ -427,10 +753,10 @@ void Slider::invalidatePosChange(const internal::SliderAxisMetrics& axis,
     bubble_envelope = Rect::Extent(old_indicator, new_indicator);
   }
   pending_content_dirty_span_.include(
-      internal::DisplayMainSpanFromRect(thumb_rect, axis.isVertical()));
+      internal::DisplayMainSpanFromRect(content_envelope, axis.isVertical()));
   pending_indicator_dirty_span_.include(
       internal::DisplayMainSpanFromRect(bubble_envelope, axis.isVertical()));
-  setDirty(thumb_rect);
+  setDirty(content_envelope);
   if (!bubble_envelope.empty()) {
     notifyParentInvalidatedRegion(
         bubble_envelope.translate(offsetLeft(), offsetTop()));
@@ -485,59 +811,57 @@ uint16_t Slider::getPos() const {
 }
 
 void Slider::paint(const Canvas& canvas) const {
-  Tokens tokens = ResolveTokens(*this);
-  const internal::SliderSizeMetrics& size_metrics =
-      internal::ResolveSliderSizeMetrics(style_.size);
-  internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
-  float center_anchor_primary = axis.centerFromPos(32768);
+  paintTrackAndThumb(canvas, buildPaintContext());
+}
+
+void Slider::paintTrackAndThumb(const Canvas& canvas,
+                                const PaintContext& context) const {
+  float center_anchor_primary = context.axis.centerFromPos(32768);
   bool thumb_on_or_right_of_center =
-      axis.centerFromPos(getPos()) >= center_anchor_primary;
+      context.axis.centerFromPos(getPos()) >= center_anchor_primary;
   float center_left_edge = center_anchor_primary - (float)kCenterGapHalfPixels;
   float center_right_edge = center_anchor_primary + (float)kCenterGapHalfPixels;
-  int16_t thumb_width =
-      ThumbWidthForState(size_metrics.handle_width, isPressed());
-  int16_t track_gap = TrackGapForThumbWidth(size_metrics, thumb_width);
-  internal::SliderVisualMetrics layout = internal::ResolveSliderVisualMetrics(
-      axis, axis.centerFromPos(getPos()), thumb_width,
-      size_metrics.track_height, track_gap, size_metrics.handle_height);
 
   float active_track_min_primary = -0.5f;
-  float active_track_max_primary = layout.active_track_max_primary;
-  roo_display::Box active_clip = axis.boxFromPrimaryCross(
-      0, layout.track_cross_start, layout.activeClipMax(axis.primarySpan()),
-      layout.track_cross_start + size_metrics.track_height - 1);
+  float active_track_max_primary = context.layout.active_track_max_primary;
+  roo_display::Box active_clip = context.axis.boxFromPrimaryCross(
+      0, context.layout.track_cross_start,
+      context.layout.activeClipMax(context.axis.primarySpan()),
+      context.layout.track_cross_start + context.size_metrics.track_height - 1);
   bool has_left_inactive_clip = false;
   bool has_right_inactive_clip = true;
   roo_display::Box left_inactive_clip;
-  roo_display::Box right_inactive_clip = axis.boxFromPrimaryCross(
-      (int16_t)ceilf(layout.inactive_track_min_primary),
-      layout.track_cross_start, axis.primarySpan() - 1,
-      layout.track_cross_start + size_metrics.track_height - 1);
+  roo_display::Box right_inactive_clip = context.axis.boxFromPrimaryCross(
+      (int16_t)ceilf(context.layout.inactive_track_min_primary),
+      context.layout.track_cross_start, context.axis.primarySpan() - 1,
+      context.layout.track_cross_start + context.size_metrics.track_height - 1);
 
   if (variant_ == SliderVariant::kCentered) {
     active_track_min_primary = thumb_on_or_right_of_center
                                    ? center_right_edge
-                                   : layout.inactive_track_min_primary;
+                                   : context.layout.inactive_track_min_primary;
     active_track_max_primary = thumb_on_or_right_of_center
-                                   ? layout.active_track_max_primary
+                                   ? context.layout.active_track_max_primary
                                    : center_left_edge;
 
     int16_t active_clip_min = (int16_t)ceilf(active_track_min_primary);
     int16_t active_clip_max = (int16_t)floorf(active_track_max_primary);
     if (active_clip_min < 0) active_clip_min = 0;
-    if (active_clip_max >= axis.primarySpan()) {
-      active_clip_max = axis.primarySpan() - 1;
+    if (active_clip_max >= context.axis.primarySpan()) {
+      active_clip_max = context.axis.primarySpan() - 1;
     }
     if (active_clip_max >= active_clip_min) {
-      active_clip = axis.boxFromPrimaryCross(
-          active_clip_min, layout.track_cross_start, active_clip_max,
-          layout.track_cross_start + size_metrics.track_height - 1);
+      active_clip = context.axis.boxFromPrimaryCross(
+          active_clip_min, context.layout.track_cross_start, active_clip_max,
+          context.layout.track_cross_start + context.size_metrics.track_height -
+              1);
     } else {
       active_clip = roo_display::Box(0, 0, -1, -1);
     }
 
     has_left_inactive_clip = true;
-    int16_t handle_left_edge = (int16_t)floorf(layout.active_track_max_primary);
+    int16_t handle_left_edge =
+        (int16_t)floorf(context.layout.active_track_max_primary);
     int16_t center_left_edge_i = (int16_t)floorf(center_left_edge);
     int16_t left_inactive_max =
         thumb_on_or_right_of_center
@@ -546,73 +870,83 @@ void Slider::paint(const Canvas& canvas) const {
     if (left_inactive_max < 0) {
       has_left_inactive_clip = false;
     } else {
-      left_inactive_clip = axis.boxFromPrimaryCross(
-          0, layout.track_cross_start,
-          left_inactive_max >= axis.primarySpan() ? axis.primarySpan() - 1
-                                                  : left_inactive_max,
-          layout.track_cross_start + size_metrics.track_height - 1);
+      left_inactive_clip = context.axis.boxFromPrimaryCross(
+          0, context.layout.track_cross_start,
+          left_inactive_max >= context.axis.primarySpan()
+              ? context.axis.primarySpan() - 1
+              : left_inactive_max,
+          context.layout.track_cross_start + context.size_metrics.track_height -
+              1);
     }
 
     int16_t handle_right_edge =
-        (int16_t)ceilf(layout.inactive_track_min_primary);
+        (int16_t)ceilf(context.layout.inactive_track_min_primary);
     int16_t center_right_edge_i = (int16_t)ceilf(center_right_edge);
     int16_t right_inactive_min =
         thumb_on_or_right_of_center
             ? handle_right_edge
             : std::max(handle_right_edge, center_right_edge_i);
-    if (right_inactive_min >= axis.primarySpan()) {
+    if (right_inactive_min >= context.axis.primarySpan()) {
       has_right_inactive_clip = false;
     } else {
       if (right_inactive_min < 0) right_inactive_min = 0;
-      right_inactive_clip = axis.boxFromPrimaryCross(
-          right_inactive_min, layout.track_cross_start, axis.primarySpan() - 1,
-          layout.track_cross_start + size_metrics.track_height - 1);
+      right_inactive_clip = context.axis.boxFromPrimaryCross(
+          right_inactive_min, context.layout.track_cross_start,
+          context.axis.primarySpan() - 1,
+          context.layout.track_cross_start + context.size_metrics.track_height -
+              1);
     }
   } else {
     int16_t right_inactive_min =
-        (int16_t)ceilf(layout.inactive_track_min_primary);
-    if (right_inactive_min >= axis.primarySpan()) {
+        (int16_t)ceilf(context.layout.inactive_track_min_primary);
+    if (right_inactive_min >= context.axis.primarySpan()) {
       has_right_inactive_clip = false;
     } else {
       if (right_inactive_min < 0) right_inactive_min = 0;
-      right_inactive_clip = axis.boxFromPrimaryCross(
-          right_inactive_min, layout.track_cross_start, axis.primarySpan() - 1,
-          layout.track_cross_start + size_metrics.track_height - 1);
+      right_inactive_clip = context.axis.boxFromPrimaryCross(
+          right_inactive_min, context.layout.track_cross_start,
+          context.axis.primarySpan() - 1,
+          context.layout.track_cross_start + context.size_metrics.track_height -
+              1);
     }
   }
 
-  auto track_bounds = axis.paintRectFromPrimaryCross(
-      TrackShapeMinPrimary(0.0f, size_metrics.track_radius),
-      layout.track_min_cross, axis.primarySpan() - 0.5f,
-      layout.track_max_cross);
-  auto handle_bounds = axis.paintRectFromPrimaryCross(
-      layout.thumb_min_primary, layout.thumb_min_cross,
-      layout.thumb_max_primary, layout.thumb_max_cross);
+  auto track_bounds = context.axis.paintRectFromPrimaryCross(
+      TrackShapeMinPrimary(0.0f, context.size_metrics.track_radius),
+      context.layout.track_min_cross, context.axis.primarySpan() - 0.5f,
+      context.layout.track_max_cross);
+  auto handle_bounds = context.axis.paintRectFromPrimaryCross(
+      context.layout.thumb_min_primary, context.layout.thumb_min_cross,
+      context.layout.thumb_max_primary, context.layout.thumb_max_cross);
 
   auto inactive_track = SmoothFilledRoundRect(
       track_bounds.x_min, track_bounds.y_min, track_bounds.x_max,
-      track_bounds.y_max, size_metrics.track_radius, tokens.inactive_track);
+      track_bounds.y_max, context.size_metrics.track_radius,
+      context.tokens.inactive_track);
   auto active_track = SmoothFilledRoundRect(
       track_bounds.x_min, track_bounds.y_min, track_bounds.x_max,
-      track_bounds.y_max, size_metrics.track_radius, tokens.active_track);
-  auto handle = SmoothFilledRoundRect(
-      handle_bounds.x_min, handle_bounds.y_min, handle_bounds.x_max,
-      handle_bounds.y_max, size_metrics.handleCornerRadius(), tokens.handle);
+      track_bounds.y_max, context.size_metrics.track_radius,
+      context.tokens.active_track);
+  auto handle = SmoothFilledRoundRect(handle_bounds.x_min, handle_bounds.y_min,
+                                      handle_bounds.x_max, handle_bounds.y_max,
+                                      context.size_metrics.handleCornerRadius(),
+                                      context.tokens.handle);
   Rect widget_bounds = bounds();
-  Rect handle_tile_bounds = GetHandleTileBounds(widget_bounds, handle.extents(),
-                                                track_gap, axis.isVertical());
+  Rect handle_tile_bounds =
+      GetHandleTileBounds(widget_bounds, handle.extents(), context.track_gap,
+                          context.axis.isVertical());
 
   if (has_left_inactive_clip) {
     DrawTrackPiece(canvas, inactive_track, widget_bounds, left_inactive_clip,
-                   axis.isVertical());
+                   context.axis.isVertical());
   }
   if (has_right_inactive_clip) {
     DrawTrackPiece(canvas, inactive_track, widget_bounds, right_inactive_clip,
-                   axis.isVertical());
+                   context.axis.isVertical());
   }
   if (!active_clip.empty()) {
     DrawTrackPiece(canvas, active_track, widget_bounds, active_clip,
-                   axis.isVertical());
+                   context.axis.isVertical());
   }
   if (variant_ == SliderVariant::kCentered) {
     int16_t gap_min =
@@ -621,94 +955,29 @@ void Slider::paint(const Canvas& canvas) const {
     int16_t gap_max =
         (int16_t)ceilf(center_anchor_primary + (float)kCenterGapHalfPixels) - 1;
     if (gap_min < 0) gap_min = 0;
-    if (gap_max >= axis.primarySpan()) gap_max = axis.primarySpan() - 1;
+    if (gap_max >= context.axis.primarySpan()) {
+      gap_max = context.axis.primarySpan() - 1;
+    }
     if (gap_min <= gap_max) {
-      Rect gap_rect = axis.isVertical()
-                          ? Rect(0, axis.primarySpan() - 1 - gap_max,
-                                 width() - 1, axis.primarySpan() - 1 - gap_min)
-                          : Rect(gap_min, 0, gap_max, height() - 1);
+      Rect gap_rect =
+          context.axis.isVertical()
+              ? Rect(0, context.axis.primarySpan() - 1 - gap_max, width() - 1,
+                     context.axis.primarySpan() - 1 - gap_min)
+              : Rect(gap_min, 0, gap_max, height() - 1);
       canvas.fillRect(gap_rect, canvas.bgcolor());
     }
   }
   canvas.drawTiled(handle, handle_tile_bounds, kNoAlign);
 }
 
-void Slider::paintStops(const Canvas& canvas, Clipper& clipper) const {
-  if (!ShouldRenderStops(*this) || width() <= 0 || height() <= 0) return;
-
-  Tokens tokens = ResolveTokens(*this);
-  const internal::SliderSizeMetrics& size_metrics =
-      internal::ResolveSliderSizeMetrics(style_.size);
-  internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
-  float thumb_center_primary = axis.centerFromPos(getPos());
-  float center_anchor_primary = axis.centerFromPos(32768);
-  bool thumb_on_or_right_of_center =
-      thumb_center_primary >= center_anchor_primary;
-  float center_left_edge = center_anchor_primary - (float)kCenterGapHalfPixels;
-  float center_right_edge = center_anchor_primary + (float)kCenterGapHalfPixels;
-  int16_t thumb_width =
-      ThumbWidthForState(size_metrics.handle_width, isPressed());
-  int16_t track_gap = TrackGapForThumbWidth(size_metrics, thumb_width);
-  internal::SliderVisualMetrics layout = internal::ResolveSliderVisualMetrics(
-      axis, thumb_center_primary, thumb_width, size_metrics.track_height,
-      track_gap, size_metrics.handle_height);
-
-  StopSegment segments[3];
-  int segment_count = 0;
-  if (variant_ == SliderVariant::kCentered) {
-    int16_t handle_left_edge = (int16_t)floorf(layout.active_track_max_primary);
-    int16_t center_left_edge_i = (int16_t)floorf(center_left_edge);
-    int16_t left_inactive_max =
-        thumb_on_or_right_of_center
-            ? std::min(handle_left_edge, center_left_edge_i)
-            : handle_left_edge;
-    if (left_inactive_max >= 0) {
-      segments[segment_count++] = StopSegment{
-          0.0f,
-          (float)std::min<int16_t>(left_inactive_max, axis.primarySpan() - 1),
-          tokens.inactive_track, tokens.inactive_stop};
-    }
-
-    float active_track_min_primary = thumb_on_or_right_of_center
-                                         ? center_right_edge
-                                         : layout.inactive_track_min_primary;
-    float active_track_max_primary = thumb_on_or_right_of_center
-                                         ? layout.active_track_max_primary
-                                         : center_left_edge;
-    if (active_track_max_primary >= active_track_min_primary) {
-      segments[segment_count++] =
-          StopSegment{active_track_min_primary, active_track_max_primary,
-                      tokens.active_track, tokens.active_stop};
-    }
-
-    int16_t handle_right_edge =
-        (int16_t)ceilf(layout.inactive_track_min_primary);
-    int16_t center_right_edge_i = (int16_t)ceilf(center_right_edge);
-    int16_t right_inactive_min =
-        thumb_on_or_right_of_center
-            ? handle_right_edge
-            : std::max(handle_right_edge, center_right_edge_i);
-    if (right_inactive_min < axis.primarySpan()) {
-      segments[segment_count++] =
-          StopSegment{(float)std::max<int16_t>(0, right_inactive_min),
-                      (float)(axis.primarySpan() - 1), tokens.inactive_track,
-                      tokens.inactive_stop};
-    }
-  } else {
-    if (layout.active_track_max_primary >= 0.0f) {
-      segments[segment_count++] =
-          StopSegment{0.0f, layout.active_track_max_primary,
-                      tokens.active_track, tokens.active_stop};
-    }
-    if (layout.inactive_track_min_primary < axis.primarySpan()) {
-      segments[segment_count++] = StopSegment{
-          layout.inactive_track_min_primary, (float)(axis.primarySpan() - 1),
-          tokens.inactive_track, tokens.inactive_stop};
-    }
+void Slider::paintStops(const Canvas& canvas, Clipper& clipper,
+                        const PaintContext& context) const {
+  if (!ShouldRenderStops(*this) || width() <= 0 || height() <= 0 ||
+      context.segment_count == 0) {
+    return;
   }
 
-  if (segment_count == 0) return;
-
+  Rect reserved_icon_rect = trackIconReservedRect(context);
   StopRun runs[3];
   int32_t stop_count =
       (int32_t)lroundf((range_.to - range_.from) / range_.step);
@@ -716,32 +985,40 @@ void Slider::paintStops(const Canvas& canvas, Clipper& clipper) const {
     float value = (i == stop_count) ? range_.to : range_.from + i * range_.step;
     uint16_t pos = internal::SliderPosFromValue(range_.from, range_.to, value);
     if (pos == getPos()) continue;
-    float primary_center = axis.centerFromPos(pos);
-    for (int segment_index = 0; segment_index < segment_count;
+    float primary_center = context.axis.centerFromPos(pos);
+    for (int segment_index = 0; segment_index < context.segment_count;
          ++segment_index) {
-      if (!SegmentContains(segments[segment_index], primary_center)) continue;
-      auto stop = SmoothFilledCircle(StopMarkCenter(axis, primary_center),
-                                     kStopMarkRadiusPixels,
-                                     segments[segment_index].stop_color);
-      IncludeStopExtentsInRun(axis, stop.extents(), runs[segment_index]);
+      if (!SegmentContains(context.segments[segment_index], primary_center)) {
+        continue;
+      }
+      auto stop = SmoothFilledCircle(
+          StopMarkCenter(context.axis, primary_center), kStopMarkRadiusPixels,
+          context.segments[segment_index].stop_color);
+      if (!reserved_icon_rect.empty() &&
+          reserved_icon_rect.intersects(stop.extents())) {
+        break;
+      }
+      IncludeStopExtentsInRun(context.axis, stop.extents(),
+                              runs[segment_index]);
       break;
     }
   }
 
-  for (int segment_index = 0; segment_index < segment_count; ++segment_index) {
+  for (int segment_index = 0; segment_index < context.segment_count;
+       ++segment_index) {
     if (!runs[segment_index].has_marks) continue;
     roo_display::Box segment_clip_box =
-        StopSegmentClipBox(axis, segments[segment_index]);
+        StopSegmentClipBox(context.axis, context.segments[segment_index]);
     if (segment_clip_box.empty()) continue;
-    int16_t cross_start = (axis.crossSpan() - kStopMarkSpanPixels) / 2;
-    roo_display::Box run_box = axis.boxFromPrimaryCross(
+    int16_t cross_start = (context.axis.crossSpan() - kStopMarkSpanPixels) / 2;
+    roo_display::Box run_box = context.axis.boxFromPrimaryCross(
         runs[segment_index].min_primary, cross_start,
         runs[segment_index].max_primary, cross_start + kStopMarkSpanPixels - 1);
     run_box = roo_display::Box::Intersect(run_box, segment_clip_box);
     if (run_box.empty()) continue;
 
     Canvas stop_canvas = canvas;
-    stop_canvas.set_bgcolor(segments[segment_index].track_color);
+    stop_canvas.set_bgcolor(context.segments[segment_index].track_color);
     stop_canvas.clip(segment_clip_box.translate(canvas.dx(), canvas.dy()));
     bool has_previous_stop = false;
     StopSpan previous_span{0, -1};
@@ -751,16 +1028,22 @@ void Slider::paintStops(const Canvas& canvas, Clipper& clipper) const {
       uint16_t pos =
           internal::SliderPosFromValue(range_.from, range_.to, value);
       if (pos == getPos()) continue;
-      float primary_center = axis.centerFromPos(pos);
-      if (!SegmentContains(segments[segment_index], primary_center)) continue;
-      auto stop = SmoothFilledCircle(StopMarkCenter(axis, primary_center),
-                                     kStopMarkRadiusPixels,
-                                     segments[segment_index].stop_color);
+      float primary_center = context.axis.centerFromPos(pos);
+      if (!SegmentContains(context.segments[segment_index], primary_center)) {
+        continue;
+      }
+      auto stop = SmoothFilledCircle(
+          StopMarkCenter(context.axis, primary_center), kStopMarkRadiusPixels,
+          context.segments[segment_index].stop_color);
+      if (!reserved_icon_rect.empty() &&
+          reserved_icon_rect.intersects(stop.extents())) {
+        continue;
+      }
       StopSpan current_span =
-          axis.isVertical()
-              ? StopSpan{(int16_t)(axis.primarySpan() - 1 -
+          context.axis.isVertical()
+              ? StopSpan{(int16_t)(context.axis.primarySpan() - 1 -
                                    stop.extents().yMax()),
-                         (int16_t)(axis.primarySpan() - 1 -
+                         (int16_t)(context.axis.primarySpan() - 1 -
                                    stop.extents().yMin())}
               : StopSpan{stop.extents().xMin(), stop.extents().xMax()};
       if (has_previous_stop) {
@@ -768,10 +1051,10 @@ void Slider::paintStops(const Canvas& canvas, Clipper& clipper) const {
         int16_t gap_max_primary = current_span.min_primary - 1;
         if (gap_max_primary >= gap_min_primary) {
           stop_canvas.fillRect(
-              axis.boxFromPrimaryCross(gap_min_primary, cross_start,
-                                       gap_max_primary,
-                                       cross_start + kStopMarkSpanPixels - 1),
-              segments[segment_index].track_color);
+              context.axis.boxFromPrimaryCross(
+                  gap_min_primary, cross_start, gap_max_primary,
+                  cross_start + kStopMarkSpanPixels - 1),
+              context.segments[segment_index].track_color);
         }
       }
       stop_canvas.drawObject(stop);
@@ -829,6 +1112,12 @@ Rect Slider::getSloppyTouchParentBounds() const {
 roo::string_view Slider::formatLabel(float value, char* scratch,
                                      size_t scratch_size) const {
   return ValueIndicatorBubble::FormatDefault(value, scratch, scratch_size);
+}
+
+void SliderWithIcons::setIcons(const SliderTrackIcons* icons) {
+  if (icons_ == icons) return;
+  icons_ = icons;
+  invalidateInterior();
 }
 
 Rect Slider::getParentTransientPaintBounds() const {
@@ -919,38 +1208,26 @@ void Slider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
     }
   };
 
-  if (!isInvalidated()) {
-    if (!pending_indicator.empty()) {
-      Canvas indicator_canvas = canvas;
-      indicator_canvas.clipToExtents(pending_indicator);
-      if (!indicator_canvas.clip_box().empty()) {
-        paint_indicator(indicator_canvas);
-      }
-    }
+  bool invalidated = isInvalidated();
 
-    Canvas content_canvas = prepareContentsCanvas(canvas);
-    if (!pending_content.empty()) {
-      content_canvas.clipToExtents(pending_content);
+  if (invalidated || !pending_indicator.empty()) {
+    Canvas indicator_canvas = canvas;
+    if (!invalidated) {
+      indicator_canvas.clipToExtents(pending_indicator);
     }
-    if (!content_canvas.clip_box().empty()) {
-      clipper.setBounds(content_canvas.clip_box());
-      paintStops(content_canvas, clipper);
-      paint(content_canvas);
-    }
-    pending_indicator_dirty_span_ = ShowsValueIndicator(*this)
-                                        ? current_indicator_span
-                                        : internal::DirtySpan();
-    markClean();
-    return;
+    paint_indicator(indicator_canvas);
   }
 
-  Canvas my_canvas = canvas;
-  paint_indicator(my_canvas);
-  Canvas content_canvas = prepareContentsCanvas(my_canvas);
+  Canvas content_canvas = prepareContentsCanvas(canvas);
+  if (!invalidated && !pending_content.empty()) {
+    content_canvas.clipToExtents(pending_content);
+  }
   if (!content_canvas.clip_box().empty()) {
     clipper.setBounds(content_canvas.clip_box());
-    paintStops(content_canvas, clipper);
-    paint(content_canvas);
+    PaintContext context = buildPaintContext();
+    paintTrackIcons(content_canvas, clipper, context);
+    paintStops(content_canvas, clipper, context);
+    paintTrackAndThumb(content_canvas, context);
   }
   pending_indicator_dirty_span_ = ShowsValueIndicator(*this)
                                       ? current_indicator_span

@@ -328,13 +328,9 @@ struct SliderAppearance {
 // Optional, normally `constexpr` and shared. Stored by pointer in the
 // `SliderWithIcons` subclass only; the base `Slider` does not pay for it.
 struct SliderTrackIcons {
-  // All pointers are non-owning. Each referenced `Drawable` must outlive
+  // All pointers are non-owning. Each referenced `Pictogram` must outlive
   // the slider that uses it. `nullptr` means "no icon in this slot".
-  const roo_display::Drawable* inset = nullptr;
-  const roo_display::Drawable* active_start = nullptr;
-  const roo_display::Drawable* active_end = nullptr;
-  const roo_display::Drawable* inactive_start = nullptr;
-  const roo_display::Drawable* inactive_end = nullptr;
+  const roo_display::Pictogram* inset = nullptr;
 };
 
 }  // namespace material3
@@ -421,7 +417,7 @@ class Slider : public BasicWidget {
 Icons are an optional feature that costs RAM only when actually used.
 
 ```cpp
-// Adds Material 3 inset icon and Android-style track endpoint icons.
+// Adds Material 3's optional inset icon.
 // Per-instance overhead beyond Slider: 4 B (one pointer to a shared,
 // usually constexpr SliderTrackIcons struct).
 class SliderWithIcons : public Slider {
@@ -698,18 +694,15 @@ visible: the visual gap from the widget edge to the handle edge is
 
 ### Track Icons
 
-The API should cover both:
-
-1. Material 3's inset icon,
-2. Android's active/inactive track endpoint icons.
+The API should cover Material 3's inset icon.
 
 Rules:
 
 - inset icons are only valid for standard sliders,
 - inset icons are only painted on M, L, and XL sizes,
 - centered and range sliders ignore `icons.inset`,
-- endpoint icons are optional and may be used across variants if their geometry
-  fits the chosen size.
+- the icon is anchored at the track start in widget layout coordinates and may
+  jump past the thumb when needed to preserve legibility.
 
 ## Non-Goals for the First Implementation
 
@@ -1142,7 +1135,7 @@ Scope:
 2. define geometry tokens for XS through XL, stored as shared `constexpr`
    tables in flash and selected by `SliderSize`,
 3. introduce `material3::SliderWithIcons` with a `const SliderTrackIcons*`
-   slot for inset and track-endpoint icons,
+  slot for the optional inset icon,
 4. restrict icon rendering to variants and sizes where it fits,
 5. verify that discrete ticks render consistently with snapping behavior.
 
