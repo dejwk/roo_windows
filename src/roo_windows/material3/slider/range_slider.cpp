@@ -21,20 +21,13 @@ static constexpr int kTouchSlopPixels = Scaled(20);
 static constexpr int8_t kNoActiveThumb = -1;
 using Tokens = internal::SliderPaintTokens;
 using StopSegment = internal::SliderPaintStopSegment;
-using StopRun = internal::SliderPaintStopRun;
-using StopSpan = internal::SliderPaintStopSpan;
 using internal::DrawTrackPiece;
 using internal::GetHandleTileBounds;
-using internal::IncludeStopExtentsInRun;
 using internal::IndicatorDirtyRectFromSpan;
-using internal::kStopMarkRadiusPixels;
-using internal::kStopMarkSpanPixels;
 using internal::MakeSliderAxisMetrics;
+using internal::PaintStopRuns;
 using internal::ResolveTokens;
-using internal::SegmentContains;
 using internal::ShouldRenderStops;
-using internal::StopMarkCenter;
-using internal::StopSegmentClipBox;
 using internal::ThumbWidthForState;
 using internal::TrackGapForThumbWidth;
 using internal::TrackShapeMinPrimary;
@@ -787,90 +780,8 @@ void RangeSlider::paintStops(const Canvas& canvas, Clipper& clipper) const {
 
   if (segment_count == 0) return;
 
-  StopRun runs[3];
-  int32_t stop_count =
-      (int32_t)lroundf((range_.to - range_.from) / range_.step);
-  // First pass: discover the exact primary-axis span occupied by stops in each
-  // segment so later clipping and exclusions stay tight.
-  for (int32_t i = 0; i <= stop_count; ++i) {
-    float value = (i == stop_count) ? range_.to : range_.from + i * range_.step;
-    uint16_t pos = internal::SliderPosFromValue(range_.from, range_.to, value);
-    if (pos == start.pos || pos == end.pos) continue;
-    float primary_center = axis.centerFromPos(pos);
-    for (int segment_index = 0; segment_index < segment_count;
-         ++segment_index) {
-      if (!SegmentContains(segments[segment_index], primary_center)) continue;
-      auto stop = SmoothFilledCircle(StopMarkCenter(axis, primary_center),
-                                     kStopMarkRadiusPixels,
-                                     segments[segment_index].stop_color);
-      IncludeStopExtentsInRun(axis, stop.extents(), runs[segment_index]);
-      break;
-    }
-  }
-
-  for (int segment_index = 0; segment_index < segment_count; ++segment_index) {
-    if (!runs[segment_index].has_marks) continue;
-    roo_display::Box segment_clip_box =
-        StopSegmentClipBox(axis, segments[segment_index]);
-    if (segment_clip_box.empty()) continue;
-    int16_t cross_start = (axis.crossSpan() - kStopMarkSpanPixels) / 2;
-    roo_display::Box run_box = axis.boxFromPrimaryCross(
-        runs[segment_index].min_primary, cross_start,
-        runs[segment_index].max_primary, cross_start + kStopMarkSpanPixels - 1);
-    run_box = roo_display::Box::Intersect(run_box, segment_clip_box);
-    if (run_box.empty()) continue;
-
-    Canvas stop_canvas = canvas;
-    stop_canvas.set_bgcolor(segments[segment_index].track_color);
-    stop_canvas.clip(segment_clip_box.translate(canvas.dx(), canvas.dy()));
-    bool has_previous_stop = false;
-    StopSpan previous_span{0, -1};
-    // Second pass: paint each stop exactly once and fill only the gaps between
-    // neighboring circles so the later track paint can skip this entire run.
-    for (int32_t i = 0; i <= stop_count; ++i) {
-      float value =
-          (i == stop_count) ? range_.to : range_.from + i * range_.step;
-      uint16_t pos =
-          internal::SliderPosFromValue(range_.from, range_.to, value);
-      if (pos == start.pos || pos == end.pos) continue;
-      float primary_center = axis.centerFromPos(pos);
-      if (!SegmentContains(segments[segment_index], primary_center)) continue;
-      auto stop = SmoothFilledCircle(StopMarkCenter(axis, primary_center),
-                                     kStopMarkRadiusPixels,
-                                     segments[segment_index].stop_color);
-      StopSpan current_span =
-          axis.isVertical()
-              ? StopSpan{(int16_t)(axis.primarySpan() - 1 -
-                                   stop.extents().yMax()),
-                         (int16_t)(axis.primarySpan() - 1 -
-                                   stop.extents().yMin())}
-              : StopSpan{stop.extents().xMin(), stop.extents().xMax()};
-      if (has_previous_stop) {
-        int16_t gap_min_primary = previous_span.max_primary + 1;
-        int16_t gap_max_primary = current_span.min_primary - 1;
-        if (gap_max_primary >= gap_min_primary) {
-          // Bridge only the pixels between adjacent stop circles; the circles
-          // themselves already provide the correct final color.
-          stop_canvas.fillRect(
-              axis.boxFromPrimaryCross(gap_min_primary, cross_start,
-                                       gap_max_primary,
-                                       cross_start + kStopMarkSpanPixels - 1),
-              segments[segment_index].track_color);
-        }
-      }
-      stop_canvas.drawObject(stop);
-      previous_span = current_span;
-      has_previous_stop = true;
-    }
-
-    roo_display::Box run_device_box = roo_display::Box::Intersect(
-        run_box.translate(canvas.dx(), canvas.dy()), canvas.clip_box());
-    if (!run_device_box.empty()) {
-      // Exclude the fully-settled stop run so subsequent track painting does
-      // not redraw underneath it.
-      clipper.addExclusion(run_device_box);
-    }
-  }
+  PaintStopRuns(canvas, clipper, axis, segments, segment_count, range_,
+                nullptr);
 }
 
 Dimensions RangeSlider::getSuggestedMinimumDimensions() const {

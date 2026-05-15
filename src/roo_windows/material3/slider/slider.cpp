@@ -24,21 +24,15 @@ static constexpr int16_t kTrackIconMinHandleCenterDistancePixels = Scaled(12);
 static constexpr int16_t kTrackIconStopPaddingPixels = Scaled(4);
 using Tokens = internal::SliderPaintTokens;
 using StopSegment = internal::SliderPaintStopSegment;
-using StopRun = internal::SliderPaintStopRun;
-using StopSpan = internal::SliderPaintStopSpan;
 using internal::DrawTrackPiece;
 using internal::GetHandleTileBounds;
-using internal::IncludeStopExtentsInRun;
 using internal::IndicatorDirtyRectFromSpan;
 using internal::kStopMarkRadiusPixels;
-using internal::kStopMarkSpanPixels;
 using internal::MakeSliderAxisMetrics;
+using internal::PaintStopRuns;
 using internal::ResolveTokens;
-using internal::SegmentContains;
 using internal::SegmentContainsRange;
 using internal::ShouldRenderStops;
-using internal::StopMarkCenter;
-using internal::StopSegmentClipBox;
 using internal::ThumbWidthForState;
 using internal::TrackGapForThumbWidth;
 using internal::TrackShapeMinPrimary;
@@ -837,106 +831,14 @@ void Slider::paintStops(const Canvas& canvas, Clipper& clipper,
   }
 
   Rect reserved_icon_rect = trackIconReservedRect(context);
-  StopRun runs[3];
-  int32_t stop_count =
-      (int32_t)lroundf((range_.to - range_.from) / range_.step);
-  // First pass: discover the exact primary-axis span occupied by stops in each
-  // segment so later clipping and exclusions stay tight.
-  for (int32_t i = 0; i <= stop_count; ++i) {
-    float value = (i == stop_count) ? range_.to : range_.from + i * range_.step;
-    uint16_t pos = internal::SliderPosFromValue(range_.from, range_.to, value);
-    if (pos == getPos()) continue;
-    float primary_center = context.axis.centerFromPos(pos);
-    for (int segment_index = 0; segment_index < context.segment_count;
-         ++segment_index) {
-      if (!SegmentContains(context.segments[segment_index], primary_center)) {
-        continue;
-      }
-      auto stop = SmoothFilledCircle(
-          StopMarkCenter(context.axis, primary_center), kStopMarkRadiusPixels,
-          context.segments[segment_index].stop_color);
-      // Keep the inset icon slot visually clear; the icon acts as the focal
-      // mark for that portion of the track instead of a stop indicator.
-      if (!reserved_icon_rect.empty() &&
-          reserved_icon_rect.intersects(stop.extents())) {
-        break;
-      }
-      IncludeStopExtentsInRun(context.axis, stop.extents(),
-                              runs[segment_index]);
-      break;
-    }
+  internal::StopSuppressionFn suppress_stop;
+  if (!reserved_icon_rect.empty()) {
+    suppress_stop = [&](const roo_display::Box& stop_extents) {
+      return reserved_icon_rect.intersects(stop_extents);
+    };
   }
-
-  for (int segment_index = 0; segment_index < context.segment_count;
-       ++segment_index) {
-    if (!runs[segment_index].has_marks) continue;
-    roo_display::Box segment_clip_box =
-        StopSegmentClipBox(context.axis, context.segments[segment_index]);
-    if (segment_clip_box.empty()) continue;
-    int16_t cross_start = (context.axis.crossSpan() - kStopMarkSpanPixels) / 2;
-    roo_display::Box run_box = context.axis.boxFromPrimaryCross(
-        runs[segment_index].min_primary, cross_start,
-        runs[segment_index].max_primary, cross_start + kStopMarkSpanPixels - 1);
-    run_box = roo_display::Box::Intersect(run_box, segment_clip_box);
-    if (run_box.empty()) continue;
-
-    Canvas stop_canvas = canvas;
-    stop_canvas.set_bgcolor(context.segments[segment_index].track_color);
-    stop_canvas.clip(segment_clip_box.translate(canvas.dx(), canvas.dy()));
-    bool has_previous_stop = false;
-    StopSpan previous_span{0, -1};
-    // Second pass: paint each stop exactly once and fill only the gaps between
-    // neighboring circles so the later track paint can skip this entire run.
-    for (int32_t i = 0; i <= stop_count; ++i) {
-      float value =
-          (i == stop_count) ? range_.to : range_.from + i * range_.step;
-      uint16_t pos =
-          internal::SliderPosFromValue(range_.from, range_.to, value);
-      if (pos == getPos()) continue;
-      float primary_center = context.axis.centerFromPos(pos);
-      if (!SegmentContains(context.segments[segment_index], primary_center)) {
-        continue;
-      }
-      auto stop = SmoothFilledCircle(
-          StopMarkCenter(context.axis, primary_center), kStopMarkRadiusPixels,
-          context.segments[segment_index].stop_color);
-      if (!reserved_icon_rect.empty() &&
-          reserved_icon_rect.intersects(stop.extents())) {
-        continue;
-      }
-      StopSpan current_span =
-          context.axis.isVertical()
-              ? StopSpan{(int16_t)(context.axis.primarySpan() - 1 -
-                                   stop.extents().yMax()),
-                         (int16_t)(context.axis.primarySpan() - 1 -
-                                   stop.extents().yMin())}
-              : StopSpan{stop.extents().xMin(), stop.extents().xMax()};
-      if (has_previous_stop) {
-        int16_t gap_min_primary = previous_span.max_primary + 1;
-        int16_t gap_max_primary = current_span.min_primary - 1;
-        if (gap_max_primary >= gap_min_primary) {
-          // Bridge only the pixels between adjacent stop circles; the circles
-          // themselves already provide the correct final color.
-          stop_canvas.fillRect(
-              context.axis.boxFromPrimaryCross(
-                  gap_min_primary, cross_start, gap_max_primary,
-                  cross_start + kStopMarkSpanPixels - 1),
-              context.segments[segment_index].track_color);
-        }
-      }
-      stop_canvas.drawObject(stop);
-      previous_span = current_span;
-      has_previous_stop = true;
-    }
-
-    roo_display::Box run_device_box = roo_display::Box::Intersect(
-        run_box.translate(canvas.dx(), canvas.dy()), canvas.clip_box());
-    if (!run_device_box.empty()) {
-      // Exclude the fully-settled stop run so subsequent track painting does
-      // not redraw underneath it.
-      clipper.addExclusion(run_device_box);
-    }
-  }
+  PaintStopRuns(canvas, clipper, context.axis, context.segments,
+                context.segment_count, range_, suppress_stop);
 }
 
 Dimensions Slider::getSuggestedMinimumDimensions() const {

@@ -48,6 +48,12 @@ cost of a new widget.
 The base case must be cheap. Optional features must not enlarge instances
 that do not use them.
 
+Apply YAGNI here as well: do not keep effectively no-op fields, branches,
+hooks, or policy checks just because they might become useful later. If the
+current implementation does not need them for correctness, behavior, or
+measured performance, leave them out and add them only when a concrete use
+appears.
+
 Concretely, when adding a feature to a widget, ask:
 
 1. *Does every instance need this feature?* If yes, store it inline.

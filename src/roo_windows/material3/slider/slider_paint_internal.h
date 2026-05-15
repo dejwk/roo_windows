@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cmath>
+#include <functional>
 
 #include "roo_windows/material3/slider/slider.h"
 #include "roo_windows/material3/slider/slider_internal.h"
@@ -15,10 +15,13 @@ inline constexpr float kPressedThumbWidthRatio = 0.5f;
 inline constexpr int16_t kStopMarkRadiusPixels = Scaled(2);
 inline constexpr int16_t kStopMarkSpanPixels = Scaled(4);
 
+// Applies the disabled Material 3 alpha treatment on top of the current
+// surface color so disabled slider pieces still blend with the theme.
 inline Color DisabledComposite(Color fg, uint8_t alpha, const Theme& theme) {
   return AlphaBlend(theme.color.surface, fg.withA(alpha));
 }
 
+// Shared slider palette after resolving enabled vs disabled treatment.
 struct SliderPaintTokens {
   Color active_track;
   Color inactive_track;
@@ -27,6 +30,7 @@ struct SliderPaintTokens {
   Color inactive_stop;
 };
 
+// Resolves the effective track, thumb, and stop colors for the current state.
 template <typename SliderLike>
 inline SliderPaintTokens ResolveTokens(const SliderLike& widget) {
   const Theme& theme = widget.theme();
@@ -49,12 +53,16 @@ inline SliderPaintTokens ResolveTokens(const SliderLike& widget) {
   };
 }
 
+// Stop marks are only meaningful for discrete sliders and can still be hidden
+// explicitly through the style.
 template <typename SliderLike>
 inline bool ShouldRenderStops(const SliderLike& widget) {
   if (!IsDiscreteSliderRange(widget.range().step)) return false;
   return widget.style().tick_mode != SliderTickMode::kHidden;
 }
 
+// Extends the rounded track tile slightly beyond the first visible pixel so the
+// end cap still lands cleanly when the segment begins inside the clip.
 inline float TrackShapeMinPrimary(float visible_min_primary,
                                   int16_t track_radius) {
   return visible_min_primary <= 0.0f
@@ -62,6 +70,8 @@ inline float TrackShapeMinPrimary(float visible_min_primary,
              : visible_min_primary - (float)track_radius;
 }
 
+// Narrows the handle in the pressed state without changing the allocated
+// slider bounds.
 inline int16_t ThumbWidthForState(int16_t nominal_width, bool pressed) {
   if (!pressed) return nominal_width;
   int16_t width =
@@ -69,6 +79,8 @@ inline int16_t ThumbWidthForState(int16_t nominal_width, bool pressed) {
   return width < 1 ? 1 : width;
 }
 
+// Adjusts the painted track/thumb clearance so a narrower pressed handle keeps
+// the same perceived gap.
 inline int16_t TrackGapForThumbWidth(const SliderSizeMetrics& size_metrics,
                                      int16_t thumb_width) {
   int16_t gap = size_metrics.track_handle_gap -
@@ -76,6 +88,8 @@ inline int16_t TrackGapForThumbWidth(const SliderSizeMetrics& size_metrics,
   return gap < 0 ? 0 : gap;
 }
 
+// Restricts drawTiled() to the dirty primary-axis run while still spanning the
+// full cross-axis of the slider.
 inline Rect GetTrackTileBounds(const Rect& widget_bounds,
                                const roo_display::Box& clip, bool vertical) {
   if (vertical) {
@@ -86,6 +100,8 @@ inline Rect GetTrackTileBounds(const Rect& widget_bounds,
               widget_bounds.yMax());
 }
 
+// Expands handle redraw just enough to include the visual gap that belongs to
+// the thumb silhouette.
 inline Rect GetHandleTileBounds(const Rect& widget_bounds,
                                 const roo_display::Box& handle_bounds,
                                 int16_t track_gap, bool vertical) {
@@ -97,6 +113,7 @@ inline Rect GetHandleTileBounds(const Rect& widget_bounds,
   return Rect::Intersect(expanded, widget_bounds);
 }
 
+// Tiles a rounded track piece only across the dirty slice for one segment.
 inline void DrawTrackPiece(const Canvas& canvas,
                            const roo_display::Drawable& piece,
                            const Rect& widget_bounds,
@@ -106,6 +123,8 @@ inline void DrawTrackPiece(const Canvas& canvas,
   canvas.drawTiled(piece, tile_bounds, roo_display::kNoAlign);
 }
 
+// Builds the orientation-aware axis helper used by both slider flavors for
+// value/position conversion and local geometry.
 template <typename SliderLike>
 inline SliderAxisMetrics MakeSliderAxisMetrics(const SliderLike& slider) {
   const SliderSizeMetrics& size_metrics =
@@ -116,6 +135,8 @@ inline SliderAxisMetrics MakeSliderAxisMetrics(const SliderLike& slider) {
       slider.style().orientation == SliderOrientation::kVertical);
 }
 
+// Turns the cached main-axis value-indicator span into a conservative local
+// dirty rect for parent invalidation.
 inline Rect IndicatorDirtyRectFromSpan(const DirtySpan& span, int16_t width,
                                        int16_t height, SliderStyle style) {
   if (span.empty() || width <= 0 || height <= 0) return Rect(0, 0, -1, -1);
@@ -132,6 +153,7 @@ inline Rect IndicatorDirtyRectFromSpan(const DirtySpan& span, int16_t width,
               conservative.yMax());
 }
 
+// Describes one contiguous track segment that shares both track and stop color.
 struct SliderPaintStopSegment {
   float min_primary;
   float max_primary;
@@ -139,70 +161,39 @@ struct SliderPaintStopSegment {
   Color stop_color;
 };
 
+// Accumulates the exact settled primary-axis span occupied by stop circles in a
+// segment.
 struct SliderPaintStopRun {
   bool has_marks = false;
   int16_t min_primary = 0;
   int16_t max_primary = -1;
 };
 
+// Primary-axis span covered by a single stop mark.
 struct SliderPaintStopSpan {
   int16_t min_primary;
   int16_t max_primary;
 };
 
-inline roo_display::Box StopSegmentClipBox(
-    const SliderAxisMetrics& axis, const SliderPaintStopSegment& segment) {
-  int16_t min_primary = (int16_t)ceilf(segment.min_primary);
-  int16_t max_primary = (int16_t)floorf(segment.max_primary);
-  if (min_primary < 0) min_primary = 0;
-  if (max_primary >= axis.primarySpan()) max_primary = axis.primarySpan() - 1;
-  if (max_primary < min_primary) return roo_display::Box(0, 0, -1, -1);
-  int16_t cross_start = (axis.crossSpan() - kStopMarkSpanPixels) / 2;
-  return axis.boxFromPrimaryCross(min_primary, cross_start, max_primary,
-                                  cross_start + kStopMarkSpanPixels - 1);
-}
-
-inline bool SegmentContains(const SliderPaintStopSegment& segment,
-                            float primary) {
-  return primary >= segment.min_primary - 0.01f &&
-         primary <= segment.max_primary + 0.01f;
-}
-
+// True when the full primary-axis span belongs to the specified segment.
 inline bool SegmentContainsRange(const SliderPaintStopSegment& segment,
                                  float min_primary, float max_primary) {
   return min_primary >= segment.min_primary - 0.01f &&
          max_primary <= segment.max_primary + 0.01f;
 }
 
-inline roo_display::FpPoint StopMarkCenter(const SliderAxisMetrics& axis,
-                                           float primary_center) {
-  float cross_center = 0.5f * (float)axis.crossSpan() - 0.5f;
-  if (axis.isVertical()) {
-    return roo_display::FpPoint{cross_center,
-                                axis.displayPrimary(primary_center)};
-  }
-  return roo_display::FpPoint{primary_center, cross_center};
-}
+using StopSuppressionFn = std::function<bool(const roo_display::Box&)>;
 
-inline void IncludeStopExtentsInRun(const SliderAxisMetrics& axis,
-                                    const roo_display::Box& stop_extents,
-                                    SliderPaintStopRun& run) {
-  SliderPaintStopSpan span =
-      axis.isVertical()
-          ? SliderPaintStopSpan{(int16_t)(axis.primarySpan() - 1 -
-                                          stop_extents.yMax()),
-                                (int16_t)(axis.primarySpan() - 1 -
-                                          stop_extents.yMin())}
-          : SliderPaintStopSpan{stop_extents.xMin(), stop_extents.xMax()};
-  if (!run.has_marks) {
-    run.has_marks = true;
-    run.min_primary = span.min_primary;
-    run.max_primary = span.max_primary;
-    return;
-  }
-  if (span.min_primary < run.min_primary) run.min_primary = span.min_primary;
-  if (span.max_primary > run.max_primary) run.max_primary = span.max_primary;
-}
+// Paints stop circles in two passes: first discover the exact span settled by
+// the marks inside each segment, then draw only those marks and exclude the
+// resulting run so later track rendering can tessellate around it. The caller
+// only supplies slider-specific suppression for decorations that own part of
+// the track, such as inset icons. An empty std::function disables suppression.
+void PaintStopRuns(const Canvas& canvas, Clipper& clipper,
+                   const SliderAxisMetrics& axis,
+                   const SliderPaintStopSegment* segments, int segment_count,
+                   const SliderRange& range,
+                   const StopSuppressionFn& suppress_stop);
 
 }  // namespace internal
 }  // namespace material3
