@@ -33,13 +33,15 @@ class Canvas {
     dy_ += dy;
   }
 
-  void clipToExtents(Rect extents) {
+  void clipToExtents(const Rect& extents) {
     clip_box_ = extents.translate(dx_, dy_).clip(clip_box_);
   }
 
-  void clip(roo_display::Box box) {
-    clip_box_ = roo_display::Box::Intersect(clip_box_, box);
+  void clipToExtents(const roo_display::Box& extents) {
+    clip_box_.clip(extents.translate(dx_, dy_));
   }
+
+  void clip(const roo_display::Box& box) { clip_box_.clip(box); }
 
   void clear() const;
 
