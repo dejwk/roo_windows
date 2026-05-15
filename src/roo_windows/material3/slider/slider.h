@@ -77,9 +77,9 @@ struct SliderRange {
   float step = 0.0f;
 };
 
-struct SliderTrackIcons {
-  const roo_display::Pictogram* inset = nullptr;
-  SliderTrackIconAnchor inset_anchor = SliderTrackIconAnchor::kStart;
+struct InsetIcon {
+  const roo_display::Pictogram* icon = nullptr;
+  SliderTrackIconAnchor anchor = SliderTrackIconAnchor::kStart;
 };
 
 class Slider : public BasicWidget {
@@ -165,7 +165,7 @@ class Slider : public BasicWidget {
  protected:
   void paintWidgetContents(const Canvas& s, Clipper& clipper) override;
   void notifyStateChanged(uint16_t state_diff) override;
-  virtual const SliderTrackIcons* trackIcons() const { return nullptr; }
+  virtual InsetIcon getInsetIcon() const { return {}; }
 
  private:
   struct PaintContext;
@@ -210,17 +210,18 @@ class Slider : public BasicWidget {
   internal::DirtySpan pending_indicator_dirty_span_;
 };
 
-class SliderWithIcons : public Slider {
+class SliderWithInsetIcon : public Slider {
  public:
   using Slider::Slider;
 
-  void setIcons(const SliderTrackIcons* icons);
+  void setIcon(const roo_display::Pictogram* icon,
+               SliderTrackIconAnchor anchor = SliderTrackIconAnchor::kStart);
 
  protected:
-  const SliderTrackIcons* trackIcons() const override { return icons_; }
+  InsetIcon getInsetIcon() const override { return icon_; }
 
  private:
-  const SliderTrackIcons* icons_ = nullptr;
+  InsetIcon icon_;
 };
 
 }  // namespace material3

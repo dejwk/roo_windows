@@ -64,8 +64,8 @@ than as another optional field on the base.
 
 Examples of the pattern:
 
-- `Slider` (base) and `SliderWithIcons` (subclass adds one
-  `const SliderTrackIcons*`).
+- `Slider` (base) and `SliderWithInsetIcon` (subclass adds one inline inset
+  icon descriptor).
 - A future `SliderWithStaticLabel` could subclass `Slider` to add a fixed
   text label without inflating every slider.
 

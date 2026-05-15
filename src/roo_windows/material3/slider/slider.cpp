@@ -456,20 +456,19 @@ Slider::PaintContext Slider::buildPaintContext(uint16_t pos,
 }
 
 Rect Slider::trackIconRect(const PaintContext& context) const {
-  const SliderTrackIcons* icons = trackIcons();
-  if (icons == nullptr || icons->inset == nullptr ||
-      context.segment_count == 0) {
+  InsetIcon inset_icon = getInsetIcon();
+  if (inset_icon.icon == nullptr || context.segment_count == 0) {
     return Rect(0, 0, -1, -1);
   }
 
   roo_display::Box inset_bounds;
   const StopSegment* inset_segment = nullptr;
-  bool inset_at_start = icons->inset_anchor == SliderTrackIconAnchor::kStart;
+  bool inset_at_start = inset_icon.anchor == SliderTrackIconAnchor::kStart;
   if (!CanPaintInsetIcon(*this, context.size_metrics) ||
-      !IconFitsWithinSlot(icons->inset, context.size_metrics.icon_size,
+      !IconFitsWithinSlot(inset_icon.icon, context.size_metrics.icon_size,
                           context.axis.isVertical()) ||
       !ResolveTrackIconBounds(
-          context.axis, context.layout, context.size_metrics, *icons->inset,
+          context.axis, context.layout, context.size_metrics, *inset_icon.icon,
           inset_at_start, context.segments, context.segment_count, inset_bounds,
           inset_segment)) {
     return Rect(0, 0, -1, -1);
@@ -491,9 +490,8 @@ Rect Slider::trackIconDirtyRect(const PaintContext& context) const {
 
 void Slider::paintTrackIcons(const Canvas& canvas, Clipper& clipper,
                              const PaintContext& context) const {
-  const SliderTrackIcons* icons = trackIcons();
-  if (icons == nullptr || icons->inset == nullptr ||
-      context.segment_count == 0) {
+  InsetIcon inset_icon = getInsetIcon();
+  if (inset_icon.icon == nullptr || context.segment_count == 0) {
     return;
   }
 
@@ -528,7 +526,7 @@ void Slider::paintTrackIcons(const Canvas& canvas, Clipper& clipper,
     const StopSegment* inset_segment = FindSegmentContainingRange(
         context.segments, context.segment_count, min_primary, max_primary);
     if (inset_segment != nullptr) {
-      paint_icon(*icons->inset, inset_rect.asBox(), *inset_segment);
+      paint_icon(*inset_icon.icon, inset_rect.asBox(), *inset_segment);
     }
   }
 }
@@ -1114,9 +1112,10 @@ roo::string_view Slider::formatLabel(float value, char* scratch,
   return ValueIndicatorBubble::FormatDefault(value, scratch, scratch_size);
 }
 
-void SliderWithIcons::setIcons(const SliderTrackIcons* icons) {
-  if (icons_ == icons) return;
-  icons_ = icons;
+void SliderWithInsetIcon::setIcon(const roo_display::Pictogram* icon,
+                                  SliderTrackIconAnchor anchor) {
+  if (icon_.icon == icon && icon_.anchor == anchor) return;
+  icon_ = {icon, anchor};
   invalidateInterior();
 }
 

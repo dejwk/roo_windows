@@ -231,9 +231,9 @@ Layered widgets within each family:
 
 - `Slider` / `RangeSlider` are the small base widgets. Optional features that
   carry per-instance RAM cost only when used are added by subclasses
-  (`SliderWithIcons`, `SliderWithLabel`, etc.).
+  (`SliderWithInsetIcon`, `SliderWithLabel`, etc.).
 - Customization that is naturally shared (color overrides, geometry token
-  sets, icon sets) is defined as `const`/`constexpr` structs and referenced
+  sets, large token tables) is defined as `const`/`constexpr` structs and referenced
   by pointer, defaulting to the active `Theme`.
 - Slider-specific interaction events are exposed as virtual no-op hooks
   rather than as stored `std::function` slots, matching the framework's
@@ -325,12 +325,14 @@ struct SliderAppearance {
   uint8_t has_colors = 0;  // bit 0..5 for the six color fields above
 };
 
-// Optional, normally `constexpr` and shared. Stored by pointer in the
-// `SliderWithIcons` subclass only; the base `Slider` does not pay for it.
-struct SliderTrackIcons {
-  // All pointers are non-owning. Each referenced `Pictogram` must outlive
-  // the slider that uses it. `nullptr` means "no icon in this slot".
-  const roo_display::Pictogram* inset = nullptr;
+// Tiny value type returned by Slider::getInsetIcon(). The dedicated
+// `SliderWithInsetIcon` subclass stores one of these inline; custom slider
+// subclasses can synthesize one on demand.
+struct InsetIcon {
+  // Non-owning. The referenced `Pictogram` must outlive the slider that uses
+  // it. `nullptr` means "no inset icon".
+  const roo_display::Pictogram* icon = nullptr;
+  SliderTrackIconAnchor anchor = SliderTrackIconAnchor::kStart;
 };
 
 }  // namespace material3
@@ -412,24 +414,24 @@ class Slider : public BasicWidget {
 };
 ```
 
-### Single-Value Slider with Icons
+### Single-Value Slider with Inset Icon
 
 Icons are an optional feature that costs RAM only when actually used.
 
 ```cpp
 // Adds Material 3's optional inset icon.
-// Per-instance overhead beyond Slider: 4 B (one pointer to a shared,
-// usually constexpr SliderTrackIcons struct).
-class SliderWithIcons : public Slider {
+// Per-instance overhead beyond Slider: ~8 B (one icon pointer + anchor,
+// stored inline because sliders are unlikely to share inset-icon config).
+class SliderWithInsetIcon : public Slider {
  public:
   using Slider::Slider;
 
-  // Non-owning. The pointed-to struct must outlive this widget.
-  void setIcons(const SliderTrackIcons* icons);
-  const SliderTrackIcons* icons() const;
+  // Non-owning. The pointed-to pictogram must outlive this widget.
+  void setIcon(const roo_display::Pictogram* icon,
+               SliderTrackIconAnchor anchor = SliderTrackIconAnchor::kStart);
 
  private:
-  const SliderTrackIcons* icons_ = nullptr;  // ~4 B
+  InsetIcon icon_;  // ~8 B
 };
 ```
 
@@ -494,13 +496,13 @@ class RangeSlider : public BasicWidget {
 |------------------------------|-----------:|-----------------------------:|
 | Existing `material3::Slider` |     ~44 B  |                          ref |
 | New `Slider` (base)          |     ~68 B  |                       +24 B  |
-| `SliderWithIcons`            |     ~72 B  |                       +28 B  |
+| `SliderWithInsetIcon`        |     ~76 B  |                       +32 B  |
 | `RangeSlider`                |     ~76 B  |                       +32 B  |
 
 The extra ~24 B on the base `Slider` pays for the semantic value domain
 (`float value_` + `SliderRange`) and the slot for an optional shared
 appearance pointer. A naive translation of the Android setter matrix
-(value-stored `SliderTrackIcons` + value-stored `SliderAppearanceOverrides`
+(value-stored inset-icon config + value-stored `SliderAppearanceOverrides`
 with ~13 `std::optional` fields + three `std::function` callbacks) would
 add well over 150 B per instance even in unconfigured sliders, which is not
 acceptable for this library.
@@ -558,9 +560,9 @@ that most instances never use.
 
 Applied here:
 
-- track icons live on a derived `SliderWithIcons` class (~4 B for one
-  pointer to a shared `SliderTrackIcons`), not on the base. Sliders without
-  icons pay zero,
+- inset icons live on a derived `SliderWithInsetIcon` class (~8 B for one
+  per-instance icon pointer plus anchor), not on the base. Sliders without
+  inset icons pay zero,
 - value indicator label formatting is a virtual `formatLabel()` method on
   the widget itself. Customization happens by subclassing, not by storing a
   `SliderLabelFormatter*`. Cost when not customized: zero,
@@ -1126,7 +1128,7 @@ material3::RangeSlider humidity_band(
 
 After the semantic and gesture surface is complete, expand the visual feature
 set in one pass around a stable style struct, and add the optional
-`SliderWithIcons` subclass.
+`SliderWithInsetIcon` subclass.
 
 Scope:
 
@@ -1134,8 +1136,8 @@ Scope:
    part of the packed `SliderStyle` bitfield),
 2. define geometry tokens for XS through XL, stored as shared `constexpr`
    tables in flash and selected by `SliderSize`,
-3. introduce `material3::SliderWithIcons` with a `const SliderTrackIcons*`
-  slot for the optional inset icon,
+3. introduce `material3::SliderWithInsetIcon` with one inline inset-icon
+  descriptor,
 4. restrict icon rendering to variants and sizes where it fits,
 5. verify that discrete ticks render consistently with snapping behavior.
 
@@ -1143,14 +1145,13 @@ Deliverable:
 
 - the slider family now covers the major missing Material 3 visual variants,
 - styling still flows through a compact configuration surface plus a
-  shared, flash-resident icon struct.
+  dedicated inset-icon subclass that keeps the base widget lean.
 
 Incremental per-instance RAM cost:
 
 - on the base `Slider`: **0 B** (size/tick/stop policy live in the existing
   `SliderStyle` bitfield),
-- on `SliderWithIcons`: **+4 B** for one shared `const SliderTrackIcons*`.
-  The pointed-to struct itself lives in flash when defined `constexpr`.
+- on `SliderWithInsetIcon`: **+8 B** for one inline icon pointer plus anchor.
 
 Example usage after this step:
 
@@ -1164,15 +1165,12 @@ material3::Slider speed(env, material3::SliderRange{0.0f, 10.0f, 1.0f}, 4.0f,
 ```
 
 ```cpp
-static constexpr material3::SliderTrackIcons kHeatingIcons{
-  /*inset=*/&kThermostatDrawable,
-};
 material3::SliderStyle style{};
 style.size = material3::SliderSize::kExtraLarge;
-material3::SliderWithIcons heating(env,
-                                   material3::SliderRange{18.0f, 30.0f}, 24.0f,
-                                   material3::SliderVariant::kStandard, style);
-heating.setIcons(&kHeatingIcons);
+material3::SliderWithInsetIcon heating(
+    env, material3::SliderRange{18.0f, 30.0f}, 24.0f,
+    material3::SliderVariant::kStandard, style);
+heating.setIcon(&kThermostatDrawable);
 ```
 
 ### Step 11: Add Optional Appearance Overrides
@@ -1310,7 +1308,7 @@ small PR-sized increments:
 3. centered mode plus slider lifecycle hooks,
 4. range slider plus active-thumb and separation logic,
 5. value indicators plus orientation,
-6. size presets, ticks, stop indicators, and `SliderWithIcons`,
+6. size presets, ticks, stop indicators, and `SliderWithInsetIcon`,
 7. shared appearance overrides, examples, and final documentation,
 8. removal of compatibility shims (final, separately reviewed breaking
    change).
@@ -1351,9 +1349,9 @@ The recommended direction is:
    Step 12, then remove it in Step 13,
 5. keep the base `Slider` near the existing ~44-68 B per-instance footprint
    by adding optional features through subclassing
-   (`SliderWithIcons`, custom `formatLabel()` / `onValueChange()` overrides)
-   and through shared, normally-`constexpr` configuration objects
-   (`SliderAppearance`, `SliderTrackIcons`),
+  (`SliderWithInsetIcon`, custom `formatLabel()` / `onValueChange()`
+  overrides) and through shared, normally-`constexpr` configuration objects
+  (`SliderAppearance`),
 6. expose interaction-lifecycle events as virtual no-op hooks rather than
    stored `std::function` slots,
 7. cover Material 3's missing variants and Android's interaction model

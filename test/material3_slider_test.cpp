@@ -605,12 +605,11 @@ TEST_F(Material3SliderRenderTest, MediumStandardInsetIconPaintsWhenConfigured) {
   SliderStyle style{};
   style.size = SliderSize::kMedium;
 
-  SliderTrackIcons icons{};
-  icons.inset = &circle_24();
+  const roo_display::Pictogram* icon = &circle_24();
 
-  auto slider = std::make_unique<SliderWithIcons>(
+  auto slider = std::make_unique<SliderWithInsetIcon>(
       env_, SliderRange{0.0f, 100.0f}, 50.0f, SliderVariant::kStandard, style);
-  slider->setIcons(&icons);
+  slider->setIcon(icon);
 
   addSlider(std::move(slider),
             roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
@@ -624,12 +623,11 @@ TEST_F(Material3SliderRenderTest, SmallSliderIgnoresInsetIcon) {
   SliderStyle style{};
   style.size = SliderSize::kSmall;
 
-  SliderTrackIcons icons{};
-  icons.inset = &circle_24();
+  const roo_display::Pictogram* icon = &circle_24();
 
-  auto slider = std::make_unique<SliderWithIcons>(
+  auto slider = std::make_unique<SliderWithInsetIcon>(
       env_, SliderRange{0.0f, 100.0f}, 50.0f, SliderVariant::kStandard, style);
-  slider->setIcons(&icons);
+  slider->setIcon(icon);
 
   addSlider(std::move(slider));
 
@@ -641,12 +639,11 @@ TEST_F(Material3SliderRenderTest, InsetIconJumpsPastHandleAtMinimumValue) {
   SliderStyle style{};
   style.size = SliderSize::kMedium;
 
-  SliderTrackIcons icons{};
-  icons.inset = &circle_24();
+  const roo_display::Pictogram* icon = &circle_24();
 
-  auto slider = std::make_unique<SliderWithIcons>(
+  auto slider = std::make_unique<SliderWithInsetIcon>(
       env_, SliderRange{0.0f, 100.0f}, 0.0f, SliderVariant::kStandard, style);
-  slider->setIcons(&icons);
+  slider->setIcon(icon);
 
   addSlider(std::move(slider),
             roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
@@ -663,7 +660,7 @@ TEST_F(Material3SliderRenderTest, InsetIconJumpsPastHandleAtMinimumValue) {
       size_metrics.handle_width, size_metrics.track_height,
       size_metrics.track_handle_gap, size_metrics.handle_height);
   Rect jumped_icon = ResolveInsetIconRectForTest(
-      style, internal::SliderPosFromValue(0.0f, 100.0f, 0.0f), *icons.inset,
+      style, internal::SliderPosFromValue(0.0f, 100.0f, 0.0f), *icon,
       kSliderWidth, Scaled(52));
   int jumped_icon_x = kSliderX + jumped_icon.xMin() + jumped_icon.width() / 2;
 
@@ -679,21 +676,20 @@ TEST_F(Material3SliderRenderTest, InactiveSideInsetIconPaintsWhenConfigured) {
   SliderStyle style{};
   style.size = SliderSize::kMedium;
 
-  SliderTrackIcons icons{};
-  icons.inset = &circle_24();
-  icons.inset_anchor = SliderTrackIconAnchor::kEnd;
+  const roo_display::Pictogram* icon = &circle_24();
+  SliderTrackIconAnchor anchor = SliderTrackIconAnchor::kEnd;
 
-  auto slider = std::make_unique<SliderWithIcons>(
+  auto slider = std::make_unique<SliderWithInsetIcon>(
       env_, SliderRange{0.0f, 100.0f}, 50.0f, SliderVariant::kStandard, style);
-  slider->setIcons(&icons);
+  slider->setIcon(icon, anchor);
 
   addSlider(std::move(slider),
             roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                              kSliderY + Scaled(52) - 1));
 
   Rect icon_rect = ResolveInsetIconRectForTest(
-      style, internal::SliderPosFromValue(0.0f, 100.0f, 50.0f), *icons.inset,
-      kSliderWidth, Scaled(52), icons.inset_anchor);
+      style, internal::SliderPosFromValue(0.0f, 100.0f, 50.0f), *icon,
+      kSliderWidth, Scaled(52), anchor);
   EXPECT_EQ(QuantizeToArgb4444(env_.theme().color.onSecondaryContainer),
             pixelAt(kSliderX + icon_rect.xMin() + icon_rect.width() / 2,
                     kSliderY + icon_rect.yMin() + icon_rect.height() / 2));
@@ -704,13 +700,12 @@ TEST_F(Material3SliderRenderTest,
   SliderStyle style{};
   style.size = SliderSize::kMedium;
 
-  SliderTrackIcons icons{};
-  icons.inset = &circle_24();
-  icons.inset_anchor = SliderTrackIconAnchor::kEnd;
+  const roo_display::Pictogram* icon = &circle_24();
+  SliderTrackIconAnchor anchor = SliderTrackIconAnchor::kEnd;
 
-  auto slider = std::make_unique<SliderWithIcons>(
+  auto slider = std::make_unique<SliderWithInsetIcon>(
       env_, SliderRange{0.0f, 100.0f}, 100.0f, SliderVariant::kStandard, style);
-  slider->setIcons(&icons);
+  slider->setIcon(icon, anchor);
 
   addSlider(std::move(slider),
             roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
@@ -727,8 +722,8 @@ TEST_F(Material3SliderRenderTest,
       size_metrics.handle_width, size_metrics.track_height,
       size_metrics.track_handle_gap, size_metrics.handle_height);
   Rect jumped_icon = ResolveInsetIconRectForTest(
-      style, internal::SliderPosFromValue(0.0f, 100.0f, 100.0f), *icons.inset,
-      kSliderWidth, Scaled(52), icons.inset_anchor);
+      style, internal::SliderPosFromValue(0.0f, 100.0f, 100.0f), *icon,
+      kSliderWidth, Scaled(52), anchor);
   int jumped_icon_x = kSliderX + jumped_icon.xMin() + jumped_icon.width() / 2;
 
   EXPECT_NE(QuantizeToArgb4444(env_.theme().color.onPrimary),
@@ -745,24 +740,23 @@ TEST_F(Material3SliderRenderTest,
   style.size = SliderSize::kMedium;
   style.tick_mode = SliderTickMode::kShowStops;
 
-  SliderTrackIcons icons{};
-  icons.inset = &circle_24();
+  const roo_display::Pictogram* icon = &circle_24();
 
-  auto slider =
-      std::make_unique<SliderWithIcons>(env_, SliderRange{0.0f, 1.0f, 0.25f},
-                                        0.5f, SliderVariant::kStandard, style);
-  SliderWithIcons* slider_ptr = slider.get();
-  slider->setIcons(&icons);
+  auto slider = std::make_unique<SliderWithInsetIcon>(
+      env_, SliderRange{0.0f, 1.0f, 0.25f}, 0.5f, SliderVariant::kStandard,
+      style);
+  SliderWithInsetIcon* slider_ptr = slider.get();
+  slider->setIcon(icon);
 
   addSlider(std::move(slider),
             roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                              kSliderY + Scaled(52) - 1));
 
   Rect icon_rect =
-      ResolveInsetIconRectForTest(style, slider_ptr->getPos(), *icons.inset,
+      ResolveInsetIconRectForTest(style, slider_ptr->getPos(), *icon,
                                   slider_ptr->width(), slider_ptr->height());
   Rect reserved_rect = ResolveInsetIconReservedRectForTest(
-      style, slider_ptr->getPos(), *icons.inset, slider_ptr->width(),
+      style, slider_ptr->getPos(), *icon, slider_ptr->width(),
       slider_ptr->height());
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
                                    Scaled(4), Scaled(6));
@@ -785,26 +779,25 @@ TEST_F(Material3SliderRenderTest,
   style.size = SliderSize::kMedium;
   style.tick_mode = SliderTickMode::kShowStops;
 
-  SliderTrackIcons icons{};
-  icons.inset = &circle_24();
-  icons.inset_anchor = SliderTrackIconAnchor::kEnd;
+  const roo_display::Pictogram* icon = &circle_24();
+  SliderTrackIconAnchor anchor = SliderTrackIconAnchor::kEnd;
 
-  auto slider =
-      std::make_unique<SliderWithIcons>(env_, SliderRange{0.0f, 1.0f, 0.25f},
-                                        0.5f, SliderVariant::kStandard, style);
-  SliderWithIcons* slider_ptr = slider.get();
-  slider->setIcons(&icons);
+  auto slider = std::make_unique<SliderWithInsetIcon>(
+      env_, SliderRange{0.0f, 1.0f, 0.25f}, 0.5f, SliderVariant::kStandard,
+      style);
+  SliderWithInsetIcon* slider_ptr = slider.get();
+  slider->setIcon(icon, anchor);
 
   addSlider(std::move(slider),
             roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                              kSliderY + Scaled(52) - 1));
 
-  Rect icon_rect = ResolveInsetIconRectForTest(
-      style, slider_ptr->getPos(), *icons.inset, slider_ptr->width(),
-      slider_ptr->height(), icons.inset_anchor);
+  Rect icon_rect = ResolveInsetIconRectForTest(style, slider_ptr->getPos(),
+                                               *icon, slider_ptr->width(),
+                                               slider_ptr->height(), anchor);
   Rect reserved_rect = ResolveInsetIconReservedRectForTest(
-      style, slider_ptr->getPos(), *icons.inset, slider_ptr->width(),
-      slider_ptr->height(), icons.inset_anchor);
+      style, slider_ptr->getPos(), *icon, slider_ptr->width(),
+      slider_ptr->height(), anchor);
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
                                    Scaled(4), Scaled(6));
   int16_t stop_center_x = (int16_t)roundf(
@@ -827,13 +820,12 @@ TEST_F(Material3SliderRenderTest,
   SliderStyle style{};
   style.size = SliderSize::kMedium;
 
-  SliderTrackIcons icons{};
-  icons.inset = &circle_24();
+  const roo_display::Pictogram* icon = &circle_24();
 
-  auto slider = std::make_unique<SliderWithIcons>(
+  auto slider = std::make_unique<SliderWithInsetIcon>(
       env_, SliderRange{0.0f, 100.0f}, 0.0f, SliderVariant::kStandard, style);
-  SliderWithIcons* slider_ptr = slider.get();
-  slider->setIcons(&icons);
+  SliderWithInsetIcon* slider_ptr = slider.get();
+  slider->setIcon(icon);
 
   addSlider(std::move(slider),
             roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
@@ -841,18 +833,17 @@ TEST_F(Material3SliderRenderTest,
 
   uint16_t old_pos = 0;
   Rect old_icon = ResolveInsetIconRectForTest(
-      style, old_pos, *icons.inset, slider_ptr->width(), slider_ptr->height());
+      style, old_pos, *icon, slider_ptr->width(), slider_ptr->height());
   int16_t old_local_center_x = old_icon.xMin() + old_icon.width() / 2;
   int16_t old_local_center_y = old_icon.yMin() + old_icon.height() / 2;
   uint16_t new_pos = old_pos + 1;
   Rect new_icon = ResolveInsetIconRectForTest(
-      style, new_pos, *icons.inset, slider_ptr->width(), slider_ptr->height());
+      style, new_pos, *icon, slider_ptr->width(), slider_ptr->height());
   while (new_pos < 65535 &&
          new_icon.contains(old_local_center_x, old_local_center_y)) {
     ++new_pos;
-    new_icon =
-        ResolveInsetIconRectForTest(style, new_pos, *icons.inset,
-                                    slider_ptr->width(), slider_ptr->height());
+    new_icon = ResolveInsetIconRectForTest(
+        style, new_pos, *icon, slider_ptr->width(), slider_ptr->height());
   }
 
   ASSERT_LT(new_pos, (uint16_t)65535);
@@ -882,14 +873,13 @@ TEST_F(Material3SliderRenderTest,
   SliderStyle style{};
   style.size = SliderSize::kMedium;
 
-  SliderTrackIcons icons{};
-  icons.inset = &circle_24();
+  const roo_display::Pictogram* icon = &circle_24();
 
-  auto slider =
-      std::make_unique<SliderWithIcons>(env_, SliderRange{0.0f, 100.0f, 5.0f},
-                                        5.0f, SliderVariant::kStandard, style);
-  SliderWithIcons* slider_ptr = slider.get();
-  slider->setIcons(&icons);
+  auto slider = std::make_unique<SliderWithInsetIcon>(
+      env_, SliderRange{0.0f, 100.0f, 5.0f}, 5.0f, SliderVariant::kStandard,
+      style);
+  SliderWithInsetIcon* slider_ptr = slider.get();
+  slider->setIcon(icon);
 
   addSlider(std::move(slider),
             roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,

@@ -191,14 +191,15 @@ class DemoSlider : public material3::Slider {
   LabelFormatter label_formatter_;
 };
 
-class DemoIconSlider : public material3::SliderWithIcons {
+class DemoIconSlider : public material3::SliderWithInsetIcon {
  public:
   using LabelFormatter = DemoSlider::LabelFormatter;
 
   DemoIconSlider(const Environment& env, material3::SliderRange range,
                  float initial_value, material3::SliderVariant variant,
                  material3::SliderStyle style)
-      : material3::SliderWithIcons(env, range, initial_value, variant, style) {}
+      : material3::SliderWithInsetIcon(env, range, initial_value, variant,
+                                       style) {}
 
   void setLabelFormatter(LabelFormatter formatter) {
     label_formatter_ = std::move(formatter);
@@ -209,8 +210,8 @@ class DemoIconSlider : public material3::SliderWithIcons {
     if (label_formatter_ != nullptr) {
       return label_formatter_(value, scratch, scratch_size);
     }
-    return material3::SliderWithIcons::formatLabel(value, scratch,
-                                                   scratch_size);
+    return material3::SliderWithInsetIcon::formatLabel(value, scratch,
+                                                       scratch_size);
   }
 
  private:
@@ -280,7 +281,7 @@ class IconSliderRow : public FlexLayout {
   IconSliderRow(const Environment& env, const char* primary,
                 const char* secondary, material3::SliderRange range,
                 float initial_value, SliderValueFormatter formatter,
-                const material3::SliderTrackIcons* icons,
+                const material3::InsetIcon* inset_icon,
                 material3::SliderStyle style = {},
                 LabelFormatter label_formatter = nullptr)
       : FlexLayout(env, FlexDirection::kColumn),
@@ -292,8 +293,8 @@ class IconSliderRow : public FlexLayout {
         slider_(env, range, initial_value, material3::SliderVariant::kStandard,
                 style),
         formatter_(std::move(formatter)) {
-    if (icons != nullptr) {
-      slider_.setIcons(icons);
+    if (inset_icon != nullptr) {
+      slider_.setIcon(inset_icon->icon, inset_icon->anchor);
     }
     if (label_formatter != nullptr) {
       slider_.setLabelFormatter(std::move(label_formatter));
@@ -614,17 +615,17 @@ constexpr material3::SliderStyle BrightnessIconStyle() {
   return s;
 }
 
-const material3::SliderTrackIcons* ThermostatIcons() {
-  static const material3::SliderTrackIcons icons = {
+const material3::InsetIcon* ThermostatIcon() {
+  static const material3::InsetIcon icon = {
       &ic_outlined_24_device_thermostat()};
-  return &icons;
+  return &icon;
 }
 
-const material3::SliderTrackIcons* BrightnessIcons() {
-  static const material3::SliderTrackIcons icons = {
+const material3::InsetIcon* BrightnessIcon() {
+  static const material3::InsetIcon icon = {
       &ic_outlined_24_device_brightness_high(),
   };
-  return &icons;
+  return &icon;
 }
 
 class SliderScreen : public SimpleScrollablePanel {
@@ -678,7 +679,7 @@ class SliderScreen : public SimpleScrollablePanel {
             [](TextLabel& label, const material3::Slider& slider) {
               label.setTextf("%.0f C", slider.value());
             },
-            ThermostatIcons(), TemperatureIconStyle(),
+            ThermostatIcon(), TemperatureIconStyle(),
             [](float value, char* scratch, size_t n) {
               int len = snprintf(scratch, n, "%.0f C", value);
               if (len < 0) len = 0;
@@ -692,7 +693,7 @@ class SliderScreen : public SimpleScrollablePanel {
             [](TextLabel& label, const material3::Slider& slider) {
               label.setTextf("%.0f%%", slider.value());
             },
-            BrightnessIcons(), BrightnessIconStyle(),
+            BrightnessIcon(), BrightnessIconStyle(),
             [](float value, char* scratch, size_t n) {
               int len = snprintf(scratch, n, "%.0f%%", value);
               if (len < 0) len = 0;
