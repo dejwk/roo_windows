@@ -161,6 +161,12 @@ struct SliderPaintStopSegment {
   Color stop_color;
 };
 
+// Converts a logical track segment into the concrete clip box used to paint it
+// for a specific cross-axis band.
+roo_display::Box TrackSegmentClipBox(const SliderAxisMetrics& axis,
+                                     const SliderPaintStopSegment& segment,
+                                     int16_t cross_start, int16_t cross_span);
+
 // Accumulates the exact settled primary-axis span occupied by stop circles in a
 // segment.
 struct SliderPaintStopRun {

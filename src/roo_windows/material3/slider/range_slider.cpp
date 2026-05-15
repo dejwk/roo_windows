@@ -30,6 +30,7 @@ using internal::ResolveTokens;
 using internal::ShouldRenderStops;
 using internal::ThumbWidthForState;
 using internal::TrackGapForThumbWidth;
+using internal::TrackSegmentClipBox;
 using internal::TrackShapeMinPrimary;
 
 // True iff the indicator should be drawn this frame. Range sliders show the
@@ -226,6 +227,42 @@ ThumbPaintMetrics ResolveThumbPaintMetrics(
           axis, axis.centerFromPos(pos), thumb_width, size_metrics.track_height,
           track_gap, size_metrics.handle_height),
   };
+}
+
+// Splits the range slider track into the same inactive/active/inactive segment
+// model used by both track painting and stop rendering.
+void BuildTrackSegments(const Tokens& tokens,
+                        const internal::SliderAxisMetrics& axis,
+                        const ThumbPaintMetrics& start,
+                        const ThumbPaintMetrics& end, StopSegment* segments,
+                        int& segment_count) {
+  segment_count = 0;
+
+  int16_t left_inactive_max =
+      (int16_t)floorf(start.layout.active_track_max_primary);
+  if (left_inactive_max >= 0) {
+    segments[segment_count++] = StopSegment{
+        0.0f,
+        (float)std::min<int16_t>(left_inactive_max, axis.primarySpan() - 1),
+        tokens.inactive_track, tokens.inactive_stop};
+  }
+
+  float active_track_min_primary = start.layout.inactive_track_min_primary;
+  float active_track_max_primary = end.layout.active_track_max_primary;
+  if (active_track_max_primary >= active_track_min_primary) {
+    segments[segment_count++] =
+        StopSegment{active_track_min_primary, active_track_max_primary,
+                    tokens.active_track, tokens.active_stop};
+  }
+
+  int16_t right_inactive_min =
+      (int16_t)ceilf(end.layout.inactive_track_min_primary);
+  if (right_inactive_min < axis.primarySpan()) {
+    segments[segment_count++] =
+        StopSegment{(float)std::max<int16_t>(0, right_inactive_min),
+                    (float)(axis.primarySpan() - 1), tokens.inactive_track,
+                    tokens.inactive_stop};
+  }
 }
 
 }  // namespace
@@ -640,48 +677,9 @@ void RangeSlider::paint(const Canvas& canvas) const {
   ThumbPaintMetrics end =
       ResolveThumbPaintMetrics(range_, end_value_, axis, size_metrics,
                                isPressed() && active_thumb_ == 1);
-
-  int16_t active_clip_min =
-      (int16_t)ceilf(start.layout.inactive_track_min_primary);
-  int16_t active_clip_max =
-      (int16_t)floorf(end.layout.active_track_max_primary);
-  if (active_clip_min < 0) active_clip_min = 0;
-  if (active_clip_max >= axis.primarySpan()) {
-    active_clip_max = axis.primarySpan() - 1;
-  }
-
-  roo_display::Box active_clip = axis.boxFromPrimaryCross(
-      active_clip_min, start.layout.track_cross_start, active_clip_max,
-      start.layout.track_cross_start + size_metrics.track_height - 1);
-  // The range track is painted as three contiguous pieces: inactive before the
-  // first thumb, active between the thumbs, and inactive after the second one.
-  bool has_left_inactive_clip = true;
-  int16_t left_inactive_max =
-      (int16_t)floorf(start.layout.active_track_max_primary);
-  roo_display::Box left_inactive_clip;
-  if (left_inactive_max < 0) {
-    has_left_inactive_clip = false;
-  } else {
-    if (left_inactive_max >= axis.primarySpan()) {
-      left_inactive_max = axis.primarySpan() - 1;
-    }
-    left_inactive_clip = axis.boxFromPrimaryCross(
-        0, start.layout.track_cross_start, left_inactive_max,
-        start.layout.track_cross_start + size_metrics.track_height - 1);
-  }
-  bool has_right_inactive_clip = true;
-  int16_t right_inactive_min =
-      (int16_t)ceilf(end.layout.inactive_track_min_primary);
-  roo_display::Box right_inactive_clip;
-  if (right_inactive_min >= axis.primarySpan()) {
-    has_right_inactive_clip = false;
-  } else {
-    if (right_inactive_min < 0) right_inactive_min = 0;
-    right_inactive_clip = axis.boxFromPrimaryCross(
-        right_inactive_min, start.layout.track_cross_start,
-        axis.primarySpan() - 1,
-        start.layout.track_cross_start + size_metrics.track_height - 1);
-  }
+  StopSegment segments[3];
+  int segment_count = 0;
+  BuildTrackSegments(tokens, axis, start, end, segments, segment_count);
 
   auto track_bounds = axis.paintRectFromPrimaryCross(
       TrackShapeMinPrimary(0.0f, size_metrics.track_radius),
@@ -715,20 +713,17 @@ void RangeSlider::paint(const Canvas& canvas) const {
   Rect end_handle_tile_bounds = GetHandleTileBounds(
       widget_bounds, end_handle.extents(), end.track_gap, axis.isVertical());
 
-  // These clips are chosen so the two inactive runs, the active middle run,
-  // and both handle tiles cover the slider exactly without overwriting each
-  // other. Stops and value indicators are composed separately via exclusions
-  // and decorations.
-  if (has_left_inactive_clip) {
-    DrawTrackPiece(canvas, inactive_track, widget_bounds, left_inactive_clip,
-                   axis.isVertical());
-  }
-  if (has_right_inactive_clip) {
-    DrawTrackPiece(canvas, inactive_track, widget_bounds, right_inactive_clip,
-                   axis.isVertical());
-  }
-  if (!active_clip.empty()) {
-    DrawTrackPiece(canvas, active_track, widget_bounds, active_clip,
+  // Paint the same segment model used by paintStops() so the track and stop
+  // passes agree on where each active or inactive run begins and ends.
+  for (int i = 0; i < segment_count; ++i) {
+    roo_display::Box track_clip =
+        TrackSegmentClipBox(axis, segments[i], start.layout.track_cross_start,
+                            size_metrics.track_height);
+    if (track_clip.empty()) continue;
+    const auto& track_piece = segments[i].track_color == tokens.active_track
+                                  ? active_track
+                                  : inactive_track;
+    DrawTrackPiece(canvas, track_piece, widget_bounds, track_clip,
                    axis.isVertical());
   }
   canvas.drawTiled(start_handle, start_handle_tile_bounds, kNoAlign);
@@ -751,32 +746,7 @@ void RangeSlider::paintStops(const Canvas& canvas, Clipper& clipper) const {
 
   StopSegment segments[3];
   int segment_count = 0;
-
-  int16_t left_inactive_max =
-      (int16_t)floorf(start.layout.active_track_max_primary);
-  if (left_inactive_max >= 0) {
-    segments[segment_count++] = StopSegment{
-        0.0f,
-        (float)std::min<int16_t>(left_inactive_max, axis.primarySpan() - 1),
-        tokens.inactive_track, tokens.inactive_stop};
-  }
-
-  float active_track_min_primary = start.layout.inactive_track_min_primary;
-  float active_track_max_primary = end.layout.active_track_max_primary;
-  if (active_track_max_primary >= active_track_min_primary) {
-    segments[segment_count++] =
-        StopSegment{active_track_min_primary, active_track_max_primary,
-                    tokens.active_track, tokens.active_stop};
-  }
-
-  int16_t right_inactive_min =
-      (int16_t)ceilf(end.layout.inactive_track_min_primary);
-  if (right_inactive_min < axis.primarySpan()) {
-    segments[segment_count++] =
-        StopSegment{(float)std::max<int16_t>(0, right_inactive_min),
-                    (float)(axis.primarySpan() - 1), tokens.inactive_track,
-                    tokens.inactive_stop};
-  }
+  BuildTrackSegments(tokens, axis, start, end, segments, segment_count);
 
   if (segment_count == 0) return;
 

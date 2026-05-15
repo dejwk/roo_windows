@@ -8,21 +8,22 @@ namespace roo_windows {
 namespace material3 {
 namespace internal {
 
-namespace {
-
-// Produces the clip box that contains only the stop marks for a segment,
-// leaving the rounded track end caps to the track drawables.
-roo_display::Box StopSegmentClipBox(const SliderAxisMetrics& axis,
-                                    const SliderPaintStopSegment& segment) {
+roo_display::Box TrackSegmentClipBox(const SliderAxisMetrics& axis,
+                                     const SliderPaintStopSegment& segment,
+                                     int16_t cross_start, int16_t cross_span) {
   int16_t min_primary = (int16_t)ceilf(segment.min_primary);
   int16_t max_primary = (int16_t)floorf(segment.max_primary);
   if (min_primary < 0) min_primary = 0;
   if (max_primary >= axis.primarySpan()) max_primary = axis.primarySpan() - 1;
-  if (max_primary < min_primary) return roo_display::Box(0, 0, -1, -1);
-  int16_t cross_start = (axis.crossSpan() - kStopMarkSpanPixels) / 2;
+  if (max_primary < min_primary || cross_span <= 0) {
+    return roo_display::Box(0, 0, -1, -1);
+  }
+  int16_t cross_end = cross_start + cross_span - 1;
   return axis.boxFromPrimaryCross(min_primary, cross_start, max_primary,
-                                  cross_start + kStopMarkSpanPixels - 1);
+                                  cross_end);
 }
+
+namespace {
 
 // True when a stop center belongs to the specified segment, allowing for small
 // floating-point tolerance at segment boundaries.
@@ -130,8 +131,9 @@ void PaintStopRuns(const Canvas& canvas, Clipper& clipper,
 
   for (int segment_index = 0; segment_index < segment_count; ++segment_index) {
     if (!runs[segment_index].has_marks) continue;
-    roo_display::Box segment_clip_box =
-        StopSegmentClipBox(axis, segments[segment_index]);
+    int16_t cross_start = (axis.crossSpan() - kStopMarkSpanPixels) / 2;
+    roo_display::Box segment_clip_box = TrackSegmentClipBox(
+        axis, segments[segment_index], cross_start, kStopMarkSpanPixels);
     if (segment_clip_box.empty()) continue;
     roo_display::Box run_box = roo_display::Box::Intersect(
         StopRunBox(axis, runs[segment_index]), segment_clip_box);
@@ -142,7 +144,6 @@ void PaintStopRuns(const Canvas& canvas, Clipper& clipper,
     stop_canvas.clip(segment_clip_box.translate(canvas.dx(), canvas.dy()));
     bool has_previous_stop = false;
     SliderPaintStopSpan previous_span{0, -1};
-    int16_t cross_start = (axis.crossSpan() - kStopMarkSpanPixels) / 2;
     for (int32_t i = 0; i <= stop_count; ++i) {
       float primary_center =
           StopPrimaryCenterFromIndex(axis, range, stop_count, i);

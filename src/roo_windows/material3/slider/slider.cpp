@@ -35,6 +35,7 @@ using internal::SegmentContainsRange;
 using internal::ShouldRenderStops;
 using internal::ThumbWidthForState;
 using internal::TrackGapForThumbWidth;
+using internal::TrackSegmentClipBox;
 using internal::TrackShapeMinPrimary;
 
 // True iff the indicator should be drawn this frame given the current
@@ -656,107 +657,6 @@ void Slider::paint(const Canvas& canvas) const {
 void Slider::paintTrackAndThumb(const Canvas& canvas,
                                 const PaintContext& context) const {
   float center_anchor_primary = context.axis.centerFromPos(32768);
-  bool thumb_on_or_right_of_center =
-      context.axis.centerFromPos(getPos()) >= center_anchor_primary;
-  float center_left_edge = center_anchor_primary - (float)kCenterGapHalfPixels;
-  float center_right_edge = center_anchor_primary + (float)kCenterGapHalfPixels;
-
-  float active_track_min_primary = -0.5f;
-  float active_track_max_primary = context.layout.active_track_max_primary;
-  roo_display::Box active_clip = context.axis.boxFromPrimaryCross(
-      0, context.layout.track_cross_start,
-      context.layout.activeClipMax(context.axis.primarySpan()),
-      context.layout.track_cross_start + context.size_metrics.track_height - 1);
-  bool has_left_inactive_clip = false;
-  bool has_right_inactive_clip = true;
-  roo_display::Box left_inactive_clip;
-  roo_display::Box right_inactive_clip = context.axis.boxFromPrimaryCross(
-      (int16_t)ceilf(context.layout.inactive_track_min_primary),
-      context.layout.track_cross_start, context.axis.primarySpan() - 1,
-      context.layout.track_cross_start + context.size_metrics.track_height - 1);
-
-  if (variant_ == SliderVariant::kCentered) {
-    // Re-split the logical track around the zero anchor so only the side away
-    // from the center is active and the center gap stays visually open.
-    active_track_min_primary = thumb_on_or_right_of_center
-                                   ? center_right_edge
-                                   : context.layout.inactive_track_min_primary;
-    active_track_max_primary = thumb_on_or_right_of_center
-                                   ? context.layout.active_track_max_primary
-                                   : center_left_edge;
-
-    int16_t active_clip_min = (int16_t)ceilf(active_track_min_primary);
-    int16_t active_clip_max = (int16_t)floorf(active_track_max_primary);
-    if (active_clip_min < 0) active_clip_min = 0;
-    if (active_clip_max >= context.axis.primarySpan()) {
-      active_clip_max = context.axis.primarySpan() - 1;
-    }
-    if (active_clip_max >= active_clip_min) {
-      // Clip the active run down to the half that actually grows away from the
-      // center anchor.
-      active_clip = context.axis.boxFromPrimaryCross(
-          active_clip_min, context.layout.track_cross_start, active_clip_max,
-          context.layout.track_cross_start + context.size_metrics.track_height -
-              1);
-    } else {
-      active_clip = roo_display::Box(0, 0, -1, -1);
-    }
-
-    has_left_inactive_clip = true;
-    // The left inactive piece ends either at the handle edge or at the center
-    // gap, whichever comes first for the current thumb side.
-    int16_t handle_left_edge =
-        (int16_t)floorf(context.layout.active_track_max_primary);
-    int16_t center_left_edge_i = (int16_t)floorf(center_left_edge);
-    int16_t left_inactive_max =
-        thumb_on_or_right_of_center
-            ? std::min(handle_left_edge, center_left_edge_i)
-            : handle_left_edge;
-    if (left_inactive_max < 0) {
-      has_left_inactive_clip = false;
-    } else {
-      left_inactive_clip = context.axis.boxFromPrimaryCross(
-          0, context.layout.track_cross_start,
-          left_inactive_max >= context.axis.primarySpan()
-              ? context.axis.primarySpan() - 1
-              : left_inactive_max,
-          context.layout.track_cross_start + context.size_metrics.track_height -
-              1);
-    }
-
-    int16_t handle_right_edge =
-        (int16_t)ceilf(context.layout.inactive_track_min_primary);
-    int16_t center_right_edge_i = (int16_t)ceilf(center_right_edge);
-    // Mirror the same rule on the right so the inactive run resumes only after
-    // the handle footprint and the center gap are both clear.
-    int16_t right_inactive_min =
-        thumb_on_or_right_of_center
-            ? handle_right_edge
-            : std::max(handle_right_edge, center_right_edge_i);
-    if (right_inactive_min >= context.axis.primarySpan()) {
-      has_right_inactive_clip = false;
-    } else {
-      if (right_inactive_min < 0) right_inactive_min = 0;
-      right_inactive_clip = context.axis.boxFromPrimaryCross(
-          right_inactive_min, context.layout.track_cross_start,
-          context.axis.primarySpan() - 1,
-          context.layout.track_cross_start + context.size_metrics.track_height -
-              1);
-    }
-  } else {
-    int16_t right_inactive_min =
-        (int16_t)ceilf(context.layout.inactive_track_min_primary);
-    if (right_inactive_min >= context.axis.primarySpan()) {
-      has_right_inactive_clip = false;
-    } else {
-      if (right_inactive_min < 0) right_inactive_min = 0;
-      right_inactive_clip = context.axis.boxFromPrimaryCross(
-          right_inactive_min, context.layout.track_cross_start,
-          context.axis.primarySpan() - 1,
-          context.layout.track_cross_start + context.size_metrics.track_height -
-              1);
-    }
-  }
 
   auto track_bounds = context.axis.paintRectFromPrimaryCross(
       TrackShapeMinPrimary(0.0f, context.size_metrics.track_radius),
@@ -783,20 +683,18 @@ void Slider::paintTrackAndThumb(const Canvas& canvas,
       GetHandleTileBounds(widget_bounds, handle.extents(), context.track_gap,
                           context.axis.isVertical());
 
-  // These clips are chosen so the inactive runs, active run, center gap, and
-  // handle tile cover their respective portions of the slider without
-  // overwriting each other. Stops, inset icons, and value indicators are the
-  // only pieces that rely on exclusions/decorations for composition.
-  if (has_left_inactive_clip) {
-    DrawTrackPiece(canvas, inactive_track, widget_bounds, left_inactive_clip,
-                   context.axis.isVertical());
-  }
-  if (has_right_inactive_clip) {
-    DrawTrackPiece(canvas, inactive_track, widget_bounds, right_inactive_clip,
-                   context.axis.isVertical());
-  }
-  if (!active_clip.empty()) {
-    DrawTrackPiece(canvas, active_track, widget_bounds, active_clip,
+  // Paint the same segment model used by stop rendering so track and stop
+  // passes agree on every active/inactive boundary.
+  for (int i = 0; i < context.segment_count; ++i) {
+    roo_display::Box track_clip = TrackSegmentClipBox(
+        context.axis, context.segments[i], context.layout.track_cross_start,
+        context.size_metrics.track_height);
+    if (track_clip.empty()) continue;
+    const auto& track_piece =
+        context.segments[i].track_color == context.tokens.active_track
+            ? active_track
+            : inactive_track;
+    DrawTrackPiece(canvas, track_piece, widget_bounds, track_clip,
                    context.axis.isVertical());
   }
   if (variant_ == SliderVariant::kCentered) {
