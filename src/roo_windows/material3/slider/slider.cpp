@@ -25,6 +25,8 @@ static constexpr int16_t kTrackIconStopPaddingPixels = Scaled(4);
 static constexpr int16_t kStopMarkRadiusPixels = Scaled(2);
 static constexpr int16_t kStopMarkSpanPixels = Scaled(4);
 
+// Applies the disabled Material 3 alpha treatment on top of the current
+// surface color so disabled slider pieces blend consistently with the theme.
 Color DisabledComposite(Color fg, uint8_t alpha, const Theme& theme) {
   return AlphaBlend(theme.color.surface, fg.withA(alpha));
 }
@@ -37,6 +39,7 @@ struct Tokens {
   Color inactive_stop;
 };
 
+// Resolves the effective palette for the current enabled/disabled slider state.
 Tokens ResolveTokens(const Slider& widget) {
   const Theme& theme = widget.theme();
   if (!widget.isEnabled()) {
@@ -58,6 +61,8 @@ Tokens ResolveTokens(const Slider& widget) {
   };
 }
 
+// Stop marks only make sense for discrete sliders, and tick_mode can still
+// suppress them explicitly.
 bool ShouldRenderStops(const Slider& widget) {
   if (!internal::IsDiscreteSliderRange(widget.range().step)) return false;
   return widget.style().tick_mode != SliderTickMode::kHidden;
@@ -85,6 +90,8 @@ float TrackShapeMinPrimary(float visible_min_primary, int16_t track_radius) {
              : visible_min_primary - (float)track_radius;
 }
 
+// The pressed state narrows the line handle, matching the Material 3 pressed
+// affordance without changing the overall slider bounds.
 int16_t ThumbWidthForState(int16_t nominal_width, bool pressed) {
   if (!pressed) return nominal_width;
   int16_t width =
@@ -92,6 +99,8 @@ int16_t ThumbWidthForState(int16_t nominal_width, bool pressed) {
   return width < 1 ? 1 : width;
 }
 
+// As the pressed thumb narrows, reduce the track/thumb gap just enough to keep
+// the perceived clearance stable.
 int16_t TrackGapForThumbWidth(const internal::SliderSizeMetrics& size_metrics,
                               int16_t thumb_width) {
   int16_t gap = size_metrics.track_handle_gap -
@@ -99,6 +108,8 @@ int16_t TrackGapForThumbWidth(const internal::SliderSizeMetrics& size_metrics,
   return gap < 0 ? 0 : gap;
 }
 
+// Restricts drawTiled() to the dirty run while still spanning the full
+// cross-axis of the widget.
 Rect GetTrackTileBounds(const Rect& widget_bounds, const roo_display::Box& clip,
                         bool vertical) {
   if (vertical) {
@@ -109,6 +120,8 @@ Rect GetTrackTileBounds(const Rect& widget_bounds, const roo_display::Box& clip,
               widget_bounds.yMax());
 }
 
+// Expands thumb redraw just enough to cover the visual gap that belongs to the
+// thumb silhouette.
 Rect GetHandleTileBounds(const Rect& widget_bounds,
                          const roo_display::Box& handle_bounds,
                          int16_t track_gap, bool vertical) {
@@ -120,6 +133,8 @@ Rect GetHandleTileBounds(const Rect& widget_bounds,
   return Rect::Intersect(expanded, widget_bounds);
 }
 
+// Measures icons in track-axis coordinates so the same placement logic works
+// for horizontal and vertical sliders.
 int16_t IconPrimarySpan(const roo_display::Pictogram& icon, bool vertical) {
   roo_display::Box extents = icon.anchorExtents();
   return vertical ? extents.height() : extents.width();
@@ -130,6 +145,7 @@ int16_t IconCrossSpan(const roo_display::Pictogram& icon, bool vertical) {
   return vertical ? extents.width() : extents.height();
 }
 
+// Rejects icons that would clip the inset slot chosen by the size preset.
 bool IconFitsWithinSlot(const roo_display::Pictogram* icon, int16_t slot_size,
                         bool vertical) {
   if (icon == nullptr || slot_size <= 0) return false;
@@ -139,12 +155,15 @@ bool IconFitsWithinSlot(const roo_display::Pictogram* icon, int16_t slot_size,
   return primary_span <= slot_size && cross_span <= slot_size;
 }
 
+// Inset icons are only part of the standard slider family and only on size
+// presets that reserve enough room inside the track.
 bool CanPaintInsetIcon(const Slider& slider,
                        const internal::SliderSizeMetrics& size_metrics) {
   return slider.variant() == SliderVariant::kStandard &&
          size_metrics.supports_inset_icon && size_metrics.icon_size > 0;
 }
 
+// Tiles a rounded track drawable only across the dirty slice for this segment.
 void DrawTrackPiece(const Canvas& canvas, const roo_display::Drawable& piece,
                     const Rect& widget_bounds,
                     const roo_display::Box& clip_bounds, bool vertical) {
@@ -153,6 +172,8 @@ void DrawTrackPiece(const Canvas& canvas, const roo_display::Drawable& piece,
   canvas.drawTiled(piece, tile_bounds, kNoAlign);
 }
 
+// Builds the axis helper that converts between value positions, local
+// coordinates, and orientation-aware geometry.
 internal::SliderAxisMetrics MakeSliderAxisMetrics(const Slider& slider) {
   const internal::SliderSizeMetrics& size_metrics =
       internal::ResolveSliderSizeMetrics(slider.style().size);
@@ -162,6 +183,8 @@ internal::SliderAxisMetrics MakeSliderAxisMetrics(const Slider& slider) {
       slider.style().orientation == SliderOrientation::kVertical);
 }
 
+// Turns the cached main-axis bubble span into a conservative local rect so the
+// parent can invalidate only the portion of overflow that actually changed.
 Rect IndicatorDirtyRectFromSpan(const internal::DirtySpan& span, int16_t width,
                                 int16_t height, SliderStyle style) {
   if (span.empty() || width <= 0 || height <= 0) return Rect(0, 0, -1, -1);
@@ -221,6 +244,8 @@ inline bool SegmentContainsRange(const StopSegment& segment, float min_primary,
          max_primary <= segment.max_primary + 0.01f;
 }
 
+// Splits the track into active/inactive runs. Centered sliders keep a small
+// empty gap around logical zero so the two halves do not visually merge.
 void BuildTrackSegments(const Slider& slider, const Tokens& tokens,
                         const internal::SliderAxisMetrics& axis,
                         const internal::SliderVisualMetrics& layout,
@@ -286,6 +311,7 @@ void BuildTrackSegments(const Slider& slider, const Tokens& tokens,
   }
 }
 
+// Finds the track segment that fully covers a prospective icon or stop range.
 const StopSegment* FindSegmentContainingRange(const StopSegment* segments,
                                               int segment_count,
                                               float min_primary,
@@ -298,6 +324,8 @@ const StopSegment* FindSegmentContainingRange(const StopSegment* segments,
   return nullptr;
 }
 
+// Chooses an inset-icon slot that stays near the requested edge, clears the
+// thumb center, and remains fully inside a single track segment.
 bool ResolveTrackIconBounds(const internal::SliderAxisMetrics& axis,
                             const internal::SliderVisualMetrics& layout,
                             const internal::SliderSizeMetrics& size_metrics,
@@ -370,6 +398,8 @@ bool ResolveTrackIconBounds(const internal::SliderAxisMetrics& axis,
   return try_candidate(jump_candidate);
 }
 
+// Converts a stop position into a point centered on the track irrespective of
+// orientation.
 roo_display::FpPoint StopMarkCenter(const internal::SliderAxisMetrics& axis,
                                     float primary_center) {
   float cross_center = 0.5f * (float)axis.crossSpan() - 0.5f;
@@ -380,6 +410,8 @@ roo_display::FpPoint StopMarkCenter(const internal::SliderAxisMetrics& axis,
   return roo_display::FpPoint{primary_center, cross_center};
 }
 
+// Accumulates the exact primary-axis extent covered by stop circles so the
+// later track pass can exclude that run instead of repainting beneath them.
 void IncludeStopExtentsInRun(const internal::SliderAxisMetrics& axis,
                              const roo_display::Box& stop_extents,
                              StopRun& run) {
@@ -398,6 +430,8 @@ void IncludeStopExtentsInRun(const internal::SliderAxisMetrics& axis,
   if (span.max_primary > run.max_primary) run.max_primary = span.max_primary;
 }
 
+// Grows the painted icon bounds along the track axis to reserve breathing room
+// for nearby stops and dirty-region recomputation.
 Rect ExpandTrackIconPrimaryRect(const Rect& icon_rect, bool vertical,
                                 int16_t primary_span, int16_t primary_padding) {
   if (icon_rect.empty()) return icon_rect;
@@ -835,6 +869,8 @@ void Slider::paintTrackAndThumb(const Canvas& canvas,
       context.layout.track_cross_start + context.size_metrics.track_height - 1);
 
   if (variant_ == SliderVariant::kCentered) {
+    // Re-split the logical track around the zero anchor so only the side away
+    // from the center is active and the center gap stays visually open.
     active_track_min_primary = thumb_on_or_right_of_center
                                    ? center_right_edge
                                    : context.layout.inactive_track_min_primary;
@@ -849,6 +885,8 @@ void Slider::paintTrackAndThumb(const Canvas& canvas,
       active_clip_max = context.axis.primarySpan() - 1;
     }
     if (active_clip_max >= active_clip_min) {
+      // Clip the active run down to the half that actually grows away from the
+      // center anchor.
       active_clip = context.axis.boxFromPrimaryCross(
           active_clip_min, context.layout.track_cross_start, active_clip_max,
           context.layout.track_cross_start + context.size_metrics.track_height -
@@ -858,6 +896,8 @@ void Slider::paintTrackAndThumb(const Canvas& canvas,
     }
 
     has_left_inactive_clip = true;
+    // The left inactive piece ends either at the handle edge or at the center
+    // gap, whichever comes first for the current thumb side.
     int16_t handle_left_edge =
         (int16_t)floorf(context.layout.active_track_max_primary);
     int16_t center_left_edge_i = (int16_t)floorf(center_left_edge);
@@ -880,6 +920,8 @@ void Slider::paintTrackAndThumb(const Canvas& canvas,
     int16_t handle_right_edge =
         (int16_t)ceilf(context.layout.inactive_track_min_primary);
     int16_t center_right_edge_i = (int16_t)ceilf(center_right_edge);
+    // Mirror the same rule on the right so the inactive run resumes only after
+    // the handle footprint and the center gap are both clear.
     int16_t right_inactive_min =
         thumb_on_or_right_of_center
             ? handle_right_edge
@@ -934,6 +976,10 @@ void Slider::paintTrackAndThumb(const Canvas& canvas,
       GetHandleTileBounds(widget_bounds, handle.extents(), context.track_gap,
                           context.axis.isVertical());
 
+  // These clips are chosen so the inactive runs, active run, center gap, and
+  // handle tile cover their respective portions of the slider without
+  // overwriting each other. Stops, inset icons, and value indicators are the
+  // only pieces that rely on exclusions/decorations for composition.
   if (has_left_inactive_clip) {
     DrawTrackPiece(canvas, inactive_track, widget_bounds, left_inactive_clip,
                    context.axis.isVertical());
@@ -947,6 +993,8 @@ void Slider::paintTrackAndThumb(const Canvas& canvas,
                    context.axis.isVertical());
   }
   if (variant_ == SliderVariant::kCentered) {
+    // The center gap is painted back to the widget background after the track
+    // pieces so the left and right halves remain visibly separated at zero.
     int16_t gap_min =
         (int16_t)floorf(center_anchor_primary - (float)kCenterGapHalfPixels) +
         1;
@@ -979,6 +1027,8 @@ void Slider::paintStops(const Canvas& canvas, Clipper& clipper,
   StopRun runs[3];
   int32_t stop_count =
       (int32_t)lroundf((range_.to - range_.from) / range_.step);
+  // First pass: discover the exact primary-axis span occupied by stops in each
+  // segment so later clipping and exclusions stay tight.
   for (int32_t i = 0; i <= stop_count; ++i) {
     float value = (i == stop_count) ? range_.to : range_.from + i * range_.step;
     uint16_t pos = internal::SliderPosFromValue(range_.from, range_.to, value);
@@ -992,6 +1042,8 @@ void Slider::paintStops(const Canvas& canvas, Clipper& clipper,
       auto stop = SmoothFilledCircle(
           StopMarkCenter(context.axis, primary_center), kStopMarkRadiusPixels,
           context.segments[segment_index].stop_color);
+      // Keep the inset icon slot visually clear; the icon acts as the focal
+      // mark for that portion of the track instead of a stop indicator.
       if (!reserved_icon_rect.empty() &&
           reserved_icon_rect.intersects(stop.extents())) {
         break;
@@ -1020,6 +1072,8 @@ void Slider::paintStops(const Canvas& canvas, Clipper& clipper,
     stop_canvas.clip(segment_clip_box.translate(canvas.dx(), canvas.dy()));
     bool has_previous_stop = false;
     StopSpan previous_span{0, -1};
+    // Second pass: paint each stop exactly once and fill only the gaps between
+    // neighboring circles so the later track paint can skip this entire run.
     for (int32_t i = 0; i <= stop_count; ++i) {
       float value =
           (i == stop_count) ? range_.to : range_.from + i * range_.step;
@@ -1048,6 +1102,8 @@ void Slider::paintStops(const Canvas& canvas, Clipper& clipper,
         int16_t gap_min_primary = previous_span.max_primary + 1;
         int16_t gap_max_primary = current_span.min_primary - 1;
         if (gap_max_primary >= gap_min_primary) {
+          // Bridge only the pixels between adjacent stop circles; the circles
+          // themselves already provide the correct final color.
           stop_canvas.fillRect(
               context.axis.boxFromPrimaryCross(
                   gap_min_primary, cross_start, gap_max_primary,
@@ -1063,6 +1119,8 @@ void Slider::paintStops(const Canvas& canvas, Clipper& clipper,
     roo_display::Box run_device_box = roo_display::Box::Intersect(
         run_box.translate(canvas.dx(), canvas.dy()), canvas.clip_box());
     if (!run_device_box.empty()) {
+      // Exclude the fully-settled stop run so subsequent track painting does
+      // not redraw underneath it.
       clipper.addExclusion(run_device_box);
     }
   }

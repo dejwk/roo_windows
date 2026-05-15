@@ -22,6 +22,8 @@ static constexpr float kPressedThumbWidthRatio = 0.5f;
 static constexpr int16_t kStopMarkRadiusPixels = Scaled(2);
 static constexpr int16_t kStopMarkSpanPixels = Scaled(4);
 
+// Applies the disabled Material 3 alpha treatment on top of the current
+// surface color so disabled slider pieces blend consistently with the theme.
 Color DisabledComposite(Color fg, uint8_t alpha, const Theme& theme) {
   return AlphaBlend(theme.color.surface, fg.withA(alpha));
 }
@@ -34,6 +36,7 @@ struct Tokens {
   Color inactive_stop;
 };
 
+// Resolves the effective palette for the current enabled/disabled slider state.
 Tokens ResolveTokens(const RangeSlider& widget) {
   const Theme& theme = widget.theme();
   if (!widget.isEnabled()) {
@@ -55,6 +58,8 @@ Tokens ResolveTokens(const RangeSlider& widget) {
   };
 }
 
+// Stop marks only make sense for discrete sliders, and tick_mode can still
+// suppress them explicitly.
 bool ShouldRenderStops(const RangeSlider& widget) {
   if (!internal::IsDiscreteSliderRange(widget.range().step)) return false;
   return widget.style().tick_mode != SliderTickMode::kHidden;
@@ -84,6 +89,7 @@ float ClampMinSeparation(const SliderRange& range, float min_separation) {
   return min_separation;
 }
 
+// Finds the first legal snapped value on or above the requested bound.
 float SmallestValidValueAtOrAbove(const SliderRange& range, float value) {
   if (!internal::IsDiscreteSliderRange(range.step)) {
     return internal::ClampSliderValue(value, range.from, range.to);
@@ -94,6 +100,7 @@ float SmallestValidValueAtOrAbove(const SliderRange& range, float value) {
                                     range.to);
 }
 
+// Finds the last legal snapped value on or below the requested bound.
 float LargestValidValueAtOrBelow(const SliderRange& range, float value) {
   if (!internal::IsDiscreteSliderRange(range.step)) {
     return internal::ClampSliderValue(value, range.from, range.to);
@@ -104,6 +111,8 @@ float LargestValidValueAtOrBelow(const SliderRange& range, float value) {
                                     range.to);
 }
 
+// Normalizes two values into the slider domain, preserving the invariant that
+// start <= end when no thumb-specific constraint needs to be honored.
 void NormalizeOrderedValues(const SliderRange& range, float start_value,
                             float end_value, float& normalized_start,
                             float& normalized_end) {
@@ -116,6 +125,9 @@ void NormalizeOrderedValues(const SliderRange& range, float start_value,
   }
 }
 
+// Normalizes two values while preserving the active thumb when possible. If the
+// requested move would violate min separation, the moving thumb is clamped onto
+// the nearest legal discrete or continuous value instead of swapping thumbs.
 void NormalizeOrderedValuesWithSeparation(const SliderRange& range,
                                           float start_value, float end_value,
                                           float min_separation,
@@ -167,12 +179,14 @@ void NormalizeOrderedValuesWithSeparation(const SliderRange& range,
       range, normalized_end - effective_min_separation);
 }
 
+// Simple helper for combining repaint envelopes produced by the two thumbs.
 Rect UnionRects(const Rect& a, const Rect& b) {
   if (a.empty()) return b;
   if (b.empty()) return a;
   return Rect::Extent(a, b);
 }
 
+// Chooses the thumb whose center is nearer to the interaction point.
 int ResolveNearestThumb(const internal::SliderAxisMetrics& axis,
                         uint16_t start_pos, uint16_t end_pos,
                         int16_t primary_coord) {
@@ -185,6 +199,8 @@ int ResolveNearestThumb(const internal::SliderAxisMetrics& axis,
   return primary_coord <= (start_center + end_center) * 0.5f ? 0 : 1;
 }
 
+// Resolves which thumb should react to a press. When both thumbs are stacked on
+// the same position, defer the choice until scroll direction disambiguates it.
 int ResolveThumbForPress(const internal::SliderAxisMetrics& axis,
                          uint16_t start_pos, uint16_t end_pos,
                          int16_t primary_coord, bool& awaiting_direction) {
@@ -203,6 +219,8 @@ int ResolveThumbForPress(const internal::SliderAxisMetrics& axis,
   return kNoActiveThumb;
 }
 
+// Produces the minimal combined thumb repaint rect for any thumb positions that
+// changed in this update.
 Rect InvalidationRectForValueChange(const internal::SliderAxisMetrics& axis,
                                     uint16_t old_start_pos,
                                     uint16_t old_end_pos,
@@ -225,6 +243,8 @@ float TrackShapeMinPrimary(float visible_min_primary, int16_t track_radius) {
              : visible_min_primary - (float)track_radius;
 }
 
+// The pressed state narrows the active handle, matching the Material 3 pressed
+// affordance without changing the overall slider bounds.
 int16_t ThumbWidthForState(int16_t nominal_width, bool pressed) {
   if (!pressed) return nominal_width;
   int16_t width =
@@ -232,6 +252,8 @@ int16_t ThumbWidthForState(int16_t nominal_width, bool pressed) {
   return width < 1 ? 1 : width;
 }
 
+// As the pressed thumb narrows, reduce the track/thumb gap just enough to keep
+// the perceived clearance stable.
 int16_t TrackGapForThumbWidth(const internal::SliderSizeMetrics& size_metrics,
                               int16_t thumb_width) {
   int16_t gap = size_metrics.track_handle_gap -
@@ -239,6 +261,8 @@ int16_t TrackGapForThumbWidth(const internal::SliderSizeMetrics& size_metrics,
   return gap < 0 ? 0 : gap;
 }
 
+// Restricts drawTiled() to the dirty run while still spanning the full
+// cross-axis of the widget.
 Rect GetTrackTileBounds(const Rect& widget_bounds, const roo_display::Box& clip,
                         bool vertical) {
   if (vertical) {
@@ -249,6 +273,8 @@ Rect GetTrackTileBounds(const Rect& widget_bounds, const roo_display::Box& clip,
               widget_bounds.yMax());
 }
 
+// Expands thumb redraw just enough to cover the visual gap that belongs to the
+// thumb silhouette.
 Rect GetHandleTileBounds(const Rect& widget_bounds,
                          const roo_display::Box& handle_bounds,
                          int16_t track_gap, bool vertical) {
@@ -260,6 +286,7 @@ Rect GetHandleTileBounds(const Rect& widget_bounds,
   return Rect::Intersect(expanded, widget_bounds);
 }
 
+// Tiles a rounded track drawable only across the dirty slice for this segment.
 void DrawTrackPiece(const Canvas& canvas, const roo_display::Drawable& piece,
                     const Rect& widget_bounds,
                     const roo_display::Box& clip_bounds, bool vertical) {
@@ -268,6 +295,8 @@ void DrawTrackPiece(const Canvas& canvas, const roo_display::Drawable& piece,
   canvas.drawTiled(piece, tile_bounds, kNoAlign);
 }
 
+// Builds the axis helper that converts between value positions, local
+// coordinates, and orientation-aware geometry.
 internal::SliderAxisMetrics MakeSliderAxisMetrics(const RangeSlider& slider) {
   const internal::SliderSizeMetrics& size_metrics =
       internal::ResolveSliderSizeMetrics(slider.style().size);
@@ -277,6 +306,8 @@ internal::SliderAxisMetrics MakeSliderAxisMetrics(const RangeSlider& slider) {
       slider.style().orientation == SliderOrientation::kVertical);
 }
 
+// Turns the cached main-axis bubble span into a conservative local rect so the
+// parent can invalidate only the portion of overflow that actually changed.
 Rect IndicatorDirtyRectFromSpan(const internal::DirtySpan& span, int16_t width,
                                 int16_t height, SliderStyle style) {
   if (span.empty() || width <= 0 || height <= 0) return Rect(0, 0, -1, -1);
@@ -318,6 +349,8 @@ struct ThumbPaintMetrics {
   internal::SliderVisualMetrics layout;
 };
 
+// Resolves the per-thumb paint metrics used to lay out the two independent
+// handles against the shared track.
 ThumbPaintMetrics ResolveThumbPaintMetrics(
     const SliderRange& range, float value,
     const internal::SliderAxisMetrics& axis,
@@ -334,6 +367,8 @@ ThumbPaintMetrics ResolveThumbPaintMetrics(
   };
 }
 
+// Produces the clip box that contains only the stop marks for one track
+// segment, leaving rounded end caps to the track drawables.
 roo_display::Box StopSegmentClipBox(const internal::SliderAxisMetrics& axis,
                                     const StopSegment& segment) {
   int16_t min_primary = (int16_t)ceilf(segment.min_primary);
@@ -351,6 +386,8 @@ inline bool SegmentContains(const StopSegment& segment, float primary) {
          primary <= segment.max_primary + 0.01f;
 }
 
+// Converts a stop position into a point centered on the track irrespective of
+// orientation.
 roo_display::FpPoint StopMarkCenter(const internal::SliderAxisMetrics& axis,
                                     float primary_center) {
   float cross_center = 0.5f * (float)axis.crossSpan() - 0.5f;
@@ -361,6 +398,8 @@ roo_display::FpPoint StopMarkCenter(const internal::SliderAxisMetrics& axis,
   return roo_display::FpPoint{primary_center, cross_center};
 }
 
+// Accumulates the exact primary-axis extent covered by stop circles so the
+// later track pass can exclude that run instead of repainting beneath them.
 void IncludeStopExtentsInRun(const internal::SliderAxisMetrics& axis,
                              const roo_display::Box& stop_extents,
                              StopRun& run) {
@@ -445,6 +484,8 @@ void RangeSlider::onShowPress(XDim x, YDim y) {
                                    axis.primaryCoordFromPoint(x, y),
                                    awaiting_direction);
   if (awaiting_direction) {
+    // Stacked thumbs need the first signed drag delta to decide whether the
+    // user intends to move the lower or the upper bound.
     active_thumb_ = kNoActiveThumb;
     awaiting_direction_ = true;
     return;
@@ -473,6 +514,8 @@ bool RangeSlider::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
   }
 
   if (awaiting_direction_) {
+    // Once the thumbs are stacked, use drag direction rather than hit-testing
+    // to decide which bound should peel away first.
     int16_t primary_delta = axis.primaryDelta(dx, dy);
     if (primary_delta < 0) {
       active_thumb_ = 0;
@@ -800,6 +843,8 @@ void RangeSlider::paint(const Canvas& canvas) const {
   roo_display::Box active_clip = axis.boxFromPrimaryCross(
       active_clip_min, start.layout.track_cross_start, active_clip_max,
       start.layout.track_cross_start + size_metrics.track_height - 1);
+  // The range track is painted as three contiguous pieces: inactive before the
+  // first thumb, active between the thumbs, and inactive after the second one.
   bool has_left_inactive_clip = true;
   int16_t left_inactive_max =
       (int16_t)floorf(start.layout.active_track_max_primary);
@@ -860,6 +905,10 @@ void RangeSlider::paint(const Canvas& canvas) const {
   Rect end_handle_tile_bounds = GetHandleTileBounds(
       widget_bounds, end_handle.extents(), end.track_gap, axis.isVertical());
 
+  // These clips are chosen so the two inactive runs, the active middle run,
+  // and both handle tiles cover the slider exactly without overwriting each
+  // other. Stops and value indicators are composed separately via exclusions
+  // and decorations.
   if (has_left_inactive_clip) {
     DrawTrackPiece(canvas, inactive_track, widget_bounds, left_inactive_clip,
                    axis.isVertical());
@@ -924,6 +973,8 @@ void RangeSlider::paintStops(const Canvas& canvas, Clipper& clipper) const {
   StopRun runs[3];
   int32_t stop_count =
       (int32_t)lroundf((range_.to - range_.from) / range_.step);
+  // First pass: discover the exact primary-axis span occupied by stops in each
+  // segment so later clipping and exclusions stay tight.
   for (int32_t i = 0; i <= stop_count; ++i) {
     float value = (i == stop_count) ? range_.to : range_.from + i * range_.step;
     uint16_t pos = internal::SliderPosFromValue(range_.from, range_.to, value);
@@ -957,6 +1008,8 @@ void RangeSlider::paintStops(const Canvas& canvas, Clipper& clipper) const {
     stop_canvas.clip(segment_clip_box.translate(canvas.dx(), canvas.dy()));
     bool has_previous_stop = false;
     StopSpan previous_span{0, -1};
+    // Second pass: paint each stop exactly once and fill only the gaps between
+    // neighboring circles so the later track paint can skip this entire run.
     for (int32_t i = 0; i <= stop_count; ++i) {
       float value =
           (i == stop_count) ? range_.to : range_.from + i * range_.step;
@@ -979,6 +1032,8 @@ void RangeSlider::paintStops(const Canvas& canvas, Clipper& clipper) const {
         int16_t gap_min_primary = previous_span.max_primary + 1;
         int16_t gap_max_primary = current_span.min_primary - 1;
         if (gap_max_primary >= gap_min_primary) {
+          // Bridge only the pixels between adjacent stop circles; the circles
+          // themselves already provide the correct final color.
           stop_canvas.fillRect(
               axis.boxFromPrimaryCross(gap_min_primary, cross_start,
                                        gap_max_primary,
@@ -994,6 +1049,8 @@ void RangeSlider::paintStops(const Canvas& canvas, Clipper& clipper) const {
     roo_display::Box run_device_box = roo_display::Box::Intersect(
         run_box.translate(canvas.dx(), canvas.dy()), canvas.clip_box());
     if (!run_device_box.empty()) {
+      // Exclude the fully-settled stop run so subsequent track painting does
+      // not redraw underneath it.
       clipper.addExclusion(run_device_box);
     }
   }
