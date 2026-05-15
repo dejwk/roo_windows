@@ -6,6 +6,7 @@
 #include "roo_display/shape/smooth.h"
 #include "roo_windows/core/overlay_spec.h"
 #include "roo_windows/material3/slider/slider_internal.h"
+#include "roo_windows/material3/slider/slider_paint_internal.h"
 #include "roo_windows/material3/slider/slider_size_internal.h"
 #include "roo_windows/material3/slider/value_indicator.h"
 
@@ -17,56 +18,30 @@ namespace material3 {
 namespace {
 
 static constexpr int kTouchSlopPixels = Scaled(20);
-static constexpr float kPressedThumbWidthRatio = 0.5f;
 static constexpr int16_t kCenterGapHalfPixels = Scaled(2);
 static constexpr int16_t kTrackIconEdgeOffsetPixels = Scaled(4);
 static constexpr int16_t kTrackIconMinHandleCenterDistancePixels = Scaled(12);
 static constexpr int16_t kTrackIconStopPaddingPixels = Scaled(4);
-static constexpr int16_t kStopMarkRadiusPixels = Scaled(2);
-static constexpr int16_t kStopMarkSpanPixels = Scaled(4);
-
-// Applies the disabled Material 3 alpha treatment on top of the current
-// surface color so disabled slider pieces blend consistently with the theme.
-Color DisabledComposite(Color fg, uint8_t alpha, const Theme& theme) {
-  return AlphaBlend(theme.color.surface, fg.withA(alpha));
-}
-
-struct Tokens {
-  Color active_track;
-  Color inactive_track;
-  Color handle;
-  Color active_stop;
-  Color inactive_stop;
-};
-
-// Resolves the effective palette for the current enabled/disabled slider state.
-Tokens ResolveTokens(const Slider& widget) {
-  const Theme& theme = widget.theme();
-  if (!widget.isEnabled()) {
-    return Tokens{
-        DisabledComposite(theme.color.onSurface, 0x61, theme),
-        DisabledComposite(theme.color.onSurface, 0x1F, theme),
-        DisabledComposite(theme.color.onSurface, 0x61, theme),
-        theme.color.surface,
-        theme.color.surface,
-    };
-  }
-
-  return Tokens{
-      theme.color.primary,
-      theme.color.secondaryContainer,
-      theme.color.primary,
-      theme.color.onPrimary,
-      theme.color.onSecondaryContainer,
-  };
-}
-
-// Stop marks only make sense for discrete sliders, and tick_mode can still
-// suppress them explicitly.
-bool ShouldRenderStops(const Slider& widget) {
-  if (!internal::IsDiscreteSliderRange(widget.range().step)) return false;
-  return widget.style().tick_mode != SliderTickMode::kHidden;
-}
+using Tokens = internal::SliderPaintTokens;
+using StopSegment = internal::SliderPaintStopSegment;
+using StopRun = internal::SliderPaintStopRun;
+using StopSpan = internal::SliderPaintStopSpan;
+using internal::DrawTrackPiece;
+using internal::GetHandleTileBounds;
+using internal::IncludeStopExtentsInRun;
+using internal::IndicatorDirtyRectFromSpan;
+using internal::kStopMarkRadiusPixels;
+using internal::kStopMarkSpanPixels;
+using internal::MakeSliderAxisMetrics;
+using internal::ResolveTokens;
+using internal::SegmentContains;
+using internal::SegmentContainsRange;
+using internal::ShouldRenderStops;
+using internal::StopMarkCenter;
+using internal::StopSegmentClipBox;
+using internal::ThumbWidthForState;
+using internal::TrackGapForThumbWidth;
+using internal::TrackShapeMinPrimary;
 
 // True iff the indicator should be drawn this frame given the current
 // interaction state and behavior. kAlways shows the bubble at all times;
@@ -82,55 +57,6 @@ bool ShowsValueIndicator(const Slider& widget) {
       return true;
   }
   return false;
-}
-
-float TrackShapeMinPrimary(float visible_min_primary, int16_t track_radius) {
-  return visible_min_primary <= 0.0f
-             ? -0.5f
-             : visible_min_primary - (float)track_radius;
-}
-
-// The pressed state narrows the line handle, matching the Material 3 pressed
-// affordance without changing the overall slider bounds.
-int16_t ThumbWidthForState(int16_t nominal_width, bool pressed) {
-  if (!pressed) return nominal_width;
-  int16_t width =
-      (int16_t)roundf((float)nominal_width * kPressedThumbWidthRatio);
-  return width < 1 ? 1 : width;
-}
-
-// As the pressed thumb narrows, reduce the track/thumb gap just enough to keep
-// the perceived clearance stable.
-int16_t TrackGapForThumbWidth(const internal::SliderSizeMetrics& size_metrics,
-                              int16_t thumb_width) {
-  int16_t gap = size_metrics.track_handle_gap -
-                (size_metrics.handle_width - thumb_width) / 2;
-  return gap < 0 ? 0 : gap;
-}
-
-// Restricts drawTiled() to the dirty run while still spanning the full
-// cross-axis of the widget.
-Rect GetTrackTileBounds(const Rect& widget_bounds, const roo_display::Box& clip,
-                        bool vertical) {
-  if (vertical) {
-    return Rect(widget_bounds.xMin(), clip.yMin(), widget_bounds.xMax(),
-                clip.yMax());
-  }
-  return Rect(clip.xMin(), widget_bounds.yMin(), clip.xMax(),
-              widget_bounds.yMax());
-}
-
-// Expands thumb redraw just enough to cover the visual gap that belongs to the
-// thumb silhouette.
-Rect GetHandleTileBounds(const Rect& widget_bounds,
-                         const roo_display::Box& handle_bounds,
-                         int16_t track_gap, bool vertical) {
-  Rect expanded =
-      vertical ? Rect(widget_bounds.xMin(), handle_bounds.yMin() - track_gap,
-                      widget_bounds.xMax(), handle_bounds.yMax() + track_gap)
-               : Rect(handle_bounds.xMin() - track_gap, widget_bounds.yMin(),
-                      handle_bounds.xMax() + track_gap, widget_bounds.yMax());
-  return Rect::Intersect(expanded, widget_bounds);
 }
 
 // Measures icons in track-axis coordinates so the same placement logic works
@@ -163,87 +89,6 @@ bool CanPaintInsetIcon(const Slider& slider,
          size_metrics.supports_inset_icon && size_metrics.icon_size > 0;
 }
 
-// Tiles a rounded track drawable only across the dirty slice for this segment.
-void DrawTrackPiece(const Canvas& canvas, const roo_display::Drawable& piece,
-                    const Rect& widget_bounds,
-                    const roo_display::Box& clip_bounds, bool vertical) {
-  if (clip_bounds.empty()) return;
-  Rect tile_bounds = GetTrackTileBounds(widget_bounds, clip_bounds, vertical);
-  canvas.drawTiled(piece, tile_bounds, kNoAlign);
-}
-
-// Builds the axis helper that converts between value positions, local
-// coordinates, and orientation-aware geometry.
-internal::SliderAxisMetrics MakeSliderAxisMetrics(const Slider& slider) {
-  const internal::SliderSizeMetrics& size_metrics =
-      internal::ResolveSliderSizeMetrics(slider.style().size);
-  return internal::SliderAxisMetrics(
-      slider.width(), slider.height(), size_metrics.handle_width,
-      size_metrics.track_handle_gap,
-      slider.style().orientation == SliderOrientation::kVertical);
-}
-
-// Turns the cached main-axis bubble span into a conservative local rect so the
-// parent can invalidate only the portion of overflow that actually changed.
-Rect IndicatorDirtyRectFromSpan(const internal::DirtySpan& span, int16_t width,
-                                int16_t height, SliderStyle style) {
-  if (span.empty() || width <= 0 || height <= 0) return Rect(0, 0, -1, -1);
-  const internal::SliderSizeMetrics& size_metrics =
-      internal::ResolveSliderSizeMetrics(style.size);
-  Rect conservative = ValueIndicatorBubble::ConservativeBounds(
-      width, height, size_metrics.handle_width, style.value_indicator,
-      style.orientation);
-  if (conservative.empty()) return Rect(0, 0, -1, -1);
-  if (style.orientation == SliderOrientation::kVertical) {
-    return Rect(conservative.xMin(), span.min_coord, conservative.xMax(),
-                span.max_coord);
-  }
-  return Rect(span.min_coord, conservative.yMin(), span.max_coord,
-              conservative.yMax());
-}
-
-struct StopSegment {
-  float min_primary;
-  float max_primary;
-  Color track_color;
-  Color stop_color;
-  bool active;
-};
-
-struct StopRun {
-  bool has_marks = false;
-  int16_t min_primary = 0;
-  int16_t max_primary = -1;
-};
-
-struct StopSpan {
-  int16_t min_primary;
-  int16_t max_primary;
-};
-
-roo_display::Box StopSegmentClipBox(const internal::SliderAxisMetrics& axis,
-                                    const StopSegment& segment) {
-  int16_t min_primary = (int16_t)ceilf(segment.min_primary);
-  int16_t max_primary = (int16_t)floorf(segment.max_primary);
-  if (min_primary < 0) min_primary = 0;
-  if (max_primary >= axis.primarySpan()) max_primary = axis.primarySpan() - 1;
-  if (max_primary < min_primary) return roo_display::Box(0, 0, -1, -1);
-  int16_t cross_start = (axis.crossSpan() - kStopMarkSpanPixels) / 2;
-  return axis.boxFromPrimaryCross(min_primary, cross_start, max_primary,
-                                  cross_start + kStopMarkSpanPixels - 1);
-}
-
-inline bool SegmentContains(const StopSegment& segment, float primary) {
-  return primary >= segment.min_primary - 0.01f &&
-         primary <= segment.max_primary + 0.01f;
-}
-
-inline bool SegmentContainsRange(const StopSegment& segment, float min_primary,
-                                 float max_primary) {
-  return min_primary >= segment.min_primary - 0.01f &&
-         max_primary <= segment.max_primary + 0.01f;
-}
-
 // Splits the track into active/inactive runs. Centered sliders keep a small
 // empty gap around logical zero so the two halves do not visually merge.
 void BuildTrackSegments(const Slider& slider, const Tokens& tokens,
@@ -268,7 +113,7 @@ void BuildTrackSegments(const Slider& slider, const Tokens& tokens,
       segments[segment_count++] = StopSegment{
           0.0f,
           (float)std::min<int16_t>(left_inactive_max, axis.primarySpan() - 1),
-          tokens.inactive_track, tokens.inactive_stop, false};
+          tokens.inactive_track, tokens.inactive_stop};
     }
 
     float active_track_min_primary = thumb_on_or_right_of_center
@@ -280,7 +125,7 @@ void BuildTrackSegments(const Slider& slider, const Tokens& tokens,
     if (active_track_max_primary >= active_track_min_primary) {
       segments[segment_count++] =
           StopSegment{active_track_min_primary, active_track_max_primary,
-                      tokens.active_track, tokens.active_stop, true};
+                      tokens.active_track, tokens.active_stop};
     }
 
     int16_t handle_right_edge =
@@ -294,7 +139,7 @@ void BuildTrackSegments(const Slider& slider, const Tokens& tokens,
       segments[segment_count++] =
           StopSegment{(float)std::max<int16_t>(0, right_inactive_min),
                       (float)(axis.primarySpan() - 1), tokens.inactive_track,
-                      tokens.inactive_stop, false};
+                      tokens.inactive_stop};
     }
     return;
   }
@@ -302,12 +147,12 @@ void BuildTrackSegments(const Slider& slider, const Tokens& tokens,
   if (layout.active_track_max_primary >= 0.0f) {
     segments[segment_count++] =
         StopSegment{0.0f, layout.active_track_max_primary, tokens.active_track,
-                    tokens.active_stop, true};
+                    tokens.active_stop};
   }
   if (layout.inactive_track_min_primary < axis.primarySpan()) {
     segments[segment_count++] = StopSegment{
         layout.inactive_track_min_primary, (float)(axis.primarySpan() - 1),
-        tokens.inactive_track, tokens.inactive_stop, false};
+        tokens.inactive_track, tokens.inactive_stop};
   }
 }
 
@@ -396,38 +241,6 @@ bool ResolveTrackIconBounds(const internal::SliderAxisMetrics& axis,
                     (float)kTrackIconMinHandleCenterDistancePixels) -
                     icon_primary_span + 1);
   return try_candidate(jump_candidate);
-}
-
-// Converts a stop position into a point centered on the track irrespective of
-// orientation.
-roo_display::FpPoint StopMarkCenter(const internal::SliderAxisMetrics& axis,
-                                    float primary_center) {
-  float cross_center = 0.5f * (float)axis.crossSpan() - 0.5f;
-  if (axis.isVertical()) {
-    return roo_display::FpPoint{cross_center,
-                                axis.displayPrimary(primary_center)};
-  }
-  return roo_display::FpPoint{primary_center, cross_center};
-}
-
-// Accumulates the exact primary-axis extent covered by stop circles so the
-// later track pass can exclude that run instead of repainting beneath them.
-void IncludeStopExtentsInRun(const internal::SliderAxisMetrics& axis,
-                             const roo_display::Box& stop_extents,
-                             StopRun& run) {
-  StopSpan span =
-      axis.isVertical()
-          ? StopSpan{(int16_t)(axis.primarySpan() - 1 - stop_extents.yMax()),
-                     (int16_t)(axis.primarySpan() - 1 - stop_extents.yMin())}
-          : StopSpan{stop_extents.xMin(), stop_extents.xMax()};
-  if (!run.has_marks) {
-    run.has_marks = true;
-    run.min_primary = span.min_primary;
-    run.max_primary = span.max_primary;
-    return;
-  }
-  if (span.min_primary < run.min_primary) run.min_primary = span.min_primary;
-  if (span.max_primary > run.max_primary) run.max_primary = span.max_primary;
 }
 
 // Grows the painted icon bounds along the track axis to reserve breathing room
