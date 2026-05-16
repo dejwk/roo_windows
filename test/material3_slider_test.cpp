@@ -348,6 +348,8 @@ class RecordingPanel : public Panel {
   }
 };
 
+// Verifies that the slider contributes no default padding or margins, so its
+// visual geometry is controlled entirely by its own layout and paint logic.
 TEST(Material3Slider, UsesZeroDefaultInsets) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -358,6 +360,8 @@ TEST(Material3Slider, UsesZeroDefaultInsets) {
   EXPECT_EQ(Margins(0), slider.getMargins());
 }
 
+// Verifies that Material 3 sliders disable the generic overlay path and that
+// the overlay focus point follows the thumb center across the full travel.
 TEST(Material3Slider, UsesNoOverlayAndHandleCenteredFocus) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -382,6 +386,8 @@ TEST(Material3Slider, UsesNoOverlayAndHandleCenteredFocus) {
   EXPECT_FLOAT_EQ(0.5f * (float)(Scaled(44) - 1), end_focus.y);
 }
 
+// Verifies that the default slider advertises the Material 3 minimum touch
+// target size rather than a tighter visual-only bound.
 TEST(Material3Slider, ReportsMaterial3MinimumSize) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -393,6 +399,8 @@ TEST(Material3Slider, ReportsMaterial3MinimumSize) {
   EXPECT_EQ(Scaled(44), dims.height());
 }
 
+// Verifies that horizontal sloppy-touch bounds expand mainly along the primary
+// axis so drags are easier to keep engaged near the track ends.
 TEST(Material3Slider, HorizontalSloppyTouchBoundsExtendPrimaryAxis) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -408,6 +416,8 @@ TEST(Material3Slider, HorizontalSloppyTouchBoundsExtendPrimaryAxis) {
   EXPECT_EQ(Scaled(44) - 1 + 3, touch_bounds.yMax());
 }
 
+// Verifies that the vertical range slider reports the same sloppy-touch region
+// in local and parent coordinates, with only the expected translation applied.
 TEST(Material3Slider, VerticalRangeSliderSloppyBoundsTrackParentOverride) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -428,6 +438,8 @@ TEST(Material3Slider, VerticalRangeSliderSloppyBoundsTrackParentOverride) {
             parent_touch);
 }
 
+// Verifies that an unconstrained measure resolves to the slider's default
+// Material 3 square footprint instead of collapsing to zero.
 TEST(Material3Slider, ReportsNaturalMeasureAsFortyFourByFortyFour) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -441,6 +453,8 @@ TEST(Material3Slider, ReportsNaturalMeasureAsFortyFourByFortyFour) {
   EXPECT_EQ(Scaled(44), measured.height());
 }
 
+// Verifies the preferred-size contract for the default horizontal slider:
+// match parent on the main axis and exact sizing on the cross axis.
 TEST(Material3Slider, ReportsMatchParentPreferredWidthAndExactHeight) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -454,6 +468,8 @@ TEST(Material3Slider, ReportsMatchParentPreferredWidthAndExactHeight) {
   EXPECT_EQ(Scaled(44), preferred.height().value());
 }
 
+// Verifies that selecting a larger size preset updates all sizing surfaces,
+// including suggested minimums, measured size, and preferred size.
 TEST(Material3Slider, SizePresetUpdatesMeasuredAndPreferredDimensions) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -477,6 +493,8 @@ TEST(Material3Slider, SizePresetUpdatesMeasuredAndPreferredDimensions) {
   EXPECT_EQ(Scaled(68), preferred.height().value());
 }
 
+// Verifies that a vertical slider swaps the sizing policy so the preset drives
+// the exact width while the height stays match-parent.
 TEST(Material3Slider, VerticalSizePresetUsesExactWidthFromPreset) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -494,6 +512,8 @@ TEST(Material3Slider, VerticalSizePresetUsesExactWidthFromPreset) {
   EXPECT_TRUE(preferred.height().isMatchParent());
 }
 
+// Verifies that the slider's container visuals resolve against the primary
+// color role, which drives its track and thumb color selection.
 TEST(Material3Slider, EffectiveContainerRoleIsPrimary) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -503,6 +523,8 @@ TEST(Material3Slider, EffectiveContainerRoleIsPrimary) {
   EXPECT_EQ(ColorRole::kPrimary, slider.effectiveContainerRole());
 }
 
+// Verifies that pressed-state feedback is rendered directly by the slider and
+// does not opt into the framework overlay or click-animation paths.
 TEST(Material3Slider, PressStateDoesNotUseOverlayOrClickAnimation) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -513,6 +535,8 @@ TEST(Material3Slider, PressStateDoesNotUseOverlayOrClickAnimation) {
   EXPECT_FALSE(slider.showClickAnimation());
 }
 
+// Verifies that the compatibility constructor still exposes a unit semantic
+// range and maps the legacy normalized position to the same value.
 TEST(Material3Slider, CompatibilityConstructorUsesUnitRangeAndValueMapping) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -526,6 +550,8 @@ TEST(Material3Slider, CompatibilityConstructorUsesUnitRangeAndValueMapping) {
   EXPECT_EQ(32768, slider.getPos());
 }
 
+// Verifies that the semantic constructor preserves the requested domain value
+// while deriving the expected normalized compatibility position.
 TEST(Material3Slider, SemanticConstructorMapsValueToNormalizedPosition) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -538,6 +564,8 @@ TEST(Material3Slider, SemanticConstructorMapsValueToNormalizedPosition) {
   EXPECT_EQ(32768, slider.getPos());
 }
 
+// Verifies that setting a semantic value outside the configured range clamps it
+// to the nearest endpoint and updates the normalized position consistently.
 TEST(Material3Slider, SetValueClampsIntoConfiguredDomain) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -549,6 +577,8 @@ TEST(Material3Slider, SetValueClampsIntoConfiguredDomain) {
   EXPECT_EQ(65535, slider.getPos());
 }
 
+// Verifies that discrete sliders snap their initial semantic value to the
+// nearest valid step before publishing value and position.
 TEST(Material3Slider, DiscreteConstructorSnapsInitialValue) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -559,6 +589,8 @@ TEST(Material3Slider, DiscreteConstructorSnapsInitialValue) {
   EXPECT_EQ((uint16_t)52428, slider.getPos());
 }
 
+// Verifies that a programmatic semantic value update on a discrete slider uses
+// the same nearest-step snapping logic as construction.
 TEST(Material3Slider, SetValueSnapsToNearestDiscreteStep) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -570,6 +602,8 @@ TEST(Material3Slider, SetValueSnapsToNearestDiscreteStep) {
   EXPECT_EQ((uint16_t)52428, slider.getPos());
 }
 
+// Verifies that a programmatic normalized-position update is also snapped back
+// onto the discrete semantic grid before being stored.
 TEST(Material3Slider, SetPosSnapsToNearestDiscreteStep) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -581,6 +615,8 @@ TEST(Material3Slider, SetPosSnapsToNearestDiscreteStep) {
   EXPECT_EQ((uint16_t)52428, slider.getPos());
 }
 
+// Verifies that replacing the semantic range clamps the current value into the
+// new domain instead of leaving an out-of-range selection behind.
 TEST(Material3Slider, SetRangeClampsCurrentValueIntoNewDomain) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -594,6 +630,8 @@ TEST(Material3Slider, SetRangeClampsCurrentValueIntoNewDomain) {
   EXPECT_EQ(0, slider.getPos());
 }
 
+// Verifies that an invalid range update is rejected atomically and leaves the
+// slider's previous range, value, and normalized position untouched.
 TEST(Material3Slider, InvalidRangeIsRejectedWithoutChangingState) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -607,6 +645,8 @@ TEST(Material3Slider, InvalidRangeIsRejectedWithoutChangingState) {
   EXPECT_EQ(32768, slider.getPos());
 }
 
+// Verifies that constructing a slider with an invalid range fails fast instead
+// of creating a partially initialized widget with inconsistent invariants.
 TEST(Material3Slider, InvalidConstructorRangeFailsFast) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -619,6 +659,8 @@ TEST(Material3Slider, InvalidConstructorRangeFailsFast) {
       "Invalid slider range");
 }
 
+// Verifies that changing to a discrete step that does not tile the range is
+// rejected, preserving the existing discrete configuration.
 TEST(Material3Slider, IncompatibleDiscreteStepIsRejected) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -632,6 +674,8 @@ TEST(Material3Slider, IncompatibleDiscreteStepIsRejected) {
   EXPECT_FLOAT_EQ(2.0f, slider.value());
 }
 
+// Verifies that negative discrete step sizes are rejected outright rather than
+// silently normalizing them into some other interpretation.
 TEST(Material3Slider, NegativeStepIsRejected) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -642,6 +686,8 @@ TEST(Material3Slider, NegativeStepIsRejected) {
   EXPECT_FLOAT_EQ(1.0f, slider.range().step);
 }
 
+// Verifies that the centered variant changes only paint semantics, not the
+// underlying value-to-position mapping for the current value.
 TEST(Material3Slider, CenteredVariantPreservesValueMapping) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -654,6 +700,8 @@ TEST(Material3Slider, CenteredVariantPreservesValueMapping) {
   EXPECT_EQ((uint16_t)26214, slider.getPos());
 }
 
+// Verifies that switching variants updates centered-vs-standard semantics
+// without perturbing the current value or normalized thumb position.
 TEST(Material3Slider, SetVariantUpdatesSemanticVariantOnly) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -666,6 +714,8 @@ TEST(Material3Slider, SetVariantUpdatesSemanticVariantOnly) {
   EXPECT_EQ((uint16_t)26214, slider.getPos());
 }
 
+// Verifies that medium sliders with a configured inset icon actually render
+// the icon into the active track with the expected foreground color.
 TEST_F(Material3SliderRenderTest, MediumStandardInsetIconPaintsWhenConfigured) {
   SliderStyle style{};
   style.size = SliderSize::kMedium;
@@ -684,6 +734,8 @@ TEST_F(Material3SliderRenderTest, MediumStandardInsetIconPaintsWhenConfigured) {
             pixelAt(kSliderX + 12, kSliderY + 26));
 }
 
+// Verifies that size presets which do not support inset icons ignore the icon
+// request and leave the sampled track pixel unchanged.
 TEST_F(Material3SliderRenderTest, SmallSliderIgnoresInsetIcon) {
   SliderStyle style{};
   style.size = SliderSize::kSmall;
@@ -700,6 +752,8 @@ TEST_F(Material3SliderRenderTest, SmallSliderIgnoresInsetIcon) {
             pixelAt(kSliderX + 12, kSliderY + 22));
 }
 
+// Verifies that an inset icon anchored on the active side jumps past the thumb
+// at the minimum value instead of colliding with the handle geometry.
 TEST_F(Material3SliderRenderTest, InsetIconJumpsPastHandleAtMinimumValue) {
   SliderStyle style{};
   style.size = SliderSize::kMedium;
@@ -737,6 +791,8 @@ TEST_F(Material3SliderRenderTest, InsetIconJumpsPastHandleAtMinimumValue) {
             (int16_t)ceilf(layout.thumb_center_primary + (float)Scaled(12)));
 }
 
+// Verifies that an inset icon anchored on the inactive side paints into the
+// inactive run and uses the inactive track foreground color.
 TEST_F(Material3SliderRenderTest, InactiveSideInsetIconPaintsWhenConfigured) {
   SliderStyle style{};
   style.size = SliderSize::kMedium;
@@ -760,6 +816,8 @@ TEST_F(Material3SliderRenderTest, InactiveSideInsetIconPaintsWhenConfigured) {
                     kSliderY + icon_rect.yMin() + icon_rect.height() / 2));
 }
 
+// Verifies that an inactive-side inset icon also jumps away from the thumb at
+// the maximum value, preserving the configured clearance around the handle.
 TEST_F(Material3SliderRenderTest,
        InactiveSideInsetIconJumpsPastHandleAtMaximumValue) {
   SliderStyle style{};
@@ -799,6 +857,9 @@ TEST_F(Material3SliderRenderTest,
             (int16_t)floorf(layout.thumb_center_primary - (float)Scaled(12)));
 }
 
+// Verifies that the reserved padding around an active-side inset icon
+// suppresses nearby stop marks so the icon does not visually collide with
+// ticks.
 TEST_F(Material3SliderRenderTest,
        DiscreteInsetIconPaddingStaysClearOfStopMarks) {
   SliderStyle style{};
@@ -838,6 +899,8 @@ TEST_F(Material3SliderRenderTest,
       pixelAt(kSliderX + sample_local_x, kSliderY + slider_ptr->height() / 2));
 }
 
+// Verifies the same stop-suppression behavior for an inactive-side inset icon,
+// ensuring reserved padding stays free of icon-colored stop marks.
 TEST_F(Material3SliderRenderTest,
        InactiveSideDiscreteInsetIconPaddingStaysClearOfStopMarks) {
   SliderStyle style{};
@@ -880,6 +943,8 @@ TEST_F(Material3SliderRenderTest,
             sample);
 }
 
+// Verifies that when an inset icon relocates after a position change, the old
+// location is repainted away and the new location is painted in one refresh.
 TEST_F(Material3SliderRenderTest,
        InsetIconJumpRepaintsOldAndNewLocationsOnPositionChange) {
   SliderStyle style{};
@@ -933,6 +998,8 @@ TEST_F(Material3SliderRenderTest,
   EXPECT_EQ(expected_new_icon_color, pixelAt(new_center_x, new_center_y));
 }
 
+// Verifies that revealing a stop mark previously hidden by inset-icon padding
+// repaints the full stop when the icon moves away at the minimum value.
 TEST_F(Material3SliderRenderTest,
        InsetIconRevealOfTwentyPercentStopRepaintsFullStopAtMinimumValue) {
   SliderStyle style{};
@@ -967,6 +1034,8 @@ TEST_F(Material3SliderRenderTest,
             pixelAt(stop_rightmost_x, center_y));
 }
 
+// Verifies that centered discrete sliders still apply nearest-step snapping to
+// semantic values even though the visual fill is centered around the midpoint.
 TEST(Material3Slider, CenteredDiscreteVariantStillSnapsValues) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -979,6 +1048,8 @@ TEST(Material3Slider, CenteredDiscreteVariantStillSnapsValues) {
   EXPECT_EQ((uint16_t)42598, slider.getPos());
 }
 
+// Verifies that a programmatic value change triggers only the value-change hook
+// and does not emit interaction lifecycle callbacks meant for user gestures.
 TEST(Material3Slider, ProgrammaticValueChangeFiresOnlyValueChangeHook) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -992,6 +1063,8 @@ TEST(Material3Slider, ProgrammaticValueChangeFiresOnlyValueChangeHook) {
   EXPECT_FLOAT_EQ(4.0f, slider.values[0]);
 }
 
+// Verifies the same hook behavior for programmatic normalized-position changes,
+// ensuring they surface as value changes only.
 TEST(Material3Slider, ProgrammaticPositionChangeFiresOnlyValueChangeHook) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -1005,6 +1078,8 @@ TEST(Material3Slider, ProgrammaticPositionChangeFiresOnlyValueChangeHook) {
   EXPECT_FLOAT_EQ(5.0000763f, slider.values[0]);
 }
 
+// Verifies that the range-slider constructor orders the endpoints and snaps
+// both initial values onto the discrete grid before exposing them.
 TEST(Material3RangeSlider, ConstructorOrdersAndSnapsInitialValues) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -1017,6 +1092,8 @@ TEST(Material3RangeSlider, ConstructorOrdersAndSnapsInitialValues) {
   EXPECT_FLOAT_EQ(5.0f, slider.endValue());
 }
 
+// Verifies that programmatic range-slider updates clamp, snap, and reorder the
+// supplied endpoints into a valid in-domain selection.
 TEST(Material3RangeSlider, SetValuesClampsSnapsAndOrdersIntoDomain) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -1028,6 +1105,8 @@ TEST(Material3RangeSlider, SetValuesClampsSnapsAndOrdersIntoDomain) {
   EXPECT_FLOAT_EQ(40.0f, slider.endValue());
 }
 
+// Verifies that changing the range-slider domain clamps both thumbs into the
+// new range rather than preserving now-invalid endpoint values.
 TEST(Material3RangeSlider, SetRangeClampsExistingValuesIntoNewDomain) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -1041,6 +1120,8 @@ TEST(Material3RangeSlider, SetRangeClampsExistingValuesIntoNewDomain) {
   EXPECT_FLOAT_EQ(30.0f, slider.endValue());
 }
 
+// Verifies that an invalid range update on the range slider is rejected
+// atomically and leaves the previous state intact.
 TEST(Material3RangeSlider, InvalidRangeIsRejectedWithoutChangingState) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -1054,6 +1135,8 @@ TEST(Material3RangeSlider, InvalidRangeIsRejectedWithoutChangingState) {
   EXPECT_FLOAT_EQ(35.0f, slider.endValue());
 }
 
+// Verifies that impossible range-slider discrete domains fail fast at
+// construction time instead of leaving broken separation invariants.
 TEST(Material3RangeSlider, InvalidConstructorRangeFailsFast) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -1066,6 +1149,8 @@ TEST(Material3RangeSlider, InvalidConstructorRangeFailsFast) {
       "Invalid slider range");
 }
 
+// Verifies that programmatic two-thumb updates surface as a single value-change
+// callback with no active thumb, not as a user interaction sequence.
 TEST(Material3RangeSlider, ProgrammaticSetValuesFiresOnlyValueChangeHook) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -1082,6 +1167,8 @@ TEST(Material3RangeSlider, ProgrammaticSetValuesFiresOnlyValueChangeHook) {
   EXPECT_FLOAT_EQ(70.0f, slider.end_values[0]);
 }
 
+// Verifies that minimum thumb separation is enforced after discrete snapping,
+// potentially pushing one endpoint farther than the raw requested values.
 TEST(Material3RangeSlider, MinimumSeparationIsEnforcedInDiscreteMode) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -1095,6 +1182,8 @@ TEST(Material3RangeSlider, MinimumSeparationIsEnforcedInDiscreteMode) {
   EXPECT_FLOAT_EQ(10.0f, slider.endValue());
 }
 
+// Verifies that negative minimum-separation values are rejected without
+// mutating the existing separation constraint.
 TEST(Material3RangeSlider, NegativeMinimumSeparationIsRejected) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -1105,6 +1194,8 @@ TEST(Material3RangeSlider, NegativeMinimumSeparationIsRejected) {
   EXPECT_FLOAT_EQ(0.0f, slider.minSeparation());
 }
 
+// Verifies that the range slider, like the single slider, owns its pressed
+// visuals and avoids generic overlay or click-animation behavior.
 TEST(Material3RangeSlider, PressStateDoesNotUseOverlayOrClickAnimation) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -1115,6 +1206,8 @@ TEST(Material3RangeSlider, PressStateDoesNotUseOverlayOrClickAnimation) {
   EXPECT_FALSE(slider.showClickAnimation());
 }
 
+// Verifies that the range slider's extra-large preset feeds through all size
+// reporting surfaces, not just the paint metrics.
 TEST(Material3RangeSlider, SizePresetUpdatesMeasuredAndPreferredDimensions) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -1137,6 +1230,8 @@ TEST(Material3RangeSlider, SizePresetUpdatesMeasuredAndPreferredDimensions) {
   EXPECT_EQ(Scaled(108), preferred.height().value());
 }
 
+// Verifies that the range slider's point-overlay focus follows whichever
+// thumb becomes active through tapping and subsequent dragging.
 TEST_F(Material3SliderAppTest,
        RangeSliderOverlayFocusTracksTappedAndDraggedThumb) {
   auto tracking_slider = std::make_unique<TrackingRangeSlider>(
@@ -1171,6 +1266,8 @@ TEST_F(Material3SliderAppTest,
   EXPECT_FLOAT_EQ(0.5f * (float)(tracking->height() - 1), dragged_focus.y);
 }
 
+// Verifies that a horizontal drag along the main axis captures and moves the
+// single slider toward the tapped side.
 TEST_F(Material3SliderAppTest, HorizontalScrollUpdatesPosition) {
   Slider& slider = addSlider(0);
 
@@ -1178,6 +1275,8 @@ TEST_F(Material3SliderAppTest, HorizontalScrollUpdatesPosition) {
   EXPECT_GT(slider.getPos(), 60000);
 }
 
+// Verifies that a mostly vertical gesture does not get interpreted as a drag
+// on a horizontal slider before any dragging interaction has started.
 TEST_F(Material3SliderAppTest,
        VerticalDominantScrollDoesNotCaptureWhenNotDragging) {
   Slider& slider = addSlider(12345);
@@ -1186,6 +1285,8 @@ TEST_F(Material3SliderAppTest,
   EXPECT_EQ(12345, slider.getPos());
 }
 
+// Verifies that vertical orientation swaps the preferred-size contract so the
+// main axis becomes match-parent and the cross axis becomes exact.
 TEST(Material3SliderOrientation, VerticalPreferredSizeSwapsMajorAxis) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -1202,6 +1303,8 @@ TEST(Material3SliderOrientation, VerticalPreferredSizeSwapsMajorAxis) {
   EXPECT_TRUE(preferred.height().isMatchParent());
 }
 
+// Verifies that upward motion on a vertical slider maps to increasing values,
+// matching the reversed primary-axis interpretation.
 TEST_F(Material3SliderAppTest, VerticalSliderScrollUpUpdatesPosition) {
   SliderStyle style{};
   style.orientation = SliderOrientation::kVertical;
@@ -1217,6 +1320,8 @@ TEST_F(Material3SliderAppTest, VerticalSliderScrollUpUpdatesPosition) {
   EXPECT_GT(slider().getPos(), 60000);
 }
 
+// Verifies that a mostly horizontal gesture does not capture a vertical slider
+// when no drag interaction is currently in progress.
 TEST_F(Material3SliderAppTest,
        VerticalSliderHorizontalDominantScrollDoesNotCaptureWhenNotDragging) {
   SliderStyle style{};
@@ -1235,6 +1340,8 @@ TEST_F(Material3SliderAppTest,
   EXPECT_EQ(old_pos, slider().getPos());
 }
 
+// Verifies that tapping near the top of a vertical slider maps to a high value,
+// proving the y-axis is inverted relative to screen coordinates.
 TEST_F(Material3SliderAppTest, VerticalTapToJumpUsesReversedYMapping) {
   SliderStyle style{};
   style.orientation = SliderOrientation::kVertical;
@@ -1250,6 +1357,8 @@ TEST_F(Material3SliderAppTest, VerticalTapToJumpUsesReversedYMapping) {
   EXPECT_GT(slider().getPos(), 62000);
 }
 
+// Verifies that horizontal tap-to-jump still uses the current normalized track
+// mapping and lands at the midpoint when tapping the visual center.
 TEST_F(Material3SliderAppTest, TapToJumpUsesCurrentNormalizedMapping) {
   Slider& slider = addSlider(0);
 
@@ -1257,6 +1366,8 @@ TEST_F(Material3SliderAppTest, TapToJumpUsesCurrentNormalizedMapping) {
   EXPECT_EQ(32768, slider.getPos());
 }
 
+// Verifies that tap-to-jump on a discrete slider resolves to the nearest valid
+// step rather than an arbitrary interpolated position.
 TEST_F(Material3SliderAppTest, TapToJumpSnapsToNearestDiscreteStep) {
   auto discrete_slider =
       std::make_unique<Slider>(env_, SliderRange{0.0f, 5.0f, 1.0f}, 0.0f);
@@ -1271,6 +1382,8 @@ TEST_F(Material3SliderAppTest, TapToJumpSnapsToNearestDiscreteStep) {
   EXPECT_EQ((uint16_t)52428, slider().getPos());
 }
 
+// Verifies that the interactive-change callback is reserved for genuine user
+// actions and not for programmatic position updates.
 TEST_F(Material3SliderAppTest,
        InteractiveChangeFiresOnlyForUserOriginatedPositionChanges) {
   Slider& slider = addSlider(0);
@@ -1297,6 +1410,8 @@ TEST_F(Material3SliderAppTest,
   EXPECT_GT(slider.getPos(), 60000);
 }
 
+// Verifies the tap lifecycle order for the single slider: interaction start,
+// user value change, and interaction end, with the compatibility value echoed.
 TEST_F(Material3SliderAppTest,
        TapLifecycleFiresStartValueCompatibilityEndInOrder) {
   auto tracking_slider = std::make_unique<TrackingSlider>(env_, 0);
@@ -1321,6 +1436,8 @@ TEST_F(Material3SliderAppTest,
   EXPECT_FLOAT_EQ(32768.0f / 65535.0f, tracking->values[1]);
 }
 
+// Verifies that drag gestures emit only one interaction-start callback and
+// still terminate cleanly when canceled rather than released.
 TEST_F(Material3SliderAppTest, DragLifecycleFiresSingleStartAndEndsOnCancel) {
   auto tracking_slider = std::make_unique<TrackingSlider>(env_, 0);
   slider_ = tracking_slider.get();
@@ -1348,6 +1465,8 @@ TEST_F(Material3SliderAppTest, DragLifecycleFiresSingleStartAndEndsOnCancel) {
   EXPECT_FLOAT_EQ(tracking->values[0], tracking->values[1]);
 }
 
+// Verifies that releasing an active drag is consumed by the slider, clears the
+// pressed state, and emits a matching interaction-end callback.
 TEST_F(Material3SliderAppTest, DragTouchUpIsConsumedAndEndsInteraction) {
   auto tracking_slider = std::make_unique<TrackingSlider>(env_, 0);
   slider_ = tracking_slider.get();
@@ -1375,6 +1494,8 @@ TEST_F(Material3SliderAppTest, DragTouchUpIsConsumedAndEndsInteraction) {
   EXPECT_FALSE(tracking->isPressed());
 }
 
+// Verifies that range-slider drags honor the configured minimum separation,
+// keep the active-thumb bookkeeping accurate, and still emit lifecycle hooks.
 TEST_F(Material3SliderAppTest,
        RangeSliderDragRespectsMinimumSeparationAndReportsActiveThumb) {
   auto tracking_slider = std::make_unique<TrackingRangeSlider>(
@@ -1417,6 +1538,8 @@ TEST_F(Material3SliderAppTest,
   EXPECT_FLOAT_EQ(75.0f, tracking->end_values.back());
 }
 
+// Verifies that lifting a drag on the range slider is consumed, ends the
+// interaction, and clears the active-thumb state.
 TEST_F(Material3SliderAppTest, RangeSliderDragTouchUpIsConsumedAndEnds) {
   auto tracking_slider = std::make_unique<TrackingRangeSlider>(
       env_, SliderRange{0.0f, 100.0f}, 25.0f, 75.0f);
@@ -1447,6 +1570,8 @@ TEST_F(Material3SliderAppTest, RangeSliderDragTouchUpIsConsumedAndEnds) {
   EXPECT_FALSE(tracking->isPressed());
 }
 
+// Verifies that when both thumbs overlap, the range slider delays thumb choice
+// until drag direction reveals which side the user intends to move.
 TEST_F(Material3SliderAppTest, OverlappingRangeThumbsWaitForDirectionalIntent) {
   auto tracking_slider = std::make_unique<TrackingRangeSlider>(
       env_, SliderRange{0.0f, 100.0f}, 50.0f, 50.0f);
@@ -1477,6 +1602,8 @@ TEST_F(Material3SliderAppTest, OverlappingRangeThumbsWaitForDirectionalIntent) {
   EXPECT_EQ(-1, tracking->activeThumbIndex());
 }
 
+// Verifies the baseline painted geometry of a midpoint slider, including active
+// run, inactive run, thumb, and untouched background around the track.
 TEST_F(Material3SliderRenderTest,
        PaintsCurrentTrackAndHandleGeometryAtMidpointPosition) {
   constexpr Color kBackdropColor(0xFFF3EFE7);
@@ -1507,6 +1634,8 @@ TEST_F(Material3SliderRenderTest,
   EXPECT_EQ(background, pixelAt(kSliderX + 20, kSliderY + 5));
 }
 
+// Verifies that the centered variant paints its active segment relative to the
+// visual midpoint instead of from the track origin.
 TEST_F(Material3SliderRenderTest,
        CenteredVariantPaintsActiveTrackFromVisualMidpoint) {
   constexpr Color kBackdropColor(0xFFF3EFE7);
@@ -1556,6 +1685,8 @@ TEST_F(Material3SliderRenderTest,
   EXPECT_EQ(inactive, pixelAt(right_inactive_x, kSliderY + kSliderHeight / 2));
 }
 
+// Verifies that a range slider paints its active segment strictly between the
+// two thumbs while leaving inactive segments on both outer sides.
 TEST_F(Material3SliderRenderTest, RangeSliderPaintsActiveTrackBetweenThumbs) {
   constexpr Color kBackdropColor(0xFFF3EFE7);
 
@@ -1593,6 +1724,8 @@ TEST_F(Material3SliderRenderTest, RangeSliderPaintsActiveTrackBetweenThumbs) {
   EXPECT_EQ(primary, pixelAt(end_handle_x, kSliderY + 5));
 }
 
+// Verifies that discrete single sliders paint stop marks using active and
+// inactive stop colors on the corresponding sides of the thumb.
 TEST_F(Material3SliderRenderTest,
        DiscreteSliderPaintsActiveAndInactiveStopMarks) {
   constexpr Color kBackdropColor(0xFFF3EFE7);
@@ -1633,6 +1766,8 @@ TEST_F(Material3SliderRenderTest,
   EXPECT_EQ(inactive_stop, pixelAt(inactive_stop_x, center_y));
 }
 
+// Verifies that centered discrete sliders suppress the stop mark at the visual
+// center gap while still painting active and inactive stops on either side.
 TEST_F(Material3SliderRenderTest,
        CenteredDiscreteSliderLeavesCenterGapWithoutStopMark) {
   constexpr Color kBackdropColor(0xFFF3EFE7);
@@ -1677,6 +1812,8 @@ TEST_F(Material3SliderRenderTest,
   EXPECT_EQ(inactive_stop, pixelAt(inactive_stop_x, center_y));
 }
 
+// Verifies that discrete range sliders color stop marks per track segment so
+// active and inactive runs each get their own stop styling.
 TEST_F(Material3SliderRenderTest,
        DiscreteRangeSliderPaintsStopMarksPerTrackSegment) {
   constexpr Color kBackdropColor(0xFFF3EFE7);
@@ -1720,6 +1857,8 @@ TEST_F(Material3SliderRenderTest,
   EXPECT_EQ(inactive_stop, pixelAt(right_inactive_stop_x, center_y));
 }
 
+// Verifies that pressing a single slider narrows the thumb and tightens the
+// track gap, producing the expected changed pixels near the handle.
 TEST_F(Material3SliderRenderTest,
        PressedSliderNarrowsThumbAndTightensTrackGap) {
   constexpr Color kBackdropColor(0xFFF3EFE7);
@@ -1747,6 +1886,8 @@ TEST_F(Material3SliderRenderTest,
   EXPECT_EQ(primary, pixelAt(kSliderX + 47, kSliderY + kSliderHeight / 2));
 }
 
+// Verifies that pressed-state gap tightening does not let discrete stop marks
+// spill into the thumb gap near the active handle.
 TEST_F(Material3SliderRenderTest,
        PressedDiscreteStopsStayInsideTrackNearThumbGap) {
   constexpr Color kBackdropColor(0xFFF3EFE7);
@@ -1787,6 +1928,8 @@ TEST_F(Material3SliderRenderTest,
   EXPECT_EQ(background, pixelAt(gap_x, gap_y));
 }
 
+// Verifies that pressing one thumb of a range slider only narrows that thumb
+// and tightens its adjacent gap, leaving the rest of the track styling intact.
 TEST_F(Material3SliderRenderTest,
        PressedRangeSliderNarrowsOnlyActiveThumbAndTightensGap) {
   constexpr Color kBackdropColor(0xFFF3EFE7);
@@ -1821,6 +1964,8 @@ TEST_F(Material3SliderRenderTest,
   EXPECT_EQ(primary, pixelAt(kSliderX + 70, kSliderY + 5));
 }
 
+// Verifies that vertical sliders paint the active run from the bottom toward
+// the thumb, leaving the remaining upper segment inactive.
 TEST_F(Material3SliderRenderTest,
        VerticalSliderPaintsActiveTrackFromBottomToThumb) {
   constexpr Color kBackdropColor(0xFFF3EFE7);
@@ -1872,6 +2017,8 @@ TEST_F(Material3SliderRenderTest,
               kSliderY + inactive_rect.yMin() + inactive_rect.height() / 2));
 }
 
+// Verifies that a value-indicator repaint on the single slider only writes into
+// the thumb dirty slice plus the current indicator bounds, not the old overlay.
 TEST_F(Material3SliderRenderTest,
        ValueIndicatorValueChangePaintIsClippedToDirtySlice) {
   SliderStyle style{};
@@ -1921,6 +2068,8 @@ TEST_F(Material3SliderRenderTest,
   EXPECT_LT(expected_clip.width(), full_indicator_envelope.width());
 }
 
+// Verifies that moving only one thumb of a range slider repaints just that
+// thumb's sweep instead of a broader union covering both thumbs.
 TEST_F(Material3SliderRenderTest,
        RangeSliderSingleThumbMovePaintIsClippedToMovedThumbSweep) {
   auto slider = std::make_unique<ClipTrackingRangeSlider>(
@@ -1957,6 +2106,8 @@ TEST_F(Material3SliderRenderTest,
   EXPECT_LT(expected_clip.width(), old_broad_clip.width());
 }
 
+// Verifies that value-indicator invalidation tracks the measured old and new
+// bubble envelopes rather than falling back to a larger conservative region.
 TEST_F(Material3SliderRenderTest,
        ValueChangeInvalidatesMeasuredIndicatorEnvelopeOutsideBounds) {
   SliderStyle style{};
@@ -2034,6 +2185,8 @@ TEST_F(Material3SliderRenderTest,
   EXPECT_LT(expected.width(), conservative.width());
 }
 
+// Verifies that pressed-state transitions repaint only the thumb slice for the
+// single slider, both when pressing and when releasing.
 TEST_F(Material3SliderRenderTest, PressStateChangePaintIsClippedToHandleSlice) {
   auto slider = std::make_unique<ContentPaintSlider>(env_, SliderRange{}, 0.5f);
   ContentPaintSlider* slider_ptr = slider.get();
@@ -2066,6 +2219,8 @@ TEST_F(Material3SliderRenderTest, PressStateChangePaintIsClippedToHandleSlice) {
   EXPECT_TRUE(ExpectPaintConfinedTo({expected_clip}, clear_color));
 }
 
+// Verifies that showing or hiding the interaction-only value indicator expands
+// parent invalidation only by the indicator envelope outside widget bounds.
 TEST_F(Material3SliderRenderTest,
        PressStateChangeInvalidatesOnlyIndicatorEnvelopeOutsideBounds) {
   SliderStyle style{};
@@ -2105,6 +2260,8 @@ TEST_F(Material3SliderRenderTest,
   EXPECT_EQ(expected, panel_ptr->invalidated_regions.front());
 }
 
+// Verifies the same tight repaint behavior for vertical sliders: only the
+// thumb slice and current indicator bounds may change after a value update.
 TEST_F(Material3SliderRenderTest,
        VerticalValueIndicatorValueChangePaintIsClippedToThumbSlice) {
   SliderStyle style{};
@@ -2169,6 +2326,8 @@ class FmtSlider : public Slider {
 };
 }  // namespace
 
+// Verifies the default value-indicator formatter keeps ordinary numeric values
+// compact while still producing a sentinel string for non-finite values.
 TEST(Material3SliderValueIndicator, DefaultFormatLabelFormatsCompactly) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -2181,6 +2340,8 @@ TEST(Material3SliderValueIndicator, DefaultFormatLabelFormatsCompactly) {
                                     scratch, sizeof(scratch)));
 }
 
+// Verifies that subclasses can override value-indicator label formatting and
+// that the custom formatter is used verbatim.
 TEST(Material3SliderValueIndicator, CustomFormatLabelIsCalled) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -2189,6 +2350,8 @@ TEST(Material3SliderValueIndicator, CustomFormatLabelIsCalled) {
   EXPECT_EQ("42%", slider.formatLabel(42.0f, scratch, sizeof(scratch)));
 }
 
+// Verifies that enabling visible value indicators switches the slider into the
+// unclipped-parent mode needed to paint bubble overflow.
 TEST(Material3SliderValueIndicator, EnabledStyleSetsUnclippedParentMode) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -2204,6 +2367,8 @@ TEST(Material3SliderValueIndicator, EnabledStyleSetsUnclippedParentMode) {
   EXPECT_EQ(ParentClipMode::kUnclipped, shown.getParentClipMode());
 }
 
+// Verifies that changing style at runtime toggles the parent clip mode only
+// when the value-indicator visibility mode actually changes.
 TEST(Material3SliderValueIndicator, SetStyleTogglesParentClipMode) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -2219,6 +2384,8 @@ TEST(Material3SliderValueIndicator, SetStyleTogglesParentClipMode) {
   EXPECT_EQ(ParentClipMode::kClipped, slider.getParentClipMode());
 }
 
+// Verifies that an always-visible value indicator expands transient paint
+// bounds above the slider so the bubble can render outside widget bounds.
 TEST(Material3SliderValueIndicator, TransientPaintBoundsExpandAboveWhenAlways) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -2236,6 +2403,8 @@ TEST(Material3SliderValueIndicator, TransientPaintBoundsExpandAboveWhenAlways) {
   EXPECT_LT(base.yMin(), 0);
 }
 
+// Verifies that the same always-visible indicator expansion happens for a
+// vertical slider, including leftward overflow as well as upward overflow.
 TEST(Material3SliderValueIndicator,
      VerticalTransientPaintBoundsExpandLeftWhenAlways) {
   roo_scheduler::Scheduler scheduler;
@@ -2253,6 +2422,8 @@ TEST(Material3SliderValueIndicator,
   EXPECT_LT(base.yMin(), 0);
 }
 
+// Verifies that the range slider reuses the default numeric label formatting
+// path for value indicators when no custom formatter is supplied.
 TEST(Material3RangeSliderValueIndicator, FormatLabelDefault) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -2261,6 +2432,8 @@ TEST(Material3RangeSliderValueIndicator, FormatLabelDefault) {
   EXPECT_EQ("7", slider.formatLabel(7.0f, scratch, sizeof(scratch)));
 }
 
+// Verifies that an interaction-only range-slider indicator does not expand the
+// transient paint bounds until some thumb is actually active.
 TEST(Material3RangeSliderValueIndicator,
      TransientPaintBoundsUnchangedWithoutActivity) {
   roo_scheduler::Scheduler scheduler;
@@ -2276,6 +2449,8 @@ TEST(Material3RangeSliderValueIndicator,
   EXPECT_GE(bounds.yMin(), 0);
 }
 
+// Verifies that a vertical range slider resolves a tap to the nearest thumb by
+// y-position and reports that thumb as active for the ensuing change.
 TEST_F(Material3SliderAppTest,
        VerticalRangeSingleTapChoosesNearestThumbByYPosition) {
   SliderStyle style{};
