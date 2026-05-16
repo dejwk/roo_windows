@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "roo_logging.h"
 #include "roo_display/shape/smooth.h"
 #include "roo_windows/core/overlay_spec.h"
 #include "roo_windows/material3/slider/slider_internal.h"
@@ -651,7 +652,9 @@ uint16_t Slider::getPos() const {
 }
 
 void Slider::paint(const Canvas& canvas) const {
-  paintTrackAndThumb(canvas, buildPaintContext());
+  (void)canvas;
+  LOG(DFATAL) << "Slider::paint() should not be called; render via "
+              << "paintWidgetContents()/paintTrackAndThumb() instead";
 }
 
 void Slider::paintTrackAndThumb(const Canvas& canvas,

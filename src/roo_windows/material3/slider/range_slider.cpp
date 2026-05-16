@@ -860,7 +860,7 @@ void RangeSlider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
     int thumb = active_thumb_;
     float thumb_value = (thumb == 1) ? end_value_ : start_value_;
 
-    char scratch[16];
+    char scratch[64];
     roo::string_view text = formatLabel(thumb_value, scratch, sizeof(scratch));
 
     const Theme& th = theme();

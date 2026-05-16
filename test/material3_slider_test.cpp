@@ -87,6 +87,58 @@ class Material3SliderAppTest : public testing::Test {
     return color[0];
   }
 
+  void fillScreen(Color color) {
+    roo_display::Surface surface(display_.output(), 0, 0, display_.extents(),
+                                 /*is_write_once=*/false,
+                                 display_.getBackgroundColor(),
+                                 roo_display::FillMode::kVisible,
+                                 roo_display::BlendingMode::kSourceOver);
+    Canvas canvas(&surface);
+    canvas.fillRect(display_.extents(), color);
+  }
+
+  template <typename Widget>
+  void paintWidgetContentsForTest(Widget& widget) {
+    roo_display::Surface surface(display_.output(), 0, 0, display_.extents(),
+                                 /*is_write_once=*/false,
+                                 display_.getBackgroundColor(),
+                                 roo_display::FillMode::kVisible,
+                                 roo_display::BlendingMode::kSourceOver);
+    Canvas canvas(&surface);
+    widget.paintWidgetContentsForTest(canvas);
+  }
+
+  ::testing::AssertionResult ExpectPaintConfinedTo(
+      std::initializer_list<Rect> allowed_regions,
+      Color untouched_color) const {
+    int changed_pixels = 0;
+    for (int16_t y = 0; y < kHeight; ++y) {
+      for (int16_t x = 0; x < kWidth; ++x) {
+        bool allowed = false;
+        for (const Rect& region : allowed_regions) {
+          if (region.contains(x, y)) {
+            allowed = true;
+            break;
+          }
+        }
+        Color pixel = pixelAt(x, y);
+        if (!allowed && pixel != untouched_color) {
+          return ::testing::AssertionFailure()
+                 << "unexpected paint at (" << x << ", " << y
+                 << ") with color 0x" << std::hex << pixel.asArgb() << std::dec;
+        }
+        if (allowed && pixel != untouched_color) {
+          ++changed_pixels;
+        }
+      }
+    }
+    if (changed_pixels == 0) {
+      return ::testing::AssertionFailure()
+             << "expected at least one painted pixel inside the allowed region";
+    }
+    return ::testing::AssertionSuccess();
+  }
+
   roo::byte raster_[kWidth * kHeight * 2];
   roo_display::OffscreenDevice<roo_display::Argb4444> offscreen_;
   roo_display::Display display_;
@@ -149,29 +201,42 @@ class TrackingRangeSlider : public RangeSlider {
   std::vector<float> end_values;
 };
 
-class ClipTrackingSlider : public Slider {
+class ContentPaintSlider : public Slider {
  public:
   using Slider::Slider;
 
-  void clearPaintObservation() {
-    paint_calls_ = 0;
-    last_paint_clip_ = Rect(0, 0, -1, -1);
+  void paintWidgetContentsForTest(const Canvas& parent_canvas) {
+    roo_windows::internal::ClipperState clipper_state;
+    Clipper clipper(clipper_state, parent_canvas.out(),
+                    roo_time::Uptime::Max());
+    Canvas widget_canvas = prepareCanvas(parent_canvas);
+    paintWidgetContents(widget_canvas, clipper);
   }
-
-  int paintCalls() const { return paint_calls_; }
-
-  Rect lastPaintClip() const { return last_paint_clip_; }
-
-  void paint(const Canvas& canvas) const override {
-    ++paint_calls_;
-    const roo_display::Box& box = canvas.clip_box();
-    last_paint_clip_ = Rect(box.xMin(), box.yMin(), box.xMax(), box.yMax());
-  }
-
- private:
-  mutable int paint_calls_ = 0;
-  mutable Rect last_paint_clip_ = Rect(0, 0, -1, -1);
 };
+
+Rect ResolveCurrentIndicatorBoundsForTest(const Slider& slider,
+                                          const Environment& env) {
+  const SliderStyle& style = slider.style();
+  const internal::SliderSizeMetrics& size_metrics =
+      internal::ResolveSliderSizeMetrics(style.size);
+  internal::SliderAxisMetrics axis(
+      slider.width(), slider.height(), size_metrics.handle_width,
+      size_metrics.track_handle_gap,
+      style.orientation == SliderOrientation::kVertical);
+  float center = axis.displayCenterFromPos(slider.getPos());
+
+  char scratch[64];
+  roo::string_view label =
+      slider.formatLabel(slider.value(), scratch, sizeof(scratch));
+  ValueIndicatorBubble bubble;
+  bool clamp =
+      style.value_indicator == SliderValueIndicatorBehavior::kWithinBounds;
+  bool laid_out = bubble.layout(
+      slider.width(), slider.height(), center, style.orientation, label, clamp,
+      env.theme().color.inverseSurface, env.theme().color.inverseOnSurface);
+  EXPECT_TRUE(laid_out);
+  return laid_out ? bubble.bounds() : Rect(0, 0, -1, -1);
+}
 
 Rect ResolveInsetIconRectForTest(
     const SliderStyle& style, uint16_t pos, const roo_display::Pictogram& icon,
@@ -1812,9 +1877,9 @@ TEST_F(Material3SliderRenderTest,
   SliderStyle style{};
   style.value_indicator = SliderValueIndicatorBehavior::kAlways;
 
-  auto slider = std::make_unique<ClipTrackingSlider>(
+  auto slider = std::make_unique<ContentPaintSlider>(
       env_, SliderRange{0.0f, 1.0f}, 0.2f, SliderVariant::kStandard, style);
-  ClipTrackingSlider* slider_ptr = slider.get();
+  ContentPaintSlider* slider_ptr = slider.get();
   slider_ = slider_ptr;
 
   app_.add(std::move(slider),
@@ -1822,12 +1887,8 @@ TEST_F(Material3SliderRenderTest,
                             kSliderY + kSliderHeight - 1));
 
   ASSERT_TRUE(app_.refresh());
-  slider_ptr->clearPaintObservation();
 
   ASSERT_TRUE(slider_ptr->setValue(0.8f));
-  ASSERT_TRUE(app_.refresh());
-
-  ASSERT_EQ(1, slider_ptr->paintCalls());
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
                                    Scaled(4), Scaled(6));
@@ -1844,8 +1905,16 @@ TEST_F(Material3SliderRenderTest,
           old_overlay_axis.invalidationRectForPosChange(old_pos, new_pos),
           slider_ptr->bounds())
           .translate(kSliderX, kSliderY);
+  Rect indicator_bounds =
+      ResolveCurrentIndicatorBoundsForTest(*slider_ptr, env_)
+          .translate(kSliderX, kSliderY);
+  Color clear_color = QuantizeToArgb4444(Color(0xFF1357BD));
 
-  EXPECT_EQ(expected_clip, slider_ptr->lastPaintClip());
+  fillScreen(clear_color);
+  paintWidgetContentsForTest(*slider_ptr);
+
+  EXPECT_TRUE(
+      ExpectPaintConfinedTo({expected_clip, indicator_bounds}, clear_color));
   EXPECT_LT(expected_clip.width(), old_overlay_clip.width());
 
   Rect full_indicator_envelope = slider_ptr->getParentTransientPaintBounds();
@@ -1966,8 +2035,8 @@ TEST_F(Material3SliderRenderTest,
 }
 
 TEST_F(Material3SliderRenderTest, PressStateChangePaintIsClippedToHandleSlice) {
-  auto slider = std::make_unique<ClipTrackingSlider>(env_, SliderRange{}, 0.5f);
-  ClipTrackingSlider* slider_ptr = slider.get();
+  auto slider = std::make_unique<ContentPaintSlider>(env_, SliderRange{}, 0.5f);
+  ContentPaintSlider* slider_ptr = slider.get();
   slider_ = slider_ptr;
 
   app_.add(std::move(slider),
@@ -1975,25 +2044,26 @@ TEST_F(Material3SliderRenderTest, PressStateChangePaintIsClippedToHandleSlice) {
                             kSliderY + kSliderHeight - 1));
 
   ASSERT_TRUE(app_.refresh());
-  slider_ptr->clearPaintObservation();
 
   roo_display::FpPoint focus = slider_ptr->getPointOverlayFocus();
   slider_ptr->onShowPress((XDim)focus.x, (YDim)focus.y);
-  ASSERT_TRUE(app_.refresh());
-  ASSERT_EQ(1, slider_ptr->paintCalls());
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
                                    Scaled(4), Scaled(6));
   Rect expected_clip = axis.invalidationRectForPosChange(slider_ptr->getPos(),
                                                          slider_ptr->getPos())
                            .translate(kSliderX, kSliderY);
-  EXPECT_EQ(expected_clip, slider_ptr->lastPaintClip());
+  Color clear_color = QuantizeToArgb4444(Color(0xFF2468AC));
 
-  slider_ptr->clearPaintObservation();
+  fillScreen(clear_color);
+  paintWidgetContentsForTest(*slider_ptr);
+  EXPECT_TRUE(ExpectPaintConfinedTo({expected_clip}, clear_color));
+
   ASSERT_TRUE(slider_ptr->onTouchUp((XDim)focus.x, (YDim)focus.y));
-  ASSERT_TRUE(app_.refresh());
-  ASSERT_EQ(1, slider_ptr->paintCalls());
-  EXPECT_EQ(expected_clip, slider_ptr->lastPaintClip());
+
+  fillScreen(clear_color);
+  paintWidgetContentsForTest(*slider_ptr);
+  EXPECT_TRUE(ExpectPaintConfinedTo({expected_clip}, clear_color));
 }
 
 TEST_F(Material3SliderRenderTest,
@@ -2041,9 +2111,9 @@ TEST_F(Material3SliderRenderTest,
   style.orientation = SliderOrientation::kVertical;
   style.value_indicator = SliderValueIndicatorBehavior::kAlways;
 
-  auto slider = std::make_unique<ClipTrackingSlider>(
+  auto slider = std::make_unique<ContentPaintSlider>(
       env_, SliderRange{0.0f, 1.0f}, 0.2f, SliderVariant::kStandard, style);
-  ClipTrackingSlider* slider_ptr = slider.get();
+  ContentPaintSlider* slider_ptr = slider.get();
   slider_ = slider_ptr;
 
   app_.add(std::move(slider),
@@ -2051,12 +2121,8 @@ TEST_F(Material3SliderRenderTest,
                             kSliderY + Scaled(56) - 1));
 
   ASSERT_TRUE(app_.refresh());
-  slider_ptr->clearPaintObservation();
 
   ASSERT_TRUE(slider_ptr->setValue(0.8f));
-  ASSERT_TRUE(app_.refresh());
-
-  ASSERT_EQ(1, slider_ptr->paintCalls());
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
                                    Scaled(4), Scaled(6), true);
@@ -2073,8 +2139,16 @@ TEST_F(Material3SliderRenderTest,
           old_overlay_axis.invalidationRectForPosChange(old_pos, new_pos),
           slider_ptr->bounds())
           .translate(kSliderX, kSliderY);
+  Rect indicator_bounds =
+      ResolveCurrentIndicatorBoundsForTest(*slider_ptr, env_)
+          .translate(kSliderX, kSliderY);
+  Color clear_color = QuantizeToArgb4444(Color(0xFFB36219));
 
-  EXPECT_EQ(expected_clip, slider_ptr->lastPaintClip());
+  fillScreen(clear_color);
+  paintWidgetContentsForTest(*slider_ptr);
+
+  EXPECT_TRUE(
+      ExpectPaintConfinedTo({expected_clip, indicator_bounds}, clear_color));
   EXPECT_LT(expected_clip.height(), old_overlay_clip.height());
 
   Rect full_indicator_envelope = slider_ptr->getParentTransientPaintBounds();
