@@ -141,8 +141,18 @@ class RangeSlider : public BasicWidget {
   void notifyStateChanged(uint16_t state_diff) override;
 
  private:
+  struct PaintContext;
+
+  /// Paints the range track and both thumbs for the supplied paint state.
+  void paintTrackAndThumb(const Canvas& canvas,
+                          const PaintContext& context) const;
+
   /// Paints discrete stop marks and excludes them from later track redraw.
-  void paintStops(const Canvas& canvas, Clipper& clipper) const;
+  void paintStops(const Canvas& canvas, Clipper& clipper,
+                  const PaintContext& context) const;
+
+  /// Resolves all per-frame painting metrics for the current thumb state.
+  PaintContext buildPaintContext() const;
 
   /// Applies a two-value update while preserving ordering and min-separation
   /// rules.

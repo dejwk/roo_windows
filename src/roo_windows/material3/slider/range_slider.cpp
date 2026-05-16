@@ -267,6 +267,37 @@ void BuildTrackSegments(const Tokens& tokens,
 
 }  // namespace
 
+struct RangeSlider::PaintContext {
+  Tokens tokens;
+  internal::SliderSizeMetrics size_metrics;
+  internal::SliderAxisMetrics axis;
+  ThumbPaintMetrics start;
+  ThumbPaintMetrics end;
+  StopSegment segments[3];
+  int segment_count;
+};
+
+RangeSlider::PaintContext RangeSlider::buildPaintContext() const {
+  PaintContext context{
+      .tokens = ResolveTokens(*this),
+      .size_metrics = internal::ResolveSliderSizeMetrics(style_.size),
+      .axis = MakeSliderAxisMetrics(*this),
+      .start = ThumbPaintMetrics(),
+      .end = ThumbPaintMetrics(),
+      .segments = {},
+      .segment_count = 0,
+  };
+  context.start = ResolveThumbPaintMetrics(range_, start_value_, context.axis,
+                                           context.size_metrics,
+                                           isPressed() && active_thumb_ == 0);
+  context.end = ResolveThumbPaintMetrics(range_, end_value_, context.axis,
+                                         context.size_metrics,
+                                         isPressed() && active_thumb_ == 1);
+  BuildTrackSegments(context.tokens, context.axis, context.start, context.end,
+                     context.segments, context.segment_count);
+  return context;
+}
+
 RangeSlider::RangeSlider(const Environment& env, SliderRange range,
                          float start_value, float end_value, SliderStyle style)
     : BasicWidget(env),
@@ -667,91 +698,76 @@ void RangeSlider::notifyStateChanged(uint16_t state_diff) {
 }
 
 void RangeSlider::paint(const Canvas& canvas) const {
-  Tokens tokens = ResolveTokens(*this);
-  const internal::SliderSizeMetrics& size_metrics =
-      internal::ResolveSliderSizeMetrics(style_.size);
-  internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
-  ThumbPaintMetrics start =
-      ResolveThumbPaintMetrics(range_, start_value_, axis, size_metrics,
-                               isPressed() && active_thumb_ == 0);
-  ThumbPaintMetrics end =
-      ResolveThumbPaintMetrics(range_, end_value_, axis, size_metrics,
-                               isPressed() && active_thumb_ == 1);
-  StopSegment segments[3];
-  int segment_count = 0;
-  BuildTrackSegments(tokens, axis, start, end, segments, segment_count);
+  paintTrackAndThumb(canvas, buildPaintContext());
+}
 
-  auto track_bounds = axis.paintRectFromPrimaryCross(
-      TrackShapeMinPrimary(0.0f, size_metrics.track_radius),
-      start.layout.track_min_cross, axis.primarySpan() - 0.5f,
-      start.layout.track_max_cross);
-  auto start_handle_bounds = axis.paintRectFromPrimaryCross(
-      start.layout.thumb_min_primary, start.layout.thumb_min_cross,
-      start.layout.thumb_max_primary, start.layout.thumb_max_cross);
-  auto end_handle_bounds = axis.paintRectFromPrimaryCross(
-      end.layout.thumb_min_primary, end.layout.thumb_min_cross,
-      end.layout.thumb_max_primary, end.layout.thumb_max_cross);
+void RangeSlider::paintTrackAndThumb(const Canvas& canvas,
+                                     const PaintContext& context) const {
+  auto track_bounds = context.axis.paintRectFromPrimaryCross(
+      TrackShapeMinPrimary(0.0f, context.size_metrics.track_radius),
+      context.start.layout.track_min_cross, context.axis.primarySpan() - 0.5f,
+      context.start.layout.track_max_cross);
+  auto start_handle_bounds = context.axis.paintRectFromPrimaryCross(
+      context.start.layout.thumb_min_primary,
+      context.start.layout.thumb_min_cross,
+      context.start.layout.thumb_max_primary,
+      context.start.layout.thumb_max_cross);
+  auto end_handle_bounds = context.axis.paintRectFromPrimaryCross(
+      context.end.layout.thumb_min_primary, context.end.layout.thumb_min_cross,
+      context.end.layout.thumb_max_primary, context.end.layout.thumb_max_cross);
 
   auto inactive_track = SmoothFilledRoundRect(
       track_bounds.x_min, track_bounds.y_min, track_bounds.x_max,
-      track_bounds.y_max, size_metrics.track_radius, tokens.inactive_track);
+      track_bounds.y_max, context.size_metrics.track_radius,
+      context.tokens.inactive_track);
   auto active_track = SmoothFilledRoundRect(
       track_bounds.x_min, track_bounds.y_min, track_bounds.x_max,
-      track_bounds.y_max, size_metrics.track_radius, tokens.active_track);
+      track_bounds.y_max, context.size_metrics.track_radius,
+      context.tokens.active_track);
   auto start_handle = SmoothFilledRoundRect(
       start_handle_bounds.x_min, start_handle_bounds.y_min,
       start_handle_bounds.x_max, start_handle_bounds.y_max,
-      size_metrics.handleCornerRadius(), tokens.handle);
-  auto end_handle =
-      SmoothFilledRoundRect(end_handle_bounds.x_min, end_handle_bounds.y_min,
-                            end_handle_bounds.x_max, end_handle_bounds.y_max,
-                            size_metrics.handleCornerRadius(), tokens.handle);
+      context.size_metrics.handleCornerRadius(), context.tokens.handle);
+  auto end_handle = SmoothFilledRoundRect(
+      end_handle_bounds.x_min, end_handle_bounds.y_min, end_handle_bounds.x_max,
+      end_handle_bounds.y_max, context.size_metrics.handleCornerRadius(),
+      context.tokens.handle);
   Rect widget_bounds = bounds();
   Rect start_handle_tile_bounds =
       GetHandleTileBounds(widget_bounds, start_handle.extents(),
-                          start.track_gap, axis.isVertical());
-  Rect end_handle_tile_bounds = GetHandleTileBounds(
-      widget_bounds, end_handle.extents(), end.track_gap, axis.isVertical());
+                          context.start.track_gap, context.axis.isVertical());
+  Rect end_handle_tile_bounds =
+      GetHandleTileBounds(widget_bounds, end_handle.extents(),
+                          context.end.track_gap, context.axis.isVertical());
 
   // Paint the same segment model used by paintStops() so the track and stop
   // passes agree on where each active or inactive run begins and ends.
-  for (int i = 0; i < segment_count; ++i) {
+  for (int i = 0; i < context.segment_count; ++i) {
     roo_display::Box track_clip =
-        TrackSegmentClipBox(axis, segments[i], start.layout.track_cross_start,
-                            size_metrics.track_height);
+        TrackSegmentClipBox(context.axis, context.segments[i],
+                            context.start.layout.track_cross_start,
+                            context.size_metrics.track_height);
     if (track_clip.empty()) continue;
-    const auto& track_piece = segments[i].track_color == tokens.active_track
-                                  ? active_track
-                                  : inactive_track;
+    const auto& track_piece =
+        context.segments[i].track_color == context.tokens.active_track
+            ? active_track
+            : inactive_track;
     DrawTrackPiece(canvas, track_piece, widget_bounds, track_clip,
-                   axis.isVertical());
+                   context.axis.isVertical());
   }
   canvas.drawTiled(start_handle, start_handle_tile_bounds, kNoAlign);
   canvas.drawTiled(end_handle, end_handle_tile_bounds, kNoAlign);
 }
 
-void RangeSlider::paintStops(const Canvas& canvas, Clipper& clipper) const {
-  if (!ShouldRenderStops(*this) || width() <= 0 || height() <= 0) return;
+void RangeSlider::paintStops(const Canvas& canvas, Clipper& clipper,
+                             const PaintContext& context) const {
+  if (!ShouldRenderStops(*this) || width() <= 0 || height() <= 0 ||
+      context.segment_count == 0) {
+    return;
+  }
 
-  Tokens tokens = ResolveTokens(*this);
-  const internal::SliderSizeMetrics& size_metrics =
-      internal::ResolveSliderSizeMetrics(style_.size);
-  internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
-  ThumbPaintMetrics start =
-      ResolveThumbPaintMetrics(range_, start_value_, axis, size_metrics,
-                               isPressed() && active_thumb_ == 0);
-  ThumbPaintMetrics end =
-      ResolveThumbPaintMetrics(range_, end_value_, axis, size_metrics,
-                               isPressed() && active_thumb_ == 1);
-
-  StopSegment segments[3];
-  int segment_count = 0;
-  BuildTrackSegments(tokens, axis, start, end, segments, segment_count);
-
-  if (segment_count == 0) return;
-
-  PaintStopRuns(canvas, clipper, axis, segments, segment_count, range_,
-                nullptr);
+  PaintStopRuns(canvas, clipper, context.axis, context.segments,
+                context.segment_count, range_, nullptr);
 }
 
 Dimensions RangeSlider::getSuggestedMinimumDimensions() const {
@@ -886,38 +902,27 @@ void RangeSlider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
     }
   };
 
-  if (!isInvalidated()) {
-    if (!pending_indicator.empty()) {
-      Canvas indicator_canvas = canvas;
-      indicator_canvas.clipToExtents(pending_indicator);
-      if (!indicator_canvas.clip_box().empty()) {
-        paint_indicator(indicator_canvas);
-      }
-    }
+  bool invalidated = isInvalidated();
 
-    Canvas content_canvas = prepareContentsCanvas(canvas);
-    if (!pending_content.empty()) {
-      content_canvas.clipToExtents(pending_content);
+  if (invalidated || !pending_indicator.empty()) {
+    Canvas indicator_canvas = canvas;
+    if (!invalidated) {
+      indicator_canvas.clipToExtents(pending_indicator);
     }
-    if (!content_canvas.clip_box().empty()) {
-      clipper.setBounds(content_canvas.clip_box());
-      paintStops(content_canvas, clipper);
-      paint(content_canvas);
+    if (!indicator_canvas.clip_box().empty()) {
+      paint_indicator(indicator_canvas);
     }
-    pending_indicator_dirty_span_ = ShowsValueIndicator(*this)
-                                        ? current_indicator_span
-                                        : internal::DirtySpan();
-    markClean();
-    return;
   }
 
-  Canvas my_canvas = canvas;
-  paint_indicator(my_canvas);
-  Canvas content_canvas = prepareContentsCanvas(my_canvas);
+  Canvas content_canvas = prepareContentsCanvas(canvas);
+  if (!invalidated && !pending_content.empty()) {
+    content_canvas.clipToExtents(pending_content);
+  }
   if (!content_canvas.clip_box().empty()) {
     clipper.setBounds(content_canvas.clip_box());
-    paintStops(content_canvas, clipper);
-    paint(content_canvas);
+    PaintContext context = buildPaintContext();
+    paintStops(content_canvas, clipper, context);
+    paintTrackAndThumb(content_canvas, context);
   }
   pending_indicator_dirty_span_ = ShowsValueIndicator(*this)
                                       ? current_indicator_span
