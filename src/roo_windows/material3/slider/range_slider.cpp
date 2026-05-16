@@ -857,60 +857,50 @@ void RangeSlider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
   internal::DirtySpan pending_indicator_span = pending_indicator_dirty_span_;
   pending_content_dirty_span_ = internal::DirtySpan();
 
+  // The area of the content that needs to be repainted.
   Rect pending_content = internal::ContentRectFromDisplayMainSpan(
       pending_content_span, width(), height(),
       style_.orientation == SliderOrientation::kVertical);
+  // The area of the value indicator that needs to be repainted.
   Rect pending_indicator = IndicatorDirtyRectFromSpan(
       pending_indicator_span, width(), height(), style_);
   internal::DirtySpan current_indicator_span = pending_indicator_span;
-  // Pre-paint the active thumb's value indicator bubble before the slider
-  // contents. See Slider::paintWidgetContents() for the rationale on
-  // ordering and the role of paint() vs decorate(). The canvas is already
-  // clipped to maxBounds(), which (via getVisualBounds() ->
-  // getTransientPaintBounds() -> our getParentTransientPaintBounds()
-  // override) already covers the bubble's conservative envelope when the
-  // indicator is showing.
-  auto paint_indicator = [&](const Canvas& indicator_canvas) {
-    if (!ShowsValueIndicator(*this) || width() <= 0 || height() <= 0) return;
-    // ShowsValueIndicator() guarantees activeThumbIndex() >= 0.
-    int thumb = active_thumb_;
-    float thumb_value = (thumb == 1) ? end_value_ : start_value_;
-
-    char scratch[64];
-    roo::string_view text = formatLabel(thumb_value, scratch, sizeof(scratch));
-
-    const Theme& th = theme();
-    Color bubble_color =
-        isEnabled() ? th.color.inverseSurface : th.color.onSurface.withA(0x3D);
-    Color text_color =
-        isEnabled() ? th.color.inverseOnSurface : th.color.surface;
-
-    internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
-    uint16_t pos =
-        internal::SliderPosFromValue(range_.from, range_.to, thumb_value);
-    float thumb_center = axis.displayCenterFromPos(pos);
-    bool clamp =
-        style_.value_indicator == SliderValueIndicatorBehavior::kWithinBounds;
-
-    ValueIndicatorBubble bubble;
-    if (bubble.layout(width(), height(), thumb_center, style_.orientation, text,
-                      clamp, bubble_color, text_color)) {
-      current_indicator_span = internal::DisplayMainSpanFromRect(
-          bubble.bounds(), style_.orientation == SliderOrientation::kVertical);
-      bubble.paint(indicator_canvas);
-      bubble.decorate(indicator_canvas, clipper, OverlaySpec());
-    }
-  };
-
   bool invalidated = isInvalidated();
 
-  if (invalidated || !pending_indicator.empty()) {
+  if (ShowsValueIndicator(*this) &&
+      (invalidated || !pending_indicator.empty())) {
     Canvas indicator_canvas = canvas;
     if (!invalidated) {
       indicator_canvas.clipToExtents(pending_indicator);
     }
-    if (!indicator_canvas.clip_box().empty()) {
-      paint_indicator(indicator_canvas);
+    if (!indicator_canvas.clip_box().empty() && width() > 0 && height() > 0) {
+      // Pre-paint the value indicator bubble BEFORE the slider's track and
+      // thumbs. This mirrors Slider::paintWidgetContents(); the only extra
+      // work here is resolving which thumb currently owns the bubble.
+      //
+      // The canvas received here has been shifted to slider-local
+      // coordinates and clipped to maxBounds(). Because
+      // Widget::getVisualBounds() (the default for maxBounds()) unions in
+      // getTransientPaintBounds(), and our getParentTransientPaintBounds()
+      // override already accounts for the bubble's conservative envelope
+      // when the indicator is showing, the canvas clip already covers the
+      // bubble area.
+      internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
+      float indicator_value = active_thumb_ == 1 ? end_value_ : start_value_;
+      uint16_t indicator_pos =
+          internal::SliderPosFromValue(range_.from, range_.to, indicator_value);
+      float indicator_thumb_center = axis.displayCenterFromPos(indicator_pos);
+      char scratch[64];
+      roo::string_view text =
+          formatLabel(indicator_value, scratch, sizeof(scratch));
+      Rect indicator_bounds = PaintValueIndicator(
+          theme(), isEnabled(), indicator_canvas, clipper, width(), height(),
+          indicator_thumb_center, style_, text);
+      if (!indicator_bounds.empty()) {
+        current_indicator_span = internal::DisplayMainSpanFromRect(
+            indicator_bounds,
+            style_.orientation == SliderOrientation::kVertical);
+      }
     }
   }
 

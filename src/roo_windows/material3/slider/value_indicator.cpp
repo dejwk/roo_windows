@@ -7,6 +7,7 @@
 #include "roo_windows/config.h"
 #include "roo_windows/core/border_style.h"
 #include "roo_windows/core/number.h"
+#include "roo_windows/core/theme.h"
 #include "roo_windows/material3/slider/slider_internal.h"
 
 namespace roo_windows {
@@ -40,6 +41,12 @@ constexpr float kIntegerTolerance = internal::kSliderStepDivisibilityTolerance;
 constexpr int16_t kCornerInset = kCornerRadius - (181 * kCornerRadius) / 256;
 
 }  // namespace
+
+ValueIndicatorBubble::ValueIndicatorBubble(const Theme& theme, bool enabled)
+    : bubble_color_(enabled ? theme.color.inverseSurface
+                            : theme.color.onSurface.withA(0x3D)),
+      text_color_(enabled ? theme.color.inverseOnSurface
+                          : theme.color.surface) {}
 
 // static
 void ValueIndicatorBubble::MeasureBubbleSize(roo::string_view text,
@@ -188,9 +195,7 @@ Rect ValueIndicatorBubble::EnvelopeForCenterRange(
 bool ValueIndicatorBubble::layout(int16_t parent_width, int16_t parent_height,
                                   float thumb_center,
                                   SliderOrientation orientation,
-                                  roo::string_view text, bool clamp_to_bounds,
-                                  roo_display::Color bubble_color,
-                                  roo_display::Color text_color) {
+                                  roo::string_view text, bool clamp_to_bounds) {
   valid_ = false;
   bounds_ = Rect();
   if (parent_width <= 0 || parent_height <= 0) return false;
@@ -219,8 +224,6 @@ bool ValueIndicatorBubble::layout(int16_t parent_width, int16_t parent_height,
 
     bounds_ = Rect(left, top, right, top + bh - 1);
     text_ = text;
-    bubble_color_ = bubble_color;
-    text_color_ = text_color;
     valid_ = true;
     return true;
   }
@@ -242,8 +245,6 @@ bool ValueIndicatorBubble::layout(int16_t parent_width, int16_t parent_height,
 
   bounds_ = Rect(left, top, left + bw - 1, top + bh - 1);
   text_ = text;
-  bubble_color_ = bubble_color;
-  text_color_ = text_color;
   valid_ = true;
   return true;
 }
@@ -289,6 +290,31 @@ void ValueIndicatorBubble::paint(const Canvas& canvas) const {
   int16_t label_cx = (ext.xMin() + ext.xMax()) / 2;
   int16_t label_cy = (ext.yMin() + ext.yMax()) / 2;
   sub.drawObject(label, bubble_cx - label_cx, bubble_cy - label_cy);
+}
+
+void ValueIndicatorBubble::paintAndDecorate(
+    const Canvas& canvas, Clipper& clipper,
+    const OverlaySpec& overlay_spec) const {
+  if (!valid_ || bounds_.empty()) return;
+  paint(canvas);
+  decorate(canvas, clipper, overlay_spec);
+}
+
+Rect PaintValueIndicator(const Theme& theme, bool enabled,
+                         const Canvas& indicator_canvas, Clipper& clipper,
+                         int16_t parent_width, int16_t parent_height,
+                         float thumb_center, const SliderStyle& style,
+                         roo::string_view text,
+                         const OverlaySpec& overlay_spec) {
+  ValueIndicatorBubble bubble(theme, enabled);
+  if (!bubble.layout(parent_width, parent_height, thumb_center,
+                     style.orientation, text,
+                     style.value_indicator ==
+                         SliderValueIndicatorBehavior::kWithinBounds)) {
+    return Rect();
+  }
+  bubble.paintAndDecorate(indicator_canvas, clipper, overlay_spec);
+  return bubble.bounds();
 }
 
 void ValueIndicatorBubble::decorate(const Canvas& canvas, Clipper& clipper,

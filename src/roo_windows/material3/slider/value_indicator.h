@@ -13,15 +13,18 @@
 #include "roo_windows/material3/slider/slider.h"
 
 namespace roo_windows {
+
+struct Theme;
+
 namespace material3 {
 
 // Renders the floating "value indicator" pill that hovers above a Material 3
-// slider thumb during interaction. It is *not* a Widget: it owns no state of
-// its own beyond what is computed at paint time, has no parent in the widget
-// tree, and is invoked directly by Slider/RangeSlider during their paint
-// pipeline. The shape mirrors a small, opinionated subset of the widget
-// contract on purpose, so call sites in slider.cpp / range_slider.cpp read
-// as if the bubble were a real child.
+// slider thumb during interaction. It is *not* a Widget: it owns only the
+// transient paint state resolved for the current frame, has no parent in the
+// widget tree, and is invoked directly by Slider/RangeSlider during their
+// paint pipeline. The shape mirrors a small, opinionated subset of the widget
+// contract on purpose, so call sites in slider.cpp / range_slider.cpp read as
+// if the bubble were a real child.
 //
 // The bubble follows the same paint pattern as SurfaceWidget for a
 // rounded-corner panel:
@@ -116,19 +119,19 @@ class ValueIndicatorBubble {
   // for outline_width == 0.
   static int16_t cornerInset();
 
-  ValueIndicatorBubble() = default;
+  ValueIndicatorBubble(const Theme& theme, bool enabled);
 
   // Computes the bubble rectangle for the given thumb position and label text,
   // and prepares the paint state. `thumb_center` is in display coordinates on
   // the thumb-travel axis: x for horizontal sliders, y for vertical sliders.
-  // Returns true if the bubble has a non-empty area; returns false if there is
-  // nothing to draw (in which case paint() and decorate() are no-ops).
+  // The bubble colors come from the constructor's themed state. Returns true
+  // if the bubble has a non-empty area; returns false if there is nothing to
+  // draw (in which case paint() and decorate() are no-ops).
   //
   // `text` must remain valid until paint() returns.
   bool layout(int16_t parent_width, int16_t parent_height, float thumb_center,
               SliderOrientation orientation, roo::string_view text,
-              bool clamp_to_bounds, roo_display::Color bubble_color,
-              roo_display::Color text_color);
+              bool clamp_to_bounds);
 
   // The bubble's bounding rectangle in the owning slider's local
   // coordinates. Only meaningful after a successful layout(); empty
@@ -141,6 +144,11 @@ class ValueIndicatorBubble {
   // registered in decorate(), once the parent paints over the corner
   // strips.
   void paint(const Canvas& canvas) const;
+
+  // Convenience for the common slider path: paint the pill interior and text,
+  // then register the rounded decoration overlay and exclusion in one step.
+  void paintAndDecorate(const Canvas& canvas, Clipper& clipper,
+                        const OverlaySpec& overlay_spec) const;
 
   // Registers the bubble's rounded-rect decoration overlay on `clipper`
   // and adds an exclusion for the inscribed inner rectangle (so subsequent
@@ -162,6 +170,16 @@ class ValueIndicatorBubble {
   roo_display::Color text_color_;
   bool valid_ = false;
 };
+
+// Lays out, paints, and decorates a value-indicator bubble for the supplied
+// slider-local thumb center. Returns the painted local bounds, or an empty
+// rect when there is nothing to draw.
+Rect PaintValueIndicator(const Theme& theme, bool enabled,
+                         const Canvas& indicator_canvas, Clipper& clipper,
+                         int16_t parent_width, int16_t parent_height,
+                         float thumb_center, const SliderStyle& style,
+                         roo::string_view text,
+                         const OverlaySpec& overlay_spec = OverlaySpec());
 
 // Returns whether `style` enables a value indicator at all (i.e. anything
 // other than kHidden).

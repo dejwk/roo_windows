@@ -3,8 +3,8 @@
 #include <algorithm>
 #include <cmath>
 
-#include "roo_logging.h"
 #include "roo_display/shape/smooth.h"
+#include "roo_logging.h"
 #include "roo_windows/core/overlay_spec.h"
 #include "roo_windows/material3/slider/slider_internal.h"
 #include "roo_windows/material3/slider/slider_paint_internal.h"
@@ -832,63 +832,52 @@ void Slider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
   internal::DirtySpan pending_indicator_span = pending_indicator_dirty_span_;
   pending_content_dirty_span_ = internal::DirtySpan();
 
+  // The area of the content that needs to be repainted.
   Rect pending_content = internal::ContentRectFromDisplayMainSpan(
       pending_content_span, width(), height(),
       style_.orientation == SliderOrientation::kVertical);
+  // The area of the value indicator that needs to be repainted.
   Rect pending_indicator = IndicatorDirtyRectFromSpan(
       pending_indicator_span, width(), height(), style_);
 
   internal::DirtySpan current_indicator_span = pending_indicator_span;
 
-  auto paint_indicator = [&](const Canvas& indicator_canvas) {
-    if (!ShowsValueIndicator(*this) || width() <= 0 || height() <= 0) return;
-    // Pre-paint the value indicator bubble BEFORE the slider's track and
-    // thumb. This way, even if the bubble's geometry overlapped the slider's
-    // rectangular bounds (it does not today, but might if kGap or kPaddingV
-    // were tuned aggressively), the slider would still appear behind the
-    // bubble: subsequent slider writes inside the bubble's inscribed inner
-    // rectangle are blocked by the clipper exclusion installed by decorate(),
-    // and writes in the bubble's rounded-corner strips have the bubble's
-    // decoration overlay alpha-composited on top.
-    //
-    // The canvas received here has been shifted to slider-local coordinates
-    // and clipped to maxBounds(). Because Widget::getVisualBounds() (the
-    // default for maxBounds()) unions in getTransientPaintBounds(), and our
-    // getParentTransientPaintBounds() override already accounts for the
-    // bubble's conservative envelope when the indicator is showing, the
-    // canvas clip already covers the bubble area.
-    char scratch[64];
-    roo::string_view text = formatLabel(value_, scratch, sizeof(scratch));
-
-    const Theme& th = theme();
-    Color bubble_color =
-        isEnabled() ? th.color.inverseSurface : th.color.onSurface.withA(0x3D);
-    Color text_color =
-        isEnabled() ? th.color.inverseOnSurface : th.color.surface;
-
-    internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
-    float thumb_center = axis.displayCenterFromPos(getPos());
-    bool clamp =
-        style_.value_indicator == SliderValueIndicatorBehavior::kWithinBounds;
-
-    ValueIndicatorBubble bubble;
-    if (bubble.layout(width(), height(), thumb_center, style_.orientation, text,
-                      clamp, bubble_color, text_color)) {
-      current_indicator_span = internal::DisplayMainSpanFromRect(
-          bubble.bounds(), style_.orientation == SliderOrientation::kVertical);
-      bubble.paint(indicator_canvas);
-      bubble.decorate(indicator_canvas, clipper, OverlaySpec());
-    }
-  };
-
   bool invalidated = isInvalidated();
 
-  if (invalidated || !pending_indicator.empty()) {
+  if (ShowsValueIndicator(*this) &&
+      (invalidated || !pending_indicator.empty())) {
     Canvas indicator_canvas = canvas;
     if (!invalidated) {
       indicator_canvas.clipToExtents(pending_indicator);
     }
-    paint_indicator(indicator_canvas);
+    if (!indicator_canvas.clip_box().empty() && width() > 0 && height() > 0) {
+      // Pre-paint the value indicator bubble BEFORE the slider's track and
+      // thumb. This way, even if the bubble's geometry overlapped the
+      // slider's rectangular bounds (it does not today, but might if kGap or
+      // kPaddingV were tuned aggressively), the slider would still appear
+      // behind the bubble: subsequent slider writes inside the bubble's
+      // inscribed inner rectangle are blocked by the clipper exclusion
+      // installed by decorate(), and writes in the bubble's rounded-corner
+      // strips have the bubble's decoration overlay alpha-composited on top.
+      //
+      // The canvas received here has been shifted to slider-local coordinates
+      // and clipped to maxBounds(). Because Widget::getVisualBounds() (the
+      // default for maxBounds()) unions in getTransientPaintBounds(), and our
+      // getParentTransientPaintBounds() override already accounts for the
+      // bubble's conservative envelope when the indicator is showing, the
+      // canvas clip already covers the bubble area.
+      char scratch[64];
+      roo::string_view text = formatLabel(value_, scratch, sizeof(scratch));
+      internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
+      Rect indicator_bounds = PaintValueIndicator(
+          theme(), isEnabled(), indicator_canvas, clipper, width(), height(),
+          axis.displayCenterFromPos(getPos()), style_, text);
+      if (!indicator_bounds.empty()) {
+        current_indicator_span = internal::DisplayMainSpanFromRect(
+            indicator_bounds,
+            style_.orientation == SliderOrientation::kVertical);
+      }
+    }
   }
 
   Canvas content_canvas = prepareContentsCanvas(canvas);
