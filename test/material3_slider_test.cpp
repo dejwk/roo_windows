@@ -228,12 +228,12 @@ Rect ResolveCurrentIndicatorBoundsForTest(const Slider& slider,
   char scratch[64];
   roo::string_view label =
       slider.formatLabel(slider.value(), scratch, sizeof(scratch));
-  ValueIndicatorBubble bubble;
+  ValueIndicatorBubble bubble(env.theme(), slider.isEnabled());
   bool clamp =
       style.value_indicator == SliderValueIndicatorBehavior::kWithinBounds;
   bool laid_out = bubble.layout(
-      slider.width(), slider.height(), center, style.orientation, label, clamp,
-      env.theme().color.inverseSurface, env.theme().color.inverseOnSurface);
+      slider.width(), slider.height(), center, style.orientation, label,
+      clamp);
   EXPECT_TRUE(laid_out);
   return laid_out ? bubble.bounds() : Rect(0, 0, -1, -1);
 }
@@ -2155,10 +2155,10 @@ TEST_F(Material3SliderRenderTest,
   ValueIndicatorBubble::MeasureBubbleSize(new_text, new_bubble_width,
                                           new_bubble_height);
 
-  ValueIndicatorBubble old_bubble;
+  ValueIndicatorBubble old_bubble(th, slider_ptr->isEnabled());
   ASSERT_TRUE(old_bubble.layout(
       slider_ptr->width(), slider_ptr->height(), c_old, style.orientation,
-      old_text, clamp, th.color.inverseSurface, th.color.inverseOnSurface));
+      old_text, clamp));
 
   Rect old_indicator = old_bubble.bounds().translate(kSliderX, kSliderY);
   Rect new_indicator = ValueIndicatorBubble::EnvelopeForCenterRange(
