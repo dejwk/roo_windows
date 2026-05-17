@@ -88,13 +88,9 @@ struct InsetIcon {
 
 class Slider : public BasicWidget {
  public:
-  /// Compatibility constructor that maps a normalized position in [0, 65535]
-  /// onto the default [0.0, 1.0] slider domain.
-  explicit Slider(const Environment& env, uint16_t pos = 0);
-
   /// Creates a single-value Material 3 slider over the supplied semantic value
   /// range.
-  Slider(const Environment& env, SliderRange range, float value = 0.0f,
+  Slider(const Environment& env, SliderRange range = {}, float value = 0.0f,
          SliderVariant variant = SliderVariant::kStandard,
          SliderStyle style = {});
 
@@ -122,13 +118,6 @@ class Slider : public BasicWidget {
 
   /// Sets the semantic value, clamping and snapping it into the current domain.
   bool setValue(float value);
-
-  /// Returns the compatibility normalized position in [0, 65535].
-  uint16_t getPos() const;
-
-  /// Sets the compatibility normalized position, then remaps it through the
-  /// current semantic range and discrete step configuration.
-  bool setPos(uint16_t pos);
 
   /// Called after the slider value changes.
   virtual void onValueChange(float value, bool from_user) {}

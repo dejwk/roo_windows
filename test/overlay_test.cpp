@@ -70,14 +70,16 @@ class FullWidthColumnWidget : public FlexLayout {
   }
 };
 
-int ExamplePercentFromPos(uint16_t pos) {
-  return ((uint32_t)pos * 100u + 32767u) / 65535u;
+int ExamplePercentFromUnitValue(float value) {
+  if (value < 0.0f) value = 0.0f;
+  if (value > 1.0f) value = 1.0f;
+  return (int)lroundf(value * 100.0f);
 }
 
-uint16_t ExamplePosFromPercent(int percent) {
+float ExampleUnitValueFromPercent(int percent) {
   if (percent < 0) percent = 0;
   if (percent > 100) percent = 100;
-  return ((uint32_t)percent * 65535u + 50u) / 100u;
+  return 0.01f * (float)percent;
 }
 
 class ExampleSliderRow : public FlexLayout {
@@ -90,7 +92,8 @@ class ExampleSliderRow : public FlexLayout {
         primary_(env, primary, font_body1()),
         secondary_(env, secondary, font_caption()),
         value_(env, "", font_body1()),
-        slider_(env, ExamplePosFromPercent(initial_percent)) {
+        slider_(env, material3::SliderRange{},
+          ExampleUnitValueFromPercent(initial_percent)) {
     setPadding(Padding(Scaled(12), Scaled(8)));
     setGap(Scaled(8));
 
@@ -107,7 +110,7 @@ class ExampleSliderRow : public FlexLayout {
     add(header_, {.flex_grow = 0, .flex_shrink = 0});
     add(slider_, {.flex_grow = 0, .flex_shrink = 1});
 
-    value_.setTextf("%d%%", ExamplePercentFromPos(slider_.getPos()));
+    value_.setTextf("%d%%", ExamplePercentFromUnitValue(slider_.value()));
   }
 
   material3::Slider& slider() { return slider_; }

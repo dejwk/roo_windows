@@ -60,20 +60,6 @@ inline float NormalizeSliderValueForRange(float value, float from, float to,
   return SnapSliderValueToRange(value, from, to, step);
 }
 
-inline float SliderValueFromNormalizedPos(float from, float to, uint16_t pos) {
-  return from + (to - from) * ((float)pos / 65535.0f);
-}
-
-inline uint16_t SliderPosFromValue(float from, float to, float value) {
-  if (!(to > from)) return 0;
-  float clamped = ClampSliderValue(value, from, to);
-  float normalized = (clamped - from) / (to - from);
-  int32_t pos = (int32_t)floorf(normalized * 65535.0f + 0.5f);
-  if (pos < 0) pos = 0;
-  if (pos > 65535) pos = 65535;
-  return (uint16_t)pos;
-}
-
 // Orientation-aware geometry adapter for slider math. It lets the slider and
 // range slider express movement and painting in a single logical primary axis
 // while converting to widget-local display coordinates for horizontal and
@@ -102,22 +88,6 @@ class SliderAxisMetrics {
 
   // Returns whether display coordinates are mapped vertically.
   bool isVertical() const { return vertical_; }
-
-  // Converts a normalized 16-bit position into the thumb center in logical
-  // primary-axis coordinates. Retained for the legacy uint16_t shims only;
-  // new code should prefer centerFromValue().
-  float centerFromPos(uint16_t pos) const {
-    return (float)kTrackHandleGap - 0.5f +
-           (float)(((uint32_t)pos * (uint32_t)normalizedRange() + 32768u) >>
-                   16);
-  }
-
-  // Converts a normalized 16-bit position into the thumb center in
-  // display-space coordinates on the travel axis. Retained for the legacy
-  // uint16_t shims only; new code should prefer displayCenterFromValue().
-  float displayCenterFromPos(uint16_t pos) const {
-    return displayPrimary(centerFromPos(pos));
-  }
 
   // Returns the logical primary-axis thumb center for a semantic value,
   // rounded to the nearest pixel boundary so the painted thumb stays
@@ -165,17 +135,6 @@ class SliderAxisMetrics {
     return vertical_ ? (float)(primary_span_ - 1) - primary : primary;
   }
 
-  // Converts a display-space primary coordinate back into a normalized 16-bit
-  // slider position, clamping to the valid travel range.
-  uint16_t posFromPrimaryCoord(int16_t primary_coord) const {
-    int16_t range = normalizedRange();
-    if (range <= 0) return 0;
-    int32_t pos = primary_coord + 1 - kTrackHandleGap;
-    if (pos <= 0) return 0;
-    if (pos >= range) return 65535;
-    return (((uint32_t)pos << 16) + (uint32_t)(range / 2)) / (uint32_t)range;
-  }
-
   // Extracts the display-space coordinate on the travel axis from a widget
   // point.
   int16_t primaryCoordFromPoint(XDim x, YDim y) const {
@@ -192,15 +151,6 @@ class SliderAxisMetrics {
       return is_dragging || !((dy * dy > dx * dx) && dy * dy > 25);
     }
     return is_dragging || !((dx * dx > dy * dy) && dx * dx > 25);
-  }
-
-  // Returns whether the thumb at `pos` should be considered hit by a press at
-  // `primary_coord`, expanded by `touch_slop` pixels on both sides.
-  bool hitsThumb(uint16_t pos, int16_t primary_coord,
-                 int16_t touch_slop) const {
-    uint16_t min_pos = posFromPrimaryCoord(primary_coord - touch_slop);
-    uint16_t max_pos = posFromPrimaryCoord(primary_coord + touch_slop);
-    return pos >= min_pos && pos <= max_pos;
   }
 
   // Returns the widget-local dirty rectangle that covers the painted handle
@@ -222,12 +172,6 @@ class SliderAxisMetrics {
     return invalidationRectForCenterChange(
         centerFromValue(from, to, old_value),
         centerFromValue(from, to, new_value));
-  }
-
-  // Pos-based wrapper used by the legacy uint16_t shims only.
-  Rect invalidationRectForPosChange(uint16_t old_pos, uint16_t new_pos) const {
-    return invalidationRectForCenterChange(centerFromPos(old_pos),
-                                           centerFromPos(new_pos));
   }
 
   // Returns the cross-axis center in display coordinates.
@@ -372,14 +316,6 @@ inline SliderVisualMetrics ResolveSliderVisualMetricsForValue(
   return ResolveSliderVisualMetrics(axis, axis.centerFromValue(from, to, value),
                                     thumb_primary_span, track_cross_span,
                                     track_handle_gap, thumb_cross_span);
-}
-
-inline SliderVisualMetrics ResolveHorizontalSliderVisualMetrics(
-    const SliderAxisMetrics& axis, uint16_t pos, int16_t track_cross_span,
-    int16_t track_handle_gap, int16_t thumb_cross_span) {
-  return ResolveSliderVisualMetrics(axis, axis.centerFromPos(pos), kHandleWidth,
-                                    track_cross_span, track_handle_gap,
-                                    thumb_cross_span);
 }
 
 }  // namespace internal

@@ -94,27 +94,29 @@ void initDisplay() {
 
 namespace {
 
-int PercentFromPos(uint16_t pos) {
-  return ((uint32_t)pos * 100u + 32767u) / 65535u;
+int PercentFromUnitValue(float value) {
+  if (value < 0.0f) value = 0.0f;
+  if (value > 1.0f) value = 1.0f;
+  return (int)lroundf(value * 100.0f);
 }
 
-uint16_t PosFromPercent(int percent) {
+float UnitValueFromPercent(int percent) {
   if (percent < 0) percent = 0;
   if (percent > 100) percent = 100;
-  return ((uint32_t)percent * 65535u + 50u) / 100u;
+  return 0.01f * (float)percent;
 }
 
-class LegacySliderRow : public FlexLayout {
+class SliderRow : public FlexLayout {
  public:
-  LegacySliderRow(const Environment& env, const char* primary,
-                  const char* secondary, int initial_percent)
+  SliderRow(const Environment& env, const char* primary,
+            const char* secondary, int initial_percent)
       : FlexLayout(env, FlexDirection::kColumn),
         header_(env, FlexDirection::kRow),
         labels_(env, FlexDirection::kColumn),
         primary_(env, primary, font_body1()),
         secondary_(env, secondary, font_caption()),
         value_(env, "", font_body1()),
-        slider_(env, PosFromPercent(initial_percent)) {
+        slider_(env, SliderRange{}, UnitValueFromPercent(initial_percent)) {
     setPadding(Padding(Scaled(12), Scaled(8)));
     setGap(Scaled(8));
 
@@ -139,7 +141,7 @@ class LegacySliderRow : public FlexLayout {
     on_change_ = std::move(handler);
   }
 
-  int percent() const { return PercentFromPos(slider_.getPos()); }
+  int percent() const { return PercentFromUnitValue(slider_.value()); }
 
  private:
   void updateValue() { value_.setTextf("%d%%", percent()); }
@@ -635,17 +637,17 @@ class SliderScreen : public SimpleScrollablePanel {
         content_(env),
         title_(env, "Material 3 sliders", font_body1()),
         subtitle_(env,
-                  "Compatibility, semantic, discrete, centered, vertical, "
+                     "Unit-range, semantic, discrete, centered, vertical, "
                   "range, and iconized sliders, with custom value indicator "
                   "labels.",
                   font_caption()),
         divider_(env),
-        migration_(env,
-                   "The first row still uses Slider(env, pos). The rest use "
-                   "semantic ranges.",
-                   font_caption()),
-        legacy_(env, "Legacy compatibility",
-                "Normalized position constructor mapped to a percentage", 72),
+                migration_(env,
+                     "The first row uses the default unit range. The rest use "
+                     "custom semantic ranges.",
+                     font_caption()),
+                legacy_(env, "Default unit range",
+                  "0..100% mapped through the semantic value API", 72),
         fan_speed_(
             env, "Discrete fan speed", "Custom \"Nx\" indicator on press/drag",
             material3::SliderRange{0.0f, 5.0f, 1.0f}, 2.0f,

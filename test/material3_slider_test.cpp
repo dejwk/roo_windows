@@ -1397,10 +1397,12 @@ TEST_F(Material3SliderAppTest,
 }
 
 // Verifies the tap lifecycle order for the single slider: interaction start,
-// user value change, and interaction end, with the compatibility value echoed.
+// user value change, and interaction end, with the final semantic value
+// echoed back on completion.
 TEST_F(Material3SliderAppTest,
        TapLifecycleFiresStartValueCompatibilityEndInOrder) {
-  auto tracking_slider = std::make_unique<TrackingSlider>(env_, 0);
+  auto tracking_slider =
+      std::make_unique<TrackingSlider>(env_, SliderRange{}, 0.0f);
   slider_ = tracking_slider.get();
   int interactive_change_count = 0;
   slider_->setOnInteractiveChange([&]() { ++interactive_change_count; });
@@ -1425,7 +1427,8 @@ TEST_F(Material3SliderAppTest,
 // Verifies that drag gestures emit only one interaction-start callback and
 // still terminate cleanly when canceled rather than released.
 TEST_F(Material3SliderAppTest, DragLifecycleFiresSingleStartAndEndsOnCancel) {
-  auto tracking_slider = std::make_unique<TrackingSlider>(env_, 0);
+  auto tracking_slider =
+      std::make_unique<TrackingSlider>(env_, SliderRange{}, 0.0f);
   slider_ = tracking_slider.get();
   TrackingSlider* tracking = tracking_slider.get();
   app_.add(std::move(tracking_slider),
@@ -1454,7 +1457,8 @@ TEST_F(Material3SliderAppTest, DragLifecycleFiresSingleStartAndEndsOnCancel) {
 // Verifies that releasing an active drag is consumed by the slider, clears the
 // pressed state, and emits a matching interaction-end callback.
 TEST_F(Material3SliderAppTest, DragTouchUpIsConsumedAndEndsInteraction) {
-  auto tracking_slider = std::make_unique<TrackingSlider>(env_, 0);
+  auto tracking_slider =
+      std::make_unique<TrackingSlider>(env_, SliderRange{}, 0.0f);
   slider_ = tracking_slider.get();
   TrackingSlider* tracking = tracking_slider.get();
   app_.add(std::move(tracking_slider),
@@ -1594,7 +1598,7 @@ TEST_F(Material3SliderRenderTest,
 
   auto backdrop = std::make_unique<SolidBackdrop>(env_, kBackdropColor,
                                                   Dimensions(kWidth, kHeight));
-  auto slider = std::make_unique<Slider>(env_, 32768);
+  auto slider = std::make_unique<Slider>(env_, SliderRange{}, 0.5f);
   slider_ = slider.get();
 
   app_.add(std::move(backdrop),
@@ -1840,7 +1844,8 @@ TEST_F(Material3SliderRenderTest,
 
   auto backdrop = std::make_unique<SolidBackdrop>(env_, kBackdropColor,
                                                   Dimensions(kWidth, kHeight));
-  auto pressed_slider = std::make_unique<Slider>(env_, 32768);
+  auto pressed_slider =
+      std::make_unique<Slider>(env_, SliderRange{}, 0.5f);
   slider_ = pressed_slider.get();
 
   app_.add(std::move(backdrop),

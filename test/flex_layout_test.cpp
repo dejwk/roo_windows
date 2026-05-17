@@ -107,7 +107,7 @@ TEST(FlexLayout, PaddedColumnShrinksMatchParentWidthChildren) {
   parent.setPadding(Padding(12));
 
   HorizontalDivider divider(env);
-  material3::Slider slider(env, 32768);
+  material3::Slider slider(env, material3::SliderRange{}, 0.5f);
 
   parent.add(divider, {.flex_grow = 0, .flex_shrink = 0});
   parent.add(slider, {.flex_grow = 0, .flex_shrink = 1});
@@ -137,7 +137,8 @@ TEST(FlexLayout,
 
   auto divider = std::make_unique<HorizontalDivider>(env);
   HorizontalDivider* divider_ptr = divider.get();
-  auto slider = std::make_unique<material3::Slider>(env, 32768);
+  auto slider =
+      std::make_unique<material3::Slider>(env, material3::SliderRange{}, 0.5f);
   material3::Slider* slider_ptr = slider.get();
 
   content_ptr->add(std::move(divider), {.flex_grow = 0, .flex_shrink = 0});
@@ -173,7 +174,8 @@ TEST(FlexLayout,
 
   auto divider = std::make_unique<HorizontalDivider>(env);
   HorizontalDivider* divider_ptr = divider.get();
-  auto slider = std::make_unique<material3::Slider>(env, 32768);
+  auto slider =
+      std::make_unique<material3::Slider>(env, material3::SliderRange{}, 0.5f);
   material3::Slider* slider_ptr = slider.get();
 
   auto wide_child =
@@ -209,7 +211,8 @@ TEST(FlexLayout,
 
   auto divider = std::make_unique<HorizontalDivider>(env);
   HorizontalDivider* divider_ptr = divider.get();
-  auto slider = std::make_unique<material3::Slider>(env, 32768);
+  auto slider =
+      std::make_unique<material3::Slider>(env, material3::SliderRange{}, 0.5f);
   material3::Slider* slider_ptr = slider.get();
 
   auto row = std::make_unique<TestPaddedColumnFlexLayout>(env);
@@ -264,7 +267,8 @@ TEST(FlexLayout, SliderExampleNestedColumnsHaveCorrectPadding) {
     auto row = std::make_unique<TestFlexLayout>(env, FlexDirection::kColumn);
     row_ptrs[i] = row.get();
     row->setPadding(Padding(12, 8));
-    auto slider = std::make_unique<material3::Slider>(env, 32768);
+    auto slider = std::make_unique<material3::Slider>(
+      env, material3::SliderRange{}, 0.5f);
     slider_ptrs[i] = slider.get();
     row_ptrs[i]->add(std::move(slider), {.flex_grow = 0, .flex_shrink = 1});
     content_ptr->add(std::move(row), {.flex_grow = 0, .flex_shrink = 0});

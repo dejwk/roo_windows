@@ -187,13 +187,13 @@ All "per-instance cost" numbers below are approximate ESP32 (Xtensa, 32-bit,
 4. Make hit-testing and gesture arbitration depend on orientation.
 5. Preserve tap-to-jump and drag-to-adjust behavior.
 
-### Compatibility Requirements
+### API Requirements
 
-1. Preserve source compatibility for existing code that constructs
-   `material3::Slider(env, pos)`.
-2. Preserve `getPos()` / `setPos()` as normalized compatibility accessors.
-3. Allow the implementation to continue using a normalized fixed-point position
-   internally, even if the public API moves to semantic values.
+1. Expose only semantic construction and value access for Material 3 sliders.
+2. Keep the default constructor shape cheap by treating `Slider(env)` as a
+  unit-range slider over `[0.0f, 1.0f]`.
+3. Keep implementation math expressed in semantic values rather than a
+  normalized fixed-point compatibility layer.
 
 ### Embedded Constraints
 
@@ -348,11 +348,7 @@ using a derived class.
 ```cpp
 class Slider : public BasicWidget {
  public:
-  // Compatibility constructor. Equivalent to constructing with
-  // SliderRange{0.0f, 1.0f} and value = pos / 65535.0f.
-  explicit Slider(const Environment& env, uint16_t pos = 0);
-
-  Slider(const Environment& env, SliderRange range, float value = 0.0f,
+  Slider(const Environment& env, SliderRange range = {}, float value = 0.0f,
          SliderVariant variant = SliderVariant::kStandard,
          SliderStyle style = {});
 
@@ -369,10 +365,6 @@ class Slider : public BasicWidget {
   // --- Value access. ---
   float value() const;
   bool setValue(float value);
-
-  // Compatibility helpers; see SliderRange-based API for the primary surface.
-  uint16_t getPos() const;
-  bool setPos(uint16_t pos);
 
   // --- Optional shared appearance overrides. ---
   // Non-owning. The pointed-to struct must outlive the slider, or be cleared
@@ -518,12 +510,8 @@ Rationale:
 - Material 3 and Android both define sliders in terms of a value range,
 - step validation belongs with the slider, not every caller,
 - range sliders need domain-aware validation anyway,
-- the implementation can still map everything to a normalized fixed-point
-  representation internally if useful.
-
-`getPos()` / `setPos()` remain as compatibility APIs and should be documented
-as normalized helpers rather than the primary interface. They are scheduled
-for removal in the final implementation step (see Step 13).
+- keeping semantic values end-to-end avoids quantization surprises and removes
+  a compatibility layer the range slider never needed.
 
 ### 2. Range Slider Is a Separate Class
 
@@ -731,20 +719,17 @@ material3::Slider slider(env, 32768);
 
 continues to work through Steps 0-12. Step 13 then removes the shim.
 
-Compatibility behavior during Steps 0-12:
+Behavior during Steps 0-12:
 
-- the existing constructor remains,
-- it maps to a normalized single-value slider with range `[0.0f, 1.0f]`,
-- `getPos()` / `setPos()` continue to work,
+- `Slider(env)` remains the unit-range convenience form,
 - `setOnInteractiveChange()` keeps its current meaning, firing only for
   user-originated changes,
-- programmatic `setValue()` / `setPos()` updates fire `onValueChange()`
+- programmatic `setValue()` updates fire `onValueChange()`
   with `from_user == false` and do not fire the interaction lifecycle
   hooks or `setOnInteractiveChange()`.
 
 After Step 13:
 
-- the legacy constructor and `getPos()` / `setPos()` are removed,
 - callers use `SliderRange` and `value()` / `setValue()` exclusively.
 
 ## Implementation Plan
@@ -775,12 +760,12 @@ Incremental per-instance RAM cost: **0 B** (no fields added).
 Example usage after this step:
 
 ```cpp
-material3::Slider slider(env, 32768);
-slider.setPos(49152);
+material3::Slider slider(env);
+slider.setValue(0.75f);
 ```
 
 ```cpp
-material3::Slider brightness(env, 0);
+material3::Slider brightness(env);
 brightness.setOnInteractiveChange([]() { LOG(INFO) << "Brightness changed"; });
 ```
 
@@ -793,9 +778,8 @@ public widget unchanged in this step.
 Scope:
 
 1. separate semantic value handling from paint code,
-2. represent track axis, thumb hit-testing, and normalized position in a shared
-  helper,
-3. keep `material3::Slider(env, pos)` as the only public constructor for now.
+2. represent track axis and thumb hit-testing in a shared helper,
+3. keep `Slider(env)` as the default unit-range constructor.
 
 Deliverable:
 
@@ -809,12 +793,12 @@ footprint: ~44 B.
 Example usage after this step:
 
 ```cpp
-material3::Slider slider(env, 16384);
-slider.setPos(32768);
+material3::Slider slider(env);
+slider.setValue(0.5f);
 ```
 
 ```cpp
-material3::Slider volume(env, 50000);
+material3::Slider volume(env, material3::SliderRange{}, 0.76f);
 volume.setOnInteractiveChange([]() { /* Existing callback behavior unchanged. */ });
 ```
 
@@ -827,8 +811,7 @@ Scope:
 
 1. add `SliderRange`, `value()`, `setValue()`, `range()`, and `setRange()`,
 2. clamp invalid programmatic input into the configured domain,
-3. map the existing normalized constructor to `[0.0f, 1.0f]`,
-4. document `getPos()` / `setPos()` as compatibility helpers.
+3. make `Slider(env)` the explicit unit-range convenience form.
 
 Deliverable:
 
@@ -1325,8 +1308,7 @@ The implementation should add focused tests for:
 6. minimum separation enforcement,
 7. value-indicator visibility rules,
 8. orientation-aware drag behavior,
-9. compatibility behavior of `getPos()` / `setPos()`,
-10. size-token measurement and preferred-size output.
+9. size-token measurement and preferred-size output.
 
 The example at `examples/material3/slider/slider.ino` should also be expanded to
 demonstrate:

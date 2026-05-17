@@ -372,10 +372,6 @@ void Slider::paintTrackIcons(const Canvas& canvas, Clipper& clipper,
   }
 }
 
-Slider::Slider(const Environment& env, uint16_t pos)
-    : Slider(env, SliderRange{},
-             internal::SliderValueFromNormalizedPos(0.0f, 1.0f, pos)) {}
-
 Slider::Slider(const Environment& env, SliderRange range, float value,
                SliderVariant variant, SliderStyle style)
     : BasicWidget(env),
@@ -477,11 +473,6 @@ void Slider::onCancel() {
   }
   BasicWidget::onCancel();
   is_dragging_ = false;
-}
-
-bool Slider::setPos(uint16_t pos) {
-  return setValue(
-      internal::SliderValueFromNormalizedPos(range_.from, range_.to, pos));
 }
 
 bool Slider::setValueInternal(float value, bool from_user) {
@@ -645,10 +636,6 @@ void Slider::notifyStateChanged(uint16_t state_diff) {
     notifyParentInvalidatedRegion(
         bubble_envelope.translate(offsetLeft(), offsetTop()));
   }
-}
-
-uint16_t Slider::getPos() const {
-  return internal::SliderPosFromValue(range_.from, range_.to, value_);
 }
 
 void Slider::paint(const Canvas& canvas) const {
