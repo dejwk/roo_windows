@@ -218,8 +218,7 @@ Rect ResolveCurrentIndicatorBoundsForTest(const Slider& slider,
                                           const Environment& env) {
   const SliderStyle& style = slider.style();
   internal::SliderAxisMetrics axis(
-      slider.width(), slider.height(), internal::kHandleWidth,
-      internal::kTrackHandleGap,
+      slider.width(), slider.height(),
       style.orientation == SliderOrientation::kVertical);
   float center = axis.displayCenterFromPos(slider.getPos());
 
@@ -241,8 +240,7 @@ Rect ResolveInsetIconRectForTest(
     SliderTrackIconAnchor anchor = SliderTrackIconAnchor::kStart) {
   const internal::SliderSizeMetrics& size_metrics =
       internal::ResolveSliderSizeMetrics(style.size);
-  internal::SliderAxisMetrics axis(width, height, internal::kHandleWidth,
-                                   internal::kTrackHandleGap);
+  internal::SliderAxisMetrics axis(width, height);
   internal::SliderVisualMetrics layout = internal::ResolveSliderVisualMetrics(
       axis, axis.centerFromPos(pos), internal::kHandleWidth,
       size_metrics.track_height, internal::kTrackHandleGap,
@@ -297,6 +295,21 @@ Rect ResolveInsetIconReservedRectForTest(
   return Rect(std::max<XDim>(0, icon_rect.xMin() - Scaled(4)), icon_rect.yMin(),
               std::min<XDim>(width - 1, icon_rect.xMax() + Scaled(4)),
               icon_rect.yMax());
+}
+
+Rect ResolveLegacyOverlayClipForTest(const internal::SliderAxisMetrics& axis,
+                                     uint16_t old_pos, uint16_t new_pos,
+                                     int16_t overlay_radius) {
+  float old_center = axis.centerFromPos(old_pos);
+  float new_center = axis.centerFromPos(new_pos);
+  int16_t min_primary = (int16_t)ceilf(std::min(old_center, new_center) -
+                                       0.5f * (float)internal::kHandleWidth) -
+                        overlay_radius;
+  int16_t max_primary = (int16_t)floorf(std::max(old_center, new_center) +
+                                        0.5f * (float)internal::kHandleWidth) +
+                        overlay_radius;
+  return Rect(axis.boxFromPrimaryCross(min_primary, 0, max_primary,
+                                       axis.crossSpan() - 1));
 }
 
 class ContentPaintRangeSlider : public RangeSlider {
@@ -756,9 +769,7 @@ TEST_F(Material3SliderRenderTest, InsetIconJumpsPastHandleAtMinimumValue) {
 
   const internal::SliderSizeMetrics& size_metrics =
       internal::ResolveSliderSizeMetrics(style.size);
-  internal::SliderAxisMetrics axis(kSliderWidth, Scaled(52),
-                                   internal::kHandleWidth,
-                                   internal::kTrackHandleGap);
+  internal::SliderAxisMetrics axis(kSliderWidth, Scaled(52));
   internal::SliderVisualMetrics layout = internal::ResolveSliderVisualMetrics(
       axis,
       axis.centerFromPos(internal::SliderPosFromValue(0.0f, 100.0f, 0.0f)),
@@ -822,9 +833,7 @@ TEST_F(Material3SliderRenderTest,
 
   const internal::SliderSizeMetrics& size_metrics =
       internal::ResolveSliderSizeMetrics(style.size);
-  internal::SliderAxisMetrics axis(kSliderWidth, Scaled(52),
-                                   internal::kHandleWidth,
-                                   internal::kTrackHandleGap);
+  internal::SliderAxisMetrics axis(kSliderWidth, Scaled(52));
   internal::SliderVisualMetrics layout = internal::ResolveSliderVisualMetrics(
       axis,
       axis.centerFromPos(internal::SliderPosFromValue(0.0f, 100.0f, 100.0f)),
@@ -870,8 +879,7 @@ TEST_F(Material3SliderRenderTest,
   Rect reserved_rect = ResolveInsetIconReservedRectForTest(
       style, slider_ptr->getPos(), *icon, slider_ptr->width(),
       slider_ptr->height());
-  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
-                                   Scaled(4), Scaled(6));
+  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
   int16_t stop_center_x = (int16_t)roundf(
       axis.centerFromPos(internal::SliderPosFromValue(0.0f, 1.0f, 0.25f)));
   int16_t sample_local_x =
@@ -912,8 +920,7 @@ TEST_F(Material3SliderRenderTest,
   Rect reserved_rect = ResolveInsetIconReservedRectForTest(
       style, slider_ptr->getPos(), *icon, slider_ptr->width(),
       slider_ptr->height(), anchor);
-  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
-                                   Scaled(4), Scaled(6));
+  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
   int16_t stop_center_x = (int16_t)roundf(
       axis.centerFromPos(internal::SliderPosFromValue(0.0f, 1.0f, 0.75f)));
   int16_t sample_local_x =
@@ -1003,8 +1010,7 @@ TEST_F(Material3SliderRenderTest,
             roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                              kSliderY + Scaled(52) - 1));
 
-  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
-                                   Scaled(4), Scaled(6));
+  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
   auto stop = roo_display::SmoothFilledCircle(
       roo_display::FpPoint{
           axis.centerFromPos(internal::SliderPosFromValue(0.0f, 100.0f, 20.0f)),
@@ -1228,8 +1234,7 @@ TEST_F(Material3SliderAppTest,
                             kSliderY + kSliderHeight - 1));
   ASSERT_TRUE(app_.refresh());
 
-  internal::SliderAxisMetrics axis(tracking->width(), tracking->height(),
-                                   Scaled(4), Scaled(6));
+  internal::SliderAxisMetrics axis(tracking->width(), tracking->height());
 
   XDim tap_x = Scaled(84);
   ASSERT_TRUE(tracking->onSingleTapUp(tap_x, tracking->height() / 2));
@@ -1495,8 +1500,7 @@ TEST_F(Material3SliderAppTest,
                             kSliderY + kSliderHeight - 1));
   ASSERT_TRUE(app_.refresh());
 
-  internal::SliderAxisMetrics axis(tracking->width(), tracking->height(),
-                                   Scaled(4), Scaled(6));
+  internal::SliderAxisMetrics axis(tracking->width(), tracking->height());
   XDim start_thumb_center = (XDim)roundf(axis.centerFromPos(
       internal::SliderPosFromValue(0.0f, 100.0f, tracking->startValue())));
   tracking->onShowPress(start_thumb_center, kSliderHeight / 2);
@@ -1535,8 +1539,7 @@ TEST_F(Material3SliderAppTest, RangeSliderDragTouchUpIsConsumedAndEnds) {
                             kSliderY + kSliderHeight - 1));
   ASSERT_TRUE(app_.refresh());
 
-  internal::SliderAxisMetrics axis(tracking->width(), tracking->height(),
-                                   Scaled(4), Scaled(6));
+  internal::SliderAxisMetrics axis(tracking->width(), tracking->height());
   XDim start_thumb_center = (XDim)roundf(axis.centerFromPos(
       internal::SliderPosFromValue(0.0f, 100.0f, tracking->startValue())));
   tracking->onShowPress(start_thumb_center, kSliderHeight / 2);
@@ -1644,8 +1647,7 @@ TEST_F(Material3SliderRenderTest,
   Color inactive = QuantizeToArgb4444(env_.theme().color.secondaryContainer);
   Color background = QuantizeToArgb4444(env_.theme().color.background);
 
-  internal::SliderAxisMetrics axis(slider_->width(), slider_->height(),
-                                   Scaled(4), Scaled(6));
+  internal::SliderAxisMetrics axis(slider_->width(), slider_->height());
   internal::SliderVisualMetrics layout = internal::ResolveSliderVisualMetrics(
       axis, axis.centerFromPos(slider_->getPos()), Scaled(4), Scaled(16),
       Scaled(6), Scaled(44));
@@ -1693,8 +1695,7 @@ TEST_F(Material3SliderRenderTest, RangeSliderPaintsActiveTrackBetweenThumbs) {
   Color primary = QuantizeToArgb4444(env_.theme().color.primary);
   Color inactive = QuantizeToArgb4444(env_.theme().color.secondaryContainer);
   Color background = QuantizeToArgb4444(env_.theme().color.background);
-  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
-                                   Scaled(4), Scaled(6));
+  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
   int start_handle_x =
       kSliderX + (int)roundf(axis.centerFromPos(internal::SliderPosFromValue(
                      0.0f, 100.0f, slider_ptr->startValue())));
@@ -1734,8 +1735,7 @@ TEST_F(Material3SliderRenderTest,
 
   ASSERT_TRUE(app_.refresh());
 
-  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
-                                   Scaled(4), Scaled(6));
+  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
   int16_t center_y = kSliderY + slider_ptr->height() / 2;
   int active_stop_x =
       kSliderX + (int)roundf(axis.centerFromPos(
@@ -1777,8 +1777,7 @@ TEST_F(Material3SliderRenderTest,
 
   ASSERT_TRUE(app_.refresh());
 
-  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
-                                   Scaled(4), Scaled(6));
+  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
   int16_t center_y = kSliderY + slider_ptr->height() / 2;
   int active_stop_x =
       kSliderX + (int)roundf(axis.centerFromPos(
@@ -1821,8 +1820,7 @@ TEST_F(Material3SliderRenderTest,
 
   ASSERT_TRUE(app_.refresh());
 
-  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
-                                   Scaled(4), Scaled(6));
+  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
   int16_t center_y = kSliderY + slider_ptr->height() / 2;
   int left_inactive_stop_x =
       kSliderX + (int)roundf(axis.centerFromPos(
@@ -1900,8 +1898,7 @@ TEST_F(Material3SliderRenderTest,
                           slider_ptr->height() / 2);
   ASSERT_TRUE(app_.refresh());
 
-  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
-                                   Scaled(4), Scaled(6));
+  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
   int16_t pressed_thumb_width = Scaled(2);
   int16_t pressed_track_gap = Scaled(5);
   internal::SliderVisualMetrics layout = internal::ResolveSliderVisualMetrics(
@@ -1934,8 +1931,7 @@ TEST_F(Material3SliderRenderTest,
 
   ASSERT_TRUE(app_.refresh());
 
-  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
-                                   Scaled(4), Scaled(6));
+  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
   XDim start_thumb_center = (XDim)roundf(axis.centerFromPos(
       internal::SliderPosFromValue(0.0f, 100.0f, slider_ptr->startValue())));
   slider_ptr->onShowPress(start_thumb_center, slider_ptr->height() / 2);
@@ -1977,7 +1973,7 @@ TEST_F(Material3SliderRenderTest,
   ASSERT_TRUE(app_.refresh());
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
-                                   Scaled(4), Scaled(6), true);
+                                   true);
   internal::SliderVisualMetrics layout = internal::ResolveSliderVisualMetrics(
       axis, axis.centerFromPos(slider_ptr->getPos()), Scaled(4), Scaled(16),
       Scaled(6), Scaled(44));
@@ -2023,20 +2019,16 @@ TEST_F(Material3SliderRenderTest,
 
   ASSERT_TRUE(slider_ptr->setValue(0.8f));
 
-  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
-                                   Scaled(4), Scaled(6));
+  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
   uint16_t old_pos = internal::SliderPosFromValue(0.0f, 1.0f, 0.2f);
   uint16_t new_pos = internal::SliderPosFromValue(0.0f, 1.0f, 0.8f);
   Rect thumb_rect = axis.invalidationRectForPosChange(old_pos, new_pos);
   Rect expected_clip = Rect::Intersect(thumb_rect, slider_ptr->bounds())
                            .translate(kSliderX, kSliderY);
-  internal::SliderAxisMetrics old_overlay_axis(slider_ptr->width(),
-                                               slider_ptr->height(), Scaled(4),
-                                               kPointOverlayDiameter / 2);
   Rect old_overlay_clip =
-      Rect::Intersect(
-          old_overlay_axis.invalidationRectForPosChange(old_pos, new_pos),
-          slider_ptr->bounds())
+      Rect::Intersect(ResolveLegacyOverlayClipForTest(
+                          axis, old_pos, new_pos, kPointOverlayDiameter / 2),
+                      slider_ptr->bounds())
           .translate(kSliderX, kSliderY);
   Rect indicator_bounds =
       ResolveCurrentIndicatorBoundsForTest(*slider_ptr, env_)
@@ -2070,8 +2062,7 @@ TEST_F(Material3SliderRenderTest,
 
   ASSERT_TRUE(slider_ptr->setValues(35.0f, 75.0f));
 
-  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
-                                   Scaled(4), Scaled(6));
+  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
   uint16_t old_start_pos = internal::SliderPosFromValue(0.0f, 100.0f, 25.0f);
   uint16_t new_start_pos = internal::SliderPosFromValue(0.0f, 100.0f, 35.0f);
   uint16_t end_pos = internal::SliderPosFromValue(0.0f, 100.0f, 75.0f);
@@ -2117,8 +2108,7 @@ TEST_F(Material3SliderRenderTest,
   ASSERT_TRUE(slider_ptr->setValue(0.8f));
   ASSERT_EQ(1u, panel_ptr->invalidated_regions.size());
 
-  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
-                                   Scaled(4), Scaled(6));
+  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
   uint16_t old_pos = internal::SliderPosFromValue(0.0f, 1.0f, 0.2f);
   uint16_t new_pos = internal::SliderPosFromValue(0.0f, 1.0f, 0.8f);
   float c_old = axis.displayCenterFromPos(old_pos);
@@ -2187,8 +2177,7 @@ TEST_F(Material3SliderRenderTest, PressStateChangePaintIsClippedToHandleSlice) {
   roo_display::FpPoint focus = slider_ptr->getPointOverlayFocus();
   slider_ptr->onShowPress((XDim)focus.x, (YDim)focus.y);
 
-  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
-                                   Scaled(4), Scaled(6));
+  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
   Rect expected_clip = axis.invalidationRectForPosChange(slider_ptr->getPos(),
                                                          slider_ptr->getPos())
                            .translate(kSliderX, kSliderY);
@@ -2230,8 +2219,7 @@ TEST_F(Material3SliderRenderTest,
   slider_ptr->onShowPress((XDim)focus.x, (YDim)focus.y);
   ASSERT_EQ(1u, panel_ptr->invalidated_regions.size());
 
-  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
-                                   Scaled(4), Scaled(6));
+  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
   float center = axis.displayCenterFromPos(slider_ptr->getPos());
   Rect expected = ValueIndicatorBubble::EnvelopeForCenterRange(
                       slider_ptr->width(), slider_ptr->height(), center, center,
@@ -2268,19 +2256,16 @@ TEST_F(Material3SliderRenderTest,
   ASSERT_TRUE(slider_ptr->setValue(0.8f));
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
-                                   Scaled(4), Scaled(6), true);
+                                   true);
   uint16_t old_pos = internal::SliderPosFromValue(0.0f, 1.0f, 0.2f);
   uint16_t new_pos = internal::SliderPosFromValue(0.0f, 1.0f, 0.8f);
   Rect thumb_rect = axis.invalidationRectForPosChange(old_pos, new_pos);
   Rect expected_clip = Rect::Intersect(thumb_rect, slider_ptr->bounds())
                            .translate(kSliderX, kSliderY);
-  internal::SliderAxisMetrics old_overlay_axis(slider_ptr->width(),
-                                               slider_ptr->height(), Scaled(4),
-                                               kPointOverlayDiameter / 2, true);
   Rect old_overlay_clip =
-      Rect::Intersect(
-          old_overlay_axis.invalidationRectForPosChange(old_pos, new_pos),
-          slider_ptr->bounds())
+      Rect::Intersect(ResolveLegacyOverlayClipForTest(
+                          axis, old_pos, new_pos, kPointOverlayDiameter / 2),
+                      slider_ptr->bounds())
           .translate(kSliderX, kSliderY);
   Rect indicator_bounds =
       ResolveCurrentIndicatorBoundsForTest(*slider_ptr, env_)

@@ -126,7 +126,7 @@ inline void DrawTrackPiece(const Canvas& canvas,
 template <typename SliderLike>
 inline SliderAxisMetrics MakeSliderAxisMetrics(const SliderLike& slider) {
   return SliderAxisMetrics(
-      slider.width(), slider.height(), kHandleWidth, kTrackHandleGap,
+      slider.width(), slider.height(),
       slider.style().orientation == SliderOrientation::kVertical);
 }
 

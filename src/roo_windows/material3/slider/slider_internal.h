@@ -87,16 +87,11 @@ class SliderAxisMetrics {
     float y_max;
   };
 
-  // Builds axis metrics for a slider surface. `thumb_primary_span` is the
-  // thumb length along the travel axis. `track_handle_gap` is both the
-  // painted gap between the track and the handle and the logical stop-mark
-  // offset from each widget edge.
-  SliderAxisMetrics(int16_t width, int16_t height, int16_t thumb_primary_span,
-                    int16_t track_handle_gap, bool vertical = false)
+  // Builds axis metrics for a slider surface. The logical stop-mark offset and
+  // unpressed handle span come from the shared Material 3 slider constants.
+  SliderAxisMetrics(int16_t width, int16_t height, bool vertical = false)
       : primary_span_(vertical ? height : width),
         cross_span_(vertical ? width : height),
-        thumb_primary_span_(thumb_primary_span),
-        track_handle_gap_(track_handle_gap),
         vertical_(vertical) {}
 
   // Returns the widget extent along the slider's travel axis.
@@ -105,16 +100,13 @@ class SliderAxisMetrics {
   // Returns the widget extent perpendicular to the slider's travel axis.
   int16_t crossSpan() const { return cross_span_; }
 
-  // Returns the thumb length along the logical travel axis.
-  int16_t thumbPrimarySpan() const { return thumb_primary_span_; }
-
   // Returns whether display coordinates are mapped vertically.
   bool isVertical() const { return vertical_; }
 
   // Converts a normalized 16-bit position into the thumb center in logical
   // primary-axis coordinates.
   float centerFromPos(uint16_t pos) const {
-    return (float)track_handle_gap_ - 0.5f +
+    return (float)kTrackHandleGap - 0.5f +
            (float)(((uint32_t)pos * (uint32_t)normalizedRange() + 32768u) >>
                    16);
   }
@@ -137,7 +129,7 @@ class SliderAxisMetrics {
   uint16_t posFromPrimaryCoord(int16_t primary_coord) const {
     int16_t range = normalizedRange();
     if (range <= 0) return 0;
-    int32_t pos = primary_coord + 1 - track_handle_gap_;
+    int32_t pos = primary_coord + 1 - kTrackHandleGap;
     if (pos <= 0) return 0;
     if (pos >= range) return 65535;
     return (((uint32_t)pos << 16) + (uint32_t)(range / 2)) / (uint32_t)range;
@@ -176,11 +168,11 @@ class SliderAxisMetrics {
     float old_center = centerFromPos(old_pos);
     float new_center = centerFromPos(new_pos);
     int16_t min_primary = (int16_t)ceilf(std::min(old_center, new_center) -
-                                         0.5f * (float)thumb_primary_span_) -
-                          track_handle_gap_;
+                                         0.5f * (float)kHandleWidth) -
+                          kTrackHandleGap;
     int16_t max_primary = (int16_t)floorf(std::max(old_center, new_center) +
-                                          0.5f * (float)thumb_primary_span_) +
-                          track_handle_gap_;
+                                          0.5f * (float)kHandleWidth) +
+                          kTrackHandleGap;
     return rectFromPrimaryCross(min_primary, 0, max_primary, cross_span_ - 1);
   }
 
@@ -210,7 +202,7 @@ class SliderAxisMetrics {
 
  private:
   int16_t normalizedRange() const {
-    int16_t range = primary_span_ - 2 * track_handle_gap_;
+    int16_t range = primary_span_ - 2 * kTrackHandleGap;
     return range < 0 ? 0 : range;
   }
 
@@ -229,8 +221,6 @@ class SliderAxisMetrics {
 
   int16_t primary_span_;
   int16_t cross_span_;
-  int16_t thumb_primary_span_;
-  int16_t track_handle_gap_;
   bool vertical_;
 };
 
@@ -325,7 +315,7 @@ inline SliderVisualMetrics ResolveHorizontalSliderVisualMetrics(
     const SliderAxisMetrics& axis, uint16_t pos, int16_t track_cross_span,
     int16_t track_handle_gap, int16_t thumb_cross_span) {
   return ResolveSliderVisualMetrics(axis, axis.centerFromPos(pos),
-                                    axis.thumbPrimarySpan(), track_cross_span,
+                                    kHandleWidth, track_cross_span,
                                     track_handle_gap, thumb_cross_span);
 }
 
