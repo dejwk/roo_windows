@@ -58,31 +58,23 @@ const Pictogram& IndeterminatePictogram() {
 }
 
 struct Tokens {
-  Color box;
-  Color border;
-  Color mark;
+  Color selected_container;
+  Color selected_icon;
+  Color unselected_outline;
 };
 
 Tokens ResolveTokens(const Checkbox& widget) {
   const Theme& theme = widget.theme();
-  OnOffState state = widget.onOffState();
   bool enabled = widget.isEnabled();
 
   if (!enabled) {
-    if (state == OnOffState::kOff) {
-      Color border = DisabledComposite(theme.color.onSurface, 0x61, theme);
-      return Tokens{color::Transparent, border, color::Transparent};
-    }
-    Color fill = DisabledComposite(theme.color.onSurface, 0x61, theme);
-    return Tokens{fill, fill, theme.color.surface};
+    Color disabled_container =
+        DisabledComposite(theme.color.onSurface, 0x61, theme);
+    return Tokens{disabled_container, theme.color.surface, disabled_container};
   }
 
-  if (state == OnOffState::kOff) {
-    return Tokens{color::Transparent, theme.color.outline, color::Transparent};
-  }
-
-  return Tokens{theme.color.primary, theme.color.primary,
-                theme.color.onPrimary};
+  return Tokens{theme.color.primary, theme.color.onPrimary,
+                theme.color.outline};
 }
 
 const Pictogram* MarkForState(OnOffState state) {
@@ -106,42 +98,32 @@ void Checkbox::onClicked() {
 
 void Checkbox::paint(const Canvas& canvas) const {
   Tokens tokens = ResolveTokens(*this);
-
-  roo_display::StreamableStack composite(
-      roo_display::Box(0, 0, kContainerSize - 1, kContainerSize - 1));
-
-  SmoothShape container_shape;
-  bool has_container_shape = false;
-
-  if (tokens.box.a() != 0) {
-    container_shape =
-        SmoothFilledRoundRect(kOuterBoxMin, kOuterBoxMin, kOuterBoxMax,
-                              kOuterBoxMax, kOuterCornerRadius, tokens.box);
-    has_container_shape = true;
-  } else if (tokens.border.a() != 0) {
-    container_shape = SmoothThickRoundRect(
+  const Pictogram* mark = MarkForState(onOffState());
+  if (mark == nullptr) {
+    auto outline = SmoothThickRoundRect(
         kOuterBoxMin + kOutlineInset, kOuterBoxMin + kOutlineInset,
         kOuterBoxMax - kOutlineInset, kOuterBoxMax - kOutlineInset,
-        kBorderCornerRadius, kOutlineWidth, tokens.border);
-    has_container_shape = true;
-  }
-
-  if (has_container_shape) {
-    composite.addInput(&container_shape);
-  }
-
-  const Pictogram* mark = MarkForState(onOffState());
-  if (mark != nullptr && tokens.mark.a() != 0) {
-    Pictogram mark_icon(*mark);
-    mark_icon.color_mode().setColor(tokens.mark);
-    roo_display::Box box(0, 0, kContainerSize - 1, kContainerSize - 1);
-    roo_display::Offset offset =
-        (kCenter | kMiddle).resolveOffset(box, mark_icon.anchorExtents());
-    composite.addInput(&mark_icon, offset.dx, offset.dy);
-    canvas.drawTiled(composite, bounds(), kCenter | kMiddle, isInvalidated());
+        kBorderCornerRadius, kOutlineWidth, tokens.unselected_outline);
+    Canvas surface_canvas(canvas);
+    surface_canvas.set_bgcolor(theme().color.surface);
+    surface_canvas.drawTiled(outline, bounds(), kCenter | kMiddle,
+                             isInvalidated());
     return;
   }
 
+  roo_display::StreamableStack composite(
+      roo_display::Box(0, 0, kContainerSize - 1, kContainerSize - 1));
+  auto container = SmoothFilledRoundRect(
+      kOuterBoxMin, kOuterBoxMin, kOuterBoxMax, kOuterBoxMax,
+      kOuterCornerRadius, tokens.selected_container);
+  composite.addInput(&container);
+
+  Pictogram mark_icon(*mark);
+  mark_icon.color_mode().setColor(tokens.selected_icon);
+  roo_display::Box box(0, 0, kContainerSize - 1, kContainerSize - 1);
+  roo_display::Offset offset =
+      (kCenter | kMiddle).resolveOffset(box, mark_icon.anchorExtents());
+  composite.addInput(&mark_icon, offset.dx, offset.dy);
   canvas.drawTiled(composite, bounds(), kCenter | kMiddle, isInvalidated());
 }
 
