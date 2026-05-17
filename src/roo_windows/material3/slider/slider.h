@@ -47,9 +47,12 @@ enum class SliderValueIndicatorBehavior : uint8_t {
 };
 
 enum class SliderTickMode : uint8_t {
+  // Ticks follow the slider's default policy for the current variant.
   kAuto,
+  // Ticks are never rendered, even when the slider is discrete.
   kHidden,
-  kShowStops,
+  // Ticks are rendered for every valid step in a discrete slider.
+  kShowTicks,
 };
 
 enum class SliderInsetIconAnchor : uint8_t {
@@ -64,6 +67,8 @@ struct SliderStyle {
   SliderSize size : 3;
   SliderValueIndicatorBehavior value_indicator : 2;
   SliderTickMode tick_mode : 2;
+  // Material 3 stop indicators are enabled by default and can remain visible
+  // even when tick rendering is hidden.
   bool show_stop_indicators : 1;
 
   constexpr SliderStyle()
@@ -72,7 +77,7 @@ struct SliderStyle {
         size(SliderSize::kExtraSmall),
         value_indicator(SliderValueIndicatorBehavior::kHidden),
         tick_mode(SliderTickMode::kAuto),
-        show_stop_indicators(false) {}
+        show_stop_indicators(true) {}
 
   bool operator==(const SliderStyle& o) const {
     return orientation == o.orientation && direction == o.direction &&

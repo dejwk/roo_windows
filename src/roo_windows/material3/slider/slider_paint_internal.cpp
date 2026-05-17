@@ -105,10 +105,13 @@ void PaintStopRuns(const Canvas& canvas, Clipper& clipper,
                    const SliderPaintTokens& tokens,
                    const SliderAxisMetrics& axis,
                    const SliderPaintStopSegment* segments, int segment_count,
-                   const SliderRange& range,
+                   const SliderRange& range, bool render_active_segments,
                    const StopSuppressionFn& suppress_stop) {
   if (segment_count <= 0) return;
-  int32_t stop_count = (int32_t)lroundf((range.to - range.from) / range.step);
+  int32_t stop_count =
+      IsDiscreteSliderRange(range.step)
+          ? (int32_t)lroundf((range.to - range.from) / range.step)
+          : 1;
 
   SliderPaintStopRun runs[3];
   for (int32_t i = 0; i <= stop_count; ++i) {
@@ -116,6 +119,10 @@ void PaintStopRuns(const Canvas& canvas, Clipper& clipper,
         StopPrimaryCenterFromIndex(axis, range, stop_count, i);
     for (int segment_index = 0; segment_index < segment_count;
          ++segment_index) {
+      if (!SegmentPaintsStopMarks(segments[segment_index],
+                                  render_active_segments)) {
+        continue;
+      }
       if (!SegmentContains(segments[segment_index], primary_center)) continue;
       roo_display::Box stop_extents = StopMarkExtents(axis, primary_center);
       if (suppress_stop && suppress_stop(stop_extents)) break;
@@ -125,6 +132,10 @@ void PaintStopRuns(const Canvas& canvas, Clipper& clipper,
   }
 
   for (int segment_index = 0; segment_index < segment_count; ++segment_index) {
+    if (!SegmentPaintsStopMarks(segments[segment_index],
+                                render_active_segments)) {
+      continue;
+    }
     if (!runs[segment_index].has_marks) continue;
     int16_t cross_start = (axis.crossSpan() - kStopMarkSpanPixels) / 2;
     Color track_color = TrackColorForSegment(tokens, segments[segment_index]);

@@ -869,7 +869,7 @@ TEST_F(Material3SliderRenderTest,
        DiscreteInsetIconPaddingStaysClearOfStopMarks) {
   SliderStyle style{};
   style.size = SliderSize::kMedium;
-  style.tick_mode = SliderTickMode::kShowStops;
+  style.tick_mode = SliderTickMode::kShowTicks;
 
   const roo_display::Pictogram* icon = &circle_24();
 
@@ -909,7 +909,7 @@ TEST_F(Material3SliderRenderTest,
        InactiveSideDiscreteInsetIconPaddingStaysClearOfStopMarks) {
   SliderStyle style{};
   style.size = SliderSize::kMedium;
-  style.tick_mode = SliderTickMode::kShowStops;
+  style.tick_mode = SliderTickMode::kShowTicks;
 
   const roo_display::Pictogram* icon = &circle_24();
   SliderInsetIconAnchor anchor = SliderInsetIconAnchor::kEnd;
@@ -1750,14 +1750,14 @@ TEST_F(Material3SliderRenderTest, RangeSliderPaintsActiveTrackBetweenThumbs) {
   EXPECT_EQ(primary, pixelAt(end_handle_x, kSliderY + 5));
 }
 
-// Verifies that discrete single sliders paint stop marks using active and
-// inactive stop colors on the corresponding sides of the thumb.
+// Verifies that visible discrete ticks are painted across both active and
+// inactive tracks.
 TEST_F(Material3SliderRenderTest,
-       DiscreteSliderPaintsActiveAndInactiveStopMarks) {
+       DiscreteSliderPaintsTicksOnActiveAndInactiveTracks) {
   constexpr Color kBackdropColor(0xFFF3EFE7);
 
   SliderStyle style{};
-  style.tick_mode = SliderTickMode::kShowStops;
+  style.tick_mode = SliderTickMode::kShowTicks;
 
   auto backdrop = std::make_unique<SolidBackdrop>(env_, kBackdropColor,
                                                   Dimensions(kWidth, kHeight));
@@ -1789,6 +1789,84 @@ TEST_F(Material3SliderRenderTest,
   EXPECT_EQ(inactive_stop, pixelAt(inactive_stop_x, center_y));
 }
 
+// Verifies that stop indicators stay enabled by default even when explicit
+// tick rendering is hidden.
+TEST_F(Material3SliderRenderTest,
+       DiscreteSliderDefaultsToStopIndicatorsWhenTicksAreHidden) {
+  constexpr Color kBackdropColor(0xFFF3EFE7);
+
+  SliderStyle style{};
+  style.tick_mode = SliderTickMode::kHidden;
+
+  auto backdrop = std::make_unique<SolidBackdrop>(env_, kBackdropColor,
+                                                  Dimensions(kWidth, kHeight));
+  auto slider = std::make_unique<Slider>(env_, SliderRange{0.0f, 1.0f, 0.2f},
+                                         0.4f, SliderVariant::kStandard, style);
+  Slider* slider_ptr = slider.get();
+  slider_ = slider_ptr;
+
+  app_.add(std::move(backdrop),
+           roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
+  app_.add(std::move(slider),
+           roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
+                            kSliderY + kSliderHeight - 1));
+
+  ASSERT_TRUE(app_.refresh());
+
+  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
+  int16_t center_y = kSliderY + slider_ptr->height() / 2;
+  int active_stop_x = kSliderX + (int)roundf(CenterFromValueForTest(
+                                     axis, slider_ptr->range(), 0.2f));
+  int inactive_stop_x = kSliderX + (int)roundf(CenterFromValueForTest(
+                                       axis, slider_ptr->range(), 0.8f));
+
+  Color active_track = QuantizeToArgb4444(env_.theme().color.primary);
+  Color inactive_stop =
+      QuantizeToArgb4444(env_.theme().color.onSecondaryContainer);
+
+  EXPECT_EQ(active_track, pixelAt(active_stop_x, center_y));
+  EXPECT_EQ(inactive_stop, pixelAt(inactive_stop_x, center_y));
+}
+
+// Verifies that continuous sliders keep the endpoint stop indicator only on the
+// inactive side of the track.
+TEST_F(Material3SliderRenderTest,
+       ContinuousSliderDefaultsToInactiveEndpointStopIndicator) {
+  constexpr Color kBackdropColor(0xFFF3EFE7);
+
+  SliderStyle style{};
+  style.tick_mode = SliderTickMode::kHidden;
+
+  auto backdrop = std::make_unique<SolidBackdrop>(env_, kBackdropColor,
+                                                  Dimensions(kWidth, kHeight));
+  auto slider = std::make_unique<Slider>(env_, SliderRange{0.0f, 1.0f, 0.0f},
+                                         0.4f, SliderVariant::kStandard, style);
+  Slider* slider_ptr = slider.get();
+  slider_ = slider_ptr;
+
+  app_.add(std::move(backdrop),
+           roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
+  app_.add(std::move(slider),
+           roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
+                            kSliderY + kSliderHeight - 1));
+
+  ASSERT_TRUE(app_.refresh());
+
+  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
+  int16_t center_y = kSliderY + slider_ptr->height() / 2;
+  int active_stop_x = kSliderX + (int)roundf(CenterFromValueForTest(
+                                     axis, slider_ptr->range(), 0.0f));
+  int inactive_stop_x = kSliderX + (int)roundf(CenterFromValueForTest(
+                                       axis, slider_ptr->range(), 1.0f));
+
+  Color active_track = QuantizeToArgb4444(env_.theme().color.primary);
+  Color inactive_stop =
+      QuantizeToArgb4444(env_.theme().color.onSecondaryContainer);
+
+  EXPECT_EQ(active_track, pixelAt(active_stop_x, center_y));
+  EXPECT_EQ(inactive_stop, pixelAt(inactive_stop_x, center_y));
+}
+
 // Verifies that centered discrete sliders suppress the stop mark at the visual
 // center gap while still painting active and inactive stops on either side.
 TEST_F(Material3SliderRenderTest,
@@ -1796,7 +1874,7 @@ TEST_F(Material3SliderRenderTest,
   constexpr Color kBackdropColor(0xFFF3EFE7);
 
   SliderStyle style{};
-  style.tick_mode = SliderTickMode::kShowStops;
+  style.tick_mode = SliderTickMode::kShowTicks;
 
   auto backdrop = std::make_unique<SolidBackdrop>(env_, kBackdropColor,
                                                   Dimensions(kWidth, kHeight));
@@ -1833,14 +1911,14 @@ TEST_F(Material3SliderRenderTest,
   EXPECT_EQ(inactive_stop, pixelAt(inactive_stop_x, center_y));
 }
 
-// Verifies that discrete range sliders color stop marks per track segment so
-// active and inactive runs each get their own stop styling.
+// Verifies that visible discrete ticks are painted on both inactive outer runs
+// and the active selected run of a range slider.
 TEST_F(Material3SliderRenderTest,
-       DiscreteRangeSliderPaintsStopMarksPerTrackSegment) {
+       DiscreteRangeSliderPaintsTicksAcrossAllTrackSegments) {
   constexpr Color kBackdropColor(0xFFF3EFE7);
 
   SliderStyle style{};
-  style.tick_mode = SliderTickMode::kShowStops;
+  style.tick_mode = SliderTickMode::kShowTicks;
 
   auto backdrop = std::make_unique<SolidBackdrop>(env_, kBackdropColor,
                                                   Dimensions(kWidth, kHeight));
@@ -1910,7 +1988,7 @@ TEST_F(Material3SliderRenderTest,
   constexpr Color kBackdropColor(0xFFF3EFE7);
 
   SliderStyle style{};
-  style.tick_mode = SliderTickMode::kShowStops;
+  style.tick_mode = SliderTickMode::kShowTicks;
 
   auto backdrop = std::make_unique<SolidBackdrop>(env_, kBackdropColor,
                                                   Dimensions(kWidth, kHeight));

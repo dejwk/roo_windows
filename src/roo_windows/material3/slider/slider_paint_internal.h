@@ -53,12 +53,20 @@ inline SliderPaintTokens ResolveTokens(const SliderLike& widget) {
   };
 }
 
-// Stop marks are only meaningful for discrete sliders and can still be hidden
-// explicitly through the style.
+// Stop indicators can remain visible on any slider when explicitly enabled.
+// Discrete sliders also render step marks when tick rendering is requested,
+// even if explicit stop indicators are disabled.
 template <typename SliderLike>
 inline bool ShouldRenderStops(const SliderLike& widget) {
-  if (!IsDiscreteSliderRange(widget.range().step)) return false;
-  return widget.style().tick_mode != SliderTickMode::kHidden;
+  if (widget.style().show_stop_indicators) return true;
+  return IsDiscreteSliderRange(widget.range().step) &&
+         widget.style().tick_mode != SliderTickMode::kHidden;
+}
+
+template <typename SliderLike>
+inline bool ShouldRenderTicks(const SliderLike& widget) {
+  return IsDiscreteSliderRange(widget.range().step) &&
+         widget.style().tick_mode != SliderTickMode::kHidden;
 }
 
 // Extends the rounded track tile slightly beyond the first visible pixel so the
@@ -164,6 +172,11 @@ inline Color StopColorForSegment(const SliderPaintTokens& tokens,
   return segment.active ? tokens.active_stop : tokens.inactive_stop;
 }
 
+inline bool SegmentPaintsStopMarks(const SliderPaintStopSegment& segment,
+                                   bool render_active_segments) {
+  return render_active_segments || !segment.active;
+}
+
 // Converts a logical track segment into the concrete clip box used to paint it
 // for a specific cross-axis band.
 roo_display::Box TrackSegmentClipBox(const SliderAxisMetrics& axis,
@@ -202,7 +215,7 @@ void PaintStopRuns(const Canvas& canvas, Clipper& clipper,
                    const SliderPaintTokens& tokens,
                    const SliderAxisMetrics& axis,
                    const SliderPaintStopSegment* segments, int segment_count,
-                   const SliderRange& range,
+                   const SliderRange& range, bool render_active_segments,
                    const StopSuppressionFn& suppress_stop);
 
 }  // namespace internal

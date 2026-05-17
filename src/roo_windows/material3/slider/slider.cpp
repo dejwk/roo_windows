@@ -34,6 +34,7 @@ using internal::PaintStopRuns;
 using internal::ResolveTokens;
 using internal::SegmentContainsRange;
 using internal::ShouldRenderStops;
+using internal::ShouldRenderTicks;
 using internal::ThumbWidthForState;
 using internal::TrackGapForThumbWidth;
 using internal::TrackSegmentClipBox;
@@ -680,7 +681,8 @@ void Slider::paintStops(const Canvas& canvas, Clipper& clipper,
     };
   }
   PaintStopRuns(canvas, clipper, tokens, metrics.axis, metrics.segments,
-                metrics.segment_count, range_, suppress_stop);
+                metrics.segment_count, range_, ShouldRenderTicks(*this),
+                suppress_stop);
 }
 
 Dimensions Slider::getSuggestedMinimumDimensions() const {

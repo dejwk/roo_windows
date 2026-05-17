@@ -576,6 +576,7 @@ class FullWidthColumn : public FlexLayout {
 constexpr material3::SliderStyle FanSpeedStyle() {
   material3::SliderStyle s{};
   s.size = material3::SliderSize::kLarge;
+  s.tick_mode = material3::SliderTickMode::kShowTicks;
   s.value_indicator =
       material3::SliderValueIndicatorBehavior::kShowOnInteraction;
   return s;
@@ -597,6 +598,8 @@ constexpr material3::SliderStyle QuietHoursStyle() {
 constexpr material3::SliderStyle TankLevelStyle() {
   material3::SliderStyle s{};
   s.orientation = material3::SliderOrientation::kVertical;
+  s.direction = material3::SliderDirection::kInverted;
+  s.tick_mode = material3::SliderTickMode::kShowTicks;
   s.value_indicator =
       material3::SliderValueIndicatorBehavior::kShowOnInteraction;
   return s;
@@ -650,7 +653,8 @@ class SliderScreen : public SimpleScrollablePanel {
         legacy_(env, "Default unit range",
                 "0..100% mapped through the semantic value API", 72),
         fan_speed_(
-            env, "Discrete fan speed", "Custom \"Nx\" indicator on press/drag",
+            env, "Discrete fan speed",
+            "Ticks + stop indicators with a custom \"Nx\" bubble",
             material3::SliderRange{0.0f, 5.0f, 1.0f}, 2.0f,
             [](TextLabel& label, const material3::Slider& slider) {
               label.setTextf("%.0fx", slider.value());
@@ -705,10 +709,11 @@ class SliderScreen : public SimpleScrollablePanel {
             }),
         tank_level_(
             env, "Vertical tank level",
-            "Orientation support: drag up to increase",
-            "Tap anywhere on the column to jump; the same value "
-            "domain and label formatting still apply.",
-            material3::SliderRange{0.0f, 100.0f, 1.0f}, 62.0f,
+            "Explicit inverted direction with sparse 10% ticks",
+            "Tap anywhere on the column to jump. The vertical slider keeps "
+            "the same 0-100% domain, but uses larger 10% steps so the tick "
+            "marks stay readable.",
+            material3::SliderRange{0.0f, 100.0f, 10.0f}, 60.0f,
             [](TextLabel& label, const material3::Slider& slider) {
               label.setTextf("%.0f%%", slider.value());
             },
@@ -726,9 +731,9 @@ class SliderScreen : public SimpleScrollablePanel {
         footer_divider_(env),
         note_(env,
               "Drag a thumb to see the value indicator bubble float next to "
-              "the active thumb. Inset icons are available on larger standard "
-              "sliders, and vertical sliders reverse the drag axis so up "
-              "increases.",
+              "the active thumb. Discrete sliders now show stop indicators by "
+              "default, inset icons are available on larger standard sliders, "
+              "and direction can be configured independently from orientation.",
               font_caption()) {
     content_.setPadding(Scaled(12));
     content_.setGap(Scaled(4));
@@ -755,7 +760,7 @@ class SliderScreen : public SimpleScrollablePanel {
   TextLabel subtitle_;
   HorizontalDivider divider_;
   TextLabel migration_;
-  LegacySliderRow legacy_;
+  SliderRow legacy_;
   SemanticSliderRow fan_speed_;
   SemanticSliderRow balance_;
   IconSliderRow heating_;

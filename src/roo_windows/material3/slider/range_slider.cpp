@@ -28,6 +28,7 @@ using internal::MakeSliderAxisMetrics;
 using internal::PaintStopRuns;
 using internal::ResolveTokens;
 using internal::ShouldRenderStops;
+using internal::ShouldRenderTicks;
 using internal::ThumbWidthForState;
 using internal::TrackGapForThumbWidth;
 using internal::TrackSegmentClipBox;
@@ -733,7 +734,8 @@ void RangeSlider::paintStops(const Canvas& canvas, Clipper& clipper,
   }
 
   PaintStopRuns(canvas, clipper, tokens, metrics.axis, metrics.segments,
-                metrics.segment_count, range_, nullptr);
+                metrics.segment_count, range_, ShouldRenderTicks(*this),
+                nullptr);
 }
 
 Dimensions RangeSlider::getSuggestedMinimumDimensions() const {
