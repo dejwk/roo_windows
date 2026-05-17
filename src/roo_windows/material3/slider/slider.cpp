@@ -55,36 +55,6 @@ bool ShowsValueIndicator(const Slider& widget) {
   return false;
 }
 
-// Measures icons in track-axis coordinates so the same placement logic works
-// for horizontal and vertical sliders.
-int16_t IconPrimarySpan(const roo_display::Pictogram& icon, bool vertical) {
-  roo_display::Box extents = icon.anchorExtents();
-  return vertical ? extents.height() : extents.width();
-}
-
-int16_t IconCrossSpan(const roo_display::Pictogram& icon, bool vertical) {
-  roo_display::Box extents = icon.anchorExtents();
-  return vertical ? extents.width() : extents.height();
-}
-
-// Rejects icons that would clip the inset slot chosen by the size preset.
-bool IconFitsWithinSlot(const roo_display::Pictogram* icon, int16_t slot_size,
-                        bool vertical) {
-  if (icon == nullptr || slot_size <= 0) return false;
-  roo_display::Box extents = icon->anchorExtents();
-  int16_t primary_span = vertical ? extents.height() : extents.width();
-  int16_t cross_span = vertical ? extents.width() : extents.height();
-  return primary_span <= slot_size && cross_span <= slot_size;
-}
-
-// Inset icons are only part of the standard slider family and only on size
-// presets that reserve enough room inside the track.
-bool CanPaintInsetIcon(const Slider& slider,
-                       const internal::SliderSizeMetrics& size_metrics) {
-  return slider.variant() == SliderVariant::kStandard &&
-         size_metrics.supports_inset_icon && size_metrics.icon_size > 0;
-}
-
 // Splits the track into active/inactive runs. Centered sliders keep a small
 // empty gap around logical zero so the two halves do not visually merge.
 void BuildTrackSegments(const Slider& slider,
@@ -170,16 +140,17 @@ bool ResolveTrackIconBounds(const internal::SliderAxisMetrics& axis,
                             const roo_display::Pictogram& icon, bool at_start,
                             const StopSegment* segments, int segment_count,
                             roo_display::Box& icon_bounds) {
+  bool vertical = axis.isVertical();
   int16_t max_slot_span = size_metrics.icon_size > 0
                               ? size_metrics.icon_size
                               : size_metrics.track_height;
-  if (!IconFitsWithinSlot(&icon, max_slot_span, axis.isVertical())) {
-    return false;
-  }
+  if (max_slot_span <= 0) return false;
 
-  int16_t icon_primary_span = IconPrimarySpan(icon, axis.isVertical());
-  int16_t icon_cross_span = IconCrossSpan(icon, axis.isVertical());
+  roo_display::Box extents = icon.anchorExtents();
+  int16_t icon_primary_span = vertical ? extents.height() : extents.width();
+  int16_t icon_cross_span = vertical ? extents.width() : extents.height();
   if (icon_primary_span <= 0 || icon_cross_span <= 0 ||
+      icon_primary_span > max_slot_span || icon_cross_span > max_slot_span ||
       icon_cross_span > size_metrics.track_height ||
       icon_primary_span > axis.primarySpan()) {
     return false;
@@ -298,7 +269,9 @@ Rect Slider::trackIconRect(const Metrics& metrics) const {
 
   roo_display::Box inset_bounds;
   bool inset_at_start = inset_icon.anchor == SliderTrackIconAnchor::kStart;
-  if (!CanPaintInsetIcon(*this, metrics.size_metrics) ||
+  if (variant_ != SliderVariant::kStandard ||
+      !metrics.size_metrics.supports_inset_icon ||
+      metrics.size_metrics.icon_size <= 0 ||
       !ResolveTrackIconBounds(metrics.axis, metrics.layout,
                               metrics.size_metrics, *inset_icon.icon,
                               inset_at_start, metrics.segments,
