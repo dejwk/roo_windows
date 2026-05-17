@@ -65,8 +65,8 @@ class Material3SliderAppTest : public testing::Test {
     return *slider_;
   }
 
-  Slider& addSlider(uint16_t pos) {
-    return addSlider(std::make_unique<Slider>(env_, pos));
+  Slider& addSlider(float value) {
+    return addSlider(std::make_unique<Slider>(env_, SliderRange{}, value));
   }
 
   Slider& addSlider(SliderRange range, float value,
@@ -220,7 +220,8 @@ Rect ResolveCurrentIndicatorBoundsForTest(const Slider& slider,
   internal::SliderAxisMetrics axis(
       slider.width(), slider.height(),
       style.orientation == SliderOrientation::kVertical);
-  float center = axis.displayCenterFromPos(slider.getPos());
+  float center = axis.displayCenterFromValue(slider.range().from,
+                                             slider.range().to, slider.value());
 
   char scratch[64];
   roo::string_view label =
@@ -234,15 +235,50 @@ Rect ResolveCurrentIndicatorBoundsForTest(const Slider& slider,
   return laid_out ? bubble.bounds() : Rect(0, 0, -1, -1);
 }
 
+float CenterFromValueForTest(const internal::SliderAxisMetrics& axis,
+                             const SliderRange& range, float value) {
+  return axis.centerFromValue(range.from, range.to, value);
+}
+
+float DisplayCenterFromValueForTest(const internal::SliderAxisMetrics& axis,
+                                    const SliderRange& range, float value) {
+  return axis.displayCenterFromValue(range.from, range.to, value);
+}
+
+Rect InvalidationRectForValueChangeForTest(
+    const internal::SliderAxisMetrics& axis, const SliderRange& range,
+    float old_value, float new_value) {
+  return axis.invalidationRectForCenterChange(
+      CenterFromValueForTest(axis, range, old_value),
+      CenterFromValueForTest(axis, range, new_value));
+}
+
+Rect InvalidationRectForRangeValueChangeForTest(
+    const internal::SliderAxisMetrics& axis, const SliderRange& range,
+    float old_start_value, float old_end_value, float new_start_value,
+    float new_end_value) {
+  Rect start_rect = old_start_value == new_start_value
+                        ? Rect(0, 0, -1, -1)
+                        : InvalidationRectForValueChangeForTest(
+                              axis, range, old_start_value, new_start_value);
+  Rect end_rect = old_end_value == new_end_value
+                      ? Rect(0, 0, -1, -1)
+                      : InvalidationRectForValueChangeForTest(
+                            axis, range, old_end_value, new_end_value);
+  if (start_rect.empty()) return end_rect;
+  if (end_rect.empty()) return start_rect;
+  return Rect::Extent(start_rect, end_rect);
+}
+
 Rect ResolveInsetIconRectForTest(
-    const SliderStyle& style, uint16_t pos, const roo_display::Pictogram& icon,
-    int16_t width, int16_t height,
+    const SliderStyle& style, const SliderRange& range, float value,
+    const roo_display::Pictogram& icon, int16_t width, int16_t height,
     SliderTrackIconAnchor anchor = SliderTrackIconAnchor::kStart) {
   const internal::SliderSizeMetrics& size_metrics =
       internal::ResolveSliderSizeMetrics(style.size);
   internal::SliderAxisMetrics axis(width, height);
   internal::SliderVisualMetrics layout = internal::ResolveSliderVisualMetrics(
-      axis, axis.centerFromPos(pos), internal::kHandleWidth,
+      axis, CenterFromValueForTest(axis, range, value), internal::kHandleWidth,
       size_metrics.track_height, internal::kTrackHandleGap,
       size_metrics.handle_height);
   int16_t icon_primary_span = icon.anchorExtents().width();
@@ -287,21 +323,21 @@ Rect ResolveInsetIconRectForTest(
 }
 
 Rect ResolveInsetIconReservedRectForTest(
-    const SliderStyle& style, uint16_t pos, const roo_display::Pictogram& icon,
-    int16_t width, int16_t height,
+    const SliderStyle& style, const SliderRange& range, float value,
+    const roo_display::Pictogram& icon, int16_t width, int16_t height,
     SliderTrackIconAnchor anchor = SliderTrackIconAnchor::kStart) {
-  Rect icon_rect =
-      ResolveInsetIconRectForTest(style, pos, icon, width, height, anchor);
+  Rect icon_rect = ResolveInsetIconRectForTest(style, range, value, icon, width,
+                                               height, anchor);
   return Rect(std::max<XDim>(0, icon_rect.xMin() - Scaled(4)), icon_rect.yMin(),
               std::min<XDim>(width - 1, icon_rect.xMax() + Scaled(4)),
               icon_rect.yMax());
 }
 
 Rect ResolveLegacyOverlayClipForTest(const internal::SliderAxisMetrics& axis,
-                                     uint16_t old_pos, uint16_t new_pos,
-                                     int16_t overlay_radius) {
-  float old_center = axis.centerFromPos(old_pos);
-  float new_center = axis.centerFromPos(new_pos);
+                                     const SliderRange& range, float old_value,
+                                     float new_value, int16_t overlay_radius) {
+  float old_center = CenterFromValueForTest(axis, range, old_value);
+  float new_center = CenterFromValueForTest(axis, range, new_value);
   int16_t min_primary = (int16_t)ceilf(std::min(old_center, new_center) -
                                        0.5f * (float)internal::kHandleWidth) -
                         overlay_radius;
@@ -365,7 +401,7 @@ TEST(Material3Slider, UsesNoOverlayAndHandleCenteredFocus) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
 
-  Slider slider(env, 0);
+  Slider slider(env, SliderRange{}, 0.0f);
   slider.layout(Rect(0, 0, Scaled(96) - 1, Scaled(44) - 1));
 
   EXPECT_EQ(Widget::OVERLAY_NONE, slider.getOverlayType());
@@ -374,12 +410,12 @@ TEST(Material3Slider, UsesNoOverlayAndHandleCenteredFocus) {
   EXPECT_FLOAT_EQ((float)Scaled(6) - 0.5f, start_focus.x);
   EXPECT_FLOAT_EQ(0.5f * (float)(Scaled(44) - 1), start_focus.y);
 
-  slider.setPos(32768);
+  slider.setValue(0.5f);
   roo_display::FpPoint mid_focus = slider.getPointOverlayFocus();
   EXPECT_FLOAT_EQ(0.5f * (float)(Scaled(96) - 1), mid_focus.x);
   EXPECT_FLOAT_EQ(0.5f * (float)(Scaled(44) - 1), mid_focus.y);
 
-  slider.setPos(65535);
+  slider.setValue(1.0f);
   roo_display::FpPoint end_focus = slider.getPointOverlayFocus();
   EXPECT_FLOAT_EQ((float)(Scaled(96) - Scaled(6)) - 0.5f, end_focus.x);
   EXPECT_FLOAT_EQ(0.5f * (float)(Scaled(44) - 1), end_focus.y);
@@ -404,7 +440,7 @@ TEST(Material3Slider, HorizontalSloppyTouchBoundsExtendPrimaryAxis) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
 
-  Slider slider(env, 65535);
+  Slider slider(env, SliderRange{}, 1.0f);
   slider.layout(Rect(0, 0, Scaled(96) - 1, Scaled(44) - 1));
 
   Rect touch_bounds = slider.getSloppyTouchBounds();
@@ -534,24 +570,21 @@ TEST(Material3Slider, PressStateDoesNotUseOverlayOrClickAnimation) {
   EXPECT_FALSE(slider.showClickAnimation());
 }
 
-// Verifies that the compatibility constructor still exposes a unit semantic
-// range and maps the legacy normalized position to the same value.
-TEST(Material3Slider, CompatibilityConstructorUsesUnitRangeAndValueMapping) {
+// Verifies that a unit-range slider preserves the supplied semantic value.
+TEST(Material3Slider, UnitRangeConstructorPreservesValue) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
 
-  Slider slider(env, 32768);
+  Slider slider(env, SliderRange{}, 32768.0f / 65535.0f);
 
   EXPECT_FLOAT_EQ(0.0f, slider.range().from);
   EXPECT_FLOAT_EQ(1.0f, slider.range().to);
   EXPECT_FLOAT_EQ(0.0f, slider.range().step);
   EXPECT_FLOAT_EQ(32768.0f / 65535.0f, slider.value());
-  EXPECT_EQ(32768, slider.getPos());
 }
 
-// Verifies that the semantic constructor preserves the requested domain value
-// while deriving the expected normalized compatibility position.
-TEST(Material3Slider, SemanticConstructorMapsValueToNormalizedPosition) {
+// Verifies that the semantic constructor preserves the requested domain value.
+TEST(Material3Slider, SemanticConstructorPreservesValue) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
 
@@ -560,11 +593,10 @@ TEST(Material3Slider, SemanticConstructorMapsValueToNormalizedPosition) {
   EXPECT_FLOAT_EQ(10.0f, slider.range().from);
   EXPECT_FLOAT_EQ(40.0f, slider.range().to);
   EXPECT_FLOAT_EQ(25.0f, slider.value());
-  EXPECT_EQ(32768, slider.getPos());
 }
 
 // Verifies that setting a semantic value outside the configured range clamps it
-// to the nearest endpoint and updates the normalized position consistently.
+// to the nearest endpoint.
 TEST(Material3Slider, SetValueClampsIntoConfiguredDomain) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -573,11 +605,10 @@ TEST(Material3Slider, SetValueClampsIntoConfiguredDomain) {
 
   EXPECT_TRUE(slider.setValue(100.0f));
   EXPECT_FLOAT_EQ(40.0f, slider.value());
-  EXPECT_EQ(65535, slider.getPos());
 }
 
 // Verifies that discrete sliders snap their initial semantic value to the
-// nearest valid step before publishing value and position.
+// nearest valid step.
 TEST(Material3Slider, DiscreteConstructorSnapsInitialValue) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -585,7 +616,6 @@ TEST(Material3Slider, DiscreteConstructorSnapsInitialValue) {
   Slider slider(env, SliderRange{0.0f, 5.0f, 1.0f}, 3.6f);
 
   EXPECT_FLOAT_EQ(4.0f, slider.value());
-  EXPECT_EQ((uint16_t)52428, slider.getPos());
 }
 
 // Verifies that a programmatic semantic value update on a discrete slider uses
@@ -598,20 +628,6 @@ TEST(Material3Slider, SetValueSnapsToNearestDiscreteStep) {
 
   EXPECT_TRUE(slider.setValue(3.6f));
   EXPECT_FLOAT_EQ(4.0f, slider.value());
-  EXPECT_EQ((uint16_t)52428, slider.getPos());
-}
-
-// Verifies that a programmatic normalized-position update is also snapped back
-// onto the discrete semantic grid before being stored.
-TEST(Material3Slider, SetPosSnapsToNearestDiscreteStep) {
-  roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
-
-  Slider slider(env, SliderRange{0.0f, 5.0f, 1.0f}, 2.0f);
-
-  EXPECT_TRUE(slider.setPos((uint16_t)47185));
-  EXPECT_FLOAT_EQ(4.0f, slider.value());
-  EXPECT_EQ((uint16_t)52428, slider.getPos());
 }
 
 // Verifies that replacing the semantic range clamps the current value into the
@@ -626,11 +642,10 @@ TEST(Material3Slider, SetRangeClampsCurrentValueIntoNewDomain) {
   EXPECT_FLOAT_EQ(30.0f, slider.range().from);
   EXPECT_FLOAT_EQ(50.0f, slider.range().to);
   EXPECT_FLOAT_EQ(30.0f, slider.value());
-  EXPECT_EQ(0, slider.getPos());
 }
 
 // Verifies that an invalid range update is rejected atomically and leaves the
-// slider's previous range, value, and normalized position untouched.
+// slider's previous range and value untouched.
 TEST(Material3Slider, InvalidRangeIsRejectedWithoutChangingState) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -641,7 +656,6 @@ TEST(Material3Slider, InvalidRangeIsRejectedWithoutChangingState) {
   EXPECT_FLOAT_EQ(10.0f, slider.range().from);
   EXPECT_FLOAT_EQ(40.0f, slider.range().to);
   EXPECT_FLOAT_EQ(25.0f, slider.value());
-  EXPECT_EQ(32768, slider.getPos());
 }
 
 // Verifies that constructing a slider with an invalid range fails fast instead
@@ -686,8 +700,8 @@ TEST(Material3Slider, NegativeStepIsRejected) {
 }
 
 // Verifies that the centered variant changes only paint semantics, not the
-// underlying value-to-position mapping for the current value.
-TEST(Material3Slider, CenteredVariantPreservesValueMapping) {
+// current semantic value.
+TEST(Material3Slider, CenteredVariantPreservesValue) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
 
@@ -696,11 +710,10 @@ TEST(Material3Slider, CenteredVariantPreservesValueMapping) {
 
   EXPECT_EQ(SliderVariant::kCentered, slider.variant());
   EXPECT_FLOAT_EQ(-20.0f, slider.value());
-  EXPECT_EQ((uint16_t)26214, slider.getPos());
 }
 
 // Verifies that switching variants updates centered-vs-standard semantics
-// without perturbing the current value or normalized thumb position.
+// without perturbing the current semantic value.
 TEST(Material3Slider, SetVariantUpdatesSemanticVariantOnly) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -710,7 +723,6 @@ TEST(Material3Slider, SetVariantUpdatesSemanticVariantOnly) {
   EXPECT_TRUE(slider.setVariant(SliderVariant::kCentered));
   EXPECT_EQ(SliderVariant::kCentered, slider.variant());
   EXPECT_FLOAT_EQ(-20.0f, slider.value());
-  EXPECT_EQ((uint16_t)26214, slider.getPos());
 }
 
 // Verifies that medium sliders with a configured inset icon actually render
@@ -771,13 +783,11 @@ TEST_F(Material3SliderRenderTest, InsetIconJumpsPastHandleAtMinimumValue) {
       internal::ResolveSliderSizeMetrics(style.size);
   internal::SliderAxisMetrics axis(kSliderWidth, Scaled(52));
   internal::SliderVisualMetrics layout = internal::ResolveSliderVisualMetrics(
-      axis,
-      axis.centerFromPos(internal::SliderPosFromValue(0.0f, 100.0f, 0.0f)),
+      axis, CenterFromValueForTest(axis, SliderRange{0.0f, 100.0f}, 0.0f),
       internal::kHandleWidth, size_metrics.track_height,
       internal::kTrackHandleGap, size_metrics.handle_height);
   Rect jumped_icon = ResolveInsetIconRectForTest(
-      style, internal::SliderPosFromValue(0.0f, 100.0f, 0.0f), *icon,
-      kSliderWidth, Scaled(52));
+      style, SliderRange{0.0f, 100.0f}, 0.0f, *icon, kSliderWidth, Scaled(52));
   int jumped_icon_x = kSliderX + jumped_icon.xMin() + jumped_icon.width() / 2;
 
   EXPECT_NE(QuantizeToArgb4444(env_.theme().color.onSecondaryContainer),
@@ -805,9 +815,9 @@ TEST_F(Material3SliderRenderTest, InactiveSideInsetIconPaintsWhenConfigured) {
             roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                              kSliderY + Scaled(52) - 1));
 
-  Rect icon_rect = ResolveInsetIconRectForTest(
-      style, internal::SliderPosFromValue(0.0f, 100.0f, 50.0f), *icon,
-      kSliderWidth, Scaled(52), anchor);
+  Rect icon_rect =
+      ResolveInsetIconRectForTest(style, SliderRange{0.0f, 100.0f}, 50.0f,
+                                  *icon, kSliderWidth, Scaled(52), anchor);
   EXPECT_EQ(QuantizeToArgb4444(env_.theme().color.onSecondaryContainer),
             pixelAt(kSliderX + icon_rect.xMin() + icon_rect.width() / 2,
                     kSliderY + icon_rect.yMin() + icon_rect.height() / 2));
@@ -835,13 +845,12 @@ TEST_F(Material3SliderRenderTest,
       internal::ResolveSliderSizeMetrics(style.size);
   internal::SliderAxisMetrics axis(kSliderWidth, Scaled(52));
   internal::SliderVisualMetrics layout = internal::ResolveSliderVisualMetrics(
-      axis,
-      axis.centerFromPos(internal::SliderPosFromValue(0.0f, 100.0f, 100.0f)),
+      axis, CenterFromValueForTest(axis, SliderRange{0.0f, 100.0f}, 100.0f),
       internal::kHandleWidth, size_metrics.track_height,
       internal::kTrackHandleGap, size_metrics.handle_height);
-  Rect jumped_icon = ResolveInsetIconRectForTest(
-      style, internal::SliderPosFromValue(0.0f, 100.0f, 100.0f), *icon,
-      kSliderWidth, Scaled(52), anchor);
+  Rect jumped_icon =
+      ResolveInsetIconRectForTest(style, SliderRange{0.0f, 100.0f}, 100.0f,
+                                  *icon, kSliderWidth, Scaled(52), anchor);
   int jumped_icon_x = kSliderX + jumped_icon.xMin() + jumped_icon.width() / 2;
 
   EXPECT_NE(QuantizeToArgb4444(env_.theme().color.onPrimary),
@@ -873,15 +882,15 @@ TEST_F(Material3SliderRenderTest,
             roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                              kSliderY + Scaled(52) - 1));
 
-  Rect icon_rect =
-      ResolveInsetIconRectForTest(style, slider_ptr->getPos(), *icon,
-                                  slider_ptr->width(), slider_ptr->height());
+  Rect icon_rect = ResolveInsetIconRectForTest(
+      style, slider_ptr->range(), slider_ptr->value(), *icon,
+      slider_ptr->width(), slider_ptr->height());
   Rect reserved_rect = ResolveInsetIconReservedRectForTest(
-      style, slider_ptr->getPos(), *icon, slider_ptr->width(),
-      slider_ptr->height());
+      style, slider_ptr->range(), slider_ptr->value(), *icon,
+      slider_ptr->width(), slider_ptr->height());
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
-  int16_t stop_center_x = (int16_t)roundf(
-      axis.centerFromPos(internal::SliderPosFromValue(0.0f, 1.0f, 0.25f)));
+  int16_t stop_center_x =
+      (int16_t)roundf(CenterFromValueForTest(axis, slider_ptr->range(), 0.25f));
   int16_t sample_local_x =
       std::max<int16_t>(icon_rect.xMax() + 1, stop_center_x);
 
@@ -914,15 +923,15 @@ TEST_F(Material3SliderRenderTest,
             roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                              kSliderY + Scaled(52) - 1));
 
-  Rect icon_rect = ResolveInsetIconRectForTest(style, slider_ptr->getPos(),
-                                               *icon, slider_ptr->width(),
-                                               slider_ptr->height(), anchor);
+  Rect icon_rect = ResolveInsetIconRectForTest(
+      style, slider_ptr->range(), slider_ptr->value(), *icon,
+      slider_ptr->width(), slider_ptr->height(), anchor);
   Rect reserved_rect = ResolveInsetIconReservedRectForTest(
-      style, slider_ptr->getPos(), *icon, slider_ptr->width(),
-      slider_ptr->height(), anchor);
+      style, slider_ptr->range(), slider_ptr->value(), *icon,
+      slider_ptr->width(), slider_ptr->height(), anchor);
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
-  int16_t stop_center_x = (int16_t)roundf(
-      axis.centerFromPos(internal::SliderPosFromValue(0.0f, 1.0f, 0.75f)));
+  int16_t stop_center_x =
+      (int16_t)roundf(CenterFromValueForTest(axis, slider_ptr->range(), 0.75f));
   int16_t sample_local_x =
       std::min<int16_t>(icon_rect.xMin() - 1, stop_center_x);
 
@@ -936,10 +945,10 @@ TEST_F(Material3SliderRenderTest,
             sample);
 }
 
-// Verifies that when an inset icon relocates after a position change, the old
+// Verifies that when an inset icon relocates after a value change, the old
 // location is repainted away and the new location is painted in one refresh.
 TEST_F(Material3SliderRenderTest,
-       InsetIconJumpRepaintsOldAndNewLocationsOnPositionChange) {
+       InsetIconJumpRepaintsOldAndNewLocationsOnValueChange) {
   SliderStyle style{};
   style.size = SliderSize::kMedium;
 
@@ -954,22 +963,25 @@ TEST_F(Material3SliderRenderTest,
             roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                              kSliderY + Scaled(52) - 1));
 
-  uint16_t old_pos = 0;
-  Rect old_icon = ResolveInsetIconRectForTest(
-      style, old_pos, *icon, slider_ptr->width(), slider_ptr->height());
+  float old_value = 0.0f;
+  Rect old_icon =
+      ResolveInsetIconRectForTest(style, slider_ptr->range(), old_value, *icon,
+                                  slider_ptr->width(), slider_ptr->height());
   int16_t old_local_center_x = old_icon.xMin() + old_icon.width() / 2;
   int16_t old_local_center_y = old_icon.yMin() + old_icon.height() / 2;
-  uint16_t new_pos = old_pos + 1;
-  Rect new_icon = ResolveInsetIconRectForTest(
-      style, new_pos, *icon, slider_ptr->width(), slider_ptr->height());
-  while (new_pos < 65535 &&
+  float new_value = old_value + 0.1f;
+  Rect new_icon =
+      ResolveInsetIconRectForTest(style, slider_ptr->range(), new_value, *icon,
+                                  slider_ptr->width(), slider_ptr->height());
+  while (new_value < slider_ptr->range().to &&
          new_icon.contains(old_local_center_x, old_local_center_y)) {
-    ++new_pos;
+    new_value += 0.1f;
     new_icon = ResolveInsetIconRectForTest(
-        style, new_pos, *icon, slider_ptr->width(), slider_ptr->height());
+        style, slider_ptr->range(), new_value, *icon, slider_ptr->width(),
+        slider_ptr->height());
   }
 
-  ASSERT_LT(new_pos, (uint16_t)65535);
+  ASSERT_LT(new_value, slider_ptr->range().to);
   ASSERT_FALSE(new_icon.contains(old_local_center_x, old_local_center_y));
 
   int16_t old_center_x = kSliderX + old_local_center_x;
@@ -983,7 +995,7 @@ TEST_F(Material3SliderRenderTest,
 
   EXPECT_EQ(QuantizeToArgb4444(env_.theme().color.onSecondaryContainer),
             pixelAt(old_center_x, old_center_y));
-  ASSERT_TRUE(slider_ptr->setPos(new_pos));
+  ASSERT_TRUE(slider_ptr->setValue(new_value));
   ASSERT_TRUE(app_.refresh());
 
   EXPECT_NE(QuantizeToArgb4444(env_.theme().color.onSecondaryContainer),
@@ -1013,7 +1025,7 @@ TEST_F(Material3SliderRenderTest,
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
   auto stop = roo_display::SmoothFilledCircle(
       roo_display::FpPoint{
-          axis.centerFromPos(internal::SliderPosFromValue(0.0f, 100.0f, 20.0f)),
+          CenterFromValueForTest(axis, slider_ptr->range(), 20.0f),
           0.5f * (float)axis.crossSpan() - 0.5f},
       Scaled(2), env_.theme().color.onSecondaryContainer);
   int stop_rightmost_x = kSliderX + stop.extents().xMax();
@@ -1037,7 +1049,6 @@ TEST(Material3Slider, CenteredDiscreteVariantStillSnapsValues) {
 
   EXPECT_TRUE(slider.setValue(1.3f));
   EXPECT_FLOAT_EQ(1.5f, slider.value());
-  EXPECT_EQ((uint16_t)42598, slider.getPos());
 }
 
 // Verifies that a programmatic value change triggers only the value-change hook
@@ -1053,21 +1064,6 @@ TEST(Material3Slider, ProgrammaticValueChangeFiresOnlyValueChangeHook) {
   EXPECT_STREQ("value:program:", slider.events[0]);
   ASSERT_EQ(1u, slider.values.size());
   EXPECT_FLOAT_EQ(4.0f, slider.values[0]);
-}
-
-// Verifies the same hook behavior for programmatic normalized-position changes,
-// ensuring they surface as value changes only.
-TEST(Material3Slider, ProgrammaticPositionChangeFiresOnlyValueChangeHook) {
-  roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
-
-  TrackingSlider slider(env, SliderRange{0.0f, 10.0f}, 0.0f);
-
-  EXPECT_TRUE(slider.setPos((uint16_t)32768));
-  ASSERT_EQ(1u, slider.events.size());
-  EXPECT_STREQ("value:program:", slider.events[0]);
-  ASSERT_EQ(1u, slider.values.size());
-  EXPECT_FLOAT_EQ(5.0000763f, slider.values[0]);
 }
 
 // Verifies that the range-slider constructor orders the endpoints and snaps
@@ -1239,41 +1235,41 @@ TEST_F(Material3SliderAppTest,
   XDim tap_x = Scaled(84);
   ASSERT_TRUE(tracking->onSingleTapUp(tap_x, tracking->height() / 2));
   roo_display::FpPoint tapped_focus = tracking->getPointOverlayFocus();
-  EXPECT_FLOAT_EQ(axis.centerFromPos(internal::SliderPosFromValue(
-                      0.0f, 100.0f, tracking->endValue())),
-                  tapped_focus.x);
+  EXPECT_FLOAT_EQ(
+      CenterFromValueForTest(axis, tracking->range(), tracking->endValue()),
+      tapped_focus.x);
   EXPECT_FLOAT_EQ(0.5f * (float)(tracking->height() - 1), tapped_focus.y);
 
-  XDim start_thumb_center = (XDim)roundf(axis.centerFromPos(
-      internal::SliderPosFromValue(0.0f, 100.0f, tracking->startValue())));
+  XDim start_thumb_center = (XDim)roundf(
+      CenterFromValueForTest(axis, tracking->range(), tracking->startValue()));
   tracking->onShowPress(start_thumb_center, tracking->height() / 2);
   ASSERT_TRUE(
       tracking->onScroll(Scaled(42), tracking->height() / 2, Scaled(8), 0));
 
   roo_display::FpPoint dragged_focus = tracking->getPointOverlayFocus();
-  EXPECT_FLOAT_EQ(axis.centerFromPos(internal::SliderPosFromValue(
-                      0.0f, 100.0f, tracking->startValue())),
-                  dragged_focus.x);
+  EXPECT_FLOAT_EQ(
+      CenterFromValueForTest(axis, tracking->range(), tracking->startValue()),
+      dragged_focus.x);
   EXPECT_FLOAT_EQ(0.5f * (float)(tracking->height() - 1), dragged_focus.y);
 }
 
 // Verifies that a horizontal drag along the main axis captures and moves the
 // single slider toward the tapped side.
 TEST_F(Material3SliderAppTest, HorizontalScrollUpdatesPosition) {
-  Slider& slider = addSlider(0);
+  Slider& slider = addSlider(0.0f);
 
   EXPECT_TRUE(slider.onScroll(Scaled(96) - 1, Scaled(22), Scaled(12), 0));
-  EXPECT_GT(slider.getPos(), 60000);
+  EXPECT_GT(slider.value(), 0.9f);
 }
 
 // Verifies that a mostly vertical gesture does not get interpreted as a drag
 // on a horizontal slider before any dragging interaction has started.
 TEST_F(Material3SliderAppTest,
        VerticalDominantScrollDoesNotCaptureWhenNotDragging) {
-  Slider& slider = addSlider(12345);
+  Slider& slider = addSlider(12345.0f / 65535.0f);
 
   EXPECT_FALSE(slider.onScroll(Scaled(48), Scaled(22), 1, 6));
-  EXPECT_EQ(12345, slider.getPos());
+  EXPECT_FLOAT_EQ(12345.0f / 65535.0f, slider.value());
 }
 
 // Verifies that vertical orientation swaps the preferred-size contract so the
@@ -1308,7 +1304,7 @@ TEST_F(Material3SliderAppTest, VerticalSliderScrollUpUpdatesPosition) {
   ASSERT_TRUE(app_.refresh());
 
   EXPECT_TRUE(slider().onScroll(slider().width() / 2, 2, 0, -Scaled(12)));
-  EXPECT_GT(slider().getPos(), 60000);
+  EXPECT_GT(slider().value(), 0.9f);
 }
 
 // Verifies that a mostly horizontal gesture does not capture a vertical slider
@@ -1325,10 +1321,10 @@ TEST_F(Material3SliderAppTest,
                             kSliderY + Scaled(60) - 1));
   ASSERT_TRUE(app_.refresh());
 
-  uint16_t old_pos = slider().getPos();
+  float old_value = slider().value();
   EXPECT_FALSE(slider().onScroll(slider().width() / 2, slider().height() / 2,
                                  Scaled(8), 1));
-  EXPECT_EQ(old_pos, slider().getPos());
+  EXPECT_FLOAT_EQ(old_value, slider().value());
 }
 
 // Verifies that tapping near the top of a vertical slider maps to a high value,
@@ -1345,16 +1341,16 @@ TEST_F(Material3SliderAppTest, VerticalTapToJumpUsesReversedYMapping) {
   ASSERT_TRUE(app_.refresh());
 
   EXPECT_TRUE(slider().onSingleTapUp(slider().width() / 2, 1));
-  EXPECT_GT(slider().getPos(), 62000);
+  EXPECT_GT(slider().value(), 0.95f);
 }
 
-// Verifies that horizontal tap-to-jump still uses the current normalized track
-// mapping and lands at the midpoint when tapping the visual center.
-TEST_F(Material3SliderAppTest, TapToJumpUsesCurrentNormalizedMapping) {
-  Slider& slider = addSlider(0);
+// Verifies that horizontal tap-to-jump lands at the midpoint when tapping the
+// visual center.
+TEST_F(Material3SliderAppTest, TapToJumpLandsAtMidpointValue) {
+  Slider& slider = addSlider(0.0f);
 
   EXPECT_TRUE(slider.onSingleTapUp(Scaled(48) - 1, slider.height() / 2));
-  EXPECT_EQ(32768, slider.getPos());
+  EXPECT_FLOAT_EQ(0.5f, slider.value());
 }
 
 // Verifies that tap-to-jump on a discrete slider resolves to the nearest valid
@@ -1370,27 +1366,26 @@ TEST_F(Material3SliderAppTest, TapToJumpSnapsToNearestDiscreteStep) {
 
   EXPECT_TRUE(slider().onSingleTapUp(Scaled(70), slider().height() / 2));
   EXPECT_FLOAT_EQ(4.0f, slider().value());
-  EXPECT_EQ((uint16_t)52428, slider().getPos());
 }
 
 // Verifies that the interactive-change callback is reserved for genuine user
-// actions and not for programmatic position updates.
+// actions and not for programmatic value updates.
 TEST_F(Material3SliderAppTest,
-       InteractiveChangeFiresOnlyForUserOriginatedPositionChanges) {
-  Slider& slider = addSlider(0);
+       InteractiveChangeFiresOnlyForUserOriginatedValueChanges) {
+  Slider& slider = addSlider(0.0f);
 
   int interactive_change_count = 0;
   slider.setOnInteractiveChange([&]() { ++interactive_change_count; });
 
-  EXPECT_TRUE(slider.setPos(1000));
+  EXPECT_TRUE(slider.setValue(1000.0f));
   EXPECT_EQ(0, interactive_change_count);
 
-  slider.setPos(0);
+  slider.setValue(0.0f);
   EXPECT_EQ(0, interactive_change_count);
 
   EXPECT_TRUE(slider.onSingleTapUp(Scaled(48) - 1, slider.height() / 2));
   EXPECT_EQ(1, interactive_change_count);
-  EXPECT_EQ(32768, slider.getPos());
+  EXPECT_FLOAT_EQ(0.5f, slider.value());
 
   EXPECT_TRUE(slider.onSingleTapUp(Scaled(48) - 1, slider.height() / 2));
   EXPECT_EQ(1, interactive_change_count);
@@ -1398,7 +1393,7 @@ TEST_F(Material3SliderAppTest,
   EXPECT_TRUE(
       slider.onScroll(Scaled(96) - 1, slider.height() / 2, Scaled(12), 0));
   EXPECT_EQ(2, interactive_change_count);
-  EXPECT_GT(slider.getPos(), 60000);
+  EXPECT_GT(slider.value(), 0.9f);
 }
 
 // Verifies the tap lifecycle order for the single slider: interaction start,
@@ -1501,8 +1496,8 @@ TEST_F(Material3SliderAppTest,
   ASSERT_TRUE(app_.refresh());
 
   internal::SliderAxisMetrics axis(tracking->width(), tracking->height());
-  XDim start_thumb_center = (XDim)roundf(axis.centerFromPos(
-      internal::SliderPosFromValue(0.0f, 100.0f, tracking->startValue())));
+  XDim start_thumb_center = (XDim)roundf(
+      CenterFromValueForTest(axis, tracking->range(), tracking->startValue()));
   tracking->onShowPress(start_thumb_center, kSliderHeight / 2);
   ASSERT_FALSE(tracking->events.empty());
   EXPECT_STREQ("start", tracking->events[0]);
@@ -1540,8 +1535,8 @@ TEST_F(Material3SliderAppTest, RangeSliderDragTouchUpIsConsumedAndEnds) {
   ASSERT_TRUE(app_.refresh());
 
   internal::SliderAxisMetrics axis(tracking->width(), tracking->height());
-  XDim start_thumb_center = (XDim)roundf(axis.centerFromPos(
-      internal::SliderPosFromValue(0.0f, 100.0f, tracking->startValue())));
+  XDim start_thumb_center = (XDim)roundf(
+      CenterFromValueForTest(axis, tracking->range(), tracking->startValue()));
   tracking->onShowPress(start_thumb_center, kSliderHeight / 2);
   ASSERT_FALSE(tracking->events.empty());
   EXPECT_STREQ("start", tracking->events[0]);
@@ -1649,9 +1644,11 @@ TEST_F(Material3SliderRenderTest,
 
   internal::SliderAxisMetrics axis(slider_->width(), slider_->height());
   internal::SliderVisualMetrics layout = internal::ResolveSliderVisualMetrics(
-      axis, axis.centerFromPos(slider_->getPos()), Scaled(4), Scaled(16),
-      Scaled(6), Scaled(44));
-  float center_anchor_primary = axis.centerFromPos(32768);
+      axis, CenterFromValueForTest(axis, slider_->range(), slider_->value()),
+      Scaled(4), Scaled(16), Scaled(6), Scaled(44));
+  float center_anchor_primary = CenterFromValueForTest(
+      axis, slider_->range(),
+      0.5f * (slider_->range().from + slider_->range().to));
 
   int left_inactive_x =
       kSliderX + (int)roundf(0.5f * layout.active_track_max_primary);
@@ -1697,11 +1694,11 @@ TEST_F(Material3SliderRenderTest, RangeSliderPaintsActiveTrackBetweenThumbs) {
   Color background = QuantizeToArgb4444(env_.theme().color.background);
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
   int start_handle_x =
-      kSliderX + (int)roundf(axis.centerFromPos(internal::SliderPosFromValue(
-                     0.0f, 100.0f, slider_ptr->startValue())));
+      kSliderX + (int)roundf(CenterFromValueForTest(axis, slider_ptr->range(),
+                                                    slider_ptr->startValue()));
   int end_handle_x =
-      kSliderX + (int)roundf(axis.centerFromPos(internal::SliderPosFromValue(
-                     0.0f, 100.0f, slider_ptr->endValue())));
+      kSliderX + (int)roundf(CenterFromValueForTest(axis, slider_ptr->range(),
+                                                    slider_ptr->endValue()));
 
   EXPECT_EQ(background, pixelAt(kSliderX, kSliderY + 14));
   EXPECT_EQ(inactive, pixelAt(kSliderX + 10, kSliderY + kSliderHeight / 2));
@@ -1737,12 +1734,10 @@ TEST_F(Material3SliderRenderTest,
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
   int16_t center_y = kSliderY + slider_ptr->height() / 2;
-  int active_stop_x =
-      kSliderX + (int)roundf(axis.centerFromPos(
-                     internal::SliderPosFromValue(0.0f, 1.0f, 0.2f)));
-  int inactive_stop_x =
-      kSliderX + (int)roundf(axis.centerFromPos(
-                     internal::SliderPosFromValue(0.0f, 1.0f, 0.8f)));
+  int active_stop_x = kSliderX + (int)roundf(CenterFromValueForTest(
+                                     axis, slider_ptr->range(), 0.2f));
+  int inactive_stop_x = kSliderX + (int)roundf(CenterFromValueForTest(
+                                       axis, slider_ptr->range(), 0.8f));
 
   Color active_stop = QuantizeToArgb4444(env_.theme().color.onPrimary);
   Color inactive_stop =
@@ -1779,13 +1774,12 @@ TEST_F(Material3SliderRenderTest,
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
   int16_t center_y = kSliderY + slider_ptr->height() / 2;
-  int active_stop_x =
-      kSliderX + (int)roundf(axis.centerFromPos(
-                     internal::SliderPosFromValue(-2.0f, 2.0f, -1.0f)));
-  int center_gap_x = kSliderX + (int)roundf(axis.centerFromPos(32768));
-  int inactive_stop_x =
-      kSliderX + (int)roundf(axis.centerFromPos(
-                     internal::SliderPosFromValue(-2.0f, 2.0f, 1.0f)));
+  int active_stop_x = kSliderX + (int)roundf(CenterFromValueForTest(
+                                     axis, slider_ptr->range(), -1.0f));
+  int center_gap_x = kSliderX + (int)roundf(CenterFromValueForTest(
+                                    axis, slider_ptr->range(), 0.0f));
+  int inactive_stop_x = kSliderX + (int)roundf(CenterFromValueForTest(
+                                       axis, slider_ptr->range(), 1.0f));
 
   Color active_stop = QuantizeToArgb4444(env_.theme().color.onPrimary);
   Color inactive_stop =
@@ -1822,15 +1816,12 @@ TEST_F(Material3SliderRenderTest,
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
   int16_t center_y = kSliderY + slider_ptr->height() / 2;
-  int left_inactive_stop_x =
-      kSliderX + (int)roundf(axis.centerFromPos(
-                     internal::SliderPosFromValue(0.0f, 1.0f, 0.0f)));
-  int active_stop_x =
-      kSliderX + (int)roundf(axis.centerFromPos(
-                     internal::SliderPosFromValue(0.0f, 1.0f, 0.4f)));
-  int right_inactive_stop_x =
-      kSliderX + (int)roundf(axis.centerFromPos(
-                     internal::SliderPosFromValue(0.0f, 1.0f, 1.0f)));
+  int left_inactive_stop_x = kSliderX + (int)roundf(CenterFromValueForTest(
+                                            axis, slider_ptr->range(), 0.0f));
+  int active_stop_x = kSliderX + (int)roundf(CenterFromValueForTest(
+                                     axis, slider_ptr->range(), 0.4f));
+  int right_inactive_stop_x = kSliderX + (int)roundf(CenterFromValueForTest(
+                                             axis, slider_ptr->range(), 1.0f));
 
   Color active_stop = QuantizeToArgb4444(env_.theme().color.onPrimary);
   Color inactive_stop =
@@ -1902,8 +1893,9 @@ TEST_F(Material3SliderRenderTest,
   int16_t pressed_thumb_width = Scaled(2);
   int16_t pressed_track_gap = Scaled(5);
   internal::SliderVisualMetrics layout = internal::ResolveSliderVisualMetrics(
-      axis, axis.centerFromPos(slider_ptr->getPos()), pressed_thumb_width,
-      Scaled(16), pressed_track_gap, Scaled(44));
+      axis,
+      CenterFromValueForTest(axis, slider_ptr->range(), slider_ptr->value()),
+      pressed_thumb_width, Scaled(16), pressed_track_gap, Scaled(44));
   int gap_x = kSliderX + (int)floorf(layout.active_track_max_primary) + 1;
   int gap_y = kSliderY + slider_ptr->height() / 2;
 
@@ -1932,8 +1924,8 @@ TEST_F(Material3SliderRenderTest,
   ASSERT_TRUE(app_.refresh());
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
-  XDim start_thumb_center = (XDim)roundf(axis.centerFromPos(
-      internal::SliderPosFromValue(0.0f, 100.0f, slider_ptr->startValue())));
+  XDim start_thumb_center = (XDim)roundf(CenterFromValueForTest(
+      axis, slider_ptr->range(), slider_ptr->startValue()));
   slider_ptr->onShowPress(start_thumb_center, slider_ptr->height() / 2);
   ASSERT_TRUE(app_.refresh());
 
@@ -1975,8 +1967,9 @@ TEST_F(Material3SliderRenderTest,
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
                                    true);
   internal::SliderVisualMetrics layout = internal::ResolveSliderVisualMetrics(
-      axis, axis.centerFromPos(slider_ptr->getPos()), Scaled(4), Scaled(16),
-      Scaled(6), Scaled(44));
+      axis,
+      CenterFromValueForTest(axis, slider_ptr->range(), slider_ptr->value()),
+      Scaled(4), Scaled(16), Scaled(6), Scaled(44));
 
   Rect active_rect(
       axis.boxFromPrimaryCross(0, layout.track_cross_start,
@@ -2020,16 +2013,15 @@ TEST_F(Material3SliderRenderTest,
   ASSERT_TRUE(slider_ptr->setValue(0.8f));
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
-  uint16_t old_pos = internal::SliderPosFromValue(0.0f, 1.0f, 0.2f);
-  uint16_t new_pos = internal::SliderPosFromValue(0.0f, 1.0f, 0.8f);
-  Rect thumb_rect = axis.invalidationRectForPosChange(old_pos, new_pos);
+  Rect thumb_rect = InvalidationRectForValueChangeForTest(
+      axis, slider_ptr->range(), 0.2f, 0.8f);
   Rect expected_clip = Rect::Intersect(thumb_rect, slider_ptr->bounds())
                            .translate(kSliderX, kSliderY);
-  Rect old_overlay_clip =
-      Rect::Intersect(ResolveLegacyOverlayClipForTest(
-                          axis, old_pos, new_pos, kPointOverlayDiameter / 2),
-                      slider_ptr->bounds())
-          .translate(kSliderX, kSliderY);
+  Rect old_overlay_clip = Rect::Intersect(ResolveLegacyOverlayClipForTest(
+                                              axis, slider_ptr->range(), 0.2f,
+                                              0.8f, kPointOverlayDiameter / 2),
+                                          slider_ptr->bounds())
+                              .translate(kSliderX, kSliderY);
   Rect indicator_bounds =
       ResolveCurrentIndicatorBoundsForTest(*slider_ptr, env_)
           .translate(kSliderX, kSliderY);
@@ -2063,17 +2055,16 @@ TEST_F(Material3SliderRenderTest,
   ASSERT_TRUE(slider_ptr->setValues(35.0f, 75.0f));
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
-  uint16_t old_start_pos = internal::SliderPosFromValue(0.0f, 100.0f, 25.0f);
-  uint16_t new_start_pos = internal::SliderPosFromValue(0.0f, 100.0f, 35.0f);
-  uint16_t end_pos = internal::SliderPosFromValue(0.0f, 100.0f, 75.0f);
-
-  Rect expected_clip =
-      axis.invalidationRectForPosChange(old_start_pos, new_start_pos)
-          .translate(kSliderX, kSliderY);
+  Rect expected_clip = InvalidationRectForValueChangeForTest(
+                           axis, slider_ptr->range(), 25.0f, 35.0f)
+                           .translate(kSliderX, kSliderY);
   Rect old_broad_clip =
       Rect::Extent(
-          axis.invalidationRectForPosChange(old_start_pos, new_start_pos),
-          axis.invalidationRectForPosChange(end_pos, end_pos))
+          InvalidationRectForValueChangeForTest(axis, slider_ptr->range(),
+                                                25.0f, 35.0f),
+          axis.invalidationRectForCenterChange(
+              CenterFromValueForTest(axis, slider_ptr->range(), 75.0f),
+              CenterFromValueForTest(axis, slider_ptr->range(), 75.0f)))
           .translate(kSliderX, kSliderY);
 
   Color clear_color = QuantizeToArgb4444(Color(0xFF3A6FB0));
@@ -2109,10 +2100,8 @@ TEST_F(Material3SliderRenderTest,
   ASSERT_EQ(1u, panel_ptr->invalidated_regions.size());
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
-  uint16_t old_pos = internal::SliderPosFromValue(0.0f, 1.0f, 0.2f);
-  uint16_t new_pos = internal::SliderPosFromValue(0.0f, 1.0f, 0.8f);
-  float c_old = axis.displayCenterFromPos(old_pos);
-  float c_new = axis.displayCenterFromPos(new_pos);
+  float c_old = DisplayCenterFromValueForTest(axis, slider_ptr->range(), 0.2f);
+  float c_new = DisplayCenterFromValueForTest(axis, slider_ptr->range(), 0.8f);
 
   char old_scratch[64];
   char new_scratch[64];
@@ -2178,9 +2167,10 @@ TEST_F(Material3SliderRenderTest, PressStateChangePaintIsClippedToHandleSlice) {
   slider_ptr->onShowPress((XDim)focus.x, (YDim)focus.y);
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
-  Rect expected_clip = axis.invalidationRectForPosChange(slider_ptr->getPos(),
-                                                         slider_ptr->getPos())
-                           .translate(kSliderX, kSliderY);
+  Rect expected_clip =
+      InvalidationRectForValueChangeForTest(
+          axis, slider_ptr->range(), slider_ptr->value(), slider_ptr->value())
+          .translate(kSliderX, kSliderY);
   Color clear_color = QuantizeToArgb4444(Color(0xFF2468AC));
 
   fillScreen(clear_color);
@@ -2220,7 +2210,8 @@ TEST_F(Material3SliderRenderTest,
   ASSERT_EQ(1u, panel_ptr->invalidated_regions.size());
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
-  float center = axis.displayCenterFromPos(slider_ptr->getPos());
+  float center = DisplayCenterFromValueForTest(axis, slider_ptr->range(),
+                                               slider_ptr->value());
   Rect expected = ValueIndicatorBubble::EnvelopeForCenterRange(
                       slider_ptr->width(), slider_ptr->height(), center, center,
                       style.value_indicator, style.orientation)
@@ -2257,16 +2248,15 @@ TEST_F(Material3SliderRenderTest,
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
                                    true);
-  uint16_t old_pos = internal::SliderPosFromValue(0.0f, 1.0f, 0.2f);
-  uint16_t new_pos = internal::SliderPosFromValue(0.0f, 1.0f, 0.8f);
-  Rect thumb_rect = axis.invalidationRectForPosChange(old_pos, new_pos);
+  Rect thumb_rect = InvalidationRectForValueChangeForTest(
+      axis, slider_ptr->range(), 0.2f, 0.8f);
   Rect expected_clip = Rect::Intersect(thumb_rect, slider_ptr->bounds())
                            .translate(kSliderX, kSliderY);
-  Rect old_overlay_clip =
-      Rect::Intersect(ResolveLegacyOverlayClipForTest(
-                          axis, old_pos, new_pos, kPointOverlayDiameter / 2),
-                      slider_ptr->bounds())
-          .translate(kSliderX, kSliderY);
+  Rect old_overlay_clip = Rect::Intersect(ResolveLegacyOverlayClipForTest(
+                                              axis, slider_ptr->range(), 0.2f,
+                                              0.8f, kPointOverlayDiameter / 2),
+                                          slider_ptr->bounds())
+                              .translate(kSliderX, kSliderY);
   Rect indicator_bounds =
       ResolveCurrentIndicatorBoundsForTest(*slider_ptr, env_)
           .translate(kSliderX, kSliderY);
