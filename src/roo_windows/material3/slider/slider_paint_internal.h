@@ -153,13 +153,22 @@ inline Rect IndicatorDirtyRectFromSpan(const DirtySpan& span, int16_t width,
               conservative.yMax());
 }
 
-// Describes one contiguous track segment that shares both track and stop color.
+// Describes one contiguous active or inactive track segment.
 struct SliderPaintStopSegment {
   float min_primary;
   float max_primary;
-  Color track_color;
-  Color stop_color;
+  bool active;
 };
+
+inline Color TrackColorForSegment(const SliderPaintTokens& tokens,
+                                  const SliderPaintStopSegment& segment) {
+  return segment.active ? tokens.active_track : tokens.inactive_track;
+}
+
+inline Color StopColorForSegment(const SliderPaintTokens& tokens,
+                                 const SliderPaintStopSegment& segment) {
+  return segment.active ? tokens.active_stop : tokens.inactive_stop;
+}
 
 // Converts a logical track segment into the concrete clip box used to paint it
 // for a specific cross-axis band.
@@ -196,6 +205,7 @@ using StopSuppressionFn = std::function<bool(const roo_display::Box&)>;
 // only supplies slider-specific suppression for decorations that own part of
 // the track, such as inset icons. An empty std::function disables suppression.
 void PaintStopRuns(const Canvas& canvas, Clipper& clipper,
+                   const SliderPaintTokens& tokens,
                    const SliderAxisMetrics& axis,
                    const SliderPaintStopSegment* segments, int segment_count,
                    const SliderRange& range,

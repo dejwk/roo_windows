@@ -231,8 +231,7 @@ ThumbPaintMetrics ResolveThumbPaintMetrics(
 
 // Splits the range slider track into the same inactive/active/inactive segment
 // model used by both track painting and stop rendering.
-void BuildTrackSegments(const Tokens& tokens,
-                        const internal::SliderAxisMetrics& axis,
+void BuildTrackSegments(const internal::SliderAxisMetrics& axis,
                         const ThumbPaintMetrics& start,
                         const ThumbPaintMetrics& end, StopSegment* segments,
                         int& segment_count) {
@@ -244,15 +243,14 @@ void BuildTrackSegments(const Tokens& tokens,
     segments[segment_count++] = StopSegment{
         0.0f,
         (float)std::min<int16_t>(left_inactive_max, axis.primarySpan() - 1),
-        tokens.inactive_track, tokens.inactive_stop};
+        false};
   }
 
   float active_track_min_primary = start.layout.inactive_track_min_primary;
   float active_track_max_primary = end.layout.active_track_max_primary;
   if (active_track_max_primary >= active_track_min_primary) {
     segments[segment_count++] =
-        StopSegment{active_track_min_primary, active_track_max_primary,
-                    tokens.active_track, tokens.active_stop};
+        StopSegment{active_track_min_primary, active_track_max_primary, true};
   }
 
   int16_t right_inactive_min =
@@ -260,15 +258,13 @@ void BuildTrackSegments(const Tokens& tokens,
   if (right_inactive_min < axis.primarySpan()) {
     segments[segment_count++] =
         StopSegment{(float)std::max<int16_t>(0, right_inactive_min),
-                    (float)(axis.primarySpan() - 1), tokens.inactive_track,
-                    tokens.inactive_stop};
+                    (float)(axis.primarySpan() - 1), false};
   }
 }
 
 }  // namespace
 
-struct RangeSlider::PaintContext {
-  Tokens tokens;
+struct RangeSlider::Metrics {
   internal::SliderSizeMetrics size_metrics;
   internal::SliderAxisMetrics axis;
   ThumbPaintMetrics start;
@@ -277,9 +273,8 @@ struct RangeSlider::PaintContext {
   int segment_count;
 };
 
-RangeSlider::PaintContext RangeSlider::buildPaintContext() const {
-  PaintContext context{
-      .tokens = ResolveTokens(*this),
+RangeSlider::Metrics RangeSlider::buildMetrics() const {
+  Metrics metrics{
       .size_metrics = internal::ResolveSliderSizeMetrics(style_.size),
       .axis = MakeSliderAxisMetrics(*this),
       .start = ThumbPaintMetrics(),
@@ -287,15 +282,15 @@ RangeSlider::PaintContext RangeSlider::buildPaintContext() const {
       .segments = {},
       .segment_count = 0,
   };
-  context.start = ResolveThumbPaintMetrics(range_, start_value_, context.axis,
-                                           context.size_metrics,
+  metrics.start = ResolveThumbPaintMetrics(range_, start_value_, metrics.axis,
+                                           metrics.size_metrics,
                                            isPressed() && active_thumb_ == 0);
-  context.end = ResolveThumbPaintMetrics(range_, end_value_, context.axis,
-                                         context.size_metrics,
+  metrics.end = ResolveThumbPaintMetrics(range_, end_value_, metrics.axis,
+                                         metrics.size_metrics,
                                          isPressed() && active_thumb_ == 1);
-  BuildTrackSegments(context.tokens, context.axis, context.start, context.end,
-                     context.segments, context.segment_count);
-  return context;
+  BuildTrackSegments(metrics.axis, metrics.start, metrics.end, metrics.segments,
+                     metrics.segment_count);
+  return metrics;
 }
 
 RangeSlider::RangeSlider(const Environment& env, SliderRange range,
@@ -698,76 +693,78 @@ void RangeSlider::notifyStateChanged(uint16_t state_diff) {
 }
 
 void RangeSlider::paint(const Canvas& canvas) const {
-  paintTrackAndThumb(canvas, buildPaintContext());
+  Metrics metrics = buildMetrics();
+  Tokens tokens = ResolveTokens(*this);
+  paintTrackAndThumb(canvas, metrics, tokens);
 }
 
 void RangeSlider::paintTrackAndThumb(const Canvas& canvas,
-                                     const PaintContext& context) const {
-  auto track_bounds = context.axis.paintRectFromPrimaryCross(
-      TrackShapeMinPrimary(0.0f, context.size_metrics.track_radius),
-      context.start.layout.track_min_cross, context.axis.primarySpan() - 0.5f,
-      context.start.layout.track_max_cross);
-  auto start_handle_bounds = context.axis.paintRectFromPrimaryCross(
-      context.start.layout.thumb_min_primary,
-      context.start.layout.thumb_min_cross,
-      context.start.layout.thumb_max_primary,
-      context.start.layout.thumb_max_cross);
-  auto end_handle_bounds = context.axis.paintRectFromPrimaryCross(
-      context.end.layout.thumb_min_primary, context.end.layout.thumb_min_cross,
-      context.end.layout.thumb_max_primary, context.end.layout.thumb_max_cross);
+                                     const Metrics& metrics,
+                                     const Tokens& tokens) const {
+  auto track_bounds = metrics.axis.paintRectFromPrimaryCross(
+      TrackShapeMinPrimary(0.0f, metrics.size_metrics.track_radius),
+      metrics.start.layout.track_min_cross, metrics.axis.primarySpan() - 0.5f,
+      metrics.start.layout.track_max_cross);
+  auto start_handle_bounds = metrics.axis.paintRectFromPrimaryCross(
+      metrics.start.layout.thumb_min_primary,
+      metrics.start.layout.thumb_min_cross,
+      metrics.start.layout.thumb_max_primary,
+      metrics.start.layout.thumb_max_cross);
+  auto end_handle_bounds = metrics.axis.paintRectFromPrimaryCross(
+      metrics.end.layout.thumb_min_primary, metrics.end.layout.thumb_min_cross,
+      metrics.end.layout.thumb_max_primary, metrics.end.layout.thumb_max_cross);
 
   auto inactive_track = SmoothFilledRoundRect(
       track_bounds.x_min, track_bounds.y_min, track_bounds.x_max,
-      track_bounds.y_max, context.size_metrics.track_radius,
-      context.tokens.inactive_track);
+      track_bounds.y_max, metrics.size_metrics.track_radius,
+      tokens.inactive_track);
   auto active_track = SmoothFilledRoundRect(
       track_bounds.x_min, track_bounds.y_min, track_bounds.x_max,
-      track_bounds.y_max, context.size_metrics.track_radius,
-      context.tokens.active_track);
+      track_bounds.y_max, metrics.size_metrics.track_radius,
+      tokens.active_track);
   auto start_handle = SmoothFilledRoundRect(
       start_handle_bounds.x_min, start_handle_bounds.y_min,
       start_handle_bounds.x_max, start_handle_bounds.y_max,
-      context.size_metrics.handleCornerRadius(), context.tokens.handle);
+      metrics.size_metrics.handleCornerRadius(), tokens.handle);
   auto end_handle = SmoothFilledRoundRect(
       end_handle_bounds.x_min, end_handle_bounds.y_min, end_handle_bounds.x_max,
-      end_handle_bounds.y_max, context.size_metrics.handleCornerRadius(),
-      context.tokens.handle);
+      end_handle_bounds.y_max, metrics.size_metrics.handleCornerRadius(),
+      tokens.handle);
   Rect widget_bounds = bounds();
   Rect start_handle_tile_bounds =
       GetHandleTileBounds(widget_bounds, start_handle.extents(),
-                          context.start.track_gap, context.axis.isVertical());
+                          metrics.start.track_gap, metrics.axis.isVertical());
   Rect end_handle_tile_bounds =
       GetHandleTileBounds(widget_bounds, end_handle.extents(),
-                          context.end.track_gap, context.axis.isVertical());
+                          metrics.end.track_gap, metrics.axis.isVertical());
 
   // Paint the same segment model used by paintStops() so the track and stop
   // passes agree on where each active or inactive run begins and ends.
-  for (int i = 0; i < context.segment_count; ++i) {
+  for (int i = 0; i < metrics.segment_count; ++i) {
     roo_display::Box track_clip =
-        TrackSegmentClipBox(context.axis, context.segments[i],
-                            context.start.layout.track_cross_start,
-                            context.size_metrics.track_height);
+        TrackSegmentClipBox(metrics.axis, metrics.segments[i],
+                            metrics.start.layout.track_cross_start,
+                            metrics.size_metrics.track_height);
     if (track_clip.empty()) continue;
     const auto& track_piece =
-        context.segments[i].track_color == context.tokens.active_track
-            ? active_track
-            : inactive_track;
+        metrics.segments[i].active ? active_track : inactive_track;
     DrawTrackPiece(canvas, track_piece, widget_bounds, track_clip,
-                   context.axis.isVertical());
+                   metrics.axis.isVertical());
   }
   canvas.drawTiled(start_handle, start_handle_tile_bounds, kNoAlign);
   canvas.drawTiled(end_handle, end_handle_tile_bounds, kNoAlign);
 }
 
 void RangeSlider::paintStops(const Canvas& canvas, Clipper& clipper,
-                             const PaintContext& context) const {
+                             const Metrics& metrics,
+                             const Tokens& tokens) const {
   if (!ShouldRenderStops(*this) || width() <= 0 || height() <= 0 ||
-      context.segment_count == 0) {
+      metrics.segment_count == 0) {
     return;
   }
 
-  PaintStopRuns(canvas, clipper, context.axis, context.segments,
-                context.segment_count, range_, nullptr);
+  PaintStopRuns(canvas, clipper, tokens, metrics.axis, metrics.segments,
+                metrics.segment_count, range_, nullptr);
 }
 
 Dimensions RangeSlider::getSuggestedMinimumDimensions() const {
@@ -910,9 +907,10 @@ void RangeSlider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
   }
   if (!content_canvas.clip_box().empty()) {
     clipper.setBounds(content_canvas.clip_box());
-    PaintContext context = buildPaintContext();
-    paintStops(content_canvas, clipper, context);
-    paintTrackAndThumb(content_canvas, context);
+    Metrics metrics = buildMetrics();
+    Tokens tokens = ResolveTokens(*this);
+    paintStops(content_canvas, clipper, metrics, tokens);
+    paintTrackAndThumb(content_canvas, metrics, tokens);
   }
   pending_indicator_dirty_span_ = ShowsValueIndicator(*this)
                                       ? current_indicator_span

@@ -87,7 +87,7 @@ bool CanPaintInsetIcon(const Slider& slider,
 
 // Splits the track into active/inactive runs. Centered sliders keep a small
 // empty gap around logical zero so the two halves do not visually merge.
-void BuildTrackSegments(const Slider& slider, const Tokens& tokens,
+void BuildTrackSegments(const Slider& slider,
                         const internal::SliderAxisMetrics& axis,
                         const internal::SliderVisualMetrics& layout,
                         StopSegment* segments, int& segment_count) {
@@ -109,7 +109,7 @@ void BuildTrackSegments(const Slider& slider, const Tokens& tokens,
       segments[segment_count++] = StopSegment{
           0.0f,
           (float)std::min<int16_t>(left_inactive_max, axis.primarySpan() - 1),
-          tokens.inactive_track, tokens.inactive_stop};
+          false};
     }
 
     float active_track_min_primary = thumb_on_or_right_of_center
@@ -120,8 +120,7 @@ void BuildTrackSegments(const Slider& slider, const Tokens& tokens,
                                          : center_left_edge;
     if (active_track_max_primary >= active_track_min_primary) {
       segments[segment_count++] =
-          StopSegment{active_track_min_primary, active_track_max_primary,
-                      tokens.active_track, tokens.active_stop};
+          StopSegment{active_track_min_primary, active_track_max_primary, true};
     }
 
     int16_t handle_right_edge =
@@ -134,21 +133,19 @@ void BuildTrackSegments(const Slider& slider, const Tokens& tokens,
     if (right_inactive_min < axis.primarySpan()) {
       segments[segment_count++] =
           StopSegment{(float)std::max<int16_t>(0, right_inactive_min),
-                      (float)(axis.primarySpan() - 1), tokens.inactive_track,
-                      tokens.inactive_stop};
+                      (float)(axis.primarySpan() - 1), false};
     }
     return;
   }
 
   if (layout.active_track_max_primary >= 0.0f) {
     segments[segment_count++] =
-        StopSegment{0.0f, layout.active_track_max_primary, tokens.active_track,
-                    tokens.active_stop};
+        StopSegment{0.0f, layout.active_track_max_primary, true};
   }
   if (layout.inactive_track_min_primary < axis.primarySpan()) {
-    segments[segment_count++] = StopSegment{
-        layout.inactive_track_min_primary, (float)(axis.primarySpan() - 1),
-        tokens.inactive_track, tokens.inactive_stop};
+    segments[segment_count++] =
+        StopSegment{layout.inactive_track_min_primary,
+                    (float)(axis.primarySpan() - 1), false};
   }
 }
 
@@ -258,8 +255,7 @@ Rect ExpandTrackIconPrimaryRect(const Rect& icon_rect, bool vertical,
 
 }  // namespace
 
-struct Slider::PaintContext {
-  Tokens tokens;
+struct Slider::Metrics {
   internal::SliderSizeMetrics size_metrics;
   internal::SliderAxisMetrics axis;
   int16_t thumb_width;
@@ -269,14 +265,12 @@ struct Slider::PaintContext {
   int segment_count;
 };
 
-Slider::PaintContext Slider::buildPaintContext() const {
-  return buildPaintContext(getPos(), isPressed());
+Slider::Metrics Slider::buildMetrics() const {
+  return buildMetrics(getPos(), isPressed());
 }
 
-Slider::PaintContext Slider::buildPaintContext(uint16_t pos,
-                                               bool pressed) const {
-  PaintContext context{
-      .tokens = ResolveTokens(*this),
+Slider::Metrics Slider::buildMetrics(uint16_t pos, bool pressed) const {
+  Metrics metrics{
       .size_metrics = internal::ResolveSliderSizeMetrics(style_.size),
       .axis = MakeSliderAxisMetrics(*this),
       .thumb_width = 0,
@@ -285,56 +279,57 @@ Slider::PaintContext Slider::buildPaintContext(uint16_t pos,
       .segments = {},
       .segment_count = 0,
   };
-  context.thumb_width =
-      ThumbWidthForState(context.size_metrics.handle_width, pressed);
-  context.track_gap =
-      TrackGapForThumbWidth(context.size_metrics, context.thumb_width);
-  context.layout = internal::ResolveSliderVisualMetrics(
-      context.axis, context.axis.centerFromPos(pos), context.thumb_width,
-      context.size_metrics.track_height, context.track_gap,
-      context.size_metrics.handle_height);
-  BuildTrackSegments(*this, context.tokens, context.axis, context.layout,
-                     context.segments, context.segment_count);
-  return context;
+  metrics.thumb_width =
+      ThumbWidthForState(metrics.size_metrics.handle_width, pressed);
+  metrics.track_gap =
+      TrackGapForThumbWidth(metrics.size_metrics, metrics.thumb_width);
+  metrics.layout = internal::ResolveSliderVisualMetrics(
+      metrics.axis, metrics.axis.centerFromPos(pos), metrics.thumb_width,
+      metrics.size_metrics.track_height, metrics.track_gap,
+      metrics.size_metrics.handle_height);
+  BuildTrackSegments(*this, metrics.axis, metrics.layout, metrics.segments,
+                     metrics.segment_count);
+  return metrics;
 }
 
-Rect Slider::trackIconRect(const PaintContext& context) const {
+Rect Slider::trackIconRect(const Metrics& metrics) const {
   InsetIcon inset_icon = getInsetIcon();
-  if (inset_icon.icon == nullptr || context.segment_count == 0) {
+  if (inset_icon.icon == nullptr || metrics.segment_count == 0) {
     return Rect(0, 0, -1, -1);
   }
 
   roo_display::Box inset_bounds;
   const StopSegment* inset_segment = nullptr;
   bool inset_at_start = inset_icon.anchor == SliderTrackIconAnchor::kStart;
-  if (!CanPaintInsetIcon(*this, context.size_metrics) ||
-      !IconFitsWithinSlot(inset_icon.icon, context.size_metrics.icon_size,
-                          context.axis.isVertical()) ||
+  if (!CanPaintInsetIcon(*this, metrics.size_metrics) ||
+      !IconFitsWithinSlot(inset_icon.icon, metrics.size_metrics.icon_size,
+                          metrics.axis.isVertical()) ||
       !ResolveTrackIconBounds(
-          context.axis, context.layout, context.size_metrics, *inset_icon.icon,
-          inset_at_start, context.segments, context.segment_count, inset_bounds,
+          metrics.axis, metrics.layout, metrics.size_metrics, *inset_icon.icon,
+          inset_at_start, metrics.segments, metrics.segment_count, inset_bounds,
           inset_segment)) {
     return Rect(0, 0, -1, -1);
   }
   return Rect(inset_bounds);
 }
 
-Rect Slider::trackIconReservedRect(const PaintContext& context) const {
+Rect Slider::trackIconReservedRect(const Metrics& metrics) const {
   return ExpandTrackIconPrimaryRect(
-      trackIconRect(context), context.axis.isVertical(),
-      context.axis.primarySpan(), kTrackIconStopPaddingPixels);
+      trackIconRect(metrics), metrics.axis.isVertical(),
+      metrics.axis.primarySpan(), kTrackIconStopPaddingPixels);
 }
 
-Rect Slider::trackIconDirtyRect(const PaintContext& context) const {
+Rect Slider::trackIconDirtyRect(const Metrics& metrics) const {
   return ExpandTrackIconPrimaryRect(
-      trackIconReservedRect(context), context.axis.isVertical(),
-      context.axis.primarySpan(), kStopMarkRadiusPixels);
+      trackIconReservedRect(metrics), metrics.axis.isVertical(),
+      metrics.axis.primarySpan(), kStopMarkRadiusPixels);
 }
 
 void Slider::paintTrackIcons(const Canvas& canvas, Clipper& clipper,
-                             const PaintContext& context) const {
+                             const Metrics& metrics,
+                             const Tokens& tokens) const {
   InsetIcon inset_icon = getInsetIcon();
-  if (inset_icon.icon == nullptr || context.segment_count == 0) {
+  if (inset_icon.icon == nullptr || metrics.segment_count == 0) {
     return;
   }
 
@@ -342,11 +337,11 @@ void Slider::paintTrackIcons(const Canvas& canvas, Clipper& clipper,
                         const roo_display::Box& icon_bounds,
                         const StopSegment& segment) {
     Canvas icon_canvas = canvas;
-    icon_canvas.set_bgcolor(segment.track_color);
+    icon_canvas.set_bgcolor(TrackColorForSegment(tokens, segment));
     icon_canvas.clip(icon_bounds.translate(canvas.dx(), canvas.dy()));
     if (icon_canvas.clip_box().empty()) return;
     roo_display::Pictogram tinted_icon(icon);
-    tinted_icon.color_mode().setColor(segment.stop_color);
+    tinted_icon.color_mode().setColor(StopColorForSegment(tokens, segment));
     icon_canvas.drawTiled(tinted_icon, Rect(icon_bounds), kCenter | kMiddle,
                           false);
     roo_display::Box device_box = roo_display::Box::Intersect(
@@ -356,18 +351,18 @@ void Slider::paintTrackIcons(const Canvas& canvas, Clipper& clipper,
     }
   };
 
-  Rect inset_rect = trackIconRect(context);
+  Rect inset_rect = trackIconRect(metrics);
   if (!inset_rect.empty()) {
     float min_primary =
-        context.axis.isVertical()
-            ? (float)(context.axis.primarySpan() - 1 - inset_rect.yMax())
+        metrics.axis.isVertical()
+            ? (float)(metrics.axis.primarySpan() - 1 - inset_rect.yMax())
             : (float)inset_rect.xMin();
     float max_primary =
-        context.axis.isVertical()
-            ? (float)(context.axis.primarySpan() - 1 - inset_rect.yMin())
+        metrics.axis.isVertical()
+            ? (float)(metrics.axis.primarySpan() - 1 - inset_rect.yMin())
             : (float)inset_rect.xMax();
     const StopSegment* inset_segment = FindSegmentContainingRange(
-        context.segments, context.segment_count, min_primary, max_primary);
+        metrics.segments, metrics.segment_count, min_primary, max_primary);
     if (inset_segment != nullptr) {
       paint_icon(*inset_icon.icon, inset_rect.asBox(), *inset_segment);
     }
@@ -568,8 +563,8 @@ void Slider::invalidatePosChange(const internal::SliderAxisMetrics& axis,
                                  float new_value) {
   Rect thumb_rect = axis.invalidationRectForPosChange(old_pos, new_pos);
   Rect icon_envelope(0, 0, -1, -1);
-  Rect old_icon = trackIconDirtyRect(buildPaintContext(old_pos, isPressed()));
-  Rect new_icon = trackIconDirtyRect(buildPaintContext(new_pos, isPressed()));
+  Rect old_icon = trackIconDirtyRect(buildMetrics(old_pos, isPressed()));
+  Rect new_icon = trackIconDirtyRect(buildMetrics(new_pos, isPressed()));
   if (!old_icon.empty() || !new_icon.empty()) {
     icon_envelope = Rect::Extent(old_icon, new_icon);
   }
@@ -657,48 +652,46 @@ void Slider::paint(const Canvas& canvas) const {
               << "paintWidgetContents()/paintTrackAndThumb() instead";
 }
 
-void Slider::paintTrackAndThumb(const Canvas& canvas,
-                                const PaintContext& context) const {
-  float center_anchor_primary = context.axis.centerFromPos(32768);
+void Slider::paintTrackAndThumb(const Canvas& canvas, const Metrics& metrics,
+                                const Tokens& tokens) const {
+  float center_anchor_primary = metrics.axis.centerFromPos(32768);
 
-  auto track_bounds = context.axis.paintRectFromPrimaryCross(
-      TrackShapeMinPrimary(0.0f, context.size_metrics.track_radius),
-      context.layout.track_min_cross, context.axis.primarySpan() - 0.5f,
-      context.layout.track_max_cross);
-  auto handle_bounds = context.axis.paintRectFromPrimaryCross(
-      context.layout.thumb_min_primary, context.layout.thumb_min_cross,
-      context.layout.thumb_max_primary, context.layout.thumb_max_cross);
+  auto track_bounds = metrics.axis.paintRectFromPrimaryCross(
+      TrackShapeMinPrimary(0.0f, metrics.size_metrics.track_radius),
+      metrics.layout.track_min_cross, metrics.axis.primarySpan() - 0.5f,
+      metrics.layout.track_max_cross);
+  auto handle_bounds = metrics.axis.paintRectFromPrimaryCross(
+      metrics.layout.thumb_min_primary, metrics.layout.thumb_min_cross,
+      metrics.layout.thumb_max_primary, metrics.layout.thumb_max_cross);
 
   auto inactive_track = SmoothFilledRoundRect(
       track_bounds.x_min, track_bounds.y_min, track_bounds.x_max,
-      track_bounds.y_max, context.size_metrics.track_radius,
-      context.tokens.inactive_track);
+      track_bounds.y_max, metrics.size_metrics.track_radius,
+      tokens.inactive_track);
   auto active_track = SmoothFilledRoundRect(
       track_bounds.x_min, track_bounds.y_min, track_bounds.x_max,
-      track_bounds.y_max, context.size_metrics.track_radius,
-      context.tokens.active_track);
+      track_bounds.y_max, metrics.size_metrics.track_radius,
+      tokens.active_track);
   auto handle = SmoothFilledRoundRect(handle_bounds.x_min, handle_bounds.y_min,
                                       handle_bounds.x_max, handle_bounds.y_max,
-                                      context.size_metrics.handleCornerRadius(),
-                                      context.tokens.handle);
+                                      metrics.size_metrics.handleCornerRadius(),
+                                      tokens.handle);
   Rect widget_bounds = bounds();
   Rect handle_tile_bounds =
-      GetHandleTileBounds(widget_bounds, handle.extents(), context.track_gap,
-                          context.axis.isVertical());
+      GetHandleTileBounds(widget_bounds, handle.extents(), metrics.track_gap,
+                          metrics.axis.isVertical());
 
   // Paint the same segment model used by stop rendering so track and stop
   // passes agree on every active/inactive boundary.
-  for (int i = 0; i < context.segment_count; ++i) {
+  for (int i = 0; i < metrics.segment_count; ++i) {
     roo_display::Box track_clip = TrackSegmentClipBox(
-        context.axis, context.segments[i], context.layout.track_cross_start,
-        context.size_metrics.track_height);
+        metrics.axis, metrics.segments[i], metrics.layout.track_cross_start,
+        metrics.size_metrics.track_height);
     if (track_clip.empty()) continue;
     const auto& track_piece =
-        context.segments[i].track_color == context.tokens.active_track
-            ? active_track
-            : inactive_track;
+        metrics.segments[i].active ? active_track : inactive_track;
     DrawTrackPiece(canvas, track_piece, widget_bounds, track_clip,
-                   context.axis.isVertical());
+                   metrics.axis.isVertical());
   }
   if (variant_ == SliderVariant::kCentered) {
     // The center gap is painted back to the widget background after the track
@@ -709,14 +702,14 @@ void Slider::paintTrackAndThumb(const Canvas& canvas,
     int16_t gap_max =
         (int16_t)ceilf(center_anchor_primary + (float)kCenterGapHalfPixels) - 1;
     if (gap_min < 0) gap_min = 0;
-    if (gap_max >= context.axis.primarySpan()) {
-      gap_max = context.axis.primarySpan() - 1;
+    if (gap_max >= metrics.axis.primarySpan()) {
+      gap_max = metrics.axis.primarySpan() - 1;
     }
     if (gap_min <= gap_max) {
       Rect gap_rect =
-          context.axis.isVertical()
-              ? Rect(0, context.axis.primarySpan() - 1 - gap_max, width() - 1,
-                     context.axis.primarySpan() - 1 - gap_min)
+          metrics.axis.isVertical()
+              ? Rect(0, metrics.axis.primarySpan() - 1 - gap_max, width() - 1,
+                     metrics.axis.primarySpan() - 1 - gap_min)
               : Rect(gap_min, 0, gap_max, height() - 1);
       canvas.fillRect(gap_rect, canvas.bgcolor());
     }
@@ -725,21 +718,21 @@ void Slider::paintTrackAndThumb(const Canvas& canvas,
 }
 
 void Slider::paintStops(const Canvas& canvas, Clipper& clipper,
-                        const PaintContext& context) const {
+                        const Metrics& metrics, const Tokens& tokens) const {
   if (!ShouldRenderStops(*this) || width() <= 0 || height() <= 0 ||
-      context.segment_count == 0) {
+      metrics.segment_count == 0) {
     return;
   }
 
-  Rect reserved_icon_rect = trackIconReservedRect(context);
+  Rect reserved_icon_rect = trackIconReservedRect(metrics);
   internal::StopSuppressionFn suppress_stop;
   if (!reserved_icon_rect.empty()) {
     suppress_stop = [&](const roo_display::Box& stop_extents) {
       return reserved_icon_rect.intersects(stop_extents);
     };
   }
-  PaintStopRuns(canvas, clipper, context.axis, context.segments,
-                context.segment_count, range_, suppress_stop);
+  PaintStopRuns(canvas, clipper, tokens, metrics.axis, metrics.segments,
+                metrics.segment_count, range_, suppress_stop);
 }
 
 Dimensions Slider::getSuggestedMinimumDimensions() const {
@@ -886,10 +879,11 @@ void Slider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
   }
   if (!content_canvas.clip_box().empty()) {
     clipper.setBounds(content_canvas.clip_box());
-    PaintContext context = buildPaintContext();
-    paintTrackIcons(content_canvas, clipper, context);
-    paintStops(content_canvas, clipper, context);
-    paintTrackAndThumb(content_canvas, context);
+    Metrics metrics = buildMetrics();
+    Tokens tokens = ResolveTokens(*this);
+    paintTrackIcons(content_canvas, clipper, metrics, tokens);
+    paintStops(content_canvas, clipper, metrics, tokens);
+    paintTrackAndThumb(content_canvas, metrics, tokens);
   }
   pending_indicator_dirty_span_ = ShowsValueIndicator(*this)
                                       ? current_indicator_span

@@ -11,6 +11,10 @@
 namespace roo_windows {
 namespace material3 {
 
+namespace internal {
+struct SliderPaintTokens;
+}
+
 enum class SliderVariant : uint8_t {
   kStandard,
   kCentered,
@@ -214,34 +218,36 @@ class Slider : public BasicWidget {
   virtual InsetIcon getInsetIcon() const { return {}; }
 
  private:
-  struct PaintContext;
+  struct Metrics;
 
   /// Resolves all per-frame painting metrics for the current thumb state.
-  PaintContext buildPaintContext() const;
+  Metrics buildMetrics() const;
 
   /// Resolves all per-frame painting metrics for an arbitrary thumb state.
-  PaintContext buildPaintContext(uint16_t pos, bool pressed) const;
+  Metrics buildMetrics(uint16_t pos, bool pressed) const;
 
   /// Returns the exact local bounds of the inset icon if one can be painted.
-  Rect trackIconRect(const PaintContext& context) const;
+  Rect trackIconRect(const Metrics& metrics) const;
 
   /// Returns the icon bounds plus the stop-free buffer reserved around it.
-  Rect trackIconReservedRect(const PaintContext& context) const;
+  Rect trackIconReservedRect(const Metrics& metrics) const;
 
   /// Returns the icon repaint envelope, including stop-mark radius padding.
-  Rect trackIconDirtyRect(const PaintContext& context) const;
+  Rect trackIconDirtyRect(const Metrics& metrics) const;
 
   /// Paints the active/inactive track pieces and the current thumb geometry.
-  void paintTrackAndThumb(const Canvas& canvas,
-                          const PaintContext& context) const;
+  void paintTrackAndThumb(const Canvas& canvas, const Metrics& metrics,
+                          const internal::SliderPaintTokens& tokens) const;
 
   /// Paints any inset icon before track segments exclude the same pixels.
   void paintTrackIcons(const Canvas& canvas, Clipper& clipper,
-                       const PaintContext& context) const;
+                       const Metrics& metrics,
+                       const internal::SliderPaintTokens& tokens) const;
 
   /// Paints discrete stop marks and excludes them from later track redraw.
   void paintStops(const Canvas& canvas, Clipper& clipper,
-                  const PaintContext& context) const;
+                  const Metrics& metrics,
+                  const internal::SliderPaintTokens& tokens) const;
 
   /// Remaps a normalized thumb position into semantic value state.
   bool setPosInternal(uint16_t pos, bool from_user);

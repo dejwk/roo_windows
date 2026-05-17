@@ -108,6 +108,7 @@ float StopPrimaryCenterFromIndex(const SliderAxisMetrics& axis,
 }  // namespace
 
 void PaintStopRuns(const Canvas& canvas, Clipper& clipper,
+                   const SliderPaintTokens& tokens,
                    const SliderAxisMetrics& axis,
                    const SliderPaintStopSegment* segments, int segment_count,
                    const SliderRange& range,
@@ -132,6 +133,8 @@ void PaintStopRuns(const Canvas& canvas, Clipper& clipper,
   for (int segment_index = 0; segment_index < segment_count; ++segment_index) {
     if (!runs[segment_index].has_marks) continue;
     int16_t cross_start = (axis.crossSpan() - kStopMarkSpanPixels) / 2;
+    Color track_color = TrackColorForSegment(tokens, segments[segment_index]);
+    Color stop_color = StopColorForSegment(tokens, segments[segment_index]);
     roo_display::Box segment_clip_box = TrackSegmentClipBox(
         axis, segments[segment_index], cross_start, kStopMarkSpanPixels);
     if (segment_clip_box.empty()) continue;
@@ -140,7 +143,7 @@ void PaintStopRuns(const Canvas& canvas, Clipper& clipper,
     if (run_box.empty()) continue;
 
     Canvas stop_canvas = canvas;
-    stop_canvas.set_bgcolor(segments[segment_index].track_color);
+  stop_canvas.set_bgcolor(track_color);
     stop_canvas.clip(segment_clip_box.translate(canvas.dx(), canvas.dy()));
     bool has_previous_stop = false;
     SliderPaintStopSpan previous_span{0, -1};
@@ -161,13 +164,13 @@ void PaintStopRuns(const Canvas& canvas, Clipper& clipper,
               axis.boxFromPrimaryCross(gap_min_primary, cross_start,
                                        gap_max_primary,
                                        cross_start + kStopMarkSpanPixels - 1),
-              segments[segment_index].track_color);
+              track_color);
         }
       }
 
       stop_canvas.drawObject(roo_display::SmoothFilledCircle(
           StopMarkCenter(axis, primary_center), kStopMarkRadiusPixels,
-          segments[segment_index].stop_color));
+          stop_color));
       previous_span = current_span;
       has_previous_stop = true;
     }

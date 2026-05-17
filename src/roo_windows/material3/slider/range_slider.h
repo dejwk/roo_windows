@@ -10,6 +10,7 @@ namespace material3 {
 
 namespace internal {
 class SliderAxisMetrics;
+struct SliderPaintTokens;
 }  // namespace internal
 
 // Supports both horizontal and vertical range selection. Material 3 guidance
@@ -141,18 +142,19 @@ class RangeSlider : public BasicWidget {
   void notifyStateChanged(uint16_t state_diff) override;
 
  private:
-  struct PaintContext;
+  struct Metrics;
 
   /// Paints the range track and both thumbs for the supplied paint state.
-  void paintTrackAndThumb(const Canvas& canvas,
-                          const PaintContext& context) const;
+  void paintTrackAndThumb(const Canvas& canvas, const Metrics& metrics,
+                          const internal::SliderPaintTokens& tokens) const;
 
   /// Paints discrete stop marks and excludes them from later track redraw.
   void paintStops(const Canvas& canvas, Clipper& clipper,
-                  const PaintContext& context) const;
+                  const Metrics& metrics,
+                  const internal::SliderPaintTokens& tokens) const;
 
   /// Resolves all per-frame painting metrics for the current thumb state.
-  PaintContext buildPaintContext() const;
+  Metrics buildMetrics() const;
 
   /// Applies a two-value update while preserving ordering and min-separation
   /// rules.
