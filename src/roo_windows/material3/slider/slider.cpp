@@ -93,11 +93,10 @@ void BuildTrackSegments(const Slider& slider,
                         StopSegment* segments, int& segment_count) {
   segment_count = 0;
   const SliderRange& range = slider.range();
-  float center_anchor_primary = axis.centerFromValue(
-      range.from, range.to, 0.5f * (range.from + range.to));
+  float center_anchor_primary =
+      axis.centerFromValue(range, 0.5f * (range.from + range.to));
   bool thumb_on_or_right_of_center =
-      axis.centerFromValue(range.from, range.to, slider.value()) >=
-      center_anchor_primary;
+      axis.centerFromValue(range, slider.value()) >= center_anchor_primary;
   float center_left_edge = center_anchor_primary - (float)kCenterGapHalfPixels;
   float center_right_edge = center_anchor_primary + (float)kCenterGapHalfPixels;
 
@@ -270,8 +269,7 @@ struct Slider::Metrics {
 
 Slider::Metrics Slider::buildMetrics() const {
   internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
-  return buildMetrics(axis.centerFromValue(range_.from, range_.to, value_),
-                      isPressed());
+  return buildMetrics(axis.centerFromValue(range_, value_), isPressed());
 }
 
 Slider::Metrics Slider::buildMetrics(float thumb_center, bool pressed) const {
@@ -400,8 +398,8 @@ bool Slider::onSingleTapUp(XDim x, YDim y) {
   if (!isEnabled()) return false;
   BasicWidget::onSingleTapUp(x, y);
   internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
-  float value = axis.valueFromPrimaryCoord(range_.from, range_.to,
-                                           axis.primaryCoordFromPoint(x, y));
+  float value =
+      axis.valueFromPrimaryCoord(range_, axis.primaryCoordFromPoint(x, y));
   onInteractionStart();
   if (setValueInternal(value, true)) {
     triggerInteractiveChange();
@@ -414,8 +412,7 @@ void Slider::onShowPress(XDim x, YDim y) {
   if (!isEnabled()) return;
   internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
   int16_t primary_coord = axis.primaryCoordFromPoint(x, y);
-  if (!axis.hitsThumbAtValue(range_.from, range_.to, value_, primary_coord,
-                             kTouchSlopPixels)) {
+  if (!axis.hitsThumbAtValue(range_, value_, primary_coord, kTouchSlopPixels)) {
     return;
   }
 
@@ -423,9 +420,8 @@ void Slider::onShowPress(XDim x, YDim y) {
     is_dragging_ = true;
     onInteractionStart();
   }
-  if (setValueInternal(
-          axis.valueFromPrimaryCoord(range_.from, range_.to, primary_coord),
-          true)) {
+  if (setValueInternal(axis.valueFromPrimaryCoord(range_, primary_coord),
+                       true)) {
     triggerInteractiveChange();
   }
   Widget::onShowPress(x, y);
@@ -440,8 +436,7 @@ bool Slider::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
 
   bool was_dragging = is_dragging_;
   if (setValueInternal(
-          axis.valueFromPrimaryCoord(range_.from, range_.to,
-                                     axis.primaryCoordFromPoint(x, y)),
+          axis.valueFromPrimaryCoord(range_, axis.primaryCoordFromPoint(x, y)),
           true)) {
     if (!was_dragging) {
       onInteractionStart();
@@ -484,8 +479,8 @@ bool Slider::setValueInternal(float value, bool from_user) {
   onValueChange(value_, from_user);
   if (width() <= 0 || height() <= 0) return true;
   internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
-  float old_center = axis.centerFromValue(range_.from, range_.to, old_value);
-  float new_center = axis.centerFromValue(range_.from, range_.to, new_value);
+  float old_center = axis.centerFromValue(range_, old_value);
+  float new_center = axis.centerFromValue(range_, new_value);
   if (old_center != new_center) {
     invalidateValueChange(axis, old_center, new_center, new_value);
   }
@@ -510,9 +505,8 @@ bool Slider::setRange(SliderRange range) {
 
   if (width() > 0 && height() > 0) {
     internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
-    float old_center =
-        axis.centerFromValue(old_range.from, old_range.to, old_value);
-    float new_center = axis.centerFromValue(range_.from, range_.to, new_value);
+    float old_center = axis.centerFromValue(old_range, old_value);
+    float new_center = axis.centerFromValue(range_, new_value);
     if (old_center != new_center) {
       invalidateValueChange(axis, old_center, new_center, new_value);
     }
@@ -609,7 +603,7 @@ void Slider::notifyStateChanged(uint16_t state_diff) {
   }
 
   internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
-  float center = axis.centerFromValue(range_.from, range_.to, value_);
+  float center = axis.centerFromValue(range_, value_);
   Rect thumb_rect = axis.invalidationRectForCenterChange(center, center);
 
   bool old_indicator_visible =
@@ -646,8 +640,8 @@ void Slider::paint(const Canvas& canvas) const {
 
 void Slider::paintTrackAndThumb(const Canvas& canvas, const Metrics& metrics,
                                 const Tokens& tokens) const {
-  float center_anchor_primary = metrics.axis.centerFromValue(
-      range_.from, range_.to, 0.5f * (range_.from + range_.to));
+  float center_anchor_primary =
+      metrics.axis.centerFromValue(range_, 0.5f * (range_.from + range_.to));
 
   auto track_bounds = metrics.axis.paintRectFromPrimaryCross(
       TrackShapeMinPrimary(0.0f, metrics.size_metrics.track_radius),
@@ -746,8 +740,7 @@ PreferredSize Slider::getPreferredSize() const {
 
 roo_display::FpPoint Slider::getPointOverlayFocus() const {
   internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
-  float display_center =
-      axis.displayCenterFromValue(range_.from, range_.to, value_);
+  float display_center = axis.displayCenterFromValue(range_, value_);
   if (style_.orientation == SliderOrientation::kVertical) {
     return roo_display::FpPoint{axis.centeredCross(), display_center};
   }
@@ -854,8 +847,7 @@ void Slider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
       internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
       Rect indicator_bounds = PaintValueIndicator(
           theme(), isEnabled(), indicator_canvas, clipper, width(), height(),
-          axis.displayCenterFromValue(range_.from, range_.to, value_), style_,
-          text);
+          axis.displayCenterFromValue(range_, value_), style_, text);
       if (!indicator_bounds.empty()) {
         current_indicator_span = internal::DisplayMainSpanFromRect(
             indicator_bounds,

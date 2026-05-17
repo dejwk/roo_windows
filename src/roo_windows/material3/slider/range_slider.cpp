@@ -170,14 +170,14 @@ int ResolveNearestThumb(const internal::SliderAxisMetrics& axis,
 // the same position, defer the choice until scroll direction disambiguates it.
 int ResolveThumbForPress(const internal::SliderAxisMetrics& axis,
                          const SliderRange& range, float start_value,
-                         float end_value,
-                         int16_t primary_coord, bool& awaiting_direction) {
-  bool start_hit = axis.hitsThumbAtValue(range.from, range.to, start_value,
-                                         primary_coord, kTouchSlopPixels);
-  bool end_hit = axis.hitsThumbAtValue(range.from, range.to, end_value,
-                                       primary_coord, kTouchSlopPixels);
-  float start_center = axis.centerFromValue(range.from, range.to, start_value);
-  float end_center = axis.centerFromValue(range.from, range.to, end_value);
+                         float end_value, int16_t primary_coord,
+                         bool& awaiting_direction) {
+  bool start_hit = axis.hitsThumbAtValue(range, start_value, primary_coord,
+                                         kTouchSlopPixels);
+  bool end_hit =
+      axis.hitsThumbAtValue(range, end_value, primary_coord, kTouchSlopPixels);
+  float start_center = axis.centerFromValue(range, start_value);
+  float end_center = axis.centerFromValue(range, end_value);
   awaiting_direction = false;
   if (start_hit && end_hit) {
     if (start_center == end_center) {
@@ -195,20 +195,17 @@ int ResolveThumbForPress(const internal::SliderAxisMetrics& axis,
 // changed in this update.
 Rect InvalidationRectForValueChange(const internal::SliderAxisMetrics& axis,
                                     const SliderRange& range,
-                                    float old_start_value,
-                                    float old_end_value,
+                                    float old_start_value, float old_end_value,
                                     float new_start_value,
                                     float new_end_value) {
-  Rect start_rect =
-      old_start_value == new_start_value
-          ? Rect(0, 0, -1, -1)
-      : axis.invalidationRectForValueChange(range.from, range.to,
-                                            old_start_value, new_start_value);
-  Rect end_rect =
-      old_end_value == new_end_value
-          ? Rect(0, 0, -1, -1)
-      : axis.invalidationRectForValueChange(range.from, range.to,
-                                            old_end_value, new_end_value);
+  Rect start_rect = old_start_value == new_start_value
+                        ? Rect(0, 0, -1, -1)
+                        : axis.invalidationRectForValueChange(
+                              range, old_start_value, new_start_value);
+  Rect end_rect = old_end_value == new_end_value
+                      ? Rect(0, 0, -1, -1)
+                      : axis.invalidationRectForValueChange(
+                            range, old_end_value, new_end_value);
   return UnionRects(start_rect, end_rect);
 }
 
@@ -228,8 +225,8 @@ ThumbPaintMetrics ResolveThumbPaintMetrics(
   return ThumbPaintMetrics{
       track_gap,
       internal::ResolveSliderVisualMetricsForValue(
-          axis, range.from, range.to, value, thumb_width,
-          size_metrics.track_height, track_gap, size_metrics.handle_height),
+          axis, range, value, thumb_width, size_metrics.track_height, track_gap,
+          size_metrics.handle_height),
   };
 }
 
@@ -330,17 +327,15 @@ bool RangeSlider::onSingleTapUp(XDim x, YDim y) {
   if (!isEnabled()) return false;
   internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
   int16_t primary_coord = axis.primaryCoordFromPoint(x, y);
-  float start_center =
-      axis.centerFromValue(range_.from, range_.to, start_value_);
-  float end_center = axis.centerFromValue(range_.from, range_.to, end_value_);
+  float start_center = axis.centerFromValue(range_, start_value_);
+  float end_center = axis.centerFromValue(range_, end_value_);
   active_thumb_ =
       ResolveNearestThumb(axis, start_center, end_center, primary_coord);
   overlay_thumb_ = active_thumb_;
   awaiting_direction_ = false;
   BasicWidget::onSingleTapUp(x, y);
   onInteractionStart(active_thumb_);
-  if (setActiveThumbValue(
-          axis.valueFromPrimaryCoord(range_.from, range_.to, primary_coord))) {
+  if (setActiveThumbValue(axis.valueFromPrimaryCoord(range_, primary_coord))) {
     triggerInteractiveChange();
   }
   active_thumb_ = kNoActiveThumb;
@@ -374,7 +369,7 @@ void RangeSlider::onShowPress(XDim x, YDim y) {
     onInteractionStart(active_thumb_);
   }
   if (setActiveThumbValue(axis.valueFromPrimaryCoord(
-          range_.from, range_.to, axis.primaryCoordFromPoint(x, y)))) {
+          range_, axis.primaryCoordFromPoint(x, y)))) {
     triggerInteractiveChange();
   }
   Widget::onShowPress(x, y);
@@ -403,9 +398,8 @@ bool RangeSlider::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
     is_dragging_ = true;
     onInteractionStart(active_thumb_);
   } else if (active_thumb_ == kNoActiveThumb) {
-    float start_center =
-      axis.centerFromValue(range_.from, range_.to, start_value_);
-    float end_center = axis.centerFromValue(range_.from, range_.to, end_value_);
+    float start_center = axis.centerFromValue(range_, start_value_);
+    float end_center = axis.centerFromValue(range_, end_value_);
     active_thumb_ = ResolveNearestThumb(axis, start_center, end_center,
                                         axis.primaryCoordFromPoint(x, y));
     overlay_thumb_ = active_thumb_;
@@ -413,8 +407,8 @@ bool RangeSlider::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
     onInteractionStart(active_thumb_);
   }
 
-    bool changed = setActiveThumbValue(axis.valueFromPrimaryCoord(
-      range_.from, range_.to, axis.primaryCoordFromPoint(x, y)));
+  bool changed = setActiveThumbValue(
+      axis.valueFromPrimaryCoord(range_, axis.primaryCoordFromPoint(x, y)));
   if (changed) {
     setPressed(true);
     triggerInteractiveChange();
@@ -477,23 +471,19 @@ bool RangeSlider::setRange(SliderRange range) {
   min_separation_ = new_min_separation;
   start_value_ = new_start_value;
   end_value_ = new_end_value;
-    if (old_start_value != start_value_ || old_end_value != end_value_) {
+  if (old_start_value != start_value_ || old_end_value != end_value_) {
     onValueChange(start_value_, end_value_, kNoActiveThumb, false);
   }
 
   if (width() > 0 && height() > 0) {
     internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
-    float old_start_center =
-      axis.centerFromValue(range_.from, range_.to, old_start_value);
-    float old_end_center =
-      axis.centerFromValue(range_.from, range_.to, old_end_value);
-    float new_start_center =
-      axis.centerFromValue(range_.from, range_.to, start_value_);
-    float new_end_center =
-      axis.centerFromValue(range_.from, range_.to, end_value_);
+    float old_start_center = axis.centerFromValue(range_, old_start_value);
+    float old_end_center = axis.centerFromValue(range_, old_end_value);
+    float new_start_center = axis.centerFromValue(range_, start_value_);
+    float new_end_center = axis.centerFromValue(range_, end_value_);
     invalidateValueChange(axis, old_start_center, old_end_center,
-                new_start_center, new_end_center, old_start_value,
-                old_end_value, start_value_, end_value_);
+                          new_start_center, new_end_center, old_start_value,
+                          old_end_value, start_value_, end_value_);
   }
   return true;
 }
@@ -510,28 +500,24 @@ bool RangeSlider::setMinSeparation(float value) {
                  start_value_ != new_start_value || end_value_ != new_end_value;
   if (!changed) return false;
 
-    float old_start_value = start_value_;
-    float old_end_value = end_value_;
+  float old_start_value = start_value_;
+  float old_end_value = end_value_;
   min_separation_ = effective_value;
   start_value_ = new_start_value;
   end_value_ = new_end_value;
-    if (old_start_value != start_value_ || old_end_value != end_value_) {
+  if (old_start_value != start_value_ || old_end_value != end_value_) {
     onValueChange(start_value_, end_value_, kNoActiveThumb, false);
   }
 
   if (width() > 0 && height() > 0) {
     internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
-    float old_start_center =
-      axis.centerFromValue(range_.from, range_.to, old_start_value);
-    float old_end_center =
-      axis.centerFromValue(range_.from, range_.to, old_end_value);
-    float new_start_center =
-      axis.centerFromValue(range_.from, range_.to, start_value_);
-    float new_end_center =
-      axis.centerFromValue(range_.from, range_.to, end_value_);
+    float old_start_center = axis.centerFromValue(range_, old_start_value);
+    float old_end_center = axis.centerFromValue(range_, old_end_value);
+    float new_start_center = axis.centerFromValue(range_, start_value_);
+    float new_end_center = axis.centerFromValue(range_, end_value_);
     invalidateValueChange(axis, old_start_center, old_end_center,
-                new_start_center, new_end_center, old_start_value,
-                old_end_value, start_value_, end_value_);
+                          new_start_center, new_end_center, old_start_value,
+                          old_end_value, start_value_, end_value_);
   }
   return true;
 }
@@ -566,8 +552,8 @@ bool RangeSlider::setValuesInternal(float start_value, float end_value,
     return false;
   }
 
-    float old_start_value = start_value_;
-    float old_end_value = end_value_;
+  float old_start_value = start_value_;
+  float old_end_value = end_value_;
 
   start_value_ = new_start_value;
   end_value_ = new_end_value;
@@ -576,22 +562,18 @@ bool RangeSlider::setValuesInternal(float start_value, float end_value,
 
   if (width() > 0 && height() > 0) {
     internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
-    float old_start_center =
-      axis.centerFromValue(range_.from, range_.to, old_start_value);
-    float old_end_center =
-      axis.centerFromValue(range_.from, range_.to, old_end_value);
-    float new_start_center =
-      axis.centerFromValue(range_.from, range_.to, start_value_);
-    float new_end_center =
-      axis.centerFromValue(range_.from, range_.to, end_value_);
+    float old_start_center = axis.centerFromValue(range_, old_start_value);
+    float old_end_center = axis.centerFromValue(range_, old_end_value);
+    float new_start_center = axis.centerFromValue(range_, start_value_);
+    float new_end_center = axis.centerFromValue(range_, end_value_);
     invalidateValueChange(axis, old_start_center, old_end_center,
-                new_start_center, new_end_center, old_start_value,
-                old_end_value, start_value_, end_value_);
+                          new_start_center, new_end_center, old_start_value,
+                          old_end_value, start_value_, end_value_);
   }
   return true;
 }
 
-  bool RangeSlider::setActiveThumbValue(float value) {
+bool RangeSlider::setActiveThumbValue(float value) {
   if (active_thumb_ == 0) {
     return setValuesInternal(value, end_value_, true, 0);
   }
@@ -621,7 +603,7 @@ void RangeSlider::invalidateValueChange(
   Rect bubble_envelope(0, 0, -1, -1);
   if (IndicatorEnabled(style_) && ShowsValueIndicator(*this)) {
     float new_active_center =
-      (active_thumb_ == 1) ? new_end_center : new_start_center;
+        (active_thumb_ == 1) ? new_end_center : new_start_center;
     float new_active_value =
         (active_thumb_ == 1) ? new_end_value : new_start_value;
     float c_new = axis.displayPrimary(new_active_center);
@@ -665,7 +647,7 @@ void RangeSlider::notifyStateChanged(uint16_t state_diff) {
 
   internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
   float active_value = active_thumb_ == 1 ? end_value_ : start_value_;
-  float center = axis.centerFromValue(range_.from, range_.to, active_value);
+  float center = axis.centerFromValue(range_, active_value);
   Rect thumb_rect = axis.invalidationRectForCenterChange(center, center);
 
   bool old_indicator_visible =
@@ -677,9 +659,8 @@ void RangeSlider::notifyStateChanged(uint16_t state_diff) {
   if (old_indicator_visible != new_indicator_visible) {
     float display_center = axis.displayPrimary(center);
     bubble_envelope = ValueIndicatorBubble::EnvelopeForCenterRange(
-      width(), height(), display_center, display_center,
-      style_.value_indicator,
-        style_.orientation);
+        width(), height(), display_center, display_center,
+        style_.value_indicator, style_.orientation);
   }
 
   pending_content_dirty_span_.include(
@@ -731,8 +712,7 @@ void RangeSlider::paintTrackAndThumb(const Canvas& canvas,
       internal::kHandleCornerRadius, tokens.handle);
   auto end_handle = SmoothFilledRoundRect(
       end_handle_bounds.x_min, end_handle_bounds.y_min, end_handle_bounds.x_max,
-      end_handle_bounds.y_max, internal::kHandleCornerRadius,
-      tokens.handle);
+      end_handle_bounds.y_max, internal::kHandleCornerRadius, tokens.handle);
   Rect widget_bounds = bounds();
   Rect start_handle_tile_bounds =
       GetHandleTileBounds(widget_bounds, start_handle.extents(),
@@ -789,10 +769,8 @@ PreferredSize RangeSlider::getPreferredSize() const {
 
 roo_display::FpPoint RangeSlider::getPointOverlayFocus() const {
   internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
-  float start_center =
-      axis.displayCenterFromValue(range_.from, range_.to, start_value_);
-  float end_center =
-      axis.displayCenterFromValue(range_.from, range_.to, end_value_);
+  float start_center = axis.displayCenterFromValue(range_, start_value_);
+  float end_center = axis.displayCenterFromValue(range_, end_value_);
   int thumb = active_thumb_;
   if (thumb == kNoActiveThumb) {
     thumb = overlay_thumb_;
@@ -883,8 +861,8 @@ void RangeSlider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
       // bubble area.
       internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
       float indicator_value = active_thumb_ == 1 ? end_value_ : start_value_;
-        float indicator_thumb_center =
-          axis.displayCenterFromValue(range_.from, range_.to, indicator_value);
+      float indicator_thumb_center =
+          axis.displayCenterFromValue(range_, indicator_value);
       char scratch[64];
       roo::string_view text =
           formatLabel(indicator_value, scratch, sizeof(scratch));

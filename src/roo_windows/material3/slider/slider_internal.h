@@ -102,10 +102,20 @@ class SliderAxisMetrics {
     return (float)kTrackHandleGap - 0.5f + roundf(t * (float)r);
   }
 
+  template <typename RangeLike>
+  float centerFromValue(const RangeLike& range, float value) const {
+    return centerFromValue(range.from, range.to, value);
+  }
+
   // Returns the display-space thumb center for a semantic value, accounting
   // for vertical-axis inversion.
   float displayCenterFromValue(float from, float to, float value) const {
     return displayPrimary(centerFromValue(from, to, value));
+  }
+
+  template <typename RangeLike>
+  float displayCenterFromValue(const RangeLike& range, float value) const {
+    return displayCenterFromValue(range.from, range.to, value);
   }
 
   // Maps a display-space primary coordinate to an unsnapped semantic value
@@ -119,6 +129,12 @@ class SliderAxisMetrics {
     return from + t * (to - from);
   }
 
+  template <typename RangeLike>
+  float valueFromPrimaryCoord(const RangeLike& range,
+                              int16_t primary_coord) const {
+    return valueFromPrimaryCoord(range.from, range.to, primary_coord);
+  }
+
   // True iff a tap at `primary_coord` lands within `touch_slop` pixels of the
   // thumb anchored at `value`.
   bool hitsThumbAtValue(float from, float to, float value,
@@ -126,6 +142,13 @@ class SliderAxisMetrics {
     float dist = (float)primary_coord - centerFromValue(from, to, value);
     return dist >= -(float)touch_slop - 0.5f &&
            dist <= (float)touch_slop + 0.5f;
+  }
+
+  template <typename RangeLike>
+  bool hitsThumbAtValue(const RangeLike& range, float value,
+                        int16_t primary_coord, int16_t touch_slop) const {
+    return hitsThumbAtValue(range.from, range.to, value, primary_coord,
+                            touch_slop);
   }
 
   // Converts a logical primary coordinate into a display-space coordinate.
@@ -172,6 +195,13 @@ class SliderAxisMetrics {
     return invalidationRectForCenterChange(
         centerFromValue(from, to, old_value),
         centerFromValue(from, to, new_value));
+  }
+
+  template <typename RangeLike>
+  Rect invalidationRectForValueChange(const RangeLike& range, float old_value,
+                                      float new_value) const {
+    return invalidationRectForValueChange(range.from, range.to, old_value,
+                                          new_value);
   }
 
   // Returns the cross-axis center in display coordinates.
@@ -314,6 +344,16 @@ inline SliderVisualMetrics ResolveSliderVisualMetricsForValue(
     int16_t thumb_primary_span, int16_t track_cross_span,
     int16_t track_handle_gap, int16_t thumb_cross_span) {
   return ResolveSliderVisualMetrics(axis, axis.centerFromValue(from, to, value),
+                                    thumb_primary_span, track_cross_span,
+                                    track_handle_gap, thumb_cross_span);
+}
+
+template <typename RangeLike>
+inline SliderVisualMetrics ResolveSliderVisualMetricsForValue(
+    const SliderAxisMetrics& axis, const RangeLike& range, float value,
+    int16_t thumb_primary_span, int16_t track_cross_span,
+    int16_t track_handle_gap, int16_t thumb_cross_span) {
+  return ResolveSliderVisualMetrics(axis, axis.centerFromValue(range, value),
                                     thumb_primary_span, track_cross_span,
                                     track_handle_gap, thumb_cross_span);
 }

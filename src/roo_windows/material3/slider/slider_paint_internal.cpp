@@ -102,7 +102,7 @@ float StopPrimaryCenterFromIndex(const SliderAxisMetrics& axis,
                                  const SliderRange& range, int32_t stop_count,
                                  int32_t i) {
   float value = (i == stop_count) ? range.to : range.from + i * range.step;
-  return axis.centerFromValue(range.from, range.to, value);
+  return axis.centerFromValue(range, value);
 }
 
 }  // namespace
@@ -143,7 +143,7 @@ void PaintStopRuns(const Canvas& canvas, Clipper& clipper,
     if (run_box.empty()) continue;
 
     Canvas stop_canvas = canvas;
-  stop_canvas.set_bgcolor(track_color);
+    stop_canvas.set_bgcolor(track_color);
     stop_canvas.clip(segment_clip_box.translate(canvas.dx(), canvas.dy()));
     bool has_previous_stop = false;
     SliderPaintStopSpan previous_span{0, -1};
@@ -168,9 +168,9 @@ void PaintStopRuns(const Canvas& canvas, Clipper& clipper,
         }
       }
 
-      stop_canvas.drawObject(roo_display::SmoothFilledCircle(
-          StopMarkCenter(axis, primary_center), kStopMarkRadiusPixels,
-          stop_color));
+      stop_canvas.drawObject(
+          roo_display::SmoothFilledCircle(StopMarkCenter(axis, primary_center),
+                                          kStopMarkRadiusPixels, stop_color));
       previous_span = current_span;
       has_previous_stop = true;
     }
