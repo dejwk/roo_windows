@@ -44,27 +44,6 @@ roo_display::FpPoint StopMarkCenter(const SliderAxisMetrics& axis,
   return roo_display::FpPoint{primary_center, cross_center};
 }
 
-// Expands a segment run to include the exact pixels covered by one stop mark.
-void IncludeStopExtentsInRun(const SliderAxisMetrics& axis,
-                             const roo_display::Box& stop_extents,
-                             SliderPaintStopRun& run) {
-  SliderPaintStopSpan span =
-      axis.isVertical()
-          ? SliderPaintStopSpan{(int16_t)(axis.primarySpan() - 1 -
-                                          stop_extents.yMax()),
-                                (int16_t)(axis.primarySpan() - 1 -
-                                          stop_extents.yMin())}
-          : SliderPaintStopSpan{stop_extents.xMin(), stop_extents.xMax()};
-  if (!run.has_marks) {
-    run.has_marks = true;
-    run.min_primary = span.min_primary;
-    run.max_primary = span.max_primary;
-    return;
-  }
-  if (span.min_primary < run.min_primary) run.min_primary = span.min_primary;
-  if (span.max_primary > run.max_primary) run.max_primary = span.max_primary;
-}
-
 // Converts stop extents back into primary-axis coordinates so neighboring stop
 // marks can bridge only the uncovered pixels between them.
 SliderPaintStopSpan StopSpanFromExtents(const SliderAxisMetrics& axis,
@@ -75,6 +54,21 @@ SliderPaintStopSpan StopSpanFromExtents(const SliderAxisMetrics& axis,
                                    (int16_t)(axis.primarySpan() - 1 -
                                              stop_extents.yMin())}
              : SliderPaintStopSpan{stop_extents.xMin(), stop_extents.xMax()};
+}
+
+// Expands a segment run to include the exact pixels covered by one stop mark.
+void IncludeStopExtentsInRun(const SliderAxisMetrics& axis,
+                             const roo_display::Box& stop_extents,
+                             SliderPaintStopRun& run) {
+  SliderPaintStopSpan span = StopSpanFromExtents(axis, stop_extents);
+  if (!run.has_marks) {
+    run.has_marks = true;
+    run.min_primary = span.min_primary;
+    run.max_primary = span.max_primary;
+    return;
+  }
+  if (span.min_primary < run.min_primary) run.min_primary = span.min_primary;
+  if (span.max_primary > run.max_primary) run.max_primary = span.max_primary;
 }
 
 // Rebuilds the clip/exclusion box that covers the settled stop run for one
@@ -168,9 +162,9 @@ void PaintStopRuns(const Canvas& canvas, Clipper& clipper,
         }
       }
 
-      stop_canvas.drawObject(
-          roo_display::SmoothFilledCircle(StopMarkCenter(axis, primary_center),
-                                          kStopMarkRadiusPixels, stop_color));
+      stop_canvas.drawObject(roo_display::SmoothFilledCircle(
+          StopMarkCenter(axis, primary_center), kStopMarkRadiusPixels,
+          stop_color));
       previous_span = current_span;
       has_previous_stop = true;
     }
