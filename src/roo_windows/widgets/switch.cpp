@@ -1,5 +1,6 @@
 #include "switch.h"
 
+#include "roo_time.h"
 #include "roo_display/image/image.h"
 #include "roo_display/internal/raw_streamable_overlay.h"
 #include "roo_display/ui/tile.h"
@@ -23,12 +24,12 @@ static constexpr int kSwitchAnimationMs = 120;
 
 bool Switch::onSingleTapUp(XDim x, YDim y) {
   toggle();
-  anim_ = millis() & 0x7FFF;
+  anim_ = roo_time::Uptime::Now().inMillis() & 0x7FFF;
   return Widget::onSingleTapUp(x, y);
 }
 
 int16_t Switch::time_animating_ms() const {
-  return (millis() & 0x7FFF) - (anim_ & 0x7FFF);
+  return (roo_time::Uptime::Now().inMillis() & 0x7FFF) - (anim_ & 0x7FFF);
 }
 
 int16_t Switch::currentThumbOffsetX() const {
