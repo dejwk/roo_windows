@@ -92,6 +92,19 @@ void BuildTrackSegments(const Slider& slider,
                         const internal::SliderVisualMetrics& layout,
                         StopSegment* segments, int& segment_count) {
   segment_count = 0;
+  if (slider.variant() != SliderVariant::kCentered) {
+    if (layout.active_track_max_primary >= 0.0f) {
+      segments[segment_count++] =
+          StopSegment{0.0f, layout.active_track_max_primary, true};
+    }
+    if (layout.inactive_track_min_primary < axis.primarySpan()) {
+      segments[segment_count++] =
+          StopSegment{layout.inactive_track_min_primary,
+                      (float)(axis.primarySpan() - 1), false};
+    }
+    return;
+  }
+
   const SliderRange& range = slider.range();
   float center_anchor_primary =
       axis.centerFromValue(range, 0.5f * (range.from + range.to));
@@ -99,54 +112,39 @@ void BuildTrackSegments(const Slider& slider,
       axis.centerFromValue(range, slider.value()) >= center_anchor_primary;
   float center_left_edge = center_anchor_primary - (float)kCenterGapHalfPixels;
   float center_right_edge = center_anchor_primary + (float)kCenterGapHalfPixels;
-
-  if (slider.variant() == SliderVariant::kCentered) {
-    int16_t handle_left_edge = (int16_t)floorf(layout.active_track_max_primary);
-    int16_t center_left_edge_i = (int16_t)floorf(center_left_edge);
-    int16_t left_inactive_max =
-        thumb_on_or_right_of_center
-            ? std::min(handle_left_edge, center_left_edge_i)
-            : handle_left_edge;
-    if (left_inactive_max >= 0) {
-      segments[segment_count++] = StopSegment{
-          0.0f,
-          (float)std::min<int16_t>(left_inactive_max, axis.primarySpan() - 1),
-          false};
-    }
-
-    float active_track_min_primary = thumb_on_or_right_of_center
-                                         ? center_right_edge
-                                         : layout.inactive_track_min_primary;
-    float active_track_max_primary = thumb_on_or_right_of_center
-                                         ? layout.active_track_max_primary
-                                         : center_left_edge;
-    if (active_track_max_primary >= active_track_min_primary) {
-      segments[segment_count++] =
-          StopSegment{active_track_min_primary, active_track_max_primary, true};
-    }
-
-    int16_t handle_right_edge =
-        (int16_t)ceilf(layout.inactive_track_min_primary);
-    int16_t center_right_edge_i = (int16_t)ceilf(center_right_edge);
-    int16_t right_inactive_min =
-        thumb_on_or_right_of_center
-            ? handle_right_edge
-            : std::max(handle_right_edge, center_right_edge_i);
-    if (right_inactive_min < axis.primarySpan()) {
-      segments[segment_count++] =
-          StopSegment{(float)std::max<int16_t>(0, right_inactive_min),
-                      (float)(axis.primarySpan() - 1), false};
-    }
-    return;
+  int16_t handle_left_edge = (int16_t)floorf(layout.active_track_max_primary);
+  int16_t center_left_edge_i = (int16_t)floorf(center_left_edge);
+  int16_t left_inactive_max =
+      thumb_on_or_right_of_center
+          ? std::min(handle_left_edge, center_left_edge_i)
+          : handle_left_edge;
+  if (left_inactive_max >= 0) {
+    segments[segment_count++] = StopSegment{
+        0.0f,
+        (float)std::min<int16_t>(left_inactive_max, axis.primarySpan() - 1),
+        false};
   }
 
-  if (layout.active_track_max_primary >= 0.0f) {
+  float active_track_min_primary = thumb_on_or_right_of_center
+                                       ? center_right_edge
+                                       : layout.inactive_track_min_primary;
+  float active_track_max_primary = thumb_on_or_right_of_center
+                                       ? layout.active_track_max_primary
+                                       : center_left_edge;
+  if (active_track_max_primary >= active_track_min_primary) {
     segments[segment_count++] =
-        StopSegment{0.0f, layout.active_track_max_primary, true};
+        StopSegment{active_track_min_primary, active_track_max_primary, true};
   }
-  if (layout.inactive_track_min_primary < axis.primarySpan()) {
+
+  int16_t handle_right_edge = (int16_t)ceilf(layout.inactive_track_min_primary);
+  int16_t center_right_edge_i = (int16_t)ceilf(center_right_edge);
+  int16_t right_inactive_min =
+      thumb_on_or_right_of_center
+          ? handle_right_edge
+          : std::max(handle_right_edge, center_right_edge_i);
+  if (right_inactive_min < axis.primarySpan()) {
     segments[segment_count++] =
-        StopSegment{layout.inactive_track_min_primary,
+        StopSegment{(float)std::max<int16_t>(0, right_inactive_min),
                     (float)(axis.primarySpan() - 1), false};
   }
 }
@@ -688,11 +686,8 @@ void Slider::paintTrackAndThumb(const Canvas& canvas, const Metrics& metrics,
       gap_max = metrics.axis.primarySpan() - 1;
     }
     if (gap_min <= gap_max) {
-      Rect gap_rect =
-          metrics.axis.isVertical()
-              ? Rect(0, metrics.axis.primarySpan() - 1 - gap_max, width() - 1,
-                     metrics.axis.primarySpan() - 1 - gap_min)
-              : Rect(gap_min, 0, gap_max, height() - 1);
+      Rect gap_rect = Rect(metrics.axis.boxFromPrimaryCross(
+          gap_min, 0, gap_max, metrics.axis.crossSpan() - 1));
       canvas.fillRect(gap_rect, canvas.bgcolor());
     }
   }
