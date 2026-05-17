@@ -108,15 +108,16 @@ float UnitValueFromPercent(int percent) {
 
 class SliderRow : public FlexLayout {
  public:
-  SliderRow(const Environment& env, const char* primary,
-            const char* secondary, int initial_percent)
+  SliderRow(const Environment& env, const char* primary, const char* secondary,
+            int initial_percent)
       : FlexLayout(env, FlexDirection::kColumn),
         header_(env, FlexDirection::kRow),
         labels_(env, FlexDirection::kColumn),
         primary_(env, primary, font_body1()),
         secondary_(env, secondary, font_caption()),
         value_(env, "", font_body1()),
-        slider_(env, SliderRange{}, UnitValueFromPercent(initial_percent)) {
+        slider_(env, material3::SliderRange{},
+                UnitValueFromPercent(initial_percent)) {
     setPadding(Padding(Scaled(12), Scaled(8)));
     setGap(Scaled(8));
 
@@ -637,17 +638,17 @@ class SliderScreen : public SimpleScrollablePanel {
         content_(env),
         title_(env, "Material 3 sliders", font_body1()),
         subtitle_(env,
-                     "Unit-range, semantic, discrete, centered, vertical, "
+                  "Unit-range, semantic, discrete, centered, vertical, "
                   "range, and iconized sliders, with custom value indicator "
                   "labels.",
                   font_caption()),
         divider_(env),
-                migration_(env,
-                     "The first row uses the default unit range. The rest use "
-                     "custom semantic ranges.",
-                     font_caption()),
-                legacy_(env, "Default unit range",
-                  "0..100% mapped through the semantic value API", 72),
+        migration_(env,
+                   "The first row uses the default unit range. The rest use "
+                   "custom semantic ranges.",
+                   font_caption()),
+        legacy_(env, "Default unit range",
+                "0..100% mapped through the semantic value API", 72),
         fan_speed_(
             env, "Discrete fan speed", "Custom \"Nx\" indicator on press/drag",
             material3::SliderRange{0.0f, 5.0f, 1.0f}, 2.0f,
