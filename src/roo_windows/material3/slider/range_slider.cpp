@@ -79,20 +79,6 @@ float LargestValidValueAtOrBelow(const SliderRange& range, float value) {
                                     range.to);
 }
 
-// Normalizes two values into the slider domain, preserving the invariant that
-// start <= end when no thumb-specific constraint needs to be honored.
-void NormalizeOrderedValues(const SliderRange& range, float start_value,
-                            float end_value, float& normalized_start,
-                            float& normalized_end) {
-  normalized_start = internal::NormalizeSliderValueForRange(
-      start_value, range.from, range.to, range.step);
-  normalized_end = internal::NormalizeSliderValueForRange(end_value, range.from,
-                                                          range.to, range.step);
-  if (normalized_start > normalized_end) {
-    std::swap(normalized_start, normalized_end);
-  }
-}
-
 // Normalizes two values while preserving the active thumb when possible. If the
 // requested move would violate min separation, the moving thumb is clamped onto
 // the nearest legal discrete or continuous value instead of swapping thumbs.
@@ -129,8 +115,13 @@ void NormalizeOrderedValuesWithSeparation(const SliderRange& range,
     return;
   }
 
-  NormalizeOrderedValues(range, start_value, end_value, normalized_start,
-                         normalized_end);
+  normalized_start = internal::NormalizeSliderValueForRange(
+      start_value, range.from, range.to, range.step);
+  normalized_end = internal::NormalizeSliderValueForRange(end_value, range.from,
+                                                          range.to, range.step);
+  if (normalized_start > normalized_end) {
+    std::swap(normalized_start, normalized_end);
+  }
   if (normalized_end - normalized_start >= effective_min_separation) return;
 
   float adjusted_end = SmallestValidValueAtOrAbove(
@@ -145,13 +136,6 @@ void NormalizeOrderedValuesWithSeparation(const SliderRange& range,
   normalized_end = range.to;
   normalized_start = LargestValidValueAtOrBelow(
       range, normalized_end - effective_min_separation);
-}
-
-// Simple helper for combining repaint envelopes produced by the two thumbs.
-Rect UnionRects(const Rect& a, const Rect& b) {
-  if (a.empty()) return b;
-  if (b.empty()) return a;
-  return Rect::Extent(a, b);
 }
 
 // Chooses the thumb whose center is nearer to the interaction point.
@@ -206,7 +190,9 @@ Rect InvalidationRectForValueChange(const internal::SliderAxisMetrics& axis,
                       ? Rect(0, 0, -1, -1)
                       : axis.invalidationRectForValueChange(
                             range, old_end_value, new_end_value);
-  return UnionRects(start_rect, end_rect);
+  if (start_rect.empty()) return end_rect;
+  if (end_rect.empty()) return start_rect;
+  return Rect::Extent(start_rect, end_rect);
 }
 
 struct ThumbPaintMetrics {
