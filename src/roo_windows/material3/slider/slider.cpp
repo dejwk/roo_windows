@@ -171,8 +171,7 @@ bool ResolveTrackIconBounds(const internal::SliderAxisMetrics& axis,
                             const internal::SliderSizeMetrics& size_metrics,
                             const roo_display::Pictogram& icon, bool at_start,
                             const StopSegment* segments, int segment_count,
-                            roo_display::Box& icon_bounds,
-                            const StopSegment*& icon_segment) {
+                            roo_display::Box& icon_bounds) {
   int16_t max_slot_span = size_metrics.icon_size > 0
                               ? size_metrics.icon_size
                               : size_metrics.track_height;
@@ -206,13 +205,13 @@ bool ResolveTrackIconBounds(const internal::SliderAxisMetrics& axis,
     if (max_primary > max_left_boundary && min_primary < min_right_boundary) {
       return false;
     }
-    const StopSegment* containing = FindSegmentContainingRange(
-        segments, segment_count, (float)min_primary, (float)max_primary);
-    if (containing == nullptr) return false;
+    if (FindSegmentContainingRange(segments, segment_count, (float)min_primary,
+                                   (float)max_primary) == nullptr) {
+      return false;
+    }
     icon_bounds =
         axis.boxFromPrimaryCross(min_primary, cross_start, max_primary,
                                  cross_start + icon_cross_span - 1);
-    icon_segment = containing;
     return true;
   };
 
@@ -300,15 +299,12 @@ Rect Slider::trackIconRect(const Metrics& metrics) const {
   }
 
   roo_display::Box inset_bounds;
-  const StopSegment* inset_segment = nullptr;
   bool inset_at_start = inset_icon.anchor == SliderTrackIconAnchor::kStart;
   if (!CanPaintInsetIcon(*this, metrics.size_metrics) ||
-      !IconFitsWithinSlot(inset_icon.icon, metrics.size_metrics.icon_size,
-                          metrics.axis.isVertical()) ||
-      !ResolveTrackIconBounds(
-          metrics.axis, metrics.layout, metrics.size_metrics, *inset_icon.icon,
-          inset_at_start, metrics.segments, metrics.segment_count, inset_bounds,
-          inset_segment)) {
+      !ResolveTrackIconBounds(metrics.axis, metrics.layout,
+                              metrics.size_metrics, *inset_icon.icon,
+                              inset_at_start, metrics.segments,
+                              metrics.segment_count, inset_bounds)) {
     return Rect(0, 0, -1, -1);
   }
   return Rect(inset_bounds);

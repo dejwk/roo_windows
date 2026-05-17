@@ -162,9 +162,9 @@ void PaintStopRuns(const Canvas& canvas, Clipper& clipper,
         }
       }
 
-      stop_canvas.drawObject(roo_display::SmoothFilledCircle(
-          StopMarkCenter(axis, primary_center), kStopMarkRadiusPixels,
-          stop_color));
+      stop_canvas.drawObject(
+          roo_display::SmoothFilledCircle(StopMarkCenter(axis, primary_center),
+                                          kStopMarkRadiusPixels, stop_color));
       previous_span = current_span;
       has_previous_stop = true;
     }
