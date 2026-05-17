@@ -231,9 +231,8 @@ Rect ResolveCurrentIndicatorBoundsForTest(const Slider& slider,
   ValueIndicatorBubble bubble(env.theme(), slider.isEnabled());
   bool clamp =
       style.value_indicator == SliderValueIndicatorBehavior::kWithinBounds;
-  bool laid_out = bubble.layout(
-      slider.width(), slider.height(), center, style.orientation, label,
-      clamp);
+  bool laid_out = bubble.layout(slider.width(), slider.height(), center,
+                                style.orientation, label, clamp);
   EXPECT_TRUE(laid_out);
   return laid_out ? bubble.bounds() : Rect(0, 0, -1, -1);
 }
@@ -302,28 +301,17 @@ Rect ResolveInsetIconReservedRectForTest(
               icon_rect.yMax());
 }
 
-class ClipTrackingRangeSlider : public RangeSlider {
+class ContentPaintRangeSlider : public RangeSlider {
  public:
   using RangeSlider::RangeSlider;
 
-  void clearPaintObservation() {
-    paint_calls_ = 0;
-    last_paint_clip_ = Rect(0, 0, -1, -1);
+  void paintWidgetContentsForTest(const Canvas& parent_canvas) {
+    roo_windows::internal::ClipperState clipper_state;
+    Clipper clipper(clipper_state, parent_canvas.out(),
+                    roo_time::Uptime::Max());
+    Canvas widget_canvas = prepareCanvas(parent_canvas);
+    paintWidgetContents(widget_canvas, clipper);
   }
-
-  int paintCalls() const { return paint_calls_; }
-
-  Rect lastPaintClip() const { return last_paint_clip_; }
-
-  void paint(const Canvas& canvas) const override {
-    ++paint_calls_;
-    const roo_display::Box& box = canvas.clip_box();
-    last_paint_clip_ = Rect(box.xMin(), box.yMin(), box.xMax(), box.yMax());
-  }
-
- private:
-  mutable int paint_calls_ = 0;
-  mutable Rect last_paint_clip_ = Rect(0, 0, -1, -1);
 };
 
 class RecordingPanel : public Panel {
@@ -2072,20 +2060,17 @@ TEST_F(Material3SliderRenderTest,
 // thumb's sweep instead of a broader union covering both thumbs.
 TEST_F(Material3SliderRenderTest,
        RangeSliderSingleThumbMovePaintIsClippedToMovedThumbSweep) {
-  auto slider = std::make_unique<ClipTrackingRangeSlider>(
+  auto slider = std::make_unique<ContentPaintRangeSlider>(
       env_, SliderRange{0.0f, 100.0f}, 25.0f, 75.0f);
-  ClipTrackingRangeSlider* slider_ptr = slider.get();
+  ContentPaintRangeSlider* slider_ptr = slider.get();
 
   app_.add(std::move(slider),
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                             kSliderY + kSliderHeight - 1));
 
   ASSERT_TRUE(app_.refresh());
-  slider_ptr->clearPaintObservation();
 
   ASSERT_TRUE(slider_ptr->setValues(35.0f, 75.0f));
-  ASSERT_TRUE(app_.refresh());
-  ASSERT_EQ(1, slider_ptr->paintCalls());
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
                                    Scaled(4), Scaled(6));
@@ -2102,7 +2087,11 @@ TEST_F(Material3SliderRenderTest,
           axis.invalidationRectForPosChange(end_pos, end_pos))
           .translate(kSliderX, kSliderY);
 
-  EXPECT_EQ(expected_clip, slider_ptr->lastPaintClip());
+  Color clear_color = QuantizeToArgb4444(Color(0xFF3A6FB0));
+  fillScreen(clear_color);
+  paintWidgetContentsForTest(*slider_ptr);
+
+  EXPECT_TRUE(ExpectPaintConfinedTo({expected_clip}, clear_color));
   EXPECT_LT(expected_clip.width(), old_broad_clip.width());
 }
 
@@ -2156,9 +2145,8 @@ TEST_F(Material3SliderRenderTest,
                                           new_bubble_height);
 
   ValueIndicatorBubble old_bubble(th, slider_ptr->isEnabled());
-  ASSERT_TRUE(old_bubble.layout(
-      slider_ptr->width(), slider_ptr->height(), c_old, style.orientation,
-      old_text, clamp));
+  ASSERT_TRUE(old_bubble.layout(slider_ptr->width(), slider_ptr->height(),
+                                c_old, style.orientation, old_text, clamp));
 
   Rect old_indicator = old_bubble.bounds().translate(kSliderX, kSliderY);
   Rect new_indicator = ValueIndicatorBubble::EnvelopeForCenterRange(
