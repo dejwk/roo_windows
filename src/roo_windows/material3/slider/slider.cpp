@@ -38,6 +38,7 @@ using internal::ShouldRenderTicks;
 using internal::ThumbWidthForState;
 using internal::TrackGapForThumbWidth;
 using internal::TrackSegmentClipBox;
+using internal::TrackShapeMaxPrimary;
 using internal::TrackShapeMinPrimary;
 
 // True iff the indicator should be drawn this frame given the current
@@ -519,14 +520,34 @@ void Slider::invalidateValueChange(const internal::SliderAxisMetrics& axis,
   Rect thumb_rect =
       axis.invalidationRectForCenterChange(old_center, new_center);
   Rect icon_envelope(0, 0, -1, -1);
-  Rect old_icon = insetIconDirtyRect(buildMetrics(old_center, isPressed()));
-  Rect new_icon = insetIconDirtyRect(buildMetrics(new_center, isPressed()));
+  Metrics old_metrics = buildMetrics(old_center, isPressed());
+  Metrics new_metrics = buildMetrics(new_center, isPressed());
+  Rect old_icon = insetIconDirtyRect(old_metrics);
+  Rect new_icon = insetIconDirtyRect(new_metrics);
   if (!old_icon.empty() || !new_icon.empty()) {
     icon_envelope = Rect::Extent(old_icon, new_icon);
   }
   Rect content_envelope = icon_envelope.empty()
                               ? thumb_rect
                               : Rect::Extent(thumb_rect, icon_envelope);
+  if (HasReducedTrackRadiusAtBoundary(
+          axis, old_metrics.segments, old_metrics.segment_count,
+          old_metrics.size_metrics.track_radius, true) ||
+      HasReducedTrackRadiusAtBoundary(
+          axis, new_metrics.segments, new_metrics.segment_count,
+          new_metrics.size_metrics.track_radius, true)) {
+    content_envelope =
+        Rect::Extent(content_envelope, BoundaryTrackStripRect(axis, true));
+  }
+  if (HasReducedTrackRadiusAtBoundary(
+          axis, old_metrics.segments, old_metrics.segment_count,
+          old_metrics.size_metrics.track_radius, false) ||
+      HasReducedTrackRadiusAtBoundary(
+          axis, new_metrics.segments, new_metrics.segment_count,
+          new_metrics.size_metrics.track_radius, false)) {
+    content_envelope =
+        Rect::Extent(content_envelope, BoundaryTrackStripRect(axis, false));
+  }
   Rect bubble_envelope(0, 0, -1, -1);
   if (IndicatorEnabled(style_) && ShowsValueIndicator(*this)) {
     float c_new = axis.displayPrimary(new_center);
@@ -608,23 +629,9 @@ void Slider::paintTrackAndThumb(const Canvas& canvas, const Metrics& metrics,
                                 const Tokens& tokens) const {
   float center_anchor_primary =
       metrics.axis.centerFromValue(range_, 0.5f * (range_.from + range_.to));
-
-  auto track_bounds = metrics.axis.paintRectFromPrimaryCross(
-      TrackShapeMinPrimary(0.0f, metrics.size_metrics.track_radius),
-      metrics.layout.track_min_cross, metrics.axis.primarySpan() - 0.5f,
-      metrics.layout.track_max_cross);
   auto handle_bounds = metrics.axis.paintRectFromPrimaryCross(
       metrics.layout.thumb_min_primary, metrics.layout.thumb_min_cross,
       metrics.layout.thumb_max_primary, metrics.layout.thumb_max_cross);
-
-  auto inactive_track = SmoothFilledRoundRect(
-      track_bounds.x_min, track_bounds.y_min, track_bounds.x_max,
-      track_bounds.y_max, metrics.size_metrics.track_radius,
-      tokens.inactive_track);
-  auto active_track = SmoothFilledRoundRect(
-      track_bounds.x_min, track_bounds.y_min, track_bounds.x_max,
-      track_bounds.y_max, metrics.size_metrics.track_radius,
-      tokens.active_track);
   auto handle = SmoothFilledRoundRect(
       handle_bounds.x_min, handle_bounds.y_min, handle_bounds.x_max,
       handle_bounds.y_max, internal::kHandleCornerRadius, tokens.handle);
@@ -640,8 +647,20 @@ void Slider::paintTrackAndThumb(const Canvas& canvas, const Metrics& metrics,
         metrics.axis, metrics.segments[i], metrics.layout.track_cross_start,
         metrics.size_metrics.track_height);
     if (track_clip.empty()) continue;
-    const auto& track_piece =
-        metrics.segments[i].active ? active_track : inactive_track;
+    int16_t segment_track_radius = ReducedTrackRadiusForSegment(
+        metrics.axis, metrics.segments[i], metrics.size_metrics.track_radius);
+    auto track_bounds = metrics.axis.paintRectFromPrimaryCross(
+        TrackShapeMinPrimary(metrics.segments[i].min_primary,
+                             segment_track_radius),
+        metrics.layout.track_min_cross,
+        TrackShapeMaxPrimary(metrics.segments[i].max_primary,
+                             metrics.axis.primarySpan(), segment_track_radius),
+        metrics.layout.track_max_cross);
+    auto track_piece = SmoothFilledRoundRect(
+        track_bounds.x_min, track_bounds.y_min, track_bounds.x_max,
+        track_bounds.y_max, segment_track_radius,
+        metrics.segments[i].active ? tokens.active_track
+                                   : tokens.inactive_track);
     DrawTrackPiece(canvas, track_piece, widget_bounds, track_clip,
                    metrics.axis.isVertical());
   }

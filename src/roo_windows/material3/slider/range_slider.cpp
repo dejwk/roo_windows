@@ -32,6 +32,7 @@ using internal::ShouldRenderTicks;
 using internal::ThumbWidthForState;
 using internal::TrackGapForThumbWidth;
 using internal::TrackSegmentClipBox;
+using internal::TrackShapeMaxPrimary;
 using internal::TrackShapeMinPrimary;
 
 // True iff the indicator should be drawn this frame. Range sliders show the
@@ -176,26 +177,6 @@ int ResolveThumbForPress(const internal::SliderAxisMetrics& axis,
   return kNoActiveThumb;
 }
 
-// Produces the minimal combined thumb repaint rect for any thumb positions that
-// changed in this update.
-Rect InvalidationRectForValueChange(const internal::SliderAxisMetrics& axis,
-                                    const SliderRange& range,
-                                    float old_start_value, float old_end_value,
-                                    float new_start_value,
-                                    float new_end_value) {
-  Rect start_rect = old_start_value == new_start_value
-                        ? Rect(0, 0, -1, -1)
-                        : axis.invalidationRectForValueChange(
-                              range, old_start_value, new_start_value);
-  Rect end_rect = old_end_value == new_end_value
-                      ? Rect(0, 0, -1, -1)
-                      : axis.invalidationRectForValueChange(
-                            range, old_end_value, new_end_value);
-  if (start_rect.empty()) return end_rect;
-  if (end_rect.empty()) return start_rect;
-  return Rect::Extent(start_rect, end_rect);
-}
-
 struct ThumbPaintMetrics {
   int16_t track_gap;
   internal::SliderVisualMetrics layout;
@@ -204,6 +185,7 @@ struct ThumbPaintMetrics {
 // Resolves the per-thumb paint metrics used to lay out the two independent
 // handles against the shared track.
 ThumbPaintMetrics ResolveThumbPaintMetrics(
+
     const SliderRange& range, float value,
     const internal::SliderAxisMetrics& axis,
     const internal::SliderSizeMetrics& size_metrics, bool pressed) {
@@ -250,6 +232,52 @@ void BuildTrackSegments(const internal::SliderAxisMetrics& axis,
   }
 }
 
+// Produces the minimal content repaint rect for any thumb positions that
+// changed in this update, including boundary strips exposed when a reduced
+// track radius must repaint all the way to the widget edge.
+Rect InvalidationRectForValueChange(
+    const internal::SliderAxisMetrics& axis,
+    const internal::SliderSizeMetrics& size_metrics,
+    const ThumbPaintMetrics& old_start, const ThumbPaintMetrics& old_end,
+    const ThumbPaintMetrics& new_start, const ThumbPaintMetrics& new_end) {
+  Rect start_rect = old_start.layout.thumb_center_primary ==
+                            new_start.layout.thumb_center_primary
+                        ? Rect(0, 0, -1, -1)
+                        : axis.invalidationRectForCenterChange(
+                              old_start.layout.thumb_center_primary,
+                              new_start.layout.thumb_center_primary);
+  Rect end_rect =
+      old_end.layout.thumb_center_primary == new_end.layout.thumb_center_primary
+          ? Rect(0, 0, -1, -1)
+          : axis.invalidationRectForCenterChange(
+                old_end.layout.thumb_center_primary,
+                new_end.layout.thumb_center_primary);
+  Rect rect = start_rect.empty()
+                  ? end_rect
+                  : (end_rect.empty() ? start_rect
+                                      : Rect::Extent(start_rect, end_rect));
+
+  StopSegment old_segments[3];
+  int old_segment_count = 0;
+  BuildTrackSegments(axis, old_start, old_end, old_segments, old_segment_count);
+  StopSegment new_segments[3];
+  int new_segment_count = 0;
+  BuildTrackSegments(axis, new_start, new_end, new_segments, new_segment_count);
+  if (HasReducedTrackRadiusAtBoundary(axis, old_segments, old_segment_count,
+                                      size_metrics.track_radius, true) ||
+      HasReducedTrackRadiusAtBoundary(axis, new_segments, new_segment_count,
+                                      size_metrics.track_radius, true)) {
+    rect = Rect::Extent(rect, BoundaryTrackStripRect(axis, true));
+  }
+  if (HasReducedTrackRadiusAtBoundary(axis, old_segments, old_segment_count,
+                                      size_metrics.track_radius, false) ||
+      HasReducedTrackRadiusAtBoundary(axis, new_segments, new_segment_count,
+                                      size_metrics.track_radius, false)) {
+    rect = Rect::Extent(rect, BoundaryTrackStripRect(axis, false));
+  }
+  return rect;
+}
+
 }  // namespace
 
 struct RangeSlider::Metrics {
@@ -292,16 +320,11 @@ RangeSlider::RangeSlider(const Environment& env, SliderRange range,
       active_thumb_(kNoActiveThumb),
       overlay_thumb_(kNoActiveThumb),
       is_dragging_(false),
-      awaiting_direction_(false),
-      pending_content_dirty_span_(),
-      pending_indicator_dirty_span_() {
+      awaiting_direction_(false) {
   internal::CheckValidSliderRange(range_.from, range_.to, range_.step);
   NormalizeOrderedValuesWithSeparation(range_, start_value, end_value,
                                        min_separation_, kNoActiveThumb,
                                        start_value_, end_value_);
-  if (IndicatorEnabled(style_)) {
-    setParentClipMode(ParentClipMode::kUnclipped);
-  }
 }
 
 bool RangeSlider::onDown(XDim x, YDim y) {
@@ -584,9 +607,22 @@ void RangeSlider::invalidateValueChange(
     float old_end_center, float new_start_center, float new_end_center,
     float old_start_value, float old_end_value, float new_start_value,
     float new_end_value) {
+  const internal::SliderSizeMetrics& size_metrics =
+      internal::ResolveSliderSizeMetrics(style_.size);
+  ThumbPaintMetrics old_start =
+      ResolveThumbPaintMetrics(range_, old_start_value, axis, size_metrics,
+                               isPressed() && active_thumb_ == 0);
+  ThumbPaintMetrics old_end =
+      ResolveThumbPaintMetrics(range_, old_end_value, axis, size_metrics,
+                               isPressed() && active_thumb_ == 1);
+  ThumbPaintMetrics new_start =
+      ResolveThumbPaintMetrics(range_, new_start_value, axis, size_metrics,
+                               isPressed() && active_thumb_ == 0);
+  ThumbPaintMetrics new_end =
+      ResolveThumbPaintMetrics(range_, new_end_value, axis, size_metrics,
+                               isPressed() && active_thumb_ == 1);
   Rect thumb_rect = InvalidationRectForValueChange(
-      axis, range_, old_start_value, old_end_value, new_start_value,
-      new_end_value);
+      axis, size_metrics, old_start, old_end, new_start, new_end);
   Rect bubble_envelope(0, 0, -1, -1);
   if (IndicatorEnabled(style_) && ShowsValueIndicator(*this)) {
     float new_active_center =
@@ -672,10 +708,6 @@ void RangeSlider::paint(const Canvas& canvas) const {
 void RangeSlider::paintTrackAndThumb(const Canvas& canvas,
                                      const Metrics& metrics,
                                      const Tokens& tokens) const {
-  auto track_bounds = metrics.axis.paintRectFromPrimaryCross(
-      TrackShapeMinPrimary(0.0f, metrics.size_metrics.track_radius),
-      metrics.start.layout.track_min_cross, metrics.axis.primarySpan() - 0.5f,
-      metrics.start.layout.track_max_cross);
   auto start_handle_bounds = metrics.axis.paintRectFromPrimaryCross(
       metrics.start.layout.thumb_min_primary,
       metrics.start.layout.thumb_min_cross,
@@ -684,15 +716,6 @@ void RangeSlider::paintTrackAndThumb(const Canvas& canvas,
   auto end_handle_bounds = metrics.axis.paintRectFromPrimaryCross(
       metrics.end.layout.thumb_min_primary, metrics.end.layout.thumb_min_cross,
       metrics.end.layout.thumb_max_primary, metrics.end.layout.thumb_max_cross);
-
-  auto inactive_track = SmoothFilledRoundRect(
-      track_bounds.x_min, track_bounds.y_min, track_bounds.x_max,
-      track_bounds.y_max, metrics.size_metrics.track_radius,
-      tokens.inactive_track);
-  auto active_track = SmoothFilledRoundRect(
-      track_bounds.x_min, track_bounds.y_min, track_bounds.x_max,
-      track_bounds.y_max, metrics.size_metrics.track_radius,
-      tokens.active_track);
   auto start_handle = SmoothFilledRoundRect(
       start_handle_bounds.x_min, start_handle_bounds.y_min,
       start_handle_bounds.x_max, start_handle_bounds.y_max,
@@ -716,8 +739,20 @@ void RangeSlider::paintTrackAndThumb(const Canvas& canvas,
                             metrics.start.layout.track_cross_start,
                             metrics.size_metrics.track_height);
     if (track_clip.empty()) continue;
-    const auto& track_piece =
-        metrics.segments[i].active ? active_track : inactive_track;
+    int16_t segment_track_radius = ReducedTrackRadiusForSegment(
+        metrics.axis, metrics.segments[i], metrics.size_metrics.track_radius);
+    auto track_bounds = metrics.axis.paintRectFromPrimaryCross(
+        TrackShapeMinPrimary(metrics.segments[i].min_primary,
+                             segment_track_radius),
+        metrics.start.layout.track_min_cross,
+        TrackShapeMaxPrimary(metrics.segments[i].max_primary,
+                             metrics.axis.primarySpan(), segment_track_radius),
+        metrics.start.layout.track_max_cross);
+    auto track_piece = SmoothFilledRoundRect(
+        track_bounds.x_min, track_bounds.y_min, track_bounds.x_max,
+        track_bounds.y_max, segment_track_radius,
+        metrics.segments[i].active ? tokens.active_track
+                                   : tokens.inactive_track);
     DrawTrackPiece(canvas, track_piece, widget_bounds, track_clip,
                    metrics.axis.isVertical());
   }

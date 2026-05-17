@@ -37,23 +37,37 @@ bool SegmentContains(const SliderPaintStopSegment& segment, float primary) {
 roo_display::FpPoint StopMarkCenter(const SliderAxisMetrics& axis,
                                     float primary_center) {
   float cross_center = 0.5f * (float)axis.crossSpan() - 0.5f;
+  float display_primary = axis.displayPrimary(primary_center);
   if (axis.isVertical()) {
-    return roo_display::FpPoint{cross_center,
-                                axis.displayPrimary(primary_center)};
+    return roo_display::FpPoint{cross_center, display_primary};
   }
-  return roo_display::FpPoint{primary_center, cross_center};
+  return roo_display::FpPoint{display_primary, cross_center};
 }
 
 // Converts stop extents back into primary-axis coordinates so neighboring stop
 // marks can bridge only the uncovered pixels between them.
 SliderPaintStopSpan StopSpanFromExtents(const SliderAxisMetrics& axis,
                                         const roo_display::Box& stop_extents) {
+  int16_t display_min_primary =
+      axis.isVertical() ? stop_extents.yMin() : stop_extents.xMin();
+  int16_t display_max_primary =
+      axis.isVertical() ? stop_extents.yMax() : stop_extents.xMax();
+  int16_t primary_a = (int16_t)axis.displayPrimary(display_min_primary);
+  int16_t primary_b = (int16_t)axis.displayPrimary(display_max_primary);
+  return SliderPaintStopSpan{std::min(primary_a, primary_b),
+                             std::max(primary_a, primary_b)};
+}
+
+struct StopCrossSpan {
+  int16_t min_cross;
+  int16_t max_cross;
+};
+
+StopCrossSpan StopCrossSpanFromExtents(const SliderAxisMetrics& axis,
+                                       const roo_display::Box& stop_extents) {
   return axis.isVertical()
-             ? SliderPaintStopSpan{(int16_t)(axis.primarySpan() - 1 -
-                                             stop_extents.yMax()),
-                                   (int16_t)(axis.primarySpan() - 1 -
-                                             stop_extents.yMin())}
-             : SliderPaintStopSpan{stop_extents.xMin(), stop_extents.xMax()};
+             ? StopCrossSpan{stop_extents.xMin(), stop_extents.xMax()}
+             : StopCrossSpan{stop_extents.yMin(), stop_extents.yMax()};
 }
 
 // Expands a segment run to include the exact pixels covered by one stop mark.
@@ -74,10 +88,10 @@ void IncludeStopExtentsInRun(const SliderAxisMetrics& axis,
 // Rebuilds the clip/exclusion box that covers the settled stop run for one
 // segment.
 roo_display::Box StopRunBox(const SliderAxisMetrics& axis,
-                            const SliderPaintStopRun& run) {
-  int16_t cross_start = (axis.crossSpan() - kStopMarkSpanPixels) / 2;
-  return axis.boxFromPrimaryCross(run.min_primary, cross_start, run.max_primary,
-                                  cross_start + kStopMarkSpanPixels - 1);
+                            const SliderPaintStopRun& run,
+                            const StopCrossSpan& cross_span) {
+  return axis.boxFromPrimaryCross(run.min_primary, cross_span.min_cross,
+                                  run.max_primary, cross_span.max_cross);
 }
 
 // Computes stop extents without committing to a color so both passes can share
@@ -88,6 +102,11 @@ roo_display::Box StopMarkExtents(const SliderAxisMetrics& axis,
                                          kStopMarkRadiusPixels,
                                          roo_display::Color())
       .extents();
+}
+
+StopCrossSpan ResolveStopCrossSpan(const SliderAxisMetrics& axis) {
+  float primary_center = 0.5f * (float)(axis.primarySpan() - 1);
+  return StopCrossSpanFromExtents(axis, StopMarkExtents(axis, primary_center));
 }
 
 // Converts a discrete stop index into a primary-axis center using the slider's
@@ -108,6 +127,7 @@ void PaintStopRuns(const Canvas& canvas, Clipper& clipper,
                    const SliderRange& range, bool render_active_segments,
                    const StopSuppressionFn& suppress_stop) {
   if (segment_count <= 0) return;
+  StopCrossSpan stop_cross_span = ResolveStopCrossSpan(axis);
   int32_t stop_count =
       IsDiscreteSliderRange(range.step)
           ? (int32_t)lroundf((range.to - range.from) / range.step)
@@ -137,14 +157,15 @@ void PaintStopRuns(const Canvas& canvas, Clipper& clipper,
       continue;
     }
     if (!runs[segment_index].has_marks) continue;
-    int16_t cross_start = (axis.crossSpan() - kStopMarkSpanPixels) / 2;
     Color track_color = TrackColorForSegment(tokens, segments[segment_index]);
     Color stop_color = StopColorForSegment(tokens, segments[segment_index]);
     roo_display::Box segment_clip_box = TrackSegmentClipBox(
-        axis, segments[segment_index], cross_start, kStopMarkSpanPixels);
+        axis, segments[segment_index], stop_cross_span.min_cross,
+        stop_cross_span.max_cross - stop_cross_span.min_cross + 1);
     if (segment_clip_box.empty()) continue;
     roo_display::Box run_box = roo_display::Box::Intersect(
-        StopRunBox(axis, runs[segment_index]), segment_clip_box);
+        StopRunBox(axis, runs[segment_index], stop_cross_span),
+        segment_clip_box);
     if (run_box.empty()) continue;
 
     Canvas stop_canvas = canvas;
@@ -165,11 +186,10 @@ void PaintStopRuns(const Canvas& canvas, Clipper& clipper,
         int16_t gap_min_primary = previous_span.max_primary + 1;
         int16_t gap_max_primary = current_span.min_primary - 1;
         if (gap_max_primary >= gap_min_primary) {
-          stop_canvas.fillRect(
-              axis.boxFromPrimaryCross(gap_min_primary, cross_start,
-                                       gap_max_primary,
-                                       cross_start + kStopMarkSpanPixels - 1),
-              track_color);
+          stop_canvas.fillRect(axis.boxFromPrimaryCross(
+                                   gap_min_primary, stop_cross_span.min_cross,
+                                   gap_max_primary, stop_cross_span.max_cross),
+                               track_color);
         }
       }
 

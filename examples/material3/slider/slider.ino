@@ -621,6 +621,15 @@ constexpr material3::SliderStyle BrightnessIconStyle() {
   return s;
 }
 
+constexpr material3::SliderStyle XLInvertedContinuousStyle() {
+  material3::SliderStyle s{};
+  s.size = material3::SliderSize::kExtraLarge;
+  s.direction = material3::SliderDirection::kInverted;
+  s.value_indicator =
+      material3::SliderValueIndicatorBehavior::kShowOnInteraction;
+  return s;
+}
+
 const material3::InsetIcon* ThermostatIcon() {
   static const material3::InsetIcon icon = {
       &ic_outlined_24_device_thermostat()};
@@ -707,6 +716,20 @@ class SliderScreen : public SimpleScrollablePanel {
               if ((size_t)len >= n) len = (int)n - 1;
               return roo::string_view(scratch, (size_t)len);
             }),
+        inverted_xl_(
+            env, "XL inverted continuous",
+            "Extra-large thumb with right-to-left continuous travel",
+            material3::SliderRange{0.0f, 100.0f}, 35.0f,
+            [](TextLabel& label, const material3::Slider& slider) {
+              label.setTextf("%.0f%%", slider.value());
+            },
+            material3::SliderVariant::kStandard, XLInvertedContinuousStyle(),
+            [](float value, char* scratch, size_t n) {
+              int len = snprintf(scratch, n, "%.0f%%", value);
+              if (len < 0) len = 0;
+              if ((size_t)len >= n) len = (int)n - 1;
+              return roo::string_view(scratch, (size_t)len);
+            }),
         tank_level_(
             env, "Vertical tank level",
             "Explicit inverted direction with sparse 10% ticks",
@@ -747,6 +770,7 @@ class SliderScreen : public SimpleScrollablePanel {
     content_.add(balance_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(heating_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(brightness_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(inverted_xl_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(tank_level_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(quiet_hours_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(footer_divider_, {.flex_grow = 0, .flex_shrink = 0});
@@ -765,6 +789,7 @@ class SliderScreen : public SimpleScrollablePanel {
   SemanticSliderRow balance_;
   IconSliderRow heating_;
   IconSliderRow brightness_;
+  SemanticSliderRow inverted_xl_;
   VerticalSliderShowcase tank_level_;
   RangeSliderRow quiet_hours_;
   HorizontalDivider footer_divider_;

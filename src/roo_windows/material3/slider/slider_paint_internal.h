@@ -78,6 +78,15 @@ inline float TrackShapeMinPrimary(float visible_min_primary,
              : visible_min_primary - (float)track_radius;
 }
 
+// Extends the rounded track tile beyond the last visible pixel when the
+// segment ends inside the clip so the clipped edge stays flat.
+inline float TrackShapeMaxPrimary(float visible_max_primary,
+                                  int16_t primary_span, int16_t track_radius) {
+  return visible_max_primary >= (float)(primary_span - 1)
+             ? (float)primary_span - 0.5f
+             : visible_max_primary + (float)track_radius;
+}
+
 // Narrows the handle in the pressed state without changing the allocated
 // slider bounds.
 inline int16_t ThumbWidthForState(bool pressed) {
@@ -161,6 +170,46 @@ struct SliderPaintStopSegment {
   float max_primary;
   bool active;
 };
+
+inline int16_t ReducedTrackRadiusForSegment(
+    const SliderAxisMetrics& axis, const SliderPaintStopSegment& segment,
+    int16_t track_radius) {
+  int16_t min_primary = (int16_t)ceilf(segment.min_primary);
+  int16_t max_primary = (int16_t)floorf(segment.max_primary);
+  if (min_primary < 0) min_primary = 0;
+  if (max_primary >= axis.primarySpan()) max_primary = axis.primarySpan() - 1;
+  if (max_primary < min_primary) return 0;
+  if (min_primary != 0 && max_primary != axis.primarySpan() - 1) {
+    return track_radius;
+  }
+  int16_t visible_span = max_primary - min_primary + 1;
+  return visible_span < track_radius ? visible_span : track_radius;
+}
+
+inline bool HasReducedTrackRadiusAtBoundary(
+    const SliderAxisMetrics& axis, const SliderPaintStopSegment* segments,
+    int segment_count, int16_t track_radius, bool start_boundary) {
+  for (int i = 0; i < segment_count; ++i) {
+    int16_t min_primary = (int16_t)ceilf(segments[i].min_primary);
+    int16_t max_primary = (int16_t)floorf(segments[i].max_primary);
+    if (min_primary < 0) min_primary = 0;
+    if (max_primary >= axis.primarySpan()) max_primary = axis.primarySpan() - 1;
+    if (max_primary < min_primary) continue;
+    if ((start_boundary && min_primary == 0) ||
+        (!start_boundary && max_primary == axis.primarySpan() - 1)) {
+      return ReducedTrackRadiusForSegment(axis, segments[i], track_radius) <
+             track_radius;
+    }
+  }
+  return false;
+}
+
+inline Rect BoundaryTrackStripRect(const SliderAxisMetrics& axis,
+                                   bool start_boundary) {
+  int16_t primary = start_boundary ? 0 : axis.primarySpan() - 1;
+  return Rect(
+      axis.boxFromPrimaryCross(primary, 0, primary, axis.crossSpan() - 1));
+}
 
 inline Color TrackColorForSegment(const SliderPaintTokens& tokens,
                                   const SliderPaintStopSegment& segment) {

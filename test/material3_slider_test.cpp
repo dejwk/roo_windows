@@ -254,6 +254,64 @@ Rect InvalidationRectForValueChangeForTest(
       CenterFromValueForTest(axis, range, new_value));
 }
 
+int16_t ReducedTrackRadiusTowardStartForTest(
+    const internal::SliderAxisMetrics& axis, float max_primary,
+    int16_t track_radius) {
+  int16_t max_pixel = (int16_t)floorf(max_primary);
+  if (max_pixel < 0) return 0;
+  if (max_pixel >= axis.primarySpan()) max_pixel = axis.primarySpan() - 1;
+  int16_t visible_span = max_pixel + 1;
+  return visible_span < track_radius ? visible_span : track_radius;
+}
+
+int16_t ReducedTrackRadiusTowardEndForTest(
+    const internal::SliderAxisMetrics& axis, float min_primary,
+    int16_t track_radius) {
+  int16_t min_pixel = (int16_t)ceilf(min_primary);
+  if (min_pixel < 0) min_pixel = 0;
+  if (min_pixel >= axis.primarySpan()) return 0;
+  int16_t visible_span = axis.primarySpan() - min_pixel;
+  return visible_span < track_radius ? visible_span : track_radius;
+}
+
+Rect ExpandedSingleSliderInvalidationRectForTest(
+    const internal::SliderAxisMetrics& axis, SliderStyle style,
+    const SliderRange& range, float old_value, float new_value, Rect rect) {
+  const internal::SliderSizeMetrics& size_metrics =
+      internal::ResolveSliderSizeMetrics(style.size);
+  internal::SliderVisualMetrics old_layout =
+      internal::ResolveSliderVisualMetricsForValue(
+          axis, range, old_value, internal::kHandleWidth,
+          size_metrics.track_height, internal::kTrackHandleGap,
+          size_metrics.handle_height);
+  internal::SliderVisualMetrics new_layout =
+      internal::ResolveSliderVisualMetricsForValue(
+          axis, range, new_value, internal::kHandleWidth,
+          size_metrics.track_height, internal::kTrackHandleGap,
+          size_metrics.handle_height);
+  if (ReducedTrackRadiusTowardStartForTest(
+          axis, old_layout.active_track_max_primary,
+          size_metrics.track_radius) < size_metrics.track_radius ||
+      ReducedTrackRadiusTowardStartForTest(
+          axis, new_layout.active_track_max_primary,
+          size_metrics.track_radius) < size_metrics.track_radius) {
+    rect = Rect::Extent(
+        rect, Rect(axis.boxFromPrimaryCross(0, 0, 0, axis.crossSpan() - 1)));
+  }
+  if (ReducedTrackRadiusTowardEndForTest(
+          axis, old_layout.inactive_track_min_primary,
+          size_metrics.track_radius) < size_metrics.track_radius ||
+      ReducedTrackRadiusTowardEndForTest(
+          axis, new_layout.inactive_track_min_primary,
+          size_metrics.track_radius) < size_metrics.track_radius) {
+    rect =
+        Rect::Extent(rect, Rect(axis.boxFromPrimaryCross(
+                               axis.primarySpan() - 1, 0,
+                               axis.primarySpan() - 1, axis.crossSpan() - 1)));
+  }
+  return rect;
+}
+
 Rect InvalidationRectForRangeValueChangeForTest(
     const internal::SliderAxisMetrics& axis, const SliderRange& range,
     float old_start_value, float old_end_value, float new_start_value,
@@ -1867,6 +1925,49 @@ TEST_F(Material3SliderRenderTest,
   EXPECT_EQ(inactive_stop, pixelAt(inactive_stop_x, center_y));
 }
 
+// Verifies that an inverted extra-large continuous slider still paints the
+// endpoint stop indicator on the inactive display side.
+TEST_F(Material3SliderRenderTest,
+       InvertedXLContinuousSliderPaintsInactiveEndpointStopIndicator) {
+  constexpr Color kBackdropColor(0xFFF3EFE7);
+
+  SliderStyle style{};
+  style.size = SliderSize::kExtraLarge;
+  style.direction = SliderDirection::kInverted;
+  style.tick_mode = SliderTickMode::kHidden;
+
+  auto backdrop = std::make_unique<SolidBackdrop>(env_, kBackdropColor,
+                                                  Dimensions(kWidth, kHeight));
+  auto slider =
+      std::make_unique<Slider>(env_, SliderRange{0.0f, 1.0f, 0.0f}, 0.35f,
+                               SliderVariant::kStandard, style);
+  Slider* slider_ptr = slider.get();
+  slider_ = slider_ptr;
+
+  app_.add(std::move(backdrop),
+           roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
+  app_.add(std::move(slider),
+           roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
+                            kSliderY + Scaled(108) - 1));
+
+  ASSERT_TRUE(app_.refresh());
+
+  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
+                                   false, true);
+  int16_t center_y = kSliderY + slider_ptr->height() / 2;
+  int active_stop_x = kSliderX + (int)roundf(DisplayCenterFromValueForTest(
+                                     axis, slider_ptr->range(), 0.0f));
+  int inactive_stop_x = kSliderX + (int)roundf(DisplayCenterFromValueForTest(
+                                       axis, slider_ptr->range(), 1.0f));
+
+  Color active_track = QuantizeToArgb4444(env_.theme().color.primary);
+  Color inactive_stop =
+      QuantizeToArgb4444(env_.theme().color.onSecondaryContainer);
+
+  EXPECT_EQ(active_track, pixelAt(active_stop_x, center_y));
+  EXPECT_EQ(inactive_stop, pixelAt(inactive_stop_x, center_y));
+}
+
 // Verifies that centered discrete sliders suppress the stop mark at the visual
 // center gap while still painting active and inactive stops on either side.
 TEST_F(Material3SliderRenderTest,
@@ -2158,6 +2259,46 @@ TEST_F(Material3SliderRenderTest,
   EXPECT_LT(expected_clip.width(), full_indicator_envelope.width());
 }
 
+// Verifies that when a boundary-adjacent track cap shrinks near the start of
+// the range, the dirty slice expands all the way to the boundary so the cap is
+// fully repainted.
+TEST_F(Material3SliderRenderTest,
+       NearBoundaryValueChangePaintExpandsToTrackBoundary) {
+  auto slider = std::make_unique<ContentPaintSlider>(
+      env_, SliderRange{0.0f, 1.0f}, 0.05f, SliderVariant::kStandard);
+  ContentPaintSlider* slider_ptr = slider.get();
+  slider_ = slider_ptr;
+
+  app_.add(std::move(slider),
+           roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
+                            kSliderY + kSliderHeight - 1));
+
+  ASSERT_TRUE(app_.refresh());
+
+  ASSERT_TRUE(slider_ptr->setValue(0.08f));
+
+  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
+  Rect thumb_rect = InvalidationRectForValueChangeForTest(
+      axis, slider_ptr->range(), 0.05f, 0.08f);
+  Rect old_clip = Rect::Intersect(thumb_rect, slider_ptr->bounds())
+                      .translate(kSliderX, kSliderY);
+  Rect expected_clip =
+      ExpandedSingleSliderInvalidationRectForTest(
+          axis, slider_ptr->style(), slider_ptr->range(), 0.05f, 0.08f,
+          Rect::Intersect(thumb_rect, slider_ptr->bounds()))
+          .translate(kSliderX, kSliderY);
+  Color clear_color = QuantizeToArgb4444(Color(0xFF5C8F1A));
+
+  fillScreen(clear_color);
+  paintWidgetContentsForTest(*slider_ptr);
+
+  EXPECT_TRUE(ExpectPaintConfinedTo({expected_clip}, clear_color));
+  EXPECT_EQ(kSliderX, expected_clip.xMin());
+  EXPECT_GT(expected_clip.width(), old_clip.width());
+  EXPECT_NE(clear_color,
+            pixelAt(kSliderX, kSliderY + slider_ptr->height() / 2));
+}
+
 // Verifies that moving only one thumb of a range slider repaints just that
 // thumb's sweep instead of a broader union covering both thumbs.
 TEST_F(Material3SliderRenderTest,
@@ -2370,8 +2511,11 @@ TEST_F(Material3SliderRenderTest,
                                    true, true);
   Rect thumb_rect = InvalidationRectForValueChangeForTest(
       axis, slider_ptr->range(), 0.2f, 0.8f);
-  Rect expected_clip = Rect::Intersect(thumb_rect, slider_ptr->bounds())
-                           .translate(kSliderX, kSliderY);
+  Rect expected_clip =
+      ExpandedSingleSliderInvalidationRectForTest(
+          axis, slider_ptr->style(), slider_ptr->range(), 0.2f, 0.8f,
+          Rect::Intersect(thumb_rect, slider_ptr->bounds()))
+          .translate(kSliderX, kSliderY);
   Rect old_overlay_clip = Rect::Intersect(ResolveLegacyOverlayClipForTest(
                                               axis, slider_ptr->range(), 0.2f,
                                               0.8f, kPointOverlayDiameter / 2),
@@ -2387,7 +2531,7 @@ TEST_F(Material3SliderRenderTest,
 
   EXPECT_TRUE(
       ExpectPaintConfinedTo({expected_clip, indicator_bounds}, clear_color));
-  EXPECT_LT(expected_clip.height(), old_overlay_clip.height());
+  EXPECT_LE(expected_clip.height(), old_overlay_clip.height());
 
   Rect full_indicator_envelope = slider_ptr->getParentTransientPaintBounds();
   EXPECT_LT(expected_clip.height(), full_indicator_envelope.height());
