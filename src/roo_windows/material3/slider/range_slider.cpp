@@ -218,8 +218,8 @@ ThumbPaintMetrics ResolveThumbPaintMetrics(
     const internal::SliderAxisMetrics& axis,
     const internal::SliderSizeMetrics& size_metrics, bool pressed) {
   uint16_t pos = internal::SliderPosFromValue(range.from, range.to, value);
-  int16_t thumb_width = ThumbWidthForState(size_metrics.handle_width, pressed);
-  int16_t track_gap = TrackGapForThumbWidth(size_metrics, thumb_width);
+  int16_t thumb_width = ThumbWidthForState(pressed);
+  int16_t track_gap = TrackGapForThumbWidth(thumb_width);
   return ThumbPaintMetrics{
       pos,
       track_gap,
@@ -725,10 +725,10 @@ void RangeSlider::paintTrackAndThumb(const Canvas& canvas,
   auto start_handle = SmoothFilledRoundRect(
       start_handle_bounds.x_min, start_handle_bounds.y_min,
       start_handle_bounds.x_max, start_handle_bounds.y_max,
-      metrics.size_metrics.handleCornerRadius(), tokens.handle);
+      internal::kHandleCornerRadius, tokens.handle);
   auto end_handle = SmoothFilledRoundRect(
       end_handle_bounds.x_min, end_handle_bounds.y_min, end_handle_bounds.x_max,
-      end_handle_bounds.y_max, metrics.size_metrics.handleCornerRadius(),
+      end_handle_bounds.y_max, internal::kHandleCornerRadius,
       tokens.handle);
   Rect widget_bounds = bounds();
   Rect start_handle_tile_bounds =
@@ -836,10 +836,8 @@ Rect RangeSlider::getParentTransientPaintBounds() const {
       style_.value_indicator == SliderValueIndicatorBehavior::kAlways ||
       isPressed() || isDragged();
   if (!may_show || width() <= 0 || height() <= 0) return base;
-  const internal::SliderSizeMetrics& size_metrics =
-      internal::ResolveSliderSizeMetrics(style_.size);
   Rect bubble_local = ValueIndicatorBubble::ConservativeBounds(
-      width(), height(), size_metrics.handle_width, style_.value_indicator,
+      width(), height(), internal::kHandleWidth, style_.value_indicator,
       style_.orientation);
   if (bubble_local.empty()) return base;
   Rect bubble_parent = bubble_local.translate(offsetLeft(), offsetTop());

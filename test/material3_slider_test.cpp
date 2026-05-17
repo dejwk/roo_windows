@@ -217,11 +217,9 @@ class ContentPaintSlider : public Slider {
 Rect ResolveCurrentIndicatorBoundsForTest(const Slider& slider,
                                           const Environment& env) {
   const SliderStyle& style = slider.style();
-  const internal::SliderSizeMetrics& size_metrics =
-      internal::ResolveSliderSizeMetrics(style.size);
   internal::SliderAxisMetrics axis(
-      slider.width(), slider.height(), size_metrics.handle_width,
-      size_metrics.track_handle_gap,
+      slider.width(), slider.height(), internal::kHandleWidth,
+      internal::kTrackHandleGap,
       style.orientation == SliderOrientation::kVertical);
   float center = axis.displayCenterFromPos(slider.getPos());
 
@@ -243,11 +241,11 @@ Rect ResolveInsetIconRectForTest(
     SliderTrackIconAnchor anchor = SliderTrackIconAnchor::kStart) {
   const internal::SliderSizeMetrics& size_metrics =
       internal::ResolveSliderSizeMetrics(style.size);
-  internal::SliderAxisMetrics axis(width, height, size_metrics.handle_width,
-                                   size_metrics.track_handle_gap);
+  internal::SliderAxisMetrics axis(width, height, internal::kHandleWidth,
+                                   internal::kTrackHandleGap);
   internal::SliderVisualMetrics layout = internal::ResolveSliderVisualMetrics(
-      axis, axis.centerFromPos(pos), size_metrics.handle_width,
-      size_metrics.track_height, size_metrics.track_handle_gap,
+      axis, axis.centerFromPos(pos), internal::kHandleWidth,
+      size_metrics.track_height, internal::kTrackHandleGap,
       size_metrics.handle_height);
   int16_t icon_primary_span = icon.anchorExtents().width();
   int16_t icon_cross_span = icon.anchorExtents().height();
@@ -759,13 +757,13 @@ TEST_F(Material3SliderRenderTest, InsetIconJumpsPastHandleAtMinimumValue) {
   const internal::SliderSizeMetrics& size_metrics =
       internal::ResolveSliderSizeMetrics(style.size);
   internal::SliderAxisMetrics axis(kSliderWidth, Scaled(52),
-                                   size_metrics.handle_width,
-                                   size_metrics.track_handle_gap);
+                                   internal::kHandleWidth,
+                                   internal::kTrackHandleGap);
   internal::SliderVisualMetrics layout = internal::ResolveSliderVisualMetrics(
       axis,
       axis.centerFromPos(internal::SliderPosFromValue(0.0f, 100.0f, 0.0f)),
-      size_metrics.handle_width, size_metrics.track_height,
-      size_metrics.track_handle_gap, size_metrics.handle_height);
+      internal::kHandleWidth, size_metrics.track_height,
+      internal::kTrackHandleGap, size_metrics.handle_height);
   Rect jumped_icon = ResolveInsetIconRectForTest(
       style, internal::SliderPosFromValue(0.0f, 100.0f, 0.0f), *icon,
       kSliderWidth, Scaled(52));
@@ -825,13 +823,13 @@ TEST_F(Material3SliderRenderTest,
   const internal::SliderSizeMetrics& size_metrics =
       internal::ResolveSliderSizeMetrics(style.size);
   internal::SliderAxisMetrics axis(kSliderWidth, Scaled(52),
-                                   size_metrics.handle_width,
-                                   size_metrics.track_handle_gap);
+                                   internal::kHandleWidth,
+                                   internal::kTrackHandleGap);
   internal::SliderVisualMetrics layout = internal::ResolveSliderVisualMetrics(
       axis,
       axis.centerFromPos(internal::SliderPosFromValue(0.0f, 100.0f, 100.0f)),
-      size_metrics.handle_width, size_metrics.track_height,
-      size_metrics.track_handle_gap, size_metrics.handle_height);
+      internal::kHandleWidth, size_metrics.track_height,
+      internal::kTrackHandleGap, size_metrics.handle_height);
   Rect jumped_icon = ResolveInsetIconRectForTest(
       style, internal::SliderPosFromValue(0.0f, 100.0f, 100.0f), *icon,
       kSliderWidth, Scaled(52), anchor);

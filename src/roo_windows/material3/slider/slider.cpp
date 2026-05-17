@@ -279,10 +279,8 @@ Slider::Metrics Slider::buildMetrics(uint16_t pos, bool pressed) const {
       .segments = {},
       .segment_count = 0,
   };
-  metrics.thumb_width =
-      ThumbWidthForState(metrics.size_metrics.handle_width, pressed);
-  metrics.track_gap =
-      TrackGapForThumbWidth(metrics.size_metrics, metrics.thumb_width);
+      metrics.thumb_width = ThumbWidthForState(pressed);
+      metrics.track_gap = TrackGapForThumbWidth(metrics.thumb_width);
   metrics.layout = internal::ResolveSliderVisualMetrics(
       metrics.axis, metrics.axis.centerFromPos(pos), metrics.thumb_width,
       metrics.size_metrics.track_height, metrics.track_gap,
@@ -674,7 +672,7 @@ void Slider::paintTrackAndThumb(const Canvas& canvas, const Metrics& metrics,
       tokens.active_track);
   auto handle = SmoothFilledRoundRect(handle_bounds.x_min, handle_bounds.y_min,
                                       handle_bounds.x_max, handle_bounds.y_max,
-                                      metrics.size_metrics.handleCornerRadius(),
+                                      internal::kHandleCornerRadius,
                                       tokens.handle);
   Rect widget_bounds = bounds();
   Rect handle_tile_bounds =
@@ -801,10 +799,8 @@ Rect Slider::getParentTransientPaintBounds() const {
       style_.value_indicator == SliderValueIndicatorBehavior::kAlways ||
       isPressed() || isDragged();
   if (!may_show || width() <= 0 || height() <= 0) return base;
-  const internal::SliderSizeMetrics& size_metrics =
-      internal::ResolveSliderSizeMetrics(style_.size);
   Rect bubble_local = ValueIndicatorBubble::ConservativeBounds(
-      width(), height(), size_metrics.handle_width, style_.value_indicator,
+      width(), height(), internal::kHandleWidth, style_.value_indicator,
       style_.orientation);
   if (bubble_local.empty()) return base;
   Rect bubble_parent = bubble_local.translate(offsetLeft(), offsetTop());

@@ -8,12 +8,17 @@
 #include "roo_display/core/box.h"
 #include "roo_logging.h"
 #include "roo_windows/core/rect.h"
+#include "roo_windows/core/theme.h"
 
 namespace roo_windows {
 namespace material3 {
 namespace internal {
 
 static constexpr float kSliderStepDivisibilityTolerance = 1e-4f;
+
+static constexpr int16_t kTrackHandleGap = Scaled(6);
+static constexpr int16_t kHandleWidth = Scaled(4);
+static constexpr float kHandleCornerRadius = 0.5f * (float)kHandleWidth;
 
 inline bool IsDiscreteSliderRange(float step) { return step > 0.0f; }
 

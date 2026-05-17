@@ -72,19 +72,17 @@ inline float TrackShapeMinPrimary(float visible_min_primary,
 
 // Narrows the handle in the pressed state without changing the allocated
 // slider bounds.
-inline int16_t ThumbWidthForState(int16_t nominal_width, bool pressed) {
-  if (!pressed) return nominal_width;
+inline int16_t ThumbWidthForState(bool pressed) {
+  if (!pressed) return kHandleWidth;
   int16_t width =
-      (int16_t)roundf((float)nominal_width * kPressedThumbWidthRatio);
+      (int16_t)roundf((float)kHandleWidth * kPressedThumbWidthRatio);
   return width < 1 ? 1 : width;
 }
 
 // Adjusts the painted track/thumb clearance so a narrower pressed handle keeps
 // the same perceived gap.
-inline int16_t TrackGapForThumbWidth(const SliderSizeMetrics& size_metrics,
-                                     int16_t thumb_width) {
-  int16_t gap = size_metrics.track_handle_gap -
-                (size_metrics.handle_width - thumb_width) / 2;
+inline int16_t TrackGapForThumbWidth(int16_t thumb_width) {
+  int16_t gap = kTrackHandleGap - (kHandleWidth - thumb_width) / 2;
   return gap < 0 ? 0 : gap;
 }
 
@@ -127,11 +125,8 @@ inline void DrawTrackPiece(const Canvas& canvas,
 // value/position conversion and local geometry.
 template <typename SliderLike>
 inline SliderAxisMetrics MakeSliderAxisMetrics(const SliderLike& slider) {
-  const SliderSizeMetrics& size_metrics =
-      ResolveSliderSizeMetrics(slider.style().size);
   return SliderAxisMetrics(
-      slider.width(), slider.height(), size_metrics.handle_width,
-      size_metrics.track_handle_gap,
+      slider.width(), slider.height(), kHandleWidth, kTrackHandleGap,
       slider.style().orientation == SliderOrientation::kVertical);
 }
 
@@ -140,10 +135,8 @@ inline SliderAxisMetrics MakeSliderAxisMetrics(const SliderLike& slider) {
 inline Rect IndicatorDirtyRectFromSpan(const DirtySpan& span, int16_t width,
                                        int16_t height, SliderStyle style) {
   if (span.empty() || width <= 0 || height <= 0) return Rect(0, 0, -1, -1);
-  const SliderSizeMetrics& size_metrics = ResolveSliderSizeMetrics(style.size);
   Rect conservative = ValueIndicatorBubble::ConservativeBounds(
-      width, height, size_metrics.handle_width, style.value_indicator,
-      style.orientation);
+      width, height, kHandleWidth, style.value_indicator, style.orientation);
   if (conservative.empty()) return Rect(0, 0, -1, -1);
   if (style.orientation == SliderOrientation::kVertical) {
     return Rect(conservative.xMin(), span.min_coord, conservative.xMax(),
