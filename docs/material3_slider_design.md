@@ -280,7 +280,7 @@ enum class SliderTickMode : uint8_t {
   // Ticks are never rendered, even in discrete mode.
   kHidden,
   // Ticks are rendered for every valid step. Only meaningful in discrete mode.
-  kShowStops,
+  kShowTicks,
 };
 
 struct SliderRange {
@@ -1141,8 +1141,7 @@ Example usage after this step:
 ```cpp
 material3::SliderStyle style{};
 style.size = material3::SliderSize::kMedium;
-style.tick_mode = material3::SliderTickMode::kShowStops;
-style.show_stop_indicators = true;
+style.tick_mode = material3::SliderTickMode::kShowTicks;
 material3::Slider speed(env, material3::SliderRange{0.0f, 10.0f, 1.0f}, 4.0f,
                         material3::SliderVariant::kStandard, style);
 ```
