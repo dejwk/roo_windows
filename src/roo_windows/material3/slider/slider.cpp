@@ -20,9 +20,9 @@ namespace {
 
 static constexpr int kTouchSlopPixels = Scaled(20);
 static constexpr int16_t kCenterGapHalfPixels = Scaled(2);
-static constexpr int16_t kTrackIconEdgeOffsetPixels = Scaled(4);
-static constexpr int16_t kTrackIconMinHandleCenterDistancePixels = Scaled(12);
-static constexpr int16_t kTrackIconStopPaddingPixels = Scaled(4);
+static constexpr int16_t kInsetIconEdgeOffsetPixels = Scaled(4);
+static constexpr int16_t kInsetIconMinHandleCenterDistancePixels = Scaled(12);
+static constexpr int16_t kInsetIconStopPaddingPixels = Scaled(4);
 using Tokens = internal::SliderPaintTokens;
 using StopSegment = internal::SliderPaintStopSegment;
 using internal::DrawTrackPiece;
@@ -134,7 +134,7 @@ const StopSegment* FindSegmentContainingRange(const StopSegment* segments,
 
 // Chooses an inset-icon slot that stays near the requested edge, clears the
 // thumb center, and remains fully inside a single track segment.
-bool ResolveTrackIconBounds(const internal::SliderAxisMetrics& axis,
+bool ResolveInsetIconBounds(const internal::SliderAxisMetrics& axis,
                             const internal::SliderVisualMetrics& layout,
                             const internal::SliderSizeMetrics& size_metrics,
                             const roo_display::Pictogram& icon, bool at_start,
@@ -167,10 +167,10 @@ bool ResolveTrackIconBounds(const internal::SliderAxisMetrics& axis,
     if (min_primary < 0 || max_primary >= axis.primarySpan()) return false;
     int16_t max_left_boundary =
         (int16_t)floorf(layout.thumb_center_primary -
-                        (float)kTrackIconMinHandleCenterDistancePixels);
+                        (float)kInsetIconMinHandleCenterDistancePixels);
     int16_t min_right_boundary =
         (int16_t)ceilf(layout.thumb_center_primary +
-                       (float)kTrackIconMinHandleCenterDistancePixels);
+                       (float)kInsetIconMinHandleCenterDistancePixels);
     if (max_primary > max_left_boundary && min_primary < min_right_boundary) {
       return false;
     }
@@ -186,8 +186,8 @@ bool ResolveTrackIconBounds(const internal::SliderAxisMetrics& axis,
 
   int16_t edge_candidate =
       at_start
-          ? kTrackIconEdgeOffsetPixels
-          : axis.primarySpan() - kTrackIconEdgeOffsetPixels - icon_primary_span;
+          ? kInsetIconEdgeOffsetPixels
+          : axis.primarySpan() - kInsetIconEdgeOffsetPixels - icon_primary_span;
   if (try_candidate(edge_candidate)) return true;
 
   int16_t jump_candidate =
@@ -195,20 +195,20 @@ bool ResolveTrackIconBounds(const internal::SliderAxisMetrics& axis,
           ? std::max<int16_t>(
                 (int16_t)ceilf(layout.inactive_track_min_primary),
                 (int16_t)ceilf(layout.thumb_center_primary +
-                               (float)kTrackIconMinHandleCenterDistancePixels))
+                               (float)kInsetIconMinHandleCenterDistancePixels))
           : std::min<int16_t>(
                 (int16_t)floorf(layout.active_track_max_primary) -
                     icon_primary_span + 1,
                 (int16_t)floorf(
                     layout.thumb_center_primary -
-                    (float)kTrackIconMinHandleCenterDistancePixels) -
+                    (float)kInsetIconMinHandleCenterDistancePixels) -
                     icon_primary_span + 1);
   return try_candidate(jump_candidate);
 }
 
 // Grows the painted icon bounds along the track axis to reserve breathing room
 // for nearby stops and dirty-region recomputation.
-Rect ExpandTrackIconPrimaryRect(const Rect& icon_rect, bool vertical,
+Rect ExpandInsetIconPrimaryRect(const Rect& icon_rect, bool vertical,
                                 int16_t primary_span, int16_t primary_padding) {
   if (icon_rect.empty()) return icon_rect;
   if (vertical) {
@@ -261,18 +261,18 @@ Slider::Metrics Slider::buildMetrics(float thumb_center, bool pressed) const {
   return metrics;
 }
 
-Rect Slider::trackIconRect(const Metrics& metrics) const {
+Rect Slider::insetIconRect(const Metrics& metrics) const {
   InsetIcon inset_icon = getInsetIcon();
   if (inset_icon.icon == nullptr || metrics.segment_count == 0) {
     return Rect(0, 0, -1, -1);
   }
 
   roo_display::Box inset_bounds;
-  bool inset_at_start = inset_icon.anchor == SliderTrackIconAnchor::kStart;
+  bool inset_at_start = inset_icon.anchor == SliderInsetIconAnchor::kStart;
   if (variant_ != SliderVariant::kStandard ||
       !metrics.size_metrics.supports_inset_icon ||
       metrics.size_metrics.icon_size <= 0 ||
-      !ResolveTrackIconBounds(metrics.axis, metrics.layout,
+      !ResolveInsetIconBounds(metrics.axis, metrics.layout,
                               metrics.size_metrics, *inset_icon.icon,
                               inset_at_start, metrics.segments,
                               metrics.segment_count, inset_bounds)) {
@@ -281,23 +281,23 @@ Rect Slider::trackIconRect(const Metrics& metrics) const {
   return Rect(inset_bounds);
 }
 
-Rect Slider::trackIconReservedRect(const Metrics& metrics) const {
-  return ExpandTrackIconPrimaryRect(
-      trackIconRect(metrics), metrics.axis.isVertical(),
-      metrics.axis.primarySpan(), kTrackIconStopPaddingPixels);
+Rect Slider::insetIconReservedRect(const Metrics& metrics) const {
+  return ExpandInsetIconPrimaryRect(
+      insetIconRect(metrics), metrics.axis.isVertical(),
+      metrics.axis.primarySpan(), kInsetIconStopPaddingPixels);
 }
 
-Rect Slider::trackIconDirtyRect(const Metrics& metrics) const {
-  return ExpandTrackIconPrimaryRect(
-      trackIconRect(metrics), metrics.axis.isVertical(),
+Rect Slider::insetIconDirtyRect(const Metrics& metrics) const {
+  return ExpandInsetIconPrimaryRect(
+      insetIconRect(metrics), metrics.axis.isVertical(),
       metrics.axis.primarySpan(),
-      kTrackIconStopPaddingPixels + kStopMarkRadiusPixels);
+      kInsetIconStopPaddingPixels + kStopMarkRadiusPixels);
 }
 
-void Slider::paintTrackIcons(const Canvas& canvas, Clipper& clipper,
+void Slider::paintInsetIcons(const Canvas& canvas, Clipper& clipper,
                              const Metrics& metrics,
                              const Tokens& tokens) const {
-  Rect inset_rect = trackIconRect(metrics);
+  Rect inset_rect = insetIconRect(metrics);
   if (inset_rect.empty()) return;
 
   InsetIcon inset_icon = getInsetIcon();
@@ -518,8 +518,8 @@ void Slider::invalidateValueChange(const internal::SliderAxisMetrics& axis,
   Rect thumb_rect =
       axis.invalidationRectForCenterChange(old_center, new_center);
   Rect icon_envelope(0, 0, -1, -1);
-  Rect old_icon = trackIconDirtyRect(buildMetrics(old_center, isPressed()));
-  Rect new_icon = trackIconDirtyRect(buildMetrics(new_center, isPressed()));
+  Rect old_icon = insetIconDirtyRect(buildMetrics(old_center, isPressed()));
+  Rect new_icon = insetIconDirtyRect(buildMetrics(new_center, isPressed()));
   if (!old_icon.empty() || !new_icon.empty()) {
     icon_envelope = Rect::Extent(old_icon, new_icon);
   }
@@ -672,7 +672,7 @@ void Slider::paintStops(const Canvas& canvas, Clipper& clipper,
     return;
   }
 
-  Rect reserved_icon_rect = trackIconReservedRect(metrics);
+  Rect reserved_icon_rect = insetIconReservedRect(metrics);
   internal::StopSuppressionFn suppress_stop;
   if (!reserved_icon_rect.empty()) {
     suppress_stop = [&](const roo_display::Box& stop_extents) {
@@ -727,7 +727,7 @@ roo::string_view Slider::formatLabel(float value, char* scratch,
 }
 
 void SliderWithInsetIcon::setIcon(const roo_display::Pictogram* icon,
-                                  SliderTrackIconAnchor anchor) {
+                                  SliderInsetIconAnchor anchor) {
   if (icon_.icon == icon && icon_.anchor == anchor) return;
   icon_ = {icon, anchor};
   invalidateInterior();
@@ -826,7 +826,7 @@ void Slider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
     clipper.setBounds(content_canvas.clip_box());
     Metrics metrics = buildMetrics();
     Tokens tokens = ResolveTokens(*this);
-    paintTrackIcons(content_canvas, clipper, metrics, tokens);
+    paintInsetIcons(content_canvas, clipper, metrics, tokens);
     paintStops(content_canvas, clipper, metrics, tokens);
     paintTrackAndThumb(content_canvas, metrics, tokens);
   }

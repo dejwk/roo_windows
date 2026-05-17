@@ -46,7 +46,7 @@ enum class SliderTickMode : uint8_t {
   kShowStops,
 };
 
-enum class SliderTrackIconAnchor : uint8_t {
+enum class SliderInsetIconAnchor : uint8_t {
   kStart,
   kEnd,
 };
@@ -83,7 +83,7 @@ struct SliderRange {
 
 struct InsetIcon {
   const roo_display::Pictogram* icon = nullptr;
-  SliderTrackIconAnchor anchor = SliderTrackIconAnchor::kStart;
+  SliderInsetIconAnchor anchor = SliderInsetIconAnchor::kStart;
 };
 
 class Slider : public BasicWidget {
@@ -216,20 +216,20 @@ class Slider : public BasicWidget {
   Metrics buildMetrics(float thumb_center, bool pressed) const;
 
   /// Returns the exact local bounds of the inset icon if one can be painted.
-  Rect trackIconRect(const Metrics& metrics) const;
+  Rect insetIconRect(const Metrics& metrics) const;
 
   /// Returns the icon bounds plus the stop-free buffer reserved around it.
-  Rect trackIconReservedRect(const Metrics& metrics) const;
+  Rect insetIconReservedRect(const Metrics& metrics) const;
 
   /// Returns the icon repaint envelope, including stop-mark radius padding.
-  Rect trackIconDirtyRect(const Metrics& metrics) const;
+  Rect insetIconDirtyRect(const Metrics& metrics) const;
 
   /// Paints the active/inactive track pieces and the current thumb geometry.
   void paintTrackAndThumb(const Canvas& canvas, const Metrics& metrics,
                           const internal::SliderPaintTokens& tokens) const;
 
   /// Paints any inset icon before track segments exclude the same pixels.
-  void paintTrackIcons(const Canvas& canvas, Clipper& clipper,
+  void paintInsetIcons(const Canvas& canvas, Clipper& clipper,
                        const Metrics& metrics,
                        const internal::SliderPaintTokens& tokens) const;
 
@@ -273,7 +273,7 @@ class SliderWithInsetIcon : public Slider {
 
   /// Configures the non-owning inset icon painted inside the track.
   void setIcon(const roo_display::Pictogram* icon,
-               SliderTrackIconAnchor anchor = SliderTrackIconAnchor::kStart);
+               SliderInsetIconAnchor anchor = SliderInsetIconAnchor::kStart);
 
  protected:
   /// Supplies the icon descriptor consumed by Slider's shared painting path.

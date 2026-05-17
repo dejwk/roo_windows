@@ -273,7 +273,7 @@ Rect InvalidationRectForRangeValueChangeForTest(
 Rect ResolveInsetIconRectForTest(
     const SliderStyle& style, const SliderRange& range, float value,
     const roo_display::Pictogram& icon, int16_t width, int16_t height,
-    SliderTrackIconAnchor anchor = SliderTrackIconAnchor::kStart) {
+    SliderInsetIconAnchor anchor = SliderInsetIconAnchor::kStart) {
   const internal::SliderSizeMetrics& size_metrics =
       internal::ResolveSliderSizeMetrics(style.size);
   internal::SliderAxisMetrics axis(width, height);
@@ -294,11 +294,11 @@ Rect ResolveInsetIconRectForTest(
     return !(max_primary > max_left_boundary &&
              min_primary < min_right_boundary);
   };
-  int16_t edge_candidate = anchor == SliderTrackIconAnchor::kStart
+  int16_t edge_candidate = anchor == SliderInsetIconAnchor::kStart
                                ? Scaled(4)
                                : width - Scaled(4) - icon_primary_span;
   int16_t min_primary;
-  if (anchor == SliderTrackIconAnchor::kStart) {
+  if (anchor == SliderInsetIconAnchor::kStart) {
     min_primary =
         edge_candidate + icon_primary_span - 1 <=
                     (int16_t)floorf(layout.active_track_max_primary) &&
@@ -325,7 +325,7 @@ Rect ResolveInsetIconRectForTest(
 Rect ResolveInsetIconReservedRectForTest(
     const SliderStyle& style, const SliderRange& range, float value,
     const roo_display::Pictogram& icon, int16_t width, int16_t height,
-    SliderTrackIconAnchor anchor = SliderTrackIconAnchor::kStart) {
+    SliderInsetIconAnchor anchor = SliderInsetIconAnchor::kStart) {
   Rect icon_rect = ResolveInsetIconRectForTest(style, range, value, icon, width,
                                                height, anchor);
   return Rect(std::max<XDim>(0, icon_rect.xMin() - Scaled(4)), icon_rect.yMin(),
@@ -805,7 +805,7 @@ TEST_F(Material3SliderRenderTest, InactiveSideInsetIconPaintsWhenConfigured) {
   style.size = SliderSize::kMedium;
 
   const roo_display::Pictogram* icon = &circle_24();
-  SliderTrackIconAnchor anchor = SliderTrackIconAnchor::kEnd;
+  SliderInsetIconAnchor anchor = SliderInsetIconAnchor::kEnd;
 
   auto slider = std::make_unique<SliderWithInsetIcon>(
       env_, SliderRange{0.0f, 100.0f}, 50.0f, SliderVariant::kStandard, style);
@@ -831,7 +831,7 @@ TEST_F(Material3SliderRenderTest,
   style.size = SliderSize::kMedium;
 
   const roo_display::Pictogram* icon = &circle_24();
-  SliderTrackIconAnchor anchor = SliderTrackIconAnchor::kEnd;
+  SliderInsetIconAnchor anchor = SliderInsetIconAnchor::kEnd;
 
   auto slider = std::make_unique<SliderWithInsetIcon>(
       env_, SliderRange{0.0f, 100.0f}, 100.0f, SliderVariant::kStandard, style);
@@ -911,7 +911,7 @@ TEST_F(Material3SliderRenderTest,
   style.tick_mode = SliderTickMode::kShowStops;
 
   const roo_display::Pictogram* icon = &circle_24();
-  SliderTrackIconAnchor anchor = SliderTrackIconAnchor::kEnd;
+  SliderInsetIconAnchor anchor = SliderInsetIconAnchor::kEnd;
 
   auto slider = std::make_unique<SliderWithInsetIcon>(
       env_, SliderRange{0.0f, 1.0f, 0.25f}, 0.5f, SliderVariant::kStandard,
@@ -1844,8 +1844,7 @@ TEST_F(Material3SliderRenderTest,
 
   auto backdrop = std::make_unique<SolidBackdrop>(env_, kBackdropColor,
                                                   Dimensions(kWidth, kHeight));
-  auto pressed_slider =
-      std::make_unique<Slider>(env_, SliderRange{}, 0.5f);
+  auto pressed_slider = std::make_unique<Slider>(env_, SliderRange{}, 0.5f);
   slider_ = pressed_slider.get();
 
   app_.add(std::move(backdrop),
