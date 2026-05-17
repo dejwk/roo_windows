@@ -161,13 +161,13 @@ class RangeSlider : public BasicWidget {
   bool setValuesInternal(float start_value, float end_value, bool from_user,
                          int active_thumb);
 
-  /// Moves the currently active thumb using normalized position coordinates.
-  bool setActiveThumbPos(uint16_t pos);
+  /// Moves the currently active thumb using a semantic value.
+  bool setActiveThumbValue(float value);
 
   /// Marks the minimal local repaint envelope needed for a two-thumb move.
   void invalidateValueChange(const internal::SliderAxisMetrics& axis,
-                             uint16_t old_start_pos, uint16_t old_end_pos,
-                             uint16_t new_start_pos, uint16_t new_end_pos,
+                             float old_start_center, float old_end_center,
+                             float new_start_center, float new_end_center,
                              float new_start_value, float new_end_value);
 
   SliderRange range_;

@@ -104,7 +104,8 @@ class SliderAxisMetrics {
   bool isVertical() const { return vertical_; }
 
   // Converts a normalized 16-bit position into the thumb center in logical
-  // primary-axis coordinates.
+  // primary-axis coordinates. Retained for the legacy uint16_t shims and the
+  // range slider; new code should prefer centerFromValue().
   float centerFromPos(uint16_t pos) const {
     return (float)kTrackHandleGap - 0.5f +
            (float)(((uint32_t)pos * (uint32_t)normalizedRange() + 32768u) >>
@@ -112,9 +113,50 @@ class SliderAxisMetrics {
   }
 
   // Converts a normalized 16-bit position into the thumb center in
-  // display-space coordinates on the travel axis.
+  // display-space coordinates on the travel axis. Retained for the legacy
+  // uint16_t shims and the range slider; new code should prefer
+  // displayCenterFromValue().
   float displayCenterFromPos(uint16_t pos) const {
     return displayPrimary(centerFromPos(pos));
+  }
+
+  // Returns the logical primary-axis thumb center for a semantic value,
+  // rounded to the nearest pixel boundary so the painted thumb stays
+  // integer-aligned.
+  float centerFromValue(float from, float to, float value) const {
+    int16_t r = normalizedRange();
+    if (r <= 0 || !(to > from)) {
+      return (float)kTrackHandleGap - 0.5f;
+    }
+    float clamped = ClampSliderValue(value, from, to);
+    float t = (clamped - from) / (to - from);
+    return (float)kTrackHandleGap - 0.5f + roundf(t * (float)r);
+  }
+
+  // Returns the display-space thumb center for a semantic value, accounting
+  // for vertical-axis inversion.
+  float displayCenterFromValue(float from, float to, float value) const {
+    return displayPrimary(centerFromValue(from, to, value));
+  }
+
+  // Maps a display-space primary coordinate to an unsnapped semantic value
+  // using the inverse of centerFromValue(). Callers are expected to clamp and
+  // snap via NormalizeSliderValueForRange().
+  float valueFromPrimaryCoord(float from, float to,
+                              int16_t primary_coord) const {
+    int16_t r = normalizedRange();
+    if (r <= 0) return from;
+    float t = (float)(primary_coord + 1 - kTrackHandleGap) / (float)r;
+    return from + t * (to - from);
+  }
+
+  // True iff a tap at `primary_coord` lands within `touch_slop` pixels of the
+  // thumb anchored at `value`.
+  bool hitsThumbAtValue(float from, float to, float value,
+                        int16_t primary_coord, int16_t touch_slop) const {
+    float dist = (float)primary_coord - centerFromValue(from, to, value);
+    return dist >= -(float)touch_slop - 0.5f &&
+           dist <= (float)touch_slop + 0.5f;
   }
 
   // Converts a logical primary coordinate into a display-space coordinate.
@@ -163,10 +205,9 @@ class SliderAxisMetrics {
   }
 
   // Returns the widget-local dirty rectangle that covers the painted handle
-  // tile sweep between `old_pos` and `new_pos`.
-  Rect invalidationRectForPosChange(uint16_t old_pos, uint16_t new_pos) const {
-    float old_center = centerFromPos(old_pos);
-    float new_center = centerFromPos(new_pos);
+  // tile sweep between two thumb centers in logical primary-axis space.
+  Rect invalidationRectForCenterChange(float old_center,
+                                       float new_center) const {
     int16_t min_primary = (int16_t)ceilf(std::min(old_center, new_center) -
                                          0.5f * (float)kHandleWidth) -
                           kTrackHandleGap;
@@ -174,6 +215,12 @@ class SliderAxisMetrics {
                                           0.5f * (float)kHandleWidth) +
                           kTrackHandleGap;
     return rectFromPrimaryCross(min_primary, 0, max_primary, cross_span_ - 1);
+  }
+
+  // Pos-based wrapper used by the legacy uint16_t shims and the range slider.
+  Rect invalidationRectForPosChange(uint16_t old_pos, uint16_t new_pos) const {
+    return invalidationRectForCenterChange(centerFromPos(old_pos),
+                                           centerFromPos(new_pos));
   }
 
   // Returns the cross-axis center in display coordinates.

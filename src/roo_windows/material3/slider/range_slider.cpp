@@ -156,10 +156,9 @@ Rect UnionRects(const Rect& a, const Rect& b) {
 
 // Chooses the thumb whose center is nearer to the interaction point.
 int ResolveNearestThumb(const internal::SliderAxisMetrics& axis,
-                        uint16_t start_pos, uint16_t end_pos,
+                        float start_center, float end_center,
                         int16_t primary_coord) {
-  float start_center = axis.centerFromPos(start_pos);
-  float end_center = axis.centerFromPos(end_pos);
+  (void)axis;
   float start_distance = std::fabs((float)primary_coord - start_center);
   float end_distance = std::fabs((float)primary_coord - end_center);
   if (start_distance < end_distance) return 0;
@@ -170,17 +169,22 @@ int ResolveNearestThumb(const internal::SliderAxisMetrics& axis,
 // Resolves which thumb should react to a press. When both thumbs are stacked on
 // the same position, defer the choice until scroll direction disambiguates it.
 int ResolveThumbForPress(const internal::SliderAxisMetrics& axis,
-                         uint16_t start_pos, uint16_t end_pos,
+                         const SliderRange& range, float start_value,
+                         float end_value,
                          int16_t primary_coord, bool& awaiting_direction) {
-  bool start_hit = axis.hitsThumb(start_pos, primary_coord, kTouchSlopPixels);
-  bool end_hit = axis.hitsThumb(end_pos, primary_coord, kTouchSlopPixels);
+  bool start_hit = axis.hitsThumbAtValue(range.from, range.to, start_value,
+                                         primary_coord, kTouchSlopPixels);
+  bool end_hit = axis.hitsThumbAtValue(range.from, range.to, end_value,
+                                       primary_coord, kTouchSlopPixels);
+  float start_center = axis.centerFromValue(range.from, range.to, start_value);
+  float end_center = axis.centerFromValue(range.from, range.to, end_value);
   awaiting_direction = false;
   if (start_hit && end_hit) {
-    if (start_pos == end_pos) {
+    if (start_center == end_center) {
       awaiting_direction = true;
       return kNoActiveThumb;
     }
-    return ResolveNearestThumb(axis, start_pos, end_pos, primary_coord);
+    return ResolveNearestThumb(axis, start_center, end_center, primary_coord);
   }
   if (start_hit) return 0;
   if (end_hit) return 1;
@@ -190,23 +194,24 @@ int ResolveThumbForPress(const internal::SliderAxisMetrics& axis,
 // Produces the minimal combined thumb repaint rect for any thumb positions that
 // changed in this update.
 Rect InvalidationRectForValueChange(const internal::SliderAxisMetrics& axis,
-                                    uint16_t old_start_pos,
-                                    uint16_t old_end_pos,
-                                    uint16_t new_start_pos,
-                                    uint16_t new_end_pos) {
+                                    float old_start_center,
+                                    float old_end_center,
+                                    float new_start_center,
+                                    float new_end_center) {
   Rect start_rect =
-      old_start_pos == new_start_pos
+      old_start_center == new_start_center
           ? Rect(0, 0, -1, -1)
-          : axis.invalidationRectForPosChange(old_start_pos, new_start_pos);
+          : axis.invalidationRectForCenterChange(old_start_center,
+                                                 new_start_center);
   Rect end_rect =
-      old_end_pos == new_end_pos
+      old_end_center == new_end_center
           ? Rect(0, 0, -1, -1)
-          : axis.invalidationRectForPosChange(old_end_pos, new_end_pos);
+          : axis.invalidationRectForCenterChange(old_end_center,
+                                                 new_end_center);
   return UnionRects(start_rect, end_rect);
 }
 
 struct ThumbPaintMetrics {
-  uint16_t pos;
   int16_t track_gap;
   internal::SliderVisualMetrics layout;
 };
@@ -217,15 +222,14 @@ ThumbPaintMetrics ResolveThumbPaintMetrics(
     const SliderRange& range, float value,
     const internal::SliderAxisMetrics& axis,
     const internal::SliderSizeMetrics& size_metrics, bool pressed) {
-  uint16_t pos = internal::SliderPosFromValue(range.from, range.to, value);
+  float center = axis.centerFromValue(range.from, range.to, value);
   int16_t thumb_width = ThumbWidthForState(pressed);
   int16_t track_gap = TrackGapForThumbWidth(thumb_width);
   return ThumbPaintMetrics{
-      pos,
       track_gap,
-      internal::ResolveSliderVisualMetrics(
-          axis, axis.centerFromPos(pos), thumb_width, size_metrics.track_height,
-          track_gap, size_metrics.handle_height),
+      internal::ResolveSliderVisualMetrics(axis, center, thumb_width,
+                                           size_metrics.track_height, track_gap,
+                                           size_metrics.handle_height),
   };
 }
 
@@ -326,16 +330,17 @@ bool RangeSlider::onSingleTapUp(XDim x, YDim y) {
   if (!isEnabled()) return false;
   internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
   int16_t primary_coord = axis.primaryCoordFromPoint(x, y);
-  uint16_t start_pos =
-      internal::SliderPosFromValue(range_.from, range_.to, start_value_);
-  uint16_t end_pos =
-      internal::SliderPosFromValue(range_.from, range_.to, end_value_);
-  active_thumb_ = ResolveNearestThumb(axis, start_pos, end_pos, primary_coord);
+  float start_center =
+      axis.centerFromValue(range_.from, range_.to, start_value_);
+  float end_center = axis.centerFromValue(range_.from, range_.to, end_value_);
+  active_thumb_ =
+      ResolveNearestThumb(axis, start_center, end_center, primary_coord);
   overlay_thumb_ = active_thumb_;
   awaiting_direction_ = false;
   BasicWidget::onSingleTapUp(x, y);
   onInteractionStart(active_thumb_);
-  if (setActiveThumbPos(axis.posFromPrimaryCoord(primary_coord))) {
+  if (setActiveThumbValue(
+          axis.valueFromPrimaryCoord(range_.from, range_.to, primary_coord))) {
     triggerInteractiveChange();
   }
   active_thumb_ = kNoActiveThumb;
@@ -348,12 +353,8 @@ bool RangeSlider::onSingleTapUp(XDim x, YDim y) {
 void RangeSlider::onShowPress(XDim x, YDim y) {
   if (!isEnabled()) return;
   internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
-  uint16_t start_pos =
-      internal::SliderPosFromValue(range_.from, range_.to, start_value_);
-  uint16_t end_pos =
-      internal::SliderPosFromValue(range_.from, range_.to, end_value_);
   bool awaiting_direction = false;
-  int thumb = ResolveThumbForPress(axis, start_pos, end_pos,
+  int thumb = ResolveThumbForPress(axis, range_, start_value_, end_value_,
                                    axis.primaryCoordFromPoint(x, y),
                                    awaiting_direction);
   if (awaiting_direction) {
@@ -372,8 +373,8 @@ void RangeSlider::onShowPress(XDim x, YDim y) {
     is_dragging_ = true;
     onInteractionStart(active_thumb_);
   }
-  if (setActiveThumbPos(
-          axis.posFromPrimaryCoord(axis.primaryCoordFromPoint(x, y)))) {
+  if (setActiveThumbValue(axis.valueFromPrimaryCoord(
+          range_.from, range_.to, axis.primaryCoordFromPoint(x, y)))) {
     triggerInteractiveChange();
   }
   Widget::onShowPress(x, y);
@@ -402,19 +403,18 @@ bool RangeSlider::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
     is_dragging_ = true;
     onInteractionStart(active_thumb_);
   } else if (active_thumb_ == kNoActiveThumb) {
-    uint16_t start_pos =
-        internal::SliderPosFromValue(range_.from, range_.to, start_value_);
-    uint16_t end_pos =
-        internal::SliderPosFromValue(range_.from, range_.to, end_value_);
-    active_thumb_ = ResolveNearestThumb(axis, start_pos, end_pos,
+    float start_center =
+      axis.centerFromValue(range_.from, range_.to, start_value_);
+    float end_center = axis.centerFromValue(range_.from, range_.to, end_value_);
+    active_thumb_ = ResolveNearestThumb(axis, start_center, end_center,
                                         axis.primaryCoordFromPoint(x, y));
     overlay_thumb_ = active_thumb_;
     is_dragging_ = true;
     onInteractionStart(active_thumb_);
   }
 
-  bool changed = setActiveThumbPos(
-      axis.posFromPrimaryCoord(axis.primaryCoordFromPoint(x, y)));
+    bool changed = setActiveThumbValue(axis.valueFromPrimaryCoord(
+      range_.from, range_.to, axis.primaryCoordFromPoint(x, y)));
   if (changed) {
     setPressed(true);
     triggerInteractiveChange();
@@ -457,10 +457,8 @@ bool RangeSlider::setRange(SliderRange range) {
     return false;
   }
 
-  uint16_t old_start_pos =
-      internal::SliderPosFromValue(range_.from, range_.to, start_value_);
-  uint16_t old_end_pos =
-      internal::SliderPosFromValue(range_.from, range_.to, end_value_);
+  float old_start_value = start_value_;
+  float old_end_value = end_value_;
 
   float new_start_value;
   float new_end_value;
@@ -479,21 +477,23 @@ bool RangeSlider::setRange(SliderRange range) {
   min_separation_ = new_min_separation;
   start_value_ = new_start_value;
   end_value_ = new_end_value;
-  if (old_start_pos !=
-          internal::SliderPosFromValue(range_.from, range_.to, start_value_) ||
-      old_end_pos !=
-          internal::SliderPosFromValue(range_.from, range_.to, end_value_)) {
+    if (old_start_value != start_value_ || old_end_value != end_value_) {
     onValueChange(start_value_, end_value_, kNoActiveThumb, false);
   }
 
   if (width() > 0 && height() > 0) {
-    uint16_t new_start_pos =
-        internal::SliderPosFromValue(range_.from, range_.to, start_value_);
-    uint16_t new_end_pos =
-        internal::SliderPosFromValue(range_.from, range_.to, end_value_);
     internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
-    invalidateValueChange(axis, old_start_pos, old_end_pos, new_start_pos,
-                          new_end_pos, start_value_, end_value_);
+    float old_start_center =
+      axis.centerFromValue(range_.from, range_.to, old_start_value);
+    float old_end_center =
+      axis.centerFromValue(range_.from, range_.to, old_end_value);
+    float new_start_center =
+      axis.centerFromValue(range_.from, range_.to, start_value_);
+    float new_end_center =
+      axis.centerFromValue(range_.from, range_.to, end_value_);
+    invalidateValueChange(axis, old_start_center, old_end_center,
+                new_start_center, new_end_center, start_value_,
+                end_value_);
   }
   return true;
 }
@@ -510,28 +510,28 @@ bool RangeSlider::setMinSeparation(float value) {
                  start_value_ != new_start_value || end_value_ != new_end_value;
   if (!changed) return false;
 
-  uint16_t old_start_pos =
-      internal::SliderPosFromValue(range_.from, range_.to, start_value_);
-  uint16_t old_end_pos =
-      internal::SliderPosFromValue(range_.from, range_.to, end_value_);
+    float old_start_value = start_value_;
+    float old_end_value = end_value_;
   min_separation_ = effective_value;
   start_value_ = new_start_value;
   end_value_ = new_end_value;
-  if (old_start_pos !=
-          internal::SliderPosFromValue(range_.from, range_.to, start_value_) ||
-      old_end_pos !=
-          internal::SliderPosFromValue(range_.from, range_.to, end_value_)) {
+    if (old_start_value != start_value_ || old_end_value != end_value_) {
     onValueChange(start_value_, end_value_, kNoActiveThumb, false);
   }
 
   if (width() > 0 && height() > 0) {
-    uint16_t new_start_pos =
-        internal::SliderPosFromValue(range_.from, range_.to, start_value_);
-    uint16_t new_end_pos =
-        internal::SliderPosFromValue(range_.from, range_.to, end_value_);
     internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
-    invalidateValueChange(axis, old_start_pos, old_end_pos, new_start_pos,
-                          new_end_pos, start_value_, end_value_);
+    float old_start_center =
+      axis.centerFromValue(range_.from, range_.to, old_start_value);
+    float old_end_center =
+      axis.centerFromValue(range_.from, range_.to, old_end_value);
+    float new_start_center =
+      axis.centerFromValue(range_.from, range_.to, start_value_);
+    float new_end_center =
+      axis.centerFromValue(range_.from, range_.to, end_value_);
+    invalidateValueChange(axis, old_start_center, old_end_center,
+                new_start_center, new_end_center, start_value_,
+                end_value_);
   }
   return true;
 }
@@ -566,10 +566,8 @@ bool RangeSlider::setValuesInternal(float start_value, float end_value,
     return false;
   }
 
-  uint16_t old_start_pos =
-      internal::SliderPosFromValue(range_.from, range_.to, start_value_);
-  uint16_t old_end_pos =
-      internal::SliderPosFromValue(range_.from, range_.to, end_value_);
+    float old_start_value = start_value_;
+    float old_end_value = end_value_;
 
   start_value_ = new_start_value;
   end_value_ = new_end_value;
@@ -577,20 +575,23 @@ bool RangeSlider::setValuesInternal(float start_value, float end_value,
                 from_user && active_thumb != kNoActiveThumb);
 
   if (width() > 0 && height() > 0) {
-    uint16_t new_start_pos =
-        internal::SliderPosFromValue(range_.from, range_.to, start_value_);
-    uint16_t new_end_pos =
-        internal::SliderPosFromValue(range_.from, range_.to, end_value_);
     internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
-    invalidateValueChange(axis, old_start_pos, old_end_pos, new_start_pos,
-                          new_end_pos, start_value_, end_value_);
+    float old_start_center =
+      axis.centerFromValue(range_.from, range_.to, old_start_value);
+    float old_end_center =
+      axis.centerFromValue(range_.from, range_.to, old_end_value);
+    float new_start_center =
+      axis.centerFromValue(range_.from, range_.to, start_value_);
+    float new_end_center =
+      axis.centerFromValue(range_.from, range_.to, end_value_);
+    invalidateValueChange(axis, old_start_center, old_end_center,
+                new_start_center, new_end_center, start_value_,
+                end_value_);
   }
   return true;
 }
 
-bool RangeSlider::setActiveThumbPos(uint16_t pos) {
-  float value =
-      internal::SliderValueFromNormalizedPos(range_.from, range_.to, pos);
+  bool RangeSlider::setActiveThumbValue(float value) {
   if (active_thumb_ == 0) {
     return setValuesInternal(value, end_value_, true, 0);
   }
@@ -607,21 +608,22 @@ bool RangeSlider::setActiveThumbPos(uint16_t pos) {
 // tight bubble envelope swept by the active thumb rather than the
 // conservative full-width envelope reported by
 // getParentTransientPaintBounds(). For range sliders the bubble only
-// follows the active thumb, so only that thumb's old/new positions
+// follows the active thumb, so only that thumb's old/new centers
 // contribute to the bubble envelope.
 void RangeSlider::invalidateValueChange(
-    const internal::SliderAxisMetrics& axis, uint16_t old_start_pos,
-    uint16_t old_end_pos, uint16_t new_start_pos, uint16_t new_end_pos,
+  const internal::SliderAxisMetrics& axis, float old_start_center,
+  float old_end_center, float new_start_center, float new_end_center,
     float new_start_value, float new_end_value) {
   Rect thumb_rect = InvalidationRectForValueChange(
-      axis, old_start_pos, old_end_pos, new_start_pos, new_end_pos);
+    axis, old_start_center, old_end_center, new_start_center,
+    new_end_center);
   Rect bubble_envelope(0, 0, -1, -1);
   if (IndicatorEnabled(style_) && ShowsValueIndicator(*this)) {
-    uint16_t new_active_pos =
-        (active_thumb_ == 1) ? new_end_pos : new_start_pos;
+  float new_active_center =
+    (active_thumb_ == 1) ? new_end_center : new_start_center;
     float new_active_value =
         (active_thumb_ == 1) ? new_end_value : new_start_value;
-    float c_new = axis.displayCenterFromPos(new_active_pos);
+  float c_new = axis.displayPrimary(new_active_center);
     char new_scratch[64];
     roo::string_view new_text =
         formatLabel(new_active_value, new_scratch, sizeof(new_scratch));
@@ -662,9 +664,8 @@ void RangeSlider::notifyStateChanged(uint16_t state_diff) {
 
   internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
   float active_value = active_thumb_ == 1 ? end_value_ : start_value_;
-  uint16_t pos =
-      internal::SliderPosFromValue(range_.from, range_.to, active_value);
-  Rect thumb_rect = axis.invalidationRectForPosChange(pos, pos);
+  float center = axis.centerFromValue(range_.from, range_.to, active_value);
+  Rect thumb_rect = axis.invalidationRectForCenterChange(center, center);
 
   bool old_indicator_visible =
       style_.value_indicator == SliderValueIndicatorBehavior::kAlways ||
@@ -673,9 +674,10 @@ void RangeSlider::notifyStateChanged(uint16_t state_diff) {
 
   Rect bubble_envelope(0, 0, -1, -1);
   if (old_indicator_visible != new_indicator_visible) {
-    float center = axis.displayCenterFromPos(pos);
+    float display_center = axis.displayPrimary(center);
     bubble_envelope = ValueIndicatorBubble::EnvelopeForCenterRange(
-        width(), height(), center, center, style_.value_indicator,
+      width(), height(), display_center, display_center,
+      style_.value_indicator,
         style_.orientation);
   }
 
@@ -786,22 +788,20 @@ PreferredSize RangeSlider::getPreferredSize() const {
 
 roo_display::FpPoint RangeSlider::getPointOverlayFocus() const {
   internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
-  uint16_t start_pos =
-      internal::SliderPosFromValue(range_.from, range_.to, start_value_);
-  uint16_t end_pos =
-      internal::SliderPosFromValue(range_.from, range_.to, end_value_);
+  float start_center =
+      axis.displayCenterFromValue(range_.from, range_.to, start_value_);
+  float end_center =
+      axis.displayCenterFromValue(range_.from, range_.to, end_value_);
   int thumb = active_thumb_;
   if (thumb == kNoActiveThumb) {
     thumb = overlay_thumb_;
   }
   if (style_.orientation == SliderOrientation::kVertical) {
-    return roo_display::FpPoint{
-        axis.centeredCross(),
-        axis.displayCenterFromPos(thumb == 1 ? end_pos : start_pos)};
+    return roo_display::FpPoint{axis.centeredCross(),
+                                thumb == 1 ? end_center : start_center};
   }
-  return roo_display::FpPoint{
-      axis.displayCenterFromPos(thumb == 1 ? end_pos : start_pos),
-      axis.centeredCross()};
+  return roo_display::FpPoint{thumb == 1 ? end_center : start_center,
+                              axis.centeredCross()};
 }
 
 ColorRole RangeSlider::effectiveContainerRole() const {
@@ -882,9 +882,8 @@ void RangeSlider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
       // bubble area.
       internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
       float indicator_value = active_thumb_ == 1 ? end_value_ : start_value_;
-      uint16_t indicator_pos =
-          internal::SliderPosFromValue(range_.from, range_.to, indicator_value);
-      float indicator_thumb_center = axis.displayCenterFromPos(indicator_pos);
+        float indicator_thumb_center =
+          axis.displayCenterFromValue(range_.from, range_.to, indicator_value);
       char scratch[64];
       roo::string_view text =
           formatLabel(indicator_value, scratch, sizeof(scratch));

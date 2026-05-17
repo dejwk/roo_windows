@@ -1423,8 +1423,8 @@ TEST_F(Material3SliderAppTest,
   EXPECT_STREQ("end", tracking->events[2]);
   EXPECT_EQ(1, interactive_change_count);
   ASSERT_EQ(2u, tracking->values.size());
-  EXPECT_FLOAT_EQ(32768.0f / 65535.0f, tracking->values[0]);
-  EXPECT_FLOAT_EQ(32768.0f / 65535.0f, tracking->values[1]);
+  EXPECT_FLOAT_EQ(0.5f, tracking->values[0]);
+  EXPECT_FLOAT_EQ(0.5f, tracking->values[1]);
 }
 
 // Verifies that drag gestures emit only one interaction-start callback and

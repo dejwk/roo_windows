@@ -102,7 +102,7 @@ float StopPrimaryCenterFromIndex(const SliderAxisMetrics& axis,
                                  const SliderRange& range, int32_t stop_count,
                                  int32_t i) {
   float value = (i == stop_count) ? range.to : range.from + i * range.step;
-  return axis.centerFromPos(SliderPosFromValue(range.from, range.to, value));
+  return axis.centerFromValue(range.from, range.to, value);
 }
 
 }  // namespace

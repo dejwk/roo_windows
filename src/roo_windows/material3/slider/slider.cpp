@@ -92,9 +92,12 @@ void BuildTrackSegments(const Slider& slider,
                         const internal::SliderVisualMetrics& layout,
                         StopSegment* segments, int& segment_count) {
   segment_count = 0;
-  float center_anchor_primary = axis.centerFromPos(32768);
+  const SliderRange& range = slider.range();
+  float center_anchor_primary = axis.centerFromValue(
+      range.from, range.to, 0.5f * (range.from + range.to));
   bool thumb_on_or_right_of_center =
-      axis.centerFromPos(slider.getPos()) >= center_anchor_primary;
+      axis.centerFromValue(range.from, range.to, slider.value()) >=
+      center_anchor_primary;
   float center_left_edge = center_anchor_primary - (float)kCenterGapHalfPixels;
   float center_right_edge = center_anchor_primary + (float)kCenterGapHalfPixels;
 
@@ -266,10 +269,12 @@ struct Slider::Metrics {
 };
 
 Slider::Metrics Slider::buildMetrics() const {
-  return buildMetrics(getPos(), isPressed());
+  internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
+  return buildMetrics(axis.centerFromValue(range_.from, range_.to, value_),
+                      isPressed());
 }
 
-Slider::Metrics Slider::buildMetrics(uint16_t pos, bool pressed) const {
+Slider::Metrics Slider::buildMetrics(float thumb_center, bool pressed) const {
   Metrics metrics{
       .size_metrics = internal::ResolveSliderSizeMetrics(style_.size),
       .axis = MakeSliderAxisMetrics(*this),
@@ -279,10 +284,10 @@ Slider::Metrics Slider::buildMetrics(uint16_t pos, bool pressed) const {
       .segments = {},
       .segment_count = 0,
   };
-      metrics.thumb_width = ThumbWidthForState(pressed);
-      metrics.track_gap = TrackGapForThumbWidth(metrics.thumb_width);
+  metrics.thumb_width = ThumbWidthForState(pressed);
+  metrics.track_gap = TrackGapForThumbWidth(metrics.thumb_width);
   metrics.layout = internal::ResolveSliderVisualMetrics(
-      metrics.axis, metrics.axis.centerFromPos(pos), metrics.thumb_width,
+      metrics.axis, thumb_center, metrics.thumb_width,
       metrics.size_metrics.track_height, metrics.track_gap,
       metrics.size_metrics.handle_height);
   BuildTrackSegments(*this, metrics.axis, metrics.layout, metrics.segments,
@@ -399,9 +404,10 @@ bool Slider::onSingleTapUp(XDim x, YDim y) {
   if (!isEnabled()) return false;
   BasicWidget::onSingleTapUp(x, y);
   internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
-  uint16_t pos = axis.posFromPrimaryCoord(axis.primaryCoordFromPoint(x, y));
+  float value = axis.valueFromPrimaryCoord(range_.from, range_.to,
+                                           axis.primaryCoordFromPoint(x, y));
   onInteractionStart();
-  if (setPosInternal(pos, true)) {
+  if (setValueInternal(value, true)) {
     triggerInteractiveChange();
   }
   onInteractionEnd(value_);
@@ -412,13 +418,18 @@ void Slider::onShowPress(XDim x, YDim y) {
   if (!isEnabled()) return;
   internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
   int16_t primary_coord = axis.primaryCoordFromPoint(x, y);
-  if (!axis.hitsThumb(getPos(), primary_coord, kTouchSlopPixels)) return;
+  if (!axis.hitsThumbAtValue(range_.from, range_.to, value_, primary_coord,
+                             kTouchSlopPixels)) {
+    return;
+  }
 
   if (!is_dragging_) {
     is_dragging_ = true;
     onInteractionStart();
   }
-  if (setPosInternal(axis.posFromPrimaryCoord(primary_coord), true)) {
+  if (setValueInternal(
+          axis.valueFromPrimaryCoord(range_.from, range_.to, primary_coord),
+          true)) {
     triggerInteractiveChange();
   }
   Widget::onShowPress(x, y);
@@ -432,8 +443,10 @@ bool Slider::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
   }
 
   bool was_dragging = is_dragging_;
-  if (setPosInternal(axis.posFromPrimaryCoord(axis.primaryCoordFromPoint(x, y)),
-                     true)) {
+  if (setValueInternal(
+          axis.valueFromPrimaryCoord(range_.from, range_.to,
+                                     axis.primaryCoordFromPoint(x, y)),
+          true)) {
     if (!was_dragging) {
       onInteractionStart();
     }
@@ -466,22 +479,25 @@ void Slider::onCancel() {
   is_dragging_ = false;
 }
 
-bool Slider::setPos(uint16_t pos) { return setPosInternal(pos, false); }
+bool Slider::setPos(uint16_t pos) {
+  return setValue(
+      internal::SliderValueFromNormalizedPos(range_.from, range_.to, pos));
+}
 
-bool Slider::setPosInternal(uint16_t pos, bool from_user) {
-  uint16_t old_pos = getPos();
-  if (pos == old_pos) return false;
-  value_ = internal::NormalizeSliderValueForRange(
-      internal::SliderValueFromNormalizedPos(range_.from, range_.to, pos),
-      range_.from, range_.to, range_.step);
-  uint16_t new_pos = getPos();
-  if (new_pos == old_pos) return false;
+bool Slider::setValueInternal(float value, bool from_user) {
+  float new_value = internal::NormalizeSliderValueForRange(
+      value, range_.from, range_.to, range_.step);
+  if (value_ == new_value) return false;
+  float old_value = value_;
+  value_ = new_value;
   onValueChange(value_, from_user);
-  if (width() <= 0 || height() <= 0) {
-    return true;
-  }
+  if (width() <= 0 || height() <= 0) return true;
   internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
-  invalidatePosChange(axis, old_pos, new_pos, value_);
+  float old_center = axis.centerFromValue(range_.from, range_.to, old_value);
+  float new_center = axis.centerFromValue(range_.from, range_.to, new_value);
+  if (old_center != new_center) {
+    invalidateValueChange(axis, old_center, new_center, new_value);
+  }
   return true;
 }
 
@@ -489,21 +505,26 @@ bool Slider::setRange(SliderRange range) {
   if (!internal::IsValidSliderRange(range.from, range.to, range.step)) {
     return false;
   }
-  uint16_t old_pos = getPos();
   float new_value = internal::NormalizeSliderValueForRange(
       value_, range.from, range.to, range.step);
   bool changed = range_.from != range.from || range_.to != range.to ||
                  range_.step != range.step || value_ != new_value;
   if (!changed) return false;
 
+  SliderRange old_range = range_;
+  float old_value = value_;
   range_ = range;
   value_ = new_value;
   onValueChange(value_, false);
 
-  uint16_t new_pos = getPos();
-  if (width() > 0 && height() > 0 && old_pos != new_pos) {
+  if (width() > 0 && height() > 0) {
     internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
-    invalidatePosChange(axis, old_pos, new_pos, value_);
+    float old_center =
+        axis.centerFromValue(old_range.from, old_range.to, old_value);
+    float new_center = axis.centerFromValue(range_.from, range_.to, new_value);
+    if (old_center != new_center) {
+      invalidateValueChange(axis, old_center, new_center, new_value);
+    }
   }
   return true;
 }
@@ -530,25 +551,10 @@ bool Slider::setStyle(SliderStyle style) {
   return true;
 }
 
-bool Slider::setValue(float value) {
-  float new_value = internal::NormalizeSliderValueForRange(
-      value, range_.from, range_.to, range_.step);
-  if (value_ == new_value) return false;
-
-  uint16_t old_pos = getPos();
-  value_ = new_value;
-  onValueChange(value_, false);
-  uint16_t new_pos = getPos();
-
-  if (width() > 0 && height() > 0 && old_pos != new_pos) {
-    internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
-    invalidatePosChange(axis, old_pos, new_pos, value_);
-  }
-  return true;
-}
+bool Slider::setValue(float value) { return setValueInternal(value, false); }
 
 // Marks the minimal area that needs to be redrawn for a thumb move from
-// `old_pos` to `new_pos`. Uses setDirty() (not invalidateInterior()) so
+// `old_center` to `new_center`. Uses setDirty() (not invalidateInterior()) so
 // the slider itself is not marked invalidated: paint() can rely on
 // isInvalidated() being false here and let the canvas clip restrict
 // drawing to the dirty slice. When the value indicator is visible, the
@@ -556,13 +562,14 @@ bool Slider::setValue(float value) {
 // positions (rather than the conservative full-envelope reported by
 // getParentTransientPaintBounds()), and the parent is told to invalidate only
 // that strip so siblings beneath repaint just the area the old bubble vacated.
-void Slider::invalidatePosChange(const internal::SliderAxisMetrics& axis,
-                                 uint16_t old_pos, uint16_t new_pos,
-                                 float new_value) {
-  Rect thumb_rect = axis.invalidationRectForPosChange(old_pos, new_pos);
+void Slider::invalidateValueChange(const internal::SliderAxisMetrics& axis,
+                                   float old_center, float new_center,
+                                   float new_value) {
+  Rect thumb_rect =
+      axis.invalidationRectForCenterChange(old_center, new_center);
   Rect icon_envelope(0, 0, -1, -1);
-  Rect old_icon = trackIconDirtyRect(buildMetrics(old_pos, isPressed()));
-  Rect new_icon = trackIconDirtyRect(buildMetrics(new_pos, isPressed()));
+  Rect old_icon = trackIconDirtyRect(buildMetrics(old_center, isPressed()));
+  Rect new_icon = trackIconDirtyRect(buildMetrics(new_center, isPressed()));
   if (!old_icon.empty() || !new_icon.empty()) {
     icon_envelope = Rect::Extent(old_icon, new_icon);
   }
@@ -571,7 +578,7 @@ void Slider::invalidatePosChange(const internal::SliderAxisMetrics& axis,
                               : Rect::Extent(thumb_rect, icon_envelope);
   Rect bubble_envelope(0, 0, -1, -1);
   if (IndicatorEnabled(style_) && ShowsValueIndicator(*this)) {
-    float c_new = axis.displayCenterFromPos(new_pos);
+    float c_new = axis.displayPrimary(new_center);
     char new_scratch[64];
     roo::string_view new_text =
         formatLabel(new_value, new_scratch, sizeof(new_scratch));
@@ -611,8 +618,8 @@ void Slider::notifyStateChanged(uint16_t state_diff) {
   }
 
   internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
-  uint16_t pos = getPos();
-  Rect thumb_rect = axis.invalidationRectForPosChange(pos, pos);
+  float center = axis.centerFromValue(range_.from, range_.to, value_);
+  Rect thumb_rect = axis.invalidationRectForCenterChange(center, center);
 
   bool old_indicator_visible =
       style_.value_indicator == SliderValueIndicatorBehavior::kAlways ||
@@ -621,10 +628,10 @@ void Slider::notifyStateChanged(uint16_t state_diff) {
 
   Rect bubble_envelope(0, 0, -1, -1);
   if (old_indicator_visible != new_indicator_visible) {
-    float center = axis.displayCenterFromPos(pos);
+    float display_center = axis.displayPrimary(center);
     bubble_envelope = ValueIndicatorBubble::EnvelopeForCenterRange(
-        width(), height(), center, center, style_.value_indicator,
-        style_.orientation);
+        width(), height(), display_center, display_center,
+        style_.value_indicator, style_.orientation);
   }
 
   pending_content_dirty_span_.include(
@@ -652,7 +659,8 @@ void Slider::paint(const Canvas& canvas) const {
 
 void Slider::paintTrackAndThumb(const Canvas& canvas, const Metrics& metrics,
                                 const Tokens& tokens) const {
-  float center_anchor_primary = metrics.axis.centerFromPos(32768);
+  float center_anchor_primary = metrics.axis.centerFromValue(
+      range_.from, range_.to, 0.5f * (range_.from + range_.to));
 
   auto track_bounds = metrics.axis.paintRectFromPrimaryCross(
       TrackShapeMinPrimary(0.0f, metrics.size_metrics.track_radius),
@@ -670,10 +678,9 @@ void Slider::paintTrackAndThumb(const Canvas& canvas, const Metrics& metrics,
       track_bounds.x_min, track_bounds.y_min, track_bounds.x_max,
       track_bounds.y_max, metrics.size_metrics.track_radius,
       tokens.active_track);
-  auto handle = SmoothFilledRoundRect(handle_bounds.x_min, handle_bounds.y_min,
-                                      handle_bounds.x_max, handle_bounds.y_max,
-                                      internal::kHandleCornerRadius,
-                                      tokens.handle);
+  auto handle = SmoothFilledRoundRect(
+      handle_bounds.x_min, handle_bounds.y_min, handle_bounds.x_max,
+      handle_bounds.y_max, internal::kHandleCornerRadius, tokens.handle);
   Rect widget_bounds = bounds();
   Rect handle_tile_bounds =
       GetHandleTileBounds(widget_bounds, handle.extents(), metrics.track_gap,
@@ -752,12 +759,12 @@ PreferredSize Slider::getPreferredSize() const {
 
 roo_display::FpPoint Slider::getPointOverlayFocus() const {
   internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
+  float display_center =
+      axis.displayCenterFromValue(range_.from, range_.to, value_);
   if (style_.orientation == SliderOrientation::kVertical) {
-    return roo_display::FpPoint{axis.centeredCross(),
-                                axis.displayCenterFromPos(getPos())};
+    return roo_display::FpPoint{axis.centeredCross(), display_center};
   }
-  return roo_display::FpPoint{axis.displayCenterFromPos(getPos()),
-                              axis.centeredCross()};
+  return roo_display::FpPoint{display_center, axis.centeredCross()};
 }
 
 ColorRole Slider::effectiveContainerRole() const { return ColorRole::kPrimary; }
@@ -812,7 +819,7 @@ void Slider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
   // getParentTransientPaintBounds() override) covers the full bubble
   // conservative envelope when the indicator is showing. If the only
   // reason we're being repainted is a value/style state change that
-  // dirtied a tight rectangle (set by invalidatePosChange()), narrow the
+  // dirtied a tight rectangle (set by invalidateValueChange()), narrow the
   // canvas clip to that rectangle so paint() does not redraw the entire
   // envelope. isInvalidated() being true means the framework asked us to
   // fully repaint (e.g. style change, visibility toggle), in which case
@@ -860,7 +867,8 @@ void Slider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
       internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
       Rect indicator_bounds = PaintValueIndicator(
           theme(), isEnabled(), indicator_canvas, clipper, width(), height(),
-          axis.displayCenterFromPos(getPos()), style_, text);
+          axis.displayCenterFromValue(range_.from, range_.to, value_), style_,
+          text);
       if (!indicator_bounds.empty()) {
         current_indicator_span = internal::DisplayMainSpanFromRect(
             indicator_bounds,

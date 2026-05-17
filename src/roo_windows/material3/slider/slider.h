@@ -223,8 +223,8 @@ class Slider : public BasicWidget {
   /// Resolves all per-frame painting metrics for the current thumb state.
   Metrics buildMetrics() const;
 
-  /// Resolves all per-frame painting metrics for an arbitrary thumb state.
-  Metrics buildMetrics(uint16_t pos, bool pressed) const;
+  /// Resolves all per-frame painting metrics for an arbitrary thumb center.
+  Metrics buildMetrics(float thumb_center, bool pressed) const;
 
   /// Returns the exact local bounds of the inset icon if one can be painted.
   Rect trackIconRect(const Metrics& metrics) const;
@@ -249,12 +249,16 @@ class Slider : public BasicWidget {
                   const Metrics& metrics,
                   const internal::SliderPaintTokens& tokens) const;
 
-  /// Remaps a normalized thumb position into semantic value state.
-  bool setPosInternal(uint16_t pos, bool from_user);
+  /// Updates the semantic value (clamped/snapped against the current range)
+  /// and triggers the necessary invalidation, flagging whether the change came
+  /// from a user gesture.
+  bool setValueInternal(float value, bool from_user);
 
-  /// Marks the minimal local repaint envelope needed for a thumb move.
-  void invalidatePosChange(const internal::SliderAxisMetrics& axis,
-                           uint16_t old_pos, uint16_t new_pos, float new_value);
+  /// Marks the minimal local repaint envelope needed for a thumb move between
+  /// two centers in logical primary-axis space.
+  void invalidateValueChange(const internal::SliderAxisMetrics& axis,
+                             float old_center, float new_center,
+                             float new_value);
 
   SliderRange range_;
   SliderVariant variant_;
