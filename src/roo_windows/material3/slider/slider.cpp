@@ -316,17 +316,18 @@ Rect Slider::trackIconReservedRect(const Metrics& metrics) const {
 
 Rect Slider::trackIconDirtyRect(const Metrics& metrics) const {
   return ExpandTrackIconPrimaryRect(
-      trackIconReservedRect(metrics), metrics.axis.isVertical(),
-      metrics.axis.primarySpan(), kStopMarkRadiusPixels);
+      trackIconRect(metrics), metrics.axis.isVertical(),
+      metrics.axis.primarySpan(),
+      kTrackIconStopPaddingPixels + kStopMarkRadiusPixels);
 }
 
 void Slider::paintTrackIcons(const Canvas& canvas, Clipper& clipper,
                              const Metrics& metrics,
                              const Tokens& tokens) const {
+  Rect inset_rect = trackIconRect(metrics);
+  if (inset_rect.empty()) return;
+
   InsetIcon inset_icon = getInsetIcon();
-  if (inset_icon.icon == nullptr || metrics.segment_count == 0) {
-    return;
-  }
 
   auto paint_icon = [&](const roo_display::Pictogram& icon,
                         const roo_display::Box& icon_bounds,
@@ -346,21 +347,18 @@ void Slider::paintTrackIcons(const Canvas& canvas, Clipper& clipper,
     }
   };
 
-  Rect inset_rect = trackIconRect(metrics);
-  if (!inset_rect.empty()) {
-    float min_primary =
-        metrics.axis.isVertical()
-            ? (float)(metrics.axis.primarySpan() - 1 - inset_rect.yMax())
-            : (float)inset_rect.xMin();
-    float max_primary =
-        metrics.axis.isVertical()
-            ? (float)(metrics.axis.primarySpan() - 1 - inset_rect.yMin())
-            : (float)inset_rect.xMax();
-    const StopSegment* inset_segment = FindSegmentContainingRange(
-        metrics.segments, metrics.segment_count, min_primary, max_primary);
-    if (inset_segment != nullptr) {
-      paint_icon(*inset_icon.icon, inset_rect.asBox(), *inset_segment);
-    }
+  float min_primary =
+      metrics.axis.isVertical()
+          ? (float)(metrics.axis.primarySpan() - 1 - inset_rect.yMax())
+          : (float)inset_rect.xMin();
+  float max_primary =
+      metrics.axis.isVertical()
+          ? (float)(metrics.axis.primarySpan() - 1 - inset_rect.yMin())
+          : (float)inset_rect.xMax();
+  const StopSegment* inset_segment = FindSegmentContainingRange(
+      metrics.segments, metrics.segment_count, min_primary, max_primary);
+  if (inset_segment != nullptr) {
+    paint_icon(*inset_icon.icon, inset_rect.asBox(), *inset_segment);
   }
 }
 
