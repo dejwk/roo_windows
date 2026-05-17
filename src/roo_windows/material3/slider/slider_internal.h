@@ -104,8 +104,8 @@ class SliderAxisMetrics {
   bool isVertical() const { return vertical_; }
 
   // Converts a normalized 16-bit position into the thumb center in logical
-  // primary-axis coordinates. Retained for the legacy uint16_t shims and the
-  // range slider; new code should prefer centerFromValue().
+  // primary-axis coordinates. Retained for the legacy uint16_t shims only;
+  // new code should prefer centerFromValue().
   float centerFromPos(uint16_t pos) const {
     return (float)kTrackHandleGap - 0.5f +
            (float)(((uint32_t)pos * (uint32_t)normalizedRange() + 32768u) >>
@@ -114,8 +114,7 @@ class SliderAxisMetrics {
 
   // Converts a normalized 16-bit position into the thumb center in
   // display-space coordinates on the travel axis. Retained for the legacy
-  // uint16_t shims and the range slider; new code should prefer
-  // displayCenterFromValue().
+  // uint16_t shims only; new code should prefer displayCenterFromValue().
   float displayCenterFromPos(uint16_t pos) const {
     return displayPrimary(centerFromPos(pos));
   }
@@ -217,7 +216,15 @@ class SliderAxisMetrics {
     return rectFromPrimaryCross(min_primary, 0, max_primary, cross_span_ - 1);
   }
 
-  // Pos-based wrapper used by the legacy uint16_t shims and the range slider.
+  // Value-based wrapper for callers that only traffic in semantic values.
+  Rect invalidationRectForValueChange(float from, float to, float old_value,
+                                      float new_value) const {
+    return invalidationRectForCenterChange(
+        centerFromValue(from, to, old_value),
+        centerFromValue(from, to, new_value));
+  }
+
+  // Pos-based wrapper used by the legacy uint16_t shims only.
   Rect invalidationRectForPosChange(uint16_t old_pos, uint16_t new_pos) const {
     return invalidationRectForCenterChange(centerFromPos(old_pos),
                                            centerFromPos(new_pos));
@@ -358,12 +365,21 @@ inline SliderVisualMetrics ResolveSliderVisualMetrics(
       active_track_max_primary, inactive_track_min_primary};
 }
 
+inline SliderVisualMetrics ResolveSliderVisualMetricsForValue(
+    const SliderAxisMetrics& axis, float from, float to, float value,
+    int16_t thumb_primary_span, int16_t track_cross_span,
+    int16_t track_handle_gap, int16_t thumb_cross_span) {
+  return ResolveSliderVisualMetrics(axis, axis.centerFromValue(from, to, value),
+                                    thumb_primary_span, track_cross_span,
+                                    track_handle_gap, thumb_cross_span);
+}
+
 inline SliderVisualMetrics ResolveHorizontalSliderVisualMetrics(
     const SliderAxisMetrics& axis, uint16_t pos, int16_t track_cross_span,
     int16_t track_handle_gap, int16_t thumb_cross_span) {
-  return ResolveSliderVisualMetrics(axis, axis.centerFromPos(pos),
-                                    kHandleWidth, track_cross_span,
-                                    track_handle_gap, thumb_cross_span);
+  return ResolveSliderVisualMetrics(axis, axis.centerFromPos(pos), kHandleWidth,
+                                    track_cross_span, track_handle_gap,
+                                    thumb_cross_span);
 }
 
 }  // namespace internal

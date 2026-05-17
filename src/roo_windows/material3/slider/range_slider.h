@@ -168,6 +168,7 @@ class RangeSlider : public BasicWidget {
   void invalidateValueChange(const internal::SliderAxisMetrics& axis,
                              float old_start_center, float old_end_center,
                              float new_start_center, float new_end_center,
+                             float old_start_value, float old_end_value,
                              float new_start_value, float new_end_value);
 
   SliderRange range_;

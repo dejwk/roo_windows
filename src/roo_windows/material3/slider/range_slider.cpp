@@ -194,20 +194,21 @@ int ResolveThumbForPress(const internal::SliderAxisMetrics& axis,
 // Produces the minimal combined thumb repaint rect for any thumb positions that
 // changed in this update.
 Rect InvalidationRectForValueChange(const internal::SliderAxisMetrics& axis,
-                                    float old_start_center,
-                                    float old_end_center,
-                                    float new_start_center,
-                                    float new_end_center) {
+                                    const SliderRange& range,
+                                    float old_start_value,
+                                    float old_end_value,
+                                    float new_start_value,
+                                    float new_end_value) {
   Rect start_rect =
-      old_start_center == new_start_center
+      old_start_value == new_start_value
           ? Rect(0, 0, -1, -1)
-          : axis.invalidationRectForCenterChange(old_start_center,
-                                                 new_start_center);
+      : axis.invalidationRectForValueChange(range.from, range.to,
+                                            old_start_value, new_start_value);
   Rect end_rect =
-      old_end_center == new_end_center
+      old_end_value == new_end_value
           ? Rect(0, 0, -1, -1)
-          : axis.invalidationRectForCenterChange(old_end_center,
-                                                 new_end_center);
+      : axis.invalidationRectForValueChange(range.from, range.to,
+                                            old_end_value, new_end_value);
   return UnionRects(start_rect, end_rect);
 }
 
@@ -222,14 +223,13 @@ ThumbPaintMetrics ResolveThumbPaintMetrics(
     const SliderRange& range, float value,
     const internal::SliderAxisMetrics& axis,
     const internal::SliderSizeMetrics& size_metrics, bool pressed) {
-  float center = axis.centerFromValue(range.from, range.to, value);
   int16_t thumb_width = ThumbWidthForState(pressed);
   int16_t track_gap = TrackGapForThumbWidth(thumb_width);
   return ThumbPaintMetrics{
       track_gap,
-      internal::ResolveSliderVisualMetrics(axis, center, thumb_width,
-                                           size_metrics.track_height, track_gap,
-                                           size_metrics.handle_height),
+      internal::ResolveSliderVisualMetricsForValue(
+          axis, range.from, range.to, value, thumb_width,
+          size_metrics.track_height, track_gap, size_metrics.handle_height),
   };
 }
 
@@ -492,8 +492,8 @@ bool RangeSlider::setRange(SliderRange range) {
     float new_end_center =
       axis.centerFromValue(range_.from, range_.to, end_value_);
     invalidateValueChange(axis, old_start_center, old_end_center,
-                new_start_center, new_end_center, start_value_,
-                end_value_);
+                new_start_center, new_end_center, old_start_value,
+                old_end_value, start_value_, end_value_);
   }
   return true;
 }
@@ -530,8 +530,8 @@ bool RangeSlider::setMinSeparation(float value) {
     float new_end_center =
       axis.centerFromValue(range_.from, range_.to, end_value_);
     invalidateValueChange(axis, old_start_center, old_end_center,
-                new_start_center, new_end_center, start_value_,
-                end_value_);
+                new_start_center, new_end_center, old_start_value,
+                old_end_value, start_value_, end_value_);
   }
   return true;
 }
@@ -585,8 +585,8 @@ bool RangeSlider::setValuesInternal(float start_value, float end_value,
     float new_end_center =
       axis.centerFromValue(range_.from, range_.to, end_value_);
     invalidateValueChange(axis, old_start_center, old_end_center,
-                new_start_center, new_end_center, start_value_,
-                end_value_);
+                new_start_center, new_end_center, old_start_value,
+                old_end_value, start_value_, end_value_);
   }
   return true;
 }
@@ -602,7 +602,7 @@ bool RangeSlider::setValuesInternal(float start_value, float end_value,
 }
 
 // Marks the minimal area that needs to be redrawn for a value change.
-// Mirrors Slider::invalidatePosChange(): uses setDirty() rather than
+// Mirrors the single-slider invalidation path: uses setDirty() rather than
 // invalidateInterior() so the slider is not marked invalidated (paint()
 // will only redraw the dirty slice), and notifies the parent only of the
 // tight bubble envelope swept by the active thumb rather than the
@@ -611,19 +611,20 @@ bool RangeSlider::setValuesInternal(float start_value, float end_value,
 // follows the active thumb, so only that thumb's old/new centers
 // contribute to the bubble envelope.
 void RangeSlider::invalidateValueChange(
-  const internal::SliderAxisMetrics& axis, float old_start_center,
-  float old_end_center, float new_start_center, float new_end_center,
-    float new_start_value, float new_end_value) {
+    const internal::SliderAxisMetrics& axis, float old_start_center,
+    float old_end_center, float new_start_center, float new_end_center,
+    float old_start_value, float old_end_value, float new_start_value,
+    float new_end_value) {
   Rect thumb_rect = InvalidationRectForValueChange(
-    axis, old_start_center, old_end_center, new_start_center,
-    new_end_center);
+      axis, range_, old_start_value, old_end_value, new_start_value,
+      new_end_value);
   Rect bubble_envelope(0, 0, -1, -1);
   if (IndicatorEnabled(style_) && ShowsValueIndicator(*this)) {
-  float new_active_center =
-    (active_thumb_ == 1) ? new_end_center : new_start_center;
+    float new_active_center =
+      (active_thumb_ == 1) ? new_end_center : new_start_center;
     float new_active_value =
         (active_thumb_ == 1) ? new_end_value : new_start_value;
-  float c_new = axis.displayPrimary(new_active_center);
+    float c_new = axis.displayPrimary(new_active_center);
     char new_scratch[64];
     roo::string_view new_text =
         formatLabel(new_active_value, new_scratch, sizeof(new_scratch));
