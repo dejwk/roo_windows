@@ -73,12 +73,15 @@ class SliderAxisMetrics {
     float y_max;
   };
 
-  // Builds axis metrics for a slider surface. The logical stop-mark offset and
-  // unpressed handle span come from the shared Material 3 slider constants.
-  SliderAxisMetrics(int16_t width, int16_t height, bool vertical = false)
+  // Builds axis metrics for a slider surface. Orientation controls which
+  // display axis the slider uses; inversion controls whether logical values
+  // increase in the same or opposite direction along that axis.
+  SliderAxisMetrics(int16_t width, int16_t height, bool vertical = false,
+                    bool inverted = false)
       : primary_span_(vertical ? height : width),
         cross_span_(vertical ? width : height),
-        vertical_(vertical) {}
+        vertical_(vertical),
+        inverted_(inverted) {}
 
   // Returns the widget extent along the slider's travel axis.
   int16_t primarySpan() const { return primary_span_; }
@@ -108,7 +111,7 @@ class SliderAxisMetrics {
   }
 
   // Returns the display-space thumb center for a semantic value, accounting
-  // for vertical-axis inversion.
+  // for the configured logical-direction inversion.
   float displayCenterFromValue(float from, float to, float value) const {
     return displayPrimary(centerFromValue(from, to, value));
   }
@@ -152,20 +155,22 @@ class SliderAxisMetrics {
   }
 
   // Converts a logical primary coordinate into a display-space coordinate.
-  // Vertical sliders invert the primary axis so larger logical values paint
-  // higher on screen.
   float displayPrimary(float primary) const {
-    return vertical_ ? (float)(primary_span_ - 1) - primary : primary;
+    return inverted_ ? (float)(primary_span_ - 1) - primary : primary;
   }
 
   // Extracts the display-space coordinate on the travel axis from a widget
   // point.
   int16_t primaryCoordFromPoint(XDim x, YDim y) const {
-    return vertical_ ? (primary_span_ - 1 - y) : x;
+    int16_t primary = vertical_ ? y : x;
+    return inverted_ ? (primary_span_ - 1 - primary) : primary;
   }
 
   // Projects a display-space drag delta onto the logical travel axis.
-  int16_t primaryDelta(XDim dx, YDim dy) const { return vertical_ ? -dy : dx; }
+  int16_t primaryDelta(XDim dx, YDim dy) const {
+    int16_t delta = vertical_ ? dy : dx;
+    return inverted_ ? -delta : delta;
+  }
 
   // Returns whether a scroll gesture should be captured by the slider based on
   // the dominant gesture direction and current drag state.
@@ -221,11 +226,16 @@ class SliderAxisMetrics {
   PaintRect paintRectFromPrimaryCross(float min_primary, float min_cross,
                                       float max_primary,
                                       float max_cross) const {
+    float display_min_primary =
+        inverted_ ? displayPrimary(max_primary) : displayPrimary(min_primary);
+    float display_max_primary =
+        inverted_ ? displayPrimary(min_primary) : displayPrimary(max_primary);
     if (!vertical_) {
-      return PaintRect{min_primary, min_cross, max_primary, max_cross};
+      return PaintRect{display_min_primary, min_cross, display_max_primary,
+                       max_cross};
     }
-    return PaintRect{min_cross, displayPrimary(max_primary), max_cross,
-                     displayPrimary(min_primary)};
+    return PaintRect{min_cross, display_min_primary, max_cross,
+                     display_max_primary};
   }
 
  private:
@@ -240,16 +250,21 @@ class SliderAxisMetrics {
 
   Rect rectFromPrimaryCross(int16_t min_primary, int16_t min_cross,
                             int16_t max_primary, int16_t max_cross) const {
+    int16_t display_min_primary =
+        inverted_ ? primary_span_ - 1 - max_primary : min_primary;
+    int16_t display_max_primary =
+        inverted_ ? primary_span_ - 1 - min_primary : max_primary;
     if (!vertical_) {
-      return Rect(min_primary, min_cross, max_primary, max_cross);
+      return Rect(display_min_primary, min_cross, display_max_primary,
+                  max_cross);
     }
-    return Rect(min_cross, primary_span_ - 1 - max_primary, max_cross,
-                primary_span_ - 1 - min_primary);
+    return Rect(min_cross, display_min_primary, max_cross, display_max_primary);
   }
 
   int16_t primary_span_;
   int16_t cross_span_;
   bool vertical_;
+  bool inverted_;
 };
 
 struct DirtySpan {

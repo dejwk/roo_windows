@@ -219,7 +219,8 @@ Rect ResolveCurrentIndicatorBoundsForTest(const Slider& slider,
   const SliderStyle& style = slider.style();
   internal::SliderAxisMetrics axis(
       slider.width(), slider.height(),
-      style.orientation == SliderOrientation::kVertical);
+      style.orientation == SliderOrientation::kVertical,
+      IsSliderDirectionInverted(style));
   float center = axis.displayCenterFromValue(slider.range().from,
                                              slider.range().to, slider.value());
 
@@ -1344,6 +1345,43 @@ TEST_F(Material3SliderAppTest, VerticalTapToJumpUsesReversedYMapping) {
   EXPECT_GT(slider().value(), 0.95f);
 }
 
+// Verifies that vertical orientation can opt out of the default inverted
+// mapping when direction is configured explicitly.
+TEST_F(Material3SliderAppTest, VerticalNormalDirectionUsesForwardYMapping) {
+  SliderStyle style{};
+  style.orientation = SliderOrientation::kVertical;
+  style.direction = SliderDirection::kNormal;
+  auto vertical_slider = std::make_unique<Slider>(
+      env_, SliderRange{0.0f, 1.0f}, 1.0f, SliderVariant::kStandard, style);
+  slider_ = vertical_slider.get();
+  app_.add(std::move(vertical_slider),
+           roo_display::Box(kSliderX, kSliderY, kSliderX + Scaled(44) - 1,
+                            kSliderY + Scaled(60) - 1));
+  ASSERT_TRUE(app_.refresh());
+
+  EXPECT_TRUE(slider().onSingleTapUp(slider().width() / 2, 1));
+  EXPECT_LT(slider().value(), 0.05f);
+}
+
+// Verifies that horizontal orientation can request an inverted mapping
+// independently of the travel axis.
+TEST_F(Material3SliderAppTest,
+       HorizontalInvertedDirectionUsesReversedXMapping) {
+  SliderStyle style{};
+  style.direction = SliderDirection::kInverted;
+  auto inverted_slider = std::make_unique<Slider>(
+      env_, SliderRange{0.0f, 1.0f}, 1.0f, SliderVariant::kStandard, style);
+  slider_ = inverted_slider.get();
+  app_.add(std::move(inverted_slider),
+           roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
+                            kSliderY + kSliderHeight - 1));
+  ASSERT_TRUE(app_.refresh());
+
+  EXPECT_TRUE(
+      slider().onSingleTapUp(slider().width() - 2, slider().height() / 2));
+  EXPECT_LT(slider().value(), 0.05f);
+}
+
 // Verifies that horizontal tap-to-jump lands at the midpoint when tapping the
 // visual center.
 TEST_F(Material3SliderAppTest, TapToJumpLandsAtMidpointValue) {
@@ -1969,7 +2007,7 @@ TEST_F(Material3SliderRenderTest,
   ASSERT_TRUE(app_.refresh());
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
-                                   true);
+                                   true, true);
   internal::SliderVisualMetrics layout = internal::ResolveSliderVisualMetrics(
       axis,
       CenterFromValueForTest(axis, slider_ptr->range(), slider_ptr->value()),
@@ -2251,7 +2289,7 @@ TEST_F(Material3SliderRenderTest,
   ASSERT_TRUE(slider_ptr->setValue(0.8f));
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
-                                   true);
+                                   true, true);
   Rect thumb_rect = InvalidationRectForValueChangeForTest(
       axis, slider_ptr->range(), 0.2f, 0.8f);
   Rect expected_clip = Rect::Intersect(thumb_rect, slider_ptr->bounds())

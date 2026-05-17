@@ -31,7 +31,8 @@ class RangeSlider : public BasicWidget {
   /// Returns the packed presentation settings used while painting.
   const SliderStyle& style() const { return style_; }
 
-  /// Applies orientation, size, indicator, and stop/tick presentation flags.
+  /// Applies orientation, direction, size, indicator, and stop/tick
+  /// presentation flags.
   bool setStyle(SliderStyle style);
 
   /// Returns the minimum allowed distance between the two semantic values.

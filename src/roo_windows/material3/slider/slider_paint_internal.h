@@ -121,13 +121,14 @@ inline void DrawTrackPiece(const Canvas& canvas,
   canvas.drawTiled(piece, tile_bounds, roo_display::kNoAlign);
 }
 
-// Builds the orientation-aware axis helper used by both slider flavors for
-// value/position conversion and local geometry.
+// Builds the orientation- and direction-aware axis helper used by both slider
+// flavors for value/position conversion and local geometry.
 template <typename SliderLike>
 inline SliderAxisMetrics MakeSliderAxisMetrics(const SliderLike& slider) {
-  return SliderAxisMetrics(
-      slider.width(), slider.height(),
-      slider.style().orientation == SliderOrientation::kVertical);
+  SliderStyle style = slider.style();
+  return SliderAxisMetrics(slider.width(), slider.height(),
+                           style.orientation == SliderOrientation::kVertical,
+                           IsSliderDirectionInverted(style));
 }
 
 // Turns the cached main-axis value-indicator span into a conservative local

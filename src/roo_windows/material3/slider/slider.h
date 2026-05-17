@@ -25,6 +25,12 @@ enum class SliderOrientation : uint8_t {
   kVertical,
 };
 
+enum class SliderDirection : uint8_t {
+  kDefault,
+  kNormal,
+  kInverted,
+};
+
 enum class SliderSize : uint8_t {
   kExtraSmall,
   kSmall,
@@ -51,10 +57,10 @@ enum class SliderInsetIconAnchor : uint8_t {
   kEnd,
 };
 
-// Compact packed style state. Read on every paint, so kept inline. Reserved
-// bits leave room for later steps.
+// Compact packed style state. Read on every paint, so kept inline.
 struct SliderStyle {
   SliderOrientation orientation : 1;
+  SliderDirection direction : 2;
   SliderSize size : 3;
   SliderValueIndicatorBehavior value_indicator : 2;
   SliderTickMode tick_mode : 2;
@@ -62,18 +68,33 @@ struct SliderStyle {
 
   constexpr SliderStyle()
       : orientation(SliderOrientation::kHorizontal),
+        direction(SliderDirection::kDefault),
         size(SliderSize::kExtraSmall),
         value_indicator(SliderValueIndicatorBehavior::kHidden),
         tick_mode(SliderTickMode::kAuto),
         show_stop_indicators(false) {}
 
   bool operator==(const SliderStyle& o) const {
-    return orientation == o.orientation && size == o.size &&
-           value_indicator == o.value_indicator && tick_mode == o.tick_mode &&
+    return orientation == o.orientation && direction == o.direction &&
+           size == o.size && value_indicator == o.value_indicator &&
+           tick_mode == o.tick_mode &&
            show_stop_indicators == o.show_stop_indicators;
   }
   bool operator!=(const SliderStyle& o) const { return !(*this == o); }
 };
+
+constexpr SliderDirection ResolveSliderDirection(SliderStyle style) {
+  if (style.direction != SliderDirection::kDefault) {
+    return style.direction;
+  }
+  return style.orientation == SliderOrientation::kVertical
+             ? SliderDirection::kInverted
+             : SliderDirection::kNormal;
+}
+
+constexpr bool IsSliderDirectionInverted(SliderStyle style) {
+  return ResolveSliderDirection(style) == SliderDirection::kInverted;
+}
 
 struct SliderRange {
   float from = 0.0f;
@@ -110,7 +131,8 @@ class Slider : public BasicWidget {
   /// Returns the packed presentation settings used while painting.
   const SliderStyle& style() const { return style_; }
 
-  /// Applies orientation, size, indicator, and stop/tick presentation flags.
+  /// Applies orientation, direction, size, indicator, and stop/tick
+  /// presentation flags.
   bool setStyle(SliderStyle style);
 
   /// Returns the current semantic value after clamping and snapping.
