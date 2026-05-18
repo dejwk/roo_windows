@@ -49,8 +49,6 @@ class RadioListItem : public HorizontalLayout {
   friend class RadioListModel;
 
   void init() {
-    // item().setMargins(MarginSize::kNone);
-    // item().setPadding(PaddingSize::kNone);
     setGravity(kGravityMiddle);
     setPadding(Padding(PaddingSize::kTiny, PaddingSize::kNone));
     button_.setMargins(MarginSize::kNone, MarginSize::kSmall);

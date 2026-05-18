@@ -118,7 +118,6 @@ void TextField::paint(const Canvas& canvas) const {
   }
   roo::string_view text = value_;
   bool starred = isStarred();
-  // bool show_last_glyph = false;
   if (text.empty()) {
     // Show hint with half the opacity.
     text = hint_;

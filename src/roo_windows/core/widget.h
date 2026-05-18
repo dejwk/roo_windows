@@ -44,7 +44,6 @@ static const uint16_t kWidgetOwnedByParent = 0x0001;
 static const uint16_t kWidgetClippedInParent = 0x0002;
 
 static const uint16_t kWidgetEnabled = 0x0004;
-// static const uint16_t kWidgetDisabled = 0x0002;
 static const uint16_t kWidgetHover = 0x0008;
 static const uint16_t kWidgetFocused = 0x0010;
 static const uint16_t kWidgetSelected = 0x0020;
