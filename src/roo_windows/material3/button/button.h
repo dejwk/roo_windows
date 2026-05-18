@@ -110,10 +110,6 @@ class Button : public BasicSurfaceWidget {
   roo::string_view label_;
   const MonoIcon* icon_;
   ButtonVariant variant_;
-  // Cache of the elevation reported on the previous paint, so that we can
-  // notify the framework when elevation changes (e.g. press transitions on
-  // the elevated variant).
-  uint8_t last_elevation_;
 };
 
 }  // namespace material3

@@ -1,6 +1,7 @@
 #include "roo_windows/material3/button/button.h"
 
 #include "gtest/gtest.h"
+#include "roo_icons/outlined/24/action.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/measure_spec.h"
@@ -32,12 +33,21 @@ TEST(Material3Button, ReportsMinimumHeightOfFortyDp) {
   Environment env(scheduler);
 
   Button b(env, "Hi");
-  Dimensions measured =
-      b.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+  EXPECT_EQ(Scaled(40), b.getNaturalDimensions().height());
+}
 
-  // After padding, the measured outer height must reach the Material 3
-  // minimum button height of 40 dp.
-  EXPECT_GE(measured.height(), Scaled(40));
+TEST(Material3Button, DefaultHorizontalPaddingIsSixteenDpPerSide) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+
+  Button label_only(env, "Hi");
+  EXPECT_EQ(Scaled(16), label_only.getPadding().left());
+  EXPECT_EQ(Scaled(16), label_only.getPadding().right());
+
+  Button with_icon(env, "Hi");
+  with_icon.setIcon(&ic_outlined_24_action_done());
+  EXPECT_EQ(Scaled(16), with_icon.getPadding().left());
+  EXPECT_EQ(Scaled(16), with_icon.getPadding().right());
 }
 
 TEST(Material3Button, ContainerRoleMatchesVariant) {
@@ -76,10 +86,20 @@ TEST(Material3Button, ElevatedVariantHasNonzeroRestingElevation) {
   Environment env(scheduler);
 
   Button elevated(env, "E", ButtonVariant::kElevated);
-  EXPECT_EQ(1, elevated.getElevation());
+  EXPECT_EQ(3, elevated.getElevation());
 
   Button filled(env, "F", ButtonVariant::kFilled);
   EXPECT_EQ(0, filled.getElevation());
+}
+
+TEST(Material3Button, DisabledElevatedVariantDropsElevation) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+
+  Button elevated(env, "E", ButtonVariant::kElevated);
+  elevated.setEnabled(false);
+
+  EXPECT_EQ(0, elevated.getElevation());
 }
 
 TEST(Material3Button, IconChangesNaturalWidth) {

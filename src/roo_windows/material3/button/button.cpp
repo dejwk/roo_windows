@@ -20,12 +20,18 @@ namespace {
 // Material 3 button geometry tokens (in dp; scaled by Scaled()).
 constexpr int kMinHeight = 40;
 constexpr int kCornerRadius = 20;
-constexpr int kPadHText = 24;      // text-only horizontal padding.
-constexpr int kPadHLeading = 16;   // leading padding when icon present.
-constexpr int kPadHTrailing = 24;  // trailing padding when icon present.
+constexpr int kPadH = 16;
 constexpr int kPadV = 8;
 constexpr int kIconLabelGap = 8;
 constexpr int kOutlineWidth = 1;
+
+struct ButtonTokens {
+  Color container;
+  Color content;
+  Color outline;
+  uint8_t resting_elevation;
+  uint8_t pressed_elevation;
+};
 
 Color DisabledComposite(const Theme& theme, Color fg, uint8_t alpha) {
   return AlphaBlend(theme.color.surface, fg.withA(alpha));
@@ -46,55 +52,48 @@ ColorRole ContainerRoleFor(ButtonVariant v) {
   return ColorRole::kUndefined;
 }
 
-Color ContainerColorFor(const Theme& theme, ButtonVariant v, bool enabled) {
+ButtonTokens ResolveTokens(const Theme& theme, ButtonVariant v, bool enabled) {
   if (!enabled) {
     if (v == ButtonVariant::kText || v == ButtonVariant::kOutlined) {
-      return Transparent;
+      return ButtonTokens{
+          Transparent, DisabledComposite(theme, theme.color.onSurface, 0x61),
+          v == ButtonVariant::kOutlined
+              ? DisabledComposite(theme, theme.color.onSurface, 0x1F)
+              : Transparent,
+          0, 0};
     }
-    return DisabledComposite(theme, theme.color.onSurface, 0x1F);
+    Color disabled_container =
+        DisabledComposite(theme, theme.color.onSurface, 0x1F);
+    return ButtonTokens{disabled_container,
+                        DisabledComposite(theme, theme.color.onSurface, 0x61),
+                        Transparent, 0, 0};
   }
   switch (v) {
     case ButtonVariant::kFilled:
-      return theme.color.primary;
+      return ButtonTokens{theme.color.primary, theme.color.onPrimary,
+                          Transparent, 0, 0};
     case ButtonVariant::kFilledTonal:
-      return theme.color.secondaryContainer;
+      return ButtonTokens{theme.color.secondaryContainer,
+                          theme.color.onSecondaryContainer, Transparent, 0, 0};
     case ButtonVariant::kElevated:
-      return theme.color.surfaceContainerLow;
+      return ButtonTokens{theme.color.surfaceContainerLow, theme.color.primary,
+                          Transparent, 1, 1};
     case ButtonVariant::kText:
+      return ButtonTokens{Transparent, theme.color.primary, Transparent, 0, 0};
     case ButtonVariant::kOutlined:
-      return Transparent;
+      return ButtonTokens{Transparent, theme.color.onSurfaceVariant,
+                          theme.color.outlineVariant, 0, 0};
   }
-  return Transparent;
-}
-
-Color ContentColorFor(const Theme& theme, ButtonVariant v, bool enabled) {
-  if (!enabled) {
-    return DisabledComposite(theme, theme.color.onSurface, 0x61);
-  }
-  switch (v) {
-    case ButtonVariant::kFilled:
-      return theme.color.onPrimary;
-    case ButtonVariant::kFilledTonal:
-      return theme.color.onSecondaryContainer;
-    case ButtonVariant::kElevated:
-    case ButtonVariant::kText:
-    case ButtonVariant::kOutlined:
-      return theme.color.primary;
-  }
-  return theme.color.primary;
-}
-
-Color OutlineColorFor(const Theme& theme, ButtonVariant v, bool enabled) {
-  if (v != ButtonVariant::kOutlined) return Transparent;
-  if (!enabled) return DisabledComposite(theme, theme.color.onSurface, 0x1F);
-  return theme.color.outline;
-}
-
-uint8_t RestingElevationFor(ButtonVariant v) {
-  return v == ButtonVariant::kElevated ? 1 : 0;
+  return ButtonTokens{Transparent, theme.color.primary, Transparent, 0, 0};
 }
 
 const roo_display::Font& ButtonFont() { return font_button(); }
+
+uint8_t ElevationFor(ButtonVariant variant, bool enabled, bool pressed) {
+  (void)pressed;
+  if (!enabled) return 0;
+  return variant == ButtonVariant::kElevated ? 3 : 0;
+}
 
 }  // namespace
 
@@ -103,18 +102,17 @@ Button::Button(const Environment& env, roo::string_view label,
     : BasicSurfaceWidget(env),
       label_(label),
       icon_(nullptr),
-      variant_(variant),
-      last_elevation_(RestingElevationFor(variant)) {}
+      variant_(variant) {}
 
 void Button::setVariant(ButtonVariant variant) {
   if (variant_ == variant) return;
-  uint8_t prev_elev = last_elevation_;
+  uint8_t old_elevation = getElevation();
   variant_ = variant;
-  last_elevation_ = RestingElevationFor(variant);
   invalidateInterior();
   requestLayout();
-  if (prev_elev != last_elevation_ && isVisible()) {
-    elevationChanged(std::max(prev_elev, last_elevation_));
+  uint8_t new_elevation = getElevation();
+  if (old_elevation != new_elevation && isVisible()) {
+    elevationChanged(std::max(old_elevation, new_elevation));
   }
 }
 
@@ -127,27 +125,23 @@ void Button::setLabel(roo::string_view label) {
 
 void Button::setIcon(const MonoIcon* icon) {
   if (icon_ == icon) return;
-  bool layout_changed = (icon_ == nullptr) != (icon == nullptr);
   icon_ = icon;
   invalidateInterior();
-  if (layout_changed) requestLayout();
+  requestLayout();
 }
 
 Padding Button::getDefaultPadding() const {
-  if (hasIcon()) {
-    return Padding(Scaled((kPadHLeading + kPadHTrailing) / 2), Scaled(kPadV));
-  }
-  return Padding(Scaled(kPadHText), Scaled(kPadV));
+  return Padding(Scaled(kPadH), Scaled(kPadV));
 }
 
 ColorRole Button::containerRole() const { return ContainerRoleFor(variant_); }
 
 Color Button::background() const {
-  return ContainerColorFor(theme(), variant_, isEnabled());
+  return ResolveTokens(theme(), variant_, isEnabled()).container;
 }
 
 Color Button::getOutlineColor() const {
-  return OutlineColorFor(theme(), variant_, isEnabled());
+  return ResolveTokens(theme(), variant_, isEnabled()).outline;
 }
 
 BorderStyle Button::getBorderStyle() const {
@@ -158,19 +152,24 @@ BorderStyle Button::getBorderStyle() const {
   return BorderStyle(r, outline);
 }
 
-uint8_t Button::getElevation() const { return RestingElevationFor(variant_); }
+uint8_t Button::getElevation() const {
+  return ElevationFor(variant_, isEnabled(), isPressed());
+}
 
 Color Button::resolveContentColor() const {
-  return ContentColorFor(theme(), variant_, isEnabled());
+  return ResolveTokens(theme(), variant_, isEnabled()).content;
 }
 
 void Button::notifyStateChanged(uint16_t state_diff) {
-  uint8_t new_elev = getElevation();
-  if (new_elev != last_elevation_) {
-    uint8_t higher = std::max(last_elevation_, new_elev);
-    last_elevation_ = new_elev;
-    if (isVisible()) {
-      elevationChanged(higher);
+  if ((state_diff & (kWidgetPressed | kWidgetEnabled)) != 0) {
+    bool old_pressed =
+        (state_diff & kWidgetPressed) != 0 ? !isPressed() : isPressed();
+    bool old_enabled =
+        (state_diff & kWidgetEnabled) != 0 ? !isEnabled() : isEnabled();
+    uint8_t old_elevation = ElevationFor(variant_, old_enabled, old_pressed);
+    uint8_t new_elevation = getElevation();
+    if (old_elevation != new_elevation && isVisible()) {
+      elevationChanged(std::max(old_elevation, new_elevation));
     }
   }
   BasicSurfaceWidget::notifyStateChanged(state_diff);
@@ -195,14 +194,9 @@ Dimensions Button::getSuggestedMinimumDimensions() const {
     content_w = (text_width > 0) ? text_width : icon_w;
   }
   int16_t content_h = std::max(text_height, icon_h);
-
-  int16_t pad_h = hasIcon() ? (Scaled(kPadHLeading) + Scaled(kPadHTrailing))
-                            : (Scaled(kPadHText) * 2);
-  int16_t pad_v = Scaled(kPadV) * 2;
-  int16_t outer_w = content_w + pad_h;
-  int16_t outer_h = std::max<int16_t>((int16_t)(content_h + pad_v),
-                                      (int16_t)Scaled(kMinHeight));
-  return Dimensions(outer_w, outer_h);
+  int16_t min_content_h =
+      std::max<int16_t>(0, (int16_t)(Scaled(kMinHeight) - 2 * Scaled(kPadV)));
+  return Dimensions(content_w, std::max(content_h, min_content_h));
 }
 
 void Button::paint(const Canvas& canvas) const {
