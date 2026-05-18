@@ -211,6 +211,46 @@ inline Rect BoundaryTrackStripRect(const SliderAxisMetrics& axis,
       axis.boxFromPrimaryCross(primary, 0, primary, axis.crossSpan() - 1));
 }
 
+// Unions `rect` with the boundary strips that need repainting when either the
+// `old_segments` or `new_segments` configuration results in a reduced
+// track-edge radius at the corresponding slider boundary. Used by the
+// invalidate-on-value-change path so a thumb sliding into the corner does not
+// leave behind a stale rounded cap.
+inline Rect IncludeBoundaryRadiusStrips(
+    Rect rect, const SliderAxisMetrics& axis,
+    const SliderPaintStopSegment* old_segments, int old_segment_count,
+    const SliderPaintStopSegment* new_segments, int new_segment_count,
+    int16_t track_radius) {
+  for (bool start_boundary : {true, false}) {
+    if (HasReducedTrackRadiusAtBoundary(axis, old_segments, old_segment_count,
+                                        track_radius, start_boundary) ||
+        HasReducedTrackRadiusAtBoundary(axis, new_segments, new_segment_count,
+                                        track_radius, start_boundary)) {
+      rect = Rect::Extent(rect, BoundaryTrackStripRect(axis, start_boundary));
+    }
+  }
+  return rect;
+}
+
+// Visual band the slider track occupies on the cross axis. Both flavors paint
+// the same band, so both layouts (single-slider's only layout and either of
+// the range slider's per-thumb layouts) carry identical values here.
+struct TrackCrossBand {
+  int16_t track_cross_start;
+  int16_t track_cross_span;
+  float track_min_cross;
+  float track_max_cross;
+};
+
+// Renders every active/inactive run of `segments` using the track tokens. The
+// track tile is widened at segment ends with a reduced radius so the visible
+// rounded caps land cleanly on top of (or alongside) the surrounding stops.
+void PaintTrackSegments(const Canvas& canvas, const Rect& widget_bounds,
+                        const SliderAxisMetrics& axis,
+                        const SliderPaintStopSegment* segments,
+                        int segment_count, const TrackCrossBand& cross_band,
+                        int16_t track_radius, const SliderPaintTokens& tokens);
+
 inline Color TrackColorForSegment(const SliderPaintTokens& tokens,
                                   const SliderPaintStopSegment& segment) {
   return segment.active ? tokens.active_track : tokens.inactive_track;

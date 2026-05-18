@@ -23,6 +23,33 @@ roo_display::Box TrackSegmentClipBox(const SliderAxisMetrics& axis,
                                   cross_end);
 }
 
+void PaintTrackSegments(const Canvas& canvas, const Rect& widget_bounds,
+                        const SliderAxisMetrics& axis,
+                        const SliderPaintStopSegment* segments,
+                        int segment_count, const TrackCrossBand& cross_band,
+                        int16_t track_radius, const SliderPaintTokens& tokens) {
+  for (int i = 0; i < segment_count; ++i) {
+    roo_display::Box track_clip =
+        TrackSegmentClipBox(axis, segments[i], cross_band.track_cross_start,
+                            cross_band.track_cross_span);
+    if (track_clip.empty()) continue;
+    int16_t segment_track_radius =
+        ReducedTrackRadiusForSegment(axis, segments[i], track_radius);
+    SliderAxisMetrics::PaintRect track_bounds = axis.paintRectFromPrimaryCross(
+        TrackShapeMinPrimary(segments[i].min_primary, segment_track_radius),
+        cross_band.track_min_cross,
+        TrackShapeMaxPrimary(segments[i].max_primary, axis.primarySpan(),
+                             segment_track_radius),
+        cross_band.track_max_cross);
+    auto track_piece = roo_display::SmoothFilledRoundRect(
+        track_bounds.x_min, track_bounds.y_min, track_bounds.x_max,
+        track_bounds.y_max, segment_track_radius,
+        segments[i].active ? tokens.active_track : tokens.inactive_track);
+    DrawTrackPiece(canvas, track_piece, widget_bounds, track_clip,
+                   axis.isVertical());
+  }
+}
+
 namespace {
 
 // True when a stop center belongs to the specified segment, allowing for small

@@ -78,9 +78,6 @@ class RangeSlider : public BasicWidget {
   /// Range sliders do not add default outer margins.
   Margins getDefaultMargins() const override { return Margins(0); }
 
-  /// Paints the range track and both thumbs for the current slider state.
-  void paint(const Canvas& canvas) const override;
-
   /// Returns the minimum square footprint required by the active size preset.
   Dimensions getSuggestedMinimumDimensions() const override;
 

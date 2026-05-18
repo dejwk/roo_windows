@@ -23,13 +23,16 @@ using Tokens = internal::SliderPaintTokens;
 using StopSegment = internal::SliderPaintStopSegment;
 using internal::DrawTrackPiece;
 using internal::GetHandleTileBounds;
+using internal::IncludeBoundaryRadiusStrips;
 using internal::IndicatorDirtyRectFromSpan;
 using internal::MakeSliderAxisMetrics;
 using internal::PaintStopRuns;
+using internal::PaintTrackSegments;
 using internal::ResolveTokens;
 using internal::ShouldRenderStops;
 using internal::ShouldRenderTicks;
 using internal::ThumbWidthForState;
+using internal::TrackCrossBand;
 using internal::TrackGapForThumbWidth;
 using internal::TrackSegmentClipBox;
 using internal::TrackShapeMaxPrimary;
@@ -91,36 +94,32 @@ void NormalizeOrderedValuesWithSeparation(const SliderRange& range,
                                           float& normalized_start,
                                           float& normalized_end) {
   float effective_min_separation = ClampMinSeparation(range, min_separation);
-
-  if (active_thumb == 0) {
-    normalized_end = internal::NormalizeSliderValueForRange(
-        end_value, range.from, range.to, range.step);
-    normalized_start = internal::NormalizeSliderValueForRange(
-        start_value, range.from, range.to, range.step);
-    if (normalized_start <= normalized_end - effective_min_separation) {
-      return;
-    }
-    normalized_start = LargestValidValueAtOrBelow(
-        range, normalized_end - effective_min_separation);
-    return;
-  }
-  if (active_thumb == 1) {
-    normalized_start = internal::NormalizeSliderValueForRange(
-        start_value, range.from, range.to, range.step);
-    normalized_end = internal::NormalizeSliderValueForRange(
-        end_value, range.from, range.to, range.step);
-    if (normalized_end >= normalized_start + effective_min_separation) {
-      return;
-    }
-    normalized_end = SmallestValidValueAtOrAbove(
-        range, normalized_start + effective_min_separation);
-    return;
-  }
-
   normalized_start = internal::NormalizeSliderValueForRange(
       start_value, range.from, range.to, range.step);
   normalized_end = internal::NormalizeSliderValueForRange(end_value, range.from,
                                                           range.to, range.step);
+
+  // Single-thumb drag: only the moving thumb is clamped; the other remains the
+  // anchor. Pull the moving thumb onto the nearest legal value that preserves
+  // the minimum separation, never swapping with the anchor.
+  if (active_thumb == 0) {
+    if (normalized_start > normalized_end - effective_min_separation) {
+      normalized_start = LargestValidValueAtOrBelow(
+          range, normalized_end - effective_min_separation);
+    }
+    return;
+  }
+  if (active_thumb == 1) {
+    if (normalized_end < normalized_start + effective_min_separation) {
+      normalized_end = SmallestValidValueAtOrAbove(
+          range, normalized_start + effective_min_separation);
+    }
+    return;
+  }
+
+  // External setter (no active thumb): order the values, then enforce the
+  // min separation by expanding `end` upward; if that would exceed range.to,
+  // pin `end` to the max and pull `start` back instead.
   if (normalized_start > normalized_end) {
     std::swap(normalized_start, normalized_end);
   }
@@ -185,7 +184,6 @@ struct ThumbPaintMetrics {
 // Resolves the per-thumb paint metrics used to lay out the two independent
 // handles against the shared track.
 ThumbPaintMetrics ResolveThumbPaintMetrics(
-
     const SliderRange& range, float value,
     const internal::SliderAxisMetrics& axis,
     const internal::SliderSizeMetrics& size_metrics, bool pressed) {
@@ -263,19 +261,9 @@ Rect InvalidationRectForValueChange(
   StopSegment new_segments[3];
   int new_segment_count = 0;
   BuildTrackSegments(axis, new_start, new_end, new_segments, new_segment_count);
-  if (HasReducedTrackRadiusAtBoundary(axis, old_segments, old_segment_count,
-                                      size_metrics.track_radius, true) ||
-      HasReducedTrackRadiusAtBoundary(axis, new_segments, new_segment_count,
-                                      size_metrics.track_radius, true)) {
-    rect = Rect::Extent(rect, BoundaryTrackStripRect(axis, true));
-  }
-  if (HasReducedTrackRadiusAtBoundary(axis, old_segments, old_segment_count,
-                                      size_metrics.track_radius, false) ||
-      HasReducedTrackRadiusAtBoundary(axis, new_segments, new_segment_count,
-                                      size_metrics.track_radius, false)) {
-    rect = Rect::Extent(rect, BoundaryTrackStripRect(axis, false));
-  }
-  return rect;
+  return IncludeBoundaryRadiusStrips(
+      rect, axis, old_segments, old_segment_count, new_segments,
+      new_segment_count, size_metrics.track_radius);
 }
 
 }  // namespace
@@ -699,12 +687,6 @@ void RangeSlider::notifyStateChanged(uint16_t state_diff) {
   }
 }
 
-void RangeSlider::paint(const Canvas& canvas) const {
-  Metrics metrics = buildMetrics();
-  Tokens tokens = ResolveTokens(*this);
-  paintTrackAndThumb(canvas, metrics, tokens);
-}
-
 void RangeSlider::paintTrackAndThumb(const Canvas& canvas,
                                      const Metrics& metrics,
                                      const Tokens& tokens) const {
@@ -733,29 +715,13 @@ void RangeSlider::paintTrackAndThumb(const Canvas& canvas,
 
   // Paint the same segment model used by paintStops() so the track and stop
   // passes agree on where each active or inactive run begins and ends.
-  for (int i = 0; i < metrics.segment_count; ++i) {
-    roo_display::Box track_clip =
-        TrackSegmentClipBox(metrics.axis, metrics.segments[i],
-                            metrics.start.layout.track_cross_start,
-                            metrics.size_metrics.track_height);
-    if (track_clip.empty()) continue;
-    int16_t segment_track_radius = ReducedTrackRadiusForSegment(
-        metrics.axis, metrics.segments[i], metrics.size_metrics.track_radius);
-    auto track_bounds = metrics.axis.paintRectFromPrimaryCross(
-        TrackShapeMinPrimary(metrics.segments[i].min_primary,
-                             segment_track_radius),
-        metrics.start.layout.track_min_cross,
-        TrackShapeMaxPrimary(metrics.segments[i].max_primary,
-                             metrics.axis.primarySpan(), segment_track_radius),
-        metrics.start.layout.track_max_cross);
-    auto track_piece = SmoothFilledRoundRect(
-        track_bounds.x_min, track_bounds.y_min, track_bounds.x_max,
-        track_bounds.y_max, segment_track_radius,
-        metrics.segments[i].active ? tokens.active_track
-                                   : tokens.inactive_track);
-    DrawTrackPiece(canvas, track_piece, widget_bounds, track_clip,
-                   metrics.axis.isVertical());
-  }
+  PaintTrackSegments(canvas, widget_bounds, metrics.axis, metrics.segments,
+                     metrics.segment_count,
+                     TrackCrossBand{metrics.start.layout.track_cross_start,
+                                    metrics.size_metrics.track_height,
+                                    metrics.start.layout.track_min_cross,
+                                    metrics.start.layout.track_max_cross},
+                     metrics.size_metrics.track_radius, tokens);
   canvas.drawTiled(start_handle, start_handle_tile_bounds, kNoAlign);
   canvas.drawTiled(end_handle, end_handle_tile_bounds, kNoAlign);
 }

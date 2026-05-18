@@ -166,9 +166,6 @@ class Slider : public BasicWidget {
   /// Sliders do not add default outer margins.
   Margins getDefaultMargins() const override { return Margins(0); }
 
-  /// Paints the slider track and thumb for the current slider state.
-  void paint(const Canvas& canvas) const override;
-
   /// Returns the minimum square footprint required by the active size preset.
   Dimensions getSuggestedMinimumDimensions() const override;
 

@@ -27,15 +27,18 @@ using Tokens = internal::SliderPaintTokens;
 using StopSegment = internal::SliderPaintStopSegment;
 using internal::DrawTrackPiece;
 using internal::GetHandleTileBounds;
+using internal::IncludeBoundaryRadiusStrips;
 using internal::IndicatorDirtyRectFromSpan;
 using internal::kStopMarkRadiusPixels;
 using internal::MakeSliderAxisMetrics;
 using internal::PaintStopRuns;
+using internal::PaintTrackSegments;
 using internal::ResolveTokens;
 using internal::SegmentContainsRange;
 using internal::ShouldRenderStops;
 using internal::ShouldRenderTicks;
 using internal::ThumbWidthForState;
+using internal::TrackCrossBand;
 using internal::TrackGapForThumbWidth;
 using internal::TrackSegmentClipBox;
 using internal::TrackShapeMaxPrimary;
@@ -243,17 +246,16 @@ Slider::Metrics Slider::buildMetrics() const {
 }
 
 Slider::Metrics Slider::buildMetrics(float thumb_center, bool pressed) const {
+  int16_t thumb_width = ThumbWidthForState(pressed);
   Metrics metrics{
       .size_metrics = internal::ResolveSliderSizeMetrics(style_.size),
       .axis = MakeSliderAxisMetrics(*this),
-      .thumb_width = 0,
-      .track_gap = 0,
+      .thumb_width = thumb_width,
+      .track_gap = TrackGapForThumbWidth(thumb_width),
       .layout = internal::SliderVisualMetrics(),
       .segments = {},
       .segment_count = 0,
   };
-  metrics.thumb_width = ThumbWidthForState(pressed);
-  metrics.track_gap = TrackGapForThumbWidth(metrics.thumb_width);
   metrics.layout = internal::ResolveSliderVisualMetrics(
       metrics.axis, thumb_center, metrics.thumb_width,
       metrics.size_metrics.track_height, metrics.track_gap,
@@ -530,24 +532,13 @@ void Slider::invalidateValueChange(const internal::SliderAxisMetrics& axis,
   Rect content_envelope = icon_envelope.empty()
                               ? thumb_rect
                               : Rect::Extent(thumb_rect, icon_envelope);
-  if (HasReducedTrackRadiusAtBoundary(
-          axis, old_metrics.segments, old_metrics.segment_count,
-          old_metrics.size_metrics.track_radius, true) ||
-      HasReducedTrackRadiusAtBoundary(
-          axis, new_metrics.segments, new_metrics.segment_count,
-          new_metrics.size_metrics.track_radius, true)) {
-    content_envelope =
-        Rect::Extent(content_envelope, BoundaryTrackStripRect(axis, true));
-  }
-  if (HasReducedTrackRadiusAtBoundary(
-          axis, old_metrics.segments, old_metrics.segment_count,
-          old_metrics.size_metrics.track_radius, false) ||
-      HasReducedTrackRadiusAtBoundary(
-          axis, new_metrics.segments, new_metrics.segment_count,
-          new_metrics.size_metrics.track_radius, false)) {
-    content_envelope =
-        Rect::Extent(content_envelope, BoundaryTrackStripRect(axis, false));
-  }
+  // Track-corner radius shrinks when the active/inactive boundary is near
+  // the slider's edge, so include those edge strips on either side if either
+  // the old or new layout reduces the radius there.
+  content_envelope = IncludeBoundaryRadiusStrips(
+      content_envelope, axis, old_metrics.segments, old_metrics.segment_count,
+      new_metrics.segments, new_metrics.segment_count,
+      old_metrics.size_metrics.track_radius);
   Rect bubble_envelope(0, 0, -1, -1);
   if (IndicatorEnabled(style_) && ShowsValueIndicator(*this)) {
     float c_new = axis.displayPrimary(new_center);
@@ -619,12 +610,6 @@ void Slider::notifyStateChanged(uint16_t state_diff) {
   }
 }
 
-void Slider::paint(const Canvas& canvas) const {
-  (void)canvas;
-  LOG(DFATAL) << "Slider::paint() should not be called; render via "
-              << "paintWidgetContents()/paintTrackAndThumb() instead";
-}
-
 void Slider::paintTrackAndThumb(const Canvas& canvas, const Metrics& metrics,
                                 const Tokens& tokens) const {
   float center_anchor_primary =
@@ -642,28 +627,13 @@ void Slider::paintTrackAndThumb(const Canvas& canvas, const Metrics& metrics,
 
   // Paint the same segment model used by stop rendering so track and stop
   // passes agree on every active/inactive boundary.
-  for (int i = 0; i < metrics.segment_count; ++i) {
-    roo_display::Box track_clip = TrackSegmentClipBox(
-        metrics.axis, metrics.segments[i], metrics.layout.track_cross_start,
-        metrics.size_metrics.track_height);
-    if (track_clip.empty()) continue;
-    int16_t segment_track_radius = ReducedTrackRadiusForSegment(
-        metrics.axis, metrics.segments[i], metrics.size_metrics.track_radius);
-    auto track_bounds = metrics.axis.paintRectFromPrimaryCross(
-        TrackShapeMinPrimary(metrics.segments[i].min_primary,
-                             segment_track_radius),
-        metrics.layout.track_min_cross,
-        TrackShapeMaxPrimary(metrics.segments[i].max_primary,
-                             metrics.axis.primarySpan(), segment_track_radius),
-        metrics.layout.track_max_cross);
-    auto track_piece = SmoothFilledRoundRect(
-        track_bounds.x_min, track_bounds.y_min, track_bounds.x_max,
-        track_bounds.y_max, segment_track_radius,
-        metrics.segments[i].active ? tokens.active_track
-                                   : tokens.inactive_track);
-    DrawTrackPiece(canvas, track_piece, widget_bounds, track_clip,
-                   metrics.axis.isVertical());
-  }
+  PaintTrackSegments(canvas, widget_bounds, metrics.axis, metrics.segments,
+                     metrics.segment_count,
+                     TrackCrossBand{metrics.layout.track_cross_start,
+                                    metrics.size_metrics.track_height,
+                                    metrics.layout.track_min_cross,
+                                    metrics.layout.track_max_cross},
+                     metrics.size_metrics.track_radius, tokens);
   if (variant_ == SliderVariant::kCentered) {
     // The center gap is painted back to the widget background after the track
     // pieces so the left and right halves remain visibly separated at zero.
