@@ -241,14 +241,15 @@ const ClickAnimation* ClickAnimationController(const Widget& widget);
 
 ## Testing Plan
 
-1. Add focused tests for the new `Widget::getClickAnimation()` semantics:
+1. Every implementation change in this area must ship with focused unit tests.
+2. Add focused tests for the new `Widget::getClickAnimation()` semantics:
    target widget sees a non-null animation, non-target widgets see `nullptr`.
-2. Add tests for `ClickAnimation` progress and center accessors.
-3. Add a button test that verifies click animation changes border radius
+3. Add tests for `ClickAnimation` progress and center accessors.
+4. Add a button test that verifies click animation changes border radius
    gradually rather than stepping immediately to the pressed shape.
-4. Add a repaint-scope test for a widget whose click animation widens
+5. Add a repaint-scope test for a widget whose click animation widens
   `getParentTransientPaintBounds()`.
-5. Re-run the existing click-overlay and button suites to catch regressions in
+6. Re-run the existing click-overlay and button suites to catch regressions in
    deferred click delivery and press feedback.
 
 ## Caveats
