@@ -28,6 +28,8 @@ Primary reference:
   not.
 - Keep the base widget cheap and push rare features into subclasses or shared
   const tables.
+- Public widget headers should document every public method with Doxygen
+  comments so the API contract stays visible at the declaration site.
 - Prefer virtual no-op hooks over per-instance `std::function` callbacks.
 - Resolve default colors and geometry from the active `Theme` whenever
   possible.
@@ -164,6 +166,7 @@ Before finalizing a custom widget paint path, verify:
 - Base per-instance RAM cost is justified.
 - Optional features are implemented as a subclass, shared const pointer, or
   virtual hook unless every instance truly needs them.
+- Every public method in a public widget header has a Doxygen comment.
 - Dirty repaint minimizes written pixels.
 - Invalidated repaint covers the entire invalid region.
 - No pixel is written more than once with a different color within the same
