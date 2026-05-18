@@ -128,7 +128,10 @@ class Button : public BasicSurfaceWidget {
   /// Returns the resolved outline color, used by the outlined variant.
   Color getOutlineColor() const override;
 
-  /// Returns the border radius and outline width for the current variant.
+  /// Returns the current border radius and outline width.
+  ///
+  /// While the button's click animation is active, the corner radius animates
+  /// toward the Material 3 pressed shape.
   BorderStyle getBorderStyle() const override;
 
   /// Returns the resting elevation advertised to the surface framework.

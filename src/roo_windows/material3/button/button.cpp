@@ -1,10 +1,12 @@
 #include "roo_windows/material3/button/button.h"
 
 #include <algorithm>
+#include <cmath>
 
 #include "roo_display/color/color.h"
 #include "roo_display/ui/alignment.h"
 #include "roo_display/ui/text_label.h"
+#include "roo_windows/core/click_animation.h"
 
 using roo_display::AlphaBlend;
 using roo_display::kCenter;
@@ -21,6 +23,7 @@ namespace {
 constexpr int kIconLabelGap = 8;
 constexpr int kOutlineWidth = 1;
 constexpr uint8_t kFullCornerRadius = 0xFF;
+constexpr float kShapeMorphProgressScale = 3.0f;
 
 struct ButtonGeometryTokens {
   uint8_t height_dp;
@@ -173,6 +176,29 @@ uint8_t ElevationFor(ButtonVariant variant, bool enabled, bool pressed) {
   return variant == ButtonVariant::kElevated ? 3 : 0;
 }
 
+uint8_t RestingCornerRadiusPx(const Button& button,
+                              const ButtonGeometryTokens& geometry) {
+  if (button.shape() != ButtonShape::kRound) {
+    return (uint8_t)std::min<int>(Scaled(geometry.square_corner_radius_dp),
+                                  255);
+  }
+  int16_t diameter = std::min<int16_t>(button.width(), button.height());
+  if (diameter <= 0) {
+    diameter = Scaled(geometry.height_dp);
+  }
+  return (uint8_t)std::min<int16_t>(diameter / 2, 255);
+}
+
+uint8_t PressedCornerRadiusPx(const ButtonGeometryTokens& geometry) {
+  return (uint8_t)std::min<int>(Scaled(geometry.pressed_corner_radius_dp), 255);
+}
+
+uint8_t InterpolateCornerRadiusPx(uint8_t from, uint8_t to, float progress) {
+  if (progress <= 0.0f) return from;
+  if (progress >= 1.0f) return to;
+  return (uint8_t)std::lround(from + (to - from) * progress);
+}
+
 }  // namespace
 
 Button::Button(const Environment& env, roo::string_view label,
@@ -262,23 +288,34 @@ Color Button::getOutlineColor() const {
 
 BorderStyle Button::getBorderStyle() const {
   const ButtonGeometryTokens& geometry = GeometryTokensFor(size());
-  int corner_radius_dp = 0;
-  // Pressed state uses a shared "more square" shape regardless of the resting
-  // corner family, matching the Material 3 shape morph behavior.
-  if (isPressed()) {
-    corner_radius_dp = geometry.pressed_corner_radius_dp;
-  } else if (shape() == ButtonShape::kRound) {
-    corner_radius_dp = kFullCornerRadius;
-  } else {
-    corner_radius_dp = geometry.square_corner_radius_dp;
-  }
-  uint8_t r = corner_radius_dp == kFullCornerRadius
-                  ? kFullCornerRadius
-                  : (uint8_t)std::min<int>(Scaled(corner_radius_dp), 255);
   SmallNumber outline = variant() == ButtonVariant::kOutlined
                             ? SmallNumber(Scaled(kOutlineWidth))
                             : SmallNumber(0);
-  return BorderStyle(r, outline);
+  const ClickAnimation* anim = getClickAnimation();
+  if (anim == nullptr && !isPressed()) {
+    if (shape() == ButtonShape::kRound) {
+      return BorderStyle(kFullCornerRadius, outline);
+    }
+    return BorderStyle(RestingCornerRadiusPx(*this, geometry), outline);
+  }
+
+  uint8_t pressed_radius = PressedCornerRadiusPx(geometry);
+  uint8_t corner_radius = 0;
+  if (anim != nullptr) {
+    // Let the shape settle early so the button reaches its pressed geometry
+    // before the longer click animation finishes.
+    float morph_progress =
+        std::min(1.0f, anim->progress() * kShapeMorphProgressScale);
+    corner_radius = InterpolateCornerRadiusPx(
+        RestingCornerRadiusPx(*this, geometry), pressed_radius, morph_progress);
+  } else if (isPressed()) {
+    // Pressed state uses a shared "more square" shape regardless of the
+    // resting corner family, matching the Material 3 shape morph behavior.
+    corner_radius = pressed_radius;
+  } else {
+    corner_radius = RestingCornerRadiusPx(*this, geometry);
+  }
+  return BorderStyle(corner_radius, outline);
 }
 
 uint8_t Button::getElevation() const {

@@ -1,6 +1,9 @@
 #include "gtest/gtest.h"
+#include "roo_display.h"
+#include "roo_display/core/offscreen.h"
 #include "roo_icons/outlined/24/action.h"
 #include "roo_scheduler.h"
+#include "roo_windows/core/application.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/measure_spec.h"
 #include "roo_windows/material3/button/button.h"
@@ -8,6 +11,29 @@
 namespace roo_windows {
 namespace material3 {
 namespace {
+
+class Material3ButtonClickAnimationTest : public testing::Test {
+ protected:
+  static constexpr int16_t kWidth = 160;
+  static constexpr int16_t kHeight = 80;
+
+  Material3ButtonClickAnimationTest()
+      : offscreen_(kWidth, kHeight, raster_, roo_display::Argb4444()),
+        display_(offscreen_),
+        env_(scheduler_),
+        app_(&env_, display_) {}
+
+  bool refresh(roo_time::Uptime deadline = roo_time::Uptime::Max()) {
+    return app_.refresh(deadline);
+  }
+
+  roo::byte raster_[kWidth * kHeight * 2];
+  roo_display::OffscreenDevice<roo_display::Argb4444> offscreen_;
+  roo_display::Display display_;
+  roo_scheduler::Scheduler scheduler_;
+  Environment env_;
+  Application app_;
+};
 
 // Verifies that a default button comes up with the intended Material 3 visual
 // variant and geometry selectors, while preserving the supplied label.
@@ -191,6 +217,61 @@ TEST(Material3Button, IconChangesNaturalWidth) {
   Dimensions with_icon =
       b.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
   EXPECT_GT(with_icon.width(), text_only.width());
+}
+
+// Verifies that square buttons morph their corner radius during the first half
+// of the click animation, then settle at the pressed radius.
+TEST_F(Material3ButtonClickAnimationTest,
+       SquareButtonCornerRadiusSettlesMidwayThroughClickAnimation) {
+  auto button = std::make_unique<Button>(env_, "Save");
+  Button* button_ptr = button.get();
+  button_ptr->setShape(ButtonShape::kSquare);
+
+  app_.add(std::move(button), roo_display::Box(20, 20, 139, 59));
+  ASSERT_TRUE(refresh());
+
+  uint8_t resting_radius =
+      button_ptr->getBorderStyle().top_left_corner_radius();
+  uint8_t pressed_radius = (uint8_t)Scaled(8);
+  EXPECT_EQ((uint8_t)Scaled(12), resting_radius);
+
+  button_ptr->onShowPress(button_ptr->width() / 2, button_ptr->height() / 2);
+
+  delay(kPressAnimationMillis / 4);
+  uint8_t animated_radius =
+      button_ptr->getBorderStyle().top_left_corner_radius();
+  EXPECT_LT(animated_radius, resting_radius);
+  EXPECT_GT(animated_radius, pressed_radius);
+
+  delay(kPressAnimationMillis / 4 + 20);
+  EXPECT_EQ(pressed_radius,
+            button_ptr->getBorderStyle().top_left_corner_radius());
+}
+
+// Verifies that round buttons keep their pill radius at rest, animate away
+// from it early, and settle at the pressed radius by mid-click.
+TEST_F(Material3ButtonClickAnimationTest,
+       RoundButtonCornerRadiusSettlesMidwayThroughClickAnimation) {
+  auto button = std::make_unique<Button>(env_, "Save");
+  Button* button_ptr = button.get();
+
+  app_.add(std::move(button), roo_display::Box(20, 20, 139, 59));
+  ASSERT_TRUE(refresh());
+
+  uint8_t pressed_radius = (uint8_t)Scaled(8);
+  EXPECT_EQ(0xFF, button_ptr->getBorderStyle().top_left_corner_radius());
+
+  button_ptr->onShowPress(button_ptr->width() / 2, button_ptr->height() / 2);
+
+  delay(kPressAnimationMillis / 4);
+  uint8_t animated_radius =
+      button_ptr->getBorderStyle().top_left_corner_radius();
+  EXPECT_LT(animated_radius, (uint8_t)0xFF);
+  EXPECT_GT(animated_radius, pressed_radius);
+
+  delay(kPressAnimationMillis / 4 + 20);
+  EXPECT_EQ(pressed_radius,
+            button_ptr->getBorderStyle().top_left_corner_radius());
 }
 
 }  // namespace
