@@ -301,6 +301,9 @@ enum class InteractionState {
   kDragged,
 };
 
+/// Material 3 palette: maps each `ColorRole` to a concrete color and provides
+/// helpers for resolving foreground / accent colors against a given
+/// background role.
 struct ColorTheme {
   roo_display::Color primary;
   roo_display::Color primaryVariant;
@@ -338,6 +341,8 @@ struct ColorTheme {
   roo_display::Color inversePrimary;
   roo_display::Color surfaceTint;
 
+  /// Returns the palette color for the supplied semantic role. `kUndefined`
+  /// resolves to fully transparent.
   roo_display::Color role(ColorRole role) const {
     switch (role) {
       case ColorRole::kUndefined:
@@ -412,6 +417,8 @@ struct ColorTheme {
     return background;
   }
 
+  /// Returns the standard foreground ("on") color for content drawn against
+  /// a background painted with `bg_role`.
   roo_display::Color contentColorFor(ColorRole bg_role) const {
     switch (bg_role) {
       case ColorRole::kPrimary:
@@ -448,6 +455,8 @@ struct ColorTheme {
     }
   }
 
+  /// Returns the accent (highlight / call-to-action) color appropriate for
+  /// content drawn against `bg_role`.
   roo_display::Color accentColorFor(ColorRole bg_role) const {
     switch (bg_role) {
       case ColorRole::kPrimary:
@@ -473,6 +482,9 @@ struct ColorTheme {
     }
   }
 
+  /// Reverse-maps a concrete color back to its best-matching semantic role.
+  /// Useful for widgets that receive an explicit color and need to derive
+  /// matching on-content / state colors.
   ColorRole roleForColor(roo_display::Color bg) const {
     if (bg == surface) {
       return ColorRole::kSurface;
@@ -568,10 +580,13 @@ struct StateOpacityTheme {
   const uint8_t draggedOnError;
 };
 
+/// Material 3 theme: palette plus per-state opacity overrides.
 struct Theme {
   struct ColorTheme color;
   struct StateOpacityTheme state;
 
+  /// Returns the state-layer opacity (0..255) applied when a widget painted
+  /// against `bg_role` is in `interaction`.
   uint8_t opacity(ColorRole bg_role, InteractionState interaction) const {
     switch (interaction) {
       case InteractionState::kHover:
@@ -793,7 +808,9 @@ struct KeyboardColorTheme {
   roo_display::Color text;
 };
 
+/// Returns the framework's default Material 3 theme.
 const Theme& DefaultTheme();
+/// Returns the framework's default on-screen keyboard color theme.
 const KeyboardColorTheme& DefaultKeyboardColorTheme();
 
 }  // namespace roo_windows

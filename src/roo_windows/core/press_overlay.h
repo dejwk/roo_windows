@@ -26,8 +26,11 @@ inline constexpr roo_display::Color AverageColors(roo_display::Color c1,
 /// `Clipper` pipeline without materializing pixels.
 class PressOverlay : public roo_display::Rasterizable {
  public:
+  /// Creates an inert overlay (radius zero, transparent foreground).
   PressOverlay() : PressOverlay(0, 0, 0, roo_display::color::Transparent) {}
 
+  /// Creates an overlay drawing a circle of radius `r` at `(x, y)` (device
+  /// coordinates) filled with `fg`, optionally over a background `bg`.
   PressOverlay(int16_t x, int16_t y, int16_t r, roo_display::Color fg,
                roo_display::Color bg = roo_display::color::Transparent)
       : x_(x),
@@ -42,8 +45,12 @@ class PressOverlay : public roo_display::Rasterizable {
         clip_circle_r_(),
         clip_circle_r_sq_() {}
 
+  /// Removes any active circular clip, letting the overlay extend over its
+  /// full square bounding box.
   void unsetClipCircle() { clip_circle_ = false; }
 
+  /// Confines subsequent rasterization to the disk of radius `r` centered at
+  /// `(x, y)`. Used to keep ripples within a widget's rounded silhouette.
   void setClipCircle(float x, float y, float r) {
     clip_circle_ = true;
     clip_circle_r_ = r;

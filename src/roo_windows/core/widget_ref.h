@@ -2,17 +2,22 @@
 
 namespace roo_windows {
 
-// A type of a smart pointer to a widget, with optional ownership.
+/// Move-only smart pointer to a `Widget`, with optional ownership.
+///
+/// Used by container APIs that need to accept either a caller-owned reference
+/// (`Widget&`) or a unique pointer that should be adopted. The contained
+/// widget is `delete`d on destruction only when the ref was constructed with
+/// `std::unique_ptr<T>`.
 class WidgetRef {
  public:
-  // Creates a 'null' widget ref.
+  /// Creates a null widget ref.
   WidgetRef() : ptr_(nullptr), is_owned_(false) {}
 
-  // Creates a WidgetRef that owns the widget.
+  /// Adopts `w`; the widget will be deleted when this ref is destroyed.
   template <typename T>
   WidgetRef(std::unique_ptr<T> w) : ptr_(w.release()), is_owned_(true) {}
 
-  // Creates a WidgetRef that does not own the widget.
+  /// Borrows `w`; ownership stays with the caller.
   WidgetRef(Widget& w) : ptr_(&w), is_owned_(false) {}
 
   WidgetRef(const WidgetRef& w) = delete;
@@ -33,15 +38,21 @@ class WidgetRef {
   const Widget* operator->() const { return ptr_; }
   const Widget& operator*() const { return *ptr_; }
 
+  /// Returns the raw pointer to the referenced widget (may be nullptr).
   Widget* get() { return ptr_; }
+  /// Returns the raw pointer to the referenced widget (may be nullptr).
   const Widget* get() const { return ptr_; }
 
+  /// Relinquishes ownership and returns the underlying pointer. The caller
+  /// becomes responsible for deleting the widget if it was owned.
   Widget* release() {
     Widget* result = ptr_;
     ptr_ = nullptr;
     return result;
   }
 
+  /// Returns true if this ref owns the widget (i.e. it will delete on
+  /// destruction).
   bool is_owned() const { return is_owned_; }
 
  private:

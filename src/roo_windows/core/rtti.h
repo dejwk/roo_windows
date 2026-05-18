@@ -7,6 +7,10 @@
 
 namespace roo_windows {
 
+/// Returns a demangled, human-readable type name for the dynamic type of `t`.
+///
+/// Falls back to the raw mangled `typeid().name()` if demangling fails, and
+/// returns an empty string when the toolchain was built without RTTI.
 template <typename T>
 std::string GetTypeName(const T& t) {
 #if defined(__GXX_RTTI)

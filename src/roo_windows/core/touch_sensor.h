@@ -16,6 +16,8 @@ namespace roo_windows {
 /// buffer, and lets the consumer `drain()` them.
 class TouchSensor {
  public:
+  /// Single sample drained from the touch queue. `velocity_x`/`velocity_y`
+  /// are filtered pixels-per-second estimates from the recent move history.
   struct Event {
     enum Type : uint8_t { DOWN, MOVE, UP };
 
@@ -29,17 +31,23 @@ class TouchSensor {
 
   static constexpr int kQueueCapacity = 16;
 
+  /// Binds the sensor to the touch input attached to `display`.
   explicit TouchSensor(roo_display::Display& display);
   ~TouchSensor();
 
+  /// Starts the polling worker (multi-threaded builds) and accepts events.
+  /// In single-threaded builds, simply marks the sensor as ready for
+  /// `pollOnce()`.
   void start();
+  /// Stops the polling worker and drops any pending events.
   void stop();
 
-  // Polls the touch sensor once from the current thread.
-  // Used in single-threaded mode and tests.
+  /// Polls the touch sensor once from the current thread.
+  /// Used in single-threaded mode and tests.
   void pollOnce();
 
-  // Drains up to max_events queued touch events into out.
+  /// Drains up to `max_events` queued touch events into `out` and returns
+  /// how many were copied.
   int drain(Event* out, int max_events);
 
  private:

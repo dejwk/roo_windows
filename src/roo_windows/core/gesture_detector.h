@@ -27,31 +27,48 @@ static constexpr int32_t kMinFlingVelocitySquare = 50 * 50;
 
 static constexpr int16_t kMaxFlingVelocity = 8000;  // Pixels per second.
 
+/// Translates raw touch samples into widget gesture callbacks.
+///
+/// Polls the bound `TouchSensor`, tracks one in-flight gesture at a time, and
+/// dispatches `onDown` / `onShowPress` / `onSingleTapUp` / `onLongPress` /
+/// `onScroll` / `onFling` / `onTouchUp` to the chain of widgets that captured
+/// the gesture. Also runs the scheduled show-press / tap / long-press timers.
 class GestureDetector {
  public:
+  /// Binds the detector to a root widget tree and a touch input source.
   GestureDetector(Widget& root, TouchSensor& sensor)
       : root_(root), sensor_(sensor), is_down_(false) {}
 
-  // Returns true if an interaction is in progress and touch event has been
-  // dispatched.
+  /// Drains pending touch events, fires due timers, and dispatches gestures.
+  /// Returns true if an interaction is in progress and at least one touch
+  /// event was dispatched during this call.
   bool tick();
 
+  /// Dispatches a synthetic DOWN to `widget` and arms the show-press, tap,
+  /// and long-press timers. Returns true if the gesture was accepted.
   bool onTouchDown(Widget& widget, XDim x, YDim y);
 
+  /// Forwards a MOVE sample, promoting the gesture to a scroll once the touch
+  /// leaves the tap slop region. Returns true while the gesture is captured.
   bool onTouchMove(Widget& widget, XDim x, YDim y);
 
+  /// Forwards an UP sample, optionally producing a tap, long-press release,
+  /// or fling depending on movement and timing. Returns true if handled.
   bool onTouchUp(Widget& widget, XDim x, YDim y);
 
+  /// Returns the total X movement since the initial touch-down sample.
   int16_t xTotalMoveDelta() const { return latest_.x() - initial_down_.x(); }
 
+  /// Returns the total Y movement since the initial touch-down sample.
   int16_t yTotalMoveDelta() const { return latest_.y() - initial_down_.y(); }
 
-  // Returns the widget that currently handles touch gesture (receiving touch
-  // events), or nullptr if no gesture is currently handled.
+  /// Returns the widget currently receiving gesture callbacks, or nullptr
+  /// when no gesture is in flight.
   const Widget* currentGestureTarget() const {
     return touch_target_path_.empty() ? nullptr : touch_target_path_.back();
   }
 
+  /// Returns true while a touch is currently pressed down.
   bool isTouchDown() const { return is_down_; }
 
  private:

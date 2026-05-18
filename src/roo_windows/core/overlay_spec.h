@@ -19,18 +19,28 @@ class Widget;
 // disablement overlay.
 class OverlaySpec {
  public:
+  /// Creates an inert spec describing a widget with no overlays applied.
   OverlaySpec();
+  /// Resolves the overlays that apply to `widget` when painted onto `canvas`.
   OverlaySpec(Widget& widget, const Canvas& canvas);
 
+  /// Returns true if any overlay modifier (disabled tint, press overlay,
+  /// click animation, ...) is active.
   bool is_modded() const { return is_modded_; }
+  /// Returns true if the widget should be rendered in its disabled style.
   bool is_disabled() const { return is_disabled_; }
 
+  /// Returns true while a click ripple animation is currently being painted.
   bool is_click_animation_in_progress() const {
     return press_overlay_ != nullptr;
   }
 
+  /// Returns the flat base overlay color to be composited over the widget
+  /// (e.g. disabled scrim or hover tint). May be fully transparent.
   roo_display::Color base_overlay() const { return base_overlay_; }
 
+  /// Returns the active animated press overlay, or nullptr if none is
+  /// running.
   const PressOverlay* press_overlay() const { return press_overlay_; }
 
  private:

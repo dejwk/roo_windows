@@ -300,38 +300,53 @@ class ClipperOutput : public roo_display::DisplayOutput {
 
 }  // namespace internal
 
-// Specifies a set of rectangular regions, in device coordinates, that should be
-// excluded from subsequent drawing.
+/// Aggregates per-paint exclusions and overlays applied to a downstream
+/// `roo_display::DisplayOutput`.
+///
+/// During a widget paint pass, ancestors and descendants register rectangles
+/// they have already rendered (`addExclusion`) and overlays they want
+/// composited above subsequent draws (`addOverlay`, `addOverlayShape`,
+/// `addDecoration`). The clipper applies both transparently when the surface
+/// is finally drawn into, in device coordinates.
 class Clipper {
  public:
+  /// Wraps `out` for a paint pass and stores per-pass buffers in `state`.
+  /// `deadline` is the wall-clock limit beyond which painting may be
+  /// short-circuited.
   Clipper(internal::ClipperState &state, roo_display::DisplayOutput &out,
           roo_time::Uptime deadline)
       : out_(state, out), deadline_(deadline) {}
 
-  // Provides a hint to the underlying implementation that in the subsequent
-  // draw operations, the specified bounds will be used as a clip box. This hint
-  // allows the implementaiton to (temporarily) trim the set of excluded
-  // rectangles.
+  /// Hints that subsequent draws will be confined to `bounds` (device
+  /// coordinates). Lets the clipper temporarily ignore exclusions that fall
+  /// outside the hint.
   void setBounds(const roo_display::Box &bounds) { out_.setBounds(bounds); }
 
-  // Adds the specified rectangle, in device coordinates, to the exclusion set.
+  /// Adds a device-coordinate rectangle that should be skipped by subsequent
+  /// draws. Used by parents to avoid repainting pixels their children already
+  /// covered.
   void addExclusion(const roo_display::Box &exclusion) {
     out_.addExclusion(exclusion);
   }
 
-  // Adds the specified overlay (e.g. shadow) that should be applied to the
-  // subsequent paints. The overlay is added underneath previously added
-  // overlays if any.
+  /// Registers `overlay` to be composited on top of subsequent draws within
+  /// `clip_box`. The new overlay is layered underneath previously added
+  /// overlays. The pointee must outlive this paint pass.
   void addOverlay(const roo_display::Rasterizable *overlay,
                   roo_display::Box clip_box) {
     out_.addOverlay(overlay, clip_box);
   }
 
+  /// Like `addOverlay()`, but stores the smooth shape in the clipper's own
+  /// arena so the caller does not need to keep it alive.
   void addOverlayShape(roo_display::SmoothShape overlay,
                        roo_display::Box clip_box) {
     out_.addOverlayShape(std::move(overlay), clip_box);
   }
 
+  /// Registers a fully-described decoration (shadow + outline + fill) clipped
+  /// to `clip_box` and bounded by `extents`. The decoration is stored in the
+  /// clipper arena and composited like any other overlay.
   void addDecoration(roo_display::Box clip_box, Rect extents, int elevation,
                      const OverlaySpec &overlay_spec,
                      roo_display::Color bgcolor,
@@ -343,14 +358,19 @@ class Clipper {
                        outline_color);
   }
 
+  /// Returns the filtered output that exclusions and overlays apply to.
   roo_display::DisplayOutput *out() { return &out_; }
 
+  /// Returns the unfiltered underlying output (bypassing exclusions and
+  /// overlays).
   roo_display::DisplayOutput &rawOut() { return out_.rawOut(); }
 
+  /// Returns the currently active exclusion rectangles (device coordinates).
   const std::vector<roo_display::Box> &exclusions() const {
     return out_.exclusions();
   }
 
+  /// Returns true if the paint deadline has elapsed.
   bool isDeadlineExceeded() const {
     return roo_time::Uptime::Now() >= deadline_;
   }
