@@ -17,13 +17,25 @@ namespace material3 {
 
 namespace {
 
-// Material 3 button geometry tokens (in dp; scaled by Scaled()).
-constexpr int kMinHeight = 40;
-constexpr int kCornerRadius = 20;
-constexpr int kPadH = 16;
-constexpr int kPadV = 8;
+// Per-size geometry tokens transcribed from the Material 3 button spec.
 constexpr int kIconLabelGap = 8;
 constexpr int kOutlineWidth = 1;
+constexpr uint8_t kFullCornerRadius = 0xFF;
+
+struct ButtonGeometryTokens {
+  uint8_t height_dp;
+  uint8_t horizontal_padding_dp;
+  uint8_t icon_size_dp;
+  uint8_t icon_gap_dp;
+  uint8_t square_corner_radius_dp;
+  uint8_t pressed_corner_radius_dp;
+};
+
+constexpr ButtonGeometryTokens kButtonGeometryTokens[] = {
+    {32, 12, 20, 4, 12, 8},    {40, 16, 24, 8, 12, 8},
+    {56, 24, 24, 8, 16, 12},   {96, 48, 32, 12, 28, 16},
+    {136, 64, 40, 16, 28, 16},
+};
 
 struct ButtonTokens {
   Color container;
@@ -33,6 +45,8 @@ struct ButtonTokens {
   uint8_t pressed_elevation;
 };
 
+// Disabled buttons are specified as on-surface content composited onto the
+// surface, rather than as separate fixed colors.
 Color DisabledComposite(const Theme& theme, Color fg, uint8_t alpha) {
   return AlphaBlend(theme.color.surface, fg.withA(alpha));
 }
@@ -87,7 +101,71 @@ ButtonTokens ResolveTokens(const Theme& theme, ButtonVariant v, bool enabled) {
   return ButtonTokens{Transparent, theme.color.primary, Transparent, 0, 0};
 }
 
+const ButtonGeometryTokens& GeometryTokensFor(ButtonSize size) {
+  return kButtonGeometryTokens[static_cast<uint8_t>(size)];
+}
+
+// Small buttons have an extra configuration knob in the spec: the same height
+// can be paired with either the default or reduced horizontal padding.
+int HorizontalPaddingDpFor(ButtonSize size,
+                           SmallButtonPadding small_button_padding) {
+  if (size == ButtonSize::kSmall) {
+    return small_button_padding == SmallButtonPadding::kDefault ? 24 : 16;
+  }
+  return GeometryTokensFor(size).horizontal_padding_dp;
+}
+
 const roo_display::Font& ButtonFont() { return font_button(); }
+
+struct ButtonContentMetrics {
+  int16_t text_width;
+  int16_t text_height;
+  int16_t icon_slot_width;
+  int16_t icon_slot_height;
+  int16_t gap;
+  int16_t content_width;
+  int16_t content_height;
+};
+
+// Measures the content block without widget padding. For icons, keep at least
+// the token slot size so the size tables remain stable even if the concrete
+// drawable is smaller than the Material 3 target.
+ButtonContentMetrics ResolveContentMetrics(roo::string_view label,
+                                           const MonoIcon* icon,
+                                           ButtonSize size) {
+  const ButtonGeometryTokens& geometry = GeometryTokensFor(size);
+  const roo_display::Font& font = ButtonFont();
+  int16_t text_width = 0;
+  int16_t text_height = 0;
+  if (!label.empty()) {
+    text_width = font.getHorizontalStringMetrics(label).width();
+    text_height = ((font.metrics().maxHeight()) + 1) & ~1;
+  }
+  int16_t icon_slot_width = 0;
+  int16_t icon_slot_height = 0;
+  if (icon != nullptr) {
+    int16_t token_icon_size = Scaled(geometry.icon_size_dp);
+    icon_slot_width = token_icon_size;
+    icon_slot_height = token_icon_size;
+    icon_slot_width =
+        std::max<int16_t>(icon_slot_width, icon->anchorExtents().width());
+    icon_slot_height =
+        std::max<int16_t>(icon_slot_height, icon->anchorExtents().height());
+  }
+  int16_t gap =
+      (icon != nullptr && text_width > 0) ? Scaled(geometry.icon_gap_dp) : 0;
+  int16_t content_width = text_width;
+  if (icon != nullptr) {
+    content_width = icon_slot_width;
+    if (text_width > 0) {
+      content_width += gap + text_width;
+    }
+  }
+  int16_t content_height = std::max(text_height, icon_slot_height);
+  return ButtonContentMetrics{text_width,       text_height, icon_slot_width,
+                              icon_slot_height, gap,         content_width,
+                              content_height};
+}
 
 uint8_t ElevationFor(ButtonVariant variant, bool enabled, bool pressed) {
   (void)pressed;
@@ -102,12 +180,40 @@ Button::Button(const Environment& env, roo::string_view label,
     : BasicSurfaceWidget(env),
       label_(label),
       icon_(nullptr),
-      variant_(variant) {}
+      variant_(static_cast<uint8_t>(variant)),
+      size_(static_cast<uint8_t>(ButtonSize::kSmall)),
+      shape_(static_cast<uint8_t>(ButtonShape::kRound)),
+      small_button_padding_(
+          static_cast<uint8_t>(SmallButtonPadding::kReduced)) {}
+
+void Button::setSize(ButtonSize size) {
+  uint8_t encoded = static_cast<uint8_t>(size);
+  if (size_ == encoded) return;
+  size_ = encoded;
+  invalidateInterior();
+  requestLayout();
+}
+
+void Button::setShape(ButtonShape shape) {
+  uint8_t encoded = static_cast<uint8_t>(shape);
+  if (shape_ == encoded) return;
+  shape_ = encoded;
+  invalidateInterior();
+}
+
+void Button::setSmallButtonPadding(SmallButtonPadding padding) {
+  uint8_t encoded = static_cast<uint8_t>(padding);
+  if (small_button_padding_ == encoded) return;
+  small_button_padding_ = encoded;
+  invalidateInterior();
+  requestLayout();
+}
 
 void Button::setVariant(ButtonVariant variant) {
-  if (variant_ == variant) return;
+  uint8_t encoded = static_cast<uint8_t>(variant);
+  if (variant_ == encoded) return;
   uint8_t old_elevation = getElevation();
-  variant_ = variant;
+  variant_ = encoded;
   invalidateInterior();
   requestLayout();
   uint8_t new_elevation = getElevation();
@@ -131,42 +237,70 @@ void Button::setIcon(const MonoIcon* icon) {
 }
 
 Padding Button::getDefaultPadding() const {
-  return Padding(Scaled(kPadH), Scaled(kPadV));
+  ButtonSize button_size = size();
+  ButtonContentMetrics metrics =
+      ResolveContentMetrics(label_, icon_, button_size);
+  int16_t horizontal =
+      Scaled(HorizontalPaddingDpFor(button_size, smallButtonPadding()));
+  int16_t target_height = Scaled(GeometryTokensFor(button_size).height_dp);
+  // Suggested minimum dimensions exclude padding in roo_windows, so vertical
+  // padding is derived here to make the final natural height match the spec.
+  int16_t vertical =
+      std::max<int16_t>(0, (target_height - metrics.content_height) / 2);
+  return Padding(horizontal, vertical);
 }
 
-ColorRole Button::containerRole() const { return ContainerRoleFor(variant_); }
+ColorRole Button::containerRole() const { return ContainerRoleFor(variant()); }
 
 Color Button::background() const {
-  return ResolveTokens(theme(), variant_, isEnabled()).container;
+  return ResolveTokens(theme(), variant(), isEnabled()).container;
 }
 
 Color Button::getOutlineColor() const {
-  return ResolveTokens(theme(), variant_, isEnabled()).outline;
+  return ResolveTokens(theme(), variant(), isEnabled()).outline;
 }
 
 BorderStyle Button::getBorderStyle() const {
-  uint8_t r = (uint8_t)std::min<int>(Scaled(kCornerRadius), 255);
-  SmallNumber outline = variant_ == ButtonVariant::kOutlined
+  const ButtonGeometryTokens& geometry = GeometryTokensFor(size());
+  int corner_radius_dp = 0;
+  // Pressed state uses a shared "more square" shape regardless of the resting
+  // corner family, matching the Material 3 shape morph behavior.
+  if (isPressed()) {
+    corner_radius_dp = geometry.pressed_corner_radius_dp;
+  } else if (shape() == ButtonShape::kRound) {
+    corner_radius_dp = kFullCornerRadius;
+  } else {
+    corner_radius_dp = geometry.square_corner_radius_dp;
+  }
+  uint8_t r = corner_radius_dp == kFullCornerRadius
+                  ? kFullCornerRadius
+                  : (uint8_t)std::min<int>(Scaled(corner_radius_dp), 255);
+  SmallNumber outline = variant() == ButtonVariant::kOutlined
                             ? SmallNumber(Scaled(kOutlineWidth))
                             : SmallNumber(0);
   return BorderStyle(r, outline);
 }
 
 uint8_t Button::getElevation() const {
-  return ElevationFor(variant_, isEnabled(), isPressed());
+  return ElevationFor(variant(), isEnabled(), isPressed());
 }
 
 Color Button::resolveContentColor() const {
-  return ResolveTokens(theme(), variant_, isEnabled()).content;
+  return ResolveTokens(theme(), variant(), isEnabled()).content;
 }
 
 void Button::notifyStateChanged(uint16_t state_diff) {
+  if ((state_diff & kWidgetPressed) != 0) {
+    // Shape morph changes the outline, so a press transition needs a repaint
+    // even when elevation stays unchanged.
+    invalidateInterior();
+  }
   if ((state_diff & (kWidgetPressed | kWidgetEnabled)) != 0) {
     bool old_pressed =
         (state_diff & kWidgetPressed) != 0 ? !isPressed() : isPressed();
     bool old_enabled =
         (state_diff & kWidgetEnabled) != 0 ? !isEnabled() : isEnabled();
-    uint8_t old_elevation = ElevationFor(variant_, old_enabled, old_pressed);
+    uint8_t old_elevation = ElevationFor(variant(), old_enabled, old_pressed);
     uint8_t new_elevation = getElevation();
     if (old_elevation != new_elevation && isVisible()) {
       elevationChanged(std::max(old_elevation, new_elevation));
@@ -176,27 +310,8 @@ void Button::notifyStateChanged(uint16_t state_diff) {
 }
 
 Dimensions Button::getSuggestedMinimumDimensions() const {
-  const roo_display::Font& font = ButtonFont();
-  int16_t text_height = ((font.metrics().maxHeight()) + 1) & ~1;
-  int16_t text_width = 0;
-  if (!label_.empty()) {
-    text_width = font.getHorizontalStringMetrics(label_).width();
-  }
-  int16_t icon_w = 0, icon_h = 0;
-  if (hasIcon()) {
-    icon_w = icon_->anchorExtents().width();
-    icon_h = icon_->anchorExtents().height();
-  }
-  int16_t content_w = 0;
-  if (hasIcon() && text_width > 0) {
-    content_w = icon_w + Scaled(kIconLabelGap) + text_width;
-  } else {
-    content_w = (text_width > 0) ? text_width : icon_w;
-  }
-  int16_t content_h = std::max(text_height, icon_h);
-  int16_t min_content_h =
-      std::max<int16_t>(0, (int16_t)(Scaled(kMinHeight) - 2 * Scaled(kPadV)));
-  return Dimensions(content_w, std::max(content_h, min_content_h));
+  ButtonContentMetrics metrics = ResolveContentMetrics(label_, icon_, size());
+  return Dimensions(metrics.content_width, metrics.content_height);
 }
 
 void Button::paint(const Canvas& canvas) const {
@@ -218,11 +333,13 @@ void Button::paint(const Canvas& canvas) const {
     canvas.drawTiled(ic, b, kCenter | kMiddle);
     return;
   }
-  // Icon + label, leading icon, centered as a block.
+  // Center the icon+label cluster as a single block so size-dependent icon
+  // slots do not bias the text away from the visual center.
   StringViewLabel l(label_, font, content);
-  int16_t iw = ic.anchorExtents().width();
+  ButtonContentMetrics metrics = ResolveContentMetrics(label_, icon_, size());
+  int16_t iw = metrics.icon_slot_width;
   int16_t lw = l.anchorExtents().width();
-  int16_t gap = Scaled(kIconLabelGap);
+  int16_t gap = metrics.gap;
   int16_t total = iw + gap + lw;
   int16_t x_offset = (b.width() - total) / 2;
   int16_t x = b.xMin();

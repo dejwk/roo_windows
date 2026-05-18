@@ -1,10 +1,9 @@
-#include "roo_windows/material3/button/button.h"
-
 #include "gtest/gtest.h"
 #include "roo_icons/outlined/24/action.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/measure_spec.h"
+#include "roo_windows/material3/button/button.h"
 
 namespace roo_windows {
 namespace material3 {
@@ -16,6 +15,9 @@ TEST(Material3Button, DefaultVariantIsFilled) {
 
   Button b(env, "Save");
   EXPECT_EQ(ButtonVariant::kFilled, b.variant());
+  EXPECT_EQ(ButtonSize::kSmall, b.size());
+  EXPECT_EQ(ButtonShape::kRound, b.shape());
+  EXPECT_EQ(SmallButtonPadding::kReduced, b.smallButtonPadding());
   EXPECT_EQ(std::string("Save"), std::string(b.label()));
   EXPECT_FALSE(b.hasIcon());
 }
@@ -48,6 +50,58 @@ TEST(Material3Button, DefaultHorizontalPaddingIsSixteenDpPerSide) {
   with_icon.setIcon(&ic_outlined_24_action_done());
   EXPECT_EQ(Scaled(16), with_icon.getPadding().left());
   EXPECT_EQ(Scaled(16), with_icon.getPadding().right());
+}
+
+TEST(Material3Button, SizeControlsNaturalHeight) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+
+  Button b(env, "Hi");
+
+  b.setSize(ButtonSize::kExtraSmall);
+  EXPECT_EQ(Scaled(32), b.getNaturalDimensions().height());
+
+  b.setSize(ButtonSize::kMedium);
+  EXPECT_EQ(Scaled(56), b.getNaturalDimensions().height());
+
+  b.setSize(ButtonSize::kLarge);
+  EXPECT_EQ(Scaled(96), b.getNaturalDimensions().height());
+
+  b.setSize(ButtonSize::kExtraLarge);
+  EXPECT_EQ(Scaled(136), b.getNaturalDimensions().height());
+}
+
+TEST(Material3Button, SmallPaddingModeOnlyAffectsSmallButtons) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+
+  Button b(env, "Hi");
+
+  EXPECT_EQ(Scaled(16), b.getPadding().left());
+  b.setSmallButtonPadding(SmallButtonPadding::kDefault);
+  EXPECT_EQ(Scaled(24), b.getPadding().left());
+
+  b.setSize(ButtonSize::kMedium);
+  EXPECT_EQ(Scaled(24), b.getPadding().left());
+  b.setSmallButtonPadding(SmallButtonPadding::kReduced);
+  EXPECT_EQ(Scaled(24), b.getPadding().left());
+}
+
+TEST(Material3Button, SquareShapeUsesSizeSpecificCornerRadius) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+
+  Button b(env, "Hi");
+  b.setShape(ButtonShape::kSquare);
+
+  b.setSize(ButtonSize::kExtraSmall);
+  EXPECT_EQ(Scaled(12), b.getBorderStyle().top_left_corner_radius());
+
+  b.setSize(ButtonSize::kMedium);
+  EXPECT_EQ(Scaled(16), b.getBorderStyle().top_left_corner_radius());
+
+  b.setSize(ButtonSize::kLarge);
+  EXPECT_EQ(Scaled(28), b.getBorderStyle().top_left_corner_radius());
 }
 
 TEST(Material3Button, ContainerRoleMatchesVariant) {
@@ -109,7 +163,10 @@ TEST(Material3Button, IconChangesNaturalWidth) {
   Button b(env, "Send");
   Dimensions text_only =
       b.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
-  EXPECT_GT(text_only.width(), 0);
+  b.setIcon(&ic_outlined_24_action_done());
+  Dimensions with_icon =
+      b.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+  EXPECT_GT(with_icon.width(), text_only.width());
 }
 
 }  // namespace

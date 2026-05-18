@@ -87,6 +87,17 @@ void initDisplay() {
 
 namespace {
 
+void PrepareDemoButton(material3::Button& button) {
+  // Remove the framework's default outer margins so the dense showcase fits on
+  // screen and reflects the button tokens rather than container spacing.
+  button.setMargins(MarginSize::kNone);
+}
+
+void PrepareIconDemoButton(material3::Button& button) {
+  PrepareDemoButton(button);
+  button.setIcon(&ic_outlined_24_action_done());
+}
+
 class ButtonRow : public FlexLayout {
  public:
   ButtonRow(const Environment& env, const char* title,
@@ -99,7 +110,9 @@ class ButtonRow : public FlexLayout {
     setPadding(Padding(Scaled(12), Scaled(6)));
     setGap(Scaled(6));
 
-    button_with_icon_.setIcon(&ic_outlined_24_action_done());
+    PrepareDemoButton(button_);
+    PrepareIconDemoButton(button_with_icon_);
+    PrepareDemoButton(disabled_);
 
     disabled_.setEnabled(false);
 
@@ -116,6 +129,8 @@ class ButtonRow : public FlexLayout {
   void handleClick() {
     counter_++;
     char buf[24];
+    // Reuse the section caption as lightweight feedback so the example stays
+    // self-contained and does not need extra status widgets.
     snprintf(buf, sizeof(buf), "clicked %d", counter_);
     title_.setText(buf);
   }
@@ -127,25 +142,136 @@ class ButtonRow : public FlexLayout {
   int counter_ = 0;
 };
 
+class SizeShowcase : public FlexLayout {
+ public:
+  explicit SizeShowcase(const Environment& env)
+      : FlexLayout(env, FlexDirection::kColumn),
+        title_(env, "Size tokens", font_caption()),
+        extra_small_(env, "XS", material3::ButtonVariant::kFilled),
+        small_(env, "Small", material3::ButtonVariant::kFilled),
+        medium_(env, "Medium", material3::ButtonVariant::kFilled),
+        large_(env, "Large", material3::ButtonVariant::kFilled),
+        extra_large_(env, "XL", material3::ButtonVariant::kFilled) {
+    setPadding(Padding(Scaled(12), Scaled(6)));
+    setGap(Scaled(6));
+
+    configure(extra_small_, material3::ButtonSize::kExtraSmall);
+    configure(small_, material3::ButtonSize::kSmall);
+    configure(medium_, material3::ButtonSize::kMedium);
+    configure(large_, material3::ButtonSize::kLarge);
+    configure(extra_large_, material3::ButtonSize::kExtraLarge);
+
+    add(title_, {.flex_grow = 0, .flex_shrink = 0});
+    add(extra_small_, {.flex_grow = 0, .flex_shrink = 0});
+    add(small_, {.flex_grow = 0, .flex_shrink = 0});
+    add(medium_, {.flex_grow = 0, .flex_shrink = 0});
+    add(large_, {.flex_grow = 0, .flex_shrink = 0});
+    add(extra_large_, {.flex_grow = 0, .flex_shrink = 0});
+  }
+
+ private:
+  void configure(material3::Button& button, material3::ButtonSize size) {
+    PrepareIconDemoButton(button);
+    button.setSize(size);
+  }
+
+  TextLabel title_;
+  material3::Button extra_small_;
+  material3::Button small_;
+  material3::Button medium_;
+  material3::Button large_;
+  material3::Button extra_large_;
+};
+
+class ShapeShowcase : public FlexLayout {
+ public:
+  explicit ShapeShowcase(const Environment& env)
+      : FlexLayout(env, FlexDirection::kColumn),
+        title_(env, "Shape tokens", font_caption()),
+        round_(env, "Round", material3::ButtonVariant::kOutlined),
+        square_(env, "Square", material3::ButtonVariant::kOutlined) {
+    setPadding(Padding(Scaled(12), Scaled(6)));
+    setGap(Scaled(6));
+
+    PrepareIconDemoButton(round_);
+    round_.setSize(material3::ButtonSize::kMedium);
+
+    PrepareIconDemoButton(square_);
+    square_.setSize(material3::ButtonSize::kMedium);
+    square_.setShape(material3::ButtonShape::kSquare);
+
+    add(title_, {.flex_grow = 0, .flex_shrink = 0});
+    add(round_, {.flex_grow = 0, .flex_shrink = 0});
+    add(square_, {.flex_grow = 0, .flex_shrink = 0});
+  }
+
+ private:
+  TextLabel title_;
+  material3::Button round_;
+  material3::Button square_;
+};
+
+class SmallPaddingShowcase : public FlexLayout {
+ public:
+  explicit SmallPaddingShowcase(const Environment& env)
+      : FlexLayout(env, FlexDirection::kColumn),
+        title_(env, "Small-button padding", font_caption()),
+        default_padding_(env, "24 dp", material3::ButtonVariant::kFilledTonal),
+        reduced_padding_(env, "16 dp", material3::ButtonVariant::kFilledTonal) {
+    setPadding(Padding(Scaled(12), Scaled(6)));
+    setGap(Scaled(6));
+
+    configure(default_padding_, material3::SmallButtonPadding::kDefault);
+    configure(reduced_padding_, material3::SmallButtonPadding::kReduced);
+
+    add(title_, {.flex_grow = 0, .flex_shrink = 0});
+    add(default_padding_, {.flex_grow = 0, .flex_shrink = 0});
+    add(reduced_padding_, {.flex_grow = 0, .flex_shrink = 0});
+  }
+
+ private:
+  void configure(material3::Button& button,
+                 material3::SmallButtonPadding padding) {
+    PrepareIconDemoButton(button);
+    // The padding selector only affects the small size, so pin the showcase to
+    // that size to make the two configurations visually comparable.
+    button.setSize(material3::ButtonSize::kSmall);
+    button.setSmallButtonPadding(padding);
+  }
+
+  TextLabel title_;
+  material3::Button default_padding_;
+  material3::Button reduced_padding_;
+};
+
 class ButtonScreen : public ScrollablePanel {
  public:
   ButtonScreen(const Environment& env)
       : ScrollablePanel(env),
         content_(env, FlexDirection::kColumn),
         title_(env, "Material 3 buttons", font_h6()),
-        subtitle_(env, "Phase 1 \xe2\x80\x94 five variants", font_caption()),
-        divider_(env),
+        subtitle_(env, "Phase 1 - variants, sizes, shapes, and padding",
+                  font_caption()),
+        geometry_divider_(env),
+        sizes_(env),
+        shapes_(env),
+        padding_(env),
+        variant_divider_(env),
         elevated_(env, "Elevated", material3::ButtonVariant::kElevated),
         filled_(env, "Filled", material3::ButtonVariant::kFilled),
         tonal_(env, "Filled tonal", material3::ButtonVariant::kFilledTonal),
         outlined_(env, "Outlined", material3::ButtonVariant::kOutlined),
         text_(env, "Text", material3::ButtonVariant::kText) {
     content_.setPadding(Padding(Scaled(12), Scaled(8)));
-    content_.setGap(Scaled(8));
+    content_.setGap(Scaled(6));
 
     content_.add(title_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(subtitle_, {.flex_grow = 0, .flex_shrink = 0});
-    content_.add(divider_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(geometry_divider_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(sizes_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(shapes_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(padding_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(variant_divider_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(elevated_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(filled_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(tonal_, {.flex_grow = 0, .flex_shrink = 0});
@@ -159,7 +285,11 @@ class ButtonScreen : public ScrollablePanel {
   FlexLayout content_;
   TextLabel title_;
   TextLabel subtitle_;
-  HorizontalDivider divider_;
+  HorizontalDivider geometry_divider_;
+  SizeShowcase sizes_;
+  ShapeShowcase shapes_;
+  SmallPaddingShowcase padding_;
+  HorizontalDivider variant_divider_;
   ButtonRow elevated_;
   ButtonRow filled_;
   ButtonRow tonal_;

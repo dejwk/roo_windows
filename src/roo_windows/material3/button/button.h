@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdint.h>
+
 #include "roo_backport/string_view.h"
 #include "roo_windows/core/basic_surface_widget.h"
 #include "roo_windows/core/border_style.h"
@@ -30,6 +32,24 @@ enum class ButtonVariant : uint8_t {
   kElevated,
 };
 
+enum class ButtonSize : uint8_t {
+  kExtraSmall,
+  kSmall,
+  kMedium,
+  kLarge,
+  kExtraLarge,
+};
+
+enum class ButtonShape : uint8_t {
+  kRound,
+  kSquare,
+};
+
+enum class SmallButtonPadding : uint8_t {
+  kDefault,
+  kReduced,
+};
+
 class Button : public BasicSurfaceWidget {
  public:
   /// Creates a Material 3 button with the supplied label and visual variant.
@@ -40,13 +60,35 @@ class Button : public BasicSurfaceWidget {
                   ButtonVariant variant = ButtonVariant::kFilled);
 
   /// Returns the active Material 3 button variant.
-  ButtonVariant variant() const { return variant_; }
+  ButtonVariant variant() const { return (ButtonVariant)variant_; }
 
   /// Switches the button to a different Material 3 visual variant.
   ///
   /// This updates theme-derived decoration such as container color, outline,
   /// and resting elevation, then requests relayout and repaint as needed.
   void setVariant(ButtonVariant variant);
+
+  /// Returns the active Material 3 size token set.
+  ButtonSize size() const { return (ButtonSize)size_; }
+
+  /// Selects the Material 3 size token set used for measurement and spacing.
+  void setSize(ButtonSize size);
+
+  /// Returns the resting corner family used by the button.
+  ButtonShape shape() const { return (ButtonShape)shape_; }
+
+  /// Selects the resting corner family used by the button.
+  void setShape(ButtonShape shape);
+
+  /// Returns the small-button padding mode currently configured.
+  SmallButtonPadding smallButtonPadding() const {
+    return (SmallButtonPadding)small_button_padding_;
+  }
+
+  /// Selects the horizontal padding mode used for small buttons.
+  ///
+  /// This setting only has a visible effect when size() is kSmall.
+  void setSmallButtonPadding(SmallButtonPadding padding);
 
   /// Returns the current non-owning label view.
   roo::string_view label() const { return label_; }
@@ -109,7 +151,10 @@ class Button : public BasicSurfaceWidget {
 
   roo::string_view label_;
   const MonoIcon* icon_;
-  ButtonVariant variant_;
+  uint8_t variant_ : 3;
+  uint8_t size_ : 3;
+  uint8_t shape_ : 1;
+  uint8_t small_button_padding_ : 1;
 };
 
 }  // namespace material3
