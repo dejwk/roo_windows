@@ -18,6 +18,10 @@ class Clipper;
 
 namespace internal {
 
+/// Internal helper: wraps a `Rasterizable` with an additional clip box.
+///
+/// Used by `Clipper` to compose overlays (decorations, press effects, etc.)
+/// against a per-widget clip without copying their pixel data.
 class ClippedOverlay : public roo_display::Rasterizable {
  public:
   ClippedOverlay(const roo_display::Rasterizable *delegate,
@@ -48,6 +52,8 @@ class ClippedOverlay : public roo_display::Rasterizable {
   roo_display::Box extents_;
 };
 
+/// Internal helper: a `Rasterizable` that composites a contiguous range of
+/// `ClippedOverlay`s top-down at read time.
 class OverlayStack : public roo_display::Rasterizable {
  public:
   OverlayStack()
@@ -75,6 +81,11 @@ class OverlayStack : public roo_display::Rasterizable {
   roo_display::Box extents_;
 };
 
+/// Internal helper: owns the buffers that back `ClipperOutput`.
+///
+/// Holds exclusion rectangles, decoration shapes, overlay shape storage, and
+/// `ClippedOverlay` vectors. Separated from `ClipperOutput` so the storage can
+/// outlive any single paint scope and be reused across frames.
 class ClipperState {
  public:
   ClipperState() {}
@@ -95,6 +106,12 @@ class ClipperState {
   std::vector<ClippedOverlay> bounded_overlays_;
 };
 
+/// Internal helper: `DisplayOutput` filter that combines exclusion rectangles
+/// and a stack of `ClippedOverlay`s on top of a downstream output.
+///
+/// Exclusion rectangles let an ancestor skip pixels already covered by
+/// descendants; overlays let descendants stamp decoration (shadows, ink,
+/// outlines) into the final image without paint() needing to know about them.
 class ClipperOutput : public roo_display::DisplayOutput {
  public:
   ClipperOutput(internal::ClipperState &state, roo_display::DisplayOutput &out)

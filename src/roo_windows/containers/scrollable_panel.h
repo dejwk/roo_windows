@@ -38,6 +38,14 @@ class VerticalScrollBar : public Widget {
   int16_t end_;
 };
 
+/// Container that wraps a single child widget and lets it scroll in one or
+/// two directions, with momentum/fling, bounce/overshoot, and optional
+/// vertical scroll-bar overlay.
+///
+/// The contents widget is owned by the panel and measured against the panel's
+/// content area; the panel then translates child paint and touch dispatch by
+/// the current scroll offset. Use this as the base for any view that needs
+/// generic scrolling behavior.
 class SimpleScrollablePanel : public Container,
                               private roo_scheduler::Executable {
  public:

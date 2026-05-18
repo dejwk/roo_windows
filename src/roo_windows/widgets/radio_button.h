@@ -4,6 +4,10 @@
 
 namespace roo_windows {
 
+/// Single-selection radio button in the legacy (pre-Material 3) style.
+///
+/// For new code, prefer `material3::RadioButton`. The state is shared with
+/// `Widget`'s on/off facility, and clicking toggles it.
 class RadioButton : public BasicWidget {
  public:
   RadioButton(const Environment& env, bool on = false) : BasicWidget(env) {

@@ -8,6 +8,13 @@
 
 namespace roo_windows {
 
+/// Data source for a virtualized list rendered by `ListLayout`.
+///
+/// The model owns the underlying items and tells the layout how many there
+/// are (`elementCount()`); the layout calls `set()` whenever a recycled child
+/// widget needs to be bound to a new model row. Keeping the visual elements
+/// separate from the model is what lets `ListLayout` scroll long lists with
+/// constant RAM.
 class ListModel {
  public:
   ListModel() {}
@@ -20,6 +27,12 @@ class ListModel {
   virtual void set(int idx, Widget& dest) const = 0;
 };
 
+/// Fixed-capacity ring buffer of heap-allocated widget pointers.
+///
+/// Used internally by `ListLayout` to recycle a small set of element widgets
+/// across a much larger model. Exposes STL-style `push_back` / `pop_back` /
+/// `push_front` / `pop_front` accessors that walk the ring without
+/// reallocating.
 class CircularBuffer {
  public:
   CircularBuffer(const Environment& env) : elements_(), start_(0), count_(0) {}
@@ -106,6 +119,14 @@ inline Rect unclippedRegion(const Widget* w) {
   return rect;
 }
 
+/// Virtualized vertical list backed by a `ListModel` and a single prototype
+/// widget.
+///
+/// Only the currently visible window of model items is materialized as child
+/// widgets, which are recycled via the internal `CircularBuffer` as the user
+/// scrolls. Call `modelChanged()` / `modelRangeChanged()` /
+/// `modelItemChanged()` to push updates from the model back into the rendered
+/// view.
 class ListLayout : public Panel {
  public:
   using PrototypeFn = std::function<std::unique_ptr<Widget>()>;

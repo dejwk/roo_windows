@@ -16,6 +16,12 @@ namespace roo_windows {
 
 using roo_display::Color;
 
+/// Concrete container that stores its children in a `std::vector`.
+///
+/// Provides the default home for widgets that don't need a specialized child
+/// collection. Subclasses are expected to add children through `add()` (or its
+/// public wrappers) and to override `onMeasure()` / `onLayout()` when they need
+/// a dynamic layout.
 class Panel : public Container {
  public:
   Panel(const Environment& env) : Container(env) {}

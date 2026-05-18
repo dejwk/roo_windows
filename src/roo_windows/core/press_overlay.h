@@ -18,6 +18,12 @@ inline constexpr roo_display::Color AverageColors(roo_display::Color c1,
 }
 }  // namespace internal
 
+/// Animated ink overlay used to render the Material press / ripple effect.
+///
+/// Models a colored circle at `(x, y)` with radius `r`, optionally clipped to a
+/// second circle (used to constrain the ripple to a widget's rounded
+/// silhouette). Implements `Rasterizable` so it can be composited by the
+/// `Clipper` pipeline without materializing pixels.
 class PressOverlay : public roo_display::Rasterizable {
  public:
   PressOverlay() : PressOverlay(0, 0, 0, roo_display::color::Transparent) {}
@@ -57,9 +63,9 @@ class PressOverlay : public roo_display::Rasterizable {
           std::max<int16_t>(y_ - r_ - 1, (int16_t)floorf(clip_circle_y_ -
                                                          clip_circle_r_ + 1)),
           std::min<int16_t>(
-            x_ + r_ + 1, (int16_t)ceilf(clip_circle_x_ + clip_circle_r_ - 1)),
+              x_ + r_ + 1, (int16_t)ceilf(clip_circle_x_ + clip_circle_r_ - 1)),
           std::min<int16_t>(y_ + r_ + 1, (int16_t)ceilf(clip_circle_y_ +
-                                clip_circle_r_ - 1)));
+                                                        clip_circle_r_ - 1)));
     }
   };
 

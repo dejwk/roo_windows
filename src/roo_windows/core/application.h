@@ -17,6 +17,15 @@
 
 namespace roo_windows {
 
+/// Top-level coordinator that owns the event loop, the display, the input
+/// pipeline, and all active `Task`s.
+///
+/// An application is constructed with an `Environment` (scheduler + theme) and
+/// a `roo_display::Display`. It hosts a single `MainWindow` and any number of
+/// `Task`s (full-screen or floating, normal or popup) which in turn host
+/// `Activity` stacks. `run()` enters the main loop; `refresh()` performs a
+/// one-shot layout/paint pass; `executeInUIThread()` provides thread-safe
+/// re-entry from worker threads.
 class Application {
  public:
   Application(const Environment* env, roo_display::Display& display);

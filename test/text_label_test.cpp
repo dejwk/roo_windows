@@ -156,6 +156,9 @@ class RecordingPanel : public Panel {
 
 }  // namespace
 
+// Verifies that the natural minimum size of a TextLabel matches the font's
+// advance for the configured text horizontally and the font's full line
+// height (ascent - descent + linegap) vertically.
 TEST(TextLabel, SuggestedMinimumDimensionsMatchFontMetrics) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -170,6 +173,9 @@ TEST(TextLabel, SuggestedMinimumDimensionsMatchFontMetrics) {
             dims.height());
 }
 
+// Verifies that getContentBounds() reflects the glyphs' actual ink extents
+// translated by the gravity-resolved alignment offset, rather than the full
+// layout rectangle.
 TEST(TextLabel, ContentBoundsFollowDrawableInkExtents) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -191,6 +197,8 @@ TEST(TextLabel, ContentBoundsFollowDrawableInkExtents) {
   EXPECT_EQ(expected, label.getContentBounds());
 }
 
+// Verifies that an empty TextLabel (both std::string and string_view flavors)
+// reports zero ink insets, so an empty label doesn't claim any visual area.
 TEST(TextLabel, EmptyTextHasZeroInkInsets) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -204,6 +212,9 @@ TEST(TextLabel, EmptyTextHasZeroInkInsets) {
   EXPECT_EQ(Insets::Zero(), string_view_label.getInkInsets());
 }
 
+// Verifies that transitioning from empty to non-empty text avoids invalidating
+// the parent: only the new ink region needs painting and there is nothing to
+// erase beneath, so the panel records no invalidation regions.
 TEST(TextLabel, EmptyToNonEmptyDoesNotInvalidateParentBeneath) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -220,6 +231,9 @@ TEST(TextLabel, EmptyToNonEmptyDoesNotInvalidateParentBeneath) {
   EXPECT_TRUE(panel.invalidated_regions.empty());
 }
 
+// Verifies that changing text from a small string to a larger one invalidates
+// exactly the previous (smaller) visual rect on the parent; the new larger
+// rect is repainted by the label itself.
 TEST(TextLabel, TextChangeInvalidatesOnlyOldVisualBounds) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -238,6 +252,9 @@ TEST(TextLabel, TextChangeInvalidatesOnlyOldVisualBounds) {
   EXPECT_EQ(old_bounds, panel.invalidated_regions.front());
 }
 
+// Verifies that swapping the text for another value of identical measured
+// dimensions does not trigger a layout request, avoiding needless layout
+// passes for incremental value updates (e.g., '72%' -> '73%').
 TEST(TextLabel, SameMeasuredSizeTextChangeDoesNotRequestLayout) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -258,6 +275,9 @@ TEST(TextLabel, SameMeasuredSizeTextChangeDoesNotRequestLayout) {
   EXPECT_FALSE(label.isLayoutRequested());
 }
 
+// Verifies the same equal-measured-size invariant for StringViewLabel: a
+// text swap to a string of the same measured dimensions does not request a
+// new layout pass.
 TEST(StringViewLabel, SameMeasuredSizeTextChangeDoesNotRequestLayout) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -280,6 +300,9 @@ TEST(StringViewLabel, SameMeasuredSizeTextChangeDoesNotRequestLayout) {
   EXPECT_FALSE(label.isLayoutRequested());
 }
 
+// Verifies that setText() and clearText() actually change rendered pixels:
+// the painted ink region grows when text grows, and disappears entirely
+// when the text is cleared.
 TEST_F(TextLabelRenderTest, SetTextAndClearTextAffectRenderedPixels) {
   auto label = std::make_unique<TextLabel>(env_, "A", font_body2());
   TextLabel* label_ptr = label.get();
@@ -302,6 +325,9 @@ TEST_F(TextLabelRenderTest, SetTextAndClearTextAffectRenderedPixels) {
   EXPECT_FALSE(cleared.found);
 }
 
+// Verifies that horizontal gravity is honored at paint time: a right-gravity
+// label paints its ink farther right than a left-gravity label of the same
+// text within an equally-sized box.
 TEST_F(TextLabelRenderTest, GravityChangesHorizontalPlacement) {
   auto left = std::make_unique<TextLabel>(env_, "WWW", font_body2(),
                                           kGravityLeft | kGravityMiddle);
@@ -323,6 +349,9 @@ TEST_F(TextLabelRenderTest, GravityChangesHorizontalPlacement) {
   EXPECT_GT(right_bounds.x_min, left_bounds.x_min);
 }
 
+// Verifies that omitting the color argument (Color::Transparent default)
+// produces pixels identical to passing the theme's onBackground color
+// explicitly, confirming the transparent sentinel resolves to the theme.
 TEST_F(TextLabelRenderTest, TransparentColorMatchesExplicitDefaultColor) {
   auto implicit = std::make_unique<TextLabel>(env_, "Hi", font_body2(),
                                               kGravityLeft | kGravityMiddle);
@@ -345,6 +374,8 @@ TEST_F(TextLabelRenderTest, TransparentColorMatchesExplicitDefaultColor) {
   EXPECT_EQ(pixelAt(top.x_min, top.y_min), pixelAt(4 + dx, 34 + dy));
 }
 
+// Verifies the golden image for a centered, natural-size label placed in a
+// FlexLayout: the ink overhang renders correctly within the parent layout.
 TEST_F(TextLabelGoldenTest, CenteredNaturalSizeOverhangGolden) {
   auto image =
       RenderFlexLabel(kGravityCenter | kGravityMiddle, FlexLayout::Params{});
@@ -354,6 +385,8 @@ TEST_F(TextLabelGoldenTest, CenteredNaturalSizeOverhangGolden) {
       "text_label_flex_center_natural"));
 }
 
+// Verifies the golden image for a fill-width, left-gravity label in a
+// FlexLayout, including any horizontal ink overhang at the leading edge.
 TEST_F(TextLabelGoldenTest, FillWidthLeftGravityOverhangGolden) {
   auto image =
       RenderFlexLabel(kGravityLeft | kGravityMiddle, FillWidthParams());
@@ -363,6 +396,8 @@ TEST_F(TextLabelGoldenTest, FillWidthLeftGravityOverhangGolden) {
       "text_label_flex_fill_left"));
 }
 
+// Verifies the golden image for a fill-width, center-gravity label in a
+// FlexLayout, exercising symmetric ink overhang on both sides.
 TEST_F(TextLabelGoldenTest, FillWidthCenterGravityOverhangGolden) {
   auto image =
       RenderFlexLabel(kGravityCenter | kGravityMiddle, FillWidthParams());
@@ -372,6 +407,8 @@ TEST_F(TextLabelGoldenTest, FillWidthCenterGravityOverhangGolden) {
       "text_label_flex_fill_center"));
 }
 
+// Verifies the golden image for a fill-width, right-gravity label in a
+// FlexLayout, including any horizontal ink overhang at the trailing edge.
 TEST_F(TextLabelGoldenTest, FillWidthRightGravityOverhangGolden) {
   auto image =
       RenderFlexLabel(kGravityRight | kGravityMiddle, FillWidthParams());
@@ -381,6 +418,9 @@ TEST_F(TextLabelGoldenTest, FillWidthRightGravityOverhangGolden) {
       "text_label_flex_fill_right"));
 }
 
+// Verifies the golden image for a fill-width left-gravity label that has
+// small widget-level padding applied, so the ink starts inside (not at) the
+// allocated content rect's edge.
 TEST_F(TextLabelGoldenTest, FillWidthLeftGravityWithWidgetPaddingGolden) {
   auto image = RenderFlexLabel(kGravityLeft | kGravityMiddle, FillWidthParams(),
                                PaddingSize::kSmall);

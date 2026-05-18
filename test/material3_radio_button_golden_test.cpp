@@ -72,6 +72,8 @@ class Material3RadioButtonGoldenTest : public testing::Test {
   Environment env_;
 };
 
+// Verifies the rendered pixels of the two enabled radio-button states
+// (off, on) against the locked-down golden image.
 TEST_F(Material3RadioButtonGoldenTest, EnabledStatesRow) {
   auto image = RenderRow(true);
   EXPECT_TRUE(test::CompareOrUpdateGolden(
@@ -79,6 +81,8 @@ TEST_F(Material3RadioButtonGoldenTest, EnabledStatesRow) {
       "material3_radio_button_enabled_states_row"));
 }
 
+// Verifies that disabled radio buttons render with the dimmed visual
+// treatment that matches the locked-down golden image.
 TEST_F(Material3RadioButtonGoldenTest, DisabledStatesRow) {
   auto image = RenderRow(false);
   EXPECT_TRUE(test::CompareOrUpdateGolden(

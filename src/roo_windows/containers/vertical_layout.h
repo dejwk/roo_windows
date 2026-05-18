@@ -10,6 +10,11 @@
 
 namespace roo_windows {
 
+/// Linear layout that arranges its children top-to-bottom.
+///
+/// Mirror image of `HorizontalLayout`: each child carries a horizontal
+/// `gravity` and a `weight`; weights distribute leftover vertical space,
+/// optionally normalized by an explicit `weight_sum`.
 class VerticalLayout : public Panel {
  public:
   struct Params {

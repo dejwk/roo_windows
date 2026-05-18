@@ -34,6 +34,9 @@ class BasicNavigationItem : public HorizontalLayout {
   Activity& target_;
 };
 
+/// Two-line navigation row: icon plus a primary label stacked above a
+/// secondary subtext line. Like `BasicNavigationItem`, clicking enters the
+/// supplied target activity.
 class BasicNavigationItemWithSubtext : public HorizontalLayout {
  public:
   BasicNavigationItemWithSubtext(const Environment& env,

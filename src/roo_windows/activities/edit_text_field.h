@@ -16,6 +16,10 @@ namespace roo_windows {
 
 class EditTextField;
 
+/// `TextField` subclass used inside `EditTextField` activities.
+///
+/// Forwards the `onEditFinished` notification back to the owning activity so
+/// the activity can confirm or cancel the edit.
 class EditedTextField : public TextField {
  public:
   EditedTextField(const Environment& env, TextFieldEditor& editor,
@@ -27,6 +31,12 @@ class EditedTextField : public TextField {
   EditTextField& activity_;
 };
 
+/// Full-screen activity for editing a string value.
+///
+/// Hosts a single `EditedTextField` with back / enter buttons; pushing it onto
+/// a `Task` via `triggerEdit()` (or `triggerEditField()` to round-trip a
+/// caller-owned `TextField`) suspends the underlying activity, runs the edit,
+/// and invokes the supplied confirmation callback with the entered string.
 class EditTextField : public Activity {
  public:
   EditTextField(const Environment& env, TextFieldEditor& editor,

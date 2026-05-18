@@ -5,8 +5,8 @@
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
-#include "roo_windows/containers/flex_layout.h"
 #include "roo_windows.h"
+#include "roo_windows/containers/flex_layout.h"
 #include "roo_windows/core/environment.h"
 
 namespace roo_windows {
@@ -43,6 +43,9 @@ class RecordingPanel : public Panel {
   }
 };
 
+// Verifies that with word-wrap enabled, measuring a multi-word string under a
+// narrow AtMost width yields a measured height greater than a single line's
+// height, confirming the wrap actually grew the layout vertically.
 TEST(TextBlock, WordWrapIncreasesHeightWithNarrowWidth) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -55,6 +58,9 @@ TEST(TextBlock, WordWrapIncreasesHeightWithNarrowWidth) {
   EXPECT_GT(dims.height(), block.font().metrics().maxHeight());
 }
 
+// Verifies that with wrapping disabled, the measured height of multi-word
+// text stays at exactly one line height even when the width spec is narrower
+// than the text's natural advance.
 TEST(TextBlock, NoWrapKeepsSingleLineHeight) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -67,6 +73,8 @@ TEST(TextBlock, NoWrapKeepsSingleLineHeight) {
   EXPECT_EQ(block.font().metrics().maxHeight(), dims.height());
 }
 
+// Verifies that setMaxLines(N) caps the measured height to at most N line
+// heights, even if the wrapped text would otherwise span more lines.
 TEST(TextBlock, MaxLinesLimitsMeasuredHeight) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -80,6 +88,9 @@ TEST(TextBlock, MaxLinesLimitsMeasuredHeight) {
   EXPECT_LE(dims.height(), 2 * block.font().metrics().maxHeight());
 }
 
+// Verifies that after laying out a non-wrapped single-line block, the
+// content bounds reflect the actual glyph ink extents (clamped to include
+// the bounding rectangle) rather than the nominal advance rectangle.
 TEST(TextBlock, SingleLineContentBoundsReflectFontInk) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -99,6 +110,9 @@ TEST(TextBlock, SingleLineContentBoundsReflectFontInk) {
             block.getContentBounds());
 }
 
+// Verifies that with a pending re-layout after setText() the reported
+// content bounds fall back to conservative font-level bounds (covering all
+// glyphs and rsb overhang) instead of the previous laid-out extents.
 TEST(TextBlock, PendingWrappedLayoutUsesConservativeFontBounds) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -117,6 +131,9 @@ TEST(TextBlock, PendingWrappedLayoutUsesConservativeFontBounds) {
             block.getContentBounds());
 }
 
+// Verifies that setPadding() flags the block as needing a new layout pass
+// and, once re-laid-out, shifts the content bounds inward by the padding on
+// both the left and top edges.
 TEST(TextBlock, SetPaddingRequestsLayoutAndUpdatesContentBounds) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -143,14 +160,16 @@ TEST(TextBlock, SetPaddingRequestsLayoutAndUpdatesContentBounds) {
   EXPECT_GT(block.getContentBounds().yMin(), without_padding.yMin());
 }
 
+// Verifies that transitioning a TextBlock from empty to non-empty text does
+// not request invalidation from the parent panel: the new ink is repainted
+// by the block itself with nothing to erase beneath.
 TEST(TextBlock, EmptyToNonEmptyDoesNotInvalidateParentBeneath) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
   RecordingPanel panel(env);
 
-  auto block = std::make_unique<TextBlock>(env, "", font_body2(),
-                                           roo_display::kCenter |
-                                               roo_display::kMiddle);
+  auto block = std::make_unique<TextBlock>(
+      env, "", font_body2(), roo_display::kCenter | roo_display::kMiddle);
   TextBlock* block_ptr = block.get();
   panel.add(std::move(block), Rect(0, 0, 159, 39));
   panel.invalidated_regions.clear();
@@ -216,10 +235,9 @@ class TextBlockGoldenTest : public testing::Test {
     layout.add(block, params);
 
     Application app(&env_, display_);
-    app.add(layout,
-            roo_display::Box(kFlexLayoutX, kFlexLayoutY,
-                             kFlexLayoutX + kFlexLayoutWidth - 1,
-                             kFlexLayoutY + kFlexLayoutHeight - 1));
+    app.add(layout, roo_display::Box(kFlexLayoutX, kFlexLayoutY,
+                                     kFlexLayoutX + kFlexLayoutWidth - 1,
+                                     kFlexLayoutY + kFlexLayoutHeight - 1));
     EXPECT_TRUE(app.refresh());
     return test::CaptureRgb(offscreen_.raster(), kFlexLayoutX, kFlexLayoutY,
                             kFlexLayoutWidth, kFlexLayoutHeight);
@@ -232,6 +250,8 @@ class TextBlockGoldenTest : public testing::Test {
   Environment env_;
 };
 
+// Verifies the golden image for a justified, word-wrapped paragraph: lines
+// expand to flush with both edges except the final line.
 TEST_F(TextBlockGoldenTest, JustifyParagraphGolden) {
   auto image = RenderBlock(
       "Lorem ipsum dolor sit amet, consectetur adipiscing elit. "
@@ -243,6 +263,9 @@ TEST_F(TextBlockGoldenTest, JustifyParagraphGolden) {
       "text_block_justify_paragraph"));
 }
 
+// Verifies the golden image for a justified paragraph that contains an
+// explicit '\n' break: justification stops at the line preceding the break,
+// and the post-break short line renders unjustified.
 TEST_F(TextBlockGoldenTest, JustifyExplicitParagraphBreakGolden) {
   auto image = RenderBlock(
       "Alpha beta gamma delta epsilon zeta eta theta iota kappa.\n"
@@ -254,6 +277,8 @@ TEST_F(TextBlockGoldenTest, JustifyExplicitParagraphBreakGolden) {
       "text_block_justify_paragraph_break"));
 }
 
+// Verifies the golden image for a non-justified (start-aligned) multi-line
+// paragraph rendered without truncation.
 TEST_F(TextBlockGoldenTest, NonJustifiedMultilineGolden) {
   auto image = RenderBlock(
       "This is a regular multiline text block rendered with start alignment. "
@@ -265,6 +290,9 @@ TEST_F(TextBlockGoldenTest, NonJustifiedMultilineGolden) {
       "text_block_non_justify_multiline"));
 }
 
+// Verifies the golden image for a justified paragraph rendered into a box
+// whose height clips the bottom of the text: clipping happens cleanly
+// without disturbing the justified line layout above.
 TEST_F(TextBlockGoldenTest, JustifyParagraphClippedBottomGolden) {
   auto image = RenderBlock(
       "Lorem ipsum dolor sit amet, consectetur adipiscing elit. "
@@ -276,6 +304,9 @@ TEST_F(TextBlockGoldenTest, JustifyParagraphClippedBottomGolden) {
       "text_block_justify_paragraph_clipped"));
 }
 
+// Verifies the golden image for ellipsization: text that would wrap to more
+// than maxLines is truncated and terminated with an ellipsis on the final
+// allowed line.
 TEST_F(TextBlockGoldenTest, EllipsizeGolden) {
   auto image = RenderBlock(
       "This text should wrap to multiple lines but get truncated with an "
@@ -286,6 +317,8 @@ TEST_F(TextBlockGoldenTest, EllipsizeGolden) {
       image, "test/goldens/text_block/ellipsize.ppm", "text_block_ellipsize"));
 }
 
+// Verifies the golden image for a centered, natural-size TextBlock placed
+// in a FlexLayout, including any ink overhang on either side.
 TEST_F(TextBlockGoldenTest, CenteredNaturalSizeOverhangGolden) {
   auto image = RenderFlexBlock(roo_display::kCenter | roo_display::kMiddle,
                                FlexLayout::Params{});
@@ -295,36 +328,42 @@ TEST_F(TextBlockGoldenTest, CenteredNaturalSizeOverhangGolden) {
       "text_block_flex_center_natural"));
 }
 
+// Verifies the golden image for a fill-width, left-gravity TextBlock in a
+// FlexLayout, including any leading-edge ink overhang.
 TEST_F(TextBlockGoldenTest, FillWidthLeftGravityOverhangGolden) {
-  auto image =
-      RenderFlexBlock(roo_display::kLeft | roo_display::kMiddle,
-                      FillWidthParams());
+  auto image = RenderFlexBlock(roo_display::kLeft | roo_display::kMiddle,
+                               FillWidthParams());
 
   EXPECT_TRUE(test::CompareOrUpdateGolden(
       image, "test/goldens/text_block/flex_fill_left.ppm",
       "text_block_flex_fill_left"));
 }
 
+// Verifies the golden image for a fill-width, center-gravity TextBlock in a
+// FlexLayout, exercising symmetric ink overhang on both sides.
 TEST_F(TextBlockGoldenTest, FillWidthCenterGravityOverhangGolden) {
-  auto image =
-      RenderFlexBlock(roo_display::kCenter | roo_display::kMiddle,
-                      FillWidthParams());
+  auto image = RenderFlexBlock(roo_display::kCenter | roo_display::kMiddle,
+                               FillWidthParams());
 
   EXPECT_TRUE(test::CompareOrUpdateGolden(
       image, "test/goldens/text_block/flex_fill_center.ppm",
       "text_block_flex_fill_center"));
 }
 
+// Verifies the golden image for a fill-width, right-gravity TextBlock in a
+// FlexLayout, including any trailing-edge ink overhang.
 TEST_F(TextBlockGoldenTest, FillWidthRightGravityOverhangGolden) {
-  auto image =
-      RenderFlexBlock(roo_display::kRight | roo_display::kMiddle,
-                      FillWidthParams());
+  auto image = RenderFlexBlock(roo_display::kRight | roo_display::kMiddle,
+                               FillWidthParams());
 
   EXPECT_TRUE(test::CompareOrUpdateGolden(
       image, "test/goldens/text_block/flex_fill_right.ppm",
       "text_block_flex_fill_right"));
 }
 
+// Verifies the golden image for a fill-width left-gravity TextBlock with
+// small widget-level padding applied, so ink starts inside the allocated
+// content area's edge.
 TEST_F(TextBlockGoldenTest, FillWidthLeftGravityWithWidgetPaddingGolden) {
   auto image = RenderFlexBlock(roo_display::kLeft | roo_display::kMiddle,
                                FillWidthParams(), PaddingSize::kSmall);

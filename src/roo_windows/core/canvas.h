@@ -8,6 +8,14 @@
 
 namespace roo_windows {
 
+/// Lightweight drawing-context adapter wrapping a `roo_display::Surface`.
+///
+/// `Canvas` is the value type a widget receives in `paint()`. It carries the
+/// current `(dx, dy)` translation, a clip box, a background color, and a
+/// pointer to the underlying display output, and exposes convenience
+/// primitives (`fillRect`, `drawTiled`, `drawObject`, lines, ...). It is
+/// copyable and safe to mutate locally (e.g. `shift`, `clipToExtents`) without
+/// touching the parent.
 class Canvas {
  public:
   Canvas(const roo_display::Surface* surface)

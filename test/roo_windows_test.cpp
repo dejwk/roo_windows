@@ -68,6 +68,9 @@ class SloppyTouchSpyWidget : public BasicWidget {
   int touch_down_count_;
 };
 
+// Verifies that a minimal Application can be constructed against an offscreen
+// display and Environment without crashing — basic API surface compiles and
+// links.
 TEST(Windows, BasicCompilation) {
   roo::byte raster[320 * 240 * 2];
   OffscreenDevice<Argb4444> offscreen(320, 240, raster, Argb4444());
@@ -77,6 +80,9 @@ TEST(Windows, BasicCompilation) {
   Application app(&env, display);
 }
 
+// Verifies that the later-added child is painted on top of the earlier child
+// where they overlap, while the earlier child remains visible outside the
+// overlap.
 TEST_F(RooWindowsRenderTest, LaterAddedChildPaintsOnTop) {
   auto back =
       std::make_unique<ColorBoxWidget>(env_, color::Red, Dimensions(20, 20));
@@ -91,6 +97,9 @@ TEST_F(RooWindowsRenderTest, LaterAddedChildPaintsOnTop) {
   EXPECT_EQ(QuantizeToArgb4444(color::Blue), pixelAt(20, 20));
 }
 
+// Verifies that hiding a top child re-exposes the underlying pixels of the
+// child beneath, and that re-showing it restores its pixels: invalidation
+// covers the previously-occluded region on both transitions.
 TEST_F(RooWindowsRenderTest, HideAndShowRestoresUnderlyingContent) {
   auto back =
       std::make_unique<ColorBoxWidget>(env_, color::Red, Dimensions(20, 20));
@@ -113,6 +122,9 @@ TEST_F(RooWindowsRenderTest, HideAndShowRestoresUnderlyingContent) {
   EXPECT_EQ(QuantizeToArgb4444(color::Blue), pixelAt(20, 20));
 }
 
+// Verifies that an elevated surface widget reports decoration bounds (drop
+// shadow) extending beyond its layout bounds on all four sides, while a
+// plain widget has zero decoration overflow and zero transient overflow.
 TEST_F(RooWindowsRenderTest, SurfaceWidgetShadowBoundsExtendPastParentBounds) {
   auto surface = std::make_unique<ElevatedColorBoxWidget>(
       env_, color::Blue, Dimensions(20, 20), 12);
@@ -142,6 +154,9 @@ TEST_F(RooWindowsRenderTest, SurfaceWidgetShadowBoundsExtendPastParentBounds) {
             plain_ptr->getParentTransientPaintBounds());
 }
 
+// Verifies that custom ink insets shape every derived rectangle: content
+// bounds, parent-content bounds, visual bounds, parent-visual bounds, max
+// bounds, max-parent bounds, and the exclusion rect.
 TEST_F(RooWindowsRenderTest, InkInsetsDriveContentAndVisualBounds) {
   InkBoundsWidget widget(env_, Dimensions(20, 10), Insets(-2, 1, 3, -4));
   widget.layout(Rect(12, 8, 31, 17));
@@ -155,6 +170,9 @@ TEST_F(RooWindowsRenderTest, InkInsetsDriveContentAndVisualBounds) {
   EXPECT_EQ(widget.getContentBounds(), widget.exclusionBounds());
 }
 
+// Verifies that for an unclipped child the parent's max-bounds expand to
+// include the child's ink overflow outside the layout rect (so the parent
+// reserves repaint area for ink that bleeds past the child's layout bounds).
 TEST_F(RooWindowsRenderTest, UnclippedChildMaxBoundsIncludeInkOverflow) {
   auto child = std::make_unique<InkBoundsWidget>(env_, Dimensions(10, 8),
                                                  Insets(-3, 0, 0, 0));
@@ -167,6 +185,10 @@ TEST_F(RooWindowsRenderTest, UnclippedChildMaxBoundsIncludeInkOverflow) {
   EXPECT_EQ(Rect(-2, 0, 63, 47), app_.root().maxBounds());
 }
 
+// Verifies that hiding an elevated surface correctly erases its drop-shadow
+// pixels outside the layout rect, and that re-showing it restores the
+// shadow to exactly the same color (regression test for shadow-overflow
+// invalidation).
 TEST_F(RooWindowsRenderTest, HideAndShowRestoresShadowOverflowRegion) {
   auto back =
       std::make_unique<ColorBoxWidget>(env_, color::Red, Dimensions(48, 40));
@@ -190,6 +212,9 @@ TEST_F(RooWindowsRenderTest, HideAndShowRestoresShadowOverflowRegion) {
   EXPECT_EQ(shadow_pixel, pixelAt(14, 22));
 }
 
+// Verifies that switching a surface widget from rectangular to rounded
+// invalidates the now-exposed corners so the underlying widget's pixels
+// re-appear there.
 TEST_F(RooWindowsRenderTest, RoundedSurfaceInvalidationRestoresExposedCorners) {
   auto back =
       std::make_unique<ColorBoxWidget>(env_, color::Red, Dimensions(48, 40));
@@ -208,6 +233,9 @@ TEST_F(RooWindowsRenderTest, RoundedSurfaceInvalidationRestoresExposedCorners) {
   EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(16, 12));
 }
 
+// Verifies that touch dispatch picks the topmost visible child at the
+// touch point; if the topmost is hidden, the next-lower visible child
+// receives the touch.
 TEST_F(RooWindowsRenderTest, TouchDispatchPrefersTopmostVisibleChild) {
   auto back = std::make_unique<TouchSpyWidget>(env_, Dimensions(20, 20));
   auto front = std::make_unique<TouchSpyWidget>(env_, Dimensions(20, 20));
@@ -229,6 +257,9 @@ TEST_F(RooWindowsRenderTest, TouchDispatchPrefersTopmostVisibleChild) {
   EXPECT_EQ(1, back_ptr->touch_down_count());
 }
 
+// Verifies that sloppy-touch dispatch (touches within a widget's slop margin
+// but outside its bounds) recurses through container hierarchies and
+// reaches the intended leaf widget.
 TEST_F(RooWindowsRenderTest, SloppyTouchDispatchRecursesThroughContainers) {
   auto outer = std::make_unique<ExposedPanel>(env_);
   ExposedPanel* outer_ptr = outer.get();
@@ -247,6 +278,9 @@ TEST_F(RooWindowsRenderTest, SloppyTouchDispatchRecursesThroughContainers) {
   EXPECT_EQ(1, leaf_ptr->touch_down_count());
 }
 
+// Verifies that a refresh() call which exceeds its time deadline mid-paint
+// returns false and leaves the partial state untouched; a subsequent
+// refresh() without a deadline completes the paint.
 TEST_F(RooWindowsRenderTest, RefreshCanResumeAfterDeadlineExceeded) {
   auto box =
       std::make_unique<ColorBoxWidget>(env_, color::Green, Dimensions(20, 20));
@@ -259,6 +293,9 @@ TEST_F(RooWindowsRenderTest, RefreshCanResumeAfterDeadlineExceeded) {
   EXPECT_EQ(QuantizeToArgb4444(color::Green), pixelAt(16, 16));
 }
 
+// Verifies that draw-tiled clips paint output to the tile bounds even when
+// the tile content rectangle extends past those bounds: pixels inside the
+// tile bounds are drawn, pixels outside are not.
 TEST_F(RooWindowsRenderTest, DrawTiledClipsOversizedContentToTileBounds) {
   auto tile = std::make_unique<TiledRectWidget>(env_, Rect(4, 4, 6, 6), true);
 
@@ -272,6 +309,9 @@ TEST_F(RooWindowsRenderTest, DrawTiledClipsOversizedContentToTileBounds) {
   EXPECT_EQ(QuantizeToArgb4444(color::Black), pixelAt(12, 14));
 }
 
+// Verifies the same clipping invariant as DrawTiledClipsOversizedContent...
+// when the tile is rendered without a border path: oversized content is
+// still clipped to the tile bounds.
 TEST_F(RooWindowsRenderTest,
        DrawTiledWithoutBorderClipsOversizedContentToTileBounds) {
   auto tile = std::make_unique<TiledRectWidget>(env_, Rect(4, 4, 6, 6), false);
@@ -286,6 +326,9 @@ TEST_F(RooWindowsRenderTest,
   EXPECT_EQ(QuantizeToArgb4444(color::Black), pixelAt(12, 14));
 }
 
+// Verifies that draw-tiled with empty interior bounds and no border draws
+// nothing: the tile area is left as parent background instead of being
+// filled by a degenerate-rect paint.
 TEST_F(RooWindowsRenderTest, DrawTiledIgnoresEmptyBoundsWithoutBorder) {
   auto tile = std::make_unique<TiledRectWidget>(env_, Rect(4, 4, 3, 6), false);
 

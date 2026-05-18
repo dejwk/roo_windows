@@ -9,6 +9,12 @@
 
 namespace roo_windows {
 
+/// Static text widget that owns its string content.
+///
+/// Use this when the label may change over time (the contained `std::string`
+/// supports `setText()` and `setTextf()`). For labels backed by a stable
+/// string buffer that the caller already keeps alive, prefer the cheaper
+/// `StringViewLabel`.
 class TextLabel : public BasicWidget {
  public:
   TextLabel(const Environment& env, std::string value,
@@ -52,6 +58,11 @@ class TextLabel : public BasicWidget {
   Gravity gravity_;
 };
 
+/// Static text widget backed by a non-owning `roo::string_view`.
+///
+/// Avoids the per-instance allocation that `TextLabel` carries, at the cost
+/// of requiring the caller to keep the underlying buffer alive for the widget's
+/// lifetime. Ideal for constant or theme-supplied strings.
 class StringViewLabel : public BasicWidget {
  public:
   StringViewLabel(const Environment& env, roo::string_view value,

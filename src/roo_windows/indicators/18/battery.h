@@ -5,6 +5,7 @@
 
 namespace roo_windows {
 
+/// 18 px battery indicator preset using the filled 18-pixel device icon set.
 class BatteryIndicator18x18 : public BatteryIndicator {
  public:
   using BatteryIndicator::BatteryIndicator;

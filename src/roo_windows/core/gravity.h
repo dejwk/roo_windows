@@ -23,6 +23,12 @@ enum GravityAxisAlignment {
   //   CLIPPED_FILL = 0xF,
 };
 
+/// Single-axis alignment marker: "none", min, middle, or max along one axis.
+///
+/// `HorizontalGravity` and `VerticalGravity` derive from this and bind it to a
+/// concrete axis (left/right vs top/bottom). The value also distinguishes
+/// "not set" from "explicitly set to a position" so callers can detect whether
+/// gravity should fall back to a default.
 class GravityAxis {
  public:
   constexpr GravityAxis() : GravityAxis(NONE) {}
@@ -58,6 +64,7 @@ class GravityAxis {
   GravityAxisAlignment alignment_;
 };
 
+/// Horizontal placement: left, center, right, or unset.
 class HorizontalGravity : public GravityAxis {
  public:
   constexpr HorizontalGravity() : GravityAxis(NONE) {}
@@ -82,6 +89,7 @@ class HorizontalGravity : public GravityAxis {
   friend class Gravity;
 };
 
+/// Vertical placement: top, middle, bottom, or unset.
 class VerticalGravity : public GravityAxis {
  public:
   constexpr VerticalGravity() : GravityAxis(NONE) {}
@@ -106,6 +114,11 @@ class VerticalGravity : public GravityAxis {
   friend class Gravity;
 };
 
+/// Combined horizontal + vertical placement, packed into one byte.
+///
+/// Built either directly or by `or`-ing a `HorizontalGravity` with a
+/// `VerticalGravity`. Used by layouts that need to align a child within a
+/// larger slot (e.g. `FlexLayout`, `Container`-based panels).
 class Gravity {
  public:
   constexpr Gravity() : value_(0) {}

@@ -5,6 +5,12 @@
 namespace roo_windows {
 namespace material3 {
 
+/// Material 3 tri-state checkbox.
+///
+/// Toggles between off, indeterminate, and on through `Widget`'s on/off
+/// facility (re-exported here). Theme colors come from
+/// `effectiveContainerRole()`. Default padding and margins are zero so the
+/// widget can be combined freely in compound rows.
 class Checkbox : public BasicWidget {
  public:
   Checkbox(const Environment& env, OnOffState state = OnOffState::kOff)

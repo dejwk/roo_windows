@@ -19,6 +19,11 @@ enum class PaddingSize {
   kNegativeSmall = 9,
 };
 
+/// Inner spacing inside a widget, expressed either as raw pixels or as a
+/// theme-scaled `PaddingSize` token.
+///
+/// Symmetric form of `Margins` for the inside of a widget; same compact
+/// two-byte encoding (biased by 32 to allow small negative values).
 class Padding {
  public:
   Padding() : Padding(0) {}

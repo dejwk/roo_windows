@@ -4,6 +4,11 @@
 
 namespace roo_windows {
 
+/// Legacy (pre-Material 3) on/off switch with animated thumb.
+///
+/// Stores animation state in a single 16-bit word (high bit = idle flag,
+/// low 15 bits = milliseconds since the toggle), to keep per-instance RAM low.
+/// For new code, prefer `material3::Switch`.
 class Switch : public BasicWidget {
  public:
   Switch(const Environment& env, bool on = false)

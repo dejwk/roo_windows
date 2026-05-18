@@ -8,6 +8,9 @@ namespace roo_windows {
 namespace material3 {
 namespace {
 
+// Verifies that the checkbox advertises a POINT overlay anchored at the
+// geometric center of its laid-out bounds, so press ripples expand from the
+// box's middle rather than the top-left corner.
 TEST(Material3Checkbox, UsesCenteredPointOverlay) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -22,6 +25,8 @@ TEST(Material3Checkbox, UsesCenteredPointOverlay) {
   EXPECT_FLOAT_EQ(0.5f * (float)(Scaled(18) - 1), focus.y);
 }
 
+// Verifies that the checkbox advertises the Material 3 prescribed 18x18 dp
+// minimum dimensions, used by parent layouts during measurement.
 TEST(Material3Checkbox, ReportsMaterial3MinimumSize) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -33,6 +38,9 @@ TEST(Material3Checkbox, ReportsMaterial3MinimumSize) {
   EXPECT_EQ(Scaled(18), dims.height());
 }
 
+// Verifies that under Unspecified width/height measure specs the checkbox
+// measures itself at its natural 18x18 dp footprint without inflating to fill
+// the unspecified parent.
 TEST(Material3Checkbox, ReportsNaturalMeasureAsEighteenByEighteen) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -46,6 +54,9 @@ TEST(Material3Checkbox, ReportsNaturalMeasureAsEighteenByEighteen) {
   EXPECT_EQ(Scaled(18), measured.height());
 }
 
+// Verifies that the checkbox contributes no padding or margins of its own and
+// that after layout its content bounds coincide with its laid-out bounds,
+// so callers can predict the painted region from layout dimensions alone.
 TEST(Material3Checkbox, UsesZeroInsetsAndMeasuredContentBounds) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -63,6 +74,9 @@ TEST(Material3Checkbox, UsesZeroInsetsAndMeasuredContentBounds) {
             checkbox.getContentBounds());
 }
 
+// Verifies that effectiveContainerRole reports kSurface while off (neutral
+// outline color) and kPrimary while indeterminate or on, so theming picks up
+// the selected accent for both filled states.
 TEST(Material3Checkbox, EffectiveContainerRoleTracksSelectionState) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);

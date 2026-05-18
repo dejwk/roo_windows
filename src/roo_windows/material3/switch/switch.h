@@ -5,6 +5,11 @@
 namespace roo_windows {
 namespace material3 {
 
+/// Material 3 on/off switch with animated thumb and optional state icons.
+///
+/// Stores animation state in a single 16-bit word (high bit = idle flag,
+/// low 15 bits = millisecond offset) to keep per-instance RAM low.
+/// Optional selected/unselected pictograms render inside the thumb.
 class Switch : public BasicWidget {
  public:
   explicit Switch(const Environment& env, bool on = false)

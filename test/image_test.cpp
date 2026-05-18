@@ -1,3 +1,5 @@
+#include "roo_windows/widgets/image.h"
+
 #include <vector>
 
 #include "gtest/gtest.h"
@@ -5,7 +7,6 @@
 #include "roo_scheduler.h"
 #include "roo_windows.h"
 #include "roo_windows/core/panel.h"
-#include "roo_windows/widgets/image.h"
 
 using namespace roo_display;
 using namespace roo_windows;
@@ -51,6 +52,9 @@ class RecordingPanel : public Panel {
 
 }  // namespace
 
+// Verifies that an Image's ink insets mirror how the drawable's natural
+// extents overhang its anchor box, and that suggested minimum dimensions
+// come from the anchor box.
 TEST(Image, InkInsetsFollowDrawableBounds) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -66,6 +70,10 @@ TEST(Image, InkInsetsFollowDrawableBounds) {
   EXPECT_EQ(Rect(8, 21, 16, 28), image.getParentContentBounds());
 }
 
+// Verifies that swapping the wrapped drawable through setImage() emits a
+// single invalidation region covering the union of the previous and new
+// parent-space visual bounds, so partial repaints cover both directions of
+// size change.
 TEST(Image, SwapInvalidatesOldAndNewVisualBounds) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);

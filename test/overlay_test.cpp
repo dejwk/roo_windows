@@ -197,6 +197,9 @@ class ExampleSliderScreen : public SimpleScrollablePanel {
   ExampleSliderRow media_;
 };
 
+// Verifies that a wide horizontal strip crossing a PressOverlay's center is
+// not uniformly transparent: it must contain at least one non-transparent
+// sample even though the strip extends well past the overlay's diameter.
 TEST(PressOverlay, WideTopStripCrossingCenterIsNotUniformTransparent) {
   PressOverlay overlay(0, 0, 10, color::Red);
 
@@ -208,6 +211,9 @@ TEST(PressOverlay, WideTopStripCrossingCenterIsNotUniformTransparent) {
   EXPECT_NE(colors[11], color::Transparent);
 }
 
+// Verifies the default overlay type for the built-in widget types: small
+// touch targets (checkbox, radio, slider, icon) default to POINT overlays
+// while surface-like clickable widgets default to AREA overlays.
 TEST_F(RooWindowsRenderTest, OverlayPolicyDefaultsFollowWidgetHierarchy) {
   Checkbox checkbox(env_);
   RadioButton radio(env_);
@@ -222,6 +228,9 @@ TEST_F(RooWindowsRenderTest, OverlayPolicyDefaultsFollowWidgetHierarchy) {
   EXPECT_EQ(Widget::OVERLAY_AREA, surface.getOverlayType());
 }
 
+// Verifies that a point-overlay widget's interaction bounds extend by the
+// scaled overlay halo (~11 px) beyond its layout rect both in widget-local
+// and parent coordinate spaces.
 TEST_F(RooWindowsRenderTest,
        PointInteractionBoundsFollowLocalAndParentCoordinates) {
   auto checkbox = std::make_unique<Checkbox>(env_);
@@ -235,6 +244,9 @@ TEST_F(RooWindowsRenderTest,
   EXPECT_EQ(Rect(9, 1, 48, 40), checkbox_ptr->getParentInteractionBounds());
 }
 
+// Verifies that the Material 3 checkbox's reported interaction bounds match
+// the geometric extents of the static circular point overlay rendered around
+// its focus point.
 TEST_F(RooWindowsRenderTest,
        Material3CheckboxInteractionBoundsMatchStaticPointOverlayExtents) {
   auto checkbox = std::make_unique<Material3Checkbox>(env_);
@@ -248,6 +260,9 @@ TEST_F(RooWindowsRenderTest,
   EXPECT_EQ(checkbox_ptr->getInteractionBounds().asBox(), overlay.extents());
 }
 
+// Verifies that the Material 3 checkbox's parent transient (click ripple)
+// bounds match the extents of the absolute-positioned, circle-clipped
+// PressOverlay used by the click animation.
 TEST_F(RooWindowsRenderTest,
        Material3CheckboxTransientBoundsMatchClickOverlayClipExtents) {
   auto checkbox = std::make_unique<Material3Checkbox>(env_);
@@ -268,6 +283,9 @@ TEST_F(RooWindowsRenderTest,
             overlay.extents());
 }
 
+// Verifies that a padded full-width column placed inside a scrollable panel
+// keeps its horizontal divider inset by the column's padding, so the divider
+// does not paint to the screen edge.
 TEST_F(
     RooWindowsRenderTest,
     ScrollablePanelPaddedDividerDoesNotPaintToScreenEdgeWhenContentFillsWidth) {
@@ -300,6 +318,9 @@ TEST_F(
 using ExampleSliderRenderTest =
     test_support::RooWindowsRenderTestSized<240, 320>;
 
+// Verifies the slider example screen layout: the divider and slider both
+// shrink to leave background-colored pixels at the right edge of the screen,
+// confirming the nested padding chain produces the expected inset widths.
 TEST_F(ExampleSliderRenderTest,
        ExampleSliderScreenLeavesRightEdgeBackgroundForDividerAndSlider) {
   auto screen = std::make_unique<ExampleSliderScreen>(env_);
@@ -334,6 +355,9 @@ TEST_F(ExampleSliderRenderTest,
   EXPECT_EQ(bg, pixelAt(kWidth - 1, slider_mid_y));
 }
 
+// Verifies that a quick tap-release on a Material 3 checkbox does not leave
+// stray ripple pixels in the leftmost column of its interaction bounds (just
+// outside the logical widget rect) after the click animation settles.
 TEST_F(RooWindowsRenderTest,
        Material3CheckboxQuickReleaseClearsLeftmostInteractionColumn) {
   auto back =
@@ -376,6 +400,9 @@ TEST_F(RooWindowsRenderTest,
   EXPECT_EQ(background_pixel, pixelAt(probe_x, probe_y));
 }
 
+// Verifies that toggling a Material 3 checkbox's on/off state via setOn()
+// repaints only inside the logical bounds: a pixel one column outside the
+// widget rect retains the parent's background color.
 TEST_F(RooWindowsRenderTest,
        Material3CheckboxStateChangeStaysWithinLogicalBounds) {
   auto back =
@@ -404,6 +431,10 @@ TEST_F(RooWindowsRenderTest,
   EXPECT_EQ(background_pixel, pixelAt(spill_x, spill_y));
 }
 
+// Verifies that with a bare scene background (no parent widget repaint), the
+// click-overlay spill region just outside a Material 3 checkbox is cleared
+// back to the background color after a quick tap-release, while the inside
+// of the checkbox reflects the new toggled state.
 TEST_F(
     RooWindowsRenderTest,
     Material3CheckboxQuickReleaseSpillStaysClearedAfterDeferredClickInBareScene) {
@@ -449,6 +480,10 @@ TEST_F(
   EXPECT_EQ(background_pixel, post_click_pixel);
 }
 
+// Verifies that a point-overlay widget reports transient paint overflow only
+// while the overlay is active: setActivated(true) expands transient bounds
+// on all sides, and setActivated(false) collapses them back to the layout
+// rect.
 TEST_F(RooWindowsRenderTest, PointOverlayBoundsExpandOnlyWhileOverlayIsActive) {
   auto checkbox = std::make_unique<Checkbox>(env_);
   Checkbox* checkbox_ptr = checkbox.get();
@@ -473,6 +508,10 @@ TEST_F(RooWindowsRenderTest, PointOverlayBoundsExpandOnlyWhileOverlayIsActive) {
             checkbox_ptr->getParentTransientPaintBounds());
 }
 
+// Verifies that deactivating a point overlay invalidates and restores the
+// background pixels outside the widget's logical bounds (where the halo
+// previously painted), while pixels inside the widget also revert to their
+// pre-activation color.
 TEST_F(RooWindowsRenderTest,
        PointOverlayInvalidationRestoresBackgroundOutsideLogicalBounds) {
   auto back =
@@ -502,6 +541,9 @@ TEST_F(RooWindowsRenderTest,
   EXPECT_EQ(center_background_pixel, pixelAt(28, 20));
 }
 
+// Verifies that a point overlay rendered over a child widget which overrides
+// its container role still picks the overlay color from the parent's role,
+// since the halo paints onto the parent's surface, not the child's.
 TEST_F(RooWindowsRenderTest,
        PointOverlayColorUsesParentRoleWhenChildOverridesContainerRole) {
   auto back =
@@ -528,6 +570,9 @@ TEST_F(RooWindowsRenderTest,
   EXPECT_EQ(expected, pixelAt(12, 20));
 }
 
+// Verifies that setPressed(true) renders the point-press overlay outside
+// the widget's logical bounds, and setPressed(false) restores the original
+// background pixels in that region.
 TEST_F(RooWindowsRenderTest, PointPressOverlayRendersOutsideLogicalBounds) {
   auto back =
       std::make_unique<ColorBoxWidget>(env_, color::Red, Dimensions(48, 40));
@@ -625,6 +670,10 @@ TEST_F(RooWindowsRenderTest,
   EXPECT_EQ(Rect(15, 9, 42, 32), panel_ptr->invalidated_regions.front());
 }
 
+// Verifies that once the press animation reaches progress 1.0 the overlay
+// settles into a static press overlay: the previously-animated halo region
+// no longer changes between subsequent refresh() calls, while the inside
+// retains the steady press overlay color.
 TEST_F(RooWindowsRenderTest, PointClickAnimationSettlesIntoStaticPressOverlay) {
   auto back =
       std::make_unique<ColorBoxWidget>(env_, color::Red, Dimensions(48, 40));

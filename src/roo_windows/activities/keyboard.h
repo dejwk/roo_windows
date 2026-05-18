@@ -15,6 +15,10 @@
 
 namespace roo_windows {
 
+/// Sink for low-level keyboard events delivered by `Keyboard`.
+///
+/// Implementations decide how to translate runes, enter, and delete events
+/// into edits on whatever buffer they own (typically a `TextFieldEditor`).
 class KeyboardListener {
  public:
   virtual ~KeyboardListener() {}
@@ -26,6 +30,13 @@ class KeyboardListener {
 
 class KeyboardWidget;
 
+/// On-screen software keyboard activity.
+///
+/// Renders the layout supplied at construction (regular / numeric / etc.)
+/// and forwards key events to the currently-bound `KeyboardListener`. Tracks
+/// caps state (`LOW`, `HIGH`, `HIGH_LOCKED`) and current page; participates
+/// in the activity stack so it can be shown above an editing surface and
+/// dismissed when the edit is complete.
 class Keyboard : public Activity {
  public:
   enum CapsState {

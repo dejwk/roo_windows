@@ -16,6 +16,11 @@ enum class MarginSize {
   kNegative = 8,
 };
 
+/// Outer spacing around a widget, expressed either as raw pixels or as a
+/// theme-scaled `MarginSize` token.
+///
+/// Stored as two bytes (horizontal + vertical, biased by 32 to support small
+/// negative values) so it fits cheaply in per-widget state.
 class Margins {
  public:
   Margins() : Margins(0) {}

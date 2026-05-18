@@ -6,6 +6,12 @@
 
 namespace roo_windows {
 
+/// Simple message dialog: a title, a multi-line supporting text body, and
+/// one or more dismiss buttons (defaulting to a single "OK").
+///
+/// Use for confirmations, warnings, and notifications where no additional
+/// input is required. The selected button index is reported back through the
+/// `Dialog`'s callback.
 class AlertDialog : public Dialog {
  public:
   AlertDialog(const Environment& env, std::string title,

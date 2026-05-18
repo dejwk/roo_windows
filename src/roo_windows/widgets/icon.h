@@ -5,6 +5,11 @@
 
 namespace roo_windows {
 
+/// Pictogram widget that draws a single `roo_display::Pictogram` in a
+/// configurable color.
+///
+/// The pictogram pointer is held by reference, so the underlying glyph data
+/// must outlive the widget (typically a constexpr/program-memory icon).
 class Icon : public BasicWidget {
  public:
   Icon(const Environment& env, Color color = roo_display::color::Transparent)

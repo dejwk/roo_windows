@@ -12,6 +12,8 @@ namespace roo_windows {
 class Destination;
 class NavigationRail;
 
+/// One entry inside a `NavigationRail`: an icon-with-caption that activates a
+/// caller-supplied callback when clicked.
 class Destination : public IconWithCaption {
  public:
   Destination(const Environment& env, const roo_display::Pictogram& icon,
@@ -35,6 +37,12 @@ class Destination : public IconWithCaption {
   std::function<void()> activator_;
 };
 
+/// Material navigation rail: a vertical strip of `Destination` icons used as
+/// the primary navigation surface on tablet/large layouts.
+///
+/// Owns its destinations and tracks the currently active one. Configurable
+/// label visibility (`PERSISTED`, `SELECTED`, `UNLABELED`) controls when the
+/// caption text is shown.
 class NavigationRail : public Panel {
  public:
   enum LabelVisibility { PERSISTED, SELECTED, UNLABELED };

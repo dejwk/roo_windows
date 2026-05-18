@@ -1,3 +1,5 @@
+#include "roo_windows/widgets/icon.h"
+
 #include <vector>
 
 #include "gtest/gtest.h"
@@ -5,7 +7,6 @@
 #include "roo_scheduler.h"
 #include "roo_windows.h"
 #include "roo_windows/core/panel.h"
-#include "roo_windows/widgets/icon.h"
 
 using namespace roo_display;
 using namespace roo_windows;
@@ -46,11 +47,14 @@ roo_display::Pictogram MakePictogram(roo_display::Box extents,
 
 }  // namespace
 
+// Verifies that the icon's negative ink insets reflect the pictogram extents
+// that fall outside its anchor box, and that getSuggestedMinimumDimensions()
+// returns the anchor-box dimensions.
 TEST(Icon, InkInsetsFollowDrawableBounds) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
-  roo_display::Pictogram pictogram = MakePictogram(Box(-1, -2, 7, 9),
-                                                   Box(0, 0, 5, 7));
+  roo_display::Pictogram pictogram =
+      MakePictogram(Box(-1, -2, 7, 9), Box(0, 0, 5, 7));
   Icon icon(env, pictogram);
 
   EXPECT_EQ(Insets(-1, -2, -2, -2), icon.getInkInsets());
@@ -58,13 +62,16 @@ TEST(Icon, InkInsetsFollowDrawableBounds) {
   EXPECT_EQ(8, icon.getSuggestedMinimumDimensions().height());
 }
 
+// Verifies that swapping the underlying pictogram via setIcon() invalidates a
+// single region that covers the union of the icon's previous and new
+// maxParentBounds, so partial repaint correctly covers shrink + grow cases.
 TEST(Icon, SwapInvalidatesOldAndNewVisualBounds) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
-  roo_display::Pictogram old_icon = MakePictogram(Box(-2, 0, 4, 4),
-                                                  Box(0, 0, 4, 4));
-  roo_display::Pictogram new_icon = MakePictogram(Box(0, 0, 6, 4),
-                                                  Box(0, 0, 4, 4));
+  roo_display::Pictogram old_icon =
+      MakePictogram(Box(-2, 0, 4, 4), Box(0, 0, 4, 4));
+  roo_display::Pictogram new_icon =
+      MakePictogram(Box(0, 0, 6, 4), Box(0, 0, 4, 4));
   Icon icon(env, old_icon);
   RecordingPanel panel(env);
 

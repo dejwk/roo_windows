@@ -8,6 +8,9 @@ namespace roo_windows {
 namespace material3 {
 namespace {
 
+// Verifies that each of the three card styles (elevated, filled, outlined)
+// seeds its container role, resting elevation, corner radius, and outline
+// width to the values prescribed by the Material 3 spec.
 TEST(FlexCard, ConstructorSeedsStyleDefaults) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -15,7 +18,8 @@ TEST(FlexCard, ConstructorSeedsStyleDefaults) {
   FlexCard elevated(env, FlexCard::Style::kElevated);
   EXPECT_EQ(ColorRole::kSurfaceContainerLow, elevated.containerRole());
   EXPECT_EQ(3, elevated.getElevation());
-  EXPECT_EQ((uint8_t)Scaled(12), elevated.getBorderStyle().corner_radii().max());
+  EXPECT_EQ((uint8_t)Scaled(12),
+            elevated.getBorderStyle().corner_radii().max());
   EXPECT_EQ(SmallNumber(0), elevated.getBorderStyle().outline_width());
 
   FlexCard filled(env, FlexCard::Style::kFilled);
@@ -27,11 +31,15 @@ TEST(FlexCard, ConstructorSeedsStyleDefaults) {
   FlexCard outlined(env, FlexCard::Style::kOutlined);
   EXPECT_EQ(ColorRole::kSurface, outlined.containerRole());
   EXPECT_EQ(0, outlined.getElevation());
-  EXPECT_EQ((uint8_t)Scaled(12), outlined.getBorderStyle().corner_radii().max());
+  EXPECT_EQ((uint8_t)Scaled(12),
+            outlined.getBorderStyle().corner_radii().max());
   EXPECT_EQ(SmallNumber::Of16ths(Scaled(16)),
             outlined.getBorderStyle().outline_width());
 }
 
+// Verifies that calling setStyle() on a card with no per-property overrides
+// updates every style-derived value (container role, elevation, outline
+// width, corner radius) to the new style's defaults.
 TEST(FlexCard, StyleChangeUpdatesNonOverriddenValues) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -46,6 +54,9 @@ TEST(FlexCard, StyleChangeUpdatesNonOverriddenValues) {
             card.getBorderStyle().outline_width());
 }
 
+// Verifies that explicit per-property overrides (container role, outline
+// role, elevation, outline width, corner radius) persist across a subsequent
+// setStyle() call, so the user's customizations are not silently reset.
 TEST(FlexCard, OverridesPersistAcrossStyleChanges) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -66,6 +77,9 @@ TEST(FlexCard, OverridesPersistAcrossStyleChanges) {
   EXPECT_EQ(5, card.getBorderStyle().corner_radii().max());
 }
 
+// Verifies that clearing each per-property override returns the card to the
+// defaults of the currently-selected style, even if those defaults differ
+// from the originally-configured style.
 TEST(FlexCard, ClearOverrideRecomputesFromCurrentStyle) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);

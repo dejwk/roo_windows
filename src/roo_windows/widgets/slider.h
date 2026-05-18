@@ -4,6 +4,12 @@
 
 namespace roo_windows {
 
+/// Legacy (pre-Material 3) horizontal slider widget.
+///
+/// Position is a 16-bit value covering the full range `[0, 65535]`. Supports
+/// dragging, scroll gestures, and tap-to-set. For new code, prefer
+/// `material3::Slider`, which exposes richer styling and discrete-stop
+/// behavior.
 class Slider : public BasicWidget {
  public:
   Slider(const Environment& env, uint16_t pos = 0)

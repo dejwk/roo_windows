@@ -12,6 +12,11 @@
 namespace roo_windows {
 namespace menu {
 
+/// Vertical menu row containing a caption, a value readout, and a slider.
+///
+/// Subclasses provide `formatValue()` to render the right-aligned readout
+/// string from the slider's raw 16-bit position. Used to build settings menus
+/// where each row exposes a single numeric/enumerated knob.
 class BaseSliderWithCaption : public roo_windows::VerticalLayout {
  public:
   BaseSliderWithCaption(const roo_windows::Environment& env,
@@ -38,6 +43,9 @@ class BaseSliderWithCaption : public roo_windows::VerticalLayout {
   roo_windows::Slider slider_;
 };
 
+/// Concrete `BaseSliderWithCaption` that maps the slider position to a float
+/// value in `[min, max]` (with optional step) and renders it using `printf`
+/// formatting.
 class NumericSliderWithCaption : public BaseSliderWithCaption {
  public:
   NumericSliderWithCaption(const roo_windows::Environment& env,

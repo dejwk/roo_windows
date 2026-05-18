@@ -50,6 +50,17 @@ enum class SmallButtonPadding : uint8_t {
   kReduced,
 };
 
+/// Material 3 standard button.
+///
+/// Supports the five visual variants (text, filled, filled tonal, outlined,
+/// elevated), five size tokens, two shape families (round / square), optional
+/// leading icon, and a press-driven shape morph. Colors, typography,
+/// elevation, and geometry are resolved entirely from the active theme;
+/// per-instance overrides described in the design doc are deferred.
+///
+/// The label is held as a non-owning `roo::string_view`, so the caller must
+/// keep the backing string alive while the button is using it. See
+/// docs/material3_buttons_design.md for the full contract.
 class Button : public BasicSurfaceWidget {
  public:
   /// Creates a Material 3 button with the supplied label and visual variant.

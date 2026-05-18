@@ -74,6 +74,8 @@ class Material3CheckboxGoldenTest : public testing::Test {
   Environment env_;
 };
 
+// Verifies the rendered pixels of the three enabled checkbox states
+// (off, on, indeterminate) against the locked-down golden image.
 TEST_F(Material3CheckboxGoldenTest, EnabledStatesRow) {
   auto image = RenderRow(true);
   EXPECT_TRUE(test::CompareOrUpdateGolden(
@@ -81,6 +83,8 @@ TEST_F(Material3CheckboxGoldenTest, EnabledStatesRow) {
       "material3_checkbox_enabled_states_row"));
 }
 
+// Verifies the rendered pixels of the three disabled checkbox states,
+// confirming the dimmed visual treatment matches the locked-down golden.
 TEST_F(Material3CheckboxGoldenTest, DisabledStatesRow) {
   auto image = RenderRow(false);
   EXPECT_TRUE(test::CompareOrUpdateGolden(

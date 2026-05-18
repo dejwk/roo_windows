@@ -4,6 +4,12 @@
 
 namespace roo_windows {
 
+/// Base widget for battery state indicators.
+///
+/// Holds the discrete state (level bucket, charging/alert/unknown flags) and
+/// resolves it to a pictogram drawn from a subclass-supplied icon table.
+/// Concrete size variants under `indicators/<size>/battery.h` plug in the
+/// matching icon family; do not instantiate this base directly.
 class BatteryIndicator : public Widget {
  public:
   BatteryIndicator(const Environment& env);

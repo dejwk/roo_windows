@@ -5,6 +5,13 @@
 
 namespace roo_windows {
 
+/// Shared, application-wide services injected into every widget at
+/// construction.
+///
+/// Carries references to a `roo_scheduler::Scheduler` (used for animations and
+/// deferred work), the active visual `Theme`, and the `KeyboardColorTheme`. The
+/// environment is normally held by the `Application` and outlives the widgets
+/// that consume it.
 class Environment {
  public:
   Environment(roo_scheduler::Scheduler& scheduler,

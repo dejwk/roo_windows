@@ -12,6 +12,13 @@ namespace roo_windows {
 
 class RadioListModel;
 
+/// Single row of a `RadioList`: a radio button plus a caller-supplied item
+/// widget laid out horizontally.
+///
+/// The wrapping `RadioListModel` drives `set()` to keep the radio button's
+/// on/off state in sync with the current selection; clicking the radio button
+/// (or, optionally, the entire row) reports the row's index through the
+/// stored on-click callback.
 class RadioListItem : public HorizontalLayout {
  public:
   RadioListItem(const Environment& env, std::unique_ptr<Widget> item,
@@ -63,6 +70,12 @@ class RadioListItem : public HorizontalLayout {
   std::function<void(int idx)> on_click_;
 };
 
+/// `ListModel` adapter that adds single-selection state on top of an existing
+/// item model.
+///
+/// The wrapped `model_` provides the row contents; this class tracks which
+/// index is selected and ensures each `RadioListItem` bound by `set()` shows
+/// the correct radio-button state.
 class RadioListModel : public ListModel {
  public:
   RadioListModel() : model_(nullptr), selected_(-1) {}
@@ -102,6 +115,12 @@ class RadioListModel : public ListModel {
   int selected_;
 };
 
+/// High-level single-selection list view.
+///
+/// Wraps a `ListLayout` of `RadioListItem`s and a `RadioListModel` inside a
+/// `Holder`, exposing `setModel()` / `setSelected()` / `selected()` plus an
+/// interactive-change callback. The caller supplies a prototype function that
+/// builds the per-row item widget; selection state is owned here.
 class RadioList : public Holder {
  public:
   RadioList(const Environment& env,

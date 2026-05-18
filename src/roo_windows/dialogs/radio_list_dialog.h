@@ -6,6 +6,12 @@
 
 namespace roo_windows {
 
+/// Dialog that wraps a `RadioList` so the user can pick exactly one item from
+/// a model.
+///
+/// The Cancel / OK footer is wired so that OK is enabled only when something
+/// is selected; the chosen index is read via `selected()` from within the
+/// callback. Override `onChange()` to react to interactive selection changes.
 class RadioListDialog : public Dialog {
  public:
   RadioListDialog(const roo_windows::Environment& env,

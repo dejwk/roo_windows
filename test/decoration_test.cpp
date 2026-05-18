@@ -92,6 +92,8 @@ class DecorationGoldenTest : public testing::Test {
   Environment env_;
 };
 
+// Verifies the rendered pixels of a flat (no corner radius, no outline,
+// no elevation) card against the locked-down golden image.
 TEST_F(DecorationGoldenTest, SharpNoOutlineElevation0) {
   auto image = Render(BorderStyle(0, 0), 0);
   EXPECT_TRUE(test::CompareOrUpdateGolden(
@@ -99,6 +101,8 @@ TEST_F(DecorationGoldenTest, SharpNoOutlineElevation0) {
       "decoration_sharp_no_outline_e0"));
 }
 
+// Verifies that a card with a uniform 14 dp corner radius and no outline
+// renders identically to the locked-down golden image.
 TEST_F(DecorationGoldenTest, RoundUniformNoOutlineElevation0) {
   auto image = Render(BorderStyle(14, 0), 0);
   EXPECT_TRUE(test::CompareOrUpdateGolden(
@@ -106,6 +110,8 @@ TEST_F(DecorationGoldenTest, RoundUniformNoOutlineElevation0) {
       "decoration_round_uniform_no_outline_e0"));
 }
 
+// Verifies that a card with per-corner radii (4, 12, 18, 8) and no outline
+// renders identically to the locked-down golden image.
 TEST_F(DecorationGoldenTest, RoundVariableNoOutlineElevation0) {
   auto image = Render(BorderStyle(4, 12, 18, 8, 0), 0);
   EXPECT_TRUE(
@@ -115,6 +121,8 @@ TEST_F(DecorationGoldenTest, RoundVariableNoOutlineElevation0) {
                                   "decoration_round_variable_no_outline_e0"));
 }
 
+// Verifies that a sharp-cornered card with a 36/16 dp outline renders
+// identically to the locked-down golden image.
 TEST_F(DecorationGoldenTest, SharpOutlineElevation0) {
   auto image = Render(BorderStyle(0, SmallNumber::Of16ths(36)), 0);
   EXPECT_TRUE(test::CompareOrUpdateGolden(
@@ -122,6 +130,8 @@ TEST_F(DecorationGoldenTest, SharpOutlineElevation0) {
       "decoration_sharp_outline_e0"));
 }
 
+// Verifies that a card with a uniform 14 dp radius and a 36/16 dp outline
+// renders identically to the locked-down golden image.
 TEST_F(DecorationGoldenTest, RoundUniformOutlineElevation0) {
   auto image = Render(BorderStyle(14, SmallNumber::Of16ths(36)), 0);
   EXPECT_TRUE(test::CompareOrUpdateGolden(
@@ -129,6 +139,8 @@ TEST_F(DecorationGoldenTest, RoundUniformOutlineElevation0) {
       "decoration_round_uniform_outline_e0"));
 }
 
+// Verifies that a card with per-corner radii and a 36/16 dp outline at
+// elevation 0 renders identically to the locked-down golden image.
 TEST_F(DecorationGoldenTest, RoundVariableOutlineElevation0) {
   auto image = Render(BorderStyle(4, 12, 18, 8, SmallNumber::Of16ths(36)), 0);
   EXPECT_TRUE(test::CompareOrUpdateGolden(
@@ -136,6 +148,8 @@ TEST_F(DecorationGoldenTest, RoundVariableOutlineElevation0) {
       "decoration_round_variable_outline_e0"));
 }
 
+// Verifies that a card with per-corner radii, a 36/16 dp outline, and
+// elevation 4 renders the expected drop-shadow against the golden image.
 TEST_F(DecorationGoldenTest, RoundVariableOutlineElevation4) {
   auto image = Render(BorderStyle(4, 12, 18, 8, SmallNumber::Of16ths(36)), 4);
   EXPECT_TRUE(test::CompareOrUpdateGolden(
@@ -143,6 +157,9 @@ TEST_F(DecorationGoldenTest, RoundVariableOutlineElevation4) {
       "decoration_round_variable_outline_e4"));
 }
 
+// Verifies that a card with per-corner radii, a 36/16 dp outline, and
+// elevation 12 renders the expected deeper drop-shadow against the golden
+// image.
 TEST_F(DecorationGoldenTest, RoundVariableOutlineElevation12) {
   auto image = Render(BorderStyle(4, 12, 18, 8, SmallNumber::Of16ths(36)), 12);
   EXPECT_TRUE(test::CompareOrUpdateGolden(

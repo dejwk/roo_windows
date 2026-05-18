@@ -4,6 +4,12 @@
 
 namespace roo_windows {
 
+/// Base widget for Wi-Fi signal indicators.
+///
+/// Tracks connection status, lock state, and signal strength (RSSI), and
+/// maps them to a discrete icon index resolved against a subclass-supplied
+/// icon table. Concrete size variants under `indicators/<size>/wifi.h`
+/// plug in the matching icon family.
 class WifiIndicatorBase : public BasicWidget {
  public:
   enum ConnectionStatus {

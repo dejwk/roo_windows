@@ -63,6 +63,11 @@ class Log : public roo_windows::BasicWidget {
   int line_count_;
 };
 
+/// `Log` widget wrapped in a `ScrollablePanel`, with optional auto-scroll to
+/// the bottom whenever a new line arrives.
+///
+/// Pick `AutoscrollMode::kAlways` for live log views; `kNone` lets the user
+/// stay parked at an earlier position even as new lines are appended.
 class ScrollableLog : public roo_windows::ScrollablePanel {
  public:
   enum class AutoscrollMode {

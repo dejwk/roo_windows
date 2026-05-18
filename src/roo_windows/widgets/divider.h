@@ -4,6 +4,7 @@
 
 namespace roo_windows {
 
+/// 2-pixel horizontal rule that stretches to its parent's width.
 class HorizontalDivider : public Widget {
  public:
   using Widget::Widget;
@@ -21,6 +22,7 @@ class HorizontalDivider : public Widget {
   }
 };
 
+/// 2-pixel vertical rule that stretches to its parent's height.
 class VerticalDivider : public Widget {
  public:
   using Widget::Widget;

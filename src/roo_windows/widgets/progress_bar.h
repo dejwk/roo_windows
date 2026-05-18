@@ -4,6 +4,11 @@
 
 namespace roo_windows {
 
+/// Horizontal progress indicator supporting determinate and indeterminate
+/// modes.
+///
+/// Progress is stored as hundredths of a percent in `[0, 10000]`; negative
+/// values mean indeterminate, which is rendered as an animated marquee.
 class ProgressBar : public Widget {
  public:
   ProgressBar(const Environment& env) : Widget(env), progress_(-1), color_(0) {}

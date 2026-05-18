@@ -15,6 +15,18 @@ namespace roo_windows {
 
 using roo_display::Color;
 
+/// Base class for widgets that can host children.
+///
+/// `Container` adds child measurement/layout/paint dispatch, dirty and
+/// invalidation propagation across the parent chain, sloppy touch dispatch into
+/// descendants, and bookkeeping for descendants whose visual extent can escape
+/// `parent_bounds()` (parent-clip mode `kUnclipped`).
+///
+/// Subclasses generally only need to provide the child collection by overriding
+/// `getChildrenCount()` and `getChild()`. Layout subclasses additionally
+/// override `onMeasure()` / `onLayout()`. The default implementations form a
+/// static layout: positions are preserved and only children that explicitly
+/// requested re-layout are re-measured.
 class Container : public SurfaceWidget {
  public:
   Container(const Environment& env);

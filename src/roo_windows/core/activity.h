@@ -8,6 +8,14 @@
 namespace roo_windows {
 
 class Application;
+
+/// An entry on a `Task`'s activity stack.
+///
+/// An activity supplies a contents widget (`getContents()`) and reacts to
+/// lifecycle events (`onStart`, `onResume`, `onPause`, `onStop`) as it is
+/// pushed onto, surfaced on, hidden under, or popped off the task stack.
+/// Activities are an Android-style abstraction: they let an application juggle
+/// multiple full-screen "screens" without tearing down their widgets.
 class Activity {
  public:
   enum State {

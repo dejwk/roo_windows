@@ -12,6 +12,17 @@
 
 namespace roo_windows {
 
+/// Modal dialog base class.
+///
+/// Provides the standard scaffold: title, scrollable content area, optional
+/// horizontal dividers, and a row of footer buttons whose labels are supplied
+/// at construction. The dialog intercepts touch-down events to enforce modal
+/// behavior, renders at elevated z to float above the underlying surface, and
+/// invokes the registered `CallbackFn` with the chosen button index on
+/// dismissal (or -1 for `close()`).
+///
+/// Subclasses populate `contents_` with their specific UI. Override `onEnter`
+/// / `onExit` to react to lifecycle transitions.
 class Dialog : public VerticalLayout {
  public:
   typedef std::function<void(int action_idx)> CallbackFn;

@@ -6,6 +6,7 @@
 
 namespace roo_windows {
 
+/// 24 px wall-clock indicator preset using `NotoSans_Regular_24`.
 class WalltimeIndicator24 : public WalltimeIndicatorBase {
  public:
   using WalltimeIndicatorBase::WalltimeIndicatorBase;

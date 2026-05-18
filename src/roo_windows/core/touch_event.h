@@ -4,6 +4,9 @@
 
 namespace roo_windows {
 
+/// Touch sample carrying screen coordinates and a microsecond timestamp.
+///
+/// Used by the gesture detector to reconstruct drag velocity and fling motion.
 class TouchPoint {
  public:
   TouchPoint() : TouchPoint(0, 0, 0) {}
@@ -20,6 +23,8 @@ class TouchPoint {
   unsigned long when_micros_;
 };
 
+/// Touch event dispatched to widgets: kind (`DOWN`, `UP`, `MOVE`) plus the
+/// touch location in the receiver's coordinate space.
 class TouchEvent {
  public:
   enum Type { DOWN, UP, MOVE };

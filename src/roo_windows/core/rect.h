@@ -11,6 +11,14 @@ namespace roo_windows {
 typedef int16_t XDim;
 typedef int32_t YDim;
 
+/// Half-open integer rectangle in the framework's coordinate system
+/// (16-bit X, 24-bit Y).
+///
+/// `Rect` is the workhorse value type for layout, paint bounds, dirty regions,
+/// and touch dispatch. Y is stored as 16+8 bits (`yMinLo_` / `yMinHi_`, same
+/// for max) so that `Rect` packs into 10 bytes while still supporting the
+/// scrollable-panel coordinate range. An empty rect is encoded as
+/// `xMax < xMin || yMax < yMin`.
 class Rect {
  public:
   struct Dimensions {

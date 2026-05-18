@@ -112,6 +112,13 @@ struct InsetIcon {
   SliderInsetIconAnchor anchor = SliderInsetIconAnchor::kStart;
 };
 
+/// Material 3 slider widget.
+///
+/// Models a continuous or stepped value over an arbitrary `SliderRange` and
+/// drives both the visual presentation (orientation, size, stops, indicator)
+/// and the touch / drag / scroll interaction. Subclasses can hook value-change
+/// callbacks (`onValueChange`, `onInteractionStart`, `onInteractionEnd`) and
+/// supply an optional inset icon painted inside the track.
 class Slider : public BasicWidget {
  public:
   /// Creates a single-value Material 3 slider over the supplied semantic value
@@ -290,6 +297,8 @@ class Slider : public BasicWidget {
   internal::DirtySpan pending_indicator_dirty_span_;
 };
 
+/// Convenience `Slider` subclass that paints a non-owning pictogram inside
+/// the track at the start or end anchor.
 class SliderWithInsetIcon : public Slider {
  public:
   /// Inherits Slider constructors.

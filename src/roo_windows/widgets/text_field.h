@@ -1,16 +1,15 @@
 #pragma once
 
-#include "roo_windows/config.h"
-
+#include "roo_backport/string_view.h"
 #include "roo_display/color/color.h"
 #include "roo_display/font/font.h"
 #include "roo_display/ui/tile.h"
 #include "roo_scheduler.h"
 #include "roo_time.h"
 #include "roo_windows/activities/keyboard.h"
+#include "roo_windows/config.h"
 #include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/panel.h"
-#include "roo_backport/string_view.h"
 
 namespace roo_windows {
 
@@ -22,6 +21,11 @@ static constexpr roo_time::Duration kCursorBlinkInterval =
 static constexpr roo_time::Duration kShowLastGlyphInterval =
     roo_time::Millis(1500);
 
+/// Eye / eye-slash style toggle used by `TextField` to reveal a masked value.
+///
+/// Acts as an on/off `BasicWidget`: clicking toggles, paint() chooses the
+/// matching pictogram. Owns no application state of its own; the consuming
+/// `TextField` reacts to the state change.
 class VisibilityToggle : public BasicWidget {
  public:
   VisibilityToggle(const Environment& env) : BasicWidget(env) { setOff(); }
@@ -46,6 +50,14 @@ class VisibilityToggle : public BasicWidget {
   using Widget::toggle;
 };
 
+/// Shared editing controller for `TextField` widgets.
+///
+/// One editor is owned by the `Application` and bound to whichever
+/// `TextField` currently has focus. It receives keyboard input as a
+/// `KeyboardListener`, maintains the cursor position, selection range, glyph
+/// metrics cache, and horizontal scroll offset, and drives cursor blinking
+/// and "recently entered glyph" reveal timers via the scheduler. Keeping this
+/// state centrally avoids paying for it on every `TextField` instance.
 class TextFieldEditor : public KeyboardListener {
  public:
   TextFieldEditor(roo_scheduler::Scheduler& scheduler, Keyboard& keyboard)
@@ -119,6 +131,13 @@ class TextFieldEditor : public KeyboardListener {
   int16_t draw_xoffset_;
 };
 
+/// Single-line editable text widget.
+///
+/// Holds the current value, hint, font, color hints, alignment, and an
+/// optional decoration (e.g. underline). All editing state (cursor, selection,
+/// scroll) is delegated to the shared `TextFieldEditor`, so individual fields
+/// stay lightweight. Set `setStarred(true)` to render the value as bullet
+/// characters for password-style fields.
 class TextField : public BasicWidget {
  public:
   enum Decoration {

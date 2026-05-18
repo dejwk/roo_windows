@@ -5,6 +5,11 @@
 
 namespace roo_windows {
 
+/// Memoizes the most recent `onMeasure()` result.
+///
+/// A widget or container can keep one of these to avoid re-running measurement
+/// when the same `(WidthSpec, HeightSpec)` pair is requested again, which is
+/// common during multi-pass layouts.
 class CachedMeasure {
  public:
   CachedMeasure()

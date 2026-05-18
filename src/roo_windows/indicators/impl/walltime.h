@@ -5,6 +5,12 @@
 
 namespace roo_windows {
 
+/// Base widget that renders the current wall-clock time as `HH:MM`.
+///
+/// Holds a non-owning `WallTimeClock` pointer, the display time zone, and
+/// the cached hour/minute pair that drives invalidation in `update()`.
+/// Subclasses under `indicators/<size>/walltime.h` choose the font; use those
+/// concrete classes rather than this base.
 class WalltimeIndicatorBase : public Widget {
  public:
   WalltimeIndicatorBase(const Environment& env,

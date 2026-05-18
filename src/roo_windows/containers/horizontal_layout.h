@@ -9,6 +9,14 @@
 
 namespace roo_windows {
 
+/// Linear layout that arranges its children left-to-right.
+///
+/// Each child can declare a vertical `gravity` and a `weight`. Weight
+/// distributes any leftover horizontal space proportionally; setting an
+/// explicit `weight_sum` lets a single child claim a fixed share (e.g.
+/// weight 50 with sum 100 yields 50%). `setUseLargestChild(true)` makes all
+/// weighted children pad up to the size of the largest, which is useful for
+/// equal-width button rows.
 class HorizontalLayout : public Panel {
  public:
   struct Params {

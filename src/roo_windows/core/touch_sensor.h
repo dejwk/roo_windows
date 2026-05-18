@@ -8,6 +8,12 @@
 
 namespace roo_windows {
 
+/// Thread-safe touch-input source.
+///
+/// Polls the underlying `roo_display::Display` for touch state on either a
+/// worker thread (multi-threaded builds) or via `pollOnce()` from the UI loop,
+/// pushes synthesized DOWN/MOVE/UP events with velocity into a small ring
+/// buffer, and lets the consumer `drain()` them.
 class TouchSensor {
  public:
   struct Event {

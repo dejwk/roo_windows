@@ -6,7 +6,13 @@
 
 namespace roo_windows {
 namespace material3 {
-
+/// Material 3 card backed by a `FlexLayout` for its contents.
+///
+/// Combines one of the three card styles (elevated, filled, outlined) with the
+/// flexible child layout of `FlexLayout`. Each visual aspect that the style
+/// normally derives from the theme - container role, outline role, elevation,
+/// outline width, and corner radius - can be individually overridden through
+/// the `setXxx()` / `clearXxxOverride()` accessors.
 class FlexCard : public FlexLayout {
  public:
   enum class Style : uint8_t {

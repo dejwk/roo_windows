@@ -1,8 +1,7 @@
 #pragma once
 
-#include "roo_windows/core/preferred_size.h"
-
 #include "roo_logging.h"
+#include "roo_windows/core/preferred_size.h"
 
 namespace roo_windows {
 
@@ -12,6 +11,13 @@ enum MeasureSpecKind {
   EXACTLY = 2,
 };
 
+/// Horizontal measurement constraint passed into `onMeasure()`.
+///
+/// Encodes a `MeasureSpecKind` (UNSPECIFIED, AT_MOST, EXACTLY) and a width
+/// value into a single 16-bit word. Widgets use `getChildWidthSpec()` to
+/// derive the spec they impose on a child given their own padding and the
+/// child's `PreferredSize`, and `resolveSize()` to clamp a desired width back
+/// into the constraint.
 class WidthSpec {
  public:
   static constexpr WidthSpec Unspecified(XDim hint) {
@@ -95,6 +101,8 @@ inline constexpr bool operator==(WidthSpec a, WidthSpec b) {
 
 roo_logging::Stream& operator<<(roo_logging::Stream& os, WidthSpec spec);
 
+/// Vertical analogue of `WidthSpec`, encoded into a 32-bit word to accommodate
+/// the wider `YDim` range used for scrollable content.
 class HeightSpec {
  public:
   static constexpr HeightSpec Unspecified(YDim hint) {

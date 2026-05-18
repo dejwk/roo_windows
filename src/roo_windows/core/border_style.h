@@ -7,6 +7,12 @@
 
 namespace roo_windows {
 
+/// Per-corner rounded-corner radii combined with an outline width.
+///
+/// Stored compactly (four `uint8_t` corner radii plus a fixed-point
+/// outline width) so it can be passed by value. Used by `Container`,
+/// `Decoration`, and the press-overlay pipeline to describe a widget's
+/// outer shape and stroke.
 class BorderStyle {
  public:
   struct CornerRadii {

@@ -7,6 +7,11 @@
 
 namespace roo_windows {
 
+/// Mutually-exclusive group of icon-only push buttons (segmented control).
+///
+/// Add icons through `addButton()`; at most one is active at a time, exposed
+/// via `getActive()` / `setActive()`. The group paints its own framing around
+/// the buttons rather than relying on per-button decoration.
 class ToggleButtons : public Panel {
  public:
   ToggleButtons(const Environment& env, int16_t padding = Scaled(12))

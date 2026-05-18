@@ -73,6 +73,10 @@ class TestExactSizeWidget : public BasicWidget {
   Dimensions dims_;
 };
 
+// Verifies that when align-content stretches a single line's cross size, a
+// stretched flex child is sized to the post-stretch line cross size during
+// onLayout (regression test for the case where the child was sized to the
+// pre-stretch cross size).
 TEST(FlexLayout, StretchUsesFinalLineCrossSizeAfterAlignContent) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -99,6 +103,9 @@ TEST(FlexLayout, StretchUsesFinalLineCrossSizeAfterAlignContent) {
   EXPECT_EQ(0, child.offsetTop());
 }
 
+// Verifies that a padded column FlexLayout correctly inset its match-parent
+// children by the configured padding on both sides, so a divider/slider
+// children land at offsetLeft==padding and span (width - 2*padding).
 TEST(FlexLayout, PaddedColumnShrinksMatchParentWidthChildren) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -125,6 +132,9 @@ TEST(FlexLayout, PaddedColumnShrinksMatchParentWidthChildren) {
   EXPECT_EQ(kParentWidth - 24, slider.width());
 }
 
+// Verifies that wrapping a padded full-width column in a SimpleScrollablePanel
+// keeps the panel's content at the panel width and still applies the column's
+// padding to its match-parent-width children.
 TEST(FlexLayout,
      ScrollablePanelRespectsNestedPaddedColumnWhenContentFillsWidth) {
   roo_scheduler::Scheduler scheduler;
@@ -162,6 +172,9 @@ TEST(FlexLayout,
   EXPECT_EQ(kPanelWidth - 24, slider_ptr->width());
 }
 
+// Verifies that a wide exact-size sibling does not cause match-parent-width
+// children to expand beyond the scrollable panel's viewport: padded
+// divider/slider widths stay clamped to the panel width minus padding.
 TEST(FlexLayout,
      ScrollablePanelKeepsMatchParentSiblingsBoundedWithWideExactSibling) {
   roo_scheduler::Scheduler scheduler;
@@ -199,6 +212,9 @@ TEST(FlexLayout,
   EXPECT_EQ(kPanelWidth - 24, slider_ptr->width());
 }
 
+// Verifies that a nested row containing a wide exact-size child does not
+// expand match-parent siblings beyond the scrollable panel's viewport: the
+// outer column padding still bounds divider/slider/row widths.
 TEST(FlexLayout,
      ScrollablePanelKeepsMatchParentSiblingsBoundedWithWideNestedRow) {
   roo_scheduler::Scheduler scheduler;
@@ -246,6 +262,10 @@ TEST(FlexLayout,
 // Reproduces the structure of the material3 slider example: a scrollable
 // panel that contains a padded full-width column, whose direct children
 // include nested column FlexLayouts (each containing a slider).
+// Verifies the layout used by the Material 3 slider example: a scrollable
+// panel hosts a padded full-width column whose nested SliderRow columns
+// inherit the correct content area, with each slider clamped to the panel
+// width minus the combined padding of both the outer column and its row.
 TEST(FlexLayout, SliderExampleNestedColumnsHaveCorrectPadding) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -268,7 +288,7 @@ TEST(FlexLayout, SliderExampleNestedColumnsHaveCorrectPadding) {
     row_ptrs[i] = row.get();
     row->setPadding(Padding(12, 8));
     auto slider = std::make_unique<material3::Slider>(
-      env, material3::SliderRange{}, 0.5f);
+        env, material3::SliderRange{}, 0.5f);
     slider_ptrs[i] = slider.get();
     row_ptrs[i]->add(std::move(slider), {.flex_grow = 0, .flex_shrink = 1});
     content_ptr->add(std::move(row), {.flex_grow = 0, .flex_shrink = 0});

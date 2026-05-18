@@ -69,6 +69,17 @@ enum class ParentClipMode { kClipped, kUnclipped };
 enum class OnOffState { kOff, kIndeterminate, kOn };
 enum class Visibility { kVisible, kInvisible, kGone };
 
+/// Base class for every UI element in the framework.
+///
+/// A `Widget` owns a rectangular `parent_bounds()` inside its parent, a set of
+/// status flags (enabled, focused, pressed, hover, etc.), and the contracts for
+/// measurement, layout, painting, dirty/invalidation propagation, and touch
+/// dispatch. Subclasses typically override `onMeasure()`, `onLayout()`, and
+/// `paint()`; most other behavior is shared.
+///
+/// Widgets are non-copyable but movable, and are normally owned by their parent
+/// `Container` (see `kWidgetOwnedByParent`). Most accessors must be called only
+/// after the widget has been attached to a parent / application tree.
 class Widget {
  public:
   static constexpr int16_t kMinSloppyTouchTargetSpan = 50;

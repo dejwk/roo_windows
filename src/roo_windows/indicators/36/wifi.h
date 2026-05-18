@@ -5,6 +5,7 @@
 
 namespace roo_windows {
 
+/// 36 px Wi-Fi indicator preset using the filled 36-pixel device icon set.
 class WifiIndicator36x36 : public WifiIndicatorBase {
  public:
   using WifiIndicatorBase::WifiIndicatorBase;

@@ -6,6 +6,12 @@
 
 namespace roo_windows {
 
+/// Signed left/top/right/bottom offsets that shrink (positive) or grow
+/// (negative) a `Rect`.
+///
+/// Unlike `Padding` / `Margins`, `Insets` is plain pixel-valued and used by
+/// internal computations such as `Widget::getInkInsets()` to describe how the
+/// foreground content region is derived from the logical bounds.
 class Insets {
  public:
   constexpr Insets() : Insets(0) {}
