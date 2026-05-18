@@ -187,10 +187,15 @@ content slots, or large override structs inline on every button instance.
 1. Expose semantic variant selection rather than a large matrix of Android-
    style setters.
 2. Keep `Button` and `IconButton` as separate public types.
-3. Keep the base content model intentionally narrow: text plus optional leading
+3. Expose common Material 3 configuration choices such as size, shape, and
+   small-button padding as direct enum-backed widget properties rather than
+   hiding them behind appearance objects.
+4. Keep the base content model intentionally narrow: text plus optional leading
    icon for `Button`, icon only for `IconButton`.
-4. Do not expose custom child slots in v1.
-5. Do not expose trailing-icon placement in v1.
+5. Do not expose custom child slots in v1.
+6. Do not expose trailing-icon placement in v1.
+7. Reserve `*Appearance` for unusual customizations such as nonstandard color
+   mappings, border widths, and other product-specific overrides.
 
 ### Embedded Constraints
 
@@ -273,6 +278,24 @@ enum class ButtonVariant : uint8_t {
   kElevated,
 };
 
+enum class ButtonSize : uint8_t {
+   kExtraSmall,
+   kSmall,
+   kMedium,
+   kLarge,
+   kExtraLarge,
+};
+
+enum class ButtonShape : uint8_t {
+   kRound,
+   kSquare,
+};
+
+enum class SmallButtonPadding : uint8_t {
+   kDefault,
+   kReduced,
+};
+
 enum class IconButtonVariant : uint8_t {
   kStandard,
   kFilled,
@@ -291,6 +314,15 @@ class Button : public BasicSurfaceWidget {
 
   ButtonVariant variant() const;
   void setVariant(ButtonVariant variant);
+
+   ButtonSize size() const;
+   void setSize(ButtonSize size);
+
+   ButtonShape shape() const;
+   void setShape(ButtonShape shape);
+
+   SmallButtonPadding smallButtonPadding() const;
+   void setSmallButtonPadding(SmallButtonPadding padding);
 
   roo::string_view label() const;
   void setLabel(roo::string_view label);
@@ -401,6 +433,38 @@ elevation. Implementations must therefore trigger `requestLayout()` and
 `invalidateInterior()` when the variant changes, matching the existing setter
 conventions on surface widgets.
 
+#### Common Material 3 Style Properties
+
+Variant is not the only property that should be surfaced directly.
+
+`ButtonSize`, `ButtonShape`, and `SmallButtonPadding` are common Material 3
+component choices rather than rare product-specific overrides, so they should
+be first-class enums on `Button`.
+
+- `ButtonSize` selects the token set for height, padding, icon size, gap, and
+   pressed-shape geometry.
+- `ButtonShape` selects the resting corner family (`round` or `square`) while
+   still allowing pressed-state shape morph to follow Material 3 behavior.
+- `SmallButtonPadding` selects the spec-defined reduced horizontal padding mode
+   for small buttons.
+
+The spec's configuration table distinguishes two explicit small-button padding
+choices:
+
+- `SmallButtonPadding::kDefault` = 24 dp,
+- `SmallButtonPadding::kReduced` = 16 dp.
+
+That selector should remain separate from `ButtonSize`, because the Material 3
+spec treats it as an independent configuration rather than as a different size.
+
+`SmallButtonPadding` only affects layouts that use `ButtonSize::kSmall`. For
+other sizes, implementations may retain the configured value but it has no
+visual effect.
+
+Like `setVariant()`, `setSize()`, `setShape()`, and
+`setSmallButtonPadding()` can affect measurement and decoration, so they should
+trigger `requestLayout()` and `invalidateInterior()`.
+
 #### Clickability
 
 `material3::Button` and `material3::IconButton` override `isClickable()` to
@@ -453,6 +517,17 @@ surface proves materially different.
 
 Button geometry should be token-backed and shared by variant family.
 
+Unlike the earlier draft, this design should expose the common Material 3
+geometry selectors directly in the widget API instead of forcing them through
+`ButtonAppearance`. The direct API surface should cover:
+
+- size,
+- shape,
+- and small-button padding.
+
+Those enums select from theme-backed token tables; they do not introduce
+arbitrary per-instance geometry.
+
 For `Button`, the token set should cover at least:
 
 - minimum height,
@@ -463,6 +538,50 @@ For `Button`, the token set should cover at least:
 - outline width,
 - and elevation levels.
 
+The token resolution should therefore depend on:
+
+- variant,
+- size,
+- shape,
+- and small-button padding.
+
+#### Spec-Derived Per-Size Measurements (dp)
+
+The Material 3 measurements figure on the button spec page provides the
+following per-size values for standard text buttons:
+
+| Size | Height | Text-only horizontal padding per side |
+| --- | ---: | ---: |
+| XS | 32 | 12 |
+| S | 40 | 16 |
+| M | 56 | 24 |
+| L | 96 | 48 |
+| XL | 136 | 64 |
+
+The same figure also provides the icon-bearing layout measurements:
+
+| Size | Height | Leading padding | Icon size | Icon-label gap | Trailing padding |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| XS | 32 | 12 | 20 | 4 | 12 |
+| S | 40 | 16 | 24 | 8 | 16 |
+| M | 56 | 24 | 24 | 8 | 24 |
+| L | 96 | 48 | 32 | 12 | 48 |
+| XL | 136 | 64 | 40 | 16 | 64 |
+
+The corner-size table on the same spec page gives these size-dependent radii:
+
+| Size | Round resting shape | Square resting shape | Pressed shape |
+| --- | --- | ---: | ---: |
+| XS | Full | 12 | 8 |
+| S | Full | 12 | 8 |
+| M | Full | 16 | 12 |
+| L | Full | 28 | 16 |
+| XL | Full | 28 | 16 |
+
+These values should be transcribed into the implementation as token tables,
+indexed by `ButtonSize` and `ButtonShape`, rather than re-derived ad hoc in
+paint or measurement code.
+
 For `IconButton`, the token set should cover at least:
 
 - container size,
@@ -471,9 +590,10 @@ For `IconButton`, the token set should cover at least:
 - outline width,
 - and elevation where applicable.
 
-This design does not expose a public size enum in v1. The initial API should
-ship with theme-backed default geometry first. Public size variants can be
-added later if product requirements justify them.
+This does not imply a large geometry-setter surface. Only the common Material
+3 choices above should be public enums. Unusual geometry overrides such as
+custom border widths, nonstandard radii, or bespoke container sizes remain the
+responsibility of `*Appearance`.
 
 ## Layout and Measurement
 
@@ -492,11 +612,22 @@ The measured size is therefore:
 - plus optional icon width,
 - plus optional icon-label gap,
 - plus label width,
-- with height determined by the larger of text height and icon height,
+- with height determined by the larger of text height and icon height, using
+   the active `ButtonSize` token set,
 - then clamped up to the tokenized minimum button height.
 
 The label should be treated as single-line in v1. Multi-line labels are out of
 scope for the initial design.
+
+In practice, that means `Button::getSuggestedMinimumDimensions()` should be
+driven from the spec-derived size tables above:
+
+- text-only width = label width + left/right padding for the active size,
+- icon-bearing width = leading padding + icon size + gap + label width +
+   trailing padding,
+- height = tokenized size height,
+- and corner radii come from the active shape/pressed-state table for the same
+   size.
 
 ### IconButton
 
@@ -527,18 +658,36 @@ generic area-overlay path is insufficient.
 
 ## Appearance Overrides
 
-The design should expose shared appearance structs rather than many per-
-instance setters.
+The design should expose shared appearance structs for unusual or product-
+specific customization, rather than for every common Material 3 control.
+
+Common Material 3 choices should remain direct widget properties:
+
+- variant,
+- size,
+- shape,
+- and small-button padding.
+
+`*Appearance` should be reserved for overrides such as:
+
+- explicit color-role substitutions,
+- nonstandard colors,
+- custom border widths,
+- atypical corner radii,
+- and other bespoke geometry or decoration choices that are not part of the
+   normal Material 3 button API.
 
 Illustrative shape:
 
 ```cpp
 struct ButtonAppearance {
-  // Token-like overrides for roles and geometry.
+   // Uncommon overrides such as custom roles, colors, border widths,
+   // or bespoke geometry.
 };
 
 struct IconButtonAppearance {
-  // Token-like overrides for roles and geometry.
+   // Uncommon overrides such as custom roles, colors, border widths,
+   // or bespoke geometry.
 };
 ```
 
@@ -572,7 +721,7 @@ no transient elevation state are stored on the widget.
 - `roo::string_view` label: 8 B
 - optional icon pointer: 4 B
 - appearance pointer: 4 B
-- packed variant + state byte: 1 B
+- packed variant + size + shape + small-padding + state bits: ~1-2 B
 - alignment / padding slack: ~3 B
 
 Approximate total: ~60-70 B.
@@ -632,6 +781,7 @@ design work rather than kept as speculative complexity in the base design.
 Implement `material3::Button` with:
 
 - variant selection,
+- direct `ButtonSize`, `ButtonShape`, and `SmallButtonPadding` properties,
 - single-line label,
 - optional leading icon,
 - the Material 3 button token surface (geometry, colors, typography,
