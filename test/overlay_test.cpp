@@ -57,6 +57,43 @@ class RoleOverridingPointOverlayWidget : public PointOverlayBoxWidget {
   ColorRole role_;
 };
 
+class RecordingPanel : public Panel {
+ public:
+  explicit RecordingPanel(const Environment& env) : Panel(env) {}
+
+  using Panel::add;
+
+  std::vector<Rect> invalidated_regions;
+
+ protected:
+  void childShown(const Widget* child) override { (void)child; }
+
+  void propagateDirty(const Widget* child, const Rect& rect) override {
+    (void)child;
+    (void)rect;
+  }
+
+  void childInvalidatedRegion(const Widget* child, Rect rect) override {
+    (void)child;
+    invalidated_regions.push_back(rect);
+  }
+};
+
+class ClickAnimationOverflowWidget : public PointOverlayBoxWidget {
+ public:
+  ClickAnimationOverflowWidget(const Environment& env, roo_display::Color color,
+                               Dimensions dims)
+      : PointOverlayBoxWidget(env, color, dims) {}
+
+  Rect getParentTransientPaintBounds() const override {
+    if (!isClicking()) {
+      return PointOverlayBoxWidget::getParentTransientPaintBounds();
+    }
+    return Rect(parent_bounds().xMin() - 5, parent_bounds().yMin() - 3,
+                parent_bounds().xMax() + 5, parent_bounds().yMax() + 3);
+  }
+};
+
 class FullWidthColumnWidget : public FlexLayout {
  public:
   explicit FullWidthColumnWidget(const Environment& env)
@@ -93,7 +130,7 @@ class ExampleSliderRow : public FlexLayout {
         secondary_(env, secondary, font_caption()),
         value_(env, "", font_body1()),
         slider_(env, material3::SliderRange{},
-          ExampleUnitValueFromPercent(initial_percent)) {
+                ExampleUnitValueFromPercent(initial_percent)) {
     setPadding(Padding(Scaled(12), Scaled(8)));
     setGap(Scaled(8));
 
@@ -564,6 +601,28 @@ TEST_F(RooWindowsRenderTest,
   EXPECT_EQ(front_ptr, anim.target());
   EXPECT_TRUE(anim.isClickAnimating());
   EXPECT_EQ(1.0f, anim.progress());
+}
+
+// Verifies that click-animation ticks invalidate the full transient spill
+// region reported by the target rather than only the logical bounds.
+TEST_F(RooWindowsRenderTest,
+       ClickAnimationTickInvalidatesReportedTransientOverflowRegion) {
+  auto panel = std::make_unique<RecordingPanel>(env_);
+  RecordingPanel* panel_ptr = panel.get();
+  auto front = std::make_unique<ClickAnimationOverflowWidget>(
+      env_, color::Blue, Dimensions(18, 18));
+  ClickAnimationOverflowWidget* front_ptr = front.get();
+
+  panel_ptr->add(std::move(front), Box(20, 12, 37, 29));
+  app_.add(std::move(panel), Box(0, 0, 47, 39));
+
+  front_ptr->onShowPress(front_ptr->width() / 2, front_ptr->height() / 2);
+  panel_ptr->invalidated_regions.clear();
+
+  app_.root().refreshClickAnimation();
+
+  ASSERT_EQ(1u, panel_ptr->invalidated_regions.size());
+  EXPECT_EQ(Rect(15, 9, 42, 32), panel_ptr->invalidated_regions.front());
 }
 
 TEST_F(RooWindowsRenderTest, PointClickAnimationSettlesIntoStaticPressOverlay) {

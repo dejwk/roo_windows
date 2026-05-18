@@ -20,6 +20,10 @@ void ClickAnimation::tick() {
   unsigned long now = millis();
   if (click_anim_target_ != nullptr) {
     click_anim_target_->invalidateInterior();
+    Rect transient_bounds = click_anim_target_->getParentTransientPaintBounds();
+    if (transient_bounds != click_anim_target_->parent_bounds()) {
+      click_anim_target_->notifyParentInvalidatedRegion(transient_bounds);
+    }
     unsigned long elapsed = millis() - click_anim_start_millis_;
     if (elapsed > kClickAnimationMs + 100) {
       // 100 ms is a grace period to allow the widget to draw the full click
@@ -39,13 +43,12 @@ void ClickAnimation::tick() {
   if (click_anim_target_ != nullptr &&
       now - click_anim_start_millis_ >= kClickAnimationMs &&
       !click_anim_target_->isClicking()) {
-    if (click_anim_target_->getOverlayType() == Widget::OVERLAY_POINT) {
-      // The final paint frame may still use the pre-clear overlay state and
-      // therefore redraw the settled point overlay once more. Invalidate the
-      // full interaction spill region before delivering the deferred click so
-      // that siblings underneath the spill are refreshed as well.
-      click_anim_target_->notifyParentInvalidatedRegion(
-          click_anim_target_->getParentInteractionBounds());
+    // The final paint frame may still use the pre-clear transient state.
+    // Invalidate the full transient spill region once more before delivering
+    // the deferred click so siblings underneath that spill are refreshed.
+    Rect transient_bounds = click_anim_target_->getParentTransientPaintBounds();
+    if (transient_bounds != click_anim_target_->parent_bounds()) {
+      click_anim_target_->notifyParentInvalidatedRegion(transient_bounds);
     }
     if (click_confirmed_) {
       click_confirmed_ = false;

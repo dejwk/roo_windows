@@ -166,9 +166,12 @@ bool MayHaveNonTransparentOverlayOutsideBounds(const Widget& widget) {
   if (widget.isSelected()) return true;
   if (widget.isDragged()) return true;
   if (widget.isActivated() && widget.useOverlayOnActivation()) return true;
-  if ((widget.isPressed() || widget.isClicking()) &&
-      widget.useOverlayOnPress()) {
-    return true;
+  if (widget.useOverlayOnPress()) {
+    if (widget.isPressed() || widget.isClicking()) return true;
+    const ClickAnimation* anim = ClickAnimationController(widget);
+    if (anim != nullptr && anim->target() == &widget) {
+      return true;
+    }
   }
   return false;
 }
