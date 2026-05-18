@@ -38,10 +38,16 @@ class TextBlock : public BasicWidget {
             const roo_display::Font& font, roo_display::Color color,
             roo_display::Alignment alignment);
 
+  /// Paints all currently laid-out lines using the configured font, color
+  /// and alignment, including any trailing ellipsis when text is clipped.
   void paint(const Canvas& s) const override;
 
+  /// Reports ink insets matching the smallest rectangle that contains the
+  /// rendered glyphs, so the dirty-region tracker only repaints actual text.
   Insets getInkInsets() const override;
 
+  /// Reports the natural unwrapped block size (longest line wide; total
+  /// rendered line height tall) as the minimum.
   Dimensions getSuggestedMinimumDimensions() const override;
 
   PreferredSize getPreferredSize() const override {
@@ -49,28 +55,40 @@ class TextBlock : public BasicWidget {
                          PreferredSize::WrapContentHeight());
   }
 
+  /// Re-runs (and caches) wrapping for the proposed width and reports the
+  /// resulting block dimensions.
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
 
+  /// Confirms the layout for the final width so subsequent paints use the
+  /// cached line breaks.
   void onLayout(bool changed, const Rect& rect) override;
 
   const std::string& content() const { return value_; }
 
   const std::string& text() const { return value_; }
 
+  /// Replaces the block's text and invalidates the cached layout.
   void setText(std::string value);
 
   void setContent(std::string value) { setText(std::move(value)); }
 
+  /// Replaces the foreground color used to render the text.
   void setColor(roo_display::Color color);
 
+  /// Sets the global alignment of the block within its widget bounds.
   void setAlignment(roo_display::Alignment alignment);
 
+  /// Switches between wrapping and single-line modes; invalidates layout.
   void setWrapMode(TextWrapMode wrap_mode);
 
+  /// Sets per-line horizontal alignment (start/center/end/justify).
   void setTextAlign(TextAlign text_align);
 
+  /// Caps the number of rendered lines; excess lines are dropped and the
+  /// last visible line gets an ellipsis when `ellipsize()` is true.
   void setMaxLines(uint16_t max_lines);
 
+  /// Toggles trailing ellipsis on truncated content.
   void setEllipsize(bool ellipsize);
 
   TextWrapMode wrapMode() const { return wrap_mode_; }

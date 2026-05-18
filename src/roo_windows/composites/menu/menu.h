@@ -23,12 +23,15 @@ class Menu : public roo_windows::Activity {
     pane_.add(title_);
   }
 
+  /// Adds a child widget below the title with the supplied vertical layout
+  /// params.
   void add(roo_windows::WidgetRef child,
            roo_windows::VerticalLayout::Params params =
                roo_windows::VerticalLayout::Params()) {
     pane_.add(std::move(child), params);
   }
 
+  /// Returns the scrollable container that hosts the menu's contents.
   roo_windows::Widget& getContents() override { return container_; }
 
  private:

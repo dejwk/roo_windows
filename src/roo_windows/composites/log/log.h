@@ -27,21 +27,39 @@ class Log : public roo_windows::BasicWidget {
   //
   // The implementation uses a circular buffer with some auxiliary circular
   // vectors for caching string offsets and line lengths.
+  // Create the log widget with the specified buffer size and max lines. The
+  // total memory footprint of the log will be approximately equal to the buffer
+  // size. The line count is a hard limit. If appending a new line causes either
+  // the buffer size or the line count limit to be exceeded, the lines get
+  // dropped from the beginning of the log until sufficient space is cleared.
+  //
+  // The implementation uses a circular buffer with some auxiliary circular
+  // vectors for caching string offsets and line lengths.
   Log(const roo_windows::Environment& env, uint32_t buffer_size = 10 * 1024,
       size_t max_lines = 100);
 
+  /// Discards all stored lines, leaving the log empty.
   void clear();
+  /// Appends a new line, evicting oldest lines if the buffer or line-count
+  /// caps would be exceeded.
   void appendLine(roo::string_view line);
 
+  /// Sets the font used to render the log; invalidates cached line widths.
   void setFont(const roo_display::Font* font);
 
+  /// Returns a minimum size large enough to host a single character.
   roo_windows::Dimensions getSuggestedMinimumDimensions() const override;
 
+  /// Advertises wrap-content sized for the widest measured line and the
+  /// total line count.
   roo_windows::PreferredSize getPreferredSize() const override;
 
+  /// Reports a content size derived from cached per-line widths and the line
+  /// height of the current font.
   roo_windows::Dimensions onMeasure(roo_windows::WidthSpec width,
                                     roo_windows::HeightSpec height) override;
 
+  /// Draws each stored line top-to-bottom in the current font.
   void paint(const roo_windows::Canvas& s) const override;
 
   const roo_display::Font& font() const { return *font_; }
@@ -79,10 +97,14 @@ class ScrollableLog : public roo_windows::ScrollablePanel {
   ScrollableLog(const roo_windows::Environment& env,
                 uint32_t buffer_size = 10 * 1024, size_t max_lines = 100);
 
+  /// Clears all stored lines and resets the scroll position.
   void clear();
 
+  /// Appends a new line and, when configured, scrolls to keep the bottom in
+  /// view.
   void appendLine(roo::string_view line);
 
+  /// Sets the font of the underlying `Log` widget.
   void setFont(const roo_display::Font* font);
 
   const roo_display::Font& font() const;

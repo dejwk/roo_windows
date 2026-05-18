@@ -21,31 +21,36 @@ class Task {
  public:
   Task();
 
-  // Puts a new activity on top of the stack. The task must not be showing a
-  // dialog. (You can call clearDialog() prior to this method to forcefully
-  // close any open dialog).
+  /// Puts a new activity on top of the stack. The task must not be showing
+  /// a dialog. (You can call `clearDialog()` prior to this method to
+  /// forcefully close any open dialog).
   void enterActivity(Activity* activity);
 
-  // Removes the topmost activity from the stack. The task must not be showing a
-  // dialog. (You can call clearDialog() prior to this method to forcefully
-  // close any open dialog).
+  /// Removes the topmost activity from the stack. The task must not be
+  /// showing a dialog. (You can call `clearDialog()` prior to this method to
+  /// forcefully close any open dialog).
   void exitActivity();
 
-  // Removes all activities. Closes any open dialogs.
-  // As the activities are removed from the stack, they don't get resumed; they
-  // go directly from 'paused' to 'stopped'.
+  /// Removes all activities. Closes any open dialogs. Activities go
+  /// directly from `paused` to `stopped` without being resumed.
   void clear();
 
-  // Returns the top-most activity, or nullptr if the task has no activities.
+  /// Returns the top-most activity, or nullptr if the task has no
+  /// activities.
   Activity* currentActivity();
 
+  /// Returns the task's pixel dimensions on the host display.
   Dimensions getDimensions() const;
 
+  /// Reports the task's absolute (full) and currently visible bounds.
   void getAbsoluteBounds(Rect& full, Rect& visible) const;
 
+  /// Reports the task's absolute offset from the display origin.
   void getAbsoluteOffset(XDim& dx, YDim& dy) const;
 
+  /// Returns the application's `MainWindow`.
   MainWindow& getMainWindow() const;
+  /// Returns the owning application.
   Application& getApplication() const;
 
  private:
@@ -76,8 +81,11 @@ class TaskPanel : public Panel {
  public:
   TaskPanel(const Environment& env, Task& task) : Panel(env), task_(task) {}
 
+  /// Returns the owning task; descendants use this to resolve their host
+  /// task context.
   Task* getTask() override { return &task_; }
 
+  /// Routes touch-down dispatch into the active activity's contents.
   Widget* dispatchTouchDownEvent(XDim x, YDim y) override;
 
  private:

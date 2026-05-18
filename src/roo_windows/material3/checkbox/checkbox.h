@@ -29,14 +29,20 @@ class Checkbox : public BasicWidget {
   Padding getDefaultPadding() const override { return Padding(0); }
   Margins getDefaultMargins() const override { return Margins(0); }
 
+  /// Paints the box outline and the on/indeterminate glyph in theme colors.
   void paint(const Canvas& canvas) const override;
 
+  /// Reports a fixed square footprint matching the Material 3 checkbox
+  /// tokens.
   Dimensions getSuggestedMinimumDimensions() const override;
 
   bool isClickable() const override { return true; }
 
+  /// Resolves the surface color role based on the current on/off state.
   ColorRole effectiveContainerRole() const override;
 
+  /// Toggles between off and on (programmatic-only paths can also set the
+  /// indeterminate state through `setOnOffState()`).
   void onClicked() override;
 };
 

@@ -23,8 +23,11 @@ class KeyboardListener {
  public:
   virtual ~KeyboardListener() {}
 
+  /// Called for a printable character keypress.
   virtual void rune(uint32_t rune) = 0;
+  /// Called when the Enter / commit key is pressed.
   virtual void enter() = 0;
+  /// Called when the backspace / delete key is pressed.
   virtual void del() = 0;
 };
 
@@ -47,17 +50,26 @@ class Keyboard : public Activity {
 
   Keyboard(const Environment& env, const KeyboardSpec* spec);
 
+  /// Returns the underlying `KeyboardWidget` that renders the layout.
   Widget& getContents() override;
 
+  /// Routes future key events to the supplied listener (may be nullptr).
   void setListener(KeyboardListener* listener);
 
+  /// Returns the preferred docking placement (typically anchored to the
+  /// bottom edge of the task surface).
   roo_display::Box getPreferredPlacement(const Task& task) override;
 
+  /// Brings the keyboard activity onto the activity stack.
   void show();
+  /// Pops the keyboard activity from the stack.
   void hide();
 
+  /// Switches to the keyboard page at the supplied index (e.g. symbols).
   void setPage(int idx);
+  /// Returns the current caps state.
   CapsState caps_state() const;
+  /// Updates the caps state, refreshing the rendered key glyphs.
   void setCapsState(CapsState caps_state);
 
  private:

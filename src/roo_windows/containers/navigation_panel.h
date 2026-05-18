@@ -13,14 +13,22 @@ class NavigationPanel : public Panel {
  public:
   NavigationPanel(const Environment& env);
 
+  /// Adds a new page accessible via the rail. The icon/caption become a new
+  /// destination; the page widget is added to the stacked content area.
   void addPage(const roo_display::Pictogram& icon, std::string text,
                WidgetRef page);
 
+  /// Switches to the page at `index`, both visually and in the rail's
+  /// selection state.
   void setActive(int index);
 
  protected:
+  /// Measures the rail and the active page side-by-side and reports the
+  /// combined size.
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
 
+  /// Places the rail on the leading edge and the stacked content area in the
+  /// remaining space.
   void onLayout(bool changed, const Rect& rect) override;
 
  private:

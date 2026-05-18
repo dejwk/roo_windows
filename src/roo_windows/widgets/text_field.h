@@ -30,17 +30,23 @@ class VisibilityToggle : public BasicWidget {
  public:
   VisibilityToggle(const Environment& env) : BasicWidget(env) { setOff(); }
 
+  /// Reports the fixed icon-sized footprint used to draw the eye/eye-slash
+  /// pictograms.
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(ROO_WINDOWS_ICON_SIZE, ROO_WINDOWS_ICON_SIZE);
   }
 
   bool isClickable() const override { return true; }
 
+  /// Toggles the on/off state and then runs the base click behavior so the
+  /// owning text field can react.
   void onClicked() override {
     toggle();
     Widget::onClicked();
   }
 
+  /// Selects the eye or eye-slash pictogram based on the current state and
+  /// paints it centered.
   void paint(const Canvas& canvas) const override;
 
   using Widget::isOff;
@@ -74,8 +80,11 @@ class TextFieldEditor : public KeyboardListener {
         selection_end_(0),
         draw_xoffset_(0) {}
 
+  /// Begins editing `target` as the active field; any previously active
+  /// field is implicitly committed and unbound first.
   void edit(TextField* target);
 
+  /// True iff this editor is currently bound to `target`.
   bool isEdited(const TextField* target) const;
 
   bool lastGlyphRecentlyEntered() const { return last_glyph_recently_entered_; }
@@ -93,12 +102,19 @@ class TextFieldEditor : public KeyboardListener {
 
   bool has_selection() const { return selection_end_ > selection_begin_; }
 
+  /// Sets the inclusive selection range in glyph indices and updates the
+  /// caret position to the selection end.
   void setSelection(int16_t selection_begin, int16_t selection_end);
 
+  /// Inserts (or overwrites the current selection with) a single Unicode
+  /// code point at the caret and advances it.
   void rune(uint32_t rune) override;
 
+  /// Confirms the edit and notifies the target's `onEditFinished(true)`.
   void enter() override;
 
+  /// Deletes the current selection, or the glyph before the caret if no
+  /// selection is active.
   void del() override;
 
  private:
@@ -163,13 +179,17 @@ class TextField : public BasicWidget {
   bool showClickAnimation() const override { return false; }
   bool useOverlayOnPress() const override { return false; }
 
+  /// Hook for subclasses; called when the editor finishes editing this field
+  /// (`confirmed` is true on Enter, false on cancellation/blur).
   virtual void onEditFinished(bool confirmed) {}
 
+  /// Routes a click into `edit()` so tapping the field starts editing.
   void onClicked() override {
     edit();
     Widget::onClicked();
   }
 
+  /// Toggles password-style bullet rendering on the value.
   void setStarred(bool starred) {
     if (starred == starred_) return;
     starred_ = starred;
@@ -179,10 +199,13 @@ class TextField : public BasicWidget {
 
   const std::string& hint() const { return hint_; }
 
+  /// Replaces the placeholder text shown when the value is empty.
   void setHint(roo::string_view hint) {
     hint_ = std::string((const char*)hint.data(), hint.size());
   }
 
+  /// Reports a match-parent width and a fixed height matching the font's max
+  /// glyph height plus any decoration (e.g. underline).
   PreferredSize getPreferredSize() const override {
     Padding p = getPadding();
     int16_t preferred_height =
@@ -199,8 +222,12 @@ class TextField : public BasicWidget {
                          PreferredSize::ExactHeight(preferred_height));
   }
 
+  /// Paints the value (or hint), selection highlight, and blinking caret
+  /// when this field is the active editor target.
   void paint(const Canvas& canvas) const override;
 
+  /// Reports the font-measured width and the same fixed height used by
+  /// `getPreferredSize()`.
   Dimensions getSuggestedMinimumDimensions() const override {
     auto metrics = font_.getHorizontalStringMetrics(value_);
     int16_t preferred_height = metrics.height();
@@ -217,6 +244,8 @@ class TextField : public BasicWidget {
 
   const std::string& content() const { return value_; }
 
+  /// Replaces the value. Triggers an editor re-measure when this field is
+  /// the active editor target.
   void setContent(std::string value) {
     if (value_ == value) return;
     value_ = std::move(value);
@@ -235,6 +264,7 @@ class TextField : public BasicWidget {
   bool isStarred() const { return starred_; }
 
  public:
+  /// Binds this field to the shared editor and starts editing.
   void edit() { editor_.edit(this); }
 
  private:

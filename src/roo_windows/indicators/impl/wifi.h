@@ -20,15 +20,22 @@ class WifiIndicatorBase : public BasicWidget {
 
   WifiIndicatorBase(const Environment& env);
 
+  /// Constructs the indicator with an explicit tint color (transparent means
+  /// inherit the parent's content color).
   WifiIndicatorBase(const Environment& env, roo_display::Color color);
 
+  /// Resolves the current state to an icon and draws it.
   void paint(const Canvas& canvas) const override;
   // Padding getPadding() const override { return Padding(0); }
 
+  /// Updates connection state (disconnected / connected with or without
+  /// internet).
   void setConnectionStatus(ConnectionStatus status);
 
+  /// Sets whether the connected network is password-protected.
   void setWifiLocked(bool locked);
 
+  /// Updates the signal strength in RSSI; mapped to one of four bars.
   void setWifiSignalStrength(int rssi);
 
  protected:

@@ -31,6 +31,8 @@ class AlignedLayout : public Panel {
 
   AlignedLayout(const Environment& env) : Panel(env) {}
 
+  /// Appends a child with an explicit alignment relative to the parent's
+  /// bounds. Default is middle-center.
   void add(WidgetRef child,
            roo_display::Alignment alignment = roo_display::kMiddle |
                                               roo_display::kCenter) {
@@ -38,6 +40,8 @@ class AlignedLayout : public Panel {
     Panel::add(std::move(child));
   }
 
+  /// Reports the bounding box that contains all measured children at their
+  /// natural sizes (alignment plays no role yet at this stage).
   Dimensions getSuggestedMinimumDimensions() const override;
 
   PreferredSize getPreferredSize() const override {
@@ -46,7 +50,12 @@ class AlignedLayout : public Panel {
   }
 
  protected:
+  /// Measures every child against the parent's constraints and caches the
+  /// largest width/height as the layout's preferred size.
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
+
+  /// Places each child at its preferred size, positioned according to its
+  /// individual alignment within `rect`.
   void onLayout(bool changed, const Rect& rect) override;
 
  private:

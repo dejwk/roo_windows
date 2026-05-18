@@ -38,10 +38,15 @@ class Image : public BasicWidget {
   // gets redrawn.
   void setAlignment(roo_display::Alignment alignment);
 
+  /// Paints the underlying drawable at the configured alignment, clearing to
+  /// the background for any uncovered area.
   void paint(const Canvas& canvas) const override;
 
+  /// Computes ink insets so the widget's visual extents follow the drawable's
+  /// anchor extents inside the laid-out bounds.
   Insets getInkInsets() const override;
 
+  /// Reports the drawable's natural anchor extents as the minimum size.
   Dimensions getSuggestedMinimumDimensions() const override;
 
  private:

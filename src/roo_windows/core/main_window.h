@@ -21,23 +21,28 @@ class MainWindow : public Container {
 
   ~MainWindow() override;
 
+  /// Drives the shared click-animation forward one tick and invalidates
+  /// regions that changed.
   void refreshClickAnimation();
 
-  // Applies any pending layout requests.
+  /// Applies any pending layout requests in the widget tree.
   void updateLayout();
 
   MainWindow* getMainWindow() override { return this; }
   const MainWindow* getMainWindow() const override { return this; }
 
+  /// Performs a single paint pass onto the supplied display surface, bounded
+  /// by `deadline`. Returns false when the deadline interrupted painting.
   bool paintWindow(const roo_display::Surface& s, roo_time::Uptime deadline);
 
   Application& app() const;
   const Theme& theme() const override;
 
-  // Adds a regular task layer child. Tasks render behind popups and dialogs.
+  /// Adds a regular task layer child. Tasks render behind popups and
+  /// dialogs.
   void addTask(WidgetRef child, const Rect& rect);
 
-  // Adds a popup layer child. Popups render above tasks but below dialogs.
+  /// Adds a popup layer child. Popups render above tasks but below dialogs.
   void addPopup(WidgetRef child, const Rect& rect);
 
   /// Returns the shared click-animation controller for this window.
@@ -46,14 +51,20 @@ class MainWindow : public Container {
   /// Returns the shared click-animation controller for this window.
   const ClickAnimation& click_animation() const { return click_animation_; }
 
+  /// Returns the shared press-overlay drawable used for circular ripple
+  /// effects.
   PressOverlay& press_overlay() { return press_overlay_; }
 
+  /// Replaces the shared press-overlay drawable (callers usually swap in a
+  /// theme-specific renderer at startup).
   void set_press_overlay(PressOverlay press_overlay) {
     press_overlay_ = std::move(press_overlay);
   }
 
+  /// Shows a modal dialog. Adds it above the scrim and routes its callback.
   void showDialog(Dialog& dialog, Dialog::CallbackFn callback_fn);
 
+  /// If a dialog is currently open, closes it (callback receives -1).
   void clearDialog();
 
  protected:

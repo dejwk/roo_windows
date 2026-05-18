@@ -28,22 +28,26 @@ class Panel : public Container {
 
   ~Panel();
 
+  /// Returns the panel's child vector.
   const std::vector<Widget*>& children() const { return children_; }
 
   Widget& child_at(int idx) { return *children_[idx]; }
 
   const Widget& child_at(int idx) const { return *children_[idx]; }
 
+  /// Hook for subclasses that want to claim a touch event before it reaches
+  /// children. The default implementation never intercepts.
   virtual bool onInterceptTouchEvent(const TouchEvent& event) { return false; }
 
  protected:
-  // Adds a child to this panel.
+  /// Adds a child to this panel at optional initial bounds (`(0,0,-1,-1)`
+  /// defers placement to the next layout pass).
   void add(WidgetRef child, const Rect& bounds = Rect(0, 0, -1, -1));
 
-  // Removes all children.
+  /// Detaches and destroys every child.
   void removeAll();
 
-  // Removes and returns the last child.
+  /// Detaches and destroys the last-added child.
   void removeLast();
 
   virtual int getChildrenCount() const { return (int)children_.size(); }

@@ -21,29 +21,40 @@ class RadioListDialog : public Dialog {
     init();
   }
 
+  /// Returns the currently selected index in the wrapped `RadioList`.
   int selected() const { return list_.selected(); }
 
+  /// Binds the supplied item model and disables the OK button until an item
+  /// is selected.
   void setModel(ListModel& model) {
     list_.setModel(model);
     contents_.setContents(list_);
     last_button().setEnabled(false);
   }
 
+  /// Disallowed: callers must bind their own `ListModel`, not the internal
+  /// `RadioListModel` adapter.
   void setModel(RadioListModel& model) = delete;
 
+  /// Clears the selection and disables the OK button.
   void reset() {
     list_.reset();
     last_button().setEnabled(false);
   }
 
+  /// Programmatically updates the selected index; toggles the OK button's
+  /// enabled state accordingly.
   void setSelected(int selected) {
     list_.setSelected(selected);
     last_button().setEnabled(selected >= 0);
   }
 
+  /// Notifies the list that its bound model's contents have changed.
   void contentsChanged() { list_.modelChanged(); }
 
  protected:
+  /// Hook fired on interactive selection changes; default implementation
+  /// re-emits the panel-level interactive-change signal.
   virtual void onChange() { triggerInteractiveChange(); }
 
  private:

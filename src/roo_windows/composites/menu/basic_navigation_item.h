@@ -17,6 +17,8 @@ namespace menu {
 
 class BasicNavigationItem : public HorizontalLayout {
  public:
+  /// Builds a single-line navigation row with the supplied icon and label;
+  /// clicking the row enters `target`.
   BasicNavigationItem(const Environment& env,
                       const roo_display::Pictogram& icon, roo::string_view text,
                       Activity& target);
@@ -39,6 +41,8 @@ class BasicNavigationItem : public HorizontalLayout {
 /// supplied target activity.
 class BasicNavigationItemWithSubtext : public HorizontalLayout {
  public:
+  /// Builds a navigation row with an icon, a primary label and a secondary
+  /// subtext line; clicking the row enters `target`.
   BasicNavigationItemWithSubtext(const Environment& env,
                                  const roo_display::Pictogram& icon,
                                  roo::string_view label,

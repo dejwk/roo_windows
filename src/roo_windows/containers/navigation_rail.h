@@ -27,6 +27,8 @@ class Destination : public IconWithCaption {
   bool isClickable() const override { return true; }
   bool usesHighlighterColor() const override { return true; }
 
+  /// Activates this destination in its rail and invokes the user-supplied
+  /// callback to switch the application's content.
   void onClicked() override;
 
  private:
@@ -54,20 +56,27 @@ class NavigationRail : public Panel {
                          PreferredSize::MatchParentHeight());
   }
 
+  /// Appends a new destination at the end of the rail.
   void addDestination(const roo_display::Pictogram& icon, std::string text,
                       std::function<void()> activator);
 
-  // Returns the number of destinations.
+  /// Returns the number of destinations.
   int size() const { return destinations_.size(); }
 
-  // Returns the index of active destination.
+  /// Returns the index of the currently active destination, or -1 if none.
   int getActive() const { return active_; }
 
+  /// Sets the active destination by index. Returns true if the active
+  /// destination changed.
   bool setActive(int index);
 
  protected:
+  /// Measures every destination in a vertical column and reports the total
+  /// rail size.
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
 
+  /// Stacks destinations vertically; positions them top, center, or bottom
+  /// according to the configured alignment.
   void onLayout(bool changed, const Rect& rect) override;
 
  private:

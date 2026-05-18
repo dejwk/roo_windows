@@ -30,6 +30,8 @@ class RadioListItem : public HorizontalLayout {
     init();
   }
 
+  /// Binds this row to its model index and synchronizes the radio button's
+  /// on/off state to the model's current selection.
   void set(int idx, bool is_on) {
     idx_ = idx;
     if (is_on) {
@@ -46,8 +48,10 @@ class RadioListItem : public HorizontalLayout {
   //
   // bool isClickable() const override { return true; }
 
+  /// Reports this row's index through the stored on-click callback.
   void onClicked() override { on_click_(idx_); }
 
+  /// Returns the caller-supplied item widget hosted in this row.
   Widget& item() { return *item_; }
 
   const Widget& item() const { return *item_; }
@@ -81,10 +85,14 @@ class RadioListModel : public ListModel {
   RadioListModel() : model_(nullptr), selected_(-1) {}
   RadioListModel(ListModel& model) : model_(&model), selected_(-1) {}
 
+  /// Returns the number of items from the wrapped model, or 0 when no model
+  /// has been bound.
   int elementCount() const override {
     return model_ == nullptr ? 0 : model_->elementCount();
   }
 
+  /// Populates `dest` (a `RadioListItem`) by delegating to the wrapped model
+  /// and then syncing the radio button to match the selected index.
   void set(int idx, Widget& dest) const override {
     // Note: set is not expected tobe called when model_ is nullptr, because we
     // report zero element count in such case.
@@ -92,22 +100,27 @@ class RadioListModel : public ListModel {
     ((RadioListItem&)dest).set(idx, idx == selected_);
   }
 
+  /// Replaces the wrapped item model and clears the current selection.
   void setModel(ListModel& model) {
     model_ = &model;
     selected_ = -1;
   }
 
+  /// Detaches the wrapped model and clears the current selection.
   void clearModel() {
     model_ = nullptr;
     selected_ = -1;
   }
 
+  /// Updates the selected index; returns true when the value actually
+  /// changed.
   bool setSelected(int idx) {
     if (idx == selected_) return false;
     selected_ = idx;
     return true;
   }
 
+  /// Returns the currently selected index, or -1 when nothing is selected.
   int selected() const { return selected_; }
 
  private:
@@ -138,13 +151,17 @@ class RadioList : public Holder {
     setModel(model);
   }
 
+  /// Returns the currently selected index, or -1 when nothing is selected.
   int selected() const { return list_model_.selected(); }
 
+  /// Binds an item model; rebuilds the underlying list view from scratch.
   void setModel(ListModel& model) {
     list_model_.setModel(model);
     setContents(list_);
   }
 
+  /// Disallowed: callers must bind their own `ListModel`, not the internal
+  /// adapter.
   void setModel(RadioListModel& model) = delete;
 
   PreferredSize getPreferredSize() const override {
@@ -152,16 +169,21 @@ class RadioList : public Holder {
                          PreferredSize::WrapContentHeight());
   }
 
+  /// Clears the current selection and re-fires the interactive-change hook.
   void reset() {
     list_model_.setSelected(-1);
     modelChanged();
   }
 
+  /// Notifies the list view that its model contents (or selection) have
+  /// changed.
   void modelChanged() {
     list_.modelChanged();
     triggerInteractiveChange();
   }
 
+  /// Programmatically updates the selected index, refreshing the previously
+  /// and newly selected rows.
   void setSelected(int selected) {
     int selected_old = list_model_.selected();
     if (list_model_.selected() == selected_old) return;

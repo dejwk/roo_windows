@@ -23,12 +23,17 @@ class IconWithCaption : public BasicWidget {
   IconWithCaption(const Environment& env, const roo_display::Pictogram& def,
                   const std::string& caption, const roo_display::Font* font);
 
+  /// Paints the icon centered horizontally above the caption, both in the
+  /// currently configured color.
   void paint(const Canvas& canvas) const override;
 
+  /// Reports a footprint large enough to contain the icon stacked above the
+  /// caption rendered in the configured font, with a small gap between them.
   Dimensions getSuggestedMinimumDimensions() const override;
 
   const roo_display::Pictogram& icon() const { return *icon_; }
 
+  /// Replaces the icon. No-op if unchanged.
   void setIcon(const roo_display::Pictogram& icon) {
     if (icon_ == &icon) return;
     icon_ = &icon;
@@ -37,6 +42,7 @@ class IconWithCaption : public BasicWidget {
 
   roo::string_view caption() const { return caption_; }
 
+  /// Replaces the caption string. No-op if unchanged.
   void setCaption(std::string caption) {
     if (caption_ == caption) return;
     caption_ = std::move(caption);
@@ -45,6 +51,8 @@ class IconWithCaption : public BasicWidget {
 
   roo_display::Color color() const { return color_; }
 
+  /// Sets the foreground color for both the icon and the caption. No-op if
+  /// unchanged. Transparent defers to the theme.
   void setColor(roo_display::Color color) {
     if (color_ == color) return;
     color_ = color;
@@ -52,6 +60,8 @@ class IconWithCaption : public BasicWidget {
   }
 
  protected:
+  /// Caches the vertical split point between icon and caption based on the
+  /// final widget size.
   void onLayout(bool changed, const Rect& rect) override;
 
  private:

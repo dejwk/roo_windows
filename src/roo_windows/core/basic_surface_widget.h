@@ -12,14 +12,18 @@ class BasicSurfaceWidget : public SurfaceWidget {
   BasicSurfaceWidget(const Environment& env)
       : SurfaceWidget(env), padding_(0), margins_(0) {}
 
+  /// Returns the surface widget's default padding token.
   virtual Padding getDefaultPadding() const {
     return Padding(PaddingSize::kRegular);
   }
 
+  /// Returns the surface widget's default margins token.
   virtual Margins getDefaultMargins() const {
     return Margins(MarginSize::kRegular);
   }
 
+  /// Updates horizontal and vertical padding (independently). Triggers
+  /// repaint and relayout when the value actually changes.
   void setPadding(PaddingSize h, PaddingSize v) {
     uint8_t padding = ((int)h << 4) | (int)v;
     if (padding_ == padding) return;
@@ -28,8 +32,11 @@ class BasicSurfaceWidget : public SurfaceWidget {
     requestLayout();
   }
 
+  /// Sets both horizontal and vertical padding to the same token.
   void setPadding(PaddingSize size) { setPadding(size, size); }
 
+  /// Resolves the configured padding tokens to pixel padding, falling back
+  /// to the per-subclass default when a token is `kDefault`.
   Padding getPadding() const override {
     PaddingSize hs = (PaddingSize)(padding_ >> 4);
     PaddingSize vs = (PaddingSize)(padding_ & 15);
@@ -45,16 +52,23 @@ class BasicSurfaceWidget : public SurfaceWidget {
     return Padding(h, v);
   }
 
+  /// Updates horizontal and vertical margins (independently).
   void setMargins(MarginSize h, MarginSize v) {
     margins_ = ((int)h << 4) | (int)v;
   }
 
+  /// Sets both horizontal and vertical margins to the same token.
   void setMargins(MarginSize size) { setMargins(size, size); }
 
+  /// `BasicSurfaceWidget`s are considered clickable iff an
+  /// interactive-change callback is registered. Subclasses that are
+  /// intrinsically clickable override this.
   bool isClickable() const override {
     return getOnInteractiveChange() != nullptr;
   }
 
+  /// Resolves the configured margin tokens to pixel margins, falling back
+  /// to the per-subclass default when a token is `kDefault`.
   Margins getMargins() const override {
     MarginSize hs = (MarginSize)(margins_ >> 4);
     MarginSize vs = (MarginSize)(margins_ & 15);

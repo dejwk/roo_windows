@@ -30,11 +30,15 @@ class BaseSliderWithCaption : public roo_windows::VerticalLayout {
         roo_windows::PreferredSize::WrapContentHeight());
   }
 
+  /// Replaces the displayed caption text.
   void setCaption(std::string caption) { caption_.setText(std::move(caption)); }
 
+  /// Returns the row's outer margins; subclasses may override to tighten or
+  /// expand the vertical rhythm.
   virtual Margins getMargins() const { return Margins(0, Scaled(8)); }
 
  protected:
+  /// Renders the value readout for the supplied raw 16-bit slider position.
   virtual std::string formatValue(uint16_t value) const = 0;
 
   roo_windows::AlignedLayout text_section_;
@@ -51,14 +55,21 @@ class NumericSliderWithCaption : public BaseSliderWithCaption {
   NumericSliderWithCaption(const roo_windows::Environment& env,
                            std::string caption);
 
+  /// Sets the printf-style format used to render the readout (default
+  /// `"%0.1f"`).
   void setFormat(std::string format) { format_ = std::move(format); }
 
+  /// Configures the numeric range, initial value, and optional step size.
   void init(float min_val, float max_val, float val, float step = 0.0f);
+  /// Updates the displayed value (clamped and snapped to the configured
+  /// range/step).
   void setValue(float val);
 
+  /// Returns the current value mapped from the slider's raw position.
   float getValue() const;
 
  protected:
+  /// Formats the current numeric value using the configured printf format.
   std::string formatValue(uint16_t value) const;
 
  private:

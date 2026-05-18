@@ -18,6 +18,7 @@ class StackedLayout : public Panel {
   void add(WidgetRef child) { Panel::add(std::move(child)); }
 
  protected:
+  /// Reports the bounding box of the largest visible child.
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override {
     XDim w = 0;
     YDim h = 0;
@@ -31,6 +32,7 @@ class StackedLayout : public Panel {
     return Dimensions(w, h);
   }
 
+  /// Lays every child out to fill the full container rect (stacking them).
   void onLayout(bool changed, const Rect& rect) {
     Rect local(0, 0, rect.width() - 1, rect.height() - 1);
     for (const auto& child : children()) {

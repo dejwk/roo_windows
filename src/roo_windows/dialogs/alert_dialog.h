@@ -14,10 +14,13 @@ namespace roo_windows {
 /// `Dialog`'s callback.
 class AlertDialog : public Dialog {
  public:
+  /// Builds an alert dialog with the supplied title, body, and footer
+  /// buttons. The default button set is a single OK.
   AlertDialog(const Environment& env, std::string title,
               std::string supporting_text,
               std::vector<std::string> button_labels = {kStrDialogOK});
 
+  /// Replaces the multi-line supporting text.
   void setSupportingText(std::string supporting_text);
 
  private:

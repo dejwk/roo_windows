@@ -27,33 +27,42 @@ class Dialog : public VerticalLayout {
  public:
   typedef std::function<void(int action_idx)> CallbackFn;
 
+  /// Replaces the dialog's title text.
   void setTitle(std::string title);
 
-  // Intercept all touch events to ensure the dialog is modal.
+  /// Intercepts all touch-down events so the dialog behaves modally,
+  /// preventing the underlying surface from receiving touches outside the
+  /// dialog's bounds.
   Widget* dispatchTouchDownEvent(XDim x, YDim y) override;
 
-  // If the dialog is currently open, closes it and calls callback_fn(-1).
+  /// If the dialog is currently open, closes it and invokes the callback
+  /// with -1 (no action chosen).
   void close();
 
-  // Dialog appear at a quite high elevation over the underlying content.
+  /// Dialog floats at a high elevation over the underlying content.
   uint8_t getElevation() const override { return 20; }
 
-  // Use some round corners.
+  /// Returns rounded corners with no outline.
   BorderStyle getBorderStyle() const override { return BorderStyle(5, 0); }
 
  protected:
   Dialog(const Environment& env, const std::vector<std::string> button_labels);
 
+  /// Returns the number of footer buttons.
   int button_count() const { return buttons_.size(); }
+  /// Returns the footer button at `idx`.
   SimpleButton& button(int idx) { return buttons_[idx]; }
   const SimpleButton& button(int idx) const { return buttons_[idx]; }
 
+  /// Returns the last (typically affirmative) footer button.
   SimpleButton& last_button() { return buttons_[button_count() - 1]; }
 
   const SimpleButton& last_button() const {
     return buttons_[button_count() - 1];
   }
 
+  /// Shows or hides the horizontal dividers that separate the title,
+  /// content, and button rows.
   void setDividersVisible(bool visible) {
     divider1_.setVisibility(visible ? Visibility::kVisible : Visibility::kGone);
     divider2_.setVisibility(visible ? Visibility::kVisible : Visibility::kGone);
@@ -64,7 +73,9 @@ class Dialog : public VerticalLayout {
   ScrollablePanel contents_;
   HorizontalDivider divider2_;
 
+  /// Lifecycle hook invoked when the dialog becomes visible.
   virtual void onEnter() {}
+  /// Lifecycle hook invoked when the dialog is dismissed with `result`.
   virtual void onExit(int result) {}
 
  private:

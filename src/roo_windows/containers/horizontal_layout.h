@@ -49,42 +49,55 @@ class HorizontalLayout : public Panel {
         min_dimensions_(0, 0),
         total_length_(0) {}
 
+  /// Sets a minimum width/height the layout reports even when its children
+  /// would yield a smaller measurement.
   void setMinimumDimensions(Dimensions dimensions) {
     min_dimensions_ = dimensions;
   }
 
+  /// Sets inner padding. Triggers a re-layout when changed.
   void setPadding(Padding padding) {
     if (padding_ == padding) return;
     padding_ = padding;
     requestLayout();
   }
 
+  /// Sets outer margins. Triggers a re-layout when changed.
   void setMargins(Margins margins) {
     if (margins_ == margins) return;
     margins_ = margins;
     requestLayout();
   }
 
+  /// Sets the gravity used for: (a) aligning the row when there is extra
+  /// horizontal space, and (b) as default vertical gravity for children that
+  /// don't specify their own.
   void setGravity(Gravity gravity) { gravity_ = gravity; }
 
-  // Convenience method to set only the horizontal gravity.
+  /// Convenience overload that updates only the horizontal gravity.
   void setGravity(HorizontalGravity gravity) { setGravity(Gravity(gravity)); }
 
-  // Convenience method to set only the vertical gravity.
+  /// Convenience overload that updates only the vertical gravity.
   void setGravity(VerticalGravity gravity) { setGravity(Gravity(gravity)); }
 
   const Gravity& gravity() const { return gravity_; }
 
+  /// When true, all weighted children pad up to the size of the largest
+  /// (useful for equal-width rows). When false, children are measured
+  /// normally.
   void setUseLargestChild(bool use_largest_child) {
     use_largest_child_ = use_largest_child;
   }
 
   bool use_largest_child() const { return use_largest_child_; }
 
+  /// Overrides the implicit weight sum. Use this to give a child a fixed
+  /// share of the layout (e.g. weight 50 with sum 100 = 50%).
   void setWeightSum(int16_t weight_sum) { weight_sum_ = weight_sum; }
 
   int16_t weight_sum() const { return weight_sum_; }
 
+  /// Appends a child with optional per-child gravity and weight.
   void add(WidgetRef child, Params params = {kVerticalGravityNone, 0}) {
     child_measures_.emplace_back(params);
     Panel::add(std::move(child));
@@ -101,7 +114,12 @@ class HorizontalLayout : public Panel {
   bool respectsChildrenBoundaries() const override { return true; }
 
  protected:
+  /// Measures each child against the available width, applying weights to
+  /// the leftover horizontal space; reports the row's measured size.
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
+
+  /// Places children left-to-right at their measured widths, applying each
+  /// child's vertical gravity within `rect`.
   void onLayout(bool changed, const Rect& rect) override;
 
  private:

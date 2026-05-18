@@ -12,6 +12,7 @@ namespace menu {
 // The title of the activity, with the back button.
 class Title : public roo_windows::HorizontalLayout {
  public:
+  /// Builds the title row with a back-button icon and the supplied label.
   Title(const roo_windows::Environment& env, std::string title);
 
   roo_windows::PreferredSize getPreferredSize() const override {
@@ -20,6 +21,7 @@ class Title : public roo_windows::HorizontalLayout {
         roo_windows::PreferredSize::WrapContentHeight());
   }
 
+  /// Replaces the displayed title text.
   void setTitle(std::string title) { label_.setText(std::move(title)); }
 
  private:

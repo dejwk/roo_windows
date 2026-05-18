@@ -22,6 +22,8 @@ class Switch : public BasicWidget {
   using Widget::setOn;
   using Widget::toggle;
 
+  /// Convenience overload of `setOn()`/`setOff()` that routes to whichever
+  /// matches the bool argument.
   void setOn(bool on) {
     if (on) {
       setOn();
@@ -30,16 +32,22 @@ class Switch : public BasicWidget {
     }
   }
 
+  /// Drives the thumb animation timing on each paint pass.
   void paintWidgetContents(const Canvas& canvas, Clipper& clipper) override;
 
+  /// Paints the track and thumb at the current animated position.
   void paint(const Canvas& canvas) const override;
 
+  /// Reports the fixed switch footprint sized to the legacy switch glyph.
   Dimensions getSuggestedMinimumDimensions() const override;
 
   bool isClickable() const override { return true; }
 
+  /// Returns the current thumb center as the focal point for the press
+  /// overlay (so the halo follows the thumb during animation).
   roo_display::FpPoint getPointOverlayFocus() const override;
 
+  /// Toggles the on/off state and starts the thumb animation.
   bool onSingleTapUp(XDim x, YDim y) override;
 
  private:

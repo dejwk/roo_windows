@@ -18,19 +18,23 @@ class VerticalScrollBar : public Widget {
 
   VerticalScrollBar(const Environment& env) : Widget(env), begin_(0), end_(0) {}
 
+  /// Sets the visible range of the scrolled content along the Y axis (in
+  /// content coordinates) so the thumb's size and position match the panel.
   void setRange(int16_t begin, int16_t end);
 
+  /// Paints the thumb proportional to the configured range.
   void paint(const Canvas& canvas) const override;
 
   PreferredSize getPreferredSize() const override;
 
+  /// Reports the fixed minimum bar thickness.
   Dimensions getSuggestedMinimumDimensions() const override;
 
   int16_t begin() const { return begin_; }
   int16_t end() const { return end_; }
 
-  // Returns the offset to the interior of the given height, implied by
-  // the current location of the scroll bar.
+  /// Returns the scroll offset (in content coordinates) implied by the
+  /// current thumb position for a viewport of the given `height`.
   YDim toOffset(YDim height) const;
 
  private:
@@ -116,11 +120,15 @@ class SimpleScrollablePanel : public Container,
     }
   }
 
+  /// Sets the alignment of the content within the panel when it is smaller
+  /// than the visible area.
   void setAlign(roo_display::Alignment alignment) {
     alignment_ = alignment;
     update();
   }
 
+  /// Configures whether the vertical scroll bar is always visible, shown
+  /// only while scrolling, or always hidden.
   void setVerticalScrollBarPresence(VerticalScrollBar::Presence presence) {
     if (scroll_bar_presence_ == presence) return;
     switch (scroll_bar_presence_) {
@@ -147,22 +155,23 @@ class SimpleScrollablePanel : public Container,
   Widget* contents() { return contents_; }
   const Widget* contents() const { return contents_; }
 
-  // Sets the relative position of the underlying content, relative to the the
-  // visible rectangle.
+  /// Scrolls so that the content origin sits at (x, y) relative to the
+  /// viewport's top-left. Clamps to scroll boundaries.
   void scrollTo(XDim x, YDim y);
 
-  // Adjusts the relative position of the underlying content by the specified
-  // offset.
+  /// Adjusts the current scroll position by (dx, dy).
   void scrollBy(XDim dx, YDim dy) {
     if (contents() == nullptr) return;
     scrollTo(dx + contents()->offsetLeft(), dy + contents()->offsetTop());
   }
 
+  /// Snaps to the top edge of the content.
   void scrollToTop() {
     if (contents() == nullptr) return;
     scrollTo(contents()->offsetLeft(), 0);
   }
 
+  /// Snaps to the bottom edge of the content.
   void scrollToBottom();
 
   struct ScrollPosition {
@@ -176,20 +185,28 @@ class SimpleScrollablePanel : public Container,
     return {w->offsetLeft(), w->offsetTop()};
   }
 
+  /// Re-applies the current scroll position. Useful after content changes.
   void update() { scrollBy(0, 0); }
 
   // void paintWidgetContents(const Canvas& canvas, Clipper& clipper) override;
 
-  // Called when the position of the scroll changed, possibly due to an
-  // animation in progress.
+  /// Hook invoked whenever the scroll position changes (drag, fling, etc.).
   virtual void onScrollPositionChanged() {}
 
+  /// Intercepts gestures targeting the scroll bar or the scrolling motion
+  /// itself.
   bool onInterceptTouchEvent(const TouchEvent& event) override;
 
+  /// Pins the touch point and cancels any in-flight animation.
   bool onDown(XDim x, YDim y) override;
+  /// Allows the child to handle the tap normally (no scroll action).
   bool onSingleTapUp(XDim x, YDim y) override;
+  /// Translates drag deltas into immediate scroll movement.
   bool onScroll(XDim x, YDim y, XDim dx, YDim dy) override;
+  /// Starts a momentum fling animation seeded from the gesture velocity.
   bool onFling(XDim x, YDim y, XDim vx, YDim vy) override;
+  /// Initiates a spring-back animation if release leaves the panel in
+  /// overshoot.
   bool onTouchUp(XDim x, YDim y) override;
 
   bool supportsScrolling() const override { return true; }
@@ -301,6 +318,8 @@ class ScrollableBlitPanel : public SimpleScrollablePanel {
                       Direction direction = Direction::kVertical)
       : SimpleScrollablePanel(env, direction), blit_cache_(env) {}
 
+  /// Wraps `new_contents` in the internal `BlitCacheContainer` and installs
+  /// it as the panel's scrolled content.
   void setContents(WidgetRef new_contents) {
     blit_cache_.setChild(std::move(new_contents));
     SimpleScrollablePanel::setContents(WidgetRef(blit_cache_));

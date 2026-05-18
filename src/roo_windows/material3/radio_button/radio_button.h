@@ -26,14 +26,18 @@ class RadioButton : public BasicWidget {
   Padding getDefaultPadding() const override { return Padding(0); }
   Margins getDefaultMargins() const override { return Margins(0); }
 
+  /// Paints the outer ring and, when on, the inner dot in theme colors.
   void paint(const Canvas& canvas) const override;
 
+  /// Reports a fixed square footprint matching the Material 3 radio tokens.
   Dimensions getSuggestedMinimumDimensions() const override;
 
   bool isClickable() const override { return true; }
 
+  /// Resolves the surface color role based on the current on/off state.
   ColorRole effectiveContainerRole() const override;
 
+  /// Forces the selected state, mirroring radio-group semantics.
   void onClicked() override;
 };
 

@@ -19,9 +19,12 @@ class Environment {
               const KeyboardColorTheme& kb_theme = DefaultKeyboardColorTheme())
       : scheduler_(scheduler), theme_(theme), kb_theme_(kb_theme) {}
 
+  /// Returns the active visual theme.
   const Theme& theme() const { return theme_; }
+  /// Returns the on-screen keyboard color theme.
   const KeyboardColorTheme& keyboardColorTheme() const { return kb_theme_; }
 
+  /// Returns the scheduler used for animations and deferred work.
   roo_scheduler::Scheduler& scheduler() const { return scheduler_; }
 
  private:

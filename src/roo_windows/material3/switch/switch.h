@@ -26,6 +26,8 @@ class Switch : public BasicWidget {
   using Widget::setOn;
   using Widget::toggle;
 
+  /// Convenience overload that routes to `setOn()` / `setOff()` based on the
+  /// boolean argument.
   void setOn(bool on) {
     if (on) {
       setOn();
@@ -34,29 +36,42 @@ class Switch : public BasicWidget {
     }
   }
 
+  /// Sets the optional pictogram rendered inside the thumb when selected.
+  /// Pass nullptr to remove. Caller retains ownership.
   void setSelectedIcon(const MonoIcon* icon);
   const MonoIcon* selectedIcon() const { return selected_icon_; }
 
+  /// Sets the optional pictogram rendered inside the thumb when not
+  /// selected. Pass nullptr to remove. Caller retains ownership.
   void setUnselectedIcon(const MonoIcon* icon);
   const MonoIcon* unselectedIcon() const { return unselected_icon_; }
 
   Padding getDefaultPadding() const override { return Padding(0); }
   Margins getDefaultMargins() const override { return Margins(0); }
 
+  /// Drives the thumb animation timing on each paint pass.
   void paintWidgetContents(const Canvas& canvas, Clipper& clipper) override;
 
+  /// Paints the track, thumb, and optional state icon for the current
+  /// animated position.
   void paint(const Canvas& canvas) const override;
 
+  /// Reports the fixed switch footprint matching the Material 3 tokens.
   Dimensions getSuggestedMinimumDimensions() const override;
 
   bool isClickable() const override { return true; }
 
+  /// Uses a point overlay so the press halo is anchored to the thumb.
   OverlayType getOverlayType() const override { return OVERLAY_POINT; }
 
+  /// Returns the thumb center as the focal point for the press halo (so it
+  /// follows the thumb during animation).
   roo_display::FpPoint getPointOverlayFocus() const override;
 
+  /// Resolves the surface color role based on the current on/off state.
   ColorRole effectiveContainerRole() const override;
 
+  /// Toggles the on/off state and starts the thumb animation.
   bool onSingleTapUp(XDim x, YDim y) override;
 
  private:

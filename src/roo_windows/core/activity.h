@@ -28,8 +28,11 @@ class Activity {
     STOPPING = 6,
   };
 
+  /// Returns the root widget that this activity presents.
   virtual Widget& getContents() = 0;
 
+  /// Returns the rectangle (in task-local coordinates) where the activity's
+  /// contents should be placed.
   virtual roo_display::Box getPreferredPlacement(const Task& task);
 
   /// Returns task this activity belongs to, or nullptr if detached.
@@ -78,6 +81,7 @@ class SingletonActivity : public Activity {
  public:
   SingletonActivity(Application& app, Widget& contents);
 
+  /// Returns the single hosted contents widget.
   Widget& getContents() override { return contents_; }
 
   /// Returns placement honoring widget margins.

@@ -157,6 +157,7 @@ class Button : public BasicSurfaceWidget {
   Dimensions getSuggestedMinimumDimensions() const override;
 
  protected:
+  /// Tracks press transitions to drive the corner-radius morph animation.
   void notifyStateChanged(uint16_t state_diff) override;
 
  private:

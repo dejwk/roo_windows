@@ -17,12 +17,17 @@ class WalltimeIndicatorBase : public Widget {
                         const roo_time::WallTimeClock* clock,
                         roo_time::TimeZone tz);
 
+  /// Constructs the indicator with an explicit tint color (transparent means
+  /// inherit the parent's content color).
   WalltimeIndicatorBase(const Environment& env, roo_display::Color color,
                         const roo_time::WallTimeClock* clock,
                         roo_time::TimeZone tz);
 
+  /// Reads the current time from the clock; if the minute changed, refreshes
+  /// the cached `HH:MM` string and invalidates the widget.
   void update();
 
+  /// Renders the cached `HH:MM` string in the configured font.
   void paint(const roo_windows::Canvas& canvas) const override;
 
   Padding getPadding() const override { return Padding(0); }

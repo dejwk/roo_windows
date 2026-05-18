@@ -31,7 +31,9 @@ class BlitCacheContainer : public Container {
  public:
   BlitCacheContainer(const Environment& env);
 
+  /// Replaces the held child widget. Detaches the previous child (if any).
   void setChild(WidgetRef child);
+  /// Detaches the current child, leaving the container empty.
   void clearChild();
 
   int getChildrenCount() const override { return child_ == nullptr ? 0 : 1; }
@@ -43,24 +45,35 @@ class BlitCacheContainer : public Container {
   Widget* child() { return child_; }
   const Widget* child() const { return child_; }
 
-  // Public to allow the parent container (e.g. ScrollablePanel) to reposition
-  // this wrapper via moveTo().
+  /// Records the position delta versus the previous layout so the next paint
+  /// can blit-copy the cached pixels instead of repainting from scratch.
+  /// Public because a parent (e.g. `ScrollablePanel`) drives the reposition.
   void moveTo(const Rect& parent_bounds) override;
 
  protected:
   PreferredSize getPreferredSize() const override;
 
+  /// Delegates measurement to the held child.
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
 
+  /// Lays out the held child to fill the container's bounds.
   void onLayout(bool changed, const Rect& rect) override;
 
+  /// Performs a hardware blit-copy when a pending move is recorded and the
+  /// underlying device supports it; falls back to a full repaint otherwise.
   void paintWidgetContents(const Canvas& canvas, Clipper& clipper) override;
 
+  /// Invalidates the entire cached region (cannot blit-copy stale pixels).
   void invalidateDescending() override;
+  /// Invalidates the region intersecting `rect` in the cache.
   void invalidateDescending(const Rect& rect) override;
 
+  /// Marks a child sub-rect as dirty and shrinks the blit-safe region so the
+  /// next paint avoids reusing those pixels.
   void propagateDirty(const Widget* child, const Rect& rect) override;
+  /// Invalidates the whole cached region (child hidden).
   void childHidden(const Widget* child) override;
+  /// Invalidates the whole cached region (child shown).
   void childShown(const Widget* child) override;
 
  private:

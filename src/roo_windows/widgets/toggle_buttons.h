@@ -17,14 +17,19 @@ class ToggleButtons : public Panel {
   ToggleButtons(const Environment& env, int16_t padding = Scaled(12))
       : Panel(env), env_(env), padding_(padding), active_(-1) {}
 
+  /// Appends a new icon-only button at the end of the strip and returns the
+  /// owning widget reference (for layout/styling tweaks).
   roo_windows::Widget& addButton(const MonoIcon& icon);
 
-  // Draws left- and right-side framing around the togglebutton control.
+  /// Draws left- and right-side framing around the togglebutton control.
   void paint(const Canvas& canvas) const override;
 
+  /// Reports the minimum size derived from the largest button glyph.
   Dimensions getSuggestedMinimumDimensions() const override;
   Padding getPadding() const override { return Padding(0); }
 
+  /// Adds horizontal padding per button and vertical padding for the framing
+  /// on top of `getSuggestedMinimumDimensions()`.
   Dimensions getNaturalDimensions() const override {
     Dimensions d = getSuggestedMinimumDimensions();
     return Dimensions(d.width() + (2 * padding_ - 2) * buttons_.size(),
@@ -33,8 +38,8 @@ class ToggleButtons : public Panel {
 
   int getActive() const { return active_; }
 
-  // Returns true if the active button changed; false if the button at index was
-  // already the active one.
+  /// Sets the active button by index (or -1 to clear). Returns true if the
+  /// active button changed; false if `index` was already active.
   bool setActive(int index);
 
  private:
@@ -49,13 +54,17 @@ class ToggleButtons : public Panel {
     bool useOverlayOnActivation() const override { return true; }
     bool isClickable() const override { return true; }
 
+    /// Notifies the parent group that this button became active, then runs
+    /// the base click hook.
     void onClicked() override {
       group_.notifyButtonClicked(idx_);
       Widget::onClicked();
     }
 
+    /// Paints the icon glyph; the active overlay is provided by the group.
     void paint(const Canvas& canvas) const override;
 
+    /// Reports the icon's anchor extents plus a 1 dp margin.
     Dimensions getSuggestedMinimumDimensions() const override {
       return Dimensions(icon_.anchorExtents().width() + 2,
                         icon_.anchorExtents().height() + 2);

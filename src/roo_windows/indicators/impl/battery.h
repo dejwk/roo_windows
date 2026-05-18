@@ -14,13 +14,20 @@ class BatteryIndicator : public Widget {
  public:
   BatteryIndicator(const Environment& env);
 
+  /// Constructs the indicator with an explicit tint color (transparent means
+  /// inherit the parent's content color).
   BatteryIndicator(const Environment& env, roo_display::Color color);
 
+  /// Resolves the current state to a battery pictogram and draws it.
   void paint(const Canvas& canvas) const override;
 
+  /// Updates the battery charge level (0..100); bucketed to a discrete icon.
   void setBatteryPercent(int percent);
+  /// Toggles whether the battery is currently charging.
   void setBatteryCharging(bool charging);
+  /// Toggles the low-battery alert glyph.
   void setBatteryAlert(bool alert);
+  /// Toggles the unknown-state glyph (e.g. when no battery is detected).
   void setBatteryUnknown(bool unknown);
 
   // Padding getPadding() const override { return Padding(0); }

@@ -20,12 +20,17 @@ class RadioButton : public BasicWidget {
   using Widget::setOn;
   using Widget::toggle;
 
+  /// Paints the outer ring; when on, additionally paints the filled inner
+  /// dot.
   void paint(const Canvas& s) const override;
 
+  /// Reports the fixed square footprint sized to the legacy radio glyph.
   Dimensions getSuggestedMinimumDimensions() const override;
 
   bool isClickable() const override { return true; }
 
+  /// Forces the on state on click (mimicking radio-group semantics where
+  /// only the selected button can be off-to-on toggled by the user).
   void onClicked() override;
 };
 

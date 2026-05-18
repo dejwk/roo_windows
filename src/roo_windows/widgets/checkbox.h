@@ -23,12 +23,17 @@ class Checkbox : public BasicWidget {
   using Widget::setOnOffState;
   using Widget::toggle;
 
+  /// Paints a solid square frame; when on, additionally paints the check
+  /// glyph; when indeterminate, paints a horizontal bar.
   void paint(const Canvas& canvas) const override;
 
+  /// Reports the fixed square footprint sized to the legacy checkbox glyph.
   Dimensions getSuggestedMinimumDimensions() const override;
 
   bool isClickable() const override { return true; }
 
+  /// Cycles the on/off state through kOff -> kOn (indeterminate is not part
+  /// of the click cycle, only of programmatic setOnOffState()).
   void onClicked() override;
 };
 

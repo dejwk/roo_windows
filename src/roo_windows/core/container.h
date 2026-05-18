@@ -31,68 +31,83 @@ class Container : public SurfaceWidget {
  public:
   Container(const Environment& env);
 
+  /// Returns the container's resolved background color, derived from its
+  /// effective container role.
   Color background() const override {
     return theme().color.role(effectiveContainerRole());
   }
 
+  /// Inherits the active theme from the parent.
   const Theme& theme() const override { return parent()->theme(); }
 
-  // Paints the panel with all its children. If the panel isn't invalidated,
-  // omits drawing the canvas area; otherwise, draws the canvas area over the
-  // invalidated region.
-  //
-  // Calls paintChildren() to actually paint the children. The default
-  // implementation calls child->paintWidget(), thus omitting drawing of
-  // children that aren't dirty.
-  //
-  // Calls paint() to actually paint the canvas area (with the canvas object
-  // clipped to the invalidated region, and with the background color pre-set
-  // to the panel's background).
+  /// Paints the panel with all its children. If the panel isn't invalidated,
+  /// omits drawing the canvas area; otherwise, draws the canvas area over
+  /// the invalidated region.
+  ///
+  /// Calls `paintChildren()` to actually paint the children. The default
+  /// implementation calls `child->paintWidget()`, thus omitting drawing of
+  /// children that aren't dirty.
+  ///
+  /// Calls `paint()` to actually paint the canvas area (with the canvas
+  /// object clipped to the invalidated region, and with the background
+  /// color pre-set to the panel's background).
   void paintWidgetContents(const Canvas& canvas, Clipper& clipper) override;
 
-  // Draws the surface area of this panel. The default implementation draws
-  // a transparent rectangle. (Effectively, the rectangle is drawn in the
-  // panel's background color, which is pre-set in the specified canvas).
+  /// Draws the surface area of this panel. The default implementation draws
+  /// a transparent rectangle. (Effectively, the rectangle is drawn in the
+  /// panel's background color, which is pre-set in the specified canvas.)
   void paint(const Canvas& s) const override;
 
+  /// Routes a touch-down event to the front-most child that contains the
+  /// point, descending the tree.
   Widget* dispatchTouchDownEvent(XDim x, YDim y) override;
 
+  /// Routes a sloppy (snap-to-nearby) touch-down event to a descendant.
   Widget* dispatchSloppyTouchDownEvent(XDim x, YDim y) override;
 
+  /// Returns the maximum sloppy-touch bounds the container will consider
+  /// for descendants.
   Rect getMaxSloppyTouchParentBounds() const override;
 
-  // Returns the minimum bounding rect, in this widget's coordinates, that
-  // covers all visible descendants, including those with parent clip mode =
-  // UNCLIPPED, i.e. sticking out of the normal bounds. In the common case, when
-  // there are no 'unclipped' descendants, equivalent to bounds().
+  /// Returns the minimum bounding rect, in this widget's coordinates, that
+  /// covers all visible descendants, including those with parent clip mode
+  /// = UNCLIPPED. In the common case, when there are no 'unclipped'
+  /// descendants, equivalent to `bounds()`.
   Rect maxBounds() const override;
 
+  /// Returns the container's maximum bounds projected into the parent's
+  /// coordinate space.
   Rect maxParentBounds() const override;
 
+  /// Reports a zero default. Containers are expected to override
+  /// `onMeasure()` and rarely consult this value.
   Dimensions getSuggestedMinimumDimensions() const override {
     // Containers are expected to override onMeasure, so this is rarely relevant
     // anyway.
     return Dimensions(0, 0);
   }
 
+  /// Default preferred size: wrap-content on both axes.
   PreferredSize getPreferredSize() const override {
     return PreferredSize(PreferredSize::WrapContentWidth(),
                          PreferredSize::WrapContentHeight());
   }
 
-  // Should be overriden to return true by panels whose children, along with
-  // their margins, are non-overlapping. In such case, decorations (borders and
-  // shadows) which fit into the margins are rendered immediately after drawing
-  // the child, which is faster than the general case where the rasterizables
-  // need to be combined.
+  /// Should be overriden to return true by panels whose children, along
+  /// with their margins, are non-overlapping. In such case, decorations
+  /// (borders and shadows) which fit into the margins are rendered
+  /// immediately after drawing the child, which is faster than the general
+  /// case where the rasterizables need to be combined.
   virtual bool respectsChildrenBoundaries() const {
     return getChildrenCount() <= 1;
   }
 
+  /// Hook for subclasses that want to claim a touch event before it reaches
+  /// children. The default implementation never intercepts.
   virtual bool onInterceptTouchEvent(const TouchEvent& event) { return false; }
 
-  // Returns true if this container or any of its ancestors support scroll
-  // events.
+  /// Returns true if this container or any of its ancestors support scroll
+  /// events.
   bool isScrollable() const;
 
  protected:

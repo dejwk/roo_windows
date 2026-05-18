@@ -25,6 +25,8 @@ class EditedTextField : public TextField {
   EditedTextField(const Environment& env, TextFieldEditor& editor,
                   const std::string& hint, EditTextField& activity);
 
+  /// Confirms or cancels the activity-driven edit through the owning
+  /// `EditTextField`.
   void onEditFinished(bool confirmed) override;
 
  private:
@@ -42,17 +44,19 @@ class EditTextField : public Activity {
   EditTextField(const Environment& env, TextFieldEditor& editor,
                 const std::string& hint);
 
+  /// Returns the activity's root pane (containing the editor and action
+  /// buttons).
   Widget& getContents() override { return main_pane_; }
 
-  // Launches a text-enter activity with the specified conditions, triggering
-  // the specified function on confirmation.
+  /// Launches a text-enter activity with the specified conditions, triggering
+  /// the specified function on confirmation.
   void triggerEdit(Task& task, const std::string& initial,
                    const std::string& hint,
                    std::function<void(const std::string&)> enter_fn);
 
-  // Launches a text-enter activity to edit the text in the specified field.
-  // Typical usage:
-  // field.addOnClicked([&]() { enter_text.triggerEditField(field); });
+  /// Launches a text-enter activity to edit the text in the specified field.
+  /// Typical usage:
+  /// field.addOnClicked([&]() { enter_text.triggerEditField(field); });
   void triggerEditField(TextField& field);
 
  private:

@@ -398,12 +398,16 @@ class FlexLayout : public Panel {
   /// @param params  Flex item parameters. Defaults to `Params{}` which matches
   ///                CSS initial values (no grow, shrink=1, auto basis).
   void add(WidgetRef child, Params params);
+  /// Convenience overload — appends with default `Params{}`.
   void add(WidgetRef child) { add(std::move(child), Params{}); }
 
   bool respectsChildrenBoundaries() const override { return true; }
 
  protected:
+  /// Runs the flex algorithm (basis, grow, shrink) for the available size and
+  /// returns the resulting container dimensions.
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
+  /// Places each child at the position and size determined by `onMeasure()`.
   void onLayout(bool changed, const Rect& rect) override;
 
  private:

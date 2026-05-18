@@ -19,6 +19,8 @@ class Holder : public Container {
 
   Holder(const Environment& env) : Container(env), contents_(nullptr) {}
 
+  /// Replaces (or clears, if `new_contents` is null) the single held child.
+  /// No-op if the same widget with the same ownership is reassigned.
   void setContents(WidgetRef new_contents) {
     if (contents() == &*new_contents &&
         contents()->isOwnedByParent() == new_contents.is_owned()) {
@@ -48,8 +50,10 @@ class Holder : public Container {
  protected:
   PreferredSize getPreferredSize() const override;
 
+  /// Delegates measurement to the held child and caches the result.
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
 
+  /// Lays out the held child to fill `rect`.
   void onLayout(bool changed, const Rect& rect) override;
 
  private:
