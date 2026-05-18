@@ -30,6 +30,12 @@ Primary reference:
   const tables.
 - Public widget headers should document every public method with Doxygen
   comments so the API contract stays visible at the declaration site.
+- New or extended widget behavior should ship with focused automated tests that
+  cover the intended contract and any regressions the change could introduce.
+- Test cases should carry brief comments for non-trivial scenarios, following
+  the "Verifies ..." style used in the more detailed widget suites.
+- User-visible widget capabilities should be showcased in an example when the
+  repo already maintains examples for that component family.
 - Prefer virtual no-op hooks over per-instance `std::function` callbacks.
 - Resolve default colors and geometry from the active `Theme` whenever
   possible.
@@ -167,6 +173,10 @@ Before finalizing a custom widget paint path, verify:
 - Optional features are implemented as a subclass, shared const pointer, or
   virtual hook unless every instance truly needs them.
 - Every public method in a public widget header has a Doxygen comment.
+- Focused automated tests cover the new or changed behavior.
+- Non-trivial test cases have short comments stating what they verify.
+- Examples are added or updated when the change introduces user-visible widget
+  functionality worth demonstrating.
 - Dirty repaint minimizes written pixels.
 - Invalidated repaint covers the entire invalid region.
 - No pixel is written more than once with a different color within the same
