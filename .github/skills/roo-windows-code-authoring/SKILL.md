@@ -16,6 +16,9 @@ Related skills:
 ## Core Conventions
 
 - Follow Google-style C++, except instance methods use `camelCase()`.
+  Trivial accessors and mutators (one-line field getters/setters and
+  STL-mimicking container methods) may keep `snake_case()` when that reads
+  more naturally, matching the spelling of the underlying field.
 - Favor readability. Avoid redundant branches, repeated explanations, and
   unnecessary line count when the code can stay clear without them.
 - Be conservative about RAM. Flash is usually cheaper than per-instance state,
