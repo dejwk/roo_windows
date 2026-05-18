@@ -14,6 +14,7 @@ namespace roo_windows {
 
 class Application;
 
+/// Root container and shared UI services owner for an Application.
 class MainWindow : public Container {
  public:
   MainWindow(Application& app, const roo_display::Box& bounds);
@@ -39,8 +40,10 @@ class MainWindow : public Container {
   // Adds a popup layer child. Popups render above tasks but below dialogs.
   void addPopup(WidgetRef child, const Rect& rect);
 
+  /// Returns the shared click-animation controller for this window.
   ClickAnimation& click_animation() { return click_animation_; }
 
+  /// Returns the shared click-animation controller for this window.
   const ClickAnimation& click_animation() const { return click_animation_; }
 
   PressOverlay& press_overlay() { return press_overlay_; }

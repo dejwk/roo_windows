@@ -250,8 +250,10 @@ class Widget {
 
   Application* getApplication() const;
 
-  ClickAnimation* getClickAnimation();
-
+  /// Returns the active click animation for this widget, or nullptr.
+  ///
+  /// Widget paint code should use this widget-local view instead of querying
+  /// the MainWindow-owned controller directly.
   const ClickAnimation* getClickAnimation() const;
 
   virtual Widget* dispatchTouchDownEvent(XDim x, YDim y);

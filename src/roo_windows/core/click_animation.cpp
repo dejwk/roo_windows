@@ -11,7 +11,10 @@ static const unsigned long kClickAnimationMs = 200;
 ClickAnimation::ClickAnimation()
     : click_anim_target_(nullptr),
       click_confirmed_(false),
-      deferred_click_(nullptr) {}
+      deferred_click_(nullptr),
+      click_anim_start_millis_(0),
+      click_anim_x_(0),
+      click_anim_y_(0) {}
 
 void ClickAnimation::tick() {
   unsigned long now = millis();
@@ -69,6 +72,20 @@ bool ClickAnimation::isClickAnimating() const {
   return click_anim_target_ != nullptr;
 }
 
+float ClickAnimation::progress() const {
+  if (click_anim_target_ == nullptr) return 1.0f;
+  float result =
+      (float)(millis() - click_anim_start_millis_) / kClickAnimationMs;
+  if (result > 1.0f) result = 1.0f;
+  return result;
+}
+
+int16_t ClickAnimation::xCenter() const { return click_anim_x_; }
+
+int16_t ClickAnimation::yCenter() const { return click_anim_y_; }
+
+const Widget* ClickAnimation::target() const { return click_anim_target_; }
+
 bool ClickAnimation::isClickConfirmed() const { return click_confirmed_; }
 
 void ClickAnimation::start(Widget* widget, int16_t x, int16_t y) {
@@ -86,18 +103,6 @@ void ClickAnimation::confirmClick(Widget* widget) {
   if (click_anim_target_ == nullptr) {
     deferred_click_ = widget;
   }
-}
-
-bool ClickAnimation::getProgress(const Widget* target, float* progress,
-                                 int16_t* x_center, int16_t* y_center) const {
-  if (click_anim_target_ != target) {
-    return false;
-  }
-  *progress = (float)(millis() - click_anim_start_millis_) / kClickAnimationMs;
-  if (*progress > 1.0) *progress = 1.0;
-  *x_center = click_anim_x_;
-  *y_center = click_anim_y_;
-  return true;
 }
 
 }  // namespace roo_windows

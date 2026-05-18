@@ -58,14 +58,24 @@ const MainWindow* Widget::getMainWindow() const {
 
 Task* Widget::getTask() { return parent_->getTask(); }
 
-ClickAnimation* Widget::getClickAnimation() {
-  MainWindow* w = getMainWindow();
+namespace {
+
+ClickAnimation* ClickAnimationController(Widget& widget) {
+  MainWindow* w = widget.getMainWindow();
   return (w == nullptr) ? nullptr : &w->click_animation();
 }
 
-const ClickAnimation* Widget::getClickAnimation() const {
-  const MainWindow* w = getMainWindow();
+const ClickAnimation* ClickAnimationController(const Widget& widget) {
+  const MainWindow* w = widget.getMainWindow();
   return (w == nullptr) ? nullptr : &w->click_animation();
+}
+
+}  // namespace
+
+const ClickAnimation* Widget::getClickAnimation() const {
+  if (!isClicking()) return nullptr;
+  const ClickAnimation* anim = ClickAnimationController(*this);
+  return (anim != nullptr && anim->target() == this) ? anim : nullptr;
 }
 
 void Widget::getAbsoluteBounds(Rect& full, Rect& visible) const {
@@ -724,14 +734,16 @@ bool Widget::isClickable() const { return false; }
 
 bool Widget::onDown(XDim x, YDim y) {
   if (!isClickable() || !isEnabled()) return false;
-  const ClickAnimation* anim = getClickAnimation();
-  return !anim->isClickAnimating() && !anim->isClickConfirmed();
+  const ClickAnimation* anim = ClickAnimationController(*this);
+  return anim == nullptr ||
+         (!anim->isClickAnimating() && !anim->isClickConfirmed());
 }
 
 void Widget::onShowPress(XDim x, YDim y) {
   if (!isClickable()) return;
   if (isPressed()) return;
-  ClickAnimation* anim = getClickAnimation();
+  ClickAnimation* anim = ClickAnimationController(*this);
+  if (anim == nullptr) return;
   if (anim->isClickAnimating() || anim->isClickConfirmed()) return;
   if (showClickAnimation()) {
     anim->start(this, x, y);
@@ -747,13 +759,16 @@ bool Widget::onSingleTapUp(XDim x, YDim y) {
   } else {
     // Quick release (onShowPress not yet triggered).
     if (showClickAnimation()) {
-      ClickAnimation* anim = getClickAnimation();
+      ClickAnimation* anim = ClickAnimationController(*this);
+      if (anim == nullptr) return false;
       setClicking();
       setDirty();
       anim->start(this, x, y);
     }
   }
-  getClickAnimation()->confirmClick(this);
+  ClickAnimation* anim = ClickAnimationController(*this);
+  if (anim == nullptr) return false;
+  anim->confirmClick(this);
   return true;
 }
 
@@ -775,7 +790,10 @@ void Widget::onCancel() {
   setPressed(false);
   if (kTerminateAnimationsOnCancel) {
     clearClicking();
-    getClickAnimation()->cancel();
+    ClickAnimation* anim = ClickAnimationController(*this);
+    if (anim != nullptr) {
+      anim->cancel();
+    }
   }
 }
 

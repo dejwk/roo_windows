@@ -83,13 +83,17 @@ OverlaySpec::OverlaySpec(Widget& widget, const Canvas& canvas)
   bool click_animation = ((widget.state_ & kWidgetClicking) != 0);
   if (click_animation) {
     is_modded_ = true;
-    float click_progress;
-    int16_t click_x, click_y;
+    float click_progress = 1.0f;
+    int16_t click_x = 0;
+    int16_t click_y = 0;
+    const ClickAnimation* active_click_animation = widget.getClickAnimation();
     bool is_click_animation_in_progress =
-        click_animation &&
-        widget.getClickAnimation()->getProgress(&widget, &click_progress,
-                                                &click_x, &click_y) &&
-        click_progress < 1.0;
+        active_click_animation != nullptr &&
+        (click_progress = active_click_animation->progress()) < 1.0f;
+    if (active_click_animation != nullptr) {
+      click_x = active_click_animation->xCenter();
+      click_y = active_click_animation->yCenter();
+    }
     Widget::OverlayType t = widget.getOverlayType();
     if (is_click_animation_in_progress) {
       Rect anim_bounds = widget.bounds();

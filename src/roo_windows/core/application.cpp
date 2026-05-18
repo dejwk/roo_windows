@@ -51,8 +51,7 @@ void Application::run() {
 void Application::tick() {
   unsigned long now = millis();
   root_window_.refreshClickAnimation();
-  bool is_click_animating =
-      root_window_.getClickAnimation()->isClickAnimating();
+  bool is_click_animating = root_window_.click_animation().isClickAnimating();
 #if defined(ROO_THREADS_SINGLETHREADED)
   touch_sensor_.pollOnce();
 #endif

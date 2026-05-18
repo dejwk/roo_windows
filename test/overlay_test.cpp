@@ -518,6 +518,54 @@ TEST_F(RooWindowsRenderTest, PointPressOverlayRendersOutsideLogicalBounds) {
   EXPECT_EQ(center_background_pixel, pixelAt(28, 20));
 }
 
+// Verifies that widget-local click-animation access only exposes the active
+// target and surfaces the target-local animation read API.
+TEST_F(RooWindowsRenderTest, WidgetGetClickAnimationReturnsOnlyActiveTarget) {
+  auto target = std::make_unique<PointOverlayBoxWidget>(env_, color::Blue,
+                                                        Dimensions(18, 18));
+  auto other = std::make_unique<PointOverlayBoxWidget>(env_, color::Green,
+                                                       Dimensions(18, 18));
+  PointOverlayBoxWidget* target_ptr = target.get();
+  PointOverlayBoxWidget* other_ptr = other.get();
+
+  app_.add(std::move(target), Box(4, 12, 21, 29));
+  app_.add(std::move(other), Box(28, 12, 45, 29));
+
+  target_ptr->onShowPress(target_ptr->width() / 2, target_ptr->height() / 2);
+
+  const ClickAnimation* target_anim = target_ptr->getClickAnimation();
+  ASSERT_NE(nullptr, target_anim);
+  EXPECT_EQ(target_ptr, target_anim->target());
+  EXPECT_EQ(target_ptr->width() / 2, target_anim->xCenter());
+  EXPECT_EQ(target_ptr->height() / 2, target_anim->yCenter());
+  EXPECT_GE(target_anim->progress(), 0.0f);
+  EXPECT_LT(target_anim->progress(), 1.0f);
+  EXPECT_EQ(nullptr, other_ptr->getClickAnimation());
+}
+
+// Verifies that the shared controller keeps the finished target attached until
+// tick() retires it, even after progress reaches 1.0.
+TEST_F(RooWindowsRenderTest,
+       ClickAnimationKeepsFinishedTargetUntilTickRetiresIt) {
+  auto front = std::make_unique<PointOverlayBoxWidget>(env_, color::Blue,
+                                                       Dimensions(18, 18));
+  PointOverlayBoxWidget* front_ptr = front.get();
+
+  app_.add(std::move(front), Box(20, 12, 37, 29));
+
+  front_ptr->onShowPress(front_ptr->width() / 2, front_ptr->height() / 2);
+
+  ClickAnimation& anim = app_.root().click_animation();
+  ASSERT_EQ(front_ptr, anim.target());
+  ASSERT_TRUE(anim.isClickAnimating());
+
+  delay(kPressAnimationMillis + 20);
+
+  EXPECT_EQ(front_ptr, anim.target());
+  EXPECT_TRUE(anim.isClickAnimating());
+  EXPECT_EQ(1.0f, anim.progress());
+}
+
 TEST_F(RooWindowsRenderTest, PointClickAnimationSettlesIntoStaticPressOverlay) {
   auto back =
       std::make_unique<ColorBoxWidget>(env_, color::Red, Dimensions(48, 40));
