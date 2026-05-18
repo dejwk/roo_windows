@@ -312,3 +312,5 @@ void setup() {
   // Never exits.
   scheduler.run();
 }
+
+void loop() {}
