@@ -31,8 +31,11 @@ Related skills:
 - Every code change must ship with focused unit tests.
 - Non-trivial test cases should carry brief `Verifies ...` comments stating the
   contract or regression being checked.
-- Code comments should be sparse and should explain the why or the overall
-  what of a complex block, not restate the mechanics line by line.
+- Code comments should be sparse, but complex algorithms should include brief
+  comments that explain the main concepts, major decisions, and why key
+  branches exist, not just the mechanics line by line.
+- Non-trivial helper functions and methods should carry a short comment or
+  Doxygen summary stating what they compute, classify, or guarantee.
 
 ## Validation Commands
 
@@ -51,4 +54,6 @@ Related skills:
 - Non-trivial tests have short `Verifies ...` comments.
 - Validation uses the narrowest relevant Bazel target first.
 - Complex implementation comments explain intent, not mechanics.
+- Complex algorithms explain their main strategy and important branches.
+- Non-trivial helper functions and methods are documented.
 - The change does not add avoidable per-instance RAM cost.
