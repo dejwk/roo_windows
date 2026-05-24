@@ -46,6 +46,25 @@ class TestListEntry : public ListEntry {
   using ListEntry::getChildrenCount;
 };
 
+class TestList : public List {
+ public:
+  explicit TestList(const Environment& env) : List(env) {}
+
+  using List::getChild;
+  using List::getChildrenCount;
+};
+
+class TrackingListEntry : public ListEntry {
+ public:
+  TrackingListEntry(const Environment& env, bool& destroyed)
+      : ListEntry(env), destroyed_(destroyed) {}
+
+  ~TrackingListEntry() override { destroyed_ = true; }
+
+ private:
+  bool& destroyed_;
+};
+
 class MutableListItem : public ListItem {
  public:
   explicit MutableListItem(roo_display::StringView headline)
@@ -270,6 +289,159 @@ TEST(Material3List, ListEntryRefreshesMutableTextWithoutReplacingSlots) {
 
   EXPECT_GT(long_measure.width(), short_measure.width());
   EXPECT_EQ(0, entry.getChildrenCount());
+}
+
+// Verifies that List keeps borrowed entries borrowed, adopts unique_ptr rows,
+// and detaches or destroys them correctly on clear().
+TEST(Material3List, ListClearsBorrowedAndAdoptedEntriesWithCorrectOwnership) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  TestList list(env);
+  TestListEntry borrowed(env);
+  bool adopted_destroyed = false;
+  auto adopted = std::make_unique<TrackingListEntry>(env, adopted_destroyed);
+  TrackingListEntry* adopted_raw = adopted.get();
+
+  list.add(borrowed);
+  list.add(std::move(adopted));
+
+  EXPECT_EQ(2, list.getChildrenCount());
+  EXPECT_EQ(&borrowed, &list.getChild(0));
+  EXPECT_EQ(adopted_raw, &list.getChild(1));
+  EXPECT_EQ(&list, borrowed.parent());
+  EXPECT_EQ(&list, adopted_raw->parent());
+
+  list.clear();
+
+  EXPECT_EQ(0, list.getChildrenCount());
+  EXPECT_EQ(nullptr, borrowed.parent());
+  EXPECT_TRUE(adopted_destroyed);
+}
+
+// Verifies that List recomputes first, middle, last, and single row position
+// roles as rows are added and list-level policies change.
+TEST(Material3List, ListPropagatesPositionVariantStyleAndSegmentedGap) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  TestList list(env);
+  TestListEntry first(env);
+  TestListEntry second(env);
+  TestListEntry third(env);
+  StandardListItem first_item(StandardListItemInit::OneLine("First"));
+  StandardListItem second_item(StandardListItemInit::OneLine("Second"));
+  StandardListItem third_item(StandardListItemInit::OneLine("Third"));
+  first.setItem(first_item);
+  second.setItem(second_item);
+  third.setItem(third_item);
+
+  list.add(first);
+  EXPECT_EQ(ListItemPosition::kSingle, first.visualContext().position);
+
+  list.add(second);
+  EXPECT_EQ(ListItemPosition::kFirst, first.visualContext().position);
+  EXPECT_EQ(ListItemPosition::kLast, second.visualContext().position);
+
+  list.setVariant(ListVariant::kBaseline);
+  list.setStyle(ListStyle::kSegmented);
+  list.add(third);
+
+  EXPECT_EQ(ListVariant::kBaseline, first.visualContext().variant);
+  EXPECT_EQ(ListStyle::kSegmented, first.visualContext().style);
+  EXPECT_EQ(ListItemPosition::kFirst, first.visualContext().position);
+  EXPECT_EQ(ListItemPosition::kMiddle, second.visualContext().position);
+  EXPECT_EQ(ListItemPosition::kLast, third.visualContext().position);
+
+  Dimensions measured =
+      list.measure(WidthSpec::Exactly(180), HeightSpec::Unspecified(0));
+  list.layout(Rect(0, 0, measured.width() - 1, measured.height() - 1));
+
+  EXPECT_EQ(0, first.offsetTop());
+  EXPECT_EQ(first.height() + Scaled(8), second.offsetTop());
+  EXPECT_EQ(second.offsetTop() + second.height() + Scaled(8),
+            third.offsetTop());
+}
+
+// Verifies that selection policy resolves the list-owned selected state and
+// divider visibility from stored per-entry selection hints.
+TEST(Material3List, ListResolvesSelectionAndDividerContext) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  TestList list(env);
+  TestListEntry first(env);
+  TestListEntry second(env);
+  TestListEntry third(env);
+  StandardListItem first_item(StandardListItemInit::OneLine("One"));
+  StandardListItem second_item(StandardListItemInit::OneLine("Two"));
+  StandardListItem third_item(StandardListItemInit::OneLine("Three"));
+  first.setItem(first_item);
+  second.setItem(second_item);
+  third.setItem(third_item);
+
+  ListEntryVisualContext selected_context;
+  selected_context.selected = true;
+  first.setVisualContext(selected_context);
+  second.setVisualContext(selected_context);
+
+  list.add(first);
+  list.add(second);
+  list.add(third);
+
+  EXPECT_FALSE(first.visualContext().selected);
+  EXPECT_FALSE(second.visualContext().selected);
+
+  ListSelectionPolicy selection_policy;
+  selection_policy.mode = SelectionMode::kMultiple;
+  list.setSelectionPolicy(selection_policy);
+
+  EXPECT_TRUE(first.visualContext().selected);
+  EXPECT_TRUE(second.visualContext().selected);
+  EXPECT_FALSE(third.visualContext().selected);
+
+  ListDividerPolicy divider_policy;
+  divider_policy.mode = DividerMode::kInset;
+  divider_policy.suppress_between_selected = true;
+  list.setDividerPolicy(divider_policy);
+
+  EXPECT_FALSE(first.visualContext().show_divider);
+  EXPECT_TRUE(second.visualContext().show_divider);
+  EXPECT_FALSE(third.visualContext().show_divider);
+
+  selection_policy.mode = SelectionMode::kSingle;
+  list.setSelectionPolicy(selection_policy);
+
+  EXPECT_TRUE(first.visualContext().selected);
+  EXPECT_FALSE(second.visualContext().selected);
+  EXPECT_TRUE(first.visualContext().show_divider);
+}
+
+// Verifies that segmented lists use list-owned gaps only while divider mode is
+// disabled, and collapse back to contiguous row stacking when dividers are on.
+TEST(Material3List, ListGapResolutionDependsOnDividerPolicy) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  TestList list(env);
+  TestListEntry first(env);
+  TestListEntry second(env);
+  StandardListItem first_item(StandardListItemInit::OneLine("One"));
+  StandardListItem second_item(StandardListItemInit::OneLine("Two"));
+  first.setItem(first_item);
+  second.setItem(second_item);
+  list.setStyle(ListStyle::kSegmented);
+  list.add(first);
+  list.add(second);
+
+  Dimensions with_gap =
+      list.measure(WidthSpec::Exactly(180), HeightSpec::Unspecified(0));
+
+  ListDividerPolicy divider_policy;
+  divider_policy.mode = DividerMode::kFullWidth;
+  list.setDividerPolicy(divider_policy);
+  Dimensions with_divider =
+      list.measure(WidthSpec::Exactly(180), HeightSpec::Unspecified(0));
+
+  EXPECT_EQ(with_gap.height(), with_divider.height() + Scaled(8));
+  EXPECT_TRUE(first.visualContext().show_divider);
+  EXPECT_FALSE(second.visualContext().show_divider);
 }
 
 // Verifies the checked Phase 1 size budget using pointer-size-aware limits so

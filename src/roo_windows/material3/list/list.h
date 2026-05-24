@@ -405,13 +405,21 @@ class List : public Container {
   int getChildrenCount() const override;
   const Widget& getChild(int idx) const override;
   Widget& getChild(int idx) override;
+  Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
+  void onLayout(bool changed, const Rect& rect) override;
 
  private:
-  std::vector<Widget*> entries_;
+  void markEntryContextsDirty();
+  void refreshEntryVisualContexts();
+  int16_t interRowGap() const;
+
+  std::vector<ListEntry*> entries_;
+  std::vector<uint8_t> selected_entries_;
   ListVariant variant_;
   ListStyle style_;
   ListSelectionPolicy selection_policy_;
   ListDividerPolicy divider_policy_;
+  bool contexts_dirty_;
 };
 
 }  // namespace material3

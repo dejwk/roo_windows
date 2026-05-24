@@ -46,9 +46,11 @@ lists, menus, and adjacent Material 3 surfaces with shared primitives.
 ### Current Status in `roo_windows`
 
 As of 2026-05, the list family is partially implemented: the Phase 1 public API
-surface exists, and the row-local Phase 2 infrastructure for `ListEntry` is in
-place, but end-to-end list sequencing and menu reuse are still design-stage
-work.
+surface exists, the row-local Phase 2 infrastructure for `ListEntry` is in
+place, and the Phase 3 baseline `List` sequencing path now resolves row
+position, list-owned visual context, add/clear behavior, and segmented gap
+treatment. Expand/collapse behavior, example-backed usage review, and menu
+reuse are still future work.
 
 What exists today:
 
@@ -60,7 +62,8 @@ What exists today:
    stable slot binding, row-local measurement and layout, and direct painting of
    standard text descriptors.
 - `material3::List` exists as a direct `Container` shell with list-owned API
-   for variant, style, selection, divider policy, and row insertion.
+   for variant, style, selection, divider policy, row insertion, row stacking,
+   and row-context propagation.
 - `FlexLayout` is implemented and already used by `material3::FlexCard`, so it
    is no longer just a future direction for generic composition.
 - `ListLayout` remains the existing recycled fixed-height list container.
@@ -70,15 +73,14 @@ What exists today:
 
 What does not exist yet:
 
-- no end-to-end `material3::List` row sequencing, list-owned visual-context
-   propagation, or clear/add behavior,
 - no implemented `ExpandablePanel` behavior,
+- no example-backed Phase 4 baseline usage review,
 - no Material 3 menu implementation built from shared list-row primitives,
-- no variable-height Material 3 list container.
+- no reusable expand/collapse body path.
 
 The rest of this document records the chosen architecture for the remaining
-phases and keeps the already landed Phase 1 / Phase 2 pieces aligned with that
-direction.
+phases and keeps the already landed Phase 1 / Phase 2 / Phase 3 pieces aligned
+with that direction.
 
 ### Material 3 Sources
 

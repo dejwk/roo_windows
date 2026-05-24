@@ -22,6 +22,7 @@ constexpr int16_t kBodyGapDp = 8;
 constexpr int16_t kOneLineMinHeightDp = 56;
 constexpr int16_t kTwoLineMinHeightDp = 72;
 constexpr int16_t kThreeLineMinHeightDp = 88;
+constexpr int16_t kSegmentedListGapDp = 8;
 
 struct RowTokens {
   int16_t horizontal_padding;
@@ -277,6 +278,43 @@ void DrawTextLine(const Canvas& canvas, roo_display::StringView text,
   if (text.empty() || bounds.empty()) return;
   canvas.drawTiled(roo_display::ClippedStringViewLabel(text, font, color),
                    bounds, roo_display::kLeft | roo_display::kMiddle);
+}
+
+ListItemPosition PositionForIndex(int idx, int count) {
+  if (count <= 1) return ListItemPosition::kSingle;
+  if (idx == 0) return ListItemPosition::kFirst;
+  if (idx == count - 1) return ListItemPosition::kLast;
+  return ListItemPosition::kMiddle;
+}
+
+int FirstSelectedIndex(const std::vector<uint8_t>& selected_entries) {
+  for (int i = 0; i < static_cast<int>(selected_entries.size()); ++i) {
+    if (selected_entries[i] != 0) return i;
+  }
+  return -1;
+}
+
+bool ResolvedSelectedState(const std::vector<uint8_t>& selected_entries,
+                           const ListSelectionPolicy& selection_policy,
+                           int idx, int first_selected_idx) {
+  if (selection_policy.mode == SelectionMode::kNone) return false;
+  if (idx < 0 || idx >= static_cast<int>(selected_entries.size())) return false;
+  if (selected_entries[idx] == 0) return false;
+  if (selection_policy.mode == SelectionMode::kSingle) {
+    return idx == first_selected_idx;
+  }
+  return true;
+}
+
+bool ShouldShowDivider(const ListDividerPolicy& divider_policy, int idx,
+                       int count, bool selected, bool next_selected) {
+  if (divider_policy.mode == DividerMode::kNone || idx >= count - 1) {
+    return false;
+  }
+  if (divider_policy.suppress_between_selected && selected && next_selected) {
+    return false;
+  }
+  return true;
 }
 
 }  // namespace
@@ -622,64 +660,172 @@ Widget* StandardListItem::bodyWidget() { return body_; }
 List::List(const Environment& env)
     : Container(env),
       entries_(),
+      selected_entries_(),
       variant_(ListVariant::kExpressive),
       style_(ListStyle::kStandard),
       selection_policy_(),
-      divider_policy_() {}
+      divider_policy_(),
+      contexts_dirty_(false) {}
 
-List::~List() {
-  for (Widget* entry : entries_) {
-    if (entry->isOwnedByParent()) delete entry;
+List::~List() { clear(); }
+
+void List::markEntryContextsDirty() {
+  contexts_dirty_ = true;
+  invalidateInterior();
+  requestLayout();
+}
+
+int16_t List::interRowGap() const {
+  if (style_ == ListStyle::kSegmented && divider_policy_.mode == DividerMode::kNone) {
+    return Scaled(kSegmentedListGapDp);
   }
+  return 0;
+}
+
+// Resolves the list-owned row context so each entry sees stable variant,
+// style, position, selection, and divider decisions.
+void List::refreshEntryVisualContexts() {
+  if (!contexts_dirty_) return;
+
+  const int count = static_cast<int>(entries_.size());
+  const int first_selected_idx =
+      selection_policy_.mode == SelectionMode::kSingle
+          ? FirstSelectedIndex(selected_entries_)
+          : -1;
+
+  for (int i = 0; i < count; ++i) {
+    ListEntry& entry = *entries_[i];
+    ListEntryVisualContext context = entry.visualContext();
+    context.variant = variant_;
+    context.style = style_;
+    context.position = PositionForIndex(i, count);
+    context.selected = ResolvedSelectedState(selected_entries_, selection_policy_,
+                                            i, first_selected_idx);
+    bool next_selected = ResolvedSelectedState(selected_entries_, selection_policy_,
+                                               i + 1, first_selected_idx);
+    context.show_divider =
+        ShouldShowDivider(divider_policy_, i, count, context.selected, next_selected);
+    entry.setVisualContext(context);
+  }
+
+  contexts_dirty_ = false;
 }
 
 void List::setVariant(ListVariant variant) {
   if (variant_ == variant) return;
   variant_ = variant;
-  invalidateInterior();
+  markEntryContextsDirty();
+  refreshEntryVisualContexts();
 }
 
 void List::setStyle(ListStyle style) {
   if (style_ == style) return;
   style_ = style;
-  invalidateInterior();
+  markEntryContextsDirty();
+  refreshEntryVisualContexts();
 }
 
 void List::setSelectionPolicy(const ListSelectionPolicy& policy) {
   selection_policy_ = policy;
-  invalidateInterior();
+  markEntryContextsDirty();
+  refreshEntryVisualContexts();
 }
 
 void List::setDividerPolicy(const ListDividerPolicy& policy) {
   divider_policy_ = policy;
-  invalidateInterior();
+  markEntryContextsDirty();
+  refreshEntryVisualContexts();
 }
 
 void List::add(ListEntry& entry) {
-  (void)entry;
-  LOG(FATAL) << "Unimplemented: material3::List::add(ListEntry&)";
+  CHECK(entry.parent() == nullptr);
+  selected_entries_.push_back(entry.visualContext().selected ? 1 : 0);
+  entries_.push_back(&entry);
+  attachChild(WidgetRef(entry));
+  markEntryContextsDirty();
+  refreshEntryVisualContexts();
 }
 
 void List::add(std::unique_ptr<ListEntry> entry) {
-  (void)entry;
-  LOG(FATAL) << "Unimplemented: material3::List::add(unique_ptr<ListEntry>)";
+  CHECK(entry != nullptr);
+  ListEntry* raw_entry = entry.get();
+  CHECK(raw_entry->parent() == nullptr);
+  selected_entries_.push_back(raw_entry->visualContext().selected ? 1 : 0);
+  entries_.push_back(raw_entry);
+  attachChild(WidgetRef(std::move(entry)));
+  markEntryContextsDirty();
+  refreshEntryVisualContexts();
 }
 
 void List::clear() {
   if (entries_.empty()) return;
-  LOG(FATAL) << "Unimplemented: material3::List::clear";
+  for (int i = static_cast<int>(entries_.size()) - 1; i >= 0; --i) {
+    detachChild(entries_[i]);
+  }
+  entries_.clear();
+  selected_entries_.clear();
+  contexts_dirty_ = false;
+  invalidateInterior();
+  requestLayout();
 }
 
-int List::getChildrenCount() const { return entries_.size(); }
+int List::getChildrenCount() const { return static_cast<int>(entries_.size()); }
 
 const Widget& List::getChild(int idx) const {
   CHECK(idx >= 0);
-  CHECK_LT(idx, (int)entries_.size());
+  CHECK_LT(idx, static_cast<int>(entries_.size()));
   return *entries_[idx];
 }
 
 Widget& List::getChild(int idx) {
   return const_cast<Widget&>(static_cast<const List&>(*this).getChild(idx));
+}
+
+Dimensions List::onMeasure(WidthSpec width, HeightSpec height) {
+  refreshEntryVisualContexts();
+
+  int16_t resolved_width = 0;
+  if (width.kind() == EXACTLY) {
+    resolved_width = width.value();
+  } else {
+    WidthSpec row_width = width.kind() == AT_MOST ? WidthSpec::AtMost(width.value())
+                                                  : WidthSpec::Unspecified(0);
+    for (ListEntry* entry : entries_) {
+      if (entry->isGone()) continue;
+      Dimensions measured = entry->measure(row_width, HeightSpec::Unspecified(0));
+      resolved_width = std::max<int16_t>(resolved_width, measured.width());
+    }
+    resolved_width = ConstrainWidth(resolved_width, width);
+  }
+
+  const int16_t gap = interRowGap();
+  int16_t total_height = 0;
+  bool has_visible_entry = false;
+  for (ListEntry* entry : entries_) {
+    if (entry->isGone()) continue;
+    Dimensions measured =
+        entry->measure(WidthSpec::Exactly(resolved_width), HeightSpec::Unspecified(0));
+    if (has_visible_entry) total_height += gap;
+    total_height += measured.height();
+    has_visible_entry = true;
+  }
+
+  return Dimensions(resolved_width, ConstrainHeight(total_height, height));
+}
+
+void List::onLayout(bool changed, const Rect& rect) {
+  (void)changed;
+  refreshEntryVisualContexts();
+
+  const int16_t gap = interRowGap();
+  int16_t y = 0;
+  for (ListEntry* entry : entries_) {
+    if (entry->isGone()) continue;
+    Dimensions measured =
+        entry->measure(WidthSpec::Exactly(rect.width()), HeightSpec::Unspecified(0));
+    entry->layout(Rect(0, y, rect.width() - 1, y + measured.height() - 1));
+    y += measured.height() + gap;
+  }
 }
 
 }  // namespace material3
