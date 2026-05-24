@@ -141,6 +141,47 @@ The design in this document assumes that scrolling is orthogonal to list
 semantics, and that the long-term layout direction for generic container
 composition should favor `FlexLayout` over `VerticalLayout`.
 
+### Embedded Authoring Constraints
+
+The updated widget authoring guidance makes RAM cost a first-order API design
+constraint, not a follow-up implementation detail. Lists are especially
+sensitive because even modest screens can keep dozens of row objects alive at
+the same time.
+
+Approximate 32-bit ESP32 reference sizes used by this document:
+
+- pointer / `vptr` / `Widget*`: 4 B,
+- `WidgetRef`: about 8 B (`Widget*` plus ownership flag and padding),
+- `std::function<...>`: about 16 B even when empty,
+- `Widget`: about 36 B,
+- `BasicWidget`: about 40 B,
+- `Container`: about 52 B (`Widget` plus two cached `Rect` values),
+- `Panel`: about 64 B before vector capacity,
+- `FlexLayout`: roughly 100 B before child-vector and measure-vector
+   capacity.
+
+The important multiplication factor is per row, not per list. A single
+`FlexLayout`-derived `List` can afford list-level policy and child vectors, but
+a `ListEntry` cannot casually inherit from `FlexLayout`, own a dynamic child
+vector, copy large appearance structs, or store callbacks that most rows never
+use.
+
+This has two direct consequences for the list design:
+
+1. Visual variation should normally be compact data: variant, style, position,
+   selection state, divider policy, text policy, and alignment bits.
+2. Class hierarchy should be reserved for storage variation: text-only rows,
+   rows with real widget slots, expandable rows, owning dynamic rows, and fully
+   custom content.
+
+Standard text content should therefore be represented as lightweight
+`StringView`-style descriptors in the standard list item path. The standard path
+should not create one `TextLabel` or `StringViewLabel` widget for every
+headline, supporting line, and overline, because each such label would add a
+`BasicWidget`-sized object before the row surface itself is counted. Child
+widgets should be used for actual leading, trailing, body, and custom visual
+content.
+
 ## Requirements
 
 ### Functional Requirements
@@ -170,6 +211,14 @@ composition should favor `FlexLayout` over `VerticalLayout`.
 3. Support lean standard item variants for common cases when that materially
    reduces per-item RAM usage.
 4. Continue to support richer dynamic forms alongside the low-allocation path.
+5. Keep visual variants and row state in packed policy structs rather than in
+   separate subclasses.
+6. Split concrete item classes only when the split changes stored fields or
+   avoids a meaningful per-row RAM cost.
+7. Keep standard text content value-based rather than widget-based in the
+   common path.
+8. Document the approximate per-instance RAM cost of the base row, standard
+   item variants, optional features, and each implementation phase.
 
 ### Layout Requirements
 
@@ -198,6 +247,9 @@ composition should favor `FlexLayout` over `VerticalLayout`.
    three-line rows.
 4. Keep supporting text aligned with Material guidance of roughly one to three
    lines in common list use cases.
+5. In the baseline generic path, `leading`, `trailing`, and `body` widget
+   identity should stay fixed for the lifetime of a binding. Replacing those
+   widgets should require rebinding a different item or row wrapper.
 
 ### Extensibility Requirements
 
@@ -205,6 +257,12 @@ composition should favor `FlexLayout` over `VerticalLayout`.
    single concrete inheritance tree.
 2. Provide a concrete standard Material 3 row implementation.
 3. Make expandable content reusable outside lists.
+4. Avoid a Cartesian-product class hierarchy across line count, visual variant,
+   leading slot, trailing slot, selection, expansion, menu usage, and segment
+   position.
+5. Allow follow-up item classes or row wrappers to expose semantic mutable APIs
+   for common cases such as pictograms, drawables, and concrete selection
+   controls without making the baseline generic item equally heavy.
 
 ## Design Overview
 
@@ -213,7 +271,7 @@ composition should favor `FlexLayout` over `VerticalLayout`.
 The initial design focuses on:
 
 1. a general Material 3 list family built from `List`, `ListEntry`,
-   `ListItem`, and `StandardListItem`,
+   `ListItem`, and the standard item family,
 2. variable-height rows and expandable content using ordinary measurement and
    relayout,
 3. composition with outer scroll surfaces such as `ScrollablePanel`,
@@ -232,8 +290,16 @@ At a high level:
 
 - `List` is a concrete list container that is flex-column-oriented.
 - `ListEntry` is a concrete row host and the reusable Material row surface.
-- `ListItem` is a pure-virtual content interface.
-- `StandardListItem` is the default concrete `ListItem` family.
+- the baseline API should center on `ListEntry` plus `StandardListItem`.
+  Thin convenience row wrappers may be added later if baseline usage proves too
+  verbose.
+- `ListItem` is a pure-virtual content interface exposing individual text,
+    policy, and widget accessors.
+- `StandardListItem` is the baseline generic item type, configured up front and
+    bound with stable widget identity.
+- lean text-only items, semantic pictogram or drawable items, and convenience
+   row wrappers are possible follow-up variants, not part of the baseline
+   implementation target.
 - `ExpandablePanel` provides reusable expandable body behavior.
 
 ### Key Decisions
@@ -247,6 +313,13 @@ At a high level:
    configuration.
 6. Row visuals are split between content (`ListItem`), row surface
    (`ListEntry`), and group context (`List`).
+7. Standard text content is value-based; it is not modeled as child label
+   widgets in the common path.
+8. Visual variants are policy bits and theme lookups, not subclasses.
+9. Concrete subclasses are introduced only for materially different storage
+   profiles.
+10. Expandability is represented by optional content such as `ExpandablePanel`,
+    not by fields stored on every `ListEntry`.
 
 ## Design Details
 
@@ -317,6 +390,12 @@ The core row configuration should describe:
 - alignment policy for leading and trailing visuals,
 - density and padding presets.
 
+In the standard path, those text slots should be stored as lightweight string
+views and painted by the row implementation using theme-provided typography.
+They should not be represented as separate label widgets unless the caller is
+using a fully custom row. This keeps a one-line list item close to one string
+view plus policy bits, instead of one row object plus one child widget.
+
 Convenience presets then map to Material-like one-line, two-line, and
 three-line defaults.
 
@@ -327,13 +406,39 @@ three-line defaults.
 For lists, the design should work naturally for code such as:
 
 ```cpp
-class MyContainer {
+class PumpSettingsScreen {
  public:
-  MyContainer() { list_.add(option1_); }
+   explicit PumpSettingsScreen(const Environment& env)
+      : list_(env),
+        pool_mode_entry_(env),
+        pool_mode_item_(
+           StandardListItemInit::TwoLine("Pool pump", "Auto")),
+        solar_delta_entry_(env),
+        solar_delta_item_(StandardListItemInit::TwoLine(
+           "Solar delta",
+           "Starts when the roof loop exceeds the pool by 4 C")),
+        safety_lock_entry_(env),
+        safety_lock_switch_(env),
+        safety_lock_item_(StandardListItemInit::OneLine(
+           "Safety lock", nullptr, &safety_lock_switch_)) {
+   pool_mode_entry_.setItem(pool_mode_item_);
+   solar_delta_entry_.setItem(solar_delta_item_);
+   safety_lock_entry_.setItem(safety_lock_item_);
+
+      list_.add(pool_mode_entry_);
+      list_.add(solar_delta_entry_);
+      list_.add(safety_lock_entry_);
+   }
 
  private:
-  List list_;
-  StandardListItem option1_;
+   List list_;
+   ListEntry pool_mode_entry_;
+   StandardListItem pool_mode_item_;
+   ListEntry solar_delta_entry_;
+   StandardListItem solar_delta_item_;
+   ListEntry safety_lock_entry_;
+   StandardListItem safety_lock_item_;
+   material3::Switch safety_lock_switch_;
 };
 ```
 
@@ -342,9 +447,151 @@ This implies:
 - list containers should build on the existing non-owning child model already
   available through `WidgetRef`, so statically declared child items remain a
   natural and explicit path,
-- the standard item family should include lean concrete variants for common
-  simple cases, so callers do not pay RAM cost for capabilities they do not
-  use.
+- the baseline API must support statically declared entries and constructor-
+   configured items without heap allocation,
+- lean convenience types may still be added later if the baseline path proves
+   too heavy or too verbose,
+- low-level custom rows should still be able to spell out `ListEntry` plus a
+   separate `ListItem` when that split is actually useful,
+- changing which widget occupies a slot should happen through rebinding a
+   different item or row wrapper, not by mutating a bound generic item.
+
+#### ListEntry as a Public Primitive
+
+`ListEntry` is intended to stay narrow. In Phase 1 its public methods fall
+into two groups:
+
+- app-facing low-level binding: `hasItem()`, `item()`, `setItem()`,
+   `clearItem()`, and owner-driven `refreshFromItem()`,
+- list-owned policy plumbing: `setVisualContext()` and `visualContext()`.
+
+What it intentionally does **not** expose in Phase 1:
+
+- no direct `setLeading()` / `setTrailing()` / `setBody()` API on the entry
+   itself,
+- no per-entry selection or divider setters,
+- no generic child-management API beyond the bound-item model.
+
+Operationally, `setItem()` either binds into an empty row or replaces the
+current binding, `clearItem()` leaves the row empty and detaches any attached
+slot children, and `refreshFromItem()` is only a manual reread of the current
+item model. During one binding, slot widget identity is fixed.
+
+That split is deliberate. Content lives on the item; sequence-aware appearance
+lives on the list; `ListEntry` stays the reusable Material row surface in the
+middle.
+
+#### ListEntry Ownership
+
+`ListEntry` follows the same child-ownership model as other `roo_windows`
+containers.
+
+- `List::add(ListEntry& entry)` is non-owning. The entry must outlive the list
+   membership.
+- `List::add(std::unique_ptr<ListEntry> entry)` adopts the entry using the
+  existing parent-owned widget model under the hood. `clear()` destroys adopted
+  entries and detaches borrowed ones.
+- `ListEntry::setItem(ListItem& item)` is a non-owning low-level binding. The
+   bound item must outlive the entry or be cleared first.
+- The item's current `leading`, `trailing`, and `body` widgets are borrowed
+  through that binding and stay fixed until `clearItem()` or another
+  `setItem()` call.
+- If convenience row wrappers are added later, they should avoid this extra
+   lifetime relationship by owning their embedded standard item directly.
+
+#### Item Mutation Semantics
+
+The baseline `StandardListItem` should be effectively immutable once
+constructed.
+
+- `StandardListItem` is configured up front through a constructor init object
+  rather than through arbitrary post-bind setters.
+- It should not expose `setLeading()`, `setTrailing()`, `setBody()`, or other
+  setters that replace slot widgets while bound.
+- It may expose non-const accessors to the already configured borrowed widgets
+  as a convenience, but those accessors must not change slot identity.
+- One `ListItem` should be bound to at most one `ListEntry` at a time. Binding
+  the same item into two entries at once should be rejected, at least in debug
+  builds.
+
+`refreshFromItem()` remains useful as an owner-driven escape hatch for custom
+or follow-up mutable item implementations, but its contract is narrower than in
+the previous design:
+
+1. reread text, policies, alignments, and other lightweight item state,
+2. observe visibility or enablement changes on the already bound widgets if
+   those changes affect layout or painting,
+3. request relayout and repaint,
+4. never replace attached slot widgets.
+
+Changing which widget occupies a slot is no longer a supported mutation on the
+generic path. To do that, the caller should either:
+
+1. clear and rebind a different item, or
+2. use a more specialized row wrapper that owns the concrete widget set.
+
+This avoids the back-pointer and structural child-reconciliation complexity of
+the earlier design while preserving a narrow manual refresh path for custom
+items that truly need mutable text or policy fields.
+
+If a caller toggles visibility or other layout-relevant state on a widget that
+is already attached through a bound item, the caller owns the corresponding row
+refresh. The generic item should not grow a large family of forwarding helpers
+for widget methods that already exist on the widgets themselves.
+
+#### What Belongs on the Item vs the Row
+
+The preferred split is:
+
+- `ListItem` and its subclasses own content semantics and compact stored data,
+- `ListEntry` owns row rendering, attachment of the stable child widgets, and
+  list-provided visual context,
+- row wrappers own concrete child-widget lifetime and any semantic APIs that
+  depend on knowing the exact widget type.
+
+That gives a clean place for follow-up mutable convenience:
+
+- item classes are the right home for compact semantic content such as
+  headline-only text, supporting text, pictograms, and static drawables,
+- row wrappers are the right home for concrete interactive controls such as
+  switch, checkbox, or radio-button rows,
+- the generic `StandardListItem` stays the low-level fallback that accepts
+  arbitrary pre-existing widgets but does not try to be the best API for every
+  common case.
+
+For example, a future `PictogramListItem` can expose `setPictogram()` because
+it stores a lightweight semantic value rather than an arbitrary widget pointer.
+A future `SwitchListRow` can expose `setOn()` because it owns a concrete
+`material3::Switch` child and can keep row and control state synchronized
+locally.
+
+#### Rejected Alternatives and Caveats
+
+Alternatives considered and rejected for the baseline:
+
+1. keep `StandardListItem` fully mutable, including arbitrary widget-replacement
+   setters. This was rejected because it requires either an item-to-entry
+   back-pointer or stale-child reconciliation machinery that is too expensive
+   and subtle for the generic path.
+2. move content-specific convenience onto `ListEntry`, such as
+   `setLeadingPictogram()` or `setTrailingSwitch()`. This was rejected because
+   it would make every row pay for content-specific state even when unused.
+3. keep returning one aggregate `ListItemContent` struct plus a separate layout
+   struct from the virtual interface. This was rejected because it obscures the
+   stable-slot contract and makes it harder to see which values are structural
+   versus lightweight.
+
+Caveats of the preferred design:
+
+1. custom `ListItem` implementations now override more small virtual accessors
+   instead of filling one aggregate struct,
+2. changing slot widget identity requires rebinding, which is a little more
+   explicit at call sites,
+3. if a bound widget changes visibility in a way that affects measurement, the
+   owner must refresh the row explicitly,
+4. adding value-based pictogram or drawable items later may require `ListEntry`
+   to learn a few more semantic painting cases, which should happen only after
+   real usage justifies the extra surface.
 
 ### Expand and Collapse
 
@@ -585,17 +832,106 @@ Practical note:
 - `HorizontalLayout` is likewise still present in older composites such as
    `RadioListItem`.
 
+## Use Cases and Hierarchy
+
+The design pressure comes from a small set of recurring cases, not from every
+possible Material token combination:
+
+- static settings screens: 10-40 rows, usually text plus an occasional control,
+- popup and overflow menus: short one-line rows with menu-specific policy,
+- rich forms: generic slotted rows with real leading, trailing, or body
+  widgets,
+- long homogeneous lists: better served by `ListLayout` or a future recycled
+  Material adapter,
+- fully custom rows: direct `ListItem` implementations.
+
+That leads to three decisions:
+
+1. The baseline implementation should optimize the generic path:
+   `ListEntry` + `StandardListItem` + `List`.
+2. Visual dimensions such as baseline vs expressive, segmented vs standard, and
+   row position are policy, not subclasses.
+3. Lean simple-item variants and convenience row wrappers are follow-up
+   candidates. They should be frozen only after baseline usage shows a clear
+   RAM or ergonomics win.
+
+Storage rules for the baseline path:
+
+- text slots stay as `StringView` descriptors, not child label widgets,
+- widget slots are borrowed `Widget*` by default,
+- owning slot adapters, if needed, belong in follow-up types,
+- callbacks stay virtual or on child widgets,
+- appearance overrides stay as shared theme or token pointers.
+
+Possible follow-up types include `HeadlineListItem`,
+`SupportingTextListItem`, `PictogramListItem`, `DrawableListItem`, and thin or
+typed row wrappers that embed or own the appropriate item and widget state.
+Those types should reuse the same `ListEntry` architecture rather than
+introducing a second row model.
+
+## Per-Instance Footprint Budget
+
+Approximate baseline targets are:
+
+| Type | Approx. RAM | Notes |
+|------|------------:|-------|
+| `List` | ~110-120 B plus vector capacity | one per list/group; derives from `FlexLayout` |
+| `ListEntry` | ~64-72 B | `Container` row surface plus item pointer, cached attached slot-child pointers, packed visual context, optional shared appearance pointer |
+| `StandardListItem` | ~52-60 B | rich non-owning descriptor: three text values, slot pointers, policies, and hints; no bound-entry backpointer in the baseline model |
+| `ExpandablePanel` | ~60-68 B | reusable body widget; can land after the baseline list if needed |
+| Owning slot adapter | +4 B per slot over raw pointer | `WidgetRef` ownership flag and padding |
+
+Likely follow-up targets, to be measured against the baseline implementation:
+
+- `HeadlineListItem`: ~16 B,
+- `SupportingTextListItem`: ~28-32 B,
+- `PictogramListItem` or `DrawableListItem`: expected to stay well below a
+   widget-backed generic row because they can store a value descriptor rather
+   than a child widget,
+- convenience row wrappers: roughly `ListEntry` plus their embedded item
+  storage.
+
+These numbers intentionally exclude child widgets such as `Switch`, `Checkbox`,
+custom icons, or body content, because those widgets are real content that the
+application asked for. The budget is about avoiding invisible framework cost
+on rows that do not use those features.
+
+For comparison, a naive all-in-one row design could add all of the following
+to every row:
+
+- dynamic child-vector storage from `Panel` or `FlexLayout`,
+- three label widgets for overline, headline, and supporting text,
+- leading, trailing, body, and selection-affordance `WidgetRef` fields,
+- expansion state and animation fields,
+- copied appearance override structs,
+- stored `std::function` callbacks.
+
+That shape can easily exceed 180 B per row before the visible child controls
+are counted. A 30-row settings screen would spend several kilobytes on unused
+row capability alone, which is exactly what the widget authoring guidance is
+trying to prevent.
+
 ## Proposed API
 
-### Public Types
+### Baseline Types
 
-The first public API should revolve around these types:
+The baseline API should revolve around these types:
 
 - `List`: concrete list container.
 - `ListEntry`: concrete row host and reusable Material row surface.
 - `ListItem`: pure-virtual content interface.
-- `StandardListItem`: default Material 3 item implementation.
+- `StandardListItem`: constructor-configured generic standard content
+   descriptor with stable slot widgets.
 - `ExpandablePanel`: reusable expandable body widget.
+
+Possible follow-up convenience types, if baseline usage justifies them:
+
+- `HeadlineListItem`,
+- `SupportingTextListItem`,
+- `PictogramListItem` or `DrawableListItem`,
+- thin row wrappers that embed one of those items or a `StandardListItem`,
+- typed rows such as switch, checkbox, or radio rows that own a concrete
+   control widget.
 
 ### Supporting Configuration Types
 
@@ -661,37 +997,81 @@ struct ListEntryVisualContext {
 This is enough policy surface for the first implementation. Anything beyond
 this should stay internal until a real use case forces it public.
 
-### Phase 1 Reviewed Class Shape
+The selection-affordance fields are list-level defaults or helper hints. They
+do not imply that `ListEntry` stores a separate affordance widget field for
+every row; the visible affordance should still be supplied as ordinary leading
+or trailing content.
 
-Phase 1 should convert the earlier sketch into the following concrete public
-direction.
+### Baseline Class Shape
+
+The baseline implementation should convert the earlier sketch into the
+following concrete public direction.
 
 ```cpp
-struct ListItemSlots {
+struct StandardListItemInit {
+   roo_display::StringView overline = {};
+   roo_display::StringView headline = {};
+   roo_display::StringView supporting = {};
+   ListTextPolicy overline_policy = {};
+   ListTextPolicy headline_policy = {};
+   ListTextPolicy supporting_policy = {};
    Widget* leading = nullptr;
-   Widget* overline = nullptr;
-   Widget* headline = nullptr;
-   Widget* supporting = nullptr;
    Widget* trailing = nullptr;
    Widget* body = nullptr;
-};
-
-struct ListItemLayoutHints {
    VerticalVisualAlignment leading_alignment =
          VerticalVisualAlignment::kMiddle;
    VerticalVisualAlignment trailing_alignment =
          VerticalVisualAlignment::kMiddle;
    DividerInsetHint divider_inset_hint;
    bool prefer_top_text_alignment = false;
+
+   static StandardListItemInit OneLine(
+         roo_display::StringView headline, Widget* leading = nullptr,
+         Widget* trailing = nullptr);
+   static StandardListItemInit TwoLine(
+         roo_display::StringView headline,
+         roo_display::StringView supporting, Widget* leading = nullptr,
+         Widget* trailing = nullptr);
+   static StandardListItemInit ThreeLine(
+         roo_display::StringView headline,
+         roo_display::StringView supporting,
+         roo_display::StringView overline = {}, Widget* leading = nullptr,
+         Widget* trailing = nullptr, Widget* body = nullptr);
 };
 
 class ListItem {
  public:
    virtual ~ListItem() = default;
 
-   virtual ListItemSlots slots() = 0;
-   virtual ListItemLayoutHints layoutHints() const {
-      return ListItemLayoutHints{};
+   virtual roo_display::StringView overlineText() const { return {}; }
+   virtual roo_display::StringView headlineText() const { return {}; }
+   virtual roo_display::StringView supportingText() const { return {}; }
+
+   virtual ListTextPolicy overlinePolicy() const {
+      return ListTextPolicy{};
+   }
+   virtual ListTextPolicy headlinePolicy() const {
+      return ListTextPolicy{};
+   }
+   virtual ListTextPolicy supportingPolicy() const {
+      return ListTextPolicy{};
+   }
+
+   virtual Widget* leading() const { return nullptr; }
+   virtual Widget* trailing() const { return nullptr; }
+   virtual Widget* body() const { return nullptr; }
+
+   virtual VerticalVisualAlignment leadingAlignment() const {
+      return VerticalVisualAlignment::kMiddle;
+   }
+   virtual VerticalVisualAlignment trailingAlignment() const {
+      return VerticalVisualAlignment::kMiddle;
+   }
+   virtual DividerInsetHint dividerInsetHint() const {
+      return DividerInsetHint{};
+   }
+   virtual bool preferTopTextAlignment() const {
+      return false;
    }
 };
 
@@ -711,45 +1091,59 @@ class ListEntry : public Container {
  public:
    explicit ListEntry(const Environment& env);
 
+   bool hasItem() const;
+
+   // Returns nullptr when no item is currently bound.
+   ListItem* item();
+   const ListItem* item() const;
+
+   // Non-owning. `item` must outlive this entry or be cleared first.
+   // Binding is exclusive: an item may be attached to at most one entry at a
+   // time. Rebinding detaches the previous item, removes its slot children,
+   // then attaches the new one. Slot widget identity stays fixed during one
+   // binding.
    void setItem(ListItem& item);
+
+   // Clears the current binding and detaches any attached slot children.
    void clearItem();
 
-   void setSelectionAffordance(WidgetRef affordance);
-   void clearSelectionAffordance();
+   // Owner-driven refresh hook for mutable custom items. This rereads text,
+   // policies, alignments, and layout-relevant state from the current item and
+   // requests relayout / repaint. It does not replace bound slot widgets. If
+   // no item is bound, this is a no-op.
+   void refreshFromItem();
 
-   void setExpandedBody(WidgetRef body);
-   void clearExpandedBody();
-
+   // Primarily list-owned. App code normally reads this but does not drive it.
    void setVisualContext(const ListEntryVisualContext& context);
    const ListEntryVisualContext& visualContext() const;
 };
 
 class StandardListItem : public ListItem {
  public:
-   explicit StandardListItem(const Environment& env);
+   explicit StandardListItem(const StandardListItemInit& init = {});
 
-   void setHeadline(roo_display::StringView text);
-   void setSupportingText(roo_display::StringView text);
-   void setOverline(roo_display::StringView text);
+   roo_display::StringView overlineText() const override;
+   roo_display::StringView headlineText() const override;
+   roo_display::StringView supportingText() const override;
 
-   void setLeading(WidgetRef leading);
-   void clearLeading();
-   void setTrailing(WidgetRef trailing);
-   void clearTrailing();
-   void setBody(WidgetRef body);
-   void clearBody();
+   ListTextPolicy overlinePolicy() const override;
+   ListTextPolicy headlinePolicy() const override;
+   ListTextPolicy supportingPolicy() const override;
 
-   void setHeadlinePolicy(ListTextPolicy policy);
-   void setSupportingPolicy(ListTextPolicy policy);
-   void setLeadingAlignment(VerticalVisualAlignment alignment);
-   void setTrailingAlignment(VerticalVisualAlignment alignment);
+   Widget* leading() const override;
+   Widget* trailing() const override;
+   Widget* body() const override;
 
-   void applyOneLinePreset();
-   void applyTwoLinePreset();
-   void applyThreeLinePreset();
+   VerticalVisualAlignment leadingAlignment() const override;
+   VerticalVisualAlignment trailingAlignment() const override;
+   DividerInsetHint dividerInsetHint() const override;
+   bool preferTopTextAlignment() const override;
 
-   ListItemSlots slots() override;
-   ListItemLayoutHints layoutHints() const override;
+   // Convenience only. These expose the already configured borrowed widgets;
+   // callers must not replace slot identity while the item is bound.
+   Widget* leadingWidget();
+   Widget* trailingWidget();
+   Widget* bodyWidget();
 };
 
 class List : public FlexLayout {
@@ -761,52 +1155,206 @@ class List : public FlexLayout {
    void setSelectionPolicy(const ListSelectionPolicy& policy);
    void setDividerPolicy(const ListDividerPolicy& policy);
 
+   // Non-owning. `entry` must outlive the list membership.
    void add(ListEntry& entry);
+   // Owning. The list adopts the entry through the normal parent-owned widget
+   // model internally.
+   void add(std::unique_ptr<ListEntry> entry);
    void clear();
 };
 ```
 
+Possible follow-up convenience types should stay provisional until the baseline
+API above exists and has been exercised on real screens. The likely direction
+is a mix of lean value-based item families and thin or typed row wrappers that
+bind or own the appropriate item and widget set.
+
 This reviewed shape preserves the architectural split already established in
 the rest of the document:
 
-1. `ListItem` exposes content slots and lightweight layout hints only.
+1. `ListItem` exposes individual content, policy, and widget accessors only.
 2. `ListEntry` owns row rendering, interaction visuals, and fixed-child
     container behavior.
 3. `ExpandablePanel` is reusable outside lists and is not list-specific.
 4. `List` owns sequence-aware policy such as variant, style, divider, and
     selection behavior.
+5. Standard text slots are descriptors painted by `ListEntry`, not label
+   widgets attached as children, and generic widget slots stay structurally
+   stable for the lifetime of a binding.
 
 ### Phase 1 Review Decisions
 
 Phase 1 should close the previously open API questions with the following
 decisions.
 
-1. The smallest useful `ListItem` API is a slot bundle plus layout hints.
-    It should not own row-surface logic, selection state, or divider policy.
+1. The smallest useful `ListItem` API is a set of individual text, policy,
+   widget, and layout-hint accessors. It should not own row-surface logic,
+   selection state, or divider policy.
 2. Section headers and footers should stay outside `List` in the first API.
     They can be ordinary sibling widgets in the surrounding flex column.
     This keeps `List` focused on row sequencing rather than section semantics.
-3. Selection policy should live on `List`, while `ListEntry` only renders the
-    already-resolved visual context and any explicit selection affordance widget.
-4. Menus should reuse `ListEntry` directly in Phase 1 and Phase 2.
+3. `ListEntry` follows the normal parent-child ownership model: borrowed when
+   added by reference, adopted when added by `std::unique_ptr<ListEntry>`.
+   `setItem(ListItem&)` is likewise a non-owning low-level binding.
+   `refreshFromItem()` is a manual reread hook for mutable custom items, not a
+   generic structural resync mechanism.
+4. `StandardListItem` should be construction-time configured and should not
+   offer arbitrary widget-replacement setters after `setItem()`.
+5. `setVisualContext()` is primarily list-owned. Application code may inspect
+   `visualContext()`, but the list should normally be the only object driving
+   per-entry group context.
+6. Selection policy should live on `List`, while `ListEntry` only renders the
+   already-resolved visual context. A visible selection affordance should be a
+   leading or trailing content widget, not a separate field on every entry.
+7. Menus should reuse `ListEntry` directly in Phase 1 and Phase 2.
     If menu-specific defaults later prove awkward, add a thin wrapper then,
     rather than baking menu concerns into the first list API.
-5. The first lean `StandardListItem` set should stay small:
-    `OneLineListItem`, `TwoLineListItem`, and `ThreeLineListItem` as optional
-    thin convenience wrappers over `StandardListItem` presets, not as a separate
-    deep class hierarchy.
+8. The first implementation should freeze only the baseline generic path.
+   The exact split between value-based item families and typed row wrappers
+   should remain open until baseline usage makes the trade-offs clearer.
+9. `ListEntry` should not store expandable body pointers or animation state.
+   Expandability belongs in `ExpandablePanel` or in a custom item that exposes
+   body content.
 
 ### Remaining Non-Blocking Follow-Up
 
 The following points should remain deferred even after Phase 1 review:
 
-1. whether any of the convenience wrappers deserve their own headers,
-2. whether `List` eventually needs a lightweight section helper,
-3. whether menu defaults justify a wrapper once real menu migration begins.
+1. whether lean text-only item types are worth the extra public surface,
+2. whether value-based pictogram or drawable item types justify direct row
+   painting support,
+3. which typed row wrappers are needed at all,
+4. whether `List` eventually needs a lightweight section helper,
+5. whether menu defaults justify a wrapper once real menu migration begins.
+
+## Usage Examples
+
+### Example 1: Static Settings Section
+
+Baseline static usage is explicit, but allocation-free and easy to reason
+about.
+
+```cpp
+class PumpSettingsSection {
+ public:
+   explicit PumpSettingsSection(const Environment& env)
+         : list_(env),
+           pool_mode_entry_(env),
+           pool_mode_item_(
+                 StandardListItemInit::TwoLine("Pool pump", "Auto")),
+           solar_delta_entry_(env),
+           solar_delta_item_(StandardListItemInit::TwoLine(
+                 "Solar delta",
+                 "Starts when the roof loop exceeds the pool by 4 C")),
+           safety_lock_entry_(env),
+           safety_lock_switch_(env),
+           safety_lock_item_(StandardListItemInit::OneLine(
+                 "Safety lock", nullptr, &safety_lock_switch_)) {
+      pool_mode_entry_.setItem(pool_mode_item_);
+      solar_delta_entry_.setItem(solar_delta_item_);
+      safety_lock_entry_.setItem(safety_lock_item_);
+
+      list_.add(pool_mode_entry_);
+      list_.add(solar_delta_entry_);
+      list_.add(safety_lock_entry_);
+   }
+
+   List& widget() { return list_; }
+
+ private:
+   List list_;
+   ListEntry pool_mode_entry_;
+   StandardListItem pool_mode_item_;
+   ListEntry solar_delta_entry_;
+   StandardListItem solar_delta_item_;
+   ListEntry safety_lock_entry_;
+   StandardListItem safety_lock_item_;
+   material3::Switch safety_lock_switch_;
+};
+```
+
+### Example 2: Adopted Rows
+
+When rows are created dynamically, the clean baseline pattern is a small row
+subclass that owns the `StandardListItem` it binds.
+
+```cpp
+class OwnedStandardListRow : public ListEntry {
+ public:
+   explicit OwnedStandardListRow(const Environment& env,
+                                 const StandardListItemInit& init)
+         : ListEntry(env), item_(init) {
+      setItem(item_);
+   }
+
+   StandardListItem& item() { return item_; }
+
+ private:
+   StandardListItem item_;
+};
+
+class ScheduleList {
+ public:
+   explicit ScheduleList(const Environment& env) : env_(env), list_(env) {}
+
+   void addSlot(roo_display::StringView title,
+                      roo_display::StringView detail) {
+         auto row = std::make_unique<OwnedStandardListRow>(
+                  env_, StandardListItemInit::TwoLine(title, detail));
+      list_.add(std::move(row));
+   }
+
+   List& widget() { return list_; }
+
+ private:
+   const Environment& env_;
+   List list_;
+};
+```
+
+This example is one of the main reasons to defer convenience types until after
+the baseline exists: it will show whether dedicated row wrappers are genuinely
+useful or whether this small owning-subclass pattern is already sufficient.
+
+### Example 3: Possible Post-Baseline Convenience Layer
+
+If baseline usage proves too verbose, a follow-up convenience layer should make
+the split between value-based item convenience and typed row convenience more
+explicit. For example:
+
+```cpp
+class PumpSettingsSection {
+ public:
+   explicit PumpSettingsSection(const Environment& env)
+         : list_(env),
+        pool_mode_(env, Pictogram::kPool, "Pool pump", "Auto"),
+        solar_delta_(env, Pictogram::kSolar, "Solar delta",
+           "Starts when the roof loop exceeds the pool by 4 C"),
+        safety_lock_(env, "Safety lock") {
+      safety_lock_.setOn(false);
+
+      list_.add(pool_mode_);
+      list_.add(solar_delta_);
+      list_.add(safety_lock_);
+   }
+
+ private:
+   List list_;
+   PictogramSupportingTextRow pool_mode_;
+   PictogramSupportingTextRow solar_delta_;
+   SwitchListRow safety_lock_;
+};
+```
+
+The point of this example is evaluative, not prescriptive. The document should
+commit to these follow-up layers only if the baseline examples above prove
+unsatisfactory. The important part is where the APIs live: pictogram or
+drawable mutators belong on compact item families, while concrete interactive
+control setters belong on typed row wrappers that own those controls.
 
 ## Implementation Plan
 
-### Phase 1: API Review
+### Phase 1: Baseline API Review
 
 Before implementation, review and freeze the concrete public API described
 above for:
@@ -817,7 +1365,7 @@ above for:
 4. `ExpandablePanel`,
 5. `List`,
 6. selection and divider configuration structs,
-7. the initial set of lean standard item variants.
+7. a checked per-instance size budget for the baseline types.
 
 No production widget code should land before this review is complete and the
 reviewed API shape above is accepted as the implementation target.
@@ -830,46 +1378,66 @@ Implement the reusable row foundation first:
 2. token-driven row padding, spacing, and color hooks.
 3. row visual context for position, variant, style, selection, and divider
    state.
-4. `ExpandablePanel` as a reusable expandable body helper.
+4. direct painting and measurement of standard text descriptors.
+5. cached attached-slot child pointers on `ListEntry`, with attachment and
+   detachment happening only on bind, clear, and rebind.
+6. `refreshFromItem()` as a manual reread path for mutable custom items that
+   keep the same slot widgets.
 
-This phase establishes the stable substrate for both lists and menus.
+This phase should make a single row render and measure correctly.
 
-### Phase 3: Standard Item Family
+### Phase 3: Baseline End-to-End List
 
 Implement:
 
 1. `StandardListItem`,
-2. the smallest useful set of lean variants,
-3. text policies for one-line, two-line, and three-line presets,
-4. slot support for leading, content, and trailing regions.
+2. text policies for one-line, two-line, and three-line content,
+3. slot support for leading, trailing, and body regions,
+4. `List` as the concrete flex-column container,
+5. row sequencing,
+6. variant, style, divider, and selection policy propagation.
 
-This phase should make the common list cases easy to express without requiring
-custom item implementations.
+At the end of this phase, static multi-item lists should work end-to-end.
 
-### Phase 4: List Container
+### Phase 4: Baseline Usage Review
 
-Implement `List` as the concrete container layer:
+Evaluate the baseline API against real usage examples such as:
 
-1. flex-column composition,
-2. row sequencing,
-3. variant and style policy,
-4. divider and gap policy,
-5. position-aware visual context propagation,
-6. selection policy support.
+1. a static settings section,
+2. an adopted-row list built from a small owning subclass,
+3. a menu prototype or similar short-form list.
 
-At the end of this phase, non-interactive and standard interactive lists should
-work end-to-end.
+This review should answer three questions before more public types land:
 
-### Phase 5: Menu Reuse and Expand/Collapse
+1. Is the explicit `ListEntry` + `StandardListItem` split acceptable in real
+    call sites?
+2. Do value-based text, pictogram, or drawable item types buy enough RAM and
+   ergonomics to justify the added surface?
+3. Which conveniences belong as item classes and which belong as typed row
+   wrappers?
 
-Once the basic list family is stable:
+### Phase 5: Optional Simple-Item Layer
 
-1. reuse shared row primitives in Material 3 menus,
-2. add expand/collapse patterns on top of `ExpandablePanel`,
+Only if Phase 4 shows a clear benefit, implement:
+
+1. `HeadlineListItem`,
+2. `SupportingTextListItem`,
+3. any pictogram or drawable item types that still look justified,
+4. any thin or typed convenience row wrappers that still look justified.
+
+These follow-up types should remain strict adapters over the baseline row
+architecture; they should not introduce a second container model.
+
+### Phase 6: Expand/Collapse and Menu Reuse
+
+Once the baseline list family is stable:
+
+1. add `ExpandablePanel` and expand/collapse patterns on top of it,
+2. reuse shared row primitives in Material 3 menus,
 3. validate the split between list-owned policy and menu-owned outer-surface
-   behavior.
+    behavior.
 
-### Phase 6: Deferred Follow-Up
+### Phase 7: Deferred Follow-Up
 
 The following are intentionally compatible with the first design but deferred:
 
@@ -877,6 +1445,27 @@ The following are intentionally compatible with the first design but deferred:
 2. swipe-to-reveal or similar specialized gesture containers,
 3. additional menu-specific wrappers,
 4. deeper token coverage once the first API is stable.
+
+### RAM Checkpoints by Phase
+
+Each implementation phase should update a measured `sizeof(...)` table in the
+design note or implementation review. Expected incremental costs are:
+
+1. Phase 2 adds `ListEntry`: about 64-72 B per row, with no child vector and no
+   heap allocation on row paint or layout paths.
+2. Phase 3 adds `StandardListItem`: about 56-64 B before real child widgets are
+   counted, and `List`: about 110-120 B plus `FlexLayout` child and measure
+   vector capacity proportional to row count.
+3. Phase 4 adds no new core types; it should instead measure whole-screen RAM
+   for the usage examples above.
+4. Phase 5, if adopted, should measure any lean item types and convenience row
+   wrappers against the Phase 3 baseline and land them only if they provide a
+   clear RAM or ergonomics win.
+5. Phase 6 adds `ExpandablePanel`: about 60-68 B only for rows that actually
+   expose expandable body content.
+
+Any implementation that materially exceeds these budgets should either revise
+the class shape or explicitly justify the extra RAM in this document.
 
 ## Testing Plan
 
@@ -887,9 +1476,17 @@ Add focused tests for the core logic first:
 1. `ListEntry` measurement and layout for common slot combinations.
 2. top vs middle alignment behavior for taller rows and three-line rows.
 3. list position propagation for first, middle, last, and single rows.
-4. selection mode behavior and selected-state propagation.
-5. divider and gap policy resolution.
-6. expand/collapse measurement and animated height behavior.
+4. borrowed vs adopted `ListEntry` lifetime behavior.
+5. owner-driven `refreshFromItem()` re-reads current item text, policies, and
+   layout hints correctly without replacing slot widgets.
+6. selection mode behavior and selected-state propagation.
+7. divider and gap policy resolution.
+8. bound `leading`, `trailing`, and `body` widget identity remains stable until
+   `clearItem()` or rebind, and rebinding detaches the old children before
+   attaching the new ones.
+9. expand/collapse measurement and animated height behavior.
+10. if a convenience layer lands later, it correctly binds its embedded standard
+   items.
 
 These tests should be narrow and behavior-scoped rather than broad integration
 tests.
@@ -912,10 +1509,14 @@ Goldens are especially important for shape, spacing, and state-layer behavior.
 Add integration-level tests for:
 
 1. multiple lists inside a single `ScrollablePanel`,
-2. statically declared item lifetimes and `WidgetRef`-based non-owning use,
-3. selection controls embedded in rows,
-4. expand/collapse inside a larger scroll surface,
-5. reuse of shared primitives in menus.
+2. simple statically declared multi-item lists built from `ListEntry` plus
+   `StandardListItem`,
+3. adopted rows built from a small owning row subclass,
+4. selection controls embedded in rows,
+5. expand/collapse inside a larger scroll surface,
+6. reuse of shared primitives in menus,
+7. if a convenience layer lands later, it stays a thin adapter over the
+   baseline row architecture.
 
 ### Practical Test Notes
 
