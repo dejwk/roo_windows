@@ -15,33 +15,6 @@ Add a Material Design 3 list family to `roo_windows` that is suitable for:
 The result should be a general-purpose list system, not a settings-specific
 special case.
 
-## Current Status in `roo_windows`
-
-As of 2026-05, this document is still a design document, not a description of
-an implemented Material 3 list API.
-
-What exists today:
-
-- Material 3 controls under `roo_windows/material3` currently include
-   `FlexCard`, `Checkbox`, `RadioButton`, and `Switch`.
-- `FlexLayout` is implemented and already used by `material3::FlexCard`, so it
-   is no longer just a future direction for generic composition.
-- `ListLayout` remains the existing recycled fixed-height list container.
-- `ScrollablePanel` remains a content-agnostic scrolling surface.
-- existing list- and menu-like composites still sit on older primitives rather
-   than on shared Material 3 row primitives.
-
-What does not exist yet:
-
-- no `material3::List`, `ListEntry`, `ListItem`, `StandardListItem`, or
-   `ExpandablePanel` implementation,
-- no Material 3 menu implementation built from shared list-row primitives,
-- no variable-height Material 3 list container.
-
-The intent of the rest of this document is to define that missing list family
-in a way that fits the current framework rather than describing code that has
-already landed.
-
 ## Motivation
 
 `roo_windows` already has adjacent pieces that overlap with list-like UI, but
@@ -70,13 +43,39 @@ lists, menus, and adjacent Material 3 surfaces with shared primitives.
 
 ## Background
 
+### Current Status in `roo_windows`
+
+As of 2026-05, this document is still a design document, not a description of
+an implemented Material 3 list API.
+
+What exists today:
+
+- Material 3 controls under `roo_windows/material3` currently include
+   `FlexCard`, `Checkbox`, `RadioButton`, and `Switch`.
+- `FlexLayout` is implemented and already used by `material3::FlexCard`, so it
+   is no longer just a future direction for generic composition.
+- `ListLayout` remains the existing recycled fixed-height list container.
+- `ScrollablePanel` remains a content-agnostic scrolling surface.
+- existing list- and menu-like composites still sit on older primitives rather
+   than on shared Material 3 row primitives.
+
+What does not exist yet:
+
+- no `material3::List`, `ListEntry`, `ListItem`, `StandardListItem`, or
+   `ExpandablePanel` implementation,
+- no Material 3 menu implementation built from shared list-row primitives,
+- no variable-height Material 3 list container.
+
+The rest of this document defines that missing list family in a way that fits
+the current framework rather than describing code that has already landed.
+
 ### Material 3 Sources
 
 This document is aligned against the Material 3 lists documentation:
 
-- Overview: https://m3.material.io/components/lists/overview
-- Specs: https://m3.material.io/components/lists/specs
-- Guidelines: https://m3.material.io/components/lists/guidelines
+- [Overview](https://m3.material.io/components/lists/overview)
+- [Specs](https://m3.material.io/components/lists/specs)
+- [Guidelines](https://m3.material.io/components/lists/guidelines)
 
 Where the Material site states behavior in text, including the dynamic token
 tables under Specs / Tokens & specs, this document treats that as
@@ -161,8 +160,8 @@ Approximate 32-bit ESP32 reference sizes used by this document:
    capacity.
 
 The important multiplication factor is per row, not per list. A single
-`FlexLayout`-derived `List` can afford list-level policy and child vectors, but
-a `ListEntry` cannot casually inherit from `FlexLayout`, own a dynamic child
+A `List` can afford list-level policy and one private child vector, but a
+`ListEntry` cannot casually inherit from `FlexLayout`, own a dynamic child
 vector, copy large appearance structs, or store callbacks that most rows never
 use.
 
@@ -198,7 +197,7 @@ content.
 9. Support selection-related affordances and policies when needed.
 10. Support divider and gap configuration independently.
 11. Support heterogeneous item heights.
-12. Support text content that may wrap or ellipsize according to explicit
+12. Support text content that can wrap or ellipsize according to explicit
     policy.
 13. Keep the first list API compatible with a future drag-reorder extension,
     even if reordering initially ships in a specialized container.
@@ -291,8 +290,8 @@ At a high level:
 - `List` is a concrete list container that is flex-column-oriented.
 - `ListEntry` is a concrete row host and the reusable Material row surface.
 - the baseline API should center on `ListEntry` plus `StandardListItem`.
-  Thin convenience row wrappers may be added later if baseline usage proves too
-  verbose.
+   Thin convenience row wrappers are deferred until baseline usage proves they
+   remove enough RAM cost or call-site complexity.
 - `ListItem` is a pure-virtual content interface exposing individual text,
     policy, and widget accessors.
 - `StandardListItem` is the baseline generic item type, configured up front and
@@ -305,7 +304,7 @@ At a high level:
 ### Key Decisions
 
 1. Scrolling is orthogonal to list semantics.
-2. `List` stays flex-column-oriented.
+2. `List` stays column-oriented while hiding generic layout mutation APIs.
 3. `ListEntry` derives directly from `Container`, not from `FlexLayout`.
 4. `ListEntry` uses a custom row layout rather than exposing itself as a
    generic flex container.
@@ -321,6 +320,11 @@ At a high level:
 10. Expandability is represented by optional content such as `ExpandablePanel`,
     not by fields stored on every `ListEntry`.
 
+Design review position: the baseline split is the right first implementation
+target. It keeps the per-row object small, makes list-owned policy explicit,
+and leaves a measured Phase 4 checkpoint for convenience APIs instead of
+pre-committing RAM to unproven row variants.
+
 ## Design Details
 
 ### Composition Model
@@ -332,14 +336,15 @@ The preferred composition is:
 - `ScrollablePanel` as the outer scroll surface,
 - wrapping a flex column,
 - containing one or more lists or list sections,
-- some of which may include expandable rows or nested subsections.
+- including expandable rows or nested subsections.
 
 This matches Android-style screens with multiple stacked sections, but also
 keeps the list primitive reusable in non-scrollable contexts and popup menus.
 
 #### List Containers Use Flex-Column Composition
 
-The list container layer is built around a flex-column-based container model.
+The list container layer is built around a column-based container model that
+uses list-specific row APIs rather than exposing a generic layout surface.
 
 This model is a good fit because the list family needs:
 
@@ -349,8 +354,8 @@ This model is a good fit because the list family needs:
 - general-purpose composition.
 
 This conclusion applies to the list container layer, not to the row widget
-itself. `List` should stay flex-column-oriented. `ListEntry` should not derive
-from `FlexLayout`.
+itself. `List` should stay column-oriented without publicly inheriting from
+`FlexLayout`. `ListEntry` should not derive from `FlexLayout`.
 
 #### Rows Are Specialized Material Surfaces
 
@@ -449,8 +454,8 @@ This implies:
   natural and explicit path,
 - the baseline API must support statically declared entries and constructor-
    configured items without heap allocation,
-- lean convenience types may still be added later if the baseline path proves
-   too heavy or too verbose,
+- lean convenience types are deferred until the baseline path proves too heavy
+   or too verbose in real usage,
 - low-level custom rows should still be able to spell out `ListEntry` plus a
    separate `ListItem` when that split is actually useful,
 - changing which widget occupies a slot should happen through rebinding a
@@ -508,8 +513,8 @@ constructed.
   rather than through arbitrary post-bind setters.
 - It should not expose `setLeading()`, `setTrailing()`, `setBody()`, or other
   setters that replace slot widgets while bound.
-- It may expose non-const accessors to the already configured borrowed widgets
-  as a convenience, but those accessors must not change slot identity.
+- It exposes non-const accessors to the already configured borrowed widgets as
+   a convenience, but those accessors must not change slot identity.
 - One `ListItem` should be bound to at most one `ListEntry` at a time. Binding
   the same item into two entries at once should be rejected, at least in debug
   builds.
@@ -565,34 +570,6 @@ A future `SwitchListRow` can expose `setOn()` because it owns a concrete
 `material3::Switch` child and can keep row and control state synchronized
 locally.
 
-#### Rejected Alternatives and Caveats
-
-Alternatives considered and rejected for the baseline:
-
-1. keep `StandardListItem` fully mutable, including arbitrary widget-replacement
-   setters. This was rejected because it requires either an item-to-entry
-   back-pointer or stale-child reconciliation machinery that is too expensive
-   and subtle for the generic path.
-2. move content-specific convenience onto `ListEntry`, such as
-   `setLeadingPictogram()` or `setTrailingSwitch()`. This was rejected because
-   it would make every row pay for content-specific state even when unused.
-3. keep returning one aggregate `ListItemContent` struct plus a separate layout
-   struct from the virtual interface. This was rejected because it obscures the
-   stable-slot contract and makes it harder to see which values are structural
-   versus lightweight.
-
-Caveats of the preferred design:
-
-1. custom `ListItem` implementations now override more small virtual accessors
-   instead of filling one aggregate struct,
-2. changing slot widget identity requires rebinding, which is a little more
-   explicit at call sites,
-3. if a bound widget changes visibility in a way that affects measurement, the
-   owner must refresh the row explicitly,
-4. adding value-based pictogram or drawable items later may require `ListEntry`
-   to learn a few more semantic painting cases, which should happen only after
-   real usage justifies the extra surface.
-
 ### Expand and Collapse
 
 The Material 3 guidelines describe expand & collapse as a parent-child list
@@ -627,8 +604,8 @@ The intended ownership model is:
 - `ListItem` owns content semantics only,
 - `ListEntry` owns row-level visual treatment and state layers,
 - `List` owns position-aware and group-aware visual behavior,
-- outer surfaces such as menus may reuse the same item primitives while
-  applying surface-specific container rules.
+- outer surfaces such as menus reuse the same item primitives while applying
+   surface-specific container rules.
 
 This means shape and selection visuals are part of the list-and-entry contract,
 not just local row implementation details.
@@ -731,8 +708,8 @@ Implementation-backed conclusion from Material Android and Compose:
    one large pill-shaped selected run.
 2. Selection changes emphasis and highlight treatment first; it does not, by
    default, flatten intermediate row corners.
-3. Adjacent selected rows may still influence divider visibility, but they do
-   not automatically form one combined outer shape.
+3. Adjacent selected rows influence divider visibility only through explicit
+   divider policy; they do not automatically form one combined outer shape.
 4. Baseline selected rows keep baseline shape rules and rely primarily on color
    and state treatment for emphasis.
 
@@ -759,8 +736,7 @@ The proposed default behavior is:
 1. Baseline rows use square corners throughout.
 2. Expressive rows use a rounded per-item shape, with 4dp as the initial
    default token.
-3. Expressive grouped containers may also apply an outer 16dp container shape
-   when the list is visually contained.
+3. Visually contained expressive groups apply an outer 16dp container shape.
 4. The API tracks first, middle, last, and only-row position because shape,
    spacing, divider policy, and segmented-list tuning depend on it.
 5. Selection and interaction states can replace or morph the default shape for
@@ -782,7 +758,7 @@ Spec-backed conclusions:
 The proposed default behavior is:
 
 1. Expressive contained lists default to gaps rather than dividers.
-2. Baseline or uncontained lists may default to dividers.
+2. Baseline and uncontained lists default to dividers.
 3. Divider inset is derived from list policy plus entry-provided content hints.
 4. The list decides whether a divider is full-width or inset.
 5. Selection does not automatically imply merged selected runs.
@@ -832,7 +808,7 @@ Practical note:
 - `HorizontalLayout` is likewise still present in older composites such as
    `RadioListItem`.
 
-## Use Cases and Hierarchy
+### Use Cases and Hierarchy
 
 The design pressure comes from a small set of recurring cases, not from every
 possible Material token combination:
@@ -869,13 +845,13 @@ typed row wrappers that embed or own the appropriate item and widget state.
 Those types should reuse the same `ListEntry` architecture rather than
 introducing a second row model.
 
-## Per-Instance Footprint Budget
+### Per-Instance Footprint Budget
 
 Approximate baseline targets are:
 
 | Type | Approx. RAM | Notes |
 |------|------------:|-------|
-| `List` | ~110-120 B plus vector capacity | one per list/group; derives from `FlexLayout` |
+| `List` | ~88-100 B plus vector capacity | one per list/group; direct `Container` with private row vector |
 | `ListEntry` | ~64-72 B | `Container` row surface plus item pointer, cached attached slot-child pointers, packed visual context, optional shared appearance pointer |
 | `StandardListItem` | ~52-60 B | rich non-owning descriptor: three text values, slot pointers, policies, and hints; no bound-entry backpointer in the baseline model |
 | `ExpandablePanel` | ~60-68 B | reusable body widget; can land after the baseline list if needed |
@@ -896,7 +872,7 @@ custom icons, or body content, because those widgets are real content that the
 application asked for. The budget is about avoiding invisible framework cost
 on rows that do not use those features.
 
-For comparison, a naive all-in-one row design could add all of the following
+For comparison, a naive all-in-one row design would add all of the following
 to every row:
 
 - dynamic child-vector storage from `Panel` or `FlexLayout`,
@@ -1098,7 +1074,7 @@ class ListEntry : public Container {
    const ListItem* item() const;
 
    // Non-owning. `item` must outlive this entry or be cleared first.
-   // Binding is exclusive: an item may be attached to at most one entry at a
+   // Binding is exclusive: an item can be attached to at most one entry at a
    // time. Rebinding detaches the previous item, removes its slot children,
    // then attaches the new one. Slot widget identity stays fixed during one
    // binding.
@@ -1146,7 +1122,7 @@ class StandardListItem : public ListItem {
    Widget* bodyWidget();
 };
 
-class List : public FlexLayout {
+class List : public Container {
  public:
    explicit List(const Environment& env);
 
@@ -1200,7 +1176,7 @@ decisions.
    generic structural resync mechanism.
 4. `StandardListItem` should be construction-time configured and should not
    offer arbitrary widget-replacement setters after `setItem()`.
-5. `setVisualContext()` is primarily list-owned. Application code may inspect
+5. `setVisualContext()` is primarily list-owned. Application code can inspect
    `visualContext()`, but the list should normally be the only object driving
    per-entry group context.
 6. Selection policy should live on `List`, while `ListEntry` only renders the
@@ -1216,20 +1192,9 @@ decisions.
    Expandability belongs in `ExpandablePanel` or in a custom item that exposes
    body content.
 
-### Remaining Non-Blocking Follow-Up
+### Usage Examples
 
-The following points should remain deferred even after Phase 1 review:
-
-1. whether lean text-only item types are worth the extra public surface,
-2. whether value-based pictogram or drawable item types justify direct row
-   painting support,
-3. which typed row wrappers are needed at all,
-4. whether `List` eventually needs a lightweight section helper,
-5. whether menu defaults justify a wrapper once real menu migration begins.
-
-## Usage Examples
-
-### Example 1: Static Settings Section
+#### Example 1: Static Settings Section
 
 Baseline static usage is explicit, but allocation-free and easy to reason
 about.
@@ -1273,7 +1238,7 @@ class PumpSettingsSection {
 };
 ```
 
-### Example 2: Adopted Rows
+#### Example 2: Adopted Rows
 
 When rows are created dynamically, the clean baseline pattern is a small row
 subclass that owns the `StandardListItem` it binds.
@@ -1316,7 +1281,7 @@ This example is one of the main reasons to defer convenience types until after
 the baseline exists: it will show whether dedicated row wrappers are genuinely
 useful or whether this small owning-subclass pattern is already sufficient.
 
-### Example 3: Possible Post-Baseline Convenience Layer
+#### Example 3: Possible Post-Baseline Convenience Layer
 
 If baseline usage proves too verbose, a follow-up convenience layer should make
 the split between value-based item convenience and typed row convenience more
@@ -1354,25 +1319,38 @@ control setters belong on typed row wrappers that own those controls.
 
 ## Implementation Plan
 
-### Phase 1: Baseline API Review
+Implementation work for these phases follows
+[roo-windows-code-authoring](../.github/skills/roo-windows-code-authoring/SKILL.md).
 
-Before implementation, review and freeze the concrete public API described
-above for:
+### Phase 1: Baseline API Declarations and Review
 
-1. `ListEntry`,
-2. `ListItem`,
-3. `StandardListItem`,
-4. `ExpandablePanel`,
-5. `List`,
-6. selection and divider configuration structs,
-7. a checked per-instance size budget for the baseline types.
+Code slice:
 
-No production widget code should land before this review is complete and the
-reviewed API shape above is accepted as the implementation target.
+1. Add the public enums, policy structs, and class declarations described in
+   Proposed API.
+2. Add Doxygen comments that state the stable-slot binding contract and the
+   list-owned visual-context contract.
+3. Add compile-focused tests and `sizeof(...)` checks for the baseline public
+   types.
+4. Any callable entry points that land before behavior is implemented must use
+   temporary `LOG(FATAL) << "Unimplemented: material3::<type>::<method>"`
+   behavior unless a safe degenerate no-op is explicitly documented.
+
+Proposed commit message:
+
+> Material 3 lists Phase 1: declare the baseline list API.
+>
+> Add the initial `List`, `ListEntry`, `ListItem`, `StandardListItem`, and
+> `ExpandablePanel` contracts from `docs/material3_lists_design.md`, including
+> policy structs, Doxygen comments, temporary unimplemented behavior, and size
+> checks for the baseline RAM budget.
+
+Validation: add `material3_list_test` and run
+`bazel test //:material3_list_test` from the `roo_windows` workspace.
 
 ### Phase 2: Shared Row Infrastructure
 
-Implement the reusable row foundation first:
+Code slice:
 
 1. `ListEntry` as a custom `Container` with manual row layout.
 2. token-driven row padding, spacing, and color hooks.
@@ -1384,67 +1362,113 @@ Implement the reusable row foundation first:
 6. `refreshFromItem()` as a manual reread path for mutable custom items that
    keep the same slot widgets.
 
-This phase should make a single row render and measure correctly.
+Proposed commit message:
+
+> Material 3 lists Phase 2: implement the reusable row surface.
+>
+> Implement `ListEntry` as the fixed-child Material row host described in
+> `docs/material3_lists_design.md`, including text measurement and painting,
+> slot attachment, row visual context, and refresh behavior without adding a
+> per-row child vector.
+
+Validation: run `bazel test //:material3_list_test` and include focused cases
+for row measurement, text policy, stable slot identity, bind, clear, rebind,
+and refresh.
 
 ### Phase 3: Baseline End-to-End List
 
-Implement:
+Code slice:
 
 1. `StandardListItem`,
 2. text policies for one-line, two-line, and three-line content,
 3. slot support for leading, trailing, and body regions,
-4. `List` as the concrete flex-column container,
+4. `List` as the concrete column-oriented container,
 5. row sequencing,
 6. variant, style, divider, and selection policy propagation.
 
-At the end of this phase, static multi-item lists should work end-to-end.
+Proposed commit message:
+
+> Material 3 lists Phase 3: wire standard items through list sequencing.
+>
+> Add the baseline `StandardListItem` descriptor and concrete `List` container
+> from `docs/material3_lists_design.md`, including static multi-row usage,
+> row-position propagation, selection context, and divider policy resolution.
+
+Validation: run `bazel test //:material3_list_test` with static multi-item,
+borrowed-entry, adopted-entry, selected-state, and divider/gap cases.
 
 ### Phase 4: Baseline Usage Review
 
-Evaluate the baseline API against real usage examples such as:
+Code slice:
 
 1. a static settings section,
 2. an adopted-row list built from a small owning subclass,
 3. a menu prototype or similar short-form list.
 
-This review should answer three questions before more public types land:
+Exit criteria:
 
-1. Is the explicit `ListEntry` + `StandardListItem` split acceptable in real
-    call sites?
-2. Do value-based text, pictogram, or drawable item types buy enough RAM and
-   ergonomics to justify the added surface?
-3. Which conveniences belong as item classes and which belong as typed row
-   wrappers?
+1. The examples compile without heap allocation beyond the list container's
+   normal child-storage path or explicitly adopted rows.
+2. Measured `sizeof(ListEntry)`, `sizeof(StandardListItem)`, and `sizeof(List)`
+   stay within the budgets in this document or the excess is justified here.
+3. Call sites do not need arbitrary post-bind widget-replacement setters.
+4. Convenience item or row-wrapper APIs remain deferred unless this review
+   records a measured RAM reduction or a clear call-site simplification.
 
-### Phase 5: Optional Simple-Item Layer
+Proposed commit message:
 
-Only if Phase 4 shows a clear benefit, implement:
+> Material 3 lists Phase 4: validate baseline list usage.
+>
+> Exercise the baseline `ListEntry` plus `StandardListItem` API from
+> `docs/material3_lists_design.md` on representative settings, adopted-row, and
+> menu-prototype call sites, and update the RAM table and follow-up decisions
+> from the measured results.
 
-1. `HeadlineListItem`,
-2. `SupportingTextListItem`,
-3. any pictogram or drawable item types that still look justified,
-4. any thin or typed convenience row wrappers that still look justified.
+Validation: run `bazel test //:material3_list_test`, and build the emulation
+example or prototype that hosts the representative static settings screen.
 
-These follow-up types should remain strict adapters over the baseline row
-architecture; they should not introduce a second container model.
+### Phase 5: Expand and Collapse
 
-### Phase 6: Expand/Collapse and Menu Reuse
+Code slice:
 
-Once the baseline list family is stable:
+1. Add `ExpandablePanel` as a reusable widget outside the list-specific API.
+2. Implement expanded/collapsed measurement, clipped intermediate height, and
+   animation progress.
+3. Add list usage patterns that expose expandable body content without storing
+   expansion state on every `ListEntry`.
 
-1. add `ExpandablePanel` and expand/collapse patterns on top of it,
-2. reuse shared row primitives in Material 3 menus,
-3. validate the split between list-owned policy and menu-owned outer-surface
-    behavior.
+Proposed commit message:
 
-### Phase 7: Deferred Follow-Up
+> Material 3 lists Phase 5: add reusable expand and collapse support.
+>
+> Implement `ExpandablePanel` from `docs/material3_lists_design.md` as the
+> optional body widget for expandable rows, with measured-height animation,
+> relayout propagation, and focused tests that keep expansion state out of
+> ordinary `ListEntry` instances.
 
-The following are intentionally compatible with the first design but deferred:
+Validation: run `bazel test //:material3_list_test` and the relevant golden
+target once expandable-row goldens are added.
 
-1. drag-reorder support,
-2. swipe-to-reveal or similar specialized gesture containers,
-3. additional menu-specific wrappers,
-4. deeper token coverage once the first API is stable.
+### Phase 6: Menu Reuse
+
+Code slice:
+
+1. Reuse `ListEntry` and `ListItem` primitives in the Material 3 menu path.
+2. Keep menu surface behavior, dismissal rules, and menu-specific defaults
+   outside the list container.
+3. Add tests that verify menu rows reuse shared item primitives while applying
+   menu-owned outer-surface behavior.
+
+Proposed commit message:
+
+> Material 3 lists Phase 6: reuse list rows in Material 3 menus.
+>
+> Apply the shared row primitives from `docs/material3_lists_design.md` to the
+> Material 3 menu path while keeping popup surface behavior and menu defaults
+> separate from list-owned sequencing policy.
+
+Validation: run `bazel test //:material3_list_test` plus the Material 3 menu
+test target introduced with this phase.
 
 ### RAM Checkpoints by Phase
 
@@ -1454,15 +1478,14 @@ design note or implementation review. Expected incremental costs are:
 1. Phase 2 adds `ListEntry`: about 64-72 B per row, with no child vector and no
    heap allocation on row paint or layout paths.
 2. Phase 3 adds `StandardListItem`: about 56-64 B before real child widgets are
-   counted, and `List`: about 110-120 B plus `FlexLayout` child and measure
-   vector capacity proportional to row count.
-3. Phase 4 adds no new core types; it should instead measure whole-screen RAM
+   counted, and `List`: about 88-100 B plus child-vector capacity proportional
+   to row count.
+3. Phase 4 adds no new core types; it measures whole-screen RAM
    for the usage examples above.
-4. Phase 5, if adopted, should measure any lean item types and convenience row
-   wrappers against the Phase 3 baseline and land them only if they provide a
-   clear RAM or ergonomics win.
-5. Phase 6 adds `ExpandablePanel`: about 60-68 B only for rows that actually
+4. Phase 5 adds `ExpandablePanel`: about 60-68 B only for rows that actually
    expose expandable body content.
+5. Phase 6 should not increase `ListEntry` size; menu-specific state belongs
+   to the menu surface or menu wrapper.
 
 Any implementation that materially exceeds these budgets should either revise
 the class shape or explicitly justify the extra RAM in this document.
@@ -1515,8 +1538,8 @@ Add integration-level tests for:
 4. selection controls embedded in rows,
 5. expand/collapse inside a larger scroll surface,
 6. reuse of shared primitives in menus,
-7. if a convenience layer lands later, it stays a thin adapter over the
-   baseline row architecture.
+7. future convenience layers stay thin adapters over the baseline row
+   architecture.
 
 ### Practical Test Notes
 
@@ -1537,3 +1560,60 @@ Testing should follow existing `roo_windows` practice and known constraints:
 5. In this frontend workspace, `lib/roo_windows` is symlinked into the main
    tree, so repository-level git status and diff for `roo_windows` work should
    be checked from the target repo when needed.
+
+## Caveats
+
+### Rejected Alternatives
+
+#### Fully Mutable `StandardListItem`
+
+The baseline rejects arbitrary post-bind widget-replacement setters such as
+`setLeading()`, `setTrailing()`, and `setBody()`. Supporting those setters
+requires either an item-to-entry back-pointer or stale-child reconciliation
+machinery, both of which add RAM and subtle lifetime behavior to the generic
+path. The chosen design keeps slot widget identity stable and uses explicit
+clear-and-rebind for structural changes.
+
+#### Content-Specific APIs on `ListEntry`
+
+The baseline rejects content-specific convenience directly on `ListEntry`, such
+as `setLeadingPictogram()` or `setTrailingSwitch()`. Those APIs make every row
+pay for content-specific state even when unused. Compact semantic item types
+and typed row wrappers are the right follow-up locations when real usage
+justifies them.
+
+#### Aggregate `ListItemContent`
+
+The baseline rejects returning one aggregate `ListItemContent` struct plus a
+separate layout struct from the virtual item interface. Individual accessors
+make the stable-slot contract visible and keep structural widget identity
+separate from lightweight text and policy values.
+
+### Accepted Trade-Offs
+
+1. Custom `ListItem` implementations override more small virtual accessors
+   instead of filling one aggregate struct.
+2. Changing slot widget identity requires rebinding, which is more explicit at
+   call sites.
+3. When a bound widget changes visibility in a way that affects measurement,
+   the owner must refresh the row explicitly.
+4. Value-based pictogram or drawable items require a follow-up review before
+   `ListEntry` learns additional semantic painting cases.
+
+## Future Work
+
+The following improvements are compatible with the baseline design but outside
+the initial implementation scope:
+
+1. lean text-only item types such as `HeadlineListItem` and
+   `SupportingTextListItem`,
+2. value-based pictogram or drawable item types with direct row painting
+   support,
+3. typed row wrappers for common controls such as switch, checkbox, or radio
+   rows,
+4. a lightweight section helper if ordinary sibling widgets prove too verbose,
+5. a menu wrapper if real menu migration shows that menu defaults are awkward
+   on bare `ListEntry`,
+6. drag-reorder support with dragged elevation and dragged shape,
+7. swipe-to-reveal or similar specialized gesture containers,
+8. deeper token coverage after the first API is stable.
