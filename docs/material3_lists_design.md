@@ -45,13 +45,22 @@ lists, menus, and adjacent Material 3 surfaces with shared primitives.
 
 ### Current Status in `roo_windows`
 
-As of 2026-05, this document is still a design document, not a description of
-an implemented Material 3 list API.
+As of 2026-05, the list family is partially implemented: the Phase 1 public API
+surface exists, and the row-local Phase 2 infrastructure for `ListEntry` is in
+place, but end-to-end list sequencing and menu reuse are still design-stage
+work.
 
 What exists today:
 
 - Material 3 controls under `roo_windows/material3` currently include
    `FlexCard`, `Checkbox`, `RadioButton`, and `Switch`.
+- `material3::StandardListItem` exists as a constructor-configured descriptor
+   with value-based text and stable borrowed slot widgets.
+- `material3::ListEntry` exists as a direct `Container` row surface with
+   stable slot binding, row-local measurement and layout, and direct painting of
+   standard text descriptors.
+- `material3::List` exists as a direct `Container` shell with list-owned API
+   for variant, style, selection, divider policy, and row insertion.
 - `FlexLayout` is implemented and already used by `material3::FlexCard`, so it
    is no longer just a future direction for generic composition.
 - `ListLayout` remains the existing recycled fixed-height list container.
@@ -61,13 +70,15 @@ What exists today:
 
 What does not exist yet:
 
-- no `material3::List`, `ListEntry`, `ListItem`, `StandardListItem`, or
-   `ExpandablePanel` implementation,
+- no end-to-end `material3::List` row sequencing, list-owned visual-context
+   propagation, or clear/add behavior,
+- no implemented `ExpandablePanel` behavior,
 - no Material 3 menu implementation built from shared list-row primitives,
 - no variable-height Material 3 list container.
 
-The rest of this document defines that missing list family in a way that fits
-the current framework rather than describing code that has already landed.
+The rest of this document records the chosen architecture for the remaining
+phases and keeps the already landed Phase 1 / Phase 2 pieces aligned with that
+direction.
 
 ### Material 3 Sources
 
@@ -159,8 +170,8 @@ Approximate 32-bit ESP32 reference sizes used by this document:
 - `FlexLayout`: roughly 100 B before child-vector and measure-vector
    capacity.
 
-The important multiplication factor is per row, not per list. A single
-A `List` can afford list-level policy and one private child vector, but a
+The important multiplication factor is per row, not per list. A single `List`
+can afford list-level policy and one private child vector, but a
 `ListEntry` cannot casually inherit from `FlexLayout`, own a dynamic child
 vector, copy large appearance structs, or store callbacks that most rows never
 use.
@@ -287,7 +298,8 @@ The design has three layers:
 
 At a high level:
 
-- `List` is a concrete list container that is flex-column-oriented.
+- `List` is a concrete column-oriented `Container` with list-specific child
+   APIs.
 - `ListEntry` is a concrete row host and the reusable Material row surface.
 - the baseline API should center on `ListEntry` plus `StandardListItem`.
    Thin convenience row wrappers are deferred until baseline usage proves they
@@ -341,7 +353,7 @@ The preferred composition is:
 This matches Android-style screens with multiple stacked sections, but also
 keeps the list primitive reusable in non-scrollable contexts and popup menus.
 
-#### List Containers Use Flex-Column Composition
+#### List Containers Use Direct Column Composition
 
 The list container layer is built around a column-based container model that
 uses list-specific row APIs rather than exposing a generic layout surface.
@@ -356,6 +368,18 @@ This model is a good fit because the list family needs:
 This conclusion applies to the list container layer, not to the row widget
 itself. `List` should stay column-oriented without publicly inheriting from
 `FlexLayout`. `ListEntry` should not derive from `FlexLayout`.
+
+Operationally, `List` should use a simple vertical stacking algorithm rather
+than the full generic `FlexLayout` surface:
+
+- `List` stores only `ListEntry` children and exposes only list-specific
+   insertion and policy APIs,
+- `List::onMeasure()` measures each visible row at the resolved list width and
+   sums row heights plus list-owned gaps,
+- `List::onLayout()` assigns full-width row bounds and stacks entries from top
+   to bottom,
+- row position, divider visibility, and list-owned visual context are resolved
+   by `List`, not by caller-supplied generic layout params.
 
 #### Rows Are Specialized Material Surfaces
 

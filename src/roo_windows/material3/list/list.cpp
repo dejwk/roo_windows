@@ -1,9 +1,285 @@
 #include "roo_windows/material3/list/list.h"
 
+#include <algorithm>
+
+#include "roo_display/ui/alignment.h"
+#include "roo_display/ui/text_label.h"
 #include "roo_logging.h"
+#include "roo_windows/core/theme.h"
 
 namespace roo_windows {
 namespace material3 {
+
+namespace {
+
+constexpr int16_t kExpressiveHorizontalPaddingDp = 16;
+constexpr int16_t kExpressiveVerticalPaddingDp = 10;
+constexpr int16_t kExpressiveSlotGapDp = 12;
+constexpr int16_t kBaselineHorizontalPaddingDp = 16;
+constexpr int16_t kBaselineVerticalPaddingDp = 8;
+constexpr int16_t kBaselineSlotGapDp = 16;
+constexpr int16_t kBodyGapDp = 8;
+constexpr int16_t kOneLineMinHeightDp = 56;
+constexpr int16_t kTwoLineMinHeightDp = 72;
+constexpr int16_t kThreeLineMinHeightDp = 88;
+
+struct RowTokens {
+  int16_t horizontal_padding;
+  int16_t vertical_padding;
+  int16_t slot_gap;
+  int16_t body_gap;
+};
+
+struct TextSlotMetrics {
+  int16_t width;
+  int16_t height;
+  uint8_t line_count;
+};
+
+struct RowLayoutMetrics {
+  Dimensions leading;
+  Dimensions trailing;
+  Dimensions body;
+  TextSlotMetrics text;
+  int16_t width;
+  int16_t height;
+  int16_t main_height;
+  int16_t row_band_height;
+  int16_t text_x;
+  int16_t text_y;
+  int16_t text_width;
+  int16_t leading_x;
+  int16_t leading_y;
+  int16_t trailing_x;
+  int16_t trailing_y;
+  int16_t body_x;
+  int16_t body_y;
+  int16_t body_width;
+};
+
+RowTokens TokensFor(ListVariant variant) {
+  if (variant == ListVariant::kBaseline) {
+    return RowTokens{Scaled(kBaselineHorizontalPaddingDp),
+                     Scaled(kBaselineVerticalPaddingDp),
+                     Scaled(kBaselineSlotGapDp), Scaled(kBodyGapDp)};
+  }
+  return RowTokens{Scaled(kExpressiveHorizontalPaddingDp),
+                   Scaled(kExpressiveVerticalPaddingDp),
+                   Scaled(kExpressiveSlotGapDp), Scaled(kBodyGapDp)};
+}
+
+const roo_display::Font& FontForOverline() { return font_overline(); }
+
+const roo_display::Font& FontForHeadline() { return font_body1(); }
+
+const roo_display::Font& FontForSupporting() { return font_body2(); }
+
+int16_t TextLineHeight(const roo_display::Font& font) {
+  return font.metrics().maxHeight();
+}
+
+int16_t TextWidth(const roo_display::Font& font, roo_display::StringView text) {
+  if (text.empty()) return 0;
+  return font.getHorizontalStringMetrics(text).advance();
+}
+
+uint8_t SlotLineCount(roo_display::StringView text, ListTextPolicy policy) {
+  if (text.empty()) return 0;
+  return std::max<uint8_t>(1, policy.max_lines);
+}
+
+// Measures the descriptor-driven text stack without depending on any row-owned
+// child widget state.
+TextSlotMetrics MeasureTextSlots(const ListItem* item) {
+  if (item == nullptr) return TextSlotMetrics{0, 0, 0};
+
+  uint8_t overline_lines =
+      SlotLineCount(item->overlineText(), item->overlinePolicy());
+  uint8_t headline_lines =
+      SlotLineCount(item->headlineText(), item->headlinePolicy());
+  uint8_t supporting_lines =
+      SlotLineCount(item->supportingText(), item->supportingPolicy());
+
+  int16_t width = 0;
+  width = std::max(width, TextWidth(FontForOverline(), item->overlineText()));
+  width = std::max(width, TextWidth(FontForHeadline(), item->headlineText()));
+  width = std::max(width,
+                   TextWidth(FontForSupporting(), item->supportingText()));
+
+  int16_t height = overline_lines * TextLineHeight(FontForOverline()) +
+                   headline_lines * TextLineHeight(FontForHeadline()) +
+                   supporting_lines * TextLineHeight(FontForSupporting());
+  return TextSlotMetrics{
+      width, height,
+      static_cast<uint8_t>(overline_lines + headline_lines + supporting_lines)};
+}
+
+Dimensions MeasureChild(Widget* child, WidthSpec width, HeightSpec height) {
+  if (child == nullptr || child->isGone()) return Dimensions(0, 0);
+  return child->measure(width, height);
+}
+
+int16_t ConstrainWidth(int16_t desired, WidthSpec spec) {
+  switch (spec.kind()) {
+    case UNSPECIFIED:
+      return desired;
+    case AT_MOST:
+      return std::min<int16_t>(desired, spec.value());
+    case EXACTLY:
+      return spec.value();
+  }
+  return desired;
+}
+
+int16_t ConstrainHeight(int16_t desired, HeightSpec spec) {
+  switch (spec.kind()) {
+    case UNSPECIFIED:
+      return desired;
+    case AT_MOST:
+      return std::min<int16_t>(desired, spec.value());
+    case EXACTLY:
+      return spec.value();
+  }
+  return desired;
+}
+
+int16_t MinRowBandHeight(const ListItem* item, const TextSlotMetrics& text) {
+  if (item != nullptr && item->preferTopTextAlignment()) {
+    return Scaled(kThreeLineMinHeightDp);
+  }
+  if (text.line_count >= 3) return Scaled(kThreeLineMinHeightDp);
+  if (text.line_count == 2) return Scaled(kTwoLineMinHeightDp);
+  return Scaled(kOneLineMinHeightDp);
+}
+
+int16_t MiddleOffset(int16_t outer, int16_t inner) {
+  if (outer <= inner) return 0;
+  return (outer - inner) / 2;
+}
+
+int16_t SlotY(const ListItem* item, VerticalVisualAlignment alignment,
+              int16_t row_band_height, int16_t slot_height,
+              const RowTokens& tokens) {
+  if (alignment == VerticalVisualAlignment::kTop ||
+      (item != nullptr && item->preferTopTextAlignment())) {
+    return tokens.vertical_padding;
+  }
+  return MiddleOffset(row_band_height, slot_height);
+}
+
+// Resolves one shared row geometry so measurement, paint, and child layout all
+// agree on the same slot positions and text bounds.
+RowLayoutMetrics ResolveRowLayout(const ListEntry& entry, WidthSpec width_spec,
+                                  HeightSpec height_spec) {
+  const ListItem* item = entry.item();
+  const RowTokens tokens = TokensFor(entry.visualContext().variant);
+
+  Dimensions leading = MeasureChild(item == nullptr ? nullptr : item->leading(),
+                                    WidthSpec::Unspecified(0),
+                                    HeightSpec::Unspecified(0));
+  Dimensions trailing = MeasureChild(
+      item == nullptr ? nullptr : item->trailing(), WidthSpec::Unspecified(0),
+      HeightSpec::Unspecified(0));
+  TextSlotMetrics text = MeasureTextSlots(item);
+
+  bool has_leading = leading.width() > 0 || leading.height() > 0;
+  bool has_trailing = trailing.width() > 0 || trailing.height() > 0;
+  bool has_text = text.width > 0 || text.height > 0;
+
+  int16_t horizontal_gaps = 0;
+  if (has_leading && has_text) horizontal_gaps += tokens.slot_gap;
+  if (has_trailing && (has_text || has_leading)) horizontal_gaps += tokens.slot_gap;
+
+  int16_t desired_main_width = tokens.horizontal_padding * 2 + leading.width() +
+                               trailing.width() + text.width + horizontal_gaps;
+
+  Dimensions body = MeasureChild(item == nullptr ? nullptr : item->body(),
+                                 WidthSpec::Unspecified(0),
+                                 HeightSpec::Unspecified(0));
+  bool has_body = body.width() > 0 || body.height() > 0;
+  int16_t desired_body_width = has_body ? tokens.horizontal_padding * 2 +
+                                              std::max<int16_t>(body.width(),
+                                                                text.width)
+                                        : 0;
+  int16_t desired_width = std::max(desired_main_width, desired_body_width);
+  int16_t resolved_width = ConstrainWidth(desired_width, width_spec);
+
+  // The text column expands into whatever horizontal space remains between the
+  // fixed leading and trailing slots.
+  int16_t content_width =
+      std::max<int16_t>(0, resolved_width - 2 * tokens.horizontal_padding);
+  int16_t text_x = tokens.horizontal_padding;
+  if (has_leading) text_x += leading.width() + (has_text ? tokens.slot_gap : 0);
+  int16_t trailing_x = resolved_width - tokens.horizontal_padding - trailing.width();
+  int16_t text_right = has_trailing ? trailing_x - tokens.slot_gap - 1
+                                    : resolved_width - tokens.horizontal_padding - 1;
+  int16_t text_width = has_text ? std::max<int16_t>(0, text_right - text_x + 1) : 0;
+
+  int16_t main_content_height = std::max<int16_t>(text.height, leading.height());
+  main_content_height = std::max<int16_t>(main_content_height, trailing.height());
+  int16_t row_band_height = std::max<int16_t>(
+      MinRowBandHeight(item, text), main_content_height + 2 * tokens.vertical_padding);
+  int16_t body_y = row_band_height;
+  if (has_body) body_y += tokens.body_gap;
+  int16_t desired_height = row_band_height +
+                           (has_body ? tokens.body_gap + body.height() +
+                                           tokens.vertical_padding
+                                     : 0);
+  int16_t resolved_height = ConstrainHeight(desired_height, height_spec);
+
+  int16_t text_y = tokens.vertical_padding;
+  if (item == nullptr || !item->preferTopTextAlignment()) {
+    text_y = MiddleOffset(row_band_height, text.height);
+  }
+  int16_t leading_y = item == nullptr
+                          ? MiddleOffset(row_band_height, leading.height())
+                          : SlotY(item, item->leadingAlignment(), row_band_height,
+                                  leading.height(), tokens);
+  int16_t trailing_y = item == nullptr
+                           ? MiddleOffset(row_band_height, trailing.height())
+                           : SlotY(item, item->trailingAlignment(), row_band_height,
+                                   trailing.height(), tokens);
+
+  int16_t body_width = has_body ? std::max<int16_t>(0, content_width) : 0;
+  if (has_body && body_width != body.width()) {
+    // Re-measure the optional body at the resolved content width so stacked
+    // body content and row height stay consistent with the final row width.
+    body = MeasureChild(item->body(), WidthSpec::Exactly(body_width),
+                        HeightSpec::Unspecified(0));
+    body_y = row_band_height + tokens.body_gap;
+    desired_height = row_band_height + tokens.body_gap + body.height() +
+                     tokens.vertical_padding;
+    resolved_height = ConstrainHeight(desired_height, height_spec);
+  }
+
+  return RowLayoutMetrics{leading,
+                          trailing,
+                          body,
+                          text,
+                          resolved_width,
+                          resolved_height,
+                          main_content_height,
+                          row_band_height,
+                          text_x,
+                          text_y,
+                          text_width,
+                          tokens.horizontal_padding,
+                          leading_y,
+                          trailing_x,
+                          trailing_y,
+                          tokens.horizontal_padding,
+                          body_y,
+                          body_width};
+}
+
+void DrawTextLine(const Canvas& canvas, roo_display::StringView text,
+                  const roo_display::Font& font, Color color, Rect bounds) {
+  if (text.empty() || bounds.empty()) return;
+  canvas.drawTiled(roo_display::ClippedStringViewLabel(text, font, color),
+                   bounds, roo_display::kLeft | roo_display::kMiddle);
+}
+
+}  // namespace
 
 StandardListItemInit StandardListItemInit::OneLine(
     roo_display::StringView headline, Widget* leading, Widget* trailing) {
@@ -91,6 +367,8 @@ ListEntry::ListEntry(const Environment& env)
       body_child_(nullptr),
       visual_context_() {}
 
+ListEntry::~ListEntry() { clearItem(); }
+
 bool ListEntry::hasItem() const { return item_ != nullptr; }
 
 ListItem* ListEntry::item() { return item_; }
@@ -98,18 +376,65 @@ ListItem* ListEntry::item() { return item_; }
 const ListItem* ListEntry::item() const { return item_; }
 
 void ListEntry::setItem(ListItem& item) {
-  (void)item;
-  LOG(FATAL) << "Unimplemented: material3::ListEntry::setItem";
+  if (item_ == &item) {
+    refreshFromItem();
+    return;
+  }
+  // A binding owns a stable borrowed slot set for its whole lifetime, so a
+  // rebind always detaches the old children before attaching the new ones.
+  clearItem();
+  Widget* leading = item.leading();
+  Widget* trailing = item.trailing();
+  Widget* body = item.body();
+  CHECK(leading == nullptr || leading != trailing);
+  CHECK(leading == nullptr || leading != body);
+  CHECK(trailing == nullptr || trailing != body);
+  item_ = &item;
+  if (leading != nullptr) {
+    CHECK(leading->parent() == nullptr);
+    attachChild(WidgetRef(*leading));
+    leading_child_ = leading;
+  }
+  if (trailing != nullptr) {
+    CHECK(trailing->parent() == nullptr);
+    attachChild(WidgetRef(*trailing));
+    trailing_child_ = trailing;
+  }
+  if (body != nullptr) {
+    CHECK(body->parent() == nullptr);
+    attachChild(WidgetRef(*body));
+    body_child_ = body;
+  }
+  invalidateInterior();
+  requestLayout();
 }
 
 void ListEntry::clearItem() {
   if (item_ == nullptr) return;
-  LOG(FATAL) << "Unimplemented: material3::ListEntry::clearItem";
+  if (body_child_ != nullptr) {
+    detachChild(body_child_);
+    body_child_ = nullptr;
+  }
+  if (trailing_child_ != nullptr) {
+    detachChild(trailing_child_);
+    trailing_child_ = nullptr;
+  }
+  if (leading_child_ != nullptr) {
+    detachChild(leading_child_);
+    leading_child_ = nullptr;
+  }
+  item_ = nullptr;
+  invalidateInterior();
+  requestLayout();
 }
 
 void ListEntry::refreshFromItem() {
   if (item_ == nullptr) return;
-  LOG(FATAL) << "Unimplemented: material3::ListEntry::refreshFromItem";
+  CHECK(item_->leading() == leading_child_);
+  CHECK(item_->trailing() == trailing_child_);
+  CHECK(item_->body() == body_child_);
+  invalidateInterior();
+  requestLayout();
 }
 
 void ListEntry::setVisualContext(const ListEntryVisualContext& context) {
@@ -121,17 +446,110 @@ const ListEntryVisualContext& ListEntry::visualContext() const {
   return visual_context_;
 }
 
-int ListEntry::getChildrenCount() const { return 0; }
+ColorRole ListEntry::containerRole() const {
+  if (visual_context_.selected &&
+      visual_context_.variant == ListVariant::kExpressive) {
+    return ColorRole::kSecondaryContainer;
+  }
+  return ColorRole::kSurface;
+}
+
+void ListEntry::paint(const Canvas& canvas) const {
+  // Borrowed slot widgets paint through normal child traversal; this pass only
+  // settles the row background and descriptor text.
+  canvas.clear();
+  if (item_ == nullptr) return;
+  RowLayoutMetrics layout = ResolveRowLayout(
+      *this, WidthSpec::Exactly(width()), HeightSpec::Exactly(height()));
+  Color headline_color = theme().color.onSurface;
+  Color supporting_color = theme().color.onSurfaceVariant;
+
+  int16_t y = layout.text_y;
+  if (!item_->overlineText().empty()) {
+    Rect line_bounds(layout.text_x, y, layout.text_x + layout.text_width - 1,
+                     y + TextLineHeight(FontForOverline()) - 1);
+    DrawTextLine(canvas, item_->overlineText(), FontForOverline(),
+                 supporting_color, line_bounds);
+    y += TextLineHeight(FontForOverline());
+  }
+  if (!item_->headlineText().empty()) {
+    Rect line_bounds(layout.text_x, y, layout.text_x + layout.text_width - 1,
+                     y + TextLineHeight(FontForHeadline()) - 1);
+    DrawTextLine(canvas, item_->headlineText(), FontForHeadline(),
+                 headline_color, line_bounds);
+    y += TextLineHeight(FontForHeadline());
+  }
+  if (!item_->supportingText().empty()) {
+    Rect line_bounds(layout.text_x, y, layout.text_x + layout.text_width - 1,
+                     y + TextLineHeight(FontForSupporting()) - 1);
+    DrawTextLine(canvas, item_->supportingText(), FontForSupporting(),
+                 supporting_color, line_bounds);
+  }
+}
+
+Dimensions ListEntry::getSuggestedMinimumDimensions() const {
+  RowLayoutMetrics layout = ResolveRowLayout(
+      *this, WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+  return Dimensions(layout.width, layout.height);
+}
+
+int ListEntry::getChildrenCount() const {
+  int count = 0;
+  if (leading_child_ != nullptr) ++count;
+  if (trailing_child_ != nullptr) ++count;
+  if (body_child_ != nullptr) ++count;
+  return count;
+}
 
 const Widget& ListEntry::getChild(int idx) const {
-  (void)idx;
-  LOG(FATAL) << "Unimplemented: material3::ListEntry::getChild";
+  CHECK(idx >= 0);
+  if (leading_child_ != nullptr) {
+    if (idx == 0) return *leading_child_;
+    --idx;
+  }
+  if (trailing_child_ != nullptr) {
+    if (idx == 0) return *trailing_child_;
+    --idx;
+  }
+  if (body_child_ != nullptr) {
+    if (idx == 0) return *body_child_;
+  }
+  LOG(FATAL) << "Invalid material3::ListEntry child index";
   return *static_cast<const Widget*>(nullptr);
 }
 
 Widget& ListEntry::getChild(int idx) {
   return const_cast<Widget&>(
       static_cast<const ListEntry&>(*this).getChild(idx));
+}
+
+Dimensions ListEntry::onMeasure(WidthSpec width, HeightSpec height) {
+  RowLayoutMetrics layout = ResolveRowLayout(*this, width, height);
+  return Dimensions(layout.width, layout.height);
+}
+
+void ListEntry::onLayout(bool changed, const Rect& rect) {
+  (void)changed;
+  // Reuse the same geometry resolver used by measure() and paint() so child
+  // slot placement stays consistent with the resolved text layout.
+  RowLayoutMetrics layout = ResolveRowLayout(
+      *this, WidthSpec::Exactly(rect.width()), HeightSpec::Exactly(rect.height()));
+  if (leading_child_ != nullptr && !leading_child_->isGone()) {
+    leading_child_->layout(Rect(layout.leading_x, layout.leading_y,
+                                layout.leading_x + layout.leading.width() - 1,
+                                layout.leading_y + layout.leading.height() - 1));
+  }
+  if (trailing_child_ != nullptr && !trailing_child_->isGone()) {
+    trailing_child_->layout(
+        Rect(layout.trailing_x, layout.trailing_y,
+             layout.trailing_x + layout.trailing.width() - 1,
+             layout.trailing_y + layout.trailing.height() - 1));
+  }
+  if (body_child_ != nullptr && !body_child_->isGone()) {
+    body_child_->layout(Rect(layout.body_x, layout.body_y,
+                             layout.body_x + layout.body.width() - 1,
+                             layout.body_y + layout.body.height() - 1));
+  }
 }
 
 StandardListItem::StandardListItem(const StandardListItemInit& init)

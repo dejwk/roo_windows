@@ -1,5 +1,3 @@
-#include "roo_windows/material3/list/list.h"
-
 #include <string>
 #include <type_traits>
 
@@ -8,6 +6,7 @@
 #include "roo_windows/containers/flex_layout.h"
 #include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/environment.h"
+#include "roo_windows/material3/list/list.h"
 
 namespace roo_windows {
 namespace material3 {
@@ -28,11 +27,36 @@ static_assert(std::is_base_of<ListItem, StandardListItem>::value,
 
 class TestWidget : public BasicWidget {
  public:
-  explicit TestWidget(const Environment& env) : BasicWidget(env) {}
+  explicit TestWidget(const Environment& env, Dimensions dimensions = {})
+      : BasicWidget(env), dimensions_(dimensions) {}
 
   Dimensions getSuggestedMinimumDimensions() const override {
-    return Dimensions(0, 0);
+    return dimensions_;
   }
+
+ private:
+  Dimensions dimensions_;
+};
+
+class TestListEntry : public ListEntry {
+ public:
+  explicit TestListEntry(const Environment& env) : ListEntry(env) {}
+
+  using ListEntry::getChild;
+  using ListEntry::getChildrenCount;
+};
+
+class MutableListItem : public ListItem {
+ public:
+  explicit MutableListItem(roo_display::StringView headline)
+      : headline_(headline) {}
+
+  roo_display::StringView headlineText() const override { return headline_; }
+
+  void setHeadline(roo_display::StringView headline) { headline_ = headline; }
+
+ private:
+  roo_display::StringView headline_;
 };
 
 // Verifies that the public policy structs start from the Phase 1 design
@@ -169,6 +193,85 @@ TEST(Material3List, BaselineClassesConstructWithSafeDefaults) {
   list.clear();
 }
 
+// Verifies that binding a standard item attaches exactly the stable slot
+// widgets exposed by the item, and clearing the item detaches them again.
+TEST(Material3List, ListEntryBindsAndClearsStableSlotChildren) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  TestWidget leading(env, Dimensions(20, 20));
+  TestWidget trailing(env, Dimensions(12, 16));
+  TestWidget body(env, Dimensions(80, 10));
+  StandardListItem item(StandardListItemInit::ThreeLine(
+      "Headline", "Supporting", "Overline", &leading, &trailing, &body));
+  TestListEntry entry(env);
+
+  entry.setItem(item);
+
+  EXPECT_TRUE(entry.hasItem());
+  EXPECT_EQ(&item, entry.item());
+  EXPECT_EQ(3, entry.getChildrenCount());
+  EXPECT_EQ(&leading, &entry.getChild(0));
+  EXPECT_EQ(&trailing, &entry.getChild(1));
+  EXPECT_EQ(&body, &entry.getChild(2));
+  EXPECT_EQ(&entry, leading.parent());
+  EXPECT_EQ(&entry, trailing.parent());
+  EXPECT_EQ(&entry, body.parent());
+
+  entry.clearItem();
+
+  EXPECT_FALSE(entry.hasItem());
+  EXPECT_EQ(nullptr, entry.item());
+  EXPECT_EQ(0, entry.getChildrenCount());
+  EXPECT_EQ(nullptr, leading.parent());
+  EXPECT_EQ(nullptr, trailing.parent());
+  EXPECT_EQ(nullptr, body.parent());
+}
+
+// Verifies that a measured and laid-out row positions leading and trailing
+// widgets according to the default Material 3 row padding and alignment.
+TEST(Material3List, ListEntryMeasuresAndLaysOutSlots) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  TestWidget leading(env, Dimensions(20, 20));
+  TestWidget trailing(env, Dimensions(12, 16));
+  StandardListItem item(
+      StandardListItemInit::OneLine("Headline", &leading, &trailing));
+  TestListEntry entry(env);
+  entry.setItem(item);
+
+  Dimensions measured =
+      entry.measure(WidthSpec::Exactly(180), HeightSpec::Unspecified(0));
+  EXPECT_EQ(180, measured.width());
+  EXPECT_GE(measured.height(), Scaled(56));
+
+  entry.layout(Rect(0, 0, measured.width() - 1, measured.height() - 1));
+
+  EXPECT_EQ(Scaled(16), leading.offsetLeft());
+  EXPECT_EQ((measured.height() - leading.height()) / 2, leading.offsetTop());
+  EXPECT_EQ(180 - Scaled(16) - trailing.width(), trailing.offsetLeft());
+  EXPECT_EQ((measured.height() - trailing.height()) / 2, trailing.offsetTop());
+}
+
+// Verifies that refreshFromItem rereads lightweight descriptor state while
+// preserving the already attached slot widget identity.
+TEST(Material3List, ListEntryRefreshesMutableTextWithoutReplacingSlots) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  MutableListItem item("A");
+  TestListEntry entry(env);
+  entry.setItem(item);
+
+  Dimensions short_measure =
+      entry.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+  item.setHeadline("A much longer headline");
+  entry.refreshFromItem();
+  Dimensions long_measure =
+      entry.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+
+  EXPECT_GT(long_measure.width(), short_measure.width());
+  EXPECT_EQ(0, entry.getChildrenCount());
+}
+
 // Verifies the checked Phase 1 size budget using pointer-size-aware limits so
 // the host build still catches accidental inline state growth.
 TEST(Material3List, BaselineTypesStayWithinPhaseOneSizeBudget) {
@@ -178,7 +281,7 @@ TEST(Material3List, BaselineTypesStayWithinPhaseOneSizeBudget) {
       sizeof(Container) + 4 * sizeof(void*) + 16;
   constexpr size_t kExpandablePanelBudget =
       sizeof(Container) + sizeof(WidgetRef) + 8;
-    constexpr size_t kListBudget = sizeof(Container) + sizeof(void*) * 8 + 16;
+  constexpr size_t kListBudget = sizeof(Container) + sizeof(void*) * 8 + 16;
 
   EXPECT_LE(sizeof(StandardListItem), kStandardItemBudget);
   EXPECT_LE(sizeof(ListEntry), kListEntryBudget);

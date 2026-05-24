@@ -1,7 +1,8 @@
 #pragma once
 
-#include <memory>
 #include <stdint.h>
+
+#include <memory>
 #include <vector>
 
 #include "roo_display/core/utf8.h"
@@ -124,10 +125,8 @@ struct StandardListItemInit {
   Widget* leading = nullptr;
   Widget* trailing = nullptr;
   Widget* body = nullptr;
-  VerticalVisualAlignment leading_alignment =
-      VerticalVisualAlignment::kMiddle;
-  VerticalVisualAlignment trailing_alignment =
-      VerticalVisualAlignment::kMiddle;
+  VerticalVisualAlignment leading_alignment = VerticalVisualAlignment::kMiddle;
+  VerticalVisualAlignment trailing_alignment = VerticalVisualAlignment::kMiddle;
   DividerInsetHint divider_inset_hint;
   bool prefer_top_text_alignment = false;
 
@@ -143,10 +142,12 @@ struct StandardListItemInit {
                                       Widget* trailing = nullptr);
 
   /// Builds a three-line standard list item descriptor.
-  static StandardListItemInit ThreeLine(
-      roo_display::StringView headline, roo_display::StringView supporting,
-      roo_display::StringView overline = {}, Widget* leading = nullptr,
-      Widget* trailing = nullptr, Widget* body = nullptr);
+  static StandardListItemInit ThreeLine(roo_display::StringView headline,
+                                        roo_display::StringView supporting,
+                                        roo_display::StringView overline = {},
+                                        Widget* leading = nullptr,
+                                        Widget* trailing = nullptr,
+                                        Widget* body = nullptr);
 };
 
 /// Pure-virtual content contract consumed by `ListEntry`.
@@ -242,6 +243,9 @@ class ListEntry : public Container {
   /// Creates an empty Material 3 list row surface.
   explicit ListEntry(const Environment& env);
 
+  /// Detaches any stable slot children that are still bound.
+  ~ListEntry() override;
+
   /// Returns whether an item is currently bound.
   bool hasItem() const;
 
@@ -273,10 +277,21 @@ class ListEntry : public Container {
   /// Returns the current list-resolved visual context.
   const ListEntryVisualContext& visualContext() const;
 
+  /// Returns the row's Material 3 container color role.
+  ColorRole containerRole() const override;
+
+  /// Paints standard text descriptors for the bound item.
+  void paint(const Canvas& canvas) const override;
+
+  /// Returns the minimum dimensions for the bound item and slot widgets.
+  Dimensions getSuggestedMinimumDimensions() const override;
+
  protected:
   int getChildrenCount() const override;
   const Widget& getChild(int idx) const override;
   Widget& getChild(int idx) override;
+  Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
+  void onLayout(bool changed, const Rect& rect) override;
 
  private:
   ListItem* item_;
