@@ -204,6 +204,18 @@ cc_test(
 )
 
 cc_test(
+    name = "material3_list_test",
+    srcs = [
+        "test/material3_list_test.cpp",
+    ],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
+cc_test(
     name = "material3_radio_button_test",
     srcs = [
         "test/material3_radio_button_test.cpp",
