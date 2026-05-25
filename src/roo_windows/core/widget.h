@@ -52,17 +52,14 @@ static const uint16_t kWidgetSelected = 0x0020;
 static const uint16_t kWidgetActivated = 0x0040;
 static const uint16_t kWidgetPressed = 0x0080;
 static const uint16_t kWidgetDragged = 0x0100;
+static const uint16_t kWidgetClicking = 0x0200;
+static const uint16_t kWidgetHidden = 0x0400;
+static const uint16_t kWidgetGone = 0x0800;
 
-// Widget is undergoing click animation.
-static const uint16_t kWidgetClicking = 0x1000;
-
-static const uint16_t kWidgetHidden = 0x4000;
-static const uint16_t kWidgetGone = 0x8000;
-
-static const uint8_t kDirty = 0x01;
-static const uint8_t kInvalidated = 0x02;
-static const uint8_t kLayoutRequested = 0x04;
-static const uint8_t kLayoutRequired = 0x08;
+static const uint16_t kDirty = 0x1000;
+static const uint16_t kInvalidated = 0x2000;
+static const uint16_t kLayoutRequested = 0x4000;
+static const uint16_t kLayoutRequired = 0x8000;
 
 enum class ParentClipMode { kClipped, kUnclipped };
 enum class Visibility { kVisible, kInvisible, kGone };
@@ -478,19 +475,13 @@ class Widget {
   const Container* parent() const { return parent_; }
   Container* parent() { return parent_; }
 
-  bool isDirty() const {
-    return (redraw_status_ & (kDirty | kInvalidated)) != 0;
-  }
+  bool isDirty() const { return (state_ & (kDirty | kInvalidated)) != 0; }
 
-  bool isInvalidated() const { return (redraw_status_ & kInvalidated) != 0; }
+  bool isInvalidated() const { return (state_ & kInvalidated) != 0; }
 
-  bool isLayoutRequested() const {
-    return (redraw_status_ & kLayoutRequested) != 0;
-  }
+  bool isLayoutRequested() const { return (state_ & kLayoutRequested) != 0; }
 
-  bool isLayoutRequired() const {
-    return (redraw_status_ & kLayoutRequired) != 0;
-  }
+  bool isLayoutRequired() const { return (state_ & kLayoutRequired) != 0; }
 
   virtual Dimensions getSuggestedMinimumDimensions() const = 0;
 
@@ -654,7 +645,7 @@ class Widget {
   // This method should not be called during paint().
   virtual void moveTo(const Rect& parent_bounds);
 
-  void markClean() { redraw_status_ &= ~(kDirty | kInvalidated); }
+  void markClean() { state_ &= ~(kDirty | kInvalidated); }
 
   // Helper method that, given the alignment, adds this widget's padding
   // to that alignment, from the appropriate side. Centered and absolute
@@ -720,10 +711,12 @@ class Widget {
   void paintWidgetInteriorWithOverlays(Canvas& s, Clipper& clipper,
                                        const OverlaySpec& overlay_spec);
 
-  void markDirty() { redraw_status_ |= kDirty; }
-  void markInvalidated() { redraw_status_ |= (kDirty | kInvalidated); }
+  void markDirty() { state_ |= kDirty; }
+  void markInvalidated() { state_ |= (kDirty | kInvalidated); }
 
-  void markLayoutRequested() { redraw_status_ |= kLayoutRequested; }
+  void markLayoutRequested() { state_ |= kLayoutRequested; }
+  void markLayoutRequired() { state_ |= kLayoutRequired; }
+  void clearLayoutState() { state_ &= ~(kLayoutRequired | kLayoutRequested); }
 
   void setParentBounds(const Rect& parent_bounds);
 
@@ -731,14 +724,11 @@ class Widget {
   Container* parent_;
   Rect parent_bounds_;
   uint16_t state_;
-
-  // kDirty | kInvalidated | kLayout{Requested|Required}
-  uint8_t redraw_status_;
 };
 
 #if UINTPTR_MAX == UINT32_MAX
-static_assert(sizeof(Widget) <= 28,
-              "Widget should stay within 28 bytes on 32-bit targets");
+static_assert(sizeof(Widget) <= 24,
+              "Widget should stay within 24 bytes on 32-bit targets");
 #endif
 
 // TODO: adjust for different screen densities.

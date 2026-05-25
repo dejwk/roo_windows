@@ -53,8 +53,8 @@ class Material3CheckboxGoldenTest : public testing::Test {
 
     AddCheckbox(app, kX0 + 0 * kStride, Checkbox::OnOffState::kOff, enabled);
     AddCheckbox(app, kX0 + 1 * kStride, Checkbox::OnOffState::kOn, enabled);
-    AddCheckbox(app, kX0 + 2 * kStride,
-          Checkbox::OnOffState::kIndeterminate, enabled);
+    AddCheckbox(app, kX0 + 2 * kStride, Checkbox::OnOffState::kIndeterminate,
+                enabled);
 
     EXPECT_TRUE(app.refresh());
     return test::CaptureRgb(offscreen_.raster(), 0, 0, kWidth, kHeight);

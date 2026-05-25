@@ -32,10 +32,10 @@ for a facility that only a few use.
 
 The previous [ApplicationContext and Widget Interactive-Change
 Dispatch](widget_event_dispatch_design.md) work reduced the 32-bit base-widget
-budget to 28 B and added the current size assertion in
+budget to 28 B and added the then-current size assertion in
 [widget.h](../src/roo_windows/core/widget.h).
 
-Today the base class still owns:
+Before this migration the base class owned:
 
 - two parent/config bits,
 - ten semantic state bits,
@@ -43,7 +43,7 @@ Today the base class still owns:
 - a separate 8-bit `redraw_status_` field carrying dirty / invalidated /
   layout-requested / layout-required.
 
-The current generic toggle API is protected on `Widget`, but the nearby usage
+The generic toggle API was protected on `Widget`, but the nearby usage
 surface is small and concrete:
 
 - [widgets/checkbox.h](../src/roo_windows/widgets/checkbox.h)
@@ -55,7 +55,7 @@ surface is small and concrete:
 - [widgets/text_field.h](../src/roo_windows/widgets/text_field.h)
   (`VisibilityToggle`)
 
-`kWidgetError` is not consumed outside the base definition today.
+`kWidgetError` was not consumed outside the base definition.
 
 This design follows the RAM-first guidance in
 [widget_authoring.md](widget_authoring.md): shared base storage should exist
@@ -301,7 +301,11 @@ class RadioButton : public BasicWidget {
 The Material 3 variants mirror the same public shape. `VisibilityToggle`
 remains binary and does not add a tri-state API.
 
-## Implementation Plan
+## Rollout History
+
+Phases 1 and 2 landed as planned. The original third phase was reduced to a
+final doc/status pass once the 24 B `Widget` size guard and the broad Bazel
+sweep were in place.
 
 Authoring reference: follow the
 [roo_windows code-authoring guidance](../.github/skills/roo-windows-code-authoring/SKILL.md)
@@ -346,15 +350,13 @@ Validation:
 - run `bazel test //:roo_windows_test`
 - run `bazel test //:overlay_test //:flex_layout_test`
 
-### Phase 3: Recount Representative Widget Sizes And Finalize Docs
+### Phase 3: Finalize Docs And Broad Validation
 
 Work:
 
-- add representative size assertions for the compacted base and key toggle
-  widgets,
-- update stale comments that still describe toggle state as a base-widget
-  facility,
-- refresh the design status once the broad sweep is green.
+- confirm the compacted base keeps the 24 B `Widget` size guard in the tree,
+- refresh the design status and remove stale rollout commentary,
+- run the broad Bazel sweep.
 
 Proposed commit message:
 
@@ -362,7 +364,27 @@ Proposed commit message:
 
 Validation:
 
-- run `bazel test //... --test_output=errors`
+- run `bazel test ...`
+
+## Status
+
+This design is implemented.
+
+Phase 1 moved toggle state into the concrete selector widgets, updated the
+selector-facing APIs and examples, and refreshed the focused selector tests.
+
+Phase 2 packed redraw and layout flags into `Widget::state_`, removed
+`redraw_status_`, and lowered the 32-bit `Widget` size guard to 24 B.
+
+The rollout was validated with:
+
+- `bazel test //:roo_windows_test //:material3_checkbox_test //:material3_checkbox_golden_test //:material3_radio_button_test //:material3_switch_test //:overlay_test`
+- `bazel test //:roo_windows_test //:overlay_test //:flex_layout_test`
+- `bazel test ...`
+
+No stale source comments remained around the former base-owned toggle state or
+the separate redraw bookkeeping; the final cleanup only needed to update this
+design record.
 
 ## Testing Plan
 

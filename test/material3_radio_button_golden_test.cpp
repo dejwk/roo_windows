@@ -51,15 +51,18 @@ class Material3RadioButtonGoldenTest : public testing::Test {
     app.add(std::move(backdrop),
             roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
 
-    AddRadioButton(app, kX0 + 0 * kStride, false, enabled);
-    AddRadioButton(app, kX0 + 1 * kStride, true, enabled);
+    AddRadioButton(app, kX0 + 0 * kStride, RadioButton::OnOffState::kOff,
+                   enabled);
+    AddRadioButton(app, kX0 + 1 * kStride, RadioButton::OnOffState::kOn,
+                   enabled);
 
     EXPECT_TRUE(app.refresh());
     return test::CaptureRgb(offscreen_.raster(), 0, 0, kWidth, kHeight);
   }
 
-  void AddRadioButton(Application& app, int16_t x, bool on, bool enabled) {
-    auto radio = std::make_unique<RadioButton>(app.context(), on);
+  void AddRadioButton(Application& app, int16_t x,
+                      RadioButton::OnOffState state, bool enabled) {
+    auto radio = std::make_unique<RadioButton>(app.context(), state);
     radio->setEnabled(enabled);
     app.add(std::move(radio), roo_display::Box(x, kRowY, x + kButtonSize - 1,
                                                kRowY + kButtonSize - 1));

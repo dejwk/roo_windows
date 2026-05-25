@@ -40,15 +40,13 @@ Widget::Widget(ApplicationContext& context)
     : context_(context),
       parent_(nullptr),
       parent_bounds_(0, 0, -1, -1),
-      state_(kWidgetEnabled),
-      redraw_status_(kDirty | kInvalidated) {}
+      state_(kWidgetEnabled | kDirty | kInvalidated) {}
 
 Widget::Widget(Widget&& other)
     : context_(other.context_),
       parent_(other.parent_),
       parent_bounds_(other.parent_bounds_),
-      state_(other.state_),
-      redraw_status_(other.redraw_status_) {
+      state_(other.state_) {
   context_.widgetEvents().moveHandlers(other, *this);
 }
 
@@ -242,7 +240,7 @@ ColorRole Widget::effectiveContainerRole() const {
 const Theme& Widget::theme() const { return context_.theme(); }
 
 void Widget::setDirty(const Rect& bounds) {
-  redraw_status_ |= kDirty;
+  markDirty();
   if (parent_ != nullptr) {
     parent_->propagateDirty(this, bounds.translate(offsetLeft(), offsetTop()));
   }
@@ -288,7 +286,7 @@ Dimensions Widget::measure(WidthSpec width, HeightSpec height) {
                            << result;
 #endif
 
-  redraw_status_ |= kLayoutRequired;
+  markLayoutRequired();
   return result;
 }
 
@@ -307,7 +305,7 @@ void Widget::layout(const Rect& rect) {
     moveTo(rect);
     onLayout(changed, rect);
   }
-  redraw_status_ &= ~(kLayoutRequired | kLayoutRequested);
+  clearLayoutState();
 }
 
 void Widget::onRequestLayout() {
