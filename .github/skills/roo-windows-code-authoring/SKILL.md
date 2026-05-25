@@ -10,14 +10,14 @@ user-invocable: true
 Use this skill for `roo_windows`-specific guidance on top of the local
 [embedded-cpp-code-authoring instruction](../../instructions/embedded-cpp-code-authoring.instructions.md).
 
-Related skills:
-[roo-windows-widget-authoring](../roo-windows-widget-authoring/SKILL.md)
+Related instructions:
+[roo-windows-widget-authoring instruction](../../instructions/roo-windows-widget-authoring.instructions.md)
 
 ## roo_windows-Specific Guidance
 
 - When a change affects widget behavior, layout, painting, or input handling,
   also use the widget authoring guidance in
-  [roo-windows-widget-authoring](../roo-windows-widget-authoring/SKILL.md).
+  [roo-windows-widget-authoring instruction](../../instructions/roo-windows-widget-authoring.instructions.md).
 - Use the repository validation commands below instead of generic build or
   test guesses.
 
@@ -33,7 +33,7 @@ Related skills:
 
 ## Checklist
 
-- Widget-related changes also follow the widget authoring skill when relevant.
+- Widget-related changes also follow the widget authoring instruction when relevant.
 - Validation uses the narrowest relevant Bazel target first.
 - Example-sketch compile coverage uses the emulation `:main` build when
   relevant.

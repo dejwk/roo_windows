@@ -13,13 +13,14 @@ Apply the local
 first, then use the repo-specific guidance below.
 
 Primary references:
-[docs/widget_authoring.md](../../../docs/widget_authoring.md)
+[roo-windows-widget-authoring instruction](../../instructions/roo-windows-widget-authoring.instructions.md)
 [docs/material3_buttons_design.md](../../../docs/material3_buttons_design.md)
 [docs/material3_lists_design.md](../../../docs/material3_lists_design.md)
 
 ## roo_windows-Specific Rules
 
-- Respect the widget authoring guidance in `docs/widget_authoring.md`.
+- Respect the widget authoring guidance in the
+  [roo-windows-widget-authoring instruction](../../instructions/roo-windows-widget-authoring.instructions.md).
 - Discuss RAM impact in the detailed design whenever the proposal touches
   widgets, painting, state, callbacks, ownership, or public API.
 - Optimize for per-instance RAM first; avoid proposals that require new stored
