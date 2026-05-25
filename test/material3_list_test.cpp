@@ -14,6 +14,8 @@ namespace {
 
 static_assert(std::is_base_of<Container, ListEntry>::value,
               "ListEntry must keep the fixed-child Container boundary");
+static_assert(std::is_base_of<ListEntry, ListRow<StandardListItem>>::value,
+              "ListRow must remain a thin ListEntry adapter");
 static_assert(std::is_base_of<Container, List>::value,
               "List must remain a public widget container");
 static_assert(!std::is_base_of<FlexLayout, List>::value,
@@ -41,6 +43,16 @@ class TestWidget : public BasicWidget {
 class TestListEntry : public ListEntry {
  public:
   explicit TestListEntry(ApplicationContext& context) : ListEntry(context) {}
+
+  using ListEntry::getChild;
+  using ListEntry::getChildrenCount;
+};
+
+class TestStandardListRow : public ListRow<StandardListItem> {
+ public:
+  template <typename... Args>
+  explicit TestStandardListRow(ApplicationContext& context, Args&&... args)
+      : ListRow<StandardListItem>(context, std::forward<Args>(args)...) {}
 
   using ListEntry::getChild;
   using ListEntry::getChildrenCount;
@@ -294,6 +306,50 @@ TEST(Material3List, ListEntryRefreshesMutableTextWithoutReplacingSlots) {
   EXPECT_EQ(1, entry.getChildrenCount());
 }
 
+// Verifies that ListRow owns exactly one inline item, binds it immediately,
+// and exposes the same row contracts through the inherited ListEntry surface.
+TEST(Material3List, ListRowOwnsAndBindsItsInlineItem) {
+  roo_scheduler::Scheduler scheduler;
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
+  TestStandardListRow row(
+      context, StandardListItemInit::TwoLine("Schedule", "Weekdays only"));
+
+  EXPECT_TRUE(row.hasItem());
+  EXPECT_EQ(&row.item(), static_cast<ListEntry&>(row).item());
+  EXPECT_EQ("Schedule", std::string(row.item().headlineText()));
+  EXPECT_EQ("Weekdays only", std::string(row.item().supportingText()));
+  EXPECT_EQ(2, row.getChildrenCount());
+
+  Dimensions measured =
+      row.measure(WidthSpec::Exactly(180), HeightSpec::Unspecified(0));
+  EXPECT_EQ(180, measured.width());
+  EXPECT_GE(measured.height(), Scaled(72));
+}
+
+// Verifies that List continues to accept borrowed and adopted ListRow
+// instances because the bridge adds ownership glue, not a second row model.
+TEST(Material3List, ListAcceptsBorrowedAndAdoptedListRows) {
+  roo_scheduler::Scheduler scheduler;
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
+  TestList list(context);
+  ListRow<StandardListItem> borrowed(context,
+                                     StandardListItemInit::OneLine("Borrowed"));
+  auto adopted = std::make_unique<ListRow<StandardListItem>>(
+      context, StandardListItemInit::OneLine("Adopted"));
+  ListRow<StandardListItem>* adopted_raw = adopted.get();
+
+  list.add(borrowed);
+  list.add(std::move(adopted));
+
+  EXPECT_EQ(2, list.getChildrenCount());
+  EXPECT_EQ(&borrowed, &list.getChild(0));
+  EXPECT_EQ(adopted_raw, &list.getChild(1));
+  EXPECT_EQ(&list, borrowed.parent());
+  EXPECT_EQ(&list, adopted_raw->parent());
+}
+
 // Verifies that List keeps borrowed entries borrowed, adopts unique_ptr rows,
 // and detaches or destroys them correctly on clear().
 TEST(Material3List, ListClearsBorrowedAndAdoptedEntriesWithCorrectOwnership) {
@@ -467,6 +523,8 @@ TEST(Material3List, BaselineTypesStayWithinPhaseOneSizeBudget) {
   EXPECT_LE(sizeof(ListEntry), kListEntryBudget);
   EXPECT_LE(sizeof(ExpandablePanel), kExpandablePanelBudget);
   EXPECT_LE(sizeof(List), kListBudget);
+  EXPECT_LE(sizeof(ListRow<StandardListItem>),
+            sizeof(ListEntry) + sizeof(StandardListItem) + sizeof(void*));
 }
 
 }  // namespace

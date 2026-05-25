@@ -87,18 +87,6 @@ void initDisplay() {
 
 namespace {
 
-class OwnedStandardListRow : public material3::ListEntry {
- public:
-  OwnedStandardListRow(ApplicationContext& context,
-                       const material3::StandardListItemInit& init)
-      : material3::ListEntry(context), item_(init) {
-    setItem(item_);
-  }
-
- private:
-  material3::StandardListItem item_;
-};
-
 class StaticSettingsSection : public FlexLayout {
  public:
   explicit StaticSettingsSection(ApplicationContext& context)
@@ -109,17 +97,16 @@ class StaticSettingsSection : public FlexLayout {
                   "selected states.",
                   font_caption()),
         list_(context),
-        pool_mode_entry_(context),
-        pool_mode_item_(
-            material3::StandardListItemInit::TwoLine("Pool pump", "Auto")),
-        solar_delta_entry_(context),
-        solar_delta_item_(material3::StandardListItemInit::TwoLine(
-            "Solar delta",
-            "Starts when the roof loop exceeds the pool by 4 C")),
-        safety_lock_entry_(context),
         safety_lock_switch_(context, material3::Switch::OnOffState::kOff),
-        safety_lock_item_(material3::StandardListItemInit::OneLine(
-            "Safety lock", nullptr, &safety_lock_switch_)) {
+        pool_mode_row_(context, material3::StandardListItemInit::TwoLine(
+                                    "Pool pump", "Auto")),
+        solar_delta_row_(
+            context, material3::StandardListItemInit::TwoLine(
+                         "Solar delta",
+                         "Starts when the roof loop exceeds the pool by 4 C")),
+        safety_lock_row_(context,
+                         material3::StandardListItemInit::OneLine(
+                             "Safety lock", nullptr, &safety_lock_switch_)) {
     setGap(Scaled(6));
 
     material3::ListSelectionPolicy selection_policy;
@@ -129,15 +116,12 @@ class StaticSettingsSection : public FlexLayout {
     material3::ListEntryVisualContext selected_context;
     selected_context.selected = true;
 
-    pool_mode_entry_.setItem(pool_mode_item_);
-    solar_delta_entry_.setItem(solar_delta_item_);
-    solar_delta_entry_.setVisualContext(selected_context);
-    safety_lock_entry_.setItem(safety_lock_item_);
-    safety_lock_entry_.setVisualContext(selected_context);
+    solar_delta_row_.setVisualContext(selected_context);
+    safety_lock_row_.setVisualContext(selected_context);
 
-    list_.add(pool_mode_entry_);
-    list_.add(solar_delta_entry_);
-    list_.add(safety_lock_entry_);
+    list_.add(pool_mode_row_);
+    list_.add(solar_delta_row_);
+    list_.add(safety_lock_row_);
 
     add(title_, {.flex_grow = 0, .flex_shrink = 0});
     add(subtitle_, {.flex_grow = 0, .flex_shrink = 0});
@@ -148,13 +132,10 @@ class StaticSettingsSection : public FlexLayout {
   TextLabel title_;
   TextLabel subtitle_;
   material3::List list_;
-  material3::ListEntry pool_mode_entry_;
-  material3::StandardListItem pool_mode_item_;
-  material3::ListEntry solar_delta_entry_;
-  material3::StandardListItem solar_delta_item_;
-  material3::ListEntry safety_lock_entry_;
   material3::Switch safety_lock_switch_;
-  material3::StandardListItem safety_lock_item_;
+  material3::ListRow<material3::StandardListItem> pool_mode_row_;
+  material3::ListRow<material3::StandardListItem> solar_delta_row_;
+  material3::ListRow<material3::StandardListItem> safety_lock_row_;
 };
 
 class AdoptedRowsSection : public FlexLayout {
@@ -163,8 +144,8 @@ class AdoptedRowsSection : public FlexLayout {
       : FlexLayout(context, FlexDirection::kColumn),
         title_(context, "Expressive segmented rows", font_body1()),
         subtitle_(context,
-                  "The baseline owning-row pattern still reads clearly without "
-                  "extra wrappers.",
+                  "Owned rows use the generic ListRow bridge instead of a "
+                  "custom row subclass.",
                   font_caption()),
         list_(context) {
     setGap(Scaled(6));
@@ -178,17 +159,20 @@ class AdoptedRowsSection : public FlexLayout {
     material3::ListEntryVisualContext selected_context;
     selected_context.selected = true;
 
-    auto morning = std::make_unique<OwnedStandardListRow>(
-        context, material3::StandardListItemInit::TwoLine("06:30 pool pump",
-                                                          "Weekdays only"));
-    auto solar = std::make_unique<OwnedStandardListRow>(
-        context,
-        material3::StandardListItemInit::TwoLine(
-            "09:15 solar assist", "Starts when the roof loop is warmer"));
-    auto spa = std::make_unique<OwnedStandardListRow>(
-        context,
-        material3::StandardListItemInit::TwoLine(
-            "18:45 spa filter", "Skips automatically during freeze guard"));
+    auto morning =
+        std::make_unique<material3::ListRow<material3::StandardListItem>>(
+            context, material3::StandardListItemInit::TwoLine("06:30 pool pump",
+                                                              "Weekdays only"));
+    auto solar =
+        std::make_unique<material3::ListRow<material3::StandardListItem>>(
+            context,
+            material3::StandardListItemInit::TwoLine(
+                "09:15 solar assist", "Starts when the roof loop is warmer"));
+    auto spa =
+        std::make_unique<material3::ListRow<material3::StandardListItem>>(
+            context,
+            material3::StandardListItemInit::TwoLine(
+                "18:45 spa filter", "Skips automatically during freeze guard"));
 
     solar->setVisualContext(selected_context);
 
@@ -217,29 +201,22 @@ class MenuPrototypeSection : public FlexLayout {
             "A compact baseline list reusing the same row and item primitives.",
             font_caption()),
         list_(context),
-        refresh_entry_(context),
         refresh_shortcut_(context, "R", font_caption()),
-        refresh_item_(material3::StandardListItemInit::OneLine(
-            "Refresh", nullptr, &refresh_shortcut_)),
-        edit_entry_(context),
         edit_shortcut_(context, "E", font_caption()),
-        edit_item_(material3::StandardListItemInit::OneLine(
-            "Edit schedule", nullptr, &edit_shortcut_)),
-        remove_entry_(context),
         remove_shortcut_(context, "Del", font_caption()),
-        remove_item_(material3::StandardListItemInit::OneLine(
-            "Remove", nullptr, &remove_shortcut_)) {
+        refresh_row_(context, material3::StandardListItemInit::OneLine(
+                                  "Refresh", nullptr, &refresh_shortcut_)),
+        edit_row_(context, material3::StandardListItemInit::OneLine(
+                               "Edit schedule", nullptr, &edit_shortcut_)),
+        remove_row_(context, material3::StandardListItemInit::OneLine(
+                                 "Remove", nullptr, &remove_shortcut_)) {
     setGap(Scaled(6));
 
     list_.setVariant(material3::ListVariant::kBaseline);
 
-    refresh_entry_.setItem(refresh_item_);
-    edit_entry_.setItem(edit_item_);
-    remove_entry_.setItem(remove_item_);
-
-    list_.add(refresh_entry_);
-    list_.add(edit_entry_);
-    list_.add(remove_entry_);
+    list_.add(refresh_row_);
+    list_.add(edit_row_);
+    list_.add(remove_row_);
 
     add(title_, {.flex_grow = 0, .flex_shrink = 0});
     add(subtitle_, {.flex_grow = 0, .flex_shrink = 0});
@@ -250,15 +227,12 @@ class MenuPrototypeSection : public FlexLayout {
   TextLabel title_;
   TextLabel subtitle_;
   material3::List list_;
-  material3::ListEntry refresh_entry_;
   TextLabel refresh_shortcut_;
-  material3::StandardListItem refresh_item_;
-  material3::ListEntry edit_entry_;
   TextLabel edit_shortcut_;
-  material3::StandardListItem edit_item_;
-  material3::ListEntry remove_entry_;
   TextLabel remove_shortcut_;
-  material3::StandardListItem remove_item_;
+  material3::ListRow<material3::StandardListItem> refresh_row_;
+  material3::ListRow<material3::StandardListItem> edit_row_;
+  material3::ListRow<material3::StandardListItem> remove_row_;
 };
 
 class ListsScreen : public SimpleScrollablePanel {
@@ -268,8 +242,8 @@ class ListsScreen : public SimpleScrollablePanel {
         content_(context, FlexDirection::kColumn),
         title_(context, "Material 3 lists", font_h6()),
         subtitle_(context,
-                  "Phase 4 - static settings, adopted rows, and a menu-like "
-                  "prototype",
+                  "Phase 5 - generic ListRow ownership glue across settings, "
+                  "adopted rows, and a menu-like prototype",
                   font_caption()),
         top_divider_(context),
         settings_(context),

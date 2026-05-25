@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "roo_display/core/utf8.h"
@@ -377,6 +378,26 @@ class StandardListItem : public ListItem {
   uint8_t leading_alignment_ : 1;
   uint8_t trailing_alignment_ : 1;
   uint8_t prefer_top_text_alignment_ : 1;
+};
+
+/// Thin ownership adapter that binds one inline-owned item to a `ListEntry`.
+template <typename Item>
+class ListRow : public ListEntry {
+ public:
+  template <typename... Args>
+  explicit ListRow(ApplicationContext& context, Args&&... args)
+      : ListEntry(context), item_(std::forward<Args>(args)...) {
+    setItem(item_);
+  }
+
+  /// Returns the row-owned item.
+  Item& item() { return item_; }
+
+  /// Returns the row-owned item.
+  const Item& item() const { return item_; }
+
+ private:
+  Item item_;
 };
 
 /// Material 3 list container that owns row sequencing policy.
