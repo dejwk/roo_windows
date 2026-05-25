@@ -2,10 +2,9 @@
 
 #include <algorithm>
 
-#include "roo_display/ui/alignment.h"
-#include "roo_display/ui/text_label.h"
 #include "roo_logging.h"
 #include "roo_windows/core/theme.h"
+#include "roo_windows/widgets/text_label.h"
 
 namespace roo_windows {
 namespace material3 {
@@ -273,13 +272,6 @@ RowLayoutMetrics ResolveRowLayout(const ListEntry& entry, WidthSpec width_spec,
                           body_width};
 }
 
-void DrawTextLine(const Canvas& canvas, roo_display::StringView text,
-                  const roo_display::Font& font, Color color, Rect bounds) {
-  if (text.empty() || bounds.empty()) return;
-  canvas.drawTiled(roo_display::ClippedStringViewLabel(text, font, color),
-                   bounds, roo_display::kLeft | roo_display::kMiddle);
-}
-
 ListItemPosition PositionForIndex(int idx, int count) {
   if (count <= 1) return ListItemPosition::kSingle;
   if (idx == 0) return ListItemPosition::kFirst;
@@ -350,8 +342,8 @@ StandardListItemInit StandardListItemInit::ThreeLine(
   return init;
 }
 
-ExpandablePanel::ExpandablePanel(const Environment& env)
-    : Container(env),
+ExpandablePanel::ExpandablePanel(ApplicationContext& context)
+  : Container(context),
       content_(),
       animation_duration_millis_(0),
       animation_progress_millis_(0),
@@ -397,10 +389,13 @@ Widget& ExpandablePanel::getChild(int idx) {
       static_cast<const ExpandablePanel&>(*this).getChild(idx));
 }
 
-ListEntry::ListEntry(const Environment& env)
-    : Container(env),
+ListEntry::ListEntry(ApplicationContext& context)
+  : Container(context),
       item_(nullptr),
       leading_child_(nullptr),
+  overline_label_(nullptr),
+  headline_label_(nullptr),
+  supporting_label_(nullptr),
       trailing_child_(nullptr),
       body_child_(nullptr),
       visual_context_() {}
@@ -413,6 +408,68 @@ ListItem* ListEntry::item() { return item_; }
 
 const ListItem* ListEntry::item() const { return item_; }
 
+void ListEntry::clearTextLabel(StringViewLabel*& label) {
+  if (label == nullptr) return;
+  detachChild(label);
+  label = nullptr;
+}
+
+void ListEntry::clearTextSlots() {
+  clearTextLabel(supporting_label_);
+  clearTextLabel(headline_label_);
+  clearTextLabel(overline_label_);
+}
+
+void ListEntry::detachBoundChildren() {
+  clearTextSlots();
+  if (body_child_ != nullptr) {
+    detachChild(body_child_);
+    body_child_ = nullptr;
+  }
+  if (trailing_child_ != nullptr) {
+    detachChild(trailing_child_);
+    trailing_child_ = nullptr;
+  }
+  if (leading_child_ != nullptr) {
+    detachChild(leading_child_);
+    leading_child_ = nullptr;
+  }
+  item_ = nullptr;
+}
+
+void ListEntry::syncTextSlotsFromItem() {
+  if (item_ == nullptr) {
+    clearTextSlots();
+    return;
+  }
+
+  auto sync_label = [this](StringViewLabel*& label,
+                           roo_display::StringView text,
+                           const roo_display::Font& font,
+                           roo_display::Color color) {
+    if (text.empty()) {
+      clearTextLabel(label);
+      return;
+    }
+    if (label == nullptr) {
+      auto owned = std::make_unique<StringViewLabel>(
+          context(), text, font, color, kGravityLeft | kGravityMiddle);
+      label = owned.get();
+      attachChild(WidgetRef(std::move(owned)));
+      return;
+    }
+    label->setText(text);
+  };
+
+  const Theme& theme = context().theme();
+  sync_label(overline_label_, item_->overlineText(), FontForOverline(),
+             theme.color.onSurfaceVariant);
+  sync_label(headline_label_, item_->headlineText(), FontForHeadline(),
+             theme.color.onSurface);
+  sync_label(supporting_label_, item_->supportingText(),
+             FontForSupporting(), theme.color.onSurfaceVariant);
+}
+
 void ListEntry::setItem(ListItem& item) {
   if (item_ == &item) {
     refreshFromItem();
@@ -420,7 +477,7 @@ void ListEntry::setItem(ListItem& item) {
   }
   // A binding owns a stable borrowed slot set for its whole lifetime, so a
   // rebind always detaches the old children before attaching the new ones.
-  clearItem();
+  detachBoundChildren();
   Widget* leading = item.leading();
   Widget* trailing = item.trailing();
   Widget* body = item.body();
@@ -443,25 +500,18 @@ void ListEntry::setItem(ListItem& item) {
     attachChild(WidgetRef(*body));
     body_child_ = body;
   }
+  syncTextSlotsFromItem();
   invalidateInterior();
   requestLayout();
 }
 
 void ListEntry::clearItem() {
-  if (item_ == nullptr) return;
-  if (body_child_ != nullptr) {
-    detachChild(body_child_);
-    body_child_ = nullptr;
+  if (item_ == nullptr && leading_child_ == nullptr && overline_label_ == nullptr &&
+      headline_label_ == nullptr && supporting_label_ == nullptr &&
+      trailing_child_ == nullptr && body_child_ == nullptr) {
+    return;
   }
-  if (trailing_child_ != nullptr) {
-    detachChild(trailing_child_);
-    trailing_child_ = nullptr;
-  }
-  if (leading_child_ != nullptr) {
-    detachChild(leading_child_);
-    leading_child_ = nullptr;
-  }
-  item_ = nullptr;
+  detachBoundChildren();
   invalidateInterior();
   requestLayout();
 }
@@ -471,6 +521,7 @@ void ListEntry::refreshFromItem() {
   CHECK(item_->leading() == leading_child_);
   CHECK(item_->trailing() == trailing_child_);
   CHECK(item_->body() == body_child_);
+  syncTextSlotsFromItem();
   invalidateInterior();
   requestLayout();
 }
@@ -492,39 +543,6 @@ ColorRole ListEntry::containerRole() const {
   return ColorRole::kSurface;
 }
 
-void ListEntry::paint(const Canvas& canvas) const {
-  // Borrowed slot widgets paint through normal child traversal; this pass only
-  // settles the row background and descriptor text.
-  canvas.clear();
-  if (item_ == nullptr) return;
-  RowLayoutMetrics layout = ResolveRowLayout(
-      *this, WidthSpec::Exactly(width()), HeightSpec::Exactly(height()));
-  Color headline_color = theme().color.onSurface;
-  Color supporting_color = theme().color.onSurfaceVariant;
-
-  int16_t y = layout.text_y;
-  if (!item_->overlineText().empty()) {
-    Rect line_bounds(layout.text_x, y, layout.text_x + layout.text_width - 1,
-                     y + TextLineHeight(FontForOverline()) - 1);
-    DrawTextLine(canvas, item_->overlineText(), FontForOverline(),
-                 supporting_color, line_bounds);
-    y += TextLineHeight(FontForOverline());
-  }
-  if (!item_->headlineText().empty()) {
-    Rect line_bounds(layout.text_x, y, layout.text_x + layout.text_width - 1,
-                     y + TextLineHeight(FontForHeadline()) - 1);
-    DrawTextLine(canvas, item_->headlineText(), FontForHeadline(),
-                 headline_color, line_bounds);
-    y += TextLineHeight(FontForHeadline());
-  }
-  if (!item_->supportingText().empty()) {
-    Rect line_bounds(layout.text_x, y, layout.text_x + layout.text_width - 1,
-                     y + TextLineHeight(FontForSupporting()) - 1);
-    DrawTextLine(canvas, item_->supportingText(), FontForSupporting(),
-                 supporting_color, line_bounds);
-  }
-}
-
 Dimensions ListEntry::getSuggestedMinimumDimensions() const {
   RowLayoutMetrics layout = ResolveRowLayout(
       *this, WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
@@ -534,6 +552,9 @@ Dimensions ListEntry::getSuggestedMinimumDimensions() const {
 int ListEntry::getChildrenCount() const {
   int count = 0;
   if (leading_child_ != nullptr) ++count;
+  if (overline_label_ != nullptr) ++count;
+  if (headline_label_ != nullptr) ++count;
+  if (supporting_label_ != nullptr) ++count;
   if (trailing_child_ != nullptr) ++count;
   if (body_child_ != nullptr) ++count;
   return count;
@@ -543,6 +564,18 @@ const Widget& ListEntry::getChild(int idx) const {
   CHECK(idx >= 0);
   if (leading_child_ != nullptr) {
     if (idx == 0) return *leading_child_;
+    --idx;
+  }
+  if (overline_label_ != nullptr) {
+    if (idx == 0) return *overline_label_;
+    --idx;
+  }
+  if (headline_label_ != nullptr) {
+    if (idx == 0) return *headline_label_;
+    --idx;
+  }
+  if (supporting_label_ != nullptr) {
+    if (idx == 0) return *supporting_label_;
     --idx;
   }
   if (trailing_child_ != nullptr) {
@@ -572,6 +605,37 @@ void ListEntry::onLayout(bool changed, const Rect& rect) {
   // slot placement stays consistent with the resolved text layout.
   RowLayoutMetrics layout = ResolveRowLayout(
       *this, WidthSpec::Exactly(rect.width()), HeightSpec::Exactly(rect.height()));
+
+  auto layout_text_label = [this](StringViewLabel* label, int16_t x, int16_t y,
+                                  int16_t max_width) {
+    if (label == nullptr || label->isGone()) return;
+    if (max_width <= 0) {
+      label->layout(Rect(0, 0, -1, -1));
+      return;
+    }
+    Dimensions measured = label->measure(WidthSpec::AtMost(max_width),
+                                         HeightSpec::Unspecified(0));
+    int16_t label_width = std::min<int16_t>(measured.width(), max_width);
+    if (label_width <= 0 || measured.height() <= 0) {
+      label->layout(Rect(0, 0, -1, -1));
+      return;
+    }
+    label->layout(Rect(x, y, x + label_width - 1,
+                       y + measured.height() - 1));
+  };
+
+  int16_t text_y = layout.text_y;
+  layout_text_label(overline_label_, layout.text_x, text_y, layout.text_width);
+  if (overline_label_ != nullptr) {
+    text_y += TextLineHeight(FontForOverline());
+  }
+  layout_text_label(headline_label_, layout.text_x, text_y, layout.text_width);
+  if (headline_label_ != nullptr) {
+    text_y += TextLineHeight(FontForHeadline());
+  }
+  layout_text_label(supporting_label_, layout.text_x, text_y,
+                    layout.text_width);
+
   if (leading_child_ != nullptr && !leading_child_->isGone()) {
     leading_child_->layout(Rect(layout.leading_x, layout.leading_y,
                                 layout.leading_x + layout.leading.width() - 1,
@@ -657,8 +721,8 @@ Widget* StandardListItem::trailingWidget() { return trailing_; }
 
 Widget* StandardListItem::bodyWidget() { return body_; }
 
-List::List(const Environment& env)
-    : Container(env),
+List::List(ApplicationContext& context)
+  : Container(context),
       entries_(),
       selected_entries_(),
       variant_(ListVariant::kExpressive),

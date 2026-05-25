@@ -10,6 +10,9 @@
 #include "roo_windows/core/widget_ref.h"
 
 namespace roo_windows {
+
+class StringViewLabel;
+
 namespace material3 {
 
 /// Selects the Material 3 list visual family.
@@ -205,7 +208,7 @@ class ListItem {
 class ExpandablePanel : public Container {
  public:
   /// Creates an empty collapsed expandable panel.
-  explicit ExpandablePanel(const Environment& env);
+  explicit ExpandablePanel(ApplicationContext& context);
 
   /// Sets the expandable content widget.
   void setContent(WidgetRef content);
@@ -241,7 +244,7 @@ class ExpandablePanel : public Container {
 class ListEntry : public Container {
  public:
   /// Creates an empty Material 3 list row surface.
-  explicit ListEntry(const Environment& env);
+  explicit ListEntry(ApplicationContext& context);
 
   /// Detaches any stable slot children that are still bound.
   ~ListEntry() override;
@@ -280,9 +283,6 @@ class ListEntry : public Container {
   /// Returns the row's Material 3 container color role.
   ColorRole containerRole() const override;
 
-  /// Paints standard text descriptors for the bound item.
-  void paint(const Canvas& canvas) const override;
-
   /// Returns the minimum dimensions for the bound item and slot widgets.
   Dimensions getSuggestedMinimumDimensions() const override;
 
@@ -294,8 +294,16 @@ class ListEntry : public Container {
   void onLayout(bool changed, const Rect& rect) override;
 
  private:
+  void detachBoundChildren();
+  void clearTextLabel(StringViewLabel*& label);
+  void clearTextSlots();
+  void syncTextSlotsFromItem();
+
   ListItem* item_;
   Widget* leading_child_;
+  StringViewLabel* overline_label_;
+  StringViewLabel* headline_label_;
+  StringViewLabel* supporting_label_;
   Widget* trailing_child_;
   Widget* body_child_;
   ListEntryVisualContext visual_context_;
@@ -375,7 +383,7 @@ class StandardListItem : public ListItem {
 class List : public Container {
  public:
   /// Creates an empty column-oriented Material 3 list.
-  explicit List(const Environment& env);
+  explicit List(ApplicationContext& context);
 
   /// Releases any adopted rows still attached to this list.
   ~List() override;

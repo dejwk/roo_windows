@@ -4,7 +4,6 @@
 #include "gtest/gtest.h"
 #include "roo_scheduler.h"
 #include "roo_windows/containers/flex_layout.h"
-#include "roo_windows/core/application_context.h"
 #include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/material3/list/list.h"
@@ -12,11 +11,6 @@
 namespace roo_windows {
 namespace material3 {
 namespace {
-
-ApplicationContext MakeContext(Environment& env) {
-  return ApplicationContext(env.scheduler(), env.theme(),
-                            env.keyboardColorTheme());
-}
 
 static_assert(std::is_base_of<Container, ListEntry>::value,
               "ListEntry must keep the fixed-child Container boundary");
@@ -33,8 +27,8 @@ static_assert(std::is_base_of<ListItem, StandardListItem>::value,
 
 class TestWidget : public BasicWidget {
  public:
-  explicit TestWidget(ApplicationContext& env, Dimensions dimensions = {})
-      : BasicWidget(env), dimensions_(dimensions) {}
+  explicit TestWidget(ApplicationContext& context, Dimensions dimensions = {})
+      : BasicWidget(context), dimensions_(dimensions) {}
 
   Dimensions getSuggestedMinimumDimensions() const override {
     return dimensions_;
@@ -46,7 +40,7 @@ class TestWidget : public BasicWidget {
 
 class TestListEntry : public ListEntry {
  public:
-  explicit TestListEntry(ApplicationContext& env) : ListEntry(env) {}
+  explicit TestListEntry(ApplicationContext& context) : ListEntry(context) {}
 
   using ListEntry::getChild;
   using ListEntry::getChildrenCount;
@@ -54,7 +48,7 @@ class TestListEntry : public ListEntry {
 
 class TestList : public List {
  public:
-  explicit TestList(ApplicationContext& env) : List(env) {}
+  explicit TestList(ApplicationContext& context) : List(context) {}
 
   using List::getChild;
   using List::getChildrenCount;
@@ -62,8 +56,8 @@ class TestList : public List {
 
 class TrackingListEntry : public ListEntry {
  public:
-  TrackingListEntry(ApplicationContext& env, bool& destroyed)
-      : ListEntry(env), destroyed_(destroyed) {}
+  TrackingListEntry(ApplicationContext& context, bool& destroyed)
+      : ListEntry(context), destroyed_(destroyed) {}
 
   ~TrackingListEntry() override { destroyed_ = true; }
 
@@ -125,8 +119,8 @@ TEST(Material3List, PolicyDefaultsMatchDesign) {
 // without requiring any row widget behavior.
 TEST(Material3List, StandardListItemInitPresetsPopulateDescriptorData) {
   roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
-  ApplicationContext context = MakeContext(env);
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
   TestWidget leading(context);
   TestWidget trailing(context);
   TestWidget body(context);
@@ -162,8 +156,8 @@ TEST(Material3List, StandardListItemInitPresetsPopulateDescriptorData) {
 // the stable borrowed widgets from its init descriptor.
 TEST(Material3List, StandardListItemMirrorsInitDescriptor) {
   roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
-  ApplicationContext context = MakeContext(env);
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
   TestWidget leading(context);
   TestWidget trailing(context);
 
@@ -192,8 +186,8 @@ TEST(Material3List, StandardListItemMirrorsInitDescriptor) {
 // state before row layout, child binding, and expansion behavior are added.
 TEST(Material3List, BaselineClassesConstructWithSafeDefaults) {
   roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
-  ApplicationContext context = MakeContext(env);
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   ListEntry entry(context);
   EXPECT_FALSE(entry.hasItem());
@@ -221,12 +215,12 @@ TEST(Material3List, BaselineClassesConstructWithSafeDefaults) {
   list.clear();
 }
 
-// Verifies that binding a standard item attaches exactly the stable slot
-// widgets exposed by the item, and clearing the item detaches them again.
+// Verifies that binding a standard item attaches the stable borrowed slot
+// widgets plus row-owned text labels, and clearing the item detaches them.
 TEST(Material3List, ListEntryBindsAndClearsStableSlotChildren) {
   roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
-  ApplicationContext context = MakeContext(env);
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
   TestWidget leading(context, Dimensions(20, 20));
   TestWidget trailing(context, Dimensions(12, 16));
   TestWidget body(context, Dimensions(80, 10));
@@ -238,10 +232,7 @@ TEST(Material3List, ListEntryBindsAndClearsStableSlotChildren) {
 
   EXPECT_TRUE(entry.hasItem());
   EXPECT_EQ(&item, entry.item());
-  EXPECT_EQ(3, entry.getChildrenCount());
-  EXPECT_EQ(&leading, &entry.getChild(0));
-  EXPECT_EQ(&trailing, &entry.getChild(1));
-  EXPECT_EQ(&body, &entry.getChild(2));
+  EXPECT_EQ(6, entry.getChildrenCount());
   EXPECT_EQ(&entry, leading.parent());
   EXPECT_EQ(&entry, trailing.parent());
   EXPECT_EQ(&entry, body.parent());
@@ -260,8 +251,8 @@ TEST(Material3List, ListEntryBindsAndClearsStableSlotChildren) {
 // widgets according to the default Material 3 row padding and alignment.
 TEST(Material3List, ListEntryMeasuresAndLaysOutSlots) {
   roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
-  ApplicationContext context = MakeContext(env);
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
   TestWidget leading(context, Dimensions(20, 20));
   TestWidget trailing(context, Dimensions(12, 16));
   StandardListItem item(
@@ -283,11 +274,11 @@ TEST(Material3List, ListEntryMeasuresAndLaysOutSlots) {
 }
 
 // Verifies that refreshFromItem rereads lightweight descriptor state while
-// preserving the already attached slot widget identity.
+// preserving the already attached slot widget identity and row-owned labels.
 TEST(Material3List, ListEntryRefreshesMutableTextWithoutReplacingSlots) {
   roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
-  ApplicationContext context = MakeContext(env);
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
   MutableListItem item("A");
   TestListEntry entry(context);
   entry.setItem(item);
@@ -300,15 +291,15 @@ TEST(Material3List, ListEntryRefreshesMutableTextWithoutReplacingSlots) {
       entry.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
 
   EXPECT_GT(long_measure.width(), short_measure.width());
-  EXPECT_EQ(0, entry.getChildrenCount());
+  EXPECT_EQ(1, entry.getChildrenCount());
 }
 
 // Verifies that List keeps borrowed entries borrowed, adopts unique_ptr rows,
 // and detaches or destroys them correctly on clear().
 TEST(Material3List, ListClearsBorrowedAndAdoptedEntriesWithCorrectOwnership) {
   roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
-  ApplicationContext context = MakeContext(env);
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
   TestList list(context);
   TestListEntry borrowed(context);
   bool adopted_destroyed = false;
@@ -336,8 +327,8 @@ TEST(Material3List, ListClearsBorrowedAndAdoptedEntriesWithCorrectOwnership) {
 // roles as rows are added and list-level policies change.
 TEST(Material3List, ListPropagatesPositionVariantStyleAndSegmentedGap) {
   roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
-  ApplicationContext context = MakeContext(env);
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
   TestList list(context);
   TestListEntry first(context);
   TestListEntry second(context);
@@ -380,8 +371,8 @@ TEST(Material3List, ListPropagatesPositionVariantStyleAndSegmentedGap) {
 // divider visibility from stored per-entry selection hints.
 TEST(Material3List, ListResolvesSelectionAndDividerContext) {
   roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
-  ApplicationContext context = MakeContext(env);
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
   TestList list(context);
   TestListEntry first(context);
   TestListEntry second(context);
@@ -434,8 +425,8 @@ TEST(Material3List, ListResolvesSelectionAndDividerContext) {
 // disabled, and collapse back to contiguous row stacking when dividers are on.
 TEST(Material3List, ListGapResolutionDependsOnDividerPolicy) {
   roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
-  ApplicationContext context = MakeContext(env);
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
   TestList list(context);
   TestListEntry first(context);
   TestListEntry second(context);
@@ -467,7 +458,7 @@ TEST(Material3List, BaselineTypesStayWithinPhaseOneSizeBudget) {
   constexpr size_t kStandardItemBudget =
       3 * sizeof(roo_display::StringView) + 4 * sizeof(void*) + 16;
   constexpr size_t kListEntryBudget =
-      sizeof(Container) + 4 * sizeof(void*) + 16;
+      sizeof(Container) + 7 * sizeof(void*) + 16;
   constexpr size_t kExpandablePanelBudget =
       sizeof(Container) + sizeof(WidgetRef) + 8;
   constexpr size_t kListBudget = sizeof(Container) + sizeof(void*) * 8 + 16;
