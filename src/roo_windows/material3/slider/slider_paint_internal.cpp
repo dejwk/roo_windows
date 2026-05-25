@@ -8,6 +8,34 @@ namespace roo_windows {
 namespace material3 {
 namespace internal {
 
+namespace {
+
+roo_display::RoundRectRadii TrackSegmentRadii(
+    const SliderAxisMetrics& axis, const SliderPaintStopSegment& segment,
+    int16_t track_radius) {
+  float start_radius = SegmentTouchesBoundary(axis, segment, true)
+                           ? (float)track_radius
+                           : (float)kTrackInnerEndRadiusPixels;
+  float end_radius = SegmentTouchesBoundary(axis, segment, false)
+                         ? (float)track_radius
+                         : (float)kTrackInnerEndRadiusPixels;
+  bool start_maps_to_low_display =
+      axis.displayPrimary(0.0f) <=
+      axis.displayPrimary((float)(axis.primarySpan() - 1));
+  if (!axis.isVertical()) {
+    float left_radius = start_maps_to_low_display ? start_radius : end_radius;
+    float right_radius = start_maps_to_low_display ? end_radius : start_radius;
+    return roo_display::RoundRectRadii{left_radius, right_radius, left_radius,
+                                       right_radius};
+  }
+  float top_radius = start_maps_to_low_display ? start_radius : end_radius;
+  float bottom_radius = start_maps_to_low_display ? end_radius : start_radius;
+  return roo_display::RoundRectRadii{top_radius, top_radius, bottom_radius,
+                                     bottom_radius};
+}
+
+}  // namespace
+
 roo_display::Box TrackSegmentClipBox(const SliderAxisMetrics& axis,
                                      const SliderPaintStopSegment& segment,
                                      int16_t cross_start, int16_t cross_span) {
@@ -33,18 +61,13 @@ void PaintTrackSegments(const Canvas& canvas, const Rect& widget_bounds,
         TrackSegmentClipBox(axis, segments[i], cross_band.track_cross_start,
                             cross_band.track_cross_span);
     if (track_clip.empty()) continue;
-    int16_t segment_track_radius =
-        ReducedTrackRadiusForSegment(axis, segments[i], track_radius);
     SliderAxisMetrics::PaintRect track_bounds = axis.paintRectFromPrimaryCross(
-        TrackShapeMinPrimary(segments[i].min_primary, segment_track_radius),
-        cross_band.track_min_cross,
-        TrackShapeMaxPrimary(segments[i].max_primary, axis.primarySpan(),
-                             segment_track_radius),
-        cross_band.track_max_cross);
+        segments[i].min_primary, cross_band.track_min_cross,
+        segments[i].max_primary, cross_band.track_max_cross);
     auto track_piece = roo_display::SmoothFilledRoundRect(
         track_bounds.x_min, track_bounds.y_min, track_bounds.x_max,
-        track_bounds.y_max, segment_track_radius,
-        segments[i].active ? tokens.active_track : tokens.inactive_track);
+        track_bounds.y_max, TrackSegmentRadii(axis, segments[i], track_radius),
+        TrackColorForSegment(tokens, segments[i]));
     DrawTrackPiece(canvas, track_piece, widget_bounds, track_clip,
                    axis.isVertical());
   }

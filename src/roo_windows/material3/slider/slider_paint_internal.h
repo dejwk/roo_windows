@@ -14,6 +14,20 @@ namespace internal {
 inline constexpr float kPressedThumbWidthRatio = 0.5f;
 inline constexpr int16_t kStopMarkRadiusPixels = Scaled(2);
 inline constexpr int16_t kStopMarkSpanPixels = Scaled(4);
+inline constexpr int16_t kTrackInnerEndRadiusPixels = Scaled(2);
+
+inline Rect ExpandRectAlongPrimary(const SliderAxisMetrics& axis, Rect rect,
+                                   int16_t amount) {
+  if (rect.empty() || amount <= 0) return rect;
+  if (!axis.isVertical()) {
+    return Rect(std::max<int16_t>(0, rect.xMin() - amount), rect.yMin(),
+                std::min<int16_t>(axis.primarySpan() - 1, rect.xMax() + amount),
+                rect.yMax());
+  }
+  return Rect(rect.xMin(), std::max<int16_t>(0, rect.yMin() - amount),
+              rect.xMax(),
+              std::min<int16_t>(axis.primarySpan() - 1, rect.yMax() + amount));
+}
 
 // Applies the disabled Material 3 alpha treatment on top of the current
 // surface color so disabled slider pieces still blend with the theme.
@@ -67,24 +81,6 @@ template <typename SliderLike>
 inline bool ShouldRenderTicks(const SliderLike& widget) {
   return IsDiscreteSliderRange(widget.range().step) &&
          widget.style().tick_mode != SliderTickMode::kHidden;
-}
-
-// Extends the rounded track tile slightly beyond the first visible pixel so the
-// end cap still lands cleanly when the segment begins inside the clip.
-inline float TrackShapeMinPrimary(float visible_min_primary,
-                                  int16_t track_radius) {
-  return visible_min_primary <= 0.0f
-             ? -0.5f
-             : visible_min_primary - (float)track_radius;
-}
-
-// Extends the rounded track tile beyond the last visible pixel when the
-// segment ends inside the clip so the clipped edge stays flat.
-inline float TrackShapeMaxPrimary(float visible_max_primary,
-                                  int16_t primary_span, int16_t track_radius) {
-  return visible_max_primary >= (float)(primary_span - 1)
-             ? (float)primary_span - 0.5f
-             : visible_max_primary + (float)track_radius;
 }
 
 // Narrows the handle in the pressed state without changing the allocated
@@ -171,34 +167,60 @@ struct SliderPaintStopSegment {
   bool active;
 };
 
-inline int16_t ReducedTrackRadiusForSegment(
-    const SliderAxisMetrics& axis, const SliderPaintStopSegment& segment,
-    int16_t track_radius) {
+inline bool SegmentTouchesBoundary(const SliderAxisMetrics& axis,
+                                   const SliderPaintStopSegment& segment,
+                                   bool start_boundary) {
   int16_t min_primary = (int16_t)ceilf(segment.min_primary);
   int16_t max_primary = (int16_t)floorf(segment.max_primary);
   if (min_primary < 0) min_primary = 0;
   if (max_primary >= axis.primarySpan()) max_primary = axis.primarySpan() - 1;
-  if (max_primary < min_primary) return 0;
-  if (min_primary != 0 && max_primary != axis.primarySpan() - 1) {
-    return track_radius;
-  }
-  int16_t visible_span = max_primary - min_primary + 1;
-  return visible_span < track_radius ? visible_span : track_radius;
+  if (max_primary < min_primary) return false;
+  return start_boundary ? min_primary == 0
+                        : max_primary == axis.primarySpan() - 1;
 }
 
-inline bool HasReducedTrackRadiusAtBoundary(
-    const SliderAxisMetrics& axis, const SliderPaintStopSegment* segments,
-    int segment_count, int16_t track_radius, bool start_boundary) {
+inline bool HasBoundarySegment(const SliderAxisMetrics& axis,
+                               const SliderPaintStopSegment* segments,
+                               int segment_count, bool start_boundary) {
   for (int i = 0; i < segment_count; ++i) {
-    int16_t min_primary = (int16_t)ceilf(segments[i].min_primary);
-    int16_t max_primary = (int16_t)floorf(segments[i].max_primary);
-    if (min_primary < 0) min_primary = 0;
-    if (max_primary >= axis.primarySpan()) max_primary = axis.primarySpan() - 1;
-    if (max_primary < min_primary) continue;
-    if ((start_boundary && min_primary == 0) ||
-        (!start_boundary && max_primary == axis.primarySpan() - 1)) {
-      return ReducedTrackRadiusForSegment(axis, segments[i], track_radius) <
-             track_radius;
+    if (SegmentTouchesBoundary(axis, segments[i], start_boundary)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+inline bool BoundaryRadiusDependsOnWidth(const SliderAxisMetrics& axis,
+                                         const SliderPaintStopSegment& segment,
+                                         int16_t track_radius,
+                                         bool start_boundary) {
+  bool touches_start = SegmentTouchesBoundary(axis, segment, true);
+  bool touches_end = SegmentTouchesBoundary(axis, segment, false);
+  if (!(start_boundary ? touches_start : touches_end)) {
+    return false;
+  }
+  float min_primary = segment.min_primary < 0.0f ? 0.0f : segment.min_primary;
+  float max_primary = segment.max_primary;
+  float max_allowed_primary = (float)(axis.primarySpan() - 1);
+  if (max_primary > max_allowed_primary) {
+    max_primary = max_allowed_primary;
+  }
+  if (max_primary < min_primary) return false;
+  float start_radius =
+      touches_start ? (float)track_radius : (float)kTrackInnerEndRadiusPixels;
+  float end_radius =
+      touches_end ? (float)track_radius : (float)kTrackInnerEndRadiusPixels;
+  return max_primary - min_primary < start_radius + end_radius;
+}
+
+inline bool HasBoundaryDependentRadius(const SliderAxisMetrics& axis,
+                                       const SliderPaintStopSegment* segments,
+                                       int segment_count, int16_t track_radius,
+                                       bool start_boundary) {
+  for (int i = 0; i < segment_count; ++i) {
+    if (BoundaryRadiusDependsOnWidth(axis, segments[i], track_radius,
+                                     start_boundary)) {
+      return true;
     }
   }
   return false;
@@ -211,21 +233,18 @@ inline Rect BoundaryTrackStripRect(const SliderAxisMetrics& axis,
       axis.boxFromPrimaryCross(primary, 0, primary, axis.crossSpan() - 1));
 }
 
-// Unions `rect` with the boundary strips that need repainting when either the
-// `old_segments` or `new_segments` configuration results in a reduced
-// track-edge radius at the corresponding slider boundary. Used by the
-// invalidate-on-value-change path so a thumb sliding into the corner does not
-// leave behind a stale rounded cap.
-inline Rect IncludeBoundaryRadiusStrips(
+// Unions `rect` with the boundary strips whose pixels can change when a short
+// boundary-touching segment forces the round-rect radii to renormalize.
+inline Rect IncludeBoundaryTrackStrips(
     Rect rect, const SliderAxisMetrics& axis,
     const SliderPaintStopSegment* old_segments, int old_segment_count,
     const SliderPaintStopSegment* new_segments, int new_segment_count,
     int16_t track_radius) {
   for (bool start_boundary : {true, false}) {
-    if (HasReducedTrackRadiusAtBoundary(axis, old_segments, old_segment_count,
-                                        track_radius, start_boundary) ||
-        HasReducedTrackRadiusAtBoundary(axis, new_segments, new_segment_count,
-                                        track_radius, start_boundary)) {
+    if (HasBoundaryDependentRadius(axis, old_segments, old_segment_count,
+                                   track_radius, start_boundary) ||
+        HasBoundaryDependentRadius(axis, new_segments, new_segment_count,
+                                   track_radius, start_boundary)) {
       rect = Rect::Extent(rect, BoundaryTrackStripRect(axis, start_boundary));
     }
   }
@@ -242,9 +261,9 @@ struct TrackCrossBand {
   float track_max_cross;
 };
 
-// Renders every active/inactive run of `segments` using the track tokens. The
-// track tile is widened at segment ends with a reduced radius so the visible
-// rounded caps land cleanly on top of (or alongside) the surrounding stops.
+// Renders every active/inactive run of `segments` using explicit per-end
+// corner radii and tiles only the dirty slice so transparent corner pixels
+// resolve against the widget background in the same pass.
 void PaintTrackSegments(const Canvas& canvas, const Rect& widget_bounds,
                         const SliderAxisMetrics& axis,
                         const SliderPaintStopSegment* segments,

@@ -25,9 +25,9 @@ static constexpr int16_t kInsetIconMinHandleCenterDistancePixels = Scaled(12);
 static constexpr int16_t kInsetIconStopPaddingPixels = Scaled(4);
 using Tokens = internal::SliderPaintTokens;
 using StopSegment = internal::SliderPaintStopSegment;
-using internal::DrawTrackPiece;
+using internal::ExpandRectAlongPrimary;
 using internal::GetHandleTileBounds;
-using internal::IncludeBoundaryRadiusStrips;
+using internal::IncludeBoundaryTrackStrips;
 using internal::IndicatorDirtyRectFromSpan;
 using internal::kStopMarkRadiusPixels;
 using internal::MakeSliderAxisMetrics;
@@ -40,9 +40,6 @@ using internal::ShouldRenderTicks;
 using internal::ThumbWidthForState;
 using internal::TrackCrossBand;
 using internal::TrackGapForThumbWidth;
-using internal::TrackSegmentClipBox;
-using internal::TrackShapeMaxPrimary;
-using internal::TrackShapeMinPrimary;
 
 // True iff the indicator should be drawn this frame given the current
 // interaction state and behavior. kWithinBounds reuses the same interaction-
@@ -521,6 +518,8 @@ void Slider::invalidateValueChange(const internal::SliderAxisMetrics& axis,
                                    float new_value) {
   Rect thumb_rect =
       axis.invalidationRectForCenterChange(old_center, new_center);
+  thumb_rect = ExpandRectAlongPrimary(axis, thumb_rect,
+                                      internal::kTrackInnerEndRadiusPixels);
   Rect icon_envelope(0, 0, -1, -1);
   Metrics old_metrics = buildMetrics(old_center, isPressed());
   Metrics new_metrics = buildMetrics(new_center, isPressed());
@@ -532,10 +531,7 @@ void Slider::invalidateValueChange(const internal::SliderAxisMetrics& axis,
   Rect content_envelope = icon_envelope.empty()
                               ? thumb_rect
                               : Rect::Extent(thumb_rect, icon_envelope);
-  // Track-corner radius shrinks when the active/inactive boundary is near
-  // the slider's edge, so include those edge strips on either side if either
-  // the old or new layout reduces the radius there.
-  content_envelope = IncludeBoundaryRadiusStrips(
+  content_envelope = IncludeBoundaryTrackStrips(
       content_envelope, axis, old_metrics.segments, old_metrics.segment_count,
       new_metrics.segments, new_metrics.segment_count,
       old_metrics.size_metrics.track_radius);
@@ -583,6 +579,14 @@ void Slider::notifyStateChanged(uint16_t state_diff) {
   internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
   float center = axis.centerFromValue(range_, value_);
   Rect thumb_rect = axis.invalidationRectForCenterChange(center, center);
+  Metrics old_metrics = buildMetrics(center, was_pressed);
+  Metrics new_metrics = buildMetrics(center, isPressed());
+  Rect content_envelope = ExpandRectAlongPrimary(
+    axis, thumb_rect, internal::kTrackInnerEndRadiusPixels);
+  content_envelope = IncludeBoundaryTrackStrips(
+    content_envelope, axis, old_metrics.segments, old_metrics.segment_count,
+    new_metrics.segments, new_metrics.segment_count,
+    old_metrics.size_metrics.track_radius);
 
   bool old_indicator_visible =
       style_.value_indicator == SliderValueIndicatorBehavior::kAlways ||
@@ -598,12 +602,13 @@ void Slider::notifyStateChanged(uint16_t state_diff) {
   }
 
   pending_content_dirty_span_.include(
-      internal::DisplayMainSpanFromRect(thumb_rect, axis.isVertical()));
+    internal::DisplayMainSpanFromRect(content_envelope, axis.isVertical()));
   pending_indicator_dirty_span_.include(
       internal::DisplayMainSpanFromRect(bubble_envelope, axis.isVertical()));
 
-  setDirty(bubble_envelope.empty() ? thumb_rect
-                                   : Rect::Extent(thumb_rect, bubble_envelope));
+  setDirty(bubble_envelope.empty() ? content_envelope
+                   : Rect::Extent(content_envelope,
+                          bubble_envelope));
   if (!bubble_envelope.empty()) {
     notifyParentInvalidatedRegion(
         bubble_envelope.translate(offsetLeft(), offsetTop()));

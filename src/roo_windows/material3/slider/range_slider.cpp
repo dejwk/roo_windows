@@ -21,9 +21,9 @@ static constexpr int kTouchSlopPixels = Scaled(20);
 static constexpr int8_t kNoActiveThumb = -1;
 using Tokens = internal::SliderPaintTokens;
 using StopSegment = internal::SliderPaintStopSegment;
-using internal::DrawTrackPiece;
+using internal::ExpandRectAlongPrimary;
 using internal::GetHandleTileBounds;
-using internal::IncludeBoundaryRadiusStrips;
+using internal::IncludeBoundaryTrackStrips;
 using internal::IndicatorDirtyRectFromSpan;
 using internal::MakeSliderAxisMetrics;
 using internal::PaintStopRuns;
@@ -34,9 +34,6 @@ using internal::ShouldRenderTicks;
 using internal::ThumbWidthForState;
 using internal::TrackCrossBand;
 using internal::TrackGapForThumbWidth;
-using internal::TrackSegmentClipBox;
-using internal::TrackShapeMaxPrimary;
-using internal::TrackShapeMinPrimary;
 
 // True iff the indicator should be drawn this frame. Range sliders show the
 // bubble only above the currently-active thumb during interaction; when no
@@ -254,6 +251,8 @@ Rect InvalidationRectForValueChange(
                   ? end_rect
                   : (end_rect.empty() ? start_rect
                                       : Rect::Extent(start_rect, end_rect));
+  rect = ExpandRectAlongPrimary(axis, rect,
+                                internal::kTrackInnerEndRadiusPixels);
 
   StopSegment old_segments[3];
   int old_segment_count = 0;
@@ -261,9 +260,10 @@ Rect InvalidationRectForValueChange(
   StopSegment new_segments[3];
   int new_segment_count = 0;
   BuildTrackSegments(axis, new_start, new_end, new_segments, new_segment_count);
-  return IncludeBoundaryRadiusStrips(
-      rect, axis, old_segments, old_segment_count, new_segments,
-      new_segment_count, size_metrics.track_radius);
+  return IncludeBoundaryTrackStrips(rect, axis, old_segments,
+                                    old_segment_count, new_segments,
+                                    new_segment_count,
+                                    size_metrics.track_radius);
 }
 
 }  // namespace
@@ -657,9 +657,32 @@ void RangeSlider::notifyStateChanged(uint16_t state_diff) {
   }
 
   internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
+  const internal::SliderSizeMetrics& size_metrics =
+    internal::ResolveSliderSizeMetrics(style_.size);
   float active_value = active_thumb_ == 1 ? end_value_ : start_value_;
   float center = axis.centerFromValue(range_, active_value);
   Rect thumb_rect = axis.invalidationRectForCenterChange(center, center);
+  ThumbPaintMetrics old_start = ResolveThumbPaintMetrics(
+    range_, start_value_, axis, size_metrics,
+    was_pressed && active_thumb_ == 0);
+  ThumbPaintMetrics old_end = ResolveThumbPaintMetrics(
+    range_, end_value_, axis, size_metrics, was_pressed && active_thumb_ == 1);
+  ThumbPaintMetrics new_start = ResolveThumbPaintMetrics(
+    range_, start_value_, axis, size_metrics,
+    isPressed() && active_thumb_ == 0);
+  ThumbPaintMetrics new_end = ResolveThumbPaintMetrics(
+    range_, end_value_, axis, size_metrics, isPressed() && active_thumb_ == 1);
+  StopSegment old_segments[3];
+  int old_segment_count = 0;
+  BuildTrackSegments(axis, old_start, old_end, old_segments, old_segment_count);
+  StopSegment new_segments[3];
+  int new_segment_count = 0;
+  BuildTrackSegments(axis, new_start, new_end, new_segments, new_segment_count);
+  Rect content_envelope = ExpandRectAlongPrimary(
+    axis, thumb_rect, internal::kTrackInnerEndRadiusPixels);
+  content_envelope = IncludeBoundaryTrackStrips(
+      content_envelope, axis, old_segments, old_segment_count, new_segments,
+      new_segment_count, size_metrics.track_radius);
 
   bool old_indicator_visible =
       style_.value_indicator == SliderValueIndicatorBehavior::kAlways ||
@@ -675,12 +698,13 @@ void RangeSlider::notifyStateChanged(uint16_t state_diff) {
   }
 
   pending_content_dirty_span_.include(
-      internal::DisplayMainSpanFromRect(thumb_rect, axis.isVertical()));
+    internal::DisplayMainSpanFromRect(content_envelope, axis.isVertical()));
   pending_indicator_dirty_span_.include(
       internal::DisplayMainSpanFromRect(bubble_envelope, axis.isVertical()));
 
-  setDirty(bubble_envelope.empty() ? thumb_rect
-                                   : Rect::Extent(thumb_rect, bubble_envelope));
+  setDirty(bubble_envelope.empty() ? content_envelope
+                   : Rect::Extent(content_envelope,
+                          bubble_envelope));
   if (!bubble_envelope.empty()) {
     notifyParentInvalidatedRegion(
         bubble_envelope.translate(offsetLeft(), offsetTop()));

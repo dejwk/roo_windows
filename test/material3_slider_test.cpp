@@ -8,6 +8,7 @@
 #include "roo_windows/material3/slider/range_slider.h"
 #include "roo_windows/material3/slider/slider.h"
 #include "roo_windows/material3/slider/slider_internal.h"
+#include "roo_windows/material3/slider/slider_paint_internal.h"
 #include "roo_windows/material3/slider/slider_size_internal.h"
 #include "roo_windows/material3/slider/value_indicator.h"
 #include "roo_windows/widgets/resources/circle.h"
@@ -260,79 +261,13 @@ Rect InvalidationRectForValueChangeForTest(
       CenterFromValueForTest(axis, range, new_value));
 }
 
-int16_t ReducedTrackRadiusTowardStartForTest(
-    const internal::SliderAxisMetrics& axis, float max_primary,
-    int16_t track_radius) {
-  int16_t max_pixel = (int16_t)floorf(max_primary);
-  if (max_pixel < 0) return 0;
-  if (max_pixel >= axis.primarySpan()) max_pixel = axis.primarySpan() - 1;
-  int16_t visible_span = max_pixel + 1;
-  return visible_span < track_radius ? visible_span : track_radius;
-}
-
-int16_t ReducedTrackRadiusTowardEndForTest(
-    const internal::SliderAxisMetrics& axis, float min_primary,
-    int16_t track_radius) {
-  int16_t min_pixel = (int16_t)ceilf(min_primary);
-  if (min_pixel < 0) min_pixel = 0;
-  if (min_pixel >= axis.primarySpan()) return 0;
-  int16_t visible_span = axis.primarySpan() - min_pixel;
-  return visible_span < track_radius ? visible_span : track_radius;
-}
-
-Rect ExpandedSingleSliderInvalidationRectForTest(
-    const internal::SliderAxisMetrics& axis, SliderStyle style,
-    const SliderRange& range, float old_value, float new_value, Rect rect) {
-  const internal::SliderSizeMetrics& size_metrics =
-      internal::ResolveSliderSizeMetrics(style.size);
-  internal::SliderVisualMetrics old_layout =
-      internal::ResolveSliderVisualMetricsForValue(
-          axis, range, old_value, internal::kHandleWidth,
-          size_metrics.track_height, internal::kTrackHandleGap,
-          size_metrics.handle_height);
-  internal::SliderVisualMetrics new_layout =
-      internal::ResolveSliderVisualMetricsForValue(
-          axis, range, new_value, internal::kHandleWidth,
-          size_metrics.track_height, internal::kTrackHandleGap,
-          size_metrics.handle_height);
-  if (ReducedTrackRadiusTowardStartForTest(
-          axis, old_layout.active_track_max_primary,
-          size_metrics.track_radius) < size_metrics.track_radius ||
-      ReducedTrackRadiusTowardStartForTest(
-          axis, new_layout.active_track_max_primary,
-          size_metrics.track_radius) < size_metrics.track_radius) {
-    rect = Rect::Extent(
-        rect, Rect(axis.boxFromPrimaryCross(0, 0, 0, axis.crossSpan() - 1)));
-  }
-  if (ReducedTrackRadiusTowardEndForTest(
-          axis, old_layout.inactive_track_min_primary,
-          size_metrics.track_radius) < size_metrics.track_radius ||
-      ReducedTrackRadiusTowardEndForTest(
-          axis, new_layout.inactive_track_min_primary,
-          size_metrics.track_radius) < size_metrics.track_radius) {
-    rect =
-        Rect::Extent(rect, Rect(axis.boxFromPrimaryCross(
-                               axis.primarySpan() - 1, 0,
-                               axis.primarySpan() - 1, axis.crossSpan() - 1)));
-  }
-  return rect;
-}
-
-Rect InvalidationRectForRangeValueChangeForTest(
+Rect RoundedTrackInvalidationRectForValueChangeForTest(
     const internal::SliderAxisMetrics& axis, const SliderRange& range,
-    float old_start_value, float old_end_value, float new_start_value,
-    float new_end_value) {
-  Rect start_rect = old_start_value == new_start_value
-                        ? Rect(0, 0, -1, -1)
-                        : InvalidationRectForValueChangeForTest(
-                              axis, range, old_start_value, new_start_value);
-  Rect end_rect = old_end_value == new_end_value
-                      ? Rect(0, 0, -1, -1)
-                      : InvalidationRectForValueChangeForTest(
-                            axis, range, old_end_value, new_end_value);
-  if (start_rect.empty()) return end_rect;
-  if (end_rect.empty()) return start_rect;
-  return Rect::Extent(start_rect, end_rect);
+    float old_value, float new_value) {
+  return internal::ExpandRectAlongPrimary(
+      axis,
+      InvalidationRectForValueChangeForTest(axis, range, old_value, new_value),
+      internal::kTrackInnerEndRadiusPixels);
 }
 
 Rect ResolveInsetIconRectForTest(
@@ -2322,7 +2257,8 @@ TEST_F(Material3SliderRenderTest,
 }
 
 // Verifies that a value-indicator repaint on the single slider only writes into
-// the thumb dirty slice plus the current indicator bounds, not the old overlay.
+// the moved thumb slice plus the rounded track ends and current indicator
+// bounds, not the old overlay.
 TEST_F(Material3SliderRenderTest,
        ValueIndicatorValueChangePaintIsClippedToDirtySlice) {
   SliderStyle style{};
@@ -2343,7 +2279,7 @@ TEST_F(Material3SliderRenderTest,
   ASSERT_TRUE(slider_ptr->setValue(0.8f));
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
-  Rect thumb_rect = InvalidationRectForValueChangeForTest(
+  Rect thumb_rect = RoundedTrackInvalidationRectForValueChangeForTest(
       axis, slider_ptr->range(), 0.2f, 0.8f);
   Rect expected_clip = Rect::Intersect(thumb_rect, slider_ptr->bounds())
                            .translate(kSliderX, kSliderY);
@@ -2361,16 +2297,20 @@ TEST_F(Material3SliderRenderTest,
   paintWidgetContentsForTest(*slider_ptr);
 
   EXPECT_TRUE(
-      ExpectPaintConfinedTo({expected_clip, indicator_bounds}, clear_color));
+      ExpectPaintConfinedTo({expected_clip, indicator_bounds}, clear_color))
+      << " expected_clip=[" << expected_clip.xMin() << ","
+      << expected_clip.yMin() << "," << expected_clip.xMax() << ","
+      << expected_clip.yMax() << "] indicator_bounds=["
+      << indicator_bounds.xMin() << "," << indicator_bounds.yMin() << ","
+      << indicator_bounds.xMax() << "," << indicator_bounds.yMax() << "]";
   EXPECT_LT(expected_clip.width(), old_overlay_clip.width());
 
   Rect full_indicator_envelope = slider_ptr->getParentTransientPaintBounds();
   EXPECT_LT(expected_clip.width(), full_indicator_envelope.width());
 }
 
-// Verifies that when a boundary-adjacent track cap shrinks near the start of
-// the range, the dirty slice expands all the way to the boundary so the cap is
-// fully repainted.
+// Verifies that near-edge value changes still repaint the track-owned boundary
+// strip because drawTiled() only repaints the dirty slice.
 TEST_F(Material3SliderRenderTest,
        NearBoundaryValueChangePaintExpandsToTrackBoundary) {
   auto slider = std::make_unique<ContentPaintSlider>(
@@ -2387,14 +2327,14 @@ TEST_F(Material3SliderRenderTest,
   ASSERT_TRUE(slider_ptr->setValue(0.08f));
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
-  Rect thumb_rect = InvalidationRectForValueChangeForTest(
+  Rect thumb_rect = RoundedTrackInvalidationRectForValueChangeForTest(
       axis, slider_ptr->range(), 0.05f, 0.08f);
   Rect old_clip = Rect::Intersect(thumb_rect, slider_ptr->bounds())
                       .translate(kSliderX, kSliderY);
   Rect expected_clip =
-      ExpandedSingleSliderInvalidationRectForTest(
-          axis, slider_ptr->style(), slider_ptr->range(), 0.05f, 0.08f,
-          Rect::Intersect(thumb_rect, slider_ptr->bounds()))
+      Rect::Extent(
+          Rect::Intersect(thumb_rect, slider_ptr->bounds()),
+          Rect(axis.boxFromPrimaryCross(0, 0, 0, axis.crossSpan() - 1)))
           .translate(kSliderX, kSliderY);
   Color clear_color = QuantizeToArgb4444(Color(0xFF5C8F1A));
 
@@ -2403,13 +2343,14 @@ TEST_F(Material3SliderRenderTest,
 
   EXPECT_TRUE(ExpectPaintConfinedTo({expected_clip}, clear_color));
   EXPECT_EQ(kSliderX, expected_clip.xMin());
-  EXPECT_GT(expected_clip.width(), old_clip.width());
+  EXPECT_EQ(expected_clip, old_clip);
   EXPECT_NE(clear_color,
             pixelAt(kSliderX, kSliderY + slider_ptr->height() / 2));
 }
 
 // Verifies that moving only one thumb of a range slider repaints just that
-// thumb's sweep instead of a broader union covering both thumbs.
+// thumb's sweep plus the rounded track ends instead of a broader union covering
+// both thumbs.
 TEST_F(Material3SliderRenderTest,
        RangeSliderSingleThumbMovePaintIsClippedToMovedThumbSweep) {
   auto slider = std::make_unique<ContentPaintRangeSlider>(
@@ -2425,7 +2366,7 @@ TEST_F(Material3SliderRenderTest,
   ASSERT_TRUE(slider_ptr->setValues(35.0f, 75.0f));
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
-  Rect expected_clip = InvalidationRectForValueChangeForTest(
+  Rect expected_clip = RoundedTrackInvalidationRectForValueChangeForTest(
                            axis, slider_ptr->range(), 25.0f, 35.0f)
                            .translate(kSliderX, kSliderY);
   Rect old_broad_clip =
@@ -2443,6 +2384,47 @@ TEST_F(Material3SliderRenderTest,
 
   EXPECT_TRUE(ExpectPaintConfinedTo({expected_clip}, clear_color));
   EXPECT_LT(expected_clip.width(), old_broad_clip.width());
+}
+
+// Verifies that range-slider pressed-state transitions repaint the active
+// thumb slice plus the rounded track ends that move with the tightened gap.
+TEST_F(Material3SliderRenderTest,
+       RangeSliderPressStateChangePaintIncludesRoundedTrackEnds) {
+  auto slider = std::make_unique<ContentPaintRangeSlider>(
+      context(), SliderRange{0.0f, 100.0f}, 25.0f, 75.0f);
+  ContentPaintRangeSlider* slider_ptr = slider.get();
+
+  app_.add(std::move(slider),
+           roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
+                            kSliderY + kSliderHeight - 1));
+
+  ASSERT_TRUE(app_.refresh());
+
+  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
+  XDim start_thumb_center = (XDim)CenterFromValueForTest(
+      axis, slider_ptr->range(), slider_ptr->startValue());
+  slider_ptr->onShowPress(start_thumb_center, slider_ptr->height() / 2);
+
+  Rect expected_clip =
+      internal::ExpandRectAlongPrimary(
+          axis,
+          axis.invalidationRectForCenterChange(
+              CenterFromValueForTest(axis, slider_ptr->range(), 25.0f),
+              CenterFromValueForTest(axis, slider_ptr->range(), 25.0f)),
+          internal::kTrackInnerEndRadiusPixels)
+          .translate(kSliderX, kSliderY);
+  Color clear_color = QuantizeToArgb4444(Color(0xFF3A6FB0));
+
+  fillScreen(clear_color);
+  paintWidgetContentsForTest(*slider_ptr);
+  EXPECT_TRUE(ExpectPaintConfinedTo({expected_clip}, clear_color));
+
+  ASSERT_TRUE(
+      slider_ptr->onTouchUp(start_thumb_center, slider_ptr->height() / 2));
+
+  fillScreen(clear_color);
+  paintWidgetContentsForTest(*slider_ptr);
+  EXPECT_TRUE(ExpectPaintConfinedTo({expected_clip}, clear_color));
 }
 
 // Verifies that value-indicator invalidation tracks the measured old and new
@@ -2520,9 +2502,10 @@ TEST_F(Material3SliderRenderTest,
   EXPECT_LT(expected.width(), conservative.width());
 }
 
-// Verifies that pressed-state transitions repaint only the thumb slice for the
-// single slider, both when pressing and when releasing.
-TEST_F(Material3SliderRenderTest, PressStateChangePaintIsClippedToHandleSlice) {
+// Verifies that pressed-state transitions repaint the thumb slice plus the
+// rounded track ends that move with the tightened gap.
+TEST_F(Material3SliderRenderTest,
+       PressStateChangePaintIncludesRoundedTrackEnds) {
   auto slider =
       std::make_unique<ContentPaintSlider>(context(), SliderRange{}, 0.5f);
   ContentPaintSlider* slider_ptr = slider.get();
@@ -2538,15 +2521,60 @@ TEST_F(Material3SliderRenderTest, PressStateChangePaintIsClippedToHandleSlice) {
   slider_ptr->onShowPress((XDim)focus.x, (YDim)focus.y);
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
-  Rect expected_clip =
-      InvalidationRectForValueChangeForTest(
-          axis, slider_ptr->range(), slider_ptr->value(), slider_ptr->value())
-          .translate(kSliderX, kSliderY);
+  Rect expected_clip = internal::ExpandRectAlongPrimary(
+                           axis,
+                           InvalidationRectForValueChangeForTest(
+                               axis, slider_ptr->range(), slider_ptr->value(),
+                               slider_ptr->value()),
+                           internal::kTrackInnerEndRadiusPixels)
+                           .translate(kSliderX, kSliderY);
   Color clear_color = QuantizeToArgb4444(Color(0xFF2468AC));
 
   fillScreen(clear_color);
   paintWidgetContentsForTest(*slider_ptr);
   EXPECT_TRUE(ExpectPaintConfinedTo({expected_clip}, clear_color));
+
+  ASSERT_TRUE(slider_ptr->onTouchUp((XDim)focus.x, (YDim)focus.y));
+
+  fillScreen(clear_color);
+  paintWidgetContentsForTest(*slider_ptr);
+  EXPECT_TRUE(ExpectPaintConfinedTo({expected_clip}, clear_color));
+}
+
+// Verifies that near the boundary, pressed-state transitions repaint the full
+// boundary-touching segment because the far rounded end also renormalizes.
+TEST_F(Material3SliderRenderTest,
+       NearBoundaryPressStatePaintExpandsToTrackBoundary) {
+  auto slider =
+      std::make_unique<ContentPaintSlider>(context(), SliderRange{}, 0.0f);
+  ContentPaintSlider* slider_ptr = slider.get();
+  slider_ = slider_ptr;
+
+  app_.add(std::move(slider),
+           roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
+                            kSliderY + kSliderHeight - 1));
+
+  ASSERT_TRUE(app_.refresh());
+
+  roo_display::FpPoint focus = slider_ptr->getPointOverlayFocus();
+  slider_ptr->onShowPress((XDim)focus.x, (YDim)focus.y);
+
+  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
+  Rect expected_clip = internal::ExpandRectAlongPrimary(
+                           axis,
+                           InvalidationRectForValueChangeForTest(
+                               axis, slider_ptr->range(), slider_ptr->value(),
+                               slider_ptr->value()),
+                           internal::kTrackInnerEndRadiusPixels)
+                           .translate(kSliderX, kSliderY);
+  expected_clip = Rect(kSliderX, expected_clip.yMin(), expected_clip.xMax(),
+                       expected_clip.yMax());
+  Color clear_color = QuantizeToArgb4444(Color(0xFF2468AC));
+
+  fillScreen(clear_color);
+  paintWidgetContentsForTest(*slider_ptr);
+  EXPECT_TRUE(ExpectPaintConfinedTo({expected_clip}, clear_color));
+  EXPECT_EQ(kSliderX, expected_clip.xMin());
 
   ASSERT_TRUE(slider_ptr->onTouchUp((XDim)focus.x, (YDim)focus.y));
 
@@ -2620,13 +2648,7 @@ TEST_F(Material3SliderRenderTest,
 
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
                                    true, true);
-  Rect thumb_rect = InvalidationRectForValueChangeForTest(
-      axis, slider_ptr->range(), 0.2f, 0.8f);
-  Rect expected_clip =
-      ExpandedSingleSliderInvalidationRectForTest(
-          axis, slider_ptr->style(), slider_ptr->range(), 0.2f, 0.8f,
-          Rect::Intersect(thumb_rect, slider_ptr->bounds()))
-          .translate(kSliderX, kSliderY);
+  Rect expected_clip = slider_ptr->bounds().translate(kSliderX, kSliderY);
   Rect old_overlay_clip = Rect::Intersect(ResolveLegacyOverlayClipForTest(
                                               axis, slider_ptr->range(), 0.2f,
                                               0.8f, kPointOverlayDiameter / 2),
