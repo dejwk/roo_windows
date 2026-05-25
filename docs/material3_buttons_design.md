@@ -200,8 +200,8 @@ content slots, or large override structs inline on every button instance.
 ### Embedded Constraints
 
 1. Do not require heap allocation on paint, press, or animation paths.
-2. Avoid stored `std::function` members beyond the framework-wide hooks already
-   present on `Widget`.
+2. Avoid stored `std::function` members; prefer virtual hooks and the
+   dispatcher-backed framework hooks already available on `Widget`.
 3. Keep default construction cheap.
 4. Prefer shared appearance pointers over per-instance appearance copies.
 5. Keep per-instance state compact enough that a screen with dozens of buttons
@@ -308,7 +308,7 @@ struct IconButtonAppearance;
 
 class Button : public BasicSurfaceWidget {
  public:
-  explicit Button(const Environment& env,
+  explicit Button(ApplicationContext& context,
                   roo::string_view label = {},
                   ButtonVariant variant = ButtonVariant::kFilled);
 
@@ -340,7 +340,7 @@ class Button : public BasicSurfaceWidget {
 
 class IconButton : public BasicSurfaceWidget {
  public:
-  explicit IconButton(const Environment& env, const MonoIcon& icon,
+  explicit IconButton(ApplicationContext& context, const MonoIcon& icon,
                       IconButtonVariant variant =
                           IconButtonVariant::kStandard);
 

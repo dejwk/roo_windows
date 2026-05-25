@@ -19,10 +19,10 @@ The end state of this design is:
 ## Motivation
 
 `roo_windows` is RAM-constrained by widget count, not by code size. The
-current inline callback slot charges every widget about 16 B for a feature that
-only a minority of widgets use. The current lack of stored application context
-also forces `Widget::theme()` to resolve through the parent chain, which is why
-it is documented today as paint-flow-only in
+previous inline callback slot charged every widget about 16 B for a feature
+that only a minority of widgets used. The lack of stored application context
+also forced `Widget::theme()` to resolve through the parent chain, which is why
+it had been documented as paint-flow-only in
 [widget.h](../src/roo_windows/core/widget.h) and enforced in
 [widget.cpp](../src/roo_windows/core/widget.cpp).
 
@@ -33,7 +33,7 @@ for.
 
 ## Background
 
-Today:
+Before this migration:
 
 - [Widget](../src/roo_windows/core/widget.h) takes `const Environment&` in its
   constructor, but the base class does not retain it.
@@ -470,6 +470,10 @@ Validation:
 
 - run `bazel test //:roo_windows_test`,
 - run `bazel test //...` before merge.
+
+## Status
+
+This migration is implemented.
 
 ## Testing Plan
 

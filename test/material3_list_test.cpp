@@ -4,6 +4,7 @@
 #include "gtest/gtest.h"
 #include "roo_scheduler.h"
 #include "roo_windows/containers/flex_layout.h"
+#include "roo_windows/core/application_context.h"
 #include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/material3/list/list.h"
@@ -11,6 +12,11 @@
 namespace roo_windows {
 namespace material3 {
 namespace {
+
+ApplicationContext MakeContext(Environment& env) {
+  return ApplicationContext(env.scheduler(), env.theme(),
+                            env.keyboardColorTheme());
+}
 
 static_assert(std::is_base_of<Container, ListEntry>::value,
               "ListEntry must keep the fixed-child Container boundary");
@@ -27,7 +33,7 @@ static_assert(std::is_base_of<ListItem, StandardListItem>::value,
 
 class TestWidget : public BasicWidget {
  public:
-  explicit TestWidget(const Environment& env, Dimensions dimensions = {})
+  explicit TestWidget(ApplicationContext& env, Dimensions dimensions = {})
       : BasicWidget(env), dimensions_(dimensions) {}
 
   Dimensions getSuggestedMinimumDimensions() const override {
@@ -40,7 +46,7 @@ class TestWidget : public BasicWidget {
 
 class TestListEntry : public ListEntry {
  public:
-  explicit TestListEntry(const Environment& env) : ListEntry(env) {}
+  explicit TestListEntry(ApplicationContext& env) : ListEntry(env) {}
 
   using ListEntry::getChild;
   using ListEntry::getChildrenCount;
@@ -48,7 +54,7 @@ class TestListEntry : public ListEntry {
 
 class TestList : public List {
  public:
-  explicit TestList(const Environment& env) : List(env) {}
+  explicit TestList(ApplicationContext& env) : List(env) {}
 
   using List::getChild;
   using List::getChildrenCount;
@@ -56,7 +62,7 @@ class TestList : public List {
 
 class TrackingListEntry : public ListEntry {
  public:
-  TrackingListEntry(const Environment& env, bool& destroyed)
+  TrackingListEntry(ApplicationContext& env, bool& destroyed)
       : ListEntry(env), destroyed_(destroyed) {}
 
   ~TrackingListEntry() override { destroyed_ = true; }
@@ -120,9 +126,10 @@ TEST(Material3List, PolicyDefaultsMatchDesign) {
 TEST(Material3List, StandardListItemInitPresetsPopulateDescriptorData) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
-  TestWidget leading(env);
-  TestWidget trailing(env);
-  TestWidget body(env);
+  ApplicationContext context = MakeContext(env);
+  TestWidget leading(context);
+  TestWidget trailing(context);
+  TestWidget body(context);
 
   StandardListItemInit one_line =
       StandardListItemInit::OneLine("WiFi", &leading, &trailing);
@@ -156,8 +163,9 @@ TEST(Material3List, StandardListItemInitPresetsPopulateDescriptorData) {
 TEST(Material3List, StandardListItemMirrorsInitDescriptor) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
-  TestWidget leading(env);
-  TestWidget trailing(env);
+  ApplicationContext context = MakeContext(env);
+  TestWidget leading(context);
+  TestWidget trailing(context);
 
   StandardListItemInit init =
       StandardListItemInit::TwoLine("Pool pump", "Auto", &leading, &trailing);
@@ -185,8 +193,9 @@ TEST(Material3List, StandardListItemMirrorsInitDescriptor) {
 TEST(Material3List, BaselineClassesConstructWithSafeDefaults) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
 
-  ListEntry entry(env);
+  ListEntry entry(context);
   EXPECT_FALSE(entry.hasItem());
   EXPECT_EQ(nullptr, entry.item());
   EXPECT_EQ(ListVariant::kExpressive, entry.visualContext().variant);
@@ -199,14 +208,14 @@ TEST(Material3List, BaselineClassesConstructWithSafeDefaults) {
   EXPECT_TRUE(entry.visualContext().selected);
   EXPECT_EQ(ListItemPosition::kFirst, entry.visualContext().position);
 
-  ExpandablePanel panel(env);
+  ExpandablePanel panel(context);
   EXPECT_FALSE(panel.isExpanded());
   EXPECT_FALSE(panel.isAnimating());
   panel.clearContent();
   panel.setExpanded(false);
   panel.setAnimationDuration(180);
 
-  List list(env);
+  List list(context);
   WidgetRef borrowed_list(list);
   EXPECT_EQ(&list, borrowed_list.get());
   list.clear();
@@ -217,12 +226,13 @@ TEST(Material3List, BaselineClassesConstructWithSafeDefaults) {
 TEST(Material3List, ListEntryBindsAndClearsStableSlotChildren) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
-  TestWidget leading(env, Dimensions(20, 20));
-  TestWidget trailing(env, Dimensions(12, 16));
-  TestWidget body(env, Dimensions(80, 10));
+  ApplicationContext context = MakeContext(env);
+  TestWidget leading(context, Dimensions(20, 20));
+  TestWidget trailing(context, Dimensions(12, 16));
+  TestWidget body(context, Dimensions(80, 10));
   StandardListItem item(StandardListItemInit::ThreeLine(
       "Headline", "Supporting", "Overline", &leading, &trailing, &body));
-  TestListEntry entry(env);
+  TestListEntry entry(context);
 
   entry.setItem(item);
 
@@ -251,11 +261,12 @@ TEST(Material3List, ListEntryBindsAndClearsStableSlotChildren) {
 TEST(Material3List, ListEntryMeasuresAndLaysOutSlots) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
-  TestWidget leading(env, Dimensions(20, 20));
-  TestWidget trailing(env, Dimensions(12, 16));
+  ApplicationContext context = MakeContext(env);
+  TestWidget leading(context, Dimensions(20, 20));
+  TestWidget trailing(context, Dimensions(12, 16));
   StandardListItem item(
       StandardListItemInit::OneLine("Headline", &leading, &trailing));
-  TestListEntry entry(env);
+  TestListEntry entry(context);
   entry.setItem(item);
 
   Dimensions measured =
@@ -276,8 +287,9 @@ TEST(Material3List, ListEntryMeasuresAndLaysOutSlots) {
 TEST(Material3List, ListEntryRefreshesMutableTextWithoutReplacingSlots) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
   MutableListItem item("A");
-  TestListEntry entry(env);
+  TestListEntry entry(context);
   entry.setItem(item);
 
   Dimensions short_measure =
@@ -296,10 +308,12 @@ TEST(Material3List, ListEntryRefreshesMutableTextWithoutReplacingSlots) {
 TEST(Material3List, ListClearsBorrowedAndAdoptedEntriesWithCorrectOwnership) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
-  TestList list(env);
-  TestListEntry borrowed(env);
+  ApplicationContext context = MakeContext(env);
+  TestList list(context);
+  TestListEntry borrowed(context);
   bool adopted_destroyed = false;
-  auto adopted = std::make_unique<TrackingListEntry>(env, adopted_destroyed);
+  auto adopted =
+      std::make_unique<TrackingListEntry>(context, adopted_destroyed);
   TrackingListEntry* adopted_raw = adopted.get();
 
   list.add(borrowed);
@@ -323,10 +337,11 @@ TEST(Material3List, ListClearsBorrowedAndAdoptedEntriesWithCorrectOwnership) {
 TEST(Material3List, ListPropagatesPositionVariantStyleAndSegmentedGap) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
-  TestList list(env);
-  TestListEntry first(env);
-  TestListEntry second(env);
-  TestListEntry third(env);
+  ApplicationContext context = MakeContext(env);
+  TestList list(context);
+  TestListEntry first(context);
+  TestListEntry second(context);
+  TestListEntry third(context);
   StandardListItem first_item(StandardListItemInit::OneLine("First"));
   StandardListItem second_item(StandardListItemInit::OneLine("Second"));
   StandardListItem third_item(StandardListItemInit::OneLine("Third"));
@@ -366,10 +381,11 @@ TEST(Material3List, ListPropagatesPositionVariantStyleAndSegmentedGap) {
 TEST(Material3List, ListResolvesSelectionAndDividerContext) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
-  TestList list(env);
-  TestListEntry first(env);
-  TestListEntry second(env);
-  TestListEntry third(env);
+  ApplicationContext context = MakeContext(env);
+  TestList list(context);
+  TestListEntry first(context);
+  TestListEntry second(context);
+  TestListEntry third(context);
   StandardListItem first_item(StandardListItemInit::OneLine("One"));
   StandardListItem second_item(StandardListItemInit::OneLine("Two"));
   StandardListItem third_item(StandardListItemInit::OneLine("Three"));
@@ -419,9 +435,10 @@ TEST(Material3List, ListResolvesSelectionAndDividerContext) {
 TEST(Material3List, ListGapResolutionDependsOnDividerPolicy) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
-  TestList list(env);
-  TestListEntry first(env);
-  TestListEntry second(env);
+  ApplicationContext context = MakeContext(env);
+  TestList list(context);
+  TestListEntry first(context);
+  TestListEntry second(context);
   StandardListItem first_item(StandardListItemInit::OneLine("One"));
   StandardListItem second_item(StandardListItemInit::OneLine("Two"));
   first.setItem(first_item);

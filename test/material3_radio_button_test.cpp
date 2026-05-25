@@ -1,5 +1,6 @@
 #include "gtest/gtest.h"
 #include "roo_scheduler.h"
+#include "roo_windows/core/application_context.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/material3/radio_button/radio_button.h"
 
@@ -7,13 +8,19 @@ namespace roo_windows {
 namespace material3 {
 namespace {
 
+ApplicationContext MakeContext(Environment& env) {
+  return ApplicationContext(env.scheduler(), env.theme(),
+                            env.keyboardColorTheme());
+}
+
 // Verifies that the radio button contributes zero padding and zero margins,
 // so its laid-out bounds map directly to its visual footprint.
 TEST(Material3RadioButton, UsesZeroDefaultInsets) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
 
-  RadioButton radio(env, false);
+  RadioButton radio(context, false);
 
   EXPECT_EQ(0, radio.getPadding().left());
   EXPECT_EQ(0, radio.getPadding().top());
@@ -32,8 +39,9 @@ TEST(Material3RadioButton, UsesZeroDefaultInsets) {
 TEST(Material3RadioButton, UsesCenteredPointOverlay) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
 
-  RadioButton radio(env, false);
+  RadioButton radio(context, false);
   radio.layout(Rect(0, 0, Scaled(20) - 1, Scaled(20) - 1));
 
   EXPECT_EQ(Widget::OVERLAY_POINT, radio.getOverlayType());
@@ -48,8 +56,9 @@ TEST(Material3RadioButton, UsesCenteredPointOverlay) {
 TEST(Material3RadioButton, ReportsMaterial3MinimumSize) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
 
-  RadioButton radio(env, false);
+  RadioButton radio(context, false);
   Dimensions dims = radio.getSuggestedMinimumDimensions();
 
   EXPECT_EQ(Scaled(20), dims.width());
@@ -62,8 +71,9 @@ TEST(Material3RadioButton, ReportsMaterial3MinimumSize) {
 TEST(Material3RadioButton, EffectiveContainerRoleTracksSelectionState) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
 
-  RadioButton radio(env, false);
+  RadioButton radio(context, false);
   EXPECT_EQ(ColorRole::kSurface, radio.effectiveContainerRole());
 
   radio.setOn();

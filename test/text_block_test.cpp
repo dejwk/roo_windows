@@ -12,6 +12,11 @@
 namespace roo_windows {
 namespace {
 
+ApplicationContext MakeContext(Environment& context) {
+  return ApplicationContext(context.scheduler(), context.theme(),
+                            context.keyboardColorTheme());
+}
+
 constexpr char kOverhangText[] = "jQy/";
 
 FlexLayout::Params FillWidthParams() {
@@ -23,7 +28,7 @@ FlexLayout::Params FillWidthParams() {
 
 class RecordingPanel : public Panel {
  public:
-  explicit RecordingPanel(const Environment& env) : Panel(env) {}
+  explicit RecordingPanel(ApplicationContext& context) : Panel(context) {}
 
   using Panel::add;
 
@@ -48,8 +53,9 @@ class RecordingPanel : public Panel {
 // height, confirming the wrap actually grew the layout vertically.
 TEST(TextBlock, WordWrapIncreasesHeightWithNarrowWidth) {
   roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
-  TextBlock block(env, "word word word word", font_body2(),
+  Environment bootstrap(scheduler);
+  ApplicationContext context = MakeContext(bootstrap);
+  TextBlock block(context, "word word word word", font_body2(),
                   roo_display::kLeft | roo_display::kTop);
   block.setWrapMode(TextWrapMode::kWordWrap);
 
@@ -63,8 +69,9 @@ TEST(TextBlock, WordWrapIncreasesHeightWithNarrowWidth) {
 // than the text's natural advance.
 TEST(TextBlock, NoWrapKeepsSingleLineHeight) {
   roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
-  TextBlock block(env, "word word word word", font_body2(),
+  Environment bootstrap(scheduler);
+  ApplicationContext context = MakeContext(bootstrap);
+  TextBlock block(context, "word word word word", font_body2(),
                   roo_display::kLeft | roo_display::kTop);
   block.setWrapMode(TextWrapMode::kNoWrap);
 
@@ -77,8 +84,9 @@ TEST(TextBlock, NoWrapKeepsSingleLineHeight) {
 // heights, even if the wrapped text would otherwise span more lines.
 TEST(TextBlock, MaxLinesLimitsMeasuredHeight) {
   roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
-  TextBlock block(env, "word word word word word word", font_body2(),
+  Environment bootstrap(scheduler);
+  ApplicationContext context = MakeContext(bootstrap);
+  TextBlock block(context, "word word word word word word", font_body2(),
                   roo_display::kLeft | roo_display::kTop);
   block.setWrapMode(TextWrapMode::kWordWrap);
   block.setMaxLines(2);
@@ -93,9 +101,10 @@ TEST(TextBlock, MaxLinesLimitsMeasuredHeight) {
 // the bounding rectangle) rather than the nominal advance rectangle.
 TEST(TextBlock, SingleLineContentBoundsReflectFontInk) {
   roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
+  Environment bootstrap(scheduler);
+  ApplicationContext context = MakeContext(bootstrap);
   const auto& font = font_body2();
-  TextBlock block(env, "abc", font, roo_display::kLeft | roo_display::kTop);
+  TextBlock block(context, "abc", font, roo_display::kLeft | roo_display::kTop);
   block.setPadding(PaddingSize::kNone);
   block.setWrapMode(TextWrapMode::kNoWrap);
 
@@ -115,9 +124,10 @@ TEST(TextBlock, SingleLineContentBoundsReflectFontInk) {
 // glyphs and rsb overhang) instead of the previous laid-out extents.
 TEST(TextBlock, PendingWrappedLayoutUsesConservativeFontBounds) {
   roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
+  Environment bootstrap(scheduler);
+  ApplicationContext context = MakeContext(bootstrap);
   const auto& font = font_body2();
-  TextBlock block(env, "abc", font, roo_display::kLeft | roo_display::kTop);
+  TextBlock block(context, "abc", font, roo_display::kLeft | roo_display::kTop);
   block.setPadding(PaddingSize::kNone);
 
   int16_t line_height = font.metrics().maxHeight();
@@ -136,9 +146,10 @@ TEST(TextBlock, PendingWrappedLayoutUsesConservativeFontBounds) {
 // both the left and top edges.
 TEST(TextBlock, SetPaddingRequestsLayoutAndUpdatesContentBounds) {
   roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
+  Environment bootstrap(scheduler);
+  ApplicationContext context = MakeContext(bootstrap);
   const auto& font = font_body2();
-  TextBlock block(env, "abc", font, roo_display::kLeft | roo_display::kTop);
+  TextBlock block(context, "abc", font, roo_display::kLeft | roo_display::kTop);
   block.setWrapMode(TextWrapMode::kNoWrap);
   block.setPadding(PaddingSize::kNone);
 
@@ -165,11 +176,12 @@ TEST(TextBlock, SetPaddingRequestsLayoutAndUpdatesContentBounds) {
 // by the block itself with nothing to erase beneath.
 TEST(TextBlock, EmptyToNonEmptyDoesNotInvalidateParentBeneath) {
   roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
-  RecordingPanel panel(env);
+  Environment bootstrap(scheduler);
+  ApplicationContext context = MakeContext(bootstrap);
+  RecordingPanel panel(context);
 
   auto block = std::make_unique<TextBlock>(
-      env, "", font_body2(), roo_display::kCenter | roo_display::kMiddle);
+      context, "", font_body2(), roo_display::kCenter | roo_display::kMiddle);
   TextBlock* block_ptr = block.get();
   panel.add(std::move(block), Rect(0, 0, 159, 39));
   panel.invalidated_regions.clear();
@@ -196,7 +208,9 @@ class TextBlockGoldenTest : public testing::Test {
   roo_display::Offscreen<roo_display::Rgb888> RenderBlock(
       const std::string& text, TextAlign align, int16_t box_width,
       int16_t max_height = 0, uint16_t max_lines = 0, bool ellipsize = false) {
-    TextBlock block(env_, text, font_body2(),
+    Application app(&env_, display_);
+
+    TextBlock block(app.context(), text, font_body2(),
                     roo_display::kLeft | roo_display::kTop);
     block.setPadding(PaddingSize::kNone);
     block.setWrapMode(TextWrapMode::kWordWrap);
@@ -213,7 +227,6 @@ class TextBlockGoldenTest : public testing::Test {
       render_height = std::min<int16_t>(render_height, max_height);
     }
 
-    Application app(&env_, display_);
     app.add(block,
             roo_display::Box(8, 8, 8 + box_width - 1, 8 + render_height - 1));
     EXPECT_TRUE(app.refresh());
@@ -224,17 +237,18 @@ class TextBlockGoldenTest : public testing::Test {
   roo_display::Offscreen<roo_display::Rgb888> RenderFlexBlock(
       roo_display::Alignment alignment, const FlexLayout::Params& params,
       PaddingSize padding = PaddingSize::kNone) {
-    TextBlock block(env_, kOverhangText, font_body2(), alignment);
+    Application app(&env_, display_);
+
+    TextBlock block(app.context(), kOverhangText, font_body2(), alignment);
     block.setPadding(padding);
     block.setWrapMode(TextWrapMode::kNoWrap);
 
-    FlexLayout layout(env_, FlexDirection::kRow);
+    FlexLayout layout(app.context(), FlexDirection::kRow);
     layout.setPadding(Padding(12, 8));
     layout.setJustifyContent(JustifyContent::kCenter);
     layout.setAlignItems(AlignItems::kCenter);
     layout.add(block, params);
 
-    Application app(&env_, display_);
     app.add(layout, roo_display::Box(kFlexLayoutX, kFlexLayoutY,
                                      kFlexLayoutX + kFlexLayoutWidth - 1,
                                      kFlexLayoutY + kFlexLayoutHeight - 1));

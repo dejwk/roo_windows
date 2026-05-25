@@ -49,7 +49,9 @@ As of 2026-05, the list family is partially implemented: the Phase 1 public API
 surface exists, the row-local Phase 2 infrastructure for `ListEntry` is in
 place, and the Phase 3 baseline `List` sequencing path now resolves row
 position, list-owned visual context, add/clear behavior, and segmented gap
-treatment. Expand/collapse behavior, example-backed usage review, and menu
+treatment. Phase 4 usage review now exists as a checked-in example sketch that
+exercises static settings, adopted rows, and a short-form menu-like list
+without introducing convenience wrappers. Expand/collapse behavior and menu
 reuse are still future work.
 
 What exists today:
@@ -64,6 +66,8 @@ What exists today:
 - `material3::List` exists as a direct `Container` shell with list-owned API
    for variant, style, selection, divider policy, row insertion, row stacking,
    and row-context propagation.
+- `examples/material3/lists/lists.ino` exists as the Phase 4 usage-review
+   sketch and compiles under the emulation harness.
 - `FlexLayout` is implemented and already used by `material3::FlexCard`, so it
    is no longer just a future direction for generic composition.
 - `ListLayout` remains the existing recycled fixed-height list container.
@@ -74,7 +78,6 @@ What exists today:
 What does not exist yet:
 
 - no implemented `ExpandablePanel` behavior,
-- no example-backed Phase 4 baseline usage review,
 - no Material 3 menu implementation built from shared list-row primitives,
 - no reusable expand/collapse body path.
 
@@ -439,17 +442,17 @@ For lists, the design should work naturally for code such as:
 ```cpp
 class PumpSettingsScreen {
  public:
-   explicit PumpSettingsScreen(const Environment& env)
-      : list_(env),
-        pool_mode_entry_(env),
+   explicit PumpSettingsScreen(ApplicationContext& context)
+      : list_(context),
+        pool_mode_entry_(context),
         pool_mode_item_(
            StandardListItemInit::TwoLine("Pool pump", "Auto")),
-        solar_delta_entry_(env),
+        solar_delta_entry_(context),
         solar_delta_item_(StandardListItemInit::TwoLine(
            "Solar delta",
            "Starts when the roof loop exceeds the pool by 4 C")),
-        safety_lock_entry_(env),
-        safety_lock_switch_(env),
+        safety_lock_entry_(context),
+        safety_lock_switch_(context),
         safety_lock_item_(StandardListItemInit::OneLine(
            "Safety lock", nullptr, &safety_lock_switch_)) {
    pool_mode_entry_.setItem(pool_mode_item_);
@@ -1079,7 +1082,7 @@ class ListItem {
 
 class ExpandablePanel : public Container {
  public:
-   explicit ExpandablePanel(const Environment& env);
+   explicit ExpandablePanel(ApplicationContext& context);
 
    void setContent(WidgetRef content);
    void clearContent();
@@ -1091,7 +1094,7 @@ class ExpandablePanel : public Container {
 
 class ListEntry : public Container {
  public:
-   explicit ListEntry(const Environment& env);
+   explicit ListEntry(ApplicationContext& context);
 
    bool hasItem() const;
 
@@ -1150,7 +1153,7 @@ class StandardListItem : public ListItem {
 
 class List : public Container {
  public:
-   explicit List(const Environment& env);
+   explicit List(ApplicationContext& context);
 
    void setVariant(ListVariant variant);
    void setStyle(ListStyle style);
@@ -1228,17 +1231,17 @@ about.
 ```cpp
 class PumpSettingsSection {
  public:
-   explicit PumpSettingsSection(const Environment& env)
-         : list_(env),
-           pool_mode_entry_(env),
+   explicit PumpSettingsSection(ApplicationContext& context)
+         : list_(context),
+           pool_mode_entry_(context),
            pool_mode_item_(
                  StandardListItemInit::TwoLine("Pool pump", "Auto")),
-           solar_delta_entry_(env),
+           solar_delta_entry_(context),
            solar_delta_item_(StandardListItemInit::TwoLine(
                  "Solar delta",
                  "Starts when the roof loop exceeds the pool by 4 C")),
-           safety_lock_entry_(env),
-           safety_lock_switch_(env),
+           safety_lock_entry_(context),
+           safety_lock_switch_(context),
            safety_lock_item_(StandardListItemInit::OneLine(
                  "Safety lock", nullptr, &safety_lock_switch_)) {
       pool_mode_entry_.setItem(pool_mode_item_);
@@ -1272,9 +1275,9 @@ subclass that owns the `StandardListItem` it binds.
 ```cpp
 class OwnedStandardListRow : public ListEntry {
  public:
-   explicit OwnedStandardListRow(const Environment& env,
+   explicit OwnedStandardListRow(ApplicationContext& context,
                                  const StandardListItemInit& init)
-         : ListEntry(env), item_(init) {
+         : ListEntry(context), item_(init) {
       setItem(item_);
    }
 
@@ -1286,19 +1289,19 @@ class OwnedStandardListRow : public ListEntry {
 
 class ScheduleList {
  public:
-   explicit ScheduleList(const Environment& env) : env_(env), list_(env) {}
+   explicit ScheduleList(ApplicationContext& context) : context_(context), list_(context) {}
 
    void addSlot(roo_display::StringView title,
                       roo_display::StringView detail) {
          auto row = std::make_unique<OwnedStandardListRow>(
-                  env_, StandardListItemInit::TwoLine(title, detail));
+                  context_, StandardListItemInit::TwoLine(title, detail));
       list_.add(std::move(row));
    }
 
    List& widget() { return list_; }
 
  private:
-   const Environment& env_;
+   ApplicationContext& context_;
    List list_;
 };
 ```
@@ -1316,12 +1319,12 @@ explicit. For example:
 ```cpp
 class PumpSettingsSection {
  public:
-   explicit PumpSettingsSection(const Environment& env)
-         : list_(env),
-        pool_mode_(env, Pictogram::kPool, "Pool pump", "Auto"),
-        solar_delta_(env, Pictogram::kSolar, "Solar delta",
+   explicit PumpSettingsSection(ApplicationContext& context)
+         : list_(context),
+        pool_mode_(context, Pictogram::kPool, "Pool pump", "Auto"),
+        solar_delta_(context, Pictogram::kSolar, "Solar delta",
            "Starts when the roof loop exceeds the pool by 4 C"),
-        safety_lock_(env, "Safety lock") {
+        safety_lock_(context, "Safety lock") {
       safety_lock_.setOn(false);
 
       list_.add(pool_mode_);

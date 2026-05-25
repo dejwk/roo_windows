@@ -9,8 +9,8 @@ namespace roo_windows {
 /// Bundles application-scoped runtime services shared by widgets.
 ///
 /// `Application` owns one context and initializes it from the surrounding
-/// `Environment`. Widgets will eventually consume this surface instead of
-/// resolving those services indirectly.
+/// `Environment`. Widgets use this surface for runtime services instead of
+/// resolving them indirectly.
 class ApplicationContext {
  public:
   /// Creates a context borrowing the supplied scheduler and themes.

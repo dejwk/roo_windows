@@ -2,7 +2,7 @@
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
-#include "roo_windows/core/application.h"
+#include "roo_windows/core/application_context.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/material3/switch/badged_switch.h"
@@ -17,6 +17,11 @@ using roo_display::Color;
 Color QuantizeToArgb4444(Color color) {
   roo_display::Argb4444 mode;
   return mode.toArgbColor(mode.fromArgbColor(color));
+}
+
+ApplicationContext MakeContext(Environment& env) {
+  return ApplicationContext(env.scheduler(), env.theme(),
+                            env.keyboardColorTheme());
 }
 
 class RecordingPanel : public Panel {
@@ -78,8 +83,9 @@ class Material3BadgedSwitchRenderTest : public testing::Test {
 TEST(Material3Switch, UsesThumbCenteredPointOverlay) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
 
-  Switch sw(env, false);
+  Switch sw(context, false);
   sw.layout(Rect(0, 0, Scaled(52) - 1, Scaled(32) - 1));
 
   EXPECT_EQ(Widget::OVERLAY_POINT, sw.getOverlayType());
@@ -101,8 +107,9 @@ TEST(Material3Switch, UsesThumbCenteredPointOverlay) {
 TEST(Material3Switch, ReportsMaterial3MinimumSize) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
 
-  Switch sw(env, false);
+  Switch sw(context, false);
   Dimensions dims = sw.getSuggestedMinimumDimensions();
 
   EXPECT_EQ(Scaled(52), dims.width());
@@ -115,8 +122,9 @@ TEST(Material3Switch, ReportsMaterial3MinimumSize) {
 TEST(Material3Switch, EffectiveContainerRoleTracksState) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
 
-  Switch sw(env, false);
+  Switch sw(context, false);
   EXPECT_EQ(ColorRole::kSurfaceContainerHighest, sw.effectiveContainerRole());
 
   sw.setOn(true);

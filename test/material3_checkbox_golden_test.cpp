@@ -14,8 +14,8 @@ using roo_display::Color;
 
 class SolidBackdrop : public BasicSurfaceWidget {
  public:
-  SolidBackdrop(const Environment& env, Color color, Dimensions dims)
-      : BasicSurfaceWidget(env), color_(color), dims_(dims) {}
+  SolidBackdrop(ApplicationContext& context, Color color, Dimensions dims)
+      : BasicSurfaceWidget(context), color_(color), dims_(dims) {}
 
   Color background() const override { return color_; }
 
@@ -47,7 +47,7 @@ class Material3CheckboxGoldenTest : public testing::Test {
     Application app(&env_, display_);
 
     auto backdrop = std::make_unique<SolidBackdrop>(
-        env_, Color(0xFFF3EFE7), Dimensions(kWidth, kHeight));
+        app.context(), Color(0xFFF3EFE7), Dimensions(kWidth, kHeight));
     app.add(std::move(backdrop),
             roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
 
@@ -61,7 +61,7 @@ class Material3CheckboxGoldenTest : public testing::Test {
 
   void AddCheckbox(Application& app, int16_t x, OnOffState state,
                    bool enabled) {
-    auto checkbox = std::make_unique<Checkbox>(env_, state);
+    auto checkbox = std::make_unique<Checkbox>(app.context(), state);
     checkbox->setEnabled(enabled);
     app.add(std::move(checkbox),
             roo_display::Box(x, kRowY, x + kBoxSize - 1, kRowY + kBoxSize - 1));

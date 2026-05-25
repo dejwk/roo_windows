@@ -1,5 +1,6 @@
 #include "roo_windows/composites/menu/slider_with_caption.h"
 
+#include "roo_windows/core/application_context.h"
 #include "roo_windows/core/theme.h"
 
 namespace roo_windows {
@@ -29,7 +30,9 @@ BaseSliderWithCaption::BaseSliderWithCaption(ApplicationContext& context,
 
 NumericSliderWithCaption::NumericSliderWithCaption(ApplicationContext& context,
                                                    std::string caption)
-    : BaseSliderWithCaption(context, std::move(caption)), min_(0.0f), max_(1.0f) {}
+    : BaseSliderWithCaption(context, std::move(caption)),
+      min_(0.0f),
+      max_(1.0f) {}
 
 void NumericSliderWithCaption::init(float min_val, float max_val, float val,
                                     float step) {

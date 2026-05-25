@@ -11,11 +11,16 @@
 namespace roo_windows {
 namespace {
 
+ApplicationContext MakeContext(Environment& context) {
+  return ApplicationContext(context.scheduler(), context.theme(),
+                            context.keyboardColorTheme());
+}
+
 class TestFlexLayout : public FlexLayout {
  public:
-  explicit TestFlexLayout(const Environment& env,
+  explicit TestFlexLayout(ApplicationContext& context,
                           FlexDirection direction = FlexDirection::kRow)
-      : FlexLayout(env, direction) {}
+      : FlexLayout(context, direction) {}
 
   using FlexLayout::add;
 };
@@ -23,8 +28,9 @@ class TestFlexLayout : public FlexLayout {
 class TestFullWidthFlexLayout : public TestFlexLayout {
  public:
   explicit TestFullWidthFlexLayout(
-      const Environment& env, FlexDirection direction = FlexDirection::kRow)
-      : TestFlexLayout(env, direction) {}
+      ApplicationContext& context,
+      FlexDirection direction = FlexDirection::kRow)
+      : TestFlexLayout(context, direction) {}
 
   PreferredSize getPreferredSize() const override {
     return PreferredSize(PreferredSize::MatchParentWidth(),
@@ -34,8 +40,8 @@ class TestFullWidthFlexLayout : public TestFlexLayout {
 
 class TestWrapContentWidget : public BasicWidget {
  public:
-  TestWrapContentWidget(const Environment& env, Dimensions dims)
-      : BasicWidget(env), dims_(dims) {}
+  TestWrapContentWidget(ApplicationContext& context, Dimensions dims)
+      : BasicWidget(context), dims_(dims) {}
 
   Dimensions getSuggestedMinimumDimensions() const override { return dims_; }
 
@@ -50,8 +56,8 @@ class TestWrapContentWidget : public BasicWidget {
 
 class TestPaddedColumnFlexLayout : public TestFlexLayout {
  public:
-  explicit TestPaddedColumnFlexLayout(const Environment& env)
-      : TestFlexLayout(env, FlexDirection::kColumn) {}
+  explicit TestPaddedColumnFlexLayout(ApplicationContext& context)
+      : TestFlexLayout(context, FlexDirection::kColumn) {}
 };
 
 // A widget that reports an exact preferred size larger than what the parent
@@ -59,8 +65,8 @@ class TestPaddedColumnFlexLayout : public TestFlexLayout {
 // the available cross-axis space in a padded container.
 class TestExactSizeWidget : public BasicWidget {
  public:
-  TestExactSizeWidget(const Environment& env, Dimensions dims)
-      : BasicWidget(env), dims_(dims) {}
+  TestExactSizeWidget(ApplicationContext& context, Dimensions dims)
+      : BasicWidget(context), dims_(dims) {}
 
   Dimensions getSuggestedMinimumDimensions() const override { return dims_; }
 
@@ -79,14 +85,15 @@ class TestExactSizeWidget : public BasicWidget {
 // pre-stretch cross size).
 TEST(FlexLayout, StretchUsesFinalLineCrossSizeAfterAlignContent) {
   roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
+  Environment bootstrap(scheduler);
+  ApplicationContext context = MakeContext(bootstrap);
 
-  TestFlexLayout parent(env, FlexDirection::kRow);
+  TestFlexLayout parent(context, FlexDirection::kRow);
   parent.setAlignItems(AlignItems::kStretch);
   parent.setAlignContent(AlignContent::kStretch);
 
   // A flex child reports wrap-content preferred size on both axes.
-  TestFlexLayout child(env, FlexDirection::kRow);
+  TestFlexLayout child(context, FlexDirection::kRow);
   FlexLayout::Params params;
   params.flex_grow = 1;
   parent.add(child, params);
@@ -108,13 +115,14 @@ TEST(FlexLayout, StretchUsesFinalLineCrossSizeAfterAlignContent) {
 // children land at offsetLeft==padding and span (width - 2*padding).
 TEST(FlexLayout, PaddedColumnShrinksMatchParentWidthChildren) {
   roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
+  Environment bootstrap(scheduler);
+  ApplicationContext context = MakeContext(bootstrap);
 
-  TestFlexLayout parent(env, FlexDirection::kColumn);
+  TestFlexLayout parent(context, FlexDirection::kColumn);
   parent.setPadding(Padding(12));
 
-  HorizontalDivider divider(env);
-  material3::Slider slider(env, material3::SliderRange{}, 0.5f);
+  HorizontalDivider divider(context);
+  material3::Slider slider(context, material3::SliderRange{}, 0.5f);
 
   parent.add(divider, {.flex_grow = 0, .flex_shrink = 0});
   parent.add(slider, {.flex_grow = 0, .flex_shrink = 1});
@@ -138,23 +146,24 @@ TEST(FlexLayout, PaddedColumnShrinksMatchParentWidthChildren) {
 TEST(FlexLayout,
      ScrollablePanelRespectsNestedPaddedColumnWhenContentFillsWidth) {
   roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
+  Environment bootstrap(scheduler);
+  ApplicationContext context = MakeContext(bootstrap);
 
-  auto content =
-      std::make_unique<TestFullWidthFlexLayout>(env, FlexDirection::kColumn);
+  auto content = std::make_unique<TestFullWidthFlexLayout>(
+      context, FlexDirection::kColumn);
   TestFullWidthFlexLayout* content_ptr = content.get();
   content_ptr->setPadding(Padding(12));
 
-  auto divider = std::make_unique<HorizontalDivider>(env);
+  auto divider = std::make_unique<HorizontalDivider>(context);
   HorizontalDivider* divider_ptr = divider.get();
-  auto slider =
-      std::make_unique<material3::Slider>(env, material3::SliderRange{}, 0.5f);
+  auto slider = std::make_unique<material3::Slider>(
+      context, material3::SliderRange{}, 0.5f);
   material3::Slider* slider_ptr = slider.get();
 
   content_ptr->add(std::move(divider), {.flex_grow = 0, .flex_shrink = 0});
   content_ptr->add(std::move(slider), {.flex_grow = 0, .flex_shrink = 1});
 
-  SimpleScrollablePanel panel(env, std::move(content));
+  SimpleScrollablePanel panel(context, std::move(content));
 
   constexpr int16_t kPanelWidth = 120;
   constexpr int16_t kPanelHeight = 80;
@@ -178,26 +187,27 @@ TEST(FlexLayout,
 TEST(FlexLayout,
      ScrollablePanelKeepsMatchParentSiblingsBoundedWithWideExactSibling) {
   roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
+  Environment bootstrap(scheduler);
+  ApplicationContext context = MakeContext(bootstrap);
 
-  auto content =
-      std::make_unique<TestFullWidthFlexLayout>(env, FlexDirection::kColumn);
+  auto content = std::make_unique<TestFullWidthFlexLayout>(
+      context, FlexDirection::kColumn);
   TestFullWidthFlexLayout* content_ptr = content.get();
   content_ptr->setPadding(Padding(12));
 
-  auto divider = std::make_unique<HorizontalDivider>(env);
+  auto divider = std::make_unique<HorizontalDivider>(context);
   HorizontalDivider* divider_ptr = divider.get();
-  auto slider =
-      std::make_unique<material3::Slider>(env, material3::SliderRange{}, 0.5f);
+  auto slider = std::make_unique<material3::Slider>(
+      context, material3::SliderRange{}, 0.5f);
   material3::Slider* slider_ptr = slider.get();
 
   auto wide_child =
-      std::make_unique<TestWrapContentWidget>(env, Dimensions(240, 20));
+      std::make_unique<TestWrapContentWidget>(context, Dimensions(240, 20));
   content_ptr->add(std::move(divider), {.flex_grow = 0, .flex_shrink = 0});
   content_ptr->add(std::move(slider), {.flex_grow = 0, .flex_shrink = 1});
   content_ptr->add(std::move(wide_child), {.flex_grow = 0, .flex_shrink = 0});
 
-  SimpleScrollablePanel panel(env, std::move(content));
+  SimpleScrollablePanel panel(context, std::move(content));
 
   constexpr int16_t kPanelWidth = 120;
   constexpr int16_t kPanelHeight = 80;
@@ -218,31 +228,32 @@ TEST(FlexLayout,
 TEST(FlexLayout,
      ScrollablePanelKeepsMatchParentSiblingsBoundedWithWideNestedRow) {
   roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
+  Environment bootstrap(scheduler);
+  ApplicationContext context = MakeContext(bootstrap);
 
-  auto content =
-      std::make_unique<TestFullWidthFlexLayout>(env, FlexDirection::kColumn);
+  auto content = std::make_unique<TestFullWidthFlexLayout>(
+      context, FlexDirection::kColumn);
   TestFullWidthFlexLayout* content_ptr = content.get();
   content_ptr->setPadding(Padding(12));
 
-  auto divider = std::make_unique<HorizontalDivider>(env);
+  auto divider = std::make_unique<HorizontalDivider>(context);
   HorizontalDivider* divider_ptr = divider.get();
-  auto slider =
-      std::make_unique<material3::Slider>(env, material3::SliderRange{}, 0.5f);
+  auto slider = std::make_unique<material3::Slider>(
+      context, material3::SliderRange{}, 0.5f);
   material3::Slider* slider_ptr = slider.get();
 
-  auto row = std::make_unique<TestPaddedColumnFlexLayout>(env);
+  auto row = std::make_unique<TestPaddedColumnFlexLayout>(context);
   TestPaddedColumnFlexLayout* row_ptr = row.get();
   row_ptr->setPadding(Padding(12));
 
   auto wide_child =
-      std::make_unique<TestWrapContentWidget>(env, Dimensions(240, 20));
+      std::make_unique<TestWrapContentWidget>(context, Dimensions(240, 20));
   row_ptr->add(std::move(wide_child), {.flex_grow = 0, .flex_shrink = 0});
   content_ptr->add(std::move(divider), {.flex_grow = 0, .flex_shrink = 0});
   content_ptr->add(std::move(slider), {.flex_grow = 0, .flex_shrink = 1});
   content_ptr->add(std::move(row), {.flex_grow = 0, .flex_shrink = 0});
 
-  SimpleScrollablePanel panel(env, std::move(content));
+  SimpleScrollablePanel panel(context, std::move(content));
 
   constexpr int16_t kPanelWidth = 120;
   constexpr int16_t kPanelHeight = 100;
@@ -268,14 +279,15 @@ TEST(FlexLayout,
 // width minus the combined padding of both the outer column and its row.
 TEST(FlexLayout, SliderExampleNestedColumnsHaveCorrectPadding) {
   roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
+  Environment bootstrap(scheduler);
+  ApplicationContext context = MakeContext(bootstrap);
 
-  auto content =
-      std::make_unique<TestFullWidthFlexLayout>(env, FlexDirection::kColumn);
+  auto content = std::make_unique<TestFullWidthFlexLayout>(
+      context, FlexDirection::kColumn);
   TestFullWidthFlexLayout* content_ptr = content.get();
   content_ptr->setPadding(Padding(12));
 
-  auto top_divider = std::make_unique<HorizontalDivider>(env);
+  auto top_divider = std::make_unique<HorizontalDivider>(context);
   HorizontalDivider* top_divider_ptr = top_divider.get();
   content_ptr->add(std::move(top_divider), {.flex_grow = 0, .flex_shrink = 0});
 
@@ -284,17 +296,18 @@ TEST(FlexLayout, SliderExampleNestedColumnsHaveCorrectPadding) {
   material3::Slider* slider_ptrs[3] = {nullptr, nullptr, nullptr};
   TestFlexLayout* row_ptrs[3] = {nullptr, nullptr, nullptr};
   for (int i = 0; i < 3; ++i) {
-    auto row = std::make_unique<TestFlexLayout>(env, FlexDirection::kColumn);
+    auto row =
+        std::make_unique<TestFlexLayout>(context, FlexDirection::kColumn);
     row_ptrs[i] = row.get();
     row->setPadding(Padding(12, 8));
     auto slider = std::make_unique<material3::Slider>(
-        env, material3::SliderRange{}, 0.5f);
+        context, material3::SliderRange{}, 0.5f);
     slider_ptrs[i] = slider.get();
     row_ptrs[i]->add(std::move(slider), {.flex_grow = 0, .flex_shrink = 1});
     content_ptr->add(std::move(row), {.flex_grow = 0, .flex_shrink = 0});
   }
 
-  auto footer_divider = std::make_unique<HorizontalDivider>(env);
+  auto footer_divider = std::make_unique<HorizontalDivider>(context);
   HorizontalDivider* footer_divider_ptr = footer_divider.get();
   content_ptr->add(std::move(footer_divider),
                    {.flex_grow = 0, .flex_shrink = 0});
@@ -305,10 +318,10 @@ TEST(FlexLayout, SliderExampleNestedColumnsHaveCorrectPadding) {
   constexpr int16_t kPanelWidth = 320;
   constexpr int16_t kPanelHeight = 240;
   auto wide_label = std::make_unique<TestExactSizeWidget>(
-      env, Dimensions(kPanelWidth + 40, 20));
+      context, Dimensions(kPanelWidth + 40, 20));
   content_ptr->add(std::move(wide_label), {.flex_grow = 0, .flex_shrink = 0});
 
-  SimpleScrollablePanel panel(env, std::move(content));
+  SimpleScrollablePanel panel(context, std::move(content));
 
   panel.measure(WidthSpec::Exactly(kPanelWidth),
                 HeightSpec::Exactly(kPanelHeight));

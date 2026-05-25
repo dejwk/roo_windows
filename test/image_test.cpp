@@ -14,6 +14,11 @@ using namespace roo_windows;
 namespace roo_windows {
 namespace {
 
+ApplicationContext MakeContext(Environment& context) {
+  return ApplicationContext(context.scheduler(), context.theme(),
+                            context.keyboardColorTheme());
+}
+
 class TestDrawable : public roo_display::Drawable {
  public:
   TestDrawable(roo_display::Box extents, roo_display::Box anchor_extents)
@@ -30,7 +35,7 @@ class TestDrawable : public roo_display::Drawable {
 
 class RecordingPanel : public Panel {
  public:
-  explicit RecordingPanel(const Environment& env) : Panel(env) {}
+  explicit RecordingPanel(ApplicationContext& context) : Panel(context) {}
 
   using Panel::add;
 
@@ -57,9 +62,10 @@ class RecordingPanel : public Panel {
 // come from the anchor box.
 TEST(Image, InkInsetsFollowDrawableBounds) {
   roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
+  Environment bootstrap(scheduler);
+  ApplicationContext context = MakeContext(bootstrap);
   TestDrawable drawable(Box(-2, 1, 6, 8), Box(0, 0, 4, 7));
-  Image image(env, drawable);
+  Image image(context, drawable);
 
   EXPECT_EQ(Insets(-2, 1, -2, -1), image.getInkInsets());
   EXPECT_EQ(5, image.getSuggestedMinimumDimensions().width());
@@ -76,11 +82,12 @@ TEST(Image, InkInsetsFollowDrawableBounds) {
 // size change.
 TEST(Image, SwapInvalidatesOldAndNewVisualBounds) {
   roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
+  Environment bootstrap(scheduler);
+  ApplicationContext context = MakeContext(bootstrap);
   TestDrawable old_drawable(Box(-2, 0, 4, 4), Box(0, 0, 4, 4));
   TestDrawable new_drawable(Box(0, 0, 6, 4), Box(0, 0, 4, 4));
-  Image image(env, old_drawable);
-  RecordingPanel panel(env);
+  Image image(context, old_drawable);
+  RecordingPanel panel(context);
 
   panel.add(image, Rect(10, 10, 14, 14));
   Rect old_bounds = image.maxParentBounds();

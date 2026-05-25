@@ -24,16 +24,16 @@ using Material3Checkbox = material3::Checkbox;
 
 class ClickableSurfaceBoxWidget : public test_support::ColorBoxWidget {
  public:
-  ClickableSurfaceBoxWidget(const Environment& env, roo_display::Color color,
+  ClickableSurfaceBoxWidget(ApplicationContext& context, roo_display::Color color,
                             Dimensions dims)
-      : ColorBoxWidget(env, color, dims) {}
+      : ColorBoxWidget(context, color, dims) {}
 
   bool isClickable() const override { return true; }
 };
 
 class RolePanel : public Panel {
  public:
-  RolePanel(const Environment& env, ColorRole role) : Panel(env), role_(role) {}
+  RolePanel(ApplicationContext& context, ColorRole role) : Panel(context), role_(role) {}
 
   void addChild(WidgetRef child, const Rect& bounds) {
     add(std::move(child), bounds);
@@ -47,10 +47,10 @@ class RolePanel : public Panel {
 
 class RoleOverridingPointOverlayWidget : public PointOverlayBoxWidget {
  public:
-  RoleOverridingPointOverlayWidget(const Environment& env,
+  RoleOverridingPointOverlayWidget(ApplicationContext& context,
                                    roo_display::Color color, Dimensions dims,
                                    ColorRole role)
-      : PointOverlayBoxWidget(env, color, dims), role_(role) {}
+      : PointOverlayBoxWidget(context, color, dims), role_(role) {}
 
   ColorRole effectiveContainerRole() const override { return role_; }
 
@@ -60,7 +60,7 @@ class RoleOverridingPointOverlayWidget : public PointOverlayBoxWidget {
 
 class RecordingPanel : public Panel {
  public:
-  explicit RecordingPanel(const Environment& env) : Panel(env) {}
+  explicit RecordingPanel(ApplicationContext& context) : Panel(context) {}
 
   using Panel::add;
 
@@ -82,9 +82,9 @@ class RecordingPanel : public Panel {
 
 class ClickAnimationOverflowWidget : public PointOverlayBoxWidget {
  public:
-  ClickAnimationOverflowWidget(const Environment& env, roo_display::Color color,
+  ClickAnimationOverflowWidget(ApplicationContext& context, roo_display::Color color,
                                Dimensions dims)
-      : PointOverlayBoxWidget(env, color, dims) {}
+      : PointOverlayBoxWidget(context, color, dims) {}
 
   Rect getParentTransientPaintBounds() const override {
     if (!isClicking()) {
@@ -97,8 +97,8 @@ class ClickAnimationOverflowWidget : public PointOverlayBoxWidget {
 
 class FullWidthColumnWidget : public FlexLayout {
  public:
-  explicit FullWidthColumnWidget(const Environment& env)
-      : FlexLayout(env, FlexDirection::kColumn) {}
+  explicit FullWidthColumnWidget(ApplicationContext& context)
+      : FlexLayout(context, FlexDirection::kColumn) {}
 
   using FlexLayout::add;
 
@@ -122,15 +122,15 @@ float ExampleUnitValueFromPercent(int percent) {
 
 class ExampleSliderRow : public FlexLayout {
  public:
-  ExampleSliderRow(const Environment& env, const char* primary,
+  ExampleSliderRow(ApplicationContext& context, const char* primary,
                    const char* secondary, int initial_percent)
-      : FlexLayout(env, FlexDirection::kColumn),
-        header_(env, FlexDirection::kRow),
-        labels_(env, FlexDirection::kColumn),
-        primary_(env, primary, font_body1()),
-        secondary_(env, secondary, font_caption()),
-        value_(env, "", font_body1()),
-        slider_(env, material3::SliderRange{},
+      : FlexLayout(context, FlexDirection::kColumn),
+        header_(context, FlexDirection::kRow),
+        labels_(context, FlexDirection::kColumn),
+        primary_(context, primary, font_body1()),
+        secondary_(context, secondary, font_caption()),
+        value_(context, "", font_body1()),
+        slider_(context, material3::SliderRange{},
                 ExampleUnitValueFromPercent(initial_percent)) {
     setPadding(Padding(Scaled(12), Scaled(8)));
     setGap(Scaled(8));
@@ -165,15 +165,15 @@ class ExampleSliderRow : public FlexLayout {
 
 class ExampleSliderScreen : public SimpleScrollablePanel {
  public:
-  explicit ExampleSliderScreen(const Environment& env)
-      : SimpleScrollablePanel(env),
-        content_(env),
-        title_(env, "Material 3 sliders", font_body1()),
-        subtitle_(env, "Drag the handles or tap the track to set a value.",
+  explicit ExampleSliderScreen(ApplicationContext& context)
+      : SimpleScrollablePanel(context),
+        content_(context),
+        title_(context, "Material 3 sliders", font_body1()),
+        subtitle_(context, "Drag the handles or tap the track to set a value.",
                   font_caption()),
-        divider_(env),
-        summary_(env, "Average level: 55%", font_caption()),
-        media_(env, "Media volume", "Speaker output for videos and games", 72) {
+        divider_(context),
+        summary_(context, "Average level: 55%", font_caption()),
+        media_(context, "Media volume", "Speaker output for videos and games", 72) {
     content_.setPadding(Scaled(12));
     content_.setGap(Scaled(4));
     content_.add(title_, {.flex_grow = 0, .flex_shrink = 0});
@@ -216,11 +216,11 @@ TEST(PressOverlay, WideTopStripCrossingCenterIsNotUniformTransparent) {
 // touch targets (checkbox, radio, slider, icon) default to POINT overlays
 // while surface-like clickable widgets default to AREA overlays.
 TEST_F(RooWindowsRenderTest, OverlayPolicyDefaultsFollowWidgetHierarchy) {
-  Checkbox checkbox(env_);
-  RadioButton radio(env_);
-  Slider slider(env_);
-  Icon idle_icon(env_);
-  ClickableSurfaceBoxWidget surface(env_, color::Blue, Dimensions(18, 18));
+  Checkbox checkbox(context());
+  RadioButton radio(context());
+  Slider slider(context());
+  Icon idle_icon(context());
+  ClickableSurfaceBoxWidget surface(context(), color::Blue, Dimensions(18, 18));
 
   EXPECT_EQ(Widget::OVERLAY_POINT, checkbox.getOverlayType());
   EXPECT_EQ(Widget::OVERLAY_POINT, radio.getOverlayType());
@@ -234,7 +234,7 @@ TEST_F(RooWindowsRenderTest, OverlayPolicyDefaultsFollowWidgetHierarchy) {
 // and parent coordinate spaces.
 TEST_F(RooWindowsRenderTest,
        PointInteractionBoundsFollowLocalAndParentCoordinates) {
-  auto checkbox = std::make_unique<Checkbox>(env_);
+  auto checkbox = std::make_unique<Checkbox>(context());
   Checkbox* checkbox_ptr = checkbox.get();
   app_.add(std::move(checkbox), Box(20, 12, 37, 29));
 
@@ -250,7 +250,7 @@ TEST_F(RooWindowsRenderTest,
 // its focus point.
 TEST_F(RooWindowsRenderTest,
        Material3CheckboxInteractionBoundsMatchStaticPointOverlayExtents) {
-  auto checkbox = std::make_unique<Material3Checkbox>(env_);
+  auto checkbox = std::make_unique<Material3Checkbox>(context());
   Material3Checkbox* checkbox_ptr = checkbox.get();
   app_.add(std::move(checkbox), Box(20, 12, 37, 29));
 
@@ -266,7 +266,7 @@ TEST_F(RooWindowsRenderTest,
 // PressOverlay used by the click animation.
 TEST_F(RooWindowsRenderTest,
        Material3CheckboxTransientBoundsMatchClickOverlayClipExtents) {
-  auto checkbox = std::make_unique<Material3Checkbox>(env_);
+  auto checkbox = std::make_unique<Material3Checkbox>(context());
   Material3Checkbox* checkbox_ptr = checkbox.get();
   app_.add(std::move(checkbox), Box(20, 12, 37, 29));
 
@@ -290,16 +290,16 @@ TEST_F(RooWindowsRenderTest,
 TEST_F(
     RooWindowsRenderTest,
     ScrollablePanelPaddedDividerDoesNotPaintToScreenEdgeWhenContentFillsWidth) {
-  auto content = std::make_unique<FullWidthColumnWidget>(env_);
+  auto content = std::make_unique<FullWidthColumnWidget>(context());
   FullWidthColumnWidget* content_ptr = content.get();
   content_ptr->setPadding(Padding(12));
 
-  auto divider = std::make_unique<HorizontalDivider>(env_);
+  auto divider = std::make_unique<HorizontalDivider>(context());
   HorizontalDivider* divider_ptr = divider.get();
   content_ptr->add(std::move(divider), {.flex_grow = 0, .flex_shrink = 0});
 
   auto panel =
-      std::make_unique<SimpleScrollablePanel>(env_, std::move(content));
+      std::make_unique<SimpleScrollablePanel>(context(), std::move(content));
   app_.add(std::move(panel), Box(0, 0, kWidth - 1, kHeight - 1));
 
   ASSERT_TRUE(refresh());
@@ -311,7 +311,7 @@ TEST_F(
   EXPECT_EQ(12, divider_x);
   EXPECT_EQ(kWidth - 24, divider_ptr->width());
 
-  Color bg = QuantizeToArgb4444(env_.theme().color.background);
+  Color bg = QuantizeToArgb4444(context().theme().color.background);
   EXPECT_NE(bg, pixelAt(divider_x, divider_y));
   EXPECT_EQ(bg, pixelAt(kWidth - 1, divider_y));
 }
@@ -324,13 +324,13 @@ using ExampleSliderRenderTest =
 // confirming the nested padding chain produces the expected inset widths.
 TEST_F(ExampleSliderRenderTest,
        ExampleSliderScreenLeavesRightEdgeBackgroundForDividerAndSlider) {
-  auto screen = std::make_unique<ExampleSliderScreen>(env_);
+  auto screen = std::make_unique<ExampleSliderScreen>(context());
   ExampleSliderScreen* screen_ptr = screen.get();
   app_.add(std::move(screen), Box(0, 0, kWidth - 1, kHeight - 1));
 
   ASSERT_TRUE(refresh());
 
-  Color bg = QuantizeToArgb4444(env_.theme().color.background);
+  Color bg = QuantizeToArgb4444(context().theme().color.background);
 
   XDim divider_x;
   YDim divider_y;
@@ -362,8 +362,8 @@ TEST_F(ExampleSliderRenderTest,
 TEST_F(RooWindowsRenderTest,
        Material3CheckboxQuickReleaseClearsLeftmostInteractionColumn) {
   auto back =
-      std::make_unique<ColorBoxWidget>(env_, color::Red, Dimensions(48, 40));
-  auto front = std::make_unique<Material3Checkbox>(env_);
+      std::make_unique<ColorBoxWidget>(context(), color::Red, Dimensions(48, 40));
+  auto front = std::make_unique<Material3Checkbox>(context());
   Material3Checkbox* front_ptr = front.get();
 
   app_.add(std::move(back), Box(0, 0, 47, 39));
@@ -407,8 +407,8 @@ TEST_F(RooWindowsRenderTest,
 TEST_F(RooWindowsRenderTest,
        Material3CheckboxStateChangeStaysWithinLogicalBounds) {
   auto back =
-      std::make_unique<ColorBoxWidget>(env_, color::Red, Dimensions(48, 40));
-  auto front = std::make_unique<Material3Checkbox>(env_, OnOffState::kOff);
+      std::make_unique<ColorBoxWidget>(context(), color::Red, Dimensions(48, 40));
+  auto front = std::make_unique<Material3Checkbox>(context(), OnOffState::kOff);
   Material3Checkbox* front_ptr = front.get();
 
   app_.add(std::move(back), Box(0, 0, 47, 39));
@@ -440,8 +440,8 @@ TEST_F(
     RooWindowsRenderTest,
     Material3CheckboxQuickReleaseSpillStaysClearedAfterDeferredClickInBareScene) {
   auto back = std::make_unique<ColorBoxWidget>(
-      env_, env_.theme().color.background, Dimensions(48, 40));
-  auto front = std::make_unique<Material3Checkbox>(env_, OnOffState::kOff);
+      context(), context().theme().color.background, Dimensions(48, 40));
+  auto front = std::make_unique<Material3Checkbox>(context(), OnOffState::kOff);
   Material3Checkbox* front_ptr = front.get();
 
   app_.add(std::move(back), Box(0, 0, 47, 39));
@@ -486,7 +486,7 @@ TEST_F(
 // on all sides, and setActivated(false) collapses them back to the layout
 // rect.
 TEST_F(RooWindowsRenderTest, PointOverlayBoundsExpandOnlyWhileOverlayIsActive) {
-  auto checkbox = std::make_unique<Checkbox>(env_);
+  auto checkbox = std::make_unique<Checkbox>(context());
   Checkbox* checkbox_ptr = checkbox.get();
   app_.add(std::move(checkbox), Box(20, 12, 37, 29));
 
@@ -516,8 +516,8 @@ TEST_F(RooWindowsRenderTest, PointOverlayBoundsExpandOnlyWhileOverlayIsActive) {
 TEST_F(RooWindowsRenderTest,
        PointOverlayInvalidationRestoresBackgroundOutsideLogicalBounds) {
   auto back =
-      std::make_unique<ColorBoxWidget>(env_, color::Red, Dimensions(48, 40));
-  auto front = std::make_unique<PointOverlayBoxWidget>(env_, color::Blue,
+      std::make_unique<ColorBoxWidget>(context(), color::Red, Dimensions(48, 40));
+  auto front = std::make_unique<PointOverlayBoxWidget>(context(), color::Blue,
                                                        Dimensions(18, 18));
   PointOverlayBoxWidget* front_ptr = front.get();
 
@@ -548,9 +548,9 @@ TEST_F(RooWindowsRenderTest,
 TEST_F(RooWindowsRenderTest,
        PointOverlayColorUsesParentRoleWhenChildOverridesContainerRole) {
   auto back =
-      std::make_unique<RolePanel>(env_, ColorRole::kSurfaceContainerHighest);
+      std::make_unique<RolePanel>(context(), ColorRole::kSurfaceContainerHighest);
   auto front = std::make_unique<RoleOverridingPointOverlayWidget>(
-      env_, color::Blue, Dimensions(18, 18), ColorRole::kPrimary);
+      context(), color::Blue, Dimensions(18, 18), ColorRole::kPrimary);
   RoleOverridingPointOverlayWidget* front_ptr = front.get();
 
   back->addChild(std::move(front), Box(20, 12, 37, 29));
@@ -576,8 +576,8 @@ TEST_F(RooWindowsRenderTest,
 // background pixels in that region.
 TEST_F(RooWindowsRenderTest, PointPressOverlayRendersOutsideLogicalBounds) {
   auto back =
-      std::make_unique<ColorBoxWidget>(env_, color::Red, Dimensions(48, 40));
-  auto front = std::make_unique<PointOverlayBoxWidget>(env_, color::Blue,
+      std::make_unique<ColorBoxWidget>(context(), color::Red, Dimensions(48, 40));
+  auto front = std::make_unique<PointOverlayBoxWidget>(context(), color::Blue,
                                                        Dimensions(18, 18));
   PointOverlayBoxWidget* front_ptr = front.get();
 
@@ -636,9 +636,9 @@ TEST_F(RooWindowsRenderTest,
 // Verifies that widget-local click-animation access only exposes the active
 // target and surfaces the target-local animation read API.
 TEST_F(RooWindowsRenderTest, WidgetGetClickAnimationReturnsOnlyActiveTarget) {
-  auto target = std::make_unique<PointOverlayBoxWidget>(env_, color::Blue,
+  auto target = std::make_unique<PointOverlayBoxWidget>(context(), color::Blue,
                                                         Dimensions(18, 18));
-  auto other = std::make_unique<PointOverlayBoxWidget>(env_, color::Green,
+  auto other = std::make_unique<PointOverlayBoxWidget>(context(), color::Green,
                                                        Dimensions(18, 18));
   PointOverlayBoxWidget* target_ptr = target.get();
   PointOverlayBoxWidget* other_ptr = other.get();
@@ -662,7 +662,7 @@ TEST_F(RooWindowsRenderTest, WidgetGetClickAnimationReturnsOnlyActiveTarget) {
 // tick() retires it, even after progress reaches 1.0.
 TEST_F(RooWindowsRenderTest,
        ClickAnimationKeepsFinishedTargetUntilTickRetiresIt) {
-  auto front = std::make_unique<PointOverlayBoxWidget>(env_, color::Blue,
+  auto front = std::make_unique<PointOverlayBoxWidget>(context(), color::Blue,
                                                        Dimensions(18, 18));
   PointOverlayBoxWidget* front_ptr = front.get();
 
@@ -685,10 +685,10 @@ TEST_F(RooWindowsRenderTest,
 // region reported by the target rather than only the logical bounds.
 TEST_F(RooWindowsRenderTest,
        ClickAnimationTickInvalidatesReportedTransientOverflowRegion) {
-  auto panel = std::make_unique<RecordingPanel>(env_);
+  auto panel = std::make_unique<RecordingPanel>(context());
   RecordingPanel* panel_ptr = panel.get();
   auto front = std::make_unique<ClickAnimationOverflowWidget>(
-      env_, color::Blue, Dimensions(18, 18));
+      context(), color::Blue, Dimensions(18, 18));
   ClickAnimationOverflowWidget* front_ptr = front.get();
 
   panel_ptr->add(std::move(front), Box(20, 12, 37, 29));
@@ -709,8 +709,8 @@ TEST_F(RooWindowsRenderTest,
 // retains the steady press overlay color.
 TEST_F(RooWindowsRenderTest, PointClickAnimationSettlesIntoStaticPressOverlay) {
   auto back =
-      std::make_unique<ColorBoxWidget>(env_, color::Red, Dimensions(48, 40));
-  auto front = std::make_unique<PointOverlayBoxWidget>(env_, color::Blue,
+      std::make_unique<ColorBoxWidget>(context(), color::Red, Dimensions(48, 40));
+  auto front = std::make_unique<PointOverlayBoxWidget>(context(), color::Blue,
                                                        Dimensions(18, 18));
   PointOverlayBoxWidget* front_ptr = front.get();
 
@@ -746,12 +746,12 @@ TEST_F(RooWindowsRenderTest, PointClickAnimationSettlesIntoStaticPressOverlay) {
 }
 
 TEST_F(RooWindowsRenderTest, PointOverlayCanTintFlexOwnedGapSpace) {
-  auto layout = std::make_unique<FlexLayout>(env_, FlexDirection::kRow);
+  auto layout = std::make_unique<FlexLayout>(context(), FlexDirection::kRow);
   layout->setJustifyContent(JustifyContent::kCenter);
   layout->setAlignItems(AlignItems::kCenter);
   FlexLayout* layout_ptr = layout.get();
 
-  auto front = std::make_unique<PointOverlayBoxWidget>(env_, color::Blue,
+  auto front = std::make_unique<PointOverlayBoxWidget>(context(), color::Blue,
                                                        Dimensions(18, 18));
   PointOverlayBoxWidget* front_ptr = front.get();
   // Strip the BasicSurfaceWidget default padding so the widget's logical
@@ -796,13 +796,13 @@ TEST_F(RooWindowsRenderTest, PointOverlayCanTintFlexOwnedGapSpace) {
 TEST_F(RooWindowsRenderTest,
        UnclippedPointOverlayPropagatesPastContainerBounds) {
   auto back =
-      std::make_unique<ColorBoxWidget>(env_, color::Red, Dimensions(64, 48));
-  auto layout = std::make_unique<FlexLayout>(env_, FlexDirection::kRow);
+      std::make_unique<ColorBoxWidget>(context(), color::Red, Dimensions(64, 48));
+  auto layout = std::make_unique<FlexLayout>(context(), FlexDirection::kRow);
   layout->setJustifyContent(JustifyContent::kCenter);
   layout->setAlignItems(AlignItems::kCenter);
   FlexLayout* layout_ptr = layout.get();
 
-  auto front = std::make_unique<PointOverlayBoxWidget>(env_, color::Blue,
+  auto front = std::make_unique<PointOverlayBoxWidget>(context(), color::Blue,
                                                        Dimensions(18, 18));
   PointOverlayBoxWidget* front_ptr = front.get();
   front_ptr->setParentClipMode(ParentClipMode::kUnclipped);

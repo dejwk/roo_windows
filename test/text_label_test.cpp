@@ -17,6 +17,11 @@ using namespace roo_windows;
 namespace roo_windows {
 namespace {
 
+ApplicationContext MakeContext(Environment& context) {
+  return ApplicationContext(context.scheduler(), context.theme(),
+                            context.keyboardColorTheme());
+}
+
 constexpr char kOverhangText[] = "jQy/";
 
 Color QuantizeToArgb4444(Color color) {
@@ -49,6 +54,8 @@ class TextLabelRenderTest : public testing::Test {
         display_(offscreen_),
         env_(scheduler_),
         app_(&env_, display_) {}
+
+  ApplicationContext& context() { return app_.context(); }
 
   bool refresh(roo_time::Uptime deadline = roo_time::Uptime::Max()) {
     return app_.refresh(deadline);
@@ -108,16 +115,17 @@ class TextLabelGoldenTest : public testing::Test {
   Offscreen<Rgb888> RenderFlexLabel(Gravity gravity,
                                     const FlexLayout::Params& params,
                                     PaddingSize padding = PaddingSize::kNone) {
-    FlexLayout layout(env_, FlexDirection::kRow);
+    Application app(&env_, display_);
+
+    FlexLayout layout(app.context(), FlexDirection::kRow);
     layout.setPadding(Padding(12, 8));
     layout.setJustifyContent(JustifyContent::kCenter);
     layout.setAlignItems(AlignItems::kCenter);
 
-    TextLabel label(env_, kOverhangText, font_body2(), gravity);
+    TextLabel label(app.context(), kOverhangText, font_body2(), gravity);
     label.setPadding(padding);
     layout.add(label, params);
 
-    Application app(&env_, display_);
     app.add(layout, Box(kLayoutX, kLayoutY, kLayoutX + kLayoutWidth - 1,
                         kLayoutY + kLayoutHeight - 1));
     EXPECT_TRUE(app.refresh());
@@ -134,7 +142,7 @@ class TextLabelGoldenTest : public testing::Test {
 
 class RecordingPanel : public Panel {
  public:
-  explicit RecordingPanel(const Environment& env) : Panel(env) {}
+  explicit RecordingPanel(ApplicationContext& context) : Panel(context) {}
 
   using Panel::add;
 
@@ -161,9 +169,10 @@ class RecordingPanel : public Panel {
 // height (ascent - descent + linegap) vertically.
 TEST(TextLabel, SuggestedMinimumDimensionsMatchFontMetrics) {
   roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
+  Environment bootstrap(scheduler);
+  ApplicationContext context = MakeContext(bootstrap);
   const auto& font = font_body2();
-  TextLabel label(env, "abc", font);
+  TextLabel label(context, "abc", font);
 
   auto metrics = font.getHorizontalStringMetrics("abc");
   Dimensions dims = label.getSuggestedMinimumDimensions();
@@ -178,9 +187,10 @@ TEST(TextLabel, SuggestedMinimumDimensionsMatchFontMetrics) {
 // layout rectangle.
 TEST(TextLabel, ContentBoundsFollowDrawableInkExtents) {
   roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
+  Environment bootstrap(scheduler);
+  ApplicationContext context = MakeContext(bootstrap);
   const auto& font = font_body2();
-  TextLabel label(env, "abc", font, kGravityLeft | kGravityMiddle);
+  TextLabel label(context, "abc", font, kGravityLeft | kGravityMiddle);
   label.setPadding(PaddingSize::kNone);
 
   Dimensions dims = label.getSuggestedMinimumDimensions();
@@ -201,11 +211,12 @@ TEST(TextLabel, ContentBoundsFollowDrawableInkExtents) {
 // reports zero ink insets, so an empty label doesn't claim any visual area.
 TEST(TextLabel, EmptyTextHasZeroInkInsets) {
   roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
+  Environment bootstrap(scheduler);
+  ApplicationContext context = MakeContext(bootstrap);
   const auto& font = font_body2();
 
-  TextLabel label(env, "", font, kGravityLeft | kGravityMiddle);
-  StringViewLabel string_view_label(env, roo::string_view(), font,
+  TextLabel label(context, "", font, kGravityLeft | kGravityMiddle);
+  StringViewLabel string_view_label(context, roo::string_view(), font,
                                     kGravityLeft | kGravityMiddle);
 
   EXPECT_EQ(Insets::Zero(), label.getInkInsets());
@@ -217,10 +228,11 @@ TEST(TextLabel, EmptyTextHasZeroInkInsets) {
 // erase beneath, so the panel records no invalidation regions.
 TEST(TextLabel, EmptyToNonEmptyDoesNotInvalidateParentBeneath) {
   roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
-  RecordingPanel panel(env);
+  Environment bootstrap(scheduler);
+  ApplicationContext context = MakeContext(bootstrap);
+  RecordingPanel panel(context);
 
-  auto label = std::make_unique<TextLabel>(env, "", font_body2(),
+  auto label = std::make_unique<TextLabel>(context, "", font_body2(),
                                            kGravityCenter | kGravityMiddle);
   TextLabel* label_ptr = label.get();
   panel.add(std::move(label), Rect(0, 0, 119, 19));
@@ -236,10 +248,11 @@ TEST(TextLabel, EmptyToNonEmptyDoesNotInvalidateParentBeneath) {
 // rect is repainted by the label itself.
 TEST(TextLabel, TextChangeInvalidatesOnlyOldVisualBounds) {
   roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
-  RecordingPanel panel(env);
+  Environment bootstrap(scheduler);
+  ApplicationContext context = MakeContext(bootstrap);
+  RecordingPanel panel(context);
 
-  auto label = std::make_unique<TextLabel>(env, "A", font_body2(),
+  auto label = std::make_unique<TextLabel>(context, "A", font_body2(),
                                            kGravityCenter | kGravityMiddle);
   TextLabel* label_ptr = label.get();
   panel.add(std::move(label), Rect(0, 0, 119, 19));
@@ -257,10 +270,11 @@ TEST(TextLabel, TextChangeInvalidatesOnlyOldVisualBounds) {
 // passes for incremental value updates (e.g., '72%' -> '73%').
 TEST(TextLabel, SameMeasuredSizeTextChangeDoesNotRequestLayout) {
   roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
+  Environment bootstrap(scheduler);
+  ApplicationContext context = MakeContext(bootstrap);
   const auto& font = font_body2();
-  TextLabel label(env, "72%", font, kGravityLeft | kGravityMiddle);
-  TextLabel comparison(env, "73%", font, kGravityLeft | kGravityMiddle);
+  TextLabel label(context, "72%", font, kGravityLeft | kGravityMiddle);
+  TextLabel comparison(context, "73%", font, kGravityLeft | kGravityMiddle);
 
   Dimensions initial = label.getSuggestedMinimumDimensions();
   Dimensions updated = comparison.getSuggestedMinimumDimensions();
@@ -280,11 +294,12 @@ TEST(TextLabel, SameMeasuredSizeTextChangeDoesNotRequestLayout) {
 // new layout pass.
 TEST(StringViewLabel, SameMeasuredSizeTextChangeDoesNotRequestLayout) {
   roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
+  Environment bootstrap(scheduler);
+  ApplicationContext context = MakeContext(bootstrap);
   const auto& font = font_body2();
-  StringViewLabel label(env, roo::string_view("72%"), font,
+  StringViewLabel label(context, roo::string_view("72%"), font,
                         kGravityLeft | kGravityMiddle);
-  StringViewLabel comparison(env, roo::string_view("73%"), font,
+  StringViewLabel comparison(context, roo::string_view("73%"), font,
                              kGravityLeft | kGravityMiddle);
 
   Dimensions initial = label.getSuggestedMinimumDimensions();
@@ -304,12 +319,12 @@ TEST(StringViewLabel, SameMeasuredSizeTextChangeDoesNotRequestLayout) {
 // the painted ink region grows when text grows, and disappears entirely
 // when the text is cleared.
 TEST_F(TextLabelRenderTest, SetTextAndClearTextAffectRenderedPixels) {
-  auto label = std::make_unique<TextLabel>(env_, "A", font_body2());
+  auto label = std::make_unique<TextLabel>(context(), "A", font_body2());
   TextLabel* label_ptr = label.get();
   app_.add(std::move(label), Box(8, 8, 80, 32));
 
   ASSERT_TRUE(refresh());
-  Color bg = QuantizeToArgb4444(env_.theme().color.background);
+  Color bg = QuantizeToArgb4444(context().theme().color.background);
   PixelBounds initial = findNonBackground(8, 8, 80, 32, bg);
   ASSERT_TRUE(initial.found);
 
@@ -329,9 +344,9 @@ TEST_F(TextLabelRenderTest, SetTextAndClearTextAffectRenderedPixels) {
 // label paints its ink farther right than a left-gravity label of the same
 // text within an equally-sized box.
 TEST_F(TextLabelRenderTest, GravityChangesHorizontalPlacement) {
-  auto left = std::make_unique<TextLabel>(env_, "WWW", font_body2(),
+  auto left = std::make_unique<TextLabel>(context(), "WWW", font_body2(),
                                           kGravityLeft | kGravityMiddle);
-  auto right = std::make_unique<TextLabel>(env_, "WWW", font_body2(),
+  auto right = std::make_unique<TextLabel>(context(), "WWW", font_body2(),
                                            kGravityRight | kGravityMiddle);
   left->setPadding(PaddingSize::kNone);
   right->setPadding(PaddingSize::kNone);
@@ -340,7 +355,7 @@ TEST_F(TextLabelRenderTest, GravityChangesHorizontalPlacement) {
   app_.add(std::move(right), Box(4, 34, 44, 56));
 
   ASSERT_TRUE(refresh());
-  Color bg = QuantizeToArgb4444(env_.theme().color.background);
+  Color bg = QuantizeToArgb4444(context().theme().color.background);
   PixelBounds left_bounds = findNonBackground(4, 6, 44, 28, bg);
   PixelBounds right_bounds = findNonBackground(4, 34, 44, 56, bg);
 
@@ -353,17 +368,17 @@ TEST_F(TextLabelRenderTest, GravityChangesHorizontalPlacement) {
 // produces pixels identical to passing the theme's onBackground color
 // explicitly, confirming the transparent sentinel resolves to the theme.
 TEST_F(TextLabelRenderTest, TransparentColorMatchesExplicitDefaultColor) {
-  auto implicit = std::make_unique<TextLabel>(env_, "Hi", font_body2(),
+  auto implicit = std::make_unique<TextLabel>(context(), "Hi", font_body2(),
                                               kGravityLeft | kGravityMiddle);
   auto explicit_default = std::make_unique<TextLabel>(
-      env_, "Hi", font_body2(), env_.theme().color.onBackground,
+      context(), "Hi", font_body2(), context().theme().color.onBackground,
       kGravityLeft | kGravityMiddle);
 
   app_.add(std::move(implicit), Box(4, 6, 44, 28));
   app_.add(std::move(explicit_default), Box(4, 34, 44, 56));
 
   ASSERT_TRUE(refresh());
-  Color bg = QuantizeToArgb4444(env_.theme().color.background);
+  Color bg = QuantizeToArgb4444(context().theme().color.background);
   PixelBounds top = findNonBackground(4, 6, 44, 28, bg);
   PixelBounds bottom = findNonBackground(4, 34, 44, 56, bg);
   ASSERT_TRUE(top.found);

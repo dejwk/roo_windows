@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <vector>
@@ -214,8 +215,9 @@ class Widget {
   // .onSecondary, or .onError, appropriately. If all else fails, returns
   // .onBackground.
   //
-  // Paint-pipeline only: this depends on theme(), so it is valid only after
-  // the widget is attached to the parent/application tree.
+  // Paint-pipeline only: this depends on the effective container role, so it
+  // is valid only after the widget is attached to the parent/application
+  // tree.
   //
   // NOTE: during paint(PaintContext&), the default foreground color is
   // derived from the effective container role.
@@ -472,8 +474,9 @@ class Widget {
   // Computes the current area-overlay opacity from the widget theme and
   // interaction state.
   //
-  // Paint-pipeline only: this depends on theme(), so it is valid only after
-  // the widget is attached to the parent/application tree.
+  // Paint-pipeline only: this depends on the effective overlay color role, so
+  // it is valid only after the widget is attached to the parent/application
+  // tree.
   virtual uint8_t getOverlayOpacity() const;
 
   const Container* parent() const { return parent_; }
@@ -746,6 +749,11 @@ class Widget {
   // kDirty | kInvalidated | kLayout{Requested|Required}
   uint8_t redraw_status_;
 };
+
+#if UINTPTR_MAX == UINT32_MAX
+static_assert(sizeof(Widget) <= 24,
+              "Widget should stay within 24 bytes on 32-bit targets");
+#endif
 
 // TODO: adjust for different screen densities.
 static const int gridSize = 4;

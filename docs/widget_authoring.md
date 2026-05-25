@@ -107,9 +107,10 @@ should live in a shared struct referenced by pointer.
 
 Two main mechanisms exist:
 
-- **Theme / Environment:** the primary path for library-wide defaults.
-  New widgets should resolve their default colors and geometry through
-  the active `Theme`, not by storing local copies.
+- **Theme via ApplicationContext:** the primary widget-runtime path for
+  library-wide defaults. `ApplicationContext` is initialized from the
+  application's `Environment`, but widgets should resolve their default colors
+  and geometry through the active `Theme`, not by storing local copies.
 - **Shared const pointers:** for per-widget overrides that are still
   shared across multiple instances of the same kind, expose a
   `setAppearance(const SomeAppearance*)`-style slot. Default to `nullptr`,

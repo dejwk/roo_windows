@@ -12,8 +12,8 @@ using roo_display::Color;
 
 class SolidWidget : public BasicSurfaceWidget {
  public:
-  SolidWidget(const Environment& env, Color color, Dimensions dims)
-      : BasicSurfaceWidget(env), color_(color), dims_(dims) {}
+  SolidWidget(ApplicationContext& context, Color color, Dimensions dims)
+      : BasicSurfaceWidget(context), color_(color), dims_(dims) {}
 
   Color background() const override { return color_; }
 
@@ -28,9 +28,9 @@ class SolidWidget : public BasicSurfaceWidget {
 
 class DecoratedWidget : public BasicSurfaceWidget {
  public:
-  DecoratedWidget(const Environment& env, Color fill_color, Color outline_color,
+  DecoratedWidget(ApplicationContext& context, Color fill_color, Color outline_color,
                   BorderStyle border_style, uint8_t elevation, Dimensions dims)
-      : BasicSurfaceWidget(env),
+      : BasicSurfaceWidget(context),
         fill_color_(fill_color),
         outline_color_(outline_color),
         border_style_(border_style),
@@ -71,13 +71,13 @@ class DecorationGoldenTest : public testing::Test {
                                                      uint8_t elevation) {
     Application app(&env_, display_);
 
-    auto backdrop = std::make_unique<SolidWidget>(env_, Color(0xFFE8EAEE),
+    auto backdrop = std::make_unique<SolidWidget>(app.context(), Color(0xFFE8EAEE),
                                                   Dimensions(kWidth, kHeight));
     app.add(WidgetRef(std::move(backdrop)),
             roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
 
     auto card = std::make_unique<DecoratedWidget>(
-        env_, Color(0xFF0F7FBF), Color(0xFFE9A334), border_style, elevation,
+        app.context(), Color(0xFF0F7FBF), Color(0xFFE9A334), border_style, elevation,
         Dimensions(92, 58));
     app.add(WidgetRef(std::move(card)), roo_display::Box(44, 30, 135, 87));
 

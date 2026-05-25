@@ -19,6 +19,11 @@ roo_display::Color QuantizeToArgb4444(roo_display::Color color) {
   return mode.toArgbColor(mode.fromArgbColor(color));
 }
 
+ApplicationContext MakeContext(Environment& env) {
+  return ApplicationContext(env.scheduler(), env.theme(),
+                            env.keyboardColorTheme());
+}
+
 class SolidBackdrop : public BasicSurfaceWidget {
  public:
   SolidBackdrop(const Environment& env, Color color, Dimensions dims)
@@ -46,6 +51,8 @@ class Material3ButtonClickAnimationTest : public testing::Test {
         env_(scheduler_),
         app_(&env_, display_) {}
 
+  ApplicationContext& context() { return app_.context(); }
+
   bool refresh(roo_time::Uptime deadline = roo_time::Uptime::Max()) {
     return app_.refresh(deadline);
   }
@@ -71,8 +78,9 @@ class Material3ButtonClickAnimationTest : public testing::Test {
 TEST(Material3Button, DefaultVariantIsFilled) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
 
-  Button b(env, "Save");
+  Button b(context, "Save");
   EXPECT_EQ(ButtonVariant::kFilled, b.variant());
   EXPECT_EQ(ButtonSize::kSmall, b.size());
   EXPECT_EQ(ButtonShape::kRound, b.shape());
@@ -86,8 +94,9 @@ TEST(Material3Button, DefaultVariantIsFilled) {
 TEST(Material3Button, IsClickableEvenWithoutCallback) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
 
-  Button b(env, "Tap");
+  Button b(context, "Tap");
   EXPECT_TRUE(b.isClickable());
 }
 
@@ -96,8 +105,9 @@ TEST(Material3Button, IsClickableEvenWithoutCallback) {
 TEST(Material3Button, ReportsMinimumHeightOfFortyDp) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
 
-  Button b(env, "Hi");
+  Button b(context, "Hi");
   EXPECT_EQ(Scaled(40), b.getNaturalDimensions().height());
 }
 
@@ -106,12 +116,13 @@ TEST(Material3Button, ReportsMinimumHeightOfFortyDp) {
 TEST(Material3Button, DefaultHorizontalPaddingIsSixteenDpPerSide) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
 
-  Button label_only(env, "Hi");
+  Button label_only(context, "Hi");
   EXPECT_EQ(Scaled(16), label_only.getPadding().left());
   EXPECT_EQ(Scaled(16), label_only.getPadding().right());
 
-  Button with_icon(env, "Hi");
+  Button with_icon(context, "Hi");
   with_icon.setIcon(&ic_outlined_24_action_done());
   EXPECT_EQ(Scaled(16), with_icon.getPadding().left());
   EXPECT_EQ(Scaled(16), with_icon.getPadding().right());
@@ -122,8 +133,9 @@ TEST(Material3Button, DefaultHorizontalPaddingIsSixteenDpPerSide) {
 TEST(Material3Button, SizeControlsNaturalHeight) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
 
-  Button b(env, "Hi");
+  Button b(context, "Hi");
 
   b.setSize(ButtonSize::kExtraSmall);
   EXPECT_EQ(Scaled(32), b.getNaturalDimensions().height());
@@ -143,8 +155,9 @@ TEST(Material3Button, SizeControlsNaturalHeight) {
 TEST(Material3Button, SmallPaddingModeOnlyAffectsSmallButtons) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
 
-  Button b(env, "Hi");
+  Button b(context, "Hi");
 
   EXPECT_EQ(Scaled(16), b.getPadding().left());
   b.setSmallButtonPadding(SmallButtonPadding::kDefault);
@@ -161,8 +174,9 @@ TEST(Material3Button, SmallPaddingModeOnlyAffectsSmallButtons) {
 TEST(Material3Button, SquareShapeUsesSizeSpecificCornerRadius) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
 
-  Button b(env, "Hi");
+  Button b(context, "Hi");
   b.setShape(ButtonShape::kSquare);
 
   b.setSize(ButtonSize::kExtraSmall);
@@ -180,20 +194,21 @@ TEST(Material3Button, SquareShapeUsesSizeSpecificCornerRadius) {
 TEST(Material3Button, ContainerRoleMatchesVariant) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
 
-  Button filled(env, "F", ButtonVariant::kFilled);
+  Button filled(context, "F", ButtonVariant::kFilled);
   EXPECT_EQ(ColorRole::kPrimary, filled.containerRole());
 
-  Button tonal(env, "FT", ButtonVariant::kFilledTonal);
+  Button tonal(context, "FT", ButtonVariant::kFilledTonal);
   EXPECT_EQ(ColorRole::kSecondaryContainer, tonal.containerRole());
 
-  Button elevated(env, "E", ButtonVariant::kElevated);
+  Button elevated(context, "E", ButtonVariant::kElevated);
   EXPECT_EQ(ColorRole::kSurfaceContainerLow, elevated.containerRole());
 
-  Button outlined(env, "O", ButtonVariant::kOutlined);
+  Button outlined(context, "O", ButtonVariant::kOutlined);
   EXPECT_EQ(ColorRole::kUndefined, outlined.containerRole());
 
-  Button text(env, "T", ButtonVariant::kText);
+  Button text(context, "T", ButtonVariant::kText);
   EXPECT_EQ(ColorRole::kUndefined, text.containerRole());
 }
 
@@ -202,11 +217,12 @@ TEST(Material3Button, ContainerRoleMatchesVariant) {
 TEST(Material3Button, OutlinedVariantHasOutline) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
 
-  Button outlined(env, "O", ButtonVariant::kOutlined);
+  Button outlined(context, "O", ButtonVariant::kOutlined);
   EXPECT_GT((int)outlined.getBorderStyle().outline_width().floor(), 0);
 
-  Button filled(env, "F", ButtonVariant::kFilled);
+  Button filled(context, "F", ButtonVariant::kFilled);
   EXPECT_EQ(0, (int)filled.getBorderStyle().outline_width().floor());
 }
 
@@ -215,11 +231,12 @@ TEST(Material3Button, OutlinedVariantHasOutline) {
 TEST(Material3Button, ElevatedVariantHasNonzeroRestingElevation) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
 
-  Button elevated(env, "E", ButtonVariant::kElevated);
+  Button elevated(context, "E", ButtonVariant::kElevated);
   EXPECT_EQ(3, elevated.getElevation());
 
-  Button filled(env, "F", ButtonVariant::kFilled);
+  Button filled(context, "F", ButtonVariant::kFilled);
   EXPECT_EQ(0, filled.getElevation());
 }
 
@@ -228,8 +245,9 @@ TEST(Material3Button, ElevatedVariantHasNonzeroRestingElevation) {
 TEST(Material3Button, DisabledElevatedVariantDropsElevation) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
 
-  Button elevated(env, "E", ButtonVariant::kElevated);
+  Button elevated(context, "E", ButtonVariant::kElevated);
   elevated.setEnabled(false);
 
   EXPECT_EQ(0, elevated.getElevation());
@@ -240,8 +258,9 @@ TEST(Material3Button, DisabledElevatedVariantDropsElevation) {
 TEST(Material3Button, IconChangesNaturalWidth) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
 
-  Button b(env, "Send");
+  Button b(context, "Send");
   Dimensions text_only =
       b.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
   b.setIcon(&ic_outlined_24_action_done());
@@ -254,7 +273,7 @@ TEST(Material3Button, IconChangesNaturalWidth) {
 // of the click animation, then settle at the pressed radius.
 TEST_F(Material3ButtonClickAnimationTest,
        SquareButtonCornerRadiusSettlesMidwayThroughClickAnimation) {
-  auto button = std::make_unique<Button>(env_, "Save");
+  auto button = std::make_unique<Button>(context(), "Save");
   Button* button_ptr = button.get();
   button_ptr->setShape(ButtonShape::kSquare);
 
@@ -283,7 +302,7 @@ TEST_F(Material3ButtonClickAnimationTest,
 // from it early, and settle at the pressed radius by mid-click.
 TEST_F(Material3ButtonClickAnimationTest,
        RoundButtonCornerRadiusSettlesMidwayThroughClickAnimation) {
-  auto button = std::make_unique<Button>(env_, "Save");
+  auto button = std::make_unique<Button>(context(), "Save");
   Button* button_ptr = button.get();
 
   app_.add(std::move(button), roo_display::Box(20, 20, 139, 59));

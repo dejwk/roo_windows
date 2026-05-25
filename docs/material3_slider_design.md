@@ -190,7 +190,7 @@ All "per-instance cost" numbers below are approximate ESP32 (Xtensa, 32-bit,
 ### API Requirements
 
 1. Expose only semantic construction and value access for Material 3 sliders.
-2. Keep the default constructor shape cheap by treating `Slider(env)` as a
+2. Keep the default constructor shape cheap by treating `Slider(context)` as a
   unit-range slider over `[0.0f, 1.0f]`.
 3. Keep implementation math expressed in semantic values rather than a
   normalized fixed-point compatibility layer.
@@ -348,7 +348,7 @@ using a derived class.
 ```cpp
 class Slider : public BasicWidget {
  public:
-  Slider(const Environment& env, SliderRange range = {}, float value = 0.0f,
+  Slider(ApplicationContext& context, SliderRange range = {}, float value = 0.0f,
          SliderVariant variant = SliderVariant::kStandard,
          SliderStyle style = {});
 
@@ -390,16 +390,17 @@ class Slider : public BasicWidget {
 
  private:
   // Approximate per-instance layout (ESP32, 32-bit):
-  //   BasicWidget                  ~40 B (vptr, parent*, Rect, state, std::function)
+  //   BasicWidget                  ~28 B (vptr, context*, parent*, Rect,
+  //                                   state, padding/margins)
   //   float value_                    4 B
   //   SliderRange range_             12 B (3 floats)
   //   const SliderAppearance* app_    4 B  (nullptr unless overridden)
   //   SliderVariant variant_          1 B
   //   SliderStyle style_              2 B  (packed bitfield)
   //   bool is_dragging_               1 B  (or folded into Widget::state_)
-  //   alignment padding              ~4 B
+  //   alignment padding              ~0-4 B
   //   ---------------------------------
-  //   Total:                        ~68 B
+  //   Total:                        ~52-56 B
   //
   // Adding a SliderAppearance override or overriding any virtual hook
   // does not increase per-instance size.
@@ -432,7 +433,7 @@ class SliderWithInsetIcon : public Slider {
 ```cpp
 class RangeSlider : public BasicWidget {
  public:
-  RangeSlider(const Environment& env, SliderRange range,
+  RangeSlider(ApplicationContext& context, SliderRange range,
               float start_value, float end_value,
               SliderStyle style = {});
 
@@ -714,14 +715,14 @@ Those are useful, but they are secondary to the missing semantic surface.
 Existing code such as:
 
 ```cpp
-material3::Slider slider(env, 32768);
+material3::Slider slider(context, 32768);
 ```
 
 continues to work through Steps 0-12. Step 13 then removes the shim.
 
 Behavior during Steps 0-12:
 
-- `Slider(env)` remains the unit-range convenience form,
+- `Slider(context)` remains the unit-range convenience form,
 - `setOnInteractiveChange()` keeps its current meaning, firing only for
   user-originated changes,
 - programmatic `setValue()` updates fire `onValueChange()`
@@ -760,12 +761,12 @@ Incremental per-instance RAM cost: **0 B** (no fields added).
 Example usage after this step:
 
 ```cpp
-material3::Slider slider(env);
+material3::Slider slider(context);
 slider.setValue(0.75f);
 ```
 
 ```cpp
-material3::Slider brightness(env);
+material3::Slider brightness(context);
 brightness.setOnInteractiveChange([]() { LOG(INFO) << "Brightness changed"; });
 ```
 
@@ -779,7 +780,7 @@ Scope:
 
 1. separate semantic value handling from paint code,
 2. represent track axis and thumb hit-testing in a shared helper,
-3. keep `Slider(env)` as the default unit-range constructor.
+3. keep `Slider(context)` as the default unit-range constructor.
 
 Deliverable:
 
@@ -793,12 +794,12 @@ footprint: ~44 B.
 Example usage after this step:
 
 ```cpp
-material3::Slider slider(env);
+material3::Slider slider(context);
 slider.setValue(0.5f);
 ```
 
 ```cpp
-material3::Slider volume(env, material3::SliderRange{}, 0.76f);
+material3::Slider volume(context, material3::SliderRange{}, 0.76f);
 volume.setOnInteractiveChange([]() { /* Existing callback behavior unchanged. */ });
 ```
 
@@ -811,7 +812,7 @@ Scope:
 
 1. add `SliderRange`, `value()`, `setValue()`, `range()`, and `setRange()`,
 2. clamp invalid programmatic input into the configured domain,
-3. make `Slider(env)` the explicit unit-range convenience form.
+3. make `Slider(context)` the explicit unit-range convenience form.
 
 Deliverable:
 
@@ -827,12 +828,12 @@ Example usage after this step:
 
 ```cpp
 material3::Slider temperature(
-  env, material3::SliderRange{10.0f, 40.0f}, 28.5f);
+  context, material3::SliderRange{10.0f, 40.0f}, 28.5f);
 temperature.setValue(30.0f);
 ```
 
 ```cpp
-material3::Slider ph(env, material3::SliderRange{6.8f, 8.0f}, 7.2f);
+material3::Slider ph(context, material3::SliderRange{6.8f, 8.0f}, 7.2f);
 ph.setRange(material3::SliderRange{6.5f, 8.5f});
 ```
 
@@ -860,13 +861,13 @@ Example usage after this step:
 
 ```cpp
 material3::Slider fan_speed(
-  env, material3::SliderRange{0.0f, 5.0f, 1.0f}, 2.0f);
+  context, material3::SliderRange{0.0f, 5.0f, 1.0f}, 2.0f);
 fan_speed.setValue(3.6f);  // Snaps to 4.0f.
 ```
 
 ```cpp
 material3::Slider setpoint(
-  env, material3::SliderRange{18.0f, 30.0f, 0.5f}, 24.0f);
+  context, material3::SliderRange{18.0f, 30.0f, 0.5f}, 24.0f);
 ```
 
 ### Step 4: Add Centered Single-Value Semantics
@@ -895,13 +896,13 @@ Example usage after this step:
 
 ```cpp
 material3::Slider trim(
-  env, material3::SliderRange{-5.0f, 5.0f, 0.5f}, 0.0f,
+  context, material3::SliderRange{-5.0f, 5.0f, 0.5f}, 0.0f,
   material3::SliderVariant::kCentered);
 ```
 
 ```cpp
 material3::Slider balance(
-  env, material3::SliderRange{-100.0f, 100.0f}, -20.0f,
+  context, material3::SliderRange{-100.0f, 100.0f}, -20.0f,
   material3::SliderVariant::kCentered);
 ```
 
@@ -977,12 +978,12 @@ Example usage after this step:
 
 ```cpp
 material3::RangeSlider quiet_hours(
-  env, material3::SliderRange{0.0f, 24.0f, 0.5f}, 6.0f, 22.0f);
+  context, material3::SliderRange{0.0f, 24.0f, 0.5f}, 6.0f, 22.0f);
 ```
 
 ```cpp
 material3::RangeSlider target_band(
-  env, material3::SliderRange{24.0f, 34.0f}, 27.0f, 30.5f);
+  context, material3::SliderRange{24.0f, 34.0f}, 27.0f, 30.5f);
 target_band.setValues(26.5f, 31.0f);
 ```
 
@@ -1012,7 +1013,7 @@ Example usage after this step:
 
 ```cpp
 material3::RangeSlider operating_band(
-  env, material3::SliderRange{10.0f, 40.0f, 0.5f}, 22.0f, 30.0f);
+  context, material3::SliderRange{10.0f, 40.0f, 0.5f}, 22.0f, 30.0f);
 operating_band.setMinSeparation(2.0f);
 ```
 
@@ -1057,7 +1058,7 @@ Example usage after this step:
 material3::SliderStyle style{};
 style.value_indicator =
   material3::SliderValueIndicatorBehavior::kShowOnInteraction;
-material3::Slider temperature(env, material3::SliderRange{20.0f, 40.0f}, 28.0f,
+material3::Slider temperature(context, material3::SliderRange{20.0f, 40.0f}, 28.0f,
                 material3::SliderVariant::kStandard, style);
 ```
 
@@ -1096,7 +1097,7 @@ Example usage after this step:
 ```cpp
 material3::SliderStyle style{};
 style.orientation = material3::SliderOrientation::kVertical;
-material3::Slider tank_level(env, material3::SliderRange{0.0f, 100.0f}, 62.0f,
+material3::Slider tank_level(context, material3::SliderRange{0.0f, 100.0f}, 62.0f,
                              material3::SliderVariant::kStandard, style);
 ```
 
@@ -1104,7 +1105,7 @@ material3::Slider tank_level(env, material3::SliderRange{0.0f, 100.0f}, 62.0f,
 material3::SliderStyle style{};
 style.orientation = material3::SliderOrientation::kVertical;
 material3::RangeSlider humidity_band(
-  env, material3::SliderRange{0.0f, 100.0f}, 35.0f, 55.0f, style);
+  context, material3::SliderRange{0.0f, 100.0f}, 35.0f, 55.0f, style);
 ```
 
 ### Step 10: Add Size Presets, Ticks, Stop Indicators, and Track Icons
@@ -1142,7 +1143,7 @@ Example usage after this step:
 material3::SliderStyle style{};
 style.size = material3::SliderSize::kMedium;
 style.tick_mode = material3::SliderTickMode::kShowTicks;
-material3::Slider speed(env, material3::SliderRange{0.0f, 10.0f, 1.0f}, 4.0f,
+material3::Slider speed(context, material3::SliderRange{0.0f, 10.0f, 1.0f}, 4.0f,
                         material3::SliderVariant::kStandard, style);
 ```
 
@@ -1150,7 +1151,7 @@ material3::Slider speed(env, material3::SliderRange{0.0f, 10.0f, 1.0f}, 4.0f,
 material3::SliderStyle style{};
 style.size = material3::SliderSize::kExtraLarge;
 material3::SliderWithInsetIcon heating(
-    env, material3::SliderRange{18.0f, 30.0f}, 24.0f,
+    context, material3::SliderRange{18.0f, 30.0f}, 24.0f,
     material3::SliderVariant::kStandard, style);
 heating.setIcon(&kThermostatDrawable);
 ```
@@ -1192,7 +1193,7 @@ static constexpr material3::SliderAppearance kBlueOrangeSlider{
   // ...remaining fields default.
   /*has_colors=*/0b000101,  // active_track + thumb
 };
-material3::Slider slider(env, material3::SliderRange{0.0f, 100.0f}, 50.0f);
+material3::Slider slider(context, material3::SliderRange{0.0f, 100.0f}, 50.0f);
 slider.setAppearance(&kBlueOrangeSlider);
 ```
 
@@ -1204,7 +1205,7 @@ static constexpr material3::SliderAppearance kCompactRangeSlider{
   /*stop_indicator_size=*/6,
 };
 material3::RangeSlider range_slider(
-  env, material3::SliderRange{0.0f, 10.0f, 1.0f}, 2.0f, 7.0f);
+  context, material3::SliderRange{0.0f, 10.0f, 1.0f}, 2.0f, 7.0f);
 range_slider.setAppearance(&kCompactRangeSlider);
 ```
 
@@ -1231,13 +1232,13 @@ Incremental per-instance RAM cost: **0 B** (documentation and examples).
 Example usage after this step:
 
 ```cpp
-material3::Slider legacy(env, 32768);
-material3::Slider migrated(env, material3::SliderRange{0.0f, 1.0f}, 0.5f);
+material3::Slider legacy(context, 32768);
+material3::Slider migrated(context, material3::SliderRange{0.0f, 1.0f}, 0.5f);
 ```
 
 ```cpp
 material3::RangeSlider schedule(
-  env, material3::SliderRange{0.0f, 24.0f, 1.0f}, 8.0f, 18.0f);
+  context, material3::SliderRange{0.0f, 24.0f, 1.0f}, 8.0f, 18.0f);
 schedule.setMinSeparation(2.0f);
 ```
 
@@ -1249,7 +1250,7 @@ surface so the slider family carries no long-term compatibility cost.
 
 Scope:
 
-1. remove the `Slider(const Environment& env, uint16_t pos)` constructor,
+1. remove the `Slider(ApplicationContext& context, uint16_t pos)` constructor,
 2. remove `getPos()` and `setPos()` from `Slider`,
 3. remove the special-case handling that treated the legacy constructor as
    `SliderRange{0.0f, 1.0f}`,
@@ -1271,13 +1272,13 @@ from flash.
 Example usage after this step:
 
 ```cpp
-material3::Slider brightness(env, material3::SliderRange{0.0f, 1.0f}, 0.5f);
+material3::Slider brightness(context, material3::SliderRange{0.0f, 1.0f}, 0.5f);
 brightness.setValue(0.75f);
 ```
 
 ```cpp
 material3::RangeSlider quiet_hours(
-  env, material3::SliderRange{0.0f, 24.0f, 0.5f}, 22.0f, 6.0f + 24.0f);
+  context, material3::SliderRange{0.0f, 24.0f, 0.5f}, 22.0f, 6.0f + 24.0f);
 ```
 
 ### Suggested Review Boundaries

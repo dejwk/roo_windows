@@ -14,9 +14,14 @@ using namespace roo_windows;
 namespace roo_windows {
 namespace {
 
+ApplicationContext MakeContext(Environment& context) {
+  return ApplicationContext(context.scheduler(), context.theme(),
+                            context.keyboardColorTheme());
+}
+
 class RecordingPanel : public Panel {
  public:
-  explicit RecordingPanel(const Environment& env) : Panel(env) {}
+  explicit RecordingPanel(ApplicationContext& context) : Panel(context) {}
 
   using Panel::add;
 
@@ -52,10 +57,11 @@ roo_display::Pictogram MakePictogram(roo_display::Box extents,
 // returns the anchor-box dimensions.
 TEST(Icon, InkInsetsFollowDrawableBounds) {
   roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
+  Environment bootstrap(scheduler);
+  ApplicationContext context = MakeContext(bootstrap);
   roo_display::Pictogram pictogram =
       MakePictogram(Box(-1, -2, 7, 9), Box(0, 0, 5, 7));
-  Icon icon(env, pictogram);
+  Icon icon(context, pictogram);
 
   EXPECT_EQ(Insets(-1, -2, -2, -2), icon.getInkInsets());
   EXPECT_EQ(6, icon.getSuggestedMinimumDimensions().width());
@@ -67,13 +73,14 @@ TEST(Icon, InkInsetsFollowDrawableBounds) {
 // maxParentBounds, so partial repaint correctly covers shrink + grow cases.
 TEST(Icon, SwapInvalidatesOldAndNewVisualBounds) {
   roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
+  Environment bootstrap(scheduler);
+  ApplicationContext context = MakeContext(bootstrap);
   roo_display::Pictogram old_icon =
       MakePictogram(Box(-2, 0, 4, 4), Box(0, 0, 4, 4));
   roo_display::Pictogram new_icon =
       MakePictogram(Box(0, 0, 6, 4), Box(0, 0, 4, 4));
-  Icon icon(env, old_icon);
-  RecordingPanel panel(env);
+  Icon icon(context, old_icon);
+  RecordingPanel panel(context);
 
   panel.add(icon, Rect(10, 10, 14, 14));
   Rect old_bounds = icon.maxParentBounds();

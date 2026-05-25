@@ -1,5 +1,6 @@
 #include "gtest/gtest.h"
 #include "roo_scheduler.h"
+#include "roo_windows/core/application_context.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/measure_spec.h"
 #include "roo_windows/material3/checkbox/checkbox.h"
@@ -8,14 +9,20 @@ namespace roo_windows {
 namespace material3 {
 namespace {
 
+ApplicationContext MakeContext(Environment& env) {
+  return ApplicationContext(env.scheduler(), env.theme(),
+                            env.keyboardColorTheme());
+}
+
 // Verifies that the checkbox advertises a POINT overlay anchored at the
 // geometric center of its laid-out bounds, so press ripples expand from the
 // box's middle rather than the top-left corner.
 TEST(Material3Checkbox, UsesCenteredPointOverlay) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
 
-  Checkbox checkbox(env, OnOffState::kOff);
+  Checkbox checkbox(context, OnOffState::kOff);
   checkbox.layout(Rect(0, 0, Scaled(18) - 1, Scaled(18) - 1));
 
   EXPECT_EQ(Widget::OVERLAY_POINT, checkbox.getOverlayType());
@@ -30,8 +37,9 @@ TEST(Material3Checkbox, UsesCenteredPointOverlay) {
 TEST(Material3Checkbox, ReportsMaterial3MinimumSize) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
 
-  Checkbox checkbox(env, OnOffState::kOff);
+  Checkbox checkbox(context, OnOffState::kOff);
   Dimensions dims = checkbox.getSuggestedMinimumDimensions();
 
   EXPECT_EQ(Scaled(18), dims.width());
@@ -44,8 +52,9 @@ TEST(Material3Checkbox, ReportsMaterial3MinimumSize) {
 TEST(Material3Checkbox, ReportsNaturalMeasureAsEighteenByEighteen) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
 
-  Checkbox checkbox(env, OnOffState::kOff);
+  Checkbox checkbox(context, OnOffState::kOff);
 
   Dimensions measured =
       checkbox.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
@@ -60,8 +69,9 @@ TEST(Material3Checkbox, ReportsNaturalMeasureAsEighteenByEighteen) {
 TEST(Material3Checkbox, UsesZeroInsetsAndMeasuredContentBounds) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
 
-  Checkbox checkbox(env, OnOffState::kOff);
+  Checkbox checkbox(context, OnOffState::kOff);
   Dimensions measured =
       checkbox.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
   checkbox.layout(Rect(0, 0, measured.width() - 1, measured.height() - 1));
@@ -80,8 +90,9 @@ TEST(Material3Checkbox, UsesZeroInsetsAndMeasuredContentBounds) {
 TEST(Material3Checkbox, EffectiveContainerRoleTracksSelectionState) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
 
-  Checkbox checkbox(env, OnOffState::kOff);
+  Checkbox checkbox(context, OnOffState::kOff);
   EXPECT_EQ(ColorRole::kSurface, checkbox.effectiveContainerRole());
 
   checkbox.setOnOffState(OnOffState::kIndeterminate);

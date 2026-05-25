@@ -2,11 +2,17 @@
 
 #include "gtest/gtest.h"
 #include "roo_scheduler.h"
+#include "roo_windows/core/application_context.h"
 #include "roo_windows/core/environment.h"
 
 namespace roo_windows {
 namespace material3 {
 namespace {
+
+ApplicationContext MakeContext(Environment& env) {
+  return ApplicationContext(env.scheduler(), env.theme(),
+                            env.keyboardColorTheme());
+}
 
 // Verifies that each of the three card styles (elevated, filled, outlined)
 // seeds its container role, resting elevation, corner radius, and outline
@@ -14,21 +20,22 @@ namespace {
 TEST(FlexCard, ConstructorSeedsStyleDefaults) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
 
-  FlexCard elevated(env, FlexCard::Style::kElevated);
+  FlexCard elevated(context, FlexCard::Style::kElevated);
   EXPECT_EQ(ColorRole::kSurfaceContainerLow, elevated.containerRole());
   EXPECT_EQ(3, elevated.getElevation());
   EXPECT_EQ((uint8_t)Scaled(12),
             elevated.getBorderStyle().corner_radii().max());
   EXPECT_EQ(SmallNumber(0), elevated.getBorderStyle().outline_width());
 
-  FlexCard filled(env, FlexCard::Style::kFilled);
+  FlexCard filled(context, FlexCard::Style::kFilled);
   EXPECT_EQ(ColorRole::kSurfaceContainerHighest, filled.containerRole());
   EXPECT_EQ(0, filled.getElevation());
   EXPECT_EQ((uint8_t)Scaled(12), filled.getBorderStyle().corner_radii().max());
   EXPECT_EQ(SmallNumber(0), filled.getBorderStyle().outline_width());
 
-  FlexCard outlined(env, FlexCard::Style::kOutlined);
+  FlexCard outlined(context, FlexCard::Style::kOutlined);
   EXPECT_EQ(ColorRole::kSurface, outlined.containerRole());
   EXPECT_EQ(0, outlined.getElevation());
   EXPECT_EQ((uint8_t)Scaled(12),
@@ -43,8 +50,9 @@ TEST(FlexCard, ConstructorSeedsStyleDefaults) {
 TEST(FlexCard, StyleChangeUpdatesNonOverriddenValues) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
 
-  FlexCard card(env, FlexCard::Style::kFilled);
+  FlexCard card(context, FlexCard::Style::kFilled);
   card.setStyle(FlexCard::Style::kOutlined);
 
   EXPECT_EQ(ColorRole::kSurface, card.containerRole());
@@ -60,8 +68,9 @@ TEST(FlexCard, StyleChangeUpdatesNonOverriddenValues) {
 TEST(FlexCard, OverridesPersistAcrossStyleChanges) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
 
-  FlexCard card(env, FlexCard::Style::kFilled);
+  FlexCard card(context, FlexCard::Style::kFilled);
   card.setContainerRole(ColorRole::kPrimaryContainer);
   card.setOutlineRole(ColorRole::kOutline);
   card.setElevation(7);
@@ -83,8 +92,9 @@ TEST(FlexCard, OverridesPersistAcrossStyleChanges) {
 TEST(FlexCard, ClearOverrideRecomputesFromCurrentStyle) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
 
-  FlexCard card(env, FlexCard::Style::kFilled);
+  FlexCard card(context, FlexCard::Style::kFilled);
 
   card.setStyle(FlexCard::Style::kElevated);
   card.setContainerRole(ColorRole::kPrimary);
