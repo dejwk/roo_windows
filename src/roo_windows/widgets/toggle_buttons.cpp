@@ -19,7 +19,7 @@ roo_windows::Widget& ToggleButtons::addButton(const MonoIcon& icon) {
   height = std::max(height, icon.anchorExtents().height());
   height += 2 * padding_;
   int idx = buttons_.size();
-  buttons_.emplace_back(new ToggleButton(env_, icon, *this, idx));
+  buttons_.emplace_back(new ToggleButton(context_, icon, *this, idx));
   auto& btn = *buttons_.back();
   Panel::add(btn, Rect(width + 1, 0,
                        width + icon.anchorExtents().width() + 2 * padding_,

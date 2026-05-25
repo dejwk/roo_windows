@@ -17,13 +17,13 @@ namespace roo_windows {
 /// `StringViewLabel`.
 class TextLabel : public BasicWidget {
  public:
-  TextLabel(const Environment& env, std::string value,
+  TextLabel(ApplicationContext& context, std::string value,
             const roo_display::Font& font);
 
-  TextLabel(const Environment& env, std::string value,
+  TextLabel(ApplicationContext& context, std::string value,
             const roo_display::Font& font, Gravity gravity);
 
-  TextLabel(const Environment& env, std::string value,
+  TextLabel(ApplicationContext& context, std::string value,
             const roo_display::Font& font, roo_display::Color color,
             Gravity gravity);
 
@@ -76,13 +76,13 @@ class TextLabel : public BasicWidget {
 /// lifetime. Ideal for constant or theme-supplied strings.
 class StringViewLabel : public BasicWidget {
  public:
-  StringViewLabel(const Environment& env, roo::string_view value,
+  StringViewLabel(ApplicationContext& context, roo::string_view value,
                   const roo_display::Font& font);
 
-  StringViewLabel(const Environment& env, roo::string_view value,
+  StringViewLabel(ApplicationContext& context, roo::string_view value,
                   const roo_display::Font& font, Gravity gravity);
 
-  StringViewLabel(const Environment& env, roo::string_view value,
+  StringViewLabel(ApplicationContext& context, roo::string_view value,
                   const roo_display::Font& font, roo_display::Color color,
                   Gravity gravity);
 

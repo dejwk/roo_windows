@@ -3,7 +3,7 @@
 #include "roo_windows/containers/holder.h"
 #include "roo_windows/containers/horizontal_layout.h"
 #include "roo_windows/containers/list_layout.h"
-#include "roo_windows/core/environment.h"
+#include "roo_windows/core/application_context.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/widget.h"
 #include "roo_windows/widgets/radio_button.h"
@@ -21,10 +21,10 @@ class RadioListModel;
 /// stored on-click callback.
 class RadioListItem : public HorizontalLayout {
  public:
-  RadioListItem(const Environment& env, std::unique_ptr<Widget> item,
+  RadioListItem(ApplicationContext& context, std::unique_ptr<Widget> item,
                 std::function<void(int idx)> on_click)
-      : HorizontalLayout(env),
-        button_(env),
+      : HorizontalLayout(context),
+        button_(context),
         item_(std::move(item)),
         on_click_(on_click) {
     init();
@@ -136,18 +136,18 @@ class RadioListModel : public ListModel {
 /// builds the per-row item widget; selection state is owned here.
 class RadioList : public Holder {
  public:
-  RadioList(const Environment& env,
+  RadioList(ApplicationContext& context,
             std::function<std::unique_ptr<Widget>()> prototype_fn)
-      : Holder(env),
+      : Holder(context),
         list_model_(),
-        list_(env, list_model_, [&, prototype_fn]() {
+        list_(context, list_model_, [&, prototype_fn]() {
           return std::make_unique<RadioListItem>(
-              env, prototype_fn(), [this](int idx) { elementSelected(idx); });
+              context, prototype_fn(), [this](int idx) { elementSelected(idx); });
         }) {}
 
-  RadioList(const Environment& env, ListModel& model,
+  RadioList(ApplicationContext& context, ListModel& model,
             const std::function<std::unique_ptr<Widget>()>& prototype_fn)
-      : RadioList(env, prototype_fn) {
+      : RadioList(context, prototype_fn) {
     setModel(model);
   }
 

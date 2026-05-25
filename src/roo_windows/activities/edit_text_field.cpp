@@ -8,11 +8,11 @@
 
 namespace roo_windows {
 
-EditedTextField::EditedTextField(const Environment& env,
+EditedTextField::EditedTextField(ApplicationContext& context,
                                  TextFieldEditor& editor,
                                  const std::string& hint,
                                  EditTextField& activity)
-    : TextField(env, editor, roo_windows::font_body1(), hint,
+    : TextField(context, editor, roo_windows::font_body1(), hint,
                 roo_display::kLeft | roo_display::kMiddle, UNDERLINE),
       activity_(activity) {}
 
@@ -24,21 +24,21 @@ void EditedTextField::onEditFinished(bool confirmed) {
   }
 }
 
-EditTextField::EditTextField(const Environment& env, TextFieldEditor& editor,
+EditTextField::EditTextField(ApplicationContext& context, TextFieldEditor& editor,
                              const std::string& hint)
-    : main_pane_(env),
-      content_pane_(env),
-      back_(env, SCALED_ROO_ICON(outlined, navigation_arrow_back),
+    : main_pane_(context),
+      content_pane_(context),
+      back_(context, SCALED_ROO_ICON(outlined, navigation_arrow_back),
             Button::TEXT),
-      text_(env, editor, hint, *this),
-      enter_(env, SCALED_ROO_ICON(outlined, navigation_check)),
+      text_(context, editor, hint, *this),
+      enter_(context, SCALED_ROO_ICON(outlined, navigation_check)),
       editing_(false),
       enter_fn_(nullptr) {
   main_pane_.add(content_pane_, VerticalLayout::Params());
   content_pane_.add(back_, {gravity : kGravityMiddle});
   content_pane_.add(text_, {gravity : kGravityMiddle, weight : 1});
   content_pane_.add(enter_, {gravity : kGravityMiddle});
-  back_.setContentColor(env.theme().color.onSurface);
+  back_.setContentColor(context.theme().color.onSurface);
   back_.setOnInteractiveChange([&]() { cancel(); });
   enter_.setOnInteractiveChange([&]() { confirm(); });
 }

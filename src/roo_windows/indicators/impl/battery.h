@@ -12,11 +12,11 @@ namespace roo_windows {
 /// matching icon family; do not instantiate this base directly.
 class BatteryIndicator : public Widget {
  public:
-  BatteryIndicator(const Environment& env);
+  BatteryIndicator(ApplicationContext& context);
 
   /// Constructs the indicator with an explicit tint color (transparent means
   /// inherit the parent's content color).
-  BatteryIndicator(const Environment& env, roo_display::Color color);
+  BatteryIndicator(ApplicationContext& context, roo_display::Color color);
 
   /// Resolves the current state to a battery pictogram and draws it.
   void paint(PaintContext& ctx) const override;

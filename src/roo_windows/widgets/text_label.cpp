@@ -42,19 +42,19 @@ Rect ResolveLabelContentBounds(const Rect& logical_bounds,
 
 }  // namespace
 
-TextLabel::TextLabel(const Environment& env, std::string value,
+TextLabel::TextLabel(ApplicationContext& context, std::string value,
                      const roo_display::Font& font)
-    : TextLabel(env, std::move(value), font, kGravityLeft | kGravityMiddle) {}
+    : TextLabel(context, std::move(value), font, kGravityLeft | kGravityMiddle) {}
 
-TextLabel::TextLabel(const Environment& env, std::string value,
+TextLabel::TextLabel(ApplicationContext& context, std::string value,
                      const roo_display::Font& font, Gravity gravity)
-    : TextLabel(env, std::move(value), font, roo_display::color::Transparent,
+    : TextLabel(context, std::move(value), font, roo_display::color::Transparent,
                 gravity) {}
 
-TextLabel::TextLabel(const Environment& env, std::string value,
+TextLabel::TextLabel(ApplicationContext& context, std::string value,
                      const roo_display::Font& font, roo_display::Color color,
                      Gravity gravity)
-    : BasicWidget(env),
+    : BasicWidget(context),
       value_(std::move(value)),
       font_(font),
       color_(color),
@@ -136,20 +136,20 @@ void TextLabel::clearText() {
   requestLayout();
 }
 
-StringViewLabel::StringViewLabel(const Environment& env, roo::string_view value,
+StringViewLabel::StringViewLabel(ApplicationContext& context, roo::string_view value,
                                  const roo_display::Font& font)
-    : StringViewLabel(env, std::move(value), font,
+    : StringViewLabel(context, std::move(value), font,
                       kGravityLeft | kGravityMiddle) {}
 
-StringViewLabel::StringViewLabel(const Environment& env, roo::string_view value,
+StringViewLabel::StringViewLabel(ApplicationContext& context, roo::string_view value,
                                  const roo_display::Font& font, Gravity gravity)
-    : StringViewLabel(env, std::move(value), font,
+    : StringViewLabel(context, std::move(value), font,
                       roo_display::color::Transparent, gravity) {}
 
-StringViewLabel::StringViewLabel(const Environment& env, roo::string_view value,
+StringViewLabel::StringViewLabel(ApplicationContext& context, roo::string_view value,
                                  const roo_display::Font& font,
                                  roo_display::Color color, Gravity gravity)
-    : BasicWidget(env),
+    : BasicWidget(context),
       value_(std::move(value)),
       font_(font),
       color_(color),

@@ -6,7 +6,7 @@
 #include "roo_windows/containers/horizontal_layout.h"
 #include "roo_windows/containers/vertical_layout.h"
 #include "roo_windows/core/activity.h"
-#include "roo_windows/core/environment.h"
+#include "roo_windows/core/application_context.h"
 #include "roo_windows/core/task.h"
 #include "roo_windows/widgets/button.h"
 #include "roo_windows/widgets/icon.h"
@@ -22,7 +22,7 @@ class EditTextField;
 /// the activity can confirm or cancel the edit.
 class EditedTextField : public TextField {
  public:
-  EditedTextField(const Environment& env, TextFieldEditor& editor,
+  EditedTextField(ApplicationContext& context, TextFieldEditor& editor,
                   const std::string& hint, EditTextField& activity);
 
   /// Confirms or cancels the activity-driven edit through the owning
@@ -41,7 +41,7 @@ class EditedTextField : public TextField {
 /// and invokes the supplied confirmation callback with the entered string.
 class EditTextField : public Activity {
  public:
-  EditTextField(const Environment& env, TextFieldEditor& editor,
+  EditTextField(ApplicationContext& context, TextFieldEditor& editor,
                 const std::string& hint);
 
   /// Returns the activity's root pane (containing the editor and action

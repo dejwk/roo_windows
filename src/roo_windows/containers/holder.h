@@ -3,7 +3,7 @@
 #include "roo_display/ui/alignment.h"
 #include "roo_scheduler.h"
 #include "roo_time.h"
-#include "roo_windows/core/environment.h"
+#include "roo_windows/core/application_context.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/widget.h"
 
@@ -13,11 +13,11 @@ namespace roo_windows {
 // view, e.g. add elevation, custom padding, margins, etc.
 class Holder : public Container {
  public:
-  Holder(const Environment& env, WidgetRef contents) : Holder(env) {
+  Holder(ApplicationContext& context, WidgetRef contents) : Holder(context) {
     setContents(std::move(contents));
   }
 
-  Holder(const Environment& env) : Container(env), contents_(nullptr) {}
+  Holder(ApplicationContext& context) : Container(context), contents_(nullptr) {}
 
   /// Replaces (or clears, if `new_contents` is null) the single held child.
   /// No-op if the same widget with the same ownership is reassigned.

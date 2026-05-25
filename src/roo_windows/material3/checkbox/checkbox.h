@@ -13,8 +13,8 @@ namespace material3 {
 /// widget can be combined freely in compound rows.
 class Checkbox : public BasicWidget {
  public:
-  Checkbox(const Environment& env, OnOffState state = OnOffState::kOff)
-      : BasicWidget(env) {
+  Checkbox(ApplicationContext& context, OnOffState state = OnOffState::kOff)
+      : BasicWidget(context) {
     setOnOffState(state);
   }
 

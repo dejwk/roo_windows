@@ -4,8 +4,8 @@
 
 namespace roo_windows {
 
-NavigationPanel::NavigationPanel(const Environment& env)
-    : Panel(env), env_(env), rail_(env), contents_(env) {
+NavigationPanel::NavigationPanel(ApplicationContext& context)
+    : Panel(context), rail_(context), contents_(context) {
   add(rail_);
   add(contents_);
 }

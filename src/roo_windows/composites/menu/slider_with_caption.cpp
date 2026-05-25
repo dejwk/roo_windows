@@ -5,13 +5,13 @@
 namespace roo_windows {
 namespace menu {
 
-BaseSliderWithCaption::BaseSliderWithCaption(const Environment& env,
+BaseSliderWithCaption::BaseSliderWithCaption(ApplicationContext& context,
                                              std::string caption)
-    : VerticalLayout(env),
-      text_section_(env),
-      caption_(env, std::move(caption), font_body1()),
-      value_(env, "", font_body1()),
-      slider_(env) {
+    : VerticalLayout(context),
+      text_section_(context),
+      caption_(context, std::move(caption), font_body1()),
+      value_(context, "", font_body1()),
+      slider_(context) {
   caption_.setMargins(MarginSize::kLarge, MarginSize::kNone);
   value_.setMargins(MarginSize::kLarge, MarginSize::kNone);
   caption_.setPadding(PaddingSize::kRegular, PaddingSize::kNone);
@@ -27,9 +27,9 @@ BaseSliderWithCaption::BaseSliderWithCaption(const Environment& env,
   });
 }
 
-NumericSliderWithCaption::NumericSliderWithCaption(const Environment& env,
+NumericSliderWithCaption::NumericSliderWithCaption(ApplicationContext& context,
                                                    std::string caption)
-    : BaseSliderWithCaption(env, std::move(caption)), min_(0.0f), max_(1.0f) {}
+    : BaseSliderWithCaption(context, std::move(caption)), min_(0.0f), max_(1.0f) {}
 
 void NumericSliderWithCaption::init(float min_val, float max_val, float val,
                                     float step) {

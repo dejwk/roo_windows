@@ -9,8 +9,8 @@ namespace roo_windows {
 // Surface-owning counterpart of BasicWidget.
 class BasicSurfaceWidget : public SurfaceWidget {
  public:
-  BasicSurfaceWidget(const Environment& env)
-      : SurfaceWidget(env), padding_(0), margins_(0) {}
+  BasicSurfaceWidget(ApplicationContext& context)
+      : SurfaceWidget(context), padding_(0), margins_(0) {}
 
   /// Returns the surface widget's default padding token.
   virtual Padding getDefaultPadding() const {

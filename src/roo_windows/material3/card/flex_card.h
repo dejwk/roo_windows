@@ -21,7 +21,7 @@ class FlexCard : public FlexLayout {
     kOutlined,
   };
 
-  explicit FlexCard(const Environment& env, Style style = Style::kFilled,
+  explicit FlexCard(ApplicationContext& context, Style style = Style::kFilled,
                     FlexDirection direction = FlexDirection::kColumn);
 
   Style style() const { return style_; }

@@ -10,7 +10,7 @@ namespace roo_windows {
 /// `Widget`'s on/off facility, and clicking toggles it.
 class RadioButton : public BasicWidget {
  public:
-  RadioButton(const Environment& env, bool on = false) : BasicWidget(env) {
+  RadioButton(ApplicationContext& context, bool on = false) : BasicWidget(context) {
     setOnOffState(on ? OnOffState::kOn : OnOffState::kOff);
   }
 

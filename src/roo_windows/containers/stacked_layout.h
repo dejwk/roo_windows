@@ -10,7 +10,7 @@ namespace roo_windows {
  */
 class StackedLayout : public Panel {
  public:
-  StackedLayout(const Environment& env) : Panel(env) {}
+  StackedLayout(ApplicationContext& context) : Panel(context) {}
 
   /**
    * Adds the specified child, at the end of the list.

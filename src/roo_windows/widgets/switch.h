@@ -11,8 +11,8 @@ namespace roo_windows {
 /// For new code, prefer `material3::Switch`.
 class Switch : public BasicWidget {
  public:
-  Switch(const Environment& env, bool on = false)
-      : BasicWidget(env), anim_(0x8000) {
+  Switch(ApplicationContext& context, bool on = false)
+      : BasicWidget(context), anim_(0x8000) {
     setOnOffState(on ? OnOffState::kOn : OnOffState::kOff);
   }
 

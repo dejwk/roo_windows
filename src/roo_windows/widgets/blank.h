@@ -10,8 +10,8 @@ namespace roo_windows {
 /// minimum size. Useful for spacing or as a stand-in during layout work.
 class Blank : public BasicWidget {
  public:
-  Blank(const Environment& env, Dimensions dims)
-      : BasicWidget(env), dims_(dims) {}
+  Blank(ApplicationContext& context, Dimensions dims)
+      : BasicWidget(context), dims_(dims) {}
 
   void paint(PaintContext& ctx) const override { ctx.clear(); }
 

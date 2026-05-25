@@ -4,14 +4,14 @@
 
 namespace roo_windows {
 
-Dialog::Dialog(const Environment& env, std::vector<std::string> button_labels)
-    : VerticalLayout(env),
-      title_(env, "", font_h6()),
-      divider1_(env),
-      contents_(env),
-      divider2_(env),
-      title_panel_(env),
-      button_panel_(env),
+Dialog::Dialog(ApplicationContext& context, std::vector<std::string> button_labels)
+    : VerticalLayout(context),
+      title_(context, "", font_h6()),
+      divider1_(context),
+      contents_(context),
+      divider2_(context),
+      title_panel_(context),
+      button_panel_(context),
       callback_fn_(nullptr) {
   title_panel_.setMargins(Margins(MarginSize::kNone, MarginSize::kRegular));
   add(title_panel_);
@@ -31,7 +31,7 @@ Dialog::Dialog(const Environment& env, std::vector<std::string> button_labels)
   buttons_.reserve(button_labels.size());
   int i = 0;
   for (std::string& label : button_labels) {
-    buttons_.emplace_back(env, std::move(label), Button::TEXT);
+    buttons_.emplace_back(context, std::move(label), Button::TEXT);
     buttons_.back().setOnInteractiveChange([this, i]() { actionTaken(i); });
     button_panel_.add(buttons_.back());
     ++i;

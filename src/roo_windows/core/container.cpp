@@ -25,8 +25,8 @@ Rect ExpandBySloppyTouchHalfExtent(const Rect& rect) {
 
 }  // namespace
 
-Container::Container(const Environment& env)
-    : SurfaceWidget(env),
+Container::Container(ApplicationContext& context)
+    : SurfaceWidget(context),
       invalid_region_(0, 0, -1, -1),
       cached_max_bounds_(0, 0, -1, -1) {}
 

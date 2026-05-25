@@ -11,7 +11,7 @@ namespace roo_windows {
 /// values mean indeterminate, which is rendered as an animated marquee.
 class ProgressBar : public Widget {
  public:
-  ProgressBar(const Environment& env) : Widget(env), progress_(-1), color_(0) {}
+  ProgressBar(ApplicationContext& context) : Widget(context), progress_(-1), color_(0) {}
 
   /// Drives the indeterminate animation timing on each paint pass.
   void paintWidgetContents(PaintContext& ctx) override;

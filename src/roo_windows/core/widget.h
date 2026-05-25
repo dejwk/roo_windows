@@ -13,7 +13,7 @@
 #include "roo_windows/core/canvas.h"
 #include "roo_windows/core/clipper.h"
 #include "roo_windows/core/dimensions.h"
-#include "roo_windows/core/environment.h"
+#include "roo_windows/core/application_context.h"
 #include "roo_windows/core/insets.h"
 #include "roo_windows/core/margins.h"
 #include "roo_windows/core/measure_spec.h"
@@ -87,7 +87,7 @@ class Widget {
   static constexpr int16_t kMaxSloppyTouchHalfExtent =
       (kMinSloppyTouchTargetSpan + 1) / 2;
 
-  Widget(const Environment& env);
+  Widget(ApplicationContext& context);
   Widget(const Widget& w) = delete;
   Widget(Widget&& w) = default;
   virtual ~Widget() {}

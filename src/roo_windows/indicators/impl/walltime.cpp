@@ -11,16 +11,16 @@ using roo_display::Color;
 using roo_time::TimeZone;
 using roo_time::WallTimeClock;
 
-WalltimeIndicatorBase::WalltimeIndicatorBase(const Environment& env,
+WalltimeIndicatorBase::WalltimeIndicatorBase(ApplicationContext& context,
                                              const WallTimeClock* clock,
                                              TimeZone tz)
-    : WalltimeIndicatorBase(env, roo_display::color::Transparent, clock, tz) {}
+    : WalltimeIndicatorBase(context, roo_display::color::Transparent, clock, tz) {}
 
-WalltimeIndicatorBase::WalltimeIndicatorBase(const Environment& env,
+WalltimeIndicatorBase::WalltimeIndicatorBase(ApplicationContext& context,
                                              Color color,
                                              const WallTimeClock* clock,
                                              TimeZone tz)
-    : Widget(env),
+    : Widget(context),
       color_(color),
       clock_(clock),
       tz_(tz),

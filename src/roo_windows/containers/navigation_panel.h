@@ -11,7 +11,7 @@ namespace roo_windows {
 // NavigationPanel has a navigation rail that activate sub-panes.
 class NavigationPanel : public Panel {
  public:
-  NavigationPanel(const Environment& env);
+  NavigationPanel(ApplicationContext& context);
 
   /// Adds a new page accessible via the rail. The icon/caption become a new
   /// destination; the page widget is added to the stacked content area.
@@ -37,7 +37,6 @@ class NavigationPanel : public Panel {
   Widget* page(int index) { return contents_.children()[index]; }
   const Widget& page(int index) const { return *contents_.children()[index]; }
 
-  const Environment& env_;
   NavigationRail rail_;
   StackedLayout contents_;
 };

@@ -23,53 +23,53 @@ void maybeAddColor(roo_display::internal::ColorSet& palette, Color color) {
 }  // namespace
 
 MainWindow::MainWindow(Application& app, const roo_display::Box& bounds)
-    : Container(app.env()),
+    : Container(app.context()),
       app_(app),
       redraw_bounds_(bounds),
-      scrim_(app.env()) {
+      scrim_(app.context()) {
   parent_bounds_ = Rect(bounds);
   invalidateDescending();
-  const Environment& env = app.env();
+  const ApplicationContext& context = app.context();
   roo_display::internal::ColorSet color_set;
-  maybeAddColor(color_set, env.theme().color.background);
-  maybeAddColor(color_set, env.theme().color.surface);
-  maybeAddColor(color_set, env.theme().color.primary);
-  maybeAddColor(color_set, env.theme().color.secondary);
-  maybeAddColor(color_set, env.keyboardColorTheme().background);
+  maybeAddColor(color_set, context.theme().color.background);
+  maybeAddColor(color_set, context.theme().color.surface);
+  maybeAddColor(color_set, context.theme().color.primary);
+  maybeAddColor(color_set, context.theme().color.secondary);
+  maybeAddColor(color_set, context.keyboardColorTheme().background);
   {
-    Color c = env.theme().color.contentColorFor(ColorRole::kSurface);
-    c.set_a(
-        env.theme().opacity(ColorRole::kSurface, InteractionState::kPressed));
-    c = AlphaBlend(env.theme().color.surface, c);
+    Color c = context.theme().color.contentColorFor(ColorRole::kSurface);
+    c.set_a(context.theme().opacity(ColorRole::kSurface,
+                                    InteractionState::kPressed));
+    c = AlphaBlend(context.theme().color.surface, c);
     maybeAddColor(color_set, c);
   }
   {
-    Color c = env.theme().color.accentColorFor(ColorRole::kSurface);
-    c.set_a(
-        env.theme().opacity(ColorRole::kSurface, InteractionState::kPressed));
-    c = AlphaBlend(env.theme().color.surface, c);
+    Color c = context.theme().color.accentColorFor(ColorRole::kSurface);
+    c.set_a(context.theme().opacity(ColorRole::kSurface,
+                                    InteractionState::kPressed));
+    c = AlphaBlend(context.theme().color.surface, c);
     maybeAddColor(color_set, c);
   }
   {
-    Color c = env.theme().color.primary;
-    c.set_a(env.theme().state.disabled);
-    c = AlphaBlend(env.theme().color.surface, c);
+    Color c = context.theme().color.primary;
+    c.set_a(context.theme().state.disabled);
+    c = AlphaBlend(context.theme().color.surface, c);
     maybeAddColor(color_set, c);
   }
   {
-    Color c = env.theme().color.secondary;
-    c.set_a(env.theme().state.disabled);
-    c = AlphaBlend(env.theme().color.surface, c);
+    Color c = context.theme().color.secondary;
+    c.set_a(context.theme().state.disabled);
+    c = AlphaBlend(context.theme().color.surface, c);
     maybeAddColor(color_set, c);
   }
 
-  maybeAddColor(color_set, env.keyboardColorTheme().normalButton);
-  maybeAddColor(color_set, env.theme().color.error);
-  maybeAddColor(color_set, env.keyboardColorTheme().modifierButton);
+  maybeAddColor(color_set, context.keyboardColorTheme().normalButton);
+  maybeAddColor(color_set, context.theme().color.error);
+  maybeAddColor(color_set, context.keyboardColorTheme().modifierButton);
   Color palette[color_set.size()];
   std::copy(color_set.begin(), color_set.end(), palette);
   // background_fill_buffer_.setPalette(palette, color_set.size());
-  // background_fill_buffer_.setPrefilled(env.theme().color.background);
+  // background_fill_buffer_.setPrefilled(context.theme().color.background);
 }
 
 MainWindow::~MainWindow() {
@@ -87,7 +87,7 @@ MainWindow::~MainWindow() {
 }
 
 Application& MainWindow::app() const { return app_; }
-const Theme& MainWindow::theme() const { return app().env().theme(); }
+const Theme& MainWindow::theme() const { return app().context().theme(); }
 
 void MainWindow::addToLayer(std::vector<Widget*>& layer, WidgetRef child,
                             const Rect& rect) {

@@ -7,7 +7,7 @@
 #include "roo_display/color/color.h"
 #include "roo_display/filter/foreground.h"
 #include "roo_windows/core/container.h"
-#include "roo_windows/core/environment.h"
+#include "roo_windows/core/application_context.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/core/widget.h"
 #include "roo_windows/core/widget_ref.h"
@@ -24,7 +24,7 @@ using roo_display::Color;
 /// a dynamic layout.
 class Panel : public Container {
  public:
-  Panel(const Environment& env) : Container(env) {}
+  Panel(ApplicationContext& context) : Container(context) {}
 
   ~Panel();
 

@@ -125,7 +125,7 @@ class KeyboardButton : public SimpleButton {
 
 class PressHighlighter : public Widget {
  public:
-  PressHighlighter(const Environment& env);
+  PressHighlighter(ApplicationContext& context);
 
   void setTarget(const TextButton* target) { target_ = target; }
 
@@ -143,11 +143,11 @@ class PressHighlighter : public Widget {
 
 class KeyboardPage : public Panel {
  public:
-  KeyboardPage(const Environment& env, const KeyboardPageSpec* spec);
+  KeyboardPage(ApplicationContext& context, const KeyboardPageSpec* spec);
 
   Color background() const override;
 
-  void init(const Environment& env);
+  void init(ApplicationContext& context);
 
   void showHighlighter(const TextButton& btn);
   void hideHighlighter();
@@ -176,7 +176,7 @@ class KeyboardPage : public Panel {
 
 class KeyboardWidget : public Panel {
  public:
-  KeyboardWidget(const Environment& env, const KeyboardSpec* spec);
+  KeyboardWidget(ApplicationContext& context, const KeyboardSpec* spec);
 
   const KeyboardColorTheme& color_theme() const { return color_theme_; }
 
@@ -200,7 +200,7 @@ class KeyboardWidget : public Panel {
   void onLayout(bool changed, const Rect& rect) override;
 
  private:
-  const Environment* env_;
+  ApplicationContext* context_;
   std::vector<KeyboardPage*> pages_;
   const KeyboardColorTheme& color_theme_;
   Keyboard::CapsState caps_state_;
@@ -220,8 +220,8 @@ void KeyboardButton::onCancel() {
 
 class TextButton : public KeyboardButton {
  public:
-  TextButton(const Environment& env, uint16_t rune, uint16_t rune_caps)
-      : KeyboardButton(env, runeAsStr(rune)),
+  TextButton(ApplicationContext& context, uint16_t rune, uint16_t rune_caps)
+      : KeyboardButton(context, runeAsStr(rune)),
         rune_(rune),
         rune_caps_(rune_caps) {
     setFont(font_body1());
@@ -265,7 +265,7 @@ class TextButton : public KeyboardButton {
 
 class SpaceButton : public KeyboardButton {
  public:
-  SpaceButton(const Environment& env) : KeyboardButton(env, "") {}
+  SpaceButton(ApplicationContext& context) : KeyboardButton(context, "") {}
 
   bool showClickAnimation() const override { return false; }
 
@@ -281,8 +281,8 @@ class SpaceButton : public KeyboardButton {
 
 class EnterButton : public KeyboardButton {
  public:
-  EnterButton(const Environment& env, const MonoIcon& icon)
-  : KeyboardButton(env, icon) {}
+  EnterButton(ApplicationContext& context, const MonoIcon& icon)
+      : KeyboardButton(context, icon) {}
 
   bool showClickAnimation() const override { return false; }
 
@@ -298,7 +298,8 @@ class EnterButton : public KeyboardButton {
 
 class ShiftButton : public KeyboardButton {
  public:
-  ShiftButton(const Environment& env) : KeyboardButton(env, shift_24()) {}
+  ShiftButton(ApplicationContext& context)
+      : KeyboardButton(context, shift_24()) {}
 
   bool showClickAnimation() const override { return false; }
 
@@ -350,8 +351,8 @@ class ShiftButton : public KeyboardButton {
 
 class DelButton : public KeyboardButton {
  public:
-  DelButton(const Environment& env, const MonoIcon& icon)
-  : KeyboardButton(env, icon) {}
+  DelButton(ApplicationContext& context, const MonoIcon& icon)
+      : KeyboardButton(context, icon) {}
 
   bool showClickAnimation() const override { return false; }
 
@@ -367,8 +368,9 @@ class DelButton : public KeyboardButton {
 
 class PageSwitchButton : public KeyboardButton {
  public:
-  PageSwitchButton(const Environment& env, std::string label, uint8_t target)
-  : KeyboardButton(env, std::move(label)), target_(target) {}
+  PageSwitchButton(ApplicationContext& context, std::string label,
+                   uint8_t target)
+      : KeyboardButton(context, std::move(label)), target_(target) {}
 
   bool showClickAnimation() const override { return false; }
 
@@ -387,15 +389,16 @@ const KeyboardWidget* KeyboardPage::keyboard() const {
 
 KeyboardWidget* KeyboardPage::keyboard() { return (KeyboardWidget*)parent(); }
 
-KeyboardWidget::KeyboardWidget(const Environment& env, const KeyboardSpec* spec)
-    : Panel(env),
-      env_(&env),
-      color_theme_(env.keyboardColorTheme()),
+KeyboardWidget::KeyboardWidget(ApplicationContext& context,
+                               const KeyboardSpec* spec)
+    : Panel(context),
+      context_(&context),
+      color_theme_(context.keyboardColorTheme()),
       caps_state_(Keyboard::CAPS_STATE_LOW),
       listener_(nullptr) {
   setParentClipMode(ParentClipMode::kUnclipped);
   for (int i = 0; i < spec->page_count; ++i) {
-    auto page = new KeyboardPage(env, &spec->pages[i]);
+    auto page = new KeyboardPage(context, &spec->pages[i]);
     add(std::unique_ptr<KeyboardPage>(page));
     pages_.push_back(page);
   }
@@ -447,7 +450,7 @@ void KeyboardWidget::setPage(int idx) {
   } else {
     if (current_page_ == pages_[idx]) return;
     current_page_ = pages_[idx];
-    current_page_->init(*env_);
+    current_page_->init(*context_);
   }
   for (int i = 0; i < static_cast<int>(pages_.size()); ++i) {
     pages_[i]->setVisibility(i == idx ? Visibility::kVisible
@@ -457,8 +460,9 @@ void KeyboardWidget::setPage(int idx) {
   requestLayout();
 }
 
-KeyboardPage::KeyboardPage(const Environment& env, const KeyboardPageSpec* spec)
-    : Panel(env), spec_(spec), highlighter_(env), initialized_(false) {
+KeyboardPage::KeyboardPage(ApplicationContext& context,
+                           const KeyboardPageSpec* spec)
+    : Panel(context), spec_(spec), highlighter_(context), initialized_(false) {
   setParentClipMode(ParentClipMode::kUnclipped);
 }
 
@@ -466,7 +470,7 @@ Color KeyboardPage::background() const {
   return keyboard()->color_theme().background;
 }
 
-void KeyboardPage::init(const Environment& env) {
+void KeyboardPage::init(ApplicationContext& context) {
   if (initialized_) return;
   initialized_ = true;
   for (int i = 0; i < spec_->row_count; ++i) {
@@ -478,43 +482,43 @@ void KeyboardPage::init(const Environment& env) {
       const auto& key_caps = row.keys_caps[j];
       switch (key.function) {
         case KeySpec::TEXT: {
-          b = new TextButton(env, key.data, key_caps.data);
-          b_color = env.keyboardColorTheme().normalButton;
+          b = new TextButton(context, key.data, key_caps.data);
+          b_color = context.keyboardColorTheme().normalButton;
           break;
         }
         case KeySpec::SPACE: {
-          b = new SpaceButton(env);
-          b_color = env.keyboardColorTheme().normalButton;
+          b = new SpaceButton(context);
+          b_color = context.keyboardColorTheme().normalButton;
           break;
         }
         case KeySpec::ENTER: {
-          b = new EnterButton(env, ic_outlined_24_action_done());
-          b_color = env.keyboardColorTheme().acceptButton;
+          b = new EnterButton(context, ic_outlined_24_action_done());
+          b_color = context.keyboardColorTheme().acceptButton;
           break;
         }
         case KeySpec::SHIFT: {
-          b = new ShiftButton(env);
-          b_color = env.keyboardColorTheme().modifierButton;
+          b = new ShiftButton(context);
+          b_color = context.keyboardColorTheme().modifierButton;
           break;
         }
         case KeySpec::DEL: {
-          b = new DelButton(env, ic_outlined_24_content_backspace());
-          b_color = env.keyboardColorTheme().modifierButton;
+          b = new DelButton(context, ic_outlined_24_content_backspace());
+          b_color = context.keyboardColorTheme().modifierButton;
           break;
         }
         case KeySpec::SWITCH_PAGE: {
           b = new PageSwitchButton(
-              env,
+              context,
               std::string(row.pageswitch_key_labels + ((key.data >> 8) & 0xFF),
                           key.data >> 16),
               (key.data & 0xFF));
-          b_color = env.keyboardColorTheme().modifierButton;
+          b_color = context.keyboardColorTheme().modifierButton;
           break;
         }
       }
       b->setInteriorColor(b_color);
       b->setOutlineColor(b_color);
-      b->setContentColor(env.keyboardColorTheme().text);
+      b->setContentColor(context.keyboardColorTheme().text);
       keys_.emplace_back(b);
       add(std::unique_ptr<Button>(b));
     }
@@ -634,7 +638,8 @@ void KeyboardPage::capsStateUpdated() {
   }
 }
 
-PressHighlighter::PressHighlighter(const Environment& env) : Widget(env) {
+PressHighlighter::PressHighlighter(ApplicationContext& context)
+    : Widget(context) {
   setParentClipMode(ParentClipMode::kUnclipped);
 }
 
@@ -675,8 +680,8 @@ Dimensions PressHighlighter::getSuggestedMinimumDimensions() const {
   return Dimensions(0, 0);
 }
 
-Keyboard::Keyboard(const Environment& env, const KeyboardSpec* spec)
-    : contents_(new KeyboardWidget(env, spec)) {
+Keyboard::Keyboard(ApplicationContext& context, const KeyboardSpec* spec)
+    : contents_(new KeyboardWidget(context, spec)) {
   contents_->setVisibility(Visibility::kGone);
 }
 

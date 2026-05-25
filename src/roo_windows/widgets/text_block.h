@@ -29,12 +29,12 @@ enum class TextAlign {
 // automatic wrapping.
 class TextBlock : public BasicWidget {
  public:
-  TextBlock(const Environment& env, std::string value,
+  TextBlock(ApplicationContext& context, std::string value,
             const roo_display::Font& font, roo_display::Alignment alignment)
-      : TextBlock(env, value, font, roo_display::color::Transparent,
+      : TextBlock(context, value, font, roo_display::color::Transparent,
                   alignment) {}
 
-  TextBlock(const Environment& env, std::string value,
+  TextBlock(ApplicationContext& context, std::string value,
             const roo_display::Font& font, roo_display::Color color,
             roo_display::Alignment alignment);
 

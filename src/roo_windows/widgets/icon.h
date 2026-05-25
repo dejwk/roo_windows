@@ -12,12 +12,12 @@ namespace roo_windows {
 /// must outlive the widget (typically a constexpr/program-memory icon).
 class Icon : public BasicWidget {
  public:
-  Icon(const Environment& env, Color color = roo_display::color::Transparent)
-      : BasicWidget(env), icon_(nullptr), color_(color) {}
+  Icon(ApplicationContext& context, Color color = roo_display::color::Transparent)
+      : BasicWidget(context), icon_(nullptr), color_(color) {}
 
-  Icon(const Environment& env, const roo_display::Pictogram& def,
+  Icon(ApplicationContext& context, const roo_display::Pictogram& def,
        Color color = roo_display::color::Transparent)
-      : BasicWidget(env), icon_(&def), color_(color) {}
+      : BasicWidget(context), icon_(&def), color_(color) {}
 
   /// Paints the pictogram centered in the widget bounds, in either the
   /// configured color or the resolved theme default when transparent.

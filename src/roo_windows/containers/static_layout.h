@@ -11,7 +11,7 @@ namespace roo_windows {
  */
 class StaticLayout : public Panel {
  public:
-  StaticLayout(const Environment& env) : Panel(env) {}
+  StaticLayout(ApplicationContext& context) : Panel(context) {}
 
   /**
    * Adds the specified child, at the end of the list, positioning it at the

@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include "roo_windows/core/environment.h"
+#include "roo_windows/core/application_context.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/widget.h"
 
@@ -79,7 +79,7 @@ class Task {
 /// activity's contents.
 class TaskPanel : public Panel {
  public:
-  TaskPanel(const Environment& env, Task& task) : Panel(env), task_(task) {}
+  TaskPanel(ApplicationContext& context, Task& task) : Panel(context), task_(task) {}
 
   /// Returns the owning task; descendants use this to resolve their host
   /// task context.

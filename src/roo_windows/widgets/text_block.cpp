@@ -352,10 +352,10 @@ class Interior : public roo_display::Drawable {
 
 }  // namespace
 
-TextBlock::TextBlock(const Environment& env, std::string value,
+TextBlock::TextBlock(ApplicationContext& context, std::string value,
                      const roo_display::Font& font, roo_display::Color color,
                      roo_display::Alignment alignment)
-    : BasicWidget(env),
+    : BasicWidget(context),
       value_(),
       ink_insets_(Insets::Zero()),
       text_dims_(0, 0),

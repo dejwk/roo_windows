@@ -4,7 +4,7 @@
 #include "roo_scheduler.h"
 #include "roo_time.h"
 #include "roo_windows/containers/blit_cache_container.h"
-#include "roo_windows/core/environment.h"
+#include "roo_windows/core/application_context.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/widget.h"
 
@@ -16,7 +16,7 @@ class VerticalScrollBar : public Widget {
  public:
   enum class Presence { kAlwaysShown, kShownWhenScrolling, kAlwaysHidden };
 
-  VerticalScrollBar(const Environment& env) : Widget(env), begin_(0), end_(0) {}
+  VerticalScrollBar(ApplicationContext& context) : Widget(context), begin_(0), end_(0) {}
 
   /// Sets the visible range of the scrolled content along the Y axis (in
   /// content coordinates) so the thumb's size and position match the panel.
@@ -55,22 +55,22 @@ class SimpleScrollablePanel : public Container,
  public:
   enum class Direction { kVertical = 0, kHorizontal = 1, kBoth = 2 };
 
-  SimpleScrollablePanel(const Environment& env, WidgetRef contents,
+  SimpleScrollablePanel(ApplicationContext& context, WidgetRef contents,
                         Direction direction = Direction::kVertical)
-      : SimpleScrollablePanel(env, direction) {
+      : SimpleScrollablePanel(context, direction) {
     setContents(std::move(contents));
   }
 
-  SimpleScrollablePanel(const Environment& env,
+  SimpleScrollablePanel(ApplicationContext& context,
                         Direction direction = Direction::kVertical)
-      : Container(env),
+      : Container(context),
         direction_(direction),
         alignment_(roo_display::kLeft | roo_display::kTop),
         contents_(nullptr),
         scroll_bar_presence_(VerticalScrollBar::Presence::kAlwaysHidden),
-        scroll_bar_(env),
+        scroll_bar_(context),
         scroll_bar_gesture_(false),
-        scheduler_(env.scheduler()),
+        scheduler_(context.scheduler()),
         notification_id_(-1),
         animation_(ScrollAnimation::IDLE),
         anim_{} {
@@ -308,15 +308,15 @@ class SimpleScrollablePanel : public Container,
 // support.
 class ScrollableBlitPanel : public SimpleScrollablePanel {
  public:
-  ScrollableBlitPanel(const Environment& env, WidgetRef contents,
+  ScrollableBlitPanel(ApplicationContext& context, WidgetRef contents,
                       Direction direction = Direction::kVertical)
-      : ScrollableBlitPanel(env, direction) {
+      : ScrollableBlitPanel(context, direction) {
     setContents(std::move(contents));
   }
 
-  ScrollableBlitPanel(const Environment& env,
+  ScrollableBlitPanel(ApplicationContext& context,
                       Direction direction = Direction::kVertical)
-      : SimpleScrollablePanel(env, direction), blit_cache_(env) {}
+      : SimpleScrollablePanel(context, direction), blit_cache_(context) {}
 
   /// Wraps `new_contents` in the internal `BlitCacheContainer` and installs
   /// it as the panel's scrolled content.

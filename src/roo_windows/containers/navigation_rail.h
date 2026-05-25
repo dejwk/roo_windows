@@ -16,9 +16,9 @@ class NavigationRail;
 /// caller-supplied callback when clicked.
 class Destination : public IconWithCaption {
  public:
-  Destination(const Environment& env, const roo_display::Pictogram& icon,
+  Destination(ApplicationContext& context, const roo_display::Pictogram& icon,
               std::string text, int idx, std::function<void()> activator)
-      : IconWithCaption(env, std::move(icon), std::move(text)),
+      : IconWithCaption(context, std::move(icon), std::move(text)),
         idx_(idx),
         activator_(std::move(activator)) {}
 
@@ -49,7 +49,7 @@ class NavigationRail : public Panel {
  public:
   enum LabelVisibility { PERSISTED, SELECTED, UNLABELED };
 
-  NavigationRail(const Environment& env);
+  NavigationRail(ApplicationContext& context);
 
   PreferredSize getPreferredSize() const override {
     return PreferredSize(PreferredSize::ExactWidth(72),
@@ -82,7 +82,7 @@ class NavigationRail : public Panel {
  private:
   friend class Destination;
 
-  const Environment& env_;
+  ApplicationContext& context_;
   int width_dp_;  // defaults to 72.
   int destination_size_dp_;
   roo_display::VAlign alignment_;

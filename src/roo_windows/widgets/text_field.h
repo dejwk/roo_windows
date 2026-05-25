@@ -28,7 +28,7 @@ static constexpr roo_time::Duration kShowLastGlyphInterval =
 /// `TextField` reacts to the state change.
 class VisibilityToggle : public BasicWidget {
  public:
-  VisibilityToggle(const Environment& env) : BasicWidget(env) { setOff(); }
+  VisibilityToggle(ApplicationContext& context) : BasicWidget(context) { setOff(); }
 
   /// Reports the fixed icon-sized footprint used to draw the eye/eye-slash
   /// pictograms.
@@ -161,10 +161,10 @@ class TextField : public BasicWidget {
     UNDERLINE,
   };
 
-  TextField(const Environment& env, TextFieldEditor& editor,
+  TextField(ApplicationContext& context, TextFieldEditor& editor,
             const roo_display::Font& font, std::string hint,
             roo_display::Alignment alignment, Decoration decoration)
-      : BasicWidget(env),
+      : BasicWidget(context),
         editor_(editor),
         decoration_(decoration),
         value_(""),

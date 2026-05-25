@@ -5,7 +5,7 @@
 #include "roo_windows/containers/horizontal_layout.h"
 #include "roo_windows/containers/vertical_layout.h"
 #include "roo_windows/core/activity.h"
-#include "roo_windows/core/environment.h"
+#include "roo_windows/core/application_context.h"
 #include "roo_windows/widgets/icon.h"
 #include "roo_windows/widgets/text_label.h"
 
@@ -19,7 +19,7 @@ class BasicNavigationItem : public HorizontalLayout {
  public:
   /// Builds a single-line navigation row with the supplied icon and label;
   /// clicking the row enters `target`.
-  BasicNavigationItem(const Environment& env,
+  BasicNavigationItem(ApplicationContext& context,
                       const roo_display::Pictogram& icon, roo::string_view text,
                       Activity& target);
 
@@ -43,7 +43,7 @@ class BasicNavigationItemWithSubtext : public HorizontalLayout {
  public:
   /// Builds a navigation row with an icon, a primary label and a secondary
   /// subtext line; clicking the row enters `target`.
-  BasicNavigationItemWithSubtext(const Environment& env,
+  BasicNavigationItemWithSubtext(ApplicationContext& context,
                                  const roo_display::Pictogram& icon,
                                  roo::string_view label,
                                  roo::string_view subtext, Activity& target);

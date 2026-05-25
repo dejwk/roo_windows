@@ -50,8 +50,8 @@ inline int16_t distributeSpace(int32_t extra, int total_weight, int weight_i,
 // Construction
 // ---------------------------------------------------------------------------
 
-FlexLayout::FlexLayout(const Environment& env, FlexDirection direction)
-    : Panel(env),
+FlexLayout::FlexLayout(ApplicationContext& context, FlexDirection direction)
+    : Panel(context),
       flex_direction_(direction),
       flex_wrap_(FlexWrap::kNowrap),
       justify_content_(JustifyContent::kFlexStart),

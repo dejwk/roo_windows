@@ -6,10 +6,10 @@
 namespace roo_windows {
 namespace menu {
 
-Title::Title(const Environment& env, std::string title)
-    : HorizontalLayout(env),
-      back_(env, SCALED_ROO_ICON(outlined, navigation_arrow_back)),
-      label_(env, std::move(title), font_h6(), kGravityLeft | kGravityMiddle) {
+Title::Title(ApplicationContext& context, std::string title)
+    : HorizontalLayout(context),
+      back_(context, SCALED_ROO_ICON(outlined, navigation_arrow_back)),
+      label_(context, std::move(title), font_h6(), kGravityLeft | kGravityMiddle) {
   setGravity(kGravityMiddle);
   label_.setMargins(MarginSize::kNone);
   label_.setPadding(PaddingSize::kTiny);

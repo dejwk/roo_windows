@@ -13,13 +13,13 @@ namespace roo_windows {
 /// concrete classes rather than this base.
 class WalltimeIndicatorBase : public Widget {
  public:
-  WalltimeIndicatorBase(const Environment& env,
+  WalltimeIndicatorBase(ApplicationContext& context,
                         const roo_time::WallTimeClock* clock,
                         roo_time::TimeZone tz);
 
   /// Constructs the indicator with an explicit tint color (transparent means
   /// inherit the parent's content color).
-  WalltimeIndicatorBase(const Environment& env, roo_display::Color color,
+  WalltimeIndicatorBase(ApplicationContext& context, roo_display::Color color,
                         const roo_time::WallTimeClock* clock,
                         roo_time::TimeZone tz);
 

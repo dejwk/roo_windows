@@ -10,8 +10,8 @@ namespace roo_windows {
 /// a toggle. For new code, prefer `material3::Checkbox`.
 class Checkbox : public BasicWidget {
  public:
-  Checkbox(const Environment& env, OnOffState state = OnOffState::kOff)
-      : BasicWidget(env) {
+  Checkbox(ApplicationContext& context, OnOffState state = OnOffState::kOff)
+      : BasicWidget(context) {
     setOnOffState(state);
   }
 

@@ -15,11 +15,11 @@ namespace menu {
 // add(), using vertical layout options if needed).
 class Menu : public roo_windows::Activity {
  public:
-  Menu(const roo_windows::Environment& env, std::string title)
+  Menu(roo_windows::ApplicationContext& context, std::string title)
       : roo_windows::Activity(),
-        pane_(env),
-        container_(env, pane_),
-        title_(env, std::move(title)) {
+        pane_(context),
+        container_(context, pane_),
+        title_(context, std::move(title)) {
     pane_.add(title_);
   }
 

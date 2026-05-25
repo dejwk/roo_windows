@@ -79,8 +79,8 @@ bool computeSingleRectRemainder(const roo_display::Box& panel,
 
 }  // namespace
 
-BlitCacheContainer::BlitCacheContainer(const Environment& env)
-    : Container(env),
+BlitCacheContainer::BlitCacheContainer(ApplicationContext& context)
+    : Container(context),
       child_(nullptr),
       blit_safe_region_(0, 0, -1, -1),
       pending_dx_(0),

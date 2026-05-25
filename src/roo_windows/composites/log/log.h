@@ -35,7 +35,8 @@ class Log : public roo_windows::BasicWidget {
   //
   // The implementation uses a circular buffer with some auxiliary circular
   // vectors for caching string offsets and line lengths.
-  Log(const roo_windows::Environment& env, uint32_t buffer_size = 10 * 1024,
+    Log(roo_windows::ApplicationContext& context,
+      uint32_t buffer_size = 10 * 1024,
       size_t max_lines = 100);
 
   /// Discards all stored lines, leaving the log empty.
@@ -94,7 +95,7 @@ class ScrollableLog : public roo_windows::ScrollablePanel {
              // appended.
   };
 
-  ScrollableLog(const roo_windows::Environment& env,
+  ScrollableLog(roo_windows::ApplicationContext& context,
                 uint32_t buffer_size = 10 * 1024, size_t max_lines = 100);
 
   /// Clears all stored lines and resets the scroll position.

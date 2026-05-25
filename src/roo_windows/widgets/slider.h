@@ -12,8 +12,8 @@ namespace roo_windows {
 /// behavior.
 class Slider : public BasicWidget {
  public:
-  Slider(const Environment& env, uint16_t pos = 0)
-      : BasicWidget(env), pos_(pos), is_dragging_(false) {}
+  Slider(ApplicationContext& context, uint16_t pos = 0)
+      : BasicWidget(context), pos_(pos), is_dragging_(false) {}
 
   /// Paints the track and thumb based on the current position; press state
   /// is reflected via the standard widget overlay.

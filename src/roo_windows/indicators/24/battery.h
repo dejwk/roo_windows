@@ -10,7 +10,7 @@ class BatteryIndicator24x24 : public BatteryIndicator {
  public:
   using BatteryIndicator::BatteryIndicator;
 
-  BatteryIndicator24x24(const Environment& env) : BatteryIndicator(env) {}
+  BatteryIndicator24x24(ApplicationContext& context) : BatteryIndicator(context) {}
 
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(24, 24);

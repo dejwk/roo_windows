@@ -2,17 +2,17 @@
 
 namespace roo_windows {
 
-AlertDialog::AlertDialog(const Environment& env, std::string title,
+AlertDialog::AlertDialog(ApplicationContext& context, std::string title,
                          std::string supporting_text,
                          std::vector<std::string> button_labels)
-    : Dialog(env, std::move(button_labels)),
-      supporting_text_(env, std::move(supporting_text), font_body1(),
+    : Dialog(context, std::move(button_labels)),
+      supporting_text_(context, std::move(supporting_text), font_body1(),
                        roo_display::kLeft | roo_display::kMiddle) {
   supporting_text_.setPadding(PaddingSize::kLarge, PaddingSize::kNone);
   supporting_text_.setMargins(MarginSize::kNone, MarginSize::kNone);
-  Color on_surface = env.theme().color.onSurface;
+  Color on_surface = context.theme().color.onSurface;
   on_surface.set_a(0xB0);
-  supporting_text_.setColor(AlphaBlend(env.theme().color.surface, on_surface));
+  supporting_text_.setColor(AlphaBlend(context.theme().color.surface, on_surface));
   contents_.setContents(supporting_text_);
   setTitle(std::move(title));
 }

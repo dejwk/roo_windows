@@ -19,7 +19,7 @@ namespace menu {
 /// where each row exposes a single numeric/enumerated knob.
 class BaseSliderWithCaption : public roo_windows::VerticalLayout {
  public:
-  BaseSliderWithCaption(const roo_windows::Environment& env,
+  BaseSliderWithCaption(roo_windows::ApplicationContext& context,
                         std::string caption);
 
   virtual ~BaseSliderWithCaption() = default;
@@ -52,7 +52,7 @@ class BaseSliderWithCaption : public roo_windows::VerticalLayout {
 /// formatting.
 class NumericSliderWithCaption : public BaseSliderWithCaption {
  public:
-  NumericSliderWithCaption(const roo_windows::Environment& env,
+  NumericSliderWithCaption(roo_windows::ApplicationContext& context,
                            std::string caption);
 
   /// Sets the printf-style format used to render the readout (default

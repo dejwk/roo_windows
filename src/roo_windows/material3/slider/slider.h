@@ -123,7 +123,7 @@ class Slider : public BasicWidget {
  public:
   /// Creates a single-value Material 3 slider over the supplied semantic value
   /// range.
-  Slider(const Environment& env, SliderRange range = {}, float value = 0.0f,
+  Slider(ApplicationContext& context, SliderRange range = {}, float value = 0.0f,
          SliderVariant variant = SliderVariant::kStandard,
          SliderStyle style = {});
 

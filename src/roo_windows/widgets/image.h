@@ -17,18 +17,18 @@ class Image : public BasicWidget {
  public:
   // Creates an empty image. You can set the content after construction by
   // calling setImage().
-  Image(const Environment& env,
+  Image(ApplicationContext& context,
         roo_display::Alignment alignment = roo_display::kCenter |
                                            roo_display::kMiddle)
-      : BasicWidget(env), image_(nullptr), alignment_(alignment) {}
+      : BasicWidget(context), image_(nullptr), alignment_(alignment) {}
 
   // Creates an image with the specified content, and optionally the alignment.
   // If the alignment is not specified, it defaults to centered (kCenter |
   // kMiddle).
-  Image(const Environment& env, const roo_display::Drawable& image,
+  Image(ApplicationContext& context, const roo_display::Drawable& image,
         roo_display::Alignment alignment = roo_display::kCenter |
                                            roo_display::kMiddle)
-      : BasicWidget(env), image_(&image), alignment_(alignment) {}
+      : BasicWidget(context), image_(&image), alignment_(alignment) {}
 
   // Sets the new content and invalidates the interior if needed so that it gets
   // redrawn. If nullptr, the image is drawn as an empty canvas.

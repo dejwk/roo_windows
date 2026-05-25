@@ -17,12 +17,12 @@ NavigationRail* Destination::rail() {
   return static_cast<NavigationRail*>(parent());
 }
 
-NavigationRail::NavigationRail(const Environment& env)
-    : Panel(env),
-      env_(env),
+NavigationRail::NavigationRail(ApplicationContext& context)
+    : Panel(context),
+      context_(context),
       alignment_(roo_display::kTop),
       active_(-1),
-      divider_(env) {
+      divider_(context) {
   add(divider_);
 }
 
@@ -49,8 +49,9 @@ void NavigationRail::onLayout(bool changed, const Rect& rect) {
 void NavigationRail::addDestination(const roo_display::Pictogram& icon,
                                     std::string text,
                                     std::function<void()> activator) {
-  Destination* dest = new Destination(
-      env_, icon, std::move(text), destinations_.size(), std::move(activator));
+  Destination* dest =
+      new Destination(context_, icon, std::move(text), destinations_.size(),
+                      std::move(activator));
   destinations_.emplace_back(dest);
   add(*dest);
 }

@@ -339,9 +339,9 @@ void Slider::paintInsetIcons(const Canvas& canvas, Clipper& clipper,
   }
 }
 
-Slider::Slider(const Environment& env, SliderRange range, float value,
+Slider::Slider(ApplicationContext& context, SliderRange range, float value,
                SliderVariant variant, SliderStyle style)
-    : BasicWidget(env),
+    : BasicWidget(context),
       range_(range),
       variant_(variant),
       style_(style),

@@ -10,7 +10,7 @@ class WifiIndicator36x36 : public WifiIndicatorBase {
  public:
   using WifiIndicatorBase::WifiIndicatorBase;
 
-  WifiIndicator36x36(const Environment& env) : WifiIndicatorBase(env) {}
+  WifiIndicator36x36(ApplicationContext& context) : WifiIndicatorBase(context) {}
 
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(36, 36);

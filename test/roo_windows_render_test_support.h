@@ -15,9 +15,9 @@ inline roo_display::Color QuantizeToArgb4444(roo_display::Color color) {
 
 class ColorBoxWidget : public BasicSurfaceWidget {
  public:
-  ColorBoxWidget(const Environment& env, roo_display::Color color,
+  ColorBoxWidget(ApplicationContext& context, roo_display::Color color,
                  Dimensions dims)
-      : BasicSurfaceWidget(env), color_(color), dims_(dims) {}
+      : BasicSurfaceWidget(context), color_(color), dims_(dims) {}
 
   roo_display::Color background() const override { return color_; }
 
@@ -32,9 +32,10 @@ class ColorBoxWidget : public BasicSurfaceWidget {
 
 class ElevatedColorBoxWidget : public ColorBoxWidget {
  public:
-  ElevatedColorBoxWidget(const Environment& env, roo_display::Color color,
+  ElevatedColorBoxWidget(ApplicationContext& context,
+                         roo_display::Color color,
                          Dimensions dims, uint8_t elevation)
-      : ColorBoxWidget(env, color, dims), elevation_(elevation) {}
+      : ColorBoxWidget(context, color, dims), elevation_(elevation) {}
 
   uint8_t getElevation() const override { return elevation_; }
 
@@ -44,9 +45,10 @@ class ElevatedColorBoxWidget : public ColorBoxWidget {
 
 class PointOverlayBoxWidget : public ColorBoxWidget {
  public:
-  PointOverlayBoxWidget(const Environment& env, roo_display::Color color,
+  PointOverlayBoxWidget(ApplicationContext& context,
+                        roo_display::Color color,
                         Dimensions dims)
-      : ColorBoxWidget(env, color, dims) {}
+      : ColorBoxWidget(context, color, dims) {}
 
   OverlayType getOverlayType() const override { return OVERLAY_POINT; }
 
@@ -55,9 +57,13 @@ class PointOverlayBoxWidget : public ColorBoxWidget {
 
 class MutableShapeColorBoxWidget : public BasicSurfaceWidget {
  public:
-  MutableShapeColorBoxWidget(const Environment& env, roo_display::Color color,
+  MutableShapeColorBoxWidget(ApplicationContext& context,
+                             roo_display::Color color,
                              Dimensions dims)
-      : BasicSurfaceWidget(env), color_(color), dims_(dims), rounded_(false) {}
+      : BasicSurfaceWidget(context),
+        color_(color),
+        dims_(dims),
+        rounded_(false) {}
 
   roo_display::Color background() const override { return color_; }
 
@@ -83,8 +89,8 @@ class MutableShapeColorBoxWidget : public BasicSurfaceWidget {
 
 class TouchSpyWidget : public BasicWidget {
  public:
-  explicit TouchSpyWidget(const Environment& env, Dimensions dims)
-      : BasicWidget(env), dims_(dims), touch_down_count_(0) {}
+  explicit TouchSpyWidget(ApplicationContext& context, Dimensions dims)
+      : BasicWidget(context), dims_(dims), touch_down_count_(0) {}
 
   Widget* dispatchTouchDownEvent(XDim x, YDim y) override {
     if (!bounds().contains(x, y)) return nullptr;
@@ -103,8 +109,9 @@ class TouchSpyWidget : public BasicWidget {
 
 class InkBoundsWidget : public BasicWidget {
  public:
-  InkBoundsWidget(const Environment& env, Dimensions dims, Insets ink_insets)
-      : BasicWidget(env), dims_(dims), ink_insets_(ink_insets) {}
+  InkBoundsWidget(ApplicationContext& context, Dimensions dims,
+                  Insets ink_insets)
+      : BasicWidget(context), dims_(dims), ink_insets_(ink_insets) {}
 
   Dimensions getSuggestedMinimumDimensions() const override { return dims_; }
 
@@ -140,6 +147,9 @@ class RooWindowsRenderTest : public testing::Test {
     return app_.refresh(deadline);
   }
 
+  ApplicationContext& context() { return app_.context(); }
+  const ApplicationContext& context() const { return app_.context(); }
+
   roo::byte raster_[kWidth * kHeight * 2];
   roo_display::OffscreenDevice<roo_display::Argb4444> offscreen_;
   roo_display::Display display_;
@@ -171,6 +181,9 @@ class RooWindowsRenderTestSized : public testing::Test {
   bool refresh(roo_time::Uptime deadline = roo_time::Uptime::Max()) {
     return app_.refresh(deadline);
   }
+
+  ApplicationContext& context() { return app_.context(); }
+  const ApplicationContext& context() const { return app_.context(); }
 
   roo::byte raster_[kWidth * kHeight * 2];
   roo_display::OffscreenDevice<roo_display::Argb4444> offscreen_;

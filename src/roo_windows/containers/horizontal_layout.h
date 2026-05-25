@@ -39,8 +39,8 @@ class HorizontalLayout : public Panel {
     CachedMeasure latest_;
   };
 
-  HorizontalLayout(const Environment& env)
-      : Panel(env),
+  HorizontalLayout(ApplicationContext& context)
+      : Panel(context),
         padding_(PaddingSize::kNone),
         margins_(MarginSize::kNone),
         gravity_(),

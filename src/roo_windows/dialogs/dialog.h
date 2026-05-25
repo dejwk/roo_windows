@@ -46,7 +46,7 @@ class Dialog : public VerticalLayout {
   BorderStyle getBorderStyle() const override { return BorderStyle(5, 0); }
 
  protected:
-  Dialog(const Environment& env, const std::vector<std::string> button_labels);
+  Dialog(ApplicationContext& context, const std::vector<std::string> button_labels);
 
   /// Returns the number of footer buttons.
   int button_count() const { return buttons_.size(); }

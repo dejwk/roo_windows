@@ -3,8 +3,8 @@
 namespace roo_windows {
 namespace material3 {
 
-FlexCard::FlexCard(const Environment& env, Style style, FlexDirection direction)
-    : FlexLayout(env, direction),
+FlexCard::FlexCard(ApplicationContext& context, Style style, FlexDirection direction)
+    : FlexLayout(context, direction),
       style_(style),
       override_flags_(0),
       elevation_override_(0),

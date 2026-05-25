@@ -29,7 +29,7 @@ namespace roo_windows {
 //   repositioned during drag, only the newly-exposed edges need repainting.
 class BlitCacheContainer : public Container {
  public:
-  BlitCacheContainer(const Environment& env);
+  BlitCacheContainer(ApplicationContext& context);
 
   /// Replaces the held child widget. Detaches the previous child (if any).
   void setChild(WidgetRef child);

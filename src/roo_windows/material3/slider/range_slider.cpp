@@ -297,9 +297,9 @@ RangeSlider::Metrics RangeSlider::buildMetrics() const {
   return metrics;
 }
 
-RangeSlider::RangeSlider(const Environment& env, SliderRange range,
+RangeSlider::RangeSlider(ApplicationContext& context, SliderRange range,
                          float start_value, float end_value, SliderStyle style)
-    : BasicWidget(env),
+    : BasicWidget(context),
       range_(range),
       style_(style),
       start_value_(0.0f),

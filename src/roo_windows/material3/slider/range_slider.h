@@ -18,7 +18,7 @@ struct SliderPaintTokens;
 class RangeSlider : public BasicWidget {
  public:
   /// Creates a two-thumb slider over the supplied semantic value range.
-  RangeSlider(const Environment& env, SliderRange range, float start_value,
+  RangeSlider(ApplicationContext& context, SliderRange range, float start_value,
               float end_value, SliderStyle style = {});
 
   /// Returns the configured semantic value domain and optional step size.

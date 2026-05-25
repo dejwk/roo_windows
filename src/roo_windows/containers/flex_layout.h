@@ -201,7 +201,7 @@ enum class FlexBasis : uint8_t {
 /// ### Quick-start
 ///
 /// ```cpp
-/// FlexLayout row(env, FlexDirection::kRow);
+/// FlexLayout row(context, FlexDirection::kRow);
 /// row.setAlignItems(AlignItems::kCenter);
 /// row.setGap(Scaled(8));
 ///
@@ -286,7 +286,7 @@ class FlexLayout : public Panel {
   /// - `align_content`   = `kStretch`
   /// - `column_gap`      = 0
   /// - `row_gap`         = 0
-  explicit FlexLayout(const Environment& env,
+  explicit FlexLayout(ApplicationContext& context,
                       FlexDirection direction = FlexDirection::kRow);
 
   // -----------------------------------------------------------------------

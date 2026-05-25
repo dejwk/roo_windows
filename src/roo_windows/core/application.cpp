@@ -19,7 +19,7 @@ Application::Application(const Environment* env, Display& display)
     : display_(display),
       env_(env),
       context_(env->scheduler(), env->theme(), env->keyboardColorTheme()),
-      keyboard_(*env, kbEngUS()),
+      keyboard_(context_, kbEngUS()),
       text_field_editor_(env->scheduler(), keyboard_),
       root_window_(*this, display.extents()),
       touch_sensor_(display),
@@ -115,7 +115,7 @@ bool Application::refresh(roo_time::Uptime deadline) {
 
 Task* Application::addTask(const roo_display::Box& bounds) {
   auto task = std::unique_ptr<Task>(new Task());
-  auto task_panel = std::unique_ptr<TaskPanel>(new TaskPanel(*env_, *task));
+  auto task_panel = std::unique_ptr<TaskPanel>(new TaskPanel(context_, *task));
   task->init(task_panel.get());
   root_window_.addTask(*task_panel, bounds);
   tasks_.push_back(std::move(task));
@@ -125,7 +125,7 @@ Task* Application::addTask(const roo_display::Box& bounds) {
 
 Task* Application::addPopupTask(const roo_display::Box& bounds) {
   auto task = std::unique_ptr<Task>(new Task());
-  auto task_panel = std::unique_ptr<TaskPanel>(new TaskPanel(*env_, *task));
+  auto task_panel = std::unique_ptr<TaskPanel>(new TaskPanel(context_, *task));
   task->init(task_panel.get());
   root_window_.addPopup(*task_panel, bounds);
   tasks_.push_back(std::move(task));
@@ -142,7 +142,7 @@ void Application::showAlertDialog(std::string title,
                                   std::vector<std::string> button_labels,
                                   Dialog::CallbackFn callback_fn) {
   Dialog* dialog =
-      new AlertDialog(env(), std::move(title), std::move(supporting_text),
+      new AlertDialog(context(), std::move(title), std::move(supporting_text),
                       std::move(button_labels));
   showDialog(*dialog, [this, dialog, callback_fn](int id) {
     if (callback_fn != nullptr) {

@@ -48,7 +48,7 @@ class Keyboard : public Activity {
     CAPS_STATE_HIGH_LOCKED = 2,
   };
 
-  Keyboard(const Environment& env, const KeyboardSpec* spec);
+  Keyboard(ApplicationContext& context, const KeyboardSpec* spec);
 
   /// Returns the underlying `KeyboardWidget` that renders the layout.
   Widget& getContents() override;

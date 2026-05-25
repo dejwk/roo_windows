@@ -18,11 +18,11 @@ class WifiIndicatorBase : public BasicWidget {
     CONNECTED = 2,
   };
 
-  WifiIndicatorBase(const Environment& env);
+  WifiIndicatorBase(ApplicationContext& context);
 
   /// Constructs the indicator with an explicit tint color (transparent means
   /// inherit the parent's content color).
-  WifiIndicatorBase(const Environment& env, roo_display::Color color);
+  WifiIndicatorBase(ApplicationContext& context, roo_display::Color color);
 
   /// Resolves the current state to an icon and draws it.
   void paint(PaintContext& ctx) const override;

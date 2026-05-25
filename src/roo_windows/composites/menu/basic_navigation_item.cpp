@@ -3,13 +3,13 @@
 namespace roo_windows {
 namespace menu {
 
-BasicNavigationItem::BasicNavigationItem(const Environment& env,
+BasicNavigationItem::BasicNavigationItem(ApplicationContext& context,
                                          const roo_display::Pictogram& icon,
                                          roo::string_view text,
                                          Activity& target)
-    : HorizontalLayout(env),
-      icon_(env, icon),
-      label_(env, text, font_subtitle1()),
+    : HorizontalLayout(context),
+      icon_(context, icon),
+      label_(context, text, font_subtitle1()),
       target_(target) {
   setGravity(kGravityMiddle);
   add(icon_);
@@ -21,13 +21,13 @@ BasicNavigationItem::BasicNavigationItem(const Environment& env,
 }
 
 BasicNavigationItemWithSubtext::BasicNavigationItemWithSubtext(
-    const Environment& env, const roo_display::Pictogram& icon,
+    ApplicationContext& context, const roo_display::Pictogram& icon,
     roo::string_view label, roo::string_view subtext, Activity& target)
-    : HorizontalLayout(env),
-      icon_(env, icon),
-      content_(env),
-      label_(env, label, font_subtitle1()),
-      subtext_(env, subtext, font_subtitle2()),
+    : HorizontalLayout(context),
+      icon_(context, icon),
+      content_(context),
+      label_(context, label, font_subtitle1()),
+      subtext_(context, subtext, font_subtitle2()),
       target_(target) {
   setGravity(kGravityMiddle);
   add(icon_);

@@ -201,9 +201,9 @@ uint8_t InterpolateCornerRadiusPx(uint8_t from, uint8_t to, float progress) {
 
 }  // namespace
 
-Button::Button(const Environment& env, roo::string_view label,
+Button::Button(ApplicationContext& context, roo::string_view label,
                ButtonVariant variant)
-    : BasicSurfaceWidget(env),
+    : BasicSurfaceWidget(context),
       label_(label),
       icon_(nullptr),
       variant_(static_cast<uint8_t>(variant)),

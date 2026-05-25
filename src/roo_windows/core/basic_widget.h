@@ -11,7 +11,7 @@ namespace roo_windows {
 // need that storage or when their clickability semantics are custom.
 class BasicWidget : public Widget {
  public:
-  BasicWidget(const Environment& env) : Widget(env), padding_(0), margins_(0) {}
+  BasicWidget(ApplicationContext& context) : Widget(context), padding_(0), margins_(0) {}
 
   /// Returns the widget's default padding token, used when an axis has been
   /// configured as `kDefault`.

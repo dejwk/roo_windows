@@ -67,7 +67,7 @@ class Button : public BasicSurfaceWidget {
   ///
   /// The label is stored as a non-owning view; the caller must keep the
   /// backing storage alive for as long as the button uses it.
-  explicit Button(const Environment& env, roo::string_view label = {},
+  explicit Button(ApplicationContext& context, roo::string_view label = {},
                   ButtonVariant variant = ButtonVariant::kFilled);
 
   /// Returns the active Material 3 button variant.

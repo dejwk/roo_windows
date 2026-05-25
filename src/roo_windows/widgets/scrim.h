@@ -10,13 +10,13 @@ namespace roo_windows {
 // everything beneath it gets redrawn with the overlay applied.
 class Scrim : public Widget {
  public:
-  Scrim(const Environment& env)
-      : Widget(env),
+  Scrim(ApplicationContext& context)
+      : Widget(context),
         color_(roo_display::Color(0x80000000)),
         fill_(color_) {}
 
-  Scrim(const Environment& env, roo_display::Color color)
-      : Widget(env), color_(color), fill_(color) {}
+  Scrim(ApplicationContext& context, roo_display::Color color)
+      : Widget(context), color_(color), fill_(color) {}
 
   roo_display::Color color() const { return color_; }
 

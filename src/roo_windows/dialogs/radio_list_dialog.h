@@ -14,10 +14,10 @@ namespace roo_windows {
 /// callback. Override `onChange()` to react to interactive selection changes.
 class RadioListDialog : public Dialog {
  public:
-  RadioListDialog(const roo_windows::Environment& env,
+  RadioListDialog(roo_windows::ApplicationContext& context,
                   std::function<std::unique_ptr<Widget>()> prototype_fn)
-      : Dialog(env, {kStrDialogCancel, kStrDialogOK}),
-        list_(env, prototype_fn) {
+      : Dialog(context, {kStrDialogCancel, kStrDialogOK}),
+        list_(context, prototype_fn) {
     init();
   }
 

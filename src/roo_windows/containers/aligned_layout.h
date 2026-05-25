@@ -29,7 +29,7 @@ class AlignedLayout : public Panel {
     CachedMeasure latest_;
   };
 
-  AlignedLayout(const Environment& env) : Panel(env) {}
+  AlignedLayout(ApplicationContext& context) : Panel(context) {}
 
   /// Appends a child with an explicit alignment relative to the parent's
   /// bounds. Default is middle-center.

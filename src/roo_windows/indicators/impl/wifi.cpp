@@ -7,12 +7,12 @@ namespace roo_windows {
 
 using namespace roo_display;
 
-WifiIndicatorBase::WifiIndicatorBase(const Environment& env)
-    : WifiIndicatorBase(env, roo_display::color::Transparent) {}
+WifiIndicatorBase::WifiIndicatorBase(ApplicationContext& context)
+    : WifiIndicatorBase(context, roo_display::color::Transparent) {}
 
-WifiIndicatorBase::WifiIndicatorBase(const Environment& env,
+WifiIndicatorBase::WifiIndicatorBase(ApplicationContext& context,
                                      roo_display::Color color)
-    : BasicWidget(env),
+    : BasicWidget(context),
       color_(color),
       connection_status_(DISCONNECTED),
       locked_(false),

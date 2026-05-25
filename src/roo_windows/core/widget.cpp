@@ -36,7 +36,7 @@ static const long int kClickStickinessRadius = 40;
 // making it stutter.
 static const bool kTerminateAnimationsOnCancel = true;
 
-Widget::Widget(const Environment& env)
+Widget::Widget(ApplicationContext& context)
     : parent_(nullptr),
       parent_bounds_(0, 0, -1, -1),
       state_(kWidgetEnabled),

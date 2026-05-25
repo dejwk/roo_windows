@@ -72,7 +72,7 @@ class Button : public BasicSurfaceWidget {
   }
 
  protected:
-  Button(const Environment& env, Style style = CONTAINED);
+  Button(ApplicationContext& context, Style style = CONTAINED);
 
   /// Tracks press transitions to swap between resting and pressed elevations.
   void notifyStateChanged(uint16_t state_diff) override;
@@ -91,17 +91,17 @@ class Button : public BasicSurfaceWidget {
 // Button with a text label, an icon, or both.
 class SimpleButton : public Button {
  public:
-  SimpleButton(const Environment& env, const MonoIcon& icon,
+  SimpleButton(ApplicationContext& context, const MonoIcon& icon,
                Style style = CONTAINED)
-      : SimpleButton(env, &icon, "", style) {}
+      : SimpleButton(context, &icon, "", style) {}
 
-  SimpleButton(const Environment& env, std::string label,
+  SimpleButton(ApplicationContext& context, std::string label,
                Style style = CONTAINED)
-      : SimpleButton(env, nullptr, label, style) {}
+      : SimpleButton(context, nullptr, label, style) {}
 
-  SimpleButton(const Environment& env, const MonoIcon& icon, std::string label,
+  SimpleButton(ApplicationContext& context, const MonoIcon& icon, std::string label,
                Style style = CONTAINED)
-      : SimpleButton(env, &icon, label, style) {}
+      : SimpleButton(context, &icon, label, style) {}
 
   Padding getDefaultPadding() const override;
 
@@ -153,7 +153,7 @@ class SimpleButton : public Button {
   Dimensions getSuggestedMinimumDimensions() const override;
 
  private:
-  SimpleButton(const Environment& env, const MonoIcon* icon, std::string label,
+  SimpleButton(ApplicationContext& context, const MonoIcon* icon, std::string label,
                Style style);
 
   roo_display::Color content_color_;

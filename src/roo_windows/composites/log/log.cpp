@@ -13,9 +13,9 @@ namespace log {
 using namespace roo_display;
 using namespace roo_windows;
 
-Log::Log(const roo_windows::Environment& env, uint32_t buffer_size,
+Log::Log(roo_windows::ApplicationContext& context, uint32_t buffer_size,
          size_t max_lines)
-    : roo_windows::BasicWidget(env),
+    : roo_windows::BasicWidget(context),
       buffer_size_(buffer_size),
       buffer_(new char[buffer_size]),
       font_(&font_NotoSans_Condensed_18()),
@@ -163,10 +163,10 @@ void Log::paint(PaintContext& ctx) const {
   }
 }
 
-ScrollableLog::ScrollableLog(const roo_windows::Environment& env,
+ScrollableLog::ScrollableLog(roo_windows::ApplicationContext& context,
                              uint32_t buffer_size, size_t max_lines)
-    : ScrollablePanel(env),
-      log_(env, buffer_size, max_lines),
+    : ScrollablePanel(context),
+      log_(context, buffer_size, max_lines),
       autoscroll_mode_(AutoscrollMode::kAlways) {
   setContents(log_);
   setVerticalScrollBarPresence(

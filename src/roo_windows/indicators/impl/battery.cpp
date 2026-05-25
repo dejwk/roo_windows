@@ -7,12 +7,12 @@ namespace roo_windows {
 
 using namespace roo_display;
 
-BatteryIndicator::BatteryIndicator(const Environment& env)
-    : BatteryIndicator(env, roo_display::color::Transparent) {}
+BatteryIndicator::BatteryIndicator(ApplicationContext& context)
+    : BatteryIndicator(context, roo_display::color::Transparent) {}
 
-BatteryIndicator::BatteryIndicator(const Environment& env,
+BatteryIndicator::BatteryIndicator(ApplicationContext& context,
                                    roo_display::Color color)
-    : Widget(env),
+    : Widget(context),
       color_(color),
       charging_(false),
       alert_(false),

@@ -14,8 +14,8 @@ namespace roo_windows {
 /// the buttons rather than relying on per-button decoration.
 class ToggleButtons : public Panel {
  public:
-  ToggleButtons(const Environment& env, int16_t padding = Scaled(12))
-      : Panel(env), env_(env), padding_(padding), active_(-1) {}
+  ToggleButtons(ApplicationContext& context, int16_t padding = Scaled(12))
+      : Panel(context), context_(context), padding_(padding), active_(-1) {}
 
   /// Appends a new icon-only button at the end of the strip and returns the
   /// owning widget reference (for layout/styling tweaks).
@@ -47,9 +47,9 @@ class ToggleButtons : public Panel {
 
   class ToggleButton : public roo_windows::Widget {
    public:
-    ToggleButton(const Environment& env, const MonoIcon& icon,
+    ToggleButton(ApplicationContext& context, const MonoIcon& icon,
                  ToggleButtons& group, int idx)
-        : roo_windows::Widget(env), icon_(icon), group_(group), idx_(idx) {}
+        : roo_windows::Widget(context), icon_(icon), group_(group), idx_(idx) {}
 
     bool useOverlayOnActivation() const override { return true; }
     bool isClickable() const override { return true; }
@@ -84,7 +84,7 @@ class ToggleButtons : public Panel {
 
   friend class ToggleButton;
 
-  const Environment& env_;
+  ApplicationContext& context_;
 
   int16_t padding_;  // defaults to 12.
   int active_;

@@ -12,8 +12,8 @@ namespace material3 {
 /// and is re-exported here for convenience.
 class RadioButton : public BasicWidget {
  public:
-  explicit RadioButton(const Environment& env, bool on = false)
-      : BasicWidget(env) {
+  explicit RadioButton(ApplicationContext& context, bool on = false)
+      : BasicWidget(context) {
     setOnOffState(on ? OnOffState::kOn : OnOffState::kOff);
   }
 
