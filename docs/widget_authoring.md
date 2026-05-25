@@ -170,6 +170,43 @@ Every new widget design document should include:
 A worked example of this format lives in
 [material3_slider_design.md](material3_slider_design.md).
 
+## Surface Ownership
+
+Be explicit about whether a widget owns a surface.
+
+`SurfaceWidget` is the explicit branch for widgets that own surface semantics:
+background, container role, border/outline, elevation, area-overlay behavior,
+and surface-specific exclusion geometry.
+
+By contrast, plain `Widget` / `BasicWidget` instances are not surface-owning.
+They paint foreground content and rely on an ancestor surface for the
+background behind them.
+
+Important consequence: `Container` is surface-owning because it derives from
+`SurfaceWidget`. Even when a container does not introduce a new
+`containerRole()`, it still participates in the surface pipeline. In
+particular, [Container::paintWidgetContents](../src/roo_windows/core/container.cpp)
+paints children first and then paints the container's own surface during
+invalidated repaint.
+
+Choose the base class from that semantic distinction, not from convenience:
+
+- Use a surface-owning widget when the widget introduces a row, card, panel,
+  selection highlight, outline, elevation, or any other independently
+  meaningful surface.
+- Use a non-surface widget when it only contributes foreground content such as
+  text, icons, indicators, or other visuals that should sit on top of an
+  ancestor's surface.
+
+This matters directly for paint logic:
+
+- If a widget is surface-owning, let the surface pipeline own the background.
+  Do not manually recompute "background between children" regions when all
+  visible content is already modeled as child widgets; that duplicates logic
+  the container paint path is already responsible for.
+- If a widget is not surface-owning, it should not prefill a background just
+  to support its content. Paint only the widget's own final content.
+
 ## Painting Model
 
 ### Dirty vs Invalidated
@@ -323,6 +360,9 @@ Before sending a widget design or implementation for review:
 - [ ] No customization struct that is naturally shared between instances
       is stored by value.
 - [ ] Hot paths (paint, drag, scroll) do not allocate.
+- [ ] Surface ownership is explicit and justified; the widget is not deriving
+  from `SurfaceWidget` / `Container` merely as a convenient place to hold
+  child composition.
 - [ ] Default colors and geometry come from the active `Theme`, with
       override hooks defaulting to `nullptr`.
 - [ ] Compatibility shims, if introduced for migration, have an explicit

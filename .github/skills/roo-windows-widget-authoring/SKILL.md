@@ -39,6 +39,39 @@ conventions in:
   possible.
 - Avoid allocations on hot paint, drag, scroll, and animation paths.
 
+## Surface Ownership
+
+Be explicit about whether the widget owns a surface.
+
+- `SurfaceWidget` is the branch for widgets that own background, container
+  role, border/outline, elevation, area-overlay semantics, and
+  surface-specific exclusion geometry.
+- Plain `Widget` / `BasicWidget` instances are not surface-owning. They paint
+  foreground content and rely on an ancestor surface for the background behind
+  them.
+- `Container` is surface-owning because it derives from `SurfaceWidget`.
+  During invalidated repaint it paints children first and then paints its own
+  surface. That ordering is already part of the framework contract.
+
+Choose the base class from that semantic distinction, not from convenience.
+
+- Use a surface-owning widget when the widget introduces a card, row, panel,
+  selection highlight, border, outline, elevation, or any other independently
+  meaningful surface.
+- Use a non-surface widget when it only contributes foreground content such as
+  text, icons, indicators, or other visuals that should sit on top of an
+  ancestor's surface.
+
+Implications for paint logic:
+
+- If a widget is surface-owning, let the surface pipeline do the surface work.
+  In particular, do not manually recompute "background between children"
+  regions when all visible content is already modeled as child widgets; the
+  default `Container::paintWidgetContents()` path already coordinates
+  child-then-surface repaint.
+- If a widget is not surface-owning, it should not prefill a background just to
+  make its content readable. Paint only the widget's own final content.
+
 ## Painting Model
 
 ### Dirty vs Invalidated
@@ -177,6 +210,9 @@ Before finalizing a custom widget paint path, verify:
 - Base per-instance RAM cost is justified.
 - Optional features are implemented as a subclass, shared const pointer, or
   virtual hook unless every instance truly needs them.
+- Surface ownership is explicit and justified; the widget is not deriving from
+  `SurfaceWidget` / `Container` merely as a convenient place to put child
+  composition.
 - Examples are added or updated when the change introduces user-visible widget
   functionality worth demonstrating.
 - Dirty repaint minimizes written pixels.
