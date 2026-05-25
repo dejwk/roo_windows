@@ -51,23 +51,27 @@ place, and the Phase 3 baseline `List` sequencing path now resolves row
 position, list-owned visual context, add/clear behavior, and segmented gap
 treatment. Phase 4 usage review now exists as a checked-in example sketch that
 exercises static settings, adopted rows, and a short-form menu-like list
-without introducing convenience wrappers. Expand/collapse behavior and menu
-reuse are still future work.
+without introducing convenience wrappers. The landed code is still the
+low-level substrate rather than the full authoring story described later in
+this document: expressive row shaping, divider painting, wrapped supporting
+text, stock clickable rows, row-to-affordance delegation, and reusable
+checkbox/radio/navigation convenience items are still future work alongside expand/collapse
+behavior and menu reuse.
 
 What exists today:
 
 - Material 3 controls under `roo_windows/material3` currently include
    `FlexCard`, `Checkbox`, `RadioButton`, and `Switch`.
 - `material3::StandardListItem` exists as a constructor-configured descriptor
-   with value-based text and stable borrowed slot widgets.
+   with lightweight text values and stable borrowed slot widgets.
 - `material3::ListEntry` exists as a direct `Container` row surface with
-   stable slot binding, row-local measurement and layout, and direct painting of
-   standard text descriptors.
+   stable slot binding, row-local measurement and layout, and row-owned text
+   widgets for standard overline, headline, and supporting content.
 - `material3::List` exists as a direct `Container` shell with list-owned API
    for variant, style, selection, divider policy, row insertion, row stacking,
    and row-context propagation.
-- `examples/material3/lists/lists.ino` exists as the Phase 4 usage-review
-   sketch and compiles under the emulation harness.
+- `examples/material3/lists/lists.ino` exists as the low-level Phase 4
+   usage-review sketch and compiles under the emulation harness.
 - `FlexLayout` is implemented and already used by `material3::FlexCard`, so it
    is no longer just a future direction for generic composition.
 - `ListLayout` remains the existing recycled fixed-height list container.
@@ -77,6 +81,13 @@ What exists today:
 
 What does not exist yet:
 
+- no implemented expressive row border shape or selection-driven corner-radius
+   behavior,
+- no divider painting path despite resolved divider state,
+- no actual wrapped or ellipsized list text behavior in `ListEntry`,
+- no stock clickable/navigation row type or row-to-affordance click
+   delegation,
+- no reusable checkbox/radio/avatar convenience item surface,
 - no implemented `ExpandablePanel` behavior,
 - no Material 3 menu implementation built from shared list-row primitives,
 - no reusable expand/collapse body path.
@@ -163,17 +174,31 @@ constraint, not a follow-up implementation detail. Lists are especially
 sensitive because even modest screens can keep dozens of row objects alive at
 the same time.
 
-Approximate 32-bit ESP32 reference sizes used by this document:
+Approximate 32-bit ESP32 reference sizes used by this document, derived from
+the current headers where possible:
 
 - pointer / `vptr` / `Widget*`: 4 B,
+- `Rect`: 10 B,
 - `WidgetRef`: about 8 B (`Widget*` plus ownership flag and padding),
-- `std::function<...>`: about 16 B even when empty,
-- `Widget`: about 36 B,
-- `BasicWidget`: about 40 B,
-- `Container`: about 52 B (`Widget` plus two cached `Rect` values),
-- `Panel`: about 64 B before vector capacity,
-- `FlexLayout`: roughly 100 B before child-vector and measure-vector
-   capacity.
+- `Widget`: 24 B (`ApplicationContext&`, parent pointer, one 10-byte `Rect`,
+   state bits, and the `vptr`; this matches the 32-bit `static_assert` in
+   `widget.h`),
+- `BasicWidget`: about 28 B (`Widget` plus one byte each for packed padding
+   and margins, plus tail padding),
+- `StringViewLabel`: about 48 B (`BasicWidget`, `roo::string_view`, font
+   reference, `Color`, `Gravity`, and tail padding),
+- `Container`: about 44 B (`Widget` plus two cached 10-byte `Rect`s),
+- `Panel`: about 56 B before vector capacity (`Container` plus one
+   `std::vector<Widget*>` control block),
+- `FlexLayout`: about 104 B before child-vector and measure-vector capacity
+   (`Panel` plus five enum settings, gaps, compact padding/margins, minimum
+   dimensions, and one `std::vector<ChildMeasure>` control block).
+
+Standard-library wrappers such as `std::function<...>` and `std::string` are
+still toolchain-dependent, so this document should not treat them as
+header-derived constants. For this section, the only standard-library storage
+assumption baked into the numbers above is the usual three-pointer
+`std::vector` control block on an ESP32-class 32-bit toolchain.
 
 The important multiplication factor is per row, not per list. A single `List`
 can afford list-level policy and one private child vector, but a
@@ -189,13 +214,26 @@ This has two direct consequences for the list design:
    rows with real widget slots, expandable rows, owning dynamic rows, and fully
    custom content.
 
-Standard text content should therefore be represented as lightweight
-`StringView`-style descriptors in the standard list item path. The standard path
-should not create one `TextLabel` or `StringViewLabel` widget for every
-headline, supporting line, and overline, because each such label would add a
-`BasicWidget`-sized object before the row surface itself is counted. Child
-widgets should be used for actual leading, trailing, body, and custom visual
-content.
+The original version of this document treated one text widget per occupied text
+slot as too expensive. That is no longer the right trade-off. With
+`StringViewLabel` now landing at roughly 48 B on 32-bit targets, the common
+path can afford one widget for each occupied standard text slot and gain a much
+simpler implementation model for measurement, layout, invalidation, and future
+text behavior. The remaining constraint is to keep the cheap path on
+`StringViewLabel` for one-line text and reserve heavier widgets such as
+`TextBlock` for rows that actually opt into wrapping, max-lines, or ellipsis.
+
+If text-widget RAM later becomes the real pressure point, the better next step
+is still lighter text widgets rather than a return to direct-painted text.
+Likely follow-ups are a one-line `Widget`-derived label that omits
+`BasicWidget`, gravity, color, and possibly even stored font when specialized
+to a fixed theme font, plus a non-owning `StringViewBlock` family and a more
+bounded lightweight variant for short text and small fixed line counts.
+
+Standard text content can therefore stay lightweight at the `ListItem`
+boundary while still being materialized as child text widgets inside the row
+surface. Child widgets are now expected not only for leading, trailing, body,
+and custom content, but also for the standard text slots themselves.
 
 ## Requirements
 
@@ -230,8 +268,9 @@ content.
    separate subclasses.
 6. Split concrete item classes only when the split changes stored fields or
    avoids a meaningful per-row RAM cost.
-7. Keep standard text content value-based rather than widget-based in the
-   common path.
+7. Keep the common text-widget path cheap enough that standard rows can use one
+   text widget per occupied slot without needing a second non-widget text
+   rendering model.
 8. Document the approximate per-instance RAM cost of the base row, standard
    item variants, optional features, and each implementation phase.
 
@@ -275,8 +314,9 @@ content.
 4. Avoid a Cartesian-product class hierarchy across line count, visual variant,
    leading slot, trailing slot, selection, expansion, menu usage, and segment
    position.
-5. Allow follow-up item classes or row wrappers to expose semantic mutable APIs
-   for common cases such as pictograms, drawables, and concrete selection
+5. Allow follow-up item classes, especially reusable owning `ListItem`
+   implementations, to expose semantic mutable APIs for common cases such as
+   pictograms, drawables, navigation affordances, and concrete selection
    controls without making the baseline generic item equally heavy.
 
 ## Design Overview
@@ -307,15 +347,19 @@ At a high level:
    APIs.
 - `ListEntry` is a concrete row host and the reusable Material row surface.
 - the baseline API should center on `ListEntry` plus `StandardListItem`.
-   Thin convenience row wrappers are deferred until baseline usage proves they
-   remove enough RAM cost or call-site complexity.
+   The first follow-up convenience layer should favor reusable `ListItem`
+   implementations, including items that own their slot widgets while
+   exposing borrowed pointers to the row. Thin convenience row wrappers are a
+   later option only if baseline usage proves item-level reuse is still too
+   awkward.
 - `ListItem` is a pure-virtual content interface exposing individual text,
     policy, and widget accessors.
 - `StandardListItem` is the baseline generic item type, configured up front and
     bound with stable widget identity.
-- lean text-only items, semantic pictogram or drawable items, and convenience
-   row wrappers are possible follow-up variants, not part of the baseline
-   implementation target.
+- lean text-only items, semantic pictogram or drawable items, and owning
+   convenience items for navigation or common controls are possible follow-up
+   variants, not part of the baseline implementation target. Thin row
+   wrappers remain optional later if a specific surface still needs them.
 - `ExpandablePanel` provides reusable expandable body behavior.
 
 ### Key Decisions
@@ -329,8 +373,8 @@ At a high level:
    configuration.
 6. Row visuals are split between content (`ListItem`), row surface
    (`ListEntry`), and group context (`List`).
-7. Standard text content is value-based; it is not modeled as child label
-   widgets in the common path.
+7. Standard text content is simple enough that one cheap text widget per
+   occupied slot is acceptable in the common path.
 8. Visual variants are policy bits and theme lookups, not subclasses.
 9. Concrete subclasses are introduced only for materially different storage
    profiles.
@@ -530,8 +574,10 @@ containers.
 - The item's current `leading`, `trailing`, and `body` widgets are borrowed
   through that binding and stay fixed until `clearItem()` or another
   `setItem()` call.
-- If convenience row wrappers are added later, they should avoid this extra
-   lifetime relationship by owning their embedded standard item directly.
+- If higher-level convenience items are added later, they should usually own
+   any embedded widgets internally and expose borrowed slot pointers through
+   the `ListItem` interface, so the reusable convenience stays at the item
+   layer rather than forcing a dedicated row type.
 
 #### Item Mutation Semantics
 
@@ -562,7 +608,8 @@ Changing which widget occupies a slot is no longer a supported mutation on the
 generic path. To do that, the caller should either:
 
 1. clear and rebind a different item, or
-2. use a more specialized row wrapper that owns the concrete widget set.
+2. use a more specialized owning item implementation, or, only if needed,
+   a local row helper that owns the concrete widget set.
 
 This avoids the back-pointer and structural child-reconciliation complexity of
 the earlier design while preserving a narrow manual refresh path for custom
@@ -580,24 +627,29 @@ The preferred split is:
 - `ListItem` and its subclasses own content semantics and compact stored data,
 - `ListEntry` owns row rendering, attachment of the stable child widgets, and
   list-provided visual context,
-- row wrappers own concrete child-widget lifetime and any semantic APIs that
-  depend on knowing the exact widget type.
+- owning convenience item implementations should normally own concrete
+   child-widget lifetime and any semantic APIs that depend on knowing the exact
+   widget type when the same convenience should work in both lists and menus,
+- row wrappers are reserved for the smaller set of cases that truly need
+   row-surface-specific behavior beyond what a shared item can express.
 
 That gives a clean place for follow-up mutable convenience:
 
 - item classes are the right home for compact semantic content such as
-  headline-only text, supporting text, pictograms, and static drawables,
-- row wrappers are the right home for concrete interactive controls such as
-  switch, checkbox, or radio-button rows,
+   headline-only text, supporting text, pictograms, static drawables, and
+   reusable convenience items that own common controls such as switch,
+   checkbox, radio, or navigation affordances,
+- row wrappers remain available for cases that need row-surface-specific
+   behavior or outer-surface glue that should not leak into shared items,
 - the generic `StandardListItem` stays the low-level fallback that accepts
   arbitrary pre-existing widgets but does not try to be the best API for every
   common case.
 
 For example, a future `PictogramListItem` can expose `setPictogram()` because
 it stores a lightweight semantic value rather than an arbitrary widget pointer.
-A future `SwitchListRow` can expose `setOn()` because it owns a concrete
-`material3::Switch` child and can keep row and control state synchronized
-locally.
+A future `SwitchListItem` can expose `setOn()` because it owns a concrete
+`material3::Switch` accessory widget while still participating in the same
+generic row host used by both lists and menus.
 
 ### Expand and Collapse
 
@@ -803,7 +855,9 @@ Shared between lists and menus:
 - text policies,
 - state layers,
 - accessory placement,
-- standard item variants.
+- standard item variants,
+- and the preferred higher-level convenience layer: reusable `ListItem`
+   implementations, including ones that own common accessory widgets.
 
 List-specific by default:
 
@@ -856,65 +910,99 @@ That leads to three decisions:
    `ListEntry` + `StandardListItem` + `List`.
 2. Visual dimensions such as baseline vs expressive, segmented vs standard, and
    row position are policy, not subclasses.
-3. Lean simple-item variants and convenience row wrappers are follow-up
-   candidates. They should be frozen only after baseline usage shows a clear
-   RAM or ergonomics win.
+3. Lean simple-item variants and owning convenience items are the first
+   follow-up candidates. A generic `ListRow<Item>` ownership bridge is also a
+   reasonable early helper because it does not create a content-specific row
+   family. Thin row wrappers should be considered only after baseline usage
+   shows that item-level reuse still misses a clear RAM or ergonomics win.
 
 Storage rules for the baseline path:
 
-- text slots stay as `StringView` descriptors, not child label widgets,
+- standard text values stay lightweight in the bound item, but the row
+   materializes them as child text widgets,
 - widget slots are borrowed `Widget*` by default,
 - owning slot adapters, if needed, belong in follow-up types,
 - callbacks stay virtual or on child widgets,
 - appearance overrides stay as shared theme or token pointers.
 
 Possible follow-up types include `HeadlineListItem`,
-`SupportingTextListItem`, `PictogramListItem`, `DrawableListItem`, and thin or
-typed row wrappers that embed or own the appropriate item and widget state.
-Those types should reuse the same `ListEntry` architecture rather than
-introducing a second row model.
+`SupportingTextListItem`, `PictogramListItem`, `DrawableListItem`, owning
+convenience items for navigation or common controls, and, only if item-level
+reuse later proves insufficient, thin row wrappers that embed or own the
+appropriate item and widget state. Those types should reuse the same
+`ListEntry` architecture rather than introducing a second row model.
+
+The first concrete follow-up surface that makes sense is therefore:
+
+- `ListRow<Item>` as a generic bridge from an owned `Item` to a real
+   `ListEntry`,
+- text-only items such as `HeadlineListItem` and `SupportingTextListItem`,
+- visual items such as `AvatarSupportingTextItem` and
+   `PictogramSupportingTextItem`,
+- interaction items such as `NavigationListItem`, `CheckboxListItem`,
+   `RadioListItem`, and `SwitchListItem`.
 
 ### Per-Instance Footprint Budget
 
-Approximate baseline targets are:
+Using the same 32-bit ESP32 assumptions as above, plus the usual 12 B
+`std::vector` control block and 24 B `std::string` control block where those
+types appear, approximate baseline targets are:
 
 | Type | Approx. RAM | Notes |
 |------|------------:|-------|
-| `List` | ~88-100 B plus vector capacity | one per list/group; direct `Container` with private row vector |
-| `ListEntry` | ~64-72 B | `Container` row surface plus item pointer, cached attached slot-child pointers, packed visual context, optional shared appearance pointer |
-| `StandardListItem` | ~52-60 B | rich non-owning descriptor: three text values, slot pointers, policies, and hints; no bound-entry backpointer in the baseline model |
-| `ExpandablePanel` | ~60-68 B | reusable body widget; can land after the baseline list if needed |
+| `List` | ~80 B plus vector capacity | one per list/group; direct `Container`, two small vectors, compact list policies, and one dirty-context flag |
+| `ListEntry` | ~84 B | `Container` row surface plus item pointer, six cached slot/text child pointers, and packed visual context |
+| `StandardListItem` | ~52 B | rich non-owning descriptor: three text views, three compact text policies, three slot pointers, divider hint, and packed alignment bits |
+| `StringViewLabel` | ~48 B per occupied text slot | default widget for one-line standard overline, headline, or supporting text |
+| `TextBlock` | ~112 B plus line-vector capacity | current opt-in wrapped-text widget; this assumes one owned 24 B `std::string` and one 12 B `std::vector` control block on the ESP32 toolchain |
+| `ExpandablePanel` | ~60 B | reusable body widget: `Container`, one `WidgetRef`, two animation counters, and one expanded flag |
 | Owning slot adapter | +4 B per slot over raw pointer | `WidgetRef` ownership flag and padding |
 
 Likely follow-up targets, to be measured against the baseline implementation:
 
 - `HeadlineListItem`: ~16 B,
 - `SupportingTextListItem`: ~28-32 B,
-- `PictogramListItem` or `DrawableListItem`: expected to stay well below a
-   widget-backed generic row because they can store a value descriptor rather
-   than a child widget,
-- convenience row wrappers: roughly `ListEntry` plus their embedded item
-  storage.
+- `PictogramListItem` or `DrawableListItem`: still expected to stay lean when
+    they avoid additional wrapped-text widgets or extra content controls,
+- owning convenience items for controls or navigation: expected to cost at
+   least one concrete accessory widget plus the item storage that exposes it,
+- thin row wrappers: still possible later, but intentionally not the first
+   convenience layer.
+
+Typical row totals on a 32-bit target are therefore closer to:
+
+- one-line standard row: `ListEntry` + `StandardListItem` + one
+   `StringViewLabel`, about 184 B before leading, trailing, or body widgets,
+- two-line standard row: about 232 B,
+- three-line standard row with three cheap labels: about 280 B,
+- wrapped supporting-text row: roughly 64 B above the corresponding
+   cheap-label row when one `TextBlock` replaces one `StringViewLabel`.
+
+Those wrapped-text numbers are intentionally based on the current `TextBlock`
+implementation. A future non-owning `StringViewBlock` or bounded lightweight
+block variant would lower the opt-in cost without changing the high-level text
+policy model.
 
 These numbers intentionally exclude child widgets such as `Switch`, `Checkbox`,
 custom icons, or body content, because those widgets are real content that the
-application asked for. The budget is about avoiding invisible framework cost
-on rows that do not use those features.
+application asked for. The budget is about making the common text-widget path
+acceptable while still avoiding invisible framework cost on rows that do not
+use heavier capabilities.
 
 For comparison, a naive all-in-one row design would add all of the following
 to every row:
 
 - dynamic child-vector storage from `Panel` or `FlexLayout`,
-- three label widgets for overline, headline, and supporting text,
+- three text widgets regardless of whether the row uses them,
 - leading, trailing, body, and selection-affordance `WidgetRef` fields,
 - expansion state and animation fields,
 - copied appearance override structs,
 - stored `std::function` callbacks.
 
-That shape can easily exceed 180 B per row before the visible child controls
-are counted. A 30-row settings screen would spend several kilobytes on unused
-row capability alone, which is exactly what the widget authoring guidance is
-trying to prevent.
+That shape still compounds quickly because it pays for every optional behavior
+up front, whether or not a row uses it. The problem is no longer the presence
+of one cheap label widget per occupied slot; it is paying for unused vectors,
+callbacks, affordance storage, and expansion state on every row.
 
 ## Proposed API
 
@@ -934,9 +1022,10 @@ Possible follow-up convenience types, if baseline usage justifies them:
 - `HeadlineListItem`,
 - `SupportingTextListItem`,
 - `PictogramListItem` or `DrawableListItem`,
-- thin row wrappers that embed one of those items or a `StandardListItem`,
-- typed rows such as switch, checkbox, or radio rows that own a concrete
-   control widget.
+- owning convenience items such as navigation, switch, checkbox, or radio
+   items that internally keep the concrete accessory widget,
+- thin row wrappers only if a later surface needs row-specific behavior beyond
+   what shared items provide.
 
 ### Supporting Configuration Types
 
@@ -1014,9 +1103,9 @@ following concrete public direction.
 
 ```cpp
 struct StandardListItemInit {
-   roo_display::StringView overline = {};
-   roo_display::StringView headline = {};
-   roo_display::StringView supporting = {};
+   roo::string_view overline = {};
+   roo::string_view headline = {};
+   roo::string_view supporting = {};
    ListTextPolicy overline_policy = {};
    ListTextPolicy headline_policy = {};
    ListTextPolicy supporting_policy = {};
@@ -1031,16 +1120,16 @@ struct StandardListItemInit {
    bool prefer_top_text_alignment = false;
 
    static StandardListItemInit OneLine(
-         roo_display::StringView headline, Widget* leading = nullptr,
+      roo::string_view headline, Widget* leading = nullptr,
          Widget* trailing = nullptr);
    static StandardListItemInit TwoLine(
-         roo_display::StringView headline,
-         roo_display::StringView supporting, Widget* leading = nullptr,
+      roo::string_view headline,
+      roo::string_view supporting, Widget* leading = nullptr,
          Widget* trailing = nullptr);
    static StandardListItemInit ThreeLine(
-         roo_display::StringView headline,
-         roo_display::StringView supporting,
-         roo_display::StringView overline = {}, Widget* leading = nullptr,
+      roo::string_view headline,
+      roo::string_view supporting,
+      roo::string_view overline = {}, Widget* leading = nullptr,
          Widget* trailing = nullptr, Widget* body = nullptr);
 };
 
@@ -1048,9 +1137,9 @@ class ListItem {
  public:
    virtual ~ListItem() = default;
 
-   virtual roo_display::StringView overlineText() const { return {}; }
-   virtual roo_display::StringView headlineText() const { return {}; }
-   virtual roo_display::StringView supportingText() const { return {}; }
+   virtual roo::string_view overlineText() const { return {}; }
+   virtual roo::string_view headlineText() const { return {}; }
+   virtual roo::string_view supportingText() const { return {}; }
 
    virtual ListTextPolicy overlinePolicy() const {
       return ListTextPolicy{};
@@ -1127,9 +1216,9 @@ class StandardListItem : public ListItem {
  public:
    explicit StandardListItem(const StandardListItemInit& init = {});
 
-   roo_display::StringView overlineText() const override;
-   roo_display::StringView headlineText() const override;
-   roo_display::StringView supportingText() const override;
+   roo::string_view overlineText() const override;
+   roo::string_view headlineText() const override;
+   roo::string_view supportingText() const override;
 
    ListTextPolicy overlinePolicy() const override;
    ListTextPolicy headlinePolicy() const override;
@@ -1151,6 +1240,22 @@ class StandardListItem : public ListItem {
    Widget* bodyWidget();
 };
 
+template <typename Item>
+class ListRow : public ListEntry {
+ public:
+   template <typename... Args>
+   explicit ListRow(ApplicationContext& context, Args&&... args)
+         : ListEntry(context), item_(std::forward<Args>(args)...) {
+      setItem(item_);
+   }
+
+   Item& item() { return item_; }
+   const Item& item() const { return item_; }
+
+ private:
+   Item item_;
+};
+
 class List : public Container {
  public:
    explicit List(ApplicationContext& context);
@@ -1161,6 +1266,7 @@ class List : public Container {
    void setDividerPolicy(const ListDividerPolicy& policy);
 
    // Non-owning. `entry` must outlive the list membership.
+   // `ListRow<Item>` participates here because it is still a `ListEntry`.
    void add(ListEntry& entry);
    // Owning. The list adopts the entry through the normal parent-owned widget
    // model internally.
@@ -1170,9 +1276,12 @@ class List : public Container {
 ```
 
 Possible follow-up convenience types should stay provisional until the baseline
-API above exists and has been exercised on real screens. The likely direction
-is a mix of lean value-based item families and thin or typed row wrappers that
-bind or own the appropriate item and widget set.
+API above exists and has been exercised on real screens. Phase 4 now answers
+that question: the baseline path is viable as the low-level substrate, but the
+remaining work should add higher-level authoring surfaces rather than keep
+pushing common list cases onto ad hoc `ListEntry` subclasses. The likely
+direction is a mix of lean value-based item families and thin or typed row
+wrappers that bind or own the appropriate item and widget set.
 
 This reviewed shape preserves the architectural split already established in
 the rest of the document:
@@ -1183,9 +1292,9 @@ the rest of the document:
 3. `ExpandablePanel` is reusable outside lists and is not list-specific.
 4. `List` owns sequence-aware policy such as variant, style, divider, and
     selection behavior.
-5. Standard text slots are descriptors painted by `ListEntry`, not label
-   widgets attached as children, and generic widget slots stay structurally
-   stable for the lifetime of a binding.
+5. Standard text values stay lightweight at the `ListItem` boundary but are
+   materialized as child text widgets by `ListEntry`, and generic widget slots
+   stay structurally stable for the lifetime of a binding.
 
 ### Phase 1 Review Decisions
 
@@ -1215,9 +1324,14 @@ decisions.
     If menu-specific defaults later prove awkward, add a thin wrapper then,
     rather than baking menu concerns into the first list API.
 8. The first implementation should freeze only the baseline generic path.
-   The exact split between value-based item families and typed row wrappers
-   should remain open until baseline usage makes the trade-offs clearer.
-9. `ListEntry` should not store expandable body pointers or animation state.
+   A generic `ListRow<Item>` bridge is acceptable early because it only
+   packages one owned item with one real row surface; it does not mean that
+   items can be added directly to `List`.
+9. The first follow-up convenience layer should favor reusable item families,
+   including item implementations that own common control widgets. Typed row
+   wrappers should remain deferred unless item-level reuse later proves
+   insufficient.
+10. `ListEntry` should not store expandable body pointers or animation state.
    Expandability belongs in `ExpandablePanel` or in a custom item that exposes
    body content.
 
@@ -1269,31 +1383,17 @@ class PumpSettingsSection {
 
 #### Example 2: Adopted Rows
 
-When rows are created dynamically, the clean baseline pattern is a small row
-subclass that owns the `StandardListItem` it binds.
+When rows are created dynamically, the preferred ownership bridge is a generic
+`ListRow<Item>` rather than a bespoke one-off row subclass.
 
 ```cpp
-class OwnedStandardListRow : public ListEntry {
- public:
-   explicit OwnedStandardListRow(ApplicationContext& context,
-                                 const StandardListItemInit& init)
-         : ListEntry(context), item_(init) {
-      setItem(item_);
-   }
-
-   StandardListItem& item() { return item_; }
-
- private:
-   StandardListItem item_;
-};
-
 class ScheduleList {
  public:
    explicit ScheduleList(ApplicationContext& context) : context_(context), list_(context) {}
 
-   void addSlot(roo_display::StringView title,
-                      roo_display::StringView detail) {
-         auto row = std::make_unique<OwnedStandardListRow>(
+   void addSlot(roo::string_view title,
+                      roo::string_view detail) {
+         auto row = std::make_unique<ListRow<StandardListItem>>(
                   context_, StandardListItemInit::TwoLine(title, detail));
       list_.add(std::move(row));
    }
@@ -1306,15 +1406,15 @@ class ScheduleList {
 };
 ```
 
-This example is one of the main reasons to defer convenience types until after
-the baseline exists: it will show whether dedicated row wrappers are genuinely
-useful or whether this small owning-subclass pattern is already sufficient.
+This example is one of the main reasons to keep the bridge generic: the common
+pattern is simply one owned item plus one row host. A templated `ListRow<Item>`
+removes boilerplate without inventing a content-specific row hierarchy.
 
 #### Example 3: Possible Post-Baseline Convenience Layer
 
-If baseline usage proves too verbose, a follow-up convenience layer should make
-the split between value-based item convenience and typed row convenience more
-explicit. For example:
+If baseline usage proves too verbose, a follow-up convenience layer should
+start with reusable item implementations that can own common widgets and be
+bound by both lists and menus. For example:
 
 ```cpp
 class PumpSettingsSection {
@@ -1325,7 +1425,7 @@ class PumpSettingsSection {
         solar_delta_(context, Pictogram::kSolar, "Solar delta",
            "Starts when the roof loop exceeds the pool by 4 C"),
         safety_lock_(context, "Safety lock") {
-      safety_lock_.setOn(false);
+      safety_lock_.item().setOn(false);
 
       list_.add(pool_mode_);
       list_.add(solar_delta_);
@@ -1334,17 +1434,173 @@ class PumpSettingsSection {
 
  private:
    List list_;
-   PictogramSupportingTextRow pool_mode_;
-   PictogramSupportingTextRow solar_delta_;
-   SwitchListRow safety_lock_;
+   ListRow<PictogramSupportingTextItem> pool_mode_;
+   ListRow<PictogramSupportingTextItem> solar_delta_;
+   ListRow<SwitchListItem> safety_lock_;
 };
 ```
 
-The point of this example is evaluative, not prescriptive. The document should
-commit to these follow-up layers only if the baseline examples above prove
-unsatisfactory. The important part is where the APIs live: pictogram or
-drawable mutators belong on compact item families, while concrete interactive
-control setters belong on typed row wrappers that own those controls.
+The point of this example is evaluative, not prescriptive. Phase 4 now shows
+that the baseline examples are good low-level coverage, but still do not cover
+common authoring tasks such as clickable rows, expressive shape completion,
+real divider rendering, wrapped supporting text, and row-level selection
+affordance delegation. The important part is where the APIs live: pictogram or
+drawable mutators belong on compact item families, and concrete interactive
+control setters should first live on owning item implementations that can be
+reused by either list rows or menu rows.
+
+### Phase 4 Capability Audit
+
+The Phase 4 example and the landed `material3::List` /
+`material3::ListEntry` / `material3::StandardListItem` code support only a
+subset of the desired list feature set.
+
+| Feature | Phase 4 status | Notes |
+| --- | --- | --- |
+| Segmented expressive list with row gaps | Partial | `ListStyle::kSegmented` adds inter-row gaps while divider mode is `kNone`, but rows still render as rectangular surfaces. |
+| Rounded expressive row corners, including softer inner corners between adjacent items | Missing | `ListEntry` does not override `getBorderStyle()`, so row shape stays rectangular and does not react to first/middle/last position. |
+| Leading or trailing icons | Partial | Any borrowed widget can occupy the leading or trailing slot, so existing widgets such as `Icon` can be bound manually. There is no list-specific icon convenience surface yet. |
+| Avatars | Missing | There is no avatar-specific helper item, `ListRow<Item>` bridge usage, or example in the landed list API. |
+| Clickable rows for navigation or drill-in | Missing in the stock list types | `ListEntry` is a `Container`, so `setOnInteractiveChange()` alone does not make it clickable. A custom subclass can add click handling, but the list API does not provide it yet. |
+| Optional wrapping or truncation for supporting text | Missing | `ListTextPolicy` exists as data, but `ListEntry` currently binds single-line `StringViewLabel`s and does not apply wrap, max-lines, or ellipsis policy. |
+| Leading and trailing checkboxes or radio buttons | Partial | Existing `material3::Checkbox` and `material3::RadioButton` widgets can be slotted manually into leading or trailing positions, but there are no reusable owning convenience item types or list-managed placement helpers yet. |
+| Gaps between rows and groups | Partial | Segmented inter-row gaps work inside one list. Larger group spacing still lives outside `List` in surrounding layout. |
+| Dividers | Missing visually | `List` resolves `show_divider`, but `ListEntry` does not paint divider strokes yet. |
+| Single-select and multi-select lists | Partial | `ListSelectionPolicy` resolves selected state for one or many pre-marked rows, but rows do not toggle themselves and the list does not create or wire selection controls. |
+| Selection affecting corner radii | Missing | Selected expressive rows currently change container color only; they do not change corner shape. |
+| Clicking the row acting like clicking the affordance | Missing | There is no row-owned press/click proxy path for embedded checkbox, radio, or switch controls. |
+
+### Post-Phase-4 Example Targets
+
+The next example pass should be split across at least two focused screens,
+rather than one oversized scrollable screen. The current
+`examples/material3/lists/lists.ino` can remain the low-level baseline example,
+and the next phases should add at least the following targets.
+
+#### Example 4: Visual Catalog Screen
+
+This target example should prove expressive shape, icon and avatar slots,
+gaps versus dividers, and real supporting-text wrap/truncate behavior on a
+narrow screen.
+
+The snippet below is intentionally sketched at the future convenience-item
+layer, not at today's exact explicit-`ListEntry` binding syntax.
+
+```cpp
+class VisualCatalogScreen : public SimpleScrollablePanel {
+ public:
+    explicit VisualCatalogScreen(ApplicationContext& context)
+          : SimpleScrollablePanel(context),
+             content_(context, FlexDirection::kColumn),
+             contacts_(context),
+             status_(context),
+             owner_(context, "DW", "Dawid Wojcik", "Pool owner"),
+             roof_loop_(context, wifi_24(), "Roof loop network",
+                "Supporting text wraps to a second line on narrow screens"),
+             freeze_guard_(context, warning_24(), "Freeze guard",
+                "Inset dividers and ellipsized supporting text should both render"),
+             schedule_sync_(context, schedule_24(), "Schedule sync",
+                "Selected segmented rows should react to first/middle/last shape") {
+         contacts_.setStyle(ListStyle::kSegmented);
+
+         auto inset_dividers = ListDividerPolicy{};
+         inset_dividers.mode = DividerMode::kInset;
+         inset_dividers.start_inset = 72;
+         inset_dividers.end_inset = 24;
+         status_.setDividerPolicy(inset_dividers);
+
+         contacts_.add(owner_);
+         contacts_.add(roof_loop_);
+
+         status_.add(freeze_guard_);
+         status_.add(schedule_sync_);
+
+         content_.add(contacts_);
+         content_.add(status_);
+         setContents(content_);
+    }
+
+ private:
+    FlexLayout content_;
+    List contacts_;
+    List status_;
+   ListRow<AvatarSupportingTextItem> owner_;
+   ListRow<PictogramSupportingTextItem> roof_loop_;
+   ListRow<PictogramSupportingTextItem> freeze_guard_;
+   ListRow<PictogramSupportingTextItem> schedule_sync_;
+};
+```
+
+#### Example 5: Interaction and Selection Screen
+
+This target example should prove row clickability, leading and trailing
+affordance placement, single-select versus multi-select behavior, and row
+click delegation.
+
+Like the previous example, this sketch shows the intended convenience-item
+surface rather than the baseline explicit row-binding mechanics.
+
+```cpp
+class InteractionCatalogScreen : public SimpleScrollablePanel {
+ public:
+    explicit InteractionCatalogScreen(ApplicationContext& context)
+          : SimpleScrollablePanel(context),
+             content_(context, FlexDirection::kColumn),
+             navigation_(context),
+             sort_order_(context),
+             alerts_(context),
+          next_task_(context, inbox_24(), "Next task", "Open task details"),
+          owner_(context, "DW", "Assigned owner", "Open schedule"),
+          priority_first_(context, "Priority first"),
+          due_date_first_(context, "Due date first"),
+          freeze_guard_alerts_(context, "Freeze guard alerts"),
+          solar_assist_alerts_(context, "Solar assist alerts") {
+       next_task_.item().setOnInvoked(
+          [&]() { openTaskDetail(); });
+       owner_.item().setOnInvoked(
+          [&]() { openSchedule(); });
+
+         auto single = ListSelectionPolicy{};
+         single.mode = SelectionMode::kSingle;
+         single.affordance = SelectionAffordance::kRadio;
+         single.placement = AffordancePlacement::kLeading;
+         sort_order_.setSelectionPolicy(single);
+       sort_order_.add(priority_first_);
+       sort_order_.add(due_date_first_);
+
+         auto multi = ListSelectionPolicy{};
+         multi.mode = SelectionMode::kMultiple;
+         multi.affordance = SelectionAffordance::kCheckbox;
+         multi.placement = AffordancePlacement::kTrailing;
+         alerts_.setSelectionPolicy(multi);
+       alerts_.add(freeze_guard_alerts_);
+       alerts_.add(solar_assist_alerts_);
+
+         navigation_.add(next_task_);
+         navigation_.add(owner_);
+
+         content_.add(navigation_);
+         content_.add(sort_order_);
+         content_.add(alerts_);
+         setContents(content_);
+    }
+
+ private:
+      void openTaskDetail();
+      void openSchedule();
+
+    FlexLayout content_;
+    List navigation_;
+    List sort_order_;
+    List alerts_;
+   ListRow<NavigationListItem> next_task_;
+   ListRow<AvatarNavigationListItem> owner_;
+   ListRow<RadioListItem> priority_first_;
+   ListRow<RadioListItem> due_date_first_;
+   ListRow<CheckboxListItem> freeze_guard_alerts_;
+   ListRow<CheckboxListItem> solar_assist_alerts_;
+};
+```
 
 ## Implementation Plan
 
@@ -1385,7 +1641,8 @@ Code slice:
 2. token-driven row padding, spacing, and color hooks.
 3. row visual context for position, variant, style, selection, and divider
    state.
-4. direct painting and measurement of standard text descriptors.
+4. widget-backed standard text slots, using cheap labels for one-line content
+   and leaving room for heavier wrapped-text widgets when needed.
 5. cached attached-slot child pointers on `ListEntry`, with attachment and
    detachment happening only on bind, clear, and rebind.
 6. `refreshFromItem()` as a manual reread path for mutable custom items that
@@ -1396,9 +1653,9 @@ Proposed commit message:
 > Material 3 lists Phase 2: implement the reusable row surface.
 >
 > Implement `ListEntry` as the fixed-child Material row host described in
-> `docs/material3_lists_design.md`, including text measurement and painting,
+> `docs/material3_lists_design.md`, including cheap text-slot widgets,
 > slot attachment, row visual context, and refresh behavior without adding a
-> per-row child vector.
+> per-row child vector or a second direct-paint text path.
 
 Validation: run `bazel test //:material3_list_test` and include focused cases
 for row measurement, text policy, stable slot identity, bind, clear, rebind,
@@ -1431,7 +1688,7 @@ borrowed-entry, adopted-entry, selected-state, and divider/gap cases.
 Code slice:
 
 1. a static settings section,
-2. an adopted-row list built from a small owning subclass,
+2. an adopted-row list built from `ListRow<StandardListItem>`,
 3. a menu prototype or similar short-form list.
 
 Exit criteria:
@@ -1441,7 +1698,9 @@ Exit criteria:
 2. Measured `sizeof(ListEntry)`, `sizeof(StandardListItem)`, and `sizeof(List)`
    stay within the budgets in this document or the excess is justified here.
 3. Call sites do not need arbitrary post-bind widget-replacement setters.
-4. Convenience item or row-wrapper APIs remain deferred unless this review
+4. If a generic ownership bridge such as `ListRow<Item>` lands here, it must
+   stay a thin `ListEntry` + owned-item adapter rather than a second row model.
+5. Content-specific convenience items remain deferred unless this review
    records a measured RAM reduction or a clear call-site simplification.
 
 Proposed commit message:
@@ -1456,7 +1715,183 @@ Proposed commit message:
 Validation: run `bazel test //:material3_list_test`, and build the emulation
 example or prototype that hosts the representative static settings screen.
 
-### Phase 5: Expand and Collapse
+### Phase 5: Generic Row Bridge
+
+Code slice:
+
+1. Add `ListRow<Item>` as a tiny ownership helper over `ListEntry`.
+2. Keep `List` row-based: the helper should bridge owned items to rows rather
+   than let items be added directly to `List`.
+3. Convert the adopted-row and convenience sketches to use `ListRow<Item>`
+   where the explicit `ListEntry` plus owned-item pair is otherwise boilerplate.
+4. Add focused tests showing that `ListRow<Item>` adds no new row behavior and
+   preserves the same `ListEntry` contracts.
+
+Proposed commit message:
+
+> Material 3 lists Phase 5: add the generic `ListRow<Item>` bridge.
+>
+> Add `ListRow<Item>` from `docs/material3_lists_design.md` as a thin
+> ownership adapter over `ListEntry`, and update the examples to use it where
+> explicit entry-plus-item storage is only ownership glue.
+
+Validation: run `bazel test //:material3_list_test` with focused `ListRow`
+ownership and binding cases, and build the representative example that uses
+owned rows.
+
+### Phase 6: Row Shapes and Dividers
+
+Code slice:
+
+1. Implement expressive and baseline row border shapes, including segmented
+   first/middle/last/single shape resolution and selected-state shape
+   overrides.
+2. Paint list-owned dividers from `ListDividerPolicy`, `DividerInsetHint`, and
+   resolved `show_divider`.
+3. Keep these effects derived from `ListEntryVisualContext` and policy data
+   rather than introducing extra per-row child state.
+4. Add focused visual tests and a narrow example pass for shapes and dividers
+   before widening the scope to text policy or convenience items.
+
+Proposed commit message:
+
+> Material 3 lists Phase 6: add row shapes and divider painting.
+>
+> Implement expressive row shaping and divider painting from
+> `docs/material3_lists_design.md`, driven entirely by resolved row visual
+> context and divider policy.
+
+Validation: run `bazel test //:material3_list_test`, add focused row-shape and
+divider cases, and run the visual catalog example or golden target covering
+segmented shapes and divider insets.
+
+### Phase 7: Text Policy Widgets
+
+Detailed text-policy direction:
+
+1. Do not switch all standard text slots to `TextBlock`; that would make the
+   common one-line path too expensive.
+2. Keep standard text in `StandardListItem` as `roo::string_view` plus
+   `ListTextPolicy`; the public item model should not force callers to provide
+   text widgets for ordinary rows.
+3. Let `ListEntry` choose the concrete text-slot widget class from policy, not
+   from measured string length:
+   - `max_lines == 1` with truncation keeps the cheap one-line label path,
+   - any wrap or multi-line policy switches that slot to a block-style widget.
+4. The current wrapped-text implementation may use `TextBlock` as the first
+   block widget, but only rows that opt into wrap or multi-line text should pay
+   that cost.
+5. If a non-owning `StringViewBlock` or bounded lightweight block lands later,
+   it should replace the wrapped-text slot implementation behind the same
+   policy surface.
+6. A slot widget class may change only during bind, clear, rebind, or explicit
+   `refreshFromItem()` when the policy class changes; never during paint.
+7. Custom items can still bypass this standard text-slot machinery entirely by
+   exposing their own body or custom content widgets.
+
+Code slice:
+
+1. Add an internal text-slot mode distinction for cheap single-line versus
+   wrapped/multi-line standard text.
+2. Implement `ListTextPolicy` handling for wrap, truncate, and max-lines.
+3. Keep one-line rows on the cheapest label path.
+4. Add focused tests for text measurement, widget selection by policy,
+   max-lines, ellipsis, and policy changes through `refreshFromItem()`.
+
+Proposed commit message:
+
+> Material 3 lists Phase 7: implement standard text policy.
+>
+> Implement `ListTextPolicy` from `docs/material3_lists_design.md` using a
+> cheap one-line label path for default rows and a heavier block-text path only
+> for rows that opt into wrap or multi-line behavior.
+
+Validation: run `bazel test //:material3_list_test` with focused text-policy
+cases and build the visual catalog example that exercises wrapped supporting
+text.
+
+### Phase 8: Visual Convenience Items
+
+Code slice:
+
+1. Add compact item families for the common non-interactive authoring cases:
+   `HeadlineListItem`, `SupportingTextListItem`, `AvatarSupportingTextItem`,
+   and `PictogramSupportingTextItem`.
+   `HeadlineListItem` and `SupportingTextListItem` should stay text-only;
+   avatar and pictogram items should own only the leading visual they need and
+   keep standard text as lightweight `roo::string_view` plus policy data.
+2. Keep those types at the item layer so the same content model can later be
+   reused by lists and menus.
+3. Pair them with `ListRow<Item>` in the convenience examples instead of
+   inventing content-specific row subclasses.
+4. Expand the visual-catalog example to cover icon/avatar rows and text-only
+   convenience items.
+
+Proposed commit message:
+
+> Material 3 lists Phase 8: add visual convenience item families.
+>
+> Add text-only, pictogram, and avatar convenience items to
+> `docs/material3_lists_design.md`, and exercise them through the generic
+> `ListRow<Item>` bridge.
+
+Validation: run `bazel test //:material3_list_test` with focused convenience-
+item binding cases and build the visual catalog example.
+
+### Phase 9: Row Invocation and Navigation
+
+Code slice:
+
+1. Add a clickable row path so row presses become first-class without storing
+   `std::function` state on every plain `ListEntry`.
+2. Add `NavigationListItem` and `AvatarNavigationListItem` as the first
+   invocation-oriented convenience items.
+   Those items should own only the visual affordances they need, plus an
+   invoke-oriented callback surface paid only by rows that opt into
+   navigation-style behavior.
+3. Keep row press delegation explicit: clicking the row should trigger the same
+   invoke path as the item's affordance or callback surface.
+4. Add a focused navigation example before mixing invocation with selection.
+
+Proposed commit message:
+
+> Material 3 lists Phase 9: add row invocation and navigation items.
+>
+> Introduce a clickable row path and navigation-oriented convenience items from
+> `docs/material3_lists_design.md`, without making every plain row carry
+> callback state.
+
+Validation: run `bazel test //:material3_list_test` with focused invocation
+and row-click cases, and build the interaction example's navigation section.
+
+### Phase 10: Selection Convenience Items
+
+Code slice:
+
+1. Add `CheckboxListItem`, `RadioListItem`, and `SwitchListItem` with owned
+   accessory widgets and configurable leading or trailing placement.
+   Those items should expose semantic setters such as `setChecked()`,
+   `setSelected()`, or `setOn()` rather than leaking raw slot-widget mutation
+   into ordinary call sites.
+2. Support list-authored single-select and multi-select examples where row
+   presses toggle or select the same state as the embedded affordance.
+3. Keep base `ListEntry` and `List` storage flat; only opt-in control items
+   should pay for embedded control widgets or callbacks.
+4. Complete the interaction-catalog example with checkbox, radio, and switch
+   cases.
+
+Proposed commit message:
+
+> Material 3 lists Phase 10: add selection convenience items.
+>
+> Add checkbox, radio, and switch convenience items to
+> `docs/material3_lists_design.md`, including placement options,
+> row-to-affordance delegation, and single/multi-select example coverage.
+
+Validation: run `bazel test //:material3_list_test` with focused interaction
+cases for row-to-affordance delegation and single/multi-select behavior.
+
+### Phase 11: Expand and Collapse
 
 Code slice:
 
@@ -1468,7 +1903,7 @@ Code slice:
 
 Proposed commit message:
 
-> Material 3 lists Phase 5: add reusable expand and collapse support.
+> Material 3 lists Phase 11: add reusable expand and collapse support.
 >
 > Implement `ExpandablePanel` from `docs/material3_lists_design.md` as the
 > optional body widget for expandable rows, with measured-height animation,
@@ -1478,7 +1913,7 @@ Proposed commit message:
 Validation: run `bazel test //:material3_list_test` and the relevant golden
 target once expandable-row goldens are added.
 
-### Phase 6: Menu Reuse
+### Phase 12: Menu Reuse
 
 Code slice:
 
@@ -1490,7 +1925,7 @@ Code slice:
 
 Proposed commit message:
 
-> Material 3 lists Phase 6: reuse list rows in Material 3 menus.
+> Material 3 lists Phase 12: reuse list rows in Material 3 menus.
 >
 > Apply the shared row primitives from `docs/material3_lists_design.md` to the
 > Material 3 menu path while keeping popup surface behavior and menu defaults
@@ -1504,16 +1939,30 @@ test target introduced with this phase.
 Each implementation phase should update a measured `sizeof(...)` table in the
 design note or implementation review. Expected incremental costs are:
 
-1. Phase 2 adds `ListEntry`: about 64-72 B per row, with no child vector and no
-   heap allocation on row paint or layout paths.
-2. Phase 3 adds `StandardListItem`: about 56-64 B before real child widgets are
-   counted, and `List`: about 88-100 B plus child-vector capacity proportional
-   to row count.
+1. Phase 2 adds `ListEntry`: about 84 B per row, with no child vector and no
+   heap allocation on row paint or layout paths, plus about 48 B for each
+   occupied one-line `StringViewLabel` text slot.
+2. Phase 3 adds `StandardListItem`: about 52 B, and `List`: about 80 B
+   plus child-vector capacity proportional to row count.
 3. Phase 4 adds no new core types; it measures whole-screen RAM
    for the usage examples above.
-4. Phase 5 adds `ExpandablePanel`: about 60-68 B only for rows that actually
+4. Phase 5 adds `ListRow<Item>` only as ownership glue; it should not increase
+   the size of plain `ListEntry`, `StandardListItem`, or `List`.
+5. Phase 6 should keep `ListEntry` close to the Phase 2/3 budget. Shape and
+   divider behavior should stay derived from policy and visual context rather
+   than add new per-row child vectors or callback state.
+6. Phase 7 keeps one-line rows on the cheap label path; wrapped rows should pay
+   the heavier current block-widget cost only when they opt in, with room for
+   future lighter `StringViewBlock`-style replacements.
+7. Phase 8 may add lightweight visual convenience items, but any extra RAM
+   should live in the item or its owned accessory widget, not in plain rows.
+8. Phase 9 should keep base `ListEntry` size flat; invocation or callback
+   storage belongs only to opt-in interactive rows or items.
+9. Phase 10 likewise keeps base row/list storage flat; embedded selection
+   controls should be paid only by opt-in convenience items.
+10. Phase 11 adds `ExpandablePanel`: about 60 B only for rows that actually
    expose expandable body content.
-5. Phase 6 should not increase `ListEntry` size; menu-specific state belongs
+11. Phase 12 should not increase `ListEntry` size; menu-specific state belongs
    to the menu surface or menu wrapper.
 
 Any implementation that materially exceeds these budgets should either revise
@@ -1608,8 +2057,9 @@ clear-and-rebind for structural changes.
 The baseline rejects content-specific convenience directly on `ListEntry`, such
 as `setLeadingPictogram()` or `setTrailingSwitch()`. Those APIs make every row
 pay for content-specific state even when unused. Compact semantic item types
-and typed row wrappers are the right follow-up locations when real usage
-justifies them.
+and owning convenience item implementations are the right follow-up locations
+when real usage justifies them. Thin row wrappers remain a later fallback when
+row-surface-specific behavior truly cannot live on shared items.
 
 #### Aggregate `ListItemContent`
 
@@ -1638,11 +2088,17 @@ the initial implementation scope:
    `SupportingTextListItem`,
 2. value-based pictogram or drawable item types with direct row painting
    support,
-3. typed row wrappers for common controls such as switch, checkbox, or radio
-   rows,
-4. a lightweight section helper if ordinary sibling widgets prove too verbose,
-5. a menu wrapper if real menu migration shows that menu defaults are awkward
+3. owning convenience item types for common controls such as switch,
+   checkbox, radio, or navigation items that can be reused in both lists and
+   menus,
+4. lighter one-line standard text widgets derived directly from `Widget`,
+   potentially specialized to fixed theme fonts and stripped of optional state
+   such as stored color or gravity,
+5. a non-owning `StringViewBlock` family and a bounded lightweight block
+   variant for short wrapped text and small fixed line counts,
+6. a lightweight section helper if ordinary sibling widgets prove too verbose,
+7. a menu wrapper if real menu migration shows that menu defaults are awkward
    on bare `ListEntry`,
-6. drag-reorder support with dragged elevation and dragged shape,
-7. swipe-to-reveal or similar specialized gesture containers,
-8. deeper token coverage after the first API is stable.
+8. drag-reorder support with dragged elevation and dragged shape,
+9. swipe-to-reveal or similar specialized gesture containers,
+10. deeper token coverage after the first API is stable.
