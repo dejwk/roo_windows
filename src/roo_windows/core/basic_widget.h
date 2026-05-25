@@ -11,7 +11,8 @@ namespace roo_windows {
 // need that storage or when their clickability semantics are custom.
 class BasicWidget : public Widget {
  public:
-  BasicWidget(ApplicationContext& context) : Widget(context), padding_(0), margins_(0) {}
+  BasicWidget(ApplicationContext& context)
+      : Widget(context), padding_(0), margins_(0) {}
 
   /// Returns the widget's default padding token, used when an axis has been
   /// configured as `kDefault`.
@@ -66,9 +67,7 @@ class BasicWidget : public Widget {
   /// `BasicWidget`s are considered clickable iff an interactive-change
   /// callback is registered. Subclasses that are intrinsically clickable
   /// override this.
-  bool isClickable() const override {
-    return getOnInteractiveChange() != nullptr;
-  }
+  bool isClickable() const override { return hasInteractiveChangeHandler(); }
 
   /// Resolves the configured margin tokens to pixel margins, falling back
   /// to the per-subclass default when a token is `kDefault`.

@@ -82,7 +82,6 @@ class NavigationRail : public Panel {
  private:
   friend class Destination;
 
-  ApplicationContext& context_;
   int width_dp_;  // defaults to 72.
   int destination_size_dp_;
   roo_display::VAlign alignment_;

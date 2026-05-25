@@ -200,7 +200,6 @@ class KeyboardWidget : public Panel {
   void onLayout(bool changed, const Rect& rect) override;
 
  private:
-  ApplicationContext* context_;
   std::vector<KeyboardPage*> pages_;
   const KeyboardColorTheme& color_theme_;
   Keyboard::CapsState caps_state_;
@@ -392,7 +391,6 @@ KeyboardWidget* KeyboardPage::keyboard() { return (KeyboardWidget*)parent(); }
 KeyboardWidget::KeyboardWidget(ApplicationContext& context,
                                const KeyboardSpec* spec)
     : Panel(context),
-      context_(&context),
       color_theme_(context.keyboardColorTheme()),
       caps_state_(Keyboard::CAPS_STATE_LOW),
       listener_(nullptr) {
@@ -450,7 +448,7 @@ void KeyboardWidget::setPage(int idx) {
   } else {
     if (current_page_ == pages_[idx]) return;
     current_page_ = pages_[idx];
-    current_page_->init(*context_);
+    current_page_->init(context());
   }
   for (int i = 0; i < static_cast<int>(pages_.size()); ++i) {
     pages_[i]->setVisibility(i == idx ? Visibility::kVisible

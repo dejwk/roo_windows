@@ -36,6 +36,10 @@ class WidgetEventDispatcher {
   void clearHandlers(Widget& widget);
 
  private:
+  friend class Widget;
+
+  void moveHandlers(Widget& from, Widget& to);
+
   roo_collections::FlatSmallHashMap<const Widget*, std::function<void()>>
       interactive_change_handlers_;
 };

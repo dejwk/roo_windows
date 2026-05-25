@@ -15,7 +15,7 @@ namespace roo_windows {
 class ToggleButtons : public Panel {
  public:
   ToggleButtons(ApplicationContext& context, int16_t padding = Scaled(12))
-      : Panel(context), context_(context), padding_(padding), active_(-1) {}
+      : Panel(context), padding_(padding), active_(-1) {}
 
   /// Appends a new icon-only button at the end of the strip and returns the
   /// owning widget reference (for layout/styling tweaks).
@@ -83,8 +83,6 @@ class ToggleButtons : public Panel {
   };
 
   friend class ToggleButton;
-
-  ApplicationContext& context_;
 
   int16_t padding_;  // defaults to 12.
   int active_;

@@ -63,9 +63,7 @@ class BasicSurfaceWidget : public SurfaceWidget {
   /// `BasicSurfaceWidget`s are considered clickable iff an
   /// interactive-change callback is registered. Subclasses that are
   /// intrinsically clickable override this.
-  bool isClickable() const override {
-    return getOnInteractiveChange() != nullptr;
-  }
+  bool isClickable() const override { return hasInteractiveChangeHandler(); }
 
   /// Resolves the configured margin tokens to pixel margins, falling back
   /// to the per-subclass default when a token is `kDefault`.

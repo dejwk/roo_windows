@@ -1,3 +1,5 @@
+#include <new>
+
 #include "roo_display/shape/basic.h"
 #include "roo_windows_render_test_support.h"
 
@@ -77,6 +79,8 @@ class DispatcherTestWidget : public BasicWidget {
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(1, 1);
   }
+
+  void triggerChange() { triggerInteractiveChange(); }
 };
 
 // Verifies that a minimal Application can be constructed against an offscreen
@@ -104,6 +108,9 @@ TEST(Windows, ApplicationContextExposesEnvironmentServices) {
   EXPECT_EQ(&scheduler, &app.context().scheduler());
   EXPECT_EQ(&env.theme(), &app.context().theme());
   EXPECT_EQ(&env.keyboardColorTheme(), &app.context().keyboardColorTheme());
+
+  DispatcherTestWidget widget(app.context());
+  EXPECT_EQ(&app.context().theme(), &widget.theme());
 }
 
 // Verifies that the phase-1 widget-event dispatcher stores, replaces,
@@ -141,6 +148,75 @@ TEST(Windows, WidgetEventDispatcherStoresAndDispatchesHandlers) {
   EXPECT_TRUE(dispatcher.hasInteractiveChangeHandler(widget));
   dispatcher.clearHandlers(widget);
   EXPECT_FALSE(dispatcher.hasInteractiveChangeHandler(widget));
+}
+
+TEST(Windows, WidgetStoresInteractiveChangeHandlersInDispatcher) {
+  roo::byte raster[320 * 240 * 2];
+  OffscreenDevice<Argb4444> offscreen(320, 240, raster, Argb4444());
+  Display display(offscreen);
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  Application app(&env, display);
+  DispatcherTestWidget widget(app.context());
+  int call_count = 0;
+
+  EXPECT_FALSE(widget.isClickable());
+  EXPECT_FALSE(widget.hasInteractiveChangeHandler());
+
+  widget.setOnInteractiveChange([&]() { ++call_count; });
+
+  EXPECT_TRUE(widget.isClickable());
+  EXPECT_TRUE(widget.hasInteractiveChangeHandler());
+  widget.triggerChange();
+  EXPECT_EQ(1, call_count);
+
+  widget.setOnInteractiveChange(nullptr);
+  EXPECT_FALSE(widget.isClickable());
+  EXPECT_FALSE(widget.hasInteractiveChangeHandler());
+  widget.triggerChange();
+  EXPECT_EQ(1, call_count);
+}
+
+TEST(Windows, WidgetMoveTransfersInteractiveChangeHandler) {
+  roo::byte raster[320 * 240 * 2];
+  OffscreenDevice<Argb4444> offscreen(320, 240, raster, Argb4444());
+  Display display(offscreen);
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  Application app(&env, display);
+  DispatcherTestWidget widget(app.context());
+  int call_count = 0;
+
+  widget.setOnInteractiveChange([&]() { ++call_count; });
+
+  DispatcherTestWidget moved(std::move(widget));
+  EXPECT_FALSE(widget.hasInteractiveChangeHandler());
+  EXPECT_FALSE(widget.isClickable());
+  EXPECT_TRUE(moved.hasInteractiveChangeHandler());
+  EXPECT_TRUE(moved.isClickable());
+
+  moved.triggerChange();
+  EXPECT_EQ(1, call_count);
+}
+
+TEST(Windows, WidgetDestructorClearsDispatcherHandlers) {
+  roo::byte raster[320 * 240 * 2];
+  OffscreenDevice<Argb4444> offscreen(320, 240, raster, Argb4444());
+  Display display(offscreen);
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  Application app(&env, display);
+  WidgetEventDispatcher& dispatcher = app.context().widgetEvents();
+  alignas(DispatcherTestWidget) char storage[sizeof(DispatcherTestWidget)];
+
+  auto* widget = new (storage) DispatcherTestWidget(app.context());
+  widget->setOnInteractiveChange([]() {});
+  EXPECT_TRUE(dispatcher.hasInteractiveChangeHandler(*widget));
+  widget->~DispatcherTestWidget();
+
+  auto* replacement = new (storage) DispatcherTestWidget(app.context());
+  EXPECT_FALSE(dispatcher.hasInteractiveChangeHandler(*replacement));
+  replacement->~DispatcherTestWidget();
 }
 
 // Verifies that the later-added child is painted on top of the earlier child

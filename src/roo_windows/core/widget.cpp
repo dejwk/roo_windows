@@ -37,11 +37,22 @@ static const long int kClickStickinessRadius = 40;
 static const bool kTerminateAnimationsOnCancel = true;
 
 Widget::Widget(ApplicationContext& context)
-    : parent_(nullptr),
+    : context_(context),
+      parent_(nullptr),
       parent_bounds_(0, 0, -1, -1),
       state_(kWidgetEnabled),
-      redraw_status_(kDirty | kInvalidated),
-      on_interactive_change_(nullptr) {}
+      redraw_status_(kDirty | kInvalidated) {}
+
+Widget::Widget(Widget&& other)
+    : context_(other.context_),
+      parent_(other.parent_),
+      parent_bounds_(other.parent_bounds_),
+      state_(other.state_),
+      redraw_status_(other.redraw_status_) {
+  context_.widgetEvents().moveHandlers(other, *this);
+}
+
+Widget::~Widget() { context_.widgetEvents().clearHandlers(*this); }
 
 MainWindow* Widget::getMainWindow() {
   return parent_ == nullptr ? nullptr : parent_->getMainWindow();
@@ -228,13 +239,7 @@ ColorRole Widget::effectiveContainerRole() const {
                              : ColorRole::kBackground;
 }
 
-// Returns the theme used by this widget's app. Must not be called outside of
-// the paint() flow.
-const Theme& Widget::theme() const {
-  CHECK(parent_ != nullptr)
-      << "Widget::theme() should only be called from paint()";
-  return parent_->theme();
-}
+const Theme& Widget::theme() const { return context_.theme(); }
 
 void Widget::setDirty(const Rect& bounds) {
   redraw_status_ |= kDirty;
@@ -465,8 +470,7 @@ void Widget::setOnOffState(OnOffState state) {
 }
 
 void Widget::triggerInteractiveChange() {
-  if (on_interactive_change_ == nullptr) return;
-  on_interactive_change_();
+  context_.widgetEvents().dispatchInteractiveChange(*this);
 }
 
 void Widget::notifyParentInvalidatedRegion(const Rect& rect) {

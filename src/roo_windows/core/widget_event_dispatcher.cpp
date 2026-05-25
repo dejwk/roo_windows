@@ -32,4 +32,12 @@ void WidgetEventDispatcher::clearHandlers(Widget& widget) {
   clearInteractiveChangeHandler(widget);
 }
 
+void WidgetEventDispatcher::moveHandlers(Widget& from, Widget& to) {
+  if (&from == &to) return;
+  auto it = interactive_change_handlers_.find(&from);
+  if (it == interactive_change_handlers_.end()) return;
+  interactive_change_handlers_[&to] = std::move((*it).second);
+  interactive_change_handlers_.erase(&from);
+}
+
 }  // namespace roo_windows

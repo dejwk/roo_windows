@@ -9,11 +9,11 @@
 #include "roo_display/image/image.h"
 #include "roo_display/shape/point.h"
 #include "roo_logging.h"
+#include "roo_windows/core/application_context.h"
 #include "roo_windows/core/border_style.h"
 #include "roo_windows/core/canvas.h"
 #include "roo_windows/core/clipper.h"
 #include "roo_windows/core/dimensions.h"
-#include "roo_windows/core/application_context.h"
 #include "roo_windows/core/insets.h"
 #include "roo_windows/core/margins.h"
 #include "roo_windows/core/measure_spec.h"
@@ -89,8 +89,8 @@ class Widget {
 
   Widget(ApplicationContext& context);
   Widget(const Widget& w) = delete;
-  Widget(Widget&& w) = default;
-  virtual ~Widget() {}
+  Widget(Widget&& w);
+  virtual ~Widget();
 
   // Causes the widget to request paint(). The widget decides which pixels
   // need re-drawing.
@@ -201,9 +201,6 @@ class Widget {
   virtual Rect maxParentBounds() const { return getParentVisualBounds(); }
 
   // Returns the effective theme for this widget.
-  //
-  // Paint-pipeline only: this resolves through the parent chain and therefore
-  // requires the widget to already be attached to a parent/application tree.
   virtual const Theme& theme() const;
 
   // Returns default color that should be used by monochromatic content.
@@ -307,11 +304,12 @@ class Widget {
   // Sets a handler to be called when the state of this widget changes due to
   // touch interaction. For simple clickable items, called by onClicked().
   void setOnInteractiveChange(std::function<void()> handler) {
-    on_interactive_change_ = std::move(handler);
+    context_.widgetEvents().setInteractiveChangeHandler(*this,
+                                                        std::move(handler));
   }
 
-  std::function<void()> getOnInteractiveChange() const {
-    return on_interactive_change_;
+  bool hasInteractiveChangeHandler() const {
+    return context_.widgetEvents().hasInteractiveChangeHandler(*this);
   }
 
   // Gesture lifecycle callbacks below are dispatched by Application's gesture
@@ -552,6 +550,9 @@ class Widget {
   void layout(const Rect& rect);
 
  protected:
+  ApplicationContext& context() { return context_; }
+  const ApplicationContext& context() const { return context_; }
+
   bool isOn() const { return (state_ & kWidgetOn) != 0; }
   bool isOff() const { return (state_ & kWidgetOff) != 0; }
 
@@ -737,14 +738,13 @@ class Widget {
 
   void setParentBounds(const Rect& parent_bounds);
 
+  ApplicationContext& context_;
   Container* parent_;
   Rect parent_bounds_;
   uint16_t state_;
 
   // kDirty | kInvalidated | kLayout{Requested|Required}
   uint8_t redraw_status_;
-
-  std::function<void()> on_interactive_change_;
 };
 
 // TODO: adjust for different screen densities.
