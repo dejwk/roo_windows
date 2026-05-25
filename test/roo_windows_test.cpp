@@ -68,6 +68,15 @@ class SloppyTouchSpyWidget : public BasicWidget {
   int touch_down_count_;
 };
 
+class DispatcherTestWidget : public BasicWidget {
+ public:
+  explicit DispatcherTestWidget(const Environment& env) : BasicWidget(env) {}
+
+  Dimensions getSuggestedMinimumDimensions() const override {
+    return Dimensions(1, 1);
+  }
+};
+
 // Verifies that a minimal Application can be constructed against an offscreen
 // display and Environment without crashing — basic API surface compiles and
 // links.
@@ -78,6 +87,58 @@ TEST(Windows, BasicCompilation) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
   Application app(&env, display);
+}
+
+// Verifies that Application exposes an ApplicationContext borrowing the
+// scheduler and themes from the bootstrap Environment.
+TEST(Windows, ApplicationContextExposesEnvironmentServices) {
+  roo::byte raster[320 * 240 * 2];
+  OffscreenDevice<Argb4444> offscreen(320, 240, raster, Argb4444());
+  Display display(offscreen);
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  Application app(&env, display);
+
+  EXPECT_EQ(&scheduler, &app.context().scheduler());
+  EXPECT_EQ(&env.theme(), &app.context().theme());
+  EXPECT_EQ(&env.keyboardColorTheme(), &app.context().keyboardColorTheme());
+}
+
+// Verifies that the phase-1 widget-event dispatcher stores, replaces,
+// clears, and dispatches one interactive-change handler per widget.
+TEST(Windows, WidgetEventDispatcherStoresAndDispatchesHandlers) {
+  roo::byte raster[320 * 240 * 2];
+  OffscreenDevice<Argb4444> offscreen(320, 240, raster, Argb4444());
+  Display display(offscreen);
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  Application app(&env, display);
+  DispatcherTestWidget widget(env);
+  WidgetEventDispatcher& dispatcher = app.context().widgetEvents();
+  int call_count = 0;
+
+  EXPECT_FALSE(dispatcher.hasInteractiveChangeHandler(widget));
+  dispatcher.dispatchInteractiveChange(widget);
+  EXPECT_EQ(0, call_count);
+
+  dispatcher.setInteractiveChangeHandler(widget, [&]() { ++call_count; });
+  EXPECT_TRUE(dispatcher.hasInteractiveChangeHandler(widget));
+  dispatcher.dispatchInteractiveChange(widget);
+  EXPECT_EQ(1, call_count);
+
+  dispatcher.setInteractiveChangeHandler(widget, [&]() { call_count += 10; });
+  dispatcher.dispatchInteractiveChange(widget);
+  EXPECT_EQ(11, call_count);
+
+  dispatcher.clearInteractiveChangeHandler(widget);
+  EXPECT_FALSE(dispatcher.hasInteractiveChangeHandler(widget));
+  dispatcher.dispatchInteractiveChange(widget);
+  EXPECT_EQ(11, call_count);
+
+  dispatcher.setInteractiveChangeHandler(widget, [&]() { ++call_count; });
+  EXPECT_TRUE(dispatcher.hasInteractiveChangeHandler(widget));
+  dispatcher.clearHandlers(widget);
+  EXPECT_FALSE(dispatcher.hasInteractiveChangeHandler(widget));
 }
 
 // Verifies that the later-added child is painted on top of the earlier child

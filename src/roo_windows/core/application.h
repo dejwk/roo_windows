@@ -8,7 +8,9 @@
 #include "roo_time.h"
 #include "roo_windows/activities/keyboard.h"
 #include "roo_windows/core/activity.h"
+#include "roo_windows/core/application_context.h"
 #include "roo_windows/core/click_animation.h"
+#include "roo_windows/core/environment.h"
 #include "roo_windows/core/gesture_detector.h"
 #include "roo_windows/core/main_window.h"
 #include "roo_windows/core/task.h"
@@ -28,6 +30,8 @@ namespace roo_windows {
 /// re-entry from worker threads.
 class Application {
  public:
+  /// Creates an application bound to the supplied bootstrap environment and
+  /// display.
   Application(const Environment* env, roo_display::Display& display);
 
   /// Deprecated entry point. Prefer `run()`.
@@ -43,7 +47,14 @@ class Application {
   /// when the refresh was terminated due to exceeded deadline.
   bool refresh(roo_time::Uptime deadline = roo_time::Uptime::Max());
 
+  /// Returns the bootstrap environment used by this application.
   const Environment& env() const { return *env_; }
+
+  /// Returns the application-owned runtime context.
+  ApplicationContext& context() { return context_; }
+
+  /// Returns the application-owned runtime context.
+  const ApplicationContext& context() const { return context_; }
 
   /// Adds a child widget to a new full-screen-ish task at the supplied
   /// bounds and immediately starts it.
@@ -123,6 +134,7 @@ class Application {
 
   roo_display::Display& display_;
   const Environment* env_;
+  ApplicationContext context_;
   unsigned long last_time_refreshed_ms_;
 
   // Must be declared before task_panels_, because task_panels_ use it.

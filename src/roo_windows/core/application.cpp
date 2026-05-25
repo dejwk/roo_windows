@@ -18,6 +18,7 @@ static constexpr long kMinRefreshTimeDeltaMs = 20;
 Application::Application(const Environment* env, Display& display)
     : display_(display),
       env_(env),
+      context_(env->scheduler(), env->theme(), env->keyboardColorTheme()),
       keyboard_(*env, kbEngUS()),
       text_field_editor_(env->scheduler(), keyboard_),
       root_window_(*this, display.extents()),
