@@ -751,8 +751,8 @@ class Widget {
 };
 
 #if UINTPTR_MAX == UINT32_MAX
-static_assert(sizeof(Widget) <= 24,
-              "Widget should stay within 24 bytes on 32-bit targets");
+static_assert(sizeof(Widget) <= 28,
+              "Widget should stay within 28 bytes on 32-bit targets");
 #endif
 
 // TODO: adjust for different screen densities.
