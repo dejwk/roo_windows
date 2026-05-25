@@ -1,9 +1,9 @@
 #include "switch.h"
 
-#include "roo_time.h"
 #include "roo_display/image/image.h"
 #include "roo_display/internal/raw_streamable_overlay.h"
 #include "roo_display/ui/tile.h"
+#include "roo_time.h"
 #include "roo_windows/widgets/resources/circle.h"
 #include "roo_windows/widgets/resources/circular_shadow.h"
 
@@ -24,12 +24,13 @@ static constexpr int kSwitchAnimationMs = 120;
 
 bool Switch::onSingleTapUp(XDim x, YDim y) {
   toggle();
-  anim_ = roo_time::Uptime::Now().inMillis() & 0x7FFF;
+  anim_ = (anim_ & kOnOffStateMask) |
+          (roo_time::Uptime::Now().inMillis() & kTimeMask);
   return Widget::onSingleTapUp(x, y);
 }
 
 int16_t Switch::time_animating_ms() const {
-  return (roo_time::Uptime::Now().inMillis() & 0x7FFF) - (anim_ & 0x7FFF);
+  return (roo_time::Uptime::Now().inMillis() & kTimeMask) - (anim_ & kTimeMask);
 }
 
 int16_t Switch::currentThumbOffsetX() const {
@@ -57,7 +58,7 @@ void Switch::paintWidgetContents(PaintContext& ctx) {
     int16_t ms = time_animating_ms();
     if (ms < 0 || ms > kSwitchAnimationMs) {
       // Done animating.
-      anim_ = 0x8000;
+      anim_ = (anim_ & kOnOffStateMask) | kIdleMask;
     }
   }
   Widget::paintWidgetContents(ctx);

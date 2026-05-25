@@ -51,15 +51,16 @@ class Material3CheckboxGoldenTest : public testing::Test {
     app.add(std::move(backdrop),
             roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
 
-    AddCheckbox(app, kX0 + 0 * kStride, OnOffState::kOff, enabled);
-    AddCheckbox(app, kX0 + 1 * kStride, OnOffState::kOn, enabled);
-    AddCheckbox(app, kX0 + 2 * kStride, OnOffState::kIndeterminate, enabled);
+    AddCheckbox(app, kX0 + 0 * kStride, Checkbox::OnOffState::kOff, enabled);
+    AddCheckbox(app, kX0 + 1 * kStride, Checkbox::OnOffState::kOn, enabled);
+    AddCheckbox(app, kX0 + 2 * kStride,
+          Checkbox::OnOffState::kIndeterminate, enabled);
 
     EXPECT_TRUE(app.refresh());
     return test::CaptureRgb(offscreen_.raster(), 0, 0, kWidth, kHeight);
   }
 
-  void AddCheckbox(Application& app, int16_t x, OnOffState state,
+  void AddCheckbox(Application& app, int16_t x, Checkbox::OnOffState state,
                    bool enabled) {
     auto checkbox = std::make_unique<Checkbox>(app.context(), state);
     checkbox->setEnabled(enabled);

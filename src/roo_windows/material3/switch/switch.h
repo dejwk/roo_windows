@@ -7,24 +7,47 @@ namespace material3 {
 
 /// Material 3 on/off switch with animated thumb and optional state icons.
 ///
-/// Stores animation state in a single 16-bit word (high bit = idle flag,
-/// low 15 bits = millisecond offset) to keep per-instance RAM low.
 /// Optional selected/unselected pictograms render inside the thumb.
 class Switch : public BasicWidget {
  public:
-  explicit Switch(ApplicationContext& context, bool on = false)
+  /// Logical selection state exposed by the switch.
+  enum class OnOffState : uint8_t { kOff, kOn };
+
+  /// Creates a switch with the specified initial state.
+  explicit Switch(ApplicationContext& context,
+                  OnOffState state = OnOffState::kOff)
       : BasicWidget(context),
-        anim_(0x8000),
+        anim_(kIdleMask | StateBits(state)),
         selected_icon_(nullptr),
-        unselected_icon_(nullptr) {
-    setOnOffState(on ? OnOffState::kOn : OnOffState::kOff);
+        unselected_icon_(nullptr) {}
+
+  /// Returns true when the switch is on.
+  bool isOn() const { return (anim_ & kOnOffStateMask) != 0; }
+
+  /// Returns true when the switch is off.
+  bool isOff() const { return !isOn(); }
+
+  /// Returns the current logical state.
+  OnOffState onOffState() const {
+    return isOn() ? OnOffState::kOn : OnOffState::kOff;
   }
 
-  using Widget::isOff;
-  using Widget::isOn;
-  using Widget::setOff;
-  using Widget::setOn;
-  using Widget::toggle;
+  /// Sets the switch to the on state.
+  void setOn() { setOnOffState(OnOffState::kOn); }
+
+  /// Sets the switch to the off state.
+  void setOff() { setOnOffState(OnOffState::kOff); }
+
+  /// Toggles between the on and off states.
+  void toggle() { isOn() ? setOff() : setOn(); }
+
+  /// Updates the logical state and schedules a repaint when it changes.
+  void setOnOffState(OnOffState state) {
+    uint16_t updated = (anim_ & ~kOnOffStateMask) | StateBits(state);
+    if (updated == anim_) return;
+    anim_ = updated;
+    setDirty();
+  }
 
   /// Convenience overload that routes to `setOn()` / `setOff()` based on the
   /// boolean argument.
@@ -39,11 +62,16 @@ class Switch : public BasicWidget {
   /// Sets the optional pictogram rendered inside the thumb when selected.
   /// Pass nullptr to remove. Caller retains ownership.
   void setSelectedIcon(const MonoIcon* icon);
+
+  /// Returns the optional pictogram rendered inside the thumb when selected.
   const MonoIcon* selectedIcon() const { return selected_icon_; }
 
   /// Sets the optional pictogram rendered inside the thumb when not
   /// selected. Pass nullptr to remove. Caller retains ownership.
   void setUnselectedIcon(const MonoIcon* icon);
+
+  /// Returns the optional pictogram rendered inside the thumb when not
+  /// selected.
   const MonoIcon* unselectedIcon() const { return unselected_icon_; }
 
   Padding getDefaultPadding() const override { return Padding(0); }
@@ -75,7 +103,15 @@ class Switch : public BasicWidget {
   bool onSingleTapUp(XDim x, YDim y) override;
 
  private:
-  bool isAnimating() const { return (anim_ & 0x8000) == 0; }
+  static constexpr uint16_t kIdleMask = 0x8000;
+  static constexpr uint16_t kOnOffStateMask = 0x4000;
+  static constexpr uint16_t kTimeMask = 0x3FFF;
+
+  static constexpr uint16_t StateBits(OnOffState state) {
+    return state == OnOffState::kOn ? kOnOffStateMask : 0;
+  }
+
+  bool isAnimating() const { return (anim_ & kIdleMask) == 0; }
   int16_t timeAnimatingMs() const;
   int16_t toggleAnimationFraction() const;
   int16_t currentThumbDiameter() const;
@@ -83,6 +119,8 @@ class Switch : public BasicWidget {
   int16_t currentThumbLeft() const;
   const MonoIcon* currentThumbIcon() const;
 
+  // Bit 15 = 1 means idle; bit 14 stores the logical on/off state; the lower
+  // 14 bits store the animation start time modulo 16384 ms.
   uint16_t anim_;
   const MonoIcon* selected_icon_;
   const MonoIcon* unselected_icon_;

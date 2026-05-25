@@ -6,21 +6,44 @@ namespace roo_windows {
 
 /// Legacy (pre-Material 3) on/off switch with animated thumb.
 ///
-/// Stores animation state in a single 16-bit word (high bit = idle flag,
-/// low 15 bits = milliseconds since the toggle), to keep per-instance RAM low.
 /// For new code, prefer `material3::Switch`.
 class Switch : public BasicWidget {
  public:
-  Switch(ApplicationContext& context, bool on = false)
-      : BasicWidget(context), anim_(0x8000) {
-    setOnOffState(on ? OnOffState::kOn : OnOffState::kOff);
+  /// Logical selection state exposed by the switch.
+  enum class OnOffState : uint8_t { kOff, kOn };
+
+  /// Creates a switch with the specified initial state.
+  explicit Switch(ApplicationContext& context,
+                  OnOffState state = OnOffState::kOff)
+      : BasicWidget(context), anim_(kIdleMask | StateBits(state)) {}
+
+  /// Returns true when the switch is on.
+  bool isOn() const { return (anim_ & kOnOffStateMask) != 0; }
+
+  /// Returns true when the switch is off.
+  bool isOff() const { return !isOn(); }
+
+  /// Returns the current logical state.
+  OnOffState onOffState() const {
+    return isOn() ? OnOffState::kOn : OnOffState::kOff;
   }
 
-  using Widget::isOff;
-  using Widget::isOn;
-  using Widget::setOff;
-  using Widget::setOn;
-  using Widget::toggle;
+  /// Sets the switch to the on state.
+  void setOn() { setOnOffState(OnOffState::kOn); }
+
+  /// Sets the switch to the off state.
+  void setOff() { setOnOffState(OnOffState::kOff); }
+
+  /// Toggles between the on and off states.
+  void toggle() { isOn() ? setOff() : setOn(); }
+
+  /// Updates the logical state and schedules a repaint when it changes.
+  void setOnOffState(OnOffState state) {
+    uint16_t updated = (anim_ & ~kOnOffStateMask) | StateBits(state);
+    if (updated == anim_) return;
+    anim_ = updated;
+    setDirty();
+  }
 
   /// Convenience overload of `setOn()`/`setOff()` that routes to whichever
   /// matches the bool argument.
@@ -51,12 +74,20 @@ class Switch : public BasicWidget {
   bool onSingleTapUp(XDim x, YDim y) override;
 
  private:
-  bool isAnimating() const { return (anim_ & 0x8000) == 0; }
+  static constexpr uint16_t kIdleMask = 0x8000;
+  static constexpr uint16_t kOnOffStateMask = 0x4000;
+  static constexpr uint16_t kTimeMask = 0x3FFF;
+
+  static constexpr uint16_t StateBits(OnOffState state) {
+    return state == OnOffState::kOn ? kOnOffStateMask : 0;
+  }
+
+  bool isAnimating() const { return (anim_ & kIdleMask) == 0; }
   int16_t time_animating_ms() const;
   int16_t currentThumbOffsetX() const;
 
-  // The topmost bit = 1 means 'no animation'.
-  // Otherwise, the remaining 15 bits are millis, LSB.
+  // Bit 15 = 1 means idle; bit 14 stores the logical on/off state; the lower
+  // 14 bits store the animation start time modulo 16384 ms.
   uint16_t anim_;
 };
 

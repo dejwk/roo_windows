@@ -7,21 +7,41 @@ namespace material3 {
 
 /// Material 3 single-selection radio button.
 ///
-/// Renders the standard outer ring + inner dot icon using theme colors. Like
-/// the other Material 3 selection widgets, the on/off state lives on `Widget`
-/// and is re-exported here for convenience.
+/// Renders the standard outer ring + inner dot icon using theme colors.
 class RadioButton : public BasicWidget {
  public:
-  explicit RadioButton(ApplicationContext& context, bool on = false)
-      : BasicWidget(context) {
-    setOnOffState(on ? OnOffState::kOn : OnOffState::kOff);
-  }
+  /// Logical selection state exposed by the radio button.
+  enum class OnOffState : uint8_t { kOff, kOn };
 
-  using Widget::isOff;
-  using Widget::isOn;
-  using Widget::setOff;
-  using Widget::setOn;
-  using Widget::toggle;
+  /// Creates a radio button with the specified initial state.
+  explicit RadioButton(ApplicationContext& context,
+                       OnOffState state = OnOffState::kOff)
+      : BasicWidget(context), state_(state) {}
+
+  /// Returns true when the radio button is selected.
+  bool isOn() const { return state_ == OnOffState::kOn; }
+
+  /// Returns true when the radio button is not selected.
+  bool isOff() const { return !isOn(); }
+
+  /// Returns the current logical state.
+  OnOffState onOffState() const { return state_; }
+
+  /// Sets the radio button to the selected state.
+  void setOn() { setOnOffState(OnOffState::kOn); }
+
+  /// Sets the radio button to the unselected state.
+  void setOff() { setOnOffState(OnOffState::kOff); }
+
+  /// Toggles between the selected and unselected states.
+  void toggle() { isOn() ? setOff() : setOn(); }
+
+  /// Updates the logical state and schedules a repaint when it changes.
+  void setOnOffState(OnOffState state) {
+    if (state_ == state) return;
+    state_ = state;
+    setDirty();
+  }
 
   Padding getDefaultPadding() const override { return Padding(0); }
   Margins getDefaultMargins() const override { return Margins(0); }
@@ -39,6 +59,9 @@ class RadioButton : public BasicWidget {
 
   /// Forces the selected state, mirroring radio-group semantics.
   void onClicked() override;
+
+ private:
+  OnOffState state_;
 };
 
 }  // namespace material3

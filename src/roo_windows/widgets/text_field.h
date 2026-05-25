@@ -23,12 +23,42 @@ static constexpr roo_time::Duration kShowLastGlyphInterval =
 
 /// Eye / eye-slash style toggle used by `TextField` to reveal a masked value.
 ///
-/// Acts as an on/off `BasicWidget`: clicking toggles, paint() chooses the
-/// matching pictogram. Owns no application state of its own; the consuming
-/// `TextField` reacts to the state change.
+/// Acts as a compact on/off control: clicking toggles it, paint() chooses the
+/// matching pictogram, and the consuming `TextField` reacts to the state
+/// change.
 class VisibilityToggle : public BasicWidget {
  public:
-  VisibilityToggle(ApplicationContext& context) : BasicWidget(context) { setOff(); }
+  /// Logical selection state exposed by the visibility toggle.
+  enum class OnOffState : uint8_t { kOff, kOn };
+
+  /// Creates the toggle in the default hidden-text state.
+  VisibilityToggle(ApplicationContext& context)
+      : BasicWidget(context), state_(OnOffState::kOff) {}
+
+  /// Returns true when the text is shown.
+  bool isOn() const { return state_ == OnOffState::kOn; }
+
+  /// Returns true when the text is hidden.
+  bool isOff() const { return !isOn(); }
+
+  /// Returns the current logical state.
+  OnOffState onOffState() const { return state_; }
+
+  /// Sets the toggle to the shown-text state.
+  void setOn() { setOnOffState(OnOffState::kOn); }
+
+  /// Sets the toggle to the hidden-text state.
+  void setOff() { setOnOffState(OnOffState::kOff); }
+
+  /// Toggles between the shown-text and hidden-text states.
+  void toggle() { isOn() ? setOff() : setOn(); }
+
+  /// Updates the logical state and schedules a repaint when it changes.
+  void setOnOffState(OnOffState state) {
+    if (state_ == state) return;
+    state_ = state;
+    setDirty();
+  }
 
   /// Reports the fixed icon-sized footprint used to draw the eye/eye-slash
   /// pictograms.
@@ -49,11 +79,8 @@ class VisibilityToggle : public BasicWidget {
   /// paints it centered.
   void paint(PaintContext& ctx) const override;
 
-  using Widget::isOff;
-  using Widget::isOn;
-  using Widget::setOff;
-  using Widget::setOn;
-  using Widget::toggle;
+ private:
+  OnOffState state_;
 };
 
 /// Shared editing controller for `TextField` widgets.

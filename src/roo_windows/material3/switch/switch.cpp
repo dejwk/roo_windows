@@ -105,12 +105,12 @@ void Switch::setUnselectedIcon(const MonoIcon* icon) {
 
 bool Switch::onSingleTapUp(XDim x, YDim y) {
   toggle();
-  anim_ = millis() & 0x7FFF;
+  anim_ = (anim_ & kOnOffStateMask) | (millis() & kTimeMask);
   return Widget::onSingleTapUp(x, y);
 }
 
 int16_t Switch::timeAnimatingMs() const {
-  return (millis() & 0x7FFF) - (anim_ & 0x7FFF);
+  return (millis() & kTimeMask) - (anim_ & kTimeMask);
 }
 
 int16_t Switch::toggleAnimationFraction() const {
@@ -164,7 +164,7 @@ void Switch::paintWidgetContents(PaintContext& ctx) {
   if (isAnimating()) {
     int16_t ms = timeAnimatingMs();
     if (ms < 0 || ms > kSwitchAnimationMs) {
-      anim_ = 0x8000;
+      anim_ = (anim_ & kOnOffStateMask) | kIdleMask;
     }
   }
   Widget::paintWidgetContents(ctx);

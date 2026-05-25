@@ -52,9 +52,6 @@ static const uint16_t kWidgetSelected = 0x0020;
 static const uint16_t kWidgetActivated = 0x0040;
 static const uint16_t kWidgetPressed = 0x0080;
 static const uint16_t kWidgetDragged = 0x0100;
-static const uint16_t kWidgetOn = 0x0200;
-static const uint16_t kWidgetOff = 0x0400;
-static const uint16_t kWidgetError = 0x0800;
 
 // Widget is undergoing click animation.
 static const uint16_t kWidgetClicking = 0x1000;
@@ -68,7 +65,6 @@ static const uint8_t kLayoutRequested = 0x04;
 static const uint8_t kLayoutRequired = 0x08;
 
 enum class ParentClipMode { kClipped, kUnclipped };
-enum class OnOffState { kOff, kIndeterminate, kOn };
 enum class Visibility { kVisible, kInvisible, kGone };
 
 /// Base class for every UI element in the framework.
@@ -555,16 +551,6 @@ class Widget {
  protected:
   ApplicationContext& context() { return context_; }
   const ApplicationContext& context() const { return context_; }
-
-  bool isOn() const { return (state_ & kWidgetOn) != 0; }
-  bool isOff() const { return (state_ & kWidgetOff) != 0; }
-
-  void setOn() { setOnOffState(OnOffState::kOn); }
-  void setOff() { setOnOffState(OnOffState::kOff); }
-  void toggle();
-
-  OnOffState onOffState() const;
-  void setOnOffState(OnOffState state);
 
   void triggerInteractiveChange();
 

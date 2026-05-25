@@ -20,7 +20,7 @@ TEST(Material3RadioButton, UsesZeroDefaultInsets) {
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
-  RadioButton radio(context, false);
+  RadioButton radio(context, RadioButton::OnOffState::kOff);
 
   EXPECT_EQ(0, radio.getPadding().left());
   EXPECT_EQ(0, radio.getPadding().top());
@@ -41,7 +41,7 @@ TEST(Material3RadioButton, UsesCenteredPointOverlay) {
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
-  RadioButton radio(context, false);
+  RadioButton radio(context, RadioButton::OnOffState::kOff);
   radio.layout(Rect(0, 0, Scaled(20) - 1, Scaled(20) - 1));
 
   EXPECT_EQ(Widget::OVERLAY_POINT, radio.getOverlayType());
@@ -58,7 +58,7 @@ TEST(Material3RadioButton, ReportsMaterial3MinimumSize) {
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
-  RadioButton radio(context, false);
+  RadioButton radio(context, RadioButton::OnOffState::kOff);
   Dimensions dims = radio.getSuggestedMinimumDimensions();
 
   EXPECT_EQ(Scaled(20), dims.width());
@@ -73,7 +73,7 @@ TEST(Material3RadioButton, EffectiveContainerRoleTracksSelectionState) {
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
-  RadioButton radio(context, false);
+  RadioButton radio(context, RadioButton::OnOffState::kOff);
   EXPECT_EQ(ColorRole::kSurface, radio.effectiveContainerRole());
 
   radio.setOn();

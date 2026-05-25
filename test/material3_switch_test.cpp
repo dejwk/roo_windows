@@ -85,7 +85,7 @@ TEST(Material3Switch, UsesThumbCenteredPointOverlay) {
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
-  Switch sw(context, false);
+  Switch sw(context, Switch::OnOffState::kOff);
   sw.layout(Rect(0, 0, Scaled(52) - 1, Scaled(32) - 1));
 
   EXPECT_EQ(Widget::OVERLAY_POINT, sw.getOverlayType());
@@ -94,7 +94,7 @@ TEST(Material3Switch, UsesThumbCenteredPointOverlay) {
   EXPECT_FLOAT_EQ(0.5f * (float)(Scaled(32) - 1), off_focus.x);
   EXPECT_FLOAT_EQ(0.5f * (float)(Scaled(32) - 1), off_focus.y);
 
-  sw.setOn(true);
+  sw.setOn();
   roo_display::FpPoint on_focus = sw.getPointOverlayFocus();
   EXPECT_FLOAT_EQ(
       0.5f * (float)(Scaled(32) - 1) + (float)(Scaled(52) - Scaled(32)),
@@ -109,7 +109,7 @@ TEST(Material3Switch, ReportsMaterial3MinimumSize) {
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
-  Switch sw(context, false);
+  Switch sw(context, Switch::OnOffState::kOff);
   Dimensions dims = sw.getSuggestedMinimumDimensions();
 
   EXPECT_EQ(Scaled(52), dims.width());
@@ -124,10 +124,10 @@ TEST(Material3Switch, EffectiveContainerRoleTracksState) {
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
-  Switch sw(context, false);
+  Switch sw(context, Switch::OnOffState::kOff);
   EXPECT_EQ(ColorRole::kSurfaceContainerHighest, sw.effectiveContainerRole());
 
-  sw.setOn(true);
+  sw.setOn();
   EXPECT_EQ(ColorRole::kPrimary, sw.effectiveContainerRole());
 }
 

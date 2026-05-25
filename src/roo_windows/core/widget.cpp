@@ -442,33 +442,6 @@ void Widget::setDragged(bool dragged) {
   notifyStateChanged(kWidgetDragged);
 }
 
-OnOffState Widget::onOffState() const {
-  return isOn() ? (!isOff() ? OnOffState::kOn : OnOffState::kIndeterminate)
-                : (isOff() ? OnOffState::kOff : OnOffState::kIndeterminate);
-}
-
-void Widget::toggle() {
-  OnOffState state = onOffState();
-  if (state == OnOffState::kOn) {
-    setOff();
-  } else if (state == OnOffState::kOff) {
-    setOn();
-  }
-}
-
-void Widget::setOnOffState(OnOffState state) {
-  if (onOffState() == state) return;
-  uint16_t old_state = state_;
-  state_ &= ~(kWidgetOn | kWidgetOff);
-  if (state == OnOffState::kOn) {
-    state_ |= kWidgetOn;
-  } else if (state == OnOffState::kOff) {
-    state_ |= kWidgetOff;
-  }
-  setDirty();
-  notifyStateChanged(old_state ^ state_);
-}
-
 void Widget::triggerInteractiveChange() {
   context_.widgetEvents().dispatchInteractiveChange(*this);
 }

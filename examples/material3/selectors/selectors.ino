@@ -134,26 +134,28 @@ class SelectorScreen : public SimpleScrollablePanel {
         checkbox_heading_(context, "Checkboxes", font_body1()),
         checkbox_status_(context, "", font_caption()),
         notifications_(context, "Notifications", "Starts enabled",
-                       OnOffState::kOn),
+                       material3::Checkbox::OnOffState::kOn),
         downloads_(context, "Offline downloads", "Starts indeterminate",
-                   OnOffState::kIndeterminate),
+                   material3::Checkbox::OnOffState::kIndeterminate),
         analytics_(context, "Anonymous analytics", "Starts disabled",
-                   OnOffState::kOff),
+                   material3::Checkbox::OnOffState::kOff),
         mid_divider_(context),
         radio_heading_(context, "Radio buttons", font_body1()),
         radio_status_(context, "", font_caption()),
         compact_(context, "Compact layout", "More density on small screens",
-                 false),
+                 material3::RadioButton::OnOffState::kOff),
         balanced_(context, "Balanced layout",
-                  "Default spacing for mixed content", true),
+                  "Default spacing for mixed content",
+                  material3::RadioButton::OnOffState::kOn),
         comfortable_(context, "Comfortable layout", "Extra padding for reading",
-                     false),
+                     material3::RadioButton::OnOffState::kOff),
         bottom_divider_(context),
         switch_heading_(context, "Switches", font_body1()),
         switch_status_(context, "", font_caption()),
-        bluetooth_(context, "Bluetooth", "Nearby accessories", true),
+        bluetooth_(context, "Bluetooth", "Nearby accessories",
+                   material3::Switch::OnOffState::kOn),
         dark_theme_(context, "Dark theme", "Applies app-wide appearance",
-                    false) {
+                    material3::Switch::OnOffState::kOff) {
     content_.setPadding(Scaled(12));
     content_.setGap(Scaled(4));
     content_.add(title_, {.flex_grow = 0, .flex_shrink = 0});
@@ -204,8 +206,10 @@ class SelectorScreen : public SimpleScrollablePanel {
   void updateCheckboxSummary() {
     int selected =
         notifications_.control().isOn() + analytics_.control().isOn();
-    int mixed =
-        downloads_.control().onOffState() == OnOffState::kIndeterminate ? 1 : 0;
+    int mixed = downloads_.control().onOffState() ==
+                        material3::Checkbox::OnOffState::kIndeterminate
+                    ? 1
+                    : 0;
     if (downloads_.control().isOn()) {
       ++selected;
     }

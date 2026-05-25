@@ -6,22 +6,46 @@ namespace roo_windows {
 
 /// Tri-state checkbox using the legacy (pre-Material 3) style.
 ///
-/// Re-exports the `OnOffState` accessors from `Widget` and turns a click into
-/// a toggle. For new code, prefer `material3::Checkbox`.
+/// For new code, prefer `material3::Checkbox`.
 class Checkbox : public BasicWidget {
  public:
+  /// Logical selection state exposed by the checkbox.
+  enum class OnOffState : uint8_t { kOff, kIndeterminate, kOn };
+
+  /// Creates a checkbox with the specified initial state.
   Checkbox(ApplicationContext& context, OnOffState state = OnOffState::kOff)
-      : BasicWidget(context) {
-    setOnOffState(state);
+      : BasicWidget(context), state_(state) {}
+
+  /// Returns true when the checkbox is in the on state.
+  bool isOn() const { return state_ == OnOffState::kOn; }
+
+  /// Returns true when the checkbox is in the off state.
+  bool isOff() const { return state_ == OnOffState::kOff; }
+
+  /// Returns the current logical state.
+  OnOffState onOffState() const { return state_; }
+
+  /// Sets the checkbox to the on state.
+  void setOn() { setOnOffState(OnOffState::kOn); }
+
+  /// Sets the checkbox to the off state.
+  void setOff() { setOnOffState(OnOffState::kOff); }
+
+  /// Toggles between the on and off states. Leaves indeterminate unchanged.
+  void toggle() {
+    if (state_ == OnOffState::kOn) {
+      setOff();
+    } else if (state_ == OnOffState::kOff) {
+      setOn();
+    }
   }
 
-  using Widget::isOff;
-  using Widget::isOn;
-  using Widget::onOffState;
-  using Widget::setOff;
-  using Widget::setOn;
-  using Widget::setOnOffState;
-  using Widget::toggle;
+  /// Updates the logical state and schedules a repaint when it changes.
+  void setOnOffState(OnOffState state) {
+    if (state_ == state) return;
+    state_ = state;
+    setDirty();
+  }
 
   /// Paints a solid square frame; when on, additionally paints the check
   /// glyph; when indeterminate, paints a horizontal bar.
@@ -35,6 +59,9 @@ class Checkbox : public BasicWidget {
   /// Cycles the on/off state through kOff -> kOn (indeterminate is not part
   /// of the click cycle, only of programmatic setOnOffState()).
   void onClicked() override;
+
+ private:
+  OnOffState state_;
 };
 
 }  // namespace roo_windows

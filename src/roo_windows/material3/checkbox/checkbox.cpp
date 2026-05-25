@@ -77,13 +77,13 @@ Tokens ResolveTokens(const Checkbox& widget) {
                 theme.color.outline};
 }
 
-const Pictogram* MarkForState(OnOffState state) {
+const Pictogram* MarkForState(Checkbox::OnOffState state) {
   switch (state) {
-    case OnOffState::kOn:
+    case Checkbox::OnOffState::kOn:
       return &CheckMarkPictogram();
-    case OnOffState::kIndeterminate:
+    case Checkbox::OnOffState::kIndeterminate:
       return &IndeterminatePictogram();
-    case OnOffState::kOff:
+    case Checkbox::OnOffState::kOff:
       return nullptr;
   }
   return nullptr;
@@ -133,8 +133,8 @@ Dimensions Checkbox::getSuggestedMinimumDimensions() const {
 }
 
 ColorRole Checkbox::effectiveContainerRole() const {
-  return onOffState() == OnOffState::kOff ? ColorRole::kSurface
-                                          : ColorRole::kPrimary;
+  return onOffState() == Checkbox::OnOffState::kOff ? ColorRole::kSurface
+                                                    : ColorRole::kPrimary;
 }
 
 }  // namespace material3

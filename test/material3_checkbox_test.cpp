@@ -22,7 +22,7 @@ TEST(Material3Checkbox, UsesCenteredPointOverlay) {
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
-  Checkbox checkbox(context, OnOffState::kOff);
+  Checkbox checkbox(context, Checkbox::OnOffState::kOff);
   checkbox.layout(Rect(0, 0, Scaled(18) - 1, Scaled(18) - 1));
 
   EXPECT_EQ(Widget::OVERLAY_POINT, checkbox.getOverlayType());
@@ -39,7 +39,7 @@ TEST(Material3Checkbox, ReportsMaterial3MinimumSize) {
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
-  Checkbox checkbox(context, OnOffState::kOff);
+  Checkbox checkbox(context, Checkbox::OnOffState::kOff);
   Dimensions dims = checkbox.getSuggestedMinimumDimensions();
 
   EXPECT_EQ(Scaled(18), dims.width());
@@ -54,7 +54,7 @@ TEST(Material3Checkbox, ReportsNaturalMeasureAsEighteenByEighteen) {
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
-  Checkbox checkbox(context, OnOffState::kOff);
+  Checkbox checkbox(context, Checkbox::OnOffState::kOff);
 
   Dimensions measured =
       checkbox.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
@@ -71,7 +71,7 @@ TEST(Material3Checkbox, UsesZeroInsetsAndMeasuredContentBounds) {
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
-  Checkbox checkbox(context, OnOffState::kOff);
+  Checkbox checkbox(context, Checkbox::OnOffState::kOff);
   Dimensions measured =
       checkbox.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
   checkbox.layout(Rect(0, 0, measured.width() - 1, measured.height() - 1));
@@ -92,10 +92,10 @@ TEST(Material3Checkbox, EffectiveContainerRoleTracksSelectionState) {
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
 
-  Checkbox checkbox(context, OnOffState::kOff);
+  Checkbox checkbox(context, Checkbox::OnOffState::kOff);
   EXPECT_EQ(ColorRole::kSurface, checkbox.effectiveContainerRole());
 
-  checkbox.setOnOffState(OnOffState::kIndeterminate);
+  checkbox.setOnOffState(Checkbox::OnOffState::kIndeterminate);
   EXPECT_EQ(ColorRole::kPrimary, checkbox.effectiveContainerRole());
 
   checkbox.setOn();
