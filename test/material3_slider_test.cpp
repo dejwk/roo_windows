@@ -221,6 +221,19 @@ class ContentPaintSlider : public Slider {
   }
 };
 
+class ContentPaintSliderWithInsetIcon : public SliderWithInsetIcon {
+ public:
+  using SliderWithInsetIcon::SliderWithInsetIcon;
+
+  void paintWidgetContentsForTest(const Canvas& parent_canvas) {
+    roo_windows::internal::ClipperState clipper_state;
+    Clipper clipper(clipper_state, parent_canvas.out(),
+                    roo_time::Uptime::Max());
+    Canvas widget_canvas = prepareCanvas(parent_canvas);
+    paintWidgetContents(widget_canvas, clipper);
+  }
+};
+
 Rect ResolveCurrentIndicatorBoundsForTest(const Slider& slider,
                                           const ApplicationContext& context) {
   const SliderStyle& style = slider.style();
@@ -1032,6 +1045,51 @@ TEST_F(Material3SliderRenderTest,
   EXPECT_NE(QuantizeToArgb4444(context().theme().color.onSecondaryContainer),
             pixelAt(old_center_x, old_center_y));
   EXPECT_EQ(expected_new_icon_color, pixelAt(new_center_x, new_center_y));
+}
+
+// Verifies that a stationary inset icon does not widen value-change repaint to
+// the icon's track segment when the icon does not move.
+TEST_F(Material3SliderRenderTest,
+       StationaryInsetIconDoesNotBroadenValueChangePaint) {
+  SliderStyle style{};
+  style.size = SliderSize::kMedium;
+
+  const roo_display::Pictogram* icon = &circle_24();
+
+  auto slider = std::make_unique<ContentPaintSliderWithInsetIcon>(
+      context(), SliderRange{0.0f, 100.0f}, 50.0f, SliderVariant::kStandard,
+      style);
+  ContentPaintSliderWithInsetIcon* slider_ptr = slider.get();
+  slider_ = slider_ptr;
+  slider->setIcon(icon);
+
+  app_.add(std::move(slider),
+           roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
+                            kSliderY + Scaled(52) - 1));
+
+  ASSERT_TRUE(app_.refresh());
+
+  constexpr float old_value = 50.0f;
+  constexpr float new_value = 60.0f;
+  Rect old_icon =
+      ResolveInsetIconRectForTest(style, slider_ptr->range(), old_value, *icon,
+                                  slider_ptr->width(), slider_ptr->height());
+  Rect new_icon =
+      ResolveInsetIconRectForTest(style, slider_ptr->range(), new_value, *icon,
+                                  slider_ptr->width(), slider_ptr->height());
+  ASSERT_EQ(old_icon, new_icon);
+
+  ASSERT_TRUE(slider_ptr->setValue(new_value));
+
+  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
+  Rect expected_clip = RoundedTrackInvalidationRectForValueChangeForTest(
+                           axis, slider_ptr->range(), old_value, new_value)
+                           .translate(kSliderX, kSliderY);
+  Color clear_color = QuantizeToArgb4444(Color(0xFF4A7C31));
+
+  fillScreen(clear_color);
+  paintWidgetContentsForTest(*slider_ptr);
+  EXPECT_TRUE(ExpectPaintConfinedTo({expected_clip}, clear_color));
 }
 
 // Verifies that revealing a stop mark previously hidden by inset-icon padding

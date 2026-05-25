@@ -525,7 +525,7 @@ void Slider::invalidateValueChange(const internal::SliderAxisMetrics& axis,
   Metrics new_metrics = buildMetrics(new_center, isPressed());
   Rect old_icon = insetIconDirtyRect(old_metrics);
   Rect new_icon = insetIconDirtyRect(new_metrics);
-  if (!old_icon.empty() || !new_icon.empty()) {
+  if (old_icon != new_icon) {
     icon_envelope = Rect::Extent(old_icon, new_icon);
   }
   Rect content_envelope = icon_envelope.empty()
@@ -582,11 +582,11 @@ void Slider::notifyStateChanged(uint16_t state_diff) {
   Metrics old_metrics = buildMetrics(center, was_pressed);
   Metrics new_metrics = buildMetrics(center, isPressed());
   Rect content_envelope = ExpandRectAlongPrimary(
-    axis, thumb_rect, internal::kTrackInnerEndRadiusPixels);
+      axis, thumb_rect, internal::kTrackInnerEndRadiusPixels);
   content_envelope = IncludeBoundaryTrackStrips(
-    content_envelope, axis, old_metrics.segments, old_metrics.segment_count,
-    new_metrics.segments, new_metrics.segment_count,
-    old_metrics.size_metrics.track_radius);
+      content_envelope, axis, old_metrics.segments, old_metrics.segment_count,
+      new_metrics.segments, new_metrics.segment_count,
+      old_metrics.size_metrics.track_radius);
 
   bool old_indicator_visible =
       style_.value_indicator == SliderValueIndicatorBehavior::kAlways ||
@@ -602,13 +602,13 @@ void Slider::notifyStateChanged(uint16_t state_diff) {
   }
 
   pending_content_dirty_span_.include(
-    internal::DisplayMainSpanFromRect(content_envelope, axis.isVertical()));
+      internal::DisplayMainSpanFromRect(content_envelope, axis.isVertical()));
   pending_indicator_dirty_span_.include(
       internal::DisplayMainSpanFromRect(bubble_envelope, axis.isVertical()));
 
-  setDirty(bubble_envelope.empty() ? content_envelope
-                   : Rect::Extent(content_envelope,
-                          bubble_envelope));
+  setDirty(bubble_envelope.empty()
+               ? content_envelope
+               : Rect::Extent(content_envelope, bubble_envelope));
   if (!bubble_envelope.empty()) {
     notifyParentInvalidatedRegion(
         bubble_envelope.translate(offsetLeft(), offsetTop()));
