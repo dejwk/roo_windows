@@ -6,4 +6,5 @@
 #include "roo_windows/core/activity.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/environment.h"
+#include "roo_windows/core/paint_context.h"
 #include "roo_windows/core/task.h"

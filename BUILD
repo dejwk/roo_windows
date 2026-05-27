@@ -83,6 +83,18 @@ cc_test(
 )
 
 cc_test(
+    name = "paint_context_test",
+    srcs = [
+        "test/paint_context_test.cpp",
+    ],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
+cc_test(
     name = "text_label_test",
     srcs = [
         "test/text_label_test.cpp",
