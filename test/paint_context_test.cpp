@@ -1,12 +1,13 @@
+#include "roo_windows/core/paint_context.h"
+
 #include "gtest/gtest.h"
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
+#include "roo_windows.h"
 #include "roo_windows/core/basic_surface_widget.h"
 #include "roo_windows/core/clipper.h"
 #include "roo_windows/core/overlay_spec.h"
-#include "roo_windows/core/paint_context.h"
-#include "roo_windows.h"
 
 using namespace roo_display;
 using namespace roo_windows;
@@ -112,8 +113,7 @@ TEST_F(PaintContextTest, AddOverlayTranslatesLocalExtentsAndAppliesClip) {
   PaintContext ctx(canvas, clipper);
 
   auto overlay = MakeRasterizable(
-      Box(0, 0, 3, 3),
-      [](int16_t, int16_t) -> Color { return color::Red; });
+      Box(0, 0, 3, 3), [](int16_t, int16_t) -> Color { return color::Red; });
 
   ctx.addOverlay(overlay, Rect(1, 1, 2, 2));
   ctx.setBgcolor(color::Blue);
@@ -135,9 +135,8 @@ TEST_F(PaintContextTest, AddOverlayShapeTranslatesLocalExtentsAndAppliesClip) {
   canvas.set_out(clipper.out());
   PaintContext ctx(canvas, clipper);
 
-  ctx.addOverlayShape(
-      SmoothFilledCircle(FpPoint{1.5f, 1.5f}, 3.0f, color::Red),
-      Rect(1, 1, 2, 2));
+  ctx.addOverlayShape(SmoothFilledCircle(FpPoint{1.5f, 1.5f}, 3.0f, color::Red),
+                      Rect(1, 1, 2, 2));
   ctx.setBgcolor(color::Blue);
   ctx.clear();
 
@@ -209,6 +208,95 @@ TEST_F(PaintContextTest,
   EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(2, 2));
   EXPECT_EQ(expected_modded, pixelAt(11, 2));
   EXPECT_NE(pixelAt(2, 2), pixelAt(11, 2));
+}
+
+TEST_F(PaintContextTest, ClipperOverlaySpecPushPopRestoresPreviousSpec) {
+  auto widget = std::make_unique<OverlaySpecSourceWidget>(env_);
+  OverlaySpecSourceWidget* widget_ptr = widget.get();
+  app_.add(std::move(widget), Box(0, 0, 7, 7));
+
+  Surface surface(display_.output(), 0, 0, display_.extents(),
+                  /*is_write_once=*/false, display_.getBackgroundColor(),
+                  FillMode::kVisible, BlendingMode::kSourceOver);
+  Canvas canvas(&surface);
+  internal::ClipperState clipper_state;
+  Clipper clipper(clipper_state, canvas.out(), roo_time::Uptime::Max());
+
+  clipper.pushOverlaySpec(*widget_ptr, canvas);
+  const OverlaySpec* inert = &clipper.currentOverlaySpec();
+  ASSERT_FALSE(inert->is_modded());
+
+  widget_ptr->setSelected(true);
+  widget_ptr->setPressed(true);
+  OverlaySpec expected(*widget_ptr, canvas);
+  ASSERT_TRUE(expected.is_modded());
+
+  clipper.pushOverlaySpec(*widget_ptr, canvas);
+  const OverlaySpec* modded = &clipper.currentOverlaySpec();
+  EXPECT_NE(inert, modded);
+  EXPECT_TRUE(modded->is_modded());
+  EXPECT_EQ(expected.is_disabled(), modded->is_disabled());
+  EXPECT_EQ(expected.base_overlay(), modded->base_overlay());
+  EXPECT_EQ(expected.press_overlay(), modded->press_overlay());
+
+  clipper.popOverlaySpec();
+  EXPECT_EQ(inert, &clipper.currentOverlaySpec());
+  EXPECT_FALSE(clipper.currentOverlaySpec().is_modded());
+
+  clipper.popOverlaySpec();
+  EXPECT_FALSE(clipper.currentOverlaySpec().is_modded());
+}
+
+TEST_F(PaintContextTest, ClipperOverlaySpecCoalescesAdjacentInertFrames) {
+  auto widget = std::make_unique<OverlaySpecSourceWidget>(env_);
+  OverlaySpecSourceWidget* widget_ptr = widget.get();
+  app_.add(std::move(widget), Box(0, 0, 7, 7));
+
+  Surface surface(display_.output(), 0, 0, display_.extents(),
+                  /*is_write_once=*/false, display_.getBackgroundColor(),
+                  FillMode::kVisible, BlendingMode::kSourceOver);
+  Canvas canvas(&surface);
+  internal::ClipperState clipper_state;
+  Clipper clipper(clipper_state, canvas.out(), roo_time::Uptime::Max());
+
+  clipper.pushOverlaySpec(*widget_ptr, canvas);
+  const OverlaySpec* first = &clipper.currentOverlaySpec();
+  ASSERT_FALSE(first->is_modded());
+
+  clipper.pushOverlaySpec(*widget_ptr, canvas);
+  EXPECT_EQ(first, &clipper.currentOverlaySpec());
+
+  clipper.popOverlaySpec();
+  EXPECT_EQ(first, &clipper.currentOverlaySpec());
+  EXPECT_FALSE(clipper.currentOverlaySpec().is_modded());
+
+  clipper.popOverlaySpec();
+  EXPECT_FALSE(clipper.currentOverlaySpec().is_modded());
+}
+
+TEST_F(PaintContextTest, PaintContextOverlaySpecForwardsFromClipper) {
+  auto widget = std::make_unique<OverlaySpecSourceWidget>(env_);
+  OverlaySpecSourceWidget* widget_ptr = widget.get();
+  app_.add(std::move(widget), Box(0, 0, 7, 7));
+  widget_ptr->setSelected(true);
+  widget_ptr->setPressed(true);
+
+  Surface surface(display_.output(), 0, 0, display_.extents(),
+                  /*is_write_once=*/false, display_.getBackgroundColor(),
+                  FillMode::kVisible, BlendingMode::kSourceOver);
+  Canvas canvas(&surface);
+  internal::ClipperState clipper_state;
+  Clipper clipper(clipper_state, canvas.out(), roo_time::Uptime::Max());
+
+  clipper.pushOverlaySpec(*widget_ptr, canvas);
+  PaintContext ctx(canvas, clipper);
+
+  EXPECT_EQ(&clipper.currentOverlaySpec(), &ctx.overlaySpec());
+  EXPECT_EQ(clipper.currentOverlaySpec().base_overlay(),
+            ctx.overlaySpec().base_overlay());
+  EXPECT_TRUE(ctx.overlaySpec().is_modded());
+
+  clipper.popOverlaySpec();
 }
 
 TEST(PaintContextSize, StaysWithinCanvasPlusPointer) {

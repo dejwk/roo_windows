@@ -61,7 +61,11 @@ inline int16_t animation_radius(const Rect& bounds, XDim x, XDim y,
 
 }  // namespace
 
-OverlaySpec::OverlaySpec() : is_modded_(false), press_overlay_(nullptr) {}
+OverlaySpec::OverlaySpec()
+    : is_modded_(false),
+      is_disabled_(false),
+      base_overlay_(roo_display::color::Transparent),
+      press_overlay_(nullptr) {}
 
 OverlaySpec::OverlaySpec(Widget& widget, const Canvas& canvas)
     : is_modded_(false),

@@ -79,19 +79,19 @@ Canvas SurfaceWidget::prepareContentsCanvas(const Canvas& in) {
   return canvas;
 }
 
-void SurfaceWidget::finalizePaintWidget(const Canvas& canvas, Clipper& clipper,
-                                        const OverlaySpec& overlay_spec) const {
-  emitSurfaceDecoration(canvas, clipper, overlay_spec);
-  Widget::finalizePaintWidget(canvas, clipper, overlay_spec);
+void SurfaceWidget::finalizePaintWidget(const Canvas& canvas,
+                                        Clipper& clipper) const {
+  emitSurfaceDecoration(canvas, clipper);
+  Widget::finalizePaintWidget(canvas, clipper);
 }
 
-void SurfaceWidget::emitSurfaceDecoration(
-    const Canvas& canvas, Clipper& clipper,
-    const OverlaySpec& overlay_spec) const {
+void SurfaceWidget::emitSurfaceDecoration(const Canvas& canvas,
+                                          Clipper& clipper) const {
   BorderStyle border_style = getBorderStyle().trim(width(), height());
   uint8_t border_thickness = border_style.getThickness();
   uint8_t elevation = getElevation();
   if (elevation != 0 || border_thickness != 0) {
+    const OverlaySpec& overlay_spec = clipper.currentOverlaySpec();
     roo_display::Box absolute_bounds(canvas.dx(), canvas.dy(),
                                      width() - 1 + canvas.dx(),
                                      height() - 1 + canvas.dy());

@@ -77,8 +77,7 @@ class SurfaceWidget : public Widget {
   // {before, after} elevations.
   void elevationChanged(int higherElevation);
 
-  void finalizePaintWidget(const Canvas& s, Clipper& clipper,
-                           const OverlaySpec& overlay_spec) const override;
+  void finalizePaintWidget(const Canvas& s, Clipper& clipper) const override;
 
   Canvas prepareCanvas(const Canvas& in) override;
 
@@ -91,8 +90,7 @@ class SurfaceWidget : public Widget {
  private:
   // Emits surface-owned decoration such as shadow and outline. The generic
   // Widget finalization path intentionally does not know about these effects.
-  void emitSurfaceDecoration(const Canvas& s, Clipper& clipper,
-                             const OverlaySpec& overlay_spec) const;
+  void emitSurfaceDecoration(const Canvas& s, Clipper& clipper) const;
 };
 
 }  // namespace roo_windows

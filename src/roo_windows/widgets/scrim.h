@@ -34,8 +34,8 @@ class Scrim : public Widget {
  protected:
   /// Installs the scrim's fill as an overlay over the clip box rather than
   /// painting opaque pixels, so widgets beneath remain visible through it.
-  void finalizePaintWidget(const Canvas& canvas, Clipper& clipper,
-                           const OverlaySpec& overlay_spec) const override {
+  void finalizePaintWidget(const Canvas& canvas,
+                           Clipper& clipper) const override {
     clipper.addOverlay(&fill_, canvas.clip_box());
   }
 

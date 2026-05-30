@@ -587,21 +587,23 @@ void Widget::paintWidget(const Canvas& canvas, Clipper& clipper) {
     markCleanDescending();
     if (!hasDecorationOverflow()) return;
   }
-  OverlaySpec overlay_spec(*this, my_canvas);
+  clipper.pushOverlaySpec(*this, my_canvas);
+  const OverlaySpec& overlay_spec = clipper.currentOverlaySpec();
   if (!empty) {
     if (!overlay_spec.is_modded()) {
       paintWidgetContents(my_canvas, clipper);
     } else {
-      paintWidgetModded(my_canvas, overlay_spec, clipper);
+      paintWidgetModded(my_canvas, clipper);
     }
   }
   my_canvas.set_clip_box(canvas.clip_box());
-  finalizePaintWidget(my_canvas, clipper, overlay_spec);
+  finalizePaintWidget(my_canvas, clipper);
+  clipper.popOverlaySpec();
 }
 
-void Widget::paintWidgetModded(Canvas& canvas, const OverlaySpec& overlay_spec,
-                               Clipper& clipper) {
+void Widget::paintWidgetModded(Canvas& canvas, Clipper& clipper) {
   // Keeping this in a separate methods sheds 32 bytes from the stack.
+  const OverlaySpec& overlay_spec = clipper.currentOverlaySpec();
   if (overlay_spec.is_disabled()) {
     roo_display::DisplayOutput& out = canvas.out();
     roo_display::TranslucencyFilter disablement_filter(
@@ -684,9 +686,7 @@ Canvas Widget::prepareContentsCanvas(const Canvas& in) {
   return canvas;
 }
 
-void Widget::finalizePaintWidget(const Canvas& canvas, Clipper& clipper,
-                                 const OverlaySpec& overlay_spec) const {
-  (void)overlay_spec;
+void Widget::finalizePaintWidget(const Canvas& canvas, Clipper& clipper) const {
   Rect exclusion = getDirectPaintExclusionBounds();
   roo_display::Box absolute_bounds(
       canvas.dx() + exclusion.xMin(), canvas.dy() + exclusion.yMin(),

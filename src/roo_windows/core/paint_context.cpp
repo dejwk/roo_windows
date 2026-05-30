@@ -17,6 +17,10 @@ Canvas& PaintContext::canvas() {
 
 void PaintContext::activate() const { clipper_->setBounds(canvas_.clip_box()); }
 
+const OverlaySpec& PaintContext::overlaySpec() const {
+  return clipper_->currentOverlaySpec();
+}
+
 void PaintContext::setClipBox(const roo_display::Box& clip_box) {
   canvas_.set_clip_box(clip_box);
   activate();

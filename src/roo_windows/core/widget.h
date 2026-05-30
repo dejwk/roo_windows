@@ -621,8 +621,7 @@ class Widget {
   // drawn. All widgets contribute an exclusion region because rendering walks
   // the z-order directly into the framebuffer; pixels not excluded remain
   // available only to later overlays or future redraws.
-  virtual void finalizePaintWidget(const Canvas& s, Clipper& clipper,
-                                   const OverlaySpec& overlay_spec) const;
+  virtual void finalizePaintWidget(const Canvas& s, Clipper& clipper) const;
 
   virtual Canvas prepareCanvas(const Canvas& in);
   virtual Canvas prepareContentsCanvas(const Canvas& in);
@@ -724,12 +723,7 @@ class Widget {
   // paintWidgetContents().
   void paintWidget(const Canvas& s, Clipper& clipper);
 
-  void paintWidgetModded(Canvas& canvas, const OverlaySpec& spec,
-                         Clipper& clipper);
-
-  // Helper functions for paintWidget.
-  void paintWidgetInteriorWithOverlays(Canvas& s, Clipper& clipper,
-                                       const OverlaySpec& overlay_spec);
+  void paintWidgetModded(Canvas& canvas, Clipper& clipper);
 
   void markDirty() { redraw_status_ |= kDirty; }
   void markInvalidated() { redraw_status_ |= (kDirty | kInvalidated); }

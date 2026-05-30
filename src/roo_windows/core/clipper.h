@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <deque>
+#include <utility>
 #include <vector>
 
 #include "roo_display.h"
@@ -19,6 +20,14 @@ class ClipperOutput;
 class Clipper;
 
 namespace internal {
+
+struct OverlaySpecStackEntry {
+  OverlaySpecStackEntry(OverlaySpec overlay_spec, uint16_t refcount)
+      : overlay_spec(std::move(overlay_spec)), refcount(refcount) {}
+
+  OverlaySpec overlay_spec;
+  uint16_t refcount;
+};
 
 /// Internal helper: wraps a `Rasterizable` with an additional clip box.
 ///
@@ -140,6 +149,7 @@ class ClipperState {
   // get invalidated.
   std::deque<Decoration> decorations_;
   std::deque<roo_display::SmoothShape> shape_overlays_;
+  std::deque<OverlaySpecStackEntry> overlay_specs_;
 
   std::vector<ClippedOverlay> overlays_;
   std::vector<ClippedOverlay> bounded_overlays_;
@@ -371,7 +381,11 @@ class Clipper {
   /// short-circuited.
   Clipper(internal::ClipperState& state, roo_display::DisplayOutput& out,
           roo_time::Uptime deadline)
-      : out_(state, out), deadline_(deadline) {}
+      : out_(state, out),
+        overlay_specs_(state.overlay_specs_),
+        deadline_(deadline) {
+    overlay_specs_.clear();
+  }
 
   /// Hints that subsequent draws will be confined to `bounds` (device
   /// coordinates). Lets the clipper temporarily ignore exclusions that fall
@@ -421,6 +435,37 @@ class Clipper {
                        outline_color);
   }
 
+  /// Pushes this widget's resolved overlay state onto the per-paint stack.
+  void pushOverlaySpec(Widget& widget, const Canvas& canvas) {
+    OverlaySpec overlay_spec(widget, canvas);
+    if (!overlay_spec.is_modded()) {
+      if (!overlay_specs_.empty() &&
+          !overlay_specs_.back().overlay_spec.is_modded()) {
+        ++overlay_specs_.back().refcount;
+        return;
+      }
+      overlay_specs_.emplace_back(OverlaySpec(), 1);
+      return;
+    }
+    overlay_specs_.emplace_back(std::move(overlay_spec), 1);
+  }
+
+  /// Pops the overlay state for the current widget paint frame.
+  void popOverlaySpec() {
+    if (overlay_specs_.empty()) return;
+    if (overlay_specs_.back().refcount > 1) {
+      --overlay_specs_.back().refcount;
+      return;
+    }
+    overlay_specs_.pop_back();
+  }
+
+  /// Returns the currently active widget overlay state.
+  const OverlaySpec& currentOverlaySpec() const {
+    if (overlay_specs_.empty()) return InertOverlaySpec();
+    return overlay_specs_.back().overlay_spec;
+  }
+
   /// Returns the filtered output that exclusions and overlays apply to.
   roo_display::DisplayOutput* out() { return &out_; }
 
@@ -439,7 +484,13 @@ class Clipper {
   }
 
  private:
+  static const OverlaySpec& InertOverlaySpec() {
+    static const OverlaySpec kInertOverlaySpec;
+    return kInertOverlaySpec;
+  }
+
   internal::ClipperOutput out_;
+  std::deque<internal::OverlaySpecStackEntry>& overlay_specs_;
   roo_time::Uptime deadline_;
 };
 
