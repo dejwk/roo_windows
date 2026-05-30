@@ -334,7 +334,7 @@ class Button : public BasicSurfaceWidget {
   const ButtonAppearance* appearance() const;
   void setAppearance(const ButtonAppearance* appearance);
 
-  void paint(const Canvas& canvas) const override;
+   void paint(PaintContext& ctx) const override;
   Dimensions getSuggestedMinimumDimensions() const override;
 };
 
@@ -353,7 +353,7 @@ class IconButton : public BasicSurfaceWidget {
   const IconButtonAppearance* appearance() const;
   void setAppearance(const IconButtonAppearance* appearance);
 
-  void paint(const Canvas& canvas) const override;
+   void paint(PaintContext& ctx) const override;
   Dimensions getSuggestedMinimumDimensions() const override;
 };
 

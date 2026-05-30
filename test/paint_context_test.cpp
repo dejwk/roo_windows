@@ -27,7 +27,7 @@ class OverlaySpecSourceWidget : public BasicSurfaceWidget {
 
   Color background() const override { return color::White; }
 
-  void paint(const Canvas& canvas) const override { canvas.clear(); }
+  void paint(PaintContext& ctx) const override { ctx.clear(); }
 
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(8, 8);

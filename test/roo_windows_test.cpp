@@ -16,10 +16,10 @@ class TiledRectWidget : public BasicSurfaceWidget {
 
   Color background() const override { return color::Black; }
 
-  void paint(const Canvas& canvas) const override {
-    canvas.clear();
+  void paint(PaintContext& ctx) const override {
+    ctx.clear();
     auto rect = FilledRect(0, 0, 5, 5, color::White);
-    canvas.drawTiled(rect, tile_bounds_, kNoAlign, draw_border_);
+    ctx.drawTiled(rect, tile_bounds_, kNoAlign, draw_border_);
   }
 
   Dimensions getSuggestedMinimumDimensions() const override {

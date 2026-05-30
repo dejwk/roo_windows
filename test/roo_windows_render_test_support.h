@@ -21,7 +21,7 @@ class ColorBoxWidget : public BasicSurfaceWidget {
 
   roo_display::Color background() const override { return color_; }
 
-  void paint(const Canvas& canvas) const override { canvas.clear(); }
+  void paint(PaintContext& ctx) const override { ctx.clear(); }
 
   Dimensions getSuggestedMinimumDimensions() const override { return dims_; }
 
@@ -65,7 +65,7 @@ class MutableShapeColorBoxWidget : public BasicSurfaceWidget {
     return rounded_ ? BorderStyle(10, 0) : BorderStyle(0, 0);
   }
 
-  void paint(const Canvas& canvas) const override { canvas.clear(); }
+  void paint(PaintContext& ctx) const override { ctx.clear(); }
 
   Dimensions getSuggestedMinimumDimensions() const override { return dims_; }
 

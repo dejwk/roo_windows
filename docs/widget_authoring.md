@@ -199,16 +199,22 @@ is a performance issue rather than a correctness issue.
 
 ### Prefer `paint()` for Simple Widgets
 
-Simple widgets should override `paint(const Canvas&)`.
+Simple widgets should override `paint(PaintContext&)`.
 
 The default [Widget::paintWidgetContents](../src/roo_windows/core/widget.cpp)
 implementation already performs the common bookkeeping:
 
 - it clips to the widget content bounds,
-- it calls `clipper.setBounds(...)` for the active clip,
-- it invokes `paint(...)`,
+- it keeps the clipper bounds aligned with the active clip through
+  `PaintContext`,
+- it invokes `paint(...)` with a widget-local `PaintContext`,
 - and after `paintWidgetContents()` returns,
   `finalizePaintWidget()` contributes the widget's exclusion region.
+
+Use `PaintContext` pass-throughs for normal drawing and clipper-backed paint
+side effects. Reach for `ctx.canvas()` only when a lower-level API still
+requires `Canvas`, and use `ctx.overlaySpec()` when framework modulation state
+matters.
 
 This is the right path for widgets whose content can be painted in a single
 paint plan where each pixel receives its final value directly. That paint plan

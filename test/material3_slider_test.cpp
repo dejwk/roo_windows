@@ -30,7 +30,7 @@ class SolidBackdrop : public BasicSurfaceWidget {
 
   Color background() const override { return color_; }
 
-  void paint(const Canvas& canvas) const override { canvas.clear(); }
+  void paint(PaintContext& ctx) const override { ctx.clear(); }
 
   Dimensions getSuggestedMinimumDimensions() const override { return dims_; }
 
@@ -2243,6 +2243,10 @@ TEST_F(Material3SliderRenderTest,
 
   int16_t sample_x = bubble.xMin() + bubble.width() / 4;
   int16_t sample_y = bubble.yMin() + bubble.height() / 4;
+  ASSERT_GE(sample_x, 0);
+  ASSERT_LT(sample_x, kWidth);
+  ASSERT_GE(sample_y, 0);
+  ASSERT_LT(sample_y, kHeight);
 
   EXPECT_EQ(QuantizeToArgb4444(env_.theme().color.inverseSurface),
             pixelAt(sample_x, sample_y));

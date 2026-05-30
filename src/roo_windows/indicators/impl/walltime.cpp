@@ -36,11 +36,11 @@ void WalltimeIndicatorBase::update() {
   setDirty();
 }
 
-void WalltimeIndicatorBase::paint(const roo_windows::Canvas& canvas) const {
+void WalltimeIndicatorBase::paint(PaintContext& ctx) const {
   roo_display::Color color =
       color_.a() == 0 ? parent()->defaultColor() : color_;
-  canvas.drawTiled(roo_display::StringViewLabel(val_, font(), color), bounds(),
-                   roo_display::kMiddle);
+  ctx.drawTiled(roo_display::StringViewLabel(val_, font(), color), bounds(),
+                roo_display::kMiddle);
 }
 
 }  // namespace roo_windows

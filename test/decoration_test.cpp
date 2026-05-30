@@ -17,7 +17,7 @@ class SolidWidget : public BasicSurfaceWidget {
 
   Color background() const override { return color_; }
 
-  void paint(const Canvas& canvas) const override { canvas.clear(); }
+  void paint(PaintContext& ctx) const override { ctx.clear(); }
 
   Dimensions getSuggestedMinimumDimensions() const override { return dims_; }
 
@@ -45,7 +45,7 @@ class DecoratedWidget : public BasicSurfaceWidget {
 
   uint8_t getElevation() const override { return elevation_; }
 
-  void paint(const Canvas& canvas) const override { canvas.clear(); }
+  void paint(PaintContext& ctx) const override { ctx.clear(); }
 
   Dimensions getSuggestedMinimumDimensions() const override { return dims_; }
 

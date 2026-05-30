@@ -102,7 +102,7 @@ void Container::paintWidgetContents(PaintContext& ctx) {
     // Paint the surface.
     PaintContext surface_ctx = prepareSurfaceContext(ctx, invalid_region);
     if (!surface_ctx.empty()) {
-      Widget::paint(surface_ctx);
+      paint(surface_ctx);
     }
   }
 }
@@ -148,7 +148,7 @@ void Container::fastDrawChildShadow(Widget& child, PaintContext& ctx) {
   ctx.addExclusion(shadow_clip);
 }
 
-void Container::paint(const Canvas& canvas) const { canvas.clear(); }
+void Container::paint(PaintContext& ctx) const { ctx.clear(); }
 
 Widget* Container::dispatchTouchDownEvent(XDim x, YDim y) {
   if (onInterceptTouchEvent(TouchEvent(TouchEvent::DOWN, x, y))) {

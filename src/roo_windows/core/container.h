@@ -54,8 +54,8 @@ class Container : public SurfaceWidget {
 
   /// Draws the surface area of this panel. The default implementation draws
   /// a transparent rectangle. (Effectively, the rectangle is drawn in the
-  /// panel's background color, which is pre-set in the specified canvas.)
-  void paint(const Canvas& s) const override;
+  /// panel's background color, which is pre-set in the active paint context.)
+  void paint(PaintContext& ctx) const override;
 
   /// Routes a touch-down event to the front-most child that contains the
   /// point, descending the tree.

@@ -220,8 +220,8 @@ class Widget {
   // Paint-pipeline only: this depends on theme(), so it is valid only after
   // the widget is attached to the parent/application tree.
   //
-  // NOTE: during the call to paint(const Canvas& canvas), the default
-  // foreground color is derived from the effective container role.
+  // NOTE: during paint(PaintContext&), the default foreground color is
+  // derived from the effective container role.
   roo_display::Color defaultColor() const {
     return theme().color.contentColorFor(effectiveContainerRole());
   }
@@ -247,13 +247,6 @@ class Widget {
 
   // Returns the offset in the device's coordinates.
   void getAbsoluteOffset(XDim& dx, YDim& dy) const;
-
-  // Legacy bridge hook kept while the framework migrates to
-  // paint(PaintContext&).
-  // The Canvas's offset and clipbox has been pre-initialized so that this
-  // widget's top-left corner is painted at (0, 0), and the clip box is
-  // constrained to this widget's bounds (and non-empty).
-  virtual void paint(const Canvas& s) const {}
 
   virtual MainWindow* getMainWindow();
   virtual const MainWindow* getMainWindow() const;
@@ -603,8 +596,8 @@ class Widget {
   // Mark this widget and its descendants as non-dirty.
   virtual void markCleanDescending() { markClean(); }
 
-  // Preferred widget authoring hook during the PaintContext migration.
-  // Default implementation forwards to paint(const Canvas&).
+  // Normal widget authoring hook. Override this for widget-local painting;
+  // use ctx.canvas() only when a lower-level API still requires Canvas.
   virtual void paint(PaintContext& ctx) const;
 
   // Responsible for drawing a widget to the specified paint context, and

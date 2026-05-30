@@ -28,7 +28,7 @@ class WalltimeIndicatorBase : public Widget {
   void update();
 
   /// Renders the cached `HH:MM` string in the configured font.
-  void paint(const roo_windows::Canvas& canvas) const override;
+  void paint(PaintContext& ctx) const override;
 
   Padding getPadding() const override { return Padding(0); }
 

@@ -578,9 +578,7 @@ PaintContext Widget::preparePaintContext(const Canvas& in, Clipper& clipper) {
   return PaintContext(prepareCanvas(in), clipper);
 }
 
-void Widget::paint(PaintContext& ctx) const {
-  paint(ctx.canvas());
-}
+void Widget::paint(PaintContext&) const {}
 
 void Widget::paintWidget(const Canvas& canvas, Clipper& clipper) {
   if (!isVisible()) {

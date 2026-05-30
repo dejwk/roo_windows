@@ -25,7 +25,7 @@ exclusion pipeline that containers and complex widgets use.
 
 The result is an awkward split:
 
-- simple widgets override `paint(const Canvas&)`,
+- simple widgets used to override `paint(const Canvas&)`,
 - complex widgets override `paintWidgetContents(const Canvas&, Clipper&)`,
 - and some overlay-only behavior lives in `finalizePaintWidget(...)`.
 
@@ -133,10 +133,10 @@ The final widget hook is:
 virtual void paint(PaintContext& ctx) const;
 ```
 
-The migration uses a temporary bridge so each commit remains testable. During
-the bridge period, the new hook defaults to forwarding to the old
-`paint(const Canvas&)` hook. After all library widgets and examples migrate,
-the old hook is removed.
+The migration used a temporary bridge so each intermediate commit remained
+testable. With the bridge removed, `paint(PaintContext&)` is the sole
+widget-facing paint hook and raw `Canvas` remains available as the lower-level
+drawing adapter through `ctx.canvas()`.
 
 ## Design Details
 
@@ -653,23 +653,12 @@ class Widget {
  protected:
   virtual void paint(PaintContext& ctx) const;
   virtual void paintWidgetContents(PaintContext& ctx);
-
-  // Temporary migration bridge. Removed in the final cleanup phase.
-  virtual void paint(const Canvas& canvas) const {}
 };
 ```
 
-During the bridge period, the default `paint(PaintContext&)`
-implementation is:
-
-```cpp
-void Widget::paint(PaintContext& ctx) const {
-  paint(ctx.canvas());
-}
-```
-
-After all widgets migrate, `paint(const Canvas&)` is removed and
-`paint(PaintContext&)` keeps the empty default implementation.
+The bridge has been removed, so `paint(PaintContext&)` now keeps the empty
+default implementation. Widgets that need lower-level canvas APIs use
+`ctx.canvas()` explicitly.
 
 ## Implementation Plan
 

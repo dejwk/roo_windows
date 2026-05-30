@@ -68,11 +68,12 @@ class ValueIndicatorBubble {
   // transient paint envelope without paying for a per-frame text
   // measurement.
   //
-  // For horizontal sliders, kWithinBounds clamps the bubble horizontally to
-  // [0, parent_width). For vertical sliders, kWithinBounds clamps the bubble
-  // vertically to [0, parent_height). In both orientations, non-clamped
-  // behaviors allow the bubble to overhang the travel axis by roughly half the
-  // conservative bubble span plus a small thumb overhang.
+  // For horizontal sliders, kWithinBounds clamps the bubble to the slider's
+  // horizontal span and shifts it down when needed so the pill stays inside
+  // the slider's local bounds. For vertical sliders, kWithinBounds clamps the
+  // bubble vertically to [0, parent_height). In both orientations,
+  // non-clamped behaviors allow the bubble to overhang the travel axis by
+  // roughly half the conservative bubble span plus a small thumb overhang.
   static Rect ConservativeBounds(int16_t parent_width, int16_t parent_height,
                                  int16_t thumb_overhang,
                                  SliderValueIndicatorBehavior behavior,

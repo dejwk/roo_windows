@@ -353,8 +353,6 @@ Dimensions Button::getSuggestedMinimumDimensions() const {
 
 void Button::paint(PaintContext& ctx) const { paintWithCanvas(ctx.canvas()); }
 
-void Button::paint(const Canvas& canvas) const { paintWithCanvas(canvas); }
-
 void Button::paintWithCanvas(const Canvas& canvas) const {
   Rect b = bounds();
   Color content = resolveContentColor();
