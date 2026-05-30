@@ -19,7 +19,7 @@ Insets InsetsFromDrawableBounds(const roo_display::Drawable& drawable) {
 
 }  // namespace
 
-void Icon::paint(const Canvas& canvas) const {
+void Icon::paint(PaintContext& ctx) const {
   Color color = color_;
   if (color == roo_display::color::Transparent) {
     const Theme& myTheme = theme();
@@ -30,12 +30,12 @@ void Icon::paint(const Canvas& canvas) const {
     }
   }
   if (icon_ == nullptr) {
-    canvas.clear();
+    ctx.clear();
     return;
   }
   roo_display::Pictogram icon(*icon_);
-  icon.color_mode().setColor(AlphaBlend(canvas.bgcolor(), color));
-  canvas.drawTiled(icon, bounds(), kCenter | kMiddle, isInvalidated());
+  icon.color_mode().setColor(AlphaBlend(ctx.bgcolor(), color));
+  ctx.drawTiled(icon, bounds(), kCenter | kMiddle, isInvalidated());
 }
 
 void Icon::setIcon(const roo_display::Pictogram& icon) {

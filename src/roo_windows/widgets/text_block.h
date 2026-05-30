@@ -40,7 +40,7 @@ class TextBlock : public BasicWidget {
 
   /// Paints all currently laid-out lines using the configured font, color
   /// and alignment, including any trailing ellipsis when text is clipped.
-  void paint(const Canvas& s) const override;
+  void paint(PaintContext& ctx) const override;
 
   /// Reports ink insets matching the smallest rectangle that contains the
   /// rendered glyphs, so the dirty-region tracker only repaints actual text.

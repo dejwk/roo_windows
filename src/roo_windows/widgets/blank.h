@@ -13,7 +13,7 @@ class Blank : public BasicWidget {
   Blank(const Environment& env, Dimensions dims)
       : BasicWidget(env), dims_(dims) {}
 
-  void paint(const Canvas& canvas) const override { canvas.clear(); }
+  void paint(PaintContext& ctx) const override { ctx.clear(); }
 
   Dimensions getSuggestedMinimumDimensions() const override { return dims_; }
 

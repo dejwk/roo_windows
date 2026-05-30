@@ -12,6 +12,29 @@ namespace roo_windows {
 namespace material3 {
 namespace {
 
+using roo_display::Color;
+
+roo_display::Color QuantizeToArgb4444(roo_display::Color color) {
+  roo_display::Argb4444 mode;
+  return mode.toArgbColor(mode.fromArgbColor(color));
+}
+
+class SolidBackdrop : public BasicSurfaceWidget {
+ public:
+  SolidBackdrop(const Environment& env, Color color, Dimensions dims)
+      : BasicSurfaceWidget(env), color_(color), dims_(dims) {}
+
+  Color background() const override { return color_; }
+
+  void paint(const Canvas& canvas) const override { canvas.clear(); }
+
+  Dimensions getSuggestedMinimumDimensions() const override { return dims_; }
+
+ private:
+  Color color_;
+  Dimensions dims_;
+};
+
 class Material3ButtonClickAnimationTest : public testing::Test {
  protected:
   static constexpr int16_t kWidth = 160;
@@ -25,6 +48,14 @@ class Material3ButtonClickAnimationTest : public testing::Test {
 
   bool refresh(roo_time::Uptime deadline = roo_time::Uptime::Max()) {
     return app_.refresh(deadline);
+  }
+
+  roo_display::Color pixelAt(int16_t x, int16_t y) const {
+    int16_t px[] = {x};
+    int16_t py[] = {y};
+    roo_display::Color color[1];
+    offscreen_.raster().readColors(px, py, 1, color);
+    return color[0];
   }
 
   roo::byte raster_[kWidth * kHeight * 2];
@@ -272,6 +303,32 @@ TEST_F(Material3ButtonClickAnimationTest,
   delay(kPressAnimationMillis / 4 + 20);
   EXPECT_EQ(pressed_radius,
             button_ptr->getBorderStyle().top_left_corner_radius());
+}
+
+// Verifies that rounded button contents stay clipped to the rectangular
+// surface interior, leaving the decoration-owned corner cutout on the
+// backdrop both at rest and during the press shape morph.
+TEST_F(Material3ButtonClickAnimationTest,
+       RoundButtonContentsDoNotPaintCornerCutouts) {
+  constexpr Color kBackdropColor(0xFFE7F6F2);
+
+  auto backdrop = std::make_unique<SolidBackdrop>(
+      env_, kBackdropColor, Dimensions(kWidth, kHeight));
+  app_.add(std::move(backdrop), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
+
+  auto button = std::make_unique<Button>(env_, "Save");
+  Button* button_ptr = button.get();
+  app_.add(std::move(button), roo_display::Box(20, 20, 139, 59));
+
+  ASSERT_TRUE(refresh());
+
+  Color expected_backdrop = QuantizeToArgb4444(kBackdropColor);
+  EXPECT_EQ(expected_backdrop, pixelAt(21, 21));
+
+  button_ptr->onShowPress(button_ptr->width() / 2, button_ptr->height() / 2);
+  delay(kPressAnimationMillis / 4);
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(expected_backdrop, pixelAt(21, 21));
 }
 
 }  // namespace

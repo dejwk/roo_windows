@@ -25,7 +25,7 @@ class WifiIndicatorBase : public BasicWidget {
   WifiIndicatorBase(const Environment& env, roo_display::Color color);
 
   /// Resolves the current state to an icon and draws it.
-  void paint(const Canvas& canvas) const override;
+  void paint(PaintContext& ctx) const override;
   // Padding getPadding() const override { return Padding(0); }
 
   /// Updates connection state (disconnected / connected with or without

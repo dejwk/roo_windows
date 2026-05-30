@@ -23,7 +23,8 @@ void IconWithCaption::onLayout(bool changed, const Rect& rect) {
   lo_border_ = border - hi_border_;
 }
 
-void IconWithCaption::paint(const Canvas& canvas) const {
+void IconWithCaption::paint(PaintContext& ctx) const {
+  const Canvas& canvas = ctx.canvas();
   Color color = color_;
   if (color == roo_display::color::Transparent) {
     const Theme& myTheme = theme();

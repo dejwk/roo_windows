@@ -25,7 +25,7 @@ class Checkbox : public BasicWidget {
 
   /// Paints a solid square frame; when on, additionally paints the check
   /// glyph; when indeterminate, paints a horizontal bar.
-  void paint(const Canvas& canvas) const override;
+  void paint(PaintContext& ctx) const override;
 
   /// Reports the fixed square footprint sized to the legacy checkbox glyph.
   Dimensions getSuggestedMinimumDimensions() const override;

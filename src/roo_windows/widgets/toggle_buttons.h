@@ -22,7 +22,7 @@ class ToggleButtons : public Panel {
   roo_windows::Widget& addButton(const MonoIcon& icon);
 
   /// Draws left- and right-side framing around the togglebutton control.
-  void paint(const Canvas& canvas) const override;
+  void paint(PaintContext& ctx) const override;
 
   /// Reports the minimum size derived from the largest button glyph.
   Dimensions getSuggestedMinimumDimensions() const override;
@@ -62,7 +62,7 @@ class ToggleButtons : public Panel {
     }
 
     /// Paints the icon glyph; the active overlay is provided by the group.
-    void paint(const Canvas& canvas) const override;
+    void paint(PaintContext& ctx) const override;
 
     /// Reports the icon's anchor extents plus a 1 dp margin.
     Dimensions getSuggestedMinimumDimensions() const override {

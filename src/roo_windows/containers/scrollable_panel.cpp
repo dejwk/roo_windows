@@ -56,19 +56,19 @@ void VerticalScrollBar::setRange(int16_t begin, int16_t end) {
   setDirty();
 }
 
-void VerticalScrollBar::paint(const Canvas& canvas) const {
+void VerticalScrollBar::paint(PaintContext& ctx) const {
   Color s = theme().color.onSurface;
   s.set_a(0xC0);
-  s = AlphaBlend(canvas.bgcolor(), s);
+  s = AlphaBlend(ctx.bgcolor(), s);
   Color semi = theme().color.onSurface;
   semi.set_a(0x40);
-  semi = AlphaBlend(canvas.bgcolor(), semi);
+  semi = AlphaBlend(ctx.bgcolor(), semi);
   if (begin_ > 0) {
-    canvas.fillRect(0, 0, width() - 1, begin_ - 1, semi);
+    ctx.fillRect(0, 0, width() - 1, begin_ - 1, semi);
   }
-  canvas.fillRect(0, begin_, width() - 1, end_, s);
+  ctx.fillRect(0, begin_, width() - 1, end_, s);
   if (end_ + 1 < height()) {
-    canvas.fillRect(0, end_ + 1, width() - 1, height() - 1, semi);
+    ctx.fillRect(0, end_ + 1, width() - 1, height() - 1, semi);
   }
 }
 

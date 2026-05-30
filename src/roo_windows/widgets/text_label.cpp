@@ -60,11 +60,11 @@ TextLabel::TextLabel(const Environment& env, std::string value,
       color_(color),
       gravity_(gravity) {}
 
-void TextLabel::paint(const Canvas& canvas) const {
+void TextLabel::paint(PaintContext& ctx) const {
   roo_display::Color color =
       color_.a() == 0 ? parent()->defaultColor() : color_;
-  canvas.drawTiled(roo_display::StringViewLabel(value_, font_, color), bounds(),
-                   adjustAlignment(gravity_.asAlignment()));
+  ctx.drawTiled(roo_display::StringViewLabel(value_, font_, color), bounds(),
+                adjustAlignment(gravity_.asAlignment()));
 }
 
 Insets TextLabel::getInkInsets() const {
@@ -155,11 +155,11 @@ StringViewLabel::StringViewLabel(const Environment& env, roo::string_view value,
       color_(color),
       gravity_(gravity) {}
 
-void StringViewLabel::paint(const Canvas& canvas) const {
+void StringViewLabel::paint(PaintContext& ctx) const {
   roo_display::Color color =
       color_.a() == 0 ? parent()->defaultColor() : color_;
-  canvas.drawTiled(roo_display::StringViewLabel(value_, font_, color), bounds(),
-                   adjustAlignment(gravity_.asAlignment()));
+  ctx.drawTiled(roo_display::StringViewLabel(value_, font_, color), bounds(),
+                adjustAlignment(gravity_.asAlignment()));
 }
 
 Insets StringViewLabel::getInkInsets() const {

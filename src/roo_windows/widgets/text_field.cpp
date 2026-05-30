@@ -11,12 +11,12 @@ namespace roo_windows {
 
 using namespace roo_display;
 
-void VisibilityToggle::paint(const Canvas& canvas) const {
+void VisibilityToggle::paint(PaintContext& ctx) const {
   Pictogram icon(isOn() ? SCALED_ROO_ICON(filled, action_visibility)
                         : SCALED_ROO_ICON(filled, action_visibility_off));
   Color color = parent()->defaultColor();
   icon.color_mode().setColor(color);
-  canvas.drawTiled(icon, bounds(), kCenter | kMiddle, isInvalidated());
+  ctx.drawTiled(icon, bounds(), kCenter | kMiddle, isInvalidated());
 }
 
 namespace {
@@ -104,7 +104,8 @@ class TextFieldInterior : public Drawable {
 
 }  // namespace
 
-void TextField::paint(const Canvas& canvas) const {
+void TextField::paint(PaintContext& ctx) const {
+  const Canvas& canvas = ctx.canvas();
   ColorRole bg_role = effectiveContainerRole();
   Color color = text_color_.a() == 0
                     ? parent()->theme().color.contentColorFor(bg_role)

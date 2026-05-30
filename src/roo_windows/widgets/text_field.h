@@ -47,7 +47,7 @@ class VisibilityToggle : public BasicWidget {
 
   /// Selects the eye or eye-slash pictogram based on the current state and
   /// paints it centered.
-  void paint(const Canvas& canvas) const override;
+  void paint(PaintContext& ctx) const override;
 
   using Widget::isOff;
   using Widget::isOn;
@@ -224,7 +224,7 @@ class TextField : public BasicWidget {
 
   /// Paints the value (or hint), selection highlight, and blinking caret
   /// when this field is the active editor target.
-  void paint(const Canvas& canvas) const override;
+  void paint(PaintContext& ctx) const override;
 
   /// Reports the font-measured width and the same fixed height used by
   /// `getPreferredSize()`.

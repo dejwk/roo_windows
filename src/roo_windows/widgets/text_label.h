@@ -29,7 +29,7 @@ class TextLabel : public BasicWidget {
 
   /// Paints the owned string in a single line, with the configured gravity
   /// applied within the widget bounds.
-  void paint(const Canvas& canvas) const override;
+  void paint(PaintContext& ctx) const override;
 
   /// Reports ink insets matching the rendered text rectangle within the
   /// widget bounds (so partial redraws only touch the glyphs).
@@ -88,7 +88,7 @@ class StringViewLabel : public BasicWidget {
 
   /// Paints the referenced string in a single line, with the configured
   /// gravity applied within the widget bounds.
-  void paint(const Canvas& canvas) const override;
+  void paint(PaintContext& ctx) const override;
 
   /// Reports ink insets matching the rendered text rectangle.
   Insets getInkInsets() const override;

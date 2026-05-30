@@ -150,6 +150,7 @@ class Button : public BasicSurfaceWidget {
 
   // Widget overrides.
   /// Paints the button's label and optional leading icon.
+  void paint(PaintContext& ctx) const override;
   void paint(const Canvas& canvas) const override;
 
   /// Returns the minimum size needed for the current content and Material 3
@@ -161,6 +162,8 @@ class Button : public BasicSurfaceWidget {
   void notifyStateChanged(uint16_t state_diff) override;
 
  private:
+  void paintWithCanvas(const Canvas& canvas) const;
+
   // Content color for label and icon, resolved against the active theme.
   Color resolveContentColor() const;
 

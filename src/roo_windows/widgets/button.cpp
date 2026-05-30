@@ -125,7 +125,8 @@ Dimensions SimpleButton::getSuggestedMinimumDimensions() const {
       Scaled(4) + std::max(icon().anchorExtents().height(), text_height));
 }
 
-void SimpleButton::paint(const Canvas& canvas) const {
+void SimpleButton::paint(PaintContext& ctx) const {
+  const Canvas& canvas = ctx.canvas();
   Rect bounds = this->bounds();
   if (!hasIcon() && label().empty()) {
     canvas.clearRect(bounds);

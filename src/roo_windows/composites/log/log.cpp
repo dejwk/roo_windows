@@ -131,7 +131,8 @@ int16_t Log::maxLineWidth() const {
   return max_line_width_;
 }
 
-void Log::paint(const Canvas& canvas) const {
+void Log::paint(PaintContext& ctx) const {
+  const Canvas& canvas = ctx.canvas();
   Padding p = getPadding();
   int first_visible_line = (canvas.clip_box().yMin() - canvas.dy() - p.top()) /
                            font_->metrics().linespace();

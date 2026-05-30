@@ -96,7 +96,8 @@ void Checkbox::onClicked() {
   Widget::onClicked();
 }
 
-void Checkbox::paint(const Canvas& canvas) const {
+void Checkbox::paint(PaintContext& ctx) const {
+  const Canvas& canvas = ctx.canvas();
   Tokens tokens = ResolveTokens(*this);
   const Pictogram* mark = MarkForState(onOffState());
   if (mark == nullptr) {
@@ -124,7 +125,7 @@ void Checkbox::paint(const Canvas& canvas) const {
   roo_display::Offset offset =
       (kCenter | kMiddle).resolveOffset(box, mark_icon.anchorExtents());
   composite.addInput(&mark_icon, offset.dx, offset.dy);
-  canvas.drawTiled(composite, bounds(), kCenter | kMiddle, isInvalidated());
+  ctx.drawTiled(composite, bounds(), kCenter | kMiddle, isInvalidated());
 }
 
 Dimensions Checkbox::getSuggestedMinimumDimensions() const {

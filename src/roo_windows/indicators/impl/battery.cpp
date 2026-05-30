@@ -19,12 +19,12 @@ BatteryIndicator::BatteryIndicator(const Environment& env,
       unknown_(false),
       level_(LEVEL_20) {}
 
-void BatteryIndicator::paint(const Canvas& canvas) const {
+void BatteryIndicator::paint(PaintContext& ctx) const {
   roo_display::Pictogram icon(*icons()[status()]);
   roo_display::Color color =
       color_.a() == 0 ? parent()->defaultColor() : color_;
   icon.color_mode().setColor(color);
-  canvas.drawTiled(icon, bounds(), kCenter | kMiddle, isInvalidated());
+  ctx.drawTiled(icon, bounds(), kCenter | kMiddle, isInvalidated());
 }
 
 void BatteryIndicator::setBatteryPercent(int percent) {

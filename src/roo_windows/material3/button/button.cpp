@@ -351,7 +351,11 @@ Dimensions Button::getSuggestedMinimumDimensions() const {
   return Dimensions(metrics.content_width, metrics.content_height);
 }
 
-void Button::paint(const Canvas& canvas) const {
+void Button::paint(PaintContext& ctx) const { paintWithCanvas(ctx.canvas()); }
+
+void Button::paint(const Canvas& canvas) const { paintWithCanvas(canvas); }
+
+void Button::paintWithCanvas(const Canvas& canvas) const {
   Rect b = bounds();
   Color content = resolveContentColor();
   if (label_.empty() && !hasIcon()) {

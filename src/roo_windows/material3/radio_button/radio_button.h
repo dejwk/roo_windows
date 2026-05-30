@@ -27,7 +27,7 @@ class RadioButton : public BasicWidget {
   Margins getDefaultMargins() const override { return Margins(0); }
 
   /// Paints the outer ring and, when on, the inner dot in theme colors.
-  void paint(const Canvas& canvas) const override;
+  void paint(PaintContext& ctx) const override;
 
   /// Reports a fixed square footprint matching the Material 3 radio tokens.
   Dimensions getSuggestedMinimumDimensions() const override;

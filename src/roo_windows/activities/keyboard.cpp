@@ -129,7 +129,7 @@ class PressHighlighter : public Widget {
 
   void setTarget(const TextButton* target) { target_ = target; }
 
-  void paint(const Canvas& canvas) const override;
+  void paint(PaintContext& ctx) const override;
   Dimensions getSuggestedMinimumDimensions() const override;
 
   const KeyboardPage* page() const;
@@ -654,9 +654,9 @@ const KeyboardWidget* Keyboard::contents() const {
   return (KeyboardWidget*)contents_.get();
 }
 
-void PressHighlighter::paint(const Canvas& canvas) const {
+void PressHighlighter::paint(PaintContext& ctx) const {
   if (target_ == nullptr) {
-    canvas.clear();
+    ctx.clear();
     return;
   }
   const Theme& th = theme();
@@ -664,7 +664,7 @@ void PressHighlighter::paint(const Canvas& canvas) const {
   Color overlay = roo_display::color::Black;
   overlay.set_a(th.pressedOpacity(kbTh.normalButton));
   Color bgcolor = roo_display::AlphaBlend(kbTh.normalButton, overlay);
-  canvas.drawObject(roo_display::MakeTileOf(
+  ctx.drawObject(roo_display::MakeTileOf(
       roo_display::StringViewLabel(target_->label(), font_body1(),
                                    target_->contentColor()),
       bounds().asBox(), roo_display::kCenter | roo_display::kTop.shiftBy(3),

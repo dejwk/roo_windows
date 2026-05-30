@@ -14,13 +14,13 @@ void Checkbox::onClicked() {
   Widget::onClicked();
 }
 
-void Checkbox::paint(const Canvas& canvas) const {
+void Checkbox::paint(PaintContext& ctx) const {
   OnOffState state = onOffState();
   ColorRole bg_role = effectiveContainerRole();
   Color color =
       state == OnOffState::kOn
           ? theme().color.accentColorFor(bg_role)
-          : AlphaBlend(canvas.bgcolor(),
+          : AlphaBlend(ctx.bgcolor(),
                        theme().color.contentColorFor(bg_role).withA(0x90));
   RleImage4bppxBiased<Alpha4, ProgMemPtr> img =
       state == OnOffState::kOn ? SCALED_ROO_ICON(filled, toggle_check_box)
@@ -28,7 +28,7 @@ void Checkbox::paint(const Canvas& canvas) const {
           ? SCALED_ROO_ICON(filled, toggle_check_box_outline_blank)
           : SCALED_ROO_ICON(filled, toggle_indeterminate_check_box);
   img.color_mode().setColor(color);
-  canvas.drawTiled(img, bounds(), kCenter | kMiddle, isInvalidated());
+  ctx.drawTiled(img, bounds(), kCenter | kMiddle, isInvalidated());
 }
 
 Dimensions Checkbox::getSuggestedMinimumDimensions() const {

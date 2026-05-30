@@ -5,26 +5,24 @@
 
 namespace roo_windows {
 
-void HorizontalDivider::paint(const Canvas& canvas) const {
+void HorizontalDivider::paint(PaintContext& ctx) const {
   if (!isInvalidated()) return;
   const Rect rect = bounds();
   Color color = theme().color.onBackground;
   color.set_a(0x40);
-  canvas.fillRect(rect.xMin(), rect.yMin(), rect.xMax(), rect.yMax() - 1,
-                  color);
+  ctx.fillRect(rect.xMin(), rect.yMin(), rect.xMax(), rect.yMax() - 1, color);
   color.set_a(0x20);
-  canvas.drawHLine(rect.xMin(), rect.yMax(), rect.xMax(), color);
+  ctx.drawHLine(rect.xMin(), rect.yMax(), rect.xMax(), color);
 }
 
-void VerticalDivider::paint(const Canvas& canvas) const {
+void VerticalDivider::paint(PaintContext& ctx) const {
   if (!isInvalidated()) return;
   const Rect rect = bounds();
   Color color = theme().color.onBackground;
   color.set_a(0x40);
-  canvas.fillRect(rect.xMin(), rect.yMin(), rect.xMax() - 1, rect.yMax(),
-                  color);
+  ctx.fillRect(rect.xMin(), rect.yMin(), rect.xMax() - 1, rect.yMax(), color);
   color.set_a(0x20);
-  canvas.drawVLine(rect.xMax(), rect.yMin(), rect.yMax(), color);
+  ctx.drawVLine(rect.xMax(), rect.yMin(), rect.yMax(), color);
 }
 
 }  // namespace roo_windows

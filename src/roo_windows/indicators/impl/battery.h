@@ -19,7 +19,7 @@ class BatteryIndicator : public Widget {
   BatteryIndicator(const Environment& env, roo_display::Color color);
 
   /// Resolves the current state to a battery pictogram and draws it.
-  void paint(const Canvas& canvas) const override;
+  void paint(PaintContext& ctx) const override;
 
   /// Updates the battery charge level (0..100); bucketed to a discrete icon.
   void setBatteryPercent(int percent);

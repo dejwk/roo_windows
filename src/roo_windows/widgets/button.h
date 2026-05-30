@@ -146,7 +146,7 @@ class SimpleButton : public Button {
 
   /// Paints the icon and/or label centered inside the button's content area,
   /// using `contentColor()` (or the theme-resolved fallback).
-  void paint(const Canvas& canvas) const override;
+  void paint(PaintContext& ctx) const override;
 
   /// Reports the minimum size required to contain the icon and label using
   /// the configured font and the default Material 3 button paddings.

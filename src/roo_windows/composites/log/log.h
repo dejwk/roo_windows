@@ -60,7 +60,7 @@ class Log : public roo_windows::BasicWidget {
                                     roo_windows::HeightSpec height) override;
 
   /// Draws each stored line top-to-bottom in the current font.
-  void paint(const roo_windows::Canvas& s) const override;
+  void paint(roo_windows::PaintContext& ctx) const override;
 
   const roo_display::Font& font() const { return *font_; }
 

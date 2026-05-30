@@ -17,7 +17,7 @@ class Slider : public BasicWidget {
 
   /// Paints the track and thumb based on the current position; press state
   /// is reflected via the standard widget overlay.
-  void paint(const Canvas& canvas) const override;
+  void paint(PaintContext& ctx) const override;
 
   /// Reports the minimum size required for the track and thumb glyph.
   Dimensions getSuggestedMinimumDimensions() const override;

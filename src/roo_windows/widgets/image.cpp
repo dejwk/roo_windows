@@ -43,12 +43,12 @@ void Image::setAlignment(roo_display::Alignment alignment) {
   }
 }
 
-void Image::paint(const Canvas& canvas) const {
+void Image::paint(PaintContext& ctx) const {
   if (image_ == nullptr) {
-    canvas.clear();
+    ctx.clear();
     return;
   }
-  canvas.drawTiled(*image_, bounds(), alignment_);
+  ctx.drawTiled(*image_, bounds(), alignment_);
 }
 
 Insets Image::getInkInsets() const {

@@ -25,7 +25,7 @@ class IconWithCaption : public BasicWidget {
 
   /// Paints the icon centered horizontally above the caption, both in the
   /// currently configured color.
-  void paint(const Canvas& canvas) const override;
+  void paint(PaintContext& ctx) const override;
 
   /// Reports a footprint large enough to contain the icon stacked above the
   /// caption rendered in the configured font, with a small gap between them.

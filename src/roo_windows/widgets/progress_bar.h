@@ -18,7 +18,7 @@ class ProgressBar : public Widget {
 
   /// Paints the determinate fill bar, or the current marquee segment when
   /// indeterminate.
-  void paint(const Canvas& canvas) const override;
+  void paint(PaintContext& ctx) const override;
 
   /// Reports a small fixed footprint (full-parent width, 4 dp tall).
   Dimensions getSuggestedMinimumDimensions() const override;

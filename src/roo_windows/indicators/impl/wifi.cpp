@@ -18,12 +18,12 @@ WifiIndicatorBase::WifiIndicatorBase(const Environment& env,
       locked_(false),
       bar_count_(1) {}
 
-void WifiIndicatorBase::paint(const Canvas& canvas) const {
+void WifiIndicatorBase::paint(PaintContext& ctx) const {
   roo_display::Pictogram icon(*icons()[status()]);
   roo_display::Color color =
       color_.a() == 0 ? parent()->defaultColor() : color_;
   icon.color_mode().setColor(color);
-  canvas.drawTiled(icon, bounds(), kCenter | kMiddle, isInvalidated());
+  ctx.drawTiled(icon, bounds(), kCenter | kMiddle, isInvalidated());
 }
 
 void WifiIndicatorBase::setConnectionStatus(ConnectionStatus status) {

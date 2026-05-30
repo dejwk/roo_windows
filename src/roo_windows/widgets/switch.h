@@ -36,7 +36,7 @@ class Switch : public BasicWidget {
   void paintWidgetContents(PaintContext& ctx) override;
 
   /// Paints the track and thumb at the current animated position.
-  void paint(const Canvas& canvas) const override;
+  void paint(PaintContext& ctx) const override;
 
   /// Reports the fixed switch footprint sized to the legacy switch glyph.
   Dimensions getSuggestedMinimumDimensions() const override;

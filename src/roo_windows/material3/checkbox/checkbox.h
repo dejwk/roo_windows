@@ -30,7 +30,7 @@ class Checkbox : public BasicWidget {
   Margins getDefaultMargins() const override { return Margins(0); }
 
   /// Paints the box outline and the on/indeterminate glyph in theme colors.
-  void paint(const Canvas& canvas) const override;
+  void paint(PaintContext& ctx) const override;
 
   /// Reports a fixed square footprint matching the Material 3 checkbox
   /// tokens.

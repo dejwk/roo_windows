@@ -66,7 +66,7 @@ void Switch::paintWidgetContents(PaintContext& ctx) {
   }
 }
 
-void Switch::paint(const Canvas& canvas) const {
+void Switch::paint(PaintContext& ctx) const {
   const Theme& th = theme();
   ColorRole bg_role = effectiveContainerRole();
   Color circleColor = isOn() ? th.color.accentColorFor(bg_role)
@@ -102,7 +102,7 @@ void Switch::paint(const Canvas& canvas) const {
               kLeft.shiftBy(xoffset) | kMiddle));
 
   roo_display::Tile toggle(&composite, outer, kMiddle);
-  canvas.drawTiled(toggle, bounds(), kCenter | kMiddle, isInvalidated());
+  ctx.drawTiled(toggle, bounds(), kCenter | kMiddle, isInvalidated());
 }
 
 Dimensions Switch::getSuggestedMinimumDimensions() const {

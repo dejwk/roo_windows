@@ -21,7 +21,7 @@ class Icon : public BasicWidget {
 
   /// Paints the pictogram centered in the widget bounds, in either the
   /// configured color or the resolved theme default when transparent.
-  void paint(const Canvas& canvas) const override;
+  void paint(PaintContext& ctx) const override;
 
   /// Returns the currently configured pictogram. Must only be called after
   /// a non-null icon has been set.

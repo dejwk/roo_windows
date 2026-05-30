@@ -54,7 +54,7 @@ class Switch : public BasicWidget {
 
   /// Paints the track, thumb, and optional state icon for the current
   /// animated position.
-  void paint(const Canvas& canvas) const override;
+  void paint(PaintContext& ctx) const override;
 
   /// Reports the fixed switch footprint matching the Material 3 tokens.
   Dimensions getSuggestedMinimumDimensions() const override;

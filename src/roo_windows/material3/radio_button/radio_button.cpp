@@ -52,7 +52,7 @@ void RadioButton::onClicked() {
   Widget::onClicked();
 }
 
-void RadioButton::paint(const Canvas& canvas) const {
+void RadioButton::paint(PaintContext& ctx) const {
   Tokens tokens = ResolveTokens(*this);
 
   // TODO: benchmark this against an asset-backed implementation on device.
@@ -78,7 +78,7 @@ void RadioButton::paint(const Canvas& canvas) const {
     composite.addInput(&dot_shape);
   }
 
-  canvas.drawTiled(composite, bounds(), kCenter | kMiddle, isInvalidated());
+  ctx.drawTiled(composite, bounds(), kCenter | kMiddle, isInvalidated());
 }
 
 Dimensions RadioButton::getSuggestedMinimumDimensions() const {

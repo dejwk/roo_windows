@@ -23,7 +23,7 @@ class VerticalScrollBar : public Widget {
   void setRange(int16_t begin, int16_t end);
 
   /// Paints the thumb proportional to the configured range.
-  void paint(const Canvas& canvas) const override;
+  void paint(PaintContext& ctx) const override;
 
   PreferredSize getPreferredSize() const override;
 

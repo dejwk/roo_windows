@@ -111,7 +111,7 @@ bool Slider::setPos(uint16_t pos) {
   return true;
 }
 
-void Slider::paint(const Canvas& canvas) const {
+void Slider::paint(PaintContext& ctx) const {
   const Theme& th = theme();
   Color circleColor = th.color.accentColorFor(effectiveContainerRole());
   Padding p = getPadding();
@@ -149,7 +149,7 @@ void Slider::paint(const Canvas& canvas) const {
   composite.addInput(&unsel);
   composite.addInput(&shadow, xoffset - kRadius, 0);
   composite.addInput(&circle, xoffset - kRadius, 0);
-  canvas.drawTiled(composite, bounds(), kMiddle, isInvalidated());
+  ctx.drawTiled(composite, bounds(), kMiddle, isInvalidated());
 }
 
 Dimensions Slider::getSuggestedMinimumDimensions() const {

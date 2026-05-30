@@ -173,7 +173,7 @@ void Switch::paintWidgetContents(PaintContext& ctx) {
   }
 }
 
-void Switch::paint(const Canvas& canvas) const {
+void Switch::paint(PaintContext& ctx) const {
   Tokens tokens = ResolveTokens(*this);
   auto track =
       SmoothFilledRoundRect(-0.5f, -0.5f, kTrackWidth - 0.5f,
@@ -223,11 +223,11 @@ void Switch::paint(const Canvas& canvas) const {
         (kCenter | kMiddle)
             .resolveOffset(thumb_bounds, thumb_icon.anchorExtents());
     composite.addInput(&thumb_icon, thumb_icon_offset.dx, thumb_icon_offset.dy);
-    canvas.drawTiled(composite, bounds(), kCenter | kMiddle, isInvalidated());
+    ctx.drawTiled(composite, bounds(), kCenter | kMiddle, isInvalidated());
     return;
   }
 
-  canvas.drawTiled(composite, bounds(), kCenter | kMiddle, isInvalidated());
+  ctx.drawTiled(composite, bounds(), kCenter | kMiddle, isInvalidated());
 }
 
 Dimensions Switch::getSuggestedMinimumDimensions() const {
