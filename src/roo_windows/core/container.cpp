@@ -115,7 +115,7 @@ void Container::paintChildren(PaintContext& ctx) {
     Widget& child = getChild(i);
     bool clipped = child.getParentClipMode() == ParentClipMode::kClipped;
     PaintContext& child_ctx = clipped ? clipped_ctx : ctx;
-    child.paintWidget(child_ctx);
+    child.paintWidget(child_ctx.canvas(), child_ctx.clipperForFramework());
     if (fast_render && clipped) {
       // Decorations are guaranteed not to overlap with siblings, so we can draw
       // them right away.
@@ -124,7 +124,7 @@ void Container::paintChildren(PaintContext& ctx) {
   }
 }
 
-void Container::fastDrawChildShadow(Widget& child, const PaintContext& ctx) {
+void Container::fastDrawChildShadow(Widget& child, PaintContext& ctx) {
   // NOTE: keeping this in a separate method sheds 48 bytes per container on the
   // stack.
   // Make sure we're not over-stepping.
@@ -132,13 +132,17 @@ void Container::fastDrawChildShadow(Widget& child, const PaintContext& ctx) {
   Rect rect = child.parent_bounds();
   // Minimize the redraw area so that we can take the most advantage of plane
   // fill performance while staying within the child's decoration margins.
-  PaintContext shadow_ctx = ctx.clipped(child.getParentDecorationBounds())
-                                .clipped(Rect(rect.xMin() - margins.left(),
-                                              rect.yMin() - margins.top(),
-                                              rect.xMax() + margins.right(),
-                                              rect.yMax() + margins.bottom()));
-  shadow_ctx.clear();
-  shadow_ctx.addExclusion(shadow_ctx.localClip());
+  Rect shadow_clip = Rect::Intersect(child.getParentDecorationBounds(),
+                                     Rect(rect.xMin() - margins.left(),
+                                          rect.yMin() - margins.top(),
+                                          rect.xMax() + margins.right(),
+                                          rect.yMax() + margins.bottom()));
+  if (shadow_clip.empty()) return;
+  Canvas shadow_canvas(ctx.canvas());
+  shadow_canvas.clipToExtents(shadow_clip);
+  if (shadow_canvas.clip_box().empty()) return;
+  shadow_canvas.clear();
+  ctx.addExclusion(shadow_clip);
 }
 
 void Container::paint(const Canvas& canvas) const { canvas.clear(); }

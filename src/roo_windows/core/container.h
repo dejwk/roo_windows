@@ -198,7 +198,7 @@ class Container : public SurfaceWidget {
   PaintContext prepareSurfaceContext(const PaintContext& in,
                                      const Rect& invalid_region);
 
-  void fastDrawChildShadow(Widget& child, const PaintContext& ctx);
+  void fastDrawChildShadow(Widget& child, PaintContext& ctx);
 
   friend class Widget;
   friend class ScrollableContainer;
