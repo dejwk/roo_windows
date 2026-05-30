@@ -10,10 +10,12 @@ The new API lets a widget draw small adjunct visuals such as badges, icons,
 and labels without making those visuals child widgets when they do not need
 independent layout, input handling, invalidation state, or ownership.
 
-The final authoring API is a breaking change:
-`paint(PaintContext&, const OverlaySpec&)` becomes the normal widget paint hook.
-The migration is still implemented in multiple self-contained commits, with
-each commit keeping the library tests and examples buildable.
+The final authoring API is a breaking change: `paint(PaintContext&)` becomes
+the normal widget paint hook, with the current widget modulation state
+available through `PaintContext::overlaySpec()` when framework or advanced
+widget code needs it. The migration is still implemented in multiple
+self-contained commits, with each commit keeping the library tests and
+examples buildable.
 
 ## Motivation
 
@@ -104,10 +106,12 @@ piece of widget-local paint rather than a child widget.
 Add a new `PaintContext` value type in the core paint layer.
 
 The context owns a local copy of `Canvas` and references the active `Clipper`.
-It does not store `OverlaySpec`; overlay specs stay separate because they are
-per-widget state and the context is the recursively threaded paint object. The
-context exposes a restricted API:
+It does not store `OverlaySpec`. Instead, the clipper owns an explicit
+per-paint overlay-spec stack in stable storage, and the context exposes the
+current top-of-stack when code needs the current widget's resolved modulation
+state. The context exposes a restricted API:
 
+- `overlaySpec()` returns the current widget's resolved modulation state,
 - draw helpers forward to `Canvas`,
 - exclusion and overlay helpers translate widget-local rectangles into the
   device-coordinate rectangles required by `Clipper`,
@@ -126,7 +130,7 @@ paint code and makes clipped derived contexts safe by construction.
 The final widget hook is:
 
 ```cpp
-virtual void paint(PaintContext& ctx, const OverlaySpec& overlay_spec) const;
+virtual void paint(PaintContext& ctx) const;
 ```
 
 The migration uses a temporary bridge so each commit remains testable. During
@@ -165,10 +169,15 @@ The context stores:
 
 - one by-value `Canvas`,
 - one `Clipper*`,
-- and no owned heap state.
+- no `OverlaySpec`, and
+- no owned heap state.
+
+The active clipper owns a deque-backed overlay-spec stack in `ClipperState`.
+Each entry stores one `OverlaySpec` plus a small refcount used to compress
+repeated inert frames.
 
 Derived contexts are by-value copies with a modified canvas. They do not own
-or duplicate clipper storage.
+or duplicate clipper storage, including the active overlay-spec stack.
 
 The implementation adds a size check that keeps `sizeof(PaintContext) <=
 sizeof(Canvas) + sizeof(void*)` on the host build. This keeps the target shape
@@ -225,11 +234,22 @@ criterion is: no more than one pointer of net per-level frame growth in the
 recursive `Widget` and `Container` paint paths, with zero net growth as the
 target.
 
-Keeping `OverlaySpec` outside `PaintContext` saves one pointer in every context
-copy. That matters most in container traversal, where a clipped child context
-can be live while the code recurses into child widgets. The spec is needed only
-for the widget currently being painted, so carrying it in every recursively
-derived context would be dead stack weight.
+Keeping `OverlaySpec` outside `PaintContext` still saves one pointer in every
+context copy. The current spec instead lives in clipper-owned stack storage and
+is looked up through `PaintContext::overlaySpec()` when a paint path actually
+needs it.
+
+That keeps the recursively copied context small and removes the separate
+`OverlaySpec` parameter from recursive widget paint hooks. The overlay state
+does not disappear; it moves from thread stack into `ClipperState`, where it is
+shared by all derived contexts in the current paint pass.
+
+The overlay-spec stack uses `std::deque` storage because the current spec must
+stay valid while descendants push their own specs. Adjacent pushes of the
+canonical inert spec reuse the top entry by incrementing a refcount instead of
+adding a second identical frame. Modded specs are not coalesced; they may
+carry transient press-overlay state that is specific to one active widget
+frame.
 
 ### Coordinate Contract
 
@@ -309,26 +329,37 @@ shadow bounds. Badge and value-indicator code therefore calls
 ### OverlaySpec Handling
 
 `OverlaySpec` remains a framework-owned description of widget-state paint
-modulation. `Widget::paintWidget()` computes it once per widget paint after the
-canvas has been shifted and clipped to that widget's visual footprint.
+modulation. `Widget::paintWidget()` resolves it once per widget paint after the
+canvas has been shifted and clipped to that widget's visual footprint, but the
+resolved spec now lives in the clipper rather than in a recursive stack local.
 
-`PaintContext` does not store the spec. Instead, framework paint methods pass
-`const OverlaySpec&` beside the context only inside the current widget's paint
-frame:
+`PaintContext` does not store the spec. Instead, `Clipper` owns an explicit
+overlay-spec stack backed by `ClipperState`, and `Widget::paintWidget()` pushes
+the current widget's spec on entry and pops it on exit.
 
-```cpp
-paintWidgetContents(ctx, overlay_spec);
-paint(ctx, overlay_spec);
-finalizePaintWidget(ctx.canvas(), ctx.clipperForFramework(), overlay_spec);
-```
+The current top-of-stack is exposed through `PaintContext::overlaySpec()` and
+`Clipper::currentOverlaySpec()`. Framework code and advanced widgets read the
+current widget modulation state from there instead of receiving a separate
+`OverlaySpec` parameter beside the context.
+
+The stack stores frames in a `std::deque` so references to the current spec
+stay valid while descendants push deeper entries. Each frame also carries a
+small refcount. When a newly computed spec is the canonical inert state
+(enabled, no base overlay, no press overlay) and the top frame is that same
+canonical inert state, push increments the refcount instead of appending a new
+entry. Pop decrements the refcount and removes the frame only when the refcount
+reaches zero.
+
+This compression is intentionally limited to the inert case. Modded specs can
+contain transient press-overlay state and stay one-per-active-widget frame.
 
 Child traversal does not pass the parent's spec to `child.paintWidget(...)`.
-Each child computes its own spec after deriving its own local context. This
-saves one pointer in every recursively derived context and keeps state
-modulation scoped to the widget that owns it.
+Each child pushes its own spec after deriving its own local context. This keeps
+state modulation scoped to the widget that owns it while removing dead
+parameter weight from recursive widget paint hooks.
 
-Decoration helpers use explicit spec selection. Calling
-`addDecoration(decoration, overlay_spec)` applies the current widget's
+Decoration helpers still use explicit spec selection. Calling
+`addDecoration(decoration, ctx.overlaySpec())` applies the current widget's
 modulation, matching current `SurfaceWidget` decoration behavior. Calling
 `addDecoration(decoration)` uses an inert default spec, matching
 value-indicator bubbles that stay visually independent of the host widget's
@@ -340,10 +371,11 @@ intended color and alpha already resolved. Framework-level press, hover,
 disabled, and click-animation behavior remains in `paintWidgetModded()` during
 the initial migration.
 
-The spec reference is never retained by the clipper. `Decoration` copies the
-resolved modulation data it needs when `addDecoration()` runs, and other
-overlay helpers either store caller-provided rasterizables or clipper-owned
-shapes exactly as they do today.
+The clipper does not retain borrowed references to caller-owned specs.
+`currentOverlaySpec()` refers to clipper-owned stack storage, `Decoration`
+still copies the resolved modulation data it needs when `addDecoration()`
+runs, and other overlay helpers either store caller-provided rasterizables or
+clipper-owned shapes exactly as they do today.
 
 ### Relationship To Existing Hooks
 
@@ -351,21 +383,20 @@ shapes exactly as they do today.
 traversal, deadline handling, animation bookkeeping, and custom dirty-region
 clip narrowing. The difference is that staged implementations construct and
 pass `PaintContext` to helper routines instead of threading both `Canvas` and
-`Clipper` manually.
+`Clipper` manually, and they read the current overlay state from the context
+only when they actually need it.
 
 `finalizePaintWidget()` remains in the initial implementation for framework
 post-content behavior. The first migration moves widget-local overlay,
-decoration, and exclusion work into
-`paint(PaintContext&, const OverlaySpec&)` where the ordering is visible in the
-paint plan. A later phase narrows or removes
+decoration, and exclusion work into `paint(PaintContext&)` where the ordering
+is visible in the paint plan. A later phase narrows or removes
 `finalizePaintWidget()` only after that migration provides enough evidence.
 
 ### Paint Pipeline Refactoring
 
 The end state refactors the internal paint pipeline to pass `PaintContext`
-through content paint. Public widget authors see
-`paint(PaintContext&, const OverlaySpec&)`; the framework keeps raw clipper
-access only at internal boundaries.
+through content paint. Public widget authors see `paint(PaintContext&)`; the
+framework keeps raw clipper access only at internal boundaries.
 
 The default widget flow becomes:
 
@@ -384,32 +415,34 @@ void Widget::paintWidget(PaintContext& parent_ctx) {
     if (!hasDecorationOverflow()) return;
   }
 
-  OverlaySpec overlay_spec(*this, ctx.canvas());
+  Clipper& clipper = ctx.clipperForFramework();
+  clipper.pushOverlaySpec(*this, ctx.canvas());
   if (!empty) {
-    if (!overlay_spec.is_modded()) {
-      paintWidgetContents(ctx, overlay_spec);
+    if (!ctx.overlaySpec().is_modded()) {
+      paintWidgetContents(ctx);
     } else {
-      paintWidgetModded(ctx, overlay_spec);
+      paintWidgetModded(ctx);
     }
   }
 
   ctx.setClipBox(parent_ctx.canvas().clip_box());
-  finalizePaintWidget(ctx.canvas(), ctx.clipperForFramework(), overlay_spec);
+  finalizePaintWidget(ctx.canvas(), clipper, ctx.overlaySpec());
+  clipper.popOverlaySpec();
 }
 
-void Widget::paintWidgetContents(PaintContext& ctx,
-                                 const OverlaySpec& overlay_spec) {
+void Widget::paintWidgetContents(PaintContext& ctx) {
   if (!isDirty() || ctx.isDeadlineExceeded()) return;
   PaintContext content_ctx = ctx.clipped(getContentBounds());
-  paint(content_ctx, overlay_spec);
+  paint(content_ctx);
   markClean();
 }
 ```
 
-`paintWidgetModded()` keeps the current filter structure, but it receives and
-passes `PaintContext&` instead of a separate `Canvas&` and `Clipper&`. That
-keeps disabled filters and non-point overlay filters isolated in the same
-helper that already contains them today.
+`paintWidgetModded()` keeps the current filter structure, but it receives
+`PaintContext&` and reads modulation state through `ctx.overlaySpec()` instead
+of taking a separate `OverlaySpec` parameter. That keeps disabled filters and
+non-point overlay filters isolated in the same helper that already contains
+them today.
 
 Container content paint keeps the same logical ordering with context-local
 helpers:
@@ -428,8 +461,7 @@ PaintContext Container::prepareSurfaceContext(PaintContext& in,
   return out;
 }
 
-void Container::paintWidgetContents(PaintContext& ctx,
-                                    const OverlaySpec& overlay_spec) {
+void Container::paintWidgetContents(PaintContext& ctx) {
   if (!isInvalidated()) {
     if (isDirty() || !bounds().contains(maxBounds())) {
       markClean();
@@ -454,7 +486,7 @@ void Container::paintWidgetContents(PaintContext& ctx,
   }
 
   PaintContext surface_ctx = prepareSurfaceContext(ctx, invalid_region);
-  if (!surface_ctx.empty()) paint(surface_ctx, overlay_spec);
+  if (!surface_ctx.empty()) paint(surface_ctx);
 }
 
 void Container::paintChildren(PaintContext& ctx) {
@@ -476,15 +508,14 @@ Simple leaf widgets become mechanically smaller. Longer paint bodies keep their
 existing geometry and replace direct `canvas` calls with context calls:
 
 ```cpp
-void Blank::paint(PaintContext& ctx, const OverlaySpec&) const { ctx.clear(); }
+void Blank::paint(PaintContext& ctx) const { ctx.clear(); }
 
-void ProgressBar::paintWidgetContents(PaintContext& ctx,
-                                      const OverlaySpec& overlay_spec) {
-  Widget::paintWidgetContents(ctx, overlay_spec);
+void ProgressBar::paintWidgetContents(PaintContext& ctx) {
+  Widget::paintWidgetContents(ctx);
   if (progress_ < 0) setDirty();
 }
 
-void ProgressBar::paint(PaintContext& ctx, const OverlaySpec&) const {
+void ProgressBar::paint(PaintContext& ctx) const {
   const Theme& th = theme();
   Color bar_color = color_ == color::Transparent ? th.color.primary : color_;
   if (progress_ >= 0) {
@@ -522,7 +553,7 @@ Overlay-only widgets move their overlay registration into paint while keeping
 their exclusion contract explicit:
 
 ```cpp
-void Scrim::paint(PaintContext& ctx, const OverlaySpec&) const {
+void Scrim::paint(PaintContext& ctx) const {
   ctx.addOverlay(fill_);
 }
 
@@ -532,8 +563,7 @@ Rect Scrim::getDirectPaintExclusionBounds() const { return Rect(); }
 Badge-like visuals use the same foreground-first ordering as containers:
 
 ```cpp
-void BadgedIcon::paint(PaintContext& ctx,
-                       const OverlaySpec& overlay_spec) const {
+void BadgedIcon::paint(PaintContext& ctx) const {
   PaintContext badge = ctx.translated(width() - badge_width_, 0)
                           .clipped(Rect(0, 0, badge_width_ - 1,
                                         badge_height_ - 1));
@@ -543,7 +573,7 @@ void BadgedIcon::paint(PaintContext& ctx,
   decoration.bounds = badge_bounds_;
   decoration.background = badge_color_;
   decoration.corner_radii = badge_radii_;
-  badge.addDecoration(decoration, overlay_spec);
+  badge.addDecoration(decoration, badge.overlaySpec());
 
   ctx.drawTiled(icon_, bounds(), roo_display::kCenter | roo_display::kMiddle);
 }
@@ -568,6 +598,7 @@ class PaintContext {
   // Activates the current clipper bounds and returns the drawing surface.
   const Canvas& canvas() const;
   Canvas& canvas();
+  const OverlaySpec& overlaySpec() const;
 
   void activate() const;
   void setClipBox(const roo_display::Box& clip_box);
@@ -620,28 +651,25 @@ Widget base-class migration shape:
 ```cpp
 class Widget {
  protected:
-  virtual void paint(PaintContext& ctx,
-                     const OverlaySpec& overlay_spec) const;
-  virtual void paintWidgetContents(PaintContext& ctx,
-                                   const OverlaySpec& overlay_spec);
+  virtual void paint(PaintContext& ctx) const;
+  virtual void paintWidgetContents(PaintContext& ctx);
 
   // Temporary migration bridge. Removed in the final cleanup phase.
   virtual void paint(const Canvas& canvas) const {}
 };
 ```
 
-During the bridge period, the default `paint(PaintContext&, const OverlaySpec&)`
+During the bridge period, the default `paint(PaintContext&)`
 implementation is:
 
 ```cpp
-void Widget::paint(PaintContext& ctx, const OverlaySpec&) const {
+void Widget::paint(PaintContext& ctx) const {
   paint(ctx.canvas());
 }
 ```
 
 After all widgets migrate, `paint(const Canvas&)` is removed and
-`paint(PaintContext&, const OverlaySpec&)` keeps the empty default
-implementation.
+`paint(PaintContext&)` keeps the empty default implementation.
 
 ## Implementation Plan
 
@@ -667,15 +695,43 @@ Validation:
   for review.
 - Run the new test target only.
 
-### Commit 2: Wire The Context Into `Widget`
+### Commit 2: Add `OverlaySpec` Stack To `Clipper`
 
 Work:
 
-- Add the temporary `paint(PaintContext&, const OverlaySpec&)` virtual hook.
+- Extend `ClipperState` with deque-backed overlay-spec storage. Each stack
+  entry stores one `OverlaySpec` plus a small refcount.
+- Add `Clipper::pushOverlaySpec(Widget&, const Canvas&)`,
+  `Clipper::popOverlaySpec()`, and `Clipper::currentOverlaySpec()`.
+- Coalesce adjacent pushes of the canonical inert spec by incrementing the top
+  refcount instead of appending a new entry.
+- Add `PaintContext::overlaySpec()` as a thin forwarder to the clipper-owned
+  current spec.
+- Update the pre-context widget pipeline (`Widget::paintWidget()`,
+  `paintWidgetModded()`, and related finalize/decoration call sites) to read
+  current overlay state from the clipper instead of threading a local
+  `OverlaySpec` through helper calls.
+
+Validation:
+
+- Add focused tests for push/pop discipline, current-spec lookup, and inert
+  refcount compression.
+- Run the existing core render tests that cover disablement, click animation,
+  point overlays, and generic finalize behavior.
+- Compare stack usage for `Widget::paintWidget()` and
+  `Widget::paintWidgetModded()` against the Commit 1 baseline.
+
+### Commit 3: Wire The Context Into `Widget`
+
+Work:
+
+- Add the temporary `paint(PaintContext&)` virtual hook.
 - Update `Widget::paintWidget()` and `Widget::paintWidgetContents()` to pass a
-  single context through the default content path.
+  single context through the default content path while preserving the
+  clipper-owned overlay-spec stack added in Commit 2.
 - Move `paintWidgetModded()` to context parameters while keeping its existing
-  filter branches separated.
+  filter branches separated and reading modulation state through
+  `ctx.overlaySpec()`.
 - Keep `paint(const Canvas&)` as the bridge hook so existing widgets remain
   source-compatible for this commit.
 
@@ -684,10 +740,10 @@ Validation:
 - Run the existing core render tests that cover simple `paint(const Canvas&)`
   widgets, child ordering, shadow overflow, and deadline resume behavior.
 - Compare stack usage for `Widget::paintWidget()` and
-  `Widget::paintWidgetContents()` against the Commit 1 baseline.
+  `Widget::paintWidgetContents()` against the Commit 2 baseline.
 - Build one existing example that contains only legacy paint overrides.
 
-### Commit 3: Refactor Container Paint Contents
+### Commit 4: Refactor Container Paint Contents
 
 Work:
 
@@ -703,9 +759,9 @@ Validation:
   unclipped child visual bounds, surface shadow restoration, and deadline
   resume.
 - Compare stack usage for `Container::paintWidgetContents()` and
-  `Container::paintChildren()` against the Commit 1 baseline.
+  `Container::paintChildren()` against the Commit 3 baseline.
 
-### Commit 4: Migrate One Decoration-Heavy Path
+### Commit 5: Migrate One Decoration-Heavy Path
 
 Work:
 
@@ -713,6 +769,8 @@ Work:
   `PaintContext&`.
 - Replace manual absolute-coordinate decoration and exclusion code with
   context-local `addDecoration()` and `addExclusion()` calls.
+- Read the host widget modulation state through `ctx.overlaySpec()` anywhere
+  the old path depended on an explicit `OverlaySpec` parameter.
 - Keep `Slider::paintWidgetContents()` responsible for staged dirty-region
   clip narrowing.
 
@@ -722,13 +780,12 @@ Validation:
   repaint, and value-indicator render output.
 - Build the Material 3 slider example.
 
-### Commit 5: Migrate An Overlay-Only Path
+### Commit 6: Migrate An Overlay-Only Path
 
 Work:
 
 - Migrate `Scrim` away from widget-local `finalizePaintWidget()` usage by
-  expressing its overlay behavior through
-  `paint(PaintContext&, const OverlaySpec&)`.
+  expressing its overlay behavior through `paint(PaintContext&)`.
 - Override `getDirectPaintExclusionBounds()` with an empty rect so the scrim
   preserves its existing non-excluding behavior under the generic finalization
   path.
@@ -740,12 +797,12 @@ Validation:
   without adding a normal exclusion region.
 - Run the core render tests affected by overlay ordering.
 
-### Commit 6: Migrate Leaf Widgets In Batches
+### Commit 7: Migrate Leaf Widgets In Batches
 
 Work:
 
 - Convert existing `paint(const Canvas&)` overrides to
-  `paint(PaintContext&, const OverlaySpec&)` in small topical batches: basic
+  `paint(PaintContext&)` in small topical batches: basic
   widgets, indicators, legacy controls, Material 3 controls, composites, and
   activities.
 - Keep implementation bodies mechanically close to their current Canvas usage
@@ -758,14 +815,15 @@ Validation:
 - Each batch runs the tests for the touched widgets plus example builds for the
   touched example families.
 
-### Commit 7: Remove The Legacy Paint Hook
+### Commit 8: Remove The Legacy Paint Hook
 
 Work:
 
 - Remove `paint(const Canvas&)` from `Widget`.
 - Remove the bridge implementation.
 - Update `docs/widget_authoring.md` to describe
-  `paint(PaintContext&, const OverlaySpec&)` as the normal paint hook and raw
+  `paint(PaintContext&)` as the normal paint hook,
+  `PaintContext::overlaySpec()` as the framework modulation accessor, and raw
   `Canvas` as a lower-level drawing adapter.
 - Update design docs that mention the old paint signature.
 
@@ -774,7 +832,7 @@ Validation:
 - Run the full `roo_windows` test suite.
 - Build all examples that are part of the normal library validation path.
 
-### Commit 8: Reevaluate `finalizePaintWidget()`
+### Commit 9: Reevaluate `finalizePaintWidget()`
 
 Work:
 
@@ -793,8 +851,9 @@ Validation:
 
 Validation covers five layers:
 
-- `PaintContext` unit tests for coordinate translation, clipping, overlays,
-  decorations, exclusions, deadline forwarding, and stack-size budget.
+- `PaintContext` and clipper unit tests for coordinate translation, clipping,
+  overlays, decorations, exclusions, current-overlay lookup, inert-stack
+  compression, deadline forwarding, and stack-size budget.
 - Stack-usage comparison for recursive paint frames, with review focused on
   per-level growth in `Widget` and `Container` paint paths.
 - Core render tests for unchanged child ordering, exclusion behavior, surface
@@ -812,9 +871,9 @@ rounded corners, translucent overlay, or dirty-region clipping changes.
 ### Breaking Migration Cost
 
 The final API removes `paint(const Canvas&)`, so downstream code that derives
-custom widgets must update overrides. The migration bridge keeps the library
-internally testable across commits, but it is not retained as a long-term
-compatibility shim.
+custom widgets must update overrides to `paint(PaintContext&)`. The migration
+bridge keeps the library internally testable across commits, but it is not
+retained as a long-term compatibility shim.
 
 ### Bounds Remain The Owner's Responsibility
 
@@ -826,6 +885,13 @@ This is the same tradeoff as hand-painted widget content today and avoids new
 per-instance RAM for retained paint-item descriptors.
 
 ### Rejected Alternatives
+
+#### Thread `OverlaySpec` Beside `PaintContext`
+
+Rejected because it keeps one extra reference live in every recursive widget
+paint frame even though most widgets use the inert spec. A clipper-owned
+overlay-spec stack preserves the same modulation semantics while moving that
+state out of the recursive call signature.
 
 #### Add Raw `Clipper&` To `paint()`
 
