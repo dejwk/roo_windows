@@ -611,8 +611,9 @@ class Widget {
   // updating the clipper to exclude the region covered by the widget from the
   // clipper to prevent it from being over-drawn. If called on a non-dirty
   // widget, does not need to draw anything, but it should still exclude the
-  // widget's area from the clipper. The default implementation clips the
-  // context to getContentBounds() and calls paint().
+  // widget's area from the clipper. The default implementation prepares the
+  // contents canvas via prepareContentsCanvas() and calls paint() on the
+  // resulting context.
   //
   // Widgets should generally not override this method, and override paint()
   // instead. Two common scenarios when you might want to override this method

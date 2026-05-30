@@ -686,7 +686,8 @@ void Widget::paintWidgetModded(PaintContext& ctx) {
 
 void Widget::paintWidgetContents(PaintContext& ctx) {
   if (!isDirty() || ctx.isDeadlineExceeded()) return;
-  PaintContext content_ctx = ctx.clipped(getContentBounds());
+  PaintContext content_ctx(prepareContentsCanvas(ctx.canvas()),
+                           ctx.clipperForFramework());
   paint(content_ctx);
   markClean();
 }
