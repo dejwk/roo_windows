@@ -113,7 +113,8 @@ TEST_F(PaintContextTest, AddOverlayTranslatesLocalExtentsAndAppliesClip) {
   PaintContext ctx(canvas, clipper);
 
   auto overlay = MakeRasterizable(
-      Box(0, 0, 3, 3), [](int16_t, int16_t) -> Color { return color::Red; });
+      Box(0, 0, 3, 3),
+      [](int16_t, int16_t) -> Color { return color::Red; });
 
   ctx.addOverlay(overlay, Rect(1, 1, 2, 2));
   ctx.setBgcolor(color::Blue);
@@ -135,8 +136,9 @@ TEST_F(PaintContextTest, AddOverlayShapeTranslatesLocalExtentsAndAppliesClip) {
   canvas.set_out(clipper.out());
   PaintContext ctx(canvas, clipper);
 
-  ctx.addOverlayShape(SmoothFilledCircle(FpPoint{1.5f, 1.5f}, 3.0f, color::Red),
-                      Rect(1, 1, 2, 2));
+  ctx.addOverlayShape(
+      SmoothFilledCircle(FpPoint{1.5f, 1.5f}, 3.0f, color::Red),
+      Rect(1, 1, 2, 2));
   ctx.setBgcolor(color::Blue);
   ctx.clear();
 

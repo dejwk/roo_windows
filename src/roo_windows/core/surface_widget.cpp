@@ -79,14 +79,14 @@ Canvas SurfaceWidget::prepareContentsCanvas(const Canvas& in) {
   return canvas;
 }
 
-void SurfaceWidget::finalizePaintWidget(const Canvas& canvas,
-                                        Clipper& clipper) const {
-  emitSurfaceDecoration(canvas, clipper);
-  Widget::finalizePaintWidget(canvas, clipper);
+void SurfaceWidget::finalizePaintWidget(PaintContext& cxt) const {
+  emitSurfaceDecoration(cxt);
+  Widget::finalizePaintWidget(cxt);
 }
 
-void SurfaceWidget::emitSurfaceDecoration(const Canvas& canvas,
-                                          Clipper& clipper) const {
+void SurfaceWidget::emitSurfaceDecoration(PaintContext& cxt) const {
+  const Canvas& canvas = cxt.canvas();
+  Clipper& clipper = cxt.clipperForFramework();
   BorderStyle border_style = getBorderStyle().trim(width(), height());
   uint8_t border_thickness = border_style.getThickness();
   uint8_t elevation = getElevation();

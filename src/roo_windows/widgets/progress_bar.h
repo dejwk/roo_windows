@@ -14,7 +14,7 @@ class ProgressBar : public Widget {
   ProgressBar(const Environment& env) : Widget(env), progress_(-1), color_(0) {}
 
   /// Drives the indeterminate animation timing on each paint pass.
-  void paintWidgetContents(const Canvas& canvas, Clipper& clipper) override;
+  void paintWidgetContents(PaintContext& ctx) override;
 
   /// Paints the determinate fill bar, or the current marquee segment when
   /// indeterminate.

@@ -134,7 +134,7 @@ class RangeSlider : public BasicWidget {
  protected:
   /// Paints range-slider content in staged order so bubbles and exclusions
   /// settle correctly.
-  void paintWidgetContents(const Canvas& s, Clipper& clipper) override;
+  void paintWidgetContents(PaintContext& ctx) override;
 
   /// Handles pressed-state invalidation for the active thumb and indicator.
   void notifyStateChanged(uint16_t state_diff) override;

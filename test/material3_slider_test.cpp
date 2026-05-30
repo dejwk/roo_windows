@@ -209,8 +209,9 @@ class ContentPaintSlider : public Slider {
     roo_windows::internal::ClipperState clipper_state;
     Clipper clipper(clipper_state, parent_canvas.out(),
                     roo_time::Uptime::Max());
-    Canvas widget_canvas = prepareCanvas(parent_canvas);
-    paintWidgetContents(widget_canvas, clipper);
+    PaintContext ctx(prepareCanvas(parent_canvas), clipper);
+    OverlaySpec overlay_spec(*this, ctx.canvas());
+    paintWidgetContents(ctx);
   }
 };
 
@@ -415,8 +416,8 @@ class ContentPaintRangeSlider : public RangeSlider {
     roo_windows::internal::ClipperState clipper_state;
     Clipper clipper(clipper_state, parent_canvas.out(),
                     roo_time::Uptime::Max());
-    Canvas widget_canvas = prepareCanvas(parent_canvas);
-    paintWidgetContents(widget_canvas, clipper);
+    PaintContext ctx(prepareCanvas(parent_canvas), clipper);
+    paintWidgetContents(ctx);
   }
 };
 

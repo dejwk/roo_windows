@@ -61,7 +61,7 @@ class BlitCacheContainer : public Container {
 
   /// Performs a hardware blit-copy when a pending move is recorded and the
   /// underlying device supports it; falls back to a full repaint otherwise.
-  void paintWidgetContents(const Canvas& canvas, Clipper& clipper) override;
+  void paintWidgetContents(PaintContext& ctx) override;
 
   /// Invalidates the entire cached region (cannot blit-copy stale pixels).
   void invalidateDescending() override;

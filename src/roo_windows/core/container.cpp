@@ -57,7 +57,8 @@ void Container::detachChild(Widget* child) {
   if (owned) delete child;
 }
 
-Canvas Container::prepareCanvas(const Canvas& in, const Rect& invalid_region) {
+Canvas Container::prepareContainerCanvas(const Canvas& in,
+                                         const Rect& invalid_region) {
   // NOTE: keeping this in a separate method helps to shed 48 bytes per
   // container from the stack.
   Rect rect = Rect::Intersect(bounds(), invalid_region);
@@ -73,7 +74,9 @@ Canvas Container::prepareCanvas(const Canvas& in, const Rect& invalid_region) {
   return my_canvas;
 }
 
-void Container::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
+void Container::paintWidgetContents(PaintContext& ctx) {
+  const Canvas& canvas = ctx.canvas();
+  Clipper& clipper = ctx.clipperForFramework();
   if (!isInvalidated()) {
     // Faster path with less stack overhead; repaint the children.
     if (isDirty() || !bounds().contains(maxBounds())) {
@@ -101,11 +104,10 @@ void Container::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
       }
     }
     // Paint the surface.
-    Canvas my_canvas = prepareCanvas(canvas, invalid_region);
+    Canvas my_canvas = prepareContainerCanvas(canvas, invalid_region);
     if (!my_canvas.clip_box().empty()) {
-      // Draw the panel's background.
-      clipper.setBounds(my_canvas.clip_box());
-      paint(my_canvas);
+      PaintContext surface_ctx(my_canvas, clipper);
+      Widget::paint(surface_ctx);
     }
   }
 }

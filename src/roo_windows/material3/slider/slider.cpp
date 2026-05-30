@@ -747,7 +747,9 @@ Rect Slider::getParentTransientPaintBounds() const {
   return Rect::Extent(base, bubble_parent);
 }
 
-void Slider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
+void Slider::paintWidgetContents(PaintContext& ctx) {
+  const Canvas& canvas = ctx.canvas();
+  Clipper& clipper = ctx.clipperForFramework();
   // The canvas we receive is clipped to maxBounds(), which (via our
   // getParentTransientPaintBounds() override) covers the full bubble
   // conservative envelope when the indicator is showing. If the only
@@ -809,7 +811,8 @@ void Slider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
     }
   }
 
-  Canvas content_canvas = prepareContentsCanvas(canvas);
+  PaintContext content_ctx = ctx.clipped(getContentBounds());
+  Canvas& content_canvas = content_ctx.canvas();
   if (!invalidated && !pending_content.empty()) {
     content_canvas.clipToExtents(pending_content);
   }

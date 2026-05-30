@@ -33,7 +33,7 @@ class Switch : public BasicWidget {
   }
 
   /// Drives the thumb animation timing on each paint pass.
-  void paintWidgetContents(const Canvas& canvas, Clipper& clipper) override;
+  void paintWidgetContents(PaintContext& ctx) override;
 
   /// Paints the track and thumb at the current animated position.
   void paint(const Canvas& canvas) const override;

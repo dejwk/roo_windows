@@ -18,6 +18,7 @@
 #include "roo_windows/core/margins.h"
 #include "roo_windows/core/measure_spec.h"
 #include "roo_windows/core/padding.h"
+#include "roo_windows/core/paint_context.h"
 #include "roo_windows/core/preferred_size.h"
 #include "roo_windows/core/rect.h"
 #include "roo_windows/core/theme.h"
@@ -247,7 +248,8 @@ class Widget {
   // Returns the offset in the device's coordinates.
   void getAbsoluteOffset(XDim& dx, YDim& dy) const;
 
-  // Called as part of display update, for a visible, dirty widget.
+  // Legacy bridge hook kept while the framework migrates to
+  // paint(PaintContext&).
   // The Canvas's offset and clipbox has been pre-initialized so that this
   // widget's top-left corner is painted at (0, 0), and the clip box is
   // constrained to this widget's bounds (and non-empty).
@@ -601,12 +603,16 @@ class Widget {
   // Mark this widget and its descendants as non-dirty.
   virtual void markCleanDescending() { markClean(); }
 
-  // Responsible for drawing a widget to the specified canvas, and updating the
-  // clipper to exclude the region covered by the widget from the clipper to
-  // prevent it from being over-drawn. If called on a non-dirty widget, does not
-  // need to draw anything, but it should still exclude the widget's area from
-  // the clipper. The default implementaion calls paint() (but only in case the)
-  // widget is actually dirty) to actually request the content to be drawn.
+  // Preferred widget authoring hook during the PaintContext migration.
+  // Default implementation forwards to paint(const Canvas&).
+  virtual void paint(PaintContext& ctx) const;
+
+  // Responsible for drawing a widget to the specified paint context, and
+  // updating the clipper to exclude the region covered by the widget from the
+  // clipper to prevent it from being over-drawn. If called on a non-dirty
+  // widget, does not need to draw anything, but it should still exclude the
+  // widget's area from the clipper. The default implementation clips the
+  // context to getContentBounds() and calls paint().
   //
   // Widgets should generally not override this method, and override paint()
   // instead. Two common scenarios when you might want to override this method
@@ -615,15 +621,16 @@ class Widget {
   //   call setDirty() if the animation shall continue.
   // * Mutating state - e.g. caching some paint-related values. Call the
   //   superclass method, and then do the necessary caching.
-  virtual void paintWidgetContents(const Canvas& s, Clipper& clipper);
+  virtual void paintWidgetContents(PaintContext& ctx);
 
   // Applies any final paint-side effects after the widget contents have been
   // drawn. All widgets contribute an exclusion region because rendering walks
   // the z-order directly into the framebuffer; pixels not excluded remain
   // available only to later overlays or future redraws.
-  virtual void finalizePaintWidget(const Canvas& s, Clipper& clipper) const;
+  virtual void finalizePaintWidget(PaintContext& cxt) const;
 
   virtual Canvas prepareCanvas(const Canvas& in);
+  virtual PaintContext preparePaintContext(const Canvas& in, Clipper& clipper);
   virtual Canvas prepareContentsCanvas(const Canvas& in);
 
   // Returns the local bounds that should be excluded after painting. Generic
@@ -723,7 +730,11 @@ class Widget {
   // paintWidgetContents().
   void paintWidget(const Canvas& s, Clipper& clipper);
 
-  void paintWidgetModded(Canvas& canvas, Clipper& clipper);
+  void paintWidgetModded(PaintContext& ctx);
+
+  // Helper functions for paintWidget.
+  void paintWidgetInteriorWithOverlays(Canvas& s, Clipper& clipper,
+                                       const OverlaySpec& overlay_spec);
 
   void markDirty() { redraw_status_ |= kDirty; }
   void markInvalidated() { redraw_status_ |= (kDirty | kInvalidated); }

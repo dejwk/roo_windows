@@ -160,14 +160,14 @@ ColorRole Switch::effectiveContainerRole() const {
   return isOn() ? ColorRole::kPrimary : ColorRole::kSurfaceContainerHighest;
 }
 
-void Switch::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
+void Switch::paintWidgetContents(PaintContext& ctx) {
   if (isAnimating()) {
     int16_t ms = timeAnimatingMs();
     if (ms < 0 || ms > kSwitchAnimationMs) {
       anim_ = 0x8000;
     }
   }
-  Widget::paintWidgetContents(canvas, clipper);
+  Widget::paintWidgetContents(ctx);
   if (isAnimating()) {
     setDirty();
   }

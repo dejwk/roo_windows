@@ -572,13 +572,23 @@ Canvas Widget::prepareCanvas(const Canvas& in) {
   return canvas;
 }
 
+PaintContext Widget::preparePaintContext(const Canvas& in, Clipper& clipper) {
+  // NOTE: keeping this in a separate method avoids retaining both a local
+  // Canvas and a PaintContext in Widget::paintWidget().
+  return PaintContext(prepareCanvas(in), clipper);
+}
+
+void Widget::paint(PaintContext& ctx) const {
+  paint(ctx.canvas());
+}
+
 void Widget::paintWidget(const Canvas& canvas, Clipper& clipper) {
   if (!isVisible()) {
     markCleanDescending();
     return;
   }
-  Canvas my_canvas = prepareCanvas(canvas);
-  bool empty = my_canvas.clip_box().empty();
+  PaintContext ctx = preparePaintContext(canvas, clipper);
+  bool empty = ctx.empty();
   if (empty) {
     // Nothing remains inside logical bounds. If persistent decoration paint
     // extends farther, finalizePaintWidget() may still need to repaint or
@@ -587,29 +597,30 @@ void Widget::paintWidget(const Canvas& canvas, Clipper& clipper) {
     markCleanDescending();
     if (!hasDecorationOverflow()) return;
   }
-  clipper.pushOverlaySpec(*this, my_canvas);
+  clipper.pushOverlaySpec(*this, ctx.canvas());
   const OverlaySpec& overlay_spec = clipper.currentOverlaySpec();
   if (!empty) {
     if (!overlay_spec.is_modded()) {
-      paintWidgetContents(my_canvas, clipper);
+      paintWidgetContents(ctx);
     } else {
-      paintWidgetModded(my_canvas, clipper);
+      paintWidgetModded(ctx);
     }
   }
-  my_canvas.set_clip_box(canvas.clip_box());
-  finalizePaintWidget(my_canvas, clipper);
-  clipper.popOverlaySpec();
+  ctx.setClipBox(canvas.clip_box());
+  finalizePaintWidget(ctx);
 }
 
-void Widget::paintWidgetModded(Canvas& canvas, Clipper& clipper) {
+void Widget::paintWidgetModded(PaintContext& ctx) {
   // Keeping this in a separate methods sheds 32 bytes from the stack.
+  Canvas& canvas = ctx.canvas();
+  Clipper& clipper = ctx.clipperForFramework();
   const OverlaySpec& overlay_spec = clipper.currentOverlaySpec();
   if (overlay_spec.is_disabled()) {
     roo_display::DisplayOutput& out = canvas.out();
     roo_display::TranslucencyFilter disablement_filter(
         canvas.out(), theme().state.disabled, canvas.bgcolor());
     canvas.set_out(&disablement_filter);
-    paintWidgetContents(canvas, clipper);
+    paintWidgetContents(ctx);
     canvas.set_out(&out);
   } else {
     // If click_animation is true, we need to redraw the overlay.
@@ -627,13 +638,13 @@ void Widget::paintWidgetModded(Canvas& canvas, Clipper& clipper) {
           roo_display::ForegroundFilter filter(canvas.out(),
                                                overlay_spec.press_overlay());
           canvas.set_out(&filter);
-          paintWidgetContents(canvas, clipper);
+          paintWidgetContents(ctx);
           canvas.set_out(&out);
           setDirty();
           notifyParentInvalidatedRegion(repaint_bounds);
           return;
         }
-        paintWidgetContents(canvas, clipper);
+        paintWidgetContents(ctx);
         setDirty();
         notifyParentInvalidatedRegion(repaint_bounds);
       } else {
@@ -653,7 +664,7 @@ void Widget::paintWidgetModded(Canvas& canvas, Clipper& clipper) {
           clipper.addOverlayShape(
               MakePointOverlay(*this, canvas, overlay_spec.base_overlay()),
               canvas.clip_box());
-          paintWidgetContents(canvas, clipper);
+          paintWidgetContents(ctx);
           break;
         }
         default: {
@@ -662,21 +673,20 @@ void Widget::paintWidgetModded(Canvas& canvas, Clipper& clipper) {
                                             overlay_spec.base_overlay(),
                                             roo_display::color::Transparent);
           canvas.set_out(&filter);
-          paintWidgetContents(canvas, clipper);
+          paintWidgetContents(ctx);
           canvas.set_out(&out);
         }
       }
     } else {
-      paintWidgetContents(canvas, clipper);
+      paintWidgetContents(ctx);
     }
   }
 }
 
-void Widget::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
-  if (!isDirty() || clipper.isDeadlineExceeded()) return;
-  Canvas my_canvas = prepareContentsCanvas(canvas);
-  clipper.setBounds(my_canvas.clip_box());
-  paint(my_canvas);
+void Widget::paintWidgetContents(PaintContext& ctx) {
+  if (!isDirty() || ctx.isDeadlineExceeded()) return;
+  PaintContext content_ctx = ctx.clipped(getContentBounds());
+  paint(content_ctx);
   markClean();
 }
 
@@ -686,7 +696,9 @@ Canvas Widget::prepareContentsCanvas(const Canvas& in) {
   return canvas;
 }
 
-void Widget::finalizePaintWidget(const Canvas& canvas, Clipper& clipper) const {
+void Widget::finalizePaintWidget(PaintContext& cxt) const {
+  const Canvas& canvas = cxt.canvas();
+  Clipper& clipper = cxt.clipperForFramework();
   Rect exclusion = getDirectPaintExclusionBounds();
   roo_display::Box absolute_bounds(
       canvas.dx() + exclusion.xMin(), canvas.dy() + exclusion.yMin(),

@@ -8,8 +8,8 @@ using namespace roo_display;
 
 namespace roo_windows {
 
-void ProgressBar::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
-  Widget::paintWidgetContents(canvas, clipper);
+void ProgressBar::paintWidgetContents(PaintContext& ctx) {
+  Widget::paintWidgetContents(ctx);
   if (progress_ < 0) {
     // Indeterminate. Continuous animation.
     setDirty();

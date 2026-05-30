@@ -48,10 +48,9 @@ class Container : public SurfaceWidget {
   /// implementation calls `child->paintWidget()`, thus omitting drawing of
   /// children that aren't dirty.
   ///
-  /// Calls `paint()` to actually paint the canvas area (with the canvas
-  /// object clipped to the invalidated region, and with the background
-  /// color pre-set to the panel's background).
-  void paintWidgetContents(const Canvas& canvas, Clipper& clipper) override;
+  /// Calls `paint()` to actually paint the canvas area through a
+  /// `PaintContext` clipped to the invalidated region.
+  void paintWidgetContents(PaintContext& ctx) override;
 
   /// Draws the surface area of this panel. The default implementation draws
   /// a transparent rectangle. (Effectively, the rectangle is drawn in the
@@ -196,7 +195,7 @@ class Container : public SurfaceWidget {
  private:
   void invalidateCachedMaxBounds() { cached_max_bounds_ = Rect(0, 0, -1, -1); }
 
-  Canvas prepareCanvas(const Canvas& in, const Rect& invalid_region);
+  Canvas prepareContainerCanvas(const Canvas& in, const Rect& invalid_region);
 
   void fastDrawChildShadow(Widget& child, const Canvas& canvas,
                            Clipper& clipper);
