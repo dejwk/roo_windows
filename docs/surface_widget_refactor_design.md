@@ -61,8 +61,9 @@ inherit surface-oriented hooks that are not part of their real contract.
 ### 2. The paint pipeline defaults to surface ownership
 
 `Widget::prepareCanvas()`, `Widget::prepareContentsCanvas()`, and
-`Widget::finalizePaintWidget()` currently assume border, background, elevation,
-and interior exclusion are generic widget concerns rather than surface concerns.
+the old `Widget::finalizePaintWidget()` path used to assume border,
+background, elevation, and interior exclusion were generic widget concerns
+rather than surface concerns.
 
 ### 3. The visual-overflow work needs a first-class ownership split
 
@@ -109,7 +110,7 @@ Important current surface-oriented implementation points include:
 
 - `prepareCanvas()` background blending
 - `prepareContentsCanvas()` border-based interior clipping
-- `finalizePaintWidget()` decoration emission and interior exclusion
+- the post-content decoration/exclusion stage
 
 ### Current concrete classification
 
@@ -531,16 +532,16 @@ Completed items are marked `[x]`. Remaining refactor steps are marked `[ ]`.
 
 - [x] Finish separating generic paint finalization from surface-specific paint
   finalization.
-  Result: `Widget::finalizePaintWidget()` now owns only the generic direct
-  render exclusion step. Surface-owned decoration emission moved behind a
-  private `SurfaceWidget::emitSurfaceDecoration()` helper, and
+  Result: the shared `Widget::paintWidget()` path now owns the generic direct
+  render exclusion step directly. Surface-owned decoration emission moved
+  behind `SurfaceWidget::emitPersistentDecoration()`, and
   `SurfaceWidget::getDirectPaintExclusionBounds()` now directly describes the
   surface-specific exclusion geometry.
   Notes: the shared path now reads as a generic framebuffer/z-order finalizer,
   while the surface branch explicitly owns shadow, outline, and exclusion
-  geometry decisions without an extra forwarding hook.
-  Exit criteria satisfied: `Widget` owns only generic
-  exclusion/finalization behavior, while `SurfaceWidget` owns decoration
+  geometry decisions through a narrow decoration hook.
+  Exit criteria satisfied: the shared `Widget` pipeline owns only generic
+  exclusion behavior, while `SurfaceWidget` owns persistent decoration
   emission and surface-interior geometry.
 
 - [x] Remove or rename any remaining migration-era terminology that implies the

@@ -606,7 +606,8 @@ class Widget {
   // widget, does not need to draw anything, but it should still exclude the
   // widget's area from the clipper. The default implementation prepares the
   // contents canvas via prepareContentsCanvas() and calls paint() on the
-  // resulting context.
+  // resulting context. After content paint, the shared pipeline emits any
+  // persistent decoration hook and contributes the widget's exclusion region.
   //
   // Widgets should generally not override this method, and override paint()
   // instead. Two common scenarios when you might want to override this method
@@ -617,11 +618,11 @@ class Widget {
   //   superclass method, and then do the necessary caching.
   virtual void paintWidgetContents(PaintContext& ctx);
 
-  // Applies any final paint-side effects after the widget contents have been
-  // drawn. All widgets contribute an exclusion region because rendering walks
-  // the z-order directly into the framebuffer; pixels not excluded remain
-  // available only to later overlays or future redraws.
-  virtual void finalizePaintWidget(PaintContext& cxt) const;
+  // Emits any persistent decoration overlay that belongs to this widget after
+  // content paint and before the shared exclusion step. Ordinary widgets leave
+  // this as a no-op; surface-owning widgets use it for shadow/outline style
+  // decoration that must still be registered when content paint is skipped.
+  virtual void emitPersistentDecoration(PaintContext& ctx) const;
 
   virtual Canvas prepareCanvas(const Canvas& in);
   virtual PaintContext preparePaintContext(const Canvas& in, Clipper& clipper);
@@ -630,8 +631,7 @@ class Widget {
   // Returns the local bounds that should be excluded after painting. Generic
   // widgets exclude the core area they draw into; the default follows the
   // content bounds derived from signed ink insets. Surface-owning widgets can
-  // refine this through their own hooks while leaving the shared finalization
-  // path generic.
+  // refine this while leaving the shared paint pipeline generic.
   virtual Rect getDirectPaintExclusionBounds() const;
 
   virtual void setParent(Container* parent, bool is_owned);

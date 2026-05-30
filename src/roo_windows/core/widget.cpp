@@ -589,8 +589,8 @@ void Widget::paintWidget(const Canvas& canvas, Clipper& clipper) {
   bool empty = ctx.empty();
   if (empty) {
     // Nothing remains inside logical bounds. If persistent decoration paint
-    // extends farther, finalizePaintWidget() may still need to repaint or
-    // exclude that decoration overflow region (currently surface shadow).
+    // extends farther, emitPersistentDecoration() may still need to repaint
+    // that decoration overflow region (currently the surface branch).
     // Transient overflow is modeled separately and is not consumed here yet.
     markCleanDescending();
     if (!hasDecorationOverflow()) return;
@@ -605,7 +605,8 @@ void Widget::paintWidget(const Canvas& canvas, Clipper& clipper) {
     }
   }
   ctx.setClipBox(canvas.clip_box());
-  finalizePaintWidget(ctx);
+  emitPersistentDecoration(ctx);
+  ctx.addExclusion(getDirectPaintExclusionBounds());
   clipper.popOverlaySpec();
 }
 
@@ -696,16 +697,7 @@ Canvas Widget::prepareContentsCanvas(const Canvas& in) {
   return canvas;
 }
 
-void Widget::finalizePaintWidget(PaintContext& cxt) const {
-  const Canvas& canvas = cxt.canvas();
-  Clipper& clipper = cxt.clipperForFramework();
-  Rect exclusion = getDirectPaintExclusionBounds();
-  roo_display::Box absolute_bounds(
-      canvas.dx() + exclusion.xMin(), canvas.dy() + exclusion.yMin(),
-      canvas.dx() + exclusion.xMax(), canvas.dy() + exclusion.yMax());
-  clipper.addExclusion(
-      roo_display::Box::Intersect(absolute_bounds, canvas.clip_box()));
-}
+void Widget::emitPersistentDecoration(PaintContext&) const {}
 
 Rect Widget::getDirectPaintExclusionBounds() const {
   return getContentBounds();

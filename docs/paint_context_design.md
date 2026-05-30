@@ -27,7 +27,7 @@ The result is an awkward split:
 
 - simple widgets used to override `paint(const Canvas&)`,
 - complex widgets override `paintWidgetContents(const Canvas&, Clipper&)`,
-- and some overlay-only behavior lives in `finalizePaintWidget(...)`.
+- and some overlay-only behavior used to live in `finalizePaintWidget(...)`.
 
 That split is visible in `material3::Slider`, `ValueIndicatorBubble`, and
 `Scrim`. Each needs a small amount of clipper participation, but each currently
@@ -49,10 +49,10 @@ Important current pieces:
   clips it to `maxBounds()`.
 - `Widget::paintWidgetContents()` prepares the content canvas, calls `paint()`,
   and marks the widget clean.
-- `Widget::finalizePaintWidget()` contributes the generic direct-paint
-  exclusion after content paint.
-- `SurfaceWidget::finalizePaintWidget()` adds surface decoration before the
-  generic finalization step.
+- The shared `Widget::paintWidget()` pipeline contributes the generic
+  direct-paint exclusion after content paint.
+- `SurfaceWidget::emitPersistentDecoration()` adds surface decoration before
+  that shared exclusion step.
 - `Container::paintWidgetContents()` already implements the desired ordering
   pattern for children: paint foreground children, add exclusions, then paint
   lower-Z background content.
@@ -83,9 +83,9 @@ piece of widget-local paint rather than a child widget.
 9. Keep real child widgets as the mechanism for visuals that need independent
    layout, input dispatch, lifetime, invalidation, overlay state, or overflow
    reporting.
-10. Keep `finalizePaintWidget()` in the initial implementation. Its remaining
-    role is reevaluated after representative widgets have migrated to the
-    context API.
+10. Keep a framework-only post-content stage in the initial implementation,
+  then narrow it after representative widgets have migrated to the context
+  API.
 
 ### Embedded Requirements
 
@@ -386,11 +386,11 @@ pass `PaintContext` to helper routines instead of threading both `Canvas` and
 `Clipper` manually, and they read the current overlay state from the context
 only when they actually need it.
 
-`finalizePaintWidget()` remains in the initial implementation for framework
-post-content behavior. The first migration moves widget-local overlay,
-decoration, and exclusion work into `paint(PaintContext&)` where the ordering
-is visible in the paint plan. A later phase narrows or removes
-`finalizePaintWidget()` only after that migration provides enough evidence.
+The initial migration keeps a framework-only post-content stage so generic
+exclusion and surface-owned decoration still happen when content paint is
+skipped. After the widget-facing migration is complete, that stage narrows to a
+surface-only `emitPersistentDecoration()` hook while the shared
+`Widget::paintWidget()` path owns the generic exclusion step directly.
 
 ### Paint Pipeline Refactoring
 
@@ -426,7 +426,8 @@ void Widget::paintWidget(PaintContext& parent_ctx) {
   }
 
   ctx.setClipBox(parent_ctx.canvas().clip_box());
-  finalizePaintWidget(ctx.canvas(), clipper, ctx.overlaySpec());
+  emitPersistentDecoration(ctx);
+  ctx.addExclusion(getDirectPaintExclusionBounds());
   clipper.popOverlaySpec();
 }
 
@@ -640,8 +641,8 @@ class PaintContext {
   void addDecoration(const PaintDecoration& decoration,
                      const OverlaySpec& overlay_spec);
 
-  // Framework-only escape hatch used by Widget/Container internals while
-  // finalizePaintWidget() is still expressed in the old low-level shape.
+  // Framework-only escape hatch used by low-level paint internals that still
+  // need direct clipper access.
   Clipper& clipperForFramework();
 };
 ```
@@ -825,11 +826,13 @@ Validation:
 
 Work:
 
-- Inspect remaining `finalizePaintWidget()` overrides and call sites after the
-  migration.
-- Keep, narrow, or remove the hook based on the remaining framework-only uses.
-- Document the decision in this design doc or in a short follow-up refactor
-  note.
+- Remove the general-purpose `finalizePaintWidget()` hook.
+- Move the generic direct-paint exclusion step into the shared
+  `Widget::paintWidget()` pipeline via `PaintContext::addExclusion()`.
+- Replace the remaining surface override with a narrower framework-only
+  `emitPersistentDecoration(PaintContext&)` hook and express that surface path
+  through `PaintContext::addDecoration()`.
+- Document the narrowed hook shape in the authoring and overflow docs.
 
 Validation:
 
@@ -906,12 +909,13 @@ Rejected because it turns helper-drawn visuals into a second lightweight widget
 system with storage, lifetime, and invalidation semantics. Real child widgets
 already cover that problem when independent state is needed.
 
-#### Remove `finalizePaintWidget()` Immediately
+#### Remove All Post-content Hooks Immediately
 
-Rejected for the initial implementation because current framework behavior
-still uses it for generic exclusion and surface decoration. The design moves
-widget-local uses first, then reevaluates the hook with actual migrated code in
-place.
+Rejected because persistent surface decoration still has to be registered on
+paint passes where content paint is skipped. The design first moved widget-
+local uses into `paint(PaintContext&)`, then narrowed the remaining hook to the
+surface-only `emitPersistentDecoration()` stage once the migrated code proved
+that generic exclusion could live in the shared pipeline.
 
 ## Future Work
 

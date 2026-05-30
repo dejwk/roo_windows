@@ -89,12 +89,11 @@ Important current properties:
 
 - Each widget paints through a `Canvas` derived from the parent canvas.
 - `Widget::prepareCanvas()` clips painting to `maxBounds()`.
-- Content paint happens before `finalizePaintWidget()`.
-- `Widget::finalizePaintWidget()` applies the generic direct-paint exclusion
-  step.
-- `SurfaceWidget::finalizePaintWidget()` adds surface-owned decoration such as
-  shadows and borders through the `Clipper` before delegating to the generic
-  finalization path.
+- Content paint happens before the framework-owned post-content stage.
+- The shared `Widget::paintWidget()` path applies the generic direct-paint
+  exclusion step.
+- `SurfaceWidget::emitPersistentDecoration()` adds surface-owned decoration
+  such as shadows and borders before that shared exclusion step.
 - Exclusions are box-based and used to prevent lower-Z content from repainting
   over direct-paint-owned regions of higher-Z widgets.
 - For surface-owning widgets, that generic exclusion contract is refined to

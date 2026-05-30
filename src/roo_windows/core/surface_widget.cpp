@@ -79,27 +79,20 @@ Canvas SurfaceWidget::prepareContentsCanvas(const Canvas& in) {
   return canvas;
 }
 
-void SurfaceWidget::finalizePaintWidget(PaintContext& cxt) const {
-  emitSurfaceDecoration(cxt);
-  Widget::finalizePaintWidget(cxt);
-}
-
-void SurfaceWidget::emitSurfaceDecoration(PaintContext& cxt) const {
-  const Canvas& canvas = cxt.canvas();
-  Clipper& clipper = cxt.clipperForFramework();
+void SurfaceWidget::emitPersistentDecoration(PaintContext& ctx) const {
   BorderStyle border_style = getBorderStyle().trim(width(), height());
   uint8_t border_thickness = border_style.getThickness();
   uint8_t elevation = getElevation();
   if (elevation != 0 || border_thickness != 0) {
-    const OverlaySpec& overlay_spec = clipper.currentOverlaySpec();
-    roo_display::Box absolute_bounds(canvas.dx(), canvas.dy(),
-                                     width() - 1 + canvas.dx(),
-                                     height() - 1 + canvas.dy());
-    clipper.addDecoration(canvas.clip_box(), absolute_bounds, elevation,
-                          overlay_spec, canvas.bgcolor(),
-                          border_style.corner_radii(),
-                          border_style.outline_width(),
-                          AlphaBlend(canvas.bgcolor(), getOutlineColor()));
+    PaintDecoration decoration;
+    decoration.bounds = Rect(0, 0, width() - 1, height() - 1);
+    decoration.background = ctx.bgcolor();
+    decoration.corner_radii = border_style.corner_radii();
+    decoration.elevation = elevation;
+    decoration.outline_width = border_style.outline_width();
+    decoration.outline_color =
+        AlphaBlend(decoration.background, getOutlineColor());
+    ctx.addDecoration(decoration, ctx.overlaySpec());
   }
 }
 
