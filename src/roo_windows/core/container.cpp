@@ -113,13 +113,16 @@ void Container::paintChildren(PaintContext& ctx) {
   for (int i = getChildrenCount() - 1; i >= 0; --i) {
     if (ctx.isDeadlineExceeded()) return;
     Widget& child = getChild(i);
-    bool clipped = child.getParentClipMode() == ParentClipMode::kClipped;
-    PaintContext& child_ctx = clipped ? clipped_ctx : ctx;
-    child.paintWidget(child_ctx.canvas(), child_ctx.clipperForFramework());
-    if (fast_render && clipped) {
-      // Decorations are guaranteed not to overlap with siblings, so we can draw
-      // them right away.
-      fastDrawChildShadow(child, clipped_ctx);
+    if (child.getParentClipMode() == ParentClipMode::kClipped) {
+      child.paintWidget(clipped_ctx.canvas(),
+                        clipped_ctx.clipperForFramework());
+      if (fast_render) {
+        // Decorations are guaranteed not to overlap with siblings, so we can
+        // draw them right away.
+        fastDrawChildShadow(child, clipped_ctx);
+      }
+    } else {
+      child.paintWidget(ctx.canvas(), ctx.clipperForFramework());
     }
   }
 }
