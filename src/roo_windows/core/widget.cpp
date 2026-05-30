@@ -608,6 +608,7 @@ void Widget::paintWidget(const Canvas& canvas, Clipper& clipper) {
   }
   ctx.setClipBox(canvas.clip_box());
   finalizePaintWidget(ctx);
+  clipper.popOverlaySpec();
 }
 
 void Widget::paintWidgetModded(PaintContext& ctx) {

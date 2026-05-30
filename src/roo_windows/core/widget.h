@@ -728,6 +728,10 @@ class Widget {
   // state-related overlays and filters (enabled/disabled, clicking, etc.),
   // creates the new, offset canvas with overlays and/or filters, and calls
   // paintWidgetContents().
+  void paintWidget(PaintContext& ctx) {
+    paintWidget(ctx.canvas(), ctx.clipperForFramework());
+  }
+
   void paintWidget(const Canvas& s, Clipper& clipper);
 
   void paintWidgetModded(PaintContext& ctx);

@@ -115,7 +115,7 @@ class Container : public SurfaceWidget {
 
   void detachChild(Widget* child);
 
-  virtual void paintChildren(const Canvas& canvas, Clipper& clipper);
+  virtual void paintChildren(PaintContext& ctx);
 
   void invalidateDescending() override;
   void invalidateDescending(const Rect& rect) override;
@@ -195,10 +195,10 @@ class Container : public SurfaceWidget {
  private:
   void invalidateCachedMaxBounds() { cached_max_bounds_ = Rect(0, 0, -1, -1); }
 
-  Canvas prepareContainerCanvas(const Canvas& in, const Rect& invalid_region);
+  PaintContext prepareSurfaceContext(const PaintContext& in,
+                                     const Rect& invalid_region);
 
-  void fastDrawChildShadow(Widget& child, const Canvas& canvas,
-                           Clipper& clipper);
+  void fastDrawChildShadow(Widget& child, const PaintContext& ctx);
 
   friend class Widget;
   friend class ScrollableContainer;

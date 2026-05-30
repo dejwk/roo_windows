@@ -232,7 +232,7 @@ class ListLayout : public Panel {
                      elements_.capacity()];
   }
 
-  void paintChildren(const Canvas& canvas, Clipper& clipper) override {
+  void paintChildren(PaintContext& ctx) override {
     paint_offset_ = (paint_offset_ + 1) % elements_.capacity();
     CHECK(!in_paint_children_);
     in_paint_children_ = true;
@@ -274,7 +274,7 @@ class ListLayout : public Panel {
     in_paint_children_ = false;
 
     // Now that we have set up all the children, we are ready to paint them.
-    Panel::paintChildren(canvas, clipper);
+    Panel::paintChildren(ctx);
   }
 
   PreferredSize getPreferredSize() const override {

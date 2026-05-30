@@ -34,6 +34,33 @@ class OverlaySpecSourceWidget : public BasicSurfaceWidget {
   }
 };
 
+class SingleChildContainer : public Container {
+ public:
+  explicit SingleChildContainer(const Environment& env)
+      : Container(env), child_(nullptr) {}
+
+  void setChild(WidgetRef child, const Rect& bounds) {
+    child_ = child.get();
+    attachChild(std::move(child), bounds);
+  }
+
+ protected:
+  int getChildrenCount() const override { return child_ == nullptr ? 0 : 1; }
+
+  const Widget& getChild(int idx) const override {
+    CHECK_EQ(0, idx);
+    return *child_;
+  }
+
+  Widget& getChild(int idx) override {
+    CHECK_EQ(0, idx);
+    return *child_;
+  }
+
+ private:
+  Widget* child_;
+};
+
 class PaintContextTest : public testing::Test {
  protected:
   static constexpr int16_t kWidth = 32;
@@ -299,6 +326,34 @@ TEST_F(PaintContextTest, PaintContextOverlaySpecForwardsFromClipper) {
   EXPECT_TRUE(ctx.overlaySpec().is_modded());
 
   clipper.popOverlaySpec();
+}
+
+TEST_F(PaintContextTest,
+       ContainerChildPaintRestoresOverlaySpecAfterModdedChild) {
+  auto container = std::make_unique<SingleChildContainer>(env_);
+  SingleChildContainer* container_ptr = container.get();
+  app_.add(std::move(container), Box(0, 0, 15, 15));
+
+  auto child = std::make_unique<OverlaySpecSourceWidget>(env_);
+  OverlaySpecSourceWidget* child_ptr = child.get();
+  container_ptr->setChild(std::move(child), Rect(0, 0, 7, 7));
+  child_ptr->setSelected(true);
+  child_ptr->setPressed(true);
+  container_ptr->setDirty();
+
+  Surface surface(display_.output(), 0, 0, display_.extents(),
+                  /*is_write_once=*/false, display_.getBackgroundColor(),
+                  FillMode::kVisible, BlendingMode::kSourceOver);
+  Canvas canvas(&surface);
+  internal::ClipperState clipper_state;
+  Clipper clipper(clipper_state, canvas.out(), roo_time::Uptime::Max());
+  PaintContext ctx(canvas, clipper);
+
+  EXPECT_FALSE(clipper.currentOverlaySpec().is_modded());
+
+  container_ptr->paintWidgetContents(ctx);
+
+  EXPECT_FALSE(clipper.currentOverlaySpec().is_modded());
 }
 
 TEST(PaintContextSize, StaysWithinCanvasPlusPointer) {

@@ -57,33 +57,29 @@ void Container::detachChild(Widget* child) {
   if (owned) delete child;
 }
 
-Canvas Container::prepareContainerCanvas(const Canvas& in,
-                                         const Rect& invalid_region) {
+PaintContext Container::prepareSurfaceContext(const PaintContext& in,
+                                              const Rect& invalid_region) {
   // NOTE: keeping this in a separate method helps to shed 48 bytes per
   // container from the stack.
-  Rect rect = Rect::Intersect(bounds(), invalid_region);
-  Canvas my_canvas = in;
-  my_canvas.clipToExtents(rect);
+  PaintContext out = in.clipped(Rect::Intersect(bounds(), invalid_region));
   BorderStyle border_style = getBorderStyle().trim(width(), height());
   uint8_t border_thickness = border_style.getThickness();
   if (border_thickness > 0) {
-    my_canvas.clipToExtents(roo_display::Box(border_thickness, border_thickness,
-                                             width() - border_thickness - 1,
-                                             height() - border_thickness - 1));
+    return out.clipped(Rect(border_thickness, border_thickness,
+                            width() - border_thickness - 1,
+                            height() - border_thickness - 1));
   }
-  return my_canvas;
+  return out;
 }
 
 void Container::paintWidgetContents(PaintContext& ctx) {
-  const Canvas& canvas = ctx.canvas();
-  Clipper& clipper = ctx.clipperForFramework();
   if (!isInvalidated()) {
     // Faster path with less stack overhead; repaint the children.
     if (isDirty() || !bounds().contains(maxBounds())) {
       markClean();
       // Draw the panel's children.
-      paintChildren(canvas, clipper);
-      if (clipper.isDeadlineExceeded()) {
+      paintChildren(ctx);
+      if (ctx.isDeadlineExceeded()) {
         markDirty();
         return;
       }
@@ -95,8 +91,8 @@ void Container::paintWidgetContents(PaintContext& ctx) {
     invalid_region_ = Rect(0, 0, -1, -1);
     if (dirty || !bounds().contains(maxBounds())) {
       // Draw the panel's children.
-      paintChildren(canvas, clipper);
-      if (clipper.isDeadlineExceeded()) {
+      paintChildren(ctx);
+      if (ctx.isDeadlineExceeded()) {
         markDirty();
         markInvalidated();
         invalid_region_ = invalid_region;
@@ -104,47 +100,45 @@ void Container::paintWidgetContents(PaintContext& ctx) {
       }
     }
     // Paint the surface.
-    Canvas my_canvas = prepareContainerCanvas(canvas, invalid_region);
-    if (!my_canvas.clip_box().empty()) {
-      PaintContext surface_ctx(my_canvas, clipper);
+    PaintContext surface_ctx = prepareSurfaceContext(ctx, invalid_region);
+    if (!surface_ctx.empty()) {
       Widget::paint(surface_ctx);
     }
   }
 }
 
-void Container::paintChildren(const Canvas& canvas, Clipper& clipper) {
-  Canvas canvas_clipped = canvas;
-  canvas_clipped.clipToExtents(bounds());
+void Container::paintChildren(PaintContext& ctx) {
+  PaintContext clipped_ctx = ctx.clipped(bounds());
   bool fast_render = isDirty() && respectsChildrenBoundaries();
   for (int i = getChildrenCount() - 1; i >= 0; --i) {
-    if (clipper.isDeadlineExceeded()) return;
+    if (ctx.isDeadlineExceeded()) return;
     Widget& child = getChild(i);
     bool clipped = child.getParentClipMode() == ParentClipMode::kClipped;
-    child.paintWidget(clipped ? canvas_clipped : canvas, clipper);
+    PaintContext& child_ctx = clipped ? clipped_ctx : ctx;
+    child.paintWidget(child_ctx);
     if (fast_render && clipped) {
       // Decorations are guaranteed not to overlap with siblings, so we can draw
       // them right away.
-      fastDrawChildShadow(child, canvas_clipped, clipper);
+      fastDrawChildShadow(child, clipped_ctx);
     }
   }
 }
 
-void Container::fastDrawChildShadow(Widget& child, const Canvas& canvas,
-                                    Clipper& clipper) {
+void Container::fastDrawChildShadow(Widget& child, const PaintContext& ctx) {
   // NOTE: keeping this in a separate method sheds 48 bytes per container on the
   // stack.
-  Canvas myc = canvas;
-  // Minimize the redraw area so that we can take the most advantage of plan
-  // fill performance.
-  myc.clipToExtents(child.getParentDecorationBounds());
   // Make sure we're not over-stepping.
   Margins margins = child.getMargins();
   Rect rect = child.parent_bounds();
-  myc.clipToExtents(
-      Rect(rect.xMin() - margins.left(), rect.yMin() - margins.top(),
-           rect.xMax() + margins.right(), rect.yMax() + margins.bottom()));
-  myc.clear();
-  clipper.addExclusion(myc.clip_box());
+  // Minimize the redraw area so that we can take the most advantage of plane
+  // fill performance while staying within the child's decoration margins.
+  PaintContext shadow_ctx = ctx.clipped(child.getParentDecorationBounds())
+                                .clipped(Rect(rect.xMin() - margins.left(),
+                                              rect.yMin() - margins.top(),
+                                              rect.xMax() + margins.right(),
+                                              rect.yMax() + margins.bottom()));
+  shadow_ctx.clear();
+  shadow_ctx.addExclusion(shadow_ctx.localClip());
 }
 
 void Container::paint(const Canvas& canvas) const { canvas.clear(); }
