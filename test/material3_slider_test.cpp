@@ -2217,13 +2217,13 @@ TEST_F(Material3SliderRenderTest,
               kSliderY + inactive_rect.yMin() + inactive_rect.height() / 2));
 }
 
-// Verifies that a visible value indicator paints its interior bubble color in
-// the resolved local bubble bounds, rather than leaving the slider background
-// or track color behind.
+// Verifies that kWithinBounds keeps the bubble hidden at rest, then paints the
+// clamped bubble interior once the slider enters the pressed state.
 TEST_F(Material3SliderRenderTest,
-       WithinBoundsValueIndicatorPaintsBubbleInterior) {
+  WithinBoundsValueIndicatorPaintsBubbleInteriorOnlyDuringInteraction) {
   SliderStyle style{};
   style.value_indicator = SliderValueIndicatorBehavior::kWithinBounds;
+  const int16_t kBubbleSliderY = kHeight - kSliderHeight;
 
   auto slider = std::make_unique<Slider>(env_, SliderRange{0.0f, 1.0f}, 0.5f,
                                          SliderVariant::kStandard, style);
@@ -2231,15 +2231,17 @@ TEST_F(Material3SliderRenderTest,
   slider_ = slider_ptr;
 
   app_.add(std::move(slider),
-           roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
-                            kSliderY + kSliderHeight - 1));
+           roo_display::Box(kSliderX, kBubbleSliderY,
+                            kSliderX + kSliderWidth - 1,
+                            kBubbleSliderY + kSliderHeight - 1));
 
   ASSERT_TRUE(app_.refresh());
 
   Rect bubble =
-      ResolveCurrentIndicatorBoundsForTest(*slider_ptr, env_).translate(kSliderX,
-                                                                        kSliderY);
+      ResolveCurrentIndicatorBoundsForTest(*slider_ptr, env_)
+          .translate(kSliderX, kBubbleSliderY);
   ASSERT_FALSE(bubble.empty());
+  EXPECT_LT(bubble.yMax(), kBubbleSliderY);
 
   int16_t sample_x = bubble.xMin() + bubble.width() / 4;
   int16_t sample_y = bubble.yMin() + bubble.height() / 4;
@@ -2247,6 +2249,13 @@ TEST_F(Material3SliderRenderTest,
   ASSERT_LT(sample_x, kWidth);
   ASSERT_GE(sample_y, 0);
   ASSERT_LT(sample_y, kHeight);
+
+  EXPECT_NE(QuantizeToArgb4444(env_.theme().color.inverseSurface),
+            pixelAt(sample_x, sample_y));
+
+  roo_display::FpPoint focus = slider_ptr->getPointOverlayFocus();
+  slider_ptr->onShowPress((XDim)focus.x, (YDim)focus.y);
+  ASSERT_TRUE(app_.refresh());
 
   EXPECT_EQ(QuantizeToArgb4444(env_.theme().color.inverseSurface),
             pixelAt(sample_x, sample_y));

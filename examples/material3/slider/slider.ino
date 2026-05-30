@@ -677,7 +677,7 @@ class SliderScreen : public SimpleScrollablePanel {
             }),
         balance_(
             env, "Centered balance",
-            "kWithinBounds: bubble clamped inside the track",
+            "kWithinBounds: bubble stays above the track and clamps horizontally",
             material3::SliderRange{-100.0f, 100.0f, 5.0f}, -20.0f,
             [](TextLabel& label, const material3::Slider& slider) {
               label.setTextf("%+.0f", slider.value());

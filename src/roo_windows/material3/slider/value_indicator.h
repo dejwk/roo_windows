@@ -69,9 +69,9 @@ class ValueIndicatorBubble {
   // measurement.
   //
   // For horizontal sliders, kWithinBounds clamps the bubble to the slider's
-  // horizontal span and shifts it down when needed so the pill stays inside
-  // the slider's local bounds. For vertical sliders, kWithinBounds clamps the
-  // bubble vertically to [0, parent_height). In both orientations,
+  // horizontal span while keeping the pill above the track. For vertical
+  // sliders, kWithinBounds clamps the bubble vertically to [0,
+  // parent_height). In both orientations,
   // non-clamped behaviors allow the bubble to overhang the travel axis by
   // roughly half the conservative bubble span plus a small thumb overhang.
   static Rect ConservativeBounds(int16_t parent_width, int16_t parent_height,

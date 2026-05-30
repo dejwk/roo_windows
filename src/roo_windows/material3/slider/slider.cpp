@@ -45,15 +45,15 @@ using internal::TrackShapeMaxPrimary;
 using internal::TrackShapeMinPrimary;
 
 // True iff the indicator should be drawn this frame given the current
-// interaction state and behavior. kAlways and kWithinBounds show the bubble
-// at all times; kShowOnInteraction shows it only while pressed or dragged.
+// interaction state and behavior. kWithinBounds reuses the same interaction-
+// driven visibility as kShowOnInteraction; it only changes bubble clamping.
 bool ShowsValueIndicator(const Slider& widget) {
   switch (widget.style().value_indicator) {
     case SliderValueIndicatorBehavior::kHidden:
       return false;
     case SliderValueIndicatorBehavior::kShowOnInteraction:
-      return widget.isPressed() || widget.isDragged();
     case SliderValueIndicatorBehavior::kWithinBounds:
+      return widget.isPressed() || widget.isDragged();
     case SliderValueIndicatorBehavior::kAlways:
       return true;
   }
@@ -584,9 +584,8 @@ void Slider::notifyStateChanged(uint16_t state_diff) {
   float center = axis.centerFromValue(range_, value_);
   Rect thumb_rect = axis.invalidationRectForCenterChange(center, center);
 
-    bool old_indicator_visible =
+  bool old_indicator_visible =
       style_.value_indicator == SliderValueIndicatorBehavior::kAlways ||
-      style_.value_indicator == SliderValueIndicatorBehavior::kWithinBounds ||
       was_pressed || isDragged();
   bool new_indicator_visible = ShowsValueIndicator(*this);
 
@@ -736,9 +735,8 @@ Rect Slider::getParentTransientPaintBounds() const {
   if (style_.value_indicator == SliderValueIndicatorBehavior::kHidden) {
     return base;
   }
-    bool may_show =
+  bool may_show =
       style_.value_indicator == SliderValueIndicatorBehavior::kAlways ||
-      style_.value_indicator == SliderValueIndicatorBehavior::kWithinBounds ||
       isPressed() || isDragged();
   if (!may_show || width() <= 0 || height() <= 0) return base;
   Rect bubble_local = ValueIndicatorBubble::ConservativeBounds(

@@ -112,7 +112,6 @@ Rect ValueIndicatorBubble::ConservativeBounds(
     return Rect(left, top, right, bottom);
   }
   if (clamp && bw > parent_width) bw = parent_width;
-  if (clamp && bh > parent_height) bh = parent_height;
   int16_t left, right;
   if (clamp) {
     left = 0;
@@ -122,8 +121,8 @@ Rect ValueIndicatorBubble::ConservativeBounds(
     left = -margin;
     right = parent_width - 1 + margin;
   }
-  int16_t top = clamp ? 0 : -kGap - bh;
-  int16_t bottom = clamp ? bh - 1 : -kGap - 1;
+  int16_t top = -kGap - bh;
+  int16_t bottom = -kGap - 1;
   return Rect(left, top, right, bottom);
 }
 
@@ -171,7 +170,6 @@ Rect ValueIndicatorBubble::EnvelopeForCenterRange(
     return Rect(left, top, right, bottom);
   }
   if (clamp && bw > parent_width) bw = parent_width;
-  if (clamp && bh > parent_height) bh = parent_height;
   // The bubble's left edge for a thumb at `center` is
   // `round(center) - bw / 2` (see layout()). Use floor/ceil with a 1-pixel
   // safety margin to be robust to rounding when the center range came from
@@ -189,8 +187,8 @@ Rect ValueIndicatorBubble::EnvelopeForCenterRange(
   }
   int16_t left = l_min;
   int16_t right = l_max + bw - 1;
-  int16_t top = clamp ? 0 : -kGap - bh;
-  int16_t bottom = clamp ? bh - 1 : -kGap - 1;
+  int16_t top = -kGap - bh;
+  int16_t bottom = -kGap - 1;
   return Rect(left, top, right, bottom);
 }
 
@@ -233,12 +231,6 @@ bool ValueIndicatorBubble::layout(int16_t parent_width, int16_t parent_height,
   int16_t left = (int16_t)roundf(thumb_center) - bw / 2;
   int16_t top = -kGap - bh;
   if (clamp_to_bounds) {
-    if (bh > parent_height) {
-      top = 0;
-      bh = parent_height;
-    } else {
-      top = 0;
-    }
     if (bw > parent_width) {
       // Bubble is wider than the slider; collapse to the slider's width and
       // let the text be horizontally centered (and clipped if necessary).
