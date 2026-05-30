@@ -249,7 +249,7 @@ bool ValueIndicatorBubble::layout(int16_t parent_width, int16_t parent_height,
   return true;
 }
 
-void ValueIndicatorBubble::paint(const Canvas& canvas) const {
+void ValueIndicatorBubble::paint(PaintContext& ctx) const {
   if (!valid_ || bounds_.empty()) return;
 
   // The inscribed inner rectangle: bounds() inset on every side by the
@@ -266,16 +266,15 @@ void ValueIndicatorBubble::paint(const Canvas& canvas) const {
   // Confine all drawing to the inner rectangle, intersected with the
   // inherited clip box. This is also a defensive safeguard against
   // out-of-range pixel writes when the bubble lands near the screen edge.
-  Canvas sub = canvas;
-  sub.clipToExtents(inner);
-  if (sub.clip_box().empty()) return;
+  PaintContext sub = ctx.clipped(inner);
+  if (sub.empty()) return;
 
   // Set the canvas background to the bubble color so that the text label's
   // inter-glyph fill (which uses bgcolor) blends to the bubble color rather
   // than to the surrounding surface bg (which is typically white) - that
   // mismatch is what previously produced the "bubble overwritten white"
   // flicker.
-  sub.set_bgcolor(bubble_color_);
+  sub.setBgcolor(bubble_color_);
 
   // Fast solid fill of the pill's interior. Far cheaper than a smooth
   // round-rect; the rounded edges come from the decoration overlay.
@@ -292,20 +291,17 @@ void ValueIndicatorBubble::paint(const Canvas& canvas) const {
   sub.drawObject(label, bubble_cx - label_cx, bubble_cy - label_cy);
 }
 
-void ValueIndicatorBubble::paintAndDecorate(
-    const Canvas& canvas, Clipper& clipper,
-    const OverlaySpec& overlay_spec) const {
+void ValueIndicatorBubble::paintAndDecorate(PaintContext& ctx) const {
   if (!valid_ || bounds_.empty()) return;
-  paint(canvas);
-  decorate(canvas, clipper, overlay_spec);
+  paint(ctx);
+  decorate(ctx);
 }
 
 Rect PaintValueIndicator(const Theme& theme, bool enabled,
-                         const Canvas& indicator_canvas, Clipper& clipper,
+                         PaintContext& indicator_ctx,
                          int16_t parent_width, int16_t parent_height,
                          float thumb_center, const SliderStyle& style,
-                         roo::string_view text,
-                         const OverlaySpec& overlay_spec) {
+                         roo::string_view text) {
   ValueIndicatorBubble bubble(theme, enabled);
   if (!bubble.layout(parent_width, parent_height, thumb_center,
                      style.orientation, text,
@@ -313,31 +309,26 @@ Rect PaintValueIndicator(const Theme& theme, bool enabled,
                          SliderValueIndicatorBehavior::kWithinBounds)) {
     return Rect();
   }
-  bubble.paintAndDecorate(indicator_canvas, clipper, overlay_spec);
+  bubble.paintAndDecorate(indicator_ctx);
   return bubble.bounds();
 }
 
-void ValueIndicatorBubble::decorate(const Canvas& canvas, Clipper& clipper,
-                                    const OverlaySpec& overlay_spec) const {
+void ValueIndicatorBubble::decorate(PaintContext& ctx) const {
   if (!valid_ || bounds_.empty()) return;
-
-  // Absolute (display) coordinates of the bubble's full bounds. The clipper
-  // wrapper's addDecoration() takes a Rect (with absolute values here),
-  // converts to a Box internally, and forwards to the underlying clipper.
-  Rect absolute(canvas.dx() + bounds_.xMin(), canvas.dy() + bounds_.yMin(),
-                canvas.dx() + bounds_.xMax(), canvas.dy() + bounds_.yMax());
 
   // 1) Register the rounded-rect decoration overlay covering the bubble's
   //    full extents. Elevation is 0 (no shadow). Outline width is 0; the
   //    outline color is the same as bg so Decoration treats the outline as
   //    absent and uses the corner radii as the bubble's silhouette.
-  BorderStyle::CornerRadii radii{(uint8_t)kCornerRadius, (uint8_t)kCornerRadius,
-                                 (uint8_t)kCornerRadius,
-                                 (uint8_t)kCornerRadius};
-  clipper.addDecoration(canvas.clip_box(), absolute, /*elevation=*/0,
-                        overlay_spec, bubble_color_, radii,
-                        /*outline_width=*/SmallNumber(0),
-                        /*outline_color=*/bubble_color_);
+  PaintDecoration decoration;
+  decoration.bounds = bounds_;
+  decoration.background = bubble_color_;
+  decoration.corner_radii = {(uint8_t)kCornerRadius, (uint8_t)kCornerRadius,
+                             (uint8_t)kCornerRadius,
+                             (uint8_t)kCornerRadius};
+  decoration.outline_width = SmallNumber(0);
+  decoration.outline_color = bubble_color_;
+  ctx.addDecoration(decoration, ctx.overlaySpec());
 
   // 2) Add an exclusion for the inscribed inner rectangle. This protects the
   //    pill interior from overdraw by subsequent sibling/parent paints
@@ -347,10 +338,9 @@ void ValueIndicatorBubble::decorate(const Canvas& canvas, Clipper& clipper,
   //    decoration overlay above blends bubble color with parent bg
   //    according to the rounded-corner alpha mask, producing the rounded
   //    edges.
-  Box inner_abs(absolute.xMin() + kCornerInset, absolute.yMin() + kCornerInset,
-                absolute.xMax() - kCornerInset, absolute.yMax() - kCornerInset);
-  Box clipped = Box::Intersect(inner_abs, canvas.clip_box());
-  if (!clipped.empty()) clipper.addExclusion(clipped);
+  Rect inner(bounds_.xMin() + kCornerInset, bounds_.yMin() + kCornerInset,
+             bounds_.xMax() - kCornerInset, bounds_.yMax() - kCornerInset);
+  if (!inner.empty()) ctx.addExclusion(inner);
 }
 
 }  // namespace material3

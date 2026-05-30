@@ -6,9 +6,7 @@
 #include "roo_backport/string_view.h"
 #include "roo_display/color/color.h"
 #include "roo_display/core/box.h"
-#include "roo_windows/core/canvas.h"
-#include "roo_windows/core/clipper.h"
-#include "roo_windows/core/overlay_spec.h"
+#include "roo_windows/core/paint_context.h"
 #include "roo_windows/core/rect.h"
 #include "roo_windows/material3/slider/slider.h"
 
@@ -30,12 +28,12 @@ namespace material3 {
 // rounded-corner panel:
 //
 //  1) layout(...)        - measure text and compute the pill rectangle.
-//  2) paint(canvas)      - fast fillRect of the bubble's inscribed inner
+//  2) paint(ctx)         - fast fillRect of the bubble's inscribed inner
 //                          rectangle (away from the rounded corners) plus
 //                          the centered text label. No anti-aliased shape
 //                          drawing happens here; it is just a fillRect and
 //                          a text blit.
-//  3) decorate(...)      - register a Decoration overlay covering the
+//  3) decorate(ctx)      - register a Decoration overlay covering the
 //                          bubble's full bounds, with rounded corners and
 //                          no shadow/outline, plus an exclusion for the
 //                          inscribed inner rectangle. Subsequent paints by
@@ -143,25 +141,21 @@ class ValueIndicatorBubble {
   // corners - those are produced later by the decoration overlay
   // registered in decorate(), once the parent paints over the corner
   // strips.
-  void paint(const Canvas& canvas) const;
+  void paint(PaintContext& ctx) const;
 
   // Convenience for the common slider path: paint the pill interior and text,
   // then register the rounded decoration overlay and exclusion in one step.
-  void paintAndDecorate(const Canvas& canvas, Clipper& clipper,
-                        const OverlaySpec& overlay_spec) const;
+  void paintAndDecorate(PaintContext& ctx) const;
 
-  // Registers the bubble's rounded-rect decoration overlay on `clipper`
+  // Registers the bubble's rounded-rect decoration overlay on `ctx`
   // and adds an exclusion for the inscribed inner rectangle (so subsequent
   // sibling and parent paints will not overdraw the freshly painted pill,
   // while still being free to paint the corner strips so the decoration
   // overlay can blend the rounded edges in).
   //
-  // `overlay_spec` is forwarded to Decoration to apply press/disabled
-  // modulation. Pass a default-constructed (unmodded) OverlaySpec to keep
-  // the bubble visually independent of the host slider's interaction
-  // state.
-  void decorate(const Canvas& canvas, Clipper& clipper,
-                const OverlaySpec& overlay_spec) const;
+  // The current context overlay spec is forwarded to Decoration so disabled
+  // and pressed host modulation matches the surrounding slider paint.
+  void decorate(PaintContext& ctx) const;
 
  private:
   Rect bounds_;
@@ -175,11 +169,10 @@ class ValueIndicatorBubble {
 // slider-local thumb center. Returns the painted local bounds, or an empty
 // rect when there is nothing to draw.
 Rect PaintValueIndicator(const Theme& theme, bool enabled,
-                         const Canvas& indicator_canvas, Clipper& clipper,
+                         PaintContext& indicator_ctx,
                          int16_t parent_width, int16_t parent_height,
                          float thumb_center, const SliderStyle& style,
-                         roo::string_view text,
-                         const OverlaySpec& overlay_spec = OverlaySpec());
+                         roo::string_view text);
 
 // Returns whether `style` enables a value indicator at all (i.e. anything
 // other than kHidden).

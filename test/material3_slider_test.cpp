@@ -210,8 +210,9 @@ class ContentPaintSlider : public Slider {
     Clipper clipper(clipper_state, parent_canvas.out(),
                     roo_time::Uptime::Max());
     PaintContext ctx(prepareCanvas(parent_canvas), clipper);
-    OverlaySpec overlay_spec(*this, ctx.canvas());
+    clipper.pushOverlaySpec(*this, ctx.canvas());
     paintWidgetContents(ctx);
+    clipper.popOverlaySpec();
   }
 };
 
@@ -417,7 +418,9 @@ class ContentPaintRangeSlider : public RangeSlider {
     Clipper clipper(clipper_state, parent_canvas.out(),
                     roo_time::Uptime::Max());
     PaintContext ctx(prepareCanvas(parent_canvas), clipper);
+    clipper.pushOverlaySpec(*this, ctx.canvas());
     paintWidgetContents(ctx);
+    clipper.popOverlaySpec();
   }
 };
 
@@ -2212,6 +2215,37 @@ TEST_F(Material3SliderRenderTest,
       inactive,
       pixelAt(kSliderX + inactive_rect.xMin() + inactive_rect.width() / 2,
               kSliderY + inactive_rect.yMin() + inactive_rect.height() / 2));
+}
+
+// Verifies that a visible value indicator paints its interior bubble color in
+// the resolved local bubble bounds, rather than leaving the slider background
+// or track color behind.
+TEST_F(Material3SliderRenderTest,
+       WithinBoundsValueIndicatorPaintsBubbleInterior) {
+  SliderStyle style{};
+  style.value_indicator = SliderValueIndicatorBehavior::kWithinBounds;
+
+  auto slider = std::make_unique<Slider>(env_, SliderRange{0.0f, 1.0f}, 0.5f,
+                                         SliderVariant::kStandard, style);
+  Slider* slider_ptr = slider.get();
+  slider_ = slider_ptr;
+
+  app_.add(std::move(slider),
+           roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
+                            kSliderY + kSliderHeight - 1));
+
+  ASSERT_TRUE(app_.refresh());
+
+  Rect bubble =
+      ResolveCurrentIndicatorBoundsForTest(*slider_ptr, env_).translate(kSliderX,
+                                                                        kSliderY);
+  ASSERT_FALSE(bubble.empty());
+
+  int16_t sample_x = bubble.xMin() + bubble.width() / 4;
+  int16_t sample_y = bubble.yMin() + bubble.height() / 4;
+
+  EXPECT_EQ(QuantizeToArgb4444(env_.theme().color.inverseSurface),
+            pixelAt(sample_x, sample_y));
 }
 
 // Verifies that a value-indicator repaint on the single slider only writes into

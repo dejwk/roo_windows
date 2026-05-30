@@ -748,7 +748,6 @@ Rect Slider::getParentTransientPaintBounds() const {
 }
 
 void Slider::paintWidgetContents(PaintContext& ctx) {
-  const Canvas& canvas = ctx.canvas();
   Clipper& clipper = ctx.clipperForFramework();
   // The canvas we receive is clipped to maxBounds(), which (via our
   // getParentTransientPaintBounds() override) covers the full bubble
@@ -777,11 +776,9 @@ void Slider::paintWidgetContents(PaintContext& ctx) {
 
   if (ShowsValueIndicator(*this) &&
       (invalidated || !pending_indicator.empty())) {
-    Canvas indicator_canvas = canvas;
-    if (!invalidated) {
-      indicator_canvas.clipToExtents(pending_indicator);
-    }
-    if (!indicator_canvas.clip_box().empty() && width() > 0 && height() > 0) {
+    PaintContext indicator_ctx =
+        invalidated ? ctx : ctx.clipped(pending_indicator);
+    if (!indicator_ctx.empty() && width() > 0 && height() > 0) {
       // Pre-paint the value indicator bubble BEFORE the slider's track and
       // thumb. This way, even if the bubble's geometry overlapped the
       // slider's rectangular bounds (it does not today, but might if kGap or
@@ -801,7 +798,7 @@ void Slider::paintWidgetContents(PaintContext& ctx) {
       roo::string_view text = formatLabel(value_, scratch, sizeof(scratch));
       internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
       Rect indicator_bounds = PaintValueIndicator(
-          theme(), isEnabled(), indicator_canvas, clipper, width(), height(),
+          theme(), isEnabled(), indicator_ctx, width(), height(),
           axis.displayCenterFromValue(range_, value_), style_, text);
       if (!indicator_bounds.empty()) {
         current_indicator_span = internal::DisplayMainSpanFromRect(

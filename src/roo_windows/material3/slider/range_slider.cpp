@@ -813,7 +813,6 @@ Rect RangeSlider::getParentTransientPaintBounds() const {
 }
 
 void RangeSlider::paintWidgetContents(PaintContext& ctx) {
-  const Canvas& canvas = ctx.canvas();
   Clipper& clipper = ctx.clipperForFramework();
   // See Slider::paintWidgetContents() for the rationale on ordering and
   // on narrowing the canvas clip when the repaint is driven by a
@@ -834,11 +833,9 @@ void RangeSlider::paintWidgetContents(PaintContext& ctx) {
 
   if (ShowsValueIndicator(*this) &&
       (invalidated || !pending_indicator.empty())) {
-    Canvas indicator_canvas = canvas;
-    if (!invalidated) {
-      indicator_canvas.clipToExtents(pending_indicator);
-    }
-    if (!indicator_canvas.clip_box().empty() && width() > 0 && height() > 0) {
+    PaintContext indicator_ctx =
+        invalidated ? ctx : ctx.clipped(pending_indicator);
+    if (!indicator_ctx.empty() && width() > 0 && height() > 0) {
       // Pre-paint the value indicator bubble BEFORE the slider's track and
       // thumbs. This mirrors Slider::paintWidgetContents(); the only extra
       // work here is resolving which thumb currently owns the bubble.
@@ -858,7 +855,7 @@ void RangeSlider::paintWidgetContents(PaintContext& ctx) {
       roo::string_view text =
           formatLabel(indicator_value, scratch, sizeof(scratch));
       Rect indicator_bounds = PaintValueIndicator(
-          theme(), isEnabled(), indicator_canvas, clipper, width(), height(),
+          theme(), isEnabled(), indicator_ctx, width(), height(),
           indicator_thumb_center, style_, text);
       if (!indicator_bounds.empty()) {
         current_indicator_span = internal::DisplayMainSpanFromRect(
