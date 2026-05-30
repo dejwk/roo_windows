@@ -32,11 +32,13 @@ class Scrim : public Widget {
   }
 
  protected:
-  /// Installs the scrim's fill as an overlay over the clip box rather than
+  /// Installs the scrim's fill as an overlay over the current clip rather than
   /// painting opaque pixels, so widgets beneath remain visible through it.
-  void finalizePaintWidget(PaintContext& cxt) const override {
-    cxt.clipperForFramework().addOverlay(&fill_, cxt.canvas().clip_box());
-  }
+  void paint(PaintContext& ctx) const override { ctx.addOverlay(fill_); }
+
+  /// Scrims do not paint direct framebuffer pixels of their own, so the
+  /// generic finalization path must not exclude their bounds.
+  Rect getDirectPaintExclusionBounds() const override { return Rect(); }
 
  private:
   roo_display::Color color_;

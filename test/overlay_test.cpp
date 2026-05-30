@@ -8,6 +8,7 @@
 #include "roo_windows/widgets/checkbox.h"
 #include "roo_windows/widgets/icon.h"
 #include "roo_windows/widgets/radio_button.h"
+#include "roo_windows/widgets/scrim.h"
 #include "roo_windows/widgets/slider.h"
 #include "roo_windows/widgets/text_label.h"
 #include "roo_windows_render_test_support.h"
@@ -598,6 +599,38 @@ TEST_F(RooWindowsRenderTest, PointPressOverlayRendersOutsideLogicalBounds) {
   ASSERT_TRUE(refresh());
   EXPECT_EQ(background_pixel, pixelAt(12, 20));
   EXPECT_EQ(center_background_pixel, pixelAt(28, 20));
+}
+
+// Verifies that a scrim tints the content beneath it through the overlay path
+// rather than behaving like a normal excluding paint: the underlying content
+// remains visible through the tint, and hiding/showing the scrim restores and
+// reapplies that tint on subsequent refreshes.
+TEST_F(RooWindowsRenderTest,
+       ScrimTintsUnderlyingContentWithoutDirectExclusion) {
+  constexpr Color kScrimColor(0x8000FF00);
+
+  auto back =
+      std::make_unique<ColorBoxWidget>(env_, color::Red, Dimensions(48, 40));
+  auto scrim = std::make_unique<Scrim>(env_, kScrimColor);
+  Scrim* scrim_ptr = scrim.get();
+
+  app_.add(std::move(back), Box(0, 0, 47, 39));
+  app_.add(std::move(scrim), Box(8, 8, 39, 31));
+
+  ASSERT_TRUE(refresh());
+
+  Color expected_tint =
+      QuantizeToArgb4444(AlphaBlend(color::Red, kScrimColor));
+  EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(4, 4));
+  EXPECT_EQ(expected_tint, pixelAt(20, 20));
+
+  scrim_ptr->setVisibility(Visibility::kInvisible);
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(20, 20));
+
+  scrim_ptr->setVisibility(Visibility::kVisible);
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(expected_tint, pixelAt(20, 20));
 }
 
 // Verifies that widget-local click-animation access only exposes the active
