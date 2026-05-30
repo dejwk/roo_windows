@@ -48,10 +48,10 @@ class Container : public SurfaceWidget {
   /// implementation calls `child->paintWidget()`, thus omitting drawing of
   /// children that aren't dirty.
   ///
-  /// Calls `paint()` to actually paint the canvas area (with the canvas
-  /// object clipped to the invalidated region, and with the background
-  /// color pre-set to the panel's background).
-  void paintWidgetContents(const Canvas& canvas, Clipper& clipper) override;
+  /// Calls `paint()` to actually paint the canvas area through a
+  /// `PaintContext` clipped to the invalidated region.
+  void paintWidgetContents(PaintContext& ctx,
+                           const OverlaySpec& overlay_spec) override;
 
   /// Draws the surface area of this panel. The default implementation draws
   /// a transparent rectangle. (Effectively, the rectangle is drawn in the

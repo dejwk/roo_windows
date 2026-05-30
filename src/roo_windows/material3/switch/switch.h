@@ -50,7 +50,8 @@ class Switch : public BasicWidget {
   Margins getDefaultMargins() const override { return Margins(0); }
 
   /// Drives the thumb animation timing on each paint pass.
-  void paintWidgetContents(const Canvas& canvas, Clipper& clipper) override;
+  void paintWidgetContents(PaintContext& ctx,
+                           const OverlaySpec& overlay_spec) override;
 
   /// Paints the track, thumb, and optional state icon for the current
   /// animated position.

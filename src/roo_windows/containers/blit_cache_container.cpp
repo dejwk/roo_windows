@@ -376,9 +376,11 @@ roo_display::Box BlitCacheContainer::computeCleanBand(
   }
 }
 
-void BlitCacheContainer::paintWidgetContents(const Canvas& canvas,
-                                             Clipper& clipper) {
+void BlitCacheContainer::paintWidgetContents(PaintContext& ctx,
+                                             const OverlaySpec& overlay_spec) {
   using roo_display::Box;
+  const Canvas& canvas = ctx.canvas();
+  Clipper& clipper = ctx.clipperForFramework();
 
   // On first paint, discover blit capability.
   if (blit_supported_ < 0) {
@@ -481,7 +483,8 @@ void BlitCacheContainer::paintWidgetContents(const Canvas& canvas,
       clipper.addExclusion(blit_dest);
     }
   }
-  Container::paintWidgetContents(paint_canvas, clipper);
+  PaintContext paint_ctx(paint_canvas, clipper);
+  Container::paintWidgetContents(paint_ctx, overlay_spec);
 
   if (clipper.isDeadlineExceeded()) {
     // Preserve incremental frame recovery but disable blit reuse after an

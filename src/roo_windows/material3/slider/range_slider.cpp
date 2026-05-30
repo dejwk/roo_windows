@@ -812,7 +812,11 @@ Rect RangeSlider::getParentTransientPaintBounds() const {
   return Rect::Extent(base, bubble_parent);
 }
 
-void RangeSlider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
+void RangeSlider::paintWidgetContents(PaintContext& ctx,
+                                      const OverlaySpec& overlay_spec) {
+  (void)overlay_spec;
+  const Canvas& canvas = ctx.canvas();
+  Clipper& clipper = ctx.clipperForFramework();
   // See Slider::paintWidgetContents() for the rationale on ordering and
   // on narrowing the canvas clip when the repaint is driven by a
   // value/style state change (rather than a forced full invalidation).
@@ -866,7 +870,8 @@ void RangeSlider::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
     }
   }
 
-  Canvas content_canvas = prepareContentsCanvas(canvas);
+  PaintContext content_ctx = ctx.clipped(getContentBounds());
+  Canvas& content_canvas = content_ctx.canvas();
   if (!invalidated && !pending_content.empty()) {
     content_canvas.clipToExtents(pending_content);
   }

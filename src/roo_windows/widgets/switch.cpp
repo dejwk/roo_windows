@@ -52,7 +52,8 @@ roo_display::FpPoint Switch::getPointOverlayFocus() const {
       content_top + 0.5f * (float)(Scaled(24) - 1)};
 }
 
-void Switch::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
+void Switch::paintWidgetContents(PaintContext& ctx,
+                                 const OverlaySpec& overlay_spec) {
   if (isAnimating()) {
     int16_t ms = time_animating_ms();
     if (ms < 0 || ms > kSwitchAnimationMs) {
@@ -60,7 +61,7 @@ void Switch::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
       anim_ = 0x8000;
     }
   }
-  Widget::paintWidgetContents(canvas, clipper);
+  Widget::paintWidgetContents(ctx, overlay_spec);
   if (isAnimating()) {
     setDirty();
   }
