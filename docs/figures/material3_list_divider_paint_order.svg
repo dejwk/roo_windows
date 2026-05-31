@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="840" height="250" viewBox="0 0 840 250">
+  <rect width="840" height="250" fill="#ffffff"/>
+  <style>
+    .title { font: 600 15px sans-serif; fill: #111827; }
+    .label { font: 13px sans-serif; fill: #1f2937; }
+    .small { font: 12px sans-serif; fill: #4b5563; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; rx: 10; }
+    .list { fill: #ffffff; stroke: #64748b; stroke-width: 1.5; rx: 8; }
+    .row { fill: #f1f5f9; stroke: #cbd5e1; stroke-width: 1; }
+    .gap { fill: #ffffff; }
+    .surface { fill: #e0f2fe; }
+    .divider { fill: #f59e0b; }
+    .exclude { fill: none; stroke: #d97706; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .arrow { stroke: #64748b; stroke-width: 1.5; marker-end: url(#arrow); }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <text x="30" y="28" class="title">List-owned divider band paint order</text>
+
+  <g transform="translate(30,45)">
+    <rect class="panel" width="240" height="175"/>
+    <text x="18" y="26" class="label">1. Row surfaces are already settled</text>
+    <rect class="list" x="22" y="42" width="150" height="108"/>
+    <rect class="row" x="30" y="50" width="134" height="42" rx="7"/>
+    <rect class="gap" x="30" y="92" width="134" height="16"/>
+    <rect class="row" x="30" y="108" width="134" height="34" rx="7"/>
+    <text x="184" y="74" class="small">row N</text>
+    <text x="184" y="102" class="small">shared</text>
+    <text x="184" y="116" class="small">separator</text>
+    <text x="184" y="130" class="small">space</text>
+    <text x="184" y="128" class="small" visibility="hidden">.</text>
+    <text x="184" y="132" class="small" visibility="hidden">.</text>
+    <text x="184" y="138" class="small">row N+1</text>
+  </g>
+
+  <line x1="278" y1="132" x2="300" y2="132" class="arrow"/>
+
+  <g transform="translate(300,45)">
+    <rect class="panel" width="240" height="175"/>
+    <text x="18" y="26" class="label">2. List::paint(ctx) draws the band</text>
+    <rect class="list" x="22" y="42" width="150" height="108"/>
+    <rect class="row" x="30" y="50" width="134" height="42" rx="7"/>
+    <rect class="gap" x="30" y="92" width="134" height="16"/>
+    <rect class="divider" x="56" y="98" width="82" height="4" rx="2"/>
+    <rect class="exclude" x="56" y="98" width="82" height="4" rx="2"/>
+    <rect class="row" x="30" y="108" width="134" height="34" rx="7"/>
+    <text x="184" y="96" class="small">draw divider</text>
+    <text x="184" y="110" class="small">then exclude</text>
+  </g>
+
+  <line x1="548" y1="132" x2="570" y2="132" class="arrow"/>
+
+  <g transform="translate(570,45)">
+    <rect class="panel" width="240" height="175"/>
+    <text x="18" y="26" class="label">3. Base surface fill skips the band</text>
+    <rect class="list" x="22" y="42" width="150" height="108"/>
+    <rect class="row" x="30" y="50" width="134" height="42" rx="7"/>
+    <rect class="surface" x="30" y="92" width="134" height="16"/>
+    <rect class="divider" x="56" y="98" width="82" height="4" rx="2"/>
+    <rect class="row" x="30" y="108" width="134" height="34" rx="7"/>
+    <text x="184" y="96" class="small">Container::paint(ctx)</text>
+    <text x="184" y="110" class="small">fills only non-excluded</text>
+    <text x="184" y="124" class="small">separator pixels</text>
+  </g>
+
+  <text x="30" y="236" class="small">Divider pixels are resolved first, excluded immediately, and then preserved while the remaining list surface clears.</text>
+</svg>

@@ -45,18 +45,16 @@ lists, menus, and adjacent Material 3 surfaces with shared primitives.
 
 ### Current Status in `roo_windows`
 
-As of 2026-05, the list family is partially implemented: the Phase 1 public API
-surface exists, the row-local Phase 2 infrastructure for `ListEntry` is in
-place, and the Phase 3 baseline `List` sequencing path now resolves row
-position, list-owned visual context, add/clear behavior, and segmented gap
-treatment. Phase 4 usage review now exists as a checked-in example sketch that
-exercises static settings, adopted rows, and a short-form menu-like list
-without introducing convenience wrappers. The landed code is still the
-low-level substrate rather than the full authoring story described later in
-this document: expressive row shaping, divider painting, wrapped supporting
-text, stock clickable rows, row-to-affordance delegation, and reusable
-checkbox/radio/navigation convenience items are still future work alongside expand/collapse
-behavior and menu reuse.
+As of 2026-05, the list family is partially implemented through Phase 6. The
+public API, row-local `ListEntry` infrastructure, baseline `List` sequencing,
+generic `ListRow<Item>` ownership bridge, and usage-review example are all
+landed. The current code also resolves expressive position-aware row shapes and
+list-owned divider bands through the current `PaintContext` exclusion pipeline.
+The landed code is still the low-level substrate rather than the full
+authoring story described later in this document: wrapped supporting text,
+stock clickable rows, row-to-affordance delegation, reusable
+checkbox/radio/navigation convenience items, expand/collapse behavior, and
+menu reuse remain future work.
 
 What exists today:
 
@@ -66,10 +64,14 @@ What exists today:
    with lightweight text values and stable borrowed slot widgets.
 - `material3::ListEntry` exists as a direct `Container` row surface with
    stable slot binding, row-local measurement and layout, and row-owned text
-   widgets for standard overline, headline, and supporting content.
+   widgets for standard overline, headline, and supporting content, plus
+   expressive position-aware border-style resolution.
+- `material3::ListRow<Item>` exists as a thin ownership helper that packages
+   one inline item with one `ListEntry` without adding a second row model.
 - `material3::List` exists as a direct `Container` shell with list-owned API
    for variant, style, selection, divider policy, row insertion, row stacking,
-   and row-context propagation.
+   row-context propagation, separator-band gap resolution, and list-owned
+   divider-band painting from `paint(PaintContext&)`.
 - `examples/material3/lists/lists.ino` exists as the low-level Phase 4
    usage-review sketch and compiles under the emulation harness.
 - `FlexLayout` is implemented and already used by `material3::FlexCard`, so it
@@ -81,9 +83,8 @@ What exists today:
 
 What does not exist yet:
 
-- no implemented expressive row border shape or selection-driven corner-radius
-   behavior,
-- no divider painting path despite resolved divider state,
+- no selection-driven corner-radius override beyond the current position-based
+   expressive shapes,
 - no actual wrapped or ellipsized list text behavior in `ListEntry`,
 - no stock clickable/navigation row type or row-to-affordance click
    delegation,
@@ -690,6 +691,42 @@ The intended ownership model is:
 
 This means shape and selection visuals are part of the list-and-entry contract,
 not just local row implementation details.
+
+#### Surface Paint Contract
+
+`ListEntry` owns row-local surface treatment through
+`ListEntryVisualContext`, `containerRole()`, and `getBorderStyle()`. `List`
+owns any pixels that live between rows rather than inside a row, including
+segmented separator bands and visible divider bands.
+
+The paint contract is therefore:
+
+1. row widgets paint their own content and row surfaces through the ordinary
+   `Container` path,
+2. `List::paint(PaintContext&)` paints each visible divider band in shared
+   separator space,
+3. `List::paint(PaintContext&)` immediately registers the same local band with
+   `PaintContext::addExclusion()`,
+4. `List::paint(PaintContext&)` then delegates to `Container::paint(ctx)` so
+   the remaining list surface clears only pixels that were not already
+   settled.
+
+Because exclusions affect only later paint, a divider band must be fully
+resolved before it is excluded. Divider geometry stays derived from existing
+row bounds, `ListDividerPolicy`, item inset hints, and the resolved
+`ListEntryVisualContext`; the design does not add extra per-row child widgets,
+cached raster state, or callback state for divider ownership.
+
+Repaint and invalidation consequences:
+
+1. dirty row repaint stays row-local because divider bands live on the list,
+   not on the rows,
+2. invalidated list repaint redraws any intersecting separator bands before
+   the base surface clear,
+3. each divider pixel and each remaining background pixel is written once per
+   pass, which matches the direct-to-framebuffer exclusion model.
+
+![List-owned divider band paint order and exclusion ownership](figures/material3_list_divider_paint_order.svg)
 
 ### Variants and Styles
 
@@ -1457,17 +1494,17 @@ subset of the desired list feature set.
 
 | Feature | Phase 4 status | Notes |
 | --- | --- | --- |
-| Segmented expressive list with row gaps | Partial | `ListStyle::kSegmented` adds inter-row gaps while divider mode is `kNone`, but rows still render as rectangular surfaces. |
-| Rounded expressive row corners, including softer inner corners between adjacent items | Missing | `ListEntry` does not override `getBorderStyle()`, so row shape stays rectangular and does not react to first/middle/last position. |
+| Segmented expressive list with row gaps | Implemented | `ListStyle::kSegmented` uses list-owned separator bands: with divider mode `kNone` the full segmented gap is kept, and with visible dividers the separator shrinks to the divider-band thickness required by the shared-band model. |
+| Rounded expressive row corners, including softer inner corners between adjacent items | Implemented | `ListEntry::getBorderStyle()` resolves expressive first/middle/last/single radii directly from `ListEntryVisualContext`, using `Scaled(16)` outer corners and `Scaled(4)` inner corners. |
 | Leading or trailing icons | Partial | Any borrowed widget can occupy the leading or trailing slot, so existing widgets such as `Icon` can be bound manually. There is no list-specific icon convenience surface yet. |
 | Avatars | Missing | There is no avatar-specific helper item, `ListRow<Item>` bridge usage, or example in the landed list API. |
 | Clickable rows for navigation or drill-in | Missing in the stock list types | `ListEntry` is a `Container`, so `setOnInteractiveChange()` alone does not make it clickable. A custom subclass can add click handling, but the list API does not provide it yet. |
 | Optional wrapping or truncation for supporting text | Missing | `ListTextPolicy` exists as data, but `ListEntry` currently binds single-line `StringViewLabel`s and does not apply wrap, max-lines, or ellipsis policy. |
 | Leading and trailing checkboxes or radio buttons | Partial | Existing `material3::Checkbox` and `material3::RadioButton` widgets can be slotted manually into leading or trailing positions, but there are no reusable owning convenience item types or list-managed placement helpers yet. |
 | Gaps between rows and groups | Partial | Segmented inter-row gaps work inside one list. Larger group spacing still lives outside `List` in surrounding layout. |
-| Dividers | Missing visually | `List` resolves `show_divider`, but `ListEntry` does not paint divider strokes yet. |
+| Dividers | Implemented | `List` paints visible divider bands from `paint(PaintContext&)`, applies `PaintContext::addExclusion()` to those settled separator pixels, and lets `Container::paint(ctx)` clear the remaining list surface. |
 | Single-select and multi-select lists | Partial | `ListSelectionPolicy` resolves selected state for one or many pre-marked rows, but rows do not toggle themselves and the list does not create or wire selection controls. |
-| Selection affecting corner radii | Missing | Selected expressive rows currently change container color only; they do not change corner shape. |
+| Selection affecting corner radii | Missing | Selected expressive rows currently change container color only; border radii remain position-driven rather than selection-driven. |
 | Clicking the row acting like clicking the affordance | Missing | There is no row-owned press/click proxy path for embedded checkbox, radio, or switch controls. |
 
 ### Post-Phase-4 Example Targets
@@ -1746,20 +1783,23 @@ Code slice:
 1. Implement expressive and baseline row border shapes, including segmented
    first/middle/last/single shape resolution and selected-state shape
    overrides.
-2. Paint list-owned dividers from `ListDividerPolicy`, `DividerInsetHint`, and
-   resolved `show_divider`.
-3. Keep these effects derived from `ListEntryVisualContext` and policy data
-   rather than introducing extra per-row child state.
+2. Paint list-owned divider bands from `List::paint(PaintContext&)`, deriving
+   their bounds from `ListDividerPolicy`, `DividerInsetHint`, and resolved
+   `show_divider`, then register local exclusions before delegating the
+   remaining surface fill to `Container::paint(ctx)`.
+3. Keep these effects derived from `ListEntryVisualContext`, row bounds, and
+   policy data rather than introducing extra per-row child state or cached
+   divider geometry.
 4. Add focused visual tests and a narrow example pass for shapes and dividers
    before widening the scope to text policy or convenience items.
 
 Proposed commit message:
 
-> Material 3 lists Phase 6: add row shapes and divider painting.
+> Material 3 lists Phase 6: add row shapes and list-owned divider bands.
 >
-> Implement expressive row shaping and divider painting from
+> Implement expressive row shaping and list-owned divider-band painting from
 > `docs/material3_lists_design.md`, driven entirely by resolved row visual
-> context and divider policy.
+> context, row bounds, and divider policy.
 
 Validation: run `bazel test //:material3_list_test`, add focused row-shape and
 divider cases, and run the visual catalog example or golden target covering
