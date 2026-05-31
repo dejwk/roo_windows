@@ -92,8 +92,8 @@ Application app(&env, display);
 // full screen).
 class MyPane : public AlignedLayout {
  public:
-  MyPane(const Environment& env)
-      : AlignedLayout(env), button_(env, "Click me!") {
+  MyPane(ApplicationContext& context)
+      : AlignedLayout(context), button_(context, "Click me!") {
     add(button_, kCenter | kMiddle);
     button_.setOnInteractiveChange([this]() {
       app.showAlertDialog("Notification", "The button has been clicked.",
@@ -105,7 +105,7 @@ class MyPane : public AlignedLayout {
   SimpleButton button_;
 };
 
-MyPane my_pane(env);
+MyPane my_pane(app.context());
 SingletonActivity activity(app, my_pane);
 
 void setup() {

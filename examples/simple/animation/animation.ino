@@ -98,12 +98,12 @@ Application app(&env, display);
 // Animated image using a generic drawable (in this case, smooth thick arc).
 class AnimatedArc : public Image {
  public:
-  AnimatedArc(const Environment& env, roo_scheduler::Scheduler& scheduler)
-      : Image(env),
+  AnimatedArc(ApplicationContext& context)
+      : Image(context),
         // Initial condition; doesn't matter much (as long as we're using the
         // correct extents) since we're updating it quickly.
         arc_(SmoothShape(), arc_extents(), kNoAlign),
-        updater_(scheduler, [this]() { update(); }, Millis(20)) {
+        updater_(context.scheduler(), [this]() { update(); }, Millis(20)) {
     setImage(&arc_);
     updater_.startInstantly();
   }
@@ -194,8 +194,9 @@ class Ghost : public Drawable {
 // Animated image using a custom drawable.
 class GhostImage : public Image {
  public:
-  GhostImage(const Environment& env, roo_scheduler::Scheduler& scheduler)
-      : Image(env), updater_(scheduler, [this] { update(); }, Seconds(0.04)) {
+  GhostImage(ApplicationContext& context)
+      : Image(context),
+        updater_(context.scheduler(), [this] { update(); }, Seconds(0.04)) {
     setImage(&ghost_);
     updater_.start();
   }
@@ -219,12 +220,13 @@ class GhostImage : public Image {
 // rather, by controlling the animation from its container.
 class MyPane : public VerticalLayout {
  public:
-  MyPane(const Environment& env, roo_scheduler::Scheduler& scheduler)
-      : VerticalLayout(env),
-        arc_(env, scheduler),
-        ghost_(env, scheduler),
-        warning_icon_(env, ic_filled_36_alert_warning(), color::DarkOrange),
-        icon_updater_(scheduler, [this]() { updateIcon(); }, Seconds(0.25)) {
+  MyPane(ApplicationContext& context)
+      : VerticalLayout(context),
+        arc_(context),
+        ghost_(context),
+        warning_icon_(context, ic_filled_36_alert_warning(), color::DarkOrange),
+        icon_updater_(
+            context.scheduler(), [this]() { updateIcon(); }, Seconds(0.25)) {
     add(arc_);
     add(ghost_);
 
@@ -251,7 +253,7 @@ class MyPane : public VerticalLayout {
   roo_scheduler::RepetitiveTask icon_updater_;
 };
 
-MyPane my_pane(env, scheduler);
+MyPane my_pane(app.context());
 
 SingletonActivity activity(app, my_pane);
 

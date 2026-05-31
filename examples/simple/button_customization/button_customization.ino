@@ -94,13 +94,13 @@ Application app(&env, display);
 // full screen).
 class MyPane : public VerticalLayout {
  public:
-  MyPane(const Environment& env)
-      : VerticalLayout(env),
-        button1_(env, "Contained text", Button::CONTAINED),
-        button2_(env, SCALED_ROO_ICON(filled, action_arrow_circle_right),
+  MyPane(ApplicationContext& context)
+      : VerticalLayout(context),
+        button1_(context, "Contained text", Button::CONTAINED),
+        button2_(context, SCALED_ROO_ICON(filled, action_arrow_circle_right),
                  "Outlined combo", Button::OUTLINED),
-        button3_(env, SCALED_ROO_ICON(filled, action_done), Button::TEXT),
-        button4_(env, "Custom", Button::OUTLINED) {
+        button3_(context, SCALED_ROO_ICON(filled, action_done), Button::TEXT),
+        button4_(context, "Custom", Button::OUTLINED) {
     button4_.setInteriorColor(roo_display::color::Beige);
     button4_.setOutlineColor(roo_display::color::DeepPink);
     button4_.setContentColor(roo_display::color::SaddleBrown);
@@ -136,7 +136,7 @@ class MyPane : public VerticalLayout {
   SimpleButton button4_;
 };
 
-MyPane my_pane(env);
+MyPane my_pane(app.context());
 SingletonActivity activity(app, my_pane);
 
 void setup() {

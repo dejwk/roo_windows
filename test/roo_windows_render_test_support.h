@@ -32,8 +32,7 @@ class ColorBoxWidget : public BasicSurfaceWidget {
 
 class ElevatedColorBoxWidget : public ColorBoxWidget {
  public:
-  ElevatedColorBoxWidget(ApplicationContext& context,
-                         roo_display::Color color,
+  ElevatedColorBoxWidget(ApplicationContext& context, roo_display::Color color,
                          Dimensions dims, uint8_t elevation)
       : ColorBoxWidget(context, color, dims), elevation_(elevation) {}
 
@@ -45,8 +44,7 @@ class ElevatedColorBoxWidget : public ColorBoxWidget {
 
 class PointOverlayBoxWidget : public ColorBoxWidget {
  public:
-  PointOverlayBoxWidget(ApplicationContext& context,
-                        roo_display::Color color,
+  PointOverlayBoxWidget(ApplicationContext& context, roo_display::Color color,
                         Dimensions dims)
       : ColorBoxWidget(context, color, dims) {}
 
@@ -58,8 +56,7 @@ class PointOverlayBoxWidget : public ColorBoxWidget {
 class MutableShapeColorBoxWidget : public BasicSurfaceWidget {
  public:
   MutableShapeColorBoxWidget(ApplicationContext& context,
-                             roo_display::Color color,
-                             Dimensions dims)
+                             roo_display::Color color, Dimensions dims)
       : BasicSurfaceWidget(context),
         color_(color),
         dims_(dims),

@@ -88,10 +88,10 @@ void initDisplay() {
 
 class NamedPanel : public FlexLayout {
  public:
-  NamedPanel(const Environment& env, const char* name,
+  NamedPanel(ApplicationContext& context, const char* name,
              ColorRole role = ColorRole::kSurfaceContainer)
-      : FlexLayout(env, FlexDirection::kRow),
-        label_(env, name, font_body1()),
+      : FlexLayout(context, FlexDirection::kRow),
+        label_(context, name, font_body1()),
         role_(role) {
     setJustifyContent(JustifyContent::kCenter);
     setAlignItems(AlignItems::kCenter);
@@ -113,14 +113,14 @@ class NamedPanel : public FlexLayout {
 
 class HolyGrail : public FlexLayout {
  public:
-  HolyGrail(const Environment& env)
-      : FlexLayout(env, FlexDirection::kColumn),
-        header_(env, "Header", ColorRole::kSurfaceContainerHigh),
-        middle_(env, FlexDirection::kRow),
-        nav_(env, "Nav", ColorRole::kSecondaryContainer),
-        content_(env, "Content", ColorRole::kPrimaryContainer),
-        sidebar_(env, "Sidebar", ColorRole::kTertiaryContainer),
-        footer_(env, "Footer", ColorRole::kSurfaceContainerHigh) {
+  HolyGrail(ApplicationContext& context)
+      : FlexLayout(context, FlexDirection::kColumn),
+        header_(context, "Header", ColorRole::kSurfaceContainerHigh),
+        middle_(context, FlexDirection::kRow),
+        nav_(context, "Nav", ColorRole::kSecondaryContainer),
+        content_(context, "Content", ColorRole::kPrimaryContainer),
+        sidebar_(context, "Sidebar", ColorRole::kTertiaryContainer),
+        footer_(context, "Footer", ColorRole::kSurfaceContainerHigh) {
     setAlignItems(AlignItems::kStretch);
 
     add(header_, {.flex_grow = 0, .flex_shrink = 0});
@@ -151,7 +151,7 @@ class HolyGrail : public FlexLayout {
 roo_scheduler::Scheduler scheduler;
 Environment env(scheduler);
 Application app(&env, display);
-HolyGrail holy_grail(env);
+HolyGrail holy_grail(app.context());
 SingletonActivity activity(app, holy_grail);
 
 void setup() {

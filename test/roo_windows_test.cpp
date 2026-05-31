@@ -147,10 +147,10 @@ TEST(Windows, WidgetEventDispatcherStoresAndDispatchesHandlers) {
 // where they overlap, while the earlier child remains visible outside the
 // overlap.
 TEST_F(RooWindowsRenderTest, LaterAddedChildPaintsOnTop) {
-  auto back =
-      std::make_unique<ColorBoxWidget>(context(), color::Red, Dimensions(20, 20));
-  auto front =
-      std::make_unique<ColorBoxWidget>(context(), color::Blue, Dimensions(20, 20));
+  auto back = std::make_unique<ColorBoxWidget>(context(), color::Red,
+                                               Dimensions(20, 20));
+  auto front = std::make_unique<ColorBoxWidget>(context(), color::Blue,
+                                                Dimensions(20, 20));
 
   app_.add(std::move(back), Box(4, 4, 30, 30));
   app_.add(std::move(front), Box(16, 16, 40, 40));
@@ -164,10 +164,10 @@ TEST_F(RooWindowsRenderTest, LaterAddedChildPaintsOnTop) {
 // child beneath, and that re-showing it restores its pixels: invalidation
 // covers the previously-occluded region on both transitions.
 TEST_F(RooWindowsRenderTest, HideAndShowRestoresUnderlyingContent) {
-  auto back =
-      std::make_unique<ColorBoxWidget>(context(), color::Red, Dimensions(20, 20));
-  auto front =
-      std::make_unique<ColorBoxWidget>(context(), color::Blue, Dimensions(20, 20));
+  auto back = std::make_unique<ColorBoxWidget>(context(), color::Red,
+                                               Dimensions(20, 20));
+  auto front = std::make_unique<ColorBoxWidget>(context(), color::Blue,
+                                                Dimensions(20, 20));
   ColorBoxWidget* front_ptr = front.get();
 
   app_.add(std::move(back), Box(4, 4, 30, 30));
@@ -253,8 +253,8 @@ TEST_F(RooWindowsRenderTest, UnclippedChildMaxBoundsIncludeInkOverflow) {
 // shadow to exactly the same color (regression test for shadow-overflow
 // invalidation).
 TEST_F(RooWindowsRenderTest, HideAndShowRestoresShadowOverflowRegion) {
-  auto back =
-      std::make_unique<ColorBoxWidget>(context(), color::Red, Dimensions(48, 40));
+  auto back = std::make_unique<ColorBoxWidget>(context(), color::Red,
+                                               Dimensions(48, 40));
   auto front = std::make_unique<ElevatedColorBoxWidget>(context(), color::Blue,
                                                         Dimensions(20, 20), 12);
   ElevatedColorBoxWidget* front_ptr = front.get();
@@ -279,10 +279,10 @@ TEST_F(RooWindowsRenderTest, HideAndShowRestoresShadowOverflowRegion) {
 // invalidates the now-exposed corners so the underlying widget's pixels
 // re-appear there.
 TEST_F(RooWindowsRenderTest, RoundedSurfaceInvalidationRestoresExposedCorners) {
-  auto back =
-      std::make_unique<ColorBoxWidget>(context(), color::Red, Dimensions(48, 40));
-  auto front = std::make_unique<MutableShapeColorBoxWidget>(context(), color::Blue,
-                                                            Dimensions(20, 20));
+  auto back = std::make_unique<ColorBoxWidget>(context(), color::Red,
+                                               Dimensions(48, 40));
+  auto front = std::make_unique<MutableShapeColorBoxWidget>(
+      context(), color::Blue, Dimensions(20, 20));
   MutableShapeColorBoxWidget* front_ptr = front.get();
 
   app_.add(std::move(back), Box(0, 0, 47, 39));
@@ -328,7 +328,8 @@ TEST_F(RooWindowsRenderTest, SloppyTouchDispatchRecursesThroughContainers) {
   ExposedPanel* outer_ptr = outer.get();
   auto inner = std::make_unique<ExposedPanel>(context());
   ExposedPanel* inner_ptr = inner.get();
-  auto leaf = std::make_unique<SloppyTouchSpyWidget>(context(), Dimensions(4, 4), 8);
+  auto leaf =
+      std::make_unique<SloppyTouchSpyWidget>(context(), Dimensions(4, 4), 8);
   SloppyTouchSpyWidget* leaf_ptr = leaf.get();
 
   inner_ptr->add(std::move(leaf), Rect(0, 0, 3, 3));
@@ -345,8 +346,8 @@ TEST_F(RooWindowsRenderTest, SloppyTouchDispatchRecursesThroughContainers) {
 // returns false and leaves the partial state untouched; a subsequent
 // refresh() without a deadline completes the paint.
 TEST_F(RooWindowsRenderTest, RefreshCanResumeAfterDeadlineExceeded) {
-  auto box =
-      std::make_unique<ColorBoxWidget>(context(), color::Green, Dimensions(20, 20));
+  auto box = std::make_unique<ColorBoxWidget>(context(), color::Green,
+                                              Dimensions(20, 20));
   app_.add(std::move(box), Box(8, 8, 36, 36));
 
   EXPECT_FALSE(refresh(roo_time::Uptime::Start()));
@@ -360,7 +361,8 @@ TEST_F(RooWindowsRenderTest, RefreshCanResumeAfterDeadlineExceeded) {
 // the tile content rectangle extends past those bounds: pixels inside the
 // tile bounds are drawn, pixels outside are not.
 TEST_F(RooWindowsRenderTest, DrawTiledClipsOversizedContentToTileBounds) {
-  auto tile = std::make_unique<TiledRectWidget>(context(), Rect(4, 4, 6, 6), true);
+  auto tile =
+      std::make_unique<TiledRectWidget>(context(), Rect(4, 4, 6, 6), true);
 
   app_.add(std::move(tile), Box(8, 8, 19, 19));
 
@@ -377,7 +379,8 @@ TEST_F(RooWindowsRenderTest, DrawTiledClipsOversizedContentToTileBounds) {
 // still clipped to the tile bounds.
 TEST_F(RooWindowsRenderTest,
        DrawTiledWithoutBorderClipsOversizedContentToTileBounds) {
-  auto tile = std::make_unique<TiledRectWidget>(context(), Rect(4, 4, 6, 6), false);
+  auto tile =
+      std::make_unique<TiledRectWidget>(context(), Rect(4, 4, 6, 6), false);
 
   app_.add(std::move(tile), Box(8, 8, 19, 19));
 
@@ -393,7 +396,8 @@ TEST_F(RooWindowsRenderTest,
 // nothing: the tile area is left as parent background instead of being
 // filled by a degenerate-rect paint.
 TEST_F(RooWindowsRenderTest, DrawTiledIgnoresEmptyBoundsWithoutBorder) {
-  auto tile = std::make_unique<TiledRectWidget>(context(), Rect(4, 4, 3, 6), false);
+  auto tile =
+      std::make_unique<TiledRectWidget>(context(), Rect(4, 4, 3, 6), false);
 
   app_.add(std::move(tile), Box(8, 8, 19, 19));
 

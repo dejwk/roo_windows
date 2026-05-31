@@ -87,10 +87,11 @@ void initDisplay() {
 
 class MetricCard : public FlexLayout {
  public:
-  MetricCard(const Environment& env, const char* value, const char* caption)
-      : FlexLayout(env, FlexDirection::kColumn),
-        value_(env, value, font_h6()),
-        caption_(env, caption, font_caption()) {
+  MetricCard(ApplicationContext& context, const char* value,
+             const char* caption)
+      : FlexLayout(context, FlexDirection::kColumn),
+        value_(context, value, font_h6()),
+        caption_(context, caption, font_caption()) {
     setAlignItems(AlignItems::kStretch);
     setJustifyContent(JustifyContent::kCenter);
     setPadding(Padding(PaddingSize::kRegular));
@@ -106,14 +107,14 @@ class MetricCard : public FlexLayout {
 
 class DashboardGrid : public FlexLayout {
  public:
-  DashboardGrid(const Environment& env)
-      : FlexLayout(env, FlexDirection::kRow),
-        temp_(env, "23 °C", "Temperature"),
-        humidity_(env, "61 %", "Humidity"),
-        pressure_(env, "1013 hPa", "Pressure"),
-        co2_(env, "412 ppm", "CO2"),
-        wind_(env, "14 km/h", "Wind"),
-        uv_(env, "3", "UV index") {
+  DashboardGrid(ApplicationContext& context)
+      : FlexLayout(context, FlexDirection::kRow),
+        temp_(context, "23 °C", "Temperature"),
+        humidity_(context, "61 %", "Humidity"),
+        pressure_(context, "1013 hPa", "Pressure"),
+        co2_(context, "412 ppm", "CO2"),
+        wind_(context, "14 km/h", "Wind"),
+        uv_(context, "3", "UV index") {
     setFlexWrap(FlexWrap::kWrap);
     setJustifyContent(JustifyContent::kSpaceBetween);
     setAlignContent(AlignContent::kFlexStart);
@@ -146,7 +147,7 @@ class DashboardGrid : public FlexLayout {
 roo_scheduler::Scheduler scheduler;
 Environment env(scheduler);
 Application app(&env, display);
-DashboardGrid dashboard_grid(env);
+DashboardGrid dashboard_grid(app.context());
 SingletonActivity activity(app, dashboard_grid);
 
 void setup() {

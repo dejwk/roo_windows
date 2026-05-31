@@ -72,7 +72,7 @@ class Material3SliderAppTest : public testing::Test {
   Slider& addSlider(SliderRange range, float value,
                     SliderVariant variant = SliderVariant::kStandard) {
     return addSlider(
-      std::make_unique<Slider>(context(), range, value, variant));
+        std::make_unique<Slider>(context(), range, value, variant));
   }
 
   Slider& slider() {
@@ -454,7 +454,8 @@ class RecordingPanel : public Panel {
 // visual geometry is controlled entirely by its own layout and paint logic.
 TEST(Material3Slider, UsesZeroDefaultInsets) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   Slider slider(context);
 
@@ -466,7 +467,8 @@ TEST(Material3Slider, UsesZeroDefaultInsets) {
 // the overlay focus point follows the thumb center across the full travel.
 TEST(Material3Slider, UsesNoOverlayAndHandleCenteredFocus) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   Slider slider(context, SliderRange{}, 0.0f);
   slider.layout(Rect(0, 0, Scaled(96) - 1, Scaled(44) - 1));
@@ -492,7 +494,8 @@ TEST(Material3Slider, UsesNoOverlayAndHandleCenteredFocus) {
 // target size rather than a tighter visual-only bound.
 TEST(Material3Slider, ReportsMaterial3MinimumSize) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   Slider slider(context);
   Dimensions dims = slider.getSuggestedMinimumDimensions();
@@ -505,7 +508,8 @@ TEST(Material3Slider, ReportsMaterial3MinimumSize) {
 // axis so drags are easier to keep engaged near the track ends.
 TEST(Material3Slider, HorizontalSloppyTouchBoundsExtendPrimaryAxis) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   Slider slider(context, SliderRange{}, 1.0f);
   slider.layout(Rect(0, 0, Scaled(96) - 1, Scaled(44) - 1));
@@ -522,7 +526,8 @@ TEST(Material3Slider, HorizontalSloppyTouchBoundsExtendPrimaryAxis) {
 // in local and parent coordinates, with only the expected translation applied.
 TEST(Material3Slider, VerticalRangeSliderSloppyBoundsTrackParentOverride) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   SliderStyle style{};
   style.orientation = SliderOrientation::kVertical;
@@ -544,7 +549,8 @@ TEST(Material3Slider, VerticalRangeSliderSloppyBoundsTrackParentOverride) {
 // Material 3 square footprint instead of collapsing to zero.
 TEST(Material3Slider, ReportsNaturalMeasureAsFortyFourByFortyFour) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   Slider slider(context);
 
@@ -559,7 +565,8 @@ TEST(Material3Slider, ReportsNaturalMeasureAsFortyFourByFortyFour) {
 // match parent on the main axis and exact sizing on the cross axis.
 TEST(Material3Slider, ReportsMatchParentPreferredWidthAndExactHeight) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   Slider slider(context);
   PreferredSize preferred = slider.getPreferredSize();
@@ -574,12 +581,13 @@ TEST(Material3Slider, ReportsMatchParentPreferredWidthAndExactHeight) {
 // including suggested minimums, measured size, and preferred size.
 TEST(Material3Slider, SizePresetUpdatesMeasuredAndPreferredDimensions) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   SliderStyle style{};
   style.size = SliderSize::kLarge;
-  Slider slider(context, SliderRange{0.0f, 100.0f}, 50.0f, SliderVariant::kStandard,
-                style);
+  Slider slider(context, SliderRange{0.0f, 100.0f}, 50.0f,
+                SliderVariant::kStandard, style);
 
   Dimensions suggested = slider.getSuggestedMinimumDimensions();
   Dimensions measured =
@@ -599,13 +607,14 @@ TEST(Material3Slider, SizePresetUpdatesMeasuredAndPreferredDimensions) {
 // the exact width while the height stays match-parent.
 TEST(Material3Slider, VerticalSizePresetUsesExactWidthFromPreset) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   SliderStyle style{};
   style.orientation = SliderOrientation::kVertical;
   style.size = SliderSize::kMedium;
-  Slider slider(context, SliderRange{0.0f, 100.0f}, 50.0f, SliderVariant::kStandard,
-                style);
+  Slider slider(context, SliderRange{0.0f, 100.0f}, 50.0f,
+                SliderVariant::kStandard, style);
 
   PreferredSize preferred = slider.getPreferredSize();
 
@@ -618,7 +627,8 @@ TEST(Material3Slider, VerticalSizePresetUsesExactWidthFromPreset) {
 // color role, which drives its track and thumb color selection.
 TEST(Material3Slider, EffectiveContainerRoleIsPrimary) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   Slider slider(context);
 
@@ -629,7 +639,8 @@ TEST(Material3Slider, EffectiveContainerRoleIsPrimary) {
 // does not opt into the framework overlay or click-animation paths.
 TEST(Material3Slider, PressStateDoesNotUseOverlayOrClickAnimation) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   Slider slider(context);
 
@@ -640,7 +651,8 @@ TEST(Material3Slider, PressStateDoesNotUseOverlayOrClickAnimation) {
 // Verifies that a unit-range slider preserves the supplied semantic value.
 TEST(Material3Slider, UnitRangeConstructorPreservesValue) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   Slider slider(context, SliderRange{}, 32768.0f / 65535.0f);
 
@@ -653,7 +665,8 @@ TEST(Material3Slider, UnitRangeConstructorPreservesValue) {
 // Verifies that the semantic constructor preserves the requested domain value.
 TEST(Material3Slider, SemanticConstructorPreservesValue) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   Slider slider(context, SliderRange{10.0f, 40.0f}, 25.0f);
 
@@ -666,7 +679,8 @@ TEST(Material3Slider, SemanticConstructorPreservesValue) {
 // to the nearest endpoint.
 TEST(Material3Slider, SetValueClampsIntoConfiguredDomain) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   Slider slider(context, SliderRange{10.0f, 40.0f}, 25.0f);
 
@@ -678,7 +692,8 @@ TEST(Material3Slider, SetValueClampsIntoConfiguredDomain) {
 // nearest valid step.
 TEST(Material3Slider, DiscreteConstructorSnapsInitialValue) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   Slider slider(context, SliderRange{0.0f, 5.0f, 1.0f}, 3.6f);
 
@@ -689,7 +704,8 @@ TEST(Material3Slider, DiscreteConstructorSnapsInitialValue) {
 // the same nearest-step snapping logic as construction.
 TEST(Material3Slider, SetValueSnapsToNearestDiscreteStep) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   Slider slider(context, SliderRange{0.0f, 5.0f, 1.0f}, 2.0f);
 
@@ -701,7 +717,8 @@ TEST(Material3Slider, SetValueSnapsToNearestDiscreteStep) {
 // new domain instead of leaving an out-of-range selection behind.
 TEST(Material3Slider, SetRangeClampsCurrentValueIntoNewDomain) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   Slider slider(context, SliderRange{10.0f, 40.0f}, 25.0f);
 
@@ -715,7 +732,8 @@ TEST(Material3Slider, SetRangeClampsCurrentValueIntoNewDomain) {
 // slider's previous range and value untouched.
 TEST(Material3Slider, InvalidRangeIsRejectedWithoutChangingState) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   Slider slider(context, SliderRange{10.0f, 40.0f}, 25.0f);
 
@@ -729,7 +747,8 @@ TEST(Material3Slider, InvalidRangeIsRejectedWithoutChangingState) {
 // of creating a partially initialized widget with inconsistent invariants.
 TEST(Material3Slider, InvalidConstructorRangeFailsFast) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   EXPECT_DEATH_IF_SUPPORTED(
       {
@@ -743,7 +762,8 @@ TEST(Material3Slider, InvalidConstructorRangeFailsFast) {
 // rejected, preserving the existing discrete configuration.
 TEST(Material3Slider, IncompatibleDiscreteStepIsRejected) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   Slider slider(context, SliderRange{0.0f, 5.0f, 1.0f}, 2.0f);
 
@@ -758,7 +778,8 @@ TEST(Material3Slider, IncompatibleDiscreteStepIsRejected) {
 // silently normalizing them into some other interpretation.
 TEST(Material3Slider, NegativeStepIsRejected) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   Slider slider(context, SliderRange{0.0f, 5.0f, 1.0f}, 2.0f);
 
@@ -770,7 +791,8 @@ TEST(Material3Slider, NegativeStepIsRejected) {
 // current semantic value.
 TEST(Material3Slider, CenteredVariantPreservesValue) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   Slider slider(context, SliderRange{-100.0f, 100.0f}, -20.0f,
                 SliderVariant::kCentered);
@@ -783,7 +805,8 @@ TEST(Material3Slider, CenteredVariantPreservesValue) {
 // without perturbing the current semantic value.
 TEST(Material3Slider, SetVariantUpdatesSemanticVariantOnly) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   Slider slider(context, SliderRange{-100.0f, 100.0f}, -20.0f);
 
@@ -801,7 +824,8 @@ TEST_F(Material3SliderRenderTest, MediumStandardInsetIconPaintsWhenConfigured) {
   const roo_display::Pictogram* icon = &circle_24();
 
   auto slider = std::make_unique<SliderWithInsetIcon>(
-      context(), SliderRange{0.0f, 100.0f}, 50.0f, SliderVariant::kStandard, style);
+      context(), SliderRange{0.0f, 100.0f}, 50.0f, SliderVariant::kStandard,
+      style);
   slider->setIcon(icon);
 
   addSlider(std::move(slider),
@@ -821,7 +845,8 @@ TEST_F(Material3SliderRenderTest, SmallSliderIgnoresInsetIcon) {
   const roo_display::Pictogram* icon = &circle_24();
 
   auto slider = std::make_unique<SliderWithInsetIcon>(
-      context(), SliderRange{0.0f, 100.0f}, 50.0f, SliderVariant::kStandard, style);
+      context(), SliderRange{0.0f, 100.0f}, 50.0f, SliderVariant::kStandard,
+      style);
   slider->setIcon(icon);
 
   addSlider(std::move(slider));
@@ -839,7 +864,8 @@ TEST_F(Material3SliderRenderTest, InsetIconJumpsPastHandleAtMinimumValue) {
   const roo_display::Pictogram* icon = &circle_24();
 
   auto slider = std::make_unique<SliderWithInsetIcon>(
-      context(), SliderRange{0.0f, 100.0f}, 0.0f, SliderVariant::kStandard, style);
+      context(), SliderRange{0.0f, 100.0f}, 0.0f, SliderVariant::kStandard,
+      style);
   slider->setIcon(icon);
 
   addSlider(std::move(slider),
@@ -875,7 +901,8 @@ TEST_F(Material3SliderRenderTest, InactiveSideInsetIconPaintsWhenConfigured) {
   SliderInsetIconAnchor anchor = SliderInsetIconAnchor::kEnd;
 
   auto slider = std::make_unique<SliderWithInsetIcon>(
-      context(), SliderRange{0.0f, 100.0f}, 50.0f, SliderVariant::kStandard, style);
+      context(), SliderRange{0.0f, 100.0f}, 50.0f, SliderVariant::kStandard,
+      style);
   slider->setIcon(icon, anchor);
 
   addSlider(std::move(slider),
@@ -901,7 +928,8 @@ TEST_F(Material3SliderRenderTest,
   SliderInsetIconAnchor anchor = SliderInsetIconAnchor::kEnd;
 
   auto slider = std::make_unique<SliderWithInsetIcon>(
-      context(), SliderRange{0.0f, 100.0f}, 100.0f, SliderVariant::kStandard, style);
+      context(), SliderRange{0.0f, 100.0f}, 100.0f, SliderVariant::kStandard,
+      style);
   slider->setIcon(icon, anchor);
 
   addSlider(std::move(slider),
@@ -1022,7 +1050,8 @@ TEST_F(Material3SliderRenderTest,
   const roo_display::Pictogram* icon = &circle_24();
 
   auto slider = std::make_unique<SliderWithInsetIcon>(
-      context(), SliderRange{0.0f, 100.0f}, 0.0f, SliderVariant::kStandard, style);
+      context(), SliderRange{0.0f, 100.0f}, 0.0f, SliderVariant::kStandard,
+      style);
   SliderWithInsetIcon* slider_ptr = slider.get();
   slider->setIcon(icon);
 
@@ -1080,8 +1109,8 @@ TEST_F(Material3SliderRenderTest,
   const roo_display::Pictogram* icon = &circle_24();
 
   auto slider = std::make_unique<SliderWithInsetIcon>(
-      context(), SliderRange{0.0f, 100.0f, 5.0f}, 5.0f, SliderVariant::kStandard,
-      style);
+      context(), SliderRange{0.0f, 100.0f, 5.0f}, 5.0f,
+      SliderVariant::kStandard, style);
   SliderWithInsetIcon* slider_ptr = slider.get();
   slider->setIcon(icon);
 
@@ -1109,7 +1138,8 @@ TEST_F(Material3SliderRenderTest,
 // semantic values even though the visual fill is centered around the midpoint.
 TEST(Material3Slider, CenteredDiscreteVariantStillSnapsValues) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   Slider slider(context, SliderRange{-5.0f, 5.0f, 0.5f}, 0.0f,
                 SliderVariant::kCentered);
@@ -1122,7 +1152,8 @@ TEST(Material3Slider, CenteredDiscreteVariantStillSnapsValues) {
 // and does not emit interaction lifecycle callbacks meant for user gestures.
 TEST(Material3Slider, ProgrammaticValueChangeFiresOnlyValueChangeHook) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   TrackingSlider slider(context, SliderRange{0.0f, 10.0f}, 2.0f);
 
@@ -1137,7 +1168,8 @@ TEST(Material3Slider, ProgrammaticValueChangeFiresOnlyValueChangeHook) {
 // both initial values onto the discrete grid before exposing them.
 TEST(Material3RangeSlider, ConstructorOrdersAndSnapsInitialValues) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   RangeSlider slider(context, SliderRange{0.0f, 5.0f, 1.0f}, 4.6f, 1.2f);
 
@@ -1151,7 +1183,8 @@ TEST(Material3RangeSlider, ConstructorOrdersAndSnapsInitialValues) {
 // supplied endpoints into a valid in-domain selection.
 TEST(Material3RangeSlider, SetValuesClampsSnapsAndOrdersIntoDomain) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   RangeSlider slider(context, SliderRange{10.0f, 40.0f, 5.0f}, 15.0f, 30.0f);
 
@@ -1164,7 +1197,8 @@ TEST(Material3RangeSlider, SetValuesClampsSnapsAndOrdersIntoDomain) {
 // new range rather than preserving now-invalid endpoint values.
 TEST(Material3RangeSlider, SetRangeClampsExistingValuesIntoNewDomain) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   RangeSlider slider(context, SliderRange{10.0f, 40.0f}, 15.0f, 35.0f);
 
@@ -1179,7 +1213,8 @@ TEST(Material3RangeSlider, SetRangeClampsExistingValuesIntoNewDomain) {
 // atomically and leaves the previous state intact.
 TEST(Material3RangeSlider, InvalidRangeIsRejectedWithoutChangingState) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   RangeSlider slider(context, SliderRange{10.0f, 40.0f}, 15.0f, 35.0f);
 
@@ -1194,7 +1229,8 @@ TEST(Material3RangeSlider, InvalidRangeIsRejectedWithoutChangingState) {
 // construction time instead of leaving broken separation invariants.
 TEST(Material3RangeSlider, InvalidConstructorRangeFailsFast) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   EXPECT_DEATH_IF_SUPPORTED(
       {
@@ -1208,7 +1244,8 @@ TEST(Material3RangeSlider, InvalidConstructorRangeFailsFast) {
 // callback with no active thumb, not as a user interaction sequence.
 TEST(Material3RangeSlider, ProgrammaticSetValuesFiresOnlyValueChangeHook) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   TrackingRangeSlider slider(context, SliderRange{0.0f, 100.0f}, 25.0f, 75.0f);
 
@@ -1226,7 +1263,8 @@ TEST(Material3RangeSlider, ProgrammaticSetValuesFiresOnlyValueChangeHook) {
 // potentially pushing one endpoint farther than the raw requested values.
 TEST(Material3RangeSlider, MinimumSeparationIsEnforcedInDiscreteMode) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   RangeSlider slider(context, SliderRange{0.0f, 10.0f, 2.0f}, 2.0f, 8.0f);
 
@@ -1241,7 +1279,8 @@ TEST(Material3RangeSlider, MinimumSeparationIsEnforcedInDiscreteMode) {
 // mutating the existing separation constraint.
 TEST(Material3RangeSlider, NegativeMinimumSeparationIsRejected) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   RangeSlider slider(context, SliderRange{0.0f, 10.0f}, 2.0f, 8.0f);
 
@@ -1253,7 +1292,8 @@ TEST(Material3RangeSlider, NegativeMinimumSeparationIsRejected) {
 // visuals and avoids generic overlay or click-animation behavior.
 TEST(Material3RangeSlider, PressStateDoesNotUseOverlayOrClickAnimation) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   RangeSlider slider(context, SliderRange{0.0f, 10.0f}, 2.0f, 8.0f);
 
@@ -1265,7 +1305,8 @@ TEST(Material3RangeSlider, PressStateDoesNotUseOverlayOrClickAnimation) {
 // reporting surfaces, not just the paint metrics.
 TEST(Material3RangeSlider, SizePresetUpdatesMeasuredAndPreferredDimensions) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   SliderStyle style{};
   style.size = SliderSize::kExtraLarge;
@@ -1343,12 +1384,13 @@ TEST_F(Material3SliderAppTest,
 // main axis becomes match-parent and the cross axis becomes exact.
 TEST(Material3SliderOrientation, VerticalPreferredSizeSwapsMajorAxis) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
 
   SliderStyle style{};
   style.orientation = SliderOrientation::kVertical;
-  Slider slider(context, SliderRange{0.0f, 1.0f}, 0.5f, SliderVariant::kStandard,
-                style);
+  Slider slider(context, SliderRange{0.0f, 1.0f}, 0.5f,
+                SliderVariant::kStandard, style);
 
   PreferredSize preferred = slider.getPreferredSize();
 
@@ -1362,8 +1404,9 @@ TEST(Material3SliderOrientation, VerticalPreferredSizeSwapsMajorAxis) {
 TEST_F(Material3SliderAppTest, VerticalSliderScrollUpUpdatesPosition) {
   SliderStyle style{};
   style.orientation = SliderOrientation::kVertical;
-  auto vertical_slider = std::make_unique<Slider>(
-      context(), SliderRange{0.0f, 1.0f}, 0.0f, SliderVariant::kStandard, style);
+  auto vertical_slider =
+      std::make_unique<Slider>(context(), SliderRange{0.0f, 1.0f}, 0.0f,
+                               SliderVariant::kStandard, style);
   slider_ = vertical_slider.get();
   app_.add(std::move(vertical_slider),
            roo_display::Box(kSliderX, kSliderY, kSliderX + Scaled(44) - 1,
@@ -1380,8 +1423,9 @@ TEST_F(Material3SliderAppTest,
        VerticalSliderHorizontalDominantScrollDoesNotCaptureWhenNotDragging) {
   SliderStyle style{};
   style.orientation = SliderOrientation::kVertical;
-  auto vertical_slider = std::make_unique<Slider>(
-      context(), SliderRange{0.0f, 1.0f}, 0.4f, SliderVariant::kStandard, style);
+  auto vertical_slider =
+      std::make_unique<Slider>(context(), SliderRange{0.0f, 1.0f}, 0.4f,
+                               SliderVariant::kStandard, style);
   slider_ = vertical_slider.get();
   app_.add(std::move(vertical_slider),
            roo_display::Box(kSliderX, kSliderY, kSliderX + Scaled(44) - 1,
@@ -1399,8 +1443,9 @@ TEST_F(Material3SliderAppTest,
 TEST_F(Material3SliderAppTest, VerticalTapToJumpUsesReversedYMapping) {
   SliderStyle style{};
   style.orientation = SliderOrientation::kVertical;
-  auto vertical_slider = std::make_unique<Slider>(
-      context(), SliderRange{0.0f, 1.0f}, 0.0f, SliderVariant::kStandard, style);
+  auto vertical_slider =
+      std::make_unique<Slider>(context(), SliderRange{0.0f, 1.0f}, 0.0f,
+                               SliderVariant::kStandard, style);
   slider_ = vertical_slider.get();
   app_.add(std::move(vertical_slider),
            roo_display::Box(kSliderX, kSliderY, kSliderX + Scaled(44) - 1,
@@ -1417,8 +1462,9 @@ TEST_F(Material3SliderAppTest, VerticalNormalDirectionUsesForwardYMapping) {
   SliderStyle style{};
   style.orientation = SliderOrientation::kVertical;
   style.direction = SliderDirection::kNormal;
-  auto vertical_slider = std::make_unique<Slider>(
-      context(), SliderRange{0.0f, 1.0f}, 1.0f, SliderVariant::kStandard, style);
+  auto vertical_slider =
+      std::make_unique<Slider>(context(), SliderRange{0.0f, 1.0f}, 1.0f,
+                               SliderVariant::kStandard, style);
   slider_ = vertical_slider.get();
   app_.add(std::move(vertical_slider),
            roo_display::Box(kSliderX, kSliderY, kSliderX + Scaled(44) - 1,
@@ -1435,8 +1481,9 @@ TEST_F(Material3SliderAppTest,
        HorizontalInvertedDirectionUsesReversedXMapping) {
   SliderStyle style{};
   style.direction = SliderDirection::kInverted;
-  auto inverted_slider = std::make_unique<Slider>(
-      context(), SliderRange{0.0f, 1.0f}, 1.0f, SliderVariant::kStandard, style);
+  auto inverted_slider =
+      std::make_unique<Slider>(context(), SliderRange{0.0f, 1.0f}, 1.0f,
+                               SliderVariant::kStandard, style);
   slider_ = inverted_slider.get();
   app_.add(std::move(inverted_slider),
            roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
@@ -1714,7 +1761,8 @@ TEST_F(Material3SliderRenderTest,
   ASSERT_TRUE(app_.refresh());
 
   Color primary = QuantizeToArgb4444(context().theme().color.primary);
-  Color inactive = QuantizeToArgb4444(context().theme().color.secondaryContainer);
+  Color inactive =
+      QuantizeToArgb4444(context().theme().color.secondaryContainer);
   Color backdrop_color = QuantizeToArgb4444(kBackdropColor);
   Color background = QuantizeToArgb4444(context().theme().color.background);
 
@@ -1734,8 +1782,9 @@ TEST_F(Material3SliderRenderTest,
 
   auto backdrop = std::make_unique<SolidBackdrop>(context(), kBackdropColor,
                                                   Dimensions(kWidth, kHeight));
-  auto slider = std::make_unique<Slider>(context(), SliderRange{-100.0f, 100.0f},
-                                         -40.0f, SliderVariant::kCentered);
+  auto slider =
+      std::make_unique<Slider>(context(), SliderRange{-100.0f, 100.0f}, -40.0f,
+                               SliderVariant::kCentered);
   slider_ = slider.get();
 
   app_.add(std::move(backdrop),
@@ -1747,7 +1796,8 @@ TEST_F(Material3SliderRenderTest,
   ASSERT_TRUE(app_.refresh());
 
   Color primary = QuantizeToArgb4444(context().theme().color.primary);
-  Color inactive = QuantizeToArgb4444(context().theme().color.secondaryContainer);
+  Color inactive =
+      QuantizeToArgb4444(context().theme().color.secondaryContainer);
   Color background = QuantizeToArgb4444(context().theme().color.background);
 
   internal::SliderAxisMetrics axis(slider_->width(), slider_->height());
@@ -1785,8 +1835,8 @@ TEST_F(Material3SliderRenderTest, RangeSliderPaintsActiveTrackBetweenThumbs) {
 
   auto backdrop = std::make_unique<SolidBackdrop>(context(), kBackdropColor,
                                                   Dimensions(kWidth, kHeight));
-  auto slider = std::make_unique<RangeSlider>(context(), SliderRange{0.0f, 100.0f},
-                                              25.0f, 75.0f);
+  auto slider = std::make_unique<RangeSlider>(
+      context(), SliderRange{0.0f, 100.0f}, 25.0f, 75.0f);
   RangeSlider* slider_ptr = slider.get();
 
   app_.add(std::move(backdrop),
@@ -1798,7 +1848,8 @@ TEST_F(Material3SliderRenderTest, RangeSliderPaintsActiveTrackBetweenThumbs) {
   ASSERT_TRUE(app_.refresh());
 
   Color primary = QuantizeToArgb4444(context().theme().color.primary);
-  Color inactive = QuantizeToArgb4444(context().theme().color.secondaryContainer);
+  Color inactive =
+      QuantizeToArgb4444(context().theme().color.secondaryContainer);
   Color background = QuantizeToArgb4444(context().theme().color.background);
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
   int start_handle_x =
@@ -1827,8 +1878,9 @@ TEST_F(Material3SliderRenderTest,
 
   auto backdrop = std::make_unique<SolidBackdrop>(context(), kBackdropColor,
                                                   Dimensions(kWidth, kHeight));
-  auto slider = std::make_unique<Slider>(context(), SliderRange{0.0f, 1.0f, 0.2f},
-                                         0.4f, SliderVariant::kStandard, style);
+  auto slider =
+      std::make_unique<Slider>(context(), SliderRange{0.0f, 1.0f, 0.2f}, 0.4f,
+                               SliderVariant::kStandard, style);
   Slider* slider_ptr = slider.get();
   slider_ = slider_ptr;
 
@@ -1866,8 +1918,9 @@ TEST_F(Material3SliderRenderTest,
 
   auto backdrop = std::make_unique<SolidBackdrop>(context(), kBackdropColor,
                                                   Dimensions(kWidth, kHeight));
-  auto slider = std::make_unique<Slider>(context(), SliderRange{0.0f, 1.0f, 0.2f},
-                                         0.4f, SliderVariant::kStandard, style);
+  auto slider =
+      std::make_unique<Slider>(context(), SliderRange{0.0f, 1.0f, 0.2f}, 0.4f,
+                               SliderVariant::kStandard, style);
   Slider* slider_ptr = slider.get();
   slider_ = slider_ptr;
 
@@ -1905,8 +1958,9 @@ TEST_F(Material3SliderRenderTest,
 
   auto backdrop = std::make_unique<SolidBackdrop>(context(), kBackdropColor,
                                                   Dimensions(kWidth, kHeight));
-  auto slider = std::make_unique<Slider>(context(), SliderRange{0.0f, 1.0f, 0.0f},
-                                         0.4f, SliderVariant::kStandard, style);
+  auto slider =
+      std::make_unique<Slider>(context(), SliderRange{0.0f, 1.0f, 0.0f}, 0.4f,
+                               SliderVariant::kStandard, style);
   Slider* slider_ptr = slider.get();
   slider_ = slider_ptr;
 
@@ -2069,7 +2123,8 @@ TEST_F(Material3SliderRenderTest,
 
   auto backdrop = std::make_unique<SolidBackdrop>(context(), kBackdropColor,
                                                   Dimensions(kWidth, kHeight));
-  auto pressed_slider = std::make_unique<Slider>(context(), SliderRange{}, 0.5f);
+  auto pressed_slider =
+      std::make_unique<Slider>(context(), SliderRange{}, 0.5f);
   slider_ = pressed_slider.get();
 
   app_.add(std::move(backdrop),
@@ -2140,8 +2195,8 @@ TEST_F(Material3SliderRenderTest,
 
   auto backdrop = std::make_unique<SolidBackdrop>(context(), kBackdropColor,
                                                   Dimensions(kWidth, kHeight));
-  auto slider = std::make_unique<RangeSlider>(context(), SliderRange{0.0f, 100.0f},
-                                              25.0f, 75.0f);
+  auto slider = std::make_unique<RangeSlider>(
+      context(), SliderRange{0.0f, 100.0f}, 25.0f, 75.0f);
   RangeSlider* slider_ptr = slider.get();
 
   app_.add(std::move(backdrop),
@@ -2180,8 +2235,8 @@ TEST_F(Material3SliderRenderTest,
 
   auto backdrop = std::make_unique<SolidBackdrop>(context(), kBackdropColor,
                                                   Dimensions(kWidth, kHeight));
-  auto slider = std::make_unique<Slider>(context(), SliderRange{0.0f, 1.0f}, 0.5f,
-                                         SliderVariant::kStandard, style);
+  auto slider = std::make_unique<Slider>(context(), SliderRange{0.0f, 1.0f},
+                                         0.5f, SliderVariant::kStandard, style);
   Slider* slider_ptr = slider.get();
   slider_ = slider_ptr;
 
@@ -2210,7 +2265,8 @@ TEST_F(Material3SliderRenderTest,
       layout.track_cross_start + Scaled(16) - 1));
 
   Color primary = QuantizeToArgb4444(context().theme().color.primary);
-  Color inactive = QuantizeToArgb4444(context().theme().color.secondaryContainer);
+  Color inactive =
+      QuantizeToArgb4444(context().theme().color.secondaryContainer);
 
   EXPECT_EQ(primary,
             pixelAt(kSliderX + active_rect.xMin() + active_rect.width() / 2,
@@ -2273,7 +2329,8 @@ TEST_F(Material3SliderRenderTest,
   style.value_indicator = SliderValueIndicatorBehavior::kAlways;
 
   auto slider = std::make_unique<ContentPaintSlider>(
-      context(), SliderRange{0.0f, 1.0f}, 0.2f, SliderVariant::kStandard, style);
+      context(), SliderRange{0.0f, 1.0f}, 0.2f, SliderVariant::kStandard,
+      style);
   ContentPaintSlider* slider_ptr = slider.get();
   slider_ = slider_ptr;
 
@@ -2398,8 +2455,8 @@ TEST_F(Material3SliderRenderTest,
   auto panel = std::make_unique<RecordingPanel>(context());
   RecordingPanel* panel_ptr = panel.get();
 
-  auto slider = std::make_unique<Slider>(context(), SliderRange{0.0f, 1.0f}, 0.2f,
-                                         SliderVariant::kStandard, style);
+  auto slider = std::make_unique<Slider>(context(), SliderRange{0.0f, 1.0f},
+                                         0.2f, SliderVariant::kStandard, style);
   Slider* slider_ptr = slider.get();
   panel_ptr->add(std::move(slider),
                  Rect(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
@@ -2466,7 +2523,8 @@ TEST_F(Material3SliderRenderTest,
 // Verifies that pressed-state transitions repaint only the thumb slice for the
 // single slider, both when pressing and when releasing.
 TEST_F(Material3SliderRenderTest, PressStateChangePaintIsClippedToHandleSlice) {
-  auto slider = std::make_unique<ContentPaintSlider>(context(), SliderRange{}, 0.5f);
+  auto slider =
+      std::make_unique<ContentPaintSlider>(context(), SliderRange{}, 0.5f);
   ContentPaintSlider* slider_ptr = slider.get();
   slider_ = slider_ptr;
 
@@ -2547,7 +2605,8 @@ TEST_F(Material3SliderRenderTest,
   style.value_indicator = SliderValueIndicatorBehavior::kAlways;
 
   auto slider = std::make_unique<ContentPaintSlider>(
-      context(), SliderRange{0.0f, 1.0f}, 0.2f, SliderVariant::kStandard, style);
+      context(), SliderRange{0.0f, 1.0f}, 0.2f, SliderVariant::kStandard,
+      style);
   ContentPaintSlider* slider_ptr = slider.get();
   slider_ = slider_ptr;
 
@@ -2607,7 +2666,8 @@ class FmtSlider : public Slider {
 // compact while still producing a sentinel string for non-finite values.
 TEST(Material3SliderValueIndicator, DefaultFormatLabelFormatsCompactly) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
   Slider slider(context);
   char scratch[16];
   EXPECT_EQ("4", slider.formatLabel(4.0f, scratch, sizeof(scratch)));
@@ -2621,7 +2681,8 @@ TEST(Material3SliderValueIndicator, DefaultFormatLabelFormatsCompactly) {
 // that the custom formatter is used verbatim.
 TEST(Material3SliderValueIndicator, CustomFormatLabelIsCalled) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
   FmtSlider slider(context);
   char scratch[16];
   EXPECT_EQ("42%", slider.formatLabel(42.0f, scratch, sizeof(scratch)));
@@ -2631,9 +2692,10 @@ TEST(Material3SliderValueIndicator, CustomFormatLabelIsCalled) {
 // unclipped-parent mode needed to paint bubble overflow.
 TEST(Material3SliderValueIndicator, EnabledStyleSetsUnclippedParentMode) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
-  Slider hidden(context, SliderRange{0.0f, 1.0f}, 0.5f, SliderVariant::kStandard,
-                SliderStyle{});  // default kHidden
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
+  Slider hidden(context, SliderRange{0.0f, 1.0f}, 0.5f,
+                SliderVariant::kStandard, SliderStyle{});  // default kHidden
   EXPECT_EQ(ParentClipMode::kClipped, hidden.getParentClipMode());
 
   SliderStyle on_interaction{};
@@ -2648,7 +2710,8 @@ TEST(Material3SliderValueIndicator, EnabledStyleSetsUnclippedParentMode) {
 // when the value-indicator visibility mode actually changes.
 TEST(Material3SliderValueIndicator, SetStyleTogglesParentClipMode) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
   Slider slider(context);
   EXPECT_EQ(ParentClipMode::kClipped, slider.getParentClipMode());
   SliderStyle s{};
@@ -2665,11 +2728,12 @@ TEST(Material3SliderValueIndicator, SetStyleTogglesParentClipMode) {
 // bounds above the slider so the bubble can render outside widget bounds.
 TEST(Material3SliderValueIndicator, TransientPaintBoundsExpandAboveWhenAlways) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
   SliderStyle s{};
   s.value_indicator = SliderValueIndicatorBehavior::kAlways;
-  Slider slider(context, SliderRange{0.0f, 1.0f}, 0.5f, SliderVariant::kStandard,
-                s);
+  Slider slider(context, SliderRange{0.0f, 1.0f}, 0.5f,
+                SliderVariant::kStandard, s);
   slider.measure(WidthSpec::Exactly(Scaled(96)),
                  HeightSpec::Exactly(Scaled(44)));
   slider.layout(Rect(0, 0, Scaled(96) - 1, Scaled(44) - 1));
@@ -2685,12 +2749,13 @@ TEST(Material3SliderValueIndicator, TransientPaintBoundsExpandAboveWhenAlways) {
 TEST(Material3SliderValueIndicator,
      VerticalTransientPaintBoundsExpandLeftWhenAlways) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
   SliderStyle s{};
   s.orientation = SliderOrientation::kVertical;
   s.value_indicator = SliderValueIndicatorBehavior::kAlways;
-  Slider slider(context, SliderRange{0.0f, 1.0f}, 0.5f, SliderVariant::kStandard,
-                s);
+  Slider slider(context, SliderRange{0.0f, 1.0f}, 0.5f,
+                SliderVariant::kStandard, s);
   slider.measure(WidthSpec::Exactly(Scaled(44)),
                  HeightSpec::Exactly(Scaled(96)));
   slider.layout(Rect(0, 0, Scaled(44) - 1, Scaled(96) - 1));
@@ -2703,7 +2768,8 @@ TEST(Material3SliderValueIndicator,
 // path for value indicators when no custom formatter is supplied.
 TEST(Material3RangeSliderValueIndicator, FormatLabelDefault) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
   RangeSlider slider(context, SliderRange{0.0f, 10.0f}, 0.0f, 10.0f);
   char scratch[16];
   EXPECT_EQ("7", slider.formatLabel(7.0f, scratch, sizeof(scratch)));
@@ -2714,7 +2780,8 @@ TEST(Material3RangeSliderValueIndicator, FormatLabelDefault) {
 TEST(Material3RangeSliderValueIndicator,
      TransientPaintBoundsUnchangedWithoutActivity) {
   roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(), DefaultKeyboardColorTheme());
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
   SliderStyle s{};
   s.value_indicator = SliderValueIndicatorBehavior::kShowOnInteraction;
   RangeSlider slider(context, SliderRange{0.0f, 10.0f}, 2.0f, 8.0f, s);

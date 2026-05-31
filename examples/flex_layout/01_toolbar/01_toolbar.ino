@@ -95,13 +95,13 @@ void initDisplay() {
 
 class Toolbar : public FlexLayout {
  public:
-  Toolbar(const Environment& env)
-      : FlexLayout(env, FlexDirection::kRow),
-        back_(env, ic_filled_24_navigation_arrow_back()),
-        title_(env, "My screen", font_body1()),
-        search_(env, ic_filled_24_action_search()),
-        settings_(env, ic_filled_24_action_settings()),
-        overflow_(env, ic_filled_24_navigation_more_vert()) {
+  Toolbar(ApplicationContext& context)
+      : FlexLayout(context, FlexDirection::kRow),
+        back_(context, ic_filled_24_navigation_arrow_back()),
+        title_(context, "My screen", font_body1()),
+        search_(context, ic_filled_24_action_search()),
+        settings_(context, ic_filled_24_action_settings()),
+        overflow_(context, ic_filled_24_navigation_more_vert()) {
     setAlignItems(AlignItems::kCenter);
     setAlignContent(AlignContent::kFlexEnd);
     setPadding(Scaled(12));
@@ -124,7 +124,7 @@ class Toolbar : public FlexLayout {
 roo_scheduler::Scheduler scheduler;
 Environment env(scheduler);
 Application app(&env, display);
-Toolbar toolbar(env);
+Toolbar toolbar(app.context());
 SingletonActivity activity(app, toolbar);
 
 void setup() {

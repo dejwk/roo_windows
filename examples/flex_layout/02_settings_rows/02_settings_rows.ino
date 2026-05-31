@@ -91,15 +91,15 @@ void initDisplay() {
 
 class SettingRow : public FlexLayout {
  public:
-  SettingRow(const Environment& env, const roo_display::Pictogram& icon_def,
-             const char* primary, const char* secondary,
-             bool initial_on = false)
-      : FlexLayout(env, FlexDirection::kRow),
-        icon_(env, icon_def),
-        labels_(env, FlexDirection::kColumn),
-        primary_(env, primary, font_body1()),
-        secondary_(env, secondary, font_caption()),
-        toggle_(env, initial_on) {
+  SettingRow(ApplicationContext& context,
+             const roo_display::Pictogram& icon_def, const char* primary,
+             const char* secondary, bool initial_on = false)
+      : FlexLayout(context, FlexDirection::kRow),
+        icon_(context, icon_def),
+        labels_(context, FlexDirection::kColumn),
+        primary_(context, primary, font_body1()),
+        secondary_(context, secondary, font_caption()),
+        toggle_(context, initial_on) {
     setAlignItems(AlignItems::kCenter);
     setPadding(Padding(Scaled(12), Scaled(8)));
     setGap(Scaled(12));
@@ -121,15 +121,16 @@ class SettingRow : public FlexLayout {
 
 class SettingsScreen : public FlexLayout {
  public:
-  SettingsScreen(const Environment& env)
-      : FlexLayout(env, FlexDirection::kColumn),
-        wifi_(env, ic_filled_24_device_wifi_tethering(), "Wi-Fi",
+  SettingsScreen(ApplicationContext& context)
+      : FlexLayout(context, FlexDirection::kColumn),
+        wifi_(context, ic_filled_24_device_wifi_tethering(), "Wi-Fi",
               "Connected to HomeNet", true),
-        div1_(env),
-        bt_(env, ic_filled_24_device_bluetooth(), "Bluetooth", "Off", false),
-        div2_(env),
-        brightness_(env, ic_filled_24_device_brightness_medium(), "Brightness",
-                    "70 %", true) {
+        div1_(context),
+        bt_(context, ic_filled_24_device_bluetooth(), "Bluetooth", "Off",
+            false),
+        div2_(context),
+        brightness_(context, ic_filled_24_device_brightness_medium(),
+                    "Brightness", "70 %", true) {
     add(wifi_);
     add(div1_);
     add(bt_);
@@ -148,7 +149,7 @@ class SettingsScreen : public FlexLayout {
 roo_scheduler::Scheduler scheduler;
 Environment env(scheduler);
 Application app(&env, display);
-SettingsScreen settings_screen(env);
+SettingsScreen settings_screen(app.context());
 SingletonActivity activity(app, settings_screen);
 
 void setup() {

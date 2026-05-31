@@ -108,15 +108,15 @@ float UnitValueFromPercent(int percent) {
 
 class SliderRow : public FlexLayout {
  public:
-  SliderRow(const Environment& env, const char* primary, const char* secondary,
-            int initial_percent)
-      : FlexLayout(env, FlexDirection::kColumn),
-        header_(env, FlexDirection::kRow),
-        labels_(env, FlexDirection::kColumn),
-        primary_(env, primary, font_body1()),
-        secondary_(env, secondary, font_caption()),
-        value_(env, "", font_body1()),
-        slider_(env, material3::SliderRange{},
+  SliderRow(ApplicationContext& context, const char* primary,
+            const char* secondary, int initial_percent)
+      : FlexLayout(context, FlexDirection::kColumn),
+        header_(context, FlexDirection::kRow),
+        labels_(context, FlexDirection::kColumn),
+        primary_(context, primary, font_body1()),
+        secondary_(context, secondary, font_caption()),
+        value_(context, "", font_body1()),
+        slider_(context, material3::SliderRange{},
                 UnitValueFromPercent(initial_percent)) {
     setPadding(Padding(Scaled(12), Scaled(8)));
     setGap(Scaled(8));
@@ -173,10 +173,10 @@ class DemoSlider : public material3::Slider {
  public:
   using LabelFormatter = std::function<roo::string_view(float, char*, size_t)>;
 
-  DemoSlider(const Environment& env, material3::SliderRange range,
+  DemoSlider(ApplicationContext& context, material3::SliderRange range,
              float initial_value, material3::SliderVariant variant,
              material3::SliderStyle style)
-      : material3::Slider(env, range, initial_value, variant, style) {}
+      : material3::Slider(context, range, initial_value, variant, style) {}
 
   void setLabelFormatter(LabelFormatter formatter) {
     label_formatter_ = std::move(formatter);
@@ -198,10 +198,10 @@ class DemoIconSlider : public material3::SliderWithInsetIcon {
  public:
   using LabelFormatter = DemoSlider::LabelFormatter;
 
-  DemoIconSlider(const Environment& env, material3::SliderRange range,
+  DemoIconSlider(ApplicationContext& context, material3::SliderRange range,
                  float initial_value, material3::SliderVariant variant,
                  material3::SliderStyle style)
-      : material3::SliderWithInsetIcon(env, range, initial_value, variant,
+      : material3::SliderWithInsetIcon(context, range, initial_value, variant,
                                        style) {}
 
   void setLabelFormatter(LabelFormatter formatter) {
@@ -226,19 +226,19 @@ class SemanticSliderRow : public FlexLayout {
   using LabelFormatter = DemoSlider::LabelFormatter;
 
   SemanticSliderRow(
-      const Environment& env, const char* primary, const char* secondary,
+      ApplicationContext& context, const char* primary, const char* secondary,
       material3::SliderRange range, float initial_value,
       SliderValueFormatter formatter,
       material3::SliderVariant variant = material3::SliderVariant::kStandard,
       material3::SliderStyle style = {},
       LabelFormatter label_formatter = nullptr)
-      : FlexLayout(env, FlexDirection::kColumn),
-        header_(env, FlexDirection::kRow),
-        labels_(env, FlexDirection::kColumn),
-        primary_(env, primary, font_body1()),
-        secondary_(env, secondary, font_caption()),
-        value_(env, "", font_body1()),
-        slider_(env, range, initial_value, variant, style),
+      : FlexLayout(context, FlexDirection::kColumn),
+        header_(context, FlexDirection::kRow),
+        labels_(context, FlexDirection::kColumn),
+        primary_(context, primary, font_body1()),
+        secondary_(context, secondary, font_caption()),
+        value_(context, "", font_body1()),
+        slider_(context, range, initial_value, variant, style),
         formatter_(std::move(formatter)) {
     if (label_formatter != nullptr) {
       slider_.setLabelFormatter(std::move(label_formatter));
@@ -281,20 +281,20 @@ class IconSliderRow : public FlexLayout {
  public:
   using LabelFormatter = DemoIconSlider::LabelFormatter;
 
-  IconSliderRow(const Environment& env, const char* primary,
+  IconSliderRow(ApplicationContext& context, const char* primary,
                 const char* secondary, material3::SliderRange range,
                 float initial_value, SliderValueFormatter formatter,
                 const material3::InsetIcon* inset_icon,
                 material3::SliderStyle style = {},
                 LabelFormatter label_formatter = nullptr)
-      : FlexLayout(env, FlexDirection::kColumn),
-        header_(env, FlexDirection::kRow),
-        labels_(env, FlexDirection::kColumn),
-        primary_(env, primary, font_body1()),
-        secondary_(env, secondary, font_caption()),
-        value_(env, "", font_body1()),
-        slider_(env, range, initial_value, material3::SliderVariant::kStandard,
-                style),
+      : FlexLayout(context, FlexDirection::kColumn),
+        header_(context, FlexDirection::kRow),
+        labels_(context, FlexDirection::kColumn),
+        primary_(context, primary, font_body1()),
+        secondary_(context, secondary, font_caption()),
+        value_(context, "", font_body1()),
+        slider_(context, range, initial_value,
+                material3::SliderVariant::kStandard, style),
         formatter_(std::move(formatter)) {
     if (inset_icon != nullptr) {
       slider_.setIcon(inset_icon->icon, inset_icon->anchor);
@@ -340,10 +340,10 @@ class DemoRangeSlider : public material3::RangeSlider {
  public:
   using UpdateHandler = std::function<void()>;
 
-  DemoRangeSlider(const Environment& env, material3::SliderRange range,
+  DemoRangeSlider(ApplicationContext& context, material3::SliderRange range,
                   float start_value, float end_value,
                   material3::SliderStyle style)
-      : material3::RangeSlider(env, range, start_value, end_value, style) {}
+      : material3::RangeSlider(context, range, start_value, end_value, style) {}
 
   // Render bubble values as "08:00" / "18:00" rather than the default decimal.
   roo::string_view formatLabel(float value, char* scratch,
@@ -391,18 +391,18 @@ class DemoRangeSlider : public material3::RangeSlider {
 
 class RangeSliderRow : public FlexLayout {
  public:
-  RangeSliderRow(const Environment& env, const char* primary,
+  RangeSliderRow(ApplicationContext& context, const char* primary,
                  const char* secondary, material3::SliderRange range,
                  float start_value, float end_value, float min_separation,
                  material3::SliderStyle style = {})
-      : FlexLayout(env, FlexDirection::kColumn),
-        header_(env, FlexDirection::kRow),
-        labels_(env, FlexDirection::kColumn),
-        primary_(env, primary, font_body1()),
-        secondary_(env, secondary, font_caption()),
-        value_(env, "", font_body1()),
-        slider_(env, range, start_value, end_value, style),
-        status_(env, "", font_caption()),
+      : FlexLayout(context, FlexDirection::kColumn),
+        header_(context, FlexDirection::kRow),
+        labels_(context, FlexDirection::kColumn),
+        primary_(context, primary, font_body1()),
+        secondary_(context, secondary, font_caption()),
+        value_(context, "", font_body1()),
+        slider_(context, range, start_value, end_value, style),
+        status_(context, "", font_caption()),
         min_separation_(min_separation) {
     setPadding(Padding(Scaled(12), Scaled(8)));
     setGap(Scaled(8));
@@ -454,9 +454,9 @@ class RangeSliderRow : public FlexLayout {
 
 class FixedSizeHolder : public Holder {
  public:
-  FixedSizeHolder(const Environment& env, XDim width, YDim height,
+  FixedSizeHolder(ApplicationContext& context, XDim width, YDim height,
                   XDim left_inset = 0, YDim top_inset = 0)
-      : Holder(env),
+      : Holder(context),
         width_(width),
         height_(height),
         left_inset_(left_inset),
@@ -497,23 +497,23 @@ class VerticalSliderShowcase : public FlexLayout {
  public:
   using LabelFormatter = DemoSlider::LabelFormatter;
 
-  VerticalSliderShowcase(const Environment& env, const char* primary,
+  VerticalSliderShowcase(ApplicationContext& context, const char* primary,
                          const char* secondary, const char* detail,
                          material3::SliderRange range, float initial_value,
                          SliderValueFormatter formatter,
                          material3::SliderStyle style = {},
                          LabelFormatter label_formatter = nullptr)
-      : FlexLayout(env, FlexDirection::kColumn),
-        header_(env, FlexDirection::kRow),
-        labels_(env, FlexDirection::kColumn),
-        primary_(env, primary, font_body1()),
-        secondary_(env, secondary, font_caption()),
-        value_(env, "", font_body1()),
-        body_(env, FlexDirection::kRow),
-        slider_slot_(env, Scaled(104), Scaled(168), Scaled(56)),
-        slider_(env, range, initial_value, material3::SliderVariant::kStandard,
-                style),
-        detail_(env, detail, font_caption()),
+      : FlexLayout(context, FlexDirection::kColumn),
+        header_(context, FlexDirection::kRow),
+        labels_(context, FlexDirection::kColumn),
+        primary_(context, primary, font_body1()),
+        secondary_(context, secondary, font_caption()),
+        value_(context, "", font_body1()),
+        body_(context, FlexDirection::kRow),
+        slider_slot_(context, Scaled(104), Scaled(168), Scaled(56)),
+        slider_(context, range, initial_value,
+                material3::SliderVariant::kStandard, style),
+        detail_(context, detail, font_caption()),
         formatter_(std::move(formatter)) {
     if (label_formatter != nullptr) {
       slider_.setLabelFormatter(std::move(label_formatter));
@@ -562,8 +562,8 @@ class VerticalSliderShowcase : public FlexLayout {
 
 class FullWidthColumn : public FlexLayout {
  public:
-  explicit FullWidthColumn(const Environment& env)
-      : FlexLayout(env, FlexDirection::kColumn) {}
+  explicit FullWidthColumn(ApplicationContext& context)
+      : FlexLayout(context, FlexDirection::kColumn) {}
 
   PreferredSize getPreferredSize() const override {
     return PreferredSize(PreferredSize::MatchParentWidth(),
@@ -645,24 +645,24 @@ const material3::InsetIcon* BrightnessIcon() {
 
 class SliderScreen : public SimpleScrollablePanel {
  public:
-  SliderScreen(const Environment& env)
-      : SimpleScrollablePanel(env),
-        content_(env),
-        title_(env, "Material 3 sliders", font_body1()),
-        subtitle_(env,
+  SliderScreen(ApplicationContext& context)
+      : SimpleScrollablePanel(context),
+        content_(context),
+        title_(context, "Material 3 sliders", font_body1()),
+        subtitle_(context,
                   "Unit-range, semantic, discrete, centered, vertical, "
                   "range, and iconized sliders, with custom value indicator "
                   "labels.",
                   font_caption()),
-        divider_(env),
-        migration_(env,
+        divider_(context),
+        migration_(context,
                    "The first row uses the default unit range. The rest use "
                    "custom semantic ranges.",
                    font_caption()),
-        legacy_(env, "Default unit range",
+        legacy_(context, "Default unit range",
                 "0..100% mapped through the semantic value API", 72),
         fan_speed_(
-            env, "Discrete fan speed",
+            context, "Discrete fan speed",
             "Ticks + stop indicators with a custom \"Nx\" bubble",
             material3::SliderRange{0.0f, 5.0f, 1.0f}, 2.0f,
             [](TextLabel& label, const material3::Slider& slider) {
@@ -676,8 +676,8 @@ class SliderScreen : public SimpleScrollablePanel {
               return roo::string_view(scratch, (size_t)len);
             }),
         balance_(
-            env, "Centered balance",
-            "kWithinBounds: bubble stays above the track and clamps horizontally",
+            context, "Centered balance",
+            "kWithinBounds: bubble clamped inside the track",
             material3::SliderRange{-100.0f, 100.0f, 5.0f}, -20.0f,
             [](TextLabel& label, const material3::Slider& slider) {
               label.setTextf("%+.0f", slider.value());
@@ -690,7 +690,8 @@ class SliderScreen : public SimpleScrollablePanel {
               return roo::string_view(scratch, (size_t)len);
             }),
         heating_(
-            env, "Heating setpoint", "Large slider with a leading inset icon",
+            context, "Heating setpoint",
+            "Large slider with a leading inset icon",
             material3::SliderRange{18.0f, 30.0f, 1.0f}, 24.0f,
             [](TextLabel& label, const material3::Slider& slider) {
               label.setTextf("%.0f C", slider.value());
@@ -703,7 +704,7 @@ class SliderScreen : public SimpleScrollablePanel {
               return roo::string_view(scratch, (size_t)len);
             }),
         brightness_(
-            env, "Desk lamp brightness",
+            context, "Desk lamp brightness",
             "Large slider with a leading inset brightness icon",
             material3::SliderRange{0.0f, 100.0f, 5.0f}, 65.0f,
             [](TextLabel& label, const material3::Slider& slider) {
@@ -717,7 +718,7 @@ class SliderScreen : public SimpleScrollablePanel {
               return roo::string_view(scratch, (size_t)len);
             }),
         inverted_xl_(
-            env, "XL inverted continuous",
+            context, "XL inverted continuous",
             "Extra-large thumb with right-to-left continuous travel",
             material3::SliderRange{0.0f, 100.0f}, 35.0f,
             [](TextLabel& label, const material3::Slider& slider) {
@@ -731,7 +732,7 @@ class SliderScreen : public SimpleScrollablePanel {
               return roo::string_view(scratch, (size_t)len);
             }),
         tank_level_(
-            env, "Vertical tank level",
+            context, "Vertical tank level",
             "Explicit inverted direction with sparse 10% ticks",
             "Tap anywhere on the column to jump. The vertical slider keeps "
             "the same 0-100% domain, but uses larger 10% steps so the tick "
@@ -747,12 +748,12 @@ class SliderScreen : public SimpleScrollablePanel {
               if ((size_t)len >= n) len = (int)n - 1;
               return roo::string_view(scratch, (size_t)len);
             }),
-        quiet_hours_(env, "Quiet hours",
+        quiet_hours_(context, "Quiet hours",
                      "Range slider: HH:00 indicator on the active thumb",
                      material3::SliderRange{0.0f, 24.0f, 1.0f}, 8.0f, 18.0f,
                      2.0f, QuietHoursStyle()),
-        footer_divider_(env),
-        note_(env,
+        footer_divider_(context),
+        note_(context,
               "Drag a thumb to see the value indicator bubble float next to "
               "the active thumb. Discrete sliders now show stop indicators by "
               "default, inset icons are available on larger standard sliders, "
@@ -801,7 +802,7 @@ class SliderScreen : public SimpleScrollablePanel {
 roo_scheduler::Scheduler scheduler;
 Environment env(scheduler);
 Application app(&env, display);
-SliderScreen slider_screen(env);
+SliderScreen slider_screen(app.context());
 SingletonActivity activity(app, slider_screen);
 
 void setup() {

@@ -35,9 +35,8 @@ class Log : public roo_windows::BasicWidget {
   //
   // The implementation uses a circular buffer with some auxiliary circular
   // vectors for caching string offsets and line lengths.
-    Log(roo_windows::ApplicationContext& context,
-      uint32_t buffer_size = 10 * 1024,
-      size_t max_lines = 100);
+  Log(roo_windows::ApplicationContext& context,
+      uint32_t buffer_size = 10 * 1024, size_t max_lines = 100);
 
   /// Discards all stored lines, leaving the log empty.
   void clear();

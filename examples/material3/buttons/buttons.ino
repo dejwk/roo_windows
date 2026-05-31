@@ -100,13 +100,13 @@ void PrepareIconDemoButton(material3::Button& button) {
 
 class ButtonRow : public FlexLayout {
  public:
-  ButtonRow(const Environment& env, const char* title,
+  ButtonRow(ApplicationContext& context, const char* title,
             material3::ButtonVariant variant)
-      : FlexLayout(env, FlexDirection::kColumn),
-        title_(env, title, font_caption()),
-        button_(env, "Action", variant),
-        button_with_icon_(env, "Action", variant),
-        disabled_(env, "Disabled", variant) {
+      : FlexLayout(context, FlexDirection::kColumn),
+        title_(context, title, font_caption()),
+        button_(context, "Action", variant),
+        button_with_icon_(context, "Action", variant),
+        disabled_(context, "Disabled", variant) {
     setPadding(Padding(Scaled(12), Scaled(6)));
     setGap(Scaled(6));
 
@@ -144,14 +144,14 @@ class ButtonRow : public FlexLayout {
 
 class SizeShowcase : public FlexLayout {
  public:
-  explicit SizeShowcase(const Environment& env)
-      : FlexLayout(env, FlexDirection::kColumn),
-        title_(env, "Size tokens", font_caption()),
-        extra_small_(env, "XS", material3::ButtonVariant::kFilled),
-        small_(env, "Small", material3::ButtonVariant::kFilled),
-        medium_(env, "Medium", material3::ButtonVariant::kFilled),
-        large_(env, "Large", material3::ButtonVariant::kFilled),
-        extra_large_(env, "XL", material3::ButtonVariant::kFilled) {
+  explicit SizeShowcase(ApplicationContext& context)
+      : FlexLayout(context, FlexDirection::kColumn),
+        title_(context, "Size tokens", font_caption()),
+        extra_small_(context, "XS", material3::ButtonVariant::kFilled),
+        small_(context, "Small", material3::ButtonVariant::kFilled),
+        medium_(context, "Medium", material3::ButtonVariant::kFilled),
+        large_(context, "Large", material3::ButtonVariant::kFilled),
+        extra_large_(context, "XL", material3::ButtonVariant::kFilled) {
     setPadding(Padding(Scaled(12), Scaled(6)));
     setGap(Scaled(6));
 
@@ -185,11 +185,11 @@ class SizeShowcase : public FlexLayout {
 
 class ShapeShowcase : public FlexLayout {
  public:
-  explicit ShapeShowcase(const Environment& env)
-      : FlexLayout(env, FlexDirection::kColumn),
-        title_(env, "Shape tokens", font_caption()),
-        round_(env, "Round", material3::ButtonVariant::kOutlined),
-        square_(env, "Square", material3::ButtonVariant::kOutlined) {
+  explicit ShapeShowcase(ApplicationContext& context)
+      : FlexLayout(context, FlexDirection::kColumn),
+        title_(context, "Shape tokens", font_caption()),
+        round_(context, "Round", material3::ButtonVariant::kOutlined),
+        square_(context, "Square", material3::ButtonVariant::kOutlined) {
     setPadding(Padding(Scaled(12), Scaled(6)));
     setGap(Scaled(6));
 
@@ -213,11 +213,13 @@ class ShapeShowcase : public FlexLayout {
 
 class SmallPaddingShowcase : public FlexLayout {
  public:
-  explicit SmallPaddingShowcase(const Environment& env)
-      : FlexLayout(env, FlexDirection::kColumn),
-        title_(env, "Small-button padding", font_caption()),
-        default_padding_(env, "24 dp", material3::ButtonVariant::kFilledTonal),
-        reduced_padding_(env, "16 dp", material3::ButtonVariant::kFilledTonal) {
+  explicit SmallPaddingShowcase(ApplicationContext& context)
+      : FlexLayout(context, FlexDirection::kColumn),
+        title_(context, "Small-button padding", font_caption()),
+        default_padding_(context, "24 dp",
+                         material3::ButtonVariant::kFilledTonal),
+        reduced_padding_(context, "16 dp",
+                         material3::ButtonVariant::kFilledTonal) {
     setPadding(Padding(Scaled(12), Scaled(6)));
     setGap(Scaled(6));
 
@@ -246,22 +248,22 @@ class SmallPaddingShowcase : public FlexLayout {
 
 class ButtonScreen : public ScrollablePanel {
  public:
-  ButtonScreen(const Environment& env)
-      : ScrollablePanel(env),
-        content_(env, FlexDirection::kColumn),
-        title_(env, "Material 3 buttons", font_h6()),
-        subtitle_(env, "Phase 1 - variants, sizes, shapes, and padding",
+  ButtonScreen(ApplicationContext& context)
+      : ScrollablePanel(context),
+        content_(context, FlexDirection::kColumn),
+        title_(context, "Material 3 buttons", font_h6()),
+        subtitle_(context, "Phase 1 - variants, sizes, shapes, and padding",
                   font_caption()),
-        geometry_divider_(env),
-        sizes_(env),
-        shapes_(env),
-        padding_(env),
-        variant_divider_(env),
-        elevated_(env, "Elevated", material3::ButtonVariant::kElevated),
-        filled_(env, "Filled", material3::ButtonVariant::kFilled),
-        tonal_(env, "Filled tonal", material3::ButtonVariant::kFilledTonal),
-        outlined_(env, "Outlined", material3::ButtonVariant::kOutlined),
-        text_(env, "Text", material3::ButtonVariant::kText) {
+        geometry_divider_(context),
+        sizes_(context),
+        shapes_(context),
+        padding_(context),
+        variant_divider_(context),
+        elevated_(context, "Elevated", material3::ButtonVariant::kElevated),
+        filled_(context, "Filled", material3::ButtonVariant::kFilled),
+        tonal_(context, "Filled tonal", material3::ButtonVariant::kFilledTonal),
+        outlined_(context, "Outlined", material3::ButtonVariant::kOutlined),
+        text_(context, "Text", material3::ButtonVariant::kText) {
     content_.setPadding(Padding(Scaled(12), Scaled(8)));
     content_.setGap(Scaled(6));
 
@@ -302,7 +304,7 @@ class ButtonScreen : public ScrollablePanel {
 roo_scheduler::Scheduler scheduler;
 Environment env(scheduler);
 Application app(&env, display);
-ButtonScreen button_screen(env);
+ButtonScreen button_screen(app.context());
 SingletonActivity activity(app, button_screen);
 
 void setup() {

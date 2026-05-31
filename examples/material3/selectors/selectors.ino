@@ -95,13 +95,13 @@ template <typename Control>
 class SelectorRow : public FlexLayout {
  public:
   template <typename... Args>
-  SelectorRow(const Environment& env, const char* primary,
+  SelectorRow(ApplicationContext& context, const char* primary,
               const char* secondary, Args&&... args)
-      : FlexLayout(env, FlexDirection::kRow),
-        labels_(env, FlexDirection::kColumn),
-        primary_(env, primary, font_body1()),
-        secondary_(env, secondary, font_caption()),
-        control_(env, std::forward<Args>(args)...) {
+      : FlexLayout(context, FlexDirection::kRow),
+        labels_(context, FlexDirection::kColumn),
+        primary_(context, primary, font_body1()),
+        secondary_(context, secondary, font_caption()),
+        control_(context, std::forward<Args>(args)...) {
     setAlignItems(AlignItems::kCenter);
     setPadding(Padding(Scaled(12), Scaled(8)));
     setGap(Scaled(12));
@@ -124,33 +124,36 @@ class SelectorRow : public FlexLayout {
 
 class SelectorScreen : public SimpleScrollablePanel {
  public:
-  SelectorScreen(const Environment& env)
-      : SimpleScrollablePanel(env),
-        content_(env, FlexDirection::kColumn),
-        title_(env, "Material 3 selectors", font_body1()),
-        subtitle_(env, "Tap each control to inspect state changes.",
+  SelectorScreen(ApplicationContext& context)
+      : SimpleScrollablePanel(context),
+        content_(context, FlexDirection::kColumn),
+        title_(context, "Material 3 selectors", font_body1()),
+        subtitle_(context, "Tap each control to inspect state changes.",
                   font_caption()),
-        top_divider_(env),
-        checkbox_heading_(env, "Checkboxes", font_body1()),
-        checkbox_status_(env, "", font_caption()),
-        notifications_(env, "Notifications", "Starts enabled", OnOffState::kOn),
-        downloads_(env, "Offline downloads", "Starts indeterminate",
+        top_divider_(context),
+        checkbox_heading_(context, "Checkboxes", font_body1()),
+        checkbox_status_(context, "", font_caption()),
+        notifications_(context, "Notifications", "Starts enabled",
+                       OnOffState::kOn),
+        downloads_(context, "Offline downloads", "Starts indeterminate",
                    OnOffState::kIndeterminate),
-        analytics_(env, "Anonymous analytics", "Starts disabled",
+        analytics_(context, "Anonymous analytics", "Starts disabled",
                    OnOffState::kOff),
-        mid_divider_(env),
-        radio_heading_(env, "Radio buttons", font_body1()),
-        radio_status_(env, "", font_caption()),
-        compact_(env, "Compact layout", "More density on small screens", false),
-        balanced_(env, "Balanced layout", "Default spacing for mixed content",
-                  true),
-        comfortable_(env, "Comfortable layout", "Extra padding for reading",
+        mid_divider_(context),
+        radio_heading_(context, "Radio buttons", font_body1()),
+        radio_status_(context, "", font_caption()),
+        compact_(context, "Compact layout", "More density on small screens",
+                 false),
+        balanced_(context, "Balanced layout",
+                  "Default spacing for mixed content", true),
+        comfortable_(context, "Comfortable layout", "Extra padding for reading",
                      false),
-        bottom_divider_(env),
-        switch_heading_(env, "Switches", font_body1()),
-        switch_status_(env, "", font_caption()),
-        bluetooth_(env, "Bluetooth", "Nearby accessories", true),
-        dark_theme_(env, "Dark theme", "Applies app-wide appearance", false) {
+        bottom_divider_(context),
+        switch_heading_(context, "Switches", font_body1()),
+        switch_status_(context, "", font_caption()),
+        bluetooth_(context, "Bluetooth", "Nearby accessories", true),
+        dark_theme_(context, "Dark theme", "Applies app-wide appearance",
+                    false) {
     content_.setPadding(Scaled(12));
     content_.setGap(Scaled(4));
     content_.add(title_, {.flex_grow = 0, .flex_shrink = 0});
@@ -256,7 +259,7 @@ class SelectorScreen : public SimpleScrollablePanel {
 roo_scheduler::Scheduler scheduler;
 Environment env(scheduler);
 Application app(&env, display);
-SelectorScreen selector_screen(env);
+SelectorScreen selector_screen(app.context());
 SingletonActivity activity(app, selector_screen);
 
 void setup() {

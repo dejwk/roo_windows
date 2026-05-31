@@ -93,8 +93,9 @@ Application app(&env, display);
 // formats from an SD card or PROGMEM, or any other synthetic content that is
 // captured via the roo_display::Drawable interface. See
 // https://github.com/dejwk/roo_display to learn more.
-auto pie = SmoothPie({0, 0}, 40, 0, M_PI / 6, env.theme().color.primaryVariant);
-Image img(env, pie);
+auto pie = SmoothPie({0, 0}, 40, 0, M_PI / 6,
+                     app.context().theme().color.primaryVariant);
+Image img(app.context(), pie);
 
 SingletonActivity activity(app, img);
 

@@ -87,17 +87,17 @@ void initDisplay() {
 
 class ChipBar : public FlexLayout {
  public:
-  ChipBar(const Environment& env)
-      : FlexLayout(env, FlexDirection::kRow),
+  ChipBar(ApplicationContext& context)
+      : FlexLayout(context, FlexDirection::kRow),
         chips_{
-            SimpleButton(env, "All", Button::OUTLINED),
-            SimpleButton(env, "Nearby", Button::OUTLINED),
-            SimpleButton(env, "Open now", Button::OUTLINED),
-            SimpleButton(env, "Top rated", Button::OUTLINED),
-            SimpleButton(env, "Price", Button::OUTLINED),
-            SimpleButton(env, "Food", Button::OUTLINED),
-            SimpleButton(env, "Hotels", Button::OUTLINED),
-            SimpleButton(env, "Activities", Button::OUTLINED),
+            SimpleButton(context, "All", Button::OUTLINED),
+            SimpleButton(context, "Nearby", Button::OUTLINED),
+            SimpleButton(context, "Open now", Button::OUTLINED),
+            SimpleButton(context, "Top rated", Button::OUTLINED),
+            SimpleButton(context, "Price", Button::OUTLINED),
+            SimpleButton(context, "Food", Button::OUTLINED),
+            SimpleButton(context, "Hotels", Button::OUTLINED),
+            SimpleButton(context, "Activities", Button::OUTLINED),
         } {
     setFlexWrap(FlexWrap::kWrap);
     setJustifyContent(JustifyContent::kFlexStart);
@@ -119,7 +119,7 @@ class ChipBar : public FlexLayout {
 roo_scheduler::Scheduler scheduler;
 Environment env(scheduler);
 Application app(&env, display);
-ChipBar chip_bar(env);
+ChipBar chip_bar(app.context());
 SingletonActivity activity(app, chip_bar);
 
 void setup() {

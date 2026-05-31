@@ -93,14 +93,14 @@ Application app(&env, display);
 // full screen).
 class MyPane : public HorizontalLayout {
  public:
-  MyPane(const Environment& env)
-      : HorizontalLayout(env),
+  MyPane(ApplicationContext& context)
+      : HorizontalLayout(context),
         // Scaled (default).
-        icon1_(env, SCALED_ROO_ICON(filled, action_rocket)),
-        icon2_(env, ic_filled_18_action_rocket()),
-        icon3_(env, ic_filled_24_action_rocket()),
-        icon4_(env, ic_filled_36_action_rocket()),
-        icon5_(env, ic_filled_48_action_rocket()) {
+        icon1_(context, SCALED_ROO_ICON(filled, action_rocket)),
+        icon2_(context, ic_filled_18_action_rocket()),
+        icon3_(context, ic_filled_24_action_rocket()),
+        icon4_(context, ic_filled_36_action_rocket()),
+        icon5_(context, ic_filled_48_action_rocket()) {
     add(icon1_);
     add(icon2_);
     add(icon3_);
@@ -117,7 +117,7 @@ class MyPane : public HorizontalLayout {
   Icon icon5_;
 };
 
-MyPane my_pane(env);
+MyPane my_pane(app.context());
 SingletonActivity activity(app, my_pane);
 
 void setup() {
