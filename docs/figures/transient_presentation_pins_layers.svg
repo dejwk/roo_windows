@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640">
+  <rect width="1280" height="640" fill="#ffffff"/>
+  <style>
+    .title { font: 600 28px 'DejaVu Sans', Arial, sans-serif; fill: #1f2937; }
+    .label { font: 500 18px 'DejaVu Sans', Arial, sans-serif; fill: #334155; }
+    .note { font: 15px 'DejaVu Sans', Arial, sans-serif; fill: #475569; }
+    .small { font: 13px 'DejaVu Sans', Arial, sans-serif; fill: #475569; }
+    .task { fill: #f8fafc; stroke: #94a3b8; stroke-width: 2; }
+    .container { fill: #eef2ff; stroke: #6366f1; stroke-width: 2; }
+    .slider { fill: #0f766e; }
+    .bubble { fill: #fb923c; stroke: #ea580c; stroke-width: 2; }
+    .clipped { fill: #ffffff; stroke: #ef4444; stroke-width: 2; stroke-dasharray: 8 6; }
+    .overlay { fill: #dcfce7; stroke: #16a34a; stroke-width: 2; }
+    .arrow { stroke: #64748b; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+  </style>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <text x="80" y="58" class="title">Current: bubble painted inside the clipped widget tree</text>
+  <rect x="70" y="95" width="510" height="470" rx="20" class="task"/>
+  <text x="98" y="132" class="label">task layer root</text>
+  <rect x="130" y="190" width="390" height="265" rx="18" class="container"/>
+  <text x="154" y="225" class="label">clipped scroll or layout container</text>
+  <rect x="210" y="360" width="220" height="10" rx="5" class="slider"/>
+  <circle cx="345" cy="365" r="16" fill="#14b8a6" stroke="#0f766e" stroke-width="3"/>
+  <text x="228" y="402" class="label">slider</text>
+  <rect x="278" y="140" width="135" height="58" rx="22" class="bubble"/>
+  <text x="319" y="176" class="label" fill="#ffffff">42</text>
+  <rect x="128" y="93" width="394" height="96" rx="18" class="clipped"/>
+  <text x="162" y="126" class="label" fill="#ef4444">bubble is clipped by an ancestor above the slider</text>
+  <path d="M346 332 L346 206" class="arrow"/>
+  <text x="106" y="503" class="note">The slider already reports transient overflow, but one clipped ancestor still stops propagation.</text>
+
+  <text x="700" y="58" class="title">Proposed: layer-scoped presentation pin</text>
+  <rect x="690" y="95" width="510" height="470" rx="20" class="task"/>
+  <text x="718" y="132" class="label">same task layer root</text>
+  <rect x="735" y="150" width="420" height="58" rx="14" class="overlay"/>
+  <text x="760" y="185" class="label">presentation pin pass: paints after the task contents</text>
+  <rect x="750" y="235" width="390" height="220" rx="18" class="container"/>
+  <text x="774" y="270" class="label">ordinary children still paint in the clipped tree</text>
+  <rect x="830" y="360" width="220" height="10" rx="5" class="slider"/>
+  <circle cx="965" cy="365" r="16" fill="#14b8a6" stroke="#0f766e" stroke-width="3"/>
+  <text x="848" y="402" class="label">slider</text>
+  <rect x="898" y="146" width="135" height="58" rx="22" class="bubble"/>
+  <text x="939" y="182" class="label" fill="#ffffff">42</text>
+  <path d="M966 332 L966 206" class="arrow"/>
+  <text x="720" y="503" class="note">The pin keeps task or popup ordering, but clips only at the main-window edge by default.</text>
+  <text x="720" y="530" class="small">Higher layers such as popups and dialogs still paint later and therefore stay above lower-layer pins.</text>
+</svg>
