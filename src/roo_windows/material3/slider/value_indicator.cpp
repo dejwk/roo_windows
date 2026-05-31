@@ -328,7 +328,7 @@ void ValueIndicatorBubble::decorate(PaintContext& ctx) const {
                              (uint8_t)kCornerRadius};
   decoration.outline_width = SmallNumber(0);
   decoration.outline_color = bubble_color_;
-  ctx.addDecoration(decoration, ctx.overlaySpec());
+  ctx.addDecoration(decoration);
 
   // 2) Add an exclusion for the inscribed inner rectangle. This protects the
   //    pill interior from overdraw by subsequent sibling/parent paints

@@ -92,7 +92,7 @@ void SurfaceWidget::emitPersistentDecoration(PaintContext& ctx) const {
     decoration.outline_width = border_style.outline_width();
     decoration.outline_color =
         AlphaBlend(decoration.background, getOutlineColor());
-    ctx.addDecoration(decoration, ctx.overlaySpec());
+    ctx.addDecoration(decoration);
   }
 }
 

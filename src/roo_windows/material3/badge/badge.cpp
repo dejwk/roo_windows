@@ -235,7 +235,7 @@ void Badge::paint(PaintContext& ctx, const Theme& theme) const {
   decoration.corner_radii = {radius, radius, radius, radius};
   decoration.outline_width = SmallNumber(0);
   decoration.outline_color = badge_color;
-  ctx.addDecoration(decoration, ctx.overlaySpec());
+  ctx.addDecoration(decoration);
   if (!inner.empty()) {
     ctx.addExclusion(inner);
   }

@@ -197,22 +197,12 @@ TEST_F(PaintContextTest, AddDecorationTranslatesLocalBounds) {
   EXPECT_EQ(QuantizeToArgb4444(color::Blue), pixelAt(9, 9));
 }
 
-TEST_F(PaintContextTest,
-       ExplicitDecorationOverlaySpecModulatesButDefaultDoesNot) {
+TEST_F(PaintContextTest, DecorationUsesCurrentOverlaySpecWhenPresent) {
   auto widget = std::make_unique<OverlaySpecSourceWidget>(env_);
   OverlaySpecSourceWidget* widget_ptr = widget.get();
   app_.add(std::move(widget), Box(0, 0, 7, 7));
   widget_ptr->setSelected(true);
   widget_ptr->setPressed(true);
-
-  Surface overlay_surface(display_.output(), 0, 0, display_.extents(),
-                          /*is_write_once=*/false,
-                          display_.getBackgroundColor(), FillMode::kVisible,
-                          BlendingMode::kSourceOver);
-  Canvas overlay_canvas(&overlay_surface);
-  OverlaySpec overlay_spec(*widget_ptr, overlay_canvas);
-  ASSERT_TRUE(overlay_spec.is_modded());
-  ASSERT_GT(overlay_spec.base_overlay().a(), 0);
 
   Surface surface(display_.output(), 0, 0, display_.extents(),
                   /*is_write_once=*/false, display_.getBackgroundColor(),
@@ -222,13 +212,18 @@ TEST_F(PaintContextTest,
   Clipper clipper(clipper_state, canvas.out(), roo_time::Uptime::Max());
   canvas.set_out(clipper.out());
   PaintContext ctx(canvas, clipper);
+  OverlaySpec overlay_spec(*widget_ptr, canvas);
+  ASSERT_TRUE(overlay_spec.is_modded());
+  ASSERT_GT(overlay_spec.base_overlay().a(), 0);
 
   PaintDecoration decoration;
   decoration.bounds = Rect(0, 0, 5, 5);
   decoration.background = color::Red;
 
   ctx.translated(1, 1).addDecoration(decoration);
-  ctx.translated(10, 1).addDecoration(decoration, overlay_spec);
+  clipper.pushOverlaySpec(*widget_ptr, canvas);
+  ctx.translated(10, 1).addDecoration(decoration);
+  clipper.popOverlaySpec();
   ctx.setBgcolor(color::Blue);
   ctx.clear();
 

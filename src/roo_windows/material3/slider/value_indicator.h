@@ -154,8 +154,9 @@ class ValueIndicatorBubble {
   // while still being free to paint the corner strips so the decoration
   // overlay can blend the rounded edges in).
   //
-  // The current context overlay spec is forwarded to Decoration so disabled
-  // and pressed host modulation matches the surrounding slider paint.
+  // Decoration modulation is inherited from the current paint-context overlay
+  // frame so disabled and pressed host state matches the surrounding slider
+  // paint.
   void decorate(PaintContext& ctx) const;
 
  private:

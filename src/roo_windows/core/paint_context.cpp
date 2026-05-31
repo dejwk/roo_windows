@@ -144,12 +144,8 @@ void PaintContext::addOverlayShape(roo_display::SmoothShape overlay,
 }
 
 void PaintContext::addDecoration(const PaintDecoration& decoration) {
-  addDecoration(decoration, OverlaySpec());
-}
-
-void PaintContext::addDecoration(const PaintDecoration& decoration,
-                                 const OverlaySpec& overlay_spec) {
   if (empty()) return;
+  const OverlaySpec& overlay_spec = clipper_->currentOverlaySpec();
   clipper_->addDecoration(canvas_.clip_box(), deviceRect(decoration.bounds),
                           decoration.elevation, overlay_spec,
                           decoration.background, decoration.corner_radii,

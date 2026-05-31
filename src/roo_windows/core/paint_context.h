@@ -147,19 +147,14 @@ class PaintContext {
   void addOverlayShape(roo_display::SmoothShape overlay,
                        const Rect& local_clip);
 
-  /// Registers `decoration` without any additional overlay modulation.
+  /// Registers `decoration` using the currently active widget overlay state.
   ///
   /// `decoration.bounds` is interpreted in the current local coordinate space.
   /// `PaintContext` translates those bounds to device coordinates before
-  /// storing the decoration in the clipper.
+  /// storing the decoration in the clipper. Modulation is inherited from the
+  /// top overlay frame in the backing `Clipper`; if the overlay stack is
+  /// empty, an inert default `OverlaySpec` is used.
   void addDecoration(const PaintDecoration& decoration);
-
-  /// Registers `decoration` modulated by `overlay_spec`.
-  ///
-  /// Geometry stays local exactly as in the overload above; `overlay_spec`
-  /// only affects modulation data, not coordinate translation.
-  void addDecoration(const PaintDecoration& decoration,
-                     const OverlaySpec& overlay_spec);
 
   /// Returns the underlying clipper for framework integration points.
   Clipper& clipperForFramework();
