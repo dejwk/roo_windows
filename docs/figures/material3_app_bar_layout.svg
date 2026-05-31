@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="620" viewBox="0 0 1240 620">
+  <rect width="1240" height="620" fill="#ffffff"/>
+
+  <style>
+    .title { font: 700 24px Arial, Helvetica, sans-serif; fill: #1f2937; }
+    .section { font: 700 18px Arial, Helvetica, sans-serif; fill: #1f2937; }
+    .label { font: 13px Arial, Helvetica, sans-serif; fill: #374151; }
+    .small { font: 12px Arial, Helvetica, sans-serif; fill: #4b5563; }
+    .caption { font: 12px Arial, Helvetica, sans-serif; fill: #6b7280; }
+    .screen { fill: #fbfdff; stroke: #cbd5e1; stroke-width: 2; }
+    .body { fill: #ffffff; stroke: #e5e7eb; stroke-width: 1.5; }
+    .bar { fill: #eef2f7; stroke: #94a3b8; stroke-width: 2; }
+    .bar-scrolled { fill: #dbe4ef; stroke: #7c93b1; stroke-width: 2; }
+    .search { fill: #e2e8f0; stroke: #94a3b8; stroke-width: 2; }
+    .search-strong { fill: #d0d8e4; stroke: #7c93b1; stroke-width: 2; }
+    .chip { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; }
+    .chip-strong { fill: #c8d9ff; stroke: #5b8def; stroke-width: 1.5; }
+    .line { stroke: #9ca3af; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .guide { stroke: #9ca3af; stroke-width: 1.5; marker-end: url(#arrow); }
+  </style>
+
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#9ca3af"/>
+    </marker>
+  </defs>
+
+  <text x="48" y="42" class="title">Material 3 app bars and search-entry surfaces</text>
+  <text x="48" y="66" class="caption">Title-based app bars own the top-edge shell. Search entry surfaces stay lightweight and hand off to later focused-search work.</text>
+
+  <text x="78" y="108" class="section">Title-based app bars</text>
+  <rect x="60" y="124" width="350" height="430" rx="20" class="screen"/>
+  <rect x="78" y="142" width="314" height="394" rx="12" class="body"/>
+
+  <rect x="78" y="156" width="314" height="64" rx="0" class="bar"/>
+  <rect x="86" y="164" width="48" height="48" rx="24" class="chip"/>
+  <rect x="332" y="164" width="48" height="48" rx="24" class="chip"/>
+  <text x="188" y="193" class="label">Centered small title</text>
+  <text x="92" y="236" class="small">64 dp base height</text>
+
+  <rect x="78" y="248" width="314" height="112" rx="0" class="bar-scrolled"/>
+  <rect x="86" y="256" width="48" height="48" rx="24" class="chip"/>
+  <rect x="280" y="256" width="48" height="48" rx="24" class="chip-strong"/>
+  <rect x="332" y="256" width="48" height="48" rx="24" class="chip"/>
+  <text x="150" y="308" class="label">Medium flexible headline</text>
+  <text x="150" y="328" class="label">with one subtitle line</text>
+  <text x="92" y="374" class="small">112 dp base height + subtitle growth</text>
+
+  <rect x="78" y="388" width="314" height="148" rx="0" class="bar"/>
+  <rect x="86" y="396" width="48" height="48" rx="24" class="chip"/>
+  <rect x="332" y="396" width="48" height="48" rx="24" class="chip"/>
+  <text x="150" y="454" class="label">Large flexible headline</text>
+  <text x="150" y="474" class="label">up to two title lines</text>
+  <text x="92" y="554" class="small">152 dp base height</text>
+
+  <line x1="408" y1="188" x2="508" y2="188" class="guide"/>
+  <text x="520" y="183" class="small">Leading and trailing actions stay as child widgets.</text>
+  <text x="520" y="200" class="small">The app bar paints only the shell and title stack.</text>
+
+  <line x1="408" y1="304" x2="508" y2="304" class="guide"/>
+  <text x="520" y="298" class="small">Flat vs scrolled is a color-state change.</text>
+  <text x="520" y="315" class="small">Scroll compression stays on the host.</text>
+
+  <text x="78" y="586" class="caption">One class covers small, medium flexible, and large flexible through variant token tables.</text>
+
+  <text x="472" y="108" class="section">Standalone search bar</text>
+  <rect x="454" y="124" width="332" height="430" rx="20" class="screen"/>
+  <rect x="472" y="142" width="296" height="394" rx="12" class="body"/>
+  <rect x="488" y="170" width="264" height="56" rx="28" class="search"/>
+  <circle cx="516" cy="198" r="10" fill="none" stroke="#6b7280" stroke-width="2"/>
+  <line x1="523" y1="205" x2="531" y2="213" stroke="#6b7280" stroke-width="2"/>
+  <text x="544" y="202" class="label">Search inbox</text>
+  <rect x="680" y="182" width="24" height="24" rx="12" class="chip"/>
+  <rect x="712" y="182" width="24" height="24" rx="12" class="chip-strong"/>
+
+  <line x1="488" y1="156" x2="488" y2="226" class="line"/>
+  <line x1="752" y1="156" x2="752" y2="226" class="line"/>
+  <text x="488" y="250" class="small">56 dp contained surface</text>
+  <text x="488" y="268" class="small">natural width clamps to 240-720 dp</text>
+  <text x="488" y="286" class="small">activates ordinary open-search action</text>
+
+  <rect x="488" y="316" width="264" height="190" rx="12" fill="#ffffff" stroke="#e5e7eb" stroke-width="1.5"/>
+  <text x="502" y="342" class="caption">content that this bar filters</text>
+  <rect x="502" y="366" width="236" height="20" rx="10" fill="#f3f4f6"/>
+  <rect x="502" y="396" width="236" height="20" rx="10" fill="#f3f4f6"/>
+  <rect x="502" y="426" width="186" height="20" rx="10" fill="#f3f4f6"/>
+
+  <line x1="786" y1="198" x2="906" y2="198" class="guide"/>
+  <text x="918" y="192" class="small">No editor, cursor, or result model lives here.</text>
+  <text x="918" y="209" class="small">The bar only displays text and opens later search.</text>
+
+  <text x="838" y="108" class="section">Search app bar</text>
+  <rect x="820" y="124" width="360" height="430" rx="20" class="screen"/>
+  <rect x="838" y="142" width="324" height="394" rx="12" class="body"/>
+  <rect x="838" y="156" width="324" height="64" rx="0" class="bar"/>
+  <rect x="846" y="164" width="48" height="48" rx="24" class="chip"/>
+  <rect x="910" y="160" width="190" height="56" rx="28" class="search-strong"/>
+  <circle cx="936" cy="188" r="10" fill="none" stroke="#6b7280" stroke-width="2"/>
+  <line x1="943" y1="195" x2="951" y2="203" stroke="#6b7280" stroke-width="2"/>
+  <text x="964" y="192" class="label">Search</text>
+  <rect x="1064" y="176" width="24" height="24" rx="12" class="chip"/>
+  <rect x="1110" y="164" width="48" height="48" rx="24" class="chip-strong"/>
+
+  <line x1="910" y1="146" x2="910" y2="220" class="line"/>
+  <line x1="1100" y1="146" x2="1100" y2="220" class="line"/>
+  <text x="848" y="250" class="small">64 dp outer shell, 56 dp embedded search lane</text>
+  <text x="848" y="268" class="small">search lane uses the remaining width, then grows at half-surplus after 312 dp</text>
+  <text x="848" y="286" class="small">selection hands off to later focused-search / search-view work</text>
+
+  <rect x="854" y="320" width="292" height="186" rx="12" fill="#ffffff" stroke="#e5e7eb" stroke-width="1.5"/>
+  <text x="868" y="346" class="caption">page content under the top shell</text>
+  <rect x="868" y="372" width="264" height="18" rx="9" fill="#f3f4f6"/>
+  <rect x="868" y="400" width="264" height="18" rx="9" fill="#f3f4f6"/>
+  <rect x="868" y="428" width="202" height="18" rx="9" fill="#f3f4f6"/>
+
+  <line x1="1100" y1="188" x2="1210" y2="188" class="guide"/>
+  <text x="1010" y="578" class="caption">Search app bars combine a full-width top shell with a contained entry surface.</text>
+
+  <text x="1040" y="182" class="small">Outer actions stay sparse.</text>
+  <text x="1040" y="199" class="small">More actions move to a toolbar.</text>
+</svg>

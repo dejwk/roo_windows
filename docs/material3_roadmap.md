@@ -44,6 +44,7 @@ The existing docs already cover most of the hard framework substrate:
 The checked-in Material 3 component and shell coverage is also substantial:
 
 - [material3_layout_scaffold_design.md](material3_layout_scaffold_design.md)
+- [material3_app_bars_design.md](material3_app_bars_design.md)
 - [material3_navigation_bar_design.md](material3_navigation_bar_design.md)
 - [material3_navigation_rail_design.md](material3_navigation_rail_design.md)
 - [material3_navigation_drawer_design.md](material3_navigation_drawer_design.md)
@@ -86,7 +87,8 @@ They should follow the larger shell and form-system decisions.
 Several existing design docs already identify their own next dependencies:
 
 - [material3_toolbars_design.md](material3_toolbars_design.md) explicitly
-  leaves top app bars and search app bars to a separate design.
+  leaves top app bars and search app bars to
+  [material3_app_bars_design.md](material3_app_bars_design.md).
 - [material3_text_fields_design.md](material3_text_fields_design.md) defers
   multiline behavior until the shared editable-text core is defined.
 - [material3_icon_buttons_design.md](material3_icon_buttons_design.md)
@@ -135,9 +137,9 @@ than component demos.
 | Work item | Type | Why it belongs here | Primary references |
 | --- | --- | --- | --- |
 | Material 3 theme and tokens design | New design doc | Every remaining component family depends on a coherent story for color roles, typography scale, shape families, density, and motion tokens. Without this, the repo can have many correct components but still lack a consistent system. | [material3_buttons_design.md](material3_buttons_design.md), [material3_text_fields_design.md](material3_text_fields_design.md), [material3_layout_scaffold_design.md](material3_layout_scaffold_design.md) |
-| Material 3 top app bars and search surfaces | New design doc | [material3_toolbars_design.md](material3_toolbars_design.md) intentionally excludes top app bars. Most real applications still need a top-edge shell with title, navigation affordance, search entry point, and page actions. | [material3_toolbars_design.md](material3_toolbars_design.md), [material3_layout_scaffold_design.md](material3_layout_scaffold_design.md), [non_touch_input_design.md](non_touch_input_design.md) |
+| Material 3 app bars and search surfaces implementation | Implementation follow-on against an existing design doc | [material3_app_bars_design.md](material3_app_bars_design.md) closes the top-edge shell contract, but the repo still needs the widget family and search-entry surfaces in code. | [material3_app_bars_design.md](material3_app_bars_design.md), [material3_layout_scaffold_design.md](material3_layout_scaffold_design.md), [material3_toolbars_design.md](material3_toolbars_design.md), [non_touch_input_design.md](non_touch_input_design.md) |
 | Material 3 dialogs | New design doc | Confirmations, destructive actions, blocking errors, and short wizard flows are still missing from the Material 3 story even though sheets and snackbars are already designed. | [material3_sheets_design.md](material3_sheets_design.md), [material3_snackbar_design.md](material3_snackbar_design.md), [non_touch_input_design.md](non_touch_input_design.md) |
-| Application navigation and back behavior | New design doc | The repo now has tabs, a page host, sheets, popups, and a non-touch-input design, but it still lacks one framework-level contract for route ownership, back dispatch, and later predictive-back integration. | [horizontal_page_host_design.md](horizontal_page_host_design.md), [material3_sheets_design.md](material3_sheets_design.md), [non_touch_input_design.md](non_touch_input_design.md) |
+| [Application navigation and back behavior](application_navigation_back_behavior_design.md) | New design doc | The repo now has tabs, a page host, sheets, popups, and a non-touch-input design, but it still lacks one framework-level contract for route ownership, back dispatch, and later predictive-back integration. | [horizontal_page_host_design.md](horizontal_page_host_design.md), [material3_sheets_design.md](material3_sheets_design.md), [non_touch_input_design.md](non_touch_input_design.md) |
 
 Phase 1 exit condition:
 
@@ -206,7 +208,7 @@ Phase 4 exit condition:
 The recommended authoring and implementation order is:
 
 1. write a Material 3 theme-and-tokens design doc,
-2. write the top-app-bar and search-surface design doc,
+2. implement [material3_app_bars_design.md](material3_app_bars_design.md),
 3. write the dialog design doc,
 4. write the navigation-and-back-behavior design doc,
 5. write the editable-text-core follow-on and update
