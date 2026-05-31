@@ -86,10 +86,11 @@ authoring surface for row-local drawing, decorations, and exclusions. Menu rows
 must use that surface for checkmarks, shortcut text, submenu chevrons, badges,
 and active-state visuals. There is no separate menu-only paint API.
 
-Those two facts also mean menus should start from the current list row API.
-`ListEntryVisualContext` is already the resolved row-visual contract for the
-shared row substrate, so menus extend it with a small amount of menu-only state
-instead of replacing it with a parallel generic row-context abstraction.
+Those two facts also mean menus start from the current list row API.
+[`ListEntryVisualContext`](../src/roo_windows/material3/list/list.h) is already
+the resolved row-visual contract for the shared row substrate, so menus extend
+it with a small amount of menu-only state instead of replacing it with a
+parallel generic row-context abstraction.
 
 ### Material 3 Sources
 
@@ -265,14 +266,18 @@ close to the existing list row substrate.
 
 ### Key Decisions
 
-1. Menus do not reuse `material3::List` directly. `List` owns list-specific row
-   grouping, divider, and selection propagation that do not match menu grouping
-   or popup behavior.
-2. Menus do reuse `ListItem`, `ListEntry`, `SelectionMode`, and
-   `ListEntryVisualContext`. Menu row state starts from the current list row
-   contract and adds only a small menu-only extension.
+1. Menus do not reuse [`material3::List`](../src/roo_windows/material3/list/list.h)
+   directly. `List` owns list-specific row grouping, divider, and selection
+   propagation that do not match menu grouping or popup behavior.
+2. Menus do reuse [`ListItem`](../src/roo_windows/material3/list/list.h),
+   [`ListEntry`](../src/roo_windows/material3/list/list.h),
+   [`SelectionMode`](../src/roo_windows/material3/list/list.h), and
+   [`ListEntryVisualContext`](../src/roo_windows/material3/list/list.h). Menu
+   row state starts from the current list row contract and adds only a small
+   menu-only extension.
 3. Menu badges are described by lightweight content data. `MenuEntry` owns the
-   live `Badge` helper when a row actually needs one.
+   live [`Badge`](../src/roo_windows/material3/badge/badge.h) helper when a row
+   actually needs one.
 4. Each open menu level uses one full-screen popup task. The menu surface is a
    child inside that task, not the task bounds themselves. That makes outside
    dismissal reliable and keeps submenu-chain behavior local to the menu family.
@@ -357,7 +362,8 @@ non-surface widgets:
 - and the full-screen `MenuOverlay` is not surface-owning; it exists to own hit
   testing and layout for the popup panel.
 
-`PaintContext` closes the row paint contract. For the standard row path,
+[`PaintContext`](../src/roo_windows/core/paint_context.h) closes the row paint
+contract. For the standard row path,
 `MenuEntry` paints shortcut text, menu-owned checkmarks, submenu chevrons, and
 optional badges from `paintWidgetContents(PaintContext&)`, using
 `PaintContext::addDecoration()` and `PaintContext::addExclusion()` whenever the
@@ -371,7 +377,8 @@ badge and slider indicator implementations. Menu code does not reintroduce raw
 
 ### Content Model and Trailing Adornments
 
-The shared content contract stays anchored on `ListItem`.
+The shared content contract stays anchored on
+[`ListItem`](../src/roo_windows/material3/list/list.h).
 
 `MenuItem` is a narrow extension of `ListItem` with menu semantics:
 
@@ -388,12 +395,13 @@ text, trailing icon, and badge content. Plain command items stay close to the
 `StandardListItem` footprint because they do not materialize that trailing
 payload.
 
-`MenuEntry` reuses `ListEntry` for binding, text-slot widget management,
-measurement, and main-slot layout. It does not accept a `Widget* badge`. When a
-bound item exposes badge content, the row materializes and lays out a local
-`material3::Badge` helper in its trailing adornment state. The item exposes only
-content, while the row owns the mutable badge layout cache that the landed badge
-API requires.
+`MenuEntry` reuses [`ListEntry`](../src/roo_windows/material3/list/list.h) for
+binding, text-slot widget management, measurement, and main-slot layout. It
+does not accept a `Widget* badge`. When a bound item exposes badge content, the
+row materializes and lays out a local
+[`material3::Badge`](../src/roo_windows/material3/badge/badge.h) helper in its
+trailing adornment state. The item exposes only content, while the row owns the
+mutable badge layout cache that the landed badge API requires.
 
 The standard convenience path treats trailing icons as owner-painted drawables
 rather than as trailing child widgets. Custom items that need a fully custom

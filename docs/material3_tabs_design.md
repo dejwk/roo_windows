@@ -519,9 +519,17 @@ passes the repo's normal slop threshold. That avoids fighting a vertically
 scrolling page that happens to contain tabs near the top.
 
 The base API deliberately excludes swipe-to-change-page behavior in the content
-area below the row. Material allows that interaction, but it requires a page
-container contract that `roo_windows` does not currently have. The row stays
-responsible only for its own strip gestures and selection semantics.
+area below the row. Material allows that interaction, but in this design that
+gesture belongs to a separate page host rather than to `Tabs` itself.
+
+That separation is important for the widget contract:
+
+- `Tabs::measure()` depends only on the tab children and row-owned indicator,
+- `Tabs::layout()` ends at the row bounds and divider,
+- and content-area drag state never feeds back into tab-row measurement.
+
+The row therefore stays responsible only for its own strip gestures and
+selection semantics.
 
 ### Theme Resolution
 
@@ -580,6 +588,58 @@ The first example should therefore use:
 
 That gives a complete authoring story without forcing a pager into the base
 tabs API.
+
+#### Future Swipe-Capable Page Host
+
+If `roo_windows` later adds Material-style swipe within the content area, that
+behavior should live in a separate page host placed below `Tabs`, not inside
+the row itself.
+
+That companion container design now lives in
+[horizontal_page_host_design.md](horizontal_page_host_design.md).
+
+That host should own:
+
+- the page sequence,
+- the horizontal drag / fling / settle state,
+- the current page index,
+- and the synchronization path back to `Tabs` selection.
+
+Its layout and measurement contract should be viewport-based rather than strip-
+based.
+
+Measurement:
+
+1. the host reports one viewport size, not `page_count * width`,
+2. when the parent gives exact width and height, the host measures each active
+  page against that same exact viewport,
+3. when an axis is not exact, the host measures candidate pages against the
+  incoming specs and reports the maximum required size on that axis,
+4. and page translation during drag does not affect measured size.
+
+Layout:
+
+1. the selected page is laid out in the viewport rect,
+2. during drag or settle animation, the immediate previous and next pages are
+  laid out at `-viewport_width` and `+viewport_width` relative to the
+  selected page, plus the current drag offset,
+3. non-adjacent pages stay hidden, detached, or otherwise out of the active
+  layout set,
+4. and the host's own bounds remain the visible viewport rather than the total
+  strip width.
+
+Selection synchronization stays two-way but remains outside the base `Tabs`
+API:
+
+1. a tab click calls into the page host to animate to the chosen page,
+2. a completed swipe updates the selected tab through
+  `tabs.setSelectedIndex(index, true)`,
+3. and intermediate drag offset affects page placement and paint only, not the
+  row's measured geometry.
+
+This is the smallest contract that supports Material-style content swiping
+without forcing `Tabs` itself to become a pager, a page container, or a
+measure-time coordinator for content below the row.
 
 ## Proposed API
 

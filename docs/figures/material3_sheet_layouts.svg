@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 640" width="980" height="640">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 5 L 10 0 L 10 10 z" fill="#6b7280" />
+    </marker>
+    <style>
+      text {
+        font-family: "DejaVu Sans", Arial, sans-serif;
+        fill: #1f2933;
+        font-size: 18px;
+      }
+      .small { font-size: 15px; fill: #4b5563; }
+      .section { font-size: 14px; letter-spacing: 1px; fill: #6b7280; }
+      .title { font-size: 17px; font-weight: 700; }
+      .window { fill: #f4f7fb; stroke: #5f6770; stroke-width: 2; }
+      .body { fill: #dfe9f5; }
+      .scrim { fill: #4b5563; opacity: 0.14; }
+      .sheet-bottom { fill: #f7f4ec; stroke: #5f6770; stroke-width: 2; }
+      .sheet-side { fill: #f3efe7; stroke: #5f6770; stroke-width: 2; }
+      .divider { stroke: #8e99a6; stroke-width: 2; }
+      .handle-hit { fill: none; stroke: #c08b32; stroke-width: 2; stroke-dasharray: 7 6; }
+      .handle { fill: #8a8f98; }
+      .content-line { stroke: #9fb0c3; stroke-width: 2; }
+      .dim { stroke: #6b7280; stroke-width: 2; fill: none; marker-start: url(#arrow); marker-end: url(#arrow); }
+      .leader { stroke: #6b7280; stroke-width: 2; fill: none; }
+      .note { fill: #ffffff; stroke: #d1d5db; stroke-width: 2; }
+      .scroll-arrow { fill: none; stroke: #5576a4; stroke-width: 2; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="980" height="640" fill="#ffffff" />
+
+  <text x="56" y="34">Material 3 sheets: bottom and side geometry</text>
+
+  <text class="section" x="64" y="66">BOTTOM SHEET</text>
+  <rect class="window" x="52" y="82" width="410" height="500" rx="14" ry="14" />
+  <rect class="body" x="66" y="96" width="382" height="472" rx="10" ry="10" />
+  <rect class="scrim" x="66" y="96" width="382" height="472" rx="10" ry="10" />
+
+  <path class="sheet-bottom" d="M 122 292 H 392 A 28 28 0 0 1 420 320 V 568 H 94 V 320 A 28 28 0 0 1 122 292 Z" />
+  <rect class="handle-hit" x="218" y="304" width="78" height="48" rx="12" ry="12" />
+  <rect class="handle" x="228" y="324" width="58" height="6" rx="3" ry="3" />
+
+  <line class="content-line" x1="118" y1="376" x2="392" y2="376" />
+  <line class="content-line" x1="118" y1="408" x2="392" y2="408" />
+  <line class="content-line" x1="118" y1="440" x2="364" y2="440" />
+  <line class="content-line" x1="118" y1="492" x2="392" y2="492" />
+  <line class="content-line" x1="118" y1="524" x2="348" y2="524" />
+  <path class="scroll-arrow" d="M 408 372 V 516" />
+
+  <text class="title" x="94" y="268">Modal bottom sheet shown</text>
+  <line class="dim" x1="94" y1="278" x2="420" y2="278" />
+  <text class="small" x="188" y="268">Full width up to 640dp</text>
+
+  <line class="dim" x1="66" y1="582" x2="94" y2="582" />
+  <line class="dim" x1="420" y1="582" x2="448" y2="582" />
+  <text class="small" x="78" y="604">56dp on wide windows</text>
+  <text class="small" x="302" y="604">56dp on wide windows</text>
+
+  <rect class="note" x="60" y="118" width="182" height="112" rx="14" ry="14" />
+  <text class="title" x="78" y="146">Detent control</text>
+  <text class="small" x="78" y="174">Resize gestures stay on the</text>
+  <text class="small" x="78" y="198">48dp handle band so inner</text>
+  <text class="small" x="78" y="222">content keeps its own scroll.</text>
+  <path class="leader" d="M 242 174 H 278 V 328 H 296" />
+
+  <rect class="note" x="268" y="116" width="170" height="116" rx="14" ry="14" />
+  <text class="title" x="286" y="144">Standard variant</text>
+  <text class="small" x="286" y="172">Uses the same sheet surface</text>
+  <text class="small" x="286" y="196">without scrim. The body keeps</text>
+  <text class="small" x="286" y="220">its full rect under the sheet.</text>
+  <path class="leader" d="M 354 232 V 262 H 304" />
+
+  <text class="section" x="520" y="66">SIDE SHEET</text>
+  <rect class="window" x="508" y="82" width="410" height="500" rx="14" ry="14" />
+  <rect class="body" x="522" y="96" width="230" height="472" rx="10" ry="10" />
+  <path class="sheet-side" d="M 752 96 H 904 V 568 H 752 Z" />
+  <line class="divider" x1="752" y1="96" x2="752" y2="568" />
+
+  <line class="content-line" x1="774" y1="154" x2="882" y2="154" />
+  <line class="content-line" x1="774" y1="188" x2="882" y2="188" />
+  <line class="content-line" x1="774" y1="222" x2="860" y2="222" />
+  <line class="content-line" x1="774" y1="292" x2="882" y2="292" />
+  <line class="content-line" x1="774" y1="326" x2="882" y2="326" />
+  <line class="content-line" x1="774" y1="360" x2="850" y2="360" />
+  <line class="content-line" x1="774" y1="430" x2="882" y2="430" />
+  <line class="content-line" x1="774" y1="464" x2="860" y2="464" />
+  <path class="scroll-arrow" d="M 890 150 V 470" />
+
+  <text class="title" x="752" y="70">Standard side sheet shown</text>
+  <line class="dim" x1="752" y1="80" x2="904" y2="80" />
+  <text class="small" x="780" y="70">Default 360dp, max 400dp</text>
+
+  <rect class="note" x="532" y="118" width="184" height="108" rx="14" ry="14" />
+  <text class="title" x="550" y="146">Standard layout</text>
+  <text class="small" x="550" y="174">The body shrinks so the side</text>
+  <text class="small" x="550" y="198">sheet stays visible beside it.</text>
+  <path class="leader" d="M 716 176 H 734 V 330 H 752" />
+
+  <rect class="note" x="532" y="250" width="184" height="132" rx="14" ry="14" />
+  <text class="title" x="550" y="278">Modal variant</text>
+  <text class="small" x="550" y="306">Uses the same width on a</text>
+  <text class="small" x="550" y="330">full-window scrim wrapper and</text>
+  <text class="small" x="550" y="354">rounds the exposed leading</text>
+  <text class="small" x="550" y="378">corners to 16dp.</text>
+  <path class="leader" d="M 716 320 H 742 V 118 H 904" />
+
+  <text class="small" x="752" y="596">LTR shown. Side sheets mirror to the logical end edge in RTL.</text>
+</svg>

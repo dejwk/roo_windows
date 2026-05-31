@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="520" viewBox="0 0 1120 520">
+  <rect width="1120" height="520" fill="#ffffff"/>
+
+  <style>
+    .title { font: 700 18px Arial, Helvetica, sans-serif; fill: #1f2937; }
+    .label { font: 13px Arial, Helvetica, sans-serif; fill: #374151; }
+    .small { font: 12px Arial, Helvetica, sans-serif; fill: #4b5563; }
+    .caption { font: 12px Arial, Helvetica, sans-serif; fill: #6b7280; }
+    .frame { fill: #f8fafc; stroke: #cbd5e1; stroke-width: 2; }
+    .safe { fill: #f1f5f9; stroke: #dbe4ee; stroke-width: 1.5; }
+    .bar { fill: #dce8ff; stroke: #5b8def; stroke-width: 1.5; }
+    .rail { fill: #eef2f7; stroke: #94a3b8; stroke-width: 1.5; }
+    .pane-main { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; }
+    .pane-side { fill: #f8fafc; stroke: #94a3b8; stroke-width: 1.5; }
+    .grid { stroke: #cbd5e1; stroke-width: 1; stroke-dasharray: 4 4; }
+    .card { fill: #eaf2ff; stroke: #7aa7ff; stroke-width: 1.5; }
+    .handle { fill: #cbd5e1; stroke: #94a3b8; stroke-width: 1; }
+    .guide { stroke: #9ca3af; stroke-width: 1.5; marker-end: url(#arrow); }
+  </style>
+
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#9ca3af"/>
+    </marker>
+  </defs>
+
+  <text x="74" y="42" class="title">Compact scaffold</text>
+  <text x="600" y="42" class="title">Expanded scaffold</text>
+
+  <rect x="60" y="70" width="360" height="360" rx="24" class="frame"/>
+  <rect x="76" y="86" width="328" height="328" rx="20" class="safe"/>
+  <rect x="76" y="86" width="328" height="52" rx="16" class="bar"/>
+  <rect x="76" y="354" width="328" height="60" rx="18" class="bar"/>
+  <rect x="92" y="154" width="296" height="184" rx="18" class="pane-main"/>
+
+  <line x1="108" y1="170" x2="108" y2="322" class="grid"/>
+  <line x1="180" y1="170" x2="180" y2="322" class="grid"/>
+  <line x1="252" y1="170" x2="252" y2="322" class="grid"/>
+  <line x1="324" y1="170" x2="324" y2="322" class="grid"/>
+
+  <rect x="108" y="182" width="60" height="56" rx="12" class="card"/>
+  <rect x="180" y="182" width="132" height="56" rx="12" class="card"/>
+  <rect x="324" y="182" width="44" height="56" rx="12" class="card"/>
+  <rect x="108" y="250" width="96" height="56" rx="12" class="card"/>
+  <rect x="216" y="250" width="152" height="56" rx="12" class="card"/>
+
+  <text x="186" y="118" class="label">top bar</text>
+  <text x="191" y="390" class="label">bottom bar</text>
+  <text x="172" y="346" class="small">body width uses compact margins</text>
+  <text x="203" y="209" class="small">4-column local grid</text>
+
+  <line x1="92" y1="146" x2="24" y2="146" class="guide"/>
+  <text x="24" y="138" class="small">bars span the</text>
+  <text x="24" y="155" class="small">full safe width</text>
+
+  <line x1="92" y1="246" x2="24" y2="216" class="guide"/>
+  <text x="24" y="202" class="small">grid columns derive</text>
+  <text x="24" y="219" class="small">from local content width</text>
+
+  <rect x="520" y="60" width="540" height="390" rx="28" class="frame"/>
+  <rect x="538" y="78" width="504" height="354" rx="22" class="safe"/>
+  <rect x="538" y="78" width="504" height="56" rx="16" class="bar"/>
+  <rect x="538" y="134" width="80" height="298" rx="18" class="rail"/>
+
+  <rect x="650" y="158" width="220" height="250" rx="18" class="pane-main"/>
+  <rect x="886" y="158" width="124" height="250" rx="18" class="pane-side"/>
+  <rect x="874" y="212" width="8" height="104" rx="4" class="handle"/>
+
+  <line x1="674" y1="178" x2="674" y2="388" class="grid"/>
+  <line x1="706" y1="178" x2="706" y2="388" class="grid"/>
+  <line x1="738" y1="178" x2="738" y2="388" class="grid"/>
+  <line x1="770" y1="178" x2="770" y2="388" class="grid"/>
+  <line x1="802" y1="178" x2="802" y2="388" class="grid"/>
+  <line x1="834" y1="178" x2="834" y2="388" class="grid"/>
+
+  <rect x="674" y="190" width="96" height="64" rx="12" class="card"/>
+  <rect x="786" y="190" width="48" height="64" rx="12" class="card"/>
+  <rect x="674" y="270" width="160" height="64" rx="12" class="card"/>
+
+  <text x="734" y="112" class="label">top bar</text>
+  <text x="563" y="286" class="label" transform="rotate(-90 563 286)">leading rail</text>
+  <text x="724" y="422" class="small">main pane</text>
+  <text x="915" y="422" class="small">trailing pane</text>
+  <text x="853" y="325" class="small">drag handle</text>
+
+  <line x1="620" y1="162" x2="470" y2="118" class="guide"/>
+  <text x="274" y="108" class="small">rails live below the top bar</text>
+  <text x="274" y="125" class="small">and outside the body margins</text>
+
+  <line x1="650" y1="146" x2="470" y2="176" class="guide"/>
+  <text x="286" y="172" class="small">body content is inset by the</text>
+  <text x="286" y="189" class="small">expanded outer margin</text>
+
+  <line x1="874" y1="264" x2="1084" y2="224" class="guide"/>
+  <text x="894" y="208" class="small">exactly two visible panes can</text>
+  <text x="894" y="225" class="small">opt into a resize handle</text>
+
+  <line x1="770" y1="190" x2="1084" y2="152" class="guide"/>
+  <text x="894" y="136" class="small">the grid still resolves from local</text>
+  <text x="894" y="153" class="small">pane width, not outer window width</text>
+
+  <text x="60" y="486" class="caption">The scaffold owns safe bounds, bars, rails, and page margins. `PaneLayout` turns the body into leading / main / trailing regions, and `GridLayout` keeps cards and forms aligned to breakpoint-backed columns inside whichever pane hosts the content.</text>
+</svg>

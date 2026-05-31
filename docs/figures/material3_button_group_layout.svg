@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="320" viewBox="0 0 980 320">
+  <rect width="980" height="320" fill="#ffffff"/>
+
+  <style>
+    .title { font-family: Arial, Helvetica, sans-serif; font-size: 20px; font-weight: 600; fill: #111827; }
+    .label { font-family: Arial, Helvetica, sans-serif; font-size: 15px; fill: #1f2937; }
+    .small { font-family: Arial, Helvetica, sans-serif; font-size: 13px; fill: #4b5563; }
+    .stroke { stroke: #5f6368; stroke-width: 2; fill: none; }
+    .band { fill: #eceff1; stroke: #c7ced4; stroke-width: 1; }
+    .filled { fill: #d7e3ff; stroke: #0b57d0; stroke-width: 2; }
+    .outlined { fill: #ffffff; stroke: #5f6368; stroke-width: 2; }
+    .tonal { fill: #d9eadd; stroke: #3c6e47; stroke-width: 2; }
+    .callout { stroke: #374151; stroke-width: 1.5; fill: none; }
+    .guide { stroke: #9ca3af; stroke-width: 1.5; stroke-dasharray: 6 5; fill: none; }
+    .content { font-family: Arial, Helvetica, sans-serif; font-size: 16px; fill: #111827; }
+    .selected { font-family: Arial, Helvetica, sans-serif; font-size: 16px; fill: #0b57d0; font-weight: 600; }
+  </style>
+
+  <text x="490" y="28" text-anchor="middle" class="title">Button groups keep the child surfaces independent and let the group own layout policy</text>
+
+  <text x="245" y="58" text-anchor="middle" class="label">Standard group</text>
+  <text x="245" y="78" text-anchor="middle" class="small">The group reserves separator bands so the active entry can expand without changing outer width.</text>
+
+  <rect x="48" y="108" width="394" height="86" rx="18" ry="18" class="guide"/>
+
+  <rect x="78" y="126" width="92" height="50" rx="25" ry="25" class="outlined"/>
+  <rect x="170" y="126" width="22" height="50" class="band"/>
+  <rect x="192" y="120" width="136" height="62" rx="18" ry="18" class="filled"/>
+  <rect x="328" y="126" width="22" height="50" class="band"/>
+  <rect x="350" y="126" width="62" height="50" rx="25" ry="25" class="tonal"/>
+
+  <text x="124" y="157" text-anchor="middle" class="content">Back</text>
+  <text x="260" y="157" text-anchor="middle" class="selected">Start</text>
+  <text x="381" y="157" text-anchor="middle" class="content">+</text>
+
+  <path d="M 260 182 V 214 H 176" class="callout"/>
+  <text x="70" y="218" class="small">Active entry consumes both reserved separator bands.</text>
+
+  <path d="M 181 126 V 92 H 118" class="callout"/>
+  <text x="52" y="88" class="small">Reserved motion band</text>
+
+  <path d="M 444 151 H 510" class="callout"/>
+  <text x="516" y="155" class="small">Outer width remains fixed.</text>
+
+  <text x="735" y="58" text-anchor="middle" class="label">Connected group</text>
+  <text x="735" y="78" text-anchor="middle" class="small">Selection changes only the touched entry; first, middle, and last positions resolve different corner radii.</text>
+
+  <rect x="548" y="108" width="374" height="86" rx="18" ry="18" class="guide"/>
+
+  <path d="M 580 126 h 88 a 24 24 0 0 1 24 24 a 24 24 0 0 1 -24 24 h -88 a 24 24 0 0 1 -24 -24 a 24 24 0 0 1 24 -24 z" class="outlined"/>
+  <rect x="694" y="126" width="12" height="50" fill="#ffffff"/>
+  <rect x="708" y="126" width="96" height="50" rx="10" ry="10" class="filled"/>
+  <rect x="816" y="126" width="12" height="50" fill="#ffffff"/>
+  <path d="M 840 126 h 56 a 24 24 0 0 1 24 24 a 24 24 0 0 1 -24 24 h -56 z" class="outlined"/>
+
+  <text x="634" y="157" text-anchor="middle" class="content">Day</text>
+  <text x="756" y="157" text-anchor="middle" class="selected">Week</text>
+  <text x="870" y="157" text-anchor="middle" class="content">Month</text>
+
+  <path d="M 700 126 V 96 H 760" class="callout"/>
+  <text x="766" y="100" class="small">Fixed 2dp inner gap</text>
+
+  <path d="M 820 151 H 896" class="callout"/>
+  <text x="902" y="155" class="small">Selected entry keeps its own width.</text>
+
+  <path d="M 756 176 V 214 H 684" class="callout"/>
+  <text x="552" y="218" class="small">Outer corners use the group shape family; inner shared corners use the connected radius table.</text>
+
+  <text x="490" y="290" text-anchor="middle" class="small">Both variants keep each button as its own surface widget. The group owns layout policy, connected selection, and standard-group motion bands.</text>
+</svg>
