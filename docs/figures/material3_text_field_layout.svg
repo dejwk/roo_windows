@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="360" viewBox="0 0 920 360" role="img" aria-labelledby="title desc">
+  <title id="title">Material 3 text field layout</title>
+  <desc id="desc">Filled and outlined Material 3 single-line text fields showing floating label, slot layout, and assistive row.</desc>
+  <rect x="0" y="0" width="920" height="360" fill="#ffffff"/>
+
+  <style>
+    .label { font: 14px 'Noto Sans', Arial, sans-serif; fill: #1f1f1f; }
+    .small { font: 12px 'Noto Sans', Arial, sans-serif; fill: #444; }
+    .caption { font: 11px 'Noto Sans', Arial, sans-serif; fill: #666; }
+    .guide { fill: none; stroke: #9aa0a6; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .slot { fill: #f5f5f5; stroke: #c6c6c6; stroke-width: 1; }
+    .icon { fill: #d7ecff; stroke: #6f9ed8; stroke-width: 1; }
+    .input { fill: #fff7d6; stroke: #d1b36a; stroke-width: 1; }
+    .assist { fill: #f7f7f7; stroke: #d0d0d0; stroke-width: 1; }
+    .filled { fill: #eceff3; stroke: #c7cbd1; stroke-width: 1.5; }
+    .outlined { fill: #ffffff; stroke: #6c6f75; stroke-width: 1.5; }
+    .primary { stroke: #2b63d9; stroke-width: 3; }
+    .axis { stroke: #b0b0b0; stroke-width: 1; }
+  </style>
+
+  <text x="180" y="38" text-anchor="middle" class="label">Filled variant</text>
+  <text x="694" y="38" text-anchor="middle" class="label">Outlined variant</text>
+
+  <path d="M40 72 Q40 52 60 52 H300 Q320 52 320 72 V164 H40 Z" class="filled"/>
+  <line x1="40" y1="164" x2="320" y2="164" class="primary"/>
+  <rect x="52" y="98" width="24" height="24" rx="4" class="icon"/>
+  <rect x="88" y="112" width="40" height="18" rx="3" class="slot"/>
+  <rect x="140" y="104" width="88" height="26" rx="4" class="input"/>
+  <rect x="240" y="112" width="36" height="18" rx="3" class="slot"/>
+  <rect x="284" y="98" width="24" height="24" rx="4" class="icon"/>
+  <rect x="132" y="62" width="84" height="18" rx="3" fill="#ffffff"/>
+  <text x="174" y="75" text-anchor="middle" class="small">Floated label</text>
+  <text x="64" y="144" text-anchor="middle" class="caption">icon</text>
+  <text x="108" y="124" text-anchor="middle" class="caption">prefix</text>
+  <text x="184" y="121" text-anchor="middle" class="caption">input text</text>
+  <text x="258" y="124" text-anchor="middle" class="caption">suffix</text>
+  <text x="296" y="144" text-anchor="middle" class="caption">icon</text>
+
+  <line x1="40" y1="164" x2="320" y2="164" class="axis" stroke-dasharray="4 4"/>
+  <text x="334" y="168" class="caption">56dp container</text>
+
+  <rect x="40" y="188" width="280" height="26" rx="4" class="assist"/>
+  <text x="180" y="205" text-anchor="middle" class="caption">supporting or error text (4dp below container)</text>
+
+  <rect x="540" y="52" width="280" height="112" rx="18" class="outlined"/>
+  <path d="M662 52 H700 M540 52 H626 M736 52 H820" class="outlined" fill="none"/>
+  <rect x="552" y="98" width="24" height="24" rx="4" class="icon"/>
+  <rect x="588" y="112" width="40" height="18" rx="3" class="slot"/>
+  <rect x="640" y="104" width="88" height="26" rx="4" class="input"/>
+  <rect x="740" y="112" width="36" height="18" rx="3" class="slot"/>
+  <rect x="784" y="98" width="24" height="24" rx="4" class="icon"/>
+  <rect x="626" y="44" width="110" height="16" rx="3" fill="#ffffff"/>
+  <text x="681" y="56" text-anchor="middle" class="small">Floated label notch</text>
+  <text x="564" y="144" text-anchor="middle" class="caption">icon</text>
+  <text x="608" y="124" text-anchor="middle" class="caption">prefix</text>
+  <text x="684" y="121" text-anchor="middle" class="caption">input text</text>
+  <text x="758" y="124" text-anchor="middle" class="caption">suffix</text>
+  <text x="796" y="144" text-anchor="middle" class="caption">icon</text>
+
+  <rect x="540" y="188" width="280" height="26" rx="4" class="assist"/>
+  <text x="680" y="205" text-anchor="middle" class="caption">supporting or error text</text>
+
+  <path d="M140 104 H228" class="guide"/>
+  <path d="M640 104 H728" class="guide"/>
+  <text x="458" y="94" text-anchor="middle" class="caption">single-line horizontal text viewport</text>
+  <text x="458" y="250" text-anchor="middle" class="small">Both variants share the same slot model; only the decoration differs.</text>
+  <text x="458" y="272" text-anchor="middle" class="caption">The first landed family keeps the assistive row single-line and ellipsized.</text>
+</svg>

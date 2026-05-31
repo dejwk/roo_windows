@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 560" width="860" height="560">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 5 L 10 0 L 10 10 z" fill="#6b7280" />
+    </marker>
+    <style>
+      text {
+        font-family: "DejaVu Sans", Arial, sans-serif;
+        fill: #1f2933;
+        font-size: 18px;
+      }
+      .small { font-size: 15px; fill: #4b5563; }
+      .section { font-size: 14px; letter-spacing: 1px; fill: #6b7280; }
+      .note-title { font-size: 17px; font-weight: 700; }
+      .row-text { font-size: 18px; dominant-baseline: middle; }
+      .sheet { fill: #f7f4ec; stroke: #5f6770; stroke-width: 2; }
+      .header { fill: #dfe7d6; stroke: #7e8f67; stroke-width: 2; }
+      .indicator { fill: #d3e3fd; stroke: #5576a4; stroke-width: 2; }
+      .row-outline { fill: none; stroke: #d0d5db; stroke-width: 1.5; stroke-dasharray: 6 6; }
+      .divider { stroke: #8e99a6; stroke-width: 2; }
+      .icon { fill: #6b7280; }
+      .icon-selected { fill: #163f7a; }
+      .badge { fill: #c62828; stroke: #8f1f1f; stroke-width: 2; }
+      .dim { stroke: #6b7280; stroke-width: 2; fill: none; marker-start: url(#arrow); marker-end: url(#arrow); }
+      .leader { stroke: #6b7280; stroke-width: 2; fill: none; }
+      .note { fill: #ffffff; stroke: #d1d5db; stroke-width: 2; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="860" height="560" fill="#ffffff" />
+
+  <path class="sheet" d="M 80 48 H 424 A 16 16 0 0 1 440 64 V 476 A 16 16 0 0 1 424 492 H 80 Z" />
+
+  <text x="80" y="26">Material 3 navigation drawer sheet</text>
+  <line class="dim" x1="80" y1="34" x2="440" y2="34" />
+  <text class="small" x="215" y="24">360dp sheet width</text>
+
+  <rect class="header" x="96" y="74" width="248" height="76" rx="14" ry="14" />
+  <circle cx="128" cy="112" r="18" fill="#7f8d6d" />
+  <text x="156" y="104">Header slot</text>
+  <text class="small" x="156" y="126">account switcher, logo, or profile block</text>
+
+  <text class="section" x="108" y="186">MAILBOXES</text>
+  <line class="divider" x1="92" y1="206" x2="428" y2="206" />
+
+  <rect class="row-outline" x="92" y="228" width="336" height="56" rx="28" ry="28" />
+  <rect x="118" y="244" width="24" height="24" rx="6" ry="6" class="icon" />
+  <text class="row-text" x="166" y="256">All inboxes</text>
+
+  <rect class="indicator" x="92" y="310" width="336" height="56" rx="28" ry="28" />
+  <rect x="118" y="326" width="24" height="24" rx="6" ry="6" class="icon-selected" />
+  <text class="row-text" x="166" y="338" fill="#163f7a">Inbox</text>
+  <circle class="badge" cx="398" cy="338" r="14" />
+  <text x="393" y="344" fill="#ffffff" font-size="15">8</text>
+
+  <rect class="row-outline" x="92" y="392" width="336" height="56" rx="28" ry="28" />
+  <rect x="118" y="408" width="24" height="24" rx="6" ry="6" class="icon" />
+  <text class="row-text" x="166" y="420">Sent</text>
+
+  <line class="dim" x1="92" y1="384" x2="428" y2="384" />
+  <text class="small" x="220" y="374">336dp selected indicator</text>
+
+  <line class="dim" x1="80" y1="458" x2="92" y2="458" />
+  <line class="dim" x1="428" y1="458" x2="440" y2="458" />
+  <text class="small" x="96" y="450">12dp</text>
+  <text class="small" x="402" y="450">12dp</text>
+
+  <line class="dim" x1="462" y1="310" x2="462" y2="366" />
+  <text class="small" x="474" y="344">56dp row height</text>
+
+  <rect class="note" x="520" y="96" width="270" height="132" rx="14" ry="14" />
+  <text class="note-title" x="542" y="126">Selected row paint order</text>
+  <text class="small" x="542" y="154">1. Paint the active indicator.</text>
+  <text class="small" x="542" y="178">2. Paint icon and label through `ListEntry`.</text>
+  <text class="small" x="542" y="202">3. Paint the badge last on top.</text>
+  <path class="leader" d="M 520 176 H 470 V 338 H 412" />
+
+  <rect class="note" x="520" y="274" width="270" height="126" rx="14" ry="14" />
+  <text class="note-title" x="542" y="304">Scrolling model</text>
+  <text class="small" x="542" y="332">Header and list rows live in one</text>
+  <text class="small" x="542" y="356">`SimpleScrollablePanel` so the drawer</text>
+  <text class="small" x="542" y="380">sheet scrolls as one vertical surface.</text>
+  <path class="leader" d="M 520 346 H 476 V 138 H 344" />
+
+  <text class="small" x="80" y="526">LTR sheet shown. In RTL the whole sheet mirrors to the logical start edge.</text>
+</svg>

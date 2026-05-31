@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="520" viewBox="0 0 1120 520">
+  <rect width="1120" height="520" fill="#ffffff"/>
+
+  <style>
+    .title { font: 700 24px Arial, Helvetica, sans-serif; fill: #1f2937; }
+    .section { font: 700 18px Arial, Helvetica, sans-serif; fill: #1f2937; }
+    .label { font: 13px Arial, Helvetica, sans-serif; fill: #374151; }
+    .small { font: 12px Arial, Helvetica, sans-serif; fill: #4b5563; }
+    .caption { font: 12px Arial, Helvetica, sans-serif; fill: #6b7280; }
+    .screen { fill: #fbfdff; stroke: #cbd5e1; stroke-width: 2; }
+    .rail { fill: #f3f4f6; stroke: #cbd5e1; stroke-width: 1.5; }
+    .toolbar { fill: #eef2f7; stroke: #94a3b8; stroke-width: 2; }
+    .toolbar-vibrant { fill: #dbeafe; stroke: #5b8def; stroke-width: 2; }
+    .child { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; }
+    .child-emphasis { fill: #c8d9ff; stroke: #5b8def; stroke-width: 1.5; }
+    .divider { stroke: #94a3b8; stroke-width: 2; }
+    .guide { stroke: #9ca3af; stroke-width: 1.5; marker-end: url(#arrow); }
+    .margin { stroke: #9ca3af; stroke-width: 1.5; stroke-dasharray: 5 4; }
+  </style>
+
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#9ca3af"/>
+    </marker>
+  </defs>
+
+  <text x="48" y="42" class="title">Material 3 toolbar family layout</text>
+  <text x="48" y="66" class="caption">Docked toolbars own a full-width grouped surface. Floating toolbars hug content and rely on host-owned outer margins.</text>
+
+  <text x="78" y="108" class="section">Docked toolbar</text>
+  <rect x="60" y="124" width="310" height="330" rx="20" class="screen"/>
+  <rect x="78" y="196" width="274" height="240" rx="12" fill="#ffffff" stroke="#e5e7eb" stroke-width="1.5"/>
+  <text x="90" y="222" class="caption">page content</text>
+
+  <rect x="78" y="372" width="274" height="64" rx="0" class="toolbar"/>
+  <rect x="94" y="388" width="40" height="32" rx="16" class="child"/>
+  <rect x="146" y="388" width="40" height="32" rx="16" class="child"/>
+  <line x1="202" y1="382" x2="202" y2="426" class="divider"/>
+  <rect x="220" y="388" width="58" height="32" rx="16" class="child-emphasis"/>
+  <line x1="294" y1="382" x2="294" y2="426" class="divider"/>
+  <rect x="310" y="388" width="26" height="32" rx="13" class="child"/>
+  <text x="94" y="352" class="label">leading</text>
+  <text x="225" y="352" class="label">center</text>
+  <text x="301" y="352" class="label">trailing</text>
+
+  <line x1="78" y1="356" x2="352" y2="356" class="margin"/>
+  <line x1="94" y1="372" x2="94" y2="436" class="margin"/>
+  <line x1="336" y1="372" x2="336" y2="436" class="margin"/>
+  <text x="84" y="466" class="small">full available width, 64 dp default height</text>
+  <text x="84" y="484" class="small">groups: leading / center / trailing</text>
+  <text x="84" y="502" class="small">optional dividers separate non-empty groups</text>
+
+  <line x1="352" y1="404" x2="446" y2="404" class="guide"/>
+  <text x="458" y="398" class="small">host docks at bottom</text>
+  <text x="458" y="415" class="small">toolbar itself owns only internal layout</text>
+
+  <text x="430" y="108" class="section">Floating toolbar (horizontal)</text>
+  <rect x="410" y="124" width="310" height="330" rx="20" class="screen"/>
+  <rect x="428" y="142" width="274" height="294" rx="12" fill="#ffffff" stroke="#e5e7eb" stroke-width="1.5"/>
+  <text x="440" y="168" class="caption">page content</text>
+
+  <rect x="458" y="344" width="214" height="68" rx="34" class="toolbar-vibrant"/>
+  <rect x="478" y="362" width="38" height="32" rx="16" class="child"/>
+  <rect x="530" y="362" width="68" height="32" rx="16" class="child-emphasis"/>
+  <rect x="612" y="362" width="40" height="32" rx="16" class="child"/>
+  <line x1="442" y1="344" x2="442" y2="412" class="margin"/>
+  <line x1="688" y1="344" x2="688" y2="412" class="margin"/>
+  <text x="452" y="434" class="small">content-hugging width</text>
+  <text x="452" y="452" class="small">host keeps at least 16 dp outer margin</text>
+  <text x="452" y="470" class="small">explicit final child can be the overflow trigger</text>
+
+  <line x1="672" y1="378" x2="780" y2="378" class="guide"/>
+  <text x="794" y="372" class="small">surface hugs the child strip</text>
+  <text x="794" y="389" class="small">no toolbar-local popup or FAB slot</text>
+
+  <text x="790" y="108" class="section">Floating toolbar (vertical)</text>
+  <rect x="770" y="124" width="310" height="330" rx="20" class="screen"/>
+  <rect x="788" y="142" width="274" height="294" rx="12" fill="#ffffff" stroke="#e5e7eb" stroke-width="1.5"/>
+  <rect x="806" y="158" width="54" height="262" rx="16" class="rail"/>
+  <text x="808" y="438" class="caption">nav rail</text>
+
+  <rect x="972" y="196" width="72" height="174" rx="36" class="toolbar"/>
+  <rect x="992" y="214" width="32" height="32" rx="16" class="child"/>
+  <rect x="992" y="267" width="32" height="32" rx="16" class="child-emphasis"/>
+  <rect x="992" y="320" width="32" height="32" rx="16" class="child"/>
+
+  <line x1="948" y1="196" x2="948" y2="370" class="margin"/>
+  <line x1="948" y1="196" x2="972" y2="196" class="guide"/>
+  <text x="868" y="186" class="small">host keeps 24 dp margin</text>
+  <text x="868" y="203" class="small">from the window edge</text>
+
+  <line x1="860" y1="286" x2="948" y2="286" class="guide"/>
+  <text x="778" y="278" class="small">best placed opposite</text>
+  <text x="778" y="295" class="small">a navigation rail</text>
+  <text x="778" y="434" class="small">vertical order stays stable; host chooses the side</text>
+
+  <text x="48" y="494" class="caption">The toolbar family owns only surface and child layout. Menus, badges, and FAB pairing stay on adjacent component families.</text>
+</svg>

@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="280" viewBox="0 0 800 280">
+  <rect width="800" height="280" fill="#ffffff"/>
+
+  <style>
+    .label { font: 16px sans-serif; fill: #1f2937; }
+    .small { font: 13px sans-serif; fill: #4b5563; }
+    .title { font: 18px sans-serif; font-weight: 600; fill: #111827; }
+    .touch { fill: none; stroke: #9ca3af; stroke-width: 2; stroke-dasharray: 7 6; }
+    .container { fill: #c8e6c9; stroke: #2e7d32; stroke-width: 2; }
+    .wide { fill: #d7ccc8; stroke: #6d4c41; stroke-width: 2; }
+    .icon { fill: #263238; }
+    .icon-bounds { fill: none; stroke: #1565c0; stroke-width: 2; }
+    .anchor { fill: #c62828; }
+    .guide { stroke: #9ca3af; stroke-width: 1.5; }
+  </style>
+
+  <text x="40" y="34" class="title">Small icon button keeps a spec-sized container and relies on the shared touch envelope</text>
+
+  <rect x="70" y="80" width="100" height="100" rx="18" ry="18" class="touch"/>
+  <rect x="100" y="110" width="40" height="40" rx="20" ry="20" class="container"/>
+  <rect x="108" y="118" width="24" height="24" rx="4" ry="4" class="icon-bounds"/>
+  <path d="M120 123 l7 7 l-7 7" fill="none" stroke="#263238" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="132" cy="118" r="4" class="anchor"/>
+
+  <line x1="170" y1="100" x2="236" y2="72" class="guide"/>
+  <text x="244" y="72" class="label">Shared touch envelope</text>
+  <text x="244" y="92" class="small">provided by Widget::getSloppyTouchBounds()</text>
+
+  <line x1="140" y1="128" x2="238" y2="126" class="guide"/>
+  <text x="246" y="130" class="label">Visible container</text>
+  <text x="246" y="150" class="small">widget bounds and surface decoration</text>
+
+  <line x1="132" y1="118" x2="238" y2="182" class="guide"/>
+  <text x="246" y="186" class="label">Badge anchor uses icon bounds</text>
+  <text x="246" y="206" class="small">the base button stays badge-free</text>
+
+  <text x="40" y="244" class="small">The icon slot stays centered inside the visible container; size and width tokens only change the slot-to-container padding.</text>
+
+  <text x="470" y="34" class="title">Width mode changes the container width, not the icon slot</text>
+
+  <rect x="520" y="104" width="40" height="40" rx="20" ry="20" class="container"/>
+  <rect x="568" y="104" width="56" height="40" rx="20" ry="20" class="wide"/>
+
+  <rect x="528" y="112" width="24" height="24" rx="4" ry="4" class="icon-bounds"/>
+  <rect x="584" y="112" width="24" height="24" rx="4" ry="4" class="icon-bounds"/>
+
+  <path d="M540 117 l7 7 l-7 7" fill="none" stroke="#263238" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M596 117 l7 7 l-7 7" fill="none" stroke="#263238" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <text x="514" y="88" class="label">Default</text>
+  <text x="576" y="88" class="label">Wide</text>
+  <text x="480" y="188" class="small">Both buttons keep the same icon slot size for the same size preset.</text>
+</svg>

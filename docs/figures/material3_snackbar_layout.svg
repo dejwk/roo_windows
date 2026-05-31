@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="360" viewBox="0 0 920 360">
+  <rect width="920" height="360" fill="#ffffff"/>
+  <style>
+    text { font-family: "Noto Sans", "DejaVu Sans", Arial, sans-serif; fill: #1f1f1f; }
+    .title { font-size: 20px; font-weight: 700; }
+    .label { font-size: 13px; }
+    .small { font-size: 11px; }
+    .window { fill: #f8f8f8; stroke: #404040; stroke-width: 2; }
+    .safe { fill: none; stroke: #b0b0b0; stroke-width: 1.5; stroke-dasharray: 6 5; }
+    .snackbar { fill: #322f35; stroke: #1f1b22; stroke-width: 1.5; }
+    .obstacle { fill: #d0bcff; stroke: #6750a4; stroke-width: 1.5; }
+    .arrow { stroke: #5f6368; stroke-width: 1.5; marker-end: url(#arrow); }
+    .guide { stroke: #8a8a8a; stroke-width: 1.2; stroke-dasharray: 4 4; }
+  </style>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5f6368"/>
+    </marker>
+  </defs>
+
+  <text x="36" y="32" class="title">Material 3 Snackbar Placement</text>
+
+  <rect x="40" y="60" width="380" height="260" rx="8" class="window"/>
+  <rect x="64" y="84" width="332" height="212" rx="4" class="safe"/>
+  <text x="40" y="348" class="label">Compact window with right-side bottom obstacle</text>
+
+  <rect x="92" y="196" width="276" height="56" rx="18" class="snackbar"/>
+  <text x="114" y="220" class="label" fill="#f5eff7">Saved to project</text>
+  <text x="302" y="220" class="label" fill="#d0bcff">UNDO</text>
+  <text x="116" y="238" class="small" fill="#f5eff7">Snackbar lifts above the overlapping obstacle by gap g</text>
+
+  <circle cx="338" cy="276" r="24" class="obstacle"/>
+  <text x="323" y="281" class="small">FAB</text>
+
+  <line x1="378" y1="196" x2="378" y2="276" class="guide"/>
+  <line x1="92" y1="276" x2="368" y2="276" class="guide"/>
+  <line x1="74" y1="296" x2="74" y2="320" class="arrow"/>
+  <line x1="386" y1="296" x2="386" y2="320" class="arrow"/>
+  <text x="62" y="336" class="small">horizontal margin m_x</text>
+  <text x="324" y="336" class="small">bottom margin m_b</text>
+
+  <line x1="338" y1="252" x2="338" y2="228" class="arrow"/>
+  <text x="348" y="244" class="small">gap g</text>
+
+  <rect x="500" y="60" width="380" height="260" rx="8" class="window"/>
+  <rect x="524" y="84" width="332" height="212" rx="4" class="safe"/>
+  <text x="500" y="348" class="label">Wide layout with centered alignment</text>
+
+  <rect x="560" y="236" width="260" height="48" rx="16" class="snackbar"/>
+  <text x="584" y="264" class="label" fill="#f5eff7">All 12 files synchronized</text>
+  <text x="694" y="264" class="label" fill="#d0bcff">VIEW</text>
+
+  <line x1="690" y1="84" x2="690" y2="236" class="guide"/>
+  <text x="628" y="106" class="small">center-aligned within visible bounds V</text>
+  <line x1="560" y1="292" x2="560" y2="320" class="arrow"/>
+  <line x1="820" y1="292" x2="820" y2="320" class="arrow"/>
+  <text x="588" y="336" class="small">snackbar width w is clamped by max width and margins</text>
+</svg>

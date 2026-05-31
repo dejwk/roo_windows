@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="240" viewBox="0 0 760 240">
+  <rect width="760" height="240" fill="#ffffff"/>
+  <style>
+    .label { font-family: Arial, Helvetica, sans-serif; font-size: 15px; fill: #1f1f1f; }
+    .small { font-family: Arial, Helvetica, sans-serif; font-size: 13px; fill: #444444; }
+    .stroke { stroke: #5f6368; stroke-width: 2; fill: none; }
+    .sep { stroke: #5f6368; stroke-width: 2; }
+    .unselected { fill: #ffffff; }
+    .selected { fill: #d7e3ff; }
+    .content { font-family: Arial, Helvetica, sans-serif; font-size: 18px; fill: #1f1f1f; }
+    .selected-content { font-family: Arial, Helvetica, sans-serif; font-size: 18px; fill: #0b57d0; }
+    .callout { stroke: #1f1f1f; stroke-width: 1.5; fill: none; }
+  </style>
+
+  <text x="380" y="26" text-anchor="middle" class="label">Segmented button group with group-owned outline bands and equal-width segments</text>
+
+  <text x="380" y="52" text-anchor="middle" class="small">Outer outline and separator columns belong to the group. Fill and content belong to each segment.</text>
+
+  <path d="M 78 82 h 444 a 50 50 0 0 1 50 50 a 50 50 0 0 1 -50 50 h -444 a 50 50 0 0 1 -50 -50 a 50 50 0 0 1 50 -50 z" class="stroke"/>
+
+  <path d="M 80 84 h 146 v 96 h -146 a 48 48 0 0 1 -48 -48 a 48 48 0 0 1 48 -48 z" class="unselected"/>
+  <rect x="228" y="84" width="146" height="96" class="selected"/>
+  <path d="M 376 84 h 146 a 48 48 0 0 1 48 48 a 48 48 0 0 1 -48 48 h -146 z" class="unselected"/>
+
+  <line x1="226" y1="86" x2="226" y2="178" class="sep"/>
+  <line x1="374" y1="86" x2="374" y2="178" class="sep"/>
+
+  <text x="129" y="138" text-anchor="middle" class="content">Day</text>
+  <text x="301" y="138" text-anchor="middle" class="selected-content">✓ Week</text>
+  <text x="449" y="138" text-anchor="middle" class="content">Month</text>
+
+  <path d="M 190 70 L 190 44 L 265 44" class="callout"/>
+  <text x="272" y="48" class="small">Group-owned 1dp separator band</text>
+
+  <path d="M 524 100 L 650 100" class="callout"/>
+  <text x="656" y="104" class="small">Group-owned outer outline</text>
+
+  <path d="M 302 182 L 302 208 L 222 208" class="callout"/>
+  <text x="116" y="212" class="small">Segment-owned fill, overlay, and content</text>
+
+  <text x="380" y="232" text-anchor="middle" class="small">Equal-width layout uses the widest segment as the shared width baseline.</text>
+</svg>

@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="700" viewBox="0 0 1120 700">
+  <rect width="1120" height="700" fill="#ffffff"/>
+  <style>
+    .title { font: 600 30px 'DejaVu Sans', sans-serif; fill: #1f1f1f; }
+    .section { font: 600 22px 'DejaVu Sans', sans-serif; fill: #1f1f1f; }
+    .label { font: 500 18px 'DejaVu Sans', sans-serif; fill: #2b2b2b; }
+    .caption { font: 400 16px 'DejaVu Sans', sans-serif; fill: #555555; }
+    .token { font: 500 15px 'DejaVu Sans Mono', monospace; fill: #2b2b2b; }
+    .outline { fill: #f5efe6; stroke: #6d5d49; stroke-width: 2; }
+    .icon { fill: #5f4339; }
+    .guide { stroke: #a89a8a; stroke-width: 1.5; stroke-dasharray: 6 5; }
+    .arrow { stroke: #7d7265; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+  </style>
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#7d7265"/>
+    </marker>
+  </defs>
+
+  <text x="48" y="52" class="title">Material 3 FAB size families and collapse targets</text>
+  <text x="48" y="84" class="caption">Heights and corner radii are to scale. Extended widths are illustrative because they are content-driven.</text>
+
+  <text x="48" y="136" class="section">Icon-only family</text>
+
+  <rect x="70" y="230" width="40" height="40" rx="12" ry="12" class="outline"/>
+  <rect x="78" y="238" width="24" height="24" rx="6" ry="6" class="icon"/>
+  <line x1="70" y1="290" x2="110" y2="290" class="guide"/>
+  <text x="55" y="324" class="label">Small</text>
+  <text x="47" y="348" class="token">40dp / 24dp / r12</text>
+  <text x="25" y="372" class="caption">legacy migration size</text>
+
+  <rect x="210" y="214" width="56" height="56" rx="16" ry="16" class="outline"/>
+  <rect x="226" y="230" width="24" height="24" rx="6" ry="6" class="icon"/>
+  <line x1="210" y1="290" x2="266" y2="290" class="guide"/>
+  <text x="204" y="324" class="label">Regular</text>
+  <text x="190" y="348" class="token">56dp / 24dp / r16</text>
+  <text x="181" y="372" class="caption">default icon-only FAB</text>
+
+  <rect x="390" y="190" width="80" height="80" rx="20" ry="20" class="outline"/>
+  <rect x="416" y="216" width="28" height="28" rx="7" ry="7" class="icon"/>
+  <line x1="390" y1="290" x2="470" y2="290" class="guide"/>
+  <text x="390" y="324" class="label">Medium</text>
+  <text x="370" y="348" class="token">80dp / 28dp / r20</text>
+  <text x="351" y="372" class="caption">recommended prominent FAB</text>
+
+  <rect x="610" y="174" width="96" height="96" rx="28" ry="28" class="outline"/>
+  <rect x="640" y="204" width="36" height="36" rx="9" ry="9" class="icon"/>
+  <line x1="610" y1="290" x2="706" y2="290" class="guide"/>
+  <text x="624" y="324" class="label">Large</text>
+  <text x="598" y="348" class="token">96dp / 36dp / r28</text>
+  <text x="578" y="372" class="caption">large-screen / high-emphasis FAB</text>
+
+  <text x="48" y="456" class="section">Extended family</text>
+
+  <rect x="80" y="520" width="230" height="56" rx="16" ry="16" class="outline"/>
+  <rect x="104" y="536" width="24" height="24" rx="6" ry="6" class="icon"/>
+  <text x="150" y="555" class="label">Compose</text>
+  <text x="78" y="606" class="token">small: 56dp tall, 24dp icon, r16</text>
+  <path d="M 310 548 L 390 548" class="arrow"/>
+  <rect x="390" y="520" width="56" height="56" rx="16" ry="16" class="outline"/>
+  <rect x="406" y="536" width="24" height="24" rx="6" ry="6" class="icon"/>
+  <text x="354" y="606" class="caption">collapse target: regular FAB</text>
+
+  <rect x="560" y="496" width="270" height="80" rx="20" ry="20" class="outline"/>
+  <rect x="592" y="522" width="28" height="28" rx="7" ry="7" class="icon"/>
+  <text x="646" y="545" class="label">Create message</text>
+  <text x="560" y="606" class="token">medium: 80dp tall, 28dp icon, r20</text>
+
+  <rect x="880" y="480" width="212" height="96" rx="28" ry="28" class="outline"/>
+  <rect x="914" y="510" width="36" height="36" rx="9" ry="9" class="icon"/>
+  <text x="978" y="537" class="label" text-anchor="middle">New project</text>
+  <text x="888" y="606" class="token">large: 96dp tall, 36dp icon, r28</text>
+
+  <text x="48" y="650" class="caption">Extended widths are resolved from token paddings, icon slot, 8dp icon-label gap, and measured single-line label width.</text>
+</svg>
