@@ -29,6 +29,9 @@ inline roo_display::Offscreen<roo_display::Rgb888> CaptureRgb(
   return out;
 }
 
+// Compare against test/goldens/... and refresh baselines by running the built
+// test binary directly with BUILD_WORKSPACE_DIRECTORY and ROO_UPDATE_GOLDENS=1.
+// See test/goldens/README.md.
 ::testing::AssertionResult CompareOrUpdateGolden(
     const roo_display::Rasterizable& actual,
     const std::string& golden_relative_path, const std::string& artifact_stem);

@@ -319,6 +319,14 @@ std::string DisplayArtifactPath(const std::string& runtime_path) {
   return runtime_path;
 }
 
+const char* GoldenUpdateHelpText() {
+  return "To refresh committed goldens, run the built test binary directly "
+         "from lib/roo_windows with BUILD_WORKSPACE_DIRECTORY set, for "
+         "example: bazel build :<target> && "
+         "BUILD_WORKSPACE_DIRECTORY=$PWD ROO_UPDATE_GOLDENS=1 "
+         "./bazel-bin/<target>. See test/goldens/README.md.";
+}
+
 void ReadColorRectExpanded(const roo_display::Rasterizable& image,
                            int16_t x_min, int16_t y_min, int16_t width,
                            int16_t height, roo_display::Color* out) {
@@ -475,7 +483,7 @@ roo_display::Offscreen<roo_display::Rgb888> DiffImage(
            << "Missing/unreadable golden: " << expected_path << " ("
            << read_error << ")\n"
            << "Wrote actual image to: " << actual_display_path << "\n"
-           << "To regenerate goldens: ROO_UPDATE_GOLDENS=1 bazel test ...";
+          << GoldenUpdateHelpText();
   }
 
   uint64_t diff_pixel_count = 0;
@@ -503,7 +511,8 @@ roo_display::Offscreen<roo_display::Rgb888> DiffImage(
          << "First differing pixel: (" << diff_x << ", " << diff_y << ")\n"
          << "Differing pixel count: " << diff_pixel_count << "\n"
          << "Actual render: " << actual_display_path << "\n"
-         << "XOR diff: " << xor_display_path;
+      << "XOR diff: " << xor_display_path << "\n"
+      << GoldenUpdateHelpText();
 }
 
 }  // namespace test
