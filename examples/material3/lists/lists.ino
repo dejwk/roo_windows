@@ -93,8 +93,8 @@ class StaticSettingsSection : public FlexLayout {
       : FlexLayout(context, FlexDirection::kColumn),
         title_(context, "Expressive settings section", font_body1()),
         subtitle_(context,
-                  "Borrowed rows with stable bound switches and expressive "
-                  "selected states.",
+                  "Inset dividers separate standard rows while selected "
+                  "entries keep their expressive shape roles.",
                   font_caption()),
         list_(context),
         safety_lock_switch_(context, material3::Switch::OnOffState::kOff),
@@ -112,6 +112,12 @@ class StaticSettingsSection : public FlexLayout {
     material3::ListSelectionPolicy selection_policy;
     selection_policy.mode = material3::SelectionMode::kMultiple;
     list_.setSelectionPolicy(selection_policy);
+
+    material3::ListDividerPolicy divider_policy;
+    divider_policy.mode = material3::DividerMode::kInset;
+    divider_policy.start_inset = 16;
+    divider_policy.end_inset = 24;
+    list_.setDividerPolicy(divider_policy);
 
     material3::ListEntryVisualContext selected_context;
     selected_context.selected = true;
@@ -144,8 +150,8 @@ class AdoptedRowsSection : public FlexLayout {
       : FlexLayout(context, FlexDirection::kColumn),
         title_(context, "Expressive segmented rows", font_body1()),
         subtitle_(context,
-                  "Owned rows use the generic ListRow bridge instead of a "
-                  "custom row subclass.",
+                  "Segmented gaps now pair with expressive first, middle, and "
+                  "last row shapes.",
                   font_caption()),
         list_(context) {
     setGap(Scaled(6));
@@ -198,7 +204,8 @@ class MenuPrototypeSection : public FlexLayout {
         title_(context, "Baseline menu prototype", font_body1()),
         subtitle_(
             context,
-            "A compact baseline list reusing the same row and item primitives.",
+      "Baseline rows stay square and use full-width dividers for "
+      "stronger separation.",
             font_caption()),
         list_(context),
         refresh_shortcut_(context, "R", font_caption()),
@@ -213,6 +220,10 @@ class MenuPrototypeSection : public FlexLayout {
     setGap(Scaled(6));
 
     list_.setVariant(material3::ListVariant::kBaseline);
+
+    material3::ListDividerPolicy divider_policy;
+    divider_policy.mode = material3::DividerMode::kFullWidth;
+    list_.setDividerPolicy(divider_policy);
 
     list_.add(refresh_row_);
     list_.add(edit_row_);
@@ -242,8 +253,8 @@ class ListsScreen : public SimpleScrollablePanel {
         content_(context, FlexDirection::kColumn),
         title_(context, "Material 3 lists", font_h6()),
         subtitle_(context,
-                  "Phase 5 - generic ListRow ownership glue across settings, "
-                  "adopted rows, and a menu-like prototype",
+                  "Phase 6 - row shapes and divider painting across "
+                  "expressive and baseline lists",
                   font_caption()),
         top_divider_(context),
         settings_(context),

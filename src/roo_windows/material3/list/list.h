@@ -116,6 +116,9 @@ struct ListEntryVisualContext {
   bool focused = false;
   bool hovered = false;
   bool show_divider = false;
+  DividerMode divider_mode = DividerMode::kNone;
+  uint8_t divider_start_inset = 0;
+  uint8_t divider_end_inset = 0;
 };
 
 /// Construction-time descriptor for `StandardListItem`.
@@ -284,6 +287,9 @@ class ListEntry : public Container {
   /// Returns the row's Material 3 container color role.
   ColorRole containerRole() const override;
 
+  /// Returns the current Material 3 row shape.
+  BorderStyle getBorderStyle() const override;
+
   /// Returns the minimum dimensions for the bound item and slot widgets.
   Dimensions getSuggestedMinimumDimensions() const override;
 
@@ -431,6 +437,7 @@ class List : public Container {
   void clear();
 
  protected:
+  void paintWidgetContents(const Canvas& canvas, Clipper& clipper) override;
   int getChildrenCount() const override;
   const Widget& getChild(int idx) const override;
   Widget& getChild(int idx) override;
@@ -440,7 +447,7 @@ class List : public Container {
  private:
   void markEntryContextsDirty();
   void refreshEntryVisualContexts();
-  int16_t interRowGap() const;
+  int16_t interRowGap(int previous_idx, int next_idx) const;
 
   std::vector<ListEntry*> entries_;
   std::vector<uint8_t> selected_entries_;

@@ -7,6 +7,7 @@
 #include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/material3/list/list.h"
+#include "roo_windows_render_test_support.h"
 
 namespace roo_windows {
 namespace material3 {
@@ -90,6 +91,9 @@ class MutableListItem : public ListItem {
   roo_display::StringView headline_;
 };
 
+class Material3ListRenderTest
+    : public test_support::RooWindowsRenderTestSized<180, 140> {};
+
 // Verifies that the public policy structs start from the Phase 1 design
 // defaults and stay compact enough to be stored inline.
 TEST(Material3List, PolicyDefaultsMatchDesign) {
@@ -119,6 +123,9 @@ TEST(Material3List, PolicyDefaultsMatchDesign) {
   EXPECT_FALSE(visual_context.focused);
   EXPECT_FALSE(visual_context.hovered);
   EXPECT_FALSE(visual_context.show_divider);
+  EXPECT_EQ(DividerMode::kNone, visual_context.divider_mode);
+  EXPECT_EQ(0, visual_context.divider_start_inset);
+  EXPECT_EQ(0, visual_context.divider_end_inset);
 
   EXPECT_LE(sizeof(ListTextPolicy), 2U);
   EXPECT_LE(sizeof(ListSelectionPolicy), 4U);
@@ -306,6 +313,68 @@ TEST(Material3List, ListEntryRefreshesMutableTextWithoutReplacingSlots) {
   EXPECT_EQ(1, entry.getChildrenCount());
 }
 
+// Verifies that expressive rows derive their rounded-corner geometry from the
+// list-provided row position and selection state, while baseline rows stay
+// square.
+TEST(Material3List, ListEntryResolvesShapeFromVariantPositionAndSelection) {
+  roo_scheduler::Scheduler scheduler;
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
+  TestListEntry entry(context);
+
+  ListEntryVisualContext visual_context;
+  visual_context.variant = ListVariant::kExpressive;
+
+  entry.setVisualContext(visual_context);
+  BorderStyle single = entry.getBorderStyle();
+  EXPECT_EQ(Scaled(16), single.top_left_corner_radius());
+  EXPECT_EQ(Scaled(16), single.top_right_corner_radius());
+  EXPECT_EQ(Scaled(16), single.bottom_right_corner_radius());
+  EXPECT_EQ(Scaled(16), single.bottom_left_corner_radius());
+
+  visual_context.position = ListItemPosition::kFirst;
+  entry.setVisualContext(visual_context);
+  BorderStyle first = entry.getBorderStyle();
+  EXPECT_EQ(Scaled(16), first.top_left_corner_radius());
+  EXPECT_EQ(Scaled(16), first.top_right_corner_radius());
+  EXPECT_EQ(Scaled(4), first.bottom_right_corner_radius());
+  EXPECT_EQ(Scaled(4), first.bottom_left_corner_radius());
+
+  visual_context.position = ListItemPosition::kMiddle;
+  entry.setVisualContext(visual_context);
+  BorderStyle middle = entry.getBorderStyle();
+  EXPECT_EQ(Scaled(4), middle.top_left_corner_radius());
+  EXPECT_EQ(Scaled(4), middle.top_right_corner_radius());
+  EXPECT_EQ(Scaled(4), middle.bottom_right_corner_radius());
+  EXPECT_EQ(Scaled(4), middle.bottom_left_corner_radius());
+
+  visual_context.position = ListItemPosition::kLast;
+  entry.setVisualContext(visual_context);
+  BorderStyle last = entry.getBorderStyle();
+  EXPECT_EQ(Scaled(4), last.top_left_corner_radius());
+  EXPECT_EQ(Scaled(4), last.top_right_corner_radius());
+  EXPECT_EQ(Scaled(16), last.bottom_right_corner_radius());
+  EXPECT_EQ(Scaled(16), last.bottom_left_corner_radius());
+
+  visual_context.position = ListItemPosition::kMiddle;
+  visual_context.selected = true;
+  entry.setVisualContext(visual_context);
+  BorderStyle selected_middle = entry.getBorderStyle();
+  EXPECT_EQ(Scaled(4), selected_middle.top_left_corner_radius());
+  EXPECT_EQ(Scaled(4), selected_middle.top_right_corner_radius());
+  EXPECT_EQ(Scaled(4), selected_middle.bottom_right_corner_radius());
+  EXPECT_EQ(Scaled(4), selected_middle.bottom_left_corner_radius());
+
+  visual_context.variant = ListVariant::kBaseline;
+  visual_context.position = ListItemPosition::kFirst;
+  entry.setVisualContext(visual_context);
+  BorderStyle baseline = entry.getBorderStyle();
+  EXPECT_EQ(0, baseline.top_left_corner_radius());
+  EXPECT_EQ(0, baseline.top_right_corner_radius());
+  EXPECT_EQ(0, baseline.bottom_right_corner_radius());
+  EXPECT_EQ(0, baseline.bottom_left_corner_radius());
+}
+
 // Verifies that ListRow owns exactly one inline item, binds it immediately,
 // and exposes the same row contracts through the inherited ListEntry surface.
 TEST(Material3List, ListRowOwnsAndBindsItsInlineItem) {
@@ -348,6 +417,106 @@ TEST(Material3List, ListAcceptsBorrowedAndAdoptedListRows) {
   EXPECT_EQ(adopted_raw, &list.getChild(1));
   EXPECT_EQ(&list, borrowed.parent());
   EXPECT_EQ(&list, adopted_raw->parent());
+}
+
+// Verifies that inset divider painting uses the list policy floor together
+// with the bound item's content hint, while pixels outside the resolved inset
+// remain row background.
+TEST_F(Material3ListRenderTest, InsetDividerPaintUsesResolvedInsets) {
+  auto list = std::make_unique<List>(context());
+  List* list_ptr = list.get();
+  list_ptr->setVariant(ListVariant::kBaseline);
+
+  ListDividerPolicy divider_policy;
+  divider_policy.mode = DividerMode::kInset;
+  divider_policy.start_inset = 18;
+  divider_policy.end_inset = 26;
+  list_ptr->setDividerPolicy(divider_policy);
+
+  StandardListItemInit first_init = StandardListItemInit::OneLine("First");
+  first_init.divider_inset_hint.start_inset = 40;
+  first_init.divider_inset_hint.end_inset = 8;
+
+  auto first = std::make_unique<ListRow<StandardListItem>>(context(), first_init);
+  auto second = std::make_unique<ListRow<StandardListItem>>(
+      context(), StandardListItemInit::OneLine("Second"));
+  ListEntry* first_row = first.get();
+  ListEntry* second_row = second.get();
+
+  list_ptr->add(std::move(first));
+  list_ptr->add(std::move(second));
+
+  app_.add(WidgetRef(std::move(list)), roo_display::Box(10, 12, 149, 123));
+
+  ASSERT_TRUE(refresh());
+
+  roo_display::Color divider_color = test_support::QuantizeToArgb4444(
+      context().theme().color.role(ColorRole::kOutlineVariant));
+  int16_t divider_thickness = Scaled(1);
+
+  EXPECT_EQ(first_row->height() + divider_thickness, second_row->offsetTop());
+
+  int16_t divider_y = list_ptr->offsetTop() + first_row->offsetTop() +
+                      first_row->height();
+  int16_t row_left = list_ptr->offsetLeft() + first_row->offsetLeft();
+  int16_t row_right = row_left + first_row->width() - 1;
+
+  EXPECT_NE(divider_color, pixelAt(row_left + 39, divider_y));
+  EXPECT_EQ(divider_color, pixelAt(row_left + 40, divider_y));
+  EXPECT_EQ(divider_color, pixelAt(row_right - 26, divider_y));
+  EXPECT_NE(divider_color, pixelAt(row_right - 25, divider_y));
+}
+
+// Verifies that expressive standard lists keep divider strokes in shared
+// inter-row separator space instead of drawing them inside the previous row.
+TEST_F(Material3ListRenderTest, ExpressiveInsetDividerPaintUsesGapSpace) {
+  auto list = std::make_unique<List>(context());
+  List* list_ptr = list.get();
+
+  ListDividerPolicy divider_policy;
+  divider_policy.mode = DividerMode::kInset;
+  divider_policy.start_inset = 18;
+  divider_policy.end_inset = 26;
+  list_ptr->setDividerPolicy(divider_policy);
+
+  StandardListItemInit first_init = StandardListItemInit::OneLine("First");
+  first_init.divider_inset_hint.start_inset = 40;
+  first_init.divider_inset_hint.end_inset = 8;
+
+  auto first = std::make_unique<ListRow<StandardListItem>>(context(), first_init);
+  auto second = std::make_unique<ListRow<StandardListItem>>(
+      context(), StandardListItemInit::OneLine("Second"));
+  ListEntry* first_row = first.get();
+  ListEntry* second_row = second.get();
+
+  list_ptr->add(std::move(first));
+  list_ptr->add(std::move(second));
+
+  app_.add(WidgetRef(std::move(list)), roo_display::Box(10, 12, 149, 123));
+
+  ASSERT_TRUE(refresh());
+
+  roo_display::Color divider_color = test_support::QuantizeToArgb4444(
+      context().theme().color.role(ColorRole::kOutlineVariant));
+  roo_display::Color surface_color = test_support::QuantizeToArgb4444(
+      context().theme().color.role(ColorRole::kSurface));
+    int16_t expressive_gap = Scaled(2);
+    int16_t divider_thickness = Scaled(1);
+
+    EXPECT_EQ(first_row->height() + expressive_gap + divider_thickness,
+        second_row->offsetTop());
+
+  int16_t divider_y = list_ptr->offsetTop() + first_row->offsetTop() +
+              first_row->height() +
+              (expressive_gap + divider_thickness - divider_thickness) / 2;
+  int16_t row_bottom_y = list_ptr->offsetTop() + first_row->offsetTop() +
+                         first_row->height() - 1;
+  int16_t row_left = list_ptr->offsetLeft() + first_row->offsetLeft();
+  int16_t row_right = row_left + first_row->width() - 1;
+
+  EXPECT_EQ(surface_color, pixelAt(row_left + 40, row_bottom_y));
+  EXPECT_EQ(divider_color, pixelAt(row_left + 40, divider_y));
+  EXPECT_EQ(divider_color, pixelAt(row_right - 26, divider_y));
 }
 
 // Verifies that List keeps borrowed entries borrowed, adopts unique_ptr rows,
@@ -465,6 +634,9 @@ TEST(Material3List, ListResolvesSelectionAndDividerContext) {
   divider_policy.suppress_between_selected = true;
   list.setDividerPolicy(divider_policy);
 
+  EXPECT_EQ(DividerMode::kInset, first.visualContext().divider_mode);
+  EXPECT_EQ(0, first.visualContext().divider_start_inset);
+  EXPECT_EQ(0, first.visualContext().divider_end_inset);
   EXPECT_FALSE(first.visualContext().show_divider);
   EXPECT_TRUE(second.visualContext().show_divider);
   EXPECT_FALSE(third.visualContext().show_divider);
@@ -477,8 +649,54 @@ TEST(Material3List, ListResolvesSelectionAndDividerContext) {
   EXPECT_TRUE(first.visualContext().show_divider);
 }
 
-// Verifies that segmented lists use list-owned gaps only while divider mode is
-// disabled, and collapse back to contiguous row stacking when dividers are on.
+// Verifies that expressive standard lists keep a small visual separator
+// between rows that are explicitly divided, and preserve that same separator
+// when a selected-selected divider is suppressed.
+TEST(Material3List, ListAddsSmallGapBetweenSeparatedExpressiveRows) {
+  roo_scheduler::Scheduler scheduler;
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
+  TestList list(context);
+  TestListEntry first(context);
+  TestListEntry second(context);
+  TestListEntry third(context);
+  StandardListItem first_item(StandardListItemInit::OneLine("One"));
+  StandardListItem second_item(StandardListItemInit::OneLine("Two"));
+  StandardListItem third_item(StandardListItemInit::OneLine("Three"));
+  first.setItem(first_item);
+  second.setItem(second_item);
+  third.setItem(third_item);
+
+  ListEntryVisualContext selected_context;
+  selected_context.selected = true;
+  second.setVisualContext(selected_context);
+  third.setVisualContext(selected_context);
+
+  list.add(first);
+  list.add(second);
+  list.add(third);
+
+  ListSelectionPolicy selection_policy;
+  selection_policy.mode = SelectionMode::kMultiple;
+  list.setSelectionPolicy(selection_policy);
+
+  ListDividerPolicy divider_policy;
+  divider_policy.mode = DividerMode::kInset;
+  divider_policy.suppress_between_selected = true;
+  list.setDividerPolicy(divider_policy);
+
+  Dimensions measured =
+      list.measure(WidthSpec::Exactly(180), HeightSpec::Unspecified(0));
+  list.layout(Rect(0, 0, measured.width() - 1, measured.height() - 1));
+
+  EXPECT_EQ(first.height() + Scaled(2) + Scaled(1), second.offsetTop());
+  EXPECT_EQ(second.offsetTop() + second.height() + Scaled(2),
+            third.offsetTop());
+}
+
+// Verifies that segmented lists use the full segmented gap while divider mode
+// is disabled, and shrink back to a divider-thickness separator when dividers
+// are on.
 TEST(Material3List, ListGapResolutionDependsOnDividerPolicy) {
   roo_scheduler::Scheduler scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
@@ -503,7 +721,8 @@ TEST(Material3List, ListGapResolutionDependsOnDividerPolicy) {
   Dimensions with_divider =
       list.measure(WidthSpec::Exactly(180), HeightSpec::Unspecified(0));
 
-  EXPECT_EQ(with_gap.height(), with_divider.height() + Scaled(8));
+  EXPECT_EQ(with_gap.height(),
+            with_divider.height() + Scaled(8) - Scaled(1));
   EXPECT_TRUE(first.visualContext().show_divider);
   EXPECT_FALSE(second.visualContext().show_divider);
 }

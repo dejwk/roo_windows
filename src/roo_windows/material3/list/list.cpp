@@ -22,6 +22,10 @@ constexpr int16_t kOneLineMinHeightDp = 56;
 constexpr int16_t kTwoLineMinHeightDp = 72;
 constexpr int16_t kThreeLineMinHeightDp = 88;
 constexpr int16_t kSegmentedListGapDp = 8;
+constexpr int16_t kExpressiveOuterCornerRadiusDp = 16;
+constexpr int16_t kExpressiveInnerCornerRadiusDp = 4;
+constexpr int16_t kExpressiveStandardSeparatorDp = 2;
+constexpr int16_t kDividerThicknessDp = 1;
 
 struct RowTokens {
   int16_t horizontal_padding;
@@ -57,6 +61,13 @@ struct RowLayoutMetrics {
   int16_t body_width;
 };
 
+struct DividerMetrics {
+  int16_t start_x;
+  int16_t end_x;
+  int16_t y;
+  bool visible;
+};
+
 RowTokens TokensFor(ListVariant variant) {
   if (variant == ListVariant::kBaseline) {
     return RowTokens{Scaled(kBaselineHorizontalPaddingDp),
@@ -66,6 +77,36 @@ RowTokens TokensFor(ListVariant variant) {
   return RowTokens{Scaled(kExpressiveHorizontalPaddingDp),
                    Scaled(kExpressiveVerticalPaddingDp),
                    Scaled(kExpressiveSlotGapDp), Scaled(kBodyGapDp)};
+}
+
+int16_t DividerThicknessPx() {
+  return std::max<int16_t>(1, Scaled(kDividerThicknessDp));
+}
+
+BorderStyle BorderStyleFor(const ListEntryVisualContext& context) {
+  if (context.variant == ListVariant::kBaseline) {
+    return BorderStyle(0, 0);
+  }
+
+  uint8_t outer_radius = static_cast<uint8_t>(Scaled(kExpressiveOuterCornerRadiusDp));
+    uint8_t inner_radius =
+      static_cast<uint8_t>(Scaled(kExpressiveInnerCornerRadiusDp));
+
+  switch (context.position) {
+    case ListItemPosition::kSingle:
+      return BorderStyle(outer_radius, outer_radius, outer_radius,
+                         outer_radius, 0);
+    case ListItemPosition::kFirst:
+      return BorderStyle(outer_radius, outer_radius, inner_radius,
+                         inner_radius, 0);
+    case ListItemPosition::kMiddle:
+      return BorderStyle(inner_radius, inner_radius, inner_radius,
+                         inner_radius, 0);
+    case ListItemPosition::kLast:
+      return BorderStyle(inner_radius, inner_radius, outer_radius,
+                         outer_radius, 0);
+  }
+  return BorderStyle(outer_radius, 0);
 }
 
 const roo_display::Font& FontForOverline() { return font_overline(); }
@@ -270,6 +311,33 @@ RowLayoutMetrics ResolveRowLayout(const ListEntry& entry, WidthSpec width_spec,
                           tokens.horizontal_padding,
                           body_y,
                           body_width};
+}
+
+DividerMetrics ResolveDividerMetrics(const ListEntry& entry, int16_t x_offset,
+                                     int16_t y) {
+  const ListEntryVisualContext& context = entry.visualContext();
+  if (!context.show_divider || context.divider_mode == DividerMode::kNone ||
+      entry.width() <= 0) {
+    return DividerMetrics{0, -1, 0, false};
+  }
+
+  int16_t start_inset = 0;
+  int16_t end_inset = 0;
+  if (context.divider_mode == DividerMode::kInset) {
+    start_inset = context.divider_start_inset;
+    end_inset = context.divider_end_inset;
+    const ListItem* item = entry.item();
+    if (item != nullptr) {
+      DividerInsetHint hint = item->dividerInsetHint();
+      start_inset = std::max<int16_t>(start_inset, hint.start_inset);
+      end_inset = std::max<int16_t>(end_inset, hint.end_inset);
+    }
+  }
+
+  int16_t start_x = x_offset + start_inset;
+  int16_t end_x = x_offset + entry.width() - 1 - end_inset;
+  if (start_x > end_x) return DividerMetrics{0, -1, y, false};
+  return DividerMetrics{start_x, end_x, y, true};
 }
 
 ListItemPosition PositionForIndex(int idx, int count) {
@@ -543,6 +611,10 @@ ColorRole ListEntry::containerRole() const {
   return ColorRole::kSurface;
 }
 
+BorderStyle ListEntry::getBorderStyle() const {
+  return BorderStyleFor(visual_context_);
+}
+
 Dimensions ListEntry::getSuggestedMinimumDimensions() const {
   RowLayoutMetrics layout = ResolveRowLayout(
       *this, WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
@@ -739,11 +811,73 @@ void List::markEntryContextsDirty() {
   requestLayout();
 }
 
-int16_t List::interRowGap() const {
-  if (style_ == ListStyle::kSegmented && divider_policy_.mode == DividerMode::kNone) {
-    return Scaled(kSegmentedListGapDp);
+int16_t List::interRowGap(int previous_idx, int next_idx) const {
+  if (previous_idx < 0 || next_idx < 0) return 0;
+
+  const ListEntryVisualContext& previous =
+      entries_[previous_idx]->visualContext();
+  const ListEntryVisualContext& next = entries_[next_idx]->visualContext();
+
+  int16_t gap = 0;
+  if (style_ == ListStyle::kSegmented &&
+      divider_policy_.mode == DividerMode::kNone) {
+    gap = Scaled(kSegmentedListGapDp);
+  } else if (previous.variant == ListVariant::kExpressive &&
+             previous.style == ListStyle::kStandard &&
+             (previous.show_divider || (previous.selected && next.selected))) {
+    gap = Scaled(kExpressiveStandardSeparatorDp);
   }
-  return 0;
+
+  if (previous.show_divider) {
+    gap += DividerThicknessPx();
+  }
+  return gap;
+}
+
+void List::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
+  if (isInvalidated() && !clipper.isDeadlineExceeded()) {
+    Canvas divider_canvas = canvas;
+    divider_canvas.clipToExtents(bounds());
+    if (!divider_canvas.clip_box().empty()) {
+      clipper.setBounds(divider_canvas.clip_box());
+      const roo_display::Color divider_color = theme().color.outlineVariant;
+      const int16_t divider_thickness = DividerThicknessPx();
+
+      int previous_visible_idx = -1;
+      for (int i = 0; i < static_cast<int>(entries_.size()); ++i) {
+        const ListEntry& entry = *entries_[i];
+        if (entry.isGone()) continue;
+        if (previous_visible_idx >= 0) {
+          const ListEntry& previous = *entries_[previous_visible_idx];
+          int16_t gap = interRowGap(previous_visible_idx, i);
+          if (gap >= divider_thickness) {
+            int16_t divider_top = previous.offsetTop() + previous.height() +
+                                  (gap - divider_thickness) / 2;
+            int16_t divider_bottom = divider_top + divider_thickness - 1;
+            DividerMetrics divider = ResolveDividerMetrics(
+                previous, previous.offsetLeft(), divider_top);
+            if (divider.visible) {
+              divider_canvas.fillRect(divider.start_x, divider_top,
+                                      divider.end_x, divider_bottom,
+                                      divider_color);
+              roo_display::Box device_box = roo_display::Box::Intersect(
+                  roo_display::Box(divider_canvas.dx() + divider.start_x,
+                                   divider_canvas.dy() + divider_top,
+                                   divider_canvas.dx() + divider.end_x,
+                                   divider_canvas.dy() + divider_bottom),
+                  divider_canvas.clip_box());
+              if (!device_box.empty()) {
+                clipper.addExclusion(device_box);
+              }
+            }
+          }
+        }
+        previous_visible_idx = i;
+      }
+    }
+  }
+
+  Container::paintWidgetContents(canvas, clipper);
 }
 
 // Resolves the list-owned row context so each entry sees stable variant,
@@ -769,6 +903,9 @@ void List::refreshEntryVisualContexts() {
                                                i + 1, first_selected_idx);
     context.show_divider =
         ShouldShowDivider(divider_policy_, i, count, context.selected, next_selected);
+    context.divider_mode = divider_policy_.mode;
+    context.divider_start_inset = divider_policy_.start_inset;
+    context.divider_end_inset = divider_policy_.end_inset;
     entry.setVisualContext(context);
   }
 
@@ -862,16 +999,18 @@ Dimensions List::onMeasure(WidthSpec width, HeightSpec height) {
     resolved_width = ConstrainWidth(resolved_width, width);
   }
 
-  const int16_t gap = interRowGap();
   int16_t total_height = 0;
-  bool has_visible_entry = false;
-  for (ListEntry* entry : entries_) {
+  int previous_visible_idx = -1;
+  for (int i = 0; i < static_cast<int>(entries_.size()); ++i) {
+    ListEntry* entry = entries_[i];
     if (entry->isGone()) continue;
     Dimensions measured =
         entry->measure(WidthSpec::Exactly(resolved_width), HeightSpec::Unspecified(0));
-    if (has_visible_entry) total_height += gap;
+    if (previous_visible_idx >= 0) {
+      total_height += interRowGap(previous_visible_idx, i);
+    }
     total_height += measured.height();
-    has_visible_entry = true;
+    previous_visible_idx = i;
   }
 
   return Dimensions(resolved_width, ConstrainHeight(total_height, height));
@@ -881,14 +1020,19 @@ void List::onLayout(bool changed, const Rect& rect) {
   (void)changed;
   refreshEntryVisualContexts();
 
-  const int16_t gap = interRowGap();
   int16_t y = 0;
-  for (ListEntry* entry : entries_) {
+  int previous_visible_idx = -1;
+  for (int i = 0; i < static_cast<int>(entries_.size()); ++i) {
+    ListEntry* entry = entries_[i];
     if (entry->isGone()) continue;
+    if (previous_visible_idx >= 0) {
+      y += interRowGap(previous_visible_idx, i);
+    }
     Dimensions measured =
         entry->measure(WidthSpec::Exactly(rect.width()), HeightSpec::Unspecified(0));
     entry->layout(Rect(0, y, rect.width() - 1, y + measured.height() - 1));
-    y += measured.height() + gap;
+    y += measured.height();
+    previous_visible_idx = i;
   }
 }
 
