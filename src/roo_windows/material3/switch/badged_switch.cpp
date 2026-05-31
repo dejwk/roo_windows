@@ -82,7 +82,11 @@ Insets BadgedSwitch::getInkInsets() const {
 
 void BadgedSwitch::paint(PaintContext& ctx) const {
   Switch::paint(ctx);
+}
+
+void BadgedSwitch::paintWidgetContents(PaintContext& ctx) {
   badge_.paint(ctx, theme());
+  Switch::paintWidgetContents(ctx);
 }
 
 void BadgedSwitch::onLayout(bool changed, const Rect& rect) {
@@ -90,6 +94,8 @@ void BadgedSwitch::onLayout(bool changed, const Rect& rect) {
   (void)rect;
   const_cast<BadgedSwitch*>(this)->relayoutBadge();
 }
+
+Rect BadgedSwitch::getDirectPaintExclusionBounds() const { return bounds(); }
 
 Rect BadgedSwitch::badgeAnchorBounds() const {
   Dimensions track_dims = Switch::getSuggestedMinimumDimensions();

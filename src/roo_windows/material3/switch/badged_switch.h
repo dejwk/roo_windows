@@ -42,12 +42,19 @@ class BadgedSwitch : public Switch {
   /// Expands the switch ink bounds conservatively when the badge can overhang.
   Insets getInkInsets() const override;
 
-  /// Paints the switch first, then settles the badge as front-most geometry.
+  /// Paints only the base switch geometry; badge ordering is handled in
+  /// `paintWidgetContents()`.
   void paint(PaintContext& ctx) const override;
+
+  /// Settles the badge before switch-local lower-z content.
+  void paintWidgetContents(PaintContext& ctx) override;
 
  protected:
   /// Re-resolves the badge layout when the host switch bounds change.
   void onLayout(bool changed, const Rect& rect) override;
+
+  /// Leaves badge corner-strip repaint to the badge's own exclusion logic.
+  Rect getDirectPaintExclusionBounds() const override;
 
  private:
   /// Returns the centered local track rect used as the badge anchor.
