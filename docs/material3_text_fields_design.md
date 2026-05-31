@@ -192,15 +192,19 @@ not using."
 
 1. Clicking or tapping the main container starts editing when the field is
    editable.
-2. Clicking or tapping the main container invokes normal widget interaction
+2. Under the framework contract in [non_touch_input_design.md](non_touch_input_design.md),
+   focus traversal alone does not start editing; semantic activate starts
+   editing instead.
+3. Clicking or tapping the main container invokes normal widget interaction
    without showing the keyboard when the field is read-only.
-3. Leading and trailing affordances must be hit-tested inside the field widget
+4. Leading and trailing affordances must be hit-tested inside the field widget
    itself rather than through child widgets.
-4. Focused, hovered, pressed, disabled, error, and populated visuals must flow
+5. Focused, hovered, pressed, disabled, error, and populated visuals must flow
    through the existing widget-state model plus compact field-local state.
-5. Typed text must update the rendered value immediately.
-6. Confirm and cancel behavior should stay aligned with the current
-   `TextFieldEditor` contract.
+6. Typed text must update the rendered value immediately.
+7. Confirm and cancel keep the current text buffer contents and differ only in
+   the `confirmed` flag delivered to `onEditFinished(bool)`, matching the
+   current `TextFieldEditor` behavior.
 
 ### API Requirements
 
@@ -465,6 +469,37 @@ work rather than mandatory state on every field.
 That keeps password-specific behavior out of the base widget while still
 reusing the current editor's "recently entered glyph" reveal behavior.
 
+### Focus, Activation, and Edit Session Boundaries
+
+This design follows the framework contract in
+[non_touch_input_design.md](non_touch_input_design.md): focus and editing are
+separate states.
+
+A field can therefore be focused without being edited. The chosen rules are:
+
+- touch click or tap on an editable field starts editing immediately,
+- semantic activate on a focused editable field starts editing through the
+   same `edit()` boundary,
+- focus traversal alone never starts editing,
+- and read-only fields remain focusable and activatable, but activation runs
+   the ordinary container action path instead of binding the editor.
+
+While a field is focused but not edited, directional navigation remains a
+focus-manager concern. While a field is edited, printable text, delete or
+backspace, caret movement, and selection-changing keys are routed to the
+shared editor instead of being reinterpreted as synthetic touch gestures.
+That keeps the field aligned with the keyboard-first rule in
+[non_touch_input_design.md](non_touch_input_design.md): semantic keyboard
+interaction is focus plus action, not fake pointer input.
+
+Confirm and cancel also keep the current editor contract. Both end the edit
+session and keep the current text buffer contents. The only semantic
+difference is the `confirmed` argument delivered to
+`onEditFinished(bool confirmed)`. Applications that need transactional
+"revert on cancel" behavior should snapshot externally or implement that
+policy in a subclass, rather than forcing extra snapshot state onto every base
+field.
+
 ### Event and Callback Model
 
 The base widget keeps the existing `Widget` interaction model and does not add
@@ -481,6 +516,34 @@ The field therefore exposes virtual hooks instead of per-instance
 The default icon-affordance hooks are no-ops. If a tap lands on an occupied
 icon slot and the subclass or consumer does not override the hook, the field
 falls back to the ordinary container click behavior.
+
+### Repaint and Invalidation Consequences
+
+The field has four repaint-sensitive regions:
+
+1. the container decoration,
+2. the floating-label band,
+3. the editable text viewport,
+4. the assistive row.
+
+The chosen paint contract is:
+
+1. the field stays owner-painted and does not delegate any of those regions to
+   child widgets,
+2. selection highlight, caret, text, prefix or suffix text, and icons are
+   drawn in their final colors; the field does not prefill and then redraw the
+   same pixels with a different color,
+3. editor-driven visual changes call `notifyEditVisualChange()`, which dirties
+   only the viewport in the common case and also dirties the label band and
+   outlined-notch strip when the populated-or-focused float state flips,
+4. assistive-row text changes repaint only the assistive band unless the error
+   bit also changes the main container palette,
+5. invalidated repaint redraws the full clipped field bounds in one pass,
+   including the assistive row and any floated-label notch.
+
+This keeps repaint local to the field, avoids child-owned repaint
+coordination, and matches the direct-to-framebuffer rule that each pixel
+should be settled once per pass.
 
 ### Migration Strategy
 
@@ -656,11 +719,12 @@ Code slice:
 
 1. Bind `material3::TextField` to the shared `TextFieldEditor` through
    `ApplicationContext`.
-2. Implement editable versus read-only click behavior.
+2. Implement editable versus read-only click behavior and the explicit
+   focused-idle versus actively edited state split.
 3. Reuse the shared single-line cursor, selection, and horizontal-scroll path.
 4. Add focused, populated, disabled, and error-state paint.
-5. Add focused golden coverage for empty, focused, populated, disabled, and
-   error states in both variants.
+5. Add focused golden coverage for empty, focused-idle, actively edited,
+   populated, disabled, and error states in both variants.
 
 Proposed commit message:
 
@@ -671,7 +735,9 @@ Proposed commit message:
 > behavior aligned with the existing keyboard path.
 
 Validation: run `bazel test //:material3_text_field_test` and
-`bazel test //:material3_text_field_golden_test` with state-focused cases.
+`bazel test //:material3_text_field_golden_test` with state-focused and
+dirty-repaint cases for caret blink, label-float transitions, and horizontal
+scroll.
 
 ### Phase 4: Add Secure-Field and Affordance Behavior
 
@@ -729,13 +795,20 @@ Validation coverage should include:
    binding, cursor movement, selection updates, masking, and confirm or cancel
    behavior.
 2. `material3_text_field_test` for defaults, slot setters, read-only behavior,
-   label float rules, error-state precedence, and size-budget assertions.
+   label float rules, error-state precedence, edit-finished confirm-versus-
+   cancel semantics, and size-budget assertions.
 3. `material3_text_field_golden_test` for filled and outlined variants,
-   empty and populated states, focused states, disabled states, error states,
-   prefix and suffix layout, and secure-field reveal behavior.
-4. RTL-focused render cases for leading or trailing slot mirroring and error-
+   empty and populated states, focused-idle versus actively edited states,
+   disabled states, error states, prefix and suffix layout, and secure-field
+   reveal behavior.
+4. Dirty-repaint cases for caret blink, selection updates, horizontal scroll,
+   and outlined-notch redraw when the label float state changes.
+5. RTL-focused render cases for leading or trailing slot mirroring and error-
    icon placement.
-5. Example compilation once `examples/material3/text_fields/text_fields.ino`
+6. Keyboard-only integration coverage for focused-idle versus semantic-
+   activate entry after the framework work in
+   [non_touch_input_design.md](non_touch_input_design.md) lands.
+7. Example compilation once `examples/material3/text_fields/text_fields.ino`
    lands.
 
 ## Caveats
@@ -775,6 +848,17 @@ This was rejected.
 Those features are not needed by every field. Carrying them on the base type
 would violate the repo's pay-for-what-you-use rules. The base field keeps only
 the state that every field actually needs.
+
+#### Revert the Buffer on Cancel
+
+This was rejected.
+
+The current shared editor mutates the live `std::string` during typing and
+distinguishes only the completion reason in `onEditFinished(bool)`. Making
+cancel revert would require per-session snapshots or a second staging buffer.
+That adds RAM or copy cost to every edit session and would diverge from the
+legacy field's behavior. The Material 3 family keeps the live-buffer
+contract; callers that need revert-on-cancel can snapshot externally.
 
 #### Extend the Current Single-Line Editor Into a Multiline Engine Now
 
