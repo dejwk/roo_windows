@@ -28,6 +28,12 @@ int16_t smoothVelocity(int16_t prev_v, int16_t measured_v,
   return (int16_t)smoothed;
 }
 
+int16_t clampVelocity(int32_t velocity) {
+  if (velocity > kMaxVelocity) return kMaxVelocity;
+  if (velocity < -kMaxVelocity) return -kMaxVelocity;
+  return (int16_t)velocity;
+}
+
 }  // namespace
 
 TouchSensor::TouchSensor(roo_display::Display& display)
@@ -94,20 +100,20 @@ void TouchSensor::run() {
 }
 
 void TouchSensor::pollOnce() {
-  int16_t x;
-  int16_t y;
-  bool down = display_.getTouch(x, y);
-  unsigned long now_us = (unsigned long)roo_time::Uptime::Now().inMicros();
+  roo_display::TouchPoint point;
+  roo_display::TouchResult sample = display_.getTouch(&point, 1);
+  bool down = sample.touch_points > 0;
+  unsigned long sample_us = (unsigned long)sample.timestamp.inMicros();
 
   if (down && !is_down_) {
     is_down_ = true;
-    x_ = x;
-    y_ = y;
-    latest_us_ = now_us;
+    x_ = point.x;
+    y_ = point.y;
+    latest_us_ = sample_us;
     velocity_x_ = 0;
     velocity_y_ = 0;
-    last_velocity_update_us_ = now_us;
-    pushEvent(Event{Event::DOWN, x_, y_, now_us, 0, 0});
+    last_velocity_update_us_ = sample_us;
+    pushEvent(Event{Event::DOWN, x_, y_, sample_us, 0, 0});
     return;
   }
 
@@ -115,14 +121,17 @@ void TouchSensor::pollOnce() {
     is_down_ = false;
     // If the touch was held stationary before release, the stored velocity is
     // stale. Zero it out so the gesture detector doesn't trigger a spurious
-    // fling. Keep this in sync with GestureDetector.
+    // fling. Base the age check on the last sampled down-state timestamp
+    // rather than the delayed UP observation time so single-threaded builds
+    // keep fling velocity across long paint stalls.
     int16_t up_vx = velocity_x_;
     int16_t up_vy = velocity_y_;
-    if ((long)(now_us - last_velocity_update_us_) > (long)kMaxVelocityAgeUs) {
+    if ((long)(latest_us_ - last_velocity_update_us_) >
+        (long)kMaxVelocityAgeUs) {
       up_vx = 0;
       up_vy = 0;
     }
-    pushEvent(Event{Event::UP, x_, y_, now_us, up_vx, up_vy});
+    pushEvent(Event{Event::UP, x_, y_, sample_us, up_vx, up_vy});
     return;
   }
 
@@ -130,32 +139,44 @@ void TouchSensor::pollOnce() {
     return;
   }
 
-  long dt = (long)(now_us - latest_us_);
-  int16_t dx = x - x_;
-  int16_t dy = y - y_;
-  x_ = x;
-  y_ = y;
-  latest_us_ = now_us;
+  long dt = (long)(sample_us - latest_us_);
+  int16_t dx = point.x - x_;
+  int16_t dy = point.y - y_;
+  x_ = point.x;
+  y_ = point.y;
+  latest_us_ = sample_us;
 
-  if (dt > 0 && (dx != 0 || dy != 0)) {
-    int16_t new_vx = (int16_t)(1000000LL * dx / dt);
-    int16_t new_vy = (int16_t)(1000000LL * dy / dt);
-    if (abs(new_vx) <= kMaxVelocity && abs(new_vy) <= kMaxVelocity) {
-      unsigned long velocity_age_us = now_us - last_velocity_update_us_;
-      bool has_prior_velocity = (velocity_x_ != 0 || velocity_y_ != 0);
-      if (has_prior_velocity && velocity_age_us <= kMaxSmoothingGapUs) {
-        velocity_x_ = smoothVelocity(velocity_x_, new_vx, (unsigned long)dt);
-        velocity_y_ = smoothVelocity(velocity_y_, new_vy, (unsigned long)dt);
-      } else {
-        velocity_x_ = new_vx;
-        velocity_y_ = new_vy;
-      }
-      last_velocity_update_us_ = now_us;
+  bool has_driver_velocity = (point.vx != 0 || point.vy != 0);
+  bool has_new_velocity_sample =
+      (long)(sample_us - last_velocity_update_us_) > 0 &&
+      ((dx != 0 || dy != 0) || has_driver_velocity);
+  if (has_new_velocity_sample) {
+    int16_t new_vx;
+    int16_t new_vy;
+    if (has_driver_velocity) {
+      new_vx = clampVelocity(point.vx);
+      new_vy = clampVelocity(point.vy);
+    } else if (dt > 0) {
+      new_vx = clampVelocity(1000000LL * dx / dt);
+      new_vy = clampVelocity(1000000LL * dy / dt);
+    } else {
+      new_vx = 0;
+      new_vy = 0;
     }
+    unsigned long velocity_age_us = sample_us - last_velocity_update_us_;
+    bool has_prior_velocity = (velocity_x_ != 0 || velocity_y_ != 0);
+    if (has_prior_velocity && velocity_age_us <= kMaxSmoothingGapUs) {
+      velocity_x_ = smoothVelocity(velocity_x_, new_vx, velocity_age_us);
+      velocity_y_ = smoothVelocity(velocity_y_, new_vy, velocity_age_us);
+    } else {
+      velocity_x_ = new_vx;
+      velocity_y_ = new_vy;
+    }
+    last_velocity_update_us_ = sample_us;
   }
 
   if (dx != 0 || dy != 0) {
-    pushEvent(Event{Event::MOVE, x_, y_, now_us, velocity_x_, velocity_y_});
+    pushEvent(Event{Event::MOVE, x_, y_, sample_us, velocity_x_, velocity_y_});
   }
 }
 

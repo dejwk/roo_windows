@@ -96,6 +96,18 @@ cc_test(
 )
 
 cc_test(
+    name = "touch_sensor_test",
+    srcs = [
+        "test/touch_sensor_test.cpp",
+    ],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
+cc_test(
     name = "text_label_test",
     srcs = [
         "test/text_label_test.cpp",
