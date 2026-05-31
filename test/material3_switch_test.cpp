@@ -2,6 +2,7 @@
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
+#include "roo_windows/core/application.h"
 #include "roo_windows/core/application_context.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/panel.h"
@@ -26,7 +27,7 @@ ApplicationContext MakeContext(Environment& env) {
 
 class RecordingPanel : public Panel {
  public:
-  explicit RecordingPanel(const Environment& env) : Panel(env) {}
+  explicit RecordingPanel(ApplicationContext& context) : Panel(context) {}
 
   using Panel::add;
 
@@ -136,8 +137,9 @@ TEST(Material3Switch, EffectiveContainerRoleTracksState) {
 TEST(Material3BadgedSwitch, ReportsBadgeOverflowViaInkInsets) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
 
-  BadgedSwitch sw(env, false);
+  BadgedSwitch sw(context, false);
   sw.layout(Rect(0, 0, Scaled(52) - 1, Scaled(32) - 1));
   sw.setBadgeText("999+");
 
@@ -154,22 +156,23 @@ TEST(Material3BadgedSwitch, ReportsBadgeOverflowViaInkInsets) {
 TEST(Material3BadgedSwitch, BadgeContentChangeInvalidatesOldAndNewEnvelope) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
 
-  RecordingPanel panel(env);
+  RecordingPanel panel(context);
   panel.layout(Rect(0, 0, 119, 79));
-  auto sw = std::make_unique<BadgedSwitch>(env, false);
+  auto sw = std::make_unique<BadgedSwitch>(context, false);
   BadgedSwitch* sw_ptr = sw.get();
-  panel.add(std::move(sw), Rect(20, 20, 20 + Scaled(52) - 1,
-                                20 + Scaled(32) - 1));
+  panel.add(std::move(sw),
+            Rect(20, 20, 20 + Scaled(52) - 1, 20 + Scaled(32) - 1));
 
   sw_ptr->setBadgeText("1");
-  Rect old_bounds =
-      sw_ptr->badge().bounds().translate(sw_ptr->offsetLeft(), sw_ptr->offsetTop());
+  Rect old_bounds = sw_ptr->badge().bounds().translate(sw_ptr->offsetLeft(),
+                                                       sw_ptr->offsetTop());
   panel.invalidated_regions.clear();
 
   sw_ptr->setBadgeValue(1000);
-  Rect new_bounds =
-      sw_ptr->badge().bounds().translate(sw_ptr->offsetLeft(), sw_ptr->offsetTop());
+  Rect new_bounds = sw_ptr->badge().bounds().translate(sw_ptr->offsetLeft(),
+                                                       sw_ptr->offsetTop());
 
   ASSERT_FALSE(panel.invalidated_regions.empty());
   EXPECT_EQ(Rect::Extent(old_bounds, new_bounds),
@@ -180,7 +183,7 @@ TEST(Material3BadgedSwitch, BadgeContentChangeInvalidatesOldAndNewEnvelope) {
 // overlapping pixel inside the badge/switch intersection resolves to the badge
 // error color rather than the underlying switch track.
 TEST_F(Material3BadgedSwitchRenderTest, BadgePaintsFrontMostOverSwitchTrack) {
-  auto sw = std::make_unique<BadgedSwitch>(env_, false);
+  auto sw = std::make_unique<BadgedSwitch>(app_.context(), false);
   BadgedSwitch* sw_ptr = sw.get();
   sw_ptr->setBadgeDot();
   int16_t x0 = 24;

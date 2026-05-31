@@ -613,9 +613,9 @@ TEST_F(RooWindowsRenderTest,
        ScrimTintsUnderlyingContentWithoutDirectExclusion) {
   constexpr Color kScrimColor(0x8000FF00);
 
-  auto back =
-      std::make_unique<ColorBoxWidget>(env_, color::Red, Dimensions(48, 40));
-  auto scrim = std::make_unique<Scrim>(env_, kScrimColor);
+  auto back = std::make_unique<ColorBoxWidget>(context(), color::Red,
+                                               Dimensions(48, 40));
+  auto scrim = std::make_unique<Scrim>(context(), kScrimColor);
   Scrim* scrim_ptr = scrim.get();
 
   app_.add(std::move(back), Box(0, 0, 47, 39));
@@ -623,8 +623,7 @@ TEST_F(RooWindowsRenderTest,
 
   ASSERT_TRUE(refresh());
 
-  Color expected_tint =
-      QuantizeToArgb4444(AlphaBlend(color::Red, kScrimColor));
+  Color expected_tint = QuantizeToArgb4444(AlphaBlend(color::Red, kScrimColor));
   EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(4, 4));
   EXPECT_EQ(expected_tint, pixelAt(20, 20));
 

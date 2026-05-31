@@ -24,15 +24,16 @@ Insets InsetsFromEnvelope(const Rect& logical_bounds, const Rect& envelope) {
 }
 
 bool SamePlacement(BadgePlacement a, BadgePlacement b) {
-  return a.gravity == b.gravity &&
-         a.horizontal_offset == b.horizontal_offset &&
+  return a.gravity == b.gravity && a.horizontal_offset == b.horizontal_offset &&
          a.vertical_offset == b.vertical_offset;
 }
 
 }  // namespace
 
-BadgedSwitch::BadgedSwitch(const Environment& env, bool on)
-    : Switch(env, on), badge_(), badge_placement_() {
+BadgedSwitch::BadgedSwitch(ApplicationContext& context, bool on)
+    : Switch(context, on ? Switch::OnOffState::kOn : Switch::OnOffState::kOff),
+      badge_(),
+      badge_placement_() {
   setParentClipMode(ParentClipMode::kUnclipped);
 }
 
@@ -80,9 +81,7 @@ Insets BadgedSwitch::getInkInsets() const {
   return InsetsFromEnvelope(bounds(), conservativeBadgeBounds());
 }
 
-void BadgedSwitch::paint(PaintContext& ctx) const {
-  Switch::paint(ctx);
-}
+void BadgedSwitch::paint(PaintContext& ctx) const { Switch::paint(ctx); }
 
 void BadgedSwitch::paintWidgetContents(PaintContext& ctx) {
   badge_.paint(ctx, theme());
@@ -100,11 +99,12 @@ Rect BadgedSwitch::getDirectPaintExclusionBounds() const { return bounds(); }
 Rect BadgedSwitch::badgeAnchorBounds() const {
   Dimensions track_dims = Switch::getSuggestedMinimumDimensions();
   Rect logical_bounds = bounds();
-  if (logical_bounds.empty() || track_dims.width() <= 0 || track_dims.height() <= 0) {
+  if (logical_bounds.empty() || track_dims.width() <= 0 ||
+      track_dims.height() <= 0) {
     return EmptyRect();
   }
-  int16_t left = logical_bounds.xMin() +
-                 (logical_bounds.width() - track_dims.width()) / 2;
+  int16_t left =
+      logical_bounds.xMin() + (logical_bounds.width() - track_dims.width()) / 2;
   int16_t top = logical_bounds.yMin() +
                 (logical_bounds.height() - track_dims.height()) / 2;
   return Rect(left, top, left + track_dims.width() - 1,

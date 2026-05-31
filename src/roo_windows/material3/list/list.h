@@ -437,7 +437,7 @@ class List : public Container {
   void clear();
 
  protected:
-  void paintWidgetContents(const Canvas& canvas, Clipper& clipper) override;
+  void paintWidgetContents(PaintContext& ctx) override;
   int getChildrenCount() const override;
   const Widget& getChild(int idx) const override;
   Widget& getChild(int idx) override;

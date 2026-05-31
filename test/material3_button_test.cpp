@@ -26,8 +26,8 @@ ApplicationContext MakeContext(Environment& env) {
 
 class SolidBackdrop : public BasicSurfaceWidget {
  public:
-  SolidBackdrop(const Environment& env, Color color, Dimensions dims)
-      : BasicSurfaceWidget(env), color_(color), dims_(dims) {}
+  SolidBackdrop(ApplicationContext& context, Color color, Dimensions dims)
+      : BasicSurfaceWidget(context), color_(color), dims_(dims) {}
 
   Color background() const override { return color_; }
 
@@ -331,11 +331,12 @@ TEST_F(Material3ButtonClickAnimationTest,
        RoundButtonContentsDoNotPaintCornerCutouts) {
   constexpr Color kBackdropColor(0xFFE7F6F2);
 
-  auto backdrop = std::make_unique<SolidBackdrop>(
-      env_, kBackdropColor, Dimensions(kWidth, kHeight));
-  app_.add(std::move(backdrop), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
+  auto backdrop = std::make_unique<SolidBackdrop>(context(), kBackdropColor,
+                                                  Dimensions(kWidth, kHeight));
+  app_.add(std::move(backdrop),
+           roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
 
-  auto button = std::make_unique<Button>(env_, "Save");
+  auto button = std::make_unique<Button>(context(), "Save");
   Button* button_ptr = button.get();
   app_.add(std::move(button), roo_display::Box(20, 20, 139, 59));
 

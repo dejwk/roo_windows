@@ -229,8 +229,10 @@ class ContentPaintSliderWithInsetIcon : public SliderWithInsetIcon {
     roo_windows::internal::ClipperState clipper_state;
     Clipper clipper(clipper_state, parent_canvas.out(),
                     roo_time::Uptime::Max());
-    Canvas widget_canvas = prepareCanvas(parent_canvas);
-    paintWidgetContents(widget_canvas, clipper);
+    PaintContext ctx(prepareCanvas(parent_canvas), clipper);
+    clipper.pushOverlaySpec(*this, ctx.canvas());
+    paintWidgetContents(ctx);
+    clipper.popOverlaySpec();
   }
 };
 
@@ -2273,26 +2275,25 @@ TEST_F(Material3SliderRenderTest,
 // Verifies that kWithinBounds keeps the bubble hidden at rest, then paints the
 // clamped bubble interior once the slider enters the pressed state.
 TEST_F(Material3SliderRenderTest,
-  WithinBoundsValueIndicatorPaintsBubbleInteriorOnlyDuringInteraction) {
+       WithinBoundsValueIndicatorPaintsBubbleInteriorOnlyDuringInteraction) {
   SliderStyle style{};
   style.value_indicator = SliderValueIndicatorBehavior::kWithinBounds;
   const int16_t kBubbleSliderY = kHeight - kSliderHeight;
 
-  auto slider = std::make_unique<Slider>(env_, SliderRange{0.0f, 1.0f}, 0.5f,
-                                         SliderVariant::kStandard, style);
+  auto slider = std::make_unique<Slider>(context(), SliderRange{0.0f, 1.0f},
+                                         0.5f, SliderVariant::kStandard, style);
   Slider* slider_ptr = slider.get();
   slider_ = slider_ptr;
 
-  app_.add(std::move(slider),
-           roo_display::Box(kSliderX, kBubbleSliderY,
-                            kSliderX + kSliderWidth - 1,
-                            kBubbleSliderY + kSliderHeight - 1));
+  app_.add(
+      std::move(slider),
+      roo_display::Box(kSliderX, kBubbleSliderY, kSliderX + kSliderWidth - 1,
+                       kBubbleSliderY + kSliderHeight - 1));
 
   ASSERT_TRUE(app_.refresh());
 
-  Rect bubble =
-      ResolveCurrentIndicatorBoundsForTest(*slider_ptr, env_)
-          .translate(kSliderX, kBubbleSliderY);
+  Rect bubble = ResolveCurrentIndicatorBoundsForTest(*slider_ptr, context())
+                    .translate(kSliderX, kBubbleSliderY);
   ASSERT_FALSE(bubble.empty());
   EXPECT_LT(bubble.yMax(), kBubbleSliderY);
 

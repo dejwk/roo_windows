@@ -15,7 +15,7 @@ namespace material3 {
 class BadgedSwitch : public Switch {
  public:
   /// Creates a Material 3 switch that can render a badge over its track.
-  explicit BadgedSwitch(const Environment& env, bool on = false);
+  explicit BadgedSwitch(ApplicationContext& context, bool on = false);
 
   /// Returns the current badge state.
   const Badge& badge() const { return badge_; }

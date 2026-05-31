@@ -834,8 +834,10 @@ int16_t List::interRowGap(int previous_idx, int next_idx) const {
   return gap;
 }
 
-void List::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
-  if (isInvalidated() && !clipper.isDeadlineExceeded()) {
+void List::paintWidgetContents(PaintContext& ctx) {
+  Canvas& canvas = ctx.canvas();
+  Clipper& clipper = ctx.clipperForFramework();
+  if (isInvalidated() && !ctx.isDeadlineExceeded()) {
     Canvas divider_canvas = canvas;
     divider_canvas.clipToExtents(bounds());
     if (!divider_canvas.clip_box().empty()) {
@@ -877,7 +879,7 @@ void List::paintWidgetContents(const Canvas& canvas, Clipper& clipper) {
     }
   }
 
-  Container::paintWidgetContents(canvas, clipper);
+  Container::paintWidgetContents(ctx);
 }
 
 // Resolves the list-owned row context so each entry sees stable variant,

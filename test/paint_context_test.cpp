@@ -22,8 +22,8 @@ Color QuantizeToArgb4444(Color color) {
 
 class OverlaySpecSourceWidget : public BasicSurfaceWidget {
  public:
-  explicit OverlaySpecSourceWidget(const Environment& env)
-      : BasicSurfaceWidget(env) {}
+  explicit OverlaySpecSourceWidget(ApplicationContext& context)
+      : BasicSurfaceWidget(context) {}
 
   Color background() const override { return color::White; }
 
@@ -36,8 +36,8 @@ class OverlaySpecSourceWidget : public BasicSurfaceWidget {
 
 class SingleChildContainer : public Container {
  public:
-  explicit SingleChildContainer(const Environment& env)
-      : Container(env), child_(nullptr) {}
+  explicit SingleChildContainer(ApplicationContext& context)
+      : Container(context), child_(nullptr) {}
 
   void setChild(WidgetRef child, const Rect& bounds) {
     child_ = child.get();
@@ -140,8 +140,7 @@ TEST_F(PaintContextTest, AddOverlayTranslatesLocalExtentsAndAppliesClip) {
   PaintContext ctx(canvas, clipper);
 
   auto overlay = MakeRasterizable(
-      Box(0, 0, 3, 3),
-      [](int16_t, int16_t) -> Color { return color::Red; });
+      Box(0, 0, 3, 3), [](int16_t, int16_t) -> Color { return color::Red; });
 
   ctx.addOverlay(overlay, Rect(1, 1, 2, 2));
   ctx.setBgcolor(color::Blue);
@@ -163,9 +162,8 @@ TEST_F(PaintContextTest, AddOverlayShapeTranslatesLocalExtentsAndAppliesClip) {
   canvas.set_out(clipper.out());
   PaintContext ctx(canvas, clipper);
 
-  ctx.addOverlayShape(
-      SmoothFilledCircle(FpPoint{1.5f, 1.5f}, 3.0f, color::Red),
-      Rect(1, 1, 2, 2));
+  ctx.addOverlayShape(SmoothFilledCircle(FpPoint{1.5f, 1.5f}, 3.0f, color::Red),
+                      Rect(1, 1, 2, 2));
   ctx.setBgcolor(color::Blue);
   ctx.clear();
 
@@ -198,7 +196,7 @@ TEST_F(PaintContextTest, AddDecorationTranslatesLocalBounds) {
 }
 
 TEST_F(PaintContextTest, DecorationUsesCurrentOverlaySpecWhenPresent) {
-  auto widget = std::make_unique<OverlaySpecSourceWidget>(env_);
+  auto widget = std::make_unique<OverlaySpecSourceWidget>(app_.context());
   OverlaySpecSourceWidget* widget_ptr = widget.get();
   app_.add(std::move(widget), Box(0, 0, 7, 7));
   widget_ptr->setSelected(true);
@@ -235,7 +233,7 @@ TEST_F(PaintContextTest, DecorationUsesCurrentOverlaySpecWhenPresent) {
 }
 
 TEST_F(PaintContextTest, ClipperOverlaySpecPushPopRestoresPreviousSpec) {
-  auto widget = std::make_unique<OverlaySpecSourceWidget>(env_);
+  auto widget = std::make_unique<OverlaySpecSourceWidget>(app_.context());
   OverlaySpecSourceWidget* widget_ptr = widget.get();
   app_.add(std::move(widget), Box(0, 0, 7, 7));
 
@@ -272,7 +270,7 @@ TEST_F(PaintContextTest, ClipperOverlaySpecPushPopRestoresPreviousSpec) {
 }
 
 TEST_F(PaintContextTest, ClipperOverlaySpecCoalescesAdjacentInertFrames) {
-  auto widget = std::make_unique<OverlaySpecSourceWidget>(env_);
+  auto widget = std::make_unique<OverlaySpecSourceWidget>(app_.context());
   OverlaySpecSourceWidget* widget_ptr = widget.get();
   app_.add(std::move(widget), Box(0, 0, 7, 7));
 
@@ -299,7 +297,7 @@ TEST_F(PaintContextTest, ClipperOverlaySpecCoalescesAdjacentInertFrames) {
 }
 
 TEST_F(PaintContextTest, PaintContextOverlaySpecForwardsFromClipper) {
-  auto widget = std::make_unique<OverlaySpecSourceWidget>(env_);
+  auto widget = std::make_unique<OverlaySpecSourceWidget>(app_.context());
   OverlaySpecSourceWidget* widget_ptr = widget.get();
   app_.add(std::move(widget), Box(0, 0, 7, 7));
   widget_ptr->setSelected(true);
@@ -325,11 +323,11 @@ TEST_F(PaintContextTest, PaintContextOverlaySpecForwardsFromClipper) {
 
 TEST_F(PaintContextTest,
        ContainerChildPaintRestoresOverlaySpecAfterModdedChild) {
-  auto container = std::make_unique<SingleChildContainer>(env_);
+  auto container = std::make_unique<SingleChildContainer>(app_.context());
   SingleChildContainer* container_ptr = container.get();
   app_.add(std::move(container), Box(0, 0, 15, 15));
 
-  auto child = std::make_unique<OverlaySpecSourceWidget>(env_);
+  auto child = std::make_unique<OverlaySpecSourceWidget>(app_.context());
   OverlaySpecSourceWidget* child_ptr = child.get();
   container_ptr->setChild(std::move(child), Rect(0, 0, 7, 7));
   child_ptr->setSelected(true);

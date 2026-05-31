@@ -131,13 +131,13 @@ Insets InsetsFromEnvelope(const Rect& logical_bounds, const Rect& envelope) {
 
 class SwitchBadgeRow : public FlexLayout {
  public:
-  SwitchBadgeRow(const Environment& env, const char* primary,
+  SwitchBadgeRow(ApplicationContext& context, const char* primary,
                  const char* secondary, bool on)
-      : FlexLayout(env, FlexDirection::kRow),
-        labels_(env, FlexDirection::kColumn),
-        primary_(env, primary, font_body1()),
-        secondary_(env, secondary, font_caption()),
-        sw_(env, on) {
+      : FlexLayout(context, FlexDirection::kRow),
+        labels_(context, FlexDirection::kColumn),
+        primary_(context, primary, font_body1()),
+        secondary_(context, secondary, font_caption()),
+        sw_(context, on) {
     setPadding(Padding(Scaled(12), Scaled(8)));
     setGap(Scaled(12));
     setAlignItems(AlignItems::kCenter);
@@ -162,8 +162,9 @@ class SwitchBadgeRow : public FlexLayout {
 
 class BadgeCard : public Widget {
  public:
-  BadgeCard(const Environment& env, const char* glyph, bool unclipped = false)
-      : Widget(env), glyph_(glyph) {
+  BadgeCard(ApplicationContext& context, const char* glyph,
+    bool unclipped = false)
+  : Widget(context), glyph_(glyph) {
     if (unclipped) {
       setParentClipMode(ParentClipMode::kUnclipped);
     }
@@ -261,11 +262,11 @@ class BadgeCard : public Widget {
 
 class BadgeCardColumn : public FlexLayout {
  public:
-  BadgeCardColumn(const Environment& env, const char* title,
+  BadgeCardColumn(ApplicationContext& context, const char* title,
                   bool unclipped = false)
-      : FlexLayout(env, FlexDirection::kColumn),
-        title_(env, title, font_caption()),
-        card_(env, "M3", unclipped) {
+      : FlexLayout(context, FlexDirection::kColumn),
+        title_(context, title, font_caption()),
+        card_(context, "M3", unclipped) {
     setGap(Scaled(6));
     setAlignItems(AlignItems::kCenter);
     add(title_, {.flex_grow = 0, .flex_shrink = 0});
@@ -281,39 +282,40 @@ class BadgeCardColumn : public FlexLayout {
 
 class BadgeScreen : public ScrollablePanel {
  public:
-  explicit BadgeScreen(const Environment& env)
-      : ScrollablePanel(env),
-        content_(env, FlexDirection::kColumn),
-        title_(env, "Material 3 badges", font_h6()),
+  explicit BadgeScreen(ApplicationContext& context)
+      : ScrollablePanel(context),
+        content_(context, FlexDirection::kColumn),
+        title_(context, "Material 3 badges", font_h6()),
         subtitle_(
-            env, "Step 3 - dot, text, numbers, overlap, and unclipped overflow",
+            context,
+            "Step 3 - dot, text, numbers, overlap, and unclipped overflow",
             font_caption()),
-        switches_heading_(env, "Badged switches", font_body1()),
-        switches_summary_(env,
+        switches_heading_(context, "Badged switches", font_body1()),
+        switches_summary_(context,
                           "Host-family example via BadgedSwitch with top-end "
                           "and top-start placement",
                           font_caption()),
-        dot_row_(env, "Dot badge", "setBadgeDot(), default kTopEnd", false),
-        text_row_(env, "Text badge", "setBadgeText(\"NEW\"), kTopStart", true),
-        value_row_(env, "Number badge", "setBadgeValue(42)", true),
-        truncation_row_(env, "Truncation", "setBadgeValue(1000) -> 999+",
+        dot_row_(context, "Dot badge", "setBadgeDot(), default kTopEnd", false),
+        text_row_(context, "Text badge", "setBadgeText(\"NEW\"), kTopStart", true),
+        value_row_(context, "Number badge", "setBadgeValue(42)", true),
+        truncation_row_(context, "Truncation", "setBadgeValue(1000) -> 999+",
                         false),
-        overlap_divider_(env),
-        overlap_heading_(env, "Owner-painted badge", font_body1()),
-        overlap_summary_(env,
+        overlap_divider_(context),
+        overlap_heading_(context, "Owner-painted badge", font_body1()),
+        overlap_summary_(context,
                          "Raw Badge helper settled before lower-z owner paint "
                          "in the same widget",
                          font_caption()),
-        overlap_card_(env, "IN"),
-        overflow_divider_(env),
-        overflow_heading_(env, "Overflow and clipping", font_body1()),
-        overflow_summary_(env,
+        overlap_card_(context, "IN"),
+        overflow_divider_(context),
+        overflow_heading_(context, "Overflow and clipping", font_body1()),
+        overflow_summary_(context,
                           "Same overhang: clipped on the left, visible on the "
                           "right with kUnclipped",
                           font_caption()),
-        overflow_row_(env, FlexDirection::kRow),
-        clipped_(env, "Clipped"),
-        unclipped_(env, "Unclipped", true) {
+        overflow_row_(context, FlexDirection::kRow),
+        clipped_(context, "Clipped"),
+        unclipped_(context, "Unclipped", true) {
     content_.setPadding(Padding(Scaled(12), Scaled(8)));
     content_.setGap(Scaled(6));
 
@@ -389,7 +391,7 @@ class BadgeScreen : public ScrollablePanel {
 roo_scheduler::Scheduler scheduler;
 Environment env(scheduler);
 Application app(&env, display);
-BadgeScreen badge_screen(env);
+BadgeScreen badge_screen(app.context());
 SingletonActivity activity(app, badge_screen);
 
 void setup() {

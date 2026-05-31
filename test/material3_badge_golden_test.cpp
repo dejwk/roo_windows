@@ -1,5 +1,4 @@
 #include "golden_image.h"
-
 #include "gtest/gtest.h"
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
@@ -38,8 +37,8 @@ Insets InsetsFromEnvelope(const Rect& logical_bounds, const Rect& envelope) {
 
 class SolidBackdrop : public BasicSurfaceWidget {
  public:
-  SolidBackdrop(const Environment& env, Color color, Dimensions dims)
-      : BasicSurfaceWidget(env), color_(color), dims_(dims) {}
+  SolidBackdrop(ApplicationContext& context, Color color, Dimensions dims)
+      : BasicSurfaceWidget(context), color_(color), dims_(dims) {}
 
   Color background() const override { return color_; }
 
@@ -57,8 +56,8 @@ class BadgeAnchorHost : public Widget {
   static constexpr int16_t kHostSize = Scaled(40);
   static constexpr int16_t kAnchorSize = Scaled(24);
 
-  explicit BadgeAnchorHost(const Environment& env, bool unclipped = false)
-      : Widget(env) {
+  explicit BadgeAnchorHost(ApplicationContext& context, bool unclipped = false)
+      : Widget(context) {
     if (unclipped) {
       setParentClipMode(ParentClipMode::kUnclipped);
     }
@@ -90,9 +89,9 @@ class BadgeAnchorHost : public Widget {
 
   Insets getInkInsets() const override {
     if (!badge_.visible()) return Insets::Zero();
-    return InsetsFromEnvelope(bounds(), Badge::ConservativeBounds(
-                                        anchorBounds(), placement_,
-                                        badge_.mode() == BadgeMode::kText));
+    return InsetsFromEnvelope(
+        bounds(), Badge::ConservativeBounds(anchorBounds(), placement_,
+                                            badge_.mode() == BadgeMode::kText));
   }
 
   Dimensions getSuggestedMinimumDimensions() const override {
@@ -204,14 +203,15 @@ class Material3BadgeGoldenTest : public testing::Test {
 
  private:
   void AddBackdrop(Application& app, Dimensions dims) {
-    auto backdrop = std::make_unique<SolidBackdrop>(env_, kBackdrop, dims);
+    auto backdrop =
+        std::make_unique<SolidBackdrop>(app.context(), kBackdrop, dims);
     app.add(std::move(backdrop),
             roo_display::Box(0, 0, dims.width() - 1, dims.height() - 1));
   }
 
   BadgeAnchorHost* AddBadgeAnchor(Application& app, int16_t x, int16_t y,
                                   bool unclipped) {
-    auto host = std::make_unique<BadgeAnchorHost>(env_, unclipped);
+    auto host = std::make_unique<BadgeAnchorHost>(app.context(), unclipped);
     BadgeAnchorHost* ptr = host.get();
     app.add(std::move(host),
             roo_display::Box(x, y, x + BadgeAnchorHost::kHostSize - 1,
@@ -221,7 +221,7 @@ class Material3BadgeGoldenTest : public testing::Test {
 
   BadgedSwitch* AddBadgedSwitch(Application& app, int16_t x, int16_t y,
                                 bool on) {
-    auto sw = std::make_unique<BadgedSwitch>(env_, on);
+    auto sw = std::make_unique<BadgedSwitch>(app.context(), on);
     BadgedSwitch* ptr = sw.get();
     app.add(std::move(sw),
             roo_display::Box(x, y, x + Scaled(52) - 1, y + Scaled(32) - 1));
