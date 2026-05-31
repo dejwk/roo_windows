@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 640" width="980" height="640">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 5 L 10 0 L 10 10 z" fill="#6b7280" />
+    </marker>
+    <style>
+      text {
+        font-family: "DejaVu Sans", Arial, sans-serif;
+        fill: #1f2933;
+        font-size: 18px;
+      }
+      .small { font-size: 15px; fill: #4b5563; }
+      .section { font-size: 14px; letter-spacing: 1px; fill: #6b7280; }
+      .title { font-size: 17px; font-weight: 700; }
+      .window { fill: #f4f7fb; stroke: #5f6770; stroke-width: 2; }
+      .body { fill: #dfe9f5; }
+      .scrim { fill: #4b5563; opacity: 0.14; }
+      .dialog { fill: #f7f3ee; stroke: #5f6770; stroke-width: 2; }
+      .dialog-full { fill: #f7f3ee; stroke: #5f6770; stroke-width: 2; }
+      .header { fill: #efe7de; }
+      .action { fill: #e8eef7; stroke: #7a8896; stroke-width: 1.5; }
+      .divider { stroke: #8e99a6; stroke-width: 2; }
+      .content-line { stroke: #9fb0c3; stroke-width: 2; }
+      .scroll-band { fill: none; stroke: #5576a4; stroke-width: 2; stroke-dasharray: 6 5; }
+      .dim { stroke: #6b7280; stroke-width: 2; fill: none; marker-start: url(#arrow); marker-end: url(#arrow); }
+      .leader { stroke: #6b7280; stroke-width: 2; fill: none; }
+      .note { fill: #ffffff; stroke: #d1d5db; stroke-width: 2; }
+      .overlay-dialog { fill: #fffaf4; stroke: #7a8896; stroke-width: 2; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="980" height="640" fill="#ffffff" />
+
+  <text x="56" y="34">Material 3 dialogs: basic and full-screen layout</text>
+
+  <text class="section" x="64" y="66">BASIC DIALOG</text>
+  <rect class="window" x="52" y="82" width="410" height="500" rx="14" ry="14" />
+  <rect class="body" x="66" y="96" width="382" height="472" rx="10" ry="10" />
+  <rect class="scrim" x="66" y="96" width="382" height="472" rx="10" ry="10" />
+
+  <rect class="dialog" x="120" y="176" width="276" height="246" rx="28" ry="28" />
+  <circle cx="258" cy="214" r="12" fill="#6f6a85" />
+  <text class="title" x="184" y="246">Use location service?</text>
+  <line class="divider" x1="144" y1="270" x2="372" y2="270" />
+  <rect class="scroll-band" x="144" y="286" width="228" height="88" rx="12" ry="12" />
+  <line class="content-line" x1="160" y1="314" x2="354" y2="314" />
+  <line class="content-line" x1="160" y1="342" x2="340" y2="342" />
+  <line class="content-line" x1="160" y1="370" x2="316" y2="370" />
+  <line class="divider" x1="144" y1="388" x2="372" y2="388" />
+  <rect class="action" x="248" y="400" width="56" height="28" rx="14" ry="14" />
+  <rect class="action" x="314" y="400" width="58" height="28" rx="14" ry="14" />
+  <text class="small" x="259" y="419">Cancel</text>
+  <text class="small" x="326" y="419">Agree</text>
+
+  <text class="title" x="120" y="158">Centered floating modal surface</text>
+  <line class="dim" x1="120" y1="166" x2="396" y2="166" />
+  <text class="small" x="194" y="156">280dp to 560dp width clamp</text>
+
+  <rect class="note" x="62" y="116" width="174" height="100" rx="14" ry="14" />
+  <text class="title" x="80" y="144">Pinned chrome</text>
+  <text class="small" x="80" y="172">Only the body scrolls.</text>
+  <text class="small" x="80" y="196">Header and actions stay</text>
+  <text class="small" x="80" y="220">visible through overflow.</text>
+  <path class="leader" d="M 236 184 H 252 V 330 H 266" />
+
+  <rect class="note" x="64" y="450" width="188" height="98" rx="14" ry="14" />
+  <text class="title" x="82" y="478">Dismiss policy</text>
+  <text class="small" x="82" y="506">Touches outside the dialog</text>
+  <text class="small" x="82" y="530">are absorbed, not used as</text>
+  <text class="small" x="82" y="554">scrim-tap dismissal.</text>
+  <path class="leader" d="M 252 494 H 288 V 448" />
+
+  <text class="section" x="520" y="66">FULL-SCREEN DIALOG</text>
+  <rect class="window" x="508" y="82" width="410" height="500" rx="14" ry="14" />
+  <rect class="dialog-full" x="522" y="96" width="382" height="472" rx="4" ry="4" />
+  <rect class="header" x="522" y="96" width="382" height="56" />
+  <circle cx="556" cy="124" r="18" fill="#e4e8ef" stroke="#7a8896" stroke-width="1.5" />
+  <path d="M 548 116 L 564 132 M 564 116 L 548 132" stroke="#56606b" stroke-width="2.5" stroke-linecap="round" />
+  <text class="title" x="586" y="130">New event</text>
+  <text class="title" x="830" y="130">Save</text>
+  <line class="divider" x1="522" y1="152" x2="904" y2="152" />
+  <line class="content-line" x1="550" y1="202" x2="844" y2="202" />
+  <line class="content-line" x1="550" y1="236" x2="820" y2="236" />
+  <line class="content-line" x1="550" y1="270" x2="852" y2="270" />
+  <line class="content-line" x1="550" y1="338" x2="844" y2="338" />
+  <line class="content-line" x1="550" y1="372" x2="814" y2="372" />
+  <line class="content-line" x1="550" y1="406" x2="838" y2="406" />
+  <line class="content-line" x1="550" y1="474" x2="844" y2="474" />
+  <line class="content-line" x1="550" y1="508" x2="796" y2="508" />
+  <path class="leader" d="M 868 198 V 518" stroke="#5576a4" stroke-width="2" marker-end="url(#arrow)" fill="none" />
+
+  <rect class="overlay-dialog" x="734" y="212" width="126" height="92" rx="18" ry="18" />
+  <line class="content-line" x1="752" y1="240" x2="842" y2="240" />
+  <rect class="action" x="756" y="262" width="40" height="22" rx="11" ry="11" />
+  <rect class="action" x="808" y="262" width="38" height="22" rx="11" ry="11" />
+
+  <text class="title" x="522" y="78">Full-window popup-hosted surface</text>
+  <line class="dim" x1="522" y1="86" x2="904" y2="86" />
+  <text class="small" x="652" y="76">0dp corners, 56dp header</text>
+
+  <rect class="note" x="536" y="170" width="166" height="104" rx="14" ry="14" />
+  <text class="title" x="554" y="198">Header actions</text>
+  <text class="small" x="554" y="226">Close stays leading and</text>
+  <text class="small" x="554" y="250">the optional confirm</text>
+  <text class="small" x="554" y="274">action stays trailing.</text>
+  <path class="leader" d="M 702 220 H 730 V 124 H 812" />
+
+  <rect class="note" x="536" y="428" width="192" height="116" rx="14" ry="14" />
+  <text class="title" x="554" y="456">Layering difference</text>
+  <text class="small" x="554" y="484">Because this dialog lives on</text>
+  <text class="small" x="554" y="508">the popup layer, a later basic</text>
+  <text class="small" x="554" y="532">dialog can still appear above</text>
+  <text class="small" x="554" y="556">it for discard confirmation.</text>
+  <path class="leader" d="M 728 484 H 742 V 304" />
+</svg>

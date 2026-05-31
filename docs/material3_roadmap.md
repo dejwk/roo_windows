@@ -53,6 +53,7 @@ The checked-in Material 3 component and shell coverage is also substantial:
 - [material3_lists_design.md](material3_lists_design.md)
 - [material3_menus_design.md](material3_menus_design.md)
 - [material3_sheets_design.md](material3_sheets_design.md)
+- [material3_dialogs_design.md](material3_dialogs_design.md)
 - [material3_snackbar_design.md](material3_snackbar_design.md)
 - [material3_buttons_design.md](material3_buttons_design.md)
 - [material3_icon_buttons_design.md](material3_icon_buttons_design.md)
@@ -138,7 +139,7 @@ than component demos.
 | --- | --- | --- | --- |
 | Material 3 theme and tokens design | New design doc | Every remaining component family depends on a coherent story for color roles, typography scale, shape families, density, and motion tokens. Without this, the repo can have many correct components but still lack a consistent system. | [material3_buttons_design.md](material3_buttons_design.md), [material3_text_fields_design.md](material3_text_fields_design.md), [material3_layout_scaffold_design.md](material3_layout_scaffold_design.md) |
 | Material 3 app bars and search surfaces implementation | Implementation follow-on against an existing design doc | [material3_app_bars_design.md](material3_app_bars_design.md) closes the top-edge shell contract, but the repo still needs the widget family and search-entry surfaces in code. | [material3_app_bars_design.md](material3_app_bars_design.md), [material3_layout_scaffold_design.md](material3_layout_scaffold_design.md), [material3_toolbars_design.md](material3_toolbars_design.md), [non_touch_input_design.md](non_touch_input_design.md) |
-| Material 3 dialogs | New design doc | Confirmations, destructive actions, blocking errors, and short wizard flows are still missing from the Material 3 story even though sheets and snackbars are already designed. | [material3_sheets_design.md](material3_sheets_design.md), [material3_snackbar_design.md](material3_snackbar_design.md), [non_touch_input_design.md](non_touch_input_design.md) |
+| Material 3 dialogs implementation follow-on | Implementation follow-on against an existing design doc | [material3_dialogs_design.md](material3_dialogs_design.md) now closes the basic-versus-full-screen dialog contract, but the repo still needs the implementation work that replaces the legacy dialog path and wires full-screen dialog hosting. | [material3_dialogs_design.md](material3_dialogs_design.md), [material3_sheets_design.md](material3_sheets_design.md), [non_touch_input_design.md](non_touch_input_design.md) |
 | [Application navigation and back behavior](application_navigation_back_behavior_design.md) | New design doc | The repo now has tabs, a page host, sheets, popups, and a non-touch-input design, but it still lacks one framework-level contract for route ownership, back dispatch, and later predictive-back integration. | [horizontal_page_host_design.md](horizontal_page_host_design.md), [material3_sheets_design.md](material3_sheets_design.md), [non_touch_input_design.md](non_touch_input_design.md) |
 
 Phase 1 exit condition:
@@ -209,7 +210,8 @@ The recommended authoring and implementation order is:
 
 1. write a Material 3 theme-and-tokens design doc,
 2. implement [material3_app_bars_design.md](material3_app_bars_design.md),
-3. write the dialog design doc,
+3. land the dialog implementation follow-on from
+  [material3_dialogs_design.md](material3_dialogs_design.md),
 4. write the navigation-and-back-behavior design doc,
 5. write the editable-text-core follow-on and update
    [material3_text_fields_design.md](material3_text_fields_design.md),
