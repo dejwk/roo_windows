@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="430" viewBox="0 0 920 430">
+  <rect width="920" height="430" fill="#ffffff"/>
+
+  <style>
+    .title { font: 700 18px Arial, Helvetica, sans-serif; fill: #1f2937; }
+    .label { font: 13px Arial, Helvetica, sans-serif; fill: #374151; }
+    .small { font: 12px Arial, Helvetica, sans-serif; fill: #4b5563; }
+    .caption { font: 12px Arial, Helvetica, sans-serif; fill: #6b7280; }
+    .rail { fill: #f5f7fa; stroke: #cbd5e1; stroke-width: 2; }
+    .header { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; }
+    .target { fill: none; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .indicator { fill: #c8d9ff; stroke: #5b8def; stroke-width: 1.5; }
+    .icon { fill: #64748b; }
+    .icon-selected { fill: #1f4fd8; }
+    .badge { fill: #d93025; }
+    .divider { stroke: #94a3b8; stroke-width: 2; }
+    .guide { stroke: #9ca3af; stroke-width: 1.5; marker-end: url(#arrow); }
+  </style>
+
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#9ca3af"/>
+    </marker>
+  </defs>
+
+  <text x="70" y="34" class="title">Collapsed rail</text>
+  <text x="355" y="34" class="title">Expanded rail</text>
+
+  <rect x="60" y="50" width="150" height="320" rx="24" class="rail"/>
+  <line x1="210" y1="68" x2="210" y2="352" class="divider"/>
+
+  <rect x="82" y="72" width="106" height="66" rx="16" class="header"/>
+  <circle cx="110" cy="105" r="12" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
+  <rect x="128" y="86" width="42" height="38" rx="18" fill="#dbeafe" stroke="#60a5fa" stroke-width="1.5"/>
+  <text x="95" y="149" class="caption">header slot</text>
+
+  <rect x="82" y="165" width="106" height="72" rx="16" class="target"/>
+  <rect x="91" y="177" width="88" height="48" rx="24" class="indicator"/>
+  <circle cx="135" cy="193" r="12" class="icon-selected"/>
+  <circle cx="147" cy="183" r="6" class="badge"/>
+  <text x="116" y="217" class="label">Inbox</text>
+
+  <rect x="82" y="246" width="106" height="72" rx="16" class="target"/>
+  <circle cx="135" cy="274" r="12" class="icon"/>
+  <text x="120" y="299" class="label">Sent</text>
+
+  <rect x="82" y="327" width="106" height="72" rx="16" class="target"/>
+  <circle cx="135" cy="355" r="12" class="icon"/>
+  <text x="109" y="380" class="label">Archive</text>
+
+  <line x1="188" y1="201" x2="294" y2="201" class="guide"/>
+  <text x="308" y="197" class="small">full-width target area</text>
+  <text x="308" y="214" class="small">indicator stays smaller</text>
+
+  <rect x="340" y="50" width="280" height="320" rx="24" class="rail"/>
+  <line x1="620" y1="68" x2="620" y2="352" class="divider"/>
+
+  <rect x="364" y="72" width="232" height="72" rx="16" class="header"/>
+  <circle cx="392" cy="108" r="12" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
+  <rect x="420" y="90" width="92" height="36" rx="18" fill="#dbeafe" stroke="#60a5fa" stroke-width="1.5"/>
+  <text x="368" y="154" class="caption">same header slot can host menu, FAB, or both</text>
+
+  <rect x="364" y="170" width="232" height="62" rx="16" class="target"/>
+  <rect x="380" y="179" width="146" height="44" rx="22" class="indicator"/>
+  <circle cx="406" cy="201" r="11" class="icon-selected"/>
+  <text x="427" y="206" class="label">Inbox</text>
+  <rect x="476" y="188" width="38" height="22" rx="11" class="badge"/>
+  <text x="486" y="204" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#ffffff">12</text>
+
+  <rect x="364" y="242" width="232" height="62" rx="16" class="target"/>
+  <circle cx="406" cy="273" r="11" class="icon"/>
+  <text x="427" y="278" class="label">Sent</text>
+
+  <rect x="364" y="314" width="232" height="62" rx="16" class="target"/>
+  <circle cx="406" cy="345" r="11" class="icon"/>
+  <text x="427" y="350" class="label">Archive</text>
+
+  <line x1="527" y1="200" x2="718" y2="200" class="guide"/>
+  <text x="732" y="196" class="small">expanded indicator hugs</text>
+  <text x="732" y="213" class="small">icon, label, and badge</text>
+
+  <line x1="596" y1="108" x2="782" y2="108" class="guide"/>
+  <text x="796" y="104" class="small">menu button and FAB remain</text>
+  <text x="796" y="121" class="small">top-aligned inside header</text>
+
+  <text x="60" y="405" class="caption">Both layouts keep the same destination model. The target area spans the full rail width, while the active indicator follows the current layout's content bounds.</text>
+</svg>

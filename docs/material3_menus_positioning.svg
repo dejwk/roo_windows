@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="460" viewBox="0 0 920 460">
+  <rect width="920" height="460" fill="#ffffff"/>
+  <style>
+    .label { font: 16px sans-serif; fill: #1f1f1f; }
+    .small { font: 13px sans-serif; fill: #4a4a4a; }
+    .task { fill: #faf7f2; stroke: #6b6257; stroke-width: 2; }
+    .anchor { fill: #d7ebff; stroke: #2f6690; stroke-width: 2; }
+    .menu { fill: #fff4dc; stroke: #8d6b2f; stroke-width: 2; }
+    .submenu { fill: #e6f4e8; stroke: #3d7a45; stroke-width: 2; }
+    .guide { stroke: #8b8b8b; stroke-width: 2; stroke-dasharray: 6 5; }
+  </style>
+
+  <text x="28" y="34" class="label">Material 3 menu placement and submenu fallback</text>
+  <text x="28" y="56" class="small">Root menus prefer the requested side, clamp to the visible window, and submenus move before the parent item when the after-side would overflow.</text>
+
+  <rect x="24" y="80" width="872" height="344" rx="18" class="task"/>
+  <text x="42" y="108" class="small">Visible task bounds</text>
+
+  <text x="88" y="142" class="label">1. Preferred below-start</text>
+  <rect x="108" y="166" width="86" height="30" rx="6" class="anchor"/>
+  <text x="122" y="186" class="small">Trigger</text>
+  <rect x="108" y="206" width="170" height="118" rx="16" class="menu"/>
+  <text x="130" y="236" class="small">Menu panel</text>
+  <text x="130" y="260" class="small">opens below anchor</text>
+
+  <text x="356" y="142" class="label">2. Fallback above when bottom would crop</text>
+  <rect x="414" y="314" width="82" height="30" rx="6" class="anchor"/>
+  <text x="429" y="334" class="small">Trigger</text>
+  <line x1="455" y1="302" x2="455" y2="166" class="guide"/>
+  <rect x="376" y="166" width="160" height="128" rx="16" class="menu"/>
+  <text x="396" y="196" class="small">Preferred below would</text>
+  <text x="396" y="218" class="small">overflow, so menu flips</text>
+  <text x="396" y="240" class="small">above the anchor</text>
+
+  <text x="640" y="142" class="label">3. Submenu after-side fallback</text>
+  <rect x="642" y="176" width="134" height="148" rx="16" class="menu"/>
+  <text x="662" y="206" class="small">Parent menu</text>
+  <rect x="656" y="236" width="106" height="28" rx="8" class="anchor"/>
+  <text x="669" y="255" class="small">Open submenu</text>
+  <line x1="774" y1="250" x2="826" y2="250" class="guide"/>
+  <rect x="560" y="194" width="64" height="112" rx="16" class="submenu"/>
+  <text x="566" y="224" class="small">Fallback</text>
+  <text x="566" y="246" class="small">before</text>
+  <text x="566" y="268" class="small">parent</text>
+  <text x="796" y="238" class="small">after-side</text>
+  <text x="796" y="260" class="small">would crop</text>
+</svg>
