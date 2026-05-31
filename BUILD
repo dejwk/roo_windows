@@ -19,6 +19,7 @@ cc_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        "@roo_collections",
         "@roo_display",
         "@roo_fonts_basic",
         "@roo_fonts_material",
@@ -218,6 +219,18 @@ cc_test(
     name = "material3_slider_test",
     srcs = [
         "test/material3_slider_test.cpp",
+    ],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
+cc_test(
+    name = "material3_badge_test",
+    srcs = [
+        "test/material3_badge_test.cpp",
     ],
     linkstatic = 1,
     deps = [
