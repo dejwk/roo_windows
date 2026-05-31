@@ -437,7 +437,8 @@ TEST_F(Material3ListRenderTest, InsetDividerPaintUsesResolvedInsets) {
   first_init.divider_inset_hint.start_inset = 40;
   first_init.divider_inset_hint.end_inset = 8;
 
-  auto first = std::make_unique<ListRow<StandardListItem>>(context(), first_init);
+  auto first =
+      std::make_unique<ListRow<StandardListItem>>(context(), first_init);
   auto second = std::make_unique<ListRow<StandardListItem>>(
       context(), StandardListItemInit::OneLine("Second"));
   ListEntry* first_row = first.get();
@@ -456,8 +457,8 @@ TEST_F(Material3ListRenderTest, InsetDividerPaintUsesResolvedInsets) {
 
   EXPECT_EQ(first_row->height() + divider_thickness, second_row->offsetTop());
 
-  int16_t divider_y = list_ptr->offsetTop() + first_row->offsetTop() +
-                      first_row->height();
+  int16_t divider_y =
+      list_ptr->offsetTop() + first_row->offsetTop() + first_row->height();
   int16_t row_left = list_ptr->offsetLeft() + first_row->offsetLeft();
   int16_t row_right = row_left + first_row->width() - 1;
 
@@ -483,7 +484,8 @@ TEST_F(Material3ListRenderTest, ExpressiveInsetDividerPaintUsesGapSpace) {
   first_init.divider_inset_hint.start_inset = 40;
   first_init.divider_inset_hint.end_inset = 8;
 
-  auto first = std::make_unique<ListRow<StandardListItem>>(context(), first_init);
+  auto first =
+      std::make_unique<ListRow<StandardListItem>>(context(), first_init);
   auto second = std::make_unique<ListRow<StandardListItem>>(
       context(), StandardListItemInit::OneLine("Second"));
   ListEntry* first_row = first.get();
@@ -500,17 +502,17 @@ TEST_F(Material3ListRenderTest, ExpressiveInsetDividerPaintUsesGapSpace) {
       context().theme().color.role(ColorRole::kOutlineVariant));
   roo_display::Color surface_color = test_support::QuantizeToArgb4444(
       context().theme().color.role(ColorRole::kSurface));
-    int16_t expressive_gap = Scaled(2);
-    int16_t divider_thickness = Scaled(1);
+  int16_t expressive_gap = Scaled(2);
+  int16_t divider_thickness = Scaled(1);
 
-    EXPECT_EQ(first_row->height() + expressive_gap + divider_thickness,
-        second_row->offsetTop());
+  EXPECT_EQ(first_row->height() + expressive_gap + divider_thickness,
+            second_row->offsetTop());
 
-  int16_t divider_y = list_ptr->offsetTop() + first_row->offsetTop() +
-              first_row->height() +
-              (expressive_gap + divider_thickness - divider_thickness) / 2;
-  int16_t row_bottom_y = list_ptr->offsetTop() + first_row->offsetTop() +
-                         first_row->height() - 1;
+  int16_t divider_y =
+      list_ptr->offsetTop() + first_row->offsetTop() + first_row->height() +
+      (expressive_gap + divider_thickness - divider_thickness) / 2;
+  int16_t row_bottom_y =
+      list_ptr->offsetTop() + first_row->offsetTop() + first_row->height() - 1;
   int16_t row_left = list_ptr->offsetLeft() + first_row->offsetLeft();
   int16_t row_right = row_left + first_row->width() - 1;
 
@@ -721,8 +723,7 @@ TEST(Material3List, ListGapResolutionDependsOnDividerPolicy) {
   Dimensions with_divider =
       list.measure(WidthSpec::Exactly(180), HeightSpec::Unspecified(0));
 
-  EXPECT_EQ(with_gap.height(),
-            with_divider.height() + Scaled(8) - Scaled(1));
+  EXPECT_EQ(with_gap.height(), with_divider.height() + Scaled(8) - Scaled(1));
   EXPECT_TRUE(first.visualContext().show_divider);
   EXPECT_FALSE(second.visualContext().show_divider);
 }

@@ -88,23 +88,24 @@ BorderStyle BorderStyleFor(const ListEntryVisualContext& context) {
     return BorderStyle(0, 0);
   }
 
-  uint8_t outer_radius = static_cast<uint8_t>(Scaled(kExpressiveOuterCornerRadiusDp));
-    uint8_t inner_radius =
+  uint8_t outer_radius =
+      static_cast<uint8_t>(Scaled(kExpressiveOuterCornerRadiusDp));
+  uint8_t inner_radius =
       static_cast<uint8_t>(Scaled(kExpressiveInnerCornerRadiusDp));
 
   switch (context.position) {
     case ListItemPosition::kSingle:
-      return BorderStyle(outer_radius, outer_radius, outer_radius,
-                         outer_radius, 0);
+      return BorderStyle(outer_radius, outer_radius, outer_radius, outer_radius,
+                         0);
     case ListItemPosition::kFirst:
-      return BorderStyle(outer_radius, outer_radius, inner_radius,
-                         inner_radius, 0);
+      return BorderStyle(outer_radius, outer_radius, inner_radius, inner_radius,
+                         0);
     case ListItemPosition::kMiddle:
-      return BorderStyle(inner_radius, inner_radius, inner_radius,
-                         inner_radius, 0);
+      return BorderStyle(inner_radius, inner_radius, inner_radius, inner_radius,
+                         0);
     case ListItemPosition::kLast:
-      return BorderStyle(inner_radius, inner_radius, outer_radius,
-                         outer_radius, 0);
+      return BorderStyle(inner_radius, inner_radius, outer_radius, outer_radius,
+                         0);
   }
   return BorderStyle(outer_radius, 0);
 }
@@ -144,8 +145,8 @@ TextSlotMetrics MeasureTextSlots(const ListItem* item) {
   int16_t width = 0;
   width = std::max(width, TextWidth(FontForOverline(), item->overlineText()));
   width = std::max(width, TextWidth(FontForHeadline(), item->headlineText()));
-  width = std::max(width,
-                   TextWidth(FontForSupporting(), item->supportingText()));
+  width =
+      std::max(width, TextWidth(FontForSupporting(), item->supportingText()));
 
   int16_t height = overline_lines * TextLineHeight(FontForOverline()) +
                    headline_lines * TextLineHeight(FontForHeadline()) +
@@ -215,12 +216,12 @@ RowLayoutMetrics ResolveRowLayout(const ListEntry& entry, WidthSpec width_spec,
   const ListItem* item = entry.item();
   const RowTokens tokens = TokensFor(entry.visualContext().variant);
 
-  Dimensions leading = MeasureChild(item == nullptr ? nullptr : item->leading(),
-                                    WidthSpec::Unspecified(0),
-                                    HeightSpec::Unspecified(0));
-  Dimensions trailing = MeasureChild(
-      item == nullptr ? nullptr : item->trailing(), WidthSpec::Unspecified(0),
-      HeightSpec::Unspecified(0));
+  Dimensions leading =
+      MeasureChild(item == nullptr ? nullptr : item->leading(),
+                   WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+  Dimensions trailing =
+      MeasureChild(item == nullptr ? nullptr : item->trailing(),
+                   WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
   TextSlotMetrics text = MeasureTextSlots(item);
 
   bool has_leading = leading.width() > 0 || leading.height() > 0;
@@ -229,19 +230,20 @@ RowLayoutMetrics ResolveRowLayout(const ListEntry& entry, WidthSpec width_spec,
 
   int16_t horizontal_gaps = 0;
   if (has_leading && has_text) horizontal_gaps += tokens.slot_gap;
-  if (has_trailing && (has_text || has_leading)) horizontal_gaps += tokens.slot_gap;
+  if (has_trailing && (has_text || has_leading))
+    horizontal_gaps += tokens.slot_gap;
 
   int16_t desired_main_width = tokens.horizontal_padding * 2 + leading.width() +
                                trailing.width() + text.width + horizontal_gaps;
 
-  Dimensions body = MeasureChild(item == nullptr ? nullptr : item->body(),
-                                 WidthSpec::Unspecified(0),
-                                 HeightSpec::Unspecified(0));
+  Dimensions body =
+      MeasureChild(item == nullptr ? nullptr : item->body(),
+                   WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
   bool has_body = body.width() > 0 || body.height() > 0;
-  int16_t desired_body_width = has_body ? tokens.horizontal_padding * 2 +
-                                              std::max<int16_t>(body.width(),
-                                                                text.width)
-                                        : 0;
+  int16_t desired_body_width =
+      has_body ? tokens.horizontal_padding * 2 +
+                     std::max<int16_t>(body.width(), text.width)
+               : 0;
   int16_t desired_width = std::max(desired_main_width, desired_body_width);
   int16_t resolved_width = ConstrainWidth(desired_width, width_spec);
 
@@ -251,21 +253,27 @@ RowLayoutMetrics ResolveRowLayout(const ListEntry& entry, WidthSpec width_spec,
       std::max<int16_t>(0, resolved_width - 2 * tokens.horizontal_padding);
   int16_t text_x = tokens.horizontal_padding;
   if (has_leading) text_x += leading.width() + (has_text ? tokens.slot_gap : 0);
-  int16_t trailing_x = resolved_width - tokens.horizontal_padding - trailing.width();
-  int16_t text_right = has_trailing ? trailing_x - tokens.slot_gap - 1
-                                    : resolved_width - tokens.horizontal_padding - 1;
-  int16_t text_width = has_text ? std::max<int16_t>(0, text_right - text_x + 1) : 0;
+  int16_t trailing_x =
+      resolved_width - tokens.horizontal_padding - trailing.width();
+  int16_t text_right = has_trailing
+                           ? trailing_x - tokens.slot_gap - 1
+                           : resolved_width - tokens.horizontal_padding - 1;
+  int16_t text_width =
+      has_text ? std::max<int16_t>(0, text_right - text_x + 1) : 0;
 
-  int16_t main_content_height = std::max<int16_t>(text.height, leading.height());
-  main_content_height = std::max<int16_t>(main_content_height, trailing.height());
-  int16_t row_band_height = std::max<int16_t>(
-      MinRowBandHeight(item, text), main_content_height + 2 * tokens.vertical_padding);
+  int16_t main_content_height =
+      std::max<int16_t>(text.height, leading.height());
+  main_content_height =
+      std::max<int16_t>(main_content_height, trailing.height());
+  int16_t row_band_height =
+      std::max<int16_t>(MinRowBandHeight(item, text),
+                        main_content_height + 2 * tokens.vertical_padding);
   int16_t body_y = row_band_height;
   if (has_body) body_y += tokens.body_gap;
-  int16_t desired_height = row_band_height +
-                           (has_body ? tokens.body_gap + body.height() +
-                                           tokens.vertical_padding
-                                     : 0);
+  int16_t desired_height =
+      row_band_height +
+      (has_body ? tokens.body_gap + body.height() + tokens.vertical_padding
+                : 0);
   int16_t resolved_height = ConstrainHeight(desired_height, height_spec);
 
   int16_t text_y = tokens.vertical_padding;
@@ -274,12 +282,12 @@ RowLayoutMetrics ResolveRowLayout(const ListEntry& entry, WidthSpec width_spec,
   }
   int16_t leading_y = item == nullptr
                           ? MiddleOffset(row_band_height, leading.height())
-                          : SlotY(item, item->leadingAlignment(), row_band_height,
-                                  leading.height(), tokens);
+                          : SlotY(item, item->leadingAlignment(),
+                                  row_band_height, leading.height(), tokens);
   int16_t trailing_y = item == nullptr
                            ? MiddleOffset(row_band_height, trailing.height())
-                           : SlotY(item, item->trailingAlignment(), row_band_height,
-                                   trailing.height(), tokens);
+                           : SlotY(item, item->trailingAlignment(),
+                                   row_band_height, trailing.height(), tokens);
 
   int16_t body_width = has_body ? std::max<int16_t>(0, content_width) : 0;
   if (has_body && body_width != body.width()) {
@@ -355,8 +363,8 @@ int FirstSelectedIndex(const std::vector<uint8_t>& selected_entries) {
 }
 
 bool ResolvedSelectedState(const std::vector<uint8_t>& selected_entries,
-                           const ListSelectionPolicy& selection_policy,
-                           int idx, int first_selected_idx) {
+                           const ListSelectionPolicy& selection_policy, int idx,
+                           int first_selected_idx) {
   if (selection_policy.mode == SelectionMode::kNone) return false;
   if (idx < 0 || idx >= static_cast<int>(selected_entries.size())) return false;
   if (selected_entries[idx] == 0) return false;
@@ -411,7 +419,7 @@ StandardListItemInit StandardListItemInit::ThreeLine(
 }
 
 ExpandablePanel::ExpandablePanel(ApplicationContext& context)
-  : Container(context),
+    : Container(context),
       content_(),
       animation_duration_millis_(0),
       animation_progress_millis_(0),
@@ -458,12 +466,12 @@ Widget& ExpandablePanel::getChild(int idx) {
 }
 
 ListEntry::ListEntry(ApplicationContext& context)
-  : Container(context),
+    : Container(context),
       item_(nullptr),
       leading_child_(nullptr),
-  overline_label_(nullptr),
-  headline_label_(nullptr),
-  supporting_label_(nullptr),
+      overline_label_(nullptr),
+      headline_label_(nullptr),
+      supporting_label_(nullptr),
       trailing_child_(nullptr),
       body_child_(nullptr),
       visual_context_() {}
@@ -511,31 +519,30 @@ void ListEntry::syncTextSlotsFromItem() {
     return;
   }
 
-  auto sync_label = [this](StringViewLabel*& label,
-                           roo_display::StringView text,
-                           const roo_display::Font& font,
-                           roo_display::Color color) {
-    if (text.empty()) {
-      clearTextLabel(label);
-      return;
-    }
-    if (label == nullptr) {
-      auto owned = std::make_unique<StringViewLabel>(
-          context(), text, font, color, kGravityLeft | kGravityMiddle);
-      label = owned.get();
-      attachChild(WidgetRef(std::move(owned)));
-      return;
-    }
-    label->setText(text);
-  };
+  auto sync_label =
+      [this](StringViewLabel*& label, roo_display::StringView text,
+             const roo_display::Font& font, roo_display::Color color) {
+        if (text.empty()) {
+          clearTextLabel(label);
+          return;
+        }
+        if (label == nullptr) {
+          auto owned = std::make_unique<StringViewLabel>(
+              context(), text, font, color, kGravityLeft | kGravityMiddle);
+          label = owned.get();
+          attachChild(WidgetRef(std::move(owned)));
+          return;
+        }
+        label->setText(text);
+      };
 
   const Theme& theme = context().theme();
   sync_label(overline_label_, item_->overlineText(), FontForOverline(),
              theme.color.onSurfaceVariant);
   sync_label(headline_label_, item_->headlineText(), FontForHeadline(),
              theme.color.onSurface);
-  sync_label(supporting_label_, item_->supportingText(),
-             FontForSupporting(), theme.color.onSurfaceVariant);
+  sync_label(supporting_label_, item_->supportingText(), FontForSupporting(),
+             theme.color.onSurfaceVariant);
 }
 
 void ListEntry::setItem(ListItem& item) {
@@ -574,9 +581,10 @@ void ListEntry::setItem(ListItem& item) {
 }
 
 void ListEntry::clearItem() {
-  if (item_ == nullptr && leading_child_ == nullptr && overline_label_ == nullptr &&
-      headline_label_ == nullptr && supporting_label_ == nullptr &&
-      trailing_child_ == nullptr && body_child_ == nullptr) {
+  if (item_ == nullptr && leading_child_ == nullptr &&
+      overline_label_ == nullptr && headline_label_ == nullptr &&
+      supporting_label_ == nullptr && trailing_child_ == nullptr &&
+      body_child_ == nullptr) {
     return;
   }
   detachBoundChildren();
@@ -616,8 +624,8 @@ BorderStyle ListEntry::getBorderStyle() const {
 }
 
 Dimensions ListEntry::getSuggestedMinimumDimensions() const {
-  RowLayoutMetrics layout = ResolveRowLayout(
-      *this, WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+  RowLayoutMetrics layout = ResolveRowLayout(*this, WidthSpec::Unspecified(0),
+                                             HeightSpec::Unspecified(0));
   return Dimensions(layout.width, layout.height);
 }
 
@@ -675,8 +683,9 @@ void ListEntry::onLayout(bool changed, const Rect& rect) {
   (void)changed;
   // Reuse the same geometry resolver used by measure() and paint() so child
   // slot placement stays consistent with the resolved text layout.
-  RowLayoutMetrics layout = ResolveRowLayout(
-      *this, WidthSpec::Exactly(rect.width()), HeightSpec::Exactly(rect.height()));
+  RowLayoutMetrics layout =
+      ResolveRowLayout(*this, WidthSpec::Exactly(rect.width()),
+                       HeightSpec::Exactly(rect.height()));
 
   auto layout_text_label = [this](StringViewLabel* label, int16_t x, int16_t y,
                                   int16_t max_width) {
@@ -692,8 +701,7 @@ void ListEntry::onLayout(bool changed, const Rect& rect) {
       label->layout(Rect(0, 0, -1, -1));
       return;
     }
-    label->layout(Rect(x, y, x + label_width - 1,
-                       y + measured.height() - 1));
+    label->layout(Rect(x, y, x + label_width - 1, y + measured.height() - 1));
   };
 
   int16_t text_y = layout.text_y;
@@ -709,9 +717,10 @@ void ListEntry::onLayout(bool changed, const Rect& rect) {
                     layout.text_width);
 
   if (leading_child_ != nullptr && !leading_child_->isGone()) {
-    leading_child_->layout(Rect(layout.leading_x, layout.leading_y,
-                                layout.leading_x + layout.leading.width() - 1,
-                                layout.leading_y + layout.leading.height() - 1));
+    leading_child_->layout(
+        Rect(layout.leading_x, layout.leading_y,
+             layout.leading_x + layout.leading.width() - 1,
+             layout.leading_y + layout.leading.height() - 1));
   }
   if (trailing_child_ != nullptr && !trailing_child_->isGone()) {
     trailing_child_->layout(
@@ -794,7 +803,7 @@ Widget* StandardListItem::trailingWidget() { return trailing_; }
 Widget* StandardListItem::bodyWidget() { return body_; }
 
 List::List(ApplicationContext& context)
-  : Container(context),
+    : Container(context),
       entries_(),
       selected_entries_(),
       variant_(ListVariant::kExpressive),
@@ -834,52 +843,37 @@ int16_t List::interRowGap(int previous_idx, int next_idx) const {
   return gap;
 }
 
-void List::paintWidgetContents(PaintContext& ctx) {
-  Canvas& canvas = ctx.canvas();
-  Clipper& clipper = ctx.clipperForFramework();
-  if (isInvalidated() && !ctx.isDeadlineExceeded()) {
-    Canvas divider_canvas = canvas;
-    divider_canvas.clipToExtents(bounds());
-    if (!divider_canvas.clip_box().empty()) {
-      clipper.setBounds(divider_canvas.clip_box());
-      const roo_display::Color divider_color = theme().color.outlineVariant;
-      const int16_t divider_thickness = DividerThicknessPx();
+void List::paint(PaintContext& ctx) const {
+  if (!ctx.isDeadlineExceeded()) {
+    const roo_display::Color divider_color = theme().color.outlineVariant;
+    const int16_t divider_thickness = DividerThicknessPx();
 
-      int previous_visible_idx = -1;
-      for (int i = 0; i < static_cast<int>(entries_.size()); ++i) {
-        const ListEntry& entry = *entries_[i];
-        if (entry.isGone()) continue;
-        if (previous_visible_idx >= 0) {
-          const ListEntry& previous = *entries_[previous_visible_idx];
-          int16_t gap = interRowGap(previous_visible_idx, i);
-          if (gap >= divider_thickness) {
-            int16_t divider_top = previous.offsetTop() + previous.height() +
-                                  (gap - divider_thickness) / 2;
-            int16_t divider_bottom = divider_top + divider_thickness - 1;
-            DividerMetrics divider = ResolveDividerMetrics(
-                previous, previous.offsetLeft(), divider_top);
-            if (divider.visible) {
-              divider_canvas.fillRect(divider.start_x, divider_top,
-                                      divider.end_x, divider_bottom,
-                                      divider_color);
-              roo_display::Box device_box = roo_display::Box::Intersect(
-                  roo_display::Box(divider_canvas.dx() + divider.start_x,
-                                   divider_canvas.dy() + divider_top,
-                                   divider_canvas.dx() + divider.end_x,
-                                   divider_canvas.dy() + divider_bottom),
-                  divider_canvas.clip_box());
-              if (!device_box.empty()) {
-                clipper.addExclusion(device_box);
-              }
-            }
+    int previous_visible_idx = -1;
+    for (int i = 0; i < static_cast<int>(entries_.size()); ++i) {
+      const ListEntry& entry = *entries_[i];
+      if (entry.isGone()) continue;
+      if (previous_visible_idx >= 0) {
+        const ListEntry& previous = *entries_[previous_visible_idx];
+        int16_t gap = interRowGap(previous_visible_idx, i);
+        if (gap >= divider_thickness) {
+          int16_t divider_top = previous.offsetTop() + previous.height() +
+                                (gap - divider_thickness) / 2;
+          int16_t divider_bottom = divider_top + divider_thickness - 1;
+          DividerMetrics divider = ResolveDividerMetrics(
+              previous, previous.offsetLeft(), divider_top);
+          if (divider.visible) {
+            Rect divider_bounds(divider.start_x, divider_top, divider.end_x,
+                                divider_bottom);
+            ctx.fillRect(divider_bounds, divider_color);
+            ctx.addExclusion(divider_bounds);
           }
         }
-        previous_visible_idx = i;
       }
+      previous_visible_idx = i;
     }
   }
 
-  Container::paintWidgetContents(ctx);
+  Container::paint(ctx);
 }
 
 // Resolves the list-owned row context so each entry sees stable variant,
@@ -899,12 +893,12 @@ void List::refreshEntryVisualContexts() {
     context.variant = variant_;
     context.style = style_;
     context.position = PositionForIndex(i, count);
-    context.selected = ResolvedSelectedState(selected_entries_, selection_policy_,
-                                            i, first_selected_idx);
-    bool next_selected = ResolvedSelectedState(selected_entries_, selection_policy_,
-                                               i + 1, first_selected_idx);
-    context.show_divider =
-        ShouldShowDivider(divider_policy_, i, count, context.selected, next_selected);
+    context.selected = ResolvedSelectedState(
+        selected_entries_, selection_policy_, i, first_selected_idx);
+    bool next_selected = ResolvedSelectedState(
+        selected_entries_, selection_policy_, i + 1, first_selected_idx);
+    context.show_divider = ShouldShowDivider(divider_policy_, i, count,
+                                             context.selected, next_selected);
     context.divider_mode = divider_policy_.mode;
     context.divider_start_inset = divider_policy_.start_inset;
     context.divider_end_inset = divider_policy_.end_inset;
@@ -991,11 +985,13 @@ Dimensions List::onMeasure(WidthSpec width, HeightSpec height) {
   if (width.kind() == EXACTLY) {
     resolved_width = width.value();
   } else {
-    WidthSpec row_width = width.kind() == AT_MOST ? WidthSpec::AtMost(width.value())
-                                                  : WidthSpec::Unspecified(0);
+    WidthSpec row_width = width.kind() == AT_MOST
+                              ? WidthSpec::AtMost(width.value())
+                              : WidthSpec::Unspecified(0);
     for (ListEntry* entry : entries_) {
       if (entry->isGone()) continue;
-      Dimensions measured = entry->measure(row_width, HeightSpec::Unspecified(0));
+      Dimensions measured =
+          entry->measure(row_width, HeightSpec::Unspecified(0));
       resolved_width = std::max<int16_t>(resolved_width, measured.width());
     }
     resolved_width = ConstrainWidth(resolved_width, width);
@@ -1006,8 +1002,8 @@ Dimensions List::onMeasure(WidthSpec width, HeightSpec height) {
   for (int i = 0; i < static_cast<int>(entries_.size()); ++i) {
     ListEntry* entry = entries_[i];
     if (entry->isGone()) continue;
-    Dimensions measured =
-        entry->measure(WidthSpec::Exactly(resolved_width), HeightSpec::Unspecified(0));
+    Dimensions measured = entry->measure(WidthSpec::Exactly(resolved_width),
+                                         HeightSpec::Unspecified(0));
     if (previous_visible_idx >= 0) {
       total_height += interRowGap(previous_visible_idx, i);
     }
@@ -1030,8 +1026,8 @@ void List::onLayout(bool changed, const Rect& rect) {
     if (previous_visible_idx >= 0) {
       y += interRowGap(previous_visible_idx, i);
     }
-    Dimensions measured =
-        entry->measure(WidthSpec::Exactly(rect.width()), HeightSpec::Unspecified(0));
+    Dimensions measured = entry->measure(WidthSpec::Exactly(rect.width()),
+                                         HeightSpec::Unspecified(0));
     entry->layout(Rect(0, y, rect.width() - 1, y + measured.height() - 1));
     y += measured.height();
     previous_visible_idx = i;

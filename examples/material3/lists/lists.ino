@@ -202,11 +202,10 @@ class MenuPrototypeSection : public FlexLayout {
   explicit MenuPrototypeSection(ApplicationContext& context)
       : FlexLayout(context, FlexDirection::kColumn),
         title_(context, "Baseline menu prototype", font_body1()),
-        subtitle_(
-            context,
-      "Baseline rows stay square and use full-width dividers for "
-      "stronger separation.",
-            font_caption()),
+        subtitle_(context,
+                  "Baseline rows stay square and use full-width dividers for "
+                  "stronger separation.",
+                  font_caption()),
         list_(context),
         refresh_shortcut_(context, "R", font_caption()),
         edit_shortcut_(context, "E", font_caption()),
