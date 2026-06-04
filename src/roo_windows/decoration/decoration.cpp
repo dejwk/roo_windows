@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "roo_display/shape/smooth.h"
 #include "roo_windows/core/theme.h"
 
 // #include "roo_windows/shadows/quarter_circle.h"
@@ -601,5 +602,48 @@ bool Decoration::readColorRect(int16_t xMin, int16_t yMin, int16_t xMax,
   }
   return false;
 }
+
+// class NoShadowDecorationStream : public roo_display::PixelStream {
+//  public:
+//   NoShadowDecorationStream(float x0, float y0, float x1, float y1,
+//                            const roo_display::RoundRectRadii& radii,
+//                            float thickness, roo_display::Color color,
+//                            roo_display::Color interior_color,
+//                            const roo_display::Box& bounds)
+//       : shape_(roo_display::SmoothThickRoundRect(
+//             x0, y0, x1, y1, radii, thickness, color, interior_color)),
+//         stream_(shape_.createStream(bounds)) {}
+
+//   void read(roo_display::Color* buf, uint16_t count,
+//             uint32_t& run_length) override {
+//     return stream_->read(buf, count, run_length);
+//   }
+
+//   void skip(uint32_t count) override { return stream_->skip(count); }
+
+//  private:
+//   roo_display::SmoothShape shape_;
+//   std::unique_ptr<roo_display::PixelStream> stream_;
+// };
+
+// std::unique_ptr<roo_display::PixelStream> Decoration::createStream(
+//     const roo_display::Box& bounds) const {
+//   if (shadow_extents_ == widget_extents_) {
+//     // Fast path for zero-elevation case: we can use a single smooth shape
+//     // without needing to combine multiple shadow/background layers.
+//     return std::make_unique<NoShadowDecorationStream>(
+//         widget_extents_.xMin() - 0.5f, widget_extents_.yMin() - 0.5f,
+//         widget_extents_.xMax() + 0.5f, widget_extents_.yMax() + 0.5f,
+//         roo_display::RoundRectRadii{
+//             corner_radii_.top_left, corner_radii_.top_right,
+//             corner_radii_.bottom_left, corner_radii_.bottom_right},
+//         outline_width_ / 16.0f, outline_color_, bgcolor_, bounds);
+//   }
+//   return Rasterizable::createStream(bounds);
+// }
+
+// std::unique_ptr<roo_display::PixelStream> Decoration::createStream() const {
+//   return createStream(widget_extents_);
+// }
 
 }  // namespace roo_windows

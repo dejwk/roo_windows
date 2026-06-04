@@ -54,6 +54,11 @@ class Decoration : public roo_display::Rasterizable {
                             int16_t yMax,
                             roo_display::Color* result) const override;
 
+  // std::unique_ptr<roo_display::PixelStream> createStream() const override;
+
+  // std::unique_ptr<roo_display::PixelStream> createStream(
+  //     const roo_display::Box& bounds) const override;
+
  private:
   roo_display::Color read(int16_t x, int16_t y) const;
 
