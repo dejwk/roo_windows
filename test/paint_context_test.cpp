@@ -39,9 +39,9 @@ class SingleChildContainer : public Container {
   explicit SingleChildContainer(ApplicationContext& context)
       : Container(context), child_(nullptr) {}
 
-  void setChild(WidgetRef child, const Rect& bounds) {
-    child_ = child.get();
-    attachChild(std::move(child), bounds);
+  void setChild(std::unique_ptr<Widget> child, const Rect& bounds) {
+    child_ = std::move(child);
+    attachChild(*child_, bounds);
   }
 
  protected:
@@ -58,7 +58,7 @@ class SingleChildContainer : public Container {
   }
 
  private:
-  Widget* child_;
+  std::unique_ptr<Widget> child_;
 };
 
 class PaintContextTest : public testing::Test {

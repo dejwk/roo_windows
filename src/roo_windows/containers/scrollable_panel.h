@@ -16,7 +16,8 @@ class VerticalScrollBar : public Widget {
  public:
   enum class Presence { kAlwaysShown, kShownWhenScrolling, kAlwaysHidden };
 
-  VerticalScrollBar(ApplicationContext& context) : Widget(context), begin_(0), end_(0) {}
+  VerticalScrollBar(ApplicationContext& context)
+      : Widget(context), begin_(0), end_(0) {}
 
   /// Sets the visible range of the scrolled content along the Y axis (in
   /// content coordinates) so the thumb's size and position match the panel.
@@ -77,7 +78,10 @@ class SimpleScrollablePanel : public Container,
     scroll_bar_.setVisibility(Visibility::kInvisible);
   }
 
-  ~SimpleScrollablePanel() { cancelPendingUpdate(); }
+  ~SimpleScrollablePanel() {
+    cancelPendingUpdate();
+    clearContents();  // Delete if owned.
+  }
 
   void setContents(WidgetRef new_contents) {
     if (contents() == &*new_contents &&
