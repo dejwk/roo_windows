@@ -12,6 +12,7 @@ cc_binary(
     tags = ["manual"],
     deps = [
         "@roo_windows",
+        "@roo_display//fake:reference_device",
         "@roo_testing//:arduino_main",
         "@roo_testing//roo_testing/devices/display/ili9341:spi",
         "@roo_testing//roo_testing/devices/touch/xpt2046:spi",
