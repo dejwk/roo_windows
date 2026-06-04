@@ -64,10 +64,10 @@ namespace {
 
 class DecoratedWidget : public BasicSurfaceWidget {
  public:
-  DecoratedWidget(const Environment& env, roo_display::Color fill_color,
+  DecoratedWidget(ApplicationContext& cxt, roo_display::Color fill_color,
                   roo_display::Color outline_color, BorderStyle border_style,
                   uint8_t elevation, Dimensions dims)
-      : BasicSurfaceWidget(env),
+      : BasicSurfaceWidget(cxt),
         fill_color_(fill_color),
         outline_color_(outline_color),
         border_style_(border_style),
@@ -82,7 +82,7 @@ class DecoratedWidget : public BasicSurfaceWidget {
 
   uint8_t getElevation() const override { return elevation_; }
 
-  void paint(const Canvas& canvas) const override { canvas.clear(); }
+  void paint(PaintContext& cxt) const override { cxt.canvas().clear(); }
   Margins getMargins() const override { return Margins(MarginSize::kHuge); }
 
   Dimensions getSuggestedMinimumDimensions() const override { return dims_; }
@@ -107,11 +107,12 @@ class BenchmarkScene {
         env_(scheduler_),
         app_(&env_, display),
         card_(nullptr) {
-    auto backdrop = std::make_unique<roo_windows::FlexLayout>(env_);
+    auto backdrop = std::make_unique<roo_windows::FlexLayout>(app_.context());
 
     auto card = std::make_unique<DecoratedWidget>(
-        env_, roo_display::Color(0xFFE9A334), roo_display::Color(0xFF0F7FBF),
-        border_style, elevation, Dimensions(92, 58));
+        app_.context(), roo_display::Color(0xFFE9A334),
+        roo_display::Color(0xFF0F7FBF), border_style, elevation,
+        Dimensions(92, 58));
     card_ = card.get();
     backdrop->add(std::move(card));
     // app_.add(WidgetRef(std::move(card)), roo_display::Box(44, 30, 135, 87));
