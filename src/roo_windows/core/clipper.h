@@ -1,12 +1,11 @@
 #pragma once
 
-#include <algorithm>
-#include <array>
 #include <deque>
 #include <utility>
 #include <vector>
 
 #include "roo_display.h"
+#include "roo_display/composition/rasterizable_stack.h"
 #include "roo_display/core/box.h"
 #include "roo_display/core/rasterizable.h"
 #include "roo_display/filter/clip_exclude_rects.h"
@@ -29,103 +28,49 @@ struct OverlaySpecStackEntry {
   uint16_t refcount;
 };
 
-/// Internal helper: wraps a `Rasterizable` with an additional clip box.
+/// Internal helper: clipper-owned overlay descriptor.
 ///
-/// Used by `Clipper` to compose overlays (decorations, press effects, etc.)
-/// against a per-widget clip without copying their pixel data.
-class ClippedOverlay : public roo_display::Rasterizable {
+/// Stores the source rasterizable and the clip/translation metadata needed to
+/// rebuild `RasterizableStack` inputs during `ClipperOutput::sync()`.
+class ClippedOverlay {
  public:
-  /// Wraps `delegate` with device-space clipping and an optional translation.
-  ClippedOverlay(const roo_display::Rasterizable* delegate,
+  /// Captures source raster plus device-space clip and translation.
+  ClippedOverlay(const roo_display::Rasterizable* source,
                  roo_display::Box clip_box, int16_t dx = 0, int16_t dy = 0)
-      : delegate_(delegate),
+      : source_(source),
+        device_clip_(clip_box),
         extents_(roo_display::Box::Intersect(
-            delegate->extents().translate(dx, dy), clip_box)),
+            source->extents().translate(dx, dy), clip_box)),
         dx_(dx),
         dy_(dy) {}
 
-  /// Returns the translated overlay extents after clipping.
-  roo_display::Box extents() const override { return extents_; }
+  /// Returns source rasterizable.
+  const roo_display::Rasterizable* source() const { return source_; }
 
-  /// Reads colors from the wrapped overlay in device coordinates.
-  void readColors(const int16_t* x, const int16_t* y, uint32_t count,
-                  roo_display::Color* result) const override {
-    if (dx_ == 0 && dy_ == 0) {
-      delegate_->readColors(x, y, count, result);
-      return;
-    }
-    if (count == 0) return;
-    int16_t shifted_x[64];
-    int16_t shifted_y[64];
-    do {
-      uint32_t batch_size = std::min<uint32_t>(count, 64u);
-      for (uint32_t i = 0; i < batch_size; ++i) {
-        shifted_x[i] = x[i] - dx_;
-        shifted_y[i] = y[i] - dy_;
-      }
-      delegate_->readColors(shifted_x, shifted_y, batch_size, result);
-      x += batch_size;
-      y += batch_size;
-      result += batch_size;
-      count -= batch_size;
-    } while (count > 0);
-  }
+  /// Returns device-space clip used when the overlay was registered.
+  const roo_display::Box& deviceClip() const { return device_clip_; }
 
-  /// Reads a translated rectangle from the wrapped overlay.
-  bool readColorRect(int16_t xMin, int16_t yMin, int16_t xMax, int16_t yMax,
-                     roo_display::Color* result) const override {
-    return delegate_->readColorRect(xMin - dx_, yMin - dy_, xMax - dx_,
-                                    yMax - dy_, result);
-  }
+  /// Returns x translation from source to device coordinates.
+  int16_t dx() const { return dx_; }
 
-  /// Checks whether a translated rectangle is uniformly colored.
-  bool readUniformColorRect(int16_t xMin, int16_t yMin, int16_t xMax,
-                            int16_t yMax,
-                            roo_display::Color* result) const override {
-    return delegate_->readUniformColorRect(xMin - dx_, yMin - dy_, xMax - dx_,
-                                           yMax - dy_, result);
+  /// Returns y translation from source to device coordinates.
+  int16_t dy() const { return dy_; }
+
+  /// Returns translated extents clipped in device coordinates.
+  const roo_display::Box& extents() const { return extents_; }
+
+  /// Computes source-space clip matching device clip and translation.
+  roo_display::Box sourceClip() const {
+    return roo_display::Box::Intersect(source_->extents(),
+                                       device_clip_.translate(-dx_, -dy_));
   }
 
  private:
-  const roo_display::Rasterizable* delegate_;
+  const roo_display::Rasterizable* source_;
+  roo_display::Box device_clip_;
   roo_display::Box extents_;
   int16_t dx_;
   int16_t dy_;
-};
-
-/// Internal helper: a `Rasterizable` that composites a contiguous range of
-/// `ClippedOverlay`s top-down at read time.
-class OverlayStack : public roo_display::Rasterizable {
- public:
-  /// Creates an empty overlay stack.
-  OverlayStack()
-      : begin_(nullptr),
-        end_(nullptr),
-        extents_(roo_display::Box(0, 0, -1, -1)) {}
-
-  /// Rebinds the stack to the half-open range `[begin, end)`.
-  void reset(const ClippedOverlay* begin, const ClippedOverlay* end);
-
-  /// Returns the union of the active overlays' extents.
-  roo_display::Box extents() const override { return extents_; }
-
-  /// Reads colors by compositing overlays in stack order.
-  void readColors(const int16_t* x, const int16_t* y, uint32_t count,
-                  roo_display::Color* result) const override;
-
-  /// Reads a rectangle by compositing overlays in stack order.
-  bool readColorRect(int16_t xMin, int16_t yMin, int16_t xMax, int16_t yMax,
-                     roo_display::Color* result) const override;
-
-  /// Checks whether the composed rectangle resolves to one color.
-  bool readUniformColorRect(int16_t xMin, int16_t yMin, int16_t xMax,
-                            int16_t yMax,
-                            roo_display::Color* result) const override;
-
- private:
-  const ClippedOverlay* begin_;
-  const ClippedOverlay* end_;
-  roo_display::Box extents_;
 };
 
 /// Internal helper: owns the buffers that back `ClipperOutput`.
@@ -152,11 +97,10 @@ class ClipperState {
   std::deque<OverlaySpecStackEntry> overlay_specs_;
 
   std::vector<ClippedOverlay> overlays_;
-  std::vector<ClippedOverlay> bounded_overlays_;
 };
 
 /// Internal helper: `DisplayOutput` filter that combines exclusion rectangles
-/// and a stack of `ClippedOverlay`s on top of a downstream output.
+/// and clipper overlays on top of a downstream output.
 ///
 /// Exclusion rectangles let an ancestor skip pixels already covered by
 /// descendants; overlays let descendants stamp decoration (shadows, ink,
@@ -172,9 +116,8 @@ class ClipperOutput : public roo_display::DisplayOutput {
         decorations_(state.decorations_),
         shape_overlays_(state.shape_overlays_),
         overlays_(state.overlays_),
-        bounded_overlays_(state.bounded_overlays_),
         valid_(true),
-        overlay_stack_(),
+        overlay_stack_(roo_display::Box(0, 0, -1, -1)),
         overlay_filter_(out, &overlay_stack_),
         rect_union_(nullptr, nullptr),
         rect_union_filter_(overlay_filter_, &rect_union_),
@@ -185,7 +128,6 @@ class ClipperOutput : public roo_display::DisplayOutput {
     decorations_.clear();
     shape_overlays_.clear();
     overlays_.clear();
-    bounded_overlays_.clear();
   }
 
   /// Narrows subsequent sync work to overlays and exclusions intersecting
@@ -312,21 +254,42 @@ class ClipperOutput : public roo_display::DisplayOutput {
   void sync() {
     if (valid_) return;
     bounded_exclusions_.clear();
-    bounded_overlays_.clear();
     for (const auto& e : exclusions_) {
       if (e.intersects(bounds_)) {
         bounded_exclusions_.push_back(e);
       }
     }
-    rect_union_.reset(&*bounded_exclusions_.begin(),
-                      &*bounded_exclusions_.end());
-    for (const auto& e : overlays_) {
-      if (e.extents().intersects(bounds_)) {
-        bounded_overlays_.push_back(e);
+    const roo_display::Box* exclusion_begin =
+        bounded_exclusions_.empty() ? nullptr : &bounded_exclusions_.front();
+    const roo_display::Box* exclusion_end = exclusion_begin;
+    if (exclusion_end != nullptr) {
+      exclusion_end += bounded_exclusions_.size();
+    }
+    rect_union_.reset(exclusion_begin, exclusion_end);
+
+    // Rebuild active overlays directly into a reusable RasterizableStack,
+    // preserving clipper's "earlier overlays stay above later overlays"
+    // contract by traversing descriptors in reverse insertion order.
+    overlay_stack_.clearInputs();
+    overlay_stack_.reserveInputs(overlays_.size());
+    roo_display::Box overlay_extents(0, 0, -1, -1);
+    bool has_overlays = false;
+    for (auto it = overlays_.rbegin(); it != overlays_.rend(); ++it) {
+      if (!it->extents().intersects(bounds_)) continue;
+      roo_display::Box source_clip = it->sourceClip();
+      if (source_clip.empty()) continue;
+      overlay_stack_.addInput(it->source(), source_clip, it->dx(), it->dy());
+      roo_display::Box translated = source_clip.translate(it->dx(), it->dy());
+      if (!has_overlays) {
+        overlay_extents = translated;
+        has_overlays = true;
+      } else {
+        overlay_extents = roo_display::Box::Extent(overlay_extents, translated);
       }
     }
-    if (bounded_overlays_.empty()) {
-      overlay_stack_.reset(nullptr, nullptr);
+
+    if (!has_overlays) {
+      overlay_stack_.setExtents(roo_display::Box(0, 0, -1, -1));
       if (bounded_exclusions_.empty()) {
         output_ = &orig_output_;
       } else {
@@ -334,8 +297,7 @@ class ClipperOutput : public roo_display::DisplayOutput {
         output_ = &rect_union_filter_;
       }
     } else {
-      overlay_stack_.reset(&*bounded_overlays_.begin(),
-                           &*bounded_overlays_.end());
+      overlay_stack_.setExtents(overlay_extents);
       if (bounded_exclusions_.empty()) {
         output_ = &overlay_filter_;
       } else {
@@ -353,9 +315,8 @@ class ClipperOutput : public roo_display::DisplayOutput {
   std::deque<Decoration>& decorations_;
   std::deque<roo_display::SmoothShape>& shape_overlays_;
   std::vector<ClippedOverlay>& overlays_;
-  std::vector<ClippedOverlay>& bounded_overlays_;
   bool valid_;
-  OverlayStack overlay_stack_;
+  roo_display::RasterizableStack overlay_stack_;
   roo_display::ForegroundFilter overlay_filter_;
   roo_display::RectUnion rect_union_;
   roo_display::RectUnionFilter rect_union_filter_;

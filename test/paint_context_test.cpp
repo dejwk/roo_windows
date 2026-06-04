@@ -152,6 +152,59 @@ TEST_F(PaintContextTest, AddOverlayTranslatesLocalExtentsAndAppliesClip) {
   EXPECT_EQ(QuantizeToArgb4444(color::Blue), pixelAt(10, 7));
 }
 
+// Verifies clipper overlay order: when two overlays overlap, the one added
+// earlier remains visually above the one added later.
+TEST_F(PaintContextTest, EarlierAddedOverlayRemainsOnTopWhenOverlapping) {
+  Surface surface(display_.output(), 7, 4, display_.extents(),
+                  /*is_write_once=*/false, display_.getBackgroundColor(),
+                  FillMode::kVisible, BlendingMode::kSourceOver);
+  Canvas canvas(&surface);
+  internal::ClipperState clipper_state;
+  Clipper clipper(clipper_state, canvas.out(), roo_time::Uptime::Max());
+  canvas.set_out(clipper.out());
+  PaintContext ctx(canvas, clipper);
+
+  auto top_overlay = MakeRasterizable(
+      Box(0, 0, 2, 2), [](int16_t, int16_t) -> Color { return color::Red; });
+  auto underlay = MakeRasterizable(
+      Box(0, 0, 2, 2), [](int16_t, int16_t) -> Color { return color::Green; });
+
+  ctx.addOverlay(top_overlay, Rect(0, 0, 2, 2));
+  ctx.addOverlay(underlay, Rect(0, 0, 2, 2));
+  ctx.setBgcolor(color::Blue);
+  ctx.clear();
+
+  EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(8, 5));
+  EXPECT_EQ(QuantizeToArgb4444(color::Blue), pixelAt(10, 7));
+}
+
+// Verifies descriptor-to-stack clip translation: a translated overlay clipped
+// to one local pixel samples exactly that source pixel after migration.
+TEST_F(PaintContextTest,
+       AddOverlayTranslatedClipMapsToExpectedSourceCoordinates) {
+  Surface surface(display_.output(), 7, 4, display_.extents(),
+                  /*is_write_once=*/false, display_.getBackgroundColor(),
+                  FillMode::kVisible, BlendingMode::kSourceOver);
+  Canvas canvas(&surface);
+  internal::ClipperState clipper_state;
+  Clipper clipper(clipper_state, canvas.out(), roo_time::Uptime::Max());
+  canvas.set_out(clipper.out());
+  PaintContext ctx(canvas, clipper);
+
+  auto overlay =
+      MakeRasterizable(Box(0, 0, 3, 3), [](int16_t x, int16_t y) -> Color {
+        return (x == 1 && y == 1) ? color::Red : color::Green;
+      });
+
+  ctx.translated(3, 2).addOverlay(overlay, Rect(1, 1, 1, 1));
+  ctx.setBgcolor(color::Blue);
+  ctx.clear();
+
+  EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(11, 7));
+  EXPECT_EQ(QuantizeToArgb4444(color::Blue), pixelAt(10, 7));
+  EXPECT_EQ(QuantizeToArgb4444(color::Blue), pixelAt(11, 6));
+}
+
 TEST_F(PaintContextTest, AddOverlayShapeTranslatesLocalExtentsAndAppliesClip) {
   Surface surface(display_.output(), 7, 4, display_.extents(),
                   /*is_write_once=*/false, display_.getBackgroundColor(),
