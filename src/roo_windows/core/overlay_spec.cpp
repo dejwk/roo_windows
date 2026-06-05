@@ -64,12 +64,14 @@ inline int16_t animation_radius(const Rect& bounds, XDim x, XDim y,
 OverlaySpec::OverlaySpec()
     : is_modded_(false),
       is_disabled_(false),
+      is_point_(false),
       base_overlay_(roo_display::color::Transparent),
       press_overlay_(nullptr) {}
 
 OverlaySpec::OverlaySpec(Widget& widget, const Canvas& canvas)
     : is_modded_(false),
       is_disabled_(!widget.isEnabled()),
+      is_point_(false),
       press_overlay_(nullptr) {
   if (is_disabled_) {
     is_modded_ = true;
@@ -82,6 +84,8 @@ OverlaySpec::OverlaySpec(Widget& widget, const Canvas& canvas)
   }
   base_overlay_ = getOverlayColor(widget, canvas);
   is_modded_ = (base_overlay_.a() != 0);
+  Widget::OverlayType overlay_type = widget.getOverlayType();
+  is_point_ = (overlay_type == Widget::OVERLAY_POINT);
 
   // If click_animation is true, we need to redraw the overlay.
   bool click_animation = ((widget.state_ & kWidgetClicking) != 0);
@@ -98,10 +102,9 @@ OverlaySpec::OverlaySpec(Widget& widget, const Canvas& canvas)
       click_x = active_click_animation->xCenter();
       click_y = active_click_animation->yCenter();
     }
-    Widget::OverlayType t = widget.getOverlayType();
     if (is_click_animation_in_progress) {
       Rect anim_bounds = widget.bounds();
-      if (t == Widget::OVERLAY_POINT) {
+      if (is_point_) {
         anim_bounds = widget.getInteractionBounds();
       }
       // Note that dx,dy might have changed since the click event, moving dim
@@ -116,7 +119,7 @@ OverlaySpec::OverlaySpec(Widget& widget, const Canvas& canvas)
       widget.getMainWindow()->set_press_overlay(
           PressOverlay(x, y, r, click_animation_overlay, base_overlay_));
       press_overlay_ = &widget.getMainWindow()->press_overlay();
-      if (t == Widget::OVERLAY_POINT) {
+      if (is_point_) {
         roo_display::FpPoint focus = widget.getPointOverlayFocus();
         XDim dx;
         YDim dy;

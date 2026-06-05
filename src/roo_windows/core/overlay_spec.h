@@ -27,8 +27,13 @@ class OverlaySpec {
   /// Returns true if any overlay modifier (disabled tint, press overlay,
   /// click animation, ...) is active.
   bool is_modded() const { return is_modded_; }
+
   /// Returns true if the widget should be rendered in its disabled style.
   bool is_disabled() const { return is_disabled_; }
+
+  /// Returns true if the widget's base overlay should only apply to an
+  /// activation circle.
+  bool is_point() const { return is_point_; }
 
   /// Returns true while a click ripple animation is currently being painted.
   bool is_click_animation_in_progress() const {
@@ -46,6 +51,8 @@ class OverlaySpec {
  private:
   bool is_modded_;  // True if any other flag or overlay is set.
   bool is_disabled_;
+  bool is_point_;  // if true, base overlay only applies to a circle, not full
+                   // area.
   roo_display::Color base_overlay_;
 
   // Nullptr if not in press animation.
