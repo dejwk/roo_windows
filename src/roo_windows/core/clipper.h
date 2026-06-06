@@ -11,6 +11,7 @@
 #include "roo_display/filter/clip_exclude_rects.h"
 #include "roo_display/filter/foreground.h"
 #include "roo_display/shape/smooth.h"
+#include "roo_windows/core/press_overlay.h"
 #include "roo_windows/decoration/decoration.h"
 
 namespace roo_windows {
@@ -38,6 +39,7 @@ class ClippedOverlay {
   ClippedOverlay(const roo_display::Rasterizable* source,
                  roo_display::Box clip_box, int16_t dx = 0, int16_t dy = 0)
       : source_(source),
+        blending_mode_(roo_display::BlendingMode::kSourceOver),
         device_clip_(clip_box),
         extents_(roo_display::Box::Intersect(
             source->extents().translate(dx, dy), clip_box)),
@@ -46,6 +48,9 @@ class ClippedOverlay {
 
   /// Returns source rasterizable.
   const roo_display::Rasterizable* source() const { return source_; }
+
+  /// Returns blending mode for this overlay.
+  roo_display::BlendingMode blending_mode() const { return blending_mode_; }
 
   /// Returns device-space clip used when the overlay was registered.
   const roo_display::Box& deviceClip() const { return device_clip_; }
@@ -65,8 +70,14 @@ class ClippedOverlay {
                                        device_clip_.translate(-dx_, -dy_));
   }
 
+  ClippedOverlay& withMode(roo_display::BlendingMode mode) {
+    blending_mode_ = mode;
+    return *this;
+  }
+
  private:
   const roo_display::Rasterizable* source_;
+  roo_display::BlendingMode blending_mode_;
   roo_display::Box device_clip_;
   roo_display::Box extents_;
   int16_t dx_;
@@ -116,6 +127,7 @@ class ClipperOutput : public roo_display::DisplayOutput {
         decorations_(state.decorations_),
         shape_overlays_(state.shape_overlays_),
         overlays_(state.overlays_),
+        overlay_specs_(state.overlay_specs_),
         valid_(true),
         overlay_stack_(roo_display::Box(0, 0, -1, -1)),
         overlay_filter_(out, &overlay_stack_),
@@ -128,6 +140,7 @@ class ClipperOutput : public roo_display::DisplayOutput {
     decorations_.clear();
     shape_overlays_.clear();
     overlays_.clear();
+    overlay_specs_.clear();
   }
 
   /// Narrows subsequent sync work to overlays and exclusions intersecting
@@ -160,14 +173,13 @@ class ClipperOutput : public roo_display::DisplayOutput {
 
   /// Stores a decoration overlay owned by the clipper.
   void addDecoration(roo_display::Box clip_box, roo_display::Box extents,
-                     int elevation, const OverlaySpec& overlay_spec,
-                     roo_display::Color bgcolor,
+                     int elevation, roo_display::Color bgcolor,
                      BorderStyle::CornerRadii corner_radii,
                      SmallNumber outline_width,
                      roo_display::Color outline_color) {
-    decorations_.emplace_back(std::move(extents), elevation, overlay_spec,
-                              bgcolor, corner_radii, outline_width,
-                              outline_color);
+    decorations_.emplace_back(std::move(extents), elevation,
+                              currentOverlaySpec(), &press_overlay_, bgcolor,
+                              corner_radii, outline_width, outline_color);
     addOverlay(&decorations_.back(), clip_box);
   }
 
@@ -182,11 +194,39 @@ class ClipperOutput : public roo_display::DisplayOutput {
     valid_ = false;
   }
 
+  /// Adds an overlay with an optional local-to-device translation.
+  void addOverlayWithMode(const roo_display::Rasterizable* overlay,
+                          roo_display::Box clip_box,
+                          roo_display::BlendingMode blending_mode,
+                          int16_t dx = 0, int16_t dy = 0) {
+    overlays_.emplace_back(overlay, clip_box, dx, dy);
+    if (overlays_.back().extents().empty()) {
+      overlays_.pop_back();
+      return;
+    }
+    overlays_.back().withMode(blending_mode);
+    valid_ = false;
+  }
+
   /// Stores a device-space smooth shape overlay owned by the clipper.
   void addOverlayShape(roo_display::SmoothShape overlay,
                        roo_display::Box clip_box) {
     shape_overlays_.push_back(std::move(overlay));
     addOverlay(&shape_overlays_.back(), clip_box);
+  }
+
+  void setPressOverlay(const PressOverlaySpec& spec,
+                       roo_display::Box clip_box) {
+    if (spec.enabled) {
+      press_overlay_ =
+          PressOverlay(spec.center_x, spec.center_y, spec.radius, spec.color);
+      if (spec.clipped_to_circle) {
+        press_overlay_.setClipCircle(spec.clip_circle_center_x,
+                                     spec.clip_circle_center_y,
+                                     spec.clip_circle_radius);
+      }
+      addOverlay(&press_overlay_, clip_box);
+    }
   }
 
   /// Forwards the address window after applying pending clipper state.
@@ -250,7 +290,43 @@ class ClipperOutput : public roo_display::DisplayOutput {
   /// Returns the unfiltered downstream output.
   roo_display::DisplayOutput& rawOut() { return orig_output_; }
 
+  /// Pushes this widget's resolved overlay state onto the per-paint stack.
+  void pushOverlaySpec(Widget& widget, const Canvas& canvas) {
+    OverlaySpec overlay_spec(widget, canvas);
+    if (!overlay_spec.is_modded()) {
+      if (!overlay_specs_.empty() &&
+          !overlay_specs_.back().overlay_spec.is_modded()) {
+        ++overlay_specs_.back().refcount;
+        return;
+      }
+      overlay_specs_.emplace_back(OverlaySpec(), 1);
+      return;
+    }
+    overlay_specs_.emplace_back(std::move(overlay_spec), 1);
+  }
+
+  /// Pops the overlay state for the current widget paint frame.
+  void popOverlaySpec() {
+    if (overlay_specs_.empty()) return;
+    if (overlay_specs_.back().refcount > 1) {
+      --overlay_specs_.back().refcount;
+      return;
+    }
+    overlay_specs_.pop_back();
+  }
+
+  /// Returns the currently active widget overlay state.
+  const OverlaySpec& currentOverlaySpec() const {
+    if (overlay_specs_.empty()) return InertOverlaySpec();
+    return overlay_specs_.back().overlay_spec;
+  }
+
  private:
+  static const OverlaySpec& InertOverlaySpec() {
+    static const OverlaySpec kInertOverlaySpec;
+    return kInertOverlaySpec;
+  }
+
   void sync() {
     if (valid_) return;
     bounded_exclusions_.clear();
@@ -278,7 +354,8 @@ class ClipperOutput : public roo_display::DisplayOutput {
       if (!it->extents().intersects(bounds_)) continue;
       roo_display::Box source_clip = it->sourceClip();
       if (source_clip.empty()) continue;
-      overlay_stack_.addInput(it->source(), source_clip, it->dx(), it->dy());
+      overlay_stack_.addInput(it->source(), source_clip, it->dx(), it->dy())
+          .withMode(it->blending_mode());
       roo_display::Box translated = source_clip.translate(it->dx(), it->dy());
       if (!has_overlays) {
         overlay_extents = translated;
@@ -310,11 +387,13 @@ class ClipperOutput : public roo_display::DisplayOutput {
 
   roo_display::DisplayOutput& orig_output_;
   roo_display::Box bounds_;
+  PressOverlay press_overlay_;
   std::vector<roo_display::Box>& exclusions_;
   std::vector<roo_display::Box>& bounded_exclusions_;
   std::deque<Decoration>& decorations_;
   std::deque<roo_display::SmoothShape>& shape_overlays_;
   std::vector<ClippedOverlay>& overlays_;
+  std::deque<internal::OverlaySpecStackEntry>& overlay_specs_;
   bool valid_;
   roo_display::RasterizableStack overlay_stack_;
   roo_display::ForegroundFilter overlay_filter_;
@@ -342,11 +421,7 @@ class Clipper {
   /// short-circuited.
   Clipper(internal::ClipperState& state, roo_display::DisplayOutput& out,
           roo_time::Uptime deadline)
-      : out_(state, out),
-        overlay_specs_(state.overlay_specs_),
-        deadline_(deadline) {
-    overlay_specs_.clear();
-  }
+      : out_(state, out), deadline_(deadline) {}
 
   /// Hints that subsequent draws will be confined to `bounds` (device
   /// coordinates). Lets the clipper temporarily ignore exclusions that fall
@@ -382,49 +457,21 @@ class Clipper {
     out_.addOverlayShape(std::move(overlay), clip_box);
   }
 
+  void setPressOverlay(const PressOverlaySpec& spec,
+                       roo_display::Box clip_box) {
+    out_.setPressOverlay(spec, clip_box);
+  }
+
   /// Registers a fully-described decoration (shadow + outline + fill) clipped
   /// to `clip_box` and bounded by `extents`. The decoration is stored in the
   /// clipper arena and composited like any other overlay.
   void addDecoration(roo_display::Box clip_box, Rect extents, int elevation,
-                     const OverlaySpec& overlay_spec,
                      roo_display::Color bgcolor,
                      BorderStyle::CornerRadii corner_radii,
                      SmallNumber outline_width,
                      roo_display::Color outline_color) {
-    out_.addDecoration(std::move(clip_box), extents.asBox(), elevation,
-                       overlay_spec, bgcolor, corner_radii, outline_width,
-                       outline_color);
-  }
-
-  /// Pushes this widget's resolved overlay state onto the per-paint stack.
-  void pushOverlaySpec(Widget& widget, const Canvas& canvas) {
-    OverlaySpec overlay_spec(widget, canvas);
-    if (!overlay_spec.is_modded()) {
-      if (!overlay_specs_.empty() &&
-          !overlay_specs_.back().overlay_spec.is_modded()) {
-        ++overlay_specs_.back().refcount;
-        return;
-      }
-      overlay_specs_.emplace_back(OverlaySpec(), 1);
-      return;
-    }
-    overlay_specs_.emplace_back(std::move(overlay_spec), 1);
-  }
-
-  /// Pops the overlay state for the current widget paint frame.
-  void popOverlaySpec() {
-    if (overlay_specs_.empty()) return;
-    if (overlay_specs_.back().refcount > 1) {
-      --overlay_specs_.back().refcount;
-      return;
-    }
-    overlay_specs_.pop_back();
-  }
-
-  /// Returns the currently active widget overlay state.
-  const OverlaySpec& currentOverlaySpec() const {
-    if (overlay_specs_.empty()) return InertOverlaySpec();
-    return overlay_specs_.back().overlay_spec;
+    out_.addDecoration(std::move(clip_box), extents.asBox(), elevation, bgcolor,
+                       corner_radii, outline_width, outline_color);
   }
 
   /// Returns the filtered output that exclusions and overlays apply to.
@@ -444,14 +491,21 @@ class Clipper {
     return roo_time::Uptime::Now() >= deadline_;
   }
 
- private:
-  static const OverlaySpec& InertOverlaySpec() {
-    static const OverlaySpec kInertOverlaySpec;
-    return kInertOverlaySpec;
+  /// Pushes this widget's resolved overlay state onto the per-paint stack.
+  void pushOverlaySpec(Widget& widget, const Canvas& canvas) {
+    out_.pushOverlaySpec(widget, canvas);
   }
 
+  /// Pops the overlay state for the current widget paint frame.
+  void popOverlaySpec() { out_.popOverlaySpec(); }
+
+  /// Returns the currently active widget overlay state.
+  const OverlaySpec& currentOverlaySpec() const {
+    return out_.currentOverlaySpec();
+  }
+
+ private:
   internal::ClipperOutput out_;
-  std::deque<internal::OverlaySpecStackEntry>& overlay_specs_;
   roo_time::Uptime deadline_;
 };
 

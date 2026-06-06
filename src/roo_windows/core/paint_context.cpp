@@ -17,9 +17,9 @@ Canvas& PaintContext::canvas() {
 
 void PaintContext::activate() const { clipper_->setBounds(canvas_.clip_box()); }
 
-const OverlaySpec& PaintContext::overlaySpec() const {
-  return clipper_->currentOverlaySpec();
-}
+// const OverlaySpec& PaintContext::overlaySpec() const {
+//   return clipper_->currentOverlaySpec();
+// }
 
 void PaintContext::setClipBox(const roo_display::Box& clip_box) {
   canvas_.set_clip_box(clip_box);
@@ -145,11 +145,10 @@ void PaintContext::addOverlayShape(roo_display::SmoothShape overlay,
 
 void PaintContext::addDecoration(const PaintDecoration& decoration) {
   if (empty()) return;
-  const OverlaySpec& overlay_spec = clipper_->currentOverlaySpec();
   clipper_->addDecoration(canvas_.clip_box(), deviceRect(decoration.bounds),
-                          decoration.elevation, overlay_spec,
-                          decoration.background, decoration.corner_radii,
-                          decoration.outline_width, decoration.outline_color);
+                          decoration.elevation, decoration.background,
+                          decoration.corner_radii, decoration.outline_width,
+                          decoration.outline_color);
 }
 
 Clipper& PaintContext::clipperForFramework() { return *clipper_; }

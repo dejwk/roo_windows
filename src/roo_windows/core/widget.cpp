@@ -607,17 +607,14 @@ void Widget::paintWidgetModded(PaintContext& ctx) {
       if (overlay_spec.is_click_animation_in_progress()) {
         Rect repaint_bounds = maxParentBounds();
         if (getOverlayType() == OVERLAY_POINT) {
-          clipper.addOverlay(overlay_spec.press_overlay(), canvas.clip_box());
-        } else {
-          roo_display::DisplayOutput& out = canvas.out();
-          roo_display::ForegroundFilter filter(canvas.out(),
-                                               overlay_spec.press_overlay());
-          canvas.set_out(&filter);
-          paintWidgetContents(ctx);
-          canvas.set_out(&out);
-          setDirty();
-          notifyParentInvalidatedRegion(repaint_bounds);
-          return;
+          clipper.setPressOverlay(overlay_spec.press_overlay(),
+                                  canvas.clip_box());
+        } else if (getOverlayType() == OVERLAY_AREA) {
+          // Only draw the overlay in the 'inner' region, leaving it up to the
+          // surface- owning widget to draw it along the external decoration.
+          Canvas inner = prepareContentsCanvas(canvas);
+          clipper.setPressOverlay(overlay_spec.press_overlay(),
+                                  inner.clip_box());
         }
         paintWidgetContents(ctx);
         setDirty();

@@ -259,13 +259,14 @@ Rect CalculateShadowExtents(const Rect& extents, int elevation) {
 }
 
 Decoration::Decoration()
-    : Decoration(roo_display::Box(0, 0, -1, -1), 0, OverlaySpec(),
+    : Decoration(roo_display::Box(0, 0, -1, -1), 0, OverlaySpec(), nullptr,
                  roo_display::color::Transparent,
                  BorderStyle::CornerRadii{0, 0, 0, 0}, 0,
                  roo_display::color::Transparent) {}
 
 Decoration::Decoration(roo_display::Box extents, int elevation,
                        const OverlaySpec& overlay_spec,
+                       const PressOverlay* press_overlay,
                        roo_display::Color bgcolor,
                        BorderStyle::CornerRadii corner_radii,
                        SmallNumber outline_width,
@@ -275,7 +276,8 @@ Decoration::Decoration(roo_display::Box extents, int elevation,
       corner_radii_(corner_radii),
       outline_width_(outline_width.floor()),
       outline_width_frac_(15 - outline_width.frac_16ths()),
-      outline_color_(outline_color) {
+      outline_color_(outline_color),
+      press_overlay_(press_overlay) {
   if (outline_color == bgcolor) {
     outline_width_ = 0;
     outline_width_frac_ = 15;
@@ -284,7 +286,7 @@ Decoration::Decoration(roo_display::Box extents, int elevation,
     bgcolor_ = AlphaBlend(bgcolor_, overlay_spec.base_overlay());
     outline_color_ = AlphaBlend(outline_color_, overlay_spec.base_overlay());
   }
-  press_overlay_ = overlay_spec.press_overlay();
+  // press_overlay_ = overlay_spec.press_overlay();
   // switch (corner_radius) {
   //   case 0:
   //     break;

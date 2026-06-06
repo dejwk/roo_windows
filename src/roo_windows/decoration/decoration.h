@@ -38,9 +38,9 @@ class Decoration : public roo_display::Rasterizable {
   // of the object casting the shadow are rounded with the specified radius.
   // Outline may be zero.
   Decoration(roo_display::Box extents, int elevation,
-             const OverlaySpec& overlay_spec, roo_display::Color bgcolor,
-             BorderStyle::CornerRadii corner_radii, SmallNumber outline_width,
-             roo_display::Color outline_color);
+             const OverlaySpec& overlay_spec, const PressOverlay* press_overlay,
+             roo_display::Color bgcolor, BorderStyle::CornerRadii corner_radii,
+             SmallNumber outline_width, roo_display::Color outline_color);
 
   roo_display::Box extents() const override { return shadow_extents_; }
 

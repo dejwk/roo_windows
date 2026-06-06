@@ -51,16 +51,6 @@ class MainWindow : public Container {
   /// Returns the shared click-animation controller for this window.
   const ClickAnimation& click_animation() const { return click_animation_; }
 
-  /// Returns the shared press-overlay drawable used for circular ripple
-  /// effects.
-  PressOverlay& press_overlay() { return press_overlay_; }
-
-  /// Replaces the shared press-overlay drawable (callers usually swap in a
-  /// theme-specific renderer at startup).
-  void set_press_overlay(PressOverlay press_overlay) {
-    press_overlay_ = std::move(press_overlay);
-  }
-
   /// Shows a modal dialog. Adds it above the scrim and routes its callback.
   void showDialog(Dialog& dialog, Dialog::CallbackFn callback_fn);
 
@@ -113,9 +103,6 @@ class MainWindow : public Container {
   std::vector<Widget*> popups_;
 
   ClickAnimation click_animation_;
-
-  // Singleton used to draw circular 'click' overlay.
-  PressOverlay press_overlay_;
 
   // Stored as instance variable, to avoid vector reallocation on each paint.
   internal::ClipperState clipper_state_;

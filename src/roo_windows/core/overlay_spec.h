@@ -14,6 +14,18 @@ static const int16_t kPointOverlayDiameter = Scaled(40);
 class Canvas;
 class Widget;
 
+struct PressOverlaySpec {
+  bool enabled;
+  int16_t center_x;
+  int16_t center_y;
+  int16_t radius;
+  roo_display::Color color;
+  bool clipped_to_circle;
+  float clip_circle_center_x;
+  float clip_circle_center_y;
+  float clip_circle_radius;
+};
+
 // Specifies all the overlay modifiers that need to be applied to the widget.
 // The overlay modifiers include: click animation status, press overlay,
 // disablement overlay.
@@ -37,7 +49,7 @@ class OverlaySpec {
 
   /// Returns true while a click ripple animation is currently being painted.
   bool is_click_animation_in_progress() const {
-    return press_overlay_ != nullptr;
+    return press_overlay_spec_.enabled;
   }
 
   /// Returns the flat base overlay color to be composited over the widget
@@ -46,7 +58,7 @@ class OverlaySpec {
 
   /// Returns the active animated press overlay, or nullptr if none is
   /// running.
-  const PressOverlay* press_overlay() const { return press_overlay_; }
+  const PressOverlaySpec& press_overlay() const { return press_overlay_spec_; }
 
  private:
   bool is_modded_;  // True if any other flag or overlay is set.
@@ -55,11 +67,7 @@ class OverlaySpec {
                    // area.
   roo_display::Color base_overlay_;
 
-  // Nullptr if not in press animation.
-  // References a singleton stored in the main window. We use a singleton to
-  // minimize memory, exploiting the fact that the library only allows one click
-  // animation at any given time.
-  PressOverlay* press_overlay_;
+  PressOverlaySpec press_overlay_spec_;
 };
 
 }  // namespace roo_windows

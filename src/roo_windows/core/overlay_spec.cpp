@@ -66,13 +66,13 @@ OverlaySpec::OverlaySpec()
       is_disabled_(false),
       is_point_(false),
       base_overlay_(roo_display::color::Transparent),
-      press_overlay_(nullptr) {}
+      press_overlay_spec_() {}
 
 OverlaySpec::OverlaySpec(Widget& widget, const Canvas& canvas)
     : is_modded_(false),
       is_disabled_(!widget.isEnabled()),
       is_point_(false),
-      press_overlay_(nullptr) {
+      press_overlay_spec_() {
   if (is_disabled_) {
     is_modded_ = true;
     base_overlay_ = roo_display::color::Transparent;
@@ -116,20 +116,31 @@ OverlaySpec::OverlaySpec(Widget& widget, const Canvas& canvas)
       roo_display::Color click_animation_overlay =
           AlphaBlend(base_overlay_, getClickAnimationColor(widget, canvas));
       base_overlay_ = roo_display::color::Transparent;
-      widget.getMainWindow()->set_press_overlay(
-          PressOverlay(x, y, r, click_animation_overlay, base_overlay_));
-      press_overlay_ = &widget.getMainWindow()->press_overlay();
+      press_overlay_spec_.enabled = true;
+      press_overlay_spec_.center_x = x;
+      press_overlay_spec_.center_y = y;
+      press_overlay_spec_.radius = r;
+      press_overlay_spec_.color = click_animation_overlay;
+
+      // widget.getMainWindow()->set_press_overlay(
+      //     PressOverlay(x, y, r, click_animation_overlay, base_overlay_));
+      // press_overlay_ = &widget.getMainWindow()->press_overlay();
       if (is_point_) {
         roo_display::FpPoint focus = widget.getPointOverlayFocus();
         XDim dx;
         YDim dy;
         widget.getAbsoluteOffset(dx, dy);
-        press_overlay_->setClipCircle(dx + focus.x, dy + focus.y,
-                                      kPointOverlayDiameter * 0.5f);
+        press_overlay_spec_.clipped_to_circle = true;
+        press_overlay_spec_.clip_circle_center_x = dx + focus.x;
+        press_overlay_spec_.clip_circle_center_y = dy + focus.y;
+        press_overlay_spec_.clip_circle_radius = kPointOverlayDiameter * 0.5f;
+      } else {
+        press_overlay_spec_.clipped_to_circle = false;
       }
     } else {
       // Full rect click overlay - just apply on top of the overlay as
       // calculated so far.
+      press_overlay_spec_.enabled = false;
       base_overlay_ =
           AlphaBlend(base_overlay_, getClickAnimationColor(widget, canvas));
     }
