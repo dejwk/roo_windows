@@ -93,6 +93,13 @@ BorderStyle BorderStyleFor(const ListEntryVisualContext& context) {
   uint8_t inner_radius =
       static_cast<uint8_t>(Scaled(kExpressiveInnerCornerRadiusDp));
 
+  // Selected expressive rows keep a fully rounded item-local outline instead
+  // of inheriting segmented first/middle/last corner trimming.
+  if (context.selected) {
+    return BorderStyle(outer_radius, outer_radius, outer_radius, outer_radius,
+                       0);
+  }
+
   switch (context.position) {
     case ListItemPosition::kSingle:
       return BorderStyle(outer_radius, outer_radius, outer_radius, outer_radius,

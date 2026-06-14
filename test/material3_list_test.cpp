@@ -360,10 +360,10 @@ TEST(Material3List, ListEntryResolvesShapeFromVariantPositionAndSelection) {
   visual_context.selected = true;
   entry.setVisualContext(visual_context);
   BorderStyle selected_middle = entry.getBorderStyle();
-  EXPECT_EQ(Scaled(4), selected_middle.top_left_corner_radius());
-  EXPECT_EQ(Scaled(4), selected_middle.top_right_corner_radius());
-  EXPECT_EQ(Scaled(4), selected_middle.bottom_right_corner_radius());
-  EXPECT_EQ(Scaled(4), selected_middle.bottom_left_corner_radius());
+  EXPECT_EQ(Scaled(16), selected_middle.top_left_corner_radius());
+  EXPECT_EQ(Scaled(16), selected_middle.top_right_corner_radius());
+  EXPECT_EQ(Scaled(16), selected_middle.bottom_right_corner_radius());
+  EXPECT_EQ(Scaled(16), selected_middle.bottom_left_corner_radius());
 
   visual_context.variant = ListVariant::kBaseline;
   visual_context.position = ListItemPosition::kFirst;
