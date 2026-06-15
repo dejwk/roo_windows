@@ -241,12 +241,20 @@ class Interior : public roo_display::Drawable {
   roo_display::Box extents() const override { return extents_; }
 
  private:
-  void drawJustifiedLine(const roo_display::Surface& s,
-                         const TextBlock::LineLayout& line, uint16_t spaces,
-                         int16_t space_width) const {
+  static void fillGap(const roo_display::Surface& s, int16_t x_min,
+                      int16_t x_max, int16_t y_min, int16_t y_max) {
+    if (x_min > x_max || y_min > y_max) return;
+    s.drawObject(roo_display::FilledRect(x_min, y_min, x_max, y_max,
+                                         s.bgcolor()));
+  }
+
+  int16_t drawJustifiedLine(const roo_display::Surface& s,
+                            const TextBlock::LineLayout& line, uint16_t spaces,
+                            int16_t space_width, int16_t row_y_min,
+                            int16_t row_y_max) const {
     if (spaces <= 0 || line.width >= extents_.width()) {
       font_.drawHorizontalString(s, line.text.data(), line.text.size(), color_);
-      return;
+      return line.width;
     }
 
     // Distribute remaining width across spaces as quotient + remainder.
@@ -280,14 +288,20 @@ class Interior : public roo_display::Drawable {
         roo_display::Surface part = s;
         part.set_dx(s.dx() + x);
         font_.drawHorizontalString(part, " ", 1, color_);
-        x += space_width + extra_per_space;
+        int16_t stretch = extra_per_space;
         if (extra_remainder > 0) {
-          ++x;
+          ++stretch;
           --extra_remainder;
         }
+        // The expanded part of justified spacing is outside glyph drawing;
+        // settle it explicitly once as background so no stale pixels remain.
+        fillGap(s, x + space_width, x + space_width + stretch - 1, row_y_min,
+                row_y_max);
+        x += space_width + stretch;
       }
       start = run_end;
     }
+    return x;
   }
 
   void drawTo(const roo_display::Surface& s) const override {
@@ -303,6 +317,7 @@ class Interior : public roo_display::Drawable {
     int16_t line_height = font_.metrics().maxHeight();
     int16_t row_y_min = -font_.metrics().glyphYMax();
     int16_t row_y_max = -font_.metrics().glyphYMin();
+    int16_t glyph_band_height = row_y_max - row_y_min + 1;
     int16_t space_width = MeasureText(font_, roo::string_view(" ", 1));
     int16_t clip_y_min = s.clip_box().yMin() - s.dy();
     int16_t clip_y_max = s.clip_box().yMax() - s.dy();
@@ -315,20 +330,25 @@ class Interior : public roo_display::Drawable {
       const auto& line = lines_[i];
       roo_display::Surface row_surface = s;
       row_surface.set_dy(s.dy() + y + font_.metrics().glyphYMax());
-      // Clear the full glyph band for this row before drawing text.
-      row_surface.drawObject(
-          roo_display::FilledRect(0, row_y_min, extents_.width() - 1, row_y_max,
-                                  row_surface.bgcolor()));
+      // Settle only unresolved background regions (gaps) while leaving glyph
+      // runs to font rendering, so each pixel reaches final color once.
 
       // Only justify non-final lines of a paragraph.
       bool justify = text_align_ == TextAlign::kJustify &&
                      !line.ends_paragraph && line.width < extents_.width() &&
                      line.spaces > 0;
+      int16_t drawn_width = 0;
       if (justify) {
-        drawJustifiedLine(row_surface, line, line.spaces, space_width);
+        drawn_width = drawJustifiedLine(row_surface, line, line.spaces,
+                                        space_width, row_y_min, row_y_max);
+        fillGap(row_surface, drawn_width, extents_.width() - 1, row_y_min,
+                row_y_max);
       } else {
         int16_t line_x =
             ResolveLineXOffset(line.width, extents_.width(), text_align_);
+        fillGap(row_surface, 0, line_x - 1, row_y_min, row_y_max);
+        fillGap(row_surface, line_x + line.width, extents_.width() - 1,
+                row_y_min, row_y_max);
         row_surface.set_dx(s.dx() + line_x);
         font_.drawHorizontalString(row_surface, line.text.data(),
                                    line.text.size(), color_);
@@ -340,6 +360,9 @@ class Interior : public roo_display::Drawable {
                                      color_);
         }
       }
+
+      int16_t glyph_bottom = y + glyph_band_height - 1;
+      fillGap(s, 0, extents_.width() - 1, glyph_bottom + 1, y_end);
     }
   }
 
