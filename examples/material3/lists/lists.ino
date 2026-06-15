@@ -87,6 +87,15 @@ void initDisplay() {
 
 namespace {
 
+material3::StandardListItemInit WrappedTwoLine(roo::string_view headline,
+                                               roo::string_view supporting) {
+  material3::StandardListItemInit init =
+      material3::StandardListItemInit::TwoLine(headline, supporting);
+  init.supporting_policy.overflow = material3::TextOverflowPolicy::kWrap;
+  init.supporting_policy.max_lines = 2;
+  return init;
+}
+
 class StaticSettingsSection : public FlexLayout {
  public:
   explicit StaticSettingsSection(ApplicationContext& context)
@@ -101,9 +110,10 @@ class StaticSettingsSection : public FlexLayout {
         pool_mode_row_(context, material3::StandardListItemInit::TwoLine(
                                     "Pool pump", "Auto")),
         solar_delta_row_(
-            context, material3::StandardListItemInit::TwoLine(
-                         "Solar delta",
-                         "Starts when the roof loop exceeds the pool by 4 C")),
+            context,
+            WrappedTwoLine("Solar delta",
+                           "Starts when the roof loop exceeds the pool by 4 C "
+                           "and pauses when freeze guard is active")),
         safety_lock_row_(context,
                          material3::StandardListItemInit::OneLine(
                              "Safety lock", nullptr, &safety_lock_switch_)) {

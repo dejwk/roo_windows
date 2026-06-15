@@ -123,9 +123,9 @@ struct ListEntryVisualContext {
 
 /// Construction-time descriptor for `StandardListItem`.
 struct StandardListItemInit {
-  roo_display::StringView overline = {};
-  roo_display::StringView headline = {};
-  roo_display::StringView supporting = {};
+  roo::string_view overline = {};
+  roo::string_view headline = {};
+  roo::string_view supporting = {};
   ListTextPolicy overline_policy = {};
   ListTextPolicy headline_policy = {};
   ListTextPolicy supporting_policy = {};
@@ -138,20 +138,20 @@ struct StandardListItemInit {
   bool prefer_top_text_alignment = false;
 
   /// Builds a one-line standard list item descriptor.
-  static StandardListItemInit OneLine(roo_display::StringView headline,
+  static StandardListItemInit OneLine(roo::string_view headline,
                                       Widget* leading = nullptr,
                                       Widget* trailing = nullptr);
 
   /// Builds a two-line standard list item descriptor.
-  static StandardListItemInit TwoLine(roo_display::StringView headline,
-                                      roo_display::StringView supporting,
+  static StandardListItemInit TwoLine(roo::string_view headline,
+                                      roo::string_view supporting,
                                       Widget* leading = nullptr,
                                       Widget* trailing = nullptr);
 
   /// Builds a three-line standard list item descriptor.
-  static StandardListItemInit ThreeLine(roo_display::StringView headline,
-                                        roo_display::StringView supporting,
-                                        roo_display::StringView overline = {},
+  static StandardListItemInit ThreeLine(roo::string_view headline,
+                                        roo::string_view supporting,
+                                        roo::string_view overline = {},
                                         Widget* leading = nullptr,
                                         Widget* trailing = nullptr,
                                         Widget* body = nullptr);
@@ -163,13 +163,13 @@ class ListItem {
   virtual ~ListItem() = default;
 
   /// Returns non-owning overline text for this item.
-  virtual roo_display::StringView overlineText() const { return {}; }
+  virtual roo::string_view overlineText() const { return {}; }
 
   /// Returns non-owning headline text for this item.
-  virtual roo_display::StringView headlineText() const { return {}; }
+  virtual roo::string_view headlineText() const { return {}; }
 
   /// Returns non-owning supporting text for this item.
-  virtual roo_display::StringView supportingText() const { return {}; }
+  virtual roo::string_view supportingText() const { return {}; }
 
   /// Returns overline text wrapping and truncation policy.
   virtual ListTextPolicy overlinePolicy() const { return ListTextPolicy{}; }
@@ -301,18 +301,27 @@ class ListEntry : public Container {
   void onLayout(bool changed, const Rect& rect) override;
 
  private:
+  enum class TextSlotMode : uint8_t {
+    kNone = 0,
+    kLabel = 1,
+    kBlock = 2,
+  };
+
   void detachBoundChildren();
-  void clearTextLabel(StringViewLabel*& label);
+  void clearTextSlot(Widget*& slot, TextSlotMode& mode);
   void clearTextSlots();
   void syncTextSlotsFromItem();
 
   ListItem* item_;
   Widget* leading_child_;
-  StringViewLabel* overline_label_;
-  StringViewLabel* headline_label_;
-  StringViewLabel* supporting_label_;
+  Widget* overline_text_;
+  Widget* headline_text_;
+  Widget* supporting_text_;
   Widget* trailing_child_;
   Widget* body_child_;
+  TextSlotMode overline_mode_;
+  TextSlotMode headline_mode_;
+  TextSlotMode supporting_mode_;
   ListEntryVisualContext visual_context_;
 };
 
@@ -323,13 +332,13 @@ class StandardListItem : public ListItem {
   explicit StandardListItem(const StandardListItemInit& init = {});
 
   /// Returns non-owning overline text for this item.
-  roo_display::StringView overlineText() const override;
+  roo::string_view overlineText() const override;
 
   /// Returns non-owning headline text for this item.
-  roo_display::StringView headlineText() const override;
+  roo::string_view headlineText() const override;
 
   /// Returns non-owning supporting text for this item.
-  roo_display::StringView supportingText() const override;
+  roo::string_view supportingText() const override;
 
   /// Returns overline text wrapping and truncation policy.
   ListTextPolicy overlinePolicy() const override;
@@ -371,9 +380,9 @@ class StandardListItem : public ListItem {
   Widget* bodyWidget();
 
  private:
-  roo_display::StringView overline_;
-  roo_display::StringView headline_;
-  roo_display::StringView supporting_;
+  roo::string_view overline_;
+  roo::string_view headline_;
+  roo::string_view supporting_;
   ListTextPolicy overline_policy_;
   ListTextPolicy headline_policy_;
   ListTextPolicy supporting_policy_;

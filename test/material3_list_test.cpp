@@ -91,6 +91,44 @@ class MutableListItem : public ListItem {
   roo_display::StringView headline_;
 };
 
+class MutablePolicyListItem : public ListItem {
+ public:
+  MutablePolicyListItem(roo_display::StringView headline,
+                        roo_display::StringView supporting)
+      : headline_(headline),
+        supporting_(supporting),
+        headline_policy_(),
+        supporting_policy_() {}
+
+  roo_display::StringView headlineText() const override { return headline_; }
+
+  roo_display::StringView supportingText() const override {
+    return supporting_;
+  }
+
+  ListTextPolicy headlinePolicy() const override { return headline_policy_; }
+
+  ListTextPolicy supportingPolicy() const override {
+    return supporting_policy_;
+  }
+
+  void setHeadlineText(roo_display::StringView text) { headline_ = text; }
+
+  void setSupportingText(roo_display::StringView text) { supporting_ = text; }
+
+  void setHeadlinePolicy(ListTextPolicy policy) { headline_policy_ = policy; }
+
+  void setSupportingPolicy(ListTextPolicy policy) {
+    supporting_policy_ = policy;
+  }
+
+ private:
+  roo_display::StringView headline_;
+  roo_display::StringView supporting_;
+  ListTextPolicy headline_policy_;
+  ListTextPolicy supporting_policy_;
+};
+
 class Material3ListRenderTest
     : public test_support::RooWindowsRenderTestSized<180, 140> {};
 
@@ -311,6 +349,87 @@ TEST(Material3List, ListEntryRefreshesMutableTextWithoutReplacingSlots) {
 
   EXPECT_GT(long_measure.width(), short_measure.width());
   EXPECT_EQ(1, entry.getChildrenCount());
+}
+
+// Verifies that one-line truncate policies keep the cheap label slot and do
+// not replace the text child when only text content changes.
+TEST(Material3List, OneLineTruncateRefreshKeepsExistingTextWidget) {
+  roo_scheduler::Scheduler scheduler;
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
+  MutablePolicyListItem item("Headline", "");
+  ListTextPolicy headline_policy;
+  headline_policy.overflow = TextOverflowPolicy::kTruncate;
+  headline_policy.max_lines = 1;
+  item.setHeadlinePolicy(headline_policy);
+  TestListEntry entry(context);
+
+  entry.setItem(item);
+  ASSERT_EQ(1, entry.getChildrenCount());
+  const Widget* first_child = &entry.getChild(0);
+
+  item.setHeadlineText("Updated headline value");
+  entry.refreshFromItem();
+
+  ASSERT_EQ(1, entry.getChildrenCount());
+  const Widget* refreshed_child = &entry.getChild(0);
+  EXPECT_EQ(first_child, refreshed_child);
+}
+
+// Verifies that changing text policy class through refresh swaps the slot
+// widget from one-line label mode to block-text mode.
+TEST(Material3List, RefreshSwitchesTextWidgetClassWhenPolicyClassChanges) {
+  roo_scheduler::Scheduler scheduler;
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
+  MutablePolicyListItem item("Headline", "");
+  ListTextPolicy headline_policy;
+  headline_policy.overflow = TextOverflowPolicy::kTruncate;
+  headline_policy.max_lines = 1;
+  item.setHeadlinePolicy(headline_policy);
+  TestListEntry entry(context);
+
+  entry.setItem(item);
+  ASSERT_EQ(1, entry.getChildrenCount());
+  const Widget* one_line_child = &entry.getChild(0);
+
+  headline_policy.overflow = TextOverflowPolicy::kWrap;
+  headline_policy.max_lines = 2;
+  item.setHeadlinePolicy(headline_policy);
+  entry.refreshFromItem();
+
+  ASSERT_EQ(1, entry.getChildrenCount());
+  const Widget* wrapped_child = &entry.getChild(0);
+  EXPECT_NE(one_line_child, wrapped_child);
+}
+
+// Verifies that max-lines policy affects measured row height for standard
+// supporting text without requiring custom caller-provided text widgets.
+TEST(Material3List, TextPolicyMaxLinesChangesMeasuredRowHeight) {
+  roo_scheduler::Scheduler scheduler;
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
+  MutablePolicyListItem item(
+      "Headline",
+      "Supporting text that is intentionally long enough to wrap across "
+      "multiple lines in a narrow row.");
+  ListTextPolicy supporting_policy;
+  supporting_policy.overflow = TextOverflowPolicy::kWrap;
+  supporting_policy.max_lines = 1;
+  item.setSupportingPolicy(supporting_policy);
+  TestListEntry entry(context);
+  entry.setItem(item);
+
+  Dimensions one_line =
+      entry.measure(WidthSpec::Exactly(120), HeightSpec::Unspecified(0));
+
+  supporting_policy.max_lines = 3;
+  item.setSupportingPolicy(supporting_policy);
+  entry.refreshFromItem();
+  Dimensions three_line =
+      entry.measure(WidthSpec::Exactly(120), HeightSpec::Unspecified(0));
+
+  EXPECT_GT(three_line.height(), one_line.height());
 }
 
 // Verifies that expressive rows derive their rounded-corner geometry from the
