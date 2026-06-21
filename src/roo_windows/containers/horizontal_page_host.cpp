@@ -28,6 +28,7 @@ HorizontalPageHost::HorizontalPageHost(ApplicationContext& context)
     : Container(context),
       pages_(),
       page_to_slot_(),
+  slot_wrappers_(),
       active_slots_(),
       scheduler_(context.scheduler()),
       notification_id_(-1),
@@ -36,7 +37,12 @@ HorizontalPageHost::HorizontalPageHost(ApplicationContext& context)
       dragging_(false),
       intercepted_gesture_(false),
       settled_index_(-1),
-      page_position_(0.0f) {}
+      page_position_(0.0f) {
+  for (int i = 0; i < kSlotCount; ++i) {
+    slot_wrappers_[i] = std::make_unique<BlitCacheContainer>(context);
+    active_slots_[i].wrapper = slot_wrappers_[i].get();
+  }
+}
 
 HorizontalPageHost::~HorizontalPageHost() {
   cancelPendingUpdate();
@@ -104,8 +110,8 @@ Dimensions HorizontalPageHost::onMeasure(WidthSpec width, HeightSpec height) {
   }
 
   if (width.kind() == EXACTLY && height.kind() == EXACTLY) {
-    Widget* current = active_slots_[kCurrentSlot].widget;
-    if (current != nullptr) {
+    BlitCacheContainer* current = active_slots_[kCurrentSlot].wrapper;
+    if (current != nullptr && active_slots_[kCurrentSlot].attached) {
       current->measure(width, height);
     }
     return Dimensions(width.value(), height.value());
@@ -219,7 +225,7 @@ bool HorizontalPageHost::onTouchUp(XDim x, YDim y) {
 int HorizontalPageHost::getChildrenCount() const {
   int count = 0;
   for (const ActiveSlot& slot : active_slots_) {
-    if (slot.widget != nullptr) {
+    if (slot.attached) {
       ++count;
     }
   }
@@ -262,9 +268,10 @@ void HorizontalPageHost::syncActiveSlots() {
 
 void HorizontalPageHost::bindSlotToPage(SlotId slot_id, int page_index) {
   DCHECK(page_index >= 0 && page_index < pageCount());
+  ActiveSlot& slot = active_slots_[slot_id];
   int existing_slot = page_to_slot_[page_index];
   if (existing_slot == static_cast<int>(slot_id) &&
-      active_slots_[slot_id].page_index == page_index) {
+      slot.page_index == page_index) {
     return;
   }
 
@@ -275,21 +282,31 @@ void HorizontalPageHost::bindSlotToPage(SlotId slot_id, int page_index) {
   clearSlot(slot_id);
 
   Widget* page = pages_[page_index].get();
-  attachChild(WidgetRef(*page));
-  active_slots_[slot_id].widget = page;
-  active_slots_[slot_id].page_index = page_index;
+  if (!slot.attached) {
+    attachChild(WidgetRef(*slot.wrapper));
+    slot.attached = true;
+  }
+  slot.wrapper->setChild(WidgetRef(*page));
+  slot.page = page;
+  slot.page_index = page_index;
   page_to_slot_[page_index] = static_cast<int8_t>(slot_id);
 }
 
 void HorizontalPageHost::clearSlot(SlotId slot_id) {
   ActiveSlot& slot = active_slots_[slot_id];
-  if (slot.widget == nullptr) return;
+  if (slot.page == nullptr && !slot.attached) return;
   if (slot.page_index >= 0 && slot.page_index < (int)page_to_slot_.size() &&
       page_to_slot_[slot.page_index] == static_cast<int8_t>(slot_id)) {
     page_to_slot_[slot.page_index] = -1;
   }
-  detachChild(slot.widget);
-  slot.widget = nullptr;
+  if (slot.wrapper->child() != nullptr) {
+    slot.wrapper->clearChild();
+  }
+  if (slot.attached) {
+    detachChild(slot.wrapper);
+    slot.attached = false;
+  }
+  slot.page = nullptr;
   slot.page_index = -1;
 }
 
@@ -297,8 +314,8 @@ Widget* HorizontalPageHost::activeChildAt(int idx) {
   DCHECK(idx >= 0);
   int found = 0;
   for (ActiveSlot& slot : active_slots_) {
-    if (slot.widget == nullptr) continue;
-    if (found == idx) return slot.widget;
+    if (!slot.attached) continue;
+    if (found == idx) return slot.wrapper;
     ++found;
   }
   CHECK(false);
@@ -309,8 +326,8 @@ const Widget* HorizontalPageHost::activeChildAt(int idx) const {
   DCHECK(idx >= 0);
   int found = 0;
   for (const ActiveSlot& slot : active_slots_) {
-    if (slot.widget == nullptr) continue;
-    if (found == idx) return slot.widget;
+    if (!slot.attached) continue;
+    if (found == idx) return slot.wrapper;
     ++found;
   }
   CHECK(false);
@@ -319,11 +336,17 @@ const Widget* HorizontalPageHost::activeChildAt(int idx) const {
 
 void HorizontalPageHost::updateActivePagePositions() {
   if (width() <= 0 || height() <= 0) return;
-  for (const ActiveSlot& slot : active_slots_) {
-    if (slot.widget == nullptr || slot.page_index < 0) continue;
+  for (ActiveSlot& slot : active_slots_) {
+    if (!slot.attached || slot.page_index < 0) continue;
     XDim x = (XDim)std::lround((slot.page_index - page_position_) * width());
     Rect rect(x, 0, x + width() - 1, height() - 1);
-    slot.widget->layout(rect);
+    if (slot.wrapper->width() != rect.width() ||
+        slot.wrapper->height() != rect.height() ||
+        slot.wrapper->isLayoutRequired() || slot.wrapper->isLayoutRequested()) {
+      slot.wrapper->layout(rect);
+    } else {
+      slot.wrapper->moveTo(rect);
+    }
   }
 }
 

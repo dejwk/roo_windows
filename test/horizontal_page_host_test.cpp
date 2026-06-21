@@ -61,6 +61,17 @@ class TestHorizontalPageHost : public HorizontalPageHost {
   using HorizontalPageHost::onScroll;
 };
 
+const Container* HostForPage(const Widget* page) {
+  const Container* wrapper = page->parent();
+  return wrapper == nullptr ? nullptr : wrapper->parent();
+}
+
+Rect SlotBoundsForPage(const Widget* page) {
+  const Container* wrapper = page->parent();
+  if (wrapper == nullptr) return Rect(0, 0, -1, -1);
+  return wrapper->parent_bounds();
+}
+
 // Verifies that the host auto-selects the first page and keeps the current
 // page plus immediate neighbor attached in phase 2.
 TEST(HorizontalPageHost, AdjacentAttachmentTracksSelection) {
@@ -85,20 +96,20 @@ TEST(HorizontalPageHost, AdjacentAttachmentTracksSelection) {
 
   EXPECT_EQ(0, host.currentIndex());
   EXPECT_EQ(3, host.pageCount());
-  EXPECT_EQ(&host, first_ptr->parent());
-  EXPECT_EQ(&host, second_ptr->parent());
+  EXPECT_EQ(&host, HostForPage(first_ptr));
+  EXPECT_EQ(&host, HostForPage(second_ptr));
   EXPECT_EQ(nullptr, third_ptr->parent());
 
   EXPECT_TRUE(host.setCurrentIndex(1, false));
   EXPECT_EQ(1, host.currentIndex());
-  EXPECT_EQ(&host, first_ptr->parent());
-  EXPECT_EQ(&host, second_ptr->parent());
-  EXPECT_EQ(&host, third_ptr->parent());
+  EXPECT_EQ(&host, HostForPage(first_ptr));
+  EXPECT_EQ(&host, HostForPage(second_ptr));
+  EXPECT_EQ(&host, HostForPage(third_ptr));
 
   EXPECT_TRUE(host.setCurrentIndex(2, false));
   EXPECT_EQ(nullptr, first_ptr->parent());
-  EXPECT_EQ(&host, second_ptr->parent());
-  EXPECT_EQ(&host, third_ptr->parent());
+  EXPECT_EQ(&host, HostForPage(second_ptr));
+  EXPECT_EQ(&host, HostForPage(third_ptr));
 
   EXPECT_FALSE(host.setCurrentIndex(2, false));
 }
@@ -186,14 +197,14 @@ TEST(HorizontalPageHost, LayoutFillsViewportWithSelectedPage) {
 
   host.measure(WidthSpec::Exactly(64), HeightSpec::Exactly(40));
   host.layout(Rect(10, 20, 73, 59));
-  EXPECT_EQ(Rect(0, 0, 63, 39), first_ptr->lastLayout());
-  EXPECT_EQ(Rect(64, 0, 127, 39), second_ptr->lastLayout());
+  EXPECT_EQ(Rect(0, 0, 63, 39), SlotBoundsForPage(first_ptr));
+  EXPECT_EQ(Rect(64, 0, 127, 39), SlotBoundsForPage(second_ptr));
 
   EXPECT_TRUE(host.setCurrentIndex(1, false));
   host.measure(WidthSpec::Exactly(64), HeightSpec::Exactly(40));
   host.layout(Rect(10, 20, 73, 59));
-  EXPECT_EQ(Rect(-64, 0, -1, 39), first_ptr->lastLayout());
-  EXPECT_EQ(Rect(0, 0, 63, 39), second_ptr->lastLayout());
+  EXPECT_EQ(Rect(-64, 0, -1, 39), SlotBoundsForPage(first_ptr));
+  EXPECT_EQ(Rect(0, 0, 63, 39), SlotBoundsForPage(second_ptr));
 }
 
 // Verifies drag updates fractional page position and lays out current and next
@@ -217,8 +228,8 @@ TEST(HorizontalPageHost, DragRepositionsCurrentAndAdjacentPages) {
   host.onDown(0, 0);
   host.onScroll(0, 0, -40, 0);
 
-  EXPECT_EQ(Rect(-40, 0, 59, 39), first_ptr->parent_bounds());
-  EXPECT_EQ(Rect(60, 0, 159, 39), second_ptr->parent_bounds());
+  EXPECT_EQ(Rect(-40, 0, 59, 39), SlotBoundsForPage(first_ptr));
+  EXPECT_EQ(Rect(60, 0, 159, 39), SlotBoundsForPage(second_ptr));
 }
 
 // Verifies edge drag resistance at the first page applies one-quarter motion
@@ -241,15 +252,15 @@ TEST(HorizontalPageHost, EdgeResistanceDampsOutOfRangeDrag) {
   host.onDown(0, 0);
   host.onScroll(0, 0, 100, 0);
 
-  EXPECT_EQ(Rect(25, 0, 124, 39), first_ptr->parent_bounds());
+  EXPECT_EQ(Rect(25, 0, 124, 39), SlotBoundsForPage(first_ptr));
 }
 
-// Verifies the phase-2 size budget with pointer-size-aware limits so added
-// swipe and settle state stays bounded.
-TEST(HorizontalPageHost, PhaseTwoSizeBudget) {
+// Verifies the phase-3 size budget with pointer-size-aware limits so bounded
+// blit-wrapper state and swipe/settle fields stay contained.
+TEST(HorizontalPageHost, PhaseThreeSizeBudget) {
   constexpr size_t kHorizontalPageHostBudget =
       sizeof(Container) + sizeof(std::vector<WidgetRef>) +
-      sizeof(std::vector<int8_t>) + 14 * sizeof(void*) + 32;
+      sizeof(std::vector<int8_t>) + 17 * sizeof(void*) + 40;
   EXPECT_LE(sizeof(HorizontalPageHost), kHorizontalPageHostBudget);
 }
 

@@ -2,9 +2,11 @@
 
 #include <array>
 #include <cstdint>
+#include <memory>
 #include <vector>
 
 #include "roo_scheduler.h"
+#include "roo_windows/containers/blit_cache_container.h"
 #include "roo_windows/core/container.h"
 #include "roo_windows/core/touch_event.h"
 #include "roo_windows/core/widget_ref.h"
@@ -90,8 +92,10 @@ class HorizontalPageHost : public Container, private roo_scheduler::Executable {
   };
 
   struct ActiveSlot {
-    Widget* widget = nullptr;
+    BlitCacheContainer* wrapper = nullptr;
+    Widget* page = nullptr;
     int page_index = -1;
+    bool attached = false;
   };
 
   enum class AnimationState : uint8_t {
@@ -137,6 +141,7 @@ class HorizontalPageHost : public Container, private roo_scheduler::Executable {
 
   std::vector<WidgetRef> pages_;
   std::vector<int8_t> page_to_slot_;
+  std::array<std::unique_ptr<BlitCacheContainer>, kSlotCount> slot_wrappers_;
   std::array<ActiveSlot, kSlotCount> active_slots_;
 
   roo_scheduler::Scheduler& scheduler_;
