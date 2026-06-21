@@ -3,12 +3,14 @@
 #include <stdint.h>
 
 #include <memory>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
 #include "roo_display/core/utf8.h"
 #include "roo_windows/core/container.h"
 #include "roo_windows/core/widget_ref.h"
+#include "roo_windows/widgets/icon.h"
 
 namespace roo_windows {
 
@@ -395,15 +397,133 @@ class StandardListItem : public ListItem {
   uint8_t prefer_top_text_alignment_ : 1;
 };
 
+/// Lightweight headline-only convenience item for simple text rows.
+class HeadlineListItem : public ListItem {
+ public:
+  explicit HeadlineListItem(roo::string_view headline = {},
+                            ListTextPolicy headline_policy = {});
+
+  roo::string_view headlineText() const override;
+  ListTextPolicy headlinePolicy() const override;
+
+  roo::string_view headline() const;
+  void setHeadline(roo::string_view headline);
+  void setHeadlinePolicy(ListTextPolicy policy);
+
+ private:
+  roo::string_view headline_;
+  ListTextPolicy headline_policy_;
+};
+
+/// Lightweight headline-plus-supporting convenience item with no slot widgets.
+class SupportingTextListItem : public ListItem {
+ public:
+  SupportingTextListItem(roo::string_view headline = {},
+                         roo::string_view supporting = {},
+                         ListTextPolicy headline_policy = {},
+                         ListTextPolicy supporting_policy = {});
+
+  roo::string_view headlineText() const override;
+  roo::string_view supportingText() const override;
+  ListTextPolicy headlinePolicy() const override;
+  ListTextPolicy supportingPolicy() const override;
+
+  roo::string_view headline() const;
+  roo::string_view supporting() const;
+  void setHeadline(roo::string_view headline);
+  void setSupportingText(roo::string_view supporting);
+  void setHeadlinePolicy(ListTextPolicy policy);
+  void setSupportingPolicy(ListTextPolicy policy);
+
+ private:
+  roo::string_view headline_;
+  roo::string_view supporting_;
+  ListTextPolicy headline_policy_;
+  ListTextPolicy supporting_policy_;
+};
+
+/// Convenience item that owns a leading pictogram widget plus standard text.
+class PictogramSupportingTextItem : public ListItem {
+ public:
+  PictogramSupportingTextItem(ApplicationContext& context,
+                              const roo_display::Pictogram& pictogram,
+                              roo::string_view headline = {},
+                              roo::string_view supporting = {},
+                              ListTextPolicy headline_policy = {},
+                              ListTextPolicy supporting_policy = {});
+
+  roo::string_view headlineText() const override;
+  roo::string_view supportingText() const override;
+  ListTextPolicy headlinePolicy() const override;
+  ListTextPolicy supportingPolicy() const override;
+  Widget* leading() const override;
+
+  roo::string_view headline() const;
+  roo::string_view supporting() const;
+  Icon& leadingIcon();
+  const Icon& leadingIcon() const;
+  void setPictogram(const roo_display::Pictogram& pictogram);
+  void setHeadline(roo::string_view headline);
+  void setSupportingText(roo::string_view supporting);
+  void setHeadlinePolicy(ListTextPolicy policy);
+  void setSupportingPolicy(ListTextPolicy policy);
+
+ private:
+  Icon leading_icon_;
+  roo::string_view headline_;
+  roo::string_view supporting_;
+  ListTextPolicy headline_policy_;
+  ListTextPolicy supporting_policy_;
+};
+
+/// Convenience item that owns a leading initials avatar plus standard text.
+class AvatarSupportingTextItem : public ListItem {
+ public:
+  AvatarSupportingTextItem(ApplicationContext& context,
+                           roo::string_view initials = {},
+                           roo::string_view headline = {},
+                           roo::string_view supporting = {},
+                           ListTextPolicy headline_policy = {},
+                           ListTextPolicy supporting_policy = {});
+  ~AvatarSupportingTextItem() override;
+
+  roo::string_view headlineText() const override;
+  roo::string_view supportingText() const override;
+  ListTextPolicy headlinePolicy() const override;
+  ListTextPolicy supportingPolicy() const override;
+  Widget* leading() const override;
+
+  roo::string_view initials() const;
+  roo::string_view headline() const;
+  roo::string_view supporting() const;
+  void setInitials(roo::string_view initials);
+  void setHeadline(roo::string_view headline);
+  void setSupportingText(roo::string_view supporting);
+  void setHeadlinePolicy(ListTextPolicy policy);
+  void setSupportingPolicy(ListTextPolicy policy);
+
+ private:
+  class AvatarVisual;
+
+  std::unique_ptr<AvatarVisual> leading_avatar_;
+  roo::string_view headline_;
+  roo::string_view supporting_;
+  ListTextPolicy headline_policy_;
+  ListTextPolicy supporting_policy_;
+};
+
 /// Thin ownership adapter that binds one inline-owned item to a `ListEntry`.
 template <typename Item>
 class ListRow : public ListEntry {
  public:
   template <typename... Args>
   explicit ListRow(ApplicationContext& context, Args&&... args)
-      : ListEntry(context), item_(std::forward<Args>(args)...) {
+      : ListEntry(context),
+        item_(makeItem(context, std::forward<Args>(args)...)) {
     setItem(item_);
   }
+
+  ~ListRow() override { clearItem(); }
 
   /// Returns the row-owned item.
   Item& item() { return item_; }
@@ -412,6 +532,16 @@ class ListRow : public ListEntry {
   const Item& item() const { return item_; }
 
  private:
+  template <typename... Args>
+  static Item makeItem(ApplicationContext& context, Args&&... args) {
+    if constexpr (std::is_constructible<Item, ApplicationContext&,
+                                        Args...>::value) {
+      return Item(context, std::forward<Args>(args)...);
+    } else {
+      return Item(std::forward<Args>(args)...);
+    }
+  }
+
   Item item_;
 };
 

@@ -2,6 +2,8 @@
 #include <type_traits>
 
 #include "gtest/gtest.h"
+#include "roo_icons/filled/24/device.h"
+#include "roo_icons/outlined/24/notification.h"
 #include "roo_scheduler.h"
 #include "roo_windows/containers/flex_layout.h"
 #include "roo_windows/core/basic_widget.h"
@@ -27,6 +29,14 @@ static_assert(!std::is_convertible<List*, FlexLayout*>::value,
               "List callers must not be able to use FlexLayout APIs");
 static_assert(std::is_base_of<ListItem, StandardListItem>::value,
               "StandardListItem must remain a ListItem descriptor");
+static_assert(std::is_base_of<ListItem, HeadlineListItem>::value,
+              "HeadlineListItem must remain a ListItem descriptor");
+static_assert(std::is_base_of<ListItem, SupportingTextListItem>::value,
+              "SupportingTextListItem must remain a ListItem descriptor");
+static_assert(std::is_base_of<ListItem, PictogramSupportingTextItem>::value,
+              "PictogramSupportingTextItem must remain a ListItem descriptor");
+static_assert(std::is_base_of<ListItem, AvatarSupportingTextItem>::value,
+              "AvatarSupportingTextItem must remain a ListItem descriptor");
 
 class TestWidget : public BasicWidget {
  public:
@@ -54,6 +64,17 @@ class TestStandardListRow : public ListRow<StandardListItem> {
   template <typename... Args>
   explicit TestStandardListRow(ApplicationContext& context, Args&&... args)
       : ListRow<StandardListItem>(context, std::forward<Args>(args)...) {}
+
+  using ListEntry::getChild;
+  using ListEntry::getChildrenCount;
+};
+
+template <typename Item>
+class TestListRow : public ListRow<Item> {
+ public:
+  template <typename... Args>
+  explicit TestListRow(ApplicationContext& context, Args&&... args)
+      : ListRow<Item>(context, std::forward<Args>(args)...) {}
 
   using ListEntry::getChild;
   using ListEntry::getChildrenCount;
@@ -237,6 +258,89 @@ TEST(Material3List, StandardListItemMirrorsInitDescriptor) {
   EXPECT_EQ(12, item.dividerInsetHint().start_inset);
   EXPECT_EQ(4, item.dividerInsetHint().end_inset);
   EXPECT_FALSE(item.preferTopTextAlignment());
+}
+
+// Verifies that phase 8 convenience items keep text data lightweight while
+// exposing only the stable leading visual they own.
+TEST(Material3List, ConvenienceItemsExposeCompactListItemState) {
+  roo_scheduler::Scheduler scheduler;
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
+
+  ListTextPolicy wrapped_supporting;
+  wrapped_supporting.overflow = TextOverflowPolicy::kWrap;
+  wrapped_supporting.max_lines = 2;
+
+  HeadlineListItem headline("Owner");
+  SupportingTextListItem supporting("Pool pump", "Automatic", {},
+                                    wrapped_supporting);
+  PictogramSupportingTextItem pictogram(
+      context, ic_filled_24_device_wifi_tethering(), "Roof loop",
+      "Connected over the shed bridge", {}, wrapped_supporting);
+  AvatarSupportingTextItem avatar(context, "DW", "Dawid Wojcik", "Pool owner",
+                                  {}, wrapped_supporting);
+
+  EXPECT_EQ("Owner", std::string(headline.headlineText()));
+  EXPECT_EQ("Pool pump", std::string(supporting.headlineText()));
+  EXPECT_EQ("Automatic", std::string(supporting.supportingText()));
+  EXPECT_EQ(2, supporting.supportingPolicy().max_lines);
+  EXPECT_EQ(&pictogram.leadingIcon(), pictogram.leading());
+  EXPECT_EQ("DW", std::string(avatar.initials()));
+  ASSERT_NE(nullptr, avatar.leading());
+  Dimensions avatar_size = avatar.leading()->measure(
+      WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+  EXPECT_EQ(Scaled(40), avatar_size.width());
+  EXPECT_EQ(Scaled(40), avatar_size.height());
+}
+
+// Verifies that convenience items bind through the existing ListEntry slot
+// contract without introducing any new row abstraction.
+TEST(Material3List, ConvenienceItemsBindThroughListEntry) {
+  roo_scheduler::Scheduler scheduler;
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
+  TestListEntry entry(context);
+
+  PictogramSupportingTextItem pictogram(
+      context, ic_outlined_24_notification_sync(), "Schedule sync",
+      "Last successful refresh this morning");
+  entry.setItem(pictogram);
+
+  ASSERT_EQ(3, entry.getChildrenCount());
+  EXPECT_EQ(&entry, pictogram.leading()->parent());
+
+  entry.clearItem();
+  EXPECT_EQ(nullptr, pictogram.leading()->parent());
+
+  AvatarSupportingTextItem avatar(context, "DW", "Dawid Wojcik", "Pool owner");
+  entry.setItem(avatar);
+
+  ASSERT_EQ(3, entry.getChildrenCount());
+  EXPECT_EQ(&entry, avatar.leading()->parent());
+
+  entry.clearItem();
+  EXPECT_EQ(nullptr, avatar.leading()->parent());
+}
+
+// Verifies that ListRow still bridges inline-owned items when the item type
+// needs the row's ApplicationContext to build its owned leading visual.
+TEST(Material3List, ListRowConstructsContextAwareConvenienceItems) {
+  roo_scheduler::Scheduler scheduler;
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
+
+  TestListRow<AvatarSupportingTextItem> avatar_row(
+      context, "DW", "Dawid Wojcik", "Pool owner");
+  TestListRow<PictogramSupportingTextItem> pictogram_row(
+      context, ic_outlined_24_notification_sync(), "Schedule sync",
+      "Refreshed from the controller");
+
+  EXPECT_TRUE(avatar_row.hasItem());
+  EXPECT_TRUE(pictogram_row.hasItem());
+  EXPECT_EQ("DW", std::string(avatar_row.item().initials()));
+  EXPECT_EQ("Schedule sync", std::string(pictogram_row.item().headlineText()));
+  EXPECT_EQ(3, avatar_row.getChildrenCount());
+  EXPECT_EQ(3, pictogram_row.getChildrenCount());
 }
 
 // Verifies that the Phase 1 widgets can be constructed with safe default

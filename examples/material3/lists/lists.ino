@@ -41,6 +41,8 @@ struct Emulator {
 
 #include "Arduino.h"
 #include "roo_display.h"
+#include "roo_icons/filled/24/device.h"
+#include "roo_icons/outlined/24/notification.h"
 #include "roo_scheduler.h"
 #include "roo_windows.h"
 
@@ -94,6 +96,13 @@ material3::StandardListItemInit WrappedTwoLine(roo::string_view headline,
   init.supporting_policy.overflow = material3::TextOverflowPolicy::kWrap;
   init.supporting_policy.max_lines = 2;
   return init;
+}
+
+material3::ListTextPolicy WrappedSupporting(uint8_t max_lines = 2) {
+  material3::ListTextPolicy policy;
+  policy.overflow = material3::TextOverflowPolicy::kWrap;
+  policy.max_lines = max_lines;
+  return policy;
 }
 
 class StaticSettingsSection : public FlexLayout {
@@ -255,6 +264,71 @@ class MenuPrototypeSection : public FlexLayout {
   material3::ListRow<material3::StandardListItem> remove_row_;
 };
 
+class VisualConvenienceSection : public FlexLayout {
+ public:
+  explicit VisualConvenienceSection(ApplicationContext& context)
+      : FlexLayout(context, FlexDirection::kColumn),
+        title_(context, "Phase 8 convenience items", font_body1()),
+        subtitle_(context,
+                  "Avatar, pictogram, and text-only items now bind through "
+                  "the shared ListRow surface.",
+                  font_caption()),
+        contacts_(context),
+        status_(context),
+        owner_(context, "DW", "Dawid Wojcik", "Pool owner"),
+        roof_loop_(context, ic_filled_24_device_wifi_tethering(),
+                   "Roof loop network",
+                   "Supporting text wraps on narrow screens without a custom "
+                   "row subclass.", material3::ListTextPolicy{},
+                   WrappedSupporting()),
+        alerts_headline_(context, "Alert routing"),
+        freeze_guard_(context, "Freeze guard",
+                      "Inset dividers and convenience items share the same "
+                      "text policy path.",
+                      material3::ListTextPolicy{}, WrappedSupporting()),
+        schedule_sync_(context, ic_outlined_24_notification_sync(),
+                       "Schedule sync",
+                       "Selected segmented rows still use the same row host.",
+                       material3::ListTextPolicy{}, WrappedSupporting()) {
+    setGap(Scaled(6));
+
+    contacts_.setStyle(material3::ListStyle::kSegmented);
+
+    material3::ListDividerPolicy inset_dividers;
+    inset_dividers.mode = material3::DividerMode::kInset;
+    inset_dividers.start_inset = 72;
+    inset_dividers.end_inset = 24;
+    status_.setDividerPolicy(inset_dividers);
+
+    material3::ListEntryVisualContext selected_context;
+    selected_context.selected = true;
+    schedule_sync_.setVisualContext(selected_context);
+
+    contacts_.add(owner_);
+    contacts_.add(roof_loop_);
+
+    status_.add(alerts_headline_);
+    status_.add(freeze_guard_);
+    status_.add(schedule_sync_);
+
+    add(title_, {.flex_grow = 0, .flex_shrink = 0});
+    add(subtitle_, {.flex_grow = 0, .flex_shrink = 0});
+    add(contacts_, {.flex_grow = 0, .flex_shrink = 0});
+    add(status_, {.flex_grow = 0, .flex_shrink = 0});
+  }
+
+ private:
+  TextLabel title_;
+  TextLabel subtitle_;
+  material3::List contacts_;
+  material3::List status_;
+  material3::ListRow<material3::AvatarSupportingTextItem> owner_;
+  material3::ListRow<material3::PictogramSupportingTextItem> roof_loop_;
+  material3::ListRow<material3::HeadlineListItem> alerts_headline_;
+  material3::ListRow<material3::SupportingTextListItem> freeze_guard_;
+  material3::ListRow<material3::PictogramSupportingTextItem> schedule_sync_;
+};
+
 class ListsScreen : public SimpleScrollablePanel {
  public:
   explicit ListsScreen(ApplicationContext& context)
@@ -262,14 +336,16 @@ class ListsScreen : public SimpleScrollablePanel {
         content_(context, FlexDirection::kColumn),
         title_(context, "Material 3 lists", font_h6()),
         subtitle_(context,
-                  "Phase 6 - row shapes and divider painting across "
-                  "expressive and baseline lists",
+                  "Phase 8 - convenience items for avatar, pictogram, and "
+                  "text-only Material 3 rows",
                   font_caption()),
         top_divider_(context),
         settings_(context),
         middle_divider_(context),
         adopted_(context),
         bottom_divider_(context),
+        convenience_(context),
+        final_divider_(context),
         menu_(context) {
     content_.setPadding(Padding(Scaled(12), Scaled(8)));
     content_.setGap(Scaled(8));
@@ -281,6 +357,8 @@ class ListsScreen : public SimpleScrollablePanel {
     content_.add(middle_divider_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(adopted_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(bottom_divider_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(convenience_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(final_divider_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(menu_, {.flex_grow = 0, .flex_shrink = 0});
 
     setContents(content_);
@@ -295,6 +373,8 @@ class ListsScreen : public SimpleScrollablePanel {
   HorizontalDivider middle_divider_;
   AdoptedRowsSection adopted_;
   HorizontalDivider bottom_divider_;
+  VisualConvenienceSection convenience_;
+  HorizontalDivider final_divider_;
   MenuPrototypeSection menu_;
 };
 
