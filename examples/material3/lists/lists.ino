@@ -279,8 +279,8 @@ class VisualConvenienceSection : public FlexLayout {
         roof_loop_(context, ic_filled_24_device_wifi_tethering(),
                    "Roof loop network",
                    "Supporting text wraps on narrow screens without a custom "
-                   "row subclass.", material3::ListTextPolicy{},
-                   WrappedSupporting()),
+                   "row subclass.",
+                   material3::ListTextPolicy{}, WrappedSupporting()),
         alerts_headline_(context, "Alert routing"),
         freeze_guard_(context, "Freeze guard",
                       "Inset dividers and convenience items share the same "
@@ -329,6 +329,46 @@ class VisualConvenienceSection : public FlexLayout {
   material3::ListRow<material3::PictogramSupportingTextItem> schedule_sync_;
 };
 
+class NavigationSection : public FlexLayout {
+ public:
+  explicit NavigationSection(ApplicationContext& context)
+      : FlexLayout(context, FlexDirection::kColumn),
+        title_(context, "Phase 9 navigation items", font_body1()),
+        subtitle_(context,
+                  "Rows become clickable only for invokable items, and row "
+                  "presses share the same invoke path as item callbacks.",
+                  font_caption()),
+        navigation_(context),
+        next_task_(context, ic_outlined_24_notification_sync(), "Next task",
+                   "Open task details"),
+        owner_(context, "DW", "Assigned owner", "Open schedule") {
+    setGap(Scaled(6));
+
+    next_task_.item().setOnInvoked([this]() {
+      next_task_.item().setSupportingText("Task detail opened");
+      next_task_.refreshFromItem();
+    });
+    owner_.item().setOnInvoked([this]() {
+      owner_.item().setSupportingText("Schedule opened");
+      owner_.refreshFromItem();
+    });
+
+    navigation_.add(next_task_);
+    navigation_.add(owner_);
+
+    add(title_, {.flex_grow = 0, .flex_shrink = 0});
+    add(subtitle_, {.flex_grow = 0, .flex_shrink = 0});
+    add(navigation_, {.flex_grow = 0, .flex_shrink = 0});
+  }
+
+ private:
+  TextLabel title_;
+  TextLabel subtitle_;
+  material3::List navigation_;
+  material3::ListRow<material3::NavigationListItem> next_task_;
+  material3::ListRow<material3::AvatarNavigationListItem> owner_;
+};
+
 class ListsScreen : public SimpleScrollablePanel {
  public:
   explicit ListsScreen(ApplicationContext& context)
@@ -336,8 +376,8 @@ class ListsScreen : public SimpleScrollablePanel {
         content_(context, FlexDirection::kColumn),
         title_(context, "Material 3 lists", font_h6()),
         subtitle_(context,
-                  "Phase 8 - convenience items for avatar, pictogram, and "
-                  "text-only Material 3 rows",
+                  "Phase 9 - convenience items now include row invocation "
+                  "and navigation paths",
                   font_caption()),
         top_divider_(context),
         settings_(context),
@@ -346,6 +386,8 @@ class ListsScreen : public SimpleScrollablePanel {
         bottom_divider_(context),
         convenience_(context),
         final_divider_(context),
+        navigation_(context),
+        menu_divider_(context),
         menu_(context) {
     content_.setPadding(Padding(Scaled(12), Scaled(8)));
     content_.setGap(Scaled(8));
@@ -359,6 +401,8 @@ class ListsScreen : public SimpleScrollablePanel {
     content_.add(bottom_divider_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(convenience_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(final_divider_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(navigation_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(menu_divider_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(menu_, {.flex_grow = 0, .flex_shrink = 0});
 
     setContents(content_);
@@ -375,6 +419,8 @@ class ListsScreen : public SimpleScrollablePanel {
   HorizontalDivider bottom_divider_;
   VisualConvenienceSection convenience_;
   HorizontalDivider final_divider_;
+  NavigationSection navigation_;
+  HorizontalDivider menu_divider_;
   MenuPrototypeSection menu_;
 };
 

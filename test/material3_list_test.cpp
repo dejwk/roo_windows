@@ -37,6 +37,10 @@ static_assert(std::is_base_of<ListItem, PictogramSupportingTextItem>::value,
               "PictogramSupportingTextItem must remain a ListItem descriptor");
 static_assert(std::is_base_of<ListItem, AvatarSupportingTextItem>::value,
               "AvatarSupportingTextItem must remain a ListItem descriptor");
+static_assert(std::is_base_of<ListItem, NavigationListItem>::value,
+              "NavigationListItem must remain a ListItem descriptor");
+static_assert(std::is_base_of<ListItem, AvatarNavigationListItem>::value,
+              "AvatarNavigationListItem must remain a ListItem descriptor");
 
 class TestWidget : public BasicWidget {
  public:
@@ -341,6 +345,84 @@ TEST(Material3List, ListRowConstructsContextAwareConvenienceItems) {
   EXPECT_EQ("Schedule sync", std::string(pictogram_row.item().headlineText()));
   EXPECT_EQ(3, avatar_row.getChildrenCount());
   EXPECT_EQ(3, pictogram_row.getChildrenCount());
+}
+
+// Verifies that rows become clickable only when the bound item exposes
+// invocation behavior.
+TEST(Material3List, ListEntryClickabilityDependsOnBoundItemInvocation) {
+  roo_scheduler::Scheduler scheduler;
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
+
+  TestListRow<NavigationListItem> navigation_row(
+      context, ic_filled_24_device_wifi_tethering(), "Device details",
+      "Inspect current connectivity state");
+  EXPECT_FALSE(navigation_row.isClickable());
+
+  int invocation_count = 0;
+  navigation_row.item().setOnInvoked([&]() { ++invocation_count; });
+  EXPECT_TRUE(navigation_row.isClickable());
+
+  navigation_row.onClicked();
+  EXPECT_EQ(1, invocation_count);
+
+  TestStandardListRow standard_row(
+      context, StandardListItemInit::OneLine("Standard row"));
+  EXPECT_FALSE(standard_row.isClickable());
+}
+
+// Verifies that Phase 9 navigation convenience items keep callback storage in
+// opt-in item types while exposing stable leading/trailing affordances.
+TEST(Material3List, NavigationConvenienceItemsExposeInvokeSurface) {
+  roo_scheduler::Scheduler scheduler;
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
+
+  NavigationListItem navigation(context, ic_outlined_24_notification_sync(),
+                                "Schedule sync", "Open sync details");
+  EXPECT_EQ("Schedule sync", std::string(navigation.headlineText()));
+  EXPECT_EQ("Open sync details", std::string(navigation.supportingText()));
+  ASSERT_NE(nullptr, navigation.leading());
+  ASSERT_NE(nullptr, navigation.trailing());
+  EXPECT_EQ(&navigation.leadingIcon(), navigation.leading());
+  EXPECT_EQ(&navigation.trailingAffordance(), navigation.trailing());
+
+  int navigation_invocations = 0;
+  navigation.setOnInvoked([&]() { ++navigation_invocations; });
+  navigation.invoke();
+  EXPECT_EQ(1, navigation_invocations);
+
+  AvatarNavigationListItem avatar_navigation(context, "DW", "Assigned owner",
+                                             "Open schedule details");
+  EXPECT_EQ("DW", std::string(avatar_navigation.initials()));
+  ASSERT_NE(nullptr, avatar_navigation.leading());
+  ASSERT_NE(nullptr, avatar_navigation.trailing());
+  EXPECT_EQ(&avatar_navigation.trailingAffordance(),
+            avatar_navigation.trailing());
+
+  int avatar_invocations = 0;
+  avatar_navigation.setOnInvoked([&]() { ++avatar_invocations; });
+  avatar_navigation.invoke();
+  EXPECT_EQ(1, avatar_invocations);
+}
+
+// Verifies that row click delegation and direct item invocation follow the
+// same callback path for navigation convenience rows.
+TEST(Material3List, NavigationRowsDelegateRowClickToItemInvokePath) {
+  roo_scheduler::Scheduler scheduler;
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
+  TestListRow<AvatarNavigationListItem> row(context, "DW", "Assigned owner",
+                                            "Open schedule details");
+
+  int invocation_count = 0;
+  row.item().setOnInvoked([&]() { ++invocation_count; });
+
+  EXPECT_TRUE(row.isClickable());
+  row.onClicked();
+  row.item().invoke();
+
+  EXPECT_EQ(2, invocation_count);
 }
 
 // Verifies that the Phase 1 widgets can be constructed with safe default

@@ -5,6 +5,7 @@
 #include "roo_display/shape/smooth.h"
 #include "roo_display/ui/alignment.h"
 #include "roo_display/ui/text_label.h"
+#include "roo_icons/filled/24/navigation.h"
 #include "roo_logging.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/widgets/text_block.h"
@@ -239,12 +240,12 @@ RowLayoutMetrics ResolveRowLayout(const ListEntry& entry, WidthSpec width_spec,
   const ListItem* item = entry.item();
   const RowTokens tokens = TokensFor(entry.visualContext().variant);
 
-  Dimensions leading =
-      MeasureChild(item == nullptr ? nullptr : item->leading(),
-                   WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
-  Dimensions trailing =
-      MeasureChild(item == nullptr ? nullptr : item->trailing(),
-                   WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+  Dimensions leading = MeasureChild(
+      item == nullptr ? nullptr : const_cast<Widget*>(item->leading()),
+      WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+  Dimensions trailing = MeasureChild(
+      item == nullptr ? nullptr : const_cast<Widget*>(item->trailing()),
+      WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
   TextSlotMetrics text = MeasureTextSlots(item);
 
   bool has_leading = leading.width() > 0 || leading.height() > 0;
@@ -259,9 +260,9 @@ RowLayoutMetrics ResolveRowLayout(const ListEntry& entry, WidthSpec width_spec,
   int16_t desired_main_width = tokens.horizontal_padding * 2 + leading.width() +
                                trailing.width() + text.width + horizontal_gaps;
 
-  Dimensions body =
-      MeasureChild(item == nullptr ? nullptr : item->body(),
-                   WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+  Dimensions body = MeasureChild(
+      item == nullptr ? nullptr : const_cast<Widget*>(item->body()),
+      WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
   bool has_body = body.width() > 0 || body.height() > 0;
   int16_t desired_body_width =
       has_body ? tokens.horizontal_padding * 2 +
@@ -316,7 +317,8 @@ RowLayoutMetrics ResolveRowLayout(const ListEntry& entry, WidthSpec width_spec,
   if (has_body && body_width != body.width()) {
     // Re-measure the optional body at the resolved content width so stacked
     // body content and row height stay consistent with the final row width.
-    body = MeasureChild(item->body(), WidthSpec::Exactly(body_width),
+    body = MeasureChild(const_cast<Widget*>(item->body()),
+                        WidthSpec::Exactly(body_width),
                         HeightSpec::Unspecified(0));
     body_y = row_band_height + tokens.body_gap;
     desired_height = row_band_height + tokens.body_gap + body.height() +
@@ -413,6 +415,62 @@ bool ShouldShowDivider(const ListDividerPolicy& divider_policy, int idx,
 // Keeps the avatar-specific paint logic private to the convenience item layer
 // instead of introducing a broader public widget before the API needs one.
 class AvatarSupportingTextItem::AvatarVisual : public BasicWidget {
+ public:
+  AvatarVisual(ApplicationContext& context, roo::string_view initials)
+      : BasicWidget(context), initials_(initials) {}
+
+  Dimensions getSuggestedMinimumDimensions() const override {
+    int16_t side = Scaled(kAvatarSizeDp);
+    return Dimensions(side, side);
+  }
+
+  void paint(PaintContext& ctx) const override {
+    Rect rect = bounds();
+    if (rect.empty()) return;
+
+    int16_t diameter = std::min<int16_t>(rect.width(), rect.height());
+    roo_display::Color original_bg = ctx.bgcolor();
+    auto background = roo_display::SmoothFilledCircle(
+        {0.5f * static_cast<float>(diameter - 1),
+         0.5f * static_cast<float>(diameter - 1)},
+        0.5f * static_cast<float>(diameter), theme().color.primaryContainer);
+
+    if (!initials_.empty()) {
+      roo_display::ClippedStringViewLabel initials_label(
+          initials_, FontForHeadline(), theme().color.onPrimaryContainer);
+      roo_display::Offset text_offset =
+          (roo_display::kCenter | roo_display::kMiddle)
+              .resolveOffset(roo_display::Box(0, 0, diameter - 1, diameter - 1),
+                             initials_label.anchorExtents());
+      Rect text_bounds = Rect(initials_label.extents())
+                             .translate(text_offset.dx, text_offset.dy)
+                             .translate(rect.xMin(), rect.yMin());
+      ctx.setBgcolor(theme().color.primaryContainer);
+      ctx.drawTiled(initials_label, text_bounds,
+                    roo_display::kCenter | roo_display::kMiddle);
+      ctx.addExclusion(text_bounds);
+    }
+
+    ctx.setBgcolor(original_bg);
+    ctx.drawTiled(background, rect, roo_display::kCenter | roo_display::kMiddle,
+                  false);
+  }
+
+  roo::string_view initials() const { return initials_; }
+
+  void setInitials(roo::string_view initials) {
+    if (initials_ == initials) return;
+    initials_ = initials;
+    setDirty();
+  }
+
+ private:
+  roo::string_view initials_;
+};
+
+// Keeps the avatar-specific paint logic private to the convenience item layer
+// instead of introducing a broader public widget before the API needs one.
+class AvatarNavigationListItem::AvatarVisual : public BasicWidget {
  public:
   AvatarVisual(ApplicationContext& context, roo::string_view initials)
       : BasicWidget(context), initials_(initials) {}
@@ -753,6 +811,17 @@ Dimensions ListEntry::getSuggestedMinimumDimensions() const {
   return Dimensions(layout.width, layout.height);
 }
 
+bool ListEntry::isClickable() const {
+  return item_ != nullptr && item_->isInvokable();
+}
+
+void ListEntry::onClicked() {
+  if (item_ != nullptr) {
+    item_->invoke();
+  }
+  Widget::onClicked();
+}
+
 int ListEntry::getChildrenCount() const {
   int count = 0;
   if (leading_child_ != nullptr) ++count;
@@ -890,11 +959,17 @@ ListTextPolicy StandardListItem::supportingPolicy() const {
   return supporting_policy_;
 }
 
-Widget* StandardListItem::leading() const { return leading_; }
+Widget* StandardListItem::leading() { return leading_; }
 
-Widget* StandardListItem::trailing() const { return trailing_; }
+const Widget* StandardListItem::leading() const { return leading_; }
 
-Widget* StandardListItem::body() const { return body_; }
+Widget* StandardListItem::trailing() { return trailing_; }
+
+const Widget* StandardListItem::trailing() const { return trailing_; }
+
+Widget* StandardListItem::body() { return body_; }
+
+const Widget* StandardListItem::body() const { return body_; }
 
 VerticalVisualAlignment StandardListItem::leadingAlignment() const {
   return static_cast<VerticalVisualAlignment>(leading_alignment_);
@@ -1011,8 +1086,10 @@ ListTextPolicy PictogramSupportingTextItem::supportingPolicy() const {
   return supporting_policy_;
 }
 
-Widget* PictogramSupportingTextItem::leading() const {
-  return const_cast<Icon*>(&leading_icon_);
+Widget* PictogramSupportingTextItem::leading() { return &leading_icon_; }
+
+const Widget* PictogramSupportingTextItem::leading() const {
+  return &leading_icon_;
 }
 
 roo::string_view PictogramSupportingTextItem::headline() const {
@@ -1079,7 +1156,9 @@ ListTextPolicy AvatarSupportingTextItem::supportingPolicy() const {
   return supporting_policy_;
 }
 
-Widget* AvatarSupportingTextItem::leading() const {
+Widget* AvatarSupportingTextItem::leading() { return leading_avatar_.get(); }
+
+const Widget* AvatarSupportingTextItem::leading() const {
   return leading_avatar_.get();
 }
 
@@ -1116,6 +1195,191 @@ void AvatarSupportingTextItem::setHeadlinePolicy(ListTextPolicy policy) {
 
 void AvatarSupportingTextItem::setSupportingPolicy(ListTextPolicy policy) {
   supporting_policy_ = policy;
+}
+
+NavigationListItem::NavigationListItem(ApplicationContext& context,
+                                       const roo_display::Pictogram& pictogram,
+                                       roo::string_view headline,
+                                       roo::string_view supporting,
+                                       ListTextPolicy headline_policy,
+                                       ListTextPolicy supporting_policy)
+    : leading_icon_(context, pictogram),
+      trailing_affordance_(context, ic_filled_24_navigation_chevron_right()),
+      headline_(headline),
+      supporting_(supporting),
+      headline_policy_(headline_policy),
+      supporting_policy_(supporting_policy),
+      on_invoked_() {}
+
+roo::string_view NavigationListItem::headlineText() const { return headline_; }
+
+roo::string_view NavigationListItem::supportingText() const {
+  return supporting_;
+}
+
+ListTextPolicy NavigationListItem::headlinePolicy() const {
+  return headline_policy_;
+}
+
+ListTextPolicy NavigationListItem::supportingPolicy() const {
+  return supporting_policy_;
+}
+
+Widget* NavigationListItem::leading() { return &leading_icon_; }
+
+const Widget* NavigationListItem::leading() const { return &leading_icon_; }
+
+Widget* NavigationListItem::trailing() { return &trailing_affordance_; }
+
+const Widget* NavigationListItem::trailing() const {
+  return &trailing_affordance_;
+}
+
+bool NavigationListItem::isInvokable() const {
+  return static_cast<bool>(on_invoked_);
+}
+
+void NavigationListItem::invoke() {
+  if (on_invoked_) {
+    on_invoked_();
+  }
+}
+
+roo::string_view NavigationListItem::headline() const { return headline_; }
+
+roo::string_view NavigationListItem::supporting() const { return supporting_; }
+
+Icon& NavigationListItem::leadingIcon() { return leading_icon_; }
+
+const Icon& NavigationListItem::leadingIcon() const { return leading_icon_; }
+
+Icon& NavigationListItem::trailingAffordance() { return trailing_affordance_; }
+
+const Icon& NavigationListItem::trailingAffordance() const {
+  return trailing_affordance_;
+}
+
+void NavigationListItem::setPictogram(const roo_display::Pictogram& pictogram) {
+  leading_icon_.setIcon(pictogram);
+}
+
+void NavigationListItem::setHeadline(roo::string_view headline) {
+  headline_ = headline;
+}
+
+void NavigationListItem::setSupportingText(roo::string_view supporting) {
+  supporting_ = supporting;
+}
+
+void NavigationListItem::setHeadlinePolicy(ListTextPolicy policy) {
+  headline_policy_ = policy;
+}
+
+void NavigationListItem::setSupportingPolicy(ListTextPolicy policy) {
+  supporting_policy_ = policy;
+}
+
+void NavigationListItem::setOnInvoked(std::function<void()> on_invoked) {
+  on_invoked_ = std::move(on_invoked);
+}
+
+AvatarNavigationListItem::AvatarNavigationListItem(
+    ApplicationContext& context, roo::string_view initials,
+    roo::string_view headline, roo::string_view supporting,
+    ListTextPolicy headline_policy, ListTextPolicy supporting_policy)
+    : leading_avatar_(std::make_unique<AvatarVisual>(context, initials)),
+      trailing_affordance_(context, ic_filled_24_navigation_chevron_right()),
+      headline_(headline),
+      supporting_(supporting),
+      headline_policy_(headline_policy),
+      supporting_policy_(supporting_policy),
+      on_invoked_() {}
+
+AvatarNavigationListItem::~AvatarNavigationListItem() = default;
+
+roo::string_view AvatarNavigationListItem::headlineText() const {
+  return headline_;
+}
+
+roo::string_view AvatarNavigationListItem::supportingText() const {
+  return supporting_;
+}
+
+ListTextPolicy AvatarNavigationListItem::headlinePolicy() const {
+  return headline_policy_;
+}
+
+ListTextPolicy AvatarNavigationListItem::supportingPolicy() const {
+  return supporting_policy_;
+}
+
+Widget* AvatarNavigationListItem::leading() { return leading_avatar_.get(); }
+
+const Widget* AvatarNavigationListItem::leading() const {
+  return leading_avatar_.get();
+}
+
+Widget* AvatarNavigationListItem::trailing() { return &trailing_affordance_; }
+
+const Widget* AvatarNavigationListItem::trailing() const {
+  return &trailing_affordance_;
+}
+
+bool AvatarNavigationListItem::isInvokable() const {
+  return static_cast<bool>(on_invoked_);
+}
+
+void AvatarNavigationListItem::invoke() {
+  if (on_invoked_) {
+    on_invoked_();
+  }
+}
+
+roo::string_view AvatarNavigationListItem::initials() const {
+  return leading_avatar_ == nullptr ? roo::string_view{}
+                                    : leading_avatar_->initials();
+}
+
+roo::string_view AvatarNavigationListItem::headline() const {
+  return headline_;
+}
+
+roo::string_view AvatarNavigationListItem::supporting() const {
+  return supporting_;
+}
+
+Icon& AvatarNavigationListItem::trailingAffordance() {
+  return trailing_affordance_;
+}
+
+const Icon& AvatarNavigationListItem::trailingAffordance() const {
+  return trailing_affordance_;
+}
+
+void AvatarNavigationListItem::setInitials(roo::string_view initials) {
+  if (leading_avatar_ != nullptr) {
+    leading_avatar_->setInitials(initials);
+  }
+}
+
+void AvatarNavigationListItem::setHeadline(roo::string_view headline) {
+  headline_ = headline;
+}
+
+void AvatarNavigationListItem::setSupportingText(roo::string_view supporting) {
+  supporting_ = supporting;
+}
+
+void AvatarNavigationListItem::setHeadlinePolicy(ListTextPolicy policy) {
+  headline_policy_ = policy;
+}
+
+void AvatarNavigationListItem::setSupportingPolicy(ListTextPolicy policy) {
+  supporting_policy_ = policy;
+}
+
+void AvatarNavigationListItem::setOnInvoked(std::function<void()> on_invoked) {
+  on_invoked_ = std::move(on_invoked);
 }
 
 List::List(ApplicationContext& context)

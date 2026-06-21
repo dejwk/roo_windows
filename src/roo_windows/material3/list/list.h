@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 
+#include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -183,13 +184,28 @@ class ListItem {
   virtual ListTextPolicy supportingPolicy() const { return ListTextPolicy{}; }
 
   /// Returns the borrowed leading slot widget, or nullptr.
-  virtual Widget* leading() const { return nullptr; }
+  virtual Widget* leading() { return nullptr; }
+
+  /// Returns the borrowed leading slot widget for read-only access.
+  virtual const Widget* leading() const {
+    return const_cast<ListItem*>(this)->leading();
+  }
 
   /// Returns the borrowed trailing slot widget, or nullptr.
-  virtual Widget* trailing() const { return nullptr; }
+  virtual Widget* trailing() { return nullptr; }
+
+  /// Returns the borrowed trailing slot widget for read-only access.
+  virtual const Widget* trailing() const {
+    return const_cast<ListItem*>(this)->trailing();
+  }
 
   /// Returns the borrowed body slot widget, or nullptr.
-  virtual Widget* body() const { return nullptr; }
+  virtual Widget* body() { return nullptr; }
+
+  /// Returns the borrowed body slot widget for read-only access.
+  virtual const Widget* body() const {
+    return const_cast<ListItem*>(this)->body();
+  }
 
   /// Returns the leading visual alignment policy.
   virtual VerticalVisualAlignment leadingAlignment() const {
@@ -208,6 +224,12 @@ class ListItem {
 
   /// Returns whether the text block prefers top alignment.
   virtual bool preferTopTextAlignment() const { return false; }
+
+  /// Returns whether this item participates in row invocation.
+  virtual bool isInvokable() const { return false; }
+
+  /// Invokes the item's action when the bound row is activated.
+  virtual void invoke() {}
 };
 
 /// Reusable expandable body container for list rows and other surfaces.
@@ -295,6 +317,12 @@ class ListEntry : public Container {
   /// Returns the minimum dimensions for the bound item and slot widgets.
   Dimensions getSuggestedMinimumDimensions() const override;
 
+  /// Returns whether this row should behave as a clickable surface.
+  bool isClickable() const override;
+
+  /// Invokes the currently bound item action, if one is available.
+  void onClicked() override;
+
  protected:
   int getChildrenCount() const override;
   const Widget& getChild(int idx) const override;
@@ -352,13 +380,22 @@ class StandardListItem : public ListItem {
   ListTextPolicy supportingPolicy() const override;
 
   /// Returns the borrowed leading slot widget, or nullptr.
-  Widget* leading() const override;
+  Widget* leading() override;
+
+  /// Returns the borrowed leading slot widget for read-only access.
+  const Widget* leading() const override;
 
   /// Returns the borrowed trailing slot widget, or nullptr.
-  Widget* trailing() const override;
+  Widget* trailing() override;
+
+  /// Returns the borrowed trailing slot widget for read-only access.
+  const Widget* trailing() const override;
 
   /// Returns the borrowed body slot widget, or nullptr.
-  Widget* body() const override;
+  Widget* body() override;
+
+  /// Returns the borrowed body slot widget for read-only access.
+  const Widget* body() const override;
 
   /// Returns the leading visual alignment policy.
   VerticalVisualAlignment leadingAlignment() const override;
@@ -456,7 +493,8 @@ class PictogramSupportingTextItem : public ListItem {
   roo::string_view supportingText() const override;
   ListTextPolicy headlinePolicy() const override;
   ListTextPolicy supportingPolicy() const override;
-  Widget* leading() const override;
+  Widget* leading() override;
+  const Widget* leading() const override;
 
   roo::string_view headline() const;
   roo::string_view supporting() const;
@@ -491,7 +529,8 @@ class AvatarSupportingTextItem : public ListItem {
   roo::string_view supportingText() const override;
   ListTextPolicy headlinePolicy() const override;
   ListTextPolicy supportingPolicy() const override;
-  Widget* leading() const override;
+  Widget* leading() override;
+  const Widget* leading() const override;
 
   roo::string_view initials() const;
   roo::string_view headline() const;
@@ -510,6 +549,97 @@ class AvatarSupportingTextItem : public ListItem {
   roo::string_view supporting_;
   ListTextPolicy headline_policy_;
   ListTextPolicy supporting_policy_;
+};
+
+/// Convenience item that owns a leading icon and trailing navigation
+/// affordance.
+class NavigationListItem : public ListItem {
+ public:
+  NavigationListItem(ApplicationContext& context,
+                     const roo_display::Pictogram& pictogram,
+                     roo::string_view headline = {},
+                     roo::string_view supporting = {},
+                     ListTextPolicy headline_policy = {},
+                     ListTextPolicy supporting_policy = {});
+
+  roo::string_view headlineText() const override;
+  roo::string_view supportingText() const override;
+  ListTextPolicy headlinePolicy() const override;
+  ListTextPolicy supportingPolicy() const override;
+  Widget* leading() override;
+  const Widget* leading() const override;
+  Widget* trailing() override;
+  const Widget* trailing() const override;
+  bool isInvokable() const override;
+  void invoke() override;
+
+  roo::string_view headline() const;
+  roo::string_view supporting() const;
+  Icon& leadingIcon();
+  const Icon& leadingIcon() const;
+  Icon& trailingAffordance();
+  const Icon& trailingAffordance() const;
+  void setPictogram(const roo_display::Pictogram& pictogram);
+  void setHeadline(roo::string_view headline);
+  void setSupportingText(roo::string_view supporting);
+  void setHeadlinePolicy(ListTextPolicy policy);
+  void setSupportingPolicy(ListTextPolicy policy);
+  void setOnInvoked(std::function<void()> on_invoked);
+
+ private:
+  Icon leading_icon_;
+  Icon trailing_affordance_;
+  roo::string_view headline_;
+  roo::string_view supporting_;
+  ListTextPolicy headline_policy_;
+  ListTextPolicy supporting_policy_;
+  std::function<void()> on_invoked_;
+};
+
+/// Convenience item with initials avatar and navigation affordance.
+class AvatarNavigationListItem : public ListItem {
+ public:
+  AvatarNavigationListItem(ApplicationContext& context,
+                           roo::string_view initials = {},
+                           roo::string_view headline = {},
+                           roo::string_view supporting = {},
+                           ListTextPolicy headline_policy = {},
+                           ListTextPolicy supporting_policy = {});
+  ~AvatarNavigationListItem() override;
+
+  roo::string_view headlineText() const override;
+  roo::string_view supportingText() const override;
+  ListTextPolicy headlinePolicy() const override;
+  ListTextPolicy supportingPolicy() const override;
+  Widget* leading() override;
+  const Widget* leading() const override;
+  Widget* trailing() override;
+  const Widget* trailing() const override;
+  bool isInvokable() const override;
+  void invoke() override;
+
+  roo::string_view initials() const;
+  roo::string_view headline() const;
+  roo::string_view supporting() const;
+  Icon& trailingAffordance();
+  const Icon& trailingAffordance() const;
+  void setInitials(roo::string_view initials);
+  void setHeadline(roo::string_view headline);
+  void setSupportingText(roo::string_view supporting);
+  void setHeadlinePolicy(ListTextPolicy policy);
+  void setSupportingPolicy(ListTextPolicy policy);
+  void setOnInvoked(std::function<void()> on_invoked);
+
+ private:
+  class AvatarVisual;
+
+  std::unique_ptr<AvatarVisual> leading_avatar_;
+  Icon trailing_affordance_;
+  roo::string_view headline_;
+  roo::string_view supporting_;
+  ListTextPolicy headline_policy_;
+  ListTextPolicy supporting_policy_;
+  std::function<void()> on_invoked_;
 };
 
 /// Thin ownership adapter that binds one inline-owned item to a `ListEntry`.
