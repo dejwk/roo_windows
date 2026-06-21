@@ -1,16 +1,7 @@
 ---
 name: "roo_windows Widget Authoring"
 description: "Use when editing widget behavior, layout, painting, invalidation, surface ownership, or widget-facing public APIs in roo_windows. Applies to widget implementations, examples, and tests."
-applyTo:
-  - "src/roo_windows/**/*.c"
-  - "src/roo_windows/**/*.cc"
-  - "src/roo_windows/**/*.cpp"
-  - "src/roo_windows/**/*.h"
-  - "src/roo_windows/**/*.hh"
-  - "src/roo_windows/**/*.hpp"
-  - "examples/**/*.ino"
-  - "emulation/main.cpp"
-  - "test/**/*.cpp"
+applyTo: "src/roo_windows/**/*.{c,cc,cpp,h,hh,hpp}, examples/**/*.ino, emulation/main.cpp, test/**/*.cpp"
 ---
 # roo_windows Widget Authoring
 
@@ -104,12 +95,28 @@ the same pixel more than once in a single paint pass.
 Core rule: draw only the final value of a pixel color; do not redraw using
 different colors.
 
-### Prefer `paint()` for Simple Widgets
+### Prefer `paint()` for Most Widgets
 
-Use `paint(const Canvas&)` when the widget's content can be painted in a
-single paint plan where each pixel receives its final value directly. Separate
+Use `paint(PaintContext& ctx) const` as the default widget-local paint hook.
+`PaintContext` is not limited to draw calls: a normal `paint()`
+implementation may also register exclusions, overlays, overlay shapes, and
+decorations through:
+
+- `ctx.addExclusion(...)`
+- `ctx.addOverlay(...)`
+- `ctx.addOverlayShape(...)`
+- `ctx.addDecoration(...)`
+
+If the widget can settle its content in one local paint plan where each pixel
+receives its final value directly, keep that logic in `paint()`. Separate
 dirty and invalidated handling does not by itself require overriding
 `paintWidgetContents()`.
+
+Reference implementation:
+
+- `src/roo_windows/material3/badge/badge.cpp` paints the badge interior and
+  text from `paint()`, then registers the rounded decoration and excludes the
+  already-settled interior from the same method.
 
 ### Override `paintWidgetContents()` for Complex Ordering
 
@@ -118,10 +125,19 @@ Override `paintWidgetContents()` when the widget needs:
 - custom foreground/background ordering,
 - a composable stack of contents settled in multiple stages,
 - early exclusions so later paint does not redraw settled pixels, or
-- decoration or overlay composition through the `Clipper` pipeline.
+- custom dirty-region clip narrowing or other paint-time context mutation that
+  must happen before or between those stages.
+
+Do not override `paintWidgetContents()` merely to reach clipper-backed
+composition. `PaintContext` already exposes the widget-authoring surface for
+that from ordinary `paint()`.
 
 Reference implementations:
 
+- `src/roo_windows/material3/slider/slider.cpp` keeps
+  `paintWidgetContents()` because it narrows dirty clips, pre-paints the value
+  indicator bubble in a separate stage, and then paints lower-z slider content
+  underneath that settled bubble.
 - `src/roo_windows/core/widget.cpp`
 - `src/roo_windows/core/container.cpp`
 
@@ -137,6 +153,10 @@ For widgets with foreground details on top of a background:
 3. Add overlays that should appear behind that geometry but above the
    background.
 4. Paint the background geometry.
+
+That ordering may live entirely inside `paint()`. Escalate to
+`paintWidgetContents()` only when the widget needs multiple clipped subpasses
+or other staged framework interaction beyond a single local paint routine.
 
 Only exclude a region after it is fully resolved. If the foreground asset has
 transparent pixels, the draw that produces it must also provide the correct
