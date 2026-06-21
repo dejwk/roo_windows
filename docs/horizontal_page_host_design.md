@@ -48,10 +48,22 @@ inside `Tabs`, `ScrollablePanel`, or application code.
 
 ### Current Status in `roo_windows`
 
-As of 2026-05, `roo_windows` has no horizontal page-host abstraction.
+As of 2026-06, the core `HorizontalPageHost` implementation is landed through
+the swipe/settle and blit-wrapper phases.
 
 What exists today:
 
+- [src/roo_windows/containers/horizontal_page_host.h](../src/roo_windows/containers/horizontal_page_host.h)
+   and
+   [src/roo_windows/containers/horizontal_page_host.cpp](../src/roo_windows/containers/horizontal_page_host.cpp)
+   provide a viewport-based horizontal page host with adjacent-page swipe
+   settle and bounded active-slot wrappers.
+- [test/horizontal_page_host_test.cpp](../test/horizontal_page_host_test.cpp)
+   provides unit coverage for selection, measurement/layout, gesture handling,
+   settle behavior, and size budgets.
+- [test/horizontal_page_host_render_test.cpp](../test/horizontal_page_host_render_test.cpp)
+   provides render coverage for revealed-strip repaint correctness with and
+   without blit-copy support.
 - [src/roo_windows/containers/stacked_layout.h](../src/roo_windows/containers/stacked_layout.h)
   provides static page switching with no swipe state.
 - [src/roo_windows/containers/holder.h](../src/roo_windows/containers/holder.h)
@@ -70,10 +82,9 @@ What exists today:
 
 What does not exist yet:
 
-- no viewport-based horizontal pager,
-- no generic page-settle selection container,
-- no framework pattern for keeping only adjacent pages active during swipe,
-- and no integration seam between tab selection and content-page swipe.
+- no landed `material3::Tabs` component to integrate with,
+- no tabs-plus-host example or tabs synchronization test coverage,
+- and no finalized integration guide built around a real tab row.
 
 ### Local Design References
 
@@ -611,37 +622,43 @@ Validation:
 - `bazel test //:horizontal_page_host_render_test`
 - `bazel run //emulation:main` to verify heavy-page drag smoothness
 
-### Phase 4: Tabs Integration Example And Clipping Coverage
+### Phase 4: Host Integration Guide And Non-Tabs Example
 
 Work:
 
-- update the Material 3 tabs example to use `HorizontalPageHost` as the
-  content area below the row,
-- and add selection-synchronization coverage between tabs and the page host.
+- add a host integration example that uses an already-landed selector surface
+   (or direct controls) to drive `setCurrentIndex(...)`,
+- add tests for app-side synchronization through
+   `onSettledIndexChanged(old_index, new_index)`,
+- and document the recommended adapter pattern for wiring a selector row above
+   `HorizontalPageHost`.
+
+Proposed commit message:
+`Add HorizontalPageHost integration guide`
+
+Validation:
+
+- `bazel test //:horizontal_page_host_test`
+- `bazel test //:horizontal_page_host_render_test`
+- `bazel run //emulation:main` with the host integration example selected
+
+### Phase 5: Material Tabs Integration (After Tabs Lands)
+
+Work:
+
+- update the eventual Material 3 tabs example to use `HorizontalPageHost` as
+   the content area below the row,
+- add bidirectional selection-synchronization coverage between tabs and the
+   page host,
+- and add regression tests for tab-click-to-page and swipe-to-tab updates.
 
 Proposed commit message:
 `Integrate tabs with HorizontalPageHost`
 
 Validation:
 
-- `bazel test //:horizontal_page_host_test`
-- `bazel test //:horizontal_page_host_render_test`
-- `bazel test //:material3_tabs_test`
-
-### Phase 5: Wrap-Content Measurement And Size Budgets
-
-Work:
-
-- add non-exact-axis measurement behavior for wrap-content parents,
-- add size-budget assertions for `HorizontalPageHost`,
-- and tighten public comments and example code to match the final semantics.
-
-Proposed commit message:
-`Finish HorizontalPageHost measurement`
-
-Validation:
-
 - `bazel test //:horizontal_page_host_test //:horizontal_page_host_render_test`
+- `bazel test //:material3_tabs_test`
 
 ## Testing Plan
 

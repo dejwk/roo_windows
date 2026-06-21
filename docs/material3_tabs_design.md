@@ -40,7 +40,7 @@ legacy buttons, selectors, or list items.
 
 ### Current Status in `roo_windows`
 
-As of 2026-05, `roo_windows` has no tabs implementation.
+As of 2026-06, `roo_windows` still has no Material 3 tabs implementation.
 
 What exists today:
 
@@ -56,6 +56,11 @@ What exists today:
 - [src/roo_windows/containers/stacked_layout.h](../src/roo_windows/containers/stacked_layout.h)
   already provides a simple way to show one selected content pane below a tab
   row.
+- [src/roo_windows/containers/horizontal_page_host.h](../src/roo_windows/containers/horizontal_page_host.h)
+  and
+  [horizontal_page_host_design.md](horizontal_page_host_design.md)
+  now provide a separate content-area swipe host for tab-row integration once
+  tabs land.
 - [widget_authoring.md](widget_authoring.md) and the repo-local
   [roo-windows-widget-authoring instruction](../.github/instructions/roo-windows-widget-authoring.instructions.md)
   require explicit surface ownership, direct-to-framebuffer paint-order
@@ -67,7 +72,8 @@ What does not exist yet:
 - no tab-owned animated underline indicator,
 - no tab-specific badge host,
 - no fixed versus scrollable tab layout policy,
-- and no tab-specific tests, goldens, or example sketch.
+- no tab-specific tests, render/golden coverage, or example sketch,
+- and no tabs-to-horizontal-page-host integration example.
 
 ### Local Design References
 
@@ -589,13 +595,13 @@ The first example should therefore use:
 That gives a complete authoring story without forcing a pager into the base
 tabs API.
 
-#### Future Swipe-Capable Page Host
+#### Swipe-Capable Page Host Status
 
-If `roo_windows` later adds Material-style swipe within the content area, that
-behavior should live in a separate page host placed below `Tabs`, not inside
-the row itself.
+Material-style content-area swipe should continue to live in a separate page
+host placed below `Tabs`, not inside the row itself.
 
-That companion container design now lives in
+That companion container now exists as `HorizontalPageHost`; the relevant
+design and constraints live in
 [horizontal_page_host_design.md](horizontal_page_host_design.md).
 
 That host should own:
@@ -841,21 +847,25 @@ Validation:
 - `bazel test //:material3_tabs_test`
 - `bazel test //:material3_tabs_golden_test`
 
-### Phase 5: Size Budgets and Documentation Cleanup
+### Phase 5: HorizontalPageHost Integration And Final Budgets
 
 Work:
 
+- add a tabs-plus-`HorizontalPageHost` example demonstrating two-way selection
+  synchronization,
+- add integration tests covering tab-click-to-page and swipe-to-tab updates,
 - add pointer-size-aware size-budget assertions for `Tab`, `BadgedTab`, and
   `Tabs`,
-- tighten the example and any public comments to match the final API,
+- tighten examples and public comments to match the final API,
 - and refresh the design doc links once source files land.
 
 Proposed commit message:
-`Lock Material3 tabs size budgets`
+`Integrate Material3 tabs with HorizontalPageHost`
 
 Validation:
 
 - `bazel test //:material3_tabs_test //:material3_tabs_golden_test`
+- `bazel test //:horizontal_page_host_test //:horizontal_page_host_render_test`
 
 ## Testing Plan
 
