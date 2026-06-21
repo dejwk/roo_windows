@@ -185,6 +185,11 @@ Dimensions MeasureChild(Widget* child, WidthSpec width, HeightSpec height) {
   return child->measure(width, height);
 }
 
+Dimensions SuggestedMinimumChild(const Widget* child) {
+  if (child == nullptr || child->isGone()) return Dimensions(0, 0);
+  return child->getSuggestedMinimumDimensions();
+}
+
 int16_t ConstrainWidth(int16_t desired, WidthSpec spec) {
   switch (spec.kind()) {
     case UNSPECIFIED:
@@ -233,19 +238,19 @@ int16_t SlotY(const ListItem* item, VerticalVisualAlignment alignment,
   return MiddleOffset(row_band_height, slot_height);
 }
 
-// Resolves one shared row geometry so measurement, paint, and child layout all
-// agree on the same slot positions and text bounds.
-RowLayoutMetrics ResolveRowLayout(const ListEntry& entry, WidthSpec width_spec,
+// Resolves one shared row geometry so measurement and child layout agree on
+// the same slot positions and text bounds.
+RowLayoutMetrics ResolveRowLayout(ListEntry& entry, WidthSpec width_spec,
                                   HeightSpec height_spec) {
-  const ListItem* item = entry.item();
+  ListItem* item = entry.item();
   const RowTokens tokens = TokensFor(entry.visualContext().variant);
 
-  Dimensions leading = MeasureChild(
-      item == nullptr ? nullptr : const_cast<Widget*>(item->leading()),
-      WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
-  Dimensions trailing = MeasureChild(
-      item == nullptr ? nullptr : const_cast<Widget*>(item->trailing()),
-      WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+  Dimensions leading =
+    MeasureChild(item == nullptr ? nullptr : item->leading(),
+           WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+  Dimensions trailing =
+    MeasureChild(item == nullptr ? nullptr : item->trailing(),
+           WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
   TextSlotMetrics text = MeasureTextSlots(item);
 
   bool has_leading = leading.width() > 0 || leading.height() > 0;
@@ -260,9 +265,9 @@ RowLayoutMetrics ResolveRowLayout(const ListEntry& entry, WidthSpec width_spec,
   int16_t desired_main_width = tokens.horizontal_padding * 2 + leading.width() +
                                trailing.width() + text.width + horizontal_gaps;
 
-  Dimensions body = MeasureChild(
-      item == nullptr ? nullptr : const_cast<Widget*>(item->body()),
-      WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+  Dimensions body = MeasureChild(item == nullptr ? nullptr : item->body(),
+                                 WidthSpec::Unspecified(0),
+                                 HeightSpec::Unspecified(0));
   bool has_body = body.width() > 0 || body.height() > 0;
   int16_t desired_body_width =
       has_body ? tokens.horizontal_padding * 2 +
@@ -317,8 +322,7 @@ RowLayoutMetrics ResolveRowLayout(const ListEntry& entry, WidthSpec width_spec,
   if (has_body && body_width != body.width()) {
     // Re-measure the optional body at the resolved content width so stacked
     // body content and row height stay consistent with the final row width.
-    body = MeasureChild(const_cast<Widget*>(item->body()),
-                        WidthSpec::Exactly(body_width),
+    body = MeasureChild(item->body(), WidthSpec::Exactly(body_width),
                         HeightSpec::Unspecified(0));
     body_y = row_band_height + tokens.body_gap;
     desired_height = row_band_height + tokens.body_gap + body.height() +
@@ -750,9 +754,43 @@ BorderStyle ListEntry::getBorderStyle() const {
 }
 
 Dimensions ListEntry::getSuggestedMinimumDimensions() const {
-  RowLayoutMetrics layout = ResolveRowLayout(*this, WidthSpec::Unspecified(0),
-                                             HeightSpec::Unspecified(0));
-  return Dimensions(layout.width, layout.height);
+  const RowTokens tokens = TokensFor(visual_context_.variant);
+  Dimensions leading = SuggestedMinimumChild(leading_child_);
+  Dimensions trailing = SuggestedMinimumChild(trailing_child_);
+  Dimensions body = SuggestedMinimumChild(body_child_);
+  TextSlotMetrics text = MeasureTextSlots(item_);
+
+  bool has_leading = leading.width() > 0 || leading.height() > 0;
+  bool has_trailing = trailing.width() > 0 || trailing.height() > 0;
+  bool has_text = text.width > 0 || text.height > 0;
+  bool has_body = body.width() > 0 || body.height() > 0;
+
+  int16_t horizontal_gaps = 0;
+  if (has_leading && has_text) horizontal_gaps += tokens.slot_gap;
+  if (has_trailing && (has_text || has_leading)) {
+    horizontal_gaps += tokens.slot_gap;
+  }
+
+  int16_t desired_main_width = tokens.horizontal_padding * 2 + leading.width() +
+                               trailing.width() + text.width + horizontal_gaps;
+  int16_t desired_body_width =
+      has_body ? tokens.horizontal_padding * 2 +
+                     std::max<int16_t>(body.width(), text.width)
+               : 0;
+  int16_t main_content_height =
+      std::max<int16_t>(text.height, leading.height());
+  main_content_height =
+      std::max<int16_t>(main_content_height, trailing.height());
+  int16_t row_band_height =
+      std::max<int16_t>(MinRowBandHeight(item_, text),
+                        main_content_height + 2 * tokens.vertical_padding);
+  int16_t desired_height =
+      row_band_height +
+      (has_body ? tokens.body_gap + body.height() + tokens.vertical_padding
+                : 0);
+
+  return Dimensions(std::max(desired_main_width, desired_body_width),
+                    desired_height);
 }
 
 bool ListEntry::isClickable() const {
@@ -1206,7 +1244,9 @@ Widget* CheckboxListItem::leading() {
 }
 
 const Widget* CheckboxListItem::leading() const {
-  return const_cast<CheckboxListItem*>(this)->leading();
+  return placement_ == static_cast<uint8_t>(AffordancePlacement::kLeading)
+             ? &checkbox_
+             : nullptr;
 }
 
 Widget* CheckboxListItem::trailing() {
@@ -1216,7 +1256,9 @@ Widget* CheckboxListItem::trailing() {
 }
 
 const Widget* CheckboxListItem::trailing() const {
-  return const_cast<CheckboxListItem*>(this)->trailing();
+  return placement_ == static_cast<uint8_t>(AffordancePlacement::kTrailing)
+             ? &checkbox_
+             : nullptr;
 }
 
 Checkbox::OnOffState CheckboxListItem::checkedState() const {
@@ -1264,7 +1306,9 @@ Widget* RadioListItem::leading() {
 }
 
 const Widget* RadioListItem::leading() const {
-  return const_cast<RadioListItem*>(this)->leading();
+  return placement_ == static_cast<uint8_t>(AffordancePlacement::kLeading)
+             ? &radio_button_
+             : nullptr;
 }
 
 Widget* RadioListItem::trailing() {
@@ -1274,7 +1318,9 @@ Widget* RadioListItem::trailing() {
 }
 
 const Widget* RadioListItem::trailing() const {
-  return const_cast<RadioListItem*>(this)->trailing();
+  return placement_ == static_cast<uint8_t>(AffordancePlacement::kTrailing)
+             ? &radio_button_
+             : nullptr;
 }
 
 bool RadioListItem::isSelected() const { return radio_button_.isOn(); }
@@ -1313,7 +1359,9 @@ Widget* SwitchListItem::leading() {
 }
 
 const Widget* SwitchListItem::leading() const {
-  return const_cast<SwitchListItem*>(this)->leading();
+  return placement_ == static_cast<uint8_t>(AffordancePlacement::kLeading)
+             ? &switch_
+             : nullptr;
 }
 
 Widget* SwitchListItem::trailing() {
@@ -1323,7 +1371,9 @@ Widget* SwitchListItem::trailing() {
 }
 
 const Widget* SwitchListItem::trailing() const {
-  return const_cast<SwitchListItem*>(this)->trailing();
+  return placement_ == static_cast<uint8_t>(AffordancePlacement::kTrailing)
+             ? &switch_
+             : nullptr;
 }
 
 bool SwitchListItem::isOn() const { return switch_.isOn(); }

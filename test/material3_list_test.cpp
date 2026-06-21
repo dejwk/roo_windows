@@ -61,6 +61,33 @@ class TestWidget : public BasicWidget {
   Dimensions dimensions_;
 };
 
+class CountingMeasureWidget : public BasicWidget {
+ public:
+  CountingMeasureWidget(ApplicationContext& context, Dimensions suggested,
+                        Dimensions measured)
+      : BasicWidget(context),
+        suggested_(suggested),
+        measured_(measured),
+        measure_count_(0) {}
+
+  Dimensions getSuggestedMinimumDimensions() const override {
+    return suggested_;
+  }
+
+  Dimensions onMeasure(WidthSpec width, HeightSpec height) override {
+    ++measure_count_;
+    return Dimensions(width.resolveSize(measured_.width()),
+                      height.resolveSize(measured_.height()));
+  }
+
+  int measureCount() const { return measure_count_; }
+
+ private:
+  Dimensions suggested_;
+  Dimensions measured_;
+  int measure_count_;
+};
+
 class TestListEntry : public ListEntry {
  public:
   explicit TestListEntry(ApplicationContext& context) : ListEntry(context) {}
@@ -447,8 +474,7 @@ TEST(Material3List, SelectionConvenienceItemsExposeSemanticStateAndPlacement) {
   checkbox_item.setChecked(true);
   EXPECT_TRUE(checkbox_item.isChecked());
   checkbox_item.setCheckedState(Checkbox::OnOffState::kIndeterminate);
-  EXPECT_EQ(Checkbox::OnOffState::kIndeterminate,
-            checkbox_item.checkedState());
+  EXPECT_EQ(Checkbox::OnOffState::kIndeterminate, checkbox_item.checkedState());
   checkbox_item.setAffordancePlacement(AffordancePlacement::kLeading);
   EXPECT_EQ(&checkbox_item.checkbox(), checkbox_item.leading());
   EXPECT_EQ(nullptr, checkbox_item.trailing());
@@ -480,15 +506,15 @@ TEST(Material3List, SelectionRowsDelegateRowClickToAffordanceState) {
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
 
-  TestListRow<CheckboxListItem> checkbox_row(
-      context, "Notifications", "Row toggles checkbox");
+  TestListRow<CheckboxListItem> checkbox_row(context, "Notifications",
+                                             "Row toggles checkbox");
   EXPECT_TRUE(checkbox_row.isClickable());
   EXPECT_FALSE(checkbox_row.item().isChecked());
   checkbox_row.onClicked();
   EXPECT_TRUE(checkbox_row.item().isChecked());
 
-  TestListRow<RadioListItem> radio_row(context, "Balanced",
-                                       "Row selects radio", false);
+  TestListRow<RadioListItem> radio_row(context, "Balanced", "Row selects radio",
+                                       false);
   EXPECT_TRUE(radio_row.isClickable());
   EXPECT_FALSE(radio_row.item().isSelected());
   radio_row.onClicked();
@@ -613,6 +639,33 @@ TEST(Material3List, ListEntryMeasuresAndLaysOutSlots) {
   EXPECT_EQ((measured.height() - leading.height()) / 2, leading.offsetTop());
   EXPECT_EQ(180 - Scaled(16) - trailing.width(), trailing.offsetLeft());
   EXPECT_EQ((measured.height() - trailing.height()) / 2, trailing.offsetTop());
+}
+
+// Verifies that the const suggested-minimum query stays on the cheap,
+// non-measuring path and does not trigger child measure side effects.
+TEST(Material3List, ListEntrySuggestedMinimumDoesNotMeasureBoundSlots) {
+  roo_scheduler::Scheduler scheduler;
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
+  CountingMeasureWidget leading(context, Dimensions(10, 8), Dimensions(40, 30));
+  CountingMeasureWidget trailing(context, Dimensions(7, 6), Dimensions(35, 20));
+  CountingMeasureWidget body(context, Dimensions(9, 5), Dimensions(60, 18));
+  StandardListItemInit init;
+  init.leading = &leading;
+  init.trailing = &trailing;
+  init.body = &body;
+  StandardListItem item(init);
+  TestListEntry entry(context);
+  entry.setItem(item);
+
+  const ListEntry& const_entry = entry;
+  Dimensions suggested = const_entry.getSuggestedMinimumDimensions();
+
+  EXPECT_EQ(0, leading.measureCount());
+  EXPECT_EQ(0, trailing.measureCount());
+  EXPECT_EQ(0, body.measureCount());
+  EXPECT_GT(suggested.width(), 0);
+  EXPECT_GE(suggested.height(), Scaled(56));
 }
 
 // Verifies that refreshFromItem rereads lightweight descriptor state while

@@ -192,25 +192,19 @@ class ListItem {
   virtual Widget* leading() { return nullptr; }
 
   /// Returns the borrowed leading slot widget for read-only access.
-  virtual const Widget* leading() const {
-    return const_cast<ListItem*>(this)->leading();
-  }
+  virtual const Widget* leading() const { return nullptr; }
 
   /// Returns the borrowed trailing slot widget, or nullptr.
   virtual Widget* trailing() { return nullptr; }
 
   /// Returns the borrowed trailing slot widget for read-only access.
-  virtual const Widget* trailing() const {
-    return const_cast<ListItem*>(this)->trailing();
-  }
+  virtual const Widget* trailing() const { return nullptr; }
 
   /// Returns the borrowed body slot widget, or nullptr.
   virtual Widget* body() { return nullptr; }
 
   /// Returns the borrowed body slot widget for read-only access.
-  virtual const Widget* body() const {
-    return const_cast<ListItem*>(this)->body();
-  }
+  virtual const Widget* body() const { return nullptr; }
 
   /// Returns the leading visual alignment policy.
   virtual VerticalVisualAlignment leadingAlignment() const {

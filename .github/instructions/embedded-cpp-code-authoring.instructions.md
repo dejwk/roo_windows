@@ -26,6 +26,10 @@ policy on top of this baseline.
   more naturally, matching the spelling of the underlying field.
 - Favor readability. Avoid redundant branches, repeated explanations, and
   unnecessary line count when the code can stay clear without them.
+- Avoid `const_cast` as a way to bridge const/non-const API mismatches,
+  especially for borrowed inputs where callers may rely on immutability.
+  Only use it when the target is provably non-mutating for that call path;
+  otherwise, fix the interface to be const-correct.
 - Avoid long lambdas. When logic is substantial, prefer an unnamed-namespace
   helper over a large local lambda, and define that helper close to the place
   where it is used.

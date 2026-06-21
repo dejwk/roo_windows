@@ -394,7 +394,7 @@ class SelectionSection : public FlexLayout {
         thermal_lock_(context, "Thermal lock", "Prevent accidental toggles",
                       true),
         heater_boost_(context, "Heater boost", "Temporarily raise target",
-                false) {
+                      false) {
     setGap(Scaled(6));
 
     material3::ListSelectionPolicy multi_policy;

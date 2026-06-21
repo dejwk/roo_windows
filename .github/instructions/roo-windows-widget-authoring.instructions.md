@@ -26,6 +26,13 @@ This is the canonical widget-authoring guidance for the repository.
   not.
 - Keep the base widget cheap and push rare features into subclasses, shared
   const tables, or virtual hooks.
+- Keep `getSuggestedMinimumDimensions()` quick and non-measuring. Exact child
+  measurement belongs in `onMeasure()`, so suggested minimums may be
+  conservative or approximate.
+- A container-style widget may derive its suggested minimum from children's
+  `getSuggestedMinimumDimensions()` when that is cheap and sufficient, like
+  `AlignedLayout` does. Returning `Dimensions(0, 0)` is also acceptable when
+  the widget provides its real sizing behavior in `onMeasure()`.
 - User-visible widget capabilities should be showcased in an example when the
   repo already maintains examples for that component family.
 - Prefer virtual no-op hooks over per-instance `std::function` callbacks.
