@@ -769,6 +769,21 @@ Authoring references:
 [embedded-cpp-code-authoring instruction](../.github/instructions/embedded-cpp-code-authoring.instructions.md)
 [roo-windows-widget-authoring instruction](../.github/instructions/roo-windows-widget-authoring.instructions.md)
 
+### Execution Order
+
+The next implementation step is to start tabs.
+
+`HorizontalPageHost` is already available as a dependency and does not block
+tabs phases 1-4.
+
+Recommended order:
+
+1. implement tabs phases 1-4 first,
+2. then wire tabs to `HorizontalPageHost` in tabs phase 5,
+3. and keep any additional host-only polishing in
+  [horizontal_page_host_design.md](horizontal_page_host_design.md) independent
+  from tabs core delivery.
+
 ### Phase 1: Core Fixed Tabs
 
 Work:
@@ -926,8 +941,6 @@ Choosing the mode explicitly gives the application stable behavior.
 
 Future follow-ups that remain intentionally out of scope for this design are:
 
-- a dedicated page-host helper or pager once `roo_windows` has a stable
-  horizontal page-container abstraction,
 - multiline or explicitly wrapped tab labels for products that genuinely need
   them,
 - nested app-bar-plus-tabs collapse behavior,
