@@ -41,6 +41,12 @@ static_assert(std::is_base_of<ListItem, NavigationListItem>::value,
               "NavigationListItem must remain a ListItem descriptor");
 static_assert(std::is_base_of<ListItem, AvatarNavigationListItem>::value,
               "AvatarNavigationListItem must remain a ListItem descriptor");
+static_assert(std::is_base_of<ListItem, CheckboxListItem>::value,
+              "CheckboxListItem must remain a ListItem descriptor");
+static_assert(std::is_base_of<ListItem, RadioListItem>::value,
+              "RadioListItem must remain a ListItem descriptor");
+static_assert(std::is_base_of<ListItem, SwitchListItem>::value,
+              "SwitchListItem must remain a ListItem descriptor");
 
 class TestWidget : public BasicWidget {
  public:
@@ -423,6 +429,99 @@ TEST(Material3List, NavigationRowsDelegateRowClickToItemInvokePath) {
   row.item().invoke();
 
   EXPECT_EQ(2, invocation_count);
+}
+
+// Verifies that Phase 10 selection convenience items expose semantic state
+// APIs and support configurable leading/trailing control placement.
+TEST(Material3List, SelectionConvenienceItemsExposeSemanticStateAndPlacement) {
+  roo_scheduler::Scheduler scheduler;
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
+
+  CheckboxListItem checkbox_item(context, "Notifications", "Row toggles",
+                                 Checkbox::OnOffState::kOff,
+                                 AffordancePlacement::kTrailing);
+  EXPECT_EQ(nullptr, checkbox_item.leading());
+  EXPECT_EQ(&checkbox_item.checkbox(), checkbox_item.trailing());
+  EXPECT_FALSE(checkbox_item.isChecked());
+  checkbox_item.setChecked(true);
+  EXPECT_TRUE(checkbox_item.isChecked());
+  checkbox_item.setCheckedState(Checkbox::OnOffState::kIndeterminate);
+  EXPECT_EQ(Checkbox::OnOffState::kIndeterminate,
+            checkbox_item.checkedState());
+  checkbox_item.setAffordancePlacement(AffordancePlacement::kLeading);
+  EXPECT_EQ(&checkbox_item.checkbox(), checkbox_item.leading());
+  EXPECT_EQ(nullptr, checkbox_item.trailing());
+
+  RadioListItem radio_item(context, "Balanced", "Single-select choice", true,
+                           AffordancePlacement::kLeading);
+  EXPECT_EQ(&radio_item.radioButton(), radio_item.leading());
+  EXPECT_EQ(nullptr, radio_item.trailing());
+  EXPECT_TRUE(radio_item.isSelected());
+  radio_item.setSelected(false);
+  EXPECT_FALSE(radio_item.isSelected());
+  radio_item.setAffordancePlacement(AffordancePlacement::kTrailing);
+  EXPECT_EQ(nullptr, radio_item.leading());
+  EXPECT_EQ(&radio_item.radioButton(), radio_item.trailing());
+
+  SwitchListItem switch_item(context, "Thermal lock", "Toggle row", false,
+                             AffordancePlacement::kTrailing);
+  EXPECT_FALSE(switch_item.isOn());
+  switch_item.setOn(true);
+  EXPECT_TRUE(switch_item.isOn());
+  switch_item.toggle();
+  EXPECT_FALSE(switch_item.isOn());
+}
+
+// Verifies that selection convenience rows are clickable without requiring a
+// callback and that row press toggles/selects the embedded affordance state.
+TEST(Material3List, SelectionRowsDelegateRowClickToAffordanceState) {
+  roo_scheduler::Scheduler scheduler;
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
+
+  TestListRow<CheckboxListItem> checkbox_row(
+      context, "Notifications", "Row toggles checkbox");
+  EXPECT_TRUE(checkbox_row.isClickable());
+  EXPECT_FALSE(checkbox_row.item().isChecked());
+  checkbox_row.onClicked();
+  EXPECT_TRUE(checkbox_row.item().isChecked());
+
+  TestListRow<RadioListItem> radio_row(context, "Balanced",
+                                       "Row selects radio", false);
+  EXPECT_TRUE(radio_row.isClickable());
+  EXPECT_FALSE(radio_row.item().isSelected());
+  radio_row.onClicked();
+  EXPECT_TRUE(radio_row.item().isSelected());
+
+  TestListRow<SwitchListItem> switch_row(context, "Thermal lock",
+                                         "Row toggles switch", false);
+  EXPECT_TRUE(switch_row.isClickable());
+  EXPECT_FALSE(switch_row.item().isOn());
+  switch_row.onClicked();
+  EXPECT_TRUE(switch_row.item().isOn());
+}
+
+// Verifies that checkbox and radio affordance taps trigger the same
+// invoke callback path used by row clicks.
+TEST(Material3List, SelectionAffordanceTapUsesSameInvokeCallbackPath) {
+  roo_scheduler::Scheduler scheduler;
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
+
+  CheckboxListItem checkbox_item(context, "Notifications", "Track invokes");
+  int checkbox_invocations = 0;
+  checkbox_item.setOnInvoked([&]() { ++checkbox_invocations; });
+  checkbox_item.invoke();
+  checkbox_item.checkbox().onClicked();
+  EXPECT_EQ(2, checkbox_invocations);
+
+  RadioListItem radio_item(context, "Balanced", "Track invokes");
+  int radio_invocations = 0;
+  radio_item.setOnInvoked([&]() { ++radio_invocations; });
+  radio_item.invoke();
+  radio_item.radioButton().onClicked();
+  EXPECT_EQ(2, radio_invocations);
 }
 
 // Verifies that the Phase 1 widgets can be constructed with safe default

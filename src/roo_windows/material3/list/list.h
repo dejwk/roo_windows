@@ -11,6 +11,9 @@
 #include "roo_display/core/utf8.h"
 #include "roo_windows/core/container.h"
 #include "roo_windows/core/widget_ref.h"
+#include "roo_windows/material3/checkbox/checkbox.h"
+#include "roo_windows/material3/radio_button/radio_button.h"
+#include "roo_windows/material3/switch/switch.h"
 #include "roo_windows/widgets/icon.h"
 
 namespace roo_windows {
@@ -532,9 +535,42 @@ class AvatarSupportingTextItem : public HeadlineSupportingListItemBase {
   std::unique_ptr<AvatarVisual> leading_avatar_;
 };
 
+/// Shared invoke-capable convenience base that keeps callback storage in
+/// opt-in item families.
+class InvokableListItemBase : public HeadlineSupportingListItemBase {
+ public:
+  /// Creates an invoke-capable convenience item with optional always-clickable
+  /// behavior.
+  InvokableListItemBase(roo::string_view headline = {},
+                        roo::string_view supporting = {},
+                        ListTextPolicy headline_policy = {},
+                        ListTextPolicy supporting_policy = {},
+                        bool always_invokable = false);
+
+  /// Returns whether this item currently allows row invocation.
+  bool isInvokable() const override;
+
+  /// Runs item-specific invoke behavior and the optional invoke callback.
+  void invoke() override;
+
+  /// Sets an optional invoke callback used by row or affordance presses.
+  void setOnInvoked(std::function<void()> on_invoked);
+
+ protected:
+  /// Runs the invoke callback when present.
+  void notifyInvoked();
+
+  /// Performs item-specific invoke behavior before notifyInvoked().
+  virtual void handleInvoke();
+
+ private:
+  bool always_invokable_;
+  std::function<void()> on_invoked_;
+};
+
 /// Convenience item that owns a leading icon and trailing navigation
 /// affordance.
-class NavigationListItem : public HeadlineSupportingListItemBase {
+class NavigationListItem : public InvokableListItemBase {
  public:
   NavigationListItem(ApplicationContext& context,
                      const roo_display::Pictogram& pictogram,
@@ -547,24 +583,20 @@ class NavigationListItem : public HeadlineSupportingListItemBase {
   const Widget* leading() const override;
   Widget* trailing() override;
   const Widget* trailing() const override;
-  bool isInvokable() const override;
-  void invoke() override;
 
   Icon& leadingIcon();
   const Icon& leadingIcon() const;
   Icon& trailingAffordance();
   const Icon& trailingAffordance() const;
   void setPictogram(const roo_display::Pictogram& pictogram);
-  void setOnInvoked(std::function<void()> on_invoked);
 
  private:
   Icon leading_icon_;
   Icon trailing_affordance_;
-  std::function<void()> on_invoked_;
 };
 
 /// Convenience item with initials avatar and navigation affordance.
-class AvatarNavigationListItem : public HeadlineSupportingListItemBase {
+class AvatarNavigationListItem : public InvokableListItemBase {
  public:
   AvatarNavigationListItem(ApplicationContext& context,
                            roo::string_view initials = {},
@@ -578,19 +610,169 @@ class AvatarNavigationListItem : public HeadlineSupportingListItemBase {
   const Widget* leading() const override;
   Widget* trailing() override;
   const Widget* trailing() const override;
-  bool isInvokable() const override;
-  void invoke() override;
 
   roo::string_view initials() const;
   Icon& trailingAffordance();
   const Icon& trailingAffordance() const;
   void setInitials(roo::string_view initials);
-  void setOnInvoked(std::function<void()> on_invoked);
 
  private:
   std::unique_ptr<AvatarVisual> leading_avatar_;
   Icon trailing_affordance_;
-  std::function<void()> on_invoked_;
+};
+
+/// Convenience item that owns a checkbox affordance plus standard text.
+class CheckboxListItem : public InvokableListItemBase {
+ public:
+  /// Creates a checkbox-backed convenience item with configurable placement.
+  CheckboxListItem(
+      ApplicationContext& context, roo::string_view headline = {},
+      roo::string_view supporting = {},
+      Checkbox::OnOffState checked_state = Checkbox::OnOffState::kOff,
+      AffordancePlacement placement = AffordancePlacement::kTrailing,
+      ListTextPolicy headline_policy = {},
+      ListTextPolicy supporting_policy = {});
+
+  /// Creates a checkbox-backed convenience item from a boolean checked flag.
+  CheckboxListItem(
+      ApplicationContext& context, roo::string_view headline,
+      roo::string_view supporting, bool checked,
+      AffordancePlacement placement = AffordancePlacement::kTrailing,
+      ListTextPolicy headline_policy = {},
+      ListTextPolicy supporting_policy = {});
+
+  /// Returns the leading slot widget when placement is leading.
+  Widget* leading() override;
+
+  /// Returns the leading slot widget when placement is leading.
+  const Widget* leading() const override;
+
+  /// Returns the trailing slot widget when placement is trailing.
+  Widget* trailing() override;
+
+  /// Returns the trailing slot widget when placement is trailing.
+  const Widget* trailing() const override;
+
+  /// Returns the current checkbox tri-state value.
+  Checkbox::OnOffState checkedState() const;
+
+  /// Returns true when the checkbox is in the on state.
+  bool isChecked() const;
+
+  /// Sets the checkbox to on or off.
+  void setChecked(bool checked);
+
+  /// Sets the checkbox tri-state value.
+  void setCheckedState(Checkbox::OnOffState checked_state);
+
+  /// Sets whether the checkbox appears in the leading or trailing slot.
+  void setAffordancePlacement(AffordancePlacement placement);
+
+  /// Returns the owned checkbox affordance.
+  Checkbox& checkbox();
+
+  /// Returns the owned checkbox affordance.
+  const Checkbox& checkbox() const;
+
+ protected:
+  void handleInvoke() override;
+
+ private:
+  Checkbox checkbox_;
+  uint8_t placement_ : 1;
+};
+
+/// Convenience item that owns a radio-button affordance plus standard text.
+class RadioListItem : public InvokableListItemBase {
+ public:
+  /// Creates a radio-backed convenience item with configurable placement.
+  RadioListItem(ApplicationContext& context, roo::string_view headline = {},
+                roo::string_view supporting = {}, bool selected = false,
+                AffordancePlacement placement = AffordancePlacement::kTrailing,
+                ListTextPolicy headline_policy = {},
+                ListTextPolicy supporting_policy = {});
+
+  /// Returns the leading slot widget when placement is leading.
+  Widget* leading() override;
+
+  /// Returns the leading slot widget when placement is leading.
+  const Widget* leading() const override;
+
+  /// Returns the trailing slot widget when placement is trailing.
+  Widget* trailing() override;
+
+  /// Returns the trailing slot widget when placement is trailing.
+  const Widget* trailing() const override;
+
+  /// Returns whether the radio affordance is selected.
+  bool isSelected() const;
+
+  /// Sets whether the radio affordance is selected.
+  void setSelected(bool selected);
+
+  /// Sets whether the radio appears in the leading or trailing slot.
+  void setAffordancePlacement(AffordancePlacement placement);
+
+  /// Returns the owned radio-button affordance.
+  RadioButton& radioButton();
+
+  /// Returns the owned radio-button affordance.
+  const RadioButton& radioButton() const;
+
+ protected:
+  void handleInvoke() override;
+
+ private:
+  RadioButton radio_button_;
+  uint8_t placement_ : 1;
+};
+
+/// Convenience item that owns a switch affordance plus standard text.
+class SwitchListItem : public InvokableListItemBase {
+ public:
+  /// Creates a switch-backed convenience item with configurable placement.
+  SwitchListItem(ApplicationContext& context, roo::string_view headline = {},
+                 roo::string_view supporting = {}, bool on = false,
+                 AffordancePlacement placement = AffordancePlacement::kTrailing,
+                 ListTextPolicy headline_policy = {},
+                 ListTextPolicy supporting_policy = {});
+
+  /// Returns the leading slot widget when placement is leading.
+  Widget* leading() override;
+
+  /// Returns the leading slot widget when placement is leading.
+  const Widget* leading() const override;
+
+  /// Returns the trailing slot widget when placement is trailing.
+  Widget* trailing() override;
+
+  /// Returns the trailing slot widget when placement is trailing.
+  const Widget* trailing() const override;
+
+  /// Returns whether the switch is currently on.
+  bool isOn() const;
+
+  /// Sets the switch on/off state.
+  void setOn(bool on);
+
+  /// Toggles the switch on/off state.
+  void toggle();
+
+  /// Sets whether the switch appears in the leading or trailing slot.
+  void setAffordancePlacement(AffordancePlacement placement);
+
+  /// Returns the owned switch affordance.
+  Switch& switchControl();
+
+  /// Returns the owned switch affordance.
+  const Switch& switchControl() const;
+
+ protected:
+  void handleInvoke() override;
+
+ private:
+  Switch switch_;
+  uint8_t placement_ : 1;
 };
 
 /// Thin ownership adapter that binds one inline-owned item to a `ListEntry`.

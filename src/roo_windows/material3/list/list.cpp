@@ -1066,17 +1066,47 @@ void AvatarSupportingTextItem::setInitials(roo::string_view initials) {
   }
 }
 
+InvokableListItemBase::InvokableListItemBase(roo::string_view headline,
+                                             roo::string_view supporting,
+                                             ListTextPolicy headline_policy,
+                                             ListTextPolicy supporting_policy,
+                                             bool always_invokable)
+    : HeadlineSupportingListItemBase(headline, supporting, headline_policy,
+                                     supporting_policy),
+      always_invokable_(always_invokable),
+      on_invoked_() {}
+
+bool InvokableListItemBase::isInvokable() const {
+  return always_invokable_ || static_cast<bool>(on_invoked_);
+}
+
+void InvokableListItemBase::invoke() {
+  handleInvoke();
+  notifyInvoked();
+}
+
+void InvokableListItemBase::setOnInvoked(std::function<void()> on_invoked) {
+  on_invoked_ = std::move(on_invoked);
+}
+
+void InvokableListItemBase::notifyInvoked() {
+  if (on_invoked_) {
+    on_invoked_();
+  }
+}
+
+void InvokableListItemBase::handleInvoke() {}
+
 NavigationListItem::NavigationListItem(ApplicationContext& context,
                                        const roo_display::Pictogram& pictogram,
                                        roo::string_view headline,
                                        roo::string_view supporting,
                                        ListTextPolicy headline_policy,
                                        ListTextPolicy supporting_policy)
-    : HeadlineSupportingListItemBase(headline, supporting, headline_policy,
-                                     supporting_policy),
+    : InvokableListItemBase(headline, supporting, headline_policy,
+                            supporting_policy),
       leading_icon_(context, pictogram),
-      trailing_affordance_(context, ic_filled_24_navigation_chevron_right()),
-      on_invoked_() {}
+      trailing_affordance_(context, ic_filled_24_navigation_chevron_right()) {}
 
 Widget* NavigationListItem::leading() { return &leading_icon_; }
 
@@ -1086,16 +1116,6 @@ Widget* NavigationListItem::trailing() { return &trailing_affordance_; }
 
 const Widget* NavigationListItem::trailing() const {
   return &trailing_affordance_;
-}
-
-bool NavigationListItem::isInvokable() const {
-  return static_cast<bool>(on_invoked_);
-}
-
-void NavigationListItem::invoke() {
-  if (on_invoked_) {
-    on_invoked_();
-  }
 }
 
 Icon& NavigationListItem::leadingIcon() { return leading_icon_; }
@@ -1112,19 +1132,14 @@ void NavigationListItem::setPictogram(const roo_display::Pictogram& pictogram) {
   leading_icon_.setIcon(pictogram);
 }
 
-void NavigationListItem::setOnInvoked(std::function<void()> on_invoked) {
-  on_invoked_ = std::move(on_invoked);
-}
-
 AvatarNavigationListItem::AvatarNavigationListItem(
     ApplicationContext& context, roo::string_view initials,
     roo::string_view headline, roo::string_view supporting,
     ListTextPolicy headline_policy, ListTextPolicy supporting_policy)
-    : HeadlineSupportingListItemBase(headline, supporting, headline_policy,
-                                     supporting_policy),
+    : InvokableListItemBase(headline, supporting, headline_policy,
+                            supporting_policy),
       leading_avatar_(std::make_unique<AvatarVisual>(context, initials)),
-      trailing_affordance_(context, ic_filled_24_navigation_chevron_right()),
-      on_invoked_() {}
+      trailing_affordance_(context, ic_filled_24_navigation_chevron_right()) {}
 
 AvatarNavigationListItem::~AvatarNavigationListItem() = default;
 
@@ -1138,16 +1153,6 @@ Widget* AvatarNavigationListItem::trailing() { return &trailing_affordance_; }
 
 const Widget* AvatarNavigationListItem::trailing() const {
   return &trailing_affordance_;
-}
-
-bool AvatarNavigationListItem::isInvokable() const {
-  return static_cast<bool>(on_invoked_);
-}
-
-void AvatarNavigationListItem::invoke() {
-  if (on_invoked_) {
-    on_invoked_();
-  }
 }
 
 roo::string_view AvatarNavigationListItem::initials() const {
@@ -1169,9 +1174,173 @@ void AvatarNavigationListItem::setInitials(roo::string_view initials) {
   }
 }
 
-void AvatarNavigationListItem::setOnInvoked(std::function<void()> on_invoked) {
-  on_invoked_ = std::move(on_invoked);
+CheckboxListItem::CheckboxListItem(ApplicationContext& context,
+                                   roo::string_view headline,
+                                   roo::string_view supporting,
+                                   Checkbox::OnOffState checked_state,
+                                   AffordancePlacement placement,
+                                   ListTextPolicy headline_policy,
+                                   ListTextPolicy supporting_policy)
+    : InvokableListItemBase(headline, supporting, headline_policy,
+                            supporting_policy, true),
+      checkbox_(context, checked_state),
+      placement_(static_cast<uint8_t>(placement)) {
+  checkbox_.setOnInteractiveChange([this]() { notifyInvoked(); });
 }
+
+CheckboxListItem::CheckboxListItem(ApplicationContext& context,
+                                   roo::string_view headline,
+                                   roo::string_view supporting, bool checked,
+                                   AffordancePlacement placement,
+                                   ListTextPolicy headline_policy,
+                                   ListTextPolicy supporting_policy)
+    : CheckboxListItem(
+          context, headline, supporting,
+          checked ? Checkbox::OnOffState::kOn : Checkbox::OnOffState::kOff,
+          placement, headline_policy, supporting_policy) {}
+
+Widget* CheckboxListItem::leading() {
+  return placement_ == static_cast<uint8_t>(AffordancePlacement::kLeading)
+             ? &checkbox_
+             : nullptr;
+}
+
+const Widget* CheckboxListItem::leading() const {
+  return const_cast<CheckboxListItem*>(this)->leading();
+}
+
+Widget* CheckboxListItem::trailing() {
+  return placement_ == static_cast<uint8_t>(AffordancePlacement::kTrailing)
+             ? &checkbox_
+             : nullptr;
+}
+
+const Widget* CheckboxListItem::trailing() const {
+  return const_cast<CheckboxListItem*>(this)->trailing();
+}
+
+Checkbox::OnOffState CheckboxListItem::checkedState() const {
+  return checkbox_.onOffState();
+}
+
+bool CheckboxListItem::isChecked() const { return checkbox_.isOn(); }
+
+void CheckboxListItem::setChecked(bool checked) {
+  checked ? checkbox_.setOn() : checkbox_.setOff();
+}
+
+void CheckboxListItem::setCheckedState(Checkbox::OnOffState checked_state) {
+  checkbox_.setOnOffState(checked_state);
+}
+
+void CheckboxListItem::setAffordancePlacement(AffordancePlacement placement) {
+  placement_ = static_cast<uint8_t>(placement);
+}
+
+Checkbox& CheckboxListItem::checkbox() { return checkbox_; }
+
+const Checkbox& CheckboxListItem::checkbox() const { return checkbox_; }
+
+void CheckboxListItem::handleInvoke() { checkbox_.toggle(); }
+
+RadioListItem::RadioListItem(ApplicationContext& context,
+                             roo::string_view headline,
+                             roo::string_view supporting, bool selected,
+                             AffordancePlacement placement,
+                             ListTextPolicy headline_policy,
+                             ListTextPolicy supporting_policy)
+    : InvokableListItemBase(headline, supporting, headline_policy,
+                            supporting_policy, true),
+      radio_button_(context, selected ? RadioButton::OnOffState::kOn
+                                      : RadioButton::OnOffState::kOff),
+      placement_(static_cast<uint8_t>(placement)) {
+  radio_button_.setOnInteractiveChange([this]() { notifyInvoked(); });
+}
+
+Widget* RadioListItem::leading() {
+  return placement_ == static_cast<uint8_t>(AffordancePlacement::kLeading)
+             ? &radio_button_
+             : nullptr;
+}
+
+const Widget* RadioListItem::leading() const {
+  return const_cast<RadioListItem*>(this)->leading();
+}
+
+Widget* RadioListItem::trailing() {
+  return placement_ == static_cast<uint8_t>(AffordancePlacement::kTrailing)
+             ? &radio_button_
+             : nullptr;
+}
+
+const Widget* RadioListItem::trailing() const {
+  return const_cast<RadioListItem*>(this)->trailing();
+}
+
+bool RadioListItem::isSelected() const { return radio_button_.isOn(); }
+
+void RadioListItem::setSelected(bool selected) {
+  selected ? radio_button_.setOn() : radio_button_.setOff();
+}
+
+void RadioListItem::setAffordancePlacement(AffordancePlacement placement) {
+  placement_ = static_cast<uint8_t>(placement);
+}
+
+RadioButton& RadioListItem::radioButton() { return radio_button_; }
+
+const RadioButton& RadioListItem::radioButton() const { return radio_button_; }
+
+void RadioListItem::handleInvoke() { radio_button_.setOn(); }
+
+SwitchListItem::SwitchListItem(ApplicationContext& context,
+                               roo::string_view headline,
+                               roo::string_view supporting, bool on,
+                               AffordancePlacement placement,
+                               ListTextPolicy headline_policy,
+                               ListTextPolicy supporting_policy)
+    : InvokableListItemBase(headline, supporting, headline_policy,
+                            supporting_policy, true),
+      switch_(context, on ? Switch::OnOffState::kOn : Switch::OnOffState::kOff),
+      placement_(static_cast<uint8_t>(placement)) {
+  switch_.setOnInteractiveChange([this]() { notifyInvoked(); });
+}
+
+Widget* SwitchListItem::leading() {
+  return placement_ == static_cast<uint8_t>(AffordancePlacement::kLeading)
+             ? &switch_
+             : nullptr;
+}
+
+const Widget* SwitchListItem::leading() const {
+  return const_cast<SwitchListItem*>(this)->leading();
+}
+
+Widget* SwitchListItem::trailing() {
+  return placement_ == static_cast<uint8_t>(AffordancePlacement::kTrailing)
+             ? &switch_
+             : nullptr;
+}
+
+const Widget* SwitchListItem::trailing() const {
+  return const_cast<SwitchListItem*>(this)->trailing();
+}
+
+bool SwitchListItem::isOn() const { return switch_.isOn(); }
+
+void SwitchListItem::setOn(bool on) { switch_.setOn(on); }
+
+void SwitchListItem::toggle() { switch_.toggle(); }
+
+void SwitchListItem::setAffordancePlacement(AffordancePlacement placement) {
+  placement_ = static_cast<uint8_t>(placement);
+}
+
+Switch& SwitchListItem::switchControl() { return switch_; }
+
+const Switch& SwitchListItem::switchControl() const { return switch_; }
+
+void SwitchListItem::handleInvoke() { switch_.toggle(); }
 
 List::List(ApplicationContext& context)
     : Container(context),

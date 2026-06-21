@@ -369,6 +369,96 @@ class NavigationSection : public FlexLayout {
   material3::ListRow<material3::AvatarNavigationListItem> owner_;
 };
 
+class SelectionSection : public FlexLayout {
+ public:
+  explicit SelectionSection(ApplicationContext& context)
+      : FlexLayout(context, FlexDirection::kColumn),
+        title_(context, "Phase 10 selection items", font_body1()),
+        subtitle_(context,
+                  "Row presses and control presses share one invoke path for "
+                  "checkbox, radio, and switch rows.",
+                  font_caption()),
+        multi_select_(context),
+        single_select_(context),
+        toggle_list_(context),
+        notifications_(context, "Notifications", "Include push updates", true,
+                       material3::AffordancePlacement::kLeading),
+        freeze_guard_(context, "Freeze guard", "Protect outdoor loop", false,
+                      material3::AffordancePlacement::kLeading),
+        compact_(context, "Compact", "Dense spacing", false,
+                 material3::AffordancePlacement::kLeading),
+        balanced_(context, "Balanced", "Default spacing", true,
+                  material3::AffordancePlacement::kLeading),
+        comfortable_(context, "Comfortable", "Extra breathing room", false,
+                     material3::AffordancePlacement::kLeading),
+        thermal_lock_(context, "Thermal lock", "Prevent accidental toggles",
+                      true),
+        heater_boost_(context, "Heater boost", "Temporarily raise target",
+                false) {
+    setGap(Scaled(6));
+
+    material3::ListSelectionPolicy multi_policy;
+    multi_policy.mode = material3::SelectionMode::kMultiple;
+    multi_policy.affordance = material3::SelectionAffordance::kCheckbox;
+    multi_policy.placement = material3::AffordancePlacement::kLeading;
+    multi_select_.setSelectionPolicy(multi_policy);
+
+    material3::ListSelectionPolicy single_policy;
+    single_policy.mode = material3::SelectionMode::kSingle;
+    single_policy.affordance = material3::SelectionAffordance::kRadio;
+    single_policy.placement = material3::AffordancePlacement::kLeading;
+    single_select_.setSelectionPolicy(single_policy);
+
+    material3::ListSelectionPolicy switch_policy;
+    switch_policy.mode = material3::SelectionMode::kMultiple;
+    switch_policy.affordance = material3::SelectionAffordance::kSwitch;
+    toggle_list_.setSelectionPolicy(switch_policy);
+
+    compact_.item().setOnInvoked([this]() { selectDensity(0); });
+    balanced_.item().setOnInvoked([this]() { selectDensity(1); });
+    comfortable_.item().setOnInvoked([this]() { selectDensity(2); });
+
+    multi_select_.add(notifications_);
+    multi_select_.add(freeze_guard_);
+
+    single_select_.add(compact_);
+    single_select_.add(balanced_);
+    single_select_.add(comfortable_);
+
+    toggle_list_.add(thermal_lock_);
+    toggle_list_.add(heater_boost_);
+
+    add(title_, {.flex_grow = 0, .flex_shrink = 0});
+    add(subtitle_, {.flex_grow = 0, .flex_shrink = 0});
+    add(multi_select_, {.flex_grow = 0, .flex_shrink = 0});
+    add(single_select_, {.flex_grow = 0, .flex_shrink = 0});
+    add(toggle_list_, {.flex_grow = 0, .flex_shrink = 0});
+  }
+
+ private:
+  void selectDensity(int idx) {
+    compact_.item().setSelected(idx == 0);
+    balanced_.item().setSelected(idx == 1);
+    comfortable_.item().setSelected(idx == 2);
+    compact_.refreshFromItem();
+    balanced_.refreshFromItem();
+    comfortable_.refreshFromItem();
+  }
+
+  TextLabel title_;
+  TextLabel subtitle_;
+  material3::List multi_select_;
+  material3::List single_select_;
+  material3::List toggle_list_;
+  material3::ListRow<material3::CheckboxListItem> notifications_;
+  material3::ListRow<material3::CheckboxListItem> freeze_guard_;
+  material3::ListRow<material3::RadioListItem> compact_;
+  material3::ListRow<material3::RadioListItem> balanced_;
+  material3::ListRow<material3::RadioListItem> comfortable_;
+  material3::ListRow<material3::SwitchListItem> thermal_lock_;
+  material3::ListRow<material3::SwitchListItem> heater_boost_;
+};
+
 class ListsScreen : public SimpleScrollablePanel {
  public:
   explicit ListsScreen(ApplicationContext& context)
@@ -376,8 +466,8 @@ class ListsScreen : public SimpleScrollablePanel {
         content_(context, FlexDirection::kColumn),
         title_(context, "Material 3 lists", font_h6()),
         subtitle_(context,
-                  "Phase 9 - convenience items now include row invocation "
-                  "and navigation paths",
+                  "Phase 10 - convenience items now include selection "
+                  "controls with row-to-affordance delegation",
                   font_caption()),
         top_divider_(context),
         settings_(context),
@@ -387,6 +477,8 @@ class ListsScreen : public SimpleScrollablePanel {
         convenience_(context),
         final_divider_(context),
         navigation_(context),
+        selection_divider_(context),
+        selection_(context),
         menu_divider_(context),
         menu_(context) {
     content_.setPadding(Padding(Scaled(12), Scaled(8)));
@@ -402,6 +494,8 @@ class ListsScreen : public SimpleScrollablePanel {
     content_.add(convenience_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(final_divider_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(navigation_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(selection_divider_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(selection_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(menu_divider_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(menu_, {.flex_grow = 0, .flex_shrink = 0});
 
@@ -420,6 +514,8 @@ class ListsScreen : public SimpleScrollablePanel {
   VisualConvenienceSection convenience_;
   HorizontalDivider final_divider_;
   NavigationSection navigation_;
+  HorizontalDivider selection_divider_;
+  SelectionSection selection_;
   HorizontalDivider menu_divider_;
   MenuPrototypeSection menu_;
 };
