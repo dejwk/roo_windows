@@ -199,8 +199,9 @@ The core decisions are:
 5. animate only adjacent programmatic page changes and snap non-adjacent
    jumps,
 6. keep tabs synchronization outside the base host API,
-7. and keep `BlitCacheContainer` out of the base design to avoid mandatory
-   per-page wrapper cost.
+7. use `BlitCacheContainer` for active-page move acceleration,
+8. and keep wrapper count bounded to active slots rather than total page
+   count.
 
 ## Design Details
 
@@ -389,6 +390,50 @@ Invalidation policy is:
 Because the host itself contributes no foreground chrome, it does not need a
 golden-tested local paint order beyond correct viewport clipping.
 
+### Blit Move Optimization
+
+The host includes blit-copy acceleration in the base design.
+
+The chosen approach is to keep a bounded active-slot model and attach one
+`BlitCacheContainer` per active slot, not per stored page.
+
+Concretely:
+
+1. `pages_` still stores all pages as `WidgetRef` for long-term ownership,
+2. the host exposes up to three active slots (previous, current, next),
+3. each active slot is a `BlitCacheContainer` with one borrowed page child,
+4. drag and settle move slot wrappers through `moveTo()` so each wrapper can
+   issue blit-copy on supported devices,
+5. and when a slot's page assignment changes (for example after settling to a
+   new index), the wrapper is rebound to the newly active page.
+
+This keeps the hot path allocation-free and retains the existing viewport
+measure and clipping model. It also avoids introducing a second custom blit
+engine in `HorizontalPageHost`.
+
+Cost and benefit summary for horizontal drag of viewport size $W \times H$ and
+per-frame offset $\Delta x$:
+
+1. without blit, repaint work is approximately full viewport area,
+   $A_{full} = WH$,
+2. with blit, repaint work is dominated by newly exposed strips,
+   $A_{strip} \approx |\Delta x|H$,
+3. so the first-order pixel-work reduction factor is
+   $A_{full}/A_{strip} \approx W/|\Delta x|$.
+
+For example, at $W = 320$ and $|\Delta x| = 8$, the ratio is about $40\times$.
+The exact gain depends on exclusions and child invalidations, but the order of
+magnitude is favorable for busy full-screen content.
+
+RAM impact is bounded per host rather than per page:
+
+1. baseline host state remains `pages_` plus pager control state,
+2. blit mode adds at most three wrapper instances (one per active slot),
+3. and there is no `O(page_count)` wrapper multiplier.
+
+This is the key footprint tradeoff: higher constant cost per host in exchange
+for substantially lower drag-time repaint on supported hardware.
+
 ### Tabs and External Selection Integration
 
 The page host does not know about `material3::Tabs`.
@@ -418,24 +463,6 @@ It owns generic free-scrolling content coordinates. A page host instead owns:
 Wrapping a page strip inside `SimpleScrollablePanel` would make the parent deal
 with strip measurement and would keep too many pages live.
 
-### Why Not `BlitCacheContainer` In The Base Design
-
-The base host does not automatically wrap every page in
-`BlitCacheContainer`.
-
-Reasoning:
-
-1. that would add one more widget layer per page whether or not the target
-   device supports blit-copy,
-2. the host already keeps the active set bounded to at most three pages,
-3. and the repo has no existing usage pattern for mandatory blit wrappers in
-   generic container APIs.
-
-The design therefore chooses lower permanent RAM cost and a simpler ownership
-model over mandatory move-acceleration wrappers. If profiling later shows a
-clear need, blit acceleration can remain a follow-up implementation or subclass
-rather than a base requirement.
-
 ### RAM Budget
 
 The base-case cost should stay explicit.
@@ -445,11 +472,17 @@ Target host-side size budget:
 1. `HorizontalPageHost`: `sizeof(Container) + sizeof(std::vector<WidgetRef>) +
    3 * sizeof(void*) + 24`
 
+Blit acceleration budget:
+
+1. up to three `BlitCacheContainer` instances per host (one per active slot),
+2. no per-page wrapper budget line item,
+3. and no new callback storage.
+
 Per stored page, the host adds only one `WidgetRef` in the backing vector:
 
 1. `sizeof(WidgetRef)` per page,
 2. no per-page callback,
-3. no mandatory wrapper widget,
+3. no per-page mandatory wrapper widget,
 4. no stored offscreen layout cache.
 
 The implementation should enforce the host budget with a pointer-size-aware
@@ -487,8 +520,8 @@ class HorizontalPageHost : public Container,
 #### Ownership
 
 `addPage(WidgetRef page)` matches the existing repo ownership surface. The host
-stores the ref in its internal page vector and borrows the page into the active
-child set only when that page is current or adjacent.
+stores the ref in its internal page vector and borrows the page into an active
+slot wrapper only when that page is current or adjacent.
 
 #### Current Index Semantics
 
@@ -524,6 +557,7 @@ Work:
 - add `src/roo_windows/containers/horizontal_page_host.h` and `.cpp`,
 - add `HorizontalPageHost` with page storage, active-child borrowing, current-
   page-only layout, and programmatic non-animated selection,
+- add fixed active slot ownership and page-to-slot mapping (without swipe yet),
 - add `test/horizontal_page_host_test.cpp`,
 - and add a small example under `examples/simple/` with colored pages and
   buttons or direct programmatic page switching.
@@ -543,6 +577,7 @@ Work:
 
 - add previous/next page attachment,
 - add horizontal drag interception, edge resistance, and settle animation,
+- move active slots through `moveTo()` to preserve future blit eligibility,
 - keep drag bounded to one adjacent page per gesture,
 - add tests for layout offsets, target selection, and edge behavior,
 - and update the example to allow direct swipe.
@@ -555,14 +590,33 @@ Validation:
 - `bazel test //:horizontal_page_host_test`
 - `bazel run //emulation:main` to verify gesture feel and settle behavior
 
-### Phase 3: Tabs Integration Example And Clipping Coverage
+### Phase 3: Blit Integration And Coverage
+
+Work:
+
+- bind each active slot to the existing `BlitCacheContainer`
+  implementation,
+- rebind wrappers on settled-index transitions while keeping wrapper count
+   bounded to active slots,
+- add tests that exercise move-driven drag with and without blit-copy support,
+- and add render coverage for revealed-strip repaint correctness under
+   horizontal drag.
+
+Proposed commit message:
+`Add HorizontalPageHost blit move optimization`
+
+Validation:
+
+- `bazel test //:horizontal_page_host_test`
+- `bazel test //:horizontal_page_host_golden_test`
+- `bazel run //emulation:main` to verify heavy-page drag smoothness
+
+### Phase 4: Tabs Integration Example And Clipping Coverage
 
 Work:
 
 - update the Material 3 tabs example to use `HorizontalPageHost` as the
   content area below the row,
-- add a small render test or golden test that verifies viewport clipping and
-  adjacent-page exposure at mid-drag,
 - and add selection-synchronization coverage between tabs and the page host.
 
 Proposed commit message:
@@ -574,7 +628,7 @@ Validation:
 - `bazel test //:horizontal_page_host_golden_test`
 - `bazel test //:material3_tabs_test`
 
-### Phase 4: Wrap-Content Measurement And Size Budgets
+### Phase 5: Wrap-Content Measurement And Size Budgets
 
 Work:
 
@@ -607,11 +661,10 @@ The intended test target names are:
 
 ## Caveats
 
-The first design intentionally leaves three things out of the base API:
+The first design intentionally leaves two things out of the base API:
 
 - controller objects,
-- non-adjacent animated page travel,
-- and mandatory blit-backed acceleration.
+- and non-adjacent animated page travel.
 
 Those omissions are deliberate. Each would either broaden the permanent state
 surface or complicate the host's measure/layout contract beyond what the first
@@ -638,17 +691,29 @@ This was rejected because it would keep inactive pages in the normal child
 paint and touch traversal set. The active-page model is the point of the new
 abstraction.
 
-#### Wrap Every Page In `BlitCacheContainer`
+#### Keep HorizontalPageHost Fully Repainted (No Blit Move Optimization)
 
-This was rejected because it would make a move-acceleration optimization a
-mandatory per-page RAM cost in the base design, even on targets that do not
-benefit from blit-copy.
+This was rejected because swipe on busy full-screen pages would repaint roughly
+the full viewport per frame. For common drag deltas, the pixel-work gap versus
+strip repaint is large (see Blit Move Optimization), and this design targets
+that use case explicitly.
+
+#### Wrap Every Stored Page In `BlitCacheContainer`
+
+This was rejected because wrapper RAM would scale with total page count.
+The chosen design keeps wrapper count bounded to the active slot set, so
+footprint is `O(1)` wrappers per host rather than `O(page_count)`.
+
+#### Implement A Host-Specific Blit Engine Instead Of Reusing `BlitCacheContainer`
+
+This was rejected because it duplicates existing dirty-region and exclusion
+logic already implemented in `BlitCacheContainer`, increasing maintenance risk
+and test surface for limited incremental gain in the first release.
 
 ## Future Work
 
 Intentionally out-of-scope follow-ups are:
 
-- an optional blit-accelerated page-host variant if profiling justifies it,
 - vertical page-host or bidirectional page-host families,
 - non-adjacent animated programmatic travel for products that explicitly want
   long-slide transitions,
