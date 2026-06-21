@@ -6,6 +6,7 @@
 
 #include "roo_scheduler.h"
 #include "roo_windows/core/container.h"
+#include "roo_windows/core/touch_event.h"
 #include "roo_windows/core/widget_ref.h"
 
 namespace roo_windows {
@@ -14,8 +15,7 @@ namespace roo_windows {
 ///
 /// Phase 1 behavior supports programmatic page selection and current-page-only
 /// layout. Swipe and settle animation hooks are reserved for later phases.
-class HorizontalPageHost : public Container,
-                           private roo_scheduler::Executable {
+class HorizontalPageHost : public Container, private roo_scheduler::Executable {
  public:
   /// Creates an empty page host.
   explicit HorizontalPageHost(ApplicationContext& context);
@@ -39,7 +39,7 @@ class HorizontalPageHost : public Container,
   /// Selects a new current page.
   ///
   /// Returns false if the index is out of range or already selected.
-  /// In phase 1, `animate = true` logs an unimplemented warning and snaps.
+  /// In phase 2, adjacent targets animate and non-adjacent targets snap.
   bool setCurrentIndex(int index, bool animate = true);
 
   /// Page host contributes no local surface paint in phase 1.
@@ -54,6 +54,28 @@ class HorizontalPageHost : public Container,
 
   /// Lays out the active current page to fill the viewport.
   void onLayout(bool changed, const Rect& rect) override;
+
+  /// Special-case interception for horizontal paging.
+  ///
+  /// Most containers should not override interception and should let child
+  /// widgets own touch unless they explicitly relinquish it. This host is a
+  /// deliberate exception: it must claim gestures once horizontal intent is
+  /// confirmed (slop exceeded and horizontal motion dominates) so paging can
+  /// stay synchronized across current/adjacent pages.
+  bool onInterceptTouchEvent(const TouchEvent& event) override;
+  bool supportsScrolling() const override { return true; }
+
+  /// Special-case DOWN handling for animation handoff.
+  ///
+  /// Most widgets can rely on default down behavior. This host overrides down
+  /// to cancel any in-flight settle animation and normalize drag state so a
+  /// new gesture always starts from the current visible fractional position.
+  bool onDown(XDim x, YDim y) override;
+  bool onScroll(XDim x, YDim y, XDim dx, YDim dy) override;
+  bool onFling(XDim x, YDim y, XDim vx, YDim vy) override;
+  bool onTouchUp(XDim x, YDim y) override;
+
+  bool shouldDelayChildPressedState() override { return true; }
 
   int getChildrenCount() const override;
   Widget& getChild(int idx) override;
@@ -72,6 +94,11 @@ class HorizontalPageHost : public Container,
     int page_index = -1;
   };
 
+  enum class AnimationState : uint8_t {
+    kIdle,
+    kSettling,
+  };
+
   void execute(roo_scheduler::ExecutionID id) override;
 
   /// Binds slots to pages according to the current settled index.
@@ -87,9 +114,47 @@ class HorizontalPageHost : public Container,
   Widget* activeChildAt(int idx);
   const Widget* activeChildAt(int idx) const;
 
+  /// Positions active pages based on the current fractional page position.
+  void updateActivePagePositions();
+
+  /// Stops a pending settle callback, if one is scheduled.
+  void cancelPendingUpdate();
+
+  /// Schedules the next settle animation tick.
+  void scheduleSettleUpdate();
+
+  /// Starts settle animation toward target page index.
+  void startSettleToIndex(int target_index);
+
+  /// Snaps immediately to target page index.
+  void snapToIndex(int target_index);
+
+  /// Chooses gesture settle target from drag offset and optional fling speed.
+  int resolveGestureSettleTarget(XDim velocity_x) const;
+
+  /// Clamps and resists raw page position against host boundaries.
+  float applyEdgeResistance(float raw_position) const;
+
   std::vector<WidgetRef> pages_;
   std::vector<int8_t> page_to_slot_;
   std::array<ActiveSlot, kSlotCount> active_slots_;
+
+  roo_scheduler::Scheduler& scheduler_;
+  roo_scheduler::ExecutionID notification_id_;
+
+  AnimationState animation_state_;
+
+  struct {
+    unsigned long start_time_ms;
+    unsigned long end_time_ms;
+    float start_position;
+    float target_position;
+    int old_index;
+    int target_index;
+  } settle_;
+
+  bool dragging_;
+  bool intercepted_gesture_;
 
   int settled_index_;
   float page_position_;

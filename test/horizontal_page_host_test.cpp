@@ -52,36 +52,55 @@ class ProbeWidget : public BasicWidget {
   Rect last_layout_;
 };
 
-// Verifies that the host auto-selects the first page and only the selected
-// page is attached to the child tree in phase 1.
-TEST(HorizontalPageHost, CurrentPageAttachmentTracksSelection) {
+class TestHorizontalPageHost : public HorizontalPageHost {
+ public:
+  explicit TestHorizontalPageHost(ApplicationContext& context)
+      : HorizontalPageHost(context) {}
+
+  using HorizontalPageHost::onDown;
+  using HorizontalPageHost::onScroll;
+};
+
+// Verifies that the host auto-selects the first page and keeps the current
+// page plus immediate neighbor attached in phase 2.
+TEST(HorizontalPageHost, AdjacentAttachmentTracksSelection) {
   roo_scheduler::Scheduler scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
 
-  HorizontalPageHost host(context);
+  TestHorizontalPageHost host(context);
   auto first = std::make_unique<ProbeWidget>(context, Dimensions(20, 10));
   auto second = std::make_unique<ProbeWidget>(context, Dimensions(30, 12));
+  auto third = std::make_unique<ProbeWidget>(context, Dimensions(40, 14));
   ProbeWidget* first_ptr = first.get();
   ProbeWidget* second_ptr = second.get();
+  ProbeWidget* third_ptr = third.get();
 
   EXPECT_EQ(-1, host.currentIndex());
   EXPECT_EQ(0, host.pageCount());
 
   host.addPage(std::move(first));
   host.addPage(std::move(second));
+  host.addPage(std::move(third));
 
   EXPECT_EQ(0, host.currentIndex());
-  EXPECT_EQ(2, host.pageCount());
+  EXPECT_EQ(3, host.pageCount());
   EXPECT_EQ(&host, first_ptr->parent());
-  EXPECT_EQ(nullptr, second_ptr->parent());
+  EXPECT_EQ(&host, second_ptr->parent());
+  EXPECT_EQ(nullptr, third_ptr->parent());
 
   EXPECT_TRUE(host.setCurrentIndex(1, false));
   EXPECT_EQ(1, host.currentIndex());
+  EXPECT_EQ(&host, first_ptr->parent());
+  EXPECT_EQ(&host, second_ptr->parent());
+  EXPECT_EQ(&host, third_ptr->parent());
+
+  EXPECT_TRUE(host.setCurrentIndex(2, false));
   EXPECT_EQ(nullptr, first_ptr->parent());
   EXPECT_EQ(&host, second_ptr->parent());
+  EXPECT_EQ(&host, third_ptr->parent());
 
-  EXPECT_FALSE(host.setCurrentIndex(1, false));
+  EXPECT_FALSE(host.setCurrentIndex(2, false));
 }
 
 // Verifies out-of-range programmatic selection is rejected without changing
@@ -91,7 +110,7 @@ TEST(HorizontalPageHost, RejectsInvalidSelection) {
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
 
-  HorizontalPageHost host(context);
+  TestHorizontalPageHost host(context);
   host.addPage(std::make_unique<ProbeWidget>(context, Dimensions(20, 10)));
 
   EXPECT_FALSE(host.setCurrentIndex(-1, false));
@@ -106,7 +125,7 @@ TEST(HorizontalPageHost, ExactMeasureUsesViewportAndCurrentPageOnly) {
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
 
-  HorizontalPageHost host(context);
+  TestHorizontalPageHost host(context);
   auto first = std::make_unique<ProbeWidget>(context, Dimensions(20, 10));
   auto second = std::make_unique<ProbeWidget>(context, Dimensions(80, 40));
   ProbeWidget* first_ptr = first.get();
@@ -114,16 +133,14 @@ TEST(HorizontalPageHost, ExactMeasureUsesViewportAndCurrentPageOnly) {
   host.addPage(std::move(first));
   host.addPage(std::move(second));
 
-  Dimensions d1 =
-      host.measure(WidthSpec::Exactly(90), HeightSpec::Exactly(50));
+  Dimensions d1 = host.measure(WidthSpec::Exactly(90), HeightSpec::Exactly(50));
   EXPECT_EQ(90, d1.width());
   EXPECT_EQ(50, d1.height());
   EXPECT_EQ(1, first_ptr->measureCount());
   EXPECT_EQ(0, second_ptr->measureCount());
 
   EXPECT_TRUE(host.setCurrentIndex(1, false));
-  Dimensions d2 =
-      host.measure(WidthSpec::Exactly(90), HeightSpec::Exactly(50));
+  Dimensions d2 = host.measure(WidthSpec::Exactly(90), HeightSpec::Exactly(50));
   EXPECT_EQ(90, d2.width());
   EXPECT_EQ(50, d2.height());
   EXPECT_EQ(1, second_ptr->measureCount());
@@ -136,7 +153,7 @@ TEST(HorizontalPageHost, WrapMeasureUsesLargestPage) {
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
 
-  HorizontalPageHost host(context);
+  TestHorizontalPageHost host(context);
   auto small = std::make_unique<ProbeWidget>(context, Dimensions(20, 10));
   auto large = std::make_unique<ProbeWidget>(context, Dimensions(120, 80));
   ProbeWidget* small_ptr = small.get();
@@ -159,7 +176,7 @@ TEST(HorizontalPageHost, LayoutFillsViewportWithSelectedPage) {
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
 
-  HorizontalPageHost host(context);
+  TestHorizontalPageHost host(context);
   auto first = std::make_unique<ProbeWidget>(context, Dimensions(20, 10));
   auto second = std::make_unique<ProbeWidget>(context, Dimensions(30, 12));
   ProbeWidget* first_ptr = first.get();
@@ -169,23 +186,70 @@ TEST(HorizontalPageHost, LayoutFillsViewportWithSelectedPage) {
 
   host.measure(WidthSpec::Exactly(64), HeightSpec::Exactly(40));
   host.layout(Rect(10, 20, 73, 59));
-  EXPECT_EQ(1, first_ptr->layoutCount());
   EXPECT_EQ(Rect(0, 0, 63, 39), first_ptr->lastLayout());
-  EXPECT_EQ(0, second_ptr->layoutCount());
+  EXPECT_EQ(Rect(64, 0, 127, 39), second_ptr->lastLayout());
 
   EXPECT_TRUE(host.setCurrentIndex(1, false));
   host.measure(WidthSpec::Exactly(64), HeightSpec::Exactly(40));
   host.layout(Rect(10, 20, 73, 59));
-  EXPECT_EQ(1, second_ptr->layoutCount());
+  EXPECT_EQ(Rect(-64, 0, -1, 39), first_ptr->lastLayout());
   EXPECT_EQ(Rect(0, 0, 63, 39), second_ptr->lastLayout());
 }
 
-// Verifies the checked Phase 1 size budget with pointer-size-aware limits to
-// catch accidental permanent RAM growth in the base host type.
-TEST(HorizontalPageHost, PhaseOneSizeBudget) {
+// Verifies drag updates fractional page position and lays out current and next
+// pages at the expected offsets for partial reveal.
+TEST(HorizontalPageHost, DragRepositionsCurrentAndAdjacentPages) {
+  roo_scheduler::Scheduler scheduler;
+  Environment bootstrap(scheduler);
+  ApplicationContext context = MakeContext(bootstrap);
+
+  TestHorizontalPageHost host(context);
+  auto first = std::make_unique<ProbeWidget>(context, Dimensions(20, 10));
+  auto second = std::make_unique<ProbeWidget>(context, Dimensions(30, 12));
+  ProbeWidget* first_ptr = first.get();
+  ProbeWidget* second_ptr = second.get();
+  host.addPage(std::move(first));
+  host.addPage(std::move(second));
+
+  host.measure(WidthSpec::Exactly(100), HeightSpec::Exactly(40));
+  host.layout(Rect(0, 0, 99, 39));
+
+  host.onDown(0, 0);
+  host.onScroll(0, 0, -40, 0);
+
+  EXPECT_EQ(Rect(-40, 0, 59, 39), first_ptr->parent_bounds());
+  EXPECT_EQ(Rect(60, 0, 159, 39), second_ptr->parent_bounds());
+}
+
+// Verifies edge drag resistance at the first page applies one-quarter motion
+// beyond the boundary.
+TEST(HorizontalPageHost, EdgeResistanceDampsOutOfRangeDrag) {
+  roo_scheduler::Scheduler scheduler;
+  Environment bootstrap(scheduler);
+  ApplicationContext context = MakeContext(bootstrap);
+
+  TestHorizontalPageHost host(context);
+  auto first = std::make_unique<ProbeWidget>(context, Dimensions(20, 10));
+  auto second = std::make_unique<ProbeWidget>(context, Dimensions(30, 12));
+  ProbeWidget* first_ptr = first.get();
+  host.addPage(std::move(first));
+  host.addPage(std::move(second));
+
+  host.measure(WidthSpec::Exactly(100), HeightSpec::Exactly(40));
+  host.layout(Rect(0, 0, 99, 39));
+
+  host.onDown(0, 0);
+  host.onScroll(0, 0, 100, 0);
+
+  EXPECT_EQ(Rect(25, 0, 124, 39), first_ptr->parent_bounds());
+}
+
+// Verifies the phase-2 size budget with pointer-size-aware limits so added
+// swipe and settle state stays bounded.
+TEST(HorizontalPageHost, PhaseTwoSizeBudget) {
   constexpr size_t kHorizontalPageHostBudget =
       sizeof(Container) + sizeof(std::vector<WidgetRef>) +
-      sizeof(std::vector<int8_t>) + 8 * sizeof(void*) + 24;
+      sizeof(std::vector<int8_t>) + 14 * sizeof(void*) + 32;
   EXPECT_LE(sizeof(HorizontalPageHost), kHorizontalPageHostBudget);
 }
 
