@@ -192,9 +192,9 @@ cc_test(
 )
 
 cc_test(
-    name = "horizontal_page_host_golden_test",
+    name = "horizontal_page_host_render_test",
     srcs = [
-        "test/horizontal_page_host_golden_test.cpp",
+        "test/horizontal_page_host_render_test.cpp",
         "test/roo_windows_render_test_support.h",
     ],
     linkstatic = 1,

@@ -608,7 +608,7 @@ Proposed commit message:
 Validation:
 
 - `bazel test //:horizontal_page_host_test`
-- `bazel test //:horizontal_page_host_golden_test`
+- `bazel test //:horizontal_page_host_render_test`
 - `bazel run //emulation:main` to verify heavy-page drag smoothness
 
 ### Phase 4: Tabs Integration Example And Clipping Coverage
@@ -625,7 +625,7 @@ Proposed commit message:
 Validation:
 
 - `bazel test //:horizontal_page_host_test`
-- `bazel test //:horizontal_page_host_golden_test`
+- `bazel test //:horizontal_page_host_render_test`
 - `bazel test //:material3_tabs_test`
 
 ### Phase 5: Wrap-Content Measurement And Size Budgets
@@ -641,7 +641,7 @@ Proposed commit message:
 
 Validation:
 
-- `bazel test //:horizontal_page_host_test //:horizontal_page_host_golden_test`
+- `bazel test //:horizontal_page_host_test //:horizontal_page_host_render_test`
 
 ## Testing Plan
 
@@ -657,7 +657,7 @@ Validation should cover three layers.
 The intended test target names are:
 
 - `//:horizontal_page_host_test`
-- `//:horizontal_page_host_golden_test`
+- `//:horizontal_page_host_render_test`
 
 ## Caveats
 
