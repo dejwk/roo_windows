@@ -454,13 +454,13 @@ class HeadlineListItem : public ListItem {
   ListTextPolicy headline_policy_;
 };
 
-/// Lightweight headline-plus-supporting convenience item with no slot widgets.
-class SupportingTextListItem : public ListItem {
+/// Shared headline/supporting text payload for convenience list item families.
+class HeadlineSupportingListItemBase : public ListItem {
  public:
-  SupportingTextListItem(roo::string_view headline = {},
-                         roo::string_view supporting = {},
-                         ListTextPolicy headline_policy = {},
-                         ListTextPolicy supporting_policy = {});
+  HeadlineSupportingListItemBase(roo::string_view headline = {},
+                                 roo::string_view supporting = {},
+                                 ListTextPolicy headline_policy = {},
+                                 ListTextPolicy supporting_policy = {});
 
   roo::string_view headlineText() const override;
   roo::string_view supportingText() const override;
@@ -474,15 +474,24 @@ class SupportingTextListItem : public ListItem {
   void setHeadlinePolicy(ListTextPolicy policy);
   void setSupportingPolicy(ListTextPolicy policy);
 
- private:
+ protected:
   roo::string_view headline_;
   roo::string_view supporting_;
   ListTextPolicy headline_policy_;
   ListTextPolicy supporting_policy_;
 };
 
+/// Lightweight headline-plus-supporting convenience item with no slot widgets.
+class SupportingTextListItem : public HeadlineSupportingListItemBase {
+ public:
+  SupportingTextListItem(roo::string_view headline = {},
+                         roo::string_view supporting = {},
+                         ListTextPolicy headline_policy = {},
+                         ListTextPolicy supporting_policy = {});
+};
+
 /// Convenience item that owns a leading pictogram widget plus standard text.
-class PictogramSupportingTextItem : public ListItem {
+class PictogramSupportingTextItem : public HeadlineSupportingListItemBase {
  public:
   PictogramSupportingTextItem(ApplicationContext& context,
                               const roo_display::Pictogram& pictogram,
@@ -491,33 +500,19 @@ class PictogramSupportingTextItem : public ListItem {
                               ListTextPolicy headline_policy = {},
                               ListTextPolicy supporting_policy = {});
 
-  roo::string_view headlineText() const override;
-  roo::string_view supportingText() const override;
-  ListTextPolicy headlinePolicy() const override;
-  ListTextPolicy supportingPolicy() const override;
   Widget* leading() override;
   const Widget* leading() const override;
 
-  roo::string_view headline() const;
-  roo::string_view supporting() const;
   Icon& leadingIcon();
   const Icon& leadingIcon() const;
   void setPictogram(const roo_display::Pictogram& pictogram);
-  void setHeadline(roo::string_view headline);
-  void setSupportingText(roo::string_view supporting);
-  void setHeadlinePolicy(ListTextPolicy policy);
-  void setSupportingPolicy(ListTextPolicy policy);
 
  private:
   Icon leading_icon_;
-  roo::string_view headline_;
-  roo::string_view supporting_;
-  ListTextPolicy headline_policy_;
-  ListTextPolicy supporting_policy_;
 };
 
 /// Convenience item that owns a leading initials avatar plus standard text.
-class AvatarSupportingTextItem : public ListItem {
+class AvatarSupportingTextItem : public HeadlineSupportingListItemBase {
  public:
   AvatarSupportingTextItem(ApplicationContext& context,
                            roo::string_view initials = {},
@@ -527,33 +522,19 @@ class AvatarSupportingTextItem : public ListItem {
                            ListTextPolicy supporting_policy = {});
   ~AvatarSupportingTextItem() override;
 
-  roo::string_view headlineText() const override;
-  roo::string_view supportingText() const override;
-  ListTextPolicy headlinePolicy() const override;
-  ListTextPolicy supportingPolicy() const override;
   Widget* leading() override;
   const Widget* leading() const override;
 
   roo::string_view initials() const;
-  roo::string_view headline() const;
-  roo::string_view supporting() const;
   void setInitials(roo::string_view initials);
-  void setHeadline(roo::string_view headline);
-  void setSupportingText(roo::string_view supporting);
-  void setHeadlinePolicy(ListTextPolicy policy);
-  void setSupportingPolicy(ListTextPolicy policy);
 
  private:
   std::unique_ptr<AvatarVisual> leading_avatar_;
-  roo::string_view headline_;
-  roo::string_view supporting_;
-  ListTextPolicy headline_policy_;
-  ListTextPolicy supporting_policy_;
 };
 
 /// Convenience item that owns a leading icon and trailing navigation
 /// affordance.
-class NavigationListItem : public ListItem {
+class NavigationListItem : public HeadlineSupportingListItemBase {
  public:
   NavigationListItem(ApplicationContext& context,
                      const roo_display::Pictogram& pictogram,
@@ -562,10 +543,6 @@ class NavigationListItem : public ListItem {
                      ListTextPolicy headline_policy = {},
                      ListTextPolicy supporting_policy = {});
 
-  roo::string_view headlineText() const override;
-  roo::string_view supportingText() const override;
-  ListTextPolicy headlinePolicy() const override;
-  ListTextPolicy supportingPolicy() const override;
   Widget* leading() override;
   const Widget* leading() const override;
   Widget* trailing() override;
@@ -573,31 +550,21 @@ class NavigationListItem : public ListItem {
   bool isInvokable() const override;
   void invoke() override;
 
-  roo::string_view headline() const;
-  roo::string_view supporting() const;
   Icon& leadingIcon();
   const Icon& leadingIcon() const;
   Icon& trailingAffordance();
   const Icon& trailingAffordance() const;
   void setPictogram(const roo_display::Pictogram& pictogram);
-  void setHeadline(roo::string_view headline);
-  void setSupportingText(roo::string_view supporting);
-  void setHeadlinePolicy(ListTextPolicy policy);
-  void setSupportingPolicy(ListTextPolicy policy);
   void setOnInvoked(std::function<void()> on_invoked);
 
  private:
   Icon leading_icon_;
   Icon trailing_affordance_;
-  roo::string_view headline_;
-  roo::string_view supporting_;
-  ListTextPolicy headline_policy_;
-  ListTextPolicy supporting_policy_;
   std::function<void()> on_invoked_;
 };
 
 /// Convenience item with initials avatar and navigation affordance.
-class AvatarNavigationListItem : public ListItem {
+class AvatarNavigationListItem : public HeadlineSupportingListItemBase {
  public:
   AvatarNavigationListItem(ApplicationContext& context,
                            roo::string_view initials = {},
@@ -607,10 +574,6 @@ class AvatarNavigationListItem : public ListItem {
                            ListTextPolicy supporting_policy = {});
   ~AvatarNavigationListItem() override;
 
-  roo::string_view headlineText() const override;
-  roo::string_view supportingText() const override;
-  ListTextPolicy headlinePolicy() const override;
-  ListTextPolicy supportingPolicy() const override;
   Widget* leading() override;
   const Widget* leading() const override;
   Widget* trailing() override;
@@ -619,24 +582,14 @@ class AvatarNavigationListItem : public ListItem {
   void invoke() override;
 
   roo::string_view initials() const;
-  roo::string_view headline() const;
-  roo::string_view supporting() const;
   Icon& trailingAffordance();
   const Icon& trailingAffordance() const;
   void setInitials(roo::string_view initials);
-  void setHeadline(roo::string_view headline);
-  void setSupportingText(roo::string_view supporting);
-  void setHeadlinePolicy(ListTextPolicy policy);
-  void setSupportingPolicy(ListTextPolicy policy);
   void setOnInvoked(std::function<void()> on_invoked);
 
  private:
   std::unique_ptr<AvatarVisual> leading_avatar_;
   Icon trailing_affordance_;
-  roo::string_view headline_;
-  roo::string_view supporting_;
-  ListTextPolicy headline_policy_;
-  ListTextPolicy supporting_policy_;
   std::function<void()> on_invoked_;
 };
 

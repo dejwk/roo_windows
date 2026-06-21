@@ -957,91 +957,75 @@ void HeadlineListItem::setHeadlinePolicy(ListTextPolicy policy) {
   headline_policy_ = policy;
 }
 
-SupportingTextListItem::SupportingTextListItem(roo::string_view headline,
-                                               roo::string_view supporting,
-                                               ListTextPolicy headline_policy,
-                                               ListTextPolicy supporting_policy)
+HeadlineSupportingListItemBase::HeadlineSupportingListItemBase(
+    roo::string_view headline, roo::string_view supporting,
+    ListTextPolicy headline_policy, ListTextPolicy supporting_policy)
     : headline_(headline),
       supporting_(supporting),
       headline_policy_(headline_policy),
       supporting_policy_(supporting_policy) {}
 
-roo::string_view SupportingTextListItem::headlineText() const {
+roo::string_view HeadlineSupportingListItemBase::headlineText() const {
   return headline_;
 }
 
-roo::string_view SupportingTextListItem::supportingText() const {
+roo::string_view HeadlineSupportingListItemBase::supportingText() const {
   return supporting_;
 }
 
-ListTextPolicy SupportingTextListItem::headlinePolicy() const {
+ListTextPolicy HeadlineSupportingListItemBase::headlinePolicy() const {
   return headline_policy_;
 }
 
-ListTextPolicy SupportingTextListItem::supportingPolicy() const {
+ListTextPolicy HeadlineSupportingListItemBase::supportingPolicy() const {
   return supporting_policy_;
 }
 
-roo::string_view SupportingTextListItem::headline() const { return headline_; }
+roo::string_view HeadlineSupportingListItemBase::headline() const {
+  return headline_;
+}
 
-roo::string_view SupportingTextListItem::supporting() const {
+roo::string_view HeadlineSupportingListItemBase::supporting() const {
   return supporting_;
 }
 
-void SupportingTextListItem::setHeadline(roo::string_view headline) {
+void HeadlineSupportingListItemBase::setHeadline(roo::string_view headline) {
   headline_ = headline;
 }
 
-void SupportingTextListItem::setSupportingText(roo::string_view supporting) {
+void HeadlineSupportingListItemBase::setSupportingText(
+    roo::string_view supporting) {
   supporting_ = supporting;
 }
 
-void SupportingTextListItem::setHeadlinePolicy(ListTextPolicy policy) {
+void HeadlineSupportingListItemBase::setHeadlinePolicy(ListTextPolicy policy) {
   headline_policy_ = policy;
 }
 
-void SupportingTextListItem::setSupportingPolicy(ListTextPolicy policy) {
+void HeadlineSupportingListItemBase::setSupportingPolicy(
+    ListTextPolicy policy) {
   supporting_policy_ = policy;
 }
+
+SupportingTextListItem::SupportingTextListItem(roo::string_view headline,
+                                               roo::string_view supporting,
+                                               ListTextPolicy headline_policy,
+                                               ListTextPolicy supporting_policy)
+    : HeadlineSupportingListItemBase(headline, supporting, headline_policy,
+                                     supporting_policy) {}
 
 PictogramSupportingTextItem::PictogramSupportingTextItem(
     ApplicationContext& context, const roo_display::Pictogram& pictogram,
     roo::string_view headline, roo::string_view supporting,
     ListTextPolicy headline_policy, ListTextPolicy supporting_policy)
-    : leading_icon_(context, pictogram),
-      headline_(headline),
-      supporting_(supporting),
-      headline_policy_(headline_policy),
-      supporting_policy_(supporting_policy) {}
-
-roo::string_view PictogramSupportingTextItem::headlineText() const {
-  return headline_;
-}
-
-roo::string_view PictogramSupportingTextItem::supportingText() const {
-  return supporting_;
-}
-
-ListTextPolicy PictogramSupportingTextItem::headlinePolicy() const {
-  return headline_policy_;
-}
-
-ListTextPolicy PictogramSupportingTextItem::supportingPolicy() const {
-  return supporting_policy_;
-}
+    : HeadlineSupportingListItemBase(headline, supporting, headline_policy,
+                                     supporting_policy),
+      leading_icon_(context, pictogram) {}
 
 Widget* PictogramSupportingTextItem::leading() { return &leading_icon_; }
 
 const Widget* PictogramSupportingTextItem::leading() const {
   return &leading_icon_;
-}
-
-roo::string_view PictogramSupportingTextItem::headline() const {
-  return headline_;
-}
-
-roo::string_view PictogramSupportingTextItem::supporting() const {
-  return supporting_;
 }
 
 Icon& PictogramSupportingTextItem::leadingIcon() { return leading_icon_; }
@@ -1055,50 +1039,15 @@ void PictogramSupportingTextItem::setPictogram(
   leading_icon_.setIcon(pictogram);
 }
 
-void PictogramSupportingTextItem::setHeadline(roo::string_view headline) {
-  headline_ = headline;
-}
-
-void PictogramSupportingTextItem::setSupportingText(
-    roo::string_view supporting) {
-  supporting_ = supporting;
-}
-
-void PictogramSupportingTextItem::setHeadlinePolicy(ListTextPolicy policy) {
-  headline_policy_ = policy;
-}
-
-void PictogramSupportingTextItem::setSupportingPolicy(ListTextPolicy policy) {
-  supporting_policy_ = policy;
-}
-
 AvatarSupportingTextItem::AvatarSupportingTextItem(
     ApplicationContext& context, roo::string_view initials,
     roo::string_view headline, roo::string_view supporting,
     ListTextPolicy headline_policy, ListTextPolicy supporting_policy)
-    : leading_avatar_(std::make_unique<AvatarVisual>(context, initials)),
-      headline_(headline),
-      supporting_(supporting),
-      headline_policy_(headline_policy),
-      supporting_policy_(supporting_policy) {}
+    : HeadlineSupportingListItemBase(headline, supporting, headline_policy,
+                                     supporting_policy),
+      leading_avatar_(std::make_unique<AvatarVisual>(context, initials)) {}
 
 AvatarSupportingTextItem::~AvatarSupportingTextItem() = default;
-
-roo::string_view AvatarSupportingTextItem::headlineText() const {
-  return headline_;
-}
-
-roo::string_view AvatarSupportingTextItem::supportingText() const {
-  return supporting_;
-}
-
-ListTextPolicy AvatarSupportingTextItem::headlinePolicy() const {
-  return headline_policy_;
-}
-
-ListTextPolicy AvatarSupportingTextItem::supportingPolicy() const {
-  return supporting_policy_;
-}
 
 Widget* AvatarSupportingTextItem::leading() { return leading_avatar_.get(); }
 
@@ -1111,34 +1060,10 @@ roo::string_view AvatarSupportingTextItem::initials() const {
                                     : leading_avatar_->initials();
 }
 
-roo::string_view AvatarSupportingTextItem::headline() const {
-  return headline_;
-}
-
-roo::string_view AvatarSupportingTextItem::supporting() const {
-  return supporting_;
-}
-
 void AvatarSupportingTextItem::setInitials(roo::string_view initials) {
   if (leading_avatar_ != nullptr) {
     leading_avatar_->setInitials(initials);
   }
-}
-
-void AvatarSupportingTextItem::setHeadline(roo::string_view headline) {
-  headline_ = headline;
-}
-
-void AvatarSupportingTextItem::setSupportingText(roo::string_view supporting) {
-  supporting_ = supporting;
-}
-
-void AvatarSupportingTextItem::setHeadlinePolicy(ListTextPolicy policy) {
-  headline_policy_ = policy;
-}
-
-void AvatarSupportingTextItem::setSupportingPolicy(ListTextPolicy policy) {
-  supporting_policy_ = policy;
 }
 
 NavigationListItem::NavigationListItem(ApplicationContext& context,
@@ -1147,27 +1072,11 @@ NavigationListItem::NavigationListItem(ApplicationContext& context,
                                        roo::string_view supporting,
                                        ListTextPolicy headline_policy,
                                        ListTextPolicy supporting_policy)
-    : leading_icon_(context, pictogram),
+    : HeadlineSupportingListItemBase(headline, supporting, headline_policy,
+                                     supporting_policy),
+      leading_icon_(context, pictogram),
       trailing_affordance_(context, ic_filled_24_navigation_chevron_right()),
-      headline_(headline),
-      supporting_(supporting),
-      headline_policy_(headline_policy),
-      supporting_policy_(supporting_policy),
       on_invoked_() {}
-
-roo::string_view NavigationListItem::headlineText() const { return headline_; }
-
-roo::string_view NavigationListItem::supportingText() const {
-  return supporting_;
-}
-
-ListTextPolicy NavigationListItem::headlinePolicy() const {
-  return headline_policy_;
-}
-
-ListTextPolicy NavigationListItem::supportingPolicy() const {
-  return supporting_policy_;
-}
 
 Widget* NavigationListItem::leading() { return &leading_icon_; }
 
@@ -1189,10 +1098,6 @@ void NavigationListItem::invoke() {
   }
 }
 
-roo::string_view NavigationListItem::headline() const { return headline_; }
-
-roo::string_view NavigationListItem::supporting() const { return supporting_; }
-
 Icon& NavigationListItem::leadingIcon() { return leading_icon_; }
 
 const Icon& NavigationListItem::leadingIcon() const { return leading_icon_; }
@@ -1207,22 +1112,6 @@ void NavigationListItem::setPictogram(const roo_display::Pictogram& pictogram) {
   leading_icon_.setIcon(pictogram);
 }
 
-void NavigationListItem::setHeadline(roo::string_view headline) {
-  headline_ = headline;
-}
-
-void NavigationListItem::setSupportingText(roo::string_view supporting) {
-  supporting_ = supporting;
-}
-
-void NavigationListItem::setHeadlinePolicy(ListTextPolicy policy) {
-  headline_policy_ = policy;
-}
-
-void NavigationListItem::setSupportingPolicy(ListTextPolicy policy) {
-  supporting_policy_ = policy;
-}
-
 void NavigationListItem::setOnInvoked(std::function<void()> on_invoked) {
   on_invoked_ = std::move(on_invoked);
 }
@@ -1231,31 +1120,13 @@ AvatarNavigationListItem::AvatarNavigationListItem(
     ApplicationContext& context, roo::string_view initials,
     roo::string_view headline, roo::string_view supporting,
     ListTextPolicy headline_policy, ListTextPolicy supporting_policy)
-    : leading_avatar_(std::make_unique<AvatarVisual>(context, initials)),
+    : HeadlineSupportingListItemBase(headline, supporting, headline_policy,
+                                     supporting_policy),
+      leading_avatar_(std::make_unique<AvatarVisual>(context, initials)),
       trailing_affordance_(context, ic_filled_24_navigation_chevron_right()),
-      headline_(headline),
-      supporting_(supporting),
-      headline_policy_(headline_policy),
-      supporting_policy_(supporting_policy),
       on_invoked_() {}
 
 AvatarNavigationListItem::~AvatarNavigationListItem() = default;
-
-roo::string_view AvatarNavigationListItem::headlineText() const {
-  return headline_;
-}
-
-roo::string_view AvatarNavigationListItem::supportingText() const {
-  return supporting_;
-}
-
-ListTextPolicy AvatarNavigationListItem::headlinePolicy() const {
-  return headline_policy_;
-}
-
-ListTextPolicy AvatarNavigationListItem::supportingPolicy() const {
-  return supporting_policy_;
-}
 
 Widget* AvatarNavigationListItem::leading() { return leading_avatar_.get(); }
 
@@ -1284,14 +1155,6 @@ roo::string_view AvatarNavigationListItem::initials() const {
                                     : leading_avatar_->initials();
 }
 
-roo::string_view AvatarNavigationListItem::headline() const {
-  return headline_;
-}
-
-roo::string_view AvatarNavigationListItem::supporting() const {
-  return supporting_;
-}
-
 Icon& AvatarNavigationListItem::trailingAffordance() {
   return trailing_affordance_;
 }
@@ -1304,22 +1167,6 @@ void AvatarNavigationListItem::setInitials(roo::string_view initials) {
   if (leading_avatar_ != nullptr) {
     leading_avatar_->setInitials(initials);
   }
-}
-
-void AvatarNavigationListItem::setHeadline(roo::string_view headline) {
-  headline_ = headline;
-}
-
-void AvatarNavigationListItem::setSupportingText(roo::string_view supporting) {
-  supporting_ = supporting;
-}
-
-void AvatarNavigationListItem::setHeadlinePolicy(ListTextPolicy policy) {
-  headline_policy_ = policy;
-}
-
-void AvatarNavigationListItem::setSupportingPolicy(ListTextPolicy policy) {
-  supporting_policy_ = policy;
 }
 
 void AvatarNavigationListItem::setOnInvoked(std::function<void()> on_invoked) {
