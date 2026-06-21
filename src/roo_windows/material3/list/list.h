@@ -19,6 +19,8 @@ class StringViewLabel;
 
 namespace material3 {
 
+class AvatarVisual;
+
 /// Selects the Material 3 list visual family.
 enum class ListVariant : uint8_t {
   kBaseline,
@@ -542,8 +544,6 @@ class AvatarSupportingTextItem : public ListItem {
   void setSupportingPolicy(ListTextPolicy policy);
 
  private:
-  class AvatarVisual;
-
   std::unique_ptr<AvatarVisual> leading_avatar_;
   roo::string_view headline_;
   roo::string_view supporting_;
@@ -631,8 +631,6 @@ class AvatarNavigationListItem : public ListItem {
   void setOnInvoked(std::function<void()> on_invoked);
 
  private:
-  class AvatarVisual;
-
   std::unique_ptr<AvatarVisual> leading_avatar_;
   Icon trailing_affordance_;
   roo::string_view headline_;
@@ -714,6 +712,8 @@ class List : public Container {
   void onLayout(bool changed, const Rect& rect) override;
 
  private:
+  void onStructureOrPolicyChanged();
+  void addEntryInternal(ListEntry* entry, WidgetRef ref);
   void markEntryContextsDirty();
   void refreshEntryVisualContexts();
   int16_t interRowGap(int previous_idx, int next_idx) const;

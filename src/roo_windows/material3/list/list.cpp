@@ -414,63 +414,7 @@ bool ShouldShowDivider(const ListDividerPolicy& divider_policy, int idx,
 
 // Keeps the avatar-specific paint logic private to the convenience item layer
 // instead of introducing a broader public widget before the API needs one.
-class AvatarSupportingTextItem::AvatarVisual : public BasicWidget {
- public:
-  AvatarVisual(ApplicationContext& context, roo::string_view initials)
-      : BasicWidget(context), initials_(initials) {}
-
-  Dimensions getSuggestedMinimumDimensions() const override {
-    int16_t side = Scaled(kAvatarSizeDp);
-    return Dimensions(side, side);
-  }
-
-  void paint(PaintContext& ctx) const override {
-    Rect rect = bounds();
-    if (rect.empty()) return;
-
-    int16_t diameter = std::min<int16_t>(rect.width(), rect.height());
-    roo_display::Color original_bg = ctx.bgcolor();
-    auto background = roo_display::SmoothFilledCircle(
-        {0.5f * static_cast<float>(diameter - 1),
-         0.5f * static_cast<float>(diameter - 1)},
-        0.5f * static_cast<float>(diameter), theme().color.primaryContainer);
-
-    if (!initials_.empty()) {
-      roo_display::ClippedStringViewLabel initials_label(
-          initials_, FontForHeadline(), theme().color.onPrimaryContainer);
-      roo_display::Offset text_offset =
-          (roo_display::kCenter | roo_display::kMiddle)
-              .resolveOffset(roo_display::Box(0, 0, diameter - 1, diameter - 1),
-                             initials_label.anchorExtents());
-      Rect text_bounds = Rect(initials_label.extents())
-                             .translate(text_offset.dx, text_offset.dy)
-                             .translate(rect.xMin(), rect.yMin());
-      ctx.setBgcolor(theme().color.primaryContainer);
-      ctx.drawTiled(initials_label, text_bounds,
-                    roo_display::kCenter | roo_display::kMiddle);
-      ctx.addExclusion(text_bounds);
-    }
-
-    ctx.setBgcolor(original_bg);
-    ctx.drawTiled(background, rect, roo_display::kCenter | roo_display::kMiddle,
-                  false);
-  }
-
-  roo::string_view initials() const { return initials_; }
-
-  void setInitials(roo::string_view initials) {
-    if (initials_ == initials) return;
-    initials_ = initials;
-    setDirty();
-  }
-
- private:
-  roo::string_view initials_;
-};
-
-// Keeps the avatar-specific paint logic private to the convenience item layer
-// instead of introducing a broader public widget before the API needs one.
-class AvatarNavigationListItem::AvatarVisual : public BasicWidget {
+class AvatarVisual : public BasicWidget {
  public:
   AvatarVisual(ApplicationContext& context, roo::string_view initials)
       : BasicWidget(context), initials_(initials) {}
@@ -1394,6 +1338,18 @@ List::List(ApplicationContext& context)
 
 List::~List() { clear(); }
 
+void List::onStructureOrPolicyChanged() {
+  markEntryContextsDirty();
+  refreshEntryVisualContexts();
+}
+
+void List::addEntryInternal(ListEntry* entry, WidgetRef ref) {
+  selected_entries_.push_back(entry->visualContext().selected ? 1 : 0);
+  entries_.push_back(entry);
+  attachChild(std::move(ref));
+  onStructureOrPolicyChanged();
+}
+
 void List::markEntryContextsDirty() {
   contexts_dirty_ = true;
   invalidateInterior();
@@ -1491,47 +1447,35 @@ void List::refreshEntryVisualContexts() {
 void List::setVariant(ListVariant variant) {
   if (variant_ == variant) return;
   variant_ = variant;
-  markEntryContextsDirty();
-  refreshEntryVisualContexts();
+  onStructureOrPolicyChanged();
 }
 
 void List::setStyle(ListStyle style) {
   if (style_ == style) return;
   style_ = style;
-  markEntryContextsDirty();
-  refreshEntryVisualContexts();
+  onStructureOrPolicyChanged();
 }
 
 void List::setSelectionPolicy(const ListSelectionPolicy& policy) {
   selection_policy_ = policy;
-  markEntryContextsDirty();
-  refreshEntryVisualContexts();
+  onStructureOrPolicyChanged();
 }
 
 void List::setDividerPolicy(const ListDividerPolicy& policy) {
   divider_policy_ = policy;
-  markEntryContextsDirty();
-  refreshEntryVisualContexts();
+  onStructureOrPolicyChanged();
 }
 
 void List::add(ListEntry& entry) {
   CHECK(entry.parent() == nullptr);
-  selected_entries_.push_back(entry.visualContext().selected ? 1 : 0);
-  entries_.push_back(&entry);
-  attachChild(WidgetRef(entry));
-  markEntryContextsDirty();
-  refreshEntryVisualContexts();
+  addEntryInternal(&entry, WidgetRef(entry));
 }
 
 void List::add(std::unique_ptr<ListEntry> entry) {
   CHECK(entry != nullptr);
   ListEntry* raw_entry = entry.get();
   CHECK(raw_entry->parent() == nullptr);
-  selected_entries_.push_back(raw_entry->visualContext().selected ? 1 : 0);
-  entries_.push_back(raw_entry);
-  attachChild(WidgetRef(std::move(entry)));
-  markEntryContextsDirty();
-  refreshEntryVisualContexts();
+  addEntryInternal(raw_entry, WidgetRef(std::move(entry)));
 }
 
 void List::clear() {
