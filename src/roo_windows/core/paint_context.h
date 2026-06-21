@@ -54,9 +54,6 @@ class PaintContext {
   /// Applies the current canvas clip box as the clipper bounds hint.
   void activate() const;
 
-  // /// Returns the currently active widget overlay state.
-  // const OverlaySpec& overlaySpec() const;
-
   /// Replaces the device-space clip box tracked by the canvas and clipper.
   void setClipBox(const roo_display::Box& clip_box);
 

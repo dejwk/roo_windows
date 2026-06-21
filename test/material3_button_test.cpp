@@ -287,7 +287,7 @@ TEST_F(Material3ButtonClickAnimationTest,
 
   button_ptr->onShowPress(button_ptr->width() / 2, button_ptr->height() / 2);
 
-  delay(kPressAnimationMillis / 4);
+  delay(kPressAnimationMillis / 8);
   uint8_t animated_radius =
       button_ptr->getBorderStyle().top_left_corner_radius();
   EXPECT_LT(animated_radius, resting_radius);
@@ -313,7 +313,7 @@ TEST_F(Material3ButtonClickAnimationTest,
 
   button_ptr->onShowPress(button_ptr->width() / 2, button_ptr->height() / 2);
 
-  delay(kPressAnimationMillis / 4);
+  delay(kPressAnimationMillis / 8);
   uint8_t animated_radius =
       button_ptr->getBorderStyle().top_left_corner_radius();
   EXPECT_LT(animated_radius, (uint8_t)0xFF);

@@ -20,6 +20,19 @@ Color QuantizeToArgb4444(Color color) {
   return mode.toArgbColor(mode.fromArgbColor(color));
 }
 
+void ExpectPressOverlaySpecEq(const PressOverlaySpec& expected,
+                              const PressOverlaySpec& actual) {
+  EXPECT_EQ(expected.enabled, actual.enabled);
+  EXPECT_EQ(expected.center_x, actual.center_x);
+  EXPECT_EQ(expected.center_y, actual.center_y);
+  EXPECT_EQ(expected.radius, actual.radius);
+  EXPECT_EQ(expected.color, actual.color);
+  EXPECT_EQ(expected.clipped_to_circle, actual.clipped_to_circle);
+  EXPECT_FLOAT_EQ(expected.clip_circle_center_x, actual.clip_circle_center_x);
+  EXPECT_FLOAT_EQ(expected.clip_circle_center_y, actual.clip_circle_center_y);
+  EXPECT_FLOAT_EQ(expected.clip_circle_radius, actual.clip_circle_radius);
+}
+
 class OverlaySpecSourceWidget : public BasicSurfaceWidget {
  public:
   explicit OverlaySpecSourceWidget(ApplicationContext& context)
@@ -312,7 +325,7 @@ TEST_F(PaintContextTest, ClipperOverlaySpecPushPopRestoresPreviousSpec) {
   EXPECT_TRUE(modded->is_modded());
   EXPECT_EQ(expected.is_disabled(), modded->is_disabled());
   EXPECT_EQ(expected.base_overlay(), modded->base_overlay());
-  EXPECT_EQ(expected.press_overlay(), modded->press_overlay());
+  ExpectPressOverlaySpecEq(expected.press_overlay(), modded->press_overlay());
 
   clipper.popOverlaySpec();
   EXPECT_EQ(inert, &clipper.currentOverlaySpec());
@@ -347,31 +360,6 @@ TEST_F(PaintContextTest, ClipperOverlaySpecCoalescesAdjacentInertFrames) {
 
   clipper.popOverlaySpec();
   EXPECT_FALSE(clipper.currentOverlaySpec().is_modded());
-}
-
-TEST_F(PaintContextTest, PaintContextOverlaySpecForwardsFromClipper) {
-  auto widget = std::make_unique<OverlaySpecSourceWidget>(app_.context());
-  OverlaySpecSourceWidget* widget_ptr = widget.get();
-  app_.add(std::move(widget), Box(0, 0, 7, 7));
-  widget_ptr->setSelected(true);
-  widget_ptr->setPressed(true);
-
-  Surface surface(display_.output(), 0, 0, display_.extents(),
-                  /*is_write_once=*/false, display_.getBackgroundColor(),
-                  FillMode::kVisible, BlendingMode::kSourceOver);
-  Canvas canvas(&surface);
-  internal::ClipperState clipper_state;
-  Clipper clipper(clipper_state, canvas.out(), roo_time::Uptime::Max());
-
-  clipper.pushOverlaySpec(*widget_ptr, canvas);
-  PaintContext ctx(canvas, clipper);
-
-  EXPECT_EQ(&clipper.currentOverlaySpec(), &ctx.overlaySpec());
-  EXPECT_EQ(clipper.currentOverlaySpec().base_overlay(),
-            ctx.overlaySpec().base_overlay());
-  EXPECT_TRUE(ctx.overlaySpec().is_modded());
-
-  clipper.popOverlaySpec();
 }
 
 TEST_F(PaintContextTest,
