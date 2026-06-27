@@ -77,6 +77,15 @@ class ClickAnimation {
   // it is non-dirty.
   Widget* deferred_click_;
 
+  // Last transient parent-space bounds reported by the active target. Keeping
+  // this allows tick() to invalidate both previous and current transient
+  // regions when bounds shrink while the click animation is still active.
+  bool has_prev_transient_bounds_;
+  int16_t prev_transient_x0_;
+  int16_t prev_transient_y0_;
+  int16_t prev_transient_x1_;
+  int16_t prev_transient_y1_;
+
   unsigned long click_anim_start_millis_;
   int16_t click_anim_x_, click_anim_y_;
 };

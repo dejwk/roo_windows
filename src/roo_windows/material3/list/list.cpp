@@ -1,6 +1,7 @@
 #include "roo_windows/material3/list/list.h"
 
 #include <algorithm>
+#include <new>
 
 #include "roo_display/shape/smooth.h"
 #include "roo_display/ui/alignment.h"
@@ -32,6 +33,7 @@ constexpr int16_t kExpressiveInnerCornerRadiusDp = 4;
 constexpr int16_t kExpressiveStandardSeparatorDp = 2;
 constexpr int16_t kDividerThicknessDp = 1;
 constexpr int16_t kAvatarSizeDp = 40;
+constexpr uint16_t kExpandableAnimationFrameMillis = 20;
 
 struct RowTokens {
   int16_t horizontal_padding;
@@ -246,11 +248,11 @@ RowLayoutMetrics ResolveRowLayout(ListEntry& entry, WidthSpec width_spec,
   const RowTokens tokens = TokensFor(entry.visualContext().variant);
 
   Dimensions leading =
-    MeasureChild(item == nullptr ? nullptr : item->leading(),
-           WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+      MeasureChild(item == nullptr ? nullptr : item->leading(),
+                   WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
   Dimensions trailing =
-    MeasureChild(item == nullptr ? nullptr : item->trailing(),
-           WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+      MeasureChild(item == nullptr ? nullptr : item->trailing(),
+                   WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
   TextSlotMetrics text = MeasureTextSlots(item);
 
   bool has_leading = leading.width() > 0 || leading.height() > 0;
@@ -265,9 +267,9 @@ RowLayoutMetrics ResolveRowLayout(ListEntry& entry, WidthSpec width_spec,
   int16_t desired_main_width = tokens.horizontal_padding * 2 + leading.width() +
                                trailing.width() + text.width + horizontal_gaps;
 
-  Dimensions body = MeasureChild(item == nullptr ? nullptr : item->body(),
-                                 WidthSpec::Unspecified(0),
-                                 HeightSpec::Unspecified(0));
+  Dimensions body =
+      MeasureChild(item == nullptr ? nullptr : item->body(),
+                   WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
   bool has_body = body.width() > 0 || body.height() > 0;
   int16_t desired_body_width =
       has_body ? tokens.horizontal_padding * 2 +
@@ -513,38 +515,161 @@ ExpandablePanel::ExpandablePanel(ApplicationContext& context)
       expanded_(false) {}
 
 void ExpandablePanel::setContent(WidgetRef content) {
-  (void)content;
-  LOG(FATAL) << "Unimplemented: material3::ExpandablePanel::setContent";
+  Widget* incoming = content.get();
+  if (incoming == content_.get()) {
+    return;
+  }
+
+  if (content_.get() != nullptr) {
+    detachChild(content_.get());
+  }
+
+  content_.~WidgetRef();
+  new (&content_) WidgetRef(std::move(content));
+  if (content_.get() != nullptr) {
+    CHECK(content_.get()->parent() == nullptr);
+    attachChild(WidgetRef(*content_.get()));
+  }
+
+  requestLayout();
+  invalidateInterior();
 }
 
 void ExpandablePanel::clearContent() {
   if (content_.get() == nullptr) return;
-  LOG(FATAL) << "Unimplemented: material3::ExpandablePanel::clearContent";
+  detachChild(content_.get());
+  content_.~WidgetRef();
+  new (&content_) WidgetRef();
+  requestLayout();
+  invalidateInterior();
 }
 
 void ExpandablePanel::setExpanded(bool expanded, bool animate) {
-  (void)animate;
-  if (!expanded && !expanded_) return;
-  LOG(FATAL) << "Unimplemented: material3::ExpandablePanel::setExpanded";
+  if (expanded_ == expanded && !isAnimating()) return;
+
+  expanded_ = expanded;
+  if (!animate || animation_duration_millis_ == 0) {
+    animation_progress_millis_ = expanded_ ? animation_duration_millis_ : 0;
+  }
+
+  requestLayout();
+  invalidateInterior();
 }
 
 bool ExpandablePanel::isExpanded() const { return expanded_; }
 
 bool ExpandablePanel::isAnimating() const {
-  (void)animation_progress_millis_;
-  return false;
+  if (animation_duration_millis_ == 0) return false;
+  if (expanded_) {
+    return animation_progress_millis_ < animation_duration_millis_;
+  }
+  return animation_progress_millis_ > 0;
 }
 
 void ExpandablePanel::setAnimationDuration(uint16_t millis) {
+  uint16_t old_duration = animation_duration_millis_;
   animation_duration_millis_ = millis;
+  if (animation_duration_millis_ == 0) {
+    animation_progress_millis_ = 0;
+  } else if (old_duration == 0) {
+    animation_progress_millis_ = expanded_ ? animation_duration_millis_ : 0;
+  } else if (animation_progress_millis_ > old_duration) {
+    animation_progress_millis_ = old_duration;
+  }
+  requestLayout();
+  invalidateInterior();
 }
 
-int ExpandablePanel::getChildrenCount() const { return 0; }
+Dimensions ExpandablePanel::getSuggestedMinimumDimensions() const {
+  const Widget* content = content_.get();
+  if (content == nullptr || content->isGone()) {
+    return Dimensions(0, 0);
+  }
+  Dimensions suggested = content->getSuggestedMinimumDimensions();
+  return Dimensions(suggested.width(),
+                    resolveVisibleHeight(suggested.height()));
+}
+
+void ExpandablePanel::paintWidgetContents(PaintContext& ctx) {
+  Container::paintWidgetContents(ctx);
+  if (isAnimating()) {
+    // Keep relayout and repaint active while the clipped height is changing.
+    requestLayout();
+    invalidateInterior();
+  }
+}
+
+void ExpandablePanel::stepAnimation() {
+  if (!isAnimating()) return;
+
+  uint16_t delta = std::min<uint16_t>(kExpandableAnimationFrameMillis,
+                                      animation_duration_millis_);
+  if (delta == 0) delta = 1;
+
+  if (expanded_) {
+    animation_progress_millis_ = std::min<uint16_t>(
+        animation_duration_millis_, animation_progress_millis_ + delta);
+  } else {
+    animation_progress_millis_ =
+        (animation_progress_millis_ > delta)
+            ? static_cast<uint16_t>(animation_progress_millis_ - delta)
+            : 0;
+  }
+}
+
+int16_t ExpandablePanel::resolveVisibleHeight(int16_t full_height) const {
+  if (full_height <= 0) return 0;
+  if (animation_duration_millis_ == 0) {
+    return expanded_ ? full_height : 0;
+  }
+
+  uint16_t clamped_progress = std::min<uint16_t>(animation_progress_millis_,
+                                                 animation_duration_millis_);
+  return static_cast<int16_t>(
+      (static_cast<int32_t>(full_height) * clamped_progress) /
+      animation_duration_millis_);
+}
+
+Dimensions ExpandablePanel::onMeasure(WidthSpec width, HeightSpec height) {
+  if (isAnimating()) {
+    stepAnimation();
+  }
+
+  Widget* content = content_.get();
+  if (content == nullptr || content->isGone()) {
+    return Dimensions(width.resolveSize(0), height.resolveSize(0));
+  }
+
+  Dimensions measured =
+      content->measure(width, HeightSpec::Unspecified(height.value()));
+  int16_t visible_height = resolveVisibleHeight(measured.height());
+  return Dimensions(width.resolveSize(measured.width()),
+                    height.resolveSize(visible_height));
+}
+
+void ExpandablePanel::onLayout(bool changed, const Rect& rect) {
+  (void)changed;
+  Widget* content = content_.get();
+  if (content == nullptr || content->isGone()) return;
+  if (rect.width() <= 0 || rect.height() <= 0) {
+    content->layout(Rect(0, 0, -1, -1));
+    return;
+  }
+
+  // Keep child layout clipped to the panel's current visible height so child
+  // max-bounds cannot spill into sibling paint/invalidation regions during
+  // expand/collapse animation.
+  content->layout(Rect(0, 0, rect.width() - 1, rect.height() - 1));
+}
+
+int ExpandablePanel::getChildrenCount() const {
+  return (content_.get() != nullptr && !content_.get()->isGone()) ? 1 : 0;
+}
 
 const Widget& ExpandablePanel::getChild(int idx) const {
-  (void)idx;
-  LOG(FATAL) << "Unimplemented: material3::ExpandablePanel::getChild";
-  return *static_cast<const Widget*>(nullptr);
+  CHECK_EQ(0, idx);
+  CHECK(content_.get() != nullptr);
+  return *content_.get();
 }
 
 Widget& ExpandablePanel::getChild(int idx) {
@@ -564,6 +689,7 @@ ListEntry::ListEntry(ApplicationContext& context)
       overline_mode_(TextSlotMode::kNone),
       headline_mode_(TextSlotMode::kNone),
       supporting_mode_(TextSlotMode::kNone),
+      suppress_next_click_invoke_(false),
       visual_context_() {}
 
 ListEntry::~ListEntry() { clearItem(); }
@@ -798,10 +924,27 @@ bool ListEntry::isClickable() const {
 }
 
 void ListEntry::onClicked() {
-  if (item_ != nullptr) {
+  if (item_ != nullptr && !suppress_next_click_invoke_) {
     item_->invoke();
   }
+  suppress_next_click_invoke_ = false;
   Widget::onClicked();
+}
+
+bool ListEntry::onSingleTapUp(XDim x, YDim y) {
+  bool handled = false;
+  if (getMainWindow() == nullptr) {
+    // Allows direct unit-test invocation without a live gesture detector.
+    handled = true;
+  } else {
+    handled = Widget::onSingleTapUp(x, y);
+  }
+
+  if (item_ != nullptr && item_->isInvokable()) {
+    item_->invoke();
+    suppress_next_click_invoke_ = true;
+  }
+  return handled;
 }
 
 int ListEntry::getChildrenCount() const {

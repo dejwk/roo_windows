@@ -255,12 +255,25 @@ class ExpandablePanel : public Container {
   /// Sets the intended expand/collapse animation duration in milliseconds.
   void setAnimationDuration(uint16_t millis);
 
+  /// Returns the current suggested size with animated height clipping applied.
+  Dimensions getSuggestedMinimumDimensions() const override;
+
  protected:
+  void paintWidgetContents(PaintContext& ctx) override;
+  Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
+  void onLayout(bool changed, const Rect& rect) override;
+
   int getChildrenCount() const override;
   const Widget& getChild(int idx) const override;
   Widget& getChild(int idx) override;
 
  private:
+  // Advances progress toward the expanded/collapsed target by one frame.
+  void stepAnimation();
+
+  // Resolves the visible clipped height from full child content height.
+  int16_t resolveVisibleHeight(int16_t full_height) const;
+
   WidgetRef content_;
   uint16_t animation_duration_millis_;
   uint16_t animation_progress_millis_;
@@ -322,6 +335,10 @@ class ListEntry : public Container {
   /// Invokes the currently bound item action, if one is available.
   void onClicked() override;
 
+  /// Starts row invocation when tap-up is confirmed, while click animation
+  /// continues, and defers duplicate suppression to onClicked().
+  bool onSingleTapUp(XDim x, YDim y) override;
+
  protected:
   int getChildrenCount() const override;
   const Widget& getChild(int idx) const override;
@@ -351,6 +368,7 @@ class ListEntry : public Container {
   TextSlotMode overline_mode_;
   TextSlotMode headline_mode_;
   TextSlotMode supporting_mode_;
+  bool suppress_next_click_invoke_;
   ListEntryVisualContext visual_context_;
 };
 

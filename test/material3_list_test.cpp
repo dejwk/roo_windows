@@ -1,5 +1,7 @@
+#include <iostream>
 #include <string>
 #include <type_traits>
+#include <vector>
 
 #include "gtest/gtest.h"
 #include "roo_icons/filled/24/device.h"
@@ -125,6 +127,15 @@ class TestList : public List {
   using List::getChildrenCount;
 };
 
+class TestExpandablePanel : public ExpandablePanel {
+ public:
+  explicit TestExpandablePanel(ApplicationContext& context)
+      : ExpandablePanel(context) {}
+
+  using ExpandablePanel::getChild;
+  using ExpandablePanel::getChildrenCount;
+};
+
 class TrackingListEntry : public ListEntry {
  public:
   TrackingListEntry(ApplicationContext& context, bool& destroyed)
@@ -185,6 +196,32 @@ class MutablePolicyListItem : public ListItem {
   roo_display::StringView supporting_;
   ListTextPolicy headline_policy_;
   ListTextPolicy supporting_policy_;
+};
+
+class ExpandableBodyListItem : public InvokableListItemBase {
+ public:
+  ExpandableBodyListItem(ApplicationContext& context, roo::string_view headline,
+                         roo::string_view supporting)
+      : InvokableListItemBase(headline, supporting, {}, {}, true),
+        body_content_(context, Dimensions(96, 24)),
+        body_panel_(context) {
+    body_panel_.setAnimationDuration(120);
+    body_panel_.setExpanded(false, false);
+    body_panel_.setContent(WidgetRef(body_content_));
+  }
+
+  Widget* body() override { return &body_panel_; }
+
+  ExpandablePanel& bodyPanel() { return body_panel_; }
+
+ protected:
+  void handleInvoke() override {
+    body_panel_.setExpanded(!body_panel_.isExpanded());
+  }
+
+ private:
+  TestWidget body_content_;
+  ExpandablePanel body_panel_;
 };
 
 class Material3ListRenderTest
@@ -458,6 +495,29 @@ TEST(Material3List, NavigationRowsDelegateRowClickToItemInvokePath) {
   EXPECT_EQ(2, invocation_count);
 }
 
+// Verifies that row invocation starts at tap-up confirmation so state changes
+// can run concurrently with click animation, and deferred onClicked does not
+// invoke the item a second time.
+TEST(Material3List, NavigationRowsInvokeOnTapUpWithoutDoubleInvokeOnClick) {
+  roo_scheduler::Scheduler scheduler;
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
+  TestListRow<AvatarNavigationListItem> row(context, "DW", "Assigned owner",
+                                            "Open schedule details");
+
+  int invocation_count = 0;
+  row.item().setOnInvoked([&]() { ++invocation_count; });
+
+  EXPECT_TRUE(row.isClickable());
+  EXPECT_EQ(0, invocation_count);
+
+  EXPECT_TRUE(row.onSingleTapUp(0, 0));
+  EXPECT_EQ(1, invocation_count);
+
+  row.onClicked();
+  EXPECT_EQ(1, invocation_count);
+}
+
 // Verifies that Phase 10 selection convenience items expose semantic state
 // APIs and support configurable leading/trailing control placement.
 TEST(Material3List, SelectionConvenienceItemsExposeSemanticStateAndPlacement) {
@@ -581,6 +641,261 @@ TEST(Material3List, BaselineClassesConstructWithSafeDefaults) {
   WidgetRef borrowed_list(list);
   EXPECT_EQ(&list, borrowed_list.get());
   list.clear();
+}
+
+// Verifies that ExpandablePanel owns a single optional body child, reports
+// collapsed vs expanded measured height, and allows replacing content.
+TEST(Material3List, ExpandablePanelAttachesContentAndResolvesHeight) {
+  roo_scheduler::Scheduler scheduler;
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
+  TestExpandablePanel panel(context);
+  TestWidget first_content(context, Dimensions(90, 28));
+  TestWidget second_content(context, Dimensions(84, 16));
+
+  panel.setAnimationDuration(120);
+  panel.setContent(WidgetRef(first_content));
+  ASSERT_EQ(1, panel.getChildrenCount());
+  EXPECT_EQ(&first_content, &panel.getChild(0));
+
+  panel.setExpanded(false, false);
+  Dimensions collapsed =
+      panel.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+  EXPECT_EQ(0, collapsed.height());
+
+  panel.setExpanded(true, false);
+  Dimensions expanded =
+      panel.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+  EXPECT_EQ(28, expanded.height());
+
+  panel.setContent(WidgetRef(second_content));
+  ASSERT_EQ(1, panel.getChildrenCount());
+  EXPECT_EQ(&second_content, &panel.getChild(0));
+  EXPECT_EQ(nullptr, first_content.parent());
+
+  panel.clearContent();
+  EXPECT_EQ(0, panel.getChildrenCount());
+}
+
+// Verifies that ExpandablePanel progresses through clipped intermediate
+// measured heights while animating between collapsed and expanded states.
+TEST(Material3List, ExpandablePanelAnimationProducesIntermediateHeights) {
+  roo_scheduler::Scheduler scheduler;
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
+  ExpandablePanel panel(context);
+  TestWidget content(context, Dimensions(80, 30));
+
+  panel.setAnimationDuration(100);
+  panel.setContent(WidgetRef(content));
+  panel.setExpanded(false, false);
+  panel.setExpanded(true, true);
+
+  Dimensions step1 =
+      panel.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+  Dimensions step2 =
+      panel.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+  Dimensions step3 =
+      panel.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+
+  EXPECT_TRUE(panel.isAnimating());
+  EXPECT_GT(step1.height(), 0);
+  EXPECT_GT(step2.height(), step1.height());
+  EXPECT_GT(step3.height(), step2.height());
+  EXPECT_LT(step3.height(), 30);
+
+  for (int i = 0; i < 6; ++i) {
+    panel.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+  }
+  EXPECT_FALSE(panel.isAnimating());
+  Dimensions expanded =
+      panel.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+  EXPECT_EQ(30, expanded.height());
+}
+
+// Verifies that ExpandablePanel keeps body child layout clipped to the
+// currently visible animated height, preventing child spill beyond panel
+// bounds while expanding.
+TEST(Material3List, ExpandablePanelClipsChildLayoutToVisibleHeight) {
+  roo_scheduler::Scheduler scheduler;
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
+  TestExpandablePanel panel(context);
+  TestWidget content(context, Dimensions(90, 36));
+
+  panel.setAnimationDuration(120);
+  panel.setContent(WidgetRef(content));
+  panel.setExpanded(false, false);
+  panel.setExpanded(true, true);
+
+  Dimensions first =
+      panel.measure(WidthSpec::Exactly(100), HeightSpec::Unspecified(0));
+  panel.layout(Rect(0, 0, first.width() - 1, first.height() - 1));
+
+  ASSERT_EQ(1, panel.getChildrenCount());
+  EXPECT_EQ(first.height(), panel.getChild(0).height());
+}
+
+// Verifies that expandable-row usage keeps expansion state in item-owned body
+// content while ListEntry remains a reusable row surface.
+TEST(Material3List, ExpandableBodyItemTogglesPanelThroughRowInvocation) {
+  roo_scheduler::Scheduler scheduler;
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
+  TestListRow<ExpandableBodyListItem> row(context, "Filter schedule",
+                                          "Tap to expand details");
+
+  EXPECT_TRUE(row.isClickable());
+  Dimensions collapsed =
+      row.measure(WidthSpec::Exactly(180), HeightSpec::Unspecified(0));
+
+  row.onClicked();
+  for (int i = 0; i < 8; ++i) {
+    row.measure(WidthSpec::Exactly(180), HeightSpec::Unspecified(0));
+  }
+  EXPECT_TRUE(row.item().bodyPanel().isExpanded());
+  EXPECT_FALSE(row.item().bodyPanel().isAnimating());
+
+  Dimensions expanded =
+      row.measure(WidthSpec::Exactly(180), HeightSpec::Unspecified(0));
+  EXPECT_GT(expanded.height(), collapsed.height());
+}
+
+// Verifies that tapping an expandable rounded row and releasing before the
+// click animation completes never leaves residual ripple pixels on the parent
+// background once both the click animation and the concurrent expansion have
+// fully settled. The settled framebuffer must match a forced clean repaint of
+// the same final state (which models the "remains until scroll" symptom: a
+// full repaint clears the stray pixels).
+TEST_F(Material3ListRenderTest, ExpandableRowRippleLeavesNoResidueAfterSettle) {
+  using test_support::ColorBoxWidget;
+
+  // Mirror the example scene: a scrollable panel whose content is taller than
+  // the viewport, with the expandable list sitting at a non-zero scroll
+  // offset (so the row paints at a translated device origin).
+  auto scroll = std::make_unique<SimpleScrollablePanel>(context());
+  SimpleScrollablePanel* scroll_ptr = scroll.get();
+
+  auto content = std::make_unique<FlexLayout>(context(), FlexDirection::kColumn);
+  FlexLayout* content_ptr = content.get();
+  // Match the example screen: horizontal padding leaves a parent-background
+  // margin to the left/right of the (full width) list rows, so any ripple that
+  // overshoots the row's rounded silhouette lands on a visible parent surface.
+  content_ptr->setPadding(Padding(Scaled(12), Scaled(8)));
+  content_ptr->setGap(Scaled(8));
+
+  auto top_filler = std::make_unique<ColorBoxWidget>(
+      context(), roo_display::color::Blue, Dimensions(kWidth, 100));
+  auto list = std::make_unique<List>(context());
+  List* list_ptr = list.get();
+  auto row1 = std::make_unique<ListRow<ExpandableBodyListItem>>(
+      context(), "Filter schedule", "Tap to expand details");
+  auto row2 = std::make_unique<ListRow<ExpandableBodyListItem>>(
+      context(), "Chemistry notes", "Tap to expand details");
+  ListRow<ExpandableBodyListItem>* row1_ptr = row1.get();
+  list_ptr->add(std::move(row1));
+  list_ptr->add(std::move(row2));
+  auto bottom_filler = std::make_unique<ColorBoxWidget>(
+      context(), roo_display::color::Green, Dimensions(kWidth, 100));
+
+  content_ptr->add(WidgetRef(std::move(top_filler)),
+                   {.flex_grow = 0, .flex_shrink = 0});
+  content_ptr->add(WidgetRef(std::move(list)),
+                   {.flex_grow = 0, .flex_shrink = 0});
+  content_ptr->add(WidgetRef(std::move(bottom_filler)),
+                   {.flex_grow = 0, .flex_shrink = 0});
+
+  scroll_ptr->setContents(WidgetRef(std::move(content)));
+  app_.add(std::move(scroll), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
+
+  ASSERT_TRUE(refresh());
+
+  // Scroll so the expandable list sits near the top of the viewport.
+  scroll_ptr->scrollTo(0, 0);
+  ASSERT_TRUE(refresh());
+
+  XDim row_lx;
+  YDim row_ly;
+  row1_ptr->getAbsoluteOffset(row_lx, row_ly);
+  // Bring row1's top near the top of the viewport (content origin shifts so
+  // the row paints at a non-zero scroll translation).
+  scroll_ptr->scrollTo(0, 16 - row_ly);
+  ASSERT_TRUE(refresh());
+
+  // Capture a PRISTINE reference of the final (expanded) layout produced with
+  // no click animation. Expanding directly drives the normal layout
+  // invalidation path on a residue-free framebuffer, so this image cannot
+  // contain any click-overlay leftovers. Comparing against this (rather than
+  // against a post-gesture invalidate) catches residue that lands outside the
+  // reach of invalidateInterior().
+  row1_ptr->item().bodyPanel().setExpanded(true, false);
+  scroll_ptr->invalidateInterior();
+  content_ptr->invalidateInterior();
+  list_ptr->invalidateInterior();
+  ASSERT_TRUE(refresh());
+  ASSERT_TRUE(row1_ptr->item().bodyPanel().isExpanded());
+  ASSERT_FALSE(row1_ptr->item().bodyPanel().isAnimating());
+  std::vector<roo_display::Color> expanded_clean(kWidth * kHeight);
+  for (int16_t y = 0; y < kHeight; ++y)
+    for (int16_t x = 0; x < kWidth; ++x)
+      expanded_clean[y * kWidth + x] = pixelAt(x, y);
+
+  // Collapse again (no animation) to set up the real gesture.
+  row1_ptr->item().bodyPanel().setExpanded(false, false);
+  scroll_ptr->invalidateInterior();
+  content_ptr->invalidateInterior();
+  list_ptr->invalidateInterior();
+  ASSERT_TRUE(refresh());
+
+  // Quick release: a genuinely fast tap where the gesture detector never
+  // emits onShowPress (the press timeout has not elapsed). onSingleTapUp then
+  // takes the quick-release branch (setClicking + start animation) without the
+  // widget ever entering the pressed state. The click animation runs to
+  // completion concurrently with the expansion it triggers. (A longer press
+  // fires onShowPress and paints several ripple frames at the steady collapsed
+  // size first, and does not reproduce.)
+  const XDim press_x = Scaled(10);
+  const YDim press_y = Scaled(10);
+  row1_ptr->onSingleTapUp(press_x, press_y);
+
+  // Drive the click animation and expansion to completion.
+  for (int frame = 0; frame < 28; ++frame) {
+    delay(16);
+    app_.root().refreshClickAnimation();
+    ASSERT_TRUE(refresh());
+  }
+  ASSERT_TRUE(row1_ptr->item().bodyPanel().isExpanded());
+  ASSERT_FALSE(row1_ptr->item().bodyPanel().isAnimating());
+
+  // Capture the settled framebuffer (may contain stale ripple pixels).
+  std::vector<roo_display::Color> settled(kWidth * kHeight);
+  for (int16_t y = 0; y < kHeight; ++y)
+    for (int16_t x = 0; x < kWidth; ++x)
+      settled[y * kWidth + x] = pixelAt(x, y);
+
+  int mismatches = 0;
+  int first_x = -1;
+  int first_y = -1;
+  for (int16_t y = 0; y < kHeight; ++y) {
+    for (int16_t x = 0; x < kWidth; ++x) {
+      if (settled[y * kWidth + x] != expanded_clean[y * kWidth + x]) {
+        if (mismatches == 0) {
+          first_x = x;
+          first_y = y;
+        }
+        ++mismatches;
+      }
+    }
+  }
+
+  EXPECT_EQ(0, mismatches)
+      << "Settled framebuffer differs from pristine expanded image by "
+      << mismatches << " pixels; first mismatch at (" << first_x << ","
+      << first_y << ") settled=0x" << std::hex
+      << (first_x < 0 ? 0 : settled[first_y * kWidth + first_x].asArgb())
+      << " clean=0x"
+      << (first_x < 0 ? 0 : expanded_clean[first_y * kWidth + first_x].asArgb())
+      << std::dec;
 }
 
 // Verifies that binding a standard item attaches the stable borrowed slot

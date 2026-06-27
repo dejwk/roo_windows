@@ -12,6 +12,11 @@ ClickAnimation::ClickAnimation()
     : click_anim_target_(nullptr),
       click_confirmed_(false),
       deferred_click_(nullptr),
+      has_prev_transient_bounds_(false),
+      prev_transient_x0_(0),
+      prev_transient_y0_(0),
+      prev_transient_x1_(-1),
+      prev_transient_y1_(-1),
       click_anim_start_millis_(0),
       click_anim_x_(0),
       click_anim_y_(0) {}
@@ -21,9 +26,20 @@ void ClickAnimation::tick() {
   if (click_anim_target_ != nullptr) {
     click_anim_target_->invalidateInterior();
     Rect transient_bounds = click_anim_target_->getParentTransientPaintBounds();
-    if (transient_bounds != click_anim_target_->parent_bounds()) {
-      click_anim_target_->notifyParentInvalidatedRegion(transient_bounds);
+    Rect repaint_bounds = transient_bounds;
+    if (has_prev_transient_bounds_) {
+      repaint_bounds = Rect::Extent(
+          repaint_bounds, Rect(prev_transient_x0_, prev_transient_y0_,
+                               prev_transient_x1_, prev_transient_y1_));
     }
+    if (repaint_bounds != click_anim_target_->parent_bounds()) {
+      click_anim_target_->notifyParentInvalidatedRegion(repaint_bounds);
+    }
+    has_prev_transient_bounds_ = true;
+    prev_transient_x0_ = transient_bounds.xMin();
+    prev_transient_y0_ = transient_bounds.yMin();
+    prev_transient_x1_ = transient_bounds.xMax();
+    prev_transient_y1_ = transient_bounds.yMax();
     unsigned long elapsed = millis() - click_anim_start_millis_;
     if (elapsed > kClickAnimationMs + 100) {
       // 100 ms is a grace period to allow the widget to draw the full click
@@ -47,14 +63,21 @@ void ClickAnimation::tick() {
     // Invalidate the full transient spill region once more before delivering
     // the deferred click so siblings underneath that spill are refreshed.
     Rect transient_bounds = click_anim_target_->getParentTransientPaintBounds();
-    if (transient_bounds != click_anim_target_->parent_bounds()) {
-      click_anim_target_->notifyParentInvalidatedRegion(transient_bounds);
+    Rect repaint_bounds = transient_bounds;
+    if (has_prev_transient_bounds_) {
+      repaint_bounds = Rect::Extent(
+          repaint_bounds, Rect(prev_transient_x0_, prev_transient_y0_,
+                               prev_transient_x1_, prev_transient_y1_));
+    }
+    if (repaint_bounds != click_anim_target_->parent_bounds()) {
+      click_anim_target_->notifyParentInvalidatedRegion(repaint_bounds);
     }
     if (click_confirmed_) {
       click_confirmed_ = false;
       clickWidget(click_anim_target_);
     }
     click_anim_target_ = nullptr;
+    has_prev_transient_bounds_ = false;
   }
 
   if (deferred_click_ != nullptr) {
@@ -97,9 +120,13 @@ void ClickAnimation::start(Widget* widget, int16_t x, int16_t y) {
   click_anim_x_ = x;
   click_anim_y_ = y;
   click_confirmed_ = false;
+  has_prev_transient_bounds_ = false;
 }
 
-void ClickAnimation::cancel() { click_anim_target_ = nullptr; }
+void ClickAnimation::cancel() {
+  click_anim_target_ = nullptr;
+  has_prev_transient_bounds_ = false;
+}
 
 void ClickAnimation::confirmClick(Widget* widget) {
   click_confirmed_ = true;

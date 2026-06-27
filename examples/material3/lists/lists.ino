@@ -459,6 +459,68 @@ class SelectionSection : public FlexLayout {
   material3::ListRow<material3::SwitchListItem> heater_boost_;
 };
 
+class ExpandableRowItem : public material3::InvokableListItemBase {
+ public:
+  ExpandableRowItem(ApplicationContext& context, roo::string_view headline,
+                    roo::string_view supporting,
+                    roo::string_view expanded_details)
+      : material3::InvokableListItemBase(headline, supporting, {}, {}, true),
+        details_(context, std::string(expanded_details), font_caption()),
+        details_panel_(context) {
+    details_panel_.setAnimationDuration(180);
+    details_panel_.setExpanded(false, false);
+    details_panel_.setContent(WidgetRef(details_));
+  }
+
+  Widget* body() override { return &details_panel_; }
+
+ protected:
+  void handleInvoke() override {
+    details_panel_.setExpanded(!details_panel_.isExpanded());
+  }
+
+ private:
+  TextLabel details_;
+  material3::ExpandablePanel details_panel_;
+};
+
+class ExpandableSection : public FlexLayout {
+ public:
+  explicit ExpandableSection(ApplicationContext& context)
+      : FlexLayout(context, FlexDirection::kColumn),
+        title_(context, "Phase 11 expandable rows", font_body1()),
+        subtitle_(context,
+                  "ExpandablePanel is reusable body content; expansion state "
+                  "stays inside the item, not on ListEntry.",
+                  font_caption()),
+        expandable_list_(context),
+        filter_schedule_(context, "Filter schedule",
+                         "Tap to expand maintenance details",
+                         "Runs at 06:30 and 18:45 on weekdays.\n"
+                         "Skips automatically when freeze guard is active."),
+        chemistry_notes_(context, "Chemistry notes",
+                         "Tap to expand current plan",
+                         "pH target: 7.4\n"
+                         "Chlorine target: 2.0 ppm\n"
+                         "Retest after evening circulation.") {
+    setGap(Scaled(6));
+
+    expandable_list_.add(filter_schedule_);
+    expandable_list_.add(chemistry_notes_);
+
+    add(title_, {.flex_grow = 0, .flex_shrink = 0});
+    add(subtitle_, {.flex_grow = 0, .flex_shrink = 0});
+    add(expandable_list_, {.flex_grow = 0, .flex_shrink = 0});
+  }
+
+ private:
+  TextLabel title_;
+  TextLabel subtitle_;
+  material3::List expandable_list_;
+  material3::ListRow<ExpandableRowItem> filter_schedule_;
+  material3::ListRow<ExpandableRowItem> chemistry_notes_;
+};
+
 class ListsScreen : public SimpleScrollablePanel {
  public:
   explicit ListsScreen(ApplicationContext& context)
@@ -466,8 +528,8 @@ class ListsScreen : public SimpleScrollablePanel {
         content_(context, FlexDirection::kColumn),
         title_(context, "Material 3 lists", font_h6()),
         subtitle_(context,
-                  "Phase 10 - convenience items now include selection "
-                  "controls with row-to-affordance delegation",
+                  "Phase 11 - expandable rows now use reusable body panels "
+                  "with animated measured-height reveal",
                   font_caption()),
         top_divider_(context),
         settings_(context),
@@ -479,6 +541,8 @@ class ListsScreen : public SimpleScrollablePanel {
         navigation_(context),
         selection_divider_(context),
         selection_(context),
+        expandable_divider_(context),
+        expandable_(context),
         menu_divider_(context),
         menu_(context) {
     content_.setPadding(Padding(Scaled(12), Scaled(8)));
@@ -496,6 +560,8 @@ class ListsScreen : public SimpleScrollablePanel {
     content_.add(navigation_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(selection_divider_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(selection_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(expandable_divider_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(expandable_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(menu_divider_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(menu_, {.flex_grow = 0, .flex_shrink = 0});
 
@@ -516,6 +582,8 @@ class ListsScreen : public SimpleScrollablePanel {
   NavigationSection navigation_;
   HorizontalDivider selection_divider_;
   SelectionSection selection_;
+  HorizontalDivider expandable_divider_;
+  ExpandableSection expandable_;
   HorizontalDivider menu_divider_;
   MenuPrototypeSection menu_;
 };

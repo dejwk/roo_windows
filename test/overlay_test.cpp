@@ -96,6 +96,28 @@ class ClickAnimationOverflowWidget : public PointOverlayBoxWidget {
   }
 };
 
+class MutableClickAnimationOverflowWidget : public PointOverlayBoxWidget {
+ public:
+  MutableClickAnimationOverflowWidget(ApplicationContext& context,
+                                      roo_display::Color color, Dimensions dims,
+                                      int16_t overflow)
+      : PointOverlayBoxWidget(context, color, dims), overflow_(overflow) {}
+
+  void setOverflow(int16_t overflow) { overflow_ = overflow; }
+
+  Rect getParentTransientPaintBounds() const override {
+    if (!isClicking()) {
+      return PointOverlayBoxWidget::getParentTransientPaintBounds();
+    }
+    return Rect(
+        parent_bounds().xMin() - overflow_, parent_bounds().yMin() - overflow_,
+        parent_bounds().xMax() + overflow_, parent_bounds().yMax() + overflow_);
+  }
+
+ private:
+  int16_t overflow_;
+};
+
 class FullWidthColumnWidget : public FlexLayout {
  public:
   explicit FullWidthColumnWidget(ApplicationContext& context)
@@ -704,6 +726,35 @@ TEST_F(RooWindowsRenderTest,
 
   ASSERT_EQ(1u, panel_ptr->invalidated_regions.size());
   EXPECT_EQ(Rect(15, 9, 42, 32), panel_ptr->invalidated_regions.front());
+}
+
+// Verifies that click-animation ticks invalidate the union of previous and
+// current transient spill bounds so stale tint does not remain when transient
+// bounds shrink mid-animation.
+TEST_F(RooWindowsRenderTest,
+       ClickAnimationTickInvalidatesPreviousAndCurrentTransientBounds) {
+  auto panel = std::make_unique<RecordingPanel>(context());
+  RecordingPanel* panel_ptr = panel.get();
+  auto front = std::make_unique<MutableClickAnimationOverflowWidget>(
+      context(), color::Blue, Dimensions(18, 18), 8);
+  MutableClickAnimationOverflowWidget* front_ptr = front.get();
+
+  panel_ptr->add(std::move(front), Box(20, 12, 37, 29));
+  app_.add(std::move(panel), Box(0, 0, 47, 39));
+
+  front_ptr->onShowPress(front_ptr->width() / 2, front_ptr->height() / 2);
+  panel_ptr->invalidated_regions.clear();
+
+  app_.root().refreshClickAnimation();
+  ASSERT_EQ(1u, panel_ptr->invalidated_regions.size());
+  EXPECT_EQ(Rect(12, 4, 45, 37), panel_ptr->invalidated_regions.front());
+
+  panel_ptr->invalidated_regions.clear();
+  front_ptr->setOverflow(2);
+  app_.root().refreshClickAnimation();
+
+  ASSERT_EQ(1u, panel_ptr->invalidated_regions.size());
+  EXPECT_EQ(Rect(12, 4, 45, 37), panel_ptr->invalidated_regions.front());
 }
 
 // Verifies that once the press animation reaches progress 1.0 the overlay
