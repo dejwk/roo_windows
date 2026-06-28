@@ -130,16 +130,23 @@ state, while dozens of tabs should remain as cheap leaf widgets.
 The local paint pipeline constrains the design more than the generic Material
 spec does.
 
-`Container` paints children first and then paints its own surface. That default
-ordering is correct for many surfaces, but it is the wrong order for tabs:
+`Container` paints children first and then paints its own surface. In
+`roo_windows`, that is a front-to-back direct-to-framebuffer contract, not a
+back-to-front scene-graph order: children settle final pixels, register
+exclusions, and the container surface fills only lower-z pixels that remain.
 
-- the tab row background belongs behind the children,
-- the active indicator belongs above the background but below tab foreground
-  content,
-- and the divider belongs in the final front-most row-owned layer.
+Tabs therefore need to distinguish conceptual z-order from paint order:
 
-That means the tabs container cannot rely on the default `Container`
-`paintWidgetContents()` implementation. It needs a custom ordering.
+- conceptually, the row surface sits behind the active indicator, tab surface
+  state layer, tab foreground content, and bottom divider,
+- but implementation must settle front-most pixels first, register exclusions
+  for resolved tab and divider regions, then let lower-z row surface/background
+  work happen through the existing clipper path.
+
+That means the tabs implementation should only override
+`paintWidgetContents()` for ordering that cannot be expressed cleanly through
+ordinary `PaintContext` painting, exclusions, decorations, and overlays. The
+goal is not to replay the conceptual stack as back-to-front draw calls.
 
 The existing
 [SimpleScrollablePanel](../src/roo_windows/containers/scrollable_panel.h)
@@ -192,7 +199,7 @@ scroll physics, rather than composing itself out of a generic scroll host.
 ### API Requirements
 
 1. Expose one surface-owning `material3::Tabs` container.
-2. Expose one cheap `material3::Tab` leaf widget.
+2. Expose one lightweight surface-owning `material3::Tab` leaf widget.
 3. Expose one opt-in `material3::BadgedTab` subclass that reuses the shared
    `material3::Badge` helper.
 4. Keep tab labels as non-owning `roo::string_view` values.
@@ -246,13 +253,14 @@ The core decisions are:
 
 1. use one `Tabs` container rather than separate fixed and scrollable public
    row classes,
-2. keep the base `Tab` on the cheap non-surface branch,
+2. keep the base `Tab` on the lightweight surface-owning branch,
 3. make badges an opt-in subclass,
 4. keep indicator ownership on the row,
 5. keep content switching outside the base row API,
 6. keep fixed versus scrollable mode explicit rather than automatic,
-7. and override the default container paint order so the row can paint
-   background, indicator, children, and divider in the correct order.
+7. and use front-to-back paint/exclusion ordering rather than replaying the
+   conceptual background -> indicator -> children -> divider stack as draw
+   order.
 
 ## Design Details
 
@@ -274,9 +282,14 @@ single timer-driven path for:
 - scroll fling,
 - and optional spring-back.
 
-`Tab` derives from `Widget`, not `BasicWidget`.
+`Tab` derives from `SurfaceWidget`, not plain `Widget`, `BasicWidget`, or
+`BasicSurfaceWidget`.
 
-That is a deliberate RAM choice. Tab geometry is token-driven and does not need
+That is both a semantic and RAM choice. A tab owns its interactive rectangle:
+hover, focus, and press overlays must cover the full tab bounds, not only the
+icon/label ink. Selection does not add an activation state-layer fill; selected
+tabs change foreground color and row-owned indicator geometry instead. At the
+same time, tab geometry is token-driven and does not need `BasicSurfaceWidget`'s
 stored padding or margin fields on every instance. The base tab only needs:
 
 - one non-owning label view,
@@ -399,7 +412,9 @@ documentation and authoring concern, not a policy bit that every row should pay
 to validate.
 
 Selected state is represented by the existing widget activated state. `Tabs`
-updates each child's activated bit when the selected index changes.
+updates each child's activated bit when the selected index changes, but
+`Tab::useOverlayOnActivation()` returns `false` so activation does not produce a
+container overlay.
 
 ### Badge Integration
 
@@ -479,23 +494,36 @@ snaps directly to the selected indicator geometry.
 
 ### Paint Model and Invalidation
 
-`Tabs` overrides `paintWidgetContents(PaintContext&)` because the default
-container ordering is wrong for tabs.
+The conceptual tab stack is:
 
-The row paint order is:
-
-1. row background fill,
+1. row surface,
 2. active indicator,
-3. child tabs,
-4. bottom divider.
+3. tab surface state layer,
+4. tab icon, label, and badge foreground,
+5. bottom divider.
 
-That order makes every layer land exactly once with its final color.
+The draw order must follow the repo's front-to-back authoring rule rather than
+that conceptual order. Do not implement this as background -> indicator ->
+children -> divider draw calls. The implementation should settle front-most
+pixels first, register exclusions for resolved tab/divider regions, and let
+lower-z row surface work happen afterward through the existing clipper path.
+Do not pre-clear the whole tab and then draw text or icons over it; compose
+surface background and foreground in one tiled/stacked paint operation, or split
+the tab into non-overlapping regions where each pixel is written once with its
+final color.
 
-`Tab::paint(PaintContext&)` paints only the tab's own foreground content:
+`Tab::paint(PaintContext&)` paints the tab-owned surface rectangle and then the
+tab's own foreground content:
 
+- `surface` tab background,
 - icon,
 - label,
-- and state-layer visuals that belong to the leaf.
+- and state-layer visuals that belong to the leaf through the normal surface
+  overlay path.
+
+For icon-plus-label tabs, the icon slot and label slot are stacked with no
+inter-slot gap. The combined icon+label cluster is vertically centered, and any
+remaining vertical padding is painted only above and below that cluster.
 
 `BadgedTab::paint(PaintContext&)` settles the badge first and then paints the
 lower-z icon and label under the shared exclusion pipeline, matching the badge
@@ -545,6 +573,7 @@ token tables.
 The defaults are:
 
 - container color from the theme surface role,
+- tab background color from the same theme surface role,
 - inactive content color from `onSurfaceVariant`,
 - primary active content color from `primary`,
 - secondary active text color from `onSurface`,
@@ -563,7 +592,7 @@ The design keeps the common case explicit.
 
 Target host-side size budgets are:
 
-1. `Tab`: `sizeof(Widget) + sizeof(roo::string_view) + sizeof(void*) + 4`
+1. `Tab`: `sizeof(SurfaceWidget) + sizeof(roo::string_view) + sizeof(void*) + 4`
 2. `BadgedTab`: `sizeof(Tab) + sizeof(Badge) + 4`
 3. `Tabs`: `sizeof(Container) + 3 * sizeof(void*) + 40`, plus tab-pointer
    vector capacity
@@ -668,7 +697,7 @@ enum class TabsMode : uint8_t {
   kScrollable,
 };
 
-class Tab : public Widget {
+class Tab : public SurfaceWidget {
  public:
   explicit Tab(ApplicationContext& context, roo::string_view label = {});
 
@@ -809,8 +838,8 @@ Validation:
 
 Work:
 
-- override `Tabs::paintWidgetContents()` to implement background -> indicator
-  -> children -> divider ordering,
+- implement indicator and divider paint with front-to-back exclusions/overlays
+  rather than a background -> indicator -> children -> divider draw sequence,
 - add secondary-variant token resolution,
 - add the row-owned `200ms` indicator animation,
 - add golden coverage for primary and secondary fixed rows,
