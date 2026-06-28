@@ -95,6 +95,13 @@ the same pixel more than once in a single paint pass.
 Core rule: draw only the final value of a pixel color; do not redraw using
 different colors.
 
+Do not pre-clear a widget or content rectangle and then draw foreground content
+over the same pixels. That writes an intermediate color to the display and can
+produce visible flicker. Use a single drawable/tile/stack that resolves
+foreground and background together, or split the paint into non-overlapping
+front-to-back regions where each pixel is written only once with its final
+color.
+
 ### Prefer `paint()` for Most Widgets
 
 Use `paint(PaintContext& ctx) const` as the default widget-local paint hook.
