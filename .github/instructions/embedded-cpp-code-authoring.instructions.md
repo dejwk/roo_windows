@@ -30,6 +30,10 @@ policy on top of this baseline.
   especially for borrowed inputs where callers may rely on immutability.
   Only use it when the target is provably non-mutating for that call path;
   otherwise, fix the interface to be const-correct.
+- Avoid RTTI-dependent constructs such as `dynamic_cast` and `typeid` in
+  embedded-target library code. Many embedded builds disable RTTI; prefer
+  compile-time type constraints, typed ownership APIs, virtual hooks, or
+  explicit lightweight tags when a runtime distinction is truly needed.
 - Avoid long lambdas. When logic is substantial, prefer an unnamed-namespace
   helper over a large local lambda, and define that helper close to the place
   where it is used.
