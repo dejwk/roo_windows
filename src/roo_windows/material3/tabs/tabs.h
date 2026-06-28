@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "roo_backport/string_view.h"
+#include "roo_scheduler.h"
 #include "roo_windows/core/container.h"
 #include "roo_windows/core/surface_widget.h"
 #include "roo_windows/core/widget_ref.h"
@@ -25,6 +26,11 @@ enum class TabsVariant : uint8_t {
 enum class TabsMode : uint8_t {
   kFixed,
   kScrollable,
+};
+
+enum class TabsSelectionCommitMode : uint8_t {
+  kOnRelease,
+  kAfterClickAnimation,
 };
 
 class Tabs;
@@ -73,6 +79,9 @@ class Tab : public SurfaceWidget {
 
  protected:
   Rect getCoreContentBounds() const;
+  Rect getContentPaintBounds() const;
+  Rect getDirectPaintExclusionBounds() const override;
+  bool onSingleTapUp(XDim x, YDim y) override;
   void onClicked() override;
   virtual Dimensions getContentMinimumDimensions() const;
   virtual void paintContent(PaintContext& ctx, const Rect& content_bounds,
@@ -83,6 +92,7 @@ class Tab : public SurfaceWidget {
 
   roo::string_view label_;
   const MonoIcon* icon_;
+  uint8_t click_handled_on_release_ : 1;
 };
 
 class BadgedTab : public Tab {
@@ -106,7 +116,7 @@ class BadgedTab : public Tab {
   Badge badge_;
 };
 
-class Tabs : public Container {
+class Tabs : public Container, private roo_scheduler::Executable {
  public:
   /// Creates a Material 3 tabs row with explicit variant and layout mode.
   explicit Tabs(ApplicationContext& context,
@@ -133,6 +143,14 @@ class Tabs : public Container {
 
   /// Enables or disables the row-owned bottom divider.
   void setShowsDivider(bool shows_divider);
+
+  /// Returns when touch selection is committed relative to click animation.
+  TabsSelectionCommitMode selectionCommitMode() const {
+    return (TabsSelectionCommitMode)selection_commit_mode_;
+  }
+
+  /// Configures when touch selection is committed relative to click animation.
+  void setSelectionCommitMode(TabsSelectionCommitMode mode);
 
   /// Adds a borrowed `Tab` or subclass child to the row.
   template <typename T>
@@ -190,18 +208,42 @@ class Tabs : public Container {
  private:
   friend class Tab;
 
+  enum class IndicatorAnimationState : uint8_t {
+    kIdle,
+    kAnimating,
+  };
+
   void addTabImpl(WidgetRef tab, Tab* raw);
   void handleTabClicked(const Tab& tab);
   void updateActivatedStates();
   int findTabIndex(const Tab& tab) const;
   int rowHeight() const;
+  int indicatorHeight() const;
+  Rect dividerBounds() const;
+  Rect indicatorBoundsForIndex(int index) const;
+  Rect indicatorPaintBoundsForTab(const Tab& tab) const;
+  Rect targetIndicatorBounds() const;
+  void snapIndicatorToSelection();
+  void startIndicatorTransition(const Rect& from, const Rect& to, bool animate);
+  void cancelPendingIndicatorUpdate();
+  void scheduleIndicatorUpdate();
+  void execute(roo_scheduler::ExecutionID id) override;
 
   std::vector<Tab*> tabs_;
+  roo_scheduler::Scheduler& scheduler_;
+  roo_scheduler::ExecutionID notification_id_;
+  Rect indicator_current_;
+  Rect indicator_start_;
+  Rect indicator_target_;
+  unsigned long indicator_start_time_ms_;
+  unsigned long indicator_end_time_ms_;
   int16_t selected_index_;
   uint8_t variant_ : 2;
   uint8_t mode_ : 2;
   uint8_t shows_divider_ : 1;
   uint8_t warned_scrollable_ : 1;
+  uint8_t indicator_animation_state_ : 1;
+  uint8_t selection_commit_mode_ : 1;
 };
 
 }  // namespace material3

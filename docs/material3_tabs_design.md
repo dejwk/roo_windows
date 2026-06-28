@@ -101,8 +101,8 @@ The current Material 3 signals carried into this design are:
 4. label-only rows use a `48dp` container height,
 5. icon-plus-label rows use a `64dp` container height,
 6. primary indicator height is `3dp`, secondary indicator height is `2dp`,
-7. active indicators have a minimum width of `24dp` and a `2dp` horizontal
-   inset from the measured content bounds,
+7. primary active indicators have a minimum width of `24dp` and a `2dp`
+   horizontal inset from the measured content bounds,
 8. scrollable rows use a `52dp` logical leading inset on the first visible tab,
 9. badges are allowed on both primary and secondary tabs,
 10. and badge placement differs between stacked icon layouts and label-inline
@@ -466,10 +466,10 @@ overflow system.
 
 ### Indicator Geometry and Animation
 
-The active indicator is row-owned and derived from the selected tab's core
-content bounds.
+The active indicator is row-owned and variant-specific.
 
-For a selected content cluster of width $w_c$, the indicator width is:
+For a selected primary-tab content cluster of width $w_c$, the indicator width
+is:
 
 $$
 w_{indicator} = max\left(24, w_c - 4\right)
@@ -477,13 +477,16 @@ $$
 
 That is the Material minimum width of `24dp` with a `2dp` inset on each side.
 
+For secondary tabs, the indicator spans the full width of the selected tab.
+
 Indicator height is variant-specific:
 
 - primary: `3dp`,
 - secondary: `2dp`.
 
-The indicator is horizontally centered under the selected tab's core content
-bounds and aligned to the row's bottom edge just above the divider.
+The primary indicator is horizontally centered under the selected tab's core
+content bounds. The secondary indicator uses the selected tab's full horizontal
+bounds. Both variants align to the row's bottom edge just above the divider.
 
 Selection changes animate one row-owned indicator rectangle from the old bounds
 to the new bounds over `200ms`. The row interpolates both left edge and width;

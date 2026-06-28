@@ -6,10 +6,14 @@
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/surface_widget.h"
 #include "roo_windows/material3/tabs/tabs.h"
+#include "roo_windows_render_test_support.h"
 
 namespace roo_windows {
 namespace material3 {
 namespace {
+
+using test_support::QuantizeToArgb4444;
+using test_support::RooWindowsRenderTestSized;
 
 ApplicationContext MakeContext(Environment& env) {
   return ApplicationContext(env.scheduler(), env.theme(),
@@ -21,6 +25,10 @@ class TestTab : public Tab {
   using Tab::Tab;
 
   void clickForTest() { onClicked(); }
+
+  bool tapUpForTest() { return onSingleTapUp(width() / 2, height() / 2); }
+
+  Rect coreContentBoundsForTest() const { return getCoreContentBounds(); }
 };
 
 class RecordingTabs : public Tabs {
@@ -31,16 +39,25 @@ class RecordingTabs : public Tabs {
   int changed_old_index = -99;
   int changed_new_index = -99;
   int selected_during_change = -99;
+  int invoked_count = 0;
+  int changed_count = 0;
 
  protected:
-  void onTabInvoked(int index) override { invoked_index = index; }
+  void onTabInvoked(int index) override {
+    invoked_index = index;
+    ++invoked_count;
+  }
 
   void onSelectedIndexChanged(int old_index, int new_index) override {
     changed_old_index = old_index;
     changed_new_index = new_index;
     selected_during_change = selectedIndex();
+    ++changed_count;
   }
 };
+
+class Material3TabsRenderTest
+    : public RooWindowsRenderTestSized<180, Scaled(48)> {};
 
 // Verifies that a new row starts on the phase-1 primary fixed configuration
 // without an implicit selected tab.
@@ -194,6 +211,59 @@ TEST(Material3Tabs, ClickingTabInvokesThenChangesSelection) {
   EXPECT_EQ(1, tabs.selectedIndex());
 }
 
+// Verifies the default touch flow: selection starts on release instead of
+// waiting for deferred onClicked() delivery after the click animation retires.
+TEST_F(Material3TabsRenderTest, TapUpCommitsSelectionImmediatelyByDefault) {
+  auto tabs = std::make_unique<RecordingTabs>(context());
+  RecordingTabs* tabs_raw = tabs.get();
+  tabs->addTab(std::make_unique<TestTab>(context(), "One"));
+  auto second = std::make_unique<TestTab>(context(), "Two");
+  TestTab* second_raw = second.get();
+  tabs->addTab(std::move(second));
+
+  app_.add(std::move(tabs), roo_display::Box(0, 0, 179, Scaled(48) - 1));
+  EXPECT_TRUE(refresh());
+
+  EXPECT_TRUE(second_raw->tapUpForTest());
+
+  EXPECT_EQ(1, tabs_raw->selectedIndex());
+  EXPECT_EQ(1, tabs_raw->invoked_index);
+  EXPECT_EQ(1, tabs_raw->invoked_count);
+  EXPECT_EQ(1, tabs_raw->changed_count);
+
+  second_raw->clickForTest();
+
+  EXPECT_EQ(1, tabs_raw->invoked_count);
+  EXPECT_EQ(1, tabs_raw->changed_count);
+}
+
+// Verifies the opt-in compatibility flow where selection remains deferred
+// until onClicked() runs after the click animation.
+TEST_F(Material3TabsRenderTest, CanDeferSelectionUntilClickAnimationCompletes) {
+  auto tabs = std::make_unique<RecordingTabs>(context());
+  RecordingTabs* tabs_raw = tabs.get();
+  tabs->setSelectionCommitMode(TabsSelectionCommitMode::kAfterClickAnimation);
+  tabs->addTab(std::make_unique<TestTab>(context(), "One"));
+  auto second = std::make_unique<TestTab>(context(), "Two");
+  TestTab* second_raw = second.get();
+  tabs->addTab(std::move(second));
+
+  app_.add(std::move(tabs), roo_display::Box(0, 0, 179, Scaled(48) - 1));
+  EXPECT_TRUE(refresh());
+
+  EXPECT_TRUE(second_raw->tapUpForTest());
+
+  EXPECT_EQ(0, tabs_raw->selectedIndex());
+  EXPECT_EQ(0, tabs_raw->invoked_count);
+  EXPECT_EQ(0, tabs_raw->changed_count);
+
+  second_raw->clickForTest();
+
+  EXPECT_EQ(1, tabs_raw->selectedIndex());
+  EXPECT_EQ(1, tabs_raw->invoked_count);
+  EXPECT_EQ(1, tabs_raw->changed_count);
+}
+
 // Verifies that fixed mode divides the available row width equally among
 // visible tabs.
 TEST(Material3Tabs, FixedLayoutDividesWidthEqually) {
@@ -236,6 +306,121 @@ TEST(Material3Tabs, IconTabsRequestSixtyFourDpRowHeight) {
       tabs.measure(WidthSpec::Exactly(120), HeightSpec::Unspecified(0));
 
   EXPECT_EQ(Scaled(64), measured.height());
+}
+
+// Verifies that tab foreground content is centered in the band above the
+// indicator rather than across the full tab surface.
+TEST(Material3Tabs, CoreContentBoundsExcludeIndicatorBand) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+
+  Tabs primary(context);
+  auto primary_tab = std::make_unique<TestTab>(context, "One");
+  TestTab* primary_raw = primary_tab.get();
+  primary.addTab(std::move(primary_tab));
+  primary.measure(WidthSpec::Exactly(120), HeightSpec::Exactly(Scaled(48)));
+  primary.layout(Rect(0, 0, 119, Scaled(48) - 1));
+
+  EXPECT_EQ(Scaled(48), primary_raw->height());
+  EXPECT_EQ(Scaled(48) - 1 - Scaled(3),
+            primary_raw->coreContentBoundsForTest().height());
+
+  Tabs secondary(context, TabsVariant::kSecondary);
+  secondary.setShowsDivider(false);
+  auto secondary_tab = std::make_unique<TestTab>(context, "One");
+  TestTab* secondary_raw = secondary_tab.get();
+  secondary.addTab(std::move(secondary_tab));
+  secondary.measure(WidthSpec::Exactly(120), HeightSpec::Exactly(Scaled(48)));
+  secondary.layout(Rect(0, 0, 119, Scaled(48) - 1));
+
+  EXPECT_EQ(Scaled(48), secondary_raw->height());
+  EXPECT_EQ(Scaled(48) - Scaled(2),
+            secondary_raw->coreContentBoundsForTest().height());
+}
+
+// Verifies that the tab-painted primary indicator gets the tab overlay while
+// the row-owned divider remains separate.
+TEST_F(Material3TabsRenderTest, PrimaryFixedRowPaintsIndicatorAndDivider) {
+  auto tabs = std::make_unique<Tabs>(context());
+  auto first = std::make_unique<Tab>(context(), "One");
+  Tab* first_raw = first.get();
+  tabs->addTab(std::move(first));
+  tabs->addTab(std::make_unique<Tab>(context(), "Two"));
+  tabs->addTab(std::make_unique<Tab>(context(), "Three"));
+
+  app_.add(std::move(tabs), roo_display::Box(0, 0, 179, Scaled(48) - 1));
+
+  EXPECT_TRUE(refresh());
+
+  EXPECT_EQ(QuantizeToArgb4444(env_.theme().color.primary),
+            pixelAt(30, Scaled(45)));
+  EXPECT_EQ(QuantizeToArgb4444(env_.theme().color.outlineVariant),
+            pixelAt(30, Scaled(47)));
+  EXPECT_EQ(QuantizeToArgb4444(env_.theme().color.surface),
+            pixelAt(0, Scaled(45)));
+
+  first_raw->setLabel("Uno");
+  EXPECT_TRUE(refresh());
+
+  EXPECT_EQ(QuantizeToArgb4444(env_.theme().color.outlineVariant),
+            pixelAt(30, Scaled(47)));
+
+  first_raw->setPressed(true);
+  EXPECT_TRUE(refresh());
+
+  roo_display::Color pressed_indicator = roo_display::AlphaBlend(
+      env_.theme().color.primary,
+      env_.theme().color.onSurface.withA(env_.theme().state.pressedOnSurface));
+  EXPECT_EQ(QuantizeToArgb4444(pressed_indicator), pixelAt(30, Scaled(45)));
+  EXPECT_EQ(QuantizeToArgb4444(env_.theme().color.outlineVariant),
+            pixelAt(30, Scaled(47)));
+}
+
+// Verifies the secondary token height, full-tab-width indicator, and
+// no-divider vertical alignment.
+TEST_F(Material3TabsRenderTest, SecondaryNoDividerPaintsTwoPixelIndicator) {
+  auto tabs = std::make_unique<Tabs>(context(), TabsVariant::kSecondary);
+  tabs->setShowsDivider(false);
+  tabs->addTab(std::make_unique<Tab>(context(), "One"));
+  tabs->addTab(std::make_unique<Tab>(context(), "Two"));
+  tabs->addTab(std::make_unique<Tab>(context(), "Three"));
+
+  app_.add(std::move(tabs), roo_display::Box(0, 0, 179, Scaled(48) - 1));
+
+  EXPECT_TRUE(refresh());
+
+  EXPECT_EQ(QuantizeToArgb4444(env_.theme().color.surface),
+            pixelAt(0, Scaled(45)));
+  EXPECT_EQ(QuantizeToArgb4444(env_.theme().color.primary),
+            pixelAt(0, Scaled(46)));
+  EXPECT_EQ(QuantizeToArgb4444(env_.theme().color.primary),
+            pixelAt(30, Scaled(46)));
+  EXPECT_EQ(QuantizeToArgb4444(env_.theme().color.primary),
+            pixelAt(59, Scaled(47)));
+  EXPECT_EQ(QuantizeToArgb4444(env_.theme().color.surface),
+            pixelAt(60, Scaled(47)));
+}
+
+// Verifies that non-animated programmatic selection snaps the row-owned
+// indicator to the newly selected tab.
+TEST_F(Material3TabsRenderTest, ProgrammaticSelectionSnapsIndicator) {
+  auto tabs = std::make_unique<Tabs>(context());
+  Tabs* tabs_raw = tabs.get();
+  tabs->addTab(std::make_unique<Tab>(context(), "One"));
+  tabs->addTab(std::make_unique<Tab>(context(), "Two"));
+  tabs->addTab(std::make_unique<Tab>(context(), "Three"));
+
+  app_.add(std::move(tabs), roo_display::Box(0, 0, 179, Scaled(48) - 1));
+  EXPECT_TRUE(refresh());
+
+  EXPECT_TRUE(tabs_raw->setSelectedIndex(1, false));
+  EXPECT_TRUE(refresh());
+
+  EXPECT_EQ(QuantizeToArgb4444(env_.theme().color.surface),
+            pixelAt(30, Scaled(45)));
+  EXPECT_EQ(QuantizeToArgb4444(env_.theme().color.primary),
+            pixelAt(90, Scaled(45)));
 }
 
 }  // namespace

@@ -1,8 +1,10 @@
 #include "roo_windows/material3/tabs/tabs.h"
 
 #include <algorithm>
+#include <cmath>
 
 #include "roo_display/color/color.h"
+#include "roo_display/shape/basic.h"
 #include "roo_display/ui/alignment.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_logging.h"
@@ -11,6 +13,7 @@
 using roo_display::ClippedStringViewLabel;
 using roo_display::kCenter;
 using roo_display::kMiddle;
+using roo_display::kNoAlign;
 
 namespace roo_windows {
 namespace material3 {
@@ -22,6 +25,13 @@ constexpr int16_t kIconAndLabelHeightDp = 64;
 constexpr int16_t kHorizontalPaddingDp = 16;
 constexpr int16_t kIconSizeDp = 24;
 constexpr int16_t kMinTabWidthDp = 48;
+constexpr int16_t kMinIndicatorWidthDp = 24;
+constexpr int16_t kIndicatorHorizontalInsetDp = 2;
+constexpr int16_t kPrimaryIndicatorHeightDp = 3;
+constexpr int16_t kSecondaryIndicatorHeightDp = 2;
+constexpr int16_t kDividerHeightPx = 1;
+constexpr int16_t kIndicatorFrameMs = 10;
+constexpr unsigned long kIndicatorDurationMs = 200;
 
 // Returns the shared label face used by phase-1 tabs.
 const roo_display::Font& TabLabelFont() { return font_button(); }
@@ -33,7 +43,14 @@ Color ContentColorFor(const Tab& tab) {
     return roo_display::AlphaBlend(theme.color.surface,
                                    theme.color.onSurface.withA(0x61));
   }
-  return tab.isActivated() ? theme.color.primary : theme.color.onSurfaceVariant;
+  if (!tab.isActivated()) return theme.color.onSurfaceVariant;
+  const Tabs* tabs = tab.parent() == nullptr
+                         ? nullptr
+                         : static_cast<const Tabs*>(tab.parent());
+  if (tabs != nullptr && tabs->variant() == TabsVariant::kSecondary) {
+    return theme.color.onSurface;
+  }
+  return theme.color.primary;
 }
 
 // Computes the token-sized icon slot while respecting larger concrete assets.
@@ -42,10 +59,26 @@ int16_t IconSlotSize(const MonoIcon* icon) {
   return std::max<int16_t>(Scaled(kIconSizeDp), icon->anchorExtents().width());
 }
 
+int16_t LerpInt(int16_t from, int16_t to, float t) {
+  return static_cast<int16_t>(
+      std::lround(from + (static_cast<float>(to - from) * t)));
+}
+
+Rect LerpRect(const Rect& from, const Rect& to, float t) {
+  if (from.empty()) return to;
+  if (to.empty()) return to;
+  return Rect(
+      LerpInt(from.xMin(), to.xMin(), t), LerpInt(from.yMin(), to.yMin(), t),
+      LerpInt(from.xMax(), to.xMax(), t), LerpInt(from.yMax(), to.yMax(), t));
+}
+
 }  // namespace
 
 Tab::Tab(ApplicationContext& context, roo::string_view label)
-    : SurfaceWidget(context), label_(label), icon_(nullptr) {}
+    : SurfaceWidget(context),
+      label_(label),
+      icon_(nullptr),
+      click_handled_on_release_(false) {}
 
 void Tab::setLabel(roo::string_view label) {
   if (label_ == label) return;
@@ -91,10 +124,34 @@ Dimensions Tab::getSuggestedMinimumDimensions() const {
 }
 
 Rect Tab::getCoreContentBounds() const {
+  Rect paint_bounds = getContentPaintBounds();
+  if (paint_bounds.empty()) return paint_bounds;
   Dimensions content = getContentMinimumDimensions();
   int16_t width = std::min<int16_t>(content.width(), this->width());
   int16_t left = (this->width() - width) / 2;
-  return Rect(left, 0, left + width - 1, height() - 1);
+  int16_t content_height = paint_bounds.height();
+  if (parent() != nullptr) {
+    const Tabs* tabs = static_cast<const Tabs*>(parent());
+    content_height -= tabs->indicatorHeight();
+  }
+  if (width <= 0 || content_height <= 0) return Rect(0, 0, -1, -1);
+  return Rect(left, paint_bounds.yMin(), left + width - 1,
+              paint_bounds.yMin() + content_height - 1);
+}
+
+Rect Tab::getContentPaintBounds() const {
+  if (width() <= 0 || height() <= 0) return Rect(0, 0, -1, -1);
+  int16_t paint_height = height();
+  if (parent() != nullptr &&
+      static_cast<const Tabs*>(parent())->showsDivider()) {
+    paint_height -= kDividerHeightPx;
+  }
+  if (paint_height <= 0) return Rect(0, 0, -1, -1);
+  return Rect(0, 0, width() - 1, paint_height - 1);
+}
+
+Rect Tab::getDirectPaintExclusionBounds() const {
+  return getContentPaintBounds();
 }
 
 void Tab::paintContent(PaintContext& ctx, const Rect& content_bounds,
@@ -102,10 +159,10 @@ void Tab::paintContent(PaintContext& ctx, const Rect& content_bounds,
   if (content_bounds.empty()) return;
   const roo_display::Font& font = TabLabelFont();
   if (label_.empty() && icon_ == nullptr) {
-    ctx.clear();
+    ctx.clearRect(content_bounds);
     return;
   }
-  Rect b = bounds();
+  Rect b = content_bounds;
   if (icon_ == nullptr) {
     ctx.drawTiled(ClippedStringViewLabel(label_, font, content_color), b,
                   kCenter | kMiddle);
@@ -141,13 +198,53 @@ void Tab::paintContent(PaintContext& ctx, const Rect& content_bounds,
 }
 
 void Tab::paint(PaintContext& ctx) const {
-  paintContent(ctx, getCoreContentBounds(), ContentColorFor(*this));
+  Rect paint_bounds = getContentPaintBounds();
+  Rect core_bounds = getCoreContentBounds();
+  Rect foreground_bounds = core_bounds.empty()
+                               ? Rect(0, 0, -1, -1)
+                               : Rect(paint_bounds.xMin(), paint_bounds.yMin(),
+                                      paint_bounds.xMax(), core_bounds.yMax());
+  Rect indicator(0, 0, -1, -1);
+  if (parent() != nullptr) {
+    const Tabs* tabs = static_cast<const Tabs*>(parent());
+    indicator = tabs->indicatorPaintBoundsForTab(*this);
+  }
+  paintContent(ctx, foreground_bounds, ContentColorFor(*this));
+  if (!paint_bounds.empty()) {
+    int16_t clear_y_min = foreground_bounds.empty()
+                              ? paint_bounds.yMin()
+                              : foreground_bounds.yMax() + 1;
+    if (clear_y_min <= paint_bounds.yMax()) {
+      Rect indicator_band(paint_bounds.xMin(), clear_y_min, paint_bounds.xMax(),
+                          paint_bounds.yMax());
+      if (indicator.empty()) {
+        ctx.clearRect(indicator_band);
+      } else {
+        roo_display::FilledRect indicator_fill(indicator.asBox(),
+                                               theme().color.primary);
+        ctx.drawTiled(indicator_fill, indicator_band, kNoAlign);
+      }
+    }
+  }
+}
+
+bool Tab::onSingleTapUp(XDim x, YDim y) {
+  bool handled = Widget::onSingleTapUp(x, y);
+  if (handled && parent() != nullptr) {
+    Tabs* tabs = static_cast<Tabs*>(parent());
+    if (tabs->selectionCommitMode() == TabsSelectionCommitMode::kOnRelease) {
+      click_handled_on_release_ = true;
+      tabs->handleTabClicked(*this);
+    }
+  }
+  return handled;
 }
 
 void Tab::onClicked() {
-  if (parent() != nullptr) {
+  if (parent() != nullptr && !click_handled_on_release_) {
     static_cast<Tabs*>(parent())->handleTabClicked(*this);
   }
+  click_handled_on_release_ = false;
   Widget::onClicked();
 }
 
@@ -167,18 +264,33 @@ void BadgedTab::paint(PaintContext& ctx) const {
 Tabs::Tabs(ApplicationContext& context, TabsVariant variant, TabsMode mode)
     : Container(context),
       tabs_(),
+      scheduler_(context.scheduler()),
+      notification_id_(-1),
+      indicator_current_(0, 0, -1, -1),
+      indicator_start_(0, 0, -1, -1),
+      indicator_target_(0, 0, -1, -1),
+      indicator_start_time_ms_(0),
+      indicator_end_time_ms_(0),
       selected_index_(-1),
       variant_(static_cast<uint8_t>(variant)),
       mode_(static_cast<uint8_t>(mode)),
       shows_divider_(true),
-      warned_scrollable_(false) {}
+      warned_scrollable_(false),
+      indicator_animation_state_(
+          static_cast<uint8_t>(IndicatorAnimationState::kIdle)),
+      selection_commit_mode_(
+          static_cast<uint8_t>(TabsSelectionCommitMode::kOnRelease)) {}
 
-Tabs::~Tabs() { clearTabs(); }
+Tabs::~Tabs() {
+  cancelPendingIndicatorUpdate();
+  clearTabs();
+}
 
 void Tabs::setVariant(TabsVariant variant) {
   uint8_t encoded = static_cast<uint8_t>(variant);
   if (variant_ == encoded) return;
   variant_ = encoded;
+  snapIndicatorToSelection();
   invalidateInterior();
 }
 
@@ -194,12 +306,26 @@ void Tabs::setMode(TabsMode mode) {
 void Tabs::setShowsDivider(bool shows_divider) {
   if (shows_divider_ == shows_divider) return;
   shows_divider_ = shows_divider;
+  snapIndicatorToSelection();
   invalidateInterior();
 }
 
 Color Tabs::background() const { return theme().color.surface; }
 
-void Tabs::paint(PaintContext& ctx) const { ctx.clear(); }
+void Tabs::paint(PaintContext& ctx) const {
+  Rect divider = dividerBounds();
+  if (!divider.empty()) {
+    roo_display::FilledRect divider_fill(divider.asBox(),
+                                         theme().color.outlineVariant);
+    ctx.drawTiled(divider_fill, bounds(), kNoAlign);
+    return;
+  }
+  ctx.clear();
+}
+
+void Tabs::setSelectionCommitMode(TabsSelectionCommitMode mode) {
+  selection_commit_mode_ = static_cast<uint8_t>(mode);
+}
 
 void Tabs::addTabImpl(WidgetRef tab, Tab* raw) {
   CHECK_NOTNULL(tab.get());
@@ -211,6 +337,7 @@ void Tabs::addTabImpl(WidgetRef tab, Tab* raw) {
     // During construction, companion content containers may not be populated.
     selected_index_ = 0;
     updateActivatedStates();
+    snapIndicatorToSelection();
     invalidateInterior();
     requestLayout();
   } else {
@@ -219,24 +346,31 @@ void Tabs::addTabImpl(WidgetRef tab, Tab* raw) {
 }
 
 void Tabs::clearTabs() {
+  cancelPendingIndicatorUpdate();
   while (!tabs_.empty()) {
     Tab* tab = tabs_.back();
     tabs_.pop_back();
     detachChild(tab);
   }
   selected_index_ = -1;
+  indicator_current_ = Rect(0, 0, -1, -1);
+  indicator_start_ = Rect(0, 0, -1, -1);
+  indicator_target_ = Rect(0, 0, -1, -1);
+  indicator_animation_state_ =
+      static_cast<uint8_t>(IndicatorAnimationState::kIdle);
 }
 
 bool Tabs::setSelectedIndex(int index, bool animate) {
-  (void)animate;
   if (index < 0 || index >= tabCount() || index == selected_index_) {
     return false;
   }
   int old_index = selected_index_;
+  Rect old_indicator = indicator_current_.empty()
+                           ? indicatorBoundsForIndex(old_index)
+                           : indicator_current_;
   selected_index_ = index;
   updateActivatedStates();
-  invalidateInterior();
-  requestLayout();
+  startIndicatorTransition(old_indicator, targetIndicatorBounds(), animate);
   onSelectedIndexChanged(old_index, selected_index_);
   return true;
 }
@@ -277,6 +411,131 @@ int Tabs::rowHeight() const {
   return Scaled(kLabelOnlyHeightDp);
 }
 
+int Tabs::indicatorHeight() const {
+  return variant() == TabsVariant::kPrimary
+             ? Scaled(kPrimaryIndicatorHeightDp)
+             : Scaled(kSecondaryIndicatorHeightDp);
+}
+
+Rect Tabs::dividerBounds() const {
+  if (!showsDivider() || width() <= 0 || height() <= 0) {
+    return Rect(0, 0, -1, -1);
+  }
+  return Rect(0, height() - kDividerHeightPx, width() - 1, height() - 1);
+}
+
+Rect Tabs::indicatorBoundsForIndex(int index) const {
+  if (index < 0 || index >= tabCount() || width() <= 0 || height() <= 0) {
+    return Rect(0, 0, -1, -1);
+  }
+  const Tab& tab = *tabs_[index];
+  int16_t h = indicatorHeight();
+  int16_t y_max = height() - 1 - (showsDivider() ? kDividerHeightPx : 0);
+  int16_t y_min = y_max - h + 1;
+  if (y_min < 0) return Rect(0, 0, -1, -1);
+  if (variant() == TabsVariant::kSecondary) {
+    return Rect(tab.offsetLeft(), y_min, tab.offsetLeft() + tab.width() - 1,
+                y_max);
+  }
+  Rect content =
+      tab.getCoreContentBounds().translate(tab.offsetLeft(), tab.offsetTop());
+  if (content.empty()) return Rect(0, 0, -1, -1);
+  int16_t indicator_width = std::max<int16_t>(
+      Scaled(kMinIndicatorWidthDp),
+      content.width() - 2 * Scaled(kIndicatorHorizontalInsetDp));
+  indicator_width = std::min<int16_t>(indicator_width, tab.width());
+  int16_t center_x = content.xMin() + (content.width() - 1) / 2;
+  int16_t x_min = center_x - (indicator_width - 1) / 2;
+  int16_t x_max = x_min + indicator_width - 1;
+  x_min = std::max<int16_t>(tab.offsetLeft(), x_min);
+  x_max = std::min<int16_t>(tab.offsetLeft() + tab.width() - 1, x_max);
+  if (x_min > x_max) return Rect(0, 0, -1, -1);
+  return Rect(x_min, y_min, x_max, y_max);
+}
+
+Rect Tabs::indicatorPaintBoundsForTab(const Tab& tab) const {
+  Rect tab_bounds = tab.parent_bounds();
+  Rect intersect = Rect::Intersect(indicator_current_, tab_bounds);
+  if (intersect.empty()) return intersect;
+  return intersect.translate(-tab.offsetLeft(), -tab.offsetTop());
+}
+
+Rect Tabs::targetIndicatorBounds() const {
+  return indicatorBoundsForIndex(selected_index_);
+}
+
+void Tabs::snapIndicatorToSelection() {
+  cancelPendingIndicatorUpdate();
+  indicator_animation_state_ =
+      static_cast<uint8_t>(IndicatorAnimationState::kIdle);
+  indicator_current_ = targetIndicatorBounds();
+  indicator_start_ = indicator_current_;
+  indicator_target_ = indicator_current_;
+}
+
+void Tabs::startIndicatorTransition(const Rect& from, const Rect& to,
+                                    bool animate) {
+  cancelPendingIndicatorUpdate();
+  indicator_target_ = to;
+  if (!animate || from.empty() || to.empty() || from == to) {
+    indicator_animation_state_ =
+        static_cast<uint8_t>(IndicatorAnimationState::kIdle);
+    indicator_current_ = to;
+    indicator_start_ = to;
+    invalidateInterior();
+    return;
+  }
+
+  indicator_start_ = from;
+  indicator_current_ = from;
+  indicator_start_time_ms_ = millis();
+  indicator_end_time_ms_ = indicator_start_time_ms_ + kIndicatorDurationMs;
+  indicator_animation_state_ =
+      static_cast<uint8_t>(IndicatorAnimationState::kAnimating);
+  invalidateInterior(Rect::Extent(from, to));
+  scheduleIndicatorUpdate();
+}
+
+void Tabs::cancelPendingIndicatorUpdate() {
+  if (notification_id_ > 0) {
+    scheduler_.cancel(notification_id_);
+    notification_id_ = -1;
+  }
+}
+
+void Tabs::scheduleIndicatorUpdate() {
+  cancelPendingIndicatorUpdate();
+  notification_id_ =
+      scheduler_.scheduleAfter(roo_time::Millis(kIndicatorFrameMs), *this);
+}
+
+void Tabs::execute(roo_scheduler::ExecutionID id) {
+  (void)id;
+  notification_id_ = -1;
+  if (static_cast<IndicatorAnimationState>(indicator_animation_state_) !=
+      IndicatorAnimationState::kAnimating) {
+    return;
+  }
+
+  Rect previous = indicator_current_;
+  unsigned long now = millis();
+  if ((long)(now - indicator_end_time_ms_) >= 0) {
+    indicator_current_ = indicator_target_;
+    indicator_animation_state_ =
+        static_cast<uint8_t>(IndicatorAnimationState::kIdle);
+    invalidateInterior(Rect::Extent(previous, indicator_current_));
+    return;
+  }
+
+  float t = (float)(now - indicator_start_time_ms_) /
+            (float)(indicator_end_time_ms_ - indicator_start_time_ms_);
+  t = std::max(0.0f, std::min(1.0f, t));
+  float eased = 1.0f - (1.0f - t) * (1.0f - t);
+  indicator_current_ = LerpRect(indicator_start_, indicator_target_, eased);
+  invalidateInterior(Rect::Extent(previous, indicator_current_));
+  scheduleIndicatorUpdate();
+}
+
 Dimensions Tabs::onMeasure(WidthSpec width, HeightSpec height) {
   if (mode() == TabsMode::kScrollable && !warned_scrollable_) {
     LOG(WARNING) << "Unimplemented: Material3 scrollable tabs";
@@ -295,10 +554,14 @@ Dimensions Tabs::onMeasure(WidthSpec width, HeightSpec height) {
 
 void Tabs::onLayout(bool changed, const Rect& rect) {
   (void)changed;
+  (void)rect;
   int count = tabCount();
-  if (count == 0) return;
+  if (count == 0) {
+    snapIndicatorToSelection();
+    return;
+  }
   int16_t row_height = rowHeight();
-  int16_t available_width = rect.width();
+  int16_t available_width = width();
   int16_t x = 0;
   for (int i = 0; i < count; ++i) {
     int16_t next_x = ((int32_t)(i + 1) * available_width) / count;
@@ -307,6 +570,12 @@ void Tabs::onLayout(bool changed, const Rect& rect) {
                       HeightSpec::Exactly(row_height));
     tabs_[i]->layout(Rect(x, 0, x + tab_width - 1, row_height - 1));
     x = next_x;
+  }
+  if (static_cast<IndicatorAnimationState>(indicator_animation_state_) ==
+      IndicatorAnimationState::kIdle) {
+    snapIndicatorToSelection();
+  } else {
+    indicator_target_ = targetIndicatorBounds();
   }
 }
 

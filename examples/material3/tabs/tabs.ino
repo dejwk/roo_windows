@@ -82,7 +82,8 @@ namespace {
 class DemoTabs : public material3::Tabs {
  public:
   DemoTabs(ApplicationContext& context, StackedLayout& pages)
-      : material3::Tabs(context), pages_(pages) {}
+      : material3::Tabs(context, material3::TabsVariant::kPrimary),
+        pages_(pages) {}
 
  protected:
   void onSelectedIndexChanged(int old_index, int new_index) override {
@@ -103,11 +104,15 @@ class TabsScreen : public FlexLayout {
  public:
   explicit TabsScreen(ApplicationContext& context)
       : FlexLayout(context, FlexDirection::kColumn),
+        pages_(context),
         tabs_(context, pages_),
+        secondary_tabs_(context, material3::TabsVariant::kSecondary),
         overview_tab_(context, "Overview"),
         heating_tab_(context, "Heating"),
         history_tab_(context, "History"),
-        pages_(context),
+        today_tab_(context, "Today"),
+        week_tab_(context, "Week"),
+        month_tab_(context, "Month"),
         overview_(context, "Pool status overview", font_h6()),
         heating_(context, "Solar heating controls", font_h6()),
         history_(context, "Recent temperature history", font_h6()) {
@@ -120,6 +125,11 @@ class TabsScreen : public FlexLayout {
     tabs_.addTab(heating_tab_);
     tabs_.addTab(history_tab_);
 
+    secondary_tabs_.addTab(today_tab_);
+    secondary_tabs_.addTab(week_tab_);
+    secondary_tabs_.addTab(month_tab_);
+    secondary_tabs_.setSelectedIndex(1, false);
+
     pages_.add(overview_);
     pages_.add(heating_);
     pages_.add(history_);
@@ -128,14 +138,19 @@ class TabsScreen : public FlexLayout {
 
     add(tabs_, {.flex_grow = 0, .flex_shrink = 0});
     add(pages_, {.flex_grow = 1, .flex_shrink = 1});
+    add(secondary_tabs_, {.flex_grow = 0, .flex_shrink = 0});
   }
 
  private:
+  StackedLayout pages_;
   DemoTabs tabs_;
+  material3::Tabs secondary_tabs_;
   material3::Tab overview_tab_;
   material3::Tab heating_tab_;
   material3::Tab history_tab_;
-  StackedLayout pages_;
+  material3::Tab today_tab_;
+  material3::Tab week_tab_;
+  material3::Tab month_tab_;
   TextLabel overview_;
   TextLabel heating_;
   TextLabel history_;
