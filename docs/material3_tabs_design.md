@@ -159,8 +159,10 @@ separate tab strip would split ownership of:
 - scroll-to-selected behavior,
 - and pressed-state gesture arbitration.
 
-The tab row therefore keeps its own scroll state and reuses the same style of
-scroll physics, rather than composing itself out of a generic scroll host.
+The tab row therefore keeps ownership of tab-strip layout and scroll offset,
+but it must not copy the scroll physics. Bounce, deceleration, spring-back, and
+gesture disambiguation should be factored so `SimpleScrollablePanel` and
+scrollable tabs use one implementation.
 
 ## Requirements
 
@@ -279,8 +281,7 @@ The core decisions are:
 single timer-driven path for:
 
 - indicator interpolation,
-- scroll fling,
-- and optional spring-back.
+- advancing shared scroll motion while flinging or springing back.
 
 `Tab` derives from `SurfaceWidget`, not plain `Widget`, `BasicWidget`, or
 `BasicSurfaceWidget`.
@@ -310,9 +311,10 @@ for inline `Badge` storage and badge-layout logic.
 - one variant field (`primary` or `secondary`),
 - one layout-mode field (`fixed` or `scrollable`),
 - one divider-visibility bit,
-- the current scroll position and content width,
-- and one row-owned animation state for the active indicator and scroll
-  motion.
+- the current scroll position, content width, and viewport width for
+  scrollable layout,
+- one shared scroll-motion helper when scrollable mode is enabled,
+- and one row-owned animation state for the active indicator.
 
 The row exposes two virtual hooks:
 
@@ -330,7 +332,7 @@ The click flow is:
 5. and only then does the row call `onSelectedIndexChanged(old_index,
    new_index)`.
 
-That ordering gives wrappers a stable seam: when the selection-changed hook
+That ordering gives wrappers a stable contract: when the selection-changed hook
 fires, row state is already current.
 
 ### Fixed and Scrollable Layout Modes
@@ -381,11 +383,133 @@ viewport width, and $W$ is the full strip width.
 This centers the selected tab when possible and otherwise clamps cleanly to the
 scroll bounds.
 
-Scrollable mode reuses the repo's existing style of drag, fling, and
-spring-back behavior. It does not instantiate a nested
+Scrollable mode reuses the repo's existing drag, fling, bounce, and
+spring-back implementation through the shared scroll-motion helper described
+below. It does not instantiate a nested
 [SimpleScrollablePanel](../src/roo_windows/containers/scrollable_panel.h),
-because the tab row already owns the indicator, divider, and scroll-to-selected
-policy.
+because the tab row already owns the indicator, divider, child sequence, and
+scroll-to-selected policy.
+
+#### Scrollable Behavior Reuse
+
+Scrollable tabs must not copy the body of
+`SimpleScrollablePanel`'s scrolling code. The duplication risk is high because
+that class already owns a dense cluster of behavior:
+
+- raw drag-position accumulation,
+- damped overshoot and maximum bounce distance,
+- fling velocity capping and deceleration,
+- interrupted fling and spring-back state,
+- scheduler-driven animation ticks,
+- gesture claiming and child/parent disambiguation,
+- and clamped `scrollTo(...)` behavior at content bounds.
+
+The phase-3 implementation should first extract that behavior into a small
+non-widget helper, tentatively `ScrollMotionController`, migrate
+`SimpleScrollablePanel` to that helper, and then enable
+`TabsMode::kScrollable` using the same helper. That keeps the common behavior
+implemented once while letting each host keep its own layout and paint model.
+
+The helper owns motion policy and state:
+
+- axis configuration (`horizontal`, `vertical`, or `both`),
+- viewport and content extents,
+- current signed scroll origin,
+- raw drag origin for overshoot damping,
+- fling and spring-back parameters,
+- velocity caps, deceleration, and bounce constants,
+- and the common slop/dominance logic used to decide when a gesture becomes a
+  scroll instead of a tap or child gesture.
+
+The helper does not own widget-tree behavior:
+
+- no child storage,
+- no child measurement or layout,
+- no scroll-bar widget,
+- no indicator or divider paint,
+- and no tab selection policy.
+
+That split gives each caller a narrow adapter. `SimpleScrollablePanel` applies
+the returned offset by moving its single content child and updating the
+vertical scroll bar. `Tabs` applies the returned horizontal offset by laying
+out the tab strip at `strip_x - scroll_x`, recalculating indicator bounds from
+the translated tab geometry, and invalidating the tab-row viewport.
+
+An illustrative API shape:
+
+```cpp
+class ScrollMotionController {
+ public:
+  enum class Axis { kHorizontal, kVertical, kBoth };
+
+  struct Bounds {
+    XDim viewport_width;
+    YDim viewport_height;
+    XDim content_width;
+    YDim content_height;
+  };
+
+  struct Result {
+    XDim x;
+    YDim y;
+    bool changed;
+    bool needs_tick;
+    bool in_overshoot;
+  };
+
+  explicit ScrollMotionController(Axis axis);
+
+  void setBounds(const Bounds& bounds);
+  void scrollTo(XDim x, YDim y);
+  void revealXRange(XDim x_min, XDim x_max, XDim preferred_center);
+
+  bool shouldClaimDrag(XDim total_dx, YDim total_dy) const;
+  Result onDown(unsigned long now_ms);
+  Result onDrag(XDim dx, YDim dy);
+  Result onFling(XDim vx, YDim vy, unsigned long now_ms);
+  Result onTouchUp(unsigned long now_ms);
+  Result tick(unsigned long now_ms);
+};
+```
+
+The exact names can change during implementation, but the ownership rule
+should not: the math and state machine for bounce, deceleration, spring-back,
+and gesture resolution live in one reusable unit. Widget-specific adapters may
+choose different policy knobs. For example, `SimpleScrollablePanel` can keep
+its current conservative parent/child gesture behavior, while `Tabs` can ask
+the helper to claim only horizontal-dominant motion after slop so a vertical
+page scroll still wins.
+
+##### Options Considered
+
+Deriving `Tabs` from `SimpleScrollablePanel` gives immediate behavior reuse,
+but it makes `Tabs` inherit the wrong child model. `SimpleScrollablePanel`
+owns one scrolled content widget plus an optional vertical scroll bar; `Tabs`
+owns many tab children, row-painted indicator geometry, a divider, and
+selection state. Making inheritance work would require a synthetic tab-strip
+child or a large override surface, which brings back the split-ownership
+problem the design is avoiding.
+
+Creating a common `ScrollableContainerBase` and deriving both classes from it
+is viable, especially if more container widgets need this exact behavior. The
+base would need virtual methods such as `scrollViewportSize()`,
+`scrollContentSize()`, `applyScrollOffset(...)`, `invalidateScrollViewport()`,
+and possibly hooks for snapping or multiple children. The drawback is that the
+base starts to look like a second widget framework: it must virtualize layout,
+paint invalidation, scrollbar policy, animation scheduling, and child gesture
+rules. That is more machinery than scrollable tabs need.
+
+Extracting a non-widget scroll abstraction is the preferred option. It shares
+the hard part, keeps `SimpleScrollablePanel` as the generic single-child
+container, and lets `Tabs` remain a purpose-built multi-child row. The adapter
+code in each host is small and visible: translate the helper's offset into
+host-specific layout, invalidate the affected viewport, and schedule another
+tick when requested.
+
+Sharing only constants or free functions is not enough. It would remove a few
+magic numbers but still duplicate the animation state machine, gesture
+resolution, and edge-case behavior. That option should be treated as a
+temporary stepping stone only if the extraction has to be split across commits.
 
 ### Base `Tab`
 
@@ -860,11 +984,15 @@ Validation:
 
 Work:
 
-- add row-owned horizontal drag, fling, and spring-back behavior,
+- extract `ScrollMotionController` or an equivalent shared helper from
+  `SimpleScrollablePanel` and migrate `SimpleScrollablePanel` to it,
+- use the shared helper for row-owned horizontal drag, fling, bounce, and
+  spring-back behavior,
 - add intrinsic-width strip layout with the `52dp` logical leading inset,
 - add scroll-to-selected clamping and centering,
 - add scroll gesture arbitration that delays child pressed-state commitment,
-- and extend tests with scrollable-mode selection and gesture coverage.
+- and extend tests with scrollable-mode selection, helper-backed motion, and
+  gesture coverage.
 
 Proposed commit message:
 `Add Material3 scrollable tabs`
@@ -943,6 +1071,14 @@ per-instance storage, force a broader gesture contract, or make the row's
 layout less predictable.
 
 ### Rejected Alternatives
+
+#### Copy `SimpleScrollablePanel` Scroll Logic Into `Tabs`
+
+This is rejected outright. The behavior is too stateful to keep in sync by
+hand: bounce damping, deceleration, spring-back, gesture ownership, and
+boundary clamping would drift over time. Scrollable tabs should land only with
+shared motion code or with an intermediate commit that makes that sharing
+possible.
 
 #### Wrap `SimpleScrollablePanel` Around a Separate Tab Strip
 
