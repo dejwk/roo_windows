@@ -31,6 +31,15 @@ class ClickableSurfaceBoxWidget : public test_support::ColorBoxWidget {
   bool isClickable() const override { return true; }
 };
 
+class RoundedClickableSurfaceBoxWidget : public ClickableSurfaceBoxWidget {
+ public:
+  RoundedClickableSurfaceBoxWidget(ApplicationContext& context,
+                                   roo_display::Color color, Dimensions dims)
+      : ClickableSurfaceBoxWidget(context, color, dims) {}
+
+  BorderStyle getBorderStyle() const override { return BorderStyle(8, 0); }
+};
+
 class RolePanel : public Panel {
  public:
   RolePanel(ApplicationContext& context, ColorRole role)
@@ -306,6 +315,57 @@ TEST_F(RooWindowsRenderTest,
 
   EXPECT_EQ(checkbox_ptr->getParentInteractionBounds().asBox(),
             overlay.extents());
+}
+
+// Verifies that an animated area-overlay widget keeps the press ripple clipped
+// to the widget's logical surface instead of tinting the parent/sibling area.
+TEST_F(RooWindowsRenderTest, AreaClickAnimationStaysInsideSurfaceBounds) {
+  auto back = std::make_unique<ColorBoxWidget>(context(), color::Red,
+                                               Dimensions(48, 40));
+  auto front = std::make_unique<ClickableSurfaceBoxWidget>(
+      context(), color::Blue, Dimensions(18, 18));
+  ClickableSurfaceBoxWidget* front_ptr = front.get();
+
+  app_.add(std::move(back), Box(0, 0, 47, 39));
+  app_.add(std::move(front), Box(20, 12, 37, 29));
+  ASSERT_TRUE(refresh());
+
+  front_ptr->onShowPress(3, 4);
+  delay(kPressAnimationMillis - 20);
+
+  const ClickAnimation* anim = front_ptr->getClickAnimation();
+  ASSERT_NE(nullptr, anim);
+  ASSERT_LT(anim->progress(), 1.0f);
+  EXPECT_EQ(front_ptr->parent_bounds(),
+            front_ptr->getParentTransientPaintBounds());
+
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(12, 20));
+  EXPECT_NE(QuantizeToArgb4444(color::Blue), pixelAt(20, 20));
+}
+
+// Verifies that a press overlay owned by one area widget does not tint a
+// sibling's rounded decoration when that sibling is painted earlier in the same
+// clipper pass.
+TEST_F(RooWindowsRenderTest, AreaClickAnimationDoesNotTintSiblingDecoration) {
+  auto target = std::make_unique<RoundedClickableSurfaceBoxWidget>(
+      context(), color::Blue, Dimensions(40, 24));
+  auto sibling = std::make_unique<RoundedClickableSurfaceBoxWidget>(
+      context(), color::Green, Dimensions(40, 20));
+  RoundedClickableSurfaceBoxWidget* target_ptr = target.get();
+  RoundedClickableSurfaceBoxWidget* sibling_ptr = sibling.get();
+
+  app_.add(std::move(target), Box(0, 0, 39, 23));
+  app_.add(std::move(sibling), Box(0, 24, 39, 43));
+  ASSERT_TRUE(refresh());
+
+  Color sibling_pixel = pixelAt(20, 34);
+  target_ptr->onShowPress(10, 10);
+  sibling_ptr->invalidateInterior();
+  delay(kPressAnimationMillis - 20);
+
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(sibling_pixel, pixelAt(20, 34));
 }
 
 // Verifies that a padded full-width column placed inside a scrollable panel

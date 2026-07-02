@@ -177,8 +177,12 @@ class ClipperOutput : public roo_display::DisplayOutput {
                      BorderStyle::CornerRadii corner_radii,
                      SmallNumber outline_width,
                      roo_display::Color outline_color) {
+    const OverlaySpec& overlay_spec = currentOverlaySpec();
+    const PressOverlay* press_overlay =
+        overlay_spec.is_click_animation_in_progress() ? &press_overlay_
+                                                      : nullptr;
     decorations_.emplace_back(std::move(extents), elevation,
-                              currentOverlaySpec(), &press_overlay_, bgcolor,
+                              overlay_spec, press_overlay, bgcolor,
                               corner_radii, outline_width, outline_color);
     addOverlay(&decorations_.back(), clip_box);
   }

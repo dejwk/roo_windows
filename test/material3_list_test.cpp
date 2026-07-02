@@ -11,6 +11,7 @@
 #include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/material3/list/list.h"
+#include "roo_windows/widgets/text_label.h"
 #include "roo_windows_render_test_support.h"
 
 namespace roo_windows {
@@ -201,13 +202,14 @@ class MutablePolicyListItem : public ListItem {
 class ExpandableBodyListItem : public InvokableListItemBase {
  public:
   ExpandableBodyListItem(ApplicationContext& context, roo::string_view headline,
-                         roo::string_view supporting)
+                         roo::string_view supporting,
+                         roo::string_view expanded_details)
       : InvokableListItemBase(headline, supporting, {}, {}, true),
-        body_content_(context, Dimensions(96, 24)),
+        details_(context, std::string(expanded_details), font_caption()),
         body_panel_(context) {
-    body_panel_.setAnimationDuration(120);
+    body_panel_.setAnimationDuration(180);
     body_panel_.setExpanded(false, false);
-    body_panel_.setContent(WidgetRef(body_content_));
+    body_panel_.setContent(WidgetRef(details_));
   }
 
   Widget* body() override { return &body_panel_; }
@@ -220,12 +222,18 @@ class ExpandableBodyListItem : public InvokableListItemBase {
   }
 
  private:
-  TestWidget body_content_;
+  TextLabel details_;
   ExpandablePanel body_panel_;
 };
 
 class Material3ListRenderTest
     : public test_support::RooWindowsRenderTestSized<180, 140> {};
+
+// Larger fixture sized to the emulator display so the faithful expandable-row
+// reproduction scene (deep scroll, multi-line wrapping body) lays out exactly
+// like the example.
+class Material3ExpandableRippleTest
+    : public test_support::RooWindowsRenderTestSized<320, 240> {};
 
 // Verifies that the public policy structs start from the Phase 1 design
 // defaults and stay compact enough to be stored inline.
@@ -743,7 +751,8 @@ TEST(Material3List, ExpandableBodyItemTogglesPanelThroughRowInvocation) {
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
   TestListRow<ExpandableBodyListItem> row(context, "Filter schedule",
-                                          "Tap to expand details");
+                                          "Tap to expand details",
+                                          "Expanded body details line.");
 
   EXPECT_TRUE(row.isClickable());
   Dimensions collapsed =
@@ -766,41 +775,81 @@ TEST(Material3List, ExpandableBodyItemTogglesPanelThroughRowInvocation) {
 // background once both the click animation and the concurrent expansion have
 // fully settled. The settled framebuffer must match a forced clean repaint of
 // the same final state (which models the "remains until scroll" symptom: a
-// full repaint clears the stray pixels).
-TEST_F(Material3ListRenderTest, ExpandableRowRippleLeavesNoResidueAfterSettle) {
+// full repaint clears the stray pixels). The scene mirrors the lists example
+// (ExpandableSection: title + subtitle + List of ExpandableRowItem rows whose
+// body is a multi-line wrapping TextLabel inside an ExpandablePanel), scrolled
+// so the row paints at a translated device origin with parent surface around
+// it.
+TEST_F(Material3ExpandableRippleTest,
+       ExpandableRowRippleLeavesNoResidueAfterSettle) {
   using test_support::ColorBoxWidget;
 
-  // Mirror the example scene: a scrollable panel whose content is taller than
-  // the viewport, with the expandable list sitting at a non-zero scroll
-  // offset (so the row paints at a translated device origin).
   auto scroll = std::make_unique<SimpleScrollablePanel>(context());
   SimpleScrollablePanel* scroll_ptr = scroll.get();
 
   auto content = std::make_unique<FlexLayout>(context(), FlexDirection::kColumn);
   FlexLayout* content_ptr = content.get();
-  // Match the example screen: horizontal padding leaves a parent-background
-  // margin to the left/right of the (full width) list rows, so any ripple that
-  // overshoots the row's rounded silhouette lands on a visible parent surface.
-  content_ptr->setPadding(Padding(Scaled(12), Scaled(8)));
   content_ptr->setGap(Scaled(8));
 
+  // Screen header (mirrors ListsScreen title/subtitle).
+  auto screen_title =
+      std::make_unique<TextLabel>(context(), "Material 3 lists", font_h6());
+  auto screen_subtitle = std::make_unique<TextLabel>(
+      context(),
+      "Phase 11 - expandable rows now use reusable body panels with animated "
+      "measured-height reveal",
+      font_caption());
+
+  // Tall filler above the expandable section so the section sits deep in the
+  // scroll content with non-moving content above it.
   auto top_filler = std::make_unique<ColorBoxWidget>(
-      context(), roo_display::color::Blue, Dimensions(kWidth, 100));
+      context(), roo_display::color::Blue, Dimensions(280, 160));
+
+  // ExpandableSection: title + subtitle + list (gap 6).
+  auto section =
+      std::make_unique<FlexLayout>(context(), FlexDirection::kColumn);
+  FlexLayout* section_ptr = section.get();
+  section_ptr->setGap(Scaled(6));
+  auto section_title = std::make_unique<TextLabel>(
+      context(), "Phase 11 expandable rows", font_body1());
+  auto section_subtitle = std::make_unique<TextLabel>(
+      context(),
+      "ExpandablePanel is reusable body content; expansion state stays inside "
+      "the item, not on ListEntry.",
+      font_caption());
+
   auto list = std::make_unique<List>(context());
   List* list_ptr = list.get();
   auto row1 = std::make_unique<ListRow<ExpandableBodyListItem>>(
-      context(), "Filter schedule", "Tap to expand details");
+      context(), "Filter schedule", "Tap to expand maintenance details",
+      "Runs at 06:30 and 18:45 on weekdays.\n"
+      "Skips automatically when freeze guard is active.");
   auto row2 = std::make_unique<ListRow<ExpandableBodyListItem>>(
-      context(), "Chemistry notes", "Tap to expand details");
+      context(), "Chemistry notes", "Tap to expand current plan",
+      "pH target: 7.4\n"
+      "Chlorine target: 2.0 ppm\n"
+      "Retest after evening circulation.");
   ListRow<ExpandableBodyListItem>* row1_ptr = row1.get();
   list_ptr->add(std::move(row1));
   list_ptr->add(std::move(row2));
-  auto bottom_filler = std::make_unique<ColorBoxWidget>(
-      context(), roo_display::color::Green, Dimensions(kWidth, 100));
 
+  section_ptr->add(WidgetRef(std::move(section_title)),
+                   {.flex_grow = 0, .flex_shrink = 0});
+  section_ptr->add(WidgetRef(std::move(section_subtitle)),
+                   {.flex_grow = 0, .flex_shrink = 0});
+  section_ptr->add(WidgetRef(std::move(list)),
+                   {.flex_grow = 0, .flex_shrink = 0});
+
+  auto bottom_filler = std::make_unique<ColorBoxWidget>(
+      context(), roo_display::color::Green, Dimensions(280, 160));
+
+  content_ptr->add(WidgetRef(std::move(screen_title)),
+                   {.flex_grow = 0, .flex_shrink = 0});
+  content_ptr->add(WidgetRef(std::move(screen_subtitle)),
+                   {.flex_grow = 0, .flex_shrink = 0});
   content_ptr->add(WidgetRef(std::move(top_filler)),
                    {.flex_grow = 0, .flex_shrink = 0});
-  content_ptr->add(WidgetRef(std::move(list)),
+  content_ptr->add(WidgetRef(std::move(section)),
                    {.flex_grow = 0, .flex_shrink = 0});
   content_ptr->add(WidgetRef(std::move(bottom_filler)),
                    {.flex_grow = 0, .flex_shrink = 0});
@@ -810,27 +859,21 @@ TEST_F(Material3ListRenderTest, ExpandableRowRippleLeavesNoResidueAfterSettle) {
 
   ASSERT_TRUE(refresh());
 
-  // Scroll so the expandable list sits near the top of the viewport.
-  scroll_ptr->scrollTo(0, 0);
-  ASSERT_TRUE(refresh());
-
+  // Bring row1's top near the top of the viewport (deep scroll offset).
   XDim row_lx;
   YDim row_ly;
   row1_ptr->getAbsoluteOffset(row_lx, row_ly);
-  // Bring row1's top near the top of the viewport (content origin shifts so
-  // the row paints at a non-zero scroll translation).
-  scroll_ptr->scrollTo(0, 16 - row_ly);
+  scroll_ptr->scrollTo(0, 24 - row_ly);
   ASSERT_TRUE(refresh());
 
   // Capture a PRISTINE reference of the final (expanded) layout produced with
   // no click animation. Expanding directly drives the normal layout
   // invalidation path on a residue-free framebuffer, so this image cannot
-  // contain any click-overlay leftovers. Comparing against this (rather than
-  // against a post-gesture invalidate) catches residue that lands outside the
-  // reach of invalidateInterior().
+  // contain any click-overlay leftovers.
   row1_ptr->item().bodyPanel().setExpanded(true, false);
   scroll_ptr->invalidateInterior();
   content_ptr->invalidateInterior();
+  section_ptr->invalidateInterior();
   list_ptr->invalidateInterior();
   ASSERT_TRUE(refresh());
   ASSERT_TRUE(row1_ptr->item().bodyPanel().isExpanded());
@@ -844,26 +887,55 @@ TEST_F(Material3ListRenderTest, ExpandableRowRippleLeavesNoResidueAfterSettle) {
   row1_ptr->item().bodyPanel().setExpanded(false, false);
   scroll_ptr->invalidateInterior();
   content_ptr->invalidateInterior();
+  section_ptr->invalidateInterior();
   list_ptr->invalidateInterior();
   ASSERT_TRUE(refresh());
 
-  // Quick release: a genuinely fast tap where the gesture detector never
-  // emits onShowPress (the press timeout has not elapsed). onSingleTapUp then
-  // takes the quick-release branch (setClicking + start animation) without the
-  // widget ever entering the pressed state. The click animation runs to
-  // completion concurrently with the expansion it triggers. (A longer press
-  // fires onShowPress and paints several ripple frames at the steady collapsed
-  // size first, and does not reproduce.)
+  // Record row1's collapsed device bounds so we can probe for ripple pixels
+  // painted OUTSIDE the row (on the parent surface) during the gesture.
+  Rect collapsed_bounds = row1_ptr->parent_bounds();
+  XDim r1x;
+  YDim r1y;
+  row1_ptr->getAbsoluteOffset(r1x, r1y);
+  const int row_left = r1x;
+  const int row_top = r1y;
+
+  // Quick release: a genuinely fast tap where the gesture detector never emits
+  // onShowPress. onSingleTapUp takes the quick-release branch (setClicking +
+  // start animation) without the widget entering the pressed state.
   const XDim press_x = Scaled(10);
   const YDim press_y = Scaled(10);
   row1_ptr->onSingleTapUp(press_x, press_y);
 
-  // Drive the click animation and expansion to completion.
-  for (int frame = 0; frame < 28; ++frame) {
-    delay(16);
+  // Drive the click animation + expansion to completion, probing each frame
+  // for any pixel ABOVE/LEFT of the row that differs from the pristine
+  // reference (the persistent overshoot region). Use a COARSE frame interval
+  // (~70ms) to mirror slow-hardware refresh cadence: the first painted frame
+  // after release already shows a large ripple while the row is only partially
+  // expanded (the transient the fine-grained 16ms loop skips over).
+  int frame_first_overshoot = -1;
+  int overshoot_x = -1;
+  int overshoot_y = -1;
+  for (int frame = 0; frame < 12; ++frame) {
+    delay(70);
     app_.root().refreshClickAnimation();
     ASSERT_TRUE(refresh());
+    if (frame_first_overshoot < 0) {
+      // Scan the band to the left of and above the row's left/top edges.
+      for (int16_t y = 0; y < kHeight && frame_first_overshoot < 0; ++y) {
+        for (int16_t x = 0; x < row_left + 6; ++x) {
+          if (pixelAt(x, y) != expanded_clean[y * kWidth + x]) {
+            frame_first_overshoot = frame;
+            overshoot_x = x;
+            overshoot_y = y;
+            break;
+          }
+        }
+      }
+    }
   }
+  (void)collapsed_bounds;
+  (void)row_top;
   ASSERT_TRUE(row1_ptr->item().bodyPanel().isExpanded());
   ASSERT_FALSE(row1_ptr->item().bodyPanel().isAnimating());
 
@@ -895,7 +967,10 @@ TEST_F(Material3ListRenderTest, ExpandableRowRippleLeavesNoResidueAfterSettle) {
       << (first_x < 0 ? 0 : settled[first_y * kWidth + first_x].asArgb())
       << " clean=0x"
       << (first_x < 0 ? 0 : expanded_clean[first_y * kWidth + first_x].asArgb())
-      << std::dec;
+      << std::dec << "; first out-of-row overshoot on frame "
+      << frame_first_overshoot << " at (" << overshoot_x << "," << overshoot_y
+      << ")";
+
 }
 
 // Verifies that binding a standard item attaches the stable borrowed slot

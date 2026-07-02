@@ -420,12 +420,14 @@ void Widget::setActivated(bool activated) {
 
 void Widget::setPressed(bool pressed) {
   if (pressed == isPressed()) return;
+  Rect invalidated_bounds = maxParentBounds();
   state_ ^= kWidgetPressed;
   if (isVisible() && useOverlayOnPress()) {
     if (getOverlayType() != OVERLAY_NONE) {
       invalidateInterior();
     }
-    notifyParentInvalidatedRegion(getParentInteractionBounds());
+    invalidated_bounds = Rect::Extent(invalidated_bounds, maxParentBounds());
+    notifyParentInvalidatedRegion(invalidated_bounds);
   }
   notifyStateChanged(kWidgetPressed);
 }
@@ -605,7 +607,6 @@ void Widget::paintWidgetModded(PaintContext& ctx) {
       // after redrawing, so that we receive a subsequent paint request
       // shortly.
       if (overlay_spec.is_click_animation_in_progress()) {
-        Rect repaint_bounds = maxParentBounds();
         if (getOverlayType() == OVERLAY_POINT) {
           clipper.setPressOverlay(overlay_spec.press_overlay(),
                                   canvas.clip_box());
@@ -613,12 +614,13 @@ void Widget::paintWidgetModded(PaintContext& ctx) {
           // Only draw the overlay in the 'inner' region, leaving it up to the
           // surface- owning widget to draw it along the external decoration.
           Canvas inner = prepareContentsCanvas(canvas);
+          inner.clipToExtents(bounds());
           clipper.setPressOverlay(overlay_spec.press_overlay(),
                                   inner.clip_box());
         }
         paintWidgetContents(ctx);
         setDirty();
-        notifyParentInvalidatedRegion(repaint_bounds);
+        notifyParentInvalidatedRegion(maxParentBounds());
       } else {
         clearClicking();
         // overlay_spec was computed before clearClicking(), so this frame may
