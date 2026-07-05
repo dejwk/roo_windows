@@ -40,7 +40,8 @@ legacy buttons, selectors, or list items.
 
 ### Current Status in `roo_windows`
 
-As of 2026-06, `roo_windows` still has no Material 3 tabs implementation.
+As of phase 5, `roo_windows` has the Material 3 tabs family described by this
+document.
 
 What exists today:
 
@@ -59,21 +60,23 @@ What exists today:
 - [src/roo_windows/containers/horizontal_page_host.h](../src/roo_windows/containers/horizontal_page_host.h)
   and
   [horizontal_page_host_design.md](horizontal_page_host_design.md)
-  now provide a separate content-area swipe host for tab-row integration once
-  tabs land.
+  provide a separate content-area swipe host for tab-row integration.
+- [src/roo_windows/material3/tabs/tabs.h](../src/roo_windows/material3/tabs/tabs.h)
+  and
+  [tabs.cpp](../src/roo_windows/material3/tabs/tabs.cpp)
+  provide fixed, scrollable, and badged Material 3 tabs.
+- [examples/material3/tabs/tabs.ino](../examples/material3/tabs/tabs.ino)
+  demonstrates two-way tabs-plus-`HorizontalPageHost` synchronization.
 - [widget_authoring.md](widget_authoring.md) and the repo-local
   [roo-windows-widget-authoring instruction](../.github/instructions/roo-windows-widget-authoring.instructions.md)
   require explicit surface ownership, direct-to-framebuffer paint-order
   discipline, and aggressive per-instance RAM control.
 
-What does not exist yet:
+What remains future work:
 
-- no Material 3 tab row,
-- no tab-owned animated underline indicator,
-- no tab-specific badge host,
-- no fixed versus scrollable tab layout policy,
-- no tab-specific tests, render/golden coverage, or example sketch,
-- and no tabs-to-horizontal-page-host integration example.
+- extended accessibility/non-touch traversal for tabs,
+- adaptive wrappers that switch between tabs and other navigation surfaces,
+- and more exhaustive visual goldens for mixed icon/text/scrollable edge cases.
 
 ### Local Design References
 
@@ -929,7 +932,7 @@ Authoring references:
 
 ### Execution Order
 
-The next implementation step is to start tabs.
+The tabs implementation is now in its phase-5 integration pass.
 
 `HorizontalPageHost` is already available as a dependency and does not block
 tabs phases 1-4.
@@ -1044,6 +1047,10 @@ Validation:
 
 - `bazel test //:material3_tabs_test //:material3_tabs_golden_test`
 - `bazel test //:horizontal_page_host_test //:horizontal_page_host_render_test`
+
+Status: implemented in
+[test/material3_tabs_test.cpp](../test/material3_tabs_test.cpp) and
+[examples/material3/tabs/tabs.ino](../examples/material3/tabs/tabs.ino).
 
 ## Testing Plan
 
