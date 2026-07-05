@@ -405,71 +405,72 @@ that class already owns a dense cluster of behavior:
 - and clamped `scrollTo(...)` behavior at content bounds.
 
 The phase-3 implementation should first extract that behavior into a small
-non-widget helper, tentatively `ScrollMotionController`, migrate
-`SimpleScrollablePanel` to that helper, and then enable
-`TabsMode::kScrollable` using the same helper. That keeps the common behavior
+non-widget helper, migrate `SimpleScrollablePanel` to that helper, and then
+enable scrollable tabs using the same helper. That keeps the common behavior
 implemented once while letting each host keep its own layout and paint model.
 
-The helper owns motion policy and state:
+The helper owns motion policy and transient state:
 
-- axis configuration (`horizontal`, `vertical`, or `both`),
-- viewport and content extents,
-- current signed scroll origin,
 - raw drag origin for overshoot damping,
 - fling and spring-back parameters,
 - velocity caps, deceleration, and bounce constants,
 - and the common slop/dominance logic used to decide when a gesture becomes a
   scroll instead of a tap or child gesture.
 
-The helper does not own widget-tree behavior:
+The helper does not own widget-tree behavior or caller geometry:
 
 - no child storage,
 - no child measurement or layout,
 - no scroll-bar widget,
+- no stored viewport or content extents,
+- no stored axis field,
 - no indicator or divider paint,
 - and no tab selection policy.
 
-That split gives each caller a narrow adapter. `SimpleScrollablePanel` applies
-the returned offset by moving its single content child and updating the
-vertical scroll bar. `Tabs` applies the returned horizontal offset by laying
-out the tab strip at `strip_x - scroll_x`, recalculating indicator bounds from
-the translated tab geometry, and invalidating the tab-row viewport.
+That split gives each caller a narrow adapter. `SimpleScrollablePanel`
+computes geometry from its child, applies the returned offset by moving that
+single child, and updates the vertical scroll bar. `ScrollableTabs` computes
+geometry from the intrinsic tab strip, applies the returned horizontal offset
+by laying out the tab strip at `strip_x + scroll_x`, recalculates indicator
+bounds from the translated tab geometry, and invalidates the tab-row viewport.
+Plain fixed `Tabs` does not store the scroll-motion state at all.
 
 An illustrative API shape:
 
 ```cpp
-class ScrollMotionController {
+namespace scroll_motion {
+
+enum class Axis { kHorizontal, kVertical, kBoth };
+
+class Geometry {
  public:
-  enum class Axis { kHorizontal, kVertical, kBoth };
+  Geometry(XDim min_x, XDim max_x, YDim min_y, YDim max_y, Axis axis);
 
-  struct Bounds {
-    XDim viewport_width;
-    YDim viewport_height;
-    XDim content_width;
-    YDim content_height;
-  };
-
-  struct Result {
-    XDim x;
-    YDim y;
-    bool changed;
-    bool needs_tick;
-    bool in_overshoot;
-  };
-
-  explicit ScrollMotionController(Axis axis);
-
-  void setBounds(const Bounds& bounds);
-  void scrollTo(XDim x, YDim y);
-  void revealXRange(XDim x_min, XDim x_max, XDim preferred_center);
-
+  bool canScroll() const;
   bool shouldClaimDrag(XDim total_dx, YDim total_dy) const;
-  Result onDown(unsigned long now_ms);
-  Result onDrag(XDim dx, YDim dy);
-  Result onFling(XDim vx, YDim vy, unsigned long now_ms);
-  Result onTouchUp(unsigned long now_ms);
-  Result tick(unsigned long now_ms);
 };
+
+class State {
+ public:
+  // Drag/fling/spring-back state only; no bounds or axis.
+  bool isAnimating() const;
+  Result onDrag(const Geometry& geometry, XDim current_x, YDim current_y,
+                XDim dx, YDim dy);
+  Result onFling(const Geometry& geometry, XDim current_x, YDim current_y,
+                 XDim vx, YDim vy, unsigned long now_ms);
+  Result tick(const Geometry& geometry, XDim current_x, YDim current_y,
+              unsigned long now_ms);
+};
+
+struct Result {
+  XDim x;
+  YDim y;
+  bool changed;
+  bool needs_tick;
+  bool in_overshoot;
+};
+
+}  // namespace scroll_motion
 ```
 
 The exact names can change during implementation, but the ownership rule
@@ -501,10 +502,11 @@ rules. That is more machinery than scrollable tabs need.
 
 Extracting a non-widget scroll abstraction is the preferred option. It shares
 the hard part, keeps `SimpleScrollablePanel` as the generic single-child
-container, and lets `Tabs` remain a purpose-built multi-child row. The adapter
-code in each host is small and visible: translate the helper's offset into
-host-specific layout, invalidate the affected viewport, and schedule another
-tick when requested.
+container, keeps fixed `Tabs` free of scroll-state RAM, and lets
+`ScrollableTabs` be the purpose-built multi-child row that pays for horizontal
+scrolling. The adapter code in each host is small and visible: translate the
+helper's offset into host-specific layout, invalidate the affected viewport,
+and schedule another tick when requested.
 
 Sharing only constants or free functions is not enough. It would remove a few
 magic numbers but still duplicate the animation state machine, gesture
@@ -984,8 +986,9 @@ Validation:
 
 Work:
 
-- extract `ScrollMotionController` or an equivalent shared helper from
+- extract a geometry-free shared scroll-motion helper from
   `SimpleScrollablePanel` and migrate `SimpleScrollablePanel` to it,
+- add `ScrollableTabs` so fixed `Tabs` instances do not pay for scroll state,
 - use the shared helper for row-owned horizontal drag, fling, bounce, and
   spring-back behavior,
 - add intrinsic-width strip layout with the `52dp` logical leading inset,
