@@ -1,5 +1,7 @@
 #include "roo_windows/containers/horizontal_page_host.h"
 
+#include <vector>
+
 #include "gtest/gtest.h"
 #include "roo_scheduler.h"
 #include "roo_windows/core/basic_widget.h"
@@ -59,6 +61,23 @@ class TestHorizontalPageHost : public HorizontalPageHost {
 
   using HorizontalPageHost::onDown;
   using HorizontalPageHost::onScroll;
+
+  struct IndexChange {
+    int old_index;
+    int new_index;
+  };
+
+  const std::vector<IndexChange>& targetChanges() const {
+    return target_changes_;
+  }
+
+ protected:
+  void onTargetIndexChanged(int old_index, int new_index) override {
+    target_changes_.push_back(IndexChange{old_index, new_index});
+  }
+
+ private:
+  std::vector<IndexChange> target_changes_;
 };
 
 const Container* HostForPage(const Widget* page) {
@@ -230,6 +249,47 @@ TEST(HorizontalPageHost, DragRepositionsCurrentAndAdjacentPages) {
 
   EXPECT_EQ(Rect(-40, 0, 59, 39), SlotBoundsForPage(first_ptr));
   EXPECT_EQ(Rect(60, 0, 159, 39), SlotBoundsForPage(second_ptr));
+}
+
+// Verifies drag target notifications move selector surfaces, such as tabs,
+// before the page has fully settled.
+TEST(HorizontalPageHost, DragUpdatesTargetIndexAtSettleThreshold) {
+  roo_scheduler::Scheduler scheduler;
+  Environment bootstrap(scheduler);
+  ApplicationContext context = MakeContext(bootstrap);
+
+  TestHorizontalPageHost host(context);
+  host.addPage(std::make_unique<ProbeWidget>(context, Dimensions(20, 10)));
+  host.addPage(std::make_unique<ProbeWidget>(context, Dimensions(30, 12)));
+
+  host.measure(WidthSpec::Exactly(100), HeightSpec::Exactly(40));
+  host.layout(Rect(0, 0, 99, 39));
+
+  EXPECT_EQ(0, host.currentIndex());
+  EXPECT_EQ(0, host.targetIndex());
+
+  host.onDown(0, 0);
+  host.onScroll(0, 0, -49, 0);
+
+  EXPECT_EQ(0, host.currentIndex());
+  EXPECT_EQ(0, host.targetIndex());
+  EXPECT_TRUE(host.targetChanges().empty());
+
+  host.onScroll(0, 0, -1, 0);
+
+  EXPECT_EQ(0, host.currentIndex());
+  EXPECT_EQ(1, host.targetIndex());
+  ASSERT_EQ(1u, host.targetChanges().size());
+  EXPECT_EQ(0, host.targetChanges()[0].old_index);
+  EXPECT_EQ(1, host.targetChanges()[0].new_index);
+
+  host.onScroll(0, 0, 1, 0);
+
+  EXPECT_EQ(0, host.currentIndex());
+  EXPECT_EQ(0, host.targetIndex());
+  ASSERT_EQ(2u, host.targetChanges().size());
+  EXPECT_EQ(1, host.targetChanges()[1].old_index);
+  EXPECT_EQ(0, host.targetChanges()[1].new_index);
 }
 
 // Verifies edge drag resistance at the first page applies one-quarter motion

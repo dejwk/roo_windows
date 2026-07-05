@@ -517,9 +517,11 @@ class HorizontalPageHost : public Container,
   int pageCount() const;
 
   int currentIndex() const;
+  int targetIndex() const;
   bool setCurrentIndex(int index, bool animate = true);
 
  protected:
+  virtual void onTargetIndexChanged(int old_index, int new_index);
   virtual void onSettledIndexChanged(int old_index, int new_index);
 };
 
@@ -538,6 +540,12 @@ slot wrapper only when that page is current or adjacent.
 
 `currentIndex()` returns the settled page index, not the transient fractional
 drag position.
+
+`targetIndex()` returns the page currently chosen by a gesture or
+programmatic transition. During a drag, it changes when the drag crosses the
+same threshold that will be used for settle. Selector surfaces can listen to
+`onTargetIndexChanged()` to update immediately while leaving
+`onSettledIndexChanged()` for work that must wait until the page is settled.
 
 `setCurrentIndex()` returns `false` when the requested index is out of range or
 already current.

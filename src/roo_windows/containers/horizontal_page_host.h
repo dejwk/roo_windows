@@ -38,6 +38,13 @@ class HorizontalPageHost : public Container, private roo_scheduler::Executable {
   /// Returns the currently settled page index, or -1 when empty.
   int currentIndex() const;
 
+  /// Returns the current gesture/programmatic target index, or -1 when empty.
+  ///
+  /// During a drag, this may switch before `currentIndex()` changes. It is
+  /// intended for selector surfaces, such as tabs, that should react as soon
+  /// as the gesture has chosen a likely destination.
+  int targetIndex() const;
+
   /// Selects a new current page.
   ///
   /// Returns false if the index is out of range or already selected.
@@ -50,6 +57,9 @@ class HorizontalPageHost : public Container, private roo_scheduler::Executable {
  protected:
   /// Hook called after the settled page index changes.
   virtual void onSettledIndexChanged(int old_index, int new_index);
+
+  /// Hook called when the gesture/programmatic target page changes.
+  virtual void onTargetIndexChanged(int old_index, int new_index);
 
   /// Measures as one viewport, not a strip width.
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
@@ -133,6 +143,9 @@ class HorizontalPageHost : public Container, private roo_scheduler::Executable {
   /// Snaps immediately to target page index.
   void snapToIndex(int target_index);
 
+  /// Updates the transient target page and notifies subclasses on changes.
+  void setTargetIndex(int target_index);
+
   /// Chooses gesture settle target from drag offset and optional fling speed.
   int resolveGestureSettleTarget(XDim velocity_x) const;
 
@@ -162,6 +175,7 @@ class HorizontalPageHost : public Container, private roo_scheduler::Executable {
   bool intercepted_gesture_;
 
   int settled_index_;
+  int target_index_;
   float page_position_;
 };
 

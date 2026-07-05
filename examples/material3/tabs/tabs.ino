@@ -106,6 +106,11 @@ class DemoPageHost : public HorizontalPageHost {
  protected:
   void onSettledIndexChanged(int old_index, int new_index) override {
     (void)old_index;
+    (void)new_index;
+  }
+
+  void onTargetIndexChanged(int old_index, int new_index) override {
+    (void)old_index;
     if (tabs_ != nullptr && tabs_->selectedIndex() != new_index) {
       tabs_->setSelectedIndex(new_index, true);
     }
@@ -117,7 +122,7 @@ class DemoPageHost : public HorizontalPageHost {
 
 void DemoTabs::onSelectedIndexChanged(int old_index, int new_index) {
   (void)old_index;
-  if (pages_ != nullptr && pages_->currentIndex() != new_index) {
+  if (pages_ != nullptr && pages_->targetIndex() != new_index) {
     pages_->setCurrentIndex(new_index, true);
   }
 }

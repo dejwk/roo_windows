@@ -799,9 +799,13 @@ Selection synchronization stays two-way but remains outside the base `Tabs`
 API:
 
 1. a tab click calls into the page host to animate to the chosen page,
-2. a completed swipe updates the selected tab through
-  `tabs.setSelectedIndex(index, true)`,
-3. and intermediate drag offset affects page placement and paint only, not the
+2. a swipe updates the selected tab through
+  `tabs.setSelectedIndex(index, true)` when `HorizontalPageHost` reports a new
+  target index, so the row reacts as soon as the drag crosses the settle
+  threshold,
+3. settled-page hooks remain available for content work that must wait until
+  the page stops moving,
+4. and intermediate drag offset affects page placement and paint only, not the
   row's measured geometry.
 
 This is the smallest contract that supports Material-style content swiping

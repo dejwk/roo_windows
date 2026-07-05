@@ -28,7 +28,7 @@ HorizontalPageHost::HorizontalPageHost(ApplicationContext& context)
     : Container(context),
       pages_(),
       page_to_slot_(),
-  slot_wrappers_(),
+      slot_wrappers_(),
       active_slots_(),
       scheduler_(context.scheduler()),
       notification_id_(-1),
@@ -37,6 +37,7 @@ HorizontalPageHost::HorizontalPageHost(ApplicationContext& context)
       dragging_(false),
       intercepted_gesture_(false),
       settled_index_(-1),
+      target_index_(-1),
       page_position_(0.0f) {
   for (int i = 0; i < kSlotCount; ++i) {
     slot_wrappers_[i] = std::make_unique<BlitCacheContainer>(context);
@@ -55,6 +56,7 @@ void HorizontalPageHost::addPage(WidgetRef page) {
   page_to_slot_.push_back(-1);
   if (settled_index_ < 0) {
     settled_index_ = 0;
+    target_index_ = 0;
     page_position_ = 0.0f;
     syncActiveSlots();
     requestLayout();
@@ -77,6 +79,7 @@ void HorizontalPageHost::clearPages() {
   pages_.clear();
   page_to_slot_.clear();
   settled_index_ = -1;
+  target_index_ = -1;
   page_position_ = 0.0f;
   requestLayout();
   invalidateInterior();
@@ -85,6 +88,8 @@ void HorizontalPageHost::clearPages() {
 int HorizontalPageHost::pageCount() const { return pages_.size(); }
 
 int HorizontalPageHost::currentIndex() const { return settled_index_; }
+
+int HorizontalPageHost::targetIndex() const { return target_index_; }
 
 bool HorizontalPageHost::setCurrentIndex(int index, bool animate) {
   if (index < 0 || index >= pageCount()) return false;
@@ -100,6 +105,11 @@ bool HorizontalPageHost::setCurrentIndex(int index, bool animate) {
 void HorizontalPageHost::paint(PaintContext& ctx) const { (void)ctx; }
 
 void HorizontalPageHost::onSettledIndexChanged(int old_index, int new_index) {
+  (void)old_index;
+  (void)new_index;
+}
+
+void HorizontalPageHost::onTargetIndexChanged(int old_index, int new_index) {
   (void)old_index;
   (void)new_index;
 }
@@ -177,6 +187,7 @@ bool HorizontalPageHost::onDown(XDim x, YDim y) {
   animation_state_ = AnimationState::kIdle;
   dragging_ = true;
   page_position_ = settled_index_ >= 0 ? settled_index_ : 0.0f;
+  setTargetIndex(settled_index_);
   syncActiveSlots();
   updateActivePagePositions();
   return true;
@@ -194,6 +205,7 @@ bool HorizontalPageHost::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
   }
   float raw_position = page_position_ - ((float)dx / (float)width());
   page_position_ = applyEdgeResistance(raw_position);
+  setTargetIndex(resolveGestureSettleTarget(0));
   syncActiveSlots();
   updateActivePagePositions();
   invalidateInterior();
@@ -370,6 +382,7 @@ void HorizontalPageHost::startSettleToIndex(int target_index) {
 
   settle_.old_index = settled_index_;
   settle_.target_index = target_index;
+  setTargetIndex(target_index);
   settle_.start_position = page_position_;
   settle_.target_position = target_index;
   settle_.start_time_ms = millis();
@@ -392,6 +405,7 @@ void HorizontalPageHost::snapToIndex(int target_index) {
   target_index = Clamp(target_index, 0, pageCount() - 1);
   cancelPendingUpdate();
   animation_state_ = AnimationState::kIdle;
+  setTargetIndex(target_index);
 
   int old_index = settled_index_;
   settled_index_ = target_index;
@@ -403,6 +417,18 @@ void HorizontalPageHost::snapToIndex(int target_index) {
   if (old_index != settled_index_) {
     onSettledIndexChanged(old_index, settled_index_);
   }
+}
+
+void HorizontalPageHost::setTargetIndex(int target_index) {
+  if (pageCount() == 0) {
+    target_index = -1;
+  } else {
+    target_index = Clamp(target_index, 0, pageCount() - 1);
+  }
+  if (target_index_ == target_index) return;
+  int old_index = target_index_;
+  target_index_ = target_index;
+  onTargetIndexChanged(old_index, target_index_);
 }
 
 int HorizontalPageHost::resolveGestureSettleTarget(XDim velocity_x) const {
