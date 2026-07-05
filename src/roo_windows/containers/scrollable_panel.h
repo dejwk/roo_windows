@@ -4,6 +4,7 @@
 #include "roo_scheduler.h"
 #include "roo_time.h"
 #include "roo_windows/containers/blit_cache_container.h"
+#include "roo_windows/containers/scroll_motion_controller.h"
 #include "roo_windows/core/application_context.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/widget.h"
@@ -73,8 +74,7 @@ class SimpleScrollablePanel : public Container,
         scroll_bar_gesture_(false),
         scheduler_(context.scheduler()),
         notification_id_(-1),
-        animation_(ScrollAnimation::IDLE),
-        anim_{} {
+        motion_() {
     scroll_bar_.setVisibility(Visibility::kInvisible);
   }
 
@@ -145,7 +145,7 @@ class SimpleScrollablePanel : public Container,
         break;
       }
       default: {
-        if (animation_ == ScrollAnimation::FLINGING || isHandlingGesture()) {
+        if (motion_.isAnimating() || isHandlingGesture()) {
           // Currently scrolling or moving.
           scroll_bar_.setVisibility(Visibility::kVisible);
         } else {
@@ -166,13 +166,15 @@ class SimpleScrollablePanel : public Container,
   /// Adjusts the current scroll position by (dx, dy).
   void scrollBy(XDim dx, YDim dy) {
     if (contents() == nullptr) return;
-    scrollTo(dx + contents()->offsetLeft(), dy + contents()->offsetTop());
+    ScrollPosition pos = getScrollPosition();
+    scrollTo(dx + pos.x, dy + pos.y);
   }
 
   /// Snaps to the top edge of the content.
   void scrollToTop() {
     if (contents() == nullptr) return;
-    scrollTo(contents()->offsetLeft(), 0);
+    ScrollPosition pos = getScrollPosition();
+    scrollTo(pos.x, 0);
   }
 
   /// Snaps to the bottom edge of the content.
@@ -184,9 +186,8 @@ class SimpleScrollablePanel : public Container,
   };
 
   ScrollPosition getScrollPosition() const {
-    const Widget* w = contents();
-    if (w == nullptr) return {0, 0};
-    return {w->offsetLeft(), w->offsetTop()};
+    if (contents() == nullptr) return {0, 0};
+    return currentScrollPosition();
   }
 
   /// Re-applies the current scroll position. Useful after content changes.
@@ -230,18 +231,10 @@ class SimpleScrollablePanel : public Container,
   void cancelPendingUpdate();
   void scheduleScrollAnimationUpdate();
   void scheduleHideScrollBarUpdate();
-
-  // Moves content to (x, y) without boundary clamping, for overshoot rendering.
-  // Scroll bar is updated as if content were at the nearest boundary.
-  void scrollToRaw(XDim x, YDim y);
-
-  // Returns true if the content is currently positioned beyond a scroll
-  // boundary (i.e., it has been dragged or flung into overshoot).
-  bool isInOvershoot() const;
-
-  // If the content is currently beyond a scroll boundary (in overshoot),
-  // initiates a spring-back animation to return it to the boundary.
-  void startSpringBack();
+  static scroll_motion::Axis AxisForDirection(Direction direction);
+  scroll_motion::Geometry motionGeometry() const;
+  ScrollPosition currentScrollPosition() const;
+  void applyScrollResult(const scroll_motion::Result& result);
 
   Direction direction_;
   roo_display::Alignment alignment_;
@@ -266,45 +259,7 @@ class SimpleScrollablePanel : public Container,
   // Whether the 'down' event has been confirmed as a touch of the scroll bar in
   // its active region.
   bool is_scroll_bar_scrolled_;
-
-  // Discriminates which animation state is currently active. DRAGGING,
-  // FLINGING, and SPRING_BACK are mutually exclusive, allowing their data to
-  // share a single union.
-  enum class ScrollAnimation : uint8_t {
-    IDLE,
-    DRAGGING,
-    FLINGING,
-    SPRING_BACK
-  };
-  ScrollAnimation animation_;
-
-  // Per-state data. Only the member corresponding to animation_ is valid.
-  union {
-    // Valid when animation_ == DRAGGING.
-    struct {
-      XDim raw_x;  // Raw (unclamped) intended scroll position.
-      YDim raw_y;
-    } drag;
-    // Valid when animation_ == FLINGING.
-    struct {
-      unsigned long start_time;
-      unsigned long end_time;
-      float start_vx;  // Initial scroll velocity in pixels/s.
-      float start_vy;
-      float decel_x;
-      float decel_y;
-      XDim dx_start;  // Content offset at fling start.
-      YDim dy_start;
-    } fling;
-    // Valid when animation_ == SPRING_BACK.
-    struct {
-      unsigned long start_time_ms;
-      XDim start_ox;  // Initial X overshoot at animation start (scroll coords).
-      YDim start_oy;  // Initial Y overshoot at animation start (scroll coords).
-      XDim target_x;  // Clamped scroll-coord X to spring back to.
-      YDim target_y;  // Clamped scroll-coord Y to spring back to.
-    } springback;
-  } anim_;
+  scroll_motion::State motion_;
 };
 
 // SimpleScrollablePanel variant that wraps the content in a BlitCacheContainer,
