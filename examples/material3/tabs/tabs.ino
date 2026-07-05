@@ -73,39 +73,61 @@ void initDisplay() {
 // *************** EXAMPLE STARTS HERE
 
 #include "roo_windows/containers/flex_layout.h"
-#include "roo_windows/containers/stacked_layout.h"
+#include "roo_windows/containers/horizontal_page_host.h"
 #include "roo_windows/material3/tabs/tabs.h"
 #include "roo_windows/widgets/text_label.h"
 
 namespace {
 
+class DemoPageHost;
+
 class DemoTabs : public material3::Tabs {
  public:
-  DemoTabs(ApplicationContext& context, StackedLayout& pages)
+  explicit DemoTabs(ApplicationContext& context)
       : material3::Tabs(context, material3::TabsVariant::kPrimary),
-        pages_(pages) {}
+        pages_(nullptr) {}
+
+  void bind(DemoPageHost& pages) { pages_ = &pages; }
 
  protected:
-  void onSelectedIndexChanged(int old_index, int new_index) override {
+  void onSelectedIndexChanged(int old_index, int new_index) override;
+
+ private:
+  DemoPageHost* pages_;
+};
+
+class DemoPageHost : public HorizontalPageHost {
+ public:
+  explicit DemoPageHost(ApplicationContext& context)
+      : HorizontalPageHost(context), tabs_(nullptr) {}
+
+  void bind(DemoTabs& tabs) { tabs_ = &tabs; }
+
+ protected:
+  void onSettledIndexChanged(int old_index, int new_index) override {
     (void)old_index;
-    for (int i = 0; i < 3; ++i) {
-      page(i).setVisibility(i == new_index ? Visibility::kVisible
-                                           : Visibility::kGone);
+    if (tabs_ != nullptr && tabs_->selectedIndex() != new_index) {
+      tabs_->setSelectedIndex(new_index, true);
     }
   }
 
  private:
-  Widget& page(int index) { return pages_.child_at(index); }
-
-  StackedLayout& pages_;
+  DemoTabs* tabs_;
 };
+
+void DemoTabs::onSelectedIndexChanged(int old_index, int new_index) {
+  (void)old_index;
+  if (pages_ != nullptr && pages_->currentIndex() != new_index) {
+    pages_->setCurrentIndex(new_index, true);
+  }
+}
 
 class TabsScreen : public FlexLayout {
  public:
   explicit TabsScreen(ApplicationContext& context)
       : FlexLayout(context, FlexDirection::kColumn),
         pages_(context),
-        tabs_(context, pages_),
+        tabs_(context),
         secondary_tabs_(context, material3::TabsVariant::kSecondary),
         overview_tab_(context, "Overview"),
         heating_tab_(context, "Heating"),
@@ -125,6 +147,9 @@ class TabsScreen : public FlexLayout {
     setPadding(Padding(Scaled(12), Scaled(8)));
     setGap(Scaled(8));
 
+    tabs_.bind(pages_);
+    pages_.bind(tabs_);
+
     heating_tab_.setIcon(&ic_outlined_24_action_done());
 
     tabs_.addTab(overview_tab_);
@@ -142,11 +167,9 @@ class TabsScreen : public FlexLayout {
     scrollable_tabs_.addTab(scroll_weather_tab_);
     scrollable_tabs_.addTab(scroll_history_tab_);
 
-    pages_.add(overview_);
-    pages_.add(heating_);
-    pages_.add(history_);
-    heating_.setVisibility(Visibility::kGone);
-    history_.setVisibility(Visibility::kGone);
+    pages_.addPage(overview_);
+    pages_.addPage(heating_);
+    pages_.addPage(history_);
 
     add(tabs_, {.flex_grow = 0, .flex_shrink = 0});
     add(pages_, {.flex_grow = 1, .flex_shrink = 1});
@@ -155,7 +178,7 @@ class TabsScreen : public FlexLayout {
   }
 
  private:
-  StackedLayout pages_;
+  DemoPageHost pages_;
   DemoTabs tabs_;
   material3::Tabs secondary_tabs_;
   material3::Tab overview_tab_;

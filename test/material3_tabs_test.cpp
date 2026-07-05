@@ -3,6 +3,8 @@
 #include "gtest/gtest.h"
 #include "roo_icons/outlined/24/action.h"
 #include "roo_scheduler.h"
+#include "roo_windows/containers/horizontal_page_host.h"
+#include "roo_windows/core/basic_widget.h"
 #include "roo_windows/containers/scroll_motion_controller.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/surface_widget.h"
@@ -59,6 +61,61 @@ class RecordingTabs : public Tabs {
 
 class Material3TabsRenderTest
     : public RooWindowsRenderTestSized<180, Scaled(48)> {};
+
+class ProbePage : public BasicWidget {
+ public:
+  explicit ProbePage(ApplicationContext& context) : BasicWidget(context) {}
+
+  Dimensions getSuggestedMinimumDimensions() const override {
+    return Dimensions(10, 10);
+  }
+};
+
+class BoundPageHost;
+
+class PageBoundTabs : public Tabs {
+ public:
+  explicit PageBoundTabs(ApplicationContext& context) : Tabs(context) {}
+
+  void bind(BoundPageHost& pages) { pages_ = &pages; }
+
+ protected:
+  void onSelectedIndexChanged(int old_index, int new_index) override;
+
+ private:
+  BoundPageHost* pages_ = nullptr;
+};
+
+class BoundPageHost : public HorizontalPageHost {
+ public:
+  explicit BoundPageHost(ApplicationContext& context)
+      : HorizontalPageHost(context), tabs_(nullptr) {}
+
+  void bind(PageBoundTabs& tabs) { tabs_ = &tabs; }
+
+  using HorizontalPageHost::onDown;
+  using HorizontalPageHost::onFling;
+  using HorizontalPageHost::onScroll;
+  using HorizontalPageHost::setCurrentIndex;
+
+ protected:
+  void onSettledIndexChanged(int old_index, int new_index) override {
+    (void)old_index;
+    if (tabs_ != nullptr && tabs_->selectedIndex() != new_index) {
+      tabs_->setSelectedIndex(new_index, true);
+    }
+  }
+
+ private:
+  PageBoundTabs* tabs_;
+};
+
+void PageBoundTabs::onSelectedIndexChanged(int old_index, int new_index) {
+  (void)old_index;
+  if (pages_ != nullptr && pages_->currentIndex() != new_index) {
+    pages_->setCurrentIndex(new_index, true);
+  }
+}
 
 // Verifies that a new row starts on the phase-1 primary fixed configuration
 // without an implicit selected tab.
@@ -297,6 +354,80 @@ TEST(Material3Tabs, ScrollMotionStateDoesNotStoreGeometry) {
   EXPECT_LT(sizeof(Tabs), sizeof(ScrollableTabs));
   EXPECT_LE(sizeof(scroll_motion::State), 48U);
   EXPECT_LE(sizeof(scroll_motion::Geometry), 16U);
+}
+
+// Verifies the final public type budgets with pointer-size-aware limits so
+// base tabs stay cheap and row-level state remains concentrated on `Tabs`.
+TEST(Material3Tabs, PublicTypesStayWithinPhaseFiveSizeBudget) {
+  constexpr size_t kTabBudget =
+      sizeof(SurfaceWidget) + sizeof(roo::string_view) + sizeof(void*) + 8;
+  constexpr size_t kBadgedTabBudget = sizeof(Tab) + sizeof(Badge) + 8;
+  constexpr size_t kTabsBudget =
+      sizeof(Container) + sizeof(std::vector<Tab*>) + 5 * sizeof(void*) + 72;
+
+  EXPECT_LE(sizeof(Tab), kTabBudget);
+  EXPECT_LE(sizeof(BadgedTab), kBadgedTabBudget);
+  EXPECT_LE(sizeof(Tabs), kTabsBudget);
+}
+
+// Verifies the phase-5 integration pattern: tab selection drives the content
+// host without making `Tabs` own a pager or page vector.
+TEST(Material3Tabs, SelectionChangesDriveHorizontalPageHost) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+
+  PageBoundTabs tabs(context);
+  BoundPageHost pages(context);
+  tabs.bind(pages);
+  pages.bind(tabs);
+
+  tabs.addTab(std::make_unique<Tab>(context, "One"));
+  tabs.addTab(std::make_unique<Tab>(context, "Two"));
+  tabs.addTab(std::make_unique<Tab>(context, "Three"));
+  pages.addPage(std::make_unique<ProbePage>(context));
+  pages.addPage(std::make_unique<ProbePage>(context));
+  pages.addPage(std::make_unique<ProbePage>(context));
+
+  ASSERT_EQ(0, tabs.selectedIndex());
+  ASSERT_EQ(0, pages.currentIndex());
+
+  EXPECT_TRUE(tabs.setSelectedIndex(2, false));
+
+  EXPECT_EQ(2, tabs.selectedIndex());
+  EXPECT_EQ(2, pages.currentIndex());
+}
+
+// Verifies the other half of the phase-5 integration pattern: a settled swipe
+// gesture in the content host updates the tab row without recursive work.
+TEST(Material3Tabs, HorizontalPageHostGestureDrivesSelection) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+
+  PageBoundTabs tabs(context);
+  BoundPageHost pages(context);
+  tabs.bind(pages);
+  pages.bind(tabs);
+
+  tabs.addTab(std::make_unique<Tab>(context, "One"));
+  tabs.addTab(std::make_unique<Tab>(context, "Two"));
+  tabs.addTab(std::make_unique<Tab>(context, "Three"));
+  pages.addPage(std::make_unique<ProbePage>(context));
+  pages.addPage(std::make_unique<ProbePage>(context));
+  pages.addPage(std::make_unique<ProbePage>(context));
+
+  ASSERT_EQ(0, tabs.selectedIndex());
+  ASSERT_EQ(0, pages.currentIndex());
+
+  pages.measure(WidthSpec::Exactly(100), HeightSpec::Exactly(40));
+  pages.layout(Rect(0, 0, 99, 39));
+  EXPECT_TRUE(pages.onDown(0, 0));
+  EXPECT_TRUE(pages.onFling(0, 0, -1200, 0));
+  scheduler.delay(roo_time::Millis(220));
+
+  EXPECT_EQ(1, tabs.selectedIndex());
+  EXPECT_EQ(1, pages.currentIndex());
 }
 
 // Verifies that scrollable tabs use intrinsic child widths and the Material 3
