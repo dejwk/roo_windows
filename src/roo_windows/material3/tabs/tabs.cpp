@@ -36,6 +36,14 @@ constexpr int16_t kDividerHeightPx = 1;
 constexpr int16_t kIndicatorFrameMs = 10;
 constexpr unsigned long kIndicatorDurationMs = 200;
 
+Rect EmptyRect() { return Rect(0, 0, -1, -1); }
+
+Rect UnionRects(const Rect& a, const Rect& b) {
+  if (a.empty()) return b;
+  if (b.empty()) return a;
+  return Rect::Extent(a, b);
+}
+
 // Returns the shared label face used by phase-1 tabs.
 const roo_display::Font& TabLabelFont() { return font_button(); }
 
@@ -254,14 +262,112 @@ void Tab::onClicked() {
 BadgedTab::BadgedTab(ApplicationContext& context, roo::string_view label)
     : Tab(context, label), badge_() {}
 
+void BadgedTab::hideBadge() {
+  if (!badge_.visible()) return;
+  Rect old_bounds = badge_.bounds();
+  badge_.hide();
+  Rect new_bounds = relayoutBadge();
+  handleBadgeGeometryChange(old_bounds, new_bounds);
+}
+
+void BadgedTab::setBadgeDot() {
+  if (badge_.mode() == BadgeMode::kDot) return;
+  Rect old_bounds = badge_.bounds();
+  badge_.setDot();
+  Rect new_bounds = relayoutBadge();
+  handleBadgeGeometryChange(old_bounds, new_bounds);
+}
+
+void BadgedTab::setBadgeText(roo::string_view text) {
+  if (badge_.mode() == BadgeMode::kText && badge_.text() == text) return;
+  Rect old_bounds = badge_.bounds();
+  badge_.setText(text);
+  Rect new_bounds = relayoutBadge();
+  handleBadgeGeometryChange(old_bounds, new_bounds);
+}
+
+void BadgedTab::setBadgeValue(unsigned int number) {
+  Rect old_bounds = badge_.bounds();
+  badge_.setValue(number);
+  Rect new_bounds = relayoutBadge();
+  handleBadgeGeometryChange(old_bounds, new_bounds);
+}
+
+Dimensions BadgedTab::getContentMinimumDimensions() const {
+  Dimensions base = Tab::getContentMinimumDimensions();
+  if (!badge_.visible()) return base;
+
+  Rect base_bounds(0, 0, std::max<int16_t>(0, base.width()) - 1,
+                   std::max<int16_t>(0, base.height()) - 1);
+  Rect badge_bounds = Badge::ConservativeBounds(
+      base_bounds, BadgePlacement{}, badge_.mode() == BadgeMode::kText);
+  Rect combined = UnionRects(base_bounds, badge_bounds);
+  if (combined.empty()) return base;
+  return Dimensions(combined.width(), base.height());
+}
+
 Dimensions BadgedTab::getSuggestedMinimumDimensions() const {
-  LOG(WARNING) << "Unimplemented: Material3 tab badge measurement";
   return Tab::getSuggestedMinimumDimensions();
 }
 
 void BadgedTab::paint(PaintContext& ctx) const {
-  LOG(WARNING) << "Unimplemented: Material3 tab badge paint";
+  badge_.paint(ctx, theme());
   Tab::paint(ctx);
+}
+
+void BadgedTab::onLayout(bool changed, const Rect& rect) {
+  (void)changed;
+  (void)rect;
+  relayoutBadge();
+}
+
+Rect BadgedTab::badgeAnchorBounds() const {
+  Rect core = getCoreContentBounds();
+  if (core.empty()) return EmptyRect();
+
+  if (hasIcon() && icon() != nullptr) {
+    int16_t icon_extent = std::max<int16_t>(
+        Scaled(kIconSizeDp), icon()->anchorExtents().height());
+    int16_t label_height =
+        label().empty() ? 0 : ((TabLabelFont().metrics().maxHeight()) + 1);
+    int16_t total_height = icon_extent + label_height;
+    Rect paint_bounds = getContentPaintBounds();
+    int16_t top = paint_bounds.yMin() +
+                  (std::max<int16_t>(0, core.height() - total_height) / 2);
+    int16_t icon_width =
+        std::max<int16_t>(Scaled(kIconSizeDp), icon()->anchorExtents().width());
+    int16_t left = core.xMin() + (core.width() - icon_width) / 2;
+    return Rect(left, top, left + icon_width - 1, top + icon_extent - 1);
+  }
+
+  return core;
+}
+
+Rect BadgedTab::conservativeBadgeBounds() const {
+  if (!badge_.visible()) return EmptyRect();
+  return Badge::ConservativeBounds(badgeAnchorBounds(), BadgePlacement{},
+                                   badge_.mode() == BadgeMode::kText);
+}
+
+Rect BadgedTab::relayoutBadge() {
+  if (!badge_.visible()) return EmptyRect();
+  if (!badge_.layout(badgeAnchorBounds(), BadgePlacement{})) {
+    return EmptyRect();
+  }
+  return badge_.bounds();
+}
+
+void BadgedTab::handleBadgeGeometryChange(const Rect& old_bounds,
+                                          const Rect& new_bounds) {
+  Rect repaint_bounds = UnionRects(old_bounds, new_bounds);
+  if (!repaint_bounds.empty()) {
+    setDirty(repaint_bounds);
+    if (parent() != nullptr) {
+      notifyParentInvalidatedRegion(
+          repaint_bounds.translate(offsetLeft(), offsetTop()));
+    }
+  }
+  requestLayout();
 }
 
 Tabs::Tabs(ApplicationContext& context, TabsVariant variant, TabsMode mode)

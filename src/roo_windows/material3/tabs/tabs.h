@@ -107,13 +107,35 @@ class BadgedTab : public Tab {
   /// Returns the inline badge helper.
   const Badge& badge() const { return badge_; }
 
-  /// Paints the tab content. Badge paint is deferred to a later phase.
+  /// Hides the badge and repaints the old badge envelope.
+  void hideBadge();
+
+  /// Shows a dot badge and repaints the old/new badge envelope.
+  void setBadgeDot();
+
+  /// Shows a text badge and repaints the old/new badge envelope.
+  void setBadgeText(roo::string_view text);
+
+  /// Shows a numeric badge and repaints the old/new badge envelope.
+  void setBadgeValue(unsigned int number);
+
+  /// Paints the tab content and front-most badge adornment.
   void paint(PaintContext& ctx) const override;
 
-  /// Reports the base tab minimum size. Badge measurement is deferred.
+  /// Reports the tab minimum size including any visible badge envelope.
   Dimensions getSuggestedMinimumDimensions() const override;
 
+ protected:
+  Dimensions getContentMinimumDimensions() const override;
+  void onLayout(bool changed, const Rect& rect) override;
+
  private:
+  Rect badgeAnchorBounds() const;
+  Rect conservativeBadgeBounds() const;
+  Rect relayoutBadge();
+  void handleBadgeGeometryChange(const Rect& old_bounds,
+                                 const Rect& new_bounds);
+
   Badge badge_;
 };
 

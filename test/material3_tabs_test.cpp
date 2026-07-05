@@ -348,6 +348,30 @@ TEST(Material3Tabs, ScrollableSelectionRevealsSelectedTab) {
   EXPECT_GT(history_raw->offsetLeft() + history_raw->width(), 0);
 }
 
+// Verifies that visible badges participate in intrinsic tab width, which is
+// the width source for scrollable tabs.
+TEST(Material3Tabs, ScrollableLayoutIncludesVisibleBadgeWidth) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+
+  ScrollableTabs tabs(context);
+  auto plain = std::make_unique<Tab>(context, "Hot");
+  auto badged = std::make_unique<BadgedTab>(context, "Hot");
+  Tab* plain_raw = plain.get();
+  BadgedTab* badged_raw = badged.get();
+  badged->setBadgeValue(1000);
+
+  tabs.addTab(std::move(plain));
+  tabs.addTab(std::move(badged));
+
+  tabs.measure(WidthSpec::Exactly(180), HeightSpec::Exactly(48));
+  tabs.layout(Rect(0, 0, 179, 47));
+
+  EXPECT_GT(badged_raw->width(), plain_raw->width());
+  EXPECT_TRUE(badged_raw->bounds().contains(badged_raw->badge().bounds()));
+}
+
 // Verifies that horizontal drag in scrollable mode uses the shared motion path
 // to move the tab strip without changing selection.
 TEST(Material3Tabs, ScrollableDragMovesStripWithoutSelecting) {
@@ -387,6 +411,37 @@ TEST(Material3Tabs, IconTabsRequestSixtyFourDpRowHeight) {
       tabs.measure(WidthSpec::Exactly(120), HeightSpec::Unspecified(0));
 
   EXPECT_EQ(Scaled(64), measured.height());
+}
+
+// Verifies the two badge placement modes from the tabs design: label-inline
+// badges and icon-overlap badges both stay within the tab surface.
+TEST(Material3Tabs, BadgedTabsPlaceBadgeWithinTabBounds) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+
+  Tabs tabs(context);
+  auto label = std::make_unique<BadgedTab>(context, "Alerts");
+  auto icon = std::make_unique<BadgedTab>(context, "Done");
+  BadgedTab* label_raw = label.get();
+  BadgedTab* icon_raw = icon.get();
+  label->setBadgeText("NEW");
+  icon->setIcon(&ic_outlined_24_action_done());
+  icon->setBadgeDot();
+
+  tabs.addTab(std::move(label));
+  tabs.addTab(std::move(icon));
+
+  tabs.measure(WidthSpec::Exactly(180), HeightSpec::Exactly(Scaled(64)));
+  tabs.layout(Rect(0, 0, 179, Scaled(64) - 1));
+
+  ASSERT_TRUE(label_raw->badge().visible());
+  ASSERT_TRUE(icon_raw->badge().visible());
+  EXPECT_FALSE(label_raw->badge().bounds().empty());
+  EXPECT_FALSE(icon_raw->badge().bounds().empty());
+  EXPECT_TRUE(label_raw->bounds().contains(label_raw->badge().bounds()));
+  EXPECT_TRUE(icon_raw->bounds().contains(icon_raw->badge().bounds()));
+  EXPECT_LT(icon_raw->badge().bounds().yMin(), icon_raw->height() / 2);
 }
 
 // Verifies that tab foreground content is centered in the band above the

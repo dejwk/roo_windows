@@ -51,6 +51,43 @@ class Material3TabsGoldenTest : public testing::Test {
     return test::CaptureRgb(offscreen_.raster(), 0, 0, 240, Scaled(48));
   }
 
+  roo_display::Offscreen<roo_display::Rgb888> RenderPrimaryBadgedRow() {
+    Application app(&env_, display_);
+    auto tabs = std::make_unique<Tabs>(app.context(), TabsVariant::kPrimary);
+    auto alerts = std::make_unique<BadgedTab>(app.context(), "Alerts");
+    alerts->setBadgeText("NEW");
+    tabs->addTab(std::move(alerts));
+    auto heating = std::make_unique<BadgedTab>(app.context(), "Heating");
+    heating->setIcon(&ic_outlined_24_action_done());
+    heating->setBadgeDot();
+    tabs->addTab(std::move(heating));
+    tabs->addTab(std::make_unique<Tab>(app.context(), "History"));
+    tabs->setSelectedIndex(1, false);
+
+    app.add(std::move(tabs), roo_display::Box(0, 0, 239, Scaled(64) - 1));
+
+    EXPECT_TRUE(app.refresh());
+    return test::CaptureRgb(offscreen_.raster(), 0, 0, 240, Scaled(64));
+  }
+
+  roo_display::Offscreen<roo_display::Rgb888> RenderSecondaryBadgedRow() {
+    Application app(&env_, display_);
+    auto tabs = std::make_unique<Tabs>(app.context(), TabsVariant::kSecondary);
+    tabs->addTab(std::make_unique<Tab>(app.context(), "Today"));
+    auto week = std::make_unique<BadgedTab>(app.context(), "Week");
+    week->setBadgeValue(7);
+    tabs->addTab(std::move(week));
+    auto month = std::make_unique<BadgedTab>(app.context(), "Month");
+    month->setBadgeDot();
+    tabs->addTab(std::move(month));
+    tabs->setSelectedIndex(1, false);
+
+    app.add(std::move(tabs), roo_display::Box(0, 0, 239, Scaled(48) - 1));
+
+    EXPECT_TRUE(app.refresh());
+    return test::CaptureRgb(offscreen_.raster(), 0, 0, 240, Scaled(48));
+  }
+
  private:
   roo::byte raster_[kWidth * kHeight * 2];
   roo_display::OffscreenDevice<roo_display::Argb4444> offscreen_;
@@ -75,6 +112,22 @@ TEST_F(Material3TabsGoldenTest, SecondaryFixedRowGolden) {
   EXPECT_TRUE(test::CompareOrUpdateGolden(
       image, "test/goldens/material3_tabs/secondary_fixed_row.ppm",
       "material3_tabs_secondary_fixed_row"));
+}
+
+// Locks down label-inline and icon-overlap badge placement on primary tabs.
+TEST_F(Material3TabsGoldenTest, PrimaryBadgedRowGolden) {
+  auto image = RenderPrimaryBadgedRow();
+  EXPECT_TRUE(test::CompareOrUpdateGolden(
+      image, "test/goldens/material3_tabs/primary_badged_row.ppm",
+      "material3_tabs_primary_badged_row"));
+}
+
+// Locks down badged secondary tabs with the full-width secondary indicator.
+TEST_F(Material3TabsGoldenTest, SecondaryBadgedRowGolden) {
+  auto image = RenderSecondaryBadgedRow();
+  EXPECT_TRUE(test::CompareOrUpdateGolden(
+      image, "test/goldens/material3_tabs/secondary_badged_row.ppm",
+      "material3_tabs_secondary_badged_row"));
 }
 
 }  // namespace
