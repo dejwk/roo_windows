@@ -113,6 +113,12 @@ class TabsScreen : public FlexLayout {
         today_tab_(context, "Today"),
         week_tab_(context, "Week"),
         month_tab_(context, "Month"),
+        scroll_overview_tab_(context, "Overview"),
+        scroll_pump_tab_(context, "Pump schedule"),
+        scroll_chemistry_tab_(context, "Chemistry"),
+        scroll_weather_tab_(context, "Weather forecast"),
+        scroll_history_tab_(context, "Temperature history"),
+        scrollable_tabs_(context, material3::TabsVariant::kSecondary),
         overview_(context, "Pool status overview", font_h6()),
         heating_(context, "Solar heating controls", font_h6()),
         history_(context, "Recent temperature history", font_h6()) {
@@ -130,6 +136,12 @@ class TabsScreen : public FlexLayout {
     secondary_tabs_.addTab(month_tab_);
     secondary_tabs_.setSelectedIndex(1, false);
 
+    scrollable_tabs_.addTab(scroll_overview_tab_);
+    scrollable_tabs_.addTab(scroll_pump_tab_);
+    scrollable_tabs_.addTab(scroll_chemistry_tab_);
+    scrollable_tabs_.addTab(scroll_weather_tab_);
+    scrollable_tabs_.addTab(scroll_history_tab_);
+
     pages_.add(overview_);
     pages_.add(heating_);
     pages_.add(history_);
@@ -139,6 +151,7 @@ class TabsScreen : public FlexLayout {
     add(tabs_, {.flex_grow = 0, .flex_shrink = 0});
     add(pages_, {.flex_grow = 1, .flex_shrink = 1});
     add(secondary_tabs_, {.flex_grow = 0, .flex_shrink = 0});
+    add(scrollable_tabs_, {.flex_grow = 0, .flex_shrink = 0});
   }
 
  private:
@@ -151,6 +164,12 @@ class TabsScreen : public FlexLayout {
   material3::Tab today_tab_;
   material3::Tab week_tab_;
   material3::Tab month_tab_;
+  material3::Tab scroll_overview_tab_;
+  material3::Tab scroll_pump_tab_;
+  material3::Tab scroll_chemistry_tab_;
+  material3::Tab scroll_weather_tab_;
+  material3::Tab scroll_history_tab_;
+  material3::ScrollableTabs scrollable_tabs_;
   TextLabel overview_;
   TextLabel heating_;
   TextLabel history_;

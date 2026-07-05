@@ -9,6 +9,7 @@
 
 #include "roo_backport/string_view.h"
 #include "roo_scheduler.h"
+#include "roo_windows/containers/scroll_motion_controller.h"
 #include "roo_windows/core/container.h"
 #include "roo_windows/core/surface_widget.h"
 #include "roo_windows/core/widget_ref.h"
@@ -116,7 +117,7 @@ class BadgedTab : public Tab {
   Badge badge_;
 };
 
-class Tabs : public Container, private roo_scheduler::Executable {
+class Tabs : public Container, protected roo_scheduler::Executable {
  public:
   /// Creates a Material 3 tabs row with explicit variant and layout mode.
   explicit Tabs(ApplicationContext& context,
@@ -135,8 +136,11 @@ class Tabs : public Container, private roo_scheduler::Executable {
   /// Returns the configured layout mode.
   TabsMode mode() const { return (TabsMode)mode_; }
 
-  /// Changes the layout mode. Scrollable mode currently falls back to fixed.
-  void setMode(TabsMode mode);
+  /// Changes the layout mode.
+  ///
+  /// Base `Tabs` has fixed-mode behavior. `ScrollableTabs` supports
+  /// scrollable-mode behavior while preserving the same tab and selection API.
+  virtual void setMode(TabsMode mode);
 
   /// Returns whether the row should show its bottom divider.
   bool showsDivider() const { return shows_divider_; }
@@ -199,11 +203,25 @@ class Tabs : public Container, private roo_scheduler::Executable {
   /// Called after a successful selection change with state already updated.
   virtual void onSelectedIndexChanged(int old_index, int new_index);
 
+  /// Called after selected state and indicator target update, before the
+  /// public selection-changed hook fires.
+  virtual void onSelectionStateUpdated(int old_index, int new_index,
+                                       bool animate);
+
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
   void onLayout(bool changed, const Rect& rect) override;
   int getChildrenCount() const override { return tabCount(); }
   const Widget& getChild(int idx) const override { return *tabs_[idx]; }
   Widget& getChild(int idx) override { return *tabs_[idx]; }
+
+  Tab& tabAt(int idx) { return *tabs_[idx]; }
+  const Tab& tabAt(int idx) const { return *tabs_[idx]; }
+  int rowHeight() const;
+  int indicatorHeight() const;
+  Rect targetIndicatorBounds() const;
+  void snapIndicatorToSelection();
+  void syncIndicatorAfterLayout();
+  void execute(roo_scheduler::ExecutionID id) override;
 
  private:
   friend class Tab;
@@ -217,20 +235,19 @@ class Tabs : public Container, private roo_scheduler::Executable {
   void handleTabClicked(const Tab& tab);
   void updateActivatedStates();
   int findTabIndex(const Tab& tab) const;
-  int rowHeight() const;
-  int indicatorHeight() const;
   Rect dividerBounds() const;
   Rect indicatorBoundsForIndex(int index) const;
   Rect indicatorPaintBoundsForTab(const Tab& tab) const;
-  Rect targetIndicatorBounds() const;
-  void snapIndicatorToSelection();
   void startIndicatorTransition(const Rect& from, const Rect& to, bool animate);
   void cancelPendingIndicatorUpdate();
   void scheduleIndicatorUpdate();
-  void execute(roo_scheduler::ExecutionID id) override;
 
   std::vector<Tab*> tabs_;
+
+ protected:
   roo_scheduler::Scheduler& scheduler_;
+
+ private:
   roo_scheduler::ExecutionID notification_id_;
   Rect indicator_current_;
   Rect indicator_start_;
@@ -244,6 +261,55 @@ class Tabs : public Container, private roo_scheduler::Executable {
   uint8_t warned_scrollable_ : 1;
   uint8_t indicator_animation_state_ : 1;
   uint8_t selection_commit_mode_ : 1;
+};
+
+/// Material 3 tabs row that pays for horizontal scroll state only when the
+/// caller asks for scrollable-tab behavior.
+class ScrollableTabs : public Tabs {
+ public:
+  /// Creates a Material 3 scrollable tabs row.
+  explicit ScrollableTabs(ApplicationContext& context,
+                          TabsVariant variant = TabsVariant::kPrimary);
+
+  /// Cancels any pending scroll animation callback.
+  ~ScrollableTabs() override;
+
+  /// Changes between fixed fallback and scrollable layout behavior.
+  void setMode(TabsMode mode) override;
+
+  /// Returns the current horizontal strip origin relative to the viewport.
+  XDim scrollOffsetForTest() const { return scroll_x_; }
+
+  bool onInterceptTouchEvent(const TouchEvent& event) override;
+  bool onDown(XDim x, YDim y) override;
+  bool onScroll(XDim x, YDim y, XDim dx, YDim dy) override;
+  bool onFling(XDim x, YDim y, XDim vx, YDim vy) override;
+  bool onTouchUp(XDim x, YDim y) override;
+  bool supportsScrolling() const override {
+    return mode() == TabsMode::kScrollable;
+  }
+
+ protected:
+  void onSelectionStateUpdated(int old_index, int new_index,
+                               bool animate) override;
+  Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
+  void onLayout(bool changed, const Rect& rect) override;
+  void execute(roo_scheduler::ExecutionID id) override;
+
+ private:
+  scroll_motion::Geometry motionGeometry() const;
+  void applyScrollResult(const scroll_motion::Result& result);
+  void layoutScrollableChildren();
+  XDim selectedTabCenterInStrip() const;
+  void revealSelectedTab();
+  void cancelPendingScrollUpdate();
+  void scheduleScrollUpdate();
+
+  scroll_motion::State scroll_motion_;
+  roo_scheduler::ExecutionID scroll_notification_id_;
+  XDim scroll_x_;
+  XDim strip_width_;
+  uint8_t intercepted_gesture_ : 1;
 };
 
 }  // namespace material3

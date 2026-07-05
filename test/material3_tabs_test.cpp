@@ -3,6 +3,7 @@
 #include "gtest/gtest.h"
 #include "roo_icons/outlined/24/action.h"
 #include "roo_scheduler.h"
+#include "roo_windows/containers/scroll_motion_controller.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/surface_widget.h"
 #include "roo_windows/material3/tabs/tabs.h"
@@ -288,6 +289,86 @@ TEST(Material3Tabs, FixedLayoutDividesWidthEqually) {
   EXPECT_EQ(Rect(0, 0, 59, 47), first_raw->parent_bounds());
   EXPECT_EQ(Rect(60, 0, 119, 47), second_raw->parent_bounds());
   EXPECT_EQ(Rect(120, 0, 179, 47), third_raw->parent_bounds());
+}
+
+// Verifies that the shared scroll-motion state does not store caller geometry;
+// widgets pass extents per call so fixed tabs do not inherit scroll bounds.
+TEST(Material3Tabs, ScrollMotionStateDoesNotStoreGeometry) {
+  EXPECT_LT(sizeof(Tabs), sizeof(ScrollableTabs));
+  EXPECT_LE(sizeof(scroll_motion::State), 48U);
+  EXPECT_LE(sizeof(scroll_motion::Geometry), 16U);
+}
+
+// Verifies that scrollable tabs use intrinsic child widths and the Material 3
+// 52dp leading inset instead of fixed equal-width slots.
+TEST(Material3Tabs, ScrollableLayoutUsesIntrinsicWidthsAndLeadingInset) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+
+  ScrollableTabs tabs(context);
+  auto first = std::make_unique<Tab>(context, "One");
+  auto second = std::make_unique<Tab>(context, "Much longer label");
+  Tab* first_raw = first.get();
+  Tab* second_raw = second.get();
+  tabs.addTab(std::move(first));
+  tabs.addTab(std::move(second));
+
+  tabs.measure(WidthSpec::Exactly(140), HeightSpec::Exactly(48));
+  tabs.layout(Rect(0, 0, 139, 47));
+
+  EXPECT_EQ(TabsMode::kScrollable, tabs.mode());
+  EXPECT_EQ(Scaled(52), first_raw->offsetLeft());
+  EXPECT_EQ(first_raw->offsetLeft() + first_raw->width(),
+            second_raw->offsetLeft());
+  EXPECT_GT(second_raw->width(), first_raw->width());
+}
+
+// Verifies that selecting an off-screen tab in scrollable mode adjusts the
+// strip origin so the selected tab is brought into the viewport.
+TEST(Material3Tabs, ScrollableSelectionRevealsSelectedTab) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+
+  ScrollableTabs tabs(context);
+  tabs.addTab(std::make_unique<Tab>(context, "Overview"));
+  tabs.addTab(std::make_unique<Tab>(context, "Heating"));
+  auto history = std::make_unique<Tab>(context, "Long history");
+  Tab* history_raw = history.get();
+  tabs.addTab(std::move(history));
+
+  tabs.measure(WidthSpec::Exactly(140), HeightSpec::Exactly(48));
+  tabs.layout(Rect(0, 0, 139, 47));
+
+  EXPECT_TRUE(tabs.setSelectedIndex(2, false));
+
+  EXPECT_LT(tabs.scrollOffsetForTest(), 0);
+  EXPECT_LT(history_raw->offsetLeft(), tabs.width());
+  EXPECT_GT(history_raw->offsetLeft() + history_raw->width(), 0);
+}
+
+// Verifies that horizontal drag in scrollable mode uses the shared motion path
+// to move the tab strip without changing selection.
+TEST(Material3Tabs, ScrollableDragMovesStripWithoutSelecting) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+
+  ScrollableTabs tabs(context);
+  tabs.addTab(std::make_unique<Tab>(context, "Overview"));
+  tabs.addTab(std::make_unique<Tab>(context, "Heating"));
+  tabs.addTab(std::make_unique<Tab>(context, "Long history"));
+
+  tabs.measure(WidthSpec::Exactly(140), HeightSpec::Exactly(48));
+  tabs.layout(Rect(0, 0, 139, 47));
+
+  ASSERT_EQ(0, tabs.selectedIndex());
+  ASSERT_TRUE(tabs.onDown(40, 20));
+  EXPECT_TRUE(tabs.onScroll(20, 20, -Scaled(30), 0));
+
+  EXPECT_LT(tabs.scrollOffsetForTest(), 0);
+  EXPECT_EQ(0, tabs.selectedIndex());
 }
 
 // Verifies that rows containing an icon tab use the Material 3 64dp container

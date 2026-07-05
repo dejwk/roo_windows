@@ -8,6 +8,8 @@
 #include "roo_display/ui/alignment.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_logging.h"
+#include "roo_windows/core/application.h"
+#include "roo_windows/core/gesture_detector.h"
 #include "roo_windows/core/theme.h"
 
 using roo_display::ClippedStringViewLabel;
@@ -29,6 +31,7 @@ constexpr int16_t kMinIndicatorWidthDp = 24;
 constexpr int16_t kIndicatorHorizontalInsetDp = 2;
 constexpr int16_t kPrimaryIndicatorHeightDp = 3;
 constexpr int16_t kSecondaryIndicatorHeightDp = 2;
+constexpr int16_t kScrollableLeadingInsetDp = 52;
 constexpr int16_t kDividerHeightPx = 1;
 constexpr int16_t kIndicatorFrameMs = 10;
 constexpr unsigned long kIndicatorDurationMs = 200;
@@ -371,6 +374,7 @@ bool Tabs::setSelectedIndex(int index, bool animate) {
   selected_index_ = index;
   updateActivatedStates();
   startIndicatorTransition(old_indicator, targetIndicatorBounds(), animate);
+  onSelectionStateUpdated(old_index, selected_index_, animate);
   onSelectedIndexChanged(old_index, selected_index_);
   return true;
 }
@@ -380,6 +384,12 @@ void Tabs::onTabInvoked(int index) { (void)index; }
 void Tabs::onSelectedIndexChanged(int old_index, int new_index) {
   (void)old_index;
   (void)new_index;
+}
+
+void Tabs::onSelectionStateUpdated(int old_index, int new_index, bool animate) {
+  (void)old_index;
+  (void)new_index;
+  (void)animate;
 }
 
 void Tabs::handleTabClicked(const Tab& tab) {
@@ -536,6 +546,15 @@ void Tabs::execute(roo_scheduler::ExecutionID id) {
   scheduleIndicatorUpdate();
 }
 
+void Tabs::syncIndicatorAfterLayout() {
+  if (static_cast<IndicatorAnimationState>(indicator_animation_state_) ==
+      IndicatorAnimationState::kIdle) {
+    snapIndicatorToSelection();
+  } else {
+    indicator_target_ = targetIndicatorBounds();
+  }
+}
+
 Dimensions Tabs::onMeasure(WidthSpec width, HeightSpec height) {
   if (mode() == TabsMode::kScrollable && !warned_scrollable_) {
     LOG(WARNING) << "Unimplemented: Material3 scrollable tabs";
@@ -571,12 +590,224 @@ void Tabs::onLayout(bool changed, const Rect& rect) {
     tabs_[i]->layout(Rect(x, 0, x + tab_width - 1, row_height - 1));
     x = next_x;
   }
-  if (static_cast<IndicatorAnimationState>(indicator_animation_state_) ==
-      IndicatorAnimationState::kIdle) {
-    snapIndicatorToSelection();
-  } else {
-    indicator_target_ = targetIndicatorBounds();
+  syncIndicatorAfterLayout();
+}
+
+ScrollableTabs::ScrollableTabs(ApplicationContext& context, TabsVariant variant)
+    : Tabs(context, variant, TabsMode::kScrollable),
+      scroll_motion_(),
+      scroll_notification_id_(-1),
+      scroll_x_(0),
+      strip_width_(0),
+      intercepted_gesture_(false) {}
+
+ScrollableTabs::~ScrollableTabs() { cancelPendingScrollUpdate(); }
+
+void ScrollableTabs::setMode(TabsMode mode) {
+  if (this->mode() == mode) return;
+  cancelPendingScrollUpdate();
+  scroll_x_ = 0;
+  scroll_motion_ = scroll_motion::State();
+  intercepted_gesture_ = false;
+  Tabs::setMode(mode);
+}
+
+Dimensions ScrollableTabs::onMeasure(WidthSpec width, HeightSpec height) {
+  if (mode() != TabsMode::kScrollable) {
+    return Tabs::onMeasure(width, height);
   }
+  int16_t desired_width = Scaled(kScrollableLeadingInsetDp);
+  int16_t desired_height = rowHeight();
+  for (int i = 0; i < tabCount(); ++i) {
+    Dimensions child = tabAt(i).measure(WidthSpec::Unspecified(0),
+                                        HeightSpec::Exactly(desired_height));
+    desired_width += child.width();
+  }
+  return Dimensions(width.resolveSize(desired_width),
+                    height.resolveSize(desired_height));
+}
+
+void ScrollableTabs::onLayout(bool changed, const Rect& rect) {
+  if (mode() != TabsMode::kScrollable) {
+    Tabs::onLayout(changed, rect);
+    return;
+  }
+  (void)changed;
+  (void)rect;
+  int count = tabCount();
+  if (count == 0) {
+    strip_width_ = 0;
+    scroll_x_ = 0;
+    snapIndicatorToSelection();
+    return;
+  }
+
+  int16_t row_height = rowHeight();
+  XDim strip_x = Scaled(kScrollableLeadingInsetDp);
+  for (int i = 0; i < count; ++i) {
+    Dimensions child = tabAt(i).measure(WidthSpec::Unspecified(0),
+                                        HeightSpec::Exactly(row_height));
+    strip_x += child.width();
+  }
+  strip_width_ = strip_x;
+  scroll_motion::Geometry geometry = motionGeometry();
+  scroll_motion::Result clamped =
+      scroll_motion_.scrollTo(geometry, scroll_x_, 0, scroll_x_, 0);
+  scroll_x_ = clamped.x;
+
+  XDim x = Scaled(kScrollableLeadingInsetDp) + scroll_x_;
+  for (int i = 0; i < count; ++i) {
+    Dimensions child = tabAt(i).measure(WidthSpec::Unspecified(0),
+                                        HeightSpec::Exactly(row_height));
+    tabAt(i).layout(Rect(x, 0, x + child.width() - 1, row_height - 1));
+    x += child.width();
+  }
+  layoutScrollableChildren();
+  syncIndicatorAfterLayout();
+}
+
+void ScrollableTabs::onSelectionStateUpdated(int old_index, int new_index,
+                                             bool animate) {
+  (void)old_index;
+  (void)new_index;
+  (void)animate;
+  if (mode() == TabsMode::kScrollable) revealSelectedTab();
+}
+
+bool ScrollableTabs::onInterceptTouchEvent(const TouchEvent& event) {
+  if (mode() != TabsMode::kScrollable) return false;
+  if (scroll_motion_.isAnimating()) {
+    intercepted_gesture_ = true;
+    return true;
+  }
+  if (event.type() == TouchEvent::DOWN) {
+    intercepted_gesture_ = false;
+    return false;
+  }
+  if (event.type() != TouchEvent::MOVE) return intercepted_gesture_;
+  if (intercepted_gesture_) return true;
+
+  const GestureDetector& gd = getApplication()->gesture_detector();
+  if (!motionGeometry().shouldClaimDrag(gd.xTotalMoveDelta(),
+                                        gd.yTotalMoveDelta())) {
+    return false;
+  }
+  intercepted_gesture_ = true;
+  return true;
+}
+
+bool ScrollableTabs::onDown(XDim x, YDim y) {
+  (void)x;
+  (void)y;
+  if (mode() != TabsMode::kScrollable) return true;
+  cancelPendingScrollUpdate();
+  applyScrollResult(scroll_motion_.onDown(motionGeometry(), scroll_x_, 0));
+  return true;
+}
+
+bool ScrollableTabs::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
+  (void)x;
+  (void)y;
+  (void)dy;
+  if (mode() != TabsMode::kScrollable || !motionGeometry().canScroll()) {
+    return false;
+  }
+  applyScrollResult(
+      scroll_motion_.onDrag(motionGeometry(), scroll_x_, 0, dx, 0));
+  return true;
+}
+
+bool ScrollableTabs::onFling(XDim x, YDim y, XDim vx, YDim vy) {
+  (void)x;
+  (void)y;
+  (void)vy;
+  if (mode() != TabsMode::kScrollable) return true;
+  scroll_motion::Result result =
+      scroll_motion_.onFling(motionGeometry(), scroll_x_, 0, vx, 0, millis());
+  applyScrollResult(result);
+  if (result.needs_tick) scheduleScrollUpdate();
+  return true;
+}
+
+bool ScrollableTabs::onTouchUp(XDim x, YDim y) {
+  bool handled = Widget::onTouchUp(x, y);
+  if (mode() == TabsMode::kScrollable) {
+    scroll_motion::Result result =
+        scroll_motion_.onTouchUp(motionGeometry(), scroll_x_, 0, millis());
+    applyScrollResult(result);
+    if (result.needs_tick) scheduleScrollUpdate();
+  }
+  intercepted_gesture_ = false;
+  return handled;
+}
+
+void ScrollableTabs::execute(roo_scheduler::ExecutionID id) {
+  if (id != scroll_notification_id_) {
+    Tabs::execute(id);
+    return;
+  }
+  scroll_notification_id_ = -1;
+  scroll_motion::Result result =
+      scroll_motion_.tick(motionGeometry(), scroll_x_, 0, millis());
+  applyScrollResult(result);
+  if (result.needs_tick) scheduleScrollUpdate();
+}
+
+scroll_motion::Geometry ScrollableTabs::motionGeometry() const {
+  XDim min_x = width() < strip_width_ ? width() - strip_width_ : 0;
+  return {min_x, 0, 0, 0, scroll_motion::Axis::kHorizontal};
+}
+
+void ScrollableTabs::applyScrollResult(const scroll_motion::Result& result) {
+  if (!result.changed && scroll_x_ == result.x) return;
+  scroll_x_ = result.x;
+  layoutScrollableChildren();
+  syncIndicatorAfterLayout();
+  invalidateInterior();
+}
+
+void ScrollableTabs::layoutScrollableChildren() {
+  int16_t row_height = rowHeight();
+  XDim x = Scaled(kScrollableLeadingInsetDp) + scroll_x_;
+  for (int i = 0; i < tabCount(); ++i) {
+    Tab& tab = tabAt(i);
+    XDim tab_width = tab.width();
+    tab.layout(Rect(x, 0, x + tab_width - 1, row_height - 1));
+    x += tab_width;
+  }
+}
+
+XDim ScrollableTabs::selectedTabCenterInStrip() const {
+  int selected = selectedIndex();
+  if (selected < 0 || selected >= tabCount()) return 0;
+  const Tab& tab = tabAt(selected);
+  return tab.offsetLeft() - scroll_x_ + (tab.width() - 1) / 2;
+}
+
+void ScrollableTabs::revealSelectedTab() {
+  if (selectedIndex() < 0 || width() <= 0 || strip_width_ <= width()) {
+    applyScrollResult(
+        scroll_motion_.scrollTo(motionGeometry(), scroll_x_, 0, 0, 0));
+    return;
+  }
+  XDim center = selectedTabCenterInStrip();
+  XDim target = width() / 2 - center;
+  scroll_motion::Result result =
+      scroll_motion_.scrollTo(motionGeometry(), scroll_x_, 0, target, 0);
+  applyScrollResult(result);
+}
+
+void ScrollableTabs::cancelPendingScrollUpdate() {
+  if (scroll_notification_id_ > 0) {
+    scheduler_.cancel(scroll_notification_id_);
+    scroll_notification_id_ = -1;
+  }
+}
+
+void ScrollableTabs::scheduleScrollUpdate() {
+  cancelPendingScrollUpdate();
+  scroll_notification_id_ =
+      scheduler_.scheduleAfter(roo_time::Millis(kIndicatorFrameMs), *this);
 }
 
 }  // namespace material3
