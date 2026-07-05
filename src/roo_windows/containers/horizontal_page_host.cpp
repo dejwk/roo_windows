@@ -11,7 +11,7 @@ namespace roo_windows {
 
 namespace {
 
-constexpr float kEdgeResistanceFactor = 0.25f;
+constexpr int16_t kMaxOvershootPx = Scaled(40);
 constexpr int16_t kSettleFrameMs = 10;
 constexpr unsigned long kSettleDurationMs = 180;
 
@@ -38,6 +38,7 @@ HorizontalPageHost::HorizontalPageHost(ApplicationContext& context)
       intercepted_gesture_(false),
       settled_index_(-1),
       target_index_(-1),
+      raw_drag_position_(0.0f),
       page_position_(0.0f) {
   for (int i = 0; i < kSlotCount; ++i) {
     slot_wrappers_[i] = std::make_unique<BlitCacheContainer>(context);
@@ -57,6 +58,7 @@ void HorizontalPageHost::addPage(WidgetRef page) {
   if (settled_index_ < 0) {
     settled_index_ = 0;
     target_index_ = 0;
+    raw_drag_position_ = 0.0f;
     page_position_ = 0.0f;
     syncActiveSlots();
     requestLayout();
@@ -80,6 +82,7 @@ void HorizontalPageHost::clearPages() {
   page_to_slot_.clear();
   settled_index_ = -1;
   target_index_ = -1;
+  raw_drag_position_ = 0.0f;
   page_position_ = 0.0f;
   requestLayout();
   invalidateInterior();
@@ -102,7 +105,11 @@ bool HorizontalPageHost::setCurrentIndex(int index, bool animate) {
   return true;
 }
 
-void HorizontalPageHost::paint(PaintContext& ctx) const { (void)ctx; }
+void HorizontalPageHost::paint(PaintContext& ctx) const {
+  // Container paints this surface after children. Child paint exclusions keep
+  // active pages intact, so this clears only exposed overscroll strips.
+  Container::paint(ctx);
+}
 
 void HorizontalPageHost::onSettledIndexChanged(int old_index, int new_index) {
   (void)old_index;
@@ -186,8 +193,8 @@ bool HorizontalPageHost::onDown(XDim x, YDim y) {
   cancelPendingUpdate();
   animation_state_ = AnimationState::kIdle;
   dragging_ = true;
-  page_position_ = settled_index_ >= 0 ? settled_index_ : 0.0f;
-  setTargetIndex(settled_index_);
+  raw_drag_position_ = page_position_;
+  setTargetIndex(resolveGestureSettleTarget(0));
   syncActiveSlots();
   updateActivePagePositions();
   return true;
@@ -202,9 +209,10 @@ bool HorizontalPageHost::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
   }
   if (!dragging_) {
     dragging_ = true;
+    raw_drag_position_ = page_position_;
   }
-  float raw_position = page_position_ - ((float)dx / (float)width());
-  page_position_ = applyEdgeResistance(raw_position);
+  raw_drag_position_ -= (float)dx / (float)width();
+  page_position_ = applyEdgeResistance(raw_drag_position_);
   setTargetIndex(resolveGestureSettleTarget(0));
   syncActiveSlots();
   updateActivePagePositions();
@@ -409,6 +417,7 @@ void HorizontalPageHost::snapToIndex(int target_index) {
 
   int old_index = settled_index_;
   settled_index_ = target_index;
+  raw_drag_position_ = target_index;
   page_position_ = target_index;
   syncActiveSlots();
   updateActivePagePositions();
@@ -452,11 +461,18 @@ float HorizontalPageHost::applyEdgeResistance(float raw_position) const {
   float min_pos = settled_index_ - (settled_index_ > 0 ? 1.0f : 0.0f);
   float max_pos = settled_index_ +
                   (settled_index_ + 1 < pageCount() ? 1.0f : 0.0f);
+  if (width() <= 0) return Clamp(raw_position, min_pos, max_pos);
   if (raw_position < min_pos) {
-    return min_pos + (raw_position - min_pos) * kEdgeResistanceFactor;
+    float excess_px = (raw_position - min_pos) * width();
+    float overshoot_px =
+        kMaxOvershootPx * excess_px / (-excess_px + kMaxOvershootPx);
+    return min_pos + overshoot_px / width();
   }
   if (raw_position > max_pos) {
-    return max_pos + (raw_position - max_pos) * kEdgeResistanceFactor;
+    float excess_px = (raw_position - max_pos) * width();
+    float overshoot_px =
+        kMaxOvershootPx * excess_px / (excess_px + kMaxOvershootPx);
+    return max_pos + overshoot_px / width();
   }
   return raw_position;
 }

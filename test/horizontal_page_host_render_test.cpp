@@ -44,6 +44,12 @@ TEST_F(HorizontalPageHostRenderTest, RevealedStripRepaintsWithBlitSupport) {
   ASSERT_TRUE(refresh());
   EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(10, 20));
   EXPECT_EQ(QuantizeToArgb4444(color::Blue), pixelAt(110, 20));
+
+  host_ptr->onScroll(0, 0, 130, 0);
+
+  ASSERT_TRUE(refresh());
+  EXPECT_NE(QuantizeToArgb4444(color::Red), pixelAt(10, 20));
+  EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(40, 20));
 }
 
 class NoBlitOffscreenDevice : public OffscreenDevice<Argb4444> {

@@ -292,8 +292,8 @@ TEST(HorizontalPageHost, DragUpdatesTargetIndexAtSettleThreshold) {
   EXPECT_EQ(0, host.targetChanges()[1].new_index);
 }
 
-// Verifies edge drag resistance at the first page applies one-quarter motion
-// beyond the boundary.
+// Verifies edge drag resistance at the first page uses capped scroll-panel
+// style damping beyond the boundary.
 TEST(HorizontalPageHost, EdgeResistanceDampsOutOfRangeDrag) {
   roo_scheduler::Scheduler scheduler;
   Environment bootstrap(scheduler);
@@ -312,7 +312,31 @@ TEST(HorizontalPageHost, EdgeResistanceDampsOutOfRangeDrag) {
   host.onDown(0, 0);
   host.onScroll(0, 0, 100, 0);
 
-  EXPECT_EQ(Rect(25, 0, 124, 39), SlotBoundsForPage(first_ptr));
+  EXPECT_EQ(Rect(29, 0, 128, 39), SlotBoundsForPage(first_ptr));
+}
+
+// Verifies edge resistance is applied from accumulated raw drag distance, not
+// from the previously damped visual page position.
+TEST(HorizontalPageHost, EdgeResistanceAccumulatesRawDrag) {
+  roo_scheduler::Scheduler scheduler;
+  Environment bootstrap(scheduler);
+  ApplicationContext context = MakeContext(bootstrap);
+
+  TestHorizontalPageHost host(context);
+  auto first = std::make_unique<ProbeWidget>(context, Dimensions(20, 10));
+  auto second = std::make_unique<ProbeWidget>(context, Dimensions(30, 12));
+  ProbeWidget* first_ptr = first.get();
+  host.addPage(std::move(first));
+  host.addPage(std::move(second));
+
+  host.measure(WidthSpec::Exactly(100), HeightSpec::Exactly(40));
+  host.layout(Rect(0, 0, 99, 39));
+
+  host.onDown(0, 0);
+  host.onScroll(0, 0, 100, 0);
+  host.onScroll(0, 0, 100, 0);
+
+  EXPECT_EQ(Rect(33, 0, 132, 39), SlotBoundsForPage(first_ptr));
 }
 
 // Verifies the phase-3 size budget with pointer-size-aware limits so bounded

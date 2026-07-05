@@ -51,7 +51,7 @@ class HorizontalPageHost : public Container, private roo_scheduler::Executable {
   /// In phase 2, adjacent targets animate and non-adjacent targets snap.
   bool setCurrentIndex(int index, bool animate = true);
 
-  /// Page host contributes no local surface paint in phase 1.
+  /// Clears invalidated viewport regions left uncovered by active pages.
   void paint(PaintContext& ctx) const override;
 
  protected:
@@ -176,6 +176,7 @@ class HorizontalPageHost : public Container, private roo_scheduler::Executable {
 
   int settled_index_;
   int target_index_;
+  float raw_drag_position_;
   float page_position_;
 };
 
