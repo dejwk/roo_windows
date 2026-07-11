@@ -1,213 +1,210 @@
-# Roo Windows Theme Color Token Model Design
+# Roo Windows Design-System-Independent Color Theme Design
+
+## Status
+
+Proposed design, revised after review. This replaces the earlier plan to
+rename the Material 3 palette into a large framework-level `ColorToken`
+vocabulary.
 
 ## Objective
 
-Define a version-agnostic color token model for [theme.h](../src/roo_windows/core/theme.h) so the shared `roo_windows` `Theme` is not inherently a Material 3 object, while keeping Material 3 widgets natural to implement and preserving the embedded-first RAM profile of the framework.
+Untie framework color semantics from Material 3 while:
+
+- keeping generic `roo_windows` widgets usable with other design systems,
+- keeping Material 3 widgets natural and exact to implement,
+- preserving the current default appearance,
+- adding no per-widget RAM,
+- keeping lookup allocation-free and suitable for embedded targets, and
+- allowing incremental migration from `ColorRole` and `ColorTheme`.
+
+Design systems do not need to be dynamically switchable. A single application
+theme may, however, expose several design-system themes at once so components
+from different systems can coexist during incremental evolution.
 
 ## Motivation
 
-The current theme API hard-codes Material 3 into framework core:
+The current [theme.h](../src/roo_windows/core/theme.h) combines three concerns:
 
-- `ColorRole` names the Material 3 role set,
-- `ColorTheme` stores a Material 3 palette directly,
-- helper behavior such as `contentColorFor()`, `accentColorFor()`, and `Theme::opacity()` is defined by Material 3-specific switches,
-- and Material 3 widgets frequently reach straight into `theme.color.<material3-name>`.
+1. a Material 3 color scheme,
+2. generic framework color needs, and
+3. Material 3 state-layer policy.
 
-That makes the core theme model harder to reuse for non-Material products and also makes future token systems look like second-class adapters layered on top of a Material 3 core. The core theme model should instead describe shared semantic tokens, with Material 3 provided as a first-class alias layer over that core.
+`ColorRole` is the M3 scheme expressed in framework core, `ColorTheme` stores
+M3 fields directly, generic helpers derive colors using Material-shaped
+switches, and `Theme::opacity()` encodes Material-style state-layer policy.
 
-## Background
+Renaming those roles would remove branding without removing the dependency. A
+palette containing primary, secondary, tertiary, paired `on*` roles, container
+pairs, five surface levels, inverse roles, outline variants, and surface tint
+is still Material 3-shaped even if its surface fields receive shorter names.
 
-The current implementation surface in [theme.h](../src/roo_windows/core/theme.h) and [theme.cpp](../src/roo_windows/core/theme.cpp) mixes three concerns into one type family:
-
-1. storage for concrete colors,
-2. semantic identity for background and foreground roles,
-3. and Material 3-specific helper policy for derived content, highlight, and interaction overlay colors.
-
-That coupling shows up in both generic and Material 3 code:
-
-- legacy and framework-level widgets use `contentColorFor()`, `accentColorFor()`, `defaultColor()`, `highlighterColor()`, and `Theme::opacity()` as general-purpose helpers,
-- Material 3 widgets such as [button.cpp](../src/roo_windows/material3/button/button.cpp) and [list.cpp](../src/roo_windows/material3/list/list.cpp) often resolve colors from direct palette fields rather than from a token indirection,
-- current design docs such as [material3_buttons_design.md](material3_buttons_design.md) and [material3_lists_design.md](material3_lists_design.md) already describe component defaults as token-backed rather than as hard-coded colors.
-
-The embedded constraints remain unchanged:
-
-- `Theme` is shared state, not per-widget state,
-- token lookup must stay allocation-free,
-- string-keyed maps are not acceptable on the hot path,
-- and the design must not add per-instance RAM cost to widgets.
+The design instead separates the small contract needed by generic framework
+widgets from the complete vocabulary and policy owned by a design system.
 
 ## Requirements
 
-1. The core `roo_windows` theme API must define a semantic color vocabulary that is not branded as Material 3.
-2. Material 3 widgets must remain natural to implement, with direct support for the Material 3 token names already used in component docs.
-3. The default theme returned by `DefaultTheme()` must remain visually equivalent to the current Material 3 default scheme.
-4. Generic framework helpers must keep deriving content, emphasis, and interaction overlay colors from a token identity rather than from scattered component-specific logic.
-5. The design must add no per-widget RAM cost and should not materially increase shared theme RAM.
-6. Migration must be incremental: core and Material 3 code must be able to move over in phases instead of through a flag-day rewrite.
-7. Reverse-mapping arbitrary concrete colors back to semantic tokens must stop being a primary design assumption.
+1. Framework core must not define or require the Material 3 vocabulary.
+2. Generic widgets depend only on a small framework color contract.
+3. Material 3 retains its exact tokens and state semantics in
+   `roo_windows::material3`.
+4. `Theme` may reference multiple typed design-system themes simultaneously;
+   runtime switching is not required.
+5. `DefaultTheme()` remains visually equivalent to the current M3 theme.
+6. Resolution is allocation-free and uses no strings or dynamic maps.
+7. The change adds no per-widget RAM. A modest increase in the singleton
+   application theme is acceptable.
+8. Migration does not require a flag-day rewrite.
+9. Semantic identity, not concrete-color equality, drives derived behavior.
+10. Inheritance, absence of paint, transparency, and arbitrary concrete-color
+    overrides have distinct representations.
+
+## Non-Goals
+
+- Runtime design-system switching.
+- A universal token vocabulary for every future design system.
+- Making an M3 widget adopt another system's styling. M3 widgets remain M3,
+  but may coexist with widgets from later systems in one application.
+- Nearest-color or arbitrary-color-to-token inference.
+- Widget-local theme maps or per-instance theme providers.
 
 ## Design Overview
 
-The color model is split into three layers.
+The design has three layers:
 
-1. A core `ColorToken` vocabulary in `roo_windows` defines the shared semantic palette used by the framework.
-2. A compile-time `ColorTokenTraits` table defines derived behavior for each token: default foreground token, emphasis token, and interaction-opacity bucket.
-3. Design-system namespaces such as `material3` expose alias enums and token mapping helpers over the core vocabulary.
+1. **Framework contract.** Core defines only roles and interaction information
+   required by generic framework behavior.
+2. **Design-system theme.** M3 owns its complete scheme, token enum, and state
+   policy. Other systems may define entirely different concrete types.
+3. **Typed design-system slots.** The singleton application `Theme` owns its
+   framework theme and contains nullable pointers to supported design-system
+   themes. More than one slot may be populated.
 
-The important boundary is that `Theme` owns only the core palette and core interaction buckets. Material 3 support lives beside that core as a zero-allocation adapter, not inside the core type names.
+There is no dynamic registry, virtual resolver, tagged payload, or string
+lookup. Generic code uses the owned framework theme. Design-system widgets use
+a typed checked accessor for their system.
 
-The core decisions are:
-
-1. rename the framework-level role vocabulary from a Material 3 role set to a neutral `ColorToken` set,
-2. keep broad cross-system token names such as `primary`, `secondary`, `tertiary`, `background`, `surface`, and `error`, because those names are not uniquely Material 3,
-3. rename the Material 3-specific surface-container ladder to neutral ordered surface levels in the core vocabulary,
-4. move helper behavior from hard-coded `switch` statements to token traits,
-5. keep Material 3 names available through a dedicated alias namespace,
-6. and make token identity, not raw color equality, the primary input to derived color and opacity logic.
-
-## Design Details
-
-### Core Token Vocabulary
-
-The core enum becomes a semantic token vocabulary rather than a Material 3 vocabulary:
-
-```cpp
-enum class ColorToken : uint8_t {
-  kUndefined,
-
-  kPrimary,
-  kOnPrimary,
-  kPrimaryContainer,
-  kOnPrimaryContainer,
-
-  kSecondary,
-  kOnSecondary,
-  kSecondaryContainer,
-  kOnSecondaryContainer,
-
-  kTertiary,
-  kOnTertiary,
-  kTertiaryContainer,
-  kOnTertiaryContainer,
-
-  kBackground,
-  kOnBackground,
-
-  kSurface,
-  kSurfaceLowest,
-  kSurfaceLow,
-  kSurfaceMid,
-  kSurfaceHigh,
-  kSurfaceHighest,
-  kOnSurface,
-  kSurfaceVariant,
-  kOnSurfaceVariant,
-
-  kError,
-  kOnError,
-  kErrorContainer,
-  kOnErrorContainer,
-
-  kOutline,
-  kOutlineVariant,
-  kInverseSurface,
-  kInverseOnSurface,
-  kInversePrimary,
-  kSurfaceTint,
-};
+```text
+Theme                              singleton application theme
+  |
+  +-- framework : FrameworkTheme  owned; generic widgets depend here
+  |
+  +-- material3 : const material3::Theme*  nullable typed slot
+  |
+  `-- future slots, e.g. const material4::Theme*
 ```
 
-This is intentionally conservative. The framework already relies on a palette that is richer than a minimal `background / foreground / accent` triple, and reducing the vocabulary to a tiny abstract set would force component-local escape hatches immediately. The chosen vocabulary keeps the broadly reusable semantic families and only removes the names that are specifically tied to Material 3 surface-container terminology.
+For example, a future application may populate both the M3 and M4 slots while
+new components migrate incrementally. The framework contract remains
+unchanged, and old M3 widgets continue to resolve the M3 theme.
 
-The core palette storage becomes `ColorPalette`, not `ColorTheme`.
+## Framework Color Contract
 
-`ColorPalette` stores exactly one concrete `Color` per core token except for the legacy `primaryVariant` and `secondaryVariant` fields. Those two fields are not part of the current `ColorRole` enum, and their only current semantic use is backward compatibility. They move out of the core palette model and survive only as compatibility aliases during migration.
+### Vocabulary
 
-That keeps shared theme RAM flat or slightly smaller:
-
-- current `ColorTheme` stores 35 colors,
-- the proposed core palette stores 33 colors,
-- the removed `primaryVariant` and `secondaryVariant` values save two shared `Color` slots,
-- and the new token-traits table lives in flash, not in widget RAM.
-
-### Token Traits Replace Material 3 Helper Switches
-
-The core model adds a small traits table for token-derived behavior:
+Core defines the smallest vocabulary justified by generic behavior. The
+initial candidate is:
 
 ```cpp
-enum class InteractionColorBucket : uint8_t {
-  kAccent,
-  kSupporting,
+enum class FrameworkColorRole : uint8_t {
   kCanvas,
   kSurface,
+  kContent,
+  kMutedContent,
+  kEmphasis,
+  kOutline,
   kCritical,
-};
-
-struct ColorTokenTraits {
-  ColorToken content;
-  ColorToken emphasis;
-  InteractionColorBucket interaction_bucket;
+  kOnCritical,
 };
 ```
 
-Each token that can reasonably act as a background token gets one traits entry.
+- `kCanvas` is the application/window background.
+- `kSurface` is the default owned widget surface.
+- `kContent` is ordinary foreground content.
+- `kMutedContent` is supporting or lower-emphasis content.
+- `kEmphasis` is the default action, selection, or highlight color.
+- `kOutline` is the default separator or boundary color.
+- `kCritical` and `kOnCritical` support generic destructive/error UI where it
+  already exists.
 
-Examples:
+This list is provisional until current call sites are classified. A role is
+added only when design-system-independent framework behavior needs it. M3
+component requirements are not sufficient justification. Core must not contain
+primary/secondary/tertiary families, surface-container levels, inverse primary,
+or surface tint merely to accommodate M3.
 
-- `kPrimary` maps to `{kOnPrimary, kOnPrimary, kAccent}`.
-- `kPrimaryContainer` maps to `{kOnPrimaryContainer, kOnPrimaryContainer, kAccent}`.
-- `kSecondary` and `kTertiary` families map to `kSupporting`.
-- `kBackground` maps to `{kOnBackground, kPrimary, kCanvas}`.
-- the full surface ladder maps to `kSurface`, with content `kOnSurface` and emphasis `kPrimary`.
-- `kSurfaceVariant` maps to `{kOnSurfaceVariant, kPrimary, kSurface}`.
-- `kError` and `kErrorContainer` map to `kCritical`.
-- `kInverseSurface` maps to `{kInverseOnSurface, kInversePrimary, kSurface}`.
+### Storage and Resolution
 
-The helper APIs then become table lookups rather than Material 3 logic baked into the core type:
-
-- `ColorPalette::contentColorFor(ColorToken bg_token)` resolves `traits(bg_token).content`,
-- `ColorPalette::emphasisColorFor(ColorToken bg_token)` resolves `traits(bg_token).emphasis`,
-- `Theme::opacity(ColorToken bg_token, InteractionState state)` first resolves `traits(bg_token).interaction_bucket` and then indexes the per-state opacity table.
-
-This is the critical decoupling. The core theme stops knowing anything about Material 3 as a design system. It only knows semantic tokens and token traits.
-
-### Interaction Opacity Uses Buckets, Not Material Families
-
-`StateOpacityTheme` becomes a grouped `InteractionOpacityTheme` keyed by `InteractionColorBucket`.
+The application theme owns a small framework scheme. Duplicating this handful
+of colors from a design-system palette is acceptable because `Theme` is shared
+singleton state, not per-widget state. Ownership also prevents generic widgets
+from depending on whichever optional design-system slot happens to be present.
 
 ```cpp
-struct InteractionOpacityValues {
-  uint8_t onAccent;
-  uint8_t onSupporting;
-  uint8_t onCanvas;
-  uint8_t onSurface;
-  uint8_t onCritical;
-};
+struct FrameworkColorScheme {
+  roo_display::Color canvas;
+  roo_display::Color surface;
+  roo_display::Color content;
+  roo_display::Color mutedContent;
+  roo_display::Color emphasis;
+  roo_display::Color outline;
+  roo_display::Color critical;
+  roo_display::Color onCritical;
 
-struct InteractionOpacityTheme {
-  uint8_t disabled;
-  InteractionOpacityValues hover;
-  InteractionOpacityValues focus;
-  InteractionOpacityValues selected;
-  InteractionOpacityValues activated;
-  InteractionOpacityValues pressed;
-  InteractionOpacityValues dragged;
+  constexpr roo_display::Color resolve(FrameworkColorRole role) const;
 };
 ```
 
-This preserves the current data shape almost exactly:
+The resolver handles every enumerator. An out-of-range value is a programming
+error: debug builds assert and release builds use a documented safe fallback.
 
-- the current design already has five effective opacity families,
-- the new names remove direct dependency on `primary`, `secondary`, and `error` terminology,
-- and the number of stored bytes stays the same apart from layout padding that the implementation should pack with `static_assert`s.
+There is no `kUndefined` palette role. Inheritance and absence are widget/API
+states, not colors.
 
-The default values in [theme.cpp](../src/roo_windows/core/theme.cpp) stay numerically identical to today's Material 3 defaults. Only the semantic labels change.
+### Generic Interaction Style
 
-### Material 3 Becomes an Alias Namespace
+Generic widgets currently use hover, focus, selection, activation, press, and
+drag overlays. Core therefore needs a small interaction contract, but it must
+not categorize backgrounds using Material color families.
 
-Material 3 remains a first-class design-system vocabulary, but it no longer owns the core theme types.
+```cpp
+enum class InteractionState : uint8_t {
+  kHover,
+  kFocus,
+  kSelected,
+  kActivated,
+  kPressed,
+  kDragged,
+};
 
-The new alias layer lives under `roo_windows::material3`:
+struct FrameworkInteractionTheme {
+  uint8_t disabledContentOpacity;
+
+  constexpr roo_display::Color resolve(FrameworkColorRole container,
+                                       InteractionState state) const;
+};
+
+struct FrameworkTheme {
+  FrameworkColorScheme color;
+  FrameworkInteractionTheme interaction;
+};
+```
+
+The returned color is the complete interaction-layer color, including its
+final alpha channel. Fully transparent means that no interaction layer is
+painted. There is no separate layer-opacity value because that would make it
+ambiguous whether the scalar replaces or multiplies an existing color alpha.
+
+`disabledContentOpacity` remains separate because it is a transformation
+applied to an arbitrary content color rather than a resolved overlay color.
+
+The exact storage may be a compact table, a switch over shared values, or a
+design-selected `constexpr` policy. Alternatives must be measured on supported
+toolchains, exploiting repeated values and flash-resident tables where
+reliable. No state is added to widgets.
+
+## Material 3 Theme
+
+M3 owns its full vocabulary without translating it through framework tokens:
 
 ```cpp
 namespace roo_windows::material3 {
@@ -248,313 +245,339 @@ enum class ColorToken : uint8_t {
   kSurfaceTint,
 };
 
-constexpr roo_windows::ColorToken ToCoreToken(ColorToken token);
-
-}  // namespace roo_windows::material3
-```
-
-The mapping is one-to-one for most tokens. The only renamed family is the surface ladder:
-
-| Material 3 token | Core token |
-| --- | --- |
-| `kSurfaceContainerLowest` | `kSurfaceLowest` |
-| `kSurfaceContainerLow` | `kSurfaceLow` |
-| `kSurfaceContainer` | `kSurfaceMid` |
-| `kSurfaceContainerHigh` | `kSurfaceHigh` |
-| `kSurfaceContainerHighest` | `kSurfaceHighest` |
-
-This gives Material 3 widgets a natural vocabulary without making the shared `Theme` type a Material 3 type.
-
-### Component Token Tables Store Tokens, Not Colors
-
-Component-local defaults should stop reaching directly into palette fields. Instead, they should store token identity and resolve colors through the palette.
-
-For example, the token set inside [button.cpp](../src/roo_windows/material3/button/button.cpp) becomes:
-
-```cpp
-struct ButtonTokens {
-  ColorToken container;
-  ColorToken content;
-  ColorToken outline;
-  uint8_t resting_elevation;
-  uint8_t pressed_elevation;
-};
-```
-
-Material 3 button variants then resolve to tokens first:
-
-- filled: `kPrimary` / `kOnPrimary`,
-- filled tonal: `kSecondaryContainer` / `kOnSecondaryContainer`,
-- elevated: `kSurfaceLow` / `kPrimary`,
-- outlined: transparent container with `kOnSurfaceVariant` content and `kOutlineVariant` outline.
-
-The paint path resolves concrete colors at the end through `theme.color.resolve(token)`.
-
-This keeps the component semantics token-backed, matches the direction already described in [material3_buttons_design.md](material3_buttons_design.md) and [material3_lists_design.md](material3_lists_design.md), and makes it possible for a different design system to reuse the same component structure with a different token table.
-
-### Raw-Color Reverse Lookup Becomes Compatibility-Only
-
-The current `roleForColor(Color)` helper is a Material 3-era convenience that assumes the active theme is a closed and exact palette. That assumption becomes weaker as soon as the theme supports non-Material or app-specific token assignments.
-
-The new design therefore makes token identity primary and raw-color reverse lookup secondary:
-
-1. widgets that derive other colors from a background should carry or return a token identity where possible,
-2. generic helpers such as `defaultColor()` and `highlighterColor()` should resolve from the widget's container token, not from a concrete color,
-3. `roleForColor(Color)` survives only as a migration shim for exact palette matches inside the core palette,
-4. and new code should not use concrete-color overloads as the main derivation path.
-
-This avoids building a generalized "find the nearest semantic token for this random color" subsystem into the framework core.
-
-### Migration Strategy
-
-Migration happens in place and keeps current behavior stable.
-
-1. Add the new `ColorToken`, `ColorPalette`, traits table, and grouped interaction opacity types in core, while keeping compatibility wrappers for current helper names.
-2. Switch `Theme::opacity()` and palette helper methods to token-traits resolution and add focused unit tests that prove equivalence with the current Material 3 default theme.
-3. Add the `material3::ColorToken` alias namespace and update representative Material 3 widgets to use token tables instead of direct palette fields.
-4. Migrate remaining framework and legacy widgets off raw-color reverse lookup where a token is already available from `containerRole()` or an equivalent surface hook.
-5. Remove the deprecated `primaryVariant` and `secondaryVariant` storage from the core theme once no in-repo code reads them.
-
-No widget needs new per-instance state for this migration. Widgets already store role-like information where they need it, and the proposal converts those values from Material 3 role names to neutral token names.
-
-## Proposed API
-
-```cpp
-namespace roo_windows {
-
-enum class ColorToken : uint8_t;
-enum class InteractionState : uint8_t;
-enum class InteractionColorBucket : uint8_t;
-
-struct ColorTokenTraits {
-  ColorToken content;
-  ColorToken emphasis;
-  InteractionColorBucket interaction_bucket;
+struct ColorScheme {
+  // Keep concrete fields for cheap aggregate initialization unless measuring
+  // shows an indexed representation to be smaller or clearer.
+  constexpr roo_display::Color resolve(ColorToken token) const;
 };
 
-struct ColorPalette {
-  roo_display::Color primary;
-  roo_display::Color onPrimary;
-  roo_display::Color primaryContainer;
-  roo_display::Color onPrimaryContainer;
-  roo_display::Color secondary;
-  roo_display::Color onSecondary;
-  roo_display::Color secondaryContainer;
-  roo_display::Color onSecondaryContainer;
-  roo_display::Color tertiary;
-  roo_display::Color onTertiary;
-  roo_display::Color tertiaryContainer;
-  roo_display::Color onTertiaryContainer;
-  roo_display::Color background;
-  roo_display::Color onBackground;
-  roo_display::Color surface;
-  roo_display::Color surfaceLowest;
-  roo_display::Color surfaceLow;
-  roo_display::Color surfaceMid;
-  roo_display::Color surfaceHigh;
-  roo_display::Color surfaceHighest;
-  roo_display::Color onSurface;
-  roo_display::Color surfaceVariant;
-  roo_display::Color onSurfaceVariant;
-  roo_display::Color error;
-  roo_display::Color onError;
-  roo_display::Color errorContainer;
-  roo_display::Color onErrorContainer;
-  roo_display::Color outline;
-  roo_display::Color outlineVariant;
-  roo_display::Color inverseSurface;
-  roo_display::Color inverseOnSurface;
-  roo_display::Color inversePrimary;
-  roo_display::Color surfaceTint;
-
-  roo_display::Color resolve(ColorToken token) const;
-  ColorTokenTraits traits(ColorToken token) const;
-  roo_display::Color contentColorFor(ColorToken bg_token) const;
-  roo_display::Color emphasisColorFor(ColorToken bg_token) const;
-};
-
-struct InteractionOpacityValues {
-  uint8_t onAccent;
-  uint8_t onSupporting;
-  uint8_t onCanvas;
-  uint8_t onSurface;
-  uint8_t onCritical;
-};
-
-struct InteractionOpacityTheme {
-  uint8_t disabled;
-  InteractionOpacityValues hover;
-  InteractionOpacityValues focus;
-  InteractionOpacityValues selected;
-  InteractionOpacityValues activated;
-  InteractionOpacityValues pressed;
-  InteractionOpacityValues dragged;
+struct StateLayerTheme {
+  constexpr roo_display::Color resolve(ColorToken container,
+                                       InteractionState state) const;
 };
 
 struct Theme {
-  ColorPalette color;
-  InteractionOpacityTheme state;
-
-  uint8_t opacity(ColorToken bg_token, InteractionState interaction) const;
+  ColorScheme color;
+  StateLayerTheme state;
 };
 
-}  // namespace roo_windows
-
-namespace roo_windows::material3 {
-
-enum class ColorToken : uint8_t;
-constexpr roo_windows::ColorToken ToCoreToken(ColorToken token);
+FrameworkTheme MakeFrameworkTheme(const Theme& material_theme);
 
 }  // namespace roo_windows::material3
 ```
 
-Compatibility rules:
+Direct color fields remain acceptable inside M3 code when clearer. Token
+lookup is primarily for component token tables. M3 state layers, disabled
+compositing, and component-specific policy remain in `material3`; they are not
+generalized into core traits.
 
-1. `DefaultTheme()` continues to return the current Material 3 values, expressed through the new core palette fields.
-2. Current helper names such as `defaultColor()` and `highlighterColor()` stay available during migration as wrappers over `contentColorFor()` and `emphasisColorFor()`.
-3. Current `ColorRole`-based call sites migrate to `ColorToken` in phases; the old enum remains only as a temporary compatibility shim.
+`MakeFrameworkTheme()` is explicit initialization policy owned by the M3
+integration. For the default theme its mapping is expected to include:
 
-## Implementation Plan
+| Framework role | Default Material 3 source |
+| --- | --- |
+| `kCanvas` | `kBackground` |
+| `kSurface` | `kSurface` |
+| `kContent` | `kOnSurface` |
+| `kMutedContent` | `kOnSurfaceVariant` |
+| `kEmphasis` | `kPrimary` |
+| `kOutline` | `kOutlineVariant` |
+| `kCritical` | `kError` |
+| `kOnCritical` | `kOnError` |
 
-Implementation work for these phases follows the repo-local [roo_windows widget authoring instruction](../.github/instructions/roo-windows-widget-authoring.instructions.md).
+These are integration defaults, not universal equivalences.
 
-### Phase 1: Land the Neutral Core Token Types
+## Typed Design-System Theme Slots
 
-Code slice:
+The application theme contains an owned framework theme and typed nullable
+pointers for supported systems:
 
-1. Add `ColorToken`, `ColorPalette`, `InteractionColorBucket`, `ColorTokenTraits`, and `InteractionOpacityTheme` in [theme.h](../src/roo_windows/core/theme.h).
-2. Keep `DefaultTheme()` numerically identical to the current Material 3 defaults in [theme.cpp](../src/roo_windows/core/theme.cpp).
-3. Keep compatibility wrappers for the old helper names so existing code still builds.
-4. Do not migrate any widget code in this phase.
+```cpp
+namespace roo_windows::material3 {
+struct Theme;
+}
 
-Proposed commit message:
+namespace roo_windows {
 
-> Theme colors Phase 1: add neutral core token types.
->
-> Introduce a version-agnostic `ColorToken` and `ColorPalette` model in core
-> theme code, together with traits-driven helper hooks and compatibility
-> wrappers that preserve the current Material 3 default theme.
+struct Theme {
+  FrameworkTheme framework;
+  const material3::Theme* material3_theme = nullptr;
 
-Validation: add a focused `theme_color_tokens_test` target that checks token
-resolution, traits mapping, and exact equality between the old default colors
-and the new `DefaultTheme()` values.
+  bool hasMaterial3Theme() const { return material3_theme != nullptr; }
 
-### Phase 2: Switch Core Helper Logic to Traits and Buckets
+  // Precondition: hasMaterial3Theme(). Debug builds assert this condition.
+  const material3::Theme& material3Theme() const;
 
-Code slice:
+  // A future system can add another independent typed slot:
+  // const material4::Theme* material4_theme = nullptr;
+};
 
-1. Reimplement `contentColorFor()`, `emphasisColorFor()`, `defaultColor()`, and `highlighterColor()` on top of the traits table.
-2. Reimplement `Theme::opacity()` on top of `InteractionColorBucket`.
-3. Keep `roleForColor(Color)` only as a compatibility shim for exact palette matches.
-4. Add narrow tests for representative background tokens from each interaction bucket.
+}  // namespace roo_windows
+```
 
-Proposed commit message:
+The accessor is preferable to scattered direct pointer dereferences. M3
+widgets call `theme.material3Theme()` and may rely on the application contract
+that an M3 theme is installed. They do not silently fall back to
+`DefaultTheme()` when the slot is null: doing so would hide application
+configuration errors and could mix unrelated themes.
 
-> Theme colors Phase 2: derive helper behavior from token traits.
->
-> Move content, emphasis, and interaction-opacity resolution onto the new
-> token-traits model so the shared theme behavior no longer depends on
-> Material 3-specific switch statements.
+Debug builds must assert the accessor precondition. Because the framework does
+not use exceptions, a null dereference remains a caller/configuration error in
+release builds unless the repository has an established always-on fatal-check
+facility suitable for this path. Code that conditionally composes optional M3
+content can query `hasMaterial3Theme()` first.
 
-Validation: run `bazel test //:theme_color_tokens_test` with content, emphasis,
-and opacity cases for `primary`, `surface`, `background`, `error`, and
-`inverseSurface`.
+All pointed-to themes must outlive the application `Theme` and every widget
+using it. Normal usage is static immutable storage. `Theme` does not own,
+allocate, mutate, or delete design-system themes.
 
-### Phase 3: Add the Material 3 Alias Namespace and Migrate Representative Widgets
+Adding M4 later adds another typed pointer and accessor. An application may set
+both M3 and M4 pointers, allowing old and new widgets to coexist. This grows
+only the singleton `Theme`; widgets retain the same reference to the overall
+theme and gain no per-instance state.
 
-Code slice:
+Forward declarations keep core headers from including every design-system
+definition. The intended split is:
 
-1. Add `roo_windows::material3::ColorToken` and the `ToCoreToken()` alias table.
-2. Update representative Material 3 widgets to resolve colors from token tables rather than direct palette fields.
-3. Start with a narrow but representative slice: button, card, list entry, switch, and checkbox.
-4. Keep direct-field compatibility available until all in-repo Material 3 widgets are migrated.
+```text
+core/framework_theme.h          framework contract
+core/theme.h                    typed slots and accessors
+material3/theme.h               M3 scheme and policy
+core/theme.cpp                  checked accessors and default integration
+```
 
-Proposed commit message:
+This is intentionally an explicit list rather than a generic plugin registry.
+It provides compile-time type safety, direct field access inside each system,
+and predictable embedded cost. Supporting a new system requires a deliberate
+core `Theme` API addition, which is acceptable because such systems are rare
+framework-level integrations.
 
-> Theme colors Phase 3: add Material 3 aliases and migrate core widgets.
->
-> Introduce a Material 3 token namespace over the neutral core palette and use
-> it to migrate representative Material 3 widgets from direct palette-field
-> reads to token-backed color resolution.
+## Component Token Tables
 
-Validation: run the focused tests for the migrated widgets and add golden
-coverage where the widget family already has goldens.
+M3 component defaults store M3 token identity rather than resolved colors:
 
-### Phase 4: Migrate Remaining Framework and Legacy Call Sites
+```cpp
+struct ButtonTokens {
+  material3::ColorToken container;
+  material3::ColorToken content;
+  OptionalColorToken outline;
+  uint8_t restingElevation;
+  uint8_t pressedElevation;
+};
+```
 
-Code slice:
+For example:
 
-1. Migrate remaining framework widgets and legacy widgets from `ColorRole` to `ColorToken`.
-2. Remove raw-color derivation where a background token is already available.
-3. Keep the best-effort raw-color shim only where a public API still accepts a concrete color.
-4. Add size-budget assertions if any type layout changes during the migration.
+- filled: `kPrimary` / `kOnPrimary`,
+- filled tonal: `kSecondaryContainer` / `kOnSecondaryContainer`,
+- elevated: `kSurfaceContainerLow` / `kPrimary`,
+- outlined: no container paint, `kPrimary` content, `kOutline` outline.
 
-Proposed commit message:
+The paint path resolves colors after component state and variant select tokens.
+Tables are shared `constexpr`/`const` data, never per-widget members. This
+separates M3 policy from concrete colors; it does not make the component
+design-system-independent.
 
-> Theme colors Phase 4: finish the token migration.
->
-> Convert the remaining framework and legacy theme call sites to the neutral
-> token model and reduce dependence on raw-color reverse lookup.
+## Inheritance, No-Paint, and Concrete Overrides
 
-Validation: run the existing widget test and golden targets that cover legacy
-surface widgets, overlays, labels, sliders, and text fields, plus the focused
-`theme_color_tokens_test` target.
+These states remain distinct:
 
-### Phase 5: Remove Deprecated Core-Theme Storage Aliases
+- **inherit:** obtain the effective container role from the parent;
+- **no paint:** do not paint an optional element;
+- **transparent:** explicitly use a transparent color;
+- **token:** resolve a semantic color from the appropriate scheme;
+- **concrete override:** use an arbitrary caller-supplied color.
 
-Code slice:
+Widget role APIs may use `kInherit` or an optional role. Component tables use a
+compact optional token with a dedicated `kNone` sentinel. `resolve()` never
+interprets inherit or no-paint as transparent.
 
-1. Remove `primaryVariant` and `secondaryVariant` from core-theme storage.
-2. Remove the deprecated `ColorRole` compatibility shim.
-3. Update remaining docs to reference `ColorToken` and the neutral surface-level names.
-4. Leave Material 3 alias names available under `roo_windows::material3`.
+An arbitrary background color cannot safely imply foreground and state colors.
+Such public APIs must do one of the following:
 
-Proposed commit message:
+1. accept companion foreground and interaction colors,
+2. prefer a semantic role/token override,
+3. use a documented fallback and disable semantic derivation, or
+4. temporarily preserve a legacy exact-match shim during migration.
 
-> Theme colors Phase 5: remove deprecated Material-era theme aliases.
->
-> Drop deprecated core-theme storage and enum aliases now that in-repo code is
-> fully token-backed and Material 3 naming lives in the dedicated alias
-> namespace.
+New code does not reverse-map colors. Equality is ambiguous whenever multiple
+tokens contain the same concrete color.
 
-Validation: run the full `roo_windows` test suite and confirm the docs that
-describe color tokens match the landed API names.
+## Default Theme Construction
+
+The default build remains M3-based:
+
+1. create a static immutable `material3::Theme` with current values from
+   [theme.cpp](../src/roo_windows/core/theme.cpp),
+2. initialize the owned `FrameworkTheme` with
+   `material3::MakeFrameworkTheme(material3_theme)`,
+3. point `Theme::material3_theme` at that static M3 object, and
+4. return the composed static `Theme` from `DefaultTheme()`.
+
+Construction order must guarantee that the pointee is initialized before the
+overall theme. Function-local statics declared in order or namespace-scope
+constant initialization are both acceptable after toolchain verification.
+The pointer remains valid for the program lifetime.
+
+The returned theme is immutable after application construction. Default
+storage is `const` where supported. Implementation must verify that const
+tables reside in flash on supported embedded architectures rather than assume
+the qualifier alone guarantees placement.
+
+## Migration Strategy
+
+### Phase 1: Introduce the New Types
+
+1. Add the framework roles, scheme, and interaction result alongside legacy
+   types without changing existing `Theme` storage.
+2. Add M3 tokens, scheme, and state policy under `material3`.
+3. Test every role/token resolver exhaustively.
+4. Add size assertions and verify flash/RAM placement.
+
+This may temporarily increase code or static data but does not change widget
+sizes. Any shared RAM increase is measured and documented.
+
+### Phase 2: Add the M3 Slot and Compose the Default Theme
+
+1. Add the typed nullable M3 pointer and checked accessor to `Theme`.
+2. Move current values into `material3::Theme`.
+3. Initialize the owned framework theme from M3 defaults.
+4. Point the default overall theme at the static default M3 theme.
+5. Provide narrow source-compatibility accessors where practical.
+
+First perform a compiling compatibility spike covering aggregate
+initialization, `Theme` forward declarations, `.color.<field>` reads,
+downstream custom themes, pointer lifetime, and static initialization order. If
+field syntax cannot be preserved without unsafe aliasing, accept a documented
+source migration.
+
+### Phase 3: Migrate Generic Widgets
+
+1. Classify every non-M3 palette read by its actual framework purpose.
+2. Migrate generic widgets to `theme.framework.color` and
+   `theme.framework.interaction`.
+3. Remove reverse lookup where semantic identity is known.
+4. Update concrete-color APIs to an explicit override contract.
+5. Assert unchanged sizes for representative base and leaf widgets.
+
+Do not add framework roles solely to avoid changing an M3 widget.
+
+### Phase 4: Migrate Material 3 Widgets
+
+1. Move M3 widgets to `theme.material3Theme().color` and M3 token tables.
+2. Keep disabled compositing and state-layer rules in M3 helpers.
+3. Migrate buttons, cards, lists, switches, checkboxes, sliders, tabs, and
+   badges as representative families.
+4. Preserve paint ordering and golden output.
+
+Direct M3 fields may remain where token indirection adds no semantic value;
+component default tables should prefer tokens.
+
+### Phase 5: Remove Legacy Core APIs
+
+After in-repository and supported downstream migration:
+
+1. remove core `ColorRole`, `ColorTheme`, and `StateOpacityTheme`,
+2. remove `roleForColor()` and concrete-color derivation overloads,
+3. remove `primaryVariant` and `secondaryVariant` if unused,
+4. remove compatibility shims, and
+5. update documentation to name the owning vocabulary.
+
+## RAM and Flash Budgets
+
+Use assertions based on actual target layouts:
+
+```cpp
+static_assert(sizeof(FrameworkColorRole) == 1);
+static_assert(sizeof(material3::ColorToken) == 1);
+static_assert(sizeof(OptionalColorToken) == 1);
+static_assert(sizeof(RepresentativeWidget) == kPreviousWidgetSize);
+static_assert(sizeof(Theme) <= kApprovedSharedThemeBudget);
+static_assert(alignof(Theme) <= kApprovedThemeAlignment);
+static_assert(sizeof(decltype(Theme::material3_theme)) == sizeof(void*));
+```
+
+Each phase reports shared theme RAM, representative widget sizes, static table
+placement/size, and relevant flash changes on the principal embedded target.
+Zero added widget-instance RAM is mandatory. Growth of the singleton theme by
+an owned framework scheme and one pointer per supported design system is
+explicitly acceptable. It is still measured to catch accidental embedded
+tables, ownership objects, or padding regressions.
 
 ## Testing Plan
 
-Validation should cover:
+1. Exhaustive framework-role and M3-token resolution tests.
+2. Invalid-enum debug behavior and documented release fallback.
+3. Exact equality between old and new default M3 colors.
+4. Default framework-theme initialization from M3 defaults.
+5. A deliberately non-M3 overall theme with the M3 slot null.
+6. Duplicate concrete colors on distinct tokens, proving identity-based logic.
+7. Inherit, no-paint, transparent, token, and concrete-override tests.
+8. Interaction tests covering the resolved layer color and its alpha channel.
+9. Existing widget tests and goldens for migrated families.
+10. `hasMaterial3Theme()` behavior and debug death/assert coverage for a null
+    `material3Theme()` accessor.
+11. A mixed-system fixture with two populated typed slots when a second system
+    is introduced.
+12. Pointer lifetime and static initialization tests where supported.
+13. Compile tests for promised compatibility and a theme without M3.
+14. Shared-theme and representative-widget size assertions.
+15. Target checks that const tables consume no unintended writable RAM.
 
-1. a dedicated `theme_color_tokens_test` target for token resolution, trait mapping, opacity buckets, compatibility wrappers, and Material 3 alias mapping,
-2. representative widget tests and goldens for families that currently rely on direct palette reads, especially buttons, cards, lists, switches, and checkboxes,
-3. framework-level overlay and default-foreground tests for generic widgets that depend on `defaultColor()`, `highlighterColor()`, and `Theme::opacity()`,
-4. size-budget assertions for shared theme structs and any widget types whose stored token fields change type or packing.
+Bazel tests use their real package-qualified labels; the implementation must
+not assume a workspace-root target.
 
-## Caveats
+## Widget Authoring Compliance
 
-### Rejected Alternatives
+Implementation follows the repo-local
+[widget authoring instruction](../.github/instructions/roo-windows-widget-authoring.instructions.md):
 
-#### Keep the Core Theme Material 3-Shaped and Only Reword the Comments
+- no token, provider, or override object is added to widgets,
+- component token tables are shared `constexpr`/`const` data,
+- optional features do not enlarge base widget state,
+- theme resolution occurs at paint time without allocation,
+- representative widget sizes are asserted unchanged,
+- direct-to-framebuffer paint ordering is preserved,
+- color resolution introduces no additional paint pass, and
+- exclusion and single-write rendering rules remain in force.
 
-This was rejected.
+## Rejected Alternatives
 
-The problem is structural, not editorial. As long as `Theme`, `ColorRole`, and helper logic are defined directly in Material 3 terms, every non-Material token system remains an adapter layered on top of a Material 3 core.
+### Rename the Material 3 Palette as Neutral Core Tokens
 
-#### Replace the Theme with a Dynamic String-Keyed Token Map
+Rejected. It preserves the M3 ontology and forces other systems to adapt to it.
 
-This was rejected.
+### Parallel Core and Material 3 Alias Enums
 
-That would make the framework superficially flexible, but it would add lookup cost, larger flash usage, more difficult static validation, and a worse embedded story. The repo already prefers fixed enums, shared const tables, and compile-time structure over dynamic registries.
+Rejected. Two almost identical enums and a one-to-one conversion add
+maintenance and conversion cost without a genuine boundary. M3 tables store
+M3 tokens directly.
 
-#### Collapse the Core Vocabulary to a Tiny `accent / surface / error` Triple
+### Dynamic String-Keyed Token Map
 
-This was rejected.
+Rejected due to lookup cost, code size, weak static validation, and embedded
+RAM impact. A short explicit list of typed pointers solves the required problem.
 
-The current widget set already needs more nuance than that, especially for surface ladders, inverse surfaces, outline tokens, and container/on-container pairs. A tiny vocabulary would immediately force component-local exceptions and would not actually simplify the implementation.
+### Runtime Type Erasure or Virtual Providers
 
-### Compatibility Cost
+Rejected because runtime switching and open-ended registration are not
+required. Typed pointers provide coexistence without virtual dispatch, erased
+types, ownership ambiguity, or a dynamic registry.
 
-The main cost of this design is migration churn in source files that currently read `theme.color.<field>` directly. That churn is acceptable because it happens in shared code, not in per-widget RAM, and the phased plan keeps behavior equivalent throughout the migration.
+### Tiny Universal Palette for All Components
+
+Rejected. The framework contract is small, but each design system owns the
+richer vocabulary its components need.
+
+### Raw-Color Reverse Lookup
+
+Rejected as a primary mechanism because equal colors do not imply equal
+semantics and arbitrary colors cannot imply accessible companion colors.
 
 ## Future Work
 
-If a future design system genuinely needs tokens that do not fit the shared core palette, the extension point should be a shared `const` design-system palette or alias table referenced from `Theme`, not a widget-local map or per-instance override object. That extension is intentionally out of scope for this first refactor because the current Material 3 work and the likely near-term product themes fit within the proposed core vocabulary.
+- Add another design-system integration to prove both the framework contract
+  and mixed-system composition.
+- Revisit runtime switching only for a concrete product requirement.
+- Consider generated compact tables if measurements show a real benefit.
+- Extend framework roles only for demonstrated cross-system behavior.
