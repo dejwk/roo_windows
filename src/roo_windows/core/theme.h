@@ -42,6 +42,7 @@
 #include "roo_fonts/NotoSans_Regular/9.h"
 #include "roo_fonts/NotoSans_Regular/96.h"
 #include "roo_windows/config.h"
+#include "roo_windows/core/framework_theme.h"
 
 #ifndef ROO_WINDOWS_ZOOM
 
@@ -290,15 +291,6 @@ enum class ColorRole {
   kInverseOnSurface,
   kInversePrimary,
   kSurfaceTint,
-};
-
-enum class InteractionState {
-  kHover,
-  kFocus,
-  kSelected,
-  kActivated,
-  kPressed,
-  kDragged,
 };
 
 /// Material 3 palette: maps each `ColorRole` to a concrete color and provides
