@@ -8,7 +8,7 @@ namespace roo_windows {
 void HorizontalDivider::paint(PaintContext& ctx) const {
   if (!isInvalidated()) return;
   const Rect rect = bounds();
-  Color color = theme().color.onBackground;
+  Color color = theme().framework.color.resolve(FrameworkColorRole::kContent);
   color.set_a(0x40);
   ctx.fillRect(rect.xMin(), rect.yMin(), rect.xMax(), rect.yMax() - 1, color);
   color.set_a(0x20);
@@ -18,7 +18,7 @@ void HorizontalDivider::paint(PaintContext& ctx) const {
 void VerticalDivider::paint(PaintContext& ctx) const {
   if (!isInvalidated()) return;
   const Rect rect = bounds();
-  Color color = theme().color.onBackground;
+  Color color = theme().framework.color.resolve(FrameworkColorRole::kContent);
   color.set_a(0x40);
   ctx.fillRect(rect.xMin(), rect.yMin(), rect.xMax() - 1, rect.yMax(), color);
   color.set_a(0x20);

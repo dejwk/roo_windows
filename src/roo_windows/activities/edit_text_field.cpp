@@ -38,7 +38,8 @@ EditTextField::EditTextField(ApplicationContext& context, TextFieldEditor& edito
   content_pane_.add(back_, {gravity : kGravityMiddle});
   content_pane_.add(text_, {gravity : kGravityMiddle, weight : 1});
   content_pane_.add(enter_, {gravity : kGravityMiddle});
-  back_.setContentColor(context.theme().color.onSurface);
+  back_.setContentColor(
+      context.theme().framework.color.resolve(FrameworkColorRole::kContent));
   back_.setOnInteractiveChange([&]() { cancel(); });
   enter_.setOnInteractiveChange([&]() { confirm(); });
 }

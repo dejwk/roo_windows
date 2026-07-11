@@ -28,10 +28,9 @@ void IconWithCaption::paint(PaintContext& ctx) const {
   Color color = color_;
   if (color == roo_display::color::Transparent) {
     const Theme& myTheme = theme();
-    ColorRole bg_role = effectiveContainerRole();
-    color = myTheme.color.contentColorFor(bg_role);
+    color = myTheme.framework.color.resolve(FrameworkColorRole::kContent);
     if (isActivated() && usesHighlighterColor()) {
-      color = myTheme.color.accentColorFor(bg_role);
+      color = myTheme.framework.color.resolve(FrameworkColorRole::kEmphasis);
     }
   }
   color = AlphaBlend(canvas.bgcolor(), color);

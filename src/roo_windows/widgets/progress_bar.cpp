@@ -18,7 +18,9 @@ void ProgressBar::paintWidgetContents(PaintContext& ctx) {
 
 void ProgressBar::paint(PaintContext& ctx) const {
   const Theme& th = theme();
-  Color c = (color_ == color::Transparent ? th.color.primary : color_);
+  Color c = (color_ == color::Transparent
+                 ? th.framework.color.resolve(FrameworkColorRole::kEmphasis)
+                 : color_);
   if (progress_ >= 0) {
     // Determinate.
     int16_t xoffset_incomplete = (uint32_t)progress_ * width() / 10000;

@@ -34,7 +34,9 @@ class SurfaceWidget : public Widget {
 
   /// Returns the outline color. Has no effect when `getBorderStyle()`
   /// reports `outline_width = 0`.
-  virtual Color getOutlineColor() const { return theme().color.primary; }
+  virtual Color getOutlineColor() const {
+    return theme().framework.color.resolve(FrameworkColorRole::kOutline);
+  }
 
   /// Returns the border style of this widget. By default, surface widgets
   /// have sharp corners and no outline. Subclasses can override.

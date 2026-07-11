@@ -195,11 +195,58 @@ constexpr ColorTheme MakeLegacyColorTheme(
   };
 }
 
+// TODO(roo_display): once Color's default constructor is constexpr on all
+// supported roo_display versions, replace this explicit initializer with {}.
+// Until then, Color(uint32_t) keeps the table's constant initialization valid
+// on the older C++17-compatible roo_display release.
+constexpr material3::StateLayerTheme EmptyMaterial3StateLayerTheme() {
+  return {
+      .disabledContentOpacity = 0,
+      .layer = {
+          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
+          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
+          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
+          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
+          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
+          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
+          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
+          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
+          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
+          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
+          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
+          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
+          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
+          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
+          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
+          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
+          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
+          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
+          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
+          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
+          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
+          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
+          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
+          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
+          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
+          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
+          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
+          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
+          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
+          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
+          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
+          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
+          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
+      },
+  };
+}
+
 const material3::Material3Theme& DefaultMaterial3Theme() {
-  static constexpr material3::Material3Theme theme = [] constexpr {
-    material3::Material3Theme result = {};
-    result.color = DefaultMaterial3Colors();
+  static constexpr material3::Material3Theme theme = [] {
     const StateOpacityTheme legacy_state = DefaultLegacyState();
+    material3::Material3Theme result = {
+        .color = DefaultMaterial3Colors(),
+        .state = EmptyMaterial3StateLayerTheme(),
+    };
     result.state.disabledContentOpacity = legacy_state.disabled;
     for (uint8_t token = 0; token < 33; ++token) {
       for (uint8_t interaction = 0; interaction < 6; ++interaction) {
