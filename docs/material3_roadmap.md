@@ -1,248 +1,212 @@
 # Roo Windows Material 3 Roadmap
 
+## Status
+
+Living roadmap. Revisit it when a phase exit condition is met or a foundation
+design exposes a materially different dependency. Component design documents
+remain the source of truth for API and implementation details.
+
 ## Objective
 
-Provide one prioritized roadmap for the remaining design and implementation
-work needed to make `roo_windows` a strong platform for building complex,
-useful embedded applications that look and behave like Material Design 3.
+Make `roo_windows` a dependable platform for complete embedded applications
+that use Material Design 3, while keeping framework core independent of M3 and
+respecting RAM, flash, stack, allocation, and invalidation constraints.
 
-The roadmap favors work that unlocks complete application shells, settings
-screens, dashboards, and task flows over work that only adds isolated leaf
-widgets.
+The roadmap favors end-to-end capability over component-count parity. A flow
+that can navigate, edit, validate, confirm, save, and report progress is more
+valuable than several additional isolated widgets.
 
-## Motivation
+## Current Assessment
 
-`roo_windows` already has unusually strong design coverage for an embedded UI
-library: paint and invalidation contracts are documented, adaptive layout has a
-checked-in design, and several major Material 3 component families already have
-detailed specs.
+The repository has broad **design coverage**, but substantially narrower
+**implemented and integrated coverage**. Those are different kinds of progress.
 
-What is still missing is a single plan that answers two questions together:
+### Foundation designs
 
-1. which existing design tracks should be finished first, and
-2. which missing design docs should be written next.
-
-Without that prioritization, it is easy to spend time on lower-leverage
-components while the larger application-building gaps remain open.
-
-## Background
-
-### Current Foundation Already Covered
-
-The existing docs already cover most of the hard framework substrate:
+The main framework contracts are already described:
 
 - [paint_context_design.md](paint_context_design.md)
 - [surface_widget_refactor_design.md](surface_widget_refactor_design.md)
 - [visual_overflow_design.md](visual_overflow_design.md)
 - [widget_event_dispatch_design.md](widget_event_dispatch_design.md)
 - [gesture_scroll_ownership_design.md](gesture_scroll_ownership_design.md)
-- [click_animation_customization_design.md](click_animation_customization_design.md)
 - [text_system_design.md](text_system_design.md)
 - [non_touch_input_design.md](non_touch_input_design.md)
 - [horizontal_page_host_design.md](horizontal_page_host_design.md)
+- [application_navigation_back_behavior_design.md](application_navigation_back_behavior_design.md)
+- [transient_presentation_pins_design.md](transient_presentation_pins_design.md)
 
-The checked-in Material 3 component and shell coverage is also substantial:
+The main gap is no longer architecture prose. It is landing, testing, and
+integrating the contracts on which the M3 families depend.
 
-- [material3_layout_scaffold_design.md](material3_layout_scaffold_design.md)
-- [material3_app_bars_design.md](material3_app_bars_design.md)
-- [material3_navigation_bar_design.md](material3_navigation_bar_design.md)
-- [material3_navigation_rail_design.md](material3_navigation_rail_design.md)
-- [material3_navigation_drawer_design.md](material3_navigation_drawer_design.md)
-- [material3_toolbars_design.md](material3_toolbars_design.md)
-- [material3_tabs_design.md](material3_tabs_design.md)
-- [material3_lists_design.md](material3_lists_design.md)
-- [material3_menus_design.md](material3_menus_design.md)
-- [material3_sheets_design.md](material3_sheets_design.md)
-- [material3_dialogs_design.md](material3_dialogs_design.md)
-- [material3_snackbar_design.md](material3_snackbar_design.md)
-- [material3_buttons_design.md](material3_buttons_design.md)
-- [material3_icon_buttons_design.md](material3_icon_buttons_design.md)
-- [material3_button_groups_design.md](material3_button_groups_design.md)
-- [material3_segmented_buttons_design.md](material3_segmented_buttons_design.md)
-- [material3_split_button_design.md](material3_split_button_design.md)
-- [material3_fabs_design.md](material3_fabs_design.md)
-- [material3_extended_fab_design.md](material3_extended_fab_design.md)
-- [material3_badge_design.md](material3_badge_design.md)
-- [material3_slider_design.md](material3_slider_design.md)
-- [material3_text_fields_design.md](material3_text_fields_design.md)
+### Theme work is a migration, not a missing M3 design
 
-That current coverage means the next roadmap phases should not start from zero.
-They should close the app-shell, input, and consistency gaps that still block
-complete applications.
+[theme_color_tokens_design.md](theme_color_tokens_design.md) defines a
+design-system-independent framework theme plus an exact M3 theme. The new
+types have begun to appear in source, while legacy `ColorRole`, `ColorTheme`,
+and state-opacity APIs remain in use.
 
-### Source Families That Exist But Lack Matching Design Docs
+Therefore, “write a Material 3 theme and tokens design” is obsolete. The real
+prerequisite is to finish and measure the migration without expanding core
+into an M3-shaped vocabulary or adding per-widget RAM.
 
-Some Material 3 families already exist in source but do not yet have matching
-design documents:
+### Component coverage
 
-- [../src/roo_windows/material3/card/flex_card.h](../src/roo_windows/material3/card/flex_card.h)
-- [../src/roo_windows/material3/checkbox/checkbox.h](../src/roo_windows/material3/checkbox/checkbox.h)
-- [../src/roo_windows/material3/radio_button/radio_button.h](../src/roo_windows/material3/radio_button/radio_button.h)
-- [../src/roo_windows/material3/switch/switch.h](../src/roo_windows/material3/switch/switch.h)
+Designs already cover the shell and many major families, including scaffold,
+app bars, navigation bar/rail/drawer, toolbars, tabs, lists, menus, sheets,
+dialogs, snackbar, buttons, FABs, badge, sliders, text fields, and date/time
+pickers.
 
-These are real documentation gaps, but they are not the highest-leverage gaps.
-They should follow the larger shell and form-system decisions.
+Several source families still lack matching design documents:
 
-### Explicitly Deferred Work Already Called Out By Existing Docs
+- [card](../src/roo_windows/material3/card/flex_card.h)
+- [checkbox](../src/roo_windows/material3/checkbox/checkbox.h)
+- [radio button](../src/roo_windows/material3/radio_button/radio_button.h)
+- [switch](../src/roo_windows/material3/switch/switch.h)
 
-Several existing design docs already identify their own next dependencies:
+Those gaps matter, especially during theme migration, but they do not outrank
+shared contracts needed for a complete flow.
 
-- [material3_toolbars_design.md](material3_toolbars_design.md) explicitly
-  leaves top app bars and search app bars to
-  [material3_app_bars_design.md](material3_app_bars_design.md).
-- [material3_text_fields_design.md](material3_text_fields_design.md) defers
-  multiline behavior until the shared editable-text core is defined.
-- [material3_icon_buttons_design.md](material3_icon_buttons_design.md)
-  defers toggle icon buttons.
-- [material3_fabs_design.md](material3_fabs_design.md) calls out a follow-on
-  FAB-menu design.
-- [material3_sheets_design.md](material3_sheets_design.md) defers predictive
-  back and broader navigation-policy work.
-- [material3_lists_design.md](material3_lists_design.md) already records a
-  substantial future-work backlog around convenience rows, wrapped text,
-  expand/collapse behavior, and menu reuse.
+## Prioritization Rules
 
-Those deferrals provide the natural starting points for the roadmap below.
+1. Finish shared contracts before multiplying leaf implementations.
+2. Deliver vertical application slices, not disconnected component batches.
+3. Track each item as designed, implementation-ready, implemented, integrated,
+   and target-verified.
+4. Require explicit RAM, flash, stack, allocation, invalidation, and input-path
+   evidence at phase exits.
+5. Keep framework abstractions design-system-independent; keep M3 tokens and
+   behavior in `roo_windows::material3`.
+6. Extend existing popup, task/activity, focus, text, and paint infrastructure
+   instead of adding component-local substitutes.
+7. Do not make strict M3 catalog parity a release gate.
 
-## Roadmap Principles
+## Phase 0: Stabilize Shared Contracts
 
-1. Prefer work that unlocks complete application flows over work that only adds
-   isolated controls.
-2. Close framework-wide contracts before adding many more leaf widgets.
-3. Reuse the landed substrate rather than reopening paint, layout, and popup
-   fundamentals.
-4. Treat design-authoring gaps and implementation follow-ons as separate kinds
-   of work, but prioritize both by application value.
-5. Keep embedded constraints visible in every phase: per-instance RAM,
-   allocation-free hot paths, and local invalidation.
+This is the critical path. Work may proceed in parallel by subsystem, but
+later components must not invent temporary alternatives to these contracts.
 
-## Roadmap Overview
+| Work item | Current state | Required outcome |
+| --- | --- | --- |
+| Complete theme migration | Design exists; compatibility-era implementation is present | Generic widgets use `FrameworkTheme`; M3 widgets use `material3::Theme`; legacy reverse lookup and core M3 vocabulary have a measured removal path. Preserve visuals and widget sizes. |
+| Land event dispatch, focus, and non-touch input | Designs exist | Touch, keyboard, encoder/directional focus, Back, and Escape use one dispatch model with no component-local routing policy. |
+| Land navigation and back behavior | Design exists | `Task`/`Activity` route ownership and deepest-first transient dismissal use the same back path. Predictive animation remains deferred. |
+| Land transient-presentation lifetime rules | Design exists | Menus, sheets, dialogs, and snackbars cannot retain invalid anchors, owners, callbacks, or content. |
+| Define and implement editable-text core | Direction exists; shared contract is incomplete | Cursor movement, selection, composition policy, validation, scrolling, multiline layout, and hardware-keyboard input live below M3 chrome. |
 
-The roadmap is split into four phases:
+Phase 0 exit condition:
 
-1. complete the app shell,
-2. complete forms and high-frequency input,
-3. expand reusable status and productivity surfaces,
-4. then cover long-tail Material 3 surfaces and documentation cleanup.
+- one target application exercises touch and non-touch dispatch, route back,
+  transient dismissal, and text entry through shared contracts;
+- tests prove unchanged default theme colors and state layers;
+- representative widget sizes do not grow; and
+- RAM, flash, stack, and invalidation behavior are measured on a supported
+  embedded target, not only in host tests.
 
-The first two phases are the ones that most directly enable powerful embedded
-applications. The later phases increase breadth and polish.
+## Phase 1: Deliver a Complete Application Shell
 
-## Roadmap Details
+Implement existing shell designs as one integrated slice.
 
-### Phase 1: Complete the App Shell
+| Work item | Why now |
+| --- | --- |
+| Scaffold plus top app bars and search entry | Establishes top-edge structure, insets, title/actions, and common search entry. |
+| One compact navigation path | Implement navigation bar or drawer according to the reference target; do not require bar, rail, and drawer simultaneously. |
+| Dialogs and one modal sheet path | Provides confirmation and compact task hosting through shared back and lifetime contracts. |
+| Menus and snackbar integration | Completes transient commands and non-modal result/error feedback. |
 
-This phase closes the highest-leverage gaps needed for full applications rather
-than component demos.
-
-| Work item | Type | Why it belongs here | Primary references |
-| --- | --- | --- | --- |
-| Material 3 theme and tokens design | New design doc | Every remaining component family depends on a coherent story for color roles, typography scale, shape families, density, and motion tokens. Without this, the repo can have many correct components but still lack a consistent system. | [material3_buttons_design.md](material3_buttons_design.md), [material3_text_fields_design.md](material3_text_fields_design.md), [material3_layout_scaffold_design.md](material3_layout_scaffold_design.md) |
-| Material 3 app bars and search surfaces implementation | Implementation follow-on against an existing design doc | [material3_app_bars_design.md](material3_app_bars_design.md) closes the top-edge shell contract, but the repo still needs the widget family and search-entry surfaces in code. | [material3_app_bars_design.md](material3_app_bars_design.md), [material3_layout_scaffold_design.md](material3_layout_scaffold_design.md), [material3_toolbars_design.md](material3_toolbars_design.md), [non_touch_input_design.md](non_touch_input_design.md) |
-| Material 3 dialogs implementation follow-on | Implementation follow-on against an existing design doc | [material3_dialogs_design.md](material3_dialogs_design.md) now closes the basic-versus-full-screen dialog contract, but the repo still needs the implementation work that replaces the legacy dialog path and wires full-screen dialog hosting. | [material3_dialogs_design.md](material3_dialogs_design.md), [material3_sheets_design.md](material3_sheets_design.md), [non_touch_input_design.md](non_touch_input_design.md) |
-| [Application navigation and back behavior](application_navigation_back_behavior_design.md) | New design doc | The repo now has tabs, a page host, sheets, popups, and a non-touch-input design, but it still lacks one framework-level contract for route ownership, back dispatch, and later predictive-back integration. | [horizontal_page_host_design.md](horizontal_page_host_design.md), [material3_sheets_design.md](material3_sheets_design.md), [non_touch_input_design.md](non_touch_input_design.md) |
+Reference slice: a multi-screen settings application can navigate, open a
+menu, edit a setting in a dialog or sheet, confirm or cancel it, handle
+Back/Escape correctly, and report the result with a snackbar.
 
 Phase 1 exit condition:
 
-- the repo has a complete Material 3 shell story for top app structure,
-  modal interruption, and navigation ownership,
-- and the missing decisions are no longer spread across toolbar, sheet, and
-  input docs.
+- the slice works on a compact touch target and the applicable non-touch path;
+- focus restoration, nested dismissal, clipping, and invalidation have
+  integration tests; and
+- the shell uses no application-specific popup or back-routing infrastructure.
 
-### Phase 2: Complete Forms and High-Frequency Input
+## Phase 2: Complete Forms, Search, and Task Feedback
 
-This phase turns the current component set into something that can support
-serious settings screens, configuration forms, and search-and-filter flows.
+| Work item | Type | Required scope |
+| --- | --- | --- |
+| Editable and multiline M3 text fields | Existing design follow-on | Editing, validation/error/supporting text, keyboard entry, focus traversal, and constrained scrolling. |
+| Progress indicators | New design plus implementation | Determinate and indeterminate linear/circular variants, bounded animation cost, visibility/lifecycle behavior, and reduced-motion policy if supported. |
+| Chips | New design plus implementation | Start with variants demanded by search/filter flows; defer catalog completeness until shared selection behavior is proven. |
+| List follow-ons | Existing design follow-on | Prioritize settings rows, wrapped/supporting text, control rows, and menu reuse. |
+| Toggle icon buttons | Existing deferred follow-on | Shared toggle semantics for toolbars and compact controls. |
 
-| Work item | Type | Why it belongs here | Primary references |
-| --- | --- | --- | --- |
-| Editable text core and multiline text-field follow-on | New design doc plus follow-on updates | [material3_text_fields_design.md](material3_text_fields_design.md) and [text_system_design.md](text_system_design.md) already define the direction, but the repo still needs a concrete editing contract for cursoring, selection, multiline layout, and hardware-keyboard entry. | [text_system_design.md](text_system_design.md), [material3_text_fields_design.md](material3_text_fields_design.md), [non_touch_input_design.md](non_touch_input_design.md) |
-| Material 3 progress indicators | New design doc | Real applications need determinate and indeterminate loading, sync, and background-task feedback. That gap shows up quickly once dialogs, forms, and data views exist. | [material3_snackbar_design.md](material3_snackbar_design.md), [material3_layout_scaffold_design.md](material3_layout_scaffold_design.md) |
-| Material 3 chips | New design doc | Filter, assist, suggestion, and input chips are a high-value compact-control family for settings, search, and dashboard workflows. | [material3_button_groups_design.md](material3_button_groups_design.md), [material3_segmented_buttons_design.md](material3_segmented_buttons_design.md), [material3_text_fields_design.md](material3_text_fields_design.md) |
-| Toggle icon buttons | New design doc | This is already called out as deferred work in [material3_icon_buttons_design.md](material3_icon_buttons_design.md). It is smaller than chips or editing, but it is a common control in toolbars, media controls, and compact settings rows. | [material3_icon_buttons_design.md](material3_icon_buttons_design.md), [material3_toolbars_design.md](material3_toolbars_design.md) |
-| Land the remaining list-family follow-ons | Implementation follow-on against an existing design doc | The list design is already broad enough to support many applications, but its future-work items still block polished settings and menu-heavy experiences. | [material3_lists_design.md](material3_lists_design.md), [material3_menus_design.md](material3_menus_design.md) |
+Reference slice: a Wi-Fi or device-configuration flow can search or filter,
+enter and validate credentials, select options, show connection progress,
+cancel safely, and present success or failure.
+[material3_wifi_configuration_design.md](material3_wifi_configuration_design.md)
+is a useful acceptance specification, not a substitute for shared contracts.
 
 Phase 2 exit condition:
 
-- the repo can express serious form entry, filtering, and settings workflows,
-- and the current list and text systems no longer stop at the first useful
-  baseline.
+- the flow needs no bespoke editing, validation, progress, or selection widgets;
+- long input, empty/error states, cancellation, disabled state, and keyboard
+  traversal are tested; and
+- animation and editing costs remain within documented embedded budgets.
 
-### Phase 3: Expand Reusable Status and Productivity Surfaces
+## Phase 3: Consolidate Existing Families and Adaptive Breadth
 
-This phase builds on the shell and form foundations to broaden the kinds of
-applications the library can support comfortably.
+1. Document and migrate card, checkbox, radio button, and switch to final
+   theme/input contracts.
+2. Implement remaining navigation modes and prove compact-to-expanded
+   adaptation without transferring route ownership into presentation widgets.
+3. Add FAB menu and tooltips once host, focus, hover, and lifetime contracts
+   are implemented.
+4. Add the highest-value remaining button, list, and search-view follow-ons.
 
-| Work item | Type | Why it belongs here | Primary references |
-| --- | --- | --- | --- |
-| Material 3 FAB menu | New design doc | The FAB design already identifies this as follow-on work. Once app shells and dialogs exist, a FAB menu becomes a natural way to expose contextual task creation on compact layouts. | [material3_fabs_design.md](material3_fabs_design.md), [material3_extended_fab_design.md](material3_extended_fab_design.md), [material3_layout_scaffold_design.md](material3_layout_scaffold_design.md) |
-| Material 3 tooltips | New design doc | Tooltips become much more valuable once [non_touch_input_design.md](non_touch_input_design.md) lands in code and hover or focus help is no longer touch-only. | [non_touch_input_design.md](non_touch_input_design.md), [material3_icon_buttons_design.md](material3_icon_buttons_design.md), [material3_toolbars_design.md](material3_toolbars_design.md) |
-| Document existing card, checkbox, radio-button, and switch families | Design-doc backlog | These families already exist in source. They should gain the same quality of written rationale and API closure as the newer Material 3 components before they are extended further. | [../src/roo_windows/material3/card/flex_card.h](../src/roo_windows/material3/card/flex_card.h), [../src/roo_windows/material3/checkbox/checkbox.h](../src/roo_windows/material3/checkbox/checkbox.h), [../src/roo_windows/material3/radio_button/radio_button.h](../src/roo_windows/material3/radio_button/radio_button.h), [../src/roo_windows/material3/switch/switch.h](../src/roo_windows/material3/switch/switch.h) |
+Exit when existing implemented families have explicit contracts and final
+theme usage, and an application can change navigation presentation by size
+without changing route state.
 
-Phase 3 exit condition:
+## Phase 4: Domain-Specific and Long-Tail Surfaces
 
-- the repo has fewer undocumented Material 3 islands,
-- and compact productivity surfaces no longer depend on ad hoc examples or
-  implicit behavior.
+Date and time picker designs already exist; they are implementation work here
+unless a committed application needs them earlier. Other candidates include
+expanded search, dense data/table surfaces, richer selection, and
+pointer-specific affordances.
 
-### Phase 4: Cover Long-Tail Application Surfaces
+Pull an item forward only when a concrete application needs it and its shared
+prerequisites are satisfied. Predictive back stays here unless a target
+platform makes it an earlier compatibility requirement.
 
-This phase is important, but it comes after the more central app-shell,
-input, and status work.
+## Recommended Near-Term Order
 
-| Work item | Type | Why it belongs later |
-| --- | --- | --- |
-| Date and time pickers | New design docs | High value for some products, but not required for the first broad class of settings, dashboard, and list-detail apps. |
-| Data-table and dense data-view surfaces | New design docs | Important for admin-style dashboards and control panels, but they depend on shell, text, keyboard, and selection behavior that should already be settled first. |
-| Search-view and expanded search workflows beyond app-bar entry points | New design docs | Better authored after top app bars, dialogs, chips, and text editing already exist. |
-| Predictive back and deeper pointer-specific behaviors | New design docs | Valuable later, but they should follow the base navigation and non-touch contracts instead of preceding them. |
+1. Inventory every foundation and M3 design as designed, implemented,
+   integrated, or target-verified. Never infer implementation from a document.
+2. Finish the theme compatibility spike and measurements in
+   [theme_color_tokens_design.md](theme_color_tokens_design.md).
+3. Implement the shared event/focus/non-touch, back, and transient-lifetime
+   path required by the Phase 1 slice.
+4. Integrate scaffold, one navigation mode, app bars, dialog/sheet, menus, and
+   snackbar into that slice.
+5. Complete editable text, then land text fields, progress, and the smallest
+   chip/list scope required by the Phase 2 slice.
+6. Consolidate existing controls and expand adaptive navigation.
+7. Select long-tail work from demonstrated application demand.
 
-Phase 4 exit condition:
+## Tracking and Review
 
-- the repo moves beyond the common Material 3 baseline into broader
-  productivity and data-entry surfaces,
-- without having skipped the core app-building contracts that those surfaces
-  depend on.
+Maintain a lightweight companion inventory with one row per work item and:
 
-## Suggested Sequencing
+- owner and dependencies;
+- design, implementation, integration, and target-verification status;
+- RAM, flash, stack, and widget-size deltas; and
+- the reference flow that justifies the item.
 
-The recommended authoring and implementation order is:
+Review this roadmap at phase exits. Put dates on committed tracker milestones,
+not speculative architectural-roadmap items.
 
-1. write a Material 3 theme-and-tokens design doc,
-2. implement [material3_app_bars_design.md](material3_app_bars_design.md),
-3. land the dialog implementation follow-on from
-  [material3_dialogs_design.md](material3_dialogs_design.md),
-4. write the navigation-and-back-behavior design doc,
-5. write the editable-text-core follow-on and update
-   [material3_text_fields_design.md](material3_text_fields_design.md),
-6. write progress-indicator and chips design docs,
-7. land the highest-value remaining list-family phases,
-8. then cover toggle icon buttons, FAB menus, tooltips, and the documentation
-   backlog for existing controls.
+## Position on the Plan
 
-This sequencing creates a useful dependency chain:
+The original emphasis on shells and forms was sound. The necessary correction
+is to put shared-contract implementation and integration ahead of catalog
+breadth, and judge progress through end-to-end slices and target measurements.
 
-- theme and shell decisions stabilize the environment around the rest of the
-  component work,
-- text, progress, and chips complete the most common form and filtering flows,
-- and the smaller follow-on families then land into a more stable system.
-
-## Caveats
-
-- This roadmap prioritizes application-building leverage over strict parity
-  with every Material 3 component family.
-- Some items appear here even though their design doc already exists. In those
-  cases the missing work is implementation and integration rather than design
-  discovery.
-- The roadmap deliberately keeps pointer-first desktop affordances later than
-  keyboard-first non-touch support. That matches the current direction in
-  [non_touch_input_design.md](non_touch_input_design.md).
-
-## Future Work
-
-- Revisit the roadmap after the top-app-bar, dialog, and editable-text work is
-  authored. Those documents may expose narrower follow-on needs that are more
-  urgent than the current Phase 3 list.
-- Add versioned or milestone-based target dates only when the repo starts
-  planning the corresponding implementation work as committed milestones rather
-  than as a design backlog.
+The largest delivery risk is not a missing M3 component. It is having many
+detailed designs whose implementations make different assumptions about theme
+ownership, focus, back dispatch, text editing, or transient lifetimes. Phases
+0 through 2 reduce that risk while still producing useful, visible software.
