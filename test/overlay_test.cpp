@@ -42,30 +42,30 @@ class RoundedClickableSurfaceBoxWidget : public ClickableSurfaceBoxWidget {
 
 class RolePanel : public Panel {
  public:
-  RolePanel(ApplicationContext& context, ColorRole role)
+  RolePanel(ApplicationContext& context, ::roo_windows::material3::ColorToken role)
       : Panel(context), role_(role) {}
 
   void addChild(WidgetRef child, const Rect& bounds) {
     add(std::move(child), bounds);
   }
 
-  ColorRole containerRole() const override { return role_; }
+  ::roo_windows::material3::ColorToken containerRole() const override { return role_; }
 
  private:
-  ColorRole role_;
+  ::roo_windows::material3::ColorToken role_;
 };
 
 class RoleOverridingPointOverlayWidget : public PointOverlayBoxWidget {
  public:
   RoleOverridingPointOverlayWidget(ApplicationContext& context,
                                    roo_display::Color color, Dimensions dims,
-                                   ColorRole role)
+                                   ::roo_windows::material3::ColorToken role)
       : PointOverlayBoxWidget(context, color, dims), role_(role) {}
 
-  ColorRole effectiveContainerRole() const override { return role_; }
+  ::roo_windows::material3::ColorToken effectiveContainerRole() const override { return role_; }
 
  private:
-  ColorRole role_;
+  ::roo_windows::material3::ColorToken role_;
 };
 
 class RecordingPanel : public Panel {
@@ -634,9 +634,9 @@ TEST_F(RooWindowsRenderTest,
 TEST_F(RooWindowsRenderTest,
        PointOverlayColorUsesParentRoleWhenChildOverridesContainerRole) {
   auto back = std::make_unique<RolePanel>(context(),
-                                          ColorRole::kSurfaceContainerHighest);
+                                          ::roo_windows::material3::ColorToken::kSurfaceContainerHighest);
   auto front = std::make_unique<RoleOverridingPointOverlayWidget>(
-      context(), color::Blue, Dimensions(18, 18), ColorRole::kPrimary);
+      context(), color::Blue, Dimensions(18, 18), ::roo_windows::material3::ColorToken::kPrimary);
   RoleOverridingPointOverlayWidget* front_ptr = front.get();
 
   back->addChild(std::move(front), Box(20, 12, 37, 29));
@@ -647,7 +647,7 @@ TEST_F(RooWindowsRenderTest,
   front_ptr->setActivated(true);
   ASSERT_TRUE(refresh());
 
-  ColorRole parent_role = ColorRole::kSurfaceContainerHighest;
+  ::roo_windows::material3::ColorToken parent_role = ::roo_windows::material3::ColorToken::kSurfaceContainerHighest;
   Color overlay = front_ptr->theme().color.contentColorFor(parent_role);
   overlay.set_a(
       front_ptr->theme().opacity(parent_role, InteractionState::kActivated));

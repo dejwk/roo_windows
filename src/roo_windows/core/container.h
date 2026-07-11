@@ -34,7 +34,7 @@ class Container : public SurfaceWidget {
   /// Returns the container's resolved background color, derived from its
   /// effective container role.
   Color background() const override {
-    return theme().color.role(effectiveContainerRole());
+    return theme().framework.color.resolve(FrameworkColorRole::kSurface);
   }
 
   /// Inherits the active theme from the parent.

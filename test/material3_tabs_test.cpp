@@ -165,7 +165,7 @@ TEST(Material3Tabs, TabOwnsSurfaceAreaForStateOverlays) {
 
   EXPECT_TRUE((std::is_base_of<SurfaceWidget, Tab>::value));
   EXPECT_EQ(Widget::OVERLAY_AREA, tab.getOverlayType());
-  EXPECT_EQ(ColorRole::kSurface, tab.containerRole());
+  EXPECT_EQ(::roo_windows::material3::ColorToken::kSurface, tab.containerRole());
   EXPECT_EQ(env.theme().color.surface, tab.background());
   EXPECT_FALSE(tab.useOverlayOnActivation());
 }

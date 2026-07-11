@@ -56,7 +56,7 @@ class Button : public BasicSurfaceWidget {
 
   /// Resolves the container color role for the active style (e.g. surface
   /// roles for OUTLINED/TEXT; primary roles for CONTAINED).
-  ColorRole containerRole() const override;
+  ::roo_windows::material3::ColorToken containerRole() const override;
 
   /// Returns `elevation_pressed_` while pressed, otherwise the resting value.
   uint8_t getElevation() const override {

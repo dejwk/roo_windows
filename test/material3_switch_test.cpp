@@ -126,10 +126,10 @@ TEST(Material3Switch, EffectiveContainerRoleTracksState) {
   ApplicationContext context = MakeContext(env);
 
   Switch sw(context, Switch::OnOffState::kOff);
-  EXPECT_EQ(ColorRole::kSurfaceContainerHighest, sw.effectiveContainerRole());
+  EXPECT_EQ(::roo_windows::material3::ColorToken::kSurfaceContainerHighest, sw.effectiveContainerRole());
 
   sw.setOn();
-  EXPECT_EQ(ColorRole::kPrimary, sw.effectiveContainerRole());
+  EXPECT_EQ(::roo_windows::material3::ColorToken::kPrimary, sw.effectiveContainerRole());
 }
 
 // Verifies that the badge-aware switch opts into unclipped parent paint and

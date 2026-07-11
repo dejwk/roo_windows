@@ -131,7 +131,7 @@ class Button : public BasicSurfaceWidget {
   bool isClickable() const override { return true; }
 
   /// Returns the theme color role used for inherited surface decoration.
-  ColorRole containerRole() const override;
+  ::roo_windows::material3::ColorToken containerRole() const override;
 
   /// Returns the resolved container fill color for the current state.
   Color background() const override;

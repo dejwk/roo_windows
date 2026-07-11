@@ -74,10 +74,10 @@ TEST(Material3RadioButton, EffectiveContainerRoleTracksSelectionState) {
   ApplicationContext context = MakeContext(env);
 
   RadioButton radio(context, RadioButton::OnOffState::kOff);
-  EXPECT_EQ(ColorRole::kSurface, radio.effectiveContainerRole());
+  EXPECT_EQ(::roo_windows::material3::ColorToken::kSurface, radio.effectiveContainerRole());
 
   radio.setOn();
-  EXPECT_EQ(ColorRole::kPrimary, radio.effectiveContainerRole());
+  EXPECT_EQ(::roo_windows::material3::ColorToken::kPrimary, radio.effectiveContainerRole());
 }
 
 }  // namespace

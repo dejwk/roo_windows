@@ -16,12 +16,12 @@ void Checkbox::onClicked() {
 
 void Checkbox::paint(PaintContext& ctx) const {
   OnOffState state = onOffState();
-  ColorRole bg_role = effectiveContainerRole();
+  ::roo_windows::material3::ColorToken bg_role = effectiveContainerRole();
   Color color =
       state == OnOffState::kOn
-          ? theme().color.accentColorFor(bg_role)
+          ? theme().material3Theme().color.accentColorFor(bg_role)
           : AlphaBlend(ctx.bgcolor(),
-                       theme().color.contentColorFor(bg_role).withA(0x90));
+                       theme().material3Theme().color.contentColorFor(bg_role).withA(0x90));
   RleImage4bppxBiased<Alpha4, ProgMemPtr> img =
       state == OnOffState::kOn ? SCALED_ROO_ICON(filled, toggle_check_box)
       : state == OnOffState::kOff

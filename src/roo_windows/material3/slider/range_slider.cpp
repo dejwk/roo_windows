@@ -796,8 +796,8 @@ roo_display::FpPoint RangeSlider::getPointOverlayFocus() const {
                               axis.centeredCross()};
 }
 
-ColorRole RangeSlider::effectiveContainerRole() const {
-  return ColorRole::kPrimary;
+::roo_windows::material3::ColorToken RangeSlider::effectiveContainerRole() const {
+  return ::roo_windows::material3::ColorToken::kPrimary;
 }
 
 Rect RangeSlider::getSloppyTouchParentBounds() const {

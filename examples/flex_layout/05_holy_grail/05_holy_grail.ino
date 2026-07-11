@@ -89,7 +89,7 @@ void initDisplay() {
 class NamedPanel : public FlexLayout {
  public:
   NamedPanel(ApplicationContext& context, const char* name,
-             ColorRole role = ColorRole::kSurfaceContainer)
+             ::roo_windows::material3::ColorToken role = ::roo_windows::material3::ColorToken::kSurfaceContainer)
       : FlexLayout(context, FlexDirection::kRow),
         label_(context, name, font_body1()),
         role_(role) {
@@ -98,7 +98,7 @@ class NamedPanel : public FlexLayout {
     add(label_);
   }
 
-  ColorRole containerRole() const override { return role_; }
+  ::roo_windows::material3::ColorToken containerRole() const override { return role_; }
 
   BorderStyle getBorderStyle() const override { return BorderStyle(0, 1); }
 
@@ -108,19 +108,19 @@ class NamedPanel : public FlexLayout {
 
  private:
   TextLabel label_;
-  ColorRole role_;
+  ::roo_windows::material3::ColorToken role_;
 };
 
 class HolyGrail : public FlexLayout {
  public:
   HolyGrail(ApplicationContext& context)
       : FlexLayout(context, FlexDirection::kColumn),
-        header_(context, "Header", ColorRole::kSurfaceContainerHigh),
+        header_(context, "Header", ::roo_windows::material3::ColorToken::kSurfaceContainerHigh),
         middle_(context, FlexDirection::kRow),
-        nav_(context, "Nav", ColorRole::kSecondaryContainer),
-        content_(context, "Content", ColorRole::kPrimaryContainer),
-        sidebar_(context, "Sidebar", ColorRole::kTertiaryContainer),
-        footer_(context, "Footer", ColorRole::kSurfaceContainerHigh) {
+        nav_(context, "Nav", ::roo_windows::material3::ColorToken::kSecondaryContainer),
+        content_(context, "Content", ::roo_windows::material3::ColorToken::kPrimaryContainer),
+        sidebar_(context, "Sidebar", ::roo_windows::material3::ColorToken::kTertiaryContainer),
+        footer_(context, "Footer", ::roo_windows::material3::ColorToken::kSurfaceContainerHigh) {
     setAlignItems(AlignItems::kStretch);
 
     add(header_, {.flex_grow = 0, .flex_shrink = 0});

@@ -218,7 +218,7 @@ class Slider : public BasicWidget {
   roo_display::FpPoint getPointOverlayFocus() const override;
 
   /// Material 3 sliders use the primary role for container-derived visuals.
-  ColorRole effectiveContainerRole() const override;
+  ::roo_windows::material3::ColorToken effectiveContainerRole() const override;
 
   /// Extends sloppy-touch reach along the slider's main interaction axis.
   Rect getSloppyTouchParentBounds() const override;

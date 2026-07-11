@@ -582,7 +582,7 @@ TEST(Material3Slider, EffectiveContainerRoleIsPrimary) {
 
   Slider slider(context);
 
-  EXPECT_EQ(ColorRole::kPrimary, slider.effectiveContainerRole());
+  EXPECT_EQ(::roo_windows::material3::ColorToken::kPrimary, slider.effectiveContainerRole());
 }
 
 // Verifies that pressed-state feedback is rendered directly by the slider and

@@ -158,8 +158,8 @@ roo_display::FpPoint Switch::getPointOverlayFocus() const {
   return roo_display::FpPoint{currentThumbCenterX(), kTrackCenterY};
 }
 
-ColorRole Switch::effectiveContainerRole() const {
-  return isOn() ? ColorRole::kPrimary : ColorRole::kSurfaceContainerHighest;
+::roo_windows::material3::ColorToken Switch::effectiveContainerRole() const {
+  return isOn() ? ::roo_windows::material3::ColorToken::kPrimary : ::roo_windows::material3::ColorToken::kSurfaceContainerHighest;
 }
 
 void Switch::paintWidgetContents(PaintContext& ctx) {

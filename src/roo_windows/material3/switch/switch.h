@@ -97,7 +97,7 @@ class Switch : public BasicWidget {
   roo_display::FpPoint getPointOverlayFocus() const override;
 
   /// Resolves the surface color role based on the current on/off state.
-  ColorRole effectiveContainerRole() const override;
+  ::roo_windows::material3::ColorToken effectiveContainerRole() const override;
 
   /// Toggles the on/off state and starts the thumb animation.
   bool onSingleTapUp(XDim x, YDim y) override;

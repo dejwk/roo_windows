@@ -16,6 +16,18 @@
 namespace roo_windows {
 namespace {
 
+// Construction-only representation of the historical M3 opacity matrix.
+// It is not part of the framework Theme API or retained in application state.
+struct LegacyStateOpacity {
+  uint8_t disabled;
+  uint8_t hoverOnPrimary, hoverOnSecondary, hoverOnBackground, hoverOnSurface, hoverOnError;
+  uint8_t focusOnPrimary, focusOnSecondary, focusOnBackground, focusOnSurface, focusOnError;
+  uint8_t selectedOnPrimary, selectedOnSecondary, selectedOnBackground, selectedOnSurface, selectedOnError;
+  uint8_t activatedOnPrimary, activatedOnSecondary, activatedOnBackground, activatedOnSurface, activatedOnError;
+  uint8_t pressedOnPrimary, pressedOnSecondary, pressedOnBackground, pressedOnSurface, pressedOnError;
+  uint8_t draggedOnPrimary, draggedOnSecondary, draggedOnBackground, draggedOnSurface, draggedOnError;
+};
+
 constexpr material3::ColorScheme DefaultMaterial3Colors() {
   return {
       .primary = roo_display::Color(0xFF6750A4),
@@ -54,7 +66,7 @@ constexpr material3::ColorScheme DefaultMaterial3Colors() {
   };
 }
 
-constexpr StateOpacityTheme DefaultLegacyState() {
+constexpr LegacyStateOpacity DefaultLegacyState() {
   return {
       .disabled = 49,
       .hoverOnPrimary = 20, .hoverOnSecondary = 20,
@@ -76,7 +88,7 @@ constexpr StateOpacityTheme DefaultLegacyState() {
   };
 }
 
-constexpr uint8_t StateOpacity(const StateOpacityTheme& state,
+constexpr uint8_t StateOpacity(const LegacyStateOpacity& state,
                                material3::ColorToken token,
                                InteractionState interaction) {
   const bool primary = token == material3::ColorToken::kPrimary ||
@@ -164,37 +176,6 @@ constexpr roo_display::Color StateLayerContent(
   }
 }
 
-constexpr ColorTheme MakeLegacyColorTheme(
-    const material3::ColorScheme& color) {
-  return {
-      .primary = color.primary, .primaryVariant = color.primary,
-      .primaryContainer = color.primaryContainer,
-      .onPrimaryContainer = color.onPrimaryContainer,
-      .secondary = color.secondary, .secondaryVariant = color.secondary,
-      .secondaryContainer = color.secondaryContainer,
-      .onSecondaryContainer = color.onSecondaryContainer,
-      .tertiary = color.tertiary, .onTertiary = color.onTertiary,
-      .tertiaryContainer = color.tertiaryContainer,
-      .onTertiaryContainer = color.onTertiaryContainer,
-      .background = color.background, .onBackground = color.onBackground,
-      .surface = color.surface,
-      .surfaceContainerLowest = color.surfaceContainerLowest,
-      .surfaceContainerLow = color.surfaceContainerLow,
-      .surfaceContainer = color.surfaceContainer,
-      .surfaceContainerHigh = color.surfaceContainerHigh,
-      .surfaceContainerHighest = color.surfaceContainerHighest,
-      .onSurface = color.onSurface, .surfaceVariant = color.surfaceVariant,
-      .onSurfaceVariant = color.onSurfaceVariant, .error = color.error,
-      .errorContainer = color.errorContainer, .onPrimary = color.onPrimary,
-      .onSecondary = color.onSecondary, .onError = color.onError,
-      .onErrorContainer = color.onErrorContainer, .outline = color.outline,
-      .outlineVariant = color.outlineVariant,
-      .inverseSurface = color.inverseSurface,
-      .inverseOnSurface = color.inverseOnSurface,
-      .inversePrimary = color.inversePrimary, .surfaceTint = color.surfaceTint,
-  };
-}
-
 // TODO(roo_display): once Color's default constructor is constexpr on all
 // supported roo_display versions, replace this explicit initializer with {}.
 // Until then, Color(uint32_t) keeps the table's constant initialization valid
@@ -242,7 +223,7 @@ constexpr material3::StateLayerTheme EmptyMaterial3StateLayerTheme() {
 
 const material3::Material3Theme& DefaultMaterial3Theme() {
   static constexpr material3::Material3Theme theme = [] {
-    const StateOpacityTheme legacy_state = DefaultLegacyState();
+    const LegacyStateOpacity legacy_state = DefaultLegacyState();
     material3::Material3Theme result = {
         .color = DefaultMaterial3Colors(),
         .state = EmptyMaterial3StateLayerTheme(),
@@ -268,8 +249,6 @@ const Theme& DefaultTheme() {
   static const Theme theme = [] {
     const material3::Material3Theme& material = DefaultMaterial3Theme();
     return Theme{
-        .color = MakeLegacyColorTheme(material.color),
-        .state = DefaultLegacyState(),
         .framework = material3::MakeFrameworkTheme(material),
         .material3_theme = &material,
     };

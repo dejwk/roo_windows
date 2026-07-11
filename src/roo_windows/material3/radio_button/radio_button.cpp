@@ -87,8 +87,8 @@ Dimensions RadioButton::getSuggestedMinimumDimensions() const {
   return Dimensions(kContainerSize, kContainerSize);
 }
 
-ColorRole RadioButton::effectiveContainerRole() const {
-  return isOn() ? ColorRole::kPrimary : ColorRole::kSurface;
+::roo_windows::material3::ColorToken RadioButton::effectiveContainerRole() const {
+  return isOn() ? ::roo_windows::material3::ColorToken::kPrimary : ::roo_windows::material3::ColorToken::kSurface;
 }
 
 }  // namespace material3

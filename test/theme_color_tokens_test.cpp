@@ -113,12 +113,6 @@ TEST(ThemeTest, DefaultThemeComposesMaterial3AndFrameworkThemes) {
   EXPECT_EQ(material.color.error, theme.framework.color.critical);
   EXPECT_EQ(material.color.onError, theme.framework.color.onCritical);
 
-  // The temporary compatibility view must remain visually identical to the
-  // M3 source while legacy ColorRole users are migrated in later phases.
-  EXPECT_EQ(material.color.primary, theme.color.primary);
-  EXPECT_EQ(material.color.surface, theme.color.surface);
-  EXPECT_EQ(material.color.onSurface, theme.color.onSurface);
-  EXPECT_EQ(material.color.error, theme.color.error);
   EXPECT_EQ(material.color.onPrimary.withA(20),
             material.state.resolve(material3::ColorToken::kPrimary,
                                    InteractionState::kHover));

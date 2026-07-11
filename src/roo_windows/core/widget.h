@@ -214,12 +214,10 @@ class Widget {
   //
   // NOTE: during paint(PaintContext&), the default foreground color is
   // derived from the effective container role.
-  roo_display::Color defaultColor() const {
-    return theme().color.contentColorFor(effectiveContainerRole());
-  }
+  roo_display::Color defaultColor() const;
 
-  virtual ColorRole effectiveContainerRole() const;
-  ColorRole effectiveOverlayColorRole() const;
+  virtual ::roo_windows::material3::ColorToken effectiveContainerRole() const;
+  ::roo_windows::material3::ColorToken effectiveOverlayColorRole() const;
 
   const Rect& parent_bounds() const { return parent_bounds_; }
 

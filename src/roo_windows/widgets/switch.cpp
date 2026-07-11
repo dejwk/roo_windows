@@ -69,11 +69,11 @@ void Switch::paintWidgetContents(PaintContext& ctx) {
 
 void Switch::paint(PaintContext& ctx) const {
   const Theme& th = theme();
-  ColorRole bg_role = effectiveContainerRole();
-  Color circleColor = isOn() ? th.color.accentColorFor(bg_role)
-                             : th.color.role(ColorRole::kSurface);
-  Color sliderColor = isOn() ? th.color.accentColorFor(bg_role)
-                             : th.color.contentColorFor(bg_role);
+  ::roo_windows::material3::ColorToken bg_role = effectiveContainerRole();
+  Color circleColor = isOn() ? th.material3Theme().color.accentColorFor(bg_role)
+                             : th.material3Theme().color.role(::roo_windows::material3::ColorToken::kSurface);
+  Color sliderColor = isOn() ? th.material3Theme().color.accentColorFor(bg_role)
+                             : th.material3Theme().color.contentColorFor(bg_role);
   int16_t xoffset = currentThumbOffsetX();
 #if ROO_WINDOWS_ZOOM >= 200
   auto slider = slider_48();

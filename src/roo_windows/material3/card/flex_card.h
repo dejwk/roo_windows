@@ -31,14 +31,14 @@ class FlexCard : public FlexLayout {
   void setStyle(Style style);
 
   /// Overrides the container color role used by the card's surface.
-  void setContainerRole(ColorRole role);
-  ColorRole containerRoleOverride() const { return container_role_override_; }
+  void setContainerRole(::roo_windows::material3::ColorToken role);
+  ::roo_windows::material3::ColorToken containerRoleOverride() const { return container_role_override_; }
   /// Reverts to the style-default container color role.
   void clearContainerRoleOverride();
 
   /// Overrides the outline color role (only visible for the outlined style).
-  void setOutlineRole(ColorRole role);
-  ColorRole outlineRoleOverride() const { return outline_role_override_; }
+  void setOutlineRole(::roo_windows::material3::ColorToken role);
+  ::roo_windows::material3::ColorToken outlineRoleOverride() const { return outline_role_override_; }
   /// Reverts to the style-default outline color role.
   void clearOutlineRoleOverride();
 
@@ -71,7 +71,7 @@ class FlexCard : public FlexLayout {
 
   /// Returns either the configured override or the style-default container
   /// color role.
-  ColorRole containerRole() const override;
+  ::roo_windows::material3::ColorToken containerRole() const override;
   /// Returns the outline color resolved from the (overridden) outline role.
   roo_display::Color getOutlineColor() const override;
   /// Returns a `BorderStyle` built from the (overridden) corner radius and
@@ -90,8 +90,8 @@ class FlexCard : public FlexLayout {
   };
 
   struct Tokens {
-    ColorRole container_role;
-    ColorRole outline_role;
+    ::roo_windows::material3::ColorToken container_role;
+    ::roo_windows::material3::ColorToken outline_role;
     uint8_t elevation;
     SmallNumber outline_width;
     uint8_t corner_radius;
@@ -105,8 +105,8 @@ class FlexCard : public FlexLayout {
   uint8_t elevation_override_;
   uint8_t corner_radius_override_;
   SmallNumber outline_width_override_;
-  ColorRole container_role_override_;
-  ColorRole outline_role_override_;
+  ::roo_windows::material3::ColorToken container_role_override_;
+  ::roo_windows::material3::ColorToken outline_role_override_;
 };
 
 }  // namespace material3

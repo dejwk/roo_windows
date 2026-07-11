@@ -82,19 +82,19 @@ Color DisabledComposite(const Theme& theme, Color fg, uint8_t alpha) {
   return AlphaBlend(theme.material3Theme().color.surface, fg.withA(alpha));
 }
 
-ColorRole ContainerRoleFor(ButtonVariant v) {
+::roo_windows::material3::ColorToken ContainerRoleFor(ButtonVariant v) {
   switch (v) {
     case ButtonVariant::kFilled:
-      return ColorRole::kPrimary;
+      return ::roo_windows::material3::ColorToken::kPrimary;
     case ButtonVariant::kFilledTonal:
-      return ColorRole::kSecondaryContainer;
+      return ::roo_windows::material3::ColorToken::kSecondaryContainer;
     case ButtonVariant::kElevated:
-      return ColorRole::kSurfaceContainerLow;
+      return ::roo_windows::material3::ColorToken::kSurfaceContainerLow;
     case ButtonVariant::kText:
     case ButtonVariant::kOutlined:
-      return ColorRole::kUndefined;
+      return ::roo_windows::material3::ColorToken::kNone;
   }
-  return ColorRole::kUndefined;
+  return ::roo_windows::material3::ColorToken::kNone;
 }
 
 ButtonTokens ResolveTokens(const Theme& theme, ButtonVariant v, bool enabled) {
@@ -297,7 +297,7 @@ Padding Button::getDefaultPadding() const {
   return Padding(horizontal, vertical);
 }
 
-ColorRole Button::containerRole() const { return ContainerRoleFor(variant()); }
+::roo_windows::material3::ColorToken Button::containerRole() const { return ContainerRoleFor(variant()); }
 
 Color Button::background() const {
   return ResolveTokens(theme(), variant(), isEnabled()).container;

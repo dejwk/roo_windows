@@ -55,7 +55,7 @@ class RadioButton : public BasicWidget {
   bool isClickable() const override { return true; }
 
   /// Resolves the surface color role based on the current on/off state.
-  ColorRole effectiveContainerRole() const override;
+  ::roo_windows::material3::ColorToken effectiveContainerRole() const override;
 
   /// Forces the selected state, mirroring radio-group semantics.
   void onClicked() override;

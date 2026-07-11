@@ -23,20 +23,20 @@ TEST(FlexCard, ConstructorSeedsStyleDefaults) {
   ApplicationContext context = MakeContext(env);
 
   FlexCard elevated(context, FlexCard::Style::kElevated);
-  EXPECT_EQ(ColorRole::kSurfaceContainerLow, elevated.containerRole());
+  EXPECT_EQ(::roo_windows::material3::ColorToken::kSurfaceContainerLow, elevated.containerRole());
   EXPECT_EQ(3, elevated.getElevation());
   EXPECT_EQ((uint8_t)Scaled(12),
             elevated.getBorderStyle().corner_radii().max());
   EXPECT_EQ(SmallNumber(0), elevated.getBorderStyle().outline_width());
 
   FlexCard filled(context, FlexCard::Style::kFilled);
-  EXPECT_EQ(ColorRole::kSurfaceContainerHighest, filled.containerRole());
+  EXPECT_EQ(::roo_windows::material3::ColorToken::kSurfaceContainerHighest, filled.containerRole());
   EXPECT_EQ(0, filled.getElevation());
   EXPECT_EQ((uint8_t)Scaled(12), filled.getBorderStyle().corner_radii().max());
   EXPECT_EQ(SmallNumber(0), filled.getBorderStyle().outline_width());
 
   FlexCard outlined(context, FlexCard::Style::kOutlined);
-  EXPECT_EQ(ColorRole::kSurface, outlined.containerRole());
+  EXPECT_EQ(::roo_windows::material3::ColorToken::kSurface, outlined.containerRole());
   EXPECT_EQ(0, outlined.getElevation());
   EXPECT_EQ((uint8_t)Scaled(12),
             outlined.getBorderStyle().corner_radii().max());
@@ -55,7 +55,7 @@ TEST(FlexCard, StyleChangeUpdatesNonOverriddenValues) {
   FlexCard card(context, FlexCard::Style::kFilled);
   card.setStyle(FlexCard::Style::kOutlined);
 
-  EXPECT_EQ(ColorRole::kSurface, card.containerRole());
+  EXPECT_EQ(::roo_windows::material3::ColorToken::kSurface, card.containerRole());
   EXPECT_EQ(0, card.getElevation());
   EXPECT_EQ((uint8_t)Scaled(12), card.getBorderStyle().corner_radii().max());
   EXPECT_EQ(SmallNumber::Of16ths(Scaled(16)),
@@ -71,16 +71,16 @@ TEST(FlexCard, OverridesPersistAcrossStyleChanges) {
   ApplicationContext context = MakeContext(env);
 
   FlexCard card(context, FlexCard::Style::kFilled);
-  card.setContainerRole(ColorRole::kPrimaryContainer);
-  card.setOutlineRole(ColorRole::kOutline);
+  card.setContainerRole(::roo_windows::material3::ColorToken::kPrimaryContainer);
+  card.setOutlineRole(::roo_windows::material3::ColorToken::kOutline);
   card.setElevation(7);
   card.setOutlineWidth(SmallNumber::Of16ths(9));
   card.setCornerRadius(5);
 
   card.setStyle(FlexCard::Style::kOutlined);
 
-  EXPECT_EQ(ColorRole::kPrimaryContainer, card.containerRole());
-  EXPECT_EQ(ColorRole::kOutline, card.outlineRoleOverride());
+  EXPECT_EQ(::roo_windows::material3::ColorToken::kPrimaryContainer, card.containerRole());
+  EXPECT_EQ(::roo_windows::material3::ColorToken::kOutline, card.outlineRoleOverride());
   EXPECT_EQ(7, card.getElevation());
   EXPECT_EQ(SmallNumber::Of16ths(9), card.getBorderStyle().outline_width());
   EXPECT_EQ(5, card.getBorderStyle().corner_radii().max());
@@ -97,8 +97,8 @@ TEST(FlexCard, ClearOverrideRecomputesFromCurrentStyle) {
   FlexCard card(context, FlexCard::Style::kFilled);
 
   card.setStyle(FlexCard::Style::kElevated);
-  card.setContainerRole(ColorRole::kPrimary);
-  card.setOutlineRole(ColorRole::kSecondary);
+  card.setContainerRole(::roo_windows::material3::ColorToken::kPrimary);
+  card.setOutlineRole(::roo_windows::material3::ColorToken::kSecondary);
   card.setElevation(11);
   card.setOutlineWidth(SmallNumber::Of16ths(3));
   card.setCornerRadius(2);
@@ -111,8 +111,8 @@ TEST(FlexCard, ClearOverrideRecomputesFromCurrentStyle) {
   card.clearOutlineWidthOverride();
   card.clearCornerRadiusOverride();
 
-  EXPECT_EQ(ColorRole::kSurface, card.containerRole());
-  EXPECT_EQ(ColorRole::kOutlineVariant, card.outlineRoleOverride());
+  EXPECT_EQ(::roo_windows::material3::ColorToken::kSurface, card.containerRole());
+  EXPECT_EQ(::roo_windows::material3::ColorToken::kOutlineVariant, card.outlineRoleOverride());
   EXPECT_EQ(0, card.getElevation());
   EXPECT_EQ(SmallNumber::Of16ths(Scaled(16)),
             card.getBorderStyle().outline_width());

@@ -113,7 +113,7 @@ bool Slider::setPos(uint16_t pos) {
 
 void Slider::paint(PaintContext& ctx) const {
   const Theme& th = theme();
-  Color circleColor = th.color.accentColorFor(effectiveContainerRole());
+  Color circleColor = th.material3Theme().color.accentColorFor(effectiveContainerRole());
   Padding p = getPadding();
 
   int16_t range = range_from_width(width(), p);

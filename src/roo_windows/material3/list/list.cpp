@@ -871,12 +871,12 @@ const ListEntryVisualContext& ListEntry::visualContext() const {
   return visual_context_;
 }
 
-ColorRole ListEntry::containerRole() const {
+::roo_windows::material3::ColorToken ListEntry::containerRole() const {
   if (visual_context_.selected &&
       visual_context_.variant == ListVariant::kExpressive) {
-    return ColorRole::kSecondaryContainer;
+    return ::roo_windows::material3::ColorToken::kSecondaryContainer;
   }
-  return ColorRole::kSurface;
+  return ::roo_windows::material3::ColorToken::kSurface;
 }
 
 BorderStyle ListEntry::getBorderStyle() const {

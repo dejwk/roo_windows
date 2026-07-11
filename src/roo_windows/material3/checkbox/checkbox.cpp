@@ -133,9 +133,9 @@ Dimensions Checkbox::getSuggestedMinimumDimensions() const {
   return Dimensions(kContainerSize, kContainerSize);
 }
 
-ColorRole Checkbox::effectiveContainerRole() const {
-  return onOffState() == Checkbox::OnOffState::kOff ? ColorRole::kSurface
-                                                    : ColorRole::kPrimary;
+::roo_windows::material3::ColorToken Checkbox::effectiveContainerRole() const {
+  return onOffState() == Checkbox::OnOffState::kOff ? ::roo_windows::material3::ColorToken::kSurface
+                                                    : ::roo_windows::material3::ColorToken::kPrimary;
 }
 
 }  // namespace material3

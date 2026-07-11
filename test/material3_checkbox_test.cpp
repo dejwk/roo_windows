@@ -93,13 +93,13 @@ TEST(Material3Checkbox, EffectiveContainerRoleTracksSelectionState) {
   ApplicationContext context = MakeContext(env);
 
   Checkbox checkbox(context, Checkbox::OnOffState::kOff);
-  EXPECT_EQ(ColorRole::kSurface, checkbox.effectiveContainerRole());
+  EXPECT_EQ(::roo_windows::material3::ColorToken::kSurface, checkbox.effectiveContainerRole());
 
   checkbox.setOnOffState(Checkbox::OnOffState::kIndeterminate);
-  EXPECT_EQ(ColorRole::kPrimary, checkbox.effectiveContainerRole());
+  EXPECT_EQ(::roo_windows::material3::ColorToken::kPrimary, checkbox.effectiveContainerRole());
 
   checkbox.setOn();
-  EXPECT_EQ(ColorRole::kPrimary, checkbox.effectiveContainerRole());
+  EXPECT_EQ(::roo_windows::material3::ColorToken::kPrimary, checkbox.effectiveContainerRole());
 }
 
 }  // namespace

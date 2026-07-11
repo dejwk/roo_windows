@@ -321,7 +321,7 @@ class ListEntry : public Container {
   const ListEntryVisualContext& visualContext() const;
 
   /// Returns the row's Material 3 container color role.
-  ColorRole containerRole() const override;
+  ::roo_windows::material3::ColorToken containerRole() const override;
 
   /// Returns the current Material 3 row shape.
   BorderStyle getBorderStyle() const override;

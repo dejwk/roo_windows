@@ -2,6 +2,7 @@
 
 #include "roo_windows/core/panel.h"
 #include "roo_windows/decoration/decoration.h"
+#include "roo_windows/material3/theme.h"
 
 namespace roo_windows {
 
@@ -19,14 +20,14 @@ Color SurfaceWidget::effectiveBackground() const {
                                        bgcolor);
 }
 
-ColorRole SurfaceWidget::effectiveContainerRole() const {
-  ColorRole role = containerRole();
-  if (role != ColorRole::kUndefined) {
+::roo_windows::material3::ColorToken SurfaceWidget::effectiveContainerRole() const {
+  ::roo_windows::material3::ColorToken role = containerRole();
+  if (role != ::roo_windows::material3::ColorToken::kNone) {
     return role;
   }
 
   return parent() != nullptr ? parent()->effectiveContainerRole()
-                             : ColorRole::kBackground;
+                             : ::roo_windows::material3::ColorToken::kBackground;
 }
 
 void SurfaceWidget::invalidateInterior() {

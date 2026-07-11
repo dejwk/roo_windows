@@ -705,7 +705,7 @@ roo_display::FpPoint Slider::getPointOverlayFocus() const {
   return roo_display::FpPoint{display_center, axis.centeredCross()};
 }
 
-ColorRole Slider::effectiveContainerRole() const { return ColorRole::kPrimary; }
+::roo_windows::material3::ColorToken Slider::effectiveContainerRole() const { return ::roo_windows::material3::ColorToken::kPrimary; }
 
 Rect Slider::getSloppyTouchParentBounds() const {
   Rect bounds = Widget::getSloppyTouchParentBounds();

@@ -11,23 +11,23 @@ namespace roo_windows {
 
 namespace {
 
-ColorRole ButtonContainerRole(Button::Style style) {
+::roo_windows::material3::ColorToken ButtonContainerRole(Button::Style style) {
   switch (style) {
     case Button::CONTAINED:
-      return ColorRole::kPrimary;
+      return ::roo_windows::material3::ColorToken::kPrimary;
     case Button::OUTLINED:
     case Button::TEXT:
-      return ColorRole::kBackground;
+      return ::roo_windows::material3::ColorToken::kBackground;
   }
-  return ColorRole::kBackground;
+  return ::roo_windows::material3::ColorToken::kBackground;
 }
 
 roo_display::Color ButtonOutlineColor(const Theme& theme, Button::Style style) {
   switch (style) {
     case Button::CONTAINED:
-      return theme.color.role(ColorRole::kPrimary);
+      return theme.material3Theme().color.role(::roo_windows::material3::ColorToken::kPrimary);
     case Button::OUTLINED:
-      return theme.color.role(ColorRole::kOutline);
+      return theme.material3Theme().color.role(::roo_windows::material3::ColorToken::kOutline);
     case Button::TEXT:
       return color::Transparent;
   }
@@ -36,18 +36,18 @@ roo_display::Color ButtonOutlineColor(const Theme& theme, Button::Style style) {
 
 roo_display::Color ButtonInteriorColor(const Theme& theme,
                                        Button::Style style) {
-  return theme.color.role(ButtonContainerRole(style));
+  return theme.material3Theme().color.role(ButtonContainerRole(style));
 }
 
 roo_display::Color ButtonContentColor(const Theme& theme, Button::Style style) {
   switch (style) {
     case Button::CONTAINED:
-      return theme.color.contentColorFor(ColorRole::kPrimary);
+      return theme.material3Theme().color.contentColorFor(::roo_windows::material3::ColorToken::kPrimary);
     case Button::OUTLINED:
     case Button::TEXT:
-      return theme.color.role(ColorRole::kPrimary);
+      return theme.material3Theme().color.role(::roo_windows::material3::ColorToken::kPrimary);
   }
-  return theme.color.role(ColorRole::kPrimary);
+  return theme.material3Theme().color.role(::roo_windows::material3::ColorToken::kPrimary);
 }
 
 }  // namespace
@@ -64,7 +64,7 @@ Button::Button(ApplicationContext& context, Style style)
   outline_color_.set_a(0x80);
 }
 
-ColorRole Button::containerRole() const { return ButtonContainerRole(style()); }
+::roo_windows::material3::ColorToken Button::containerRole() const { return ButtonContainerRole(style()); }
 
 void Button::notifyStateChanged(uint16_t state_diff) {
   (void)state_diff;

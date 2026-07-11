@@ -15,11 +15,11 @@ void RadioButton::onClicked() {
 }
 
 void RadioButton::paint(PaintContext& ctx) const {
-  ColorRole bg_role = effectiveContainerRole();
+  ::roo_windows::material3::ColorToken bg_role = effectiveContainerRole();
   Color color =
-      isOn() ? theme().color.accentColorFor(bg_role)
+      isOn() ? theme().material3Theme().color.accentColorFor(bg_role)
              : AlphaBlend(ctx.bgcolor(),
-                          theme().color.contentColorFor(bg_role).withA(0x90));
+                          theme().material3Theme().color.contentColorFor(bg_role).withA(0x90));
   RleImage4bppxBiased<Alpha4, ProgMemPtr> img =
       isOn() ? SCALED_ROO_ICON(filled, toggle_radio_button_checked)
              : SCALED_ROO_ICON(filled, toggle_radio_button_unchecked);

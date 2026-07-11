@@ -1,6 +1,7 @@
 #pragma once
 
 #include "roo_windows/core/widget.h"
+#include "roo_windows/material3/theme.h"
 
 namespace roo_windows {
 
@@ -18,11 +19,11 @@ class SurfaceWidget : public Widget {
   /// is the surface-facing public accessor. Returning kUndefined means that
   /// this surface does not introduce a new role and instead inherits the
   /// effective role from its ancestors.
-  virtual ColorRole containerRole() const { return ColorRole::kUndefined; }
+  virtual ::roo_windows::material3::ColorToken containerRole() const { return ::roo_windows::material3::ColorToken::kNone; }
 
   /// Resolves the inherited or surface-owned container role for theme
   /// lookups.
-  ColorRole effectiveContainerRole() const override;
+  ::roo_windows::material3::ColorToken effectiveContainerRole() const override;
 
   /// Returns the effective background color of this widget. If this widget
   /// has a non-opaque background, it is returned. If this widget has a

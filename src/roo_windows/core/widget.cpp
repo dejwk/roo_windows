@@ -8,6 +8,7 @@
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/press_overlay.h"
 #include "roo_windows/core/rtti.h"
+#include "roo_windows/material3/theme.h"
 
 #ifndef MLOG_roo_windows_layout
 #define MLOG_roo_windows_layout 0
@@ -232,9 +233,13 @@ Rect Widget::getSloppyTouchBounds() const {
   return getSloppyTouchParentBounds().translate(-offsetLeft(), -offsetTop());
 }
 
-ColorRole Widget::effectiveContainerRole() const {
+roo_display::Color Widget::defaultColor() const {
+  return theme().material3Theme().color.contentColorFor(effectiveContainerRole());
+}
+
+::roo_windows::material3::ColorToken Widget::effectiveContainerRole() const {
   return parent() != nullptr ? parent()->effectiveContainerRole()
-                             : ColorRole::kBackground;
+                             : ::roo_windows::material3::ColorToken::kBackground;
 }
 
 const Theme& Widget::theme() const { return context_.theme(); }
@@ -504,7 +509,7 @@ void Widget::moveTo(const Rect& parent_bounds) {
   setParentBounds(parent_bounds);
 }
 
-ColorRole Widget::effectiveOverlayColorRole() const {
+::roo_windows::material3::ColorToken Widget::effectiveOverlayColorRole() const {
   if (getOverlayType() == Widget::OVERLAY_POINT && parent() != nullptr) {
     return parent()->effectiveContainerRole();
   }
@@ -513,28 +518,28 @@ ColorRole Widget::effectiveOverlayColorRole() const {
 
 uint8_t Widget::getOverlayOpacity() const {
   if (getOverlayType() == OVERLAY_NONE) return 0;
-  ColorRole bg_role = effectiveOverlayColorRole();
+  ::roo_windows::material3::ColorToken bg_role = effectiveOverlayColorRole();
   uint16_t overlay_opacity = 0;
   const Theme& myTheme = theme();
   if (isHover()) {
-    overlay_opacity += myTheme.opacity(bg_role, InteractionState::kHover);
+    overlay_opacity += myTheme.material3Theme().state.resolve(bg_role, InteractionState::kHover).a();
   }
   if (isFocused()) {
-    overlay_opacity += myTheme.opacity(bg_role, InteractionState::kFocus);
+    overlay_opacity += myTheme.material3Theme().state.resolve(bg_role, InteractionState::kFocus).a();
   }
   if (isSelected()) {
-    overlay_opacity += myTheme.opacity(bg_role, InteractionState::kSelected);
+    overlay_opacity += myTheme.material3Theme().state.resolve(bg_role, InteractionState::kSelected).a();
   }
   if (isActivated() && useOverlayOnActivation()) {
-    overlay_opacity += myTheme.opacity(bg_role, InteractionState::kActivated);
+    overlay_opacity += myTheme.material3Theme().state.resolve(bg_role, InteractionState::kActivated).a();
   }
   if (isClicking() && useOverlayOnPress()) {
-    overlay_opacity += myTheme.opacity(bg_role, InteractionState::kPressed);
+    overlay_opacity += myTheme.material3Theme().state.resolve(bg_role, InteractionState::kPressed).a();
   } else if (isPressed() && useOverlayOnPress()) {
-    overlay_opacity += myTheme.opacity(bg_role, InteractionState::kPressed);
+    overlay_opacity += myTheme.material3Theme().state.resolve(bg_role, InteractionState::kPressed).a();
   }
   if (isDragged()) {
-    overlay_opacity += myTheme.opacity(bg_role, InteractionState::kDragged);
+    overlay_opacity += myTheme.material3Theme().state.resolve(bg_role, InteractionState::kDragged).a();
   }
   if (overlay_opacity > 255) overlay_opacity = 255;
   if (overlay_opacity == 0) return 0;  // roo_display::color::Transparent;
@@ -595,7 +600,8 @@ void Widget::paintWidgetModded(PaintContext& ctx) {
   if (overlay_spec.is_disabled()) {
     roo_display::DisplayOutput& out = canvas.out();
     roo_display::TranslucencyFilter disablement_filter(
-        canvas.out(), theme().state.disabled, canvas.bgcolor());
+        canvas.out(), theme().framework.interaction.disabledContentOpacity,
+        canvas.bgcolor());
     canvas.set_out(&disablement_filter);
     paintWidgetContents(ctx);
     canvas.set_out(&out);
