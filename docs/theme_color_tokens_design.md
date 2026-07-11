@@ -88,9 +88,9 @@ Theme                              singleton application theme
   |
   +-- framework : FrameworkTheme  owned; generic widgets depend here
   |
-  +-- material3 : const material3::Theme*  nullable typed slot
+  +-- material3 : const material3::Material3Theme*  nullable typed slot
   |
-  `-- future slots, e.g. const material4::Theme*
+  `-- future slots, e.g. const material4::Material4Theme*
 ```
 
 For example, a future application may populate both the M3 and M4 slots while
@@ -256,12 +256,12 @@ struct StateLayerTheme {
                                        InteractionState state) const;
 };
 
-struct Theme {
+struct Material3Theme {
   ColorScheme color;
   StateLayerTheme state;
 };
 
-FrameworkTheme MakeFrameworkTheme(const Theme& material_theme);
+FrameworkTheme MakeFrameworkTheme(const Material3Theme& material_theme);
 
 }  // namespace roo_windows::material3
 ```
@@ -294,22 +294,22 @@ pointers for supported systems:
 
 ```cpp
 namespace roo_windows::material3 {
-struct Theme;
+struct Material3Theme;
 }
 
 namespace roo_windows {
 
 struct Theme {
   FrameworkTheme framework;
-  const material3::Theme* material3_theme = nullptr;
+  const material3::Material3Theme* material3_theme = nullptr;
 
   bool hasMaterial3Theme() const { return material3_theme != nullptr; }
 
   // Precondition: hasMaterial3Theme(). Debug builds assert this condition.
-  const material3::Theme& material3Theme() const;
+  const material3::Material3Theme& material3Theme() const;
 
   // A future system can add another independent typed slot:
-  // const material4::Theme* material4_theme = nullptr;
+  // const material4::Material4Theme* material4_theme = nullptr;
 };
 
 }  // namespace roo_windows
@@ -407,7 +407,7 @@ tokens contain the same concrete color.
 
 The default build remains M3-based:
 
-1. create a static immutable `material3::Theme` with current values from
+1. create a static immutable `material3::Material3Theme` with current values from
    [theme.cpp](../src/roo_windows/core/theme.cpp),
 2. initialize the owned `FrameworkTheme` with
    `material3::MakeFrameworkTheme(material3_theme)`,
@@ -440,7 +440,7 @@ sizes. Any shared RAM increase is measured and documented.
 ### Phase 2: Add the M3 Slot and Compose the Default Theme
 
 1. Add the typed nullable M3 pointer and checked accessor to `Theme`.
-2. Move current values into `material3::Theme`.
+2. Move current values into `material3::Material3Theme`.
 3. Initialize the owned framework theme from M3 defaults.
 4. Point the default overall theme at the static default M3 theme.
 5. Provide narrow source-compatibility accessors where practical.

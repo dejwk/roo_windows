@@ -23,7 +23,7 @@ constexpr ColorToken TokenForFrameworkRole(FrameworkColorRole role) {
 
 }  // namespace
 
-FrameworkTheme MakeFrameworkTheme(const Theme& material_theme) {
+FrameworkTheme MakeFrameworkTheme(const Material3Theme& material_theme) {
   FrameworkTheme result = {
       .color = {
           .canvas = material_theme.color.background,

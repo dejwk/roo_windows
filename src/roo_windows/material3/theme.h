@@ -140,12 +140,12 @@ struct StateLayerTheme {
   }
 };
 
-struct Theme {
+struct Material3Theme {
   ColorScheme color;
   StateLayerTheme state;
 };
 
-FrameworkTheme MakeFrameworkTheme(const Theme& material_theme);
+FrameworkTheme MakeFrameworkTheme(const Material3Theme& material_theme);
 
 static_assert(sizeof(ColorToken) == 1,
               "Material 3 color tokens must remain compact.");

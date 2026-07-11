@@ -1,6 +1,7 @@
 #include "gtest/gtest.h"
 
 #include "roo_windows/core/framework_theme.h"
+#include "roo_windows/core/theme.h"
 #include "roo_windows/material3/theme.h"
 
 namespace roo_windows {
@@ -61,7 +62,7 @@ TEST(Material3StateLayerThemeTest, ResolvesEveryTokenAndState) {
 }
 
 TEST(Material3ThemeTest, MakesTheDocumentedFrameworkMapping) {
-  material3::Theme material = {};
+  material3::Material3Theme material = {};
   material.color.background = roo_display::Color(1);
   material.color.surface = roo_display::Color(2);
   material.color.onSurface = roo_display::Color(3);
@@ -96,6 +97,39 @@ TEST(Material3ThemeTest, MakesTheDocumentedFrameworkMapping) {
   EXPECT_EQ(roo_display::Color(9),
             framework.interaction.resolve(FrameworkColorRole::kEmphasis,
                                           InteractionState::kPressed));
+}
+
+TEST(ThemeTest, DefaultThemeComposesMaterial3AndFrameworkThemes) {
+  const Theme& theme = DefaultTheme();
+
+  ASSERT_TRUE(theme.hasMaterial3Theme());
+  const material3::Material3Theme& material = theme.material3Theme();
+  EXPECT_EQ(material.color.background, theme.framework.color.canvas);
+  EXPECT_EQ(material.color.surface, theme.framework.color.surface);
+  EXPECT_EQ(material.color.onSurface, theme.framework.color.content);
+  EXPECT_EQ(material.color.onSurfaceVariant, theme.framework.color.mutedContent);
+  EXPECT_EQ(material.color.primary, theme.framework.color.emphasis);
+  EXPECT_EQ(material.color.outlineVariant, theme.framework.color.outline);
+  EXPECT_EQ(material.color.error, theme.framework.color.critical);
+  EXPECT_EQ(material.color.onError, theme.framework.color.onCritical);
+
+  // The temporary compatibility view must remain visually identical to the
+  // M3 source while legacy ColorRole users are migrated in later phases.
+  EXPECT_EQ(material.color.primary, theme.color.primary);
+  EXPECT_EQ(material.color.surface, theme.color.surface);
+  EXPECT_EQ(material.color.onSurface, theme.color.onSurface);
+  EXPECT_EQ(material.color.error, theme.color.error);
+  EXPECT_EQ(material.color.onPrimary.withA(20),
+            material.state.resolve(material3::ColorToken::kPrimary,
+                                   InteractionState::kHover));
+  EXPECT_EQ(material.color.onSurface.withA(31),
+            material.state.resolve(material3::ColorToken::kSurface,
+                                   InteractionState::kPressed));
+}
+
+TEST(ThemeTest, CanBeUsedWithoutAMaterial3Slot) {
+  Theme theme = {};
+  EXPECT_FALSE(theme.hasMaterial3Theme());
 }
 
 }  // namespace

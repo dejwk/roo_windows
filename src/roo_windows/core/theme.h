@@ -44,6 +44,10 @@
 #include "roo_windows/config.h"
 #include "roo_windows/core/framework_theme.h"
 
+namespace roo_windows::material3 {
+struct Material3Theme;
+}
+
 #ifndef ROO_WINDOWS_ZOOM
 
 #define ROO_DISPLAY_DPI 180
@@ -572,10 +576,29 @@ struct StateOpacityTheme {
   const uint8_t draggedOnError;
 };
 
-/// Material 3 theme: palette plus per-state opacity overrides.
+/// Legacy Material 3 compatibility storage. New code should obtain the
+/// design-system theme through Theme::material3Theme().
+///
+/// This remains in the application Theme during the incremental migration so
+/// existing ColorRole-based widgets retain their source and ABI contract until
+/// they are moved in Phases 3 and 4.
 struct Theme {
   struct ColorTheme color;
   struct StateOpacityTheme state;
+
+  // The framework contract is owned by every application theme, independent
+  // of whether a Material 3 theme is installed.
+  FrameworkTheme framework;
+
+  // Non-owning typed design-system slot. The pointed-to object must outlive
+  // this Theme and widgets that use it.
+  const material3::Material3Theme* material3_theme = nullptr;
+
+  bool hasMaterial3Theme() const { return material3_theme != nullptr; }
+
+  // Precondition: hasMaterial3Theme(). This asserts in debug builds; a null
+  // slot is an application configuration error in release builds as well.
+  const material3::Material3Theme& material3Theme() const;
 
   /// Returns the state-layer opacity (0..255) applied when a widget painted
   /// against `bg_role` is in `interaction`.
@@ -791,6 +814,9 @@ struct Theme {
     return draggedOpacity(color.roleForColor(bg));
   }
 };
+
+static_assert(sizeof(decltype(Theme::material3_theme)) == sizeof(void*),
+              "A design-system theme slot must remain a pointer.");
 
 struct KeyboardColorTheme {
   roo_display::Color background;
