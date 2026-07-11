@@ -1,5 +1,9 @@
 # Roo Windows Material 3 Extended FAB Design
 
+## Implementation status
+
+**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+
 ## Objective
 
 Add Material Design 3 extended floating action button support to `roo_windows`
@@ -26,8 +30,8 @@ not describe an existing implementation.
 ## Motivation
 
 `roo_windows` now has a working Material 3 standard button surface under
-[material3_buttons_design.md](material3_buttons_design.md) and
-[src/roo_windows/material3/button/button.h](../src/roo_windows/material3/button/button.h),
+[../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md) and
+[src/roo_windows/material3/button/button.h](../../../src/roo_windows/material3/button/button.h),
 but that work deliberately excluded floating action buttons.
 
 That boundary was correct. A FAB is not just another filled button:
@@ -49,20 +53,20 @@ As of 2026-05, `roo_windows` has no checked-in FAB family.
 
 What exists today:
 
-- [src/roo_windows/material3/button/button.h](../src/roo_windows/material3/button/button.h)
+- [src/roo_windows/material3/button/button.h](../../../src/roo_windows/material3/button/button.h)
   and
-  [src/roo_windows/material3/button/button.cpp](../src/roo_windows/material3/button/button.cpp)
+  [src/roo_windows/material3/button/button.cpp](../../../src/roo_windows/material3/button/button.cpp)
   implement a Material 3 standard `Button` with token-backed size presets,
   icon-plus-label measurement, theme-resolved colors, and reuse of the
   existing `BasicSurfaceWidget` surface pipeline.
-- [examples/material3/buttons/buttons.ino](../examples/material3/buttons/buttons.ino)
+- [examples/material3/buttons/buttons.ino](../../../examples/material3/buttons/buttons.ino)
   already exercises the current Material 3 button surface.
-- [test/material3_button_test.cpp](../test/material3_button_test.cpp) already
+- [test/material3_button_test.cpp](../../../test/material3_button_test.cpp) already
   provides a host-side unit-test pattern for a Material 3 action widget.
 - `BasicSurfaceWidget` already provides surface ownership, elevation, outline,
   area-overlay, and click-animation integration.
 - the earlier button design explicitly deferred floating action buttons in
-  [material3_buttons_design.md](material3_buttons_design.md).
+  [../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md).
 - the navigation-rail design already anticipates FAB hosting in the rail header
   slot in
   [material3_navigation_rail_design.md](material3_navigation_rail_design.md).
@@ -462,7 +466,7 @@ class ExtendedFab : public BasicSurfaceWidget {
 ## Implementation Plan
 
 Implementation work for these phases follows the repo-local
-[roo_windows Widget Authoring](../.github/instructions/roo-windows-widget-authoring.instructions.md).
+[roo_windows Widget Authoring](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
 ### Phase 1: Declare the Extended FAB Type and Token Surface
 

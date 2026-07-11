@@ -1,5 +1,9 @@
 # Roo Windows Application Navigation and Back Behavior Design
 
+## Implementation status
+
+**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+
 ## Objective
 
 Add one framework-level contract for application navigation and back behavior
@@ -56,16 +60,16 @@ into one explicit model.
 
 The current ownership model already has a strong top-level navigation seam.
 
-- [Application](../src/roo_windows/core/application.h) owns the event loop,
+- [Application](../../../src/roo_windows/core/application.h) owns the event loop,
   display, `MainWindow`, input polling, and task creation.
-- [MainWindow](../src/roo_windows/core/main_window.h) already defines the
+- [MainWindow](../../../src/roo_windows/core/main_window.h) already defines the
   visible layer order: regular tasks, popup layers, then modal dialog.
-- [Task](../src/roo_windows/core/task.h) already owns an `Activity` stack with
+- [Task](../../../src/roo_windows/core/task.h) already owns an `Activity` stack with
   push and pop lifecycle.
-- [Activity](../src/roo_windows/core/activity.h) already represents one
+- [Activity](../../../src/roo_windows/core/activity.h) already represents one
   top-level screen entry with `onStart()`, `onResume()`, `onPause()`, and
   `onStop()`.
-- [Dialog](../src/roo_windows/dialogs/dialog.h) already has a close path and a
+- [Dialog](../../../src/roo_windows/dialogs/dialog.h) already has a close path and a
   dismissal callback contract.
 
 That means the repository already has a real route-stack abstraction. The
@@ -78,14 +82,14 @@ Several current design docs already constrain the answer.
 - [non_touch_input_design.md](non_touch_input_design.md) keeps `Application`
   as the owner of input polling and dispatch order, and it places shared
   runtime services on
-  [ApplicationContext](../src/roo_windows/core/application_context.h).
+  [ApplicationContext](../../../src/roo_windows/core/application_context.h).
 - [material3_menus_design.md](material3_menus_design.md) already requires
   deepest-first Back or Escape dismissal for open submenu chains.
 - [material3_sheets_design.md](material3_sheets_design.md) and
   [material3_navigation_drawer_design.md](material3_navigation_drawer_design.md)
   already keep modal wrappers on popup plus scrim infrastructure and defer
   predictive-back motion.
-- [horizontal_page_host_design.md](horizontal_page_host_design.md) explicitly
+- [../in_progress/horizontal_page_host_design.md](../in_progress/horizontal_page_host_design.md) explicitly
   defines a presentation container for peer pages, not a new route owner.
 
 Those documents already imply that:
@@ -478,9 +482,9 @@ lands in this design.
 ## Implementation Plan
 
 Authoring reference: follow the local
-[embedded C++ code authoring instruction](../.github/instructions/embedded-cpp-code-authoring.instructions.md)
+[embedded C++ code authoring instruction](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
 and the
-[roo_windows widget authoring instruction](../.github/instructions/roo-windows-widget-authoring.instructions.md).
+[roo_windows widget authoring instruction](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
 ### Phase 1: Back Dispatch Core
 

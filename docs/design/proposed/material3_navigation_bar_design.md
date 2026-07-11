@@ -1,5 +1,9 @@
 # Roo Windows Material 3 Navigation Bar Design
 
+## Implementation status
+
+**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+
 ## Objective
 
 Add a Material 3 navigation bar family to `roo_windows` that closes on the
@@ -42,8 +46,8 @@ There is no checked-in Material 3 navigation bar implementation today.
 
 The nearest current navigation surfaces are:
 
-- [src/roo_windows/containers/navigation_rail.h](../src/roo_windows/containers/navigation_rail.h)
-- [src/roo_windows/containers/navigation_panel.h](../src/roo_windows/containers/navigation_panel.h)
+- [src/roo_windows/containers/navigation_rail.h](../../../src/roo_windows/containers/navigation_rail.h)
+- [src/roo_windows/containers/navigation_panel.h](../../../src/roo_windows/containers/navigation_panel.h)
 - [docs/material3_navigation_rail_design.md](material3_navigation_rail_design.md)
 
 Those surfaces are useful architectural context, but they are not the right
@@ -64,7 +68,7 @@ mutation of the rail.
 Two checked-in surfaces directly constrain this design.
 
 The badge helper is already available in
-[src/roo_windows/material3/badge/badge.h](../src/roo_windows/material3/badge/badge.h):
+[src/roo_windows/material3/badge/badge.h](../../../src/roo_windows/material3/badge/badge.h):
 
 1. `material3::Badge` is not a `Widget`,
 2. badge text is stored inline with no heap allocation,
@@ -74,8 +78,8 @@ The badge helper is already available in
    `paint(PaintContext&, const Theme&) const`.
 
 The paint-context pipeline is also already established in
-[src/roo_windows/core/paint_context.h](../src/roo_windows/core/paint_context.h)
-and [src/roo_windows/core/widget.h](../src/roo_windows/core/widget.h):
+[src/roo_windows/core/paint_context.h](../../../src/roo_windows/core/paint_context.h)
+and [src/roo_windows/core/widget.h](../../../src/roo_windows/core/widget.h):
 
 1. widget paint goes through `paint(PaintContext&)`,
 2. exclusions protect already-settled pixels from later paint,
@@ -118,9 +122,9 @@ The main product signals carried into this design are:
 The most relevant local references are:
 
 - [material3_navigation_rail_design.md](material3_navigation_rail_design.md)
-- [material3_badge_design.md](material3_badge_design.md)
-- [paint_context_design.md](paint_context_design.md)
-- [widget_authoring.md](widget_authoring.md)
+- [../implemented/material3_badge_design.md](../implemented/material3_badge_design.md)
+- [../implemented/paint_context_design.md](../implemented/paint_context_design.md)
+- [widget_authoring.md](../../widget_authoring.md)
 
 Those references imply five important local constraints:
 
@@ -706,7 +710,7 @@ class NavigationBar : public Container {
 ## Implementation Plan
 
 Implementation work for these phases follows the repo-local
-[roo_windows widget authoring instruction](../.github/instructions/roo-windows-widget-authoring.instructions.md).
+[roo_windows widget authoring instruction](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
 ### Phase 1: Declare the Navigation Bar Types and Size Budgets
 

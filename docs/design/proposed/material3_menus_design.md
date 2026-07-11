@@ -1,5 +1,9 @@
 # Roo Windows Material 3 Menus Design
 
+## Implementation status
+
+**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+
 ## Objective
 
 Add a Material Design 3 menu family to `roo_windows` that is built on the
@@ -28,9 +32,9 @@ submenu chains, or the selected and active states required by Material 3.
 
 The menu design also needs to align with two APIs that have already landed:
 
-- [`material3::Badge`](../src/roo_windows/material3/badge/badge.h), which is a
+- [`material3::Badge`](../../../src/roo_windows/material3/badge/badge.h), which is a
   paint helper rather than a `Widget`, and
-- [`PaintContext`](../src/roo_windows/core/paint_context.h), which is now the
+- [`PaintContext`](../../../src/roo_windows/core/paint_context.h), which is now the
   normal widget paint hook and the only supported way to emit exclusions,
   overlays, and decorations from widget paint.
 
@@ -44,22 +48,22 @@ decisions against the current API surface instead.
 
 As of 2026-05, the relevant current pieces are:
 
-- the legacy [`menu::Menu`](../src/roo_windows/composites/menu/menu.h), which
+- the legacy [`menu::Menu`](../../../src/roo_windows/composites/menu/menu.h), which
   subclasses `Activity` and builds a titled menu from `ScrollablePanel` plus
   `VerticalLayout`,
 - the landed Material 3 list substrate in
-  [`material3/list/list.h`](../src/roo_windows/material3/list/list.h), which
+  [`material3/list/list.h`](../../../src/roo_windows/material3/list/list.h), which
   already provides `ListItem`, `ListEntry`, `StandardListItem`, `ListRow`,
   `List`, `SelectionMode`, and `ListEntryVisualContext`,
 - the landed badge helper in
-  [`material3/badge/badge.h`](../src/roo_windows/material3/badge/badge.h) and
+  [`material3/badge/badge.h`](../../../src/roo_windows/material3/badge/badge.h) and
   its host-integration example in
-  [`material3/switch/badged_switch.h`](../src/roo_windows/material3/switch/badged_switch.h),
-- the landed paint API in [`core/paint_context.h`](../src/roo_windows/core/paint_context.h)
-  and the corresponding [paint_context_design.md](paint_context_design.md),
-- and popup task infrastructure in [`Application`](../src/roo_windows/core/application.h),
-  [`Task`](../src/roo_windows/core/task.h), and
-  [`Activity`](../src/roo_windows/core/activity.h).
+  [`material3/switch/badged_switch.h`](../../../src/roo_windows/material3/switch/badged_switch.h),
+- the landed paint API in [`core/paint_context.h`](../../../src/roo_windows/core/paint_context.h)
+  and the corresponding [../implemented/paint_context_design.md](../implemented/paint_context_design.md),
+- and popup task infrastructure in [`Application`](../../../src/roo_windows/core/application.h),
+  [`Task`](../../../src/roo_windows/core/task.h), and
+  [`Activity`](../../../src/roo_windows/core/activity.h).
 
 What does not exist yet:
 
@@ -74,20 +78,20 @@ What does not exist yet:
 
 Two current-state constraints directly shape the menu design.
 
-First, the landed badge design in [material3_badge_design.md](material3_badge_design.md)
+First, the landed badge design in [../implemented/material3_badge_design.md](../implemented/material3_badge_design.md)
 closed the badge contract as a lightweight owner-painted helper. A menu badge
 therefore cannot be modeled as `Widget* badge` in a trailing slot. The item API
 must expose badge content, while the row owns the live `Badge` paint helper and
 lays it out in the same way as other badge-aware widgets do.
 
-Second, the landed paint-context design in [paint_context_design.md](paint_context_design.md)
+Second, the landed paint-context design in [../implemented/paint_context_design.md](../implemented/paint_context_design.md)
 closed `paint(PaintContext&)` and `paintWidgetContents(PaintContext&)` as the
 authoring surface for row-local drawing, decorations, and exclusions. Menu rows
 must use that surface for checkmarks, shortcut text, submenu chevrons, badges,
 and active-state visuals. There is no separate menu-only paint API.
 
 Those two facts also mean menus start from the current list row API.
-[`ListEntryVisualContext`](../src/roo_windows/material3/list/list.h) is already
+[`ListEntryVisualContext`](../../../src/roo_windows/material3/list/list.h) is already
 the resolved row-visual contract for the shared row substrate, so menus extend
 it with a small amount of menu-only state instead of replacing it with a
 parallel generic row-context abstraction.
@@ -137,7 +141,7 @@ Those facts drive three design choices:
 ### Embedded Authoring Constraints
 
 The canonical widget guidance in
-[roo-windows-widget-authoring.instructions.md](../.github/instructions/roo-windows-widget-authoring.instructions.md)
+[roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
 applies directly here:
 
 - optimize for RAM first,
@@ -266,17 +270,17 @@ close to the existing list row substrate.
 
 ### Key Decisions
 
-1. Menus do not reuse [`material3::List`](../src/roo_windows/material3/list/list.h)
+1. Menus do not reuse [`material3::List`](../../../src/roo_windows/material3/list/list.h)
    directly. `List` owns list-specific row grouping, divider, and selection
    propagation that do not match menu grouping or popup behavior.
-2. Menus do reuse [`ListItem`](../src/roo_windows/material3/list/list.h),
-   [`ListEntry`](../src/roo_windows/material3/list/list.h),
-   [`SelectionMode`](../src/roo_windows/material3/list/list.h), and
-   [`ListEntryVisualContext`](../src/roo_windows/material3/list/list.h). Menu
+2. Menus do reuse [`ListItem`](../../../src/roo_windows/material3/list/list.h),
+   [`ListEntry`](../../../src/roo_windows/material3/list/list.h),
+   [`SelectionMode`](../../../src/roo_windows/material3/list/list.h), and
+   [`ListEntryVisualContext`](../../../src/roo_windows/material3/list/list.h). Menu
    row state starts from the current list row contract and adds only a small
    menu-only extension.
 3. Menu badges are described by lightweight content data. `MenuEntry` owns the
-   live [`Badge`](../src/roo_windows/material3/badge/badge.h) helper when a row
+   live [`Badge`](../../../src/roo_windows/material3/badge/badge.h) helper when a row
    actually needs one.
 4. Each open menu level uses one full-screen popup task. The menu surface is a
    child inside that task, not the task bounds themselves. That makes outside
@@ -346,7 +350,7 @@ Submenus use the same scoring rule, but their primary candidates are side
 placements relative to the parent row rectangle and include a fixed gutter so
 the child surface does not overlap the row that opened it.
 
-![Anchored menu placement and submenu fallback](material3_menus_positioning.svg)
+![Anchored menu placement and submenu fallback](figures/material3_menus_positioning.svg)
 
 ### Surface Ownership and Paint Ordering
 
@@ -362,7 +366,7 @@ non-surface widgets:
 - and the full-screen `MenuOverlay` is not surface-owning; it exists to own hit
   testing and layout for the popup panel.
 
-[`PaintContext`](../src/roo_windows/core/paint_context.h) closes the row paint
+[`PaintContext`](../../../src/roo_windows/core/paint_context.h) closes the row paint
 contract. For the standard row path,
 `MenuEntry` paints shortcut text, menu-owned checkmarks, submenu chevrons, and
 optional badges from `paintWidgetContents(PaintContext&)`, using
@@ -378,7 +382,7 @@ badge and slider indicator implementations. Menu code does not reintroduce raw
 ### Content Model and Trailing Adornments
 
 The shared content contract stays anchored on
-[`ListItem`](../src/roo_windows/material3/list/list.h).
+[`ListItem`](../../../src/roo_windows/material3/list/list.h).
 
 `MenuItem` is a narrow extension of `ListItem` with menu semantics:
 
@@ -395,11 +399,11 @@ text, trailing icon, and badge content. Plain command items stay close to the
 `StandardListItem` footprint because they do not materialize that trailing
 payload.
 
-`MenuEntry` reuses [`ListEntry`](../src/roo_windows/material3/list/list.h) for
+`MenuEntry` reuses [`ListEntry`](../../../src/roo_windows/material3/list/list.h) for
 binding, text-slot widget management, measurement, and main-slot layout. It
 does not accept a `Widget* badge`. When a bound item exposes badge content, the
 row materializes and lays out a local
-[`material3::Badge`](../src/roo_windows/material3/badge/badge.h) helper in its
+[`material3::Badge`](../../../src/roo_windows/material3/badge/badge.h) helper in its
 trailing adornment state. The item exposes only content, while the row owns the
 mutable badge layout cache that the landed badge API requires.
 
@@ -504,7 +508,7 @@ No widget instances gain extra fields for this feature.
 ### Per-Instance Footprint Budget
 
 Using the same 32-bit ESP32 assumptions as
-[material3_lists_design.md](material3_lists_design.md), the intended baseline
+[../in_progress/material3_lists_design.md](../in_progress/material3_lists_design.md), the intended baseline
 budgets are:
 
 | Type | Approx. RAM | Notes |
@@ -677,9 +681,9 @@ presentation work. No partial menu tree is shown in that state.
 ## Implementation Plan
 
 Authoring reference:
-[embedded-cpp-code-authoring.instructions.md](../.github/instructions/embedded-cpp-code-authoring.instructions.md)
+[embedded-cpp-code-authoring.instructions.md](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
 and
-[roo-windows-widget-authoring.instructions.md](../.github/instructions/roo-windows-widget-authoring.instructions.md).
+[roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
 ### Phase 1: Core Menu Types and Build Skeleton
 

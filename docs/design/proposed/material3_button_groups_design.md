@@ -1,5 +1,9 @@
 # Roo Windows Material 3 Button Groups Design
 
+## Implementation status
+
+**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+
 ## Objective
 
 Add a Material 3 button-group family to `roo_windows` that covers:
@@ -11,7 +15,7 @@ Add a Material 3 button-group family to `roo_windows` that covers:
 - group-owned size, shape, layout, and connected-selection policy,
 - reuse of the existing surface-overlay and click-animation pipeline,
 - and a pay-for-what-you-use design that does not add group-only RAM cost to
-  every standalone [material3::Button](../src/roo_windows/material3/button/button.h).
+  every standalone [material3::Button](../../../src/roo_windows/material3/button/button.h).
 
 This document defines the final public family. It does not require placeholder
 APIs to land before their behavior exists: the connected-group half of the
@@ -21,10 +25,10 @@ layout behavior is implemented.
 ## Motivation
 
 `roo_windows` already has a landed Material 3
-[button](material3_buttons_design.md), but it still lacks the grouped action
+[button](../implemented/material3_buttons_design.md), but it still lacks the grouped action
 surface used for expressive clustered actions, connected view switchers, and
 small filter sets. The existing
-[widgets::ToggleButtons](../src/roo_windows/widgets/toggle_buttons.h) control
+[widgets::ToggleButtons](../../../src/roo_windows/widgets/toggle_buttons.h) control
 is icon-only, single-select, and painted in a pre-Material-3 style.
 
 The missing piece is not another standalone button variant. It is a grouped
@@ -39,8 +43,8 @@ groups own selection and first/middle/last corner geometry.
 The current checked-in Material 3 button work already provides most of the
 primitive seams this design needs:
 
-- [material3_buttons_design.md](material3_buttons_design.md) and the landed
-  [src/roo_windows/material3/button/button.h](../src/roo_windows/material3/button/button.h)
+- [../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md) and the landed
+  [src/roo_windows/material3/button/button.h](../../../src/roo_windows/material3/button/button.h)
   define `material3::Button` as a standalone momentary surface widget with
   token-backed size, shape, outline, elevation, and press-shape morph.
 - `BorderStyle` already supports per-corner radii, so first/middle/last item
@@ -60,7 +64,7 @@ What does not exist today:
 - no connected group that owns single-select, multi-select, and
   selection-required behavior,
 - and no Material 3 migration target for
-  [widgets::ToggleButtons](../src/roo_windows/widgets/toggle_buttons.h).
+  [widgets::ToggleButtons](../../../src/roo_windows/widgets/toggle_buttons.h).
 
 ### Material 3 Signals
 
@@ -111,10 +115,10 @@ The decisive signals carried into this design are:
 
 The relevant local references are:
 
-- [material3_buttons_design.md](material3_buttons_design.md)
+- [../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md)
 - [material3_icon_buttons_design.md](material3_icon_buttons_design.md)
 - [material3_segmented_buttons_design.md](material3_segmented_buttons_design.md)
-- [../.github/instructions/roo-windows-widget-authoring.instructions.md](../.github/instructions/roo-windows-widget-authoring.instructions.md)
+- [../.github/instructions/roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
 
 Those references close the main local constraints:
 
@@ -671,7 +675,7 @@ class ConnectedButtonGroup : public Container {
 ## Implementation Plan
 
 Implementation work for these phases follows the repo-local
-[roo_windows widget authoring instruction](../.github/instructions/roo-windows-widget-authoring.instructions.md).
+[roo_windows widget authoring instruction](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
 ### Phase 1: Land Group Entries and Connected Groups
 

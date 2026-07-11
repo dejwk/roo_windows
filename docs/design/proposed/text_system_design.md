@@ -1,5 +1,9 @@
 # Roo Windows Text System Design
 
+## Implementation status
+
+**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+
 ## Status
 
 - Proposed and approved for incremental implementation.

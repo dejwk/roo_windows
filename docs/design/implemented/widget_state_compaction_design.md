@@ -1,14 +1,18 @@
 # Widget State Compaction
 
+## Implementation status
+
+**Implemented.** The defined scope is present in the current source tree. Dependency status and any separately scoped follow-up work are recorded in the [status index](../README.md).
+
 ## Objective
 
-Reduce the 32-bit [Widget](../src/roo_windows/core/widget.h) base size from
+Reduce the 32-bit [Widget](../../../src/roo_windows/core/widget.h) base size from
 28 B to 24 B by removing the generic on/off/error bits from the base class and
 folding redraw bookkeeping into the same 16-bit mask word.
 
 The end state is:
 
-- [Widget](../src/roo_windows/core/widget.h) keeps one packed 16-bit mask word
+- [Widget](../../../src/roo_windows/core/widget.h) keeps one packed 16-bit mask word
   and no separate `redraw_status_` byte,
 - `setOn()`, `isOn()`, and related APIs leave `Widget` and live only on the
   concrete widgets that actually use them,
@@ -31,9 +35,9 @@ for a facility that only a few use.
 ## Background
 
 The previous [ApplicationContext and Widget Interactive-Change
-Dispatch](widget_event_dispatch_design.md) work reduced the 32-bit base-widget
+Dispatch](../implemented/widget_event_dispatch_design.md) work reduced the 32-bit base-widget
 budget to 28 B and added the then-current size assertion in
-[widget.h](../src/roo_windows/core/widget.h).
+[widget.h](../../../src/roo_windows/core/widget.h).
 
 Before this migration the base class owned:
 
@@ -46,19 +50,19 @@ Before this migration the base class owned:
 The generic toggle API was protected on `Widget`, but the nearby usage
 surface is small and concrete:
 
-- [widgets/checkbox.h](../src/roo_windows/widgets/checkbox.h)
-- [widgets/radio_button.h](../src/roo_windows/widgets/radio_button.h)
-- [widgets/switch.h](../src/roo_windows/widgets/switch.h)
-- [material3/checkbox/checkbox.h](../src/roo_windows/material3/checkbox/checkbox.h)
-- [material3/radio_button/radio_button.h](../src/roo_windows/material3/radio_button/radio_button.h)
-- [material3/switch/switch.h](../src/roo_windows/material3/switch/switch.h)
-- [widgets/text_field.h](../src/roo_windows/widgets/text_field.h)
+- [widgets/checkbox.h](../../../src/roo_windows/widgets/checkbox.h)
+- [widgets/radio_button.h](../../../src/roo_windows/widgets/radio_button.h)
+- [widgets/switch.h](../../../src/roo_windows/widgets/switch.h)
+- [material3/checkbox/checkbox.h](../../../src/roo_windows/material3/checkbox/checkbox.h)
+- [material3/radio_button/radio_button.h](../../../src/roo_windows/material3/radio_button/radio_button.h)
+- [material3/switch/switch.h](../../../src/roo_windows/material3/switch/switch.h)
+- [widgets/text_field.h](../../../src/roo_windows/widgets/text_field.h)
   (`VisibilityToggle`)
 
 `kWidgetError` was not consumed outside the base definition.
 
 This design follows the RAM-first guidance in
-[widget_authoring.md](widget_authoring.md): shared base storage should exist
+[widget_authoring.md](../../widget_authoring.md): shared base storage should exist
 only when most widgets genuinely need it.
 
 ## Requirements
@@ -308,8 +312,8 @@ final doc/status pass once the 24 B `Widget` size guard and the broad Bazel
 sweep were in place.
 
 Authoring reference: follow the
-[roo_windows code-authoring guidance](../.github/skills/roo-windows-code-authoring/SKILL.md)
-and the widget constraints in [widget_authoring.md](widget_authoring.md).
+[roo_windows code-authoring guidance](../../../.github/skills/roo-windows-code-authoring/SKILL.md)
+and the widget constraints in [widget_authoring.md](../../widget_authoring.md).
 
 ### Phase 1: Move Toggle State To Concrete Widgets
 

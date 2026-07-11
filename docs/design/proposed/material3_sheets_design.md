@@ -1,5 +1,9 @@
 # Roo Windows Material 3 Sheets Design
 
+## Implementation status
+
+**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+
 ## Objective
 
 Add Material Design 3 sheet support to `roo_windows` in a form that matches
@@ -55,16 +59,16 @@ today.
 
 The nearest current primitives are:
 
-- [src/roo_windows/core/application.h](../src/roo_windows/core/application.h)
-  and [src/roo_windows/core/main_window.h](../src/roo_windows/core/main_window.h),
+- [src/roo_windows/core/application.h](../../../src/roo_windows/core/application.h)
+  and [src/roo_windows/core/main_window.h](../../../src/roo_windows/core/main_window.h),
   which already expose popup-layer children and popup tasks above regular
   content and below dialogs,
-- [src/roo_windows/widgets/scrim.h](../src/roo_windows/widgets/scrim.h),
+- [src/roo_windows/widgets/scrim.h](../../../src/roo_windows/widgets/scrim.h),
   which already provides the overlay-backed scrim widget used by dialogs,
-- [src/roo_windows/containers/scrollable_panel.h](../src/roo_windows/containers/scrollable_panel.h),
+- [src/roo_windows/containers/scrollable_panel.h](../../../src/roo_windows/containers/scrollable_panel.h),
   which already provides `SimpleScrollablePanel` with vertical drag, fling, and
   overshoot behavior,
-- [src/roo_windows/material3/button/button.h](../src/roo_windows/material3/button/button.h),
+- [src/roo_windows/material3/button/button.h](../../../src/roo_windows/material3/button/button.h),
   which already provides the Material 3 button family that callers can place
   inside sheet content,
 - [material3_navigation_drawer_design.md](material3_navigation_drawer_design.md),
@@ -128,8 +132,8 @@ The most relevant local references are:
 - [material3_menus_design.md](material3_menus_design.md)
 - [material3_navigation_drawer_design.md](material3_navigation_drawer_design.md)
 - [material3_snackbar_design.md](material3_snackbar_design.md)
-- [embedded-design-doc-authoring.instructions.md](../.github/instructions/embedded-design-doc-authoring.instructions.md)
-- [roo-windows-widget-authoring.instructions.md](../.github/instructions/roo-windows-widget-authoring.instructions.md)
+- [embedded-design-doc-authoring.instructions.md](../../../.github/instructions/embedded-design-doc-authoring.instructions.md)
+- [roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
 
 Those references drive five important local constraints:
 
@@ -705,9 +709,9 @@ It also keeps the base family intentionally narrow:
 ## Implementation Plan
 
 Authoring reference: follow the local
-[embedded C++ code authoring instruction](../.github/instructions/embedded-cpp-code-authoring.instructions.md)
+[embedded C++ code authoring instruction](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
 and the
-[roo_windows widget authoring instruction](../.github/instructions/roo-windows-widget-authoring.instructions.md).
+[roo_windows widget authoring instruction](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
 ### Phase 1: Shared Sheet Substrate
 

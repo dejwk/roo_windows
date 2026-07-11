@@ -1,8 +1,12 @@
 # Roo Windows Design-System-Independent Color Theme Design
 
+## Implementation status
+
+**Implemented.** The defined scope is present in the current source tree. Dependency status and any separately scoped follow-up work are recorded in the [status index](../README.md).
+
 ## Status
 
-Proposed design, revised after review. This replaces the earlier plan to
+Implemented design, revised during review. It replaced the earlier plan to
 rename the Material 3 palette into a large framework-level `ColorToken`
 vocabulary.
 
@@ -23,7 +27,7 @@ from different systems can coexist during incremental evolution.
 
 ## Motivation
 
-The current [theme.h](../src/roo_windows/core/theme.h) combines three concerns:
+The current [theme.h](../../../src/roo_windows/core/theme.h) combines three concerns:
 
 1. a Material 3 color scheme,
 2. generic framework color needs, and
@@ -408,7 +412,7 @@ tokens contain the same concrete color.
 The default build remains M3-based:
 
 1. create a static immutable `material3::Material3Theme` with current values from
-   [theme.cpp](../src/roo_windows/core/theme.cpp),
+   [theme.cpp](../../../src/roo_windows/core/theme.cpp),
 2. initialize the owned `FrameworkTheme` with
    `material3::MakeFrameworkTheme(material3_theme)`,
 3. point `Theme::material3_theme` at that static M3 object, and
@@ -530,7 +534,7 @@ not assume a workspace-root target.
 ## Widget Authoring Compliance
 
 Implementation follows the repo-local
-[widget authoring instruction](../.github/instructions/roo-windows-widget-authoring.instructions.md):
+[widget authoring instruction](../../../.github/instructions/roo-windows-widget-authoring.instructions.md):
 
 - no token, provider, or override object is added to widgets,
 - component token tables are shared `constexpr`/`const` data,

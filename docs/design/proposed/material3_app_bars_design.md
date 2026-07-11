@@ -1,5 +1,9 @@
 # Roo Windows Material 3 App Bars and Search Surfaces Design
 
+## Implementation status
+
+**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+
 ## Objective
 
 Add a Material 3 top-edge shell family to `roo_windows` that closes the
@@ -59,7 +63,7 @@ What exists today:
   defines the shared editor direction for real text editing,
 - [non_touch_input_design.md](non_touch_input_design.md) already defines the
   focus-layering and semantic-action direction for keyboard and pointer input,
-- [src/roo_windows/core/theme.h](../src/roo_windows/core/theme.h) already
+- [src/roo_windows/core/theme.h](../../../src/roo_windows/core/theme.h) already
   provides the surface-role vocabulary needed for app-bar and search-surface
   colors,
 - and the current surface and container pipeline already supports theme-backed
@@ -148,7 +152,7 @@ Out of scope:
 
 Those out-of-scope behaviors belong to a later search-workflow design, which is
 already called out separately in
-[material3_roadmap.md](material3_roadmap.md).
+[material3_roadmap.md](../../material3_roadmap.md).
 
 ### Local Design References
 
@@ -159,7 +163,7 @@ The most relevant local references are:
 - [material3_text_fields_design.md](material3_text_fields_design.md)
 - [non_touch_input_design.md](non_touch_input_design.md)
 - [material3_icon_buttons_design.md](material3_icon_buttons_design.md)
-- [../.github/instructions/roo-windows-widget-authoring.instructions.md](../.github/instructions/roo-windows-widget-authoring.instructions.md)
+- [../.github/instructions/roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
 
 Those references close the main local constraints:
 
@@ -670,9 +674,9 @@ API notes:
 ## Implementation Plan
 
 Authoring reference:
-[embedded-cpp-code-authoring.instructions.md](../.github/instructions/embedded-cpp-code-authoring.instructions.md)
+[embedded-cpp-code-authoring.instructions.md](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
 and
-[roo-windows-widget-authoring.instructions.md](../.github/instructions/roo-windows-widget-authoring.instructions.md).
+[roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
 ### Phase 1: Declare the App-Bar Family and Shared Token Tables
 

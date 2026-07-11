@@ -1,5 +1,9 @@
 # Roo Windows Material 3 Dialogs Design
 
+## Implementation status
+
+**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+
 ## Objective
 
 Add a Material Design 3 dialog family to `roo_windows` that fits the current
@@ -31,14 +35,14 @@ have a Material 3 dialog family.
 
 The gap is visible in three places:
 
-1. [src/roo_windows/dialogs/dialog.h](../src/roo_windows/dialogs/dialog.h)
+1. [src/roo_windows/dialogs/dialog.h](../../../src/roo_windows/dialogs/dialog.h)
    provides one centered scaffold with a legacy shape, a dynamic footer-button
    vector, and no distinction between basic and full-screen variants.
 2. [material3_sheets_design.md](material3_sheets_design.md) and
    [material3_snackbar_design.md](material3_snackbar_design.md) already cover
    the neighboring interruption surfaces, so dialogs are now the most obvious
    missing part of the Material 3 interruption story.
-3. [material3_roadmap.md](material3_roadmap.md) explicitly calls out
+3. [material3_roadmap.md](../../material3_roadmap.md) explicitly calls out
    confirmations, destructive actions, blocking errors, and short wizard flows
    as a missing design track.
 
@@ -51,26 +55,26 @@ belong.
 ### Current Starting Point in `roo_windows`
 
 The current dialog surface is the legacy `roo_windows::Dialog` family under
-[src/roo_windows/dialogs/](../src/roo_windows/dialogs/).
+[src/roo_windows/dialogs/](../../../src/roo_windows/dialogs/).
 
 The relevant existing seams are:
 
-- [src/roo_windows/core/application.h](../src/roo_windows/core/application.h)
-  and [src/roo_windows/core/main_window.cpp](../src/roo_windows/core/main_window.cpp),
+- [src/roo_windows/core/application.h](../../../src/roo_windows/core/application.h)
+  and [src/roo_windows/core/main_window.cpp](../../../src/roo_windows/core/main_window.cpp),
   which already expose one modal dialog slot above popups and regular tasks,
-- [src/roo_windows/widgets/scrim.h](../src/roo_windows/widgets/scrim.h),
+- [src/roo_windows/widgets/scrim.h](../../../src/roo_windows/widgets/scrim.h),
   which already provides the overlay-backed scrim widget used by the modal
   dialog path,
-- [src/roo_windows/dialogs/dialog.h](../src/roo_windows/dialogs/dialog.h),
+- [src/roo_windows/dialogs/dialog.h](../../../src/roo_windows/dialogs/dialog.h),
   which already provides a title area, a scrollable content area, and a footer
   button row,
-- [src/roo_windows/dialogs/alert_dialog.h](../src/roo_windows/dialogs/alert_dialog.h)
-  and [src/roo_windows/dialogs/radio_list_dialog.h](../src/roo_windows/dialogs/radio_list_dialog.h),
+- [src/roo_windows/dialogs/alert_dialog.h](../../../src/roo_windows/dialogs/alert_dialog.h)
+  and [src/roo_windows/dialogs/radio_list_dialog.h](../../../src/roo_windows/dialogs/radio_list_dialog.h),
   which show the two common current usage patterns,
-- [src/roo_windows/containers/scrollable_panel.h](../src/roo_windows/containers/scrollable_panel.h),
+- [src/roo_windows/containers/scrollable_panel.h](../../../src/roo_windows/containers/scrollable_panel.h),
   which already provides `SimpleScrollablePanel` for generic vertical
   scrolling,
-- [src/roo_windows/material3/button/button.h](../src/roo_windows/material3/button/button.h),
+- [src/roo_windows/material3/button/button.h](../../../src/roo_windows/material3/button/button.h),
   which already provides the Material 3 text-button implementation needed for
   dialog actions,
 - and [material3_icon_buttons_design.md](material3_icon_buttons_design.md),
@@ -134,8 +138,8 @@ The most relevant local references are:
 - [material3_snackbar_design.md](material3_snackbar_design.md)
 - [non_touch_input_design.md](non_touch_input_design.md)
 - [material3_icon_buttons_design.md](material3_icon_buttons_design.md)
-- [embedded-design-doc-authoring.instructions.md](../.github/instructions/embedded-design-doc-authoring.instructions.md)
-- [roo-windows-widget-authoring.instructions.md](../.github/instructions/roo-windows-widget-authoring.instructions.md)
+- [embedded-design-doc-authoring.instructions.md](../../../.github/instructions/embedded-design-doc-authoring.instructions.md)
+- [roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
 
 Those references close six local decisions:
 
@@ -191,7 +195,7 @@ Those references close six local decisions:
 ### API Requirements
 
 1. Add the Material 3 dialog family under
-   [src/roo_windows/material3/dialog/](../src/roo_windows/material3/dialog/).
+   `src/roo_windows/material3/dialog/`.
 2. Expose separate public types for centered basic dialogs and full-screen
    dialogs rather than one enum-configured mega-widget.
 3. Keep action descriptors borrowed and fixed-capacity rather than heap-owned.
@@ -316,7 +320,7 @@ The dialog family uses two existing layering seams rather than inventing a new
 modal stack.
 
 `BasicDialog` is hosted by the modal dialog path in
-[src/roo_windows/core/main_window.cpp](../src/roo_windows/core/main_window.cpp).
+[src/roo_windows/core/main_window.cpp](../../../src/roo_windows/core/main_window.cpp).
 That path already attaches a `Scrim`, centers the child surface, and makes the
 dialog the top-most interactive layer.
 
@@ -740,9 +744,9 @@ API notes:
 ## Implementation Plan
 
 Authoring reference: follow the local
-[embedded C++ code authoring instruction](../.github/instructions/embedded-cpp-code-authoring.instructions.md)
+[embedded C++ code authoring instruction](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
 and the
-[roo_windows widget authoring instruction](../.github/instructions/roo-windows-widget-authoring.instructions.md).
+[roo_windows widget authoring instruction](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
 ### Phase 1: Shared Scaffold and Host Support
 

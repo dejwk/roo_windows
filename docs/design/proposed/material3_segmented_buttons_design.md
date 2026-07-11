@@ -1,5 +1,9 @@
 # Roo Windows Material 3 Segmented Buttons Design
 
+## Implementation status
+
+**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+
 ## Objective
 
 Add a Material 3 segmented-button family to `roo_windows` that covers the
@@ -38,16 +42,16 @@ into a grouped, checkable control.
 The current checked-in Material 3 surfaces establish most of the primitives
 this design needs:
 
-- [material3_buttons_design.md](material3_buttons_design.md) and the landed
-  [src/roo_windows/material3/button/button.h](../src/roo_windows/material3/button/button.h)
+- [../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md) and the landed
+  [src/roo_windows/material3/button/button.h](../../../src/roo_windows/material3/button/button.h)
   define the current Material 3 button family as momentary action widgets,
   not grouped or checkable buttons.
-- [src/roo_windows/material3/checkbox/checkbox.h](../src/roo_windows/material3/checkbox/checkbox.h),
-  [src/roo_windows/material3/radio_button/radio_button.h](../src/roo_windows/material3/radio_button/radio_button.h),
-  and [src/roo_windows/material3/switch/switch.h](../src/roo_windows/material3/switch/switch.h)
+- [src/roo_windows/material3/checkbox/checkbox.h](../../../src/roo_windows/material3/checkbox/checkbox.h),
+  [src/roo_windows/material3/radio_button/radio_button.h](../../../src/roo_windows/material3/radio_button/radio_button.h),
+  and [src/roo_windows/material3/switch/switch.h](../../../src/roo_windows/material3/switch/switch.h)
   show the repo's current selection-state patterns: compact widgets, no new
   callback surface, and click handling through the existing widget base class.
-- [material3_lists_design.md](material3_lists_design.md) already closes on a
+- [../in_progress/material3_lists_design.md](../in_progress/material3_lists_design.md) already closes on a
   shared-band paint model where the owner container keeps separator ownership
   instead of making every child paint overlapping borders.
 - [material3_navigation_rail_design.md](material3_navigation_rail_design.md)
@@ -98,11 +102,11 @@ The relevant signals carried into this design are:
 
 The most relevant local references are:
 
-- [material3_buttons_design.md](material3_buttons_design.md)
-- [material3_lists_design.md](material3_lists_design.md)
+- [../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md)
+- [../in_progress/material3_lists_design.md](../in_progress/material3_lists_design.md)
 - [material3_navigation_rail_design.md](material3_navigation_rail_design.md)
-- [widget_authoring.md](widget_authoring.md)
-- [../.github/instructions/roo-windows-widget-authoring.instructions.md](../.github/instructions/roo-windows-widget-authoring.instructions.md)
+- [widget_authoring.md](../../widget_authoring.md)
+- [../.github/instructions/roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
 
 Those references impose four concrete local constraints:
 
@@ -571,7 +575,7 @@ class SegmentedButtonGroup : public Container {
 ## Implementation Plan
 
 Implementation work for these phases follows the repo-local
-[roo_windows widget authoring instruction](../.github/instructions/roo-windows-widget-authoring.instructions.md).
+[roo_windows widget authoring instruction](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
 ### Phase 1: Declare the Segmented-Button Types and Size Budgets
 

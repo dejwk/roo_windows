@@ -1,5 +1,9 @@
 # Roo Windows Material 3 Badge Design
 
+## Implementation status
+
+**Implemented.** The defined scope is present in the current source tree. Dependency status and any separately scoped follow-up work are recorded in the [status index](../README.md).
+
 ## Objective
 
 Add Material Design 3 badge support to `roo_windows` in a form that matches the
@@ -18,12 +22,13 @@ The design should provide:
 - and a host-integration pattern that keeps per-instance RAM cost off widgets
   that do not use badges.
 
-This document defines the intended API and integration model. It does not
-describe an existing implementation.
+This document records the implemented API and integration model.
 
 ## Current Status in `roo_windows`
 
-As of 2026-05, `roo_windows` has no badge component.
+The `material3::Badge` component and its focused unit and golden coverage are
+implemented. The notes below record the pre-implementation baseline that the
+design replaced.
 
 What exists today:
 

@@ -1,5 +1,9 @@
 # Roo Windows Visual Overflow Design
 
+## Implementation status
+
+**In progress.** A usable subset is present, but part of the defined scope remains. Implemented and outstanding dependencies are recorded in the [status index](../README.md).
+
 ## Status
 
 - Partially implemented design.

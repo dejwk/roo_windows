@@ -1,8 +1,13 @@
 # Roo Windows Surface Widget Refactor Design
 
+## Implementation status
+
+**Implemented.** The defined scope is present in the current source tree. Dependency status and any separately scoped follow-up work are recorded in the [status index](../README.md).
+
 ## Status
 
-- Partially implemented design.
+- Implemented design; the broader visual-overflow dependency remains in
+  progress.
 - `SurfaceWidget` is now the explicit surface-owning branch in code, and the
   core shared overflow contract has been narrowed to
   `hasDecorationOverflow()` / `getParentDecorationBounds()`.

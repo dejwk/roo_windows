@@ -1,5 +1,9 @@
 # Roo Windows Material 3 Split Button Design
 
+## Implementation status
+
+**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+
 ## Objective
 
 Add Material Design 3 split button support to `roo_windows` for the common
@@ -27,12 +31,12 @@ describe an existing implementation.
 ## Motivation
 
 `roo_windows` now has Material 3 buttons in
-[material3_buttons_design.md](material3_buttons_design.md) and a designed
+[../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md) and a designed
 Material 3 menu family in [material3_menus_design.md](material3_menus_design.md),
 but it still lacks the specific control that Material 3 uses for a default
 action plus related alternatives.
 
-Building that ad hoc from a [`Button`](../src/roo_windows/material3/button/button.h),
+Building that ad hoc from a [`Button`](../../../src/roo_windows/material3/button/button.h),
 an icon-only trigger, a layout container, and custom menu anchoring has three
 problems:
 
@@ -49,15 +53,15 @@ That is the wrong default for an embedded-first widget library.
 
 As of 2026-05, the relevant current pieces are:
 
-- the shipped Material 3 [`Button`](../src/roo_windows/material3/button/button.h),
+- the shipped Material 3 [`Button`](../../../src/roo_windows/material3/button/button.h),
   whose implementation in
-  [`button.cpp`](../src/roo_windows/material3/button/button.cpp) uses one
+  [`button.cpp`](../../../src/roo_windows/material3/button/button.cpp) uses one
   widget-wide area overlay and one deferred `onClicked()` dispatch path,
 - the base widget interaction model in
-  [`Widget`](../src/roo_windows/core/widget.h), where clicks route through
+  [`Widget`](../../../src/roo_windows/core/widget.h), where clicks route through
   `onClicked()` and optional `setOnInteractiveChange(...)`,
 - the surface paint and decoration hooks in
-  [`SurfaceWidget`](../src/roo_windows/core/surface_widget.h),
+  [`SurfaceWidget`](../../../src/roo_windows/core/surface_widget.h),
 - and the proposed Material 3 menu API in
   [material3_menus_design.md](material3_menus_design.md), especially
   `Menu`, `MenuAnchor`, and `Menu::show(Application&)`.
@@ -109,7 +113,7 @@ Three local framework constraints matter most here.
 
 First, `roo_windows` is direct-to-framebuffer. The foreground-first exclusion
 rule from
-[../.github/instructions/roo-windows-widget-authoring.instructions.md](../.github/instructions/roo-windows-widget-authoring.instructions.md)
+[../.github/instructions/roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
 means split-button paint cannot rely on a vague "tint the whole widget and fix
 it later" model. The final pixels for each segment need to be settled in the
 right order.
@@ -279,7 +283,7 @@ W_{min} = w_{primary\ content} + p_{p,l} + p_{p,r} + g + T
 $$
 
 `SplitButton` uses the same one-line label measurement path as
-[`Button`](../src/roo_windows/material3/button/button.cpp): the leading icon
+[`Button`](../../../src/roo_windows/material3/button/button.cpp): the leading icon
 and label are measured as one centered content cluster. The widget always
 reports the tokenized split-button height for the selected size. It does not
 grow vertically for larger icons or wrapped text in v1.
@@ -452,7 +456,7 @@ and more state than the current requirement justifies.
 
 Instead, the implementation should extract the shared Material 3 button-family
 color and elevation helpers used by
-[`button.cpp`](../src/roo_windows/material3/button/button.cpp) into a private
+[`button.cpp`](../../../src/roo_windows/material3/button/button.cpp) into a private
 internal helper so `Button` and `SplitButton` read from the same source.
 
 Only the geometry table remains split-button specific.
@@ -464,7 +468,7 @@ variants.
 ### Per-Instance Footprint Budget
 
 Using the same 32-bit embedded assumptions as
-[material3_buttons_design.md](material3_buttons_design.md), the intended
+[../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md), the intended
 baseline budgets are:
 
 | Type | Approx. RAM | Notes |
@@ -591,7 +595,7 @@ selection state.
 ## Implementation Plan
 
 Authoring reference:
-[../.github/instructions/roo-windows-widget-authoring.instructions.md](../.github/instructions/roo-windows-widget-authoring.instructions.md)
+[../.github/instructions/roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
 
 Prerequisite: the baseline `Menu` declarations from
 [material3_menus_design.md](material3_menus_design.md) have landed.
@@ -667,7 +671,7 @@ Validation: run `bazel test //:material3_split_button_test` and
 Code slice:
 
 1. Add a split-button example to the Material 3 button example surface.
-2. Update [material3_buttons_design.md](material3_buttons_design.md) to point
+2. Update [../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md) to point
    at this follow-on design.
 3. Add golden coverage for the trailing open state and the centered open icon.
 

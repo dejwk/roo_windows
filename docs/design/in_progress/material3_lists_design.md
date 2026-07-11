@@ -1,5 +1,9 @@
 # Roo Windows Material 3 Lists Design
 
+## Implementation status
+
+**In progress.** A usable subset is present, but part of the defined scope remains. Implemented and outstanding dependencies are recorded in the [status index](../README.md).
+
 ## Objective
 
 Add a Material Design 3 list family to `roo_windows` that is suitable for:
@@ -1642,7 +1646,7 @@ class InteractionCatalogScreen : public SimpleScrollablePanel {
 ## Implementation Plan
 
 Implementation work for these phases follows
-[roo-windows-code-authoring](../.github/skills/roo-windows-code-authoring/SKILL.md).
+[roo-windows-code-authoring](../../../.github/skills/roo-windows-code-authoring/SKILL.md).
 
 ### Phase 1: Baseline API Declarations and Review
 

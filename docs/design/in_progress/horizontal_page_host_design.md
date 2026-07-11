@@ -1,5 +1,9 @@
 # Roo Windows Horizontal Page Host Design
 
+## Implementation status
+
+**In progress.** A usable subset is present, but part of the defined scope remains. Implemented and outstanding dependencies are recorded in the [status index](../README.md).
+
 ## Objective
 
 Add a generic horizontal page-container abstraction to `roo_windows` that can
@@ -13,7 +17,7 @@ The component should provide:
 - optional adjacent-page swipe and settle behavior,
 - viewport-based measurement and layout,
 - and a selection contract that can synchronize with external components such
-  as [material3_tabs_design.md](material3_tabs_design.md) without making those
+  as [../in_progress/material3_tabs_design.md](../in_progress/material3_tabs_design.md) without making those
   components own content-page gesture state.
 
 The result should be a generic container, not a Material-only tab extension,
@@ -23,15 +27,15 @@ controller.
 ## Motivation
 
 The tabs design intentionally leaves swipe-within-content-area out of
-[material3_tabs_design.md](material3_tabs_design.md). That is the right split,
+[../in_progress/material3_tabs_design.md](../in_progress/material3_tabs_design.md). That is the right split,
 but it leaves a real framework gap.
 
 `roo_windows` currently has:
 
-- [StackedLayout](../src/roo_windows/containers/stacked_layout.h) for static
+- [StackedLayout](../../../src/roo_windows/containers/stacked_layout.h) for static
   page switching,
-- [Holder](../src/roo_windows/containers/holder.h) for one active child,
-- and [SimpleScrollablePanel](../src/roo_windows/containers/scrollable_panel.h)
+- [Holder](../../../src/roo_windows/containers/holder.h) for one active child,
+- and [SimpleScrollablePanel](../../../src/roo_windows/containers/scrollable_panel.h)
   for generic scrolling.
 
 None of those is the right abstraction for horizontally settled pages that:
@@ -53,31 +57,31 @@ the swipe/settle and blit-wrapper phases.
 
 What exists today:
 
-- [src/roo_windows/containers/horizontal_page_host.h](../src/roo_windows/containers/horizontal_page_host.h)
+- [src/roo_windows/containers/horizontal_page_host.h](../../../src/roo_windows/containers/horizontal_page_host.h)
    and
-   [src/roo_windows/containers/horizontal_page_host.cpp](../src/roo_windows/containers/horizontal_page_host.cpp)
+   [src/roo_windows/containers/horizontal_page_host.cpp](../../../src/roo_windows/containers/horizontal_page_host.cpp)
    provide a viewport-based horizontal page host with adjacent-page swipe
    settle and bounded active-slot wrappers.
-- [test/horizontal_page_host_test.cpp](../test/horizontal_page_host_test.cpp)
+- [test/horizontal_page_host_test.cpp](../../../test/horizontal_page_host_test.cpp)
    provides unit coverage for selection, measurement/layout, gesture handling,
    settle behavior, and size budgets.
-- [test/horizontal_page_host_render_test.cpp](../test/horizontal_page_host_render_test.cpp)
+- [test/horizontal_page_host_render_test.cpp](../../../test/horizontal_page_host_render_test.cpp)
    provides render coverage for revealed-strip repaint correctness with and
    without blit-copy support.
-- [src/roo_windows/containers/stacked_layout.h](../src/roo_windows/containers/stacked_layout.h)
+- [src/roo_windows/containers/stacked_layout.h](../../../src/roo_windows/containers/stacked_layout.h)
   provides static page switching with no swipe state.
-- [src/roo_windows/containers/holder.h](../src/roo_windows/containers/holder.h)
+- [src/roo_windows/containers/holder.h](../../../src/roo_windows/containers/holder.h)
   provides a one-child host with replaceable contents.
-- [src/roo_windows/containers/scrollable_panel.h](../src/roo_windows/containers/scrollable_panel.h)
+- [src/roo_windows/containers/scrollable_panel.h](../../../src/roo_windows/containers/scrollable_panel.h)
   provides generic drag, fling, and spring-back behavior for free-scrolling
   content.
-- [src/roo_windows/containers/blit_cache_container.h](../src/roo_windows/containers/blit_cache_container.h)
+- [src/roo_windows/containers/blit_cache_container.h](../../../src/roo_windows/containers/blit_cache_container.h)
   provides an optional framebuffer-blit acceleration wrapper for moved child
   content.
-- [src/roo_windows/core/widget_ref.h](../src/roo_windows/core/widget_ref.h)
+- [src/roo_windows/core/widget_ref.h](../../../src/roo_windows/core/widget_ref.h)
   already supports borrowed and owned child storage through move-only
   `WidgetRef`.
-- [material3_tabs_design.md](material3_tabs_design.md) now explicitly leaves
+- [../in_progress/material3_tabs_design.md](../in_progress/material3_tabs_design.md) now explicitly leaves
   content-area swipe out of `Tabs` and points toward a separate page host.
 
 What does not exist yet:
@@ -90,12 +94,12 @@ What does not exist yet:
 
 The most relevant local references are:
 
-- [roo-windows-widget-authoring.instructions.md](../.github/instructions/roo-windows-widget-authoring.instructions.md)
-- [material3_tabs_design.md](material3_tabs_design.md)
-- [paint_context_design.md](paint_context_design.md)
-- [visual_overflow_design.md](visual_overflow_design.md)
-- [src/roo_windows/containers/scrollable_panel.h](../src/roo_windows/containers/scrollable_panel.h)
-- [src/roo_windows/containers/blit_cache_container.h](../src/roo_windows/containers/blit_cache_container.h)
+- [roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
+- [../in_progress/material3_tabs_design.md](../in_progress/material3_tabs_design.md)
+- [../implemented/paint_context_design.md](../implemented/paint_context_design.md)
+- [../in_progress/visual_overflow_design.md](../in_progress/visual_overflow_design.md)
+- [src/roo_windows/containers/scrollable_panel.h](../../../src/roo_windows/containers/scrollable_panel.h)
+- [src/roo_windows/containers/blit_cache_container.h](../../../src/roo_windows/containers/blit_cache_container.h)
 
 ### Product Signals
 
@@ -566,8 +570,8 @@ implemented, the interim behavior should be explicit:
 ## Implementation Plan
 
 Authoring references:
-[embedded-cpp-code-authoring instruction](../.github/instructions/embedded-cpp-code-authoring.instructions.md)
-[roo-windows-widget-authoring instruction](../.github/instructions/roo-windows-widget-authoring.instructions.md)
+[embedded-cpp-code-authoring instruction](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
+[roo-windows-widget-authoring instruction](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
 
 ### Phase 1: Core Host And Viewport Layout
 

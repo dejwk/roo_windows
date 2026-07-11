@@ -1,5 +1,9 @@
 # Roo Windows Non-Touch Input and Keyboard Navigation Design
 
+## Implementation status
+
+**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+
 ## Objective
 
 Add framework-level support for non-touch displays to `roo_windows`, with
@@ -56,57 +60,57 @@ non-touch input.
 
 As of 2026-05:
 
-- [src/roo_windows/core/application.h](../src/roo_windows/core/application.h)
-  and [src/roo_windows/core/application.cpp](../src/roo_windows/core/application.cpp)
+- [src/roo_windows/core/application.h](../../../src/roo_windows/core/application.h)
+  and [src/roo_windows/core/application.cpp](../../../src/roo_windows/core/application.cpp)
   own the top-level event loop and currently route only touch input.
-- [src/roo_windows/core/touch_sensor.h](../src/roo_windows/core/touch_sensor.h)
+- [src/roo_windows/core/touch_sensor.h](../../../src/roo_windows/core/touch_sensor.h)
   polls the underlying display for touch state and emits `DOWN` / `MOVE` /
   `UP` samples.
-- [src/roo_windows/core/gesture_detector.h](../src/roo_windows/core/gesture_detector.h)
+- [src/roo_windows/core/gesture_detector.h](../../../src/roo_windows/core/gesture_detector.h)
   translates those raw samples into gesture callbacks such as `onDown()`,
   `onShowPress()`, `onSingleTapUp()`, `onScroll()`, and `onFling()`.
-- [src/roo_windows/core/widget.h](../src/roo_windows/core/widget.h) exposes a
+- [src/roo_windows/core/widget.h](../../../src/roo_windows/core/widget.h) exposes a
   touch-oriented interaction surface. The public state bits include
   `kWidgetHover` and `kWidgetFocused`, but there are no public or protected
   mutators for either state and no focus traversal API.
-- [src/roo_windows/core/widget.cpp](../src/roo_windows/core/widget.cpp)
+- [src/roo_windows/core/widget.cpp](../../../src/roo_windows/core/widget.cpp)
   already accounts for hover and focus in overlay opacity, transient paint
   bounds, and invalidation.
-- [src/roo_windows/core/task.h](../src/roo_windows/core/task.h),
-  [src/roo_windows/core/task.cpp](../src/roo_windows/core/task.cpp),
-  [src/roo_windows/core/main_window.h](../src/roo_windows/core/main_window.h),
-  and [src/roo_windows/core/main_window.cpp](../src/roo_windows/core/main_window.cpp)
+- [src/roo_windows/core/task.h](../../../src/roo_windows/core/task.h),
+  [src/roo_windows/core/task.cpp](../../../src/roo_windows/core/task.cpp),
+  [src/roo_windows/core/main_window.h](../../../src/roo_windows/core/main_window.h),
+  and [src/roo_windows/core/main_window.cpp](../../../src/roo_windows/core/main_window.cpp)
   already define the active-layer routing boundaries for tasks, popups, and
   dialogs, but only for touch.
-- [src/roo_windows/widgets/text_field.h](../src/roo_windows/widgets/text_field.h)
-  and [src/roo_windows/widgets/text_field.cpp](../src/roo_windows/widgets/text_field.cpp)
+- [src/roo_windows/widgets/text_field.h](../../../src/roo_windows/widgets/text_field.h)
+  and [src/roo_windows/widgets/text_field.cpp](../../../src/roo_windows/widgets/text_field.cpp)
   contain a shared `TextFieldEditor` and `KeyboardListener`, but they are
-  wired to the on-screen [activities/keyboard.h](../src/roo_windows/activities/keyboard.h)
+  wired to the on-screen [activities/keyboard.h](../../../src/roo_windows/activities/keyboard.h)
   activity, not to a hardware keyboard source.
-- [src/roo_windows/material3/list/list.h](../src/roo_windows/material3/list/list.h)
+- [src/roo_windows/material3/list/list.h](../../../src/roo_windows/material3/list/list.h)
   already carries `pressed`, `focused`, and `hovered` inside
   `ListEntryVisualContext`, proving that some families already expect focus and
   hover to exist as real runtime concepts.
-- [emulation/main.cpp](../emulation/main.cpp) sets up a fake touch controller
+- [emulation/main.cpp](../../../emulation/main.cpp) sets up a fake touch controller
   for host emulation. It does not bind host keyboard or mouse events into the
   library.
-- [library.json](../library.json) still describes the project as a
+- [library.json](../../../library.json) still describes the project as a
   touch-based UI library.
 
 ### Existing Local Seams Worth Reusing
 
 Several local pieces already fit a keyboard-first extension.
 
-1. [src/roo_windows/core/application_context.h](../src/roo_windows/core/application_context.h)
+1. [src/roo_windows/core/application_context.h](../../../src/roo_windows/core/application_context.h)
    is now the application-owned runtime service bundle. It is the correct home
    for a focus manager or similar shared interaction service.
-2. [src/roo_windows/core/widget_event_dispatcher.h](../src/roo_windows/core/widget_event_dispatcher.h)
+2. [src/roo_windows/core/widget_event_dispatcher.h](../../../src/roo_windows/core/widget_event_dispatcher.h)
    already centralizes sparse widget-related event state in application-owned
    storage rather than charging every widget instance.
-3. [src/roo_windows/core/click_animation.h](../src/roo_windows/core/click_animation.h)
+3. [src/roo_windows/core/click_animation.h](../../../src/roo_windows/core/click_animation.h)
    and the main-window-owned click animation pipeline already give the library
    a standard pressed-feedback path.
-4. [src/roo_windows/core/widget.cpp](../src/roo_windows/core/widget.cpp)
+4. [src/roo_windows/core/widget.cpp](../../../src/roo_windows/core/widget.cpp)
    already has the shared invalidation and overlay math needed when hover or
    focus starts and stops.
 5. The touch path itself works and should remain the touch path. It does not
@@ -123,7 +127,7 @@ keyboard / pointer focus routing:
   because touch is still the primary interaction model.
 - [material3_menus_design.md](material3_menus_design.md) explicitly avoids a
   hover-only interaction model for embedded touch targets.
-- [material3_slider_design.md](material3_slider_design.md) defers keyboard
+- [../implemented/material3_slider_design.md](../implemented/material3_slider_design.md) defers keyboard
   focus movement APIs beyond what the base framework supports.
 - [material3_text_fields_design.md](material3_text_fields_design.md) assumes
   focused and hovered visuals will eventually come from the framework's widget
@@ -355,7 +359,7 @@ The framework needs one application-owned service that tracks focus and one
 small dispatcher that translates key events into focus movement or widget
 actions.
 
-The correct home is [ApplicationContext](../src/roo_windows/core/application_context.h).
+The correct home is [ApplicationContext](../../../src/roo_windows/core/application_context.h).
 
 `ApplicationContext` should gain:
 
@@ -589,11 +593,11 @@ Sliders and similar controls need more than primary activation.
 
 Affected surfaces include:
 
-- [src/roo_windows/widgets/slider.h](../src/roo_windows/widgets/slider.h),
-- [src/roo_windows/material3/slider/slider.h](../src/roo_windows/material3/slider/slider.h),
-- [src/roo_windows/material3/slider/range_slider.h](../src/roo_windows/material3/slider/range_slider.h),
+- [src/roo_windows/widgets/slider.h](../../../src/roo_windows/widgets/slider.h),
+- [src/roo_windows/material3/slider/slider.h](../../../src/roo_windows/material3/slider/slider.h),
+- [src/roo_windows/material3/slider/range_slider.h](../../../src/roo_windows/material3/slider/range_slider.h),
 - and scroll containers such as
-  [src/roo_windows/containers/scrollable_panel.h](../src/roo_windows/containers/scrollable_panel.h).
+  [src/roo_windows/containers/scrollable_panel.h](../../../src/roo_windows/containers/scrollable_panel.h).
 
 They need explicit keyboard semantics:
 
@@ -652,14 +656,14 @@ not naturally fall out of the simple clickable model.
 
 1. Dialogs
 
-   [src/roo_windows/dialogs/dialog.h](../src/roo_windows/dialogs/dialog.h)
+   [src/roo_windows/dialogs/dialog.h](../../../src/roo_windows/dialogs/dialog.h)
    currently enforces modality only for touch-down dispatch. Dialogs need a
    focus-capturing scope, sensible initial focus, keyboard button traversal,
    Enter default-action handling, and Escape dismissal.
 
 2. Lists and list-derived navigation surfaces
 
-   [src/roo_windows/material3/list/list.h](../src/roo_windows/material3/list/list.h)
+   [src/roo_windows/material3/list/list.h](../../../src/roo_windows/material3/list/list.h)
    already stores `pressed`, `focused`, and `hovered` in the resolved visual
    context. That means keyboard support is not just a widget-bit problem. The
    owning list needs to drive those bits into row visual contexts during
@@ -718,12 +722,12 @@ Focus ownership must align with the existing layer model.
 
 Primary implementation surfaces are:
 
-- [src/roo_windows/core/main_window.h](../src/roo_windows/core/main_window.h),
-- [src/roo_windows/core/main_window.cpp](../src/roo_windows/core/main_window.cpp),
-- [src/roo_windows/core/task.h](../src/roo_windows/core/task.h),
-- [src/roo_windows/core/task.cpp](../src/roo_windows/core/task.cpp),
-- [src/roo_windows/core/activity.h](../src/roo_windows/core/activity.h),
-- and [src/roo_windows/dialogs/dialog.h](../src/roo_windows/dialogs/dialog.h).
+- [src/roo_windows/core/main_window.h](../../../src/roo_windows/core/main_window.h),
+- [src/roo_windows/core/main_window.cpp](../../../src/roo_windows/core/main_window.cpp),
+- [src/roo_windows/core/task.h](../../../src/roo_windows/core/task.h),
+- [src/roo_windows/core/task.cpp](../../../src/roo_windows/core/task.cpp),
+- [src/roo_windows/core/activity.h](../../../src/roo_windows/core/activity.h),
+- and [src/roo_windows/dialogs/dialog.h](../../../src/roo_windows/dialogs/dialog.h).
 
 The integration rules are:
 
@@ -741,7 +745,7 @@ To make the feature real rather than theoretical, platform integration must
 change alongside the core.
 
 The first required host seam is
-[emulation/main.cpp](../emulation/main.cpp).
+[emulation/main.cpp](../../../emulation/main.cpp).
 
 Today it builds:
 
@@ -775,7 +779,7 @@ public description.
 
 That includes at least:
 
-- [library.json](../library.json),
+- [library.json](../../../library.json),
 - relevant examples,
 - and any README or usage docs that still present the library as touch-only.
 

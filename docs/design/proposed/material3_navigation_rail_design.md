@@ -1,5 +1,9 @@
 # Roo Windows Material 3 Navigation Rail Design
 
+## Implementation status
+
+**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+
 ## Objective
 
 Add a Material 3 navigation rail family to `roo_windows` that starts from the
@@ -31,13 +35,13 @@ design should now close directly on those landed APIs.
 ### Current Starting Point in `roo_windows`
 
 The current rail implementation lives in
-[src/roo_windows/containers/navigation_rail.h](../src/roo_windows/containers/navigation_rail.h)
+[src/roo_windows/containers/navigation_rail.h](../../../src/roo_windows/containers/navigation_rail.h)
 and
-[src/roo_windows/containers/navigation_rail.cpp](../src/roo_windows/containers/navigation_rail.cpp).
+[src/roo_windows/containers/navigation_rail.cpp](../../../src/roo_windows/containers/navigation_rail.cpp).
 The current higher-level consumer lives in
-[src/roo_windows/containers/navigation_panel.h](../src/roo_windows/containers/navigation_panel.h)
+[src/roo_windows/containers/navigation_panel.h](../../../src/roo_windows/containers/navigation_panel.h)
 and
-[src/roo_windows/containers/navigation_panel.cpp](../src/roo_windows/containers/navigation_panel.cpp).
+[src/roo_windows/containers/navigation_panel.cpp](../../../src/roo_windows/containers/navigation_panel.cpp).
 
 That checked-in API already establishes the migration baseline:
 
@@ -70,7 +74,7 @@ target public shape.
 Two adjacent designs are now checked in and materially constrain the rail API.
 
 The badge helper is already available in
-[src/roo_windows/material3/badge/badge.h](../src/roo_windows/material3/badge/badge.h):
+[src/roo_windows/material3/badge/badge.h](../../../src/roo_windows/material3/badge/badge.h):
 
 1. `material3::Badge` is not a `Widget`.
 2. Badge text is stored inline with no heap allocation.
@@ -80,9 +84,9 @@ The badge helper is already available in
    `paint(PaintContext&, const Theme&) const`.
 
 The paint-context migration is also already complete in
-[src/roo_windows/core/paint_context.h](../src/roo_windows/core/paint_context.h)
+[src/roo_windows/core/paint_context.h](../../../src/roo_windows/core/paint_context.h)
 and the shared widget pipeline in
-[src/roo_windows/core/widget.h](../src/roo_windows/core/widget.h):
+[src/roo_windows/core/widget.h](../../../src/roo_windows/core/widget.h):
 
 1. the normal widget paint hook is now `paint(PaintContext&)`,
 2. exclusions, overlays, and decorations are emitted through `PaintContext`,
@@ -119,11 +123,11 @@ The main product signals carried into this design are:
 
 The most relevant local references are:
 
-- [material3_badge_design.md](material3_badge_design.md)
-- [paint_context_design.md](paint_context_design.md)
-- [material3_buttons_design.md](material3_buttons_design.md)
-- [material3_lists_design.md](material3_lists_design.md)
-- [widget_authoring.md](widget_authoring.md)
+- [../implemented/material3_badge_design.md](../implemented/material3_badge_design.md)
+- [../implemented/paint_context_design.md](../implemented/paint_context_design.md)
+- [../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md)
+- [../in_progress/material3_lists_design.md](../in_progress/material3_lists_design.md)
+- [widget_authoring.md](../../widget_authoring.md)
 
 Those references imply three important local constraints:
 
@@ -153,7 +157,7 @@ Those references imply three important local constraints:
 10. Keep the rail fixed while page content scrolls outside it; the rail itself
     is not a scrolling surface.
 11. Provide a migration path for the current
-    [NavigationPanel](../src/roo_windows/containers/navigation_panel.h) user of
+    [NavigationPanel](../../../src/roo_windows/containers/navigation_panel.h) user of
     the legacy rail.
 
 ### Interaction Requirements
@@ -270,18 +274,18 @@ label, and state feedback, but it does not own the rail background behind it.
 `BadgedNavigationRailDestination` derives from `NavigationRailDestination`.
 
 That follows the landed badge-host pattern used by
-[src/roo_windows/material3/switch/badged_switch.h](../src/roo_windows/material3/switch/badged_switch.h):
+[src/roo_windows/material3/switch/badged_switch.h](../../../src/roo_windows/material3/switch/badged_switch.h):
 the base widget stays badge-free, and only the badge-aware subclass pays for
 the inline badge storage and layout logic.
 
 The migration boundary is explicit:
 
 1. the current
-   [src/roo_windows/containers/navigation_rail.h](../src/roo_windows/containers/navigation_rail.h)
+   [src/roo_windows/containers/navigation_rail.h](../../../src/roo_windows/containers/navigation_rail.h)
    API stops growing,
 2. the new `material3::NavigationRail` family lands beside it,
 3. and the existing
-   [NavigationPanel](../src/roo_windows/containers/navigation_panel.h) becomes
+   [NavigationPanel](../../../src/roo_windows/containers/navigation_panel.h) becomes
    a follow-on adapter over the new rail once the Material 3 family is usable.
 
 ### `NavigationRail` Container
@@ -404,7 +408,7 @@ expanded geometry. No rail-local badge primitive is introduced.
 
 If future components need badge placements that cannot be expressed cleanly as
 owner-supplied anchors, the correct extension point is
-[material3/badge](../src/roo_windows/material3/badge/badge.h), not another
+[material3/badge](../../../src/roo_windows/material3/badge/badge.h), not another
 component-specific badge type.
 
 #### Badge-Aware Indicator Bounds
@@ -723,7 +727,7 @@ class NavigationRail : public Container {
 ## Implementation Plan
 
 Implementation work for these phases follows the repo-local
-[roo_windows widget authoring instruction](../.github/instructions/roo-windows-widget-authoring.instructions.md).
+[roo_windows widget authoring instruction](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
 ### Phase 1: Declare the Material 3 Rail Types and Size Budgets
 
@@ -736,7 +740,7 @@ Code slice:
    `NavigationRailDestination`, `BadgedNavigationRailDestination`, and
    `NavigationRail`.
 4. Leave the legacy
-   [containers/navigation_rail.h](../src/roo_windows/containers/navigation_rail.h)
+   [containers/navigation_rail.h](../../../src/roo_windows/containers/navigation_rail.h)
    API untouched in this phase.
 
 Proposed commit message:
@@ -831,7 +835,7 @@ RTL-focused cases.
 Code slice:
 
 1. Refit
-   [NavigationPanel](../src/roo_windows/containers/navigation_panel.h) to use
+   [NavigationPanel](../../../src/roo_windows/containers/navigation_panel.h) to use
    a small adapter over the new Material 3 rail callbacks.
 2. Add a representative Material 3 example sketch under
    `examples/material3/navigation_rail/navigation_rail.ino`.

@@ -1,5 +1,9 @@
 # Roo Windows Material 3 Snackbar Design
 
+## Implementation status
+
+**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+
 ## Objective
 
 Add a Material Design 3 snackbar family to `roo_windows` that fits the current
@@ -48,22 +52,22 @@ general transient-message presenter.
 
 What exists today:
 
-- [`Application`](../src/roo_windows/core/application.h) and
-  [`MainWindow`](../src/roo_windows/core/main_window.h) already expose a popup
+- [`Application`](../../../src/roo_windows/core/application.h) and
+  [`MainWindow`](../../../src/roo_windows/core/main_window.h) already expose a popup
   layer above normal tasks and below dialogs.
-- [`Holder`](../src/roo_windows/containers/holder.h) already provides a
+- [`Holder`](../../../src/roo_windows/containers/holder.h) already provides a
   lightweight single-child container that can swap contents without allocating a
   second layout tree.
-- [`Widget::moveTo()`](../src/roo_windows/core/widget.h) already lets a parent
+- [`Widget::moveTo()`](../../../src/roo_windows/core/widget.h) already lets a parent
   reposition an attached child by updating its parent bounds.
-- [`ApplicationContext`](../src/roo_windows/core/application_context.h) already
+- [`ApplicationContext`](../../../src/roo_windows/core/application_context.h) already
   exposes the shared scheduler used by animated and deferred UI work.
-- [`material3::Button`](../src/roo_windows/material3/button/button.h) already
+- [`material3::Button`](../../../src/roo_windows/material3/button/button.h) already
   supports the Material 3 text-button variant needed for snackbar actions.
-- [`Theme`](../src/roo_windows/core/theme.h) already exposes the inverse color
+- [`Theme`](../../../src/roo_windows/core/theme.h) already exposes the inverse color
   roles required by the snackbar spec: `kInverseSurface`,
   `kInverseOnSurface`, and `kInversePrimary`.
-- [`TextBlock`](../src/roo_windows/widgets/text_block.h) already exists for the
+- [`TextBlock`](../../../src/roo_windows/widgets/text_block.h) already exists for the
   wrapped multi-line message path.
 
 What does not exist yet:
@@ -118,7 +122,7 @@ Second, the current hit-testing model means a full-screen popup child would
 block interaction with lower layers even when it returns `nullptr` for touches.
 That is visible in the current container dispatch flow:
 
-- [`Container::dispatchTouchDownEvent()`](../src/roo_windows/core/container.cpp)
+- [`Container::dispatchTouchDownEvent()`](../../../src/roo_windows/core/container.cpp)
   stops descending to lower-z children when a top child owns the touched parent
   bounds,
 - and a full-screen popup child therefore swallows the rest of the window even
@@ -129,7 +133,7 @@ Snackbar needs a popup child whose own parent bounds track only the snackbar's
 visible and interactive rectangle.
 
 Third, the framework currently has direct popup-child insertion through
-[`Application::addPopup()`](../src/roo_windows/core/application.h), but the
+[`Application::addPopup()`](../../../src/roo_windows/core/application.h), but the
 public API does not yet expose a generalized popup-child removal handle. The
 snackbar design therefore prefers one stable popup slot that gets moved and
 rebound over repeatedly attaching and detaching transient popup widgets.
@@ -266,7 +270,7 @@ The snackbar family is a four-part stack:
 ### Popup Slot and Pass-Through Hit Testing
 
 Snackbar uses one stable popup child in
-[`MainWindow`](../src/roo_windows/core/main_window.h), referred to here as
+[`MainWindow`](../../../src/roo_windows/core/main_window.h), referred to here as
 `SnackbarSlot`.
 
 `SnackbarSlot` is a lightweight holder-like container with these properties:
@@ -275,7 +279,7 @@ Snackbar uses one stable popup child in
 - it owns exactly one child: the reusable `SnackbarWidget`,
 - it can be hidden when idle,
 - and its parent bounds are updated with
-  [`Widget::moveTo()`](../src/roo_windows/core/widget.h) whenever the snackbar
+  [`Widget::moveTo()`](../../../src/roo_windows/core/widget.h) whenever the snackbar
   rectangle changes.
 
 The critical rule is that the slot's bounds equal the snackbar's actual
@@ -461,7 +465,7 @@ Snackbar is a surface-owning control because it introduces:
 - and its own pressable sub-affordances.
 
 The container resolves from the inverse surface roles already present in
-[`Theme`](../src/roo_windows/core/theme.h):
+[`Theme`](../../../src/roo_windows/core/theme.h):
 
 - background: `inverseSurface`,
 - message text: `inverseOnSurface`,
@@ -659,9 +663,9 @@ silently dropping requests.
 ## Implementation Plan
 
 Authoring reference:
-[embedded-cpp-code-authoring.instructions.md](../.github/instructions/embedded-cpp-code-authoring.instructions.md)
+[embedded-cpp-code-authoring.instructions.md](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
 and
-[roo-windows-widget-authoring.instructions.md](../.github/instructions/roo-windows-widget-authoring.instructions.md).
+[roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
 ### Phase 1: Add the Snackbar Widget and Token Tables
 

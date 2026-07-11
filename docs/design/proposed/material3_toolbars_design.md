@@ -1,5 +1,9 @@
 # Roo Windows Material 3 Toolbars Design
 
+## Implementation status
+
+**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+
 ## Objective
 
 Add a Material 3 toolbar family to `roo_windows` that fits the current
@@ -46,16 +50,16 @@ As of 2026-05, `roo_windows` does not have a Material 3 toolbar family.
 
 What exists today:
 
-- the generic [FlexLayout](../src/roo_windows/containers/flex_layout.h) and
+- the generic [FlexLayout](../../../src/roo_windows/containers/flex_layout.h) and
   other container primitives,
-- the checked-in [material3::Button](../src/roo_windows/material3/button/button.h),
-- the checked-in [material3::Badge](../src/roo_windows/material3/badge/badge.h)
+- the checked-in [material3::Button](../../../src/roo_windows/material3/button/button.h),
+- the checked-in [material3::Badge](../../../src/roo_windows/material3/badge/badge.h)
   helper,
-- the checked-in [PaintContext](../src/roo_windows/core/paint_context.h)
+- the checked-in [PaintContext](../../../src/roo_windows/core/paint_context.h)
   pipeline,
-- the checked-in theme token surface in [theme.h](../src/roo_windows/core/theme.h),
+- the checked-in theme token surface in [theme.h](../../../src/roo_windows/core/theme.h),
   including the legacy `ROO_WINDOWS_TOOLBAR_ICON_SIZE` macro,
-- the checked-in design docs for [Material 3 buttons](material3_buttons_design.md),
+- the checked-in design docs for [Material 3 buttons](../implemented/material3_buttons_design.md),
   [menus](material3_menus_design.md), and
   [FABs](material3_fabs_design.md).
 
@@ -127,12 +131,12 @@ Those belong in a separate app-bar design.
 
 The most relevant local references are:
 
-- [material3_buttons_design.md](material3_buttons_design.md)
+- [../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md)
 - [material3_fabs_design.md](material3_fabs_design.md)
 - [material3_menus_design.md](material3_menus_design.md)
 - [material3_navigation_rail_design.md](material3_navigation_rail_design.md)
-- [material3_badge_design.md](material3_badge_design.md)
-- [widget_authoring.md](widget_authoring.md)
+- [../implemented/material3_badge_design.md](../implemented/material3_badge_design.md)
+- [widget_authoring.md](../../widget_authoring.md)
 
 Those references imply several local constraints:
 
@@ -149,7 +153,7 @@ Those references imply several local constraints:
 ### Embedded Authoring Constraints
 
 The canonical widget guidance in
-[roo-windows-widget-authoring.instructions.md](../.github/instructions/roo-windows-widget-authoring.instructions.md)
+[roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
 applies directly here:
 
 - optimize for RAM first,
@@ -300,7 +304,7 @@ actual component shapes:
 - and neither type pays for the other's unused state or layout branches.
 
 Both widgets use dedicated single-line layout on top of `Container` rather than
-deriving from [FlexLayout](../src/roo_windows/containers/flex_layout.h).
+deriving from [FlexLayout](../../../src/roo_windows/containers/flex_layout.h).
 
 Reasoning:
 
@@ -690,12 +694,12 @@ class FloatingToolbar : public Container {
 ## Implementation Plan
 
 Implementation work for these phases follows the repo-local
-[roo_windows widget authoring instruction](../.github/instructions/roo-windows-widget-authoring.instructions.md).
+[roo_windows widget authoring instruction](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
 Precondition:
 
 If `material3::IconButton` is still missing when toolbar work starts, land the
-icon-button phase from [material3_buttons_design.md](material3_buttons_design.md)
+icon-button phase from [../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md)
 first. The toolbar family should not ship on top of legacy icon widgets or ad
 hoc button wrappers.
 

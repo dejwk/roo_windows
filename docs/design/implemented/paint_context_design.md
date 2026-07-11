@@ -1,5 +1,9 @@
 # Roo Windows Paint Context Design
 
+## Implementation status
+
+**Implemented.** The defined scope is present in the current source tree. Dependency status and any separately scoped follow-up work are recorded in the [status index](../README.md).
+
 ## Objective
 
 Introduce a widget-facing paint context that makes ordinary drawing,

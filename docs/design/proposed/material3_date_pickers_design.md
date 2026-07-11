@@ -1,5 +1,9 @@
 # Roo Windows Material 3 Date Picker Design
 
+## Implementation status
+
+**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+
 ## Objective
 
 Add a Material Design 3 single-date picker family to `roo_windows` that fits
@@ -59,13 +63,13 @@ application-specific composite.
 As of 2026-05, the relevant pieces are:
 
 - popup-task infrastructure in
-  [src/roo_windows/core/application.h](../src/roo_windows/core/application.h)
-  and [src/roo_windows/core/main_window.h](../src/roo_windows/core/main_window.h),
+  [src/roo_windows/core/application.h](../../../src/roo_windows/core/application.h)
+  and [src/roo_windows/core/main_window.h](../../../src/roo_windows/core/main_window.h),
   which already host temporary popup children above ordinary content and below
   the dialog layer,
-- the shared [Scrim](../src/roo_windows/widgets/scrim.h) widget used by other
+- the shared [Scrim](../../../src/roo_windows/widgets/scrim.h) widget used by other
   modal surfaces,
-- the shared [ScrollablePanel](../src/roo_windows/containers/scrollable_panel.h)
+- the shared [ScrollablePanel](../../../src/roo_windows/containers/scrollable_panel.h)
   path for drag and fling behavior,
 - the checked-in [Material 3 text-field design](material3_text_fields_design.md),
   which already closes the future `material3::TextField` API and explicitly
@@ -85,7 +89,7 @@ What does not exist yet:
 - no Material 3 date picker under `src/roo_windows/material3/date_picker`,
 - no Material 3 icon-button family under `src/roo_windows/material3`,
 - no application-owned wall-clock service in
-  [src/roo_windows/core/application_context.h](../src/roo_windows/core/application_context.h),
+  [src/roo_windows/core/application_context.h](../../../src/roo_windows/core/application_context.h),
 - no localized month-name or weekday-name tables in `roo_windows` or
   `roo_locale`,
 - and no public date-only type that separates civil dates from wall time and
@@ -135,8 +139,8 @@ The most relevant local references are:
 - [material3_menus_design.md](material3_menus_design.md)
 - [material3_sheets_design.md](material3_sheets_design.md)
 - [non_touch_input_design.md](non_touch_input_design.md)
-- [widget_authoring.md](widget_authoring.md)
-- [roo-windows-widget-authoring.instructions.md](../.github/instructions/roo-windows-widget-authoring.instructions.md)
+- [widget_authoring.md](../../widget_authoring.md)
+- [roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
 
 Those references close six local constraints:
 
@@ -201,7 +205,7 @@ Those references close six local constraints:
    `DockedDatePickerField`; keep the month grid, month list, and year list
    helpers internal.
 3. Base `DockedDatePickerField` on the landed `material3::TextField`, not on
-   the legacy [widgets/text_field.h](../src/roo_windows/widgets/text_field.h)
+   the legacy [widgets/text_field.h](../../../src/roo_windows/widgets/text_field.h)
    API.
 4. Expose shared default strings and parse or format providers through shared
    const helpers plus overridable virtual hooks.
@@ -718,9 +722,9 @@ input behavior.
 ## Implementation Plan
 
 Authoring reference:
-[embedded-cpp-code-authoring.instructions.md](../.github/instructions/embedded-cpp-code-authoring.instructions.md)
+[embedded-cpp-code-authoring.instructions.md](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
 and
-[roo-windows-widget-authoring.instructions.md](../.github/instructions/roo-windows-widget-authoring.instructions.md).
+[roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
 ### Phase 1: Add `CivilDay`, Bounds, and Locale Helpers
 

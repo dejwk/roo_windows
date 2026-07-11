@@ -1,9 +1,13 @@
 # Roo Windows Material 3 Wi-Fi Configuration Design
 
+## Implementation status
+
+**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+
 ## Objective
 
 Add a Material 3 Wi-Fi configuration surface family to `roo_windows` that can
-replace the legacy [`roo_windows_wifi`](../../roo_windows_wifi/src/roo_windows_wifi.h)
+replace the legacy [`roo_windows_wifi`](../../../../roo_windows_wifi/src/roo_windows_wifi.h)
 flow with a newer Android-like settings experience.
 
 The design provides:
@@ -19,8 +23,8 @@ The design provides:
   edit flow,
 - a small reusable widget set for Wi-Fi rows, signal glyphs, and config forms,
   built on the existing Material 3 direction from
-  [material3_lists_design.md](material3_lists_design.md),
-  [material3_buttons_design.md](material3_buttons_design.md), and
+  [../in_progress/material3_lists_design.md](../in_progress/material3_lists_design.md),
+  [../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md), and
   [material3_text_fields_design.md](material3_text_fields_design.md),
 - and a controller-facing state model that is richer than the current direct
   `roo_wifi::Controller` coupling.
@@ -31,7 +35,7 @@ contract. It does not describe an existing implementation.
 ## Motivation
 
 The current Wi-Fi UI shipped in
-[roo_windows_wifi](../../roo_windows_wifi/src/roo_windows_wifi.h) is useful as
+[roo_windows_wifi](../../../../roo_windows_wifi/src/roo_windows_wifi.h) is useful as
 an initial proof of concept, but it no longer matches the rest of the
 repository's Material 3 direction or the feature set expected from a modern
 settings surface.
@@ -61,15 +65,15 @@ surface and that preserves the embedded RAM budget.
 
 As of 2026-05, the existing Wi-Fi package is centered on four files:
 
-- [../../roo_windows_wifi/src/roo_windows_wifi/activity/list_activity.h](../../roo_windows_wifi/src/roo_windows_wifi/activity/list_activity.h),
+- [../../roo_windows_wifi/src/roo_windows_wifi/activity/list_activity.h](../../../../roo_windows_wifi/src/roo_windows_wifi/activity/list_activity.h),
   which builds the main screen from a legacy title row, a switch row, a
   progress bar, one current-network row, and a recycled scan-results list,
-- [../../roo_windows_wifi/src/roo_windows_wifi/activity/network_details_activity.h](../../roo_windows_wifi/src/roo_windows_wifi/activity/network_details_activity.h),
+- [../../roo_windows_wifi/src/roo_windows_wifi/activity/network_details_activity.h](../../../../roo_windows_wifi/src/roo_windows_wifi/activity/network_details_activity.h),
   which shows a large icon, status text, and connect, disconnect, and forget
   actions,
-- [../../roo_windows_wifi/src/roo_windows_wifi/activity/enter_password_activity.h](../../roo_windows_wifi/src/roo_windows_wifi/activity/enter_password_activity.h),
+- [../../roo_windows_wifi/src/roo_windows_wifi/activity/enter_password_activity.h](../../../../roo_windows_wifi/src/roo_windows_wifi/activity/enter_password_activity.h),
   which uses the legacy underlined `TextField` for password entry,
-- and [../../roo_windows_wifi/src/roo_windows_wifi.h](../../roo_windows_wifi/src/roo_windows_wifi.h),
+- and [../../roo_windows_wifi/src/roo_windows_wifi.h](../../../../roo_windows_wifi/src/roo_windows_wifi.h),
   which wires the three activities directly to `roo_wifi::Controller` through a
   small `Configurator` facade.
 
@@ -79,7 +83,7 @@ First, it proves that a Wi-Fi configuration flow belongs in a small dedicated
 package rather than in app-local glue.
 
 Second, it shows that scan results must stay recyclable. The current
-`ListActivity` uses [`ListLayout`](../src/roo_windows/containers/list_layout.h)
+`ListActivity` uses [`ListLayout`](../../../src/roo_windows/containers/list_layout.h)
 for the available-network list instead of one live widget tree per AP. That is
 still the right decision for embedded targets.
 
@@ -99,11 +103,11 @@ This design is intentionally aligned with the newer `roo_windows` direction.
 
 The most relevant nearby pieces are:
 
-- [material3_lists_design.md](material3_lists_design.md), which defines the
+- [../in_progress/material3_lists_design.md](../in_progress/material3_lists_design.md), which defines the
   small-row settings and list-item vocabulary for Material 3 surfaces,
 - [material3_text_fields_design.md](material3_text_fields_design.md), which
   defines the intended inline-editing and secure-field story,
-- [material3_buttons_design.md](material3_buttons_design.md), which provides
+- [../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md), which provides
   the action-button family for connect, forget, save, and cancel actions,
 - [material3_layout_scaffold_design.md](material3_layout_scaffold_design.md),
   which defines the page-shell direction for header plus scrolling-body
@@ -112,7 +116,7 @@ The most relevant nearby pieces are:
   future keyboard and focus contracts that the Wi-Fi flow should inherit rather
   than bypass,
 - and the current Material 3 list implementation in
-  [../src/roo_windows/material3/list/list.h](../src/roo_windows/material3/list/list.h),
+  [../src/roo_windows/material3/list/list.h](../../../src/roo_windows/material3/list/list.h),
   which is appropriate for low-cardinality settings sections but not for large
   live scan-result sets.
 
@@ -512,7 +516,7 @@ class WifiConfigForm : public roo_windows::VerticalLayout {
 #### `WifiSignalGlyph`
 
 `WifiSignalGlyph` is a new widget rather than a direct restyle of the legacy
-[`WifiIndicator`](../src/roo_windows/indicators/wifi.h).
+[`WifiIndicator`](../../../src/roo_windows/indicators/wifi.h).
 
 That separation is deliberate. The legacy indicator already serves non-Material
 3 surfaces. The new flow needs a Material 3 glyph that can encode:
@@ -843,11 +847,11 @@ editing against a backend that cannot store those fields.
 ## Implementation Plan
 
 Authoring reference:
-[../.github/instructions/roo-windows-widget-authoring.instructions.md](../.github/instructions/roo-windows-widget-authoring.instructions.md)
+[../.github/instructions/roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
 
 Prerequisite: the baseline Material 3 text-field and button work from
 [material3_text_fields_design.md](material3_text_fields_design.md) and
-[material3_buttons_design.md](material3_buttons_design.md) is available for
+[../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md) is available for
 the edit and action surfaces.
 
 ### Phase 1: Add the Controller Contract and Signal Glyph

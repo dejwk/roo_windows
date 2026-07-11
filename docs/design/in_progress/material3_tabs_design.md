@@ -1,5 +1,9 @@
 # Roo Windows Material 3 Tabs Design
 
+## Implementation status
+
+**In progress.** A usable subset is present, but part of the defined scope remains. Implemented and outstanding dependencies are recorded in the [status index](../README.md).
+
 ## Objective
 
 Add a Material Design 3 tabs family to `roo_windows` that fits the current
@@ -45,30 +49,30 @@ document.
 
 What exists today:
 
-- [material3_badge_design.md](material3_badge_design.md) has already landed as
+- [../implemented/material3_badge_design.md](../implemented/material3_badge_design.md) has already landed as
   `material3::Badge`, a lightweight owner-painted adornment rather than a
   `Widget`.
-- [material3_buttons_design.md](material3_buttons_design.md) and
-  [material3_navigation_rail_design.md](material3_navigation_rail_design.md)
+- [../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md) and
+  [material3_navigation_rail_design.md](../proposed/material3_navigation_rail_design.md)
   establish the current Material 3 API style: semantic enums, virtual hooks,
   and pay-for-what-you-use subclassing for rare features.
-- [src/roo_windows/containers/scrollable_panel.h](../src/roo_windows/containers/scrollable_panel.h)
+- [src/roo_windows/containers/scrollable_panel.h](../../../src/roo_windows/containers/scrollable_panel.h)
   already provides generic horizontal and vertical scroll physics.
-- [src/roo_windows/containers/stacked_layout.h](../src/roo_windows/containers/stacked_layout.h)
+- [src/roo_windows/containers/stacked_layout.h](../../../src/roo_windows/containers/stacked_layout.h)
   already provides a simple way to show one selected content pane below a tab
   row.
-- [src/roo_windows/containers/horizontal_page_host.h](../src/roo_windows/containers/horizontal_page_host.h)
+- [src/roo_windows/containers/horizontal_page_host.h](../../../src/roo_windows/containers/horizontal_page_host.h)
   and
-  [horizontal_page_host_design.md](horizontal_page_host_design.md)
+  [../in_progress/horizontal_page_host_design.md](../in_progress/horizontal_page_host_design.md)
   provide a separate content-area swipe host for tab-row integration.
-- [src/roo_windows/material3/tabs/tabs.h](../src/roo_windows/material3/tabs/tabs.h)
+- [src/roo_windows/material3/tabs/tabs.h](../../../src/roo_windows/material3/tabs/tabs.h)
   and
-  [tabs.cpp](../src/roo_windows/material3/tabs/tabs.cpp)
+  [tabs.cpp](../../../src/roo_windows/material3/tabs/tabs.cpp)
   provide fixed, scrollable, and badged Material 3 tabs.
-- [examples/material3/tabs/tabs.ino](../examples/material3/tabs/tabs.ino)
+- [examples/material3/tabs/tabs.ino](../../../examples/material3/tabs/tabs.ino)
   demonstrates two-way tabs-plus-`HorizontalPageHost` synchronization.
-- [widget_authoring.md](widget_authoring.md) and the repo-local
-  [roo-windows-widget-authoring instruction](../.github/instructions/roo-windows-widget-authoring.instructions.md)
+- [widget_authoring.md](../../widget_authoring.md) and the repo-local
+  [roo-windows-widget-authoring instruction](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
   require explicit surface ownership, direct-to-framebuffer paint-order
   discipline, and aggressive per-instance RAM control.
 
@@ -82,11 +86,11 @@ What remains future work:
 
 The most relevant local references are:
 
-- [roo-windows-widget-authoring.instructions.md](../.github/instructions/roo-windows-widget-authoring.instructions.md)
-- [material3_buttons_design.md](material3_buttons_design.md)
-- [material3_lists_design.md](material3_lists_design.md)
-- [material3_badge_design.md](material3_badge_design.md)
-- [material3_navigation_rail_design.md](material3_navigation_rail_design.md)
+- [roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
+- [../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md)
+- [../in_progress/material3_lists_design.md](../in_progress/material3_lists_design.md)
+- [../implemented/material3_badge_design.md](../implemented/material3_badge_design.md)
+- [material3_navigation_rail_design.md](../proposed/material3_navigation_rail_design.md)
 
 ### Material 3 Sources
 
@@ -152,7 +156,7 @@ ordinary `PaintContext` painting, exclusions, decorations, and overlays. The
 goal is not to replay the conceptual stack as back-to-front draw calls.
 
 The existing
-[SimpleScrollablePanel](../src/roo_windows/containers/scrollable_panel.h)
+[SimpleScrollablePanel](../../../src/roo_windows/containers/scrollable_panel.h)
 also matters. It proves the repo already has horizontal drag, fling, and
 spring-back machinery, but wrapping a generic scroll panel around an otherwise
 separate tab strip would split ownership of:
@@ -239,7 +243,7 @@ The public surface has three layers:
 Selection stays row-owned. Content switching stays outside the base row.
 Applications that want a page region below the tabs wire that region from the
 row's semantic hook, typically by switching visibility in a
-[StackedLayout](../src/roo_windows/containers/stacked_layout.h) or a custom
+[StackedLayout](../../../src/roo_windows/containers/stacked_layout.h) or a custom
 container.
 
 The row owns three behaviors that are intentionally not spread across the tab
@@ -389,7 +393,7 @@ scroll bounds.
 Scrollable mode reuses the repo's existing drag, fling, bounce, and
 spring-back implementation through the shared scroll-motion helper described
 below. It does not instantiate a nested
-[SimpleScrollablePanel](../src/roo_windows/containers/scrollable_panel.h),
+[SimpleScrollablePanel](../../../src/roo_windows/containers/scrollable_panel.h),
 because the tab row already owns the indicator, divider, child sequence, and
 scroll-to-selected policy.
 
@@ -565,7 +569,7 @@ When the tab shows a stacked icon-plus-label layout, the badge anchors to the
 icon bounds and overlaps that icon by `6dp` at logical top-end.
 
 That keeps tab badges aligned with the already landed
-[material3::Badge](../src/roo_windows/material3/badge/badge.h) API and avoids
+[material3::Badge](../../../src/roo_windows/material3/badge/badge.h) API and avoids
 another component-local badge primitive.
 
 #### Badge Width Versus Indicator Width
@@ -763,7 +767,7 @@ host placed below `Tabs`, not inside the row itself.
 
 That companion container now exists as `HorizontalPageHost`; the relevant
 design and constraints live in
-[horizontal_page_host_design.md](horizontal_page_host_design.md).
+[../in_progress/horizontal_page_host_design.md](../in_progress/horizontal_page_host_design.md).
 
 That host should own:
 
@@ -931,8 +935,8 @@ the interim behavior should be explicit:
 ## Implementation Plan
 
 Authoring references:
-[embedded-cpp-code-authoring instruction](../.github/instructions/embedded-cpp-code-authoring.instructions.md)
-[roo-windows-widget-authoring instruction](../.github/instructions/roo-windows-widget-authoring.instructions.md)
+[embedded-cpp-code-authoring instruction](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
+[roo-windows-widget-authoring instruction](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
 
 ### Execution Order
 
@@ -946,7 +950,7 @@ Recommended order:
 1. implement tabs phases 1-4 first,
 2. then wire tabs to `HorizontalPageHost` in tabs phase 5,
 3. and keep any additional host-only polishing in
-  [horizontal_page_host_design.md](horizontal_page_host_design.md) independent
+  [../in_progress/horizontal_page_host_design.md](../in_progress/horizontal_page_host_design.md) independent
   from tabs core delivery.
 
 ### Phase 1: Core Fixed Tabs
@@ -1053,8 +1057,8 @@ Validation:
 - `bazel test //:horizontal_page_host_test //:horizontal_page_host_render_test`
 
 Status: implemented in
-[test/material3_tabs_test.cpp](../test/material3_tabs_test.cpp) and
-[examples/material3/tabs/tabs.ino](../examples/material3/tabs/tabs.ino).
+[test/material3_tabs_test.cpp](../../../test/material3_tabs_test.cpp) and
+[examples/material3/tabs/tabs.ino](../../../examples/material3/tabs/tabs.ino).
 
 ## Testing Plan
 
@@ -1110,7 +1114,7 @@ state model plus row-owned virtual hooks are sufficient.
 #### Make Badges Child Widgets
 
 This was rejected because it conflicts with the already landed
-[material3_badge_design.md](material3_badge_design.md) direction. A badge is an
+[../implemented/material3_badge_design.md](../implemented/material3_badge_design.md) direction. A badge is an
 owner-painted adornment, not a second widget tree rooted inside every tab.
 
 #### Auto-Switch Between Fixed and Scrollable Layout

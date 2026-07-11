@@ -1,5 +1,9 @@
 # Roo Windows Transient Presentation Pins Design
 
+## Implementation status
+
+**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+
 ## Objective
 
 Define a general-purpose, paint-only presentation mechanism for visuals that
@@ -7,7 +11,7 @@ must render above ordinary widget contents without requiring an unclipped
 ancestor chain.
 
 The immediate driver is the Material 3 slider value indicator in
-[material3_slider_design.md](material3_slider_design.md). The same mechanism
+[../implemented/material3_slider_design.md](../implemented/material3_slider_design.md). The same mechanism
 also serves keyboard preview or highlighter surfaces and the
 presenter-owned trigger retention already proposed in
 [material3_menus_design.md](material3_menus_design.md).
@@ -15,7 +19,7 @@ presenter-owned trigger retention already proposed in
 ## Motivation
 
 The current slider bubble path in
-[../src/roo_windows/material3/slider/slider.cpp](../src/roo_windows/material3/slider/slider.cpp)
+[../src/roo_windows/material3/slider/slider.cpp](../../../src/roo_windows/material3/slider/slider.cpp)
 already uses the strongest local overflow path the framework currently has:
 
 - `getParentTransientPaintBounds()` widens the parent invalidation envelope,
@@ -23,7 +27,7 @@ already uses the strongest local overflow path the framework currently has:
 - and the bubble itself is painted as non-widget geometry.
 
 That still fails when any ancestor above the slider remains clipped.
-[../src/roo_windows/core/container.cpp](../src/roo_windows/core/container.cpp)
+[../src/roo_windows/core/container.cpp](../../../src/roo_windows/core/container.cpp)
 only widens `maxBounds()` for direct unclipped descendants, and
 `unclippedChildRectShown()` propagates farther only when each ancestor
 container is itself unclipped.
@@ -44,7 +48,7 @@ focus, or own layout.
 ### Current Slider Indicator Path
 
 The current indicator is a non-widget helper in
-[../src/roo_windows/material3/slider/value_indicator.h](../src/roo_windows/material3/slider/value_indicator.h).
+[../src/roo_windows/material3/slider/value_indicator.h](../../../src/roo_windows/material3/slider/value_indicator.h).
 `Slider` and `RangeSlider` pre-paint it inside `paintWidgetContents()` and rely
 on decoration and exclusion salvage so later slider paint does not erase the
 rounded corners. That design works inside the slider's own paint pass, but it
@@ -52,7 +56,7 @@ still inherits ancestor clipping.
 
 ### Current Overflow Model
 
-[visual_overflow_design.md](visual_overflow_design.md) split logical bounds,
+[../in_progress/visual_overflow_design.md](../in_progress/visual_overflow_design.md) split logical bounds,
 ink bounds, decoration overflow, and transient paint overflow. That is the
 right local model. It does not solve the "paint above arbitrary clipped
 ancestors" problem because local overflow still lives inside the widget tree
@@ -77,7 +81,7 @@ locally.
 
 [non_touch_input_design.md](non_touch_input_design.md) already treats tasks,
 popups, and modal dialogs as real routing and focus boundaries.
-[../src/roo_windows/core/main_window.cpp](../src/roo_windows/core/main_window.cpp)
+[../src/roo_windows/core/main_window.cpp](../../../src/roo_windows/core/main_window.cpp)
 paints those same boundaries in order:
 
 1. regular tasks,
@@ -97,7 +101,7 @@ affordances.
 
 ### Earlier Hierarchy Decision
 
-[surface_widget_refactor_design.md](surface_widget_refactor_design.md)
+[../implemented/surface_widget_refactor_design.md](../implemented/surface_widget_refactor_design.md)
 explicitly deferred the choice between stretching the existing
 transient-overflow machinery farther and splitting child hosting from surface
 ownership.
@@ -457,9 +461,9 @@ and menu helpers a common base.
 ## Implementation Plan
 
 Authoring reference:
-[embedded-cpp-code-authoring.instructions.md](../.github/instructions/embedded-cpp-code-authoring.instructions.md)
+[embedded-cpp-code-authoring.instructions.md](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
 and
-[roo-windows-widget-authoring.instructions.md](../.github/instructions/roo-windows-widget-authoring.instructions.md).
+[roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
 ### Phase 1: Add The Shared Pin Host
 

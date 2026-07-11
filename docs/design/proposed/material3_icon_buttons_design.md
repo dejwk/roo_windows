@@ -1,9 +1,13 @@
 # Roo Windows Material 3 Icon Button Design
 
+## Implementation status
+
+**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+
 ## Objective
 
 Add a Material 3 icon-button component to `roo_windows` that fits the current
-checked-in [Material 3 button implementation](../src/roo_windows/material3/button/button.h)
+checked-in [Material 3 button implementation](../../../src/roo_windows/material3/button/button.h)
 and the current shared widget framework.
 
 The new component should provide:
@@ -22,11 +26,11 @@ not attempt to design toggle / selected icon buttons in the same landing.
 
 ## Motivation
 
-`roo_windows` now has a landed [Material 3 `Button`](../src/roo_windows/material3/button/button.h),
+`roo_windows` now has a landed [Material 3 `Button`](../../../src/roo_windows/material3/button/button.h),
 but it still has no icon-only companion. That gap is already visible in nearby
 designs:
 
-- the [badge design](material3_badge_design.md) assumes a future
+- the [badge design](../implemented/material3_badge_design.md) assumes a future
   `BadgedIconButton` host,
 - the [menus design](material3_menus_design.md) calls out icon buttons as popup
   anchors,
@@ -43,9 +47,9 @@ piece.
 ### Current Starting Point in `roo_windows`
 
 The current Material 3 button implementation lives in
-[src/roo_windows/material3/button/button.h](../src/roo_windows/material3/button/button.h)
+[src/roo_windows/material3/button/button.h](../../../src/roo_windows/material3/button/button.h)
 and
-[src/roo_windows/material3/button/button.cpp](../src/roo_windows/material3/button/button.cpp).
+[src/roo_windows/material3/button/button.cpp](../../../src/roo_windows/material3/button/button.cpp).
 That landed code already establishes the relevant local baseline:
 
 1. `material3::Button` derives from `BasicSurfaceWidget`.
@@ -57,7 +61,7 @@ That landed code already establishes the relevant local baseline:
    of introducing a button-local ripple subsystem.
 
 The current example lives in
-[examples/material3/buttons/buttons.ino](../examples/material3/buttons/buttons.ino).
+[examples/material3/buttons/buttons.ino](../../../examples/material3/buttons/buttons.ino).
 That example proves the repo already wants a Material 3 button showcase, but it
 also makes the remaining gap obvious: there is still no icon-only button in the
 same family.
@@ -101,14 +105,14 @@ deserves a separate design.
 
 The most relevant current framework seams are:
 
-- [BasicSurfaceWidget](../src/roo_windows/core/basic_surface_widget.h), which
+- [BasicSurfaceWidget](../../../src/roo_windows/core/basic_surface_widget.h), which
   already owns padding, margins, area overlays, outline, and elevation hooks,
-- [SurfaceWidget](../src/roo_windows/core/surface_widget.h), whose decoration
+- [SurfaceWidget](../../../src/roo_windows/core/surface_widget.h), whose decoration
   model paints against the widget's logical bounds,
-- [Widget](../src/roo_windows/core/widget.h), which already expands small touch
+- [Widget](../../../src/roo_windows/core/widget.h), which already expands small touch
   targets through `getSloppyTouchBounds()` and `getSloppyTouchParentBounds()`,
 - and the current click-animation model documented in
-  [click_animation_customization_design.md](click_animation_customization_design.md).
+  [../implemented/click_animation_customization_design.md](../implemented/click_animation_customization_design.md).
 
 Those seams close two important local decisions:
 
@@ -119,7 +123,7 @@ Those seams close two important local decisions:
    touch envelope rather than from a second icon-button-specific hit-target
    mechanism.
 
-The current [badge design](material3_badge_design.md) also matters. Badges are
+The current [badge design](../implemented/material3_badge_design.md) also matters. Badges are
 already modeled as owner-painted adornments rather than as child widgets, so
 the icon-button design needs a cheap way for badge-aware hosts to ask, "where
 is the icon slot inside this button?" without baking badge state into every
@@ -182,7 +186,7 @@ button instance.
 The design introduces one new public widget:
 
 1. `material3::IconButton` under
-   [src/roo_windows/material3/button/](../src/roo_windows/material3/button/).
+   [src/roo_windows/material3/button/](../../../src/roo_windows/material3/button/).
 
 The core decisions are:
 
@@ -339,7 +343,7 @@ in local coordinates. That gives badge-aware hosts one cheap layout seam.
 
 `getIconBounds()` should return the exact icon slot rectangle after applying the
 current size and width tokens. Badge-aware hosts can then reuse the existing
-[badge helper](../src/roo_windows/material3/badge/badge.h) without duplicating
+[badge helper](../../../src/roo_windows/material3/badge/badge.h) without duplicating
 icon-button layout math.
 
 Illustrative badge-aware host shape:
@@ -451,7 +455,7 @@ same commit.
 ## Implementation Plan
 
 Implementation should follow the repo-local
-[embedded C++ code authoring guidance](../.github/instructions/embedded-cpp-code-authoring.instructions.md).
+[embedded C++ code authoring guidance](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md).
 
 ### Step 1: Add the core icon-button widget
 
@@ -459,14 +463,14 @@ Deliverables:
 
 - add `src/roo_windows/material3/button/icon_button.h` and the matching
   `.cpp` under
-  [src/roo_windows/material3/button/](../src/roo_windows/material3/button/),
+  [src/roo_windows/material3/button/](../../../src/roo_windows/material3/button/),
 - keep the implementation in the existing `material3/button/` directory beside
   the landed standard button,
 - add token tables for style, size, shape, and width,
 - expose `getIconBounds()` as part of the first public landing,
 - add `test/material3_icon_button_test.cpp`,
 - and add a `material3_icon_button_test` target to
-  [BUILD](../BUILD).
+  [BUILD](../../../BUILD).
 
 Proposed commit message: `Add Material 3 icon button widget`
 
@@ -480,11 +484,11 @@ Deliverables:
 - add golden coverage for style, size, shape, width, disabled, and pressed
   states,
 - extend
-  [examples/material3/buttons/buttons.ino](../examples/material3/buttons/buttons.ino)
+  [examples/material3/buttons/buttons.ino](../../../examples/material3/buttons/buttons.ino)
   with an icon-button section rather than creating a second near-duplicate
   button-family example,
 - and add the `material3_icon_button_golden_test` target to
-  [BUILD](../BUILD).
+  [BUILD](../../../BUILD).
 
 Proposed commit message: `Add icon button goldens and demo`
 
@@ -501,7 +505,7 @@ Validation should cover three levels.
    styles, sizes, shapes, widths, disabled state, and pressed-state shape
    morph.
 3. One example build through the emulation harness using the existing
-   [buttons example](../examples/material3/buttons/buttons.ino) after it grows
+   [buttons example](../../../examples/material3/buttons/buttons.ino) after it grows
    an icon-button section.
 
 The first icon-button landing does not need a badge-specific golden in the same
@@ -529,7 +533,7 @@ the same commit.
 
 #### Add A Shared `IconButtonAppearance` Pointer Now
 
-Rejected because the landed [standard button](../src/roo_windows/material3/button/button.h)
+Rejected because the landed [standard button](../../../src/roo_windows/material3/button/button.h)
 already chose a theme-driven first implementation with no appearance-object
 pointer. No current icon-button consumer needs product-specific per-widget
 override data badly enough to justify carrying that pointer on every instance.

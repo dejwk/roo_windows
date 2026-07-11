@@ -1,5 +1,9 @@
 # Roo Windows Material 3 FAB Design
 
+## Implementation status
+
+**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+
 ## Objective
 
 Add a Material Design 3 floating action button family to `roo_windows` that
@@ -26,7 +30,7 @@ existing implementation.
 ## Motivation
 
 `roo_windows` already has a landed Material 3 standard button in
-[src/roo_windows/material3/button/button.h](../src/roo_windows/material3/button/button.h),
+[src/roo_windows/material3/button/button.h](../../../src/roo_windows/material3/button/button.h),
 but a FAB is not just a larger button with a different default color.
 
 Material 3 FABs carry their own component semantics:
@@ -48,19 +52,19 @@ The right shape for `roo_windows` is a dedicated Material 3 FAB family.
 As of 2026-05, the relevant current pieces are:
 
 - the landed Material 3 standard button in
-  [src/roo_windows/material3/button/button.h](../src/roo_windows/material3/button/button.h)
+  [src/roo_windows/material3/button/button.h](../../../src/roo_windows/material3/button/button.h)
   and
-  [src/roo_windows/material3/button/button.cpp](../src/roo_windows/material3/button/button.cpp),
+  [src/roo_windows/material3/button/button.cpp](../../../src/roo_windows/material3/button/button.cpp),
   which already prove out token-backed Material 3 surface widgets,
 - the corresponding example in
-  [examples/material3/buttons/buttons.ino](../examples/material3/buttons/buttons.ino)
+  [examples/material3/buttons/buttons.ino](../../../examples/material3/buttons/buttons.ino)
   and tests in
-  [test/material3_button_test.cpp](../test/material3_button_test.cpp),
+  [test/material3_button_test.cpp](../../../test/material3_button_test.cpp),
 - the current surface, overlay, and click-animation pipeline in
-  [src/roo_windows/core/basic_surface_widget.h](../src/roo_windows/core/basic_surface_widget.h),
-  [src/roo_windows/core/surface_widget.h](../src/roo_windows/core/surface_widget.h),
+  [src/roo_windows/core/basic_surface_widget.h](../../../src/roo_windows/core/basic_surface_widget.h),
+  [src/roo_windows/core/surface_widget.h](../../../src/roo_windows/core/surface_widget.h),
   and
-  [src/roo_windows/core/overlay_spec.cpp](../src/roo_windows/core/overlay_spec.cpp),
+  [src/roo_windows/core/overlay_spec.cpp](../../../src/roo_windows/core/overlay_spec.cpp),
 - and the Material 3 navigation rail design in
   [material3_navigation_rail_design.md](material3_navigation_rail_design.md),
   which already reserves a generic header slot that can host a FAB.
@@ -559,7 +563,7 @@ class ExtendedFloatingActionButton : public BasicSurfaceWidget {
 ## Implementation Plan
 
 Implementation work for these phases follows the repo-local
-[roo_windows widget authoring instruction](../.github/instructions/roo-windows-widget-authoring.instructions.md).
+[roo_windows widget authoring instruction](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
 ### Phase 1: Declare the Material 3 FAB Types and Size Budgets
 

@@ -1,5 +1,9 @@
 # Roo Windows Material 3 Navigation Drawer Design
 
+## Implementation status
+
+**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+
 ## Objective
 
 Add Material Design 3 navigation drawer support to `roo_windows` in a form
@@ -54,17 +58,17 @@ There is no checked-in Material 3 drawer implementation.
 The most relevant current pieces are:
 
 - the legacy rail in
-  [src/roo_windows/containers/navigation_rail.h](../src/roo_windows/containers/navigation_rail.h),
+  [src/roo_windows/containers/navigation_rail.h](../../../src/roo_windows/containers/navigation_rail.h),
 - the Material 3 list substrate in
-  [src/roo_windows/material3/list/list.h](../src/roo_windows/material3/list/list.h),
+  [src/roo_windows/material3/list/list.h](../../../src/roo_windows/material3/list/list.h),
 - the shared badge helper in
-  [src/roo_windows/material3/badge/badge.h](../src/roo_windows/material3/badge/badge.h),
+  [src/roo_windows/material3/badge/badge.h](../../../src/roo_windows/material3/badge/badge.h),
 - the generic scrolling surface in
-  [src/roo_windows/containers/scrollable_panel.h](../src/roo_windows/containers/scrollable_panel.h),
+  [src/roo_windows/containers/scrollable_panel.h](../../../src/roo_windows/containers/scrollable_panel.h),
 - the overlay-backed scrim widget in
-  [src/roo_windows/widgets/scrim.h](../src/roo_windows/widgets/scrim.h),
+  [src/roo_windows/widgets/scrim.h](../../../src/roo_windows/widgets/scrim.h),
 - and popup / modal presentation primitives in
-  [src/roo_windows/core/application.h](../src/roo_windows/core/application.h).
+  [src/roo_windows/core/application.h](../../../src/roo_windows/core/application.h).
 
 Those landed pieces materially constrain the drawer design:
 
@@ -126,11 +130,11 @@ The main product signals carried into this design are:
 
 The most relevant local references are:
 
-- [material3_lists_design.md](material3_lists_design.md)
-- [material3_badge_design.md](material3_badge_design.md)
+- [../in_progress/material3_lists_design.md](../in_progress/material3_lists_design.md)
+- [../implemented/material3_badge_design.md](../implemented/material3_badge_design.md)
 - [material3_navigation_rail_design.md](material3_navigation_rail_design.md)
-- [paint_context_design.md](paint_context_design.md)
-- [widget_authoring.md](widget_authoring.md)
+- [../implemented/paint_context_design.md](../implemented/paint_context_design.md)
+- [widget_authoring.md](../../widget_authoring.md)
 
 Those references imply four important local constraints:
 
@@ -680,9 +684,9 @@ ownership split:
 ## Implementation Plan
 
 Authoring reference: follow the local
-[embedded C++ code authoring instruction](../.github/instructions/embedded-cpp-code-authoring.instructions.md)
+[embedded C++ code authoring instruction](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
 and the
-[roo_windows widget authoring instruction](../.github/instructions/roo-windows-widget-authoring.instructions.md).
+[roo_windows widget authoring instruction](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
 ### Phase 1: Shared List Prerequisites
 

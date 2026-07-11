@@ -1,10 +1,14 @@
 # Roo Windows Material 3 Button Design
 
-Status note (2026-05): [material3::Button](../src/roo_windows/material3/button/button.h)
+## Implementation status
+
+**Implemented.** The defined scope is present in the current source tree. Dependency status and any separately scoped follow-up work are recorded in the [status index](../README.md).
+
+Status note (2026-05): [material3::Button](../../../src/roo_windows/material3/button/button.h)
 is now implemented in
-[src/roo_windows/material3/button/button.cpp](../src/roo_windows/material3/button/button.cpp).
+[src/roo_windows/material3/button/button.cpp](../../../src/roo_windows/material3/button/button.cpp).
 The remaining icon-only work is tracked in
-[material3_icon_buttons_design.md](material3_icon_buttons_design.md). This
+[material3_icon_buttons_design.md](../proposed/material3_icon_buttons_design.md). This
 document records the original combined family proposal and is no longer the
 authoritative source for the icon-button landing.
 
@@ -32,7 +36,9 @@ existing implementation.
 
 ## Current Status in `roo_windows`
 
-As of 2026-05, `roo_windows` does not have a Material 3 button family.
+The text, filled, filled-tonal, outlined, and elevated `material3::Button`
+variants are implemented. The notes below record the legacy baseline; the
+separate icon-button scope remains proposed.
 
 What exists today:
 
@@ -771,13 +777,13 @@ Material 3 naming and behavior.
 The following are intentionally out of scope for this first design:
 
 1. floating action buttons; see
-   [material3_extended_fab_design.md](material3_extended_fab_design.md),
+   [material3_extended_fab_design.md](../proposed/material3_extended_fab_design.md),
 2. trailing icons,
 3. arbitrary child-slot composition,
 4. multi-line button labels,
 5. toggle / selectable icon buttons,
 6. split buttons in this document; see
-   [material3_split_button_design.md](material3_split_button_design.md),
+   [material3_split_button_design.md](../proposed/material3_split_button_design.md),
 7. and a large Android-style setter surface for every color, inset, and
    drawable parameter.
 

@@ -1,5 +1,9 @@
 # ApplicationContext and Widget Interactive-Change Dispatch
 
+## Implementation status
+
+**Implemented.** The defined scope is present in the current source tree. Dependency status and any separately scoped follow-up work are recorded in the [status index](../README.md).
+
 ## Objective
 
 Reduce the per-instance RAM footprint of `roo_windows::Widget` by removing the
@@ -23,8 +27,8 @@ previous inline callback slot charged every widget about 16 B for a feature
 that only a minority of widgets used. The lack of stored application context
 also forced `Widget::theme()` to resolve through the parent chain, which is why
 it had been documented as paint-flow-only in
-[widget.h](../src/roo_windows/core/widget.h) and enforced in
-[widget.cpp](../src/roo_windows/core/widget.cpp).
+[widget.h](../../../src/roo_windows/core/widget.h) and enforced in
+[widget.cpp](../../../src/roo_windows/core/widget.cpp).
 
 A shared `ApplicationContext` solves both problems with one pointer-sized field
 on `Widget`: it gives widgets direct access to theme and scheduler, and it lets
@@ -35,30 +39,30 @@ for.
 
 Before this migration:
 
-- [Widget](../src/roo_windows/core/widget.h) takes `const Environment&` in its
+- [Widget](../../../src/roo_windows/core/widget.h) takes `const Environment&` in its
   constructor, but the base class does not retain it.
-- [Environment](../src/roo_windows/core/environment.h) carries scheduler,
+- [Environment](../../../src/roo_windows/core/environment.h) carries scheduler,
   theme, and keyboard color theme, and
-  [Application](../src/roo_windows/core/application.h) stores a pointer to it.
+  [Application](../../../src/roo_windows/core/application.h) stores a pointer to it.
 - `Widget::theme()` currently delegates through `parent_->theme()`, which is
-  why [widget.cpp](../src/roo_windows/core/widget.cpp) guards it with
+  why [widget.cpp](../../../src/roo_windows/core/widget.cpp) guards it with
   `CHECK(parent_ != nullptr)`.
 - `Widget` stores `std::function<void()> on_interactive_change_` inline, and
-  [BasicWidget](../src/roo_windows/core/basic_widget.h) plus
-  [BasicSurfaceWidget](../src/roo_windows/core/basic_surface_widget.h) use
+  [BasicWidget](../../../src/roo_windows/core/basic_widget.h) plus
+  [BasicSurfaceWidget](../../../src/roo_windows/core/basic_surface_widget.h) use
   `getOnInteractiveChange() != nullptr` as their default clickability test.
 - A small number of widgets retain `const Environment&` because they create
   child widgets later, for example
-  [toggle_buttons.h](../src/roo_windows/widgets/toggle_buttons.h),
-  [navigation_panel.h](../src/roo_windows/containers/navigation_panel.h), and
-  [navigation_rail.h](../src/roo_windows/containers/navigation_rail.h).
+  [toggle_buttons.h](../../../src/roo_windows/widgets/toggle_buttons.h),
+  [navigation_panel.h](../../../src/roo_windows/containers/navigation_panel.h), and
+  [navigation_rail.h](../../../src/roo_windows/containers/navigation_rail.h).
 - Some widgets also cache scheduler access pulled from `Environment`, for
-  example [scrollable_panel.h](../src/roo_windows/containers/scrollable_panel.h).
+  example [scrollable_panel.h](../../../src/roo_windows/containers/scrollable_panel.h).
 
 The construction-order concern is manageable. Shipped examples already
 construct `Application` before the top-level widget tree, for example
-[examples/simple/button/button.ino](../examples/simple/button/button.ino) and
-[examples/material3/slider/slider.ino](../examples/material3/slider/slider.ino).
+[examples/simple/button/button.ino](../../../examples/simple/button/button.ino) and
+[examples/material3/slider/slider.ino](../../../examples/material3/slider/slider.ino).
 The migration is source-breaking, but it does not require a new runtime
 lifecycle model.
 
@@ -95,9 +99,9 @@ The design has four parts.
 1. `Application` owns a standalone `ApplicationContext` type. The type is not
    nested under `Application`; that avoids the include-cycle pressure that a
    public `Application::Context` name would create around
-   [widget.h](../src/roo_windows/core/widget.h),
-   [application.h](../src/roo_windows/core/application.h), and
-   [main_window.h](../src/roo_windows/core/main_window.h).
+   [widget.h](../../../src/roo_windows/core/widget.h),
+   [application.h](../../../src/roo_windows/core/application.h), and
+   [main_window.h](../../../src/roo_windows/core/main_window.h).
 2. `ApplicationContext` borrows `Theme`, `KeyboardColorTheme`, and
    `Scheduler` from `Environment`, and owns a sparse
    `WidgetEventDispatcher`.
@@ -244,7 +248,7 @@ The per-widget RAM trade is the central reason to make this change.
 Current per-widget callback cost:
 
 - one inline empty `std::function<void()>`, about 16 B on the ESP32/libstdc++
-  target documented in [widget_authoring.md](widget_authoring.md).
+  target documented in [widget_authoring.md](../../widget_authoring.md).
 
 End-state per-widget callback and context cost:
 
@@ -369,8 +373,8 @@ SingletonActivity activity(app, pane);
 ## Implementation Plan
 
 Authoring reference:
-[roo-windows-code-authoring](../.github/skills/roo-windows-code-authoring/SKILL.md)
-and [widget_authoring.md](widget_authoring.md).
+[roo-windows-code-authoring](../../../.github/skills/roo-windows-code-authoring/SKILL.md)
+and [widget_authoring.md](../../widget_authoring.md).
 
 ### Phase 1: Add ApplicationContext and Dispatcher Scaffolding
 
@@ -420,7 +424,7 @@ Validation:
 
 - run `bazel test //:roo_windows_test //:material3_slider_test`,
 - build one representative constructor-time-registration example under
-  emulation, using [examples/simple/button/button.ino](../examples/simple/button/button.ino)
+  emulation, using [examples/simple/button/button.ino](../../../examples/simple/button/button.ino)
   copied to `emulation/main.cpp`, then run `bazel build :main` from
   `emulation`.
 
@@ -508,7 +512,7 @@ not supported.
 An `Environment`-owned dispatcher with one dispatcher pointer on each widget
 would preserve constructor-time registration, but it was rejected as the end
 state because it puts mutable runtime state on
-[Environment](../src/roo_windows/core/environment.h), which is otherwise a
+[Environment](../../../src/roo_windows/core/environment.h), which is otherwise a
 bootstrap and configuration object. It also fails to solve the `Widget::theme()`
 parent-chain awkwardness.
 
@@ -530,9 +534,9 @@ without a concrete user-visible requirement.
 #### Public Nested `Application::Context` Type
 
 A public nested type was rejected because it creates awkward header coupling
-between [widget.h](../src/roo_windows/core/widget.h),
-[application.h](../src/roo_windows/core/application.h), and
-[main_window.h](../src/roo_windows/core/main_window.h). A standalone
+between [widget.h](../../../src/roo_windows/core/widget.h),
+[application.h](../../../src/roo_windows/core/application.h), and
+[main_window.h](../../../src/roo_windows/core/main_window.h). A standalone
 `ApplicationContext` header keeps include hygiene under control.
 
 ## Future Work

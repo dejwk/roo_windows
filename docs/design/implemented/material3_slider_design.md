@@ -1,5 +1,9 @@
 # Roo Windows Material 3 Slider Design
 
+## Implementation status
+
+**Implemented.** The defined scope is present in the current source tree. Dependency status and any separately scoped follow-up work are recorded in the [status index](../README.md).
+
 ## Objective
 
 Extend `roo_windows::material3::Slider` so that it covers the Material 3 slider
@@ -22,8 +26,10 @@ implementation.
 
 ## Current Status in `roo_windows`
 
-As of 2026-05, `roo_windows` has a Material 3 slider implementation, but it is
-intentionally narrow.
+The slider family described here is implemented, including semantic ranges,
+discrete and centered modes, range selection, value indicators, orientation,
+and size variants. The notes below record the narrow baseline from which the
+implementation proceeded.
 
 What exists today:
 
@@ -652,7 +658,7 @@ only need the existing `setOnInteractiveChange()` path.
 - shown according to `SliderValueIndicatorBehavior`,
 - for `RangeSlider`, only the active thumb shows a value indicator,
 - indicators that need to escape ancestor clipping should paint through the
-  shared [transient_presentation_pins_design.md](transient_presentation_pins_design.md)
+  shared [transient_presentation_pins_design.md](../proposed/transient_presentation_pins_design.md)
   path rather than by requiring a full `ParentClipMode::kUnclipped` ancestor
   chain,
 - if no custom formatter is set, a compact default decimal formatter is used.

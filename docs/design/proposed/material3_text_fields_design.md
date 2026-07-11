@@ -1,5 +1,9 @@
 # Roo Windows Material 3 Text Field Design
 
+## Implementation status
+
+**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+
 ## Objective
 
 Add a Material 3 text-field family to `roo_windows` that fits the framework's
@@ -52,17 +56,17 @@ As of 2026-05, `roo_windows` has no Material 3 text-field family.
 
 What exists today:
 
-- [widgets/text_field.h](../src/roo_windows/widgets/text_field.h) defines a
+- [widgets/text_field.h](../../../src/roo_windows/widgets/text_field.h) defines a
   legacy single-line `TextField` that stores an owned `std::string`, paints
   directly, supports masking, and starts editing on click.
 - The same header defines `TextFieldEditor`, a shared application-owned editor
   that tracks cursor position, selection, glyph metrics, and horizontal scroll
   state for the active field only.
-- [core/application.h](../src/roo_windows/core/application.h) owns one
+- [core/application.h](../../../src/roo_windows/core/application.h) owns one
   `Keyboard` and one `TextFieldEditor` for the whole application.
-- [activities/edit_text_field.h](../src/roo_windows/activities/edit_text_field.h)
+- [activities/edit_text_field.h](../../../src/roo_windows/activities/edit_text_field.h)
   provides a legacy full-screen editing activity built on that same editor.
-- [widgets/text_block.h](../src/roo_windows/widgets/text_block.h) now supports
+- [widgets/text_block.h](../../../src/roo_windows/widgets/text_block.h) now supports
   wrapping, alignment, max lines, and ellipsis for read-only text.
 - [text_system_design.md](text_system_design.md) already defines the intended
   long-term split between simple labels, wrapped text, rich text, and a future
@@ -124,8 +128,8 @@ though `roo_windows` should not copy its entire setter surface.
 ### Local Framework Signals
 
 The widget authoring rules in
-[widget_authoring.md](widget_authoring.md) and the canonical
-[roo-windows-widget-authoring instruction](../.github/instructions/roo-windows-widget-authoring.instructions.md)
+[widget_authoring.md](../../widget_authoring.md) and the canonical
+[roo-windows-widget-authoring instruction](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
 drive four local decisions.
 
 1. A Material 3 text field must be a surface-owning widget, so it should
@@ -211,7 +215,7 @@ not using."
 1. Expose a single `material3::TextField` class with a variant selector rather
    than separate filled and outlined public classes.
 2. Require an internal floating label in the base API. Adjacent external labels
-   remain ordinary composition with [widgets/text_label.h](../src/roo_windows/widgets/text_label.h),
+   remain ordinary composition with [widgets/text_label.h](../../../src/roo_windows/widgets/text_label.h),
    not a second mode on every field.
 3. Store only the editable value as owned text on the base widget.
 4. Store label, supporting text, error text, prefix, and suffix as non-owning
@@ -418,7 +422,7 @@ overlay widget.
 
 The current `Theme` does not expose Material 3 typography tokens directly, so
 the field resolves them through the existing font helpers in
-[theme.h](../src/roo_windows/core/theme.h).
+[theme.h](../../../src/roo_windows/core/theme.h).
 
 The intended mapping is:
 
@@ -550,12 +554,12 @@ should be settled once per pass.
 The migration plan is additive and non-breaking.
 
 1. Land `material3::TextField` and `material3::SecureTextField` beside the
-   legacy [widgets/text_field.h](../src/roo_windows/widgets/text_field.h)
+   legacy [widgets/text_field.h](../../../src/roo_windows/widgets/text_field.h)
    API.
 2. Generalize `TextFieldEditor` so both the legacy and Material 3 fields can
    use the same editing core.
 3. Add the editor accessor to `ApplicationContext`.
-4. Leave [activities/edit_text_field.h](../src/roo_windows/activities/edit_text_field.h)
+4. Leave [activities/edit_text_field.h](../../../src/roo_windows/activities/edit_text_field.h)
    available as a legacy full-screen wrapper.
 5. Migrate examples and new code to the Material 3 family gradually.
 
@@ -664,7 +668,7 @@ concrete widget type.
 ## Implementation Plan
 
 Implementation work for these phases follows the repo-local
-[roo_windows widget authoring instruction](../.github/instructions/roo-windows-widget-authoring.instructions.md).
+[roo_windows widget authoring instruction](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
 ### Phase 1: Generalize the Shared Editor Runtime
 
@@ -675,7 +679,7 @@ Code slice:
    `widgets::TextField` type.
 3. Stop using hint text inside the editor's glyph-measurement path.
 4. Add `ApplicationContext::textFieldEditor()`.
-5. Keep the legacy [widgets/text_field.h](../src/roo_windows/widgets/text_field.h)
+5. Keep the legacy [widgets/text_field.h](../../../src/roo_windows/widgets/text_field.h)
    behavior unchanged from a caller perspective.
 
 Proposed commit message:

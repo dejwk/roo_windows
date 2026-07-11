@@ -25,23 +25,23 @@ The repository has broad **design coverage**, but substantially narrower
 
 The main framework contracts are already described:
 
-- [paint_context_design.md](paint_context_design.md)
-- [surface_widget_refactor_design.md](surface_widget_refactor_design.md)
-- [visual_overflow_design.md](visual_overflow_design.md)
-- [widget_event_dispatch_design.md](widget_event_dispatch_design.md)
-- [gesture_scroll_ownership_design.md](gesture_scroll_ownership_design.md)
-- [text_system_design.md](text_system_design.md)
-- [non_touch_input_design.md](non_touch_input_design.md)
-- [horizontal_page_host_design.md](horizontal_page_host_design.md)
-- [application_navigation_back_behavior_design.md](application_navigation_back_behavior_design.md)
-- [transient_presentation_pins_design.md](transient_presentation_pins_design.md)
+- [paint_context_design.md](design/implemented/paint_context_design.md)
+- [surface_widget_refactor_design.md](design/implemented/surface_widget_refactor_design.md)
+- [visual_overflow_design.md](design/in_progress/visual_overflow_design.md)
+- [widget_event_dispatch_design.md](design/implemented/widget_event_dispatch_design.md)
+- [gesture_scroll_ownership_design.md](design/in_progress/gesture_scroll_ownership_design.md)
+- [text_system_design.md](design/proposed/text_system_design.md)
+- [non_touch_input_design.md](design/proposed/non_touch_input_design.md)
+- [horizontal_page_host_design.md](design/in_progress/horizontal_page_host_design.md)
+- [application_navigation_back_behavior_design.md](design/proposed/application_navigation_back_behavior_design.md)
+- [transient_presentation_pins_design.md](design/proposed/transient_presentation_pins_design.md)
 
 The main gap is no longer architecture prose. It is landing, testing, and
 integrating the contracts on which the M3 families depend.
 
 ### Theme work is a migration, not a missing M3 design
 
-[theme_color_tokens_design.md](theme_color_tokens_design.md) defines a
+[theme_color_tokens_design.md](design/implemented/theme_color_tokens_design.md) defines a
 design-system-independent framework theme plus an exact M3 theme. The new
 types have begun to appear in source, while legacy `ColorRole`, `ColorTheme`,
 and state-opacity APIs remain in use.
@@ -138,7 +138,7 @@ Phase 1 exit condition:
 Reference slice: a Wi-Fi or device-configuration flow can search or filter,
 enter and validate credentials, select options, show connection progress,
 cancel safely, and present success or failure.
-[material3_wifi_configuration_design.md](material3_wifi_configuration_design.md)
+[material3_wifi_configuration_design.md](design/proposed/material3_wifi_configuration_design.md)
 is a useful acceptance specification, not a substitute for shared contracts.
 
 Phase 2 exit condition:
@@ -178,7 +178,7 @@ platform makes it an earlier compatibility requirement.
 1. Inventory every foundation and M3 design as designed, implemented,
    integrated, or target-verified. Never infer implementation from a document.
 2. Finish the theme compatibility spike and measurements in
-   [theme_color_tokens_design.md](theme_color_tokens_design.md).
+   [theme_color_tokens_design.md](design/implemented/theme_color_tokens_design.md).
 3. Implement the shared event/focus/non-touch, back, and transient-lifetime
    path required by the Phase 1 slice.
 4. Integrate scaffold, one navigation mode, app bars, dialog/sheet, menus, and

@@ -1,5 +1,9 @@
 # Roo Windows Gesture Scroll Ownership Design
 
+## Implementation status
+
+**In progress.** A usable subset is present, but part of the defined scope remains. Implemented and outstanding dependencies are recorded in the [status index](../README.md).
+
 ## Status
 
 - Proposal only; not implemented at the framework level.

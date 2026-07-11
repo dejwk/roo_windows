@@ -1,5 +1,9 @@
 # Roo Windows Material 3 Time Pickers Design
 
+## Implementation status
+
+**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+
 ## Objective
 
 Add a Material Design 3 time-picker family to `roo_windows` that matches the
@@ -50,31 +54,31 @@ As of 2026-05, `roo_windows` has no checked-in Material 3 time-picker family.
 
 What exists today:
 
-- [src/roo_windows/core/application.h](../src/roo_windows/core/application.h)
-  already owns one shared [`Keyboard`](../src/roo_windows/activities/keyboard.h)
-  and one shared legacy [`TextFieldEditor`](../src/roo_windows/widgets/text_field.h),
-- [src/roo_windows/core/application.cpp](../src/roo_windows/core/application.cpp)
+- [src/roo_windows/core/application.h](../../../src/roo_windows/core/application.h)
+  already owns one shared [`Keyboard`](../../../src/roo_windows/activities/keyboard.h)
+  and one shared legacy [`TextFieldEditor`](../../../src/roo_windows/widgets/text_field.h),
+- [src/roo_windows/core/application.cpp](../../../src/roo_windows/core/application.cpp)
   already keeps that keyboard alive in its own popup task from application
   startup, so it can appear above other UI without allocating a new task each
   time,
-- [src/roo_windows/keyboard_layout/en_us.cpp](../src/roo_windows/keyboard_layout/en_us.cpp)
+- [src/roo_windows/keyboard_layout/en_us.cpp](../../../src/roo_windows/keyboard_layout/en_us.cpp)
   already defines a dedicated digits page inside the default keyboard layout,
-- [src/roo_windows/material3/button/button.h](../src/roo_windows/material3/button/button.h)
+- [src/roo_windows/material3/button/button.h](../../../src/roo_windows/material3/button/button.h)
   already provides Material 3 text buttons suitable for Cancel and OK actions,
-- [src/roo_windows/dialogs/dialog.h](../src/roo_windows/dialogs/dialog.h)
-  and [src/roo_windows/core/main_window.cpp](../src/roo_windows/core/main_window.cpp)
+- [src/roo_windows/dialogs/dialog.h](../../../src/roo_windows/dialogs/dialog.h)
+  and [src/roo_windows/core/main_window.cpp](../../../src/roo_windows/core/main_window.cpp)
   already provide centered scrim-backed modal presentation for the legacy
   dialog family,
-- and [src/roo_windows/widgets/scrim.h](../src/roo_windows/widgets/scrim.h)
+- and [src/roo_windows/widgets/scrim.h](../../../src/roo_windows/widgets/scrim.h)
   already provides the reusable scrim surface used by modal UI.
 
 What does not exist yet:
 
 - no Material 3 time picker under `src/roo_windows/material3/`,
 - no compact time-of-day value type distinct from
-  [`roo_time::DateTime`](../../roo_time/src/roo_time.h),
+  [`roo_time::DateTime`](../../../../roo_time/src/roo_time.h),
 - no Material 3 modal dialog scaffold independent of the legacy
-  [`Dialog`](../src/roo_windows/dialogs/dialog.h) widget,
+  [`Dialog`](../../../src/roo_windows/dialogs/dialog.h) widget,
 - no Material 3 icon-button family for the dial-or-input mode toggle,
 - no semantic keyboard-page selection API that lets code ask for the digits
   page without hard-coding an index,
@@ -134,19 +138,19 @@ closing on the behaviors people expect from Material time pickers.
 
 Four current repo facts directly shape the design.
 
-1. The legacy [Dialog](../src/roo_windows/dialogs/dialog.h) scaffold is the
+1. The legacy [Dialog](../../../src/roo_windows/dialogs/dialog.h) scaffold is the
    wrong visual and structural base. It hardcodes the old title panel,
    dividers, scrollable content area, and legacy footer buttons. A Material 3
    time picker should not subclass it just to inherit scrim presentation.
-2. The shared [Keyboard](../src/roo_windows/activities/keyboard.h) is already
+2. The shared [Keyboard](../../../src/roo_windows/activities/keyboard.h) is already
    alive in a popup task, so the picker can reuse it for numeric input without
    creating another keyboard subsystem.
-3. The current legacy [TextFieldEditor](../src/roo_windows/widgets/text_field.h)
+3. The current legacy [TextFieldEditor](../../../src/roo_windows/widgets/text_field.h)
    is still specialized to the old text-field widget type. Time-picker input
    does not need that machinery anyway because it edits only one active
    two-digit segment at a time.
 4. The canonical widget guidance in
-   [roo-windows-widget-authoring.instructions.md](../.github/instructions/roo-windows-widget-authoring.instructions.md)
+   [roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
    still applies: optimize for RAM first, avoid allocations on hot paths, and
    keep public widget state narrow.
 
@@ -365,7 +369,7 @@ composition or one child per mark on the dial.
 ### Modal Presentation
 
 `TimePickerDialog` does not subclass the legacy
-[Dialog](../src/roo_windows/dialogs/dialog.h).
+[Dialog](../../../src/roo_windows/dialogs/dialog.h).
 
 Instead it presents the picker through a dedicated full-window popup task:
 
@@ -498,8 +502,8 @@ precision.
 ### Input Mode and Keyboard Session
 
 Input mode reuses the existing shared
-[Keyboard](../src/roo_windows/activities/keyboard.h), but it does not reuse the
-legacy [TextFieldEditor](../src/roo_windows/widgets/text_field.h).
+[Keyboard](../../../src/roo_windows/activities/keyboard.h), but it does not reuse the
+legacy [TextFieldEditor](../../../src/roo_windows/widgets/text_field.h).
 
 That is a deliberate split.
 
@@ -574,7 +578,7 @@ that dependency local rather than waiting for a full public Material 3 icon-
 button family.
 
 Cancel and OK reuse the landed
-[material3::Button](../src/roo_windows/material3/button/button.h) in text mode.
+[material3::Button](../../../src/roo_windows/material3/button/button.h) in text mode.
 
 ### Typography and Color Mapping
 
@@ -724,7 +728,7 @@ Notes:
 ## Implementation Plan
 
 Implementation work for these phases follows the repo-local
-[roo_windows widget authoring instruction](../.github/instructions/roo-windows-widget-authoring.instructions.md).
+[roo_windows widget authoring instruction](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
 ### Phase 1: Add the Value Type and Modal Input Infrastructure
 
@@ -732,7 +736,7 @@ Code slice:
 
 1. Add `material3::TimeOfDay` plus validation and clamp helpers.
 2. Add a semantic keyboard-page role to
-   [keyboard_layout.h](../src/roo_windows/keyboard_layout/keyboard_layout.h)
+   [keyboard_layout.h](../../../src/roo_windows/keyboard_layout/keyboard_layout.h)
    and route the existing digits page through that role.
 3. Add a public `Application::keyboard()` accessor so temporary presenters can
    bind the shared keyboard without reaching through unrelated internals.

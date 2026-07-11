@@ -1,5 +1,9 @@
 # Roo Windows Material 3 Adaptive Layout Scaffold Design
 
+## Implementation status
+
+**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+
 ## Objective
 
 Add a Material 3 layout family to `roo_windows` that closes on the current
@@ -42,11 +46,11 @@ breakpoint-aware applications.
 
 The checked-in layout surface is still mostly local and mechanical:
 
-- [src/roo_windows/containers/horizontal_layout.h](../src/roo_windows/containers/horizontal_layout.h)
-- [src/roo_windows/containers/vertical_layout.h](../src/roo_windows/containers/vertical_layout.h)
-- [src/roo_windows/containers/flex_layout.h](../src/roo_windows/containers/flex_layout.h)
-- [src/roo_windows/containers/stacked_layout.h](../src/roo_windows/containers/stacked_layout.h)
-- [src/roo_windows/containers/scrollable_panel.h](../src/roo_windows/containers/scrollable_panel.h)
+- [src/roo_windows/containers/horizontal_layout.h](../../../src/roo_windows/containers/horizontal_layout.h)
+- [src/roo_windows/containers/vertical_layout.h](../../../src/roo_windows/containers/vertical_layout.h)
+- [src/roo_windows/containers/flex_layout.h](../../../src/roo_windows/containers/flex_layout.h)
+- [src/roo_windows/containers/stacked_layout.h](../../../src/roo_windows/containers/stacked_layout.h)
+- [src/roo_windows/containers/scrollable_panel.h](../../../src/roo_windows/containers/scrollable_panel.h)
 
 Those containers are useful building blocks, but they do not express the main
 Material layout decisions that shape a full application window:
@@ -60,7 +64,7 @@ Material layout decisions that shape a full application window:
 5. and there is no common way to mirror leading / trailing regions for RTL.
 
 The closest current approximation is
-[src/roo_windows/containers/navigation_panel.h](../src/roo_windows/containers/navigation_panel.h).
+[src/roo_windows/containers/navigation_panel.h](../../../src/roo_windows/containers/navigation_panel.h).
 It places a legacy rail beside a stacked content area, but it is a one-off
 composition rather than a general Material layout family:
 
@@ -105,7 +109,7 @@ The most relevant local references are:
 - [material3_navigation_drawer_design.md](material3_navigation_drawer_design.md)
 - [material3_toolbars_design.md](material3_toolbars_design.md)
 - [material3_extended_fab_design.md](material3_extended_fab_design.md)
-- [widget_authoring.md](widget_authoring.md)
+- [widget_authoring.md](../../widget_authoring.md)
 
 Those references imply six important local constraints:
 
@@ -132,7 +136,7 @@ Those references imply six important local constraints:
 3. Support per-slot breakpoint visibility rules on the scaffold so callers can
    adapt bottom bars, rails, and toolbars without swapping parent widgets.
 4. Support caller-supplied safety insets using
-   [src/roo_windows/core/insets.h](../src/roo_windows/core/insets.h).
+   [src/roo_windows/core/insets.h](../../../src/roo_windows/core/insets.h).
 5. Support one-pane, two-pane, and three-pane page bodies using a dedicated
    pane layout with leading, main, and trailing slots.
 6. Support canonical feed, list-detail, and supporting-pane pages without
@@ -527,7 +531,7 @@ not.
 ### Migration Path for Existing Consumers
 
 The existing
-[NavigationPanel](../src/roo_windows/containers/navigation_panel.h) remains a
+[NavigationPanel](../../../src/roo_windows/containers/navigation_panel.h) remains a
 valid consumer-level widget until the new scaffold and Material 3 navigation
 surfaces land.
 
@@ -729,7 +733,7 @@ Notes:
 ## Implementation Plan
 
 Implementation work for these phases follows the repo-local
-[roo_windows widget authoring instruction](../.github/instructions/roo-windows-widget-authoring.instructions.md).
+[roo_windows widget authoring instruction](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
 ### Phase 1: Declare Breakpoint Policy and Size Budgets
 
