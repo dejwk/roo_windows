@@ -6,6 +6,7 @@
 #include "roo_windows/material3/slider/slider_internal.h"
 #include "roo_windows/material3/slider/slider_size_internal.h"
 #include "roo_windows/material3/slider/value_indicator.h"
+#include "roo_windows/material3/theme.h"
 
 namespace roo_windows {
 namespace material3 {
@@ -32,7 +33,7 @@ inline Rect ExpandRectAlongPrimary(const SliderAxisMetrics& axis, Rect rect,
 // Applies the disabled Material 3 alpha treatment on top of the current
 // surface color so disabled slider pieces still blend with the theme.
 inline Color DisabledComposite(Color fg, uint8_t alpha, const Theme& theme) {
-  return AlphaBlend(theme.color.surface, fg.withA(alpha));
+  return AlphaBlend(theme.material3Theme().color.surface, fg.withA(alpha));
 }
 
 // Shared slider palette after resolving enabled vs disabled treatment.
@@ -48,22 +49,23 @@ struct SliderPaintTokens {
 template <typename SliderLike>
 inline SliderPaintTokens ResolveTokens(const SliderLike& widget) {
   const Theme& theme = widget.theme();
+  const ColorScheme& colors = theme.material3Theme().color;
   if (!widget.isEnabled()) {
     return SliderPaintTokens{
-        DisabledComposite(theme.color.onSurface, 0x61, theme),
-        DisabledComposite(theme.color.onSurface, 0x1F, theme),
-        DisabledComposite(theme.color.onSurface, 0x61, theme),
-        theme.color.surface,
-        theme.color.surface,
+        DisabledComposite(colors.onSurface, 0x61, theme),
+        DisabledComposite(colors.onSurface, 0x1F, theme),
+        DisabledComposite(colors.onSurface, 0x61, theme),
+        colors.surface,
+        colors.surface,
     };
   }
 
   return SliderPaintTokens{
-      theme.color.primary,
-      theme.color.secondaryContainer,
-      theme.color.primary,
-      theme.color.onPrimary,
-      theme.color.onSecondaryContainer,
+      colors.primary,
+      colors.secondaryContainer,
+      colors.primary,
+      colors.onPrimary,
+      colors.onSecondaryContainer,
   };
 }
 

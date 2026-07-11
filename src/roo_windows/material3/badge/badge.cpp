@@ -9,6 +9,7 @@
 #include "roo_windows/core/number.h"
 #include "roo_windows/core/paint_context.h"
 #include "roo_windows/core/theme.h"
+#include "roo_windows/material3/theme.h"
 
 namespace roo_windows {
 namespace material3 {
@@ -212,8 +213,8 @@ Rect Badge::ConservativeBounds(const Rect& anchor_bounds,
 void Badge::paint(PaintContext& ctx, const Theme& theme) const {
   if (!valid_ || bounds_.empty() || !visible()) return;
 
-  roo_display::Color badge_color = theme.color.error;
-  roo_display::Color text_color = theme.color.onError;
+  roo_display::Color badge_color = theme.material3Theme().color.error;
+  roo_display::Color text_color = theme.material3Theme().color.onError;
   Rect inner = InnerBounds(bounds_);
   if (!inner.empty()) {
     PaintContext sub = ctx.clipped(inner);

@@ -7,6 +7,7 @@
 #include "roo_display/ui/alignment.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_windows/core/click_animation.h"
+#include "roo_windows/material3/theme.h"
 
 using roo_display::AlphaBlend;
 using roo_display::kCenter;
@@ -48,10 +49,37 @@ struct ButtonTokens {
   uint8_t pressed_elevation;
 };
 
+// Shared M3 defaults retain semantic identity until the paint path resolves
+// them against the installed Material 3 scheme. A false paint flag is
+// deliberately distinct from the transparent color a caller may supply.
+struct ButtonColorTokens {
+  ColorToken container;
+  ColorToken content;
+  ColorToken outline;
+  bool paint_container;
+  bool paint_outline;
+  uint8_t resting_elevation;
+  uint8_t pressed_elevation;
+};
+
+constexpr ButtonColorTokens kButtonColorTokens[] = {
+    // text, filled, filled tonal, outlined, elevated.
+    {ColorToken::kSurface, ColorToken::kPrimary, ColorToken::kOutline,
+     false, false, 0, 0},
+    {ColorToken::kPrimary, ColorToken::kOnPrimary, ColorToken::kOutline,
+     true, false, 0, 0},
+    {ColorToken::kSecondaryContainer, ColorToken::kOnSecondaryContainer,
+     ColorToken::kOutline, true, false, 0, 0},
+    {ColorToken::kSurface, ColorToken::kOnSurfaceVariant,
+     ColorToken::kOutlineVariant, false, true, 0, 0},
+    {ColorToken::kSurfaceContainerLow, ColorToken::kPrimary,
+     ColorToken::kOutline, true, false, 1, 1},
+};
+
 // Disabled buttons are specified as on-surface content composited onto the
 // surface, rather than as separate fixed colors.
 Color DisabledComposite(const Theme& theme, Color fg, uint8_t alpha) {
-  return AlphaBlend(theme.color.surface, fg.withA(alpha));
+  return AlphaBlend(theme.material3Theme().color.surface, fg.withA(alpha));
 }
 
 ColorRole ContainerRoleFor(ButtonVariant v) {
@@ -70,38 +98,31 @@ ColorRole ContainerRoleFor(ButtonVariant v) {
 }
 
 ButtonTokens ResolveTokens(const Theme& theme, ButtonVariant v, bool enabled) {
+  const ColorScheme& colors = theme.material3Theme().color;
   if (!enabled) {
     if (v == ButtonVariant::kText || v == ButtonVariant::kOutlined) {
       return ButtonTokens{
-          Transparent, DisabledComposite(theme, theme.color.onSurface, 0x61),
+          Transparent, DisabledComposite(theme, colors.onSurface, 0x61),
           v == ButtonVariant::kOutlined
-              ? DisabledComposite(theme, theme.color.onSurface, 0x1F)
+              ? DisabledComposite(theme, colors.onSurface, 0x1F)
               : Transparent,
           0, 0};
     }
     Color disabled_container =
-        DisabledComposite(theme, theme.color.onSurface, 0x1F);
+        DisabledComposite(theme, colors.onSurface, 0x1F);
     return ButtonTokens{disabled_container,
-                        DisabledComposite(theme, theme.color.onSurface, 0x61),
+                        DisabledComposite(theme, colors.onSurface, 0x61),
                         Transparent, 0, 0};
   }
-  switch (v) {
-    case ButtonVariant::kFilled:
-      return ButtonTokens{theme.color.primary, theme.color.onPrimary,
-                          Transparent, 0, 0};
-    case ButtonVariant::kFilledTonal:
-      return ButtonTokens{theme.color.secondaryContainer,
-                          theme.color.onSecondaryContainer, Transparent, 0, 0};
-    case ButtonVariant::kElevated:
-      return ButtonTokens{theme.color.surfaceContainerLow, theme.color.primary,
-                          Transparent, 1, 1};
-    case ButtonVariant::kText:
-      return ButtonTokens{Transparent, theme.color.primary, Transparent, 0, 0};
-    case ButtonVariant::kOutlined:
-      return ButtonTokens{Transparent, theme.color.onSurfaceVariant,
-                          theme.color.outlineVariant, 0, 0};
-  }
-  return ButtonTokens{Transparent, theme.color.primary, Transparent, 0, 0};
+  const ButtonColorTokens& tokens =
+      kButtonColorTokens[static_cast<uint8_t>(v)];
+  return ButtonTokens{
+      tokens.paint_container ? colors.resolve(tokens.container) : Transparent,
+      colors.resolve(tokens.content),
+      tokens.paint_outline ? colors.resolve(tokens.outline) : Transparent,
+      tokens.resting_elevation,
+      tokens.pressed_elevation,
+  };
 }
 
 const ButtonGeometryTokens& GeometryTokensFor(ButtonSize size) {

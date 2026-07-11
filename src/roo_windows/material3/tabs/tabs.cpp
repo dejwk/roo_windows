@@ -11,6 +11,7 @@
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/gesture_detector.h"
 #include "roo_windows/core/theme.h"
+#include "roo_windows/material3/theme.h"
 
 using roo_display::ClippedStringViewLabel;
 using roo_display::kCenter;
@@ -50,18 +51,19 @@ const roo_display::Font& TabLabelFont() { return font_button(); }
 // Resolves active, inactive, and disabled foreground colors from the theme.
 Color ContentColorFor(const Tab& tab) {
   const Theme& theme = tab.theme();
+  const ColorScheme& colors = theme.material3Theme().color;
   if (!tab.isEnabled()) {
-    return roo_display::AlphaBlend(theme.color.surface,
-                                   theme.color.onSurface.withA(0x61));
+    return roo_display::AlphaBlend(colors.surface,
+                                   colors.onSurface.withA(0x61));
   }
-  if (!tab.isActivated()) return theme.color.onSurfaceVariant;
+  if (!tab.isActivated()) return colors.onSurfaceVariant;
   const Tabs* tabs = tab.parent() == nullptr
                          ? nullptr
                          : static_cast<const Tabs*>(tab.parent());
   if (tabs != nullptr && tabs->variant() == TabsVariant::kSecondary) {
-    return theme.color.onSurface;
+    return colors.onSurface;
   }
-  return theme.color.primary;
+  return colors.primary;
 }
 
 // Computes the token-sized icon slot while respecting larger concrete assets.
@@ -105,7 +107,7 @@ void Tab::setIcon(const MonoIcon* icon) {
   requestLayout();
 }
 
-Color Tab::background() const { return theme().color.surface; }
+Color Tab::background() const { return theme().material3Theme().color.surface; }
 
 Dimensions Tab::getContentMinimumDimensions() const {
   const roo_display::Font& font = TabLabelFont();
@@ -232,7 +234,7 @@ void Tab::paint(PaintContext& ctx) const {
         ctx.clearRect(indicator_band);
       } else {
         roo_display::FilledRect indicator_fill(indicator.asBox(),
-                                               theme().color.primary);
+                                               theme().material3Theme().color.primary);
         ctx.drawTiled(indicator_fill, indicator_band, kNoAlign);
       }
     }
@@ -419,13 +421,13 @@ void Tabs::setShowsDivider(bool shows_divider) {
   invalidateInterior();
 }
 
-Color Tabs::background() const { return theme().color.surface; }
+Color Tabs::background() const { return theme().material3Theme().color.surface; }
 
 void Tabs::paint(PaintContext& ctx) const {
   Rect divider = dividerBounds();
   if (!divider.empty()) {
     roo_display::FilledRect divider_fill(divider.asBox(),
-                                         theme().color.outlineVariant);
+                                         theme().material3Theme().color.outlineVariant);
     ctx.drawTiled(divider_fill, bounds(), kNoAlign);
     return;
   }

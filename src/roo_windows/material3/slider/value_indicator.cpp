@@ -8,6 +8,7 @@
 #include "roo_windows/core/border_style.h"
 #include "roo_windows/core/number.h"
 #include "roo_windows/core/theme.h"
+#include "roo_windows/material3/theme.h"
 #include "roo_windows/material3/slider/slider_internal.h"
 
 namespace roo_windows {
@@ -43,10 +44,10 @@ constexpr int16_t kCornerInset = kCornerRadius - (181 * kCornerRadius) / 256;
 }  // namespace
 
 ValueIndicatorBubble::ValueIndicatorBubble(const Theme& theme, bool enabled)
-    : bubble_color_(enabled ? theme.color.inverseSurface
-                            : theme.color.onSurface.withA(0x3D)),
-      text_color_(enabled ? theme.color.inverseOnSurface
-                          : theme.color.surface) {}
+    : bubble_color_(enabled ? theme.material3Theme().color.inverseSurface
+                            : theme.material3Theme().color.onSurface.withA(0x3D)),
+      text_color_(enabled ? theme.material3Theme().color.inverseOnSurface
+                          : theme.material3Theme().color.surface) {}
 
 // static
 void ValueIndicatorBubble::MeasureBubbleSize(roo::string_view text,

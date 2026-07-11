@@ -7,6 +7,7 @@
 #include "roo_display/shape/basic.h"
 #include "roo_display/shape/smooth.h"
 #include "roo_display/ui/alignment.h"
+#include "roo_windows/material3/theme.h"
 
 using namespace roo_display;
 
@@ -27,7 +28,7 @@ static constexpr int kPressedThumbDiameter = Scaled(28);
 static constexpr float kTrackCenterY = 0.5f * (float)(kTrackHeight - 1);
 
 Color DisabledComposite(Color fg, uint8_t alpha, const Theme& theme) {
-  return AlphaBlend(theme.color.surface, fg.withA(alpha));
+  return AlphaBlend(theme.material3Theme().color.surface, fg.withA(alpha));
 }
 
 int16_t ThumbDiameterForState(bool on, bool pressed, bool has_icon) {
@@ -50,6 +51,7 @@ struct Tokens {
 
 Tokens ResolveTokens(const Switch& widget) {
   const Theme& theme = widget.theme();
+  const ColorScheme& colors = theme.material3Theme().color;
   bool enabled = widget.isEnabled();
   bool on = widget.isOn();
   bool interaction = enabled && (widget.isPressed() || widget.isClicking() ||
@@ -58,34 +60,34 @@ Tokens ResolveTokens(const Switch& widget) {
   if (!enabled) {
     if (on) {
       return Tokens{
-          DisabledComposite(theme.color.onSurface, 0x1F, theme),
+          DisabledComposite(colors.onSurface, 0x1F, theme),
           color::Transparent,
-          theme.color.surface,
-          DisabledComposite(theme.color.onSurface, 0x61, theme),
+          colors.surface,
+          DisabledComposite(colors.onSurface, 0x61, theme),
       };
     }
     return Tokens{
-        DisabledComposite(theme.color.surfaceContainerHighest, 0x1F, theme),
-        DisabledComposite(theme.color.onSurface, 0x1F, theme),
-        DisabledComposite(theme.color.onSurface, 0x61, theme),
-        DisabledComposite(theme.color.surfaceContainerHighest, 0x61, theme),
+        DisabledComposite(colors.surfaceContainerHighest, 0x1F, theme),
+        DisabledComposite(colors.onSurface, 0x1F, theme),
+        DisabledComposite(colors.onSurface, 0x61, theme),
+        DisabledComposite(colors.surfaceContainerHighest, 0x61, theme),
     };
   }
 
   if (on) {
     return Tokens{
-        theme.color.primary,
+        colors.primary,
         color::Transparent,
-        interaction ? theme.color.primaryContainer : theme.color.onPrimary,
-        theme.color.onPrimaryContainer,
+        interaction ? colors.primaryContainer : colors.onPrimary,
+        colors.onPrimaryContainer,
     };
   }
 
   return Tokens{
-      theme.color.surfaceContainerHighest,
-      theme.color.outline,
-      interaction ? theme.color.onSurfaceVariant : theme.color.outline,
-      theme.color.surfaceContainerHighest,
+      colors.surfaceContainerHighest,
+      colors.outline,
+      interaction ? colors.onSurfaceVariant : colors.outline,
+      colors.surfaceContainerHighest,
   };
 }
 

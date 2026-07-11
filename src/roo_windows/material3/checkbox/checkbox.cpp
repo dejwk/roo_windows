@@ -11,6 +11,7 @@
 #include "roo_windows/material3/checkbox/resources/generated/indeterminate_18.h"
 #include "roo_windows/material3/checkbox/resources/generated/indeterminate_27.h"
 #include "roo_windows/material3/checkbox/resources/generated/indeterminate_36.h"
+#include "roo_windows/material3/theme.h"
 
 using namespace roo_display;
 
@@ -30,7 +31,7 @@ static constexpr float kBorderCornerRadius =
                                            : 0;
 
 Color DisabledComposite(Color fg, uint8_t alpha, const Theme& theme) {
-  return AlphaBlend(theme.color.surface, fg.withA(alpha));
+  return AlphaBlend(theme.material3Theme().color.surface, fg.withA(alpha));
 }
 
 const Pictogram& CheckMarkPictogram() {
@@ -65,16 +66,16 @@ struct Tokens {
 
 Tokens ResolveTokens(const Checkbox& widget) {
   const Theme& theme = widget.theme();
+  const ColorScheme& colors = theme.material3Theme().color;
   bool enabled = widget.isEnabled();
 
   if (!enabled) {
     Color disabled_container =
-        DisabledComposite(theme.color.onSurface, 0x61, theme);
-    return Tokens{disabled_container, theme.color.surface, disabled_container};
+        DisabledComposite(colors.onSurface, 0x61, theme);
+    return Tokens{disabled_container, colors.surface, disabled_container};
   }
 
-  return Tokens{theme.color.primary, theme.color.onPrimary,
-                theme.color.outline};
+  return Tokens{colors.primary, colors.onPrimary, colors.outline};
 }
 
 const Pictogram* MarkForState(Checkbox::OnOffState state) {
@@ -106,7 +107,7 @@ void Checkbox::paint(PaintContext& ctx) const {
         kOuterBoxMax - kOutlineInset, kOuterBoxMax - kOutlineInset,
         kBorderCornerRadius, kOutlineWidth, tokens.unselected_outline);
     Canvas surface_canvas(canvas);
-    surface_canvas.set_bgcolor(theme().color.surface);
+    surface_canvas.set_bgcolor(theme().material3Theme().color.surface);
     surface_canvas.drawTiled(outline, bounds(), kCenter | kMiddle,
                              isInvalidated());
     return;

@@ -3,6 +3,7 @@
 #include "roo_display/composition/streamable_stack.h"
 #include "roo_display/shape/smooth.h"
 #include "roo_display/ui/alignment.h"
+#include "roo_windows/material3/theme.h"
 
 using namespace roo_display;
 
@@ -19,7 +20,7 @@ static constexpr float kCenterlineRadius = kOuterRadius - 0.5f * kOutlineWidth;
 static constexpr float kDotRadius = Scaled(5.0f);
 
 Color DisabledComposite(Color fg, uint8_t alpha, const Theme& theme) {
-  return AlphaBlend(theme.color.surface, fg.withA(alpha));
+  return AlphaBlend(theme.material3Theme().color.surface, fg.withA(alpha));
 }
 
 struct Tokens {
@@ -29,20 +30,21 @@ struct Tokens {
 
 Tokens ResolveTokens(const RadioButton& widget) {
   const Theme& theme = widget.theme();
+  const ColorScheme& colors = theme.material3Theme().color;
   bool enabled = widget.isEnabled();
   bool on = widget.isOn();
 
   if (!enabled) {
-    Color ring = DisabledComposite(theme.color.onSurface, 0x61, theme);
+    Color ring = DisabledComposite(colors.onSurface, 0x61, theme);
     Color dot = on ? ring : color::Transparent;
     return Tokens{ring, dot};
   }
 
   if (!on) {
-    return Tokens{theme.color.onSurfaceVariant, color::Transparent};
+    return Tokens{colors.onSurfaceVariant, color::Transparent};
   }
 
-  return Tokens{theme.color.primary, theme.color.primary};
+  return Tokens{colors.primary, colors.primary};
 }
 
 }  // namespace

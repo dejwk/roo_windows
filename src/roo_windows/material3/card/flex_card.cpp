@@ -1,4 +1,5 @@
 #include "roo_windows/material3/card/flex_card.h"
+#include "roo_windows/material3/theme.h"
 
 namespace roo_windows {
 namespace material3 {
@@ -197,8 +198,9 @@ ColorRole FlexCard::containerRole() const {
 
 roo_display::Color FlexCard::getOutlineColor() const {
   ColorRole role = outline_role_override_;
-  return role == ColorRole::kUndefined ? roo_display::color::Transparent
-                                       : theme().color.role(role);
+  if (role == ColorRole::kUndefined) return roo_display::color::Transparent;
+  return theme().material3Theme().color.resolve(
+      static_cast<ColorToken>(static_cast<uint8_t>(role) - 1));
 }
 
 BorderStyle FlexCard::getBorderStyle() const {

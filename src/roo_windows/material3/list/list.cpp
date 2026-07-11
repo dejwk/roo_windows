@@ -9,6 +9,7 @@
 #include "roo_icons/filled/24/navigation.h"
 #include "roo_logging.h"
 #include "roo_windows/core/theme.h"
+#include "roo_windows/material3/theme.h"
 #include "roo_windows/widgets/text_block.h"
 #include "roo_windows/widgets/text_label.h"
 
@@ -439,11 +440,13 @@ class AvatarVisual : public BasicWidget {
     auto background = roo_display::SmoothFilledCircle(
         {0.5f * static_cast<float>(diameter - 1),
          0.5f * static_cast<float>(diameter - 1)},
-        0.5f * static_cast<float>(diameter), theme().color.primaryContainer);
+        0.5f * static_cast<float>(diameter),
+        theme().material3Theme().color.primaryContainer);
 
     if (!initials_.empty()) {
       roo_display::ClippedStringViewLabel initials_label(
-          initials_, FontForHeadline(), theme().color.onPrimaryContainer);
+          initials_, FontForHeadline(),
+          theme().material3Theme().color.onPrimaryContainer);
       roo_display::Offset text_offset =
           (roo_display::kCenter | roo_display::kMiddle)
               .resolveOffset(roo_display::Box(0, 0, diameter - 1, diameter - 1),
@@ -451,7 +454,7 @@ class AvatarVisual : public BasicWidget {
       Rect text_bounds = Rect(initials_label.extents())
                              .translate(text_offset.dx, text_offset.dy)
                              .translate(rect.xMin(), rect.yMin());
-      ctx.setBgcolor(theme().color.primaryContainer);
+      ctx.setBgcolor(theme().material3Theme().color.primaryContainer);
       ctx.drawTiled(initials_label, text_bounds,
                     roo_display::kCenter | roo_display::kMiddle);
       ctx.addExclusion(text_bounds);
@@ -791,14 +794,15 @@ void ListEntry::syncTextSlotsFromItem() {
   };
 
   const Theme& theme = context().theme();
+  const ColorScheme& colors = theme.material3Theme().color;
   sync_slot(overline_text_, overline_mode_, item_->overlineText(),
             item_->overlinePolicy(), FontForOverline(),
-            theme.color.onSurfaceVariant);
+            colors.onSurfaceVariant);
   sync_slot(headline_text_, headline_mode_, item_->headlineText(),
-            item_->headlinePolicy(), FontForHeadline(), theme.color.onSurface);
+            item_->headlinePolicy(), FontForHeadline(), colors.onSurface);
   sync_slot(supporting_text_, supporting_mode_, item_->supportingText(),
             item_->supportingPolicy(), FontForSupporting(),
-            theme.color.onSurfaceVariant);
+            colors.onSurfaceVariant);
 }
 
 void ListEntry::setItem(ListItem& item) {
@@ -1590,7 +1594,8 @@ int16_t List::interRowGap(int previous_idx, int next_idx) const {
 
 void List::paint(PaintContext& ctx) const {
   if (!ctx.isDeadlineExceeded()) {
-    const roo_display::Color divider_color = theme().color.outlineVariant;
+    const roo_display::Color divider_color =
+        theme().material3Theme().color.outlineVariant;
     const int16_t divider_thickness = DividerThicknessPx();
 
     int previous_visible_idx = -1;
