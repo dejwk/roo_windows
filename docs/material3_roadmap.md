@@ -23,7 +23,7 @@ The repository has broad **design coverage**, but substantially narrower
 
 ### Foundation designs
 
-The main framework contracts are already described:
+The main framework contracts with checked-in design coverage are:
 
 - [paint_context_design.md](design/implemented/paint_context_design.md)
 - [surface_widget_refactor_design.md](design/implemented/surface_widget_refactor_design.md)
@@ -34,11 +34,23 @@ The main framework contracts are already described:
 - [non_touch_input_design.md](design/proposed/non_touch_input_design.md)
 - [horizontal_page_host_design.md](design/implemented/horizontal_page_host_design.md)
 - [application_navigation_back_behavior_design.md](design/proposed/application_navigation_back_behavior_design.md)
+- [transient_presenter_lifetime_design.md](design/proposed/transient_presenter_lifetime_design.md)
 - [transient_presentation_pins_design.md](design/proposed/transient_presentation_pins_design.md)
 
-The main gap is no longer architecture prose. Event dispatch and gesture
-ownership are implemented; the remaining work is to land the unfinished
-contracts and integrate the M3 families that depend on them.
+This list is not evidence that every cross-component contract is complete.
+In particular, the transient-presentation-pins design is a narrow paint-only
+mechanism for escaping ancestor clipping. It defines registration, layer
+ordering, invalidation, and limited pin teardown behavior; it does not define a
+general lifetime contract for interactive menus, sheets, dialogs, or queued
+snackbars. The component designs currently make different caller-owned and
+borrowed-lifetime assumptions, and some still permit a visible presenter to
+hold an anchor, content reference, listener, or text view that the caller must
+keep valid.
+
+Event dispatch and gesture ownership are implemented. The remaining foundation
+work is a mix of implementing unfinished designs and closing shared contracts
+that do not yet have a complete design, before integrating the M3 families that
+depend on them.
 
 ### Theme migration is complete; target evidence remains
 
@@ -96,13 +108,19 @@ later components must not invent temporary alternatives to these contracts.
 | Retain theme-migration evidence | Implemented; host coverage exists | Record supported-target RAM, flash, stack, size, and visual-regression evidence for `FrameworkTheme` and `material3::Theme`. |
 | Land focus and non-touch input | Event dispatch and gesture ownership are implemented; focus and non-touch-input designs remain proposed | Touch, keyboard, encoder/directional focus, Back, and Escape use one dispatch model with no component-local routing policy. |
 | Land navigation and back behavior | Design exists | `Task`/`Activity` route ownership and deepest-first transient dismissal use the same back path. Predictive animation remains deferred. |
-| Land transient-presentation lifetime rules | Design exists | Menus, sheets, dialogs, and snackbars cannot retain invalid anchors, owners, callbacks, or content. |
+| Land transient-presenter lifetime and ownership | Shared proposed design exists; component designs still contain inconsistent rules | Implement the shared ownership contract and reconcile anchors, presenters, content, text, listeners, completion delivery, close, detach, destruction, replacement, and queued-request behavior without relying on undocumented caller ordering. |
+| Land paint-only presentation pins where required | Narrow proposed design exists; none is implemented | Root-stage paint-only visuals escape ancestor clipping, obey task/popup/dialog ordering, restore old pixels, and unregister safely. Interactive surfaces remain popup tasks or dialogs. Pins are not treated as the general presenter-lifetime solution. |
 | Define and implement editable-text core | Direction exists; shared contract is incomplete | Cursor movement, selection, composition policy, validation, scrolling, multiline layout, and hardware-keyboard input live below M3 chrome. |
 
 Phase 0 exit condition:
 
 - one target application exercises touch and non-touch dispatch, route back,
   transient dismissal, and text entry through shared contracts;
+- lifecycle tests cover closing, replacing, detaching, and destroying each
+  presenter and its owner while visible or queued, with completion delivered at
+  most once and no retained invalid anchor, content, listener, or text view;
+- any adopted presentation pin has clipped-ancestor, layer-order, move/hide
+  invalidation, anchor teardown, and window teardown coverage;
 - tests and target evidence prove default theme colors and state layers remain correct;
 - representative widget sizes do not grow; and
 - RAM, flash, stack, and invalidation behavior are measured on a supported
@@ -185,14 +203,18 @@ platform makes it an earlier compatibility requirement.
 2. Capture the supported-target theme-migration measurements and retain the
    regression coverage described in
    [theme_color_tokens_design.md](design/implemented/theme_color_tokens_design.md).
-3. Implement the remaining focus/non-touch, back, and transient-lifetime path
-   required by the Phase 1 slice.
-4. Integrate scaffold, the existing app bars, one navigation mode, dialog/sheet, menus, and
-   snackbar into that slice.
-5. Complete editable text, then land text fields, progress, and the smallest
+3. Land the shared transient-presenter lifetime contract, reconcile the menu,
+   sheet, dialog, and snackbar APIs with the proposed design, and add lifecycle
+   tests before integrating those presenters.
+4. Implement the remaining focus/non-touch and back paths required by the
+   Phase 1 slice. Implement presentation pins only for paint-only adopters that
+   need root-stage clipping escape.
+5. Integrate scaffold, the existing app bars, one navigation mode,
+   dialog/sheet, menus, and snackbar into that slice.
+6. Complete editable text, then land text fields, progress, and the smallest
    chip/list scope required by the Phase 2 slice.
-6. Consolidate existing controls and expand adaptive navigation.
-7. Select long-tail work from demonstrated application demand.
+7. Consolidate existing controls and expand adaptive navigation.
+8. Select long-tail work from demonstrated application demand.
 
 ## Tracking and Review
 

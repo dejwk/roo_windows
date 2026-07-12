@@ -58,5 +58,6 @@ Status was audited against the source tree and tests on 2026-07-12. “Dependenc
 | Text fields | Paint context is implemented; non-touch input and supporting icon-button/menu behavior are proposed. |
 | Time pickers | Buttons are implemented; text fields, dialogs, icon buttons, and shared back behavior are proposed. |
 | Toolbars | Buttons are implemented; icon buttons, menus, and FABs are proposed. |
+| Transient presenter lifetime and ownership | Existing host and `WidgetRef` conventions provide prerequisites; the shared interactive-presenter contract and component migrations are not implemented. |
 | Transient presentation pins | Visual overflow is in progress; no root-stage presentation-pin implementation exists. |
 | Wi-Fi configuration | Existing Wi-Fi transport/configuration APIs are external prerequisites; the Material 3 screen design and its text-field/dialog dependencies are not implemented. |
