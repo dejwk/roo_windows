@@ -4,6 +4,7 @@
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/measure_spec.h"
 #include "roo_windows/material3/checkbox/checkbox.h"
+#include "roo_windows/material3/theme.h"
 
 namespace roo_windows {
 namespace material3 {

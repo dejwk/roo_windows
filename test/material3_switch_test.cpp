@@ -197,7 +197,7 @@ TEST_F(Material3BadgedSwitchRenderTest, BadgePaintsFrontMostOverSwitchTrack) {
   int16_t sample_x = x0 + (overlap.xMin() + overlap.xMax()) / 2;
   int16_t sample_y = y0 + (overlap.yMin() + overlap.yMax()) / 2;
 
-  EXPECT_EQ(QuantizeToArgb4444(env_.theme().color.error),
+  EXPECT_EQ(QuantizeToArgb4444(env_.theme().material3Theme().color.error),
             pixelAt(sample_x, sample_y));
 }
 

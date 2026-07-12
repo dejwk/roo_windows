@@ -1299,7 +1299,7 @@ TEST_F(Material3ListRenderTest, InsetDividerPaintUsesResolvedInsets) {
   ASSERT_TRUE(refresh());
 
   roo_display::Color divider_color = test_support::QuantizeToArgb4444(
-      context().theme().color.role(::roo_windows::material3::ColorToken::kOutlineVariant));
+      context().theme().material3Theme().color.resolve(::roo_windows::material3::ColorToken::kOutlineVariant));
   int16_t divider_thickness = Scaled(1);
 
   EXPECT_EQ(first_row->height() + divider_thickness, second_row->offsetTop());
@@ -1346,9 +1346,9 @@ TEST_F(Material3ListRenderTest, ExpressiveInsetDividerPaintUsesGapSpace) {
   ASSERT_TRUE(refresh());
 
   roo_display::Color divider_color = test_support::QuantizeToArgb4444(
-      context().theme().color.role(::roo_windows::material3::ColorToken::kOutlineVariant));
+      context().theme().material3Theme().color.resolve(::roo_windows::material3::ColorToken::kOutlineVariant));
   roo_display::Color surface_color = test_support::QuantizeToArgb4444(
-      context().theme().color.role(::roo_windows::material3::ColorToken::kSurface));
+      context().theme().material3Theme().color.resolve(::roo_windows::material3::ColorToken::kSurface));
   int16_t expressive_gap = Scaled(2);
   int16_t divider_thickness = Scaled(1);
 

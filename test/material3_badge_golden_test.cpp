@@ -103,11 +103,11 @@ class BadgeAnchorHost : public Widget {
     // pixels behind it.
     badge_.paint(ctx, theme());
     Rect anchor = anchorBounds();
-    ctx.fillRect(anchor, theme().color.primaryContainer);
+    ctx.fillRect(anchor, theme().material3Theme().color.primaryContainer);
 
     Rect glyph = InsetRect(anchor, Scaled(6));
     if (!glyph.empty()) {
-      ctx.fillRect(glyph, theme().color.onPrimaryContainer);
+      ctx.fillRect(glyph, theme().material3Theme().color.onPrimaryContainer);
     }
   }
 

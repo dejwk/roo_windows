@@ -395,7 +395,7 @@ TEST_F(
   EXPECT_EQ(12, divider_x);
   EXPECT_EQ(kWidth - 24, divider_ptr->width());
 
-  Color bg = QuantizeToArgb4444(context().theme().color.background);
+  Color bg = QuantizeToArgb4444(context().theme().material3Theme().color.background);
   EXPECT_NE(bg, pixelAt(divider_x, divider_y));
   EXPECT_EQ(bg, pixelAt(kWidth - 1, divider_y));
 }
@@ -414,7 +414,7 @@ TEST_F(ExampleSliderRenderTest,
 
   ASSERT_TRUE(refresh());
 
-  Color bg = QuantizeToArgb4444(context().theme().color.background);
+  Color bg = QuantizeToArgb4444(context().theme().material3Theme().color.background);
 
   XDim divider_x;
   YDim divider_y;
@@ -525,7 +525,7 @@ TEST_F(
     RooWindowsRenderTest,
     Material3CheckboxQuickReleaseSpillStaysClearedAfterDeferredClickInBareScene) {
   auto back = std::make_unique<ColorBoxWidget>(
-      context(), context().theme().color.background, Dimensions(48, 40));
+      context(), context().theme().material3Theme().color.background, Dimensions(48, 40));
   auto front = std::make_unique<Material3Checkbox>(
       context(), Material3Checkbox::OnOffState::kOff);
   Material3Checkbox* front_ptr = front.get();
@@ -633,10 +633,15 @@ TEST_F(RooWindowsRenderTest,
 // since the halo paints onto the parent's surface, not the child's.
 TEST_F(RooWindowsRenderTest,
        PointOverlayColorUsesParentRoleWhenChildOverridesContainerRole) {
+  const ::roo_windows::material3::ColorToken parent_role =
+      ::roo_windows::material3::ColorToken::kSurfaceContainerHighest;
+  const Color parent_surface =
+      context().theme().material3Theme().color.resolve(parent_role);
   auto back = std::make_unique<RolePanel>(context(),
-                                          ::roo_windows::material3::ColorToken::kSurfaceContainerHighest);
+                                          parent_role);
   auto front = std::make_unique<RoleOverridingPointOverlayWidget>(
-      context(), color::Blue, Dimensions(18, 18), ::roo_windows::material3::ColorToken::kPrimary);
+      context(), parent_surface, Dimensions(18, 18),
+      ::roo_windows::material3::ColorToken::kPrimary);
   RoleOverridingPointOverlayWidget* front_ptr = front.get();
 
   back->addChild(std::move(front), Box(20, 12, 37, 29));
@@ -647,14 +652,15 @@ TEST_F(RooWindowsRenderTest,
   front_ptr->setActivated(true);
   ASSERT_TRUE(refresh());
 
-  ::roo_windows::material3::ColorToken parent_role = ::roo_windows::material3::ColorToken::kSurfaceContainerHighest;
-  Color overlay = front_ptr->theme().color.contentColorFor(parent_role);
-  overlay.set_a(
-      front_ptr->theme().opacity(parent_role, InteractionState::kActivated));
+  Color overlay = front_ptr->theme().material3Theme().color.contentColorFor(parent_role);
+  overlay.set_a(front_ptr->theme()
+                    .material3Theme()
+                    .state.resolve(parent_role, InteractionState::kActivated)
+                    .a());
   Color expected = QuantizeToArgb4444(
-      AlphaBlend(front_ptr->theme().color.role(parent_role), overlay));
+      AlphaBlend(front_ptr->theme().material3Theme().color.resolve(parent_role), overlay));
 
-  EXPECT_EQ(expected, pixelAt(12, 20));
+  EXPECT_EQ(expected, pixelAt(28, 20));
 }
 
 // Verifies that setPressed(true) renders the point-press overlay outside

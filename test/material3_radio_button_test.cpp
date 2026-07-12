@@ -3,6 +3,7 @@
 #include "roo_windows/core/application_context.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/material3/radio_button/radio_button.h"
+#include "roo_windows/material3/theme.h"
 
 namespace roo_windows {
 namespace material3 {

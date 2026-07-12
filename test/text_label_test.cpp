@@ -324,7 +324,7 @@ TEST_F(TextLabelRenderTest, SetTextAndClearTextAffectRenderedPixels) {
   app_.add(std::move(label), Box(8, 8, 80, 32));
 
   ASSERT_TRUE(refresh());
-  Color bg = QuantizeToArgb4444(context().theme().color.background);
+  Color bg = QuantizeToArgb4444(context().theme().material3Theme().color.background);
   PixelBounds initial = findNonBackground(8, 8, 80, 32, bg);
   ASSERT_TRUE(initial.found);
 
@@ -355,7 +355,7 @@ TEST_F(TextLabelRenderTest, GravityChangesHorizontalPlacement) {
   app_.add(std::move(right), Box(4, 34, 44, 56));
 
   ASSERT_TRUE(refresh());
-  Color bg = QuantizeToArgb4444(context().theme().color.background);
+  Color bg = QuantizeToArgb4444(context().theme().material3Theme().color.background);
   PixelBounds left_bounds = findNonBackground(4, 6, 44, 28, bg);
   PixelBounds right_bounds = findNonBackground(4, 34, 44, 56, bg);
 
@@ -371,14 +371,14 @@ TEST_F(TextLabelRenderTest, TransparentColorMatchesExplicitDefaultColor) {
   auto implicit = std::make_unique<TextLabel>(context(), "Hi", font_body2(),
                                               kGravityLeft | kGravityMiddle);
   auto explicit_default = std::make_unique<TextLabel>(
-      context(), "Hi", font_body2(), context().theme().color.onBackground,
+      context(), "Hi", font_body2(), context().theme().material3Theme().color.onBackground,
       kGravityLeft | kGravityMiddle);
 
   app_.add(std::move(implicit), Box(4, 6, 44, 28));
   app_.add(std::move(explicit_default), Box(4, 34, 44, 56));
 
   ASSERT_TRUE(refresh());
-  Color bg = QuantizeToArgb4444(context().theme().color.background);
+  Color bg = QuantizeToArgb4444(context().theme().material3Theme().color.background);
   PixelBounds top = findNonBackground(4, 6, 44, 28, bg);
   PixelBounds bottom = findNonBackground(4, 34, 44, 56, bg);
   ASSERT_TRUE(top.found);
