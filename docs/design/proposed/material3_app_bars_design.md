@@ -50,7 +50,7 @@ editing is supposed to happen in that surface.
 
 ### Current Status in `roo_windows`
 
-As of 2026-05, `roo_windows` does not have a Material 3 app-bar family or a
+As of 2026-07, `roo_windows` does not have a Material 3 app-bar family or a
 Material 3 search-bar entry surface under `src/roo_windows/material3/`.
 
 What exists today:
@@ -77,6 +77,13 @@ What does not exist yet:
 - no focused-search or search-view surface,
 - no top-app-bar example sketch,
 - and no app-bar-focused test or golden target.
+
+The current Material 3 theme exposes color and state-layer tokens, but not the
+Material 3 typography scale. Consequently, the named typography roles in this
+document are required token inputs, not APIs that already exist. Phase 1 must
+either land the shared Material 3 typography-token prerequisite or remain
+declaration-only; app bars must not silently substitute unrelated legacy
+`font_h*()` globals and call the result token-backed.
 
 That current state forces two design constraints.
 
@@ -220,7 +227,8 @@ This design therefore makes four direct decisions:
 4. Support optional leading navigation or branding content on all app-bar
    variants.
 5. Support up to two trailing action widgets on title-based app bars.
-6. Support an optional subtitle on title-based app bars.
+6. Support an optional one-line subtitle on medium flexible and large flexible
+   app bars; keep the small variant single-line in the initial implementation.
 7. Support leading-aligned and centered title layouts on title-based app bars.
 8. Support caller-supplied display text on `SearchBar` and `SearchAppBar`
    without requiring those widgets to own live editable query state.
@@ -258,9 +266,11 @@ This design therefore makes four direct decisions:
    | Medium flexible | 112dp | headline medium | 2 |
    | Large flexible | 152dp | display small | 2 |
 
-3. When a subtitle is present, the container height grows by one subtitle line
-   height plus an `8dp` inter-line gap; the base heights above stay unchanged
-   for the no-subtitle case.
+3. A subtitle, when supported by the selected variant's token table, fits
+   inside that variant's fixed base height. It reduces the title's available
+   line budget to one line rather than increasing shell height. The initial
+   implementation supports subtitles on medium flexible and large flexible
+   bars; small bars remain a single-line title surface.
 4. `SearchBar` uses a `56dp` contained search container with rounded corners.
 5. `SearchBar` should measure to a natural width clamped to the range
    `240-720dp`, but it must still accept narrower parent-constrained widths on
@@ -270,18 +280,9 @@ This design therefore makes four direct decisions:
    `56dp` search entry lane.
 7. Let `A` be the horizontal space left for the search-entry lane in
    `SearchAppBar` after outer leading / trailing widgets and edge insets are
-   reserved. The embedded search lane width is:
-
-   $$
-   w(A) = \begin{cases}
-   A & A \le 312dp \\
-   \min(720dp, 312dp + 0.5 \times (A - 312dp)) & A > 312dp
-   \end{cases}
-   $$
-
-8. On compact widths, the search-entry lane consumes all remaining width when
-   the formula above does not leave extra slack.
-9. On wider widths where the formula leaves slack, the search-entry lane stays
+   reserved. The embedded search lane width is `min(A, 720dp)`.
+8. On compact widths, the search-entry lane consumes all remaining width.
+9. On wider widths where the `720dp` cap leaves slack, the search-entry lane stays
    start-aligned inside the central strip so its reading edge tracks the page
    content start.
 
@@ -312,13 +313,16 @@ This design therefore makes four direct decisions:
    arbitrary child lists.
 5. Add pointer-size-aware size-budget assertions for `AppBar`, `SearchBar`,
    and `SearchAppBar`.
+6. Use a bounded, allocation-free line-layout helper for the one- and two-line
+   text budgets. Direct painting must not pull `TextBlock`'s dynamic line cache
+   into paint or layout hot paths.
 
 ## Design Overview
 
 The public family has four pieces:
 
-1. `AppBarVariant`, `AppBarTitleAlignment`, `AppBarSurfaceState`, and
-   `SearchBarPresentation` define the small set of configuration enums.
+1. `AppBarVariant`, `AppBarTitleAlignment`, and `AppBarSurfaceState` define the
+   small set of public configuration enums.
 2. `material3::AppBar` is the title-based top-bar widget for the small, medium
    flexible, and large flexible variants.
 3. `material3::SearchBar` is the standalone search-entry surface used near the
@@ -431,7 +435,8 @@ The title block rules are:
 
 1. small app bars paint one title line and never wrap.
 2. medium flexible and large flexible app bars allow up to two title lines.
-3. subtitles are one line on every title-based variant.
+3. subtitles are one line on medium flexible and large flexible variants;
+   small bars do not support a subtitle in the initial implementation.
 4. title and subtitle text are painted directly, not hosted as nested text
    widgets.
 5. centered alignment centers the whole title block after leading / trailing
@@ -441,10 +446,12 @@ The widget does not attempt to auto-upgrade a title from one variant to another
 based on measured text length. The caller or host chooses the intended
 variant.
 
-The widget also does not own scroll collapse. If a page wants the Material 3
-compress effect, the host changes `AppBar::variant()` from
-`kMediumFlexible` or `kLargeFlexible` to `kSmall` at the chosen threshold.
-That keeps scroll policy and stored state off the base widget.
+The widget also does not own scroll collapse. In the initial implementation a
+flexible variant is a fixed expanded presentation. A later shell controller
+may drive continuous expanded height and title interpolation without changing
+the bar's semantic variant. Abruptly switching `variant()` at a threshold is
+not the compression contract: it would produce a discontinuous layout jump
+and conflate component identity with transient scroll state.
 
 ### Scroll-State Treatment and Repaint Behavior
 
@@ -482,7 +489,6 @@ That is the central search decision in this document.
 `SearchBar` stores only:
 
 - one `roo::string_view` display string,
-- one small presentation enum,
 - one optional leading widget slot,
 - and up to two trailing widget slots.
 
@@ -509,7 +515,7 @@ editing and result presentation work.
 Layout inside the search container is direct and fixed:
 
 - `24dp` leading and trailing padding in standalone mode,
-- `12dp` edge padding in embedded search-app-bar modes,
+- `12dp` edge padding in the private embedded search-app-bar layout,
 - `4dp` gap between the leading glyph or leading widget and the text lane,
 - and `4dp` gap between the text lane and each trailing widget lane.
 
@@ -518,9 +524,9 @@ That keeps the default entry surface lightweight and visually correct without
 requiring a child widget for the most common case.
 
 The display string is rendered as plain entry text. The widget does not try to
-distinguish "hint" from "query" semantics. Callers can show `Search`,
-`Search inbox`, or the last confirmed query string by choosing the text they
-pass in.
+distinguish "hint" from "query" semantics in this entry-only phase. Callers can
+show `Search`, `Search inbox`, or the last confirmed query string by choosing
+the text they pass in.
 
 ### `SearchAppBar` Composition and Adaptive Width
 
@@ -546,9 +552,9 @@ The internal search-entry lane is not a live editor in this phase. Like
 `SearchBar`, it paints caller-supplied display text and activates ordinary
 search-open semantics when tapped or keyboard-activated.
 
-The adaptive width rule is deliberately explicit rather than "fill everything
-all the time" because Material guidance wants the search lane to stay prominent
-without becoming an edge-to-edge slab on wide screens.
+The width rule fills the available central strip up to a `720dp` cap. This is
+predictable under embedded constraints and avoids an otherwise arbitrary
+partial-growth function.
 
 The host remains responsible for whether additional outer trailing actions are
 shown. `SearchAppBar` does not auto-collapse those actions into an overflow
@@ -572,6 +578,13 @@ The traversal model is:
 4. then outer trailing search-app-bar widgets.
 
 Title text and subtitle text are not separate focus targets.
+
+`SearchAppBar` must restrict its own hit and focus bounds to the embedded
+search-entry lane. Outer padding and unused wide-screen slack are not search
+activation targets. Child widgets are tested first and retain their normal
+touch paths. The concrete implementation must override the relevant geometric
+hit-path behavior; deriving from `Container` alone does not provide this
+region-specific click contract.
 
 Back and Escape do not have search-surface-local behavior in this document.
 Those keys are owned by the later focused-search workflow once there is an
@@ -599,15 +612,10 @@ enum class AppBarSurfaceState : uint8_t {
   kScrolled,
 };
 
-enum class SearchBarPresentation : uint8_t {
-  kStandalone,
-  kEmbeddedFlat,
-  kEmbeddedScrolled,
-};
-
 class AppBar : public Container {
  public:
-  explicit AppBar(AppBarVariant variant = AppBarVariant::kSmall);
+  explicit AppBar(ApplicationContext& context,
+                  AppBarVariant variant = AppBarVariant::kSmall);
 
   void setVariant(AppBarVariant variant);
   AppBarVariant variant() const;
@@ -630,21 +638,20 @@ class AppBar : public Container {
 
 class SearchBar : public Container {
  public:
-  SearchBar();
-
-  void setPresentation(SearchBarPresentation presentation);
-  SearchBarPresentation presentation() const;
+  explicit SearchBar(ApplicationContext& context);
 
   void setDisplayText(roo::string_view text);
   roo::string_view displayText() const;
 
   void setLeading(WidgetRef widget);
   void setTrailing(uint8_t index, WidgetRef widget);
+
+  bool isClickable() const override { return true; }
 };
 
 class SearchAppBar : public Container {
  public:
-  SearchAppBar();
+  explicit SearchAppBar(ApplicationContext& context);
 
   void setSurfaceState(AppBarSurfaceState state);
   AppBarSurfaceState surfaceState() const;
@@ -665,7 +672,19 @@ API notes:
    The behavioral model is the same; only token tables and line budgets differ.
 2. `SearchBar` and `SearchAppBar` use ordinary widget click semantics for the
    "open search" action. No search-specific callback interface is added.
-3. If declarations land before the full paint / measurement behavior, methods
+   Their implementations must explicitly opt into clickability; `Container`
+   does not do that merely because it owns a surface.
+3. Every constructor takes `ApplicationContext&`, matching the required
+   `Widget` / `Container` construction contract.
+4. Passing a null `WidgetRef` clears a slot. Indexed trailing setters accept
+   only indices `0` and `1`; other indices fail explicitly in debug/test builds
+   and do not mutate the widget in release builds. Replacing a slot detaches the
+   previous child before attaching the new one, preserving `WidgetRef`
+   ownership.
+5. Each concrete class implements `getChildrenCount()` and both `getChild()`
+   overloads over its occupied semantic slots; the public API does not expose
+   an arbitrary child collection.
+6. If declarations land before the full paint / measurement behavior, methods
    that cannot yet behave correctly should emit
    `LOG(FATAL) << "Unimplemented: Material 3 app bars"` or the narrower
    surface-specific equivalent rather than silently painting the wrong
@@ -684,10 +703,12 @@ Code slice:
 
 1. Add a new `src/roo_windows/material3/app_bar/` directory with declarations
    for `AppBar`, `SearchBar`, `SearchAppBar`, and the small enum surface.
-2. Add shared token tables for title-based variants and search-entry
-   presentations.
-3. Add pointer-size-aware size-budget tests for the three public widget types.
-4. Keep behavior that is not implemented yet behind explicit
+2. Add shared token tables for title-based variants and the standalone and
+   private embedded search-entry layouts.
+3. Land or explicitly depend on shared Material 3 typography roles for title
+   large, headline medium, display small, and subtitle text.
+4. Add pointer-size-aware size-budget tests for the three public widget types.
+5. Keep behavior that is not implemented yet behind explicit
    `LOG(FATAL) << "Unimplemented: ..."` stubs rather than placeholder drawing.
 
 Proposed commit message:
@@ -705,8 +726,8 @@ Code slice:
    hit-testing.
 2. Implement the passive leading-search-icon path, optional leading child slot,
    and one- or two-widget trailing strip.
-3. Implement `SearchBarPresentation` color handling and keyboard activation
-   through the normal click path.
+3. Implement standalone color handling and keyboard activation through the
+   normal click path.
 4. Add focused tests and goldens for passive-leading, custom-leading,
    one-trailing, and two-trailing configurations, plus narrow-width fallback.
 
@@ -764,9 +785,11 @@ emulation.
 
 Validation coverage should include:
 
-1. `material3_app_bar_test` for variant measurement, subtitle height growth,
+1. `material3_app_bar_test` for variant measurement, subtitle line-budget
+   behavior,
    search-bar width fallback, adaptive search-app-bar width resolution, slot
-   ordering, RTL mirroring, and search-entry hit-testing.
+   replacement and clearing, invalid slot indices, ordering, RTL mirroring,
+   and search-entry hit-testing (including rejection of outer slack).
 2. `material3_app_bar_golden_test` for small, centered small, medium flexible,
    large flexible, subtitle, standalone search bar, and search app bar states
    in both flat and scrolled presentations.
