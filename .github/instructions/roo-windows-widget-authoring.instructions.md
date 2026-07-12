@@ -44,6 +44,20 @@ This is the canonical widget-authoring guidance for the repository.
 - Design docs for new widgets should discuss base-case size and the incremental
   RAM cost of optional features.
 
+## Child Ownership
+
+- Treat `WidgetRef` as a temporary ownership-transfer parameter only. Do not
+  store it in a widget, layout, or other long-lived object.
+- A container stores raw child pointers after calling `attachChild()`.
+  `Widget::isOwnedByParent()` is the sole record of whether the parent will
+  delete that child. This keeps ownership state in one place and avoids stale
+  duplicate ownership metadata.
+- To replace a child slot, detach the existing raw pointer first, retain the
+  incoming raw pointer before moving its `WidgetRef` into `attachChild()`, and
+  then store that raw pointer. Passing a null `WidgetRef` clears the slot.
+- Container destructors detach each stored child pointer. They must not delete
+  children directly: `detachChild()` applies the parent-owned ownership policy.
+
 ## Surface Ownership
 
 Be explicit about whether the widget owns a surface.
