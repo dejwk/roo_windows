@@ -36,26 +36,31 @@ The main framework contracts are already described:
 - [application_navigation_back_behavior_design.md](design/proposed/application_navigation_back_behavior_design.md)
 - [transient_presentation_pins_design.md](design/proposed/transient_presentation_pins_design.md)
 
-The main gap is no longer architecture prose. It is landing, testing, and
-integrating the contracts on which the M3 families depend.
+The main gap is no longer architecture prose. Event dispatch and gesture
+ownership are implemented; the remaining work is to land the unfinished
+contracts and integrate the M3 families that depend on them.
 
-### Theme work is a migration, not a missing M3 design
+### Theme migration is complete; target evidence remains
 
 [theme_color_tokens_design.md](design/implemented/theme_color_tokens_design.md) defines a
-design-system-independent framework theme plus an exact M3 theme. The new
-types have begun to appear in source, while legacy `ColorRole`, `ColorTheme`,
-and state-opacity APIs remain in use.
+design-system-independent framework theme plus an exact M3 theme. Generic
+widgets now use `FrameworkTheme`; M3 widgets resolve their colors through
+`material3::Theme`. The legacy `ColorRole`, `ColorTheme`, state-opacity, and
+reverse-lookup APIs have been removed.
 
-Therefore, “write a Material 3 theme and tokens design” is obsolete. The real
-prerequisite is to finish and measure the migration without expanding core
-into an M3-shaped vocabulary or adding per-widget RAM.
+Therefore, theme work is no longer a Phase 0 implementation prerequisite.
+The remaining work is to retain target measurements and regression coverage
+for the new ownership boundary without expanding core into an M3-shaped
+vocabulary or adding per-widget RAM.
 
 ### Component coverage
 
 Designs already cover the shell and many major families, including scaffold,
 app bars, navigation bar/rail/drawer, toolbars, tabs, lists, menus, sheets,
 dialogs, snackbar, buttons, FABs, badge, sliders, text fields, and date/time
-pickers.
+pickers. The app-bar family is now partially implemented and covered by unit
+tests; the remaining shell families are largely design work or integration
+work.
 
 Several source families still lack matching design documents:
 
@@ -88,8 +93,8 @@ later components must not invent temporary alternatives to these contracts.
 
 | Work item | Current state | Required outcome |
 | --- | --- | --- |
-| Complete theme migration | Design exists; compatibility-era implementation is present | Generic widgets use `FrameworkTheme`; M3 widgets use `material3::Theme`; legacy reverse lookup and core M3 vocabulary have a measured removal path. Preserve visuals and widget sizes. |
-| Land event dispatch, focus, and non-touch input | Designs exist | Touch, keyboard, encoder/directional focus, Back, and Escape use one dispatch model with no component-local routing policy. |
+| Retain theme-migration evidence | Implemented; host coverage exists | Record supported-target RAM, flash, stack, size, and visual-regression evidence for `FrameworkTheme` and `material3::Theme`. |
+| Land focus and non-touch input | Event dispatch and gesture ownership are implemented; focus and non-touch-input designs remain proposed | Touch, keyboard, encoder/directional focus, Back, and Escape use one dispatch model with no component-local routing policy. |
 | Land navigation and back behavior | Design exists | `Task`/`Activity` route ownership and deepest-first transient dismissal use the same back path. Predictive animation remains deferred. |
 | Land transient-presentation lifetime rules | Design exists | Menus, sheets, dialogs, and snackbars cannot retain invalid anchors, owners, callbacks, or content. |
 | Define and implement editable-text core | Direction exists; shared contract is incomplete | Cursor movement, selection, composition policy, validation, scrolling, multiline layout, and hardware-keyboard input live below M3 chrome. |
@@ -98,18 +103,18 @@ Phase 0 exit condition:
 
 - one target application exercises touch and non-touch dispatch, route back,
   transient dismissal, and text entry through shared contracts;
-- tests prove unchanged default theme colors and state layers;
+- tests and target evidence prove default theme colors and state layers remain correct;
 - representative widget sizes do not grow; and
 - RAM, flash, stack, and invalidation behavior are measured on a supported
   embedded target, not only in host tests.
 
 ## Phase 1: Deliver a Complete Application Shell
 
-Implement existing shell designs as one integrated slice.
+Complete and integrate the existing shell designs as one integrated slice.
 
 | Work item | Why now |
 | --- | --- |
-| Scaffold plus top app bars and search entry | Establishes top-edge structure, insets, title/actions, and common search entry. |
+| Scaffold plus top app bars and search entry | The app-bar/search-entry primitives exist; integrate them with scaffold, insets, title/actions, and the common search handoff. |
 | One compact navigation path | Implement navigation bar or drawer according to the reference target; do not require bar, rail, and drawer simultaneously. |
 | Dialogs and one modal sheet path | Provides confirmation and compact task hosting through shared back and lifetime contracts. |
 | Menus and snackbar integration | Completes transient commands and non-modal result/error feedback. |
@@ -175,13 +180,14 @@ platform makes it an earlier compatibility requirement.
 
 ## Recommended Near-Term Order
 
-1. Inventory every foundation and M3 design as designed, implemented,
+1. Inventory every foundation and M3 design as designed, partially implemented, implemented,
    integrated, or target-verified. Never infer implementation from a document.
-2. Finish the theme compatibility spike and measurements in
+2. Capture the supported-target theme-migration measurements and retain the
+   regression coverage described in
    [theme_color_tokens_design.md](design/implemented/theme_color_tokens_design.md).
-3. Implement the shared event/focus/non-touch, back, and transient-lifetime
-   path required by the Phase 1 slice.
-4. Integrate scaffold, one navigation mode, app bars, dialog/sheet, menus, and
+3. Implement the remaining focus/non-touch, back, and transient-lifetime path
+   required by the Phase 1 slice.
+4. Integrate scaffold, the existing app bars, one navigation mode, dialog/sheet, menus, and
    snackbar into that slice.
 5. Complete editable text, then land text fields, progress, and the smallest
    chip/list scope required by the Phase 2 slice.
