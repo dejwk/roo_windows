@@ -135,8 +135,9 @@ visuals.
    new paint bounds.
 2. Restoring pixels under a removed pin must not require ancestor
    `ParentClipMode::kUnclipped`.
-3. Pins must not rely on generic direct-paint exclusions to stay visible. They
-   are painted last within their chosen layer.
+3. Pins must compose through `PaintContext`: the pin paint plan registers the
+   exclusions, overlays, and decorations needed for its actual geometry before
+   lower-z content paints. The host must not assume the full bounds are opaque.
 4. Pins must not expand `maxBounds()` on unrelated ancestor containers.
 
 ### Embedded and API Requirements
@@ -156,8 +157,8 @@ The framework adds a small, shared `PresentationPin` primitive:
 
 - a pin is not a `Widget`,
 - a pin is caller-owned,
-- a pin paints in a root-stage pass after its chosen layer root has finished
-  painting,
+- a pin paints in a root-stage pass immediately before its chosen layer root
+  in the renderer's front-to-back order,
 - and a pin is ordered by a chosen top-level child of `MainWindow`, not by its
   local widget parent.
 
@@ -168,18 +169,22 @@ Each active pin exposes:
 3. optional tighter clip bounds, defaulting to the full window,
 4. and a `paint(PaintContext&)` implementation.
 
-`MainWindow` owns the active-pin registry and paints pins immediately after
-each top-level child:
+`MainWindow` owns the active-pin registry and integrates pins into its existing
+front-to-back child pass. Immediately before each top-level child, it paints
+that child's pins from highest to lowest pin z-order and lets each pin settle
+its geometry through the shared `PaintContext`:
 
-1. paint task panel,
-2. paint pins whose z-scope root is that task panel,
-3. paint next task panel,
-4. then repeat for popups,
-5. then repeat for the active dialog.
+1. visit the active dialog, popup tasks, and regular tasks in the existing
+   reverse-child paint order,
+2. before each root, paint pins whose z-scope is that root,
+3. let each pin register exclusions, overlays, and decorations for its actual
+   geometry,
+4. paint the scoped root through the resulting clipper state,
+5. then continue toward lower roots.
 
 That produces the wanted behavior:
 
-- a slider in a scroll panel paints its pill above the whole task layer,
+- a slider in a scroll panel settles its pill above the whole task layer,
 - a keyboard key preview can rise above the keyboard popup's local bounds but
   still remain below a modal dialog,
 - and a menu trigger press retention pin stays above its task contents without
@@ -195,8 +200,8 @@ top of the layer," not ordinary content.
 ![Layer-scoped presentation pins solve ancestor clipping without becoming a second widget tree](figures/transient_presentation_pins_layers.svg)
 
 Figure 1. The current slider bubble lives inside the clipped tree. The proposed
-pin paints after the layer root and is clipped only at the window edge unless
-it asks for a tighter clip.
+pin settles above the layer root, outside the clipped tree, and is clipped only
+at the window edge unless it asks for a tighter clip.
 
 ## Design Details
 
@@ -238,8 +243,8 @@ widgets.
 Approximate 32-bit RAM impact:
 
 - `MainWindow`: one list head pointer, 4 B,
-- each active pin object: about 16-20 B for owner pointer, list link, cached
-  bounds, and flags,
+- each active pin object: about 20-24 B for owner pointer, scope-root pointer,
+  list link, cached bounds, and alignment,
 - no `Widget` base growth.
 
 That cost is acceptable because only widgets or presenters that truly need
@@ -259,9 +264,13 @@ Each pin chooses a `zScopeRoot()`:
 - the top-level popup `TaskPanel` for popup content,
 - or the active dialog widget.
 
-`MainWindow` paints the pin immediately after that root finishes painting. That
-gives the pin the highest z-order inside that layer while preserving global
-layer order.
+`MainWindow` paints the pin immediately before that root in the framework's
+front-to-back paint order, then excludes the settled pin pixels from the root
+and all lower roots. That gives the pin the highest z-order inside that layer
+while preserving global layer order. Painting it afterward would be incorrect
+for this direct-to-display renderer: it would write a second color over pixels
+already emitted by the widget tree and bypass the clipper's foreground-first
+composition model.
 
 #### Clip Scope
 
@@ -277,22 +286,24 @@ specific feature needs it, but the default remains the full window.
 
 ### Paint Ordering
 
-Pins paint after ordinary widget contents of their chosen layer. That is the
-decisive change.
+Pins settle before ordinary widget contents of their chosen layer and register
+exclusions before that lower-z content paints. That is the decisive change.
 
 Consequences:
 
-- pins no longer need the current slider bubble trick of pre-painting and then
-  salvaging rounded corners through decoration overlays and exclusions,
-- pins do not need to participate in `getDirectPaintExclusionBounds()`,
+- pins no longer need the current slider bubble trick of pre-painting inside
+  the slider's local pass,
+- each pin excludes only pixels its paint plan has fully settled,
 - and no lower-z sibling in the same layer can erase them later.
 
-Later higher layers still paint over lower-layer pins naturally because
-`MainWindow` continues to paint popups after tasks and dialogs after popups.
+Higher layers still win naturally because `MainWindow` already visits dialogs
+before popups and popups before tasks. Their pixels are settled before a
+lower-layer pin is reached, and the existing clipper state prevents the pin
+from overwriting them.
 
-Within one z-scope root, later `show()` registration order paints later and
-therefore on top. That matches the existing widget-tree convention that later
-additions are visually above earlier ones.
+Within one z-scope root, later `show()` registration order is higher. Pins are
+therefore painted in reverse registration order, matching the widget-tree
+convention that later additions are visually above earlier ones.
 
 ### Invalidation Model
 
@@ -302,18 +313,23 @@ Chosen invalidation rule:
 
 1. every visible pin caches the last bounds it painted,
 2. `show()`, `hide()`, and `invalidate()` compute the union of old and new
-   absolute bounds,
+   absolute bounds, clipped to the window,
 3. `MainWindow` unions that rectangle into `redraw_bounds_`,
-4. and the owning z-scope root is invalidated beneath that same rectangle
-   before the next frame.
+4. and `MainWindow::invalidateDescending()` invalidates that window-coordinate
+   region through all intersecting roots before the next frame.
 
 That keeps repaint precise:
 
-- old pin pixels are restored because the layer root repaints ordinary content
-  beneath the vacated rectangle,
-- new pin pixels appear because the same frame repaints the pin after the
+- old pin pixels are restored because every intersecting layer repaints the
+  vacated rectangle in normal front-to-back order,
+- new pin pixels appear because the same frame settles the pin before the
   root,
 - and unrelated ancestors do not need `maxBounds()` expansion.
+
+Invalidating only the owning z-scope root is insufficient. A pin may extend
+outside that root, and the pixels beneath that overflow may belong to an
+earlier task or to the main-window surface. Root-descending invalidation is
+therefore required for correctness; the dirty rectangle still bounds the work.
 
 ### Slider Adoption
 
@@ -330,10 +346,10 @@ Instead:
 4. and `MainWindow` paints it after the slider's task, popup, or dialog layer
    finishes.
 
-This choice simplifies the slider code in two ways:
+This choice simplifies the slider integration in two ways:
 
-- the value indicator no longer needs the current pre-paint-plus-decoration
-  ordering inside the slider,
+- the value indicator keeps its foreground-first decoration/exclusion paint
+  plan, but no longer stages that plan inside the slider's local pass,
 - and the slider no longer needs indicator-specific
   `ParentClipMode::kUnclipped` behavior.
 
@@ -387,22 +403,32 @@ namespace roo_windows {
 
 class PresentationPin {
  public:
-  void show();
+  /// Creates a hidden presentation pin.
+  PresentationPin() = default;
+  /// Hides the pin if necessary before releasing it.
+  virtual ~PresentationPin();
+
+  PresentationPin(const PresentationPin&) = delete;
+  PresentationPin& operator=(const PresentationPin&) = delete;
+
+  /// Shows the pin above the top-level layer containing `anchor`.
+  void show(Widget& anchor);
+  /// Hides the pin and schedules restoration of its previous pixels.
   void hide();
+  /// Schedules repaint of the union of previous and current pin bounds.
   void invalidate();
 
+  /// Returns whether the pin is currently registered with a window.
   bool isVisible() const { return owner_ != nullptr; }
 
  protected:
-  // The top-level MainWindow child that this pin should paint above.
-  virtual Widget& zScopeRoot() const = 0;
-
-  // Current paint bounds in MainWindow coordinates.
+  /// Returns current paint bounds in MainWindow coordinates.
   virtual Rect boundsInWindow() const = 0;
 
-  // Optional tighter clip. Default: MainWindow bounds.
+  /// Returns an optional tighter clip; defaults to MainWindow bounds.
   virtual Rect clipBoundsInWindow() const;
 
+  /// Paints the pin's final pixels through the supplied context.
   virtual void paint(PaintContext& ctx) const = 0;
 
  private:
@@ -410,30 +436,41 @@ class PresentationPin {
 
   PresentationPin* next_ = nullptr;
   MainWindow* owner_ = nullptr;
+  Widget* z_scope_root_ = nullptr;
   Rect painted_bounds_;
 };
 
-class Widget {
- public:
-  // Returns the top-level child whose parent is MainWindow.
-  // No per-instance storage.
-  Widget& presentationScopeRoot() const;
+class Container : public SurfaceWidget {
+ protected:
+  /// Allows a specialized container to settle paint above `child` before the
+  /// normal front-to-back child pass reaches it.
+  virtual void paintBeforeChild(Widget& child, PaintContext& ctx) {}
 };
 
 class MainWindow : public Container {
  public:
-  void showPresentationPin(PresentationPin& pin);
+  /// Registers `pin` above the top-level layer containing `anchor`.
+  void showPresentationPin(PresentationPin& pin, Widget& anchor);
+  /// Unregisters `pin` and schedules restoration of its painted bounds.
   void hidePresentationPin(PresentationPin& pin);
+  /// Schedules repaint of `pin`'s previous and current bounds.
   void invalidatePresentationPin(PresentationPin& pin);
 
  private:
-  void paintPinsForScopeRoot(Widget& root, PaintContext& ctx);
+  void paintPinsBeforeScopeRoot(Widget& root, PaintContext& ctx);
 
   PresentationPin* active_pins_ = nullptr;
 };
 
 }  // namespace roo_windows
 ```
+
+`Container::paintChildren()` calls the protected no-op hook immediately before
+each visible child. `MainWindow` overrides it to paint pins for direct children;
+ordinary containers add no storage and retain the existing child paint path.
+The one virtual dispatch per visited child is the deliberate flash/runtime
+cost of keeping registry state out of every container and avoiding a duplicated
+`MainWindow` copy of the deadline-sensitive child loop.
 
 Recommended helper pattern for anchored visuals:
 
@@ -442,7 +479,7 @@ class WidgetAnchoredPresentationPin : public PresentationPin {
  protected:
   explicit WidgetAnchoredPresentationPin(Widget& anchor) : anchor_(anchor) {}
 
-  Widget& zScopeRoot() const override { return anchor_.presentationScopeRoot(); }
+  void show() { PresentationPin::show(anchor_); }
 
   Rect clipBoundsInWindow() const override {
     return anchor_.getMainWindow()->bounds();
@@ -458,6 +495,18 @@ class WidgetAnchoredPresentationPin : public PresentationPin {
 This keeps the public framework surface small while giving slider, keyboard,
 and menu helpers a common base.
 
+`show(anchor)` walks the existing parent chain once, verifies that the anchor
+is attached to a `MainWindow`, and caches the direct child of that window as
+the z-scope root. It does not add a virtual method to every `Widget`. Reparenting
+an anchor while its pin is visible is unsupported; the caller must hide the
+pin first.
+
+The destructor hides a registered pin. `MainWindow` also clears every pin's
+`owner_`, `z_scope_root_`, and link during window destruction, so a non-owned
+widget or presenter may safely outlive the window. Destroying or detaching an
+anchor while its pin remains visible is a caller error; widget-owned adopters
+hide from their destructor before the anchor becomes invalid.
+
 ## Implementation Plan
 
 Authoring reference:
@@ -470,10 +519,11 @@ and
 Scope:
 
 1. add `PresentationPin`,
-2. add `Widget::presentationScopeRoot()`,
-3. add intrusive pin registration and invalidation in `MainWindow`,
-4. paint pins immediately after each top-level child in
-   `MainWindow::paintWindow()`,
+2. resolve and cache the z-scope root from the anchor passed to `show()`,
+3. add the no-storage `Container::paintBeforeChild()` hook and intrusive pin
+   registration and invalidation in `MainWindow`,
+4. extend the `MainWindow` child pass so scoped pins settle and register
+   exclusions immediately before each top-level child,
 5. add synthetic render tests that prove task pins stay under popups and
    dialogs while still escaping intermediate clipped ancestors.
 
@@ -492,8 +542,8 @@ Scope:
 1. add `ValueIndicatorPin` helpers to `Slider` and `RangeSlider`,
 2. stop painting indicator bubbles inside `paintWidgetContents()`,
 3. remove indicator-specific reliance on `ParentClipMode::kUnclipped`,
-4. simplify `ValueIndicatorBubble` so it draws directly in the pin stage
-   instead of using decoration and exclusion salvage,
+4. adapt `ValueIndicatorBubble` to use its existing foreground-first
+   decoration and exclusion composition from the pin stage,
 5. add render coverage for sliders inside clipped scroll containers, dialogs,
    and popup tasks.
 
@@ -531,6 +581,8 @@ Validation covers three levels.
 1. Framework render tests:
    - pin escapes a clipped intermediate container,
    - pin invalidation restores old pixels after hide or move,
+   - pin overflow outside its z-scope root restores the main-window surface or
+     lower task after hide,
    - task pins remain below popup pins,
    - popup pins remain below dialogs,
    - default clip stops at the main-window edge.
@@ -555,6 +607,14 @@ Bounds correctness becomes explicit. A pin that reports incorrect bounds can
 leave stale pixels or repaint too much. The implementation must therefore keep
 the "bounds first, paint second" discipline and test old and new invalidation
 unions carefully.
+
+Pin painting follows the same single-final-write rule as widget painting. A
+pin painter must emit each final pixel once, including the correct background
+for transparent glyph or asset pixels, and exclude only its fully settled
+region. A pin that needs rounded or translucent composition uses the existing
+`PaintContext` decoration and overlay facilities; the host does not exclude the
+pin's rectangular bounds on its behalf, and the pin must not prefill and redraw
+the same pixels.
 
 ### Rejected Alternatives
 
