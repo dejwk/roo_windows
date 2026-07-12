@@ -100,7 +100,7 @@ class RangeSlider : public BasicWidget {
   bool isClickable() const override { return true; }
 
   /// Accepts pointer-down only while the slider is enabled.
-  bool onDown(XDim x, YDim y) override;
+  void onDown(XDim x, YDim y) override;
 
   /// Handles tap-to-jump by choosing the nearer thumb and moving it.
   void onSingleTapUp(XDim x, YDim y) override;

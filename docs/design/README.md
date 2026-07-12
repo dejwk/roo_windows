@@ -15,10 +15,11 @@ Status was audited against the source tree and tests on 2026-07-12. “Dependenc
 | Badge | Paint context and visual-overflow foundations are implemented; general transient presentation remains proposed and is not required by the badge scope. |
 | Button | Surface widgets, click animation, and Material 3 theme support are implemented; icon buttons are a separate proposed design. |
 | Click-animation customization | The shared click-animation controller and widget-local animation view are implemented. |
+| Gesture arbitration and ownership | Callback-free hit paths, explicit tap/long-press/drag roles, directional arbitration, strong ownership, and lifecycle-safe terminal delivery are implemented without compatibility routing. |
 | Horizontal page host | Viewport layout, adjacent swipe/settle, blit wrappers, examples, and tabs synchronization are implemented. |
 | Material 3 tabs | Fixed, scrollable, badged, and page-host-integrated tabs are implemented; later extensions are tracked as future work. |
 | Paint context | Clipper/overlay integration and the widget paint-hook migration are implemented. |
-| Slider | Paint context, Material 3 theme support, declarative drag ownership, and lifecycle-safe terminal delivery are implemented; compatibility-routing removal and transient presentation pins remain outstanding enhancements. |
+| Slider | Paint context, Material 3 theme support, declarative drag ownership, and lifecycle-safe terminal delivery are implemented; transient presentation pins remain an outstanding enhancement. |
 | Surface-widget refactor | The surface-ownership split is implemented; the broader visual-overflow design remains in progress. |
 | Theme color tokens | Framework theme separation and Material 3 token ownership are implemented in the current tree. |
 | Widget event dispatch | `ApplicationContext` and sparse interactive-change dispatch are implemented. |
@@ -28,7 +29,6 @@ Status was audited against the source tree and tests on 2026-07-12. “Dependenc
 
 | Design | Dependency status |
 | --- | --- |
-| Gesture arbitration and ownership | Callback-free hit paths, independent role selection, directional drag arbitration, strong drag ownership, lifecycle-safe drag terminal delivery, and owner-based tap/long-press terminals are implemented; compatibility-routing removal remains. |
 | Material 3 lists | Core list family phases are implemented; the remaining design phases are not complete. Badge and paint-context dependencies are implemented. |
 | Visual overflow | Surface ownership, ink bounds, direct-paint exclusion, and persistent/transient bound separation are implemented; root-stage transient overlay handling is not. |
 

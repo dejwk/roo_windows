@@ -822,16 +822,15 @@ void ScrollableTabs::onDrag(XDim x, YDim y, XDim dx, YDim dy) {
       scroll_motion_.onDrag(motionGeometry(), scroll_x_, 0, dx, 0));
 }
 
-bool ScrollableTabs::onFling(XDim x, YDim y, XDim vx, YDim vy) {
+void ScrollableTabs::onFling(XDim x, YDim y, XDim vx, YDim vy) {
   (void)x;
   (void)y;
   (void)vy;
-  if (mode() != TabsMode::kScrollable) return true;
+  if (mode() != TabsMode::kScrollable) return;
   scroll_motion::Result result =
       scroll_motion_.onFling(motionGeometry(), scroll_x_, 0, vx, 0, millis());
   applyScrollResult(result);
   if (result.needs_tick) scheduleScrollUpdate();
-  return true;
 }
 
 void ScrollableTabs::onDragFinished(XDim x, YDim y) {

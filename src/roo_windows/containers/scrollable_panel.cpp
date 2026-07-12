@@ -371,20 +371,19 @@ void SimpleScrollablePanel::onDrag(XDim x, YDim y, XDim dx, YDim dy) {
   }
 }
 
-bool SimpleScrollablePanel::onFling(XDim x, YDim y, XDim vx, YDim vy) {
+void SimpleScrollablePanel::onFling(XDim x, YDim y, XDim vx, YDim vy) {
   (void)x;
   (void)y;
-  if (contents() == nullptr) return true;
+  if (contents() == nullptr) return;
   if (scroll_bar_gesture_) {
     // No fling-animate on the scrollbar.
-    return true;
+    return;
   }
   ScrollPosition current = currentScrollPosition();
   scroll_motion::Result result =
       motion_.onFling(motionGeometry(), current.x, current.y, vx, vy, millis());
   applyScrollResult(result);
   if (result.needs_tick) scheduleScrollAnimationUpdate();
-  return true;
 }
 
 void SimpleScrollablePanel::onDragFinished(XDim vx, YDim vy) {

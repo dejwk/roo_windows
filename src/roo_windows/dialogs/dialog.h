@@ -30,11 +30,6 @@ class Dialog : public VerticalLayout {
   /// Replaces the dialog's title text.
   void setTitle(std::string title);
 
-  /// Intercepts all touch-down events so the dialog behaves modally,
-  /// preventing the underlying surface from receiving touches outside the
-  /// dialog's bounds.
-  Widget* dispatchTouchDownEvent(XDim x, YDim y) override;
-
   /// If the dialog is currently open, closes it and invokes the callback
   /// with -1 (no action chosen).
   void close();

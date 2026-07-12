@@ -104,8 +104,6 @@ class KeyboardButton : public SimpleButton {
 
   virtual void capsStateUpdated() {}
 
-  // bool onScroll(int16_t dx, int16_t dy) override;
-  // bool onFling(int16_t vx, int16_t vy) override;
 
   void onCancel() override;
 

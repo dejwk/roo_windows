@@ -75,65 +75,6 @@ bool GestureDetector::tick() {
   return is_down_;
 }
 
-bool GestureDetector::onTouchDown(Widget& widget, XDim x, YDim y) {
-  moved_outside_tap_region_ = false;
-  phase_ = Phase::kPressTracking;
-  tap_target_ = widget.supportsTap() ? &widget : nullptr;
-  long_press_target_ = widget.supportsLongPress() ? &widget : nullptr;
-  drag_target_ = widget.dragAxis() != DragAxis::kNone ? &widget : nullptr;
-  if (widget.supportsLongPress()) {
-    long_press_event_.schedule(now_us_ + kLongPressTimeoutUs);
-  }
-  bool should_delay_press_state =
-      /*supports_scrolling_ || */ widget.parent() != nullptr &&
-      widget.parent()->isScrollable();
-  show_press_event_.schedule(
-      now_us_ + (should_delay_press_state ? kShowPressTimeoutUs : 0));
-  return handledOrCancel(widget.onDown(x, y));
-}
-
-bool GestureDetector::onTouchMove(Widget& widget, XDim x, YDim y) {
-  if (phase_ == Phase::kLongPress) return false;
-  if (phase_ == Phase::kDragOwned) {
-    // Ownership is strong: legacy callback return values cannot reroute a
-    // stream after the claimant has been selected.
-    (void)widget;
-    return dispatchOwnedMove();
-  }
-
-  int16_t total_dx = latest_.x() - initial_down_.x();
-  int16_t total_dy = latest_.y() - initial_down_.y();
-  int32_t dist_square = total_dx * total_dx + total_dy * total_dy;
-  if (dist_square <= kTouchSlopSquare) return true;
-
-  DragClaim claim = widget.onDragClaim(x, y, total_dx, total_dy);
-  if (claim == DragClaim::kAccept) {
-    return claimDrag(&widget);
-  }
-  return claim == DragClaim::kDefer;
-}
-
-bool GestureDetector::onTouchUp(Widget& widget, XDim x, YDim y) {
-  if (phase_ == Phase::kLongPress) {
-    phase_ = Phase::kPressTracking;
-    widget.onLongPressFinished(x, y);
-    cancelRolesExcept(&widget);
-    return true;
-  } else if (!moved_outside_tap_region_) {
-    widget.onSingleTapUp(x, y);
-    cancelRolesExcept(&widget);
-    return true;
-  } else if (phase_ == Phase::kDragOwned) {
-    // Terminal owned delivery never bubbles through legacy touch routing.
-    return &widget == drag_target_ && finishOwnedDrag();
-  } else {
-    // Moved outside bounds of a non-scrollable widget.
-  }
-  show_press_event_.clear();
-  long_press_event_.clear();
-  return false;
-}
-
 bool GestureDetector::dispatch(TouchEvent::Type type) {
   if (type == TouchEvent::MOVE && phase_ == Phase::kDragOwned) {
     return dispatchOwnedMove();
@@ -186,14 +127,7 @@ bool GestureDetector::dispatch(TouchEvent::Type type) {
     return arbitrateDrag();
   }
 
-  Widget* target = phase_ == Phase::kDragOwned ? drag_target_ : tap_target_;
-  if (target == nullptr) target = drag_target_;
-  // Phase 2 establishes strong post-claim ownership. Terminal callback
-  // cleanup remains legacy until Phase 3, but must not fall back to ancestors.
-  if (phase_ == Phase::kDragOwned) {
-    return target != nullptr && dispatchTo(target, type);
-  }
-  return target != nullptr && dispatchTo(target, type);
+  return false;
 }
 
 bool GestureDetector::arbitrateDrag() {
@@ -256,8 +190,6 @@ bool GestureDetector::finishOwnedDrag() {
   XDim vx = velocity_x_;
   YDim vy = velocity_y_;
   if (owner->supportsFling() && qualifiesForFling(vx, vy)) {
-    // Legacy adapter: its return value is deliberately ignored. Routing has
-    // already been decided by ownership.
     owner->onFling(latest_.x() - x, latest_.y() - y, vx, vy);
   }
   phase_ = Phase::kIdle;
@@ -367,22 +299,6 @@ bool GestureDetector::offerIntercept(Panel* target, TouchEvent::Type type) {
   target->getAbsoluteOffset(dx, dy);
   return target->onInterceptTouchEvent(
       TouchEvent(type, latest_.x() - dx, latest_.y() - dy));
-}
-
-bool GestureDetector::dispatchTo(Widget* target, TouchEvent::Type type) {
-  if (!target->isVisible()) {
-    return false;
-  }
-  XDim dx;
-  YDim dy;
-  target->getAbsoluteOffset(dx, dy);
-  if (type == TouchEvent::MOVE) {
-    return target->onTouchMove(latest_.x() - dx, latest_.y() - dy);
-  } else if (type == TouchEvent::UP) {
-    return target->onTouchUp(latest_.x() - dx, latest_.y() - dy);
-  } else {
-    return false;
-  }
 }
 
 }  // namespace roo_windows

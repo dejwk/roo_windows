@@ -25,7 +25,7 @@ class Slider : public BasicWidget {
   bool isClickable() const override { return true; }
 
   /// Snaps the position to the touch point and arms scroll-dragging.
-  bool onDown(XDim x, YDim y) override;
+  void onDown(XDim x, YDim y) override;
 
   /// Treats a tap-up as a final position commit.
   void onSingleTapUp(XDim x, YDim y) override;
@@ -40,6 +40,8 @@ class Slider : public BasicWidget {
 
   /// Translates horizontal scroll deltas into position deltas while dragging.
   void onDrag(XDim x, YDim y, XDim dx, YDim dy) override;
+
+  void onDragFinished(XDim x, YDim y) override;
 
   /// Resets the drag-armed state if the gesture was canceled mid-drag.
   void onCancel() override;

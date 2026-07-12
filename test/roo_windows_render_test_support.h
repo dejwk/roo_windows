@@ -87,21 +87,12 @@ class MutableShapeColorBoxWidget : public BasicSurfaceWidget {
 class TouchSpyWidget : public BasicWidget {
  public:
   explicit TouchSpyWidget(ApplicationContext& context, Dimensions dims)
-      : BasicWidget(context), dims_(dims), touch_down_count_(0) {}
-
-  Widget* dispatchTouchDownEvent(XDim x, YDim y) override {
-    if (!bounds().contains(x, y)) return nullptr;
-    ++touch_down_count_;
-    return this;
-  }
-
-  int touch_down_count() const { return touch_down_count_; }
+      : BasicWidget(context), dims_(dims) {}
 
   Dimensions getSuggestedMinimumDimensions() const override { return dims_; }
 
  private:
   Dimensions dims_;
-  int touch_down_count_;
 };
 
 class GestureRoleSpyWidget : public BasicWidget {
@@ -111,11 +102,14 @@ class GestureRoleSpyWidget : public BasicWidget {
 
   bool supportsTap() const override { return true; }
 
-  bool onDown(XDim x, YDim y) override {
+  Dimensions getSuggestedMinimumDimensions() const override {
+    return Dimensions(1, 1);
+  }
+
+  void onDown(XDim x, YDim y) override {
     (void)x;
     (void)y;
     ++down_count_;
-    return true;
   }
 
   int down_count() const { return down_count_; }

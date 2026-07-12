@@ -40,11 +40,6 @@ Dialog::Dialog(ApplicationContext& context, std::vector<std::string> button_labe
 
 void Dialog::setTitle(std::string title) { title_.setText(std::move(title)); }
 
-Widget* Dialog::dispatchTouchDownEvent(XDim x, YDim y) {
-  Widget* result = Panel::dispatchTouchDownEvent(x, y);
-  return result == nullptr ? this : result;
-}
-
 void Dialog::actionTaken(int idx) {
   if (callback_fn_ != nullptr) {
     callback_fn_(idx);

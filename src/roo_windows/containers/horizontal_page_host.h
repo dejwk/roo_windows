@@ -84,7 +84,7 @@ class HorizontalPageHost : public Container, private roo_scheduler::Executable {
   /// so a new owned drag starts from the current visible fractional position.
   void onDragStart(XDim x, YDim y) override;
   void onDrag(XDim x, YDim y, XDim dx, YDim dy) override;
-  bool onFling(XDim x, YDim y, XDim vx, YDim vy) override;
+  void onFling(XDim x, YDim y, XDim vx, YDim vy) override;
   void onDragFinished(XDim x, YDim y) override;
   void onCancel() override;
 

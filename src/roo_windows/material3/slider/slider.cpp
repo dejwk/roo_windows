@@ -354,10 +354,9 @@ Slider::Slider(ApplicationContext& context, SliderRange range, float value,
   }
 }
 
-bool Slider::onDown(XDim x, YDim y) {
+void Slider::onDown(XDim x, YDim y) {
   (void)x;
   (void)y;
-  return isEnabled();
 }
 
 void Slider::onSingleTapUp(XDim x, YDim y) {

@@ -39,11 +39,10 @@ uint16_t pos_from_x(XDim x, int16_t range, Padding p) {
 
 }  // namespace
 
-bool Slider::onDown(XDim x, YDim y) {
+void Slider::onDown(XDim x, YDim y) {
   // We want to allow single-taps to set slider values. Because of that,
   // we cannot reject onDown() events that happen far from the current
   // slider position.
-  return true;
 }
 
 void Slider::onSingleTapUp(XDim x, YDim y) {
@@ -90,6 +89,11 @@ void Slider::onDrag(XDim x, YDim y, XDim dx, YDim dy) {
     setPressed(true);
     triggerInteractiveChange();
   }
+}
+
+void Slider::onDragFinished(XDim x, YDim y) {
+  BasicWidget::onDragFinished(x, y);
+  is_dragging_ = false;
 }
 
 bool Slider::setPos(uint16_t pos) {

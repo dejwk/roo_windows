@@ -683,15 +683,6 @@ Rect Widget::getDirectPaintExclusionBounds() const {
   return getContentBounds();
 }
 
-Widget* Widget::dispatchTouchDownEvent(XDim x, YDim y) {
-  return bounds().contains(x, y) && onTouchDown(x, y) ? this : nullptr;
-}
-
-Widget* Widget::dispatchSloppyTouchDownEvent(XDim x, YDim y) {
-  return getSloppyTouchBounds().contains(x, y) && onTouchDown(x, y) ? this
-                                                                    : nullptr;
-}
-
 bool Widget::fillTouchTargetPath(XDim x, YDim y,
                                  std::vector<Widget*>& path) {
   if (!isVisible() || !isEnabled() || !bounds().contains(x, y)) return false;
@@ -715,31 +706,13 @@ bool Widget::isHandlingGesture() const {
              : app->gesture_detector().currentGestureTarget() == this;
 }
 
-bool Widget::onTouchDown(XDim x, YDim y) {
-  return getApplication()->gesture_detector().onTouchDown(*this, x, y);
-}
-
-bool Widget::onTouchMove(XDim x, YDim y) {
-  return getApplication()->gesture_detector().onTouchMove(*this, x, y);
-}
-
-bool Widget::onTouchUp(XDim x, YDim y) {
-  bool handled = getApplication()->gesture_detector().onTouchUp(*this, x, y);
-  if (isPressed()) {
-    setPressed(false);
-  }
-  return handled;
-}
-
 void Widget::onClicked() { triggerInteractiveChange(); }
 
 bool Widget::isClickable() const { return false; }
 
-bool Widget::onDown(XDim x, YDim y) {
-  if (!isClickable() || !isEnabled()) return false;
-  const ClickAnimation* anim = ClickAnimationController(*this);
-  return anim == nullptr ||
-         (!anim->isClickAnimating() && !anim->isClickConfirmed());
+void Widget::onDown(XDim x, YDim y) {
+  (void)x;
+  (void)y;
 }
 
 void Widget::onShowPress(XDim x, YDim y) {
@@ -778,11 +751,6 @@ void Widget::onLongPress(XDim dx, YDim dy) {}
 
 void Widget::onLongPressFinished(XDim dx, YDim dy) { setPressed(false); }
 
-bool Widget::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
-  setPressed(false);
-  return false;
-}
-
 DragClaim Widget::onDragClaim(XDim x, YDim y, XDim total_dx,
                               YDim total_dy) {
   (void)x;
@@ -810,8 +778,10 @@ void Widget::onDragStart(XDim x, YDim y) {
 }
 
 void Widget::onDrag(XDim x, YDim y, XDim dx, YDim dy) {
-  // Compatibility adapter retained until drag widgets move to onDrag().
-  onScroll(x, y, dx, dy);
+  (void)x;
+  (void)y;
+  (void)dx;
+  (void)dy;
 }
 
 void Widget::onDragFinished(XDim x, YDim y) {
@@ -820,9 +790,12 @@ void Widget::onDragFinished(XDim x, YDim y) {
   setPressed(false);
 }
 
-bool Widget::onFling(XDim x, YDim y, XDim vx, YDim vy) {
+void Widget::onFling(XDim x, YDim y, XDim vx, YDim vy) {
+  (void)x;
+  (void)y;
+  (void)vx;
+  (void)vy;
   setPressed(false);
-  return false;
 }
 
 void Widget::onCancel() {

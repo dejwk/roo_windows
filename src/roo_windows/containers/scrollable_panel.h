@@ -209,7 +209,7 @@ class SimpleScrollablePanel : public Container,
   /// Translates drag deltas into immediate scroll movement.
   void onDrag(XDim x, YDim y, XDim dx, YDim dy) override;
   /// Starts a momentum fling animation seeded from the gesture velocity.
-  bool onFling(XDim x, YDim y, XDim vx, YDim vy) override;
+  void onFling(XDim x, YDim y, XDim vx, YDim vy) override;
   /// Initiates a spring-back animation if release leaves the panel in
   /// overshoot.
   void onDragFinished(XDim x, YDim y) override;

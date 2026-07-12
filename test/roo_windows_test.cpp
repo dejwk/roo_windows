@@ -46,8 +46,7 @@ class SloppyTouchSpyWidget : public BasicWidget {
                        int16_t right_slop)
       : BasicWidget(context),
         dims_(dims),
-        right_slop_(right_slop),
-        touch_down_count_(0) {}
+        right_slop_(right_slop) {}
 
   Dimensions getSuggestedMinimumDimensions() const override { return dims_; }
 
@@ -56,19 +55,9 @@ class SloppyTouchSpyWidget : public BasicWidget {
                 parent_bounds().xMax() + right_slop_, parent_bounds().yMax());
   }
 
-  bool onTouchDown(XDim x, YDim y) override {
-    (void)x;
-    (void)y;
-    ++touch_down_count_;
-    return true;
-  }
-
-  int touch_down_count() const { return touch_down_count_; }
-
  private:
   Dimensions dims_;
   int16_t right_slop_;
-  int touch_down_count_;
 };
 
 class DispatcherTestWidget : public BasicWidget {
@@ -372,10 +361,9 @@ TEST_F(RooWindowsRenderTest, RoundedSurfaceInvalidationRestoresExposedCorners) {
   EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(16, 12));
 }
 
-// Verifies that touch dispatch picks the topmost visible child at the
-// touch point; if the topmost is hidden, the next-lower visible child
-// receives the touch.
-TEST_F(RooWindowsRenderTest, TouchDispatchPrefersTopmostVisibleChild) {
+// Verifies that callback-free path construction picks the topmost visible
+// child at the touch point; if it is hidden, the next-lower child is selected.
+TEST_F(RooWindowsRenderTest, GesturePathPrefersTopmostVisibleChild) {
   auto back = std::make_unique<TouchSpyWidget>(context(), Dimensions(20, 20));
   auto front = std::make_unique<TouchSpyWidget>(context(), Dimensions(20, 20));
   TouchSpyWidget* back_ptr = back.get();
@@ -384,22 +372,19 @@ TEST_F(RooWindowsRenderTest, TouchDispatchPrefersTopmostVisibleChild) {
   app_.add(std::move(back), Box(0, 0, 24, 24));
   app_.add(std::move(front), Box(10, 10, 34, 34));
 
-  Widget* target = app_.root().dispatchTouchDownEvent(15, 15);
-  ASSERT_EQ(front_ptr, target);
-  EXPECT_EQ(1, front_ptr->touch_down_count());
-  EXPECT_EQ(0, back_ptr->touch_down_count());
+  std::vector<Widget*> path;
+  ASSERT_TRUE(app_.root().fillTouchTargetPath(15, 15, path));
+  ASSERT_EQ(front_ptr, path.back());
 
   front_ptr->setVisibility(Visibility::kInvisible);
-  target = app_.root().dispatchTouchDownEvent(15, 15);
-  ASSERT_EQ(back_ptr, target);
-  EXPECT_EQ(1, front_ptr->touch_down_count());
-  EXPECT_EQ(1, back_ptr->touch_down_count());
+  path.clear();
+  ASSERT_TRUE(app_.root().fillTouchTargetPath(15, 15, path));
+  ASSERT_EQ(back_ptr, path.back());
 }
 
-// Verifies that sloppy-touch dispatch (touches within a widget's slop margin
-// but outside its bounds) recurses through container hierarchies and
+// Verifies that sloppy-hit path construction recurses through containers and
 // reaches the intended leaf widget.
-TEST_F(RooWindowsRenderTest, SloppyTouchDispatchRecursesThroughContainers) {
+TEST_F(RooWindowsRenderTest, SloppyGesturePathRecursesThroughContainers) {
   auto outer = std::make_unique<ExposedPanel>(context());
   ExposedPanel* outer_ptr = outer.get();
   auto inner = std::make_unique<ExposedPanel>(context());
@@ -412,10 +397,9 @@ TEST_F(RooWindowsRenderTest, SloppyTouchDispatchRecursesThroughContainers) {
   outer_ptr->add(std::move(inner), Rect(2, 2, 5, 5));
   app_.add(std::move(outer), Box(4, 4, 23, 23));
 
-  Widget* target = app_.root().dispatchTouchDownEvent(14, 7);
-
-  ASSERT_EQ(leaf_ptr, target);
-  EXPECT_EQ(1, leaf_ptr->touch_down_count());
+  std::vector<Widget*> path;
+  ASSERT_TRUE(outer_ptr->fillSloppyTouchTargetPath(10, 3, path));
+  ASSERT_EQ(leaf_ptr, path.back());
 }
 
 // Verifies that geometric path construction reaches the deepest enabled child

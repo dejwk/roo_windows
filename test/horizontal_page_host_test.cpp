@@ -59,8 +59,8 @@ class TestHorizontalPageHost : public HorizontalPageHost {
   explicit TestHorizontalPageHost(ApplicationContext& context)
       : HorizontalPageHost(context) {}
 
-  using HorizontalPageHost::onDown;
-  using HorizontalPageHost::onScroll;
+  using HorizontalPageHost::onDrag;
+  using HorizontalPageHost::onDragStart;
 
   struct IndexChange {
     int old_index;

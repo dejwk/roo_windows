@@ -315,10 +315,9 @@ RangeSlider::RangeSlider(ApplicationContext& context, SliderRange range,
                                        start_value_, end_value_);
 }
 
-bool RangeSlider::onDown(XDim x, YDim y) {
+void RangeSlider::onDown(XDim x, YDim y) {
   (void)x;
   (void)y;
-  return isEnabled();
 }
 
 void RangeSlider::onSingleTapUp(XDim x, YDim y) {

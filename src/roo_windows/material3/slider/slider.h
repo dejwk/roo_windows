@@ -193,7 +193,7 @@ class Slider : public BasicWidget {
   bool isClickable() const override { return true; }
 
   /// Accepts pointer-down only while the slider is enabled.
-  bool onDown(XDim x, YDim y) override;
+  void onDown(XDim x, YDim y) override;
 
   /// Handles tap-to-jump by moving the thumb directly to the tapped position.
   void onSingleTapUp(XDim x, YDim y) override;

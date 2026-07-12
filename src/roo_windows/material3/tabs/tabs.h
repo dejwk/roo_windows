@@ -305,7 +305,7 @@ class ScrollableTabs : public Tabs {
   bool onInterceptTouchEvent(const TouchEvent& event) override;
   void onDragStart(XDim x, YDim y) override;
   void onDrag(XDim x, YDim y, XDim dx, YDim dy) override;
-  bool onFling(XDim x, YDim y, XDim vx, YDim vy) override;
+  void onFling(XDim x, YDim y, XDim vx, YDim vy) override;
   void onDragFinished(XDim x, YDim y) override;
   void onCancel() override;
   DragAxis dragAxis() const override {

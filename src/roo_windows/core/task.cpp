@@ -127,13 +127,6 @@ void TaskPanel::enterActivity(Activity* activity,
 
 void TaskPanel::exitActivity() { removeLast(); }
 
-Widget* TaskPanel::dispatchTouchDownEvent(XDim x, YDim y) {
-  // Only the topmost activity gets to handle the gestures.
-  Widget& activity = *children_.back();
-  return activity.dispatchTouchDownEvent(x - activity.offsetLeft(),
-                                         y - activity.offsetTop());
-}
-
 bool TaskPanel::fillTouchTargetPath(XDim x, YDim y,
                                     std::vector<Widget*>& path) {
   if (!isVisible() || !isEnabled() || !bounds().contains(x, y)) return false;

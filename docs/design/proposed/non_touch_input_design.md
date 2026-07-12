@@ -68,7 +68,8 @@ As of 2026-05:
   `UP` samples.
 - [src/roo_windows/core/gesture_detector.h](../../../src/roo_windows/core/gesture_detector.h)
   translates those raw samples into gesture callbacks such as `onDown()`,
-  `onShowPress()`, `onSingleTapUp()`, `onScroll()`, and `onFling()`.
+  `onShowPress()`, `onSingleTapUp()`, `onDragStart()`, `onDrag()`,
+  `onDragFinished()`, and `onFling()`.
 - [src/roo_windows/core/widget.h](../../../src/roo_windows/core/widget.h) exposes a
   touch-oriented interaction surface. The public state bits include
   `kWidgetHover` and `kWidgetFocused`, but there are no public or protected
@@ -506,8 +507,8 @@ void setHover(bool hover);
 Those mutators should reuse the same invalidation and interaction-bounds logic
 already used by pressed, selected, activated, and dragged state.
 
-The base framework must not try to emulate keyboard interaction by calling
-`onTouchDown()` / `onTouchUp()` with fabricated coordinates. That would
+The base framework must not try to emulate keyboard interaction by injecting
+fabricated touch streams. That would
 incorrectly reuse touch-specific semantics such as tap slop, show-press timing,
 sloppy hit bounds, and fling recognition.
 

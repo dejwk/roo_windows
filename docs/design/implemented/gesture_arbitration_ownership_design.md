@@ -2,14 +2,14 @@
 
 ## Implementation status
 
-**In progress.** Phases 1 through 5 are implemented: callback-free hit paths,
-independent role selection, directional drag arbitration, strong post-claim
-ownership, and lifecycle-safe owned drag completion/cancellation are available
-through compatibility adapters. Legacy and Material 3 sliders, range sliders,
-scrollable panels, horizontal page hosts, and scrollable tabs now use the owned
-drag lifecycle with declarative axis and fling policies. Tap and long-press
-terminal delivery is owner-based. Removal of compatibility routing remains.
-Dependency status is recorded in the [status index](../README.md).
+**Implemented.** Callback-free hit paths, independent role selection,
+directional drag arbitration, strong post-claim ownership, lifecycle-safe owned
+drag completion/cancellation, and owner-based tap/long-press terminals are
+implemented. Legacy routing callbacks and compatibility adapters have been
+removed. Legacy and Material 3 sliders, range sliders, scrollable panels,
+horizontal page hosts, and scrollable tabs use the owned drag lifecycle with
+declarative axis and fling policies. Dependency status is recorded in the
+[status index](../README.md).
 
 ## Objective
 
@@ -422,10 +422,10 @@ A fling-capable widget additionally overrides `supportsFling()` to return true.
 The detector derives fling direction and velocity filtering from `dragAxis()`.
 Direct-drag widgets that do not support inertia inherit the false default.
 
-During migration, internal adapters map `supportsScrolling()`, boolean
-`onScroll()`, and boolean `onFling()` to the new surface. Fling-capable widgets
-add `supportsFling()` as they migrate. Local `onTouchUp()` workarounds remain
-until each widget migrates. The adapters are removed in the final phase.
+The migration adapters for `supportsScrolling()`, boolean `onScroll()`, and
+boolean `onFling()`, along with slider-local `onTouchUp()` workarounds, were
+removed in Phase 6. The owned lifecycle above is the only gesture delivery
+surface.
 
 ## Implementation Plan
 
@@ -500,8 +500,8 @@ press has one terminal outcome.
 
 ### Phase 6: Remove compatibility routing
 
-Remove legacy APIs, detector flags, and slider-local `onTouchUp()`
-workarounds; update API docs and the status index.
+Completed. Removed legacy APIs, detector flags, and slider-local `onTouchUp()`
+workarounds; updated API docs and the status index.
 
 Proposed commit: `cleanup: remove legacy gesture routing callbacks`
 

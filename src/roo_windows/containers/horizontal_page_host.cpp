@@ -218,14 +218,13 @@ void HorizontalPageHost::onDrag(XDim x, YDim y, XDim dx, YDim dy) {
   invalidateInterior();
 }
 
-bool HorizontalPageHost::onFling(XDim x, YDim y, XDim vx, YDim vy) {
+void HorizontalPageHost::onFling(XDim x, YDim y, XDim vx, YDim vy) {
   (void)x;
   (void)y;
   (void)vy;
-  if (pageCount() <= 1 || settled_index_ < 0) return true;
+  if (pageCount() <= 1 || settled_index_ < 0) return;
   int target = resolveGestureSettleTarget(vx);
   startSettleToIndex(target);
-  return true;
 }
 
 void HorizontalPageHost::onDragFinished(XDim x, YDim y) {

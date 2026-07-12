@@ -262,10 +262,6 @@ class Widget {
   /// the MainWindow-owned controller directly.
   const ClickAnimation* getClickAnimation() const;
 
-  virtual Widget* dispatchTouchDownEvent(XDim x, YDim y);
-
-  virtual Widget* dispatchSloppyTouchDownEvent(XDim x, YDim y);
-
   /// Appends the visible, enabled widgets geometrically hit at `x`, `y` to
   /// `path`, ordered from this widget toward the deepest hit descendant.
   /// Does not invoke gesture callbacks.
@@ -279,33 +275,6 @@ class Widget {
 
   // Returns true if this widget is currently handling a touch gesture.
   bool isHandlingGesture() const;
-
-  // Called by the framework when on the first touch event within the bounds of
-  // this widget. If the method returns false, the event will be redirected to
-  // this widget's parent, and this widget will not receive any further touch
-  // events received as part of this gesture. Most widgets should not overwrite
-  // this method. The default implementation calls the gesture detector which
-  // may then call more specific widget methods.
-  //
-  // Returns true if the event is handled, false otherwise.
-  virtual bool onTouchDown(XDim x, YDim y);
-
-  // Called by the framework upon the 'move' event. If the method returns false,
-  // the event will be redirected to this widget's parent, and this widget will
-  // not receive any further touch events received as part of this gesture. Most
-  // widgets should not overwrite this method. The default implementation calls
-  // the gesture detector which may then call more specific widget methods.
-  //
-  // Returns true if the event is handled, false otherwise.
-  virtual bool onTouchMove(XDim x, YDim y);
-
-  // Called by the framework upon the 'up' event. If the method returns false,
-  // the event will be redirected to this widget's parent. Most widgets should
-  // not overwrite this method. The default implementation calls the gesture
-  // detector which may then call more specific widget methods.
-  //
-  // Returns true if the event is handled, false otherwise.
-  virtual bool onTouchUp(XDim x, YDim y);
 
   // Called when a 'click' should be handled (either during or after
   // onSingleTapUp). For widgets that support click animation, the event is
@@ -329,11 +298,8 @@ class Widget {
 
   // Called when the first 'down' event happens within the bounds of this
   // widget. Contains the touch coordinates relative to the widget. The widget
-  // should return true if it handled the event. Otherwise, the event, and the
-  // subsequent events, will be redirected to the parent.
-  //
-  // Most widgets should not override this method.
-  virtual bool onDown(XDim x, YDim y);
+  // is selected for a gesture role. It cannot redirect the event.
+  virtual void onDown(XDim x, YDim y);
 
   // Called when the gesture is recognized as press, rather than scroll.
   // Contains the coordinates of the original 'down' event, relative to the
@@ -369,16 +335,8 @@ class Widget {
   virtual bool supportsLongPress() { return false; }
 
   // Should be overridden to return true by widgets that wish to handle the
-  // onScroll and onFling events.
-  virtual bool supportsScrolling() const { return false; }
-
   /// Declares the directions in which this widget can own a drag gesture.
-  ///
-  /// The default keeps legacy scrolling widgets eligible in both directions
-  /// until they are migrated to an explicit axis policy.
-  virtual DragAxis dragAxis() const {
-    return supportsScrolling() ? DragAxis::kBoth : DragAxis::kNone;
-  }
+  virtual DragAxis dragAxis() const { return DragAxis::kNone; }
 
   /// Participates in drag ownership arbitration after touch slop is crossed.
   /// The default applies dragAxis() to total displacement. Override only for
@@ -389,8 +347,7 @@ class Widget {
   /// Called once when this widget becomes the drag owner.
   virtual void onDragStart(XDim x, YDim y);
 
-  /// Delivers movement to the drag owner. The default adapts the legacy
-  /// onScroll() callback while drag widgets are migrated.
+  /// Delivers movement to the drag owner.
   virtual void onDrag(XDim x, YDim y, XDim dx, YDim dy);
 
   /// Called once for every successfully completed owned drag, before fling.
@@ -413,20 +370,9 @@ class Widget {
   // supportsLongPress() in order to receive this notification.
   virtual void onLongPressFinished(XDim x, YDim y);
 
-  // Called during the 'move' event, when the gesture is recognized as 'scroll'.
-  // Contains the latest coordinates along with a delta since the last time
-  // onScroll was called as part of this gesture.
-  //
-  // Widgets that support scrolling should override this method. The default
-  // implementation clears the 'press' state and returns false.
-  virtual bool onScroll(XDim x, YDim y, XDim dx, YDim dy);
-
-  // Called during the 'up' event, when the gesture is recognized as 'fling'.
-  // Contains the latest coordinates along with the velocity of the fling.
-  //
-  // Widgets that support fling (swipe) should override this method. The default
-  // implementation clears the 'press' state and returns false.
-  virtual bool onFling(XDim x, YDim y, XDim vx, YDim vy);
+  /// Called after onDragFinished() when a fling qualifies for this owner's
+  /// declared drag axis.
+  virtual void onFling(XDim x, YDim y, XDim vx, YDim vy);
 
   virtual void onCancel();
 

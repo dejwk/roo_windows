@@ -31,8 +31,8 @@ static constexpr int16_t kMaxFlingVelocity = 8000;  // Pixels per second.
 ///
 /// Polls the bound `TouchSensor`, tracks one in-flight gesture at a time, and
 /// builds a callback-free hit path, selects gesture roles, and dispatches the
-/// owned drag lifecycle callbacks during the migration to explicit ownership. Also
-/// runs the scheduled show-press / tap / long-press timers.
+/// owned drag lifecycle callbacks. Also runs the scheduled show-press / tap /
+/// long-press timers.
 class GestureDetector {
  private:
   enum class Phase : uint8_t {
@@ -60,18 +60,6 @@ class GestureDetector {
   /// event was dispatched during this call.
   bool tick();
 
-  /// Dispatches a synthetic DOWN to `widget` and arms the show-press, tap,
-  /// and long-press timers. Returns true if the gesture was accepted.
-  bool onTouchDown(Widget& widget, XDim x, YDim y);
-
-  /// Forwards a MOVE sample, promoting the gesture to a scroll once the touch
-  /// leaves the tap slop region. Returns true while the gesture is captured.
-  bool onTouchMove(Widget& widget, XDim x, YDim y);
-
-  /// Forwards an UP sample, optionally producing a tap, long-press release,
-  /// or fling depending on movement and timing. Returns true if handled.
-  bool onTouchUp(Widget& widget, XDim x, YDim y);
-
   /// Aborts the active input stream. This is used when touch input is lost or
   /// superseded and gives each started role one cancellation notification.
   void cancel();
@@ -96,7 +84,7 @@ class GestureDetector {
   /// Returns the deepest widget eligible for long press in the current stream.
   const Widget* longPressTarget() const { return long_press_target_; }
 
-  /// Returns the deepest legacy scroll candidate in the current stream.
+  /// Returns the deepest eligible drag candidate, or the current drag owner.
   const Widget* dragTarget() const { return drag_target_; }
 
   /// Returns true while a touch is currently pressed down.
@@ -130,7 +118,6 @@ class GestureDetector {
   bool claimDrag(Widget* target);
   bool finishOwnedDrag();
   bool qualifiesForFling(XDim& vx, YDim& vy) const;
-  bool dispatchTo(Widget* target, TouchEvent::Type type);
   bool offerIntercept(Panel* target, TouchEvent::Type type);
   Widget* previousTouchTarget(Widget* target) const;
   Widget* previousDragCandidate(Widget* target) const;
@@ -138,11 +125,6 @@ class GestureDetector {
   void beginRole(Widget* target);
   void cancelRolesExcept(Widget* except);
   void clearStream();
-
-  bool handledOrCancel(bool handled) {
-    if (!handled) cancelEvents();
-    return handled;
-  }
 
   void cancelEvents() {
     show_press_event_.clear();
