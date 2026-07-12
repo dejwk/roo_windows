@@ -271,11 +271,10 @@ This design therefore makes five direct decisions:
    | Medium flexible | 112dp | headline medium | 2 |
    | Large flexible | 152dp | display small | 2 |
 
-3. A subtitle, when supported by the selected variant's token table, fits
-   inside that variant's fixed base height. It reduces the title's available
-   line budget to one line rather than increasing shell height. The initial
-   implementation supports subtitles on medium flexible and large flexible
-   bars; small bars remain a single-line title surface.
+3. A subtitle, when supported by the selected variant's token table, selects
+   the Material 3 expanded subtitle height: `136dp` for medium flexible and
+   `176dp` for large flexible. This keeps the title and subtitle line boxes
+   intact below the control row. Small bars remain a single-line title surface.
 4. `SearchBar` uses a `56dp` contained search container with rounded corners.
 5. `SearchBar` should measure to a natural width clamped to the range
    `240-720dp`, but it must still accept narrower parent-constrained widths on
@@ -442,8 +441,8 @@ Common geometry across all title-based variants:
 - one optional leading slot,
 - up to two trailing slots,
 - `48dp` action tap targets,
-- `8dp` outer edge inset before the first and after the last action tap target,
-- and `16dp` gap between the action strip and the title block.
+- `4dp` outer edge inset before the first and after the last action tap target,
+- a `16dp` title inset only when no leading navigation control is present.
 
 Variant-specific tokens are limited to:
 
@@ -465,6 +464,10 @@ The title block rules are:
    text children are non-interactive and are not public action slots.
 5. centered alignment centers the whole title block after leading / trailing
    slot reservation rather than pretending the actions do not exist.
+6. small bars place the navigation, title, and actions in one compact row;
+   medium flexible and large flexible bars use a `56dp` upper control row and
+   place their expanded title stack below it. This follows Android Material 3's
+   `MediumTopAppBar` and `LargeTopAppBar` expanded layout.
 
 The widget does not attempt to auto-upgrade a title from one variant to another
 based on measured text length. The caller or host chooses the intended

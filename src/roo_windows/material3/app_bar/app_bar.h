@@ -8,6 +8,7 @@
 #include "roo_windows/core/widget.h"
 #include "roo_windows/core/widget_ref.h"
 #include "roo_windows/widgets/icon.h"
+#include "roo_windows/material3/app_bar/app_bar_tokens.h"
 
 namespace roo_windows::material3 {
 
@@ -32,16 +33,29 @@ class AppBarText final : public Widget {
   void setText(roo::string_view text) { text_ = text; }
   roo::string_view text() const { return text_; }
 
+  /// Chooses the Material typography used by this bounded presentation child.
+  void setFont(const roo_display::Font& font) { font_ = &font; }
+
+  void setAlignment(roo_display::Alignment alignment) {
+    alignment_ = alignment;
+  }
+
+  void setUseOnSurfaceVariant(bool value) { use_on_surface_variant_ = value; }
+
   Dimensions getSuggestedMinimumDimensions() const override;
   void paint(PaintContext& ctx) const override;
 
  private:
   roo::string_view text_;
+  const roo_display::Font* font_ = nullptr;
+  roo_display::Alignment alignment_ =
+      roo_display::kLeft | roo_display::kMiddle;
+  bool use_on_surface_variant_ = false;
 };
 
 }  // namespace internal
 
-/// Phase-1 declaration of the Material 3 title-based top-app-bar family.
+/// Material 3 title-based top-app-bar family.
 class AppBar : public Container {
  public:
   /// Creates an app bar with the selected title-based variant.
@@ -73,13 +87,13 @@ class AppBar : public Container {
   void setTitle(roo::string_view title);
 
   /// Returns the non-owning title text view.
-  roo::string_view title() const { return title_; }
+  roo::string_view title() const { return title_widget_.text(); }
 
   /// Replaces the non-owning subtitle text view.
   void setSubtitle(roo::string_view subtitle);
 
   /// Returns the non-owning subtitle text view.
-  roo::string_view subtitle() const { return subtitle_; }
+  roo::string_view subtitle() const { return subtitle_widget_.text(); }
 
   /// Replaces or clears the optional leading child slot.
   void setLeading(WidgetRef widget);
@@ -88,14 +102,21 @@ class AppBar : public Container {
   void setTrailing(uint8_t index, WidgetRef widget);
 
  protected:
+  Color background() const override;
   int getChildrenCount() const override;
   const Widget& getChild(int idx) const override;
   Widget& getChild(int idx) override;
 
+  Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
+  void onLayout(bool changed, const Rect& rect) override;
+
  private:
+  const roo_display::Font& titleFont() const;
+  const internal::AppBarVariantTokens& tokens() const;
+  int16_t containerHeightDp() const;
   void replaceSlot(Widget*& slot, WidgetRef widget);
-  roo::string_view title_;
-  roo::string_view subtitle_;
+  internal::AppBarText title_widget_;
+  internal::AppBarText subtitle_widget_;
   Widget* leading_;
   Widget* trailing_[2];
   AppBarVariant variant_;

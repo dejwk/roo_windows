@@ -19,6 +19,7 @@ class TestAppBar : public AppBar {
  public:
   using AppBar::AppBar;
   int childCount() const { return getChildrenCount(); }
+  Widget& childAt(int index) { return getChild(index); }
 };
 
 class TestSearchBar : public SearchBar {
@@ -133,11 +134,102 @@ TEST(Material3AppBar, StandaloneSearchBarMeasuresWithinItsAdaptiveWidthRange) {
   EXPECT_EQ(Scaled(56), narrow.height());
 }
 
+// Flexible bars select their Material subtitle height so title and subtitle
+// retain complete line boxes below the upper control row.
+TEST(Material3AppBar, TitleVariantsUseFixedShellHeightsAndSubtitleRules) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+  TestAppBar app_bar(context);
+  app_bar.setTitle("Inbox");
+  app_bar.setSubtitle("3 unread");
+
+  EXPECT_EQ(1, app_bar.childCount());
+  EXPECT_EQ(Scaled(64), app_bar.measure(WidthSpec::Exactly(320),
+                                        HeightSpec::Unspecified(0)).height());
+
+  app_bar.setVariant(AppBarVariant::kMediumFlexible);
+  EXPECT_EQ(Scaled(136), app_bar.measure(WidthSpec::Exactly(320),
+                                         HeightSpec::Unspecified(0)).height());
+  EXPECT_EQ(2, app_bar.childCount());
+  app_bar.layout(Rect(0, 0, 319, Scaled(136) - 1));
+  EXPECT_GT(app_bar.childAt(1).height(), 0);
+
+  app_bar.setVariant(AppBarVariant::kLargeFlexible);
+  EXPECT_EQ(Scaled(176), app_bar.measure(WidthSpec::Exactly(320),
+                                         HeightSpec::Unspecified(0)).height());
+}
+
+// Leading and trailing actions reserve fixed 48dp slots plus the prescribed
+// title/action gap. The composed title gets the remaining lane.
+TEST(Material3AppBar, TitleLaneReservesLeadingAndTrailingActionSlots) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+  TestAppBar app_bar(context);
+  ProbeWidget leading(context), trailing(context);
+  app_bar.setTitle("Inbox");
+  app_bar.setLeading(leading);
+  app_bar.setTrailing(0, trailing);
+  app_bar.measure(WidthSpec::Exactly(320), HeightSpec::Unspecified(0));
+  app_bar.layout(Rect(0, 0, 319, Scaled(64) - 1));
+
+  EXPECT_EQ(Scaled(4), leading.offsetLeft());
+  EXPECT_EQ(Scaled(48), leading.width());
+  EXPECT_EQ(320 - Scaled(4) - Scaled(48), trailing.offsetLeft());
+  EXPECT_LT(app_bar.childAt(0).width(), 320 - 2 * Scaled(4));
+}
+
+// Material's expanded medium and large bars use a control row followed by a
+// separate title row. Small bars retain their compact, single-row layout.
+TEST(Material3AppBar, FlexibleVariantsPlaceControlsAboveTitleStack) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+  TestAppBar app_bar(context, AppBarVariant::kMediumFlexible);
+  ProbeWidget leading(context), trailing(context);
+  app_bar.setTitle("Recent");
+  app_bar.setLeading(leading);
+  app_bar.setTrailing(0, trailing);
+  app_bar.measure(WidthSpec::Exactly(320), HeightSpec::Unspecified(0));
+  app_bar.layout(Rect(0, 0, 319, Scaled(112) - 1));
+
+  EXPECT_EQ(Scaled(4), leading.offsetTop());
+  EXPECT_EQ(Scaled(4), trailing.offsetTop());
+  EXPECT_EQ(Scaled(16), app_bar.childAt(0).offsetLeft());
+  EXPECT_GE(app_bar.childAt(0).offsetTop(),
+            Scaled(48) + 2 * Scaled(4));
+
+  app_bar.setVariant(AppBarVariant::kLargeFlexible);
+  app_bar.measure(WidthSpec::Exactly(320), HeightSpec::Unspecified(0));
+  app_bar.layout(Rect(0, 0, 319, Scaled(152) - 1));
+  EXPECT_EQ(Scaled(4), leading.offsetTop());
+  EXPECT_EQ(Scaled(16), app_bar.childAt(0).offsetLeft());
+  EXPECT_GE(app_bar.childAt(0).offsetTop(),
+            Scaled(48) + 2 * Scaled(4));
+}
+
+TEST(Material3AppBar, SmallTitleUsesTheStandardInsetWithoutNavigation) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+  TestAppBar app_bar(context);
+  app_bar.setTitle("Inbox");
+  app_bar.measure(WidthSpec::Exactly(320), HeightSpec::Unspecified(0));
+  app_bar.layout(Rect(0, 0, 319, Scaled(64) - 1));
+
+  EXPECT_EQ(Scaled(16), app_bar.childAt(0).offsetLeft());
+}
+
 // Verifies shared token tables preserve the specified Phase-1 dimensions.
 TEST(Material3AppBar, SharedTokensKeepSpecifiedPhaseOneGeometry) {
   EXPECT_EQ(64, internal::kSmallAppBarTokens.container_height_dp);
   EXPECT_EQ(112, internal::kMediumFlexibleAppBarTokens.container_height_dp);
   EXPECT_EQ(152, internal::kLargeFlexibleAppBarTokens.container_height_dp);
+  EXPECT_EQ(136,
+            internal::kMediumFlexibleAppBarTokens.subtitle_container_height_dp);
+  EXPECT_EQ(176,
+            internal::kLargeFlexibleAppBarTokens.subtitle_container_height_dp);
   EXPECT_EQ(720, internal::kEmbeddedSearchEntryTokens.max_width_dp);
   EXPECT_EQ(48, internal::kActionTapTargetDp);
 }

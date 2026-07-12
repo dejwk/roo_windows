@@ -39,38 +39,90 @@ const Widget& ChildAt(Widget* const (&slots)[N], int idx, const char* owner) {
 
 Dimensions internal::AppBarText::getSuggestedMinimumDimensions() const {
   if (text_.empty()) return Dimensions(0, 0);
-  const roo_display::Font& font = font_body1();
+  const roo_display::Font& font = font_ == nullptr ? font_body1() : *font_;
   return Dimensions(font.getHorizontalStringMetrics(text_).width(),
                     font.metrics().maxHeight());
 }
 
 void internal::AppBarText::paint(PaintContext& ctx) const {
   if (text_.empty()) return;
-  const roo_display::Font& font = font_body1();
+  const roo_display::Font& font = font_ == nullptr ? font_body1() : *font_;
   ctx.canvas().drawTiled(
       roo_display::StringViewLabel(
-          text_, font, theme().material3Theme().color.onSurfaceVariant),
-      bounds(), roo_display::kLeft | roo_display::kMiddle);
+          text_, font, use_on_surface_variant_
+                           ? theme().material3Theme().color.onSurfaceVariant
+                           : theme().material3Theme().color.onSurface),
+      bounds(), alignment_);
 }
 
 AppBar::AppBar(ApplicationContext& context, AppBarVariant variant)
     : Container(context),
+      title_widget_(context),
+      subtitle_widget_(context),
       leading_(nullptr),
       trailing_{nullptr, nullptr},
       variant_(variant),
       title_alignment_(AppBarTitleAlignment::kLeading),
-      surface_state_(AppBarSurfaceState::kFlat) {}
+      surface_state_(AppBarSurfaceState::kFlat) {
+  // The title children are by-value, so a title-only bar has no dynamic
+  // allocations and text updates follow the regular child invalidation path.
+  title_widget_.setFont(titleFont());
+  subtitle_widget_.setFont(font_subtitle1());
+  title_widget_.setVisibility(Visibility::kGone);
+  subtitle_widget_.setVisibility(Visibility::kGone);
+  attachChild(title_widget_);
+  attachChild(subtitle_widget_);
+}
 
 AppBar::~AppBar() {
   for (Widget* slot : trailing_) {
     if (slot) detachChild(slot);
   }
   if (leading_) detachChild(leading_);
+  detachChild(&subtitle_widget_);
+  detachChild(&title_widget_);
+}
+
+const internal::AppBarVariantTokens& AppBar::tokens() const {
+  switch (variant_) {
+    case AppBarVariant::kSmall:
+      return internal::kSmallAppBarTokens;
+    case AppBarVariant::kMediumFlexible:
+      return internal::kMediumFlexibleAppBarTokens;
+    case AppBarVariant::kLargeFlexible:
+      return internal::kLargeFlexibleAppBarTokens;
+  }
+  return internal::kSmallAppBarTokens;
+}
+
+const roo_display::Font& AppBar::titleFont() const {
+  switch (variant_) {
+    case AppBarVariant::kSmall:
+      return font_h6();
+    case AppBarVariant::kMediumFlexible:
+      return font_h5();
+    case AppBarVariant::kLargeFlexible:
+      return font_h4();
+  }
+  return font_h6();
+}
+
+int16_t AppBar::containerHeightDp() const {
+  const internal::AppBarVariantTokens& variant_tokens = tokens();
+  return variant_tokens.supports_subtitle && !subtitle_widget_.text().empty()
+             ? variant_tokens.subtitle_container_height_dp
+             : variant_tokens.container_height_dp;
 }
 
 void AppBar::setVariant(AppBarVariant variant) {
   if (variant_ == variant) return;
   variant_ = variant;
+  title_widget_.setFont(titleFont());
+  if (!tokens().supports_subtitle) {
+    subtitle_widget_.setVisibility(Visibility::kGone);
+  } else if (!subtitle_widget_.text().empty()) {
+    subtitle_widget_.setVisibility(Visibility::kVisible);
+  }
   invalidateInterior();
   requestLayout();
 }
@@ -78,6 +130,12 @@ void AppBar::setVariant(AppBarVariant variant) {
 void AppBar::setTitleAlignment(AppBarTitleAlignment alignment) {
   if (title_alignment_ == alignment) return;
   title_alignment_ = alignment;
+  const roo_display::Alignment text_alignment =
+      (alignment == AppBarTitleAlignment::kCentered ? roo_display::kCenter
+                                                    : roo_display::kLeft) |
+      roo_display::kMiddle;
+  title_widget_.setAlignment(text_alignment);
+  subtitle_widget_.setAlignment(text_alignment);
   invalidateInterior();
   requestLayout();
 }
@@ -89,15 +147,20 @@ void AppBar::setSurfaceState(AppBarSurfaceState state) {
 }
 
 void AppBar::setTitle(roo::string_view title) {
-  if (title_ == title) return;
-  title_ = title;
+  if (title_widget_.text() == title) return;
+  title_widget_.setText(title);
+  title_widget_.setVisibility(title.empty() ? Visibility::kGone
+                                             : Visibility::kVisible);
   invalidateInterior();
   requestLayout();
 }
 
 void AppBar::setSubtitle(roo::string_view subtitle) {
-  if (subtitle_ == subtitle) return;
-  subtitle_ = subtitle;
+  if (subtitle_widget_.text() == subtitle) return;
+  subtitle_widget_.setText(subtitle);
+  subtitle_widget_.setVisibility(
+      !subtitle.empty() && tokens().supports_subtitle ? Visibility::kVisible
+                                                       : Visibility::kGone);
   invalidateInterior();
   requestLayout();
 }
@@ -125,21 +188,127 @@ void AppBar::setTrailing(uint8_t index, WidgetRef widget) {
 }
 
 int AppBar::getChildrenCount() const {
-  return (leading_ != nullptr) + ChildCount(trailing_);
+  return (!title_widget_.isGone()) + (!subtitle_widget_.isGone()) +
+         (leading_ != nullptr) + ChildCount(trailing_);
 }
 
 const Widget& AppBar::getChild(int idx) const {
+  if (!title_widget_.isGone() && idx-- == 0) return title_widget_;
+  if (!subtitle_widget_.isGone() && idx-- == 0) return subtitle_widget_;
   if (leading_ && idx-- == 0) return *leading_;
   return ChildAt(trailing_, idx, "AppBar");
 }
 
 Widget& AppBar::getChild(int idx) {
+  if (!title_widget_.isGone() && idx-- == 0) return title_widget_;
+  if (!subtitle_widget_.isGone() && idx-- == 0) return subtitle_widget_;
   if (leading_ && idx-- == 0) return *leading_;
   for (Widget* slot : trailing_) {
     if (slot && idx-- == 0) return *slot;
   }
   LOG(FATAL) << "AppBar child index out of bounds";
   return *leading_;
+}
+
+Color AppBar::background() const {
+  const auto& colors = theme().material3Theme().color;
+  return surface_state_ == AppBarSurfaceState::kFlat ? colors.surface
+                                                      : colors.surfaceContainer;
+}
+
+Dimensions AppBar::onMeasure(WidthSpec width, HeightSpec height) {
+  const int16_t row_height = Scaled(internal::kActionTapTargetDp);
+  const int16_t container_height = Scaled(containerHeightDp());
+  const int16_t available_width = width.value();
+
+  // Measure all children even when an exact app-bar width leaves them no room;
+  // this preserves the normal child layout-request lifecycle.
+  if (leading_ != nullptr) {
+    leading_->measure(WidthSpec::AtMost(row_height), HeightSpec::Exactly(row_height));
+  }
+  for (Widget* slot : trailing_) {
+    if (slot != nullptr) {
+      slot->measure(WidthSpec::AtMost(row_height), HeightSpec::Exactly(row_height));
+    }
+  }
+  title_widget_.measure(WidthSpec::AtMost(std::max<int16_t>(0, available_width)),
+                        HeightSpec::Unspecified(container_height));
+  subtitle_widget_.measure(WidthSpec::AtMost(std::max<int16_t>(0, available_width)),
+                           HeightSpec::Unspecified(container_height));
+  return Dimensions(width.resolveSize(available_width),
+                    height.resolveSize(container_height));
+}
+
+void AppBar::onLayout(bool changed, const Rect& rect) {
+  (void)changed;
+  const int16_t edge = Scaled(internal::kAppBarEdgeInsetDp);
+  const int16_t title_inset = Scaled(internal::kAppBarTitleInsetDp);
+  const int16_t action_size = Scaled(internal::kActionTapTargetDp);
+  const int16_t width = std::max<int16_t>(0, rect.width());
+  const int16_t height = std::max<int16_t>(0, rect.height());
+  const bool single_row = variant_ == AppBarVariant::kSmall;
+  int16_t left = std::min<int16_t>(edge, width);
+  int16_t right = std::max<int16_t>(left, width - edge);
+
+  // Flexible bars reserve a 56dp control row at the top. Their title stack is
+  // intentionally in a separate row below it, matching MediumTopAppBar and
+  // LargeTopAppBar in Android's Material 3 implementation.
+  const int16_t action_y = single_row
+                               ? std::max<int16_t>(0, (height - action_size) / 2)
+                               : edge;
+  auto layout_action = [action_size, action_y](Widget* child, int16_t x) {
+    if (child == nullptr) return;
+    child->layout(
+        Rect(x, action_y, x + action_size - 1, action_y + action_size - 1));
+  };
+  if (leading_ != nullptr) {
+    const int16_t slot = std::min<int16_t>(action_size, right - left);
+    layout_action(leading_, left);
+    left += slot;
+  }
+  for (int index = 1; index >= 0; --index) {
+    if (trailing_[index] == nullptr) continue;
+    const int16_t slot = std::min<int16_t>(action_size, std::max<int16_t>(0, right - left));
+    right -= slot;
+    layout_action(trailing_[index], right);
+  }
+
+  // A single-row title starts at the 16dp title inset without navigation, or
+  // immediately after its 48dp navigation slot. Flexible titles use the
+  // second row and therefore do not reserve navigation/action width.
+  if (single_row && leading_ == nullptr) {
+    left = std::min<int16_t>(title_inset, right);
+  }
+  if (!single_row) {
+    left = std::min<int16_t>(title_inset, width);
+    right = std::max<int16_t>(left, width - title_inset);
+  } else {
+    right = std::max<int16_t>(left, right);
+  }
+
+  const int16_t lane_top = single_row ? 0 : action_size + 2 * edge;
+  const int16_t lane_bottom = single_row
+                                  ? height
+                                  : std::max<int16_t>(lane_top,
+                                                      height - Scaled(tokens().title_bottom_inset_dp));
+  const int16_t lane_height = std::max<int16_t>(0, lane_bottom - lane_top);
+  const int16_t lane_width = std::max<int16_t>(0, right - left);
+  const bool show_subtitle = !subtitle_widget_.isGone();
+  const int16_t title_height = std::min<int16_t>(
+      title_widget_.measure(WidthSpec::AtMost(lane_width), HeightSpec::AtMost(lane_height)).height(),
+      lane_height);
+  const int16_t subtitle_height = show_subtitle
+      ? std::min<int16_t>(subtitle_widget_.measure(WidthSpec::AtMost(lane_width), HeightSpec::AtMost(lane_height)).height(), lane_height - title_height)
+      : 0;
+  const int16_t stack_height = title_height + subtitle_height;
+  const int16_t stack_top = single_row
+                                ? (height - stack_height) / 2
+                                : lane_bottom - stack_height;
+  title_widget_.layout(Rect(left, stack_top, right - 1, stack_top + title_height - 1));
+  if (show_subtitle) {
+    subtitle_widget_.layout(Rect(left, stack_top + title_height, right - 1,
+                                 stack_top + stack_height - 1));
+  }
 }
 
 SearchBar::SearchBar(ApplicationContext& context)
@@ -150,6 +319,7 @@ SearchBar::SearchBar(ApplicationContext& context)
       trailing_{nullptr, nullptr} {
   // These presentation children are stored by value and borrowed by the
   // container, avoiding heap ownership for the default search treatment.
+  display_text_widget_.setUseOnSurfaceVariant(true);
   attachChild(display_text_widget_);
   attachChild(passive_search_icon_);
 }
