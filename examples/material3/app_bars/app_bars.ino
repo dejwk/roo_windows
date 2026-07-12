@@ -87,11 +87,15 @@ class AppBarsScreen : public ScrollablePanel {
   explicit AppBarsScreen(ApplicationContext& context)
       : ScrollablePanel(context),
         content_(context, FlexDirection::kColumn),
-        title_(context, "Material 3 search bars", font_h6()),
+        title_(context, "Material 3 app bars", font_h6()),
         subtitle_(context,
-                  "Phase 2 standalone search-entry surface. Tap either bar.",
+                  "Title, standalone, and top-edge search-entry surfaces.",
                   font_caption()),
         divider_(context),
+        app_bar_heading_(context, "Title-based top app bar", font_subtitle2()),
+        title_app_bar_(context, material3::AppBarVariant::kSmall),
+        search_app_bar_heading_(context, "Search app bar", font_subtitle2()),
+        search_app_bar_(context),
         passive_heading_(context, "Default passive leading search icon",
                          font_subtitle2()),
         passive_search_(context),
@@ -101,6 +105,10 @@ class AppBarsScreen : public ScrollablePanel {
         leading_(context, ic_outlined_24_action_done()),
         first_trailing_(context, ic_outlined_24_navigation_close()),
         second_trailing_(context, ic_outlined_24_navigation_more_vert()),
+        app_bar_leading_(context, ic_outlined_24_navigation_menu()),
+        app_bar_trailing_(context, ic_outlined_24_navigation_more_vert()),
+        search_app_bar_inner_(context, ic_outlined_24_action_search()),
+        search_app_bar_outer_(context, ic_outlined_24_navigation_more_vert()),
         feedback_(context, "Tap a search surface to simulate opening search.",
                   font_caption()),
         activations_(0) {
@@ -112,12 +120,23 @@ class AppBarsScreen : public ScrollablePanel {
     custom_search_.setLeading(leading_);
     custom_search_.setTrailing(0, first_trailing_);
     custom_search_.setTrailing(1, second_trailing_);
+    title_app_bar_.setTitle("Inbox");
+    title_app_bar_.setLeading(app_bar_leading_);
+    title_app_bar_.setTrailing(0, app_bar_trailing_);
+    search_app_bar_.setDisplayText("Search messages");
+    search_app_bar_.setInnerTrailing(0, search_app_bar_inner_);
+    search_app_bar_.setTrailing(0, search_app_bar_outer_);
     passive_search_.setOnInteractiveChange([this]() { showActivation(); });
     custom_search_.setOnInteractiveChange([this]() { showActivation(); });
+    search_app_bar_.setOnInteractiveChange([this]() { showActivation(); });
 
     content_.add(title_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(subtitle_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(divider_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(app_bar_heading_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(title_app_bar_, {.flex_grow = 0, .flex_shrink = 1});
+    content_.add(search_app_bar_heading_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(search_app_bar_, {.flex_grow = 0, .flex_shrink = 1});
     content_.add(passive_heading_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(passive_search_, {.flex_grow = 0, .flex_shrink = 1});
     content_.add(custom_heading_, {.flex_grow = 0, .flex_shrink = 0});
@@ -138,6 +157,10 @@ class AppBarsScreen : public ScrollablePanel {
   TextLabel title_;
   TextLabel subtitle_;
   HorizontalDivider divider_;
+  TextLabel app_bar_heading_;
+  material3::AppBar title_app_bar_;
+  TextLabel search_app_bar_heading_;
+  material3::SearchAppBar search_app_bar_;
   TextLabel passive_heading_;
   material3::SearchBar passive_search_;
   TextLabel custom_heading_;
@@ -145,6 +168,10 @@ class AppBarsScreen : public ScrollablePanel {
   Icon leading_;
   Icon first_trailing_;
   Icon second_trailing_;
+  Icon app_bar_leading_;
+  Icon app_bar_trailing_;
+  Icon search_app_bar_inner_;
+  Icon search_app_bar_outer_;
   TextLabel feedback_;
   char message_[48];
   unsigned int activations_;

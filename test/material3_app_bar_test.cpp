@@ -1,4 +1,5 @@
 #include <string>
+#include <vector>
 
 #include "gtest/gtest.h"
 #include "roo_scheduler.h"
@@ -32,6 +33,7 @@ class TestSearchAppBar : public SearchAppBar {
  public:
   using SearchAppBar::SearchAppBar;
   int childCount() const { return getChildrenCount(); }
+  Widget& childAt(int index) { return getChild(index); }
 };
 
 class ProbeWidget : public BasicWidget {
@@ -112,7 +114,47 @@ TEST(Material3AppBar, ChildSlotsAreBoundedAndClearable) {
   EXPECT_EQ(2, search_bar.childCount());
 
   search_app_bar.setInnerTrailing(0, inner);
-  EXPECT_EQ(1, search_app_bar.childCount());
+  // SearchAppBar owns by-value display text and a passive search glyph in
+  // addition to its optional fixed slots.
+  EXPECT_EQ(3, search_app_bar.childCount());
+}
+
+// The full-width shell stays 64dp high. Its embedded entry fills the central
+// strip only up to 720dp and leaves outer action slots outside search hit area.
+TEST(Material3AppBar, SearchAppBarUsesAdaptiveEmbeddedLaneAndRestrictedHits) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+  TestSearchAppBar search_app_bar(context);
+  ProbeWidget outer_action(context), inner_action(context);
+  search_app_bar.setDisplayText("Search mail");
+  search_app_bar.setTrailing(0, outer_action);
+  search_app_bar.setInnerTrailing(0, inner_action);
+
+  EXPECT_EQ(Scaled(64), search_app_bar
+                            .measure(WidthSpec::Exactly(1000),
+                                     HeightSpec::Unspecified(0))
+                            .height());
+  search_app_bar.layout(Rect(0, 0, 999, Scaled(64) - 1));
+
+  // The passive glyph is child 1. The capped 720dp lane stays start-aligned
+  // in the central strip after the right outer action slot has been reserved.
+  EXPECT_EQ(Scaled(16), search_app_bar.childAt(1).offsetLeft());
+  EXPECT_EQ(Scaled(948), outer_action.offsetLeft());
+  EXPECT_GT(inner_action.offsetLeft(), search_app_bar.childAt(1).offsetLeft());
+
+  std::vector<Widget*> path;
+  EXPECT_FALSE(search_app_bar.fillTouchTargetPath(Scaled(800), Scaled(32), path));
+  EXPECT_TRUE(path.empty());
+
+  EXPECT_TRUE(search_app_bar.fillTouchTargetPath(
+      outer_action.offsetLeft() + 1, outer_action.offsetTop() + 1, path));
+  EXPECT_EQ(&outer_action, path.back());
+  path.clear();
+
+  EXPECT_TRUE(search_app_bar.fillTouchTargetPath(
+      inner_action.offsetLeft(), inner_action.offsetTop(), path));
+  EXPECT_EQ(&inner_action, path.back());
 }
 
 // Verifies the standalone entry follows its 56dp row token, prefers the

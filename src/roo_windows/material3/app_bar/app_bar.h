@@ -206,6 +206,17 @@ class SearchAppBar : public Container {
   /// Search entry surfaces are intrinsically clickable.
   bool isClickable() const override { return true; }
 
+  /// The outer action strip remains interactive, but only the contained
+  /// search-entry lane activates this app bar itself.
+  bool fillTouchTargetPath(XDim x, YDim y,
+                           std::vector<Widget*>& path) override;
+  bool fillSloppyTouchTargetPath(XDim x, YDim y,
+                                 std::vector<Widget*>& path) override;
+
+  Color background() const override;
+  void paint(PaintContext& ctx) const override;
+  bool useOverlayOnPress() const override { return false; }
+
  protected:
   int getChildrenCount() const override;
   const Widget& getChild(int idx) const override;
@@ -214,10 +225,16 @@ class SearchAppBar : public Container {
  private:
   void replaceSlot(Widget*& slot, WidgetRef widget);
   roo::string_view display_text_;
+  internal::AppBarText display_text_widget_;
+  Icon passive_search_icon_;
   Widget* leading_;
   Widget* inner_trailing_[2];
   Widget* trailing_[2];
   AppBarSurfaceState surface_state_;
+  Rect search_entry_bounds_;
+
+  Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
+  void onLayout(bool changed, const Rect& rect) override;
 };
 
 }  // namespace roo_windows::material3
