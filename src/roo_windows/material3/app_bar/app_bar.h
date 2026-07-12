@@ -3,8 +3,11 @@
 #include <stdint.h>
 
 #include "roo_backport/string_view.h"
+#include "roo_windows/core/border_style.h"
 #include "roo_windows/core/container.h"
+#include "roo_windows/core/widget.h"
 #include "roo_windows/core/widget_ref.h"
+#include "roo_windows/widgets/icon.h"
 
 namespace roo_windows::material3 {
 
@@ -16,6 +19,27 @@ enum class AppBarTitleAlignment : uint8_t { kLeading, kCentered };
 
 /// Selects the flat or content-separated app-bar surface treatment.
 enum class AppBarSurfaceState : uint8_t { kFlat, kScrolled };
+
+namespace internal {
+
+// The entry-only search surface needs a bounded, non-interactive text child.
+// It deliberately keeps only a view: editable query state belongs to the
+// later focused-search work, not to this shell component.
+class AppBarText final : public Widget {
+ public:
+  explicit AppBarText(ApplicationContext& context) : Widget(context) {}
+
+  void setText(roo::string_view text) { text_ = text; }
+  roo::string_view text() const { return text_; }
+
+  Dimensions getSuggestedMinimumDimensions() const override;
+  void paint(PaintContext& ctx) const override;
+
+ private:
+  roo::string_view text_;
+};
+
+}  // namespace internal
 
 /// Phase-1 declaration of the Material 3 title-based top-app-bar family.
 class AppBar : public Container {
@@ -103,6 +127,14 @@ class SearchBar : public Container {
   /// Search entry surfaces are intrinsically clickable.
   bool isClickable() const override { return true; }
 
+  /// Keeps interaction feedback out of the container surface paint path.
+  /// Activation still follows the ordinary click and semantic-action path.
+  bool useOverlayOnPress() const override { return false; }
+
+  /// Resolves the standalone contained-search surface token.
+  Color background() const override;
+  BorderStyle getBorderStyle() const override;
+
  protected:
   int getChildrenCount() const override;
   const Widget& getChild(int idx) const override;
@@ -111,8 +143,13 @@ class SearchBar : public Container {
  private:
   void replaceSlot(Widget*& slot, WidgetRef widget);
   roo::string_view display_text_;
+  internal::AppBarText display_text_widget_;
+  Icon passive_search_icon_;
   Widget* leading_;
   Widget* trailing_[2];
+
+  Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
+  void onLayout(bool changed, const Rect& rect) override;
 };
 
 /// Phase-1 declaration of the full-width Material 3 search app bar.
