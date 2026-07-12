@@ -360,8 +360,8 @@ bool Slider::onDown(XDim x, YDim y) {
   return isEnabled();
 }
 
-bool Slider::onSingleTapUp(XDim x, YDim y) {
-  if (!isEnabled()) return false;
+void Slider::onSingleTapUp(XDim x, YDim y) {
+  if (!isEnabled()) return;
   BasicWidget::onSingleTapUp(x, y);
   internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
   float value =
@@ -371,7 +371,6 @@ bool Slider::onSingleTapUp(XDim x, YDim y) {
     triggerInteractiveChange();
   }
   onInteractionEnd(value_);
-  return true;
 }
 
 void Slider::onShowPress(XDim x, YDim y) {

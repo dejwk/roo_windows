@@ -23,11 +23,11 @@ const ::roo_display::Pictogram& slider_48();
 static constexpr int kSwitchAnimationMs = 120;
 }  // namespace
 
-bool Switch::onSingleTapUp(XDim x, YDim y) {
+void Switch::onSingleTapUp(XDim x, YDim y) {
   toggle();
   anim_ = (anim_ & kOnOffStateMask) |
           (roo_time::Uptime::Now().inMillis() & kTimeMask);
-  return Widget::onSingleTapUp(x, y);
+  Widget::onSingleTapUp(x, y);
 }
 
 int16_t Switch::time_animating_ms() const {

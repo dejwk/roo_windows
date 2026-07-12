@@ -1336,7 +1336,7 @@ TEST_F(Material3SliderAppTest,
   internal::SliderAxisMetrics axis(tracking->width(), tracking->height());
 
   XDim tap_x = Scaled(84);
-  ASSERT_TRUE(tracking->onSingleTapUp(tap_x, tracking->height() / 2));
+  tracking->onSingleTapUp(tap_x, tracking->height() / 2);
   roo_display::FpPoint tapped_focus = tracking->getPointOverlayFocus();
   EXPECT_FLOAT_EQ(
       CenterFromValueForTest(axis, tracking->range(), tracking->endValue()),
@@ -1450,7 +1450,7 @@ TEST_F(Material3SliderAppTest, VerticalTapToJumpUsesReversedYMapping) {
                             kSliderY + Scaled(60) - 1));
   ASSERT_TRUE(app_.refresh());
 
-  EXPECT_TRUE(slider().onSingleTapUp(slider().width() / 2, 1));
+  slider().onSingleTapUp(slider().width() / 2, 1);
   EXPECT_GT(slider().value(), 0.95f);
 }
 
@@ -1469,7 +1469,7 @@ TEST_F(Material3SliderAppTest, VerticalNormalDirectionUsesForwardYMapping) {
                             kSliderY + Scaled(60) - 1));
   ASSERT_TRUE(app_.refresh());
 
-  EXPECT_TRUE(slider().onSingleTapUp(slider().width() / 2, 1));
+  slider().onSingleTapUp(slider().width() / 2, 1);
   EXPECT_LT(slider().value(), 0.05f);
 }
 
@@ -1488,8 +1488,7 @@ TEST_F(Material3SliderAppTest,
                             kSliderY + kSliderHeight - 1));
   ASSERT_TRUE(app_.refresh());
 
-  EXPECT_TRUE(
-      slider().onSingleTapUp(slider().width() - 2, slider().height() / 2));
+  slider().onSingleTapUp(slider().width() - 2, slider().height() / 2);
   EXPECT_LT(slider().value(), 0.05f);
 }
 
@@ -1498,7 +1497,7 @@ TEST_F(Material3SliderAppTest,
 TEST_F(Material3SliderAppTest, TapToJumpLandsAtMidpointValue) {
   Slider& slider = addSlider(0.0f);
 
-  EXPECT_TRUE(slider.onSingleTapUp(Scaled(48) - 1, slider.height() / 2));
+  slider.onSingleTapUp(Scaled(48) - 1, slider.height() / 2);
   EXPECT_FLOAT_EQ(0.5f, slider.value());
 }
 
@@ -1513,7 +1512,7 @@ TEST_F(Material3SliderAppTest, TapToJumpSnapsToNearestDiscreteStep) {
                             kSliderY + kSliderHeight - 1));
   ASSERT_TRUE(app_.refresh());
 
-  EXPECT_TRUE(slider().onSingleTapUp(Scaled(70), slider().height() / 2));
+  slider().onSingleTapUp(Scaled(70), slider().height() / 2);
   EXPECT_FLOAT_EQ(4.0f, slider().value());
 }
 
@@ -1532,11 +1531,11 @@ TEST_F(Material3SliderAppTest,
   slider.setValue(0.0f);
   EXPECT_EQ(0, interactive_change_count);
 
-  EXPECT_TRUE(slider.onSingleTapUp(Scaled(48) - 1, slider.height() / 2));
+  slider.onSingleTapUp(Scaled(48) - 1, slider.height() / 2);
   EXPECT_EQ(1, interactive_change_count);
   EXPECT_FLOAT_EQ(0.5f, slider.value());
 
-  EXPECT_TRUE(slider.onSingleTapUp(Scaled(48) - 1, slider.height() / 2));
+  slider.onSingleTapUp(Scaled(48) - 1, slider.height() / 2);
   EXPECT_EQ(1, interactive_change_count);
 
   slider.onDragStart(Scaled(96) - 1, slider.height() / 2);
@@ -1561,7 +1560,7 @@ TEST_F(Material3SliderAppTest,
                             kSliderY + kSliderHeight - 1));
   ASSERT_TRUE(app_.refresh());
 
-  EXPECT_TRUE(tracking->onSingleTapUp(Scaled(48) - 1, tracking->height() / 2));
+  tracking->onSingleTapUp(Scaled(48) - 1, tracking->height() / 2);
 
   ASSERT_EQ(3u, tracking->events.size());
   EXPECT_STREQ("start", tracking->events[0]);
@@ -2888,7 +2887,7 @@ TEST_F(Material3SliderAppTest,
                             kSliderY + Scaled(60) - 1));
   ASSERT_TRUE(app_.refresh());
 
-  ASSERT_TRUE(tracking->onSingleTapUp(tracking->width() / 2, 2));
+  tracking->onSingleTapUp(tracking->width() / 2, 2);
   ASSERT_GE(tracking->events.size(), 2u);
   EXPECT_STREQ("start", tracking->events[0]);
   EXPECT_STREQ("value:user:", tracking->events[1]);

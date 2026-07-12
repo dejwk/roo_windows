@@ -46,14 +46,13 @@ bool Slider::onDown(XDim x, YDim y) {
   return true;
 }
 
-bool Slider::onSingleTapUp(XDim x, YDim y) {
+void Slider::onSingleTapUp(XDim x, YDim y) {
   BasicWidget::onSingleTapUp(x, y);
   Padding p = getPadding();
   int16_t range = range_from_width(width(), p);
   if (setPos(pos_from_x(x, range, p))) {
     triggerInteractiveChange();
   }
-  return true;
 }
 
 void Slider::onShowPress(XDim x, YDim y) {

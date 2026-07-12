@@ -241,16 +241,15 @@ void Tab::paint(PaintContext& ctx) const {
   }
 }
 
-bool Tab::onSingleTapUp(XDim x, YDim y) {
-  bool handled = Widget::onSingleTapUp(x, y);
-  if (handled && parent() != nullptr) {
+void Tab::onSingleTapUp(XDim x, YDim y) {
+  Widget::onSingleTapUp(x, y);
+  if (parent() != nullptr) {
     Tabs* tabs = static_cast<Tabs*>(parent());
     if (tabs->selectionCommitMode() == TabsSelectionCommitMode::kOnRelease) {
       click_handled_on_release_ = true;
       tabs->handleTabClicked(*this);
     }
   }
-  return handled;
 }
 
 void Tab::onClicked() {

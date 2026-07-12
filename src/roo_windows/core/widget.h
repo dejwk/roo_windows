@@ -348,9 +348,8 @@ class Widget {
 
   // Called when the gesture is recognized as a single tap, during the 'up'
   // event that ended the tap. Contains the coordinates of the 'up' event, in
-  // the widget's coordinate system. The widget should return true if it handled
-  // the event. Otherwise, the event, and the subsequent events, will be
-  // redirected to the parent.
+  // the widget's coordinate system. The selected tap role exclusively receives
+  // this terminal callback; it cannot redirect the event to an ancestor.
   //
   // Most widgets should not override this method, and override 'onClicked()'
   // instead. The default implementation handles state changes to show the
@@ -360,7 +359,7 @@ class Widget {
   // If you would like to perform some additional action on the tap 'up', you
   // may want to override this method and call the superclass method at the
   // beginning of your implementation.
-  virtual bool onSingleTapUp(XDim x, YDim y);
+  virtual void onSingleTapUp(XDim x, YDim y);
 
   /// Returns whether this widget may receive the tap role for a touch stream.
   virtual bool supportsTap() const { return isClickable(); }

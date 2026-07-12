@@ -309,10 +309,10 @@ void SimpleScrollablePanel::onDragStart(XDim x, YDim y) {
   }
 }
 
-bool SimpleScrollablePanel::onSingleTapUp(XDim x, YDim y) {
+void SimpleScrollablePanel::onSingleTapUp(XDim x, YDim y) {
   // We generally swallow and ignore tap events, except when tapping on
   // a scrollbar area.
-  if (!scroll_bar_gesture_) return true;
+  if (!scroll_bar_gesture_) return;
   if (scroll_bar_.isVisible()) {
     // Interpret as an immediate jump.
     // Calculate the difference in pixels between the minimum and maximum
@@ -335,7 +335,6 @@ bool SimpleScrollablePanel::onSingleTapUp(XDim x, YDim y) {
   }
   deadline_hide_scrollbar_ = roo_time::Uptime::Now() + kDelayHideScrollbar;
   scheduleHideScrollBarUpdate();
-  return true;
 }
 
 void SimpleScrollablePanel::onDrag(XDim x, YDim y, XDim dx, YDim dy) {

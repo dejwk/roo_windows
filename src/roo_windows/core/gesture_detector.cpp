@@ -114,13 +114,15 @@ bool GestureDetector::onTouchMove(Widget& widget, XDim x, YDim y) {
 }
 
 bool GestureDetector::onTouchUp(Widget& widget, XDim x, YDim y) {
-  bool handled = false;
   if (phase_ == Phase::kLongPress) {
     phase_ = Phase::kPressTracking;
     widget.onLongPressFinished(x, y);
-    handled = true;
+    cancelRolesExcept(&widget);
+    return true;
   } else if (!moved_outside_tap_region_) {
-    handled |= widget.onSingleTapUp(x, y);
+    widget.onSingleTapUp(x, y);
+    cancelRolesExcept(&widget);
+    return true;
   } else if (phase_ == Phase::kDragOwned) {
     // Terminal owned delivery never bubbles through legacy touch routing.
     return &widget == drag_target_ && finishOwnedDrag();
@@ -129,7 +131,7 @@ bool GestureDetector::onTouchUp(Widget& widget, XDim x, YDim y) {
   }
   show_press_event_.clear();
   long_press_event_.clear();
-  return handled;
+  return false;
 }
 
 bool GestureDetector::dispatch(TouchEvent::Type type) {
@@ -138,6 +140,36 @@ bool GestureDetector::dispatch(TouchEvent::Type type) {
   }
   if (type == TouchEvent::UP && phase_ == Phase::kDragOwned) {
     return finishOwnedDrag();
+  }
+
+  if (type == TouchEvent::UP && phase_ == Phase::kLongPress) {
+    Widget* target = long_press_target_;
+    if (target == nullptr) return false;
+    XDim x;
+    YDim y;
+    target->getAbsoluteOffset(x, y);
+    target->onLongPressFinished(latest_.x() - x, latest_.y() - y);
+    cancelRolesExcept(target);
+    return true;
+  }
+
+  if (type == TouchEvent::UP && phase_ == Phase::kPressTracking) {
+    Widget* target = tap_target_;
+    if (target == nullptr || moved_outside_tap_region_) {
+      cancelRolesExcept(nullptr);
+      return false;
+    }
+    XDim x;
+    YDim y;
+    target->getAbsoluteOffset(x, y);
+    if (!target->getSloppyTouchBounds().contains(latest_.x() - x,
+                                                 latest_.y() - y)) {
+      cancelRolesExcept(nullptr);
+      return false;
+    }
+    target->onSingleTapUp(latest_.x() - x, latest_.y() - y);
+    cancelRolesExcept(target);
+    return true;
   }
 
   // Interception is available only before a drag has an owner.
@@ -154,10 +186,7 @@ bool GestureDetector::dispatch(TouchEvent::Type type) {
     return arbitrateDrag();
   }
 
-  Widget* target = phase_ == Phase::kDragOwned
-                       ? drag_target_
-                       : (phase_ == Phase::kLongPress ? long_press_target_
-                                                      : tap_target_);
+  Widget* target = phase_ == Phase::kDragOwned ? drag_target_ : tap_target_;
   if (target == nullptr) target = drag_target_;
   // Phase 2 establishes strong post-claim ownership. Terminal callback
   // cleanup remains legacy until Phase 3, but must not fall back to ancestors.

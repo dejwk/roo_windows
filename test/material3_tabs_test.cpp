@@ -29,7 +29,7 @@ class TestTab : public Tab {
 
   void clickForTest() { onClicked(); }
 
-  bool tapUpForTest() { return onSingleTapUp(width() / 2, height() / 2); }
+  void tapUpForTest() { onSingleTapUp(width() / 2, height() / 2); }
 
   Rect coreContentBoundsForTest() const { return getCoreContentBounds(); }
 };
@@ -281,7 +281,7 @@ TEST_F(Material3TabsRenderTest, TapUpCommitsSelectionImmediatelyByDefault) {
   app_.add(std::move(tabs), roo_display::Box(0, 0, 179, Scaled(48) - 1));
   EXPECT_TRUE(refresh());
 
-  EXPECT_TRUE(second_raw->tapUpForTest());
+  second_raw->tapUpForTest();
 
   EXPECT_EQ(1, tabs_raw->selectedIndex());
   EXPECT_EQ(1, tabs_raw->invoked_index);
@@ -308,7 +308,7 @@ TEST_F(Material3TabsRenderTest, CanDeferSelectionUntilClickAnimationCompletes) {
   app_.add(std::move(tabs), roo_display::Box(0, 0, 179, Scaled(48) - 1));
   EXPECT_TRUE(refresh());
 
-  EXPECT_TRUE(second_raw->tapUpForTest());
+  second_raw->tapUpForTest();
 
   EXPECT_EQ(0, tabs_raw->selectedIndex());
   EXPECT_EQ(0, tabs_raw->invoked_count);

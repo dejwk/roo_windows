@@ -755,24 +755,23 @@ void Widget::onShowPress(XDim x, YDim y) {
   setPressed(true);
 }
 
-bool Widget::onSingleTapUp(XDim x, YDim y) {
-  if (!isClickable()) return false;
+void Widget::onSingleTapUp(XDim x, YDim y) {
+  if (!isClickable()) return;
   if (isPressed()) {
     setPressed(false);
   } else {
     // Quick release (onShowPress not yet triggered).
     if (showClickAnimation()) {
       ClickAnimation* anim = ClickAnimationController(*this);
-      if (anim == nullptr) return false;
+      if (anim == nullptr) return;
       setClicking();
       setDirty();
       anim->start(this, x, y);
     }
   }
   ClickAnimation* anim = ClickAnimationController(*this);
-  if (anim == nullptr) return false;
+  if (anim == nullptr) return;
   anim->confirmClick(this);
-  return true;
 }
 
 void Widget::onLongPress(XDim dx, YDim dy) {}

@@ -337,7 +337,7 @@ class ListEntry : public Container {
 
   /// Starts row invocation when tap-up is confirmed, while click animation
   /// continues, and defers duplicate suppression to onClicked().
-  bool onSingleTapUp(XDim x, YDim y) override;
+  void onSingleTapUp(XDim x, YDim y) override;
 
  protected:
   int getChildrenCount() const override;

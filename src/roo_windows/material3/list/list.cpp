@@ -935,20 +935,17 @@ void ListEntry::onClicked() {
   Widget::onClicked();
 }
 
-bool ListEntry::onSingleTapUp(XDim x, YDim y) {
-  bool handled = false;
+void ListEntry::onSingleTapUp(XDim x, YDim y) {
   if (getMainWindow() == nullptr) {
     // Allows direct unit-test invocation without a live gesture detector.
-    handled = true;
   } else {
-    handled = Widget::onSingleTapUp(x, y);
+    Widget::onSingleTapUp(x, y);
   }
 
   if (item_ != nullptr && item_->isInvokable()) {
     item_->invoke();
     suppress_next_click_invoke_ = true;
   }
-  return handled;
 }
 
 int ListEntry::getChildrenCount() const {

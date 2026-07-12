@@ -100,7 +100,7 @@ class Switch : public BasicWidget {
   ::roo_windows::material3::ColorToken effectiveContainerRole() const override;
 
   /// Toggles the on/off state and starts the thumb animation.
-  bool onSingleTapUp(XDim x, YDim y) override;
+  void onSingleTapUp(XDim x, YDim y) override;
 
  private:
   static constexpr uint16_t kIdleMask = 0x8000;

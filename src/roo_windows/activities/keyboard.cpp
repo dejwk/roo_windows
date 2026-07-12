@@ -243,7 +243,7 @@ class TextButton : public KeyboardButton {
     }
   }
 
-  bool onSingleTapUp(XDim x, YDim y) override {
+  void onSingleTapUp(XDim x, YDim y) override {
     KeyboardPage* page = ((KeyboardPage*)parent());
     page->hideHighlighter();
     KeyboardListener* listener = page->keyboard()->listener();
@@ -255,7 +255,7 @@ class TextButton : public KeyboardButton {
       // Flip back.
       keyboard().setCapsState(Keyboard::CAPS_STATE_LOW);
     }
-    return Button::onSingleTapUp(x, y);
+    Button::onSingleTapUp(x, y);
   }
 
   uint16_t rune_;
@@ -268,13 +268,13 @@ class SpaceButton : public KeyboardButton {
 
   bool showClickAnimation() const override { return false; }
 
-  bool onSingleTapUp(XDim x, YDim y) override {
+  void onSingleTapUp(XDim x, YDim y) override {
     KeyboardPage* page = ((KeyboardPage*)parent());
     KeyboardListener* listener = page->keyboard()->listener();
     if (listener != nullptr) {
       listener->rune(' ');
     }
-    return Button::onSingleTapUp(x, y);
+    Button::onSingleTapUp(x, y);
   }
 };
 
@@ -285,13 +285,13 @@ class EnterButton : public KeyboardButton {
 
   bool showClickAnimation() const override { return false; }
 
-  bool onSingleTapUp(XDim x, YDim y) override {
+  void onSingleTapUp(XDim x, YDim y) override {
     KeyboardPage* page = ((KeyboardPage*)parent());
     KeyboardListener* listener = page->keyboard()->listener();
     if (listener != nullptr) {
       listener->enter();
     }
-    return Button::onSingleTapUp(x, y);
+    Button::onSingleTapUp(x, y);
   }
 };
 
@@ -355,13 +355,13 @@ class DelButton : public KeyboardButton {
 
   bool showClickAnimation() const override { return false; }
 
-  bool onSingleTapUp(XDim x, YDim y) override {
+  void onSingleTapUp(XDim x, YDim y) override {
     KeyboardPage* page = ((KeyboardPage*)parent());
     KeyboardListener* listener = page->keyboard()->listener();
     if (listener != nullptr) {
       listener->del();
     }
-    return Button::onSingleTapUp(x, y);
+    Button::onSingleTapUp(x, y);
   }
 };
 

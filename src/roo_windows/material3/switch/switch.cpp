@@ -105,10 +105,10 @@ void Switch::setUnselectedIcon(const MonoIcon* icon) {
   invalidateInterior();
 }
 
-bool Switch::onSingleTapUp(XDim x, YDim y) {
+void Switch::onSingleTapUp(XDim x, YDim y) {
   toggle();
   anim_ = (anim_ & kOnOffStateMask) | (millis() & kTimeMask);
-  return Widget::onSingleTapUp(x, y);
+  Widget::onSingleTapUp(x, y);
 }
 
 int16_t Switch::timeAnimatingMs() const {

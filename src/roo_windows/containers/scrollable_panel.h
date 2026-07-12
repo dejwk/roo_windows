@@ -205,7 +205,7 @@ class SimpleScrollablePanel : public Container,
   /// Pins the scroll motion and cancels any in-flight animation on ownership.
   void onDragStart(XDim x, YDim y) override;
   /// Allows the child to handle the tap normally (no scroll action).
-  bool onSingleTapUp(XDim x, YDim y) override;
+  void onSingleTapUp(XDim x, YDim y) override;
   /// Translates drag deltas into immediate scroll movement.
   void onDrag(XDim x, YDim y, XDim dx, YDim dy) override;
   /// Starts a momentum fling animation seeded from the gesture velocity.

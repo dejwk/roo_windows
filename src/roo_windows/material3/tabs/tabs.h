@@ -82,7 +82,7 @@ class Tab : public SurfaceWidget {
   Rect getCoreContentBounds() const;
   Rect getContentPaintBounds() const;
   Rect getDirectPaintExclusionBounds() const override;
-  bool onSingleTapUp(XDim x, YDim y) override;
+  void onSingleTapUp(XDim x, YDim y) override;
   void onClicked() override;
   virtual Dimensions getContentMinimumDimensions() const;
   virtual void paintContent(PaintContext& ctx, const Rect& content_bounds,

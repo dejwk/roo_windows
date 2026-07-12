@@ -28,7 +28,7 @@ class Slider : public BasicWidget {
   bool onDown(XDim x, YDim y) override;
 
   /// Treats a tap-up as a final position commit.
-  bool onSingleTapUp(XDim x, YDim y) override;
+  void onSingleTapUp(XDim x, YDim y) override;
 
   /// Captures the press location so the slider can show a static press
   /// overlay before scrolling starts.

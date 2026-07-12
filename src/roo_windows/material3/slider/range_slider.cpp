@@ -321,8 +321,8 @@ bool RangeSlider::onDown(XDim x, YDim y) {
   return isEnabled();
 }
 
-bool RangeSlider::onSingleTapUp(XDim x, YDim y) {
-  if (!isEnabled()) return false;
+void RangeSlider::onSingleTapUp(XDim x, YDim y) {
+  if (!isEnabled()) return;
   internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
   int16_t primary_coord = axis.primaryCoordFromPoint(x, y);
   float start_center = axis.centerFromValue(range_, start_value_);
@@ -340,7 +340,6 @@ bool RangeSlider::onSingleTapUp(XDim x, YDim y) {
   awaiting_direction_ = false;
   is_dragging_ = false;
   onInteractionEnd(start_value_, end_value_);
-  return true;
 }
 
 void RangeSlider::onShowPress(XDim x, YDim y) {

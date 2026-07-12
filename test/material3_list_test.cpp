@@ -519,7 +519,7 @@ TEST(Material3List, NavigationRowsInvokeOnTapUpWithoutDoubleInvokeOnClick) {
   EXPECT_TRUE(row.isClickable());
   EXPECT_EQ(0, invocation_count);
 
-  EXPECT_TRUE(row.onSingleTapUp(0, 0));
+  row.onSingleTapUp(0, 0);
   EXPECT_EQ(1, invocation_count);
 
   row.onClicked();

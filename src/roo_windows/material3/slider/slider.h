@@ -196,7 +196,7 @@ class Slider : public BasicWidget {
   bool onDown(XDim x, YDim y) override;
 
   /// Handles tap-to-jump by moving the thumb directly to the tapped position.
-  bool onSingleTapUp(XDim x, YDim y) override;
+  void onSingleTapUp(XDim x, YDim y) override;
 
   /// Starts drag interaction when the press lands near the current thumb.
   void onShowPress(XDim x, YDim y) override;

@@ -103,7 +103,7 @@ class RangeSlider : public BasicWidget {
   bool onDown(XDim x, YDim y) override;
 
   /// Handles tap-to-jump by choosing the nearer thumb and moving it.
-  bool onSingleTapUp(XDim x, YDim y) override;
+  void onSingleTapUp(XDim x, YDim y) override;
 
   /// Starts drag interaction when the press lands near one or both thumbs.
   void onShowPress(XDim x, YDim y) override;
