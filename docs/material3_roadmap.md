@@ -29,7 +29,7 @@ The main framework contracts are already described:
 - [surface_widget_refactor_design.md](design/implemented/surface_widget_refactor_design.md)
 - [visual_overflow_design.md](design/in_progress/visual_overflow_design.md)
 - [widget_event_dispatch_design.md](design/implemented/widget_event_dispatch_design.md)
-- [gesture_scroll_ownership_design.md](design/in_progress/gesture_scroll_ownership_design.md)
+- [gesture_arbitration_ownership_design.md](design/in_progress/gesture_arbitration_ownership_design.md)
 - [text_system_design.md](design/proposed/text_system_design.md)
 - [non_touch_input_design.md](design/proposed/non_touch_input_design.md)
 - [horizontal_page_host_design.md](design/implemented/horizontal_page_host_design.md)
