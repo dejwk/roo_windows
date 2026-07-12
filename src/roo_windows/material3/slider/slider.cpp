@@ -393,12 +393,9 @@ void Slider::onShowPress(XDim x, YDim y) {
   Widget::onShowPress(x, y);
 }
 
-bool Slider::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
-  if (!isEnabled()) return false;
+void Slider::onDrag(XDim x, YDim y, XDim dx, YDim dy) {
+  if (!isEnabled()) return;
   internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
-  if (!axis.shouldCaptureScroll(is_dragging_, dx, dy)) {
-    return false;
-  }
 
   bool was_dragging = is_dragging_;
   if (setValueInternal(
@@ -413,19 +410,18 @@ bool Slider::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
   } else if (was_dragging) {
     is_dragging_ = true;
   }
-  return true;
 }
 
-bool Slider::onTouchUp(XDim x, YDim y) {
+void Slider::onDragFinished(XDim x, YDim y) {
+  (void)x;
+  (void)y;
   if (is_dragging_) {
     if (isPressed()) {
       setPressed(false);
     }
     onInteractionEnd(value_);
     is_dragging_ = false;
-    return true;
   }
-  return Widget::onTouchUp(x, y);
 }
 
 void Slider::onCancel() {

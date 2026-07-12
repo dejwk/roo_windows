@@ -14,8 +14,8 @@ class TestHorizontalPageHost : public HorizontalPageHost {
   explicit TestHorizontalPageHost(ApplicationContext& context)
       : HorizontalPageHost(context) {}
 
-  using HorizontalPageHost::onDown;
-  using HorizontalPageHost::onScroll;
+  using HorizontalPageHost::onDrag;
+  using HorizontalPageHost::onDragStart;
 };
 
 using HorizontalPageHostRenderTest =
@@ -38,14 +38,14 @@ TEST_F(HorizontalPageHostRenderTest, RevealedStripRepaintsWithBlitSupport) {
   EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(10, 20));
   EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(110, 20));
 
-  host_ptr->onDown(0, 0);
-  host_ptr->onScroll(0, 0, -30, 0);
+  host_ptr->onDragStart(0, 0);
+  host_ptr->onDrag(0, 0, -30, 0);
 
   ASSERT_TRUE(refresh());
   EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(10, 20));
   EXPECT_EQ(QuantizeToArgb4444(color::Blue), pixelAt(110, 20));
 
-  host_ptr->onScroll(0, 0, 130, 0);
+  host_ptr->onDrag(0, 0, 130, 0);
 
   ASSERT_TRUE(refresh());
   EXPECT_NE(QuantizeToArgb4444(color::Red), pixelAt(10, 20));
@@ -92,8 +92,8 @@ TEST(HorizontalPageHostRender, RevealedStripRepaintsWithoutBlitSupport) {
   EXPECT_EQ(QuantizeToArgb4444(color::Red), colors0[0]);
   EXPECT_EQ(QuantizeToArgb4444(color::Red), colors0[1]);
 
-  host_ptr->onDown(0, 0);
-  host_ptr->onScroll(0, 0, -30, 0);
+  host_ptr->onDragStart(0, 0);
+  host_ptr->onDrag(0, 0, -30, 0);
   ASSERT_TRUE(app.refresh());
 
   Color colors1[2];

@@ -373,12 +373,9 @@ void RangeSlider::onShowPress(XDim x, YDim y) {
   Widget::onShowPress(x, y);
 }
 
-bool RangeSlider::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
-  if (!isEnabled()) return false;
+void RangeSlider::onDrag(XDim x, YDim y, XDim dx, YDim dy) {
+  if (!isEnabled()) return;
   internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
-  if (!axis.shouldCaptureScroll(is_dragging_ || awaiting_direction_, dx, dy)) {
-    return false;
-  }
 
   if (awaiting_direction_) {
     // Once the thumbs are stacked, use drag direction rather than hit-testing
@@ -389,7 +386,7 @@ bool RangeSlider::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
     } else if (primary_delta > 0) {
       active_thumb_ = 1;
     } else {
-      return true;
+      return;
     }
     overlay_thumb_ = active_thumb_;
     awaiting_direction_ = false;
@@ -411,10 +408,9 @@ bool RangeSlider::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
     setPressed(true);
     triggerInteractiveChange();
   }
-  return true;
 }
 
-bool RangeSlider::onTouchUp(XDim x, YDim y) {
+void RangeSlider::onDragFinished(XDim x, YDim y) {
   (void)x;
   (void)y;
   if (active_thumb_ != kNoActiveThumb || is_dragging_ || awaiting_direction_) {
@@ -428,9 +424,7 @@ bool RangeSlider::onTouchUp(XDim x, YDim y) {
     if (had_active_thumb) {
       onInteractionEnd(start_value_, end_value_);
     }
-    return true;
   }
-  return Widget::onTouchUp(x, y);
 }
 
 void RangeSlider::onCancel() {

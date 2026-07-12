@@ -299,7 +299,7 @@ bool SimpleScrollablePanel::onInterceptTouchEvent(const TouchEvent& event) {
   return false;
 }
 
-bool SimpleScrollablePanel::onDown(XDim x, YDim y) {
+void SimpleScrollablePanel::onDragStart(XDim x, YDim y) {
   (void)x;
   (void)y;
   cancelPendingUpdate();
@@ -307,7 +307,6 @@ bool SimpleScrollablePanel::onDown(XDim x, YDim y) {
     ScrollPosition current = currentScrollPosition();
     applyScrollResult(motion_.onDown(motionGeometry(), current.x, current.y));
   }
-  return true;
 }
 
 bool SimpleScrollablePanel::onSingleTapUp(XDim x, YDim y) {
@@ -339,15 +338,15 @@ bool SimpleScrollablePanel::onSingleTapUp(XDim x, YDim y) {
   return true;
 }
 
-bool SimpleScrollablePanel::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
+void SimpleScrollablePanel::onDrag(XDim x, YDim y, XDim dx, YDim dy) {
   (void)x;
   (void)y;
   if (contents() == nullptr) {
     // Nothing to scroll.
-    return false;
+    return;
   }
   scroll_motion::Geometry geometry = motionGeometry();
-  if (!geometry.canScroll()) return false;
+  if (!geometry.canScroll()) return;
   if (scroll_bar_gesture_) {
     if (is_scroll_bar_scrolled_) {
       // Calculate the difference in pixels between the minimum and maximum
@@ -371,7 +370,6 @@ bool SimpleScrollablePanel::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
     scroll_bar_.setVisibility(Visibility::kVisible);
     deadline_hide_scrollbar_ = roo_time::Uptime::Now() + roo_time::Hours(1);
   }
-  return true;
 }
 
 bool SimpleScrollablePanel::onFling(XDim x, YDim y, XDim vx, YDim vy) {
@@ -390,8 +388,9 @@ bool SimpleScrollablePanel::onFling(XDim x, YDim y, XDim vx, YDim vy) {
   return true;
 }
 
-bool SimpleScrollablePanel::onTouchUp(XDim vx, YDim vy) {
-  bool result = Widget::onTouchUp(vx, vy);
+void SimpleScrollablePanel::onDragFinished(XDim vx, YDim vy) {
+  (void)vx;
+  (void)vy;
   scroll_bar_gesture_ = false;
   is_scroll_bar_scrolled_ = false;
   if (contents() != nullptr) {
@@ -407,7 +406,6 @@ bool SimpleScrollablePanel::onTouchUp(XDim vx, YDim vy) {
       scheduleHideScrollBarUpdate();
     }
   }
-  return result;
 }
 
 }  // namespace roo_windows

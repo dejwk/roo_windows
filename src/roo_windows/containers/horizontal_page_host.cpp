@@ -185,7 +185,7 @@ bool HorizontalPageHost::onInterceptTouchEvent(const TouchEvent& event) {
   return true;
 }
 
-bool HorizontalPageHost::onDown(XDim x, YDim y) {
+void HorizontalPageHost::onDragStart(XDim x, YDim y) {
   (void)x;
   (void)y;
   // A new touch should always take over immediately from any in-flight settle
@@ -197,15 +197,14 @@ bool HorizontalPageHost::onDown(XDim x, YDim y) {
   setTargetIndex(resolveGestureSettleTarget(0));
   syncActiveSlots();
   updateActivePagePositions();
-  return true;
 }
 
-bool HorizontalPageHost::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
+void HorizontalPageHost::onDrag(XDim x, YDim y, XDim dx, YDim dy) {
   (void)x;
   (void)y;
   (void)dy;
   if (pageCount() <= 1 || width() <= 0 || settled_index_ < 0) {
-    return false;
+    return;
   }
   if (!dragging_) {
     dragging_ = true;
@@ -217,7 +216,6 @@ bool HorizontalPageHost::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
   syncActiveSlots();
   updateActivePagePositions();
   invalidateInterior();
-  return true;
 }
 
 bool HorizontalPageHost::onFling(XDim x, YDim y, XDim vx, YDim vy) {
@@ -230,8 +228,9 @@ bool HorizontalPageHost::onFling(XDim x, YDim y, XDim vx, YDim vy) {
   return true;
 }
 
-bool HorizontalPageHost::onTouchUp(XDim x, YDim y) {
-  bool handled = Widget::onTouchUp(x, y);
+void HorizontalPageHost::onDragFinished(XDim x, YDim y) {
+  (void)x;
+  (void)y;
   if (pageCount() > 1 && settled_index_ >= 0 &&
       animation_state_ != AnimationState::kSettling) {
     int target = resolveGestureSettleTarget(0);
@@ -239,7 +238,12 @@ bool HorizontalPageHost::onTouchUp(XDim x, YDim y) {
   }
   dragging_ = false;
   intercepted_gesture_ = false;
-  return handled;
+}
+
+void HorizontalPageHost::onCancel() {
+  Container::onCancel();
+  dragging_ = false;
+  intercepted_gesture_ = false;
 }
 
 int HorizontalPageHost::getChildrenCount() const {

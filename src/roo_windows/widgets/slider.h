@@ -34,12 +34,12 @@ class Slider : public BasicWidget {
   /// overlay before scrolling starts.
   void onShowPress(XDim x, YDim y) override;
 
-  bool supportsScrolling() const override { return true; }
+  DragAxis dragAxis() const override { return DragAxis::kHorizontal; }
 
   bool usesHighlighterColor() const override { return true; }
 
   /// Translates horizontal scroll deltas into position deltas while dragging.
-  bool onScroll(XDim x, YDim y, XDim dx, YDim dy) override;
+  void onDrag(XDim x, YDim y, XDim dx, YDim dy) override;
 
   /// Resets the drag-armed state if the gesture was canceled mid-drag.
   void onCancel() override;

@@ -422,7 +422,7 @@ TEST(Material3Tabs, HorizontalPageHostGestureDrivesSelection) {
 
   pages.measure(WidthSpec::Exactly(100), HeightSpec::Exactly(40));
   pages.layout(Rect(0, 0, 99, 39));
-  EXPECT_TRUE(pages.onDown(0, 0));
+  pages.onDragStart(0, 0);
   EXPECT_TRUE(pages.onFling(0, 0, -1200, 0));
   scheduler.delay(roo_time::Millis(220));
 
@@ -519,8 +519,8 @@ TEST(Material3Tabs, ScrollableDragMovesStripWithoutSelecting) {
   tabs.layout(Rect(0, 0, 139, 47));
 
   ASSERT_EQ(0, tabs.selectedIndex());
-  ASSERT_TRUE(tabs.onDown(40, 20));
-  EXPECT_TRUE(tabs.onScroll(20, 20, -Scaled(30), 0));
+  tabs.onDragStart(40, 20);
+  tabs.onDrag(20, 20, -Scaled(30), 0);
 
   EXPECT_LT(tabs.scrollOffsetForTest(), 0);
   EXPECT_EQ(0, tabs.selectedIndex());

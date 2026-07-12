@@ -108,15 +108,18 @@ class RangeSlider : public BasicWidget {
   /// Starts drag interaction when the press lands near one or both thumbs.
   void onShowPress(XDim x, YDim y) override;
 
-  /// Range sliders can capture scroll gestures as drag gestures.
-  bool supportsScrolling() const override { return true; }
+  /// Declares the orientation in which this range slider owns drags.
+  DragAxis dragAxis() const override {
+    return style_.orientation == SliderOrientation::kHorizontal
+               ? DragAxis::kHorizontal
+               : DragAxis::kVertical;
+  }
 
-  /// Converts scroll motion along the slider axis into live thumb updates.
-  bool onScroll(XDim x, YDim y, XDim dx, YDim dy) override;
+  /// Converts owned drag motion into live thumb updates.
+  void onDrag(XDim x, YDim y, XDim dx, YDim dy) override;
 
-  /// Finalizes drag interaction and consumes the release when the slider owns
-  /// it.
-  bool onTouchUp(XDim x, YDim y) override;
+  /// Finalizes an owned range-slider drag interaction.
+  void onDragFinished(XDim x, YDim y) override;
 
   /// Cancels any in-progress interaction state.
   void onCancel() override;

@@ -75,11 +75,9 @@ void Slider::onShowPress(XDim x, YDim y) {
   }
 }
 
-bool Slider::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
-  if (!is_dragging_ && (dy * dy > dx * dx) && dy * dy > 25) {
-    //
-    return false;
-  }
+void Slider::onDrag(XDim x, YDim y, XDim dx, YDim dy) {
+  (void)dx;
+  (void)dy;
   // if (y < -20 || y > height() + 20) return false;
   Padding p = getPadding();
   int16_t range = range_from_width(width(), p);
@@ -93,7 +91,6 @@ bool Slider::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
     setPressed(true);
     triggerInteractiveChange();
   }
-  return true;
 }
 
 bool Slider::setPos(uint16_t pos) {

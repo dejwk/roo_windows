@@ -303,11 +303,16 @@ class ScrollableTabs : public Tabs {
   XDim scrollOffsetForTest() const { return scroll_x_; }
 
   bool onInterceptTouchEvent(const TouchEvent& event) override;
-  bool onDown(XDim x, YDim y) override;
-  bool onScroll(XDim x, YDim y, XDim dx, YDim dy) override;
+  void onDragStart(XDim x, YDim y) override;
+  void onDrag(XDim x, YDim y, XDim dx, YDim dy) override;
   bool onFling(XDim x, YDim y, XDim vx, YDim vy) override;
-  bool onTouchUp(XDim x, YDim y) override;
-  bool supportsScrolling() const override {
+  void onDragFinished(XDim x, YDim y) override;
+  void onCancel() override;
+  DragAxis dragAxis() const override {
+    return mode() == TabsMode::kScrollable ? DragAxis::kHorizontal
+                                            : DragAxis::kNone;
+  }
+  bool supportsFling() const override {
     return mode() == TabsMode::kScrollable;
   }
 

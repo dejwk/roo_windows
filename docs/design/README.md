@@ -18,7 +18,7 @@ Status was audited against the source tree and tests on 2026-07-12. “Dependenc
 | Horizontal page host | Viewport layout, adjacent swipe/settle, blit wrappers, examples, and tabs synchronization are implemented. |
 | Material 3 tabs | Fixed, scrollable, badged, and page-host-integrated tabs are implemented; later extensions are tracked as future work. |
 | Paint context | Clipper/overlay integration and the widget paint-hook migration are implemented. |
-| Slider | Paint context, Material 3 theme support, and the local drag-release workaround are implemented; framework gesture ownership and transient presentation pins remain outstanding enhancements. |
+| Slider | Paint context, Material 3 theme support, declarative drag ownership, and lifecycle-safe terminal delivery are implemented; compatibility-routing removal and transient presentation pins remain outstanding enhancements. |
 | Surface-widget refactor | The surface-ownership split is implemented; the broader visual-overflow design remains in progress. |
 | Theme color tokens | Framework theme separation and Material 3 token ownership are implemented in the current tree. |
 | Widget event dispatch | `ApplicationContext` and sparse interactive-change dispatch are implemented. |

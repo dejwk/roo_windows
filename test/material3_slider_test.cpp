@@ -1346,8 +1346,7 @@ TEST_F(Material3SliderAppTest,
   XDim start_thumb_center = (XDim)roundf(
       CenterFromValueForTest(axis, tracking->range(), tracking->startValue()));
   tracking->onShowPress(start_thumb_center, tracking->height() / 2);
-  ASSERT_TRUE(
-      tracking->onScroll(Scaled(42), tracking->height() / 2, Scaled(8), 0));
+  tracking->onDrag(Scaled(42), tracking->height() / 2, Scaled(8), 0);
 
   roo_display::FpPoint dragged_focus = tracking->getPointOverlayFocus();
   EXPECT_FLOAT_EQ(
@@ -1361,7 +1360,8 @@ TEST_F(Material3SliderAppTest,
 TEST_F(Material3SliderAppTest, HorizontalScrollUpdatesPosition) {
   Slider& slider = addSlider(0.0f);
 
-  EXPECT_TRUE(slider.onScroll(Scaled(96) - 1, Scaled(22), Scaled(12), 0));
+  slider.onDragStart(Scaled(96) - 1, Scaled(22));
+  slider.onDrag(Scaled(96) - 1, Scaled(22), Scaled(12), 0);
   EXPECT_GT(slider.value(), 0.9f);
 }
 
@@ -1371,7 +1371,8 @@ TEST_F(Material3SliderAppTest,
        VerticalDominantScrollDoesNotCaptureWhenNotDragging) {
   Slider& slider = addSlider(12345.0f / 65535.0f);
 
-  EXPECT_FALSE(slider.onScroll(Scaled(48), Scaled(22), 1, 6));
+  EXPECT_EQ(DragClaim::kReject,
+            slider.onDragClaim(Scaled(48), Scaled(22), 1, 6));
   EXPECT_FLOAT_EQ(12345.0f / 65535.0f, slider.value());
 }
 
@@ -1408,7 +1409,8 @@ TEST_F(Material3SliderAppTest, VerticalSliderScrollUpUpdatesPosition) {
                             kSliderY + Scaled(60) - 1));
   ASSERT_TRUE(app_.refresh());
 
-  EXPECT_TRUE(slider().onScroll(slider().width() / 2, 2, 0, -Scaled(12)));
+  slider().onDragStart(slider().width() / 2, 2);
+  slider().onDrag(slider().width() / 2, 2, 0, -Scaled(12));
   EXPECT_GT(slider().value(), 0.9f);
 }
 
@@ -1428,8 +1430,9 @@ TEST_F(Material3SliderAppTest,
   ASSERT_TRUE(app_.refresh());
 
   float old_value = slider().value();
-  EXPECT_FALSE(slider().onScroll(slider().width() / 2, slider().height() / 2,
-                                 Scaled(8), 1));
+  EXPECT_EQ(DragClaim::kReject,
+            slider().onDragClaim(slider().width() / 2,
+                                 slider().height() / 2, Scaled(8), 1));
   EXPECT_FLOAT_EQ(old_value, slider().value());
 }
 
@@ -1536,8 +1539,8 @@ TEST_F(Material3SliderAppTest,
   EXPECT_TRUE(slider.onSingleTapUp(Scaled(48) - 1, slider.height() / 2));
   EXPECT_EQ(1, interactive_change_count);
 
-  EXPECT_TRUE(
-      slider.onScroll(Scaled(96) - 1, slider.height() / 2, Scaled(12), 0));
+  slider.onDragStart(Scaled(96) - 1, slider.height() / 2);
+  slider.onDrag(Scaled(96) - 1, slider.height() / 2, Scaled(12), 0);
   EXPECT_EQ(2, interactive_change_count);
   EXPECT_GT(slider.value(), 0.9f);
 }
@@ -1587,8 +1590,7 @@ TEST_F(Material3SliderAppTest, DragLifecycleFiresSingleStartAndEndsOnCancel) {
   ASSERT_EQ(1u, tracking->events.size());
   EXPECT_STREQ("start", tracking->events[0]);
 
-  EXPECT_TRUE(tracking->onScroll(Scaled(96) - 1, tracking->height() / 2,
-                                 Scaled(12), 0));
+  tracking->onDrag(Scaled(96) - 1, tracking->height() / 2, Scaled(12), 0);
   ASSERT_EQ(2u, tracking->events.size());
   EXPECT_STREQ("value:user:", tracking->events[1]);
 
@@ -1617,12 +1619,11 @@ TEST_F(Material3SliderAppTest, DragTouchUpIsConsumedAndEndsInteraction) {
   ASSERT_EQ(1u, tracking->events.size());
   EXPECT_STREQ("start", tracking->events[0]);
 
-  EXPECT_TRUE(tracking->onScroll(Scaled(96) - 1, tracking->height() / 2,
-                                 Scaled(12), 0));
+  tracking->onDrag(Scaled(96) - 1, tracking->height() / 2, Scaled(12), 0);
   ASSERT_EQ(2u, tracking->events.size());
   EXPECT_STREQ("value:user:", tracking->events[1]);
 
-  EXPECT_TRUE(tracking->onTouchUp(Scaled(96) - 1, tracking->height() / 2));
+  tracking->onDragFinished(Scaled(96) - 1, tracking->height() / 2);
   ASSERT_EQ(3u, tracking->events.size());
   EXPECT_STREQ("end", tracking->events[2]);
   ASSERT_EQ(2u, tracking->values.size());
@@ -1655,7 +1656,7 @@ TEST_F(Material3SliderAppTest,
   EXPECT_EQ(0, tracking->active_thumbs[0]);
   EXPECT_EQ(0, tracking->activeThumbIndex());
 
-  EXPECT_TRUE(tracking->onScroll(Scaled(90), kSliderHeight / 2, Scaled(20), 0));
+  tracking->onDrag(Scaled(90), kSliderHeight / 2, Scaled(20), 0);
   ASSERT_GE(tracking->events.size(), 2u);
   EXPECT_STREQ("value:user:", tracking->events.back());
   ASSERT_GE(tracking->active_thumbs.size(), 2u);
@@ -1691,11 +1692,11 @@ TEST_F(Material3SliderAppTest, RangeSliderDragTouchUpIsConsumedAndEnds) {
   ASSERT_FALSE(tracking->events.empty());
   EXPECT_STREQ("start", tracking->events[0]);
 
-  EXPECT_TRUE(tracking->onScroll(Scaled(90), kSliderHeight / 2, Scaled(20), 0));
+  tracking->onDrag(Scaled(90), kSliderHeight / 2, Scaled(20), 0);
   ASSERT_GE(tracking->events.size(), 2u);
   EXPECT_STREQ("value:user:", tracking->events.back());
 
-  EXPECT_TRUE(tracking->onTouchUp(Scaled(90), kSliderHeight / 2));
+  tracking->onDragFinished(Scaled(90), kSliderHeight / 2);
   ASSERT_GE(tracking->events.size(), 3u);
   EXPECT_STREQ("end", tracking->events.back());
   ASSERT_FALSE(tracking->end_active_thumbs.empty());
@@ -1719,7 +1720,7 @@ TEST_F(Material3SliderAppTest, OverlappingRangeThumbsWaitForDirectionalIntent) {
   EXPECT_TRUE(tracking->events.empty());
   EXPECT_EQ(-1, tracking->activeThumbIndex());
 
-  EXPECT_TRUE(tracking->onScroll(Scaled(70), kSliderHeight / 2, Scaled(12), 0));
+  tracking->onDrag(Scaled(70), kSliderHeight / 2, Scaled(12), 0);
   ASSERT_EQ(2u, tracking->events.size());
   EXPECT_STREQ("start", tracking->events[0]);
   EXPECT_STREQ("value:user:", tracking->events[1]);
@@ -2478,8 +2479,7 @@ TEST_F(Material3SliderRenderTest,
   paintWidgetContentsForTest(*slider_ptr);
   EXPECT_TRUE(ExpectPaintConfinedTo({expected_clip}, clear_color));
 
-  ASSERT_TRUE(
-      slider_ptr->onTouchUp(start_thumb_center, slider_ptr->height() / 2));
+  slider_ptr->onDragFinished(start_thumb_center, slider_ptr->height() / 2);
 
   fillScreen(clear_color);
   paintWidgetContentsForTest(*slider_ptr);
@@ -2593,7 +2593,7 @@ TEST_F(Material3SliderRenderTest,
   paintWidgetContentsForTest(*slider_ptr);
   EXPECT_TRUE(ExpectPaintConfinedTo({expected_clip}, clear_color));
 
-  ASSERT_TRUE(slider_ptr->onTouchUp((XDim)focus.x, (YDim)focus.y));
+  slider_ptr->onDragFinished((XDim)focus.x, (YDim)focus.y);
 
   fillScreen(clear_color);
   paintWidgetContentsForTest(*slider_ptr);
@@ -2635,7 +2635,7 @@ TEST_F(Material3SliderRenderTest,
   EXPECT_TRUE(ExpectPaintConfinedTo({expected_clip}, clear_color));
   EXPECT_EQ(kSliderX, expected_clip.xMin());
 
-  ASSERT_TRUE(slider_ptr->onTouchUp((XDim)focus.x, (YDim)focus.y));
+  slider_ptr->onDragFinished((XDim)focus.x, (YDim)focus.y);
 
   fillScreen(clear_color);
   paintWidgetContentsForTest(*slider_ptr);
@@ -2678,7 +2678,7 @@ TEST_F(Material3SliderRenderTest,
   EXPECT_LT(expected.width(), slider_ptr->maxParentBounds().width());
 
   panel_ptr->invalidated_regions.clear();
-  ASSERT_TRUE(slider_ptr->onTouchUp((XDim)focus.x, (YDim)focus.y));
+  slider_ptr->onDragFinished((XDim)focus.x, (YDim)focus.y);
   ASSERT_EQ(1u, panel_ptr->invalidated_regions.size());
   EXPECT_EQ(expected, panel_ptr->invalidated_regions.front());
 }

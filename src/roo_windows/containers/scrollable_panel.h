@@ -202,19 +202,23 @@ class SimpleScrollablePanel : public Container,
   /// itself.
   bool onInterceptTouchEvent(const TouchEvent& event) override;
 
-  /// Pins the touch point and cancels any in-flight animation.
-  bool onDown(XDim x, YDim y) override;
+  /// Pins the scroll motion and cancels any in-flight animation on ownership.
+  void onDragStart(XDim x, YDim y) override;
   /// Allows the child to handle the tap normally (no scroll action).
   bool onSingleTapUp(XDim x, YDim y) override;
   /// Translates drag deltas into immediate scroll movement.
-  bool onScroll(XDim x, YDim y, XDim dx, YDim dy) override;
+  void onDrag(XDim x, YDim y, XDim dx, YDim dy) override;
   /// Starts a momentum fling animation seeded from the gesture velocity.
   bool onFling(XDim x, YDim y, XDim vx, YDim vy) override;
   /// Initiates a spring-back animation if release leaves the panel in
   /// overshoot.
-  bool onTouchUp(XDim x, YDim y) override;
+  void onDragFinished(XDim x, YDim y) override;
 
-  bool supportsScrolling() const override { return true; }
+  DragAxis dragAxis() const override {
+    return direction_ == Direction::kVertical ? DragAxis::kVertical
+                                               : DragAxis::kHorizontal;
+  }
+  bool supportsFling() const override { return true; }
 
  protected:
   PreferredSize getPreferredSize() const override;

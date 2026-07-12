@@ -2,13 +2,13 @@
 
 ## Implementation status
 
-**In progress.** Phases 1 through 3 are implemented: callback-free hit paths,
+**In progress.** Phases 1 through 4 are implemented: callback-free hit paths,
 independent role selection, directional drag arbitration, strong post-claim
 ownership, and lifecycle-safe owned drag completion/cancellation are available
-through compatibility adapters. Widget migration and removal of compatibility
-routing remain. Material 3 sliders still contain a local release-consumption
-workaround. Dependency status is recorded in the
-[status index](../README.md).
+through compatibility adapters. Legacy and Material 3 sliders, range sliders,
+scrollable panels, horizontal page hosts, and scrollable tabs now use the owned
+drag lifecycle with declarative axis and fling policies. Removal of compatibility
+routing remains. Dependency status is recorded in the [status index](../README.md).
 
 ## Objective
 

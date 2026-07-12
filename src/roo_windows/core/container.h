@@ -115,8 +115,7 @@ class Container : public SurfaceWidget {
   /// children. The default implementation never intercepts.
   virtual bool onInterceptTouchEvent(const TouchEvent& event) { return false; }
 
-  /// Returns true if this container or any of its ancestors support scroll
-  /// events.
+  /// Returns true if this container or any ancestor can own a drag gesture.
   bool isScrollable() const;
 
  protected:

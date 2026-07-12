@@ -75,17 +75,18 @@ class HorizontalPageHost : public Container, private roo_scheduler::Executable {
   /// confirmed (slop exceeded and horizontal motion dominates) so paging can
   /// stay synchronized across current/adjacent pages.
   bool onInterceptTouchEvent(const TouchEvent& event) override;
-  bool supportsScrolling() const override { return true; }
+  DragAxis dragAxis() const override { return DragAxis::kHorizontal; }
+  bool supportsFling() const override { return true; }
 
-  /// Special-case DOWN handling for animation handoff.
+  /// Initializes an owned drag for animation handoff.
   ///
-  /// Most widgets can rely on default down behavior. This host overrides down
-  /// to cancel any in-flight settle animation and normalize drag state so a
-  /// new gesture always starts from the current visible fractional position.
-  bool onDown(XDim x, YDim y) override;
-  bool onScroll(XDim x, YDim y, XDim dx, YDim dy) override;
+  /// The host cancels any in-flight settle animation and normalizes drag state
+  /// so a new owned drag starts from the current visible fractional position.
+  void onDragStart(XDim x, YDim y) override;
+  void onDrag(XDim x, YDim y, XDim dx, YDim dy) override;
   bool onFling(XDim x, YDim y, XDim vx, YDim vy) override;
-  bool onTouchUp(XDim x, YDim y) override;
+  void onDragFinished(XDim x, YDim y) override;
+  void onCancel() override;
 
   bool shouldDelayChildPressedState() override { return true; }
 

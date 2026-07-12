@@ -804,25 +804,23 @@ bool ScrollableTabs::onInterceptTouchEvent(const TouchEvent& event) {
   return true;
 }
 
-bool ScrollableTabs::onDown(XDim x, YDim y) {
+void ScrollableTabs::onDragStart(XDim x, YDim y) {
   (void)x;
   (void)y;
-  if (mode() != TabsMode::kScrollable) return true;
+  if (mode() != TabsMode::kScrollable) return;
   cancelPendingScrollUpdate();
   applyScrollResult(scroll_motion_.onDown(motionGeometry(), scroll_x_, 0));
-  return true;
 }
 
-bool ScrollableTabs::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
+void ScrollableTabs::onDrag(XDim x, YDim y, XDim dx, YDim dy) {
   (void)x;
   (void)y;
   (void)dy;
   if (mode() != TabsMode::kScrollable || !motionGeometry().canScroll()) {
-    return false;
+    return;
   }
   applyScrollResult(
       scroll_motion_.onDrag(motionGeometry(), scroll_x_, 0, dx, 0));
-  return true;
 }
 
 bool ScrollableTabs::onFling(XDim x, YDim y, XDim vx, YDim vy) {
@@ -837,8 +835,9 @@ bool ScrollableTabs::onFling(XDim x, YDim y, XDim vx, YDim vy) {
   return true;
 }
 
-bool ScrollableTabs::onTouchUp(XDim x, YDim y) {
-  bool handled = Widget::onTouchUp(x, y);
+void ScrollableTabs::onDragFinished(XDim x, YDim y) {
+  (void)x;
+  (void)y;
   if (mode() == TabsMode::kScrollable) {
     scroll_motion::Result result =
         scroll_motion_.onTouchUp(motionGeometry(), scroll_x_, 0, millis());
@@ -846,7 +845,11 @@ bool ScrollableTabs::onTouchUp(XDim x, YDim y) {
     if (result.needs_tick) scheduleScrollUpdate();
   }
   intercepted_gesture_ = false;
-  return handled;
+}
+
+void ScrollableTabs::onCancel() {
+  Tabs::onCancel();
+  intercepted_gesture_ = false;
 }
 
 void ScrollableTabs::execute(roo_scheduler::ExecutionID id) {

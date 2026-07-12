@@ -244,8 +244,8 @@ TEST(HorizontalPageHost, DragRepositionsCurrentAndAdjacentPages) {
   host.measure(WidthSpec::Exactly(100), HeightSpec::Exactly(40));
   host.layout(Rect(0, 0, 99, 39));
 
-  host.onDown(0, 0);
-  host.onScroll(0, 0, -40, 0);
+  host.onDragStart(0, 0);
+  host.onDrag(0, 0, -40, 0);
 
   EXPECT_EQ(Rect(-40, 0, 59, 39), SlotBoundsForPage(first_ptr));
   EXPECT_EQ(Rect(60, 0, 159, 39), SlotBoundsForPage(second_ptr));
@@ -268,14 +268,14 @@ TEST(HorizontalPageHost, DragUpdatesTargetIndexAtSettleThreshold) {
   EXPECT_EQ(0, host.currentIndex());
   EXPECT_EQ(0, host.targetIndex());
 
-  host.onDown(0, 0);
-  host.onScroll(0, 0, -49, 0);
+  host.onDragStart(0, 0);
+  host.onDrag(0, 0, -49, 0);
 
   EXPECT_EQ(0, host.currentIndex());
   EXPECT_EQ(0, host.targetIndex());
   EXPECT_TRUE(host.targetChanges().empty());
 
-  host.onScroll(0, 0, -1, 0);
+  host.onDrag(0, 0, -1, 0);
 
   EXPECT_EQ(0, host.currentIndex());
   EXPECT_EQ(1, host.targetIndex());
@@ -283,7 +283,7 @@ TEST(HorizontalPageHost, DragUpdatesTargetIndexAtSettleThreshold) {
   EXPECT_EQ(0, host.targetChanges()[0].old_index);
   EXPECT_EQ(1, host.targetChanges()[0].new_index);
 
-  host.onScroll(0, 0, 1, 0);
+  host.onDrag(0, 0, 1, 0);
 
   EXPECT_EQ(0, host.currentIndex());
   EXPECT_EQ(0, host.targetIndex());
@@ -309,8 +309,8 @@ TEST(HorizontalPageHost, EdgeResistanceDampsOutOfRangeDrag) {
   host.measure(WidthSpec::Exactly(100), HeightSpec::Exactly(40));
   host.layout(Rect(0, 0, 99, 39));
 
-  host.onDown(0, 0);
-  host.onScroll(0, 0, 100, 0);
+  host.onDragStart(0, 0);
+  host.onDrag(0, 0, 100, 0);
 
   EXPECT_EQ(Rect(29, 0, 128, 39), SlotBoundsForPage(first_ptr));
 }
@@ -332,9 +332,9 @@ TEST(HorizontalPageHost, EdgeResistanceAccumulatesRawDrag) {
   host.measure(WidthSpec::Exactly(100), HeightSpec::Exactly(40));
   host.layout(Rect(0, 0, 99, 39));
 
-  host.onDown(0, 0);
-  host.onScroll(0, 0, 100, 0);
-  host.onScroll(0, 0, 100, 0);
+  host.onDragStart(0, 0);
+  host.onDrag(0, 0, 100, 0);
+  host.onDrag(0, 0, 100, 0);
 
   EXPECT_EQ(Rect(33, 0, 132, 39), SlotBoundsForPage(first_ptr));
 }
