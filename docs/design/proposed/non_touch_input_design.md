@@ -58,7 +58,7 @@ non-touch input.
 
 ### Current Status in `roo_windows`
 
-As of 2026-05:
+As of 2026-07:
 
 - [src/roo_windows/core/application.h](../../../src/roo_windows/core/application.h)
   and [src/roo_windows/core/application.cpp](../../../src/roo_windows/core/application.cpp)
@@ -221,7 +221,7 @@ displays usable.
 The design extends the framework in layers.
 
 1. Keep the current touch pipeline for touch.
-2. Add optional input-source abstractions for keys and later pointer events.
+2. Add an optional key-source abstraction.
 3. Add an application-owned focus manager.
 4. Extend `Widget` with semantic non-touch action hooks.
 5. Roll out keyboard behavior across widget families incrementally.
@@ -241,7 +241,6 @@ The proposed runtime shape is:
 ```text
 TouchSource   -> GestureDetector -> touched widget path
 KeySource     -> KeyDispatcher   -> FocusManager -> focused widget / action
-PointerSource -> PointerRouter   -> HoverManager + focus transfer + action
 ```
 
 Touch remains direct-widget routing. Keyboard and pointer share focus and
@@ -255,46 +254,39 @@ The current `Application` constructor bakes touch acquisition directly into the
 framework by owning a `TouchSensor` bound to a `roo_display::Display`.
 That is too narrow for non-touch displays.
 
-The design introduces three thin source interfaces:
+The first implementation introduces one thin non-touch source interface. The
+source is borrowed by `Application`; its owner must keep it alive until the
+application is destroyed. `drain()` is non-blocking, preserves source order,
+and leaves events beyond `max_events` queued for the next call.
+
+Each tick drains a four-event stack buffer at most four times. Consuming all
+16 events schedules an immediate follow-up tick. This bounds input work per
+tick without dropping queued events.
 
 ```cpp
-class TouchSource {
- public:
-  virtual ~TouchSource() = default;
-  virtual int drain(TouchSensor::Event* out, int max_events) = 0;
-};
-
 class KeySource {
  public:
   virtual ~KeySource() = default;
   virtual int drain(KeyEvent* out, int max_events) = 0;
 };
 
-class PointerSource {
- public:
-  virtual ~PointerSource() = default;
-  virtual int drain(PointerEvent* out, int max_events) = 0;
-};
 ```
 
-`TouchSensor` becomes one concrete `TouchSource` implementation rather than a
-hard-coded application detail.
-
-`Application` then gains an overload that accepts optional key and pointer
-sources while preserving the current touch-only constructor for compatibility.
+`Application` gains an overload that accepts a key source and an explicit
+`enable_touch` flag while preserving the current touch-only constructor.
 
 Compatibility rule:
 
 - existing `Application(env, display)` keeps constructing the legacy touch
   source internally,
-- callers that want keyboard or mouse support pass extra sources,
-- callers with no touch hardware can pass `nullptr` for touch and still use
-  the keyboard path.
+- callers that want keyboard support pass a `KeySource`,
+- callers with no touch hardware pass `enable_touch == false`.
 
-This keeps non-touch input out of `roo_display::Display`, which is the correct
-separation. Keyboards and mice are not display responsibilities.
+The existing touch pipeline remains concrete. A general `TouchSource` is not
+needed to add keyboard support, and a public pointer interface does not land
+before pointer routing exists.
 
-### Key and Pointer Event Types
+### Key Event Type
 
 The framework needs explicit, compact event types.
 
@@ -321,9 +313,10 @@ enum class KeyCode : uint8_t {
   kCharacter,
 };
 
+enum class KeyPhase : uint8_t { kDown, kUp, kRepeat };
+
 struct KeyEvent {
-  enum Type : uint8_t { kDown, kUp, kRepeat };
-  Type type;
+  KeyPhase phase;
   KeyCode code;
   uint8_t modifiers;
   uint32_t rune;  // valid when code == kCharacter.
@@ -339,20 +332,56 @@ The first keyboard pass only needs enough expressiveness for:
 - text entry,
 - and edit navigation.
 
-Pointer support can follow the same pattern later:
+Physical keys and produced text are distinct. Printable keys produce physical
+events for shortcuts and separate `kCharacter` events for text. Modifier bits
+are `Shift`, `Control`, `Alt`, and `Meta`. Sources reject invalid Unicode
+scalar values. Space does not produce both activation and text: an editor
+consumes the physical Space event and receives its character event; other
+widgets receive Space only as an activation key.
 
-```cpp
-struct PointerEvent {
-  enum Type : uint8_t { kMove, kDown, kUp, kWheel };
-  Type type;
-  int16_t x;
-  int16_t y;
-  uint8_t buttons;
-  int16_t wheel_x;
-  int16_t wheel_y;
-  uint8_t modifiers;
-};
-```
+### Key Dispatch Order
+
+Key routing is target-first and consumption-based. `KeyDispatcher` handles
+each event in this fixed order:
+
+1. On Back or Escape down, call the shared
+   [`Application::requestBack()`](application_navigation_back_behavior_design.md)
+   path. A handled request stops dispatch; an unhandled request continues so a
+   root editor can cancel local edit state.
+2. On Tab down, move focus forward or backward according to Shift. Widgets do
+   not consume Tab in the first implementation.
+3. Deliver the event to the focused widget's `onKeyEvent()`.
+4. If unhandled, bubble through its ancestors, nearest first.
+5. Apply framework fallback: Enter and Space use primary activation; arrows
+   use directional traversal; other keys remain unhandled.
+
+Controls consume keys that have local meaning before traversal fallback. Text
+editors consume character, caret, deletion, Home, End, Enter, and Space input.
+Sliders consume directional value keys. Scroll containers consume scrolling
+keys only when descendants and intervening ancestors leave them unhandled.
+
+Repeat events are delivered to widget and ancestor handlers for repeated value
+or scroll changes. Framework activation and traversal ignore repeat.
+
+### Keyboard Activation Lifecycle
+
+The focus manager stores one armed-widget pointer and one armed key; widgets
+gain no per-instance key-state field.
+
+- An unhandled Enter or Space down on an enabled clickable arms the focused
+  widget and sets its pressed state.
+- The matching key up activates only if the same widget is still focused,
+  enabled, attached, and inside the active scope.
+- Activation clears the armed and pressed state before calling
+  `performAction(kPrimary, kKeyboard)`, so the action can synchronously remove
+  the widget safely.
+- Focus change, scope change, disable, hide, detachment, destruction, or a
+  mismatched release cancels the arm and clears pressed state.
+- Repeat never activates or re-arms.
+
+The primary action starts the existing click-animation path at
+`getPointOverlayFocus()` and schedules exactly one existing `onClicked()`
+semantic.
 
 ### Application-Owned Interaction Services
 
@@ -375,11 +404,10 @@ The intended `Application::tick()` order becomes:
 
 1. refresh click animation,
 2. drain and dispatch pending key events,
-3. drain and dispatch pending pointer events when present,
-4. drain and dispatch pending touch events through the existing gesture
+3. drain and dispatch pending touch events through the existing gesture
    detector,
-5. refresh layout and paint,
-6. reschedule the ticker based on input, focus-blink, and animation activity.
+4. refresh layout and paint,
+5. reschedule the ticker based on input, focus-blink, and animation activity.
 
 The touch path stays intact. The new work is additive.
 
@@ -388,11 +416,11 @@ The touch path stays intact. The new work is additive.
 The framework currently has no owner for focus. That is the central missing
 piece.
 
-`FocusManager` should own:
+`FocusManager` owns:
 
 - the currently focused widget,
 - the current active focus scope root,
-- the previous focused descendant per scope when that improves restoration,
+- one intrusive `FocusScope` record per focus-owning task or presenter,
 - and the logic that validates whether a focus target is still visible,
   enabled, attached, and within the active scope.
 
@@ -406,7 +434,13 @@ The manager's responsibilities are:
    active scope,
 6. and update the widget's focused bit.
 
-#### Focus Scope Resolution
+#### Focus Scope Storage and Resolution
+
+Each regular `TaskPanel`, focus-capturing popup presenter, and dialog presenter
+embeds a `FocusScope` containing its root widget, its last focused descendant,
+and a link to the previously active scope. On a 32-bit target this costs about
+12 bytes per focus-owning layer. It avoids a focus-history map, fixed unused
+capacity, and allocation during scope changes.
 
 The framework already knows about regular tasks, popups, and modal dialogs.
 Keyboard focus must follow the same layering.
@@ -440,6 +474,11 @@ enum class FocusCapturePolicy : uint8_t {
 Regular tasks default to `kCapturesFocus`. Existing keyboard popup paths can
 stay `kPassive`.
 
+Focus capture and back participation are independent. A passive popup can
+register with the shared back dispatcher and dismiss before the underlying
+activity receives Back or Escape. The focus manager does not invent a second
+dismissal route.
+
 #### Initial Focus
 
 When a new focus scope becomes active, the manager should choose the initial
@@ -458,10 +497,37 @@ On mixed-input systems:
 
 - a successful touch activation on a focusable widget should transfer focus to
   that widget,
-- a pointer primary-button activation should also transfer focus,
 - hover should not imply focus,
 - and focus should remain sticky until a later focus change, scope change, or
   target invalidation.
+
+A successful touch tap requests focus immediately before scheduling its click
+semantic. This ordering remains safe when `onClicked()` removes the target.
+Non-click touch gestures do not move focus.
+
+#### Focus Lifetime and Tree Mutation
+
+Raw focus pointers require mandatory lifecycle notification.
+`Container::detachChild()` calls
+`FocusManager::onSubtreeDetaching(child)` before changing parent links or
+applying parent-owned deletion. While the tree is intact, the manager clears
+the focused target and every active scope record that points to the child or a
+descendant, cancels keyboard activation, and removes focused visual state.
+
+`Widget::~Widget()` calls `FocusManager::onWidgetDestroying(*this)` as a
+debug-checked fallback before sparse event handlers are removed. Destruction
+of an attached widget is already invalid. A match in this fallback is a debug
+failure because it proves that a detach notification was skipped; release
+builds still clear an exact match without dereferencing it.
+
+Visibility and enabled-state changes notify the manager before applying the
+transition. When the changed subtree contains focus, the manager moves to the
+next eligible target or clears focus. Scope exit clears visible focus but
+retains its last-focused pointer until subtree detachment or scope destruction.
+
+A focus target is eligible only when it is focusable, has non-empty laid-out
+bounds, remains attached below the active scope root, and it and every ancestor
+through that root are visible and enabled.
 
 ### Widget Contract Changes
 
@@ -479,13 +545,13 @@ virtual void onFocusChanged(bool focused) {}
 
 virtual bool onKeyEvent(const KeyEvent& event) { return false; }
 
-enum class InputOrigin : uint8_t { kTouch, kKeyboard, kPointer };
+enum class InputOrigin : uint8_t { kTouch, kKeyboard };
 enum class SemanticAction : uint8_t {
   kPrimary,
-  kSecondary,
   kIncrement,
   kDecrement,
-  kCancel,
+  kMinimum,
+  kMaximum,
 };
 
 virtual bool performAction(SemanticAction action, InputOrigin origin);
@@ -519,19 +585,25 @@ points.
 
 #### Forward / Backward Traversal
 
-Tab and Shift+Tab should use depth-first traversal over the active scope's
-visible, enabled, focusable descendants.
-
-That default is simple, predictable, and cheap.
+Tab uses depth-first child storage order and Shift+Tab uses reverse child
+storage order over eligible descendants. Traversal wraps within the active
+scope; a scope with one eligible widget retains it.
 
 #### Directional Traversal
 
-Directional keys should use a geometry-aware search:
+Directional traversal performs one allocation-free tree scan. Candidates must
+lie in the requested half-plane relative to the focused bounds' center. The
+score is the lexicographic tuple:
 
-- only consider candidates in the requested half-plane,
-- prefer candidates with overlap on the orthogonal axis,
-- then score by distance on the primary axis,
-- then by orthogonal-axis distance as a tie-breaker.
+1. `0` for overlap on the orthogonal axis, otherwise `1`,
+2. primary-axis edge distance,
+3. orthogonal-axis gap,
+4. forward traversal ordinal.
+
+Directional traversal does not wrap. The traversal ordinal makes ties
+deterministic without storing a candidate vector.
+
+![Directional focus candidates and score priorities](../assets/non_touch_directional_traversal.svg)
 
 This makes D-pad and arrow-key navigation work on lists, menus, grids, and
 split layouts without every container needing a bespoke neighbor table.
@@ -544,6 +616,7 @@ hooks such as:
 ```cpp
 virtual Widget* preferredFocusChild();
 virtual Widget* nextFocusable(FocusDirection direction, Widget* from);
+virtual bool revealFocusedDescendant(Widget& descendant);
 ```
 
 These hooks let lists, menus, tab bars, navigation surfaces, and custom
@@ -557,9 +630,11 @@ scrollable ancestor must reveal it.
 
 This is required for keyboard-only usability.
 
-The expected owner is the scroll container itself, not the global focus
-manager. The manager requests reveal; the nearest scrollable ancestor performs
-the scroll.
+After transfer, the manager walks outward from the target. The first ancestor
+whose `revealFocusedDescendant()` returns true owns the reveal. A scroll
+container performs the minimum scroll needed to expose the full target when it
+fits; when the target exceeds the viewport, it exposes the target's leading
+edge.
 
 ### Component Adoption Strategy
 
@@ -695,28 +770,6 @@ not naturally fall out of the simple clickable model.
    - but do not block the keyboard-first core on solving every childless
      compound control at once.
 
-### Pointer and Mouse Phase
-
-Mouse support is intentionally later, but the core should leave a clean path
-for it.
-
-When the pointer phase lands, it should reuse the same focus and semantic
-action model:
-
-- pointer move updates hover,
-- primary-button activation transfers focus and performs `kPrimary`,
-- wheel events route to the nearest scrollable ancestor,
-- and pointer-specific behavior remains optional.
-
-This phase should not attempt full desktop parity in v1.
-
-Deferred pointer-specific behavior includes:
-
-- drag selection in text fields,
-- right-click or context-menu surfaces,
-- resize cursors,
-- and every possible wheel or button gesture.
-
 ### Task, Popup, and Dialog Integration
 
 Focus ownership must align with the existing layer model.
@@ -754,10 +807,7 @@ Today it builds:
 - a fake touch controller,
 - and a host viewport.
 
-It must also provide:
-
-- a host-backed `KeySource`,
-- and later a host-backed `PointerSource`.
+It must also provide a host-backed `KeySource`.
 
 That gives the library a real keyboard smoke path in the emulator rather than
 only in embedded integration code.
@@ -770,8 +820,8 @@ On real hardware, different devices can provide these new sources:
 - BLE remotes,
 - or board-specific GPIO button clusters.
 
-Those integrations should implement `KeySource` / `PointerSource`. They should
-not extend the meaning of `roo_display::Display`.
+Those integrations implement `KeySource`. They do not extend the meaning of
+`roo_display::Display`.
 
 ### Documentation and Packaging Follow-Up
 
@@ -786,41 +836,114 @@ That includes at least:
 
 That metadata change should happen after the feature is real, not before.
 
-## Migration and Compatibility
+## Proposed API
 
-The migration should preserve current touch-only callers.
+The public surface added by this design is:
+
+```cpp
+enum class KeyPhase : uint8_t { kDown, kUp, kRepeat };
+
+struct KeyEvent {
+  KeyPhase phase;
+  KeyCode code;
+  uint8_t modifiers;
+  uint32_t rune;  // Valid only for kCharacter.
+};
+
+class KeySource {
+ public:
+  virtual ~KeySource() = default;
+  virtual int drain(KeyEvent* out, int max_events) = 0;
+};
+
+enum class InputOrigin : uint8_t { kTouch, kKeyboard };
+
+enum class SemanticAction : uint8_t {
+  kPrimary,
+  kIncrement,
+  kDecrement,
+  kMinimum,
+  kMaximum,
+};
+
+class Widget {
+ public:
+  virtual bool isFocusable() const { return isClickable(); }
+  bool requestFocus();
+  virtual bool onKeyEvent(const KeyEvent& event) { return false; }
+  virtual bool performAction(SemanticAction action, InputOrigin origin);
+  virtual void onFocusChanged(bool focused) {}
+};
+
+class Application {
+ public:
+  Application(const Environment* env, roo_display::Display& display);
+  Application(const Environment* env, roo_display::Display& display,
+              KeySource& keys, bool enable_touch);
+};
+```
+
+Framework-only `FocusManager`, `KeyDispatcher`, `FocusScope`, focus-state
+mutators, and traversal hooks remain internal or protected. No pointer API is
+introduced before working pointer routing exists.
+
+### Migration and Compatibility
+
+The migration preserves current touch-only callers.
 
 Compatibility rules:
 
 1. Existing `Application(env, display)` continues to work.
-2. If no key or pointer source is provided, behavior is unchanged.
+2. If no key source is provided, behavior is unchanged.
 3. Existing touch-driven widgets keep their current touch semantics.
 4. The new keyboard path is additive.
 5. Widgets that do not override new key hooks still compile and remain
    keyboard-inert unless the base semantics already make sense.
 
 The important compatibility goal is behavioral, not just source-level:
-touch-only UIs should still feel like touch-only UIs after the keyboard-first
-core lands.
+touch-only UIs retain their existing interaction behavior after the
+keyboard-first core lands.
 
-## Phased Implementation Plan
+## Implementation Plan
 
-### Phase 1: Input Sources, Focus Manager, and Widget State Plumbing
+Authoring references: follow the
+[embedded C++ code authoring instruction](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
+and the
+[roo_windows widget authoring instruction](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
-1. Add `KeySource` and `PointerSource` interfaces plus optional application
-   constructor overloads.
-2. Make `TouchSensor` satisfy the new touch-source contract or wrap it in a
-   touch-source adapter.
-3. Add `FocusManager` to `ApplicationContext`.
-4. Add `setFocused(bool)`, `setHover(bool)`, `requestFocus()`,
-   `isFocusable()`, and semantic action hooks to `Widget`.
-5. Add popup focus-capture policy.
-6. Update the application tick loop to drain key events before touch.
+### Phase 1: Key Acquisition
 
-This phase is purely foundational. It should not yet attempt to make every
-widget family keyboard-usable.
+Add `KeySource`, bounded draining, optional keyboard-only construction, source
+tests, and host-emulator source plumbing.
 
-### Phase 2: Simple Clickables and Dialog Focus
+Proposed commit message:
+
+> Non-touch input phase 1: add bounded key acquisition
+>
+> Add bounded borrowed key input, keyboard-only application construction,
+> emulator wiring, and focused acquisition tests from the non-touch input
+> design.
+
+Validation: run the new key-source target and build the emulator.
+
+### Phase 2: Focus Manager and Widget State Plumbing
+
+Add intrusive focus scopes, lifecycle notifications, eligibility checks,
+focus state hooks, restoration, and popup focus-capture policy. Add tests that
+detach, delete, hide, and disable focused or remembered descendants from
+inside callbacks.
+
+Proposed commit message:
+
+> Non-touch input phase 2: add lifecycle-safe focus ownership
+>
+> Add intrusive focus scopes, framework focus state plumbing, mandatory tree
+> mutation notifications, restoration, and mutation-focused tests from the
+> non-touch input design without increasing base widget size.
+
+Validation: run focus-manager, widget, container, task, and dialog targets.
+
+### Phase 3: Simple Clickables and Dialog Focus
 
 1. Make simple clickables focusable by default.
 2. Map Enter / Space to `kPrimary`.
@@ -831,7 +954,18 @@ widget family keyboard-usable.
 This delivers the first end-to-end keyboard story for common buttons and modal
 surfaces.
 
-### Phase 3: Scroll Containers and Value Controls
+Proposed commit message:
+
+> Non-touch input phase 3: route keys and activate focused controls
+>
+> Add target-first routing, deterministic traversal, release-based activation,
+> dialog focus trapping, touch focus transfer, examples, and interaction tests
+> from the non-touch input design.
+
+Validation: run key-dispatch, traversal, button, dialog, click-animation,
+gesture, and emulator targets.
+
+### Phase 4: Scroll Containers and Value Controls
 
 1. Add focus reveal to scroll containers.
 2. Add keyboard scrolling to scrollable panels where appropriate.
@@ -840,7 +974,17 @@ surfaces.
 
 This phase makes settings-style UIs viable without touch.
 
-### Phase 4: Structured Navigation Surfaces
+Proposed commit message:
+
+> Non-touch input phase 4: navigate value and scroll controls
+>
+> Add focus reveal, keyboard scrolling, value-control actions, component
+> examples, and boundary and repeat tests from the non-touch input design.
+
+Validation: run slider, scroll-container, simple-control, traversal, and
+emulator targets.
+
+### Phase 5: Structured Navigation Surfaces
 
 1. Add list row focus policy and visual-context plumbing.
 2. Add menu navigation by keyboard.
@@ -850,32 +994,41 @@ This phase makes settings-style UIs viable without touch.
 
 This phase turns the keyboard core into a real application-navigation model.
 
-### Phase 5: Text Entry
+Proposed commit message:
+
+> Non-touch input phase 5: add structured keyboard navigation
+>
+> Add list visual focus, menu and destination traversal, compound-control
+> adoption, component examples, and focus-versus-selection tests from the
+> non-touch input design.
+
+Validation: run list, menu, navigation-family, traversal, and emulator targets.
+
+### Phase 6: Text Entry
 
 1. Expand `TextFieldEditor` to support caret movement and selection by key.
 2. Add hardware-keyboard text editing policy to text fields.
 3. Keep software-keyboard behavior intact for touch-only targets.
-4. Decide and document the focus-versus-edit contract for read-only and
-   editable fields.
+4. Make editable fields enter edit mode immediately on hardware-key focus;
+   keep read-only fields focusable without entering edit mode.
 
 This phase makes the library genuinely usable on keyboard-only displays rather
 than only navigable.
 
-### Phase 6: Pointer / Mouse Support
+Proposed commit message:
 
-1. Add pointer source integration.
-2. Add hover manager and pointer hit routing.
-3. Transfer focus on pointer primary-button activation.
-4. Add wheel routing to scrollable surfaces.
-5. Add focused hover tests and emulator coverage.
+> Non-touch input phase 6: edit text from hardware keyboards
+>
+> Extend the shared editor with Unicode entry, caret and selection movement,
+> commit and cancel policy, mixed-input examples, and editor tests from the
+> non-touch input design.
 
-This phase is valuable, but it should not delay the keyboard-first core.
+Validation: run text-field, keyboard-activity, key-dispatch, back-dispatch, and
+emulator targets.
 
-## Validation Strategy
+## Testing Plan
 
-The implementation should add focused tests as the phases land.
-
-Core validation targets should include:
+Core validation covers:
 
 1. focus state transitions,
 2. focus scope changes across task, popup, and dialog boundaries,
@@ -886,12 +1039,24 @@ Core validation targets should include:
 7. text-field editing by hardware keyboard,
 8. and emulator smoke coverage for host keyboard input.
 
-The key regression requirement is that existing touch tests and examples remain
-green.
+Each phase runs the existing touch tests for the components it changes. The
+emulator supplies the end-to-end host-keyboard smoke path. Size checks verify
+that `sizeof(Widget)` does not increase and record the actual
+`ApplicationContext` and `FocusScope` deltas against the design estimates.
 
-## Rejected Alternatives
+## Caveats
 
-### Model Keyboard as Synthetic Touch
+Directional traversal is an O(n) scan. Key events are infrequent and embedded
+interfaces normally contain few focusable widgets, so constant storage is
+preferred over neighbor tables or cached vectors.
+
+The design depends on the shared back-behavior proposal for Back and Escape.
+Phase 3 lands after that proposal's core dispatcher; Phases 1 and 2 remain
+independently implementable and testable.
+
+### Rejected Alternatives
+
+#### Model Keyboard as Synthetic Touch
 
 Rejected because touch callbacks are not generic activation callbacks.
 
@@ -908,7 +1073,7 @@ Touch has:
 Keyboard navigation has none of those properties. Synthesizing fake touch would
 hide the real missing abstraction, which is focus plus semantic action.
 
-### Put Keyboard and Mouse APIs on `roo_display::Display`
+#### Put Keyboard and Mouse APIs on `roo_display::Display`
 
 Rejected because non-touch inputs often come from devices unrelated to the
 display itself.
@@ -916,7 +1081,7 @@ display itself.
 The right abstraction boundary is input source interfaces owned by the
 application, not a display object that suddenly becomes a keyboard host.
 
-### Let Every Widget Family Invent Its Own Local Focus Model
+#### Let Every Widget Family Invent Its Own Local Focus Model
 
 Rejected because focus scope, modality, and traversal must work across the
 whole active UI tree, not only within one component family.
@@ -924,7 +1089,7 @@ whole active UI tree, not only within one component family.
 Dialogs, popups, tasks, and mixed-input focus transfer require one framework
 owner.
 
-### Delay Keyboard Until Mouse Is Also Ready
+#### Delay Keyboard Until Mouse Is Also Ready
 
 Rejected because keyboard navigation is the smallest change that makes
 non-touch displays useful.
@@ -933,9 +1098,34 @@ Mouse support is valuable, but it brings hover routing, wheel policy, and
 desktop-specific interaction questions that are not required to unblock the
 user's immediate need.
 
-### Force Every Popup to Capture Focus
+#### Force Every Popup to Capture Focus
 
 Rejected because some popups, especially the existing on-screen keyboard, are
 supporting surfaces rather than the keyboard navigation destination.
 
 The framework needs passive popups as a first-class concept.
+
+#### Store Remembered Focus in a Hash Map
+
+Rejected because scope changes would allocate or require fixed unused
+capacity. Intrusive scope records charge only focus-owning layers and make
+nesting explicit.
+
+#### Activate on Key Down
+
+Rejected because it cannot represent Space's held pressed state and makes key
+repeat prone to duplicate actions. Arm-on-down and activate-on-up provide a
+defined cancellation point.
+
+#### Add Pointer APIs Before Pointer Routing
+
+Rejected because an unimplemented API would freeze an unvalidated contract.
+Pointer types land together with working routing and tests.
+
+## Future Work
+
+Pointer and mouse support adds pointer acquisition, hover routing,
+primary-button focus transfer, wheel bubbling, and emulator coverage on top of
+the focus and semantic-action contracts defined here. Platform IME,
+accessibility, context menus, drag-and-drop, and mouse text selection remain
+separate designs.

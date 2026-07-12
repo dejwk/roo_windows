@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="330" viewBox="0 0 760 330">
+  <rect width="760" height="330" fill="white"/>
+  <g font-family="sans-serif" font-size="15" fill="#202124">
+    <text x="24" y="28" font-size="18" font-weight="bold">Rightward focus search</text>
+    <rect x="80" y="130" width="120" height="70" rx="8" fill="#d2e3fc" stroke="#185abc" stroke-width="2"/>
+    <text x="108" y="170">focused</text>
+    <line x1="200" y1="50" x2="200" y2="290" stroke="#9aa0a6" stroke-dasharray="6 5"/>
+    <text x="207" y="122" fill="#5f6368">candidate half-plane</text>
+
+    <rect x="285" y="135" width="120" height="60" rx="8" fill="#ceead6" stroke="#137333" stroke-width="2"/>
+    <text x="310" y="169">A: overlap</text>
+    <line x1="200" y1="165" x2="285" y2="165" stroke="#137333" marker-end="url(#arrow)"/>
+
+    <rect x="300" y="55" width="120" height="50" rx="8" fill="#fef7e0" stroke="#b06000" stroke-width="2"/>
+    <text x="321" y="84">B: no overlap</text>
+    <line x1="200" y1="145" x2="300" y2="95" stroke="#b06000" marker-end="url(#arrow)"/>
+
+    <rect x="500" y="140" width="120" height="50" rx="8" fill="#e8eaed" stroke="#5f6368" stroke-width="2"/>
+    <text x="520" y="169">C: farther</text>
+    <line x1="405" y1="165" x2="500" y2="165" stroke="#5f6368" marker-end="url(#arrow)"/>
+
+    <text x="80" y="245">Score priority:</text>
+    <text x="80" y="270">1 overlap class · 2 primary edge distance · 3 orthogonal gap</text>
+    <text x="80" y="294">4 forward tree ordinal</text>
+    <text x="80" y="318" fill="#137333">A wins: aligned candidates beat non-overlapping or farther candidates.</text>
+  </g>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#5f6368"/>
+    </marker>
+  </defs>
+</svg>
