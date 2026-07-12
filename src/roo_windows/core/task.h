@@ -88,6 +88,10 @@ class TaskPanel : public Panel {
   /// Routes touch-down dispatch into the active activity's contents.
   Widget* dispatchTouchDownEvent(XDim x, YDim y) override;
 
+  /// Builds a callback-free path through only the active activity.
+  bool fillTouchTargetPath(XDim x, YDim y,
+                           std::vector<Widget*>& path) override;
+
  private:
   friend class Task;
 

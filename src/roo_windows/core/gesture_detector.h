@@ -30,14 +30,29 @@ static constexpr int16_t kMaxFlingVelocity = 8000;  // Pixels per second.
 /// Translates raw touch samples into widget gesture callbacks.
 ///
 /// Polls the bound `TouchSensor`, tracks one in-flight gesture at a time, and
-/// dispatches `onDown` / `onShowPress` / `onSingleTapUp` / `onLongPress` /
-/// `onScroll` / `onFling` / `onTouchUp` to the chain of widgets that captured
-/// the gesture. Also runs the scheduled show-press / tap / long-press timers.
+/// builds a callback-free hit path, selects gesture roles, and dispatches the
+/// legacy gesture callbacks during the migration to explicit ownership. Also
+/// runs the scheduled show-press / tap / long-press timers.
 class GestureDetector {
+ private:
+  enum class Phase : uint8_t {
+    kIdle,
+    kPressTracking,
+    kLegacyScroll,
+    kLongPress
+  };
+
  public:
   /// Binds the detector to a root widget tree and a touch input source.
   GestureDetector(Widget& root, TouchSensor& sensor)
-      : root_(root), sensor_(sensor), is_down_(false) {}
+      : root_(root),
+        sensor_(sensor),
+        is_down_(false),
+        moved_outside_tap_region_(false),
+        phase_(Phase::kIdle),
+        tap_target_(nullptr),
+        long_press_target_(nullptr),
+        drag_target_(nullptr) {}
 
   /// Drains pending touch events, fires due timers, and dispatches gestures.
   /// Returns true if an interaction is in progress and at least one touch
@@ -65,8 +80,19 @@ class GestureDetector {
   /// Returns the widget currently receiving gesture callbacks, or nullptr
   /// when no gesture is in flight.
   const Widget* currentGestureTarget() const {
-    return touch_target_path_.empty() ? nullptr : touch_target_path_.back();
+    return phase_ == Phase::kLegacyScroll
+               ? drag_target_
+               : (tap_target_ != nullptr ? tap_target_ : long_press_target_);
   }
+
+  /// Returns the deepest widget eligible for taps in the current stream.
+  const Widget* tapTarget() const { return tap_target_; }
+
+  /// Returns the deepest widget eligible for long press in the current stream.
+  const Widget* longPressTarget() const { return long_press_target_; }
+
+  /// Returns the deepest legacy scroll candidate in the current stream.
+  const Widget* dragTarget() const { return drag_target_; }
 
   /// Returns true while a touch is currently pressed down.
   bool isTouchDown() const { return is_down_; }
@@ -96,6 +122,9 @@ class GestureDetector {
   bool dispatch(TouchEvent::Type type);
   bool dispatchTo(Widget* target, TouchEvent::Type type);
   bool offerIntercept(Panel* target, TouchEvent::Type type);
+  Widget* previousTouchTarget(Widget* target) const;
+  void selectRoles();
+  void beginRole(Widget* target);
 
   bool handledOrCancel(bool handled) {
     if (!handled) cancelEvents();
@@ -113,14 +142,13 @@ class GestureDetector {
 
   unsigned long now_us_;
   bool is_down_;
-  bool supports_scrolling_;
   bool moved_outside_tap_region_;
-
-  // Indicates that the gesture has been recognized as a long press, rather than
-  // a single tap, scroll, or fling.
-  bool in_long_press_;
+  Phase phase_;
 
   std::vector<Widget*> touch_target_path_;
+  Widget* tap_target_;
+  Widget* long_press_target_;
+  Widget* drag_target_;
 
   TouchPoint initial_down_;
   TouchPoint latest_;

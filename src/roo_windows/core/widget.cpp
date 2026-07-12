@@ -692,6 +692,22 @@ Widget* Widget::dispatchSloppyTouchDownEvent(XDim x, YDim y) {
                                                                     : nullptr;
 }
 
+bool Widget::fillTouchTargetPath(XDim x, YDim y,
+                                 std::vector<Widget*>& path) {
+  if (!isVisible() || !isEnabled() || !bounds().contains(x, y)) return false;
+  path.push_back(this);
+  return true;
+}
+
+bool Widget::fillSloppyTouchTargetPath(XDim x, YDim y,
+                                       std::vector<Widget*>& path) {
+  if (!isVisible() || !isEnabled() || !getSloppyTouchBounds().contains(x, y)) {
+    return false;
+  }
+  path.push_back(this);
+  return true;
+}
+
 bool Widget::isHandlingGesture() const {
   const Application* app = getApplication();
   return app == nullptr

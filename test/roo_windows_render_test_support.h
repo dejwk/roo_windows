@@ -104,6 +104,26 @@ class TouchSpyWidget : public BasicWidget {
   int touch_down_count_;
 };
 
+class GestureRoleSpyWidget : public BasicWidget {
+ public:
+  explicit GestureRoleSpyWidget(ApplicationContext& context)
+      : BasicWidget(context), down_count_(0) {}
+
+  bool supportsTap() const override { return true; }
+
+  bool onDown(XDim x, YDim y) override {
+    (void)x;
+    (void)y;
+    ++down_count_;
+    return true;
+  }
+
+  int down_count() const { return down_count_; }
+
+ private:
+  int down_count_;
+};
+
 class InkBoundsWidget : public BasicWidget {
  public:
   InkBoundsWidget(ApplicationContext& context, Dimensions dims,

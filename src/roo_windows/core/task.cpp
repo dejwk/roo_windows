@@ -134,4 +134,15 @@ Widget* TaskPanel::dispatchTouchDownEvent(XDim x, YDim y) {
                                          y - activity.offsetTop());
 }
 
+bool TaskPanel::fillTouchTargetPath(XDim x, YDim y,
+                                    std::vector<Widget*>& path) {
+  if (!isVisible() || !isEnabled() || !bounds().contains(x, y)) return false;
+  path.push_back(this);
+  if (children_.empty()) return true;
+  Widget& activity = *children_.back();
+  activity.fillTouchTargetPath(x - activity.offsetLeft(),
+                               y - activity.offsetTop(), path);
+  return true;
+}
+
 }  // namespace roo_windows

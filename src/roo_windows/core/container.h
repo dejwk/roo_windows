@@ -64,6 +64,16 @@ class Container : public SurfaceWidget {
   /// Routes a sloppy (snap-to-nearby) touch-down event to a descendant.
   Widget* dispatchSloppyTouchDownEvent(XDim x, YDim y) override;
 
+  /// Builds the callback-free geometric touch path through the front-most
+  /// visible, enabled descendant at `x`, `y`.
+  bool fillTouchTargetPath(XDim x, YDim y,
+                           std::vector<Widget*>& path) override;
+
+  /// Builds the callback-free sloppy touch path through the front-most
+  /// visible, enabled descendant at `x`, `y`.
+  bool fillSloppyTouchTargetPath(XDim x, YDim y,
+                                 std::vector<Widget*>& path) override;
+
   /// Returns the maximum sloppy-touch bounds the container will consider
   /// for descendants.
   Rect getMaxSloppyTouchParentBounds() const override;

@@ -255,6 +255,17 @@ class Widget {
 
   virtual Widget* dispatchSloppyTouchDownEvent(XDim x, YDim y);
 
+  /// Appends the visible, enabled widgets geometrically hit at `x`, `y` to
+  /// `path`, ordered from this widget toward the deepest hit descendant.
+  /// Does not invoke gesture callbacks.
+  virtual bool fillTouchTargetPath(XDim x, YDim y,
+                                   std::vector<Widget*>& path);
+
+  /// Appends the visible, enabled widgets sloppy-hit at `x`, `y` to `path`.
+  /// Does not invoke gesture callbacks.
+  virtual bool fillSloppyTouchTargetPath(XDim x, YDim y,
+                                         std::vector<Widget*>& path);
+
   // Returns true if this widget is currently handling a touch gesture.
   bool isHandlingGesture() const;
 
@@ -343,6 +354,9 @@ class Widget {
   // may want to override this method and call the superclass method at the
   // beginning of your implementation.
   virtual bool onSingleTapUp(XDim x, YDim y);
+
+  /// Returns whether this widget may receive the tap role for a touch stream.
+  virtual bool supportsTap() const { return isClickable(); }
 
   // Should be overridden to return true by widgets that wish to handle the
   // onLongPoress events.

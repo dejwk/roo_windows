@@ -217,6 +217,66 @@ Widget* Container::dispatchSloppyTouchDownEvent(XDim x, YDim y) {
   return Widget::dispatchSloppyTouchDownEvent(x, y);
 }
 
+bool Container::fillTouchTargetPath(XDim x, YDim y,
+                                    std::vector<Widget*>& path) {
+  if (!isVisible() || !isEnabled() || !bounds().contains(x, y)) return false;
+  path.push_back(this);
+  for (int i = getChildrenCount() - 1; i >= 0; --i) {
+    Widget& child = getChild(i);
+    if (!child.isVisible() || !child.isEnabled()) continue;
+    if (child.getParentClipMode() == ParentClipMode::kClipped &&
+        !bounds().contains(x, y)) {
+      continue;
+    }
+    if (!child.maxParentBounds().contains(x, y)) continue;
+    if (child.fillTouchTargetPath(x - child.offsetLeft(),
+                                  y - child.offsetTop(), path)) {
+      return true;
+    }
+    if (child.parent_bounds().contains(x, y)) break;
+  }
+  for (int i = getChildrenCount() - 1; i >= 0; --i) {
+    Widget& child = getChild(i);
+    if (!child.isVisible() || !child.isEnabled() ||
+        child.parent_bounds().contains(x, y) ||
+        !child.getMaxSloppyTouchParentBounds().contains(x, y)) {
+      continue;
+    }
+    if (child.fillSloppyTouchTargetPath(x - child.offsetLeft(),
+                                        y - child.offsetTop(), path)) {
+      return true;
+    }
+    if (child.getSloppyTouchParentBounds().contains(x, y)) break;
+  }
+  return true;
+}
+
+bool Container::fillSloppyTouchTargetPath(XDim x, YDim y,
+                                          std::vector<Widget*>& path) {
+  if (!isVisible() || !isEnabled() || !getSloppyTouchBounds().contains(x, y)) {
+    return false;
+  }
+  path.push_back(this);
+  for (int i = getChildrenCount() - 1; i >= 0; --i) {
+    Widget& child = getChild(i);
+    if (!child.isVisible() || !child.isEnabled() ||
+        !child.getMaxSloppyTouchParentBounds().contains(x, y)) {
+      continue;
+    }
+    bool within_bounds = child.parent_bounds().contains(x, y);
+    bool hit = within_bounds
+                   ? child.fillTouchTargetPath(x - child.offsetLeft(),
+                                               y - child.offsetTop(), path)
+                   : child.fillSloppyTouchTargetPath(
+                         x - child.offsetLeft(), y - child.offsetTop(), path);
+    if (hit) return true;
+    if (within_bounds || child.getSloppyTouchParentBounds().contains(x, y)) {
+      break;
+    }
+  }
+  return true;
+}
+
 Rect Container::getMaxSloppyTouchParentBounds() const {
   return Rect::Extent(getSloppyTouchParentBounds(),
                       ExpandBySloppyTouchHalfExtent(maxParentBounds()));

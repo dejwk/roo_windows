@@ -418,6 +418,29 @@ TEST_F(RooWindowsRenderTest, SloppyTouchDispatchRecursesThroughContainers) {
   EXPECT_EQ(1, leaf_ptr->touch_down_count());
 }
 
+// Verifies that geometric path construction reaches the deepest enabled child
+// without invoking its role callbacks, and skips it after it becomes disabled.
+TEST_F(RooWindowsRenderTest, GesturePathBuildsWithoutGestureCallbacks) {
+  auto panel = std::make_unique<ExposedPanel>(context());
+  ExposedPanel* panel_ptr = panel.get();
+  auto child = std::make_unique<GestureRoleSpyWidget>(context());
+  GestureRoleSpyWidget* child_ptr = child.get();
+  panel_ptr->add(std::move(child), Rect(2, 2, 21, 21));
+  app_.add(std::move(panel), Box(4, 4, 35, 35));
+
+  std::vector<Widget*> path;
+  ASSERT_TRUE(app_.root().fillTouchTargetPath(10, 10, path));
+  ASSERT_FALSE(path.empty());
+  EXPECT_EQ(child_ptr, path.back());
+  EXPECT_EQ(0, child_ptr->down_count());
+
+  child_ptr->setEnabled(false);
+  path.clear();
+  ASSERT_TRUE(app_.root().fillTouchTargetPath(10, 10, path));
+  EXPECT_EQ(panel_ptr, path.back());
+  EXPECT_EQ(0, child_ptr->down_count());
+}
+
 // Verifies that a refresh() call which exceeds its time deadline mid-paint
 // returns false and leaves the partial state untouched; a subsequent
 // refresh() without a deadline completes the paint.
