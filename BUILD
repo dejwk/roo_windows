@@ -325,6 +325,16 @@ cc_test(
 )
 
 cc_test(
+    name = "material3_app_bar_test",
+    srcs = ["test/material3_app_bar_test.cpp"],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
+cc_test(
     name = "material3_tabs_golden_test",
     srcs = [
         "test/material3_tabs_golden_test.cpp",
