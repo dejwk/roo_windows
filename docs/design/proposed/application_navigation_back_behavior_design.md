@@ -1,463 +1,236 @@
-# Roo Windows Application Navigation and Back Behavior Design
+# Roo Windows Back Request Coordination Design
 
 ## Implementation status
 
-**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+**Proposed.** `Task` and `Activity` already implement route stacking and route
+lifecycle. The semantic back-request coordination defined here is not
+implemented. See the [status index](../README.md) for prerequisite
+status.
 
 ## Objective
 
-Add one framework-level contract for application navigation and back behavior
-to `roo_windows`.
+Add one semantic back-request path without adding another navigation model.
 
-The design closes on three decisions that are currently spread across several
-component and input documents:
+The path coordinates existing owners in this order:
 
-- who owns route state,
-- how Back and Escape are dispatched across dialogs, popup layers, and the
-  active screen,
-- and how later predictive-back work plugs into the same routing model.
+1. the top visible transient presenter gets the first dismissal opportunity;
+2. the current `Activity` of the target `Task` can handle activity-local state;
+3. the `Task` pops one activity only when more than its root remains.
 
-The end state is:
-
-- `Task` plus `Activity` remains the framework-owned route stack,
-- modal and transient surfaces dismiss deepest-first through one shared back
-  path,
-- primary destination widgets reflect route-owner state but do not silently
-  become route owners themselves,
-- and predictive-back can layer preview motion onto the same ownership and
-  priority rules later.
+`Task` plus `Activity` remains the complete framework route-stack abstraction.
+Tabs, page hosts, navigation bars, rails, and drawers remain selectors or
+presentation surfaces rather than implicit route owners.
 
 ## Motivation
 
-`roo_windows` already has enough surface area that application navigation rules
-now matter at the framework level.
+The framework does not need another navigator. `Task::enterActivity()` and
+`Task::exitActivity()` already provide push, pop, and lifecycle transitions.
 
-The repository has:
+It does need a semantic operation distinct from unconditional
+`Task::exitActivity()`. Back or Escape must first close a visible dialog,
+submenu, modal sheet, or modal drawer; it must let the current activity leave
+edit mode or reject navigation; and it must not pop the root activity into an
+empty task. Existing callers invoke `exitActivity()` directly, so every input
+source would otherwise need to reimplement those rules.
 
-- task and activity stacks,
-- popup tasks,
-- modal dialogs,
-- a horizontal page host,
-- Material 3 menu, drawer, rail, and sheet designs,
-- and a non-touch-input design that introduces keyboard Back and Escape.
-
-What it does not yet have is one shared contract saying which of those pieces
-owns route history and which of them only participates in dismissal.
-
-That gap produces two concrete problems:
-
-1. component documents already assume back behavior, but they do so locally,
-   not through one framework rule,
-2. and applications cannot reuse one embedded-friendly back path across
-   keyboard, UI back buttons, and later gesture back.
-
-The framework therefore needs one design that turns those local expectations
-into one explicit model.
+This design adds only that coordination. It adds no route objects, destination
+history, URL-like state, or second route stack.
 
 ## Background
 
-### Current Starting Point in `roo_windows`
+### Existing route model
 
-The current ownership model already has a strong top-level navigation seam.
+[Task](../../../src/roo_windows/core/task.h) owns a stack of borrowed
+[`Activity`](../../../src/roo_windows/core/activity.h) objects.
+`enterActivity()` and `exitActivity()` enforce activity state and call
+`onStart()`, `onResume()`, `onPause()`, and `onStop()` in order. That is the
+framework's route model and remains unchanged.
 
-- [Application](../../../src/roo_windows/core/application.h) owns the event loop,
-  display, `MainWindow`, input polling, and task creation.
-- [MainWindow](../../../src/roo_windows/core/main_window.h) already defines the
-  visible layer order: regular tasks, popup layers, then modal dialog.
-- [Task](../../../src/roo_windows/core/task.h) already owns an `Activity` stack with
-  push and pop lifecycle.
-- [Activity](../../../src/roo_windows/core/activity.h) already represents one
-  top-level screen entry with `onStart()`, `onResume()`, `onPause()`, and
-  `onStop()`.
-- [Dialog](../../../src/roo_windows/dialogs/dialog.h) already has a close path and a
-  dismissal callback contract.
+[MainWindow](../../../src/roo_windows/core/main_window.h) provides the visual
+layer order: regular tasks, popup tasks, then the modal dialog. Visual priority
+cannot implement semantic Back because a popup task is a generic host and does
+not know whether its contents dismiss, navigate internally, or ignore Back.
 
-That means the repository already has a real route-stack abstraction. The
-missing work is the shared back contract around it.
+Four gaps remain:
 
-### Existing Design Signals
+1. `Task::exitActivity()` assumes a non-empty stack and has no root guard.
+2. `Activity` has no hook for editor, selection, or internal-step state.
+3. UI buttons, keyboard Back, and Escape have no common semantic entry point.
+4. transient surfaces have no common lifetime-safe dismissal path before pop.
 
-Several current design docs already constrain the answer.
+### Dependency on transient presenter lifetime
 
-- [non_touch_input_design.md](non_touch_input_design.md) keeps `Application`
-  as the owner of input polling and dispatch order, and it places shared
-  runtime services on
-  [ApplicationContext](../../../src/roo_windows/core/application_context.h).
-- [material3_menus_design.md](material3_menus_design.md) already requires
-  deepest-first Back or Escape dismissal for open submenu chains.
-- [material3_sheets_design.md](material3_sheets_design.md) and
-  [material3_navigation_drawer_design.md](material3_navigation_drawer_design.md)
-  already keep modal wrappers on popup plus scrim infrastructure and defer
-  predictive-back motion.
-- [../implemented/horizontal_page_host_design.md](../implemented/horizontal_page_host_design.md) explicitly
-  defines a presentation container for peer pages, not a new route owner.
+The [transient presenter lifetime design](transient_presenter_lifetime_design.md)
+defines intrusive registration, nesting order, finish reasons, destruction
+safety, and unlink-before-completion for temporary presenters.
 
-Those documents already imply that:
+This design reuses that registration. It does not add a separate
+`BackParticipant` stack. Two stacks would add storage, allow visual and Back
+order to diverge, and recreate dangling-registration risks.
 
-1. the route stack should stay outside individual selection widgets,
-2. transient modal surfaces need deepest-first dismissal,
-3. and predictive back should extend existing ownership rather than introduce a
-   second navigation subsystem.
+The boundary is explicit:
 
-### Current Gaps
+- the lifetime design owns registration, nesting, teardown, and
+  `finish(PresentationFinishReason)`;
+- this design maps Back or Escape to `PresentationFinishReason::kBack` on the
+  top eligible registration;
+- when no transient consumes, this design delegates to the target task;
+- presentation pins do not dispatch Back, though lifetime teardown hides them.
 
-The repository currently has no framework-owned answer to the following:
+The lifetime host must land before transient components join Back dispatch.
+The task/activity portion can land independently.
 
-1. There is no single back entry point that keyboard, Escape, UI back buttons,
-   and future gesture back all call.
-2. There is no shared transient-participant stack for dialogs, menus, modal
-   drawers, or modal sheets.
-3. `Activity::exit()` exists, but the framework does not distinguish
-   route-owned back handling from explicit programmatic exit.
-4. Tabs, drawers, rails, and `HorizontalPageHost` all synchronize selection,
-   but there is no framework statement that their selection history is not the
-   same thing as route history.
-5. Predictive-back preview has no future attachment point yet.
+### Target task is explicit
+
+Applications can contain multiple regular tasks. Creation or paint order does
+not identify the intended navigation target.
+
+- A UI back button uses its containing task.
+- Application code supplies a task explicitly.
+- Non-touch input uses the task containing the focus owner.
+
+The [non-touch input design](non_touch_input_design.md) owns focus resolution.
+With no eligible global transient and no focus-owned or explicit task, a
+hardware request is unhandled. The framework does not guess.
 
 ## Requirements
 
-### Functional Requirements
+### Functional requirements
 
-1. Provide one framework back entry point that can be used by keyboard Back,
-   Escape, explicit UI back buttons, and future back gestures.
-2. Dispatch back in visible-priority order: deepest visible transient surface
-   first, then the active regular-task route owner.
-3. Keep `Task` plus `Activity` as the only framework-owned route stack in the
-   first pass.
-4. Let an activity own nested local navigation without forcing every nested
-   change into a new `Activity`.
-5. Keep primary-destination selection surfaces out of implicit back history
-   unless the owning activity explicitly chooses otherwise.
-6. Let transient surfaces consume back without adding permanent callback or
-   policy state to every widget instance.
-7. Keep back dispatch allocation-free on the hot request path.
-8. Keep the design compatible with later predictive-back preview and commit.
+1. Keep `Task` and `Activity` as the only framework route stack.
+2. Share one semantic operation across UI Back, keyboard Back, Escape, and
+   application code.
+3. Dismiss the top eligible transient before consulting a task.
+4. Let the current activity consume a request for local state or policy.
+5. Pop one activity when unconsumed and more than the root remains.
+6. Preserve a root task and return unhandled when its activity does not consume.
+7. Require an explicit or focus-derived target task.
+8. Keep selector state and selection history application-owned.
 
-### Interaction Requirements
+### Lifetime requirements
 
-1. Back or Escape dismisses only the deepest open transient surface first.
-2. Dialog dismissal on back follows the same close path as explicit dialog
-   close.
-3. Modal sheets, modal drawers, and menu chains that already dismiss on scrim
-   or outside press must also dismiss on back.
-4. A top activity can intercept back for unsaved edits, nested flows, or local
-   policy before the framework pops that activity.
-5. If the current task has more than one activity and the top activity does
-   not consume back, the framework pops exactly one activity.
-6. If the current task is already at its root route and the top activity does
-   not consume back, the request remains unhandled; the framework does not
-   blank the screen automatically.
-7. Selecting a different tab, rail destination, drawer destination, or page
-   host page does not by itself create a new back-stack entry.
+1. Transients use their normal idempotent finish path.
+2. Dispatch retains no callback, presenter, or activity pointer after return.
+3. A transient unlinks before completion runs.
+4. Completion can reentrantly open, destroy, or replace presentation state.
+5. One request dismisses or pops at most one semantic level.
 
-### API Requirements
+### Embedded requirements
 
-1. `Application` must expose one explicit back-request method.
-2. `ApplicationContext` must expose one shared back-dispatcher service for
-   transient presenters.
-3. `Activity` must expose one virtual back hook.
-4. The transient dispatcher API must support strict deepest-first nesting
-   without per-widget `std::function` storage.
-5. The first pass must not introduce a second public `Navigator`, route tree,
-   or controller framework beside `Task` plus `Activity`.
-6. Predictive-back work must extend the same dispatcher contract rather than
-   add a parallel preview-only subsystem.
-
-### Embedded Constraints
-
-1. Do not allocate while handling a back request.
-2. Keep permanent RAM growth off base widgets, page hosts, sheets, drawers,
-   rails, tabs, and lists.
-3. Prefer one application-owned service plus lightweight transient participant
-   objects over per-instance callback fields.
-4. Keep selection history application-owned; the framework must not record
-   implicit tab or drawer history.
-5. Reuse the existing task, popup, and dialog layers rather than inventing a
-   second overlay hierarchy.
+1. Request handling allocates no memory.
+2. `Activity` gains no per-instance storage.
+3. Widgets and selectors gain no back callbacks or history fields.
+4. The lifetime registration supplies the only per-presenter intrusive link.
+5. Dispatch is constant-time apart from component finish work.
 
 ## Design Overview
 
-Route ownership remains explicit and narrow.
-
-1. `Task` plus its `Activity` stack is the only framework-owned route stack.
-2. The current activity is the route owner for anything nested inside that
-   screen.
-3. Primary-destination widgets such as tabs, drawers, rails, and
-   `HorizontalPageHost` reflect route-owner state but do not become route
-   owners themselves.
-4. Transient modal or popup surfaces participate in back only while visible.
-
-Back dispatch has one path:
+Back is an operation on existing owners, not stored navigation state.
 
 ```text
-Back key / Escape / UI back button / future gesture commit
-    -> Application::requestBack(source)
-    -> ApplicationContext::back().dispatch(source)
-    -> deepest transient participant closes or consumes
-    -> current top activity handles local back policy
-    -> Task pops one activity when stack depth > 1
-    -> root request remains unhandled
+Back / Escape / UI button
+            |
+ Application::requestBack(target, source)
+            |
+   top eligible transient? -- yes --> finish(kBack), handled
+            |
+            no
+            v
+   Task::requestBack(source)
+            |
+   Activity::onBackRequested()
+            |
+   handled, or pop one when depth > 1,
+   or leave root unhandled
 ```
 
-The key decision is to avoid a new generic navigator framework. `roo_windows`
-already has a real route stack in `Task` and `Activity`. The missing piece is
-the shared back contract around that stack.
+Dispatch finishes at most one level. There is no application route history and
+no widget-tree Back bubbling.
 
 ## Design Details
 
-### `Task` and `Activity` Stay the Route Stack
+### Task and activity behavior
 
-The design does not introduce a second route abstraction.
+`Task::requestBack()` owns route fallback because `Task` owns the activity
+stack. It snapshots the current activity and calls
+`Activity::onBackRequested(source)`.
 
-`Task::enterActivity()` and `Task::exitActivity()` already implement the
-framework's push and pop semantics, and `Activity` already supplies the
-lifecycle that callers expect from a top-level screen entry.
+After the hook:
 
-This design therefore keeps the route model simple:
+- `kHandled` ends the request;
+- if the stack was cleared or its top changed reentrantly, return `kHandled`;
+- if the same activity remains and depth is greater than one, call the existing
+  `exitActivity()` once and return `kHandled`;
+- if the same activity remains as the root, return `kUnhandled`.
 
-1. one `Activity` stack per `Task`,
-2. one current activity per task,
-3. and one virtual back hook on `Activity` for local policy.
+The root guard belongs in `requestBack()`. `exitActivity()` remains an explicit
+programmatic pop with its current precondition. The default activity hook is
+unhandled, so existing activities require no state or override.
 
-The new rule is:
+### Activity-local navigation
 
-- `Activity` gets a virtual `onBackRequested()` hook,
-- the top activity gets first chance to consume back when no transient surface
-  is active,
-- if it does not consume back and the task depth is greater than one, the
-  framework pops exactly one activity,
-- otherwise the request returns unhandled.
+The activity owns navigation below its route entry: edit/selection mode,
+activity-local wizard steps, unsaved-change confirmation, or branch history.
+Opening a confirmation dialog counts as handled, preventing an immediate pop
+under the new dialog.
 
-This keeps local policy where it belongs.
+### Transient precedence
 
-Examples:
+Only interactive registrations marked Back- or Escape-dismissible participate.
+The lifetime host supplies visible nesting order.
 
-- a text-edit screen can cancel edit mode first,
-- a wizard-style activity can step back within its own local flow,
-- and a root activity can keep the request, ignore it, or show a confirmation
-  dialog.
+- Dialogs, submenus, modal sheets, and modal drawers participate.
+- A submenu finishes before its parent menu.
+- Snackbars do not participate by default.
+- Standard sheets/drawers, ripples, standalone scrims, keyboard previews, and
+  presentation pins do not participate.
 
-The framework does not automatically exit the last activity on a task in
-response to back. A generic auto-exit rule would turn an unhandled root back
-into an empty screen with no application-specific confirmation or persistence
-policy.
+Participation policy is fixed at registration. If finish opens another
+transient reentrantly, the current request still ends after the first finish.
 
-### Primary-Destination Surfaces Are Selectors, Not Routes
+### Back, Escape, and UI buttons
 
-The design closes on one important ownership rule: peer destination widgets do
-not create route history by themselves.
+Back and Escape share priority but retain distinct `BackSource` values for
+activity policy. Eligible transient presenters map both to finish reason
+`kBack`.
 
-That includes:
+A UI button calls
+`Application::requestBack(*getTask(), BackSource::kNavigationButton)`, never
+`exitActivity()` directly. This preserves transient precedence if presentation
+state changes around event dispatch.
 
-- tab rows,
-- navigation rail destinations,
-- navigation drawer destinations,
-- future bottom navigation destinations,
-- and `HorizontalPageHost` page selection.
+### Selectors and multiple tasks
 
-Those widgets synchronize visible selection. They do not push route entries
-automatically, and the framework does not record their recent selection history
-for back.
+Tabs, navigation bars, rails, drawers, and `HorizontalPageHost` synchronize peer
+selection without creating route entries. Applications implement selection
+history in the owning activity when desired.
 
-This is a deliberate choice for both product and embedded reasons.
+Task fallback uses the supplied target. Global transients receive precedence
+regardless of the initiating task. A popup `Task` used as a genuine route can be
+the target; a popup-backed transient finishes through lifetime registration and
+does not expose its implementation task as route history.
 
-Product reason:
+### Cost
 
-- peer destinations are app sections, not a wizard stack, and automatic
-  history through recent tab or drawer selections produces surprising back
-  behavior.
-
-Embedded reason:
-
-- implicit destination history would require permanent storage on either the
-  selector or a new controller object even for applications that do not want
-  that policy.
-
-If an application needs branch-local history, the owning activity keeps it in
-its own state and resolves it from `onBackRequested()`. The framework does not
-do that implicitly.
-
-### Transient Surfaces Register with an Application-Owned Dispatcher
-
-Transient dismissal belongs on a shared application service rather than on the
-base widget tree.
-
-`ApplicationContext` therefore gains a `BackDispatcher` service.
-
-`BackDispatcher` owns a strict LIFO stack of currently active transient
-participants:
-
-- dialog presenters,
-- menu overlays and submenu overlays,
-- modal sheet wrappers,
-- modal drawer wrappers,
-- and other popup-backed presenters that choose to participate in back.
-
-The stack is strict by design.
-
-Registration and unregistration follow visible nesting order, and `pop()`
-checks that the participant being removed is the current top. That is the
-correct contract for the current framework because dialogs, popup menus, modal
-drawers, and modal sheets already form a nested presentation stack.
-
-This choice is intentionally narrower than a general ordered registry:
-
-- dispatch remains allocation-free,
-- dispatcher state stays one top-of-stack pointer,
-- each transient participant pays only one back-link pointer,
-- and the design avoids a hash map or vector on the hot path.
-
-When a transient participant consumes back, it must reuse its existing close or
-dismiss path rather than mutating route state directly. That keeps dialog
-callbacks, menu-chain teardown, sheet scrim cleanup, and popup invalidation on
-the same code path as other dismiss triggers.
-
-### Dialogs, Menus, Sheets, and Drawers Use the Same Back Rule
-
-The design unifies the current component-level expectations.
-
-Dialogs:
-
-- register while visible,
-- consume back first when they are on top,
-- and close through `Dialog::close()` so callback behavior stays unchanged.
-
-Menus:
-
-- register one transient participant per open overlay level,
-- and therefore dismiss deepest-first on Back or Escape exactly as the menu
-  design already requires.
-
-Modal sheets and modal drawers:
-
-- register only while open,
-- dismiss through the same wrapper close path as scrim dismissal,
-- and do not add back policy to the embedded standard sheet or drawer widgets.
-
-Standard sheets and standard drawers do not register for back because they are
-layout surfaces, not transient modal interruptions.
-
-### Passive Overlays Stay Out of the Back Stack
-
-Back participation is explicit registration. Visibility alone is not enough.
-
-This keeps passive overlays out of the back path:
-
-- click animations,
-- press overlays,
-- scrims without an active modal presenter,
-- and the current shared on-screen keyboard popup.
-
-The shared keyboard popup remains non-participating in this design. Text-edit
-cancel versus confirm policy stays on the owning activity or text-edit flow.
-A dedicated soft-keyboard hide-on-back policy is follow-on work, not part of
-this navigation contract.
-
-### `Application` Owns the Physical Input Entry Point
-
-As in [non_touch_input_design.md](non_touch_input_design.md), `Application`
-remains the owner of physical input polling and dispatch order.
-
-That means all semantic back sources route through one method:
-
-- keyboard Back key,
-- Escape,
-- a top app bar or navigation icon button,
-- programmatic back requests from application code,
-- and later committed predictive-back gestures.
-
-UI code that wants back behavior should call `Application::requestBack()`.
-It should not pop activities directly, because direct activity pop would bypass
-dialog, menu, sheet, and drawer dismissal precedence.
-
-### Predictive Back Reuses the Same Ownership and Priority
-
-Predictive back changes animation timing, not ownership.
-
-When predictive-back gesture support lands, the framework keeps the same top
-consumer rule:
-
-1. resolve the current top consumer using the same transient-first, then
-   activity-owned ordering,
-2. lock that one consumer as the preview owner for the duration of the
-   gesture,
-3. send preview progress only to that owner,
-4. then either cancel the preview or commit it through the same final dismiss
-   or pop path.
-
-Lower layers do not preview concurrently. If a modal drawer is the active
-consumer, the underlying activity does not also animate its own back preview.
-If no transient surface is active, the current activity owns the preview.
-
-The first implementation phase lands only the commit-style back contract.
-Predictive preview hooks land later, once a gesture source exists, as an
-extension of the same dispatcher and `Activity` hook family. The framework
-does not check in public preview-only API before it can drive that API end to
-end.
-
-### RAM Impact
-
-This design is intentionally cheap in steady state.
-
-- `ApplicationContext` gains one `BackDispatcher` object with one top pointer.
-- `Activity` gains one virtual back hook but no new per-instance data.
-- Each active transient presenter pays one pointer for its back-stack link
-  while it is visible.
-- Base widgets such as tabs, rails, drawers, lists, sheets, and page hosts do
-  not gain back callbacks, history buffers, or policy flags.
-
-That cost model is the main reason the design rejects implicit destination
-history and a universal widget-level back API.
+The task path adds one virtual function to the existing `Activity` vtable, with
+no polymorphic-object size increase, plus an activity-count query and request
+method. Transient dispatch reuses the lifetime registration's link and host
+pointer; two policy bits fit its flags byte. No `BackDispatcher` object or
+second per-presenter pointer is added.
 
 ## Proposed API
 
-The first-pass public surface is:
-
 ```cpp
+namespace roo_windows {
+
 enum class BackSource : uint8_t {
   kProgrammatic,
   kBackKey,
   kEscapeKey,
   kNavigationButton,
-  kGestureCommit,
 };
 
-enum class BackResult : uint8_t {
-  kUnhandled,
-  kHandled,
-};
-
-class BackParticipant {
- public:
-  virtual ~BackParticipant() = default;
-  virtual BackResult onBackRequested(BackSource source) = 0;
-
- private:
-  friend class BackDispatcher;
-  BackParticipant* previous_ = nullptr;
-};
-
-class BackDispatcher {
- public:
-  void push(BackParticipant& participant);
-  void pop(BackParticipant& participant);
-  BackResult dispatch(BackSource source);
-
- private:
-  BackParticipant* top_ = nullptr;
-};
-
-class ApplicationContext {
- public:
-  BackDispatcher& back();
-  const BackDispatcher& back() const;
-};
-
-class Application {
- public:
-  BackResult requestBack(
-      BackSource source = BackSource::kProgrammatic);
-};
+enum class BackResult : uint8_t { kUnhandled, kHandled };
 
 class Activity {
  public:
@@ -465,164 +238,154 @@ class Activity {
     return BackResult::kUnhandled;
   }
 };
+
+class Task {
+ public:
+  size_t activityCount() const;
+  BackResult requestBack(BackSource source);
+};
+
+class Application {
+ public:
+  BackResult requestBack(
+      Task& target,
+      BackSource source = BackSource::kProgrammatic);
+};
+
+struct TransientPresentationPolicy {
+  bool dismiss_on_back : 1 = false;
+  bool dismiss_on_escape : 1 = false;
+};
+
+}  // namespace roo_windows
 ```
 
-`Application::requestBack()` resolves behavior in this order:
+`Application::requestBack()` verifies that the target belongs to the
+application, checks the transient host, then calls `target.requestBack()`.
+Passing a detached or foreign task is a programming error.
 
-1. ask `context().back()` to dispatch to the current transient participant
-   stack,
-2. if unhandled, ask the top regular task's current activity,
-3. if still unhandled and the task depth is greater than one, pop exactly one
-   activity and return `kHandled`,
-4. otherwise return `kUnhandled`.
-
-No separate public `Navigator` class, route object, or route-history service
-lands in this design.
+Policy is fixed while registered; changing it requires re-registration. No
+predictive API lands before a gesture and animation contract can test it end to
+end.
 
 ## Implementation Plan
 
-Authoring reference: follow the local
-[embedded C++ code authoring instruction](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
-and the
-[roo_windows widget authoring instruction](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
+Authoring reference: follow the
+[embedded C++ code-authoring instructions](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
+and [roo_windows widget-authoring instructions](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
-### Phase 1: Back Dispatch Core
+### Phase 1: Task and activity semantics
 
-Code slice:
-
-1. Add `src/roo_windows/core/back_dispatcher.h` and
-   `src/roo_windows/core/back_dispatcher.cpp`.
-2. Add `ApplicationContext::back()` accessors and `Application::requestBack()`.
-3. Add the virtual `Activity::onBackRequested()` hook and the internal task
-   fallback that pops exactly one activity only when the task depth is greater
-   than one.
-4. Add `test/back_dispatcher_test.cpp` coverage for LIFO transient dispatch,
-   root-route unhandled behavior, and single-activity pop behavior.
+Add the enums, default activity hook, activity-count query, and
+`Task::requestBack()`. Test root preservation, one pop, consumption, and
+reentrant clear/pop/push. Update API comments in the same commit.
 
 Proposed commit message:
 
-> Add framework back dispatch core
+> task: add semantic back request handling
 
-Validation: run `bazel test //:back_dispatcher_test`.
+Validation: `bazel test //:task_test`.
 
-### Phase 2: Modal and Popup Integration
+### Phase 2: Application entry point and UI adoption
 
-Code slice:
-
-1. Wire `Dialog` to register a transient back participant while visible and to
-   dismiss through `Dialog::close()` on back.
-2. Wire menu overlays and submenu overlays to register one participant per
-   open overlay layer so deepest-first menu dismissal follows the shared
-   dispatcher contract.
-3. Wire modal sheet and modal drawer wrappers to register while open and to
-   dismiss through their existing wrapper close paths.
-4. Add `test/modal_back_behavior_test.cpp` coverage for dialog priority,
-   deepest-first menu dismissal, and modal sheet or drawer dismissal.
+Add `Application::requestBack(Task&, BackSource)` with task fallback only.
+Convert existing activity Back buttons, including the composite menu title,
+from direct pop. Test target selection in a multi-task application and update
+one existing example or emulator flow.
 
 Proposed commit message:
 
-> Wire modal surfaces into back dispatch
+> application: route back requests to their target task
 
-Validation: run `bazel test //:back_dispatcher_test //:modal_back_behavior_test`.
+Validation: `bazel test //:task_test //:application_test` and build the updated
+example or emulator target.
 
-### Phase 3: Activity-Owned Navigation Adoption
+### Phase 3: Transient precedence
 
-Code slice:
-
-1. Update the relevant app-shell surfaces so explicit back buttons call
-   `Application::requestBack()` rather than popping activities directly.
-2. Add one emulation scenario in `emulation/main.cpp` that demonstrates
-   transient dismissal first and activity pop second.
-3. Expand documentation for navigation surfaces to state that tabs, rails,
-   drawers, and `HorizontalPageHost` remain selector-only unless the owning
-   activity chooses to consume back for local branch history.
-4. Add or expand tests that cover one activity-owned local-navigation example
-   that consumes back without mutating the task stack.
+After Phase 1 of the [lifetime design](transient_presenter_lifetime_design.md),
+add fixed Back/Escape policy bits and finish the top eligible registration
+before task fallback. Test unlink-before-completion, replacement reentrancy,
+one finish per request, and fallback with no eligible transient.
 
 Proposed commit message:
 
-> Adopt shared back handling in navigation surfaces
+> presentation: dismiss top transient on back request
 
-Validation: run `bazel test //:back_dispatcher_test //:modal_back_behavior_test`
-and `(cd emulation; bazel build :main)`.
+Validation:
 
-### Phase 4: Predictive-Back Follow-On
+- `bazel test //:back_request_test
+  //:transient_presentation_lifetime_test`
 
-Code slice:
+### Phase 4: Component and non-touch integration
 
-1. Add preview begin, progress, cancel, and commit hooks to the dispatcher and
-   activity path once a gesture back source exists.
-2. Lock preview ownership to the same top consumer selected by commit-style
-   back dispatch.
-3. Add modal-drawer, modal-sheet, and activity preview implementations that
-   animate only the current owner.
-4. Add `test/predictive_back_test.cpp` coverage for owner locking, cancel,
-   commit, and transient-versus-activity precedence.
+Adopt dialogs, menu chains, modal sheets, and modal drawers as their
+implementations land. Route hardware Back and Escape using the focus-owned task.
+Split work into one commit per component, each including dismissal, nesting,
+destruction, and reentrancy tests plus the updated reference application.
 
-Proposed commit message:
+Proposed commit-message pattern:
 
-> Add predictive back previews
+> `<component>: join semantic back request handling`
 
-Validation: run `bazel test //:predictive_back_test`.
+Validation for each commit: its component tests, `//:back_request_test`,
+`//:transient_presentation_lifetime_test`, and the reference-application build.
 
 ## Testing Plan
 
-Validation should cover the contract at three levels.
+Task tests cover activity consumption, root preservation, one-level pop, and
+reentrant stack changes. Presentation-host tests cover priority, eligibility,
+exactly-once finish, and destruction-safe unlinking. Component and reference
+tests cover nested menus, modal precedence, focus-derived target selection, and
+activity fallback.
 
-1. Core unit coverage for dispatcher LIFO behavior, top-activity fallback, and
-   root-route unhandled behavior.
-2. Modal-surface coverage for dialog, menu, modal sheet, and modal drawer
-   precedence and dismissal-path reuse.
-3. Activity-owned local-navigation coverage for one nested-flow example that
-   consumes back without popping the task stack.
-
-The emulation build should also carry one simple scenario that exercises:
-
-1. explicit UI back button calls,
-2. transient dismissal first,
-3. and activity pop second.
-
-Predictive-back preview tests land only with the gesture-source follow-on.
+Supported-target validation records stack delta and confirms that request
+handling allocates nothing. No rendering golden is needed because this design
+changes semantic routing, not geometry or pixels.
 
 ## Caveats
 
+A hardware source with neither an eligible transient nor a focus-owned task is
+unhandled. Applications wanting a global fallback explicitly select that task.
+
+Activities remain borrowed and must outlive task membership. This design does
+not introduce route ownership or general weak references.
+
 ### Rejected Alternatives
 
-#### Add a Second Generic Navigator Framework
+#### Add a navigator or route-controller hierarchy
 
-Rejected.
+Rejected because `Task` and `Activity` already own route stack and lifecycle.
 
-`Task` plus `Activity` already provides a real route stack with lifecycle.
-Adding a second public navigator or route-tree framework would duplicate that
-ownership model, create migration pressure across existing activity-based code,
-and add permanent RAM cost before the repository has evidence that the current
-task model is insufficient.
+#### Call `exitActivity()` for every Back source
 
-#### Record Automatic History for Tabs, Drawers, Rails, or Page Hosts
+Rejected because it bypasses transient and local policy and can remove root.
 
-Rejected.
+#### Add a separate `BackDispatcher` stack
 
-Primary-destination selection is not the same thing as back-stack navigation.
-Automatic history through recent destination selection would produce surprising
-app-shell behavior and would add storage to applications that do not want that
-policy. Applications that need branch-local history can store it explicitly in
-their activity state.
+Rejected because the lifetime host already owns visible registration and
+nesting; another stack adds RAM and destruction/order races.
 
-#### Add a Universal Widget-Level `onBackRequested()` API
+#### Bubble through the widget tree
 
-Rejected.
+Rejected because widgets do not own routes and modal priority does not follow
+ordinary parentage.
 
-Back ownership is layer-driven and route-driven, not a generic widget-tree
-traversal problem. Putting a universal back hook on every widget would invite
-ambiguous propagation rules, encourage per-widget policy, and push back logic
-into surfaces that are not route owners. The dispatcher plus activity hook is
-the narrower and cheaper abstraction.
+#### Pick the newest regular task
+
+Rejected because creation order does not identify intent in multi-pane apps.
+
+#### Record selector history
+
+Rejected because peer destinations are not universally hierarchical routes and
+implicit history adds storage and application policy to reusable widgets.
 
 ## Future Work
 
-1. Add predictive-back gesture preview and commit once the gesture-input path
-   exists.
-2. Revisit soft-keyboard hide-on-back policy after hardware-keyboard and
-   text-edit ownership rules are implemented in code.
-3. Add higher-level app-shell helpers only after the lower-level back contract
-   is landed and real applications show a repeated composition pattern.
+Predictive Back can extend this path after gesture, cancellation, and component
+motion contracts exist. It must preserve transient-first and explicit-target
+ownership, lock one consumer for the gesture, and commit through this semantic
+request path.
+
+Soft-keyboard hide-on-back remains owned by editable-text and non-touch-input
+work. It can participate as a transient or activity-local state without another
+navigation layer.

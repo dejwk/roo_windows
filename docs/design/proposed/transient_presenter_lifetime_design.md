@@ -103,7 +103,7 @@ normal call boundary:
 - basic and full-screen dialogs,
 - snackbar presenters and queued snackbar requests,
 - modal drawers and future popup-backed presenters,
-- and the back-dispatch participants owned by those surfaces.
+- and the Back/Escape eligibility policy owned by those surfaces.
 
 It does not apply to:
 
@@ -131,7 +131,7 @@ It does not apply to:
 
 ### Embedded requirements
 
-1. Show, dismiss, and back-dispatch registration are heap-free for
+1. Show, dismiss, and Back/Escape eligibility registration are heap-free for
    caller-owned presenters.
 2. No base `Widget` storage is added solely to observe anchor lifetime.
 3. No `shared_ptr` or general weak-reference control block is introduced.
@@ -277,7 +277,7 @@ Terminal paths use one `finish(reason, result)` operation. It is idempotent.
 The required order is:
 
 1. change state to `kFinishing`,
-2. remove back-dispatch and input registrations,
+2. disable Back/Escape eligibility and remove input registrations,
 3. hide presentation pins and cancel scheduled work,
 4. detach surface, scrim, and borrowed content,
 5. unlink from the host or queue,
@@ -446,9 +446,10 @@ rather than putting a type-erased result or callback in the framework base.
 
 ## Relationship to Back Dispatch and Presentation Pins
 
-Back dispatch determines which visible transient receives a dismiss request;
-it does not own that transient. Its intrusive entry is embedded in the
-registered presentation and is removed during `finish()` before application
+The presentation host determines which visible transient receives a semantic
+Back/Escape dismiss request. The eligibility bits live on the existing
+registration; there is no separate back-participant registry. Eligibility is
+disabled and the presentation is unlinked during `finish()` before application
 code runs.
 
 `PresentationPin` is a paint-only child resource of a presentation. It solves
