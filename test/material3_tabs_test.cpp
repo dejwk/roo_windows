@@ -93,9 +93,8 @@ class BoundPageHost : public HorizontalPageHost {
 
   void bind(PageBoundTabs& tabs) { tabs_ = &tabs; }
 
-  using HorizontalPageHost::onDown;
+  using HorizontalPageHost::onDragStart;
   using HorizontalPageHost::onFling;
-  using HorizontalPageHost::onScroll;
   using HorizontalPageHost::setCurrentIndex;
 
  protected:
@@ -166,7 +165,7 @@ TEST(Material3Tabs, TabOwnsSurfaceAreaForStateOverlays) {
   EXPECT_TRUE((std::is_base_of<SurfaceWidget, Tab>::value));
   EXPECT_EQ(Widget::OVERLAY_AREA, tab.getOverlayType());
   EXPECT_EQ(::roo_windows::material3::ColorToken::kSurface, tab.containerRole());
-  EXPECT_EQ(env.theme().color.surface, tab.background());
+  EXPECT_EQ(env.theme().material3Theme().color.surface, tab.background());
   EXPECT_FALSE(tab.useOverlayOnActivation());
 }
 
@@ -620,27 +619,30 @@ TEST_F(Material3TabsRenderTest, PrimaryFixedRowPaintsIndicatorAndDivider) {
 
   EXPECT_TRUE(refresh());
 
-  EXPECT_EQ(QuantizeToArgb4444(env_.theme().color.primary),
+  EXPECT_EQ(QuantizeToArgb4444(env_.theme().material3Theme().color.primary),
             pixelAt(30, Scaled(45)));
-  EXPECT_EQ(QuantizeToArgb4444(env_.theme().color.outlineVariant),
+  EXPECT_EQ(QuantizeToArgb4444(env_.theme().material3Theme().color.outlineVariant),
             pixelAt(30, Scaled(47)));
-  EXPECT_EQ(QuantizeToArgb4444(env_.theme().color.surface),
+  EXPECT_EQ(QuantizeToArgb4444(env_.theme().material3Theme().color.surface),
             pixelAt(0, Scaled(45)));
 
   first_raw->setLabel("Uno");
   EXPECT_TRUE(refresh());
 
-  EXPECT_EQ(QuantizeToArgb4444(env_.theme().color.outlineVariant),
+  EXPECT_EQ(QuantizeToArgb4444(env_.theme().material3Theme().color.outlineVariant),
             pixelAt(30, Scaled(47)));
 
   first_raw->setPressed(true);
   EXPECT_TRUE(refresh());
 
   roo_display::Color pressed_indicator = roo_display::AlphaBlend(
-      env_.theme().color.primary,
-      env_.theme().color.onSurface.withA(env_.theme().state.pressedOnSurface));
+      env_.theme().material3Theme().color.primary,
+      env_.theme().material3Theme().color.onSurface.withA(
+          env_.theme().material3Theme().state
+              .resolve(ColorToken::kSurface, InteractionState::kPressed)
+              .a()));
   EXPECT_EQ(QuantizeToArgb4444(pressed_indicator), pixelAt(30, Scaled(45)));
-  EXPECT_EQ(QuantizeToArgb4444(env_.theme().color.outlineVariant),
+  EXPECT_EQ(QuantizeToArgb4444(env_.theme().material3Theme().color.outlineVariant),
             pixelAt(30, Scaled(47)));
 }
 
@@ -657,15 +659,15 @@ TEST_F(Material3TabsRenderTest, SecondaryNoDividerPaintsTwoPixelIndicator) {
 
   EXPECT_TRUE(refresh());
 
-  EXPECT_EQ(QuantizeToArgb4444(env_.theme().color.surface),
+  EXPECT_EQ(QuantizeToArgb4444(env_.theme().material3Theme().color.surface),
             pixelAt(0, Scaled(45)));
-  EXPECT_EQ(QuantizeToArgb4444(env_.theme().color.primary),
+  EXPECT_EQ(QuantizeToArgb4444(env_.theme().material3Theme().color.primary),
             pixelAt(0, Scaled(46)));
-  EXPECT_EQ(QuantizeToArgb4444(env_.theme().color.primary),
+  EXPECT_EQ(QuantizeToArgb4444(env_.theme().material3Theme().color.primary),
             pixelAt(30, Scaled(46)));
-  EXPECT_EQ(QuantizeToArgb4444(env_.theme().color.primary),
+  EXPECT_EQ(QuantizeToArgb4444(env_.theme().material3Theme().color.primary),
             pixelAt(59, Scaled(47)));
-  EXPECT_EQ(QuantizeToArgb4444(env_.theme().color.surface),
+  EXPECT_EQ(QuantizeToArgb4444(env_.theme().material3Theme().color.surface),
             pixelAt(60, Scaled(47)));
 }
 
@@ -684,9 +686,9 @@ TEST_F(Material3TabsRenderTest, ProgrammaticSelectionSnapsIndicator) {
   EXPECT_TRUE(tabs_raw->setSelectedIndex(1, false));
   EXPECT_TRUE(refresh());
 
-  EXPECT_EQ(QuantizeToArgb4444(env_.theme().color.surface),
+  EXPECT_EQ(QuantizeToArgb4444(env_.theme().material3Theme().color.surface),
             pixelAt(30, Scaled(45)));
-  EXPECT_EQ(QuantizeToArgb4444(env_.theme().color.primary),
+  EXPECT_EQ(QuantizeToArgb4444(env_.theme().material3Theme().color.primary),
             pixelAt(90, Scaled(45)));
 }
 

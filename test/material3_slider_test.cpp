@@ -782,7 +782,7 @@ TEST_F(Material3SliderRenderTest, MediumStandardInsetIconPaintsWhenConfigured) {
             roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                              kSliderY + Scaled(52) - 1));
 
-  EXPECT_EQ(QuantizeToArgb4444(context().theme().color.onPrimary),
+  EXPECT_EQ(QuantizeToArgb4444(context().theme().material3Theme().color.onPrimary),
             pixelAt(kSliderX + 12, kSliderY + 26));
 }
 
@@ -801,7 +801,7 @@ TEST_F(Material3SliderRenderTest, SmallSliderIgnoresInsetIcon) {
 
   addSlider(std::move(slider));
 
-  EXPECT_EQ(QuantizeToArgb4444(context().theme().color.primary),
+  EXPECT_EQ(QuantizeToArgb4444(context().theme().material3Theme().color.primary),
             pixelAt(kSliderX + 12, kSliderY + 22));
 }
 
@@ -833,9 +833,9 @@ TEST_F(Material3SliderRenderTest, InsetIconJumpsPastHandleAtMinimumValue) {
       style, SliderRange{0.0f, 100.0f}, 0.0f, *icon, kSliderWidth, Scaled(52));
   int jumped_icon_x = kSliderX + jumped_icon.xMin() + jumped_icon.width() / 2;
 
-  EXPECT_NE(QuantizeToArgb4444(context().theme().color.onSecondaryContainer),
+  EXPECT_NE(QuantizeToArgb4444(context().theme().material3Theme().color.onSecondaryContainer),
             pixelAt(kSliderX + 6, kSliderY + 26));
-  EXPECT_EQ(QuantizeToArgb4444(context().theme().color.onSecondaryContainer),
+  EXPECT_EQ(QuantizeToArgb4444(context().theme().material3Theme().color.onSecondaryContainer),
             pixelAt(jumped_icon_x, kSliderY + 26));
   EXPECT_GE(jumped_icon.xMin(),
             (int16_t)ceilf(layout.thumb_center_primary + (float)Scaled(12)));
@@ -862,7 +862,7 @@ TEST_F(Material3SliderRenderTest, InactiveSideInsetIconPaintsWhenConfigured) {
   Rect icon_rect =
       ResolveInsetIconRectForTest(style, SliderRange{0.0f, 100.0f}, 50.0f,
                                   *icon, kSliderWidth, Scaled(52), anchor);
-  EXPECT_EQ(QuantizeToArgb4444(context().theme().color.onSecondaryContainer),
+  EXPECT_EQ(QuantizeToArgb4444(context().theme().material3Theme().color.onSecondaryContainer),
             pixelAt(kSliderX + icon_rect.xMin() + icon_rect.width() / 2,
                     kSliderY + icon_rect.yMin() + icon_rect.height() / 2));
 }
@@ -898,9 +898,9 @@ TEST_F(Material3SliderRenderTest,
                                   *icon, kSliderWidth, Scaled(52), anchor);
   int jumped_icon_x = kSliderX + jumped_icon.xMin() + jumped_icon.width() / 2;
 
-  EXPECT_NE(QuantizeToArgb4444(context().theme().color.onPrimary),
+  EXPECT_NE(QuantizeToArgb4444(context().theme().material3Theme().color.onPrimary),
             pixelAt(kSliderX + kSliderWidth - 6, kSliderY + 26));
-  EXPECT_EQ(QuantizeToArgb4444(context().theme().color.onPrimary),
+  EXPECT_EQ(QuantizeToArgb4444(context().theme().material3Theme().color.onPrimary),
             pixelAt(jumped_icon_x, kSliderY + 26));
   EXPECT_LE(jumped_icon.xMax(),
             (int16_t)floorf(layout.thumb_center_primary - (float)Scaled(12)));
@@ -943,7 +943,7 @@ TEST_F(Material3SliderRenderTest,
   ASSERT_GT(sample_local_x, icon_rect.xMax());
 
   EXPECT_EQ(
-      QuantizeToArgb4444(context().theme().color.primary),
+      QuantizeToArgb4444(context().theme().material3Theme().color.primary),
       pixelAt(kSliderX + sample_local_x, kSliderY + slider_ptr->height() / 2));
 }
 
@@ -985,8 +985,8 @@ TEST_F(Material3SliderRenderTest,
 
   Color sample =
       pixelAt(kSliderX + sample_local_x, kSliderY + slider_ptr->height() / 2);
-  EXPECT_NE(QuantizeToArgb4444(context().theme().color.onPrimary), sample);
-  EXPECT_NE(QuantizeToArgb4444(context().theme().color.onSecondaryContainer),
+  EXPECT_NE(QuantizeToArgb4444(context().theme().material3Theme().color.onPrimary), sample);
+  EXPECT_NE(QuantizeToArgb4444(context().theme().material3Theme().color.onSecondaryContainer),
             sample);
 }
 
@@ -1036,15 +1036,15 @@ TEST_F(Material3SliderRenderTest,
   int16_t new_center_y = kSliderY + new_icon.yMin() + new_icon.height() / 2;
   Color expected_new_icon_color =
       new_icon.xMin() == Scaled(4)
-          ? QuantizeToArgb4444(context().theme().color.onPrimary)
-          : QuantizeToArgb4444(context().theme().color.onSecondaryContainer);
+          ? QuantizeToArgb4444(context().theme().material3Theme().color.onPrimary)
+          : QuantizeToArgb4444(context().theme().material3Theme().color.onSecondaryContainer);
 
-  EXPECT_EQ(QuantizeToArgb4444(context().theme().color.onSecondaryContainer),
+  EXPECT_EQ(QuantizeToArgb4444(context().theme().material3Theme().color.onSecondaryContainer),
             pixelAt(old_center_x, old_center_y));
   ASSERT_TRUE(slider_ptr->setValue(new_value));
   ASSERT_TRUE(app_.refresh());
 
-  EXPECT_NE(QuantizeToArgb4444(context().theme().color.onSecondaryContainer),
+  EXPECT_NE(QuantizeToArgb4444(context().theme().material3Theme().color.onSecondaryContainer),
             pixelAt(old_center_x, old_center_y));
   EXPECT_EQ(expected_new_icon_color, pixelAt(new_center_x, new_center_y));
 }
@@ -1118,14 +1118,14 @@ TEST_F(Material3SliderRenderTest,
       roo_display::FpPoint{
           CenterFromValueForTest(axis, slider_ptr->range(), 20.0f),
           0.5f * (float)axis.crossSpan() - 0.5f},
-      Scaled(2), context().theme().color.onSecondaryContainer);
+      Scaled(2), context().theme().material3Theme().color.onSecondaryContainer);
   int stop_rightmost_x = kSliderX + stop.extents().xMax();
   int center_y = kSliderY + slider_ptr->height() / 2;
 
   ASSERT_TRUE(slider_ptr->setValue(0.0f));
   ASSERT_TRUE(app_.refresh());
 
-  EXPECT_EQ(QuantizeToArgb4444(context().theme().color.onSecondaryContainer),
+  EXPECT_EQ(QuantizeToArgb4444(context().theme().material3Theme().color.onSecondaryContainer),
             pixelAt(stop_rightmost_x, center_y));
 }
 
@@ -1756,11 +1756,11 @@ TEST_F(Material3SliderRenderTest,
 
   ASSERT_TRUE(app_.refresh());
 
-  Color primary = QuantizeToArgb4444(context().theme().color.primary);
+  Color primary = QuantizeToArgb4444(context().theme().material3Theme().color.primary);
   Color inactive =
-      QuantizeToArgb4444(context().theme().color.secondaryContainer);
+      QuantizeToArgb4444(context().theme().material3Theme().color.secondaryContainer);
   Color backdrop_color = QuantizeToArgb4444(kBackdropColor);
-  Color background = QuantizeToArgb4444(context().theme().color.background);
+  Color background = QuantizeToArgb4444(context().theme().material3Theme().color.background);
 
   EXPECT_EQ(backdrop_color, pixelAt(2, 2));
   EXPECT_EQ(background, pixelAt(kSliderX, kSliderY + 14));
@@ -1791,10 +1791,10 @@ TEST_F(Material3SliderRenderTest,
 
   ASSERT_TRUE(app_.refresh());
 
-  Color primary = QuantizeToArgb4444(context().theme().color.primary);
+  Color primary = QuantizeToArgb4444(context().theme().material3Theme().color.primary);
   Color inactive =
-      QuantizeToArgb4444(context().theme().color.secondaryContainer);
-  Color background = QuantizeToArgb4444(context().theme().color.background);
+      QuantizeToArgb4444(context().theme().material3Theme().color.secondaryContainer);
+  Color background = QuantizeToArgb4444(context().theme().material3Theme().color.background);
 
   internal::SliderAxisMetrics axis(slider_->width(), slider_->height());
   internal::SliderVisualMetrics layout = internal::ResolveSliderVisualMetrics(
@@ -1843,10 +1843,10 @@ TEST_F(Material3SliderRenderTest, RangeSliderPaintsActiveTrackBetweenThumbs) {
 
   ASSERT_TRUE(app_.refresh());
 
-  Color primary = QuantizeToArgb4444(context().theme().color.primary);
+  Color primary = QuantizeToArgb4444(context().theme().material3Theme().color.primary);
   Color inactive =
-      QuantizeToArgb4444(context().theme().color.secondaryContainer);
-  Color background = QuantizeToArgb4444(context().theme().color.background);
+      QuantizeToArgb4444(context().theme().material3Theme().color.secondaryContainer);
+  Color background = QuantizeToArgb4444(context().theme().material3Theme().color.background);
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
   int start_handle_x =
       kSliderX + (int)roundf(CenterFromValueForTest(axis, slider_ptr->range(),
@@ -1895,9 +1895,9 @@ TEST_F(Material3SliderRenderTest,
   int inactive_stop_x = kSliderX + (int)roundf(CenterFromValueForTest(
                                        axis, slider_ptr->range(), 0.8f));
 
-  Color active_stop = QuantizeToArgb4444(context().theme().color.onPrimary);
+  Color active_stop = QuantizeToArgb4444(context().theme().material3Theme().color.onPrimary);
   Color inactive_stop =
-      QuantizeToArgb4444(context().theme().color.onSecondaryContainer);
+      QuantizeToArgb4444(context().theme().material3Theme().color.onSecondaryContainer);
 
   EXPECT_EQ(active_stop, pixelAt(active_stop_x, center_y));
   EXPECT_EQ(inactive_stop, pixelAt(inactive_stop_x, center_y));
@@ -1935,9 +1935,9 @@ TEST_F(Material3SliderRenderTest,
   int inactive_stop_x = kSliderX + (int)roundf(CenterFromValueForTest(
                                        axis, slider_ptr->range(), 0.8f));
 
-  Color active_track = QuantizeToArgb4444(context().theme().color.primary);
+  Color active_track = QuantizeToArgb4444(context().theme().material3Theme().color.primary);
   Color inactive_stop =
-      QuantizeToArgb4444(context().theme().color.onSecondaryContainer);
+      QuantizeToArgb4444(context().theme().material3Theme().color.onSecondaryContainer);
 
   EXPECT_EQ(active_track, pixelAt(active_stop_x, center_y));
   EXPECT_EQ(inactive_stop, pixelAt(inactive_stop_x, center_y));
@@ -1975,9 +1975,9 @@ TEST_F(Material3SliderRenderTest,
   int inactive_stop_x = kSliderX + (int)roundf(CenterFromValueForTest(
                                        axis, slider_ptr->range(), 1.0f));
 
-  Color active_track = QuantizeToArgb4444(context().theme().color.primary);
+  Color active_track = QuantizeToArgb4444(context().theme().material3Theme().color.primary);
   Color inactive_stop =
-      QuantizeToArgb4444(context().theme().color.onSecondaryContainer);
+      QuantizeToArgb4444(context().theme().material3Theme().color.onSecondaryContainer);
 
   EXPECT_EQ(active_track, pixelAt(active_stop_x, center_y));
   EXPECT_EQ(inactive_stop, pixelAt(inactive_stop_x, center_y));
@@ -2018,9 +2018,9 @@ TEST_F(Material3SliderRenderTest,
   int inactive_stop_x = kSliderX + (int)roundf(DisplayCenterFromValueForTest(
                                        axis, slider_ptr->range(), 1.0f));
 
-  Color active_track = QuantizeToArgb4444(context().theme().color.primary);
+  Color active_track = QuantizeToArgb4444(context().theme().material3Theme().color.primary);
   Color inactive_stop =
-      QuantizeToArgb4444(context().theme().color.onSecondaryContainer);
+      QuantizeToArgb4444(context().theme().material3Theme().color.onSecondaryContainer);
 
   EXPECT_EQ(active_track, pixelAt(active_stop_x, center_y));
   EXPECT_EQ(inactive_stop, pixelAt(inactive_stop_x, center_y));
@@ -2060,10 +2060,10 @@ TEST_F(Material3SliderRenderTest,
   int inactive_stop_x = kSliderX + (int)roundf(CenterFromValueForTest(
                                        axis, slider_ptr->range(), 1.0f));
 
-  Color active_stop = QuantizeToArgb4444(context().theme().color.onPrimary);
+  Color active_stop = QuantizeToArgb4444(context().theme().material3Theme().color.onPrimary);
   Color inactive_stop =
-      QuantizeToArgb4444(context().theme().color.onSecondaryContainer);
-  Color background = QuantizeToArgb4444(context().theme().color.background);
+      QuantizeToArgb4444(context().theme().material3Theme().color.onSecondaryContainer);
+  Color background = QuantizeToArgb4444(context().theme().material3Theme().color.background);
 
   EXPECT_EQ(active_stop, pixelAt(active_stop_x, center_y));
   EXPECT_EQ(background, pixelAt(center_gap_x, center_y));
@@ -2102,9 +2102,9 @@ TEST_F(Material3SliderRenderTest,
   int right_inactive_stop_x = kSliderX + (int)roundf(CenterFromValueForTest(
                                              axis, slider_ptr->range(), 1.0f));
 
-  Color active_stop = QuantizeToArgb4444(context().theme().color.onPrimary);
+  Color active_stop = QuantizeToArgb4444(context().theme().material3Theme().color.onPrimary);
   Color inactive_stop =
-      QuantizeToArgb4444(context().theme().color.onSecondaryContainer);
+      QuantizeToArgb4444(context().theme().material3Theme().color.onSecondaryContainer);
 
   EXPECT_EQ(inactive_stop, pixelAt(left_inactive_stop_x, center_y));
   EXPECT_EQ(active_stop, pixelAt(active_stop_x, center_y));
@@ -2134,8 +2134,8 @@ TEST_F(Material3SliderRenderTest,
                        slider().height() / 2);
   ASSERT_TRUE(app_.refresh());
 
-  Color primary = QuantizeToArgb4444(context().theme().color.primary);
-  Color background = QuantizeToArgb4444(context().theme().color.background);
+  Color primary = QuantizeToArgb4444(context().theme().material3Theme().color.primary);
+  Color background = QuantizeToArgb4444(context().theme().material3Theme().color.background);
 
   EXPECT_EQ(background, pixelAt(kSliderX + 45, kSliderY + 5));
   EXPECT_EQ(primary, pixelAt(kSliderX + 47, kSliderY + kSliderHeight / 2));
@@ -2179,7 +2179,7 @@ TEST_F(Material3SliderRenderTest,
   int gap_x = kSliderX + (int)floorf(layout.active_track_max_primary) + 1;
   int gap_y = kSliderY + slider_ptr->height() / 2;
 
-  Color background = QuantizeToArgb4444(context().theme().color.background);
+  Color background = QuantizeToArgb4444(context().theme().material3Theme().color.background);
   EXPECT_EQ(background, pixelAt(gap_x, gap_y));
 }
 
@@ -2209,8 +2209,8 @@ TEST_F(Material3SliderRenderTest,
   slider_ptr->onShowPress(start_thumb_center, slider_ptr->height() / 2);
   ASSERT_TRUE(app_.refresh());
 
-  Color primary = QuantizeToArgb4444(context().theme().color.primary);
-  Color background = QuantizeToArgb4444(context().theme().color.background);
+  Color primary = QuantizeToArgb4444(context().theme().material3Theme().color.primary);
+  Color background = QuantizeToArgb4444(context().theme().material3Theme().color.background);
 
   EXPECT_EQ(background, pixelAt(kSliderX + 22, kSliderY + 5));
   EXPECT_EQ(background, pixelAt(kSliderX + 30, kSliderY + kSliderHeight / 2));
@@ -2260,9 +2260,9 @@ TEST_F(Material3SliderRenderTest,
       layout.track_cross_start, axis.primarySpan() - 1,
       layout.track_cross_start + Scaled(16) - 1));
 
-  Color primary = QuantizeToArgb4444(context().theme().color.primary);
+  Color primary = QuantizeToArgb4444(context().theme().material3Theme().color.primary);
   Color inactive =
-      QuantizeToArgb4444(context().theme().color.secondaryContainer);
+      QuantizeToArgb4444(context().theme().material3Theme().color.secondaryContainer);
 
   EXPECT_EQ(primary,
             pixelAt(kSliderX + active_rect.xMin() + active_rect.width() / 2,
@@ -2305,14 +2305,14 @@ TEST_F(Material3SliderRenderTest,
   ASSERT_GE(sample_y, 0);
   ASSERT_LT(sample_y, kHeight);
 
-  EXPECT_NE(QuantizeToArgb4444(env_.theme().color.inverseSurface),
+  EXPECT_NE(QuantizeToArgb4444(env_.theme().material3Theme().color.inverseSurface),
             pixelAt(sample_x, sample_y));
 
   roo_display::FpPoint focus = slider_ptr->getPointOverlayFocus();
   slider_ptr->onShowPress((XDim)focus.x, (YDim)focus.y);
   ASSERT_TRUE(app_.refresh());
 
-  EXPECT_EQ(QuantizeToArgb4444(env_.theme().color.inverseSurface),
+  EXPECT_EQ(QuantizeToArgb4444(env_.theme().material3Theme().color.inverseSurface),
             pixelAt(sample_x, sample_y));
 }
 
