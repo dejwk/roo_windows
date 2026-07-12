@@ -112,12 +112,15 @@ explicit roles, not a general recognizer arena.
 11. Preserve slider tap-to-position without treating it as scroll.
 12. Let an ancestor claim without receiving the original `onDown()`.
 13. Never fallback-bubble terminal `UP` after ownership.
+14. Let widgets opt into fling independently from drag ownership; use the
+    owner's drag axis to qualify fling velocity.
 
 ### API and architecture
 
 1. Separate hit testing, role selection, recognition, and owned delivery.
 2. Use claim results only during arbitration; owned callbacks return `void`.
-3. Keep `onFling()` semantically separate.
+3. Keep `onFling()` semantically separate and gate it through explicit
+   `supportsFling()` opt-in.
 4. Consolidate cancellation on `onCancel()`.
 5. Keep ordinary widget APIs declarative: a simple drag widget overrides one
    axis-policy hook plus the drag callbacks it uses.
@@ -292,10 +295,28 @@ Acceptance calls `onDragStart()` before the first `onDrag()`, allowing a
 promoted ancestor to initialize without `onDown()`. Later moves go only to
 the owner.
 
-Successful `UP` calls `onDragFinished()` exactly once. If velocity qualifies
-and the widget supports fling, `onFling()` follows. Finish-before-fling makes
-cleanup unconditional. Slow release is consumed. Cancellation calls
-`onCancel()` instead and never flings.
+Successful `UP` calls `onDragFinished()` exactly once. If the owner returns
+true from `supportsFling()` and velocity qualifies on its `dragAxis()`,
+`onFling()` follows. Finish-before-fling makes cleanup unconditional. Slow
+release is consumed. Cancellation calls `onCancel()` instead and never flings.
+
+`supportsFling()` defaults to false. Fling is therefore explicit opt-in:
+sliders, range sliders, sheet handles, and reorder handles remain directly
+draggable without accidentally gaining inertia, while scroll containers
+override one boolean capability hook.
+
+The detector evaluates velocity from the owner's `dragAxis()`:
+
+- `kNone` never flings,
+- `kHorizontal` compares `abs(vx)` with the fling threshold,
+- `kVertical` compares `abs(vy)` with the fling threshold,
+- `kBoth` compares `vx * vx + vy * vy` with the squared threshold.
+
+When fling qualifies, the detector zeroes velocity components outside the drag
+axes before calling `onFling()`: horizontal owners receive `(vx, 0)`,
+vertical owners receive `(0, vy)`, and two-axis owners receive `(vx, vy)`. This
+prevents high cross-axis release velocity from triggering or influencing a
+fling.
 
 Because raw sensor events lack `CANCEL`, the detector gains an explicit
 cancellation entry point used for hide, detach, disable, input-stream loss, or
@@ -393,10 +414,14 @@ implements `onDrag()`. Vertical and two-axis widgets return `kVertical` and
 `kBoth`, respectively. They inherit all slop and claim behavior. Only a widget
 with additional claim conditions overrides `onDragClaim()`.
 
+A fling-capable widget additionally overrides `supportsFling()` to return true.
+The detector derives fling direction and velocity filtering from `dragAxis()`.
+Direct-drag widgets that do not support inertia inherit the false default.
+
 During migration, internal adapters map `supportsScrolling()`, boolean
-`onScroll()`, and boolean `onFling()` to the new surface. Local
-`onTouchUp()` workarounds remain until each widget migrates. The adapters are
-removed in the final phase.
+`onScroll()`, and boolean `onFling()` to the new surface. Fling-capable widgets
+add `supportsFling()` as they migrate. Local `onTouchUp()` workarounds remain
+until each widget migrates. The adapters are removed in the final phase.
 
 ## Implementation Plan
 
@@ -419,7 +444,7 @@ and zero per-widget growth; allocation instrumentation confirms that owned
 
 ### Phase 2: Add directional arbitration and strong ownership
 
-Add `DragAxis`, the default policy-driven `onDragClaim()`,
+Add `DragAxis`, `dragAxis()`, the default policy-driven `onDragClaim()`,
 total-displacement arbitration, same-event ancestor retry, owner-only moves,
 and pre-claim-only interception. Add a nested horizontal-slider/vertical-panel
 fixture and a two-axis pan fixture.
@@ -432,13 +457,15 @@ double delta, no post-claim interception, and O(1) owned dispatch.
 
 ### Phase 3: Complete terminal and cancellation lifecycles
 
-Add drag start/finish, explicit detector cancellation, finish-before-fling, and
-exactly-once cancellation. Remove `onTouchCanceled()`.
+Add drag start/finish, drag-axis-filtered velocity qualification, explicit
+detector cancellation, finish-before-fling, and exactly-once cancellation.
+Remove `onTouchCanceled()`.
 
 Proposed commit: `feat: make gesture terminal delivery lifecycle-safe`
 
-Validation: cover slow release, fling order, cancellation in every phase,
-promoted-ancestor balance, and no terminal bubbling.
+Validation: cover slow release, fling order, `supportsFling()` opt-in, all four
+drag-axis velocity policies, cross-axis velocity rejection, cancellation in
+every phase, promoted-ancestor balance, and no terminal bubbling.
 
 ### Phase 4: Migrate current drag widgets
 
@@ -446,7 +473,9 @@ Migrate legacy and Material 3 sliders, range slider, scrollable panel,
 horizontal page host, and scrollable tabs. Express orientation in
 `dragAxis()`; only widgets with claim conditions beyond orientation override
 `onDragClaim()`. Initialize motion controllers in `onDragStart()` and update
-affected examples or interaction documentation.
+affected examples or interaction documentation. Scroll containers declare
+inertial support through `supportsFling()`; sliders and other non-inertial drag
+widgets retain the false default.
 
 Proposed commit: `refactor: migrate widgets to owned drag lifecycle`
 
@@ -523,6 +552,14 @@ Rejected because it duplicates touch-slop and axis-dominance logic, invites
 small behavioral inconsistencies, and makes the common fixed-axis case harder
 than its policy requires. `DragAxis` centralizes that behavior without adding
 per-widget state; `onDragClaim()` remains available for exceptional policies.
+
+#### Add a separate `flingAxis()`
+
+Rejected because fling is defined only as continuation of an owned drag, so its
+permitted axes are already known from `dragAxis()`. A separate axis hook would
+duplicate that policy in every fling-capable widget. `supportsFling()` expresses
+the remaining independent decision: whether the widget provides inertia at
+all.
 
 #### Defer tap-versus-scroll
 
