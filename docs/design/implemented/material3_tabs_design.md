@@ -2,7 +2,9 @@
 
 ## Implementation status
 
-**In progress.** A usable subset is present, but part of the defined scope remains. Implemented and outstanding dependencies are recorded in the [status index](../README.md).
+**Implemented.** All five documented phases are present in the source tree,
+tests, and examples. Follow-up extensions remain tracked under
+[Future Work](#future-work).
 
 ## Objective
 
@@ -940,7 +942,7 @@ Authoring references:
 
 ### Execution Order
 
-The tabs implementation is now in its phase-5 integration pass.
+The tabs implementation is complete through its phase-5 integration pass.
 
 `HorizontalPageHost` is already available as a dependency and does not block
 tabs phases 1-4.

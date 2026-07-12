@@ -2,7 +2,9 @@
 
 ## Implementation status
 
-**In progress.** A usable subset is present, but part of the defined scope remains. Implemented and outstanding dependencies are recorded in the [status index](../README.md).
+**Implemented.** All five documented phases are present in the source tree,
+tests, and examples. Follow-up extensions remain tracked under
+[Future Work](#future-work).
 
 ## Objective
 
@@ -84,11 +86,12 @@ What exists today:
 - [../in_progress/material3_tabs_design.md](../in_progress/material3_tabs_design.md) now explicitly leaves
   content-area swipe out of `Tabs` and points toward a separate page host.
 
-What does not exist yet:
+The final integration phase is also landed:
 
-- no landed `material3::Tabs` component to integrate with,
-- no tabs-plus-host example or tabs synchronization test coverage,
-- and no finalized integration guide built around a real tab row.
+- `material3::Tabs` is available as the selector surface,
+- the tabs example demonstrates bidirectional tabs-plus-host synchronization,
+- and `material3_tabs_test.cpp` covers tab-click-to-page and swipe-to-tab
+  updates.
 
 ### Local Design References
 
@@ -568,6 +571,8 @@ implemented, the interim behavior should be explicit:
   layout rather than trying to fake a strip.
 
 ## Implementation Plan
+
+Status: all five phases are implemented.
 
 Authoring references:
 [embedded-cpp-code-authoring instruction](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)

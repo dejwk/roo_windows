@@ -89,7 +89,7 @@ Several current design docs already constrain the answer.
   [material3_navigation_drawer_design.md](material3_navigation_drawer_design.md)
   already keep modal wrappers on popup plus scrim infrastructure and defer
   predictive-back motion.
-- [../in_progress/horizontal_page_host_design.md](../in_progress/horizontal_page_host_design.md) explicitly
+- [../implemented/horizontal_page_host_design.md](../implemented/horizontal_page_host_design.md) explicitly
   defines a presentation container for peer pages, not a new route owner.
 
 Those documents already imply that:

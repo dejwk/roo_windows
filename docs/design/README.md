@@ -15,6 +15,8 @@ Status was audited against the source tree and tests on 2026-07-12. “Dependenc
 | Badge | Paint context and visual-overflow foundations are implemented; general transient presentation remains proposed and is not required by the badge scope. |
 | Button | Surface widgets, click animation, and Material 3 theme support are implemented; icon buttons are a separate proposed design. |
 | Click-animation customization | The shared click-animation controller and widget-local animation view are implemented. |
+| Horizontal page host | Viewport layout, adjacent swipe/settle, blit wrappers, examples, and tabs synchronization are implemented. |
+| Material 3 tabs | Fixed, scrollable, badged, and page-host-integrated tabs are implemented; later extensions are tracked as future work. |
 | Paint context | Clipper/overlay integration and the widget paint-hook migration are implemented. |
 | Slider | Paint context, Material 3 theme support, and the local drag-release workaround are implemented; framework gesture ownership and transient presentation pins remain outstanding enhancements. |
 | Surface-widget refactor | The surface-ownership split is implemented; the broader visual-overflow design remains in progress. |
@@ -26,10 +28,8 @@ Status was audited against the source tree and tests on 2026-07-12. “Dependenc
 
 | Design | Dependency status |
 | --- | --- |
-| Gesture scroll ownership | Slider-local release consumption is implemented; framework-wide gesture ownership is not. |
-| Horizontal page host | Core viewport, swipe/settle, and blit-wrapper phases are implemented; remaining integration/coverage work is not complete. |
+| Gesture arbitration and ownership | Slider-local release consumption is implemented; framework-wide gesture arbitration and ownership are not. |
 | Material 3 lists | Core list family phases are implemented; the remaining design phases are not complete. Badge and paint-context dependencies are implemented. |
-| Material 3 tabs | Fixed, scrollable, badged, and page-host integration are implemented; the design's remaining integration/polish work is incomplete. Horizontal page host remains in progress. |
 | Visual overflow | Surface ownership, ink bounds, direct-paint exclusion, and persistent/transient bound separation are implemented; root-stage transient overlay handling is not. |
 
 ## Proposed
@@ -60,4 +60,3 @@ Status was audited against the source tree and tests on 2026-07-12. “Dependenc
 | Toolbars | Buttons are implemented; icon buttons, menus, and FABs are proposed. |
 | Transient presentation pins | Visual overflow is in progress; no root-stage presentation-pin implementation exists. |
 | Wi-Fi configuration | Existing Wi-Fi transport/configuration APIs are external prerequisites; the Material 3 screen design and its text-field/dialog dependencies are not implemented. |
-

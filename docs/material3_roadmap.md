@@ -32,7 +32,7 @@ The main framework contracts are already described:
 - [gesture_scroll_ownership_design.md](design/in_progress/gesture_scroll_ownership_design.md)
 - [text_system_design.md](design/proposed/text_system_design.md)
 - [non_touch_input_design.md](design/proposed/non_touch_input_design.md)
-- [horizontal_page_host_design.md](design/in_progress/horizontal_page_host_design.md)
+- [horizontal_page_host_design.md](design/implemented/horizontal_page_host_design.md)
 - [application_navigation_back_behavior_design.md](design/proposed/application_navigation_back_behavior_design.md)
 - [transient_presentation_pins_design.md](design/proposed/transient_presentation_pins_design.md)
 
