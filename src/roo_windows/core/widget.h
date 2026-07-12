@@ -64,6 +64,17 @@ static const uint16_t kLayoutRequired = 0x8000;
 enum class ParentClipMode { kClipped, kUnclipped };
 enum class Visibility { kVisible, kInvisible, kGone };
 
+/// The directions in which a widget can own a drag gesture.
+enum class DragAxis : uint8_t {
+  kNone,
+  kHorizontal,
+  kVertical,
+  kBoth,
+};
+
+/// A drag candidate's response while gesture ownership is being negotiated.
+enum class DragClaim : uint8_t { kReject, kAccept, kDefer };
+
 /// Base class for every UI element in the framework.
 ///
 /// A `Widget` owns a rectangular `parent_bounds()` inside its parent, a set of
@@ -365,6 +376,20 @@ class Widget {
   // Should be overridden to return true by widgets that wish to handle the
   // onScroll and onFling events.
   virtual bool supportsScrolling() const { return false; }
+
+  /// Declares the directions in which this widget can own a drag gesture.
+  ///
+  /// The default keeps legacy scrolling widgets eligible in both directions
+  /// until they are migrated to an explicit axis policy.
+  virtual DragAxis dragAxis() const {
+    return supportsScrolling() ? DragAxis::kBoth : DragAxis::kNone;
+  }
+
+  /// Participates in drag ownership arbitration after touch slop is crossed.
+  /// The default applies dragAxis() to total displacement. Override only for
+  /// policies that cannot be expressed by an axis.
+  virtual DragClaim onDragClaim(XDim x, YDim y, XDim total_dx,
+                                YDim total_dy);
 
   // Called when the gesture is recognized as a long press. The widget must
   // have returned true from supportsLongPress() in order to receive this

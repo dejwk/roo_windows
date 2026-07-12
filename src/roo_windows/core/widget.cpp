@@ -784,6 +784,27 @@ bool Widget::onScroll(XDim x, YDim y, XDim dx, YDim dy) {
   return false;
 }
 
+DragClaim Widget::onDragClaim(XDim x, YDim y, XDim total_dx,
+                              YDim total_dy) {
+  (void)x;
+  (void)y;
+  int32_t abs_dx = total_dx < 0 ? -static_cast<int32_t>(total_dx) : total_dx;
+  int32_t abs_dy = total_dy < 0 ? -static_cast<int32_t>(total_dy) : total_dy;
+  switch (dragAxis()) {
+    case DragAxis::kNone:
+      return DragClaim::kReject;
+    case DragAxis::kBoth:
+      return DragClaim::kAccept;
+    case DragAxis::kHorizontal:
+      if (abs_dx == abs_dy) return DragClaim::kDefer;
+      return abs_dx > abs_dy ? DragClaim::kAccept : DragClaim::kReject;
+    case DragAxis::kVertical:
+      if (abs_dx == abs_dy) return DragClaim::kDefer;
+      return abs_dy > abs_dx ? DragClaim::kAccept : DragClaim::kReject;
+  }
+  return DragClaim::kReject;
+}
+
 bool Widget::onFling(XDim x, YDim y, XDim vx, YDim vy) {
   setPressed(false);
   return false;

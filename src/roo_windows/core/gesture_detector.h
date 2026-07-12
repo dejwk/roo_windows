@@ -38,7 +38,7 @@ class GestureDetector {
   enum class Phase : uint8_t {
     kIdle,
     kPressTracking,
-    kLegacyScroll,
+    kDragOwned,
     kLongPress
   };
 
@@ -49,6 +49,7 @@ class GestureDetector {
         sensor_(sensor),
         is_down_(false),
         moved_outside_tap_region_(false),
+        drag_just_claimed_(false),
         phase_(Phase::kIdle),
         tap_target_(nullptr),
         long_press_target_(nullptr),
@@ -80,7 +81,7 @@ class GestureDetector {
   /// Returns the widget currently receiving gesture callbacks, or nullptr
   /// when no gesture is in flight.
   const Widget* currentGestureTarget() const {
-    return phase_ == Phase::kLegacyScroll
+    return phase_ == Phase::kDragOwned
                ? drag_target_
                : (tap_target_ != nullptr ? tap_target_ : long_press_target_);
   }
@@ -120,9 +121,13 @@ class GestureDetector {
   };
 
   bool dispatch(TouchEvent::Type type);
+  bool arbitrateDrag();
+  bool dispatchOwnedMove();
+  bool claimDrag(Widget* target);
   bool dispatchTo(Widget* target, TouchEvent::Type type);
   bool offerIntercept(Panel* target, TouchEvent::Type type);
   Widget* previousTouchTarget(Widget* target) const;
+  Widget* previousDragCandidate(Widget* target) const;
   void selectRoles();
   void beginRole(Widget* target);
 
@@ -143,6 +148,7 @@ class GestureDetector {
   unsigned long now_us_;
   bool is_down_;
   bool moved_outside_tap_region_;
+  bool drag_just_claimed_;
   Phase phase_;
 
   std::vector<Widget*> touch_target_path_;

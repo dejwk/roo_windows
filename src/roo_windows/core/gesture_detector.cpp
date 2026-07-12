@@ -18,6 +18,7 @@ bool GestureDetector::tick() {
       root_.fillTouchTargetPath(event.x, event.y, touch_target_path_);
       selectRoles();
       moved_outside_tap_region_ = false;
+      drag_just_claimed_ = false;
       if (long_press_target_ != nullptr) {
         long_press_event_.schedule(now_us_ + kLongPressTimeoutUs);
       }
@@ -78,7 +79,7 @@ bool GestureDetector::onTouchDown(Widget& widget, XDim x, YDim y) {
   phase_ = Phase::kPressTracking;
   tap_target_ = widget.supportsTap() ? &widget : nullptr;
   long_press_target_ = widget.supportsLongPress() ? &widget : nullptr;
-  drag_target_ = widget.supportsScrolling() ? &widget : nullptr;
+  drag_target_ = widget.dragAxis() != DragAxis::kNone ? &widget : nullptr;
   if (widget.supportsLongPress()) {
     long_press_event_.schedule(now_us_ + kLongPressTimeoutUs);
   }
@@ -92,51 +93,30 @@ bool GestureDetector::onTouchDown(Widget& widget, XDim x, YDim y) {
 
 bool GestureDetector::onTouchMove(Widget& widget, XDim x, YDim y) {
   if (phase_ == Phase::kLongPress) return false;
-  bool handled = false;
-  bool supports_scrolling = widget.supportsScrolling();
-  if (moved_outside_tap_region_) {
-    if (supports_scrolling) {
-      handled |= widget.onScroll(x, y, delta_x_, delta_y_);
-    }
-  } else {
-    if (supports_scrolling) {
-      int16_t total_move_x = latest_.x() - initial_down_.x();
-      int16_t total_move_y = latest_.y() - initial_down_.y();
-      int32_t dist_square =
-          total_move_x * total_move_x + total_move_y * total_move_y;
-      if (dist_square > kTouchSlopSquare) {
-        handled |= widget.onScroll(x, y, delta_x_, delta_y_);
-        phase_ = Phase::kLegacyScroll;
-        moved_outside_tap_region_ = true;
-        cancelEvents();
-      } else {
-        handled = true;
-      }
-    } else if (widget.parent() != nullptr && widget.parent()->isScrollable()) {
-      int16_t total_move_x = latest_.x() - initial_down_.x();
-      int16_t total_move_y = latest_.y() - initial_down_.y();
-      int32_t dist_square =
-          total_move_x * total_move_x + total_move_y * total_move_y;
-      if (dist_square > kTouchSlopSquare) {
-        handled = false;
-        moved_outside_tap_region_ = true;
-        cancelEvents();
-      } else {
-        handled = true;
-      }
-    } else {
-      // tap region = the sloppy bounds of the widget.
-      if (widget.getSloppyTouchBounds().contains(x, y)) {
-        handled = true;
-      } else {
-        moved_outside_tap_region_ = true;
-        cancelEvents();
-        widget.setPressed(false);
-        widget.onCancel();
-      }
-    }
+  if (phase_ == Phase::kDragOwned) {
+    // Ownership is strong: legacy callback return values cannot reroute a
+    // stream after the claimant has been selected.
+    widget.onScroll(x, y, delta_x_, delta_y_);
+    return true;
   }
-  return handled;
+
+  int16_t total_dx = latest_.x() - initial_down_.x();
+  int16_t total_dy = latest_.y() - initial_down_.y();
+  int32_t dist_square = total_dx * total_dx + total_dy * total_dy;
+  if (dist_square <= kTouchSlopSquare) return true;
+
+  DragClaim claim = widget.onDragClaim(x, y, total_dx, total_dy);
+  if (claim == DragClaim::kAccept) {
+    drag_target_ = &widget;
+    phase_ = Phase::kDragOwned;
+    moved_outside_tap_region_ = true;
+    cancelEvents();
+    // The first owned update carries all motion accumulated while intent was
+    // being resolved.
+    widget.onScroll(x, y, total_dx, total_dy);
+    return true;
+  }
+  return claim == DragClaim::kDefer;
 }
 
 bool GestureDetector::onTouchUp(Widget& widget, XDim x, YDim y) {
@@ -147,7 +127,7 @@ bool GestureDetector::onTouchUp(Widget& widget, XDim x, YDim y) {
     handled = true;
   } else if (!moved_outside_tap_region_) {
     handled |= widget.onSingleTapUp(x, y);
-  } else if (widget.supportsScrolling()) {
+  } else if (phase_ == Phase::kDragOwned) {
     // We have been in 'scroll'. Perhaps a fling?
     int32_t v_square = velocity_x_ * velocity_x_ + velocity_y_ * velocity_y_;
     if (v_square > kMinFlingVelocitySquare) {
@@ -162,44 +142,76 @@ bool GestureDetector::onTouchUp(Widget& widget, XDim x, YDim y) {
 }
 
 bool GestureDetector::dispatch(TouchEvent::Type type) {
-  // Give the ancestors a chance to intercept the event.
-  // The last element may be a non-panel, and cannot intercept.
-  if (touch_target_path_.size() > 1) {
+  if (type == TouchEvent::MOVE && phase_ == Phase::kDragOwned) {
+    return dispatchOwnedMove();
+  }
+
+  // Interception is available only before a drag has an owner.
+  if (type == TouchEvent::MOVE && phase_ == Phase::kPressTracking &&
+      touch_target_path_.size() > 1) {
     for (size_t i = 0; i < touch_target_path_.size() - 1; ++i) {
       if (offerIntercept((Panel*)touch_target_path_[i], type)) {
-        Widget* previous_target =
-            phase_ == Phase::kLegacyScroll ? drag_target_ : tap_target_;
-        if (previous_target != nullptr) previous_target->onCancel();
-        drag_target_ = touch_target_path_[i];
-        phase_ = Phase::kLegacyScroll;
-        break;
+        return claimDrag(touch_target_path_[i]);
       }
     }
   }
 
-  // This version does not allow a slider to give up to its parent when an
-  // initial vertical scroll is detected.
-  // if (!touch_target_path_.empty()) {
-  //   return dispatchTo(touch_target_path_.back(), type);
-  // }
-  //
-  // With this version, when moving a slider inside a vertical scroll panel,
-  // panel scroll and slider scroll both work at the same time (without lifting
-  // the touch), depending on where the touch gets dragged. for (auto i =
-  // touch_target_path_.rbegin(); i != touch_target_path_.rend(); ++i) {
-  //   if (dispatchTo(*i, type)) break;
-  // }
-
-  Widget* target = phase_ == Phase::kLegacyScroll ? drag_target_ : tap_target_;
-  if (target == nullptr) target = drag_target_;
-  while (target != nullptr) {
-    if (dispatchTo(target, type)) return true;
-    target->onCancel();
-    target = previousTouchTarget(target);
-    drag_target_ = target;
+  if (type == TouchEvent::MOVE && phase_ == Phase::kPressTracking) {
+    return arbitrateDrag();
   }
 
+  Widget* target = phase_ == Phase::kDragOwned ? drag_target_ : tap_target_;
+  if (target == nullptr) target = drag_target_;
+  // Phase 2 establishes strong post-claim ownership. Terminal callback
+  // cleanup remains legacy until Phase 3, but must not fall back to ancestors.
+  if (phase_ == Phase::kDragOwned) {
+    return target != nullptr && dispatchTo(target, type);
+  }
+  return target != nullptr && dispatchTo(target, type);
+}
+
+bool GestureDetector::arbitrateDrag() {
+  int16_t total_dx = latest_.x() - initial_down_.x();
+  int16_t total_dy = latest_.y() - initial_down_.y();
+  int32_t dist_square = total_dx * total_dx + total_dy * total_dy;
+  if (dist_square <= kTouchSlopSquare) return true;
+
+  while (drag_target_ != nullptr) {
+    XDim x;
+    YDim y;
+    drag_target_->getAbsoluteOffset(x, y);
+    DragClaim claim = drag_target_->onDragClaim(
+        latest_.x() - x, latest_.y() - y, total_dx, total_dy);
+    if (claim == DragClaim::kAccept) return claimDrag(drag_target_);
+    if (claim == DragClaim::kDefer) return true;
+    drag_target_ = previousDragCandidate(drag_target_);
+  }
+  moved_outside_tap_region_ = true;
+  cancelEvents();
   return false;
+}
+
+bool GestureDetector::claimDrag(Widget* target) {
+  drag_target_ = target;
+  phase_ = Phase::kDragOwned;
+  moved_outside_tap_region_ = true;
+  drag_just_claimed_ = true;
+  cancelEvents();
+  return dispatchOwnedMove();
+}
+
+bool GestureDetector::dispatchOwnedMove() {
+  if (drag_target_ == nullptr) return false;
+  XDim x;
+  YDim y;
+  drag_target_->getAbsoluteOffset(x, y);
+  // The first dispatch uses total displacement, so arbitration/defer does not
+  // discard motion. Subsequent dispatches use the incremental sample delta.
+  XDim dx = drag_just_claimed_ ? latest_.x() - initial_down_.x() : delta_x_;
+  YDim dy = drag_just_claimed_ ? latest_.y() - initial_down_.y() : delta_y_;
+  drag_just_claimed_ = false;
+  drag_target_->onScroll(latest_.x() - x, latest_.y() - y, dx, dy);
+  return true;
 }
 
 Widget* GestureDetector::previousTouchTarget(Widget* target) const {
@@ -207,6 +219,14 @@ Widget* GestureDetector::previousTouchTarget(Widget* target) const {
     if (touch_target_path_[i] == target) return touch_target_path_[i - 1];
   }
   return nullptr;
+}
+
+Widget* GestureDetector::previousDragCandidate(Widget* target) const {
+  Widget* previous = previousTouchTarget(target);
+  while (previous != nullptr && previous->dragAxis() == DragAxis::kNone) {
+    previous = previousTouchTarget(previous);
+  }
+  return previous;
 }
 
 void GestureDetector::selectRoles() {
@@ -220,7 +240,7 @@ void GestureDetector::selectRoles() {
     if (long_press_target_ == nullptr && widget->supportsLongPress()) {
       long_press_target_ = widget;
     }
-    if (drag_target_ == nullptr && widget->supportsScrolling()) {
+    if (drag_target_ == nullptr && widget->dragAxis() != DragAxis::kNone) {
       drag_target_ = widget;
     }
   }
