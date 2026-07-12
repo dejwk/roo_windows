@@ -203,15 +203,20 @@ App bars and search bars are low-multiplicity shell surfaces. Most screens will
 host zero or one of each. That changes the RAM tradeoff relative to list rows
 or large button grids.
 
-This design therefore makes four direct decisions:
+This design therefore makes five direct decisions:
 
 1. `AppBar`, `SearchBar`, and `SearchAppBar` are surface-owning widgets.
 2. They may use `Container` as the child-host base because the family has a
    small, structurally bounded child set and does not justify a new generic
    fixed-slot child-host abstraction in `core/`.
-3. Title text, subtitle text, and search-label text are painted directly by the
-   surface-owning widgets rather than through extra text child widgets.
-4. Scroll observation, focused-search orchestration, and overflow policy stay
+3. Title, subtitle, and search-label content are non-interactive text child
+   widgets. They own text measurement, line breaking, ink bounds, invalidation,
+   and final glyph paint; the app-bar classes only assign their slot bounds.
+4. App bars use custom fixed-slot measurement and layout rather than deriving
+   from or nesting `FlexLayout`. The slot geometry is small and prescribed,
+   while the current general flex implementation carries dynamic child and
+   measurement storage and allocates temporary vectors during measurement.
+5. Scroll observation, focused-search orchestration, and overflow policy stay
    outside the base widgets so every instance does not pay for controller state
    it may never use.
 
@@ -307,15 +312,18 @@ This design therefore makes four direct decisions:
 1. Do not allocate on paint, hover, press, focus, or normal layout passes.
 2. Do not add search-editor state, suggestion storage, or result-model storage
    to `SearchBar` or `SearchAppBar`.
-3. Keep the title and search display text as non-owning `roo::string_view`
-   values.
+3. Keep title, subtitle, and search display content as non-owning
+   `roo::string_view` values owned by their text children. The public app-bar
+   setters forward to those children and do not retain duplicate views.
 4. Keep child-widget hosting bounded and small; this family should not expose
    arbitrary child lists.
 5. Add pointer-size-aware size-budget assertions for `AppBar`, `SearchBar`,
    and `SearchAppBar`.
-6. Use a bounded, allocation-free line-layout helper for the one- and two-line
-   text budgets. Direct painting must not pull `TextBlock`'s dynamic line cache
-   into paint or layout hot paths.
+6. Use one private non-interactive `AppBarText` child type across the family.
+   It stores a non-owning view, a Material typography role, a color role, a
+   one- or two-line budget, and a fixed two-entry line cache. It resolves the
+   active theme without allocating during measurement, layout, or paint. Do
+   not use the owning, dynamically cached `TextBlock` for these shell strings.
 
 ## Design Overview
 
@@ -333,14 +341,14 @@ The public family has four pieces:
 `AppBar` owns:
 
 - the straight top-edge container,
-- title and optional subtitle paint,
+- one title text child and, when populated, one subtitle text child,
 - a leading slot,
 - and up to two trailing action slots.
 
 `SearchBar` owns:
 
 - the rounded contained search surface,
-- caller-supplied display text,
+- one search-display text child,
 - an optional leading widget or a default passive search glyph,
 - and one or two trailing widget slots.
 
@@ -350,13 +358,15 @@ The public family has four pieces:
 - one outer leading slot,
 - one shared search-entry lane with the same internal geometry vocabulary as
   `SearchBar`,
+- one search-display text child inside that lane,
 - up to two trailing widgets inside that search-entry lane,
 - and up to two outer trailing slots.
 
 The decisive ownership split is:
 
 - app bars own shell geometry and shell background,
-- child widgets own child action semantics,
+- text children own text measurement, clipping, invalidation, and paint,
+- action children own child action semantics,
 - search entry surfaces own only the unfocused entry treatment,
 - and later focused-search controllers own query editing, suggestions,
   results, and search-view presentation.
@@ -370,8 +380,10 @@ The core decisions are:
    that only differ in token tables,
 3. keep `SearchBar` and `SearchAppBar` as entry surfaces rather than editor
    widgets,
-4. keep host-driven scroll and compression policy outside the base widgets,
-5. and keep the family visually narrow so more than two essential actions still
+4. use fixed-slot app-bar layout with composed text children rather than
+   direct text paint or a nested general-purpose `FlexLayout`,
+5. keep host-driven scroll and compression policy outside the base widgets,
+6. and keep the family visually narrow so more than two essential actions still
    push the page toward a toolbar or another surface rather than bloating the
    app bar.
 
@@ -396,11 +408,13 @@ needs.
 
 To keep the per-instance cost bounded despite the `Container` base:
 
-1. app bars paint title, subtitle, and search text directly,
-2. child widgets are limited to fixed semantic slots,
-3. there is no app-bar-local overflow controller, search presenter, or route
+1. text children are stored by value and attached as borrowed children; there
+   is no heap ownership or layout-container child around them,
+2. text children use non-owning views and fixed-capacity line metadata,
+3. all children are limited to fixed semantic slots,
+4. there is no app-bar-local overflow controller, search presenter, or route
    controller stored on the widget,
-4. and host-driven behaviors such as scroll collapse and search-view handoff
+5. and host-driven behaviors such as scroll collapse and search-view handoff
    stay outside the base widgets.
 
 The low-multiplicity assumption matters. A page may contain several buttons or
@@ -408,6 +422,14 @@ many list rows, but it rarely contains many simultaneous app bars. Using the
 existing `Container` ownership path is therefore a better overall tradeoff than
 inventing a new generic infrastructure layer to save a small amount of RAM on a
 rare shell widget.
+
+The same argument does not justify nesting `FlexLayout`. An app bar has a
+prescribed leading slot, text lane, and trailing strip rather than a caller-
+defined flow. A small custom `onMeasure()` / `onLayout()` implementation can
+measure the occupied slots and assign their rectangles without the two
+persistent vectors and temporary measurement vectors used by the general flex
+algorithm. Composition is retained where it removes behavioral duplication --
+text and actions -- while fixed shell geometry stays on the shell widget.
 
 ### `AppBar` Variant Geometry and Headline Layout
 
@@ -433,12 +455,14 @@ Variant-specific tokens are limited to:
 
 The title block rules are:
 
-1. small app bars paint one title line and never wrap.
+1. all variants use one bounded `AppBarText` title child; small configures
+   it for one line, while medium flexible and large flexible configure it for
+   at most two.
 2. medium flexible and large flexible app bars allow up to two title lines.
 3. subtitles are one line on medium flexible and large flexible variants;
    small bars do not support a subtitle in the initial implementation.
-4. title and subtitle text are painted directly, not hosted as nested text
-   widgets.
+4. subtitles use a by-value `AppBarText` that is gone when empty. Both
+   text children are non-interactive and are not public action slots.
 5. centered alignment centers the whole title block after leading / trailing
    slot reservation rather than pretending the actions do not exist.
 
@@ -469,16 +493,18 @@ That split keeps repaint behavior clean:
 
 1. changing surface state dirties the visible app-bar bounds because the full
    background role changes,
-2. changing title or subtitle dirties only the title block plus any newly
-   exposed background,
+2. changing title or subtitle is forwarded to its text child, which invalidates
+   its old and new ink/layout bounds; a line-count change also requests parent
+   layout,
 3. changing variant invalidates the full bar bounds because the widget height
    can change,
 4. and child-widget hover / press / focus changes stay on the existing child
    widget invalidation paths.
 
 No pixel is intentionally redrawn twice in different colors in the same pass.
-The app-bar surface paints its own final text and background. Child widgets then
-paint or invalidate through the existing widget pipeline.
+The app-bar surface and composed children use the existing container surface,
+exclusion, and child-paint pipeline; the app bar does not paint a second copy of
+text owned by a child.
 
 ### `SearchBar` as an Entry Surface, Not an Editor
 
@@ -486,9 +512,9 @@ paint or invalidate through the existing widget pipeline.
 
 That is the central search decision in this document.
 
-`SearchBar` stores only:
+`SearchBar` contains only:
 
-- one `roo::string_view` display string,
+- one non-interactive `AppBarText` display child,
 - one optional leading widget slot,
 - and up to two trailing widget slots.
 
@@ -512,7 +538,7 @@ This aligns with the roadmap split. The app shell can land a correct visual
 search entry point now, while a later focused-search design decides how query
 editing and result presentation work.
 
-Layout inside the search container is direct and fixed:
+Layout inside the search container uses custom fixed-slot geometry:
 
 - `24dp` leading and trailing padding in standalone mode,
 - `12dp` edge padding in the private embedded search-app-bar layout,
@@ -523,7 +549,7 @@ If no leading widget is supplied, `SearchBar` paints a passive search glyph.
 That keeps the default entry surface lightweight and visually correct without
 requiring a child widget for the most common case.
 
-The display string is rendered as plain entry text. The widget does not try to
+The display child renders plain entry text. The widget does not try to
 distinguish "hint" from "query" semantics in this entry-only phase. Callers can
 show `Search`, `Search inbox`, or the last confirmed query string by choosing
 the text they pass in.
@@ -549,8 +575,9 @@ owns:
   embedded search lane.
 
 The internal search-entry lane is not a live editor in this phase. Like
-`SearchBar`, it paints caller-supplied display text and activates ordinary
-search-open semantics when tapped or keyboard-activated.
+`SearchBar`, it hosts a non-interactive `AppBarText` for caller-supplied
+display text and activates ordinary search-open semantics when tapped or
+keyboard-activated.
 
 The width rule fills the available central strip up to a `720dp` cap. This is
 predictable under embedded constraints and avoids an otherwise arbitrary
@@ -676,15 +703,19 @@ API notes:
    does not do that merely because it owns a surface.
 3. Every constructor takes `ApplicationContext&`, matching the required
    `Widget` / `Container` construction contract.
-4. Passing a null `WidgetRef` clears a slot. Indexed trailing setters accept
-   only indices `0` and `1`; other indices fail explicitly in debug/test builds
-   and do not mutate the widget in release builds. Replacing a slot detaches the
-   previous child before attaching the new one, preserving `WidgetRef`
-   ownership.
-5. Each concrete class implements `getChildrenCount()` and both `getChild()`
-   overloads over its occupied semantic slots; the public API does not expose
-   an arbitrary child collection.
-6. If declarations land before the full paint / measurement behavior, methods
+4. Title, subtitle, and search-display setters forward to by-value text child
+   widgets. Those widgets are returned by the protected child enumeration but
+   are not exposed as replaceable public slots. Empty subtitle text marks the
+   subtitle child gone.
+5. Passing a null `WidgetRef` clears an action slot. Indexed trailing setters
+   accept only indices `0` and `1`; other indices fail explicitly in debug/test
+   builds and do not mutate the widget in release builds. Replacing a slot
+   detaches the previous child before attaching the new one, preserving
+   `WidgetRef` ownership.
+6. Each concrete class implements `getChildrenCount()` and both `getChild()`
+   overloads over its text children and occupied action slots; the public API
+   does not expose an arbitrary child collection.
+7. If declarations land before the full paint / measurement behavior, methods
    that cannot yet behave correctly should emit
    `LOG(FATAL) << "Unimplemented: Material 3 app bars"` or the narrower
    surface-specific equivalent rather than silently painting the wrong
@@ -705,10 +736,16 @@ Code slice:
    for `AppBar`, `SearchBar`, `SearchAppBar`, and the small enum surface.
 2. Add shared token tables for title-based variants and the standalone and
    private embedded search-entry layouts.
-3. Land or explicitly depend on shared Material 3 typography roles for title
+3. Add the private bounded non-owning `AppBarText` child, with Material
+   typography/color-role resolution, a fixed two-line cache, focused
+   measurement / wrapping / ellipsis / invalidation tests, and no allocations
+   during normal measure, layout, or paint.
+4. Land or explicitly depend on shared Material 3 typography roles for title
    large, headline medium, display small, and subtitle text.
-4. Add pointer-size-aware size-budget tests for the three public widget types.
-5. Keep behavior that is not implemented yet behind explicit
+5. Add pointer-size-aware size-budget tests for `AppBarText` and the three
+   public app-bar widget types, including the incremental cost of their by-value
+   text children.
+6. Keep behavior that is not implemented yet behind explicit
    `LOG(FATAL) << "Unimplemented: ..."` stubs rather than placeholder drawing.
 
 Proposed commit message:
@@ -725,7 +762,8 @@ Code slice:
 1. Implement `SearchBar` measurement, contained-surface paint, and bounded
    hit-testing.
 2. Implement the passive leading-search-icon path, optional leading child slot,
-   and one- or two-widget trailing strip.
+   by-value `AppBarText` display child, and one- or two-widget trailing
+   strip.
 3. Implement standalone color handling and keyboard activation through the
    normal click path.
 4. Add focused tests and goldens for passive-leading, custom-leading,
@@ -744,8 +782,9 @@ Code slice:
 
 1. Implement `AppBar` measurement and layout for small, medium flexible, and
    large flexible variants.
-2. Implement direct title / subtitle paint, leading and centered title
-   alignment, and the leading plus trailing slot geometry.
+2. Compose the bounded `AppBarText` title and subtitle children, then implement
+   leading and centered title alignment plus the leading and trailing
+   action-slot geometry.
 3. Implement flat and scrolled container treatment, RTL mirroring, and the
    full-bar invalidation path for variant changes.
 4. Add focused tests and goldens for small, centered small, medium flexible,
@@ -765,7 +804,8 @@ Code slice:
 1. Implement `SearchAppBar` outer-slot layout, embedded search-entry lane, and
    the adaptive width rule from this design.
 2. Implement flat and scrolled color coordination between the outer container
-   and the embedded search-entry lane.
+   and the embedded search-entry lane, including its by-value
+   `AppBarText` display child.
 3. Add behavior tests proving that child actions consume their own taps while
    taps in the search-entry lane trigger the ordinary search-open action.
 4. Add a representative example under `examples/material3/app_bars/` showing a
@@ -803,6 +843,30 @@ Validation coverage should include:
 ## Caveats
 
 ### Rejected Alternatives
+
+#### Paint Title and Search Text Directly in Each App-Bar Widget
+
+This was rejected because the apparent RAM saving moves reusable text-widget
+behavior into the shell classes. Direct painting would make app bars own font
+measurement, line breaking, ellipsis, alignment, ink bounds, and text-specific
+invalidation. It would also duplicate that behavior between `AppBar`,
+`SearchBar`, and `SearchAppBar`.
+
+Instead, non-interactive text children own those responsibilities. The children
+are stored by value, use non-owning strings, and have bounded line metadata, so
+composition does not require heap allocation or nested layout containers.
+
+#### Implement App Bars as `FlexLayout` Trees
+
+This was rejected because the prescribed app-bar slots do not need the general
+CSS flex algorithm. The current `FlexLayout` keeps dynamic child and cached-
+measurement vectors and builds temporary vectors during measurement. Correctly
+modeling the title stack would also introduce a nested layout.
+
+The app-bar classes therefore retain small custom fixed-slot measurement and
+layout. This is not a second general layout system: it only reserves leading
+and trailing action strips, computes the remaining text lane, and assigns
+bounds to the composed children.
 
 #### Reuse `DockedToolbar` as the Top App Bar
 
