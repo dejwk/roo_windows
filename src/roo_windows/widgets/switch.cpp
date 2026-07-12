@@ -4,6 +4,7 @@
 #include "roo_display/internal/raw_streamable_overlay.h"
 #include "roo_display/ui/tile.h"
 #include "roo_time.h"
+#include "roo_windows/material3/theme.h"
 #include "roo_windows/widgets/resources/circle.h"
 #include "roo_windows/widgets/resources/circular_shadow.h"
 
@@ -70,8 +71,10 @@ void Switch::paintWidgetContents(PaintContext& ctx) {
 void Switch::paint(PaintContext& ctx) const {
   const Theme& th = theme();
   ::roo_windows::material3::ColorToken bg_role = effectiveContainerRole();
-  Color circleColor = isOn() ? th.material3Theme().color.accentColorFor(bg_role)
-                             : th.material3Theme().color.role(::roo_windows::material3::ColorToken::kSurface);
+  Color circleColor = isOn()
+                          ? th.material3Theme().color.accentColorFor(bg_role)
+                          : th.material3Theme().color.resolve(
+                                ::roo_windows::material3::ColorToken::kSurface);
   Color sliderColor = isOn() ? th.material3Theme().color.accentColorFor(bg_role)
                              : th.material3Theme().color.contentColorFor(bg_role);
   int16_t xoffset = currentThumbOffsetX();

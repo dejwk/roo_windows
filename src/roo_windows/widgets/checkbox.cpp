@@ -4,6 +4,7 @@
 #include "roo_display/ui/tile.h"
 #include "roo_icons/filled/toggle.h"
 #include "roo_windows/config.h"
+#include "roo_windows/material3/theme.h"
 
 using namespace roo_display;
 

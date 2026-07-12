@@ -4,6 +4,7 @@
 #include "roo_display/shape/basic.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_display/ui/tile.h"
+#include "roo_windows/material3/theme.h"
 
 using namespace roo_display;
 
@@ -25,9 +26,9 @@ namespace {
 roo_display::Color ButtonOutlineColor(const Theme& theme, Button::Style style) {
   switch (style) {
     case Button::CONTAINED:
-      return theme.material3Theme().color.role(::roo_windows::material3::ColorToken::kPrimary);
+      return theme.material3Theme().color.resolve(::roo_windows::material3::ColorToken::kPrimary);
     case Button::OUTLINED:
-      return theme.material3Theme().color.role(::roo_windows::material3::ColorToken::kOutline);
+      return theme.material3Theme().color.resolve(::roo_windows::material3::ColorToken::kOutline);
     case Button::TEXT:
       return color::Transparent;
   }
@@ -36,7 +37,7 @@ roo_display::Color ButtonOutlineColor(const Theme& theme, Button::Style style) {
 
 roo_display::Color ButtonInteriorColor(const Theme& theme,
                                        Button::Style style) {
-  return theme.material3Theme().color.role(ButtonContainerRole(style));
+  return theme.material3Theme().color.resolve(ButtonContainerRole(style));
 }
 
 roo_display::Color ButtonContentColor(const Theme& theme, Button::Style style) {
@@ -45,9 +46,9 @@ roo_display::Color ButtonContentColor(const Theme& theme, Button::Style style) {
       return theme.material3Theme().color.contentColorFor(::roo_windows::material3::ColorToken::kPrimary);
     case Button::OUTLINED:
     case Button::TEXT:
-      return theme.material3Theme().color.role(::roo_windows::material3::ColorToken::kPrimary);
+      return theme.material3Theme().color.resolve(::roo_windows::material3::ColorToken::kPrimary);
   }
-  return theme.material3Theme().color.role(::roo_windows::material3::ColorToken::kPrimary);
+  return theme.material3Theme().color.resolve(::roo_windows::material3::ColorToken::kPrimary);
 }
 
 }  // namespace

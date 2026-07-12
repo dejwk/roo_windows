@@ -83,6 +83,7 @@ void initDisplay() {
 #include "roo_windows/containers/scrollable_panel.h"
 #include "roo_windows/material3/badge/badge.h"
 #include "roo_windows/material3/switch/badged_switch.h"
+#include "roo_windows/material3/theme.h"
 #include "roo_windows/widgets/divider.h"
 #include "roo_windows/widgets/text_label.h"
 
@@ -212,20 +213,20 @@ class BadgeCard : public Widget {
 
     uint8_t outer_radius = static_cast<uint8_t>(Scaled(10));
     PaintRoundedSurface(ctx, bounds(), outer_radius,
-                        theme().color.primaryContainer);
+                        theme().material3Theme().color.primaryContainer);
 
     Rect anchor = anchorBounds();
     uint8_t inner_radius = static_cast<uint8_t>(Scaled(8));
     PaintRoundedSurface(ctx, anchor, inner_radius,
-                        theme().color.secondaryContainer);
+                        theme().material3Theme().color.secondaryContainer);
 
     Rect anchor_inner = InnerRoundedRect(anchor, inner_radius);
     if (!anchor_inner.empty()) {
       PaintContext label_ctx = ctx.clipped(anchor_inner);
       if (!label_ctx.empty()) {
-        label_ctx.setBgcolor(theme().color.secondaryContainer);
+        label_ctx.setBgcolor(theme().material3Theme().color.secondaryContainer);
         label_ctx.drawTiled(StringViewLabel(glyph_, font_h5(),
-                                            theme().color.onSecondaryContainer),
+                                            theme().material3Theme().color.onSecondaryContainer),
                             anchor,
                             roo_display::kCenter | roo_display::kMiddle);
       }
