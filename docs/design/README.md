@@ -30,6 +30,7 @@ Status was audited against the source tree and tests on 2026-07-12. “Dependenc
 | Design | Dependency status |
 | --- | --- |
 | Material 3 lists | Core list family phases are implemented; the remaining design phases are not complete. Badge and paint-context dependencies are implemented. |
+| Text system | `TextBlock` wrapping, justification, max-lines, ellipsis, caching, and golden coverage are implemented; shared rich paragraph layout and `RichTextBlock` remain. |
 | Visual overflow | Surface ownership, ink bounds, direct-paint exclusion, and persistent/transient bound separation are implemented; root-stage transient overlay handling is not. |
 
 ## Proposed
@@ -55,7 +56,6 @@ Status was audited against the source tree and tests on 2026-07-12. “Dependenc
 | Snackbar | Paint/overflow foundations are implemented; scaffold and non-touch behavior are proposed. |
 | Split button | Buttons are implemented; icon buttons, menus, and non-touch input are proposed. |
 | Text fields | Paint context is implemented; non-touch input and supporting icon-button/menu behavior are proposed. |
-| Text system | Paint context is implemented; paragraph/rich/editable text scope is not implemented. |
 | Time pickers | Buttons are implemented; text fields, dialogs, icon buttons, and shared back behavior are proposed. |
 | Toolbars | Buttons are implemented; icon buttons, menus, and FABs are proposed. |
 | Transient presentation pins | Visual overflow is in progress; no root-stage presentation-pin implementation exists. |

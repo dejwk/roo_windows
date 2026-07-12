@@ -24,7 +24,7 @@ The design should provide:
 - direct inline editing with the shared application-owned editor and software
   keyboard rather than a second text-input subsystem,
 - and a clear follow-on seam for multiline fields once the shared editable
-  text work from [text_system_design.md](text_system_design.md) lands.
+  text work from [text_system_design.md](../in_progress/text_system_design.md) lands.
 
 This document defines the intended API family and rollout plan. It does not
 describe an existing implementation.
@@ -68,7 +68,7 @@ What exists today:
   provides a legacy full-screen editing activity built on that same editor.
 - [widgets/text_block.h](../../../src/roo_windows/widgets/text_block.h) now supports
   wrapping, alignment, max lines, and ellipsis for read-only text.
-- [text_system_design.md](text_system_design.md) already defines the intended
+- [text_system_design.md](../in_progress/text_system_design.md) already defines the intended
   long-term split between simple labels, wrapped text, rich text, and a future
   reusable `TextEditor`.
 
@@ -267,7 +267,7 @@ Key decisions:
    and one variant selector.
 5. Password reveal state lives only on `SecureTextField`.
 6. Multiline is deferred until the shared editable-text core from
-   [text_system_design.md](text_system_design.md) is ready.
+   [text_system_design.md](../in_progress/text_system_design.md) is ready.
 
 ## Design Details
 
@@ -869,7 +869,7 @@ contract; callers that need revert-on-cancel can snapshot externally.
 This was rejected.
 
 The repo already has a checked-in shared text-system direction in
-[text_system_design.md](text_system_design.md). Extending the current
+[text_system_design.md](../in_progress/text_system_design.md). Extending the current
 single-line editor into an ad hoc multiline engine would duplicate that work.
 The first Material 3 family therefore stays single-line and keeps multiline as
 the next deliberate follow-on once the shared editor core exists.
@@ -877,7 +877,7 @@ the next deliberate follow-on once the shared editor core exists.
 ## Future Work
 
 1. Add multiline expanding Material 3 fields after the shared editable-text
-   pipeline from [text_system_design.md](text_system_design.md) lands.
+   pipeline from [text_system_design.md](../in_progress/text_system_design.md) lands.
 2. Add a fixed-height Material 3 text-area surface once multiline editing is
    available.
 3. Add exposed-dropdown and picker-field subclasses on top of the read-only

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="270" viewBox="0 0 760 270">
+  <rect width="760" height="270" fill="white"/>
+  <g font-family="sans-serif" fill="#202124">
+    <text x="28" y="30" font-size="18" font-weight="bold">Rich paragraph layout</text>
+    <rect x="28" y="50" width="704" height="172" rx="6" fill="#f8f9fa" stroke="#5f6368"/>
+    <line x1="48" y1="112" x2="712" y2="112" stroke="#9aa0a6" stroke-dasharray="5 4"/>
+    <line x1="48" y1="184" x2="712" y2="184" stroke="#9aa0a6" stroke-dasharray="5 4"/>
+    <text x="48" y="101" font-size="28" fill="#174ea6">Shared</text>
+    <text x="151" y="101" font-size="18" fill="#b3261e">layout engine places styled runs</text>
+    <text x="48" y="173" font-size="18" fill="#137333">on a second baseline after wrapping.</text>
+    <g font-size="12" fill="#5f6368">
+      <text x="50" y="128">baseline 0</text>
+      <text x="50" y="200">baseline 1</text>
+      <text x="48" y="244">UTF-8 byte ranges:</text>
+      <text x="164" y="244" fill="#174ea6">run 0 [0, 6)</text>
+      <text x="276" y="244" fill="#b3261e">run 1 [6, 44)</text>
+      <text x="407" y="244" fill="#137333">run 2 [44, 78)</text>
+    </g>
+    <path d="M48 60 v-7 h103 v7" fill="none" stroke="#174ea6"/>
+    <path d="M151 60 v-7 h347 v7" fill="none" stroke="#b3261e"/>
+    <path d="M48 132 v-7 h332 v7" fill="none" stroke="#137333"/>
+  </g>
+</svg>
