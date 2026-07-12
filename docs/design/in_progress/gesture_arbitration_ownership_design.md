@@ -2,9 +2,12 @@
 
 ## Implementation status
 
-**In progress.** Material 3 sliders contain a local release-consumption
-workaround. The framework-wide arbitration and ownership model defined here is
-not implemented. Dependency status is recorded in the
+**In progress.** Phases 1 through 3 are implemented: callback-free hit paths,
+independent role selection, directional drag arbitration, strong post-claim
+ownership, and lifecycle-safe owned drag completion/cancellation are available
+through compatibility adapters. Widget migration and removal of compatibility
+routing remain. Material 3 sliders still contain a local release-consumption
+workaround. Dependency status is recorded in the
 [status index](../README.md).
 
 ## Objective

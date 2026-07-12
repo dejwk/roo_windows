@@ -28,7 +28,7 @@ Status was audited against the source tree and tests on 2026-07-12. “Dependenc
 
 | Design | Dependency status |
 | --- | --- |
-| Gesture arbitration and ownership | Slider-local release consumption is implemented; framework-wide gesture arbitration and ownership are not. |
+| Gesture arbitration and ownership | Callback-free hit paths, role selection, directional drag arbitration, and strong move ownership are implemented; terminal/cancellation lifecycles and widget migration remain. |
 | Material 3 lists | Core list family phases are implemented; the remaining design phases are not complete. Badge and paint-context dependencies are implemented. |
 | Visual overflow | Surface ownership, ink bounds, direct-paint exclusion, and persistent/transient bound separation are implemented; root-stage transient overlay handling is not. |
 

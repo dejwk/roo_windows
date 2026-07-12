@@ -307,10 +307,6 @@ class Widget {
   // Returns true if the event is handled, false otherwise.
   virtual bool onTouchUp(XDim x, YDim y);
 
-  // Called by the framework when onTouchMove returns false, indicating that
-  // this widget is no longer the target of the gesture.
-  virtual void onTouchCanceled() {}
-
   // Called when a 'click' should be handled (either during or after
   // onSingleTapUp). For widgets that support click animation, the event is
   // triggered after the animation completes.
@@ -390,6 +386,19 @@ class Widget {
   /// policies that cannot be expressed by an axis.
   virtual DragClaim onDragClaim(XDim x, YDim y, XDim total_dx,
                                 YDim total_dy);
+
+  /// Called once when this widget becomes the drag owner.
+  virtual void onDragStart(XDim x, YDim y);
+
+  /// Delivers movement to the drag owner. The default adapts the legacy
+  /// onScroll() callback while drag widgets are migrated.
+  virtual void onDrag(XDim x, YDim y, XDim dx, YDim dy);
+
+  /// Called once for every successfully completed owned drag, before fling.
+  virtual void onDragFinished(XDim x, YDim y);
+
+  /// Whether this drag owner opts into inertial fling delivery.
+  virtual bool supportsFling() const { return false; }
 
   // Called when the gesture is recognized as a long press. The widget must
   // have returned true from supportsLongPress() in order to receive this

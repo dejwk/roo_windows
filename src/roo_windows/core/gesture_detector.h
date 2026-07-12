@@ -31,7 +31,7 @@ static constexpr int16_t kMaxFlingVelocity = 8000;  // Pixels per second.
 ///
 /// Polls the bound `TouchSensor`, tracks one in-flight gesture at a time, and
 /// builds a callback-free hit path, selects gesture roles, and dispatches the
-/// legacy gesture callbacks during the migration to explicit ownership. Also
+/// owned drag lifecycle callbacks during the migration to explicit ownership. Also
 /// runs the scheduled show-press / tap / long-press timers.
 class GestureDetector {
  private:
@@ -71,6 +71,10 @@ class GestureDetector {
   /// Forwards an UP sample, optionally producing a tap, long-press release,
   /// or fling depending on movement and timing. Returns true if handled.
   bool onTouchUp(Widget& widget, XDim x, YDim y);
+
+  /// Aborts the active input stream. This is used when touch input is lost or
+  /// superseded and gives each started role one cancellation notification.
+  void cancel();
 
   /// Returns the total X movement since the initial touch-down sample.
   int16_t xTotalMoveDelta() const { return latest_.x() - initial_down_.x(); }
@@ -124,12 +128,16 @@ class GestureDetector {
   bool arbitrateDrag();
   bool dispatchOwnedMove();
   bool claimDrag(Widget* target);
+  bool finishOwnedDrag();
+  bool qualifiesForFling(XDim& vx, YDim& vy) const;
   bool dispatchTo(Widget* target, TouchEvent::Type type);
   bool offerIntercept(Panel* target, TouchEvent::Type type);
   Widget* previousTouchTarget(Widget* target) const;
   Widget* previousDragCandidate(Widget* target) const;
   void selectRoles();
   void beginRole(Widget* target);
+  void cancelRolesExcept(Widget* except);
+  void clearStream();
 
   bool handledOrCancel(bool handled) {
     if (!handled) cancelEvents();

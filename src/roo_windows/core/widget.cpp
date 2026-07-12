@@ -805,6 +805,22 @@ DragClaim Widget::onDragClaim(XDim x, YDim y, XDim total_dx,
   return DragClaim::kReject;
 }
 
+void Widget::onDragStart(XDim x, YDim y) {
+  (void)x;
+  (void)y;
+}
+
+void Widget::onDrag(XDim x, YDim y, XDim dx, YDim dy) {
+  // Compatibility adapter retained until drag widgets move to onDrag().
+  onScroll(x, y, dx, dy);
+}
+
+void Widget::onDragFinished(XDim x, YDim y) {
+  (void)x;
+  (void)y;
+  setPressed(false);
+}
+
 bool Widget::onFling(XDim x, YDim y, XDim vx, YDim vy) {
   setPressed(false);
   return false;
