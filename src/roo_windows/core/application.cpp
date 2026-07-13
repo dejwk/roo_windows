@@ -1,6 +1,7 @@
 #include "application.h"
 
 #include "roo_display.h"
+#include "roo_logging.h"
 #include "roo_threads.h"
 #include "roo_threads/semaphore.h"
 #include "roo_windows/dialogs/alert_dialog.h"
@@ -42,6 +43,11 @@ void Application::add(WidgetRef child, const roo_display::Box& box) {
 
 void Application::addPopup(WidgetRef child, const roo_display::Box& box) {
   root_window_.addPopup(std::move(child), box);
+}
+
+BackResult Application::requestBack(Task& target, BackSource source) {
+  CHECK(ownsTask(target));
+  return target.requestBack(source);
 }
 
 void Application::start() {
@@ -137,6 +143,13 @@ Task* Application::addPopupTask(const roo_display::Box& bounds) {
   tasks_.push_back(std::move(task));
   task_panels_.push_back(std::move(task_panel));
   return tasks_.back().get();
+}
+
+bool Application::ownsTask(const Task& task) const {
+  for (const std::unique_ptr<Task>& candidate : tasks_) {
+    if (candidate.get() == &task) return true;
+  }
+  return false;
 }
 
 void Application::showDialog(Dialog& dialog, Dialog::CallbackFn callback_fn) {

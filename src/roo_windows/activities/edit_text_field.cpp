@@ -5,6 +5,7 @@
 #include "roo_icons.h"
 #include "roo_icons/outlined/navigation.h"
 #include "roo_windows/config.h"
+#include "roo_windows/core/application.h"
 
 namespace roo_windows {
 
@@ -40,8 +41,18 @@ EditTextField::EditTextField(ApplicationContext& context, TextFieldEditor& edito
   content_pane_.add(enter_, {gravity : kGravityMiddle});
   back_.setContentColor(
       context.theme().framework.color.resolve(FrameworkColorRole::kContent));
-  back_.setOnInteractiveChange([&]() { cancel(); });
+  back_.setOnInteractiveChange([&]() {
+    getApplication()->requestBack(*getTask(),
+                                  BackSource::kNavigationButton);
+  });
   enter_.setOnInteractiveChange([&]() { confirm(); });
+}
+
+BackResult EditTextField::onBackRequested(BackSource source) {
+  (void)source;
+  if (!editing_) return BackResult::kUnhandled;
+  cancel();
+  return BackResult::kHandled;
 }
 
 void EditTextField::confirm() {

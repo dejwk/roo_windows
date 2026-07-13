@@ -37,7 +37,7 @@ Status was audited against the source tree and tests on 2026-07-12. “Dependenc
 
 | Design | Dependency status |
 | --- | --- |
-| Back request coordination | Task/activity routing exists; semantic root guarding, activity-local handling, lifetime-host transient precedence, non-touch entry, and component integrations are not implemented. |
+| Back request coordination | Task/activity semantics, explicit application target routing, and existing UI Back-button adoption are implemented. Lifetime-host transient precedence and non-touch entry remain. |
 | App bars/search surfaces | Scaffold, icon-button, text-field, and non-touch dependencies are proposed; base framework surface primitives are implemented. |
 | Button groups | Buttons are implemented; icon buttons are proposed, and no group implementation exists. |
 | Date pickers | Buttons are implemented; text fields, dialogs, icon buttons, and shared back behavior are proposed. |

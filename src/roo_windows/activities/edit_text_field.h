@@ -48,6 +48,9 @@ class EditTextField : public Activity {
   /// buttons).
   Widget& getContents() override { return main_pane_; }
 
+  /// Cancels an active edit when it receives a semantic back request.
+  BackResult onBackRequested(BackSource source) override;
+
   /// Launches a text-enter activity with the specified conditions, triggering
   /// the specified function on confirmation.
   void triggerEdit(Task& task, const std::string& initial,

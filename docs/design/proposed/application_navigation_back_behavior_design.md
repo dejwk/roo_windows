@@ -2,10 +2,10 @@
 
 ## Implementation status
 
-**Proposed.** `Task` and `Activity` already implement route stacking and route
-lifecycle. The semantic back-request coordination defined here is not
-implemented. See the [status index](../README.md) for prerequisite
-status.
+**Partially implemented.** Phases 1 and 2 implement task/activity semantics,
+explicit application target routing, and existing UI Back-button adoption.
+Transient precedence and non-touch integration remain proposed. See the
+[status index](../README.md) for prerequisite status.
 
 ## Objective
 

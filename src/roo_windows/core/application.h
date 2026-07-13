@@ -84,6 +84,13 @@ class Application {
     return addPopupTask(roo_display::Box(0, 0, -1, -1));
   }
 
+  /// Routes a semantic back request to an application-owned target task.
+  ///
+  /// Passing a task that does not belong to this application is a programming
+  /// error. Transient presentation precedence is added in a later phase.
+  BackResult requestBack(
+      Task& target, BackSource source = BackSource::kProgrammatic);
+
   /// Shows a modal dialog. Dialogs are centered and scrim the screen behind
   /// them. The callback gets called with the index of the option (e.g.
   /// button) selected in the dialog.
@@ -134,6 +141,9 @@ class Application {
  private:
   // Handles user input (touch, etc.), and calls refresh() periodically.
   void tick();
+
+  /// Returns whether `task` is owned by this application.
+  bool ownsTask(const Task& task) const;
 
   roo_display::Display& display_;
   const Environment* env_;

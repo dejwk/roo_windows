@@ -1,6 +1,7 @@
 #include "roo_windows/composites/menu/title.h"
 
 #include "roo_icons/outlined/navigation.h"
+#include "roo_windows/core/application.h"
 #include "roo_windows/core/task.h"
 
 namespace roo_windows {
@@ -15,7 +16,10 @@ Title::Title(ApplicationContext& context, std::string title)
   label_.setPadding(PaddingSize::kTiny);
   add(back_);
   add(label_, {weight : 1});
-  back_.setOnInteractiveChange([&]() { getTask()->exitActivity(); });
+  back_.setOnInteractiveChange([&]() {
+    getTask()->getApplication().requestBack(*getTask(),
+                                            BackSource::kNavigationButton);
+  });
 }
 
 }  // namespace menu
