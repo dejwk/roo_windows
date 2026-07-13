@@ -2,9 +2,11 @@
 
 ## Implementation status
 
-**Phase 1 implemented.** The framework now provides the shared registration,
-single-slot, finish-order, and Back-participant contract. Dialog, sheet, menu,
-and snackbar adoption remains outstanding. The status of existing and
+**Phases 1 and dialog adoption implemented.** The framework provides the
+shared registration, single-slot, finish-order, and Back-participant contract,
+and legacy dialogs now use it. Modal-sheet wrappers do not yet exist in the
+tree, so their adoption remains blocked on the sheet-family implementation;
+menu and snackbar adoption also remain outstanding. The status of existing and
 outstanding prerequisites is recorded in the [status index](../README.md).
 
 ## Objective

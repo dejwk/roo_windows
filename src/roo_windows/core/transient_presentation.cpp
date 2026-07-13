@@ -21,7 +21,7 @@ bool isBackAllowed(uint8_t policy, BackSource source) {
 }  // namespace
 
 TransientPresentationRegistration::~TransientPresentationRegistration() {
-  cancelFromDestructor();
+  cancel();
 }
 
 void TransientPresentationRegistration::finish(PresentationFinishReason reason) {
@@ -34,7 +34,7 @@ BackResult TransientPresentationRegistration::onBackRequested(
   return BackResult::kHandled;
 }
 
-void TransientPresentationRegistration::cancelFromDestructor() {
+void TransientPresentationRegistration::cancel() {
   if (slot_ != nullptr) slot_->cancel(*this);
 }
 

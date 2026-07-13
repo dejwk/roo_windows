@@ -64,11 +64,6 @@ MainWindow::MainWindow(Application& app, const roo_display::Box& bounds)
 }
 
 MainWindow::~MainWindow() {
-  if (active_dialog_ != nullptr) {
-    detachChild(active_dialog_);
-    detachChild(&scrim_);
-    active_dialog_ = nullptr;
-  }
   while (!popups_.empty()) {
     removeLastFromLayer(popups_);
   }
@@ -170,35 +165,38 @@ void MainWindow::removeLastFromLayer(std::vector<Widget*>& layer) {
   detachChild(widget);
 }
 
-void MainWindow::showDialog(Dialog& dialog, Dialog::CallbackFn callback_fn) {
-  CHECK(active_dialog_ == nullptr) << "Can't show two dialogs at the same time";
+PresentationStartResult MainWindow::showDialog(
+    Dialog& dialog, Dialog::CallbackFn callback_fn) {
+  PresentationStartResult result = transient_presentation_slot_.show(
+      dialog.registration(), TransientPresentationPolicy(true, true));
+  if (result != PresentationStartResult::kStarted) return result;
+
   active_dialog_ = &dialog;
   attachChild(scrim_, bounds());
   pending_scrim_blit_ = true;
-  dialog.onEnter();
-  dialog.setCallbackFn([this, callback_fn, &dialog](int id) {
-    dialog.onExit(id);
-    active_dialog_ = nullptr;
-    pending_scrim_blit_ = false;
-    detachChild(&dialog);
-    detachChild(&scrim_);
-    invalidateInterior();
-    Dialog::CallbackFn fn = callback_fn;
-    dialog.setCallbackFn(nullptr);
-    fn(id);
-  });
   Dimensions dims =
       dialog.measure(WidthSpec::AtMost(width()), HeightSpec::AtMost(height()));
   XDim offsetLeft = (width() - dims.width()) / 2;
   YDim offsetTop = (height() - dims.height()) / 2;
   attachChild(dialog, Rect(offsetLeft, offsetTop, offsetLeft + dims.width() - 1,
                            offsetTop + dims.height() - 1));
+  dialog.beginPresentation(std::move(callback_fn));
+  return PresentationStartResult::kStarted;
 }
 
 void MainWindow::clearDialog() {
   if (active_dialog_ != nullptr) {
     active_dialog_->close();
   }
+}
+
+void MainWindow::detachDialog(Dialog& dialog) {
+  if (active_dialog_ != &dialog) return;
+  active_dialog_ = nullptr;
+  pending_scrim_blit_ = false;
+  detachChild(&dialog);
+  detachChild(&scrim_);
+  invalidateInterior();
 }
 
 }  // namespace roo_windows

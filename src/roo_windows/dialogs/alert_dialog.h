@@ -23,6 +23,9 @@ class AlertDialog : public Dialog {
   /// Replaces the multi-line supporting text.
   void setSupportingText(std::string supporting_text);
 
+ protected:
+  void onEnter() override;
+
  private:
   TextBlock supporting_text_;
 };

@@ -1,5 +1,6 @@
 #include "dialog.h"
 
+#include "roo_windows/core/main_window.h"
 #include "roo_windows/widgets/button.h"
 
 namespace roo_windows {
@@ -12,7 +13,8 @@ Dialog::Dialog(ApplicationContext& context, std::vector<std::string> button_labe
       divider2_(context),
       title_panel_(context),
       button_panel_(context),
-      callback_fn_(nullptr) {
+      callback_fn_(nullptr),
+      registration_(*this) {
   title_panel_.setMargins(Margins(MarginSize::kNone, MarginSize::kRegular));
   add(title_panel_);
   title_.setPadding(PaddingSize::kLarge, PaddingSize::kSmall);
@@ -38,18 +40,66 @@ Dialog::Dialog(ApplicationContext& context, std::vector<std::string> button_labe
   }
 }
 
+Dialog::~Dialog() {
+  if (!registration_.isActive()) return;
+  MainWindow* window = getMainWindow();
+  if (window != nullptr) window->detachDialog(*this);
+  registration_.cancelPresentation();
+}
+
 void Dialog::setTitle(std::string title) { title_.setText(std::move(title)); }
 
-void Dialog::actionTaken(int idx) {
-  if (callback_fn_ != nullptr) {
-    callback_fn_(idx);
+void Dialog::setPresentationContent(WidgetRef content) {
+  clearPresentationContent();
+  presentation_content_ = content.get();
+  if (presentation_content_ != nullptr) {
+    contents_.setContents(std::move(content));
   }
 }
 
+void Dialog::actionTaken(int idx) {
+  result_ = idx;
+  registration_.finish(PresentationFinishReason::kAction);
+}
+
 void Dialog::close() {
-  if (callback_fn_ != nullptr) {
-    callback_fn_(-1);
-  }
+  result_ = -1;
+  registration_.finish(PresentationFinishReason::kCancel);
+}
+
+void Dialog::beginPresentation(CallbackFn callback_fn) {
+  result_ = -1;
+  setCallbackFn(std::move(callback_fn));
+  onEnter();
+}
+
+void Dialog::detachPresentation(PresentationFinishReason) {
+  clearPresentationContent();
+  MainWindow* window = getMainWindow();
+  if (window != nullptr) window->detachDialog(*this);
+}
+
+void Dialog::notifyFinished(PresentationFinishReason) {
+  Dialog::CallbackFn callback_fn = std::move(callback_fn_);
+  callback_fn_ = nullptr;
+  onExit(result_);
+  if (callback_fn != nullptr) callback_fn(result_);
+}
+
+void Dialog::Registration::detachPresentation(PresentationFinishReason reason) {
+  dialog_.detachPresentation(reason);
+}
+
+void Dialog::Registration::onFinished(PresentationFinishReason reason) {
+  dialog_.notifyFinished(reason);
+}
+
+void Dialog::clearPresentationContent() {
+  if (presentation_content_ == nullptr) return;
+  // ScrollablePanel's inherited clearContents() bypasses its blit-cache
+  // wrapper. Dispatch through the derived content setter to detach the child.
+  contents_.setContents(WidgetRef());
+  presentation_content_ = nullptr;
 }
 
 }  // namespace roo_windows

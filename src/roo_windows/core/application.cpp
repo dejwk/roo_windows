@@ -156,23 +156,26 @@ bool Application::ownsTask(const Task& task) const {
   return false;
 }
 
-void Application::showDialog(Dialog& dialog, Dialog::CallbackFn callback_fn) {
-  root_window_.showDialog(dialog, std::move(callback_fn));
+PresentationStartResult Application::showDialog(Dialog& dialog,
+                                                 Dialog::CallbackFn callback_fn) {
+  return root_window_.showDialog(dialog, std::move(callback_fn));
 }
 
-void Application::showAlertDialog(std::string title,
-                                  std::string supporting_text,
-                                  std::vector<std::string> button_labels,
-                                  Dialog::CallbackFn callback_fn) {
+PresentationStartResult Application::showAlertDialog(
+    std::string title, std::string supporting_text,
+    std::vector<std::string> button_labels, Dialog::CallbackFn callback_fn) {
   Dialog* dialog =
       new AlertDialog(context(), std::move(title), std::move(supporting_text),
                       std::move(button_labels));
-  showDialog(*dialog, [this, dialog, callback_fn](int id) {
-    if (callback_fn != nullptr) {
-      callback_fn(id);
-    }
-    delete dialog;
-  });
+  PresentationStartResult result = showDialog(
+      *dialog, [dialog, callback_fn](int id) {
+        if (callback_fn != nullptr) {
+          callback_fn(id);
+        }
+        delete dialog;
+      });
+  if (result != PresentationStartResult::kStarted) delete dialog;
+  return result;
 }
 
 void Application::clearDialog() { root_window_.clearDialog(); }

@@ -62,8 +62,9 @@ class MainWindow : public Container {
     return transient_presentation_slot_;
   }
 
-  /// Shows a modal dialog. Adds it above the scrim and routes its callback.
-  void showDialog(Dialog& dialog, Dialog::CallbackFn callback_fn);
+  /// Shows a modal dialog when the interactive transient slot is available.
+  PresentationStartResult showDialog(Dialog& dialog,
+                                     Dialog::CallbackFn callback_fn);
 
   /// If a dialog is currently open, closes it (callback receives -1).
   void clearDialog();
@@ -99,10 +100,14 @@ class MainWindow : public Container {
   void childInvalidatedRegion(const Widget* child, Rect rect) override;
 
  private:
+  friend class Dialog;
+
   void addToLayer(std::vector<Widget*>& layer, WidgetRef child,
                   const Rect& rect);
 
   void removeLastFromLayer(std::vector<Widget*>& layer);
+
+  void detachDialog(Dialog& dialog);
 
   Application& app_;
 

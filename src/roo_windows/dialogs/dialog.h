@@ -6,6 +6,7 @@
 #include "roo_windows/containers/scrollable_panel.h"
 #include "roo_windows/containers/vertical_layout.h"
 #include "roo_windows/core/panel.h"
+#include "roo_windows/core/transient_presentation.h"
 #include "roo_windows/widgets/button.h"
 #include "roo_windows/widgets/divider.h"
 #include "roo_windows/widgets/text_label.h"
@@ -26,6 +27,9 @@ namespace roo_windows {
 class Dialog : public VerticalLayout {
  public:
   typedef std::function<void(int action_idx)> CallbackFn;
+
+  /// Cancels an active presentation without delivering application completion.
+  ~Dialog() override;
 
   /// Replaces the dialog's title text.
   void setTitle(std::string title);
@@ -63,6 +67,15 @@ class Dialog : public VerticalLayout {
     divider2_.setVisibility(visible ? Visibility::kVisible : Visibility::kGone);
   }
 
+  /// Attaches caller-provided content for the current presentation.
+  ///
+  /// The content is detached before completion. Call again before re-showing
+  /// a dialog whose content is not recreated by `onEnter()`.
+  void setPresentationContent(WidgetRef content);
+
+  /// Finishes the visible dialog with the selected footer action index.
+  void actionTaken(int id);
+
   TextLabel title_;
   HorizontalDivider divider1_;
   ScrollablePanel contents_;
@@ -76,6 +89,20 @@ class Dialog : public VerticalLayout {
  private:
   friend class MainWindow;
 
+  class Registration final : public TransientPresentationRegistration {
+   public:
+    explicit Registration(Dialog& dialog) : dialog_(dialog) {}
+
+    void cancelPresentation() { cancel(); }
+
+   protected:
+    void detachPresentation(PresentationFinishReason reason) override;
+    void onFinished(PresentationFinishReason reason) override;
+
+   private:
+    Dialog& dialog_;
+  };
+
   class FullWidthPanel : public HorizontalLayout {
    public:
     using HorizontalLayout::HorizontalLayout;
@@ -86,19 +113,26 @@ class Dialog : public VerticalLayout {
     }
   };
 
-  // Called by a task.
+  void beginPresentation(CallbackFn callback_fn);
+  void detachPresentation(PresentationFinishReason reason);
+  void notifyFinished(PresentationFinishReason reason);
+  void clearPresentationContent();
+
   void setCallbackFn(CallbackFn callback_fn) {
     callback_fn_ = std::move(callback_fn);
   }
 
-  // Called when the user explicitly chooses one of the options of the dialog.
-  // Invokes the callback_fn, passing the ID.
-  void actionTaken(int id);
+  Registration& registration() { return registration_; }
 
   FullWidthPanel title_panel_;
   FullWidthPanel button_panel_;
   std::vector<SimpleButton> buttons_;
   CallbackFn callback_fn_;
+  int result_ = -1;
+  Widget* presentation_content_ = nullptr;
+
+  // Must remain last so it vacates the window slot before dialog members.
+  Registration registration_;
 };
 
 }  // namespace roo_windows

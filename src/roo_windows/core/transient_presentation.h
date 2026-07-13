@@ -86,10 +86,11 @@ class TransientPresentationRegistration {
   /// `PresentationFinishReason::kBack`.
   virtual BackResult onBackRequested(BackSource source);
 
+  /// Vacates the slot without terminal delivery during presenter destruction.
+  void cancel();
+
  private:
   friend class TransientPresentationSlot;
-
-  void cancelFromDestructor();
 
   TransientPresentationSlot* slot_ = nullptr;
   PresentationState state_ = PresentationState::kIdle;

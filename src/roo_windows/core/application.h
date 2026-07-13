@@ -101,15 +101,17 @@ class Application {
   ///
   /// The dialog can be closed by user action, or programmatically by calling
   /// `clearDialog()`. Both paths invoke `callback_fn` and remove the dialog
-  /// from the task.
-  void showDialog(Dialog& dialog, Dialog::CallbackFn callback_fn);
+  /// from the task. Returns `kHostBusy` when another root presentation is
+  /// already visible.
+  PresentationStartResult showDialog(Dialog& dialog,
+                                     Dialog::CallbackFn callback_fn);
 
   /// Convenience function showing a new, heap-allocated alert dialog with
   /// the specified contents. See `showDialog()`. The dialog is deleted after
-  /// the callback has been called.
-  void showAlertDialog(std::string title, std::string supporting_text,
-                       std::vector<std::string> button_labels,
-                       Dialog::CallbackFn callback_fn);
+  /// the callback has been called, or immediately if the host is busy.
+  PresentationStartResult showAlertDialog(
+      std::string title, std::string supporting_text,
+      std::vector<std::string> button_labels, Dialog::CallbackFn callback_fn);
 
   /// If a dialog is open, closes it. Otherwise, no-op.
   void clearDialog();

@@ -28,7 +28,6 @@ class RadioListDialog : public Dialog {
   /// is selected.
   void setModel(ListModel& model) {
     list_.setModel(model);
-    contents_.setContents(list_);
     last_button().setEnabled(false);
   }
 
@@ -53,6 +52,8 @@ class RadioListDialog : public Dialog {
   void contentsChanged() { list_.modelChanged(); }
 
  protected:
+  void onEnter() override { setPresentationContent(list_); }
+
   /// Hook fired on interactive selection changes; default implementation
   /// re-emits the panel-level interactive-change signal.
   virtual void onChange() { triggerInteractiveChange(); }

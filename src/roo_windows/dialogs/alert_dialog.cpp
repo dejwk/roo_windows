@@ -15,12 +15,13 @@ AlertDialog::AlertDialog(ApplicationContext& context, std::string title,
   on_surface.set_a(0xB0);
   supporting_text_.setColor(
       AlphaBlend(colors.resolve(FrameworkColorRole::kSurface), on_surface));
-  contents_.setContents(supporting_text_);
   setTitle(std::move(title));
 }
 
 void AlertDialog::setSupportingText(std::string supporting_text) {
   supporting_text_.setContent(std::move(supporting_text));
 }
+
+void AlertDialog::onEnter() { setPresentationContent(supporting_text_); }
 
 }  // namespace roo_windows

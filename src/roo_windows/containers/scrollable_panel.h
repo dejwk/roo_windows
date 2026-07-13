@@ -84,7 +84,7 @@ class SimpleScrollablePanel : public Container,
   }
 
   void setContents(WidgetRef new_contents) {
-    if (contents() == &*new_contents &&
+    if (contents_ != nullptr && contents() == new_contents.get() &&
         contents()->isOwnedByParent() == new_contents.is_owned()) {
       return;
     }

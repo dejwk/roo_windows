@@ -33,7 +33,7 @@ Status was audited against the source tree and tests on 2026-07-12. “Dependenc
 | --- | --- |
 | Material 3 lists | Core list family phases are implemented; the remaining design phases are not complete. Badge and paint-context dependencies are implemented. |
 | Text system | `TextBlock` wrapping, justification, max-lines, ellipsis, caching, and golden coverage are implemented; shared rich paragraph layout and `RichTextBlock` remain. |
-| Transient presenter lifetime and ownership | The phase-1 shared interactive-presenter slot, finish ordering, and Back precedence are implemented; dialog, sheet, menu, and snackbar migrations remain. |
+| Transient presenter lifetime and ownership | The shared slot and dialog migration are implemented; modal sheets have no implementation to adopt, and menu/snackbar migrations remain. |
 | Visual overflow | Surface ownership, ink bounds, direct-paint exclusion, and persistent/transient bound separation are implemented; root-stage transient overlay handling is not. |
 
 ## Proposed
