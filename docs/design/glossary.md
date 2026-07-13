@@ -8,16 +8,28 @@ same term.
 
 ### Adopted object
 
-An object whose allocation lifetime transfers to the receiver. For example,
-`WidgetRef(std::unique_ptr<Widget>)` lets a container delete the widget after
-detaching it.
+An object whose allocation lifetime transfers to the receiver. For widget
+children, moving `WidgetRef(std::unique_ptr<Widget>)` into `attachChild()` marks
+the child as parent-owned. The container stores only the raw child pointer;
+`Widget::isOwnedByParent()` is the ownership record, and `detachChild()` applies
+that policy and deletes the child.
 
 ### Borrowed object
 
 An object used without taking allocation ownership. The borrower must stop
 using and structurally detach it before its owner destroys it. `Task` entries
-are borrowed `Activity*` objects, and `WidgetRef(Widget&)` attaches a borrowed
-widget.
+are borrowed `Activity*` objects. Moving `WidgetRef(Widget&)` into
+`attachChild()` attaches a borrowed widget; the container subsequently stores
+only its raw pointer.
+
+### WidgetRef
+
+A move-only, temporary ownership-transfer parameter accepted by container
+APIs. A component may inspect and retain the incoming raw pointer before moving
+the `WidgetRef` into `attachChild()`, but must not store the `WidgetRef` itself.
+After attachment, the parent stores a raw `Widget*`, and
+`Widget::isOwnedByParent()` is the sole ownership record. Replacing or clearing
+the slot goes through `detachChild()`, which deletes only a parent-owned child.
 
 ### Host
 

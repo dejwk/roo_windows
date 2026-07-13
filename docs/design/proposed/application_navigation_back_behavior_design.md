@@ -13,7 +13,7 @@ Add one semantic back-request path without adding another navigation model.
 
 The path coordinates existing owners in this order:
 
-1. the top visible transient presenter gets the first dismissal opportunity;
+1. the active root interactive transient gets the first dismissal opportunity;
 2. the current `Activity` of the target `Task` can handle activity-local state;
 3. the `Task` pops one activity only when more than its root remains.
 
@@ -38,6 +38,11 @@ history, URL-like state, or second route stack.
 
 ## Background
 
+The [Roo Windows design glossary](../glossary.md) defines the navigation and
+temporary-UI terms used here, including [task](../glossary.md#task),
+[activity](../glossary.md#activity), [semantic Back request](../glossary.md#semantic-back-request),
+and [interactive transient](../glossary.md#interactive-transient).
+
 ### Existing route model
 
 [Task](../../../src/roo_windows/core/task.h) owns a stack of borrowed
@@ -61,19 +66,20 @@ Four gaps remain:
 ### Dependency on transient presenter lifetime
 
 The [transient presenter lifetime design](transient_presenter_lifetime_design.md)
-defines intrusive registration, nesting order, finish reasons, destruction
-safety, and unlink-before-completion for temporary presenters.
+defines the single interactive-transient slot, finish reasons, destruction
+safety, and slot-removal-before-completion ordering.
 
 This design reuses that registration. It does not add a separate
-`BackParticipant` stack. Two stacks would add storage, allow visual and Back
-order to diverge, and recreate dangling-registration risks.
+`BackParticipant` stack. The window has one registered root interactive
+transient; nested UI such as submenus remains inside that component's own
+presentation chain.
 
 The boundary is explicit:
 
-- the lifetime design owns registration, nesting, teardown, and
+- the lifetime design owns registration, slot occupancy, teardown, and
   `finish(PresentationFinishReason)`;
 - this design maps Back or Escape to `PresentationFinishReason::kBack` on the
-  top eligible registration;
+  eligible slot occupant;
 - when no transient consumes, this design delegates to the target task;
 - presentation pins do not dispatch Back, though lifetime teardown hides them.
 
@@ -100,7 +106,8 @@ hardware request is unhandled. The framework does not guess.
 1. Keep `Task` and `Activity` as the only framework route stack.
 2. Share one semantic operation across UI Back, keyboard Back, Escape, and
    application code.
-3. Dismiss the top eligible transient before consulting a task.
+3. Dismiss the eligible interactive-transient slot occupant before consulting
+   a task.
 4. Let the current activity consume a request for local state or policy.
 5. Pop one activity when unconsumed and more than the root remains.
 6. Preserve a root task and return unhandled when its activity does not consume.
@@ -111,7 +118,7 @@ hardware request is unhandled. The framework does not guess.
 
 1. Transients use their normal idempotent finish path.
 2. Dispatch retains no callback, presenter, or activity pointer after return.
-3. A transient unlinks before completion runs.
+3. A transient vacates its slot before completion runs.
 4. Completion can reentrantly open, destroy, or replace presentation state.
 5. One request dismisses or pops at most one semantic level.
 
@@ -120,7 +127,8 @@ hardware request is unhandled. The framework does not guess.
 1. Request handling allocates no memory.
 2. `Activity` gains no per-instance storage.
 3. Widgets and selectors gain no back callbacks or history fields.
-4. The lifetime registration supplies the only per-presenter intrusive link.
+4. The lifetime registration supplies the only per-presenter coordination
+   state.
 5. Dispatch is constant-time apart from component finish work.
 
 ## Design Overview
@@ -132,7 +140,7 @@ Back / Escape / UI button
             |
  Application::requestBack(target, source)
             |
-   top eligible transient? -- yes --> finish(kBack), handled
+   eligible interactive transient? -- yes --> handle one level
             |
             no
             v
@@ -176,11 +184,12 @@ under the new dialog.
 
 ### Transient precedence
 
-Only interactive registrations marked Back- or Escape-dismissible participate.
-The lifetime host supplies visible nesting order.
+Only the root interactive transient marked Back- or Escape-dismissible
+participates in the shared slot.
 
-- Dialogs, submenus, modal sheets, and modal drawers participate.
-- A submenu finishes before its parent menu.
+- Dialogs, menu chains, modal sheets, and modal drawers participate.
+- A menu presenter closes its deepest submenu before its parent while occupying
+  one shared slot.
 - Snackbars do not participate by default.
 - Standard sheets/drawers, ripples, standalone scrims, keyboard previews, and
   presentation pins do not participate.
@@ -214,9 +223,10 @@ does not expose its implementation task as route history.
 
 The task path adds one virtual function to the existing `Activity` vtable, with
 no polymorphic-object size increase, plus an activity-count query and request
-method. Transient dispatch reuses the lifetime registration's link and host
-pointer; two policy bits fit its flags byte. No `BackDispatcher` object or
-second per-presenter pointer is added.
+method. Transient dispatch reuses the lifetime registration's slot pointer;
+two policy bits fit its flags byte. The window pays for one occupant pointer,
+and registrations have no linked-list field or separate `BackDispatcher`
+entry.
 
 ## Proposed API
 
@@ -303,13 +313,13 @@ example or emulator target.
 ### Phase 3: Transient precedence
 
 After Phase 1 of the [lifetime design](transient_presenter_lifetime_design.md),
-add fixed Back/Escape policy bits and finish the top eligible registration
-before task fallback. Test unlink-before-completion, replacement reentrancy,
-one finish per request, and fallback with no eligible transient.
+add fixed Back/Escape policy bits and offer the request to the slot occupant
+before task fallback. Test slot-removal-before-completion, replacement
+reentrancy, one finish per request, and fallback with no eligible transient.
 
 Proposed commit message:
 
-> presentation: dismiss top transient on back request
+> presentation: dismiss active transient on back request
 
 Validation:
 
@@ -333,10 +343,10 @@ Validation for each commit: its component tests, `//:back_request_test`,
 ## Testing Plan
 
 Task tests cover activity consumption, root preservation, one-level pop, and
-reentrant stack changes. Presentation-host tests cover priority, eligibility,
-exactly-once finish, and destruction-safe unlinking. Component and reference
-tests cover nested menus, modal precedence, focus-derived target selection, and
-activity fallback.
+reentrant stack changes. Presentation-slot tests cover exclusivity,
+eligibility, exactly-once finish, and destruction-safe removal. Component and
+reference tests cover nested menus, modal precedence, focus-derived target
+selection, and activity fallback.
 
 Supported-target validation records stack delta and confirms that request
 handling allocates nothing. No rendering golden is needed because this design
@@ -362,8 +372,9 @@ Rejected because it bypasses transient and local policy and can remove root.
 
 #### Add a separate `BackDispatcher` stack
 
-Rejected because the lifetime host already owns visible registration and
-nesting; another stack adds RAM and destruction/order races.
+Rejected because the lifetime host already owns the only root
+interactive-transient slot; another stack adds RAM and destruction/order
+races.
 
 #### Bubble through the widget tree
 

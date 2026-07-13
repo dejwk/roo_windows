@@ -14,7 +14,7 @@ transient presenters.
 
 The contract covers:
 
-- the presenter and its host registration,
+- the presenter and its slot registration,
 - anchors and placement data,
 - hosted widget content,
 - queued request data,
@@ -29,36 +29,75 @@ registered lifetime participant itself.
 
 ## Motivation
 
-The component designs currently describe presentation lifetime independently.
-That produces incompatible assumptions:
+Temporary UI creates several concrete lifetime hazards in the current and
+proposed component APIs:
 
-- an anchored menu wants to retain trigger state,
-- a sheet wants generic caller-owned widget content,
-- a dialog host borrows the dialog and stores a callback,
-- and the snackbar design copies request descriptors but retains non-owning
-  text views and a listener pointer while requests may be queued.
+- `MainWindow::showDialog()` retains a borrowed `Dialog*` and installs a
+  callback that captures the dialog by reference. Destroying an open dialog,
+  or destroying the application objects in the wrong order, leaves the window
+  with a dangling pointer.
+- An overflow menu is positioned from an icon in the current activity. If it
+  retains that icon as an anchor and navigation pops the activity, later menu
+  layout or dismissal can dereference a destroyed widget. The menu needs a
+  copied rectangle, not an observed widget.
+- A modal sheet can host caller-owned form content. Its completion callback can
+  destroy that content, so the sheet must detach the content and scrim before
+  delivering the result.
+- A snackbar request can wait behind another message. Retaining the caller's
+  `string_view` or listener pointer turns a short `show()` call into an
+  undocumented long-lived borrow.
 
-These choices are individually plausible but do not compose into a framework
-rule. In particular, “caller keeps it alive” is insufficient for a request
-that may remain queued for an unbounded time, and a raw anchor pointer is
-unsafe when navigation can detach its widget subtree.
+These problems need common ownership and finish-order rules. They do **not**
+require a global linked list of every temporary surface. A list only becomes
+necessary when unrelated interactive transients may overlap arbitrarily and
+the framework must reconstruct their Back order. Roo Windows instead chooses
+one root interactive transient per window: a dialog, one menu chain, or one
+modal sheet. Showing another root is rejected or explicitly replaces the
+current one. A menu presenter owns its submenu chain and closes the deepest
+submenu itself. Snackbars can coexist because they do not occupy the
+interactive Back slot.
 
-The framework already contains a stronger ownership philosophy. This design
-makes that philosophy explicit and applies it to temporal presentation.
+The shared primitive is therefore a single lifetime-safe slot, not an
+open-ended stack. The rest of this design addresses the independent anchor,
+content, completion, and queue hazards directly.
 
-## Existing Ownership Philosophy
+The slot solves two narrower coordination problems. First, the window needs a
+safe pointer to the root transient that receives Back and window-teardown
+requests; the embedded registration clears that pointer if the presenter is
+destroyed. Second, an occupied slot makes conflicting requests explicit. A
+menu action that opens a dialog finishes the menu and can open the dialog from
+completion. Conversely, code that tries to show a modal sheet while a dialog
+is active receives `kHostBusy` unless it deliberately calls `replace()`. With
+separate per-component active pointers, both could appear active and the
+framework would still need an ordering rule. With a list, Roo Windows would pay
+for arbitrary overlap that these component semantics do not require.
 
-### Ownership transfer is explicit
+## Background
 
-`WidgetRef` is move-only and records whether a container adopts a
-`std::unique_ptr<Widget>` or merely borrows a `Widget&`. Attaching a child does
-not silently change that choice. Detaching deletes only an adopted child.
+### Terminology
+
+The [Roo Windows design glossary](../glossary.md) defines the distinctions used
+here, especially [presenter](../glossary.md#presenter), [presentation](../glossary.md#transient-presentation),
+[surface](../glossary.md#transient-surface), [host](../glossary.md#host), and
+[registration](../glossary.md#registration). In short: application code can
+own a dialog presenter, `MainWindow` can host its current presentation, and the
+dialog card is the surface attached during that presentation.
+
+### Existing Ownership Philosophy
+
+#### Ownership transfer is explicit
+
+`WidgetRef` is a move-only, temporary transfer parameter. A container accepts
+either a `std::unique_ptr<Widget>` to adopt or a `Widget&` to borrow, moves the
+reference into `attachChild()`, and then stores only a raw child pointer.
+`Widget::isOwnedByParent()` is the sole retained ownership record, and
+`detachChild()` deletes only a parent-owned child.
 
 This establishes the first rule:
 
 > An API must make adoption distinguishable from borrowing at the call site.
 
-### Structural hosting and object ownership are separate
+#### Structural hosting and object ownership are separate
 
 `Container` stores the parent relationship needed for layout, paint, and input,
 but caller-owned children remain caller-owned. `Task` similarly stores borrowed
@@ -70,7 +109,7 @@ This establishes the second rule:
 > A host may control attachment and lifecycle without becoming the allocation
 > owner, but the hosted object must participate in that lifecycle.
 
-### Teardown removes reachability before calling application code
+#### Teardown removes reachability before calling application code
 
 The legacy dialog path clears the active dialog, detaches the dialog and scrim,
 clears the stored callback, and only then invokes the application callback.
@@ -82,7 +121,7 @@ This establishes the third rule:
 > Terminal delivery happens after the framework has made the presentation
 > inactive, so callbacks may destroy, replace, or reopen surfaces safely.
 
-### Hot-path ownership is bounded and allocation-conscious
+#### Hot-path ownership is bounded and allocation-conscious
 
 The framework prefers stable caller-owned objects, intrusive relationships,
 fixed slots, and virtual hooks over per-instance callback collections and
@@ -104,6 +143,11 @@ normal call boundary:
 - snackbar presenters and queued snackbar requests,
 - modal drawers and future popup-backed presenters,
 - and the Back/Escape eligibility policy owned by those surfaces.
+
+Only the root interactive transient occupies the shared window slot. Nested
+temporary UI owned by that root, such as cascading submenus, remains internal
+to the component's presentation chain. Non-interactive surfaces such as
+snackbars use their own bounded presenter or queue and do not occupy the slot.
 
 It does not apply to:
 
@@ -128,6 +172,9 @@ It does not apply to:
    clear its host.
 8. Window, task, activity, and popup teardown must use the same terminal path
    as explicit dismissal, with an explicit dismissal reason.
+9. At most one independent root interactive transient occupies a window.
+10. Nested component UI preserves its own semantic order without global
+    registration of each nested surface.
 
 ### Embedded requirements
 
@@ -137,40 +184,56 @@ It does not apply to:
 3. No `shared_ptr` or general weak-reference control block is introduced.
 4. Queue capacity and payload storage are explicit and bounded.
 5. Components pay only for the presentation state they use.
+6. The common host stores one participant pointer and no linked-list node.
 
 ## Design Overview
 
-The framework uses an intrusive `TransientPresentationRegistration` embedded in
-each caller-owned presenter. The registration is the lifetime token known to
-the host; the presenter remains the component-specific control surface.
+The framework uses a `TransientPresentationRegistration` embedded in
+each caller-owned root interactive presenter. `MainWindow` owns one
+`TransientPresentationSlot`, which stores either no registration or the one
+active registration. The presenter remains the component-specific control
+surface.
 
 The central rule is:
 
-> The registration embedded in the presenter unlinks on destruction. A
-> registration never uses an unrelated owner or listener as its lifetime token.
+> The registration embedded in the presenter vacates the slot on destruction.
+> A registration never uses an unrelated owner or listener as its lifetime
+> token.
 
 Each presentation has one state:
 
 - `kIdle`,
 - `kVisible`,
-- `kQueued`, or
 - `kFinishing` while framework teardown is in progress.
 
-The host holds only an intrusive pointer to the embedded registration. The
+Queued snackbar requests use the separate queue contract and are not states of
+the interactive slot.
+
+The slot holds one non-owning pointer to the embedded registration. The
 registration is declared after the presenter's detachable resources, so C++
-reverse member-destruction order unlinks and performs host-side structural
-cleanup before those resources are destroyed. Destructor cancellation suppresses
-application completion; explicit and host-driven finishes deliver it. The host
-also unlinks every registration during its own teardown. Neither side deletes
-the other.
+reverse member-destruction order clears host reachability before those
+resources are destroyed. Destructor cancellation suppresses application
+completion; explicit and host-driven finishes deliver it. Window teardown
+finishes the occupant with `kHostDestroyed`. Neither side deletes the other.
+
+`show()` succeeds only when the slot is empty. `replace()` finishes the current
+occupant with `kReplacement`, then installs the requested registration only if
+completion did not reentrantly occupy the slot. This makes replacement
+deterministic without overwriting a presentation opened by completion code.
+
+Nested UI does not register separately. For example, a menu presenter occupies
+the slot once and owns its root menu plus all submenus. Back is offered to that
+presenter, which closes its deepest submenu and remains registered until the
+root menu finishes. The host therefore coordinates independent component
+roots; the component coordinates its internal chain.
 
 Completion is a component hook on the presenter that owns the registration.
-The host asks the presenter to finish only while the registration is live;
-destructor cancellation uses host-owned attachment records and does not call
-back into a partially destroyed presenter. Applications subclass or compose the
-presenter; they do not give the host an independent callback target pointer.
-Convenience APIs may allocate an owned presenter, but that ownership is explicit
-and deletion follows unlinking and terminal delivery.
+The slot asks the presenter to finish only while the registration is live.
+Destructor cancellation only vacates the slot; it does not call back into a
+partially destroyed presenter. Applications subclass or compose the presenter;
+they do not give the slot an independent callback target pointer. Convenience
+APIs can allocate an owned presenter, but that ownership is explicit and
+deletion follows slot removal and terminal delivery.
 
 ## Retained-Data Rules
 
@@ -194,12 +257,24 @@ capacity and allocation behavior; an implementation may use fixed-capacity
 storage or reject/enqueue by policy rather than silently retaining a
 `string_view`.
 
-### Explicit `WidgetRef`
+### Temporary `WidgetRef` parameter
 
-Generic widget content uses `WidgetRef`, preserving the existing adopt-or-borrow
-choice. An adopted widget follows the presentation lifetime. A borrowed widget
-must be structurally attached to the presentation while visible and detached
-before terminal delivery.
+Generic widget content is accepted through a `WidgetRef` parameter, preserving
+the existing adopt-or-borrow choice without retaining duplicate ownership
+state. Before moving the parameter into `attachChild()`, the component retains
+its raw pointer. After attachment, it stores only that `Widget*`;
+`Widget::isOwnedByParent()` remains the sole ownership record. The component
+must not store a `WidgetRef` member.
+
+To replace a content slot, the component calls `detachChild()` on the existing
+raw pointer, retains the incoming raw pointer, moves the incoming `WidgetRef`
+into `attachChild()`, and stores the raw pointer. A null `WidgetRef` clears the
+slot after detaching the old child and is not passed to `attachChild()`.
+
+An adopted widget follows the presentation surface's attachment lifetime and
+is deleted by `detachChild()`. A borrowed widget must remain valid while
+attached and is detached, but not deleted, by the same operation before
+terminal delivery.
 
 Borrowed content is appropriate for stable application-composed objects. It is
 not safe for a queued descriptor because it does not participate while queued;
@@ -248,16 +323,17 @@ presenter lifetime.
 ## Content Contract
 
 The presentation surface owns its internal chrome and accepts application
-content through `WidgetRef`.
+content through a temporary `WidgetRef` parameter. It stores the attached
+content as a raw `Widget*`, never as a `WidgetRef`.
 
 For borrowed content:
 
 1. `show()` attaches it before the surface becomes visible,
 2. every terminal path detaches it before completion,
 3. replacement detaches the old content before attaching new content,
-4. the embedded registration is declared last and therefore unlinks and asks
-   the host to detach registered resources before earlier members are
-   destroyed,
+4. the presenter destructor performs component cleanup, after which the
+   last-declared registration vacates the slot before earlier resource members
+   are destroyed,
 5. and documentation states that the content owner must not destroy a borrowed
    widget while it is attached.
 
@@ -280,7 +356,7 @@ The required order is:
 2. disable Back/Escape eligibility and remove input registrations,
 3. hide presentation pins and cancel scheduled work,
 4. detach surface, scrim, and borrowed content,
-5. unlink from the host or queue,
+5. vacate the interactive slot or remove the entry from its queue,
 6. set state to `kIdle`,
 7. copy any result value needed by the hook,
 8. invoke `onFinished(reason, result)` exactly once,
@@ -325,8 +401,7 @@ silently on the common embedded path.
 
 ## Proposed Framework Primitive
 
-The exact names may be refined during implementation, but the common
-registration should resemble:
+The common registration and single slot should resemble:
 
 ```cpp
 namespace roo_windows {
@@ -334,7 +409,6 @@ namespace roo_windows {
 enum class PresentationState : uint8_t {
   kIdle,
   kVisible,
-  kQueued,
   kFinishing,
 };
 
@@ -349,6 +423,19 @@ enum class PresentationFinishReason : uint8_t {
   kTimeout,
 };
 
+enum class PresentationStartResult : uint8_t {
+  kStarted,
+  kHostBusy,
+  kReentrantReplacement,
+};
+
+struct TransientPresentationPolicy {
+  bool dismiss_on_back : 1 = false;
+  bool dismiss_on_escape : 1 = false;
+};
+
+class TransientPresentationSlot;
+
 class TransientPresentationRegistration {
  public:
   ~TransientPresentationRegistration();
@@ -361,42 +448,95 @@ class TransientPresentationRegistration {
   PresentationState state() const { return state_; }
   bool isActive() const { return state_ != PresentationState::kIdle; }
 
-  // Presenter-owned explicit finish; detaches and unlinks before returning.
+  // Presenter-owned explicit finish; detaches and vacates the slot before
+  // delivering completion.
   void finish(PresentationFinishReason reason);
 
- private:
-  friend class TransientPresentationHost;
+ protected:
+  // Component hook for removing surfaces, content, timers, and input state.
+  virtual void detachPresentation(PresentationFinishReason reason) = 0;
 
-  // Unlinks and performs only host-side structural cleanup. Does not invoke
-  // application or presenter code.
+  // Application-facing completion hook. Runs after state becomes kIdle.
+  virtual void onFinished(PresentationFinishReason reason) {}
+
+  // Menu chains override this to close one internal submenu level. The default
+  // finishes the root presentation with kBack.
+  virtual BackResult onBackRequested(BackSource source);
+
+ private:
+  friend class TransientPresentationSlot;
+
+  // Vacates the slot without calling component or application code.
   void cancelFromDestructor();
 
-  TransientPresentationHost* host_ = nullptr;
-  TransientPresentationRegistration* next_ = nullptr;
-  Widget* attached_surface_ = nullptr;
-  Widget* attached_content_ = nullptr;
+  TransientPresentationSlot* slot_ = nullptr;
   PresentationState state_ = PresentationState::kIdle;
+  uint8_t policy_ = 0;
+};
+
+class TransientPresentationSlot {
+ public:
+  PresentationStartResult show(
+      TransientPresentationRegistration& registration,
+      TransientPresentationPolicy policy = {});
+
+  PresentationStartResult replace(
+      TransientPresentationRegistration& registration,
+      TransientPresentationPolicy policy = {});
+
+  BackResult requestBack(BackSource source);
+  void clear(PresentationFinishReason reason);
+
+ private:
+  TransientPresentationRegistration* active_ = nullptr;
+  bool clearing_ = false;
 };
 
 class ExamplePresenter {
  private:
-  // Content and surface resources precede registration.
+  class Registration final : public TransientPresentationRegistration {
+   public:
+    explicit Registration(ExamplePresenter& presenter)
+        : presenter_(presenter) {}
+
+   protected:
+    void detachPresentation(PresentationFinishReason reason) override {
+      presenter_.detachPresentation(reason);
+    }
+
+    void onFinished(PresentationFinishReason reason) override {
+      presenter_.onFinished(reason);
+    }
+
+   private:
+    ExamplePresenter& presenter_;
+  };
+
+  // Content and surface resources precede registration. The surface/container
+  // owns the attachment policy; this is only the attached-child pointer.
   ExampleSurface surface_;
-  WidgetRef content_;
+  Widget* content_ = nullptr;
 
   // Must remain the last member so it is destroyed first.
-  TransientPresentationRegistration registration_;
+  Registration registration_;
 };
 
 }  // namespace roo_windows
 ```
 
-The registration destructor can detach only resources recorded with the host;
-it cannot invoke component-specific virtual cleanup. Components therefore
-cancel timers, gesture ownership, and pins in their destructor body before
-member destruction, while the registration provides a final structural safety
-net. Debug builds assert the last-member/fully-unregistered invariants where
-they can be checked.
+`show()` returns `kHostBusy` rather than silently covering another interactive
+transient. `replace()` is the only API that dismisses the current occupant. If
+that dismissal's completion reentrantly calls `show()`, `replace()` returns
+`kReentrantReplacement` and leaves the reentrant presentation intact.
+
+The registration's normal finish path invokes `detachPresentation()`, vacates
+the slot, sets `kIdle`, and then invokes `onFinished()`. Its destructor cannot
+safely call component-specific virtual cleanup because the presenter can be
+partially destroyed. Presenter destructors therefore cancel timers, gestures,
+and pins and detach their surfaces before member destruction; the registration,
+declared last, provides the final guarantee that the shared slot cannot retain
+a destroyed presenter. Debug builds assert the last-member and fully-detached
+invariants where they can be checked.
 
 Component APIs add typed dismissal and result delivery on top of this primitive
 rather than putting a type-erased result or callback in the framework base.
@@ -405,10 +545,10 @@ rather than putting a type-erased result or callback in the framework base.
 
 ### Menus
 
-- `Menu` is the registered lifetime participant.
+- The root menu presenter is the one registered lifetime participant.
 - The anchor is resolved to copied placement and trigger-paint data at show.
-- Each submenu is either an embedded child participant or a separately
-  registered node owned by its parent menu.
+- Submenus are component-owned entries in that presenter's internal chain; they
+  do not occupy additional window slots.
 - Closing a parent finishes the deepest submenu first and then the parent.
 - Menu items dispatch through virtual invocation on menu-owned or
   application-stable item objects; the overlay does not retain an unrelated
@@ -418,7 +558,10 @@ rather than putting a type-erased result or callback in the framework base.
 
 - Modal wrappers are registered participants; standard sheets are persistent
   layout and do not participate.
-- Generic content uses `WidgetRef` and is detached before dismissal delivery.
+- Showing a modal sheet while another root interactive transient is active
+  returns busy unless the caller explicitly requests replacement.
+- Generic content enters through a temporary `WidgetRef` parameter. The sheet
+  stores a raw child pointer and detaches it before dismissal delivery.
 - Content-triggered dismissal calls the wrapper's idempotent `finish()` path.
 - Scrim, back registration, gesture ownership, and animation tasks are removed
   before completion.
@@ -427,16 +570,20 @@ rather than putting a type-erased result or callback in the framework base.
 
 - The dialog object is the registered participant rather than a borrowed
   dialog plus a callback stored by `MainWindow`.
+- The current one-dialog limit becomes the shared one-interactive-transient
+  limit rather than a dialog-specific special case.
 - Typed subclasses receive results through `onFinished` or an owner object that
   embeds the dialog.
 - An explicit convenience API may own a heap-allocated alert dialog, matching
   the existing `showAlertDialog` precedent, but ownership is visible in that
-  API and deletion follows unlinking and completion.
+  API and deletion follows slot removal and completion.
 - Reentrant completion may immediately show another dialog.
 
 ### Snackbars
 
 - The stable `SnackbarPresenter` owns its visible slot and scheduler state.
+- Snackbar state is independent of the interactive-transient slot because a
+  snackbar does not consume Back by default.
 - Queued payloads are fully owned, including text and action labels, or use
   intrusive request nodes that cancel themselves on destruction.
 - The proposed copied request containing non-owning strings and a separate
@@ -446,64 +593,67 @@ rather than putting a type-erased result or callback in the framework base.
 
 ## Relationship to Back Dispatch and Presentation Pins
 
-The presentation host determines which visible transient receives a semantic
-Back/Escape dismiss request. The eligibility bits live on the existing
-registration; there is no separate back-participant registry. Eligibility is
-disabled and the presentation is unlinked during `finish()` before application
-code runs.
+The interactive-transient slot determines whether its occupant receives a
+semantic Back/Escape request. The eligibility bits live on that occupant's
+registration; there is no separate Back-participant registry. Eligibility is
+disabled and the slot is vacated during `finish()` before application code
+runs. A menu occupant can consume Back by closing an internal submenu while
+remaining registered.
 
 `PresentationPin` is a paint-only child resource of a presentation. It solves
 root-stage paint and clipping, not interactive lifetime. A presentation hides
 all of its pins before detaching its surface or invoking completion.
 
-## Testing Plan
-
-Shared contract tests must cover:
-
-1. explicit dismiss, action, Back, outside interaction, replacement, and
-   timeout each deliver completion once;
-2. completion observes `kIdle` and may destroy or reopen a presenter;
-3. presenter destruction while visible or queued unlinks without completion
-   into a destroyed object;
-4. host/window destruction unlinks presentations and reports host teardown to
-   surviving caller-owned participants;
-5. borrowed content is detached before completion and adopted content is
-   deleted exactly once;
-6. queued payload remains valid after initiating call-local strings and request
-   descriptors are destroyed;
-7. reanchoring snapshots attached widgets and never dereferences them later;
-8. nested menus finish deepest-first;
-9. sheet/dialog scrims, gestures, scheduled tasks, back entries, and pins are
-   gone before completion;
-10. queue overflow follows the configured bounded policy; and
-11. repeated dismiss calls and recursive teardown are idempotent.
-
-Integration tests repeat the destruction and replacement cases for one menu,
-one modal sheet, one dialog, and the snackbar queue.
-
 ## Implementation Plan
 
-### Phase 1: Contract and host primitive
+Authoring reference: follow the
+[embedded C++ code-authoring instructions](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
+and [roo_windows widget-authoring instructions](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
-1. Add the intrusive presentation state/host primitive and common finish
-   reasons.
+### Phase 1: Contract and Single-Slot Primitive
+
+1. Add the embedded registration, single interactive-transient slot, common
+   finish reasons, and explicit busy/replacement results.
 2. Make teardown reentrant and idempotent.
 3. Integrate back registration as an embedded participant resource.
-4. Add synthetic lifecycle tests before adopting a component.
+4. Add synthetic lifecycle, occupied-slot, and replacement-reentrancy tests
+   before adopting a component.
+
+Proposed commit message:
+
+> presentation: add the transient lifetime slot
+
+Validation: `bazel test //:transient_presentation_lifetime_test`.
 
 ### Phase 2: Dialog and sheet adoption
 
 1. Replace the dialog host's stored callback/reference pair with a registered
    dialog participant.
-2. Apply `WidgetRef` content attachment and detach-before-completion ordering.
+2. Accept content through a temporary `WidgetRef`, retain only the raw attached
+   child pointer, and apply detach-before-completion ordering.
 3. Adopt modal sheet wrappers and verify animation/scrim cleanup.
+
+Proposed commit message:
+
+> presentation: adopt dialogs and modal sheets
+
+Validation: `bazel test //:dialog_test //:modal_sheet_test
+//:transient_presentation_lifetime_test`.
 
 ### Phase 3: Menu adoption
 
 1. Snapshot anchors at show/reanchor time.
-2. Apply nested intrusive ownership and deepest-first finish.
+2. Keep the full submenu chain inside one registered menu presenter and apply
+   deepest-first Back behavior.
 3. Bind trigger-retention pins as presenter-owned resources if pins have
    landed.
+
+Proposed commit message:
+
+> menu: adopt the transient presentation slot
+
+Validation: `bazel test //:material3_menu_test
+//:transient_presentation_lifetime_test`.
 
 ### Phase 4: Snackbar queue adoption
 
@@ -512,51 +662,102 @@ one modal sheet, one dialog, and the snackbar queue.
 2. Remove queued non-owning strings and separate listener pointers.
 3. Verify timeout, replacement, clear, overflow, and host teardown.
 
-## Rejected Alternatives
+Proposed commit message:
 
-### Document raw-pointer ordering only
+> snackbar: make queued presentation lifetime explicit
+
+Validation: `bazel test //:material3_snackbar_test`.
+
+## Testing Plan
+
+Shared contract tests must cover:
+
+1. explicit dismiss, action, Back, outside interaction, replacement, and
+   timeout each deliver completion once;
+2. completion observes `kIdle` and may destroy or reopen a presenter;
+3. presenter destruction while visible vacates its slot without delivering
+   completion into a destroyed object;
+4. host/window destruction clears the occupant and reports host teardown to
+   surviving caller-owned participants;
+5. borrowed content is detached before completion and adopted content is
+   deleted exactly once;
+6. queued payload remains valid after initiating call-local strings and request
+   descriptors are destroyed;
+7. reanchoring snapshots attached widgets and never dereferences them later;
+8. nested menus finish deepest-first while using one window slot;
+9. sheet/dialog scrims, gestures, scheduled tasks, Back eligibility, and pins
+   are gone before completion;
+10. queue overflow follows the configured bounded policy;
+11. repeated dismiss calls and recursive teardown are idempotent; and
+12. `show()` rejects an occupied slot, explicit replacement does not overwrite
+    a presentation opened reentrantly by completion, and non-interactive
+    snackbar state does not occupy the slot.
+
+Integration tests repeat the destruction and replacement cases for one menu,
+one modal sheet, one dialog, and the snackbar queue.
+
+## Caveats
+
+### Rejected Alternatives
+
+#### Keep a Global Intrusive Presentation List
+
+Rejected because it solves ordering for arbitrary independent overlap, which
+this design explicitly disallows. It would add a link field to every active
+registration, require out-of-order unlink logic, and create a second ordering
+that could diverge from `MainWindow` paint layers. Dialogs and modal sheets are
+exclusive roots, submenu order already belongs to the menu presenter, and
+snackbars do not participate in Back. A single slot represents those semantics
+directly.
+
+If a future component demonstrates a valid need for two independent root
+interactive transients, that component must first define their visual, input,
+focus, and Back ordering. That evidence can justify replacing the slot; generic
+stacking is not enabled preemptively.
+
+#### Document Raw-Pointer Ordering Only
 
 Rejected because temporary and queued surfaces cross navigation, timeout, and
 owner teardown boundaries. Correctness would depend on every application
 remembering a different manual dismissal order.
 
-### Add weak-reference state to every widget
+#### Add Weak-Reference State to Every Widget
 
 Rejected because most widgets are never presentation anchors. It adds RAM and
 mutation cost globally to solve an opt-in presenter problem.
 
-### Use `shared_ptr` for presenters and dependencies
+#### Use `shared_ptr` for Presenters and Dependencies
 
 Rejected because it obscures allocation ownership, adds control blocks and
 reference-count operations, and can prolong UI objects past their structural
 host lifetime.
 
-### Make every presenter heap-owned by the framework
+#### Make Every Presenter Heap-Owned by the Framework
 
 Rejected because caller-owned stable objects are common in this embedded code
 base. Heap ownership remains an explicit convenience option, not the base
 contract.
 
-### Treat presentation pins as the lifetime mechanism
+#### Treat Presentation Pins as the Lifetime Mechanism
 
 Rejected because pins are paint-only. They do not own input, content, callback
 delivery, queues, or modal teardown.
 
-## Design Consequences
+### Design Consequences
 
 This design deliberately does not promise that arbitrary borrowed widget
 content can be destroyed while still attached. That would require a general
 weak-reference or observer mechanism the framework does not otherwise use.
-Instead, it preserves the existing explicit `WidgetRef` borrowing rule and
-removes the more hazardous temporal borrows: anchors are snapshotted, queued
-payload is owned or self-registering, and deferred behavior belongs to the
-registered participant.
+Instead, it preserves the existing temporary-`WidgetRef` transfer rule and
+raw-child storage model while removing the more hazardous temporal borrows:
+anchors are snapshotted, queued payload is owned or self-registering, and
+deferred behavior belongs to the registered participant.
 
 The resulting ownership model is consistent with the implementation:
 
 - adopt or borrow explicitly,
 - keep structural hosting separate from allocation ownership,
 - make the borrowed object participate in lifecycle,
-- unlink before terminal delivery,
+- vacate the slot or queue before terminal delivery,
 - permit safe reentrancy,
 - and pay lifetime-management cost only for objects that present transient UI.
