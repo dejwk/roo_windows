@@ -1,5 +1,7 @@
 # Design document status index
 
+Shared terminology is defined in the [Roo Windows design glossary](glossary.md).
+
 Design documents are filed by implementation status:
 
 - `implemented/`: the design's defined scope is implemented. Later extensions do not change that status.
