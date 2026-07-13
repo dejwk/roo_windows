@@ -19,6 +19,8 @@ class FocusManager {
 
   /// Attempts to move focus to an eligible, attached widget.
   bool requestFocus(Widget& widget);
+  /// Moves focus through focusable descendants of `root`, wrapping at ends.
+  bool moveFocus(Widget& root, bool backwards);
 
   /// Clears focus when `subtree` is about to detach from its parent.
   void onSubtreeDetaching(Widget& subtree);

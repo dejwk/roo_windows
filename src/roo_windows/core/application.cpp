@@ -126,10 +126,36 @@ bool Application::drainKeyEvents() {
     int count = key_source_->drain(events, kKeyDrainBatchSize);
     if (count <= 0) return false;
     if (count > kKeyDrainBatchSize) count = kKeyDrainBatchSize;
+    for (int i = 0; i < count; ++i) dispatchKeyEvent(events[i]);
     total += count;
     if (count < kKeyDrainBatchSize) return false;
   }
   return total == kKeyDrainBatchSize * kMaxKeyDrainBatchesPerTick;
+}
+
+void Application::dispatchKeyEvent(const KeyEvent& event) {
+  if (event.phase == KeyPhase::kDown && event.code == KeyCode::kTab &&
+      !task_panels_.empty()) {
+    context_.focus().moveFocus(*task_panels_.back(),
+                               (event.modifiers & kKeyModifierShift) != 0);
+    return;
+  }
+  Widget* focused = context_.focus().focused();
+  if (focused == nullptr) return;
+  if (focused->onKeyEvent(event)) return;
+  bool primary = event.code == KeyCode::kEnter || event.code == KeyCode::kSpace;
+  if (!primary) return;
+  if (event.phase == KeyPhase::kDown && focused->isClickable() &&
+      focused->isEnabled()) {
+    armed_key_widget_ = focused;
+    armed_key_ = event.code;
+    focused->setPressed(true);
+  } else if (event.phase == KeyPhase::kUp && armed_key_widget_ == focused &&
+             armed_key_ == event.code) {
+    armed_key_widget_ = nullptr;
+    armed_key_ = KeyCode::kUnknown;
+    focused->onSingleTapUp(focused->width() / 2, focused->height() / 2);
+  }
 }
 
 namespace {

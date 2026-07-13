@@ -24,6 +24,7 @@
 #include "roo_windows/core/rect.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/core/touch_event.h"
+#include "roo_windows/core/key_source.h"
 
 namespace roo_windows {
 
@@ -424,6 +425,10 @@ class Widget {
 
   /// Called after keyboard focus changes.
   virtual void onFocusChanged(bool focused) {}
+  /// Handles a key routed to this focused widget.
+  virtual bool onKeyEvent(const KeyEvent& event) { return false; }
+  virtual int focusChildCount() const { return 0; }
+  virtual Widget* focusChildAt(int) { return nullptr; }
 
   void setSelected(bool selected);
   void setActivated(bool activated);

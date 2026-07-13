@@ -112,6 +112,8 @@ class Container : public SurfaceWidget {
   bool isScrollable() const;
 
  protected:
+  int focusChildCount() const override { return getChildrenCount(); }
+  Widget* focusChildAt(int index) override { return &getChild(index); }
   void attachChild(WidgetRef child,
                    const Rect& initial_bounds = Rect(0, 0, -1, -1));
 

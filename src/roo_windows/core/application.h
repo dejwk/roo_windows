@@ -157,6 +157,7 @@ class Application {
   /// the focus-management phase; acquisition deliberately does not interpret
   /// these samples yet.
   bool drainKeyEvents();
+  void dispatchKeyEvent(const KeyEvent& event);
 
   /// Returns whether `task` is owned by this application.
   bool ownsTask(const Task& task) const;
@@ -178,6 +179,8 @@ class Application {
   GestureDetector gesture_detector_;
   KeySource* key_source_;
   bool touch_enabled_;
+  Widget* armed_key_widget_ = nullptr;
+  KeyCode armed_key_ = KeyCode::kUnknown;
 
   roo_scheduler::SingletonTask ticker_;
   roo_time::Duration paint_interval_;

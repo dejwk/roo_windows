@@ -11,6 +11,36 @@ bool FocusManager::requestFocus(Widget& widget) {
   return true;
 }
 
+namespace {
+
+void FindFocusable(Widget& widget, FocusManager& manager, Widget*& first,
+                   Widget*& previous, Widget*& next, Widget* focused) {
+  if (widget.isFocusable() && widget.parent() != nullptr &&
+      widget.isVisible() && widget.isEnabled()) {
+    if (first == nullptr) first = &widget;
+    if (previous == focused) next = &widget;
+    previous = &widget;
+  }
+  for (int i = 0; i < widget.focusChildCount(); ++i) {
+    Widget* child = widget.focusChildAt(i);
+    if (child != nullptr) {
+      FindFocusable(*child, manager, first, previous, next, focused);
+    }
+  }
+}
+
+}  // namespace
+
+bool FocusManager::moveFocus(Widget& root, bool backwards) {
+  (void)backwards;
+  Widget* first = nullptr;
+  Widget* previous = nullptr;
+  Widget* next = nullptr;
+  FindFocusable(root, *this, first, previous, next, focused_);
+  if (first == nullptr) return false;
+  return requestFocus(*((next != nullptr) ? next : first));
+}
+
 void FocusManager::onSubtreeDetaching(Widget& subtree) {
   if (focused_ != nullptr && isDescendantOf(*focused_, subtree)) {
     setFocused(nullptr);
