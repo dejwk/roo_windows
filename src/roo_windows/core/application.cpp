@@ -134,10 +134,9 @@ bool Application::drainKeyEvents() {
 }
 
 void Application::dispatchKeyEvent(const KeyEvent& event) {
-  if (event.phase == KeyPhase::kDown && event.code == KeyCode::kTab &&
-      !task_panels_.empty()) {
-    context_.focus().moveFocus(*task_panels_.back(),
-                               (event.modifiers & kKeyModifierShift) != 0);
+  if (event.phase == KeyPhase::kDown && event.code == KeyCode::kTab) {
+    context_.focus().moveFocus(
+        root_window_, (event.modifiers & kKeyModifierShift) != 0);
     return;
   }
   Widget* focused = context_.focus().focused();

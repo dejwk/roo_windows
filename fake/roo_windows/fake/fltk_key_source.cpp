@@ -1,55 +1,99 @@
 #include "roo_windows/fake/fltk_key_source.h"
 
+#include <chrono>
 #include <FL/Enumerations.H>
 #include <FL/Fl.H>
+#include <FL/Fl_Window.H>
 
 namespace roo_windows::fake {
 
 FltkKeySource* FltkKeySource::active_source_ = nullptr;
-bool FltkKeySource::handler_installed_ = false;
+bool FltkKeySource::dispatcher_installed_ = false;
 
-FltkKeySource::FltkKeySource() : head_(0), tail_(0) {
+namespace {
+bool dispatching = false;
+}
+
+FltkKeySource::FltkKeySource()
+    : head_(0),
+      tail_(0),
+      active_fltk_key_(0),
+      key_is_down_(false),
+      last_repeat_millis_(0) {
+  pthread_mutex_init(&mutex_, nullptr);
   active_source_ = this;
-  if (!handler_installed_) {
-    Fl::add_handler(handleFltkEvent);
-    handler_installed_ = true;
-  }
 }
 
 FltkKeySource::~FltkKeySource() {
   if (active_source_ == this) active_source_ = nullptr;
+  pthread_mutex_destroy(&mutex_);
 }
 
 int FltkKeySource::drain(KeyEvent* out, int max_events) {
-  roo::lock_guard<roo::mutex> lock(mutex_);
+  installDispatcher();
+  pthread_mutex_lock(&mutex_);
   int count = 0;
   while (head_ != tail_ && count < max_events) {
     out[count++] = queue_[head_];
     head_ = (head_ + 1) % kQueueCapacity;
   }
+  pthread_mutex_unlock(&mutex_);
   return count;
 }
 
-bool FltkKeySource::enqueue(const KeyEvent& event) {
-  roo::lock_guard<roo::mutex> lock(mutex_);
-  int next_tail = (tail_ + 1) % kQueueCapacity;
-  if (next_tail == head_) return false;
-  queue_[tail_] = event;
-  tail_ = next_tail;
-  return true;
+void FltkKeySource::installDispatcher() {
+  if (dispatcher_installed_) return;
+  Fl::event_dispatch(dispatchFltkEvent);
+  dispatcher_installed_ = true;
 }
 
-int FltkKeySource::handleFltkEvent(int event) {
-  if (active_source_ == nullptr ||
-      (event != FL_KEYDOWN && event != FL_KEYUP)) {
-    return 0;
+bool FltkKeySource::enqueue(const KeyEvent& event) {
+  pthread_mutex_lock(&mutex_);
+  int next_tail = (tail_ + 1) % kQueueCapacity;
+  bool accepted = next_tail != head_;
+  if (accepted) {
+    queue_[tail_] = event;
+    tail_ = next_tail;
   }
-  active_source_->onFltkEvent(event == FL_KEYDOWN ? KeyPhase::kDown
-                                                   : KeyPhase::kUp);
-  return 0;
+  pthread_mutex_unlock(&mutex_);
+  return accepted;
+}
+
+int FltkKeySource::dispatchFltkEvent(int event, Fl_Window* window) {
+  if (dispatching) return window == nullptr ? 0 : Fl::handle_(event, window);
+  dispatching = true;
+  if (active_source_ != nullptr && (event == FL_KEYDOWN || event == FL_KEYUP)) {
+    int key = Fl::event_key();
+    KeyPhase phase = KeyPhase::kUp;
+    if (event == FL_KEYDOWN) {
+      phase = active_source_->key_is_down_ &&
+                      active_source_->active_fltk_key_ == key
+                  ? KeyPhase::kRepeat
+                  : KeyPhase::kDown;
+      active_source_->active_fltk_key_ = key;
+      active_source_->key_is_down_ = true;
+    } else if (active_source_->active_fltk_key_ == key) {
+      active_source_->key_is_down_ = false;
+    }
+    active_source_->onFltkEvent(phase);
+  }
+  int result = window == nullptr ? 0 : Fl::handle_(event, window);
+  dispatching = false;
+  return result;
 }
 
 void FltkKeySource::onFltkEvent(KeyPhase phase) {
+  constexpr uint64_t kRepeatIntervalMillis = 50;
+  uint64_t now = static_cast<uint64_t>(
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          std::chrono::steady_clock::now().time_since_epoch())
+          .count());
+  if (phase == KeyPhase::kRepeat) {
+    if (now - last_repeat_millis_ < kRepeatIntervalMillis) return;
+    last_repeat_millis_ = now;
+  } else if (phase == KeyPhase::kDown) {
+    last_repeat_millis_ = now;
+  }
   enqueue({phase, keyCode(Fl::event_key()), modifiers(), 0});
   if (phase != KeyPhase::kDown) return;
 

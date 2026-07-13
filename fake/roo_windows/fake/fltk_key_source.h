@@ -1,7 +1,11 @@
 #pragma once
 
-#include "roo_threads/mutex.h"
+#include <cstdint>
+#include <pthread.h>
+
 #include "roo_windows/core/key_source.h"
+
+class Fl_Window;
 
 namespace roo_windows::fake {
 
@@ -27,20 +31,24 @@ class FltkKeySource : public KeySource {
   bool enqueue(const KeyEvent& event);
 
  private:
-  static int handleFltkEvent(int event);
+  static int dispatchFltkEvent(int event, Fl_Window* window);
+  static void installDispatcher();
   void onFltkEvent(KeyPhase phase);
 
   static KeyCode keyCode(int key);
   static uint8_t modifiers();
   static bool decodeRune(const char* text, int length, uint32_t* rune);
 
-  roo::mutex mutex_;
+  pthread_mutex_t mutex_;
   KeyEvent queue_[kQueueCapacity];
   int head_;
   int tail_;
+  int active_fltk_key_;
+  bool key_is_down_;
+  uint64_t last_repeat_millis_;
 
   static FltkKeySource* active_source_;
-  static bool handler_installed_;
+  static bool dispatcher_installed_;
 };
 
 }  // namespace roo_windows::fake
