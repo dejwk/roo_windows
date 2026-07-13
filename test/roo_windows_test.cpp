@@ -37,7 +37,28 @@ class TiledRectWidget : public BasicSurfaceWidget {
 class ExposedPanel : public Panel {
  public:
   using Panel::add;
+  using Panel::removeLast;
   using Panel::Panel;
+};
+
+class FocusableTestWidget : public BasicWidget {
+ public:
+  explicit FocusableTestWidget(ApplicationContext& context)
+      : BasicWidget(context), focus_change_count_(0), last_focused_(false) {}
+
+  Dimensions getSuggestedMinimumDimensions() const override {
+    return Dimensions(1, 1);
+  }
+
+  bool isFocusable() const override { return true; }
+
+  void onFocusChanged(bool focused) override {
+    ++focus_change_count_;
+    last_focused_ = focused;
+  }
+
+  int focus_change_count_;
+  bool last_focused_;
 };
 
 class SloppyTouchSpyWidget : public BasicWidget {
@@ -100,6 +121,60 @@ TEST(Windows, ApplicationContextExposesEnvironmentServices) {
 
   DispatcherTestWidget widget(app.context());
   EXPECT_EQ(&app.context().theme(), &widget.theme());
+}
+
+// Verifies that focus is application-owned, updates widget state, and moves
+// cleanly between eligible attached widgets.
+TEST(Windows, FocusManagerTransfersFocusBetweenAttachedWidgets) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context(scheduler, env.theme(), env.keyboardColorTheme());
+  ExposedPanel panel(context);
+  FocusableTestWidget first(context);
+  FocusableTestWidget second(context);
+  panel.add(WidgetRef(first));
+  panel.add(WidgetRef(second));
+  first.layout(Rect(0, 0, 9, 9));
+  second.layout(Rect(10, 0, 19, 9));
+
+  EXPECT_TRUE(first.requestFocus());
+  EXPECT_EQ(&first, context.focus().focused());
+  EXPECT_TRUE(first.isFocused());
+  EXPECT_TRUE(first.last_focused_);
+
+  EXPECT_TRUE(second.requestFocus());
+  EXPECT_EQ(&second, context.focus().focused());
+  EXPECT_FALSE(first.isFocused());
+  EXPECT_TRUE(second.isFocused());
+  EXPECT_FALSE(first.last_focused_);
+}
+
+// Verifies that hiding, disabling, and detaching a focused subtree clear
+// focus before its parent link or visibility state becomes invalid.
+TEST(Windows, FocusManagerClearsInvalidFocusedDescendants) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context(scheduler, env.theme(), env.keyboardColorTheme());
+  ExposedPanel panel(context);
+  FocusableTestWidget child(context);
+  panel.add(WidgetRef(child));
+  child.layout(Rect(0, 0, 9, 9));
+
+  ASSERT_TRUE(child.requestFocus());
+  child.setVisibility(Visibility::kInvisible);
+  EXPECT_EQ(nullptr, context.focus().focused());
+  EXPECT_FALSE(child.isFocused());
+
+  child.setVisibility(Visibility::kVisible);
+  ASSERT_TRUE(child.requestFocus());
+  child.setEnabled(false);
+  EXPECT_EQ(nullptr, context.focus().focused());
+
+  child.setEnabled(true);
+  ASSERT_TRUE(child.requestFocus());
+  panel.removeLast();
+  EXPECT_EQ(nullptr, context.focus().focused());
+  EXPECT_FALSE(child.isFocused());
 }
 
 // Verifies that the phase-1 widget-event dispatcher stores, replaces,

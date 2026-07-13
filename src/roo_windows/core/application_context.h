@@ -1,6 +1,7 @@
 #pragma once
 
 #include "roo_scheduler.h"
+#include "roo_windows/core/focus_manager.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/core/widget_event_dispatcher.h"
 
@@ -32,11 +33,18 @@ class ApplicationContext {
   /// Returns the widget-event dispatcher.
   const WidgetEventDispatcher& widgetEvents() const;
 
+  /// Returns the application-owned keyboard-focus service.
+  FocusManager& focus() { return focus_; }
+
+  /// Returns the application-owned keyboard-focus service.
+  const FocusManager& focus() const { return focus_; }
+
  private:
   roo_scheduler::Scheduler& scheduler_;
   const Theme& theme_;
   const KeyboardColorTheme& keyboard_color_theme_;
   WidgetEventDispatcher widget_events_;
+  FocusManager focus_;
 };
 
 }  // namespace roo_windows

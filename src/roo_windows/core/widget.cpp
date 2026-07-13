@@ -4,6 +4,7 @@
 #include "roo_display/shape/smooth.h"
 #include "roo_logging.h"
 #include "roo_windows/core/application.h"
+#include "roo_windows/core/focus_manager.h"
 #include "roo_windows/core/main_window.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/press_overlay.h"
@@ -51,7 +52,10 @@ Widget::Widget(Widget&& other)
   context_.widgetEvents().moveHandlers(other, *this);
 }
 
-Widget::~Widget() { context_.widgetEvents().clearHandlers(*this); }
+Widget::~Widget() {
+  context_.focus().onWidgetDestroying(*this);
+  context_.widgetEvents().clearHandlers(*this);
+}
 
 MainWindow* Widget::getMainWindow() {
   return parent_ == nullptr ? nullptr : parent_->getMainWindow();
@@ -370,6 +374,9 @@ void Widget::setParentClipMode(ParentClipMode mode) {
 void Widget::setVisibility(Visibility visibility) {
   Visibility previous = this->visibility();
   if (visibility == previous) return;
+  if (visibility != Visibility::kVisible) {
+    context_.focus().onWidgetEligibilityChanging(*this);
+  }
   state_ &= ~(kWidgetHidden | kWidgetGone);
   state_ |= (kWidgetHidden * (visibility == Visibility::kInvisible));
   state_ |= (kWidgetGone * (visibility == Visibility::kGone));
@@ -394,12 +401,36 @@ void Widget::setVisibility(Visibility visibility) {
 
 void Widget::setEnabled(bool enabled) {
   if (isEnabled() == enabled) return;
+  if (!enabled) context_.focus().onWidgetEligibilityChanging(*this);
   state_ ^= kWidgetEnabled;
   if (isVisible()) {
     invalidateInterior();
   }
   notifyStateChanged(kWidgetEnabled);
 }
+
+void Widget::setHover(bool hover) {
+  if (hover == isHover()) return;
+  state_ ^= kWidgetHover;
+  if (isVisible()) {
+    invalidateInterior();
+    notifyParentInvalidatedRegion(getParentInteractionBounds());
+  }
+  notifyStateChanged(kWidgetHover);
+}
+
+void Widget::setFocused(bool focused) {
+  if (focused == isFocused()) return;
+  state_ ^= kWidgetFocused;
+  if (isVisible()) {
+    invalidateInterior();
+    notifyParentInvalidatedRegion(getParentInteractionBounds());
+  }
+  onFocusChanged(focused);
+  notifyStateChanged(kWidgetFocused);
+}
+
+bool Widget::requestFocus() { return context_.focus().requestFocus(*this); }
 
 void Widget::setSelected(bool selected) {
   if (selected == isSelected()) return;

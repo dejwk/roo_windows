@@ -2,9 +2,10 @@
 
 ## Implementation status
 
-**In progress.** Phase 1 key acquisition is implemented; focus management,
-key dispatch, traversal, and component adoption remain. The status of existing
-and outstanding prerequisites is recorded in the [status index](../README.md).
+**In progress.** Phases 1 and 2 are implemented: key acquisition and
+lifecycle-safe focus state plumbing. Scope activation, key dispatch,
+traversal, and component adoption remain. The status of existing and
+outstanding prerequisites is recorded in the [status index](../README.md).
 
 ## Objective
 

@@ -265,8 +265,7 @@ class Widget {
   /// Appends the visible, enabled widgets geometrically hit at `x`, `y` to
   /// `path`, ordered from this widget toward the deepest hit descendant.
   /// Does not invoke gesture callbacks.
-  virtual bool fillTouchTargetPath(XDim x, YDim y,
-                                   std::vector<Widget*>& path);
+  virtual bool fillTouchTargetPath(XDim x, YDim y, std::vector<Widget*>& path);
 
   /// Appends the visible, enabled widgets sloppy-hit at `x`, `y` to `path`.
   /// Does not invoke gesture callbacks.
@@ -341,8 +340,7 @@ class Widget {
   /// Participates in drag ownership arbitration after touch slop is crossed.
   /// The default applies dragAxis() to total displacement. Override only for
   /// policies that cannot be expressed by an axis.
-  virtual DragClaim onDragClaim(XDim x, YDim y, XDim total_dx,
-                                YDim total_dy);
+  virtual DragClaim onDragClaim(XDim x, YDim y, XDim total_dx, YDim total_dy);
 
   /// Called once when this widget becomes the drag owner.
   virtual void onDragStart(XDim x, YDim y);
@@ -411,6 +409,22 @@ class Widget {
   void setVisibility(Visibility visibility);
 
   void setEnabled(bool enabled);
+
+  /// Updates whether this widget is hovered by a pointing device.
+  void setHover(bool hover);
+
+  /// Updates whether this widget owns keyboard focus.
+  void setFocused(bool focused);
+
+  /// Returns whether this widget can own keyboard focus.
+  virtual bool isFocusable() const { return isClickable(); }
+
+  /// Requests keyboard focus for this attached, eligible widget.
+  bool requestFocus();
+
+  /// Called after keyboard focus changes.
+  virtual void onFocusChanged(bool focused) {}
+
   void setSelected(bool selected);
   void setActivated(bool activated);
   void setPressed(bool pressed);

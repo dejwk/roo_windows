@@ -2,6 +2,7 @@
 
 #ifdef ROO_TESTING
 
+#include "roo_windows/fake/fltk_key_source.h"
 #include "roo_testing/devices/display/ili9341/ili9341spi.h"
 #include "roo_testing/devices/touch/xpt2046/xpt2046spi.h"
 #include "roo_testing/microcontrollers/esp32/fake_esp32.h"
@@ -32,6 +33,8 @@ struct Emulator {
     FakeEsp32().gpio.attachOutput(1, touch.cs());
   }
 } emulator;
+
+roo_windows::fake::FltkKeySource emulator_keys;
 
 #endif
 
@@ -303,7 +306,11 @@ class ButtonScreen : public ScrollablePanel {
 
 roo_scheduler::Scheduler scheduler;
 Environment env(scheduler);
+#ifdef ROO_TESTING
+Application app(&env, display, emulator_keys, true);
+#else
 Application app(&env, display);
+#endif
 ButtonScreen button_screen(app.context());
 SingletonActivity activity(app, button_screen);
 

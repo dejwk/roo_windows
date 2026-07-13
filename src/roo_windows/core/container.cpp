@@ -48,6 +48,7 @@ void Container::attachChild(WidgetRef ref, const Rect& bounds) {
 
 void Container::detachChild(Widget* child) {
   CHECK(child->parent() == this);
+  context().focus().onSubtreeDetaching(*child);
   bool owned = child->isOwnedByParent();
   if (child->isVisible()) {
     childHidden(child);
