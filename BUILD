@@ -158,6 +158,16 @@ cc_test(
 )
 
 cc_test(
+    name = "key_source_test",
+    srcs = ["test/key_source_test.cpp"],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
+cc_test(
     name = "text_label_test",
     srcs = [
         "test/text_label_test.cpp",

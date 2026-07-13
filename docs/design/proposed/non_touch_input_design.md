@@ -2,7 +2,9 @@
 
 ## Implementation status
 
-**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+**In progress.** Phase 1 key acquisition is implemented; focus management,
+key dispatch, traversal, and component adoption remain. The status of existing
+and outstanding prerequisites is recorded in the [status index](../README.md).
 
 ## Objective
 

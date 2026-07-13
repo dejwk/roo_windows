@@ -12,6 +12,7 @@
 #include "roo_windows/core/click_animation.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/gesture_detector.h"
+#include "roo_windows/core/key_source.h"
 #include "roo_windows/core/main_window.h"
 #include "roo_windows/core/task.h"
 #include "roo_windows/core/touch_sensor.h"
@@ -33,6 +34,13 @@ class Application {
   /// Creates an application bound to the supplied bootstrap environment and
   /// display.
   Application(const Environment* env, roo_display::Display& display);
+
+  /// Creates an application with an optional borrowed non-touch key source.
+  ///
+  /// When `enable_touch` is false the display is not polled for touch input,
+  /// which lets keyboard-only displays use the normal application runtime.
+  Application(const Environment* env, roo_display::Display& display,
+              KeySource& keys, bool enable_touch);
 
   /// Stops and detaches all task activities before destroying application state.
   ~Application();
@@ -145,6 +153,11 @@ class Application {
   // Handles user input (touch, etc.), and calls refresh() periodically.
   void tick();
 
+  /// Drains a bounded batch of pending key events. Event dispatch lands with
+  /// the focus-management phase; acquisition deliberately does not interpret
+  /// these samples yet.
+  bool drainKeyEvents();
+
   /// Returns whether `task` is owned by this application.
   bool ownsTask(const Task& task) const;
 
@@ -163,6 +176,8 @@ class Application {
   MainWindow root_window_;
   TouchSensor touch_sensor_;
   GestureDetector gesture_detector_;
+  KeySource* key_source_;
+  bool touch_enabled_;
 
   roo_scheduler::SingletonTask ticker_;
   roo_time::Duration paint_interval_;

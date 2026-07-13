@@ -15,6 +15,8 @@ static constexpr roo_time::Duration kMinRefreshDuration = roo_time::Millis(200);
 
 // Do not refresh display more frequently than this (50 Hz).
 static constexpr long kMinRefreshTimeDeltaMs = 20;
+static constexpr int kKeyDrainBatchSize = 4;
+static constexpr int kMaxKeyDrainBatchesPerTick = 4;
 
 Application::Application(const Environment* env, Display& display)
     : display_(display),
@@ -25,6 +27,26 @@ Application::Application(const Environment* env, Display& display)
       root_window_(*this, display.extents()),
       touch_sensor_(display),
       gesture_detector_(root_window_, touch_sensor_),
+      key_source_(nullptr),
+      touch_enabled_(true),
+      ticker_(env->scheduler(), [this]() { tick(); }),
+      paint_interval_(kMinRefreshDuration) {
+  roo_windows::Task* kb_task = addPopupTaskFloating();
+  kb_task->enterActivity(&keyboard_);
+}
+
+Application::Application(const Environment* env, Display& display,
+                         KeySource& keys, bool enable_touch)
+    : display_(display),
+      env_(env),
+      context_(env->scheduler(), env->theme(), env->keyboardColorTheme()),
+      keyboard_(context_, kbEngUS()),
+      text_field_editor_(env->scheduler(), keyboard_),
+      root_window_(*this, display.extents()),
+      touch_sensor_(display),
+      gesture_detector_(root_window_, touch_sensor_),
+      key_source_(&keys),
+      touch_enabled_(enable_touch),
       ticker_(env->scheduler(), [this]() { tick(); }),
       paint_interval_(kMinRefreshDuration) {
   roo_windows::Task* kb_task = addPopupTaskFloating();
@@ -56,7 +78,7 @@ BackResult Application::requestBack(Task& target, BackSource source) {
 
 void Application::start() {
   ui_thread_id_ = roo::this_thread::get_id();
-  touch_sensor_.start();
+  if (touch_enabled_) touch_sensor_.start();
   ticker_.scheduleNow();
 }
 
@@ -69,11 +91,12 @@ void Application::tick() {
   unsigned long now = millis();
   root_window_.refreshClickAnimation();
   bool is_click_animating = root_window_.click_animation().isClickAnimating();
+  bool key_events_pending = drainKeyEvents();
 #if defined(ROO_THREADS_SINGLETHREADED)
-  touch_sensor_.pollOnce();
+  if (touch_enabled_) touch_sensor_.pollOnce();
 #endif
-  bool gesture_dispatched = gesture_detector_.tick();
-  bool touch_active = gesture_detector_.isTouchDown();
+  bool gesture_dispatched = touch_enabled_ && gesture_detector_.tick();
+  bool touch_active = touch_enabled_ && gesture_detector_.isTouchDown();
   bool redraw_timeout = false;
   if ((now - last_time_refreshed_ms_) >= kMinRefreshTimeDeltaMs) {
     bool completed = refresh(roo_time::Uptime::Now() + paint_interval_);
@@ -88,10 +111,25 @@ void Application::tick() {
                                          ? roo_scheduler::PRIORITY_NORMAL
                                          : roo_scheduler::PRIORITY_NORMAL;
   roo_time::Duration delay =
-      gesture_dispatched || touch_active || redraw_timeout
+      key_events_pending || gesture_dispatched || touch_active || redraw_timeout
           ? roo_time::Millis(0)
           : roo_time::Millis(20);
   ticker_.scheduleAfter(delay, priority);
+}
+
+bool Application::drainKeyEvents() {
+  if (key_source_ == nullptr) return false;
+
+  KeyEvent events[kKeyDrainBatchSize];
+  int total = 0;
+  for (int batch = 0; batch < kMaxKeyDrainBatchesPerTick; ++batch) {
+    int count = key_source_->drain(events, kKeyDrainBatchSize);
+    if (count <= 0) return false;
+    if (count > kKeyDrainBatchSize) count = kKeyDrainBatchSize;
+    total += count;
+    if (count < kKeyDrainBatchSize) return false;
+  }
+  return total == kKeyDrainBatchSize * kMaxKeyDrainBatchesPerTick;
 }
 
 namespace {
