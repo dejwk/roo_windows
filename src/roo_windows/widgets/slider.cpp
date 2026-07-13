@@ -112,6 +112,41 @@ bool Slider::setPos(uint16_t pos) {
   return true;
 }
 
+bool Slider::onKeyEvent(const KeyEvent& event) {
+  if (event.phase != KeyPhase::kDown && event.phase != KeyPhase::kRepeat) {
+    return false;
+  }
+  uint16_t target = pos_;
+  constexpr uint16_t kFineStep = 1024;
+  constexpr uint16_t kPageStep = 8192;
+  switch (event.code) {
+    case KeyCode::kLeft:
+    case KeyCode::kDown:
+      target = pos_ > kFineStep ? pos_ - kFineStep : 0;
+      break;
+    case KeyCode::kRight:
+    case KeyCode::kUp:
+      target = pos_ < UINT16_MAX - kFineStep ? pos_ + kFineStep : UINT16_MAX;
+      break;
+    case KeyCode::kPageDown:
+      target = pos_ > kPageStep ? pos_ - kPageStep : 0;
+      break;
+    case KeyCode::kPageUp:
+      target = pos_ < UINT16_MAX - kPageStep ? pos_ + kPageStep : UINT16_MAX;
+      break;
+    case KeyCode::kHome:
+      target = 0;
+      break;
+    case KeyCode::kEnd:
+      target = UINT16_MAX;
+      break;
+    default:
+      return false;
+  }
+  if (setPos(target)) triggerInteractiveChange();
+  return true;
+}
+
 void Slider::paint(PaintContext& ctx) const {
   const Theme& th = theme();
   Color circleColor = th.material3Theme().color.accentColorFor(effectiveContainerRole());

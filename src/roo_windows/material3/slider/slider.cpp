@@ -498,6 +498,31 @@ bool Slider::setStyle(SliderStyle style) {
 
 bool Slider::setValue(float value) { return setValueInternal(value, false); }
 
+bool Slider::onKeyEvent(const KeyEvent& event) {
+  if (event.phase != KeyPhase::kDown && event.phase != KeyPhase::kRepeat) {
+    return false;
+  }
+  const float span = range_.to - range_.from;
+  const float fine = range_.step > 0.0f ? range_.step : span / 100.0f;
+  const float page = range_.step > 0.0f ? range_.step * 10.0f : span / 10.0f;
+  float target = value_;
+  switch (event.code) {
+    case KeyCode::kLeft:
+    case KeyCode::kDown: target -= fine; break;
+    case KeyCode::kRight:
+    case KeyCode::kUp: target += fine; break;
+    case KeyCode::kPageDown: target -= page; break;
+    case KeyCode::kPageUp: target += page; break;
+    case KeyCode::kHome: target = range_.from; break;
+    case KeyCode::kEnd: target = range_.to; break;
+    default: return false;
+  }
+  onInteractionStart();
+  if (setValueInternal(target, true)) triggerInteractiveChange();
+  onInteractionEnd(value_);
+  return true;
+}
+
 // Marks the minimal area that needs to be redrawn for a thumb move from
 // `old_center` to `new_center`. Uses setDirty() (not invalidateInterior()) so
 // the slider itself is not marked invalidated: paint() can rely on

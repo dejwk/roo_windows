@@ -99,6 +99,9 @@ class RangeSlider : public BasicWidget {
   /// Range sliders participate in press handling.
   bool isClickable() const override { return true; }
 
+  /// Adjusts the active thumb with arrow, page, Home, and End keys.
+  bool onKeyEvent(const KeyEvent& event) override;
+
   /// Accepts pointer-down only while the slider is enabled.
   void onDown(XDim x, YDim y) override;
 

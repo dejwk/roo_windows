@@ -24,6 +24,9 @@ class Slider : public BasicWidget {
 
   bool isClickable() const override { return true; }
 
+  /// Adjusts the value with arrow, page, Home, and End keys.
+  bool onKeyEvent(const KeyEvent& event) override;
+
   /// Snaps the position to the touch point and arms scroll-dragging.
   void onDown(XDim x, YDim y) override;
 

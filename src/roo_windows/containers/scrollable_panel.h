@@ -198,6 +198,14 @@ class SimpleScrollablePanel : public Container,
   /// Hook invoked whenever the scroll position changes (drag, fling, etc.).
   virtual void onScrollPositionChanged() {}
 
+  /// Reveals a focused descendant with the minimum scroll needed to make it
+  /// visible in this panel's viewport.
+  bool revealFocusedDescendant(Widget& descendant) override;
+
+  /// Scrolls this panel in response to arrow, page, Home, and End keys after
+  /// focused descendants leave those keys unhandled.
+  bool onKeyEvent(const KeyEvent& event) override;
+
   /// Intercepts gestures targeting the scroll bar or the scrolling motion
   /// itself.
   bool onInterceptTouchEvent(const TouchEvent& event) override;
@@ -239,6 +247,7 @@ class SimpleScrollablePanel : public Container,
   scroll_motion::Geometry motionGeometry() const;
   ScrollPosition currentScrollPosition() const;
   void applyScrollResult(const scroll_motion::Result& result);
+  bool containsDescendant(const Widget& descendant) const;
 
   Direction direction_;
   roo_display::Alignment alignment_;

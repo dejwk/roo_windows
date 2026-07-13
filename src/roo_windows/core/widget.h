@@ -427,6 +427,14 @@ class Widget {
   virtual void onFocusChanged(bool focused) {}
   /// Handles a key routed to this focused widget.
   virtual bool onKeyEvent(const KeyEvent& event) { return false; }
+
+  /// Reveals a focused descendant when this widget clips its children.
+  /// Returns true when the reveal was handled. Containers that do not scroll
+  /// leave the default implementation in place.
+  virtual bool revealFocusedDescendant(Widget& descendant) {
+    (void)descendant;
+    return false;
+  }
   virtual int focusChildCount() const { return 0; }
   virtual Widget* focusChildAt(int) { return nullptr; }
 

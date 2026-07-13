@@ -82,6 +82,89 @@ void SimpleScrollablePanel::scrollToBottom() {
            height() - m.top() - m.bottom() - contents()->height());
 }
 
+bool SimpleScrollablePanel::containsDescendant(const Widget& descendant) const {
+  for (const Widget* current = &descendant; current != nullptr;
+       current = current->parent()) {
+    if (current == this) return true;
+  }
+  return false;
+}
+
+bool SimpleScrollablePanel::revealFocusedDescendant(Widget& descendant) {
+  if (contents() == nullptr || !containsDescendant(descendant)) return false;
+
+  // Project the target's parent-space bounds into this panel's coordinates.
+  Rect target = descendant.parent_bounds();
+  for (Widget* current = descendant.parent(); current != nullptr &&
+                                               current != this;
+       current = current->parent()) {
+    target = target.translate(current->offsetLeft(), current->offsetTop());
+  }
+  if (descendant.parent() == nullptr) return false;
+
+  Margins margins = contents()->getMargins();
+  Rect viewport(margins.left(), margins.top(), width() - margins.right() - 1,
+                height() - margins.bottom() - 1);
+  if (viewport.empty()) return false;
+
+  ScrollPosition position = currentScrollPosition();
+  XDim desired_x = position.x;
+  YDim desired_y = position.y;
+  if (target.width() > viewport.width()) {
+    desired_x += viewport.xMin() - target.xMin();
+  } else if (target.xMin() < viewport.xMin()) {
+    desired_x += viewport.xMin() - target.xMin();
+  } else if (target.xMax() > viewport.xMax()) {
+    desired_x -= target.xMax() - viewport.xMax();
+  }
+  if (target.height() > viewport.height()) {
+    desired_y += viewport.yMin() - target.yMin();
+  } else if (target.yMin() < viewport.yMin()) {
+    desired_y += viewport.yMin() - target.yMin();
+  } else if (target.yMax() > viewport.yMax()) {
+    desired_y -= target.yMax() - viewport.yMax();
+  }
+  scrollTo(desired_x, desired_y);
+  return true;
+}
+
+bool SimpleScrollablePanel::onKeyEvent(const KeyEvent& event) {
+  if (event.phase != KeyPhase::kDown && event.phase != KeyPhase::kRepeat) {
+    return false;
+  }
+  if (contents() == nullptr) return false;
+  const XDim page_x = std::max<XDim>(1, width() - Scaled(16));
+  const YDim page_y = std::max<YDim>(1, height() - Scaled(16));
+  switch (event.code) {
+    case KeyCode::kLeft:
+      scrollBy(page_x / 8, 0);
+      return true;
+    case KeyCode::kRight:
+      scrollBy(-page_x / 8, 0);
+      return true;
+    case KeyCode::kUp:
+      scrollBy(0, page_y / 8);
+      return true;
+    case KeyCode::kDown:
+      scrollBy(0, -page_y / 8);
+      return true;
+    case KeyCode::kPageUp:
+      scrollBy(0, page_y);
+      return true;
+    case KeyCode::kPageDown:
+      scrollBy(0, -page_y);
+      return true;
+    case KeyCode::kHome:
+      scrollToTop();
+      return true;
+    case KeyCode::kEnd:
+      scrollToBottom();
+      return true;
+    default:
+      return false;
+  }
+}
+
 PreferredSize SimpleScrollablePanel::getPreferredSize() const {
   // In the dimension that is scrolled over, we will just return 'wrap
   // contents', For example, if the panel scrolls vertically, we report the

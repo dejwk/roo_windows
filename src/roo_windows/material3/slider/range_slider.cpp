@@ -573,6 +573,33 @@ bool RangeSlider::setActiveThumbValue(float value) {
   return false;
 }
 
+bool RangeSlider::onKeyEvent(const KeyEvent& event) {
+  if (event.phase != KeyPhase::kDown && event.phase != KeyPhase::kRepeat) {
+    return false;
+  }
+  const float span = range_.to - range_.from;
+  const float fine = range_.step > 0.0f ? range_.step : span / 100.0f;
+  const float page = range_.step > 0.0f ? range_.step * 10.0f : span / 10.0f;
+  int thumb = active_thumb_ == kNoActiveThumb ? 0 : active_thumb_;
+  float target = thumb == 0 ? start_value_ : end_value_;
+  switch (event.code) {
+    case KeyCode::kLeft:
+    case KeyCode::kDown: target -= fine; break;
+    case KeyCode::kRight:
+    case KeyCode::kUp: target += fine; break;
+    case KeyCode::kPageDown: target -= page; break;
+    case KeyCode::kPageUp: target += page; break;
+    case KeyCode::kHome: target = range_.from; break;
+    case KeyCode::kEnd: target = range_.to; break;
+    default: return false;
+  }
+  active_thumb_ = thumb;
+  onInteractionStart(thumb);
+  setActiveThumbValue(target);
+  onInteractionEnd(start_value_, end_value_);
+  return true;
+}
+
 // Marks the minimal area that needs to be redrawn for a value change.
 // Mirrors the single-slider invalidation path: uses setDirty() rather than
 // invalidateInterior() so the slider is not marked invalidated (paint()

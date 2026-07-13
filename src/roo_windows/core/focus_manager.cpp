@@ -81,7 +81,13 @@ void FocusManager::setFocused(Widget* widget) {
   if (focused_ == widget) return;
   if (focused_ != nullptr) focused_->setFocused(false);
   focused_ = widget;
-  if (focused_ != nullptr) focused_->setFocused(true);
+  if (focused_ != nullptr) {
+    focused_->setFocused(true);
+    for (Widget* ancestor = focused_->parent(); ancestor != nullptr;
+         ancestor = ancestor->parent()) {
+      if (ancestor->revealFocusedDescendant(*focused_)) break;
+    }
+  }
 }
 
 }  // namespace roo_windows

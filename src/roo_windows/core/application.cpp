@@ -142,6 +142,13 @@ void Application::dispatchKeyEvent(const KeyEvent& event) {
   Widget* focused = context_.focus().focused();
   if (focused == nullptr) return;
   if (focused->onKeyEvent(event)) return;
+  // A focused child gets the first chance to consume a key; scroll containers
+  // and other structural ancestors can then handle keys the child does not
+  // own (for example PageDown after a button leaves it unhandled).
+  for (Widget* ancestor = focused->parent(); ancestor != nullptr;
+       ancestor = ancestor->parent()) {
+    if (ancestor->onKeyEvent(event)) return;
+  }
   bool primary = event.code == KeyCode::kEnter || event.code == KeyCode::kSpace;
   if (!primary) return;
   if (event.phase == KeyPhase::kDown && focused->isClickable() &&
