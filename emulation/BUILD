@@ -11,6 +11,7 @@ cc_binary(
     linkstatic = 1,
     tags = ["manual"],
     deps = [
+        "@roo_windows//fake:fltk_key_source",
         "@roo_windows",
         "@roo_display//fake:reference_device",
         "@roo_testing//:arduino_main",
