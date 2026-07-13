@@ -54,6 +54,14 @@ That mismatch is now the main blocker. The missing work is not just "add a few
 key handlers". The library needs a framework-owned interaction model for
 non-touch input.
 
+The existing semantic endpoint for simple controls is already `onClicked()`:
+touch gesture recognition eventually schedules that callback through the
+shared click-animation controller. Keyboard support therefore needs a second
+way to reach the same endpoint, with keyboard-specific press and release
+handling, but it does not need a new cross-input action taxonomy. Controls for
+which a key means something other than click, such as sliders and text fields,
+can express that meaning in `onKeyEvent()`.
+
 ## Background
 
 ### Current Status in `roo_windows`
@@ -166,8 +174,8 @@ The new interaction model must respect four existing framework constraints.
    model when their paint path uses that model.
 4. Mixed-input systems must be supported: touch-only, keyboard-only,
    touch-plus-keyboard, and later keyboard-plus-pointer.
-5. Activating a focused clickable from the keyboard must trigger the same
-   semantic action as a successful touch click.
+5. Activating a focused clickable from the keyboard must reach the same
+   existing `onClicked()` semantic as a successful touch click.
 6. Focus movement into an offscreen descendant must reveal that descendant in
    its nearest scroll container.
 7. Hardware keyboard text entry must work without requiring the on-screen
@@ -180,8 +188,7 @@ The new interaction model must respect four existing framework constraints.
 1. Input acquisition must become independent of the touch-capable display.
 2. `Application` must support optional non-touch input sources without forcing
    existing touch-only callers onto a new construction pattern.
-3. `Widget` must gain focusability, focus request, and non-touch action
-   hooks.
+3. `Widget` must gain focusability, focus request, and key-event hooks.
 4. `Widget` must gain real hover and focus mutators so the existing bits can
    become live state.
 5. The framework must expose container override points for focus traversal and
@@ -223,10 +230,10 @@ The design extends the framework in layers.
 1. Keep the current touch pipeline for touch.
 2. Add an optional key-source abstraction.
 3. Add an application-owned focus manager.
-4. Extend `Widget` with semantic non-touch action hooks.
+4. Extend `Widget` with key-event hooks and shared keyboard activation.
 5. Roll out keyboard behavior across widget families incrementally.
-6. Add mouse / pointer behavior later on top of the same focus and action
-   model.
+6. Add mouse / pointer behavior later on top of the same focus and lifecycle
+   model, while defining pointer routing only when it is implemented.
 
 The key design rule is:
 
@@ -234,17 +241,19 @@ The key design rule is:
 
 Touch callbacks are coordinate-rich gesture callbacks with tap slop,
 show-press, fling, and touch-target expansion semantics. Keyboard navigation
-has none of those properties. The correct model is focus plus semantic action.
+has none of those properties. The correct model is focus plus key dispatch,
+with activation reusing the existing click semantic.
 
 The proposed runtime shape is:
 
 ```text
 TouchSource   -> GestureDetector -> touched widget path
-KeySource     -> KeyDispatcher   -> FocusManager -> focused widget / action
+KeySource     -> KeyDispatcher   -> FocusManager -> focused widget / click
 ```
 
-Touch remains direct-widget routing. Keyboard and pointer share focus and
-semantic action infrastructure.
+Touch remains direct-widget routing. Keyboard adds focus and key routing; its
+simple-control fallback joins the existing click path only after a valid
+keyboard press-and-release lifecycle.
 
 ## Design Details
 
@@ -372,9 +381,9 @@ gain no per-instance key-state field.
   widget and sets its pressed state.
 - The matching key up activates only if the same widget is still focused,
   enabled, attached, and inside the active scope.
-- Activation clears the armed and pressed state before calling
-  `performAction(kPrimary, kKeyboard)`, so the action can synchronously remove
-  the widget safely.
+- Activation clears the armed and pressed state before queuing the existing
+  click semantic through the shared click-animation controller, so the click
+  callback can synchronously remove the widget safely.
 - Focus change, scope change, disable, hide, detachment, destruction, or a
   mismatched release cancels the arm and clears pressed state.
 - Repeat never activates or re-arms.
@@ -544,24 +553,22 @@ void requestFocus();
 virtual void onFocusChanged(bool focused) {}
 
 virtual bool onKeyEvent(const KeyEvent& event) { return false; }
-
-enum class InputOrigin : uint8_t { kTouch, kKeyboard };
-enum class SemanticAction : uint8_t {
-  kPrimary,
-  kIncrement,
-  kDecrement,
-  kMinimum,
-  kMaximum,
-};
-
-virtual bool performAction(SemanticAction action, InputOrigin origin);
 ```
 
-The base implementation of `performAction(kPrimary, kKeyboard)` should:
+If an eligible focused widget leaves Enter or Space unhandled, the framework's
+keyboard-activation fallback should:
 
 - verify that the widget is clickable and enabled,
 - show pressed / click animation feedback centered on `getPointOverlayFocus()`,
-- and route to the existing click semantic (`onClicked()` or its equivalent).
+- and queue the existing `onClicked()` semantic through the same
+  main-window-owned click-animation controller used by touch.
+
+This fallback is framework dispatch logic, not a new virtual widget action.
+Widgets override `onKeyEvent()` only when their keys have control-specific
+meaning. For example, a slider handles arrows and Home / End directly, while a
+text field handles editing keys and characters directly. Touch continues to
+reach `onClicked()` through gesture recognition, so an input-origin parameter
+would have no truthful role in this design.
 
 The widget must also gain real state mutators analogous to `setPressed()`:
 
@@ -658,7 +665,7 @@ This includes:
 Most of these can adopt keyboard support with minimal component-specific code:
 
 - become focusable,
-- accept `kPrimary` on Enter / Space,
+- accept the shared Enter / Space activation fallback,
 - and rely on the shared focused / pressed visuals.
 
 This is the highest-value early adoption slice.
@@ -675,7 +682,7 @@ Affected surfaces include:
 - and scroll containers such as
   [src/roo_windows/containers/scrollable_panel.h](../../../src/roo_windows/containers/scrollable_panel.h).
 
-They need explicit keyboard semantics:
+They need explicit keyboard handling in `onKeyEvent()`:
 
 - Left / Down -> decrement,
 - Right / Up -> increment,
@@ -856,22 +863,11 @@ class KeySource {
   virtual int drain(KeyEvent* out, int max_events) = 0;
 };
 
-enum class InputOrigin : uint8_t { kTouch, kKeyboard };
-
-enum class SemanticAction : uint8_t {
-  kPrimary,
-  kIncrement,
-  kDecrement,
-  kMinimum,
-  kMaximum,
-};
-
 class Widget {
  public:
   virtual bool isFocusable() const { return isClickable(); }
   bool requestFocus();
   virtual bool onKeyEvent(const KeyEvent& event) { return false; }
-  virtual bool performAction(SemanticAction action, InputOrigin origin);
   virtual void onFocusChanged(bool focused) {}
 };
 
@@ -946,7 +942,7 @@ Validation: run focus-manager, widget, container, task, and dialog targets.
 ### Phase 3: Simple Clickables and Dialog Focus
 
 1. Make simple clickables focusable by default.
-2. Map Enter / Space to `kPrimary`.
+2. Map Enter / Space to the existing click semantic.
 3. Add focus transfer on successful touch click.
 4. Make dialogs true keyboard focus scopes.
 5. Add Tab, Shift+Tab, arrow-key, Enter, and Escape behavior to dialogs.
@@ -969,7 +965,8 @@ gesture, and emulator targets.
 
 1. Add focus reveal to scroll containers.
 2. Add keyboard scrolling to scrollable panels where appropriate.
-3. Add increment / decrement / min / max actions to sliders and range sliders.
+3. Add increment / decrement / min / max key handling to sliders and range
+   sliders.
 4. Make switches, checkboxes, and radio buttons keyboard-operable.
 
 This phase makes settings-style UIs viable without touch.
@@ -978,7 +975,7 @@ Proposed commit message:
 
 > Non-touch input phase 4: navigate value and scroll controls
 >
-> Add focus reveal, keyboard scrolling, value-control actions, component
+> Add focus reveal, keyboard scrolling, value-control key behavior, component
 > examples, and boundary and repeat tests from the non-touch input design.
 
 Validation: run slider, scroll-container, simple-control, traversal, and
@@ -1071,7 +1068,9 @@ Touch has:
 - and sloppy hit-target expansion.
 
 Keyboard navigation has none of those properties. Synthesizing fake touch would
-hide the real missing abstraction, which is focus plus semantic action.
+hide the real missing abstraction, which is focus plus key dispatch. Simple
+keyboard activation can reuse the existing click semantic after dispatch has
+validated the keyboard lifecycle.
 
 #### Put Keyboard and Mouse APIs on `roo_display::Display`
 
@@ -1126,6 +1125,6 @@ Pointer types land together with working routing and tests.
 
 Pointer and mouse support adds pointer acquisition, hover routing,
 primary-button focus transfer, wheel bubbling, and emulator coverage on top of
-the focus and semantic-action contracts defined here. Platform IME,
+the focus and key-routing contracts defined here. Platform IME,
 accessibility, context menus, drag-and-drop, and mouse text selection remain
 separate designs.
