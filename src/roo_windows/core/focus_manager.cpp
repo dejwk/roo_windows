@@ -115,25 +115,29 @@ void FindDirectionalFocusable(Widget& widget, const Rect& source,
     bool overlaps = false;
     switch (direction) {
       case FocusDirection::kLeft:
-        in_half_plane = candidate_center_x < source_center_x;
+        in_half_plane = candidate_center_x < source_center_x &&
+                        candidate_bounds.xMin() < source.xMin();
         primary_distance = std::max<int32_t>(0, source.xMin() - candidate_bounds.xMax());
         overlaps = candidate_bounds.yMin() <= source.yMax() && candidate_bounds.yMax() >= source.yMin();
         orthogonal_gap = overlaps ? 0 : std::max(source.yMin() - candidate_bounds.yMax(), candidate_bounds.yMin() - source.yMax());
         break;
       case FocusDirection::kRight:
-        in_half_plane = candidate_center_x > source_center_x;
+        in_half_plane = candidate_center_x > source_center_x &&
+                        candidate_bounds.xMax() > source.xMax();
         primary_distance = std::max<int32_t>(0, candidate_bounds.xMin() - source.xMax());
         overlaps = candidate_bounds.yMin() <= source.yMax() && candidate_bounds.yMax() >= source.yMin();
         orthogonal_gap = overlaps ? 0 : std::max(source.yMin() - candidate_bounds.yMax(), candidate_bounds.yMin() - source.yMax());
         break;
       case FocusDirection::kUp:
-        in_half_plane = candidate_center_y < source_center_y;
+        in_half_plane = candidate_center_y < source_center_y &&
+                        candidate_bounds.yMin() < source.yMin();
         primary_distance = std::max<int32_t>(0, source.yMin() - candidate_bounds.yMax());
         overlaps = candidate_bounds.xMin() <= source.xMax() && candidate_bounds.xMax() >= source.xMin();
         orthogonal_gap = overlaps ? 0 : std::max(source.xMin() - candidate_bounds.xMax(), candidate_bounds.xMin() - source.xMax());
         break;
       case FocusDirection::kDown:
-        in_half_plane = candidate_center_y > source_center_y;
+        in_half_plane = candidate_center_y > source_center_y &&
+                        candidate_bounds.yMax() > source.yMax();
         primary_distance = std::max<int32_t>(0, candidate_bounds.yMin() - source.yMax());
         overlaps = candidate_bounds.xMin() <= source.xMax() && candidate_bounds.xMax() >= source.xMin();
         orthogonal_gap = overlaps ? 0 : std::max(source.xMin() - candidate_bounds.xMax(), candidate_bounds.xMin() - source.xMax());
