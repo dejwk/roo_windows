@@ -7,6 +7,7 @@
 #include "roo_windows/core/clipper.h"
 #include "roo_windows/core/container.h"
 #include "roo_windows/core/gesture_detector.h"
+#include "roo_windows/core/transient_presentation.h"
 #include "roo_windows/dialogs/dialog.h"
 #include "roo_windows/widgets/scrim.h"
 
@@ -50,6 +51,16 @@ class MainWindow : public Container {
 
   /// Returns the shared click-animation controller for this window.
   const ClickAnimation& click_animation() const { return click_animation_; }
+
+  /// Returns the single slot for root interactive transient presentations.
+  TransientPresentationSlot& transient_presentation_slot() {
+    return transient_presentation_slot_;
+  }
+
+  /// Returns the single slot for root interactive transient presentations.
+  const TransientPresentationSlot& transient_presentation_slot() const {
+    return transient_presentation_slot_;
+  }
 
   /// Shows a modal dialog. Adds it above the scrim and routes its callback.
   void showDialog(Dialog& dialog, Dialog::CallbackFn callback_fn);
@@ -118,6 +129,10 @@ class MainWindow : public Container {
   bool pending_scrim_blit_ = false;
 
   Scrim scrim_;
+
+  // Kept last so it clears presenter reachability before other window
+  // resources are destroyed.
+  TransientPresentationSlot transient_presentation_slot_;
 };
 
 }  // namespace roo_windows

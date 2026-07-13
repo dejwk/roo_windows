@@ -7,6 +7,7 @@
 #include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/task.h"
+#include "roo_windows/core/transient_presentation.h"
 
 namespace roo_windows {
 namespace {
@@ -37,6 +38,21 @@ class TestActivity : public Activity {
 
  private:
   TestWidget contents_;
+};
+
+class BackPresentation final : public TransientPresentationRegistration {
+ public:
+  int back_request_count = 0;
+  BackSource last_source = BackSource::kProgrammatic;
+
+ protected:
+  void detachPresentation(PresentationFinishReason reason) override {}
+
+  BackResult onBackRequested(BackSource source) override {
+    ++back_request_count;
+    last_source = source;
+    return TransientPresentationRegistration::onBackRequested(source);
+  }
 };
 
 // Verifies that application back dispatch only changes the explicitly targeted
@@ -72,6 +88,35 @@ TEST(Application, RequestBackUsesExplicitTargetTask) {
 
   first_task->clear();
   second_task->clear();
+}
+
+// Verifies an eligible window presentation receives Back before its task.
+TEST(Application, RequestBackPrioritizesTransientPresentation) {
+  roo::byte raster[64 * 64 * 2] = {};
+  roo_display::OffscreenDevice<roo_display::Argb4444> device(
+      64, 64, raster, roo_display::Argb4444());
+  roo_display::Display display(device);
+  roo_scheduler::Scheduler scheduler;
+  Environment environment(scheduler);
+  Application app(&environment, display);
+  Task* task = app.addTaskFullScreen();
+  TestActivity root(app.context());
+  TestActivity child(app.context());
+  task->enterActivity(&root);
+  task->enterActivity(&child);
+  BackPresentation presentation;
+
+  EXPECT_EQ(PresentationStartResult::kStarted,
+            app.root().transient_presentation_slot().show(
+                presentation, TransientPresentationPolicy(true)));
+  EXPECT_EQ(BackResult::kHandled,
+            app.requestBack(*task, BackSource::kNavigationButton));
+  EXPECT_EQ(1, presentation.back_request_count);
+  EXPECT_EQ(BackSource::kNavigationButton, presentation.last_source);
+  EXPECT_EQ(&child, task->currentActivity());
+  EXPECT_EQ(0, child.back_request_count);
+
+  task->clear();
 }
 
 }  // namespace

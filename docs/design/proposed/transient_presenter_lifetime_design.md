@@ -2,10 +2,10 @@
 
 ## Implementation status
 
-**Proposed.** The framework has useful ownership precedents, but no shared
-contract covers the lifetime of menus, sheets, dialogs, snackbars, and similar
-temporary interactive surfaces. The status of existing and outstanding
-prerequisites is recorded in the [status index](../README.md).
+**Phase 1 implemented.** The framework now provides the shared registration,
+single-slot, finish-order, and Back-participant contract. Dialog, sheet, menu,
+and snackbar adoption remains outstanding. The status of existing and
+outstanding prerequisites is recorded in the [status index](../README.md).
 
 ## Objective
 
@@ -22,10 +22,11 @@ The contract covers:
 - dismissal, replacement, detachment, and destruction,
 - and interaction with back dispatch and paint-only presentation pins.
 
-After this design lands, an active or queued presenter must not retain a raw
-reference to an object whose lifetime is independent of the registration.
-Every retained dependency must instead be copied, owned, or represented by the
-registered lifetime participant itself.
+After this design lands, an active or queued presenter must not retain an
+unstructured raw reference to an object whose lifetime is independent of the
+registration. Every retained dependency must instead be copied, owned,
+structurally attached through the container child-lifetime contract, or
+represented by the registered lifetime participant itself.
 
 ## Motivation
 
@@ -250,7 +251,7 @@ dismissal policy, duration, and action identifiers.
 
 Data whose lifetime must follow an active or queued presentation is owned by
 that presentation. Examples include dialog title strings, snackbar text,
-queued action labels, and optional component-owned widget content.
+queued action labels, and optional parent-owned attached widget content.
 
 Owned text uses the existing project string type. Queue APIs must expose their
 capacity and allocation behavior; an implementation may use fixed-capacity
@@ -287,7 +288,8 @@ Behavior that must be called later lives on the registered presentation or
 request node itself through virtual hooks. This category replaces independent
 listener pointers and stored callbacks on the common path.
 
-Arbitrary raw pointers, reference captures, and non-owning text views are not
+Except for raw child pointers governed by `Container` attachment,
+arbitrary raw pointers, reference captures, and non-owning text views are not
 valid retained categories for active or queued presentation state.
 
 ## Anchor Contract

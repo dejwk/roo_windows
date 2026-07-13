@@ -160,8 +160,9 @@ the presentation.
 ### Finish
 
 The idempotent terminal operation that disables input, detaches temporary
-surfaces and borrowed content, clears host reachability, changes state to idle,
-and only then delivers completion.
+surfaces and attached content, clears host reachability, changes state to idle,
+and only then delivers completion. Detachment deletes parent-owned content and
+leaves borrowed content alive according to the container ownership flag.
 
 ### Completion
 

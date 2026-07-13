@@ -33,6 +33,7 @@ Status was audited against the source tree and tests on 2026-07-12. “Dependenc
 | --- | --- |
 | Material 3 lists | Core list family phases are implemented; the remaining design phases are not complete. Badge and paint-context dependencies are implemented. |
 | Text system | `TextBlock` wrapping, justification, max-lines, ellipsis, caching, and golden coverage are implemented; shared rich paragraph layout and `RichTextBlock` remain. |
+| Transient presenter lifetime and ownership | The phase-1 shared interactive-presenter slot, finish ordering, and Back precedence are implemented; dialog, sheet, menu, and snackbar migrations remain. |
 | Visual overflow | Surface ownership, ink bounds, direct-paint exclusion, and persistent/transient bound separation are implemented; root-stage transient overlay handling is not. |
 
 ## Proposed
@@ -60,6 +61,5 @@ Status was audited against the source tree and tests on 2026-07-12. “Dependenc
 | Text fields | Paint context is implemented; non-touch input and supporting icon-button/menu behavior are proposed. |
 | Time pickers | Buttons are implemented; text fields, dialogs, icon buttons, and shared back behavior are proposed. |
 | Toolbars | Buttons are implemented; icon buttons, menus, and FABs are proposed. |
-| Transient presenter lifetime and ownership | Existing host and `WidgetRef` conventions provide prerequisites; the shared interactive-presenter contract and component migrations are not implemented. |
 | Transient presentation pins | Visual overflow is in progress; no root-stage presentation-pin implementation exists. |
 | Wi-Fi configuration | Existing Wi-Fi transport/configuration APIs are external prerequisites; the Material 3 screen design and its text-field/dialog dependencies are not implemented. |

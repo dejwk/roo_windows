@@ -19,7 +19,8 @@ The design provides:
 - a standard side-sheet layout that keeps the sheet visible beside the main
   body on medium and expanded windows,
 - a modal side-sheet wrapper that presents the same side sheet over a scrim,
-- generic caller-owned content instead of a menu-only or form-only sheet API,
+- generic caller-provided content, with an explicit borrow-or-adopt choice,
+  instead of a menu-only or form-only sheet API,
 - bottom-sheet detents with a built-in drag handle,
 - independent vertical scrolling inside each sheet,
 - and reuse of the existing popup, scrim, theme, and scrolling primitives.
@@ -158,7 +159,8 @@ Those references drive five important local constraints:
    sheet visible.
 4. Support a modal side-sheet wrapper that presents the side sheet over a
    scrim.
-5. Support arbitrary caller-owned content inside every sheet variant.
+5. Support arbitrary caller-provided content inside every sheet variant, with
+   ownership selected by the temporary `WidgetRef` argument.
 6. Support independent vertical scrolling for sheet content.
 7. Support preset bottom-sheet heights through detents and programmatic snapping
    between detents.
@@ -194,8 +196,9 @@ Those references drive five important local constraints:
    variant.
 6. Expose a `material3::ModalSideSheet` wrapper for the modal side-sheet
    variant.
-7. Keep content ownership generic through `WidgetRef` instead of a menu-only or
-   form-only item API.
+7. Accept generic content through a temporary `WidgetRef` transfer parameter
+   instead of a menu-only or form-only item API, and retain only its raw
+   attached-child pointer.
 8. Keep bottom-sheet detent configuration borrowed rather than heap-owned.
 9. Keep semantic notifications on virtual hooks or owner-managed state instead
    of per-instance `std::function` fields.
@@ -275,9 +278,10 @@ belongs: in a future higher-level scaffold.
 `SheetSurfaceBase` is an internal `Container` subclass shared by
 `BottomSheet` and `SideSheet`.
 
-It owns:
+It contains:
 
-- one caller-provided content `WidgetRef`,
+- one caller-provided content slot in the internal scroll panel, accepted
+  through `WidgetRef` and retained there as a raw `Widget*`,
 - one internal `SimpleScrollablePanel`,
 - one small geometry-and-style config struct,
 - and the sheet surface paint for color, shape, outline, and optional bottom
@@ -698,9 +702,17 @@ class ModalSideSheet : public Container {
 This API keeps the split between surface widgets, standard hosts, and modal
 wrappers explicit.
 
+Every `WidgetRef` above is a temporary ownership-transfer parameter. The
+receiving container detaches its existing raw child pointer first, retains the
+incoming pointer before moving the `WidgetRef` into `attachChild()`, and then
+stores only that raw pointer. A null `WidgetRef` clears the slot. Ownership is
+recorded only by `Widget::isOwnedByParent()`, and destructors detach children
+through `detachChild()` rather than storing `WidgetRef` members or deleting
+children directly.
+
 It also keeps the base family intentionally narrow:
 
-- generic content stays caller-owned,
+- generic content keeps its caller-selected borrow-or-adopt policy,
 - modal wrappers own dismissal,
 - standard hosts own body-plus-sheet layout,
 - and no public sheet entry point lands before its corresponding behavior is

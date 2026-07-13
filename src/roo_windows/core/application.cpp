@@ -47,6 +47,10 @@ void Application::addPopup(WidgetRef child, const roo_display::Box& box) {
 
 BackResult Application::requestBack(Task& target, BackSource source) {
   CHECK(ownsTask(target));
+  if (root_window_.transient_presentation_slot().requestBack(source) ==
+      BackResult::kHandled) {
+    return BackResult::kHandled;
+  }
   return target.requestBack(source);
 }
 

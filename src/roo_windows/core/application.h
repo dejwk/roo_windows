@@ -87,7 +87,8 @@ class Application {
   /// Routes a semantic back request to an application-owned target task.
   ///
   /// Passing a task that does not belong to this application is a programming
-  /// error. Transient presentation precedence is added in a later phase.
+  /// error. An eligible root transient presentation receives the request
+  /// before the target task.
   BackResult requestBack(
       Task& target, BackSource source = BackSource::kProgrammatic);
 
