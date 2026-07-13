@@ -749,6 +749,37 @@ TEST_F(RooWindowsRenderTest, WidgetGetClickAnimationReturnsOnlyActiveTarget) {
   EXPECT_EQ(nullptr, other_ptr->getClickAnimation());
 }
 
+// Verifies that canceling a competing gesture role does not cancel the click
+// animation owned by another widget. This occurs when a button wins the tap
+// role and its scrollable ancestor loses the drag role on release.
+TEST_F(RooWindowsRenderTest,
+       CancelingCompetingRoleDoesNotCancelClickAnimation) {
+  auto target = std::make_unique<PointOverlayBoxWidget>(context(), color::Blue,
+                                                        Dimensions(18, 18));
+  auto competing_role = std::make_unique<PointOverlayBoxWidget>(
+      context(), color::Green, Dimensions(18, 18));
+  PointOverlayBoxWidget* target_ptr = target.get();
+  PointOverlayBoxWidget* competing_role_ptr = competing_role.get();
+
+  app_.add(std::move(target), Box(4, 12, 21, 29));
+  app_.add(std::move(competing_role), Box(28, 12, 45, 29));
+
+  target_ptr->onShowPress(target_ptr->width() / 2,
+                          target_ptr->height() / 2);
+  ClickAnimation& anim = app_.root().click_animation();
+  ASSERT_EQ(target_ptr, anim.target());
+
+  competing_role_ptr->onCancel();
+  EXPECT_EQ(target_ptr, anim.target());
+  EXPECT_TRUE(target_ptr->isClicking());
+
+  target_ptr->onSingleTapUp(target_ptr->width() / 2,
+                            target_ptr->height() / 2);
+  competing_role_ptr->onCancel();
+  EXPECT_EQ(target_ptr, anim.target());
+  EXPECT_TRUE(anim.isClickConfirmed());
+}
+
 // Verifies that the shared controller keeps the finished target attached until
 // tick() retires it, even after progress reaches 1.0.
 TEST_F(RooWindowsRenderTest,

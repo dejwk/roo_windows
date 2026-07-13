@@ -834,7 +834,12 @@ void Widget::onCancel() {
   if (kTerminateAnimationsOnCancel) {
     clearClicking();
     ClickAnimation* anim = ClickAnimationController(*this);
-    if (anim != nullptr) {
+    // The controller is shared by the whole window. Gesture roles can belong
+    // to different widgets (for example, a button's tap role and its
+    // scrollable parent's drag role), so cancel only an animation owned by
+    // this role. Otherwise canceling the losing role after tap-up would also
+    // cancel the winning widget's newly confirmed click animation.
+    if (anim != nullptr && anim->target() == this) {
       anim->cancel();
     }
   }
