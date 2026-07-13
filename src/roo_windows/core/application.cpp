@@ -134,7 +134,8 @@ bool Application::drainKeyEvents() {
 }
 
 void Application::dispatchKeyEvent(const KeyEvent& event) {
-  if (event.phase == KeyPhase::kDown && event.code == KeyCode::kTab) {
+  if ((event.phase == KeyPhase::kDown || event.phase == KeyPhase::kRepeat) &&
+      event.code == KeyCode::kTab) {
     context_.focus().moveFocus(
         root_window_, (event.modifiers & kKeyModifierShift) != 0);
     return;

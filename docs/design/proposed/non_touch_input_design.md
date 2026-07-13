@@ -373,7 +373,8 @@ Sliders consume directional value keys. Scroll containers consume scrolling
 keys only when descendants and intervening ancestors leave them unhandled.
 
 Repeat events are delivered to widget and ancestor handlers for repeated value
-or scroll changes. Framework activation and traversal ignore repeat.
+or scroll changes. Tab traversal also honors repeat; framework activation
+continues to ignore repeat.
 
 ### Keyboard Activation Lifecycle
 

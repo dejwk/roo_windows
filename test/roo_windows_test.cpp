@@ -149,6 +149,30 @@ TEST(Windows, FocusManagerTransfersFocusBetweenAttachedWidgets) {
   EXPECT_FALSE(first.last_focused_);
 }
 
+// Verifies that reverse traversal honors Shift+Tab semantics and wraps to the
+// final eligible descendant when the current target is first in tree order.
+TEST(Windows, FocusManagerMovesFocusBackwardsAndWraps) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context(scheduler, env.theme(), env.keyboardColorTheme());
+  ExposedPanel panel(context);
+  FocusableTestWidget first(context);
+  FocusableTestWidget second(context);
+  FocusableTestWidget third(context);
+  panel.add(WidgetRef(first));
+  panel.add(WidgetRef(second));
+  panel.add(WidgetRef(third));
+  first.layout(Rect(0, 0, 9, 9));
+  second.layout(Rect(10, 0, 19, 9));
+  third.layout(Rect(20, 0, 29, 9));
+
+  ASSERT_TRUE(second.requestFocus());
+  EXPECT_TRUE(context.focus().moveFocus(panel, true));
+  EXPECT_EQ(&first, context.focus().focused());
+  EXPECT_TRUE(context.focus().moveFocus(panel, true));
+  EXPECT_EQ(&third, context.focus().focused());
+}
+
 // Verifies that hiding, disabling, and detaching a focused subtree clear
 // focus before its parent link or visibility state becomes invalid.
 TEST(Windows, FocusManagerClearsInvalidFocusedDescendants) {
