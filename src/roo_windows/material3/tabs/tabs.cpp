@@ -233,8 +233,8 @@ void Tab::paint(PaintContext& ctx) const {
       if (indicator.empty()) {
         ctx.clearRect(indicator_band);
       } else {
-        roo_display::FilledRect indicator_fill(indicator.asBox(),
-                                               theme().material3Theme().color.primary);
+        roo_display::FilledRect indicator_fill(
+            indicator.asBox(), theme().material3Theme().color.primary);
         ctx.drawTiled(indicator_fill, indicator_band, kNoAlign);
       }
     }
@@ -327,8 +327,8 @@ Rect BadgedTab::badgeAnchorBounds() const {
   if (core.empty()) return EmptyRect();
 
   if (hasIcon() && icon() != nullptr) {
-    int16_t icon_extent = std::max<int16_t>(
-        Scaled(kIconSizeDp), icon()->anchorExtents().height());
+    int16_t icon_extent = std::max<int16_t>(Scaled(kIconSizeDp),
+                                            icon()->anchorExtents().height());
     int16_t label_height =
         label().empty() ? 0 : ((TabLabelFont().metrics().maxHeight()) + 1);
     int16_t total_height = icon_extent + label_height;
@@ -420,13 +420,15 @@ void Tabs::setShowsDivider(bool shows_divider) {
   invalidateInterior();
 }
 
-Color Tabs::background() const { return theme().material3Theme().color.surface; }
+Color Tabs::background() const {
+  return theme().material3Theme().color.surface;
+}
 
 void Tabs::paint(PaintContext& ctx) const {
   Rect divider = dividerBounds();
   if (!divider.empty()) {
-    roo_display::FilledRect divider_fill(divider.asBox(),
-                                         theme().material3Theme().color.outlineVariant);
+    roo_display::FilledRect divider_fill(
+        divider.asBox(), theme().material3Theme().color.outlineVariant);
     ctx.drawTiled(divider_fill, bounds(), kNoAlign);
     return;
   }
@@ -435,6 +437,24 @@ void Tabs::paint(PaintContext& ctx) const {
 
 void Tabs::setSelectionCommitMode(TabsSelectionCommitMode mode) {
   selection_commit_mode_ = static_cast<uint8_t>(mode);
+}
+
+bool Tabs::onKeyEvent(const KeyEvent& event) {
+  if (event.phase != KeyPhase::kDown && event.phase != KeyPhase::kRepeat) {
+    return false;
+  }
+  FocusDirection direction;
+  switch (event.code) {
+    case KeyCode::kLeft:
+      direction = FocusDirection::kLeft;
+      break;
+    case KeyCode::kRight:
+      direction = FocusDirection::kRight;
+      break;
+    default:
+      return false;
+  }
+  return context().focus().moveFocusDirection(*this, direction);
 }
 
 void Tabs::addTabImpl(WidgetRef tab, Tab* raw) {
@@ -779,6 +799,39 @@ void ScrollableTabs::onSelectionStateUpdated(int old_index, int new_index,
   (void)new_index;
   (void)animate;
   if (mode() == TabsMode::kScrollable) revealSelectedTab();
+}
+
+bool ScrollableTabs::isTabDescendant(const Widget& descendant) const {
+  for (const Widget* current = &descendant; current != nullptr;
+       current = current->parent()) {
+    if (current == this) return true;
+  }
+  return false;
+}
+
+bool ScrollableTabs::revealFocusedDescendant(Widget& descendant) {
+  if (mode() != TabsMode::kScrollable || !isTabDescendant(descendant) ||
+      width() <= 0 || strip_width_ <= width()) {
+    return mode() == TabsMode::kScrollable && isTabDescendant(descendant);
+  }
+
+  // Tab bounds are already in this row's coordinate space. Move only far
+  // enough to expose the focused tab; unlike selection reveal this must not
+  // alter selectedIndex() or move the indicator.
+  Rect target = descendant.parent_bounds();
+  for (Widget* current = descendant.parent();
+       current != nullptr && current != this; current = current->parent()) {
+    target = target.translate(current->offsetLeft(), current->offsetTop());
+  }
+  XDim target_scroll = scroll_x_;
+  if (target.xMin() < 0) {
+    target_scroll -= target.xMin();
+  } else if (target.xMax() >= width()) {
+    target_scroll -= target.xMax() - width() + 1;
+  }
+  applyScrollResult(scroll_motion_.scrollTo(motionGeometry(), scroll_x_, 0,
+                                            target_scroll, 0));
+  return true;
 }
 
 bool ScrollableTabs::onInterceptTouchEvent(const TouchEvent& event) {

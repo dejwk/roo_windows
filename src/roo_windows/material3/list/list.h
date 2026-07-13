@@ -339,6 +339,9 @@ class ListEntry : public Container {
   /// continues, and defers duplicate suppression to onClicked().
   void onSingleTapUp(XDim x, YDim y) override;
 
+  /// Keeps the list-provided visual context synchronized with focus state.
+  void onFocusChanged(bool focused) override;
+
  protected:
   int getChildrenCount() const override;
   const Widget& getChild(int idx) const override;
@@ -849,6 +852,10 @@ class List : public Container {
 
   /// Clears all row entries from the list.
   void clear();
+
+  /// Traverses rows vertically before an enclosing scroll panel consumes an
+  /// arrow key for scrolling.
+  bool onKeyEvent(const KeyEvent& event) override;
 
  protected:
   void paint(PaintContext& ctx) const override;

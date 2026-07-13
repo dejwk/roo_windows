@@ -218,6 +218,9 @@ class Tabs : public Container, protected roo_scheduler::Executable {
   /// Paints the row-owned surface pixels not already settled by child tabs.
   void paint(PaintContext& ctx) const override;
 
+  /// Traverses tabs horizontally before generic geometric traversal runs.
+  bool onKeyEvent(const KeyEvent& event) override;
+
  protected:
   /// Called whenever an enabled tab is invoked, even if already selected.
   virtual void onTabInvoked(int index);
@@ -302,6 +305,9 @@ class ScrollableTabs : public Tabs {
   /// Returns the current horizontal strip origin relative to the viewport.
   XDim scrollOffsetForTest() const { return scroll_x_; }
 
+  /// Reveals a focused tab without changing the selected tab or indicator.
+  bool revealFocusedDescendant(Widget& descendant) override;
+
   bool onInterceptTouchEvent(const TouchEvent& event) override;
   void onDragStart(XDim x, YDim y) override;
   void onDrag(XDim x, YDim y, XDim dx, YDim dy) override;
@@ -329,6 +335,7 @@ class ScrollableTabs : public Tabs {
   void layoutScrollableChildren();
   XDim selectedTabCenterInStrip() const;
   void revealSelectedTab();
+  bool isTabDescendant(const Widget& descendant) const;
   void cancelPendingScrollUpdate();
   void scheduleScrollUpdate();
 

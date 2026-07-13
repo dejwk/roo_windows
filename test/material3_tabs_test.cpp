@@ -478,6 +478,31 @@ TEST(Material3Tabs, ScrollableSelectionRevealsSelectedTab) {
   EXPECT_GT(history_raw->offsetLeft() + history_raw->width(), 0);
 }
 
+// Focus reveal is independent from selection: arrow-key traversal may expose
+// an unselected tab without moving the selection indicator or changing pages.
+TEST(Material3Tabs, ScrollableFocusRevealDoesNotChangeSelection) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+
+  ScrollableTabs tabs(context);
+  tabs.addTab(std::make_unique<Tab>(context, "Overview"));
+  tabs.addTab(std::make_unique<Tab>(context, "Heating"));
+  auto history = std::make_unique<Tab>(context, "Long history");
+  Tab* history_raw = history.get();
+  tabs.addTab(std::move(history));
+
+  tabs.measure(WidthSpec::Exactly(140), HeightSpec::Exactly(48));
+  tabs.layout(Rect(0, 0, 139, 47));
+
+  ASSERT_EQ(0, tabs.selectedIndex());
+  EXPECT_TRUE(tabs.revealFocusedDescendant(*history_raw));
+  EXPECT_LT(tabs.scrollOffsetForTest(), 0);
+  EXPECT_EQ(0, tabs.selectedIndex());
+  EXPECT_LT(history_raw->offsetLeft(), tabs.width());
+  EXPECT_GE(history_raw->offsetLeft() + history_raw->width(), 0);
+}
+
 // Verifies that visible badges participate in intrinsic tab width, which is
 // the width source for scrollable tabs.
 TEST(Material3Tabs, ScrollableLayoutIncludesVisibleBadgeWidth) {

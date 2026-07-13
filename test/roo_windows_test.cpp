@@ -173,6 +173,29 @@ TEST(Windows, FocusManagerMovesFocusBackwardsAndWraps) {
   EXPECT_EQ(&third, context.focus().focused());
 }
 
+// Verifies that directional traversal prefers candidates overlapping the
+// orthogonal axis, then uses the nearest forward edge deterministically.
+TEST(Windows, FocusManagerMovesFocusByGeometry) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context(scheduler, env.theme(), env.keyboardColorTheme());
+  ExposedPanel panel(context);
+  FocusableTestWidget source(context);
+  FocusableTestWidget diagonal(context);
+  FocusableTestWidget aligned(context);
+  panel.add(WidgetRef(source));
+  panel.add(WidgetRef(diagonal));
+  panel.add(WidgetRef(aligned));
+  source.layout(Rect(10, 10, 19, 19));
+  diagonal.layout(Rect(20, 0, 29, 9));
+  aligned.layout(Rect(40, 10, 49, 19));
+
+  ASSERT_TRUE(source.requestFocus());
+  EXPECT_TRUE(
+      context.focus().moveFocusDirection(panel, FocusDirection::kRight));
+  EXPECT_EQ(&aligned, context.focus().focused());
+}
+
 // Verifies that hiding, disabling, and detaching a focused subtree clear
 // focus before its parent link or visibility state becomes invalid.
 TEST(Windows, FocusManagerClearsInvalidFocusedDescendants) {

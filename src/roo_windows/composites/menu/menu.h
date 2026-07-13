@@ -39,6 +39,22 @@ class Menu : public roo_windows::Activity {
    public:
     using roo_windows::ScrollablePanel::ScrollablePanel;
 
+    bool onKeyEvent(const roo_windows::KeyEvent& event) override {
+      if (event.phase == roo_windows::KeyPhase::kDown ||
+          event.phase == roo_windows::KeyPhase::kRepeat) {
+        roo_windows::FocusDirection direction;
+        if (event.code == roo_windows::KeyCode::kUp) {
+          direction = roo_windows::FocusDirection::kUp;
+        } else if (event.code == roo_windows::KeyCode::kDown) {
+          direction = roo_windows::FocusDirection::kDown;
+        } else {
+          return roo_windows::ScrollablePanel::onKeyEvent(event);
+        }
+        if (context().focus().moveFocusDirection(*this, direction)) return true;
+      }
+      return roo_windows::ScrollablePanel::onKeyEvent(event);
+    }
+
     roo_windows::PreferredSize getPreferredSize() const override {
       return roo_windows::PreferredSize(
           roo_windows::PreferredSize::MatchParentWidth(),

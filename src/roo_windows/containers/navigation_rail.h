@@ -70,6 +70,9 @@ class NavigationRail : public Panel {
   /// destination changed.
   bool setActive(int index);
 
+  /// Traverses destinations vertically with the arrow keys.
+  bool onKeyEvent(const KeyEvent& event) override;
+
  protected:
   /// Measures every destination in a vertical column and reports the total
   /// rail size.

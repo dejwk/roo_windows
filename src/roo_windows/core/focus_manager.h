@@ -1,8 +1,13 @@
 #pragma once
 
+#include <cstdint>
+
 namespace roo_windows {
 
 class Widget;
+
+/// Direction used for geometry-based focus traversal.
+enum class FocusDirection : uint8_t { kUp, kDown, kLeft, kRight };
 
 /// Intrusive focus record embedded by a focus-owning UI layer.
 struct FocusScope {
@@ -21,6 +26,9 @@ class FocusManager {
   bool requestFocus(Widget& widget);
   /// Moves focus through focusable descendants of `root`, wrapping at ends.
   bool moveFocus(Widget& root, bool backwards);
+  /// Moves focus to the best eligible descendant in `direction`. Unlike Tab
+  /// traversal, directional movement does not wrap.
+  bool moveFocusDirection(Widget& root, FocusDirection direction);
 
   /// Clears focus when `subtree` is about to detach from its parent.
   void onSubtreeDetaching(Widget& subtree);

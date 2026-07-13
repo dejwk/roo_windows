@@ -64,4 +64,22 @@ bool NavigationRail::setActive(int index) {
   return true;
 }
 
+bool NavigationRail::onKeyEvent(const KeyEvent& event) {
+  if (event.phase != KeyPhase::kDown && event.phase != KeyPhase::kRepeat) {
+    return false;
+  }
+  FocusDirection direction;
+  switch (event.code) {
+    case KeyCode::kUp:
+      direction = FocusDirection::kUp;
+      break;
+    case KeyCode::kDown:
+      direction = FocusDirection::kDown;
+      break;
+    default:
+      return false;
+  }
+  return context().focus().moveFocusDirection(*this, direction);
+}
+
 }  // namespace roo_windows

@@ -150,6 +150,18 @@ void Application::dispatchKeyEvent(const KeyEvent& event) {
        ancestor = ancestor->parent()) {
     if (ancestor->onKeyEvent(event)) return;
   }
+  if (event.phase == KeyPhase::kDown || event.phase == KeyPhase::kRepeat) {
+    FocusDirection direction;
+    switch (event.code) {
+      case KeyCode::kUp: direction = FocusDirection::kUp; break;
+      case KeyCode::kDown: direction = FocusDirection::kDown; break;
+      case KeyCode::kLeft: direction = FocusDirection::kLeft; break;
+      case KeyCode::kRight: direction = FocusDirection::kRight; break;
+      default: goto no_directional_traversal;
+    }
+    if (context_.focus().moveFocusDirection(root_window_, direction)) return;
+  }
+no_directional_traversal:
   bool primary = event.code == KeyCode::kEnter || event.code == KeyCode::kSpace;
   if (!primary) return;
   if (event.phase == KeyPhase::kDown && focused->isClickable() &&

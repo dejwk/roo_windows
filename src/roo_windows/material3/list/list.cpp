@@ -948,6 +948,12 @@ void ListEntry::onSingleTapUp(XDim x, YDim y) {
   }
 }
 
+void ListEntry::onFocusChanged(bool focused) {
+  if (visual_context_.focused == focused) return;
+  visual_context_.focused = focused;
+  invalidateInterior();
+}
+
 int ListEntry::getChildrenCount() const {
   int count = 0;
   if (leading_child_ != nullptr) ++count;
@@ -1560,6 +1566,24 @@ void List::addEntryInternal(ListEntry* entry, WidgetRef ref) {
   onStructureOrPolicyChanged();
 }
 
+bool List::onKeyEvent(const KeyEvent& event) {
+  if (event.phase != KeyPhase::kDown && event.phase != KeyPhase::kRepeat) {
+    return false;
+  }
+  FocusDirection direction;
+  switch (event.code) {
+    case KeyCode::kUp:
+      direction = FocusDirection::kUp;
+      break;
+    case KeyCode::kDown:
+      direction = FocusDirection::kDown;
+      break;
+    default:
+      return false;
+  }
+  return context().focus().moveFocusDirection(*this, direction);
+}
+
 void List::markEntryContextsDirty() {
   contexts_dirty_ = true;
   invalidateInterior();
@@ -1642,6 +1666,7 @@ void List::refreshEntryVisualContexts() {
     context.position = PositionForIndex(i, count);
     context.selected = ResolvedSelectedState(
         selected_entries_, selection_policy_, i, first_selected_idx);
+    context.focused = entry.isFocused();
     bool next_selected = ResolvedSelectedState(
         selected_entries_, selection_policy_, i + 1, first_selected_idx);
     context.show_divider = ShouldShowDivider(divider_policy_, i, count,
