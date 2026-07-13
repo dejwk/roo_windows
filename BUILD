@@ -47,6 +47,16 @@ cc_test(
 )
 
 cc_test(
+    name = "task_test",
+    srcs = ["test/task_test.cpp"],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
+cc_test(
     name = "image_test",
     srcs = [
         "test/image_test.cpp",

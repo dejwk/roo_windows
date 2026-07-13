@@ -53,6 +53,23 @@ void Task::exitActivity() {
   resumeCurrentActivity();
 }
 
+BackResult Task::requestBack(BackSource source) {
+  Activity* activity = currentActivity();
+  if (activity == nullptr) return BackResult::kUnhandled;
+
+  if (activity->onBackRequested(source) == BackResult::kHandled) {
+    return BackResult::kHandled;
+  }
+
+  // Activity callbacks may synchronously clear, pop, or push the stack.
+  // Such a callback already performed navigation, so never pop again.
+  if (currentActivity() != activity) return BackResult::kHandled;
+
+  if (activityCount() == 1) return BackResult::kUnhandled;
+  exitActivity();
+  return BackResult::kHandled;
+}
+
 bool Task::pauseCurrentActivity() {
   if (activities_.empty()) return false;
   Activity* activity = activities_.back();
@@ -93,8 +110,12 @@ void Task::clear() {
   pauseCurrentActivity();
   // Now, all activities on the stack are paused.
   while (!activities_.empty()) {
+    Activity* activity = activities_.back();
     panel_->exitActivity();
-    activities_.back()->onStop();
+    activity->state_ = Activity::STOPPING;
+    activity->onStop();
+    activity->state_ = Activity::INACTIVE;
+    activity->task_ = nullptr;
     activities_.pop_back();
   }
 }

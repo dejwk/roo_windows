@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "roo_windows/core/application_context.h"
+#include "roo_windows/core/back_request.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/widget.h"
 
@@ -31,6 +32,13 @@ class Task {
   /// forcefully close any open dialog).
   void exitActivity();
 
+  /// Requests semantic back navigation from the current activity.
+  ///
+  /// The current activity may consume the request. Otherwise this task pops
+  /// one activity when more than its root remains. A root activity is left in
+  /// place and the request is reported unhandled.
+  BackResult requestBack(BackSource source = BackSource::kProgrammatic);
+
   /// Removes all activities. Closes any open dialogs. Activities go
   /// directly from `paused` to `stopped` without being resumed.
   void clear();
@@ -38,6 +46,9 @@ class Task {
   /// Returns the top-most activity, or nullptr if the task has no
   /// activities.
   Activity* currentActivity();
+
+  /// Returns the number of activities currently on this task's stack.
+  size_t activityCount() const { return activities_.size(); }
 
   /// Returns the task's pixel dimensions on the host display.
   Dimensions getDimensions() const;

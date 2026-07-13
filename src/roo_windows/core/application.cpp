@@ -30,6 +30,12 @@ Application::Application(const Environment* env, Display& display)
   kb_task->enterActivity(&keyboard_);
 }
 
+Application::~Application() {
+  for (const std::unique_ptr<Task>& task : tasks_) {
+    task->clear();
+  }
+}
+
 void Application::add(WidgetRef child, const roo_display::Box& box) {
   root_window_.addTask(std::move(child), box);
 }

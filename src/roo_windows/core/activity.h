@@ -2,6 +2,7 @@
 
 #include <vector>
 
+#include "roo_windows/core/back_request.h"
 #include "roo_windows/core/task.h"
 #include "roo_windows/core/widget.h"
 
@@ -28,6 +29,12 @@ class Activity {
     STOPPING = 6,
   };
 
+  /// Destroys this detached activity.
+  ///
+  /// Activities are borrowed by their task and must be removed from its stack
+  /// before they are destroyed.
+  virtual ~Activity();
+
   /// Returns the root widget that this activity presents.
   virtual Widget& getContents() = 0;
 
@@ -45,6 +52,14 @@ class Activity {
   ///
   /// Activity must be top of task stack; otherwise behavior is undefined.
   void exit();
+
+  /// Gives this activity the first opportunity to consume a back request.
+  ///
+  /// The default implementation leaves the request unhandled, allowing its
+  /// owning task to pop this activity when it is not the root activity.
+  virtual BackResult onBackRequested(BackSource source) {
+    return BackResult::kUnhandled;
+  }
 
   /// Called when activity is entered.
   virtual void onStart() {}

@@ -34,6 +34,9 @@ class Application {
   /// display.
   Application(const Environment* env, roo_display::Display& display);
 
+  /// Stops and detaches all task activities before destroying application state.
+  ~Application();
+
   /// Deprecated entry point. Prefer `run()`.
   void start();
 

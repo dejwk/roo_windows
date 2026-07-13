@@ -1,9 +1,12 @@
 #include "roo_windows/core/activity.h"
 
+#include "roo_logging.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/task.h"
 
 namespace roo_windows {
+
+Activity::~Activity() { DCHECK(task_ == nullptr); }
 
 roo_display::Box Activity::getPreferredPlacement(const Task& task) {
   // By default, fill the entire task area.
