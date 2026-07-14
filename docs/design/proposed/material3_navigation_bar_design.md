@@ -2,11 +2,11 @@
 
 ## Implementation status
 
-**Proposed.** None of the defined scope is implemented. Before implementation,
-this design must add explicit keyboard traversal, focus-versus-selection, and
-activation rules against the implemented non-touch-input contract, as tracked
-by roadmap item P1.2. The status of existing and outstanding prerequisites is
-recorded in the [status index](../README.md).
+**Proposed.** None of the defined component scope is implemented. Keyboard
+operation, focus-versus-selection, and activation rules are defined below
+against the implemented non-touch-input contract, completing the design work
+tracked by roadmap item P1.2. The status of existing and outstanding
+prerequisites is recorded in the [status index](../README.md).
 
 ## Objective
 
@@ -176,6 +176,14 @@ Those references imply five important local constraints:
 7. The base API must not require per-destination stored `std::function`
    callbacks.
 8. The base API must not imply swipe-to-switch or hide-on-scroll behavior.
+9. Keyboard operation must use the framework-owned `FocusManager`; the bar
+   must not keep a second focused-index or key-armed state.
+10. Tab and Shift+Tab must enter and leave destinations through ordinary
+    focus-manager traversal. Arrow keys must move between destinations in the
+    bar's visual row without changing selection. Enter and Space must use the
+    framework primary-activation lifecycle.
+11. Disabled destinations must be absent from keyboard traversal and cannot be
+    activated. A selection change must not move keyboard focus.
 
 ### API Requirements
 
@@ -516,6 +524,90 @@ The bar also auto-selects the first destination added when it is currently
 empty. After that point, the public contract keeps one destination selected for
 as long as the bar has at least one destination.
 
+### Keyboard Operation and Focus
+
+`NavigationBarDestination` is focusable through its inherited clickable-widget
+default. It is the destination, rather than the `NavigationBar` container,
+that receives keyboard focus and the focused state overlay. This keeps the
+full destination target rect as the focus affordance and lets the existing
+`FocusManager` retain ownership of focused-widget lifetime.
+
+Selection and focus are deliberately independent:
+
+1. **Selection** is the bar-owned, persistent top-level content choice. Exactly
+   one enabled or disabled destination may be selected while the bar is
+   non-empty.
+2. **Focus** is the transient keyboard target. Moving focus does not select a
+   destination, repaint its selected indicator, invoke callbacks, or alter the
+   selected index.
+3. Invoking a focused destination follows the ordinary click contract: a new
+   destination becomes selected after `onDestinationInvoked`, while invoking
+   the selected destination calls only the reselection hook. Focus remains on
+   that destination in either case.
+
+#### Tab Entry and Exit
+
+The bar does not consume `KeyCode::kTab`. Its destination children remain in
+their stable logical insertion order, so the implemented focus manager's
+depth-first traversal provides the contract directly:
+
+1. Tab from a preceding eligible control enters the first enabled destination.
+2. Shift+Tab from a following eligible control enters the last enabled
+   destination.
+3. Tab from the last enabled destination and Shift+Tab from the first enabled
+   destination leave the bar and continue in the containing active root's
+   normal traversal order (including the framework's root-level wrap policy).
+4. If a destination is disabled, hidden, detached, or otherwise ineligible,
+   it is skipped; it never becomes the Tab entry target.
+
+This is intentionally not a bar-local Tab loop. Capturing Tab inside a
+bottom-navigation row would make the rest of the active UI unreachable and
+would conflict with `FocusManager::moveFocus(root, backwards)`.
+
+#### Arrow-Key Movement
+
+All flexible-navigation-bar variants lay their destinations out in one
+horizontal row, even when a destination's icon and label are vertically
+stacked. Therefore Left and Right are the bar's local directional keys in both
+`kVertical` and `kHorizontal` layouts.
+
+`NavigationBar::onKeyEvent()` handles `KeyCode::kLeft` and `KeyCode::kRight`
+on down and repeat by calling
+`context().focus().moveFocusDirection(*this, direction)`. That uses the
+implemented allocation-free geometry scan, accepts only eligible descendants,
+and does not wrap. The visual left/right direction automatically follows the
+actual mirrored geometry in RTL; no separate logical-direction mapping is
+stored by the bar.
+
+At either end, or for Up/Down, the bar returns `false`. Normal ancestor
+bubbling and then the application directional-traversal fallback can move
+focus to an eligible control outside the bar. The bar never changes selection
+while handling an arrow key.
+
+#### Activation, Disabled Destinations, and Restoration
+
+The bar adds no bespoke Enter/Space handler. An unhandled Enter or Space on a
+focused enabled destination is armed on key-down and invokes the same
+release-based `onClicked()` path as touch on the matching key-up, through the
+framework's primary-activation fallback. Repeat does not activate a
+destination. This preserves pressed feedback and prevents duplicate navigation
+from held keys.
+
+Disabled destinations remain visible in their disabled visual state, may stay
+selected if the host disables the current destination, but are ineligible for
+Tab and directional traversal and cannot be activated. Implementations must
+not silently select a neighboring destination merely because the selected one
+is disabled; that policy belongs to the host's navigation model.
+
+The bar stores no focus-restoration pointer or focused index. Focus restoration
+is the framework's responsibility: `FocusManager` clears focus before a
+disabled, hidden, or detached destination becomes ineligible, and any
+containing focus scope restores an eligible target according to its normal
+scope policy. When the bar remains attached, changing selection or completing
+keyboard activation leaves focus on the invoked destination. When a host
+replaces a bar or its page, it must rely on the active scope's restoration
+policy rather than retaining a destination pointer in the bar.
+
 ### Theme Resolution
 
 The bar resolves its defaults from the active `Theme` and the current flexible
@@ -679,6 +771,7 @@ class NavigationBar : public Container {
   Widget& getChild(int idx) override;
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
   void onLayout(bool changed, const Rect& rect) override;
+  bool onKeyEvent(const KeyEvent& event) override;
 
   virtual void onDestinationInvoked(int index) {}
   virtual void onSelectedIndexChanged(int old_index, int new_index) {}
@@ -751,7 +844,7 @@ Code slice:
 3. Keep the base destination on `paint(PaintContext&)`; do not add a legacy
    `Canvas` entry point.
 4. Add focused tests and goldens for vertical and horizontal enabled,
-   disabled, selected, and unselected destinations.
+   disabled, selected, unselected, and focused destinations.
 
 Proposed commit message:
 
@@ -778,6 +871,9 @@ Code slice:
 4. Add explicit reselection behavior through
    `onSelectedDestinationReselected(int index)`.
 5. Paint the bar-owned container fill on the current `Container` surface path.
+6. Add the keyboard contract: focusable destinations, Left/Right local
+   traversal through `FocusManager`, framework Enter/Space activation, and no
+   selection change on focus movement.
 
 Proposed commit message:
 
@@ -785,11 +881,12 @@ Proposed commit message:
 > model.
 >
 > Add the persistent `NavigationBar` surface, destination sequencing,
-> container-owned selection, and reselection callbacks for top-level
-> navigation.
+> container-owned selection and keyboard focus traversal, and reselection
+> callbacks for top-level navigation.
 
 Validation: run `bazel test //:material3_navigation_bar_test` with focused
-selection, reselection, add / clear, and layout cases.
+selection, reselection, add / clear, layout, focus-versus-selection, and
+keyboard cases.
 
 ### Phase 4: Add the Badge-Aware Destination Subclass
 
@@ -852,6 +949,20 @@ Validation coverage should include:
 3. RTL-focused render cases for destination ordering, horizontal icon / label
    mirroring, and badge gravity.
 4. Example compilation for `examples/material3/navigation_bar/navigation_bar.ino`.
+5. Keyboard tests using a real `ApplicationContext::focus()` / `FocusManager`,
+   not a bar-local fake focus index, covering:
+   - Tab entry at the first enabled destination, Shift+Tab entry at the last,
+     and Tab / Shift+Tab exit from the bar;
+   - Left/Right down and repeat movement in both layouts, RTL geometry, and
+     no-wrap handoff at either edge;
+   - focus movement without a selection or callback change;
+   - Enter/Space key-down/key-up activation, pressed feedback, reselection,
+     and no activation on repeat;
+   - disabled destinations skipped by Tab and arrows, rejected activation, and
+     preservation of an explicitly selected disabled destination; and
+   - focus retained across selection changes plus focus clearing/restoration
+     when the focused destination is disabled, detached, or its containing
+     scope changes.
 
 ## Caveats
 
