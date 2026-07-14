@@ -1,0 +1,167 @@
+// Source for material3_roadmap_dependencies.svg.
+// Keep the full dependency set here. Generate the displayed transitive
+// reduction from the repository root with:
+//   tred docs/material3_roadmap_dependencies.dot | \
+//     dot -Tsvg -o docs/material3_roadmap_dependencies.svg
+digraph material3_roadmap_dependencies {
+  graph [
+    rankdir=LR,
+    newrank=true,
+    bgcolor="#FFFFFF",
+    pad=0.2,
+    nodesep=0.25,
+    ranksep=0.55,
+    fontname="DejaVu Sans",
+    fontsize=12,
+    labelloc=t,
+    label="Roo Windows Material 3 delivery dependencies"
+  ];
+  node [
+    shape=box,
+    style="rounded,filled",
+    margin="0.10,0.06",
+    fontname="DejaVu Sans",
+    fontsize=10,
+    penwidth=2.2,
+    target="_top",
+    fillcolor="#FFFFFF",
+    color="#EAB308",
+    fontcolor="#334155"
+  ];
+  edge [color="#64748B", arrowsize=0.7, penwidth=1.1];
+
+  subgraph cluster_phase0 {
+    label="Phase 0 — Framework baseline";
+    color="#CBD5E1";
+    style="rounded";
+
+    p0_1 [label="P0.1", fillcolor="#FFFFFF", color="#16A34A",
+          fontcolor="#334155", URL="material3_roadmap.md#p0-1",
+          tooltip="Theme ownership split"];
+    p0_2 [label="P0.2", fillcolor="#FFFFFF", color="#CBD5E1",
+          fontcolor="#334155", URL="material3_roadmap.md#p0-2",
+          tooltip="Supported-target baseline for the theme split"];
+    p0_3 [label="P0.3", fillcolor="#FFFFFF", color="#16A34A",
+          fontcolor="#334155", URL="material3_roadmap.md#p0-3",
+          tooltip="Keyboard/focus framework"];
+    p0_4 [label="P0.4", fillcolor="#FFFFFF", color="#16A34A",
+          fontcolor="#334155", URL="material3_roadmap.md#p0-4",
+          tooltip="Semantic Back/Escape routing"];
+    p0_5 [label="P0.5", fillcolor="#FFFFFF", color="#16A34A",
+          fontcolor="#334155", URL="material3_roadmap.md#p0-5",
+          tooltip="Interactive-transient slot and dialog lifetime migration"];
+  }
+
+  subgraph cluster_phase1 {
+    label="Phase 1 — Compact application shell";
+    color="#CBD5E1";
+    style="rounded";
+
+    p1_1 [label="P1.1", fillcolor="#FFFFFF", color="#0284C7",
+          fontcolor="#334155", URL="material3_roadmap.md#p1-1",
+          tooltip="Finish app-bar component verification"];
+    p1_2 [label="P1.2", fillcolor="#FFFFFF", color="#CBD5E1",
+          fontcolor="#334155", URL="material3_roadmap.md#p1-2",
+          tooltip="Amend the navigation-bar design for keyboard operation"];
+    p1_3 [label="P1.3", URL="material3_roadmap.md#p1-3",
+          tooltip="Implement compact navigation bar"];
+    p1_4 [label="P1.4", URL="material3_roadmap.md#p1-4",
+          tooltip="Implement the compact LayoutScaffold slice"];
+    p1_5 [label="P1.5", fillcolor="#FFFFFF", color="#CBD5E1",
+          fontcolor="#334155", URL="material3_roadmap.md#p1-5",
+          tooltip="Implement the shared presentation-pin host"];
+    p1_6 [label="P1.6", URL="material3_roadmap.md#p1-6",
+          tooltip="Reconcile menu ownership and input design"];
+    p1_7 [label="P1.7", URL="material3_roadmap.md#p1-7",
+          tooltip="Implement Material 3 menus"];
+    p1_8 [label="P1.8", fillcolor="#FFFFFF", color="#CBD5E1",
+          fontcolor="#334155", URL="material3_roadmap.md#p1-8",
+          tooltip="Implement basic Material 3 dialogs"];
+    p1_9 [label="P1.9", URL="material3_roadmap.md#p1-9",
+          tooltip="Reconcile snackbar queue ownership design"];
+    p1_10 [label="P1.10", URL="material3_roadmap.md#p1-10",
+           tooltip="Implement snackbar widget, presenter, and queue"];
+    p1_11 [label="P1.11", URL="material3_roadmap.md#p1-11",
+           tooltip="Integrate the compact settings shell"];
+  }
+
+  subgraph cluster_phase2 {
+    label="Phase 2 — Complete configuration flow";
+    color="#CBD5E1";
+    style="rounded";
+
+    p2_1 [label="P2.1", fillcolor="#FFFFFF", color="#CBD5E1",
+          fontcolor="#334155", URL="material3_roadmap.md#p2-1",
+          tooltip="Implement single-line Material 3 text fields"];
+    p2_2 [label="P2.2", fillcolor="#FFFFFF", color="#CBD5E1",
+          fontcolor="#334155", URL="material3_roadmap.md#p2-2",
+          tooltip="Design progress indicators"];
+    p2_3 [label="P2.3", URL="material3_roadmap.md#p2-3",
+          tooltip="Implement progress indicators"];
+    p2_4 [label="P2.4", URL="material3_roadmap.md#p2-4",
+          tooltip="Implement the Material 3 Wi-Fi configuration flow"];
+    p2_5 [label="P2.5", URL="material3_roadmap.md#p2-5",
+          tooltip="Verify the configuration flow on target"];
+  }
+
+  subgraph cluster_phase3 {
+    label="Phase 3 — Consolidation and adaptive breadth";
+    color="#CBD5E1";
+    style="rounded";
+
+    p3_1 [label="P3.1", fillcolor="#FFFFFF", color="#CBD5E1",
+          fontcolor="#334155", URL="material3_roadmap.md#p3-1",
+          tooltip="Specify the existing card, checkbox, radio-button, and switch families"];
+    p3_2 [label="P3.2", URL="material3_roadmap.md#p3-2",
+          tooltip="Reconcile existing control implementations with P3.1"];
+    p3_3 [label="P3.3", URL="material3_roadmap.md#p3-3",
+          tooltip="Design adaptive navigation orchestration"];
+    p3_4 [label="P3.4", URL="material3_roadmap.md#p3-4",
+          tooltip="Implement adaptive navigation"];
+    p3_5 [label="P3.5", URL="material3_roadmap.md#p3-5",
+          tooltip="Design multiline editing and composition"];
+    p3_6 [label="P3.6", URL="material3_roadmap.md#p3-6",
+          tooltip="Implement multiline Material 3 text fields"];
+    p3_7 [label="P3.7", URL="material3_roadmap.md#p3-7",
+          tooltip="Implement modal sheets and adopt transient lifetime"];
+  }
+
+  p0_1 -> p0_2;
+  p0_3 -> p0_4 -> p0_5;
+
+  p0_1 -> p1_1;
+  p0_3 -> p1_1;
+  p0_3 -> p1_2;
+  p1_2 -> p1_3;
+  p1_1 -> p1_4;
+  p1_3 -> p1_4;
+  p0_3 -> p1_6;
+  p0_4 -> p1_6;
+  p0_5 -> p1_6;
+  p1_5 -> p1_6 -> p1_7;
+  p0_4 -> p1_8;
+  p0_5 -> p1_8;
+  p0_5 -> p1_9;
+  p1_4 -> p1_9;
+  p0_3 -> p1_10;
+  p1_9 -> p1_10;
+  p1_4 -> p1_11;
+  p1_7 -> p1_11;
+  p1_8 -> p1_11;
+  p1_10 -> p1_11;
+
+  p0_3 -> p2_1;
+  p0_1 -> p2_2;
+  p2_2 -> p2_3;
+  p1_11 -> p2_4;
+  p2_1 -> p2_4;
+  p2_3 -> p2_4 -> p2_5;
+
+  p0_1 -> p3_1;
+  p0_3 -> p3_1;
+  p3_1 -> p3_2;
+  p1_4 -> p3_3 -> p3_4;
+  p2_1 -> p3_5 -> p3_6;
+  p0_5 -> p3_7;
+  p1_4 -> p3_7;
+}

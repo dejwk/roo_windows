@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 24 24">
+  <title>In progress</title>
+  <defs>
+    <symbol id="icon" viewBox="0 0 24 24">
+      <path d="M12 1.75a10.25 10.25 0 1 1 0 20.5 10.25 10.25 0 0 1 0-20.5
+               m0 2.5a7.75 7.75 0 1 0 0 15.5 7.75 7.75 0 0 0 0-15.5"
+            fill="#08A6E5" fill-rule="evenodd"/>
+      <path d="M12 5A7 7 0 1 1 5 12H12Z" fill="#08A6E5"/>
+    </symbol>
+  </defs>
+  <use href="#icon" xlink:href="#icon" x="0" y="0" width="24" height="24"/>
+  <!-- Fallback for SVG renderers that do not paint symbol instances. -->
+  <path d="M12 1.75a10.25 10.25 0 1 1 0 20.5 10.25 10.25 0 0 1 0-20.5
+           m0 2.5a7.75 7.75 0 1 0 0 15.5 7.75 7.75 0 0 0 0-15.5"
+        fill="#08A6E5" fill-rule="evenodd"/>
+  <path d="M12 5A7 7 0 1 1 5 12H12Z" fill="#08A6E5"/>
+</svg>

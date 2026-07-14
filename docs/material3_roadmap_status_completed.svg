@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 24 24">
+  <title>Completed</title>
+  <defs>
+    <symbol id="icon" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10" fill="#00C853"/>
+      <path d="m5.55 12.5 1.77-1.77L10 13.41l6.62-6.62 1.77 1.77L10 16.95Z"
+            fill="#FFFFFF"/>
+    </symbol>
+  </defs>
+  <use href="#icon" xlink:href="#icon" x="0" y="0" width="24" height="24"/>
+  <!-- Fallback for SVG renderers that do not paint symbol instances. -->
+  <circle cx="12" cy="12" r="10" fill="#00C853"/>
+  <path d="m5.55 12.5 1.77-1.77L10 13.41l6.62-6.62 1.77 1.77L10 16.95Z"
+        fill="#FFFFFF"/>
+</svg>
