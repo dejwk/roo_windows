@@ -2,9 +2,12 @@
 
 ## Implementation status
 
-**Partially implemented.** Phases 1 and 2 implement task/activity semantics,
-explicit application target routing, and existing UI Back-button adoption.
-Transient precedence and non-touch integration remain proposed. See the
+**In progress.** Phases 1 through 3 are implemented: task/activity semantics,
+explicit application target routing, UI Back-button adoption, and root
+transient-slot precedence. Dialogs are registered with the slot. Hardware
+Back/Escape routing, focus-derived task selection, soft-keyboard coordination,
+and their integration tests remain. Adoption by future menu, sheet, drawer,
+and Material 3 dialog presenters is component-owned future work. See the
 [status index](../README.md) for prerequisite status.
 
 ## Objective
@@ -56,12 +59,14 @@ layer order: regular tasks, popup tasks, then the modal dialog. Visual priority
 cannot implement semantic Back because a popup task is a generic host and does
 not know whether its contents dismiss, navigate internally, or ignore Back.
 
-Four gaps remain:
+The core route path is implemented. The remaining integration gaps are:
 
-1. `Task::exitActivity()` assumes a non-empty stack and has no root guard.
-2. `Activity` has no hook for editor, selection, or internal-step state.
-3. UI buttons, keyboard Back, and Escape have no common semantic entry point.
-4. transient surfaces have no common lifetime-safe dismissal path before pop.
+1. `Application::dispatchKeyEvent()` does not yet map hardware Back or Escape
+   into the semantic request path.
+2. A hardware request does not yet derive its target task from the focused
+   widget.
+3. Text editing currently handles Escape locally and still needs to defer to
+   transient-first semantic Back handling.
 
 ### Dependency on transient presenter lifetime
 
@@ -83,8 +88,10 @@ The boundary is explicit:
 - when no transient consumes, this design delegates to the target task;
 - presentation pins do not dispatch Back, though lifetime teardown hides them.
 
-The lifetime host must land before transient components join Back dispatch.
-The task/activity portion can land independently.
+The shared lifetime slot and legacy-dialog migration are implemented. Future
+transient components must join that same slot rather than introduce a second
+Back-participant registry; their adoption requirements live in their component
+designs and do not hold this framework contract open.
 
 ### Target task is explicit
 
@@ -96,8 +103,9 @@ not identify the intended navigation target.
 - Non-touch input uses the task containing the focus owner.
 
 The [non-touch input design](../implemented/non_touch_input_design.md) owns focus resolution.
-With no eligible global transient and no focus-owned or explicit task, a
-hardware request is unhandled. The framework does not guess.
+The remaining integration work derives the target task from its focused widget.
+Until that lands, callers must supply an explicit task; the framework does not
+guess.
 
 ## Requirements
 
@@ -284,7 +292,7 @@ Authoring reference: follow the
 [embedded C++ code-authoring instructions](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
 and [roo_windows widget-authoring instructions](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
-### Phase 1: Task and activity semantics
+### Phase 1: Task and activity semantics — implemented
 
 Add the enums, default activity hook, activity-count query, and
 `Task::requestBack()`. Test root preservation, one pop, consumption, and
@@ -296,7 +304,7 @@ Proposed commit message:
 
 Validation: `bazel test //:task_test`.
 
-### Phase 2: Application entry point and UI adoption
+### Phase 2: Application entry point and UI adoption — implemented
 
 Add `Application::requestBack(Task&, BackSource)` with task fallback only.
 Convert existing activity Back buttons, including the composite menu title,
@@ -310,7 +318,7 @@ Proposed commit message:
 Validation: `bazel test //:task_test //:application_test` and build the updated
 example or emulator target.
 
-### Phase 3: Transient precedence
+### Phase 3: Transient precedence — implemented
 
 After Phase 1 of the [lifetime design](transient_presenter_lifetime_design.md),
 add fixed Back/Escape policy bits and offer the request to the slot occupant
@@ -326,27 +334,28 @@ Validation:
 - `bazel test //:back_request_test
   //:transient_presentation_lifetime_test`
 
-### Phase 4: Component and non-touch integration
+### Phase 4: Non-touch integration — remaining
 
-Adopt dialogs, menu chains, modal sheets, and modal drawers as their
-implementations land. Route hardware Back and Escape using the focus-owned task.
-Split work into one commit per component, each including dismissal, nesting,
-destruction, and reentrancy tests plus the updated reference application.
+Route hardware Back and Escape using the focus-owned task, and reconcile editor
+cancellation with transient-first dispatch. Add focused tests for no-target
+requests, dialog precedence, activity fallback, and editor cancellation, plus
+an updated reference application.
 
-Proposed commit-message pattern:
+Proposed commit message:
 
-> `<component>: join semantic back request handling`
+> input: route hardware back requests through focused tasks
 
-Validation for each commit: its component tests, `//:back_request_test`,
-`//:transient_presentation_lifetime_test`, and the reference-application build.
+Validation: `//:back_request_test`, `//:application_test`,
+`//:transient_presentation_lifetime_test`, text-field tests, and the
+reference-application build.
 
 ## Testing Plan
 
 Task tests cover activity consumption, root preservation, one-level pop, and
 reentrant stack changes. Presentation-slot tests cover exclusivity,
-eligibility, exactly-once finish, and destruction-safe removal. Component and
-reference tests cover nested menus, modal precedence, focus-derived target
-selection, and activity fallback.
+eligibility, exactly-once finish, and destruction-safe removal. Application and
+reference tests cover dialog precedence, focus-derived target selection,
+editor cancellation, and activity fallback.
 
 Supported-target validation records stack delta and confirms that request
 handling allocates nothing. No rendering golden is needed because this design
@@ -391,6 +400,16 @@ Rejected because peer destinations are not universally hierarchical routes and
 implicit history adds storage and application policy to reusable widgets.
 
 ## Future Work
+
+Each future interactive transient owns its adoption of this contract.
+[Material 3 menus](../proposed/material3_menus_design.md) must register one
+root chain and dismiss the deepest submenu first;
+[modal sheets](../proposed/material3_sheets_design.md) and
+[modal drawers](../proposed/material3_navigation_drawer_design.md) must
+register as Back/Escape-dismissible; [Material 3 dialogs](../proposed/material3_dialogs_design.md)
+must use the same root slot as legacy dialogs.
+[Snackbars](../proposed/material3_snackbar_design.md) remain passive by
+default. These obligations are defined and tested with their components.
 
 Predictive Back can extend this path after gesture, cancellation, and component
 motion contracts exist. It must preserve transient-first and explicit-target

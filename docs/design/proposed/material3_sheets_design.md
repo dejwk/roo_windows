@@ -484,8 +484,13 @@ Dismissal is closed as follows:
 1. scrim tap dismisses,
 2. explicit owner dismissal dismisses,
 3. dragging the sheet below the smallest detent dismisses,
-4. and content-triggered dismissal stays content-owned rather than being hard-
+4. Back and Escape dismiss through the shared interactive-transient slot from
+   the [Back request coordination design](../in_progress/application_navigation_back_behavior_design.md),
+5. and content-triggered dismissal stays content-owned rather than being hard-
    coded into the base component.
+
+Only modal sheet wrappers register for semantic Back. Standard sheets remain
+application-owned content and do not implicitly participate.
 
 The modal wrapper uses a static scrim during open and close animation. The sheet
 translates; the scrim does not fade per frame.
@@ -619,6 +624,8 @@ enum class SheetDismissReason {
   kProgrammatic,
   kScrimTap,
   kHandleDrag,
+  kBack,
+  kEscape,
 };
 
 class BottomSheet : public Container {

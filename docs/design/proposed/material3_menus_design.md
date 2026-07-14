@@ -179,6 +179,11 @@ objects, and pays for badge or shortcut support only on rows that use it.
     invocation according to the selected menu policy.
 12. Keep the menu row interaction model to one action per row.
 
+The root menu chain must occupy the shared interactive-transient slot from the
+[Back request coordination design](../in_progress/application_navigation_back_behavior_design.md)
+with Back and Escape enabled. One semantic request closes only the deepest open
+submenu; the root registration stays active until the whole chain closes.
+
 ### Memory and Allocation Requirements
 
 1. Reuse the existing list item and row substrate instead of introducing a
@@ -559,6 +564,8 @@ struct MenuPolicy {
   SelectionMode selection_mode = SelectionMode::kNone;
   bool dismiss_on_leaf_invoke = true;
   bool dismiss_on_outside_press = true;
+  bool dismiss_on_back = true;
+  bool dismiss_on_escape = true;
 };
 
 struct MenuBadgeSpec {

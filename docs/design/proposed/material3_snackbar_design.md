@@ -519,6 +519,12 @@ Dismissal reasons are explicit:
 - programmatic,
 - cleared.
 
+Snackbars are passive with respect to the shared
+[Back request coordination path](../in_progress/application_navigation_back_behavior_design.md):
+they do not occupy the root interactive-transient slot and Back or Escape
+continues to the active dialog, activity, or route stack. A future explicit
+policy may opt in, but passive remains the default.
+
 The presenter excludes enter and exit transition time from the visible timeout
 budget so the message remains readable for the full requested duration.
 

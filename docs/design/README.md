@@ -31,6 +31,7 @@ Status was audited against the source tree and tests on 2026-07-12. “Dependenc
 
 | Design | Dependency status |
 | --- | --- |
+| Back request coordination | Task/activity semantics, explicit application target routing, UI Back-button adoption, root transient-slot precedence, and legacy-dialog registration are implemented. Hardware Back/Escape routing, focus-derived target selection, and editor coordination remain; future presenter adoption is tracked by component designs. |
 | Material 3 lists | Core list family phases are implemented; the remaining design phases are not complete. Badge and paint-context dependencies are implemented. |
 | Non-touch input | Keyboard acquisition, focus lifecycle, click/value/scroll control interaction, structured list/menu/tab/rail navigation, and hardware text entry are implemented. |
 | Text system | `TextBlock` wrapping, justification, max-lines, ellipsis, caching, and golden coverage are implemented; shared rich paragraph layout and `RichTextBlock` remain. |
@@ -41,7 +42,6 @@ Status was audited against the source tree and tests on 2026-07-12. “Dependenc
 
 | Design | Dependency status |
 | --- | --- |
-| Back request coordination | Task/activity semantics, explicit application target routing, and existing UI Back-button adoption are implemented. Lifetime-host transient precedence and non-touch entry remain. |
 | App bars/search surfaces | Scaffold, icon-button, text-field, and non-touch dependencies are proposed; base framework surface primitives are implemented. |
 | Button groups | Buttons are implemented; icon buttons are proposed, and no group implementation exists. |
 | Date pickers | Buttons are implemented; text fields, dialogs, icon buttons, and shared back behavior are proposed. |

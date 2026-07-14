@@ -192,6 +192,12 @@ Those references close six local decisions:
    and discard-confirm flows can keep the dialog open.
 10. Focus must remain inside the active dialog scope.
 
+Basic and full-screen Material 3 dialog presenters must use the root
+interactive-transient slot defined by the
+[Back request coordination design](../in_progress/application_navigation_back_behavior_design.md).
+They register as Back- and Escape-dismissible, vacate the slot before invoking
+dismissal completion, and do not introduce a dialog-local Back dispatcher.
+
 ### API Requirements
 
 1. Add the Material 3 dialog family under
