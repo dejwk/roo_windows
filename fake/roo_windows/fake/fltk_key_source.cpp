@@ -62,6 +62,7 @@ bool FltkKeySource::enqueue(const KeyEvent& event) {
 int FltkKeySource::dispatchFltkEvent(int event, Fl_Window* window) {
   if (dispatching) return window == nullptr ? 0 : Fl::handle_(event, window);
   dispatching = true;
+  bool consumed = false;
   if (active_source_ != nullptr && (event == FL_KEYDOWN || event == FL_KEYUP)) {
     int key = Fl::event_key();
     KeyPhase phase = KeyPhase::kUp;
@@ -76,8 +77,13 @@ int FltkKeySource::dispatchFltkEvent(int event, Fl_Window* window) {
       active_source_->key_is_down_ = false;
     }
     active_source_->onFltkEvent(phase);
+    // Keyboard input belongs to the Roo Windows key source once normalized.
+    // Passing it on would let FLTK independently interpret Escape (or Tab)
+    // after the framework has queued its semantic handling.
+    consumed = true;
   }
-  int result = window == nullptr ? 0 : Fl::handle_(event, window);
+  int result =
+      consumed ? 1 : (window == nullptr ? 0 : Fl::handle_(event, window));
   dispatching = false;
   return result;
 }
