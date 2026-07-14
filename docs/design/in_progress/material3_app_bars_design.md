@@ -2,7 +2,12 @@
 
 ## Implementation status
 
-**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+**In progress.** The `AppBar`, `SearchBar`, and `SearchAppBar` component family,
+token-backed geometry and colors, bounded slots, adaptive layout, activation
+hit routing, focused unit tests, and example are implemented. Planned golden
+coverage and integration with the proposed Material 3 scaffold remain. The
+status of existing and outstanding prerequisites is recorded in the
+[status index](../README.md).
 
 ## Objective
 
@@ -50,16 +55,28 @@ editing is supposed to happen in that surface.
 
 ### Current Status in `roo_windows`
 
-As of 2026-07, `roo_windows` does not have a Material 3 app-bar family or a
-Material 3 search-bar entry surface under `src/roo_windows/material3/`.
+As of 2026-07, `roo_windows` has a Material 3 app-bar and search-entry family
+under `src/roo_windows/material3/app_bar/`.
 
 What exists today:
 
-- [material3_layout_scaffold_design.md](material3_layout_scaffold_design.md)
+- `material3::AppBar` implements the small, medium flexible, and large flexible
+  title variants, bounded leading/trailing slots, subtitle rules, title
+  alignment, RTL layout, and flat/scrolled surface treatment,
+- `material3::SearchBar` implements the standalone adaptive search-entry
+  surface with bounded slots and ordinary click/keyboard activation,
+- `material3::SearchAppBar` implements the adaptive embedded search lane,
+  inner and outer action slots, coordinated flat/scrolled colors, and
+  search-lane-only activation,
+- `test/material3_app_bar_test.cpp` covers component sizing, layout, slots,
+  adaptive widths, and hit routing,
+- `examples/material3/app_bars/app_bars.ino` demonstrates the implemented
+  family,
+- [material3_layout_scaffold_design.md](../proposed/material3_layout_scaffold_design.md)
   already defines one top-bar slot on the scaffold,
-- [material3_toolbars_design.md](material3_toolbars_design.md) already closes
+- [material3_toolbars_design.md](../proposed/material3_toolbars_design.md) already closes
   on bottom and floating toolbars and explicitly excludes top app bars,
-- [material3_text_fields_design.md](material3_text_fields_design.md) already
+- [material3_text_fields_design.md](../proposed/material3_text_fields_design.md) already
   defines the shared editor direction for real text editing,
 - [non_touch_input_design.md](../implemented/non_touch_input_design.md) already defines the
   focus-layering and semantic-action direction for keyboard and pointer input,
@@ -71,21 +88,17 @@ What exists today:
 
 What does not exist yet:
 
-- no `material3/app_bar/` implementation,
-- no search-bar entry widget,
-- no search-app-bar widget,
 - no focused-search or search-view surface,
-- no top-app-bar example sketch,
-- and no app-bar-focused test or golden target.
+- no app-bar golden-test target,
+- and no implemented Material 3 scaffold or scaffold integration test.
 
 The current Material 3 theme exposes color and state-layer tokens, but not the
-Material 3 typography scale. Consequently, the named typography roles in this
-document are required token inputs, not APIs that already exist. Phase 1 must
-either land the shared Material 3 typography-token prerequisite or remain
-declaration-only; app bars must not silently substitute unrelated legacy
-`font_h*()` globals and call the result token-backed.
+Material 3 typography scale. The implementation currently maps the named roles
+to the existing project fonts. A future shared typography-token migration must
+preserve the component geometry and size budgets rather than adding per-widget
+theme storage.
 
-That current state forces two design constraints.
+That state preserves two design constraints.
 
 First, the search entry surfaces in this document must stay intentionally
 narrow. They should open or hand off to later search workflows, but they should
@@ -165,11 +178,11 @@ already called out separately in
 
 The most relevant local references are:
 
-- [material3_layout_scaffold_design.md](material3_layout_scaffold_design.md)
-- [material3_toolbars_design.md](material3_toolbars_design.md)
-- [material3_text_fields_design.md](material3_text_fields_design.md)
+- [material3_layout_scaffold_design.md](../proposed/material3_layout_scaffold_design.md)
+- [material3_toolbars_design.md](../proposed/material3_toolbars_design.md)
+- [material3_text_fields_design.md](../proposed/material3_text_fields_design.md)
 - [non_touch_input_design.md](../implemented/non_touch_input_design.md)
-- [material3_icon_buttons_design.md](material3_icon_buttons_design.md)
+- [material3_icon_buttons_design.md](../proposed/material3_icon_buttons_design.md)
 - [../.github/instructions/roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
 
 Those references close the main local constraints:

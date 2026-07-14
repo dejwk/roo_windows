@@ -34,7 +34,7 @@ The main framework contracts with checked-in design coverage are:
 - [non_touch_input_design.md](design/implemented/non_touch_input_design.md)
 - [horizontal_page_host_design.md](design/implemented/horizontal_page_host_design.md)
 - [application_navigation_back_behavior_design.md](design/implemented/application_navigation_back_behavior_design.md)
-- [transient_presenter_lifetime_design.md](design/proposed/transient_presenter_lifetime_design.md)
+- [transient_presenter_lifetime_design.md](design/in_progress/transient_presenter_lifetime_design.md)
 - [transient_presentation_pins_design.md](design/proposed/transient_presentation_pins_design.md)
 
 This list is not evidence that every cross-component contract is complete.
@@ -42,10 +42,12 @@ In particular, the transient-presentation-pins design is a narrow paint-only
 mechanism for escaping ancestor clipping. It defines registration, layer
 ordering, invalidation, and limited pin teardown behavior; it does not define a
 general lifetime contract for interactive menus, sheets, dialogs, or queued
-snackbars. The component designs currently make different caller-owned and
-borrowed-lifetime assumptions, and some still permit a visible presenter to
-hold an anchor, content reference, listener, or text view that the caller must
-keep valid.
+snackbars. The shared transient slot and legacy-dialog adoption are
+implemented, but menu and snackbar adoption remain, and modal sheets do not
+yet exist. Component designs therefore still make different caller-owned and
+borrowed-lifetime assumptions, and some permit a visible presenter to hold an
+anchor, content reference, listener, or text view that the caller must keep
+valid.
 
 Event dispatch, gesture ownership, and the non-touch keyboard path are
 implemented. The remaining foundation work is a mix of implementing unfinished
@@ -70,9 +72,11 @@ vocabulary or adding per-widget RAM.
 Designs already cover the shell and many major families, including scaffold,
 app bars, navigation bar/rail/drawer, toolbars, tabs, lists, menus, sheets,
 dialogs, snackbar, buttons, FABs, badge, sliders, text fields, and date/time
-pickers. The app-bar family is now partially implemented and covered by unit
-tests; the remaining shell families are largely design work or integration
-work.
+pickers. The app-bar/search-entry component family is implemented and covered
+by focused unit tests and an example; its planned golden and scaffold
+integration coverage remain. The list family is implemented through Phase 11,
+with menu reuse still outstanding. The remaining shell families are largely
+design work or integration work.
 
 Several source families still lack matching design documents:
 
@@ -102,15 +106,17 @@ shared contracts needed for a complete flow.
 
 This is the critical path. Work may proceed in parallel by subsystem, but
 later components must not invent temporary alternatives to these contracts.
+Phase-table status is one of **Not started**, **In progress**, or **Done** and
+describes the complete roadmap work item, not just its landed prerequisites.
 
-| Work item | Current state | Required outcome |
-| --- | --- | --- |
-| Retain theme-migration evidence | Implemented; host coverage exists | Record supported-target RAM, flash, stack, size, and visual-regression evidence for `FrameworkTheme` and `material3::Theme`. |
-| Integrate implemented focus and non-touch input | Keyboard acquisition, lifecycle-safe focus, traversal, structured-surface navigation, scroll/value controls, single-line hardware text entry, and shared Back/Escape coordination are implemented | Retain one shared touch/keyboard dispatch model while integrating shell components, using the implemented back-request contract for semantic Back/Escape handling. |
-| Integrate implemented back request coordination | Task/activity fallback, transient precedence, UI and hardware Back/Escape entry, focus-derived targeting, and editor fallback are implemented | Adopt the shared semantic path in shell components without introducing local dispatchers. Predictive animation remains deferred. |
-| Land transient-presenter lifetime and ownership | Shared proposed design exists; component designs still contain inconsistent rules | Implement the shared ownership contract and reconcile anchors, presenters, content, text, listeners, completion delivery, close, detach, destruction, replacement, and queued-request behavior without relying on undocumented caller ordering. |
-| Land paint-only presentation pins where required | Narrow proposed design exists; none is implemented | Root-stage paint-only visuals escape ancestor clipping, obey task/popup/dialog ordering, restore old pixels, and unregister safely. Interactive surfaces remain popup tasks or dialogs. Pins are not treated as the general presenter-lifetime solution. |
-| Complete editable-text core | Single-line hardware editing provides cursor movement, selection, deletion, commit/cancel, and focus entry | Add composition policy, validation, constrained scrolling, and multiline layout below M3 chrome. |
+| Work item | Status | Current state | Required outcome |
+| --- | --- | --- | --- |
+| Retain theme-migration evidence | In progress | Theme migration and host coverage are done; supported-target evidence remains | Record supported-target RAM, flash, stack, size, and visual-regression evidence for `FrameworkTheme` and `material3::Theme`. |
+| Integrate implemented focus and non-touch input | In progress | Keyboard acquisition, lifecycle-safe focus, traversal, structured-surface navigation, scroll/value controls, single-line hardware text entry, and shared Back/Escape coordination are implemented; shell integration remains | Retain one shared touch/keyboard dispatch model while integrating shell components, using the implemented back-request contract for semantic Back/Escape handling. |
+| Integrate implemented back request coordination | In progress | Task/activity fallback, transient precedence, UI and hardware Back/Escape entry, focus-derived targeting, and editor fallback are implemented; shell adoption remains | Adopt the shared semantic path in shell components without introducing local dispatchers. Predictive animation remains deferred. |
+| Complete transient-presenter lifetime and ownership | In progress | The shared slot and legacy-dialog adoption are implemented; modal-sheet, menu, and snackbar adoption remain | Reconcile anchors, presenters, content, text, listeners, completion delivery, close, detach, destruction, replacement, and queued-request behavior without relying on undocumented caller ordering. |
+| Land paint-only presentation pins where required | Not started | Narrow proposed design exists; none is implemented | Root-stage paint-only visuals escape ancestor clipping, obey task/popup/dialog ordering, restore old pixels, and unregister safely. Interactive surfaces remain popup tasks or dialogs. Pins are not treated as the general presenter-lifetime solution. |
+| Complete editable-text core | In progress | Single-line hardware editing provides cursor movement, selection, deletion, commit/cancel, and focus entry | Add composition policy, validation, constrained scrolling, and multiline layout below M3 chrome. |
 
 Phase 0 exit condition:
 
@@ -130,12 +136,12 @@ Phase 0 exit condition:
 
 Complete and integrate the existing shell designs as one integrated slice.
 
-| Work item | Why now |
-| --- | --- |
-| Scaffold plus top app bars and search entry | The app-bar/search-entry primitives exist; integrate them with scaffold, insets, title/actions, and the common search handoff. |
-| One compact navigation path | Implement navigation bar or drawer according to the reference target; do not require bar, rail, and drawer simultaneously. |
-| Dialogs and one modal sheet path | Provides confirmation and compact task hosting through shared back and lifetime contracts. |
-| Menus and snackbar integration | Completes transient commands and non-modal result/error feedback. |
+| Work item | Status | Why now |
+| --- | --- | --- |
+| Scaffold plus top app bars and search entry | In progress | The app-bar/search-entry primitives exist; planned golden coverage and integration with scaffold, insets, title/actions, and the common search handoff remain. |
+| One compact navigation path | Not started | Implement navigation bar or drawer according to the reference target; do not require bar, rail, and drawer simultaneously. |
+| Dialogs and one modal sheet path | Not started | Provides confirmation and compact task hosting through shared back and lifetime contracts. The legacy dialog has adopted the lifetime slot, but the M3 dialog and sheet families are not implemented. |
+| Menus and snackbar integration | Not started | Completes transient commands and non-modal result/error feedback. |
 
 Reference slice: a multi-screen settings application can navigate, open a
 menu, edit a setting in a dialog or sheet, confirm or cancel it, handle
@@ -150,13 +156,13 @@ Phase 1 exit condition:
 
 ## Phase 2: Complete Forms, Search, and Task Feedback
 
-| Work item | Type | Required scope |
-| --- | --- | --- |
-| Editable and multiline M3 text fields | Existing design follow-on | Editing, validation/error/supporting text, keyboard entry, focus traversal, and constrained scrolling. |
-| Progress indicators | New design plus implementation | Determinate and indeterminate linear/circular variants, bounded animation cost, visibility/lifecycle behavior, and reduced-motion policy if supported. |
-| Chips | New design plus implementation | Start with variants demanded by search/filter flows; defer catalog completeness until shared selection behavior is proven. |
-| List follow-ons | Existing design follow-on | Prioritize settings rows, wrapped/supporting text, control rows, and menu reuse. |
-| Toggle icon buttons | Existing deferred follow-on | Shared toggle semantics for toolbars and compact controls. |
+| Work item | Status | Type | Required scope |
+| --- | --- | --- | --- |
+| Editable and multiline M3 text fields | Not started | Existing design follow-on | Editing, validation/error/supporting text, keyboard entry, focus traversal, and constrained scrolling. The reusable legacy single-line editor is a prerequisite, not an M3 text-field implementation. |
+| Progress indicators | Not started | New design plus implementation | Determinate and indeterminate linear/circular variants, bounded animation cost, visibility/lifecycle behavior, and reduced-motion policy if supported. |
+| Chips | Not started | New design plus implementation | Start with variants demanded by search/filter flows; defer catalog completeness until shared selection behavior is proven. |
+| List follow-ons | In progress | Existing design follow-on | Wrapped/supporting text, settings/navigation rows, control rows, selection conveniences, and expandable content are implemented; menu reuse remains. |
+| Toggle icon buttons | Not started | Existing deferred follow-on | Shared toggle semantics for toolbars and compact controls. |
 
 Reference slice: a Wi-Fi or device-configuration flow can search or filter,
 enter and validate credentials, select options, show connection progress,
@@ -203,9 +209,9 @@ platform makes it an earlier compatibility requirement.
 2. Capture the supported-target theme-migration measurements and retain the
    regression coverage described in
    [theme_color_tokens_design.md](design/implemented/theme_color_tokens_design.md).
-3. Land the shared transient-presenter lifetime contract, reconcile the menu,
-   sheet, dialog, and snackbar APIs with the proposed design, and add lifecycle
-   tests before integrating those presenters.
+3. Complete adoption of the shared transient-presenter lifetime contract for
+   menus, sheets, and snackbars, and add their lifecycle tests before
+   integrating those presenters. Retain the implemented dialog coverage.
 4. Integrate the implemented focus/non-touch and back-request paths in the
    Phase 1 slice. Implement presentation pins only for paint-only adopters that
    need root-stage clipping escape.

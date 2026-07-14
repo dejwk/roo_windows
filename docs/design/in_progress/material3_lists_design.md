@@ -49,16 +49,13 @@ lists, menus, and adjacent Material 3 surfaces with shared primitives.
 
 ### Current Status in `roo_windows`
 
-As of 2026-05, the list family is partially implemented through Phase 6. The
-public API, row-local `ListEntry` infrastructure, baseline `List` sequencing,
-generic `ListRow<Item>` ownership bridge, and usage-review example are all
-landed. The current code also resolves expressive position-aware row shapes and
-list-owned divider bands through the current `PaintContext` exclusion pipeline.
-The landed code is still the low-level substrate rather than the full
-authoring story described later in this document: wrapped supporting text,
-stock clickable rows, row-to-affordance delegation, reusable
-checkbox/radio/navigation convenience items, expand/collapse behavior, and
-menu reuse remain future work.
+As of 2026-07, the list family is implemented through Phase 11. In addition to
+the baseline API, row infrastructure, sequencing, generic ownership bridge,
+expressive shapes, and divider painting, the current tree implements text
+wrapping/truncation policy, visual convenience items, invocation and navigation
+rows, checkbox/radio/switch selection items, and reusable animated
+`ExpandablePanel` content. Phase 12 menu reuse remains future work, so the
+overall design remains in progress.
 
 What exists today:
 
@@ -76,8 +73,9 @@ What exists today:
    for variant, style, selection, divider policy, row insertion, row stacking,
    row-context propagation, separator-band gap resolution, and list-owned
    divider-band painting from `paint(PaintContext&)`.
-- `examples/material3/lists/lists.ino` exists as the low-level Phase 4
-   usage-review sketch and compiles under the emulation harness.
+- `examples/material3/lists/lists.ino` exists as the Phase 4 usage-review
+   sketch and now demonstrates the later convenience and expandable-row APIs;
+   it compiles under the emulation harness.
 - `FlexLayout` is implemented and already used by `material3::FlexCard`, so it
    is no longer just a future direction for generic composition.
 - `ListLayout` remains the existing recycled fixed-height list container.
@@ -89,17 +87,11 @@ What does not exist yet:
 
 - no selection-driven corner-radius override beyond the current position-based
    expressive shapes,
-- no actual wrapped or ellipsized list text behavior in `ListEntry`,
-- no stock clickable/navigation row type or row-to-affordance click
-   delegation,
-- no reusable checkbox/radio/avatar convenience item surface,
-- no implemented `ExpandablePanel` behavior,
 - no Material 3 menu implementation built from shared list-row primitives,
-- no reusable expand/collapse body path.
+- and no Phase 12 menu-row reuse integration.
 
-The rest of this document records the chosen architecture for the remaining
-phases and keeps the already landed Phase 1 / Phase 2 / Phase 3 pieces aligned
-with that direction.
+The rest of this document records the chosen architecture and keeps the landed
+Phases 1 through 11 aligned with the remaining menu-reuse work.
 
 ### Material 3 Sources
 

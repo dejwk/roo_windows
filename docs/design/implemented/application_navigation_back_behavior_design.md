@@ -69,7 +69,7 @@ The core route path is implemented:
 
 ### Dependency on transient presenter lifetime
 
-The [transient presenter lifetime design](../proposed/transient_presenter_lifetime_design.md)
+The [transient presenter lifetime design](../in_progress/transient_presenter_lifetime_design.md)
 defines the single interactive-transient slot, finish reasons, destruction
 safety, and slot-removal-before-completion ordering.
 
@@ -319,7 +319,7 @@ example or emulator target.
 
 ### Phase 3: Transient precedence — implemented
 
-After Phase 1 of the [lifetime design](../proposed/transient_presenter_lifetime_design.md),
+After Phase 1 of the [lifetime design](../in_progress/transient_presenter_lifetime_design.md),
 add fixed Back/Escape policy bits and offer the request to the slot occupant
 before task fallback. Test slot-removal-before-completion, replacement
 reentrancy, one finish per request, and fallback with no eligible transient.
