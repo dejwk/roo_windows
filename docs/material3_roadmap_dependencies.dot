@@ -38,7 +38,7 @@ digraph material3_roadmap_dependencies {
     p0_1 [label="P0.1", fillcolor="#FFFFFF", color="#16A34A",
           fontcolor="#334155", URL="material3_roadmap.md#p0-1",
           tooltip="Theme ownership split"];
-    p0_2 [label="P0.2", fillcolor="#FFFFFF", color="#CBD5E1",
+    p0_2 [label="P0.2", fillcolor="#FFFFFF", color="#16A34A",
           fontcolor="#334155", URL="material3_roadmap.md#p0-2",
           tooltip="Supported-target baseline for the theme split"];
     p0_3 [label="P0.3", fillcolor="#FFFFFF", color="#16A34A",
