@@ -2,7 +2,11 @@
 
 ## Implementation status
 
-**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+**Proposed.** None of the defined scope is implemented. Before implementation,
+this design must add explicit keyboard traversal, focus-versus-selection, and
+activation rules against the implemented non-touch-input contract, as tracked
+by roadmap item P1.2. The status of existing and outstanding prerequisites is
+recorded in the [status index](../README.md).
 
 ## Objective
 

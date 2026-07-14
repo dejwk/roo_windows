@@ -50,13 +50,13 @@ Status was audited against the source tree and tests on 2026-07-14. “Dependenc
 | FAB | Buttons and theme support are implemented; icon buttons are proposed. |
 | Icon buttons | Buttons, badges, click animation, and theme support are implemented; no icon-button implementation exists. |
 | Layout scaffold | Existing layout containers and Material 3 app-bar components are implemented; the scaffold and Material 3 navigation surfaces are not. |
-| Menus | Badge, paint context, back routing, and non-touch input are implemented; icon buttons and presentation pins are proposed. |
-| Navigation bar | Tabs, badge support, and shared back behavior exist; the navigation-bar component is not implemented. |
+| Menus | Badge, paint context, back routing, and non-touch input are implemented; presentation pins are proposed. Before implementation, the menu design must replace retained trigger/widget pointers with the copied-anchor and presenter-owned-pin rules from the in-progress transient-lifetime design. |
+| Navigation bar | Tabs, badge support, shared back behavior, and non-touch input exist; the navigation-bar component is not implemented. Its proposed design still needs explicit keyboard traversal and activation rules before implementation. |
 | Navigation drawer | List support is in progress and back routing is implemented; dialogs are proposed, and no drawer implementation exists. |
 | Navigation rail | A legacy rail exists, but the Material 3 design is not implemented; lists are in progress and badges are implemented. |
 | Segmented buttons | Buttons are implemented; the superseding button-group design and this legacy component design are not implemented. |
 | Sheets | Paint/overflow foundations and shared back behavior are implemented; icon buttons are proposed. |
-| Snackbar | Paint/overflow foundations and non-touch input are implemented; scaffold is proposed. |
+| Snackbar | Paint/overflow foundations and non-touch input are implemented; scaffold is proposed. Before implementation, the snackbar design must replace queued non-owning strings and listener pointers with the ownership model required by the in-progress transient-lifetime design. |
 | Split button | Buttons and non-touch input are implemented; icon buttons and menus are proposed. |
 | Text fields | Paint context and non-touch input are implemented; supporting icon-button/menu behavior is proposed. |
 | Time pickers | Buttons and shared back behavior are implemented; text fields, dialogs, and icon buttons are proposed. |

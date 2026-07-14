@@ -50,9 +50,11 @@ anchor, content reference, listener, or text view that the caller must keep
 valid.
 
 Event dispatch, gesture ownership, and the non-touch keyboard path are
-implemented. The remaining foundation work is a mix of implementing unfinished
-designs and closing shared contracts that do not yet have a complete design,
-before integrating the M3 families that depend on them.
+implemented. The interactive-transient slot and legacy-dialog migration are
+also implemented. Phase 0 therefore has one remaining deliverable: retain the
+supported-target theme baseline. Unfinished component adoption and optional
+foundation extensions are scheduled beside their first consumer below; they do
+not keep the implemented framework contracts open.
 
 ### Theme migration is complete; target evidence remains
 
@@ -85,163 +87,147 @@ Several source families still lack matching design documents:
 - [radio button](../src/roo_windows/material3/radio_button/radio_button.h)
 - [switch](../src/roo_windows/material3/switch/switch.h)
 
-Those gaps matter, especially during theme migration, but they do not outrank
-shared contracts needed for a complete flow.
+Those gaps matter for consolidation, but they do not block the compact shell or
+configuration-flow slices below.
 
-## Prioritization Rules
+## How to Read the Delivery Plan
 
-1. Finish shared contracts before multiplying leaf implementations.
-2. Deliver vertical application slices, not disconnected component batches.
-3. Track each item as designed, implementation-ready, implemented, integrated,
-   and target-verified.
-4. Require explicit RAM, flash, stack, allocation, invalidation, and input-path
-   evidence at phase exits.
-5. Keep framework abstractions design-system-independent; keep M3 tokens and
-   behavior in `roo_windows::material3`.
-6. Extend existing popup, task/activity, focus, text, and paint infrastructure
-   instead of adding component-local substitutes.
-7. Do not make strict M3 catalog parity a release gate.
+Each row below is one deliverable. Rows are ordered; a dependency names only an
+earlier row, so completing a later component can never be a prerequisite for an
+earlier phase.
 
-## Phase 0: Stabilize Shared Contracts
+Status applies to the row, not to every phase of the linked design:
 
-This is the critical path. Work may proceed in parallel by subsystem, but
-later components must not invent temporary alternatives to these contracts.
-Phase-table status is one of **Not started**, **In progress**, or **Done** and
-describes the complete roadmap work item, not just its landed prerequisites.
+- **Done**: the row's completion check is satisfied in the current tree.
+- **In progress**: part of that exact deliverable is present, and the completion
+  check names what remains.
+- **Not started**: none of that exact deliverable is implemented.
 
-| Work item | Status | Current state | Required outcome |
-| --- | --- | --- | --- |
-| Retain theme-migration evidence | In progress | Theme migration and host coverage are done; supported-target evidence remains | Record supported-target RAM, flash, stack, size, and visual-regression evidence for `FrameworkTheme` and `material3::Theme`. |
-| Integrate implemented focus and non-touch input | In progress | Keyboard acquisition, lifecycle-safe focus, traversal, structured-surface navigation, scroll/value controls, single-line hardware text entry, and shared Back/Escape coordination are implemented; shell integration remains | Retain one shared touch/keyboard dispatch model while integrating shell components, using the implemented back-request contract for semantic Back/Escape handling. |
-| Integrate implemented back request coordination | In progress | Task/activity fallback, transient precedence, UI and hardware Back/Escape entry, focus-derived targeting, and editor fallback are implemented; shell adoption remains | Adopt the shared semantic path in shell components without introducing local dispatchers. Predictive animation remains deferred. |
-| Complete transient-presenter lifetime and ownership | In progress | The shared slot and legacy-dialog adoption are implemented; modal-sheet, menu, and snackbar adoption remain | Reconcile anchors, presenters, content, text, listeners, completion delivery, close, detach, destruction, replacement, and queued-request behavior without relying on undocumented caller ordering. |
-| Land paint-only presentation pins where required | Not started | Narrow proposed design exists; none is implemented | Root-stage paint-only visuals escape ancestor clipping, obey task/popup/dialog ordering, restore old pixels, and unregister safely. Interactive surfaces remain popup tasks or dialogs. Pins are not treated as the general presenter-lifetime solution. |
-| Complete editable-text core | In progress | Single-line hardware editing provides cursor movement, selection, deletion, commit/cancel, and focus entry | Add composition policy, validation, constrained scrolling, and multiline layout below M3 chrome. |
+A **Missing design** row is a required deliverable. Implementation does not
+start until that design is reviewed and filed under `docs/design/proposed/`.
+A row may be **Done** while linking an in-progress design when it deliberately
+covers only an implemented phase of that design; later adoption is then listed
+as a separate row beside the component that needs it.
 
-Phase 0 exit condition:
+Phase exits are simple: every row in the phase is **Done**, and the stated
+reference target passes. Target evidence validates completed work; it does not
+silently add new implementation scope.
 
-- one target application exercises touch and non-touch dispatch, route back,
-  transient dismissal, and text entry through shared contracts;
-- lifecycle tests cover closing, replacing, detaching, and destroying each
-  presenter and its owner while visible or queued, with completion delivered at
-  most once and no retained invalid anchor, content, listener, or text view;
-- any adopted presentation pin has clipped-ancestor, layer-order, move/hide
-  invalidation, anchor teardown, and window teardown coverage;
-- tests and target evidence prove default theme colors and state layers remain correct;
-- representative widget sizes do not grow; and
-- RAM, flash, stack, and invalidation behavior are measured on a supported
-  embedded target, not only in host tests.
+## Delivery Rules
 
-## Phase 1: Deliver a Complete Application Shell
+1. Finish a shared primitive before the first component that consumes it.
+2. Put component adoption in the component's phase, not in the foundation
+   phase that introduced the primitive.
+3. Keep framework abstractions design-system-independent and M3 behavior in
+   `roo_windows::material3`.
+4. Require RAM, flash, stack, allocation, invalidation, and input-path evidence
+   at the exit of the phase that introduces the relevant behavior.
+5. Deliver the smallest end-to-end application slice; catalog parity is not a
+   release gate.
 
-Complete and integrate the existing shell designs as one integrated slice.
+## Phase 0: Close the Framework Baseline
 
-| Work item | Status | Why now |
+Phase 0 contains no Material component integration. It can be completed using
+the framework, existing widgets, synthetic presenters, and target measurements.
+
+| ID | Deliverable | Status | Design | Depends on | Completion check |
+| --- | --- | --- | --- | --- | --- |
+| P0.1 | Theme ownership split | Done | [Theme color tokens](design/implemented/theme_color_tokens_design.md) | — | `FrameworkTheme` and `material3::Theme` are separate, legacy color-role APIs are absent, and host regression tests pass. |
+| P0.2 | Supported-target baseline for the theme split | Not started | No new design; evidence required by [Theme color tokens](design/implemented/theme_color_tokens_design.md) | P0.1 | Check in `docs/material3_target_baseline.md` recording board, toolchain, build flags, `.text`/`.rodata`/`.data`/`.bss`, theme-object and representative-widget sizes, stack method/result, and a target screenshot or golden comparison. |
+| P0.3 | Keyboard/focus framework | Done | [Non-touch input](design/implemented/non_touch_input_design.md) | — | Key acquisition, lifecycle-safe focus, traversal, control operation, structured navigation, and hardware text entry are covered by the implemented design tests. |
+| P0.4 | Semantic Back/Escape routing | Done | [Application navigation and back behavior](design/implemented/application_navigation_back_behavior_design.md) | P0.3 | UI and hardware Back/Escape share the semantic request path; transient precedence, focus-derived routing, task fallback, and editor fallback are tested. |
+| P0.5 | Interactive-transient slot and dialog lifetime migration | Done | Phases 1 and the dialog part of Phase 2 in [Transient presenter lifetime](design/in_progress/transient_presenter_lifetime_design.md) | P0.4 | Slot occupancy, replacement reentrancy, Back policy, host/presenter destruction, detach-before-completion, and legacy-dialog adoption tests pass. Menu, sheet, and snackbar adoption are explicitly later rows. |
+
+Phase 0 exits when P0.1–P0.5 are **Done**. No scaffold, M3 menu, M3 dialog,
+sheet, snackbar, or text-field implementation is part of this exit.
+
+## Phase 1: Build the Compact Application Shell
+
+Rows in this phase are the implementation sequence. A row with no dependency
+on the immediately preceding row may be developed in parallel, but it must be
+complete before the first row that depends on it.
+
+| ID | Deliverable | Status | Design | Depends on | Completion check |
+| --- | --- | --- | --- | --- | --- |
+| P1.1 | Finish app-bar component verification | In progress | [App bars and search surfaces](design/in_progress/material3_app_bars_design.md) | P0.1, P0.3 | Add `material3_app_bar_golden_test` for title variants, standalone search, and search app bar in flat/scrolled states; retain the passing unit test and example. Scaffold integration is P1.4, not part of this row. |
+| P1.2 | Amend the navigation-bar design for keyboard operation | Not started | Revise [Navigation bar](design/proposed/material3_navigation_bar_design.md) | P0.3 | The design explicitly defines Tab entry/exit, arrow-key movement, selection versus focus, Enter/Space activation, disabled destinations, focus restoration, and tests using the implemented focus manager. |
+| P1.3 | Implement compact navigation bar | Not started | Navigation-bar design revised by P1.2 | P1.2 | Complete design Phases 1–5, including fixed destinations, selection, badges, keyboard behavior, unit/golden tests, and example. This is the one compact navigation mode required by the reference shell. |
+| P1.4 | Implement the compact `LayoutScaffold` slice | Not started | [Layout scaffold](design/proposed/material3_layout_scaffold_design.md) | P1.1, P1.3 | Implement design Phases 1–2 and the compact consumer from Phase 5: top app bar, body, bottom navigation, FAB/snackbar insets, RTL, tests, and one example. `PaneLayout` and `GridLayout` remain deferred design phases and do not block this row. |
+| P1.5 | Implement the shared presentation-pin host | Not started | Phase 1 of [Transient presentation pins](design/proposed/transient_presentation_pins_design.md) | — | Root-stage registration, ordering, old/new-bounds invalidation, hide/unregister, anchor teardown, and window teardown tests pass. Slider and keyboard-highlighter migrations remain deferred and do not block this row. |
+| P1.6 | Reconcile menu ownership and input design | Not started | Revise [Menus](design/proposed/material3_menus_design.md) against Phase 3 of [Transient presenter lifetime](design/in_progress/transient_presenter_lifetime_design.md), Phase 12 of [Lists](design/in_progress/material3_lists_design.md), and P1.5 | P0.3–P0.5, P1.5 | Remove retained trigger/widget pointers in favor of copied anchor geometry and presenter-owned pin data; define one registered root per menu chain, deepest-first Back, focus restoration, list-row reuse, and keyboard semantics. Resolve these contracts in the design before code starts. |
+| P1.7 | Implement Material 3 menus | Not started | Menu design reconciled by P1.6 | P1.6 | Complete the reconciled menu phases; pass placement, pin, lifetime, keyboard, list reuse, submenu, golden, and example tests. |
+| P1.8 | Implement basic Material 3 dialogs | Not started | Phases 1–2 of [Dialogs](design/proposed/material3_dialogs_design.md) | P0.4, P0.5 | Basic/alert dialogs use the existing transient slot, detach content before completion, restore focus, handle Back/Escape, and pass unit and golden tests. Full-screen dialogs are deferred. |
+| P1.9 | Reconcile snackbar queue ownership design | Not started | Revise [Snackbar](design/proposed/material3_snackbar_design.md) against Phase 4 of [Transient presenter lifetime](design/in_progress/transient_presenter_lifetime_design.md) | P0.5, P1.4 | Replace queued non-owning text views and independent listener pointers with bounded owned payloads or self-cancelling registered request nodes; define overflow, completion, teardown, and allocation policy before code starts. |
+| P1.10 | Implement snackbar widget, presenter, and queue | Not started | Snackbar design reconciled by P1.9 | P0.3, P1.9 | Complete the reconciled snackbar phases; placement follows scaffold insets, and timeout/action/replacement/overflow/host-teardown tests plus goldens and example pass. |
+| P1.11 | Integrate the compact settings shell | Not started | No new design; integration of P1.4, P1.7, P1.8, and P1.10 | P1.4, P1.7, P1.8, P1.10 | One example/test application navigates multiple settings screens, opens a menu, confirms or cancels in a dialog, restores focus, handles touch and keyboard Back/Escape, and reports the result with a snackbar without application-local popup or Back routing. |
+
+Phase 1 exits when P1.1–P1.11 are **Done** and the P1.11 application passes on
+one supported compact target. Modal sheets are not a shell prerequisite because
+the reference flow uses the basic dialog path; sheet adoption is P3.7.
+
+## Phase 2: Deliver a Complete Configuration Flow
+
+The reference deliverable is the Wi-Fi configuration design. It does not
+require multiline editing, chips, or a focused-search subsystem, so those are
+not hidden prerequisites for this phase.
+
+| ID | Deliverable | Status | Design | Depends on | Completion check |
+| --- | --- | --- | --- | --- | --- |
+| P2.1 | Implement single-line Material 3 text fields | Not started | [Text fields](design/proposed/material3_text_fields_design.md) | P0.3 | Complete design Phases 1–5: generalize the shared editor target, implement filled/outlined fields, cursor/selection/horizontal scrolling, error/supporting text, secure entry, keyboard traversal, tests, goldens, and example. Multiline and IME composition are not in this design. |
+| P2.2 | Design progress indicators | Not started | **Missing design:** create `docs/design/proposed/material3_progress_indicators_design.md` | P0.1 | Reviewed design defines determinate/indeterminate linear and circular variants, animation scheduling and cancellation, visibility/teardown behavior, reduced-motion policy, tokens, RAM/flash budgets, tests, and implementation phases. |
+| P2.3 | Implement progress indicators | Not started | Design produced by P2.2 | P2.2 | Implement the reviewed phases and pass unit, golden, animation-lifecycle, bounded-invalidation, and target-cost checks. |
+| P2.4 | Implement the Material 3 Wi-Fi configuration flow | Not started | [Wi-Fi configuration](design/proposed/material3_wifi_configuration_design.md) | P1.11, P2.1, P2.3 | Complete design Phases 1–5: controller adapter, recycled network rows, root/details/saved screens, editable credential and network forms, validation, progress/cancellation, integration tests, goldens, and example. Unsupported backend capabilities remain explicitly disabled or read-only. |
+| P2.5 | Verify the configuration flow on target | Not started | No new design; acceptance of P2.4 | P2.4 | On one supported target, record RAM/flash/stack deltas and demonstrate scan, secured-network edit, invalid input, connect progress, cancellation, success/failure snackbar, touch operation, and keyboard traversal. |
+
+Phase 2 exits when P2.1–P2.5 are **Done**. The flow must use the shared
+components above and contain no Wi-Fi-local editor, progress widget, popup
+lifetime mechanism, or Back dispatcher.
+
+## Phase 3: Consolidate and Add Adaptive Breadth
+
+| ID | Deliverable | Status | Design | Depends on | Completion check |
+| --- | --- | --- | --- | --- | --- |
+| P3.1 | Specify the existing card, checkbox, radio-button, and switch families | Not started | **Missing designs:** add one reviewed design document per family | P0.1, P0.3 | Each design records current API/behavior, M3 tokens, input semantics, size budget, tests, and any concrete migration delta; documents move to `implemented/` only when code matches them. |
+| P3.2 | Reconcile existing control implementations with P3.1 | Not started | Designs produced by P3.1 | P3.1 | All identified deltas are implemented; host/golden/keyboard tests pass; no legacy theme or component-local input path remains. |
+| P3.3 | Design adaptive navigation orchestration | Not started | **Missing design:** define route ownership and breakpoint-driven switching across bar, rail, and drawer | P1.4 | Reviewed design names the route-state owner, maps compact/medium/expanded presentations, defines focus transfer and Back behavior, and forbids navigation widgets from owning route history. |
+| P3.4 | Implement adaptive navigation | Not started | P3.3 plus existing [Navigation rail](design/proposed/material3_navigation_rail_design.md) and [Navigation drawer](design/proposed/material3_navigation_drawer_design.md) designs | P3.3 | Bar, rail, and drawer present the same route state across size changes; focus and selection survive transitions; compact-to-expanded integration and target tests pass. |
+| P3.5 | Design multiline editing and composition | Not started | **Missing design:** create a shared editable-text follow-on covering multiline layout, constrained scrolling, IME/composition policy, selection, validation hooks, and ownership | P2.1 | Reviewed design separates framework editor behavior from M3 chrome and includes memory, allocation, invalidation, input, and test budgets. |
+| P3.6 | Implement multiline Material 3 text fields | Not started | Design produced by P3.5 | P3.5 | Shared editor and M3 field follow-on are implemented with multiline, composition, scrolling, validation, keyboard, lifecycle, golden, and target-cost coverage. |
+| P3.7 | Implement modal sheets and adopt transient lifetime | Not started | [Sheets](design/proposed/material3_sheets_design.md) and the remaining sheet part of Phase 2 in [Transient presenter lifetime](design/in_progress/transient_presenter_lifetime_design.md) | P0.5, P1.4 | Sheet design Phases 1–3 are implemented; modal wrappers use the transient slot, detach content/scrim before completion, restore focus, and pass gesture, Back, lifetime, golden, and target tests. |
+
+Phase 3 exits when P3.1–P3.7 are **Done** and one application changes among
+bar, rail, and drawer without changing route state.
+
+## Phase 4: Demand-Driven Backlog
+
+Phase 4 is not a committed sequence and has no aggregate exit condition. Move
+one candidate into a numbered delivery phase only when a concrete application
+needs it; at that point, add explicit design, dependency, and completion rows
+before implementation starts.
+
+| Candidate | Existing design status | Known prerequisite before scheduling |
 | --- | --- | --- |
-| Scaffold plus top app bars and search entry | In progress | The app-bar/search-entry primitives exist; planned golden coverage and integration with scaffold, insets, title/actions, and the common search handoff remain. |
-| One compact navigation path | Not started | Implement navigation bar or drawer according to the reference target; do not require bar, rail, and drawer simultaneously. |
-| Dialogs and one modal sheet path | Not started | Provides confirmation and compact task hosting through shared back and lifetime contracts. The legacy dialog has adopted the lifetime slot, but the M3 dialog and sheet families are not implemented. |
-| Menus and snackbar integration | Not started | Completes transient commands and non-modal result/error feedback. |
-
-Reference slice: a multi-screen settings application can navigate, open a
-menu, edit a setting in a dialog or sheet, confirm or cancel it, handle
-Back/Escape correctly, and report the result with a snackbar.
-
-Phase 1 exit condition:
-
-- the slice works on a compact touch target and the applicable non-touch path;
-- focus restoration, nested dismissal, clipping, and invalidation have
-  integration tests; and
-- the shell uses no application-specific popup or back-routing infrastructure.
-
-## Phase 2: Complete Forms, Search, and Task Feedback
-
-| Work item | Status | Type | Required scope |
-| --- | --- | --- | --- |
-| Editable and multiline M3 text fields | Not started | Existing design follow-on | Editing, validation/error/supporting text, keyboard entry, focus traversal, and constrained scrolling. The reusable legacy single-line editor is a prerequisite, not an M3 text-field implementation. |
-| Progress indicators | Not started | New design plus implementation | Determinate and indeterminate linear/circular variants, bounded animation cost, visibility/lifecycle behavior, and reduced-motion policy if supported. |
-| Chips | Not started | New design plus implementation | Start with variants demanded by search/filter flows; defer catalog completeness until shared selection behavior is proven. |
-| List follow-ons | In progress | Existing design follow-on | Wrapped/supporting text, settings/navigation rows, control rows, selection conveniences, and expandable content are implemented; menu reuse remains. |
-| Toggle icon buttons | Not started | Existing deferred follow-on | Shared toggle semantics for toolbars and compact controls. |
-
-Reference slice: a Wi-Fi or device-configuration flow can search or filter,
-enter and validate credentials, select options, show connection progress,
-cancel safely, and present success or failure.
-[material3_wifi_configuration_design.md](design/proposed/material3_wifi_configuration_design.md)
-is a useful acceptance specification, not a substitute for shared contracts.
-
-Phase 2 exit condition:
-
-- the flow needs no bespoke editing, validation, progress, or selection widgets;
-- long input, empty/error states, cancellation, disabled state, and keyboard
-  traversal are tested; and
-- animation and editing costs remain within documented embedded budgets.
-
-## Phase 3: Consolidate Existing Families and Adaptive Breadth
-
-1. Document and migrate card, checkbox, radio button, and switch to final
-   theme/input contracts.
-2. Implement remaining navigation modes and prove compact-to-expanded
-   adaptation without transferring route ownership into presentation widgets.
-3. Add FAB menu and tooltips once host, focus, hover, and lifetime contracts
-   are implemented.
-4. Add the highest-value remaining button, list, and search-view follow-ons.
-
-Exit when existing implemented families have explicit contracts and final
-theme usage, and an application can change navigation presentation by size
-without changing route state.
-
-## Phase 4: Domain-Specific and Long-Tail Surfaces
-
-Date and time picker designs already exist; they are implementation work here
-unless a committed application needs them earlier. Other candidates include
-expanded search, dense data/table surfaces, richer selection, and
-pointer-specific affordances.
-
-Pull an item forward only when a concrete application needs it and its shared
-prerequisites are satisfied. Predictive back stays here unless a target
-platform makes it an earlier compatibility requirement.
-
-## Recommended Near-Term Order
-
-1. Inventory every foundation and M3 design as designed, partially implemented, implemented,
-   integrated, or target-verified. Never infer implementation from a document.
-2. Capture the supported-target theme-migration measurements and retain the
-   regression coverage described in
-   [theme_color_tokens_design.md](design/implemented/theme_color_tokens_design.md).
-3. Complete adoption of the shared transient-presenter lifetime contract for
-   menus, sheets, and snackbars, and add their lifecycle tests before
-   integrating those presenters. Retain the implemented dialog coverage.
-4. Integrate the implemented focus/non-touch and back-request paths in the
-   Phase 1 slice. Implement presentation pins only for paint-only adopters that
-   need root-stage clipping escape.
-5. Integrate scaffold, the existing app bars, one navigation mode,
-   dialog/sheet, menus, and snackbar into that slice.
-6. Build on the implemented single-line editor to complete M3 text fields,
-   then land progress and the smallest chip/list scope required by the Phase 2
-   slice.
-7. Consolidate existing controls and expand adaptive navigation.
-8. Select long-tail work from demonstrated application demand.
+| Date and time pickers | Proposed designs exist | P2.1 text fields and P1.8 dialogs; confirm localization and target-size requirements. |
+| Toolbars, FABs, extended FABs, split buttons, and button groups | Proposed designs exist | Implement the proposed icon-button design first and select a concrete consuming flow. |
+| Chips | No local design | Name a concrete filter/selection consumer, then add a chips design covering only its required variants and shared selection semantics. |
+| Focused/expanded search | No complete local design | Add an explicit search-workflow design covering query ownership, suggestions/results, focus, Back, and presentation lifetime. |
+| Tooltips and pointer-specific affordances | No complete local design | Define pointer/hover routing and tooltip lifetime before component APIs. |
+| Dense data/table surfaces and richer selection | No local design | Name a concrete data model and embedded target budget before design. |
+| Predictive Back | Deferred by the implemented Back design | Schedule only for a target compatibility requirement; preserve semantic Back as the commit path. |
 
 ## Tracking and Review
 
-Maintain a lightweight companion inventory with one row per work item and:
-
-- owner and dependencies;
-- design, implementation, integration, and target-verification status;
-- RAM, flash, stack, and widget-size deltas; and
-- the reference flow that justifies the item.
-
-Review this roadmap at phase exits. Put dates on committed tracker milestones,
-not speculative architectural-roadmap items.
+Use the IDs in this document in issues and commits. Update a row to **Done**
+only when its completion check is satisfied; do not derive roadmap status from
+the containing directory of a design document. Record target evidence in the
+row's named report or acceptance artifact. Review the roadmap when a phase
+exits or when a reviewed design changes a listed dependency.
 
 ## Position on the Plan
 
-The original emphasis on shells and forms was sound. The necessary correction
-is to put shared-contract implementation and integration ahead of catalog
-breadth, and judge progress through end-to-end slices and target measurements.
-
-The largest delivery risk is not a missing M3 component. It is having many
-detailed designs whose implementations make different assumptions about theme
-ownership, focus, back dispatch, text editing, or transient lifetimes. Phases
-0 through 2 reduce that risk while still producing useful, visible software.
+The original emphasis on shells and forms remains sound. The delivery plan now
+distinguishes a completed framework contract from adoption by a future
+component, makes missing designs first-class tasks, and assigns integration to
+the phase that owns the consuming component. This keeps phase dependencies
+one-way while still judging progress through end-to-end slices and target
+measurements.

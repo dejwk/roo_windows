@@ -2,7 +2,12 @@
 
 ## Implementation status
 
-**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+**Proposed.** None of the defined scope is implemented. Before implementation,
+the queued non-owning strings and independent listener pointer in this document
+must be replaced by the bounded ownership model required by the
+transient-presenter-lifetime design, as tracked by roadmap item P1.9. The
+status of existing and outstanding prerequisites is recorded in the
+[status index](../README.md).
 
 ## Objective
 

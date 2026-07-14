@@ -2,7 +2,12 @@
 
 ## Implementation status
 
-**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+**Proposed.** None of the defined scope is implemented. Before implementation,
+the retained trigger/anchor and presenter rules in this document must be
+reconciled with the copied-anchor, presenter-owned-pin, and single-slot rules
+in the transient-presenter-lifetime design, as tracked by roadmap item P1.6.
+The status of existing and outstanding prerequisites is recorded in the
+[status index](../README.md).
 
 ## Objective
 
