@@ -9,6 +9,7 @@
 #include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/transient_presentation.h"
+#include "roo_windows/material3/tabs/tabs.h"
 #include "roo_windows/widgets/text_field.h"
 
 namespace roo_windows {
@@ -99,6 +100,33 @@ class TextFieldActivity : public Activity {
   TextField field;
   int request_count = 0;
   BackSource last_source = BackSource::kProgrammatic;
+};
+
+class EscapeCountingTabs : public material3::Tabs {
+ public:
+  using material3::Tabs::Tabs;
+
+  bool onKeyEvent(const KeyEvent& event) override {
+    if (event.code == KeyCode::kEscape) ++escape_count;
+    return material3::Tabs::onKeyEvent(event);
+  }
+
+  int escape_count = 0;
+};
+
+class TabsActivity : public Activity {
+ public:
+  explicit TabsActivity(ApplicationContext& context)
+      : tabs(context), first(context, "First"), second(context, "Second") {
+    tabs.addTab(first);
+    tabs.addTab(second);
+  }
+
+  Widget& getContents() override { return tabs; }
+
+  EscapeCountingTabs tabs;
+  material3::Tab first;
+  material3::Tab second;
 };
 
 // Verifies that acquisition is bounded to four four-event source reads and
@@ -217,6 +245,30 @@ TEST(KeySource, UnhandledRootEscapeCancelsFocusedEditor) {
   EXPECT_EQ(BackSource::kEscapeKey, activity.last_source);
   EXPECT_FALSE(app.text_field_editor().isEdited(&activity.field));
   EXPECT_EQ(1u, task->activityCount());
+  task->clear();
+}
+
+TEST(KeySource, UnhandledRootEscapeFromFocusedTabBubblesToTabHost) {
+  roo::byte raster[64 * 32 * 2] = {};
+  roo_display::OffscreenDevice<roo_display::Argb4444> device(
+      64, 32, raster, roo_display::Argb4444());
+  roo_display::Display display(device);
+  roo_scheduler::Scheduler scheduler;
+  Environment environment(scheduler);
+  QueuedKeySource keys({{KeyPhase::kDown, KeyCode::kEscape, 0, 0}});
+  Application app(&environment, display, keys, false);
+  Task* task = app.addTaskFullScreen();
+  TabsActivity activity(app.context());
+  task->enterActivity(&activity);
+  app.refresh();
+  ASSERT_TRUE(activity.first.requestFocus());
+
+  app.start();
+  scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 1);
+
+  EXPECT_EQ(1u, task->activityCount());
+  EXPECT_EQ(&activity.first, app.context().focus().focused());
+  EXPECT_EQ(1, activity.tabs.escape_count);
   task->clear();
 }
 

@@ -336,9 +336,11 @@ Validation:
 ### Phase 4: Non-touch integration — implemented
 
 Route hardware Back and Escape using the focus-owned task, and reconcile editor
-cancellation with transient-first dispatch. Add focused tests for no-target
-requests, dialog precedence, activity fallback, and editor cancellation, plus
-an updated reference application.
+cancellation with transient-first dispatch. When route handling leaves a
+request unhandled, it resumes normal focused-widget dispatch through
+structural ancestors, as other keys do. Add focused tests for no-target
+requests, dialog precedence, activity fallback, editor cancellation, and
+focused-tab propagation, plus an updated reference application.
 
 Proposed commit message:
 

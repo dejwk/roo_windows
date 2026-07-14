@@ -153,8 +153,8 @@ void Application::dispatchKeyEvent(const KeyEvent& event) {
                             ? BackSource::kBackKey
                             : BackSource::kEscapeKey;
     if (requestBackFromFocused(source) == BackResult::kHandled) return;
-    // An unhandled root request continues to the focus owner so editors can
-    // cancel local state without bypassing transient/activity precedence.
+    // An unhandled request continues through normal focused-widget dispatch,
+    // including structural ancestors, just like every other key.
   }
   if ((event.phase == KeyPhase::kDown || event.phase == KeyPhase::kRepeat) &&
       event.code == KeyCode::kTab) {
