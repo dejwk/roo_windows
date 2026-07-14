@@ -180,7 +180,7 @@ objects, and pays for badge or shortcut support only on rows that use it.
 12. Keep the menu row interaction model to one action per row.
 
 The root menu chain must occupy the shared interactive-transient slot from the
-[Back request coordination design](../in_progress/application_navigation_back_behavior_design.md)
+[Back request coordination design](../implemented/application_navigation_back_behavior_design.md)
 with Back and Escape enabled. One semantic request closes only the deepest open
 submenu; the root registration stays active until the whole chain closes.
 

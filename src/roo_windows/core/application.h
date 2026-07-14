@@ -159,6 +159,11 @@ class Application {
   bool drainKeyEvents();
   void dispatchKeyEvent(const KeyEvent& event);
 
+  /// Routes a hardware Back/Escape request through the root transient and the
+  /// task containing the current focus owner. Returns unhandled when no
+  /// focus-owned task exists.
+  BackResult requestBackFromFocused(BackSource source);
+
   /// Returns whether `task` is owned by this application.
   bool ownsTask(const Task& task) const;
 

@@ -2,13 +2,12 @@
 
 ## Implementation status
 
-**In progress.** Phases 1 through 3 are implemented: task/activity semantics,
-explicit application target routing, UI Back-button adoption, and root
-transient-slot precedence. Dialogs are registered with the slot. Hardware
-Back/Escape routing, focus-derived task selection, soft-keyboard coordination,
-and their integration tests remain. Adoption by future menu, sheet, drawer,
-and Material 3 dialog presenters is component-owned future work. See the
-[status index](../README.md) for prerequisite status.
+**Implemented.** Phases 1 through 4 provide task/activity semantics, explicit
+and focus-derived application target routing, UI and hardware Back/Escape
+entry, root transient-slot precedence, dialog registration, and editor
+fallback after an unhandled root request. Adoption by future menu, sheet,
+drawer, and Material 3 dialog presenters is component-owned future work. See
+the [status index](../README.md) for dependency status.
 
 ## Objective
 
@@ -59,18 +58,18 @@ layer order: regular tasks, popup tasks, then the modal dialog. Visual priority
 cannot implement semantic Back because a popup task is a generic host and does
 not know whether its contents dismiss, navigate internally, or ignore Back.
 
-The core route path is implemented. The remaining integration gaps are:
+The core route path is implemented:
 
-1. `Application::dispatchKeyEvent()` does not yet map hardware Back or Escape
-   into the semantic request path.
-2. A hardware request does not yet derive its target task from the focused
-   widget.
-3. Text editing currently handles Escape locally and still needs to defer to
-   transient-first semantic Back handling.
+1. `Application::dispatchKeyEvent()` maps hardware Back and Escape down events
+   into the semantic request path without repeating route pops.
+2. The request offers the root transient slot first, even when no widget owns
+   focus, then derives a target task from the focused widget.
+3. An unhandled root request continues to the focused widget, allowing text
+   editing to cancel local state after transient and activity policy run.
 
 ### Dependency on transient presenter lifetime
 
-The [transient presenter lifetime design](transient_presenter_lifetime_design.md)
+The [transient presenter lifetime design](../proposed/transient_presenter_lifetime_design.md)
 defines the single interactive-transient slot, finish reasons, destruction
 safety, and slot-removal-before-completion ordering.
 
@@ -103,9 +102,9 @@ not identify the intended navigation target.
 - Non-touch input uses the task containing the focus owner.
 
 The [non-touch input design](../implemented/non_touch_input_design.md) owns focus resolution.
-The remaining integration work derives the target task from its focused widget.
-Until that lands, callers must supply an explicit task; the framework does not
-guess.
+Hardware routing derives the target task from its focused widget. With no
+eligible transient and no focus-owned or explicitly supplied task, the request
+is unhandled; the framework does not guess.
 
 ## Requirements
 
@@ -320,7 +319,7 @@ example or emulator target.
 
 ### Phase 3: Transient precedence — implemented
 
-After Phase 1 of the [lifetime design](transient_presenter_lifetime_design.md),
+After Phase 1 of the [lifetime design](../proposed/transient_presenter_lifetime_design.md),
 add fixed Back/Escape policy bits and offer the request to the slot occupant
 before task fallback. Test slot-removal-before-completion, replacement
 reentrancy, one finish per request, and fallback with no eligible transient.
@@ -334,7 +333,7 @@ Validation:
 - `bazel test //:back_request_test
   //:transient_presentation_lifetime_test`
 
-### Phase 4: Non-touch integration — remaining
+### Phase 4: Non-touch integration — implemented
 
 Route hardware Back and Escape using the focus-owned task, and reconcile editor
 cancellation with transient-first dispatch. Add focused tests for no-target

@@ -485,7 +485,7 @@ Dismissal is closed as follows:
 2. explicit owner dismissal dismisses,
 3. dragging the sheet below the smallest detent dismisses,
 4. Back and Escape dismiss through the shared interactive-transient slot from
-   the [Back request coordination design](../in_progress/application_navigation_back_behavior_design.md),
+   the [Back request coordination design](../implemented/application_navigation_back_behavior_design.md),
 5. and content-triggered dismissal stays content-owned rather than being hard-
    coded into the base component.
 

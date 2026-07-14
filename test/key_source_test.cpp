@@ -4,8 +4,12 @@
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
+#include "roo_windows/core/activity.h"
 #include "roo_windows/core/application.h"
+#include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/environment.h"
+#include "roo_windows/core/transient_presentation.h"
+#include "roo_windows/widgets/text_field.h"
 
 namespace roo_windows {
 namespace {
@@ -34,6 +38,67 @@ class QueuedKeySource : public KeySource {
   size_t next_;
   int drain_calls_;
   std::vector<int> max_events_;
+};
+
+class FocusableBackWidget : public BasicWidget {
+ public:
+  explicit FocusableBackWidget(ApplicationContext& context)
+      : BasicWidget(context) {}
+
+  bool isFocusable() const override { return true; }
+  Dimensions getSuggestedMinimumDimensions() const override {
+    return Dimensions(1, 1);
+  }
+};
+
+class BackActivity : public Activity {
+ public:
+  explicit BackActivity(ApplicationContext& context) : contents_(context) {}
+
+  Widget& getContents() override { return contents_; }
+  BackResult onBackRequested(BackSource source) override {
+    ++request_count;
+    last_source = source;
+    return BackResult::kUnhandled;
+  }
+
+  FocusableBackWidget& contents() { return contents_; }
+
+  int request_count = 0;
+  BackSource last_source = BackSource::kProgrammatic;
+
+ private:
+  FocusableBackWidget contents_;
+};
+
+class BackPresentation final : public TransientPresentationRegistration {
+ public:
+  PresentationFinishReason reason = PresentationFinishReason::kAction;
+  int detach_count = 0;
+
+ protected:
+  void detachPresentation(PresentationFinishReason finish_reason) override {
+    reason = finish_reason;
+    ++detach_count;
+  }
+};
+
+class TextFieldActivity : public Activity {
+ public:
+  TextFieldActivity(ApplicationContext& context, TextFieldEditor& editor)
+      : field(context, editor, font_body1(), "", roo_display::kLeft,
+              TextField::NONE) {}
+
+  Widget& getContents() override { return field; }
+  BackResult onBackRequested(BackSource source) override {
+    ++request_count;
+    last_source = source;
+    return BackResult::kUnhandled;
+  }
+
+  TextField field;
+  int request_count = 0;
+  BackSource last_source = BackSource::kProgrammatic;
 };
 
 // Verifies that acquisition is bounded to four four-event source reads and
@@ -78,6 +143,81 @@ TEST(KeySource, ApplicationStopsAtTheFirstPartialBatch) {
   EXPECT_EQ(1, keys.drain_calls());
   EXPECT_EQ(0u, keys.remaining());
   EXPECT_EQ((std::vector<int>{4}), keys.max_events());
+}
+
+TEST(KeySource, HardwareEscapeUsesFocusedTask) {
+  roo::byte raster[32 * 32 * 2] = {};
+  roo_display::OffscreenDevice<roo_display::Argb4444> device(
+      32, 32, raster, roo_display::Argb4444());
+  roo_display::Display display(device);
+  roo_scheduler::Scheduler scheduler;
+  Environment environment(scheduler);
+  QueuedKeySource keys({{KeyPhase::kDown, KeyCode::kEscape, 0, 0}});
+  Application app(&environment, display, keys, false);
+  Task* task = app.addTaskFullScreen();
+  BackActivity root(app.context());
+  BackActivity child(app.context());
+  task->enterActivity(&root);
+  task->enterActivity(&child);
+  app.refresh();
+  ASSERT_TRUE(child.contents().requestFocus());
+
+  app.start();
+  scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 1);
+
+  EXPECT_EQ(1u, task->activityCount());
+  EXPECT_EQ(&root, task->currentActivity());
+  EXPECT_EQ(1, child.request_count);
+  EXPECT_EQ(BackSource::kEscapeKey, child.last_source);
+  task->clear();
+}
+
+TEST(KeySource, HardwareBackDismissesTransientWithoutFocus) {
+  roo::byte raster[32 * 32 * 2] = {};
+  roo_display::OffscreenDevice<roo_display::Argb4444> device(
+      32, 32, raster, roo_display::Argb4444());
+  roo_display::Display display(device);
+  roo_scheduler::Scheduler scheduler;
+  Environment environment(scheduler);
+  QueuedKeySource keys({{KeyPhase::kDown, KeyCode::kBack, 0, 0}});
+  Application app(&environment, display, keys, false);
+  BackPresentation presentation;
+  ASSERT_EQ(PresentationStartResult::kStarted,
+            app.root().transient_presentation_slot().show(
+                presentation, TransientPresentationPolicy(true, true)));
+
+  app.start();
+  scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 1);
+
+  EXPECT_EQ(1, presentation.detach_count);
+  EXPECT_EQ(PresentationFinishReason::kBack, presentation.reason);
+  EXPECT_FALSE(app.root().transient_presentation_slot().hasActivePresentation());
+}
+
+TEST(KeySource, UnhandledRootEscapeCancelsFocusedEditor) {
+  roo::byte raster[64 * 32 * 2] = {};
+  roo_display::OffscreenDevice<roo_display::Argb4444> device(
+      64, 32, raster, roo_display::Argb4444());
+  roo_display::Display display(device);
+  roo_scheduler::Scheduler scheduler;
+  Environment environment(scheduler);
+  QueuedKeySource keys({{KeyPhase::kDown, KeyCode::kEscape, 0, 0}});
+  Application app(&environment, display, keys, false);
+  Task* task = app.addTaskFullScreen();
+  TextFieldActivity activity(app.context(), app.text_field_editor());
+  task->enterActivity(&activity);
+  app.refresh();
+  ASSERT_TRUE(activity.field.requestFocus());
+  ASSERT_TRUE(app.text_field_editor().isEdited(&activity.field));
+
+  app.start();
+  scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 1);
+
+  EXPECT_EQ(1, activity.request_count);
+  EXPECT_EQ(BackSource::kEscapeKey, activity.last_source);
+  EXPECT_FALSE(app.text_field_editor().isEdited(&activity.field));
+  EXPECT_EQ(1u, task->activityCount());
+  task->clear();
 }
 
 }  // namespace

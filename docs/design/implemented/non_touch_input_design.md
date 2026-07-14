@@ -358,7 +358,7 @@ Key routing is target-first and consumption-based. `KeyDispatcher` handles
 each event in this fixed order:
 
 1. On Back or Escape down, call the shared
-   [`Application::requestBack()`](../in_progress/application_navigation_back_behavior_design.md)
+   [`Application::requestBack()`](application_navigation_back_behavior_design.md)
    path. A handled request stops dispatch; an unhandled request continues so a
    root editor can cancel local edit state.
 2. On Tab down, move focus forward or backward according to Shift. Widgets do

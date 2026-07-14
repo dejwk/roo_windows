@@ -600,6 +600,7 @@ bool TextField::onKeyEvent(const KeyEvent& event) {
       editor_.enter();
       return true;
     case KeyCode::kEscape:
+    case KeyCode::kBack:
       editor_.cancel();
       return true;
     case KeyCode::kBackspace:

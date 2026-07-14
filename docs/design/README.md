@@ -14,6 +14,7 @@ Status was audited against the source tree and tests on 2026-07-12. “Dependenc
 
 | Design | Dependency status |
 | --- | --- |
+| Back request coordination | Task/activity semantics, explicit and focus-derived application routing, UI and hardware Back/Escape entry, root transient precedence, legacy-dialog registration, and editor fallback are implemented. Future presenter adoption is tracked by component designs. |
 | Badge | Paint context and visual-overflow foundations are implemented; general transient presentation remains proposed and is not required by the badge scope. |
 | Button | Surface widgets, click animation, and Material 3 theme support are implemented; icon buttons are a separate proposed design. |
 | Click-animation customization | The shared click-animation controller and widget-local animation view are implemented. |
@@ -31,7 +32,6 @@ Status was audited against the source tree and tests on 2026-07-12. “Dependenc
 
 | Design | Dependency status |
 | --- | --- |
-| Back request coordination | Task/activity semantics, explicit application target routing, UI Back-button adoption, root transient-slot precedence, and legacy-dialog registration are implemented. Hardware Back/Escape routing, focus-derived target selection, and editor coordination remain; future presenter adoption is tracked by component designs. |
 | Material 3 lists | Core list family phases are implemented; the remaining design phases are not complete. Badge and paint-context dependencies are implemented. |
 | Non-touch input | Keyboard acquisition, focus lifecycle, click/value/scroll control interaction, structured list/menu/tab/rail navigation, and hardware text entry are implemented. |
 | Text system | `TextBlock` wrapping, justification, max-lines, ellipsis, caching, and golden coverage are implemented; shared rich paragraph layout and `RichTextBlock` remain. |

@@ -519,7 +519,7 @@ The wrapper owns:
 - drawer slide-in / slide-out animation,
 - optional automatic dismissal after destination selection,
 - Back and Escape dismissal through the shared interactive-transient slot from
-  the [Back request coordination design](../in_progress/application_navigation_back_behavior_design.md),
+  the [Back request coordination design](../implemented/application_navigation_back_behavior_design.md),
 - and modality over the content beneath the popup task.
 
 The modal wrapper registers as one root transient for its visible lifetime.

@@ -70,7 +70,9 @@ const MainWindow* Widget::getMainWindow() const {
   return parent_->getMainWindow();
 }
 
-Task* Widget::getTask() { return parent_->getTask(); }
+Task* Widget::getTask() {
+  return parent_ == nullptr ? nullptr : parent_->getTask();
+}
 
 namespace {
 

@@ -33,7 +33,7 @@ The main framework contracts with checked-in design coverage are:
 - [text_system_design.md](design/in_progress/text_system_design.md)
 - [non_touch_input_design.md](design/implemented/non_touch_input_design.md)
 - [horizontal_page_host_design.md](design/implemented/horizontal_page_host_design.md)
-- [application_navigation_back_behavior_design.md](design/in_progress/application_navigation_back_behavior_design.md)
+- [application_navigation_back_behavior_design.md](design/implemented/application_navigation_back_behavior_design.md)
 - [transient_presenter_lifetime_design.md](design/proposed/transient_presenter_lifetime_design.md)
 - [transient_presentation_pins_design.md](design/proposed/transient_presentation_pins_design.md)
 
@@ -106,8 +106,8 @@ later components must not invent temporary alternatives to these contracts.
 | Work item | Current state | Required outcome |
 | --- | --- | --- |
 | Retain theme-migration evidence | Implemented; host coverage exists | Record supported-target RAM, flash, stack, size, and visual-regression evidence for `FrameworkTheme` and `material3::Theme`. |
-| Integrate implemented focus and non-touch input | Keyboard acquisition, lifecycle-safe focus, traversal, structured-surface navigation, scroll/value controls, and single-line hardware text entry are implemented | Retain one shared touch/keyboard dispatch model while integrating shell components. Back/Escape coordination remains dependent on the shared back-request contract. |
-| Land back request coordination | Narrow proposed design exists; `Task`/`Activity` routing is already implemented | Preserve `Task`/`Activity` as the route model; add root-safe activity fallback and lifetime-host transient dismissal through one semantic Back/Escape path. Predictive animation remains deferred. |
+| Integrate implemented focus and non-touch input | Keyboard acquisition, lifecycle-safe focus, traversal, structured-surface navigation, scroll/value controls, single-line hardware text entry, and shared Back/Escape coordination are implemented | Retain one shared touch/keyboard dispatch model while integrating shell components, using the implemented back-request contract for semantic Back/Escape handling. |
+| Integrate implemented back request coordination | Task/activity fallback, transient precedence, UI and hardware Back/Escape entry, focus-derived targeting, and editor fallback are implemented | Adopt the shared semantic path in shell components without introducing local dispatchers. Predictive animation remains deferred. |
 | Land transient-presenter lifetime and ownership | Shared proposed design exists; component designs still contain inconsistent rules | Implement the shared ownership contract and reconcile anchors, presenters, content, text, listeners, completion delivery, close, detach, destruction, replacement, and queued-request behavior without relying on undocumented caller ordering. |
 | Land paint-only presentation pins where required | Narrow proposed design exists; none is implemented | Root-stage paint-only visuals escape ancestor clipping, obey task/popup/dialog ordering, restore old pixels, and unregister safely. Interactive surfaces remain popup tasks or dialogs. Pins are not treated as the general presenter-lifetime solution. |
 | Complete editable-text core | Single-line hardware editing provides cursor movement, selection, deletion, commit/cancel, and focus entry | Add composition policy, validation, constrained scrolling, and multiline layout below M3 chrome. |
@@ -206,10 +206,9 @@ platform makes it an earlier compatibility requirement.
 3. Land the shared transient-presenter lifetime contract, reconcile the menu,
    sheet, dialog, and snackbar APIs with the proposed design, and add lifecycle
    tests before integrating those presenters.
-4. Integrate the implemented focus/non-touch path and land the remaining shared
-   back-request coordination required by the Phase 1 slice. Implement
-   presentation pins only for paint-only adopters that need root-stage clipping
-   escape.
+4. Integrate the implemented focus/non-touch and back-request paths in the
+   Phase 1 slice. Implement presentation pins only for paint-only adopters that
+   need root-stage clipping escape.
 5. Integrate scaffold, the existing app bars, one navigation mode,
    dialog/sheet, menus, and snackbar into that slice.
 6. Build on the implemented single-line editor to complete M3 text fields,

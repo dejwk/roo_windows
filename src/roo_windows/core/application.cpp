@@ -76,6 +76,19 @@ BackResult Application::requestBack(Task& target, BackSource source) {
   return target.requestBack(source);
 }
 
+BackResult Application::requestBackFromFocused(BackSource source) {
+  if (root_window_.transient_presentation_slot().requestBack(source) ==
+      BackResult::kHandled) {
+    return BackResult::kHandled;
+  }
+  Widget* focused = context_.focus().focused();
+  if (focused == nullptr) return BackResult::kUnhandled;
+  Task* target = focused->getTask();
+  if (target == nullptr) return BackResult::kUnhandled;
+  CHECK(ownsTask(*target));
+  return target->requestBack(source);
+}
+
 void Application::start() {
   ui_thread_id_ = roo::this_thread::get_id();
   if (touch_enabled_) touch_sensor_.start();
@@ -134,6 +147,15 @@ bool Application::drainKeyEvents() {
 }
 
 void Application::dispatchKeyEvent(const KeyEvent& event) {
+  if (event.phase == KeyPhase::kDown &&
+      (event.code == KeyCode::kBack || event.code == KeyCode::kEscape)) {
+    BackSource source = event.code == KeyCode::kBack
+                            ? BackSource::kBackKey
+                            : BackSource::kEscapeKey;
+    if (requestBackFromFocused(source) == BackResult::kHandled) return;
+    // An unhandled root request continues to the focus owner so editors can
+    // cancel local state without bypassing transient/activity precedence.
+  }
   if ((event.phase == KeyPhase::kDown || event.phase == KeyPhase::kRepeat) &&
       event.code == KeyCode::kTab) {
     context_.focus().moveFocus(
