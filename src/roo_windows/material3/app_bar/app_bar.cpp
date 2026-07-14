@@ -36,6 +36,23 @@ const Widget& ChildAt(Widget* const (&slots)[N], int idx, const char* owner) {
   return *slots[0];
 }
 
+// Presentation children (the passive search glyph and display text) must not
+// swallow a search-surface tap. A supplied descendant still gets first refusal
+// when it is itself interactive, so callers can attach independent actions.
+bool AppendInteractiveChildTouchTarget(Widget& child, XDim x, YDim y,
+                                       bool sloppy,
+                                       std::vector<Widget*>& path) {
+  const size_t old_size = path.size();
+  const bool hit = sloppy
+                       ? child.fillSloppyTouchTargetPath(
+                             x - child.offsetLeft(), y - child.offsetTop(), path)
+                       : child.fillTouchTargetPath(
+                             x - child.offsetLeft(), y - child.offsetTop(), path);
+  if (hit && !path.empty() && path.back()->isClickable()) return true;
+  path.resize(old_size);
+  return false;
+}
+
 }  // namespace
 
 Dimensions internal::AppBarText::getSuggestedMinimumDimensions() const {
@@ -347,9 +364,54 @@ Color SearchBar::background() const {
   return theme().material3Theme().color.surfaceContainerHigh;
 }
 
+::roo_windows::material3::ColorToken SearchBar::containerRole() const {
+  return ::roo_windows::material3::ColorToken::kSurfaceContainerHigh;
+}
+
+const internal::SearchEntryTokens& SearchBar::entryTokens() const {
+  return internal::kStandaloneSearchEntryTokens;
+}
+
 BorderStyle SearchBar::getBorderStyle() const {
   return BorderStyle(static_cast<uint8_t>(std::min<int16_t>(Scaled(28), 0xff)),
                      0);
+}
+
+bool SearchBar::fillTouchTargetPath(XDim x, YDim y,
+                                    std::vector<Widget*>& path) {
+  if (!isVisible() || !isEnabled() || !bounds().contains(x, y)) return false;
+  path.push_back(this);
+  for (int i = getChildrenCount() - 1; i >= 0; --i) {
+    Widget& child = getChild(i);
+    if (!child.isVisible() || !child.isEnabled() ||
+        !child.parent_bounds().contains(x, y)) {
+      continue;
+    }
+    if (AppendInteractiveChildTouchTarget(child, x, y, false, path)) {
+      return true;
+    }
+  }
+  return true;
+}
+
+bool SearchBar::fillSloppyTouchTargetPath(XDim x, YDim y,
+                                          std::vector<Widget*>& path) {
+  if (!isVisible() || !isEnabled() || !getSloppyTouchBounds().contains(x, y)) {
+    return false;
+  }
+  path.push_back(this);
+  for (int i = getChildrenCount() - 1; i >= 0; --i) {
+    Widget& child = getChild(i);
+    if (!child.isVisible() || !child.isEnabled() ||
+        !child.getMaxSloppyTouchParentBounds().contains(x, y)) {
+      continue;
+    }
+    const bool within_bounds = child.parent_bounds().contains(x, y);
+    if (AppendInteractiveChildTouchTarget(child, x, y, !within_bounds, path)) {
+      return true;
+    }
+  }
+  return true;
 }
 
 void SearchBar::replaceSlot(Widget*& slot, WidgetRef widget) {
@@ -399,12 +461,10 @@ Widget& SearchBar::getChild(int idx) {
 }
 
 Dimensions SearchBar::onMeasure(WidthSpec width, HeightSpec height) {
-  const int16_t edge =
-      Scaled(internal::kStandaloneSearchEntryTokens.edge_padding_dp);
-  const int16_t gap =
-      Scaled(internal::kStandaloneSearchEntryTokens.slot_gap_dp);
-  const int16_t row_height =
-      Scaled(internal::kStandaloneSearchEntryTokens.container_height_dp);
+  const internal::SearchEntryTokens& tokens = entryTokens();
+  const int16_t edge = Scaled(tokens.edge_padding_dp);
+  const int16_t gap = Scaled(tokens.slot_gap_dp);
+  const int16_t row_height = Scaled(tokens.container_height_dp);
   Widget* leading = leading_ == nullptr ? &passive_search_icon_ : leading_;
   int16_t occupied = edge * 2;
   occupied += leading
@@ -429,10 +489,9 @@ Dimensions SearchBar::onMeasure(WidthSpec width, HeightSpec height) {
 
 void SearchBar::onLayout(bool changed, const Rect& rect) {
   (void)changed;
-  const int16_t edge =
-      Scaled(internal::kStandaloneSearchEntryTokens.edge_padding_dp);
-  const int16_t gap =
-      Scaled(internal::kStandaloneSearchEntryTokens.slot_gap_dp);
+  const internal::SearchEntryTokens& tokens = entryTokens();
+  const int16_t edge = Scaled(tokens.edge_padding_dp);
+  const int16_t gap = Scaled(tokens.slot_gap_dp);
   const int16_t row_height = rect.height();
   int16_t left = edge;
   int16_t right = rect.width() - edge;
@@ -467,44 +526,33 @@ void SearchBar::onLayout(bool changed, const Rect& rect) {
 
 SearchAppBar::SearchAppBar(ApplicationContext& context)
     : Container(context),
-      display_text_widget_(context),
-      passive_search_icon_(context, ic_outlined_24_action_search()),
+      search_entry_(context),
       leading_(nullptr),
-      inner_trailing_{nullptr, nullptr},
       trailing_{nullptr, nullptr},
-      surface_state_(AppBarSurfaceState::kFlat),
-      search_entry_bounds_(0, 0, -1, -1) {
-  display_text_widget_.setUseOnSurfaceVariant(true);
-  attachChild(display_text_widget_);
-  attachChild(passive_search_icon_);
+      surface_state_(AppBarSurfaceState::kFlat) {
+  attachChild(search_entry_);
+  search_entry_.setOnInteractiveChange(
+      [this]() { this->triggerInteractiveChange(); });
 }
 
 SearchAppBar::~SearchAppBar() {
   for (Widget* slot : trailing_) {
     if (slot) detachChild(slot);
   }
-  for (Widget* slot : inner_trailing_) {
-    if (slot) detachChild(slot);
-  }
   if (leading_) detachChild(leading_);
-  detachChild(&passive_search_icon_);
-  detachChild(&display_text_widget_);
+  detachChild(&search_entry_);
 }
 
 void SearchAppBar::setSurfaceState(AppBarSurfaceState state) {
   if (surface_state_ != state) {
     surface_state_ = state;
+    search_entry_.setSurfaceState(state);
     invalidateInterior();
   }
 }
 
 void SearchAppBar::setDisplayText(roo::string_view text) {
-  if (display_text_ != text) {
-    display_text_ = text;
-    display_text_widget_.setText(text);
-    invalidateInterior();
-    requestLayout();
-  }
+  search_entry_.setDisplayText(text);
 }
 
 void SearchAppBar::replaceSlot(Widget*& slot, WidgetRef widget) {
@@ -525,8 +573,7 @@ void SearchAppBar::setLeading(WidgetRef widget) {
 }
 
 void SearchAppBar::setInnerTrailing(uint8_t index, WidgetRef widget) {
-  CheckTrailingIndex(index);
-  replaceSlot(inner_trailing_[index], std::move(widget));
+  search_entry_.setTrailing(index, std::move(widget));
 }
 
 void SearchAppBar::setTrailing(uint8_t index, WidgetRef widget) {
@@ -535,26 +582,21 @@ void SearchAppBar::setTrailing(uint8_t index, WidgetRef widget) {
 }
 
 int SearchAppBar::getChildrenCount() const {
-  return 2 + (leading_ != nullptr) + ChildCount(inner_trailing_) +
-         ChildCount(trailing_);
+  return 1 + (leading_ != nullptr) + ChildCount(trailing_);
 }
 
 const Widget& SearchAppBar::getChild(int idx) const {
-  if (idx-- == 0) return display_text_widget_;
-  if (idx-- == 0) return passive_search_icon_;
+  if (idx-- == 0) return search_entry_;
   if (leading_ != nullptr && idx-- == 0) return *leading_;
-  int n = ChildCount(inner_trailing_);
-  if (idx < n) return ChildAt(inner_trailing_, idx, "SearchAppBar");
-  return ChildAt(trailing_, idx - n, "SearchAppBar");
+  int n = ChildCount(trailing_);
+  if (idx < n) return ChildAt(trailing_, idx, "SearchAppBar");
+  LOG(FATAL) << "SearchAppBar child index out of bounds";
+  return *leading_;
 }
 
 Widget& SearchAppBar::getChild(int idx) {
-  if (idx-- == 0) return display_text_widget_;
-  if (idx-- == 0) return passive_search_icon_;
+  if (idx-- == 0) return search_entry_;
   if (leading_ != nullptr && idx-- == 0) return *leading_;
-  for (Widget* slot : inner_trailing_) {
-    if (slot && idx-- == 0) return *slot;
-  }
   for (Widget* slot : trailing_) {
     if (slot && idx-- == 0) return *slot;
   }
@@ -568,21 +610,30 @@ Color SearchAppBar::background() const {
                                                       : colors.surfaceContainer;
 }
 
-void SearchAppBar::paint(PaintContext& ctx) const {
-  ctx.clear();
-  if (search_entry_bounds_.empty()) return;
-  const Color entry_background =
-      surface_state_ == AppBarSurfaceState::kFlat
-          ? theme().material3Theme().color.surfaceContainer
-          : theme().material3Theme().color.surfaceContainerHighest;
-  const uint8_t radius = static_cast<uint8_t>(std::min<int>(
-      Scaled(28), std::min<int>(search_entry_bounds_.width(),
-                                search_entry_bounds_.height()) / 2));
-  const roo_display::SmoothShape entry = roo_display::SmoothFilledRoundRect(
-      0, 0, search_entry_bounds_.width() - 1,
-      search_entry_bounds_.height() - 1, radius, entry_background);
-  ctx.drawTiled(entry, search_entry_bounds_,
-                roo_display::kCenter | roo_display::kMiddle, false);
+void SearchAppBar::EmbeddedSearchBar::setSurfaceState(
+    AppBarSurfaceState state) {
+  if (surface_state_ == state) return;
+  surface_state_ = state;
+  invalidateInterior();
+}
+
+Color SearchAppBar::EmbeddedSearchBar::background() const {
+  const auto& colors = theme().material3Theme().color;
+  return surface_state_ == AppBarSurfaceState::kFlat
+             ? colors.surfaceContainer
+             : colors.surfaceContainerHighest;
+}
+
+::roo_windows::material3::ColorToken
+SearchAppBar::EmbeddedSearchBar::containerRole() const {
+  return surface_state_ == AppBarSurfaceState::kFlat
+             ? ::roo_windows::material3::ColorToken::kSurfaceContainer
+             : ::roo_windows::material3::ColorToken::kSurfaceContainerHighest;
+}
+
+const internal::SearchEntryTokens&
+SearchAppBar::EmbeddedSearchBar::entryTokens() const {
+  return internal::kEmbeddedSearchEntryTokens;
 }
 
 Dimensions SearchAppBar::onMeasure(WidthSpec width, HeightSpec height) {
@@ -597,14 +648,14 @@ Dimensions SearchAppBar::onMeasure(WidthSpec width, HeightSpec height) {
     if (slot) slot->measure(WidthSpec::AtMost(action_size),
                             HeightSpec::Exactly(action_size));
   }
-  passive_search_icon_.measure(WidthSpec::AtMost(entry_height),
-                               HeightSpec::Exactly(entry_height));
-  for (Widget* slot : inner_trailing_) {
-    if (slot) slot->measure(WidthSpec::AtMost(entry_height),
-                            HeightSpec::Exactly(entry_height));
-  }
-  display_text_widget_.measure(WidthSpec::AtMost(available_width),
-                               HeightSpec::AtMost(entry_height));
+  const int16_t outer_slots = (leading_ != nullptr) * action_size +
+                              ChildCount(trailing_) * action_size;
+  const int16_t entry_width = std::min<int16_t>(
+      std::max<int16_t>(0, available_width - 2 * Scaled(internal::kAppBarEdgeInsetDp) -
+                              outer_slots),
+      Scaled(internal::kEmbeddedSearchEntryTokens.max_width_dp));
+  search_entry_.measure(WidthSpec::Exactly(entry_width),
+                        HeightSpec::Exactly(entry_height));
   return Dimensions(width.resolveSize(available_width),
                     height.resolveSize(outer_height));
 }
@@ -615,9 +666,6 @@ void SearchAppBar::onLayout(bool changed, const Rect& rect) {
   const int16_t action_size = Scaled(internal::kActionTapTargetDp);
   const int16_t entry_height =
       Scaled(internal::kEmbeddedSearchEntryTokens.container_height_dp);
-  const int16_t entry_edge =
-      Scaled(internal::kEmbeddedSearchEntryTokens.edge_padding_dp);
-  const int16_t gap = Scaled(internal::kEmbeddedSearchEntryTokens.slot_gap_dp);
   const int16_t width = std::max<int16_t>(0, rect.width());
   const int16_t height = std::max<int16_t>(0, rect.height());
   const int16_t action_y = std::max<int16_t>(0, (height - action_size) / 2);
@@ -643,39 +691,8 @@ void SearchAppBar::onLayout(bool changed, const Rect& rect) {
   // than centering the entry and making it drift away from page content.
   const int16_t lane_left = left;
   const int16_t lane_top = std::max<int16_t>(0, (height - entry_height) / 2);
-  search_entry_bounds_ = Rect(lane_left, lane_top, lane_left + lane_width - 1,
-                              lane_top + entry_height - 1);
-
-  int16_t inner_left = lane_left + entry_edge;
-  int16_t inner_right = lane_left + lane_width - entry_edge;
-  auto place_inner = [entry_height, lane_top](Widget* child, int16_t x,
-                                               int16_t max_width) {
-    if (!child || max_width <= 0) return int16_t{0};
-    Dimensions measured = child->measure(WidthSpec::AtMost(max_width),
-                                         HeightSpec::AtMost(entry_height));
-    const int16_t w = std::min<int16_t>(measured.width(), max_width);
-    const int16_t h = std::min<int16_t>(measured.height(), entry_height);
-    child->layout(Rect(x, (entry_height - h) / 2 + lane_top,
-                       x + w - 1, (entry_height - h) / 2 + lane_top + h - 1));
-    return w;
-  };
-  inner_left += place_inner(&passive_search_icon_, inner_left,
-                            std::max<int16_t>(0, inner_right - inner_left)) + gap;
-  for (int i = 1; i >= 0; --i) {
-    Widget* slot = inner_trailing_[i];
-    if (!slot) continue;
-    Dimensions measured = slot->measure(
-        WidthSpec::AtMost(std::max<int16_t>(0, inner_right - inner_left)),
-        HeightSpec::AtMost(entry_height));
-    const int16_t w = std::min<int16_t>(
-        measured.width(), std::max<int16_t>(0, inner_right - inner_left));
-    inner_right -= w;
-    place_inner(slot, inner_right, w);
-    inner_right -= gap;
-  }
-  display_text_widget_.layout(
-      Rect(inner_left, lane_top, std::max<int16_t>(inner_left - 1, inner_right - 1),
-           lane_top + entry_height - 1));
+  search_entry_.layout(Rect(lane_left, lane_top, lane_left + lane_width - 1,
+                            lane_top + entry_height - 1));
 }
 
 bool SearchAppBar::fillTouchTargetPath(XDim x, YDim y,
@@ -688,13 +705,10 @@ bool SearchAppBar::fillTouchTargetPath(XDim x, YDim y,
         !child.parent_bounds().contains(x, y)) {
       continue;
     }
-    if (child.fillTouchTargetPath(x - child.offsetLeft(),
-                                  y - child.offsetTop(), path)) {
+    if (AppendInteractiveChildTouchTarget(child, x, y, false, path)) {
       return true;
     }
-    break;
   }
-  if (search_entry_bounds_.contains(x, y)) return true;
   path.pop_back();
   return false;
 }
@@ -712,18 +726,10 @@ bool SearchAppBar::fillSloppyTouchTargetPath(XDim x, YDim y,
       continue;
     }
     const bool within_bounds = child.parent_bounds().contains(x, y);
-    const bool hit = within_bounds
-                         ? child.fillTouchTargetPath(x - child.offsetLeft(),
-                                                     y - child.offsetTop(), path)
-                         : child.fillSloppyTouchTargetPath(
-                               x - child.offsetLeft(), y - child.offsetTop(),
-                               path);
-    if (hit) return true;
-    if (within_bounds || child.getSloppyTouchParentBounds().contains(x, y)) {
-      break;
+    if (AppendInteractiveChildTouchTarget(child, x, y, !within_bounds, path)) {
+      return true;
     }
   }
-  if (search_entry_bounds_.contains(x, y)) return true;
   path.pop_back();
   return false;
 }

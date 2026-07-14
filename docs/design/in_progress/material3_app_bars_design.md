@@ -2,12 +2,12 @@
 
 ## Implementation status
 
-**In progress.** The `AppBar`, `SearchBar`, and `SearchAppBar` component family,
-token-backed geometry and colors, bounded slots, adaptive layout, activation
-hit routing, focused unit tests, and example are implemented. Planned golden
-coverage and integration with the proposed Material 3 scaffold remain. The
-status of existing and outstanding prerequisites is recorded in the
-[status index](../README.md).
+**Component verification complete; scaffold integration deferred to P1.4.**
+The `AppBar`, `SearchBar`, and `SearchAppBar` component family, token-backed
+geometry and colors, bounded slots, adaptive layout, activation hit routing,
+focused unit tests, golden coverage, and example are implemented. Integration
+with the proposed Material 3 scaffold remains P1.4. The status of existing and
+outstanding prerequisites is recorded in the [status index](../README.md).
 
 ## Objective
 
@@ -89,7 +89,6 @@ What exists today:
 What does not exist yet:
 
 - no focused-search or search-view surface,
-- no app-bar golden-test target,
 - and no implemented Material 3 scaffold or scaffold integration test.
 
 The current Material 3 theme exposes color and state-layer tokens, but not the
@@ -368,10 +367,10 @@ The public family has four pieces:
 
 - the straight full-width top-edge container,
 - one outer leading slot,
-- one shared search-entry lane with the same internal geometry vocabulary as
-  `SearchBar`,
-- one search-display text child inside that lane,
-- up to two trailing widgets inside that search-entry lane,
+- one private embedded `SearchBar` child with embedded geometry and color
+  tokens,
+- one search-display text child and up to two trailing widgets owned by that
+  embedded search surface,
 - and up to two outer trailing slots.
 
 The decisive ownership split is:
@@ -580,8 +579,8 @@ It owns two layers of structure:
 2. and an internal contained search-entry lane that follows search-surface
    geometry and colors.
 
-The internal lane shares its token vocabulary and painting helper with
-`SearchBar`, but `SearchAppBar` remains its own public type because it also
+The internal lane is a composed `SearchBar` child with embedded token and color
+overrides. `SearchAppBar` remains its own public type because it also
 owns:
 
 - one outer leading slot,
@@ -622,17 +621,17 @@ The traversal model is:
 
 Title text and subtitle text are not separate focus targets.
 
-`SearchAppBar` must restrict its own hit and focus bounds to the embedded
-search-entry lane. Outer padding and unused wide-screen slack are not search
-activation targets. Child widgets are tested first and retain their normal
-touch paths. The concrete implementation must override the relevant geometric
-hit-path behavior; deriving from `Container` alone does not provide this
-region-specific click contract.
+The embedded search child owns the search-entry hit and focus bounds;
+`SearchAppBar` itself is not clickable. Outer padding and unused wide-screen
+slack are not search activation targets. Child widgets are tested first and
+retain their normal touch paths. The outer container overrides the relevant
+geometric hit-path behavior so it never becomes a fallback target.
 
 Back and Escape do not have search-surface-local behavior in this document.
 Those keys are owned by the later focused-search workflow once there is an
 actual search-view or focused-search state to dismiss. Until then,
-`SearchBar` and `SearchAppBar` behave like ordinary clickable widgets.
+standalone and embedded `SearchBar` surfaces behave like ordinary clickable
+widgets.
 
 ## Proposed API
 
@@ -713,16 +712,16 @@ API notes:
 1. `AppBar` uses one class plus `AppBarVariant` rather than separate public
    `SmallAppBar`, `MediumFlexibleAppBar`, and `LargeFlexibleAppBar` classes.
    The behavioral model is the same; only token tables and line budgets differ.
-2. `SearchBar` and `SearchAppBar` use ordinary widget click semantics for the
-   "open search" action. No search-specific callback interface is added.
-   Their implementations must explicitly opt into clickability; `Container`
-   does not do that merely because it owns a surface.
+2. Standalone `SearchBar` and the private `SearchBar` composed inside
+   `SearchAppBar` use ordinary widget click semantics for the "open search"
+   action. No search-specific callback interface is added. The outer
+   `SearchAppBar` container remains non-clickable.
 3. Every constructor takes `ApplicationContext&`, matching the required
    `Widget` / `Container` construction contract.
 4. Title, subtitle, and search-display setters forward to by-value text child
-   widgets. Those widgets are returned by the protected child enumeration but
-   are not exposed as replaceable public slots. Empty subtitle text marks the
-   subtitle child gone.
+   widgets. `SearchAppBar` forwards search-display state and activation through
+   its private embedded `SearchBar`. Presentation children are not exposed as
+   replaceable public slots. Empty subtitle text marks the subtitle child gone.
 5. Passing a null `WidgetRef` clears an action slot. Indexed trailing setters
    accept only indices `0` and `1`; other indices fail explicitly in debug/test
    builds and do not mutate the widget in release builds. Replacing a slot
@@ -820,8 +819,8 @@ Code slice:
 1. Implement `SearchAppBar` outer-slot layout, embedded search-entry lane, and
    the adaptive width rule from this design.
 2. Implement flat and scrolled color coordination between the outer container
-   and the embedded search-entry lane, including its by-value
-   `AppBarText` display child.
+   and the composed embedded `SearchBar`, including its by-value `AppBarText`
+   display child.
 3. Add behavior tests proving that child actions consume their own taps while
    taps in the search-entry lane trigger the ordinary search-open action.
 4. Add a representative example under `examples/material3/app_bars/` showing a

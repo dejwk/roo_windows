@@ -148,15 +148,20 @@ class SearchBar : public Container {
   /// Search entry surfaces are intrinsically clickable.
   bool isClickable() const override { return true; }
 
-  /// Keeps interaction feedback out of the container surface paint path.
-  /// Activation still follows the ordinary click and semantic-action path.
-  bool useOverlayOnPress() const override { return false; }
-
   /// Resolves the standalone contained-search surface token.
   Color background() const override;
+  ::roo_windows::material3::ColorToken containerRole() const override;
   BorderStyle getBorderStyle() const override;
 
+  bool fillTouchTargetPath(XDim x, YDim y,
+                           std::vector<Widget*>& path) override;
+  bool fillSloppyTouchTargetPath(XDim x, YDim y,
+                                 std::vector<Widget*>& path) override;
+
  protected:
+  /// Selects geometry for standalone or embedded search-entry variants.
+  virtual const internal::SearchEntryTokens& entryTokens() const;
+
   int getChildrenCount() const override;
   const Widget& getChild(int idx) const override;
   Widget& getChild(int idx) override;
@@ -192,7 +197,7 @@ class SearchAppBar : public Container {
   void setDisplayText(roo::string_view text);
 
   /// Returns the non-owning text displayed by the embedded search entry.
-  roo::string_view displayText() const { return display_text_; }
+  roo::string_view displayText() const { return search_entry_.displayText(); }
 
   /// Replaces or clears the optional outer leading child slot.
   void setLeading(WidgetRef widget);
@@ -203,19 +208,14 @@ class SearchAppBar : public Container {
   /// Replaces or clears one of the two outer trailing child slots.
   void setTrailing(uint8_t index, WidgetRef widget);
 
-  /// Search entry surfaces are intrinsically clickable.
-  bool isClickable() const override { return true; }
-
-  /// The outer action strip remains interactive, but only the contained
-  /// search-entry lane activates this app bar itself.
+  /// Routes the embedded entry and outer affordances independently; the
+  /// non-interactive outer surface never becomes a fallback touch target.
   bool fillTouchTargetPath(XDim x, YDim y,
                            std::vector<Widget*>& path) override;
   bool fillSloppyTouchTargetPath(XDim x, YDim y,
                                  std::vector<Widget*>& path) override;
 
   Color background() const override;
-  void paint(PaintContext& ctx) const override;
-  bool useOverlayOnPress() const override { return false; }
 
  protected:
   int getChildrenCount() const override;
@@ -223,15 +223,27 @@ class SearchAppBar : public Container {
   Widget& getChild(int idx) override;
 
  private:
+  class EmbeddedSearchBar final : public SearchBar {
+   public:
+    explicit EmbeddedSearchBar(ApplicationContext& context)
+        : SearchBar(context), surface_state_(AppBarSurfaceState::kFlat) {}
+
+    void setSurfaceState(AppBarSurfaceState state);
+    Color background() const override;
+    ::roo_windows::material3::ColorToken containerRole() const override;
+
+   protected:
+    const internal::SearchEntryTokens& entryTokens() const override;
+
+   private:
+    AppBarSurfaceState surface_state_;
+  };
+
   void replaceSlot(Widget*& slot, WidgetRef widget);
-  roo::string_view display_text_;
-  internal::AppBarText display_text_widget_;
-  Icon passive_search_icon_;
+  EmbeddedSearchBar search_entry_;
   Widget* leading_;
-  Widget* inner_trailing_[2];
   Widget* trailing_[2];
   AppBarSurfaceState surface_state_;
-  Rect search_entry_bounds_;
 
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
   void onLayout(bool changed, const Rect& rect) override;

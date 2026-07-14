@@ -57,7 +57,7 @@ digraph material3_roadmap_dependencies {
     color="#CBD5E1";
     style="rounded";
 
-    p1_1 [label="P1.1", fillcolor="#FFFFFF", color="#0284C7",
+    p1_1 [label="P1.1", fillcolor="#FFFFFF", color="#16A34A",
           fontcolor="#334155", URL="material3_roadmap.md#p1-1",
           tooltip="Finish app-bar component verification"];
     p1_2 [label="P1.2", fillcolor="#FFFFFF", color="#16A34A",

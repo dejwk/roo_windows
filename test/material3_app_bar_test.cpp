@@ -44,6 +44,12 @@ class ProbeWidget : public BasicWidget {
   }
 };
 
+class ClickableProbeWidget : public ProbeWidget {
+ public:
+  using ProbeWidget::ProbeWidget;
+  bool isClickable() const override { return true; }
+};
+
 // Verifies the Phase-1 defaults preserve the proposed public surface.
 TEST(Material3AppBar, DefaultsMatchThePhaseOneSurface) {
   roo_scheduler::Scheduler scheduler;
@@ -57,8 +63,8 @@ TEST(Material3AppBar, DefaultsMatchThePhaseOneSurface) {
   EXPECT_EQ(AppBarTitleAlignment::kLeading, app_bar.titleAlignment());
   EXPECT_EQ(AppBarSurfaceState::kFlat, app_bar.surfaceState());
   EXPECT_TRUE(search_bar.isClickable());
-  EXPECT_FALSE(search_bar.useOverlayOnPress());
-  EXPECT_TRUE(search_app_bar.isClickable());
+  EXPECT_TRUE(search_bar.useOverlayOnPress());
+  EXPECT_FALSE(search_app_bar.isClickable());
   EXPECT_EQ(AppBarSurfaceState::kFlat, search_app_bar.surfaceState());
 }
 
@@ -114,9 +120,9 @@ TEST(Material3AppBar, ChildSlotsAreBoundedAndClearable) {
   EXPECT_EQ(2, search_bar.childCount());
 
   search_app_bar.setInnerTrailing(0, inner);
-  // SearchAppBar owns by-value display text and a passive search glyph in
-  // addition to its optional fixed slots.
-  EXPECT_EQ(3, search_app_bar.childCount());
+  // The embedded entry owns its presentation and inner-action children; the
+  // outer app bar exposes it as one composed child surface.
+  EXPECT_EQ(1, search_app_bar.childCount());
 }
 
 // The full-width shell stays 64dp high. Its embedded entry fills the central
@@ -126,7 +132,7 @@ TEST(Material3AppBar, SearchAppBarUsesAdaptiveEmbeddedLaneAndRestrictedHits) {
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   TestSearchAppBar search_app_bar(context);
-  ProbeWidget outer_action(context), inner_action(context);
+  ClickableProbeWidget outer_action(context), inner_action(context);
   search_app_bar.setDisplayText("Search mail");
   search_app_bar.setTrailing(0, outer_action);
   search_app_bar.setInnerTrailing(0, inner_action);
@@ -137,11 +143,11 @@ TEST(Material3AppBar, SearchAppBarUsesAdaptiveEmbeddedLaneAndRestrictedHits) {
                             .height());
   search_app_bar.layout(Rect(0, 0, 999, Scaled(64) - 1));
 
-  // The passive glyph is child 1. The capped 720dp lane stays start-aligned
+  // Child 0 is the composed entry. The capped 720dp lane stays start-aligned
   // in the central strip after the right outer action slot has been reserved.
-  EXPECT_EQ(Scaled(16), search_app_bar.childAt(1).offsetLeft());
+  EXPECT_EQ(Scaled(4), search_app_bar.childAt(0).offsetLeft());
   EXPECT_EQ(Scaled(948), outer_action.offsetLeft());
-  EXPECT_GT(inner_action.offsetLeft(), search_app_bar.childAt(1).offsetLeft());
+  EXPECT_GT(inner_action.offsetLeft(), Scaled(16));
 
   std::vector<Widget*> path;
   EXPECT_FALSE(search_app_bar.fillTouchTargetPath(Scaled(800), Scaled(32), path));
@@ -153,7 +159,8 @@ TEST(Material3AppBar, SearchAppBarUsesAdaptiveEmbeddedLaneAndRestrictedHits) {
   path.clear();
 
   EXPECT_TRUE(search_app_bar.fillTouchTargetPath(
-      inner_action.offsetLeft(), inner_action.offsetTop(), path));
+      search_app_bar.childAt(0).offsetLeft() + inner_action.offsetLeft(),
+      search_app_bar.childAt(0).offsetTop() + inner_action.offsetTop(), path));
   EXPECT_EQ(&inner_action, path.back());
 }
 
@@ -174,6 +181,52 @@ TEST(Material3AppBar, StandaloneSearchBarMeasuresWithinItsAdaptiveWidthRange) {
       search_bar.measure(WidthSpec::Exactly(100), HeightSpec::Unspecified(0));
   EXPECT_EQ(100, narrow.width());
   EXPECT_EQ(Scaled(56), narrow.height());
+}
+
+// Passive presentation glyphs and text do not consume the search activation,
+// while a caller-supplied interactive child keeps its own tap target.
+TEST(Material3AppBar, SearchBarsRoutePassiveAndInteractiveSlotsCorrectly) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+  SearchBar search_bar(context);
+  ClickableProbeWidget action(context);
+  search_bar.setDisplayText("Search mail");
+  search_bar.measure(WidthSpec::Exactly(320), HeightSpec::Unspecified(0));
+  search_bar.layout(Rect(0, 0, 319, Scaled(56) - 1));
+
+  std::vector<Widget*> path;
+  EXPECT_TRUE(search_bar.fillTouchTargetPath(Scaled(20), Scaled(28), path));
+  EXPECT_EQ(&search_bar, path.back());
+
+  search_bar.setTrailing(0, action);
+  search_bar.measure(WidthSpec::Exactly(320), HeightSpec::Unspecified(0));
+  search_bar.layout(Rect(0, 0, 319, Scaled(56) - 1));
+  path.clear();
+  EXPECT_TRUE(search_bar.fillTouchTargetPath(action.offsetLeft(),
+                                             action.offsetTop(), path));
+  EXPECT_EQ(&action, path.back());
+
+  TestSearchAppBar search_app_bar(context);
+  ClickableProbeWidget outer_action(context);
+  search_app_bar.setDisplayText("Search all mail");
+  search_app_bar.setTrailing(0, outer_action);
+  search_app_bar.measure(WidthSpec::Exactly(320), HeightSpec::Unspecified(0));
+  search_app_bar.layout(Rect(0, 0, 319, Scaled(64) - 1));
+  path.clear();
+  EXPECT_TRUE(search_app_bar.fillTouchTargetPath(Scaled(20), Scaled(32), path));
+  EXPECT_EQ(&search_app_bar.childAt(0), path.back());
+  path.clear();
+  EXPECT_TRUE(search_app_bar.fillTouchTargetPath(
+      outer_action.offsetLeft() + 1, outer_action.offsetTop() + 1, path));
+  EXPECT_EQ(&outer_action, path.back());
+
+  int search_activations = 0;
+  search_app_bar.setOnInteractiveChange([&search_activations]() {
+    ++search_activations;
+  });
+  search_app_bar.childAt(0).onClicked();
+  EXPECT_EQ(1, search_activations);
 }
 
 // Flexible bars select their Material subtitle height so title and subtitle

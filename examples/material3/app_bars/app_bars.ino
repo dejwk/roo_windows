@@ -85,6 +85,12 @@ void initDisplay() {
 
 namespace {
 
+class ActionIcon : public Icon {
+ public:
+  using Icon::Icon;
+  bool isClickable() const override { return true; }
+};
+
 class AppBarsScreen : public ScrollablePanel {
  public:
   explicit AppBarsScreen(ApplicationContext& context)
@@ -132,6 +138,13 @@ class AppBarsScreen : public ScrollablePanel {
     passive_search_.setOnInteractiveChange([this]() { showActivation(); });
     custom_search_.setOnInteractiveChange([this]() { showActivation(); });
     search_app_bar_.setOnInteractiveChange([this]() { showActivation(); });
+    leading_.setOnInteractiveChange([this]() { showAction(); });
+    first_trailing_.setOnInteractiveChange([this]() { showAction(); });
+    second_trailing_.setOnInteractiveChange([this]() { showAction(); });
+    app_bar_leading_.setOnInteractiveChange([this]() { showAction(); });
+    app_bar_trailing_.setOnInteractiveChange([this]() { showAction(); });
+    search_app_bar_inner_.setOnInteractiveChange([this]() { showAction(); });
+    search_app_bar_outer_.setOnInteractiveChange([this]() { showAction(); });
 
     content_.add(title_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(subtitle_, {.flex_grow = 0, .flex_shrink = 0});
@@ -156,6 +169,8 @@ class AppBarsScreen : public ScrollablePanel {
     feedback_.setText(message_);
   }
 
+  void showAction() { feedback_.setText("App-bar action activated."); }
+
   FlexLayout content_;
   TextLabel title_;
   TextLabel subtitle_;
@@ -168,13 +183,13 @@ class AppBarsScreen : public ScrollablePanel {
   material3::SearchBar passive_search_;
   TextLabel custom_heading_;
   material3::SearchBar custom_search_;
-  Icon leading_;
-  Icon first_trailing_;
-  Icon second_trailing_;
-  Icon app_bar_leading_;
-  Icon app_bar_trailing_;
-  Icon search_app_bar_inner_;
-  Icon search_app_bar_outer_;
+  ActionIcon leading_;
+  ActionIcon first_trailing_;
+  ActionIcon second_trailing_;
+  ActionIcon app_bar_leading_;
+  ActionIcon app_bar_trailing_;
+  ActionIcon search_app_bar_inner_;
+  ActionIcon search_app_bar_outer_;
   TextLabel feedback_;
   char message_[48];
   unsigned int activations_;

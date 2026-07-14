@@ -80,6 +80,12 @@ void initDisplay() {
 
 namespace {
 
+class ActionIcon : public Icon {
+ public:
+  using Icon::Icon;
+  bool isClickable() const override { return true; }
+};
+
 class AppBarScreen : public ScrollablePanel {
  public:
   explicit AppBarScreen(ApplicationContext& context)
@@ -136,12 +142,12 @@ class AppBarScreen : public ScrollablePanel {
   material3::AppBar small_;
   material3::AppBar medium_;
   material3::AppBar large_;
-  Icon small_leading_;
-  Icon small_action_;
-  Icon medium_leading_;
-  Icon medium_action_;
-  Icon large_leading_;
-  Icon large_action_;
+  ActionIcon small_leading_;
+  ActionIcon small_action_;
+  ActionIcon medium_leading_;
+  ActionIcon medium_action_;
+  ActionIcon large_leading_;
+  ActionIcon large_action_;
 };
 
 }  // namespace
