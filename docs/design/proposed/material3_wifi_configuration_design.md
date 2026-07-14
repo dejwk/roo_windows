@@ -112,7 +112,7 @@ The most relevant nearby pieces are:
 - [material3_layout_scaffold_design.md](material3_layout_scaffold_design.md),
   which defines the page-shell direction for header plus scrolling-body
   surfaces,
-- [non_touch_input_design.md](non_touch_input_design.md), which defines the
+- [non_touch_input_design.md](../implemented/non_touch_input_design.md), which defines the
   future keyboard and focus contracts that the Wi-Fi flow should inherit rather
   than bypass,
 - and the current Material 3 list implementation in
@@ -210,7 +210,7 @@ land incrementally.
 6. Save or connect actions are disabled while the current draft is invalid or a
    conflicting controller operation is already running.
 7. The flow must remain compatible with the framework-level focus and keyboard
-   contracts from [non_touch_input_design.md](non_touch_input_design.md); it
+   contracts from [non_touch_input_design.md](../implemented/non_touch_input_design.md); it
    must not introduce a Wi-Fi-specific input model.
 8. `Saved networks` and `Add network` remain reachable even when Wi-Fi is off;
    only live scan results and live connection rows are suppressed.

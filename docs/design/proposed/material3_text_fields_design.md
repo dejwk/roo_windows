@@ -196,7 +196,7 @@ not using."
 
 1. Clicking or tapping the main container starts editing when the field is
    editable.
-2. Under the framework contract in [non_touch_input_design.md](non_touch_input_design.md),
+2. Under the framework contract in [non_touch_input_design.md](../implemented/non_touch_input_design.md),
    focus traversal alone does not start editing; semantic activate starts
    editing instead.
 3. Clicking or tapping the main container invokes normal widget interaction
@@ -476,7 +476,7 @@ reusing the current editor's "recently entered glyph" reveal behavior.
 ### Focus, Activation, and Edit Session Boundaries
 
 This design follows the framework contract in
-[non_touch_input_design.md](non_touch_input_design.md): focus and editing are
+[non_touch_input_design.md](../implemented/non_touch_input_design.md): focus and editing are
 separate states.
 
 A field can therefore be focused without being edited. The chosen rules are:
@@ -493,7 +493,7 @@ focus-manager concern. While a field is edited, printable text, delete or
 backspace, caret movement, and selection-changing keys are routed to the
 shared editor instead of being reinterpreted as synthetic touch gestures.
 That keeps the field aligned with the keyboard-first rule in
-[non_touch_input_design.md](non_touch_input_design.md): semantic keyboard
+[non_touch_input_design.md](../implemented/non_touch_input_design.md): semantic keyboard
 interaction is focus plus action, not fake pointer input.
 
 Confirm and cancel also keep the current editor contract. Both end the edit
@@ -811,7 +811,8 @@ Validation coverage should include:
    icon placement.
 6. Keyboard-only integration coverage for focused-idle versus semantic-
    activate entry after the framework work in
-   [non_touch_input_design.md](non_touch_input_design.md) lands.
+   [non_touch_input_design.md](../implemented/non_touch_input_design.md) is
+   implemented.
 7. Example compilation once `examples/material3/text_fields/text_fields.ino`
    lands.
 

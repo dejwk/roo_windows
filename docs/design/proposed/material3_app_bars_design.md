@@ -61,7 +61,7 @@ What exists today:
   on bottom and floating toolbars and explicitly excludes top app bars,
 - [material3_text_fields_design.md](material3_text_fields_design.md) already
   defines the shared editor direction for real text editing,
-- [non_touch_input_design.md](non_touch_input_design.md) already defines the
+- [non_touch_input_design.md](../implemented/non_touch_input_design.md) already defines the
   focus-layering and semantic-action direction for keyboard and pointer input,
 - [src/roo_windows/core/theme.h](../../../src/roo_windows/core/theme.h) already
   provides the surface-role vocabulary needed for app-bar and search-surface
@@ -168,7 +168,7 @@ The most relevant local references are:
 - [material3_layout_scaffold_design.md](material3_layout_scaffold_design.md)
 - [material3_toolbars_design.md](material3_toolbars_design.md)
 - [material3_text_fields_design.md](material3_text_fields_design.md)
-- [non_touch_input_design.md](non_touch_input_design.md)
+- [non_touch_input_design.md](../implemented/non_touch_input_design.md)
 - [material3_icon_buttons_design.md](material3_icon_buttons_design.md)
 - [../.github/instructions/roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
 

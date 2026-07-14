@@ -77,7 +77,7 @@ As of 2026-05, the relevant pieces are:
 - the checked-in [Material 3 menus design](material3_menus_design.md), which
   already closes the anchored-popup placement algorithm that docked pickers
   should reuse,
-- the checked-in [non-touch input design](non_touch_input_design.md), which
+- the checked-in [non-touch input design](../implemented/non_touch_input_design.md), which
   already closes the future focus and semantic-action model that pickers should
   align with,
 - and the checked-in [Material 3 sheets design](material3_sheets_design.md),
@@ -138,7 +138,7 @@ The most relevant local references are:
 - [material3_text_fields_design.md](material3_text_fields_design.md)
 - [material3_menus_design.md](material3_menus_design.md)
 - [material3_sheets_design.md](material3_sheets_design.md)
-- [non_touch_input_design.md](non_touch_input_design.md)
+- [non_touch_input_design.md](../implemented/non_touch_input_design.md)
 - [widget_authoring.md](../../widget_authoring.md)
 - [roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
 
@@ -873,7 +873,7 @@ Example coverage is one emulation-ready picker example that builds in the same
 workspace as the implementation and demonstrates the modal and docked flows.
 
 Keyboard-specific traversal tests belong in a later non-touch follow-on once
-the framework-level focus manager from [non_touch_input_design.md](non_touch_input_design.md)
+the framework-level focus manager from [non_touch_input_design.md](../implemented/non_touch_input_design.md)
 lands. The picker family itself still keeps its public hooks aligned with that
 future model from the start.
 

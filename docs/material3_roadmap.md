@@ -31,7 +31,7 @@ The main framework contracts with checked-in design coverage are:
 - [widget_event_dispatch_design.md](design/implemented/widget_event_dispatch_design.md)
 - [gesture_arbitration_ownership_design.md](design/implemented/gesture_arbitration_ownership_design.md)
 - [text_system_design.md](design/in_progress/text_system_design.md)
-- [non_touch_input_design.md](design/proposed/non_touch_input_design.md)
+- [non_touch_input_design.md](design/implemented/non_touch_input_design.md)
 - [horizontal_page_host_design.md](design/implemented/horizontal_page_host_design.md)
 - [application_navigation_back_behavior_design.md](design/proposed/application_navigation_back_behavior_design.md)
 - [transient_presenter_lifetime_design.md](design/proposed/transient_presenter_lifetime_design.md)

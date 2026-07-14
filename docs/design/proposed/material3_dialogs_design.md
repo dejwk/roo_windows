@@ -136,7 +136,7 @@ The most relevant local references are:
 
 - [material3_sheets_design.md](material3_sheets_design.md)
 - [material3_snackbar_design.md](material3_snackbar_design.md)
-- [non_touch_input_design.md](non_touch_input_design.md)
+- [non_touch_input_design.md](../implemented/non_touch_input_design.md)
 - [material3_icon_buttons_design.md](material3_icon_buttons_design.md)
 - [embedded-design-doc-authoring.instructions.md](../../../.github/instructions/embedded-design-doc-authoring.instructions.md)
 - [roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
@@ -153,7 +153,7 @@ Those references close six local decisions:
 5. the full-screen close affordance must be dialog-local rather than a public
    dependency on an unimplemented icon-button family,
 6. and keyboard focus must follow the layering rules already defined in
-   [non_touch_input_design.md](non_touch_input_design.md): basic dialogs first,
+   [non_touch_input_design.md](../implemented/non_touch_input_design.md): basic dialogs first,
    then focus-capturing popups, then regular tasks.
 
 ## Requirements
@@ -185,7 +185,7 @@ Those references close six local decisions:
 6. Confirming actions may be disabled; dismissive and acknowledgement actions
    remain enabled.
 7. Back and Escape must dismiss the active basic dialog once the shared key
-   routing from [non_touch_input_design.md](non_touch_input_design.md) is in
+   routing from [non_touch_input_design.md](../implemented/non_touch_input_design.md) is in
    code.
 8. Full-screen dialog close button, Back, and Escape must request dismissal.
 9. Full-screen dialog confirm action must be able to veto close so validation
@@ -325,7 +325,7 @@ That path already attaches a `Scrim`, centers the child surface, and makes the
 dialog the top-most interactive layer.
 
 `FullScreenDialog` is hosted as one full-window popup child or popup task with
-focus-capture semantics from [non_touch_input_design.md](non_touch_input_design.md).
+focus-capture semantics from [non_touch_input_design.md](../implemented/non_touch_input_design.md).
 This split is the most important architectural decision in the design.
 
 A full-screen dialog fills the whole window, so it does not need a scrim.
@@ -447,7 +447,7 @@ Basic dialogs are deliberately strict.
   shared key-routing path exists.
 
 Preferred initial focus follows the ordering already described in
-[non_touch_input_design.md](non_touch_input_design.md): previously focused
+[non_touch_input_design.md](../implemented/non_touch_input_design.md): previously focused
 descendant if still valid, then an explicit preferred focus child, then the
 first focusable descendant.
 
@@ -539,7 +539,7 @@ without per-instance callback storage:
 #### Focus and Overlay Behavior
 
 The full-screen dialog host is a focus-capturing popup scope as defined by
-[non_touch_input_design.md](non_touch_input_design.md).
+[non_touch_input_design.md](../implemented/non_touch_input_design.md).
 
 That choice has three benefits:
 

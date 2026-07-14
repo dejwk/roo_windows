@@ -79,7 +79,7 @@ locally.
 
 ### Existing Layer Roots
 
-[non_touch_input_design.md](non_touch_input_design.md) already treats tasks,
+[non_touch_input_design.md](../implemented/non_touch_input_design.md) already treats tasks,
 popups, and modal dialogs as real routing and focus boundaries.
 [../src/roo_windows/core/main_window.cpp](../../../src/roo_windows/core/main_window.cpp)
 paints those same boundaries in order:
@@ -382,7 +382,7 @@ escape the keyboard widget tree:
   keyboard surface.
 
 That directly matches the popup or passive-overlay split already established in
-[non_touch_input_design.md](non_touch_input_design.md).
+[non_touch_input_design.md](../implemented/non_touch_input_design.md).
 
 #### Menus
 

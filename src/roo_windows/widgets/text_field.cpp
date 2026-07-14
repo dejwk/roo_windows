@@ -1,6 +1,8 @@
 
 #include "roo_windows/widgets/text_field.h"
 
+#include <algorithm>
+
 #include "roo_backport/string_view.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_icons/filled/action.h"
@@ -247,19 +249,37 @@ void TextField::paint(PaintContext& ctx) const {
   }
 }
 
-void TextFieldEditor::edit(TextField* target) {
-  if (target_ == target) return;
+void TextFieldEditor::edit(TextField* target, bool show_software_keyboard) {
+  if (target_ == target) {
+    if (target_ != nullptr) {
+      keyboard_.setListener(this);
+      if (show_software_keyboard) {
+        keyboard_.show();
+      } else {
+        keyboard_.hide();
+      }
+    }
+    return;
+  }
   last_glyph_recently_entered_ = false;
   TextField* old_target = target_;
   target_ = target;
   if (target == nullptr) {
-    old_target->onEditFinished(false);
+    if (old_target != nullptr) old_target->onEditFinished(false);
     keyboard_.hide();
     keyboard_.setListener(nullptr);
-    old_target->invalidateInterior();
+    if (old_target != nullptr) old_target->invalidateInterior();
     return;
   }
-  keyboard_.show();
+  if (old_target != nullptr) {
+    old_target->onEditFinished(false);
+    old_target->invalidateInterior();
+  }
+  if (show_software_keyboard) {
+    keyboard_.show();
+  } else {
+    keyboard_.hide();
+  }
   keyboard_.setListener(this);
   target->invalidateInterior();
   last_glyph_recently_entered_ = false;
@@ -288,6 +308,8 @@ void TextFieldEditor::setSelection(int16_t selection_begin,
   }
   selection_begin_ = selection_begin;
   selection_end_ = selection_end;
+  selection_anchor_ = selection_begin;
+  cursor_position_ = selection_end;
   target_->setDirty();
 }
 
@@ -298,6 +320,7 @@ void TextFieldEditor::measure() {
   const std::string& s = empty ? target_->hint() : target_->content();
   selection_begin_ = 0;
   selection_end_ = 0;
+  selection_anchor_ = 0;
   int max_count = s.size();
   glyphs_.resize(max_count);
   // Special case for an empty string, because begin() might not return
@@ -408,7 +431,9 @@ void TextFieldEditor::rune(uint32_t rune) {
     // Delete the selected text, remove the selection, and set the cursor
     // where there was the selection.
     val.erase(val.begin() + offsets_[selection_begin_],
-              val.begin() + offsets_[selection_end_]);
+              selection_end_ == static_cast<int16_t>(offsets_.size())
+                  ? val.end()
+                  : val.begin() + offsets_[selection_end_]);
     cursor_position_ = selection_begin_;
   }
   char encoded[4];
@@ -441,6 +466,50 @@ void TextFieldEditor::enter() {
   return;
 }
 
+void TextFieldEditor::cancel() { edit(nullptr, false); }
+
+void TextFieldEditor::moveCursor(int16_t position, bool extend_selection) {
+  if (target_ == nullptr) return;
+  position = std::max<int16_t>(
+      0, std::min<int16_t>(position, static_cast<int16_t>(glyphs_.size())));
+  if (extend_selection) {
+    if (!has_selection()) selection_anchor_ = cursor_position_;
+    selection_begin_ = std::min(selection_anchor_, position);
+    selection_end_ = std::max(selection_anchor_, position);
+  } else {
+    selection_begin_ = 0;
+    selection_end_ = 0;
+    selection_anchor_ = position;
+  }
+  cursor_position_ = position;
+  restartCursor();
+  target_->setDirty();
+}
+
+void TextFieldEditor::moveLeft(bool extend_selection) {
+  if (!extend_selection && has_selection()) {
+    moveCursor(selection_begin_, false);
+  } else {
+    moveCursor(cursor_position_ - 1, extend_selection);
+  }
+}
+
+void TextFieldEditor::moveRight(bool extend_selection) {
+  if (!extend_selection && has_selection()) {
+    moveCursor(selection_end_, false);
+  } else {
+    moveCursor(cursor_position_ + 1, extend_selection);
+  }
+}
+
+void TextFieldEditor::moveHome(bool extend_selection) {
+  moveCursor(0, extend_selection);
+}
+
+void TextFieldEditor::moveEnd(bool extend_selection) {
+  moveCursor(glyphs_.size(), extend_selection);
+}
+
 void TextFieldEditor::del() {
   if (target_ == nullptr) return;
   if (target_->value_.empty()) return;
@@ -451,7 +520,9 @@ void TextFieldEditor::del() {
     // where there was the selection.
     std::string& val = target_->value_;
     val.erase(val.begin() + offsets_[selection_begin_],
-              val.begin() + offsets_[selection_end_]);
+              selection_end_ == static_cast<int16_t>(offsets_.size())
+                  ? val.end()
+                  : val.begin() + offsets_[selection_end_]);
     // Need to re-measure, because the glyphs use absolute coordinates, and
     // also, kerning makes it not trivial.
     int16_t saved_pos = selection_begin_;
@@ -470,6 +541,87 @@ void TextFieldEditor::del() {
     measure();
     cursor_position_ = saved_pos;
     target_->setDirty();
+  }
+}
+
+void TextFieldEditor::forwardDelete() {
+  if (target_ == nullptr || target_->value_.empty()) return;
+  if (has_selection()) {
+    del();
+    return;
+  }
+  if (cursor_position_ >= static_cast<int16_t>(offsets_.size())) return;
+  last_glyph_recently_entered_ = false;
+  restartCursor();
+  std::string& val = target_->value_;
+  int16_t saved_pos = cursor_position_;
+  val.erase(val.begin() + offsets_[cursor_position_],
+            cursor_position_ + 1 == static_cast<int16_t>(offsets_.size())
+                ? val.end()
+                : val.begin() + offsets_[cursor_position_ + 1]);
+  measure();
+  cursor_position_ = saved_pos;
+  selection_anchor_ = saved_pos;
+  target_->setDirty();
+}
+
+void TextField::onFocusChanged(bool focused) {
+  if (focused) {
+    if (editable_) editor_.edit(this, false);
+  } else if (isEdited()) {
+    editor_.edit(nullptr, false);
+  }
+}
+
+void TextField::setEditable(bool editable) {
+  if (editable_ == editable) return;
+  editable_ = editable;
+  if (!editable_ && isEdited()) editor_.edit(nullptr, false);
+  setDirty();
+}
+
+bool TextField::onKeyEvent(const KeyEvent& event) {
+  if (!editable_ ||
+      (event.phase != KeyPhase::kDown && event.phase != KeyPhase::kRepeat)) {
+    return false;
+  }
+  const bool extend = (event.modifiers & kKeyModifierShift) != 0;
+  switch (event.code) {
+    case KeyCode::kCharacter:
+      if (event.rune == 0) return true;
+      editor_.edit(this, false);
+      editor_.rune(event.rune);
+      return true;
+    case KeyCode::kSpace:
+      // The source delivers the printable space separately as kCharacter.
+      return true;
+    case KeyCode::kEnter:
+      if (!isEdited()) editor_.edit(this, false);
+      editor_.enter();
+      return true;
+    case KeyCode::kEscape:
+      editor_.cancel();
+      return true;
+    case KeyCode::kBackspace:
+      editor_.del();
+      return true;
+    case KeyCode::kDelete:
+      editor_.forwardDelete();
+      return true;
+    case KeyCode::kLeft:
+      editor_.moveLeft(extend);
+      return true;
+    case KeyCode::kRight:
+      editor_.moveRight(extend);
+      return true;
+    case KeyCode::kHome:
+      editor_.moveHome(extend);
+      return true;
+    case KeyCode::kEnd:
+      editor_.moveEnd(extend);
+      return true;
+    default:
+      return false;
   }
 }
 

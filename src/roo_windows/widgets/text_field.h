@@ -105,11 +105,12 @@ class TextFieldEditor : public KeyboardListener {
         cursor_position_(0),
         selection_begin_(0),
         selection_end_(0),
+        selection_anchor_(0),
         draw_xoffset_(0) {}
 
   /// Begins editing `target` as the active field; any previously active
   /// field is implicitly committed and unbound first.
-  void edit(TextField* target);
+  void edit(TextField* target, bool show_software_keyboard = true);
 
   /// True iff this editor is currently bound to `target`.
   bool isEdited(const TextField* target) const;
@@ -144,6 +145,13 @@ class TextFieldEditor : public KeyboardListener {
   /// selection is active.
   void del() override;
 
+  void cancel();
+  void forwardDelete();
+  void moveLeft(bool extend_selection = false);
+  void moveRight(bool extend_selection = false);
+  void moveHome(bool extend_selection = false);
+  void moveEnd(bool extend_selection = false);
+
  private:
   friend class TextField;
 
@@ -153,6 +161,7 @@ class TextFieldEditor : public KeyboardListener {
 
   void restartLastGlyphRecentlyEntered();
   void hideLastGlyph();
+  void moveCursor(int16_t position, bool extend_selection);
 
   roo_scheduler::Scheduler& scheduler_;
   Keyboard& keyboard_;
@@ -171,6 +180,7 @@ class TextFieldEditor : public KeyboardListener {
   int16_t cursor_position_;
   int16_t selection_begin_;
   int16_t selection_end_;
+  int16_t selection_anchor_;
   int16_t draw_xoffset_;
 };
 
@@ -200,7 +210,8 @@ class TextField : public BasicWidget {
         font_(font),
         text_color_(roo_display::color::Transparent),
         highlight_color_(roo_display::color::Transparent),
-        alignment_(alignment) {}
+        alignment_(alignment),
+        editable_(true) {}
 
   bool isClickable() const override { return true; }
   bool showClickAnimation() const override { return false; }
@@ -212,9 +223,16 @@ class TextField : public BasicWidget {
 
   /// Routes a click into `edit()` so tapping the field starts editing.
   void onClicked() override {
-    edit();
+    if (editable_) edit();
     Widget::onClicked();
   }
+
+  void onFocusChanged(bool focused) override;
+  bool onKeyEvent(const KeyEvent& event) override;
+
+  /// Read-only fields remain focusable, but do not enter edit mode.
+  bool isEditable() const { return editable_; }
+  void setEditable(bool editable);
 
   /// Toggles password-style bullet rendering on the value.
   void setStarred(bool starred) {
@@ -306,6 +324,7 @@ class TextField : public BasicWidget {
   roo_display::Color text_color_;
   roo_display::Color highlight_color_;
   roo_display::Alignment alignment_;
+  bool editable_;
 };
 
 }  // namespace roo_windows

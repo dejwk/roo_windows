@@ -95,7 +95,7 @@ not identify the intended navigation target.
 - Application code supplies a task explicitly.
 - Non-touch input uses the task containing the focus owner.
 
-The [non-touch input design](non_touch_input_design.md) owns focus resolution.
+The [non-touch input design](../implemented/non_touch_input_design.md) owns focus resolution.
 With no eligible global transient and no focus-owned or explicit task, a
 hardware request is unhandled. The framework does not guess.
 

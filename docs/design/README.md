@@ -32,7 +32,7 @@ Status was audited against the source tree and tests on 2026-07-12. “Dependenc
 | Design | Dependency status |
 | --- | --- |
 | Material 3 lists | Core list family phases are implemented; the remaining design phases are not complete. Badge and paint-context dependencies are implemented. |
-| Non-touch input | Keyboard acquisition, focus lifecycle, click/value/scroll control interaction, and structured list/menu/tab/rail navigation are implemented; hardware text entry remains. |
+| Non-touch input | Keyboard acquisition, focus lifecycle, click/value/scroll control interaction, structured list/menu/tab/rail navigation, and hardware text entry are implemented. |
 | Text system | `TextBlock` wrapping, justification, max-lines, ellipsis, caching, and golden coverage are implemented; shared rich paragraph layout and `RichTextBlock` remain. |
 | Transient presenter lifetime and ownership | The shared slot and dialog migration are implemented; modal sheets have no implementation to adopt, and menu/snackbar migrations remain. |
 | Visual overflow | Surface ownership, ink bounds, direct-paint exclusion, and persistent/transient bound separation are implemented; root-stage transient overlay handling is not. |

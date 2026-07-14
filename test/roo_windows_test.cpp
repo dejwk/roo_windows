@@ -2,6 +2,7 @@
 
 #include "roo_display/shape/basic.h"
 #include "roo_windows_render_test_support.h"
+#include "roo_windows/widgets/text_field.h"
 
 using namespace roo_display;
 using namespace roo_windows;
@@ -194,6 +195,34 @@ TEST(Windows, FocusManagerMovesFocusByGeometry) {
   EXPECT_TRUE(
       context.focus().moveFocusDirection(panel, FocusDirection::kRight));
   EXPECT_EQ(&aligned, context.focus().focused());
+}
+
+// Verifies that a focused editable field consumes hardware editing keys while
+// keeping the software keyboard optional, and that read-only fields remain
+// focusable without accepting text.
+TEST(Windows, TextFieldEditsFromHardwareKeys) {
+  roo::byte raster[320 * 240 * 2] = {};
+  OffscreenDevice<Argb4444> offscreen(320, 240, raster, Argb4444());
+  Display display(offscreen);
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  Application app(&env, display);
+  TextField field(app.context(), app.text_field_editor(), font_body1(), "",
+                  kLeft | kMiddle, TextField::NONE);
+
+  field.onFocusChanged(true);
+  EXPECT_TRUE(field.onKeyEvent({KeyPhase::kDown, KeyCode::kCharacter, 0, 'A'}));
+  EXPECT_TRUE(field.onKeyEvent({KeyPhase::kDown, KeyCode::kCharacter, 0, 'B'}));
+  EXPECT_EQ("AB", field.content());
+  EXPECT_TRUE(field.onKeyEvent({KeyPhase::kDown, KeyCode::kLeft, 0, 0}));
+  EXPECT_TRUE(field.onKeyEvent({KeyPhase::kDown, KeyCode::kCharacter, 0, 'X'}));
+  EXPECT_EQ("AXB", field.content());
+  EXPECT_TRUE(field.onKeyEvent({KeyPhase::kDown, KeyCode::kDelete, 0, 0}));
+  EXPECT_EQ("AX", field.content());
+
+  field.setEditable(false);
+  EXPECT_FALSE(field.onKeyEvent({KeyPhase::kDown, KeyCode::kCharacter, 0, 'Z'}));
+  EXPECT_EQ("AX", field.content());
 }
 
 // Verifies that hiding, disabling, and detaching a focused subtree clear

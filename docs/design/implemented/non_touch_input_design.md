@@ -2,11 +2,11 @@
 
 ## Implementation status
 
-**In progress.** Phases 1 through 5 are implemented: key acquisition,
+**Implemented.** Phases 1 through 6 are implemented: key acquisition,
 lifecycle-safe focus state plumbing, simple-control activation, scroll/value
-control navigation, and structured navigation surfaces. Hardware-keyboard text
-entry remains. The status of existing and outstanding prerequisites is
-recorded in the [status index](../README.md).
+control navigation, structured navigation surfaces, and hardware-keyboard text
+entry. The status of existing and outstanding prerequisites is recorded in the
+[status index](../README.md).
 
 ## Objective
 
