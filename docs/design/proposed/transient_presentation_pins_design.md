@@ -144,19 +144,34 @@ visuals.
 
 1. `Widget`, `BasicWidget`, `SurfaceWidget`, and `Container` must not gain new
    per-instance storage for this feature.
-2. Showing, hiding, and invalidating a pin must be heap-free in the common
-   case.
-3. The mechanism must be paid for only by widgets or presenters that actually
-   use it.
-4. Interactive anchored surfaces such as full menus or the existing on-screen
+2. A widget or presenter must not embed a dormant pin, pin handle, or pin-state
+   field solely to support a visual that is normally absent.
+3. Showing a pin performs at most one allocation for its host-owned pin object.
+   The anchor performs that allocation and transfers ownership to its window;
+   the registry must not allocate a separate entry or bucket array.
+   Painting, geometry tracking, invalidating, scrolling, and animation updates
+   must not allocate.
+   Pin subclasses keep their active payload inline and use a non-throwing
+   constructor that does not allocate again.
+4. Allocation failure must leave the control functional and return an explicit
+   result; the transient visual is omitted for that presentation.
+5. The mechanism's object RAM and allocator overhead must be paid only while a
+   pin is active.
+6. Interactive anchored surfaces such as full menus or the existing on-screen
    keyboard remain popup tasks or dialogs, not pins.
+7. Contract-defining declarations must carry Doxygen comments and follow the
+   repository's `camelCase()` instance-method convention.
+8. Pin painters must follow the single-final-write and foreground-first
+   exclusion rules; they must not pre-clear and redraw the same pixels.
+9. Every implementation phase must include focused tests, `Verifies ...`
+   comments on non-trivial cases, and the narrowest relevant validation target.
 
 ## Design Overview
 
 The framework adds a small, shared `PresentationPin` primitive:
 
 - a pin is not a `Widget`,
-- a pin is caller-owned,
+- an active pin is heap-allocated and owned by `MainWindow`,
 - a pin paints in a root-stage pass immediately before its chosen layer root
   in the renderer's front-to-back order,
 - and a pin is ordered by a chosen top-level child of `MainWindow`, not by its
@@ -166,8 +181,9 @@ Each active pin exposes:
 
 1. the top-level child that defines its z-scope,
 2. its current absolute paint bounds in main-window coordinates,
-3. optional tighter clip bounds, defaulting to the full window,
-4. and a `paint(PaintContext&)` implementation.
+3. content-dirty bounds, defaulting to its full current paint bounds,
+4. optional tighter clip bounds, defaulting to the full window,
+5. and a `paint(PaintContext&)` implementation.
 
 `MainWindow` owns the active-pin registry and integrates pins into its existing
 front-to-back child pass. Immediately before each top-level child, it paints
@@ -225,32 +241,63 @@ authority is no longer the local ancestor chain.
 
 ### Pin Lifetime And Storage
 
-Pins are intrusive caller-owned objects rather than entries stored in a
-`std::vector` owned by `MainWindow`.
+Pins are heap-allocated only while active and are owned by `MainWindow` through
+an intrusive `std::unique_ptr` list. The pin object is both the polymorphic
+paint plan and the list node, so activation performs one allocation rather than
+one allocation for the pin and another for registry bookkeeping.
 
 Chosen structure:
 
-- `MainWindow` keeps one intrusive list head for active pins,
-- each pin stores `next_`, `owner_`, `painted_bounds_`, and a small flags
-  byte,
-- `show()` links the pin into the list,
-- `hide()` unlinks it,
-- and `invalidate()` recomputes bounds and invalidates the old and new union.
+- `MainWindow` keeps one `std::unique_ptr<PresentationPin>` list head,
+- each active pin owns `next_` and stores `anchor_`, `z_scope_root_`, and
+  `presented_bounds_`,
+- a successful show transfers a newly allocated pin to the window,
+- hide or anchor teardown unlinks and deletes the matching pin,
+- and window teardown iteratively unlinks and deletes the complete list before
+  child teardown begins.
 
-This keeps pin activation heap-free and keeps the registry cost off unrelated
-widgets.
+The host permits at most one active pin per registered anchor. One pin can
+compose several related shapes, such as both range-slider indicators. This
+constraint gives widgets a storage-free identity: they show, invalidate, query,
+or hide their active pin through their own address, and do not retain a pin
+pointer or handle. Multiple pins remain supported across distinct anchors and
+retain deterministic registration z-order.
+
+The anchor constructs the concrete pin with `new (std::nothrow)` and transfers
+it as a `std::unique_ptr<PresentationPin>` through its widget-facing show
+method. Construction therefore stays at the concrete widget, where constructor
+arguments and failure policy are visible, instead of requiring callers to use
+a variadic `MainWindow` emplace template. The window validates the anchor and
+duplicate constraint, adopts a non-null pointer, and destroys a rejected
+pointer before returning. A null pointer reports `kAllocationFailed`.
+
+The retained `anchor_` is a host-observed geometry and lifetime participant,
+not an unobserved presenter pointer. `Container::detachChild()` asks the window
+to erase pins anchored anywhere in the departing subtree before it clears
+parent links or deletes owned children. Rect-anchored presenters register
+against a stable attached presentation or layer root and keep copied geometry
+inside their heap pin; they do not retain the initiating trigger widget.
 
 Approximate 32-bit RAM impact:
 
-- `MainWindow`: one list head pointer, 4 B,
-- each active pin object: about 20-24 B for owner pointer, scope-root pointer,
-  list link, cached bounds, and alignment,
-- no `Widget` base growth.
+- `MainWindow`: one list-head pointer, at most 4 B,
+- every inactive widget or presenter: 0 B,
+- each active pin: approximately 32 B for the polymorphic object plus allocator
+  metadata and any subclass-specific copied paint data,
+- no `Widget`, slider, range-slider, keyboard, or presenter size growth solely
+  for pin hosting.
 
-That cost is acceptable because only widgets or presenters that truly need
-root-stage paint pay it. It is also more predictable than pushing
-`ParentClipMode::kUnclipped` up several containers, which broadens cached
-max-bounds and repaint on every change in the entire ancestor chain.
+Phase 1 accepts at most a 4 B `MainWindow` increase and requires zero size
+increase in `Widget`, `BasicWidget`, `SurfaceWidget`, and `Container`. Phase 2
+requires zero pin-related size increase in `Slider` and `RangeSlider` after
+removing their old bubble-only bookkeeping. Target-ABI measurements record the
+active allocation payload separately from persistent object sizes.
+
+Allocation occurs once when a presentation transitions from absent to active.
+Value changes, ancestor movement, paint, and animation frames reuse the same
+object. Hide performs one deletion. A nothrow allocation failure returns
+`kAllocationFailed`; slider, keyboard, and menu behavior continues without the
+optional transient visual.
 
 ### Z-Order Scope Versus Clip Scope
 
@@ -258,7 +305,7 @@ Pins need two separate scopes.
 
 #### Z-Scope Root
 
-Each pin chooses a `zScopeRoot()`:
+The host assigns each pin a z-scope root during registration:
 
 - the top-level `TaskPanel` for ordinary task content,
 - the top-level popup `TaskPanel` for popup content,
@@ -301,7 +348,7 @@ before popups and popups before tasks. Their pixels are settled before a
 lower-layer pin is reached, and the existing clipper state prevents the pin
 from overwriting them.
 
-Within one z-scope root, later `show()` registration order is higher. Pins are
+Within one z-scope root, later successful registration is higher. Pins are
 therefore painted in reverse registration order, matching the widget-tree
 convention that later additions are visually above earlier ones.
 
@@ -311,12 +358,77 @@ Pins are not widgets, so the host has to restore their old pixels explicitly.
 
 Chosen invalidation rule:
 
-1. every visible pin caches the last bounds it painted,
-2. `show()`, `hide()`, and `invalidate()` compute the union of old and new
-   absolute bounds, clipped to the window,
-3. `MainWindow` unions that rectangle into `redraw_bounds_`,
-4. and `MainWindow::invalidateDescending()` invalidates that window-coordinate
-   region through all intersecting roots before the next frame.
+1. every registered pin caches a conservative envelope of bounds whose pin
+   pixels may still exist in the framebuffer,
+2. show, hide, and the pre-paint geometry scan invalidate the required old/new
+   absolute geometry envelope, while a content-only dirty request uses the
+   pin's conservative `dirtyBoundsInWindow()`,
+3. one private `MainWindow::invalidatePresentationRegion()` operation unions
+   that rectangle into `redraw_bounds_` and calls
+   `MainWindow::invalidateDescending()` for the same window-coordinate region;
+   descending invalidation marks the window dirty as part of the existing
+   invalidated-state contract,
+4. and the descendant invalidation reaches all intersecting roots before the
+   next frame.
+
+Updating `redraw_bounds_` alone is not sufficient: `paintWindow()` returns
+early while `MainWindow` is clean. The helper owns all three state changes so a
+caller cannot schedule a display clip without also scheduling paint and
+invalidated restoration beneath the pin.
+
+`presented_bounds_` starts as an explicit empty rectangle. Immediately before
+invoking a pin painter, the host extends it with the pin's full current bounds
+after applying the pin clip and window clip, not merely the current frame's
+dirty intersection. This preserves pixels written by earlier partial redraws.
+The envelope union handles an empty operand explicitly rather than passing an
+empty sentinel directly to `Rect::Extent()`.
+After the entire window paint completes before its deadline, the host commits
+each eligible pin's `presented_bounds_` to its current clipped bounds and clears
+the envelope for pins suppressed by anchor visibility. If the deadline
+interrupts the frame, the host does not commit: the conservative union remains,
+and `paintWindow()` already retains the interrupted frame's redraw bounds.
+Hiding before the first paint therefore restores an empty envelope; hiding
+after a partial frame restores every region that the pin may have touched.
+
+`MainWindow::paintWindow()` runs `preparePresentationPinsForPaint()` before its
+clean-window early return and before it constructs the redraw-clipped canvas.
+For each active pin, that pass resolves effective anchor visibility and current
+bounds. A visibility or geometry difference invalidates the old/new union, so
+ancestor scrolling and layout can expand the frame's redraw clip before paint
+begins. The no-pin path is one null-head check. For $P$ active pins and maximum
+widget depth $D$, preflight costs at most $P \times D$ parent-pointer
+comparisons plus $P$ bounds evaluations per `paintWindow()` call. The normal
+interactive case has one pin, so polling avoids permanent observer state and
+removes move and visibility hooks from every widget.
+
+Geometry polling cannot detect a content-only change when bounds stay equal.
+An anchor therefore calls `setPresentationPinDirty()` whenever data read by its
+pin painter changes. This mirrors `Widget::setDirty()`: the anchor does not
+calculate a root-coordinate repaint rectangle. The host finds the normally
+one active pin and calls its `dirtyBoundsInWindow()` implementation, whose
+default is the pin's full current `boundsInWindow()`. A pin may override the
+method to return a tighter conservative content-dirty rectangle when its
+active object keeps enough state to calculate one. The result is clipped by
+the pin and window clips and passed to `invalidatePresentationRegion()` without
+allocating.
+
+Content dirtiness and geometry restoration remain deliberately separate.
+`setPresentationPinDirty()` does not discard or replace `presented_bounds_`.
+The pre-paint geometry scan still compares the current full bounds with the
+conservative presented envelope and invalidates their union when geometry or
+effective visibility changed. Thus a narrow content hint cannot strand old
+pixels after a move, and callers do not have to identify whether a state
+change also moved the pin. Slider value changes, keyboard highlight changes,
+and menu paint-plan changes use the anchor convenience method. Hide similarly
+finds the pin by anchor, invalidates its full presented envelope, unlinks it,
+and deletes it.
+
+Detach remains an explicit framework event because preflight cannot safely poll
+an anchor after its lifetime ends. Before `Container::detachChild()` clears a
+parent link, `MainWindow` removes pins anchored anywhere in that subtree. Direct
+destruction of a widget while it remains attached is already outside the widget
+ownership contract; normal parent-owned and borrowed-child teardown passes
+through `detachChild()`.
 
 That keeps repaint precise:
 
@@ -338,13 +450,17 @@ indicator inside `paintWidgetContents()`.
 
 Instead:
 
-1. each slider owns a small `ValueIndicatorPin` helper,
-2. the helper is shown when the configured indicator behavior says the bubble
-   is visible,
-3. the helper computes its bounds from the slider's current absolute offset
+1. when the configured indicator behavior transitions to visible, the slider
+   allocates a `ValueIndicatorPin` and transfers it to `MainWindow`,
+2. the active pin reads the slider's current state and computes its bounds from
+   the slider's absolute offset
    plus the existing bubble geometry code,
-4. and `MainWindow` paints it after the slider's task, popup, or dialog layer
-   finishes.
+3. value changes call `setPresentationPinDirty()` without retaining a pin
+   pointer or calculating root-coordinate dirty bounds,
+4. the visible-to-hidden transition calls `hidePresentationPin()`, which
+   unlinks and deletes the pin,
+5. and `MainWindow` settles it immediately before the slider's task, popup, or
+   dialog root in foreground-first paint order.
 
 This choice simplifies the slider integration in two ways:
 
@@ -358,13 +474,13 @@ no longer implies "paint locally inside the widget tree." All indicator
 behaviors use the same pin path. Only the bubble bounds differ.
 
 The existing slider-local transient invalidation work for thumb and track
-movement stays in place. Only bubble invalidation moves to the pin helper.
+movement stays in place. Only bubble invalidation moves to the host pin path.
 
-Expected slider RAM change is small. The current slider already carries
-indicator-specific dirty-span bookkeeping and bubble paint complexity.
-Replacing that with one small pin helper keeps the net delta within single-
-digit bytes per slider instance while removing ancestor-chain overflow
-propagation.
+Neither slider class stores a pin, handle, ownership bit, or lookup token. The
+existing indicator-specific dirty-span bookkeeping is removed rather than
+replaced. Phase 2 must demonstrate no pin-related target-ABI size increase in
+`Slider` or `RangeSlider`; active heap payload and allocator overhead are
+reported separately.
 
 ### Keyboard And Menu Adoption
 
@@ -390,7 +506,9 @@ The presenter-owned trigger retention already described in
 [material3_menus_design.md](material3_menus_design.md) uses the same
 `PresentationPin` API instead of introducing a menu-only hook in
 `MainWindow`. The pin host becomes the shared implementation, and menu code
-supplies only the trigger-specific geometry and paint.
+supplies copied trigger-specific geometry and paint. It registers against the
+attached task or popup root, not the initiating trigger widget, so the pin does
+not weaken the transient-presenter copied-anchor contract.
 
 ## Proposed API
 
@@ -399,31 +517,51 @@ Material 3 public API, but it is a reusable building block for framework
 widgets and advanced custom widgets.
 
 ```cpp
+#include <memory>
+#include <new>
+#include <utility>
+
 namespace roo_windows {
 
+class Widget;
+
+/// Result of attempting to register a presentation pin.
+enum class PresentationPinShowResult : uint8_t {
+  /// The pin was registered and its initial bounds were invalidated.
+  kShown,
+  /// The pin was already registered; its existing registration is unchanged.
+  /// The newly supplied pin is destroyed.
+  kAlreadyRegistered,
+  /// The anchor is not attached beneath a MainWindow layer root.
+  /// The newly supplied pin is destroyed.
+  kAnchorUnavailable,
+  /// The anchor supplied a null pointer because allocation failed.
+  kAllocationFailed,
+};
+
+/// Host-owned paint-only visual registered at a MainWindow layer boundary.
 class PresentationPin {
  public:
-  /// Creates a hidden presentation pin.
-  PresentationPin() = default;
-  /// Hides the pin if necessary before releasing it.
-  virtual ~PresentationPin();
+  /// Releases a host-owned pin; derived destructors must not access `anchor()`.
+  virtual ~PresentationPin() = default;
 
   PresentationPin(const PresentationPin&) = delete;
   PresentationPin& operator=(const PresentationPin&) = delete;
 
-  /// Shows the pin above the top-level layer containing `anchor`.
-  void show(Widget& anchor);
-  /// Hides the pin and schedules restoration of its previous pixels.
-  void hide();
-  /// Schedules repaint of the union of previous and current pin bounds.
-  void invalidate();
-
-  /// Returns whether the pin is currently registered with a window.
-  bool isVisible() const { return owner_ != nullptr; }
-
  protected:
+  PresentationPin() = default;
+
+  /// Returns the registered anchor while this host-owned pin is active.
+  Widget& anchor() const { return *anchor_; }
+
   /// Returns current paint bounds in MainWindow coordinates.
   virtual Rect boundsInWindow() const = 0;
+
+  /// Returns the current region affected by a content-only change.
+  ///
+  /// The default returns `boundsInWindow()`. An override may return a tighter
+  /// conservative region but must not omit any changed final pixel.
+  virtual Rect dirtyBoundsInWindow() const { return boundsInWindow(); }
 
   /// Returns an optional tighter clip; defaults to MainWindow bounds.
   virtual Rect clipBoundsInWindow() const;
@@ -434,78 +572,150 @@ class PresentationPin {
  private:
   friend class MainWindow;
 
-  PresentationPin* next_ = nullptr;
-  MainWindow* owner_ = nullptr;
+  std::unique_ptr<PresentationPin> next_;
+  Widget* anchor_ = nullptr;
   Widget* z_scope_root_ = nullptr;
-  Rect painted_bounds_;
+  Rect presented_bounds_{0, 0, -1, -1};
+};
+
+class Widget {
+ public:
+  /// Transfers a newly allocated pin to this anchor's MainWindow.
+  ///
+  /// At most one pin may be registered per anchor. A null pointer reports
+  /// `kAllocationFailed`. The call consumes and destroys `pin` when the anchor
+  /// is unavailable or already has an active pin.
+  PresentationPinShowResult showPresentationPin(
+      std::unique_ptr<PresentationPin> pin);
+
+  /// Returns whether this widget has an active presentation pin.
+  bool hasPresentationPin() const;
+
+  /// Requests repaint of the active pin's implementation-defined dirty bounds.
+  void setPresentationPinDirty();
+
+  /// Removes and deletes this widget's active presentation pin, if any.
+  void hidePresentationPin();
 };
 
 class Container : public SurfaceWidget {
  protected:
-  /// Allows a specialized container to settle paint above `child` before the
-  /// normal front-to-back child pass reaches it.
-  virtual void paintBeforeChild(Widget& child, PaintContext& ctx) {}
+  /// Draws `child` decoration immediately when sibling boundaries permit the
+  /// existing fast path. Visibility changes from private to protected so the
+  /// MainWindow child traversal can preserve the base behavior.
+  void fastDrawChildShadow(Widget& child, PaintContext& ctx);
 };
 
 class MainWindow : public Container {
- public:
-  /// Registers `pin` above the top-level layer containing `anchor`.
-  void showPresentationPin(PresentationPin& pin, Widget& anchor);
-  /// Unregisters `pin` and schedules restoration of its painted bounds.
-  void hidePresentationPin(PresentationPin& pin);
-  /// Schedules repaint of `pin`'s previous and current bounds.
-  void invalidatePresentationPin(PresentationPin& pin);
+ protected:
+  /// Paints root children with their eligible presentation pins immediately
+  /// before each child in the existing front-to-back order.
+  void paintChildren(PaintContext& ctx) override;
 
  private:
+  friend class Container;
+  friend class Widget;
+
+  /// Validates `anchor` and adopts `pin` into the active registry.
+  PresentationPinShowResult showPresentationPin(
+      Widget& anchor, std::unique_ptr<PresentationPin> pin);
+
+  /// Returns whether `anchor` has an active pin.
+  bool hasPresentationPin(const Widget& anchor) const;
+
+  /// Invalidates the active pin's implementation-defined dirty bounds.
+  void setPresentationPinDirty(const Widget& anchor);
+
+  /// Removes and deletes the active pin registered to `anchor`, if any.
+  void hidePresentationPin(const Widget& anchor);
+
+  /// Marks `rect` dirty and invalidated and includes it in the next display
+  /// redraw clip.
+  void invalidatePresentationRegion(const Rect& rect);
+
+  /// Deletes pins before `subtree` loses its parent chain.
+  void presentationAnchorSubtreeDetaching(Widget& subtree);
+
+  /// Polls active pin visibility and bounds before choosing the redraw clip.
+  void preparePresentationPinsForPaint();
+
+  /// Settles eligible pins registered above `root` in pin z-order.
   void paintPinsBeforeScopeRoot(Widget& root, PaintContext& ctx);
 
-  PresentationPin* active_pins_ = nullptr;
+  /// Commits conservative pin envelopes after a complete window paint.
+  void commitPresentationPinBounds();
+
+  std::unique_ptr<PresentationPin> active_pins_;
 };
 
 }  // namespace roo_windows
 ```
 
-`Container::paintChildren()` calls the protected no-op hook immediately before
-each visible child. `MainWindow` overrides it to paint pins for direct children;
-ordinary containers add no storage and retain the existing child paint path.
-The one virtual dispatch per visited child is the deliberate flash/runtime
-cost of keeping registry state out of every container and avoiding a duplicated
-`MainWindow` copy of the deadline-sensitive child loop.
+`MainWindow::paintChildren()` specializes the existing compact
+`Container::paintChildren()` loop. It keeps the same reverse iteration,
+deadline check, clipped-versus-unclipped child branch, and fast-shadow behavior,
+but calls `paintPinsBeforeScopeRoot()` immediately before the corresponding
+direct child. Pin painting receives the unclipped root context; ordinary child
+painting retains its existing parent-clip branch.
 
-Recommended helper pattern for anchored visuals:
+This duplicates the small child loop in the already-special root container,
+but leaves `Container` and every ordinary container's hot paint path unchanged.
+The existing `fastDrawChildShadow()` helper moves from private to protected so
+the override can preserve the single-child optimization; its implementation
+and call conditions do not change.
+The Phase 1 implementation must keep the override structurally aligned with
+the base loop, and focused tests cover both clipping branches, fast-shadow
+behavior, and deadline interruption so later changes cannot silently make the
+two traversal contracts diverge.
+
+Recommended helper pattern for widget-anchored visuals:
 
 ```cpp
-class WidgetAnchoredPresentationPin : public PresentationPin {
+/// Private heap-only paint plan; Slider stores no instance or handle.
+class Slider::ValueIndicatorPin final : public PresentationPin {
+ public:
+  ValueIndicatorPin() noexcept = default;
+
  protected:
-  explicit WidgetAnchoredPresentationPin(Widget& anchor) : anchor_(anchor) {}
-
-  void show() { PresentationPin::show(anchor_); }
-
-  Rect clipBoundsInWindow() const override {
-    return anchor_.getMainWindow()->bounds();
+  Rect boundsInWindow() const override {
+    return static_cast<const Slider&>(anchor()).valueIndicatorBoundsInWindow();
   }
 
-  Widget& anchor() const { return anchor_; }
-
- private:
-  Widget& anchor_;
+  void paint(PaintContext& ctx) const override {
+    static_cast<const Slider&>(anchor()).paintValueIndicator(ctx);
+  }
 };
+
+PresentationPinShowResult Slider::showValueIndicatorPin() {
+  std::unique_ptr<ValueIndicatorPin> pin(
+      new (std::nothrow) ValueIndicatorPin());
+  return showPresentationPin(std::move(pin));
+}
 ```
 
-This keeps the public framework surface small while giving slider, keyboard,
-and menu helpers a common base.
+The slider allocates and transfers the pin only on the hidden-to-visible
+transition. The static cast is safe because this private creation path
+registers `ValueIndicatorPin` only through a `Slider`; no RTTI is required.
+The private nested class can reuse existing private bubble geometry and paint
+helpers without adding widget-facing geometry API. Range slider, keyboard, and
+framework presenter pins follow the same pattern.
 
-`show(anchor)` walks the existing parent chain once, verifies that the anchor
-is attached to a `MainWindow`, and caches the direct child of that window as
-the z-scope root. It does not add a virtual method to every `Widget`. Reparenting
-an anchor while its pin is visible is unsupported; the caller must hide the
-pin first.
+`Widget::showPresentationPin()` routes through its attached `MainWindow`.
+The host treats a null pointer as `kAllocationFailed`, then validates attachment
+and duplicate registration before adopting a non-null pointer. On success it
+caches the anchor and direct layer child, initializes the presented envelope,
+links the unique pointer at the list head, and invalidates the initial bounds.
+On rejection the by-value unique pointer destroys the candidate. An invisible
+anchor is valid but its pin remains suppressed until preflight observes it as
+visible. Reparenting follows the existing detach-then-attach lifecycle: detach
+deletes the old pin, and the next presentation transition allocates a new one.
 
-The destructor hides a registered pin. `MainWindow` also clears every pin's
-`owner_`, `z_scope_root_`, and link during window destruction, so a non-owned
-widget or presenter may safely outlive the window. Destroying or detaching an
-anchor while its pin remains visible is a caller error; widget-owned adopters
-hide from their destructor before the anchor becomes invalid.
+`MainWindow::~MainWindow()` iteratively unlinks and deletes the pin list at the
+start of its destructor body, before it detaches popup and task children. The
+iterative path moves `next_` out before each delete so destruction does not
+recurse with list depth. Hide and subtree-detach removal use the same
+pointer-to-`unique_ptr` unlink operation; deleting one pin never deletes the
+remaining tail.
 
 ## Implementation Plan
 
@@ -518,84 +728,142 @@ and
 
 Scope:
 
-1. add `PresentationPin`,
-2. resolve and cache the z-scope root from the anchor passed to `show()`,
-3. add the no-storage `Container::paintBeforeChild()` hook and intrusive pin
-   registration and invalidation in `MainWindow`,
-4. extend the `MainWindow` child pass so scoped pins settle and register
-   exclusions immediately before each top-level child,
-5. add synthetic render tests that prove task pins stay under popups and
-   dialogs while still escaping intermediate clipped ancestors.
+1. add the heap-only `PresentationPin` base, explicit show-result enum,
+   widget-facing ownership-transfer API, and anchor-side nothrow allocation
+   pattern,
+2. resolve and cache the z-scope root from the registering anchor,
+3. add the intrusive `std::unique_ptr` ownership list and root-specific
+   `MainWindow::paintChildren()` override, promoting the existing fast-shadow
+   helper to protected without changing the generic container traversal,
+4. add the anchor `setPresentationPinDirty()` convenience API, the pin-defined
+   content-dirty bounds hook, and the atomic dirty, redraw-clip, and
+   descending-invalidation helper,
+5. preflight pin geometry and visibility before the clean-window return and
+   canvas clip, and erase subtree pins before detach,
+6. settle pins immediately before each top-level child, commit conservative
+   envelopes only after `paintWindow()` completes, and iteratively delete the
+   list during window teardown,
+7. add a focused `transient_presentation_pin_test` target for registration,
+   allocation failure, ownership, lifetime, invalidation, and target-ABI size
+   contracts, plus synthetic render tests proving that pins escape intermediate
+   clipped ancestors without crossing higher layers.
+
+Focused Phase 1 cases verify:
+
+- clean-window show schedules dirty, invalidated, and redraw-clip state,
+- hide before first paint, partial dirty repaint, and interrupted paint use the
+  conservative presented-bounds envelope,
+- null, duplicate, and unavailable-anchor show return explicit errors, destroy
+  any rejected non-null candidate, and leave the list unchanged,
+- a default pin dirty request repaints its full current bounds, while a pin
+  override can conservatively narrow a content-only repaint,
+- narrow content dirtiness followed by a geometry change still restores the
+  full old bounds through preflight,
+- preflight detects anchor and ancestor movement before choosing the canvas
+  clip,
+- visibility changes suppress and resume paint,
+- anchor, ancestor, top-level-root, and window teardown delete active pins
+  before invalid pointers become reachable,
+- repeated show/hide cycles allocate once per show, delete once per hide, and
+  allocate nothing during intermediate invalidation and paint,
+- task, popup, dialog, and same-root pin ordering is deterministic,
+- the root override preserves clipped and unclipped child paint, fast-shadow
+  handling, and deadline interruption from the base child loop,
+- clipped-ancestor escape, window clipping, and old-pixel restoration render
+  correctly,
+- and the 32-bit persistent-size ceilings hold while the active allocation
+  payload is reported separately.
 
 Proposed commit message:
 
-> main_window: add layer-scoped presentation pins
+> Transient presentation pins Phase 1: add the layer-scoped pin host.
+>
+> Add anchor-allocated, host-owned heap pins, pin-defined content dirtiness,
+> pre-paint geometry polling, atomic root invalidation, foreground-first layer
+> ordering, detach and window cleanup, focused lifecycle tests, and overlay
+> render coverage from the Transient Presentation Pins design.
 
 Validation:
 
+- `bazel test //:transient_presentation_pin_test`
 - `bazel test //:overlay_test`
+- verify the `MainWindow`, concrete-pin, and base-widget symbols with the
+  [size procedure](../../material3_target_baseline.md#target-abi-object-sizes)
 
 ### Phase 2: Move Slider And Range Slider Indicators To Pins
 
 Scope:
 
-1. add `ValueIndicatorPin` helpers to `Slider` and `RangeSlider`,
+1. add heap-only `ValueIndicatorPin` paint plans for `Slider` and
+   `RangeSlider`, with no stored pin or handle,
 2. stop painting indicator bubbles inside `paintWidgetContents()`,
 3. remove indicator-specific reliance on `ParentClipMode::kUnclipped`,
 4. adapt `ValueIndicatorBubble` to use its existing foreground-first
    decoration and exclusion composition from the pin stage,
-5. add render coverage for sliders inside clipped scroll containers, dialogs,
-   and popup tasks.
+5. make the slider allocate and transfer its pin, use
+   `setPresentationPinDirty()` for value changes, hide by implicit slider
+   anchor, and degrade to no bubble on allocation failure,
+6. add render coverage for sliders inside clipped scroll containers, dialogs,
+   and popup tasks,
+7. update the slider emulator/example with a scrollable value-indicator case,
+8. record the before/after target-ABI sizes and enforce zero pin-related
+   persistent-size increase for both slider classes.
 
 Proposed commit message:
 
-> slider: paint value indicators through presentation pins
+> Transient presentation pins Phase 2: move slider indicators to pins.
+>
+> Allocate slider indicator pins only while visible, remove local bubble
+> staging and indicator-only unclipped behavior, preserve zero dormant pin RAM,
+> and add clipped-container, popup, dialog, failure, and size coverage from the
+> Transient Presentation Pins design.
 
 Validation:
 
 - `bazel test //:material3_slider_test //:overlay_test`
+- verify `Slider` and `RangeSlider` with the
+  [size procedure](../../material3_target_baseline.md#target-abi-object-sizes)
 
 ### Phase 3: Convert Keyboard Press Highlighter To A Popup Pin
 
 Scope:
 
-1. replace the current keyboard-local unclipped highlighter path with a
+1. replace the current stored keyboard highlighter widget with a heap-only
    popup-layer pin,
 2. allow the preview or highlighter to rise above the keyboard task bounds
    while staying below dialogs,
 3. add one keyboard render case that proves popup pins escape the keyboard
-   subtree without stealing focus or changing popup ownership.
+   subtree without stealing focus or changing popup ownership,
+4. omit only the highlight when allocation fails and preserve keyboard input,
+5. update the existing keyboard emulator/example to exercise the converted
+   highlight path,
+6. add a focused `keyboard_presentation_pin_test` target for allocation,
+   highlight visibility, popup ownership, focus, and persistent-size invariants.
 
 Proposed commit message:
 
-> keyboard: move press highlighter to popup presentation pin
+> Transient presentation pins Phase 3: move keyboard highlights to popup pins.
+>
+> Replace the stored keyboard highlighter with an active-only popup pin and add
+> allocation, size, and render coverage proving that it escapes the keyboard
+> subtree, remains below dialogs, and does not alter input or popup ownership.
 
 Validation:
 
+- `bazel test //:keyboard_presentation_pin_test`
 - `bazel test //:overlay_test`
 
 ## Testing Plan
 
-Validation covers three levels.
-
-1. Framework render tests:
-   - pin escapes a clipped intermediate container,
-   - pin invalidation restores old pixels after hide or move,
-   - pin overflow outside its z-scope root restores the main-window surface or
-     lower task after hide,
-   - task pins remain below popup pins,
-   - popup pins remain below dialogs,
-   - default clip stops at the main-window edge.
-2. Slider-specific render tests:
-   - single slider and range slider indicators in ordinary panels,
-   - the same controls inside clipped scroll containers,
-   - the same controls inside dialogs,
-   - and the same controls inside popup tasks.
-3. Integration smoke coverage:
-   - drag a slider in the emulator inside a scrollable settings surface,
-   - drag one inside a dialog,
-   - and verify that the bubble remains fully visible while higher layers still
-     overpaint it when appropriate.
+Validation proceeds from the focused host or component target to
+`overlay_test`, followed by the target-ABI size build and the relevant emulator
+smoke case. Phase 1 covers pin state, lifecycle, invalidation, ordering, and
+rendering, including allocation failure and repeated allocation/deletion.
+Phase 2 covers zero dormant slider RAM and slider/range-slider adoption in task,
+scrolled, popup, and dialog layers. Phase 3 covers keyboard allocation,
+persistent size, popup-layer rendering, and focus/ownership invariants. Every
+non-trivial test carries a `Verifies ...` comment immediately before its
+declaration.
 
 ## Caveats
 
@@ -607,6 +875,21 @@ Bounds correctness becomes explicit. A pin that reports incorrect bounds can
 leave stale pixels or repaint too much. The implementation must therefore keep
 the "bounds first, paint second" discipline and test old and new invalidation
 unions carefully.
+
+The registered `anchor_` is narrowly scoped to attached widget-tree geometry
+and teardown. It is not a general weak reference and must not be copied into
+queued presentation data. Rect-anchored presenters retain copied geometry and
+use their attached layer root solely as the registration anchor, consistent
+with the transient-presenter lifetime design. The host-observed pin registry is
+the explicit live-anchor registration extension required by that design: it
+provides pre-paint geometry polling and detach notification, while ordinary
+presenters continue to snapshot anchors.
+
+Heap allocation introduces allocator metadata, bounded allocation latency, and
+possible fragmentation. The design limits that exposure to one small allocation
+per presentation transition and performs no allocation in paint or update
+loops. Framework adopters use nothrow allocation and preserve their primary
+interaction when the optional visual cannot be created.
 
 Pin painting follows the same single-final-write rule as widget painting. A
 pin painter must emit each final pixel once, including the correct background
@@ -638,6 +921,69 @@ Rejected because the repo already has one proposed root trigger pin for menus
 and one actual clipping problem for sliders. Solving each one with a dedicated
 `MainWindow` hook would duplicate registry, ordering, and invalidation logic. A
 shared pin primitive is smaller and more consistent.
+
+#### Add A Generic `Container::paintBeforeChild()` Hook
+
+Rejected because only `MainWindow` owns layer-scoped pins. Calling a new virtual
+hook before every painted child would add dispatch to every ordinary container
+and expose a generic extension point whose ordering contract is meaningful only
+at the root. `MainWindow` is already special: it synthesizes task, popup, scrim,
+and dialog children through its own `getChild()` ordering. A root-specific
+`paintChildren()` override keeps the policy at that boundary. The cost is a
+small duplicate traversal loop and a protected existing fast-shadow helper,
+with parity enforced by the Phase 1 tests.
+
+#### Add An Observer Node To Every Widget
+
+Rejected because most widgets never anchor a presentation pin. A permanent
+observer link would violate the base-widget RAM requirement. The active-list
+scan selected in [Pin Lifetime And Storage](#pin-lifetime-and-storage) performs
+at most $P \times D$ pointer comparisons and makes the no-pin path a single
+list-head check.
+
+#### Embed A Dormant Pin In Every Potential Host
+
+Rejected because the active object costs roughly 28-32 B before
+subclass-specific paint data, while most sliders and keyboard hosts have no pin
+visible. Active-only heap ownership moves that RAM cost to the uncommon active
+interval and keeps every potential host unchanged.
+
+#### Store Active Pins In A Flat Hash Map
+
+Rejected as the default registry after evaluating a map keyed by anchor
+address. The concrete polymorphic pin still needs its own variable-sized heap
+allocation. A flat hash map then needs a separate contiguous bucket allocation,
+so the first active pin costs two allocations and later growth can rehash in a
+show path. Keeping capacity after the last removal violates the active-only RAM
+goal; releasing it restores that goal but adds allocator churn to every
+empty-to-active transition. Embedding initial buckets in `MainWindow` instead
+would charge every window for dormant capacity.
+
+A hash table also does not preserve the required registration z-order. Adding
+a registration sequence plus ordered traversal or a second order structure
+recovers correctness at additional RAM or runtime cost. The selected intrusive
+list stores its only registry link inside the already allocated pin, preserves
+registration order directly, has a one-null-check empty path, and makes lookup
+$O(P)$. With the expected $P = 1$ and only a few simultaneous pins in unusual
+cases, hashing does not repay its bucket memory, second allocation, rehash
+failure cases, or ordering machinery. This decision can be revisited if target
+measurements demonstrate sustained large active-pin counts.
+
+#### Reserve A Fixed Pin Buffer In MainWindow
+
+Rejected because a type-erased inline buffer permanently charges every window
+for the largest supported pin and imposes a maximum size and alignment on
+advanced custom pins. A fixed pool also needs an overflow policy for the
+required multiple-anchor case. The heap design retains a 4 B empty-window cost
+and naturally supports different pin payload sizes.
+
+#### Discover Pin Movement From The Child Paint Hook
+
+Rejected because `paintWindow()` begins with an already chosen dirty clip. A
+pin discovered at a new location during paint cannot expand that frame's canvas
+to restore its old pixels or reach its new pixels. The preflight and
+conservative envelope commit in [Invalidation Model](#invalidation-model)
+schedule the full old/new union before canvas construction.
 
 ## Future Work
 
