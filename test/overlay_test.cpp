@@ -40,6 +40,26 @@ class RoundedClickableSurfaceBoxWidget : public ClickableSurfaceBoxWidget {
   BorderStyle getBorderStyle() const override { return BorderStyle(8, 0); }
 };
 
+class RoundedClickableChildSurface : public Panel {
+ public:
+  RoundedClickableChildSurface(ApplicationContext& context,
+                               roo_display::Color color)
+      : Panel(context), color_(color) {}
+
+  void addChild(WidgetRef child, const Rect& bounds) {
+    add(std::move(child), bounds);
+  }
+
+  roo_display::Color background() const override { return color_; }
+
+  BorderStyle getBorderStyle() const override { return BorderStyle(8, 0); }
+
+  bool isClickable() const override { return true; }
+
+ private:
+  roo_display::Color color_;
+};
+
 class RolePanel : public Panel {
  public:
   RolePanel(ApplicationContext& context, ::roo_windows::material3::ColorToken role)
@@ -342,6 +362,111 @@ TEST_F(RooWindowsRenderTest, AreaClickAnimationStaysInsideSurfaceBounds) {
   ASSERT_TRUE(refresh());
   EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(12, 20));
   EXPECT_NE(QuantizeToArgb4444(color::Blue), pixelAt(20, 20));
+}
+
+// A rounded surface's decoration owns the corner mask. Its animated area
+// ripple must not tint untouched background pixels outside that mask.
+TEST_F(RooWindowsRenderTest,
+       RoundedAreaClickAnimationPreservesPixelsBeyondRoundedCorners) {
+  auto back = std::make_unique<ColorBoxWidget>(context(), color::Red,
+                                               Dimensions(64, 48));
+  auto front = std::make_unique<RoundedClickableSurfaceBoxWidget>(
+      context(), color::Blue, Dimensions(40, 24));
+  RoundedClickableSurfaceBoxWidget* front_ptr = front.get();
+
+  app_.add(std::move(back), Box(0, 0, 63, 47));
+  app_.add(std::move(front), Box(20, 12, 59, 35));
+  ASSERT_TRUE(refresh());
+
+  const Color corner_color = pixelAt(20, 12);
+  const Color interior_color = pixelAt(40, 24);
+  EXPECT_EQ(QuantizeToArgb4444(color::Red), corner_color);
+  EXPECT_EQ(QuantizeToArgb4444(color::Blue), interior_color);
+
+  front_ptr->onShowPress(20, 12);
+  delay(kPressAnimationMillis - 20);
+  const ClickAnimation* anim = front_ptr->getClickAnimation();
+  ASSERT_NE(nullptr, anim);
+  ASSERT_LT(anim->progress(), 1.0f);
+
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(corner_color, pixelAt(20, 12));
+  EXPECT_NE(interior_color, pixelAt(40, 24));
+}
+
+// A rounded surface's "inner rectangle" is only an optimization boundary for
+// painting its solid background. Children may also occupy the rounded
+// decoration band when the caller keeps their pixels inside the surface. This
+// child is a narrow strip at the vertical midpoint, safely away from both
+// rounded corners, but extending two pixels past the current inner rectangle.
+TEST_F(RooWindowsRenderTest,
+       RoundedSurfaceChildPaintsOutsideSolidInnerRectangle) {
+  auto surface = std::make_unique<RoundedClickableChildSurface>(
+      context(), color::Red);
+  RoundedClickableChildSurface* surface_ptr = surface.get();
+  surface_ptr->addChild(
+      std::make_unique<RoundedClickableSurfaceBoxWidget>(
+          context(), color::Blue, Dimensions(6, 8)),
+      Rect(1, 8, 6, 15));
+  app_.add(std::move(surface), Box(20, 12, 59, 35));
+
+  ASSERT_TRUE(refresh());
+
+  // Local (1, 12) is inside the rounded surface, but outside the conservative
+  // inner rectangle (which begins at x = 3 for an 8 px corner radius).
+  EXPECT_EQ(QuantizeToArgb4444(color::Blue), pixelAt(21, 24));
+}
+
+// Non-animated parent state overlays already reach child pixels in the
+// decoration band. This guards the overlay-spec propagation path separately
+// from the composition-stack path used by an animated ripple.
+TEST_F(RooWindowsRenderTest,
+       StaticAreaPressOverlayTintsChildOutsideSolidInnerRectangle) {
+  auto surface = std::make_unique<RoundedClickableChildSurface>(
+      context(), color::Red);
+  RoundedClickableChildSurface* surface_ptr = surface.get();
+  surface_ptr->addChild(
+      std::make_unique<ColorBoxWidget>(context(), color::Blue,
+                                       Dimensions(6, 8)),
+      Rect(0, 8, 5, 15));
+  app_.add(std::move(surface), Box(20, 12, 59, 35));
+  ASSERT_TRUE(refresh());
+
+  const Color child_color = QuantizeToArgb4444(color::Blue);
+  ASSERT_EQ(child_color, pixelAt(21, 24));
+
+  surface_ptr->setPressed(true);
+  ASSERT_TRUE(refresh());
+  EXPECT_NE(child_color, pixelAt(21, 24));
+}
+
+// The animated area ripple belongs to the parent surface and must modulate
+// child pixels throughout the surface, including pixels outside the solid
+// inner rectangle. The caller keeps those pixels inside the parent's actual
+// surface shape; untouched pixels beyond its rounded corners remain protected.
+TEST_F(RooWindowsRenderTest,
+       AreaClickAnimationTintsChildOutsideSolidInnerRectangle) {
+  auto surface = std::make_unique<RoundedClickableChildSurface>(
+      context(), color::Red);
+  RoundedClickableChildSurface* surface_ptr = surface.get();
+  surface_ptr->addChild(
+      std::make_unique<RoundedClickableSurfaceBoxWidget>(
+          context(), color::Blue, Dimensions(6, 8)),
+      Rect(1, 8, 6, 15));
+  app_.add(std::move(surface), Box(20, 12, 59, 35));
+  ASSERT_TRUE(refresh());
+
+  const Color child_color = QuantizeToArgb4444(color::Blue);
+  ASSERT_EQ(child_color, pixelAt(21, 24));
+
+  surface_ptr->onShowPress(1, 12);
+  delay(kPressAnimationMillis - 20);
+  const ClickAnimation* anim = surface_ptr->getClickAnimation();
+  ASSERT_NE(nullptr, anim);
+  ASSERT_LT(anim->progress(), 1.0f);
+
+  ASSERT_TRUE(refresh());
+  EXPECT_NE(child_color, pixelAt(21, 24));
 }
 
 // Verifies that a press overlay owned by one area widget does not tint a
