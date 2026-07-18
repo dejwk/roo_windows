@@ -128,6 +128,8 @@ class ClipperOutput : public roo_display::DisplayOutput {
         shape_overlays_(state.shape_overlays_),
         overlays_(state.overlays_),
         overlay_specs_(state.overlay_specs_),
+        scoped_press_overlay_active_(false),
+        scoped_press_overlay_clip_(0, 0, -1, -1),
         valid_(true),
         overlay_stack_(roo_display::Box(0, 0, -1, -1)),
         overlay_filter_(out, &overlay_stack_),
@@ -178,9 +180,10 @@ class ClipperOutput : public roo_display::DisplayOutput {
                      SmallNumber outline_width,
                      roo_display::Color outline_color) {
     const OverlaySpec& overlay_spec = currentOverlaySpec();
+    bool apply_press_overlay = overlay_spec.is_click_animation_in_progress() ||
+                               scoped_press_overlay_active_;
     const PressOverlay* press_overlay =
-        overlay_spec.is_click_animation_in_progress() ? &press_overlay_
-                                                      : nullptr;
+        apply_press_overlay ? &press_overlay_ : nullptr;
     decorations_.emplace_back(std::move(extents), elevation,
                               overlay_spec, press_overlay, bgcolor,
                               corner_radii, outline_width, outline_color);
@@ -219,18 +222,30 @@ class ClipperOutput : public roo_display::DisplayOutput {
     addOverlay(&shape_overlays_.back(), clip_box);
   }
 
+  const PressOverlay* configurePressOverlay(const PressOverlaySpec& spec) {
+    if (!spec.enabled) return nullptr;
+    press_overlay_ =
+        PressOverlay(spec.center_x, spec.center_y, spec.radius, spec.color);
+    if (spec.clipped_to_circle) {
+      press_overlay_.setClipCircle(spec.clip_circle_center_x,
+                                   spec.clip_circle_center_y,
+                                   spec.clip_circle_radius);
+    }
+    return &press_overlay_;
+  }
+
   void setPressOverlay(const PressOverlaySpec& spec,
                        roo_display::Box clip_box) {
-    if (spec.enabled) {
-      press_overlay_ =
-          PressOverlay(spec.center_x, spec.center_y, spec.radius, spec.color);
-      if (spec.clipped_to_circle) {
-        press_overlay_.setClipCircle(spec.clip_circle_center_x,
-                                     spec.clip_circle_center_y,
-                                     spec.clip_circle_radius);
-      }
-      addOverlay(&press_overlay_, clip_box);
-    }
+    const PressOverlay* press_overlay = configurePressOverlay(spec);
+    if (press_overlay != nullptr) addOverlay(press_overlay, clip_box);
+  }
+
+  void setScopedPressOverlay(const PressOverlaySpec& spec,
+                             roo_display::Box clip_box) {
+    configurePressOverlay(spec);
+    scoped_press_overlay_active_ = true;
+    scoped_press_overlay_clip_ = std::move(clip_box);
+    valid_ = false;
   }
 
   /// Forwards the address window after applying pending clipper state.
@@ -316,6 +331,11 @@ class ClipperOutput : public roo_display::DisplayOutput {
       --overlay_specs_.back().refcount;
       return;
     }
+    if (scoped_press_overlay_active_ &&
+        overlay_specs_.back().overlay_spec.is_click_animation_in_progress()) {
+      scoped_press_overlay_active_ = false;
+      valid_ = false;
+    }
     overlay_specs_.pop_back();
   }
 
@@ -351,9 +371,24 @@ class ClipperOutput : public roo_display::DisplayOutput {
     // preserving clipper's "earlier overlays stay above later overlays"
     // contract by traversing descriptors in reverse insertion order.
     overlay_stack_.clearInputs();
-    overlay_stack_.reserveInputs(overlays_.size());
+    overlay_stack_.reserveInputs(overlays_.size() +
+                                 (scoped_press_overlay_active_ ? 1 : 0));
     roo_display::Box overlay_extents(0, 0, -1, -1);
     bool has_overlays = false;
+
+    // The scoped press overlay represents a foreground applied to content
+    // writes. Add it first so all persistent clipper overlays, including
+    // decorations, remain above it in RasterizableStack composition order.
+    if (scoped_press_overlay_active_) {
+      roo_display::Box source_clip = roo_display::Box::Intersect(
+          press_overlay_.extents(), scoped_press_overlay_clip_);
+      if (!source_clip.empty() && source_clip.intersects(bounds_)) {
+        overlay_stack_.addInput(&press_overlay_, source_clip);
+        overlay_extents = source_clip;
+        has_overlays = true;
+      }
+    }
+
     for (auto it = overlays_.rbegin(); it != overlays_.rend(); ++it) {
       if (!it->extents().intersects(bounds_)) continue;
       roo_display::Box source_clip = it->sourceClip();
@@ -398,6 +433,8 @@ class ClipperOutput : public roo_display::DisplayOutput {
   std::deque<roo_display::SmoothShape>& shape_overlays_;
   std::vector<ClippedOverlay>& overlays_;
   std::deque<internal::OverlaySpecStackEntry>& overlay_specs_;
+  bool scoped_press_overlay_active_;
+  roo_display::Box scoped_press_overlay_clip_;
   bool valid_;
   roo_display::RasterizableStack overlay_stack_;
   roo_display::ForegroundFilter overlay_filter_;
@@ -464,6 +501,13 @@ class Clipper {
   void setPressOverlay(const PressOverlaySpec& spec,
                        roo_display::Box clip_box) {
     out_.setPressOverlay(spec, clip_box);
+  }
+
+  /// Sets a bottom-of-stack press foreground scoped to the current overlay
+  /// frame. Persistent overlays such as decorations remain above it.
+  void setScopedPressOverlay(const PressOverlaySpec& spec,
+                             roo_display::Box clip_box) {
+    out_.setScopedPressOverlay(spec, std::move(clip_box));
   }
 
   /// Registers a fully-described decoration (shadow + outline + fill) clipped

@@ -1,6 +1,5 @@
 #include "roo_windows/core/widget.h"
 
-#include "roo_display/filter/foreground.h"
 #include "roo_display/shape/smooth.h"
 #include "roo_logging.h"
 #include "roo_windows/core/application.h"
@@ -650,12 +649,10 @@ void Widget::paintWidgetModded(PaintContext& ctx) {
           clipper.setPressOverlay(overlay_spec.press_overlay(),
                                   canvas.clip_box());
         } else if (getOverlayType() == OVERLAY_AREA) {
-          // Only draw the overlay in the 'inner' region, leaving it up to the
-          // surface- owning widget to draw it along the external decoration.
-          Canvas inner = prepareContentsCanvas(canvas);
-          inner.clipToExtents(bounds());
-          clipper.setPressOverlay(overlay_spec.press_overlay(),
-                                  inner.clip_box());
+          // Keep the ripple active through descendant painting. The owning
+          // overlay-spec frame clears it after decoration emission.
+          clipper.setScopedPressOverlay(overlay_spec.press_overlay(),
+                                        canvas.clip_box());
         }
         paintWidgetContents(ctx);
         setDirty();
