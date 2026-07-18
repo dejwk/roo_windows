@@ -64,6 +64,9 @@ MainWindow::MainWindow(Application& app, const roo_display::Box& bounds)
 }
 
 MainWindow::~MainWindow() {
+  while (active_pins_ != nullptr) {
+    active_pins_ = std::move(active_pins_->next_);
+  }
   while (!popups_.empty()) {
     removeLastFromLayer(popups_);
   }
@@ -101,6 +104,7 @@ void MainWindow::updateLayout() {
 
 bool MainWindow::paintWindow(const roo_display::Surface& s,
                              roo_time::Uptime deadline) {
+  preparePresentationPinsForPaint();
   if (!initialized_) {
     initialized_ = true;
     s.drawObject(roo_display::Fill(
@@ -129,7 +133,178 @@ bool MainWindow::paintWindow(const roo_display::Surface& s,
     redraw_bounds_ = old_redraw_bounds;
     return false;
   }
+  commitPresentationPinBounds();
   return true;
+}
+
+namespace {
+
+Rect UnionNonEmpty(const Rect& a, const Rect& b) {
+  if (a.empty()) return b;
+  if (b.empty()) return a;
+  return Rect::Extent(a, b);
+}
+
+bool IsEffectivelyVisible(const Widget& widget) {
+  for (const Widget* current = &widget; current != nullptr;
+       current = current->parent()) {
+    if (!current->isVisible()) return false;
+  }
+  return true;
+}
+
+bool IsInSubtree(const Widget& candidate, const Widget& subtree) {
+  for (const Widget* current = &candidate; current != nullptr;
+       current = current->parent()) {
+    if (current == &subtree) return true;
+  }
+  return false;
+}
+
+}  // namespace
+
+PresentationPinShowResult MainWindow::showPresentationPin(
+    Widget& anchor, std::unique_ptr<PresentationPin> pin) {
+  if (pin == nullptr) return PresentationPinShowResult::kAllocationFailed;
+  if (&anchor == this || anchor.parent() == nullptr ||
+      anchor.getMainWindow() != this) {
+    return PresentationPinShowResult::kAnchorUnavailable;
+  }
+  for (PresentationPin* current = active_pins_.get(); current != nullptr;
+       current = current->next_.get()) {
+    if (current->anchor_ == &anchor) {
+      return PresentationPinShowResult::kAlreadyRegistered;
+    }
+  }
+
+  Widget* root = &anchor;
+  while (root->parent() != this) {
+    root = root->parent();
+    if (root == nullptr) return PresentationPinShowResult::kAnchorUnavailable;
+  }
+  pin->anchor_ = &anchor;
+  pin->z_scope_root_ = root;
+  pin->next_ = std::move(active_pins_);
+  active_pins_ = std::move(pin);
+  if (IsEffectivelyVisible(anchor)) {
+    PresentationPin& shown = *active_pins_;
+    invalidatePresentationRegion(Rect::Intersect(
+        Rect::Intersect(shown.boundsInWindow(), shown.clipBoundsInWindow()),
+        bounds()));
+  }
+  return PresentationPinShowResult::kShown;
+}
+
+bool MainWindow::hasPresentationPin(const Widget& anchor) const {
+  for (const PresentationPin* current = active_pins_.get(); current != nullptr;
+       current = current->next_.get()) {
+    if (current->anchor_ == &anchor) return true;
+  }
+  return false;
+}
+
+void MainWindow::invalidatePresentationRegion(const Rect& rect) {
+  const Rect clipped = Rect::Intersect(rect, bounds());
+  if (clipped.empty()) return;
+  setDirty(clipped);
+  invalidateDescending(clipped);
+  redraw_bounds_ = UnionNonEmpty(redraw_bounds_, clipped);
+}
+
+void MainWindow::setPresentationPinDirty(const Widget& anchor) {
+  for (PresentationPin* current = active_pins_.get(); current != nullptr;
+       current = current->next_.get()) {
+    if (current->anchor_ != &anchor || !IsEffectivelyVisible(anchor)) continue;
+    invalidatePresentationRegion(Rect::Intersect(
+        current->dirtyBoundsInWindow(), current->clipBoundsInWindow()));
+    return;
+  }
+}
+
+void MainWindow::hidePresentationPin(const Widget& anchor) {
+  std::unique_ptr<PresentationPin>* link = &active_pins_;
+  while (*link != nullptr) {
+    if ((*link)->anchor_ == &anchor) {
+      invalidatePresentationRegion((*link)->presented_bounds_);
+      *link = std::move((*link)->next_);
+      return;
+    }
+    link = &((*link)->next_);
+  }
+}
+
+void MainWindow::presentationAnchorSubtreeDetaching(Widget& subtree) {
+  std::unique_ptr<PresentationPin>* link = &active_pins_;
+  while (*link != nullptr) {
+    if (IsInSubtree(*(*link)->anchor_, subtree)) {
+      invalidatePresentationRegion((*link)->presented_bounds_);
+      *link = std::move((*link)->next_);
+    } else {
+      link = &((*link)->next_);
+    }
+  }
+}
+
+void MainWindow::preparePresentationPinsForPaint() {
+  for (PresentationPin* current = active_pins_.get(); current != nullptr;
+       current = current->next_.get()) {
+    Rect current_bounds(0, 0, -1, -1);
+    if (IsEffectivelyVisible(*current->anchor_)) {
+      current_bounds = Rect::Intersect(
+          Rect::Intersect(current->boundsInWindow(),
+                          current->clipBoundsInWindow()),
+          bounds());
+    }
+    if (current_bounds != current->presented_bounds_) {
+      invalidatePresentationRegion(
+          UnionNonEmpty(current->presented_bounds_, current_bounds));
+    }
+  }
+}
+
+void MainWindow::paintPinsBeforeScopeRoot(Widget& root, PaintContext& ctx) {
+  for (PresentationPin* current = active_pins_.get(); current != nullptr;
+       current = current->next_.get()) {
+    if (current->z_scope_root_ != &root ||
+        !IsEffectivelyVisible(*current->anchor_)) {
+      continue;
+    }
+    Rect pin_bounds = Rect::Intersect(
+        Rect::Intersect(current->boundsInWindow(), current->clipBoundsInWindow()),
+        bounds());
+    if (pin_bounds.empty()) continue;
+    current->presented_bounds_ = UnionNonEmpty(current->presented_bounds_, pin_bounds);
+    PaintContext pin_ctx = ctx.clipped(pin_bounds);
+    if (!pin_ctx.empty()) current->paint(pin_ctx);
+  }
+}
+
+void MainWindow::commitPresentationPinBounds() {
+  for (PresentationPin* current = active_pins_.get(); current != nullptr;
+       current = current->next_.get()) {
+    current->presented_bounds_ = IsEffectivelyVisible(*current->anchor_)
+                                     ? Rect::Intersect(
+                                           Rect::Intersect(current->boundsInWindow(),
+                                                           current->clipBoundsInWindow()),
+                                           bounds())
+                                     : Rect(0, 0, -1, -1);
+  }
+}
+
+void MainWindow::paintChildren(PaintContext& ctx) {
+  PaintContext clipped_ctx = ctx.clipped(bounds());
+  bool fast_render = isDirty() && respectsChildrenBoundaries();
+  for (int i = getChildrenCount() - 1; i >= 0; --i) {
+    if (ctx.isDeadlineExceeded()) return;
+    Widget& child = getChild(i);
+    paintPinsBeforeScopeRoot(child, ctx);
+    if (child.getParentClipMode() == ParentClipMode::kClipped) {
+      child.paintWidget(clipped_ctx.canvas(), clipped_ctx.clipperForFramework());
+      if (fast_render) fastDrawChildShadow(child, clipped_ctx);
+    } else {
+      child.paintWidget(ctx.canvas(), ctx.clipperForFramework());
+    }
+  }
 }
 
 void MainWindow::propagateDirty(const Widget* child, const Rect& rect) {

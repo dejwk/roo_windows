@@ -121,6 +121,11 @@ class Container : public SurfaceWidget {
 
   virtual void paintChildren(PaintContext& ctx);
 
+  /// Draws `child` decoration immediately when sibling boundaries permit the
+  /// existing fast path. MainWindow preserves this behavior in its specialized
+  /// root traversal.
+  void fastDrawChildShadow(Widget& child, PaintContext& ctx);
+
   void invalidateDescending() override;
   void invalidateDescending(const Rect& rect) override;
   bool invalidateBeneathDescending(const Rect& rect,
@@ -201,8 +206,6 @@ class Container : public SurfaceWidget {
 
   PaintContext prepareSurfaceContext(const PaintContext& in,
                                      const Rect& invalid_region);
-
-  void fastDrawChildShadow(Widget& child, PaintContext& ctx);
 
   friend class Widget;
   friend class ScrollableContainer;

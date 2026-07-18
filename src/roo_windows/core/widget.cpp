@@ -56,6 +56,30 @@ Widget::~Widget() {
   context_.widgetEvents().clearHandlers(*this);
 }
 
+PresentationPinShowResult Widget::showPresentationPin(
+    std::unique_ptr<PresentationPin> pin) {
+  MainWindow* window = getMainWindow();
+  return window == nullptr ? PresentationPinShowResult::kAnchorUnavailable
+                           : window->showPresentationPin(*this, std::move(pin));
+}
+
+bool Widget::hasPresentationPin() const {
+  const MainWindow* window = parent_ == nullptr ? nullptr : getMainWindow();
+  return window != nullptr && window->hasPresentationPin(*this);
+}
+
+void Widget::setPresentationPinDirty() {
+  if (MainWindow* window = getMainWindow(); window != nullptr) {
+    window->setPresentationPinDirty(*this);
+  }
+}
+
+void Widget::hidePresentationPin() {
+  if (MainWindow* window = getMainWindow(); window != nullptr) {
+    window->hidePresentationPin(*this);
+  }
+}
+
 MainWindow* Widget::getMainWindow() {
   return parent_ == nullptr ? nullptr : parent_->getMainWindow();
 }

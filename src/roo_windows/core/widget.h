@@ -20,6 +20,7 @@
 #include "roo_windows/core/measure_spec.h"
 #include "roo_windows/core/padding.h"
 #include "roo_windows/core/paint_context.h"
+#include "roo_windows/core/presentation_pin.h"
 #include "roo_windows/core/preferred_size.h"
 #include "roo_windows/core/rect.h"
 #include "roo_windows/core/theme.h"
@@ -97,6 +98,22 @@ class Widget {
   Widget(const Widget& w) = delete;
   Widget(Widget&& w);
   virtual ~Widget();
+
+  /// Transfers a newly allocated pin to this anchor's MainWindow.
+  ///
+  /// At most one pin may be active for an anchor. This consumes `pin` on all
+  /// outcomes; a null pointer reports kAllocationFailed.
+  PresentationPinShowResult showPresentationPin(
+      std::unique_ptr<PresentationPin> pin);
+
+  /// Returns whether this widget currently anchors a presentation pin.
+  bool hasPresentationPin() const;
+
+  /// Requests repaint of this pin's conservative content-dirty region.
+  void setPresentationPinDirty();
+
+  /// Removes and deletes this widget's active presentation pin, if any.
+  void hidePresentationPin();
 
   // Causes the widget to request paint(). The widget decides which pixels
   // need re-drawing.

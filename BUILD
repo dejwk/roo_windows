@@ -87,6 +87,16 @@ cc_test(
 )
 
 cc_test(
+    name = "transient_presentation_pin_test",
+    srcs = ["test/transient_presentation_pin_test.cpp"],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
+cc_test(
     name = "image_test",
     srcs = [
         "test/image_test.cpp",

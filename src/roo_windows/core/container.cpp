@@ -48,6 +48,9 @@ void Container::attachChild(WidgetRef ref, const Rect& bounds) {
 
 void Container::detachChild(Widget* child) {
   CHECK(child->parent() == this);
+  if (MainWindow* window = getMainWindow(); window != nullptr) {
+    window->presentationAnchorSubtreeDetaching(*child);
+  }
   context().focus().onSubtreeDetaching(*child);
   bool owned = child->isOwnedByParent();
   if (child->isVisible()) {

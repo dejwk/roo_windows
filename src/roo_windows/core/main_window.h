@@ -7,6 +7,7 @@
 #include "roo_windows/core/clipper.h"
 #include "roo_windows/core/container.h"
 #include "roo_windows/core/gesture_detector.h"
+#include "roo_windows/core/presentation_pin.h"
 #include "roo_windows/core/transient_presentation.h"
 #include "roo_windows/dialogs/dialog.h"
 #include "roo_windows/widgets/scrim.h"
@@ -99,8 +100,36 @@ class MainWindow : public Container {
 
   void childInvalidatedRegion(const Widget* child, Rect rect) override;
 
+  /// Paints root children with their eligible pins immediately before each
+  /// child, preserving the generic container traversal for ordinary trees.
+  void paintChildren(PaintContext& ctx) override;
+
  private:
   friend class Dialog;
+  friend class Container;
+  friend class Widget;
+
+  PresentationPinShowResult showPresentationPin(
+      Widget& anchor, std::unique_ptr<PresentationPin> pin);
+
+  bool hasPresentationPin(const Widget& anchor) const;
+  void setPresentationPinDirty(const Widget& anchor);
+  void hidePresentationPin(const Widget& anchor);
+
+  /// Schedules a full root-tree repaint of the affected pin region.
+  void invalidatePresentationRegion(const Rect& rect);
+
+  /// Removes pins before an anchor subtree loses its parent chain.
+  void presentationAnchorSubtreeDetaching(Widget& subtree);
+
+  /// Detects visibility and geometry changes before choosing the redraw clip.
+  void preparePresentationPinsForPaint();
+
+  /// Settles pins scoped to `root` before that root paints.
+  void paintPinsBeforeScopeRoot(Widget& root, PaintContext& ctx);
+
+  /// Commits conservative pin envelopes after a complete paint.
+  void commitPresentationPinBounds();
 
   void addToLayer(std::vector<Widget*>& layer, WidgetRef child,
                   const Rect& rect);
@@ -138,6 +167,8 @@ class MainWindow : public Container {
   // Kept last so it clears presenter reachability before other window
   // resources are destroyed.
   TransientPresentationSlot transient_presentation_slot_;
+
+  std::unique_ptr<PresentationPin> active_pins_;
 };
 
 }  // namespace roo_windows
