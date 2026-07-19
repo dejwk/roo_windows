@@ -582,7 +582,8 @@ TEST(Material3Slider, EffectiveContainerRoleIsPrimary) {
 
   Slider slider(context);
 
-  EXPECT_EQ(::roo_windows::material3::ColorToken::kPrimary, slider.effectiveContainerRole());
+  EXPECT_EQ(::roo_windows::material3::ColorToken::kPrimary,
+            slider.effectiveContainerRole());
 }
 
 // Verifies that pressed-state feedback is rendered directly by the slider and
@@ -782,8 +783,9 @@ TEST_F(Material3SliderRenderTest, MediumStandardInsetIconPaintsWhenConfigured) {
             roo_display::Box(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
                              kSliderY + Scaled(52) - 1));
 
-  EXPECT_EQ(QuantizeToArgb4444(context().theme().material3Theme().color.onPrimary),
-            pixelAt(kSliderX + 12, kSliderY + 26));
+  EXPECT_EQ(
+      QuantizeToArgb4444(context().theme().material3Theme().color.onPrimary),
+      pixelAt(kSliderX + 12, kSliderY + 26));
 }
 
 // Verifies that size presets which do not support inset icons ignore the icon
@@ -801,8 +803,9 @@ TEST_F(Material3SliderRenderTest, SmallSliderIgnoresInsetIcon) {
 
   addSlider(std::move(slider));
 
-  EXPECT_EQ(QuantizeToArgb4444(context().theme().material3Theme().color.primary),
-            pixelAt(kSliderX + 12, kSliderY + 22));
+  EXPECT_EQ(
+      QuantizeToArgb4444(context().theme().material3Theme().color.primary),
+      pixelAt(kSliderX + 12, kSliderY + 22));
 }
 
 // Verifies that an inset icon anchored on the active side jumps past the thumb
@@ -833,9 +836,11 @@ TEST_F(Material3SliderRenderTest, InsetIconJumpsPastHandleAtMinimumValue) {
       style, SliderRange{0.0f, 100.0f}, 0.0f, *icon, kSliderWidth, Scaled(52));
   int jumped_icon_x = kSliderX + jumped_icon.xMin() + jumped_icon.width() / 2;
 
-  EXPECT_NE(QuantizeToArgb4444(context().theme().material3Theme().color.onSecondaryContainer),
+  EXPECT_NE(QuantizeToArgb4444(
+                context().theme().material3Theme().color.onSecondaryContainer),
             pixelAt(kSliderX + 6, kSliderY + 26));
-  EXPECT_EQ(QuantizeToArgb4444(context().theme().material3Theme().color.onSecondaryContainer),
+  EXPECT_EQ(QuantizeToArgb4444(
+                context().theme().material3Theme().color.onSecondaryContainer),
             pixelAt(jumped_icon_x, kSliderY + 26));
   EXPECT_GE(jumped_icon.xMin(),
             (int16_t)ceilf(layout.thumb_center_primary + (float)Scaled(12)));
@@ -862,7 +867,8 @@ TEST_F(Material3SliderRenderTest, InactiveSideInsetIconPaintsWhenConfigured) {
   Rect icon_rect =
       ResolveInsetIconRectForTest(style, SliderRange{0.0f, 100.0f}, 50.0f,
                                   *icon, kSliderWidth, Scaled(52), anchor);
-  EXPECT_EQ(QuantizeToArgb4444(context().theme().material3Theme().color.onSecondaryContainer),
+  EXPECT_EQ(QuantizeToArgb4444(
+                context().theme().material3Theme().color.onSecondaryContainer),
             pixelAt(kSliderX + icon_rect.xMin() + icon_rect.width() / 2,
                     kSliderY + icon_rect.yMin() + icon_rect.height() / 2));
 }
@@ -898,10 +904,12 @@ TEST_F(Material3SliderRenderTest,
                                   *icon, kSliderWidth, Scaled(52), anchor);
   int jumped_icon_x = kSliderX + jumped_icon.xMin() + jumped_icon.width() / 2;
 
-  EXPECT_NE(QuantizeToArgb4444(context().theme().material3Theme().color.onPrimary),
-            pixelAt(kSliderX + kSliderWidth - 6, kSliderY + 26));
-  EXPECT_EQ(QuantizeToArgb4444(context().theme().material3Theme().color.onPrimary),
-            pixelAt(jumped_icon_x, kSliderY + 26));
+  EXPECT_NE(
+      QuantizeToArgb4444(context().theme().material3Theme().color.onPrimary),
+      pixelAt(kSliderX + kSliderWidth - 6, kSliderY + 26));
+  EXPECT_EQ(
+      QuantizeToArgb4444(context().theme().material3Theme().color.onPrimary),
+      pixelAt(jumped_icon_x, kSliderY + 26));
   EXPECT_LE(jumped_icon.xMax(),
             (int16_t)floorf(layout.thumb_center_primary - (float)Scaled(12)));
 }
@@ -985,8 +993,11 @@ TEST_F(Material3SliderRenderTest,
 
   Color sample =
       pixelAt(kSliderX + sample_local_x, kSliderY + slider_ptr->height() / 2);
-  EXPECT_NE(QuantizeToArgb4444(context().theme().material3Theme().color.onPrimary), sample);
-  EXPECT_NE(QuantizeToArgb4444(context().theme().material3Theme().color.onSecondaryContainer),
+  EXPECT_NE(
+      QuantizeToArgb4444(context().theme().material3Theme().color.onPrimary),
+      sample);
+  EXPECT_NE(QuantizeToArgb4444(
+                context().theme().material3Theme().color.onSecondaryContainer),
             sample);
 }
 
@@ -1036,15 +1047,19 @@ TEST_F(Material3SliderRenderTest,
   int16_t new_center_y = kSliderY + new_icon.yMin() + new_icon.height() / 2;
   Color expected_new_icon_color =
       new_icon.xMin() == Scaled(4)
-          ? QuantizeToArgb4444(context().theme().material3Theme().color.onPrimary)
-          : QuantizeToArgb4444(context().theme().material3Theme().color.onSecondaryContainer);
+          ? QuantizeToArgb4444(
+                context().theme().material3Theme().color.onPrimary)
+          : QuantizeToArgb4444(
+                context().theme().material3Theme().color.onSecondaryContainer);
 
-  EXPECT_EQ(QuantizeToArgb4444(context().theme().material3Theme().color.onSecondaryContainer),
+  EXPECT_EQ(QuantizeToArgb4444(
+                context().theme().material3Theme().color.onSecondaryContainer),
             pixelAt(old_center_x, old_center_y));
   ASSERT_TRUE(slider_ptr->setValue(new_value));
   ASSERT_TRUE(app_.refresh());
 
-  EXPECT_NE(QuantizeToArgb4444(context().theme().material3Theme().color.onSecondaryContainer),
+  EXPECT_NE(QuantizeToArgb4444(
+                context().theme().material3Theme().color.onSecondaryContainer),
             pixelAt(old_center_x, old_center_y));
   EXPECT_EQ(expected_new_icon_color, pixelAt(new_center_x, new_center_y));
 }
@@ -1125,7 +1140,8 @@ TEST_F(Material3SliderRenderTest,
   ASSERT_TRUE(slider_ptr->setValue(0.0f));
   ASSERT_TRUE(app_.refresh());
 
-  EXPECT_EQ(QuantizeToArgb4444(context().theme().material3Theme().color.onSecondaryContainer),
+  EXPECT_EQ(QuantizeToArgb4444(
+                context().theme().material3Theme().color.onSecondaryContainer),
             pixelAt(stop_rightmost_x, center_y));
 }
 
@@ -1431,8 +1447,8 @@ TEST_F(Material3SliderAppTest,
 
   float old_value = slider().value();
   EXPECT_EQ(DragClaim::kReject,
-            slider().onDragClaim(slider().width() / 2,
-                                 slider().height() / 2, Scaled(8), 1));
+            slider().onDragClaim(slider().width() / 2, slider().height() / 2,
+                                 Scaled(8), 1));
   EXPECT_FLOAT_EQ(old_value, slider().value());
 }
 
@@ -1755,11 +1771,13 @@ TEST_F(Material3SliderRenderTest,
 
   ASSERT_TRUE(app_.refresh());
 
-  Color primary = QuantizeToArgb4444(context().theme().material3Theme().color.primary);
-  Color inactive =
-      QuantizeToArgb4444(context().theme().material3Theme().color.secondaryContainer);
+  Color primary =
+      QuantizeToArgb4444(context().theme().material3Theme().color.primary);
+  Color inactive = QuantizeToArgb4444(
+      context().theme().material3Theme().color.secondaryContainer);
   Color backdrop_color = QuantizeToArgb4444(kBackdropColor);
-  Color background = QuantizeToArgb4444(context().theme().material3Theme().color.background);
+  Color background =
+      QuantizeToArgb4444(context().theme().material3Theme().color.background);
 
   EXPECT_EQ(backdrop_color, pixelAt(2, 2));
   EXPECT_EQ(background, pixelAt(kSliderX, kSliderY + 14));
@@ -1790,10 +1808,12 @@ TEST_F(Material3SliderRenderTest,
 
   ASSERT_TRUE(app_.refresh());
 
-  Color primary = QuantizeToArgb4444(context().theme().material3Theme().color.primary);
-  Color inactive =
-      QuantizeToArgb4444(context().theme().material3Theme().color.secondaryContainer);
-  Color background = QuantizeToArgb4444(context().theme().material3Theme().color.background);
+  Color primary =
+      QuantizeToArgb4444(context().theme().material3Theme().color.primary);
+  Color inactive = QuantizeToArgb4444(
+      context().theme().material3Theme().color.secondaryContainer);
+  Color background =
+      QuantizeToArgb4444(context().theme().material3Theme().color.background);
 
   internal::SliderAxisMetrics axis(slider_->width(), slider_->height());
   internal::SliderVisualMetrics layout = internal::ResolveSliderVisualMetrics(
@@ -1842,10 +1862,12 @@ TEST_F(Material3SliderRenderTest, RangeSliderPaintsActiveTrackBetweenThumbs) {
 
   ASSERT_TRUE(app_.refresh());
 
-  Color primary = QuantizeToArgb4444(context().theme().material3Theme().color.primary);
-  Color inactive =
-      QuantizeToArgb4444(context().theme().material3Theme().color.secondaryContainer);
-  Color background = QuantizeToArgb4444(context().theme().material3Theme().color.background);
+  Color primary =
+      QuantizeToArgb4444(context().theme().material3Theme().color.primary);
+  Color inactive = QuantizeToArgb4444(
+      context().theme().material3Theme().color.secondaryContainer);
+  Color background =
+      QuantizeToArgb4444(context().theme().material3Theme().color.background);
   internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
   int start_handle_x =
       kSliderX + (int)roundf(CenterFromValueForTest(axis, slider_ptr->range(),
@@ -1894,9 +1916,10 @@ TEST_F(Material3SliderRenderTest,
   int inactive_stop_x = kSliderX + (int)roundf(CenterFromValueForTest(
                                        axis, slider_ptr->range(), 0.8f));
 
-  Color active_stop = QuantizeToArgb4444(context().theme().material3Theme().color.onPrimary);
-  Color inactive_stop =
-      QuantizeToArgb4444(context().theme().material3Theme().color.onSecondaryContainer);
+  Color active_stop =
+      QuantizeToArgb4444(context().theme().material3Theme().color.onPrimary);
+  Color inactive_stop = QuantizeToArgb4444(
+      context().theme().material3Theme().color.onSecondaryContainer);
 
   EXPECT_EQ(active_stop, pixelAt(active_stop_x, center_y));
   EXPECT_EQ(inactive_stop, pixelAt(inactive_stop_x, center_y));
@@ -1934,9 +1957,10 @@ TEST_F(Material3SliderRenderTest,
   int inactive_stop_x = kSliderX + (int)roundf(CenterFromValueForTest(
                                        axis, slider_ptr->range(), 0.8f));
 
-  Color active_track = QuantizeToArgb4444(context().theme().material3Theme().color.primary);
-  Color inactive_stop =
-      QuantizeToArgb4444(context().theme().material3Theme().color.onSecondaryContainer);
+  Color active_track =
+      QuantizeToArgb4444(context().theme().material3Theme().color.primary);
+  Color inactive_stop = QuantizeToArgb4444(
+      context().theme().material3Theme().color.onSecondaryContainer);
 
   EXPECT_EQ(active_track, pixelAt(active_stop_x, center_y));
   EXPECT_EQ(inactive_stop, pixelAt(inactive_stop_x, center_y));
@@ -1974,9 +1998,10 @@ TEST_F(Material3SliderRenderTest,
   int inactive_stop_x = kSliderX + (int)roundf(CenterFromValueForTest(
                                        axis, slider_ptr->range(), 1.0f));
 
-  Color active_track = QuantizeToArgb4444(context().theme().material3Theme().color.primary);
-  Color inactive_stop =
-      QuantizeToArgb4444(context().theme().material3Theme().color.onSecondaryContainer);
+  Color active_track =
+      QuantizeToArgb4444(context().theme().material3Theme().color.primary);
+  Color inactive_stop = QuantizeToArgb4444(
+      context().theme().material3Theme().color.onSecondaryContainer);
 
   EXPECT_EQ(active_track, pixelAt(active_stop_x, center_y));
   EXPECT_EQ(inactive_stop, pixelAt(inactive_stop_x, center_y));
@@ -2017,9 +2042,10 @@ TEST_F(Material3SliderRenderTest,
   int inactive_stop_x = kSliderX + (int)roundf(DisplayCenterFromValueForTest(
                                        axis, slider_ptr->range(), 1.0f));
 
-  Color active_track = QuantizeToArgb4444(context().theme().material3Theme().color.primary);
-  Color inactive_stop =
-      QuantizeToArgb4444(context().theme().material3Theme().color.onSecondaryContainer);
+  Color active_track =
+      QuantizeToArgb4444(context().theme().material3Theme().color.primary);
+  Color inactive_stop = QuantizeToArgb4444(
+      context().theme().material3Theme().color.onSecondaryContainer);
 
   EXPECT_EQ(active_track, pixelAt(active_stop_x, center_y));
   EXPECT_EQ(inactive_stop, pixelAt(inactive_stop_x, center_y));
@@ -2059,10 +2085,12 @@ TEST_F(Material3SliderRenderTest,
   int inactive_stop_x = kSliderX + (int)roundf(CenterFromValueForTest(
                                        axis, slider_ptr->range(), 1.0f));
 
-  Color active_stop = QuantizeToArgb4444(context().theme().material3Theme().color.onPrimary);
-  Color inactive_stop =
-      QuantizeToArgb4444(context().theme().material3Theme().color.onSecondaryContainer);
-  Color background = QuantizeToArgb4444(context().theme().material3Theme().color.background);
+  Color active_stop =
+      QuantizeToArgb4444(context().theme().material3Theme().color.onPrimary);
+  Color inactive_stop = QuantizeToArgb4444(
+      context().theme().material3Theme().color.onSecondaryContainer);
+  Color background =
+      QuantizeToArgb4444(context().theme().material3Theme().color.background);
 
   EXPECT_EQ(active_stop, pixelAt(active_stop_x, center_y));
   EXPECT_EQ(background, pixelAt(center_gap_x, center_y));
@@ -2101,9 +2129,10 @@ TEST_F(Material3SliderRenderTest,
   int right_inactive_stop_x = kSliderX + (int)roundf(CenterFromValueForTest(
                                              axis, slider_ptr->range(), 1.0f));
 
-  Color active_stop = QuantizeToArgb4444(context().theme().material3Theme().color.onPrimary);
-  Color inactive_stop =
-      QuantizeToArgb4444(context().theme().material3Theme().color.onSecondaryContainer);
+  Color active_stop =
+      QuantizeToArgb4444(context().theme().material3Theme().color.onPrimary);
+  Color inactive_stop = QuantizeToArgb4444(
+      context().theme().material3Theme().color.onSecondaryContainer);
 
   EXPECT_EQ(inactive_stop, pixelAt(left_inactive_stop_x, center_y));
   EXPECT_EQ(active_stop, pixelAt(active_stop_x, center_y));
@@ -2133,8 +2162,10 @@ TEST_F(Material3SliderRenderTest,
                        slider().height() / 2);
   ASSERT_TRUE(app_.refresh());
 
-  Color primary = QuantizeToArgb4444(context().theme().material3Theme().color.primary);
-  Color background = QuantizeToArgb4444(context().theme().material3Theme().color.background);
+  Color primary =
+      QuantizeToArgb4444(context().theme().material3Theme().color.primary);
+  Color background =
+      QuantizeToArgb4444(context().theme().material3Theme().color.background);
 
   EXPECT_EQ(background, pixelAt(kSliderX + 45, kSliderY + 5));
   EXPECT_EQ(primary, pixelAt(kSliderX + 47, kSliderY + kSliderHeight / 2));
@@ -2178,7 +2209,8 @@ TEST_F(Material3SliderRenderTest,
   int gap_x = kSliderX + (int)floorf(layout.active_track_max_primary) + 1;
   int gap_y = kSliderY + slider_ptr->height() / 2;
 
-  Color background = QuantizeToArgb4444(context().theme().material3Theme().color.background);
+  Color background =
+      QuantizeToArgb4444(context().theme().material3Theme().color.background);
   EXPECT_EQ(background, pixelAt(gap_x, gap_y));
 }
 
@@ -2208,8 +2240,10 @@ TEST_F(Material3SliderRenderTest,
   slider_ptr->onShowPress(start_thumb_center, slider_ptr->height() / 2);
   ASSERT_TRUE(app_.refresh());
 
-  Color primary = QuantizeToArgb4444(context().theme().material3Theme().color.primary);
-  Color background = QuantizeToArgb4444(context().theme().material3Theme().color.background);
+  Color primary =
+      QuantizeToArgb4444(context().theme().material3Theme().color.primary);
+  Color background =
+      QuantizeToArgb4444(context().theme().material3Theme().color.background);
 
   EXPECT_EQ(background, pixelAt(kSliderX + 22, kSliderY + 5));
   EXPECT_EQ(background, pixelAt(kSliderX + 30, kSliderY + kSliderHeight / 2));
@@ -2259,9 +2293,10 @@ TEST_F(Material3SliderRenderTest,
       layout.track_cross_start, axis.primarySpan() - 1,
       layout.track_cross_start + Scaled(16) - 1));
 
-  Color primary = QuantizeToArgb4444(context().theme().material3Theme().color.primary);
-  Color inactive =
-      QuantizeToArgb4444(context().theme().material3Theme().color.secondaryContainer);
+  Color primary =
+      QuantizeToArgb4444(context().theme().material3Theme().color.primary);
+  Color inactive = QuantizeToArgb4444(
+      context().theme().material3Theme().color.secondaryContainer);
 
   EXPECT_EQ(primary,
             pixelAt(kSliderX + active_rect.xMin() + active_rect.width() / 2,
@@ -2304,15 +2339,17 @@ TEST_F(Material3SliderRenderTest,
   ASSERT_GE(sample_y, 0);
   ASSERT_LT(sample_y, kHeight);
 
-  EXPECT_NE(QuantizeToArgb4444(env_.theme().material3Theme().color.inverseSurface),
-            pixelAt(sample_x, sample_y));
+  EXPECT_NE(
+      QuantizeToArgb4444(env_.theme().material3Theme().color.inverseSurface),
+      pixelAt(sample_x, sample_y));
 
   roo_display::FpPoint focus = slider_ptr->getPointOverlayFocus();
   slider_ptr->onShowPress((XDim)focus.x, (YDim)focus.y);
   ASSERT_TRUE(app_.refresh());
 
-  EXPECT_EQ(QuantizeToArgb4444(env_.theme().material3Theme().color.inverseSurface),
-            pixelAt(sample_x, sample_y));
+  EXPECT_EQ(
+      QuantizeToArgb4444(env_.theme().material3Theme().color.inverseSurface),
+      pixelAt(sample_x, sample_y));
 }
 
 // Verifies that a value-indicator repaint on the single slider only writes into
@@ -2485,81 +2522,6 @@ TEST_F(Material3SliderRenderTest,
   EXPECT_TRUE(ExpectPaintConfinedTo({expected_clip}, clear_color));
 }
 
-// Verifies that value-indicator invalidation tracks the measured old and new
-// bubble envelopes rather than falling back to a larger conservative region.
-TEST_F(Material3SliderRenderTest,
-       ValueChangeInvalidatesMeasuredIndicatorEnvelopeOutsideBounds) {
-  SliderStyle style{};
-  style.value_indicator = SliderValueIndicatorBehavior::kAlways;
-
-  auto panel = std::make_unique<RecordingPanel>(context());
-  RecordingPanel* panel_ptr = panel.get();
-
-  auto slider = std::make_unique<Slider>(context(), SliderRange{0.0f, 1.0f},
-                                         0.2f, SliderVariant::kStandard, style);
-  Slider* slider_ptr = slider.get();
-  panel_ptr->add(std::move(slider),
-                 Rect(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
-                      kSliderY + kSliderHeight - 1));
-
-  app_.add(std::move(panel), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
-  ASSERT_TRUE(app_.refresh());
-
-  panel_ptr->invalidated_regions.clear();
-  ASSERT_TRUE(slider_ptr->setValue(0.8f));
-  ASSERT_EQ(1u, panel_ptr->invalidated_regions.size());
-
-  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
-  float c_old = DisplayCenterFromValueForTest(axis, slider_ptr->range(), 0.2f);
-  float c_new = DisplayCenterFromValueForTest(axis, slider_ptr->range(), 0.8f);
-
-  char old_scratch[64];
-  char new_scratch[64];
-  roo::string_view old_text =
-      slider_ptr->formatLabel(0.2f, old_scratch, sizeof(old_scratch));
-  roo::string_view new_text =
-      slider_ptr->formatLabel(0.8f, new_scratch, sizeof(new_scratch));
-  const Theme& th = context().theme();
-  bool clamp =
-      style.value_indicator == SliderValueIndicatorBehavior::kWithinBounds;
-  int16_t old_bubble_width;
-  int16_t old_bubble_height;
-  int16_t new_bubble_width;
-  int16_t new_bubble_height;
-  ValueIndicatorBubble::MeasureBubbleSize(old_text, old_bubble_width,
-                                          old_bubble_height);
-  ValueIndicatorBubble::MeasureBubbleSize(new_text, new_bubble_width,
-                                          new_bubble_height);
-
-  ValueIndicatorBubble old_bubble(th, slider_ptr->isEnabled());
-  ASSERT_TRUE(old_bubble.layout(slider_ptr->width(), slider_ptr->height(),
-                                c_old, style.orientation, old_text, clamp));
-
-  Rect old_indicator = old_bubble.bounds().translate(kSliderX, kSliderY);
-  Rect new_indicator = ValueIndicatorBubble::EnvelopeForCenterRange(
-                           slider_ptr->width(), slider_ptr->height(), c_new,
-                           c_new, style.value_indicator, style.orientation,
-                           new_bubble_width, new_bubble_height)
-                           .translate(kSliderX, kSliderY);
-  Rect expected = Rect::Extent(old_indicator, new_indicator);
-  Rect max_width_sweep =
-      ValueIndicatorBubble::EnvelopeForCenterRange(
-          slider_ptr->width(), slider_ptr->height(), std::min(c_old, c_new),
-          std::max(c_old, c_new), style.value_indicator, style.orientation,
-          std::max(old_bubble_width, new_bubble_width),
-          std::max(old_bubble_height, new_bubble_height))
-          .translate(kSliderX, kSliderY);
-  Rect conservative =
-      ValueIndicatorBubble::EnvelopeForCenterRange(
-          slider_ptr->width(), slider_ptr->height(), std::min(c_old, c_new),
-          std::max(c_old, c_new), style.value_indicator, style.orientation)
-          .translate(kSliderX, kSliderY);
-
-  EXPECT_EQ(expected, panel_ptr->invalidated_regions.front());
-  EXPECT_LT(expected.width(), max_width_sweep.width());
-  EXPECT_LT(expected.width(), conservative.width());
-}
-
 // Verifies that pressed-state transitions repaint the thumb slice plus the
 // rounded track ends that move with the tightened gap.
 TEST_F(Material3SliderRenderTest,
@@ -2641,93 +2603,6 @@ TEST_F(Material3SliderRenderTest,
   EXPECT_TRUE(ExpectPaintConfinedTo({expected_clip}, clear_color));
 }
 
-// Verifies that showing or hiding the interaction-only value indicator expands
-// parent invalidation only by the indicator envelope outside widget bounds.
-TEST_F(Material3SliderRenderTest,
-       PressStateChangeInvalidatesOnlyIndicatorEnvelopeOutsideBounds) {
-  SliderStyle style{};
-  style.value_indicator = SliderValueIndicatorBehavior::kShowOnInteraction;
-
-  auto panel = std::make_unique<RecordingPanel>(context());
-  RecordingPanel* panel_ptr = panel.get();
-
-  auto slider = std::make_unique<Slider>(context(), SliderRange{}, 0.5f,
-                                         SliderVariant::kStandard, style);
-  Slider* slider_ptr = slider.get();
-  panel_ptr->add(std::move(slider),
-                 Rect(kSliderX, kSliderY, kSliderX + kSliderWidth - 1,
-                      kSliderY + kSliderHeight - 1));
-
-  app_.add(std::move(panel), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
-  ASSERT_TRUE(app_.refresh());
-
-  panel_ptr->invalidated_regions.clear();
-  roo_display::FpPoint focus = slider_ptr->getPointOverlayFocus();
-  slider_ptr->onShowPress((XDim)focus.x, (YDim)focus.y);
-  ASSERT_EQ(1u, panel_ptr->invalidated_regions.size());
-
-  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height());
-  float center = DisplayCenterFromValueForTest(axis, slider_ptr->range(),
-                                               slider_ptr->value());
-  Rect expected = ValueIndicatorBubble::EnvelopeForCenterRange(
-                      slider_ptr->width(), slider_ptr->height(), center, center,
-                      style.value_indicator, style.orientation)
-                      .translate(kSliderX, kSliderY);
-  EXPECT_EQ(expected, panel_ptr->invalidated_regions.front());
-  EXPECT_LT(expected.width(), slider_ptr->maxParentBounds().width());
-
-  panel_ptr->invalidated_regions.clear();
-  slider_ptr->onDragFinished((XDim)focus.x, (YDim)focus.y);
-  ASSERT_EQ(1u, panel_ptr->invalidated_regions.size());
-  EXPECT_EQ(expected, panel_ptr->invalidated_regions.front());
-}
-
-// Verifies the same tight repaint behavior for vertical sliders: only the
-// thumb slice and current indicator bounds may change after a value update.
-TEST_F(Material3SliderRenderTest,
-       VerticalValueIndicatorValueChangePaintIsClippedToThumbSlice) {
-  SliderStyle style{};
-  style.orientation = SliderOrientation::kVertical;
-  style.value_indicator = SliderValueIndicatorBehavior::kAlways;
-
-  auto slider = std::make_unique<ContentPaintSlider>(
-      context(), SliderRange{0.0f, 1.0f}, 0.2f, SliderVariant::kStandard,
-      style);
-  ContentPaintSlider* slider_ptr = slider.get();
-  slider_ = slider_ptr;
-
-  app_.add(std::move(slider),
-           roo_display::Box(kSliderX, kSliderY, kSliderX + Scaled(44) - 1,
-                            kSliderY + Scaled(56) - 1));
-
-  ASSERT_TRUE(app_.refresh());
-
-  ASSERT_TRUE(slider_ptr->setValue(0.8f));
-
-  internal::SliderAxisMetrics axis(slider_ptr->width(), slider_ptr->height(),
-                                   true, true);
-  Rect expected_clip = slider_ptr->bounds().translate(kSliderX, kSliderY);
-  Rect old_overlay_clip = Rect::Intersect(ResolveLegacyOverlayClipForTest(
-                                              axis, slider_ptr->range(), 0.2f,
-                                              0.8f, kPointOverlayDiameter / 2),
-                                          slider_ptr->bounds())
-                              .translate(kSliderX, kSliderY);
-  Rect indicator_bounds =
-      ResolveCurrentIndicatorBoundsForTest(*slider_ptr, context())
-          .translate(kSliderX, kSliderY);
-  Color clear_color = QuantizeToArgb4444(Color(0xFFB36219));
-
-  fillScreen(clear_color);
-  paintWidgetContentsForTest(*slider_ptr);
-
-  EXPECT_TRUE(
-      ExpectPaintConfinedTo({expected_clip, indicator_bounds}, clear_color));
-  EXPECT_LE(expected_clip.height(), old_overlay_clip.height());
-
-  Rect full_indicator_envelope = slider_ptr->getParentTransientPaintBounds();
-  EXPECT_LT(expected_clip.height(), full_indicator_envelope.height());
-}
-
 namespace {
 class FmtSlider : public Slider {
  public:
@@ -2766,82 +2641,6 @@ TEST(Material3SliderValueIndicator, CustomFormatLabelIsCalled) {
   FmtSlider slider(context);
   char scratch[16];
   EXPECT_EQ("42%", slider.formatLabel(42.0f, scratch, sizeof(scratch)));
-}
-
-// Verifies that enabling visible value indicators switches the slider into the
-// unclipped-parent mode needed to paint bubble overflow.
-TEST(Material3SliderValueIndicator, EnabledStyleSetsUnclippedParentMode) {
-  roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(),
-                             DefaultKeyboardColorTheme());
-  Slider hidden(context, SliderRange{0.0f, 1.0f}, 0.5f,
-                SliderVariant::kStandard, SliderStyle{});  // default kHidden
-  EXPECT_EQ(ParentClipMode::kClipped, hidden.getParentClipMode());
-
-  SliderStyle on_interaction{};
-  on_interaction.value_indicator =
-      SliderValueIndicatorBehavior::kShowOnInteraction;
-  Slider shown(context, SliderRange{0.0f, 1.0f}, 0.5f, SliderVariant::kStandard,
-               on_interaction);
-  EXPECT_EQ(ParentClipMode::kUnclipped, shown.getParentClipMode());
-}
-
-// Verifies that changing style at runtime toggles the parent clip mode only
-// when the value-indicator visibility mode actually changes.
-TEST(Material3SliderValueIndicator, SetStyleTogglesParentClipMode) {
-  roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(),
-                             DefaultKeyboardColorTheme());
-  Slider slider(context);
-  EXPECT_EQ(ParentClipMode::kClipped, slider.getParentClipMode());
-  SliderStyle s{};
-  s.value_indicator = SliderValueIndicatorBehavior::kAlways;
-  EXPECT_TRUE(slider.setStyle(s));
-  EXPECT_EQ(ParentClipMode::kUnclipped, slider.getParentClipMode());
-  EXPECT_FALSE(slider.setStyle(s));
-  SliderStyle hidden{};
-  EXPECT_TRUE(slider.setStyle(hidden));
-  EXPECT_EQ(ParentClipMode::kClipped, slider.getParentClipMode());
-}
-
-// Verifies that an always-visible value indicator expands transient paint
-// bounds above the slider so the bubble can render outside widget bounds.
-TEST(Material3SliderValueIndicator, TransientPaintBoundsExpandAboveWhenAlways) {
-  roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(),
-                             DefaultKeyboardColorTheme());
-  SliderStyle s{};
-  s.value_indicator = SliderValueIndicatorBehavior::kAlways;
-  Slider slider(context, SliderRange{0.0f, 1.0f}, 0.5f,
-                SliderVariant::kStandard, s);
-  slider.measure(WidthSpec::Exactly(Scaled(96)),
-                 HeightSpec::Exactly(Scaled(44)));
-  slider.layout(Rect(0, 0, Scaled(96) - 1, Scaled(44) - 1));
-  Rect base = slider.getParentTransientPaintBounds();
-  // The bubble extends above y=0 in widget-local coords; in parent coords this
-  // means above offsetTop(). Since the widget is at (0,0) offsets are zero, so
-  // bubble extends into negative y.
-  EXPECT_LT(base.yMin(), 0);
-}
-
-// Verifies that the same always-visible indicator expansion happens for a
-// vertical slider, including leftward overflow as well as upward overflow.
-TEST(Material3SliderValueIndicator,
-     VerticalTransientPaintBoundsExpandLeftWhenAlways) {
-  roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(),
-                             DefaultKeyboardColorTheme());
-  SliderStyle s{};
-  s.orientation = SliderOrientation::kVertical;
-  s.value_indicator = SliderValueIndicatorBehavior::kAlways;
-  Slider slider(context, SliderRange{0.0f, 1.0f}, 0.5f,
-                SliderVariant::kStandard, s);
-  slider.measure(WidthSpec::Exactly(Scaled(44)),
-                 HeightSpec::Exactly(Scaled(96)));
-  slider.layout(Rect(0, 0, Scaled(44) - 1, Scaled(96) - 1));
-  Rect base = slider.getParentTransientPaintBounds();
-  EXPECT_LT(base.xMin(), 0);
-  EXPECT_LT(base.yMin(), 0);
 }
 
 // Verifies that the range slider reuses the default numeric label formatting

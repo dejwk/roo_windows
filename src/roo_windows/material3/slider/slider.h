@@ -229,9 +229,6 @@ class Slider : public BasicWidget {
   /// Extends sloppy-touch reach along the slider's main interaction axis.
   Rect getSloppyTouchParentBounds() const override;
 
-  /// Expands parent invalidation to cover value-indicator overflow when needed.
-  Rect getParentTransientPaintBounds() const override;
-
  protected:
   /// Paints slider content in staged order so bubbles and exclusions settle
   /// correctly.
@@ -245,6 +242,10 @@ class Slider : public BasicWidget {
 
  private:
   struct Metrics;
+  class ValueIndicatorPin;
+  void updateValueIndicatorPin();
+  Rect valueIndicatorBoundsInWindow() const;
+  void paintValueIndicator(PaintContext& ctx) const;
 
   /// Resolves all per-frame painting metrics for the current thumb state.
   Metrics buildMetrics() const;
@@ -295,12 +296,6 @@ class Slider : public BasicWidget {
   // and thumb area that needs repainting due to a value/style state change.
   // Used by paintWidgetContents() to narrow the clip passed to paint().
   internal::DirtySpan pending_content_dirty_span_;
-  // Indicator span state. When the slider is clean, this stores the current
-  // on-screen indicator footprint. Once the slider is dirty, the same field is
-  // reused as the indicator repaint span so coalesced updates can union the
-  // next bubble bounds against the previously shown footprint without a second
-  // cached span.
-  internal::DirtySpan pending_indicator_dirty_span_;
 };
 
 /// Convenience `Slider` subclass that paints a non-owning pictogram inside

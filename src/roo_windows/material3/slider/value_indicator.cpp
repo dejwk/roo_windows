@@ -8,8 +8,8 @@
 #include "roo_windows/core/border_style.h"
 #include "roo_windows/core/number.h"
 #include "roo_windows/core/theme.h"
-#include "roo_windows/material3/theme.h"
 #include "roo_windows/material3/slider/slider_internal.h"
+#include "roo_windows/material3/theme.h"
 
 namespace roo_windows {
 namespace material3 {
@@ -44,8 +44,9 @@ constexpr int16_t kCornerInset = kCornerRadius - (181 * kCornerRadius) / 256;
 }  // namespace
 
 ValueIndicatorBubble::ValueIndicatorBubble(const Theme& theme, bool enabled)
-    : bubble_color_(enabled ? theme.material3Theme().color.inverseSurface
-                            : theme.material3Theme().color.onSurface.withA(0x3D)),
+    : bubble_color_(enabled
+                        ? theme.material3Theme().color.inverseSurface
+                        : theme.material3Theme().color.onSurface.withA(0x3D)),
       text_color_(enabled ? theme.material3Theme().color.inverseOnSurface
                           : theme.material3Theme().color.surface) {}
 
@@ -277,19 +278,10 @@ void ValueIndicatorBubble::paint(PaintContext& ctx) const {
   // flicker.
   sub.setBgcolor(bubble_color_);
 
-  // Fast solid fill of the pill's interior. Far cheaper than a smooth
-  // round-rect; the rounded edges come from the decoration overlay.
-  sub.fillRect(inner, bubble_color_);
-
   // Centered label: position by anchor-center, then draw without a tile so
   // we do not refill any rectangle around the glyphs.
   StringViewLabel label(text_, font_caption(), text_color_);
-  Box ext = label.anchorExtents();
-  int16_t bubble_cx = (bounds_.xMin() + bounds_.xMax()) / 2;
-  int16_t bubble_cy = (bounds_.yMin() + bounds_.yMax()) / 2;
-  int16_t label_cx = (ext.xMin() + ext.xMax()) / 2;
-  int16_t label_cy = (ext.yMin() + ext.yMax()) / 2;
-  sub.drawObject(label, bubble_cx - label_cx, bubble_cy - label_cy);
+  sub.drawTiled(label, inner, roo_display::kCenter | roo_display::kMiddle);
 }
 
 void ValueIndicatorBubble::paintAndDecorate(PaintContext& ctx) const {
@@ -299,10 +291,9 @@ void ValueIndicatorBubble::paintAndDecorate(PaintContext& ctx) const {
 }
 
 Rect PaintValueIndicator(const Theme& theme, bool enabled,
-                         PaintContext& indicator_ctx,
-                         int16_t parent_width, int16_t parent_height,
-                         float thumb_center, const SliderStyle& style,
-                         roo::string_view text) {
+                         PaintContext& indicator_ctx, int16_t parent_width,
+                         int16_t parent_height, float thumb_center,
+                         const SliderStyle& style, roo::string_view text) {
   ValueIndicatorBubble bubble(theme, enabled);
   if (!bubble.layout(parent_width, parent_height, thumb_center,
                      style.orientation, text,
@@ -325,8 +316,7 @@ void ValueIndicatorBubble::decorate(PaintContext& ctx) const {
   decoration.bounds = bounds_;
   decoration.background = bubble_color_;
   decoration.corner_radii = {(uint8_t)kCornerRadius, (uint8_t)kCornerRadius,
-                             (uint8_t)kCornerRadius,
-                             (uint8_t)kCornerRadius};
+                             (uint8_t)kCornerRadius, (uint8_t)kCornerRadius};
   decoration.outline_width = SmallNumber(0);
   decoration.outline_color = bubble_color_;
   ctx.addDecoration(decoration);

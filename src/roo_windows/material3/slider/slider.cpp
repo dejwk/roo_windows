@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <new>
 
 #include "roo_display/shape/smooth.h"
 #include "roo_logging.h"
@@ -344,14 +345,10 @@ Slider::Slider(ApplicationContext& context, SliderRange range, float value,
       style_(style),
       value_(0.0f),
       is_dragging_(false),
-      pending_content_dirty_span_(),
-      pending_indicator_dirty_span_() {
+      pending_content_dirty_span_() {
   internal::CheckValidSliderRange(range_.from, range_.to, range_.step);
   value_ = internal::NormalizeSliderValueForRange(value, range_.from, range_.to,
                                                   range_.step);
-  if (IndicatorEnabled(style_)) {
-    setParentClipMode(ParentClipMode::kUnclipped);
-  }
 }
 
 void Slider::onDown(XDim x, YDim y) {
@@ -419,6 +416,7 @@ void Slider::onDragFinished(XDim x, YDim y) {
     }
     onInteractionEnd(value_);
     is_dragging_ = false;
+    updateValueIndicatorPin();
   }
 }
 
@@ -428,6 +426,7 @@ void Slider::onCancel() {
   }
   BasicWidget::onCancel();
   is_dragging_ = false;
+  updateValueIndicatorPin();
 }
 
 bool Slider::setValueInternal(float value, bool from_user) {
@@ -487,12 +486,12 @@ bool Slider::setStyle(SliderStyle style) {
   bool was_enabled = IndicatorEnabled(style_);
   style_ = style;
   bool is_enabled = IndicatorEnabled(style_);
-  setParentClipMode(is_enabled ? ParentClipMode::kUnclipped
-                               : ParentClipMode::kClipped);
+  setParentClipMode(ParentClipMode::kClipped);
   invalidateInterior();
   if (was_enabled || is_enabled) {
     notifyParentInvalidatedRegion(Rect::Extent(old_bounds, maxParentBounds()));
   }
+  updateValueIndicatorPin();
   return true;
 }
 
@@ -567,37 +566,16 @@ void Slider::invalidateValueChange(const internal::SliderAxisMetrics& axis,
       content_envelope, axis, old_metrics.segments, old_metrics.segment_count,
       new_metrics.segments, new_metrics.segment_count,
       old_metrics.size_metrics.track_radius);
-  Rect bubble_envelope(0, 0, -1, -1);
-  if (IndicatorEnabled(style_) && ShowsValueIndicator(*this)) {
-    float c_new = axis.displayPrimary(new_center);
-    char new_scratch[64];
-    roo::string_view new_text =
-        formatLabel(new_value, new_scratch, sizeof(new_scratch));
-    int16_t new_bubble_width;
-    int16_t new_bubble_height;
-    ValueIndicatorBubble::MeasureBubbleSize(new_text, new_bubble_width,
-                                            new_bubble_height);
-    Rect new_indicator = ValueIndicatorBubble::EnvelopeForCenterRange(
-        width(), height(), c_new, c_new, style_.value_indicator,
-        style_.orientation, new_bubble_width, new_bubble_height);
-    Rect old_indicator = IndicatorDirtyRectFromSpan(
-        pending_indicator_dirty_span_, width(), height(), style_);
-    bubble_envelope = Rect::Extent(old_indicator, new_indicator);
-  }
   pending_content_dirty_span_.include(
       internal::DisplayMainSpanFromRect(content_envelope, axis.isVertical()));
-  pending_indicator_dirty_span_.include(
-      internal::DisplayMainSpanFromRect(bubble_envelope, axis.isVertical()));
   setDirty(content_envelope);
-  if (!bubble_envelope.empty()) {
-    notifyParentInvalidatedRegion(
-        bubble_envelope.translate(offsetLeft(), offsetTop()));
-  }
+  if (ShowsValueIndicator(*this)) setPresentationPinDirty();
 }
 
 void Slider::notifyStateChanged(uint16_t state_diff) {
   if ((state_diff & kWidgetPressed) == 0) {
     Widget::notifyStateChanged(state_diff);
+    updateValueIndicatorPin();
     return;
   }
 
@@ -605,6 +583,7 @@ void Slider::notifyStateChanged(uint16_t state_diff) {
 
   if (width() <= 0 || height() <= 0) {
     setDirty();
+    updateValueIndicatorPin();
     return;
   }
 
@@ -620,31 +599,10 @@ void Slider::notifyStateChanged(uint16_t state_diff) {
       new_metrics.segments, new_metrics.segment_count,
       old_metrics.size_metrics.track_radius);
 
-  bool old_indicator_visible =
-      style_.value_indicator == SliderValueIndicatorBehavior::kAlways ||
-      was_pressed || isDragged();
-  bool new_indicator_visible = ShowsValueIndicator(*this);
-
-  Rect bubble_envelope(0, 0, -1, -1);
-  if (old_indicator_visible != new_indicator_visible) {
-    float display_center = axis.displayPrimary(center);
-    bubble_envelope = ValueIndicatorBubble::EnvelopeForCenterRange(
-        width(), height(), display_center, display_center,
-        style_.value_indicator, style_.orientation);
-  }
-
   pending_content_dirty_span_.include(
       internal::DisplayMainSpanFromRect(content_envelope, axis.isVertical()));
-  pending_indicator_dirty_span_.include(
-      internal::DisplayMainSpanFromRect(bubble_envelope, axis.isVertical()));
-
-  setDirty(bubble_envelope.empty()
-               ? content_envelope
-               : Rect::Extent(content_envelope, bubble_envelope));
-  if (!bubble_envelope.empty()) {
-    notifyParentInvalidatedRegion(
-        bubble_envelope.translate(offsetLeft(), offsetTop()));
-  }
+  setDirty(content_envelope);
+  updateValueIndicatorPin();
 }
 
 void Slider::paintTrackAndThumb(const Canvas& canvas, const Metrics& metrics,
@@ -756,34 +714,65 @@ roo::string_view Slider::formatLabel(float value, char* scratch,
   return ValueIndicatorBubble::FormatDefault(value, scratch, scratch_size);
 }
 
+class Slider::ValueIndicatorPin final : public PresentationPin {
+ protected:
+  Rect boundsInWindow() const override {
+    return static_cast<const Slider&>(anchor()).valueIndicatorBoundsInWindow();
+  }
+  void paint(PaintContext& ctx) const override {
+    static_cast<const Slider&>(anchor()).paintValueIndicator(ctx);
+  }
+};
+
+Rect Slider::valueIndicatorBoundsInWindow() const {
+  char scratch[64];
+  roo::string_view text = formatLabel(value_, scratch, sizeof(scratch));
+  int16_t w, h;
+  ValueIndicatorBubble::MeasureBubbleSize(text, w, h);
+  internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
+  Rect local = ValueIndicatorBubble::EnvelopeForCenterRange(
+      width(), height(), axis.displayCenterFromValue(range_, value_),
+      axis.displayCenterFromValue(range_, value_), style_.value_indicator,
+      style_.orientation, w, h);
+  XDim dx;
+  YDim dy;
+  getAbsoluteOffset(dx, dy);
+  return local.translate(dx, dy);
+}
+
+void Slider::paintValueIndicator(PaintContext& ctx) const {
+  XDim dx;
+  YDim dy;
+  getAbsoluteOffset(dx, dy);
+  // The pin starts in MainWindow coordinates. Restore the slider's local
+  // coordinate system by adding its absolute canvas translation.
+  PaintContext local = ctx.translated(dx, dy);
+  char scratch[64];
+  roo::string_view text = formatLabel(value_, scratch, sizeof(scratch));
+  internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
+  PaintValueIndicator(theme(), isEnabled(), local, width(), height(),
+                      axis.displayCenterFromValue(range_, value_), style_,
+                      text);
+}
+
+void Slider::updateValueIndicatorPin() {
+  if (!ShowsValueIndicator(*this)) {
+    hidePresentationPin();
+    return;
+  }
+  if (hasPresentationPin()) {
+    setPresentationPinDirty();
+    return;
+  }
+  std::unique_ptr<ValueIndicatorPin> pin(new (std::nothrow) ValueIndicatorPin);
+  showPresentationPin(std::move(pin));
+}
+
 void SliderWithInsetIcon::setIcon(const roo_display::Pictogram* icon,
                                   SliderInsetIconAnchor anchor) {
   if (icon_.icon == icon && icon_.anchor == anchor) return;
   icon_ = {icon, anchor};
   invalidateInterior();
-}
-
-Rect Slider::getParentTransientPaintBounds() const {
-  // Start with whatever the base widget reports (currently just bounds; in
-  // the future this may include other transient overflow). Then, if the
-  // value indicator may be shown this frame, union with a conservative
-  // envelope big enough to cover the bubble at any thumb position. This is
-  // what tells the framework to invalidate the bubble area in the parent
-  // when isPressed/isDragged flips.
-  Rect base = BasicWidget::getParentTransientPaintBounds();
-  if (style_.value_indicator == SliderValueIndicatorBehavior::kHidden) {
-    return base;
-  }
-  bool may_show =
-      style_.value_indicator == SliderValueIndicatorBehavior::kAlways ||
-      isPressed() || isDragged();
-  if (!may_show || width() <= 0 || height() <= 0) return base;
-  Rect bubble_local = ValueIndicatorBubble::ConservativeBounds(
-      width(), height(), internal::kHandleWidth, style_.value_indicator,
-      style_.orientation);
-  if (bubble_local.empty()) return base;
-  Rect bubble_parent = bubble_local.translate(offsetLeft(), offsetTop());
-  return Rect::Extent(base, bubble_parent);
 }
 
 void Slider::paintWidgetContents(PaintContext& ctx) {
@@ -798,7 +787,6 @@ void Slider::paintWidgetContents(PaintContext& ctx) {
   // fully repaint (e.g. style change, visibility toggle), in which case
   // we keep the full clip.
   internal::DirtySpan pending_content_span = pending_content_dirty_span_;
-  internal::DirtySpan pending_indicator_span = pending_indicator_dirty_span_;
   pending_content_dirty_span_ = internal::DirtySpan();
 
   // The area of the content that needs to be repainted.
@@ -806,46 +794,7 @@ void Slider::paintWidgetContents(PaintContext& ctx) {
       pending_content_span, width(), height(),
       style_.orientation == SliderOrientation::kVertical);
   // The area of the value indicator that needs to be repainted.
-  Rect pending_indicator = IndicatorDirtyRectFromSpan(
-      pending_indicator_span, width(), height(), style_);
-
-  internal::DirtySpan current_indicator_span = pending_indicator_span;
-
   bool invalidated = isInvalidated();
-
-  if (ShowsValueIndicator(*this) &&
-      (invalidated || !pending_indicator.empty())) {
-    PaintContext indicator_ctx =
-        invalidated ? ctx : ctx.clipped(pending_indicator);
-    if (!indicator_ctx.empty() && width() > 0 && height() > 0) {
-      // Pre-paint the value indicator bubble BEFORE the slider's track and
-      // thumb. This way, even if the bubble's geometry overlapped the
-      // slider's rectangular bounds (it does not today, but might if kGap or
-      // kPaddingV were tuned aggressively), the slider would still appear
-      // behind the bubble: subsequent slider writes inside the bubble's
-      // inscribed inner rectangle are blocked by the clipper exclusion
-      // installed by decorate(), and writes in the bubble's rounded-corner
-      // strips have the bubble's decoration overlay alpha-composited on top.
-      //
-      // The canvas received here has been shifted to slider-local coordinates
-      // and clipped to maxBounds(). Because Widget::getVisualBounds() (the
-      // default for maxBounds()) unions in getTransientPaintBounds(), and our
-      // getParentTransientPaintBounds() override already accounts for the
-      // bubble's conservative envelope when the indicator is showing, the
-      // canvas clip already covers the bubble area.
-      char scratch[64];
-      roo::string_view text = formatLabel(value_, scratch, sizeof(scratch));
-      internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
-      Rect indicator_bounds = PaintValueIndicator(
-          theme(), isEnabled(), indicator_ctx, width(), height(),
-          axis.displayCenterFromValue(range_, value_), style_, text);
-      if (!indicator_bounds.empty()) {
-        current_indicator_span = internal::DisplayMainSpanFromRect(
-            indicator_bounds,
-            style_.orientation == SliderOrientation::kVertical);
-      }
-    }
-  }
 
   PaintContext content_ctx = ctx.clipped(getContentBounds());
   Canvas& content_canvas = content_ctx.canvas();
@@ -860,9 +809,6 @@ void Slider::paintWidgetContents(PaintContext& ctx) {
     paintStops(content_canvas, clipper, metrics, tokens);
     paintTrackAndThumb(content_canvas, metrics, tokens);
   }
-  pending_indicator_dirty_span_ = ShowsValueIndicator(*this)
-                                      ? current_indicator_span
-                                      : internal::DirtySpan();
   markClean();
 }
 
