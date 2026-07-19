@@ -88,7 +88,10 @@ cc_test(
 
 cc_test(
     name = "transient_presentation_pin_test",
-    srcs = ["test/transient_presentation_pin_test.cpp"],
+    srcs = [
+        "test/roo_windows_render_test_support.h",
+        "test/transient_presentation_pin_test.cpp",
+    ],
     linkstatic = 1,
     deps = [
         ":roo_windows",
