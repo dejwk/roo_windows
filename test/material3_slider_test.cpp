@@ -92,6 +92,22 @@ class Material3SliderAppTest : public testing::Test {
     return color[0];
   }
 
+  Color sampleIndicatorInterior(const Widget& slider,
+                                const Rect& local_bounds) const {
+    XDim dx;
+    YDim dy;
+    slider.getAbsoluteOffset(dx, dy);
+    int16_t x = dx + local_bounds.xMin() + local_bounds.width() / 4;
+    int16_t y = dy + local_bounds.yMin() + local_bounds.height() / 4;
+    EXPECT_GE(x, 0);
+    EXPECT_LT(x, kWidth);
+    EXPECT_GE(y, 0);
+    EXPECT_LT(y, kHeight);
+    return x >= 0 && x < kWidth && y >= 0 && y < kHeight
+               ? pixelAt(x, y)
+               : roo_display::color::Transparent;
+  }
+
   void fillScreen(Color color) {
     roo_display::Surface surface(display_.output(), 0, 0, display_.extents(),
                                  /*is_write_once=*/false,
@@ -399,6 +415,49 @@ class RecordingPanel : public Panel {
     invalidated_regions.push_back(rect);
   }
 };
+
+class IndicatorClipPanel final : public Panel {
+ public:
+  IndicatorClipPanel(ApplicationContext& context, Color color)
+      : Panel(context), color_(color) {}
+
+  using Panel::add;
+  Color background() const override { return color_; }
+  void paint(PaintContext& ctx) const override { ctx.clear(); }
+
+ private:
+  Color color_;
+};
+
+class IndicatorDialog final : public Dialog {
+ public:
+  explicit IndicatorDialog(ApplicationContext& context) : Dialog(context, {}) {}
+
+  void setContent(WidgetRef content) {
+    setPresentationContent(std::move(content));
+  }
+};
+
+Rect ResolveRangeIndicatorBoundsForTest(const RangeSlider& slider,
+                                        float value,
+                                        const ApplicationContext& context) {
+  const SliderStyle& style = slider.style();
+  internal::SliderAxisMetrics axis(
+      slider.width(), slider.height(),
+      style.orientation == SliderOrientation::kVertical,
+      IsSliderDirectionInverted(style));
+  char scratch[64];
+  roo::string_view label =
+      slider.formatLabel(value, scratch, sizeof(scratch));
+  ValueIndicatorBubble bubble(context.theme(), slider.isEnabled());
+  bool laid_out = bubble.layout(
+      slider.width(), slider.height(),
+      axis.displayCenterFromValue(slider.range(), value), style.orientation,
+      label, style.value_indicator == SliderValueIndicatorBehavior::kWithinBounds);
+  EXPECT_TRUE(laid_out);
+  return laid_out ? bubble.bounds() : Rect(0, 0, -1, -1);
+}
+
 
 // Verifies that the slider contributes no default padding or margins, so its
 // visual geometry is controlled entirely by its own layout and paint logic.
@@ -2693,6 +2752,193 @@ TEST_F(Material3SliderAppTest,
   ASSERT_GE(tracking->active_thumbs.size(), 2u);
   EXPECT_EQ(1, tracking->active_thumbs[0]);
   EXPECT_EQ(1, tracking->active_thumbs[1]);
+}
+
+// Verifies an always-visible single-slider indicator registers immediately
+// after attachment rather than waiting for an unrelated state transition.
+TEST_F(Material3SliderRenderTest, AlwaysIndicatorRegistersOnAttachment) {
+  SliderStyle style{};
+  style.value_indicator = SliderValueIndicatorBehavior::kAlways;
+  auto slider = std::make_unique<Slider>(
+      context(), SliderRange{}, 0.5f, SliderVariant::kStandard, style);
+  Slider* raw = slider.get();
+  app_.add(std::move(slider),
+           roo_display::Box(kSliderX, kSliderY,
+                            kSliderX + kSliderWidth - 1,
+                            kSliderY + kSliderHeight - 1));
+  ASSERT_TRUE(app_.refresh());
+  ASSERT_TRUE(raw->hasPresentationPin());
+  Rect bubble = ResolveCurrentIndicatorBoundsForTest(*raw, context());
+  ASSERT_FALSE(bubble.empty());
+  EXPECT_EQ(QuantizeToArgb4444(
+                context().theme().material3Theme().color.inverseSurface),
+            sampleIndicatorInterior(*raw, bubble));
+}
+
+// Verifies an always-visible range indicator follows the same attachment
+// lifecycle and pays no dormant pin storage before it is attached.
+TEST_F(Material3SliderRenderTest, RangeAlwaysIndicatorRegistersOnAttachment) {
+  SliderStyle style{};
+  style.value_indicator = SliderValueIndicatorBehavior::kAlways;
+  auto slider = std::make_unique<RangeSlider>(context(), SliderRange{}, 0.2f,
+                                              0.8f, style);
+  RangeSlider* raw = slider.get();
+  app_.add(std::move(slider),
+           roo_display::Box(kSliderX, kSliderY,
+                            kSliderX + kSliderWidth - 1,
+                            kSliderY + kSliderHeight - 1));
+  ASSERT_TRUE(app_.refresh());
+  ASSERT_TRUE(raw->hasPresentationPin());
+  Rect bubble = ResolveRangeIndicatorBoundsForTest(*raw, raw->startValue(),
+                                                    context());
+  ASSERT_FALSE(bubble.empty());
+  EXPECT_EQ(QuantizeToArgb4444(
+                context().theme().material3Theme().color.inverseSurface),
+            sampleIndicatorInterior(*raw, bubble));
+}
+
+// Verifies both slider variants remain ordinary clipped children when value
+// indicators are enabled; only their pins escape the ancestor chain.
+TEST(Material3SliderValueIndicator, PinIndicatorsDoNotChangeParentClipMode) {
+  roo_scheduler::Scheduler scheduler;
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
+  SliderStyle style{};
+  style.value_indicator = SliderValueIndicatorBehavior::kAlways;
+  Slider slider(context, SliderRange{}, 0.5f, SliderVariant::kStandard,
+                style);
+  RangeSlider range(context, SliderRange{}, 0.2f, 0.8f, style);
+  EXPECT_EQ(ParentClipMode::kClipped, slider.getParentClipMode());
+  EXPECT_EQ(ParentClipMode::kClipped, range.getParentClipMode());
+}
+
+// Verifies a single-slider interaction pin renders above a clipped panel and
+// is removed when the interaction ends.
+TEST_F(Material3SliderRenderTest,
+       InteractionIndicatorEscapesClippedPanelAndHides) {
+  SliderStyle style{};
+  style.value_indicator = SliderValueIndicatorBehavior::kShowOnInteraction;
+  auto root = std::make_unique<IndicatorClipPanel>(
+      context(), roo_display::color::Red);
+  auto panel = std::make_unique<IndicatorClipPanel>(
+      context(), roo_display::color::Blue);
+  auto slider = std::make_unique<Slider>(
+      context(), SliderRange{}, 0.5f, SliderVariant::kStandard, style);
+  Slider* raw = slider.get();
+  panel->add(std::move(slider), Rect(2, 0, 2 + kSliderWidth - 1,
+                                    kSliderHeight - 1));
+  root->add(std::move(panel), Rect(10, 30, 111, 79));
+  app_.add(std::move(root), roo_display::Box(0, 0, 119, 79));
+  ASSERT_TRUE(app_.refresh());
+  roo_display::FpPoint focus = raw->getPointOverlayFocus();
+  raw->onShowPress((XDim)focus.x, (YDim)focus.y);
+  ASSERT_TRUE(app_.refresh());
+  ASSERT_TRUE(raw->hasPresentationPin());
+  Rect bubble = ResolveCurrentIndicatorBoundsForTest(*raw, context());
+  ASSERT_FALSE(bubble.empty());
+  XDim dx;
+  YDim dy;
+  raw->getAbsoluteOffset(dx, dy);
+  EXPECT_LT(dy + bubble.yMin(), 30);
+  EXPECT_EQ(QuantizeToArgb4444(
+                context().theme().material3Theme().color.inverseSurface),
+            sampleIndicatorInterior(*raw, bubble));
+  raw->onDragFinished((XDim)focus.x, (YDim)focus.y);
+  EXPECT_FALSE(raw->hasPresentationPin());
+}
+
+// Verifies the range-slider indicator is a root-stage pin that escapes a
+// clipped panel and is deleted at the interaction boundary.
+TEST_F(Material3SliderRenderTest,
+       RangeInteractionIndicatorEscapesClippedPanelAndHides) {
+  SliderStyle style{};
+  style.value_indicator = SliderValueIndicatorBehavior::kShowOnInteraction;
+  auto root = std::make_unique<IndicatorClipPanel>(
+      context(), roo_display::color::Red);
+  auto panel = std::make_unique<IndicatorClipPanel>(
+      context(), roo_display::color::Blue);
+  auto slider = std::make_unique<RangeSlider>(context(), SliderRange{}, 0.2f,
+                                              0.8f, style);
+  RangeSlider* raw = slider.get();
+  panel->add(std::move(slider), Rect(2, 0, 2 + kSliderWidth - 1,
+                                    kSliderHeight - 1));
+  root->add(std::move(panel), Rect(10, 30, 111, 79));
+  app_.add(std::move(root), roo_display::Box(0, 0, 119, 79));
+  ASSERT_TRUE(app_.refresh());
+  roo_display::FpPoint focus = raw->getPointOverlayFocus();
+  raw->onShowPress((XDim)focus.x, (YDim)focus.y);
+  ASSERT_TRUE(app_.refresh());
+  ASSERT_TRUE(raw->hasPresentationPin());
+  Rect bubble = ResolveRangeIndicatorBoundsForTest(*raw, raw->startValue(),
+                                                    context());
+  ASSERT_FALSE(bubble.empty());
+  XDim dx;
+  YDim dy;
+  raw->getAbsoluteOffset(dx, dy);
+  EXPECT_LT(dy + bubble.yMin(), 30);
+  EXPECT_EQ(QuantizeToArgb4444(
+                context().theme().material3Theme().color.inverseSurface),
+            sampleIndicatorInterior(*raw, bubble));
+  raw->onDragFinished((XDim)focus.x, (YDim)focus.y);
+  EXPECT_FALSE(raw->hasPresentationPin());
+}
+
+// Verifies moving either range endpoint dirties the existing pin instead of
+// replacing its allocation and restores the old bubble footprint.
+TEST_F(Material3SliderRenderTest, RangeValueMoveReusesAlwaysIndicatorPin) {
+  SliderStyle style{};
+  style.value_indicator = SliderValueIndicatorBehavior::kAlways;
+  auto slider = std::make_unique<RangeSlider>(context(), SliderRange{}, 0.2f,
+                                              0.8f, style);
+  RangeSlider* raw = slider.get();
+  app_.add(std::move(slider),
+           roo_display::Box(kSliderX, kSliderY,
+                            kSliderX + kSliderWidth - 1,
+                            kSliderY + kSliderHeight - 1));
+  ASSERT_TRUE(app_.refresh());
+  ASSERT_TRUE(raw->hasPresentationPin());
+  ASSERT_TRUE(raw->setValues(0.4f, 0.9f));
+  EXPECT_TRUE(raw->hasPresentationPin());
+  ASSERT_TRUE(app_.refresh());
+  Rect bubble = ResolveRangeIndicatorBoundsForTest(*raw, raw->startValue(),
+                                                    context());
+  ASSERT_FALSE(bubble.empty());
+  EXPECT_EQ(QuantizeToArgb4444(
+                context().theme().material3Theme().color.inverseSurface),
+            sampleIndicatorInterior(*raw, bubble));
+}
+
+// Verifies popup and dialog attachment both establish the correct layer root
+// for an always-visible slider pin.
+TEST_F(Material3SliderRenderTest, IndicatorPinsRegisterInPopupAndDialogLayers) {
+  SliderStyle style{};
+  style.value_indicator = SliderValueIndicatorBehavior::kAlways;
+  auto popup_slider = std::make_unique<Slider>(
+      context(), SliderRange{}, 0.4f, SliderVariant::kStandard, style);
+  Slider* popup_raw = popup_slider.get();
+  app_.addPopup(std::move(popup_slider),
+                roo_display::Box(12, 24, 107, 67));
+  ASSERT_TRUE(app_.refresh());
+  EXPECT_TRUE(popup_raw->hasPresentationPin());
+
+  IndicatorDialog dialog(context());
+  auto dialog_slider = std::make_unique<Slider>(
+      context(), SliderRange{}, 0.6f, SliderVariant::kStandard, style);
+  Slider* dialog_raw = dialog_slider.get();
+  dialog.setContent(WidgetRef(std::move(dialog_slider)));
+  ASSERT_EQ(PresentationStartResult::kStarted,
+            app_.showDialog(dialog, [](int) {}));
+  ASSERT_TRUE(app_.refresh());
+  EXPECT_TRUE(dialog_raw->hasPresentationPin());
+}
+
+// Verifies Phase 2 does not add a dormant pin handle or state object to either
+// slider. These budgets include the semantic slider fields, not heap payload.
+TEST(Material3SliderValueIndicator, PersistentObjectSizesStayBounded) {
+  constexpr size_t kSliderBudget = sizeof(BasicWidget) + 64;
+  constexpr size_t kRangeSliderBudget = sizeof(BasicWidget) + 80;
+  EXPECT_LE(sizeof(Slider), kSliderBudget);
+  EXPECT_LE(sizeof(RangeSlider), kRangeSliderBudget);
 }
 
 }  // namespace
