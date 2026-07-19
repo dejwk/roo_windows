@@ -58,11 +58,19 @@ the host ABI.
 | `material3::Material3Theme` | 928 | Full M3 color and state-layer contract |
 | `Theme` | 232 | Application-owned composition of framework theme and M3 slot |
 | `material3::Badge` | 20 | Representative lightweight M3 adornment; no widget allocation |
+| `material3::Slider` | 56 | Phase 2 transient-pin result; 60 bytes before indicator migration |
+| `material3::RangeSlider` | 64 | Phase 2 transient-pin result; 68 bytes before indicator migration |
+| `PresentationPin` | 28 | Active heap payload before allocator overhead; slider pin plans add no fields |
 
 `Theme` holds the M3 theme through a typed pointer. The 928-byte M3 object is
 therefore application/theme state, not per-widget RAM. The representative
 badge remains a compact inline helper and does not introduce a theme pointer
 or per-widget palette.
+
+The slider figures confirm that transient-pin adoption adds no dormant widget
+storage. Both slider classes instead remove their former 4-byte local
+indicator dirty span. The 28-byte pin payload exists only while an indicator
+is visible and is owned by the layer host.
 
 ## Stack
 

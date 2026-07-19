@@ -230,8 +230,13 @@ class Slider : public BasicWidget {
   Rect getSloppyTouchParentBounds() const override;
 
  protected:
-  /// Paints slider content in staged order so bubbles and exclusions settle
-  /// correctly.
+  /// Registers an initially visible indicator after attachment.
+  void setParent(Container* parent, bool is_owned) override;
+
+  /// Retries registration once a prebuilt ancestor subtree is attached.
+  void onLayout(bool changed, const Rect& rect) override;
+
+  /// Paints the widget-local track, stops, icons, and thumb.
   void paintWidgetContents(PaintContext& ctx) override;
 
   /// Handles pressed-state invalidation for the thumb and value indicator.

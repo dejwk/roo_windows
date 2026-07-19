@@ -2,7 +2,10 @@
 
 ## Implementation status
 
-**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+**In progress.** Phases 1 and 2 are implemented: the layer-scoped pin host is
+available and both slider variants use active-only pins for value indicators.
+Phase 3, keyboard-highlighter adoption, remains outstanding. The status of
+prerequisites is recorded in the [status index](../README.md).
 
 ## Objective
 
@@ -14,13 +17,13 @@ The immediate driver is the Material 3 slider value indicator in
 [../implemented/material3_slider_design.md](../implemented/material3_slider_design.md). The same mechanism
 also serves keyboard preview or highlighter surfaces and the
 presenter-owned trigger retention already proposed in
-[material3_menus_design.md](material3_menus_design.md).
+[material3_menus_design.md](../proposed/material3_menus_design.md).
 
 ## Motivation
 
-The current slider bubble path in
+Before Phase 2, the slider bubble path in
 [../src/roo_windows/material3/slider/slider.cpp](../../../src/roo_windows/material3/slider/slider.cpp)
-already uses the strongest local overflow path the framework currently has:
+used the strongest local overflow path then available:
 
 - `getParentTransientPaintBounds()` widens the parent invalidation envelope,
 - `ParentClipMode::kUnclipped` lets the slider escape its direct parent,
@@ -45,14 +48,15 @@ focus, or own layout.
 
 ## Background
 
-### Current Slider Indicator Path
+### Pre-Phase-2 Slider Indicator Path
 
-The current indicator is a non-widget helper in
+The indicator remains a non-widget helper in
 [../src/roo_windows/material3/slider/value_indicator.h](../../../src/roo_windows/material3/slider/value_indicator.h).
-`Slider` and `RangeSlider` pre-paint it inside `paintWidgetContents()` and rely
-on decoration and exclusion salvage so later slider paint does not erase the
-rounded corners. That design works inside the slider's own paint pass, but it
-still inherits ancestor clipping.
+Before pin adoption, `Slider` and `RangeSlider` pre-painted it inside
+`paintWidgetContents()` and relied on decoration and exclusion salvage so
+later slider paint did not erase the rounded corners. Phase 2 retained that
+composition inside the pin paint plan while moving the paint opportunity to
+the owning layer root.
 
 ### Current Overflow Model
 
@@ -93,7 +97,7 @@ layer" visuals.
 
 ### Existing Pin Precedent
 
-[material3_menus_design.md](material3_menus_design.md) already proposed a
+[material3_menus_design.md](../proposed/material3_menus_design.md) already proposed a
 presenter-owned root trigger overlay pin for menu press retention. This
 document generalizes that one-off idea into a shared framework primitive
 instead of adding separate root hooks for menus, sliders, and keyboard
@@ -503,7 +507,7 @@ That directly matches the popup or passive-overlay split already established in
 #### Menus
 
 The presenter-owned trigger retention already described in
-[material3_menus_design.md](material3_menus_design.md) uses the same
+[material3_menus_design.md](../proposed/material3_menus_design.md) uses the same
 `PresentationPin` API instead of introducing a menu-only hook in
 `MainWindow`. The pin host becomes the shared implementation, and menu code
 supplies copied trigger-specific geometry and paint. It registers against the
@@ -724,7 +728,7 @@ Authoring reference:
 and
 [roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
-### Phase 1: Add The Shared Pin Host
+### Phase 1: Add The Shared Pin Host (Implemented)
 
 Scope:
 
@@ -790,7 +794,7 @@ Validation:
 - verify the `MainWindow`, concrete-pin, and base-widget symbols with the
   [size procedure](../../material3_target_baseline.md#target-abi-object-sizes)
 
-### Phase 2: Move Slider And Range Slider Indicators To Pins
+### Phase 2: Move Slider And Range Slider Indicators To Pins (Implemented)
 
 Scope:
 
@@ -823,6 +827,20 @@ Validation:
 - `bazel test //:material3_slider_test //:overlay_test`
 - verify `Slider` and `RangeSlider` with the
   [size procedure](../../material3_target_baseline.md#target-abi-object-sizes)
+
+Implementation result:
+
+- both variants allocate only an active `ValueIndicatorPin`, retain no pin
+  pointer or handle, and degrade by omitting the bubble if allocation fails,
+- range indicators remain active-thumb-only, including under `kAlways`,
+- clipped task content, popup, and dialog attachment are covered by render
+  tests, and indicator hide/reuse behavior is covered explicitly,
+- on the configured 32-bit RISC-V target ABI, `Slider` decreases from 60 to
+  56 bytes and `RangeSlider` decreases from 68 to 64 bytes because each drops
+  its former 4-byte indicator dirty span; neither class acquires persistent
+  pin storage,
+- each active concrete slider pin has the 28-byte `PresentationPin` payload
+  (the concrete plans add no fields), plus allocator overhead.
 
 ### Phase 3: Convert Keyboard Press Highlighter To A Popup Pin
 
@@ -992,7 +1010,7 @@ schedule the full old/new union before canvas construction.
    a different problem than paint-only transient feedback and should not be
    folded into `PresentationPin`.
 2. Fold the planned menu trigger retention in
-   [material3_menus_design.md](material3_menus_design.md) onto this shared pin
+   [material3_menus_design.md](../proposed/material3_menus_design.md) onto this shared pin
    host once the menu presenter lands.
 3. Extend keyboard adopters from the press highlighter to richer key preview or
    selection affordances as those surfaces are implemented.

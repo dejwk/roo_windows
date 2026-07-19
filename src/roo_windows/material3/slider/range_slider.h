@@ -134,12 +134,14 @@ class RangeSlider : public BasicWidget {
   /// Extends sloppy-touch reach along the slider's main interaction axis.
   Rect getSloppyTouchParentBounds() const override;
 
-  /// Expands parent invalidation to cover value-indicator overflow when needed.
-  Rect getParentTransientPaintBounds() const override;
-
  protected:
-  /// Paints range-slider content in staged order so bubbles and exclusions
-  /// settle correctly.
+  /// Registers an active indicator after attachment.
+  void setParent(Container* parent, bool is_owned) override;
+
+  /// Retries registration once a prebuilt ancestor subtree is attached.
+  void onLayout(bool changed, const Rect& rect) override;
+
+  /// Paints the widget-local track, stops, and thumbs.
   void paintWidgetContents(PaintContext& ctx) override;
 
   /// Handles pressed-state invalidation for the active thumb and indicator.
@@ -147,6 +149,12 @@ class RangeSlider : public BasicWidget {
 
  private:
   struct Metrics;
+  class ValueIndicatorPin;
+
+  void updateValueIndicatorPin();
+  float indicatorValue() const;
+  Rect valueIndicatorBoundsInWindow() const;
+  void paintValueIndicator(PaintContext& ctx) const;
 
   /// Paints the range track and both thumbs for the supplied paint state.
   void paintTrackAndThumb(const Canvas& canvas, const Metrics& metrics,
@@ -187,12 +195,6 @@ class RangeSlider : public BasicWidget {
   // Tight bounding span (widget-local, within bounds()) of the slider track
   // and thumbs area that needs repainting due to a value/style state change.
   internal::DirtySpan pending_content_dirty_span_;
-  // Indicator span state. When the range slider is clean, this stores the
-  // current on-screen indicator footprint. Once the range slider is dirty, the
-  // same field is reused as the indicator repaint span so coalesced updates
-  // can union the next bubble bounds against the previously shown footprint
-  // without a second cached span.
-  internal::DirtySpan pending_indicator_dirty_span_;
 };
 
 }  // namespace material3

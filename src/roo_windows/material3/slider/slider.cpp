@@ -351,6 +351,16 @@ Slider::Slider(ApplicationContext& context, SliderRange range, float value,
                                                   range_.step);
 }
 
+void Slider::setParent(Container* parent, bool is_owned) {
+  BasicWidget::setParent(parent, is_owned);
+  if (parent != nullptr) updateValueIndicatorPin();
+}
+
+void Slider::onLayout(bool changed, const Rect& rect) {
+  BasicWidget::onLayout(changed, rect);
+  updateValueIndicatorPin();
+}
+
 void Slider::onDown(XDim x, YDim y) {
   (void)x;
   (void)y;
@@ -777,15 +787,8 @@ void SliderWithInsetIcon::setIcon(const roo_display::Pictogram* icon,
 
 void Slider::paintWidgetContents(PaintContext& ctx) {
   Clipper& clipper = ctx.clipperForFramework();
-  // The canvas we receive is clipped to maxBounds(), which (via our
-  // getParentTransientPaintBounds() override) covers the full bubble
-  // conservative envelope when the indicator is showing. If the only
-  // reason we're being repainted is a value/style state change that
-  // dirtied a tight rectangle (set by invalidateValueChange()), narrow the
-  // canvas clip to that rectangle so paint() does not redraw the entire
-  // envelope. isInvalidated() being true means the framework asked us to
-  // fully repaint (e.g. style change, visibility toggle), in which case
-  // we keep the full clip.
+  // A value change can repaint only the track/thumb sweep. The indicator is
+  // dirtied and painted independently by its presentation pin.
   internal::DirtySpan pending_content_span = pending_content_dirty_span_;
   pending_content_dirty_span_ = internal::DirtySpan();
 
@@ -793,7 +796,6 @@ void Slider::paintWidgetContents(PaintContext& ctx) {
   Rect pending_content = internal::ContentRectFromDisplayMainSpan(
       pending_content_span, width(), height(),
       style_.orientation == SliderOrientation::kVertical);
-  // The area of the value indicator that needs to be repainted.
   bool invalidated = isInvalidated();
 
   PaintContext content_ctx = ctx.clipped(getContentBounds());
