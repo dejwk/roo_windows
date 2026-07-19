@@ -123,8 +123,8 @@ class Slider : public BasicWidget {
  public:
   /// Creates a single-value Material 3 slider over the supplied semantic value
   /// range.
-  Slider(ApplicationContext& context, SliderRange range = {}, float value = 0.0f,
-         SliderVariant variant = SliderVariant::kStandard,
+  Slider(ApplicationContext& context, SliderRange range = {},
+         float value = 0.0f, SliderVariant variant = SliderVariant::kStandard,
          SliderStyle style = {});
 
   /// Returns the configured semantic value domain and optional step size.

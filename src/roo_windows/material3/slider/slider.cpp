@@ -508,14 +508,27 @@ bool Slider::onKeyEvent(const KeyEvent& event) {
   float target = value_;
   switch (event.code) {
     case KeyCode::kLeft:
-    case KeyCode::kDown: target -= fine; break;
+    case KeyCode::kDown:
+      target -= fine;
+      break;
     case KeyCode::kRight:
-    case KeyCode::kUp: target += fine; break;
-    case KeyCode::kPageDown: target -= page; break;
-    case KeyCode::kPageUp: target += page; break;
-    case KeyCode::kHome: target = range_.from; break;
-    case KeyCode::kEnd: target = range_.to; break;
-    default: return false;
+    case KeyCode::kUp:
+      target += fine;
+      break;
+    case KeyCode::kPageDown:
+      target -= page;
+      break;
+    case KeyCode::kPageUp:
+      target += page;
+      break;
+    case KeyCode::kHome:
+      target = range_.from;
+      break;
+    case KeyCode::kEnd:
+      target = range_.to;
+      break;
+    default:
+      return false;
   }
   onInteractionStart();
   if (setValueInternal(target, true)) triggerInteractiveChange();
@@ -724,7 +737,9 @@ roo_display::FpPoint Slider::getPointOverlayFocus() const {
   return roo_display::FpPoint{display_center, axis.centeredCross()};
 }
 
-::roo_windows::material3::ColorToken Slider::effectiveContainerRole() const { return ::roo_windows::material3::ColorToken::kPrimary; }
+::roo_windows::material3::ColorToken Slider::effectiveContainerRole() const {
+  return ::roo_windows::material3::ColorToken::kPrimary;
+}
 
 Rect Slider::getSloppyTouchParentBounds() const {
   Rect bounds = Widget::getSloppyTouchParentBounds();
