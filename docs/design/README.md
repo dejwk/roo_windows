@@ -51,6 +51,7 @@ Status was audited against the source tree and tests on 2026-07-20. “Dependenc
 | Extended FAB | The base FAB dependency is proposed; buttons and theme support are implemented. |
 | FAB | Buttons and theme support are implemented; icon buttons are proposed. |
 | Icon buttons | Buttons, badges, click animation, and theme support are implemented; no icon-button implementation exists. |
+| Interaction overlay reveal | Point and area ripples, widget-local click animation, paint context, and the navigation bar's component-local fade are implemented; shared fade reveal and paint-owned overlay policy are not. |
 | Layout scaffold | Existing layout containers, Material 3 app bars, and the compact navigation bar are implemented; the scaffold, navigation rail, and drawer are not. |
 | Menus | Badge, paint context, back routing, and non-touch input are implemented; presentation pins are proposed. Before implementation, the menu design must replace retained trigger/widget pointers with the copied-anchor and presenter-owned-pin rules from the in-progress transient-lifetime design. |
 | Navigation drawer | List support is in progress and back routing is implemented; dialogs are proposed, and no drawer implementation exists. |

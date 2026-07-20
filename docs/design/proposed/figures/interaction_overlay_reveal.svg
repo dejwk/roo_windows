@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="530" viewBox="0 0 960 530">
+  <rect width="960" height="530" fill="#ffffff"/>
+  <style>
+    text { font-family: sans-serif; fill: #1f2937; }
+    .title { font-size: 22px; font-weight: 700; }
+    .heading { font-size: 17px; font-weight: 700; }
+    .label { font-size: 14px; }
+    .small { font-size: 12px; fill: #4b5563; }
+    .target { fill: #f3f4f6; stroke: #6b7280; stroke-width: 2; }
+    .layer { fill: #6750a4; }
+    .outline { fill: none; stroke: #6750a4; stroke-width: 2; }
+    .divider { stroke: #d1d5db; stroke-width: 2; }
+    .arrow { stroke: #6b7280; stroke-width: 2; marker-end: url(#arrow); }
+  </style>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#6b7280"/>
+    </marker>
+  </defs>
+
+  <text x="32" y="38" class="title">Interaction overlay policy: target and reveal are independent</text>
+  <line x1="32" y1="60" x2="928" y2="60" class="divider"/>
+
+  <text x="32" y="92" class="heading">Overlay target: where final pixels are settled</text>
+
+  <rect x="52" y="122" width="180" height="104" rx="8" class="target"/>
+  <circle cx="142" cy="174" r="32" class="layer" opacity="0.18"/>
+  <circle cx="142" cy="174" r="31" class="outline"/>
+  <text x="142" y="250" text-anchor="middle" class="label">Point</text>
+  <text x="142" y="269" text-anchor="middle" class="small">standard circular target</text>
+
+  <rect x="270" y="122" width="180" height="104" rx="8" class="target"/>
+  <rect x="271" y="123" width="178" height="102" rx="7" class="layer" opacity="0.18"/>
+  <text x="360" y="250" text-anchor="middle" class="label">Area</text>
+  <text x="360" y="269" text-anchor="middle" class="small">full widget/surface target</text>
+
+  <rect x="488" y="122" width="240" height="104" rx="8" class="target"/>
+  <rect x="536" y="148" width="144" height="52" rx="26" class="layer" opacity="0.18"/>
+  <circle cx="572" cy="174" r="10" fill="#6750a4"/>
+  <rect x="592" y="167" width="52" height="14" rx="7" fill="#6750a4" opacity="0.7"/>
+  <text x="608" y="250" text-anchor="middle" class="label">Paint-owned</text>
+  <text x="608" y="269" text-anchor="middle" class="small">component geometry, e.g. indicator pill</text>
+
+  <line x1="760" y1="105" x2="760" y2="282" class="divider"/>
+  <text x="784" y="137" class="heading">Lifecycle stays shared</text>
+  <text x="784" y="166" class="small">ClickAnimation owns:</text>
+  <text x="800" y="190" class="small">• progress</text>
+  <text x="800" y="211" class="small">• target and center</text>
+  <text x="800" y="232" class="small">• invalidation</text>
+  <text x="800" y="253" class="small">• deferred click</text>
+
+  <line x1="32" y1="296" x2="928" y2="296" class="divider"/>
+  <text x="32" y="328" class="heading">Click reveal: how the pressed layer appears over time</text>
+
+  <text x="56" y="372" class="label">Ripple</text>
+  <rect x="144" y="344" width="126" height="58" rx="29" class="target"/>
+  <circle cx="207" cy="373" r="5" class="layer" opacity="0.8"/>
+  <text x="207" y="420" text-anchor="middle" class="small">t = 0</text>
+  <line x1="280" y1="373" x2="318" y2="373" class="arrow"/>
+  <rect x="330" y="344" width="126" height="58" rx="29" class="target"/>
+  <circle cx="393" cy="373" r="22" class="layer" opacity="0.35"/>
+  <text x="393" y="420" text-anchor="middle" class="small">t = 0.5</text>
+  <line x1="466" y1="373" x2="504" y2="373" class="arrow"/>
+  <rect x="516" y="344" width="126" height="58" rx="29" class="target"/>
+  <rect x="517" y="345" width="124" height="56" rx="28" class="layer" opacity="0.18"/>
+  <text x="579" y="420" text-anchor="middle" class="small">t = 1</text>
+
+  <text x="56" y="475" class="label">Fade</text>
+  <rect x="144" y="447" width="126" height="44" rx="22" class="target"/>
+  <rect x="145" y="448" width="124" height="42" rx="21" class="layer" opacity="0"/>
+  <text x="207" y="515" text-anchor="middle" class="small">alpha = 0%</text>
+  <line x1="280" y1="469" x2="318" y2="469" class="arrow"/>
+  <rect x="330" y="447" width="126" height="44" rx="22" class="target"/>
+  <rect x="331" y="448" width="124" height="42" rx="21" class="layer" opacity="0.09"/>
+  <text x="393" y="515" text-anchor="middle" class="small">alpha = 50%</text>
+  <line x1="466" y1="469" x2="504" y2="469" class="arrow"/>
+  <rect x="516" y="447" width="126" height="44" rx="22" class="target"/>
+  <rect x="517" y="448" width="124" height="42" rx="21" class="layer" opacity="0.18"/>
+  <text x="579" y="515" text-anchor="middle" class="small">alpha = 100%</text>
+
+  <text x="700" y="368" class="small">Target does not choose reveal.</text>
+  <text x="700" y="391" class="small">Point and area can fade.</text>
+  <text x="700" y="414" class="small">Paint-owned geometry consumes</text>
+  <text x="700" y="435" class="small">the same resolved flat overlay.</text>
+</svg>
