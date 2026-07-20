@@ -8,7 +8,7 @@ Design documents are filed by implementation status:
 - `in_progress/`: a usable subset or prerequisite has landed, but part of the defined scope remains.
 - `proposed/`: none of the design's own scope is implemented. Existing prerequisites may still be available.
 
-Status was audited against the source tree and tests on 2026-07-19. “Dependency status” distinguishes implemented prerequisites from proposed or partially implemented work; a design can be proposed even when all of its prerequisites are available.
+Status was audited against the source tree and tests on 2026-07-20. “Dependency status” distinguishes implemented prerequisites from proposed or partially implemented work; a design can be proposed even when all of its prerequisites are available.
 
 ## Implemented
 
@@ -21,6 +21,7 @@ Status was audited against the source tree and tests on 2026-07-19. “Dependenc
 | Gesture arbitration and ownership | Callback-free hit paths, explicit tap/long-press/drag roles, directional arbitration, strong ownership, and lifecycle-safe terminal delivery are implemented without compatibility routing. |
 | Horizontal page host | Viewport layout, adjacent swipe/settle, blit wrappers, examples, and tabs synchronization are implemented. |
 | Material 3 tabs | Fixed, scrollable, badged, and page-host-integrated tabs are implemented; later extensions are tracked as future work. |
+| Navigation bar | The compact and medium destination layouts, selection/reselection hooks, badges, keyboard traversal, focused tests/goldens, and example are implemented. |
 | Non-touch input | Keyboard acquisition, focus lifecycle, click/value/scroll control interaction, structured list/menu/tab/rail navigation, and hardware text entry are implemented. |
 | Paint context | Clipper/overlay integration and the widget paint-hook migration are implemented. |
 | Slider | Paint context, Material 3 theme support, declarative drag ownership, lifecycle-safe terminal delivery, and transient-pin value indicators are implemented. |
@@ -52,7 +53,6 @@ Status was audited against the source tree and tests on 2026-07-19. “Dependenc
 | Icon buttons | Buttons, badges, click animation, and theme support are implemented; no icon-button implementation exists. |
 | Layout scaffold | Existing layout containers and Material 3 app-bar components are implemented; the scaffold and Material 3 navigation surfaces are not. |
 | Menus | Badge, paint context, back routing, and non-touch input are implemented; presentation pins are proposed. Before implementation, the menu design must replace retained trigger/widget pointers with the copied-anchor and presenter-owned-pin rules from the in-progress transient-lifetime design. |
-| Navigation bar | Tabs, badge support, shared back behavior, and non-touch input exist; the navigation-bar component is not implemented. Its proposed design still needs explicit keyboard traversal and activation rules before implementation. |
 | Navigation drawer | List support is in progress and back routing is implemented; dialogs are proposed, and no drawer implementation exists. |
 | Navigation rail | A legacy rail exists, but the Material 3 design is not implemented; lists are in progress and badges are implemented. |
 | Segmented buttons | Buttons are implemented; the superseding button-group design and this legacy component design are not implemented. |

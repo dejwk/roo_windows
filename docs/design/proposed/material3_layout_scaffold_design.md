@@ -104,7 +104,7 @@ The main product signals carried into this design are:
 
 The most relevant local references are:
 
-- [material3_navigation_bar_design.md](material3_navigation_bar_design.md)
+- [material3_navigation_bar_design.md](../implemented/material3_navigation_bar_design.md)
 - [material3_navigation_rail_design.md](material3_navigation_rail_design.md)
 - [material3_navigation_drawer_design.md](material3_navigation_drawer_design.md)
 - [material3_toolbars_design.md](material3_toolbars_design.md)

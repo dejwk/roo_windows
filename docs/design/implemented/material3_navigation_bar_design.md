@@ -2,11 +2,10 @@
 
 ## Implementation status
 
-**Proposed.** None of the defined component scope is implemented. Keyboard
-operation, focus-versus-selection, and activation rules are defined below
-against the implemented non-touch-input contract, completing the design work
-tracked by roadmap item P1.2. The status of existing and outstanding
-prerequisites is recorded in the [status index](../README.md).
+**Implemented.** All five documented phases are present in the source tree,
+focused unit and golden tests, and the Material 3 navigation-bar example. The
+status of existing and outstanding prerequisites is recorded in the
+[status index](../README.md).
 
 ## Objective
 
@@ -46,13 +45,14 @@ not naturally fit.
 
 ### Current Starting Point in `roo_windows`
 
-There is no checked-in Material 3 navigation bar implementation today.
+At design time, there was no checked-in Material 3 navigation bar
+implementation.
 
 The nearest current navigation surfaces are:
 
 - [src/roo_windows/containers/navigation_rail.h](../../../src/roo_windows/containers/navigation_rail.h)
 - [src/roo_windows/containers/navigation_panel.h](../../../src/roo_windows/containers/navigation_panel.h)
-- [docs/material3_navigation_rail_design.md](material3_navigation_rail_design.md)
+- [docs/material3_navigation_rail_design.md](../proposed/material3_navigation_rail_design.md)
 
 Those surfaces are useful architectural context, but they are not the right
 public shape for a bottom navigation bar:
@@ -125,7 +125,7 @@ The main product signals carried into this design are:
 
 The most relevant local references are:
 
-- [material3_navigation_rail_design.md](material3_navigation_rail_design.md)
+- [material3_navigation_rail_design.md](../proposed/material3_navigation_rail_design.md)
 - [../implemented/material3_badge_design.md](../implemented/material3_badge_design.md)
 - [../implemented/paint_context_design.md](../implemented/paint_context_design.md)
 - [widget_authoring.md](../../widget_authoring.md)

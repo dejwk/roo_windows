@@ -63,11 +63,12 @@ digraph material3_roadmap_dependencies {
     p1_2 [label="P1.2", fillcolor="#FFFFFF", color="#16A34A",
           fontcolor="#334155", URL="material3_roadmap.md#p1-2",
           tooltip="Amend the navigation-bar design for keyboard operation"];
-    p1_3 [label="P1.3", URL="material3_roadmap.md#p1-3",
+    p1_3 [label="P1.3", fillcolor="#FFFFFF", color="#16A34A",
+          fontcolor="#334155", URL="material3_roadmap.md#p1-3",
           tooltip="Implement compact navigation bar"];
     p1_4 [label="P1.4", URL="material3_roadmap.md#p1-4",
           tooltip="Implement the compact LayoutScaffold slice"];
-    p1_5 [label="P1.5", fillcolor="#FFFFFF", color="#CBD5E1",
+    p1_5 [label="P1.5", fillcolor="#FFFFFF", color="#16A34A",
           fontcolor="#334155", URL="material3_roadmap.md#p1-5",
           tooltip="Implement the shared presentation-pin host"];
     p1_6 [label="P1.6", URL="material3_roadmap.md#p1-6",
