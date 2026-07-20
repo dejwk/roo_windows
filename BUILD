@@ -376,10 +376,30 @@ cc_test(
 
 cc_test(
     name = "material3_navigation_bar_test",
-    srcs = ["test/material3_navigation_bar_test.cpp"],
+    srcs = [
+        "test/material3_navigation_bar_test.cpp",
+        "test/material3_navigation_bar_test_access.h",
+    ],
     linkstatic = 1,
     deps = [
         ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
+cc_test(
+    name = "material3_navigation_bar_golden_test",
+    srcs = [
+        "test/material3_navigation_bar_golden_test.cpp",
+        "test/material3_navigation_bar_test_access.h",
+    ],
+    data = glob([
+        "test/goldens/**/*.ppm",
+    ], allow_empty = True),
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        ":test_golden_utils",
         "@roo_testing//:arduino_gtest_main",
     ],
 )

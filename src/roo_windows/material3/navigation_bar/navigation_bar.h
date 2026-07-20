@@ -23,6 +23,7 @@ enum class NavigationBarLayout : uint8_t {
 };
 
 class NavigationBar;
+class NavigationBarDestinationTestAccess;
 
 /// Badge-free Material 3 navigation-bar destination.
 ///
@@ -64,21 +65,32 @@ class NavigationBarDestination : public BasicWidget {
   /// Navigation destinations are clickable while enabled.
   bool isClickable() const override;
 
-  /// Returns a conservative minimum until destination measurement lands.
+  /// Uses the destination indicator pill for interaction state rendering.
+  OverlayType getOverlayType() const override { return OVERLAY_NONE; }
+
+  /// Returns the token-backed compact or horizontal destination minimum.
   Dimensions getSuggestedMinimumDimensions() const override;
 
-  /// Paints destination content once its visual implementation lands.
+  /// Paints the always-visible label, selected icon, and active indicator.
   void paint(PaintContext& ctx) const override;
 
  protected:
-  /// Forwards primary activation to the owning navigation bar.
+  /// Preserves the framework primary-activation lifecycle until bar routing
+  /// lands with the container selection model.
   void onClicked() override;
+
+  /// Repaints the indicator pill when interaction state changes.
+  void notifyStateChanged(uint16_t state_diff) override;
 
   /// Returns the icon rectangle resolved by the destination layout.
   Rect iconBounds() const;
 
+  /// Lets `paint()` register its disjoint settled content regions precisely.
+  Rect getDirectPaintExclusionBounds() const override;
+
  private:
   friend class NavigationBar;
+  friend class NavigationBarDestinationTestAccess;
 
   void setLayoutFromBar(NavigationBarLayout layout);
   void setSelectedFromBar(bool selected);
