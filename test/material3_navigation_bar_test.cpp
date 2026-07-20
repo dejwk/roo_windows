@@ -85,6 +85,18 @@ void ExpectDestinationPaintsEveryPixel(NavigationBarLayout layout,
   }
 }
 
+bool ContainsRect(const Rect& outer, const Rect& inner) {
+  return !inner.empty() && outer.xMin() <= inner.xMin() &&
+         outer.yMin() <= inner.yMin() && outer.xMax() >= inner.xMax() &&
+         outer.yMax() >= inner.yMax();
+}
+
+bool TextBadgeStartsAtIconCenter(const Rect& icon_bounds,
+                                 const Rect& badge_bounds) {
+  return badge_bounds.xMin() == icon_bounds.xMin() + icon_bounds.width() / 2 &&
+         badge_bounds.yMax() == icon_bounds.yMin() + icon_bounds.height() / 2;
+}
+
 class TestNavigationBar : public NavigationBar {
  public:
   explicit TestNavigationBar(ApplicationContext& context)
@@ -210,6 +222,44 @@ TEST(Material3NavigationBar, SelectionStateAndIconAnchorFollowLayout) {
 TEST(Material3NavigationBar, DestinationPaintSettlesEveryPixelExactlyOnce) {
   ExpectDestinationPaintsEveryPixel(NavigationBarLayout::kVertical, true);
   ExpectDestinationPaintsEveryPixel(NavigationBarLayout::kHorizontal, true);
+}
+
+// Verifies that the opt-in badge subclass reuses the shared inline helper,
+// caps numeric values, and keeps icon-corner geometry inside both targets.
+TEST(Material3NavigationBar, BadgedDestinationCapsValueAndStaysWithinBounds) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+  BadgedNavigationBarDestination destination(context, "Inbox",
+                                             &ic_outlined_24_action_bookmark());
+
+  destination.setBadgeValue(1000);
+  static_cast<Widget&>(destination)
+      .layout(Rect(0, 0, Scaled(95) - 1, Scaled(80) - 1));
+  EXPECT_EQ(BadgeMode::kText, destination.badge().mode());
+  EXPECT_EQ("999+", destination.badge().text());
+  EXPECT_TRUE(ContainsRect(destination.bounds(), destination.badge().bounds()));
+  EXPECT_TRUE(TextBadgeStartsAtIconCenter(
+      NavigationBarDestinationTestAccess::iconBounds(destination),
+      destination.badge().bounds()));
+  destination.setBadgeDot();
+
+  NavigationBarDestinationTestAccess::setLayout(
+      destination, NavigationBarLayout::kHorizontal);
+  destination.setBadgeValue(1000);
+  static_cast<Widget&>(destination)
+      .layout(Rect(0, 0, Scaled(96) - 1, Scaled(64) - 1));
+  EXPECT_TRUE(ContainsRect(destination.bounds(), destination.badge().bounds()));
+  EXPECT_TRUE(TextBadgeStartsAtIconCenter(
+      NavigationBarDestinationTestAccess::iconBounds(destination),
+      destination.badge().bounds()));
+
+  destination.setBadgeDot();
+  EXPECT_EQ(BadgeMode::kDot, destination.badge().mode());
+  EXPECT_TRUE(ContainsRect(destination.bounds(), destination.badge().bounds()));
+  destination.hideBadge();
+  EXPECT_FALSE(destination.badge().visible());
+  EXPECT_TRUE(destination.badge().bounds().empty());
 }
 
 // Verifies that the bar owns selection, auto-selects its first destination,

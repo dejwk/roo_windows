@@ -124,7 +124,7 @@ class BadgedNavigationBarDestination : public NavigationBarDestination {
   /// Shows a decimal badge value, capped by the shared helper.
   void setBadgeValue(unsigned int number);
 
-  /// Paints the badge above destination content once painting lands.
+  /// Paints the badge before lower-z destination content.
   void paint(PaintContext& ctx) const override;
 
  protected:

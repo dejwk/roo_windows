@@ -377,6 +377,95 @@ void NavigationBarDestination::setSelectedFromBar(bool selected) {
   requestLayout();
 }
 
+BadgedNavigationBarDestination::BadgedNavigationBarDestination(
+    ApplicationContext& context, roo::string_view label, const MonoIcon* icon,
+    const MonoIcon* selected_icon)
+    : NavigationBarDestination(context, label, icon, selected_icon), badge_() {}
+
+const Badge& BadgedNavigationBarDestination::badge() const { return badge_; }
+
+void BadgedNavigationBarDestination::hideBadge() {
+  if (!badge_.visible()) return;
+  badge_.hide();
+  invalidateInterior();
+}
+
+void BadgedNavigationBarDestination::setBadgeDot() {
+  badge_.setDot();
+  relayoutBadge();
+  invalidateInterior();
+}
+
+void BadgedNavigationBarDestination::setBadgeText(roo::string_view text) {
+  badge_.setText(text);
+  relayoutBadge();
+  invalidateInterior();
+}
+
+void BadgedNavigationBarDestination::setBadgeValue(unsigned int number) {
+  badge_.setValue(number);
+  relayoutBadge();
+  invalidateInterior();
+}
+
+void BadgedNavigationBarDestination::paint(PaintContext& ctx) const {
+  // The badge is front-most. Its helper settles the badge interior and
+  // registers the matching exclusion before base destination paint fills the
+  // lower-z indicator and inherited bar surface underneath it.
+  badge_.paint(ctx, theme());
+  NavigationBarDestination::paint(ctx);
+}
+
+void BadgedNavigationBarDestination::onLayout(bool changed, const Rect& rect) {
+  (void)changed;
+  (void)rect;
+  relayoutBadge();
+}
+
+void BadgedNavigationBarDestination::relayoutBadge() {
+  if (!badge_.visible()) return;
+  const Rect anchor = iconBounds();
+  if (!badge_.layout(anchor)) return;
+
+  BadgePlacement placement;
+  if (badge_.mode() == BadgeMode::kText) {
+    // A text badge grows from the icon's center toward its logical top end:
+    // its conceptual sharp bottom-left corner is the icon-slot center. This
+    // keeps the widened badge attached to the icon rather than aligned to its
+    // trailing edge or positioned below it.
+    const Rect text_bounds = badge_.bounds();
+    const int16_t anchor_center_x = anchor.xMin() + anchor.width() / 2;
+    const int16_t anchor_center_y = anchor.yMin() + anchor.height() / 2;
+    placement.horizontal_offset = static_cast<int8_t>(std::clamp<int16_t>(
+        text_bounds.xMin() - anchor_center_x, INT8_MIN, INT8_MAX));
+    placement.vertical_offset = static_cast<int8_t>(std::clamp<int16_t>(
+        anchor_center_y - text_bounds.yMax(), INT8_MIN, INT8_MAX));
+    badge_.layout(anchor, placement);
+  }
+
+  const Rect badge_bounds = badge_.bounds();
+  int16_t horizontal_offset = 0;
+  int16_t vertical_offset = 0;
+  if (badge_bounds.xMin() < bounds().xMin()) {
+    horizontal_offset = badge_bounds.xMin() - bounds().xMin();
+  } else if (badge_bounds.xMax() > bounds().xMax()) {
+    horizontal_offset = badge_bounds.xMax() - bounds().xMax();
+  }
+  if (badge_bounds.yMin() < bounds().yMin()) {
+    vertical_offset = bounds().yMin() - badge_bounds.yMin();
+  } else if (badge_bounds.yMax() > bounds().yMax()) {
+    vertical_offset = bounds().yMax() - badge_bounds.yMax();
+  }
+  if (horizontal_offset == 0 && vertical_offset == 0) return;
+  placement.horizontal_offset = static_cast<int8_t>(std::clamp<int16_t>(
+      static_cast<int16_t>(placement.horizontal_offset) + horizontal_offset,
+      INT8_MIN, INT8_MAX));
+  placement.vertical_offset = static_cast<int8_t>(std::clamp<int16_t>(
+      static_cast<int16_t>(placement.vertical_offset) + vertical_offset,
+      INT8_MIN, INT8_MAX));
+  badge_.layout(anchor, placement);
+}
+
 NavigationBar::NavigationBar(ApplicationContext& context)
     : Container(context),
       destinations_(),

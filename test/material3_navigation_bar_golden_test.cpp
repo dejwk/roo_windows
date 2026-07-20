@@ -66,6 +66,38 @@ class Material3NavigationBarGoldenTest : public testing::Test {
     return test::CaptureRgb(offscreen_.raster(), 0, 0, 560, Scaled(64));
   }
 
+  roo_display::Offscreen<roo_display::Rgb888> RenderVerticalBadgesRow() {
+    Application app(&env_, display_);
+    AddBadgedDestination(app, 0, 0, 95, "Home",
+                         &ic_outlined_24_navigation_home_work(), false, true,
+                         NavigationBarLayout::kVertical);
+    AddBadgedDestination(app, 96, 0, 95, "Inbox",
+                         &ic_outlined_24_action_bookmark(), true, false,
+                         NavigationBarLayout::kVertical);
+    AddBadgedDestination(app, 192, 0, 95, "Saved",
+                         &ic_outlined_24_action_done(), false, true,
+                         NavigationBarLayout::kVertical);
+
+    EXPECT_TRUE(app.refresh());
+    return test::CaptureRgb(offscreen_.raster(), 0, 0, 288, Scaled(80));
+  }
+
+  roo_display::Offscreen<roo_display::Rgb888> RenderHorizontalBadgesRow() {
+    Application app(&env_, display_);
+    AddBadgedDestination(app, 0, 0, 111, "Home",
+                         &ic_outlined_24_navigation_home_work(), false, true,
+                         NavigationBarLayout::kHorizontal);
+    AddBadgedDestination(app, 112, 0, 111, "Inbox",
+                         &ic_outlined_24_action_bookmark(), true, false,
+                         NavigationBarLayout::kHorizontal);
+    AddBadgedDestination(app, 224, 0, 111, "Saved",
+                         &ic_outlined_24_action_done(), false, true,
+                         NavigationBarLayout::kHorizontal);
+
+    EXPECT_TRUE(app.refresh());
+    return test::CaptureRgb(offscreen_.raster(), 0, 0, 336, Scaled(64));
+  }
+
  private:
   void AddDestination(Application& app, int16_t x, int16_t y, int16_t width,
                       roo::string_view label, const MonoIcon* icon,
@@ -79,6 +111,25 @@ class Material3NavigationBarGoldenTest : public testing::Test {
     destination->setEnabled(!disabled);
     destination->setFocused(focused);
     destination->setPressed(pressed);
+    const int16_t height =
+        layout == NavigationBarLayout::kVertical ? Scaled(80) : Scaled(64);
+    app.add(std::move(destination),
+            roo_display::Box(x, y, x + width - 1, y + height - 1));
+  }
+
+  void AddBadgedDestination(Application& app, int16_t x, int16_t y,
+                            int16_t width, roo::string_view label,
+                            const MonoIcon* icon, bool selected, bool dot,
+                            NavigationBarLayout layout) {
+    auto destination = std::make_unique<BadgedNavigationBarDestination>(
+        app.context(), label, icon);
+    NavigationBarDestinationTestAccess::setLayout(*destination, layout);
+    NavigationBarDestinationTestAccess::setSelected(*destination, selected);
+    if (dot) {
+      destination->setBadgeDot();
+    } else {
+      destination->setBadgeValue(1000);
+    }
     const int16_t height =
         layout == NavigationBarLayout::kVertical ? Scaled(80) : Scaled(64);
     app.add(std::move(destination),
@@ -108,6 +159,22 @@ TEST_F(Material3NavigationBarGoldenTest, HorizontalDestinationStatesGolden) {
       RenderHorizontalStatesRow(),
       "test/goldens/material3_navigation_bar/horizontal_destination_states.ppm",
       "material3_navigation_bar_horizontal_destination_states"));
+}
+
+// Locks down compact icon-corner dot and capped-text badge placement.
+TEST_F(Material3NavigationBarGoldenTest, VerticalBadgedDestinationGolden) {
+  EXPECT_TRUE(test::CompareOrUpdateGolden(
+      RenderVerticalBadgesRow(),
+      "test/goldens/material3_navigation_bar/vertical_badged_destination.ppm",
+      "material3_navigation_bar_vertical_badged_destination"));
+}
+
+// Locks down medium icon-corner dot and capped-text badge placement.
+TEST_F(Material3NavigationBarGoldenTest, HorizontalBadgedDestinationGolden) {
+  EXPECT_TRUE(test::CompareOrUpdateGolden(
+      RenderHorizontalBadgesRow(),
+      "test/goldens/material3_navigation_bar/horizontal_badged_destination.ppm",
+      "material3_navigation_bar_horizontal_badged_destination"));
 }
 
 }  // namespace
