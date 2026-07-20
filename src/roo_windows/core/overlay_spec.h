@@ -43,14 +43,20 @@ class OverlaySpec {
   /// Returns true if the widget should be rendered in its disabled style.
   bool is_disabled() const { return is_disabled_; }
 
-  /// Returns true if the widget's base overlay should only apply to an
-  /// activation circle.
-  bool is_point() const { return is_point_; }
+  /// Returns true if the framework owns an area-shaped overlay target.
+  bool is_area() const { return target_ == Target::kArea; }
 
-  /// Returns true while a click ripple animation is currently being painted.
+  /// Returns true if the framework owns a point-shaped overlay target.
+  bool is_point() const { return target_ == Target::kPoint; }
+
+  /// Returns true while the shared click timeline requires another paint
+  /// frame. A fade has timeline activity without a press ripple.
   bool is_click_animation_in_progress() const {
-    return press_overlay_spec_.enabled;
+    return click_animation_in_progress_;
   }
+
+  /// Returns true when this frame contains an expanding press ripple.
+  bool has_press_overlay() const { return press_overlay_spec_.enabled; }
 
   /// Returns the flat base overlay color to be composited over the widget
   /// (e.g. disabled scrim or hover tint). May be fully transparent.
@@ -61,10 +67,12 @@ class OverlaySpec {
   const PressOverlaySpec& press_overlay() const { return press_overlay_spec_; }
 
  private:
+  enum class Target : uint8_t { kNone, kArea, kPoint };
+
   bool is_modded_;  // True if any other flag or overlay is set.
   bool is_disabled_;
-  bool is_point_;  // if true, base overlay only applies to a circle, not full
-                   // area.
+  Target target_;
+  bool click_animation_in_progress_;
   roo_display::Color base_overlay_;
 
   PressOverlaySpec press_overlay_spec_;

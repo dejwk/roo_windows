@@ -66,14 +66,16 @@ inline int16_t animation_radius(const Rect& bounds, XDim x, XDim y,
 OverlaySpec::OverlaySpec()
     : is_modded_(false),
       is_disabled_(false),
-      is_point_(false),
+      target_(Target::kNone),
+      click_animation_in_progress_(false),
       base_overlay_(roo_display::color::Transparent),
       press_overlay_spec_() {}
 
 OverlaySpec::OverlaySpec(Widget& widget, const Canvas& canvas)
     : is_modded_(false),
       is_disabled_(!widget.isEnabled()),
-      is_point_(false),
+      target_(Target::kNone),
+      click_animation_in_progress_(false),
       press_overlay_spec_() {
   if (is_disabled_) {
     is_modded_ = true;
@@ -87,7 +89,9 @@ OverlaySpec::OverlaySpec(Widget& widget, const Canvas& canvas)
   base_overlay_ = getOverlayColor(widget, canvas);
   is_modded_ = (base_overlay_.a() != 0);
   Widget::OverlayType overlay_type = widget.getOverlayType();
-  is_point_ = (overlay_type == Widget::OVERLAY_POINT);
+  target_ = overlay_type == Widget::OVERLAY_AREA
+                ? Target::kArea
+                : Target::kPoint;
 
   // If click_animation is true, we need to redraw the overlay.
   bool click_animation = ((widget.state_ & kWidgetClicking) != 0);
@@ -97,16 +101,18 @@ OverlaySpec::OverlaySpec(Widget& widget, const Canvas& canvas)
     int16_t click_x = 0;
     int16_t click_y = 0;
     const ClickAnimation* active_click_animation = widget.getClickAnimation();
-    bool is_click_animation_in_progress =
+    click_animation_in_progress_ =
         active_click_animation != nullptr &&
         (click_progress = active_click_animation->progress()) < 1.0f;
     if (active_click_animation != nullptr) {
       click_x = active_click_animation->xCenter();
       click_y = active_click_animation->yCenter();
     }
-    if (is_click_animation_in_progress) {
+    if (click_animation_in_progress_ &&
+        widget.getClickOverlayAnimation() ==
+            Widget::ClickOverlayAnimation::kRipple) {
       Rect anim_bounds = widget.bounds();
-      if (is_point_) {
+      if (is_point()) {
         anim_bounds = widget.getInteractionBounds();
       }
       // Note that dx,dy might have changed since the click event, moving dim
@@ -127,7 +133,7 @@ OverlaySpec::OverlaySpec(Widget& widget, const Canvas& canvas)
       // widget.getMainWindow()->set_press_overlay(
       //     PressOverlay(x, y, r, click_animation_overlay, base_overlay_));
       // press_overlay_ = &widget.getMainWindow()->press_overlay();
-      if (is_point_) {
+      if (is_point()) {
         roo_display::FpPoint focus = widget.getPointOverlayFocus();
         XDim dx;
         YDim dy;
@@ -139,7 +145,8 @@ OverlaySpec::OverlaySpec(Widget& widget, const Canvas& canvas)
       } else {
         press_overlay_spec_.clipped_to_circle = false;
       }
-    } else {
+    } else if (widget.getClickOverlayAnimation() ==
+               Widget::ClickOverlayAnimation::kRipple) {
       // Full rect click overlay - just apply on top of the overlay as
       // calculated so far.
       press_overlay_spec_.enabled = false;

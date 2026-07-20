@@ -180,7 +180,7 @@ class ClipperOutput : public roo_display::DisplayOutput {
                      SmallNumber outline_width,
                      roo_display::Color outline_color) {
     const OverlaySpec& overlay_spec = currentOverlaySpec();
-    bool apply_press_overlay = overlay_spec.is_click_animation_in_progress() ||
+    bool apply_press_overlay = overlay_spec.has_press_overlay() ||
                                scoped_press_overlay_active_;
     const PressOverlay* press_overlay =
         apply_press_overlay ? &press_overlay_ : nullptr;
@@ -332,7 +332,7 @@ class ClipperOutput : public roo_display::DisplayOutput {
       return;
     }
     if (scoped_press_overlay_active_ &&
-        overlay_specs_.back().overlay_spec.is_click_animation_in_progress()) {
+        overlay_specs_.back().overlay_spec.has_press_overlay()) {
       scoped_press_overlay_active_ = false;
       valid_ = false;
     }

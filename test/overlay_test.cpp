@@ -31,6 +31,50 @@ class ClickableSurfaceBoxWidget : public test_support::ColorBoxWidget {
   bool isClickable() const override { return true; }
 };
 
+class FadePointOverlayBoxWidget : public PointOverlayBoxWidget {
+ public:
+  FadePointOverlayBoxWidget(ApplicationContext& context, roo_display::Color color,
+                            Dimensions dims)
+      : PointOverlayBoxWidget(context, color, dims),
+        click_animation_in_progress_(false),
+        has_press_overlay_(false),
+        overlay_alpha_(0) {}
+
+  ClickOverlayAnimation getClickOverlayAnimation() const override {
+    return ClickOverlayAnimation::kFade;
+  }
+
+  void paint(PaintContext& ctx) const override {
+    const OverlaySpec& overlay_spec =
+        ctx.clipperForFramework().currentOverlaySpec();
+    click_animation_in_progress_ =
+        overlay_spec.is_click_animation_in_progress();
+    has_press_overlay_ = overlay_spec.has_press_overlay();
+    overlay_alpha_ = overlay_spec.base_overlay().a();
+    PointOverlayBoxWidget::paint(ctx);
+  }
+
+  bool clickAnimationInProgress() const { return click_animation_in_progress_; }
+  bool hasPressOverlay() const { return has_press_overlay_; }
+  uint8_t overlayAlpha() const { return overlay_alpha_; }
+
+ private:
+  mutable bool click_animation_in_progress_;
+  mutable bool has_press_overlay_;
+  mutable uint8_t overlay_alpha_;
+};
+
+class FadeClickableSurfaceBoxWidget : public ClickableSurfaceBoxWidget {
+ public:
+  FadeClickableSurfaceBoxWidget(ApplicationContext& context,
+                                roo_display::Color color, Dimensions dims)
+      : ClickableSurfaceBoxWidget(context, color, dims) {}
+
+  ClickOverlayAnimation getClickOverlayAnimation() const override {
+    return ClickOverlayAnimation::kFade;
+  }
+};
+
 class RoundedClickableSurfaceBoxWidget : public ClickableSurfaceBoxWidget {
  public:
   RoundedClickableSurfaceBoxWidget(ApplicationContext& context,
@@ -280,6 +324,74 @@ TEST_F(RooWindowsRenderTest, OverlayPolicyDefaultsFollowWidgetHierarchy) {
   EXPECT_EQ(Widget::OVERLAY_POINT, slider.getOverlayType());
   EXPECT_EQ(Widget::OVERLAY_POINT, idle_icon.getOverlayType());
   EXPECT_EQ(Widget::OVERLAY_AREA, surface.getOverlayType());
+  EXPECT_EQ(Widget::ClickOverlayAnimation::kRipple,
+            surface.getClickOverlayAnimation());
+}
+
+// A fade keeps using the shared click timeline but exposes the pressed layer
+// as a progressive flat point overlay rather than installing a ripple.
+TEST_F(RooWindowsRenderTest, PointFadeUsesTimelineWithoutPressOverlay) {
+  auto back = std::make_unique<ColorBoxWidget>(context(), color::Red,
+                                               Dimensions(48, 40));
+  auto front = std::make_unique<FadePointOverlayBoxWidget>(
+      context(), color::Blue, Dimensions(18, 18));
+  FadePointOverlayBoxWidget* front_ptr = front.get();
+
+  app_.add(std::move(back), Box(0, 0, 47, 39));
+  app_.add(std::move(front), Box(20, 12, 37, 29));
+  ASSERT_TRUE(refresh());
+
+  const Color outside_circle = pixelAt(8, 20);
+  const Color point_circle = pixelAt(12, 20);
+  EXPECT_EQ(QuantizeToArgb4444(color::Red), outside_circle);
+  EXPECT_EQ(QuantizeToArgb4444(color::Red), point_circle);
+
+  front_ptr->onShowPress(front_ptr->width() / 2, front_ptr->height() / 2);
+  delay(kPressAnimationMillis / 2);
+  ASSERT_TRUE(refresh());
+
+  EXPECT_TRUE(front_ptr->clickAnimationInProgress());
+  EXPECT_FALSE(front_ptr->hasPressOverlay());
+  EXPECT_GT(front_ptr->overlayAlpha(), 0);
+  EXPECT_EQ(outside_circle, pixelAt(8, 20));
+  EXPECT_NE(point_circle, pixelAt(12, 20));
+
+  delay(kPressAnimationMillis + 20);
+  ASSERT_TRUE(refresh());
+  EXPECT_FALSE(front_ptr->clickAnimationInProgress());
+  EXPECT_FALSE(front_ptr->hasPressOverlay());
+  EXPECT_GT(front_ptr->overlayAlpha(), 0);
+  EXPECT_NE(point_circle, pixelAt(12, 20));
+}
+
+// An area fade remains bounded by its surface and applies the progressive
+// pressed layer through the regular area-overlay path.
+TEST_F(RooWindowsRenderTest, AreaFadeStaysInsideSurfaceBounds) {
+  auto back = std::make_unique<ColorBoxWidget>(context(), color::Red,
+                                               Dimensions(48, 40));
+  auto front = std::make_unique<FadeClickableSurfaceBoxWidget>(
+      context(), color::Blue, Dimensions(18, 18));
+  FadeClickableSurfaceBoxWidget* front_ptr = front.get();
+
+  app_.add(std::move(back), Box(0, 0, 47, 39));
+  app_.add(std::move(front), Box(20, 12, 37, 29));
+  ASSERT_TRUE(refresh());
+
+  const Color background = pixelAt(12, 20);
+  const Color surface = pixelAt(28, 20);
+  EXPECT_EQ(QuantizeToArgb4444(color::Red), background);
+  EXPECT_EQ(QuantizeToArgb4444(color::Blue), surface);
+
+  front_ptr->onShowPress(front_ptr->width() / 2, front_ptr->height() / 2);
+  delay(kPressAnimationMillis / 2);
+  ASSERT_TRUE(refresh());
+
+  EXPECT_EQ(background, pixelAt(12, 20));
+  EXPECT_NE(surface, pixelAt(28, 20));
+}
+
+TEST(OverlaySpecSize, RemainsWithinOneWordOfPressOverlayState) {
+  EXPECT_LE(sizeof(OverlaySpec), sizeof(PressOverlaySpec) + sizeof(uint64_t));
 }
 
 // Verifies that a point-overlay widget's interaction bounds extend by the

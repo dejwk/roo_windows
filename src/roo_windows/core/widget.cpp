@@ -3,6 +3,7 @@
 #include "roo_display/shape/smooth.h"
 #include "roo_logging.h"
 #include "roo_windows/core/application.h"
+#include "roo_windows/core/click_animation.h"
 #include "roo_windows/core/focus_manager.h"
 #include "roo_windows/core/main_window.h"
 #include "roo_windows/core/panel.h"
@@ -590,7 +591,15 @@ uint8_t Widget::getOverlayOpacity() const {
     overlay_opacity += myTheme.material3Theme().state.resolve(bg_role, InteractionState::kActivated).a();
   }
   if (isClicking() && useOverlayOnPress()) {
-    overlay_opacity += myTheme.material3Theme().state.resolve(bg_role, InteractionState::kPressed).a();
+    uint8_t pressed_opacity =
+        myTheme.material3Theme().state.resolve(bg_role, InteractionState::kPressed).a();
+    if (getClickOverlayAnimation() == ClickOverlayAnimation::kFade) {
+      const ClickAnimation* animation = getClickAnimation();
+      float progress = animation == nullptr ? 1.0f : animation->progress();
+      overlay_opacity += static_cast<uint16_t>(pressed_opacity * progress);
+    } else {
+      overlay_opacity += pressed_opacity;
+    }
   } else if (isPressed() && useOverlayOnPress()) {
     overlay_opacity += myTheme.material3Theme().state.resolve(bg_role, InteractionState::kPressed).a();
   }
@@ -669,16 +678,15 @@ void Widget::paintWidgetModded(PaintContext& ctx) {
       // after redrawing, so that we receive a subsequent paint request
       // shortly.
       if (overlay_spec.is_click_animation_in_progress()) {
-        if (getOverlayType() == OVERLAY_POINT) {
+        if (overlay_spec.has_press_overlay() && overlay_spec.is_point()) {
           clipper.setPressOverlay(overlay_spec.press_overlay(),
                                   canvas.clip_box());
-        } else if (getOverlayType() == OVERLAY_AREA) {
+        } else if (overlay_spec.has_press_overlay() && overlay_spec.is_area()) {
           // Keep the ripple active through descendant painting. The owning
           // overlay-spec frame clears it after decoration emission.
           clipper.setScopedPressOverlay(overlay_spec.press_overlay(),
                                         canvas.clip_box());
         }
-        paintWidgetContents(ctx);
         setDirty();
         notifyParentInvalidatedRegion(maxParentBounds());
       } else {
@@ -690,18 +698,15 @@ void Widget::paintWidgetModded(PaintContext& ctx) {
         // deferred click, which refreshes any siblings we may have tinted.
       }
     }
-    if (overlay_spec.is_click_animation_in_progress()) {
-      // Already drawn.
+    if (overlay_spec.has_press_overlay()) {
+      paintWidgetContents(ctx);
     } else if (overlay_spec.base_overlay().a() > 0) {
-      switch (getOverlayType()) {
-        case OVERLAY_POINT: {
+      if (overlay_spec.is_point()) {
           clipper.addOverlayShape(
               MakePointOverlay(*this, canvas, overlay_spec.base_overlay()),
               canvas.clip_box());
           paintWidgetContents(ctx);
-          break;
-        }
-        default: {
+      } else {
           roo_display::DisplayOutput& out = canvas.out();
           roo_display::OverlayFilter filter(canvas.out(),
                                             overlay_spec.base_overlay(),
@@ -709,7 +714,6 @@ void Widget::paintWidgetModded(PaintContext& ctx) {
           canvas.set_out(&filter);
           paintWidgetContents(ctx);
           canvas.set_out(&out);
-        }
       }
     } else {
       paintWidgetContents(ctx);

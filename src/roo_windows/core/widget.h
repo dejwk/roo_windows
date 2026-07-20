@@ -464,7 +464,16 @@ class Widget {
 
   enum OverlayType { OVERLAY_NONE, OVERLAY_AREA, OVERLAY_POINT };
 
+  /// Selects how the pressed interaction layer is revealed while a click
+  /// animation is active. The default preserves the existing ripple behavior.
+  enum class ClickOverlayAnimation : uint8_t { kRipple, kFade };
+
   virtual OverlayType getOverlayType() const { return OVERLAY_POINT; }
+
+  /// Returns the reveal used for the clicking pressed interaction layer.
+  virtual ClickOverlayAnimation getClickOverlayAnimation() const {
+    return ClickOverlayAnimation::kRipple;
+  }
 
   virtual roo_display::FpPoint getPointOverlayFocus() const {
     const Rect& r = parent_bounds();
