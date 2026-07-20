@@ -149,17 +149,16 @@ bool Application::drainKeyEvents() {
 void Application::dispatchKeyEvent(const KeyEvent& event) {
   if (event.phase == KeyPhase::kDown &&
       (event.code == KeyCode::kBack || event.code == KeyCode::kEscape)) {
-    BackSource source = event.code == KeyCode::kBack
-                            ? BackSource::kBackKey
-                            : BackSource::kEscapeKey;
+    BackSource source = event.code == KeyCode::kBack ? BackSource::kBackKey
+                                                     : BackSource::kEscapeKey;
     if (requestBackFromFocused(source) == BackResult::kHandled) return;
     // An unhandled request continues through normal focused-widget dispatch,
     // including structural ancestors, just like every other key.
   }
   if ((event.phase == KeyPhase::kDown || event.phase == KeyPhase::kRepeat) &&
       event.code == KeyCode::kTab) {
-    context_.focus().moveFocus(
-        root_window_, (event.modifiers & kKeyModifierShift) != 0);
+    context_.focus().moveFocus(root_window_,
+                               (event.modifiers & kKeyModifierShift) != 0);
     return;
   }
   Widget* focused = context_.focus().focused();
@@ -175,11 +174,20 @@ void Application::dispatchKeyEvent(const KeyEvent& event) {
   if (event.phase == KeyPhase::kDown || event.phase == KeyPhase::kRepeat) {
     FocusDirection direction;
     switch (event.code) {
-      case KeyCode::kUp: direction = FocusDirection::kUp; break;
-      case KeyCode::kDown: direction = FocusDirection::kDown; break;
-      case KeyCode::kLeft: direction = FocusDirection::kLeft; break;
-      case KeyCode::kRight: direction = FocusDirection::kRight; break;
-      default: goto no_directional_traversal;
+      case KeyCode::kUp:
+        direction = FocusDirection::kUp;
+        break;
+      case KeyCode::kDown:
+        direction = FocusDirection::kDown;
+        break;
+      case KeyCode::kLeft:
+        direction = FocusDirection::kLeft;
+        break;
+      case KeyCode::kRight:
+        direction = FocusDirection::kRight;
+        break;
+      default:
+        goto no_directional_traversal;
     }
     if (context_.focus().moveFocusDirection(root_window_, direction)) return;
   }
@@ -261,8 +269,8 @@ bool Application::ownsTask(const Task& task) const {
   return false;
 }
 
-PresentationStartResult Application::showDialog(Dialog& dialog,
-                                                 Dialog::CallbackFn callback_fn) {
+PresentationStartResult Application::showDialog(
+    Dialog& dialog, Dialog::CallbackFn callback_fn) {
   return root_window_.showDialog(dialog, std::move(callback_fn));
 }
 
@@ -272,8 +280,8 @@ PresentationStartResult Application::showAlertDialog(
   Dialog* dialog =
       new AlertDialog(context(), std::move(title), std::move(supporting_text),
                       std::move(button_labels));
-  PresentationStartResult result = showDialog(
-      *dialog, [dialog, callback_fn](int id) {
+  PresentationStartResult result =
+      showDialog(*dialog, [dialog, callback_fn](int id) {
         if (callback_fn != nullptr) {
           callback_fn(id);
         }
