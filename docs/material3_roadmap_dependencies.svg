@@ -184,7 +184,7 @@
 <g id="node11" class="node">
 <title>p1_6</title>
 <g id="a_node11"><a xlink:href="material3_roadmap.md#p1-6" xlink:title="Reconcile menu ownership and input design" target="_top">
-<path fill="#ffffff" stroke="#eab308" stroke-width="2.2" d="M434,-390C434,-390 404,-390 404,-390 398,-390 392,-384 392,-378 392,-378 392,-366 392,-366 392,-360 398,-354 404,-354 404,-354 434,-354 434,-354 440,-354 446,-360 446,-366 446,-366 446,-378 446,-378 446,-384 440,-390 434,-390"/>
+<path fill="#ffffff" stroke="#cbd5e1" stroke-width="2.2" d="M434,-390C434,-390 404,-390 404,-390 398,-390 392,-384 392,-378 392,-378 392,-366 392,-366 392,-360 398,-354 404,-354 404,-354 434,-354 434,-354 440,-354 446,-360 446,-366 446,-366 446,-378 446,-378 446,-384 440,-390 434,-390"/>
 <text text-anchor="middle" x="419" y="-369.5" font-family="DejaVu Sans" font-size="10.00" fill="#334155">P1.6</text>
 </a>
 </g>
@@ -244,7 +244,7 @@
 <g id="node9" class="node">
 <title>p1_4</title>
 <g id="a_node9"><a xlink:href="material3_roadmap.md#p1-4" xlink:title="Implement the compact LayoutScaffold slice" target="_top">
-<path fill="#ffffff" stroke="#eab308" stroke-width="2.2" d="M340,-332C340,-332 310,-332 310,-332 304,-332 298,-326 298,-320 298,-320 298,-308 298,-308 298,-302 304,-296 310,-296 310,-296 340,-296 340,-296 346,-296 352,-302 352,-308 352,-308 352,-320 352,-320 352,-326 346,-332 340,-332"/>
+<path fill="#ffffff" stroke="#cbd5e1" stroke-width="2.2" d="M340,-332C340,-332 310,-332 310,-332 304,-332 298,-326 298,-320 298,-320 298,-308 298,-308 298,-302 304,-296 310,-296 310,-296 340,-296 340,-296 346,-296 352,-302 352,-308 352,-308 352,-320 352,-320 352,-326 346,-332 340,-332"/>
 <text text-anchor="middle" x="325" y="-311.5" font-family="DejaVu Sans" font-size="10.00" fill="#334155">P1.4</text>
 </a>
 </g>
