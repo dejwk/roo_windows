@@ -404,6 +404,34 @@ cc_test(
     ],
 )
 
+cc_binary(
+    name = "material3_navigation_bar_example",
+    srcs = ["test/material3_navigation_bar_example_build.cpp"],
+    defines = [
+        "ROO_TESTING",
+        "ROO_LOGGING_COLORLOGTOSTDERR=1",
+    ],
+    linkstatic = 1,
+    tags = ["manual"],
+    deps = [
+        ":roo_windows",
+        "//fake:fltk_key_source",
+        ":material3_navigation_bar_example_source",
+        "@roo_display//fake:reference_device",
+        "@roo_testing//:arduino_main",
+        "@roo_testing//roo_testing/devices/display/ili9341:spi",
+        "@roo_testing//roo_testing/devices/touch/xpt2046:spi",
+        "@roo_testing//roo_testing/transducers/ui/viewport:flex",
+        "@roo_testing//roo_testing/transducers/ui/viewport/fltk",
+    ],
+)
+
+cc_library(
+    name = "material3_navigation_bar_example_source",
+    hdrs = ["examples/material3/navigation_bar/navigation_bar.ino"],
+    includes = ["examples/material3/navigation_bar"],
+)
+
 cc_test(
     name = "material3_tabs_test",
     srcs = [
