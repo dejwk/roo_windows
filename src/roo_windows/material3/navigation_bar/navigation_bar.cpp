@@ -213,7 +213,8 @@ NavigationBarDestination::NavigationBarDestination(
       icon_(icon),
       selected_icon_(selected_icon),
       layout_(static_cast<uint8_t>(NavigationBarLayout::kVertical)),
-      selected_(false) {}
+      selected_(false),
+      click_handled_on_release_(false) {}
 
 roo::string_view NavigationBarDestination::label() const { return label_; }
 
@@ -337,11 +338,26 @@ void NavigationBarDestination::paint(PaintContext& ctx) const {
   ctx.addExclusion(bounds());
 }
 
-void NavigationBarDestination::onClicked() {
+void NavigationBarDestination::onSingleTapUp(XDim x, YDim y) {
+  Widget::onSingleTapUp(x, y);
   if (parent() != nullptr) {
+    // The destination owns its pill feedback, so framework overlay retirement
+    // cannot keep an unselected destination visually pressed. Select now to
+    // make the final click frame settle into the indicator rather than the
+    // inherited bar surface. onClicked() still delivers the normal framework
+    // interactive-change notification after the animation completes.
+    click_handled_on_release_ = true;
     static_cast<NavigationBar*>(parent())->updateSelectionFromDestination(
         *this);
   }
+}
+
+void NavigationBarDestination::onClicked() {
+  if (parent() != nullptr && !click_handled_on_release_) {
+    static_cast<NavigationBar*>(parent())->updateSelectionFromDestination(
+        *this);
+  }
+  click_handled_on_release_ = false;
   Widget::onClicked();
 }
 

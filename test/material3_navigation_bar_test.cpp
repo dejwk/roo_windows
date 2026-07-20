@@ -8,6 +8,7 @@
 #include "roo_display/core/offscreen.h"
 #include "roo_icons/outlined/24/action.h"
 #include "roo_scheduler.h"
+#include "roo_windows/core/application.h"
 #include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/canvas.h"
 #include "roo_windows/core/clipper.h"
@@ -294,6 +295,47 @@ TEST(Material3NavigationBar, BarOwnsSelectionAndReselection) {
   EXPECT_EQ(std::vector<int>({0, 1}), bar.selected_during_invocation);
   EXPECT_EQ(std::vector<int>({1}), bar.reselected);
   EXPECT_EQ((std::vector<std::pair<int, int>>{{0, 1}}), bar.selection_changes);
+}
+
+// Verifies that touch release selects before the custom pill animation retires,
+// so its final frame cannot flash the unselected bar surface before settling.
+TEST(Material3NavigationBar, TouchReleaseSettlesIntoSelectedPill) {
+  constexpr int16_t kWidth = 192;
+  constexpr int16_t kHeight = 80;
+  roo::byte raster[kWidth * kHeight * 2];
+  roo_display::OffscreenDevice<roo_display::Argb4444> offscreen(
+      kWidth, kHeight, raster, roo_display::Argb4444());
+  roo_display::Display display(offscreen);
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  Application app(&env, display);
+
+  auto bar = std::make_unique<TestNavigationBar>(app.context());
+  TestNavigationBar* bar_raw = bar.get();
+  auto home = std::make_unique<NavigationBarDestination>(
+      app.context(), "Home", &ic_outlined_24_action_done());
+  auto inbox = std::make_unique<NavigationBarDestination>(
+      app.context(), "Inbox", &ic_outlined_24_action_bookmark());
+  NavigationBarDestination* inbox_raw = inbox.get();
+  ASSERT_TRUE(bar->add(WidgetRef(std::move(home))));
+  ASSERT_TRUE(bar->add(WidgetRef(std::move(inbox))));
+  app.add(std::move(bar), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
+  ASSERT_TRUE(app.refresh());
+
+  inbox_raw->onShowPress(inbox_raw->width() / 2, inbox_raw->height() / 2);
+  NavigationBarDestinationTestAccess::tapUp(*inbox_raw, inbox_raw->width() / 2,
+                                            inbox_raw->height() / 2);
+
+  EXPECT_TRUE(inbox_raw->isClicking());
+  EXPECT_EQ(1, bar_raw->selectedIndex());
+  EXPECT_TRUE(inbox_raw->selected());
+  EXPECT_EQ(std::vector<int>({1}), bar_raw->invoked);
+
+  // Simulate the framework's deferred completion callback: selection and the
+  // semantic bar callback have already been committed on touch release.
+  NavigationBarDestinationTestAccess::click(*inbox_raw);
+  EXPECT_EQ(std::vector<int>({1}), bar_raw->invoked);
+  EXPECT_TRUE(bar_raw->reselected.empty());
 }
 
 // Verifies the five-destination cap and that clear detaches every destination

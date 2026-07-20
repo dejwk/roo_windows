@@ -74,8 +74,12 @@ class NavigationBarDestination : public BasicWidget {
   void paint(PaintContext& ctx) const override;
 
  protected:
-  /// Preserves the framework primary-activation lifecycle until bar routing
-  /// after updating the bar-owned selection model.
+  /// Commits touch selection before the pill click animation reaches its
+  /// settled frame.
+  void onSingleTapUp(XDim x, YDim y) override;
+
+  /// Routes keyboard and deferred framework activation through the bar after
+  /// touch release has already committed selection when applicable.
   void onClicked() override;
 
   /// Repaints the indicator pill when interaction state changes.
@@ -99,6 +103,7 @@ class NavigationBarDestination : public BasicWidget {
   const MonoIcon* selected_icon_;
   uint8_t layout_ : 1;
   uint8_t selected_ : 1;
+  uint8_t click_handled_on_release_ : 1;
 };
 
 /// Navigation-bar destination that opts into one inline badge helper.

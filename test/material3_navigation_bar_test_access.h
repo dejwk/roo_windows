@@ -29,6 +29,10 @@ class NavigationBarDestinationTestAccess {
   static void click(NavigationBarDestination& destination) {
     destination.onClicked();
   }
+
+  static void tapUp(NavigationBarDestination& destination, XDim x, YDim y) {
+    destination.onSingleTapUp(x, y);
+  }
 };
 
 }  // namespace roo_windows::material3
