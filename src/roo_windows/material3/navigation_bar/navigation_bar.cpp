@@ -5,7 +5,6 @@
 #include "roo_display/shape/smooth.h"
 #include "roo_display/ui/alignment.h"
 #include "roo_display/ui/text_label.h"
-#include "roo_windows/core/click_animation.h"
 #include "roo_windows/material3/navigation_bar/navigation_bar_tokens.h"
 #include "roo_windows/material3/theme.h"
 
@@ -163,38 +162,6 @@ Color ContentColorFor(const NavigationBarDestination& destination) {
                                 : colors.onSurfaceVariant;
 }
 
-/// Resolves the combined hover/focus/press state layer for the indicator pill.
-Color InteractionOverlayFor(const NavigationBarDestination& destination,
-                            ColorToken container_role) {
-  const Material3Theme& material = destination.theme().material3Theme();
-  uint16_t opacity = 0;
-  if (destination.isHover()) {
-    opacity +=
-        material.state.resolve(container_role, InteractionState::kHover).a();
-  }
-  if (destination.isFocused()) {
-    opacity +=
-        material.state.resolve(container_role, InteractionState::kFocus).a();
-  }
-  if (destination.isClicking()) {
-    uint8_t pressed_opacity =
-        material.state.resolve(container_role, InteractionState::kPressed).a();
-    const ClickAnimation* animation = destination.getClickAnimation();
-    float progress = animation == nullptr ? 1.0f : animation->progress();
-    opacity += static_cast<uint16_t>(pressed_opacity * progress);
-  } else if (destination.isPressed()) {
-    opacity +=
-        material.state.resolve(container_role, InteractionState::kPressed).a();
-  }
-  if (destination.isDragged()) {
-    opacity +=
-        material.state.resolve(container_role, InteractionState::kDragged).a();
-  }
-  Color overlay = material.color.contentColorFor(container_role);
-  overlay.set_a(std::min<uint16_t>(opacity, 255));
-  return overlay;
-}
-
 /// Resolves the parent surface role used by an unselected indicator state.
 ColorToken UnselectedIndicatorRole(
     const NavigationBarDestination& destination) {
@@ -253,6 +220,11 @@ NavigationBarLayout NavigationBarDestination::layout() const {
 
 bool NavigationBarDestination::isClickable() const { return isEnabled(); }
 
+ColorToken NavigationBarDestination::effectiveOverlayColorRole() const {
+  return selected() ? ColorToken::kSecondaryContainer
+                    : UnselectedIndicatorRole(*this);
+}
+
 Dimensions NavigationBarDestination::getSuggestedMinimumDimensions() const {
   const MonoIcon* content_icon =
       selected() && selectedIcon() != nullptr ? selectedIcon() : icon();
@@ -278,13 +250,10 @@ Dimensions NavigationBarDestination::getSuggestedMinimumDimensions() const {
 void NavigationBarDestination::paint(PaintContext& ctx) const {
   const DestinationContentGeometry geometry = ResolveContentGeometry(*this);
   const Color content_color = ContentColorFor(*this);
-  const ColorToken indicator_role = selected() ? ColorToken::kSecondaryContainer
-                                               : UnselectedIndicatorRole(*this);
   Color indicator_color =
       selected() ? theme().material3Theme().color.secondaryContainer
                  : ctx.bgcolor();
-  const Color interaction_overlay =
-      InteractionOverlayFor(*this, indicator_role);
+  const Color interaction_overlay = ctx.overlaySpec().base_overlay();
   const bool shows_indicator = selected() || interaction_overlay.a() != 0;
   if (interaction_overlay.a() != 0) {
     indicator_color =

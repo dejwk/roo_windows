@@ -405,6 +405,17 @@ cc_test(
 )
 
 cc_test(
+    name = "material3_navigation_bar_example_build",
+    srcs = ["test/material3_navigation_bar_example_build.cpp"],
+    includes = ["examples/material3/navigation_bar"],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
+cc_test(
     name = "material3_tabs_test",
     srcs = [
         "test/material3_tabs_test.cpp",

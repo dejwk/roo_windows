@@ -98,6 +98,10 @@ void PaintContext::drawObject(const roo_display::Drawable& object, XDim dx,
 
 roo_display::Color PaintContext::bgcolor() const { return canvas_.bgcolor(); }
 
+const OverlaySpec& PaintContext::overlaySpec() const {
+  return clipper_->currentOverlaySpec();
+}
+
 void PaintContext::setBgcolor(roo_display::Color color) {
   canvas_.set_bgcolor(color);
 }

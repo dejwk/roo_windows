@@ -1,3 +1,5 @@
+#include <Arduino.h>
+
 #include <stddef.h>
 
 #include <memory>
@@ -31,6 +33,72 @@ ApplicationContext MakeContext(Environment& env) {
 roo_display::Color QuantizeToArgb4444(roo_display::Color color) {
   roo_display::Argb4444 mode;
   return mode.toArgbColor(mode.fromArgbColor(color));
+}
+
+roo_display::Color ReadPixel(
+    const roo_display::OffscreenDevice<roo_display::Argb4444>& offscreen,
+    int16_t x, int16_t y) {
+  const int16_t px[] = {x};
+  const int16_t py[] = {y};
+  roo_display::Color color[1];
+  offscreen.raster().readColors(px, py, 1, color);
+  return color[0];
+}
+
+// Exercises paint-owned fade compositing without tinting the whole destination.
+void ExpectDestinationFadeStaysWithinIndicator(NavigationBarLayout layout) {
+  constexpr int16_t kWidth = 192;
+  constexpr int16_t kHeight = 80;
+  roo::byte raster[kWidth * kHeight * 2];
+  roo_display::OffscreenDevice<roo_display::Argb4444> offscreen(
+      kWidth, kHeight, raster, roo_display::Argb4444());
+  roo_display::Display display(offscreen);
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  Application app(&env, display);
+
+  auto bar = std::make_unique<NavigationBar>(app.context());
+  bar->setLayout(layout);
+  auto first = std::make_unique<NavigationBarDestination>(
+      app.context(), "Home", &ic_outlined_24_action_done());
+  auto second = std::make_unique<NavigationBarDestination>(
+      app.context(), "Inbox", &ic_outlined_24_action_bookmark());
+  NavigationBarDestination* second_raw = second.get();
+  ASSERT_TRUE(bar->add(WidgetRef(std::move(first))));
+  ASSERT_TRUE(bar->add(WidgetRef(std::move(second))));
+  app.add(std::move(bar), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
+  ASSERT_TRUE(app.refresh());
+
+  const Rect icon_bounds =
+      NavigationBarDestinationTestAccess::iconBounds(*second_raw);
+  const int16_t inside_x = second_raw->offsetLeft() + icon_bounds.xMin() - 4;
+  const int16_t inside_y = second_raw->offsetTop() +
+                           icon_bounds.yMin() + icon_bounds.height() / 2;
+  ASSERT_TRUE(second_raw->parent_bounds().contains(inside_x, inside_y));
+  const roo_display::Color initial_indicator =
+      ReadPixel(offscreen, inside_x, inside_y);
+
+  int16_t outside_x = 0;
+  int16_t outside_y = 0;
+  roo_display::Color initial_outside;
+  if (layout == NavigationBarLayout::kVertical) {
+    outside_x = second_raw->offsetLeft() + 1;
+    outside_y = inside_y;
+    initial_outside = ReadPixel(offscreen, outside_x, outside_y);
+  }
+
+  second_raw->onShowPress(second_raw->width() / 2,
+                          second_raw->height() / 2);
+  delay(kPressAnimationMillis / 2);
+  ASSERT_TRUE(app.refresh());
+  EXPECT_NE(initial_indicator, ReadPixel(offscreen, inside_x, inside_y));
+  if (layout == NavigationBarLayout::kVertical) {
+    EXPECT_EQ(initial_outside, ReadPixel(offscreen, outside_x, outside_y));
+  }
+
+  delay(kPressAnimationMillis + 20);
+  ASSERT_TRUE(app.refresh());
+  EXPECT_NE(initial_indicator, ReadPixel(offscreen, inside_x, inside_y));
 }
 
 void ExpectDestinationPaintsEveryPixel(NavigationBarLayout layout,
@@ -157,7 +225,15 @@ TEST(Material3NavigationBar, DestinationDefaultsAndSetters) {
   EXPECT_EQ(NavigationBarLayout::kVertical, destination.layout());
   EXPECT_FALSE(destination.selected());
   EXPECT_TRUE(destination.isClickable());
-  EXPECT_EQ(Widget::OVERLAY_NONE, destination.getOverlayType());
+  EXPECT_EQ(Widget::OVERLAY_CUSTOM, destination.getOverlayType());
+  EXPECT_EQ(Widget::ClickOverlayAnimation::kFade,
+            destination.getClickOverlayAnimation());
+  EXPECT_FALSE(destination.useOverlayOnSelection());
+  EXPECT_EQ(ColorToken::kSurface, destination.effectiveOverlayColorRole());
+
+  NavigationBarDestinationTestAccess::setSelected(destination, true);
+  EXPECT_EQ(ColorToken::kSecondaryContainer,
+            destination.effectiveOverlayColorRole());
 
   destination.setLabel("Saved");
   destination.setIcon(nullptr);
@@ -223,6 +299,12 @@ TEST(Material3NavigationBar, SelectionStateAndIconAnchorFollowLayout) {
 TEST(Material3NavigationBar, DestinationPaintSettlesEveryPixelExactlyOnce) {
   ExpectDestinationPaintsEveryPixel(NavigationBarLayout::kVertical, true);
   ExpectDestinationPaintsEveryPixel(NavigationBarLayout::kHorizontal, true);
+}
+
+TEST(Material3NavigationBar, DestinationFadeStaysWithinIndicatorInBothLayouts) {
+  ExpectDestinationFadeStaysWithinIndicator(NavigationBarLayout::kVertical);
+  ExpectDestinationFadeStaysWithinIndicator(
+      NavigationBarLayout::kHorizontal);
 }
 
 // Verifies that the opt-in badge subclass reuses the shared inline helper,

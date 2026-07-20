@@ -64,8 +64,17 @@ class NavigationBarDestination : public BasicWidget {
   /// Navigation destinations are clickable while enabled.
   bool isClickable() const override;
 
-  /// Uses the destination indicator pill for interaction state rendering.
-  OverlayType getOverlayType() const override { return OVERLAY_NONE; }
+  /// Owns interaction-overlay compositing for the destination indicator pill.
+  OverlayType getOverlayType() const override { return OVERLAY_CUSTOM; }
+
+  ClickOverlayAnimation getClickOverlayAnimation() const override {
+    return ClickOverlayAnimation::kFade;
+  }
+
+  bool useOverlayOnSelection() const override { return false; }
+
+  ::roo_windows::material3::ColorToken effectiveOverlayColorRole()
+      const override;
 
   /// Returns the token-backed compact or horizontal destination minimum.
   Dimensions getSuggestedMinimumDimensions() const override;

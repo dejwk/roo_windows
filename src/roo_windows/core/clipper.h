@@ -180,8 +180,9 @@ class ClipperOutput : public roo_display::DisplayOutput {
                      SmallNumber outline_width,
                      roo_display::Color outline_color) {
     const OverlaySpec& overlay_spec = currentOverlaySpec();
-    bool apply_press_overlay = overlay_spec.has_press_overlay() ||
-                               scoped_press_overlay_active_;
+    bool apply_press_overlay =
+        (overlay_spec.is_area() && overlay_spec.has_press_overlay()) ||
+        scoped_press_overlay_active_;
     const PressOverlay* press_overlay =
         apply_press_overlay ? &press_overlay_ : nullptr;
     decorations_.emplace_back(std::move(extents), elevation,

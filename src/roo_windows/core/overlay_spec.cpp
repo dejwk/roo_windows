@@ -89,9 +89,20 @@ OverlaySpec::OverlaySpec(Widget& widget, const Canvas& canvas)
   base_overlay_ = getOverlayColor(widget, canvas);
   is_modded_ = (base_overlay_.a() != 0);
   Widget::OverlayType overlay_type = widget.getOverlayType();
-  target_ = overlay_type == Widget::OVERLAY_AREA
-                ? Target::kArea
-                : Target::kPoint;
+  switch (overlay_type) {
+    case Widget::OVERLAY_AREA:
+      target_ = Target::kArea;
+      break;
+    case Widget::OVERLAY_POINT:
+      target_ = Target::kPoint;
+      break;
+    case Widget::OVERLAY_CUSTOM:
+      target_ = Target::kCustom;
+      break;
+    case Widget::OVERLAY_NONE:
+      target_ = Target::kNone;
+      break;
+  }
 
   // If click_animation is true, we need to redraw the overlay.
   bool click_animation = ((widget.state_ & kWidgetClicking) != 0);

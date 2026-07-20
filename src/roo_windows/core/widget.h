@@ -246,7 +246,8 @@ class Widget {
   roo_display::Color defaultColor() const;
 
   virtual ::roo_windows::material3::ColorToken effectiveContainerRole() const;
-  ::roo_windows::material3::ColorToken effectiveOverlayColorRole() const;
+  virtual ::roo_windows::material3::ColorToken
+  effectiveOverlayColorRole() const;
 
   const Rect& parent_bounds() const { return parent_bounds_; }
 
@@ -462,7 +463,7 @@ class Widget {
 
   void setClicking();
 
-  enum OverlayType { OVERLAY_NONE, OVERLAY_AREA, OVERLAY_POINT };
+  enum OverlayType { OVERLAY_NONE, OVERLAY_AREA, OVERLAY_POINT, OVERLAY_CUSTOM };
 
   /// Selects how the pressed interaction layer is revealed while a click
   /// animation is active. The default preserves the existing ripple behavior.
@@ -500,6 +501,7 @@ class Widget {
   }
 
   virtual bool useOverlayOnActivation() const { return true; }
+  virtual bool useOverlayOnSelection() const { return true; }
   virtual bool useOverlayOnPress() const { return true; }
 
   virtual bool isClickable() const;

@@ -45,8 +45,7 @@ class FadePointOverlayBoxWidget : public PointOverlayBoxWidget {
   }
 
   void paint(PaintContext& ctx) const override {
-    const OverlaySpec& overlay_spec =
-        ctx.clipperForFramework().currentOverlaySpec();
+    const OverlaySpec& overlay_spec = ctx.overlaySpec();
     click_animation_in_progress_ =
         overlay_spec.is_click_animation_in_progress();
     has_press_overlay_ = overlay_spec.has_press_overlay();

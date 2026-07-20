@@ -49,6 +49,9 @@ class OverlaySpec {
   /// Returns true if the framework owns a point-shaped overlay target.
   bool is_point() const { return target_ == Target::kPoint; }
 
+  /// Returns true if the widget owns overlay geometry and compositing.
+  bool is_custom() const { return target_ == Target::kCustom; }
+
   /// Returns true while the shared click timeline requires another paint
   /// frame. A fade has timeline activity without a press ripple.
   bool is_click_animation_in_progress() const {
@@ -67,7 +70,7 @@ class OverlaySpec {
   const PressOverlaySpec& press_overlay() const { return press_overlay_spec_; }
 
  private:
-  enum class Target : uint8_t { kNone, kArea, kPoint };
+  enum class Target : uint8_t { kNone, kArea, kPoint, kCustom };
 
   bool is_modded_;  // True if any other flag or overlay is set.
   bool is_disabled_;

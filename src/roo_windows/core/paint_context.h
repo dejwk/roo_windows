@@ -107,6 +107,11 @@ class PaintContext {
   /// Returns the canvas background color.
   roo_display::Color bgcolor() const;
 
+  /// Returns the resolved interaction-overlay state for the current widget
+  /// paint frame. Paint-owned overlay targets consume base_overlay() here and
+  /// settle their component-specific geometry directly.
+  const OverlaySpec& overlaySpec() const;
+
   /// Sets the canvas background color.
   void setBgcolor(roo_display::Color color);
 

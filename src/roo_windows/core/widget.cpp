@@ -584,7 +584,7 @@ uint8_t Widget::getOverlayOpacity() const {
   if (isFocused()) {
     overlay_opacity += myTheme.material3Theme().state.resolve(bg_role, InteractionState::kFocus).a();
   }
-  if (isSelected()) {
+  if (isSelected() && useOverlayOnSelection()) {
     overlay_opacity += myTheme.material3Theme().state.resolve(bg_role, InteractionState::kSelected).a();
   }
   if (isActivated() && useOverlayOnActivation()) {
@@ -706,7 +706,7 @@ void Widget::paintWidgetModded(PaintContext& ctx) {
               MakePointOverlay(*this, canvas, overlay_spec.base_overlay()),
               canvas.clip_box());
           paintWidgetContents(ctx);
-      } else {
+      } else if (overlay_spec.is_area()) {
           roo_display::DisplayOutput& out = canvas.out();
           roo_display::OverlayFilter filter(canvas.out(),
                                             overlay_spec.base_overlay(),
@@ -714,6 +714,8 @@ void Widget::paintWidgetModded(PaintContext& ctx) {
           canvas.set_out(&filter);
           paintWidgetContents(ctx);
           canvas.set_out(&out);
+      } else {
+        paintWidgetContents(ctx);
       }
     } else {
       paintWidgetContents(ctx);

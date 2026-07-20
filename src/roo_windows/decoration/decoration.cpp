@@ -282,7 +282,7 @@ Decoration::Decoration(roo_display::Box extents, int elevation,
     outline_width_ = 0;
     outline_width_frac_ = 15;
   }
-  if (overlay_spec.is_modded() && !overlay_spec.is_point()) {
+  if (overlay_spec.is_area() && overlay_spec.is_modded()) {
     bgcolor_ = AlphaBlend(bgcolor_, overlay_spec.base_overlay());
     outline_color_ = AlphaBlend(outline_color_, overlay_spec.base_overlay());
   }
