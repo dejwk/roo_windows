@@ -18,9 +18,10 @@ struct NavigationBarTokens {
   int16_t vertical_indicator_height_dp;
   int16_t horizontal_indicator_padding_dp;
   int16_t horizontal_indicator_height_dp;
+  int16_t horizontal_item_width_dp;
 };
 
-inline constexpr NavigationBarTokens kNavigationBarTokens = {80, 64, 24, 4, 64,
-                                                             64, 32, 12, 32};
+inline constexpr NavigationBarTokens kNavigationBarTokens = {
+    80, 64, 24, 4, 64, 64, 32, 12, 32, 96};
 
 }  // namespace roo_windows::material3::internal

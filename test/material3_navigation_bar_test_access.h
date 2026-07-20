@@ -4,7 +4,7 @@
 
 namespace roo_windows::material3 {
 
-/// Test-only access to bar-owned destination state before Phase 3 lands.
+/// Test-only access to destination internals used by focused bar tests.
 class NavigationBarDestinationTestAccess {
  public:
   static void setLayout(NavigationBarDestination& destination,
@@ -24,6 +24,10 @@ class NavigationBarDestinationTestAccess {
   static void paint(const NavigationBarDestination& destination,
                     PaintContext& ctx) {
     destination.paint(ctx);
+  }
+
+  static void click(NavigationBarDestination& destination) {
+    destination.onClicked();
   }
 };
 

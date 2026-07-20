@@ -337,7 +337,13 @@ void NavigationBarDestination::paint(PaintContext& ctx) const {
   ctx.addExclusion(bounds());
 }
 
-void NavigationBarDestination::onClicked() { Widget::onClicked(); }
+void NavigationBarDestination::onClicked() {
+  if (parent() != nullptr) {
+    static_cast<NavigationBar*>(parent())->updateSelectionFromDestination(
+        *this);
+  }
+  Widget::onClicked();
+}
 
 void NavigationBarDestination::notifyStateChanged(uint16_t state_diff) {
   if ((state_diff & (kWidgetHover | kWidgetFocused | kWidgetPressed |
@@ -369,6 +375,210 @@ void NavigationBarDestination::setSelectedFromBar(bool selected) {
   setSelected(selected);
   invalidateInterior();
   requestLayout();
+}
+
+NavigationBar::NavigationBar(ApplicationContext& context)
+    : Container(context),
+      destinations_(),
+      selected_index_(-1),
+      layout_(static_cast<uint8_t>(NavigationBarLayout::kVertical)) {}
+
+NavigationBar::~NavigationBar() { clear(); }
+
+NavigationBarLayout NavigationBar::layout() const {
+  return static_cast<NavigationBarLayout>(layout_);
+}
+
+void NavigationBar::setLayout(NavigationBarLayout layout) {
+  const uint8_t encoded = static_cast<uint8_t>(layout);
+  if (layout_ == encoded) return;
+  layout_ = encoded;
+  propagateLayoutToDestinations();
+  invalidateInterior();
+  requestLayout();
+}
+
+int NavigationBar::selectedIndex() const { return selected_index_; }
+
+void NavigationBar::setSelectedIndex(int index) {
+  if (index < 0 || index >= destinationCount() || index == selected_index_) {
+    return;
+  }
+  const int old_index = selected_index_;
+  selected_index_ = static_cast<int8_t>(index);
+  for (int i = 0; i < destinationCount(); ++i) {
+    destinations_[i]->setSelectedFromBar(i == selected_index_);
+  }
+  onSelectedIndexChanged(old_index, selected_index_);
+  invalidateInterior();
+}
+
+int NavigationBar::destinationCount() const {
+  return static_cast<int>(destinations_.size());
+}
+
+bool NavigationBar::add(WidgetRef destination) {
+  if (destination.get() == nullptr || destinationCount() >= kMaxDestinations) {
+    return false;
+  }
+  NavigationBarDestination* raw_destination =
+      static_cast<NavigationBarDestination*>(destination.get());
+  CHECK(raw_destination->parent() == nullptr);
+  destinations_.push_back(raw_destination);
+  attachChild(std::move(destination));
+  raw_destination->setLayoutFromBar(layout());
+  if (selected_index_ < 0) {
+    selected_index_ = 0;
+    raw_destination->setSelectedFromBar(true);
+  }
+  invalidateInterior();
+  requestLayout();
+  return true;
+}
+
+void NavigationBar::clear() {
+  if (destinations_.empty()) return;
+  while (!destinations_.empty()) {
+    NavigationBarDestination* destination = destinations_.back();
+    destinations_.pop_back();
+    detachChild(destination);
+  }
+  selected_index_ = -1;
+  invalidateInterior();
+  requestLayout();
+}
+
+::roo_windows::material3::ColorToken NavigationBar::containerRole() const {
+  return ColorToken::kSurface;
+}
+
+Color NavigationBar::background() const {
+  return theme().material3Theme().color.surface;
+}
+
+void NavigationBar::paint(PaintContext& ctx) const { ctx.clear(); }
+
+int NavigationBar::getChildrenCount() const { return destinationCount(); }
+
+const Widget& NavigationBar::getChild(int idx) const {
+  CHECK(idx >= 0);
+  CHECK_LT(idx, destinationCount());
+  return *destinations_[idx];
+}
+
+Widget& NavigationBar::getChild(int idx) {
+  return const_cast<Widget&>(
+      static_cast<const NavigationBar&>(*this).getChild(idx));
+}
+
+Dimensions NavigationBar::onMeasure(WidthSpec width, HeightSpec height) {
+  const internal::NavigationBarTokens& tokens = internal::kNavigationBarTokens;
+  const int16_t bar_height = Scaled(layout() == NavigationBarLayout::kVertical
+                                        ? tokens.vertical_height_dp
+                                        : tokens.horizontal_height_dp);
+  int16_t desired_width = 0;
+  if (layout() == NavigationBarLayout::kVertical) {
+    for (NavigationBarDestination* destination : destinations_) {
+      Dimensions child = destination->measure(WidthSpec::Unspecified(0),
+                                              HeightSpec::Exactly(bar_height));
+      desired_width += child.width();
+    }
+  } else {
+    desired_width =
+        destinationCount() * Scaled(tokens.horizontal_item_width_dp);
+  }
+  return Dimensions(width.resolveSize(desired_width),
+                    height.resolveSize(bar_height));
+}
+
+void NavigationBar::onLayout(bool changed, const Rect& rect) {
+  (void)changed;
+  (void)rect;
+  const int count = destinationCount();
+  if (count == 0) return;
+
+  propagateLayoutToDestinations();
+  const int16_t available_width = width();
+  const int16_t bar_height = height();
+  int16_t item_width = 0;
+  int16_t start_x = 0;
+  if (layout() == NavigationBarLayout::kHorizontal) {
+    const int16_t preferred_width =
+        Scaled(internal::kNavigationBarTokens.horizontal_item_width_dp);
+    const int32_t preferred_total =
+        static_cast<int32_t>(count) * preferred_width;
+    if (available_width >= preferred_total) {
+      item_width = preferred_width;
+      start_x = static_cast<int16_t>((available_width - preferred_total) / 2);
+    }
+  }
+
+  // Compact mode, and horizontal mode under width pressure, divide the row
+  // with integer boundaries so every pixel belongs to exactly one target.
+  if (item_width == 0) {
+    int16_t x = 0;
+    for (int i = 0; i < count; ++i) {
+      const int16_t next_x = static_cast<int16_t>(
+          (static_cast<int32_t>(i + 1) * available_width) / count);
+      destinations_[i]->measure(WidthSpec::Exactly(next_x - x),
+                                HeightSpec::Exactly(bar_height));
+      static_cast<Widget&>(*destinations_[i])
+          .layout(Rect(x, 0, next_x - 1, bar_height - 1));
+      x = next_x;
+    }
+    return;
+  }
+
+  for (int i = 0; i < count; ++i) {
+    const int16_t x = start_x + i * item_width;
+    destinations_[i]->measure(WidthSpec::Exactly(item_width),
+                              HeightSpec::Exactly(bar_height));
+    static_cast<Widget&>(*destinations_[i])
+        .layout(Rect(x, 0, x + item_width - 1, bar_height - 1));
+  }
+}
+
+bool NavigationBar::onKeyEvent(const KeyEvent& event) {
+  if (event.phase != KeyPhase::kDown && event.phase != KeyPhase::kRepeat) {
+    return false;
+  }
+  FocusDirection direction;
+  switch (event.code) {
+    case KeyCode::kLeft:
+      direction = FocusDirection::kLeft;
+      break;
+    case KeyCode::kRight:
+      direction = FocusDirection::kRight;
+      break;
+    default:
+      return false;
+  }
+  return context().focus().moveFocusDirection(*this, direction);
+}
+
+void NavigationBar::updateSelectionFromDestination(
+    NavigationBarDestination& destination) {
+  const int index = indexOf(destination);
+  if (index < 0 || !destination.isEnabled()) return;
+  onDestinationInvoked(index);
+  if (index == selected_index_) {
+    onSelectedDestinationReselected(index);
+  } else {
+    setSelectedIndex(index);
+  }
+}
+
+void NavigationBar::propagateLayoutToDestinations() {
+  for (NavigationBarDestination* destination : destinations_) {
+    destination->setLayoutFromBar(layout());
+  }
+}
+
+int NavigationBar::indexOf(const NavigationBarDestination& destination) const {
+  for (int i = 0; i < destinationCount(); ++i) {
+    if (destinations_[i] == &destination) return i;
+  }
+  return -1;
 }
 
 }  // namespace material3

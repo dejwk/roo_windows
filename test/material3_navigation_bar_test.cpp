@@ -1,5 +1,7 @@
 #include <stddef.h>
 
+#include <memory>
+
 #include "gtest/gtest.h"
 #include "material3_navigation_bar_test_access.h"
 #include "roo_display.h"
@@ -11,6 +13,7 @@
 #include "roo_windows/core/clipper.h"
 #include "roo_windows/core/container.h"
 #include "roo_windows/core/environment.h"
+#include "roo_windows/core/key_source.h"
 #include "roo_windows/core/paint_context.h"
 #include "roo_windows/material3/badge/badge.h"
 #include "roo_windows/material3/navigation_bar/navigation_bar.h"
@@ -81,6 +84,33 @@ void ExpectDestinationPaintsEveryPixel(NavigationBarLayout layout,
     }
   }
 }
+
+class TestNavigationBar : public NavigationBar {
+ public:
+  explicit TestNavigationBar(ApplicationContext& context)
+      : NavigationBar(context) {}
+
+  using NavigationBar::onKeyEvent;
+
+  std::vector<int> invoked;
+  std::vector<int> selected_during_invocation;
+  std::vector<std::pair<int, int>> selection_changes;
+  std::vector<int> reselected;
+
+ protected:
+  void onDestinationInvoked(int index) override {
+    invoked.push_back(index);
+    selected_during_invocation.push_back(selectedIndex());
+  }
+
+  void onSelectedIndexChanged(int old_index, int new_index) override {
+    selection_changes.emplace_back(old_index, new_index);
+  }
+
+  void onSelectedDestinationReselected(int index) override {
+    reselected.push_back(index);
+  }
+};
 
 // Verifies the Phase 1 pointer-size-aware budgets that keep badge state off
 // base destinations and keep container state limited to destination storage,
@@ -180,6 +210,139 @@ TEST(Material3NavigationBar, SelectionStateAndIconAnchorFollowLayout) {
 TEST(Material3NavigationBar, DestinationPaintSettlesEveryPixelExactlyOnce) {
   ExpectDestinationPaintsEveryPixel(NavigationBarLayout::kVertical, true);
   ExpectDestinationPaintsEveryPixel(NavigationBarLayout::kHorizontal, true);
+}
+
+// Verifies that the bar owns selection, auto-selects its first destination,
+// and distinguishes a new activation from an explicit reselection.
+TEST(Material3NavigationBar, BarOwnsSelectionAndReselection) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+  TestNavigationBar bar(context);
+  NavigationBarDestination home(context, "Home", &ic_outlined_24_action_done());
+  NavigationBarDestination inbox(context, "Inbox",
+                                 &ic_outlined_24_action_bookmark());
+
+  EXPECT_TRUE(bar.add(WidgetRef(home)));
+  EXPECT_TRUE(bar.add(WidgetRef(inbox)));
+  EXPECT_EQ(0, bar.selectedIndex());
+  EXPECT_TRUE(home.selected());
+  EXPECT_FALSE(inbox.selected());
+
+  NavigationBarDestinationTestAccess::click(inbox);
+  EXPECT_EQ(1, bar.selectedIndex());
+  EXPECT_FALSE(home.selected());
+  EXPECT_TRUE(inbox.selected());
+  EXPECT_EQ(std::vector<int>({1}), bar.invoked);
+  EXPECT_EQ(std::vector<int>({0}), bar.selected_during_invocation);
+  EXPECT_EQ((std::vector<std::pair<int, int>>{{0, 1}}), bar.selection_changes);
+  EXPECT_TRUE(bar.reselected.empty());
+
+  NavigationBarDestinationTestAccess::click(inbox);
+  EXPECT_EQ(1, bar.selectedIndex());
+  EXPECT_EQ(std::vector<int>({1, 1}), bar.invoked);
+  EXPECT_EQ(std::vector<int>({0, 1}), bar.selected_during_invocation);
+  EXPECT_EQ(std::vector<int>({1}), bar.reselected);
+  EXPECT_EQ((std::vector<std::pair<int, int>>{{0, 1}}), bar.selection_changes);
+}
+
+// Verifies the five-destination cap and that clear detaches every destination
+// while restoring the empty-bar selection sentinel.
+TEST(Material3NavigationBar, BarCapsAndClearsDestinations) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+  NavigationBar bar(context);
+  NavigationBarDestination first(context);
+  NavigationBarDestination second(context);
+  NavigationBarDestination third(context);
+  NavigationBarDestination fourth(context);
+  auto fifth = std::make_unique<NavigationBarDestination>(context);
+  NavigationBarDestination sixth(context);
+
+  EXPECT_TRUE(bar.add(WidgetRef(first)));
+  EXPECT_TRUE(bar.add(WidgetRef(second)));
+  EXPECT_TRUE(bar.add(WidgetRef(third)));
+  EXPECT_TRUE(bar.add(WidgetRef(fourth)));
+  EXPECT_TRUE(bar.add(WidgetRef(std::move(fifth))));
+  EXPECT_EQ(nullptr, fifth);
+  EXPECT_FALSE(bar.add(WidgetRef(sixth)));
+  EXPECT_EQ(NavigationBar::kMaxDestinations, bar.destinationCount());
+
+  bar.clear();
+  EXPECT_EQ(0, bar.destinationCount());
+  EXPECT_EQ(-1, bar.selectedIndex());
+  EXPECT_EQ(nullptr, first.parent());
+  EXPECT_EQ(nullptr, fourth.parent());
+}
+
+// Verifies equal compact segments, fixed-width centered horizontal items, and
+// the equal-width fallback when the horizontal preferred width cannot fit.
+TEST(Material3NavigationBar, BarLayoutsDestinationsByMode) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+  NavigationBar bar(context);
+  NavigationBarDestination first(context, "Home",
+                                 &ic_outlined_24_action_done());
+  NavigationBarDestination second(context, "Inbox",
+                                  &ic_outlined_24_action_bookmark());
+  NavigationBarDestination third(context, "Saved",
+                                 &ic_outlined_24_action_done());
+  ASSERT_TRUE(bar.add(WidgetRef(first)));
+  ASSERT_TRUE(bar.add(WidgetRef(second)));
+  ASSERT_TRUE(bar.add(WidgetRef(third)));
+
+  bar.measure(WidthSpec::Exactly(301), HeightSpec::Unspecified(0));
+  static_cast<Widget&>(bar).layout(Rect(0, 0, 300, Scaled(80) - 1));
+  EXPECT_EQ(Rect(0, 0, 99, Scaled(80) - 1), first.parent_bounds());
+  EXPECT_EQ(Rect(100, 0, 199, Scaled(80) - 1), second.parent_bounds());
+  EXPECT_EQ(Rect(200, 0, 300, Scaled(80) - 1), third.parent_bounds());
+
+  bar.setLayout(NavigationBarLayout::kHorizontal);
+  bar.measure(WidthSpec::Exactly(400), HeightSpec::Unspecified(0));
+  static_cast<Widget&>(bar).layout(Rect(0, 0, 399, Scaled(64) - 1));
+  EXPECT_EQ(Rect(56, 0, 151, Scaled(64) - 1), first.parent_bounds());
+  EXPECT_EQ(Rect(152, 0, 247, Scaled(64) - 1), second.parent_bounds());
+  EXPECT_EQ(Rect(248, 0, 343, Scaled(64) - 1), third.parent_bounds());
+
+  bar.measure(WidthSpec::Exactly(200), HeightSpec::Unspecified(0));
+  static_cast<Widget&>(bar).layout(Rect(0, 0, 199, Scaled(64) - 1));
+  EXPECT_EQ(Rect(0, 0, 65, Scaled(64) - 1), first.parent_bounds());
+  EXPECT_EQ(Rect(66, 0, 132, Scaled(64) - 1), second.parent_bounds());
+  EXPECT_EQ(Rect(133, 0, 199, Scaled(64) - 1), third.parent_bounds());
+}
+
+// Verifies Left/Right traversal moves keyboard focus without selecting the
+// focused destination, leaving Enter and Space to the framework activation.
+TEST(Material3NavigationBar, ArrowKeysMoveFocusWithoutChangingSelection) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+  TestNavigationBar bar(context);
+  NavigationBarDestination first(context, "Home",
+                                 &ic_outlined_24_action_done());
+  NavigationBarDestination second(context, "Inbox",
+                                  &ic_outlined_24_action_bookmark());
+  NavigationBarDestination third(context, "Saved",
+                                 &ic_outlined_24_action_done());
+  ASSERT_TRUE(bar.add(WidgetRef(first)));
+  ASSERT_TRUE(bar.add(WidgetRef(second)));
+  ASSERT_TRUE(bar.add(WidgetRef(third)));
+  bar.measure(WidthSpec::Exactly(300), HeightSpec::Unspecified(0));
+  static_cast<Widget&>(bar).layout(Rect(0, 0, 299, Scaled(80) - 1));
+  ASSERT_TRUE(context.focus().requestFocus(second));
+
+  EXPECT_TRUE(bar.onKeyEvent(KeyEvent{KeyPhase::kDown, KeyCode::kRight, 0, 0}));
+  EXPECT_EQ(&third, context.focus().focused());
+  EXPECT_EQ(0, bar.selectedIndex());
+  EXPECT_FALSE(third.selected());
+
+  EXPECT_TRUE(
+      bar.onKeyEvent(KeyEvent{KeyPhase::kRepeat, KeyCode::kLeft, 0, 0}));
+  EXPECT_EQ(&second, context.focus().focused());
+  EXPECT_FALSE(bar.onKeyEvent(KeyEvent{KeyPhase::kDown, KeyCode::kDown, 0, 0}));
+  EXPECT_EQ(&second, context.focus().focused());
 }
 
 }  // namespace

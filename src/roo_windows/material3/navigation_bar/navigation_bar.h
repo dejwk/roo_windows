@@ -3,7 +3,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <memory>
 #include <vector>
 
 #include "roo_backport/string_view.h"
@@ -76,7 +75,7 @@ class NavigationBarDestination : public BasicWidget {
 
  protected:
   /// Preserves the framework primary-activation lifecycle until bar routing
-  /// lands with the container selection model.
+  /// after updating the bar-owned selection model.
   void onClicked() override;
 
   /// Repaints the indicator pill when interaction state changes.
@@ -147,6 +146,9 @@ class NavigationBar : public Container {
   /// Creates an empty navigation bar in the compact vertical layout.
   explicit NavigationBar(ApplicationContext& context);
 
+  /// Detaches all borrowed or owned destinations before destruction.
+  ~NavigationBar() override;
+
   /// Returns the configured destination layout mode.
   NavigationBarLayout layout() const;
 
@@ -162,17 +164,21 @@ class NavigationBar : public Container {
   /// Returns the current number of destinations.
   int destinationCount() const;
 
-  /// Adds a caller-owned destination when capacity permits.
-  bool add(NavigationBarDestination& destination);
-
-  /// Adopts a destination when capacity permits.
-  bool add(std::unique_ptr<NavigationBarDestination> destination);
+  /// Adds a borrowed or adopted destination when capacity permits.
+  ///
+  /// `destination` must reference a `NavigationBarDestination`. Pass
+  /// `WidgetRef(destination)` to borrow a caller-owned destination or
+  /// `WidgetRef(std::move(destination))` to transfer ownership.
+  bool add(WidgetRef destination);
 
   /// Detaches every destination and clears selection.
   void clear();
 
   /// Resolves the navigation bar's Material surface token.
   ::roo_windows::material3::ColorToken containerRole() const override;
+
+  /// Returns the Material 3 surface color owned by the bar container.
+  Color background() const override;
 
   /// Paints the bar-owned surface once the container implementation lands.
   void paint(PaintContext& ctx) const override;
@@ -206,8 +212,11 @@ class NavigationBar : public Container {
   virtual void onSelectedDestinationReselected(int index) {}
 
  private:
+  friend class NavigationBarDestination;
+
   void updateSelectionFromDestination(NavigationBarDestination& destination);
   void propagateLayoutToDestinations();
+  int indexOf(const NavigationBarDestination& destination) const;
 
   std::vector<NavigationBarDestination*> destinations_;
   int8_t selected_index_;
