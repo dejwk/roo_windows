@@ -10,22 +10,24 @@ Add a Material 3 layout family to `roo_windows` that closes on the current
 container APIs and the current Material 3 layout guidance:
 
 - a top-level scaffold that places bars, rails, and page content against
-  caller-supplied safety insets and breakpoint-backed margins,
+  caller-supplied safety insets and publishes breakpoint-backed ruler metrics,
 - a pane layout that builds single-pane, list-detail, supporting-pane, and
   three-pane pages from fixed leading / main / trailing slots,
 - a grid layout that applies breakpoint-backed columns, gutters, and margins
   so feeds, forms, and dashboards keep a consistent Material rhythm,
-- shared breakpoint and ruler metrics that callers can query without adding a
-  CSS-style layout engine,
+- shared breakpoint, layout-direction, and ruler metrics that callers can query
+  without adding a CSS-style layout engine,
 - and adaptive visibility rules that let higher-level code host a bottom bar,
   navigation rail, drawer trigger, or toolbar in the right layout region
   without pushing that policy down into the components themselves.
 
 The result is a missing middle layer between `roo_windows`' low-level row /
 column / flex containers and the Material 3 component families already being
-designed under `docs/`. It deliberately stops short of modal shell
-management, automatic platform inset discovery, and animated pane
-transitions.
+designed under `docs/`. It deliberately stops short of modal shell management,
+automatic platform inset discovery, and animated pane transitions. The first
+implementation slice is the compact scaffold required by the roadmap; pane and
+grid containers are deferred, independently complete slices rather than
+placeholder APIs.
 
 ## Motivation
 
@@ -61,7 +63,8 @@ Material layout decisions that shape a full application window:
 3. there is no pane container for list-detail or supporting-pane structure,
 4. there is no grid container that keeps cards and forms on breakpoint-backed
    columns,
-5. and there is no common way to mirror leading / trailing regions for RTL.
+5. and there is no common layout-direction type with which to mirror leading /
+   trailing regions for RTL.
 
 The closest current approximation is
 [src/roo_windows/containers/navigation_panel.h](../../../src/roo_windows/containers/navigation_panel.h).
@@ -79,17 +82,19 @@ This document is aligned against the current Material 3 layout references:
 
 - [Layout overview](https://m3.material.io/foundations/layout/layout-overview/overview)
 - [Parts of layout](https://m3.material.io/foundations/layout/layout-overview/parts-of-layout)
-- [Canonical layout examples](https://m3.material.io/m3/pages/canonical-examples)
-- [Grids and spacing](https://m3.material.io/foundations/layout/understanding-layout/spacing)
+- [Window size classes](https://developer.android.com/develop/adaptive-apps/guides/use-window-size-classes)
+- [Canonical layouts](https://developer.android.com/develop/adaptive-apps/guides/canonical-layouts)
+- [Content composition and structure](https://developer.android.com/design/ui/mobile/guides/layout-and-content/content-structure)
+- [Grids and spacing](https://m3.material.io/foundations/layout/grids-spacing/spacing)
 
 The main product signals carried into this design are:
 
 1. new layouts should start from a layout scaffold rather than from ad hoc
    nested rows and columns,
 2. layouts should adapt across compact, medium, expanded, large, and extra-
-   large breakpoints,
-3. bars, rails, panes, drag handles, and rulers are first-class layout
-   concepts,
+   large width classes; height remains an independent application input,
+3. bars, rails, panes, optional resize affordances, and rulers are first-class
+   layout concepts,
 4. canonical starting points are feed, list-detail, and supporting-pane
    layouts,
 5. columns, margins, and gutters should change with breakpoint so spacing
@@ -99,6 +104,11 @@ The main product signals carried into this design are:
    page content itself,
 8. layout should mirror for RTL,
 9. and good rhythm matters more than dense packing or clever auto-placement.
+
+The five width classes are the Android window-size-class V2 extension of the
+Material compact / medium / expanded model. The design does not label them as
+device types, and it does not assume that a window's class is stable for the
+lifetime of the application.
 
 ### Local Design References
 
@@ -117,8 +127,9 @@ Those references imply six important local constraints:
    than inside each bar / rail / drawer widget,
 2. per-instance RAM still matters, so fixed-slot containers should not pay for
    generic child vectors when the child set is structurally fixed,
-3. `Panel` remains the right choice for content containers with arbitrary child
-   counts,
+3. arbitrary-child containers should use one specialized item vector when each
+   child also needs layout metadata, rather than a `Panel` pointer vector plus
+   a parallel metadata vector,
 4. paint and invalidation must stay on the current widget / container
    pipeline,
 5. the parent, not the FAB, owns floating placement,
@@ -131,22 +142,29 @@ Those references imply six important local constraints:
 
 1. Support compact, medium, expanded, large, and extra-large width
    breakpoints through one shared policy object with repo-default thresholds.
-2. Support one top bar slot, one bottom bar slot, one leading rail slot, one
+2. Resolve Material dp tokens through the repo's compile-time `Scaled()`
+   convention while keeping `Rect`, `Insets`, and published metrics in pixels.
+3. Support explicit left-to-right and right-to-left layout direction; do not
+   infer it from text content or child widget types.
+4. Support one top bar slot, one bottom bar slot, one leading rail slot, one
    trailing rail slot, and one body slot on the scaffold.
-3. Support per-slot breakpoint visibility rules on the scaffold so callers can
+5. Support per-slot breakpoint visibility rules on the scaffold so callers can
    adapt bottom bars, rails, and toolbars without swapping parent widgets.
-4. Support caller-supplied safety insets using
+6. Support caller-supplied safety insets using
    [src/roo_windows/core/insets.h](../../../src/roo_windows/core/insets.h).
-5. Support one-pane, two-pane, and three-pane page bodies using a dedicated
+7. Publish resolved body bounds and occupied chrome insets so later FAB and
+   snackbar hosts can align to the scaffold without scanning its widget tree.
+8. Support one-pane, two-pane, and three-pane page bodies using a dedicated
    pane layout with leading, main, and trailing slots.
-6. Support canonical feed, list-detail, and supporting-pane pages without
+9. Support caller-selected single-pane presentation so compact list-detail
+   flows can show either list or detail while routing and Back remain outside
+   the layout.
+10. Support canonical feed, list-detail, and supporting-pane pages without
    introducing separate public widget families for each canonical example.
-7. Support optional pane resizing through a drag handle when exactly two panes
-   are visible and the side pane is marked resizable.
-8. Support a grid layout with breakpoint-backed column counts, margins,
+11. Support a grid layout with breakpoint-backed column counts, margins,
    gutters, and per-item spans.
-9. Mirror leading / trailing layout correctly in RTL.
-10. Keep scaffold and pane transitions static in v1; animated transitions are
+12. Mirror leading / trailing layout correctly in RTL.
+13. Keep scaffold and pane transitions static in v1; animated transitions are
     out of scope.
 
 ### Interaction Requirements
@@ -154,10 +172,12 @@ Those references imply six important local constraints:
 1. Breakpoint or inset changes must relayout the whole scaffold deterministically.
 2. `LayoutScaffold` must not own routing, destination selection, or drawer
    gesture policy.
-3. `PaneLayout` must keep the main pane visible at every breakpoint.
-4. `PaneLayout` must collapse side panes before violating the configured main-
-   pane minimum width.
-5. Drag-handle movement must avoid heap allocation on the hot drag path.
+3. `PaneLayout` must keep the caller-selected active pane visible whenever that
+   slot is attached; it must never substitute a different pane silently.
+4. In adaptive multi-pane mode, `PaneLayout` must preserve the active pane,
+   then the main pane, before lower-priority side panes when width is scarce.
+5. The caller may force single-pane mode based on height, posture, or
+   application state without replacing pane widgets.
 6. `GridLayout` must preserve row-major order and consistent inter-row rhythm;
    v1 must not implement masonry or waterfall packing.
 7. Grid items with varying heights must align to a shared row height per row,
@@ -167,11 +187,13 @@ Those references imply six important local constraints:
 
 ### API Requirements
 
-1. Expose `material3::LayoutBreakpoint`, `BreakpointRange`,
+1. Expose `roo_windows::LayoutDirection` plus
+   `material3::LayoutBreakpoint`, `BreakpointRange`,
    `LayoutBreakpointPolicy`, and `LayoutMetrics` as shared layout primitives.
 2. Expose one surface-owning `material3::LayoutScaffold` container.
 3. Expose one fixed-slot `material3::PaneLayout` container.
-4. Expose one arbitrary-child `material3::GridLayout` container.
+4. Expose one arbitrary-child `material3::GridLayout` container with a
+   specialized item vector.
 5. Keep the scaffold semantic: fixed named slots instead of a vector of
    arbitrary positioned children.
 6. Keep the pane container semantic: fixed leading / main / trailing slots
@@ -182,25 +204,31 @@ Those references imply six important local constraints:
    discovery outside the base API.
 9. Keep adaptive selection of bottom bar versus rail in the scaffold layer;
    do not push it down into the bar or rail widgets.
+10. Do not publish an unimplemented `PaneLayout` or `GridLayout` declaration in
+    the compact scaffold slice; each type becomes public in its implementation
+    phase.
 
 ### Embedded Constraints
 
-1. Do not allocate on paint, layout, or drag paths.
+1. Do not allocate on paint or layout paths.
 2. Store scaffold slots as fixed pointers plus small visibility metadata rather
    than as a generic child vector.
 3. Store pane slots as fixed pointers plus small per-pane metadata rather than
    as a vector of pane descriptors.
-4. Use `Panel` only where arbitrary child count is intrinsic, which is true
-   for `GridLayout` but not for `LayoutScaffold` or `PaneLayout`.
-5. Use pointer-size-aware size-budget assertions for the new public types.
-6. Do not add a CSS-like styling, selector, or auto-layout rule engine.
+4. Store grid children and their params in one specialized item vector; do not
+   pay for `Panel`'s pointer vector plus a parallel params vector.
+5. Store one borrowed pointer to the immutable breakpoint policy on each
+   container rather than copying the complete token table per instance.
+6. Use pointer-size-aware size-budget assertions for the new public types.
+7. Do not add a CSS-like styling, selector, or auto-layout rule engine.
 
 ## Design Overview
 
-The public surface has four pieces:
+The eventual public surface has four pieces:
 
-1. `LayoutBreakpoint`, `BreakpointRange`, `LayoutBreakpointPolicy`, and
-   `LayoutMetrics` define the shared breakpoint and ruler model.
+1. `LayoutDirection`, `LayoutBreakpoint`, `BreakpointRange`,
+   `LayoutBreakpointPolicy`, and `LayoutMetrics` define the shared direction,
+   breakpoint, and ruler model.
 2. `LayoutScaffold` owns top-level bars, rails, safety insets, and the body
    region.
 3. `PaneLayout` turns one body region into a leading / main / trailing pane
@@ -209,11 +237,16 @@ The public surface has four pieces:
 
 `LayoutScaffold` is the top-level adaptive shell. It decides which fixed slots
 are visible at the current breakpoint, resolves the remaining body bounds, and
-applies the scaffold's breakpoint-backed outer margins.
+publishes ruler metrics. It does not force an outer margin onto every body:
+full-width lists, media, and scrolling surfaces must remain possible. A body
+that wants the shared margin uses the published content bounds or a
+`GridLayout`.
 
 `PaneLayout` is the canonical page-body container. A list-detail screen is a
 leading pane plus a main pane. A supporting-pane screen is a main pane plus a
-trailing pane. A three-pane screen uses all three slots. No separate public
+trailing pane. A three-pane screen uses all three slots. When only one pane can
+be shown, the caller selects the active role; `PaneLayout` applies that state
+but does not own the navigation decision or Back handling. No separate public
 widget family is needed for each canonical example.
 
 `GridLayout` is the content-density tool. It gives feeds, settings pages,
@@ -243,7 +276,10 @@ The core decisions are:
 
 ### Breakpoint Policy and Ruler Metrics
 
-The shared breakpoint model is width-based.
+The shared breakpoint model is width-based. Width classes are resolved from
+the owner's available width before safety or content margins. A top-level
+scaffold therefore classifies its application window, while a nested grid
+classifies its local container.
 
 The default policy uses the current Material / Android width-class cut points:
 
@@ -253,7 +289,7 @@ The default policy uses the current Material / Android width-class cut points:
 4. large: `1200-1599dp`,
 5. extra-large: `1600dp+`.
 
-The library resolves layout tokens from that breakpoint:
+The library resolves repo-default layout tokens from that breakpoint:
 
 | Breakpoint | Columns | Outer margin | Gutter |
 | --- | ---: | ---: | ---: |
@@ -263,9 +299,30 @@ The library resolves layout tokens from that breakpoint:
 | Large | 12 | 32dp | 24dp |
 | Extra-large | 12 | 40dp | 24dp |
 
-Those numbers are library defaults, not hard-wired law. `LayoutBreakpointPolicy`
-lets callers replace the thresholds or the per-breakpoint tokens when a device
-family needs tighter or looser spacing.
+The breakpoint thresholds follow the current Android width size classes. The
+column, margin, and gutter values are Roo Windows defaults, not claims that
+Material requires one universal grid at each class. They retain the familiar
+4 / 8 / 12-column authoring rhythm and the documented 16dp compact margin;
+applications may supply a different immutable policy when their content calls
+for different spacing.
+
+Policy construction requires strictly increasing, non-negative thresholds;
+`columns >= 1`; non-negative margins/gutters; and dp values that remain in
+`XDim` range after `Scaled()`. These are checked configuration preconditions,
+not values silently reordered at layout time. An inverted `BreakpointRange`
+matches no breakpoint, which gives callers an explicit never-participate range.
+
+Policy thresholds and tokens are authored in Material dp. Resolution compares
+pixel widths against `Scaled(threshold_dp)` and converts selected spacing
+tokens with `Scaled()` exactly once. `Insets`, `Rect`, `LayoutMetrics`, and all
+child measure/layout calls remain pixel-valued. This avoids treating a 900px
+window at 150% zoom as a 900dp window.
+
+Containers borrow an immutable policy and default to a process-lifetime
+singleton. A custom policy must outlive every container using it. Reapplying a
+policy requests layout; mutating a policy behind an attached container is not
+supported. This reduces the common per-instance cost from a full threshold and
+token table to one pointer.
 
 `LayoutMetrics` stores:
 
@@ -277,6 +334,11 @@ family needs tighter or looser spacing.
 - gutter,
 - and the resolved column width.
 
+For a scaffold, `safe_bounds` is the body band after safety and visible chrome;
+the breakpoint itself still comes from the outer scaffold width. For a grid,
+`safe_bounds` is the grid's own local bounds. In both cases `content_bounds` is
+the centered ruler envelope after its resolved outer margin.
+
 Column width is:
 
 $$
@@ -286,15 +348,31 @@ $$
 where $W$ is the local safe width, $M$ is the outer margin, $G$ is the
 gutter, and $C$ is the column count.
 
-If the configured column count would drive `column_width` below `1px`, the
-policy reduces the effective column count until the layout is drawable. This
-is a defensive guard for very small emulated windows; it is not the normal
-design path.
+Integer division can leave unused pixels. The resolved grid is centered inside
+the nominal margin bounds: the leading side receives `floor(remainder / 2)`
+and the trailing side receives the rest, with physical sides mirrored in RTL.
+`content_bounds` records that resolved grid envelope, so `columnStart()` and
+`spanBounds()` cannot disagree about the leftover pixels.
+
+For very small emulated windows, resolution first clamps the margin so at least
+one content pixel remains, then reduces the effective column count until the
+columns and required gutters fit. A one-column result has no gutter. This is a
+defensive path, not normal Material layout.
+
+Width-only classification is intentional for v1. Applications with compact
+height, unusual posture, or other host constraints can force `PaneLayout` into
+single-pane mode. Height classes and automatic posture discovery are not
+silently approximated from width.
 
 Ruler helpers on `LayoutMetrics` expose column starts and span bounds. The
 design does not add a separate `RulerLayout` class because the metrics object
 already closes the real need: callers can align to global columns without
 adding a second layout tree.
+
+Column indices are zero-based in logical start-to-end order. RTL mirrors their
+physical rectangles but does not renumber application spans. A zero span or a
+first column outside the resolved count returns an empty rect; over-wide spans
+are clamped at the last column.
 
 ### `LayoutScaffold`
 
@@ -314,10 +392,11 @@ for-all even though the scaffold does not want either. A fixed-slot container
 is more explicit and keeps hot-path layout deterministic.
 
 The scaffold stores one pointer and one `BreakpointRange` per optional slot,
-plus one required body pointer, one `Insets`, one `LayoutBreakpointPolicy`,
-and one cached `LayoutMetrics`. That is a slightly larger static footprint than
-an empty `Panel`, but it avoids a heap-backed child vector and matches the
-actual structure of a page shell.
+plus one body pointer, one `Insets`, one borrowed policy pointer, one
+layout-direction bit, cached body/chrome geometry, and one cached
+`LayoutMetrics`. That is a slightly larger static footprint than an empty
+`Panel`, but it avoids a heap-backed child vector and matches the actual
+structure of a page shell.
 
 #### Slot Visibility
 
@@ -332,27 +411,59 @@ the scaffold becomes the first layer that can legally decide, for example,
 that a bottom bar belongs on compact and medium widths while a leading rail
 belongs on expanded and up.
 
+The current widget core has no visibility channel separate from
+`Widget::Visibility`. The scaffold therefore owns visibility of optional chrome
+while it is attached: a participating slot is `kVisible`; an excluded slot is
+`kGone` and receives empty bounds. This uses the existing focus, pressed-state,
+pin-visibility, measurement, paint, and hit-test behavior instead of trying to
+reimplement six traversal paths in the scaffold. Callers change chrome
+participation through the slot's `BreakpointRange` setter and must not call
+`setVisibility()` directly on an attached optional chrome child. Body
+visibility remains caller-owned.
+
+Changing a range requests layout even when the resolved participation does not
+change. Replacing or clearing any slot always goes through `detachChild()`
+before the new `WidgetRef` is attached. The scaffold destructor detaches all
+five stored slots so parent-owned children are deleted exactly once and
+borrowed children survive.
+
+The scaffold reports match-parent preferred width and height because it is an
+application shell. In normal use both axes are bounded by its host. Top/bottom
+bars are measured at the safe width with natural height; rails are measured at
+natural width and the remaining exact band height; the body receives the exact
+remaining rectangle. An `UNSPECIFIED` width uses the spec's hint to select the
+provisional class and may perform one allocation-free remeasure if the resolved
+natural width crosses a breakpoint.
+
+Safety insets are physical pixel values. `setSafetyInsets()` clamps negative
+edges to zero; if opposing insets consume an axis, all participating slots get
+empty bounds and the published geometry remains empty rather than producing
+negative child sizes.
+
 #### Layout Algorithm
 
-Layout proceeds in six steps:
+Layout proceeds in seven steps:
 
 1. start from the scaffold rect,
-2. subtract caller-supplied safety insets,
-3. measure and place visible top and bottom bars across the full safe width,
-4. measure and place visible leading and trailing rails in the remaining band
+2. resolve the width class from the scaffold width in pixels using the policy's
+   scaled dp thresholds,
+3. subtract caller-supplied safety insets,
+4. measure and place visible top and bottom bars across the full safe width,
+5. measure and place visible leading and trailing rails in the remaining band
    between the bars,
-5. inset the remaining body band by the breakpoint-backed outer margin,
-6. lay out the body widget in that final content rect.
+6. lay out the body widget in the remaining body band without imposing the
+   ruler margin,
+7. cache body bounds, occupied chrome insets, and ruler metrics for consumers.
 
 The scaffold's body width is therefore:
 
 $$
-body\_width = W - I_l - I_r - R_l - R_r - 2M
+body\_width = W - I_l - I_r - R_l - R_r
 $$
 
-where $W$ is the outer width, $I_l$ and $I_r$ are safety insets, $R_l$ and
-$R_r$ are the widths of visible rails, and $M$ is the breakpoint-backed outer
-margin.
+where $W$ is the outer width, $I_l$ and $I_r$ are safety insets, and $R_l$ and
+$R_r$ are the widths of visible rails. The breakpoint-backed ruler margin is
+available through `metrics()` but is not subtracted from body layout.
 
 Two decisions matter here:
 
@@ -364,6 +475,34 @@ want a toolbar which excludes the rail can put that toolbar inside the body or
 inside a pane instead of making the scaffold solve multiple incompatible bar
 models.
 
+`bodyBounds()` and `contentInsets()` describe the resolved body band in the
+scaffold's local coordinates. `bottomBarBounds()` returns the active bottom
+bar rect or an empty rect. These are geometry queries, not overlay ownership:
+a later FAB host can align to the body bounds, and a snackbar presenter can use
+the bottom-bar rect as an avoidance obstacle without the scaffold retaining a
+presenter or scanning unrelated widgets.
+
+`contentInsets()` is the physical left/top/right/bottom distance from the
+scaffold bounds to `bodyBounds()`, including safety and participating chrome
+but excluding the optional ruler margin. `bottomBarBounds()` is empty when the
+slot is absent, excluded by its range, or otherwise not visible.
+
+All three queries are valid after layout and return empty/zero geometry before
+the first successful layout. Any inset, direction, policy, slot, or measured
+chrome-size change requests layout and refreshes them deterministically.
+
+#### Layout Direction
+
+Direction is explicit container state. In LTR, the leading rail occupies the
+left edge and the trailing rail the right edge; RTL swaps those physical
+positions. Safety insets remain physical left/top/right/bottom values and are
+not swapped. Top and bottom bars keep their edge role in both directions.
+
+The scaffold does not mutate direction state on arbitrary child types. The
+shared `LayoutDirection` value gives callers and future direction-aware child
+components one vocabulary, but each component remains responsible for its own
+internal leading/trailing geometry.
+
 #### Surface Ownership
 
 `LayoutScaffold` owns the page background.
@@ -374,7 +513,9 @@ lists still own their own more specific surfaces.
 
 The scaffold does not add a z-layer manager, a FAB anchor slot, or a modal
 overlay stack in v1. Those are legitimate future shell features, but they are
-not required to land the core layout model.
+not required to land the core layout model. Publishing chrome geometry is the
+compact slice required for later FAB/snackbar placement; it does not turn those
+surfaces into scaffold children.
 
 ### `PaneLayout`
 
@@ -396,31 +537,51 @@ Each optional side pane stores a compact metadata block:
 
 - `min_width`,
 - `preferred_width`,
-- `BreakpointRange visibility`,
-- and one `resizable` bit.
+- and `BreakpointRange simultaneous_visibility`.
 
-The main pane stores only its widget pointer plus one `main_min_width` value
-on the container.
+The main pane stores only its widget pointer plus one `main_min_width` value on
+the container. The container additionally stores one active-pane role, one
+multi-pane-enabled bit, one direction bit, and one borrowed policy pointer.
+`main_min_width` defaults to `360dp`, the active role defaults to main, and
+multi-pane mode defaults on. Pane gaps use the current policy's scaled gutter.
+An application whose initial compact destination is a list explicitly selects
+leading after attaching that pane.
 
 #### Visibility and Collapse Rules
 
-The main pane is always visible.
+As with scaffold chrome, `PaneLayout` owns `Widget::Visibility` for attached
+pane roots because the current core has no separate parent-participation bit.
+Visible roles are `kVisible`; non-participating roles are `kGone` with empty
+bounds. Callers express pane presentation through `setActivePane()`,
+`setMultiPaneEnabled()`, and pane specs rather than mutating root visibility.
+This also clears focus/pressed state and suppresses presentation pins when a
+pane stops participating.
 
-Leading and trailing panes are candidates only when:
+The caller-selected active pane is always visible when its slot is attached.
+Changing it requests layout but performs no routing and installs no Back
+handler. This closes the compact list-detail case: application navigation can
+select the list pane first and the detail pane after an item is opened.
+
+When multi-pane mode is enabled, additional panes are candidates only when:
 
 1. a widget is attached in that slot,
-2. the current breakpoint falls inside the slot's `BreakpointRange`,
-3. and the available width can still preserve `main_min_width` plus all needed
-   gutters.
+2. the current breakpoint falls inside the slot's
+   `simultaneous_visibility` range,
+3. and the available width can preserve every higher-priority visible pane's
+   minimum width plus all needed gutters.
 
-When width is insufficient, collapse order is fixed:
+When width is insufficient, preservation priority is fixed:
 
-1. trailing collapses first,
-2. leading collapses second,
-3. main never collapses.
+1. the active pane never collapses,
+2. the main pane is preserved next when it is not active,
+3. the leading pane is preserved next,
+4. the trailing pane is preserved last.
 
-That order keeps detail and supporting context optional while protecting the
-main working surface.
+The algorithm removes candidates in reverse priority order, skipping the
+active role. `setActivePane()` rejects an unattached role without changing
+state. Clearing the active slot leaves no active pane until the caller attaches
+and selects another one; the layout does not silently substitute application
+state.
 
 The container therefore avoids per-pane priority settings, per-pane overlay
 modes, or a general visibility-rule engine. The canonical layouts do not need
@@ -428,15 +589,17 @@ that extra policy state.
 
 #### Width Resolution
 
-When one side pane is visible, that side pane gets its preferred width clamped
-between its configured minimum and the width that still leaves `main_min_width`
-for the main pane.
+When the main pane and one side pane are visible, the side pane gets its
+preferred width clamped between its configured minimum and the width that still
+leaves `main_min_width` for the main pane.
 
 When both side panes are visible, the layout applies the same clamp to both
 side panes, then gives the remainder to the main pane.
 
-The main pane is always the flexible pane. Side panes are never allowed to
-steal width below `main_min_width`.
+The main pane is the flexible pane whenever it participates. In a single-pane
+layout, the active pane fills the bounds regardless of role. Side panes are
+never allowed to steal width below `main_min_width`, and a non-active side pane
+is never kept at less than its own minimum.
 
 This is intentionally simpler than a desktop window manager:
 
@@ -448,18 +611,6 @@ This is intentionally simpler than a desktop window manager:
 That simplicity is the right tradeoff for embedded UIs. The canonical Material
 page shapes do not justify a more configurable pane engine yet.
 
-#### Drag Handle
-
-`PaneLayout` supports one drag handle only when exactly two panes are visible
-and the visible side pane is marked resizable.
-
-That handle sits on the gutter between the main pane and the side pane. Dragging
-it updates one stored side-pane width override and requests relayout.
-
-The three-pane case deliberately does not add two simultaneous handles in v1.
-That would add more state, more hit-testing edge cases, and more persistence
-policy before the base two-pane behavior is proven out.
-
 #### RTL Behavior
 
 RTL mirroring happens at the container, not at the child widgets.
@@ -470,11 +621,14 @@ which is the correct Material abstraction.
 
 ### `GridLayout`
 
-`GridLayout` derives from `Panel`.
+`GridLayout` derives directly from `Container`.
 
 Unlike the scaffold and pane containers, grid content truly has arbitrary
-child count. A generic child vector is therefore intrinsic rather than
-accidental.
+child count. It stores one `std::vector<Item>` in which each item contains the
+raw attached child pointer, `GridSpan`, vertical gravity, and cached measurement
+state. Deriving from `Panel` would retain its `std::vector<Widget*>` and require
+a second parallel params vector, paying for two buffers and creating index-sync
+failure modes.
 
 Each child carries one `GridSpan` descriptor and one vertical-alignment hint.
 `GridSpan` stores the column span to use at each breakpoint. That is a small
@@ -516,6 +670,10 @@ Placement is row-major:
 7. vertically align shorter row peers within that shared row height,
 8. use the current gutter as the default inter-row gap.
 
+Measurement and layout use bounded passes over the existing item vector and do
+not build temporary row vectors. `add()` and `clear()` may allocate or free as
+the structural child set changes; measure, layout, and paint do not.
+
 Span width is:
 
 $$
@@ -527,6 +685,27 @@ where $s$ is the resolved span in columns.
 This design explicitly rejects masonry. Material's grid guidance emphasizes
 rhythm and alignment. Variable-height rows are acceptable; waterfall packing is
 not.
+
+### RAM Budget
+
+The policy's threshold/token table exists once per application policy, not once
+per container. Pointer-size-aware host assertions use these upper-bound shapes:
+
+1. `LayoutScaffold`:
+   `sizeof(Container) + 6 * sizeof(void*) + 4 * sizeof(BreakpointRange) +
+   2 * sizeof(Insets) + sizeof(LayoutMetrics) + sizeof(Rect) + 16`.
+2. `PaneLayout`:
+   `sizeof(Container) + 4 * sizeof(void*) + 2 * sizeof(PaneSpec) +
+   sizeof(LayoutMetrics) + 16`.
+3. Empty `GridLayout`:
+   `sizeof(Container) + sizeof(std::vector<Item>) + sizeof(void*) +
+   sizeof(LayoutMetrics) + 8`.
+
+The additive constants cover packed direction/participation state and ABI
+alignment; they are ceilings, not storage targets. Grid instances additionally
+pay one `Item` per attached child. The item budget is one child pointer, one
+`GridSpan`, one `VerticalGravity`, one cached measurement record, and at most
+8 bytes of alignment/cache state. No row-sized auxiliary allocation is allowed.
 
 ### Migration Path for Existing Consumers
 
@@ -547,7 +726,14 @@ real local use case instead of keeping the design purely theoretical.
 ## Proposed API
 
 ```cpp
-namespace roo_windows::material3 {
+namespace roo_windows {
+
+enum class LayoutDirection : uint8_t {
+  kLeftToRight,
+  kRightToLeft,
+};
+
+namespace material3 {
 
 enum class LayoutBreakpoint : uint8_t {
   kCompact,
@@ -570,40 +756,55 @@ struct BreakpointTokens {
   int16_t gutter_dp;
 };
 
+struct BreakpointThresholds {
+  int16_t medium_min_dp = 600;
+  int16_t expanded_min_dp = 840;
+  int16_t large_min_dp = 1200;
+  int16_t extra_large_min_dp = 1600;
+};
+
 class LayoutBreakpointPolicy {
  public:
-  LayoutBreakpointPolicy();
+  LayoutBreakpointPolicy(
+      BreakpointThresholds thresholds = BreakpointThresholds(),
+      BreakpointTokens compact = {4, 16, 16},
+      BreakpointTokens medium = {8, 24, 16},
+      BreakpointTokens expanded = {12, 24, 24},
+      BreakpointTokens large = {12, 32, 24},
+      BreakpointTokens extra_large = {12, 40, 24});
 
-  LayoutBreakpoint resolve(int16_t width_dp) const;
+  static const LayoutBreakpointPolicy& Default();
+
+  /// Resolves scaled pixel width against this policy's dp thresholds.
+  LayoutBreakpoint resolveWidthPx(XDim width_px) const;
   const BreakpointTokens& tokens(LayoutBreakpoint breakpoint) const;
-
-  void setCompactMaxWidthDp(int16_t value);
-  void setMediumMaxWidthDp(int16_t value);
-  void setExpandedMaxWidthDp(int16_t value);
-  void setLargeMaxWidthDp(int16_t value);
-  void setTokens(LayoutBreakpoint breakpoint, BreakpointTokens tokens);
 };
 
 struct LayoutMetrics {
-  LayoutBreakpoint breakpoint;
-  Rect safe_bounds;
-  Rect content_bounds;
-  uint8_t columns;
-  int16_t outer_margin;
-  int16_t gutter;
-  int16_t column_width;
+  LayoutBreakpoint breakpoint = LayoutBreakpoint::kCompact;
+  LayoutDirection direction = LayoutDirection::kLeftToRight;
+  Rect safe_bounds = Rect(0, 0, -1, -1);
+  Rect content_bounds = Rect(0, 0, -1, -1);
+  uint8_t columns = 1;
+  int16_t outer_margin = 0;
+  int16_t gutter = 0;
+  int16_t column_width = 0;
 
-  int16_t columnStart(uint8_t column) const;
-  Rect spanBounds(uint8_t first_column, uint8_t span, int16_t top,
-                  int16_t height) const;
+  XDim columnStart(uint8_t column) const;
+  Rect spanBounds(uint8_t first_column, uint8_t span, YDim top,
+                  YDim height) const;
 };
 
 class LayoutScaffold : public Container {
  public:
   explicit LayoutScaffold(ApplicationContext& context);
+  ~LayoutScaffold() override;
 
-  /// Sets the shared breakpoint and spacing policy used by this scaffold.
-  void setBreakpointPolicy(LayoutBreakpointPolicy policy);
+  /// Borrows the policy; it must outlive this scaffold.
+  void setBreakpointPolicy(const LayoutBreakpointPolicy& policy);
+  void setBreakpointPolicy(LayoutBreakpointPolicy&&) = delete;
+
+  void setLayoutDirection(LayoutDirection direction);
 
   /// Sets caller-supplied safety insets.
   void setSafetyInsets(Insets insets);
@@ -611,11 +812,13 @@ class LayoutScaffold : public Container {
   /// Replaces the top bar slot.
   void setTopBar(WidgetRef widget,
                  BreakpointRange visibility = BreakpointRange());
+  void setTopBarVisibility(BreakpointRange visibility);
   void clearTopBar();
 
   /// Replaces the bottom bar slot.
   void setBottomBar(WidgetRef widget,
                     BreakpointRange visibility = BreakpointRange());
+  void setBottomBarVisibility(BreakpointRange visibility);
   void clearBottomBar();
 
   /// Replaces the leading rail slot.
@@ -623,25 +826,37 @@ class LayoutScaffold : public Container {
       WidgetRef widget,
       BreakpointRange visibility = {LayoutBreakpoint::kExpanded,
                                     LayoutBreakpoint::kExtraLarge});
+  void setLeadingRailVisibility(BreakpointRange visibility);
   void clearLeadingRail();
 
   /// Replaces the trailing rail slot.
   void setTrailingRail(WidgetRef widget,
                        BreakpointRange visibility = BreakpointRange());
+  void setTrailingRailVisibility(BreakpointRange visibility);
   void clearTrailingRail();
 
-  /// Replaces the required body slot.
+  /// Replaces the body slot. A null body is valid during construction but
+  /// produces empty body geometry.
   void setBody(WidgetRef widget);
 
   /// Returns the latest resolved scaffold metrics.
   const LayoutMetrics& metrics() const { return metrics_; }
 
+  /// Geometry queries are empty/zero before the first successful layout.
+  Rect bodyBounds() const;
+  Insets contentInsets() const;
+  Rect bottomBarBounds() const;
+
  protected:
+  PreferredSize getPreferredSize() const override;
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
   void onLayout(bool changed, const Rect& rect) override;
+  int getChildrenCount() const override;
+  const Widget& getChild(int index) const override;
+  Widget& getChild(int index) override;
 
  private:
-  LayoutBreakpointPolicy policy_;
+  const LayoutBreakpointPolicy* policy_;
   Insets safety_insets_;
   LayoutMetrics metrics_;
 };
@@ -649,17 +864,27 @@ class LayoutScaffold : public Container {
 struct PaneSpec {
   int16_t min_width_dp = 280;
   int16_t preferred_width_dp = 360;
-  BreakpointRange visibility = {LayoutBreakpoint::kMedium,
-                                LayoutBreakpoint::kExtraLarge};
-  bool resizable = false;
+  BreakpointRange simultaneous_visibility = {
+      LayoutBreakpoint::kExpanded, LayoutBreakpoint::kExtraLarge};
 };
+
+enum class PaneRole : uint8_t { kLeading, kMain, kTrailing };
 
 class PaneLayout : public Container {
  public:
   explicit PaneLayout(ApplicationContext& context);
+  ~PaneLayout() override;
 
-  void setBreakpointPolicy(LayoutBreakpointPolicy policy);
+  /// Borrows the policy; it must outlive this pane layout.
+  void setBreakpointPolicy(const LayoutBreakpointPolicy& policy);
+  void setBreakpointPolicy(LayoutBreakpointPolicy&&) = delete;
+  void setLayoutDirection(LayoutDirection direction);
   void setMainMinWidthDp(int16_t width_dp);
+  void setMultiPaneEnabled(bool enabled);
+
+  /// Selects the sole pane preserved at narrow widths. Returns false when the
+  /// requested slot is not attached and leaves the current role unchanged.
+  bool setActivePane(PaneRole role);
 
   void setLeadingPane(WidgetRef widget, PaneSpec spec = PaneSpec());
   void clearLeadingPane();
@@ -669,18 +894,20 @@ class PaneLayout : public Container {
   void setTrailingPane(WidgetRef widget, PaneSpec spec = PaneSpec());
   void clearTrailingPane();
 
-  void setDragHandleEnabled(bool enabled);
-
   const LayoutMetrics& metrics() const { return metrics_; }
   bool isLeadingVisible() const;
+  bool isMainVisible() const;
   bool isTrailingVisible() const;
 
  protected:
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
   void onLayout(bool changed, const Rect& rect) override;
+  int getChildrenCount() const override;
+  const Widget& getChild(int index) const override;
+  Widget& getChild(int index) override;
 
  private:
-  LayoutBreakpointPolicy policy_;
+  const LayoutBreakpointPolicy* policy_;
   LayoutMetrics metrics_;
 };
 
@@ -692,40 +919,51 @@ struct GridSpan {
   uint8_t extra_large = 4;
 };
 
-class GridLayout : public Panel {
+class GridLayout : public Container {
  public:
   struct Params {
     GridSpan span;
-    VerticalGravity gravity = kVerticalGravityTop;
+    VerticalGravity gravity = kGravityTop;
   };
 
   explicit GridLayout(ApplicationContext& context);
+  ~GridLayout() override;
 
-  void setBreakpointPolicy(LayoutBreakpointPolicy policy);
-  void setRowGap(int16_t gap_dp);
+  /// Borrows the policy; it must outlive this grid.
+  void setBreakpointPolicy(const LayoutBreakpointPolicy& policy);
+  void setBreakpointPolicy(LayoutBreakpointPolicy&&) = delete;
+  void setLayoutDirection(LayoutDirection direction);
+  void setRowGapDp(int16_t gap_dp);
 
   void add(WidgetRef child, Params params = Params());
+  void clear();
 
   const LayoutMetrics& metrics() const { return metrics_; }
 
  protected:
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
   void onLayout(bool changed, const Rect& rect) override;
+  int getChildrenCount() const override;
+  const Widget& getChild(int index) const override;
+  Widget& getChild(int index) override;
 
  private:
-  LayoutBreakpointPolicy policy_;
+  struct Item;
+  std::vector<Item> items_;
+  const LayoutBreakpointPolicy* policy_;
   LayoutMetrics metrics_;
 };
 
-}  // namespace roo_windows::material3
+}  // namespace material3
+}  // namespace roo_windows
 ```
 
 Notes:
 
-1. `LayoutScaffold` and `PaneLayout` are expected to land fully rather than as
-   placeholders.
-2. `GridLayout` must also land fully because its API shape is tightly coupled
-   to its row-major packing behavior.
+1. A public type lands only in the phase that implements its promised behavior;
+   `PaneLayout` and `GridLayout` are not declarations in the compact slice.
+2. Policy objects are immutable after construction from the perspective of
+   attached containers. Custom-policy lifetime is caller-owned and explicit.
 3. No API in this family should emit `LOG(WARNING)` fallback behavior for
    "future overlay panes" or "future foldables". Those features are not part
    of the initial contract.
@@ -735,51 +973,58 @@ Notes:
 Implementation work for these phases follows the repo-local
 [roo_windows widget authoring instruction](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
-### Phase 1: Declare Breakpoint Policy and Size Budgets
+### Phase 1: Implement Shared Adaptive Primitives
 
 Code slice:
 
-1. Add `LayoutBreakpoint`, `BreakpointRange`, `BreakpointTokens`,
-   `LayoutBreakpointPolicy`, and `LayoutMetrics`.
-2. Add fixed-slot declarations for `LayoutScaffold` and `PaneLayout`, plus the
-   initial `GridLayout` declaration.
-3. Add pointer-size-aware size-budget assertions for the new public types.
-4. Do not implement slot layout, pane collapse, drag handling, or grid packing
-   yet.
+1. Add the shared `LayoutDirection` type.
+2. Add and fully implement `LayoutBreakpoint`, `BreakpointRange`,
+   `BreakpointTokens`, `BreakpointThresholds`, `LayoutBreakpointPolicy`, and
+   `LayoutMetrics`, including scaled-dp resolution, tiny-width degradation,
+   RTL ruler math, and the process-lifetime default policy.
+3. Add focused tests for exact breakpoint boundaries at every supported
+   `ROO_WINDOWS_ZOOM`, invalid/tiny geometry, and ruler remainder handling.
+4. Do not declare `PaneLayout` or `GridLayout` in this phase.
 
 Proposed commit message:
 
-> Material 3 layout scaffold Phase 1: declare the adaptive layout primitives.
+> Material 3 layout scaffold Phase 1: implement adaptive layout primitives.
 >
-> Add the shared breakpoint and ruler model together with the public
-> `LayoutScaffold`, `PaneLayout`, and `GridLayout` declarations from
-> `docs/material3_layout_scaffold_design.md`, plus size-budget tests for the
-> fixed-slot containers.
+> Add the shared direction, breakpoint, and ruler model with scaled-dp
+> resolution and focused boundary tests. Defer container declarations until
+> their behavior is implemented.
 
 Validation: add `material3_layout_scaffold_test` and run
 `bazel test //:material3_layout_scaffold_test` from the `roo_windows`
 workspace.
 
-### Phase 2: Implement `LayoutScaffold`
+### Phase 2: Implement the Compact `LayoutScaffold` Slice
 
 Code slice:
 
-1. Implement breakpoint resolution, safety-inset handling, and cached
-   `LayoutMetrics` on `LayoutScaffold`.
-2. Implement full-width top / bottom bar placement and perimeter rail
-   placement with per-slot `BreakpointRange` visibility.
-3. Paint the scaffold-owned background on the current `Container` surface
+1. Declare and fully implement fixed-slot `LayoutScaffold`, including borrowed
+   policy lifetime, explicit direction, slot replacement/clearing, and
+   pointer-size-aware size-budget assertions.
+2. Implement safety-inset handling, full-width top/bottom bar placement,
+   perimeter rail placement, and per-slot `BreakpointRange` participation
+   through scaffold-owned chrome visibility.
+3. Publish body bounds, occupied chrome insets, bottom-bar avoidance bounds,
+   and ruler metrics; prove they refresh on every relevant change.
+4. Paint the scaffold-owned background on the current `Container` surface
    pipeline.
-4. Add focused tests and goldens for compact, medium, expanded, and RTL slot
-   placement.
+5. Add the compact example slice with a top app bar, body, bottom navigation,
+   and caller-positioned FAB/snackbar stand-ins using the scaffold geometry.
+6. Add focused tests and goldens for compact boundary widths, safety insets,
+   slot ownership, focus clearing and pin suppression on exclusion, empty
+   inactive bounds, geometry queries, and RTL rails.
 
 Proposed commit message:
 
 > Material 3 layout scaffold Phase 2: implement the scaffold shell.
 >
-> Add `LayoutScaffold` measurement, layout, slot visibility, safety insets, and
-> scaffold-surface paint so Material bars, rails, and body content share one
-> adaptive page shell.
+> Add the fixed-slot scaffold, compact top/body/bottom shell, explicit RTL,
+> safety/chrome geometry, and an example that demonstrates FAB/snackbar
+> avoidance without transferring overlay ownership to the scaffold.
 
 Validation: run `bazel test //:material3_layout_scaffold_test` and
 `bazel test //:material3_layout_scaffold_golden_test` with scaffold-focused
@@ -789,20 +1034,23 @@ cases.
 
 Code slice:
 
-1. Implement leading / main / trailing pane measurement and the fixed collapse
-   order.
-2. Enforce `main_min_width_dp` before allowing side panes to remain visible.
-3. Implement the optional two-pane drag handle for resizable side panes.
-4. Add focused tests and goldens for list-detail, supporting-pane, three-pane,
-   collapse, and RTL mirroring.
+1. Declare and fully implement fixed-slot `PaneLayout` with its size budget.
+2. Implement active-pane selection, caller-forced single-pane mode, and
+   leading/main/trailing multi-pane measurement with the fixed preservation
+   priority.
+3. Enforce scaled pane minima and `main_min_width_dp` before allowing
+   additional panes to remain visible.
+4. Add focused tests and goldens for compact list-to-detail selection,
+   supporting-pane, three-pane, short-height caller override, collapse, and RTL
+   mirroring.
 
 Proposed commit message:
 
 > Material 3 layout scaffold Phase 3: implement adaptive pane layout.
 >
-> Add `PaneLayout` as the shared leading / main / trailing page-body container,
-> including breakpoint-gated side panes, deterministic collapse, and the first
-> drag-handle path for two-pane layouts.
+> Add `PaneLayout` as the shared leading/main/trailing page-body container,
+> including caller-selected compact presentation, breakpoint-gated simultaneous
+> panes, and deterministic collapse without taking over navigation.
 
 Validation: run `bazel test //:material3_pane_layout_test` and
 `bazel test //:material3_layout_scaffold_golden_test` with pane-focused cases.
@@ -811,13 +1059,16 @@ Validation: run `bazel test //:material3_pane_layout_test` and
 
 Code slice:
 
-1. Implement local breakpoint resolution and local `LayoutMetrics` on
-   `GridLayout`.
-2. Implement span-based row-major packing with shared row heights and default
-   gutter-backed row gaps.
-3. Clamp over-wide spans to the available column count.
-4. Add focused tests and goldens for compact, medium, and expanded grid spans,
-   mixed-height rows, and local-breakpoint behavior inside a narrow pane.
+1. Declare `GridLayout` with one specialized item vector and add base/per-item
+   size-budget assertions.
+2. Implement local breakpoint resolution and local `LayoutMetrics`.
+3. Implement allocation-free span-based measure/layout passes with row-major
+   packing, shared row heights, RTL logical columns, and default gutter-backed
+   row gaps.
+4. Clamp over-wide spans to the available column count.
+5. Add focused tests and goldens for compact, medium, and expanded grid spans,
+   mixed-height rows, remainder pixels, and local-breakpoint behavior inside a
+   narrow pane.
 
 Proposed commit message:
 
@@ -834,13 +1085,11 @@ Validation: run `bazel test //:material3_grid_layout_test` and
 
 Code slice:
 
-1. Add a layout catalog example under
-   `examples/material3/layout_scaffold/layout_scaffold.ino`.
-2. Exercise one compact bottom-bar shell, one expanded rail shell, one
-   list-detail page, and one grid-backed feed page.
-3. Migrate either `NavigationPanel` or a similarly small existing example onto
+1. Extend the compact layout example from Phase 2 with an expanded rail shell,
+   one navigable list-detail page, and one grid-backed feed page.
+2. Migrate either `NavigationPanel` or a similarly small existing example onto
    the new scaffold family so the API proves itself against a local consumer.
-4. Add focused example build coverage for the new example path.
+3. Keep focused example build coverage for the resulting catalog path.
 
 Proposed commit message:
 
@@ -860,13 +1109,14 @@ that hosts `examples/material3/layout_scaffold/layout_scaffold.ino`.
 
 Validation coverage should include:
 
-1. `material3_layout_scaffold_test` for breakpoint resolution, per-slot
-   visibility, safety insets, margin calculation, and size-budget assertions.
+1. `material3_layout_scaffold_test` for scaled breakpoint boundaries,
+   per-slot participation, ownership-safe replacement, safety insets, ruler
+   calculation, body/chrome geometry queries, and size-budget assertions.
 2. `material3_layout_scaffold_golden_test` for compact and expanded shell
    geometry, RTL mirroring, bar / rail placement, pane placement, and grid
    packing.
-3. `material3_pane_layout_test` for side-pane collapse, `main_min_width_dp`,
-   width clamping, and two-pane drag handling.
+3. `material3_pane_layout_test` for active-pane selection, forced single-pane
+   mode, side-pane collapse, `main_min_width_dp`, width clamping, and RTL.
 4. `material3_grid_layout_test` for span clamping, mixed-height rows, row
    wrapping, row-gap behavior, and local breakpoint resolution in nested grids.
 5. Example compilation for
@@ -909,14 +1159,33 @@ The scaffold should not inspect whether a child "looks like" a navigation bar,
 rail, toolbar, or drawer. That would couple the shell to specific component
 families and make the adaptive boundary implicit instead of explicit.
 
-#### Add Overlay Panes and Three-Pane Multi-Handle Resizing in v1
+#### Add Overlay Panes or Resizable Splitters to Base `PaneLayout` in v1
 
 This was rejected.
 
 Material does describe more advanced layered layouts, but the base need in
-`roo_windows` is still canonical page structure. Overlay panes and multiple
-simultaneous resize handles would widen the state model before the simple
-two-pane path is validated.
+`roo_windows` is still canonical page structure. Overlay panes add presentation
+and input ownership, while resizing adds drag state and persistence policy to
+every pane instance. Those features should be proven as opt-in hosts or
+subclasses after static pane selection lands.
+
+#### Copy the Policy Table Into Every Container
+
+This was rejected.
+
+The table is shared configuration, and the widget-authoring guidance explicitly
+prefers shared const data over repeated per-instance token storage. Borrowing an
+immutable policy makes custom lifetime visible and keeps the default case to
+one pointer per container.
+
+#### Apply the Ruler Margin to Every Scaffold Body
+
+This was rejected.
+
+Full-width lists, media, and scrolling surfaces are legitimate body content.
+The scaffold publishes the ruler envelope, while a grid or the body composition
+chooses whether to honor it; this avoids double-insetting components that
+already own their horizontal content padding.
 
 #### Auto-Discover Platform Insets and Fold / Hinge Geometry in the Base API
 
@@ -931,8 +1200,8 @@ pretending that all targets can discover them locally.
 1. Add a scaffold-level floating slot for FABs, snackbars, and other promoted
    overlays once the repo has a stable layering policy.
 2. Add overlay / levitate pane presentation for compact supporting-pane flows.
-3. Add persisted splitter positions and a second handle path for true
-   three-pane desktop layouts.
+3. Add an opt-in resizable pane host/subclass with persisted splitter positions;
+   consider a second handle only for true three-pane desktop layouts.
 4. Add foldable hinge / spacer integration once `roo_windows` has a stable
    way to receive posture geometry from the host platform.
 5. Add a higher-level adaptive navigation shell that wires future Material 3
