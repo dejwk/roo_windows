@@ -401,6 +401,19 @@ cc_test(
 )
 
 cc_test(
+    name = "navigation_panel_test",
+    srcs = [
+        "test/navigation_panel_test.cpp",
+        "test/navigation_panel_test_access.h",
+    ],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
+cc_test(
     name = "material3_navigation_rail_golden_test",
     srcs = [
         "test/material3_navigation_rail_golden_test.cpp",
@@ -486,6 +499,62 @@ cc_test(
     deps = [
         ":roo_windows",
         "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
+cc_test(
+    name = "material3_navigation_rail_example_build",
+    srcs = ["test/material3_navigation_rail_example_build.cpp"],
+    includes = ["examples/material3/navigation_rail"],
+    linkstatic = 1,
+    deps = [
+        ":material3_navigation_rail_example_source",
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
+cc_library(
+    name = "material3_navigation_rail_example_source",
+    textual_hdrs = ["examples/material3/navigation_rail/navigation_rail.ino"],
+    includes = ["examples/material3/navigation_rail"],
+    deps = [
+        ":roo_windows",
+        "//fake:fltk_key_source",
+        "@roo_display//fake:reference_device",
+        "@roo_testing//roo_testing/devices/display/ili9341:spi",
+        "@roo_testing//roo_testing/devices/touch/xpt2046:spi",
+        "@roo_testing//roo_testing/microcontrollers/esp32:esp32",
+        "@roo_testing//roo_testing/transducers/ui/viewport:flex",
+        "@roo_testing//roo_testing/transducers/ui/viewport/fltk",
+    ],
+)
+
+cc_binary(
+    name = "material3_layout_scaffold_example_build",
+    srcs = ["test/material3_layout_scaffold_example_build.cpp"],
+    defines = ["ROO_TESTING"],
+    includes = ["examples/material3/layout_scaffold"],
+    linkstatic = 1,
+    deps = [
+        ":material3_layout_scaffold_example_source",
+        ":roo_windows",
+        "@roo_testing//:arduino_main",
+    ],
+)
+
+cc_library(
+    name = "material3_layout_scaffold_example_source",
+    textual_hdrs = ["examples/material3/layout_scaffold/layout_scaffold.ino"],
+    includes = ["examples/material3/layout_scaffold"],
+    deps = [
+        ":roo_windows",
+        "//fake:fltk_key_source",
+        "@roo_display//fake:reference_device",
+        "@roo_testing//roo_testing/devices/display/ili9341:spi",
+        "@roo_testing//roo_testing/devices/touch/xpt2046:spi",
+        "@roo_testing//roo_testing/transducers/ui/viewport/fltk",
+        "@roo_testing//roo_testing/transducers/ui/viewport:flex",
     ],
 )
 
