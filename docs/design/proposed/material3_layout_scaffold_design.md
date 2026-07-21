@@ -2,11 +2,11 @@
 
 ## Implementation status
 
-**In progress.** Phases 1 through 4 are implemented: shared adaptive
-primitives, the fixed-slot `LayoutScaffold` shell, fixed-slot `PaneLayout`, and
-row-major `GridLayout`. Example coverage and migration remain outstanding. The
-status of existing and outstanding prerequisites is recorded in the
-[status index](../README.md).
+**In progress.** Phases 1 through 5 are implemented: shared adaptive
+primitives, the fixed-slot `LayoutScaffold` shell, fixed-slot `PaneLayout`,
+row-major `GridLayout`, and the representative catalog composition. Navigation
+rail and drawer components remain separate work. The status of existing and
+outstanding prerequisites is recorded in the [status index](../README.md).
 
 ## Objective
 
@@ -121,7 +121,7 @@ lifetime of the application.
 The most relevant local references are:
 
 - [material3_navigation_bar_design.md](../implemented/material3_navigation_bar_design.md)
-- [material3_navigation_rail_design.md](material3_navigation_rail_design.md)
+- [material3_navigation_rail_design.md](../implemented/material3_navigation_rail_design.md)
 - [material3_navigation_drawer_design.md](material3_navigation_drawer_design.md)
 - [material3_toolbars_design.md](material3_toolbars_design.md)
 - [material3_extended_fab_design.md](material3_extended_fab_design.md)
@@ -888,7 +888,7 @@ surfaces land.
 After that, it should become a thin adapter over:
 
 1. `LayoutScaffold`,
-2. a future Material 3 navigation rail or bar hosted in scaffold chrome,
+2. the implemented Material 3 navigation rail or bar hosted in scaffold chrome,
 3. and a body that is either a `StackedLayout` or a `PaneLayout`.
 
 That migration direction matters because it validates the new shell against a

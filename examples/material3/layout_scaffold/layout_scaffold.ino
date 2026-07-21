@@ -75,17 +75,18 @@ void initDisplay() {
 
 // *************** EXAMPLE STARTS HERE
 
+#include "roo_icons/outlined/24/action.h"
+#include "roo_icons/outlined/24/navigation.h"
 #include "roo_windows/containers/flex_layout.h"
+#include "roo_windows/containers/scrollable_panel.h"
 #include "roo_windows/containers/stacked_layout.h"
 #include "roo_windows/material3/app_bar/app_bar.h"
 #include "roo_windows/material3/button/button.h"
 #include "roo_windows/material3/layout_scaffold/layout_scaffold.h"
 #include "roo_windows/material3/navigation_bar/navigation_bar.h"
 #include "roo_windows/material3/navigation_rail/navigation_rail.h"
+#include "roo_windows/widgets/text_block.h"
 #include "roo_windows/widgets/text_label.h"
-
-#include "roo_icons/outlined/24/action.h"
-#include "roo_icons/outlined/24/navigation.h"
 
 namespace {
 
@@ -136,22 +137,25 @@ class ListDetailPage : public PaneLayout {
   }
 
  private:
-  std::unique_ptr<FlexLayout> makeDetail(ApplicationContext& context,
-                                         roo::string_view title,
-                                         roo::string_view description) {
+  std::unique_ptr<ScrollablePanel> makeDetail(ApplicationContext& context,
+                                              roo::string_view title,
+                                              roo::string_view description) {
     auto detail = std::make_unique<FlexLayout>(context, FlexDirection::kColumn);
-    detail->setPadding(Padding(Scaled(24), Scaled(20)));
+    detail->setPadding(Padding(Scaled(16), Scaled(20)));
     detail->setGap(Scaled(12));
     detail->add(WidgetRef(
-        std::make_unique<TextLabel>(context, std::string(title), font_h5())));
-    detail->add(WidgetRef(std::make_unique<TextLabel>(
-        context, std::string(description), font_body1())));
+        std::make_unique<TextBlock>(context, std::string(title), font_h6(),
+                                    roo_display::kTop | roo_display::kLeft)));
+    detail->add(WidgetRef(std::make_unique<TextBlock>(
+        context, std::string(description), font_body1(),
+        roo_display::kTop | roo_display::kLeft)));
     auto back = std::make_unique<material3::Button>(
         context, "Back to list", material3::ButtonVariant::kText);
     back->setOnInteractiveChange(
         [this]() { setActivePane(PaneRole::kLeading); });
     detail->add(WidgetRef(std::move(back)));
-    return detail;
+    return std::make_unique<ScrollablePanel>(context,
+                                             WidgetRef(std::move(detail)));
   }
 
   void selectDetail(size_t index) {
@@ -168,14 +172,12 @@ class ListDetailPage : public PaneLayout {
 class FeedPage : public GridLayout {
  public:
   explicit FeedPage(ApplicationContext& context) : GridLayout(context) {
-    addCard(context, "Solar gain", DashboardSpan(4, 4, 6),
+    addCard(context, "Solar gain", DashboardSpan(2, 4, 6),
             material3::ButtonVariant::kFilled);
-    addCard(context, "Pool temperature", DashboardSpan(4, 4, 6),
+    addCard(context, "Pool temperature", DashboardSpan(2, 4, 6),
             material3::ButtonVariant::kFilledTonal);
-    addCard(context, "Pump history", DashboardSpan(2, 4, 3),
+    addCard(context, "Pump history", DashboardSpan(4, 8, 12),
             material3::ButtonVariant::kOutlined);
-    addCard(context, "Freeze guard", DashboardSpan(2, 4, 3),
-            material3::ButtonVariant::kElevated);
   }
 
  private:
@@ -183,8 +185,7 @@ class FeedPage : public GridLayout {
                GridSpan span, material3::ButtonVariant variant) {
     Params params;
     params.span = span;
-    add(WidgetRef(std::make_unique<material3::Button>(
-            context, label, variant)),
+    add(WidgetRef(std::make_unique<material3::Button>(context, label, variant)),
         params);
   }
 };
@@ -218,7 +219,10 @@ class CatalogBar : public material3::NavigationBar {
 class LayoutCatalog : public material3::LayoutScaffold {
  public:
   explicit LayoutCatalog(ApplicationContext& context)
-      : LayoutScaffold(context), pages_(nullptr), rail_(nullptr), bar_(nullptr) {
+      : LayoutScaffold(context),
+        pages_(nullptr),
+        rail_(nullptr),
+        bar_(nullptr) {
     auto top_bar = std::make_unique<material3::AppBar>(context);
     top_bar->setTitle("Adaptive pool layout");
     setTopBar(WidgetRef(std::move(top_bar)));
