@@ -2,20 +2,12 @@
 
 #include <algorithm>
 
-#include "roo_display/shape/smooth.h"
-#include "roo_display/ui/alignment.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_windows/material3/navigation_rail/navigation_rail_tokens.h"
 
 namespace roo_windows {
 namespace material3 {
 namespace {
-
-using roo_display::ClippedStringViewLabel;
-using roo_display::Color;
-using roo_display::kCenter;
-using roo_display::kMiddle;
-using roo_display::SmoothFilledRoundRect;
 
 const roo_display::Font& DestinationLabelFont() { return font_button(); }
 
@@ -165,81 +157,21 @@ DestinationContentGeometry ResolveContentGeometry(
   return result;
 }
 
-Color ContentColorFor(const NavigationRailDestination& destination) {
-  const ColorScheme& colors = destination.theme().material3Theme().color;
-  if (!destination.isEnabled()) {
-    return roo_display::AlphaBlend(colors.surface,
-                                   colors.onSurface.withA(0x61));
-  }
-  return destination.selected() ? colors.onSecondaryContainer
-                                : colors.onSurfaceVariant;
-}
-
-ColorToken UnselectedIndicatorRole(
-    const NavigationRailDestination& destination) {
-  if (destination.parent() == nullptr) return ColorToken::kSurface;
-  const ColorToken role = destination.parent()->effectiveContainerRole();
-  return role == ColorToken::kNone ? ColorToken::kSurface : role;
-}
-
 }  // namespace
 
 NavigationRailDestination::NavigationRailDestination(
     ApplicationContext& context, roo::string_view label, const MonoIcon* icon,
     const MonoIcon* selected_icon)
-    : BasicWidget(context),
-      label_(label),
-      icon_(icon),
-      selected_icon_(selected_icon),
-      layout_(static_cast<uint8_t>(NavigationRailLayout::kCollapsed)),
-      selected_(false),
-      click_handled_on_release_(false) {}
-
-roo::string_view NavigationRailDestination::label() const { return label_; }
-
-void NavigationRailDestination::setLabel(roo::string_view label) {
-  if (label_ == label) return;
-  label_ = label;
-  invalidateInterior();
-  requestLayout();
-}
-
-const MonoIcon* NavigationRailDestination::icon() const { return icon_; }
-
-void NavigationRailDestination::setIcon(const MonoIcon* icon) {
-  if (icon_ == icon) return;
-  icon_ = icon;
-  invalidateInterior();
-  requestLayout();
-}
-
-const MonoIcon* NavigationRailDestination::selectedIcon() const {
-  return selected_icon_;
-}
-
-void NavigationRailDestination::setSelectedIcon(const MonoIcon* icon) {
-  if (selected_icon_ == icon) return;
-  selected_icon_ = icon;
-  invalidateInterior();
-  requestLayout();
-}
-
-bool NavigationRailDestination::selected() const { return selected_ != 0; }
+    : NavigationDestinationBase(context, label, icon, selected_icon) {}
 
 NavigationRailLayout NavigationRailDestination::layout() const {
-  return static_cast<NavigationRailLayout>(layout_);
-}
-
-bool NavigationRailDestination::isClickable() const { return isEnabled(); }
-
-ColorToken NavigationRailDestination::effectiveOverlayColorRole() const {
-  return selected() ? ColorToken::kSecondaryContainer
-                    : UnselectedIndicatorRole(*this);
+  return presentation() == internal::NavigationDestinationPresentation::kInline
+             ? NavigationRailLayout::kExpanded
+             : NavigationRailLayout::kCollapsed;
 }
 
 Dimensions NavigationRailDestination::getSuggestedMinimumDimensions() const {
-  const MonoIcon* content_icon =
-      selected() && selectedIcon() != nullptr ? selectedIcon() : icon();
+  const MonoIcon* content_icon = displayedIcon();
   const DestinationContentMetrics metrics =
       ResolveContentMetrics(label(), content_icon);
   const internal::NavigationRailTokens& tokens =
@@ -261,7 +193,8 @@ Dimensions NavigationRailDestination::getSuggestedMinimumDimensions() const {
       Scaled(tokens.destination_height_dp));
 }
 
-void NavigationRailDestination::paint(PaintContext& ctx) const {
+internal::NavigationDestinationGeometry
+NavigationRailDestination::resolveDestinationGeometry() const {
   DestinationContentGeometry geometry = ResolveContentGeometry(*this);
   if (layout() == NavigationRailLayout::kExpanded) {
     // Badged destinations extend this virtual content envelope with their
@@ -269,88 +202,8 @@ void NavigationRailDestination::paint(PaintContext& ctx) const {
     geometry.indicator_bounds =
         ExpandedIndicatorBounds(bounds(), destinationContentBounds());
   }
-  const Color content_color = ContentColorFor(*this);
-  Color indicator_color =
-      selected() ? theme().material3Theme().color.secondaryContainer
-                 : ctx.bgcolor();
-  const Color interaction_overlay = ctx.overlaySpec().base_overlay();
-  const bool shows_indicator = selected() || interaction_overlay.a() != 0;
-  if (interaction_overlay.a() != 0) {
-    indicator_color =
-        roo_display::AlphaBlend(indicator_color, interaction_overlay);
-  }
-  const Color foreground_background =
-      shows_indicator ? indicator_color : ctx.bgcolor();
-  const bool label_in_indicator =
-      shows_indicator &&
-      geometry.indicator_bounds.intersects(geometry.label_bounds);
-  const Color label_background =
-      label_in_indicator ? indicator_color : ctx.bgcolor();
-  const MonoIcon* icon =
-      selected() && selectedIcon() != nullptr ? selectedIcon() : this->icon();
-
-  if (!geometry.icon_bounds.empty() && icon != nullptr) {
-    MonoIcon tinted_icon = *icon;
-    tinted_icon.color_mode().setColor(content_color);
-    PaintContext icon_context = ctx.clipped(geometry.icon_bounds);
-    icon_context.setBgcolor(foreground_background);
-    icon_context.drawTiled(tinted_icon, geometry.icon_bounds,
-                           kCenter | kMiddle);
-    ctx.addExclusion(geometry.icon_bounds);
-  }
-
-  if (!geometry.label_bounds.empty() && !label().empty()) {
-    PaintContext label_context = ctx.clipped(geometry.label_bounds);
-    label_context.setBgcolor(label_background);
-    label_context.drawTiled(
-        ClippedStringViewLabel(label(), DestinationLabelFont(), content_color),
-        geometry.label_bounds, kCenter | kMiddle);
-    ctx.addExclusion(geometry.label_bounds);
-  }
-
-  if (shows_indicator && !geometry.indicator_bounds.empty()) {
-    const Rect& indicator = geometry.indicator_bounds;
-    ctx.drawObject(SmoothFilledRoundRect(
-        indicator.xMin(), indicator.yMin(), indicator.xMax(), indicator.yMax(),
-        indicator.height() / 2, indicator_color));
-    ctx.addExclusion(indicator);
-  }
-
-  // The target is the full-width interaction area. Settle every remaining
-  // pixel only after foreground and indicator exclusions have been registered.
-  ctx.clearRect(bounds());
-  ctx.addExclusion(bounds());
-}
-
-void NavigationRailDestination::onSingleTapUp(XDim x, YDim y) {
-  Widget::onSingleTapUp(x, y);
-  if (parent() != nullptr && isEnabled()) {
-    // The destination owns its pill feedback, so commit selection before the
-    // final click-animation frame can settle into the unselected rail surface.
-    // onClicked() still receives the framework's deferred completion signal;
-    // the packed guard prevents a duplicate rail invocation.
-    click_handled_on_release_ = true;
-    static_cast<NavigationRail*>(parent())->updateSelectionFromDestination(
-        *this);
-  }
-}
-
-void NavigationRailDestination::onClicked() {
-  const bool click_was_handled_on_release = click_handled_on_release_ != 0;
-  click_handled_on_release_ = false;
-  if (parent() != nullptr && !click_was_handled_on_release) {
-    static_cast<NavigationRail*>(parent())->updateSelectionFromDestination(
-        *this);
-  }
-  Widget::onClicked();
-}
-
-void NavigationRailDestination::notifyStateChanged(uint16_t state_diff) {
-  if ((state_diff & (kWidgetHover | kWidgetFocused | kWidgetPressed |
-                     kWidgetDragged | kWidgetClicking)) != 0) {
-    invalidateInterior();
-  }
-  Widget::notifyStateChanged(state_diff);
+  return {geometry.icon_bounds, geometry.label_bounds,
+          geometry.indicator_bounds};
 }
 
 Rect NavigationRailDestination::destinationContentBounds() const {
@@ -365,24 +218,18 @@ Rect NavigationRailDestination::labelBounds() const {
   return ResolveContentGeometry(*this).label_bounds;
 }
 
-Rect NavigationRailDestination::getDirectPaintExclusionBounds() const {
-  return EmptyRect();
-}
-
 void NavigationRailDestination::setLayoutFromRail(NavigationRailLayout layout) {
-  const uint8_t encoded = static_cast<uint8_t>(layout);
-  if (layout_ == encoded) return;
-  layout_ = encoded;
-  invalidateInterior();
-  requestLayout();
+  setPresentation(layout == NavigationRailLayout::kExpanded
+                      ? internal::NavigationDestinationPresentation::kInline
+                      : internal::NavigationDestinationPresentation::kStacked);
 }
 
 void NavigationRailDestination::setSelectedFromRail(bool selected) {
-  if ((selected_ != 0) == selected) return;
-  selected_ = selected;
-  setSelected(selected);
-  invalidateInterior();
-  requestLayout();
+  setSelectedFromOwner(selected);
+}
+
+void NavigationRailDestination::activateFromOwner() {
+  static_cast<NavigationRail*>(parent())->updateSelectionFromDestination(*this);
 }
 
 NavigationRail::NavigationRail(ApplicationContext& context)

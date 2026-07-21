@@ -6,10 +6,10 @@
 #include <vector>
 
 #include "roo_backport/string_view.h"
-#include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/container.h"
 #include "roo_windows/core/layout_direction.h"
 #include "roo_windows/material3/badge/badge.h"
+#include "roo_windows/material3/navigation_destination/navigation_destination.h"
 #include "roo_windows/material3/theme.h"
 #include "roo_windows/widgets/icon.h"
 
@@ -36,7 +36,7 @@ class NavigationRailDestinationTestAccess;
 /// The parent `NavigationRail` owns selection and layout mode. The destination
 /// stores only its label, icon references, and compact derived state so badge
 /// storage remains opt-in through `BadgedNavigationRailDestination`.
-class NavigationRailDestination : public BasicWidget {
+class NavigationRailDestination : public internal::NavigationDestinationBase {
  public:
   /// Creates a destination with non-owning label and icon references.
   explicit NavigationRailDestination(ApplicationContext& context,
@@ -44,51 +44,11 @@ class NavigationRailDestination : public BasicWidget {
                                      const MonoIcon* icon = nullptr,
                                      const MonoIcon* selected_icon = nullptr);
 
-  /// Returns the current non-owning label view.
-  roo::string_view label() const;
-
-  /// Replaces the non-owning label view.
-  void setLabel(roo::string_view label);
-
-  /// Returns the inactive icon, or nullptr when none is configured.
-  const MonoIcon* icon() const;
-
-  /// Replaces the inactive icon reference.
-  void setIcon(const MonoIcon* icon);
-
-  /// Returns the selected icon, or nullptr when the inactive icon is reused.
-  const MonoIcon* selectedIcon() const;
-
-  /// Replaces the optional selected icon reference.
-  void setSelectedIcon(const MonoIcon* icon);
-
-  /// Returns whether the parent rail currently selects this destination.
-  bool selected() const;
-
   /// Returns the layout mode supplied by the parent rail.
   NavigationRailLayout layout() const;
-
-  /// Navigation destinations are clickable while enabled.
-  bool isClickable() const override;
-
-  /// Owns interaction-overlay compositing for the destination indicator pill.
-  OverlayType getOverlayType() const override { return OVERLAY_CUSTOM; }
-
-  ClickOverlayAnimation getClickOverlayAnimation() const override {
-    return ClickOverlayAnimation::kFade;
-  }
-
-  bool useOverlayOnSelection() const override { return false; }
-
-  ColorToken effectiveOverlayColorRole() const override;
   Dimensions getSuggestedMinimumDimensions() const override;
-  void paint(PaintContext& ctx) const override;
 
  protected:
-  void onSingleTapUp(XDim x, YDim y) override;
-  void onClicked() override;
-  void notifyStateChanged(uint16_t state_diff) override;
-
   /// Returns the content bounds that determine active-indicator geometry.
   virtual Rect destinationContentBounds() const;
 
@@ -98,8 +58,6 @@ class NavigationRailDestination : public BasicWidget {
   /// Returns the resolved label slot used for expanded badge anchoring.
   Rect labelBounds() const;
 
-  Rect getDirectPaintExclusionBounds() const override;
-
  private:
   friend class NavigationRail;
   friend class NavigationRailDestinationTestAccess;
@@ -107,13 +65,9 @@ class NavigationRailDestination : public BasicWidget {
   void setLayoutFromRail(NavigationRailLayout layout);
   virtual void setLayoutDirectionFromRail(LayoutDirection direction) {}
   void setSelectedFromRail(bool selected);
-
-  roo::string_view label_;
-  const MonoIcon* icon_;
-  const MonoIcon* selected_icon_;
-  uint8_t layout_ : 1;
-  uint8_t selected_ : 1;
-  uint8_t click_handled_on_release_ : 1;
+  internal::NavigationDestinationGeometry resolveDestinationGeometry()
+      const override;
+  void activateFromOwner() override;
 };
 
 /// Navigation-rail destination that opts into one inline badge helper.

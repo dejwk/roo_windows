@@ -6,9 +6,9 @@
 #include <vector>
 
 #include "roo_backport/string_view.h"
-#include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/container.h"
 #include "roo_windows/material3/badge/badge.h"
+#include "roo_windows/material3/navigation_destination/navigation_destination.h"
 #include "roo_windows/material3/theme.h"
 #include "roo_windows/widgets/icon.h"
 
@@ -29,7 +29,7 @@ class NavigationBarDestinationTestAccess;
 /// The parent `NavigationBar` owns selection and layout mode. The destination
 /// stores only its label, icon references, and compact derived state so badge
 /// storage remains opt-in through `BadgedNavigationBarDestination`.
-class NavigationBarDestination : public BasicWidget {
+class NavigationBarDestination : public internal::NavigationDestinationBase {
  public:
   /// Creates a destination with non-owning label and icon references.
   explicit NavigationBarDestination(ApplicationContext& context,
@@ -37,68 +37,15 @@ class NavigationBarDestination : public BasicWidget {
                                     const MonoIcon* icon = nullptr,
                                     const MonoIcon* selected_icon = nullptr);
 
-  /// Returns the current non-owning label view.
-  roo::string_view label() const;
-
-  /// Replaces the non-owning label view.
-  void setLabel(roo::string_view label);
-
-  /// Returns the inactive icon, or nullptr when none is configured.
-  const MonoIcon* icon() const;
-
-  /// Replaces the inactive icon reference.
-  void setIcon(const MonoIcon* icon);
-
-  /// Returns the selected icon, or nullptr when the inactive icon is reused.
-  const MonoIcon* selectedIcon() const;
-
-  /// Replaces the optional selected icon reference.
-  void setSelectedIcon(const MonoIcon* icon);
-
-  /// Returns whether the parent bar currently selects this destination.
-  bool selected() const;
-
   /// Returns the layout mode supplied by the parent bar.
   NavigationBarLayout layout() const;
-
-  /// Navigation destinations are clickable while enabled.
-  bool isClickable() const override;
-
-  /// Owns interaction-overlay compositing for the destination indicator pill.
-  OverlayType getOverlayType() const override { return OVERLAY_CUSTOM; }
-
-  ClickOverlayAnimation getClickOverlayAnimation() const override {
-    return ClickOverlayAnimation::kFade;
-  }
-
-  bool useOverlayOnSelection() const override { return false; }
-
-  ::roo_windows::material3::ColorToken effectiveOverlayColorRole()
-      const override;
 
   /// Returns the token-backed compact or horizontal destination minimum.
   Dimensions getSuggestedMinimumDimensions() const override;
 
-  /// Paints the always-visible label, selected icon, and active indicator.
-  void paint(PaintContext& ctx) const override;
-
  protected:
-  /// Commits touch selection before the pill click animation reaches its
-  /// settled frame.
-  void onSingleTapUp(XDim x, YDim y) override;
-
-  /// Routes keyboard and deferred framework activation through the bar after
-  /// touch release has already committed selection when applicable.
-  void onClicked() override;
-
-  /// Repaints the indicator pill when interaction state changes.
-  void notifyStateChanged(uint16_t state_diff) override;
-
   /// Returns the icon rectangle resolved by the destination layout.
   Rect iconBounds() const;
-
-  /// Lets `paint()` register its disjoint settled content regions precisely.
-  Rect getDirectPaintExclusionBounds() const override;
 
  private:
   friend class NavigationBar;
@@ -106,13 +53,9 @@ class NavigationBarDestination : public BasicWidget {
 
   void setLayoutFromBar(NavigationBarLayout layout);
   void setSelectedFromBar(bool selected);
-
-  roo::string_view label_;
-  const MonoIcon* icon_;
-  const MonoIcon* selected_icon_;
-  uint8_t layout_ : 1;
-  uint8_t selected_ : 1;
-  uint8_t click_handled_on_release_ : 1;
+  internal::NavigationDestinationGeometry resolveDestinationGeometry()
+      const override;
+  void activateFromOwner() override;
 };
 
 /// Navigation-bar destination that opts into one inline badge helper.
