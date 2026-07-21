@@ -2,8 +2,12 @@
 
 #include <stdint.h>
 
+#include <utility>
+#include <vector>
+
 #include "roo_display/color/color.h"
 #include "roo_windows/core/container.h"
+#include "roo_windows/core/gravity.h"
 #include "roo_windows/core/insets.h"
 #include "roo_windows/core/layout_direction.h"
 #include "roo_windows/core/rect.h"
@@ -366,5 +370,94 @@ static_assert(sizeof(PaneLayout) <= sizeof(Container) + 4 * sizeof(void*) +
                                         2 * sizeof(PaneSpec) +
                                         sizeof(LayoutMetrics) + 16,
               "PaneLayout must retain its fixed-slot RAM budget");
+
+/// Per-breakpoint column spans for one `GridLayout` child.
+struct GridSpan {
+  uint8_t compact = 4;
+  uint8_t medium = 4;
+  uint8_t expanded = 4;
+  uint8_t large = 4;
+  uint8_t extra_large = 4;
+};
+
+/// Breakpoint-aware Material grid with row-major span packing.
+///
+/// Grid children retain their insertion order. Rows use the height of their
+/// tallest child, so varied card heights preserve horizontal rhythm instead of
+/// creating masonry columns.
+class GridLayout : public Container {
+ public:
+  /// Per-child span and vertical placement within its shared row.
+  struct Params {
+    GridSpan span;
+    VerticalGravity gravity = kGravityTop;
+  };
+
+  /// Creates an empty grid with the default breakpoint policy and gutter gap.
+  explicit GridLayout(ApplicationContext& context);
+
+  /// Detaches every stored child before releasing the specialized item vector.
+  ~GridLayout() override;
+
+  /// Borrows an immutable policy that must outlive this grid.
+  void setBreakpointPolicy(const LayoutBreakpointPolicy& policy);
+  void setBreakpointPolicy(LayoutBreakpointPolicy&&) = delete;
+
+  /// Changes the logical column direction and requests layout.
+  void setLayoutDirection(LayoutDirection direction);
+
+  /// Returns the explicit logical column direction.
+  LayoutDirection layoutDirection() const;
+
+  /// Sets the vertical gap between rows in dp instead of the policy gutter.
+  void setRowGapDp(int16_t gap_dp);
+
+  /// Appends a child with explicit immutable grid placement parameters.
+  void add(WidgetRef child, Params params);
+
+  /// Appends a child using the default span and top row alignment.
+  void add(WidgetRef child) { add(std::move(child), Params()); }
+
+  /// Detaches and clears all grid children and cached measurements.
+  void clear();
+
+  /// Returns the latest local ruler metrics resolved by this grid.
+  const LayoutMetrics& metrics() const { return metrics_; }
+
+ protected:
+  PreferredSize getPreferredSize() const override;
+  Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
+  void onLayout(bool changed, const Rect& rect) override;
+  int getChildrenCount() const override;
+  const Widget& getChild(int index) const override;
+  Widget& getChild(int index) override;
+
+ private:
+  struct Item {
+    Item(Widget* widget, Params params) : widget(widget), params(params) {}
+
+    Widget* widget;
+    Params params;
+    Dimensions measured_dimensions;
+  };
+
+  static_assert(sizeof(Item) <= sizeof(void*) + sizeof(GridSpan) +
+                                    sizeof(VerticalGravity) +
+                                    sizeof(Dimensions) + 8,
+                "GridLayout items must retain their per-child RAM budget");
+
+  uint8_t resolveSpan(const GridSpan& span, const LayoutMetrics& metrics) const;
+  YDim resolveRowGap(const LayoutMetrics& metrics) const;
+
+  std::vector<Item> items_;
+  const LayoutBreakpointPolicy* policy_;
+  LayoutMetrics metrics_;
+  int16_t row_gap_dp_;
+};
+
+static_assert(sizeof(GridLayout) <=
+                  sizeof(Container) + sizeof(std::vector<void*>) +
+                      sizeof(void*) + sizeof(LayoutMetrics) + 8,
+              "GridLayout must retain its empty-instance RAM budget");
 
 }  // namespace roo_windows::material3

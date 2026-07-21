@@ -2,10 +2,11 @@
 
 ## Implementation status
 
-**In progress.** Phases 1 through 3 are implemented: shared adaptive
-primitives, the fixed-slot `LayoutScaffold` shell, and fixed-slot `PaneLayout`.
-The grid container remains outstanding. The status of existing and outstanding
-prerequisites is recorded in the [status index](../README.md).
+**In progress.** Phases 1 through 4 are implemented: shared adaptive
+primitives, the fixed-slot `LayoutScaffold` shell, fixed-slot `PaneLayout`, and
+row-major `GridLayout`. Example coverage and migration remain outstanding. The
+status of existing and outstanding prerequisites is recorded in the
+[status index](../README.md).
 
 ## Objective
 

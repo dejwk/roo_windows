@@ -438,6 +438,16 @@ cc_test(
 )
 
 cc_test(
+    name = "material3_grid_layout_test",
+    srcs = ["test/material3_grid_layout_test.cpp"],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
+cc_test(
     name = "material3_layout_scaffold_golden_test",
     srcs = ["test/material3_pane_layout_golden_test.cpp"],
     data = glob([

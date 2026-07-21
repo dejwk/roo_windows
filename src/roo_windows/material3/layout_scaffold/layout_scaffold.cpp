@@ -35,6 +35,10 @@ int CountChildren(const Widget* const* children, int count) {
   return result;
 }
 
+XDim SpanWidth(const LayoutMetrics& metrics, uint8_t span) {
+  return span * metrics.column_width + (span - 1) * metrics.gutter;
+}
+
 }  // namespace
 
 bool BreakpointRange::contains(LayoutBreakpoint breakpoint) const {
@@ -878,6 +882,208 @@ void PaneLayout::applyVisibility(const PanePlan& plan) {
 
 void PaneLayout::layoutSlot(Widget* widget, const Rect& bounds) {
   if (widget != nullptr) widget->layout(bounds);
+}
+
+GridLayout::GridLayout(ApplicationContext& context)
+    : Container(context),
+      policy_(&LayoutBreakpointPolicy::Default()),
+      row_gap_dp_(-1) {}
+
+GridLayout::~GridLayout() {
+  // Erase each pointer before detachChild() can delete an owned child and
+  // trigger invalidation that enumerates the remaining item vector.
+  while (!items_.empty()) {
+    Widget* widget = items_.back().widget;
+    items_.pop_back();
+    detachChild(widget);
+  }
+}
+
+void GridLayout::setBreakpointPolicy(const LayoutBreakpointPolicy& policy) {
+  if (policy_ == &policy) return;
+  policy_ = &policy;
+  requestLayout();
+}
+
+void GridLayout::setLayoutDirection(LayoutDirection direction) {
+  if (layoutDirection() == direction) return;
+  metrics_.direction = direction;
+  requestLayout();
+}
+
+LayoutDirection GridLayout::layoutDirection() const {
+  return metrics_.direction;
+}
+
+void GridLayout::setRowGapDp(int16_t gap_dp) {
+  CheckScaledDimension(gap_dp, "grid row gap");
+  if (row_gap_dp_ == gap_dp) return;
+  row_gap_dp_ = gap_dp;
+  requestLayout();
+}
+
+void GridLayout::add(WidgetRef child, Params params) {
+  Widget* widget = child.get();
+  CHECK_NOTNULL(widget);
+  CHECK(widget->parent() == nullptr);
+  items_.emplace_back(widget, params);
+  attachChild(std::move(child));
+}
+
+void GridLayout::clear() {
+  while (!items_.empty()) {
+    Widget* widget = items_.back().widget;
+    items_.pop_back();
+    detachChild(widget);
+  }
+  requestLayout();
+}
+
+PreferredSize GridLayout::getPreferredSize() const {
+  return PreferredSize(PreferredSize::MatchParentWidth(),
+                       PreferredSize::WrapContentHeight());
+}
+
+Dimensions GridLayout::onMeasure(WidthSpec width, HeightSpec height) {
+  const XDim measured_width = width.resolveSize(width.value());
+  const LayoutMetrics measurement_metrics = policy_->resolveMetrics(
+      Rect(0, 0, measured_width - 1, 0), layoutDirection());
+  const YDim row_gap = resolveRowGap(measurement_metrics);
+  uint8_t occupied_columns = 0;
+  YDim row_height = 0;
+  YDim desired_height = 0;
+  bool has_row = false;
+
+  // A single pass both caches each exact-width measurement and accumulates
+  // shared row heights. It never builds a temporary row collection.
+  for (Item& item : items_) {
+    if (item.widget->isGone()) {
+      item.measured_dimensions = Dimensions(0, 0);
+      continue;
+    }
+    const uint8_t span = resolveSpan(item.params.span, measurement_metrics);
+    if (occupied_columns != 0 &&
+        occupied_columns + span > measurement_metrics.columns) {
+      desired_height += row_height + row_gap;
+      occupied_columns = 0;
+      row_height = 0;
+    }
+    const XDim span_width = SpanWidth(measurement_metrics, span);
+    item.measured_dimensions = item.widget->measure(
+        WidthSpec::Exactly(span_width), HeightSpec::Unspecified(0));
+    occupied_columns += span;
+    row_height = std::max(row_height, item.measured_dimensions.height());
+    has_row = true;
+  }
+  if (has_row) desired_height += row_height;
+
+  const YDim measured_height = height.resolveSize(desired_height);
+  metrics_ = policy_->resolveMetrics(
+      Rect(0, 0, measured_width - 1, measured_height - 1), layoutDirection());
+  return Dimensions(measured_width, measured_height);
+}
+
+void GridLayout::onLayout(bool changed, const Rect& rect) {
+  metrics_ = policy_->resolveMetrics(rect, layoutDirection());
+  if (rect.empty()) {
+    for (Item& item : items_) item.widget->layout(EmptyRect());
+    return;
+  }
+
+  const YDim row_gap = resolveRowGap(metrics_);
+  const size_t item_count = items_.size();
+  size_t row_start = 0;
+  YDim row_top = metrics_.content_bounds.yMin();
+  // Find one row's height before assigning any of its bounds, then replay that
+  // bounded item range to align its shorter peers within the common row.
+  while (row_start < item_count) {
+    while (row_start < item_count && items_[row_start].widget->isGone()) {
+      items_[row_start].widget->layout(EmptyRect());
+      ++row_start;
+    }
+    if (row_start == item_count) break;
+
+    size_t row_end = row_start;
+    uint8_t occupied_columns = 0;
+    YDim row_height = 0;
+    while (row_end < item_count) {
+      Item& item = items_[row_end];
+      if (item.widget->isGone()) {
+        item.widget->layout(EmptyRect());
+        ++row_end;
+        continue;
+      }
+      const uint8_t span = resolveSpan(item.params.span, metrics_);
+      if (occupied_columns != 0 && occupied_columns + span > metrics_.columns) {
+        break;
+      }
+      occupied_columns += span;
+      row_height = std::max(row_height, item.measured_dimensions.height());
+      ++row_end;
+    }
+
+    occupied_columns = 0;
+    for (size_t index = row_start; index < row_end; ++index) {
+      Item& item = items_[index];
+      if (item.widget->isGone()) continue;
+      const uint8_t span = resolveSpan(item.params.span, metrics_);
+      const Rect cell =
+          metrics_.spanBounds(occupied_columns, span, row_top, row_height);
+      const YDim child_height = item.measured_dimensions.height();
+      YDim child_top = row_top;
+      if (item.params.gravity.isMiddle()) {
+        child_top += (row_height - child_height) / 2;
+      } else if (item.params.gravity.isBottom()) {
+        child_top += row_height - child_height;
+      }
+      item.widget->layout(Rect(cell.xMin(), child_top, cell.xMax(),
+                               child_top + child_height - 1));
+      occupied_columns += span;
+    }
+    row_top += row_height + row_gap;
+    row_start = row_end;
+  }
+}
+
+int GridLayout::getChildrenCount() const {
+  return static_cast<int>(items_.size());
+}
+
+const Widget& GridLayout::getChild(int index) const {
+  CHECK(index >= 0 && index < static_cast<int>(items_.size()));
+  return *items_[index].widget;
+}
+
+Widget& GridLayout::getChild(int index) {
+  CHECK(index >= 0 && index < static_cast<int>(items_.size()));
+  return *items_[index].widget;
+}
+
+uint8_t GridLayout::resolveSpan(const GridSpan& span,
+                                const LayoutMetrics& metrics) const {
+  uint8_t requested_span = span.compact;
+  switch (metrics.breakpoint) {
+    case LayoutBreakpoint::kMedium:
+      requested_span = span.medium;
+      break;
+    case LayoutBreakpoint::kExpanded:
+      requested_span = span.expanded;
+      break;
+    case LayoutBreakpoint::kLarge:
+      requested_span = span.large;
+      break;
+    case LayoutBreakpoint::kExtraLarge:
+      requested_span = span.extra_large;
+      break;
+    case LayoutBreakpoint::kCompact:
+      break;
+  }
+  return std::max<uint8_t>(1,
+                           std::min<uint8_t>(requested_span, metrics.columns));
+}
+
+YDim GridLayout::resolveRowGap(const LayoutMetrics& metrics) const {
+  return row_gap_dp_ < 0 ? metrics.gutter : ScaledDp(row_gap_dp_);
 }
 
 }  // namespace roo_windows::material3
