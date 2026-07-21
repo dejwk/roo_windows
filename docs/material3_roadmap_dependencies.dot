@@ -72,7 +72,7 @@ digraph material3_roadmap_dependencies {
     p1_5 [label="P1.5", fillcolor="#FFFFFF", color="#16A34A",
           fontcolor="#334155", URL="material3_roadmap.md#p1-5",
           tooltip="Implement the shared presentation-pin host"];
-    p1_6 [label="P1.6", fillcolor="#FFFFFF", color="#CBD5E1",
+    p1_6 [label="P1.6", fillcolor="#FFFFFF", color="#16A34A",
           fontcolor="#334155", URL="material3_roadmap.md#p1-6",
           tooltip="Reconcile menu ownership and input design"];
     p1_7 [label="P1.7", URL="material3_roadmap.md#p1-7",

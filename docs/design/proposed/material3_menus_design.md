@@ -2,12 +2,11 @@
 
 ## Implementation status
 
-**Proposed.** None of the defined scope is implemented. Before implementation,
-the retained trigger/anchor and presenter rules in this document must be
-reconciled with the copied-anchor, presenter-owned-pin, and single-slot rules
-in the transient-presenter-lifetime design, as tracked by roadmap item P1.6.
-The status of existing and outstanding prerequisites is recorded in the
-[status index](../README.md).
+**Proposed; P1.6 design reconciliation complete.** None of the defined menu
+implementation scope is implemented. This document closes the copied-anchor,
+presenter-owned-pin, single-root registration, focus, keyboard, and shared-row
+contracts required before implementation begins. The status of existing and
+outstanding prerequisites is recorded in the [status index](../README.md).
 
 ## Objective
 
@@ -76,7 +75,7 @@ What does not exist yet:
 - no anchored popup overlay that dismisses on outside press without becoming a
   dialog,
 - no submenu chain controller,
-- no generic root-trigger press pin for popup menus,
+- no Material 3 menu presenter or menu-specific trigger-pin paint snapshot,
 - and no Material 3 example or test target covering popup menus.
 
 ### Badge and Paint Context Implications
@@ -264,13 +263,16 @@ Out of scope:
 
 The menu family is a four-part stack:
 
-1. `material3::Menu` is a popup `Activity` that owns temporary presentation
-   state: anchor, trigger reference, child submenu chain, and dismissal.
+1. `material3::Menu` is the one registered popup presenter for an entire menu
+   chain. It owns copied anchor and trigger-paint snapshots, every visible
+   menu level, focus-scope state, pins, and dismissal; it retains neither a
+   trigger widget nor an anchor widget.
 2. An internal full-screen `MenuOverlay` widget is the activity contents. It
-   intercepts outside presses, keeps the presentation task full-screen, and
-   hosts one anchored `MenuPanel` child.
-3. `MenuPanel` owns the menu surface, optional `ScrollablePanel`, and one or
-   more `MenuGroup` children.
+   intercepts outside presses, keeps the one presentation task full-screen,
+   and hosts the root and every child `MenuPanel` at their resolved rectangles.
+3. `MenuPanel` owns one level's surface, optional `ScrollablePanel`, and one
+   or more `MenuGroup` children. The presenter owns panel ordering and the
+   parent/child chain; a panel does not independently present or register.
 4. `MenuEntry` derives from `ListEntry` and adds only menu-specific state plus
    owner-painted trailing adornments.
 
@@ -292,11 +294,14 @@ close to the existing list row substrate.
 3. Menu badges are described by lightweight content data. `MenuEntry` owns the
    live [`Badge`](../../../src/roo_windows/material3/badge/badge.h) helper when a row
    actually needs one.
-4. Each open menu level uses one full-screen popup task. The menu surface is a
-   child inside that task, not the task bounds themselves. That makes outside
-   dismissal reliable and keeps submenu-chain behavior local to the menu family.
-5. Trigger pressed indication is implemented as a presenter-owned overlay pin,
-   not as a new persistent state bit on every `Widget`.
+4. One root menu chain uses one full-screen popup task, one overlay, one focus
+   scope, and one `TransientPresentationRegistration`. Submenus are owned
+   overlay children, never sibling popup tasks or slot occupants. This makes
+   outside dismissal, focus containment, and deepest-first closure local to
+   the presenter.
+5. Trigger pressed indication is implemented as a presenter-owned,
+   rect-anchored overlay pin from copied paint data, not as a retained trigger
+   widget or a new persistent state bit on every `Widget`.
 6. The standard convenience path uses virtual item hooks for invocation and
    menu-owned owner-painted adornments. It does not embed checkbox, radio, or
    switch widgets inside menu rows.
@@ -307,9 +312,9 @@ close to the existing list row substrate.
 
 ### Popup Overlay and Placement
 
-Each visible menu is hosted in a full-screen popup task. Its `Activity`
-contents are a full-screen `MenuOverlay` widget that lays out one `MenuPanel`
-child at the resolved anchored rectangle.
+One visible menu chain is hosted in one full-screen popup task. Its `Activity`
+contents are a full-screen `MenuOverlay` widget that lays out the root
+`MenuPanel` and all visible child panels at their resolved anchored rectangles.
 
 That architecture does three things at once:
 
@@ -319,7 +324,7 @@ That architecture does three things at once:
 - and it avoids making popup task bounds themselves part of the menu-layout
   API.
 
-The placement algorithm operates on four rectangles:
+The placement algorithm operates on four copied values:
 
 - anchor rectangle $A$ in task-local coordinates,
 - measured menu rectangle size $(w, h)$,
@@ -358,7 +363,8 @@ $$
 
 Submenus use the same scoring rule, but their primary candidates are side
 placements relative to the parent row rectangle and include a fixed gutter so
-the child surface does not overlap the row that opened it.
+the child surface does not overlap the row that opened it. A level stores its
+opener as a parent-owned row index, not a pointer to a caller-owned row.
 
 ![Anchored menu placement and submenu fallback](figures/material3_menus_positioning.svg)
 
@@ -403,11 +409,12 @@ The shared content contract stays anchored on
 - and virtual invocation.
 
 The baseline convenience path is `StandardMenuItem`, which stores headline and
-supporting text, an optional leading widget, selected and enabled bits, an
-optional submenu pointer, and an optional trailing-detail payload for shortcut
-text, trailing icon, and badge content. Plain command items stay close to the
-`StandardListItem` footprint because they do not materialize that trailing
-payload.
+supporting text, an optional leading widget, selected and enabled bits, and an
+optional trailing-detail payload for shortcut text, trailing icon, and badge
+content. Items with submenus override the virtual `hasSubmenu()` and
+`populateSubmenu()` hooks; the presenter owns the resulting child level. Plain
+command items stay close to the `StandardListItem` footprint because they do
+not materialize that trailing payload.
 
 `MenuEntry` reuses [`ListEntry`](../../../src/roo_windows/material3/list/list.h) for
 binding, text-slot widget management, measurement, and main-slot layout. It
@@ -482,9 +489,45 @@ Selection rules are also closed:
 4. Baseline menu selection does not instantiate embedded checkbox, radio, or
    switch widgets.
 
+### Presentation Ownership, Anchor Snapshots, and Finish Order
+
+`Menu` is a presenter, not an observed trigger. `show()` resolves a
+`MenuAnchorSnapshot` synchronously while the caller's anchor is attached. The
+snapshot contains the task/layer identity, task-local rectangle, layout
+direction, placement preference, and an optional `MenuTriggerPaintSnapshot`.
+The latter contains every geometry and paint token needed for press retention;
+it does not contain a `Widget*`, callback, or reference capture. Context menus
+use a rectangle snapshot and omit trigger paint retention.
+
+The root presenter embeds one `TransientPresentationRegistration` as its final
+member. `show()` first asks the target `MainWindow` slot to register it with
+Back and Escape enabled. Only after `kStarted` does it attach the full-screen
+popup task, enter its focus scope, and show the optional rect-anchored pin. A
+busy or reentrant result attaches no panel, moves no focus, and creates no pin.
+The pin is scoped to the copied task/layer root, not to the initiating widget.
+
+All visible levels are owned by this presenter. A level may retain pointers to
+its attached panels and groups through the normal container child-lifetime
+contract, but it retains no application-owned trigger, anchor, listener, or
+submenu object. A submenu request invokes a virtual item hook synchronously to
+populate a presenter-owned child level. Its parent/opener relationship is kept
+as level and row indices. Consequently, opening, replacing, and closing a
+submenu cannot dereference an item or widget that navigation has already
+destroyed.
+
+Every terminal path uses the transient registration's idempotent `finish()`
+operation. `detachPresentation()` first disables overlay input and keyboard
+handling, hides the trigger pin, closes child levels deepest-first, detaches
+the popup task and root panel, and exits the focus scope. It then lets the
+shared slot become idle before `onFinished()` runs. Explicit close, outside
+press, action, replacement, owner destruction, and host destruction all use
+this ordering. Destruction performs local detach/pin cleanup and lets the
+last-member registration vacate the slot without completion delivery.
+
 ### Submenu Chain Behavior
 
-Submenus are opened by rows that expose a non-null child menu pointer.
+Submenus are opened by rows whose item exposes `hasSubmenu()` and synchronously
+populates a presenter-owned child level.
 
 The chain behavior is:
 
@@ -493,7 +536,7 @@ The chain behavior is:
 2. Only one child submenu can be open from a given menu at a time.
 3. Opening a new submenu from the same parent closes the previous child chain
    first.
-4. Dismissing a submenu returns focus and active styling to its parent menu.
+4. Dismissing a submenu returns focus and active styling to its parent opener.
 5. Outside press dismisses the entire chain from root to leaf.
 6. Back or escape dismisses only the deepest open menu first.
 7. Hover and focus state can move within an already open submenu chain, but
@@ -502,16 +545,55 @@ The chain behavior is:
 This keeps touch behavior predictable and avoids requiring a hover-only
 interaction model on embedded targets that primarily use touch.
 
+### Focus and Keyboard Semantics
+
+The root overlay enters one framework-owned `FocusScope` before requesting
+initial focus. The focus manager, rather than `Menu`, retains the pre-menu
+target and clears stale targets through its existing detach/destruction hooks.
+On a root close, scope exit restores that target when it remains eligible;
+otherwise the focus manager applies its normal preferred-child then
+first-eligible fallback. The presenter never caches a raw focus target.
+
+The root level initially focuses its selected enabled row, or its first enabled
+row when there is no selected row. Opening a child level focuses the child
+level's selected enabled row or first enabled row. Closing that child restores
+focus to the still-attached parent opener before removing the child panel. If
+the opener is disabled or removed by a synchronous item update, focus instead
+falls back to the nearest enabled row in the parent, then to the root scope's
+normal fallback.
+
+The active (deepest) level handles keyboard input as follows:
+
+1. Up and Down move among enabled rows in visual order and wrap within that
+   level. `Home` and `End` select its first and last enabled rows.
+2. Enter and Space invoke the focused row through the same virtual item path
+   used by touch. Disabled rows are never focused or invoked.
+3. The forward horizontal arrow opens a focused submenu; the backward arrow
+   closes the deepest child level. Forward is Right in LTR and Left in RTL.
+   On the root level, the backward arrow is unhandled so application routing
+   remains available.
+4. Tab and Shift+Tab use `FocusManager::moveFocus()` within the active level
+   and wrap; popup focus never escapes to obscured task content while the root
+   menu is visible.
+5. Back and Escape reach the one registered root. It closes exactly the
+   deepest level when a child is present; otherwise it finishes the root with
+   `kBack`. Neither key is re-routed through a per-level registration.
+
+Pointer hover only updates hover state. It never opens a submenu in the first
+implementation. A touch press requests focus for its row immediately before
+the shared invocation path, preserving the framework's mixed-input rule.
+
 ### Trigger Press Retention
 
 Material 3 expects the root trigger to stay visually pressed while the menu
 chain is open.
 
 This design implements that without changing base widget storage. The root menu
-presentation layer registers the trigger widget with a menu-only overlay pin
-owned by `MainWindow`. While registered, that helper paints the existing press
-overlay over the trigger bounds during the root window paint pass. When the root
-menu chain closes, the pin is removed.
+presentation layer gives `MainWindow` one presenter-owned, rect-anchored pin
+whose copied `MenuTriggerPaintSnapshot` paints the press overlay at the copied
+trigger bounds during the root-window paint pass. The pin is attached to the
+snapshot's stable layer root, never to the initiating trigger widget. When the
+root menu chain closes, it is hidden before popup detachment and slot release.
 
 No widget instances gain extra fields for this feature.
 
@@ -523,12 +605,12 @@ budgets are:
 
 | Type | Approx. RAM | Notes |
 |------|------------:|-------|
-| `Menu` | ~40-48 B | anchor data, trigger pointer, child-chain pointers, compact policy bits; temporary only while menu exists |
-| `MenuOverlay` | ~48 B | one child pointer plus dismissal and placement state |
+| `Menu` | ~64-76 B | copied anchor and paint snapshots, registration/focus records, and compact chain state; temporary only while menu exists |
+| `MenuOverlay` | ~56-64 B plus child-vector capacity | dismissal/placement state and the chain's attached panel pointers |
 | `MenuPanel` | ~56-72 B plus optional scroll wrapper storage | popup surface, group-stack child pointers, and compact separator policy |
 | `MenuGroup` | ~56-64 B plus vector capacity | one row-pointer vector and compact group policy |
-| `MenuEntry` | ~92-100 B base | `ListEntry` budget plus a small menu-only state extension |
-| `StandardMenuItem` plain path | ~48-56 B | headline or supporting text views, enabled or selected bits, and optional submenu pointer |
+| `MenuEntry` | ~92-100 B base | `ListEntry` reuse plus a thin menu-only wrapper; no `ListEntry` growth |
+| `StandardMenuItem` plain path | ~48-56 B | headline/supporting text views and enabled/selected bits; submenu construction is virtual |
 | optional trailing-detail payload | ~24-40 B when present | paid only by items that use shortcut text, trailing icon, or badge content |
 | badge-aware row adornment state | ~20-28 B when present | paid only while a bound row needs a live `Badge` helper |
 
@@ -554,12 +636,26 @@ enum class MenuSeparatorMode : uint8_t {
   kGap,
 };
 
-struct MenuAnchor {
+struct MenuAnchorSnapshot {
   Rect bounds;
   bool right_to_left = false;
+  // Opaque host-issued identity, not a Task or Widget pointer. The host
+  // validates it at show time and ends the presentation if its layer leaves.
+  uint16_t origin_layer_id = 0;
 
-  static MenuAnchor FromWidget(const Widget& widget);
-  static MenuAnchor FromRect(const Rect& rect, bool right_to_left = false);
+  // Resolves geometry synchronously. The returned value retains no widget.
+  static MenuAnchorSnapshot snapshotFromWidget(const Widget& widget);
+  static MenuAnchorSnapshot snapshotFromRect(const Rect& rect,
+                                             bool right_to_left = false);
+};
+
+struct MenuTriggerPaintSnapshot {
+  // Copied bounds, shape, and paint-token data for a root trigger pin. This
+  // is intentionally value-only and cannot retain a Widget or callback.
+  Rect bounds;
+  uint16_t corner_radius = 0;
+  uint32_t overlay_argb = 0;
+  uint8_t overlay_opacity = 0;
 };
 
 struct MenuPolicy {
@@ -569,8 +665,6 @@ struct MenuPolicy {
   SelectionMode selection_mode = SelectionMode::kNone;
   bool dismiss_on_leaf_invoke = true;
   bool dismiss_on_outside_press = true;
-  bool dismiss_on_back = true;
-  bool dismiss_on_escape = true;
 };
 
 struct MenuBadgeSpec {
@@ -590,8 +684,11 @@ class MenuItem : public ListItem {
  public:
   virtual bool isEnabled() const { return true; }
   virtual bool isSelected() const { return false; }
-  virtual Menu* submenu() const { return nullptr; }
   virtual MenuTrailingAffordances trailingAffordances() const { return {}; }
+  virtual bool hasSubmenu() const { return false; }
+  // Populates one presenter-owned child level synchronously. It never returns
+  // or stores a caller-owned Menu pointer.
+  virtual void populateSubmenu(Menu& owner) {}
   virtual void onInvoked(Menu& owner) {}
 };
 
@@ -618,7 +715,6 @@ class StandardMenuItem : public MenuItem {
   void clearBadge();
   void setTrailingIcon(const roo_display::Drawable* icon);
   void clearTrailingIcon();
-  void setSubmenu(Menu* submenu);
 };
 
 class MenuEntry : public ListEntry {
@@ -657,12 +753,12 @@ class Menu : public Activity {
   explicit Menu(ApplicationContext& context);
 
   void setPolicy(const MenuPolicy& policy);
-  void setAnchor(const MenuAnchor& anchor);
-  void setTrigger(Widget* trigger);
+  void setAnchorSnapshot(const MenuAnchorSnapshot& anchor);
+  void setTriggerPaintSnapshot(const MenuTriggerPaintSnapshot& trigger);
   void addGroup(MenuGroup& group);
   void addGroup(std::unique_ptr<MenuGroup> group);
   void clearGroups();
-  void show(Application& app);
+  PresentationStartResult show(Application& app);
   void dismissChain();
 
   Widget& getContents() override;
@@ -684,11 +780,14 @@ vocabulary:
   on the row that paints it,
 - and action dispatch stays virtual rather than callback-heavy.
 
-`Menu::show(Application&)` opens the menu in a popup task and retains the root
-trigger press overlay if a trigger has been supplied. If `show()` is called
-before the popup presenter lands, the interim behavior is to emit
-`LOG(WARNING) << "Unimplemented: Material 3 menu presentation"` and perform no
-presentation work. No partial menu tree is shown in that state.
+`Menu::show(Application&)` returns the shared slot result. The caller supplies
+only copied anchor and optional trigger-paint snapshots; `Menu` never exposes a
+`setTrigger(Widget*)` or a retained widget anchor. Once popup presentation
+lands, `show()` registers the root with Back and Escape enabled before it
+attaches the single overlay task, establishes its focus scope, and shows its
+pin. Before that phase lands, it emits
+`LOG(WARNING) << "Unimplemented: Material 3 menu presentation"` and returns
+`PresentationStartResult::kHostBusy`; it does not show a partial tree.
 
 ## Implementation Plan
 
@@ -701,7 +800,7 @@ and
 
 Code slice:
 
-1. Add the baseline public declarations for `MenuPolicy`, `MenuAnchor`,
+1. Add the baseline public declarations for `MenuPolicy`, `MenuAnchorSnapshot`,
    `MenuItem`, `MenuEntry`, `MenuGroup`, and `Menu` under
    `src/roo_windows/material3/menu/`.
 2. Keep `show()` as a non-presenting stub with a single warning log until the
@@ -719,7 +818,8 @@ Validation: run `bazel test //:material3_menu_smoke_test`.
 Code slice:
 
 1. Implement `MenuEntry` on top of `ListEntry`.
-2. Add `MenuTrailingAffordances`, `StandardMenuItem`, and `MenuRow<Item>`.
+2. Add `MenuTrailingAffordances`, `StandardMenuItem`, and `MenuRow<Item>` as
+   thin `ListItem` / `ListEntry` reuse; do not increase `ListEntry` storage.
 3. Implement owner-painted shortcut text, menu-owned checkmarks, submenu
    chevrons, and landed-badge integration through `PaintContext`.
 4. Add row-focused golden coverage for plain, disabled, selected, and badged
@@ -747,20 +847,23 @@ Proposed commit message:
 
 Validation: run `bazel test //:material3_menu_golden_test`.
 
-### Phase 4: Popup Overlay, Placement, and Trigger Pin
+### Phase 4: Root Presenter, Popup Overlay, Placement, Pin, and Focus
 
 Code slice:
 
-1. Implement the full-screen `MenuOverlay` and anchored popup presentation.
-2. Resolve anchored placement in `Menu::getPreferredPlacement(...)`.
-3. Add the root-trigger overlay pin in `MainWindow` and integrate it with menu
-   show and dismiss lifecycle.
-4. Add behavior tests for placement, outside dismissal, and trigger pressed
-   retention.
+1. Implement one registered `Menu` presenter, one full-screen `MenuOverlay`,
+   and one popup task for a complete chain.
+2. Resolve only copied anchor snapshots in placement; reject a show that has
+   no valid snapshot rather than retaining its widget source.
+3. Add the presenter-owned rect pin and its copied paint snapshot; hide it
+   before overlay detachment and slot completion.
+4. Enter/exit the one focus scope and add behavior tests for placement, busy
+   slot rejection, outside dismissal, trigger retention, and root-close focus
+   restoration.
 
 Proposed commit message:
 
-> Material 3 menus Phase 4: add popup presenter and trigger pin
+> Material 3 menus Phase 4: add root presenter, popup, pin, and focus
 
 Validation: run `bazel test //:material3_menu_test`.
 
@@ -783,10 +886,11 @@ Validation: run `bazel test //:material3_menu_test`.
 
 Code slice:
 
-1. Implement child submenu presentation, active-parent-row styling, and
-   deepest-first back or escape dismissal.
+1. Implement presenter-owned child levels, active-parent-row styling, and
+   deepest-first Back/Escape dismissal without additional slot registration.
 2. Add placement fallback from after to before when side overflow occurs.
-3. Add golden and interaction coverage for two-level submenu chains.
+3. Add focused-row movement, horizontal open/close, parent-opener restoration,
+   and golden/interaction coverage for two-level submenu chains.
 
 Proposed commit message:
 
@@ -826,7 +930,12 @@ Add `material3_menu_test` coverage for:
 - disabled-row non-invocation,
 - submenu open and close sequencing,
 - deepest-first back or escape dismissal,
-- and root-trigger pressed retention while the menu chain is visible.
+- and root-trigger pressed retention while the menu chain is visible,
+- root-slot occupancy, busy/replacement behavior, presenter and host teardown,
+  and copied-anchor safety after the initiating widget detaches,
+- root close and child close focus restoration, disabled-row skipping, Tab
+  wrapping, directional submenu open/close, and Enter/Space activation,
+- and `ListEntry` / `ListItem` reuse without a `ListEntry` size increase.
 
 ### Golden and Rendering Tests
 
@@ -892,12 +1001,29 @@ content. Material 3 menus are contextual popup surfaces that stay tied to their
 trigger or context anchor and dismiss on outside interaction without becoming
 modal dialogs.
 
+#### Retaining Trigger, Anchor, Focus, or Child-Menu Pointers
+
+Rejected because every one of those objects can disappear through ordinary
+navigation or a synchronous invocation while the popup remains visible. The
+chosen contract copies anchor and trigger paint values, leaves focus-target
+lifetime to `FocusManager`, and makes each child level presenter-owned. It
+therefore needs neither widget observer fields nor a second registration for a
+submenu.
+
+#### One Popup Task or Registration per Submenu
+
+Rejected because it creates ambiguous outside-input, focus, and Back ordering
+for what is semantically one temporary surface. One root task, overlay, focus
+scope, registration, and pin set give the root presenter a deterministic
+deepest-first chain without expanding `MainWindow` beyond its existing single
+interactive slot.
+
 ### Accepted Trade-Offs
 
-1. Each open menu level pays for a full-screen popup task and overlay widget.
-   That is higher menu-level overhead than a bare floating surface, but it
-   makes outside dismissal, trigger retention, and submenu chains correct
-   without widening base widget state.
+1. One complete menu chain pays for one full-screen popup task and overlay.
+   That is higher root-level overhead than a bare floating surface, but it
+   makes outside dismissal, trigger retention, focus, and submenu chains
+   correct without widening base widget state.
 2. The standard convenience path uses a menu-specific trailing-detail payload
    instead of trying to force shortcut text, badges, and submenu chevrons into
    the generic list slot model. That keeps the shared list substrate small at
