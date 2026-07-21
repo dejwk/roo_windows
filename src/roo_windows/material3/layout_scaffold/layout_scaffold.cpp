@@ -189,11 +189,21 @@ LayoutScaffold::LayoutScaffold(ApplicationContext& context)
       direction_(static_cast<uint8_t>(LayoutDirection::kLeftToRight)) {}
 
 LayoutScaffold::~LayoutScaffold() {
-  if (top_bar_ != nullptr) detachChild(top_bar_);
-  if (bottom_bar_ != nullptr) detachChild(bottom_bar_);
-  if (leading_rail_ != nullptr) detachChild(leading_rail_);
-  if (trailing_rail_ != nullptr) detachChild(trailing_rail_);
-  if (body_ != nullptr) detachChild(body_);
+  Widget* top_bar = top_bar_;
+  top_bar_ = nullptr;
+  if (top_bar != nullptr) detachChild(top_bar);
+  Widget* bottom_bar = bottom_bar_;
+  bottom_bar_ = nullptr;
+  if (bottom_bar != nullptr) detachChild(bottom_bar);
+  Widget* leading_rail = leading_rail_;
+  leading_rail_ = nullptr;
+  if (leading_rail != nullptr) detachChild(leading_rail);
+  Widget* trailing_rail = trailing_rail_;
+  trailing_rail_ = nullptr;
+  if (trailing_rail != nullptr) detachChild(trailing_rail);
+  Widget* body = body_;
+  body_ = nullptr;
+  if (body != nullptr) detachChild(body);
 }
 
 void LayoutScaffold::setBreakpointPolicy(const LayoutBreakpointPolicy& policy) {
@@ -346,6 +356,8 @@ void LayoutScaffold::onLayout(bool changed, const Rect& rect) {
   updateChromeVisibility(breakpoint);
   const Rect safe = ApplyInsets(rect, safety_insets_);
   if (safe.empty()) {
+    // A collapsed safety area must actively remove every child from layout;
+    // keeping stale chrome bounds would leave invalid published geometry.
     layoutSlot(top_bar_, EmptyRect());
     layoutSlot(bottom_bar_, EmptyRect());
     layoutSlot(leading_rail_, EmptyRect());
@@ -355,6 +367,8 @@ void LayoutScaffold::onLayout(bool changed, const Rect& rect) {
     return;
   }
 
+  // Bars reserve vertical space first. Rails and body then share the band
+  // between them, so all chrome changes resolve in one coordinate system.
   const YDim top = safe.yMin();
   const Rect top_bounds =
       top_bar_ != nullptr && top_bar_->isVisible()
@@ -390,6 +404,7 @@ void LayoutScaffold::onLayout(bool changed, const Rect& rect) {
   const Rect body_bounds(body_left, rail_band.yMin(), body_right,
                          rail_band.yMax());
 
+  // Publish the resolved rectangles only after every slot bound is known.
   layoutSlot(top_bar_, top_bounds);
   layoutSlot(bottom_bar_, bottom_bounds);
   layoutSlot(leading_rail_, leading_bounds);
@@ -494,6 +509,374 @@ void LayoutScaffold::clearLayoutMetrics(LayoutBreakpoint breakpoint) {
 }
 
 void LayoutScaffold::layoutSlot(Widget* widget, const Rect& bounds) {
+  if (widget != nullptr) widget->layout(bounds);
+}
+
+PaneLayout::PaneLayout(ApplicationContext& context)
+    : Container(context),
+      leading_(nullptr),
+      main_(nullptr),
+      trailing_(nullptr),
+      policy_(&LayoutBreakpointPolicy::Default()),
+      main_min_width_dp_(360),
+      active_pane_(static_cast<uint8_t>(PaneRole::kMain)),
+      multi_pane_enabled_(true),
+      direction_(static_cast<uint8_t>(LayoutDirection::kLeftToRight)) {}
+
+PaneLayout::~PaneLayout() {
+  // Clear each fixed slot before detaching it: an owned detach can delete the
+  // child, while Container invalidation may enumerate the remaining slots.
+  Widget* leading = leading_;
+  leading_ = nullptr;
+  if (leading != nullptr) detachChild(leading);
+  Widget* main = main_;
+  main_ = nullptr;
+  if (main != nullptr) detachChild(main);
+  Widget* trailing = trailing_;
+  trailing_ = nullptr;
+  if (trailing != nullptr) detachChild(trailing);
+}
+
+void PaneLayout::setBreakpointPolicy(const LayoutBreakpointPolicy& policy) {
+  if (policy_ == &policy) return;
+  policy_ = &policy;
+  requestLayout();
+}
+
+void PaneLayout::setLayoutDirection(LayoutDirection direction) {
+  if (layoutDirection() == direction) return;
+  direction_ = static_cast<uint8_t>(direction);
+  requestLayout();
+}
+
+LayoutDirection PaneLayout::layoutDirection() const {
+  return static_cast<LayoutDirection>(direction_);
+}
+
+void PaneLayout::setMainMinWidthDp(int16_t width_dp) {
+  CheckScaledDimension(width_dp, "main pane minimum width");
+  if (main_min_width_dp_ == width_dp) return;
+  main_min_width_dp_ = width_dp;
+  requestLayout();
+}
+
+void PaneLayout::setMultiPaneEnabled(bool enabled) {
+  if (isMultiPaneEnabled() == enabled) return;
+  multi_pane_enabled_ = enabled;
+  requestLayout();
+}
+
+bool PaneLayout::isMultiPaneEnabled() const { return multi_pane_enabled_; }
+
+bool PaneLayout::setActivePane(PaneRole role) {
+  if (slotForRole(role) == nullptr) return false;
+  if (activePane() == role) return true;
+  active_pane_ = static_cast<uint8_t>(role);
+  requestLayout();
+  return true;
+}
+
+PaneRole PaneLayout::activePane() const {
+  return static_cast<PaneRole>(active_pane_);
+}
+
+void PaneLayout::setLeadingPane(WidgetRef widget, PaneSpec spec) {
+  CheckPaneSpec(spec);
+  leading_spec_ = spec;
+  replaceSlot(leading_, std::move(widget));
+}
+
+void PaneLayout::clearLeadingPane() { replaceSlot(leading_, WidgetRef()); }
+
+void PaneLayout::setMainPane(WidgetRef widget) {
+  replaceSlot(main_, std::move(widget));
+}
+
+void PaneLayout::clearMainPane() { replaceSlot(main_, WidgetRef()); }
+
+void PaneLayout::setTrailingPane(WidgetRef widget, PaneSpec spec) {
+  CheckPaneSpec(spec);
+  trailing_spec_ = spec;
+  replaceSlot(trailing_, std::move(widget));
+}
+
+void PaneLayout::clearTrailingPane() { replaceSlot(trailing_, WidgetRef()); }
+
+bool PaneLayout::isLeadingVisible() const {
+  return leading_ != nullptr && leading_->isVisible();
+}
+
+bool PaneLayout::isMainVisible() const {
+  return main_ != nullptr && main_->isVisible();
+}
+
+bool PaneLayout::isTrailingVisible() const {
+  return trailing_ != nullptr && trailing_->isVisible();
+}
+
+PreferredSize PaneLayout::getPreferredSize() const {
+  return PreferredSize(PreferredSize::MatchParentWidth(),
+                       PreferredSize::MatchParentHeight());
+}
+
+Dimensions PaneLayout::onMeasure(WidthSpec width, HeightSpec height) {
+  const XDim measured_width = width.resolveSize(width.value());
+  const YDim measured_height = height.resolveSize(height.value());
+  // Measure against the same complete plan later used by onLayout(). This
+  // keeps visibility, exact child specs, and final geometry in agreement.
+  const PanePlan plan =
+      resolvePlan(Rect(0, 0, measured_width - 1, measured_height - 1));
+  applyVisibility(plan);
+  if (plan.leading_visible) {
+    leading_->measure(WidthSpec::Exactly(plan.leading_bounds.width()),
+                      HeightSpec::Exactly(plan.leading_bounds.height()));
+  }
+  if (plan.main_visible) {
+    main_->measure(WidthSpec::Exactly(plan.main_bounds.width()),
+                   HeightSpec::Exactly(plan.main_bounds.height()));
+  }
+  if (plan.trailing_visible) {
+    trailing_->measure(WidthSpec::Exactly(plan.trailing_bounds.width()),
+                       HeightSpec::Exactly(plan.trailing_bounds.height()));
+  }
+  return Dimensions(measured_width, measured_height);
+}
+
+void PaneLayout::onLayout(bool changed, const Rect& rect) {
+  // resolvePlan() is deliberately side-effect free. Apply its complete answer
+  // once so focus clearing and empty bounds cannot observe a partial layout.
+  const PanePlan plan = resolvePlan(rect);
+  applyVisibility(plan);
+  layoutSlot(leading_, plan.leading_bounds);
+  layoutSlot(main_, plan.main_bounds);
+  layoutSlot(trailing_, plan.trailing_bounds);
+  metrics_ = plan.metrics;
+}
+
+int PaneLayout::getChildrenCount() const {
+  const Widget* children[] = {leading_, main_, trailing_};
+  return CountChildren(children, 3);
+}
+
+const Widget& PaneLayout::getChild(int index) const {
+  const Widget* children[] = {leading_, main_, trailing_};
+  for (const Widget* child : children) {
+    if (child != nullptr && index-- == 0) return *child;
+  }
+  LOG(FATAL) << "PaneLayout child index out of bounds";
+  return *main_;
+}
+
+Widget& PaneLayout::getChild(int index) {
+  Widget* children[] = {leading_, main_, trailing_};
+  for (Widget* child : children) {
+    if (child != nullptr && index-- == 0) return *child;
+  }
+  LOG(FATAL) << "PaneLayout child index out of bounds";
+  return *main_;
+}
+
+void PaneLayout::CheckPaneSpec(const PaneSpec& spec) {
+  CheckScaledDimension(spec.min_width_dp, "pane minimum width");
+  CheckScaledDimension(spec.preferred_width_dp, "pane preferred width");
+  CHECK(spec.preferred_width_dp >= spec.min_width_dp)
+      << "pane preferred width must not be smaller than its minimum width";
+}
+
+PaneLayout::PanePlan PaneLayout::resolvePlan(const Rect& bounds) const {
+  PanePlan plan;
+  // Pane breakpoints are local to the body region; the outer scaffold may
+  // have a different width class after its chrome has claimed space.
+  const LayoutBreakpoint breakpoint =
+      policy_->resolveWidthPx(bounds.empty() ? 0 : bounds.width());
+  plan.metrics = policy_->resolveMetrics(bounds, layoutDirection());
+  if (bounds.empty()) return plan;
+
+  // Compact presentation is the baseline. A cleared active slot intentionally
+  // yields no replacement pane until the application selects one.
+  const PaneRole active = activePane();
+  if (slotForRole(active) == nullptr) return plan;
+
+  plan.leading_visible = active == PaneRole::kLeading;
+  plan.main_visible = active == PaneRole::kMain;
+  plan.trailing_visible = active == PaneRole::kTrailing;
+
+  // Widen the compact baseline only with the canonical main/side candidates.
+  // Side participation remains breakpoint-gated; the active role is exempt.
+  if (isMultiPaneEnabled() && main_ != nullptr) {
+    plan.main_visible = true;
+    if (leading_ != nullptr && active != PaneRole::kLeading &&
+        leading_spec_.simultaneous_visibility.contains(breakpoint)) {
+      plan.leading_visible = true;
+    }
+    if (trailing_ != nullptr && active != PaneRole::kTrailing &&
+        trailing_spec_.simultaneous_visibility.contains(breakpoint)) {
+      plan.trailing_visible = true;
+    }
+  }
+
+  const XDim gutter = ScaledDp(policy_->tokens(breakpoint).gutter_dp);
+  const XDim leading_min = ScaledDp(leading_spec_.min_width_dp);
+  const XDim main_min = ScaledDp(main_min_width_dp_);
+  const XDim trailing_min = ScaledDp(trailing_spec_.min_width_dp);
+  const auto minimum_total = [&]() {
+    const int pane_count = static_cast<int>(plan.leading_visible) +
+                           static_cast<int>(plan.main_visible) +
+                           static_cast<int>(plan.trailing_visible);
+    return (plan.leading_visible ? leading_min : 0) +
+           (plan.main_visible ? main_min : 0) +
+           (plan.trailing_visible ? trailing_min : 0) +
+           std::max(0, pane_count - 1) * gutter;
+  };
+  // Degrade from the lowest preservation priority while never removing the
+  // caller-selected active role. This loop has at most three iterations.
+  while (minimum_total() > bounds.width()) {
+    if (plan.trailing_visible && active != PaneRole::kTrailing) {
+      plan.trailing_visible = false;
+    } else if (plan.leading_visible && active != PaneRole::kLeading) {
+      plan.leading_visible = false;
+    } else if (plan.main_visible && active != PaneRole::kMain) {
+      plan.main_visible = false;
+    } else {
+      break;
+    }
+  }
+
+  const int pane_count = static_cast<int>(plan.leading_visible) +
+                         static_cast<int>(plan.main_visible) +
+                         static_cast<int>(plan.trailing_visible);
+  if (pane_count == 0) return plan;
+
+  XDim leading_width = 0;
+  XDim main_width = 0;
+  XDim trailing_width = 0;
+  const XDim total_gutter = std::max(0, pane_count - 1) * gutter;
+  // A single active pane occupies the whole body. When main participates it
+  // remains flexible after fixed-width side panes and gutters are reserved.
+  if (!plan.main_visible) {
+    if (plan.leading_visible) {
+      leading_width = bounds.width();
+    } else {
+      trailing_width = bounds.width();
+    }
+  } else {
+    XDim side_budget =
+        std::max<XDim>(0, bounds.width() - main_min - total_gutter);
+    if (plan.leading_visible && plan.trailing_visible) {
+      // Start both sides at their minima, share spare width toward their
+      // preferred widths, then let main absorb any unclaimed remainder.
+      leading_width = leading_min;
+      trailing_width = trailing_min;
+      XDim extra_width = side_budget - leading_width - trailing_width;
+      const XDim leading_preferred = ScaledDp(leading_spec_.preferred_width_dp);
+      const XDim trailing_preferred =
+          ScaledDp(trailing_spec_.preferred_width_dp);
+      const XDim shared_extra = extra_width / 2;
+      const XDim leading_extra =
+          std::min<XDim>(leading_preferred - leading_width, shared_extra);
+      const XDim trailing_extra =
+          std::min<XDim>(trailing_preferred - trailing_width, shared_extra);
+      leading_width += leading_extra;
+      trailing_width += trailing_extra;
+      extra_width -= leading_extra + trailing_extra;
+      const XDim remaining_leading = leading_preferred - leading_width;
+      const XDim remaining_trailing = trailing_preferred - trailing_width;
+      const XDim additional_leading =
+          std::min<XDim>(remaining_leading, extra_width);
+      leading_width += additional_leading;
+      extra_width -= additional_leading;
+      trailing_width += std::min<XDim>(remaining_trailing, extra_width);
+    } else if (plan.leading_visible) {
+      leading_width = std::min<XDim>(ScaledDp(leading_spec_.preferred_width_dp),
+                                     side_budget);
+    }
+    if (plan.trailing_visible && !plan.leading_visible) {
+      trailing_width = std::min<XDim>(
+          ScaledDp(trailing_spec_.preferred_width_dp), side_budget);
+    }
+    main_width = bounds.width() - total_gutter - leading_width - trailing_width;
+  }
+
+  // Compute logical order once, then mirror only its physical cursor for RTL.
+  // PaneRole identity never changes with the writing direction.
+  if (layoutDirection() == LayoutDirection::kLeftToRight) {
+    XDim left = bounds.xMin();
+    if (plan.leading_visible) {
+      plan.leading_bounds =
+          Rect(left, bounds.yMin(), left + leading_width - 1, bounds.yMax());
+      left += leading_width + gutter;
+    }
+    if (plan.main_visible) {
+      plan.main_bounds =
+          Rect(left, bounds.yMin(), left + main_width - 1, bounds.yMax());
+      left += main_width + gutter;
+    }
+    if (plan.trailing_visible) {
+      plan.trailing_bounds =
+          Rect(left, bounds.yMin(), left + trailing_width - 1, bounds.yMax());
+    }
+  } else {
+    XDim right = bounds.xMax();
+    if (plan.leading_visible) {
+      plan.leading_bounds =
+          Rect(right - leading_width + 1, bounds.yMin(), right, bounds.yMax());
+      right -= leading_width + gutter;
+    }
+    if (plan.main_visible) {
+      plan.main_bounds =
+          Rect(right - main_width + 1, bounds.yMin(), right, bounds.yMax());
+      right -= main_width + gutter;
+    }
+    if (plan.trailing_visible) {
+      plan.trailing_bounds =
+          Rect(right - trailing_width + 1, bounds.yMin(), right, bounds.yMax());
+    }
+  }
+  return plan;
+}
+
+Widget* PaneLayout::slotForRole(PaneRole role) const {
+  switch (role) {
+    case PaneRole::kLeading:
+      return leading_;
+    case PaneRole::kMain:
+      return main_;
+    case PaneRole::kTrailing:
+      return trailing_;
+  }
+  return nullptr;
+}
+
+void PaneLayout::replaceSlot(Widget*& slot, WidgetRef widget) {
+  Widget* incoming = widget.get();
+  if (incoming == slot) return;
+  if (slot != nullptr) detachChild(slot);
+  slot = incoming;
+  if (slot != nullptr) {
+    CHECK(slot->parent() == nullptr);
+    attachChild(std::move(widget));
+  }
+  requestLayout();
+}
+
+void PaneLayout::applyVisibility(const PanePlan& plan) {
+  // Visibility is applied after planning so a hidden pane clears interaction
+  // state before it receives the matching empty layout rectangle.
+  if (leading_ != nullptr) {
+    leading_->setVisibility(plan.leading_visible ? Visibility::kVisible
+                                                 : Visibility::kGone);
+  }
+  if (main_ != nullptr) {
+    main_->setVisibility(plan.main_visible ? Visibility::kVisible
+                                           : Visibility::kGone);
+  }
+  if (trailing_ != nullptr) {
+    trailing_->setVisibility(plan.trailing_visible ? Visibility::kVisible
+                                                   : Visibility::kGone);
+  }
+}
+
+void PaneLayout::layoutSlot(Widget* widget, const Rect& bounds) {
   if (widget != nullptr) widget->layout(bounds);
 }
 

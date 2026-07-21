@@ -233,4 +233,138 @@ static_assert(sizeof(LayoutScaffold) <=
                       sizeof(LayoutMetrics) + sizeof(Rect) + 16,
               "LayoutScaffold must retain its fixed-slot RAM budget");
 
+/// Logical identity for a page-body pane.
+enum class PaneRole : uint8_t {
+  kLeading,
+  kMain,
+  kTrailing,
+};
+
+/// Width and breakpoint constraints for a docked side pane.
+struct PaneSpec {
+  int16_t min_width_dp = 280;
+  int16_t preferred_width_dp = 360;
+  BreakpointRange simultaneous_visibility = {LayoutBreakpoint::kExpanded,
+                                             LayoutBreakpoint::kExtraLarge};
+};
+
+/// Fixed-slot adaptive page-body container with leading, main, and trailing
+/// panes.
+///
+/// The caller chooses the compact presentation with `setActivePane()`. On
+/// wider layouts the container retains that pane first, adds the main pane
+/// when available, then adds breakpoint-eligible side panes while their
+/// scaled minimum widths fit. It never changes navigation or replaces a
+/// missing active pane with another slot.
+class PaneLayout : public Container {
+ public:
+  /// Creates an empty match-parent pane layout with main selected by default.
+  explicit PaneLayout(ApplicationContext& context);
+
+  /// Detaches all stored slots before their references are released.
+  ~PaneLayout() override;
+
+  /// Borrows an immutable policy that must outlive this pane layout.
+  void setBreakpointPolicy(const LayoutBreakpointPolicy& policy);
+  void setBreakpointPolicy(LayoutBreakpointPolicy&&) = delete;
+
+  /// Changes the logical leading/trailing direction and requests layout.
+  void setLayoutDirection(LayoutDirection direction);
+
+  /// Returns the explicit logical leading/trailing direction.
+  LayoutDirection layoutDirection() const;
+
+  /// Sets the scaled minimum width reserved for main whenever it is docked.
+  void setMainMinWidthDp(int16_t width_dp);
+
+  /// Enables or disables breakpoint-driven simultaneous panes.
+  void setMultiPaneEnabled(bool enabled);
+
+  /// Returns whether breakpoint-driven simultaneous panes are enabled.
+  bool isMultiPaneEnabled() const;
+
+  /// Selects an attached pane for compact presentation.
+  ///
+  /// Returns false and preserves the existing selection when `role` is not
+  /// attached. Clearing the selected slot deliberately leaves no active pane.
+  bool setActivePane(PaneRole role);
+
+  /// Returns the caller-selected logical pane role.
+  PaneRole activePane() const;
+
+  /// Replaces the leading pane slot and its simultaneous-visibility rule.
+  void setLeadingPane(WidgetRef widget, PaneSpec spec = PaneSpec());
+
+  /// Clears the leading pane slot.
+  void clearLeadingPane();
+
+  /// Replaces the main pane slot; an empty reference clears it.
+  void setMainPane(WidgetRef widget);
+
+  /// Clears the main pane slot.
+  void clearMainPane();
+
+  /// Replaces the trailing pane slot and its simultaneous-visibility rule.
+  void setTrailingPane(WidgetRef widget, PaneSpec spec = PaneSpec());
+
+  /// Clears the trailing pane slot.
+  void clearTrailingPane();
+
+  /// Returns the ruler resolved for this pane layout's local bounds.
+  const LayoutMetrics& metrics() const { return metrics_; }
+
+  /// Returns whether the leading pane participated in the latest layout.
+  bool isLeadingVisible() const;
+
+  /// Returns whether the main pane participated in the latest layout.
+  bool isMainVisible() const;
+
+  /// Returns whether the trailing pane participated in the latest layout.
+  bool isTrailingVisible() const;
+
+ protected:
+  PreferredSize getPreferredSize() const override;
+  Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
+  void onLayout(bool changed, const Rect& rect) override;
+  int getChildrenCount() const override;
+  const Widget& getChild(int index) const override;
+  Widget& getChild(int index) override;
+
+ private:
+  struct PanePlan {
+    Rect leading_bounds = Rect(0, 0, -1, -1);
+    Rect main_bounds = Rect(0, 0, -1, -1);
+    Rect trailing_bounds = Rect(0, 0, -1, -1);
+    LayoutMetrics metrics;
+    bool leading_visible = false;
+    bool main_visible = false;
+    bool trailing_visible = false;
+  };
+
+  static void CheckPaneSpec(const PaneSpec& spec);
+
+  PanePlan resolvePlan(const Rect& bounds) const;
+  Widget* slotForRole(PaneRole role) const;
+  void replaceSlot(Widget*& slot, WidgetRef widget);
+  void applyVisibility(const PanePlan& plan);
+  void layoutSlot(Widget* widget, const Rect& bounds);
+
+  Widget* leading_;
+  Widget* main_;
+  Widget* trailing_;
+  const LayoutBreakpointPolicy* policy_;
+  PaneSpec leading_spec_;
+  PaneSpec trailing_spec_;
+  LayoutMetrics metrics_;
+  int16_t main_min_width_dp_;
+  uint8_t active_pane_ : 2;
+  uint8_t multi_pane_enabled_ : 1;
+  uint8_t direction_ : 1;
+};
+
+static_assert(sizeof(PaneLayout) <= sizeof(Container) + 4 * sizeof(void*) +
+                                        2 * sizeof(PaneSpec) +
+                                        sizeof(LayoutMetrics) + 16,
+              "PaneLayout must retain its fixed-slot RAM budget");
+
 }  // namespace roo_windows::material3
