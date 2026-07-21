@@ -12,7 +12,6 @@ current checked-in rail API and closes on the current shared framework APIs:
 - persistent collapsed and expanded rail layouts,
 - one selected destination with a Material 3 active indicator,
 - an optional header slot for a menu button, FAB, logo, or small composite,
-- optional divider and optional container fill,
 - optional badges on selected destinations through the landed
   `material3::Badge` helper,
 - and `paint(PaintContext&)`-based rendering that fits the current widget paint
@@ -104,6 +103,7 @@ This document is aligned against the Material 3 navigation rail references:
 - [Overview](https://m3.material.io/components/navigation-rail/overview)
 - [Specs](https://m3.material.io/components/navigation-rail/specs)
 - [Guidelines](https://m3.material.io/components/navigation-rail/guidelines)
+- [Material Components for Android navigation rail](https://github.com/material-components/material-components-android/blob/master/docs/components/NavigationRail.md)
 
 The main product signals carried into this design are:
 
@@ -117,7 +117,22 @@ The main product signals carried into this design are:
 5. badges are part of the component contract,
 6. collapsed badges sit on the icon's upper trailing corner,
 7. expanded badges sit beside the label text,
-8. and only one destination shows the active indicator at a time.
+8. only one destination shows the active indicator at a time,
+9. the collapsed rail is the default state and supports three through seven
+   top-level destinations,
+10. the expanded rail is the wider counterpart intended to replace the
+    navigation drawer,
+11. and every destination needs a meaningful text label for non-visual input
+    and accessibility, even when the compact presentation cannot show all of
+    it.
+
+Current platform implementations also allow expanded-only submenus and more
+than seven expanded destinations. Those features imply section storage,
+expanded-only overflow behavior, and a policy for collapsing while a hidden
+route is selected. They are deliberately outside the first embedded v1. The
+v1 rail keeps one shared sequence of at most seven destinations so every state
+can transition between collapsed and expanded layouts without changing route
+availability.
 
 ### Local Design References
 
@@ -144,19 +159,16 @@ Those references imply three important local constraints:
 1. Support the Material 3 collapsed and expanded persistent navigation rail
    layouts.
 2. Support one selected destination at a time.
-3. Support 3-7 destinations as the intended design range, while allowing fewer
-   during construction and tests.
+3. Support 3-7 destinations as the intended design range and a hard maximum of
+   seven in both layouts, while allowing fewer during construction and tests.
 4. Support an optional header slot above the destination group.
 5. Support top-aligned and center-aligned destination groups.
-6. Support optional divider painting on the content-adjacent edge.
-7. Support optional container fill so the rail can either own a visible surface
-   or sit directly on an ancestor surface.
-8. Support separate inactive and selected icons per destination.
-9. Support optional dot and text / number badges on some destinations without
+6. Support separate inactive and selected icons per destination.
+7. Support optional dot and text / number badges on some destinations without
    adding badge state to every destination instance.
-10. Keep the rail fixed while page content scrolls outside it; the rail itself
+8. Keep the rail fixed while page content scrolls outside it; the rail itself
     is not a scrolling surface.
-11. Provide a migration path for the current
+9. Provide a migration path for the current
     [NavigationPanel](../../../src/roo_windows/containers/navigation_panel.h) user of
     the legacy rail.
 
@@ -166,11 +178,16 @@ Those references imply three important local constraints:
    modes.
 2. Clicking an enabled destination must invoke a semantic rail callback.
 3. Clicking a different destination must also update the selected index.
-4. Hovered, focused, pressed, disabled, selected, and activated visuals must
+4. Invoking the selected destination again must have a distinct semantic
+   reselection hook.
+5. Up and Down keys must move focus between enabled destinations without
+   changing selection; normal Enter / Space activation must use the same
+   invocation path as touch.
+6. Hovered, focused, pressed, disabled, selected, and activated visuals must
    flow through the existing widget state model.
-5. Badge paint ordering must be correct under the current `PaintContext` /
+7. Badge paint ordering must be correct under the current `PaintContext` /
    `Clipper` exclusion pipeline.
-6. The base Material 3 rail API must not require per-destination stored
+8. The base Material 3 rail API must not require per-destination stored
    `std::function` callbacks.
 
 ### API Requirements
@@ -182,12 +199,15 @@ Those references imply three important local constraints:
 4. Keep standard destination labels as non-owning `roo::string_view`.
 5. Keep the header API generic: one widget slot, not separate menu-button and
    FAB stored fields.
-6. Keep badge behavior on the shared badge helper. If shared badge geometry
+6. Accept header and destination ownership through transient `WidgetRef`
+   parameters, then retain raw child pointers after `attachChild()`; never
+   store `WidgetRef` in the rail.
+7. Keep badge behavior on the shared badge helper. If shared badge geometry
    later needs a wider placement vocabulary, extend `badge/` itself rather
    than introducing a rail-local badge primitive.
-7. Use `paint(PaintContext&)` for widget paint; do not add a legacy `Canvas`
+8. Use `paint(PaintContext&)` for widget paint; do not add a legacy `Canvas`
    paint path.
-8. Keep modal presentation, predictive-back behavior, and adaptive navigation
+9. Keep modal presentation, predictive-back behavior, and adaptive navigation
    switching out of the base rail API.
 
 ### Embedded Constraints
@@ -200,6 +220,9 @@ Those references imply three important local constraints:
 4. Keep badge placement derived from current layout geometry rather than stored
    as another permanent per-instance policy field.
 5. Use pointer-size-aware size-budget assertions for the new public types.
+6. Detach the header and every destination in the rail destructor so borrowed
+   children survive and adopted children are deleted by the framework's sole
+   ownership record.
 
 ## Design Overview
 
@@ -218,7 +241,7 @@ starting point; the new Material 3 family is the target API.
 
 `NavigationRail` owns:
 
-- the outer rail surface and optional divider,
+- the outer rail surface,
 - the optional header slot,
 - the destination sequence,
 - the collapsed versus expanded layout mode,
@@ -251,7 +274,10 @@ The core decisions are:
 4. translate expanded badge placement into badge anchor geometry owned by the
    destination rather than adding a rail-local badge renderer,
 5. keep paint on the current `PaintContext` path,
-6. and leave modal / adaptive wrappers outside the base rail.
+6. reuse the interaction and ownership contracts already established by the
+   landed Material 3 navigation bar,
+7. and leave expanded-only sections, modal presentation, animation, and
+   adaptive wrappers outside the base rail.
 
 ## Design Details
 
@@ -260,11 +286,11 @@ The core decisions are:
 `NavigationRail` derives from `Container`.
 
 That choice is semantic and storage-driven. The rail owns a meaningful outer
-surface, optional divider, and child sequencing policy, so it belongs on the
-surface-owning branch. It also wants a stricter child model than `Panel`: one
-optional header plus a destination list. Deriving directly from `Container`
-avoids paying for `Panel`'s general child vector on top of the rail's dedicated
-destination storage.
+surface and child sequencing policy, so it belongs on the surface-owning
+branch. It also wants a stricter child model than `Panel`: one optional header
+plus a destination list. Deriving directly from `Container` avoids paying for
+`Panel`'s general child vector on top of the rail's dedicated destination
+storage.
 
 `NavigationRailDestination` derives from `BasicWidget`.
 
@@ -292,12 +318,17 @@ The migration boundary is explicit:
 
 The rail stores:
 
-- an optional header `WidgetRef`,
+- an optional raw header pointer,
 - a vector of destination pointers,
 - one selected-index field,
 - one collapsed / expanded layout bit,
-- one group-alignment bit,
-- and booleans for container-fill and divider visibility.
+- and one group-alignment bit.
+
+The raw pointers are child lookup, not ownership records. `setHeader()` and
+`add()` accept move-only `WidgetRef` parameters, retain the raw pointer, and
+move the parameter into `attachChild()`. Replacement, `clear()`, and the rail
+destructor call `detachChild()`; the widget's parent-owned bit remains the sole
+authority for deletion.
 
 The layout algorithm is:
 
@@ -306,20 +337,25 @@ The layout algorithm is:
 3. compute the total destination-group height for the active layout mode,
 4. place that group at the top or center of the remaining vertical space,
 5. give every destination the full available content width,
-6. use token-backed minimum heights and inter-item gaps for the active mode,
-7. and paint the divider on the content-adjacent edge when enabled.
+6. and use token-backed minimum heights and inter-item gaps for the active
+   mode.
 
 The rail does not scroll. If the available height is smaller than preferred,
 the implementation compresses free gap space to zero before it compresses any
 destination below the token-backed minimum height.
 
-Container fill and divider painting stay on the current `Container`
+Rail surface painting stays on the current `Container`
 child-first-surface-second pipeline:
 
 1. destination children paint first,
 2. the rail surface paints afterward through `paint(PaintContext&)`,
 3. child exclusions keep settled destination pixels from being overwritten,
 4. and the rail does not need a custom post-child badge or overlay stage.
+
+The v1 rail always owns its token-backed Material container. A divider and a
+"transparent container" switch are not Material rail anatomy, complicate the
+surface opacity contract, and add state to every instance. Callers that need a
+separator can place a divider beside the rail in the parent layout.
 
 ### `NavigationRailDestination`
 
@@ -362,8 +398,9 @@ are visible.
 Standard destination labels stay intentionally narrow:
 
 1. the widget stores one non-owning `roo::string_view`,
-2. explicit caller-authored newlines are honored,
-3. the widget does not auto-ellipsis, auto-hyphenate, or shrink text,
+2. the standard destination renders one line in both layouts and clips text
+   that does not fit,
+3. the widget does not auto-wrap, auto-ellipsis, auto-hyphenate, or shrink text,
 4. and richer text behavior is left to custom subclasses instead of inflating
    every destination instance.
 
@@ -374,6 +411,22 @@ Otherwise the selected state reuses the inactive icon with selected-state tint.
 
 That matches the checked-in Material 3 button and switch style: keep the public
 API semantic, and let the theme and current state resolve the final draw.
+
+#### Interaction State and Direct Paint
+
+The destination follows the landed navigation-bar interaction contract. It
+uses a custom overlay whose geometry is the indicator pill, commits touch
+selection on single-tap release so the final feedback frame settles into the
+selected indicator, and routes deferred or keyboard activation through
+`onClicked()`. One packed bit prevents that touch path from invoking the rail a
+second time.
+
+Hover, focus, press, drag, click-animation, enabled, and selected changes
+invalidate the indicator/content region. Destination paint resolves icon and
+label transparency against their final indicator or rail background, excludes
+those settled pixels, draws the lower-z indicator, and finally settles the
+remaining target rectangle. It returns an empty direct-paint exclusion so the
+precise exclusions registered by `paint()` remain authoritative.
 
 ### Badge Integration
 
@@ -492,6 +545,9 @@ One header slot covers:
 - or a small caller-built composite.
 
 The rail does not need dedicated stored fields for each of those cases.
+`WidgetRef` is only the ownership-transfer parameter. The rail retains a raw
+`Widget*` after attachment and detaches the previous header before attaching a
+replacement.
 
 ### Selection Ownership and Callbacks
 
@@ -508,11 +564,27 @@ Click handling is:
 2. if the index differs from the current selection, the rail updates the
    selected index,
 3. and only then calls
-   `NavigationRail::onSelectedIndexChanged(int old_index, int new_index)`.
+   `NavigationRail::onSelectedIndexChanged(int old_index, int new_index)`,
+4. otherwise it calls
+   `NavigationRail::onSelectedDestinationReselected(int index)`.
 
-Both hooks are virtual no-ops. That keeps the base rail free of stored
-callbacks while still giving adapters such as `NavigationPanel` a semantic seam
-for migration.
+All three hooks are virtual no-ops. That keeps the base rail free of stored
+callbacks while still giving adapters such as `NavigationPanel` a semantic
+seam for migration.
+
+The empty rail has selected index `-1`. Adding the first destination selects it
+without reporting an invocation. After that, `setSelectedIndex()` accepts only
+valid destination indices and the rail always has exactly one selected
+destination. Clearing all destinations returns the index to `-1`; there is no
+public "clear selection while populated" state.
+
+### Focus and Keyboard Navigation
+
+Every enabled destination participates in the inherited focus system. On key
+down or repeat, the rail maps Up and Down to directional focus movement within
+the rail. Moving focus does not move selection. Enter and Space use normal
+focused-widget activation and therefore reach the same invocation, selection,
+and reselection hooks as touch.
 
 ### Theme Resolution
 
@@ -523,7 +595,8 @@ The rail resolves its defaults from the active `Theme`:
 - inter-item gap and outer padding,
 - active-indicator shape and padding,
 - content colors and typography,
-- container color and divider color.
+- container color,
+- and state-layer color and opacity.
 
 Badge colors stay owned by the shared badge helper. The rail does not shadow
 them with a second badge palette; `material3::Badge` continues to use the badge
@@ -540,7 +613,6 @@ Logical leading / trailing semantics apply to:
 
 - expanded icon / label ordering,
 - collapsed and expanded badge gravity,
-- divider placement,
 - and synthetic expanded badge anchors.
 
 The parent still decides where the rail is placed. The rail owns only its
@@ -557,7 +629,7 @@ Target budgets for host-side tests are:
 2. `BadgedNavigationRailDestination`:
    `sizeof(NavigationRailDestination) + sizeof(Badge) + 4`
 3. `NavigationRail`:
-   `sizeof(Container) + sizeof(WidgetRef) + 4 * sizeof(void*) + 16`
+   `sizeof(Container) + sizeof(Widget*) + sizeof(std::vector<void*>) + 8`
 
 The important accounting rule is not the exact host-build byte count. It is the
 shape:
