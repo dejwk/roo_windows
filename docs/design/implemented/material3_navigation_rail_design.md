@@ -2,7 +2,10 @@
 
 ## Implementation status
 
-**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+**Implemented.** All five documented phases are present in the source tree,
+focused unit and golden tests, the migrated `NavigationPanel` consumer, and
+the build-covered Material 3 navigation-rail example. The status of existing
+and outstanding prerequisites is recorded in the [status index](../README.md).
 
 ## Objective
 

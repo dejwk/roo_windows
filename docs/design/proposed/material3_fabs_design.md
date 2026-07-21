@@ -66,7 +66,7 @@ As of 2026-05, the relevant current pieces are:
   and
   [src/roo_windows/core/overlay_spec.cpp](../../../src/roo_windows/core/overlay_spec.cpp),
 - and the Material 3 navigation rail design in
-  [material3_navigation_rail_design.md](material3_navigation_rail_design.md),
+  [material3_navigation_rail_design.md](../implemented/material3_navigation_rail_design.md),
   which already reserves a generic header slot that can host a FAB.
 
 What does not exist yet:

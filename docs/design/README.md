@@ -8,7 +8,7 @@ Design documents are filed by implementation status:
 - `in_progress/`: a usable subset or prerequisite has landed, but part of the defined scope remains.
 - `proposed/`: none of the design's own scope is implemented. Existing prerequisites may still be available.
 
-Status was audited against the source tree and tests on 2026-07-20. “Dependency status” distinguishes implemented prerequisites from proposed or partially implemented work; a design can be proposed even when all of its prerequisites are available.
+Status was audited against the source tree and tests on 2026-07-22. “Dependency status” distinguishes implemented prerequisites from proposed or partially implemented work; a design can be proposed even when all of its prerequisites are available.
 
 ## Implemented
 
@@ -22,6 +22,7 @@ Status was audited against the source tree and tests on 2026-07-20. “Dependenc
 | Horizontal page host | Viewport layout, adjacent swipe/settle, blit wrappers, examples, and tabs synchronization are implemented. |
 | Material 3 tabs | Fixed, scrollable, badged, and page-host-integrated tabs are implemented; later extensions are tracked as future work. |
 | Navigation bar | The compact and medium destination layouts, selection/reselection hooks, badges, keyboard traversal, focused tests/goldens, and example are implemented. |
+| Navigation rail | Collapsed and expanded destinations, semantic selection and reselection, header and group layout, badges, RTL behavior, migrated `NavigationPanel` coverage, and the emulator-backed example are implemented. |
 | Non-touch input | Keyboard acquisition, focus lifecycle, click/value/scroll control interaction, structured list/menu/tab/rail navigation, and hardware text entry are implemented. |
 | Paint context | Clipper/overlay integration and the widget paint-hook migration are implemented. |
 | Slider | Paint context, Material 3 theme support, declarative drag ownership, lifecycle-safe terminal delivery, and transient-pin value indicators are implemented. |
@@ -52,10 +53,9 @@ Status was audited against the source tree and tests on 2026-07-20. “Dependenc
 | FAB | Buttons and theme support are implemented; icon buttons are proposed. |
 | Icon buttons | Buttons, badges, click animation, and theme support are implemented; no icon-button implementation exists. |
 | Interaction overlay reveal | Point and area ripples, widget-local click animation, paint context, and the navigation bar's component-local fade are implemented; shared fade reveal and paint-owned overlay policy are not. |
-| Layout scaffold | Shared adaptive primitives, the fixed-slot `LayoutScaffold` shell, fixed-slot `PaneLayout`, and row-major `GridLayout` are implemented. Navigation rail and drawer remain outstanding; example migration remains. |
+| Layout scaffold | Shared adaptive primitives, the fixed-slot `LayoutScaffold` shell, fixed-slot `PaneLayout`, row-major `GridLayout`, and the build-covered catalog example are implemented. Navigation drawer remains outstanding component work. |
 | Menus | Badge, paint context, back routing, and non-touch input are implemented; presentation pins are proposed. Before implementation, the menu design must replace retained trigger/widget pointers with the copied-anchor and presenter-owned-pin rules from the in-progress transient-lifetime design. |
 | Navigation drawer | List support is in progress and back routing is implemented; dialogs are proposed, and no drawer implementation exists. |
-| Navigation rail | A legacy rail exists, but the Material 3 design is not implemented; lists are in progress and badges are implemented. |
 | Segmented buttons | Buttons are implemented; the superseding button-group design and this legacy component design are not implemented. |
 | Sheets | Paint/overflow foundations and shared back behavior are implemented; icon buttons are proposed. |
 | Snackbar | Paint/overflow foundations and non-touch input are implemented; scaffold is proposed. Before implementation, the snackbar design must replace queued non-owning strings and listener pointers with the ownership model required by the in-progress transient-lifetime design. |

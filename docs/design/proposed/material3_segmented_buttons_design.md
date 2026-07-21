@@ -54,7 +54,7 @@ this design needs:
 - [../in_progress/material3_lists_design.md](../in_progress/material3_lists_design.md) already closes on a
   shared-band paint model where the owner container keeps separator ownership
   instead of making every child paint overlapping borders.
-- [material3_navigation_rail_design.md](material3_navigation_rail_design.md)
+- [material3_navigation_rail_design.md](../implemented/material3_navigation_rail_design.md)
   already closes on the owner-container pattern for shared selection state and
   virtual no-op hooks instead of per-child stored callbacks.
 
@@ -104,7 +104,7 @@ The most relevant local references are:
 
 - [../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md)
 - [../in_progress/material3_lists_design.md](../in_progress/material3_lists_design.md)
-- [material3_navigation_rail_design.md](material3_navigation_rail_design.md)
+- [material3_navigation_rail_design.md](../implemented/material3_navigation_rail_design.md)
 - [widget_authoring.md](../../widget_authoring.md)
 - [../.github/instructions/roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
 

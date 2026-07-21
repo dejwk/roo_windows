@@ -52,7 +52,7 @@ The nearest current navigation surfaces are:
 
 - [src/roo_windows/containers/navigation_rail.h](../../../src/roo_windows/containers/navigation_rail.h)
 - [src/roo_windows/containers/navigation_panel.h](../../../src/roo_windows/containers/navigation_panel.h)
-- [docs/material3_navigation_rail_design.md](../proposed/material3_navigation_rail_design.md)
+- [docs/material3_navigation_rail_design.md](../implemented/material3_navigation_rail_design.md)
 
 Those surfaces are useful architectural context, but they are not the right
 public shape for a bottom navigation bar:
@@ -125,7 +125,7 @@ The main product signals carried into this design are:
 
 The most relevant local references are:
 
-- [material3_navigation_rail_design.md](../proposed/material3_navigation_rail_design.md)
+- [material3_navigation_rail_design.md](../implemented/material3_navigation_rail_design.md)
 - [../implemented/material3_badge_design.md](../implemented/material3_badge_design.md)
 - [../implemented/paint_context_design.md](../implemented/paint_context_design.md)
 - [widget_authoring.md](../../widget_authoring.md)
@@ -1013,7 +1013,7 @@ navigation widget to infrastructure that is still broader than this design.
 ## Future Work
 
 1. Add an adaptive navigation scaffold that switches between
-   `material3::NavigationBar` and the future Material 3 rail family.
+   `material3::NavigationBar` and the implemented Material 3 rail family.
 2. Add an accessibility-aware hide-on-scroll wrapper once the repo has a stable
    presentation shell for scroll-driven chrome.
 3. Add bottom-inset integration once `roo_windows` has a stable scaffold-level

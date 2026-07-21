@@ -55,7 +55,7 @@ What exists today:
   `material3::Badge`, a lightweight owner-painted adornment rather than a
   `Widget`.
 - [../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md) and
-  [material3_navigation_rail_design.md](../proposed/material3_navigation_rail_design.md)
+  [material3_navigation_rail_design.md](../implemented/material3_navigation_rail_design.md)
   establish the current Material 3 API style: semantic enums, virtual hooks,
   and pay-for-what-you-use subclassing for rare features.
 - [src/roo_windows/containers/scrollable_panel.h](../../../src/roo_windows/containers/scrollable_panel.h)
@@ -92,7 +92,7 @@ The most relevant local references are:
 - [../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md)
 - [../in_progress/material3_lists_design.md](../in_progress/material3_lists_design.md)
 - [../implemented/material3_badge_design.md](../implemented/material3_badge_design.md)
-- [material3_navigation_rail_design.md](../proposed/material3_navigation_rail_design.md)
+- [material3_navigation_rail_design.md](../implemented/material3_navigation_rail_design.md)
 
 ### Material 3 Sources
 

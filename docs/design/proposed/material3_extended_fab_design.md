@@ -69,7 +69,7 @@ What exists today:
   [../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md).
 - the navigation-rail design already anticipates FAB hosting in the rail header
   slot in
-  [material3_navigation_rail_design.md](material3_navigation_rail_design.md).
+  [material3_navigation_rail_design.md](../implemented/material3_navigation_rail_design.md).
 
 What does not exist yet:
 

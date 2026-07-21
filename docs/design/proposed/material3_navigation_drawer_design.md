@@ -27,8 +27,9 @@ adaptive shell.
 
 ## Motivation
 
-`roo_windows` has a legacy navigation rail and an in-progress Material 3 list
-substrate, but it has no Material 3 navigation drawer.
+`roo_windows` has a legacy navigation rail, an implemented Material 3
+navigation rail, and an in-progress Material 3 list substrate, but it has no
+Material 3 navigation drawer.
 
 That gap matters for three reasons:
 
@@ -45,7 +46,7 @@ expressive designs. The `roo_windows` drawer should therefore be implemented as
 an intentionally narrow baseline component family:
 
 - good support for standard and modal drawer patterns,
-- clean interoperability with the planned Material 3 navigation rail,
+- clean interoperability with the implemented Material 3 navigation rail,
 - and no attempt to make the drawer itself the adaptive navigation policy
   layer.
 
@@ -132,7 +133,7 @@ The most relevant local references are:
 
 - [../in_progress/material3_lists_design.md](../in_progress/material3_lists_design.md)
 - [../implemented/material3_badge_design.md](../implemented/material3_badge_design.md)
-- [material3_navigation_rail_design.md](material3_navigation_rail_design.md)
+- [material3_navigation_rail_design.md](../implemented/material3_navigation_rail_design.md)
 - [../implemented/paint_context_design.md](../implemented/paint_context_design.md)
 - [widget_authoring.md](../../widget_authoring.md)
 
@@ -244,7 +245,7 @@ turning into the adaptive shell that decides between bar, rail, and drawer.
 In practice that means:
 
 1. implement standard and modal drawer variants,
-2. align the drawer's selection and callback seams with the planned Material 3
+2. align the drawer's selection and callback seams with the implemented Material 3
    rail family,
 3. and leave rail-to-drawer adaptation to a future higher-level scaffold.
 

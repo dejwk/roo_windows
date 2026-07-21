@@ -134,7 +134,7 @@ The most relevant local references are:
 - [../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md)
 - [material3_fabs_design.md](material3_fabs_design.md)
 - [material3_menus_design.md](material3_menus_design.md)
-- [material3_navigation_rail_design.md](material3_navigation_rail_design.md)
+- [material3_navigation_rail_design.md](../implemented/material3_navigation_rail_design.md)
 - [../implemented/material3_badge_design.md](../implemented/material3_badge_design.md)
 - [widget_authoring.md](../../widget_authoring.md)
 
