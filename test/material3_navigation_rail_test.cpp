@@ -41,6 +41,12 @@ bool ContainsRect(const Rect& outer, const Rect& inner) {
          outer.yMax() >= inner.yMax();
 }
 
+bool TextBadgeStartsAtIconCenter(const Rect& icon_bounds,
+                                 const Rect& badge_bounds) {
+  return badge_bounds.xMin() == icon_bounds.xMin() + icon_bounds.width() / 2 &&
+         badge_bounds.yMax() == icon_bounds.yMin() + icon_bounds.height() / 2;
+}
+
 void ExpectDestinationPaintsEveryPixel(NavigationRailLayout layout,
                                        bool selected) {
   constexpr int16_t kWidth = 256;
@@ -84,8 +90,8 @@ void ExpectDestinationPaintsEveryPixel(NavigationRailLayout layout,
       int16_t py[] = {y};
       roo_display::Color pixel[1];
       offscreen.raster().readColors(px, py, 1, pixel);
-      EXPECT_NE(quantized_untouched, pixel[0]) << "at (" << x << ", " << y
-                                                << ')';
+      EXPECT_NE(quantized_untouched, pixel[0])
+          << "at (" << x << ", " << y << ')';
     }
   }
 }
@@ -192,16 +198,16 @@ TEST(Material3NavigationRail, ExpandedContentHugsIconAndLabel) {
   NavigationRailDestination destination(context, "Inbox",
                                         &ic_outlined_24_action_done());
 
-  static_cast<Widget&>(destination).layout(Rect(0, 0, Scaled(80) - 1,
-                                                 Scaled(64) - 1));
+  static_cast<Widget&>(destination)
+      .layout(Rect(0, 0, Scaled(80) - 1, Scaled(64) - 1));
   Rect collapsed_content =
       NavigationRailDestinationTestAccess::contentBounds(destination);
   EXPECT_FALSE(collapsed_content.empty());
 
   NavigationRailDestinationTestAccess::setLayout(
       destination, NavigationRailLayout::kExpanded);
-  static_cast<Widget&>(destination).layout(Rect(0, 0, Scaled(320) - 1,
-                                                 Scaled(64) - 1));
+  static_cast<Widget&>(destination)
+      .layout(Rect(0, 0, Scaled(320) - 1, Scaled(64) - 1));
   Rect expanded_content =
       NavigationRailDestinationTestAccess::contentBounds(destination);
   EXPECT_FALSE(expanded_content.empty());
@@ -227,8 +233,9 @@ TEST(Material3NavigationRail, BadgedDestinationCapsValuesAndStaysInTarget) {
   EXPECT_EQ(BadgeMode::kText, destination.badge().mode());
   EXPECT_EQ("999+", destination.badge().text());
   EXPECT_TRUE(ContainsRect(destination.bounds(), destination.badge().bounds()));
-  EXPECT_FALSE(NavigationRailDestinationTestAccess::iconBounds(destination)
-                   .empty());
+  EXPECT_TRUE(TextBadgeStartsAtIconCenter(
+      NavigationRailDestinationTestAccess::iconBounds(destination),
+      destination.badge().bounds()));
 
   NavigationRailDestinationTestAccess::setLayout(
       destination, NavigationRailLayout::kExpanded);
@@ -245,6 +252,25 @@ TEST(Material3NavigationRail, BadgedDestinationCapsValuesAndStaysInTarget) {
   EXPECT_TRUE(destination.badge().bounds().empty());
 }
 
+TEST(Material3NavigationRail, CollapsedTextBadgesAnchorAtIconCenter) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+  NavigationRail rail(context);
+  BadgedNavigationRailDestination destination(
+      context, "Inbox", &ic_outlined_24_action_bookmark());
+  destination.setBadgeValue(1000);
+  ASSERT_TRUE(rail.add(WidgetRef(destination)));
+  rail.measure(WidthSpec::Exactly(Scaled(80)), HeightSpec::Exactly(Scaled(64)));
+  static_cast<Widget&>(rail).layout(Rect(0, 0, Scaled(80) - 1, Scaled(64) - 1));
+
+  const Rect icon_bounds =
+      NavigationRailDestinationTestAccess::iconBounds(destination);
+  const Rect badge_bounds = destination.badge().bounds();
+  EXPECT_EQ(icon_bounds.xMin() + icon_bounds.width() / 2, badge_bounds.xMin());
+  EXPECT_EQ(icon_bounds.yMin() + icon_bounds.height() / 2, badge_bounds.yMax());
+}
+
 TEST(Material3NavigationRail, ExpandedBadgesMirrorBesideTheLabelInRtl) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
@@ -254,7 +280,8 @@ TEST(Material3NavigationRail, ExpandedBadgesMirrorBesideTheLabelInRtl) {
   BadgedNavigationRailDestination destination(
       context, "Inbox", &ic_outlined_24_action_bookmark());
   ASSERT_TRUE(rail.add(WidgetRef(destination)));
-  rail.measure(WidthSpec::Exactly(Scaled(320)), HeightSpec::Exactly(Scaled(96)));
+  rail.measure(WidthSpec::Exactly(Scaled(320)),
+               HeightSpec::Exactly(Scaled(96)));
   static_cast<Widget&>(rail).layout(
       Rect(0, 0, Scaled(320) - 1, Scaled(96) - 1));
   destination.setBadgeText("12");
@@ -295,8 +322,7 @@ TEST(Material3NavigationRail, RailOwnsSelectionAndReselection) {
   EXPECT_TRUE(inbox.selected());
   EXPECT_EQ(std::vector<int>({1}), rail.invoked);
   EXPECT_EQ(std::vector<int>({0}), rail.selected_during_invocation);
-  EXPECT_EQ((std::vector<std::pair<int, int>>{{0, 1}}),
-            rail.selection_changes);
+  EXPECT_EQ((std::vector<std::pair<int, int>>{{0, 1}}), rail.selection_changes);
   EXPECT_TRUE(rail.reselected.empty());
 
   NavigationRailDestinationTestAccess::click(inbox);
@@ -330,7 +356,7 @@ TEST(Material3NavigationRail, TouchReleaseCommitsSelectionOnlyOnce) {
 
   inbox_raw->onShowPress(inbox_raw->width() / 2, inbox_raw->height() / 2);
   NavigationRailDestinationTestAccess::tapUp(*inbox_raw, inbox_raw->width() / 2,
-                                              inbox_raw->height() / 2);
+                                             inbox_raw->height() / 2);
   EXPECT_TRUE(inbox_raw->isClicking());
   EXPECT_EQ(1, rail_raw->selectedIndex());
   EXPECT_TRUE(inbox_raw->selected());
@@ -443,7 +469,8 @@ TEST(Material3NavigationRail, ArrowKeysMoveFocusWithoutChangingSelection) {
   EXPECT_FALSE(third.selected());
   EXPECT_TRUE(rail.onKeyEvent(KeyEvent{KeyPhase::kRepeat, KeyCode::kUp, 0, 0}));
   EXPECT_EQ(&second, context.focus().focused());
-  EXPECT_FALSE(rail.onKeyEvent(KeyEvent{KeyPhase::kDown, KeyCode::kRight, 0, 0}));
+  EXPECT_FALSE(
+      rail.onKeyEvent(KeyEvent{KeyPhase::kDown, KeyCode::kRight, 0, 0}));
 }
 
 }  // namespace

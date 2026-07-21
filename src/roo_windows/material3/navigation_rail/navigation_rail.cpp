@@ -112,18 +112,18 @@ DestinationContentGeometry ResolveContentGeometry(
         target.height(), Scaled(tokens.collapsed_indicator_height_dp));
     const int16_t indicator_top = std::max<int16_t>(
         target.yMin(), (target.yMin() + target.yMax() + 1) / 2 -
-                            Scaled(tokens.destination_height_dp) / 2 +
-                            Scaled(4));
+                           Scaled(tokens.destination_height_dp) / 2 +
+                           Scaled(4));
     result.indicator_bounds = Rect(
         target.xMin() + (target.width() - indicator_width) / 2, indicator_top,
         target.xMin() + (target.width() - indicator_width) / 2 +
             indicator_width - 1,
         std::min<int16_t>(target.yMax(), indicator_top + indicator_height - 1));
-    result.icon_bounds = CenteredBounds(result.indicator_bounds,
-                                        metrics.icon_width, metrics.icon_height);
+    result.icon_bounds = CenteredBounds(
+        result.indicator_bounds, metrics.icon_width, metrics.icon_height);
     if (metrics.label_height > 0) {
-      const int16_t label_top = result.indicator_bounds.yMax() + 1 +
-                                Scaled(tokens.icon_label_gap_dp);
+      const int16_t label_top =
+          result.indicator_bounds.yMax() + 1 + Scaled(tokens.icon_label_gap_dp);
       if (label_top <= target.yMax()) {
         result.label_bounds =
             Rect(target.xMin(), label_top, target.xMax(),
@@ -139,8 +139,7 @@ DestinationContentGeometry ResolveContentGeometry(
   const int16_t gap = metrics.icon_width > 0 && metrics.label_width > 0
                           ? Scaled(tokens.icon_label_gap_dp)
                           : 0;
-  const int16_t content_width =
-      metrics.icon_width + gap + metrics.label_width;
+  const int16_t content_width = metrics.icon_width + gap + metrics.label_width;
   const int16_t content_height =
       std::max(metrics.icon_height, metrics.label_height);
   result.content_bounds = CenteredBounds(target, content_width, content_height);
@@ -277,8 +276,8 @@ void NavigationRailDestination::paint(PaintContext& ctx) const {
   const Color interaction_overlay = ctx.overlaySpec().base_overlay();
   const bool shows_indicator = selected() || interaction_overlay.a() != 0;
   if (interaction_overlay.a() != 0) {
-    indicator_color = roo_display::AlphaBlend(indicator_color,
-                                               interaction_overlay);
+    indicator_color =
+        roo_display::AlphaBlend(indicator_color, interaction_overlay);
   }
   const Color foreground_background =
       shows_indicator ? indicator_color : ctx.bgcolor();
@@ -295,7 +294,8 @@ void NavigationRailDestination::paint(PaintContext& ctx) const {
     tinted_icon.color_mode().setColor(content_color);
     PaintContext icon_context = ctx.clipped(geometry.icon_bounds);
     icon_context.setBgcolor(foreground_background);
-    icon_context.drawTiled(tinted_icon, geometry.icon_bounds, kCenter | kMiddle);
+    icon_context.drawTiled(tinted_icon, geometry.icon_bounds,
+                           kCenter | kMiddle);
     ctx.addExclusion(geometry.icon_bounds);
   }
 
@@ -417,8 +417,7 @@ NavigationRailGroupAlignment NavigationRail::groupAlignment() const {
   return static_cast<NavigationRailGroupAlignment>(group_alignment_);
 }
 
-void NavigationRail::setGroupAlignment(
-    NavigationRailGroupAlignment alignment) {
+void NavigationRail::setGroupAlignment(NavigationRailGroupAlignment alignment) {
   const uint8_t encoded = static_cast<uint8_t>(alignment);
   if (group_alignment_ == encoded) return;
   group_alignment_ = encoded;
@@ -542,10 +541,10 @@ Dimensions NavigationRail::onMeasure(WidthSpec width, HeightSpec height) {
   // A rail has one token-defined width for each presentation. The parent may
   // still constrain that width through its WidthSpec, for example when a
   // scaffold must make room for body content.
-  const XDim rail_width = width.resolveSize(
-      Scaled(layout() == NavigationRailLayout::kCollapsed
-                 ? tokens.collapsed_min_width_dp
-                 : tokens.expanded_min_width_dp));
+  const XDim rail_width =
+      width.resolveSize(Scaled(layout() == NavigationRailLayout::kCollapsed
+                                   ? tokens.collapsed_min_width_dp
+                                   : tokens.expanded_min_width_dp));
   // Children use the padded content width rather than the surface width. This
   // makes every destination's target area consistent with the eventual layout
   // and lets a generic header retain its natural width.
@@ -612,11 +611,15 @@ void NavigationRail::onLayout(bool changed, const Rect& rect) {
   if (header_ != nullptr && !header_->isGone()) {
     // Keep the generic header at its natural measured size and center it in
     // the rail. The destination group then occupies only the remaining band.
-    const Dimensions header_size = header_->measure(
-        WidthSpec::AtMost(content.width()), HeightSpec::AtMost(content.height()));
-    const XDim header_width = std::min<XDim>(content.width(), header_size.width());
-    const YDim header_height = std::min<YDim>(content.height(), header_size.height());
-    const XDim header_left = content.xMin() + (content.width() - header_width) / 2;
+    const Dimensions header_size =
+        header_->measure(WidthSpec::AtMost(content.width()),
+                         HeightSpec::AtMost(content.height()));
+    const XDim header_width =
+        std::min<XDim>(content.width(), header_size.width());
+    const YDim header_height =
+        std::min<YDim>(content.height(), header_size.height());
+    const XDim header_left =
+        content.xMin() + (content.width() - header_width) / 2;
     static_cast<Widget&>(*header_).layout(
         Rect(header_left, content.yMin(), header_left + header_width - 1,
              content.yMin() + header_height - 1));
@@ -655,9 +658,9 @@ void NavigationRail::onLayout(bool changed, const Rect& rect) {
       NavigationRailDestination* destination = destinations_[i];
       destination->measure(WidthSpec::Exactly(content.width()),
                            HeightSpec::Exactly(minimum_height));
-      static_cast<Widget&>(*destination).layout(
-          Rect(content.xMin(), destination_top, content.xMax(),
-               destination_top + minimum_height - 1));
+      static_cast<Widget&>(*destination)
+          .layout(Rect(content.xMin(), destination_top, content.xMax(),
+                       destination_top + minimum_height - 1));
       destination_top += minimum_height + gap;
     }
     return;
@@ -668,13 +671,14 @@ void NavigationRail::onLayout(bool changed, const Rect& rect) {
   // target, preserving the full-width hit-test contract.
   for (int i = 0; i < count; ++i) {
     const YDim next_top = static_cast<YDim>(
-        destination_top + (static_cast<int32_t>(i + 1) * available_height) /
-                              count);
+        destination_top +
+        (static_cast<int32_t>(i + 1) * available_height) / count);
     NavigationRailDestination* destination = destinations_[i];
     destination->measure(WidthSpec::Exactly(content.width()),
                          HeightSpec::Exactly(next_top - destination_top));
-    static_cast<Widget&>(*destination).layout(
-        Rect(content.xMin(), destination_top, content.xMax(), next_top - 1));
+    static_cast<Widget&>(*destination)
+        .layout(Rect(content.xMin(), destination_top, content.xMax(),
+                     next_top - 1));
     destination_top = next_top;
   }
 }
@@ -792,8 +796,8 @@ void BadgedNavigationRailDestination::relayoutBadge() {
   const Rect anchor = badgeAnchorBounds();
   if (anchor.empty()) return;
 
-  const bool rtl =
-      static_cast<LayoutDirection>(layout_direction_) == LayoutDirection::kRightToLeft;
+  const bool rtl = static_cast<LayoutDirection>(layout_direction_) ==
+                   LayoutDirection::kRightToLeft;
   BadgePlacement placement;
   if (layout() == NavigationRailLayout::kCollapsed) {
     placement.gravity = rtl ? BadgeGravity::kTopStart : BadgeGravity::kTopEnd;
@@ -804,29 +808,53 @@ void BadgedNavigationRailDestination::relayoutBadge() {
   }
   if (!badge_.layout(anchor, placement)) return;
 
+  if (layout() == NavigationRailLayout::kCollapsed &&
+      badge_.mode() == BadgeMode::kText) {
+    // Match the navigation bar: a widened text badge grows from the icon
+    // center toward the logical trailing/top corner. Its lower inner corner
+    // therefore stays attached to the icon rather than drifting toward the
+    // icon's outer edge. RTL mirrors this to the lower right corner.
+    const Rect text_bounds = badge_.bounds();
+    const int16_t anchor_center_x = anchor.xMin() + anchor.width() / 2;
+    const int16_t anchor_center_y = anchor.yMin() + anchor.height() / 2;
+    const int16_t horizontal_offset =
+        rtl ? anchor_center_x - text_bounds.xMax()
+            : text_bounds.xMin() - anchor_center_x;
+    placement.horizontal_offset = static_cast<int8_t>(
+        std::clamp<int16_t>(horizontal_offset, INT8_MIN, INT8_MAX));
+    placement.vertical_offset = static_cast<int8_t>(std::clamp<int16_t>(
+        anchor_center_y - text_bounds.yMax(), INT8_MIN, INT8_MAX));
+    if (!badge_.layout(anchor, placement)) return;
+  }
+
   const Rect badge_bounds = badge_.bounds();
   int16_t horizontal_delta = 0;
   int16_t vertical_delta = 0;
-  if (badge_bounds.xMin() < bounds().xMin()) {
-    horizontal_delta = bounds().xMin() - badge_bounds.xMin();
-  } else if (badge_bounds.xMax() > bounds().xMax()) {
-    horizontal_delta = bounds().xMax() - badge_bounds.xMax();
-  }
-  if (badge_bounds.yMin() < bounds().yMin()) {
-    vertical_delta = bounds().yMin() - badge_bounds.yMin();
-  } else if (badge_bounds.yMax() > bounds().yMax()) {
-    vertical_delta = bounds().yMax() - badge_bounds.yMax();
+  const bool preserve_compact_text_anchor =
+      layout() == NavigationRailLayout::kCollapsed &&
+      badge_.mode() == BadgeMode::kText;
+  if (!preserve_compact_text_anchor) {
+    if (badge_bounds.xMin() < bounds().xMin()) {
+      horizontal_delta = bounds().xMin() - badge_bounds.xMin();
+    } else if (badge_bounds.xMax() > bounds().xMax()) {
+      horizontal_delta = bounds().xMax() - badge_bounds.xMax();
+    }
+    if (badge_bounds.yMin() < bounds().yMin()) {
+      vertical_delta = bounds().yMin() - badge_bounds.yMin();
+    } else if (badge_bounds.yMax() > bounds().yMax()) {
+      vertical_delta = bounds().yMax() - badge_bounds.yMax();
+    }
   }
   if (horizontal_delta == 0 && vertical_delta == 0) return;
 
   // Badge offsets are measured toward the anchor center. Top-start and
-  // top-end therefore need opposite horizontal corrections to stay in bounds.
+  // top-end therefore need opposite horizontal corrections when clamping.
   const int16_t horizontal_offset =
       placement.gravity == BadgeGravity::kTopStart
           ? placement.horizontal_offset + horizontal_delta
           : placement.horizontal_offset - horizontal_delta;
-  placement.horizontal_offset = static_cast<int8_t>(std::clamp<int16_t>(
-      horizontal_offset, INT8_MIN, INT8_MAX));
+  placement.horizontal_offset = static_cast<int8_t>(
+      std::clamp<int16_t>(horizontal_offset, INT8_MIN, INT8_MAX));
   placement.vertical_offset = static_cast<int8_t>(std::clamp<int16_t>(
       placement.vertical_offset + vertical_delta, INT8_MIN, INT8_MAX));
   badge_.layout(anchor, placement);
@@ -839,8 +867,8 @@ Rect BadgedNavigationRailDestination::badgeAnchorBounds() const {
   if (label_bounds.empty()) label_bounds = iconBounds();
   if (label_bounds.empty()) return EmptyRect();
 
-  const bool rtl =
-      static_cast<LayoutDirection>(layout_direction_) == LayoutDirection::kRightToLeft;
+  const bool rtl = static_cast<LayoutDirection>(layout_direction_) ==
+                   LayoutDirection::kRightToLeft;
   const int16_t anchor_x =
       rtl ? label_bounds.xMin() - 1 : label_bounds.xMax() + 1;
   return Rect(anchor_x, label_bounds.yMin(), anchor_x, label_bounds.yMax());
