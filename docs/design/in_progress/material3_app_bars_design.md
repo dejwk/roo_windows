@@ -72,7 +72,7 @@ What exists today:
   adaptive widths, and hit routing,
 - `examples/material3/app_bars/app_bars.ino` demonstrates the implemented
   family,
-- [material3_layout_scaffold_design.md](../proposed/material3_layout_scaffold_design.md)
+- [material3_layout_scaffold_design.md](../implemented/material3_layout_scaffold_design.md)
   already defines one top-bar slot on the scaffold,
 - [material3_toolbars_design.md](../proposed/material3_toolbars_design.md) already closes
   on bottom and floating toolbars and explicitly excludes top app bars,
@@ -177,7 +177,7 @@ already called out separately in
 
 The most relevant local references are:
 
-- [material3_layout_scaffold_design.md](../proposed/material3_layout_scaffold_design.md)
+- [material3_layout_scaffold_design.md](../implemented/material3_layout_scaffold_design.md)
 - [material3_toolbars_design.md](../proposed/material3_toolbars_design.md)
 - [material3_text_fields_design.md](../proposed/material3_text_fields_design.md)
 - [non_touch_input_design.md](../implemented/non_touch_input_design.md)

@@ -2,11 +2,12 @@
 
 ## Implementation status
 
-**In progress.** Phases 1 through 5 are implemented: shared adaptive
+**Implemented.** Phases 1 through 5 are implemented: shared adaptive
 primitives, the fixed-slot `LayoutScaffold` shell, fixed-slot `PaneLayout`,
 row-major `GridLayout`, and the representative catalog composition. Navigation
-rail and drawer components remain separate work. The status of existing and
-outstanding prerequisites is recorded in the [status index](../README.md).
+rail is integrated by the catalog shell; navigation drawer remains separate
+component work. The status of existing and outstanding prerequisites is
+recorded in the [status index](../README.md).
 
 ## Objective
 
@@ -31,28 +32,27 @@ designed under `docs/`. It deliberately stops short of modal shell management,
 automatic platform inset discovery, animated pane transitions, interactive
 splitters, and floating panes. The latter pane features are specified below as
 incremental extensions so that v1 does not accidentally close off their state,
-geometry, or ownership requirements. The first implementation slice is the
-compact scaffold required by the roadmap; pane and grid containers are
-deferred, independently complete slices rather than placeholder APIs.
+geometry, or ownership requirements. The delivery began with the compact
+scaffold required by the roadmap, then completed pane and grid containers as
+independently usable APIs rather than placeholder declarations.
 
 ## Motivation
 
-`roo_windows` can already build local arrangements with `HorizontalLayout`,
-`VerticalLayout`, and `FlexLayout`, but it still lacks the adaptive page-level
-structure that makes Material 3 applications look intentional instead of
-hand-packed.
+Before this work, `roo_windows` could build local arrangements with
+`HorizontalLayout`, `VerticalLayout`, and `FlexLayout`, but lacked the
+adaptive page-level structure that makes Material 3 applications look
+intentional instead of hand-packed.
 
-The current navigation component work already points at that gap. The
-navigation bar, rail, drawer, toolbar, and snackbar designs all defer higher-
-level scaffold decisions to a future layout surface. Landing that surface now
-creates the place where those families can be composed into good-looking,
-breakpoint-aware applications.
+The navigation component work pointed at that gap. The navigation bar, rail,
+drawer, toolbar, and snackbar designs defer higher-level shell policy to a
+layout surface. The implemented scaffold now provides the place where those
+families can be composed into good-looking, breakpoint-aware applications.
 
 ## Background
 
-### Current Starting Point in `roo_windows`
+### Prior Starting Point in `roo_windows`
 
-The checked-in layout surface is still mostly local and mechanical:
+At the outset, the checked-in layout surface was mostly local and mechanical:
 
 - [src/roo_windows/containers/horizontal_layout.h](../../../src/roo_windows/containers/horizontal_layout.h)
 - [src/roo_windows/containers/vertical_layout.h](../../../src/roo_windows/containers/vertical_layout.h)
@@ -1139,9 +1139,9 @@ Notes:
    "future overlay panes" or "future foldables". Those features are not part
    of the initial contract.
 
-## Implementation Plan
+## Completed Implementation Record
 
-Implementation work for these phases follows the repo-local
+Implementation work for these completed phases followed the repo-local
 [roo_windows widget authoring instruction](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
 ### Phase 1: Implement Shared Adaptive Primitives
@@ -1280,7 +1280,7 @@ that hosts `examples/material3/layout_scaffold/layout_scaffold.ino`.
 
 ## Testing Plan
 
-Validation coverage should include:
+Validation coverage includes:
 
 1. `material3_layout_scaffold_test` for scaled breakpoint boundaries,
    per-slot participation, ownership-safe replacement, safety insets, ruler

@@ -109,7 +109,7 @@ The most relevant nearby pieces are:
   defines the intended inline-editing and secure-field story,
 - [../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md), which provides
   the action-button family for connect, forget, save, and cancel actions,
-- [material3_layout_scaffold_design.md](material3_layout_scaffold_design.md),
+- [material3_layout_scaffold_design.md](../implemented/material3_layout_scaffold_design.md),
   which defines the page-shell direction for header plus scrolling-body
   surfaces,
 - [non_touch_input_design.md](../implemented/non_touch_input_design.md), which defines the
