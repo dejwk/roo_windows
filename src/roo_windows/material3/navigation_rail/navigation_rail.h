@@ -28,6 +28,7 @@ enum class NavigationRailGroupAlignment : uint8_t {
 };
 
 class NavigationRail;
+class NavigationRailDestinationTestAccess;
 
 /// Badge-free Material 3 navigation-rail destination.
 ///
@@ -94,6 +95,7 @@ class NavigationRailDestination : public BasicWidget {
 
  private:
   friend class NavigationRail;
+  friend class NavigationRailDestinationTestAccess;
 
   void setLayoutFromRail(NavigationRailLayout layout);
   void setSelectedFromRail(bool selected);
