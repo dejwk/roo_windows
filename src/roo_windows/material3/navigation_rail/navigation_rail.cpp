@@ -54,6 +54,23 @@ Rect CenteredBounds(const Rect& bounds, int16_t width, int16_t height) {
   return Rect(left, top, left + width - 1, top + height - 1);
 }
 
+Rect ExpandedIndicatorBounds(const Rect& target, const Rect& content_bounds) {
+  if (target.empty() || content_bounds.empty()) return EmptyRect();
+  const internal::NavigationRailTokens& tokens =
+      internal::kNavigationRailTokens;
+  const int16_t indicator_width = std::min<int16_t>(
+      target.width(), content_bounds.width() +
+                          2 * Scaled(tokens.expanded_indicator_padding_dp));
+  const int16_t indicator_height = std::min<int16_t>(
+      target.height(), Scaled(tokens.expanded_indicator_height_dp));
+  return CenteredBounds(
+      Rect(content_bounds.xMin() - Scaled(tokens.expanded_indicator_padding_dp),
+           target.yMin(),
+           content_bounds.xMax() + Scaled(tokens.expanded_indicator_padding_dp),
+           target.yMax()),
+      indicator_width, indicator_height);
+}
+
 DestinationContentMetrics ResolveContentMetrics(roo::string_view label,
                                                 const MonoIcon* icon) {
   const internal::NavigationRailTokens& tokens =
@@ -144,19 +161,8 @@ DestinationContentGeometry ResolveContentGeometry(
         metrics.label_width, metrics.label_height);
   }
 
-  const int16_t indicator_width = std::min<int16_t>(
-      target.width(), result.content_bounds.width() +
-                          2 * Scaled(tokens.expanded_indicator_padding_dp));
-  const int16_t indicator_height = std::min<int16_t>(
-      target.height(), Scaled(tokens.expanded_indicator_height_dp));
-  result.indicator_bounds = CenteredBounds(
-      Rect(result.content_bounds.xMin() -
-               Scaled(tokens.expanded_indicator_padding_dp),
-           target.yMin(),
-           result.content_bounds.xMax() +
-               Scaled(tokens.expanded_indicator_padding_dp),
-           target.yMax()),
-      indicator_width, indicator_height);
+  result.indicator_bounds =
+      ExpandedIndicatorBounds(target, result.content_bounds);
   return result;
 }
 
@@ -257,7 +263,13 @@ Dimensions NavigationRailDestination::getSuggestedMinimumDimensions() const {
 }
 
 void NavigationRailDestination::paint(PaintContext& ctx) const {
-  const DestinationContentGeometry geometry = ResolveContentGeometry(*this);
+  DestinationContentGeometry geometry = ResolveContentGeometry(*this);
+  if (layout() == NavigationRailLayout::kExpanded) {
+    // Badged destinations extend this virtual content envelope with their
+    // cached badge bounds so the active indicator hugs the full cluster.
+    geometry.indicator_bounds =
+        ExpandedIndicatorBounds(bounds(), destinationContentBounds());
+  }
   const Color content_color = ContentColorFor(*this);
   Color indicator_color =
       selected() ? theme().material3Theme().color.secondaryContainer
@@ -345,6 +357,14 @@ Rect NavigationRailDestination::destinationContentBounds() const {
   return ResolveContentGeometry(*this).content_bounds;
 }
 
+Rect NavigationRailDestination::iconBounds() const {
+  return ResolveContentGeometry(*this).icon_bounds;
+}
+
+Rect NavigationRailDestination::labelBounds() const {
+  return ResolveContentGeometry(*this).label_bounds;
+}
+
 Rect NavigationRailDestination::getDirectPaintExclusionBounds() const {
   return EmptyRect();
 }
@@ -372,7 +392,8 @@ NavigationRail::NavigationRail(ApplicationContext& context)
       selected_index_(-1),
       layout_(static_cast<uint8_t>(NavigationRailLayout::kCollapsed)),
       group_alignment_(
-          static_cast<uint8_t>(NavigationRailGroupAlignment::kTop)) {}
+          static_cast<uint8_t>(NavigationRailGroupAlignment::kTop)),
+      layout_direction_(static_cast<uint8_t>(LayoutDirection::kLeftToRight)) {}
 
 NavigationRail::~NavigationRail() {
   clear();
@@ -401,6 +422,19 @@ void NavigationRail::setGroupAlignment(
   const uint8_t encoded = static_cast<uint8_t>(alignment);
   if (group_alignment_ == encoded) return;
   group_alignment_ = encoded;
+  requestLayout();
+}
+
+LayoutDirection NavigationRail::layoutDirection() const {
+  return static_cast<LayoutDirection>(layout_direction_);
+}
+
+void NavigationRail::setLayoutDirection(LayoutDirection direction) {
+  const uint8_t encoded = static_cast<uint8_t>(direction);
+  if (layout_direction_ == encoded) return;
+  layout_direction_ = encoded;
+  propagateLayoutToDestinations();
+  invalidateInterior();
   requestLayout();
 }
 
@@ -451,6 +485,7 @@ bool NavigationRail::add(WidgetRef destination) {
   destinations_.push_back(raw_destination);
   attachChild(std::move(destination));
   raw_destination->setLayoutFromRail(layout());
+  raw_destination->setLayoutDirectionFromRail(layoutDirection());
   if (selected_index_ < 0) {
     selected_index_ = 0;
     raw_destination->setSelectedFromRail(true);
@@ -677,6 +712,7 @@ void NavigationRail::updateSelectionFromDestination(
 void NavigationRail::propagateLayoutToDestinations() {
   for (NavigationRailDestination* destination : destinations_) {
     destination->setLayoutFromRail(layout());
+    destination->setLayoutDirectionFromRail(layoutDirection());
   }
 }
 
@@ -686,6 +722,128 @@ int NavigationRail::indexOf(
     if (destinations_[i] == &destination) return i;
   }
   return -1;
+}
+
+BadgedNavigationRailDestination::BadgedNavigationRailDestination(
+    ApplicationContext& context, roo::string_view label, const MonoIcon* icon,
+    const MonoIcon* selected_icon)
+    : NavigationRailDestination(context, label, icon, selected_icon),
+      badge_(),
+      layout_direction_(static_cast<uint8_t>(LayoutDirection::kLeftToRight)) {}
+
+const Badge& BadgedNavigationRailDestination::badge() const { return badge_; }
+
+void BadgedNavigationRailDestination::hideBadge() {
+  if (!badge_.visible()) return;
+  badge_.hide();
+  invalidateInterior();
+}
+
+void BadgedNavigationRailDestination::setBadgeDot() {
+  badge_.setDot();
+  relayoutBadge();
+  invalidateInterior();
+}
+
+void BadgedNavigationRailDestination::setBadgeText(roo::string_view text) {
+  badge_.setText(text);
+  relayoutBadge();
+  invalidateInterior();
+}
+
+void BadgedNavigationRailDestination::setBadgeValue(unsigned int number) {
+  badge_.setValue(number);
+  relayoutBadge();
+  invalidateInterior();
+}
+
+void BadgedNavigationRailDestination::paint(PaintContext& ctx) const {
+  // The badge is front-most. Its helper settles its direct pixels and records
+  // exclusions before base paint fills the lower-z indicator and rail surface.
+  badge_.paint(ctx, theme());
+  NavigationRailDestination::paint(ctx);
+}
+
+void BadgedNavigationRailDestination::onLayout(bool changed, const Rect& rect) {
+  (void)changed;
+  (void)rect;
+  relayoutBadge();
+}
+
+Rect BadgedNavigationRailDestination::destinationContentBounds() const {
+  Rect content = NavigationRailDestination::destinationContentBounds();
+  if (layout() == NavigationRailLayout::kExpanded && badge_.visible()) {
+    content = UnionBounds(content, badge_.bounds());
+  }
+  return content;
+}
+
+void BadgedNavigationRailDestination::setLayoutDirectionFromRail(
+    LayoutDirection direction) {
+  const uint8_t encoded = static_cast<uint8_t>(direction);
+  if (layout_direction_ == encoded) return;
+  layout_direction_ = encoded;
+  relayoutBadge();
+  invalidateInterior();
+}
+
+void BadgedNavigationRailDestination::relayoutBadge() {
+  if (!badge_.visible()) return;
+  const Rect anchor = badgeAnchorBounds();
+  if (anchor.empty()) return;
+
+  const bool rtl =
+      static_cast<LayoutDirection>(layout_direction_) == LayoutDirection::kRightToLeft;
+  BadgePlacement placement;
+  if (layout() == NavigationRailLayout::kCollapsed) {
+    placement.gravity = rtl ? BadgeGravity::kTopStart : BadgeGravity::kTopEnd;
+  } else {
+    // A one-pixel synthetic anchor just beyond the label maps the shared
+    // corner-based helper onto the Material expanded beside-label treatment.
+    placement.gravity = rtl ? BadgeGravity::kTopEnd : BadgeGravity::kTopStart;
+  }
+  if (!badge_.layout(anchor, placement)) return;
+
+  const Rect badge_bounds = badge_.bounds();
+  int16_t horizontal_delta = 0;
+  int16_t vertical_delta = 0;
+  if (badge_bounds.xMin() < bounds().xMin()) {
+    horizontal_delta = bounds().xMin() - badge_bounds.xMin();
+  } else if (badge_bounds.xMax() > bounds().xMax()) {
+    horizontal_delta = bounds().xMax() - badge_bounds.xMax();
+  }
+  if (badge_bounds.yMin() < bounds().yMin()) {
+    vertical_delta = bounds().yMin() - badge_bounds.yMin();
+  } else if (badge_bounds.yMax() > bounds().yMax()) {
+    vertical_delta = bounds().yMax() - badge_bounds.yMax();
+  }
+  if (horizontal_delta == 0 && vertical_delta == 0) return;
+
+  // Badge offsets are measured toward the anchor center. Top-start and
+  // top-end therefore need opposite horizontal corrections to stay in bounds.
+  const int16_t horizontal_offset =
+      placement.gravity == BadgeGravity::kTopStart
+          ? placement.horizontal_offset + horizontal_delta
+          : placement.horizontal_offset - horizontal_delta;
+  placement.horizontal_offset = static_cast<int8_t>(std::clamp<int16_t>(
+      horizontal_offset, INT8_MIN, INT8_MAX));
+  placement.vertical_offset = static_cast<int8_t>(std::clamp<int16_t>(
+      placement.vertical_offset + vertical_delta, INT8_MIN, INT8_MAX));
+  badge_.layout(anchor, placement);
+}
+
+Rect BadgedNavigationRailDestination::badgeAnchorBounds() const {
+  if (layout() == NavigationRailLayout::kCollapsed) return iconBounds();
+
+  Rect label_bounds = labelBounds();
+  if (label_bounds.empty()) label_bounds = iconBounds();
+  if (label_bounds.empty()) return EmptyRect();
+
+  const bool rtl =
+      static_cast<LayoutDirection>(layout_direction_) == LayoutDirection::kRightToLeft;
+  const int16_t anchor_x =
+      rtl ? label_bounds.xMin() - 1 : label_bounds.xMax() + 1;
+  return Rect(anchor_x, label_bounds.yMin(), anchor_x, label_bounds.yMax());
 }
 
 }  // namespace material3

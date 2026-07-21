@@ -8,6 +8,7 @@
 #include "roo_backport/string_view.h"
 #include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/container.h"
+#include "roo_windows/core/layout_direction.h"
 #include "roo_windows/material3/badge/badge.h"
 #include "roo_windows/material3/theme.h"
 #include "roo_windows/widgets/icon.h"
@@ -91,6 +92,12 @@ class NavigationRailDestination : public BasicWidget {
   /// Returns the content bounds that determine active-indicator geometry.
   virtual Rect destinationContentBounds() const;
 
+  /// Returns the resolved icon slot used to anchor compact badges.
+  Rect iconBounds() const;
+
+  /// Returns the resolved label slot used for expanded badge anchoring.
+  Rect labelBounds() const;
+
   Rect getDirectPaintExclusionBounds() const override;
 
  private:
@@ -98,6 +105,7 @@ class NavigationRailDestination : public BasicWidget {
   friend class NavigationRailDestinationTestAccess;
 
   void setLayoutFromRail(NavigationRailLayout layout);
+  virtual void setLayoutDirectionFromRail(LayoutDirection direction) {}
   void setSelectedFromRail(bool selected);
 
   roo::string_view label_;
@@ -136,12 +144,14 @@ class BadgedNavigationRailDestination : public NavigationRailDestination {
  protected:
   void onLayout(bool changed, const Rect& rect) override;
   Rect destinationContentBounds() const override;
+  void setLayoutDirectionFromRail(LayoutDirection direction) override;
 
  private:
   void relayoutBadge();
   Rect badgeAnchorBounds() const;
 
   Badge badge_;
+  uint8_t layout_direction_ : 1;
 };
 
 /// Material 3 persistent navigation-rail container with up to seven routes.
@@ -167,6 +177,12 @@ class NavigationRail : public Container {
 
   /// Changes whether destinations are top- or center-aligned below the header.
   void setGroupAlignment(NavigationRailGroupAlignment alignment);
+
+  /// Returns the logical direction used for badge placement.
+  LayoutDirection layoutDirection() const;
+
+  /// Changes the logical direction used for badge placement.
+  void setLayoutDirection(LayoutDirection direction);
 
   /// Replaces the optional header child with a borrowed or adopted widget.
   void setHeader(WidgetRef header);
@@ -226,6 +242,7 @@ class NavigationRail : public Container {
   int8_t selected_index_;
   uint8_t layout_ : 1;
   uint8_t group_alignment_ : 1;
+  uint8_t layout_direction_ : 1;
 };
 
 }  // namespace material3

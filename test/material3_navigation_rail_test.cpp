@@ -35,6 +35,12 @@ roo_display::Color QuantizeToArgb4444(roo_display::Color color) {
   return mode.toArgbColor(mode.fromArgbColor(color));
 }
 
+bool ContainsRect(const Rect& outer, const Rect& inner) {
+  return !inner.empty() && outer.xMin() <= inner.xMin() &&
+         outer.yMin() <= inner.yMin() && outer.xMax() >= inner.xMax() &&
+         outer.yMax() >= inner.yMax();
+}
+
 void ExpectDestinationPaintsEveryPixel(NavigationRailLayout layout,
                                        bool selected) {
   constexpr int16_t kWidth = 256;
@@ -206,6 +212,65 @@ TEST(Material3NavigationRail, ExpandedContentHugsIconAndLabel) {
 TEST(Material3NavigationRail, DestinationPaintSettlesEveryPixelExactlyOnce) {
   ExpectDestinationPaintsEveryPixel(NavigationRailLayout::kCollapsed, true);
   ExpectDestinationPaintsEveryPixel(NavigationRailLayout::kExpanded, true);
+}
+
+TEST(Material3NavigationRail, BadgedDestinationCapsValuesAndStaysInTarget) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+  BadgedNavigationRailDestination destination(
+      context, "Inbox", &ic_outlined_24_action_bookmark());
+
+  destination.setBadgeValue(1000);
+  static_cast<Widget&>(destination)
+      .layout(Rect(0, 0, Scaled(80) - 1, Scaled(64) - 1));
+  EXPECT_EQ(BadgeMode::kText, destination.badge().mode());
+  EXPECT_EQ("999+", destination.badge().text());
+  EXPECT_TRUE(ContainsRect(destination.bounds(), destination.badge().bounds()));
+  EXPECT_FALSE(NavigationRailDestinationTestAccess::iconBounds(destination)
+                   .empty());
+
+  NavigationRailDestinationTestAccess::setLayout(
+      destination, NavigationRailLayout::kExpanded);
+  static_cast<Widget&>(destination)
+      .layout(Rect(0, 0, Scaled(320) - 1, Scaled(64) - 1));
+  destination.setBadgeDot();
+  EXPECT_EQ(BadgeMode::kDot, destination.badge().mode());
+  EXPECT_TRUE(ContainsRect(destination.bounds(), destination.badge().bounds()));
+  EXPECT_TRUE(ContainsRect(
+      NavigationRailDestinationTestAccess::contentBounds(destination),
+      destination.badge().bounds()));
+  destination.hideBadge();
+  EXPECT_FALSE(destination.badge().visible());
+  EXPECT_TRUE(destination.badge().bounds().empty());
+}
+
+TEST(Material3NavigationRail, ExpandedBadgesMirrorBesideTheLabelInRtl) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+  NavigationRail rail(context);
+  rail.setLayout(NavigationRailLayout::kExpanded);
+  BadgedNavigationRailDestination destination(
+      context, "Inbox", &ic_outlined_24_action_bookmark());
+  ASSERT_TRUE(rail.add(WidgetRef(destination)));
+  rail.measure(WidthSpec::Exactly(Scaled(320)), HeightSpec::Exactly(Scaled(96)));
+  static_cast<Widget&>(rail).layout(
+      Rect(0, 0, Scaled(320) - 1, Scaled(96) - 1));
+  destination.setBadgeText("12");
+  const Rect ltr_label =
+      NavigationRailDestinationTestAccess::labelBounds(destination);
+  const Rect ltr_badge = destination.badge().bounds();
+  EXPECT_GT(ltr_badge.xMin(), ltr_label.xMax());
+
+  rail.setLayoutDirection(LayoutDirection::kRightToLeft);
+  static_cast<Widget&>(rail).layout(
+      Rect(0, 0, Scaled(320) - 1, Scaled(96) - 1));
+  const Rect rtl_label =
+      NavigationRailDestinationTestAccess::labelBounds(destination);
+  const Rect rtl_badge = destination.badge().bounds();
+  EXPECT_LT(rtl_badge.xMax(), rtl_label.xMin());
+  EXPECT_TRUE(ContainsRect(destination.bounds(), rtl_badge));
 }
 
 TEST(Material3NavigationRail, RailOwnsSelectionAndReselection) {

@@ -21,6 +21,14 @@ class NavigationRailDestinationTestAccess {
     return destination.destinationContentBounds();
   }
 
+  static Rect iconBounds(const NavigationRailDestination& destination) {
+    return destination.iconBounds();
+  }
+
+  static Rect labelBounds(const NavigationRailDestination& destination) {
+    return destination.labelBounds();
+  }
+
   static void paint(const NavigationRailDestination& destination,
                     PaintContext& ctx) {
     destination.paint(ctx);
