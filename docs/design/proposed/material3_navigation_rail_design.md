@@ -180,9 +180,10 @@ Those references imply three important local constraints:
 3. Clicking a different destination must also update the selected index.
 4. Invoking the selected destination again must have a distinct semantic
    reselection hook.
-5. Up and Down keys must move focus between enabled destinations without
-   changing selection; normal Enter / Space activation must use the same
-   invocation path as touch.
+5. Up and Down keys must move focus through focusable rail children, including
+   an interactive header when present, without changing destination selection;
+   normal Enter / Space activation must use the same destination invocation
+   path as touch.
 6. Hovered, focused, pressed, disabled, selected, and activated visuals must
    flow through the existing widget state model.
 7. Badge paint ordering must be correct under the current `PaintContext` /
@@ -498,9 +499,7 @@ The rail follows the current `PaintContext` paint pipeline exactly.
 
 `NavigationRail::paint(PaintContext&)` paints only rail-owned surface content:
 
-- optional container fill,
-- optional divider,
-- and any other rail-level background treatment.
+- the token-backed rail container.
 
 `NavigationRailDestination::paint(PaintContext&)` paints destination-owned
 foreground content:
@@ -582,9 +581,10 @@ public "clear selection while populated" state.
 
 Every enabled destination participates in the inherited focus system. On key
 down or repeat, the rail maps Up and Down to directional focus movement within
-the rail. Moving focus does not move selection. Enter and Space use normal
-focused-widget activation and therefore reach the same invocation, selection,
-and reselection hooks as touch.
+the rail. A focusable header participates in the same geometric traversal.
+Moving focus does not move selection. Enter and Space use normal focused-widget
+activation and therefore reach the same invocation, selection, and reselection
+hooks as touch when a destination is focused.
 
 ### Theme Resolution
 
@@ -677,12 +677,21 @@ class NavigationRailDestination : public BasicWidget {
   NavigationRailLayout layout() const;
 
   bool isClickable() const override;
+  OverlayType getOverlayType() const override { return OVERLAY_CUSTOM; }
+  ClickOverlayAnimation getClickOverlayAnimation() const override {
+    return ClickOverlayAnimation::kFade;
+  }
+  bool useOverlayOnSelection() const override { return false; }
+  ColorToken effectiveOverlayColorRole() const override;
   Dimensions getSuggestedMinimumDimensions() const override;
   void paint(PaintContext& ctx) const override;
 
  protected:
+  void onSingleTapUp(XDim x, YDim y) override;
   void onClicked() override;
+  void notifyStateChanged(uint16_t state_diff) override;
   virtual Rect destinationContentBounds() const;
+  Rect getDirectPaintExclusionBounds() const override;
 
  private:
   friend class NavigationRail;
@@ -694,6 +703,7 @@ class NavigationRailDestination : public BasicWidget {
   const MonoIcon* selected_icon_;
   uint8_t layout_ : 1;
   uint8_t selected_ : 1;
+  uint8_t click_handled_on_release_ : 1;
 };
 
 class BadgedNavigationRailDestination : public NavigationRailDestination {
@@ -727,18 +737,13 @@ class NavigationRail : public Container {
   static constexpr uint8_t kMaxDestinations = 7;
 
   explicit NavigationRail(ApplicationContext& context);
+  ~NavigationRail() override;
 
   NavigationRailLayout layout() const;
   void setLayout(NavigationRailLayout layout);
 
   NavigationRailGroupAlignment groupAlignment() const;
   void setGroupAlignment(NavigationRailGroupAlignment alignment);
-
-  bool showsContainer() const;
-  void setShowContainer(bool show);
-
-  bool showsDivider() const;
-  void setShowDivider(bool show);
 
   void setHeader(WidgetRef header);
   void clearHeader();
@@ -748,11 +753,11 @@ class NavigationRail : public Container {
 
   int destinationCount() const;
 
-  bool add(NavigationRailDestination& destination);
-  bool add(std::unique_ptr<NavigationRailDestination> destination);
+  bool add(WidgetRef destination);
   void clear();
 
-  ColorRole containerRole() const override;
+  ColorToken containerRole() const override;
+  Color background() const override;
   void paint(PaintContext& ctx) const override;
 
  protected:
@@ -761,21 +766,22 @@ class NavigationRail : public Container {
   Widget& getChild(int idx) override;
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
   void onLayout(bool changed, const Rect& rect) override;
+  bool onKeyEvent(const KeyEvent& event) override;
 
   virtual void onDestinationInvoked(int index) {}
   virtual void onSelectedIndexChanged(int old_index, int new_index) {}
+  virtual void onSelectedDestinationReselected(int index) {}
 
  private:
   void updateSelectionFromDestination(NavigationRailDestination& destination);
   void propagateLayoutToDestinations();
+  int indexOf(const NavigationRailDestination& destination) const;
 
-  WidgetRef header_;
+  Widget* header_;
   std::vector<NavigationRailDestination*> destinations_;
   int8_t selected_index_;
   uint8_t layout_ : 1;
   uint8_t group_alignment_ : 1;
-  bool show_container_;
-  bool show_divider_;
 };
 
 }  // namespace material3
@@ -790,11 +796,18 @@ class NavigationRail : public Container {
    Badge placement is derived from the current layout mode and logical
    direction.
 3. `clear()` clears destinations but preserves the header slot.
-4. `setSelectedIndex(-1)` clears the current selection.
+4. `setSelectedIndex()` ignores invalid indices. The populated rail cannot be
+   left without a selection; `-1` occurs only while it is empty.
 5. The new Material 3 family lands beside the current legacy
    `roo_windows::NavigationRail`; it does not change that symbol in place.
 6. If a later revision needs a wider shared badge placement vocabulary, extend
    the shared badge helper rather than adding a second badge model here.
+7. `WidgetRef` parameters may borrow a caller-owned widget or adopt a
+   `std::unique_ptr`; the rail stores only attached raw pointers and detaches
+   them in its destructor.
+8. Child traversal exposes the header first when present, followed by
+   destinations in insertion order. `clear()` detaches destinations only; the
+   destructor then detaches the header.
 
 ## Implementation Plan
 
@@ -835,9 +848,11 @@ Code slice:
    `NavigationRailDestination`.
 2. Implement the full-width target-area paint, selected-icon fallback, and
    content-hugging indicator geometry.
-3. Keep the base destination on `paint(PaintContext&)`; do not add a legacy
+3. Implement the custom indicator overlay, touch-release commit guard, and
+   state-driven invalidation used by the landed navigation bar.
+4. Keep the base destination on `paint(PaintContext&)`; do not add a legacy
    `Canvas` paint entry point.
-4. Add focused tests and goldens for collapsed and expanded enabled, disabled,
+5. Add focused tests and goldens for collapsed and expanded enabled, disabled,
    selected, and unselected destinations.
 
 Proposed commit message:
@@ -859,18 +874,19 @@ Code slice:
 1. Implement `NavigationRail` add / clear / header / selection behavior and the
    seven-destination cap.
 2. Lay out the rail for top and center group alignment in both layout modes.
-3. Paint the optional container fill and divider on the current
-   `Container` surface path.
-4. Wire destination clicks through the rail-owned selection model and virtual
-   semantic callbacks.
+3. Paint the token-backed container on the current `Container` surface path.
+4. Wire destination touch and keyboard activation through the rail-owned
+   selection and reselection model and virtual semantic callbacks.
+5. Add Up / Down directional focus movement without coupling focus to
+   selection.
 
 Proposed commit message:
 
 > Material 3 navigation rail Phase 3: implement the rail container.
 >
 > Add the persistent `NavigationRail` surface, header slot, destination
-> sequencing, selection ownership, and optional divider / container-fill
-> behavior.
+> sequencing, child ownership, selection / reselection callbacks, and vertical
+> keyboard focus behavior.
 
 Validation: run `bazel test //:material3_navigation_rail_test` with focused
 selection, add / clear, and layout cases.
@@ -931,13 +947,15 @@ that hosts `examples/material3/navigation_rail/navigation_rail.ino`.
 
 Validation coverage should include:
 
-1. `material3_navigation_rail_test` for defaults, header replacement,
-   destination-count limits, label lifetime contract, selection changes, and
+1. `material3_navigation_rail_test` for defaults, borrowed and adopted header
+   replacement, destructor detach behavior, destination-count limits, label
+   lifetime contract, first-item auto-selection, invalid-index rejection,
+   selection / reselection callback ordering, vertical focus movement, and
    size-budget assertions.
 2. `material3_navigation_rail_golden_test` for collapsed and expanded
-   destinations, selected and unselected states, divider and container-off
-   rendering, and collapsed / expanded badge placement.
-3. RTL-focused render cases for divider edge placement and badge mirroring.
+   destinations; selected, unselected, disabled, focused, pressed, and hovered
+   states; long-label clipping; and collapsed / expanded badge placement.
+3. RTL-focused render cases for expanded content ordering and badge mirroring.
 4. Example compilation and migrated consumer coverage once `NavigationPanel` or
    another in-repo adapter is switched over.
 
@@ -989,14 +1007,26 @@ adaptive switching to a navigation bar are not properties of every persistent
 rail instance. Carrying that state on the base rail would overpay RAM for the
 common case.
 
+#### Add Per-Instance Container or Divider Switches
+
+This was rejected.
+
+The Material rail owns a container and does not include a divider in its
+current anatomy. Optional transparency also changes `SurfaceWidget` opacity
+and invalidation semantics, while both switches cost state on every rail.
+Applications that need separation can compose a divider beside the rail.
+
 ## Future Work
 
 1. Add a modal expanded-rail wrapper once the repo has a scaffold-level modal
    presentation shell.
-2. Add an adaptive navigation scaffold that switches between a future Material
-   3 navigation bar and the rail.
+2. Add an adaptive navigation scaffold that switches between the landed
+   Material 3 navigation bar and the rail.
 3. Add shared badge-placement extensions in `material3/badge` if multiple
    components eventually need placements that cannot be expressed cleanly as
    owner-supplied anchor bounds.
 4. Add animated collapsed / expanded transitions once the static rail family is
    in place and can be profiled independently.
+5. Add expanded-only sections and more than seven expanded destinations once
+   the component has a bounded overflow policy and a defined collapse rule for
+   routes that are not available in collapsed mode.

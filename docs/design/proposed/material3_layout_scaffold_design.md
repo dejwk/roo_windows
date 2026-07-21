@@ -737,10 +737,19 @@ ruler tokens. It must not accumulate page-specific decisions such as whether a
 supporting pane docks, floats, stacks below the main pane, or hides. Those
 decisions belong to a separate future immutable `PaneArrangementPolicy`.
 
-An arrangement policy maps the resolver request to a bounded plan. The v1
-policy is `dock-or-hide`: preserve the active and main panes, dock eligible side
-panes when their minima fit, and otherwise remove candidates in the documented
-order. Later policies may add deterministic modes such as:
+An arrangement policy maps the resolver request to a bounded topology: pane
+participation, dock axis/order, and docked/floating presentation. The shared
+measurement step then measures children against that topology and produces the
+final geometry plan. Keeping these as two bounded stages matters for vertical
+reflow, where a child's height may not be known until it is measured at the
+selected exact width. A policy must not choose a topology from the resulting
+measured height and then repeatedly choose again in the same layout pass; any
+overflow after measurement uses deterministic degradation instead of an
+oscillating retry loop.
+
+The v1 policy is `dock-or-hide`: preserve the active and main panes, dock
+eligible side panes when their minima fit, and otherwise remove candidates in
+the documented order. Later policies may add deterministic modes such as:
 
 - `dock-or-float`, in which a side pane overlays the main pane before hiding,
 - `dock-or-reflow`, in which a supporting pane moves below the main content
@@ -748,20 +757,28 @@ order. Later policies may add deterministic modes such as:
 - and application-defined breakpoint/posture tables that select among those
   modes without changing attached widgets.
 
-Reflow is plan-level placement, not child-tree mutation. The plan records a
-vertical or horizontal dock axis and ordered regions; measurement applies that
-plan to the existing role slots. Policies receive explicit width, height, and
-caller-supplied posture inputs rather than discovering host state. They must be
-immutable while borrowed, allocation-free during measure/layout, and return a
-valid plan within fixed role/count bounds. If a policy cannot satisfy pane
+Reflow is plan-level placement, not child-tree mutation. The topology records a
+vertical or horizontal dock axis and ordered regions; measurement applies it to
+the existing role slots. A future reflow host may carry axis-specific minimum
+and preferred extents as opt-in sidecar constraints rather than enlarging
+`PaneSpec` for every v1 instance. Horizontally docked panes continue to use
+`PaneSpec`; vertically reflowed children are measured at their assigned exact
+width and against those vertical constraints before the final bounds are
+resolved.
+
+Policies receive explicit width, height, and caller-supplied posture inputs
+rather than discovering host state. They must be immutable while borrowed,
+allocation-free during measure/layout, and return a valid topology within fixed
+role/count bounds. If a policy or its measured result cannot satisfy pane
 minima, the shared degradation pass applies the same active/main/leading/
 trailing preservation rules as v1.
 
 This separation allows policy support to land after static `PaneLayout`: first
-extract the already-tested v1 resolver behind the default policy, then add a
-borrowed policy setter and plan validation, and finally add individual reflow
-or floating modes. Existing callers that set no arrangement policy continue to
-receive byte-for-byte-equivalent dock-or-hide geometry.
+expose the already-tested v1 resolver to an opt-in policy host/subclass, then
+add a borrowed policy and plan validation there, and finally add individual
+reflow or floating modes. Existing `PaneLayout` callers continue to receive
+identical dock-or-hide geometry without paying for a policy pointer or
+interaction state.
 
 #### RTL Behavior
 
@@ -1192,7 +1209,9 @@ Code slice:
    priority.
 3. Enforce scaled pane minima and `main_min_width_dp` before allowing
    additional panes to remain visible.
-4. Add focused tests and goldens for compact list-to-detail selection,
+4. Keep visibility and geometry resolution in one allocation-free, bounded,
+   side-effect-free internal pass, then apply the resulting plan to children.
+5. Add focused tests and goldens for compact list-to-detail selection,
    supporting-pane, three-pane, short-height caller override, collapse, and RTL
    mirroring.
 
@@ -1317,9 +1336,11 @@ This was rejected.
 
 Material does describe more advanced layered layouts, but the base need in
 `roo_windows` is still canonical page structure. Overlay panes add presentation
-and input ownership, while resizing adds drag state and persistence policy to
-every pane instance. Those features should be proven as opt-in hosts or
-subclasses after static pane selection lands.
+and input ownership, while resizing adds drag state and a persistence seam.
+Putting that state directly into v1 would charge every pane instance for an
+optional desktop interaction. The shared resolution-plan boundary described
+above preserves an incremental path for opt-in hosts or subclasses after
+static pane selection lands.
 
 #### Copy the Policy Table Into Every Container
 
@@ -1351,10 +1372,20 @@ pretending that all targets can discover them locally.
 
 1. Add a scaffold-level floating slot for FABs, snackbars, and other promoted
    overlays once the repo has a stable layering policy.
-2. Add overlay / levitate pane presentation for compact supporting-pane flows.
-3. Add an opt-in resizable pane host/subclass with persisted splitter positions;
-   consider a second handle only for true three-pane desktop layouts.
-4. Add foldable hinge / spacer integration once `roo_windows` has a stable
+2. Add an opt-in resizable pane host/subclass using logical dp width overrides,
+   one splitter per adjacent docked pair, and application-owned persistence.
+   Prove drag cancellation, min-width clamping, temporary collapse/restoration,
+   keyboard adjustment, RTL, and the completion callback before adding a
+   second handle to three-pane layouts.
+3. Add one-side-pane floating presentation on the shared pane plan. Prove
+   non-consuming geometry, safe-bound clamping, paint/hit-test precedence, and
+   stable widget/active-role ownership; leave dismissal and Back to the caller's
+   presentation controller.
+4. Add an immutable opt-in arrangement policy after the default dock-or-hide
+   resolver is established. Land dock-or-float and dock-or-reflow separately,
+   with validation for breakpoint, height/posture input, RTL, unsatisfied
+   minima, and deterministic fallback.
+5. Add foldable hinge / spacer integration once `roo_windows` has a stable
    way to receive posture geometry from the host platform.
-5. Add a higher-level adaptive navigation shell that wires future Material 3
+6. Add a higher-level adaptive navigation shell that wires future Material 3
    bar, rail, and drawer widgets into one convenience API.
