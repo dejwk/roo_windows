@@ -18,9 +18,13 @@ struct NavigationRailTokens {
   int16_t collapsed_indicator_height_dp;
   int16_t expanded_indicator_padding_dp;
   int16_t expanded_indicator_height_dp;
+  int16_t outer_horizontal_padding_dp;
+  int16_t outer_vertical_padding_dp;
+  int16_t header_destination_gap_dp;
+  int16_t destination_gap_dp;
 };
 
 inline constexpr NavigationRailTokens kNavigationRailTokens = {
-    80, 256, 64, 24, 4, 64, 32, 16, 40};
+    80, 256, 64, 24, 4, 64, 32, 16, 40, 8, 16, 16, 8};
 
 }  // namespace roo_windows::material3::internal

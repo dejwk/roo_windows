@@ -312,14 +312,24 @@ void NavigationRailDestination::paint(PaintContext& ctx) const {
 
 void NavigationRailDestination::onSingleTapUp(XDim x, YDim y) {
   Widget::onSingleTapUp(x, y);
-  // Selection ownership is added with the rail container in Phase 3. Keep the
-  // guard explicit now so the destination continues to use one activation path
-  // when that semantic callback is wired in.
-  click_handled_on_release_ = false;
+  if (parent() != nullptr && isEnabled()) {
+    // The destination owns its pill feedback, so commit selection before the
+    // final click-animation frame can settle into the unselected rail surface.
+    // onClicked() still receives the framework's deferred completion signal;
+    // the packed guard prevents a duplicate rail invocation.
+    click_handled_on_release_ = true;
+    static_cast<NavigationRail*>(parent())->updateSelectionFromDestination(
+        *this);
+  }
 }
 
 void NavigationRailDestination::onClicked() {
+  const bool click_was_handled_on_release = click_handled_on_release_ != 0;
   click_handled_on_release_ = false;
+  if (parent() != nullptr && !click_was_handled_on_release) {
+    static_cast<NavigationRail*>(parent())->updateSelectionFromDestination(
+        *this);
+  }
   Widget::onClicked();
 }
 
@@ -353,6 +363,329 @@ void NavigationRailDestination::setSelectedFromRail(bool selected) {
   setSelected(selected);
   invalidateInterior();
   requestLayout();
+}
+
+NavigationRail::NavigationRail(ApplicationContext& context)
+    : Container(context),
+      header_(nullptr),
+      destinations_(),
+      selected_index_(-1),
+      layout_(static_cast<uint8_t>(NavigationRailLayout::kCollapsed)),
+      group_alignment_(
+          static_cast<uint8_t>(NavigationRailGroupAlignment::kTop)) {}
+
+NavigationRail::~NavigationRail() {
+  clear();
+  clearHeader();
+}
+
+NavigationRailLayout NavigationRail::layout() const {
+  return static_cast<NavigationRailLayout>(layout_);
+}
+
+void NavigationRail::setLayout(NavigationRailLayout layout) {
+  const uint8_t encoded = static_cast<uint8_t>(layout);
+  if (layout_ == encoded) return;
+  layout_ = encoded;
+  propagateLayoutToDestinations();
+  invalidateInterior();
+  requestLayout();
+}
+
+NavigationRailGroupAlignment NavigationRail::groupAlignment() const {
+  return static_cast<NavigationRailGroupAlignment>(group_alignment_);
+}
+
+void NavigationRail::setGroupAlignment(
+    NavigationRailGroupAlignment alignment) {
+  const uint8_t encoded = static_cast<uint8_t>(alignment);
+  if (group_alignment_ == encoded) return;
+  group_alignment_ = encoded;
+  requestLayout();
+}
+
+void NavigationRail::setHeader(WidgetRef header) {
+  Widget* incoming = header.get();
+  if (incoming == header_) return;
+  if (incoming != nullptr) CHECK(incoming->parent() == nullptr);
+
+  Widget* previous = header_;
+  header_ = nullptr;
+  if (previous != nullptr) detachChild(previous);
+  if (incoming != nullptr) {
+    header_ = incoming;
+    attachChild(std::move(header));
+  }
+  invalidateInterior();
+  requestLayout();
+}
+
+void NavigationRail::clearHeader() { setHeader(WidgetRef()); }
+
+int NavigationRail::selectedIndex() const { return selected_index_; }
+
+void NavigationRail::setSelectedIndex(int index) {
+  if (index < 0 || index >= destinationCount() || index == selected_index_) {
+    return;
+  }
+  const int old_index = selected_index_;
+  selected_index_ = static_cast<int8_t>(index);
+  for (int i = 0; i < destinationCount(); ++i) {
+    destinations_[i]->setSelectedFromRail(i == selected_index_);
+  }
+  onSelectedIndexChanged(old_index, selected_index_);
+  invalidateInterior();
+}
+
+int NavigationRail::destinationCount() const {
+  return static_cast<int>(destinations_.size());
+}
+
+bool NavigationRail::add(WidgetRef destination) {
+  if (destination.get() == nullptr || destinationCount() >= kMaxDestinations) {
+    return false;
+  }
+  NavigationRailDestination* raw_destination =
+      static_cast<NavigationRailDestination*>(destination.get());
+  CHECK(raw_destination->parent() == nullptr);
+  destinations_.push_back(raw_destination);
+  attachChild(std::move(destination));
+  raw_destination->setLayoutFromRail(layout());
+  if (selected_index_ < 0) {
+    selected_index_ = 0;
+    raw_destination->setSelectedFromRail(true);
+  }
+  invalidateInterior();
+  requestLayout();
+  return true;
+}
+
+void NavigationRail::clear() {
+  if (destinations_.empty()) return;
+  while (!destinations_.empty()) {
+    NavigationRailDestination* destination = destinations_.back();
+    destinations_.pop_back();
+    detachChild(destination);
+  }
+  selected_index_ = -1;
+  invalidateInterior();
+  requestLayout();
+}
+
+::roo_windows::material3::ColorToken NavigationRail::containerRole() const {
+  return ColorToken::kSurface;
+}
+
+Color NavigationRail::background() const {
+  return theme().material3Theme().color.surface;
+}
+
+void NavigationRail::paint(PaintContext& ctx) const { ctx.clear(); }
+
+int NavigationRail::getChildrenCount() const {
+  return destinationCount() + (header_ != nullptr ? 1 : 0);
+}
+
+const Widget& NavigationRail::getChild(int idx) const {
+  CHECK(idx >= 0);
+  CHECK_LT(idx, getChildrenCount());
+  if (header_ != nullptr) {
+    if (idx == 0) return *header_;
+    --idx;
+  }
+  return *destinations_[idx];
+}
+
+Widget& NavigationRail::getChild(int idx) {
+  return const_cast<Widget&>(
+      static_cast<const NavigationRail&>(*this).getChild(idx));
+}
+
+Dimensions NavigationRail::onMeasure(WidthSpec width, HeightSpec height) {
+  const internal::NavigationRailTokens& tokens =
+      internal::kNavigationRailTokens;
+  // A rail has one token-defined width for each presentation. The parent may
+  // still constrain that width through its WidthSpec, for example when a
+  // scaffold must make room for body content.
+  const XDim rail_width = width.resolveSize(
+      Scaled(layout() == NavigationRailLayout::kCollapsed
+                 ? tokens.collapsed_min_width_dp
+                 : tokens.expanded_min_width_dp));
+  // Children use the padded content width rather than the surface width. This
+  // makes every destination's target area consistent with the eventual layout
+  // and lets a generic header retain its natural width.
+  const XDim content_width = std::max<XDim>(
+      0, rail_width - 2 * Scaled(tokens.outer_horizontal_padding_dp));
+  const YDim vertical_padding = Scaled(tokens.outer_vertical_padding_dp);
+  YDim desired_height = 2 * vertical_padding;
+
+  // The header is optional and is measured independently: unlike destinations
+  // it is a caller-supplied composite and may choose a narrower natural width.
+  // Its separation gap exists only when there is a destination group below it.
+  if (header_ != nullptr && !header_->isGone()) {
+    const Dimensions header_size = header_->measure(
+        WidthSpec::AtMost(content_width), HeightSpec::Unspecified(0));
+    desired_height += header_size.height();
+    if (!destinations_.empty()) {
+      desired_height += Scaled(tokens.header_destination_gap_dp);
+    }
+  }
+
+  // Destinations always receive the full content width and stack vertically.
+  // Height remains unconstrained here so each destination can report its
+  // layout-mode minimum; the parent HeightSpec resolves the final rail height.
+  for (int i = 0; i < destinationCount(); ++i) {
+    const Dimensions destination_size = destinations_[i]->measure(
+        WidthSpec::Exactly(content_width), HeightSpec::Unspecified(0));
+    desired_height += destination_size.height();
+    if (i > 0) desired_height += Scaled(tokens.destination_gap_dp);
+  }
+  return Dimensions(rail_width, height.resolveSize(desired_height));
+}
+
+void NavigationRail::onLayout(bool changed, const Rect& rect) {
+  (void)changed;
+  const internal::NavigationRailTokens& tokens =
+      internal::kNavigationRailTokens;
+  if (rect.empty()) {
+    // An empty parent target must also clear stale child geometry. Otherwise a
+    // detached or clipped rail could leave old child hit targets reachable.
+    if (header_ != nullptr) static_cast<Widget&>(*header_).layout(EmptyRect());
+    for (NavigationRailDestination* destination : destinations_) {
+      static_cast<Widget&>(*destination).layout(EmptyRect());
+    }
+    return;
+  }
+
+  const XDim horizontal_padding = Scaled(tokens.outer_horizontal_padding_dp);
+  const YDim vertical_padding = Scaled(tokens.outer_vertical_padding_dp);
+  // The rail surface owns the outer padding. Destinations receive this entire
+  // inner width, which is the full-width target area described by the rail
+  // contract; their indicator remains narrower and is resolved internally.
+  const Rect content(
+      rect.xMin() + horizontal_padding, rect.yMin() + vertical_padding,
+      rect.xMax() - horizontal_padding, rect.yMax() - vertical_padding);
+  if (content.empty()) {
+    if (header_ != nullptr) static_cast<Widget&>(*header_).layout(EmptyRect());
+    for (NavigationRailDestination* destination : destinations_) {
+      static_cast<Widget&>(*destination).layout(EmptyRect());
+    }
+    return;
+  }
+
+  YDim destination_top = content.yMin();
+  if (header_ != nullptr && !header_->isGone()) {
+    // Keep the generic header at its natural measured size and center it in
+    // the rail. The destination group then occupies only the remaining band.
+    const Dimensions header_size = header_->measure(
+        WidthSpec::AtMost(content.width()), HeightSpec::AtMost(content.height()));
+    const XDim header_width = std::min<XDim>(content.width(), header_size.width());
+    const YDim header_height = std::min<YDim>(content.height(), header_size.height());
+    const XDim header_left = content.xMin() + (content.width() - header_width) / 2;
+    static_cast<Widget&>(*header_).layout(
+        Rect(header_left, content.yMin(), header_left + header_width - 1,
+             content.yMin() + header_height - 1));
+    destination_top = content.yMin() + header_height;
+    if (!destinations_.empty()) {
+      destination_top = std::min<YDim>(
+          content.yMax() + 1,
+          destination_top + Scaled(tokens.header_destination_gap_dp));
+    }
+  } else if (header_ != nullptr) {
+    static_cast<Widget&>(*header_).layout(EmptyRect());
+  }
+
+  if (destinations_.empty() || destination_top > content.yMax()) return;
+  const YDim available_height = content.yMax() - destination_top + 1;
+  const int count = destinationCount();
+  const YDim minimum_height = Scaled(tokens.destination_height_dp);
+  const YDim preferred_gaps = Scaled(tokens.destination_gap_dp);
+  const int32_t preferred_total =
+      static_cast<int32_t>(count) * minimum_height +
+      static_cast<int32_t>(count - 1) * preferred_gaps;
+  // Preserve token-height destinations whenever possible. Under pressure the
+  // inter-item gaps are the first discretionary space to disappear.
+  const YDim gap = preferred_total <= available_height ? preferred_gaps : 0;
+  const YDim group_height = preferred_total <= available_height
+                                ? static_cast<YDim>(preferred_total)
+                                : available_height;
+  if (groupAlignment() == NavigationRailGroupAlignment::kCenter &&
+      group_height < available_height) {
+    // Center only the destination group; the header stays top-aligned.
+    destination_top += (available_height - group_height) / 2;
+  }
+
+  if (preferred_total <= available_height) {
+    for (int i = 0; i < count; ++i) {
+      NavigationRailDestination* destination = destinations_[i];
+      destination->measure(WidthSpec::Exactly(content.width()),
+                           HeightSpec::Exactly(minimum_height));
+      static_cast<Widget&>(*destination).layout(
+          Rect(content.xMin(), destination_top, content.xMax(),
+               destination_top + minimum_height - 1));
+      destination_top += minimum_height + gap;
+    }
+    return;
+  }
+
+  // Under vertical pressure, free gaps are removed before destinations shrink.
+  // Integer boundaries guarantee that every available pixel belongs to one
+  // target, preserving the full-width hit-test contract.
+  for (int i = 0; i < count; ++i) {
+    const YDim next_top = static_cast<YDim>(
+        destination_top + (static_cast<int32_t>(i + 1) * available_height) /
+                              count);
+    NavigationRailDestination* destination = destinations_[i];
+    destination->measure(WidthSpec::Exactly(content.width()),
+                         HeightSpec::Exactly(next_top - destination_top));
+    static_cast<Widget&>(*destination).layout(
+        Rect(content.xMin(), destination_top, content.xMax(), next_top - 1));
+    destination_top = next_top;
+  }
+}
+
+bool NavigationRail::onKeyEvent(const KeyEvent& event) {
+  if (event.phase != KeyPhase::kDown && event.phase != KeyPhase::kRepeat) {
+    return false;
+  }
+  FocusDirection direction;
+  switch (event.code) {
+    case KeyCode::kUp:
+      direction = FocusDirection::kUp;
+      break;
+    case KeyCode::kDown:
+      direction = FocusDirection::kDown;
+      break;
+    default:
+      return false;
+  }
+  return context().focus().moveFocusDirection(*this, direction);
+}
+
+void NavigationRail::updateSelectionFromDestination(
+    NavigationRailDestination& destination) {
+  const int index = indexOf(destination);
+  if (index < 0 || !destination.isEnabled()) return;
+  onDestinationInvoked(index);
+  if (index == selected_index_) {
+    onSelectedDestinationReselected(index);
+  } else {
+    setSelectedIndex(index);
+  }
+}
+
+void NavigationRail::propagateLayoutToDestinations() {
+  for (NavigationRailDestination* destination : destinations_) {
+    destination->setLayoutFromRail(layout());
+  }
+}
+
+int NavigationRail::indexOf(
+    const NavigationRailDestination& destination) const {
+  for (int i = 0; i < destinationCount(); ++i) {
+    if (destinations_[i] == &destination) return i;
+  }
+  return -1;
 }
 
 }  // namespace material3

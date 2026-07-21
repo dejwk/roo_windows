@@ -25,6 +25,14 @@ class NavigationRailDestinationTestAccess {
                     PaintContext& ctx) {
     destination.paint(ctx);
   }
+
+  static void click(NavigationRailDestination& destination) {
+    destination.onClicked();
+  }
+
+  static void tapUp(NavigationRailDestination& destination, XDim x, YDim y) {
+    destination.onSingleTapUp(x, y);
+  }
 };
 
 }  // namespace roo_windows::material3
