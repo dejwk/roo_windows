@@ -3,6 +3,7 @@
 #include "roo_display/shape/smooth.h"
 #include "roo_display/ui/alignment.h"
 #include "roo_display/ui/text_label.h"
+#include "roo_windows/core/container.h"
 
 namespace roo_windows {
 namespace material3 {
