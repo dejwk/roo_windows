@@ -2,7 +2,9 @@
 
 ## Implementation status
 
-**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+**In progress.** Phase 1 shared adaptive primitives are implemented. The
+scaffold, pane, and grid containers remain outstanding. The status of existing
+and outstanding prerequisites is recorded in the [status index](../README.md).
 
 ## Objective
 
@@ -24,10 +26,12 @@ container APIs and the current Material 3 layout guidance:
 The result is a missing middle layer between `roo_windows`' low-level row /
 column / flex containers and the Material 3 component families already being
 designed under `docs/`. It deliberately stops short of modal shell management,
-automatic platform inset discovery, and animated pane transitions. The first
-implementation slice is the compact scaffold required by the roadmap; pane and
-grid containers are deferred, independently complete slices rather than
-placeholder APIs.
+automatic platform inset discovery, animated pane transitions, interactive
+splitters, and floating panes. The latter pane features are specified below as
+incremental extensions so that v1 does not accidentally close off their state,
+geometry, or ownership requirements. The first implementation slice is the
+compact scaffold required by the roadmap; pane and grid containers are
+deferred, independently complete slices rather than placeholder APIs.
 
 ## Motivation
 
@@ -166,6 +170,9 @@ Those references imply six important local constraints:
 12. Mirror leading / trailing layout correctly in RTL.
 13. Keep scaffold and pane transitions static in v1; animated transitions are
     out of scope.
+14. Keep pane roles, sizing constraints, presentation, and arrangement policy
+    conceptually separate so later resizing, floating, and reflow features do
+    not require a second pane ownership model.
 
 ### Interaction Requirements
 
@@ -248,6 +255,13 @@ trailing pane. A three-pane screen uses all three slots. When only one pane can
 be shown, the caller selects the active role; `PaneLayout` applies that state
 but does not own the navigation decision or Back handling. No separate public
 widget family is needed for each canonical example.
+
+The v1 pane algorithm is also the default arrangement policy for future pane
+hosts. Its implementation is kept as an allocation-free resolution step from
+pane constraints and container state to a complete pane plan. Resizable,
+floating, and reflow-capable variants can add inputs to that step and consume
+the same plan without changing role identity, reparenting pane widgets, or
+forking the minimum-width and collapse rules.
 
 `GridLayout` is the content-density tool. It gives feeds, settings pages,
 forms, and dashboards a consistent column rhythm without forcing callers to
@@ -610,6 +624,144 @@ This is intentionally simpler than a desktop window manager:
 
 That simplicity is the right tradeoff for embedded UIs. The canonical Material
 page shapes do not justify a more configurable pane engine yet.
+
+#### Incremental Pane Extension Model
+
+Interactive resizing, floating panes, and alternate arrangement policies are
+future work, but they must build on `PaneLayout` rather than become an unrelated
+desktop window-manager API. Phase 3 therefore keeps pane resolution internally
+separable from measurement, child ownership, painting, and event dispatch.
+
+Conceptually, the allocation-free resolver consumes a request containing:
+
+- the container bounds, breakpoint, and layout direction,
+- the attached leading / main / trailing roles and their `PaneSpec` values,
+- the active role and multi-pane-enabled state,
+- optional effective preferred widths supplied by a future resize extension,
+- and an arrangement policy selected by a future adaptive host.
+
+It produces a plan containing, for every fixed role:
+
+- whether the pane participates,
+- whether it consumes a docked track or floats over another track,
+- its final bounds and logical stacking order,
+- the gutters or splitter bands between docked panes,
+- and the reason it did not participate, such as breakpoint exclusion or
+  insufficient width.
+
+Only the v1 inputs and docked-plan fields need to exist in the first public
+implementation. The implementation should nevertheless compute visibility and
+bounds in one side-effect-free, bounded pass before applying them to widgets.
+This avoids interleaving collapse decisions with `Widget::Visibility` changes
+and leaves one natural seam at which later policies can provide a different
+plan. The resolver is initially private; no speculative public strategy ABI is
+published. Extracting its request and result into public policy types later is
+an additive API change.
+
+The compatibility invariants for all later extensions are:
+
+1. `PaneRole` remains the stable semantic identity. A pane does not become a
+   different child merely because it changes from docked to floating.
+2. `PaneLayout` (or an opt-in subclass/host built on it) continues to own the
+   three pane widgets. Presentation changes do not require application-level
+   removal, reparenting, or duplicate widgets.
+3. `PaneSpec::preferred_width_dp` remains the authored default, not mutable
+   interaction state. A user-selected width is a separate override.
+4. The active role remains application state and keeps its current guarantee;
+   a layout policy may change presentation but may not silently select a new
+   active role.
+5. Minimum-width enforcement and deterministic degradation remain shared. An
+   alternate policy may reflow or float a pane before hiding it, but it may not
+   return invalid or overlapping docked tracks.
+6. Layout direction stays logical. Persisted leading/trailing widths and
+   splitter identity do not swap meaning when RTL changes their physical side.
+7. Routing, Back handling, and platform persistence remain outside the layout
+   resolver.
+
+##### Resizable Pane Extension
+
+The first resize feature should be an opt-in `ResizablePaneLayout` (or an
+equivalent interaction host) layered on the fixed-role pane resolver. It adds
+one splitter between each pair of adjacent participating docked tracks. A
+two-pane layout therefore has one splitter; a true three-pane desktop layout
+may expose two. Hidden or floating panes do not leave active splitter hit
+regions behind.
+
+A splitter owns drag gestures only after a pointer starts in its explicit hit
+target. The painted divider may be thinner than that target. Dragging supplies
+an effective preferred width for the logical side pane and reruns the normal
+resolver, so side-pane minima, `main_min_width`, gutters, RTL, and collapse
+behavior cannot diverge from non-interactive layout. Keyboard adjustment and a
+reset-to-authored-width action should use the same update path. Gesture cancel
+restores the width from the start of the drag; successful completion publishes
+the final logical widths to an application callback.
+
+Resize state is stored as logical leading/trailing width overrides in dp, not
+as physical splitter x-coordinates. Each layout clamps an override against the
+current available size; it does not destroy the requested value when a smaller
+window temporarily collapses a pane. The library does not write preferences or
+files. A future persistence adapter or application callback may save and
+restore a small versioned value containing optional leading and trailing dp
+widths. Invalid, out-of-range, or newer-version data falls back to the authored
+`PaneSpec` values.
+
+This extension can land incrementally by adding effective-width inputs to the
+private resolver, then the opt-in host and its gesture/keyboard coverage. Base
+`PaneLayout` instances retain their current RAM cost and behavior.
+
+##### Floating Pane Extension
+
+Floating is a presentation choice, not a fourth pane role. A future
+`PanePresentation` value can distinguish at least `kDocked`, `kFloating`, and
+`kHidden` in the resolved plan. A floating leading or trailing pane uses its
+normal constraints, is clamped to the pane host's safe bounds, does not consume
+main-pane width, and paints after docked panes. Hit testing visits floating
+panes before the content below them. The pane host continues to own the same
+widget pointer throughout the transition.
+
+Whether outside interaction dismisses a floating pane, whether it is modal,
+and how Back changes application state belong to a higher-level presentation
+controller. The layout plan only supplies geometry, stacking, and hit-test
+ordering. This keeps floating supporting panes possible without turning the
+base container into a modal shell or weakening the existing active-pane rule.
+
+The first floating slice should support one floating side pane. Simultaneous
+floating side panes, freeform dragging, detachable windows, and arbitrary
+z-order are explicitly outside this extension path; they would constitute a
+window manager rather than a canonical adaptive layout.
+
+##### Arrangement and Reflow Policy Extension
+
+`LayoutBreakpointPolicy` remains responsible only for width classification and
+ruler tokens. It must not accumulate page-specific decisions such as whether a
+supporting pane docks, floats, stacks below the main pane, or hides. Those
+decisions belong to a separate future immutable `PaneArrangementPolicy`.
+
+An arrangement policy maps the resolver request to a bounded plan. The v1
+policy is `dock-or-hide`: preserve the active and main panes, dock eligible side
+panes when their minima fit, and otherwise remove candidates in the documented
+order. Later policies may add deterministic modes such as:
+
+- `dock-or-float`, in which a side pane overlays the main pane before hiding,
+- `dock-or-reflow`, in which a supporting pane moves below the main content
+  when horizontal tracks do not fit but vertical composition is allowed,
+- and application-defined breakpoint/posture tables that select among those
+  modes without changing attached widgets.
+
+Reflow is plan-level placement, not child-tree mutation. The plan records a
+vertical or horizontal dock axis and ordered regions; measurement applies that
+plan to the existing role slots. Policies receive explicit width, height, and
+caller-supplied posture inputs rather than discovering host state. They must be
+immutable while borrowed, allocation-free during measure/layout, and return a
+valid plan within fixed role/count bounds. If a policy cannot satisfy pane
+minima, the shared degradation pass applies the same active/main/leading/
+trailing preservation rules as v1.
+
+This separation allows policy support to land after static `PaneLayout`: first
+extract the already-tested v1 resolver behind the default policy, then add a
+borrowed policy setter and plan validation, and finally add individual reflow
+or floating modes. Existing callers that set no arrangement policy continue to
+receive byte-for-byte-equivalent dock-or-hide geometry.
 
 #### RTL Behavior
 
