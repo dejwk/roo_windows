@@ -2,9 +2,10 @@
 
 ## Implementation status
 
-**In progress.** Phase 1 shared adaptive primitives are implemented. The
-scaffold, pane, and grid containers remain outstanding. The status of existing
-and outstanding prerequisites is recorded in the [status index](../README.md).
+**In progress.** Phases 1 and 2 are implemented: shared adaptive primitives
+and the fixed-slot `LayoutScaffold` shell. Pane and grid containers remain
+outstanding. The status of existing and outstanding prerequisites is recorded
+in the [status index](../README.md).
 
 ## Objective
 
