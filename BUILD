@@ -388,6 +388,16 @@ cc_test(
 )
 
 cc_test(
+    name = "material3_layout_scaffold_test",
+    srcs = ["test/material3_layout_scaffold_test.cpp"],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
+cc_test(
     name = "material3_navigation_bar_golden_test",
     srcs = [
         "test/material3_navigation_bar_golden_test.cpp",
