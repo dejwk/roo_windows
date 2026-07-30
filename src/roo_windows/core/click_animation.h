@@ -2,6 +2,8 @@
 
 #include <inttypes.h>
 
+#include "roo_windows/core/rect.h"
+
 namespace roo_windows {
 
 class Application;
@@ -63,15 +65,18 @@ class ClickAnimation {
   /// Confirms that `widget` should receive onClicked() after animation settles.
   void confirmClick(Widget* widget);
 
-  /// Queues deferred click delivery for `target` without starting animation.
-  void clickWidget(Widget* target) { deferred_click_ = target; }
-
  private:
   friend class Application;
 
   // Captures wall-clock progress once so every pixel emitted by the following
   // refresh observes the same animation state.
   void sampleFrameTime();
+
+  // Invalidates the union of the target's current and previous transient
+  // parent-space footprints, then remembers the current footprint.
+  void invalidateTransientFootprint();
+
+  void resetTransientFootprint();
 
   Widget* click_anim_target_;
 
@@ -83,14 +88,10 @@ class ClickAnimation {
   // it is non-dirty.
   Widget* deferred_click_;
 
-  // Last transient parent-space bounds reported by the active target. Keeping
-  // this allows tick() to invalidate both previous and current transient
-  // regions when bounds shrink while the click animation is still active.
-  bool has_prev_transient_bounds_;
-  int16_t prev_transient_x0_;
-  int16_t prev_transient_y0_;
-  int16_t prev_transient_x1_;
-  int16_t prev_transient_y1_;
+  // Last transient parent-space footprint reported by the active target.
+  // Keeping the full Rect preserves the framework's extended Y coordinate
+  // range while allowing shrinking or moving effects to erase old pixels.
+  Rect previous_transient_footprint_;
 
   unsigned long click_anim_start_millis_;
   unsigned long sampled_elapsed_millis_;

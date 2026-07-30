@@ -18,6 +18,7 @@ Status was audited against the source tree and tests on 2026-07-22. “Dependenc
 | Badge | Paint context and visual-overflow foundations are implemented; the shared transient lifetime contract remains in progress and is not required by the badge scope. |
 | Button | Surface widgets, click animation, and Material 3 theme support are implemented; icon buttons are a separate proposed design. |
 | Click-animation customization | The shared click-animation controller and widget-local animation view are implemented. |
+| Click-animation lifecycle and settlement | Stable per-frame timing, slow-display rendering, deferred semantic delivery, held-press settlement, late-release coalescing, and transient-overlay cleanup are implemented. |
 | Gesture arbitration and ownership | Callback-free hit paths, explicit tap/long-press/drag roles, directional arbitration, strong ownership, and lifecycle-safe terminal delivery are implemented without compatibility routing. |
 | Horizontal page host | Viewport layout, adjacent swipe/settle, blit wrappers, examples, and tabs synchronization are implemented. |
 | Layout scaffold | Shared adaptive primitives, the fixed-slot `LayoutScaffold` shell, fixed-slot `PaneLayout`, row-major `GridLayout`, and a build-covered catalog with app-bar, navigation-bar, and navigation-rail composition are implemented. Navigation drawer remains separate component work. |
@@ -48,6 +49,7 @@ Status was audited against the source tree and tests on 2026-07-22. “Dependenc
 | Design | Dependency status |
 | --- | --- |
 | Button groups | Buttons are implemented; icon buttons are proposed, and no group implementation exists. |
+| Click-animation lifecycle simplification | Change 1 characterization and mechanical cleanup are implemented, including deadline-safe final paint and non-animated contention coverage. An explicit controller phase, one target pointer, and optional completed-refresh settlement remain proposed. |
 | Date pickers | Buttons and shared back behavior are implemented; text fields, dialogs, and icon buttons are proposed. |
 | Dialogs | Legacy dialogs and shared back behavior exist, but the Material 3 design is not implemented; icon buttons and text fields are proposed. |
 | Extended FAB | The base FAB dependency is proposed; buttons and theme support are implemented. |

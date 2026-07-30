@@ -10,11 +10,7 @@ ClickAnimation::ClickAnimation()
     : click_anim_target_(nullptr),
       click_confirmed_(false),
       deferred_click_(nullptr),
-      has_prev_transient_bounds_(false),
-      prev_transient_x0_(0),
-      prev_transient_y0_(0),
-      prev_transient_x1_(-1),
-      prev_transient_y1_(-1),
+      previous_transient_footprint_(0, 0, -1, -1),
       click_anim_start_millis_(0),
       sampled_elapsed_millis_(0),
       awaiting_release_(false),
@@ -25,21 +21,7 @@ void ClickAnimation::tick() {
   sampleFrameTime();
   if (click_anim_target_ != nullptr && click_anim_target_->isClicking()) {
     click_anim_target_->invalidateInterior();
-    Rect transient_bounds = click_anim_target_->getParentTransientPaintBounds();
-    Rect repaint_bounds = transient_bounds;
-    if (has_prev_transient_bounds_) {
-      repaint_bounds = Rect::Extent(
-          repaint_bounds, Rect(prev_transient_x0_, prev_transient_y0_,
-                               prev_transient_x1_, prev_transient_y1_));
-    }
-    if (repaint_bounds != click_anim_target_->parent_bounds()) {
-      click_anim_target_->notifyParentInvalidatedRegion(repaint_bounds);
-    }
-    has_prev_transient_bounds_ = true;
-    prev_transient_x0_ = transient_bounds.xMin();
-    prev_transient_y0_ = transient_bounds.yMin();
-    prev_transient_x1_ = transient_bounds.xMax();
-    prev_transient_y1_ = transient_bounds.yMax();
+    invalidateTransientFootprint();
     if (sampled_elapsed_millis_ > kPressAnimationMillis + 100 &&
         !click_confirmed_) {
       // 100 ms is a grace period to allow the widget to draw the full click
@@ -70,32 +52,23 @@ void ClickAnimation::tick() {
     // The final paint frame may still use the pre-clear transient state.
     // Invalidate the full transient spill region once more before delivering
     // the deferred click so siblings underneath that spill are refreshed.
-    Rect transient_bounds = click_anim_target_->getParentTransientPaintBounds();
-    Rect repaint_bounds = transient_bounds;
-    if (has_prev_transient_bounds_) {
-      repaint_bounds = Rect::Extent(
-          repaint_bounds, Rect(prev_transient_x0_, prev_transient_y0_,
-                               prev_transient_x1_, prev_transient_y1_));
-    }
-    if (repaint_bounds != click_anim_target_->parent_bounds()) {
-      click_anim_target_->notifyParentInvalidatedRegion(repaint_bounds);
-    }
+    invalidateTransientFootprint();
     Widget* target = click_anim_target_;
     if (!click_confirmed_ && target->isPressed()) {
       target->invalidateInterior();
       awaiting_release_ = true;
-      has_prev_transient_bounds_ = false;
+      resetTransientFootprint();
       return;
     } else if (click_confirmed_) {
       click_confirmed_ = false;
-      clickWidget(target);
+      deferred_click_ = target;
     } else {
       // An unconfirmed target which is no longer pressed has no deferred action
       // to schedule its settlement frame.
       target->invalidateInterior();
     }
     click_anim_target_ = nullptr;
-    has_prev_transient_bounds_ = false;
+    resetTransientFootprint();
   }
 
   if (deferred_click_ != nullptr) {
@@ -125,6 +98,21 @@ void ClickAnimation::sampleFrameTime() {
   sampled_elapsed_millis_ = millis() - click_anim_start_millis_;
 }
 
+void ClickAnimation::invalidateTransientFootprint() {
+  Rect current = click_anim_target_->getParentTransientPaintBounds();
+  Rect repaint = previous_transient_footprint_.empty()
+                     ? current
+                     : Rect::Extent(previous_transient_footprint_, current);
+  if (repaint != click_anim_target_->parent_bounds()) {
+    click_anim_target_->notifyParentInvalidatedRegion(repaint);
+  }
+  previous_transient_footprint_ = current;
+}
+
+void ClickAnimation::resetTransientFootprint() {
+  previous_transient_footprint_ = Rect(0, 0, -1, -1);
+}
+
 bool ClickAnimation::isClickAnimating() const {
   return click_anim_target_ != nullptr;
 }
@@ -150,14 +138,14 @@ void ClickAnimation::start(Widget* widget, int16_t x, int16_t y) {
   click_anim_x_ = x;
   click_anim_y_ = y;
   click_confirmed_ = false;
-  has_prev_transient_bounds_ = false;
+  resetTransientFootprint();
   sampled_elapsed_millis_ = 0;
   awaiting_release_ = false;
 }
 
 void ClickAnimation::cancel() {
   click_anim_target_ = nullptr;
-  has_prev_transient_bounds_ = false;
+  resetTransientFootprint();
   sampled_elapsed_millis_ = 0;
   awaiting_release_ = false;
 }
@@ -170,7 +158,7 @@ void ClickAnimation::confirmClick(Widget* widget) {
     // has run already or is still pending.
     click_anim_target_ = nullptr;
     click_confirmed_ = false;
-    has_prev_transient_bounds_ = false;
+    resetTransientFootprint();
     awaiting_release_ = false;
     widget->invalidateInterior();
     widget->onClicked();

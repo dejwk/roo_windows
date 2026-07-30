@@ -103,7 +103,6 @@ void Application::run() {
 void Application::tick() {
   unsigned long now = millis();
   root_window_.refreshClickAnimation();
-  bool is_click_animating = root_window_.click_animation().isClickAnimating();
   bool key_events_pending = drainKeyEvents();
 #if defined(ROO_THREADS_SINGLETHREADED)
   if (touch_enabled_) touch_sensor_.pollOnce();
@@ -120,14 +119,11 @@ void Application::tick() {
       paint_interval_ = kMinRefreshDuration;
     }
   }
-  roo_scheduler::Priority priority = is_click_animating || touch_active
-                                         ? roo_scheduler::PRIORITY_NORMAL
-                                         : roo_scheduler::PRIORITY_NORMAL;
   roo_time::Duration delay =
       key_events_pending || gesture_dispatched || touch_active || redraw_timeout
           ? roo_time::Millis(0)
           : roo_time::Millis(20);
-  ticker_.scheduleAfter(delay, priority);
+  ticker_.scheduleAfter(delay, roo_scheduler::PRIORITY_NORMAL);
 }
 
 bool Application::drainKeyEvents() {

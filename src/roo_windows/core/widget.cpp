@@ -662,6 +662,7 @@ void Widget::paintWidgetModded(PaintContext& ctx) {
   Canvas& canvas = ctx.canvas();
   Clipper& clipper = ctx.clipperForFramework();
   const OverlaySpec& overlay_spec = clipper.currentOverlaySpec();
+  bool final_click_frame = false;
   if (overlay_spec.is_disabled()) {
     roo_display::DisplayOutput& out = canvas.out();
     roo_display::TranslucencyFilter disablement_filter(
@@ -690,12 +691,12 @@ void Widget::paintWidgetModded(PaintContext& ctx) {
         setDirty();
         notifyParentInvalidatedRegion(maxParentBounds());
       } else {
+        // Clear provisionally so state-change invalidations are consumed by
+        // this final overlay paint. If the refresh deadline prevents that
+        // paint, restore kWidgetClicking below so ClickAnimation cannot retire
+        // a frame that was never emitted.
         clearClicking();
-        // overlay_spec was computed before clearClicking(), so this frame may
-        // still draw the full settled overlay even though the widget is no
-        // longer marked clicking. ClickAnimation retains a held target through
-        // its settlement repaint, allowing a late release to merge any visual
-        // state change into that frame without residual pixels or flicker.
+        final_click_frame = true;
       }
     }
     if (overlay_spec.has_press_overlay()) {
@@ -719,6 +720,9 @@ void Widget::paintWidgetModded(PaintContext& ctx) {
       }
     } else {
       paintWidgetContents(ctx);
+    }
+    if (final_click_frame && ctx.isDeadlineExceeded()) {
+      setClicking();
     }
   }
 }
@@ -790,22 +794,21 @@ void Widget::onShowPress(XDim x, YDim y) {
 
 void Widget::onSingleTapUp(XDim x, YDim y) {
   if (!isClickable()) return;
+  ClickAnimation* anim = ClickAnimationController(*this);
   if (isPressed()) {
     setPressed(false);
   } else {
     // Quick release (onShowPress not yet triggered).
+    if (anim == nullptr) return;
+    if (anim->isClickAnimating() || anim->isClickConfirmed()) {
+      return;
+    }
     if (showClickAnimation()) {
-      ClickAnimation* anim = ClickAnimationController(*this);
-      if (anim == nullptr) return;
-      if (anim->isClickAnimating() || anim->isClickConfirmed()) {
-        return;
-      }
       setClicking();
       setDirty();
       anim->start(this, x, y);
     }
   }
-  ClickAnimation* anim = ClickAnimationController(*this);
   if (anim == nullptr) return;
   anim->confirmClick(this);
 }

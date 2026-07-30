@@ -288,12 +288,14 @@ TEST_F(Material3ButtonClickAnimationTest,
   button_ptr->onShowPress(button_ptr->width() / 2, button_ptr->height() / 2);
 
   delay(kPressAnimationMillis / 8);
+  app_.root().refreshClickAnimation();
   uint8_t animated_radius =
       button_ptr->getBorderStyle().top_left_corner_radius();
   EXPECT_LT(animated_radius, resting_radius);
   EXPECT_GT(animated_radius, pressed_radius);
 
   delay(kPressAnimationMillis / 4 + 20);
+  app_.root().refreshClickAnimation();
   EXPECT_EQ(pressed_radius,
             button_ptr->getBorderStyle().top_left_corner_radius());
 }
@@ -314,12 +316,14 @@ TEST_F(Material3ButtonClickAnimationTest,
   button_ptr->onShowPress(button_ptr->width() / 2, button_ptr->height() / 2);
 
   delay(kPressAnimationMillis / 8);
+  app_.root().refreshClickAnimation();
   uint8_t animated_radius =
       button_ptr->getBorderStyle().top_left_corner_radius();
   EXPECT_LT(animated_radius, (uint8_t)0xFF);
   EXPECT_GT(animated_radius, pressed_radius);
 
   delay(kPressAnimationMillis / 4 + 20);
+  app_.root().refreshClickAnimation();
   EXPECT_EQ(pressed_radius,
             button_ptr->getBorderStyle().top_left_corner_radius());
 }

@@ -3,6 +3,9 @@
 ## Implementation status
 
 **Implemented.** The defined scope is present in the current source tree. Dependency status and any separately scoped follow-up work are recorded in the [status index](../README.md).
+Frame timing, deferred click delivery, and final-paint ordering are documented
+separately in the
+[click-animation lifecycle and settlement design](click_animation_lifecycle_design.md).
 
 ## Objective
 
@@ -258,9 +261,9 @@ const ClickAnimation* ClickAnimationController(const Widget& widget);
 
 ## Caveats
 
-- Repeated `progress()` calls in one paint pass may observe slightly different
-  values if they read `millis()` directly. If that becomes visible, snapshot
-  progress once per tick instead of per getter call.
+- `progress()` now reads a frame-time sample rather than `millis()` directly.
+  The lifecycle design defines why both `tick()` and standalone `refresh()`
+  update that sample.
 - Elevation animation is more demanding than corner-radius animation because it
   can change paint outside the widget interior.
 - Widgets whose click-animation spill grows and shrinks over time should report

@@ -50,6 +50,42 @@ class ClickableIcon : public Icon {
   int click_count_ = 0;
 };
 
+class DeadlineExpiringClickableIcon : public ClickableIcon {
+ public:
+  using ClickableIcon::ClickableIcon;
+
+  void setOverlayQueryDelay(unsigned long delay_ms) {
+    overlay_query_delay_ms_ = delay_ms;
+  }
+
+  int overlayQueryCount() const { return overlay_query_count_; }
+  int paintCount() const { return paint_count_; }
+
+  uint8_t getOverlayOpacity() const override {
+    ++overlay_query_count_;
+    uint8_t result = ClickableIcon::getOverlayOpacity();
+    if (overlay_query_delay_ms_ != 0) delay(overlay_query_delay_ms_);
+    return result;
+  }
+
+  void paint(PaintContext& ctx) const override {
+    ++paint_count_;
+    ClickableIcon::paint(ctx);
+  }
+
+ private:
+  unsigned long overlay_query_delay_ms_ = 0;
+  mutable int overlay_query_count_ = 0;
+  mutable int paint_count_ = 0;
+};
+
+class NonAnimatedClickableIcon : public ClickableIcon {
+ public:
+  using ClickableIcon::ClickableIcon;
+
+  bool showClickAnimation() const override { return false; }
+};
+
 class FadePointOverlayBoxWidget : public PointOverlayBoxWidget {
  public:
   FadePointOverlayBoxWidget(ApplicationContext& context, roo_display::Color color,
@@ -559,6 +595,61 @@ TEST_F(RooWindowsRenderTest,
                 0.05f);
 }
 
+// Verifies that reaching progress 1 is not enough to retire an animation when
+// the refresh deadline expires after OverlaySpec is computed but before the
+// target contents are emitted. The following successful refresh must still
+// paint the final overlay before click delivery and normal-state settlement.
+TEST_F(RooWindowsRenderTest, DeadlineInterruptedFinalClickFrameRemainsPending) {
+  constexpr unsigned long kOverlayQueryDelayMillis = 30;
+  auto back = std::make_unique<ColorBoxWidget>(
+      context(), context().theme().material3Theme().color.background,
+      Dimensions(kWidth, kHeight));
+  auto icon = std::make_unique<DeadlineExpiringClickableIcon>(
+      context(), ic_outlined_24_navigation_menu());
+  DeadlineExpiringClickableIcon* icon_ptr = icon.get();
+
+  app_.add(std::move(back), Box(0, 0, kWidth - 1, kHeight - 1));
+  app_.add(std::move(icon), Box(20, 12, 43, 35));
+  ASSERT_TRUE(refresh());
+
+  XDim abs_x;
+  YDim abs_y;
+  icon_ptr->getAbsoluteOffset(abs_x, abs_y);
+  const int16_t probe_x = abs_x + icon_ptr->width() / 2;
+  const int16_t probe_y = abs_y + 9;
+  const Color settled_pixel = pixelAt(probe_x, probe_y);
+
+  icon_ptr->onSingleTapUp(icon_ptr->width() / 2, icon_ptr->height() / 2);
+  delay(kPressAnimationMillis + 20);
+
+  const int queries_before = icon_ptr->overlayQueryCount();
+  const int paints_before = icon_ptr->paintCount();
+  icon_ptr->setOverlayQueryDelay(kOverlayQueryDelayMillis);
+  EXPECT_FALSE(refresh(roo_time::Uptime::Now() + roo_time::Millis(10)));
+
+  EXPECT_GT(icon_ptr->overlayQueryCount(), queries_before);
+  EXPECT_EQ(paints_before, icon_ptr->paintCount());
+  EXPECT_TRUE(icon_ptr->isClicking());
+  EXPECT_EQ(0, icon_ptr->clickCount());
+
+  app_.root().refreshClickAnimation();
+  EXPECT_EQ(icon_ptr, app_.root().click_animation().target());
+  EXPECT_EQ(0, icon_ptr->clickCount());
+
+  icon_ptr->setOverlayQueryDelay(0);
+  ASSERT_TRUE(refresh());
+  EXPECT_FALSE(icon_ptr->isClicking());
+  EXPECT_FALSE(icon_ptr->isDirty());
+  EXPECT_GT(icon_ptr->paintCount(), paints_before);
+  EXPECT_NE(settled_pixel, pixelAt(probe_x, probe_y));
+
+  app_.root().refreshClickAnimation();
+  EXPECT_EQ(1, icon_ptr->clickCount());
+  EXPECT_TRUE(icon_ptr->isDirty());
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(settled_pixel, pixelAt(probe_x, probe_y));
+}
+
 // A rounded surface's decoration owns the corner mask. Its animated area
 // ripple must not tint untouched background pixels outside that mask.
 TEST_F(RooWindowsRenderTest,
@@ -907,6 +998,42 @@ TEST_F(RooWindowsRenderTest,
 
   ASSERT_TRUE(refresh());
   EXPECT_FALSE(icon_ptr->isDirty());
+}
+
+// A quick tap on a non-animated widget takes the same shared-controller
+// admission path as an animated quick tap. It must not confirm the animation
+// currently owned by another widget or lose its own click into that target.
+TEST_F(RooWindowsRenderTest,
+       NonAnimatedQuickTapCannotConfirmAnotherWidgetsAnimation) {
+  auto animated = std::make_unique<ClickableIcon>(
+      context(), ic_outlined_24_navigation_menu());
+  auto non_animated = std::make_unique<NonAnimatedClickableIcon>(
+      context(), ic_outlined_24_navigation_menu());
+  ClickableIcon* animated_ptr = animated.get();
+  NonAnimatedClickableIcon* non_animated_ptr = non_animated.get();
+
+  app_.add(std::move(animated), Box(0, 8, 23, 31));
+  app_.add(std::move(non_animated), Box(24, 8, 47, 31));
+  ASSERT_TRUE(refresh());
+
+  animated_ptr->onShowPress(animated_ptr->width() / 2,
+                            animated_ptr->height() / 2);
+  ClickAnimation& animation = app_.root().click_animation();
+  ASSERT_EQ(animated_ptr, animation.target());
+  ASSERT_FALSE(animation.isClickConfirmed());
+
+  non_animated_ptr->onSingleTapUp(non_animated_ptr->width() / 2,
+                                  non_animated_ptr->height() / 2);
+
+  EXPECT_EQ(animated_ptr, animation.target());
+  EXPECT_FALSE(animation.isClickConfirmed());
+  EXPECT_TRUE(animated_ptr->isClicking());
+  EXPECT_FALSE(non_animated_ptr->isClicking());
+  EXPECT_EQ(0, non_animated_ptr->clickCount());
+
+  animated_ptr->onSingleTapUp(animated_ptr->width() / 2,
+                              animated_ptr->height() / 2);
+  EXPECT_TRUE(animation.isClickConfirmed());
 }
 
 // Verifies that toggling a Material 3 checkbox's on/off state via setOn()
