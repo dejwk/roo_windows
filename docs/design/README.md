@@ -49,7 +49,7 @@ Status was audited against the source tree and tests on 2026-07-22. “Dependenc
 | Design | Dependency status |
 | --- | --- |
 | Button groups | Buttons are implemented; icon buttons are proposed, and no group implementation exists. |
-| Click-animation lifecycle simplification | Change 1 characterization and mechanical cleanup are implemented, including deadline-safe final paint and non-animated contention coverage. An explicit controller phase, one target pointer, and optional completed-refresh settlement remain proposed. |
+| Click-animation lifecycle simplification | Changes 1 and 2 are implemented: characterization, mechanical cleanup, one-target phase ownership, atomic admission, identity-checked cancellation, and reentrant delivery coverage. The optional completed-refresh settlement experiment remains proposed. |
 | Date pickers | Buttons and shared back behavior are implemented; text fields, dialogs, and icon buttons are proposed. |
 | Dialogs | Legacy dialogs and shared back behavior exist, but the Material 3 design is not implemented; icon buttons and text fields are proposed. |
 | Extended FAB | The base FAB dependency is proposed; buttons and theme support are implemented. |

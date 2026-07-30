@@ -50,16 +50,14 @@ The following states are related but are not interchangeable.
 | --- | --- |
 | `kWidgetPressed` / `isPressed()` | The gesture is still physically held. It also drives the static pressed overlay after animation finishes. |
 | `kWidgetClicking` / `isClicking()` | The widget is still rendering its animated click reveal. |
-| `click_anim_target_` | The one widget owned by the `MainWindow` animation controller. A completed held target may remain here even after `kWidgetClicking` is cleared. |
-| `click_confirmed_` | Touch-up confirmed that the active target should eventually receive `onClicked()`. |
-| `deferred_click_` | A click is waiting for the animation target to be released and clean before delivery. |
-| `awaiting_release_` | A held animation finished, received one settlement invalidation, and remains attached so a late release can reuse that repaint. |
+| `ClickAnimation::target_` | The one widget owned by every non-idle controller phase. `target()` exposes it only while visual animation ownership remains. |
+| `ClickAnimation::phase_` | One of idle, animating-unconfirmed, animating-confirmed, awaiting-release, or awaiting-clean. It replaces the former second target pointer and lifecycle booleans. |
 | dirty/invalidated state | A repaint obligation. It is also used as a frame-completion boundary before ordinary deferred click delivery. |
 
 `Widget::getClickAnimation()` is deliberately narrower than controller
 ownership. It returns an animation only while the widget is both the controller
 target and `isClicking()`. Consequently, it returns `nullptr` for a completed
-held target retained by `awaiting_release_`; framework code must inspect
+held target in `kAwaitingRelease`; framework code must inspect
 `MainWindow::click_animation().target()` when controller ownership matters.
 
 ## Requirements and invariants
@@ -100,6 +98,12 @@ held target retained by `awaiting_release_`; framework code must inspect
    repaint.
 7. Cancellation may cancel the shared controller only when the canceled role
    owns its target.
+8. Admission, confirmation, and cancellation validate target identity inside
+   the controller; callers cannot overwrite or confirm another widget's phase.
+9. Hiding an owned target cancels its pending interaction, including a semantic
+   click waiting for the target to become clean.
+10. Controller ownership is cleared before `onClicked()` so callbacks may
+    reentrantly start a new interaction.
 
 ## Runtime ordering
 
@@ -163,11 +167,11 @@ first chooses roles and waits to distinguish a press from a scroll or drag.
 `Widget::onShowPress()`:
 
 1. rejects non-clickable or already-pressed widgets,
-2. rejects the gesture if the shared controller is already animating or has a
-   confirmed click,
-3. when animation is enabled, calls `ClickAnimation::start()` and sets
-   `kWidgetClicking`,
-4. sets `kWidgetPressed`.
+2. when animation is enabled, calls `ClickAnimation::tryStart()`; the
+   controller atomically rejects the gesture if another interaction owns it,
+3. when animation is disabled, rejects the press if the controller is busy,
+4. after admission, sets `kWidgetClicking` when applicable,
+5. sets `kWidgetPressed`.
 
 The animation and physical press therefore start together only after the
 gesture becomes a recognized press.
@@ -178,25 +182,30 @@ A quick tap can reach `onSingleTapUp()` before `onShowPress()`.
 
 In that path `Widget::onSingleTapUp()`:
 
-1. verifies that no animation or confirmed click already owns the controller,
-2. sets `kWidgetClicking`,
-3. explicitly marks the widget dirty,
-4. calls `ClickAnimation::start()`,
-5. confirms the click.
+1. for an animated target, atomically calls `tryStart()` and returns if the
+   controller is busy,
+2. sets `kWidgetClicking` and explicitly marks the widget dirty,
+3. calls `tryConfirm()` for the same target,
+4. for a non-animated target, calls `tryConfirm()` directly; it admits the
+   semantic click only when the controller is idle.
 
-The busy-controller guard is essential. Without it, a quick release on another
-widget could replace `click_anim_target_` and strand the previous target in
-`kWidgetClicking`.
+Controller-owned admission and identity checks are essential. Without them, a
+quick release on another widget could replace the target or confirm the first
+widget while losing its own action.
 
 ### Cancellation
 
 `Widget::onCancel()` clears pressed state and, when cancellation terminates
-animations, clears clicking state. It calls `ClickAnimation::cancel()` only if
-the canceled widget is the controller target.
+animations, clears clicking state. It passes the canceled widget to
+`ClickAnimation::cancel()`, which changes state only for the matching owner.
 
 Gesture roles can belong to different widgets. For example, a button can own
 the tap while a scrollable ancestor loses a competing drag role. Canceling the
 ancestor must not cancel the button's animation.
+
+Changing an owned widget from visible to invisible or gone uses the same
+identity-checked cancellation path. This prevents a hidden target from
+retaining either an animation phase or a deferred semantic action.
 
 ## Overlay rendering
 
@@ -262,10 +271,10 @@ animated overlay, so a later settlement repaint is mandatory.
 
 ```text
 onShowPress:
-  start animation -> set clicking -> set pressed
+  tryStart -> set clicking -> set pressed
 
 onSingleTapUp:
-  clear pressed -> set click_confirmed_
+  clear pressed -> tryConfirm -> kAnimatingConfirmed
 
 animation ticks and paints:
   invalidate target/spill -> paint sampled progress
@@ -274,7 +283,7 @@ final animated paint:
   clear clicking -> paint full final overlay -> target becomes clean
 
 next animation tick:
-  retire target -> queue deferred click
+  transition to kAwaitingClean
   target is released and clean
   invalidate target -> call onClicked()
 
@@ -301,7 +310,7 @@ final animated paint:
 retirement tick:
   clean transient spill
   invalidate target once
-  set awaiting_release_
+  enter kAwaitingRelease
   retain controller target
 
 settlement paint:
@@ -321,7 +330,7 @@ coincidental update or eventual release.
 When the pointer is eventually released:
 
 1. `onSingleTapUp()` clears pressed state,
-2. `confirmClick()` recognizes a completed, non-clicking target,
+2. `tryConfirm()` recognizes `kAwaitingRelease`,
 3. the controller detaches it,
 4. the target is invalidated,
 5. `onClicked()` is invoked immediately,
@@ -338,13 +347,13 @@ There are two adjacent races.
 #### After final paint, before retirement tick
 
 The target is still owned by the controller, progress is complete, and
-`kWidgetClicking` is clear. `confirmClick()` detects those conditions and
+`kWidgetClicking` is clear. `tryConfirm()` detects those conditions and
 coalesces the action directly into the next repaint.
 
 #### After retirement invalidation, before settlement paint
 
-The target has `awaiting_release_` set and is already dirty for held-state
-settlement. `confirmClick()` detaches it and calls `onClicked()` before that
+The target is in `kAwaitingRelease` and is already dirty for held-state
+settlement. `tryConfirm()` detaches it and calls `onClicked()` before that
 dirty frame is painted.
 
 Both paths prevent:
@@ -375,9 +384,10 @@ painted.
 ### 7. No click animation
 
 If a clickable widget disables click animation, no controller target is
-started. Confirmation queues `deferred_click_`; delivery still waits for the
-widget to be released and clean. This preserves the general separation between
-press-state repaint and action delivery.
+started during press. `tryConfirm()` atomically admits the target into
+`kAwaitingClean`; delivery still waits for the widget to be released and clean.
+This preserves the general separation between press-state repaint and action
+delivery.
 
 ## Invalidation and cleanup
 
@@ -441,35 +451,37 @@ This means:
 The behavior applies to both navigation rails and navigation bars because they
 share `NavigationDestinationBase`.
 
-## Simplification guidance
+## Implementation structure and remaining simplification
 
-The current implementation encodes a state machine through pointers, widget
-flags, and booleans. It may be possible to simplify, but a candidate design
-should first model these phases explicitly:
+The controller models semantic ownership with one `target_` pointer and this
+explicit phase machine:
 
 ```text
-idle
-  -> animating_unconfirmed
-  -> animating_confirmed
-  -> final_frame_painted_confirmed
-  -> deferred_action
-  -> idle
+kIdle
+  -> kAnimatingUnconfirmed
+  -> kAnimatingConfirmed
+  -> kAwaitingClean
+  -> kIdle after delivery
 
-animating_unconfirmed
-  -> held_settlement_pending
-  -> held_settled_awaiting_release
-  -> idle after late-release action or cancellation
+kAnimatingUnconfirmed
+  -> kAwaitingRelease after held settlement
+  -> kIdle after late-release delivery or cancellation
+
+kIdle
+  -> kAwaitingClean for a non-animated click
 ```
 
 Promising refactoring seams:
 
-1. replace coupled booleans with an explicit controller phase enum,
-2. extract repeated transient-bounds union/invalidation code,
-3. represent “final animated frame was emitted” explicitly rather than infer it
+1. represent “final animated frame was emitted” explicitly rather than infer it
    from `!isClicking()` plus sampled progress,
-4. separate animation-timeline ownership from semantic click-delivery policy,
-5. introduce an explicit post-paint callback or frame token if it can preserve
+2. separate animation-timeline ownership from semantic click-delivery policy,
+3. introduce an explicit post-paint callback or frame token if it can preserve
    incremental rendering and RAM constraints.
+
+The phase enum, one-target representation, atomic admission, identity-checked
+cancellation, and shared transient-bounds invalidation helper are implemented.
+The completed-refresh experiment remains optional follow-up work.
 
 Changes that look simpler but violate known requirements:
 
@@ -500,6 +512,10 @@ The following tests are executable constraints for this design:
 | `ReselectionSettlesDirectlyIntoSelectedAppearance` | Reselection follows the same one-frame settlement contract. |
 | `QuickReleaseCannotReplaceAnotherDestinationsActiveAnimation` | Shared-controller ownership cannot be stolen by a second quick tap. |
 | `NonAnimatedQuickTapCannotConfirmAnotherWidgetsAnimation` | A non-animated quick tap observes the same busy-controller admission rule. |
+| `CompetingPressCannotReplaceAnimationTarget` | Atomic controller admission rejects a second recognized press. |
+| `CancelingConfirmedOwnerCancelsPendingClick` | Owner cancellation before the final frame cancels the semantic action. |
+| `HidingTargetCancelsEveryPendingClickPhase` | Hidden targets release both visual and awaiting-clean ownership without later delivery. |
+| `ReentrantClickCanStartNextAnimation` | Controller ownership is idle before `onClicked()` reenters the gesture path. |
 | `Material3CheckboxQuickReleaseClearsLeftmostInteractionColumn` | Ripple spill outside logical bounds is erased. |
 | `ClickAnimationTickInvalidatesPreviousAndCurrentTransientBounds` | Shrinking transient effects clean their previous footprint. |
 | `CancelingCompetingRoleDoesNotCancelClickAnimation` | Only the owning gesture role may cancel the animation target. |

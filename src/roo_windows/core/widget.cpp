@@ -402,6 +402,8 @@ void Widget::setVisibility(Visibility visibility) {
   if (visibility == previous) return;
   if (visibility != Visibility::kVisible) {
     context_.focus().onWidgetEligibilityChanging(*this);
+    ClickAnimation* anim = ClickAnimationController(*this);
+    if (anim != nullptr) anim->cancel(*this);
   }
   state_ &= ~(kWidgetHidden | kWidgetGone);
   state_ |= (kWidgetHidden * (visibility == Visibility::kInvisible));
@@ -784,10 +786,11 @@ void Widget::onShowPress(XDim x, YDim y) {
   if (isPressed()) return;
   ClickAnimation* anim = ClickAnimationController(*this);
   if (anim == nullptr) return;
-  if (anim->isClickAnimating() || anim->isClickConfirmed()) return;
   if (showClickAnimation()) {
-    anim->start(this, x, y);
+    if (!anim->tryStart(*this, x, y)) return;
     setClicking();
+  } else if (anim->isBusy()) {
+    return;
   }
   setPressed(true);
 }
@@ -800,17 +803,14 @@ void Widget::onSingleTapUp(XDim x, YDim y) {
   } else {
     // Quick release (onShowPress not yet triggered).
     if (anim == nullptr) return;
-    if (anim->isClickAnimating() || anim->isClickConfirmed()) {
-      return;
-    }
     if (showClickAnimation()) {
+      if (!anim->tryStart(*this, x, y)) return;
       setClicking();
       setDirty();
-      anim->start(this, x, y);
     }
   }
   if (anim == nullptr) return;
-  anim->confirmClick(this);
+  anim->tryConfirm(*this);
 }
 
 void Widget::onLongPress(XDim dx, YDim dy) {}
@@ -869,14 +869,9 @@ void Widget::onCancel() {
   if (kTerminateAnimationsOnCancel) {
     clearClicking();
     ClickAnimation* anim = ClickAnimationController(*this);
-    // The controller is shared by the whole window. Gesture roles can belong
-    // to different widgets (for example, a button's tap role and its
-    // scrollable parent's drag role), so cancel only an animation owned by
-    // this role. Otherwise canceling the losing role after tap-up would also
-    // cancel the winning widget's newly confirmed click animation.
-    if (anim != nullptr && anim->target() == this) {
-      anim->cancel();
-    }
+    // The controller validates ownership because a losing gesture role may
+    // belong to a different widget than the active click target.
+    if (anim != nullptr) anim->cancel(*this);
   }
 }
 

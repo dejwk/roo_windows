@@ -47,26 +47,33 @@ class ClickAnimation {
   /// click result can be merged into its settlement frame.
   const Widget* target() const;
 
-  /// Returns true while an animation target is active.
-  ///
-  /// Equivalent to `target() != nullptr`.
-  /// This includes a finished target retained while its pointer remains down.
-  bool isClickAnimating() const;
+  /// Returns true while any interaction owns the shared controller.
+  bool isBusy() const { return phase_ != Phase::kIdle; }
 
-  /// Returns true once the release has been confirmed for deferred delivery.
-  bool isClickConfirmed() const;
+  /// Atomically starts an animation when idle; returns false when busy.
+  bool tryStart(Widget& target, int16_t x, int16_t y);
 
-  /// Starts a click animation for `target` centered at (`x`, `y`).
-  void start(Widget* target, int16_t x, int16_t y);
+  /// Confirms the matching target, or admits a non-animated click when idle.
+  /// Returns false when another widget owns the controller.
+  bool tryConfirm(Widget& target);
 
-  /// Cancels any active click animation.
-  void cancel();
-
-  /// Confirms that `widget` should receive onClicked() after animation settles.
-  void confirmClick(Widget* widget);
+  /// Cancels the interaction only when it is owned by `target`.
+  void cancel(Widget& target);
 
  private:
   friend class Application;
+
+  enum class Phase : uint8_t {
+    kIdle,  // No click is in progress; the next eligible widget may start one.
+    kAnimatingUnconfirmed,  // Click feedback is being drawn; the user has not
+                            // released the press over this widget yet.
+    kAnimatingConfirmed,  // The user released over this widget; finish drawing
+                          // the feedback before running the widget's action.
+    kAwaitingRelease,  // Feedback finished while the press remains held; keep
+                       // the widget pressed until release, then run its action.
+    kAwaitingClean,    // No feedback remains; wait for the pending redraw to
+                       // finish before running the widget's action.
+  };
 
   // Captures wall-clock progress once so every pixel emitted by the following
   // refresh observes the same animation state.
@@ -78,15 +85,18 @@ class ClickAnimation {
 
   void resetTransientFootprint();
 
-  Widget* click_anim_target_;
+  bool isAnimationPending() const {
+    return phase_ == Phase::kAnimatingUnconfirmed ||
+           phase_ == Phase::kAnimatingConfirmed;
+  }
 
-  // The click has been released on top of the widget during click animation.
-  // It is to be delivered immediately when the click animation finishes.
-  bool click_confirmed_;
+  void reset();
+  void deliverClick();
 
-  // This widget has pending onClicked() that should be called on it as soon as
-  // it is non-dirty.
-  Widget* deferred_click_;
+  // Every non-idle phase has exactly one target. target() deliberately hides
+  // it in kAwaitingClean because no visual animation owns the widget then.
+  Widget* target_;
+  Phase phase_;
 
   // Last transient parent-space footprint reported by the active target.
   // Keeping the full Rect preserves the framework's extended Y coordinate
@@ -96,9 +106,6 @@ class ClickAnimation {
   unsigned long click_anim_start_millis_;
   unsigned long sampled_elapsed_millis_;
 
-  // The finished target has been invalidated once for held-state settlement
-  // and remains attached so a late release can reuse that repaint.
-  bool awaiting_release_;
   int16_t click_anim_x_, click_anim_y_;
 };
 

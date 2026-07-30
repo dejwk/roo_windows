@@ -86,6 +86,26 @@ class NonAnimatedClickableIcon : public ClickableIcon {
   bool showClickAnimation() const override { return false; }
 };
 
+class ReentrantClickableIcon : public ClickableIcon {
+ public:
+  using ClickableIcon::ClickableIcon;
+
+  void setNextTarget(Widget* target) { next_target_ = target; }
+
+ protected:
+  void onClicked() override {
+    ClickableIcon::onClicked();
+    Widget* target = next_target_;
+    next_target_ = nullptr;
+    if (target != nullptr) {
+      target->onSingleTapUp(target->width() / 2, target->height() / 2);
+    }
+  }
+
+ private:
+  Widget* next_target_ = nullptr;
+};
+
 class FadePointOverlayBoxWidget : public PointOverlayBoxWidget {
  public:
   FadePointOverlayBoxWidget(ApplicationContext& context, roo_display::Color color,
@@ -1020,20 +1040,136 @@ TEST_F(RooWindowsRenderTest,
                             animated_ptr->height() / 2);
   ClickAnimation& animation = app_.root().click_animation();
   ASSERT_EQ(animated_ptr, animation.target());
-  ASSERT_FALSE(animation.isClickConfirmed());
 
   non_animated_ptr->onSingleTapUp(non_animated_ptr->width() / 2,
                                   non_animated_ptr->height() / 2);
 
   EXPECT_EQ(animated_ptr, animation.target());
-  EXPECT_FALSE(animation.isClickConfirmed());
   EXPECT_TRUE(animated_ptr->isClicking());
   EXPECT_FALSE(non_animated_ptr->isClicking());
   EXPECT_EQ(0, non_animated_ptr->clickCount());
 
   animated_ptr->onSingleTapUp(animated_ptr->width() / 2,
                               animated_ptr->height() / 2);
-  EXPECT_TRUE(animation.isClickConfirmed());
+  EXPECT_FALSE(animated_ptr->isPressed());
+  EXPECT_TRUE(animation.isBusy());
+}
+
+// Admission is owned by ClickAnimation itself: a second recognized press
+// cannot replace the active target between a caller-side check and start.
+TEST_F(RooWindowsRenderTest, CompetingPressCannotReplaceAnimationTarget) {
+  auto first = std::make_unique<ClickableIcon>(
+      context(), ic_outlined_24_navigation_menu());
+  auto second = std::make_unique<ClickableIcon>(
+      context(), ic_outlined_24_navigation_menu());
+  ClickableIcon* first_ptr = first.get();
+  ClickableIcon* second_ptr = second.get();
+
+  app_.add(std::move(first), Box(0, 8, 23, 31));
+  app_.add(std::move(second), Box(24, 8, 47, 31));
+  ASSERT_TRUE(refresh());
+
+  first_ptr->onShowPress(first_ptr->width() / 2, first_ptr->height() / 2);
+  second_ptr->onShowPress(second_ptr->width() / 2, second_ptr->height() / 2);
+
+  ClickAnimation& animation = app_.root().click_animation();
+  EXPECT_TRUE(animation.isBusy());
+  EXPECT_EQ(first_ptr, animation.target());
+  EXPECT_TRUE(first_ptr->isPressed());
+  EXPECT_FALSE(second_ptr->isPressed());
+  EXPECT_FALSE(second_ptr->isClicking());
+}
+
+// Cancellation after touch-up but before the final frame cancels the semantic
+// click and releases controller ownership.
+TEST_F(RooWindowsRenderTest, CancelingConfirmedOwnerCancelsPendingClick) {
+  auto icon = std::make_unique<ClickableIcon>(context(),
+                                              ic_outlined_24_navigation_menu());
+  ClickableIcon* icon_ptr = icon.get();
+  app_.add(std::move(icon), Box(20, 8, 43, 31));
+  ASSERT_TRUE(refresh());
+
+  icon_ptr->onShowPress(icon_ptr->width() / 2, icon_ptr->height() / 2);
+  icon_ptr->onSingleTapUp(icon_ptr->width() / 2, icon_ptr->height() / 2);
+  ClickAnimation& animation = app_.root().click_animation();
+  ASSERT_TRUE(animation.isBusy());
+  ASSERT_EQ(icon_ptr, animation.target());
+
+  icon_ptr->onCancel();
+  EXPECT_FALSE(animation.isBusy());
+  EXPECT_EQ(nullptr, animation.target());
+  EXPECT_FALSE(icon_ptr->isClicking());
+
+  delay(kPressAnimationMillis + 20);
+  app_.root().refreshClickAnimation();
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(0, icon_ptr->clickCount());
+}
+
+// Hidden targets cannot strand either an unconfirmed animation or a confirmed
+// click that is waiting for an outstanding repaint to become clean.
+TEST_F(RooWindowsRenderTest, HidingTargetCancelsEveryPendingClickPhase) {
+  auto unconfirmed = std::make_unique<ClickableIcon>(
+      context(), ic_outlined_24_navigation_menu());
+  auto confirmed = std::make_unique<ClickableIcon>(
+      context(), ic_outlined_24_navigation_menu());
+  ClickableIcon* unconfirmed_ptr = unconfirmed.get();
+  ClickableIcon* confirmed_ptr = confirmed.get();
+
+  app_.add(std::move(unconfirmed), Box(0, 8, 23, 31));
+  app_.add(std::move(confirmed), Box(24, 8, 47, 31));
+  ASSERT_TRUE(refresh());
+
+  ClickAnimation& animation = app_.root().click_animation();
+  unconfirmed_ptr->onShowPress(unconfirmed_ptr->width() / 2,
+                               unconfirmed_ptr->height() / 2);
+  ASSERT_TRUE(animation.isBusy());
+  unconfirmed_ptr->setVisibility(Visibility::kInvisible);
+  EXPECT_FALSE(animation.isBusy());
+  EXPECT_EQ(nullptr, animation.target());
+
+  confirmed_ptr->onSingleTapUp(confirmed_ptr->width() / 2,
+                               confirmed_ptr->height() / 2);
+  delay(kPressAnimationMillis + 20);
+  ASSERT_TRUE(refresh());
+  confirmed_ptr->invalidateInterior();
+  app_.root().refreshClickAnimation();
+  ASSERT_TRUE(animation.isBusy());
+  ASSERT_EQ(nullptr, animation.target());
+  ASSERT_EQ(0, confirmed_ptr->clickCount());
+
+  confirmed_ptr->setVisibility(Visibility::kInvisible);
+  EXPECT_FALSE(animation.isBusy());
+  app_.root().refreshClickAnimation();
+  EXPECT_EQ(0, confirmed_ptr->clickCount());
+}
+
+// The controller becomes idle before onClicked() enters user code, allowing a
+// reentrant callback to start the next interaction without overwriting state.
+TEST_F(RooWindowsRenderTest, ReentrantClickCanStartNextAnimation) {
+  auto first = std::make_unique<ReentrantClickableIcon>(
+      context(), ic_outlined_24_navigation_menu());
+  auto second = std::make_unique<ClickableIcon>(
+      context(), ic_outlined_24_navigation_menu());
+  ReentrantClickableIcon* first_ptr = first.get();
+  ClickableIcon* second_ptr = second.get();
+  first_ptr->setNextTarget(second_ptr);
+
+  app_.add(std::move(first), Box(0, 8, 23, 31));
+  app_.add(std::move(second), Box(24, 8, 47, 31));
+  ASSERT_TRUE(refresh());
+
+  first_ptr->onSingleTapUp(first_ptr->width() / 2, first_ptr->height() / 2);
+  delay(kPressAnimationMillis + 20);
+  ASSERT_TRUE(refresh());
+  app_.root().refreshClickAnimation();
+
+  ClickAnimation& animation = app_.root().click_animation();
+  EXPECT_EQ(1, first_ptr->clickCount());
+  EXPECT_EQ(0, second_ptr->clickCount());
+  EXPECT_TRUE(animation.isBusy());
+  EXPECT_EQ(second_ptr, animation.target());
+  EXPECT_TRUE(second_ptr->isClicking());
 }
 
 // Verifies that toggling a Material 3 checkbox's on/off state via setOn()
@@ -1328,7 +1464,8 @@ TEST_F(RooWindowsRenderTest,
                             target_ptr->height() / 2);
   competing_role_ptr->onCancel();
   EXPECT_EQ(target_ptr, anim.target());
-  EXPECT_TRUE(anim.isClickConfirmed());
+  EXPECT_TRUE(anim.isBusy());
+  EXPECT_FALSE(target_ptr->isPressed());
 }
 
 // Verifies that the shared controller keeps the finished target attached until
@@ -1345,13 +1482,11 @@ TEST_F(RooWindowsRenderTest,
 
   ClickAnimation& anim = app_.root().click_animation();
   ASSERT_EQ(front_ptr, anim.target());
-  ASSERT_TRUE(anim.isClickAnimating());
 
   delay(kPressAnimationMillis + 20);
   app_.root().refreshClickAnimation();
 
   EXPECT_EQ(front_ptr, anim.target());
-  EXPECT_TRUE(anim.isClickAnimating());
   EXPECT_EQ(1.0f, anim.progress());
 }
 

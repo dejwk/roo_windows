@@ -54,7 +54,8 @@ Those concerns should be separated.
 1. `Widget` paint-time code must be able to query its own active click
    animation with a null check and no explicit target parameter.
 2. Framework code in `widget.cpp` must retain access to the shared controller
-   for `start()`, `cancel()`, `confirmClick()`, and global busy checks.
+   for atomic start/confirmation, identity-checked cancellation, and global
+   busy checks.
 3. The refactor must not add per-instance RAM cost to `Widget` or subclasses.
 4. The refactor must support custom click feedback beyond the current ripple,
    including animated corner radius, overlay alpha, and elevation.
@@ -138,8 +139,9 @@ if (anim != nullptr) {
 }
 ```
 
-The shared controller methods stay as they are: `start()`, `cancel()`,
-`confirmClick()`, `isClickAnimating()`, and `isClickConfirmed()`.
+The shared controller now exposes `tryStart()`, `tryConfirm()`,
+identity-checked `cancel()`, and `isBusy()`. These lifecycle methods are
+orthogonal to the widget-local read API introduced by this design.
 
 ### Paint and Invalidation
 
@@ -213,11 +215,10 @@ class ClickAnimation {
   int16_t yCenter() const;
   const Widget* target() const;
 
-  bool isClickAnimating() const;
-  bool isClickConfirmed() const;
-  void start(Widget* target, int16_t x, int16_t y);
-  void cancel();
-  void confirmClick(Widget* widget);
+  bool isBusy() const;
+  bool tryStart(Widget& target, int16_t x, int16_t y);
+  bool tryConfirm(Widget& target);
+  void cancel(Widget& target);
 };
 ```
 

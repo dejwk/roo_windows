@@ -2,10 +2,10 @@
 
 ## Status
 
-**Investigation with Change 1 implemented.** The characterization and
-mechanical-cleanup change described below is present in the source tree. The
-explicit phase model and completed-refresh experiment remain proposed. This
-document follows the implemented
+**Investigation with Changes 1 and 2 implemented.** Characterization,
+mechanical cleanup, the explicit phase model, one-target ownership, and atomic
+controller admission are present in the source tree. The completed-refresh
+experiment remains proposed. This document follows the implemented
 [click-animation lifecycle and settlement design](../implemented/click_animation_lifecycle_design.md)
 and evaluates how that implementation could be made smaller and easier to
 reason about without losing its slow-display guarantees.
@@ -22,23 +22,22 @@ are instead:
 
 ## Executive conclusion
 
-A conservative refactor remains worthwhile:
+The conservative refactor is implemented:
 
-1. replace `click_anim_target_`, `deferred_click_`, `click_confirmed_`, and
-   `awaiting_release_` with one target pointer and an explicit phase enum,
-2. expose one controller-owned busy/acceptance operation instead of duplicating
-   `isClickAnimating() || isClickConfirmed()` in `Widget`,
-3. make target identity validation part of `start()` and `confirmClick()`.
+1. one `target_` pointer and a five-value `Phase` replace two pointers and two
+   lifecycle booleans,
+2. `tryStart()`, `tryConfirm()`, and `isBusy()` centralize admission,
+3. confirmation and cancellation validate target identity inside the
+   controller,
+4. `target()` exposes only visual animation ownership while `isBusy()` covers
+   every non-idle phase.
 
-Change 1 already stores the previous transient footprint as a `Rect`, extracts
-its invalidation helper, and removes the public-in-practice-only
-`clickWidget()` helper plus the dead scheduler branch.
-
-This should make invalid controller states unrepresentable, save an estimated
-12 bytes per `ClickAnimation` on a 32-bit target, and modestly reduce production
-lines. The exact code-size result should be measured with the embedded
-toolchain; an enum-based state machine is primarily a correctness and
-maintainability improvement, not a promise of a smaller binary.
+Invalid pointer/boolean combinations are no longer representable. The member
+layout is estimated at 28 bytes on a 32-bit target, down from about 40 bytes;
+the embedded ABI should still be measured directly. Counting physical source
+lines but excluding comment-only lines, the complete Change 2 production diff
+adds 18 lines and the controller itself grows from 199 to 219 lines. This is a
+state-complexity and RAM improvement, not a source-line-count improvement.
 
 The most promising non-obvious alternative is to add an
 `afterRefresh(completed)` boundary to `ClickAnimation`. A completed refresh is
@@ -46,8 +45,8 @@ a better proof of frame settlement than a later `tick()` observing
 `!isClicking()`. It could collapse the two adjacent late-release windows into
 one explicit awaiting-release case and remove most dirty-state polling. It
 also changes when `onClicked()` runs—from a later animation tick to the tail
-of the refresh that emitted the final frame—and therefore needs explicit
-agreement and a prototype before adoption.
+of the refresh that emitted the final frame. The timing change has user
+approval for the focused Change 3 prototype.
 
 Implemented in Change 1:
 
@@ -60,52 +59,51 @@ Implemented in Change 1:
   `clickWidget()`,
 - explicit frame sampling in two stale Material 3 button tests.
 
+Implemented in Change 2:
+
+- one target plus the five documented controller phases,
+- atomic start and confirmation with mismatched-target rejection,
+- intent-specific `isBusy()` and removal of the pointer/boolean-era
+  `isClickAnimating()` and `isClickConfirmed()` queries,
+- identity-checked cancellation from gesture and visibility paths,
+- idle-before-callback delivery for safe reentrancy,
+- characterization of competing press, confirmed cancellation, target hiding,
+  and reentrant click delivery.
+
 ## Current complexity inventory
 
-After Change 1 the controller carries:
+After Change 2 the controller carries:
 
 | State | Representation |
 | --- | --- |
-| Animation or retained held target | `click_anim_target_` |
-| Pending click with no active animation target | `deferred_click_` |
-| Release confirmation | `click_confirmed_` |
-| One held settlement invalidation already scheduled | `awaiting_release_` |
+| Interaction owner | `target_`; non-null in every non-idle phase |
+| Lifecycle | `phase_`: idle, animating-unconfirmed, animating-confirmed, awaiting-release, or awaiting-clean |
 | Previous footprint and presence sentinel | `previous_transient_footprint_`; an empty `Rect` means absent |
 | Animation time | Start time plus sampled elapsed time |
 | Animation origin | Two `int16_t` coordinates |
 | Final-frame observation | Inferred from elapsed time and the widget's `kWidgetClicking` flag |
 | Repaint completion | Inferred from `Widget::isDirty()` |
 
-The logical phase remains distributed among both pointers, two lifecycle
-booleans, two widget flags, elapsed time, and dirty state. Most combinations
-are nonsensical but representable. Examples include:
+The semantic lifecycle is now local to `target_` plus `phase_`. Widget flags,
+elapsed time, and dirty state still provide rendering and frame-completion
+facts, but cannot form contradictory controller ownership combinations.
 
-- both target pointers being non-null,
-- `awaiting_release_` with no animation target,
-- a confirmed click whose widget is neither target pointer,
-- a stale `click_confirmed_` after cancellation,
-- a target owned by one widget and confirmation supplied by another.
-
-The intended call paths avoid most of these combinations, but the controller
-does not enforce the invariants itself.
-
-On a typical 32-bit ABI the present member order is expected to occupy about
-40 bytes after alignment. One pointer, a one-byte phase, one 10-byte `Rect`,
-two 32-bit times, and two `int16_t` coordinates are expected to occupy about
-28 bytes. These are layout estimates, not checked ABI promises.
+On a typical 32-bit ABI one pointer, a one-byte phase, one 10-byte `Rect`, two
+32-bit times, and two `int16_t` coordinates are expected to occupy 28 bytes.
+This remains a layout estimate, not a checked ABI promise.
 
 ## Findings from the implementation audit
 
-### 1. The state enum can also remove a pointer
+### 1. The state enum also removes a pointer — implemented
 
-`click_anim_target_` and `deferred_click_` are successive owners of the same
-logical interaction. Repository call sites do not intentionally run an active
-animation and an unrelated deferred click concurrently. The second pointer is
+`click_anim_target_` and `deferred_click_` were successive owners of the same
+logical interaction. Repository call sites did not intentionally run an active
+animation and an unrelated deferred click concurrently. The second pointer was
 therefore a phase discriminator disguised as storage.
 
-A single `Widget* target_` can remain valid through animation, held
-settlement, and deferred delivery. Public queries can preserve current
-semantics by returning it only for animation-related phases.
+Change 2 keeps one `Widget* target_` valid through animation, held settlement,
+and deferred delivery. `target()` returns it only for animation-related phases;
+`isBusy()` reports every non-idle phase.
 
 ### 2. Transient-footprint code is duplicated
 
@@ -125,7 +123,7 @@ using an empty rectangle as the sentinel. Its helper:
 1. query the target's current parent-space transient bounds,
 2. union them with the non-empty previous bounds,
 3. notify the parent when the union differs from logical parent bounds,
-4. remembers the current bounds.
+4. remember the current bounds.
 
 Besides reducing fields and duplicated code, this preserves the full `YDim`
 range. The replaced saved Y coordinates were `int16_t`, while `Rect` supports
@@ -136,25 +134,25 @@ content can change a target's parent-space bounds during the ripple. The test
 override in `overlay_test.cpp` is a compact characterization of a production
 scenario, not merely hypothetical extensibility.
 
-### 3. Admission and identity checks are split across callers
+### 3. Admission and identity checks — implemented
 
-Both `Widget::onShowPress()` and the animated quick-tap branch check:
+Before Change 2, both `Widget::onShowPress()` and the animated quick-tap branch
+checked:
 
 ```cpp
 anim->isClickAnimating() || anim->isClickConfirmed()
 ```
 
-before calling `start()`. `start()` itself will overwrite an existing target.
-`confirmClick()` also accepts any widget identity.
+before calling `start()`. `start()` itself could overwrite an existing target,
+and `confirmClick()` accepted any widget identity.
 
 Before Change 1, a widget with `showClickAnimation() == false` skipped the
 quick-tap busy guard and called `confirmClick()` while another widget could own
 the active animation. The second tap could confirm the first target while
 losing its own action. Change 1 moves the existing caller-side busy guard
-outside the animated-only branch. Atomic controller admission and identity
-validation remain Change 2 work.
+outside the animated-only branch.
 
-The simplification should make admission atomic:
+Change 2 makes admission atomic:
 
 ```cpp
 bool tryStart(Widget& target, XDim x, YDim y);
@@ -162,10 +160,12 @@ bool tryConfirm(Widget& target);
 bool isBusy() const;
 ```
 
-Exact names are not important. The important property is that callers do not
-perform a check and mutation as separate controller operations.
+`tryStart()` mutates only from idle; `tryConfirm()` admits a non-animated click
+from idle or confirms only the matching animation target. `cancel()` likewise
+accepts a widget identity and ignores non-owners. Callers no longer perform a
+check and mutation as separate controller operations.
 
-The existing single-interaction policy should be preserved: a competing tap is
+The existing single-interaction policy is preserved: a competing tap is
 rejected, not queued. Queueing changes input semantics, requires ownership and
 lifetime rules for multiple raw widget pointers, and is not a simplification.
 
@@ -251,33 +251,33 @@ These are opportunistic source cleanups. They do not materially simplify the
 lifecycle on their own and should not be mixed into a behavioral change when
 review clarity matters.
 
-## Expected source and state reduction
+## Source and state reduction
 
-The current controller implementation is 278 physical lines across
-`click_animation.h` and `click_animation.cpp`, including API documentation and
-the long comments that explain settlement ordering. Those comments should not
-be removed merely to improve a line count.
+After Change 2 the controller implementation has 219 physical source lines
+excluding comment-only lines across `click_animation.h` and
+`click_animation.cpp`, compared with 199 after Change 1. Blank lines remain in
+the physical count, and an inline comment remains part of its code line.
 
 Reasonable source targets for a prototype are:
 
 | Change | Expected production-source effect |
 | --- | --- |
-| `Rect` footprint plus one helper | Implemented; the complete Change 1 production diff is 12 net lines smaller while also adding both fixes |
-| One target plus `Phase` | Approximately 10 fewer lines to 5 additional lines, depending on switch/query documentation; three coupled state fields disappear |
-| Atomic admission/confirmation | Roughly source-neutral; removes duplicated caller conditions and closes the identity gap |
+| `Rect` footprint plus one helper | Implemented; the complete Change 1 production diff is 12 non-comment physical lines smaller while also adding both fixes |
+| One target plus `Phase` and atomic admission | Implemented; together with widget call-site cleanup, Change 2 adds 18 non-comment physical lines and removes three coupled state fields |
 | Incidental dead-code cleanup | Approximately 8–15 fewer lines outside the controller |
 | Completed-refresh settlement | Unknown until prototyped; reject it if deadline handling and callback plumbing merely relocate or grow the branches |
 
-The conservative refactor should therefore aim for roughly 15–35 fewer
-physical production lines while retaining explanatory comments. More
-important, four controller lifecycle carriers (two pointers and two lifecycle
-booleans) become two: one pointer and one phase. If the prototype does not
-produce that state reduction, the enum is not earning its complexity.
+The anticipated source-line reduction did not materialize: centralized phase
+transitions and atomic APIs use more lines than the compact pointer/boolean
+branches. The important state reduction did materialize: four controller
+lifecycle carriers became one pointer and one phase. The result should be
+judged on that invariant and estimated RAM reduction rather than line count
+alone.
 
-## Recommended conservative state model
+## Implemented conservative state model
 
-The first implementation pass can preserve the current tick/refresh ordering
-and use these controller phases:
+Change 2 preserves the current tick/refresh ordering and uses these controller
+phases:
 
 | Phase | Meaning |
 | --- | --- |
@@ -295,7 +295,7 @@ remain an animating phase in the conservative version. The existing
 removes the coupled confirmation, deferred-pointer, and awaiting-release
 booleans.
 
-### Proposed transitions
+### Transitions
 
 ```text
 kIdle
@@ -320,26 +320,29 @@ kAwaitingClean
   released and clean -> invalidate, deliver, kIdle
 ```
 
-The delivery helper should set phase and ownership to idle before invoking
-`onClicked()`. A callback is allowed to start another interaction or otherwise
-re-enter framework code; it must not observe the old controller ownership.
+The delivery helper sets phase and ownership to idle before invoking
+`onClicked()`. A callback may start another interaction or otherwise re-enter
+framework code without observing the old controller ownership.
 
 ### Query cleanup
 
-The existing query names blur animation and controller occupancy:
+The former query names blurred animation and controller occupancy:
 
-- `isClickAnimating()` includes a completed held target,
-- `isClickConfirmed()` sometimes represents a no-animation deferred click,
-- `target()` excludes `deferred_click_` only because it is stored separately.
+- `isClickAnimating()` included a completed held target,
+- `isClickConfirmed()` sometimes represented a no-animation deferred click,
+- `target()` excluded `deferred_click_` only because it was stored separately.
 
-A phase model should expose intent-specific queries:
+A phase model now exposes intent-specific queries:
 
 - `isBusy()` for admission,
-- `animationTarget()` or the existing `target()` for overlay ownership,
+- the existing `target()` for overlay ownership,
 - a private `target_` for all phase transitions.
 
-`Widget::getClickAnimation()` should continue returning non-null only while
-that widget owns a visually active animation.
+`isClickAnimating()` and `isClickConfirmed()` were removed. Their meanings were
+phase-dependent and no production caller required them.
+
+`Widget::getClickAnimation()` continues returning non-null only while that
+widget owns a visually active animation.
 
 ## Non-obvious option: settle at completed-refresh boundary
 
@@ -406,23 +409,22 @@ successful `refresh()`.
    actually painted the final overlay during that completed refresh. A
    completed window refresh plus `!isClicking()` may be sufficient if all
    non-paint clears have explicit cancellation semantics.
-3. An incomplete refresh that clears `kWidgetClicking` must either restore the
-   clicking state or delay clearing it until target paint succeeds.
+3. An incomplete refresh that clears `kWidgetClicking` must restore it. Change
+   1 already enforces this and the prototype must preserve it.
 4. `onClicked()` can mutate layout immediately after a completed refresh. That
    is safe with respect to paint traversal, but reentrancy and scheduling tests
    should make the contract explicit.
 
 ### Recommendation
 
-Prototype this only after the conservative phase model and characterization
-tests exist. It has the best chance of reducing the lifecycle branches, but it
-is not a mechanical refactor.
+The conservative phase model and characterization tests now exist. This is the
+next approved experiment; it has the best chance of reducing the lifecycle
+branches, but it is not a mechanical refactor.
 
 My recommendation is to allow animated click delivery at the tail of a
 successful refresh, because that is the precise boundary the user-visible
-contract cares about. Agreement is needed before implementation because it
-changes observable callback timing for callers that invoke `refresh()`
-directly.
+contract cares about. The user accepted the observable callback-timing change
+for a prototype, including callers that invoke `refresh()` directly.
 
 ## Alternative: widget-level final-frame acknowledgement
 
@@ -502,19 +504,19 @@ Implemented in Change 1:
    widget with `showClickAnimation() == false`; verifies it cannot confirm or
    replace the first target and cannot be silently misdelivered.
 
-Still recommended before or during Change 2:
+Implemented in Change 2:
 
-3. **Confirmed-owner cancellation:** cancel the owning widget after
-   confirmation and specify whether the click is canceled or retained; verify
-   the controller returns to an admissible phase.
-4. **Target visibility change:** hide an unconfirmed and a confirmed target
-   around final-frame time; specify whether the action is canceled or
-   delivered and verify no controller pointer remains stranded.
-5. **Reentrant `onClicked()`:** let `onClicked()` immediately start or confirm
-   another control; verify the old phase was cleared before callback entry.
-
-The remaining three define behavior currently dependent on gesture or
-widget-lifetime assumptions.
+3. **Confirmed-owner cancellation:**
+   `CancelingConfirmedOwnerCancelsPendingClick` verifies that owner
+   cancellation before the final frame cancels the semantic action and returns
+   the controller to idle.
+4. **Target visibility change:**
+   `HidingTargetCancelsEveryPendingClickPhase` verifies that hiding an
+   unconfirmed target or an awaiting-clean confirmed target cancels ownership
+   without later delivery.
+5. **Reentrant `onClicked()`:** `ReentrantClickCanStartNextAnimation` verifies
+   that ownership is cleared before callback entry and the callback can start
+   the next target.
 
 ## Suggested implementation sequence
 
@@ -527,9 +529,9 @@ widget-lifetime assumptions.
 - optionally remove unrelated unused constants in a separate cleanup commit.
 
 This change preserves the lifecycle representation. It fixes the two
-characterized gaps and removes 12 net production lines.
+characterized gaps and removes 12 non-comment physical production-source lines.
 
-### Change 2: explicit phase and one target
+### Change 2: explicit phase and one target — implemented
 
 - introduce `Phase`,
 - replace the second pointer and coupled booleans,
@@ -538,7 +540,9 @@ characterized gaps and removes 12 net production lines.
 - run all overlay, navigation bar, navigation rail, list, button, switch, tab,
   keyboard, and deadline tests.
 
-This is the recommended simplification change.
+This change removes the second pointer, both lifecycle booleans, and the two
+ambiguous public state queries. It adds 18 non-comment physical source lines
+and an estimated 12-byte controller RAM saving on a 32-bit target.
 
 ### Change 3: completed-refresh experiment
 
@@ -548,34 +552,30 @@ This is the recommended simplification change.
 - retain it only if it is observably simpler than the conservative phase
   implementation.
 
-This change requires consultation because callback timing changes.
+The callback-timing change has user approval for a focused experiment; it is
+not yet implemented.
 
 ### Change 4: terminology only
 
-If desired, rename `kPressAnimationMillis`, `isClickAnimating()`, or
-`ClickAnimation` consistently after behavior and state settle. Do not mix the
-rename into the lifecycle refactor.
+If desired, rename `kPressAnimationMillis` or `ClickAnimation` consistently
+after behavior and state settle. Do not mix the rename into the lifecycle
+refactor.
 
-## Consultation points
+## Resolved consultation points
 
-Before implementing beyond the conservative phase model, decide:
+The user accepted the documented recommendations:
 
-1. **Completed-refresh delivery:** May `onClicked()` run at the tail of the
-   successful refresh that emitted the final animation frame, rather than in a
-   later `tick()`? Recommendation: yes, behind a focused prototype.
-2. **Concurrent tap policy:** Should a second interaction be rejected or
-   queued while the controller is busy? Recommendation: reject, preserving the
-   current intended policy.
-3. **Cancellation after confirmation:** Does owner cancellation cancel the
-   semantic click, or must a confirmed click always deliver? Recommendation:
-   cancel before the final frame; gesture completion should use confirmation,
-   not cancellation.
-4. **Hidden confirmed targets:** Should hiding a target cancel its pending
-   action? Recommendation: cancel and release controller ownership; an
-   invisible control should not later mutate content due to a stale pointer.
-5. **Release-time component policies:** Should any existing component be
-   migrated to post-animation delivery? Recommendation: no in this work; treat
-   each as a separate behavioral decision.
+1. **Completed-refresh delivery:** prototype delivery at the tail of the
+   successful final-frame refresh as Change 3, retaining it only if it is
+   simpler.
+2. **Concurrent tap policy:** reject a second interaction while busy. This is
+   implemented in Change 2.
+3. **Cancellation after confirmation:** cancellation before the final frame
+   cancels the semantic click. This is implemented and characterized.
+4. **Hidden confirmed targets:** hiding cancels the pending action and releases
+   ownership. This is implemented and characterized.
+5. **Release-time component policies:** do not migrate component-specific
+   release-time actions in this work.
 
 ## Success criteria
 
@@ -591,6 +591,11 @@ A successful simplification should:
 - reduce or hold production source lines without moving complexity into tests
   or generic framework machinery,
 - pass both complete and deadline-interrupted refresh regressions.
+
+Change 2 meets the state, ownership, RAM-estimate, and regression criteria. It
+does not meet the source-line criterion: excluding comment-only lines, the
+physical production diff adds 18 lines. That explicit tradeoff should be
+evaluated during review.
 
 Primary files:
 
