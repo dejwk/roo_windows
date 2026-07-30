@@ -235,6 +235,12 @@ class Adapter : public roo_display::Drawable {
 bool Application::refresh(roo_time::Uptime deadline) {
   root_window_.updateLayout();
   last_time_refreshed_ms_ = millis();
+  ClickAnimation& click_animation = root_window_.click_animation();
+  // refresh() is also a public, one-shot rendering entry point and therefore
+  // is not necessarily preceded by tick(). Sample immediately before drawing
+  // so standalone refreshes advance the animation and every pixel in this
+  // frame observes the same wall-clock progress.
+  click_animation.sampleFrameTime();
   roo_display::DrawingContext dc(display_);
   dc.setFillMode(roo_display::FillMode::kExtents);
   Adapter adapter(root_window_, deadline);

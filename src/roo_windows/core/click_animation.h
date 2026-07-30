@@ -4,6 +4,7 @@
 
 namespace roo_windows {
 
+class Application;
 class Widget;
 
 /// Shared click-animation controller owned by a MainWindow.
@@ -67,6 +68,12 @@ class ClickAnimation {
   void clickWidget(Widget* target) { deferred_click_ = target; }
 
  private:
+  friend class Application;
+
+  // Captures wall-clock progress once so every pixel emitted by the following
+  // refresh observes the same animation state.
+  void sampleFrameTime();
+
   Widget* click_anim_target_;
 
   // The click has been released on top of the widget during click animation.
@@ -87,6 +94,7 @@ class ClickAnimation {
   int16_t prev_transient_y1_;
 
   unsigned long click_anim_start_millis_;
+  unsigned long sampled_elapsed_millis_;
   int16_t click_anim_x_, click_anim_y_;
 };
 

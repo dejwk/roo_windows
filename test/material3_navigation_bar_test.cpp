@@ -132,7 +132,7 @@ void ExpectDestinationPaintsEveryPixel(NavigationBarLayout layout,
       /*is_write_once=*/true, roo_display::color::Blue,
       roo_display::FillMode::kExtents, roo_display::BlendingMode::kSourceOver);
   Canvas canvas(&surface);
-  internal::ClipperState clipper_state;
+  roo_windows::internal::ClipperState clipper_state;
   Clipper clipper(clipper_state, canvas.out(), roo_time::Uptime::Max());
   canvas.set_out(clipper.out());
   PaintContext paint_context(canvas, clipper);

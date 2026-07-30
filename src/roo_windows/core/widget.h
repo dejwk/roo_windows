@@ -42,6 +42,8 @@ typedef roo_display::RleImage4bppxBiased<roo_display::Alpha4,
 
 using roo_display::Color;
 
+// TODO: Rename this consistently in a separate change; it controls the full
+// click-animation lifecycle as well as the initial press visuals.
 static const uint32_t kPressAnimationMillis = 200;
 
 static const uint16_t kWidgetOwnedByParent = 0x0001;

@@ -3,6 +3,7 @@
 #include "roo_windows/core/overlay_spec.h"
 #include "roo_windows/core/press_overlay.h"
 #include "roo_windows/core/theme.h"
+#include "roo_icons/outlined/24/navigation.h"
 #include "roo_windows/material3/checkbox/checkbox.h"
 #include "roo_windows/material3/slider/slider.h"
 #include "roo_windows/widgets/checkbox.h"
@@ -29,6 +30,24 @@ class ClickableSurfaceBoxWidget : public test_support::ColorBoxWidget {
       : ColorBoxWidget(context, color, dims) {}
 
   bool isClickable() const override { return true; }
+};
+
+class ClickableIcon : public Icon {
+ public:
+  using Icon::Icon;
+
+  bool isClickable() const override { return true; }
+
+  int clickCount() const { return click_count_; }
+
+ protected:
+  void onClicked() override {
+    ++click_count_;
+    Icon::onClicked();
+  }
+
+ private:
+  int click_count_ = 0;
 };
 
 class FadePointOverlayBoxWidget : public PointOverlayBoxWidget {
@@ -61,6 +80,34 @@ class FadePointOverlayBoxWidget : public PointOverlayBoxWidget {
   mutable bool click_animation_in_progress_;
   mutable bool has_press_overlay_;
   mutable uint8_t overlay_alpha_;
+};
+
+class SlowPaintPointOverlayBoxWidget : public PointOverlayBoxWidget {
+ public:
+  SlowPaintPointOverlayBoxWidget(ApplicationContext& context,
+                                 roo_display::Color color, Dimensions dims)
+      : PointOverlayBoxWidget(context, color, dims) {}
+
+  void setPaintDelay(unsigned long delay_ms) { paint_delay_ms_ = delay_ms; }
+
+  float progressAtPaintStart() const { return progress_at_paint_start_; }
+  float progressAtPaintEnd() const { return progress_at_paint_end_; }
+
+  void paint(PaintContext& ctx) const override {
+    const ClickAnimation* animation = getClickAnimation();
+    progress_at_paint_start_ =
+        animation == nullptr ? 1.0f : animation->progress();
+    PointOverlayBoxWidget::paint(ctx);
+    if (paint_delay_ms_ != 0) delay(paint_delay_ms_);
+    animation = getClickAnimation();
+    progress_at_paint_end_ =
+        animation == nullptr ? 1.0f : animation->progress();
+  }
+
+ private:
+  unsigned long paint_delay_ms_ = 0;
+  mutable float progress_at_paint_start_ = 1.0f;
+  mutable float progress_at_paint_end_ = 1.0f;
 };
 
 class FadeClickableSurfaceBoxWidget : public ClickableSurfaceBoxWidget {
@@ -475,6 +522,43 @@ TEST_F(RooWindowsRenderTest, AreaClickAnimationStaysInsideSurfaceBounds) {
   EXPECT_NE(QuantizeToArgb4444(color::Blue), pixelAt(20, 20));
 }
 
+// Verifies that slow display output cannot advance animation progress midway
+// through a frame, while the following frame still includes that output time
+// in its wall-clock sample.
+TEST_F(RooWindowsRenderTest,
+       ClickAnimationUsesOneWallClockSamplePerFrame) {
+  constexpr unsigned long kSlowPaintMillis = kPressAnimationMillis / 4;
+  auto target = std::make_unique<SlowPaintPointOverlayBoxWidget>(
+      context(), color::Blue, Dimensions(18, 18));
+  SlowPaintPointOverlayBoxWidget* target_ptr = target.get();
+
+  app_.add(std::move(target), Box(20, 12, 37, 29));
+  ASSERT_TRUE(refresh());
+
+  target_ptr->onShowPress(target_ptr->width() / 2,
+                          target_ptr->height() / 2);
+  delay(kPressAnimationMillis / 4);
+  app_.root().refreshClickAnimation();
+  const ClickAnimation* animation = target_ptr->getClickAnimation();
+  ASSERT_NE(nullptr, animation);
+  ASSERT_LT(animation->progress(), 1.0f);
+
+  target_ptr->setPaintDelay(kSlowPaintMillis);
+  ASSERT_TRUE(refresh());
+  target_ptr->setPaintDelay(0);
+
+  EXPECT_NEAR(target_ptr->progressAtPaintStart(),
+              target_ptr->progressAtPaintEnd(), 0.005f);
+  const float frame_progress = target_ptr->progressAtPaintEnd();
+
+  app_.root().refreshClickAnimation();
+  EXPECT_GE(animation->progress(),
+            frame_progress +
+                static_cast<float>(kSlowPaintMillis) /
+                    static_cast<float>(kPressAnimationMillis) -
+                0.05f);
+}
+
 // A rounded surface's decoration owns the corner mask. Its animated area
 // ripple must not tint untouched background pixels outside that mask.
 TEST_F(RooWindowsRenderTest,
@@ -719,6 +803,48 @@ TEST_F(RooWindowsRenderTest,
   app_.root().refreshClickAnimation();
   ASSERT_TRUE(refresh());
   EXPECT_EQ(background_pixel, pixelAt(probe_x, probe_y));
+}
+
+// Verifies that the final click-overlay frame does not leave its tint between
+// an icon's foreground strokes. The deferred action is delivered before the
+// overlay-free settlement frame, which restores the target's normal pixels.
+TEST_F(RooWindowsRenderTest,
+       ClickableIconRepaintsForegroundAfterClickOverlaySettles) {
+  auto back = std::make_unique<ColorBoxWidget>(
+      context(), context().theme().material3Theme().color.background,
+      Dimensions(kWidth, kHeight));
+  auto icon = std::make_unique<ClickableIcon>(
+      context(), ic_outlined_24_navigation_menu());
+  ClickableIcon* icon_ptr = icon.get();
+
+  app_.add(std::move(back), Box(0, 0, kWidth - 1, kHeight - 1));
+  app_.add(std::move(icon), Box(20, 12, 43, 35));
+  ASSERT_TRUE(refresh());
+
+  XDim abs_x;
+  YDim abs_y;
+  icon_ptr->getAbsoluteOffset(abs_x, abs_y);
+  const int16_t probe_x = abs_x + icon_ptr->width() / 2;
+  const int16_t probe_y = abs_y + 9;
+  const Color settled_pixel = pixelAt(probe_x, probe_y);
+
+  icon_ptr->onSingleTapUp(icon_ptr->width() / 2, icon_ptr->height() / 2);
+  ASSERT_TRUE(refresh());
+
+  delay(kPressAnimationMillis + 20);
+  ASSERT_TRUE(refresh());
+  EXPECT_FALSE(icon_ptr->isClicking());
+  EXPECT_FALSE(icon_ptr->isDirty());
+  EXPECT_EQ(0, icon_ptr->clickCount());
+  EXPECT_NE(settled_pixel, pixelAt(probe_x, probe_y));
+
+  app_.root().refreshClickAnimation();
+  EXPECT_TRUE(icon_ptr->isDirty());
+  EXPECT_EQ(1, icon_ptr->clickCount());
+  ASSERT_TRUE(refresh());
+
+  EXPECT_FALSE(icon_ptr->isDirty());
+  EXPECT_EQ(settled_pixel, pixelAt(probe_x, probe_y));
 }
 
 // Verifies that toggling a Material 3 checkbox's on/off state via setOn()
@@ -1033,6 +1159,7 @@ TEST_F(RooWindowsRenderTest,
   ASSERT_TRUE(anim.isClickAnimating());
 
   delay(kPressAnimationMillis + 20);
+  app_.root().refreshClickAnimation();
 
   EXPECT_EQ(front_ptr, anim.target());
   EXPECT_TRUE(anim.isClickAnimating());
