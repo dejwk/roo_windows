@@ -69,7 +69,6 @@ class NavigationDestinationBase : public BasicWidget {
   void setPresentation(NavigationDestinationPresentation presentation);
   void setSelectedFromOwner(bool selected);
 
-  void onSingleTapUp(XDim x, YDim y) override;
   void onClicked() override;
   void notifyStateChanged(uint16_t state_diff) override;
   Rect getDirectPaintExclusionBounds() const override;
@@ -86,7 +85,6 @@ class NavigationDestinationBase : public BasicWidget {
   const MonoIcon* selected_icon_;
   uint8_t presentation_ : 1;
   uint8_t selected_ : 1;
-  uint8_t click_handled_on_release_ : 1;
 };
 
 }  // namespace internal

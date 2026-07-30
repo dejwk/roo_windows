@@ -379,8 +379,8 @@ TEST(Material3NavigationBar, BarOwnsSelectionAndReselection) {
   EXPECT_EQ((std::vector<std::pair<int, int>>{{0, 1}}), bar.selection_changes);
 }
 
-// Verifies that touch release selects before the custom pill animation retires,
-// so its final frame cannot flash the unselected bar surface before settling.
+// Verifies that touch release waits for the custom pill animation, then commits
+// selection before the single overlay-free settlement frame is painted.
 TEST(Material3NavigationBar, TouchReleaseSettlesIntoSelectedPill) {
   constexpr int16_t kWidth = 192;
   constexpr int16_t kHeight = 80;
@@ -409,15 +409,24 @@ TEST(Material3NavigationBar, TouchReleaseSettlesIntoSelectedPill) {
                                             inbox_raw->height() / 2);
 
   EXPECT_TRUE(inbox_raw->isClicking());
+  EXPECT_EQ(0, bar_raw->selectedIndex());
+  EXPECT_FALSE(inbox_raw->selected());
+  EXPECT_TRUE(bar_raw->invoked.empty());
+
+  delay(kPressAnimationMillis + 20);
+  app.root().refreshClickAnimation();
+  ASSERT_TRUE(app.refresh());
+  EXPECT_FALSE(inbox_raw->isClicking());
+  EXPECT_FALSE(inbox_raw->isDirty());
+
+  app.root().refreshClickAnimation();
   EXPECT_EQ(1, bar_raw->selectedIndex());
   EXPECT_TRUE(inbox_raw->selected());
-  EXPECT_EQ(std::vector<int>({1}), bar_raw->invoked);
-
-  // Simulate the framework's deferred completion callback: selection and the
-  // semantic bar callback have already been committed on touch release.
-  NavigationBarDestinationTestAccess::click(*inbox_raw);
+  EXPECT_TRUE(inbox_raw->isDirty());
   EXPECT_EQ(std::vector<int>({1}), bar_raw->invoked);
   EXPECT_TRUE(bar_raw->reselected.empty());
+  ASSERT_TRUE(app.refresh());
+  EXPECT_FALSE(inbox_raw->isDirty());
 }
 
 // Verifies the five-destination cap and that clear detaches every destination

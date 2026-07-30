@@ -46,8 +46,7 @@ NavigationDestinationBase::NavigationDestinationBase(
       selected_icon_(selected_icon),
       presentation_(
           static_cast<uint8_t>(NavigationDestinationPresentation::kStacked)),
-      selected_(false),
-      click_handled_on_release_(false) {}
+      selected_(false) {}
 
 roo::string_view NavigationDestinationBase::label() const { return label_; }
 
@@ -170,23 +169,8 @@ void NavigationDestinationBase::setSelectedFromOwner(bool selected) {
   requestLayout();
 }
 
-void NavigationDestinationBase::onSingleTapUp(XDim x, YDim y) {
-  Widget::onSingleTapUp(x, y);
-  if (parent() != nullptr && isEnabled()) {
-    // Commit selection before the custom pill's final click frame settles.
-    // onClicked() still receives the deferred framework completion signal;
-    // the guard prevents a duplicate owner activation.
-    click_handled_on_release_ = true;
-    activateFromOwner();
-  }
-}
-
 void NavigationDestinationBase::onClicked() {
-  const bool click_was_handled_on_release = click_handled_on_release_ != 0;
-  click_handled_on_release_ = false;
-  if (parent() != nullptr && !click_was_handled_on_release) {
-    activateFromOwner();
-  }
+  if (parent() != nullptr && isEnabled()) activateFromOwner();
   Widget::onClicked();
 }
 

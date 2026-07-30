@@ -1,3 +1,4 @@
+#include <Arduino.h>
 #include <stddef.h>
 
 #include <memory>
@@ -13,6 +14,7 @@
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/canvas.h"
+#include "roo_windows/core/click_animation.h"
 #include "roo_windows/core/clipper.h"
 #include "roo_windows/core/container.h"
 #include "roo_windows/core/environment.h"
@@ -331,7 +333,53 @@ TEST(Material3NavigationRail, RailOwnsSelectionAndReselection) {
   EXPECT_EQ(std::vector<int>({1}), rail.reselected);
 }
 
-TEST(Material3NavigationRail, TouchReleaseCommitsSelectionOnlyOnce) {
+TEST(Material3NavigationRail,
+     ReselectionSettlesDirectlyIntoSelectedAppearance) {
+  constexpr int16_t kWidth = 80;
+  constexpr int16_t kHeight = 80;
+  roo::byte raster[kWidth * kHeight * 2];
+  roo_display::OffscreenDevice<roo_display::Argb4444> offscreen(
+      kWidth, kHeight, raster, roo_display::Argb4444());
+  roo_display::Display display(offscreen);
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  Application app(&env, display);
+
+  auto rail = std::make_unique<TestNavigationRail>(app.context());
+  auto home = std::make_unique<NavigationRailDestination>(
+      app.context(), "Home", &ic_outlined_24_action_done());
+  NavigationRailDestination* home_raw = home.get();
+  ASSERT_TRUE(rail->add(WidgetRef(std::move(home))));
+  app.add(std::move(rail),
+          roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
+  ASSERT_TRUE(app.refresh());
+  ASSERT_TRUE(home_raw->selected());
+  ASSERT_FALSE(home_raw->isDirty());
+
+  home_raw->onShowPress(home_raw->width() / 2, home_raw->height() / 2);
+  NavigationRailDestinationTestAccess::tapUp(
+      *home_raw, home_raw->width() / 2, home_raw->height() / 2);
+  ASSERT_TRUE(app.refresh());
+
+  delay(kPressAnimationMillis + 20);
+  app.root().refreshClickAnimation();
+  ASSERT_TRUE(app.refresh());
+  ASSERT_FALSE(home_raw->isClicking());
+  ASSERT_FALSE(home_raw->isDirty());
+
+  // The generic handoff invalidates immediately before invoking the action.
+  // Reselection therefore has one selected settlement frame even though the
+  // owner does not change selected state.
+  app.root().refreshClickAnimation();
+  EXPECT_TRUE(home_raw->selected());
+  EXPECT_TRUE(home_raw->isDirty());
+  EXPECT_EQ(std::vector<int>({0}),
+            static_cast<TestNavigationRail*>(home_raw->parent())->reselected);
+  ASSERT_TRUE(app.refresh());
+  EXPECT_FALSE(home_raw->isDirty());
+}
+
+TEST(Material3NavigationRail, TouchReleaseDefersSelectionUntilClickCompletes) {
   constexpr int16_t kWidth = 80;
   constexpr int16_t kHeight = 160;
   roo::byte raster[kWidth * kHeight * 2];
@@ -358,13 +406,78 @@ TEST(Material3NavigationRail, TouchReleaseCommitsSelectionOnlyOnce) {
   NavigationRailDestinationTestAccess::tapUp(*inbox_raw, inbox_raw->width() / 2,
                                              inbox_raw->height() / 2);
   EXPECT_TRUE(inbox_raw->isClicking());
+  EXPECT_EQ(0, rail_raw->selectedIndex());
+  EXPECT_FALSE(inbox_raw->selected());
+  EXPECT_TRUE(rail_raw->invoked.empty());
+
+  delay(kPressAnimationMillis + 20);
+  app.root().refreshClickAnimation();
+  const ClickAnimation* animation = inbox_raw->getClickAnimation();
+  ASSERT_NE(nullptr, animation);
+  // A confirmed target retains its settled overlay until the final frame is
+  // actually painted. Clearing it here would leave the destination blank
+  // while the deferred selection waits for a clean widget.
+  EXPECT_TRUE(inbox_raw->isClicking());
+  EXPECT_GE(animation->progress(), 1.0f);
+  ASSERT_TRUE(app.refresh());
+  EXPECT_FALSE(inbox_raw->isClicking());
+  EXPECT_FALSE(inbox_raw->isDirty());
+
+  // Retirement invalidates and invokes in one tick. The next paint therefore
+  // sees the selected state directly; there is no intermediate unselected
+  // frame between the final overlay and the selected indicator.
+  app.root().refreshClickAnimation();
   EXPECT_EQ(1, rail_raw->selectedIndex());
   EXPECT_TRUE(inbox_raw->selected());
-  EXPECT_EQ(std::vector<int>({1}), rail_raw->invoked);
-
-  NavigationRailDestinationTestAccess::click(*inbox_raw);
+  EXPECT_TRUE(inbox_raw->isDirty());
   EXPECT_EQ(std::vector<int>({1}), rail_raw->invoked);
   EXPECT_TRUE(rail_raw->reselected.empty());
+  ASSERT_TRUE(app.refresh());
+  EXPECT_FALSE(inbox_raw->isDirty());
+}
+
+TEST(Material3NavigationRail,
+     QuickReleaseCannotReplaceAnotherDestinationsActiveAnimation) {
+  constexpr int16_t kWidth = 80;
+  constexpr int16_t kHeight = 160;
+  roo::byte raster[kWidth * kHeight * 2];
+  roo_display::OffscreenDevice<roo_display::Argb4444> offscreen(
+      kWidth, kHeight, raster, roo_display::Argb4444());
+  roo_display::Display display(offscreen);
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  Application app(&env, display);
+
+  auto rail = std::make_unique<TestNavigationRail>(app.context());
+  auto home = std::make_unique<NavigationRailDestination>(
+      app.context(), "Home", &ic_outlined_24_action_done());
+  auto inbox = std::make_unique<NavigationRailDestination>(
+      app.context(), "Inbox", &ic_outlined_24_action_bookmark());
+  NavigationRailDestination* home_raw = home.get();
+  NavigationRailDestination* inbox_raw = inbox.get();
+  ASSERT_TRUE(rail->add(WidgetRef(std::move(home))));
+  ASSERT_TRUE(rail->add(WidgetRef(std::move(inbox))));
+  app.add(std::move(rail),
+          roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
+  ASSERT_TRUE(app.refresh());
+
+  inbox_raw->onShowPress(inbox_raw->width() / 2, inbox_raw->height() / 2);
+  NavigationRailDestinationTestAccess::tapUp(
+      *inbox_raw, inbox_raw->width() / 2, inbox_raw->height() / 2);
+  ASSERT_EQ(inbox_raw, app.root().click_animation().target());
+  ASSERT_TRUE(inbox_raw->isClicking());
+
+  // A quick release has no preceding onShowPress(). It must still honor the
+  // active-animation guard instead of replacing the controller target and
+  // stranding the previous destination in kWidgetClicking.
+  NavigationRailDestinationTestAccess::tapUp(
+      *home_raw, home_raw->width() / 2, home_raw->height() / 2);
+
+  EXPECT_EQ(inbox_raw, app.root().click_animation().target());
+  EXPECT_TRUE(inbox_raw->isClicking());
+  EXPECT_FALSE(home_raw->isClicking());
+  EXPECT_EQ(0, static_cast<TestNavigationRail*>(inbox_raw->parent())
+                   ->selectedIndex());
 }
 
 TEST(Material3NavigationRail, RailCapsDestinationsAndRetainsHeaderOnClear) {
