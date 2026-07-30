@@ -693,10 +693,9 @@ void Widget::paintWidgetModded(PaintContext& ctx) {
         clearClicking();
         // overlay_spec was computed before clearClicking(), so this frame may
         // still draw the full settled overlay even though the widget is no
-        // longer marked clicking. ClickAnimation::tick() invalidates the
-        // target immediately before delivering the deferred action, allowing
-        // the next frame to paint either the action's new visual state or the
-        // unchanged control without residual overlay pixels.
+        // longer marked clicking. ClickAnimation retains a held target through
+        // its settlement repaint, allowing a late release to merge any visual
+        // state change into that frame without residual pixels or flicker.
       }
     }
     if (overlay_spec.has_press_overlay()) {

@@ -17,6 +17,7 @@ ClickAnimation::ClickAnimation()
       prev_transient_y1_(-1),
       click_anim_start_millis_(0),
       sampled_elapsed_millis_(0),
+      awaiting_release_(false),
       click_anim_x_(0),
       click_anim_y_(0) {}
 
@@ -61,6 +62,11 @@ void ClickAnimation::tick() {
   if (click_anim_target_ != nullptr &&
       sampled_elapsed_millis_ >= kPressAnimationMillis &&
       !click_anim_target_->isClicking()) {
+    // A finished held press stays attached after its one settlement
+    // invalidation. This lets a release coalesce its state change into that
+    // repaint instead of first drawing the old state without an overlay.
+    if (awaiting_release_) return;
+
     // The final paint frame may still use the pre-clear transient state.
     // Invalidate the full transient spill region once more before delivering
     // the deferred click so siblings underneath that spill are refreshed.
@@ -74,9 +80,19 @@ void ClickAnimation::tick() {
     if (repaint_bounds != click_anim_target_->parent_bounds()) {
       click_anim_target_->notifyParentInvalidatedRegion(repaint_bounds);
     }
-    if (click_confirmed_) {
+    Widget* target = click_anim_target_;
+    if (!click_confirmed_ && target->isPressed()) {
+      target->invalidateInterior();
+      awaiting_release_ = true;
+      has_prev_transient_bounds_ = false;
+      return;
+    } else if (click_confirmed_) {
       click_confirmed_ = false;
-      clickWidget(click_anim_target_);
+      clickWidget(target);
+    } else {
+      // An unconfirmed target which is no longer pressed has no deferred action
+      // to schedule its settlement frame.
+      target->invalidateInterior();
     }
     click_anim_target_ = nullptr;
     has_prev_transient_bounds_ = false;
@@ -136,15 +152,30 @@ void ClickAnimation::start(Widget* widget, int16_t x, int16_t y) {
   click_confirmed_ = false;
   has_prev_transient_bounds_ = false;
   sampled_elapsed_millis_ = 0;
+  awaiting_release_ = false;
 }
 
 void ClickAnimation::cancel() {
   click_anim_target_ = nullptr;
   has_prev_transient_bounds_ = false;
   sampled_elapsed_millis_ = 0;
+  awaiting_release_ = false;
 }
 
 void ClickAnimation::confirmClick(Widget* widget) {
+  if (click_anim_target_ == widget && !widget->isClicking() &&
+      sampled_elapsed_millis_ >= kPressAnimationMillis) {
+    // The final animated frame has already been emitted. Merge the click's
+    // visual state change into the next settlement frame, whether retirement
+    // has run already or is still pending.
+    click_anim_target_ = nullptr;
+    click_confirmed_ = false;
+    has_prev_transient_bounds_ = false;
+    awaiting_release_ = false;
+    widget->invalidateInterior();
+    widget->onClicked();
+    return;
+  }
   click_confirmed_ = true;
   if (click_anim_target_ == nullptr) {
     deferred_click_ = widget;

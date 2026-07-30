@@ -41,15 +41,14 @@ class ClickAnimation {
   /// Returns the widget currently owning the active click animation.
   ///
   /// Returns `nullptr` when there is no active animation.
-  /// A finished animation may still keep its target until it is retired by
-  /// tick().
+  /// A finished animation may retain a pressed target until release so the
+  /// click result can be merged into its settlement frame.
   const Widget* target() const;
 
   /// Returns true while an animation target is active.
   ///
   /// Equivalent to `target() != nullptr`.
-  /// This includes the brief state after the animation has finished and before
-  /// tick() retires the target.
+  /// This includes a finished target retained while its pointer remains down.
   bool isClickAnimating() const;
 
   /// Returns true once the release has been confirmed for deferred delivery.
@@ -95,6 +94,10 @@ class ClickAnimation {
 
   unsigned long click_anim_start_millis_;
   unsigned long sampled_elapsed_millis_;
+
+  // The finished target has been invalidated once for held-state settlement
+  // and remains attached so a late release can reuse that repaint.
+  bool awaiting_release_;
   int16_t click_anim_x_, click_anim_y_;
 };
 

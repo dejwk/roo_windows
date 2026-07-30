@@ -847,6 +847,68 @@ TEST_F(RooWindowsRenderTest,
   EXPECT_EQ(settled_pixel, pixelAt(probe_x, probe_y));
 }
 
+// Verifies that an animation which finishes while the pointer is still held
+// schedules its own settlement frame and remains attached until release.
+TEST_F(RooWindowsRenderTest,
+       HeldPressRepaintsAfterUnconfirmedClickAnimationRetires) {
+  auto icon = std::make_unique<ClickableIcon>(
+      context(), ic_outlined_24_navigation_menu());
+  ClickableIcon* icon_ptr = icon.get();
+  app_.add(std::move(icon), Box(20, 12, 43, 35));
+  ASSERT_TRUE(refresh());
+
+  icon_ptr->onShowPress(icon_ptr->width() / 2, icon_ptr->height() / 2);
+  ASSERT_TRUE(icon_ptr->isPressed());
+
+  delay(kPressAnimationMillis + 20);
+  ASSERT_TRUE(refresh());
+  EXPECT_FALSE(icon_ptr->isClicking());
+  EXPECT_FALSE(icon_ptr->isDirty());
+  EXPECT_TRUE(icon_ptr->isPressed());
+
+  app_.root().refreshClickAnimation();
+  EXPECT_EQ(icon_ptr, app_.root().click_animation().target());
+  EXPECT_TRUE(icon_ptr->isDirty());
+  EXPECT_TRUE(icon_ptr->isPressed());
+
+  ASSERT_TRUE(refresh());
+  EXPECT_FALSE(icon_ptr->isDirty());
+  EXPECT_TRUE(icon_ptr->isPressed());
+
+  icon_ptr->onSingleTapUp(icon_ptr->width() / 2, icon_ptr->height() / 2);
+  EXPECT_EQ(nullptr, icon_ptr->getClickAnimation());
+  EXPECT_EQ(1, icon_ptr->clickCount());
+  EXPECT_TRUE(icon_ptr->isDirty());
+  ASSERT_TRUE(refresh());
+  EXPECT_FALSE(icon_ptr->isDirty());
+}
+
+// Verifies the adjacent race where release arrives after the final animated
+// paint clears kWidgetClicking but before tick() enters held-release waiting.
+TEST_F(RooWindowsRenderTest,
+       ReleaseAfterFinalPaintCommitsBeforeRetirementTick) {
+  auto icon = std::make_unique<ClickableIcon>(
+      context(), ic_outlined_24_navigation_menu());
+  ClickableIcon* icon_ptr = icon.get();
+  app_.add(std::move(icon), Box(20, 12, 43, 35));
+  ASSERT_TRUE(refresh());
+
+  icon_ptr->onShowPress(icon_ptr->width() / 2, icon_ptr->height() / 2);
+  delay(kPressAnimationMillis + 20);
+  ASSERT_TRUE(refresh());
+  ASSERT_FALSE(icon_ptr->isClicking());
+  ASSERT_FALSE(icon_ptr->isDirty());
+  ASSERT_EQ(0, icon_ptr->clickCount());
+
+  icon_ptr->onSingleTapUp(icon_ptr->width() / 2, icon_ptr->height() / 2);
+  EXPECT_EQ(nullptr, icon_ptr->getClickAnimation());
+  EXPECT_EQ(1, icon_ptr->clickCount());
+  EXPECT_TRUE(icon_ptr->isDirty());
+
+  ASSERT_TRUE(refresh());
+  EXPECT_FALSE(icon_ptr->isDirty());
+}
+
 // Verifies that toggling a Material 3 checkbox's on/off state via setOn()
 // repaints only inside the logical bounds: a pixel one column outside the
 // widget rect retains the parent's background color.

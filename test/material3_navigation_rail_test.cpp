@@ -437,6 +437,56 @@ TEST(Material3NavigationRail, TouchReleaseDefersSelectionUntilClickCompletes) {
 }
 
 TEST(Material3NavigationRail,
+     LateReleaseCoalescesSelectionIntoHeldPressSettlement) {
+  constexpr int16_t kWidth = 80;
+  constexpr int16_t kHeight = 160;
+  roo::byte raster[kWidth * kHeight * 2];
+  roo_display::OffscreenDevice<roo_display::Argb4444> offscreen(
+      kWidth, kHeight, raster, roo_display::Argb4444());
+  roo_display::Display display(offscreen);
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  Application app(&env, display);
+
+  auto rail = std::make_unique<TestNavigationRail>(app.context());
+  TestNavigationRail* rail_raw = rail.get();
+  auto home = std::make_unique<NavigationRailDestination>(
+      app.context(), "Home", &ic_outlined_24_action_done());
+  auto inbox = std::make_unique<NavigationRailDestination>(
+      app.context(), "Inbox", &ic_outlined_24_action_bookmark());
+  NavigationRailDestination* inbox_raw = inbox.get();
+  ASSERT_TRUE(rail->add(WidgetRef(std::move(home))));
+  ASSERT_TRUE(rail->add(WidgetRef(std::move(inbox))));
+  app.add(std::move(rail),
+          roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
+  ASSERT_TRUE(app.refresh());
+
+  inbox_raw->onShowPress(inbox_raw->width() / 2, inbox_raw->height() / 2);
+  delay(kPressAnimationMillis + 20);
+  ASSERT_TRUE(app.refresh());
+  ASSERT_FALSE(inbox_raw->isClicking());
+  ASSERT_FALSE(inbox_raw->isDirty());
+  ASSERT_EQ(0, rail_raw->selectedIndex());
+
+  // Retirement schedules the held-state settlement frame. Releasing before
+  // that frame is painted must merge selection into it rather than paint one
+  // intermediate unselected frame.
+  app.root().refreshClickAnimation();
+  ASSERT_TRUE(inbox_raw->isDirty());
+  NavigationRailDestinationTestAccess::tapUp(
+      *inbox_raw, inbox_raw->width() / 2, inbox_raw->height() / 2);
+
+  EXPECT_EQ(1, rail_raw->selectedIndex());
+  EXPECT_TRUE(inbox_raw->selected());
+  EXPECT_EQ(std::vector<int>({1}), rail_raw->invoked);
+  EXPECT_EQ(nullptr, inbox_raw->getClickAnimation());
+  EXPECT_TRUE(inbox_raw->isDirty());
+
+  ASSERT_TRUE(app.refresh());
+  EXPECT_FALSE(inbox_raw->isDirty());
+}
+
+TEST(Material3NavigationRail,
      QuickReleaseCannotReplaceAnotherDestinationsActiveAnimation) {
   constexpr int16_t kWidth = 80;
   constexpr int16_t kHeight = 160;
