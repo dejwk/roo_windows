@@ -81,8 +81,8 @@ class BadgeAnchorHost : public Widget {
     setDirty();
   }
 
-  void setBadgePlacement(BadgePlacement placement) {
-    placement_ = placement;
+  void setBadgeAlignment(roo_display::Alignment alignment) {
+    alignment_ = alignment;
     requestLayout();
     setDirty();
   }
@@ -90,7 +90,7 @@ class BadgeAnchorHost : public Widget {
   Insets getInkInsets() const override {
     if (!badge_.visible()) return Insets::Zero();
     return InsetsFromEnvelope(
-        bounds(), Badge::ConservativeBounds(anchorBounds(), placement_,
+        bounds(), Badge::ConservativeBounds(anchorBounds(), alignment_,
                                             badge_.mode() == BadgeMode::kText));
   }
 
@@ -115,7 +115,7 @@ class BadgeAnchorHost : public Widget {
   void onLayout(bool changed, const Rect& rect) override {
     (void)changed;
     (void)rect;
-    badge_.layout(anchorBounds(), placement_);
+    badge_.layout(anchorBounds(), alignment_);
   }
 
   Rect getDirectPaintExclusionBounds() const override { return anchorBounds(); }
@@ -130,7 +130,7 @@ class BadgeAnchorHost : public Widget {
   }
 
   Badge badge_;
-  BadgePlacement placement_;
+  roo_display::Alignment alignment_ = roo_display::kRight | roo_display::kTop;
 };
 
 class Material3BadgeGoldenTest : public testing::Test {
@@ -156,7 +156,7 @@ class Material3BadgeGoldenTest : public testing::Test {
 
     BadgeAnchorHost* value = AddBadgeAnchor(app, 128, 16, false);
     value->setBadgeValue(1000);
-    value->setBadgePlacement({.gravity = BadgeGravity::kTopStart});
+    value->setBadgeAlignment(roo_display::kLeft | roo_display::kTop);
 
     EXPECT_TRUE(app.refresh());
     return test::CaptureRgb(offscreen_.raster(), 0, 0, 184, 56);
@@ -166,18 +166,16 @@ class Material3BadgeGoldenTest : public testing::Test {
     Application app(&env_, display_);
     AddBackdrop(app, Dimensions(184, 60));
 
-    BadgePlacement overhang;
-    overhang.gravity = BadgeGravity::kTopEnd;
-    overhang.horizontal_offset = -12;
-    overhang.vertical_offset = -12;
+    const roo_display::Alignment overhang =
+        (roo_display::kRight | roo_display::kTop).shiftBy(12, -12);
 
     BadgeAnchorHost* clipped = AddBadgeAnchor(app, 24, 18, false);
     clipped->setBadgeValue(1000);
-    clipped->setBadgePlacement(overhang);
+    clipped->setBadgeAlignment(overhang);
 
     BadgeAnchorHost* unclipped = AddBadgeAnchor(app, 104, 18, true);
     unclipped->setBadgeValue(1000);
-    unclipped->setBadgePlacement(overhang);
+    unclipped->setBadgeAlignment(overhang);
 
     EXPECT_TRUE(app.refresh());
     return test::CaptureRgb(offscreen_.raster(), 0, 0, 184, 60);
@@ -192,7 +190,7 @@ class Material3BadgeGoldenTest : public testing::Test {
 
     BadgedSwitch* text = AddBadgedSwitch(app, 88, 16, true);
     text->setBadgeText("NEW");
-    text->setBadgePlacement({.gravity = BadgeGravity::kTopStart});
+    text->setBadgeAlignment(roo_display::kLeft | roo_display::kTop);
 
     BadgedSwitch* value = AddBadgedSwitch(app, 164, 16, false);
     value->setBadgeValue(1000);

@@ -158,10 +158,10 @@ bool ContainsRect(const Rect& outer, const Rect& inner) {
          outer.yMax() >= inner.yMax();
 }
 
-bool TextBadgeStartsAtIconCenter(const Rect& icon_bounds,
-                                 const Rect& badge_bounds) {
-  return badge_bounds.xMin() == icon_bounds.xMin() + icon_bounds.width() / 2 &&
-         badge_bounds.yMax() == icon_bounds.yMin() + icon_bounds.height() / 2;
+bool TextBadgeUsesMaterialIconPlacement(const Rect& icon_bounds,
+                                        const Rect& badge_bounds) {
+  return badge_bounds.xMin() == icon_bounds.xMax() - Scaled(12) &&
+         badge_bounds.yMax() == icon_bounds.yMin() + Scaled(14);
 }
 
 class TestNavigationBar : public NavigationBar {
@@ -319,7 +319,7 @@ TEST(Material3NavigationBar, BadgedDestinationCapsValueAndStaysWithinBounds) {
   EXPECT_EQ(BadgeMode::kText, destination.badge().mode());
   EXPECT_EQ("999+", destination.badge().text());
   EXPECT_TRUE(ContainsRect(destination.bounds(), destination.badge().bounds()));
-  EXPECT_TRUE(TextBadgeStartsAtIconCenter(
+  EXPECT_TRUE(TextBadgeUsesMaterialIconPlacement(
       NavigationBarDestinationTestAccess::iconBounds(destination),
       destination.badge().bounds()));
   destination.setBadgeDot();
@@ -330,7 +330,7 @@ TEST(Material3NavigationBar, BadgedDestinationCapsValueAndStaysWithinBounds) {
   static_cast<Widget&>(destination)
       .layout(Rect(0, 0, Scaled(96) - 1, Scaled(64) - 1));
   EXPECT_TRUE(ContainsRect(destination.bounds(), destination.badge().bounds()));
-  EXPECT_TRUE(TextBadgeStartsAtIconCenter(
+  EXPECT_TRUE(TextBadgeUsesMaterialIconPlacement(
       NavigationBarDestinationTestAccess::iconBounds(destination),
       destination.badge().bounds()));
 

@@ -20,11 +20,11 @@ class BadgedSwitch : public Switch {
   /// Returns the current badge state.
   const Badge& badge() const { return badge_; }
 
-  /// Returns the current badge placement relative to the switch track.
-  BadgePlacement badgePlacement() const { return badge_placement_; }
+  /// Returns the current badge alignment relative to the switch track.
+  roo_display::Alignment badgeAlignment() const { return badge_alignment_; }
 
-  /// Updates the badge placement and repaints the old/new badge envelope.
-  void setBadgePlacement(BadgePlacement placement);
+  /// Updates the badge alignment and repaints the old/new badge envelope.
+  void setBadgeAlignment(roo_display::Alignment alignment);
 
   /// Hides the badge and repaints the old badge envelope.
   void hideBadge();
@@ -71,7 +71,8 @@ class BadgedSwitch : public Switch {
                                  const Rect& new_bounds);
 
   Badge badge_;
-  BadgePlacement badge_placement_;
+  roo_display::Alignment badge_alignment_ =
+      roo_display::kRight | roo_display::kTop;
 };
 
 }  // namespace material3

@@ -96,11 +96,11 @@ TEST(Material3Badge, TopEndLayoutKeepsOuterEdgeStable) {
   Rect anchor(10, 20, 33, 43);
 
   badge.setText("1");
-  ASSERT_TRUE(badge.layout(anchor));
+  ASSERT_TRUE(badge.layout(anchor, roo_display::kRight | roo_display::kTop));
   Rect short_bounds = badge.bounds();
 
   badge.setText("1234567");
-  ASSERT_TRUE(badge.layout(anchor));
+  ASSERT_TRUE(badge.layout(anchor, roo_display::kRight | roo_display::kTop));
   Rect long_bounds = badge.bounds();
 
   EXPECT_EQ(short_bounds.xMax(), long_bounds.xMax());
@@ -115,12 +115,12 @@ TEST(Material3Badge, TopStartLayoutKeepsOuterEdgeStable) {
 
   badge.setText("1");
   ASSERT_TRUE(
-      badge.layout(anchor, BadgePlacement{BadgeGravity::kTopStart, 0, 0}));
+      badge.layout(anchor, roo_display::kLeft | roo_display::kTop));
   Rect short_bounds = badge.bounds();
 
   badge.setText("1234567");
   ASSERT_TRUE(
-      badge.layout(anchor, BadgePlacement{BadgeGravity::kTopStart, 0, 0}));
+      badge.layout(anchor, roo_display::kLeft | roo_display::kTop));
   Rect long_bounds = badge.bounds();
 
   EXPECT_EQ(short_bounds.xMin(), long_bounds.xMin());
@@ -137,7 +137,8 @@ TEST(Material3Badge, TextHeightUsesFontAscent) {
 
   Badge badge;
   badge.setText("1");
-  ASSERT_TRUE(badge.layout(Rect(10, 20, 33, 43)));
+  ASSERT_TRUE(badge.layout(Rect(10, 20, 33, 43),
+                           roo_display::kRight | roo_display::kTop));
 
   EXPECT_EQ(expected_height, badge.bounds().height());
 #if ROO_WINDOWS_ZOOM == 100
@@ -145,17 +146,33 @@ TEST(Material3Badge, TextHeightUsesFontAscent) {
 #endif
 }
 
-// Verifies that placement offsets move the badge toward the anchor center:
-// top-end badges move left/down and top-start badges move right/down.
-TEST(Material3Badge, PlacementOffsetsMoveTowardAnchorCenter) {
+TEST(Material3Badge, LayoutForIconUsesMaterialDefaultPlacement) {
+  const Rect icon_bounds(0, 0, Scaled(24) - 1, Scaled(24) - 1);
+
+  Badge dot;
+  dot.setDot();
+  ASSERT_TRUE(dot.layoutForIcon(icon_bounds));
+  EXPECT_EQ(Scaled(24) - 1, dot.bounds().xMax());
+  EXPECT_EQ(0, dot.bounds().yMin());
+
+  Badge text;
+  text.setText("1");
+  ASSERT_TRUE(text.layoutForIcon(icon_bounds));
+  EXPECT_EQ(Scaled(24) - 1 - Scaled(12), text.bounds().xMin());
+  EXPECT_EQ(Scaled(14), text.bounds().yMax());
+}
+
+// Verifies that alignment offsets translate the badge by the requested amount.
+TEST(Material3Badge, AlignmentOffsetsTranslateBadge) {
   Rect anchor(10, 20, 33, 43);
 
   Badge top_end;
   top_end.setDot();
-  ASSERT_TRUE(top_end.layout(anchor));
+  ASSERT_TRUE(top_end.layout(anchor, roo_display::kRight | roo_display::kTop));
   Rect top_end_default = top_end.bounds();
   ASSERT_TRUE(
-      top_end.layout(anchor, BadgePlacement{BadgeGravity::kTopEnd, 2, 3}));
+      top_end.layout(anchor, (roo_display::kRight | roo_display::kTop)
+                                 .shiftBy(-2, 3)));
   Rect top_end_offset = top_end.bounds();
   EXPECT_EQ(top_end_default.xMax() - 2, top_end_offset.xMax());
   EXPECT_EQ(top_end_default.yMin() + 3, top_end_offset.yMin());
@@ -163,36 +180,39 @@ TEST(Material3Badge, PlacementOffsetsMoveTowardAnchorCenter) {
   Badge top_start;
   top_start.setDot();
   ASSERT_TRUE(
-      top_start.layout(anchor, BadgePlacement{BadgeGravity::kTopStart, 0, 0}));
+      top_start.layout(anchor, roo_display::kLeft | roo_display::kTop));
   Rect top_start_default = top_start.bounds();
   ASSERT_TRUE(
-      top_start.layout(anchor, BadgePlacement{BadgeGravity::kTopStart, 2, 3}));
+      top_start.layout(anchor, (roo_display::kLeft | roo_display::kTop)
+                                   .shiftBy(2, 3)));
   Rect top_start_offset = top_start.bounds();
   EXPECT_EQ(top_start_default.xMin() + 2, top_start_offset.xMin());
   EXPECT_EQ(top_start_default.yMin() + 3, top_start_offset.yMin());
 }
 
 // Verifies that ConservativeBounds() envelopes both dot badges and the widest
-// 7-byte text badge layout for each supported gravity.
+// 7-byte text badge layout for supported corner alignments.
 TEST(Material3Badge, ConservativeBoundsContainDotAndTextLayouts) {
   Rect anchor(10, 20, 33, 43);
 
-  for (BadgeGravity gravity :
-       {BadgeGravity::kTopEnd, BadgeGravity::kTopStart}) {
-    BadgePlacement placement{gravity, 0, 0};
+  for (roo_display::Alignment alignment :
+       {roo_display::kRight | roo_display::kTop,
+        roo_display::kLeft | roo_display::kTop}) {
 
     Badge dot;
     dot.setDot();
-    ASSERT_TRUE(dot.layout(anchor, placement));
-    EXPECT_TRUE(Badge::ConservativeBounds(anchor, placement, false)
+    ASSERT_TRUE(dot.layout(anchor, alignment));
+    EXPECT_TRUE(Badge::ConservativeBounds(anchor, alignment, false)
                     .contains(dot.bounds()));
 
     Badge text;
     text.setText("WWWWWWW");
-    ASSERT_TRUE(text.layout(anchor, placement));
-    Rect conservative_text = Badge::ConservativeBounds(anchor, placement, true);
+    ASSERT_TRUE(text.layout(anchor, alignment));
+    Rect conservative_text = Badge::ConservativeBounds(anchor, alignment, true);
     EXPECT_TRUE(conservative_text.contains(text.bounds()))
-        << "gravity=" << static_cast<int>(gravity)
+        << "alignment=" << (alignment == (roo_display::kRight | roo_display::kTop)
+                                  ? "top-right"
+                                  : "top-left")
         << " conservative=" << RectToString(conservative_text)
         << " actual=" << RectToString(text.bounds());
   }

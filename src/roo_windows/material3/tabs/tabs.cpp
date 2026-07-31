@@ -306,7 +306,8 @@ Dimensions BadgedTab::getContentMinimumDimensions() const {
   Rect base_bounds(0, 0, std::max<int16_t>(0, base.width()) - 1,
                    std::max<int16_t>(0, base.height()) - 1);
   Rect badge_bounds = Badge::ConservativeBounds(
-      base_bounds, BadgePlacement{}, badge_.mode() == BadgeMode::kText);
+      base_bounds, roo_display::kRight | roo_display::kTop,
+      badge_.mode() == BadgeMode::kText);
   Rect combined = UnionRects(base_bounds, badge_bounds);
   if (combined.empty()) return base;
   return Dimensions(combined.width(), base.height());
@@ -350,13 +351,15 @@ Rect BadgedTab::badgeAnchorBounds() const {
 
 Rect BadgedTab::conservativeBadgeBounds() const {
   if (!badge_.visible()) return EmptyRect();
-  return Badge::ConservativeBounds(badgeAnchorBounds(), BadgePlacement{},
+  return Badge::ConservativeBounds(badgeAnchorBounds(),
+                                   roo_display::kRight | roo_display::kTop,
                                    badge_.mode() == BadgeMode::kText);
 }
 
 Rect BadgedTab::relayoutBadge() {
   if (!badge_.visible()) return EmptyRect();
-  if (!badge_.layout(badgeAnchorBounds(), BadgePlacement{})) {
+  if (!badge_.layout(badgeAnchorBounds(),
+                     roo_display::kRight | roo_display::kTop)) {
     return EmptyRect();
   }
   return badge_.bounds();

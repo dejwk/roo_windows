@@ -28,8 +28,6 @@ constexpr int16_t kTextPaddingH = Scaled(4);
 // Keep this separate from kTextMinHeight: changing the padding must not make
 // badge measurement fall back to the font's taller line box.
 constexpr int16_t kTextPaddingV = Scaled(4);
-constexpr int16_t kDotDefaultOffset = Scaled(6);
-constexpr int16_t kTextDefaultOffset = Scaled(12);
 
 Rect EmptyRect() { return Rect(0, 0, -1, -1); }
 
@@ -86,10 +84,6 @@ int16_t ConservativeTextHeight() {
       2 * kTextPaddingV + text_style_label_small().ascent());
 }
 
-int16_t DefaultOffset(BadgeMode mode) {
-  return mode == BadgeMode::kText ? kTextDefaultOffset : kDotDefaultOffset;
-}
-
 uint8_t CornerRadius(const Rect& bounds) {
   int16_t min_dimension =
       std::min<int16_t>(bounds.width(), static_cast<int16_t>(bounds.height()));
@@ -99,25 +93,15 @@ uint8_t CornerRadius(const Rect& bounds) {
 int16_t CornerInset(uint8_t radius) { return radius - (181 * radius) / 256; }
 
 Rect ResolveBadgeBounds(const Rect& anchor_bounds,
-                        const BadgePlacement& placement, int16_t badge_width,
-                        int16_t badge_height, int16_t anchor_width,
-                        int16_t anchor_height, BadgeMode mode) {
-  if (anchor_bounds.empty() || badge_width <= 0 || badge_height <= 0 ||
-      anchor_width <= 0 || anchor_height <= 0) {
+                        roo_display::Alignment alignment,
+                        int16_t badge_width, int16_t badge_height) {
+  if (anchor_bounds.empty() || badge_width <= 0 || badge_height <= 0) {
     return EmptyRect();
   }
-
-  int16_t horizontal_offset = DefaultOffset(mode) + placement.horizontal_offset;
-  int16_t vertical_offset = DefaultOffset(mode) + placement.vertical_offset;
-  int16_t top = anchor_bounds.yMin() - anchor_height / 2 + vertical_offset;
-
-  if (placement.gravity == BadgeGravity::kTopStart) {
-    int16_t left = anchor_bounds.xMin() - anchor_width / 2 + horizontal_offset;
-    return Rect(left, top, left + badge_width - 1, top + badge_height - 1);
-  }
-
-  int16_t right = anchor_bounds.xMax() + anchor_width / 2 - horizontal_offset;
-  return Rect(right - badge_width + 1, top, right, top + badge_height - 1);
+  Rect badge_bounds(0, 0, badge_width - 1, badge_height - 1);
+  const auto offset = ResolveAlignmentOffset(anchor_bounds, badge_bounds,
+                                             alignment);
+  return badge_bounds.translate(offset.first, offset.second);
 }
 
 Rect InnerBounds(const Rect& bounds) {
@@ -176,7 +160,7 @@ void Badge::setValue(unsigned int number) {
   setText(roo::string_view(buffer));
 }
 
-bool Badge::layout(const Rect& anchor_bounds, const BadgePlacement& placement) {
+bool Badge::layout(const Rect& anchor_bounds, roo_display::Alignment alignment) {
   bounds_ = EmptyRect();
   valid_ = false;
   if (!visible() || anchor_bounds.empty()) return false;
@@ -184,37 +168,37 @@ bool Badge::layout(const Rect& anchor_bounds, const BadgePlacement& placement) {
   BadgeMode current_mode = mode();
   int16_t width = 0;
   int16_t height = 0;
-  int16_t anchor_width = 0;
-  int16_t anchor_height = 0;
   if (current_mode == BadgeMode::kDot) {
     width = kDotSize;
     height = kDotSize;
-    anchor_width = kDotSize;
-    anchor_height = kDotSize;
   } else {
     MeasureTextBadge(text(), width, height);
-    anchor_width = kTextMinWidth;
-    anchor_height = kTextMinHeight;
   }
 
-  bounds_ = ResolveBadgeBounds(anchor_bounds, placement, width, height,
-                               anchor_width, anchor_height, current_mode);
+  bounds_ = ResolveBadgeBounds(anchor_bounds, alignment, width, height);
   valid_ = !bounds_.empty();
   return valid_;
+}
+
+bool Badge::layoutForIcon(const Rect& icon_bounds) {
+  const roo_display::Alignment alignment =
+      mode() == BadgeMode::kDot
+          ? roo_display::kRight | roo_display::kTop
+          : roo_display::kLeft.toRight().shiftBy(Scaled(-12)) |
+                roo_display::kBottom.toTop().shiftBy(Scaled(14));
+  return layout(icon_bounds, alignment);
 }
 
 Rect Badge::bounds() const { return valid_ ? bounds_ : EmptyRect(); }
 
 Rect Badge::ConservativeBounds(const Rect& anchor_bounds,
-                               const BadgePlacement& placement,
+                               roo_display::Alignment alignment,
                                bool for_text_badge) {
   if (for_text_badge) {
-    return ResolveBadgeBounds(anchor_bounds, placement, ConservativeTextWidth(),
-                              ConservativeTextHeight(), kTextMinWidth,
-                              kTextMinHeight, BadgeMode::kText);
+    return ResolveBadgeBounds(anchor_bounds, alignment, ConservativeTextWidth(),
+                              ConservativeTextHeight());
   }
-  return ResolveBadgeBounds(anchor_bounds, placement, kDotSize, kDotSize,
-                            kDotSize, kDotSize, BadgeMode::kDot);
+  return ResolveBadgeBounds(anchor_bounds, alignment, kDotSize, kDotSize);
 }
 
 void Badge::paint(PaintContext& ctx, const Theme& theme) const {

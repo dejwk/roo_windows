@@ -644,71 +644,38 @@ void BadgedNavigationRailDestination::setLayoutDirectionFromRail(
 
 void BadgedNavigationRailDestination::relayoutBadge() {
   if (!badge_.visible()) return;
+  if (layout() == NavigationRailLayout::kCollapsed) {
+    badge_.layoutForIcon(iconBounds());
+    return;
+  }
   const Rect anchor = badgeAnchorBounds();
   if (anchor.empty()) return;
 
   const bool rtl = static_cast<LayoutDirection>(layout_direction_) ==
                    LayoutDirection::kRightToLeft;
-  BadgePlacement placement;
-  if (layout() == NavigationRailLayout::kCollapsed) {
-    placement.gravity = rtl ? BadgeGravity::kTopStart : BadgeGravity::kTopEnd;
-  } else {
-    // A one-pixel synthetic anchor just beyond the label maps the shared
-    // corner-based helper onto the Material expanded beside-label treatment.
-    placement.gravity = rtl ? BadgeGravity::kTopEnd : BadgeGravity::kTopStart;
-  }
-  if (!badge_.layout(anchor, placement)) return;
-
-  if (layout() == NavigationRailLayout::kCollapsed &&
-      badge_.mode() == BadgeMode::kText) {
-    // Match the navigation bar: a widened text badge grows from the icon
-    // center toward the logical trailing/top corner. Its lower inner corner
-    // therefore stays attached to the icon rather than drifting toward the
-    // icon's outer edge. RTL mirrors this to the lower right corner.
-    const Rect text_bounds = badge_.bounds();
-    const int16_t anchor_center_x = anchor.xMin() + anchor.width() / 2;
-    const int16_t anchor_center_y = anchor.yMin() + anchor.height() / 2;
-    const int16_t horizontal_offset =
-        rtl ? anchor_center_x - text_bounds.xMax()
-            : text_bounds.xMin() - anchor_center_x;
-    placement.horizontal_offset = static_cast<int8_t>(
-        std::clamp<int16_t>(horizontal_offset, INT8_MIN, INT8_MAX));
-    placement.vertical_offset = static_cast<int8_t>(std::clamp<int16_t>(
-        anchor_center_y - text_bounds.yMax(), INT8_MIN, INT8_MAX));
-    if (!badge_.layout(anchor, placement)) return;
-  }
+  roo_display::Alignment alignment;
+  // A one-pixel synthetic anchor just beyond the label maps the shared
+  // corner-based helper onto the Material expanded beside-label treatment.
+  alignment = rtl ? roo_display::kRight | roo_display::kTop
+                  : roo_display::kLeft | roo_display::kTop;
+  if (!badge_.layout(anchor, alignment)) return;
 
   const Rect badge_bounds = badge_.bounds();
   int16_t horizontal_delta = 0;
   int16_t vertical_delta = 0;
-  const bool preserve_compact_text_anchor =
-      layout() == NavigationRailLayout::kCollapsed &&
-      badge_.mode() == BadgeMode::kText;
-  if (!preserve_compact_text_anchor) {
-    if (badge_bounds.xMin() < bounds().xMin()) {
-      horizontal_delta = bounds().xMin() - badge_bounds.xMin();
-    } else if (badge_bounds.xMax() > bounds().xMax()) {
-      horizontal_delta = bounds().xMax() - badge_bounds.xMax();
-    }
-    if (badge_bounds.yMin() < bounds().yMin()) {
-      vertical_delta = bounds().yMin() - badge_bounds.yMin();
-    } else if (badge_bounds.yMax() > bounds().yMax()) {
-      vertical_delta = bounds().yMax() - badge_bounds.yMax();
-    }
+  if (badge_bounds.xMin() < bounds().xMin()) {
+    horizontal_delta = bounds().xMin() - badge_bounds.xMin();
+  } else if (badge_bounds.xMax() > bounds().xMax()) {
+    horizontal_delta = bounds().xMax() - badge_bounds.xMax();
+  }
+  if (badge_bounds.yMin() < bounds().yMin()) {
+    vertical_delta = bounds().yMin() - badge_bounds.yMin();
+  } else if (badge_bounds.yMax() > bounds().yMax()) {
+    vertical_delta = bounds().yMax() - badge_bounds.yMax();
   }
   if (horizontal_delta == 0 && vertical_delta == 0) return;
 
-  // Badge offsets are measured toward the anchor center. Top-start and
-  // top-end therefore need opposite horizontal corrections when clamping.
-  const int16_t horizontal_offset =
-      placement.gravity == BadgeGravity::kTopStart
-          ? placement.horizontal_offset + horizontal_delta
-          : placement.horizontal_offset - horizontal_delta;
-  placement.horizontal_offset = static_cast<int8_t>(
-      std::clamp<int16_t>(horizontal_offset, INT8_MIN, INT8_MAX));
-  placement.vertical_offset = static_cast<int8_t>(std::clamp<int16_t>(
-      placement.vertical_offset + vertical_delta, INT8_MIN, INT8_MAX));
-  badge_.layout(anchor, placement);
+  badge_.layout(anchor, alignment.shiftBy(horizontal_delta, vertical_delta));
 }
 
 Rect BadgedNavigationRailDestination::badgeAnchorBounds() const {

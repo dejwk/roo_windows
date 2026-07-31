@@ -5,6 +5,7 @@
 
 #include "roo_backport/string_view.h"
 #include "roo_collections/small_string.h"
+#include "roo_display/ui/alignment.h"
 #include "roo_windows/core/rect.h"
 
 namespace roo_windows {
@@ -19,22 +20,6 @@ enum class BadgeMode : uint8_t {
   kHidden,
   kDot,
   kText,
-};
-
-/// Supported badge anchor gravities for v1.
-enum class BadgeGravity : uint8_t {
-  kTopEnd,
-  kTopStart,
-};
-
-/// Owner-supplied placement adjustment for badge layout.
-///
-/// Offsets are interpreted in local coordinates as motion toward the anchor
-/// center.
-struct BadgePlacement {
-  BadgeGravity gravity = BadgeGravity::kTopEnd;
-  int8_t horizontal_offset = 0;
-  int8_t vertical_offset = 0;
 };
 
 /// Lightweight Material 3 badge adornment painted directly by its owner.
@@ -81,14 +66,21 @@ class Badge {
   void setValue(unsigned int number);
 
   /// Resolves and caches badge bounds relative to `anchor_bounds`.
-  bool layout(const Rect& anchor_bounds, const BadgePlacement& placement = {});
+  bool layout(const Rect& anchor_bounds, roo_display::Alignment alignment);
+
+  /// Resolves the Material badge placement for `icon_bounds`.
+  ///
+  /// Dot badges align their top-right corner to the icon's top-right corner.
+  /// Text badges align their bottom-left corner to that corner with the
+  /// Material-specified (-12, 14) dp offset.
+  bool layoutForIcon(const Rect& icon_bounds);
 
   /// Returns the most recently cached local badge bounds.
   Rect bounds() const;
 
   /// Returns a conservative envelope for dot or text badge overflow.
   static Rect ConservativeBounds(const Rect& anchor_bounds,
-                                 const BadgePlacement& placement,
+                                 roo_display::Alignment alignment,
                                  bool for_text_badge);
 
   /// Paints the badge interior, centered text, decoration, and exclusion.

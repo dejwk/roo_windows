@@ -23,24 +23,18 @@ Insets InsetsFromEnvelope(const Rect& logical_bounds, const Rect& envelope) {
                 logical_bounds.yMax() - combined.yMax());
 }
 
-bool SamePlacement(BadgePlacement a, BadgePlacement b) {
-  return a.gravity == b.gravity && a.horizontal_offset == b.horizontal_offset &&
-         a.vertical_offset == b.vertical_offset;
-}
-
 }  // namespace
 
 BadgedSwitch::BadgedSwitch(ApplicationContext& context, bool on)
     : Switch(context, on ? Switch::OnOffState::kOn : Switch::OnOffState::kOff),
-      badge_(),
-      badge_placement_() {
+      badge_() {
   setParentClipMode(ParentClipMode::kUnclipped);
 }
 
-void BadgedSwitch::setBadgePlacement(BadgePlacement placement) {
-  if (SamePlacement(badge_placement_, placement)) return;
+void BadgedSwitch::setBadgeAlignment(roo_display::Alignment alignment) {
+  if (badge_alignment_ == alignment) return;
   Rect old_bounds = badge_.bounds();
-  badge_placement_ = placement;
+  badge_alignment_ = alignment;
   Rect new_bounds = relayoutBadge();
   handleBadgeGeometryChange(old_bounds, new_bounds);
 }
@@ -113,13 +107,13 @@ Rect BadgedSwitch::badgeAnchorBounds() const {
 
 Rect BadgedSwitch::conservativeBadgeBounds() const {
   if (!badge_.visible()) return EmptyRect();
-  return Badge::ConservativeBounds(badgeAnchorBounds(), badge_placement_,
+  return Badge::ConservativeBounds(badgeAnchorBounds(), badge_alignment_,
                                    badge_.mode() == BadgeMode::kText);
 }
 
 Rect BadgedSwitch::relayoutBadge() {
   if (!badge_.visible()) return EmptyRect();
-  if (!badge_.layout(badgeAnchorBounds(), badge_placement_)) {
+  if (!badge_.layout(badgeAnchorBounds(), badge_alignment_)) {
     return EmptyRect();
   }
   return badge_.bounds();

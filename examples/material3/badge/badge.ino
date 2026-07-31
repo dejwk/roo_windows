@@ -189,8 +189,8 @@ class BadgeCard : public Widget {
     setDirty();
   }
 
-  void setBadgePlacement(material3::BadgePlacement placement) {
-    placement_ = placement;
+  void setBadgeAlignment(roo_display::Alignment alignment) {
+    alignment_ = alignment;
     requestLayout();
     setDirty();
   }
@@ -198,7 +198,7 @@ class BadgeCard : public Widget {
   Insets getInkInsets() const override {
     if (!badge_.visible()) return Insets::Zero();
     Rect conservative = material3::Badge::ConservativeBounds(
-        anchorBounds(), placement_,
+        anchorBounds(), alignment_,
         badge_.mode() == material3::BadgeMode::kText);
     return InsetsFromEnvelope(bounds(), conservative);
   }
@@ -238,7 +238,7 @@ class BadgeCard : public Widget {
   void onLayout(bool changed, const Rect& rect) override {
     (void)changed;
     (void)rect;
-    badge_.layout(anchorBounds(), placement_);
+    badge_.layout(anchorBounds(), alignment_);
   }
 
   Rect getDirectPaintExclusionBounds() const override {
@@ -258,7 +258,7 @@ class BadgeCard : public Widget {
   }
 
   material3::Badge badge_;
-  material3::BadgePlacement placement_;
+  roo_display::Alignment alignment_ = roo_display::kRight | roo_display::kTop;
   const char* glyph_;
 };
 
@@ -298,8 +298,8 @@ class BadgeScreen : public ScrollablePanel {
                           "Host-family example via BadgedSwitch with top-end "
                           "and top-start placement",
                           material2::text_style_caption()),
-        dot_row_(context, "Dot badge", "setBadgeDot(), default kTopEnd", false),
-        text_row_(context, "Text badge", "setBadgeText(\"NEW\"), kTopStart",
+        dot_row_(context, "Dot badge", "setBadgeDot(), top-right", false),
+        text_row_(context, "Text badge", "setBadgeText(\"NEW\"), top-left",
                   true),
         value_row_(context, "Number badge", "setBadgeValue(42)", true),
         truncation_row_(context, "Truncation", "setBadgeValue(1000) -> 999+",
@@ -328,8 +328,8 @@ class BadgeScreen : public ScrollablePanel {
     overflow_row_.setGap(Scaled(12));
     overflow_row_.setPadding(Padding(Scaled(0), Scaled(4)));
 
-    text_row_.control().setBadgePlacement(
-        {.gravity = material3::BadgeGravity::kTopStart});
+    text_row_.control().setBadgeAlignment(roo_display::kLeft |
+                                          roo_display::kTop);
 
     dot_row_.control().setBadgeDot();
     text_row_.control().setBadgeText("NEW");
@@ -338,14 +338,12 @@ class BadgeScreen : public ScrollablePanel {
 
     overlap_card_.setBadgeText("NEW");
 
-    material3::BadgePlacement overhang;
-    overhang.gravity = material3::BadgeGravity::kTopEnd;
-    overhang.horizontal_offset = -16;
-    overhang.vertical_offset = -20;
+    const roo_display::Alignment overhang =
+        (roo_display::kRight | roo_display::kTop).shiftBy(16, -20);
     clipped_.card().setBadgeValue(1000);
-    clipped_.card().setBadgePlacement(overhang);
+    clipped_.card().setBadgeAlignment(overhang);
     unclipped_.card().setBadgeValue(1000);
-    unclipped_.card().setBadgePlacement(overhang);
+    unclipped_.card().setBadgeAlignment(overhang);
 
     content_.add(title_, {.flex_grow = 0, .flex_shrink = 0});
     content_.add(subtitle_, {.flex_grow = 0, .flex_shrink = 0});

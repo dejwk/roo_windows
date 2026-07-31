@@ -43,10 +43,10 @@ bool ContainsRect(const Rect& outer, const Rect& inner) {
          outer.yMax() >= inner.yMax();
 }
 
-bool TextBadgeStartsAtIconCenter(const Rect& icon_bounds,
-                                 const Rect& badge_bounds) {
-  return badge_bounds.xMin() == icon_bounds.xMin() + icon_bounds.width() / 2 &&
-         badge_bounds.yMax() == icon_bounds.yMin() + icon_bounds.height() / 2;
+bool TextBadgeUsesMaterialIconPlacement(const Rect& icon_bounds,
+                                        const Rect& badge_bounds) {
+  return badge_bounds.xMin() == icon_bounds.xMax() - Scaled(12) &&
+         badge_bounds.yMax() == icon_bounds.yMin() + Scaled(14);
 }
 
 void ExpectDestinationPaintsEveryPixel(NavigationRailLayout layout,
@@ -235,7 +235,7 @@ TEST(Material3NavigationRail, BadgedDestinationCapsValuesAndStaysInTarget) {
   EXPECT_EQ(BadgeMode::kText, destination.badge().mode());
   EXPECT_EQ("999+", destination.badge().text());
   EXPECT_TRUE(ContainsRect(destination.bounds(), destination.badge().bounds()));
-  EXPECT_TRUE(TextBadgeStartsAtIconCenter(
+  EXPECT_TRUE(TextBadgeUsesMaterialIconPlacement(
       NavigationRailDestinationTestAccess::iconBounds(destination),
       destination.badge().bounds()));
 
@@ -254,7 +254,7 @@ TEST(Material3NavigationRail, BadgedDestinationCapsValuesAndStaysInTarget) {
   EXPECT_TRUE(destination.badge().bounds().empty());
 }
 
-TEST(Material3NavigationRail, CollapsedTextBadgesAnchorAtIconCenter) {
+TEST(Material3NavigationRail, CollapsedTextBadgesUseMaterialIconPlacement) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
@@ -269,8 +269,8 @@ TEST(Material3NavigationRail, CollapsedTextBadgesAnchorAtIconCenter) {
   const Rect icon_bounds =
       NavigationRailDestinationTestAccess::iconBounds(destination);
   const Rect badge_bounds = destination.badge().bounds();
-  EXPECT_EQ(icon_bounds.xMin() + icon_bounds.width() / 2, badge_bounds.xMin());
-  EXPECT_EQ(icon_bounds.yMin() + icon_bounds.height() / 2, badge_bounds.yMax());
+  EXPECT_EQ(icon_bounds.xMax() - Scaled(12), badge_bounds.xMin());
+  EXPECT_EQ(icon_bounds.yMin() + Scaled(14), badge_bounds.yMax());
 }
 
 TEST(Material3NavigationRail, ExpandedBadgesMirrorBesideTheLabelInRtl) {
