@@ -9,6 +9,7 @@
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/surface_widget.h"
 #include "roo_windows/material3/tabs/tabs.h"
+#include "roo_windows/material3/typography.h"
 #include "roo_windows_render_test_support.h"
 
 namespace roo_windows {
@@ -30,6 +31,13 @@ class TestTab : public Tab {
   void clickForTest() { onClicked(); }
 
   void tapUpForTest() { onSingleTapUp(width() / 2, height() / 2); }
+
+  Rect coreContentBoundsForTest() const { return getCoreContentBounds(); }
+};
+
+class TestBadgedTab : public BadgedTab {
+ public:
+  using BadgedTab::BadgedTab;
 
   Rect coreContentBoundsForTest() const { return getCoreContentBounds(); }
 };
@@ -625,6 +633,33 @@ TEST(Material3Tabs, BadgedTabsPlaceBadgeWithinTabBounds) {
   EXPECT_TRUE(label_raw->bounds().contains(label_raw->badge().bounds()));
   EXPECT_TRUE(icon_raw->bounds().contains(icon_raw->badge().bounds()));
   EXPECT_LT(icon_raw->badge().bounds().yMin(), icon_raw->height() / 2);
+}
+
+// Label-only badges sit inline with the text rather than at the top edge of
+// the tab. The label and badge form one centered content cluster.
+TEST(Material3Tabs, LabelOnlyBadgeIsCenteredAndSeparatedFromText) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+
+  Tabs tabs(context);
+  auto label = std::make_unique<TestBadgedTab>(context, "Alerts");
+  TestBadgedTab* label_raw = label.get();
+  label->setBadgeText("NEW");
+  tabs.addTab(std::move(label));
+
+  tabs.measure(WidthSpec::Exactly(180), HeightSpec::Exactly(Scaled(48)));
+  tabs.layout(Rect(0, 0, 179, Scaled(48) - 1));
+
+  Rect core = label_raw->coreContentBoundsForTest();
+  Rect badge = label_raw->badge().bounds();
+  const TextStyle& style = text_style_title_small();
+  int16_t label_width =
+      style.font()
+          .getHorizontalStringMetrics("Alerts", style.fontOptions())
+          .advance();
+  EXPECT_EQ(core.xMin() + label_width - 1 + Scaled(4), badge.xMin());
+  EXPECT_EQ(core.yMin() + (core.height() - badge.height()) / 2, badge.yMin());
 }
 
 // Verifies that tab foreground content is centered in the band above the

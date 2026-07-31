@@ -129,11 +129,12 @@ class BadgedTab : public Tab {
 
  protected:
   Dimensions getContentMinimumDimensions() const override;
+  void paintContent(PaintContext& ctx, const Rect& content_bounds,
+                    Color content_color) const override;
   void onLayout(bool changed, const Rect& rect) override;
 
  private:
   Rect badgeAnchorBounds() const;
-  Rect conservativeBadgeBounds() const;
   Rect relayoutBadge();
   void handleBadgeGeometryChange(const Rect& old_bounds,
                                  const Rect& new_bounds);

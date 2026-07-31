@@ -27,6 +27,7 @@ namespace {
 constexpr int16_t kLabelOnlyHeightDp = 48;
 constexpr int16_t kIconAndLabelHeightDp = 64;
 constexpr int16_t kHorizontalPaddingDp = 16;
+constexpr int16_t kLabelBadgeGapDp = 4;
 constexpr int16_t kIconSizeDp = 24;
 constexpr int16_t kMinTabWidthDp = 48;
 constexpr int16_t kMinIndicatorWidthDp = 24;
@@ -303,6 +304,16 @@ Dimensions BadgedTab::getContentMinimumDimensions() const {
   Dimensions base = Tab::getContentMinimumDimensions();
   if (!badge_.visible()) return base;
 
+  if (!hasIcon() && !label().empty()) {
+    Badge measured_badge = badge_;
+    measured_badge.layout(Rect(0, 0, 0, 0),
+                          roo_display::kLeft | roo_display::kTop);
+    Rect badge_bounds = measured_badge.bounds();
+    return Dimensions(
+        base.width() + Scaled(kLabelBadgeGapDp) + badge_bounds.width(),
+        std::max<int16_t>(base.height(), badge_bounds.height()));
+  }
+
   Rect base_bounds(0, 0, std::max<int16_t>(0, base.width()) - 1,
                    std::max<int16_t>(0, base.height()) - 1);
   Rect badge_bounds = Badge::ConservativeBounds(
@@ -320,6 +331,28 @@ Dimensions BadgedTab::getSuggestedMinimumDimensions() const {
 void BadgedTab::paint(PaintContext& ctx) const {
   badge_.paint(ctx, theme());
   Tab::paint(ctx);
+}
+
+void BadgedTab::paintContent(PaintContext& ctx, const Rect& content_bounds,
+                             Color content_color) const {
+  if (!badge_.visible() || hasIcon() || label().empty()) {
+    Tab::paintContent(ctx, content_bounds, content_color);
+    return;
+  }
+
+  const TextStyle& style = TabLabelStyle();
+  int16_t label_width =
+      style.font()
+          .getHorizontalStringMetrics(label(), style.fontOptions())
+          .advance();
+  Rect core = getCoreContentBounds();
+  if (core.empty() || label_width <= 0) return;
+  ctx.drawTiled(
+      ClippedStringViewLabel(label(), style.font(), content_color,
+                             style.fontOptions()),
+      content_bounds,
+      roo_display::kLeft.toLeft().shiftBy(core.xMin() - content_bounds.xMin()) |
+          kMiddle);
 }
 
 void BadgedTab::onLayout(bool changed, const Rect& rect) {
@@ -346,20 +379,28 @@ Rect BadgedTab::badgeAnchorBounds() const {
     return Rect(left, top, left + icon_width - 1, top + icon_extent - 1);
   }
 
-  return core;
-}
+  if (!label().empty()) {
+    const TextStyle& style = TabLabelStyle();
+    int16_t label_width =
+        style.font()
+            .getHorizontalStringMetrics(label(), style.fontOptions())
+            .advance();
+    if (label_width <= 0) return EmptyRect();
+    return Rect(core.xMin(), core.yMin(), core.xMin() + label_width - 1,
+                core.yMax());
+  }
 
-Rect BadgedTab::conservativeBadgeBounds() const {
-  if (!badge_.visible()) return EmptyRect();
-  return Badge::ConservativeBounds(badgeAnchorBounds(),
-                                   roo_display::kRight | roo_display::kTop,
-                                   badge_.mode() == BadgeMode::kText);
+  return core;
 }
 
 Rect BadgedTab::relayoutBadge() {
   if (!badge_.visible()) return EmptyRect();
-  if (!badge_.layout(badgeAnchorBounds(),
-                     roo_display::kRight | roo_display::kTop)) {
+  roo_display::Alignment alignment = roo_display::kRight | roo_display::kTop;
+  if (!hasIcon() && !label().empty()) {
+    alignment = roo_display::kLeft.toRight().shiftBy(Scaled(kLabelBadgeGapDp)) |
+                roo_display::kMiddle;
+  }
+  if (!badge_.layout(badgeAnchorBounds(), alignment)) {
     return EmptyRect();
   }
   return badge_.bounds();
