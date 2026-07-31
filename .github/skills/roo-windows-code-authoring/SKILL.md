@@ -31,9 +31,16 @@ Related instructions:
   `roo_windows/emulation/main.cpp`, then run:
   `(cd lib/roo_windows/emulation; bazel build :main)`
 
+## Formatting
+
+- Before handing code over for review or submitting it, run `clang-format` on
+  every changed C++ source and header file.
+
 ## Checklist
 
 - Widget-related changes also follow the widget authoring instruction when relevant.
 - Validation uses the narrowest relevant Bazel target first.
 - Example-sketch compile coverage uses the emulation `:main` build when
   relevant.
+- `clang-format` has been run on every changed C++ source and header file
+  before review or submission.
