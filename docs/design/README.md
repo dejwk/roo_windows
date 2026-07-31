@@ -8,7 +8,7 @@ Design documents are filed by implementation status:
 - `in_progress/`: a usable subset or prerequisite has landed, but part of the defined scope remains.
 - `proposed/`: none of the design's own scope is implemented. Existing prerequisites may still be available.
 
-Status was audited against the source tree and tests on 2026-07-22. “Dependency status” distinguishes implemented prerequisites from proposed or partially implemented work; a design can be proposed even when all of its prerequisites are available.
+Status was audited against the source tree and tests on 2026-07-31. “Dependency status” distinguishes implemented prerequisites from proposed or partially implemented work; a design can be proposed even when all of its prerequisites are available.
 
 ## Implemented
 

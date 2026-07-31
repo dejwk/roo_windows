@@ -1,9 +1,12 @@
+#include <algorithm>
 #include <string>
 
 #include "gtest/gtest.h"
 #include "roo_scheduler.h"
+#include "roo_windows/config.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/material3/badge/badge.h"
+#include "roo_windows/material3/typography.h"
 
 namespace roo_windows {
 namespace material3 {
@@ -122,6 +125,24 @@ TEST(Material3Badge, TopStartLayoutKeepsOuterEdgeStable) {
 
   EXPECT_EQ(short_bounds.xMin(), long_bounds.xMin());
   EXPECT_GE(long_bounds.xMax(), short_bounds.xMax());
+}
+
+// Verifies that text badge height follows the baseline-to-ascent span, with
+// independently configurable vertical padding, rather than the font's taller
+// line box or maximum glyph bounds.
+TEST(Material3Badge, TextHeightUsesFontAscent) {
+  const TextStyle& style = text_style_label_small();
+  const int16_t expected_height =
+      std::max<int16_t>(Scaled(16), style.ascent() + 2 * Scaled(4));
+
+  Badge badge;
+  badge.setText("1");
+  ASSERT_TRUE(badge.layout(Rect(10, 20, 33, 43)));
+
+  EXPECT_EQ(expected_height, badge.bounds().height());
+#if ROO_WINDOWS_ZOOM == 100
+  EXPECT_EQ(16, badge.bounds().height());
+#endif
 }
 
 // Verifies that placement offsets move the badge toward the anchor center:

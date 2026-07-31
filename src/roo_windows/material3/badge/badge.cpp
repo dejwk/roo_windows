@@ -24,7 +24,10 @@ constexpr int16_t kDotSize = Scaled(8);
 constexpr int16_t kTextMinHeight = Scaled(16);
 constexpr int16_t kTextMinWidth = Scaled(16);
 constexpr int16_t kTextPaddingH = Scaled(4);
-constexpr int16_t kTextPaddingV = Scaled(2);
+// Minimum clearance on either side of the baseline-to-ascent span.
+// Keep this separate from kTextMinHeight: changing the padding must not make
+// badge measurement fall back to the font's taller line box.
+constexpr int16_t kTextPaddingV = Scaled(4);
 constexpr int16_t kDotDefaultOffset = Scaled(6);
 constexpr int16_t kTextDefaultOffset = Scaled(12);
 
@@ -48,8 +51,8 @@ void MeasureTextBadge(roo::string_view text, int16_t& width, int16_t& height) {
                         style.fontOptions());
   Box extents = label.anchorExtents();
   width = std::max<int16_t>(kTextMinWidth, extents.width() + 2 * kTextPaddingH);
-  height =
-      std::max<int16_t>(kTextMinHeight, style.lineHeight() + 2 * kTextPaddingV);
+  height = std::max<int16_t>(
+      kTextMinHeight, style.ascent() + 2 * kTextPaddingV);
 }
 
 int16_t MaxCaptionCharacterSpan() {
@@ -80,7 +83,7 @@ int16_t ConservativeTextWidth() {
 int16_t ConservativeTextHeight() {
   return std::max<int16_t>(
       kTextMinHeight,
-      2 * kTextPaddingV + text_style_label_small().lineHeight());
+      2 * kTextPaddingV + text_style_label_small().ascent());
 }
 
 int16_t DefaultOffset(BadgeMode mode) {
@@ -226,9 +229,19 @@ void Badge::paint(PaintContext& ctx, const Theme& theme) const {
       sub.setBgcolor(badge_color);
       if (mode() == BadgeMode::kText && hasText()) {
         const TextStyle& style = text_style_label_small();
-        sub.drawTiled(StringViewLabel(text(), style.font(), text_color,
-                                      style.fontOptions()),
-                      inner, roo_display::kCenter | roo_display::kMiddle);
+        StringViewLabel label(text(), style.font(), text_color,
+                              style.fontOptions());
+        // Center the baseline-to-ascent span, deliberately ignoring line
+        // leading and descenders. For even-sized spans this leaves equal
+        // whole-pixel padding above and below.
+        roo_display::VAlign vertical =
+            roo_display::kBaseline.toTop().shiftBy(
+                (bounds_.height() + style.ascent()) / 2);
+        // drawTiled resolves the label and its badge-colored background in a
+        // single pass. The sub-context clips that pass to the already-safe
+        // inscribed rectangle while alignment remains relative to the full
+        // badge bounds.
+        sub.drawTiled(label, bounds_, roo_display::kCenter | vertical);
       } else {
         sub.fillRect(inner, badge_color);
       }
