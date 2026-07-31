@@ -10,6 +10,7 @@
 #include "roo_display/ui/tile.h"
 #include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/panel.h"
+#include "roo_windows/core/text_style.h"
 
 namespace roo_windows {
 
@@ -30,12 +31,12 @@ enum class TextAlign {
 class TextBlock : public BasicWidget {
  public:
   TextBlock(ApplicationContext& context, std::string value,
-            const roo_display::Font& font, roo_display::Alignment alignment)
-      : TextBlock(context, value, font, roo_display::color::Transparent,
+            const TextStyle& text_style, roo_display::Alignment alignment)
+      : TextBlock(context, value, text_style, roo_display::color::Transparent,
                   alignment) {}
 
   TextBlock(ApplicationContext& context, std::string value,
-            const roo_display::Font& font, roo_display::Color color,
+            const TextStyle& text_style, roo_display::Color color,
             roo_display::Alignment alignment);
 
   /// Paints all currently laid-out lines using the configured font, color
@@ -99,7 +100,9 @@ class TextBlock : public BasicWidget {
 
   bool ellipsize() const { return ellipsize_; }
 
-  const roo_display::Font& font() const { return font_; }
+  const TextStyle& textStyle() const { return *text_style_; }
+  const roo_display::Font& font() const { return textStyle().font(); }
+  void setTextStyle(const TextStyle& text_style);
 
   struct LineLayout {
     roo::string_view text;
@@ -129,7 +132,7 @@ class TextBlock : public BasicWidget {
   mutable std::vector<LineLayout> layout_lines_;
   mutable XDim layout_width_limit_;
   mutable bool layout_valid_;
-  const roo_display::Font& font_;
+  const TextStyle* text_style_;
   roo_display::Color color_;
   roo_display::Alignment alignment_;
   TextWrapMode wrap_mode_;

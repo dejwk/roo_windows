@@ -55,13 +55,13 @@ TEST(TextBlock, WordWrapIncreasesHeightWithNarrowWidth) {
   roo_scheduler::Scheduler scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
-  TextBlock block(context, "word word word word", font_body2(),
+  TextBlock block(context, "word word word word", material2::text_style_body2(),
                   roo_display::kLeft | roo_display::kTop);
   block.setWrapMode(TextWrapMode::kWordWrap);
 
   Dimensions dims =
       block.measure(WidthSpec::AtMost(32), HeightSpec::Unspecified(1000));
-  EXPECT_GT(dims.height(), block.font().metrics().maxHeight());
+  EXPECT_GT(dims.height(), block.textStyle().lineHeight());
 }
 
 // Verifies that with wrapping disabled, the measured height of multi-word
@@ -71,13 +71,13 @@ TEST(TextBlock, NoWrapKeepsSingleLineHeight) {
   roo_scheduler::Scheduler scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
-  TextBlock block(context, "word word word word", font_body2(),
+  TextBlock block(context, "word word word word", material2::text_style_body2(),
                   roo_display::kLeft | roo_display::kTop);
   block.setWrapMode(TextWrapMode::kNoWrap);
 
   Dimensions dims =
       block.measure(WidthSpec::AtMost(32), HeightSpec::Unspecified(1000));
-  EXPECT_EQ(block.font().metrics().maxHeight(), dims.height());
+  EXPECT_EQ(block.textStyle().lineHeight(), dims.height());
 }
 
 // Verifies that setMaxLines(N) caps the measured height to at most N line
@@ -86,14 +86,15 @@ TEST(TextBlock, MaxLinesLimitsMeasuredHeight) {
   roo_scheduler::Scheduler scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
-  TextBlock block(context, "word word word word word word", font_body2(),
+  TextBlock block(context, "word word word word word word",
+                  material2::text_style_body2(),
                   roo_display::kLeft | roo_display::kTop);
   block.setWrapMode(TextWrapMode::kWordWrap);
   block.setMaxLines(2);
 
   Dimensions dims =
       block.measure(WidthSpec::AtMost(36), HeightSpec::Unspecified(1000));
-  EXPECT_LE(dims.height(), 2 * block.font().metrics().maxHeight());
+  EXPECT_LE(dims.height(), 2 * block.textStyle().lineHeight());
 }
 
 // Verifies that after laying out a non-wrapped single-line block, the
@@ -103,14 +104,15 @@ TEST(TextBlock, SingleLineContentBoundsReflectFontInk) {
   roo_scheduler::Scheduler scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
-  const auto& font = font_body2();
+  const auto& font = material2::text_style_body2();
   TextBlock block(context, "abc", font, roo_display::kLeft | roo_display::kTop);
   block.setPadding(PaddingSize::kNone);
   block.setWrapMode(TextWrapMode::kNoWrap);
 
-  auto metrics = font.getHorizontalStringMetrics("abc");
+  auto metrics =
+      font.font().getHorizontalStringMetrics("abc", font.fontOptions());
   int16_t advance = metrics.advance();
-  int16_t line_height = font.metrics().maxHeight();
+  int16_t line_height = font.lineHeight();
   block.layout(Rect(0, 0, advance - 1, line_height - 1));
 
   EXPECT_EQ(Rect(std::min<int16_t>(0, metrics.glyphXMin()), 0,
@@ -126,17 +128,17 @@ TEST(TextBlock, PendingWrappedLayoutUsesConservativeFontBounds) {
   roo_scheduler::Scheduler scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
-  const auto& font = font_body2();
+  const auto& font = material2::text_style_body2();
   TextBlock block(context, "abc", font, roo_display::kLeft | roo_display::kTop);
   block.setPadding(PaddingSize::kNone);
 
-  int16_t line_height = font.metrics().maxHeight();
+  int16_t line_height = font.lineHeight();
   block.layout(Rect(0, 0, 79, 2 * line_height - 1));
 
   block.setText("ab");
 
-  EXPECT_EQ(Rect(std::min<int16_t>(0, font.metrics().glyphXMin()), 0,
-                 79 + std::max<int16_t>(0, -font.metrics().minRsb()),
+  EXPECT_EQ(Rect(std::min<int16_t>(0, font.font().metrics().glyphXMin()), 0,
+                 79 + std::max<int16_t>(0, -font.font().metrics().minRsb()),
                  2 * line_height - 1),
             block.getContentBounds());
 }
@@ -148,14 +150,15 @@ TEST(TextBlock, SetPaddingRequestsLayoutAndUpdatesContentBounds) {
   roo_scheduler::Scheduler scheduler;
   Environment bootstrap(scheduler);
   ApplicationContext context = MakeContext(bootstrap);
-  const auto& font = font_body2();
+  const auto& font = material2::text_style_body2();
   TextBlock block(context, "abc", font, roo_display::kLeft | roo_display::kTop);
   block.setWrapMode(TextWrapMode::kNoWrap);
   block.setPadding(PaddingSize::kNone);
 
-  auto metrics = font.getHorizontalStringMetrics("abc");
+  auto metrics =
+      font.font().getHorizontalStringMetrics("abc", font.fontOptions());
   int16_t advance = metrics.advance();
-  int16_t line_height = font.metrics().maxHeight();
+  int16_t line_height = font.lineHeight();
   block.layout(Rect(0, 0, advance + 15, line_height + 11));
 
   Rect without_padding = block.getContentBounds();
@@ -180,8 +183,9 @@ TEST(TextBlock, EmptyToNonEmptyDoesNotInvalidateParentBeneath) {
   ApplicationContext context = MakeContext(bootstrap);
   RecordingPanel panel(context);
 
-  auto block = std::make_unique<TextBlock>(
-      context, "", font_body2(), roo_display::kCenter | roo_display::kMiddle);
+  auto block =
+      std::make_unique<TextBlock>(context, "", material2::text_style_body2(),
+                                  roo_display::kCenter | roo_display::kMiddle);
   TextBlock* block_ptr = block.get();
   panel.add(std::move(block), Rect(0, 0, 159, 39));
   panel.invalidated_regions.clear();
@@ -210,7 +214,7 @@ class TextBlockGoldenTest : public testing::Test {
       int16_t max_height = 0, uint16_t max_lines = 0, bool ellipsize = false) {
     Application app(&env_, display_);
 
-    TextBlock block(app.context(), text, font_body2(),
+    TextBlock block(app.context(), text, material2::text_style_body2(),
                     roo_display::kLeft | roo_display::kTop);
     block.setPadding(PaddingSize::kNone);
     block.setWrapMode(TextWrapMode::kWordWrap);
@@ -239,7 +243,8 @@ class TextBlockGoldenTest : public testing::Test {
       PaddingSize padding = PaddingSize::kNone) {
     Application app(&env_, display_);
 
-    TextBlock block(app.context(), kOverhangText, font_body2(), alignment);
+    TextBlock block(app.context(), kOverhangText, material2::text_style_body2(),
+                    alignment);
     block.setPadding(padding);
     block.setWrapMode(TextWrapMode::kNoWrap);
 

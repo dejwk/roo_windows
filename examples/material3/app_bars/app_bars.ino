@@ -2,12 +2,12 @@
 
 #ifdef ROO_TESTING
 
-#include "roo_windows/fake/fltk_key_source.h"
 #include "roo_testing/devices/display/ili9341/ili9341spi.h"
 #include "roo_testing/devices/touch/xpt2046/xpt2046spi.h"
 #include "roo_testing/microcontrollers/esp32/fake_esp32.h"
 #include "roo_testing/transducers/ui/viewport/flex_viewport.h"
 #include "roo_testing/transducers/ui/viewport/fltk/fltk_viewport.h"
+#include "roo_windows/fake/fltk_key_source.h"
 
 using roo_testing_transducers::FlexViewport;
 using roo_testing_transducers::FltkViewport;
@@ -96,20 +96,22 @@ class AppBarsScreen : public ScrollablePanel {
   explicit AppBarsScreen(ApplicationContext& context)
       : ScrollablePanel(context),
         content_(context, FlexDirection::kColumn),
-        title_(context, "Material 3 app bars", font_h6()),
+        title_(context, "Material 3 app bars", material2::text_style_h6()),
         subtitle_(context,
                   "Title, standalone, and top-edge search-entry surfaces.",
-                  font_caption()),
+                  material2::text_style_caption()),
         divider_(context),
-        app_bar_heading_(context, "Title-based top app bar", font_subtitle2()),
+        app_bar_heading_(context, "Title-based top app bar",
+                         material2::text_style_subtitle2()),
         title_app_bar_(context, material3::AppBarVariant::kSmall),
-        search_app_bar_heading_(context, "Search app bar", font_subtitle2()),
+        search_app_bar_heading_(context, "Search app bar",
+                                material2::text_style_subtitle2()),
         search_app_bar_(context),
         passive_heading_(context, "Default passive leading search icon",
-                         font_subtitle2()),
+                         material2::text_style_subtitle2()),
         passive_search_(context),
         custom_heading_(context, "Custom leading and trailing widget slots",
-                        font_subtitle2()),
+                        material2::text_style_subtitle2()),
         custom_search_(context),
         leading_(context, ic_outlined_24_action_done()),
         first_trailing_(context, ic_outlined_24_navigation_close()),
@@ -119,7 +121,7 @@ class AppBarsScreen : public ScrollablePanel {
         search_app_bar_inner_(context, ic_outlined_24_action_search()),
         search_app_bar_outer_(context, ic_outlined_24_navigation_more_vert()),
         feedback_(context, "Tap a search surface to simulate opening search.",
-                  font_caption()),
+                  material2::text_style_caption()),
         activations_(0) {
     content_.setPadding(Padding(Scaled(12), Scaled(10)));
     content_.setGap(Scaled(8));

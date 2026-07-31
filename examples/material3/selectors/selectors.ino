@@ -2,12 +2,12 @@
 
 #ifdef ROO_TESTING
 
-#include "roo_windows/fake/fltk_key_source.h"
 #include "roo_testing/devices/display/ili9341/ili9341spi.h"
 #include "roo_testing/devices/touch/xpt2046/xpt2046spi.h"
 #include "roo_testing/microcontrollers/esp32/fake_esp32.h"
 #include "roo_testing/transducers/ui/viewport/flex_viewport.h"
 #include "roo_testing/transducers/ui/viewport/fltk/fltk_viewport.h"
+#include "roo_windows/fake/fltk_key_source.h"
 
 using roo_testing_transducers::FlexViewport;
 using roo_testing_transducers::FltkViewport;
@@ -102,8 +102,8 @@ class SelectorRow : public FlexLayout {
               const char* secondary, Args&&... args)
       : FlexLayout(context, FlexDirection::kRow),
         labels_(context, FlexDirection::kColumn),
-        primary_(context, primary, font_body1()),
-        secondary_(context, secondary, font_caption()),
+        primary_(context, primary, material2::text_style_body1()),
+        secondary_(context, secondary, material2::text_style_caption()),
         control_(context, std::forward<Args>(args)...) {
     setAlignItems(AlignItems::kCenter);
     setPadding(Padding(Scaled(12), Scaled(8)));
@@ -130,12 +130,12 @@ class SelectorScreen : public SimpleScrollablePanel {
   SelectorScreen(ApplicationContext& context)
       : SimpleScrollablePanel(context),
         content_(context, FlexDirection::kColumn),
-        title_(context, "Material 3 selectors", font_body1()),
+        title_(context, "Material 3 selectors", material2::text_style_body1()),
         subtitle_(context, "Tap each control to inspect state changes.",
-                  font_caption()),
+                  material2::text_style_caption()),
         top_divider_(context),
-        checkbox_heading_(context, "Checkboxes", font_body1()),
-        checkbox_status_(context, "", font_caption()),
+        checkbox_heading_(context, "Checkboxes", material2::text_style_body1()),
+        checkbox_status_(context, "", material2::text_style_caption()),
         notifications_(context, "Notifications", "Starts enabled",
                        material3::Checkbox::OnOffState::kOn),
         downloads_(context, "Offline downloads", "Starts indeterminate",
@@ -143,8 +143,8 @@ class SelectorScreen : public SimpleScrollablePanel {
         analytics_(context, "Anonymous analytics", "Starts disabled",
                    material3::Checkbox::OnOffState::kOff),
         mid_divider_(context),
-        radio_heading_(context, "Radio buttons", font_body1()),
-        radio_status_(context, "", font_caption()),
+        radio_heading_(context, "Radio buttons", material2::text_style_body1()),
+        radio_status_(context, "", material2::text_style_caption()),
         compact_(context, "Compact layout", "More density on small screens",
                  material3::RadioButton::OnOffState::kOff),
         balanced_(context, "Balanced layout",
@@ -153,8 +153,8 @@ class SelectorScreen : public SimpleScrollablePanel {
         comfortable_(context, "Comfortable layout", "Extra padding for reading",
                      material3::RadioButton::OnOffState::kOff),
         bottom_divider_(context),
-        switch_heading_(context, "Switches", font_body1()),
-        switch_status_(context, "", font_caption()),
+        switch_heading_(context, "Switches", material2::text_style_body1()),
+        switch_status_(context, "", material2::text_style_caption()),
         bluetooth_(context, "Bluetooth", "Nearby accessories",
                    material3::Switch::OnOffState::kOn),
         dark_theme_(context, "Dark theme", "Applies app-wide appearance",

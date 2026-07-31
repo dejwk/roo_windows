@@ -2,12 +2,12 @@
 
 #ifdef ROO_TESTING
 
-#include "roo_windows/fake/fltk_key_source.h"
 #include "roo_testing/devices/display/ili9341/ili9341spi.h"
 #include "roo_testing/devices/touch/xpt2046/xpt2046spi.h"
 #include "roo_testing/microcontrollers/esp32/fake_esp32.h"
 #include "roo_testing/transducers/ui/viewport/flex_viewport.h"
 #include "roo_testing/transducers/ui/viewport/fltk/fltk_viewport.h"
+#include "roo_windows/fake/fltk_key_source.h"
 
 using roo_testing_transducers::FlexViewport;
 using roo_testing_transducers::FltkViewport;
@@ -149,9 +149,10 @@ class TabsScreen : public FlexLayout {
         scroll_weather_tab_(context, "Weather forecast"),
         scroll_history_tab_(context, "Temperature history"),
         scrollable_tabs_(context, material3::TabsVariant::kSecondary),
-        overview_(context, "Pool status overview", font_h6()),
-        heating_(context, "Solar heating controls", font_h6()),
-        history_(context, "Recent temperature history", font_h6()) {
+        overview_(context, "Pool status overview", material2::text_style_h6()),
+        heating_(context, "Solar heating controls", material2::text_style_h6()),
+        history_(context, "Recent temperature history",
+                 material2::text_style_h6()) {
     setPadding(Padding(Scaled(12), Scaled(8)));
     setGap(Scaled(8));
 

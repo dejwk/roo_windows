@@ -466,16 +466,16 @@ class TextStyle {
   const roo_display::Font& font() const { return *font_; }
 
   /// Returns the extra leading outside the ascent-to-descent band.
-  int16_t lineGapPx() const { return line_gap_px_; }
+  int16_t lineGap() const { return line_gap_px_; }
 
   /// Returns the resolved line-box height and baseline advance.
-  int16_t lineHeightPx() const {
+  int16_t lineHeight() const {
     const auto& metrics = font().metrics();
     return metrics.ascent() - metrics.descent() + line_gap_px_;
   }
 
   /// Returns the signed adjustment at each inter-glyph boundary.
-  int16_t trackingPx() const { return tracking_px_; }
+  int16_t tracking() const { return tracking_px_; }
 
   /// Returns font options that apply this style's tracking.
   roo_display::Font::Options fontOptions() const {
@@ -485,10 +485,10 @@ class TextStyle {
   }
 
   /// Returns the leading placed above the ascent-to-descent band.
-  int16_t topLeadingPx() const;
+  int16_t topLeading() const;
 
   /// Returns the baseline offset from the line-box origin.
-  int16_t baselineOffsetPx() const;
+  int16_t baselineOffset() const;
 
  private:
   const roo_display::Font* font_;

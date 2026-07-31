@@ -2,12 +2,12 @@
 
 #ifdef ROO_TESTING
 
-#include "roo_windows/fake/fltk_key_source.h"
 #include "roo_testing/devices/display/ili9341/ili9341spi.h"
 #include "roo_testing/devices/touch/xpt2046/xpt2046spi.h"
 #include "roo_testing/microcontrollers/esp32/fake_esp32.h"
 #include "roo_testing/transducers/ui/viewport/flex_viewport.h"
 #include "roo_testing/transducers/ui/viewport/fltk/fltk_viewport.h"
+#include "roo_windows/fake/fltk_key_source.h"
 
 using roo_testing_transducers::FlexViewport;
 using roo_testing_transducers::FltkViewport;
@@ -112,11 +112,12 @@ class StaticSettingsSection : public FlexLayout {
  public:
   explicit StaticSettingsSection(ApplicationContext& context)
       : FlexLayout(context, FlexDirection::kColumn),
-        title_(context, "Expressive settings section", font_body1()),
+        title_(context, "Expressive settings section",
+               material2::text_style_body1()),
         subtitle_(context,
                   "Inset dividers separate standard rows while selected "
                   "entries keep their expressive shape roles.",
-                  font_caption()),
+                  material2::text_style_caption()),
         list_(context),
         safety_lock_switch_(context, material3::Switch::OnOffState::kOff),
         pool_mode_row_(context, material3::StandardListItemInit::TwoLine(
@@ -170,11 +171,12 @@ class AdoptedRowsSection : public FlexLayout {
  public:
   explicit AdoptedRowsSection(ApplicationContext& context)
       : FlexLayout(context, FlexDirection::kColumn),
-        title_(context, "Expressive segmented rows", font_body1()),
+        title_(context, "Expressive segmented rows",
+               material2::text_style_body1()),
         subtitle_(context,
                   "Segmented gaps now pair with expressive first, middle, and "
                   "last row shapes.",
-                  font_caption()),
+                  material2::text_style_caption()),
         list_(context) {
     setGap(Scaled(6));
 
@@ -223,15 +225,16 @@ class MenuPrototypeSection : public FlexLayout {
  public:
   explicit MenuPrototypeSection(ApplicationContext& context)
       : FlexLayout(context, FlexDirection::kColumn),
-        title_(context, "Baseline menu prototype", font_body1()),
+        title_(context, "Baseline menu prototype",
+               material2::text_style_body1()),
         subtitle_(context,
                   "Baseline rows stay square and use full-width dividers for "
                   "stronger separation.",
-                  font_caption()),
+                  material2::text_style_caption()),
         list_(context),
-        refresh_shortcut_(context, "R", font_caption()),
-        edit_shortcut_(context, "E", font_caption()),
-        remove_shortcut_(context, "Del", font_caption()),
+        refresh_shortcut_(context, "R", material2::text_style_caption()),
+        edit_shortcut_(context, "E", material2::text_style_caption()),
+        remove_shortcut_(context, "Del", material2::text_style_caption()),
         refresh_row_(context, material3::StandardListItemInit::OneLine(
                                   "Refresh", nullptr, &refresh_shortcut_)),
         edit_row_(context, material3::StandardListItemInit::OneLine(
@@ -271,11 +274,12 @@ class VisualConvenienceSection : public FlexLayout {
  public:
   explicit VisualConvenienceSection(ApplicationContext& context)
       : FlexLayout(context, FlexDirection::kColumn),
-        title_(context, "Phase 8 convenience items", font_body1()),
+        title_(context, "Phase 8 convenience items",
+               material2::text_style_body1()),
         subtitle_(context,
                   "Avatar, pictogram, and text-only items now bind through "
                   "the shared ListRow surface.",
-                  font_caption()),
+                  material2::text_style_caption()),
         contacts_(context),
         status_(context),
         owner_(context, "DW", "Dawid Wojcik", "Pool owner"),
@@ -336,11 +340,12 @@ class NavigationSection : public FlexLayout {
  public:
   explicit NavigationSection(ApplicationContext& context)
       : FlexLayout(context, FlexDirection::kColumn),
-        title_(context, "Phase 9 navigation items", font_body1()),
+        title_(context, "Phase 9 navigation items",
+               material2::text_style_body1()),
         subtitle_(context,
                   "Rows become clickable only for invokable items, and row "
                   "presses share the same invoke path as item callbacks.",
-                  font_caption()),
+                  material2::text_style_caption()),
         navigation_(context),
         next_task_(context, ic_outlined_24_notification_sync(), "Next task",
                    "Open task details"),
@@ -376,11 +381,12 @@ class SelectionSection : public FlexLayout {
  public:
   explicit SelectionSection(ApplicationContext& context)
       : FlexLayout(context, FlexDirection::kColumn),
-        title_(context, "Phase 10 selection items", font_body1()),
+        title_(context, "Phase 10 selection items",
+               material2::text_style_body1()),
         subtitle_(context,
                   "Row presses and control presses share one invoke path for "
                   "checkbox, radio, and switch rows.",
-                  font_caption()),
+                  material2::text_style_caption()),
         multi_select_(context),
         single_select_(context),
         toggle_list_(context),
@@ -468,7 +474,8 @@ class ExpandableRowItem : public material3::InvokableListItemBase {
                     roo::string_view supporting,
                     roo::string_view expanded_details)
       : material3::InvokableListItemBase(headline, supporting, {}, {}, true),
-        details_(context, std::string(expanded_details), font_caption()),
+        details_(context, std::string(expanded_details),
+                 material2::text_style_caption()),
         details_panel_(context) {
     details_panel_.setAnimationDuration(180);
     details_panel_.setExpanded(false, false);
@@ -491,11 +498,12 @@ class ExpandableSection : public FlexLayout {
  public:
   explicit ExpandableSection(ApplicationContext& context)
       : FlexLayout(context, FlexDirection::kColumn),
-        title_(context, "Phase 11 expandable rows", font_body1()),
+        title_(context, "Phase 11 expandable rows",
+               material2::text_style_body1()),
         subtitle_(context,
                   "ExpandablePanel is reusable body content; expansion state "
                   "stays inside the item, not on ListEntry.",
-                  font_caption()),
+                  material2::text_style_caption()),
         expandable_list_(context),
         filter_schedule_(context, "Filter schedule",
                          "Tap to expand maintenance details",
@@ -529,11 +537,11 @@ class ListsScreen : public SimpleScrollablePanel {
   explicit ListsScreen(ApplicationContext& context)
       : SimpleScrollablePanel(context),
         content_(context, FlexDirection::kColumn),
-        title_(context, "Material 3 lists", font_h6()),
+        title_(context, "Material 3 lists", material2::text_style_h6()),
         subtitle_(context,
                   "Phase 11 - expandable rows now use reusable body panels "
                   "with animated measured-height reveal",
-                  font_caption()),
+                  material2::text_style_caption()),
         top_divider_(context),
         settings_(context),
         middle_divider_(context),

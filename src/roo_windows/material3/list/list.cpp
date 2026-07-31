@@ -126,19 +126,17 @@ BorderStyle BorderStyleFor(const ListEntryVisualContext& context) {
   return BorderStyle(outer_radius, 0);
 }
 
-const roo_display::Font& FontForOverline() { return font_overline(); }
+const TextStyle& FontForOverline() { return material2::text_style_overline(); }
 
-const roo_display::Font& FontForHeadline() { return font_body1(); }
+const TextStyle& FontForHeadline() { return material2::text_style_body1(); }
 
-const roo_display::Font& FontForSupporting() { return font_body2(); }
+const TextStyle& FontForSupporting() { return material2::text_style_body2(); }
 
-int16_t TextLineHeight(const roo_display::Font& font) {
-  return font.metrics().maxHeight();
-}
-
-int16_t TextWidth(const roo_display::Font& font, roo::string_view text) {
+int16_t TextWidth(const TextStyle& style, roo::string_view text) {
   if (text.empty()) return 0;
-  return font.getHorizontalStringMetrics(text).advance();
+  return style.font()
+      .getHorizontalStringMetrics(text, style.fontOptions())
+      .advance();
 }
 
 uint8_t SlotLineCount(roo::string_view text, ListTextPolicy policy) {
@@ -175,9 +173,9 @@ TextSlotMetrics MeasureTextSlots(const ListItem* item) {
   width =
       std::max(width, TextWidth(FontForSupporting(), item->supportingText()));
 
-  int16_t height = overline_lines * TextLineHeight(FontForOverline()) +
-                   headline_lines * TextLineHeight(FontForHeadline()) +
-                   supporting_lines * TextLineHeight(FontForSupporting());
+  int16_t height = overline_lines * FontForOverline().lineHeight() +
+                   headline_lines * FontForHeadline().lineHeight() +
+                   supporting_lines * FontForSupporting().lineHeight();
   return TextSlotMetrics{
       width, height,
       static_cast<uint8_t>(overline_lines + headline_lines + supporting_lines)};
@@ -445,7 +443,7 @@ class AvatarVisual : public BasicWidget {
 
     if (!initials_.empty()) {
       roo_display::ClippedStringViewLabel initials_label(
-          initials_, FontForHeadline(),
+          initials_, FontForHeadline().font(),
           theme().material3Theme().color.onPrimaryContainer);
       roo_display::Offset text_offset =
           (roo_display::kCenter | roo_display::kMiddle)
@@ -744,7 +742,7 @@ void ListEntry::syncTextSlotsFromItem() {
   // transitions during bind/clear/rebind/refresh, never during paint.
   auto sync_slot = [this](Widget*& slot, TextSlotMode& mode,
                           roo::string_view text, ListTextPolicy policy,
-                          const roo_display::Font& font,
+                          const TextStyle& text_style,
                           roo_display::Color color) {
     if (text.empty()) {
       clearTextSlot(slot, mode);
@@ -757,15 +755,15 @@ void ListEntry::syncTextSlotsFromItem() {
       clearTextSlot(slot, mode);
       if (desired_mode == TextSlotMode::kLabel) {
         auto owned = std::make_unique<StringViewLabel>(
-            context(), text, font, color, kGravityLeft | kGravityMiddle);
+            context(), text, text_style, color, kGravityLeft | kGravityMiddle);
         slot = owned.get();
         mode = TextSlotMode::kLabel;
         attachChild(WidgetRef(std::move(owned)));
         return;
       }
-      auto owned =
-          std::make_unique<TextBlock>(context(), ToString(text), font, color,
-                                      roo_display::kLeft | roo_display::kTop);
+      auto owned = std::make_unique<TextBlock>(
+          context(), ToString(text), text_style, color,
+          roo_display::kLeft | roo_display::kTop);
       owned->setTextAlign(TextAlign::kStart);
       owned->setWrapMode(policy.overflow == TextOverflowPolicy::kWrap
                              ? TextWrapMode::kWordWrap

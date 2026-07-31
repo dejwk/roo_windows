@@ -89,16 +89,19 @@ void initDisplay() {
 class NamedPanel : public FlexLayout {
  public:
   NamedPanel(ApplicationContext& context, const char* name,
-             ::roo_windows::material3::ColorToken role = ::roo_windows::material3::ColorToken::kSurfaceContainer)
+             ::roo_windows::material3::ColorToken role =
+                 ::roo_windows::material3::ColorToken::kSurfaceContainer)
       : FlexLayout(context, FlexDirection::kRow),
-        label_(context, name, font_body1()),
+        label_(context, name, material2::text_style_body1()),
         role_(role) {
     setJustifyContent(JustifyContent::kCenter);
     setAlignItems(AlignItems::kCenter);
     add(label_);
   }
 
-  ::roo_windows::material3::ColorToken containerRole() const override { return role_; }
+  ::roo_windows::material3::ColorToken containerRole() const override {
+    return role_;
+  }
 
   BorderStyle getBorderStyle() const override { return BorderStyle(0, 1); }
 
@@ -115,12 +118,17 @@ class HolyGrail : public FlexLayout {
  public:
   HolyGrail(ApplicationContext& context)
       : FlexLayout(context, FlexDirection::kColumn),
-        header_(context, "Header", ::roo_windows::material3::ColorToken::kSurfaceContainerHigh),
+        header_(context, "Header",
+                ::roo_windows::material3::ColorToken::kSurfaceContainerHigh),
         middle_(context, FlexDirection::kRow),
-        nav_(context, "Nav", ::roo_windows::material3::ColorToken::kSecondaryContainer),
-        content_(context, "Content", ::roo_windows::material3::ColorToken::kPrimaryContainer),
-        sidebar_(context, "Sidebar", ::roo_windows::material3::ColorToken::kTertiaryContainer),
-        footer_(context, "Footer", ::roo_windows::material3::ColorToken::kSurfaceContainerHigh) {
+        nav_(context, "Nav",
+             ::roo_windows::material3::ColorToken::kSecondaryContainer),
+        content_(context, "Content",
+                 ::roo_windows::material3::ColorToken::kPrimaryContainer),
+        sidebar_(context, "Sidebar",
+                 ::roo_windows::material3::ColorToken::kTertiaryContainer),
+        footer_(context, "Footer",
+                ::roo_windows::material3::ColorToken::kSurfaceContainerHigh) {
     setAlignItems(AlignItems::kStretch);
 
     add(header_, {.flex_grow = 0, .flex_shrink = 0});

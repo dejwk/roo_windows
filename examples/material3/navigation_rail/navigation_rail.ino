@@ -107,7 +107,7 @@ class NavigationRailScreen : public FlexLayout {
  public:
   explicit NavigationRailScreen(ApplicationContext& context)
       : FlexLayout(context, FlexDirection::kRow),
-        status_(context, "Home selected", font_h6()),
+        status_(context, "Home selected", material2::text_style_h6()),
         header_(context, ic_outlined_24_navigation_menu()),
         home_(context, "Home", &ic_outlined_24_navigation_home_work()),
         inbox_(context, "Inbox", &ic_outlined_24_action_bookmark()),

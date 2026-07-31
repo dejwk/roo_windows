@@ -6,7 +6,8 @@ AlertDialog::AlertDialog(ApplicationContext& context, std::string title,
                          std::string supporting_text,
                          std::vector<std::string> button_labels)
     : Dialog(context, std::move(button_labels)),
-      supporting_text_(context, std::move(supporting_text), font_body1(),
+      supporting_text_(context, std::move(supporting_text),
+                       material2::text_style_body1(),
                        roo_display::kLeft | roo_display::kMiddle) {
   supporting_text_.setPadding(PaddingSize::kLarge, PaddingSize::kNone);
   supporting_text_.setMargins(MarginSize::kNone, MarginSize::kNone);

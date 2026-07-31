@@ -1,9 +1,9 @@
+#include "roo_icons/outlined/24/navigation.h"
 #include "roo_windows/containers/flex_layout.h"
 #include "roo_windows/containers/scrollable_panel.h"
 #include "roo_windows/core/overlay_spec.h"
 #include "roo_windows/core/press_overlay.h"
 #include "roo_windows/core/theme.h"
-#include "roo_icons/outlined/24/navigation.h"
 #include "roo_windows/material3/checkbox/checkbox.h"
 #include "roo_windows/material3/slider/slider.h"
 #include "roo_windows/widgets/checkbox.h"
@@ -108,8 +108,8 @@ class ReentrantClickableIcon : public ClickableIcon {
 
 class FadePointOverlayBoxWidget : public PointOverlayBoxWidget {
  public:
-  FadePointOverlayBoxWidget(ApplicationContext& context, roo_display::Color color,
-                            Dimensions dims)
+  FadePointOverlayBoxWidget(ApplicationContext& context,
+                            roo_display::Color color, Dimensions dims)
       : PointOverlayBoxWidget(context, color, dims),
         click_animation_in_progress_(false),
         has_press_overlay_(false),
@@ -208,14 +208,17 @@ class RoundedClickableChildSurface : public Panel {
 
 class RolePanel : public Panel {
  public:
-  RolePanel(ApplicationContext& context, ::roo_windows::material3::ColorToken role)
+  RolePanel(ApplicationContext& context,
+            ::roo_windows::material3::ColorToken role)
       : Panel(context), role_(role) {}
 
   void addChild(WidgetRef child, const Rect& bounds) {
     add(std::move(child), bounds);
   }
 
-  ::roo_windows::material3::ColorToken containerRole() const override { return role_; }
+  ::roo_windows::material3::ColorToken containerRole() const override {
+    return role_;
+  }
 
  private:
   ::roo_windows::material3::ColorToken role_;
@@ -228,7 +231,9 @@ class RoleOverridingPointOverlayWidget : public PointOverlayBoxWidget {
                                    ::roo_windows::material3::ColorToken role)
       : PointOverlayBoxWidget(context, color, dims), role_(role) {}
 
-  ::roo_windows::material3::ColorToken effectiveContainerRole() const override { return role_; }
+  ::roo_windows::material3::ColorToken effectiveContainerRole() const override {
+    return role_;
+  }
 
  private:
   ::roo_windows::material3::ColorToken role_;
@@ -325,9 +330,9 @@ class ExampleSliderRow : public FlexLayout {
       : FlexLayout(context, FlexDirection::kColumn),
         header_(context, FlexDirection::kRow),
         labels_(context, FlexDirection::kColumn),
-        primary_(context, primary, font_body1()),
-        secondary_(context, secondary, font_caption()),
-        value_(context, "", font_body1()),
+        primary_(context, primary, material2::text_style_body1()),
+        secondary_(context, secondary, material2::text_style_caption()),
+        value_(context, "", material2::text_style_body1()),
         slider_(context, material3::SliderRange{},
                 ExampleUnitValueFromPercent(initial_percent)) {
     setPadding(Padding(Scaled(12), Scaled(8)));
@@ -366,11 +371,12 @@ class ExampleSliderScreen : public SimpleScrollablePanel {
   explicit ExampleSliderScreen(ApplicationContext& context)
       : SimpleScrollablePanel(context),
         content_(context),
-        title_(context, "Material 3 sliders", font_body1()),
+        title_(context, "Material 3 sliders", material2::text_style_body1()),
         subtitle_(context, "Drag the handles or tap the track to set a value.",
-                  font_caption()),
+                  material2::text_style_caption()),
         divider_(context),
-        summary_(context, "Average level: 55%", font_caption()),
+        summary_(context, "Average level: 55%",
+                 material2::text_style_caption()),
         media_(context, "Media volume", "Speaker output for videos and games",
                72) {
     content_.setPadding(Scaled(12));
@@ -581,8 +587,7 @@ TEST_F(RooWindowsRenderTest, AreaClickAnimationStaysInsideSurfaceBounds) {
 // Verifies that slow display output cannot advance animation progress midway
 // through a frame, while the following frame still includes that output time
 // in its wall-clock sample.
-TEST_F(RooWindowsRenderTest,
-       ClickAnimationUsesOneWallClockSamplePerFrame) {
+TEST_F(RooWindowsRenderTest, ClickAnimationUsesOneWallClockSamplePerFrame) {
   constexpr unsigned long kSlowPaintMillis = kPressAnimationMillis / 4;
   auto target = std::make_unique<SlowPaintPointOverlayBoxWidget>(
       context(), color::Blue, Dimensions(18, 18));
@@ -591,8 +596,7 @@ TEST_F(RooWindowsRenderTest,
   app_.add(std::move(target), Box(20, 12, 37, 29));
   ASSERT_TRUE(refresh());
 
-  target_ptr->onShowPress(target_ptr->width() / 2,
-                          target_ptr->height() / 2);
+  target_ptr->onShowPress(target_ptr->width() / 2, target_ptr->height() / 2);
   delay(kPressAnimationMillis / 4);
   app_.root().refreshClickAnimation();
   const ClickAnimation* animation = target_ptr->getClickAnimation();
@@ -707,13 +711,12 @@ TEST_F(RooWindowsRenderTest,
 // rounded corners, but extending two pixels past the current inner rectangle.
 TEST_F(RooWindowsRenderTest,
        RoundedSurfaceChildPaintsOutsideSolidInnerRectangle) {
-  auto surface = std::make_unique<RoundedClickableChildSurface>(
-      context(), color::Red);
+  auto surface =
+      std::make_unique<RoundedClickableChildSurface>(context(), color::Red);
   RoundedClickableChildSurface* surface_ptr = surface.get();
-  surface_ptr->addChild(
-      std::make_unique<RoundedClickableSurfaceBoxWidget>(
-          context(), color::Blue, Dimensions(6, 8)),
-      Rect(1, 8, 6, 15));
+  surface_ptr->addChild(std::make_unique<RoundedClickableSurfaceBoxWidget>(
+                            context(), color::Blue, Dimensions(6, 8)),
+                        Rect(1, 8, 6, 15));
   app_.add(std::move(surface), Box(20, 12, 59, 35));
 
   ASSERT_TRUE(refresh());
@@ -728,13 +731,12 @@ TEST_F(RooWindowsRenderTest,
 // from the composition-stack path used by an animated ripple.
 TEST_F(RooWindowsRenderTest,
        StaticAreaPressOverlayTintsChildOutsideSolidInnerRectangle) {
-  auto surface = std::make_unique<RoundedClickableChildSurface>(
-      context(), color::Red);
+  auto surface =
+      std::make_unique<RoundedClickableChildSurface>(context(), color::Red);
   RoundedClickableChildSurface* surface_ptr = surface.get();
-  surface_ptr->addChild(
-      std::make_unique<ColorBoxWidget>(context(), color::Blue,
-                                       Dimensions(6, 8)),
-      Rect(0, 8, 5, 15));
+  surface_ptr->addChild(std::make_unique<ColorBoxWidget>(context(), color::Blue,
+                                                         Dimensions(6, 8)),
+                        Rect(0, 8, 5, 15));
   app_.add(std::move(surface), Box(20, 12, 59, 35));
   ASSERT_TRUE(refresh());
 
@@ -752,13 +754,12 @@ TEST_F(RooWindowsRenderTest,
 // surface shape; untouched pixels beyond its rounded corners remain protected.
 TEST_F(RooWindowsRenderTest,
        AreaClickAnimationTintsChildOutsideSolidInnerRectangle) {
-  auto surface = std::make_unique<RoundedClickableChildSurface>(
-      context(), color::Red);
+  auto surface =
+      std::make_unique<RoundedClickableChildSurface>(context(), color::Red);
   RoundedClickableChildSurface* surface_ptr = surface.get();
-  surface_ptr->addChild(
-      std::make_unique<RoundedClickableSurfaceBoxWidget>(
-          context(), color::Blue, Dimensions(6, 8)),
-      Rect(1, 8, 6, 15));
+  surface_ptr->addChild(std::make_unique<RoundedClickableSurfaceBoxWidget>(
+                            context(), color::Blue, Dimensions(6, 8)),
+                        Rect(1, 8, 6, 15));
   app_.add(std::move(surface), Box(20, 12, 59, 35));
   ASSERT_TRUE(refresh());
 
@@ -826,7 +827,8 @@ TEST_F(
   EXPECT_EQ(12, divider_x);
   EXPECT_EQ(kWidth - 24, divider_ptr->width());
 
-  Color bg = QuantizeToArgb4444(context().theme().material3Theme().color.background);
+  Color bg =
+      QuantizeToArgb4444(context().theme().material3Theme().color.background);
   EXPECT_NE(bg, pixelAt(divider_x, divider_y));
   EXPECT_EQ(bg, pixelAt(kWidth - 1, divider_y));
 }
@@ -845,7 +847,8 @@ TEST_F(ExampleSliderRenderTest,
 
   ASSERT_TRUE(refresh());
 
-  Color bg = QuantizeToArgb4444(context().theme().material3Theme().color.background);
+  Color bg =
+      QuantizeToArgb4444(context().theme().material3Theme().color.background);
 
   XDim divider_x;
   YDim divider_y;
@@ -924,8 +927,8 @@ TEST_F(RooWindowsRenderTest,
   auto back = std::make_unique<ColorBoxWidget>(
       context(), context().theme().material3Theme().color.background,
       Dimensions(kWidth, kHeight));
-  auto icon = std::make_unique<ClickableIcon>(
-      context(), ic_outlined_24_navigation_menu());
+  auto icon = std::make_unique<ClickableIcon>(context(),
+                                              ic_outlined_24_navigation_menu());
   ClickableIcon* icon_ptr = icon.get();
 
   app_.add(std::move(back), Box(0, 0, kWidth - 1, kHeight - 1));
@@ -959,8 +962,8 @@ TEST_F(RooWindowsRenderTest,
 // schedules its own settlement frame and remains attached until release.
 TEST_F(RooWindowsRenderTest,
        HeldPressRepaintsAfterUnconfirmedClickAnimationRetires) {
-  auto icon = std::make_unique<ClickableIcon>(
-      context(), ic_outlined_24_navigation_menu());
+  auto icon = std::make_unique<ClickableIcon>(context(),
+                                              ic_outlined_24_navigation_menu());
   ClickableIcon* icon_ptr = icon.get();
   app_.add(std::move(icon), Box(20, 12, 43, 35));
   ASSERT_TRUE(refresh());
@@ -991,8 +994,8 @@ TEST_F(RooWindowsRenderTest,
 // invalidation instead of drawing an obsolete overlay-free frame first.
 TEST_F(RooWindowsRenderTest,
        ReleaseAfterFinalRefreshCommitsBeforeHeldSettlement) {
-  auto icon = std::make_unique<ClickableIcon>(
-      context(), ic_outlined_24_navigation_menu());
+  auto icon = std::make_unique<ClickableIcon>(context(),
+                                              ic_outlined_24_navigation_menu());
   ClickableIcon* icon_ptr = icon.get();
   app_.add(std::move(icon), Box(20, 12, 43, 35));
   ASSERT_TRUE(refresh());
@@ -1228,7 +1231,8 @@ TEST_F(
     RooWindowsRenderTest,
     Material3CheckboxQuickReleaseSpillStaysClearedAfterDeferredClickInBareScene) {
   auto back = std::make_unique<ColorBoxWidget>(
-      context(), context().theme().material3Theme().color.background, Dimensions(48, 40));
+      context(), context().theme().material3Theme().color.background,
+      Dimensions(48, 40));
   auto front = std::make_unique<Material3Checkbox>(
       context(), Material3Checkbox::OnOffState::kOff);
   Material3Checkbox* front_ptr = front.get();
@@ -1340,8 +1344,7 @@ TEST_F(RooWindowsRenderTest,
       ::roo_windows::material3::ColorToken::kSurfaceContainerHighest;
   const Color parent_surface =
       context().theme().material3Theme().color.resolve(parent_role);
-  auto back = std::make_unique<RolePanel>(context(),
-                                          parent_role);
+  auto back = std::make_unique<RolePanel>(context(), parent_role);
   auto front = std::make_unique<RoleOverridingPointOverlayWidget>(
       context(), parent_surface, Dimensions(18, 18),
       ::roo_windows::material3::ColorToken::kPrimary);
@@ -1355,13 +1358,14 @@ TEST_F(RooWindowsRenderTest,
   front_ptr->setActivated(true);
   ASSERT_TRUE(refresh());
 
-  Color overlay = front_ptr->theme().material3Theme().color.contentColorFor(parent_role);
+  Color overlay =
+      front_ptr->theme().material3Theme().color.contentColorFor(parent_role);
   overlay.set_a(front_ptr->theme()
                     .material3Theme()
                     .state.resolve(parent_role, InteractionState::kActivated)
                     .a());
-  Color expected = QuantizeToArgb4444(
-      AlphaBlend(front_ptr->theme().material3Theme().color.resolve(parent_role), overlay));
+  Color expected = QuantizeToArgb4444(AlphaBlend(
+      front_ptr->theme().material3Theme().color.resolve(parent_role), overlay));
 
   EXPECT_EQ(expected, pixelAt(28, 20));
 }
@@ -1467,8 +1471,7 @@ TEST_F(RooWindowsRenderTest,
   app_.add(std::move(target), Box(4, 12, 21, 29));
   app_.add(std::move(competing_role), Box(28, 12, 45, 29));
 
-  target_ptr->onShowPress(target_ptr->width() / 2,
-                          target_ptr->height() / 2);
+  target_ptr->onShowPress(target_ptr->width() / 2, target_ptr->height() / 2);
   ClickAnimation& anim = app_.root().click_animation();
   ASSERT_EQ(target_ptr, anim.target());
 
@@ -1476,8 +1479,7 @@ TEST_F(RooWindowsRenderTest,
   EXPECT_EQ(target_ptr, anim.target());
   EXPECT_TRUE(target_ptr->isClicking());
 
-  target_ptr->onSingleTapUp(target_ptr->width() / 2,
-                            target_ptr->height() / 2);
+  target_ptr->onSingleTapUp(target_ptr->width() / 2, target_ptr->height() / 2);
   competing_role_ptr->onCancel();
   EXPECT_EQ(target_ptr, anim.target());
   EXPECT_TRUE(anim.isBusy());

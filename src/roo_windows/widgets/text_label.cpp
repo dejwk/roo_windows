@@ -8,12 +8,43 @@ namespace roo_windows {
 
 namespace {
 
-Dimensions MeasureLabelText(const roo_display::Font& font,
+class StyledStringViewLabel : public roo_display::Drawable {
+ public:
+  StyledStringViewLabel(roo::string_view text, const TextStyle& text_style,
+                        roo_display::Color color)
+      : text_(text),
+        text_style_(text_style),
+        color_(color),
+        metrics_(text_style.font().getHorizontalStringMetrics(
+            text, text_style.fontOptions())) {}
+
+  roo_display::Box extents() const override {
+    return metrics_.screen_extents();
+  }
+
+  roo_display::Box anchorExtents() const override {
+    return roo_display::Box(
+        0, -text_style_.baselineOffset(), metrics_.advance() - 1,
+        text_style_.lineHeight() - text_style_.baselineOffset() - 1);
+  }
+
+ private:
+  void drawTo(const roo_display::Surface& surface) const override {
+    text_style_.font().drawHorizontalString(surface, text_.data(), text_.size(),
+                                            color_, text_style_.fontOptions());
+  }
+
+  roo::string_view text_;
+  const TextStyle& text_style_;
+  roo_display::Color color_;
+  roo_display::GlyphMetrics metrics_;
+};
+
+Dimensions MeasureLabelText(const TextStyle& text_style,
                             roo::string_view text) {
-  auto metrics = font.getHorizontalStringMetrics(text);
-  return Dimensions(metrics.advance(), font.metrics().ascent() -
-                                           font.metrics().descent() +
-                                           font.metrics().linegap());
+  auto metrics = text_style.font().getHorizontalStringMetrics(
+      text, text_style.fontOptions());
+  return Dimensions(metrics.advance(), text_style.lineHeight());
 }
 
 bool DimensionsDiffer(const Dimensions& a, const Dimensions& b) {
@@ -29,12 +60,14 @@ Insets InsetsFromContentBounds(const Rect& logical_bounds,
 }
 
 Rect ResolveLabelContentBounds(const Rect& logical_bounds,
-                               const roo_display::Font& font,
+                               const TextStyle& text_style,
                                roo::string_view text,
                                roo_display::Alignment alignment) {
-  auto metrics = font.getHorizontalStringMetrics(text);
-  Rect anchor_bounds(0, -font.metrics().ascent() - font.metrics().linegap(),
-                     metrics.advance() - 1, -font.metrics().descent());
+  const auto& font = text_style.font();
+  auto metrics =
+      font.getHorizontalStringMetrics(text, text_style.fontOptions());
+  Rect anchor_bounds(0, -text_style.baselineOffset(), metrics.advance() - 1,
+                     text_style.lineHeight() - text_style.baselineOffset() - 1);
   auto offset =
       ResolveAlignmentOffset(logical_bounds, anchor_bounds, alignment);
   return Rect(metrics.screen_extents()).translate(offset.first, offset.second);
@@ -43,27 +76,28 @@ Rect ResolveLabelContentBounds(const Rect& logical_bounds,
 }  // namespace
 
 TextLabel::TextLabel(ApplicationContext& context, std::string value,
-                     const roo_display::Font& font)
-    : TextLabel(context, std::move(value), font, kGravityLeft | kGravityMiddle) {}
+                     const TextStyle& text_style)
+    : TextLabel(context, std::move(value), text_style,
+                kGravityLeft | kGravityMiddle) {}
 
 TextLabel::TextLabel(ApplicationContext& context, std::string value,
-                     const roo_display::Font& font, Gravity gravity)
-    : TextLabel(context, std::move(value), font, roo_display::color::Transparent,
-                gravity) {}
+                     const TextStyle& text_style, Gravity gravity)
+    : TextLabel(context, std::move(value), text_style,
+                roo_display::color::Transparent, gravity) {}
 
 TextLabel::TextLabel(ApplicationContext& context, std::string value,
-                     const roo_display::Font& font, roo_display::Color color,
+                     const TextStyle& text_style, roo_display::Color color,
                      Gravity gravity)
     : BasicWidget(context),
       value_(std::move(value)),
-      font_(font),
+      text_style_(&text_style),
       color_(color),
       gravity_(gravity) {}
 
 void TextLabel::paint(PaintContext& ctx) const {
   roo_display::Color color =
       color_.a() == 0 ? parent()->defaultColor() : color_;
-  ctx.drawTiled(roo_display::StringViewLabel(value_, font_, color), bounds(),
+  ctx.drawTiled(StyledStringViewLabel(value_, textStyle(), color), bounds(),
                 adjustAlignment(gravity_.asAlignment()));
 }
 
@@ -71,7 +105,7 @@ Insets TextLabel::getInkInsets() const {
   if (value_.empty()) return Insets::Zero();
   return InsetsFromContentBounds(
       bounds(),
-      ResolveLabelContentBounds(bounds(), font_, value_,
+      ResolveLabelContentBounds(bounds(), textStyle(), value_,
                                 adjustAlignment(gravity_.asAlignment())));
 }
 
@@ -79,15 +113,15 @@ Dimensions TextLabel::getSuggestedMinimumDimensions() const {
   // NOTE: we could consider pre-calculating and storing these (and avoid
   // re-measuring in paint), but it is an extra 20 bytes per label so it is
   // not a clear win.
-  return MeasureLabelText(font_, value_);
+  return MeasureLabelText(textStyle(), value_);
 }
 
 void TextLabel::setText(std::string value) {
   if (value_ == value) return;
   bool had_old_content = !value_.empty();
   Rect old_bounds = had_old_content ? maxParentBounds() : Rect(0, 0, -1, -1);
-  Dimensions old_dimensions = MeasureLabelText(font_, value_);
-  Dimensions new_dimensions = MeasureLabelText(font_, value);
+  Dimensions old_dimensions = MeasureLabelText(textStyle(), value_);
+  Dimensions new_dimensions = MeasureLabelText(textStyle(), value);
   value_ = std::move(value);
   invalidateInterior();
   if (had_old_content) {
@@ -104,8 +138,8 @@ void TextLabel::setText(roo::string_view value) {
   if (value_ == value) return;
   bool had_old_content = !value_.empty();
   Rect old_bounds = had_old_content ? maxParentBounds() : Rect(0, 0, -1, -1);
-  Dimensions old_dimensions = MeasureLabelText(font_, value_);
-  Dimensions new_dimensions = MeasureLabelText(font_, value);
+  Dimensions old_dimensions = MeasureLabelText(textStyle(), value_);
+  Dimensions new_dimensions = MeasureLabelText(textStyle(), value);
   value_ = std::string((const char*)value.data(), value.size());
   invalidateInterior();
   if (had_old_content) {
@@ -136,29 +170,41 @@ void TextLabel::clearText() {
   requestLayout();
 }
 
-StringViewLabel::StringViewLabel(ApplicationContext& context, roo::string_view value,
-                                 const roo_display::Font& font)
-    : StringViewLabel(context, std::move(value), font,
+void TextLabel::setTextStyle(const TextStyle& text_style) {
+  if (text_style_ == &text_style) return;
+  Rect old_bounds = value_.empty() ? Rect(0, 0, -1, -1) : maxParentBounds();
+  text_style_ = &text_style;
+  invalidateInterior();
+  if (!value_.empty()) notifyParentInvalidatedRegion(old_bounds);
+  requestLayout();
+}
+
+StringViewLabel::StringViewLabel(ApplicationContext& context,
+                                 roo::string_view value,
+                                 const TextStyle& text_style)
+    : StringViewLabel(context, std::move(value), text_style,
                       kGravityLeft | kGravityMiddle) {}
 
-StringViewLabel::StringViewLabel(ApplicationContext& context, roo::string_view value,
-                                 const roo_display::Font& font, Gravity gravity)
-    : StringViewLabel(context, std::move(value), font,
+StringViewLabel::StringViewLabel(ApplicationContext& context,
+                                 roo::string_view value,
+                                 const TextStyle& text_style, Gravity gravity)
+    : StringViewLabel(context, std::move(value), text_style,
                       roo_display::color::Transparent, gravity) {}
 
-StringViewLabel::StringViewLabel(ApplicationContext& context, roo::string_view value,
-                                 const roo_display::Font& font,
+StringViewLabel::StringViewLabel(ApplicationContext& context,
+                                 roo::string_view value,
+                                 const TextStyle& text_style,
                                  roo_display::Color color, Gravity gravity)
     : BasicWidget(context),
       value_(std::move(value)),
-      font_(font),
+      text_style_(&text_style),
       color_(color),
       gravity_(gravity) {}
 
 void StringViewLabel::paint(PaintContext& ctx) const {
   roo_display::Color color =
       color_.a() == 0 ? parent()->defaultColor() : color_;
-  ctx.drawTiled(roo_display::StringViewLabel(value_, font_, color), bounds(),
+  ctx.drawTiled(StyledStringViewLabel(value_, textStyle(), color), bounds(),
                 adjustAlignment(gravity_.asAlignment()));
 }
 
@@ -166,7 +212,7 @@ Insets StringViewLabel::getInkInsets() const {
   if (value_.empty()) return Insets::Zero();
   return InsetsFromContentBounds(
       bounds(),
-      ResolveLabelContentBounds(bounds(), font_, value_,
+      ResolveLabelContentBounds(bounds(), textStyle(), value_,
                                 adjustAlignment(gravity_.asAlignment())));
 }
 
@@ -174,15 +220,15 @@ Dimensions StringViewLabel::getSuggestedMinimumDimensions() const {
   // NOTE: we could consider pre-calculating and storing these (and avoid
   // re-measuring in paint), but it is an extra 20 bytes per label so it is
   // not a clear win.
-  return MeasureLabelText(font_, value_);
+  return MeasureLabelText(textStyle(), value_);
 }
 
 void StringViewLabel::setText(roo::string_view value) {
   if (value_ == value) return;
   bool had_old_content = !value_.empty();
   Rect old_bounds = had_old_content ? maxParentBounds() : Rect(0, 0, -1, -1);
-  Dimensions old_dimensions = MeasureLabelText(font_, value_);
-  Dimensions new_dimensions = MeasureLabelText(font_, value);
+  Dimensions old_dimensions = MeasureLabelText(textStyle(), value_);
+  Dimensions new_dimensions = MeasureLabelText(textStyle(), value);
   value_ = std::move(value);
   invalidateInterior();
   if (had_old_content) {
@@ -199,6 +245,15 @@ void StringViewLabel::clearText() {
   value_ = "";
   invalidateInterior();
   notifyParentInvalidatedRegion(old_bounds);
+  requestLayout();
+}
+
+void StringViewLabel::setTextStyle(const TextStyle& text_style) {
+  if (text_style_ == &text_style) return;
+  Rect old_bounds = value_.empty() ? Rect(0, 0, -1, -1) : maxParentBounds();
+  text_style_ = &text_style;
+  invalidateInterior();
+  if (!value_.empty()) notifyParentInvalidatedRegion(old_bounds);
   requestLayout();
 }
 

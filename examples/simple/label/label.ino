@@ -88,7 +88,7 @@ using namespace roo_windows;
 roo_scheduler::Scheduler scheduler;
 Environment env(scheduler);
 Application app(&env, display);
-TextLabel label(app.context(), "Hello World!", font_caption(),
+TextLabel label(app.context(), "Hello World!", material2::text_style_caption(),
                 kGravityCenter | kGravityMiddle);
 SingletonActivity activity(app, label);
 

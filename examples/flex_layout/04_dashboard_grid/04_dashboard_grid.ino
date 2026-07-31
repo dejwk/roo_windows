@@ -90,8 +90,8 @@ class MetricCard : public FlexLayout {
   MetricCard(ApplicationContext& context, const char* value,
              const char* caption)
       : FlexLayout(context, FlexDirection::kColumn),
-        value_(context, value, font_h6()),
-        caption_(context, caption, font_caption()) {
+        value_(context, value, material2::text_style_h6()),
+        caption_(context, caption, material2::text_style_caption()) {
     setAlignItems(AlignItems::kStretch);
     setJustifyContent(JustifyContent::kCenter);
     setPadding(Padding(PaddingSize::kRegular));

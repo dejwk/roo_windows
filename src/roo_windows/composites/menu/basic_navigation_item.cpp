@@ -9,7 +9,7 @@ BasicNavigationItem::BasicNavigationItem(ApplicationContext& context,
                                          Activity& target)
     : HorizontalLayout(context),
       icon_(context, icon),
-      label_(context, text, font_subtitle1()),
+      label_(context, text, material2::text_style_subtitle1()),
       target_(target) {
   setGravity(kGravityMiddle);
   add(icon_);
@@ -26,8 +26,8 @@ BasicNavigationItemWithSubtext::BasicNavigationItemWithSubtext(
     : HorizontalLayout(context),
       icon_(context, icon),
       content_(context),
-      label_(context, label, font_subtitle1()),
-      subtext_(context, subtext, font_subtitle2()),
+      label_(context, label, material2::text_style_subtitle1()),
+      subtext_(context, subtext, material2::text_style_subtitle2()),
       target_(target) {
   setGravity(kGravityMiddle);
   add(icon_);

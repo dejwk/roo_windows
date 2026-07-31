@@ -2,12 +2,12 @@
 
 #ifdef ROO_TESTING
 
-#include "roo_windows/fake/fltk_key_source.h"
 #include "roo_testing/devices/display/ili9341/ili9341spi.h"
 #include "roo_testing/devices/touch/xpt2046/xpt2046spi.h"
 #include "roo_testing/microcontrollers/esp32/fake_esp32.h"
 #include "roo_testing/transducers/ui/viewport/flex_viewport.h"
 #include "roo_testing/transducers/ui/viewport/fltk/fltk_viewport.h"
+#include "roo_windows/fake/fltk_key_source.h"
 
 using roo_testing_transducers::FlexViewport;
 using roo_testing_transducers::FltkViewport;
@@ -106,7 +106,7 @@ class ButtonRow : public FlexLayout {
   ButtonRow(ApplicationContext& context, const char* title,
             material3::ButtonVariant variant)
       : FlexLayout(context, FlexDirection::kColumn),
-        title_(context, title, font_caption()),
+        title_(context, title, material2::text_style_caption()),
         button_(context, "Action", variant),
         button_with_icon_(context, "Action", variant),
         disabled_(context, "Disabled", variant) {
@@ -149,7 +149,7 @@ class SizeShowcase : public FlexLayout {
  public:
   explicit SizeShowcase(ApplicationContext& context)
       : FlexLayout(context, FlexDirection::kColumn),
-        title_(context, "Size tokens", font_caption()),
+        title_(context, "Size tokens", material2::text_style_caption()),
         extra_small_(context, "XS", material3::ButtonVariant::kFilled),
         small_(context, "Small", material3::ButtonVariant::kFilled),
         medium_(context, "Medium", material3::ButtonVariant::kFilled),
@@ -190,7 +190,7 @@ class ShapeShowcase : public FlexLayout {
  public:
   explicit ShapeShowcase(ApplicationContext& context)
       : FlexLayout(context, FlexDirection::kColumn),
-        title_(context, "Shape tokens", font_caption()),
+        title_(context, "Shape tokens", material2::text_style_caption()),
         round_(context, "Round", material3::ButtonVariant::kOutlined),
         square_(context, "Square", material3::ButtonVariant::kOutlined) {
     setPadding(Padding(Scaled(12), Scaled(6)));
@@ -218,7 +218,8 @@ class SmallPaddingShowcase : public FlexLayout {
  public:
   explicit SmallPaddingShowcase(ApplicationContext& context)
       : FlexLayout(context, FlexDirection::kColumn),
-        title_(context, "Small-button padding", font_caption()),
+        title_(context, "Small-button padding",
+               material2::text_style_caption()),
         default_padding_(context, "24 dp",
                          material3::ButtonVariant::kFilledTonal),
         reduced_padding_(context, "16 dp",
@@ -254,9 +255,9 @@ class ButtonScreen : public ScrollablePanel {
   ButtonScreen(ApplicationContext& context)
       : ScrollablePanel(context),
         content_(context, FlexDirection::kColumn),
-        title_(context, "Material 3 buttons", font_h6()),
+        title_(context, "Material 3 buttons", material2::text_style_h6()),
         subtitle_(context, "Phase 1 - variants, sizes, shapes, and padding",
-                  font_caption()),
+                  material2::text_style_caption()),
         geometry_divider_(context),
         sizes_(context),
         shapes_(context),

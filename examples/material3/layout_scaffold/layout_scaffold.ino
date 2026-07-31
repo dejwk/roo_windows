@@ -143,11 +143,11 @@ class ListDetailPage : public PaneLayout {
     auto detail = std::make_unique<FlexLayout>(context, FlexDirection::kColumn);
     detail->setPadding(Padding(Scaled(16), Scaled(20)));
     detail->setGap(Scaled(12));
-    detail->add(WidgetRef(
-        std::make_unique<TextBlock>(context, std::string(title), font_h6(),
-                                    roo_display::kTop | roo_display::kLeft)));
     detail->add(WidgetRef(std::make_unique<TextBlock>(
-        context, std::string(description), font_body1(),
+        context, std::string(title), material2::text_style_h6(),
+        roo_display::kTop | roo_display::kLeft)));
+    detail->add(WidgetRef(std::make_unique<TextBlock>(
+        context, std::string(description), material2::text_style_body1(),
         roo_display::kTop | roo_display::kLeft)));
     auto back = std::make_unique<material3::Button>(
         context, "Back to list", material3::ButtonVariant::kText);

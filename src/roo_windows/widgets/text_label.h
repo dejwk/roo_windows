@@ -6,6 +6,7 @@
 #include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/gravity.h"
 #include "roo_windows/core/panel.h"
+#include "roo_windows/core/text_style.h"
 
 namespace roo_windows {
 
@@ -18,13 +19,13 @@ namespace roo_windows {
 class TextLabel : public BasicWidget {
  public:
   TextLabel(ApplicationContext& context, std::string value,
-            const roo_display::Font& font);
+            const TextStyle& text_style);
 
   TextLabel(ApplicationContext& context, std::string value,
-            const roo_display::Font& font, Gravity gravity);
+            const TextStyle& text_style, Gravity gravity);
 
   TextLabel(ApplicationContext& context, std::string value,
-            const roo_display::Font& font, roo_display::Color color,
+            const TextStyle& text_style, roo_display::Color color,
             Gravity gravity);
 
   /// Paints the owned string in a single line, with the configured gravity
@@ -60,11 +61,13 @@ class TextLabel : public BasicWidget {
   /// Empties the label.
   void clearText();
 
-  const roo_display::Font& font() const { return font_; }
+  const TextStyle& textStyle() const { return *text_style_; }
+  const roo_display::Font& font() const { return textStyle().font(); }
+  void setTextStyle(const TextStyle& text_style);
 
  private:
   std::string value_;
-  const roo_display::Font& font_;
+  const TextStyle* text_style_;
   roo_display::Color color_;
   Gravity gravity_;
 };
@@ -77,13 +80,13 @@ class TextLabel : public BasicWidget {
 class StringViewLabel : public BasicWidget {
  public:
   StringViewLabel(ApplicationContext& context, roo::string_view value,
-                  const roo_display::Font& font);
+                  const TextStyle& text_style);
 
   StringViewLabel(ApplicationContext& context, roo::string_view value,
-                  const roo_display::Font& font, Gravity gravity);
+                  const TextStyle& text_style, Gravity gravity);
 
   StringViewLabel(ApplicationContext& context, roo::string_view value,
-                  const roo_display::Font& font, roo_display::Color color,
+                  const TextStyle& text_style, roo_display::Color color,
                   Gravity gravity);
 
   /// Paints the referenced string in a single line, with the configured
@@ -107,11 +110,13 @@ class StringViewLabel : public BasicWidget {
   /// Resets the label to an empty view.
   void clearText();
 
-  const roo_display::Font& font() const { return font_; }
+  const TextStyle& textStyle() const { return *text_style_; }
+  const roo_display::Font& font() const { return textStyle().font(); }
+  void setTextStyle(const TextStyle& text_style);
 
  private:
   roo::string_view value_;
-  const roo_display::Font& font_;
+  const TextStyle* text_style_;
   roo_display::Color color_;
   Gravity gravity_;
 };

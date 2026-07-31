@@ -98,7 +98,7 @@ class Toolbar : public FlexLayout {
   Toolbar(ApplicationContext& context)
       : FlexLayout(context, FlexDirection::kRow),
         back_(context, ic_filled_24_navigation_arrow_back()),
-        title_(context, "My screen", font_body1()),
+        title_(context, "My screen", material2::text_style_body1()),
         search_(context, ic_filled_24_action_search()),
         settings_(context, ic_filled_24_action_settings()),
         overflow_(context, ic_filled_24_navigation_more_vert()) {

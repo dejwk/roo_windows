@@ -91,10 +91,10 @@ class AppBarScreen : public ScrollablePanel {
   explicit AppBarScreen(ApplicationContext& context)
       : ScrollablePanel(context),
         content_(context, FlexDirection::kColumn),
-        heading_(context, "Material 3 app bars", font_h6()),
+        heading_(context, "Material 3 app bars", material2::text_style_h6()),
         description_(context,
                      "Small, medium, and large title-based top app bars.",
-                     font_caption()),
+                     material2::text_style_caption()),
         divider_(context),
         small_(context, material3::AppBarVariant::kSmall),
         medium_(context, material3::AppBarVariant::kMediumFlexible),

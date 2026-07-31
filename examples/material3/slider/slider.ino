@@ -2,12 +2,12 @@
 
 #ifdef ROO_TESTING
 
-#include "roo_windows/fake/fltk_key_source.h"
 #include "roo_testing/devices/display/ili9341/ili9341spi.h"
 #include "roo_testing/devices/touch/xpt2046/xpt2046spi.h"
 #include "roo_testing/microcontrollers/esp32/fake_esp32.h"
 #include "roo_testing/transducers/ui/viewport/flex_viewport.h"
 #include "roo_testing/transducers/ui/viewport/fltk/fltk_viewport.h"
+#include "roo_windows/fake/fltk_key_source.h"
 
 using roo_testing_transducers::FlexViewport;
 using roo_testing_transducers::FltkViewport;
@@ -116,9 +116,9 @@ class SliderRow : public FlexLayout {
       : FlexLayout(context, FlexDirection::kColumn),
         header_(context, FlexDirection::kRow),
         labels_(context, FlexDirection::kColumn),
-        primary_(context, primary, font_body1()),
-        secondary_(context, secondary, font_caption()),
-        value_(context, "", font_body1()),
+        primary_(context, primary, material2::text_style_body1()),
+        secondary_(context, secondary, material2::text_style_caption()),
+        value_(context, "", material2::text_style_body1()),
         slider_(context, material3::SliderRange{},
                 UnitValueFromPercent(initial_percent)) {
     setPadding(Padding(Scaled(12), Scaled(8)));
@@ -238,9 +238,9 @@ class SemanticSliderRow : public FlexLayout {
       : FlexLayout(context, FlexDirection::kColumn),
         header_(context, FlexDirection::kRow),
         labels_(context, FlexDirection::kColumn),
-        primary_(context, primary, font_body1()),
-        secondary_(context, secondary, font_caption()),
-        value_(context, "", font_body1()),
+        primary_(context, primary, material2::text_style_body1()),
+        secondary_(context, secondary, material2::text_style_caption()),
+        value_(context, "", material2::text_style_body1()),
         slider_(context, range, initial_value, variant, style),
         formatter_(std::move(formatter)) {
     if (label_formatter != nullptr) {
@@ -293,9 +293,9 @@ class IconSliderRow : public FlexLayout {
       : FlexLayout(context, FlexDirection::kColumn),
         header_(context, FlexDirection::kRow),
         labels_(context, FlexDirection::kColumn),
-        primary_(context, primary, font_body1()),
-        secondary_(context, secondary, font_caption()),
-        value_(context, "", font_body1()),
+        primary_(context, primary, material2::text_style_body1()),
+        secondary_(context, secondary, material2::text_style_caption()),
+        value_(context, "", material2::text_style_body1()),
         slider_(context, range, initial_value,
                 material3::SliderVariant::kStandard, style),
         formatter_(std::move(formatter)) {
@@ -401,11 +401,11 @@ class RangeSliderRow : public FlexLayout {
       : FlexLayout(context, FlexDirection::kColumn),
         header_(context, FlexDirection::kRow),
         labels_(context, FlexDirection::kColumn),
-        primary_(context, primary, font_body1()),
-        secondary_(context, secondary, font_caption()),
-        value_(context, "", font_body1()),
+        primary_(context, primary, material2::text_style_body1()),
+        secondary_(context, secondary, material2::text_style_caption()),
+        value_(context, "", material2::text_style_body1()),
         slider_(context, range, start_value, end_value, style),
-        status_(context, "", font_caption()),
+        status_(context, "", material2::text_style_caption()),
         min_separation_(min_separation) {
     setPadding(Padding(Scaled(12), Scaled(8)));
     setGap(Scaled(8));
@@ -509,14 +509,14 @@ class VerticalSliderShowcase : public FlexLayout {
       : FlexLayout(context, FlexDirection::kColumn),
         header_(context, FlexDirection::kRow),
         labels_(context, FlexDirection::kColumn),
-        primary_(context, primary, font_body1()),
-        secondary_(context, secondary, font_caption()),
-        value_(context, "", font_body1()),
+        primary_(context, primary, material2::text_style_body1()),
+        secondary_(context, secondary, material2::text_style_caption()),
+        value_(context, "", material2::text_style_body1()),
         body_(context, FlexDirection::kRow),
         slider_slot_(context, Scaled(104), Scaled(168), Scaled(56)),
         slider_(context, range, initial_value,
                 material3::SliderVariant::kStandard, style),
-        detail_(context, detail, font_caption()),
+        detail_(context, detail, material2::text_style_caption()),
         formatter_(std::move(formatter)) {
     if (label_formatter != nullptr) {
       slider_.setLabelFormatter(std::move(label_formatter));
@@ -651,17 +651,17 @@ class SliderScreen : public SimpleScrollablePanel {
   SliderScreen(ApplicationContext& context)
       : SimpleScrollablePanel(context),
         content_(context),
-        title_(context, "Material 3 sliders", font_body1()),
+        title_(context, "Material 3 sliders", material2::text_style_body1()),
         subtitle_(context,
                   "Unit-range, semantic, discrete, centered, vertical, "
                   "range, and iconized sliders, with custom value indicator "
                   "labels.",
-                  font_caption()),
+                  material2::text_style_caption()),
         divider_(context),
         migration_(context,
                    "The first row uses the default unit range. The rest use "
                    "custom semantic ranges.",
-                   font_caption()),
+                   material2::text_style_caption()),
         legacy_(context, "Default unit range",
                 "0..100% mapped through the semantic value API", 72),
         fan_speed_(
@@ -761,7 +761,7 @@ class SliderScreen : public SimpleScrollablePanel {
               "the active thumb. Discrete sliders now show stop indicators by "
               "default, inset icons are available on larger standard sliders, "
               "and direction can be configured independently from orientation.",
-              font_caption()) {
+              material2::text_style_caption()) {
     content_.setPadding(Scaled(12));
     content_.setGap(Scaled(4));
 

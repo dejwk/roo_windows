@@ -14,9 +14,10 @@ namespace {
 
 inline bool IsWrapWhitespace(char c) { return c == ' ' || c == '\t'; }
 
-int16_t MeasureText(const roo_display::Font& font, roo::string_view text) {
+int16_t MeasureText(const TextStyle& text_style, roo::string_view text) {
   if (text.empty()) return 0;
-  auto m = font.getHorizontalStringMetrics(text.data(), text.size());
+  auto m = text_style.font().getHorizontalStringMetrics(
+      text.data(), text.size(), text_style.fontOptions());
   return m.advance();
 }
 
@@ -77,7 +78,7 @@ Insets ResolveConservativeTextInsets(const roo_display::Font& font) {
                 std::min<int16_t>(0, font.metrics().minRsb()), 0);
 }
 
-void EllipsizeLine(TextBlock::LineLayout& line, const roo_display::Font& font,
+void EllipsizeLine(TextBlock::LineLayout& line, const TextStyle& text_style,
                    int16_t max_width) {
   line.ellipsis_chars = 0;
   if (max_width <= 0) {
@@ -90,7 +91,7 @@ void EllipsizeLine(TextBlock::LineLayout& line, const roo_display::Font& font,
   static constexpr const char kDots[] = "...";
   int16_t dots_width[4] = {0, 0, 0, 0};
   for (int i = 1; i <= 3; ++i) {
-    dots_width[i] = MeasureText(font, roo::string_view(kDots, i));
+    dots_width[i] = MeasureText(text_style, roo::string_view(kDots, i));
   }
 
   uint8_t dots_count = 3;
@@ -120,7 +121,12 @@ void EllipsizeLine(TextBlock::LineLayout& line, const roo_display::Font& font,
   while (true) {
     roo::string_view candidate(data, len);
     int16_t candidate_width =
-        MeasureText(font, candidate) + dots_width[dots_count];
+        MeasureText(text_style, candidate) + dots_width[dots_count];
+    // The candidate and ellipsis form one logical run, so preserve the
+    // tracking boundary that separate measurements omit.
+    if (!candidate.empty() && dots_count > 0) {
+      candidate_width += text_style.tracking();
+    }
     if (candidate_width <= max_width) {
       line.text = candidate;
       line.ellipsis_chars = dots_count;
@@ -144,7 +150,7 @@ void EllipsizeLine(TextBlock::LineLayout& line, const roo_display::Font& font,
 }
 
 void AppendParagraphLines(const std::string& text, size_t start, size_t end,
-                          const roo_display::Font& font, TextWrapMode wrap_mode,
+                          const TextStyle& text_style, TextWrapMode wrap_mode,
                           int16_t width_limit,
                           std::vector<TextBlock::LineLayout>& out) {
   size_t before = out.size();
@@ -157,7 +163,8 @@ void AppendParagraphLines(const std::string& text, size_t start, size_t end,
     // Fast path: keep paragraph on one line when wrapping is disabled.
     roo::string_view line_text(text.data() + start, end - start);
     out.push_back(TextBlock::LineLayout{line_text, 0, CountSpaces(line_text),
-                                        MeasureText(font, line_text), true});
+                                        MeasureText(text_style, line_text),
+                                        true});
     return;
   }
 
@@ -178,8 +185,9 @@ void AppendParagraphLines(const std::string& text, size_t start, size_t end,
       if (!decoder.next(code_point)) break;
       size_t cp_end = static_cast<size_t>(
           reinterpret_cast<const char*>(decoder.data()) - text.data());
-      int16_t w = MeasureText(font, roo::string_view(text.data() + line_start,
-                                                     cp_end - line_start));
+      int16_t w = MeasureText(
+          text_style,
+          roo::string_view(text.data() + line_start, cp_end - line_start));
       if (w <= width_limit) {
         last_fit_end = cp_end;
         if (code_point == U' ' || code_point == U'\t') {
@@ -216,7 +224,8 @@ void AppendParagraphLines(const std::string& text, size_t start, size_t end,
 
     roo::string_view line_text(text.data() + line_start, line_end - line_start);
     out.push_back(TextBlock::LineLayout{line_text, 0, CountSpaces(line_text),
-                                        MeasureText(font, line_text), false});
+                                        MeasureText(text_style, line_text),
+                                        false});
     pos = line_end;
   }
 
@@ -230,11 +239,11 @@ class Interior : public roo_display::Drawable {
  public:
   Interior(roo_display::Box extents,
            const std::vector<TextBlock::LineLayout>& lines,
-           const roo_display::Font& font, roo_display::Color color,
+           const TextStyle& text_style, roo_display::Color color,
            TextAlign text_align)
       : extents_(extents),
         lines_(lines),
-        font_(font),
+        text_style_(text_style),
         color_(color),
         text_align_(text_align) {}
 
@@ -244,8 +253,8 @@ class Interior : public roo_display::Drawable {
   static void fillGap(const roo_display::Surface& s, int16_t x_min,
                       int16_t x_max, int16_t y_min, int16_t y_max) {
     if (x_min > x_max || y_min > y_max) return;
-    s.drawObject(roo_display::FilledRect(x_min, y_min, x_max, y_max,
-                                         s.bgcolor()));
+    s.drawObject(
+        roo_display::FilledRect(x_min, y_min, x_max, y_max, s.bgcolor()));
   }
 
   int16_t drawJustifiedLine(const roo_display::Surface& s,
@@ -253,7 +262,9 @@ class Interior : public roo_display::Drawable {
                             int16_t space_width, int16_t row_y_min,
                             int16_t row_y_max) const {
     if (spaces <= 0 || line.width >= extents_.width()) {
-      font_.drawHorizontalString(s, line.text.data(), line.text.size(), color_);
+      text_style_.font().drawHorizontalString(s, line.text.data(),
+                                              line.text.size(), color_,
+                                              text_style_.fontOptions());
       return line.width;
     }
 
@@ -273,9 +284,11 @@ class Interior : public roo_display::Drawable {
         roo_display::Surface part = s;
         part.set_dx(s.dx() + x);
         size_t len = space - start;
-        font_.drawHorizontalString(part, line.text.data() + start, len, color_);
-        x +=
-            MeasureText(font_, roo::string_view(line.text.data() + start, len));
+        text_style_.font().drawHorizontalString(part, line.text.data() + start,
+                                                len, color_,
+                                                text_style_.fontOptions());
+        x += MeasureText(text_style_,
+                         roo::string_view(line.text.data() + start, len));
       }
       if (space >= line.text.size()) break;
 
@@ -287,7 +300,8 @@ class Interior : public roo_display::Drawable {
       for (size_t i = space; i < run_end; ++i) {
         roo_display::Surface part = s;
         part.set_dx(s.dx() + x);
-        font_.drawHorizontalString(part, " ", 1, color_);
+        text_style_.font().drawHorizontalString(part, " ", 1, color_,
+                                                text_style_.fontOptions());
         int16_t stretch = extra_per_space;
         if (extra_remainder > 0) {
           ++stretch;
@@ -311,14 +325,14 @@ class Interior : public roo_display::Drawable {
     // Precompute dot widths once per paint for ellipsis overlay.
     int16_t dots_width[4] = {0, 0, 0, 0};
     for (int i = 1; i <= 3; ++i) {
-      dots_width[i] = MeasureText(font_, roo::string_view(kDots, i));
+      dots_width[i] = MeasureText(text_style_, roo::string_view(kDots, i));
     }
 
-    int16_t line_height = font_.metrics().maxHeight();
-    int16_t row_y_min = -font_.metrics().glyphYMax();
-    int16_t row_y_max = -font_.metrics().glyphYMin();
-    int16_t glyph_band_height = row_y_max - row_y_min + 1;
-    int16_t space_width = MeasureText(font_, roo::string_view(" ", 1));
+    const auto& font = text_style_.font();
+    int16_t line_height = text_style_.lineHeight();
+    int16_t row_y_min = -font.metrics().glyphYMax();
+    int16_t row_y_max = -font.metrics().glyphYMin();
+    int16_t space_width = MeasureText(text_style_, roo::string_view(" ", 1));
     int16_t clip_y_min = s.clip_box().yMin() - s.dy();
     int16_t clip_y_max = s.clip_box().yMax() - s.dy();
 
@@ -329,7 +343,10 @@ class Interior : public roo_display::Drawable {
       if (y_end < clip_y_min || y > clip_y_max) continue;
       const auto& line = lines_[i];
       roo_display::Surface row_surface = s;
-      row_surface.set_dy(s.dy() + y + font_.metrics().glyphYMax());
+      // The Material baseline is defined exclusively by the line box. Raster
+      // bounds are ink bounds, not an alternate baseline metric.
+      int16_t baseline = y + text_style_.baselineOffset();
+      row_surface.set_dy(s.dy() + baseline);
       // Settle only unresolved background regions (gaps) while leaving glyph
       // runs to font rendering, so each pixel reaches final color once.
 
@@ -350,25 +367,28 @@ class Interior : public roo_display::Drawable {
         fillGap(row_surface, line_x + line.width, extents_.width() - 1,
                 row_y_min, row_y_max);
         row_surface.set_dx(s.dx() + line_x);
-        font_.drawHorizontalString(row_surface, line.text.data(),
-                                   line.text.size(), color_);
+        font.drawHorizontalString(row_surface, line.text.data(),
+                                  line.text.size(), color_,
+                                  text_style_.fontOptions());
         if (line.ellipsis_chars > 0) {
           roo_display::Surface dots_surface = row_surface;
           dots_surface.set_dx(row_surface.dx() + line.width -
                               dots_width[line.ellipsis_chars]);
-          font_.drawHorizontalString(dots_surface, kDots, line.ellipsis_chars,
-                                     color_);
+          font.drawHorizontalString(dots_surface, kDots, line.ellipsis_chars,
+                                    color_, text_style_.fontOptions());
         }
       }
 
-      int16_t glyph_bottom = y + glyph_band_height - 1;
+      int16_t glyph_top = baseline - font.metrics().glyphYMax();
+      int16_t glyph_bottom = baseline - font.metrics().glyphYMin();
+      fillGap(s, 0, extents_.width() - 1, y, glyph_top - 1);
       fillGap(s, 0, extents_.width() - 1, glyph_bottom + 1, y_end);
     }
   }
 
   roo_display::Box extents_;
   const std::vector<TextBlock::LineLayout>& lines_;
-  const roo_display::Font& font_;
+  const TextStyle& text_style_;
   roo_display::Color color_;
   TextAlign text_align_;
 };
@@ -376,7 +396,7 @@ class Interior : public roo_display::Drawable {
 }  // namespace
 
 TextBlock::TextBlock(ApplicationContext& context, std::string value,
-                     const roo_display::Font& font, roo_display::Color color,
+                     const TextStyle& text_style, roo_display::Color color,
                      roo_display::Alignment alignment)
     : BasicWidget(context),
       value_(),
@@ -386,7 +406,7 @@ TextBlock::TextBlock(ApplicationContext& context, std::string value,
       layout_lines_(),
       layout_width_limit_(-1),
       layout_valid_(false),
-      font_(font),
+      text_style_(&text_style),
       color_(color),
       alignment_(alignment),
       wrap_mode_(TextWrapMode::kWordWrap),
@@ -408,7 +428,7 @@ void TextBlock::recalculateNaturalDimensions() {
 
 void TextBlock::setConservativeInkInsets() {
   ink_insets_ =
-      value_.empty() ? Insets::Zero() : ResolveConservativeTextInsets(font_);
+      value_.empty() ? Insets::Zero() : ResolveConservativeTextInsets(font());
 }
 
 void TextBlock::updateCachedInkInsetsFromCurrentBounds() {
@@ -438,8 +458,8 @@ void TextBlock::ensureLayout(XDim width_limit) const {
       }
 
       // Process one newline-delimited paragraph into one or more lines.
-      AppendParagraphLines(value_, start, end, font_, wrap_mode_, width_limit,
-                           layout_lines_);
+      AppendParagraphLines(value_, start, end, textStyle(), wrap_mode_,
+                           width_limit, layout_lines_);
 
       if (end == value_.size()) break;
       start = end + 1;
@@ -461,7 +481,7 @@ void TextBlock::ensureLayout(XDim width_limit) const {
     if (ellipsize_ && truncated && !layout_lines_.empty()) {
       // Ellipsize only after max-lines truncation to preserve full layout data.
       int16_t ellipsis_limit = width_limit > 0 ? width_limit : max_line_width;
-      EllipsizeLine(layout_lines_.back(), font_, ellipsis_limit);
+      EllipsizeLine(layout_lines_.back(), textStyle(), ellipsis_limit);
       max_line_width =
           std::max<int16_t>(max_line_width, layout_lines_.back().width);
     }
@@ -470,7 +490,7 @@ void TextBlock::ensureLayout(XDim width_limit) const {
     if (wrap_mode_ == TextWrapMode::kWordWrap && width_limit > 0) {
       block_width = width_limit;
     }
-    int16_t block_height = layout_lines_.size() * font_.metrics().maxHeight();
+    int16_t block_height = layout_lines_.size() * textStyle().lineHeight();
     layout_dims_ = Dimensions(block_width, block_height);
   }
 
@@ -491,7 +511,7 @@ void TextBlock::paint(PaintContext& ctx) const {
 
   ctx.drawTiled(Interior(roo_display::Box(0, 0, layout_dims_.width() - 1,
                                           layout_dims_.height() - 1),
-                         layout_lines_, font_, color, text_align_),
+                         layout_lines_, textStyle(), color, text_align_),
                 bounds(), adjustAlignment(alignment_));
 }
 
@@ -608,6 +628,19 @@ void TextBlock::setEllipsize(bool ellipsize) {
   requestLayout();
 }
 
+void TextBlock::setTextStyle(const TextStyle& text_style) {
+  if (text_style_ == &text_style) return;
+  bool had_old_content = !value_.empty();
+  Rect old_bounds = had_old_content ? maxParentBounds() : Rect(0, 0, -1, -1);
+  text_style_ = &text_style;
+  invalidateLayoutCache();
+  recalculateNaturalDimensions();
+  setConservativeInkInsets();
+  invalidateInterior();
+  if (had_old_content) notifyParentInvalidatedRegion(old_bounds);
+  requestLayout();
+}
+
 Rect TextBlock::getRenderedTextBounds() const {
   if (width() <= 0 || height() <= 0 || value_.empty()) {
     return bounds();
@@ -628,7 +661,7 @@ Rect TextBlock::getRenderedTextBounds() const {
   Rect rendered(block_offset.first, block_offset.second, block_offset.first,
                 block_offset.second);
   bool has_rendered_pixels = false;
-  int16_t line_height = font_.metrics().maxHeight();
+  int16_t line_height = textStyle().lineHeight();
 
   for (size_t i = 0; i < layout_lines_.size(); ++i) {
     const auto& line = layout_lines_[i];
@@ -645,12 +678,13 @@ Rect TextBlock::getRenderedTextBounds() const {
     int16_t line_y =
         block_offset.second + static_cast<int16_t>(i) * line_height;
 
-    auto line_metrics = font_.getHorizontalStringMetrics(line.text);
+    auto line_metrics =
+        font().getHorizontalStringMetrics(line.text, textStyle().fontOptions());
     int16_t line_left = line_x + std::min<int16_t>(0, line_metrics.glyphXMin());
     int16_t line_right =
         line_x + std::max<int16_t>(line_width - 1, line_metrics.glyphXMax());
     Rect line_bounds(line_left, line_y, line_right,
-                     line_y + font_.metrics().maxHeight() - 1);
+                     line_y + textStyle().lineHeight() - 1);
     rendered =
         has_rendered_pixels ? Rect::Extent(rendered, line_bounds) : line_bounds;
     has_rendered_pixels = true;

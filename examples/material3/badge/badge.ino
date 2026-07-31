@@ -136,8 +136,8 @@ class SwitchBadgeRow : public FlexLayout {
                  const char* secondary, bool on)
       : FlexLayout(context, FlexDirection::kRow),
         labels_(context, FlexDirection::kColumn),
-        primary_(context, primary, font_body1()),
-        secondary_(context, secondary, font_caption()),
+        primary_(context, primary, material2::text_style_body1()),
+        secondary_(context, secondary, material2::text_style_caption()),
         sw_(context, on) {
     setPadding(Padding(Scaled(12), Scaled(8)));
     setGap(Scaled(12));
@@ -164,8 +164,8 @@ class SwitchBadgeRow : public FlexLayout {
 class BadgeCard : public Widget {
  public:
   BadgeCard(ApplicationContext& context, const char* glyph,
-    bool unclipped = false)
-  : Widget(context), glyph_(glyph) {
+            bool unclipped = false)
+      : Widget(context), glyph_(glyph) {
     if (unclipped) {
       setParentClipMode(ParentClipMode::kUnclipped);
     }
@@ -225,10 +225,11 @@ class BadgeCard : public Widget {
       PaintContext label_ctx = ctx.clipped(anchor_inner);
       if (!label_ctx.empty()) {
         label_ctx.setBgcolor(theme().material3Theme().color.secondaryContainer);
-        label_ctx.drawTiled(StringViewLabel(glyph_, font_h5(),
-                                            theme().material3Theme().color.onSecondaryContainer),
-                            anchor,
-                            roo_display::kCenter | roo_display::kMiddle);
+        label_ctx.drawTiled(
+            StringViewLabel(
+                glyph_, font_h5(),
+                theme().material3Theme().color.onSecondaryContainer),
+            anchor, roo_display::kCenter | roo_display::kMiddle);
       }
     }
   }
@@ -266,7 +267,7 @@ class BadgeCardColumn : public FlexLayout {
   BadgeCardColumn(ApplicationContext& context, const char* title,
                   bool unclipped = false)
       : FlexLayout(context, FlexDirection::kColumn),
-        title_(context, title, font_caption()),
+        title_(context, title, material2::text_style_caption()),
         card_(context, "M3", unclipped) {
     setGap(Scaled(6));
     setAlignItems(AlignItems::kCenter);
@@ -286,34 +287,38 @@ class BadgeScreen : public ScrollablePanel {
   explicit BadgeScreen(ApplicationContext& context)
       : ScrollablePanel(context),
         content_(context, FlexDirection::kColumn),
-        title_(context, "Material 3 badges", font_h6()),
+        title_(context, "Material 3 badges", material2::text_style_h6()),
         subtitle_(
             context,
             "Step 3 - dot, text, numbers, overlap, and unclipped overflow",
-            font_caption()),
-        switches_heading_(context, "Badged switches", font_body1()),
+            material2::text_style_caption()),
+        switches_heading_(context, "Badged switches",
+                          material2::text_style_body1()),
         switches_summary_(context,
                           "Host-family example via BadgedSwitch with top-end "
                           "and top-start placement",
-                          font_caption()),
+                          material2::text_style_caption()),
         dot_row_(context, "Dot badge", "setBadgeDot(), default kTopEnd", false),
-        text_row_(context, "Text badge", "setBadgeText(\"NEW\"), kTopStart", true),
+        text_row_(context, "Text badge", "setBadgeText(\"NEW\"), kTopStart",
+                  true),
         value_row_(context, "Number badge", "setBadgeValue(42)", true),
         truncation_row_(context, "Truncation", "setBadgeValue(1000) -> 999+",
                         false),
         overlap_divider_(context),
-        overlap_heading_(context, "Owner-painted badge", font_body1()),
+        overlap_heading_(context, "Owner-painted badge",
+                         material2::text_style_body1()),
         overlap_summary_(context,
                          "Raw Badge helper settled before lower-z owner paint "
                          "in the same widget",
-                         font_caption()),
+                         material2::text_style_caption()),
         overlap_card_(context, "IN"),
         overflow_divider_(context),
-        overflow_heading_(context, "Overflow and clipping", font_body1()),
+        overflow_heading_(context, "Overflow and clipping",
+                          material2::text_style_body1()),
         overflow_summary_(context,
                           "Same overhang: clipped on the left, visible on the "
                           "right with kUnclipped",
-                          font_caption()),
+                          material2::text_style_caption()),
         overflow_row_(context, FlexDirection::kRow),
         clipped_(context, "Clipped"),
         unclipped_(context, "Unclipped", true) {

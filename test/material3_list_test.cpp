@@ -205,7 +205,8 @@ class ExpandableBodyListItem : public InvokableListItemBase {
                          roo::string_view supporting,
                          roo::string_view expanded_details)
       : InvokableListItemBase(headline, supporting, {}, {}, true),
-        details_(context, std::string(expanded_details), font_caption()),
+        details_(context, std::string(expanded_details),
+                 material2::text_style_caption()),
         body_panel_(context) {
     body_panel_.setAnimationDuration(180);
     body_panel_.setExpanded(false, false);
@@ -787,18 +788,19 @@ TEST_F(Material3ExpandableRippleTest,
   auto scroll = std::make_unique<SimpleScrollablePanel>(context());
   SimpleScrollablePanel* scroll_ptr = scroll.get();
 
-  auto content = std::make_unique<FlexLayout>(context(), FlexDirection::kColumn);
+  auto content =
+      std::make_unique<FlexLayout>(context(), FlexDirection::kColumn);
   FlexLayout* content_ptr = content.get();
   content_ptr->setGap(Scaled(8));
 
   // Screen header (mirrors ListsScreen title/subtitle).
-  auto screen_title =
-      std::make_unique<TextLabel>(context(), "Material 3 lists", font_h6());
+  auto screen_title = std::make_unique<TextLabel>(context(), "Material 3 lists",
+                                                  material2::text_style_h6());
   auto screen_subtitle = std::make_unique<TextLabel>(
       context(),
       "Phase 11 - expandable rows now use reusable body panels with animated "
       "measured-height reveal",
-      font_caption());
+      material2::text_style_caption());
 
   // Tall filler above the expandable section so the section sits deep in the
   // scroll content with non-moving content above it.
@@ -811,12 +813,12 @@ TEST_F(Material3ExpandableRippleTest,
   FlexLayout* section_ptr = section.get();
   section_ptr->setGap(Scaled(6));
   auto section_title = std::make_unique<TextLabel>(
-      context(), "Phase 11 expandable rows", font_body1());
+      context(), "Phase 11 expandable rows", material2::text_style_body1());
   auto section_subtitle = std::make_unique<TextLabel>(
       context(),
       "ExpandablePanel is reusable body content; expansion state stays inside "
       "the item, not on ListEntry.",
-      font_caption());
+      material2::text_style_caption());
 
   auto list = std::make_unique<List>(context());
   List* list_ptr = list.get();
@@ -970,7 +972,6 @@ TEST_F(Material3ExpandableRippleTest,
       << std::dec << "; first out-of-row overshoot on frame "
       << frame_first_overshoot << " at (" << overshoot_x << "," << overshoot_y
       << ")";
-
 }
 
 // Verifies that binding a standard item attaches the stable borrowed slot
@@ -1299,7 +1300,8 @@ TEST_F(Material3ListRenderTest, InsetDividerPaintUsesResolvedInsets) {
   ASSERT_TRUE(refresh());
 
   roo_display::Color divider_color = test_support::QuantizeToArgb4444(
-      context().theme().material3Theme().color.resolve(::roo_windows::material3::ColorToken::kOutlineVariant));
+      context().theme().material3Theme().color.resolve(
+          ::roo_windows::material3::ColorToken::kOutlineVariant));
   int16_t divider_thickness = Scaled(1);
 
   EXPECT_EQ(first_row->height() + divider_thickness, second_row->offsetTop());
@@ -1346,9 +1348,11 @@ TEST_F(Material3ListRenderTest, ExpressiveInsetDividerPaintUsesGapSpace) {
   ASSERT_TRUE(refresh());
 
   roo_display::Color divider_color = test_support::QuantizeToArgb4444(
-      context().theme().material3Theme().color.resolve(::roo_windows::material3::ColorToken::kOutlineVariant));
+      context().theme().material3Theme().color.resolve(
+          ::roo_windows::material3::ColorToken::kOutlineVariant));
   roo_display::Color surface_color = test_support::QuantizeToArgb4444(
-      context().theme().material3Theme().color.resolve(::roo_windows::material3::ColorToken::kSurface));
+      context().theme().material3Theme().color.resolve(
+          ::roo_windows::material3::ColorToken::kSurface));
   int16_t expressive_gap = Scaled(2);
   int16_t divider_thickness = Scaled(1);
 

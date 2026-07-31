@@ -5,9 +5,11 @@ Use the compile-time `material2::text_style_*()` and
 `material3::text_style_*()` accessors for the standard semantic roles. They
 return stable references and retain only the selected font payload.
 
-Text widgets still accept and expose fonts until their style-aware migration.
-When a widget accepts a `TextStyle`, the style must outlive that widget. Custom
-styles should therefore normally be function-local statics:
+`TextLabel`, `StringViewLabel`, and `TextBlock` accept `TextStyle` and retain
+only a non-owning pointer. `font()` remains available as a compatibility view;
+use `setTextStyle()` to rebind a widget when its shared style changes. A style
+must outlive every widget that borrows it. Custom styles should therefore
+normally be function-local statics:
 
 ```cpp
 const TextStyle& custom_body_style() {

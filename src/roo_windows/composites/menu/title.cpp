@@ -10,7 +10,8 @@ namespace menu {
 Title::Title(ApplicationContext& context, std::string title)
     : HorizontalLayout(context),
       back_(context, SCALED_ROO_ICON(outlined, navigation_arrow_back)),
-      label_(context, std::move(title), font_h6(), kGravityLeft | kGravityMiddle) {
+      label_(context, std::move(title), material2::text_style_h6(),
+             kGravityLeft | kGravityMiddle) {
   setGravity(kGravityMiddle);
   label_.setMargins(MarginSize::kNone);
   label_.setPadding(PaddingSize::kTiny);

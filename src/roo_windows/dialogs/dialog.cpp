@@ -5,9 +5,10 @@
 
 namespace roo_windows {
 
-Dialog::Dialog(ApplicationContext& context, std::vector<std::string> button_labels)
+Dialog::Dialog(ApplicationContext& context,
+               std::vector<std::string> button_labels)
     : VerticalLayout(context),
-      title_(context, "", font_h6()),
+      title_(context, "", material2::text_style_h6()),
       divider1_(context),
       contents_(context),
       divider2_(context),

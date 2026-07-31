@@ -6,11 +6,11 @@ namespace roo_windows {
 namespace {
 
 void ExpectStyle(const TextStyle& style, int16_t height, int16_t tracking) {
-  EXPECT_EQ(height, style.lineHeightPx());
-  EXPECT_EQ(tracking, style.trackingPx());
+  EXPECT_EQ(height, style.lineHeight());
+  EXPECT_EQ(tracking, style.tracking());
   EXPECT_EQ(height, style.font().metrics().ascent() -
-                        style.font().metrics().descent() + style.lineGapPx());
-  EXPECT_EQ(style.trackingPx(), style.fontOptions().trackingPx());
+                        style.font().metrics().descent() + style.lineGap());
+  EXPECT_EQ(style.tracking(), style.fontOptions().trackingPx());
 }
 
 TEST(MaterialTypography, Material3Catalog) {
@@ -59,9 +59,12 @@ TEST(MaterialTypography, Material2FontHelpersRemainCompatible) {
 
 TEST(MaterialTypography, TextStyleExposesLineBoxAndTracking) {
   const TextStyle style(font_body1(), 3, -2);
-  EXPECT_EQ(3, style.lineGapPx());
-  EXPECT_EQ(1, style.topLeadingPx());
-  EXPECT_EQ(font_body1().metrics().ascent() + 1, style.baselineOffsetPx());
+  EXPECT_EQ(3, style.lineGap());
+  EXPECT_EQ(style.font().metrics().ascent(), style.ascent());
+  EXPECT_EQ(style.font().metrics().descent(), style.descent());
+  EXPECT_EQ(1, style.topLeading());
+  EXPECT_EQ(2, style.bottomLeading());
+  EXPECT_EQ(font_body1().metrics().ascent() + 1, style.baselineOffset());
   EXPECT_EQ(-2, style.fontOptions().trackingPx());
 }
 

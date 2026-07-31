@@ -10,8 +10,8 @@ BaseSliderWithCaption::BaseSliderWithCaption(ApplicationContext& context,
                                              std::string caption)
     : VerticalLayout(context),
       text_section_(context),
-      caption_(context, std::move(caption), font_body1()),
-      value_(context, "", font_body1()),
+      caption_(context, std::move(caption), material2::text_style_body1()),
+      value_(context, "", material2::text_style_body1()),
       slider_(context) {
   caption_.setMargins(MarginSize::kLarge, MarginSize::kNone);
   value_.setMargins(MarginSize::kLarge, MarginSize::kNone);
