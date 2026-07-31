@@ -13,21 +13,22 @@ class Widget;
 ///
 /// Widget authors normally consume click-animation state through
 /// Widget::getClickAnimation(), which returns this controller only while the
-/// widget is the active animation target. Framework code that needs to start,
-/// cancel, or confirm animations should go through
+/// widget is actively drawing animated feedback. Framework code that needs to
+/// start, cancel, or confirm interactions should go through
 /// MainWindow::click_animation().
 class ClickAnimation {
  public:
   /// Creates an idle click-animation controller.
   ClickAnimation();
 
-  /// Advances the animation and delivers deferred clicks when ready.
+  /// Samples progress, invalidates active feedback, and marks stalled
+  /// unconfirmed feedback finished.
   void tick();
 
   /// Returns normalized animation progress clamped to `[0, 1]`.
   ///
   /// Returns `1.0f` when target() is `nullptr`.
-  /// Returns the active target's progress when target() is non-null.
+  /// Returns the exposed target's sampled progress when target() is non-null.
   float progress() const;
 
   /// Returns the x-coordinate of the click center in target-local space.
@@ -40,21 +41,26 @@ class ClickAnimation {
   /// Invalid when target() is `nullptr`.
   int16_t yCenter() const;
 
-  /// Returns the widget currently owning the active click animation.
+  /// Returns the widget owning animated click feedback or held settlement.
   ///
-  /// Returns `nullptr` when there is no active animation.
-  /// A finished animation may retain a pressed target until release so the
-  /// click result can be merged into its settlement frame.
+  /// A finished animation may retain a pressed target until release so its
+  /// action can be merged into the pending settlement frame. Returns `nullptr`
+  /// when no animated target is exposed; isBusy() may still be true while a
+  /// non-animated click awaits a completed refresh.
   const Widget* target() const;
 
-  /// Returns true while any interaction owns the shared controller.
+  /// Returns true while animated feedback or a deferred click owns the shared
+  /// controller.
   bool isBusy() const { return phase_ != Phase::kIdle; }
 
-  /// Atomically starts an animation when idle; returns false when busy.
+  /// Atomically starts feedback at target-local coordinates when idle.
+  /// Returns false without changing ownership when the controller is busy.
   bool tryStart(Widget& target, int16_t x, int16_t y);
 
-  /// Confirms the matching target, or admits a non-animated click when idle.
-  /// Returns false when another widget owns the controller.
+  /// Confirms the matching animated target, or reserves a non-animated click
+  /// for delivery after a completed refresh when idle. Confirming a finished
+  /// held target delivers its action synchronously. Returns false without
+  /// changing ownership when another widget owns the controller.
   bool tryConfirm(Widget& target);
 
   /// Cancels the interaction only when it is owned by `target`.
@@ -71,13 +77,16 @@ class ClickAnimation {
                           // the feedback before running the widget's action.
     kAwaitingRelease,  // Feedback finished while the press remains held; keep
                        // the widget pressed until release, then run its action.
-    kAwaitingClean,    // No feedback remains; wait for the pending redraw to
-                       // finish before running the widget's action.
+    kAwaitingRefresh,  // A click without animated feedback waits until a full
+                       // display refresh succeeds before its action runs.
   };
 
   // Captures wall-clock progress once so every pixel emitted by the following
   // refresh observes the same animation state.
   void sampleFrameTime();
+
+  // Settles interactions after Application completes a full refresh.
+  void notifyRefreshCompleted();
 
   // Invalidates the union of the target's current and previous transient
   // parent-space footprints, then remembers the current footprint.
@@ -94,7 +103,7 @@ class ClickAnimation {
   void deliverClick();
 
   // Every non-idle phase has exactly one target. target() deliberately hides
-  // it in kAwaitingClean because no visual animation owns the widget then.
+  // it in kAwaitingRefresh because no visual animation owns the widget then.
   Widget* target_;
   Phase phase_;
 

@@ -13,7 +13,7 @@ The purpose of this document is to preserve the behavioral constraints behind
 the implementation. A future refactor may replace the current fields and
 branches, but it must preserve the visible and semantic outcomes described
 here. The follow-up
-[click-animation simplification investigation](../proposed/click_animation_simplification_handoff.md)
+[click-animation simplification investigation](click_animation_simplification_handoff.md)
 evaluates concrete refactoring options against those constraints.
 
 ## Problem statement
@@ -51,8 +51,8 @@ The following states are related but are not interchangeable.
 | `kWidgetPressed` / `isPressed()` | The gesture is still physically held. It also drives the static pressed overlay after animation finishes. |
 | `kWidgetClicking` / `isClicking()` | The widget is still rendering its animated click reveal. |
 | `ClickAnimation::target_` | The one widget owned by every non-idle controller phase. `target()` exposes it only while visual animation ownership remains. |
-| `ClickAnimation::phase_` | One of idle, animating-unconfirmed, animating-confirmed, awaiting-release, or awaiting-clean. It replaces the former second target pointer and lifecycle booleans. |
-| dirty/invalidated state | A repaint obligation. It is also used as a frame-completion boundary before ordinary deferred click delivery. |
+| `ClickAnimation::phase_` | One of idle, animating-unconfirmed, animating-confirmed, awaiting-release, or awaiting-refresh. It replaces the former second target pointer and lifecycle booleans. |
+| dirty/invalidated state | A repaint obligation only; completed refreshes, not clean widgets, are the controller's settlement boundary. |
 
 `Widget::getClickAnimation()` is deliberately narrower than controller
 ownership. It returns an animation only while the widget is both the controller
@@ -75,8 +75,9 @@ held target in `kAwaitingRelease`; framework code must inspect
    restored.
 5. A press held past animation completion must remain visible in its static
    pressed appearance.
-6. Releasing at the animation boundary must not flicker, regardless of whether
-   release arrives just before or just after the controller's retirement tick.
+6. Releasing at the animation boundary must not flicker, whether release
+   confirms before the final refresh or arrives before the held settlement
+   repaint.
 7. Ripple spill outside logical widget bounds must be erased, including pixels
    in a previous, larger transient footprint.
 
@@ -89,7 +90,7 @@ held target in `kAwaitingRelease`; framework code must inspect
 3. A confirmed target is never forcibly cleared by the unconfirmed-animation
    grace timeout.
 4. `onClicked()` is normally delivered only after the final animated paint has
-   made the target clean.
+   been emitted and a refresh has completed.
 5. Immediately before ordinary deferred delivery, the target is invalidated and
    then `onClicked()` is invoked. This creates one following repaint that either
    draws the changed state or restores the unchanged target.
@@ -101,7 +102,7 @@ held target in `kAwaitingRelease`; framework code must inspect
 8. Admission, confirmation, and cancellation validate target identity inside
    the controller; callers cannot overwrite or confirm another widget's phase.
 9. Hiding an owned target cancels its pending interaction, including a semantic
-   click waiting for the target to become clean.
+   click waiting for a completed refresh.
 10. Controller ownership is cleared before `onClicked()` so callbacks may
     reentrantly start a new interaction.
 
@@ -116,18 +117,24 @@ ClickAnimation::tick()
         -> onShowPress(), onSingleTapUp(), or onCancel()
     -> Application::refresh()
         -> sampleFrameTime()
-        -> paint
+        -> paint and close DrawingContext
+        -> if completed: ClickAnimation::notifyRefreshCompleted()
 ```
 
-This ordering is important. A touch release can occur after
-`ClickAnimation::tick()` but before the paint in the same application tick.
-That is why a release at animation completion cannot always wait for another
-animation tick: doing so would allow the intervening refresh to paint an
-obsolete, overlay-free state.
+This ordering is important. Animation settlement happens at the first
+completed refresh after the final overlay has been emitted. Usually this is
+the same refresh; it can be a later pass if other paint work was interrupted.
+Settlement no longer waits for a later animation tick, so there is no
+post-completion/pre-retirement interval in which a release needs special
+handling.
 
 `Application::refresh()` is also a public one-shot entry point and is not
 necessarily preceded by `Application::tick()`. It therefore calls
-`sampleFrameTime()` itself immediately before drawing.
+`sampleFrameTime()` itself immediately before drawing. After drawing, it
+destroys the `DrawingContext` before calling `notifyRefreshCompleted()` for a
+successful pass. Display unnesting or flushing is consequently complete before
+`onClicked()` can mutate layout or start another interaction. An interrupted
+refresh does not notify the controller, so deferred clicks remain pending.
 
 ## Frame-time sampling
 
@@ -262,8 +269,10 @@ the target contents can be emitted, the paint path restores
 `kWidgetClicking`; the controller therefore cannot retire the animation until
 a later successful final paint.
 
-The target is then clean. The pixels on the display still represent the final
-animated overlay, so a later settlement repaint is mandatory.
+At the end of that target paint the widget is clean, but the pixels on the
+display still represent the final animated overlay. At the completed-refresh
+boundary the controller immediately schedules the mandatory settlement repaint
+before returning to application code.
 
 ## Scenario timelines
 
@@ -282,9 +291,7 @@ animation ticks and paints:
 final animated paint:
   clear clicking -> paint full final overlay -> target becomes clean
 
-next animation tick:
-  transition to kAwaitingClean
-  target is released and clean
+tail of the completed refresh:
   invalidate target -> call onClicked()
 
 settlement paint:
@@ -307,7 +314,7 @@ final animated paint:
   clear clicking -> paint full final overlay
   pressed remains true
 
-retirement tick:
+tail of the completed refresh:
   clean transient spill
   invalidate target once
   enter kAwaitingRelease
@@ -317,9 +324,9 @@ settlement paint:
   draw static pressed appearance
 ```
 
-The controller remains attached even though
-`Widget::getClickAnimation()` returns `nullptr`. Subsequent ticks do not keep
-invalidating the settled held target.
+The controller remains attached even though `Widget::getClickAnimation()`
+returns `nullptr`. Subsequent ticks do not keep invalidating the settled held
+target.
 
 Without this branch, retirement would detach the target with no deferred action
 to request a repaint, leaving the final overlay pixels on screen until some
@@ -342,21 +349,13 @@ tick would create an unnecessary old-state frame.
 
 ### 5. Release at the completion boundary
 
-There are two adjacent races.
+The completed-refresh callback removes the former interval between final paint
+and retirement. By the time `Application::refresh()` returns, a still-held
+target is already in `kAwaitingRelease` and dirty for held-state settlement.
+If release arrives before that settlement paint, `tryConfirm()` detaches it
+and calls `onClicked()` while reusing the pending invalidation.
 
-#### After final paint, before retirement tick
-
-The target is still owned by the controller, progress is complete, and
-`kWidgetClicking` is clear. `tryConfirm()` detects those conditions and
-coalesces the action directly into the next repaint.
-
-#### After retirement invalidation, before settlement paint
-
-The target is in `kAwaitingRelease` and is already dirty for held-state
-settlement. `tryConfirm()` detaches it and calls `onClicked()` before that
-dirty frame is painted.
-
-Both paths prevent:
+This prevents:
 
 ```text
 final overlay -> old state with no overlay -> new clicked state
@@ -376,7 +375,8 @@ after states look the same.
 
 If progress is complete but `kWidgetClicking` is still set, confirmation remains
 deferred. The next paint emits the required final animated frame and clears
-clicking. The following tick then performs ordinary deferred delivery.
+clicking. The tail of that completed refresh then performs ordinary deferred
+delivery.
 
 Elapsed time alone is therefore not proof that the final animation frame was
 painted.
@@ -385,9 +385,9 @@ painted.
 
 If a clickable widget disables click animation, no controller target is
 started during press. `tryConfirm()` atomically admits the target into
-`kAwaitingClean`; delivery still waits for the widget to be released and clean.
-This preserves the general separation between press-state repaint and action
-delivery.
+`kAwaitingRefresh`; delivery waits for one completed refresh. This preserves
+the general separation between press-state repaint and action delivery without
+using widget dirtiness as a lifecycle signal.
 
 ## Invalidation and cleanup
 
@@ -406,9 +406,9 @@ of previous and current bounds. This is required when an animated ripple or
 other effect shrinks or moves; invalidating only the new bounds would leave
 stale pixels in the old footprint.
 
-### Retirement cleanup
+### Completed-refresh cleanup
 
-Retirement repeats transient-spill invalidation because the final paint was
+Settlement repeats transient-spill invalidation because the final paint was
 computed with the animation overlay still active. Interior settlement depends
 on the scenario:
 
@@ -427,10 +427,10 @@ An unconfirmed animation that remains clicking more than 100 ms beyond
 `kPressAnimationMillis` can be forcibly cleared. This handles targets that
 became invisible, clipped, or otherwise stopped receiving paint.
 
-A confirmed animation is not forcibly cleared. It must retain its final overlay
-until a completed paint clears `kWidgetClicking`; otherwise the controller can
-detach while deferred delivery is waiting for a clean widget, leaving the
-target visually erased.
+A confirmed animation is not forcibly cleared. It must retain its final
+overlay until a completed paint clears `kWidgetClicking`; otherwise the
+controller could detach before the required final frame, leaving the target
+visually erased.
 
 ## Navigation-specific behavior
 
@@ -451,7 +451,7 @@ This means:
 The behavior applies to both navigation rails and navigation bars because they
 share `NavigationDestinationBase`.
 
-## Implementation structure and remaining simplification
+## Implementation structure and remaining seams
 
 The controller models semantic ownership with one `target_` pointer and this
 explicit phase machine:
@@ -460,28 +460,26 @@ explicit phase machine:
 kIdle
   -> kAnimatingUnconfirmed
   -> kAnimatingConfirmed
-  -> kAwaitingClean
-  -> kIdle after delivery
+  -> kIdle with delivery at the first completed refresh after the final frame
 
 kAnimatingUnconfirmed
-  -> kAwaitingRelease after held settlement
-  -> kIdle after late-release delivery or cancellation
+  -> kAwaitingRelease at that completed refresh while held
+  -> kIdle after release or cancellation
 
 kIdle
-  -> kAwaitingClean for a non-animated click
+  -> kAwaitingRefresh for a non-animated click
+  -> kIdle at the next completed refresh after delivery
 ```
 
-Promising refactoring seams:
-
-1. represent “final animated frame was emitted” explicitly rather than infer it
-   from `!isClicking()` plus sampled progress,
-2. separate animation-timeline ownership from semantic click-delivery policy,
-3. introduce an explicit post-paint callback or frame token if it can preserve
-   incremental rendering and RAM constraints.
-
 The phase enum, one-target representation, atomic admission, identity-checked
-cancellation, and shared transient-bounds invalidation helper are implemented.
-The completed-refresh experiment remains optional follow-up work.
+cancellation, shared transient-bounds invalidation helper, and
+completed-refresh settlement are implemented.
+
+The remaining architectural seam is between animation ownership and
+component-specific semantic policy. Some widgets intentionally act at release,
+whereas base widgets and navigation destinations defer their action until
+animation settlement. A universal semantic-click abstraction is not justified
+without another concrete consumer.
 
 Changes that look simpler but violate known requirements:
 
@@ -505,17 +503,19 @@ The following tests are executable constraints for this design:
 | `DeadlineInterruptedFinalClickFrameRemainsPending` | A deadline-aborted final paint retains the animation until the final overlay is successfully emitted. |
 | `ClickableIconRepaintsForegroundAfterClickOverlaySettles` | Unchanged targets restore foreground/background pixels after overlay removal. |
 | `HeldPressRepaintsAfterUnconfirmedClickAnimationRetires` | A completed held press gets one static settlement repaint and remains attached until release. |
-| `ReleaseAfterFinalPaintCommitsBeforeRetirementTick` | The pre-retirement late-release race commits without an intermediate paint. |
+| `ReleaseAfterFinalRefreshCommitsBeforeHeldSettlement` | Release before held settlement reuses the pending invalidation without an intermediate paint. |
 | `LateReleaseCoalescesSelectionIntoHeldPressSettlement` | A changing navigation target reuses held settlement rather than flashing its old state. |
 | `TouchReleaseDefersSelectionUntilClickCompletes` | Navigation selection waits for the final animation paint. |
 | `TouchReleaseSettlesIntoSelectedPill` | Navigation-bar selection settles directly into the selected indicator. |
 | `ReselectionSettlesDirectlyIntoSelectedAppearance` | Reselection follows the same one-frame settlement contract. |
 | `QuickReleaseCannotReplaceAnotherDestinationsActiveAnimation` | Shared-controller ownership cannot be stolen by a second quick tap. |
 | `NonAnimatedQuickTapCannotConfirmAnotherWidgetsAnimation` | A non-animated quick tap observes the same busy-controller admission rule. |
+| `NonAnimatedClickWaitsForCompletedRefresh` | A non-animated click ignores an interrupted refresh and delivers at the next completed refresh boundary. |
 | `CompetingPressCannotReplaceAnimationTarget` | Atomic controller admission rejects a second recognized press. |
 | `CancelingConfirmedOwnerCancelsPendingClick` | Owner cancellation before the final frame cancels the semantic action. |
-| `HidingTargetCancelsEveryPendingClickPhase` | Hidden targets release both visual and awaiting-clean ownership without later delivery. |
+| `HidingTargetCancelsVisualAndRefreshPendingPhases` | Hidden targets release both visual and awaiting-refresh ownership without later delivery. |
 | `ReentrantClickCanStartNextAnimation` | Controller ownership is idle before `onClicked()` reenters the gesture path. |
+| `ElapsedTimeAndTickDoNotRetireBeforeFinalRefresh` | Elapsed time and `tick()` alone cannot retire a target before its final paint. |
 | `Material3CheckboxQuickReleaseClearsLeftmostInteractionColumn` | Ripple spill outside logical bounds is erased. |
 | `ClickAnimationTickInvalidatesPreviousAndCurrentTransientBounds` | Shrinking transient effects clean their previous footprint. |
 | `CancelingCompetingRoleDoesNotCancelClickAnimation` | Only the owning gesture role may cancel the animation target. |

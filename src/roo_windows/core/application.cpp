@@ -237,11 +237,20 @@ bool Application::refresh(roo_time::Uptime deadline) {
   // so standalone refreshes advance the animation and every pixel in this
   // frame observes the same wall-clock progress.
   click_animation.sampleFrameTime();
-  roo_display::DrawingContext dc(display_);
-  dc.setFillMode(roo_display::FillMode::kExtents);
-  Adapter adapter(root_window_, deadline);
-  dc.draw(adapter);
-  return adapter.completed();
+  // Close the drawing context before reporting a successful refresh. That
+  // notification may synchronously deliver deferred onClicked() calls, which
+  // can mutate the widget tree or start another interaction and must not run
+  // while the display is still drawing or flushing the preceding frame.
+  bool completed;
+  {
+    roo_display::DrawingContext dc(display_);
+    dc.setFillMode(roo_display::FillMode::kExtents);
+    Adapter adapter(root_window_, deadline);
+    dc.draw(adapter);
+    completed = adapter.completed();
+  }
+  if (completed) click_animation.notifyRefreshCompleted();
+  return completed;
 }
 
 Task* Application::addTask(const roo_display::Box& bounds) {

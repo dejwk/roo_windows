@@ -417,9 +417,7 @@ TEST(Material3NavigationBar, TouchReleaseSettlesIntoSelectedPill) {
   app.root().refreshClickAnimation();
   ASSERT_TRUE(app.refresh());
   EXPECT_FALSE(inbox_raw->isClicking());
-  EXPECT_FALSE(inbox_raw->isDirty());
 
-  app.root().refreshClickAnimation();
   EXPECT_EQ(1, bar_raw->selectedIndex());
   EXPECT_TRUE(inbox_raw->selected());
   EXPECT_TRUE(inbox_raw->isDirty());

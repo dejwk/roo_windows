@@ -27,7 +27,8 @@ namespace roo_windows {
 /// a `roo_display::Display`. It hosts a single `MainWindow` and any number of
 /// `Task`s (full-screen or floating, normal or popup) which in turn host
 /// `Activity` stacks. `run()` enters the main loop; `refresh()` performs a
-/// one-shot layout/paint pass; `executeInUIThread()` provides thread-safe
+/// one-shot layout/paint pass, advances click settlement, and may deliver
+/// deferred click notifications; `executeInUIThread()` provides thread-safe
 /// re-entry from worker threads.
 class Application {
  public:
@@ -51,11 +52,15 @@ class Application {
   /// Enters the main event loop. Does not return.
   void run();
 
-  /// Lays out and paints all dirty items. Does not handle user input.
-  /// Useful when you want to enforce some visual changes immediately,
-  /// without waiting for the next tick(). Optionally, you can provide
-  /// a redraw deadline. Returns whether the refresh completed, false
-  /// when the refresh was terminated due to exceeded deadline.
+  /// Lays out and paints all dirty items without polling or dispatching new
+  /// input. A completed refresh also advances pending click settlement and may
+  /// synchronously deliver deferred `Widget::onClicked()` notifications after
+  /// drawing has finished. Such callbacks may invalidate additional work.
+  ///
+  /// Useful when you want to enforce visual changes immediately without
+  /// waiting for the next tick. `deadline` can limit the redraw. Returns true
+  /// when the refresh completed. When the deadline interrupts drawing, returns
+  /// false and leaves deferred click notifications pending.
   bool refresh(roo_time::Uptime deadline = roo_time::Uptime::Max());
 
   /// Returns the bootstrap environment used by this application.

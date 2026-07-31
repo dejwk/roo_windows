@@ -277,10 +277,12 @@ class Widget {
 
   Application* getApplication() const;
 
-  /// Returns the active click animation for this widget, or nullptr.
+  /// Returns the click animation while this widget is actively drawing its
+  /// animated feedback, or nullptr otherwise.
   ///
   /// Widget paint code should use this widget-local view instead of querying
-  /// the MainWindow-owned controller directly.
+  /// the MainWindow-owned controller directly. It returns nullptr during
+  /// non-animated delivery and after a held animation enters settlement.
   const ClickAnimation* getClickAnimation() const;
 
   /// Appends the visible, enabled widgets geometrically hit at `x`, `y` to
@@ -296,9 +298,11 @@ class Widget {
   // Returns true if this widget is currently handling a touch gesture.
   bool isHandlingGesture() const;
 
-  // Called when a 'click' should be handled (either during or after
-  // onSingleTapUp). For widgets that support click animation, the event is
-  // triggered after the animation completes.
+  // Called when a click should be handled. The base tap path defers this until
+  // the final animated frame has been emitted and a refresh completes, or
+  // until the next completed refresh when animation is disabled. Components
+  // that act on release may use this later callback only for completion or
+  // duplicate suppression.
   virtual void onClicked();
 
   // Sets a handler to be called when the state of this widget changes due to
@@ -338,9 +342,9 @@ class Widget {
   // this terminal callback; it cannot redirect the event to an ancestor.
   //
   // Most widgets should not override this method, and override 'onClicked()'
-  // instead. The default implementation handles state changes to show the
-  // widget as no longer pressed, triggers click animation if it hasn't alrady
-  // started, and schedules onClicked().
+  // instead. The default implementation clears pressed state, starts animated
+  // feedback when a quick tap has not already started it, and confirms the
+  // shared click lifecycle that eventually invokes onClicked().
   //
   // If you would like to perform some additional action on the tap 'up', you
   // may want to override this method and call the superclass method at the
@@ -351,7 +355,7 @@ class Widget {
   virtual bool supportsTap() const { return isClickable(); }
 
   // Should be overridden to return true by widgets that wish to handle the
-  // onLongPoress events.
+  // onLongPress events.
   virtual bool supportsLongPress() { return false; }
 
   // Should be overridden to return true by widgets that wish to handle the

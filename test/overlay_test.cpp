@@ -659,14 +659,14 @@ TEST_F(RooWindowsRenderTest, DeadlineInterruptedFinalClickFrameRemainsPending) {
   icon_ptr->setOverlayQueryDelay(0);
   ASSERT_TRUE(refresh());
   EXPECT_FALSE(icon_ptr->isClicking());
-  EXPECT_FALSE(icon_ptr->isDirty());
+  EXPECT_TRUE(icon_ptr->isDirty());
   EXPECT_GT(icon_ptr->paintCount(), paints_before);
   EXPECT_NE(settled_pixel, pixelAt(probe_x, probe_y));
-
-  app_.root().refreshClickAnimation();
   EXPECT_EQ(1, icon_ptr->clickCount());
-  EXPECT_TRUE(icon_ptr->isDirty());
+  EXPECT_FALSE(app_.root().click_animation().isBusy());
+
   ASSERT_TRUE(refresh());
+  EXPECT_FALSE(icon_ptr->isDirty());
   EXPECT_EQ(settled_pixel, pixelAt(probe_x, probe_y));
 }
 
@@ -945,13 +945,10 @@ TEST_F(RooWindowsRenderTest,
   delay(kPressAnimationMillis + 20);
   ASSERT_TRUE(refresh());
   EXPECT_FALSE(icon_ptr->isClicking());
-  EXPECT_FALSE(icon_ptr->isDirty());
-  EXPECT_EQ(0, icon_ptr->clickCount());
-  EXPECT_NE(settled_pixel, pixelAt(probe_x, probe_y));
-
-  app_.root().refreshClickAnimation();
   EXPECT_TRUE(icon_ptr->isDirty());
   EXPECT_EQ(1, icon_ptr->clickCount());
+  EXPECT_NE(settled_pixel, pixelAt(probe_x, probe_y));
+
   ASSERT_TRUE(refresh());
 
   EXPECT_FALSE(icon_ptr->isDirty());
@@ -974,13 +971,9 @@ TEST_F(RooWindowsRenderTest,
   delay(kPressAnimationMillis + 20);
   ASSERT_TRUE(refresh());
   EXPECT_FALSE(icon_ptr->isClicking());
-  EXPECT_FALSE(icon_ptr->isDirty());
-  EXPECT_TRUE(icon_ptr->isPressed());
-
-  app_.root().refreshClickAnimation();
-  EXPECT_EQ(icon_ptr, app_.root().click_animation().target());
   EXPECT_TRUE(icon_ptr->isDirty());
   EXPECT_TRUE(icon_ptr->isPressed());
+  EXPECT_EQ(icon_ptr, app_.root().click_animation().target());
 
   ASSERT_TRUE(refresh());
   EXPECT_FALSE(icon_ptr->isDirty());
@@ -994,10 +987,10 @@ TEST_F(RooWindowsRenderTest,
   EXPECT_FALSE(icon_ptr->isDirty());
 }
 
-// Verifies the adjacent race where release arrives after the final animated
-// paint clears kWidgetClicking but before tick() enters held-release waiting.
+// Release after the completed final refresh reuses the held-state settlement
+// invalidation instead of drawing an obsolete overlay-free frame first.
 TEST_F(RooWindowsRenderTest,
-       ReleaseAfterFinalPaintCommitsBeforeRetirementTick) {
+       ReleaseAfterFinalRefreshCommitsBeforeHeldSettlement) {
   auto icon = std::make_unique<ClickableIcon>(
       context(), ic_outlined_24_navigation_menu());
   ClickableIcon* icon_ptr = icon.get();
@@ -1008,8 +1001,9 @@ TEST_F(RooWindowsRenderTest,
   delay(kPressAnimationMillis + 20);
   ASSERT_TRUE(refresh());
   ASSERT_FALSE(icon_ptr->isClicking());
-  ASSERT_FALSE(icon_ptr->isDirty());
+  ASSERT_TRUE(icon_ptr->isDirty());
   ASSERT_EQ(0, icon_ptr->clickCount());
+  ASSERT_EQ(icon_ptr, app_.root().click_animation().target());
 
   icon_ptr->onSingleTapUp(icon_ptr->width() / 2, icon_ptr->height() / 2);
   EXPECT_EQ(nullptr, icon_ptr->getClickAnimation());
@@ -1053,6 +1047,33 @@ TEST_F(RooWindowsRenderTest,
                               animated_ptr->height() / 2);
   EXPECT_FALSE(animated_ptr->isPressed());
   EXPECT_TRUE(animation.isBusy());
+}
+
+TEST_F(RooWindowsRenderTest, NonAnimatedClickWaitsForCompletedRefresh) {
+  auto icon = std::make_unique<NonAnimatedClickableIcon>(
+      context(), ic_outlined_24_navigation_menu());
+  NonAnimatedClickableIcon* icon_ptr = icon.get();
+  app_.add(std::move(icon), Box(20, 8, 43, 31));
+  ASSERT_TRUE(refresh());
+
+  icon_ptr->onSingleTapUp(icon_ptr->width() / 2, icon_ptr->height() / 2);
+  ClickAnimation& animation = app_.root().click_animation();
+  ASSERT_TRUE(animation.isBusy());
+  EXPECT_EQ(nullptr, animation.target());
+  EXPECT_EQ(0, icon_ptr->clickCount());
+
+  icon_ptr->invalidateInterior();
+  EXPECT_FALSE(refresh(roo_time::Uptime::Start()));
+  EXPECT_TRUE(animation.isBusy());
+  EXPECT_EQ(0, icon_ptr->clickCount());
+
+  ASSERT_TRUE(refresh());
+  EXPECT_FALSE(animation.isBusy());
+  EXPECT_EQ(1, icon_ptr->clickCount());
+  EXPECT_TRUE(icon_ptr->isDirty());
+
+  ASSERT_TRUE(refresh());
+  EXPECT_FALSE(icon_ptr->isDirty());
 }
 
 // Admission is owned by ClickAnimation itself: a second recognized press
@@ -1106,15 +1127,15 @@ TEST_F(RooWindowsRenderTest, CancelingConfirmedOwnerCancelsPendingClick) {
   EXPECT_EQ(0, icon_ptr->clickCount());
 }
 
-// Hidden targets cannot strand either an unconfirmed animation or a confirmed
-// click that is waiting for an outstanding repaint to become clean.
-TEST_F(RooWindowsRenderTest, HidingTargetCancelsEveryPendingClickPhase) {
+// Hidden targets cannot strand either an animated press or a non-animated
+// click waiting for the next completed refresh.
+TEST_F(RooWindowsRenderTest, HidingTargetCancelsVisualAndRefreshPendingPhases) {
   auto unconfirmed = std::make_unique<ClickableIcon>(
       context(), ic_outlined_24_navigation_menu());
-  auto confirmed = std::make_unique<ClickableIcon>(
+  auto confirmed = std::make_unique<NonAnimatedClickableIcon>(
       context(), ic_outlined_24_navigation_menu());
   ClickableIcon* unconfirmed_ptr = unconfirmed.get();
-  ClickableIcon* confirmed_ptr = confirmed.get();
+  NonAnimatedClickableIcon* confirmed_ptr = confirmed.get();
 
   app_.add(std::move(unconfirmed), Box(0, 8, 23, 31));
   app_.add(std::move(confirmed), Box(24, 8, 47, 31));
@@ -1130,17 +1151,13 @@ TEST_F(RooWindowsRenderTest, HidingTargetCancelsEveryPendingClickPhase) {
 
   confirmed_ptr->onSingleTapUp(confirmed_ptr->width() / 2,
                                confirmed_ptr->height() / 2);
-  delay(kPressAnimationMillis + 20);
-  ASSERT_TRUE(refresh());
-  confirmed_ptr->invalidateInterior();
-  app_.root().refreshClickAnimation();
   ASSERT_TRUE(animation.isBusy());
   ASSERT_EQ(nullptr, animation.target());
   ASSERT_EQ(0, confirmed_ptr->clickCount());
 
   confirmed_ptr->setVisibility(Visibility::kInvisible);
   EXPECT_FALSE(animation.isBusy());
-  app_.root().refreshClickAnimation();
+  ASSERT_TRUE(refresh());
   EXPECT_EQ(0, confirmed_ptr->clickCount());
 }
 
@@ -1162,7 +1179,6 @@ TEST_F(RooWindowsRenderTest, ReentrantClickCanStartNextAnimation) {
   first_ptr->onSingleTapUp(first_ptr->width() / 2, first_ptr->height() / 2);
   delay(kPressAnimationMillis + 20);
   ASSERT_TRUE(refresh());
-  app_.root().refreshClickAnimation();
 
   ClickAnimation& animation = app_.root().click_animation();
   EXPECT_EQ(1, first_ptr->clickCount());
@@ -1468,10 +1484,9 @@ TEST_F(RooWindowsRenderTest,
   EXPECT_FALSE(target_ptr->isPressed());
 }
 
-// Verifies that the shared controller keeps the finished target attached until
-// tick() retires it, even after progress reaches 1.0.
-TEST_F(RooWindowsRenderTest,
-       ClickAnimationKeepsFinishedTargetUntilTickRetiresIt) {
+// Elapsed time and an animation tick cannot retire the target before a refresh
+// has actually emitted the final frame.
+TEST_F(RooWindowsRenderTest, ElapsedTimeAndTickDoNotRetireBeforeFinalRefresh) {
   auto front = std::make_unique<PointOverlayBoxWidget>(context(), color::Blue,
                                                        Dimensions(18, 18));
   PointOverlayBoxWidget* front_ptr = front.get();
@@ -1487,6 +1502,7 @@ TEST_F(RooWindowsRenderTest,
   app_.root().refreshClickAnimation();
 
   EXPECT_EQ(front_ptr, anim.target());
+  EXPECT_TRUE(front_ptr->isClicking());
   EXPECT_EQ(1.0f, anim.progress());
 }
 

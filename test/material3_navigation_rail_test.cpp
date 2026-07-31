@@ -365,14 +365,12 @@ TEST(Material3NavigationRail,
   app.root().refreshClickAnimation();
   ASSERT_TRUE(app.refresh());
   ASSERT_FALSE(home_raw->isClicking());
-  ASSERT_FALSE(home_raw->isDirty());
+  ASSERT_TRUE(home_raw->isDirty());
 
-  // The generic handoff invalidates immediately before invoking the action.
+  // The completed final refresh invokes and invalidates after drawing returns.
   // Reselection therefore has one selected settlement frame even though the
   // owner does not change selected state.
-  app.root().refreshClickAnimation();
   EXPECT_TRUE(home_raw->selected());
-  EXPECT_TRUE(home_raw->isDirty());
   EXPECT_EQ(std::vector<int>({0}),
             static_cast<TestNavigationRail*>(home_raw->parent())->reselected);
   ASSERT_TRUE(app.refresh());
@@ -421,12 +419,10 @@ TEST(Material3NavigationRail, TouchReleaseDefersSelectionUntilClickCompletes) {
   EXPECT_GE(animation->progress(), 1.0f);
   ASSERT_TRUE(app.refresh());
   EXPECT_FALSE(inbox_raw->isClicking());
-  EXPECT_FALSE(inbox_raw->isDirty());
 
-  // Retirement invalidates and invokes in one tick. The next paint therefore
-  // sees the selected state directly; there is no intermediate unselected
-  // frame between the final overlay and the selected indicator.
-  app.root().refreshClickAnimation();
+  // The completed final refresh invalidates and invokes after drawing returns.
+  // The next paint therefore sees the selected state directly; there is no
+  // intermediate unselected frame between the final overlay and indicator.
   EXPECT_EQ(1, rail_raw->selectedIndex());
   EXPECT_TRUE(inbox_raw->selected());
   EXPECT_TRUE(inbox_raw->isDirty());
@@ -465,14 +461,12 @@ TEST(Material3NavigationRail,
   delay(kPressAnimationMillis + 20);
   ASSERT_TRUE(app.refresh());
   ASSERT_FALSE(inbox_raw->isClicking());
-  ASSERT_FALSE(inbox_raw->isDirty());
+  ASSERT_TRUE(inbox_raw->isDirty());
   ASSERT_EQ(0, rail_raw->selectedIndex());
 
-  // Retirement schedules the held-state settlement frame. Releasing before
-  // that frame is painted must merge selection into it rather than paint one
-  // intermediate unselected frame.
-  app.root().refreshClickAnimation();
-  ASSERT_TRUE(inbox_raw->isDirty());
+  // The completed final refresh schedules held-state settlement. Releasing
+  // before that frame is painted must merge selection into it rather than
+  // paint one intermediate unselected frame.
   NavigationRailDestinationTestAccess::tapUp(
       *inbox_raw, inbox_raw->width() / 2, inbox_raw->height() / 2);
 

@@ -17,68 +17,42 @@ ClickAnimation::ClickAnimation()
 
 void ClickAnimation::tick() {
   sampleFrameTime();
-  if (isAnimationPending() && target_->isClicking()) {
+  if (!isAnimationPending() || !target_->isClicking()) return;
+  target_->invalidateInterior();
+  invalidateTransientFootprint();
+  if (sampled_elapsed_millis_ > kPressAnimationMillis + 100 &&
+      phase_ == Phase::kAnimatingUnconfirmed) {
+    // 100 ms is a grace period to allow the widget to draw the full click
+    // state and then mark itself as non-clicking. If the widget is dragging
+    // its feet, it may mean it became invisible or clipped out and is not
+    // refreshing anymore. An unconfirmed animation can be retired safely.
+    // A confirmed animation must instead retain its full overlay until a
+    // completed paint clears it; otherwise the target can disappear before
+    // its deferred selection is delivered.
+    target_->clearClicking();
+  }
+}
+
+void ClickAnimation::notifyRefreshCompleted() {
+  if (phase_ == Phase::kAwaitingRefresh) {
+    deliverClick();
+    return;
+  }
+  if (!isAnimationPending() || target_->isClicking()) return;
+
+  // The final paint used the pre-clear transient state. Invalidate its spill
+  // once more so siblings underneath it are refreshed during settlement.
+  invalidateTransientFootprint();
+  if (phase_ == Phase::kAnimatingConfirmed) {
+    deliverClick();
+  } else if (target_->isPressed()) {
     target_->invalidateInterior();
-    invalidateTransientFootprint();
-    if (sampled_elapsed_millis_ > kPressAnimationMillis + 100 &&
-        phase_ == Phase::kAnimatingUnconfirmed) {
-      // 100 ms is a grace period to allow the widget to draw the full click
-      // state and then mark itself as non-clicking. If the widget is dragging
-      // its feet, it may mean it became invisible or clipped out and is not
-      // refreshing anymore. An unconfirmed animation can be retired safely.
-      // A confirmed animation must instead retain its full overlay until a
-      // completed paint clears it; otherwise the target can disappear while
-      // its deferred selection is still waiting for the widget to become
-      // clean.
-      target_->clearClicking();
-    }
-  }
-
-  // If an in-progress click animation is expired, clear the animation target so
-  // that other widgets can be clicked, and possibly deliver the delayed click
-  // notification. This is done after the overall redraw, so that the click
-  // animation target has a chance to fully redraw itself after the click
-  // animation completed but before the click notification is delivered.
-  if (isAnimationPending() &&
-      sampled_elapsed_millis_ >= kPressAnimationMillis &&
-      !target_->isClicking()) {
-    // The final paint frame may still use the pre-clear transient state.
-    // Invalidate the full transient spill region once more before delivering
-    // the deferred click so siblings underneath that spill are refreshed.
-    invalidateTransientFootprint();
-    if (phase_ == Phase::kAnimatingUnconfirmed) {
-      if (target_->isPressed()) {
-        // A finished held press stays attached after its one settlement
-        // invalidation. This lets a release coalesce its state change into that
-        // repaint instead of first drawing the old state without an overlay.
-        target_->invalidateInterior();
-        phase_ = Phase::kAwaitingRelease;
-        resetTransientFootprint();
-        return;
-      }
-      Widget* target = target_;
-      reset();
-      target->invalidateInterior();
-    } else {
-      phase_ = Phase::kAwaitingClean;
-      resetTransientFootprint();
-    }
-  }
-
-  if (phase_ == Phase::kAwaitingClean) {
-    // We want to deliver click only after the widget has been released and is
-    // no longer animating. This way, the visual updates of the widget and its
-    // resulting actions are distinct. This makes the widget feel more snappy,
-    // and reduces the redraw area (by splitting the update into smaller
-    // updates).
-    if (!target_->isPressed() && !target_->isDirty()) {
-      // The final animation frame was computed while the click overlay was
-      // still active. Invalidate immediately before invoking the action so
-      // there is exactly one subsequent paint: state-changing controls draw
-      // their new state directly, while unchanged controls still restore their
-      // normal foreground and the background between its pixels.
-      deliverClick();
-    }
+    phase_ = Phase::kAwaitingRelease;
+    resetTransientFootprint();
+  } else {
+    Widget* target = target_;
+    reset();
+    target->invalidateInterior();
   }
 }
 
@@ -153,20 +127,13 @@ void ClickAnimation::cancel(Widget& widget) {
 bool ClickAnimation::tryConfirm(Widget& widget) {
   if (phase_ == Phase::kIdle) {
     target_ = &widget;
-    phase_ = Phase::kAwaitingClean;
+    phase_ = Phase::kAwaitingRefresh;
     return true;
   }
   if (target_ != &widget) return false;
 
   if (phase_ == Phase::kAnimatingUnconfirmed) {
-    if (!widget.isClicking() &&
-        sampled_elapsed_millis_ >= kPressAnimationMillis) {
-      // The final animated frame has already been emitted. Merge the click's
-      // visual state change into the pending settlement repaint.
-      deliverClick();
-    } else {
-      phase_ = Phase::kAnimatingConfirmed;
-    }
+    phase_ = Phase::kAnimatingConfirmed;
     return true;
   }
 
@@ -178,7 +145,7 @@ bool ClickAnimation::tryConfirm(Widget& widget) {
   // A matching target is already confirmed; competing targets were rejected
   // above without mutating the interaction.
   return phase_ == Phase::kAnimatingConfirmed ||
-         phase_ == Phase::kAwaitingClean;
+         phase_ == Phase::kAwaitingRefresh;
 }
 
 }  // namespace roo_windows
