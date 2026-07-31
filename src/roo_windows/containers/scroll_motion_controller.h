@@ -85,18 +85,28 @@ struct Result {
 /// or single-child widgets do not pay for duplicated per-instance data.
 class State {
   /// Active phase of the scroll state machine.
-  enum class Phase : uint8_t { kIdle, kDragging, kFlinging, kSpringBack };
+  enum class Phase : uint8_t {
+    kIdle,
+    kDragging,
+    kFlinging,
+    kSpringBack,
+    kProgrammatic,
+  };
 
  public:
   /// Creates idle motion state with no active animation.
   State() : phase_(Phase::kIdle), anim_{} {}
 
-  /// Returns whether a fling or spring-back animation is active.
+  /// Returns whether a fling, spring-back, or programmatic animation is
+  /// active.
   bool isAnimating() const;
 
   /// Snaps to the requested content origin after clamping it to scroll bounds.
   Result scrollTo(const Geometry& geometry, XDim current_x, YDim current_y,
                   XDim target_x, YDim target_y);
+  /// Starts an eased animation to the requested content origin.
+  Result animateTo(const Geometry& geometry, XDim current_x, YDim current_y,
+                   XDim target_x, YDim target_y, unsigned long now_ms);
   /// Starts a drag gesture and interrupts any in-flight animation.
   Result onDown(const Geometry& geometry, XDim current_x, YDim current_y);
   /// Applies a drag delta, preserving raw overshoot for resistance damping.
@@ -146,6 +156,13 @@ class State {
       XDim target_x;
       YDim target_y;
     } springback;
+    struct {
+      unsigned long start_time_ms;
+      XDim start_x;
+      YDim start_y;
+      XDim target_x;
+      YDim target_y;
+    } programmatic;
   } anim_;
 };
 

@@ -800,8 +800,7 @@ void ScrollableTabs::onSelectionStateUpdated(int old_index, int new_index,
                                              bool animate) {
   (void)old_index;
   (void)new_index;
-  (void)animate;
-  if (mode() == TabsMode::kScrollable) revealSelectedTab();
+  if (mode() == TabsMode::kScrollable) revealSelectedTab(animate);
 }
 
 bool ScrollableTabs::isTabDescendant(const Widget& descendant) const {
@@ -949,7 +948,7 @@ XDim ScrollableTabs::selectedTabCenterInStrip() const {
   return tab.offsetLeft() - scroll_x_ + (tab.width() - 1) / 2;
 }
 
-void ScrollableTabs::revealSelectedTab() {
+void ScrollableTabs::revealSelectedTab(bool animate) {
   if (selectedIndex() < 0 || width() <= 0 || strip_width_ <= width()) {
     applyScrollResult(
         scroll_motion_.scrollTo(motionGeometry(), scroll_x_, 0, 0, 0));
@@ -958,8 +957,12 @@ void ScrollableTabs::revealSelectedTab() {
   XDim center = selectedTabCenterInStrip();
   XDim target = width() / 2 - center;
   scroll_motion::Result result =
-      scroll_motion_.scrollTo(motionGeometry(), scroll_x_, 0, target, 0);
+      animate
+          ? scroll_motion_.animateTo(motionGeometry(), scroll_x_, 0, target, 0,
+                                     millis())
+          : scroll_motion_.scrollTo(motionGeometry(), scroll_x_, 0, target, 0);
   applyScrollResult(result);
+  if (result.needs_tick) scheduleScrollUpdate();
 }
 
 void ScrollableTabs::cancelPendingScrollUpdate() {

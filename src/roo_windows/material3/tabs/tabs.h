@@ -64,7 +64,9 @@ class Tab : public SurfaceWidget {
   bool isClickable() const override { return isEnabled(); }
 
   /// Exposes each tab as a surface-colored interaction rectangle.
-  ::roo_windows::material3::ColorToken containerRole() const override { return ::roo_windows::material3::ColorToken::kSurface; }
+  ::roo_windows::material3::ColorToken containerRole() const override {
+    return ::roo_windows::material3::ColorToken::kSurface;
+  }
 
   /// Returns the tab background color.
   Color background() const override;
@@ -316,7 +318,7 @@ class ScrollableTabs : public Tabs {
   void onCancel() override;
   DragAxis dragAxis() const override {
     return mode() == TabsMode::kScrollable ? DragAxis::kHorizontal
-                                            : DragAxis::kNone;
+                                           : DragAxis::kNone;
   }
   bool supportsFling() const override {
     return mode() == TabsMode::kScrollable;
@@ -334,7 +336,7 @@ class ScrollableTabs : public Tabs {
   void applyScrollResult(const scroll_motion::Result& result);
   void layoutScrollableChildren();
   XDim selectedTabCenterInStrip() const;
-  void revealSelectedTab();
+  void revealSelectedTab(bool animate);
   bool isTabDescendant(const Widget& descendant) const;
   void cancelPendingScrollUpdate();
   void scheduleScrollUpdate();

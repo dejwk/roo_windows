@@ -14,6 +14,7 @@ constexpr float kDeceleration = 300.0f;
 constexpr float kMaxVelocity = 5000.0f;
 constexpr int16_t kMaxOvershootPx = Scaled(40);
 constexpr unsigned long kSpringBackDurationMs = 500;
+constexpr unsigned long kProgrammaticScrollDurationMs = 250;
 
 template <typename T>
 T Clamp(T input, T min_val, T max_val) {
@@ -88,7 +89,8 @@ YDim Geometry::clampY(YDim y) const {
 }
 
 bool State::isAnimating() const {
-  return phase_ == Phase::kFlinging || phase_ == Phase::kSpringBack;
+  return phase_ == Phase::kFlinging || phase_ == Phase::kSpringBack ||
+         phase_ == Phase::kProgrammatic;
 }
 
 Result State::scrollToRaw(const Geometry& geometry, XDim current_x,
@@ -140,6 +142,24 @@ Result State::scrollTo(const Geometry& geometry, XDim current_x, YDim current_y,
   phase_ = Phase::kIdle;
   return scrollToRaw(geometry, current_x, current_y, geometry.clampX(target_x),
                      geometry.clampY(target_y));
+}
+
+Result State::animateTo(const Geometry& geometry, XDim current_x,
+                        YDim current_y, XDim target_x, YDim target_y,
+                        unsigned long now_ms) {
+  target_x = geometry.clampX(target_x);
+  target_y = geometry.clampY(target_y);
+  if (current_x == target_x && current_y == target_y) {
+    phase_ = Phase::kIdle;
+    return MakeResult(geometry, current_x, current_y, false, false);
+  }
+  phase_ = Phase::kProgrammatic;
+  anim_.programmatic.start_time_ms = now_ms;
+  anim_.programmatic.start_x = current_x;
+  anim_.programmatic.start_y = current_y;
+  anim_.programmatic.target_x = target_x;
+  anim_.programmatic.target_y = target_y;
+  return MakeResult(geometry, current_x, current_y, false, true);
 }
 
 Result State::onDown(const Geometry& geometry, XDim current_x, YDim current_y) {
@@ -239,6 +259,28 @@ Result State::onTouchUp(const Geometry& geometry, XDim current_x,
 
 Result State::tick(const Geometry& geometry, XDim current_x, YDim current_y,
                    unsigned long now_ms) {
+  if (phase_ == Phase::kProgrammatic) {
+    unsigned long elapsed = now_ms - anim_.programmatic.start_time_ms;
+    if (elapsed >= kProgrammaticScrollDurationMs) {
+      phase_ = Phase::kIdle;
+      return scrollToRaw(geometry, current_x, current_y,
+                         anim_.programmatic.target_x,
+                         anim_.programmatic.target_y);
+    }
+    float t = static_cast<float>(elapsed) / kProgrammaticScrollDurationMs;
+    // Cubic ease-out: responsive without a visible snap.
+    float ease = 1.0f - (1.0f - t) * (1.0f - t) * (1.0f - t);
+    XDim x = static_cast<XDim>(std::round(
+        anim_.programmatic.start_x +
+        (anim_.programmatic.target_x - anim_.programmatic.start_x) * ease));
+    YDim y = static_cast<YDim>(std::round(
+        anim_.programmatic.start_y +
+        (anim_.programmatic.target_y - anim_.programmatic.start_y) * ease));
+    Result result = scrollToRaw(geometry, current_x, current_y, x, y);
+    result.needs_tick = true;
+    return result;
+  }
+
   if (phase_ == Phase::kSpringBack) {
     float t =
         static_cast<float>(now_ms - anim_.springback.start_time_ms) / 1000.0f;

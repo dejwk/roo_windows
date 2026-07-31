@@ -4,8 +4,8 @@
 #include "roo_icons/outlined/24/action.h"
 #include "roo_scheduler.h"
 #include "roo_windows/containers/horizontal_page_host.h"
-#include "roo_windows/core/basic_widget.h"
 #include "roo_windows/containers/scroll_motion_controller.h"
+#include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/surface_widget.h"
 #include "roo_windows/material3/tabs/tabs.h"
@@ -164,7 +164,8 @@ TEST(Material3Tabs, TabOwnsSurfaceAreaForStateOverlays) {
 
   EXPECT_TRUE((std::is_base_of<SurfaceWidget, Tab>::value));
   EXPECT_EQ(Widget::OVERLAY_AREA, tab.getOverlayType());
-  EXPECT_EQ(::roo_windows::material3::ColorToken::kSurface, tab.containerRole());
+  EXPECT_EQ(::roo_windows::material3::ColorToken::kSurface,
+            tab.containerRole());
   EXPECT_EQ(env.theme().material3Theme().color.surface, tab.background());
   EXPECT_FALSE(tab.useOverlayOnActivation());
 }
@@ -478,6 +479,33 @@ TEST(Material3Tabs, ScrollableSelectionRevealsSelectedTab) {
   EXPECT_GT(history_raw->offsetLeft() + history_raw->width(), 0);
 }
 
+// User-initiated selection keeps its immediate state change, but moves the
+// strip over several scheduler ticks instead of snapping to the selected tab.
+TEST(Material3Tabs, ScrollableAnimatedSelectionRevealsSelectedTabOverTime) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+
+  ScrollableTabs tabs(context);
+  tabs.addTab(std::make_unique<Tab>(context, "Overview"));
+  tabs.addTab(std::make_unique<Tab>(context, "Heating"));
+  tabs.addTab(std::make_unique<Tab>(context, "Long history"));
+  tabs.measure(WidthSpec::Exactly(140), HeightSpec::Exactly(48));
+  tabs.layout(Rect(0, 0, 139, 47));
+
+  EXPECT_TRUE(tabs.setSelectedIndex(2, true));
+  EXPECT_EQ(2, tabs.selectedIndex());
+  EXPECT_EQ(0, tabs.scrollOffsetForTest());
+
+  scheduler.delay(roo_time::Millis(120));
+
+  EXPECT_LT(tabs.scrollOffsetForTest(), 0);
+
+  scheduler.delay(roo_time::Millis(180));
+
+  EXPECT_LT(tabs.scrollOffsetForTest(), 0);
+}
+
 // Focus reveal is independent from selection: arrow-key traversal may expose
 // an unselected tab without moving the selection indicator or changing pages.
 TEST(Material3Tabs, ScrollableFocusRevealDoesNotChangeSelection) {
@@ -646,16 +674,18 @@ TEST_F(Material3TabsRenderTest, PrimaryFixedRowPaintsIndicatorAndDivider) {
 
   EXPECT_EQ(QuantizeToArgb4444(env_.theme().material3Theme().color.primary),
             pixelAt(30, Scaled(45)));
-  EXPECT_EQ(QuantizeToArgb4444(env_.theme().material3Theme().color.outlineVariant),
-            pixelAt(30, Scaled(47)));
+  EXPECT_EQ(
+      QuantizeToArgb4444(env_.theme().material3Theme().color.outlineVariant),
+      pixelAt(30, Scaled(47)));
   EXPECT_EQ(QuantizeToArgb4444(env_.theme().material3Theme().color.surface),
             pixelAt(0, Scaled(45)));
 
   first_raw->setLabel("Uno");
   EXPECT_TRUE(refresh());
 
-  EXPECT_EQ(QuantizeToArgb4444(env_.theme().material3Theme().color.outlineVariant),
-            pixelAt(30, Scaled(47)));
+  EXPECT_EQ(
+      QuantizeToArgb4444(env_.theme().material3Theme().color.outlineVariant),
+      pixelAt(30, Scaled(47)));
 
   first_raw->setPressed(true);
   EXPECT_TRUE(refresh());
@@ -663,12 +693,14 @@ TEST_F(Material3TabsRenderTest, PrimaryFixedRowPaintsIndicatorAndDivider) {
   roo_display::Color pressed_indicator = roo_display::AlphaBlend(
       env_.theme().material3Theme().color.primary,
       env_.theme().material3Theme().color.onSurface.withA(
-          env_.theme().material3Theme().state
-              .resolve(ColorToken::kSurface, InteractionState::kPressed)
+          env_.theme()
+              .material3Theme()
+              .state.resolve(ColorToken::kSurface, InteractionState::kPressed)
               .a()));
   EXPECT_EQ(QuantizeToArgb4444(pressed_indicator), pixelAt(30, Scaled(45)));
-  EXPECT_EQ(QuantizeToArgb4444(env_.theme().material3Theme().color.outlineVariant),
-            pixelAt(30, Scaled(47)));
+  EXPECT_EQ(
+      QuantizeToArgb4444(env_.theme().material3Theme().color.outlineVariant),
+      pixelAt(30, Scaled(47)));
 }
 
 // Verifies the secondary token height, full-tab-width indicator, and
