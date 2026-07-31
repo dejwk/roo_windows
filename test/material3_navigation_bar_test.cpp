@@ -1,5 +1,4 @@
 #include <Arduino.h>
-
 #include <stddef.h>
 
 #include <memory>
@@ -72,8 +71,8 @@ void ExpectDestinationFadeStaysWithinIndicator(NavigationBarLayout layout) {
   const Rect icon_bounds =
       NavigationBarDestinationTestAccess::iconBounds(*second_raw);
   const int16_t inside_x = second_raw->offsetLeft() + icon_bounds.xMin() - 4;
-  const int16_t inside_y = second_raw->offsetTop() +
-                           icon_bounds.yMin() + icon_bounds.height() / 2;
+  const int16_t inside_y =
+      second_raw->offsetTop() + icon_bounds.yMin() + icon_bounds.height() / 2;
   ASSERT_TRUE(second_raw->parent_bounds().contains(inside_x, inside_y));
   const roo_display::Color initial_indicator =
       ReadPixel(offscreen, inside_x, inside_y);
@@ -87,8 +86,7 @@ void ExpectDestinationFadeStaysWithinIndicator(NavigationBarLayout layout) {
     initial_outside = ReadPixel(offscreen, outside_x, outside_y);
   }
 
-  second_raw->onShowPress(second_raw->width() / 2,
-                          second_raw->height() / 2);
+  second_raw->onShowPress(second_raw->width() / 2, second_raw->height() / 2);
   delay(kPressAnimationMillis / 2);
   ASSERT_TRUE(app.refresh());
   EXPECT_NE(initial_indicator, ReadPixel(offscreen, inside_x, inside_y));
@@ -303,8 +301,7 @@ TEST(Material3NavigationBar, DestinationPaintSettlesEveryPixelExactlyOnce) {
 
 TEST(Material3NavigationBar, DestinationFadeStaysWithinIndicatorInBothLayouts) {
   ExpectDestinationFadeStaysWithinIndicator(NavigationBarLayout::kVertical);
-  ExpectDestinationFadeStaysWithinIndicator(
-      NavigationBarLayout::kHorizontal);
+  ExpectDestinationFadeStaysWithinIndicator(NavigationBarLayout::kHorizontal);
 }
 
 // Verifies that the opt-in badge subclass reuses the shared inline helper,

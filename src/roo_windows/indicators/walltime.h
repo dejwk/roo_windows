@@ -1,9 +1,9 @@
 #pragma once
 
 #include "roo_windows/config.h"
-#include "roo_windows/indicators/impl/walltime.h"
 #include "roo_windows/indicators/18/walltime.h"
 #include "roo_windows/indicators/24/walltime.h"
+#include "roo_windows/indicators/impl/walltime.h"
 // #include "roo_windows/indicators/36/Walltime.h"
 // #include "roo_windows/indicators/48/Walltime.h"
 

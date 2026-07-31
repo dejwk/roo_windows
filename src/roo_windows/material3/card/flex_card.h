@@ -32,13 +32,17 @@ class FlexCard : public FlexLayout {
 
   /// Overrides the container color role used by the card's surface.
   void setContainerRole(::roo_windows::material3::ColorToken role);
-  ::roo_windows::material3::ColorToken containerRoleOverride() const { return container_role_override_; }
+  ::roo_windows::material3::ColorToken containerRoleOverride() const {
+    return container_role_override_;
+  }
   /// Reverts to the style-default container color role.
   void clearContainerRoleOverride();
 
   /// Overrides the outline color role (only visible for the outlined style).
   void setOutlineRole(::roo_windows::material3::ColorToken role);
-  ::roo_windows::material3::ColorToken outlineRoleOverride() const { return outline_role_override_; }
+  ::roo_windows::material3::ColorToken outlineRoleOverride() const {
+    return outline_role_override_;
+  }
   /// Reverts to the style-default outline color role.
   void clearOutlineRoleOverride();
 

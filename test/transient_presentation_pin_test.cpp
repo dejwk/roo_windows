@@ -6,8 +6,8 @@
 #include "roo_scheduler.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/basic_widget.h"
-#include "roo_windows/core/panel.h"
 #include "roo_windows/core/environment.h"
+#include "roo_windows/core/panel.h"
 #include "roo_windows/dialogs/dialog.h"
 #include "roo_windows_render_test_support.h"
 
@@ -106,9 +106,9 @@ TEST(TransientPresentationPin, RegistrationOwnsAndReleasesPins) {
   int destroyed = 0;
 
   PinAnchor detached(app.context());
-  EXPECT_EQ(PresentationPinShowResult::kAnchorUnavailable,
-            detached.showPresentationPin(
-                std::make_unique<CountingPin>(destroyed)));
+  EXPECT_EQ(
+      PresentationPinShowResult::kAnchorUnavailable,
+      detached.showPresentationPin(std::make_unique<CountingPin>(destroyed)));
   EXPECT_EQ(1, destroyed);
 
   auto anchor = std::make_unique<PinAnchor>(app.context());
@@ -390,9 +390,9 @@ TEST_F(RooWindowsRenderTest, DeadlineInterruptionRetainsPendingPin) {
 TEST_F(RooWindowsRenderTest, RepeatedShowHideUsesActiveOnlyStorage) {
   static_assert(sizeof(PinAnchor) == sizeof(BasicWidget),
                 "pin anchors must not gain dormant storage");
-  static_assert(sizeof(MutablePin) <=
-                    sizeof(PresentationPin) + 2 * sizeof(void*),
-                "concrete pin payload must remain inline and compact");
+  static_assert(
+      sizeof(MutablePin) <= sizeof(PresentationPin) + 2 * sizeof(void*),
+      "concrete pin payload must remain inline and compact");
   auto anchor = std::make_unique<PinAnchor>(context());
   PinAnchor* raw = anchor.get();
   app_.add(std::move(anchor), Box(0, 0, 31, 31));

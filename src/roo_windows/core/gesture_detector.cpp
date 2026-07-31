@@ -23,11 +23,11 @@ bool GestureDetector::tick() {
       if (long_press_target_ != nullptr) {
         long_press_event_.schedule(now_us_ + kLongPressTimeoutUs);
       }
-      Widget* press_target = tap_target_ != nullptr ? tap_target_
-                                                     : long_press_target_;
-      bool should_delay_press_state =
-          press_target != nullptr && press_target->parent() != nullptr &&
-          press_target->parent()->isScrollable();
+      Widget* press_target =
+          tap_target_ != nullptr ? tap_target_ : long_press_target_;
+      bool should_delay_press_state = press_target != nullptr &&
+                                      press_target->parent() != nullptr &&
+                                      press_target->parent()->isScrollable();
       show_press_event_.schedule(
           now_us_ + (should_delay_press_state ? kShowPressTimeoutUs : 0));
       beginRole(tap_target_);

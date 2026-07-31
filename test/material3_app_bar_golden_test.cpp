@@ -72,14 +72,15 @@ class Material3AppBarGoldenTest : public testing::Test {
     if (!leading_aligned) {
       bar->setTitleAlignment(AppBarTitleAlignment::kCentered);
     }
-    auto menu = std::make_unique<Icon>(app.context(),
-                                       ic_outlined_24_navigation_menu());
+    auto menu =
+        std::make_unique<Icon>(app.context(), ic_outlined_24_navigation_menu());
     auto more = std::make_unique<Icon>(app.context(),
                                        ic_outlined_24_navigation_more_vert());
     bar->setLeading(std::move(menu));
     bar->setTrailing(0, std::move(more));
-    const int16_t height = bar->measure(WidthSpec::Exactly(kWidth),
-                                        HeightSpec::Unspecified(0)).height();
+    const int16_t height =
+        bar->measure(WidthSpec::Exactly(kWidth), HeightSpec::Unspecified(0))
+            .height();
     app.add(std::move(bar), roo_display::Box(0, y, kWidth - 1, y + height - 1));
   }
 
@@ -90,8 +91,8 @@ class Material3AppBarGoldenTest : public testing::Test {
                             ? "Search all mail"
                             : "Search in archive");
     bar->setSurfaceState(surface_state);
-    auto inner = std::make_unique<Icon>(app.context(),
-                                        ic_outlined_24_action_search());
+    auto inner =
+        std::make_unique<Icon>(app.context(), ic_outlined_24_action_search());
     auto outer = std::make_unique<Icon>(app.context(),
                                         ic_outlined_24_navigation_more_vert());
     bar->setInnerTrailing(0, std::move(inner));

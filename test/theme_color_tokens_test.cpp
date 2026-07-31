@@ -1,5 +1,4 @@
 #include "gtest/gtest.h"
-
 #include "roo_windows/core/framework_theme.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/material3/theme.h"
@@ -32,9 +31,9 @@ TEST(FrameworkInteractionThemeTest, ResolvesEveryRoleAndState) {
 
 TEST(Material3ColorSchemeTest, ResolvesEveryToken) {
   const material3::ColorScheme scheme = {
-      roo_display::Color(1), roo_display::Color(2), roo_display::Color(3),
-      roo_display::Color(4), roo_display::Color(5), roo_display::Color(6),
-      roo_display::Color(7), roo_display::Color(8), roo_display::Color(9),
+      roo_display::Color(1),  roo_display::Color(2),  roo_display::Color(3),
+      roo_display::Color(4),  roo_display::Color(5),  roo_display::Color(6),
+      roo_display::Color(7),  roo_display::Color(8),  roo_display::Color(9),
       roo_display::Color(10), roo_display::Color(11), roo_display::Color(12),
       roo_display::Color(13), roo_display::Color(14), roo_display::Color(15),
       roo_display::Color(16), roo_display::Color(17), roo_display::Color(18),
@@ -55,8 +54,9 @@ TEST(Material3StateLayerThemeTest, ResolvesEveryTokenAndState) {
     for (uint8_t interaction = 0; interaction < 6; ++interaction) {
       const roo_display::Color color(token * 6 + interaction + 1);
       state.layer[token][interaction] = color;
-      EXPECT_EQ(color, state.resolve(static_cast<material3::ColorToken>(token),
-                                     static_cast<InteractionState>(interaction)));
+      EXPECT_EQ(color,
+                state.resolve(static_cast<material3::ColorToken>(token),
+                              static_cast<InteractionState>(interaction)));
     }
   }
 }
@@ -107,7 +107,8 @@ TEST(ThemeTest, DefaultThemeComposesMaterial3AndFrameworkThemes) {
   EXPECT_EQ(material.color.background, theme.framework.color.canvas);
   EXPECT_EQ(material.color.surface, theme.framework.color.surface);
   EXPECT_EQ(material.color.onSurface, theme.framework.color.content);
-  EXPECT_EQ(material.color.onSurfaceVariant, theme.framework.color.mutedContent);
+  EXPECT_EQ(material.color.onSurfaceVariant,
+            theme.framework.color.mutedContent);
   EXPECT_EQ(material.color.primary, theme.framework.color.emphasis);
   EXPECT_EQ(material.color.outlineVariant, theme.framework.color.outline);
   EXPECT_EQ(material.color.error, theme.framework.color.critical);

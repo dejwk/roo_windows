@@ -75,8 +75,9 @@ void Switch::paint(PaintContext& ctx) const {
                           ? th.material3Theme().color.accentColorFor(bg_role)
                           : th.material3Theme().color.resolve(
                                 ::roo_windows::material3::ColorToken::kSurface);
-  Color sliderColor = isOn() ? th.material3Theme().color.accentColorFor(bg_role)
-                             : th.material3Theme().color.contentColorFor(bg_role);
+  Color sliderColor = isOn()
+                          ? th.material3Theme().color.accentColorFor(bg_role)
+                          : th.material3Theme().color.contentColorFor(bg_role);
   int16_t xoffset = currentThumbOffsetX();
 #if ROO_WINDOWS_ZOOM >= 200
   auto slider = slider_48();

@@ -7,8 +7,8 @@
 #include "roo_windows/core/container.h"
 #include "roo_windows/core/widget.h"
 #include "roo_windows/core/widget_ref.h"
-#include "roo_windows/widgets/icon.h"
 #include "roo_windows/material3/app_bar/app_bar_tokens.h"
+#include "roo_windows/widgets/icon.h"
 
 namespace roo_windows::material3 {
 
@@ -48,8 +48,7 @@ class AppBarText final : public Widget {
  private:
   roo::string_view text_;
   const roo_display::Font* font_ = nullptr;
-  roo_display::Alignment alignment_ =
-      roo_display::kLeft | roo_display::kMiddle;
+  roo_display::Alignment alignment_ = roo_display::kLeft | roo_display::kMiddle;
   bool use_on_surface_variant_ = false;
 };
 
@@ -153,8 +152,7 @@ class SearchBar : public Container {
   ::roo_windows::material3::ColorToken containerRole() const override;
   BorderStyle getBorderStyle() const override;
 
-  bool fillTouchTargetPath(XDim x, YDim y,
-                           std::vector<Widget*>& path) override;
+  bool fillTouchTargetPath(XDim x, YDim y, std::vector<Widget*>& path) override;
   bool fillSloppyTouchTargetPath(XDim x, YDim y,
                                  std::vector<Widget*>& path) override;
 
@@ -210,8 +208,7 @@ class SearchAppBar : public Container {
 
   /// Routes the embedded entry and outer affordances independently; the
   /// non-interactive outer surface never becomes a fallback touch target.
-  bool fillTouchTargetPath(XDim x, YDim y,
-                           std::vector<Widget*>& path) override;
+  bool fillTouchTargetPath(XDim x, YDim y, std::vector<Widget*>& path) override;
   bool fillSloppyTouchTargetPath(XDim x, YDim y,
                                  std::vector<Widget*>& path) override;
 

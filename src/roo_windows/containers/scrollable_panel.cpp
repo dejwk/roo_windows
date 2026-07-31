@@ -95,9 +95,8 @@ bool SimpleScrollablePanel::revealFocusedDescendant(Widget& descendant) {
 
   // Project the target's parent-space bounds into this panel's coordinates.
   Rect target = descendant.parent_bounds();
-  for (Widget* current = descendant.parent(); current != nullptr &&
-                                               current != this;
-       current = current->parent()) {
+  for (Widget* current = descendant.parent();
+       current != nullptr && current != this; current = current->parent()) {
     target = target.translate(current->offsetLeft(), current->offsetTop());
   }
   if (descendant.parent() == nullptr) return false;

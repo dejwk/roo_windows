@@ -64,10 +64,10 @@ struct ButtonColorTokens {
 
 constexpr ButtonColorTokens kButtonColorTokens[] = {
     // text, filled, filled tonal, outlined, elevated.
-    {ColorToken::kSurface, ColorToken::kPrimary, ColorToken::kOutline,
-     false, false, 0, 0},
-    {ColorToken::kPrimary, ColorToken::kOnPrimary, ColorToken::kOutline,
-     true, false, 0, 0},
+    {ColorToken::kSurface, ColorToken::kPrimary, ColorToken::kOutline, false,
+     false, 0, 0},
+    {ColorToken::kPrimary, ColorToken::kOnPrimary, ColorToken::kOutline, true,
+     false, 0, 0},
     {ColorToken::kSecondaryContainer, ColorToken::kOnSecondaryContainer,
      ColorToken::kOutline, true, false, 0, 0},
     {ColorToken::kSurface, ColorToken::kOnSurfaceVariant,
@@ -101,21 +101,19 @@ ButtonTokens ResolveTokens(const Theme& theme, ButtonVariant v, bool enabled) {
   const ColorScheme& colors = theme.material3Theme().color;
   if (!enabled) {
     if (v == ButtonVariant::kText || v == ButtonVariant::kOutlined) {
-      return ButtonTokens{
-          Transparent, DisabledComposite(theme, colors.onSurface, 0x61),
-          v == ButtonVariant::kOutlined
-              ? DisabledComposite(theme, colors.onSurface, 0x1F)
-              : Transparent,
-          0, 0};
+      return ButtonTokens{Transparent,
+                          DisabledComposite(theme, colors.onSurface, 0x61),
+                          v == ButtonVariant::kOutlined
+                              ? DisabledComposite(theme, colors.onSurface, 0x1F)
+                              : Transparent,
+                          0, 0};
     }
-    Color disabled_container =
-        DisabledComposite(theme, colors.onSurface, 0x1F);
+    Color disabled_container = DisabledComposite(theme, colors.onSurface, 0x1F);
     return ButtonTokens{disabled_container,
                         DisabledComposite(theme, colors.onSurface, 0x61),
                         Transparent, 0, 0};
   }
-  const ButtonColorTokens& tokens =
-      kButtonColorTokens[static_cast<uint8_t>(v)];
+  const ButtonColorTokens& tokens = kButtonColorTokens[static_cast<uint8_t>(v)];
   return ButtonTokens{
       tokens.paint_container ? colors.resolve(tokens.container) : Transparent,
       colors.resolve(tokens.content),
@@ -297,7 +295,9 @@ Padding Button::getDefaultPadding() const {
   return Padding(horizontal, vertical);
 }
 
-::roo_windows::material3::ColorToken Button::containerRole() const { return ContainerRoleFor(variant()); }
+::roo_windows::material3::ColorToken Button::containerRole() const {
+  return ContainerRoleFor(variant());
+}
 
 Color Button::background() const {
   return ResolveTokens(theme(), variant(), isEnabled()).container;

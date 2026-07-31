@@ -3,9 +3,9 @@
 #include <algorithm>
 #include <cmath>
 
+#include "roo_logging.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/gesture_detector.h"
-#include "roo_logging.h"
 
 namespace roo_windows {
 
@@ -141,7 +141,8 @@ Dimensions HorizontalPageHost::onMeasure(WidthSpec width, HeightSpec height) {
     max_width = std::max(max_width, d.width());
     max_height = std::max(max_height, d.height());
   }
-  return Dimensions(width.resolveSize(max_width), height.resolveSize(max_height));
+  return Dimensions(width.resolveSize(max_width),
+                    height.resolveSize(max_height));
 }
 
 void HorizontalPageHost::onLayout(bool changed, const Rect& rect) {
@@ -255,9 +256,7 @@ int HorizontalPageHost::getChildrenCount() const {
   return count;
 }
 
-Widget& HorizontalPageHost::getChild(int idx) {
-  return *activeChildAt(idx);
-}
+Widget& HorizontalPageHost::getChild(int idx) { return *activeChildAt(idx); }
 
 const Widget& HorizontalPageHost::getChild(int idx) const {
   return *activeChildAt(idx);
@@ -382,7 +381,8 @@ void HorizontalPageHost::cancelPendingUpdate() {
 
 void HorizontalPageHost::scheduleSettleUpdate() {
   cancelPendingUpdate();
-  notification_id_ = scheduler_.scheduleAfter(roo_time::Millis(kSettleFrameMs), *this);
+  notification_id_ =
+      scheduler_.scheduleAfter(roo_time::Millis(kSettleFrameMs), *this);
 }
 
 void HorizontalPageHost::startSettleToIndex(int target_index) {
@@ -462,8 +462,8 @@ int HorizontalPageHost::resolveGestureSettleTarget(XDim velocity_x) const {
 float HorizontalPageHost::applyEdgeResistance(float raw_position) const {
   if (settled_index_ < 0) return 0.0f;
   float min_pos = settled_index_ - (settled_index_ > 0 ? 1.0f : 0.0f);
-  float max_pos = settled_index_ +
-                  (settled_index_ + 1 < pageCount() ? 1.0f : 0.0f);
+  float max_pos =
+      settled_index_ + (settled_index_ + 1 < pageCount() ? 1.0f : 0.0f);
   if (width() <= 0) return Clamp(raw_position, min_pos, max_pos);
   if (raw_position < min_pos) {
     float excess_px = (raw_position - min_pos) * width();
@@ -491,13 +491,12 @@ void HorizontalPageHost::execute(roo_scheduler::ExecutionID id) {
     return;
   }
 
-  float t =
-      (float)(now - settle_.start_time_ms) / (float)(settle_.end_time_ms - settle_.start_time_ms);
+  float t = (float)(now - settle_.start_time_ms) /
+            (float)(settle_.end_time_ms - settle_.start_time_ms);
   t = Clamp(t, 0.0f, 1.0f);
   float eased = 1.0f - (1.0f - t) * (1.0f - t);
-  page_position_ =
-      settle_.start_position +
-      (settle_.target_position - settle_.start_position) * eased;
+  page_position_ = settle_.start_position +
+                   (settle_.target_position - settle_.start_position) * eased;
 
   syncActiveSlots();
   updateActivePagePositions();

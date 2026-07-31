@@ -1,7 +1,8 @@
 #pragma once
 
-#include <cstdint>
 #include <pthread.h>
+
+#include <cstdint>
 
 #include "roo_windows/core/key_source.h"
 

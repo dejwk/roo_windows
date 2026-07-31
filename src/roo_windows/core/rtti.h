@@ -2,6 +2,7 @@
 
 #if defined(__GXX_RTTI)
 #include <typeinfo>
+
 #include "roo_logging/demangle.h"
 #endif
 
@@ -14,7 +15,7 @@ namespace roo_windows {
 template <typename T>
 std::string GetTypeName(const T& t) {
 #if defined(__GXX_RTTI)
-  char out[256];  
+  char out[256];
   if (roo_logging::Demangle(typeid(t).name(), out, 256)) {
     return out;
   }

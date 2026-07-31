@@ -35,12 +35,7 @@ static constexpr int16_t kMaxFlingVelocity = 8000;  // Pixels per second.
 /// long-press timers.
 class GestureDetector {
  private:
-  enum class Phase : uint8_t {
-    kIdle,
-    kPressTracking,
-    kDragOwned,
-    kLongPress
-  };
+  enum class Phase : uint8_t { kIdle, kPressTracking, kDragOwned, kLongPress };
 
  public:
   /// Binds the detector to a root widget tree and a touch input source.

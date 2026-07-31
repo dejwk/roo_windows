@@ -90,15 +90,15 @@ class Task {
 /// activity's contents.
 class TaskPanel : public Panel {
  public:
-  TaskPanel(ApplicationContext& context, Task& task) : Panel(context), task_(task) {}
+  TaskPanel(ApplicationContext& context, Task& task)
+      : Panel(context), task_(task) {}
 
   /// Returns the owning task; descendants use this to resolve their host
   /// task context.
   Task* getTask() override { return &task_; }
 
   /// Builds a callback-free path through only the active activity.
-  bool fillTouchTargetPath(XDim x, YDim y,
-                           std::vector<Widget*>& path) override;
+  bool fillTouchTargetPath(XDim x, YDim y, std::vector<Widget*>& path) override;
 
  private:
   friend class Task;

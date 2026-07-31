@@ -17,8 +17,7 @@ class NavigationPanel : public Panel {
 
   /// Adds a new page accessible via the rail. The icon/caption become a new
   /// destination; the page widget is added to the stacked content area.
-  void addPage(const MonoIcon& icon, std::string text,
-               WidgetRef page);
+  void addPage(const MonoIcon& icon, std::string text, WidgetRef page);
 
   /// Switches to the page at `index`, both visually and in the rail's
   /// selection state.

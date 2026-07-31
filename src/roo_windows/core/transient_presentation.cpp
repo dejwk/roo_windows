@@ -24,7 +24,8 @@ TransientPresentationRegistration::~TransientPresentationRegistration() {
   cancel();
 }
 
-void TransientPresentationRegistration::finish(PresentationFinishReason reason) {
+void TransientPresentationRegistration::finish(
+    PresentationFinishReason reason) {
   if (slot_ != nullptr) slot_->finish(*this, reason);
 }
 
@@ -46,8 +47,8 @@ TransientPresentationSlot::~TransientPresentationSlot() {
 PresentationStartResult TransientPresentationSlot::show(
     TransientPresentationRegistration& registration,
     TransientPresentationPolicy policy) {
-  if (destroying_ || clearing_ || active_ != nullptr || registration.slot_ != nullptr ||
-      registration.isActive()) {
+  if (destroying_ || clearing_ || active_ != nullptr ||
+      registration.slot_ != nullptr || registration.isActive()) {
     return PresentationStartResult::kHostBusy;
   }
   active_ = &registration;

@@ -149,7 +149,8 @@ bool Slider::onKeyEvent(const KeyEvent& event) {
 
 void Slider::paint(PaintContext& ctx) const {
   const Theme& th = theme();
-  Color circleColor = th.material3Theme().color.accentColorFor(effectiveContainerRole());
+  Color circleColor =
+      th.material3Theme().color.accentColorFor(effectiveContainerRole());
   Padding p = getPadding();
 
   int16_t range = range_from_width(width(), p);

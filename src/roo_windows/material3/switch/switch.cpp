@@ -159,7 +159,9 @@ roo_display::FpPoint Switch::getPointOverlayFocus() const {
 }
 
 ::roo_windows::material3::ColorToken Switch::effectiveContainerRole() const {
-  return isOn() ? ::roo_windows::material3::ColorToken::kPrimary : ::roo_windows::material3::ColorToken::kSurfaceContainerHighest;
+  return isOn()
+             ? ::roo_windows::material3::ColorToken::kPrimary
+             : ::roo_windows::material3::ColorToken::kSurfaceContainerHighest;
 }
 
 void Switch::paintWidgetContents(PaintContext& ctx) {

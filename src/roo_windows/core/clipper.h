@@ -185,9 +185,9 @@ class ClipperOutput : public roo_display::DisplayOutput {
         scoped_press_overlay_active_;
     const PressOverlay* press_overlay =
         apply_press_overlay ? &press_overlay_ : nullptr;
-    decorations_.emplace_back(std::move(extents), elevation,
-                              overlay_spec, press_overlay, bgcolor,
-                              corner_radii, outline_width, outline_color);
+    decorations_.emplace_back(std::move(extents), elevation, overlay_spec,
+                              press_overlay, bgcolor, corner_radii,
+                              outline_width, outline_color);
     addOverlay(&decorations_.back(), clip_box);
   }
 

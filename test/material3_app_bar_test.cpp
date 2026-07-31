@@ -137,10 +137,10 @@ TEST(Material3AppBar, SearchAppBarUsesAdaptiveEmbeddedLaneAndRestrictedHits) {
   search_app_bar.setTrailing(0, outer_action);
   search_app_bar.setInnerTrailing(0, inner_action);
 
-  EXPECT_EQ(Scaled(64), search_app_bar
-                            .measure(WidthSpec::Exactly(1000),
-                                     HeightSpec::Unspecified(0))
-                            .height());
+  EXPECT_EQ(Scaled(64),
+            search_app_bar
+                .measure(WidthSpec::Exactly(1000), HeightSpec::Unspecified(0))
+                .height());
   search_app_bar.layout(Rect(0, 0, 999, Scaled(64) - 1));
 
   // Child 0 is the composed entry. The capped 720dp lane stays start-aligned
@@ -150,7 +150,8 @@ TEST(Material3AppBar, SearchAppBarUsesAdaptiveEmbeddedLaneAndRestrictedHits) {
   EXPECT_GT(inner_action.offsetLeft(), Scaled(16));
 
   std::vector<Widget*> path;
-  EXPECT_FALSE(search_app_bar.fillTouchTargetPath(Scaled(800), Scaled(32), path));
+  EXPECT_FALSE(
+      search_app_bar.fillTouchTargetPath(Scaled(800), Scaled(32), path));
   EXPECT_TRUE(path.empty());
 
   EXPECT_TRUE(search_app_bar.fillTouchTargetPath(
@@ -222,9 +223,8 @@ TEST(Material3AppBar, SearchBarsRoutePassiveAndInteractiveSlotsCorrectly) {
   EXPECT_EQ(&outer_action, path.back());
 
   int search_activations = 0;
-  search_app_bar.setOnInteractiveChange([&search_activations]() {
-    ++search_activations;
-  });
+  search_app_bar.setOnInteractiveChange(
+      [&search_activations]() { ++search_activations; });
   search_app_bar.childAt(0).onClicked();
   EXPECT_EQ(1, search_activations);
 }
@@ -240,19 +240,22 @@ TEST(Material3AppBar, TitleVariantsUseFixedShellHeightsAndSubtitleRules) {
   app_bar.setSubtitle("3 unread");
 
   EXPECT_EQ(1, app_bar.childCount());
-  EXPECT_EQ(Scaled(64), app_bar.measure(WidthSpec::Exactly(320),
-                                        HeightSpec::Unspecified(0)).height());
+  EXPECT_EQ(Scaled(64),
+            app_bar.measure(WidthSpec::Exactly(320), HeightSpec::Unspecified(0))
+                .height());
 
   app_bar.setVariant(AppBarVariant::kMediumFlexible);
-  EXPECT_EQ(Scaled(136), app_bar.measure(WidthSpec::Exactly(320),
-                                         HeightSpec::Unspecified(0)).height());
+  EXPECT_EQ(Scaled(136),
+            app_bar.measure(WidthSpec::Exactly(320), HeightSpec::Unspecified(0))
+                .height());
   EXPECT_EQ(2, app_bar.childCount());
   app_bar.layout(Rect(0, 0, 319, Scaled(136) - 1));
   EXPECT_GT(app_bar.childAt(1).height(), 0);
 
   app_bar.setVariant(AppBarVariant::kLargeFlexible);
-  EXPECT_EQ(Scaled(176), app_bar.measure(WidthSpec::Exactly(320),
-                                         HeightSpec::Unspecified(0)).height());
+  EXPECT_EQ(Scaled(176),
+            app_bar.measure(WidthSpec::Exactly(320), HeightSpec::Unspecified(0))
+                .height());
 }
 
 // Leading and trailing actions reserve fixed 48dp slots plus the prescribed
@@ -292,16 +295,14 @@ TEST(Material3AppBar, FlexibleVariantsPlaceControlsAboveTitleStack) {
   EXPECT_EQ(Scaled(4), leading.offsetTop());
   EXPECT_EQ(Scaled(4), trailing.offsetTop());
   EXPECT_EQ(Scaled(16), app_bar.childAt(0).offsetLeft());
-  EXPECT_GE(app_bar.childAt(0).offsetTop(),
-            Scaled(48) + 2 * Scaled(4));
+  EXPECT_GE(app_bar.childAt(0).offsetTop(), Scaled(48) + 2 * Scaled(4));
 
   app_bar.setVariant(AppBarVariant::kLargeFlexible);
   app_bar.measure(WidthSpec::Exactly(320), HeightSpec::Unspecified(0));
   app_bar.layout(Rect(0, 0, 319, Scaled(152) - 1));
   EXPECT_EQ(Scaled(4), leading.offsetTop());
   EXPECT_EQ(Scaled(16), app_bar.childAt(0).offsetLeft());
-  EXPECT_GE(app_bar.childAt(0).offsetTop(),
-            Scaled(48) + 2 * Scaled(4));
+  EXPECT_GE(app_bar.childAt(0).offsetTop(), Scaled(48) + 2 * Scaled(4));
 }
 
 TEST(Material3AppBar, SmallTitleUsesTheStandardInsetWithoutNavigation) {

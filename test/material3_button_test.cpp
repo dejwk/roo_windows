@@ -197,16 +197,20 @@ TEST(Material3Button, ContainerRoleMatchesVariant) {
   ApplicationContext context = MakeContext(env);
 
   Button filled(context, "F", ButtonVariant::kFilled);
-  EXPECT_EQ(::roo_windows::material3::ColorToken::kPrimary, filled.containerRole());
+  EXPECT_EQ(::roo_windows::material3::ColorToken::kPrimary,
+            filled.containerRole());
 
   Button tonal(context, "FT", ButtonVariant::kFilledTonal);
-  EXPECT_EQ(::roo_windows::material3::ColorToken::kSecondaryContainer, tonal.containerRole());
+  EXPECT_EQ(::roo_windows::material3::ColorToken::kSecondaryContainer,
+            tonal.containerRole());
 
   Button elevated(context, "E", ButtonVariant::kElevated);
-  EXPECT_EQ(::roo_windows::material3::ColorToken::kSurfaceContainerLow, elevated.containerRole());
+  EXPECT_EQ(::roo_windows::material3::ColorToken::kSurfaceContainerLow,
+            elevated.containerRole());
 
   Button outlined(context, "O", ButtonVariant::kOutlined);
-  EXPECT_EQ(::roo_windows::material3::ColorToken::kNone, outlined.containerRole());
+  EXPECT_EQ(::roo_windows::material3::ColorToken::kNone,
+            outlined.containerRole());
 
   Button text(context, "T", ButtonVariant::kText);
   EXPECT_EQ(::roo_windows::material3::ColorToken::kNone, text.containerRole());

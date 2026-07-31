@@ -17,7 +17,8 @@ class Holder : public Container {
     setContents(std::move(contents));
   }
 
-  Holder(ApplicationContext& context) : Container(context), contents_(nullptr) {}
+  Holder(ApplicationContext& context)
+      : Container(context), contents_(nullptr) {}
 
   /// Replaces (or clears, if `new_contents` is null) the single held child.
   /// No-op if the same widget with the same ownership is reassigned.

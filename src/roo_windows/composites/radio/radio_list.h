@@ -142,7 +142,8 @@ class RadioList : public Holder {
         list_model_(),
         list_(context, list_model_, [&, prototype_fn]() {
           return std::make_unique<RadioListItem>(
-              context, prototype_fn(), [this](int idx) { elementSelected(idx); });
+              context, prototype_fn(),
+              [this](int idx) { elementSelected(idx); });
         }) {}
 
   RadioList(ApplicationContext& context, ListModel& model,

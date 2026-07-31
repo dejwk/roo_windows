@@ -28,8 +28,9 @@ class SolidWidget : public BasicSurfaceWidget {
 
 class DecoratedWidget : public BasicSurfaceWidget {
  public:
-  DecoratedWidget(ApplicationContext& context, Color fill_color, Color outline_color,
-                  BorderStyle border_style, uint8_t elevation, Dimensions dims)
+  DecoratedWidget(ApplicationContext& context, Color fill_color,
+                  Color outline_color, BorderStyle border_style,
+                  uint8_t elevation, Dimensions dims)
       : BasicSurfaceWidget(context),
         fill_color_(fill_color),
         outline_color_(outline_color),
@@ -71,14 +72,14 @@ class DecorationGoldenTest : public testing::Test {
                                                      uint8_t elevation) {
     Application app(&env_, display_);
 
-    auto backdrop = std::make_unique<SolidWidget>(app.context(), Color(0xFFE8EAEE),
-                                                  Dimensions(kWidth, kHeight));
+    auto backdrop = std::make_unique<SolidWidget>(
+        app.context(), Color(0xFFE8EAEE), Dimensions(kWidth, kHeight));
     app.add(WidgetRef(std::move(backdrop)),
             roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
 
     auto card = std::make_unique<DecoratedWidget>(
-        app.context(), Color(0xFF0F7FBF), Color(0xFFE9A334), border_style, elevation,
-        Dimensions(92, 58));
+        app.context(), Color(0xFF0F7FBF), Color(0xFFE9A334), border_style,
+        elevation, Dimensions(92, 58));
     app.add(WidgetRef(std::move(card)), roo_display::Box(44, 30, 135, 87));
 
     EXPECT_TRUE(app.refresh());

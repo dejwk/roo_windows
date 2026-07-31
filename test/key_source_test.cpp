@@ -219,7 +219,8 @@ TEST(KeySource, HardwareBackDismissesTransientWithoutFocus) {
 
   EXPECT_EQ(1, presentation.detach_count);
   EXPECT_EQ(PresentationFinishReason::kBack, presentation.reason);
-  EXPECT_FALSE(app.root().transient_presentation_slot().hasActivePresentation());
+  EXPECT_FALSE(
+      app.root().transient_presentation_slot().hasActivePresentation());
 }
 
 TEST(KeySource, UnhandledRootEscapeCancelsFocusedEditor) {

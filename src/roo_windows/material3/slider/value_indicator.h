@@ -171,10 +171,9 @@ class ValueIndicatorBubble {
 // slider-local thumb center. Returns the painted local bounds, or an empty
 // rect when there is nothing to draw.
 Rect PaintValueIndicator(const Theme& theme, bool enabled,
-                         PaintContext& indicator_ctx,
-                         int16_t parent_width, int16_t parent_height,
-                         float thumb_center, const SliderStyle& style,
-                         roo::string_view text);
+                         PaintContext& indicator_ctx, int16_t parent_width,
+                         int16_t parent_height, float thumb_center,
+                         const SliderStyle& style, roo::string_view text);
 
 // Returns whether `style` enables a value indicator at all (i.e. anything
 // other than kHidden).

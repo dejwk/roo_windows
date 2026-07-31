@@ -25,8 +25,8 @@ void EditedTextField::onEditFinished(bool confirmed) {
   }
 }
 
-EditTextField::EditTextField(ApplicationContext& context, TextFieldEditor& editor,
-                             const std::string& hint)
+EditTextField::EditTextField(ApplicationContext& context,
+                             TextFieldEditor& editor, const std::string& hint)
     : main_pane_(context),
       content_pane_(context),
       back_(context, SCALED_ROO_ICON(outlined, navigation_arrow_back),
@@ -42,8 +42,7 @@ EditTextField::EditTextField(ApplicationContext& context, TextFieldEditor& edito
   back_.setContentColor(
       context.theme().framework.color.resolve(FrameworkColorRole::kContent));
   back_.setOnInteractiveChange([&]() {
-    getApplication()->requestBack(*getTask(),
-                                  BackSource::kNavigationButton);
+    getApplication()->requestBack(*getTask(), BackSource::kNavigationButton);
   });
   enter_.setOnInteractiveChange([&]() { confirm(); });
 }

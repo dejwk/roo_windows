@@ -20,14 +20,16 @@ Color SurfaceWidget::effectiveBackground() const {
                                        bgcolor);
 }
 
-::roo_windows::material3::ColorToken SurfaceWidget::effectiveContainerRole() const {
+::roo_windows::material3::ColorToken SurfaceWidget::effectiveContainerRole()
+    const {
   ::roo_windows::material3::ColorToken role = containerRole();
   if (role != ::roo_windows::material3::ColorToken::kNone) {
     return role;
   }
 
-  return parent() != nullptr ? parent()->effectiveContainerRole()
-                             : ::roo_windows::material3::ColorToken::kBackground;
+  return parent() != nullptr
+             ? parent()->effectiveContainerRole()
+             : ::roo_windows::material3::ColorToken::kBackground;
 }
 
 void SurfaceWidget::invalidateInterior() {

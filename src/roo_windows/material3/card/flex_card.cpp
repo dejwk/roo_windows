@@ -1,10 +1,12 @@
 #include "roo_windows/material3/card/flex_card.h"
+
 #include "roo_windows/material3/theme.h"
 
 namespace roo_windows {
 namespace material3 {
 
-FlexCard::FlexCard(ApplicationContext& context, Style style, FlexDirection direction)
+FlexCard::FlexCard(ApplicationContext& context, Style style,
+                   FlexDirection direction)
     : FlexLayout(context, direction),
       style_(style),
       override_flags_(0),
@@ -198,7 +200,8 @@ void FlexCard::clearCornerRadiusOverride() {
 
 roo_display::Color FlexCard::getOutlineColor() const {
   ::roo_windows::material3::ColorToken role = outline_role_override_;
-  if (role == ::roo_windows::material3::ColorToken::kNone) return roo_display::color::Transparent;
+  if (role == ::roo_windows::material3::ColorToken::kNone)
+    return roo_display::color::Transparent;
   return theme().material3Theme().color.resolve(
       static_cast<ColorToken>(static_cast<uint8_t>(role) - 1));
 }
@@ -207,24 +210,27 @@ BorderStyle FlexCard::getBorderStyle() const {
   return BorderStyle(corner_radius_override_, outline_width_override_);
 }
 
-uint8_t FlexCard::getElevation() const {
-  return elevation_override_;
-}
+uint8_t FlexCard::getElevation() const { return elevation_override_; }
 
 FlexCard::Tokens FlexCard::styleDefaults(Style style) {
   switch (style) {
     case Style::kElevated:
-      return Tokens{::roo_windows::material3::ColorToken::kSurfaceContainerLow, ::roo_windows::material3::ColorToken::kNone, 3,
+      return Tokens{::roo_windows::material3::ColorToken::kSurfaceContainerLow,
+                    ::roo_windows::material3::ColorToken::kNone, 3,
                     SmallNumber(0), (uint8_t)Scaled(12)};
     case Style::kFilled:
-      return Tokens{::roo_windows::material3::ColorToken::kSurfaceContainerHighest, ::roo_windows::material3::ColorToken::kNone,
-                    0, SmallNumber(0), (uint8_t)Scaled(12)};
+      return Tokens{
+          ::roo_windows::material3::ColorToken::kSurfaceContainerHighest,
+          ::roo_windows::material3::ColorToken::kNone, 0, SmallNumber(0),
+          (uint8_t)Scaled(12)};
     case Style::kOutlined:
-      return Tokens{::roo_windows::material3::ColorToken::kSurface, ::roo_windows::material3::ColorToken::kOutlineVariant, 0,
+      return Tokens{::roo_windows::material3::ColorToken::kSurface,
+                    ::roo_windows::material3::ColorToken::kOutlineVariant, 0,
                     SmallNumber::Of16ths(Scaled(16)), (uint8_t)Scaled(12)};
   }
-  return Tokens{::roo_windows::material3::ColorToken::kSurfaceContainerHighest, ::roo_windows::material3::ColorToken::kNone, 0,
-                SmallNumber(0), (uint8_t)Scaled(12)};
+  return Tokens{::roo_windows::material3::ColorToken::kSurfaceContainerHighest,
+                ::roo_windows::material3::ColorToken::kNone, 0, SmallNumber(0),
+                (uint8_t)Scaled(12)};
 }
 
 }  // namespace material3

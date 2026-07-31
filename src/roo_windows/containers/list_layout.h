@@ -35,7 +35,8 @@ class ListModel {
 /// reallocating.
 class CircularBuffer {
  public:
-  CircularBuffer(ApplicationContext& context) : elements_(), start_(0), count_(0) {}
+  CircularBuffer(ApplicationContext& context)
+      : elements_(), start_(0), count_(0) {}
 
   CircularBuffer(CircularBuffer&& other)
       : elements_(std::move(other.elements_)),
@@ -132,7 +133,8 @@ class ListLayout : public Panel {
   using PrototypeFn = std::function<std::unique_ptr<Widget>()>;
 
   // Creates a list layout that uses the specified prototype element.
-  ListLayout(ApplicationContext& context, ListModel& model, PrototypeFn prototype_fn)
+  ListLayout(ApplicationContext& context, ListModel& model,
+             PrototypeFn prototype_fn)
       : Panel(context),
         padding_(),
         model_(model),

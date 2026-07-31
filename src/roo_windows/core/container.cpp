@@ -139,11 +139,10 @@ void Container::fastDrawChildShadow(Widget& child, PaintContext& ctx) {
   Rect rect = child.parent_bounds();
   // Minimize the redraw area so that we can take the most advantage of plane
   // fill performance while staying within the child's decoration margins.
-  Rect shadow_clip = Rect::Intersect(child.getParentDecorationBounds(),
-                                     Rect(rect.xMin() - margins.left(),
-                                          rect.yMin() - margins.top(),
-                                          rect.xMax() + margins.right(),
-                                          rect.yMax() + margins.bottom()));
+  Rect shadow_clip = Rect::Intersect(
+      child.getParentDecorationBounds(),
+      Rect(rect.xMin() - margins.left(), rect.yMin() - margins.top(),
+           rect.xMax() + margins.right(), rect.yMax() + margins.bottom()));
   if (shadow_clip.empty()) return;
   Canvas shadow_canvas(ctx.canvas());
   shadow_canvas.clipToExtents(shadow_clip);
@@ -166,8 +165,8 @@ bool Container::fillTouchTargetPath(XDim x, YDim y,
       continue;
     }
     if (!child.maxParentBounds().contains(x, y)) continue;
-    if (child.fillTouchTargetPath(x - child.offsetLeft(),
-                                  y - child.offsetTop(), path)) {
+    if (child.fillTouchTargetPath(x - child.offsetLeft(), y - child.offsetTop(),
+                                  path)) {
       return true;
     }
     if (child.parent_bounds().contains(x, y)) break;

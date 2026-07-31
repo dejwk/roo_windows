@@ -61,11 +61,8 @@ inline SliderPaintTokens ResolveTokens(const SliderLike& widget) {
   }
 
   return SliderPaintTokens{
-      colors.primary,
-      colors.secondaryContainer,
-      colors.primary,
-      colors.onPrimary,
-      colors.onSecondaryContainer,
+      colors.primary,   colors.secondaryContainer,   colors.primary,
+      colors.onPrimary, colors.onSecondaryContainer,
   };
 }
 

@@ -48,16 +48,15 @@ class Material3NavigationRailGoldenTest : public testing::Test {
     AddDestination(app, 0, 0, 139, "Home",
                    &ic_outlined_24_navigation_home_work(), nullptr, false,
                    false, false, false, NavigationRailLayout::kExpanded);
-    AddDestination(app, 140, 0, 139, "Inbox",
-                   &ic_outlined_24_action_bookmark(),
+    AddDestination(app, 140, 0, 139, "Inbox", &ic_outlined_24_action_bookmark(),
                    &ic_outlined_24_action_done(), true, false, false, false,
                    NavigationRailLayout::kExpanded);
     AddDestination(app, 280, 0, 139, "Saved", &ic_outlined_24_action_done(),
                    nullptr, false, true, false, false,
                    NavigationRailLayout::kExpanded);
-    AddDestination(app, 420, 0, 139, "Focus",
-                   &ic_outlined_24_action_bookmark(), nullptr, false, false,
-                   true, false, NavigationRailLayout::kExpanded);
+    AddDestination(app, 420, 0, 139, "Focus", &ic_outlined_24_action_bookmark(),
+                   nullptr, false, false, true, false,
+                   NavigationRailLayout::kExpanded);
     AddDestination(app, 560, 0, 139, "Press", &ic_outlined_24_action_done(),
                    nullptr, false, false, false, true,
                    NavigationRailLayout::kExpanded);
@@ -102,8 +101,7 @@ class Material3NavigationRailGoldenTest : public testing::Test {
     app.add(std::move(rail),
             roo_display::Box(0, 0, Scaled(320) - 1, Scaled(96) - 1));
     EXPECT_TRUE(app.refresh());
-    return test::CaptureRgb(offscreen_.raster(), 0, 0, Scaled(320),
-                            Scaled(96));
+    return test::CaptureRgb(offscreen_.raster(), 0, 0, Scaled(320), Scaled(96));
   }
 
  private:
@@ -163,7 +161,8 @@ TEST_F(Material3NavigationRailGoldenTest, ExpandedDestinationStatesGolden) {
 TEST_F(Material3NavigationRailGoldenTest, CollapsedBadgedDestinationsGolden) {
   EXPECT_TRUE(test::CompareOrUpdateGolden(
       RenderCollapsedBadgesRow(),
-      "test/goldens/material3_navigation_rail/collapsed_badged_destinations.ppm",
+      "test/goldens/material3_navigation_rail/"
+      "collapsed_badged_destinations.ppm",
       "material3_navigation_rail_collapsed_badged_destinations"));
 }
 
@@ -177,7 +176,8 @@ TEST_F(Material3NavigationRailGoldenTest, ExpandedBadgedDestinationsGolden) {
 TEST_F(Material3NavigationRailGoldenTest, ExpandedRtlBadgedDestinationGolden) {
   EXPECT_TRUE(test::CompareOrUpdateGolden(
       RenderExpandedRtlBadge(),
-      "test/goldens/material3_navigation_rail/expanded_rtl_badged_destination.ppm",
+      "test/goldens/material3_navigation_rail/"
+      "expanded_rtl_badged_destination.ppm",
       "material3_navigation_rail_expanded_rtl_badged_destination"));
 }
 

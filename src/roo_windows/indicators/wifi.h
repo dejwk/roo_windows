@@ -1,11 +1,11 @@
 #pragma once
 
 #include "roo_windows/config.h"
-#include "roo_windows/indicators/impl/wifi.h"
 #include "roo_windows/indicators/18/wifi.h"
 #include "roo_windows/indicators/24/wifi.h"
 #include "roo_windows/indicators/36/wifi.h"
 #include "roo_windows/indicators/48/wifi.h"
+#include "roo_windows/indicators/impl/wifi.h"
 
 namespace roo_windows {
 

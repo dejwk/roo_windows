@@ -43,7 +43,8 @@ class Application {
   Application(const Environment* env, roo_display::Display& display,
               KeySource& keys, bool enable_touch);
 
-  /// Stops and detaches all task activities before destroying application state.
+  /// Stops and detaches all task activities before destroying application
+  /// state.
   ~Application();
 
   /// Deprecated entry point. Prefer `run()`.
@@ -102,8 +103,8 @@ class Application {
   /// Passing a task that does not belong to this application is a programming
   /// error. An eligible root transient presentation receives the request
   /// before the target task.
-  BackResult requestBack(
-      Task& target, BackSource source = BackSource::kProgrammatic);
+  BackResult requestBack(Task& target,
+                         BackSource source = BackSource::kProgrammatic);
 
   /// Shows a modal dialog. Dialogs are centered and scrim the screen behind
   /// them. The callback gets called with the index of the option (e.g.

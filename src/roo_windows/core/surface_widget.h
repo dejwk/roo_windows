@@ -19,7 +19,9 @@ class SurfaceWidget : public Widget {
   /// is the surface-facing public accessor. Returning kUndefined means that
   /// this surface does not introduce a new role and instead inherits the
   /// effective role from its ancestors.
-  virtual ::roo_windows::material3::ColorToken containerRole() const { return ::roo_windows::material3::ColorToken::kNone; }
+  virtual ::roo_windows::material3::ColorToken containerRole() const {
+    return ::roo_windows::material3::ColorToken::kNone;
+  }
 
   /// Resolves the inherited or surface-owned container role for theme
   /// lookups.
@@ -89,7 +91,6 @@ class SurfaceWidget : public Widget {
   // Surface widgets refine the generic exclusion contract to the surface
   // interior they actually own.
   Rect getDirectPaintExclusionBounds() const override;
-
 };
 
 }  // namespace roo_windows

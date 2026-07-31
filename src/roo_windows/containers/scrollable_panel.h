@@ -224,7 +224,7 @@ class SimpleScrollablePanel : public Container,
 
   DragAxis dragAxis() const override {
     return direction_ == Direction::kVertical ? DragAxis::kVertical
-                                               : DragAxis::kHorizontal;
+                                              : DragAxis::kHorizontal;
   }
   bool supportsFling() const override { return true; }
 

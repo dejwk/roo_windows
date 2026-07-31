@@ -1,5 +1,6 @@
-#include "roo_windows/config.h"
 #include "roo_windows/dialogs/string_constants.h"
+
+#include "roo_windows/config.h"
 
 namespace roo_windows {
 
@@ -25,4 +26,4 @@ const char* kStrDialogExit = "EXIT";
 
 #endif
 
-}
+}  // namespace roo_windows

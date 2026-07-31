@@ -20,12 +20,18 @@ namespace {
 // It is not part of the framework Theme API or retained in application state.
 struct LegacyStateOpacity {
   uint8_t disabled;
-  uint8_t hoverOnPrimary, hoverOnSecondary, hoverOnBackground, hoverOnSurface, hoverOnError;
-  uint8_t focusOnPrimary, focusOnSecondary, focusOnBackground, focusOnSurface, focusOnError;
-  uint8_t selectedOnPrimary, selectedOnSecondary, selectedOnBackground, selectedOnSurface, selectedOnError;
-  uint8_t activatedOnPrimary, activatedOnSecondary, activatedOnBackground, activatedOnSurface, activatedOnError;
-  uint8_t pressedOnPrimary, pressedOnSecondary, pressedOnBackground, pressedOnSurface, pressedOnError;
-  uint8_t draggedOnPrimary, draggedOnSecondary, draggedOnBackground, draggedOnSurface, draggedOnError;
+  uint8_t hoverOnPrimary, hoverOnSecondary, hoverOnBackground, hoverOnSurface,
+      hoverOnError;
+  uint8_t focusOnPrimary, focusOnSecondary, focusOnBackground, focusOnSurface,
+      focusOnError;
+  uint8_t selectedOnPrimary, selectedOnSecondary, selectedOnBackground,
+      selectedOnSurface, selectedOnError;
+  uint8_t activatedOnPrimary, activatedOnSecondary, activatedOnBackground,
+      activatedOnSurface, activatedOnError;
+  uint8_t pressedOnPrimary, pressedOnSecondary, pressedOnBackground,
+      pressedOnSurface, pressedOnError;
+  uint8_t draggedOnPrimary, draggedOnSecondary, draggedOnBackground,
+      draggedOnSurface, draggedOnError;
 };
 
 constexpr material3::ColorScheme DefaultMaterial3Colors() {
@@ -69,21 +75,35 @@ constexpr material3::ColorScheme DefaultMaterial3Colors() {
 constexpr LegacyStateOpacity DefaultLegacyState() {
   return {
       .disabled = 49,
-      .hoverOnPrimary = 20, .hoverOnSecondary = 20,
-      .hoverOnBackground = 10, .hoverOnSurface = 10, .hoverOnError = 20,
-      .focusOnPrimary = 61, .focusOnSecondary = 61,
-      .focusOnBackground = 31, .focusOnSurface = 31, .focusOnError = 61,
-      .selectedOnPrimary = 41, .selectedOnSecondary = 41,
-      .selectedOnBackground = 20, .selectedOnSurface = 20,
+      .hoverOnPrimary = 20,
+      .hoverOnSecondary = 20,
+      .hoverOnBackground = 10,
+      .hoverOnSurface = 10,
+      .hoverOnError = 20,
+      .focusOnPrimary = 61,
+      .focusOnSecondary = 61,
+      .focusOnBackground = 31,
+      .focusOnSurface = 31,
+      .focusOnError = 61,
+      .selectedOnPrimary = 41,
+      .selectedOnSecondary = 41,
+      .selectedOnBackground = 20,
+      .selectedOnSurface = 20,
       .selectedOnError = 41,
-      .activatedOnPrimary = 61, .activatedOnSecondary = 61,
-      .activatedOnBackground = 31, .activatedOnSurface = 31,
+      .activatedOnPrimary = 61,
+      .activatedOnSecondary = 61,
+      .activatedOnBackground = 31,
+      .activatedOnSurface = 31,
       .activatedOnError = 61,
-      .pressedOnPrimary = 61, .pressedOnSecondary = 61,
-      .pressedOnBackground = 31, .pressedOnSurface = 31,
+      .pressedOnPrimary = 61,
+      .pressedOnSecondary = 61,
+      .pressedOnBackground = 31,
+      .pressedOnSurface = 31,
       .pressedOnError = 61,
-      .draggedOnPrimary = 41, .draggedOnSecondary = 41,
-      .draggedOnBackground = 20, .draggedOnSurface = 20,
+      .draggedOnPrimary = 41,
+      .draggedOnSecondary = 41,
+      .draggedOnBackground = 20,
+      .draggedOnSurface = 20,
       .draggedOnError = 41,
   };
 }
@@ -99,49 +119,52 @@ constexpr uint8_t StateOpacity(const LegacyStateOpacity& state,
                          token == material3::ColorToken::kTertiaryContainer;
   const bool error = token == material3::ColorToken::kError ||
                      token == material3::ColorToken::kErrorContainer;
-  const bool surface = token == material3::ColorToken::kSurface ||
-                       token == material3::ColorToken::kSurfaceContainerLowest ||
-                       token == material3::ColorToken::kSurfaceContainerLow ||
-                       token == material3::ColorToken::kSurfaceContainer ||
-                       token == material3::ColorToken::kSurfaceContainerHigh ||
-                       token == material3::ColorToken::kSurfaceContainerHighest ||
-                       token == material3::ColorToken::kSurfaceVariant ||
-                       token == material3::ColorToken::kInverseSurface;
+  const bool surface =
+      token == material3::ColorToken::kSurface ||
+      token == material3::ColorToken::kSurfaceContainerLowest ||
+      token == material3::ColorToken::kSurfaceContainerLow ||
+      token == material3::ColorToken::kSurfaceContainer ||
+      token == material3::ColorToken::kSurfaceContainerHigh ||
+      token == material3::ColorToken::kSurfaceContainerHighest ||
+      token == material3::ColorToken::kSurfaceVariant ||
+      token == material3::ColorToken::kInverseSurface;
   switch (interaction) {
     case InteractionState::kHover:
-      return primary ? state.hoverOnPrimary : secondary ? state.hoverOnSecondary
-                     : error ? state.hoverOnError
-                             : surface ? state.hoverOnSurface
-                                       : state.hoverOnBackground;
+      return primary     ? state.hoverOnPrimary
+             : secondary ? state.hoverOnSecondary
+             : error     ? state.hoverOnError
+             : surface   ? state.hoverOnSurface
+                         : state.hoverOnBackground;
     case InteractionState::kFocus:
-      return primary ? state.focusOnPrimary : secondary ? state.focusOnSecondary
-                     : error ? state.focusOnError
-                             : surface ? state.focusOnSurface
-                                       : state.focusOnBackground;
+      return primary     ? state.focusOnPrimary
+             : secondary ? state.focusOnSecondary
+             : error     ? state.focusOnError
+             : surface   ? state.focusOnSurface
+                         : state.focusOnBackground;
     case InteractionState::kSelected:
-      return primary ? state.selectedOnPrimary
-                     : secondary ? state.selectedOnSecondary
-                     : error ? state.selectedOnError
-                             : surface ? state.selectedOnSurface
-                                       : state.selectedOnBackground;
+      return primary     ? state.selectedOnPrimary
+             : secondary ? state.selectedOnSecondary
+             : error     ? state.selectedOnError
+             : surface   ? state.selectedOnSurface
+                         : state.selectedOnBackground;
     case InteractionState::kActivated:
-      return primary ? state.activatedOnPrimary
-                     : secondary ? state.activatedOnSecondary
-                     : error ? state.activatedOnError
-                             : surface ? state.activatedOnSurface
-                                       : state.activatedOnBackground;
+      return primary     ? state.activatedOnPrimary
+             : secondary ? state.activatedOnSecondary
+             : error     ? state.activatedOnError
+             : surface   ? state.activatedOnSurface
+                         : state.activatedOnBackground;
     case InteractionState::kPressed:
-      return primary ? state.pressedOnPrimary
-                     : secondary ? state.pressedOnSecondary
-                     : error ? state.pressedOnError
-                             : surface ? state.pressedOnSurface
-                                       : state.pressedOnBackground;
+      return primary     ? state.pressedOnPrimary
+             : secondary ? state.pressedOnSecondary
+             : error     ? state.pressedOnError
+             : surface   ? state.pressedOnSurface
+                         : state.pressedOnBackground;
     case InteractionState::kDragged:
-      return primary ? state.draggedOnPrimary
-                     : secondary ? state.draggedOnSecondary
-                     : error ? state.draggedOnError
-                             : surface ? state.draggedOnSurface
-                                       : state.draggedOnBackground;
+      return primary     ? state.draggedOnPrimary
+             : secondary ? state.draggedOnSecondary
+             : error     ? state.draggedOnError
+             : surface   ? state.draggedOnSurface
+                         : state.draggedOnBackground;
   }
   return state.pressedOnBackground;
 }
@@ -183,41 +206,108 @@ constexpr roo_display::Color StateLayerContent(
 constexpr material3::StateLayerTheme EmptyMaterial3StateLayerTheme() {
   return {
       .disabledContentOpacity = 0,
-      .layer = {
-          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
-          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
-          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
-          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
-          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
-          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
-          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
-          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
-          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
-          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
-          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
-          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
-          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
-          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
-          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
-          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
-          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
-          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
-          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
-          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
-          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
-          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
-          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
-          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
-          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
-          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
-          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
-          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
-          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
-          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
-          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
-          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
-          {roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0), roo_display::Color(0)},
-      },
+      .layer =
+          {
+              {roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0)},
+              {roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0)},
+              {roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0)},
+              {roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0)},
+              {roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0)},
+              {roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0)},
+              {roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0)},
+              {roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0)},
+              {roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0)},
+              {roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0)},
+              {roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0)},
+              {roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0)},
+              {roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0)},
+              {roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0)},
+              {roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0)},
+              {roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0)},
+              {roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0)},
+              {roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0)},
+              {roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0)},
+              {roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0)},
+              {roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0)},
+              {roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0)},
+              {roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0)},
+              {roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0)},
+              {roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0)},
+              {roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0)},
+              {roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0)},
+              {roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0)},
+              {roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0)},
+              {roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0)},
+              {roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0)},
+              {roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0)},
+              {roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0),
+               roo_display::Color(0), roo_display::Color(0)},
+          },
   };
 }
 

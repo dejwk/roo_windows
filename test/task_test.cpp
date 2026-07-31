@@ -1,3 +1,5 @@
+#include "roo_windows/core/task.h"
+
 #include <memory>
 
 #include "gtest/gtest.h"
@@ -9,7 +11,6 @@
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/environment.h"
-#include "roo_windows/core/task.h"
 
 namespace roo_windows {
 namespace {

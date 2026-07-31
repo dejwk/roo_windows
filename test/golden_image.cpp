@@ -483,7 +483,7 @@ roo_display::Offscreen<roo_display::Rgb888> DiffImage(
            << "Missing/unreadable golden: " << expected_path << " ("
            << read_error << ")\n"
            << "Wrote actual image to: " << actual_display_path << "\n"
-          << GoldenUpdateHelpText();
+           << GoldenUpdateHelpText();
   }
 
   uint64_t diff_pixel_count = 0;
@@ -511,8 +511,8 @@ roo_display::Offscreen<roo_display::Rgb888> DiffImage(
          << "First differing pixel: (" << diff_x << ", " << diff_y << ")\n"
          << "Differing pixel count: " << diff_pixel_count << "\n"
          << "Actual render: " << actual_display_path << "\n"
-      << "XOR diff: " << xor_display_path << "\n"
-      << GoldenUpdateHelpText();
+         << "XOR diff: " << xor_display_path << "\n"
+         << GoldenUpdateHelpText();
 }
 
 }  // namespace test

@@ -1,6 +1,6 @@
-#include "gtest/gtest.h"
-
 #include "roo_windows/fake/fltk_key_source.h"
+
+#include "gtest/gtest.h"
 
 namespace roo_windows::fake {
 namespace {

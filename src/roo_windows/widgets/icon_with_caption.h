@@ -16,12 +16,13 @@ namespace roo_windows {
 /// widgets. The caption font defaults to the theme's caption font.
 class IconWithCaption : public BasicWidget {
  public:
-  IconWithCaption(ApplicationContext& context, const roo_display::Pictogram& def,
-                  const std::string& caption)
+  IconWithCaption(ApplicationContext& context,
+                  const roo_display::Pictogram& def, const std::string& caption)
       : IconWithCaption(context, def, caption, &font_caption()) {}
 
-  IconWithCaption(ApplicationContext& context, const roo_display::Pictogram& def,
-                  const std::string& caption, const roo_display::Font* font);
+  IconWithCaption(ApplicationContext& context,
+                  const roo_display::Pictogram& def, const std::string& caption,
+                  const roo_display::Font* font);
 
   /// Paints the icon centered horizontally above the caption, both in the
   /// currently configured color.

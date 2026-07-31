@@ -70,8 +70,7 @@ Tokens ResolveTokens(const Checkbox& widget) {
   bool enabled = widget.isEnabled();
 
   if (!enabled) {
-    Color disabled_container =
-        DisabledComposite(colors.onSurface, 0x61, theme);
+    Color disabled_container = DisabledComposite(colors.onSurface, 0x61, theme);
     return Tokens{disabled_container, colors.surface, disabled_container};
   }
 
@@ -134,8 +133,9 @@ Dimensions Checkbox::getSuggestedMinimumDimensions() const {
 }
 
 ::roo_windows::material3::ColorToken Checkbox::effectiveContainerRole() const {
-  return onOffState() == Checkbox::OnOffState::kOff ? ::roo_windows::material3::ColorToken::kSurface
-                                                    : ::roo_windows::material3::ColorToken::kPrimary;
+  return onOffState() == Checkbox::OnOffState::kOff
+             ? ::roo_windows::material3::ColorToken::kSurface
+             : ::roo_windows::material3::ColorToken::kPrimary;
 }
 
 }  // namespace material3

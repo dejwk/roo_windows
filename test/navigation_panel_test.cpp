@@ -1,8 +1,9 @@
+#include "roo_windows/containers/navigation_panel.h"
+
 #include "gtest/gtest.h"
 #include "navigation_panel_test_access.h"
 #include "roo_icons/outlined/24/action.h"
 #include "roo_scheduler.h"
-#include "roo_windows/containers/navigation_panel.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/widgets/blank.h"
 

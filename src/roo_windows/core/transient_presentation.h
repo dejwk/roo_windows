@@ -54,8 +54,8 @@ class TransientPresentationRegistration {
  public:
   virtual ~TransientPresentationRegistration();
 
-  TransientPresentationRegistration(
-      const TransientPresentationRegistration&) = delete;
+  TransientPresentationRegistration(const TransientPresentationRegistration&) =
+      delete;
   TransientPresentationRegistration& operator=(
       const TransientPresentationRegistration&) = delete;
 
@@ -109,9 +109,8 @@ class TransientPresentationSlot {
       delete;
 
   /// Registers `registration` when no interactive presentation is visible.
-  PresentationStartResult show(
-      TransientPresentationRegistration& registration,
-      TransientPresentationPolicy policy = {});
+  PresentationStartResult show(TransientPresentationRegistration& registration,
+                               TransientPresentationPolicy policy = {});
 
   /// Replaces the active registration unless completion reentrantly fills it.
   PresentationStartResult replace(

@@ -1,3 +1,5 @@
+#include "roo_windows/core/touch_sensor.h"
+
 #include <cstdlib>
 #include <vector>
 
@@ -5,7 +7,6 @@
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_testing/system/timer.h"
-#include "roo_windows/core/touch_sensor.h"
 
 namespace roo_windows {
 namespace {
@@ -42,8 +43,8 @@ class ScriptedTouchDevice : public roo_display::TouchDevice {
   roo_display::TouchResult getTouch(roo_display::TouchPoint* points,
                                     int max_points) override {
     const Sample& sample = currentSample();
-    roo_time::Uptime timestamp = roo_time::Uptime::Start() +
-                                 roo_time::Micros(sampleTimestampUs(sample));
+    roo_time::Uptime timestamp =
+        roo_time::Uptime::Start() + roo_time::Micros(sampleTimestampUs(sample));
     if (!sample.down || max_points <= 0) {
       return roo_display::TouchResult(timestamp, 0);
     }
@@ -79,9 +80,9 @@ class ScriptedTouchDevice : public roo_display::TouchDevice {
   }
 
   int64_t sampleTimestampUs(const Sample& sample) const {
-    int64_t offset_us =
-        sample.reported_offset_us >= 0 ? sample.reported_offset_us
-                                       : sample.offset_us;
+    int64_t offset_us = sample.reported_offset_us >= 0
+                            ? sample.reported_offset_us
+                            : sample.offset_us;
     return base_us_ + offset_us;
   }
 
@@ -103,10 +104,9 @@ TEST(TouchSensor, PreservesRecentVelocityWhenUpObservationIsDelayed) {
   roo::byte raster[kWidth * kHeight * 2];
   roo_display::OffscreenDevice<roo_display::Argb4444> offscreen(
       kWidth, kHeight, raster, roo_display::Argb4444());
-  ScriptedTouchDevice touch(kWidth, kHeight,
-                            {{0, true, 10, 10},
-                             {20000, true, 70, 10},
-                             {40000, false, 70, 10}});
+  ScriptedTouchDevice touch(
+      kWidth, kHeight,
+      {{0, true, 10, 10}, {20000, true, 70, 10}, {40000, false, 70, 10}});
   roo_display::Display display = makeDisplay(offscreen, touch);
   TouchSensor sensor(display);
 

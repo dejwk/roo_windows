@@ -21,8 +21,10 @@ void Checkbox::paint(PaintContext& ctx) const {
   Color color =
       state == OnOffState::kOn
           ? theme().material3Theme().color.accentColorFor(bg_role)
-          : AlphaBlend(ctx.bgcolor(),
-                       theme().material3Theme().color.contentColorFor(bg_role).withA(0x90));
+          : AlphaBlend(
+                ctx.bgcolor(),
+                theme().material3Theme().color.contentColorFor(bg_role).withA(
+                    0x90));
   RleImage4bppxBiased<Alpha4, ProgMemPtr> img =
       state == OnOffState::kOn ? SCALED_ROO_ICON(filled, toggle_check_box)
       : state == OnOffState::kOff

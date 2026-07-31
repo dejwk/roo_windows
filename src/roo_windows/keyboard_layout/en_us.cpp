@@ -111,21 +111,21 @@ static const PROGMEM KeyboardRowSpec kbEngUsRowsDigits[] = {
      .pageswitch_key_labels = "ABC"}};
 
 static const PROGMEM KeySpec kbEngUsSymbolsRow1keys[] = {
-    textKey(2, '~'), textKey(2, '`'), textKey(2, '|'), textKey(2, u'·'),
+    textKey(2, '~'),  textKey(2, '`'),  textKey(2, '|'),  textKey(2, u'·'),
     textKey(2, u'μ'), textKey(2, u'π'), textKey(2, u'÷'), textKey(2, u'×'),
     textKey(2, u'¶'), textKey(2, u'Ω'),
 };
 
 static const PROGMEM KeySpec kbEngUsSymbolsRow2keys[] = {
     textKey(2, u'£'), textKey(2, u'¢'), textKey(2, u'€'), textKey(2, u'¥'),
-    textKey(2, '^'), textKey(2, u'°'), textKey(2, '='), textKey(2, '{'),
-    textKey(2, '}'), textKey(2, '\\'),
+    textKey(2, '^'),  textKey(2, u'°'), textKey(2, '='),  textKey(2, '{'),
+    textKey(2, '}'),  textKey(2, '\\'),
 };
 
 static const PROGMEM KeySpec kbEngUsSymbolsRow3keys[] = {
-    pageSwitchKey(3, 0, 4, 1), textKey(2, '%'), textKey(2, u'©'),
+    pageSwitchKey(3, 0, 4, 1), textKey(2, '%'),  textKey(2, u'©'),
     textKey(2, u'®'),          textKey(2, u'™'), textKey(2, u'§'),
-    textKey(2, '['),           textKey(2, ']'), fnKey(3, KeySpec::DEL),
+    textKey(2, '['),           textKey(2, ']'),  fnKey(3, KeySpec::DEL),
 };
 
 static const PROGMEM KeySpec kbEngUsSymbolsRow4keys[] = {

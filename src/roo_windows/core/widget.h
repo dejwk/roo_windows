@@ -16,16 +16,16 @@
 #include "roo_windows/core/clipper.h"
 #include "roo_windows/core/dimensions.h"
 #include "roo_windows/core/insets.h"
+#include "roo_windows/core/key_source.h"
 #include "roo_windows/core/margins.h"
 #include "roo_windows/core/measure_spec.h"
 #include "roo_windows/core/padding.h"
 #include "roo_windows/core/paint_context.h"
-#include "roo_windows/core/presentation_pin.h"
 #include "roo_windows/core/preferred_size.h"
+#include "roo_windows/core/presentation_pin.h"
 #include "roo_windows/core/rect.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/core/touch_event.h"
-#include "roo_windows/core/key_source.h"
 
 namespace roo_windows {
 
@@ -248,8 +248,8 @@ class Widget {
   roo_display::Color defaultColor() const;
 
   virtual ::roo_windows::material3::ColorToken effectiveContainerRole() const;
-  virtual ::roo_windows::material3::ColorToken
-  effectiveOverlayColorRole() const;
+  virtual ::roo_windows::material3::ColorToken effectiveOverlayColorRole()
+      const;
 
   const Rect& parent_bounds() const { return parent_bounds_; }
 
@@ -469,7 +469,12 @@ class Widget {
 
   void setClicking();
 
-  enum OverlayType { OVERLAY_NONE, OVERLAY_AREA, OVERLAY_POINT, OVERLAY_CUSTOM };
+  enum OverlayType {
+    OVERLAY_NONE,
+    OVERLAY_AREA,
+    OVERLAY_POINT,
+    OVERLAY_CUSTOM
+  };
 
   /// Selects how the pressed interaction layer is revealed while a click
   /// animation is active. The default preserves the existing ripple behavior.

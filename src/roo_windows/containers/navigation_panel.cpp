@@ -3,20 +3,23 @@
 #include <algorithm>
 #include <memory>
 
-#include "roo_windows/config.h"
 #include "roo_logging.h"
+#include "roo_windows/config.h"
 
 namespace roo_windows {
 
 NavigationPanel::NavigationPanel(ApplicationContext& context)
-    : Panel(context), rail_(context, *this), contents_(context), rail_width_(0) {
+    : Panel(context),
+      rail_(context, *this),
+      contents_(context),
+      rail_width_(0) {
   destination_labels_.reserve(material3::NavigationRail::kMaxDestinations);
   add(rail_);
   add(contents_);
 }
 
-void NavigationPanel::addPage(const MonoIcon& icon,
-                              std::string text, WidgetRef page) {
+void NavigationPanel::addPage(const MonoIcon& icon, std::string text,
+                              WidgetRef page) {
   CHECK_LT(page_count(), material3::NavigationRail::kMaxDestinations)
       << "NavigationPanel supports at most "
       << static_cast<int>(material3::NavigationRail::kMaxDestinations)
@@ -56,7 +59,7 @@ void NavigationPanel::showPage(int index) {
 }
 
 void NavigationPanel::PanelRail::onSelectedIndexChanged(int old_index,
-                                                         int new_index) {
+                                                        int new_index) {
   (void)old_index;
   panel_.showPage(new_index);
 }
@@ -85,8 +88,7 @@ void NavigationPanel::onLayout(bool changed, const Rect& rect) {
     return;
   }
   const XDim rail_width = std::min<XDim>(rect.width(), rail_width_);
-  static_cast<Widget&>(rail_).layout(
-      Rect(0, 0, rail_width - 1, rect.yMax()));
+  static_cast<Widget&>(rail_).layout(Rect(0, 0, rail_width - 1, rect.yMax()));
   contents_.layout(Rect(rail_width, 0, rect.xMax(), rect.yMax()));
 }
 

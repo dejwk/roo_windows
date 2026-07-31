@@ -99,8 +99,8 @@ class SimpleButton : public Button {
                Style style = CONTAINED)
       : SimpleButton(context, nullptr, label, style) {}
 
-  SimpleButton(ApplicationContext& context, const MonoIcon& icon, std::string label,
-               Style style = CONTAINED)
+  SimpleButton(ApplicationContext& context, const MonoIcon& icon,
+               std::string label, Style style = CONTAINED)
       : SimpleButton(context, &icon, label, style) {}
 
   Padding getDefaultPadding() const override;
@@ -153,8 +153,8 @@ class SimpleButton : public Button {
   Dimensions getSuggestedMinimumDimensions() const override;
 
  private:
-  SimpleButton(ApplicationContext& context, const MonoIcon* icon, std::string label,
-               Style style);
+  SimpleButton(ApplicationContext& context, const MonoIcon* icon,
+               std::string label, Style style);
 
   roo_display::Color content_color_;
   const roo_display::Font* font_;

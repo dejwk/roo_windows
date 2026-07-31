@@ -59,8 +59,7 @@ class Container : public SurfaceWidget {
 
   /// Builds the callback-free geometric touch path through the front-most
   /// visible, enabled descendant at `x`, `y`.
-  bool fillTouchTargetPath(XDim x, YDim y,
-                           std::vector<Widget*>& path) override;
+  bool fillTouchTargetPath(XDim x, YDim y, std::vector<Widget*>& path) override;
 
   /// Builds the callback-free sloppy touch path through the front-most
   /// visible, enabled descendant at `x`, `y`.

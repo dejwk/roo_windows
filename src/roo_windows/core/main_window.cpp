@@ -250,10 +250,10 @@ void MainWindow::preparePresentationPinsForPaint() {
        current = current->next_.get()) {
     Rect current_bounds(0, 0, -1, -1);
     if (IsEffectivelyVisible(*current->anchor_)) {
-      current_bounds = Rect::Intersect(
-          Rect::Intersect(current->boundsInWindow(),
-                          current->clipBoundsInWindow()),
-          bounds());
+      current_bounds =
+          Rect::Intersect(Rect::Intersect(current->boundsInWindow(),
+                                          current->clipBoundsInWindow()),
+                          bounds());
     }
     if (current_bounds != current->presented_bounds_) {
       invalidatePresentationRegion(
@@ -269,11 +269,13 @@ void MainWindow::paintPinsBeforeScopeRoot(Widget& root, PaintContext& ctx) {
         !IsEffectivelyVisible(*current->anchor_)) {
       continue;
     }
-    Rect pin_bounds = Rect::Intersect(
-        Rect::Intersect(current->boundsInWindow(), current->clipBoundsInWindow()),
-        bounds());
+    Rect pin_bounds =
+        Rect::Intersect(Rect::Intersect(current->boundsInWindow(),
+                                        current->clipBoundsInWindow()),
+                        bounds());
     if (pin_bounds.empty()) continue;
-    current->presented_bounds_ = UnionNonEmpty(current->presented_bounds_, pin_bounds);
+    current->presented_bounds_ =
+        UnionNonEmpty(current->presented_bounds_, pin_bounds);
     PaintContext pin_ctx = ctx.clipped(pin_bounds);
     if (!pin_ctx.empty()) current->paint(pin_ctx);
   }
@@ -282,12 +284,12 @@ void MainWindow::paintPinsBeforeScopeRoot(Widget& root, PaintContext& ctx) {
 void MainWindow::commitPresentationPinBounds() {
   for (PresentationPin* current = active_pins_.get(); current != nullptr;
        current = current->next_.get()) {
-    current->presented_bounds_ = IsEffectivelyVisible(*current->anchor_)
-                                     ? Rect::Intersect(
-                                           Rect::Intersect(current->boundsInWindow(),
-                                                           current->clipBoundsInWindow()),
-                                           bounds())
-                                     : Rect(0, 0, -1, -1);
+    current->presented_bounds_ =
+        IsEffectivelyVisible(*current->anchor_)
+            ? Rect::Intersect(Rect::Intersect(current->boundsInWindow(),
+                                              current->clipBoundsInWindow()),
+                              bounds())
+            : Rect(0, 0, -1, -1);
   }
 }
 
@@ -299,7 +301,8 @@ void MainWindow::paintChildren(PaintContext& ctx) {
     Widget& child = getChild(i);
     paintPinsBeforeScopeRoot(child, ctx);
     if (child.getParentClipMode() == ParentClipMode::kClipped) {
-      child.paintWidget(clipped_ctx.canvas(), clipped_ctx.clipperForFramework());
+      child.paintWidget(clipped_ctx.canvas(),
+                        clipped_ctx.clipperForFramework());
       if (fast_render) fastDrawChildShadow(child, clipped_ctx);
     } else {
       child.paintWidget(ctx.canvas(), ctx.clipperForFramework());
@@ -340,8 +343,8 @@ void MainWindow::removeLastFromLayer(std::vector<Widget*>& layer) {
   detachChild(widget);
 }
 
-PresentationStartResult MainWindow::showDialog(
-    Dialog& dialog, Dialog::CallbackFn callback_fn) {
+PresentationStartResult MainWindow::showDialog(Dialog& dialog,
+                                               Dialog::CallbackFn callback_fn) {
   PresentationStartResult result = transient_presentation_slot_.show(
       dialog.registration(), TransientPresentationPolicy(true, true));
   if (result != PresentationStartResult::kStarted) return result;

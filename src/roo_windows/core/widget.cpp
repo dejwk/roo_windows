@@ -264,12 +264,14 @@ Rect Widget::getSloppyTouchBounds() const {
 }
 
 roo_display::Color Widget::defaultColor() const {
-  return theme().material3Theme().color.contentColorFor(effectiveContainerRole());
+  return theme().material3Theme().color.contentColorFor(
+      effectiveContainerRole());
 }
 
 ::roo_windows::material3::ColorToken Widget::effectiveContainerRole() const {
-  return parent() != nullptr ? parent()->effectiveContainerRole()
-                             : ::roo_windows::material3::ColorToken::kBackground;
+  return parent() != nullptr
+             ? parent()->effectiveContainerRole()
+             : ::roo_windows::material3::ColorToken::kBackground;
 }
 
 const Theme& Widget::theme() const { return context_.theme(); }
@@ -581,20 +583,30 @@ uint8_t Widget::getOverlayOpacity() const {
   uint16_t overlay_opacity = 0;
   const Theme& myTheme = theme();
   if (isHover()) {
-    overlay_opacity += myTheme.material3Theme().state.resolve(bg_role, InteractionState::kHover).a();
+    overlay_opacity += myTheme.material3Theme()
+                           .state.resolve(bg_role, InteractionState::kHover)
+                           .a();
   }
   if (isFocused()) {
-    overlay_opacity += myTheme.material3Theme().state.resolve(bg_role, InteractionState::kFocus).a();
+    overlay_opacity += myTheme.material3Theme()
+                           .state.resolve(bg_role, InteractionState::kFocus)
+                           .a();
   }
   if (isSelected() && useOverlayOnSelection()) {
-    overlay_opacity += myTheme.material3Theme().state.resolve(bg_role, InteractionState::kSelected).a();
+    overlay_opacity += myTheme.material3Theme()
+                           .state.resolve(bg_role, InteractionState::kSelected)
+                           .a();
   }
   if (isActivated() && useOverlayOnActivation()) {
-    overlay_opacity += myTheme.material3Theme().state.resolve(bg_role, InteractionState::kActivated).a();
+    overlay_opacity += myTheme.material3Theme()
+                           .state.resolve(bg_role, InteractionState::kActivated)
+                           .a();
   }
   if (isClicking() && useOverlayOnPress()) {
     uint8_t pressed_opacity =
-        myTheme.material3Theme().state.resolve(bg_role, InteractionState::kPressed).a();
+        myTheme.material3Theme()
+            .state.resolve(bg_role, InteractionState::kPressed)
+            .a();
     if (getClickOverlayAnimation() == ClickOverlayAnimation::kFade) {
       const ClickAnimation* animation = getClickAnimation();
       float progress = animation == nullptr ? 1.0f : animation->progress();
@@ -603,10 +615,14 @@ uint8_t Widget::getOverlayOpacity() const {
       overlay_opacity += pressed_opacity;
     }
   } else if (isPressed() && useOverlayOnPress()) {
-    overlay_opacity += myTheme.material3Theme().state.resolve(bg_role, InteractionState::kPressed).a();
+    overlay_opacity += myTheme.material3Theme()
+                           .state.resolve(bg_role, InteractionState::kPressed)
+                           .a();
   }
   if (isDragged()) {
-    overlay_opacity += myTheme.material3Theme().state.resolve(bg_role, InteractionState::kDragged).a();
+    overlay_opacity += myTheme.material3Theme()
+                           .state.resolve(bg_role, InteractionState::kDragged)
+                           .a();
   }
   if (overlay_opacity > 255) overlay_opacity = 255;
   if (overlay_opacity == 0) return 0;  // roo_display::color::Transparent;
@@ -705,18 +721,18 @@ void Widget::paintWidgetModded(PaintContext& ctx) {
       paintWidgetContents(ctx);
     } else if (overlay_spec.base_overlay().a() > 0) {
       if (overlay_spec.is_point()) {
-          clipper.addOverlayShape(
-              MakePointOverlay(*this, canvas, overlay_spec.base_overlay()),
-              canvas.clip_box());
-          paintWidgetContents(ctx);
+        clipper.addOverlayShape(
+            MakePointOverlay(*this, canvas, overlay_spec.base_overlay()),
+            canvas.clip_box());
+        paintWidgetContents(ctx);
       } else if (overlay_spec.is_area()) {
-          roo_display::DisplayOutput& out = canvas.out();
-          roo_display::OverlayFilter filter(canvas.out(),
-                                            overlay_spec.base_overlay(),
-                                            roo_display::color::Transparent);
-          canvas.set_out(&filter);
-          paintWidgetContents(ctx);
-          canvas.set_out(&out);
+        roo_display::DisplayOutput& out = canvas.out();
+        roo_display::OverlayFilter filter(canvas.out(),
+                                          overlay_spec.base_overlay(),
+                                          roo_display::color::Transparent);
+        canvas.set_out(&filter);
+        paintWidgetContents(ctx);
+        canvas.set_out(&out);
       } else {
         paintWidgetContents(ctx);
       }
@@ -749,8 +765,7 @@ Rect Widget::getDirectPaintExclusionBounds() const {
   return getContentBounds();
 }
 
-bool Widget::fillTouchTargetPath(XDim x, YDim y,
-                                 std::vector<Widget*>& path) {
+bool Widget::fillTouchTargetPath(XDim x, YDim y, std::vector<Widget*>& path) {
   if (!isVisible() || !isEnabled() || !bounds().contains(x, y)) return false;
   path.push_back(this);
   return true;
@@ -817,8 +832,7 @@ void Widget::onLongPress(XDim dx, YDim dy) {}
 
 void Widget::onLongPressFinished(XDim dx, YDim dy) { setPressed(false); }
 
-DragClaim Widget::onDragClaim(XDim x, YDim y, XDim total_dx,
-                              YDim total_dy) {
+DragClaim Widget::onDragClaim(XDim x, YDim y, XDim total_dx, YDim total_dy) {
   (void)x;
   (void)y;
   int32_t abs_dx = total_dx < 0 ? -static_cast<int32_t>(total_dx) : total_dx;

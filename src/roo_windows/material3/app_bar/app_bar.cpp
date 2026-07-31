@@ -3,9 +3,9 @@
 #include <algorithm>
 #include <utility>
 
+#include "roo_display/shape/smooth.h"
 #include "roo_display/ui/alignment.h"
 #include "roo_display/ui/text_label.h"
-#include "roo_display/shape/smooth.h"
 #include "roo_icons/outlined/24/action.h"
 #include "roo_logging.h"
 #include "roo_windows/material3/app_bar/app_bar_tokens.h"
@@ -43,11 +43,11 @@ bool AppendInteractiveChildTouchTarget(Widget& child, XDim x, YDim y,
                                        bool sloppy,
                                        std::vector<Widget*>& path) {
   const size_t old_size = path.size();
-  const bool hit = sloppy
-                       ? child.fillSloppyTouchTargetPath(
-                             x - child.offsetLeft(), y - child.offsetTop(), path)
-                       : child.fillTouchTargetPath(
-                             x - child.offsetLeft(), y - child.offsetTop(), path);
+  const bool hit =
+      sloppy ? child.fillSloppyTouchTargetPath(x - child.offsetLeft(),
+                                               y - child.offsetTop(), path)
+             : child.fillTouchTargetPath(x - child.offsetLeft(),
+                                         y - child.offsetTop(), path);
   if (hit && !path.empty() && path.back()->isClickable()) return true;
   path.resize(old_size);
   return false;
@@ -67,9 +67,10 @@ void internal::AppBarText::paint(PaintContext& ctx) const {
   const roo_display::Font& font = font_ == nullptr ? font_body1() : *font_;
   ctx.canvas().drawTiled(
       roo_display::StringViewLabel(
-          text_, font, use_on_surface_variant_
-                           ? theme().material3Theme().color.onSurfaceVariant
-                           : theme().material3Theme().color.onSurface),
+          text_, font,
+          use_on_surface_variant_
+              ? theme().material3Theme().color.onSurfaceVariant
+              : theme().material3Theme().color.onSurface),
       bounds(), alignment_);
 }
 
@@ -168,7 +169,7 @@ void AppBar::setTitle(roo::string_view title) {
   if (title_widget_.text() == title) return;
   title_widget_.setText(title);
   title_widget_.setVisibility(title.empty() ? Visibility::kGone
-                                             : Visibility::kVisible);
+                                            : Visibility::kVisible);
   invalidateInterior();
   requestLayout();
 }
@@ -176,9 +177,9 @@ void AppBar::setTitle(roo::string_view title) {
 void AppBar::setSubtitle(roo::string_view subtitle) {
   if (subtitle_widget_.text() == subtitle) return;
   subtitle_widget_.setText(subtitle);
-  subtitle_widget_.setVisibility(
-      !subtitle.empty() && tokens().supports_subtitle ? Visibility::kVisible
-                                                       : Visibility::kGone);
+  subtitle_widget_.setVisibility(!subtitle.empty() && tokens().supports_subtitle
+                                     ? Visibility::kVisible
+                                     : Visibility::kGone);
   invalidateInterior();
   requestLayout();
 }
@@ -231,7 +232,7 @@ Widget& AppBar::getChild(int idx) {
 Color AppBar::background() const {
   const auto& colors = theme().material3Theme().color;
   return surface_state_ == AppBarSurfaceState::kFlat ? colors.surface
-                                                      : colors.surfaceContainer;
+                                                     : colors.surfaceContainer;
 }
 
 Dimensions AppBar::onMeasure(WidthSpec width, HeightSpec height) {
@@ -242,17 +243,21 @@ Dimensions AppBar::onMeasure(WidthSpec width, HeightSpec height) {
   // Measure all children even when an exact app-bar width leaves them no room;
   // this preserves the normal child layout-request lifecycle.
   if (leading_ != nullptr) {
-    leading_->measure(WidthSpec::AtMost(row_height), HeightSpec::Exactly(row_height));
+    leading_->measure(WidthSpec::AtMost(row_height),
+                      HeightSpec::Exactly(row_height));
   }
   for (Widget* slot : trailing_) {
     if (slot != nullptr) {
-      slot->measure(WidthSpec::AtMost(row_height), HeightSpec::Exactly(row_height));
+      slot->measure(WidthSpec::AtMost(row_height),
+                    HeightSpec::Exactly(row_height));
     }
   }
-  title_widget_.measure(WidthSpec::AtMost(std::max<int16_t>(0, available_width)),
-                        HeightSpec::Unspecified(container_height));
-  subtitle_widget_.measure(WidthSpec::AtMost(std::max<int16_t>(0, available_width)),
-                           HeightSpec::Unspecified(container_height));
+  title_widget_.measure(
+      WidthSpec::AtMost(std::max<int16_t>(0, available_width)),
+      HeightSpec::Unspecified(container_height));
+  subtitle_widget_.measure(
+      WidthSpec::AtMost(std::max<int16_t>(0, available_width)),
+      HeightSpec::Unspecified(container_height));
   return Dimensions(width.resolveSize(available_width),
                     height.resolveSize(container_height));
 }
@@ -271,9 +276,8 @@ void AppBar::onLayout(bool changed, const Rect& rect) {
   // Flexible bars reserve a 56dp control row at the top. Their title stack is
   // intentionally in a separate row below it, matching MediumTopAppBar and
   // LargeTopAppBar in Android's Material 3 implementation.
-  const int16_t action_y = single_row
-                               ? std::max<int16_t>(0, (height - action_size) / 2)
-                               : edge;
+  const int16_t action_y =
+      single_row ? std::max<int16_t>(0, (height - action_size) / 2) : edge;
   auto layout_action = [action_size, action_y](Widget* child, int16_t x) {
     if (child == nullptr) return;
     child->layout(
@@ -286,7 +290,8 @@ void AppBar::onLayout(bool changed, const Rect& rect) {
   }
   for (int index = 1; index >= 0; --index) {
     if (trailing_[index] == nullptr) continue;
-    const int16_t slot = std::min<int16_t>(action_size, std::max<int16_t>(0, right - left));
+    const int16_t slot =
+        std::min<int16_t>(action_size, std::max<int16_t>(0, right - left));
     right -= slot;
     layout_action(trailing_[index], right);
   }
@@ -305,24 +310,33 @@ void AppBar::onLayout(bool changed, const Rect& rect) {
   }
 
   const int16_t lane_top = single_row ? 0 : action_size + 2 * edge;
-  const int16_t lane_bottom = single_row
-                                  ? height
-                                  : std::max<int16_t>(lane_top,
-                                                      height - Scaled(tokens().title_bottom_inset_dp));
+  const int16_t lane_bottom =
+      single_row
+          ? height
+          : std::max<int16_t>(lane_top,
+                              height - Scaled(tokens().title_bottom_inset_dp));
   const int16_t lane_height = std::max<int16_t>(0, lane_bottom - lane_top);
   const int16_t lane_width = std::max<int16_t>(0, right - left);
   const bool show_subtitle = !subtitle_widget_.isGone();
-  const int16_t title_height = std::min<int16_t>(
-      title_widget_.measure(WidthSpec::AtMost(lane_width), HeightSpec::AtMost(lane_height)).height(),
-      lane_height);
-  const int16_t subtitle_height = show_subtitle
-      ? std::min<int16_t>(subtitle_widget_.measure(WidthSpec::AtMost(lane_width), HeightSpec::AtMost(lane_height)).height(), lane_height - title_height)
-      : 0;
+  const int16_t title_height =
+      std::min<int16_t>(title_widget_
+                            .measure(WidthSpec::AtMost(lane_width),
+                                     HeightSpec::AtMost(lane_height))
+                            .height(),
+                        lane_height);
+  const int16_t subtitle_height =
+      show_subtitle
+          ? std::min<int16_t>(subtitle_widget_
+                                  .measure(WidthSpec::AtMost(lane_width),
+                                           HeightSpec::AtMost(lane_height))
+                                  .height(),
+                              lane_height - title_height)
+          : 0;
   const int16_t stack_height = title_height + subtitle_height;
-  const int16_t stack_top = single_row
-                                ? (height - stack_height) / 2
-                                : lane_bottom - stack_height;
-  title_widget_.layout(Rect(left, stack_top, right - 1, stack_top + title_height - 1));
+  const int16_t stack_top =
+      single_row ? (height - stack_height) / 2 : lane_bottom - stack_height;
+  title_widget_.layout(
+      Rect(left, stack_top, right - 1, stack_top + title_height - 1));
   if (show_subtitle) {
     subtitle_widget_.layout(Rect(left, stack_top + title_height, right - 1,
                                  stack_top + stack_height - 1));
@@ -607,7 +621,7 @@ Widget& SearchAppBar::getChild(int idx) {
 Color SearchAppBar::background() const {
   const auto& colors = theme().material3Theme().color;
   return surface_state_ == AppBarSurfaceState::kFlat ? colors.surface
-                                                      : colors.surfaceContainer;
+                                                     : colors.surfaceContainer;
 }
 
 void SearchAppBar::EmbeddedSearchBar::setSurfaceState(
@@ -642,17 +656,20 @@ Dimensions SearchAppBar::onMeasure(WidthSpec width, HeightSpec height) {
   const int16_t entry_height =
       Scaled(internal::kEmbeddedSearchEntryTokens.container_height_dp);
   const int16_t available_width = std::max<int16_t>(0, width.value());
-  if (leading_) leading_->measure(WidthSpec::AtMost(action_size),
-                                  HeightSpec::Exactly(action_size));
+  if (leading_)
+    leading_->measure(WidthSpec::AtMost(action_size),
+                      HeightSpec::Exactly(action_size));
   for (Widget* slot : trailing_) {
-    if (slot) slot->measure(WidthSpec::AtMost(action_size),
-                            HeightSpec::Exactly(action_size));
+    if (slot)
+      slot->measure(WidthSpec::AtMost(action_size),
+                    HeightSpec::Exactly(action_size));
   }
-  const int16_t outer_slots = (leading_ != nullptr) * action_size +
-                              ChildCount(trailing_) * action_size;
+  const int16_t outer_slots =
+      (leading_ != nullptr) * action_size + ChildCount(trailing_) * action_size;
   const int16_t entry_width = std::min<int16_t>(
-      std::max<int16_t>(0, available_width - 2 * Scaled(internal::kAppBarEdgeInsetDp) -
-                              outer_slots),
+      std::max<int16_t>(0, available_width -
+                               2 * Scaled(internal::kAppBarEdgeInsetDp) -
+                               outer_slots),
       Scaled(internal::kEmbeddedSearchEntryTokens.max_width_dp));
   search_entry_.measure(WidthSpec::Exactly(entry_width),
                         HeightSpec::Exactly(entry_height));
@@ -672,8 +689,9 @@ void SearchAppBar::onLayout(bool changed, const Rect& rect) {
   int16_t left = std::min<int16_t>(edge, width);
   int16_t right = std::max<int16_t>(left, width - edge);
   auto layout_outer = [action_size, action_y](Widget* child, int16_t x) {
-    if (child) child->layout(Rect(x, action_y, x + action_size - 1,
-                                  action_y + action_size - 1));
+    if (child)
+      child->layout(
+          Rect(x, action_y, x + action_size - 1, action_y + action_size - 1));
   };
   if (leading_) {
     layout_outer(leading_, left);

@@ -350,15 +350,14 @@ TEST(Material3NavigationRail,
       app.context(), "Home", &ic_outlined_24_action_done());
   NavigationRailDestination* home_raw = home.get();
   ASSERT_TRUE(rail->add(WidgetRef(std::move(home))));
-  app.add(std::move(rail),
-          roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
+  app.add(std::move(rail), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
   ASSERT_TRUE(app.refresh());
   ASSERT_TRUE(home_raw->selected());
   ASSERT_FALSE(home_raw->isDirty());
 
   home_raw->onShowPress(home_raw->width() / 2, home_raw->height() / 2);
-  NavigationRailDestinationTestAccess::tapUp(
-      *home_raw, home_raw->width() / 2, home_raw->height() / 2);
+  NavigationRailDestinationTestAccess::tapUp(*home_raw, home_raw->width() / 2,
+                                             home_raw->height() / 2);
   ASSERT_TRUE(app.refresh());
 
   delay(kPressAnimationMillis + 20);
@@ -453,8 +452,7 @@ TEST(Material3NavigationRail,
   NavigationRailDestination* inbox_raw = inbox.get();
   ASSERT_TRUE(rail->add(WidgetRef(std::move(home))));
   ASSERT_TRUE(rail->add(WidgetRef(std::move(inbox))));
-  app.add(std::move(rail),
-          roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
+  app.add(std::move(rail), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
   ASSERT_TRUE(app.refresh());
 
   inbox_raw->onShowPress(inbox_raw->width() / 2, inbox_raw->height() / 2);
@@ -467,8 +465,8 @@ TEST(Material3NavigationRail,
   // The completed final refresh schedules held-state settlement. Releasing
   // before that frame is painted must merge selection into it rather than
   // paint one intermediate unselected frame.
-  NavigationRailDestinationTestAccess::tapUp(
-      *inbox_raw, inbox_raw->width() / 2, inbox_raw->height() / 2);
+  NavigationRailDestinationTestAccess::tapUp(*inbox_raw, inbox_raw->width() / 2,
+                                             inbox_raw->height() / 2);
 
   EXPECT_EQ(1, rail_raw->selectedIndex());
   EXPECT_TRUE(inbox_raw->selected());
@@ -501,27 +499,27 @@ TEST(Material3NavigationRail,
   NavigationRailDestination* inbox_raw = inbox.get();
   ASSERT_TRUE(rail->add(WidgetRef(std::move(home))));
   ASSERT_TRUE(rail->add(WidgetRef(std::move(inbox))));
-  app.add(std::move(rail),
-          roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
+  app.add(std::move(rail), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
   ASSERT_TRUE(app.refresh());
 
   inbox_raw->onShowPress(inbox_raw->width() / 2, inbox_raw->height() / 2);
-  NavigationRailDestinationTestAccess::tapUp(
-      *inbox_raw, inbox_raw->width() / 2, inbox_raw->height() / 2);
+  NavigationRailDestinationTestAccess::tapUp(*inbox_raw, inbox_raw->width() / 2,
+                                             inbox_raw->height() / 2);
   ASSERT_EQ(inbox_raw, app.root().click_animation().target());
   ASSERT_TRUE(inbox_raw->isClicking());
 
   // A quick release has no preceding onShowPress(). It must still honor the
   // active-animation guard instead of replacing the controller target and
   // stranding the previous destination in kWidgetClicking.
-  NavigationRailDestinationTestAccess::tapUp(
-      *home_raw, home_raw->width() / 2, home_raw->height() / 2);
+  NavigationRailDestinationTestAccess::tapUp(*home_raw, home_raw->width() / 2,
+                                             home_raw->height() / 2);
 
   EXPECT_EQ(inbox_raw, app.root().click_animation().target());
   EXPECT_TRUE(inbox_raw->isClicking());
   EXPECT_FALSE(home_raw->isClicking());
-  EXPECT_EQ(0, static_cast<TestNavigationRail*>(inbox_raw->parent())
-                   ->selectedIndex());
+  EXPECT_EQ(
+      0,
+      static_cast<TestNavigationRail*>(inbox_raw->parent())->selectedIndex());
 }
 
 TEST(Material3NavigationRail, RailCapsDestinationsAndRetainsHeaderOnClear) {

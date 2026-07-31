@@ -88,39 +88,72 @@ struct ColorScheme {
       case ColorToken::kNone:
         assert(false && "an absent Material 3 token cannot be resolved");
         return roo_display::color::Transparent;
-      case ColorToken::kPrimary: return primary;
-      case ColorToken::kOnPrimary: return onPrimary;
-      case ColorToken::kPrimaryContainer: return primaryContainer;
-      case ColorToken::kOnPrimaryContainer: return onPrimaryContainer;
-      case ColorToken::kSecondary: return secondary;
-      case ColorToken::kOnSecondary: return onSecondary;
-      case ColorToken::kSecondaryContainer: return secondaryContainer;
-      case ColorToken::kOnSecondaryContainer: return onSecondaryContainer;
-      case ColorToken::kTertiary: return tertiary;
-      case ColorToken::kOnTertiary: return onTertiary;
-      case ColorToken::kTertiaryContainer: return tertiaryContainer;
-      case ColorToken::kOnTertiaryContainer: return onTertiaryContainer;
-      case ColorToken::kBackground: return background;
-      case ColorToken::kOnBackground: return onBackground;
-      case ColorToken::kSurface: return surface;
-      case ColorToken::kSurfaceContainerLowest: return surfaceContainerLowest;
-      case ColorToken::kSurfaceContainerLow: return surfaceContainerLow;
-      case ColorToken::kSurfaceContainer: return surfaceContainer;
-      case ColorToken::kSurfaceContainerHigh: return surfaceContainerHigh;
-      case ColorToken::kSurfaceContainerHighest: return surfaceContainerHighest;
-      case ColorToken::kOnSurface: return onSurface;
-      case ColorToken::kSurfaceVariant: return surfaceVariant;
-      case ColorToken::kOnSurfaceVariant: return onSurfaceVariant;
-      case ColorToken::kError: return error;
-      case ColorToken::kOnError: return onError;
-      case ColorToken::kErrorContainer: return errorContainer;
-      case ColorToken::kOnErrorContainer: return onErrorContainer;
-      case ColorToken::kOutline: return outline;
-      case ColorToken::kOutlineVariant: return outlineVariant;
-      case ColorToken::kInverseSurface: return inverseSurface;
-      case ColorToken::kInverseOnSurface: return inverseOnSurface;
-      case ColorToken::kInversePrimary: return inversePrimary;
-      case ColorToken::kSurfaceTint: return surfaceTint;
+      case ColorToken::kPrimary:
+        return primary;
+      case ColorToken::kOnPrimary:
+        return onPrimary;
+      case ColorToken::kPrimaryContainer:
+        return primaryContainer;
+      case ColorToken::kOnPrimaryContainer:
+        return onPrimaryContainer;
+      case ColorToken::kSecondary:
+        return secondary;
+      case ColorToken::kOnSecondary:
+        return onSecondary;
+      case ColorToken::kSecondaryContainer:
+        return secondaryContainer;
+      case ColorToken::kOnSecondaryContainer:
+        return onSecondaryContainer;
+      case ColorToken::kTertiary:
+        return tertiary;
+      case ColorToken::kOnTertiary:
+        return onTertiary;
+      case ColorToken::kTertiaryContainer:
+        return tertiaryContainer;
+      case ColorToken::kOnTertiaryContainer:
+        return onTertiaryContainer;
+      case ColorToken::kBackground:
+        return background;
+      case ColorToken::kOnBackground:
+        return onBackground;
+      case ColorToken::kSurface:
+        return surface;
+      case ColorToken::kSurfaceContainerLowest:
+        return surfaceContainerLowest;
+      case ColorToken::kSurfaceContainerLow:
+        return surfaceContainerLow;
+      case ColorToken::kSurfaceContainer:
+        return surfaceContainer;
+      case ColorToken::kSurfaceContainerHigh:
+        return surfaceContainerHigh;
+      case ColorToken::kSurfaceContainerHighest:
+        return surfaceContainerHighest;
+      case ColorToken::kOnSurface:
+        return onSurface;
+      case ColorToken::kSurfaceVariant:
+        return surfaceVariant;
+      case ColorToken::kOnSurfaceVariant:
+        return onSurfaceVariant;
+      case ColorToken::kError:
+        return error;
+      case ColorToken::kOnError:
+        return onError;
+      case ColorToken::kErrorContainer:
+        return errorContainer;
+      case ColorToken::kOnErrorContainer:
+        return onErrorContainer;
+      case ColorToken::kOutline:
+        return outline;
+      case ColorToken::kOutlineVariant:
+        return outlineVariant;
+      case ColorToken::kInverseSurface:
+        return inverseSurface;
+      case ColorToken::kInverseOnSurface:
+        return inverseOnSurface;
+      case ColorToken::kInversePrimary:
+        return inversePrimary;
+      case ColorToken::kSurfaceTint:
+        return surfaceTint;
     }
     assert(false && "invalid Material 3 color token");
     return background;
@@ -128,33 +161,55 @@ struct ColorScheme {
 
   constexpr roo_display::Color contentColorFor(ColorToken container) const {
     switch (container) {
-      case ColorToken::kPrimary: return onPrimary;
-      case ColorToken::kPrimaryContainer: return onPrimaryContainer;
-      case ColorToken::kSecondary: return onSecondary;
-      case ColorToken::kSecondaryContainer: return onSecondaryContainer;
-      case ColorToken::kTertiary: return onTertiary;
-      case ColorToken::kTertiaryContainer: return onTertiaryContainer;
-      case ColorToken::kError: return onError;
-      case ColorToken::kErrorContainer: return onErrorContainer;
-      case ColorToken::kSurfaceVariant: return onSurfaceVariant;
-      case ColorToken::kInverseSurface: return inverseOnSurface;
-      case ColorToken::kBackground: return onBackground;
-      default: return onSurface;
+      case ColorToken::kPrimary:
+        return onPrimary;
+      case ColorToken::kPrimaryContainer:
+        return onPrimaryContainer;
+      case ColorToken::kSecondary:
+        return onSecondary;
+      case ColorToken::kSecondaryContainer:
+        return onSecondaryContainer;
+      case ColorToken::kTertiary:
+        return onTertiary;
+      case ColorToken::kTertiaryContainer:
+        return onTertiaryContainer;
+      case ColorToken::kError:
+        return onError;
+      case ColorToken::kErrorContainer:
+        return onErrorContainer;
+      case ColorToken::kSurfaceVariant:
+        return onSurfaceVariant;
+      case ColorToken::kInverseSurface:
+        return inverseOnSurface;
+      case ColorToken::kBackground:
+        return onBackground;
+      default:
+        return onSurface;
     }
   }
 
   constexpr roo_display::Color accentColorFor(ColorToken container) const {
     switch (container) {
-      case ColorToken::kPrimary: return onPrimary;
-      case ColorToken::kPrimaryContainer: return onPrimaryContainer;
-      case ColorToken::kSecondary: return onSecondary;
-      case ColorToken::kSecondaryContainer: return onSecondaryContainer;
-      case ColorToken::kTertiary: return onTertiary;
-      case ColorToken::kTertiaryContainer: return onTertiaryContainer;
-      case ColorToken::kError: return onError;
-      case ColorToken::kErrorContainer: return onErrorContainer;
-      case ColorToken::kInverseSurface: return inversePrimary;
-      default: return primary;
+      case ColorToken::kPrimary:
+        return onPrimary;
+      case ColorToken::kPrimaryContainer:
+        return onPrimaryContainer;
+      case ColorToken::kSecondary:
+        return onSecondary;
+      case ColorToken::kSecondaryContainer:
+        return onSecondaryContainer;
+      case ColorToken::kTertiary:
+        return onTertiary;
+      case ColorToken::kTertiaryContainer:
+        return onTertiaryContainer;
+      case ColorToken::kError:
+        return onError;
+      case ColorToken::kErrorContainer:
+        return onErrorContainer;
+      case ColorToken::kInverseSurface:
+        return inversePrimary;
+      default:
+        return primary;
     }
   }
 };

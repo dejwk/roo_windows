@@ -1,8 +1,8 @@
 #include <new>
 
 #include "roo_display/shape/basic.h"
-#include "roo_windows_render_test_support.h"
 #include "roo_windows/widgets/text_field.h"
+#include "roo_windows_render_test_support.h"
 
 using namespace roo_display;
 using namespace roo_windows;
@@ -38,8 +38,8 @@ class TiledRectWidget : public BasicSurfaceWidget {
 class ExposedPanel : public Panel {
  public:
   using Panel::add;
-  using Panel::removeLast;
   using Panel::Panel;
+  using Panel::removeLast;
 };
 
 class FocusableTestWidget : public BasicWidget {
@@ -66,9 +66,7 @@ class SloppyTouchSpyWidget : public BasicWidget {
  public:
   SloppyTouchSpyWidget(ApplicationContext& context, Dimensions dims,
                        int16_t right_slop)
-      : BasicWidget(context),
-        dims_(dims),
-        right_slop_(right_slop) {}
+      : BasicWidget(context), dims_(dims), right_slop_(right_slop) {}
 
   Dimensions getSuggestedMinimumDimensions() const override { return dims_; }
 
@@ -221,7 +219,8 @@ TEST(Windows, TextFieldEditsFromHardwareKeys) {
   EXPECT_EQ("AX", field.content());
 
   field.setEditable(false);
-  EXPECT_FALSE(field.onKeyEvent({KeyPhase::kDown, KeyCode::kCharacter, 0, 'Z'}));
+  EXPECT_FALSE(
+      field.onKeyEvent({KeyPhase::kDown, KeyCode::kCharacter, 0, 'Z'}));
   EXPECT_EQ("AX", field.content());
 }
 

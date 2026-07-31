@@ -1,3 +1,5 @@
+#include "roo_windows/dialogs/dialog.h"
+
 #include "gtest/gtest.h"
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
@@ -5,7 +7,6 @@
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/environment.h"
-#include "roo_windows/dialogs/dialog.h"
 
 namespace roo_windows {
 namespace {
@@ -65,14 +66,14 @@ TEST_F(DialogTest, CloseDetachesContentBeforeCompletion) {
   bool content_detached = false;
   bool slot_empty = false;
 
-  EXPECT_EQ(PresentationStartResult::kStarted,
-            app_.showDialog(dialog, [&](int result) {
-              EXPECT_EQ(-1, result);
-              content_detached = content.parent() == nullptr;
-              slot_empty = !app_.root()
-                                .transient_presentation_slot()
-                                .hasActivePresentation();
-            }));
+  EXPECT_EQ(
+      PresentationStartResult::kStarted,
+      app_.showDialog(dialog, [&](int result) {
+        EXPECT_EQ(-1, result);
+        content_detached = content.parent() == nullptr;
+        slot_empty =
+            !app_.root().transient_presentation_slot().hasActivePresentation();
+      }));
   EXPECT_NE(nullptr, content.parent());
 
   app_.clearDialog();
@@ -94,7 +95,8 @@ TEST_F(DialogTest, ActionCompletesAndReleasesTheSlot) {
 
   EXPECT_EQ(1, dialog.exit_count);
   EXPECT_EQ(0, dialog.exit_result);
-  EXPECT_FALSE(app_.root().transient_presentation_slot().hasActivePresentation());
+  EXPECT_FALSE(
+      app_.root().transient_presentation_slot().hasActivePresentation());
 }
 
 // Verifies a busy dialog host leaves a second presenter untouched.
@@ -102,8 +104,7 @@ TEST_F(DialogTest, ShowRejectsOccupiedTransientSlot) {
   TestDialog first(app_.context());
   TestDialog second(app_.context());
 
-  EXPECT_EQ(PresentationStartResult::kStarted,
-            app_.showDialog(first, nullptr));
+  EXPECT_EQ(PresentationStartResult::kStarted, app_.showDialog(first, nullptr));
   EXPECT_EQ(PresentationStartResult::kHostBusy,
             app_.showDialog(second, nullptr));
   app_.clearDialog();
@@ -124,12 +125,14 @@ TEST_F(DialogTest, CompletionCanShowAnotherDialog) {
   app_.clearDialog();
 
   EXPECT_EQ(PresentationStartResult::kStarted, second_result);
-  EXPECT_TRUE(app_.root().transient_presentation_slot().hasActivePresentation());
+  EXPECT_TRUE(
+      app_.root().transient_presentation_slot().hasActivePresentation());
   app_.clearDialog();
   EXPECT_EQ(1, second.exit_count);
 }
 
-// Verifies destroying a visible caller-owned dialog detaches it without callback.
+// Verifies destroying a visible caller-owned dialog detaches it without
+// callback.
 TEST_F(DialogTest, DestructionCancelsWithoutCompletion) {
   int callback_count = 0;
   TestDialog* dialog = new TestDialog(app_.context());
@@ -139,7 +142,8 @@ TEST_F(DialogTest, DestructionCancelsWithoutCompletion) {
   delete dialog;
 
   EXPECT_EQ(0, callback_count);
-  EXPECT_FALSE(app_.root().transient_presentation_slot().hasActivePresentation());
+  EXPECT_FALSE(
+      app_.root().transient_presentation_slot().hasActivePresentation());
 }
 
 }  // namespace

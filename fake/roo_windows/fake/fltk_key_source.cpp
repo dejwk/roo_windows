@@ -1,9 +1,10 @@
 #include "roo_windows/fake/fltk_key_source.h"
 
-#include <chrono>
 #include <FL/Enumerations.H>
 #include <FL/Fl.H>
 #include <FL/Fl_Window.H>
+
+#include <chrono>
 
 namespace roo_windows::fake {
 
@@ -163,8 +164,10 @@ bool FltkKeySource::decodeRune(const char* text, int length, uint32_t* rune) {
     *rune = first;
     return true;
   }
-  int continuation_count = first < 0xe0 ? 1 : first < 0xf0 ? 2 :
-                           first < 0xf8 ? 3 : -1;
+  int continuation_count = first < 0xe0   ? 1
+                           : first < 0xf0 ? 2
+                           : first < 0xf8 ? 3
+                                          : -1;
   if (continuation_count < 0 || length != continuation_count + 1) {
     return false;
   }
