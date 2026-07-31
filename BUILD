@@ -147,6 +147,16 @@ cc_test(
 )
 
 cc_test(
+    name = "material_typography_test",
+    srcs = ["test/material_typography_test.cpp"],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
+cc_test(
     name = "paint_context_test",
     srcs = [
         "test/paint_context_test.cpp",
