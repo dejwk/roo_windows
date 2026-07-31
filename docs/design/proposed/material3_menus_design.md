@@ -60,9 +60,7 @@ As of 2026-05, the relevant current pieces are:
   already provides `ListItem`, `ListEntry`, `StandardListItem`, `ListRow`,
   `List`, `SelectionMode`, and `ListEntryVisualContext`,
 - the landed badge helper in
-  [`material3/badge/badge.h`](../../../src/roo_windows/material3/badge/badge.h) and
-  its host-integration example in
-  [`material3/switch/badged_switch.h`](../../../src/roo_windows/material3/switch/badged_switch.h),
+  [`material3/badge/badge.h`](../../../src/roo_windows/material3/badge/badge.h),
 - the landed paint API in [`core/paint_context.h`](../../../src/roo_windows/core/paint_context.h)
   and the corresponding [../implemented/paint_context_design.md](../implemented/paint_context_design.md),
 - and popup task infrastructure in [`Application`](../../../src/roo_windows/core/application.h),

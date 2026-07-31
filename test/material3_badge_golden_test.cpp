@@ -5,7 +5,6 @@
 #include "roo_scheduler.h"
 #include "roo_windows.h"
 #include "roo_windows/material3/badge/badge.h"
-#include "roo_windows/material3/switch/badged_switch.h"
 
 namespace roo_windows {
 namespace material3 {
@@ -181,24 +180,6 @@ class Material3BadgeGoldenTest : public testing::Test {
     return test::CaptureRgb(offscreen_.raster(), 0, 0, 184, 60);
   }
 
-  roo_display::Offscreen<roo_display::Rgb888> RenderBadgedSwitchRow() {
-    Application app(&env_, display_);
-    AddBackdrop(app, Dimensions(228, 64));
-
-    BadgedSwitch* dot = AddBadgedSwitch(app, 12, 16, false);
-    dot->setBadgeDot();
-
-    BadgedSwitch* text = AddBadgedSwitch(app, 88, 16, true);
-    text->setBadgeText("NEW");
-    text->setBadgeAlignment(roo_display::kLeft | roo_display::kTop);
-
-    BadgedSwitch* value = AddBadgedSwitch(app, 164, 16, false);
-    value->setBadgeValue(1000);
-
-    EXPECT_TRUE(app.refresh());
-    return test::CaptureRgb(offscreen_.raster(), 0, 0, 228, 64);
-  }
-
  private:
   void AddBackdrop(Application& app, Dimensions dims) {
     auto backdrop =
@@ -214,15 +195,6 @@ class Material3BadgeGoldenTest : public testing::Test {
     app.add(std::move(host),
             roo_display::Box(x, y, x + BadgeAnchorHost::kHostSize - 1,
                              y + BadgeAnchorHost::kHostSize - 1));
-    return ptr;
-  }
-
-  BadgedSwitch* AddBadgedSwitch(Application& app, int16_t x, int16_t y,
-                                bool on) {
-    auto sw = std::make_unique<BadgedSwitch>(app.context(), on);
-    BadgedSwitch* ptr = sw.get();
-    app.add(std::move(sw),
-            roo_display::Box(x, y, x + Scaled(52) - 1, y + Scaled(32) - 1));
     return ptr;
   }
 
@@ -249,15 +221,6 @@ TEST_F(Material3BadgeGoldenTest, OverflowClippingRowGolden) {
   EXPECT_TRUE(test::CompareOrUpdateGolden(
       image, "test/goldens/material3_badge/overflow_clipping_row.ppm",
       "material3_badge_overflow_clipping_row"));
-}
-
-// Verifies a locked-down host-integration render reference for the badge-aware
-// Material 3 switch family.
-TEST_F(Material3BadgeGoldenTest, BadgedSwitchRowGolden) {
-  auto image = RenderBadgedSwitchRow();
-  EXPECT_TRUE(test::CompareOrUpdateGolden(
-      image, "test/goldens/material3_badge/badged_switch_row.ppm",
-      "material3_badge_badged_switch_row"));
 }
 
 }  // namespace

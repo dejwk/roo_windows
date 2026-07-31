@@ -303,10 +303,8 @@ label, and state feedback, but it does not own the rail background behind it.
 
 `BadgedNavigationRailDestination` derives from `NavigationRailDestination`.
 
-That follows the landed badge-host pattern used by
-[src/roo_windows/material3/switch/badged_switch.h](../../../src/roo_windows/material3/switch/badged_switch.h):
-the base widget stays badge-free, and only the badge-aware subclass pays for
-the inline badge storage and layout logic.
+That keeps the base destination badge-free, while the badge-aware subclass
+pays for its inline badge storage and layout logic.
 
 The migration boundary is explicit:
 
