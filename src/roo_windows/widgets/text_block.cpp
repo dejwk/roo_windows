@@ -332,7 +332,7 @@ class Interior : public roo_display::Drawable {
     int16_t line_height = text_style_.lineHeight();
     int16_t row_y_min = -font.metrics().glyphYMax();
     int16_t row_y_max = -font.metrics().glyphYMin();
-    int16_t space_width = MeasureText(text_style_, roo::string_view(" ", 1));
+    int16_t space_width = font.metrics().defaultSpaceWidth();
     int16_t clip_y_min = s.clip_box().yMin() - s.dy();
     int16_t clip_y_max = s.clip_box().yMax() - s.dy();
 
