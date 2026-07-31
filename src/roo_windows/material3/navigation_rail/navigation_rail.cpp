@@ -4,12 +4,13 @@
 
 #include "roo_display/ui/text_label.h"
 #include "roo_windows/material3/navigation_rail/navigation_rail_tokens.h"
+#include "roo_windows/material3/typography.h"
 
 namespace roo_windows {
 namespace material3 {
 namespace {
 
-const roo_display::Font& DestinationLabelFont() { return font_button(); }
+const TextStyle& DestinationLabelStyle() { return text_style_label_medium(); }
 
 struct DestinationContentMetrics {
   int16_t icon_width;
@@ -75,9 +76,12 @@ DestinationContentMetrics ResolveContentMetrics(roo::string_view label,
                                            icon->anchorExtents().height());
   }
   if (!label.empty()) {
-    result.label_width =
-        DestinationLabelFont().getHorizontalStringMetrics(label).width();
-    result.label_height = DestinationLabelFont().metrics().maxHeight() + 1;
+    result.label_width = DestinationLabelStyle()
+                             .font()
+                             .getHorizontalStringMetrics(
+                                 label, DestinationLabelStyle().fontOptions())
+                             .advance();
+    result.label_height = DestinationLabelStyle().lineHeight();
   }
   return result;
 }

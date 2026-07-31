@@ -586,6 +586,34 @@ cc_library(
     ],
 )
 
+cc_binary(
+    name = "material3_typography_example_build",
+    srcs = ["test/material3_typography_example_build.cpp"],
+    defines = ["ROO_TESTING"],
+    includes = ["examples/material3/typography"],
+    linkstatic = 1,
+    deps = [
+        ":material3_typography_example_source",
+        ":roo_windows",
+        "@roo_testing//:arduino_main",
+    ],
+)
+
+cc_library(
+    name = "material3_typography_example_source",
+    textual_hdrs = ["examples/material3/typography/typography.ino"],
+    includes = ["examples/material3/typography"],
+    deps = [
+        ":roo_windows",
+        "@roo_display//fake:reference_device",
+        "@roo_testing//roo_testing/devices/display/ili9341:spi",
+        "@roo_testing//roo_testing/devices/touch/xpt2046:spi",
+        "@roo_testing//roo_testing/microcontrollers/esp32:esp32",
+        "@roo_testing//roo_testing/transducers/ui/viewport:flex",
+        "@roo_testing//roo_testing/transducers/ui/viewport/fltk",
+    ],
+)
+
 cc_test(
     name = "material3_tabs_test",
     srcs = [

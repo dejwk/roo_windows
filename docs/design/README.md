@@ -24,6 +24,7 @@ Status was audited against the source tree and tests on 2026-07-22. “Dependenc
 | Horizontal page host | Viewport layout, adjacent swipe/settle, blit wrappers, examples, and tabs synchronization are implemented. |
 | Layout scaffold | Shared adaptive primitives, the fixed-slot `LayoutScaffold` shell, fixed-slot `PaneLayout`, row-major `GridLayout`, and a build-covered catalog with app-bar, navigation-bar, and navigation-rail composition are implemented. Navigation drawer remains separate component work. |
 | Material 3 tabs | Fixed, scrollable, badged, and page-host-integrated tabs are implemented; later extensions are tracked as future work. |
+| Material typography | Material 2 and Material 3 `TextStyle` catalogs, style-aware labels and paragraphs, Material 3 component role adoption, focused tests/goldens, and a build-covered catalog example are implemented. |
 | Navigation bar | The compact and medium destination layouts, selection/reselection hooks, badges, keyboard traversal, focused tests/goldens, and example are implemented. |
 | Navigation rail | Collapsed and expanded destinations, semantic selection and reselection, header and group layout, badges, RTL behavior, migrated `NavigationPanel` coverage, and the emulator-backed example are implemented. |
 | Non-touch input | Keyboard acquisition, focus lifecycle, click/value/scroll control interaction, structured list/menu/tab/rail navigation, and hardware text entry are implemented. |
@@ -56,7 +57,6 @@ Status was audited against the source tree and tests on 2026-07-22. “Dependenc
 | FAB | Buttons and theme support are implemented; icon buttons are proposed. |
 | Icon buttons | Buttons, badges, click animation, and theme support are implemented; no icon-button implementation exists. |
 | Interaction overlay reveal | Point and area ripples, widget-local click animation, paint context, and the navigation bar's component-local fade are implemented; shared fade reveal and paint-owned overlay policy are not. |
-| Material typography | Integer letter tracking in `roo_display` and 21 precise-catalog font additions in `roo_fonts_material` are external prerequisites; no M2/M3 `TextStyle` catalog or style-aware widget integration exists. |
 | Menus | Badge, paint context, back routing, non-touch input, and presentation pins are implemented. The proposed menu design is reconciled with copied anchor and trigger-paint snapshots, presenter-owned pins and child levels, one root transient registration, focus restoration, keyboard semantics, and `ListItem`/`ListEntry` reuse; implementation is P1.7. |
 | Navigation drawer | List support is in progress and back routing is implemented; dialogs are proposed, and no drawer implementation exists. |
 | Segmented buttons | Buttons are implemented; the superseding button-group design and this legacy component design are not implemented. |

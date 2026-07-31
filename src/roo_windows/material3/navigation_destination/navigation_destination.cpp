@@ -4,6 +4,7 @@
 #include "roo_display/ui/alignment.h"
 #include "roo_display/ui/text_label.h"
 #include "roo_windows/core/container.h"
+#include "roo_windows/material3/typography.h"
 
 namespace roo_windows {
 namespace material3 {
@@ -16,7 +17,7 @@ using roo_display::kCenter;
 using roo_display::kMiddle;
 using roo_display::SmoothFilledRoundRect;
 
-const roo_display::Font& DestinationLabelFont() { return font_button(); }
+const TextStyle& DestinationLabelStyle() { return text_style_label_medium(); }
 
 Color ContentColorFor(const NavigationDestinationBase& destination) {
   const ColorScheme& colors = destination.theme().material3Theme().color;
@@ -123,8 +124,10 @@ void NavigationDestinationBase::paint(PaintContext& ctx) const {
   if (!geometry.label_bounds.empty() && !label().empty()) {
     PaintContext label_context = ctx.clipped(geometry.label_bounds);
     label_context.setBgcolor(label_background);
+    const TextStyle& style = DestinationLabelStyle();
     label_context.drawTiled(
-        ClippedStringViewLabel(label(), DestinationLabelFont(), content_color),
+        ClippedStringViewLabel(label(), style.font(), content_color,
+                               style.fontOptions()),
         geometry.label_bounds, kCenter | kMiddle);
     ctx.addExclusion(geometry.label_bounds);
   }

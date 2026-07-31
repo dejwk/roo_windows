@@ -21,3 +21,7 @@ const TextStyle& custom_body_style() {
 
 Use `style.fontOptions()` for every matching text measurement and draw so the
 role's tracking is applied consistently.
+
+The build-covered [Material 3 typography catalog example](../examples/material3/typography/typography.ino)
+shows the roles adopted by badges, buttons, navigation destinations, tabs,
+lists, and app bars. It compiles at all four supported zoom levels.

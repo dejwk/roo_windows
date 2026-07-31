@@ -10,6 +10,7 @@
 #include "roo_logging.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/material3/theme.h"
+#include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_block.h"
 #include "roo_windows/widgets/text_label.h"
 
@@ -126,11 +127,11 @@ BorderStyle BorderStyleFor(const ListEntryVisualContext& context) {
   return BorderStyle(outer_radius, 0);
 }
 
-const TextStyle& FontForOverline() { return material2::text_style_overline(); }
+const TextStyle& FontForOverline() { return text_style_label_small(); }
 
-const TextStyle& FontForHeadline() { return material2::text_style_body1(); }
+const TextStyle& FontForHeadline() { return text_style_body_large(); }
 
-const TextStyle& FontForSupporting() { return material2::text_style_body2(); }
+const TextStyle& FontForSupporting() { return text_style_body_medium(); }
 
 int16_t TextWidth(const TextStyle& style, roo::string_view text) {
   if (text.empty()) return 0;

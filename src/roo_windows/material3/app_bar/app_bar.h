@@ -5,6 +5,7 @@
 #include "roo_backport/string_view.h"
 #include "roo_windows/core/border_style.h"
 #include "roo_windows/core/container.h"
+#include "roo_windows/core/text_style.h"
 #include "roo_windows/core/widget.h"
 #include "roo_windows/core/widget_ref.h"
 #include "roo_windows/material3/app_bar/app_bar_tokens.h"
@@ -34,7 +35,7 @@ class AppBarText final : public Widget {
   roo::string_view text() const { return text_; }
 
   /// Chooses the Material typography used by this bounded presentation child.
-  void setFont(const roo_display::Font& font) { font_ = &font; }
+  void setTextStyle(const TextStyle& text_style) { text_style_ = &text_style; }
 
   void setAlignment(roo_display::Alignment alignment) {
     alignment_ = alignment;
@@ -47,7 +48,7 @@ class AppBarText final : public Widget {
 
  private:
   roo::string_view text_;
-  const roo_display::Font* font_ = nullptr;
+  const TextStyle* text_style_ = nullptr;
   roo_display::Alignment alignment_ = roo_display::kLeft | roo_display::kMiddle;
   bool use_on_surface_variant_ = false;
 };
@@ -110,7 +111,7 @@ class AppBar : public Container {
   void onLayout(bool changed, const Rect& rect) override;
 
  private:
-  const roo_display::Font& titleFont() const;
+  const TextStyle& titleTextStyle() const;
   const internal::AppBarVariantTokens& tokens() const;
   int16_t containerHeightDp() const;
   void replaceSlot(Widget*& slot, WidgetRef widget);

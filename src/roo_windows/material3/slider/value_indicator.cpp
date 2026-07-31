@@ -10,6 +10,7 @@
 #include "roo_windows/core/theme.h"
 #include "roo_windows/material3/slider/slider_internal.h"
 #include "roo_windows/material3/theme.h"
+#include "roo_windows/material3/typography.h"
 
 namespace roo_windows {
 namespace material3 {
@@ -27,8 +28,6 @@ constexpr int16_t kPaddingV = Scaled(12);
 constexpr int16_t kGap = Scaled(4);  // gap between thumb and bubble
 constexpr int16_t kCornerRadius = Scaled(20);
 constexpr int16_t kBubbleMaxWidth = Scaled(96);
-// Conservative caption-glyph height used when sizing the transient envelope.
-constexpr int16_t kCaptionHeight = Scaled(16);
 
 // Tolerance used by FormatDefault() to decide whether a value should be
 // rendered as an integer; matches the slider's value-snapping tolerance.
@@ -54,10 +53,12 @@ ValueIndicatorBubble::ValueIndicatorBubble(const Theme& theme, bool enabled)
 void ValueIndicatorBubble::MeasureBubbleSize(roo::string_view text,
                                              int16_t& bubble_width,
                                              int16_t& bubble_height) {
-  StringViewLabel label(text, font_caption(), roo_display::color::Black);
+  const TextStyle& style = text_style_label_small();
+  StringViewLabel label(text, style.font(), roo_display::color::Black,
+                        style.fontOptions());
   Box label_extents = label.anchorExtents();
   bubble_width = label_extents.width() + 2 * kPaddingH;
-  bubble_height = label_extents.height() + 2 * kPaddingV;
+  bubble_height = style.lineHeight() + 2 * kPaddingV;
 }
 
 // static
@@ -96,7 +97,7 @@ Rect ValueIndicatorBubble::ConservativeBounds(
     return Rect();
   }
   int16_t bw = kBubbleMaxWidth;
-  int16_t bh = 2 * kPaddingV + kCaptionHeight;
+  int16_t bh = 2 * kPaddingV + text_style_label_small().lineHeight();
   bool clamp = behavior == SliderValueIndicatorBehavior::kWithinBounds;
   if (orientation == SliderOrientation::kVertical) {
     if (clamp && bh > parent_height) bh = parent_height;
@@ -135,7 +136,8 @@ Rect ValueIndicatorBubble::EnvelopeForCenterRange(
     SliderOrientation orientation) {
   return EnvelopeForCenterRange(
       parent_width, parent_height, center_min, center_max, behavior,
-      orientation, kBubbleMaxWidth, 2 * kPaddingV + kCaptionHeight);
+      orientation, kBubbleMaxWidth,
+      2 * kPaddingV + text_style_label_small().lineHeight());
 }
 
 // static
@@ -280,7 +282,8 @@ void ValueIndicatorBubble::paint(PaintContext& ctx) const {
 
   // Centered label: position by anchor-center, then draw without a tile so
   // we do not refill any rectangle around the glyphs.
-  StringViewLabel label(text_, font_caption(), text_color_);
+  const TextStyle& style = text_style_label_small();
+  StringViewLabel label(text_, style.font(), text_color_, style.fontOptions());
   sub.drawTiled(label, inner, roo_display::kCenter | roo_display::kMiddle);
 }
 

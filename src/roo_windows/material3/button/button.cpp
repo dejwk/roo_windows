@@ -8,6 +8,7 @@
 #include "roo_display/ui/text_label.h"
 #include "roo_windows/core/click_animation.h"
 #include "roo_windows/material3/theme.h"
+#include "roo_windows/material3/typography.h"
 
 using roo_display::AlphaBlend;
 using roo_display::kCenter;
@@ -137,7 +138,7 @@ int HorizontalPaddingDpFor(ButtonSize size,
   return GeometryTokensFor(size).horizontal_padding_dp;
 }
 
-const roo_display::Font& ButtonFont() { return font_button(); }
+const TextStyle& ButtonTextStyle() { return text_style_label_large(); }
 
 struct ButtonContentMetrics {
   int16_t text_width;
@@ -156,12 +157,14 @@ ButtonContentMetrics ResolveContentMetrics(roo::string_view label,
                                            const MonoIcon* icon,
                                            ButtonSize size) {
   const ButtonGeometryTokens& geometry = GeometryTokensFor(size);
-  const roo_display::Font& font = ButtonFont();
+  const TextStyle& style = ButtonTextStyle();
+  const roo_display::Font& font = style.font();
   int16_t text_width = 0;
   int16_t text_height = 0;
   if (!label.empty()) {
-    text_width = font.getHorizontalStringMetrics(label).width();
-    text_height = ((font.metrics().maxHeight()) + 1) & ~1;
+    text_width =
+        font.getHorizontalStringMetrics(label, style.fontOptions()).advance();
+    text_height = style.lineHeight();
   }
   int16_t icon_slot_width = 0;
   int16_t icon_slot_height = 0;
@@ -381,10 +384,12 @@ void Button::paintWithCanvas(const Canvas& canvas) const {
     canvas.clearRect(b);
     return;
   }
-  const roo_display::Font& font = ButtonFont();
+  const TextStyle& style = ButtonTextStyle();
+  const roo_display::Font& font = style.font();
   if (!hasIcon()) {
-    canvas.drawTiled(StringViewLabel(label_, font, content), b,
-                     kCenter | kMiddle);
+    canvas.drawTiled(
+        StringViewLabel(label_, font, content, style.fontOptions()), b,
+        kCenter | kMiddle);
     return;
   }
   MonoIcon ic = *icon_;
@@ -395,7 +400,7 @@ void Button::paintWithCanvas(const Canvas& canvas) const {
   }
   // Center the icon+label cluster as a single block so size-dependent icon
   // slots do not bias the text away from the visual center.
-  StringViewLabel l(label_, font, content);
+  StringViewLabel l(label_, font, content, style.fontOptions());
   ButtonContentMetrics metrics = ResolveContentMetrics(label_, icon_, size());
   int16_t iw = metrics.icon_slot_width;
   int16_t lw = l.anchorExtents().width();

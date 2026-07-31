@@ -10,6 +10,7 @@
 #include "roo_windows/core/paint_context.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/material3/theme.h"
+#include "roo_windows/material3/typography.h"
 
 namespace roo_windows {
 namespace material3 {
@@ -42,22 +43,25 @@ void CopyClampedText(roo_collections::SmallString<Badge::kTextStorage>& target,
 }
 
 void MeasureTextBadge(roo::string_view text, int16_t& width, int16_t& height) {
-  StringViewLabel label(text, font_caption(), roo_display::color::Black);
+  const TextStyle& style = text_style_label_small();
+  StringViewLabel label(text, style.font(), roo_display::color::Black,
+                        style.fontOptions());
   Box extents = label.anchorExtents();
   width = std::max<int16_t>(kTextMinWidth, extents.width() + 2 * kTextPaddingH);
   height =
-      std::max<int16_t>(kTextMinHeight, extents.height() + 2 * kTextPaddingV);
+      std::max<int16_t>(kTextMinHeight, style.lineHeight() + 2 * kTextPaddingV);
 }
 
 int16_t MaxCaptionCharacterSpan() {
   static const int16_t kSpan = []() {
     int16_t max_span = 0;
     char sample[2] = {' ', '\0'};
-    const roo_display::Font& font = font_caption();
+    const TextStyle& style = text_style_label_small();
+    const roo_display::Font& font = style.font();
     for (int code = 32; code <= 126; ++code) {
       sample[0] = static_cast<char>(code);
       roo_display::GlyphMetrics metrics =
-          font.getHorizontalStringMetrics(sample);
+          font.getHorizontalStringMetrics(sample, style.fontOptions());
       max_span = std::max<int16_t>(
           max_span, std::max<int16_t>(metrics.advance(),
                                       metrics.screen_extents().width()));
@@ -76,7 +80,7 @@ int16_t ConservativeTextWidth() {
 int16_t ConservativeTextHeight() {
   return std::max<int16_t>(
       kTextMinHeight,
-      2 * kTextPaddingV + font_caption().metrics().linespace() + 1);
+      2 * kTextPaddingV + text_style_label_small().lineHeight());
 }
 
 int16_t DefaultOffset(BadgeMode mode) {
@@ -221,7 +225,9 @@ void Badge::paint(PaintContext& ctx, const Theme& theme) const {
     if (!sub.empty()) {
       sub.setBgcolor(badge_color);
       if (mode() == BadgeMode::kText && hasText()) {
-        sub.drawTiled(StringViewLabel(text(), font_caption(), text_color),
+        const TextStyle& style = text_style_label_small();
+        sub.drawTiled(StringViewLabel(text(), style.font(), text_color,
+                                      style.fontOptions()),
                       inner, roo_display::kCenter | roo_display::kMiddle);
       } else {
         sub.fillRect(inner, badge_color);

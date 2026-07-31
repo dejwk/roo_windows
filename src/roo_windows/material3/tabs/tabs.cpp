@@ -12,6 +12,7 @@
 #include "roo_windows/core/gesture_detector.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/material3/theme.h"
+#include "roo_windows/material3/typography.h"
 
 using roo_display::ClippedStringViewLabel;
 using roo_display::kCenter;
@@ -45,8 +46,7 @@ Rect UnionRects(const Rect& a, const Rect& b) {
   return Rect::Extent(a, b);
 }
 
-// Returns the shared label face used by phase-1 tabs.
-const roo_display::Font& TabLabelFont() { return font_button(); }
+const TextStyle& TabLabelStyle() { return text_style_title_small(); }
 
 // Resolves active, inactive, and disabled foreground colors from the theme.
 Color ContentColorFor(const Tab& tab) {
@@ -110,10 +110,13 @@ void Tab::setIcon(const MonoIcon* icon) {
 Color Tab::background() const { return theme().material3Theme().color.surface; }
 
 Dimensions Tab::getContentMinimumDimensions() const {
-  const roo_display::Font& font = TabLabelFont();
-  int16_t text_width =
-      label_.empty() ? 0 : font.getHorizontalStringMetrics(label_).width();
-  int16_t text_height = label_.empty() ? 0 : ((font.metrics().maxHeight()) + 1);
+  const TextStyle& style = TabLabelStyle();
+  const roo_display::Font& font = style.font();
+  int16_t text_width = label_.empty() ? 0
+                                      : font.getHorizontalStringMetrics(
+                                                label_, style.fontOptions())
+                                            .advance();
+  int16_t text_height = label_.empty() ? 0 : style.lineHeight();
   int16_t icon_width = IconSlotSize(icon_);
   int16_t icon_height = icon_ == nullptr ? 0 : Scaled(kIconSizeDp);
   if (icon_ != nullptr) {
@@ -170,15 +173,17 @@ Rect Tab::getDirectPaintExclusionBounds() const {
 void Tab::paintContent(PaintContext& ctx, const Rect& content_bounds,
                        Color content_color) const {
   if (content_bounds.empty()) return;
-  const roo_display::Font& font = TabLabelFont();
+  const TextStyle& style = TabLabelStyle();
+  const roo_display::Font& font = style.font();
   if (label_.empty() && icon_ == nullptr) {
     ctx.clearRect(content_bounds);
     return;
   }
   Rect b = content_bounds;
   if (icon_ == nullptr) {
-    ctx.drawTiled(ClippedStringViewLabel(label_, font, content_color), b,
-                  kCenter | kMiddle);
+    ctx.drawTiled(ClippedStringViewLabel(label_, font, content_color,
+                                         style.fontOptions()),
+                  b, kCenter | kMiddle);
     return;
   }
 
@@ -186,8 +191,7 @@ void Tab::paintContent(PaintContext& ctx, const Rect& content_bounds,
   ic.color_mode().setColor(content_color);
   int16_t icon_height =
       std::max<int16_t>(Scaled(kIconSizeDp), icon_->anchorExtents().height());
-  int16_t label_height =
-      label_.empty() ? 0 : ((font.metrics().maxHeight()) + 1);
+  int16_t label_height = label_.empty() ? 0 : style.lineHeight();
   int16_t total_height = icon_height + label_height;
   int16_t top = b.yMin() + (b.height() - total_height) / 2;
 
@@ -203,8 +207,9 @@ void Tab::paintContent(PaintContext& ctx, const Rect& content_bounds,
   ctx.drawTiled(ic, icon_bounds, kCenter | kMiddle);
   Rect label_bounds(b.xMin(), icon_bounds.yMax() + 1, b.xMax(),
                     icon_bounds.yMax() + label_height);
-  ctx.drawTiled(ClippedStringViewLabel(label_, font, content_color),
-                label_bounds, kCenter | kMiddle);
+  ctx.drawTiled(
+      ClippedStringViewLabel(label_, font, content_color, style.fontOptions()),
+      label_bounds, kCenter | kMiddle);
   if (label_bounds.yMax() < b.yMax()) {
     ctx.clearRect(Rect(b.xMin(), label_bounds.yMax() + 1, b.xMax(), b.yMax()));
   }
@@ -329,8 +334,7 @@ Rect BadgedTab::badgeAnchorBounds() const {
   if (hasIcon() && icon() != nullptr) {
     int16_t icon_extent = std::max<int16_t>(Scaled(kIconSizeDp),
                                             icon()->anchorExtents().height());
-    int16_t label_height =
-        label().empty() ? 0 : ((TabLabelFont().metrics().maxHeight()) + 1);
+    int16_t label_height = label().empty() ? 0 : TabLabelStyle().lineHeight();
     int16_t total_height = icon_extent + label_height;
     Rect paint_bounds = getContentPaintBounds();
     int16_t top = paint_bounds.yMin() +

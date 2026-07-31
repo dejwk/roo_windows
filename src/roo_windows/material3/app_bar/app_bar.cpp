@@ -10,6 +10,7 @@
 #include "roo_logging.h"
 #include "roo_windows/material3/app_bar/app_bar_tokens.h"
 #include "roo_windows/material3/theme.h"
+#include "roo_windows/material3/typography.h"
 
 namespace roo_windows::material3 {
 namespace {
@@ -57,20 +58,25 @@ bool AppendInteractiveChildTouchTarget(Widget& child, XDim x, YDim y,
 
 Dimensions internal::AppBarText::getSuggestedMinimumDimensions() const {
   if (text_.empty()) return Dimensions(0, 0);
-  const roo_display::Font& font = font_ == nullptr ? font_body1() : *font_;
-  return Dimensions(font.getHorizontalStringMetrics(text_).width(),
-                    font.metrics().maxHeight());
+  const TextStyle& style =
+      text_style_ == nullptr ? text_style_body_medium() : *text_style_;
+  return Dimensions(style.font()
+                        .getHorizontalStringMetrics(text_, style.fontOptions())
+                        .advance(),
+                    style.lineHeight());
 }
 
 void internal::AppBarText::paint(PaintContext& ctx) const {
   if (text_.empty()) return;
-  const roo_display::Font& font = font_ == nullptr ? font_body1() : *font_;
+  const TextStyle& style =
+      text_style_ == nullptr ? text_style_body_medium() : *text_style_;
   ctx.canvas().drawTiled(
       roo_display::StringViewLabel(
-          text_, font,
+          text_, style.font(),
           use_on_surface_variant_
               ? theme().material3Theme().color.onSurfaceVariant
-              : theme().material3Theme().color.onSurface),
+              : theme().material3Theme().color.onSurface,
+          style.fontOptions()),
       bounds(), alignment_);
 }
 
@@ -85,8 +91,8 @@ AppBar::AppBar(ApplicationContext& context, AppBarVariant variant)
       surface_state_(AppBarSurfaceState::kFlat) {
   // The title children are by-value, so a title-only bar has no dynamic
   // allocations and text updates follow the regular child invalidation path.
-  title_widget_.setFont(titleFont());
-  subtitle_widget_.setFont(font_subtitle1());
+  title_widget_.setTextStyle(titleTextStyle());
+  subtitle_widget_.setTextStyle(text_style_body_medium());
   title_widget_.setVisibility(Visibility::kGone);
   subtitle_widget_.setVisibility(Visibility::kGone);
   attachChild(title_widget_);
@@ -114,16 +120,16 @@ const internal::AppBarVariantTokens& AppBar::tokens() const {
   return internal::kSmallAppBarTokens;
 }
 
-const roo_display::Font& AppBar::titleFont() const {
+const TextStyle& AppBar::titleTextStyle() const {
   switch (variant_) {
     case AppBarVariant::kSmall:
-      return font_h6();
+      return text_style_title_large();
     case AppBarVariant::kMediumFlexible:
-      return font_h5();
+      return text_style_headline_small();
     case AppBarVariant::kLargeFlexible:
-      return font_h4();
+      return text_style_headline_medium();
   }
-  return font_h6();
+  return text_style_title_large();
 }
 
 int16_t AppBar::containerHeightDp() const {
@@ -136,7 +142,7 @@ int16_t AppBar::containerHeightDp() const {
 void AppBar::setVariant(AppBarVariant variant) {
   if (variant_ == variant) return;
   variant_ = variant;
-  title_widget_.setFont(titleFont());
+  title_widget_.setTextStyle(titleTextStyle());
   if (!tokens().supports_subtitle) {
     subtitle_widget_.setVisibility(Visibility::kGone);
   } else if (!subtitle_widget_.text().empty()) {

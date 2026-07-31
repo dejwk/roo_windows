@@ -8,13 +8,11 @@ properties. Integrate those styles with single-line and paragraph widgets
 while preserving Material 2 font compatibility and per-font linker
 elimination.
 
-**Implementation status: proposed.** The
-[`roo_display` integer letter tracking design](https://github.com/dejwk/roo_display/blob/master/docs/integer_letter_tracking_design.md)
-is complete on `roo_display` master, and fractional nominal-size support is
-implemented in `roo_display_font_importer`. The pinned
-[`roo_display` 3.1.2 dependency](../../../MODULE.bazel) predates tracking, the
-21 catalog fonts have not been added to `roo_fonts_material`, and the
-typography API in this document has not been implemented.
+**Implementation status: implemented.** `TextStyle`, both Material catalogs,
+style-aware labels and paragraphs, and the adopted Material 3 component roles
+are implemented. The build-covered
+[`typography catalog`](../../../examples/material3/typography/typography.ino)
+uses every adopted role and compiles at zoom 75, 100, 150, and 200.
 
 ## Motivation
 
