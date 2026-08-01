@@ -26,7 +26,12 @@ This is the canonical widget-authoring guidance for the repository.
   the widget provides its real sizing behavior in `onMeasure()`.
 - User-visible widget capabilities should be showcased in an example when the
   repo already maintains examples for that component family.
-- Prefer virtual no-op hooks over per-instance `std::function` callbacks.
+- When designing widget internals, prefer virtual no-op hooks over adding new
+  per-instance `std::function` callback storage.
+- This guidance does not prohibit user code or examples from registering
+  callbacks through existing `std::function`-based hooks such as
+  `setOnInteractiveChange()`. Using those public hooks is the intended way for
+  callers to react to widget events.
 - Resolve default colors and geometry from the active `Theme`.
 - Avoid allocations on hot paint, drag, scroll, and animation paths.
 
