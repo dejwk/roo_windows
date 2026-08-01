@@ -108,6 +108,7 @@ class ClipperState {
   std::deque<OverlaySpecStackEntry> overlay_specs_;
 
   std::vector<ClippedOverlay> overlays_;
+  PressOverlay press_overlay_;
 };
 
 /// Internal helper: `DisplayOutput` filter that combines exclusion rectangles
@@ -118,10 +119,13 @@ class ClipperState {
 /// outlines) into the final image without paint() needing to know about them.
 class ClipperOutput : public roo_display::DisplayOutput {
  public:
-  /// Wraps `out` and reuses buffers from `state` for one paint pass.
-  ClipperOutput(internal::ClipperState& state, roo_display::DisplayOutput& out)
+  /// Wraps `out`, optionally preserving completed foreground state from an
+  /// interrupted logical paint pass.
+  ClipperOutput(internal::ClipperState& state, roo_display::DisplayOutput& out,
+                bool resume)
       : orig_output_(out),
         bounds_(0, 0, -1, -1),
+        press_overlay_(state.press_overlay_),
         exclusions_(state.exclusions_),
         bounded_exclusions_(state.bounded_exclusions_),
         decorations_(state.decorations_),
@@ -130,19 +134,21 @@ class ClipperOutput : public roo_display::DisplayOutput {
         overlay_specs_(state.overlay_specs_),
         scoped_press_overlay_active_(false),
         scoped_press_overlay_clip_(0, 0, -1, -1),
-        valid_(true),
+        valid_(false),
         overlay_stack_(roo_display::Box(0, 0, -1, -1)),
         overlay_filter_(out, &overlay_stack_),
         rect_union_(nullptr, nullptr),
         rect_union_filter_(overlay_filter_, &rect_union_),
         output_(&rect_union_filter_),
         capabilities_(out.getCapabilities().supportsBlending(), false) {
-    exclusions_.clear();
     bounded_exclusions_.clear();
-    decorations_.clear();
-    shape_overlays_.clear();
-    overlays_.clear();
     overlay_specs_.clear();
+    if (!resume) {
+      exclusions_.clear();
+      overlays_.clear();
+      decorations_.clear();
+      shape_overlays_.clear();
+    }
   }
 
   /// Narrows subsequent sync work to overlays and exclusions intersecting
@@ -260,6 +266,12 @@ class ClipperOutput : public roo_display::DisplayOutput {
   void write(roo_display::Color* color, uint32_t pixel_count) override {
     sync();
     output_->write(color, pixel_count);
+  }
+
+  /// Writes a contiguous pixel span through the active filters.
+  void fill(roo_display::Color color, uint32_t pixel_count) override {
+    sync();
+    output_->fill(color, pixel_count);
   }
 
   /// Writes sparse pixels through the active filters.
@@ -427,7 +439,7 @@ class ClipperOutput : public roo_display::DisplayOutput {
 
   roo_display::DisplayOutput& orig_output_;
   roo_display::Box bounds_;
-  PressOverlay press_overlay_;
+  PressOverlay& press_overlay_;
   std::vector<roo_display::Box>& exclusions_;
   std::vector<roo_display::Box>& bounded_exclusions_;
   std::deque<Decoration>& decorations_;
@@ -462,8 +474,8 @@ class Clipper {
   /// `deadline` is the wall-clock limit beyond which painting may be
   /// short-circuited.
   Clipper(internal::ClipperState& state, roo_display::DisplayOutput& out,
-          roo_time::Uptime deadline)
-      : out_(state, out), deadline_(deadline) {}
+          roo_time::Uptime deadline, bool resume = false)
+      : out_(state, out, resume), deadline_(deadline) {}
 
   /// Hints that subsequent draws will be confined to `bounds` (device
   /// coordinates). Lets the clipper temporarily ignore exclusions that fall
