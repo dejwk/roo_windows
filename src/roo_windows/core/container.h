@@ -37,9 +37,6 @@ class Container : public SurfaceWidget {
     return theme().framework.color.resolve(FrameworkColorRole::kSurface);
   }
 
-  /// Inherits the active theme from the parent.
-  const Theme& theme() const override { return parent()->theme(); }
-
   /// Paints the panel with all its children. If the panel isn't invalidated,
   /// omits drawing the canvas area; otherwise, draws the canvas area over
   /// the invalidated region.
