@@ -712,10 +712,9 @@ bazel test //:material3_button_test //:material3_tabs_test
    intermediate fade opacity and final settlement in vertical and horizontal
    layouts, and retain existing badge and selection goldens.
 7. Keep the existing navigation-bar example unchanged as the user-visible
-   demonstration. Add the missing `material3_navigation_bar_example_build`
-   Bazel target around the existing
-   [`material3_navigation_bar_example_build.cpp`](../../../test/material3_navigation_bar_example_build.cpp)
-   compile harness so the example remains build-covered without mutating
+   demonstration. Register it with
+   [`roo_windows_example_build`](../../../examples/example_build.bzl) in the
+   examples package so it remains build-covered without mutating
    `emulation/main.cpp`.
 8. Re-run size budgets for `NavigationBarDestination` and
    `BadgedNavigationBarDestination`.
@@ -736,7 +735,7 @@ Validation:
 bazel test //:overlay_test
 bazel test //:material3_navigation_bar_test
 bazel test //:material3_navigation_bar_golden_test
-bazel test //:material3_navigation_bar_example_build
+bazel build //examples:material3_navigation_bar_example_build
 ```
 
 ## Testing Plan
@@ -763,7 +762,7 @@ bazel test //:overlay_test
 bazel test //:material3_button_test //:material3_tabs_test
 bazel test //:material3_navigation_bar_test
 bazel test //:material3_navigation_bar_golden_test
-bazel test //:material3_navigation_bar_example_build
+bazel build //examples:material3_navigation_bar_example_build
 ```
 
 Tests that sample animation progress use the existing host `delay()` pattern
