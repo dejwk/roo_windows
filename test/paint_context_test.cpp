@@ -142,6 +142,51 @@ TEST_F(PaintContextTest, AddExclusionTranslatesAndClipsLocalBounds) {
   EXPECT_EQ(1u, clipper.exclusions().size());
 }
 
+TEST_F(PaintContextTest, RetainedStateReopensOnlyInvalidatedExclusionPixels) {
+  internal::ClipperState clipper_state;
+  {
+    Clipper clipper(clipper_state, display_.output(), roo_time::Uptime::Max());
+    clipper.addExclusion(Box(2, 2, 9, 9));
+  }
+
+  clipper_state.invalidate(Box(5, 5, 6, 6));
+  Clipper resumed(clipper_state, display_.output(), roo_time::Uptime::Max(),
+                  /*resume=*/true);
+
+  ASSERT_EQ(4u, resumed.exclusions().size());
+  EXPECT_EQ(Box(2, 2, 9, 4), resumed.exclusions()[0]);
+  EXPECT_EQ(Box(2, 7, 9, 9), resumed.exclusions()[1]);
+  EXPECT_EQ(Box(2, 5, 4, 6), resumed.exclusions()[2]);
+  EXPECT_EQ(Box(7, 5, 9, 6), resumed.exclusions()[3]);
+}
+
+TEST_F(PaintContextTest, RetainedStateReopensOnlyInvalidatedOverlayPixels) {
+  Surface surface(display_.output(), 0, 0, display_.extents(),
+                  /*is_write_once=*/false, display_.getBackgroundColor(),
+                  FillMode::kVisible, BlendingMode::kSourceOver);
+  auto overlay = MakeRasterizable(
+      Box(2, 2, 9, 9), [](int16_t, int16_t) -> Color { return color::Red; });
+  internal::ClipperState clipper_state;
+  {
+    Clipper clipper(clipper_state, surface.out(), roo_time::Uptime::Max());
+    clipper.addOverlay(&overlay, overlay.extents());
+  }
+
+  clipper_state.invalidate(Box(5, 5, 6, 6));
+  Canvas canvas(&surface);
+  Clipper resumed(clipper_state, canvas.out(), roo_time::Uptime::Max(),
+                  /*resume=*/true);
+  canvas.set_out(resumed.out());
+  PaintContext ctx(canvas, resumed);
+  ctx.setBgcolor(color::Blue);
+  ctx.clear();
+
+  EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(4, 4));
+  EXPECT_EQ(QuantizeToArgb4444(color::Blue), pixelAt(5, 5));
+  EXPECT_EQ(QuantizeToArgb4444(color::Blue), pixelAt(6, 6));
+  EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(7, 7));
+}
+
 TEST_F(PaintContextTest, AddOverlayTranslatesLocalExtentsAndAppliesClip) {
   Surface surface(display_.output(), 7, 4, display_.extents(),
                   /*is_write_once=*/false, display_.getBackgroundColor(),

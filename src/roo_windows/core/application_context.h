@@ -7,6 +7,8 @@
 
 namespace roo_windows {
 
+class MainWindow;
+
 /// Bundles application-scoped runtime services shared by widgets.
 ///
 /// `Application` owns one context and initializes it from the surrounding
@@ -39,12 +41,22 @@ class ApplicationContext {
   /// Returns the application-owned keyboard-focus service.
   const FocusManager& focus() const { return focus_; }
 
+  /// Returns true while the root is continuing a deadline-interrupted logical
+  /// paint. Dirty propagation uses this to report new geometry all the way to
+  /// the root instead of stopping at an already-dirty ancestor.
+  bool hasPaintContinuation() const { return paint_continuation_; }
+
  private:
+  friend class MainWindow;
+
+  void setPaintContinuation(bool active) { paint_continuation_ = active; }
+
   roo_scheduler::Scheduler& scheduler_;
   const Theme& theme_;
   const KeyboardColorTheme& keyboard_color_theme_;
   WidgetEventDispatcher widget_events_;
   FocusManager focus_;
+  bool paint_continuation_ = false;
 };
 
 }  // namespace roo_windows

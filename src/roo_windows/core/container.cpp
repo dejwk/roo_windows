@@ -85,6 +85,7 @@ void Container::paintWidgetContents(PaintContext& ctx) {
       paintChildren(ctx);
       if (ctx.isDeadlineExceeded()) {
         markDirty();
+        ctx.markPaintInterrupted();
         return;
       }
     }
@@ -100,6 +101,7 @@ void Container::paintWidgetContents(PaintContext& ctx) {
         markDirty();
         markInvalidated();
         invalid_region_ = invalid_region;
+        ctx.markPaintInterrupted();
         return;
       }
     }
@@ -226,7 +228,8 @@ Rect Container::getMaxSloppyTouchParentBounds() const {
 // are dirty, but a relatively small area actually gets invalidated (e.g.
 // because something moved).
 void Container::propagateDirty(const Widget* child, const Rect& rect) {
-  if (isDirty() && invalid_region_.contains(rect)) {
+  if (isDirty() && invalid_region_.contains(rect) &&
+      !context().hasPaintContinuation()) {
     // Already fully invalidated, thus dirty.
     return;
   }
@@ -261,11 +264,11 @@ void Container::invalidateDescending(const Rect& rect) {
   int count = getChildrenCount();
   for (int i = 0; i < count; ++i) {
     Widget& child = getChild(i);
-    Rect rect = Rect::Intersect(invalid_region_, child.maxParentBounds());
-    if (rect.empty()) continue;
-    rect = rect.translate(-child.parent_bounds().xMin(),
-                          -child.parent_bounds().yMin());
-    child.invalidateDescending(rect);
+    Rect child_rect = Rect::Intersect(rect, child.maxParentBounds());
+    if (child_rect.empty()) continue;
+    child_rect = child_rect.translate(-child.parent_bounds().xMin(),
+                                      -child.parent_bounds().yMin());
+    child.invalidateDescending(child_rect);
   }
 }
 

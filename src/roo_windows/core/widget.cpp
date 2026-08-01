@@ -669,9 +669,13 @@ void Widget::paintWidget(const Canvas& canvas, Clipper& clipper) {
       paintWidgetModded(ctx);
     }
   }
-  ctx.setClipBox(canvas.clip_box());
-  emitPersistentDecoration(ctx);
-  ctx.addExclusion(getDirectPaintExclusionBounds());
+  // Do not publish terminal state for a widget whose paint was interrupted;
+  // retained entries would claim pixels that the continuation still owes.
+  if (!clipper.wasPaintInterrupted()) {
+    ctx.setClipBox(canvas.clip_box());
+    emitPersistentDecoration(ctx);
+    ctx.addExclusion(getDirectPaintExclusionBounds());
+  }
   clipper.popOverlaySpec();
 }
 
@@ -739,14 +743,18 @@ void Widget::paintWidgetModded(PaintContext& ctx) {
     } else {
       paintWidgetContents(ctx);
     }
-    if (final_click_frame && ctx.isDeadlineExceeded()) {
+    if (final_click_frame && clipper.wasPaintInterrupted()) {
       setClicking();
     }
   }
 }
 
 void Widget::paintWidgetContents(PaintContext& ctx) {
-  if (!isDirty() || ctx.isDeadlineExceeded()) return;
+  if (!isDirty()) return;
+  if (ctx.isDeadlineExceeded()) {
+    ctx.markPaintInterrupted();
+    return;
+  }
   PaintContext content_ctx(prepareContentsCanvas(ctx.canvas()),
                            ctx.clipperForFramework());
   paint(content_ctx);

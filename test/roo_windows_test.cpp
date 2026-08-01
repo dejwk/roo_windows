@@ -1,3 +1,5 @@
+#include <Arduino.h>
+
 #include <new>
 
 #include "roo_display/shape/basic.h"
@@ -40,6 +42,13 @@ class ExposedPanel : public Panel {
   using Panel::add;
   using Panel::Panel;
   using Panel::removeLast;
+};
+
+class OpaqueExposedPanel : public ExposedPanel {
+ public:
+  using ExposedPanel::ExposedPanel;
+
+  Color background() const override { return color::Blue; }
 };
 
 class FocusableTestWidget : public BasicWidget {
@@ -90,6 +99,75 @@ class DispatcherTestWidget : public BasicWidget {
   }
 
   void triggerChange() { triggerInteractiveChange(); }
+};
+
+class SelfExcludingColorWidget : public BasicWidget {
+ public:
+  SelfExcludingColorWidget(ApplicationContext& context, Color color,
+                           Dimensions dims)
+      : BasicWidget(context),
+        color_(color),
+        dims_(dims),
+        paint_delay_ms_(0),
+        paint_count_(0) {}
+
+  void paint(PaintContext& ctx) const override {
+    ++paint_count_;
+    ctx.fillRect(bounds(), color_);
+    ctx.addExclusion(bounds());
+    if (paint_delay_ms_ > 0) delay(paint_delay_ms_);
+  }
+
+  Dimensions getSuggestedMinimumDimensions() const override { return dims_; }
+
+  void setPaintDelay(unsigned long delay_ms) { paint_delay_ms_ = delay_ms; }
+
+  void setColor(Color color) {
+    color_ = color;
+    invalidateInterior();
+  }
+
+  int paintCount() const { return paint_count_; }
+
+ protected:
+  Rect getDirectPaintExclusionBounds() const override {
+    return Rect(0, 0, -1, -1);
+  }
+
+ private:
+  Color color_;
+  Dimensions dims_;
+  unsigned long paint_delay_ms_;
+  mutable int paint_count_;
+};
+
+class RedirtyingColorWidget : public BasicWidget {
+ public:
+  explicit RedirtyingColorWidget(ApplicationContext& context)
+      : BasicWidget(context), redirty_(false), paint_count_(0) {}
+
+  void paint(PaintContext& ctx) const override {
+    ++paint_count_;
+    ctx.fillRect(bounds(), color::Red);
+  }
+
+  Dimensions getSuggestedMinimumDimensions() const override {
+    return Dimensions(20, 20);
+  }
+
+  void setRedirty(bool redirty) { redirty_ = redirty; }
+
+  int paintCount() const { return paint_count_; }
+
+ protected:
+  void paintWidgetContents(PaintContext& ctx) override {
+    Widget::paintWidgetContents(ctx);
+    if (redirty_) setDirty();
+  }
+
+ private:
+  bool redirty_;
+  mutable int paint_count_;
 };
 
 // Verifies that a minimal Application can be constructed against an offscreen
@@ -588,6 +666,86 @@ TEST_F(RooWindowsRenderTest, RefreshCanResumeAfterDeadlineExceeded) {
 
   EXPECT_TRUE(refresh());
   EXPECT_EQ(QuantizeToArgb4444(color::Green), pixelAt(16, 16));
+}
+
+// A child that completed before a later sibling exceeded the deadline must
+// keep its exclusion on retry. Some widgets, including navigation
+// destinations, create exclusions only while paint() runs; losing that state
+// lets the parent's surface erase a completed child.
+TEST_F(RooWindowsRenderTest,
+       DeadlineRetryPreservesCompletedChildrenAndReopensInvalidations) {
+  auto panel = std::make_unique<OpaqueExposedPanel>(context());
+  OpaqueExposedPanel* panel_ptr = panel.get();
+  auto delayed = std::make_unique<SelfExcludingColorWidget>(
+      context(), color::Green, Dimensions(20, 20));
+  SelfExcludingColorWidget* delayed_ptr = delayed.get();
+  auto target = std::make_unique<SelfExcludingColorWidget>(
+      context(), color::Red, Dimensions(20, 20));
+  SelfExcludingColorWidget* target_ptr = target.get();
+  panel_ptr->add(std::move(delayed), Rect(0, 0, 19, 19));
+  panel_ptr->add(std::move(target), Rect(20, 0, 39, 19));
+  app_.add(std::move(panel), Box(8, 8, 47, 27));
+  ASSERT_TRUE(refresh());
+  ASSERT_EQ(QuantizeToArgb4444(color::Red), pixelAt(32, 16));
+
+  target_ptr->setPaintDelay(80);
+  delayed_ptr->setPaintDelay(80);
+  panel_ptr->invalidateInterior();
+  EXPECT_FALSE(refresh(roo_time::Uptime::Now() + roo_time::Millis(50)));
+  EXPECT_EQ(2, target_ptr->paintCount());
+  EXPECT_EQ(1, delayed_ptr->paintCount());
+
+  EXPECT_FALSE(refresh(roo_time::Uptime::Now() + roo_time::Millis(50)));
+  EXPECT_EQ(2, target_ptr->paintCount());
+  EXPECT_EQ(2, delayed_ptr->paintCount());
+
+  target_ptr->setPaintDelay(0);
+  delayed_ptr->setPaintDelay(0);
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(2, target_ptr->paintCount());
+  EXPECT_EQ(2, delayed_ptr->paintCount());
+  EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(32, 16));
+
+  // A real state change between attempts reopens just that target in the saved
+  // snapshot. The unrelated delayed sibling must remain completed.
+  delayed_ptr->setPaintDelay(80);
+  panel_ptr->invalidateInterior();
+  EXPECT_FALSE(refresh(roo_time::Uptime::Now() + roo_time::Millis(50)));
+  EXPECT_EQ(3, target_ptr->paintCount());
+  EXPECT_EQ(3, delayed_ptr->paintCount());
+
+  target_ptr->setColor(color::Yellow);
+  delayed_ptr->setPaintDelay(0);
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(4, target_ptr->paintCount());
+  EXPECT_EQ(3, delayed_ptr->paintCount());
+  EXPECT_EQ(QuantizeToArgb4444(color::Yellow), pixelAt(32, 16));
+}
+
+TEST_F(RooWindowsRenderTest,
+       CompletedDirtyWidgetPublishesTerminalStateBeforeTimeout) {
+  auto panel = std::make_unique<OpaqueExposedPanel>(context());
+  OpaqueExposedPanel* panel_ptr = panel.get();
+  auto delayed = std::make_unique<SelfExcludingColorWidget>(
+      context(), color::Green, Dimensions(20, 20));
+  SelfExcludingColorWidget* delayed_ptr = delayed.get();
+  auto animated = std::make_unique<RedirtyingColorWidget>(context());
+  RedirtyingColorWidget* animated_ptr = animated.get();
+  panel_ptr->add(std::move(delayed), Rect(0, 0, 19, 19));
+  panel_ptr->add(std::move(animated), Rect(20, 0, 39, 19));
+  app_.add(std::move(panel), Box(8, 8, 47, 27));
+  ASSERT_TRUE(refresh());
+
+  animated_ptr->setRedirty(true);
+  delayed_ptr->setPaintDelay(80);
+  panel_ptr->invalidateInterior();
+  EXPECT_FALSE(refresh(roo_time::Uptime::Now() + roo_time::Millis(50)));
+  EXPECT_EQ(2, animated_ptr->paintCount());
+
+  delayed_ptr->setPaintDelay(0);
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(3, animated_ptr->paintCount());
+  EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(32, 16));
 }
 
 // Verifies that draw-tiled clips paint output to the tile bounds even when

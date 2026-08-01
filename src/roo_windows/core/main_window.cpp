@@ -20,6 +20,12 @@ void maybeAddColor(roo_display::internal::ColorSet& palette, Color color) {
   palette.insert(color);
 }
 
+Rect UnionNonEmpty(const Rect& a, const Rect& b) {
+  if (a.empty()) return b;
+  if (b.empty()) return a;
+  return Rect::Extent(a, b);
+}
+
 }  // namespace
 
 MainWindow::MainWindow(Application& app, const roo_display::Box& bounds)
@@ -64,6 +70,7 @@ MainWindow::MainWindow(Application& app, const roo_display::Box& bounds)
 }
 
 MainWindow::~MainWindow() {
+  context().setPaintContinuation(false);
   while (active_pins_ != nullptr) {
     active_pins_ = std::move(active_pins_->next_);
   }
@@ -105,6 +112,14 @@ void MainWindow::updateLayout() {
 bool MainWindow::paintWindow(const roo_display::Surface& s,
                              roo_time::Uptime deadline) {
   preparePresentationPinsForPaint();
+  if (paint_continuation_ && !continuation_invalid_bounds_.empty()) {
+    // Preserve the completed prefix outside the newly invalidated area. Inside
+    // it, remove stale exclusions/overlays and reopen just the affected widget
+    // subtrees for this continuation.
+    clipper_state_.invalidate(continuation_invalid_bounds_.asBox());
+    invalidateDescending(continuation_invalid_bounds_);
+    continuation_invalid_bounds_ = Rect(0, 0, -1, -1);
+  }
   if (!initialized_) {
     initialized_ = true;
     s.drawObject(roo_display::Fill(
@@ -119,31 +134,36 @@ bool MainWindow::paintWindow(const roo_display::Surface& s,
       invalidateBeneath(bounds(), &scrim_, /*clip=*/true);
     }
   }
-  if (!isDirty()) return true;
+  if (!isDirty()) {
+    paint_continuation_ = false;
+    context().setPaintContinuation(false);
+    continuation_invalid_bounds_ = Rect(0, 0, -1, -1);
+    return true;
+  }
   Canvas canvas(&s);
   canvas.clipToExtents(redraw_bounds_);
   Rect old_redraw_bounds = redraw_bounds_;
   redraw_bounds_ = Rect(0, 0, -1, -1);
-  Clipper clipper(clipper_state_, s.out(), deadline);
+  Clipper clipper(clipper_state_, s.out(), deadline, paint_continuation_);
   canvas.set_out(clipper.out());
   paintWidget(canvas, clipper);
   if (clipper.isDeadlineExceeded()) {
-    // Preserve incremental timeout recovery: keep pending redraw scope and
-    // continue from partially drawn state in the next frame.
-    redraw_bounds_ = old_redraw_bounds;
+    // Keep exclusions and clipper-owned overlays from the completed foreground
+    // prefix. Clean children remain skipped on retry while their preserved
+    // exclusions protect them from the remaining lower-z paint.
+    paint_continuation_ = true;
+    context().setPaintContinuation(true);
+    redraw_bounds_ = UnionNonEmpty(old_redraw_bounds, redraw_bounds_);
     return false;
   }
+  paint_continuation_ = false;
+  context().setPaintContinuation(false);
+  continuation_invalid_bounds_ = Rect(0, 0, -1, -1);
   commitPresentationPinBounds();
   return true;
 }
 
 namespace {
-
-Rect UnionNonEmpty(const Rect& a, const Rect& b) {
-  if (a.empty()) return b;
-  if (b.empty()) return a;
-  return Rect::Extent(a, b);
-}
 
 bool IsEffectivelyVisible(const Widget& widget) {
   for (const Widget* current = &widget; current != nullptr;
@@ -317,6 +337,12 @@ void MainWindow::propagateDirty(const Widget* child, const Rect& rect) {
   }
   setDirty(clipped);
   if (!clipped.empty()) {
+    if (paint_continuation_) {
+      continuation_invalid_bounds_ =
+          continuation_invalid_bounds_.empty()
+              ? clipped
+              : Rect::Extent(continuation_invalid_bounds_, clipped);
+    }
     if (redraw_bounds_.empty()) {
       redraw_bounds_ = clipped;
     } else {
@@ -328,6 +354,12 @@ void MainWindow::propagateDirty(const Widget* child, const Rect& rect) {
 void MainWindow::childInvalidatedRegion(const Widget* child, Rect rect) {
   rect = Rect::Intersect(rect, bounds());
   if (!rect.empty()) {
+    if (paint_continuation_) {
+      continuation_invalid_bounds_ =
+          continuation_invalid_bounds_.empty()
+              ? rect
+              : Rect::Extent(continuation_invalid_bounds_, rect);
+    }
     if (redraw_bounds_.empty()) {
       redraw_bounds_ = rect;
     } else {

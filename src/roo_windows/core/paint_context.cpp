@@ -32,6 +32,10 @@ bool PaintContext::isDeadlineExceeded() const {
   return clipper_->isDeadlineExceeded();
 }
 
+void PaintContext::markPaintInterrupted() const {
+  clipper_->markPaintInterrupted();
+}
+
 PaintContext PaintContext::translated(XDim dx, YDim dy) const {
   PaintContext out(*this);
   out.canvas_.shift(dx, dy);

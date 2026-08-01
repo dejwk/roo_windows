@@ -484,7 +484,7 @@ void BlitCacheContainer::paintWidgetContents(PaintContext& ctx) {
   }
   Container::paintWidgetContents(ctx);
 
-  if (clipper.isDeadlineExceeded()) {
+  if (clipper.wasPaintInterrupted()) {
     // Preserve incremental frame recovery but disable blit reuse after an
     // aborted frame; the exclusions/content set may be only partially updated.
     blit_safe_region_ = Box(0, 0, -1, -1);

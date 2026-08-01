@@ -27,6 +27,10 @@ class MainWindow : public Container {
   /// regions that changed.
   void refreshClickAnimation();
 
+  /// Returns true while a deadline-interrupted logical paint is awaiting
+  /// continuation with its completed foreground state preserved.
+  bool hasPaintContinuation() const { return paint_continuation_; }
+
   /// Applies any pending layout requests in the widget tree.
   void updateLayout();
 
@@ -155,6 +159,9 @@ class MainWindow : public Container {
   // Maintains the area that encapsulates all content that needs to be
   // (re)drawn.
   Rect redraw_bounds_;
+
+  bool paint_continuation_ = false;
+  Rect continuation_invalid_bounds_ = Rect(0, 0, -1, -1);
 
   bool initialized_ = false;
 

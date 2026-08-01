@@ -102,7 +102,11 @@ void Application::run() {
 
 void Application::tick() {
   unsigned long now = millis();
-  root_window_.refreshClickAnimation();
+  // A continuation must finish the exact frame snapshot whose foreground
+  // exclusions were preserved. Advance animation again after it completes.
+  if (!root_window_.hasPaintContinuation()) {
+    root_window_.refreshClickAnimation();
+  }
   bool key_events_pending = drainKeyEvents();
 #if defined(ROO_THREADS_SINGLETHREADED)
   if (touch_enabled_) touch_sensor_.pollOnce();
@@ -233,10 +237,12 @@ bool Application::refresh(roo_time::Uptime deadline) {
   last_time_refreshed_ms_ = millis();
   ClickAnimation& click_animation = root_window_.click_animation();
   // refresh() is also a public, one-shot rendering entry point and therefore
-  // is not necessarily preceded by tick(). Sample immediately before drawing
-  // so standalone refreshes advance the animation and every pixel in this
-  // frame observes the same wall-clock progress.
-  click_animation.sampleFrameTime();
+  // is not necessarily preceded by tick(). Sample immediately before starting
+  // a logical paint, then retain that sample across deadline continuations so
+  // completed and retried widgets observe the same animation frame.
+  if (!root_window_.hasPaintContinuation()) {
+    click_animation.sampleFrameTime();
+  }
   // Close the drawing context before reporting a successful refresh. That
   // notification may synchronously deliver deferred onClicked() calls, which
   // can mutate the widget tree or start another interaction and must not run

@@ -94,9 +94,91 @@ class ClipperState {
   /// Creates empty reusable storage for one clipper instance.
   ClipperState() {}
 
+  /// Reopens `bounds` in retained state from an interrupted logical paint.
+  /// Completed exclusions and overlays outside the invalidated area remain
+  /// available to the continuation.
+  void invalidate(const roo_display::Box& bounds) {
+    if (bounds.empty()) return;
+
+    std::vector<roo_display::Box> retained_exclusions;
+    retained_exclusions.reserve(exclusions_.size() * 2);
+    for (const roo_display::Box& exclusion : exclusions_) {
+      forEachOutsideFragment(
+          exclusion, bounds, [&retained_exclusions](roo_display::Box fragment) {
+            retained_exclusions.push_back(std::move(fragment));
+          });
+    }
+    replacePreservingAllocation(exclusions_, retained_exclusions);
+
+    std::vector<ClippedOverlay> retained_overlays;
+    retained_overlays.reserve(overlays_.size() * 2);
+    for (const ClippedOverlay& overlay : overlays_) {
+      if (roo_display::Box::Intersect(overlay.extents(), bounds).empty()) {
+        retained_overlays.push_back(overlay);
+        continue;
+      }
+      forEachOutsideFragment(
+          overlay.deviceClip(), bounds,
+          [&retained_overlays, &overlay](roo_display::Box clip) {
+            ClippedOverlay retained(overlay.source(), std::move(clip),
+                                    overlay.dx(), overlay.dy());
+            retained.withMode(overlay.blending_mode());
+            if (!retained.extents().empty()) {
+              retained_overlays.push_back(std::move(retained));
+            }
+          });
+    }
+    replacePreservingAllocation(overlays_, retained_overlays);
+    bounded_exclusions_.clear();
+  }
+
  private:
   friend class ClipperOutput;
   friend class ::roo_windows::Clipper;
+
+  // Keep the long-lived clipper vector's allocation when the rebuilt contents
+  // fit, so repeated invalidation does not discard and reacquire its buffer.
+  // When the result outgrows that capacity, swap in the temporary's larger
+  // allocation so the new high-water mark is retained for subsequent paints.
+  template <typename T>
+  static void replacePreservingAllocation(std::vector<T>& target,
+                                          std::vector<T>& replacement) {
+    if (replacement.size() > target.capacity()) {
+      target.swap(replacement);
+      return;
+    }
+    target.clear();
+    for (T& value : replacement) {
+      target.push_back(std::move(value));
+    }
+  }
+
+  template <typename Fn>
+  static void forEachOutsideFragment(const roo_display::Box& source,
+                                     const roo_display::Box& removed, Fn&& fn) {
+    const roo_display::Box intersection =
+        roo_display::Box::Intersect(source, removed);
+    if (intersection.empty()) {
+      fn(source);
+      return;
+    }
+    if (source.yMin() < intersection.yMin()) {
+      fn(roo_display::Box(source.xMin(), source.yMin(), source.xMax(),
+                          intersection.yMin() - 1));
+    }
+    if (intersection.yMax() < source.yMax()) {
+      fn(roo_display::Box(source.xMin(), intersection.yMax() + 1, source.xMax(),
+                          source.yMax()));
+    }
+    if (source.xMin() < intersection.xMin()) {
+      fn(roo_display::Box(source.xMin(), intersection.yMin(),
+                          intersection.xMin() - 1, intersection.yMax()));
+    }
+    if (intersection.xMax() < source.xMax()) {
+      fn(roo_display::Box(intersection.xMax() + 1, intersection.yMin(),
+                          source.xMax(), intersection.yMax()));
+    }
+  }
 
   std::vector<roo_display::Box> exclusions_;
   std::vector<roo_display::Box> bounded_exclusions_;
@@ -475,7 +557,9 @@ class Clipper {
   /// short-circuited.
   Clipper(internal::ClipperState& state, roo_display::DisplayOutput& out,
           roo_time::Uptime deadline, bool resume = false)
-      : out_(state, out, resume), deadline_(deadline) {}
+      : out_(state, out, resume),
+        deadline_(deadline),
+        paint_interrupted_(false) {}
 
   /// Hints that subsequent draws will be confined to `bounds` (device
   /// coordinates). Lets the clipper temporarily ignore exclusions that fall
@@ -552,6 +636,12 @@ class Clipper {
     return roo_time::Uptime::Now() >= deadline_;
   }
 
+  /// Records that a widget stopped painting because the deadline was reached.
+  void markPaintInterrupted() { paint_interrupted_ = true; }
+
+  /// Returns true after any widget in this paint attempt reports interruption.
+  bool wasPaintInterrupted() const { return paint_interrupted_; }
+
   /// Pushes this widget's resolved overlay state onto the per-paint stack.
   void pushOverlaySpec(Widget& widget, const Canvas& canvas) {
     out_.pushOverlaySpec(widget, canvas);
@@ -568,6 +658,7 @@ class Clipper {
  private:
   internal::ClipperOutput out_;
   roo_time::Uptime deadline_;
+  bool paint_interrupted_;
 };
 
 }  // namespace roo_windows
