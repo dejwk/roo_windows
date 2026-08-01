@@ -125,6 +125,23 @@ class TestNavigationRail : public NavigationRail {
   }
 };
 
+class QueuedKeySource : public KeySource {
+ public:
+  int drain(KeyEvent* out, int max_events) override {
+    int count = 0;
+    while (count < max_events && !events_.empty()) {
+      out[count++] = events_.front();
+      events_.erase(events_.begin());
+    }
+    return count;
+  }
+
+  void push(KeyEvent event) { events_.push_back(event); }
+
+ private:
+  std::vector<KeyEvent> events_;
+};
+
 // Verifies the Phase 1 pointer-size-aware budgets that keep badge state off
 // base destinations and keep rail state limited to its header, destination
 // storage, selection, and layout bits.
@@ -475,6 +492,62 @@ TEST(Material3NavigationRail,
   EXPECT_TRUE(inbox_raw->isDirty());
 
   ASSERT_TRUE(app.refresh());
+  EXPECT_FALSE(inbox_raw->isDirty());
+}
+
+// Verifies that keyboard activation enters the shared click-animation path so
+// key-up merges selection into the pending held-press settlement repaint.
+TEST(Material3NavigationRail,
+     KeyReleaseCoalescesSelectionIntoHeldPressSettlement) {
+  constexpr int16_t kWidth = 80;
+  constexpr int16_t kHeight = 160;
+  roo::byte raster[kWidth * kHeight * 2];
+  roo_display::OffscreenDevice<roo_display::Argb4444> offscreen(
+      kWidth, kHeight, raster, roo_display::Argb4444());
+  roo_display::Display display(offscreen);
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  QueuedKeySource keys;
+  Application app(&env, display, keys, false);
+
+  auto rail = std::make_unique<TestNavigationRail>(app.context());
+  TestNavigationRail* rail_raw = rail.get();
+  auto home = std::make_unique<NavigationRailDestination>(
+      app.context(), "Home", &ic_outlined_24_action_done());
+  auto inbox = std::make_unique<NavigationRailDestination>(
+      app.context(), "Inbox", &ic_outlined_24_action_bookmark());
+  NavigationRailDestination* inbox_raw = inbox.get();
+  ASSERT_TRUE(rail->add(WidgetRef(std::move(home))));
+  ASSERT_TRUE(rail->add(WidgetRef(std::move(inbox))));
+  app.add(std::move(rail), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
+  ASSERT_TRUE(app.refresh());
+  ASSERT_TRUE(inbox_raw->requestFocus());
+  ASSERT_TRUE(app.refresh());
+
+  keys.push(KeyEvent{KeyPhase::kDown, KeyCode::kEnter, 0, 0});
+  app.start();
+  scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 1);
+  EXPECT_TRUE(inbox_raw->isPressed());
+  EXPECT_TRUE(inbox_raw->isClicking());
+  EXPECT_EQ(inbox_raw, app.root().click_animation().target());
+
+  delay(kPressAnimationMillis + 20);
+  app.root().refreshClickAnimation();
+  ASSERT_TRUE(app.refresh());
+  ASSERT_TRUE(inbox_raw->isPressed());
+  ASSERT_FALSE(inbox_raw->isClicking());
+  ASSERT_TRUE(inbox_raw->isDirty());
+  ASSERT_TRUE(app.refresh());
+  ASSERT_FALSE(inbox_raw->isDirty());
+  ASSERT_EQ(0, rail_raw->selectedIndex());
+
+  keys.push(KeyEvent{KeyPhase::kUp, KeyCode::kEnter, 0, 0});
+  delay(30);
+  scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 1);
+
+  EXPECT_EQ(1, rail_raw->selectedIndex());
+  EXPECT_TRUE(inbox_raw->selected());
+  EXPECT_EQ(std::vector<int>({1}), rail_raw->invoked);
   EXPECT_FALSE(inbox_raw->isDirty());
 }
 

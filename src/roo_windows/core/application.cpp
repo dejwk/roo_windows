@@ -198,7 +198,9 @@ no_directional_traversal:
       focused->isEnabled()) {
     armed_key_widget_ = focused;
     armed_key_ = event.code;
-    focused->setPressed(true);
+    // Share the base visual press lifecycle without invoking touch-specific
+    // onShowPress() overrides such as slider value changes.
+    focused->Widget::onShowPress(focused->width() / 2, focused->height() / 2);
   } else if (event.phase == KeyPhase::kUp && armed_key_widget_ == focused &&
              armed_key_ == event.code) {
     armed_key_widget_ = nullptr;

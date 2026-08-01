@@ -21,8 +21,8 @@ evaluates concrete refactoring options against those constraints.
 Click feedback is not only an interpolation from progress 0 to 1. It spans
 several independently timed systems:
 
-- gesture recognition (`onDown()`, delayed `onShowPress()`, tap release, and
-  cancellation),
+- input recognition (`onDown()`, delayed `onShowPress()`, tap release,
+  Enter/Space press and release, and cancellation),
 - animation progression and invalidation in `ClickAnimation::tick()`,
 - incremental drawing to displays that may take longer than a nominal frame,
 - widget state changes performed by `onClicked()`,
@@ -48,7 +48,7 @@ The following states are related but are not interchangeable.
 
 | State | Meaning |
 | --- | --- |
-| `kWidgetPressed` / `isPressed()` | The gesture is still physically held. It also drives the static pressed overlay after animation finishes. |
+| `kWidgetPressed` / `isPressed()` | The pointer or primary key is still physically held. It also drives the static pressed overlay after animation finishes. |
 | `kWidgetClicking` / `isClicking()` | The widget is still rendering its animated click reveal. |
 | `ClickAnimation::target_` | The one widget owned by every non-idle controller phase. `target()` exposes it only while visual animation ownership remains. |
 | `ClickAnimation::phase_` | One of idle, animating-unconfirmed, animating-confirmed, awaiting-release, or awaiting-refresh. It replaces the former second target pointer and lifecycle booleans. |
@@ -199,6 +199,21 @@ In that path `Widget::onSingleTapUp()`:
 Controller-owned admission and identity checks are essential. Without them, a
 quick release on another widget could replace the target or confirm the first
 widget while losing its own action.
+
+### Primary key press
+
+The framework's Enter/Space fallback enters the same base visual lifecycle at
+the focused widget's center. Key-down invokes `Widget::onShowPress()` with
+qualified base dispatch, so it acquires click-animation ownership and pressed
+state without running control-specific touch preprocessing such as slider
+value changes. Matching key-up calls `onSingleTapUp()` and therefore confirms
+the existing target instead of first clearing the pressed overlay and
+reserving a non-animated click.
+
+This gives quick and held key presses the same final-frame and late-release
+settlement as touch. In particular, a navigation destination commits selection
+before the overlay-free settlement repaint, so key release cannot expose one
+intermediate unselected frame.
 
 ### Cancellation
 
