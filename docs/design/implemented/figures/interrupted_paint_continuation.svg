@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="330"
+     viewBox="0 0 960 330" role="img"
+     aria-labelledby="title description">
+  <title id="title">Interrupted paint continuation and selective reopening</title>
+  <desc id="description">
+    Three panels show a completed foreground exclusion at timeout, the same
+    exclusion protecting pixels during continuation, and an invalidation
+    splitting the exclusion into four retained fragments around a reopened
+    center rectangle.
+  </desc>
+
+  <rect x="0" y="0" width="960" height="330" fill="#ffffff"/>
+  <style>
+    text { font-family: Arial, Helvetica, sans-serif; fill: #1f2937; }
+    .heading { font-size: 18px; font-weight: 700; }
+    .label { font-size: 14px; }
+    .small { font-size: 12px; }
+    .frame { fill: #f3f4f6; stroke: #374151; stroke-width: 2; }
+    .retained { fill: #73d4ce; stroke: #087f8c; stroke-width: 2; }
+    .reopened { fill: #ffd19a; stroke: #c65d00; stroke-width: 2; }
+    .pending { fill: #e5e7eb; stroke: #9ca3af; stroke-width: 1.5;
+               stroke-dasharray: 5 4; }
+    .arrow { fill: none; stroke: #6b7280; stroke-width: 2; }
+  </style>
+
+  <text class="heading" x="25" y="32">1. Attempt reaches deadline</text>
+  <rect class="frame" x="25" y="52" width="270" height="180" rx="4"/>
+  <rect class="pending" x="45" y="72" width="230" height="140"/>
+  <rect class="retained" x="95" y="102" width="130" height="80"/>
+  <text class="label" x="118" y="137">completed</text>
+  <text class="label" x="115" y="157">foreground</text>
+  <text class="small" x="87" y="253">terminal exclusion E is retained</text>
+  <path class="arrow" d="M 260 94 L 260 67 M 255 74 L 260 67 L 265 74"/>
+  <text class="small" x="197" y="88">lower-Z work owed</text>
+
+  <text class="heading" x="345" y="32">2. Continuation resumes</text>
+  <rect class="frame" x="345" y="52" width="270" height="180" rx="4"/>
+  <rect x="365" y="72" width="230" height="140" fill="#cbd5e1"
+        stroke="#64748b" stroke-width="1.5"/>
+  <rect class="retained" x="415" y="102" width="130" height="80"/>
+  <text class="label" x="438" y="137">protected</text>
+  <text class="label" x="443" y="157">pixels</text>
+  <text class="small" x="383" y="253">lower-Z paint is clipped around E</text>
+  <path class="arrow" d="M 315 142 L 332 142 M 325 137 L 332 142 L 325 147"/>
+
+  <text class="heading" x="665" y="32">3. State changes before retry</text>
+  <rect class="frame" x="665" y="52" width="270" height="180" rx="4"/>
+  <rect class="pending" x="685" y="72" width="230" height="140"/>
+
+  <!-- E minus I: top, bottom, left, and right non-overlapping fragments. -->
+  <rect class="retained" x="735" y="102" width="130" height="25"/>
+  <rect class="retained" x="735" y="157" width="130" height="25"/>
+  <rect class="retained" x="735" y="127" width="45" height="30"/>
+  <rect class="retained" x="820" y="127" width="45" height="30"/>
+  <rect class="reopened" x="780" y="127" width="40" height="30"/>
+
+  <text class="small" x="787" y="146">I</text>
+  <text class="small" x="720" y="253">E \ I stays retained; I is repainted</text>
+
+  <rect class="retained" x="260" y="286" width="22" height="16"/>
+  <text class="small" x="290" y="299">retained terminal state</text>
+  <rect class="reopened" x="470" y="286" width="22" height="16"/>
+  <text class="small" x="500" y="299">reopened invalidation</text>
+  <rect x="655" y="286" width="22" height="16" fill="#cbd5e1"
+        stroke="#64748b" stroke-width="1.5"/>
+  <text class="small" x="685" y="299">continued lower-Z paint</text>
+</svg>
