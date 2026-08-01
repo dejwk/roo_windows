@@ -1,3 +1,6 @@
+// Learning goal: use fixed secondary tabs as a view filter rather than page
+// navigation. Tap Today, Week, or Month to update the same history view.
+
 // *************** EMULATOR SETUP BEGIN
 
 #ifdef ROO_TESTING
@@ -43,14 +46,13 @@ roo_windows::fake::FltkKeySource emulator_keys;
 #include "roo_display.h"
 #include "roo_display/driver/ili9341.h"
 #include "roo_display/driver/touch_xpt2046.h"
-#include "roo_icons/outlined/24/action.h"
-#include "roo_icons/outlined/24/navigation.h"
 #include "roo_scheduler.h"
 #include "roo_windows.h"
 
 using namespace roo_display;
 using namespace roo_windows;
 
+// Change these pins and the touch calibration for your display board.
 static constexpr int kCsPin = 7;
 static constexpr int kDcPin = 2;
 static constexpr int kRstPin = 3;
@@ -74,67 +76,76 @@ void initDisplay() {
 // *************** EXAMPLE STARTS HERE
 
 #include "roo_windows/containers/flex_layout.h"
-#include "roo_windows/material3/navigation_rail/navigation_rail.h"
-#include "roo_windows/widgets/icon.h"
+#include "roo_windows/material3/tabs/tabs.h"
+#include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_label.h"
 
 namespace {
 
-class HeaderIcon : public Icon {
+/// Secondary tabs that update one history view instead of navigating pages.
+class HistoryTabs : public material3::Tabs {
  public:
-  using Icon::Icon;
-  bool isClickable() const override { return true; }
-};
-
-class ExampleRail : public material3::NavigationRail {
- public:
-  ExampleRail(ApplicationContext& context, TextLabel& status)
-      : material3::NavigationRail(context), status_(status) {}
+  /// Creates filter tabs that update the supplied range and summary labels.
+  HistoryTabs(ApplicationContext& context, TextLabel& range, TextLabel& summary)
+      : material3::Tabs(context, material3::TabsVariant::kSecondary),
+        range_(range),
+        summary_(summary) {}
 
  protected:
   void onSelectedIndexChanged(int old_index, int new_index) override {
     (void)old_index;
-    static constexpr const char* kMessages[] = {
-        "Home selected", "Inbox selected", "Saved selected"};
-    status_.setText(kMessages[new_index]);
+    static constexpr const char* kRanges[] = {"Today", "Last 7 days",
+                                              "Last 30 days"};
+    static constexpr const char* kSummaries[] = {
+        "25.1 °C to 27.6 °C", "24.4 °C to 28.0 °C", "21.8 °C to 28.3 °C"};
+    range_.setText(kRanges[new_index]);
+    summary_.setText(kSummaries[new_index]);
   }
 
  private:
-  TextLabel& status_;
+  TextLabel& range_;
+  TextLabel& summary_;
 };
 
-class NavigationRailScreen : public FlexLayout {
+/// Temperature history screen with a fixed secondary-tab filter.
+class TemperatureHistory : public FlexLayout {
  public:
-  explicit NavigationRailScreen(ApplicationContext& context)
-      : FlexLayout(context, FlexDirection::kRow),
-        status_(context, "Home selected", material2::text_style_h6()),
-        header_(context, ic_outlined_24_navigation_menu()),
-        home_(context, "Home", &ic_outlined_24_navigation_home_work()),
-        inbox_(context, "Inbox", &ic_outlined_24_action_bookmark()),
-        saved_(context, "Saved", &ic_outlined_24_action_done()),
-        rail_(context, status_) {
-    setPadding(Padding(Scaled(8)));
-    setGap(Scaled(12));
-    setAlignItems(AlignItems::kCenter);
+  /// Creates the history view and its Today, Week, and Month filters.
+  explicit TemperatureHistory(ApplicationContext& context)
+      : FlexLayout(context, FlexDirection::kColumn),
+        title_(context, "Temperature history",
+               material3::text_style_title_large()),
+        range_(context, "Last 7 days", material3::text_style_title_medium()),
+        summary_(context, "24.4 °C to 28.0 °C",
+                 material3::text_style_headline_medium()),
+        tabs_(context, range_, summary_),
+        today_(context, "Today"),
+        week_(context, "Week"),
+        month_(context, "Month") {
+    setPadding(Padding(Scaled(12), Scaled(14)));
+    setGap(Scaled(10));
 
-    rail_.setHeader(WidgetRef(header_));
-    rail_.add(WidgetRef(home_));
-    rail_.add(WidgetRef(inbox_));
-    rail_.add(WidgetRef(saved_));
-    rail_.setSelectedIndex(1);
-    inbox_.setBadgeValue(12);
+    // Secondary tabs refine the current view; they do not replace the screen
+    // or participate in back navigation.
+    tabs_.addTab(today_);
+    tabs_.addTab(week_);
+    tabs_.addTab(month_);
+    tabs_.setSelectedIndex(1, false);
 
-    add(rail_, {.flex_grow = 0, .flex_shrink = 0});
-    add(status_, {.flex_grow = 1, .flex_shrink = 1});
+    add(title_, {.flex_grow = 0, .flex_shrink = 0});
+    add(tabs_, {.flex_grow = 0, .flex_shrink = 0});
+    add(range_, {.flex_grow = 0, .flex_shrink = 0});
+    add(summary_, {.flex_grow = 0, .flex_shrink = 0});
   }
 
  private:
-  TextLabel status_;
-  HeaderIcon header_;
-  material3::NavigationRailDestination home_;
-  material3::BadgedNavigationRailDestination inbox_;
-  material3::NavigationRailDestination saved_;
-  ExampleRail rail_;
+  TextLabel title_;
+  TextLabel range_;
+  TextLabel summary_;
+  HistoryTabs tabs_;
+  material3::Tab today_;
+  material3::Tab week_;
+  material3::Tab month_;
 };
 
 }  // namespace
@@ -146,8 +157,8 @@ Application app(&env, display, emulator_keys, true);
 #else
 Application app(&env, display);
 #endif
-NavigationRailScreen navigation_rail_screen(app.context());
-SingletonActivity activity(app, navigation_rail_screen);
+TemperatureHistory temperature_history(app.context());
+SingletonActivity activity(app, temperature_history);
 
 void setup() {
   initDisplay();

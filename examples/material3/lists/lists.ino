@@ -125,7 +125,7 @@ class StaticSettingsSection : public FlexLayout {
         solar_delta_row_(
             context,
             WrappedTwoLine("Solar delta",
-                           "Starts when the roof loop exceeds the pool by 4 C "
+                           "Starts when the roof loop exceeds the pool by 4 °C "
                            "and pauses when freeze guard is active")),
         safety_lock_row_(context,
                          material3::StandardListItemInit::OneLine(

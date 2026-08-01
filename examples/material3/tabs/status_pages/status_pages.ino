@@ -1,3 +1,6 @@
+// Learning goal: bind primary tabs to swipeable application pages. Tap a tab
+// or swipe the page area; both interactions keep selection synchronized.
+
 // *************** EMULATOR SETUP BEGIN
 
 #ifdef ROO_TESTING
@@ -14,17 +17,16 @@ using roo_testing_transducers::FltkViewport;
 
 struct Emulator {
   FltkViewport viewport;
-  FlexViewport flexViewport;
-
+  FlexViewport flex_viewport;
   FakeIli9341Spi display;
   FakeXpt2046Spi touch;
 
   Emulator()
       : viewport(),
-        flexViewport(viewport, 1, FlexViewport::kRotationRight),
-        display(flexViewport),
-        touch(flexViewport, FakeXpt2046Spi::Calibration(269, 249, 3829, 3684,
-                                                        true, false, false)) {
+        flex_viewport(viewport, 1, FlexViewport::kRotationRight),
+        display(flex_viewport),
+        touch(flex_viewport, FakeXpt2046Spi::Calibration(269, 249, 3829, 3684,
+                                                         true, false, false)) {
     FakeEsp32().attachSpiDevice(display, 4, 5, 6);
     FakeEsp32().gpio.attachOutput(7, display.cs());
     FakeEsp32().gpio.attachOutput(2, display.dc());
@@ -42,6 +44,8 @@ roo_windows::fake::FltkKeySource emulator_keys;
 
 #include "Arduino.h"
 #include "roo_display.h"
+#include "roo_display/driver/ili9341.h"
+#include "roo_display/driver/touch_xpt2046.h"
 #include "roo_icons/outlined/24/action.h"
 #include "roo_scheduler.h"
 #include "roo_windows.h"
@@ -49,9 +53,7 @@ roo_windows::fake::FltkKeySource emulator_keys;
 using namespace roo_display;
 using namespace roo_windows;
 
-#include "roo_display/driver/ili9341.h"
-#include "roo_display/driver/touch_xpt2046.h"
-
+// Change these pins and the touch calibration for your display board.
 static constexpr int kCsPin = 7;
 static constexpr int kDcPin = 2;
 static constexpr int kRstPin = 3;
@@ -62,7 +64,6 @@ static constexpr int kTouchCsPin = 1;
 
 Ili9341spi<kCsPin, kDcPin, kRstPin> screen(Orientation().rotateLeft());
 TouchXpt2046<kTouchCsPin> touch;
-
 Display display(screen, touch,
                 TouchCalibration(269, 249, 3829, 3684,
                                  Orientation::LeftDown()));
@@ -78,40 +79,43 @@ void initDisplay() {
 #include "roo_windows/containers/flex_layout.h"
 #include "roo_windows/containers/horizontal_page_host.h"
 #include "roo_windows/material3/tabs/tabs.h"
+#include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_label.h"
 
 namespace {
 
-class DemoPageHost;
+class StatusPages;
 
-class DemoTabs : public material3::Tabs {
+/// Primary tabs that send selected indices to a bound page host.
+class StatusTabs : public material3::Tabs {
  public:
-  explicit DemoTabs(ApplicationContext& context)
-      : material3::Tabs(context, material3::TabsVariant::kPrimary),
-        pages_(nullptr) {}
+  /// Creates an initially unbound primary tab row.
+  explicit StatusTabs(ApplicationContext& context)
+      : material3::Tabs(context), pages_(nullptr) {}
 
-  void bind(DemoPageHost& pages) { pages_ = &pages; }
+  /// Binds the page host that follows tab selection.
+  void bind(StatusPages& pages) { pages_ = &pages; }
 
  protected:
   void onSelectedIndexChanged(int old_index, int new_index) override;
 
  private:
-  DemoPageHost* pages_;
+  StatusPages* pages_;
 };
 
-class DemoPageHost : public HorizontalPageHost {
+/// Page host that sends swipe targets back to its bound primary tabs.
+class StatusPages : public HorizontalPageHost {
  public:
-  explicit DemoPageHost(ApplicationContext& context)
+  /// Creates an initially unbound horizontal page host.
+  explicit StatusPages(ApplicationContext& context)
       : HorizontalPageHost(context), tabs_(nullptr) {}
 
-  void bind(DemoTabs& tabs) { tabs_ = &tabs; }
+  /// Binds the tab row that follows page swipe targets.
+  void bind(StatusTabs& tabs) { tabs_ = &tabs; }
 
  protected:
-  void onSettledIndexChanged(int old_index, int new_index) override {
-    (void)old_index;
-    (void)new_index;
-  }
-
+  // targetIndex changes as soon as a swipe commits to a likely page, so the
+  // tab indicator can respond before the page's settle animation completes.
   void onTargetIndexChanged(int old_index, int new_index) override {
     (void)old_index;
     if (tabs_ != nullptr && tabs_->selectedIndex() != new_index) {
@@ -120,88 +124,63 @@ class DemoPageHost : public HorizontalPageHost {
   }
 
  private:
-  DemoTabs* tabs_;
+  StatusTabs* tabs_;
 };
 
-void DemoTabs::onSelectedIndexChanged(int old_index, int new_index) {
+void StatusTabs::onSelectedIndexChanged(int old_index, int new_index) {
   (void)old_index;
   if (pages_ != nullptr && pages_->targetIndex() != new_index) {
     pages_->setCurrentIndex(new_index, true);
   }
 }
 
-class TabsScreen : public FlexLayout {
+/// Pool status screen with synchronized tabs and swipeable pages.
+class PoolStatus : public FlexLayout {
  public:
-  explicit TabsScreen(ApplicationContext& context)
+  /// Creates the three tabs, matching pages, and bidirectional binding.
+  explicit PoolStatus(ApplicationContext& context)
       : FlexLayout(context, FlexDirection::kColumn),
-        pages_(context),
         tabs_(context),
-        secondary_tabs_(context, material3::TabsVariant::kSecondary),
         overview_tab_(context, "Overview"),
         heating_tab_(context, "Heating"),
         history_tab_(context, "History"),
-        today_tab_(context, "Today"),
-        week_tab_(context, "Week"),
-        month_tab_(context, "Month"),
-        scroll_overview_tab_(context, "Overview"),
-        scroll_pump_tab_(context, "Pump schedule"),
-        scroll_chemistry_tab_(context, "Chemistry"),
-        scroll_weather_tab_(context, "Weather forecast"),
-        scroll_history_tab_(context, "Temperature history"),
-        scrollable_tabs_(context, material3::TabsVariant::kSecondary),
-        overview_(context, "Pool status overview", material2::text_style_h6()),
-        heating_(context, "Solar heating controls", material2::text_style_h6()),
-        history_(context, "Recent temperature history",
-                 material2::text_style_h6()) {
-    setPadding(Padding(Scaled(12), Scaled(8)));
-    setGap(Scaled(8));
-
+        pages_(context),
+        overview_(context, "Water 27.4 °C · Pump running",
+                  material3::text_style_title_large()),
+        heating_(context, "Solar collector 41.8 °C",
+                 material3::text_style_title_large()),
+        history_(context, "Today: 25.1 °C to 27.6 °C",
+                 material3::text_style_title_large()) {
     tabs_.bind(pages_);
     pages_.bind(tabs_);
 
-    heating_tab_.setIcon(&ic_outlined_24_action_done());
-
+    overview_tab_.setIcon(&ic_outlined_24_action_dashboard());
+    heating_tab_.setIcon(&ic_outlined_24_action_eco());
+    history_tab_.setIcon(&ic_outlined_24_action_history());
     tabs_.addTab(overview_tab_);
     tabs_.addTab(heating_tab_);
     tabs_.addTab(history_tab_);
 
-    secondary_tabs_.addTab(today_tab_);
-    secondary_tabs_.addTab(week_tab_);
-    secondary_tabs_.addTab(month_tab_);
-    secondary_tabs_.setSelectedIndex(1, false);
-
-    scrollable_tabs_.addTab(scroll_overview_tab_);
-    scrollable_tabs_.addTab(scroll_pump_tab_);
-    scrollable_tabs_.addTab(scroll_chemistry_tab_);
-    scrollable_tabs_.addTab(scroll_weather_tab_);
-    scrollable_tabs_.addTab(scroll_history_tab_);
-
+    // Page order must match tab order because the callbacks share indices.
     pages_.addPage(overview_);
     pages_.addPage(heating_);
     pages_.addPage(history_);
 
+    // Keep page content away from the screen and tab-row edges.
+    overview_.setPadding(PaddingSize::kLarge);
+    heating_.setPadding(PaddingSize::kLarge);
+    history_.setPadding(PaddingSize::kLarge);
+
     add(tabs_, {.flex_grow = 0, .flex_shrink = 0});
     add(pages_, {.flex_grow = 1, .flex_shrink = 1});
-    add(secondary_tabs_, {.flex_grow = 0, .flex_shrink = 0});
-    add(scrollable_tabs_, {.flex_grow = 0, .flex_shrink = 0});
   }
 
  private:
-  DemoPageHost pages_;
-  DemoTabs tabs_;
-  material3::Tabs secondary_tabs_;
+  StatusTabs tabs_;
   material3::Tab overview_tab_;
   material3::Tab heating_tab_;
   material3::Tab history_tab_;
-  material3::Tab today_tab_;
-  material3::Tab week_tab_;
-  material3::Tab month_tab_;
-  material3::Tab scroll_overview_tab_;
-  material3::Tab scroll_pump_tab_;
-  material3::Tab scroll_chemistry_tab_;
-  material3::Tab scroll_weather_tab_;
-  material3::Tab scroll_history_tab_;
-  material3::ScrollableTabs scrollable_tabs_;
+  StatusPages pages_;
   TextLabel overview_;
   TextLabel heating_;
   TextLabel history_;
@@ -216,8 +195,8 @@ Application app(&env, display, emulator_keys, true);
 #else
 Application app(&env, display);
 #endif
-TabsScreen tabs_screen(app.context());
-SingletonActivity activity(app, tabs_screen);
+PoolStatus pool_status(app.context());
+SingletonActivity activity(app, pool_status);
 
 void setup() {
   initDisplay();
