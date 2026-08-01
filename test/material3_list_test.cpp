@@ -1445,6 +1445,28 @@ TEST(Material3List, ListPropagatesPositionVariantStyleAndSegmentedGap) {
             third.offsetTop());
 }
 
+TEST(Material3List, ListEntryResolvesFlatSegmentedAndSelectedFills) {
+  roo_scheduler::Scheduler scheduler;
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
+  TestListEntry entry(context);
+  const ColorScheme& colors = context.theme().material3Theme().color;
+
+  EXPECT_EQ(colors.surface, entry.background());
+
+  ListEntryVisualContext segmented;
+  segmented.style = ListStyle::kSegmented;
+  entry.setVisualContext(segmented);
+  EXPECT_EQ(colors.surfaceContainer, entry.background());
+  EXPECT_EQ(ColorToken::kSurfaceContainer, entry.containerRole());
+
+  ListEntryVisualContext selected;
+  selected.selected = true;
+  entry.setVisualContext(selected);
+  EXPECT_EQ(colors.secondaryContainer, entry.background());
+  EXPECT_EQ(ColorToken::kSecondaryContainer, entry.containerRole());
+}
+
 // Verifies that selection policy resolves the list-owned selected state and
 // divider visibility from stored per-entry selection hints.
 TEST(Material3List, ListResolvesSelectionAndDividerContext) {

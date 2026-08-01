@@ -875,7 +875,27 @@ const ListEntryVisualContext& ListEntry::visualContext() const {
       visual_context_.variant == ListVariant::kExpressive) {
     return ::roo_windows::material3::ColorToken::kSecondaryContainer;
   }
+  if (visual_context_.style == ListStyle::kSegmented) {
+    return ::roo_windows::material3::ColorToken::kSurfaceContainer;
+  }
   return ::roo_windows::material3::ColorToken::kSurface;
+}
+
+Color ListEntry::background() const {
+  const ColorScheme& colors = theme().material3Theme().color;
+
+  if (visual_context_.selected &&
+      visual_context_.variant == ListVariant::kExpressive) {
+    return colors.secondaryContainer;
+  }
+  if (visual_context_.style == ListStyle::kSegmented) {
+    // Standard lists intentionally stay flat on the surrounding surface.
+    // Segmented rows, however, need a distinct tonal container: unlike
+    // surfaceContainerLow, this level remains visibly separate after RGB565
+    // quantization while preserving the Material 3 surface hierarchy.
+    return colors.surfaceContainer;
+  }
+  return colors.surface;
 }
 
 BorderStyle ListEntry::getBorderStyle() const {
