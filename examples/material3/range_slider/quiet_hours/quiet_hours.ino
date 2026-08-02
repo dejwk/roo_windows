@@ -80,8 +80,8 @@ void initDisplay() {
 #include "roo_windows/containers/flex_layout.h"
 #include "roo_windows/material3/slider/range_slider.h"
 #include "roo_windows/material3/typography.h"
-#include "roo_windows/widgets/text_label.h"
 #include "roo_windows/widgets/text_block.h"
+#include "roo_windows/widgets/text_label.h"
 
 namespace {
 
@@ -90,8 +90,8 @@ constexpr material3::SliderStyle QuietHoursStyle() {
   material3::SliderStyle style;
   style.size = material3::SliderSize::kLarge;
   style.tick_mode = material3::SliderTickMode::kShowTicks;
-  style.value_indicator =
-      material3::SliderValueIndicatorBehavior::kShowOnInteraction;
+  // No need for the bubble since we're showing the selected range in a separate label.
+  style.value_indicator = material3::SliderValueIndicatorBehavior::kHidden;
   return style;
 }
 
@@ -173,13 +173,16 @@ class QuietHours : public FlexLayout {
         value_(context, "", material3::text_style_display_small()),
         interaction_(context, "", material3::text_style_body_medium()),
         slider_(context, value_, interaction_) {
-    setPadding(Padding(Scaled(16)));
-    setGap(Scaled(14));
-    add(title_, {.flex_grow = 0, .flex_shrink = 0});
-    add(guidance_, {.flex_grow = 0, .flex_shrink = 0});
-    add(value_, {.flex_grow = 0, .flex_shrink = 0});
-    add(slider_, {.flex_grow = 0, .flex_shrink = 1});
-    add(interaction_, {.flex_grow = 0, .flex_shrink = 0});
+    // Keep the large slider at its intrinsic 68 px height. This compact
+    // spacing leaves room for the two-line guidance and status text within
+    // the 240 px example display.
+    setPadding(Padding(Scaled(8)));
+    setGap(Scaled(4));
+    add(title_);
+    add(guidance_);
+    add(value_);
+    add(slider_);
+    add(interaction_);
   }
 
  private:
