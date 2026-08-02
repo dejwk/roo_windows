@@ -105,7 +105,7 @@ class MaintenanceItem : public material3::InvokableListItemBase {
                   roo::string_view supporting, roo::string_view details)
       : material3::InvokableListItemBase(headline, supporting, {}, {}, true),
         details_(context, std::string(details),
-                 material3::text_style_body_medium()),
+                 material3::text_style_body_medium(), kTop | kLeft),
         details_panel_(context) {
     details_panel_.setAnimationDuration(180);
     details_panel_.setExpanded(false, false);
@@ -122,7 +122,7 @@ class MaintenanceItem : public material3::InvokableListItemBase {
   }
 
  private:
-  TextLabel details_;
+  TextBlock details_;
   material3::ExpandablePanel details_panel_;
 };
 
