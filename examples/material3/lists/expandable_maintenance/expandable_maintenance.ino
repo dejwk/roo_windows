@@ -83,9 +83,19 @@ void initDisplay() {
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_label.h"
 #include "roo_windows/widgets/text_block.h"
-#include "../list_example_layout.h"
 
 namespace {
+
+class FullWidthColumn : public FlexLayout {
+ public:
+  explicit FullWidthColumn(ApplicationContext& context)
+      : FlexLayout(context, FlexDirection::kColumn) {}
+
+  PreferredSize getPreferredSize() const override {
+    return PreferredSize(PreferredSize::MatchParentWidth(),
+                         PreferredSize::WrapContentHeight());
+  }
+};
 
 /// Invokable maintenance item that owns its expandable details panel.
 class MaintenanceItem : public material3::InvokableListItemBase {
@@ -144,7 +154,7 @@ class MaintenancePlan : public SimpleScrollablePanel {
   }
 
  private:
-  material3_examples::FullWidthColumn content_;
+  FullWidthColumn content_;
   TextLabel title_;
   TextBlock guidance_;
   material3::List tasks_;

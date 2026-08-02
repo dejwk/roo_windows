@@ -81,9 +81,19 @@ void initDisplay() {
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_label.h"
 #include "roo_windows/widgets/text_block.h"
-#include "../list_example_layout.h"
 
 namespace {
+
+class FullWidthColumn : public FlexLayout {
+ public:
+  explicit FullWidthColumn(ApplicationContext& context)
+      : FlexLayout(context, FlexDirection::kColumn) {}
+
+  PreferredSize getPreferredSize() const override {
+    return PreferredSize(PreferredSize::MatchParentWidth(),
+                         PreferredSize::WrapContentHeight());
+  }
+};
 
 /// Compatibility menu using the opt-in baseline list variant.
 class LegacyServiceMenu : public SimpleScrollablePanel {
@@ -125,7 +135,7 @@ class LegacyServiceMenu : public SimpleScrollablePanel {
   }
 
  private:
-  material3_examples::FullWidthColumn content_;
+  FullWidthColumn content_;
   TextLabel title_;
   TextBlock guidance_;
   material3::List menu_;

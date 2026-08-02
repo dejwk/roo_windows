@@ -81,9 +81,19 @@ void initDisplay() {
 #include "roo_windows/material3/list/list.h"
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_label.h"
-#include "../list_example_layout.h"
 
 namespace {
+
+class FullWidthColumn : public FlexLayout {
+ public:
+  explicit FullWidthColumn(ApplicationContext& context)
+      : FlexLayout(context, FlexDirection::kColumn) {}
+
+  PreferredSize getPreferredSize() const override {
+    return PreferredSize(PreferredSize::MatchParentWidth(),
+                         PreferredSize::WrapContentHeight());
+  }
+};
 
 /// Equipment list whose invokable rows update adjacent screen state.
 class EquipmentNavigation : public SimpleScrollablePanel {
@@ -119,7 +129,7 @@ class EquipmentNavigation : public SimpleScrollablePanel {
   }
 
  private:
-  material3_examples::FullWidthColumn content_;
+  FullWidthColumn content_;
   TextLabel title_;
   TextLabel feedback_;
   material3::List equipment_;

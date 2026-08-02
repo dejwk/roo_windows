@@ -82,9 +82,19 @@ void initDisplay() {
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_label.h"
 #include "roo_windows/widgets/text_block.h"
-#include "../list_example_layout.h"
 
 namespace {
+
+class FullWidthColumn : public FlexLayout {
+ public:
+  explicit FullWidthColumn(ApplicationContext& context)
+      : FlexLayout(context, FlexDirection::kColumn) {}
+
+  PreferredSize getPreferredSize() const override {
+    return PreferredSize(PreferredSize::MatchParentWidth(),
+                         PreferredSize::WrapContentHeight());
+  }
+};
 
 // Creates a two-line row whose supporting text can wrap on compact displays.
 material3::StandardListItemInit WrappedSetting(roo::string_view headline,
@@ -137,7 +147,7 @@ class PoolSettings : public SimpleScrollablePanel {
   }
 
  private:
-  material3_examples::FullWidthColumn content_;
+  FullWidthColumn content_;
   TextLabel title_;
   TextBlock guidance_;
   material3::List list_;
