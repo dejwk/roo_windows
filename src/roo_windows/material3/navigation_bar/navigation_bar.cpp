@@ -78,11 +78,12 @@ DestinationContentGeometry ResolveContentGeometry(
         Scaled(tokens.vertical_indicator_width_dp), target.width());
     int16_t indicator_height = std::min<int16_t>(
         Scaled(tokens.vertical_indicator_height_dp), target.height());
+    // The compact flexible bar is 64 dp: 6 dp above the 32 dp indicator,
+    // then the 4 dp icon-to-label gap and a 16 dp label line, leaving 6 dp
+    // beneath the label. Do not center this group: that would turn any extra
+    // available height into asymmetric visual padding.
     int16_t indicator_top =
-        target.yMin() +
-        std::max<int16_t>(
-            0, (target.height() - Scaled(tokens.vertical_height_dp)) / 2 +
-                   Scaled(8));
+        target.yMin() + Scaled(tokens.vertical_item_padding_dp);
     indicator_top =
         std::min<int16_t>(indicator_top, target.yMax() - indicator_height + 1);
     int16_t indicator_left =

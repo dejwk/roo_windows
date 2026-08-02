@@ -391,6 +391,12 @@ Every destination has two distinct rectangles:
 In vertical layout, the indicator is icon-focused. The label remains visible
 below the icon, but it sits outside the selected pill.
 
+For the compact flexible bar, the complete target stack is exactly 64 dp at
+100% scale: 6 dp top padding, a 56 by 32 dp active indicator, a 4 dp
+indicator-to-label gap, the 16 dp `label-medium` line, and 6 dp bottom
+padding. The target segment owns that full height; the indicator is therefore
+placed from the token-backed top padding rather than vertically centered.
+
 In horizontal layout, the indicator hugs the horizontal icon-plus-label content
 cluster.
 

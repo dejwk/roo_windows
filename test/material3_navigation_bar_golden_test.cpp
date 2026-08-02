@@ -41,7 +41,7 @@ class Material3NavigationBarGoldenTest : public testing::Test {
                    NavigationBarLayout::kVertical);
 
     EXPECT_TRUE(app.refresh());
-    return test::CaptureRgb(offscreen_.raster(), 0, 0, 480, Scaled(80));
+    return test::CaptureRgb(offscreen_.raster(), 0, 0, 480, Scaled(64));
   }
 
   roo_display::Offscreen<roo_display::Rgb888> RenderHorizontalStatesRow() {
@@ -79,7 +79,7 @@ class Material3NavigationBarGoldenTest : public testing::Test {
                          NavigationBarLayout::kVertical);
 
     EXPECT_TRUE(app.refresh());
-    return test::CaptureRgb(offscreen_.raster(), 0, 0, 288, Scaled(80));
+    return test::CaptureRgb(offscreen_.raster(), 0, 0, 288, Scaled(64));
   }
 
   roo_display::Offscreen<roo_display::Rgb888> RenderHorizontalBadgesRow() {
@@ -112,7 +112,7 @@ class Material3NavigationBarGoldenTest : public testing::Test {
     destination->setFocused(focused);
     destination->setPressed(pressed);
     const int16_t height =
-        layout == NavigationBarLayout::kVertical ? Scaled(80) : Scaled(64);
+        Scaled(64);
     app.add(std::move(destination),
             roo_display::Box(x, y, x + width - 1, y + height - 1));
   }
@@ -131,7 +131,7 @@ class Material3NavigationBarGoldenTest : public testing::Test {
       destination->setBadgeValue(1000);
     }
     const int16_t height =
-        layout == NavigationBarLayout::kVertical ? Scaled(80) : Scaled(64);
+        Scaled(64);
     app.add(std::move(destination),
             roo_display::Box(x, y, x + width - 1, y + height - 1));
   }

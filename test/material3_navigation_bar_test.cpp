@@ -47,7 +47,7 @@ roo_display::Color ReadPixel(
 // Exercises paint-owned fade compositing without tinting the whole destination.
 void ExpectDestinationFadeStaysWithinIndicator(NavigationBarLayout layout) {
   constexpr int16_t kWidth = 192;
-  constexpr int16_t kHeight = 80;
+  constexpr int16_t kHeight = 64;
   roo::byte raster[kWidth * kHeight * 2];
   roo_display::OffscreenDevice<roo_display::Argb4444> offscreen(
       kWidth, kHeight, raster, roo_display::Argb4444());
@@ -102,7 +102,7 @@ void ExpectDestinationFadeStaysWithinIndicator(NavigationBarLayout layout) {
 void ExpectDestinationPaintsEveryPixel(NavigationBarLayout layout,
                                        bool selected) {
   constexpr int16_t kWidth = 96;
-  constexpr int16_t kHeight = 80;
+  constexpr int16_t kHeight = 64;
   roo::byte raster[kWidth * kHeight * 2];
   roo_display::OffscreenDevice<roo_display::Argb4444> offscreen(
       kWidth, kHeight, raster, roo_display::Argb4444());
@@ -120,7 +120,7 @@ void ExpectDestinationPaintsEveryPixel(NavigationBarLayout layout,
   NavigationBarDestinationTestAccess::setLayout(destination, layout);
   NavigationBarDestinationTestAccess::setSelected(destination, selected);
   const int16_t destination_height =
-      layout == NavigationBarLayout::kVertical ? Scaled(80) : Scaled(64);
+      Scaled(64);
   static_cast<Widget&>(destination)
       .layout(Rect(0, 0, kWidth - 1, destination_height - 1));
 
@@ -253,7 +253,7 @@ TEST(Material3NavigationBar, DestinationMeasuresForBothLayouts) {
 
   Dimensions vertical = destination.measure(WidthSpec::Unspecified(0),
                                             HeightSpec::Unspecified(0));
-  EXPECT_EQ(Scaled(80), vertical.height());
+  EXPECT_EQ(Scaled(64), vertical.height());
   EXPECT_GE(vertical.width(), Scaled(64));
 
   NavigationBarDestinationTestAccess::setLayout(
@@ -274,7 +274,7 @@ TEST(Material3NavigationBar, SelectionStateAndIconAnchorFollowLayout) {
   ApplicationContext context = MakeContext(env);
   NavigationBarDestination destination(context, "Inbox",
                                        &ic_outlined_24_action_done());
-  static_cast<Widget&>(destination).layout(Rect(0, 0, Scaled(95), Scaled(79)));
+  static_cast<Widget&>(destination).layout(Rect(0, 0, Scaled(95), Scaled(63)));
 
   NavigationBarDestinationTestAccess::setSelected(destination, true);
   Rect vertical_icon =
@@ -290,6 +290,47 @@ TEST(Material3NavigationBar, SelectionStateAndIconAnchorFollowLayout) {
   EXPECT_FALSE(horizontal_icon.empty());
   EXPECT_LT(horizontal_icon.xMin(), Scaled(72));
   EXPECT_EQ(Scaled(24), horizontal_icon.width());
+}
+
+// Locks the compact flexible-bar metric stack to the Jetpack Material 3
+// arrangement: 6 top + 32 indicator + 4 gap + 16 label + 6 bottom.
+TEST(Material3NavigationBar, VerticalDestinationUsesShortBarMetricStack) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+  NavigationBarDestination destination(context, "Inbox",
+                                       &ic_outlined_24_action_done());
+  static_cast<Widget&>(destination)
+      .layout(Rect(0, 0, Scaled(96) - 1, Scaled(64) - 1));
+
+  const internal::NavigationDestinationGeometry geometry =
+      NavigationBarDestinationTestAccess::geometry(destination);
+  EXPECT_EQ(Rect(Scaled(20), Scaled(6), Scaled(75), Scaled(37)),
+            geometry.indicator_bounds);
+  EXPECT_EQ(Rect(0, Scaled(42), Scaled(95), Scaled(57)),
+            geometry.label_bounds);
+}
+
+// The medium start-icon arrangement centers a 40 dp indicator around the
+// content cluster and gives that cluster 16 dp of indicator padding per side.
+TEST(Material3NavigationBar, HorizontalDestinationUsesInlineIndicatorMetrics) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+  NavigationBarDestination destination(context, "Inbox",
+                                       &ic_outlined_24_action_done());
+  NavigationBarDestinationTestAccess::setLayout(
+      destination, NavigationBarLayout::kHorizontal);
+  static_cast<Widget&>(destination)
+      .layout(Rect(0, 0, Scaled(128) - 1, Scaled(64) - 1));
+
+  const internal::NavigationDestinationGeometry geometry =
+      NavigationBarDestinationTestAccess::geometry(destination);
+  EXPECT_EQ(Scaled(40), geometry.indicator_bounds.height());
+  EXPECT_EQ(geometry.icon_bounds.xMin() - Scaled(16),
+            geometry.indicator_bounds.xMin());
+  EXPECT_EQ(geometry.label_bounds.xMax() + Scaled(16),
+            geometry.indicator_bounds.xMax());
 }
 
 // Verifies that destination paint settles every local pixel in both layouts,
@@ -315,7 +356,7 @@ TEST(Material3NavigationBar, BadgedDestinationCapsValueAndStaysWithinBounds) {
 
   destination.setBadgeValue(1000);
   static_cast<Widget&>(destination)
-      .layout(Rect(0, 0, Scaled(95) - 1, Scaled(80) - 1));
+      .layout(Rect(0, 0, Scaled(95) - 1, Scaled(64) - 1));
   EXPECT_EQ(BadgeMode::kText, destination.badge().mode());
   EXPECT_EQ("999+", destination.badge().text());
   EXPECT_TRUE(ContainsRect(destination.bounds(), destination.badge().bounds()));
@@ -472,10 +513,10 @@ TEST(Material3NavigationBar, BarLayoutsDestinationsByMode) {
   ASSERT_TRUE(bar.add(WidgetRef(third)));
 
   bar.measure(WidthSpec::Exactly(301), HeightSpec::Unspecified(0));
-  static_cast<Widget&>(bar).layout(Rect(0, 0, 300, Scaled(80) - 1));
-  EXPECT_EQ(Rect(0, 0, 99, Scaled(80) - 1), first.parent_bounds());
-  EXPECT_EQ(Rect(100, 0, 199, Scaled(80) - 1), second.parent_bounds());
-  EXPECT_EQ(Rect(200, 0, 300, Scaled(80) - 1), third.parent_bounds());
+  static_cast<Widget&>(bar).layout(Rect(0, 0, 300, Scaled(64) - 1));
+  EXPECT_EQ(Rect(0, 0, 99, Scaled(64) - 1), first.parent_bounds());
+  EXPECT_EQ(Rect(100, 0, 199, Scaled(64) - 1), second.parent_bounds());
+  EXPECT_EQ(Rect(200, 0, 300, Scaled(64) - 1), third.parent_bounds());
 
   bar.setLayout(NavigationBarLayout::kHorizontal);
   bar.measure(WidthSpec::Exactly(400), HeightSpec::Unspecified(0));
@@ -508,7 +549,7 @@ TEST(Material3NavigationBar, ArrowKeysMoveFocusWithoutChangingSelection) {
   ASSERT_TRUE(bar.add(WidgetRef(second)));
   ASSERT_TRUE(bar.add(WidgetRef(third)));
   bar.measure(WidthSpec::Exactly(300), HeightSpec::Unspecified(0));
-  static_cast<Widget&>(bar).layout(Rect(0, 0, 299, Scaled(80) - 1));
+  static_cast<Widget&>(bar).layout(Rect(0, 0, 299, Scaled(64) - 1));
   ASSERT_TRUE(context.focus().requestFocus(second));
 
   EXPECT_TRUE(bar.onKeyEvent(KeyEvent{KeyPhase::kDown, KeyCode::kRight, 0, 0}));

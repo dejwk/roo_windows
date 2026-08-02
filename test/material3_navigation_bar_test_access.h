@@ -21,6 +21,11 @@ class NavigationBarDestinationTestAccess {
     return destination.iconBounds();
   }
 
+  static internal::NavigationDestinationGeometry geometry(
+      const NavigationBarDestination& destination) {
+    return destination.resolveDestinationGeometry();
+  }
+
   static void paint(const NavigationBarDestination& destination,
                     PaintContext& ctx) {
     destination.paint(ctx);
