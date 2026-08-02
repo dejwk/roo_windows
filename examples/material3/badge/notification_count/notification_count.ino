@@ -80,6 +80,7 @@ void initDisplay() {
 #include "roo_windows/containers/flex_layout.h"
 #include "roo_windows/material3/navigation_bar/navigation_bar.h"
 #include "roo_windows/material3/typography.h"
+#include "roo_windows/widgets/text_block.h"
 #include "roo_windows/widgets/text_label.h"
 
 namespace {
@@ -88,7 +89,7 @@ namespace {
 class NotificationNavigation : public material3::NavigationBar {
  public:
   /// Creates navigation bound to visible feedback and its badged destination.
-  NotificationNavigation(ApplicationContext& context, TextLabel& feedback,
+  NotificationNavigation(ApplicationContext& context, TextBlock& feedback,
                          material3::BadgedNavigationBarDestination& alerts)
       : material3::NavigationBar(context),
         feedback_(feedback),

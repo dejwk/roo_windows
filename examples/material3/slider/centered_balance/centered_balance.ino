@@ -124,7 +124,7 @@ class BalanceSlider : public material3::Slider {
 
  private:
   void updateStatus(float value) {
-    status_.setTextf("Volume balance: %+.0f%", value);
+    status_.setTextf("Volume balance: %+.0f%%", value);
   }
 
   TextLabel& status_;
