@@ -30,20 +30,24 @@ enum class TextAlign {
 class TextBlock : public BasicWidget {
  public:
   TextBlock(ApplicationContext& context, std::string value,
-            const TextStyle& text_style, roo_display::Alignment alignment)
+            const TextStyle& text_style,
+            roo_display::Alignment alignment = roo_display::kTop |
+                                               roo_display::kLeft)
       : TextBlock(context, value, text_style, roo_display::color::Transparent,
                   alignment) {}
 
   TextBlock(ApplicationContext& context, std::string value,
             const TextStyle& text_style, roo_display::Color color,
-            roo_display::Alignment alignment);
+            roo_display::Alignment alignment = roo_display::kTop |
+                                               roo_display::kLeft);
 
   /// Paints all currently laid-out lines using the configured font, color
   /// and alignment, including any trailing ellipsis when text is clipped.
   void paint(PaintContext& ctx) const override;
 
   /// Reports ink insets matching the smallest rectangle that contains the
-  /// rendered glyphs, so the dirty-region tracker only repaints actual text.
+  /// rendered glyphs, so the dirty-region tracker only repaints actual
+  /// text.
   Insets getInkInsets() const override;
 
   /// Reports the natural unwrapped block size (longest line wide; total
