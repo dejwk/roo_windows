@@ -132,10 +132,10 @@ class EquipmentCategories : public FlexLayout {
     tabs_.addTab(sensors_);
     tabs_.addTab(lights_);
 
-    add(title_, {.flex_grow = 0, .flex_shrink = 0});
-    add(tabs_, {.flex_grow = 0, .flex_shrink = 0});
-    add(selection_, {.flex_grow = 0, .flex_shrink = 0});
-    add(help_, {.flex_grow = 0, .flex_shrink = 0});
+    add(title_);
+    add(tabs_);
+    add(selection_);
+    add(help_);
   }
 
  private:

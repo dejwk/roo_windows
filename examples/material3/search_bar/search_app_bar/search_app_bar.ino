@@ -123,8 +123,8 @@ class LogSearch : public FlexLayout {
     content_.add(feedback_);
 
     // SearchAppBar owns the top edge; only ordinary content receives padding.
-    add(search_app_bar_, {.flex_grow = 0, .flex_shrink = 0});
-    add(content_, {.flex_grow = 1, .flex_shrink = 1});
+    add(search_app_bar_);
+    add(content_, {.flex_grow = 1});
   }
 
  private:

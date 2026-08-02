@@ -116,8 +116,8 @@ class AlarmRow : public FlexLayout {
         checkbox_(context, state, label, feedback) {
     setAlignItems(AlignItems::kCenter);
     setGap(Scaled(12));
-    add(label_, {.flex_grow = 1, .flex_shrink = 1});
-    add(checkbox_, {.flex_grow = 0, .flex_shrink = 0});
+    add(label_, {.flex_grow = 1});
+    add(checkbox_);
   }
 
  private:
@@ -144,12 +144,12 @@ class AlarmSources : public FlexLayout {
                    material3::Checkbox::OnOffState::kOff, feedback_) {
     setPadding(Padding(Scaled(16), Scaled(12)));
     setGap(Scaled(8));
-    add(title_, {.flex_grow = 0, .flex_shrink = 0});
-    add(guidance_, {.flex_grow = 0, .flex_shrink = 0});
-    add(freeze_, {.flex_grow = 0, .flex_shrink = 0});
-    add(flow_, {.flex_grow = 0, .flex_shrink = 0});
-    add(chemistry_, {.flex_grow = 0, .flex_shrink = 0});
-    add(feedback_, {.flex_grow = 0, .flex_shrink = 0});
+    add(title_);
+    add(guidance_);
+    add(freeze_);
+    add(flow_);
+    add(chemistry_);
+    add(feedback_);
   }
 
  private:

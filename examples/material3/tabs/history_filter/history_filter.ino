@@ -132,10 +132,10 @@ class TemperatureHistory : public FlexLayout {
     tabs_.addTab(month_);
     tabs_.setSelectedIndex(1, false);
 
-    add(title_, {.flex_grow = 0, .flex_shrink = 0});
-    add(tabs_, {.flex_grow = 0, .flex_shrink = 0});
-    add(range_, {.flex_grow = 0, .flex_shrink = 0});
-    add(summary_, {.flex_grow = 0, .flex_shrink = 0});
+    add(title_);
+    add(tabs_);
+    add(range_);
+    add(summary_);
   }
 
  private:

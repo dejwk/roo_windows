@@ -141,8 +141,8 @@ class PoolController : public FlexLayout {
     navigation_.add(schedule_);
     navigation_.add(settings_);
 
-    add(content_, {.flex_grow = 1, .flex_shrink = 1});
-    add(navigation_, {.flex_grow = 0, .flex_shrink = 0});
+    add(content_, {.flex_grow = 1});
+    add(navigation_);
   }
 
  private:

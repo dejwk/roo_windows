@@ -146,8 +146,8 @@ class EquipmentConsole : public FlexLayout {
 
     // Collapsed rails preserve content width on this 320 px example display.
     // Wider products can call setLayout(kExpanded) to show labels inline.
-    add(navigation_, {.flex_grow = 0, .flex_shrink = 0});
-    add(content_, {.flex_grow = 1, .flex_shrink = 1});
+    add(navigation_);
+    add(content_, {.flex_grow = 1});
   }
 
  private:

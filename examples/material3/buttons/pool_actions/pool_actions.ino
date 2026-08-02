@@ -141,14 +141,14 @@ class PoolActions : public FlexLayout {
     circulate_.setMargins(MarginSize::kNone);
     stop_.setMargins(MarginSize::kNone);
 
-    actions_.add(heat_, {.flex_grow = 0, .flex_shrink = 1});
-    actions_.add(circulate_, {.flex_grow = 0, .flex_shrink = 1});
-    actions_.add(stop_, {.flex_grow = 0, .flex_shrink = 1});
+    actions_.add(heat_);
+    actions_.add(circulate_);
+    actions_.add(stop_);
 
-    add(title_, {.flex_grow = 0, .flex_shrink = 0});
-    add(guidance_, {.flex_grow = 0, .flex_shrink = 0});
-    add(actions_, {.flex_grow = 0, .flex_shrink = 1});
-    add(feedback_, {.flex_grow = 0, .flex_shrink = 0});
+    add(title_);
+    add(guidance_);
+    add(actions_);
+    add(feedback_);
   }
 
  private:

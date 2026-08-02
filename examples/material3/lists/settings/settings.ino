@@ -140,9 +140,9 @@ class PoolSettings : public SimpleScrollablePanel {
     list_.add(solar_delta_);
     list_.add(safety_);
 
-    content_.add(title_, {.flex_grow = 0, .flex_shrink = 0});
-    content_.add(guidance_, {.flex_grow = 0, .flex_shrink = 0});
-    content_.add(list_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(title_);
+    content_.add(guidance_);
+    content_.add(list_);
     setContents(content_);
   }
 

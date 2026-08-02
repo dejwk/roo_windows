@@ -143,10 +143,10 @@ class TemperatureSetpoint : public FlexLayout {
         slider_(context, value_) {
     setPadding(Padding(Scaled(16)));
     setGap(Scaled(14));
-    add(title_, {.flex_grow = 0, .flex_shrink = 0});
-    add(guidance_, {.flex_grow = 0, .flex_shrink = 0});
-    add(value_, {.flex_grow = 0, .flex_shrink = 0});
-    add(slider_, {.flex_grow = 0, .flex_shrink = 1});
+    add(title_);
+    add(guidance_);
+    add(value_);
+    add(slider_);
   }
 
  private:

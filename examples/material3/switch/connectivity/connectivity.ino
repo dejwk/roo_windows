@@ -120,8 +120,8 @@ class ConnectionRow : public FlexLayout {
     setGap(Scaled(12));
     toggle_.setSelectedIcon(&ic_outlined_24_action_done());
     toggle_.setUnselectedIcon(&ic_outlined_24_navigation_close());
-    add(label_, {.flex_grow = 1, .flex_shrink = 1});
-    add(toggle_, {.flex_grow = 0, .flex_shrink = 0});
+    add(label_, {.flex_grow = 1});
+    add(toggle_);
   }
 
  private:
@@ -145,11 +145,11 @@ class Connectivity : public FlexLayout {
                feedback_) {
     setPadding(Padding(Scaled(16), Scaled(16)));
     setGap(Scaled(12));
-    add(title_, {.flex_grow = 0, .flex_shrink = 0});
-    add(guidance_, {.flex_grow = 0, .flex_shrink = 0});
-    add(wifi_, {.flex_grow = 0, .flex_shrink = 0});
-    add(cloud_, {.flex_grow = 0, .flex_shrink = 0});
-    add(feedback_, {.flex_grow = 0, .flex_shrink = 0});
+    add(title_);
+    add(guidance_);
+    add(wifi_);
+    add(cloud_);
+    add(feedback_);
   }
 
  private:

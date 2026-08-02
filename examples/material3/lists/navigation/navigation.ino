@@ -122,9 +122,9 @@ class EquipmentNavigation : public SimpleScrollablePanel {
     equipment_.add(next_task_);
     equipment_.add(owner_);
 
-    content_.add(title_, {.flex_grow = 0, .flex_shrink = 0});
-    content_.add(feedback_, {.flex_grow = 0, .flex_shrink = 0});
-    content_.add(equipment_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(title_);
+    content_.add(feedback_);
+    content_.add(equipment_);
     setContents(content_);
   }
 

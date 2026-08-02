@@ -128,9 +128,9 @@ class LegacyServiceMenu : public SimpleScrollablePanel {
     menu_.add(refresh_);
     menu_.add(edit_);
     menu_.add(remove_);
-    content_.add(title_, {.flex_grow = 0, .flex_shrink = 0});
-    content_.add(guidance_, {.flex_grow = 0, .flex_shrink = 0});
-    content_.add(menu_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(title_);
+    content_.add(guidance_);
+    content_.add(menu_);
     setContents(content_);
   }
 

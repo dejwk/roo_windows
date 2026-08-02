@@ -164,12 +164,12 @@ class TankLevel : public FlexLayout {
     setGap(Scaled(12));
     setAlignItems(AlignItems::kCenter);
     details_.setGap(Scaled(12));
-    details_.add(title_, {.flex_grow = 0, .flex_shrink = 0});
-    details_.add(guidance_, {.flex_grow = 0, .flex_shrink = 0});
-    details_.add(value_, {.flex_grow = 0, .flex_shrink = 0});
+    details_.add(title_);
+    details_.add(guidance_);
+    details_.add(value_);
     slider_slot_.setContents(slider_);
-    add(details_, {.flex_grow = 1, .flex_shrink = 1});
-    add(slider_slot_, {.flex_grow = 0, .flex_shrink = 0});
+    add(details_, {.flex_grow = 1});
+    add(slider_slot_);
   }
 
  private:

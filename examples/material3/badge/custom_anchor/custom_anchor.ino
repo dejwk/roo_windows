@@ -154,9 +154,9 @@ class CustomBadgeAnchor : public FlexLayout {
     setPadding(Padding(Scaled(16), Scaled(16)));
     setGap(Scaled(12));
     setAlignItems(AlignItems::kCenter);
-    add(title_, {.flex_grow = 0, .flex_shrink = 0});
-    add(guidance_, {.flex_grow = 0, .flex_shrink = 0});
-    add(tile_, {.flex_grow = 0, .flex_shrink = 0});
+    add(title_);
+    add(guidance_);
+    add(tile_);
   }
 
  private:

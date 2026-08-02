@@ -113,9 +113,9 @@ class EquipmentSearch : public FlexLayout {
       feedback_.setText("Search prompt restored");
     });
 
-    add(title_, {.flex_grow = 0, .flex_shrink = 0});
-    add(search_, {.flex_grow = 0, .flex_shrink = 1});
-    add(feedback_, {.flex_grow = 0, .flex_shrink = 0});
+    add(title_);
+    add(search_);
+    add(feedback_);
   }
 
  private:

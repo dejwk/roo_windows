@@ -120,8 +120,8 @@ class DensityRow : public FlexLayout {
                material3::text_style_body_large()) {
     setAlignItems(AlignItems::kCenter);
     setGap(Scaled(12));
-    add(radio_, {.flex_grow = 0, .flex_shrink = 0});
-    add(label_, {.flex_grow = 1, .flex_shrink = 1});
+    add(radio_);
+    add(label_, {.flex_grow = 1});
   }
 
   /// Returns the row's group-owned radio control.
@@ -148,12 +148,12 @@ class ControlDensity : public FlexLayout, public DensityGroup {
         comfortable_(context, "Comfortable", *this, 2) {
     setPadding(Padding(Scaled(16), Scaled(12)));
     setGap(Scaled(8));
-    add(title_, {.flex_grow = 0, .flex_shrink = 0});
-    add(guidance_, {.flex_grow = 0, .flex_shrink = 0});
-    add(compact_, {.flex_grow = 0, .flex_shrink = 0});
-    add(balanced_, {.flex_grow = 0, .flex_shrink = 0});
-    add(comfortable_, {.flex_grow = 0, .flex_shrink = 0});
-    add(feedback_, {.flex_grow = 0, .flex_shrink = 0});
+    add(title_);
+    add(guidance_);
+    add(compact_);
+    add(balanced_);
+    add(comfortable_);
+    add(feedback_);
     selectDensity(1);
   }
 

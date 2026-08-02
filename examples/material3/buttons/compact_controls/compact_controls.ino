@@ -144,14 +144,14 @@ class CompactControls : public FlexLayout {
     backwash_.setMargins(MarginSize::kNone);
     reset_.setMargins(MarginSize::kNone);
 
-    toolbar_.add(prime_, {.flex_grow = 0, .flex_shrink = 1});
-    toolbar_.add(backwash_, {.flex_grow = 0, .flex_shrink = 1});
-    toolbar_.add(reset_, {.flex_grow = 0, .flex_shrink = 1});
+    toolbar_.add(prime_);
+    toolbar_.add(backwash_);
+    toolbar_.add(reset_);
 
-    add(title_, {.flex_grow = 0, .flex_shrink = 0});
-    add(guidance_, {.flex_grow = 0, .flex_shrink = 0});
-    add(toolbar_, {.flex_grow = 0, .flex_shrink = 1});
-    add(feedback_, {.flex_grow = 0, .flex_shrink = 0});
+    add(title_);
+    add(guidance_);
+    add(toolbar_);
+    add(feedback_);
   }
 
  private:

@@ -45,6 +45,13 @@ feature, and adapt the demonstrated pattern to an embedded application.
 - Avoid custom framework infrastructure in an example unless writing that
   infrastructure is the lesson. Prefer public convenience types and direct,
   idiomatic API use.
+- Prefer API defaults. In particular, omit `FlexLayout::Params` from `add()`
+  when every option has its default value, and specify only the non-default
+  fields that are necessary for the lesson.
+- Do not use non-default `flex_shrink` merely to force a screen to fit. If
+  default layout behavior exceeds the available vertical space, tighten the
+  layout or make the content scrollable. An example whose explicit learning
+  goal is `FlexLayout` behavior may intentionally show those options.
 
 ## Emulator Compatibility
 

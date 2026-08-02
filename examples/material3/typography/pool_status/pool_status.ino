@@ -106,14 +106,14 @@ class PoolStatus : public FlexLayout {
 
     // Large roles carry the glanceable value and current operating state.
     // Title, body, and label roles provide structure without competing with it.
-    add(title_, {.flex_grow = 0, .flex_shrink = 0});
-    add(updated_, {.flex_grow = 0, .flex_shrink = 0});
-    add(temperature_, {.flex_grow = 0, .flex_shrink = 0});
-    add(temperature_label_, {.flex_grow = 0, .flex_shrink = 0});
-    add(pump_, {.flex_grow = 0, .flex_shrink = 0});
-    add(pump_detail_, {.flex_grow = 0, .flex_shrink = 0});
-    add(next_heading_, {.flex_grow = 0, .flex_shrink = 0});
-    add(next_detail_, {.flex_grow = 0, .flex_shrink = 0});
+    add(title_);
+    add(updated_);
+    add(temperature_);
+    add(temperature_label_);
+    add(pump_);
+    add(pump_detail_);
+    add(next_heading_);
+    add(next_detail_);
   }
 
  private:

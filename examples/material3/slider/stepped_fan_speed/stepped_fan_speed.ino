@@ -146,10 +146,10 @@ class SteppedFanSpeed : public FlexLayout {
         slider_(context, status_) {
     setPadding(Padding(Scaled(16)));
     setGap(Scaled(14));
-    add(title_, {.flex_grow = 0, .flex_shrink = 0});
-    add(guidance_, {.flex_grow = 0, .flex_shrink = 0});
-    add(status_, {.flex_grow = 0, .flex_shrink = 0});
-    add(slider_, {.flex_grow = 0, .flex_shrink = 1});
+    add(title_);
+    add(guidance_);
+    add(status_);
+    add(slider_);
   }
 
  private:

@@ -126,9 +126,9 @@ class CirculationSchedule : public SimpleScrollablePanel {
     schedule_.add(solar_);
     schedule_.add(evening_);
 
-    content_.add(title_, {.flex_grow = 0, .flex_shrink = 0});
-    content_.add(guidance_, {.flex_grow = 0, .flex_shrink = 0});
-    content_.add(schedule_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(title_);
+    content_.add(guidance_);
+    content_.add(schedule_);
     setContents(content_);
   }
 

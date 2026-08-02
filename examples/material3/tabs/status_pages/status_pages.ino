@@ -171,8 +171,8 @@ class PoolStatus : public FlexLayout {
     heating_.setPadding(PaddingSize::kLarge);
     history_.setPadding(PaddingSize::kLarge);
 
-    add(tabs_, {.flex_grow = 0, .flex_shrink = 0});
-    add(pages_, {.flex_grow = 1, .flex_shrink = 1});
+    add(tabs_);
+    add(pages_, {.flex_grow = 1});
   }
 
  private:
