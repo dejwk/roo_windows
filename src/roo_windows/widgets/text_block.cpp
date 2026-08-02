@@ -1,7 +1,6 @@
 #include "roo_windows/widgets/text_block.h"
 
 #include <algorithm>
-#include <limits>
 #include <vector>
 
 #include "roo_backport/string_view.h"
@@ -431,6 +430,18 @@ void TextBlock::setConservativeInkInsets() {
       value_.empty() ? Insets::Zero() : ResolveConservativeTextInsets(font());
 }
 
+void TextBlock::updateAfterLayoutChange(bool had_old_content,
+                                        const Rect& old_bounds) {
+  invalidateLayoutCache();
+  recalculateNaturalDimensions();
+  setConservativeInkInsets();
+  invalidateInterior();
+  if (had_old_content) {
+    notifyParentInvalidatedRegion(old_bounds);
+  }
+  requestLayout();
+}
+
 void TextBlock::updateCachedInkInsetsFromCurrentBounds() {
   if (width() <= 0 || height() <= 0 || value_.empty()) {
     ink_insets_ = Insets::Zero();
@@ -543,14 +554,7 @@ void TextBlock::setText(std::string value) {
   bool had_old_content = !value_.empty();
   Rect old_bounds = had_old_content ? maxParentBounds() : Rect(0, 0, -1, -1);
   value_ = std::move(value);
-  invalidateLayoutCache();
-  recalculateNaturalDimensions();
-  setConservativeInkInsets();
-  invalidateInterior();
-  if (had_old_content) {
-    notifyParentInvalidatedRegion(old_bounds);
-  }
-  requestLayout();
+  updateAfterLayoutChange(had_old_content, old_bounds);
 }
 
 void TextBlock::setColor(roo_display::Color color) {
@@ -576,14 +580,7 @@ void TextBlock::setWrapMode(TextWrapMode wrap_mode) {
   bool had_old_content = !value_.empty();
   Rect old_bounds = had_old_content ? maxParentBounds() : Rect(0, 0, -1, -1);
   wrap_mode_ = wrap_mode;
-  invalidateLayoutCache();
-  recalculateNaturalDimensions();
-  setConservativeInkInsets();
-  invalidateInterior();
-  if (had_old_content) {
-    notifyParentInvalidatedRegion(old_bounds);
-  }
-  requestLayout();
+  updateAfterLayoutChange(had_old_content, old_bounds);
 }
 
 void TextBlock::setTextAlign(TextAlign text_align) {
@@ -603,14 +600,7 @@ void TextBlock::setMaxLines(uint16_t max_lines) {
   bool had_old_content = !value_.empty();
   Rect old_bounds = had_old_content ? maxParentBounds() : Rect(0, 0, -1, -1);
   max_lines_ = max_lines;
-  invalidateLayoutCache();
-  recalculateNaturalDimensions();
-  setConservativeInkInsets();
-  invalidateInterior();
-  if (had_old_content) {
-    notifyParentInvalidatedRegion(old_bounds);
-  }
-  requestLayout();
+  updateAfterLayoutChange(had_old_content, old_bounds);
 }
 
 void TextBlock::setEllipsize(bool ellipsize) {
@@ -618,14 +608,7 @@ void TextBlock::setEllipsize(bool ellipsize) {
   bool had_old_content = !value_.empty();
   Rect old_bounds = had_old_content ? maxParentBounds() : Rect(0, 0, -1, -1);
   ellipsize_ = ellipsize;
-  invalidateLayoutCache();
-  recalculateNaturalDimensions();
-  setConservativeInkInsets();
-  invalidateInterior();
-  if (had_old_content) {
-    notifyParentInvalidatedRegion(old_bounds);
-  }
-  requestLayout();
+  updateAfterLayoutChange(had_old_content, old_bounds);
 }
 
 void TextBlock::setTextStyle(const TextStyle& text_style) {
@@ -633,12 +616,7 @@ void TextBlock::setTextStyle(const TextStyle& text_style) {
   bool had_old_content = !value_.empty();
   Rect old_bounds = had_old_content ? maxParentBounds() : Rect(0, 0, -1, -1);
   text_style_ = &text_style;
-  invalidateLayoutCache();
-  recalculateNaturalDimensions();
-  setConservativeInkInsets();
-  invalidateInterior();
-  if (had_old_content) notifyParentInvalidatedRegion(old_bounds);
-  requestLayout();
+  updateAfterLayoutChange(had_old_content, old_bounds);
 }
 
 Rect TextBlock::getRenderedTextBounds() const {

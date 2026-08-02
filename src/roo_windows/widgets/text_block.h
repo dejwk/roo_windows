@@ -118,6 +118,8 @@ class TextBlock : public BasicWidget {
 
   void setConservativeInkInsets();
 
+  void updateAfterLayoutChange(bool had_old_content, const Rect& old_bounds);
+
   void updateCachedInkInsetsFromCurrentBounds();
 
   void ensureLayout(XDim width_limit) const;
