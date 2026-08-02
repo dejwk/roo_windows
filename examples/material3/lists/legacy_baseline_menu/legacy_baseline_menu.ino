@@ -80,6 +80,7 @@ void initDisplay() {
 #include "roo_windows/material3/list/list.h"
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_label.h"
+#include "roo_windows/widgets/text_block.h"
 #include "../list_example_layout.h"
 
 namespace {
@@ -94,7 +95,7 @@ class LegacyServiceMenu : public SimpleScrollablePanel {
         title_(context, "Legacy service menu",
                material3::text_style_title_large()),
         guidance_(context, "Use only when matching an existing square menu",
-                  material3::text_style_body_medium()),
+                  material3::text_style_body_medium(), kTop | kLeft),
         menu_(context),
         refresh_key_(context, "R", material3::text_style_label_medium()),
         edit_key_(context, "E", material3::text_style_label_medium()),
@@ -126,7 +127,7 @@ class LegacyServiceMenu : public SimpleScrollablePanel {
  private:
   material3_examples::FullWidthColumn content_;
   TextLabel title_;
-  TextLabel guidance_;
+  TextBlock guidance_;
   material3::List menu_;
   TextLabel refresh_key_;
   TextLabel edit_key_;

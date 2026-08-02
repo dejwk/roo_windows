@@ -6,7 +6,6 @@
 #include "roo_backport/string_view.h"
 #include "roo_display/color/color.h"
 #include "roo_display/font/font.h"
-#include "roo_display/ui/text_label.h"
 #include "roo_display/ui/tile.h"
 #include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/panel.h"

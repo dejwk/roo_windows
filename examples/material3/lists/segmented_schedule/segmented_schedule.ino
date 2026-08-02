@@ -80,6 +80,7 @@ void initDisplay() {
 #include "roo_windows/material3/list/list.h"
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_label.h"
+#include "roo_windows/widgets/text_block.h"
 #include "../list_example_layout.h"
 
 namespace {
@@ -94,7 +95,7 @@ class CirculationSchedule : public SimpleScrollablePanel {
         title_(context, "Circulation schedule",
                material3::text_style_title_large()),
         guidance_(context, "Today's automatic equipment cycles",
-                  material3::text_style_body_medium()),
+                  material3::text_style_body_medium(), kTop | kLeft),
         schedule_(context),
         morning_(context, material3::StandardListItemInit::TwoLine(
                               "06:30  Pool pump", "Weekdays · 90 minutes")),
@@ -124,7 +125,7 @@ class CirculationSchedule : public SimpleScrollablePanel {
  private:
   material3_examples::FullWidthColumn content_;
   TextLabel title_;
-  TextLabel guidance_;
+  TextBlock guidance_;
   material3::List schedule_;
   material3::ListRow<material3::StandardListItem> morning_;
   material3::ListRow<material3::StandardListItem> solar_;

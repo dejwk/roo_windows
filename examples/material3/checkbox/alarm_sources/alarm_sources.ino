@@ -79,6 +79,7 @@ void initDisplay() {
 #include "roo_windows/material3/checkbox/checkbox.h"
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_label.h"
+#include "roo_windows/widgets/text_block.h"
 
 namespace {
 
@@ -132,7 +133,7 @@ class AlarmSources : public FlexLayout {
       : FlexLayout(context, FlexDirection::kColumn),
         title_(context, "Alarm sources", material3::text_style_title_large()),
         guidance_(context, "Select every condition that should raise an alarm",
-                  material3::text_style_body_medium()),
+                  material3::text_style_body_medium(), kTop | kLeft),
         feedback_(context, "Freeze and flow alarms enabled",
                   material3::text_style_title_small()),
         freeze_(context, "Freeze risk", material3::Checkbox::OnOffState::kOn,
@@ -153,7 +154,7 @@ class AlarmSources : public FlexLayout {
 
  private:
   TextLabel title_;
-  TextLabel guidance_;
+  TextBlock guidance_;
   TextLabel feedback_;
   AlarmRow freeze_;
   AlarmRow flow_;

@@ -81,6 +81,7 @@ void initDisplay() {
 #include "roo_windows/material3/slider/range_slider.h"
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_label.h"
+#include "roo_windows/widgets/text_block.h"
 
 namespace {
 
@@ -168,7 +169,7 @@ class QuietHours : public FlexLayout {
         title_(context, "Pump quiet hours",
                material3::text_style_title_large()),
         guidance_(context, "Each thumb owns one endpoint of the time window",
-                  material3::text_style_body_medium()),
+                  material3::text_style_body_medium(), kTop | kLeft),
         value_(context, "", material3::text_style_display_small()),
         interaction_(context, "", material3::text_style_body_medium()),
         slider_(context, value_, interaction_) {
@@ -183,7 +184,7 @@ class QuietHours : public FlexLayout {
 
  private:
   TextLabel title_;
-  TextLabel guidance_;
+  TextBlock guidance_;
   TextLabel value_;
   TextLabel interaction_;
   QuietHoursSlider slider_;

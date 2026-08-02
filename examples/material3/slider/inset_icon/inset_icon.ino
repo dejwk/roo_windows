@@ -82,6 +82,7 @@ void initDisplay() {
 #include "roo_windows/material3/slider/slider.h"
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_label.h"
+#include "roo_windows/widgets/text_block.h"
 
 namespace {
 
@@ -141,7 +142,7 @@ class InsetIconSlider : public FlexLayout {
       : FlexLayout(context, FlexDirection::kColumn),
         title_(context, "Pool lighting", material3::text_style_title_large()),
         guidance_(context, "Inset icons work best on larger standard sliders",
-                  material3::text_style_body_medium()),
+                  material3::text_style_body_medium(), kTop | kLeft),
         value_(context, "", material3::text_style_title_medium()),
         slider_(context, value_) {
     setPadding(Padding(Scaled(16)));
@@ -154,7 +155,7 @@ class InsetIconSlider : public FlexLayout {
 
  private:
   TextLabel title_;
-  TextLabel guidance_;
+  TextBlock guidance_;
   TextLabel value_;
   BrightnessSlider slider_;
 };

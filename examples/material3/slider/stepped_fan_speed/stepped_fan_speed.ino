@@ -82,6 +82,7 @@ void initDisplay() {
 #include "roo_windows/material3/slider/slider.h"
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_label.h"
+#include "roo_windows/widgets/text_block.h"
 
 namespace {
 
@@ -140,7 +141,7 @@ class SteppedFanSpeed : public FlexLayout {
       : FlexLayout(context, FlexDirection::kColumn),
         title_(context, "Ventilation", material3::text_style_title_large()),
         guidance_(context, "A step of 1 prevents unsupported fan speeds",
-                  material3::text_style_body_medium()),
+                  material3::text_style_body_medium(), kTop | kLeft),
         status_(context, "", material3::text_style_title_medium()),
         slider_(context, status_) {
     setPadding(Padding(Scaled(16)));
@@ -153,7 +154,7 @@ class SteppedFanSpeed : public FlexLayout {
 
  private:
   TextLabel title_;
-  TextLabel guidance_;
+  TextBlock guidance_;
   TextLabel status_;
   FanSpeedSlider slider_;
 };

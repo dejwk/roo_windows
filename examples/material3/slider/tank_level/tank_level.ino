@@ -82,6 +82,7 @@ void initDisplay() {
 #include "roo_windows/material3/slider/slider.h"
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_label.h"
+#include "roo_windows/widgets/text_block.h"
 
 namespace {
 
@@ -155,7 +156,7 @@ class TankLevel : public FlexLayout {
         details_(context, FlexDirection::kColumn),
         title_(context, "Balance tank", material3::text_style_title_large()),
         guidance_(context, "Ten-percent steps keep sparse ticks readable",
-                  material3::text_style_body_medium()),
+                  material3::text_style_body_medium(), kTop | kLeft),
         value_(context, "", material3::text_style_display_small()),
         slider_slot_(context),
         slider_(context, value_) {
@@ -174,7 +175,7 @@ class TankLevel : public FlexLayout {
  private:
   FlexLayout details_;
   TextLabel title_;
-  TextLabel guidance_;
+  TextBlock guidance_;
   TextLabel value_;
   VerticalSliderSlot slider_slot_;
   TankSlider slider_;

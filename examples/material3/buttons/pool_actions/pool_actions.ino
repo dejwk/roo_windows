@@ -81,6 +81,7 @@ void initDisplay() {
 #include "roo_windows/material3/button/button.h"
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_label.h"
+#include "roo_windows/widgets/text_block.h"
 
 namespace {
 
@@ -118,7 +119,7 @@ class PoolActions : public FlexLayout {
       : FlexLayout(context, FlexDirection::kColumn),
         title_(context, "Pool actions", material3::text_style_title_large()),
         guidance_(context, "Filled is primary; tonal and outlined step down",
-                  material3::text_style_body_medium()),
+                  material3::text_style_body_medium(), kTop | kLeft),
         feedback_(context, "Choose an action",
                   material3::text_style_title_small()),
         actions_(context, FlexDirection::kRow),
@@ -152,7 +153,7 @@ class PoolActions : public FlexLayout {
 
  private:
   TextLabel title_;
-  TextLabel guidance_;
+  TextBlock guidance_;
   TextLabel feedback_;
   FlexLayout actions_;
   PoolActionButton heat_;

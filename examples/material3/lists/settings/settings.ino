@@ -81,6 +81,7 @@ void initDisplay() {
 #include "roo_windows/material3/switch/switch.h"
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_label.h"
+#include "roo_windows/widgets/text_block.h"
 #include "../list_example_layout.h"
 
 namespace {
@@ -104,7 +105,7 @@ class PoolSettings : public SimpleScrollablePanel {
         content_(context),
         title_(context, "Pool settings", material3::text_style_title_large()),
         guidance_(context, "Review automation and safety defaults",
-                  material3::text_style_body_medium()),
+                  material3::text_style_body_medium(), kTop | kLeft),
         list_(context),
         safety_lock_(context, material3::Switch::OnOffState::kOn),
         pump_mode_(context, material3::StandardListItemInit::TwoLine(
@@ -138,7 +139,7 @@ class PoolSettings : public SimpleScrollablePanel {
  private:
   material3_examples::FullWidthColumn content_;
   TextLabel title_;
-  TextLabel guidance_;
+  TextBlock guidance_;
   material3::List list_;
   material3::Switch safety_lock_;
   material3::ListRow<material3::StandardListItem> pump_mode_;

@@ -81,6 +81,7 @@ void initDisplay() {
 #include "roo_windows/material3/switch/switch.h"
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_label.h"
+#include "roo_windows/widgets/text_block.h"
 
 namespace {
 
@@ -136,7 +137,7 @@ class Connectivity : public FlexLayout {
       : FlexLayout(context, FlexDirection::kColumn),
         title_(context, "Connectivity", material3::text_style_title_large()),
         guidance_(context, "Switch changes apply immediately",
-                  material3::text_style_body_medium()),
+                  material3::text_style_body_medium(), kTop | kLeft),
         feedback_(context, "Wi-Fi connected · Cloud sync offline",
                   material3::text_style_title_small()),
         wifi_(context, "Wi-Fi", material3::Switch::OnOffState::kOn, feedback_),
@@ -153,7 +154,7 @@ class Connectivity : public FlexLayout {
 
  private:
   TextLabel title_;
-  TextLabel guidance_;
+  TextBlock guidance_;
   TextLabel feedback_;
   ConnectionRow wifi_;
   ConnectionRow cloud_;

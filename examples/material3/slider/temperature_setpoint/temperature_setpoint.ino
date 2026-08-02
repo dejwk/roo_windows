@@ -81,6 +81,7 @@ void initDisplay() {
 #include "roo_windows/material3/slider/slider.h"
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_label.h"
+#include "roo_windows/widgets/text_block.h"
 
 namespace {
 
@@ -137,7 +138,7 @@ class TemperatureSetpoint : public FlexLayout {
         title_(context, "Heating setpoint",
                material3::text_style_title_large()),
         guidance_(context, "Range: 18.0 °C to 32.0 °C in 0.5-degree steps",
-                  material3::text_style_body_medium()),
+                  material3::text_style_body_medium(), kTop | kLeft),
         value_(context, "", material3::text_style_display_small()),
         slider_(context, value_) {
     setPadding(Padding(Scaled(16)));
@@ -150,7 +151,7 @@ class TemperatureSetpoint : public FlexLayout {
 
  private:
   TextLabel title_;
-  TextLabel guidance_;
+  TextBlock guidance_;
   TextLabel value_;
   SetpointSlider slider_;
 };

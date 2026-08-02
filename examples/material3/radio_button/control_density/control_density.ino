@@ -79,6 +79,7 @@ void initDisplay() {
 #include "roo_windows/material3/radio_button/radio_button.h"
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_label.h"
+#include "roo_windows/widgets/text_block.h"
 
 namespace {
 
@@ -139,7 +140,7 @@ class ControlDensity : public FlexLayout, public DensityGroup {
       : FlexLayout(context, FlexDirection::kColumn),
         title_(context, "Control density", material3::text_style_title_large()),
         guidance_(context, "Choose one spacing policy for controller screens",
-                  material3::text_style_body_medium()),
+                  material3::text_style_body_medium(), kTop | kLeft),
         feedback_(context, "Balanced spacing selected",
                   material3::text_style_title_small()),
         compact_(context, "Compact", *this, 0),
@@ -175,7 +176,7 @@ class ControlDensity : public FlexLayout, public DensityGroup {
 
  private:
   TextLabel title_;
-  TextLabel guidance_;
+  TextBlock guidance_;
   TextLabel feedback_;
   DensityRow compact_;
   DensityRow balanced_;

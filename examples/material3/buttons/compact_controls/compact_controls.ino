@@ -80,6 +80,7 @@ void initDisplay() {
 #include "roo_windows/material3/button/button.h"
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_label.h"
+#include "roo_windows/widgets/text_block.h"
 
 namespace {
 
@@ -117,7 +118,7 @@ class CompactControls : public FlexLayout {
       : FlexLayout(context, FlexDirection::kColumn),
         title_(context, "Service toolbar", material3::text_style_title_large()),
         guidance_(context, "Use compact sizes only where screen space is tight",
-                  material3::text_style_body_medium()),
+                  material3::text_style_body_medium(), kTop | kLeft),
         toolbar_(context, FlexDirection::kRow),
         feedback_(context, "No service command pending",
                   material3::text_style_title_small()),
@@ -155,7 +156,7 @@ class CompactControls : public FlexLayout {
 
  private:
   TextLabel title_;
-  TextLabel guidance_;
+  TextBlock guidance_;
   FlexLayout toolbar_;
   TextLabel feedback_;
   ServiceButton prime_;

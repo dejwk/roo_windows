@@ -79,6 +79,7 @@ void initDisplay() {
 #include "roo_windows/material3/tabs/tabs.h"
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_label.h"
+#include "roo_windows/widgets/text_block.h"
 
 namespace {
 
@@ -113,7 +114,7 @@ class EquipmentCategories : public FlexLayout {
         selection_(context, "All equipment",
                    material3::text_style_headline_small()),
         help_(context, "Drag the tab row to reveal more categories",
-              material3::text_style_body_medium()),
+              material3::text_style_body_medium(), kTop | kLeft),
         tabs_(context, selection_),
         all_(context, "All"),
         pumps_(context, "Circulation pumps"),
@@ -140,7 +141,7 @@ class EquipmentCategories : public FlexLayout {
  private:
   TextLabel title_;
   TextLabel selection_;
-  TextLabel help_;
+  TextBlock help_;
   EquipmentTabs tabs_;
   material3::Tab all_;
   material3::Tab pumps_;

@@ -82,6 +82,7 @@ void initDisplay() {
 #include "roo_windows/material3/list/list.h"
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_label.h"
+#include "roo_windows/widgets/text_block.h"
 #include "../list_example_layout.h"
 
 namespace {
@@ -125,7 +126,7 @@ class MaintenancePlan : public SimpleScrollablePanel {
         title_(context, "Maintenance plan",
                material3::text_style_title_large()),
         guidance_(context, "Select a task to reveal its instructions",
-                  material3::text_style_body_medium()),
+                  material3::text_style_body_medium(), kTop | kLeft),
         tasks_(context),
         filter_(context, "Backwash filter", "Due tomorrow",
                 "Run the pump for 2 minutes.\n"
@@ -145,7 +146,7 @@ class MaintenancePlan : public SimpleScrollablePanel {
  private:
   material3_examples::FullWidthColumn content_;
   TextLabel title_;
-  TextLabel guidance_;
+  TextBlock guidance_;
   material3::List tasks_;
   material3::ListRow<MaintenanceItem> filter_;
   material3::ListRow<MaintenanceItem> chemistry_;

@@ -81,6 +81,7 @@ void initDisplay() {
 #include "roo_windows/material3/theme.h"
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_label.h"
+#include "roo_windows/widgets/text_block.h"
 
 namespace {
 
@@ -148,7 +149,7 @@ class CustomBadgeAnchor : public FlexLayout {
       : FlexLayout(context, FlexDirection::kColumn),
         title_(context, "Chemical feeder", material3::text_style_title_large()),
         guidance_(context, "Custom tile · 3 maintenance alerts",
-                  material3::text_style_body_medium()),
+                  material3::text_style_body_medium(), kTop | kLeft),
         tile_(context, 3) {
     setPadding(Padding(Scaled(16), Scaled(16)));
     setGap(Scaled(12));
@@ -160,7 +161,7 @@ class CustomBadgeAnchor : public FlexLayout {
 
  private:
   TextLabel title_;
-  TextLabel guidance_;
+  TextBlock guidance_;
   AlertTile tile_;
 };
 

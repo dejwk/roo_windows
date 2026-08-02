@@ -81,6 +81,7 @@ void initDisplay() {
 #include "roo_windows/material3/slider/slider.h"
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_label.h"
+#include "roo_windows/widgets/text_block.h"
 
 namespace {
 
@@ -139,7 +140,7 @@ class CenteredBalance : public FlexLayout {
                material3::text_style_title_large()),
         guidance_(context,
                   "Zero is neutral; the active track grows from center",
-                  material3::text_style_body_medium()),
+                  material3::text_style_body_medium(), kTop | kLeft),
         status_(context, "", material3::text_style_title_medium()),
         slider_(context, status_) {
     setPadding(Padding(Scaled(16)));
@@ -152,7 +153,7 @@ class CenteredBalance : public FlexLayout {
 
  private:
   TextLabel title_;
-  TextLabel guidance_;
+  TextBlock guidance_;
   TextLabel status_;
   BalanceSlider slider_;
 };
