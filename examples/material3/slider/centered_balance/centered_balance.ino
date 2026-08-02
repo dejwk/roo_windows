@@ -124,7 +124,7 @@ class BalanceSlider : public material3::Slider {
 
  private:
   void updateStatus(float value) {
-    status_.setTextf("Return-water balance: %+.0f", value);
+    status_.setTextf("Volume balance: %+.0f%", value);
   }
 
   TextLabel& status_;
@@ -136,7 +136,7 @@ class CenteredBalance : public FlexLayout {
   /// Creates the signed balance control lesson.
   explicit CenteredBalance(ApplicationContext& context)
       : FlexLayout(context, FlexDirection::kColumn),
-        title_(context, "Hydraulic balance",
+        title_(context, "Balance",
                material3::text_style_title_large()),
         guidance_(context,
                   "Zero is neutral; the active track grows from center",
