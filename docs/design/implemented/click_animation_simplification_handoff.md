@@ -257,9 +257,6 @@ Change 1 removed:
 
 The following remain optional independent cleanup:
 
-- `gesture_detector.h` defines unused `kClickAnimationUs`,
-- `widget.cpp` defines unused `kClickDurationThresholdMs` and
-  `kClickStickinessRadius`,
 - `kTerminateAnimationsOnCancel` is a file-local constant permanently set to
   true; the direct branch is clearer if runtime configurability is not planned.
 

@@ -15,7 +15,6 @@ static constexpr unsigned int kShowPressTimeoutUs = 100000;
 static constexpr unsigned int kTapTimeoutUs = 300000;
 static constexpr unsigned int kLongPressTimeoutUs = 300000;
 
-static constexpr unsigned long kClickAnimationUs = 200000;
 static constexpr unsigned long kClickDelayUs = 1000;
 
 static constexpr int16_t kTouchSlop = 12;

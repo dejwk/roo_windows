@@ -17,20 +17,6 @@
 
 namespace roo_windows {
 
-// If the end-to-end duration of touch it shorted than this threshold,
-// it is always interpreted as a 'click' rather than 'drag'; i.e.
-// it is registered in the target component even if the exit coordinates
-// fall outside of the component. (It helps to overcome touch panel noise).
-static const long int kClickDurationThresholdMs = 200;
-
-// When the user presses on a clickable item and drags the finger within
-// this radius, the drag events are ignored and considered 'random noise'.
-// The item remains clicked, and when the press is released, the gesture
-// is interpreted as 'click'. If the user drags beyond this thredhold,
-// however, then the item gets 'unclicked' and the gesture gets interpreted
-// as drag.
-static const long int kClickStickinessRadius = 40;
-
 // If working with the fast display, set it to false, so that click animations
 // finish gracefully. The default is true, because SPI displays are slow, and
 // continuing to animate a moving widget (e.g. when its) container is scrolling)
