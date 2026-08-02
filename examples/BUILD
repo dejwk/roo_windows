@@ -49,9 +49,21 @@ roo_windows_example_build(
 )
 
 roo_windows_example_build(
-    name = "material3_layout_scaffold",
-    sketch = "material3/layout_scaffold/layout_scaffold.ino",
-    include_dir = "material3/layout_scaffold",
+    name = "material3_layout_scaffold_adaptive_navigation",
+    sketch = "material3/layout_scaffold/adaptive_navigation/adaptive_navigation.ino",
+    include_dir = "material3/layout_scaffold/adaptive_navigation",
+)
+
+roo_windows_example_build(
+    name = "material3_pane_layout_equipment_list_detail",
+    sketch = "material3/pane_layout/equipment_list_detail/equipment_list_detail.ino",
+    include_dir = "material3/pane_layout/equipment_list_detail",
+)
+
+roo_windows_example_build(
+    name = "material3_grid_layout_pool_dashboard",
+    sketch = "material3/grid_layout/pool_dashboard/pool_dashboard.ino",
+    include_dir = "material3/grid_layout/pool_dashboard",
 )
 
 roo_windows_example_build(
@@ -190,7 +202,8 @@ filegroup(
         ":material3_buttons_compact_controls_example_build",
         ":material3_buttons_pool_actions_example_build",
         ":material3_checkbox_alarm_sources_example_build",
-        ":material3_layout_scaffold_example_build",
+        ":material3_grid_layout_pool_dashboard_example_build",
+        ":material3_layout_scaffold_adaptive_navigation_example_build",
         ":material3_lists_expandable_maintenance_example_build",
         ":material3_lists_legacy_baseline_menu_example_build",
         ":material3_lists_navigation_example_build",
@@ -199,6 +212,7 @@ filegroup(
         ":material3_lists_settings_example_build",
         ":material3_navigation_bar_app_navigation_example_build",
         ":material3_navigation_rail_app_navigation_example_build",
+        ":material3_pane_layout_equipment_list_detail_example_build",
         ":material3_radio_button_control_density_example_build",
         ":material3_range_slider_quiet_hours_example_build",
         ":material3_search_bar_basic_search_example_build",
