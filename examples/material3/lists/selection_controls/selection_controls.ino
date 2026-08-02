@@ -80,6 +80,7 @@ void initDisplay() {
 #include "roo_windows/material3/list/list.h"
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_label.h"
+#include "../list_example_layout.h"
 
 namespace {
 
@@ -89,7 +90,7 @@ class SelectionControls : public SimpleScrollablePanel {
   /// Creates checkbox, radio, and switch lists with row-wide interaction.
   explicit SelectionControls(ApplicationContext& context)
       : SimpleScrollablePanel(context),
-        content_(context, FlexDirection::kColumn),
+        content_(context),
         title_(context, "Control preferences",
                material3::text_style_title_large()),
         alarms_label_(context, "Alarm sources",
@@ -161,7 +162,7 @@ class SelectionControls : public SimpleScrollablePanel {
     comfortable_.refreshFromItem();
   }
 
-  FlexLayout content_;
+  material3_examples::FullWidthColumn content_;
   TextLabel title_;
   TextLabel alarms_label_;
   material3::List alarms_;

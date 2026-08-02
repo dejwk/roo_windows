@@ -76,18 +76,21 @@ void initDisplay() {
 // *************** EXAMPLE STARTS HERE
 
 #include "roo_windows/containers/flex_layout.h"
+#include "roo_windows/containers/scrollable_panel.h"
 #include "roo_windows/material3/list/list.h"
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_label.h"
+#include "../list_example_layout.h"
 
 namespace {
 
 /// Daily circulation schedule presented as one visual group.
-class CirculationSchedule : public FlexLayout {
+class CirculationSchedule : public SimpleScrollablePanel {
  public:
   /// Creates three related schedule entries in a segmented list.
   explicit CirculationSchedule(ApplicationContext& context)
-      : FlexLayout(context, FlexDirection::kColumn),
+      : SimpleScrollablePanel(context),
+        content_(context),
         title_(context, "Circulation schedule",
                material3::text_style_title_large()),
         guidance_(context, "Today's automatic equipment cycles",
@@ -99,8 +102,8 @@ class CirculationSchedule : public FlexLayout {
                             "09:15  Solar assist", "When roof water is warm")),
         evening_(context, material3::StandardListItemInit::TwoLine(
                               "18:45  Spa filter", "Daily · 45 minutes")) {
-    setPadding(Padding(Scaled(16), Scaled(12)));
-    setGap(Scaled(10));
+    content_.setPadding(Padding(Scaled(16), Scaled(12)));
+    content_.setGap(Scaled(10));
 
     // Segmented style supplies the grouped gaps and position-aware shapes.
     schedule_.setStyle(material3::ListStyle::kSegmented);
@@ -112,12 +115,14 @@ class CirculationSchedule : public FlexLayout {
     schedule_.add(solar_);
     schedule_.add(evening_);
 
-    add(title_, {.flex_grow = 0, .flex_shrink = 0});
-    add(guidance_, {.flex_grow = 0, .flex_shrink = 0});
-    add(schedule_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(title_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(guidance_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(schedule_, {.flex_grow = 0, .flex_shrink = 0});
+    setContents(content_);
   }
 
  private:
+  material3_examples::FullWidthColumn content_;
   TextLabel title_;
   TextLabel guidance_;
   material3::List schedule_;

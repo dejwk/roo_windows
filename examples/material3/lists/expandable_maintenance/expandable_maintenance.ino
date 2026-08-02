@@ -82,6 +82,7 @@ void initDisplay() {
 #include "roo_windows/material3/list/list.h"
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_label.h"
+#include "../list_example_layout.h"
 
 namespace {
 
@@ -120,7 +121,7 @@ class MaintenancePlan : public SimpleScrollablePanel {
   /// Creates collapsed filter and chemistry tasks.
   explicit MaintenancePlan(ApplicationContext& context)
       : SimpleScrollablePanel(context),
-        content_(context, FlexDirection::kColumn),
+        content_(context),
         title_(context, "Maintenance plan",
                material3::text_style_title_large()),
         guidance_(context, "Select a task to reveal its instructions",
@@ -142,7 +143,7 @@ class MaintenancePlan : public SimpleScrollablePanel {
   }
 
  private:
-  FlexLayout content_;
+  material3_examples::FullWidthColumn content_;
   TextLabel title_;
   TextLabel guidance_;
   material3::List tasks_;

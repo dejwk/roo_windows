@@ -44,6 +44,7 @@ def roo_windows_example_build(
         name,
         sketch,
         include_dir,
+        textual_hdrs = [],
         deps = []):
     """Creates a build-only emulator target for a standalone Arduino sketch.
 
@@ -51,6 +52,7 @@ def roo_windows_example_build(
       name: Stable target-name prefix. The binary is `<name>_example_build`.
       sketch: Label of the `.ino` file compiled by the target.
       include_dir: Directory containing `sketch`, relative to this package.
+      textual_hdrs: Additional textually included source files for `sketch`.
       deps: Additional dependencies required by this particular example.
     """
     source_target = name + "_example_source"
@@ -63,7 +65,7 @@ def roo_windows_example_build(
 
     cc_library(
         name = source_target,
-        textual_hdrs = [sketch],
+        textual_hdrs = [sketch] + textual_hdrs,
         includes = [include_dir],
         deps = _EXAMPLE_SOURCE_DEPS + deps,
     )

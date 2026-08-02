@@ -76,18 +76,21 @@ void initDisplay() {
 // *************** EXAMPLE STARTS HERE
 
 #include "roo_windows/containers/flex_layout.h"
+#include "roo_windows/containers/scrollable_panel.h"
 #include "roo_windows/material3/list/list.h"
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_label.h"
+#include "../list_example_layout.h"
 
 namespace {
 
 /// Compatibility menu using the opt-in baseline list variant.
-class LegacyServiceMenu : public FlexLayout {
+class LegacyServiceMenu : public SimpleScrollablePanel {
  public:
   /// Creates a baseline menu with shortcut labels and full-width dividers.
   explicit LegacyServiceMenu(ApplicationContext& context)
-      : FlexLayout(context, FlexDirection::kColumn),
+      : SimpleScrollablePanel(context),
+        content_(context),
         title_(context, "Legacy service menu",
                material3::text_style_title_large()),
         guidance_(context, "Use only when matching an existing square menu",
@@ -102,8 +105,8 @@ class LegacyServiceMenu : public FlexLayout {
                            "Edit schedule", nullptr, &edit_key_)),
         remove_(context, material3::StandardListItemInit::OneLine(
                              "Remove", nullptr, &remove_key_)) {
-    setPadding(Padding(Scaled(16), Scaled(12)));
-    setGap(Scaled(10));
+    content_.setPadding(Padding(Scaled(16), Scaled(12)));
+    content_.setGap(Scaled(10));
 
     // The baseline variant is deliberately isolated in this legacy example.
     menu_.setVariant(material3::ListVariant::kBaseline);
@@ -114,12 +117,14 @@ class LegacyServiceMenu : public FlexLayout {
     menu_.add(refresh_);
     menu_.add(edit_);
     menu_.add(remove_);
-    add(title_, {.flex_grow = 0, .flex_shrink = 0});
-    add(guidance_, {.flex_grow = 0, .flex_shrink = 0});
-    add(menu_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(title_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(guidance_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(menu_, {.flex_grow = 0, .flex_shrink = 0});
+    setContents(content_);
   }
 
  private:
+  material3_examples::FullWidthColumn content_;
   TextLabel title_;
   TextLabel guidance_;
   material3::List menu_;

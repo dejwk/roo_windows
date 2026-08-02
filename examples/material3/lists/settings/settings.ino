@@ -76,10 +76,12 @@ void initDisplay() {
 // *************** EXAMPLE STARTS HERE
 
 #include "roo_windows/containers/flex_layout.h"
+#include "roo_windows/containers/scrollable_panel.h"
 #include "roo_windows/material3/list/list.h"
 #include "roo_windows/material3/switch/switch.h"
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_label.h"
+#include "../list_example_layout.h"
 
 namespace {
 
@@ -94,11 +96,12 @@ material3::StandardListItemInit WrappedSetting(roo::string_view headline,
 }
 
 /// Pool settings screen built from standard rows and inset dividers.
-class PoolSettings : public FlexLayout {
+class PoolSettings : public SimpleScrollablePanel {
  public:
   /// Creates settings with one-line, wrapped, and trailing-control rows.
   explicit PoolSettings(ApplicationContext& context)
-      : FlexLayout(context, FlexDirection::kColumn),
+      : SimpleScrollablePanel(context),
+        content_(context),
         title_(context, "Pool settings", material3::text_style_title_large()),
         guidance_(context, "Review automation and safety defaults",
                   material3::text_style_body_medium()),
@@ -112,8 +115,8 @@ class PoolSettings : public FlexLayout {
                                     "than the pool")),
         safety_(context, material3::StandardListItemInit::OneLine(
                              "Safety lock", nullptr, &safety_lock_)) {
-    setPadding(Padding(Scaled(16), Scaled(12)));
-    setGap(Scaled(10));
+    content_.setPadding(Padding(Scaled(16), Scaled(12)));
+    content_.setGap(Scaled(10));
 
     // Inset dividers align with text rather than cutting through the screen.
     material3::ListDividerPolicy dividers;
@@ -126,12 +129,14 @@ class PoolSettings : public FlexLayout {
     list_.add(solar_delta_);
     list_.add(safety_);
 
-    add(title_, {.flex_grow = 0, .flex_shrink = 0});
-    add(guidance_, {.flex_grow = 0, .flex_shrink = 0});
-    add(list_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(title_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(guidance_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(list_, {.flex_grow = 0, .flex_shrink = 0});
+    setContents(content_);
   }
 
  private:
+  material3_examples::FullWidthColumn content_;
   TextLabel title_;
   TextLabel guidance_;
   material3::List list_;

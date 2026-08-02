@@ -58,36 +58,42 @@ roo_windows_example_build(
     name = "material3_lists_settings",
     sketch = "material3/lists/settings/settings.ino",
     include_dir = "material3/lists/settings",
+    textual_hdrs = ["material3/lists/list_example_layout.h"],
 )
 
 roo_windows_example_build(
     name = "material3_lists_segmented_schedule",
     sketch = "material3/lists/segmented_schedule/segmented_schedule.ino",
     include_dir = "material3/lists/segmented_schedule",
+    textual_hdrs = ["material3/lists/list_example_layout.h"],
 )
 
 roo_windows_example_build(
     name = "material3_lists_navigation",
     sketch = "material3/lists/navigation/navigation.ino",
     include_dir = "material3/lists/navigation",
+    textual_hdrs = ["material3/lists/list_example_layout.h"],
 )
 
 roo_windows_example_build(
     name = "material3_lists_selection_controls",
     sketch = "material3/lists/selection_controls/selection_controls.ino",
     include_dir = "material3/lists/selection_controls",
+    textual_hdrs = ["material3/lists/list_example_layout.h"],
 )
 
 roo_windows_example_build(
     name = "material3_lists_expandable_maintenance",
     sketch = "material3/lists/expandable_maintenance/expandable_maintenance.ino",
     include_dir = "material3/lists/expandable_maintenance",
+    textual_hdrs = ["material3/lists/list_example_layout.h"],
 )
 
 roo_windows_example_build(
     name = "material3_lists_legacy_baseline_menu",
     sketch = "material3/lists/legacy_baseline_menu/legacy_baseline_menu.ino",
     include_dir = "material3/lists/legacy_baseline_menu",
+    textual_hdrs = ["material3/lists/list_example_layout.h"],
 )
 
 roo_windows_example_build(

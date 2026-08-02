@@ -77,18 +77,21 @@ void initDisplay() {
 // *************** EXAMPLE STARTS HERE
 
 #include "roo_windows/containers/flex_layout.h"
+#include "roo_windows/containers/scrollable_panel.h"
 #include "roo_windows/material3/list/list.h"
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_label.h"
+#include "../list_example_layout.h"
 
 namespace {
 
 /// Equipment list whose invokable rows update adjacent screen state.
-class EquipmentNavigation : public FlexLayout {
+class EquipmentNavigation : public SimpleScrollablePanel {
  public:
   /// Creates two destinations and binds each item's invocation callback.
   explicit EquipmentNavigation(ApplicationContext& context)
-      : FlexLayout(context, FlexDirection::kColumn),
+      : SimpleScrollablePanel(context),
+        content_(context),
         title_(context, "Equipment", material3::text_style_title_large()),
         feedback_(context, "Select an item to open its details",
                   material3::text_style_body_medium()),
@@ -96,8 +99,8 @@ class EquipmentNavigation : public FlexLayout {
         next_task_(context, ic_outlined_24_notification_sync(), "Next task",
                    "Backwash filter · tomorrow at 08:00"),
         owner_(context, "DW", "Service contact", "Dawid · pool technician") {
-    setPadding(Padding(Scaled(16), Scaled(12)));
-    setGap(Scaled(10));
+    content_.setPadding(Padding(Scaled(16), Scaled(12)));
+    content_.setGap(Scaled(10));
 
     // Invokable item types add the click target and trailing affordance. The
     // row forwards both touch and keyboard invocation to the same callback.
@@ -109,12 +112,14 @@ class EquipmentNavigation : public FlexLayout {
     equipment_.add(next_task_);
     equipment_.add(owner_);
 
-    add(title_, {.flex_grow = 0, .flex_shrink = 0});
-    add(feedback_, {.flex_grow = 0, .flex_shrink = 0});
-    add(equipment_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(title_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(feedback_, {.flex_grow = 0, .flex_shrink = 0});
+    content_.add(equipment_, {.flex_grow = 0, .flex_shrink = 0});
+    setContents(content_);
   }
 
  private:
+  material3_examples::FullWidthColumn content_;
   TextLabel title_;
   TextLabel feedback_;
   material3::List equipment_;
