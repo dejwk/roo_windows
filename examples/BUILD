@@ -25,9 +25,15 @@ roo_windows_example_build(
 )
 
 roo_windows_example_build(
-    name = "material3_badge",
-    sketch = "material3/badge/badge.ino",
-    include_dir = "material3/badge",
+    name = "material3_badge_notification_count",
+    sketch = "material3/badge/notification_count/notification_count.ino",
+    include_dir = "material3/badge/notification_count",
+)
+
+roo_windows_example_build(
+    name = "material3_badge_custom_anchor",
+    sketch = "material3/badge/custom_anchor/custom_anchor.ino",
+    include_dir = "material3/badge/custom_anchor",
 )
 
 roo_windows_example_build(
@@ -49,9 +55,39 @@ roo_windows_example_build(
 )
 
 roo_windows_example_build(
-    name = "material3_lists",
-    sketch = "material3/lists/lists.ino",
-    include_dir = "material3/lists",
+    name = "material3_lists_settings",
+    sketch = "material3/lists/settings/settings.ino",
+    include_dir = "material3/lists/settings",
+)
+
+roo_windows_example_build(
+    name = "material3_lists_segmented_schedule",
+    sketch = "material3/lists/segmented_schedule/segmented_schedule.ino",
+    include_dir = "material3/lists/segmented_schedule",
+)
+
+roo_windows_example_build(
+    name = "material3_lists_navigation",
+    sketch = "material3/lists/navigation/navigation.ino",
+    include_dir = "material3/lists/navigation",
+)
+
+roo_windows_example_build(
+    name = "material3_lists_selection_controls",
+    sketch = "material3/lists/selection_controls/selection_controls.ino",
+    include_dir = "material3/lists/selection_controls",
+)
+
+roo_windows_example_build(
+    name = "material3_lists_expandable_maintenance",
+    sketch = "material3/lists/expandable_maintenance/expandable_maintenance.ino",
+    include_dir = "material3/lists/expandable_maintenance",
+)
+
+roo_windows_example_build(
+    name = "material3_lists_legacy_baseline_menu",
+    sketch = "material3/lists/legacy_baseline_menu/legacy_baseline_menu.ino",
+    include_dir = "material3/lists/legacy_baseline_menu",
 )
 
 roo_windows_example_build(
@@ -139,9 +175,9 @@ roo_windows_example_build(
 )
 
 roo_windows_example_build(
-    name = "material3_typography",
-    sketch = "material3/typography/typography.ino",
-    include_dir = "material3/typography",
+    name = "material3_typography_pool_status",
+    sketch = "material3/typography/pool_status/pool_status.ino",
+    include_dir = "material3/typography/pool_status",
 )
 
 filegroup(
@@ -149,12 +185,18 @@ filegroup(
     srcs = [
         ":material3_app_bar_basic_top_bar_example_build",
         ":material3_app_bar_flexible_top_bar_example_build",
-        ":material3_badge_example_build",
+        ":material3_badge_custom_anchor_example_build",
+        ":material3_badge_notification_count_example_build",
         ":material3_buttons_compact_controls_example_build",
         ":material3_buttons_pool_actions_example_build",
         ":material3_checkbox_alarm_sources_example_build",
         ":material3_layout_scaffold_example_build",
-        ":material3_lists_example_build",
+        ":material3_lists_expandable_maintenance_example_build",
+        ":material3_lists_legacy_baseline_menu_example_build",
+        ":material3_lists_navigation_example_build",
+        ":material3_lists_segmented_schedule_example_build",
+        ":material3_lists_selection_controls_example_build",
+        ":material3_lists_settings_example_build",
         ":material3_navigation_bar_app_navigation_example_build",
         ":material3_navigation_rail_app_navigation_example_build",
         ":material3_radio_button_control_density_example_build",
@@ -170,6 +212,6 @@ filegroup(
         ":material3_tabs_history_filter_example_build",
         ":material3_tabs_scrollable_categories_example_build",
         ":material3_tabs_status_pages_example_build",
-        ":material3_typography_example_build",
+        ":material3_typography_pool_status_example_build",
     ],
 )
