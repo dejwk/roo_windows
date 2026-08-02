@@ -70,7 +70,11 @@ Rect ResolveLabelContentBounds(const Rect& logical_bounds,
                      text_style.lineHeight() - text_style.baselineOffset() - 1);
   auto offset =
       ResolveAlignmentOffset(logical_bounds, anchor_bounds, alignment);
-  return Rect(metrics.screen_extents()).translate(offset.first, offset.second);
+  // A constrained label may clip a long string. Its direct-paint exclusion
+  // must not extend into adjacent sibling or surface pixels.
+  return Rect::Intersect(
+      logical_bounds,
+      Rect(metrics.screen_extents()).translate(offset.first, offset.second));
 }
 
 }  // namespace

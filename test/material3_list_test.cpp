@@ -1032,6 +1032,25 @@ TEST(Material3List, ListEntryMeasuresAndLaysOutSlots) {
   EXPECT_EQ((measured.height() - trailing.height()) / 2, trailing.offsetTop());
 }
 
+// Verifies that a truncated supporting label does not exclude the trailing
+// portion of its row surface from the row-owned press overlay.
+TEST(Material3List, TruncatedSupportingLabelKeepsPaintBoundsInsideTextSlot) {
+  roo_scheduler::Scheduler scheduler;
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
+  TestListRow<NavigationListItem> row(
+      context, ic_outlined_24_notification_sync(), "Next task",
+      "Backwash filter - tomorrow at 08:00");
+
+  Dimensions measured =
+      row.measure(WidthSpec::Exactly(180), HeightSpec::Unspecified(0));
+  row.layout(Rect(0, 0, measured.width() - 1, measured.height() - 1));
+
+  const Widget& supporting = row.getChild(2);
+  EXPECT_TRUE(supporting.getContentBounds().empty() ||
+              supporting.bounds().contains(supporting.getContentBounds()));
+}
+
 // Verifies that the const suggested-minimum query stays on the cheap,
 // non-measuring path and does not trigger child measure side effects.
 TEST(Material3List, ListEntrySuggestedMinimumDoesNotMeasureBoundSlots) {
