@@ -87,7 +87,7 @@ void initDisplay() {
 namespace {
 
 /// Makes low values appear at the bottom and exposes each ten-percent step.
-constexpr material3::SliderStyle TankLevelStyle() {
+constexpr material3::SliderStyle ChargingLevelStyle() {
   material3::SliderStyle style;
   style.orientation = material3::SliderOrientation::kVertical;
   style.direction = material3::SliderDirection::kInverted;
@@ -112,13 +112,13 @@ class VerticalSliderSlot : public Holder {
 };
 
 /// Vertical slider that binds the tank percentage to status text.
-class TankSlider : public material3::Slider {
+class ChargingLevelSlider : public material3::Slider {
  public:
   /// Creates a zero-to-100-percent control with ten-percent steps.
-  TankSlider(ApplicationContext& context, TextLabel& value_label)
+  ChargingLevelSlider(ApplicationContext& context, TextLabel& value_label)
       : material3::Slider(context, {0.0f, 100.0f, 10.0f}, 60.0f,
                           material3::SliderVariant::kStandard,
-                          TankLevelStyle()),
+                          ChargingLevelStyle()),
         value_label_(value_label) {
     updateLabel(value());
   }
@@ -147,14 +147,14 @@ class TankSlider : public material3::Slider {
   TextLabel& value_label_;
 };
 
-/// Tank screen demonstrating orientation independently from value semantics.
-class TankLevel : public FlexLayout {
+/// Charging screen demonstrating orientation independently from value semantics.
+class ChargingLevel : public FlexLayout {
  public:
-  /// Creates the vertical tank-level lesson.
-  explicit TankLevel(ApplicationContext& context)
+  /// Creates the vertical charging-level lesson.
+  explicit ChargingLevel(ApplicationContext& context)
       : FlexLayout(context, FlexDirection::kRow),
         details_(context, FlexDirection::kColumn),
-        title_(context, "Balance tank", material3::text_style_title_large()),
+        title_(context, "Target level", material3::text_style_title_large()),
         guidance_(context, "Ten-percent steps keep sparse ticks readable",
                   material3::text_style_body_medium(), kTop | kLeft),
         value_(context, "", material3::text_style_display_small()),
@@ -178,7 +178,7 @@ class TankLevel : public FlexLayout {
   TextBlock guidance_;
   TextLabel value_;
   VerticalSliderSlot slider_slot_;
-  TankSlider slider_;
+  ChargingLevelSlider slider_;
 };
 
 }  // namespace
@@ -190,8 +190,8 @@ Application app(&env, display, emulator_keys, true);
 #else
 Application app(&env, display);
 #endif
-TankLevel tank_level(app.context());
-SingletonActivity activity(app, tank_level);
+ChargingLevel charging_level(app.context());
+SingletonActivity activity(app, charging_level);
 
 void setup() {
   initDisplay();

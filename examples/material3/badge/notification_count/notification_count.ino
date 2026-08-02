@@ -108,7 +108,7 @@ class NotificationNavigation : public material3::NavigationBar {
   }
 
  private:
-  TextLabel& feedback_;
+  TextBlock& feedback_;
   material3::BadgedNavigationBarDestination& alerts_;
 };
 
@@ -146,7 +146,7 @@ class NotificationCount : public FlexLayout {
  private:
   FlexLayout content_;
   TextLabel title_;
-  TextLabel feedback_;
+  TextBlock feedback_;
   material3::NavigationBarDestination status_;
   material3::BadgedNavigationBarDestination alerts_;
   material3::NavigationBarDestination settings_;
