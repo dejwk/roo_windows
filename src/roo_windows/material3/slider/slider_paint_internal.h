@@ -149,7 +149,7 @@ inline Rect IndicatorDirtyRectFromSpan(const DirtySpan& span, int16_t width,
                                        int16_t height, SliderStyle style) {
   if (span.empty() || width <= 0 || height <= 0) return Rect(0, 0, -1, -1);
   Rect conservative = ValueIndicatorBubble::ConservativeBounds(
-      width, height, kHandleWidth, style.value_indicator, style.orientation);
+      width, height, kHandleWidth, style);
   if (conservative.empty()) return Rect(0, 0, -1, -1);
   if (style.orientation == SliderOrientation::kVertical) {
     return Rect(conservative.xMin(), span.min_coord, conservative.xMax(),

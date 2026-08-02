@@ -9,6 +9,7 @@
 #include "roo_windows/core/number.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/material3/slider/slider_internal.h"
+#include "roo_windows/material3/slider/slider_size_internal.h"
 #include "roo_windows/material3/theme.h"
 #include "roo_windows/material3/typography.h"
 
@@ -39,6 +40,17 @@ constexpr float kIntegerTolerance = internal::kSliderStepDivisibilityTolerance;
 //     thickness = r - floor(r * 181 / 256)   (~= 0.293 * r)
 // For kCornerRadius==Scaled(20) (==20 px on a 1x display) this evaluates to 5.
 constexpr int16_t kCornerInset = kCornerRadius - (181 * kCornerRadius) / 256;
+
+// Returns the x coordinate immediately before the spec-defined gap from the
+// leading edge of a vertical thumb. A vertical slider may be allocated wider
+// than its handle, so anchoring this to the widget edge would make the gap
+// grow with the available width.
+int16_t VerticalIndicatorRight(int16_t parent_width, SliderSize size) {
+  const int16_t thumb_width =
+      internal::ResolveSliderSizeMetrics(size).handle_height;
+  const int16_t thumb_left = (parent_width - thumb_width) / 2;
+  return thumb_left - kGap - 1;
+}
 
 }  // namespace
 
@@ -89,17 +101,19 @@ roo::string_view ValueIndicatorBubble::FormatDefault(float value, char* scratch,
 }
 
 // static
-Rect ValueIndicatorBubble::ConservativeBounds(
-    int16_t parent_width, int16_t parent_height, int16_t thumb_overhang,
-    SliderValueIndicatorBehavior behavior, SliderOrientation orientation) {
-  if (behavior == SliderValueIndicatorBehavior::kHidden || parent_width <= 0 ||
-      parent_height <= 0) {
+Rect ValueIndicatorBubble::ConservativeBounds(int16_t parent_width,
+                                              int16_t parent_height,
+                                              int16_t thumb_overhang,
+                                              const SliderStyle& style) {
+  if (style.value_indicator == SliderValueIndicatorBehavior::kHidden ||
+      parent_width <= 0 || parent_height <= 0) {
     return Rect();
   }
   int16_t bw = kBubbleMaxWidth;
   int16_t bh = 2 * kPaddingV + text_style_label_small().lineHeight();
-  bool clamp = behavior == SliderValueIndicatorBehavior::kWithinBounds;
-  if (orientation == SliderOrientation::kVertical) {
+  bool clamp =
+      style.value_indicator == SliderValueIndicatorBehavior::kWithinBounds;
+  if (style.orientation == SliderOrientation::kVertical) {
     if (clamp && bh > parent_height) bh = parent_height;
     int16_t top, bottom;
     if (clamp) {
@@ -110,7 +124,7 @@ Rect ValueIndicatorBubble::ConservativeBounds(
       top = -margin;
       bottom = parent_height - 1 + margin;
     }
-    int16_t right = -kGap - 1;
+    int16_t right = VerticalIndicatorRight(parent_width, style.size);
     int16_t left = right - bw + 1;
     return Rect(left, top, right, bottom);
   }
@@ -130,31 +144,32 @@ Rect ValueIndicatorBubble::ConservativeBounds(
 }
 
 // static
-Rect ValueIndicatorBubble::EnvelopeForCenterRange(
-    int16_t parent_width, int16_t parent_height, float center_min,
-    float center_max, SliderValueIndicatorBehavior behavior,
-    SliderOrientation orientation) {
+Rect ValueIndicatorBubble::EnvelopeForCenterRange(int16_t parent_width,
+                                                  int16_t parent_height,
+                                                  float center_min,
+                                                  float center_max,
+                                                  const SliderStyle& style) {
   return EnvelopeForCenterRange(
-      parent_width, parent_height, center_min, center_max, behavior,
-      orientation, kBubbleMaxWidth,
-      2 * kPaddingV + text_style_label_small().lineHeight());
+      parent_width, parent_height, center_min, center_max, style,
+      kBubbleMaxWidth, 2 * kPaddingV + text_style_label_small().lineHeight());
 }
 
 // static
 Rect ValueIndicatorBubble::EnvelopeForCenterRange(
     int16_t parent_width, int16_t parent_height, float center_min,
-    float center_max, SliderValueIndicatorBehavior behavior,
-    SliderOrientation orientation, int16_t bubble_width,
+    float center_max, const SliderStyle& style, int16_t bubble_width,
     int16_t bubble_height) {
-  if (behavior == SliderValueIndicatorBehavior::kHidden || parent_width <= 0 ||
-      parent_height <= 0 || bubble_width <= 0 || bubble_height <= 0) {
+  if (style.value_indicator == SliderValueIndicatorBehavior::kHidden ||
+      parent_width <= 0 || parent_height <= 0 || bubble_width <= 0 ||
+      bubble_height <= 0) {
     return Rect();
   }
   if (center_min > center_max) std::swap(center_min, center_max);
   int16_t bw = bubble_width;
   int16_t bh = bubble_height;
-  bool clamp = behavior == SliderValueIndicatorBehavior::kWithinBounds;
-  if (orientation == SliderOrientation::kVertical) {
+  bool clamp =
+      style.value_indicator == SliderValueIndicatorBehavior::kWithinBounds;
+  if (style.orientation == SliderOrientation::kVertical) {
     if (clamp && bh > parent_height) bh = parent_height;
     int16_t t_min = (int16_t)floorf(center_min) - bh / 2 - 1;
     int16_t t_max = (int16_t)ceilf(center_max) - bh / 2 + 1;
@@ -167,7 +182,7 @@ Rect ValueIndicatorBubble::EnvelopeForCenterRange(
       if (t_max < t_clamp_min) t_max = t_clamp_min;
       if (t_max > t_clamp_max) t_max = t_clamp_max;
     }
-    int16_t right = -kGap - 1;
+    int16_t right = VerticalIndicatorRight(parent_width, style.size);
     int16_t left = right - bw + 1;
     int16_t top = t_min;
     int16_t bottom = t_max + bh - 1;
@@ -197,8 +212,7 @@ Rect ValueIndicatorBubble::EnvelopeForCenterRange(
 }
 
 bool ValueIndicatorBubble::layout(int16_t parent_width, int16_t parent_height,
-                                  float thumb_center,
-                                  SliderOrientation orientation,
+                                  float thumb_center, const SliderStyle& style,
                                   roo::string_view text, bool clamp_to_bounds) {
   valid_ = false;
   bounds_ = Rect();
@@ -211,8 +225,8 @@ bool ValueIndicatorBubble::layout(int16_t parent_width, int16_t parent_height,
   int16_t bw;
   int16_t bh;
   MeasureBubbleSize(text, bw, bh);
-  if (orientation == SliderOrientation::kVertical) {
-    int16_t right = -kGap - 1;
+  if (style.orientation == SliderOrientation::kVertical) {
+    int16_t right = VerticalIndicatorRight(parent_width, style.size);
     int16_t left = right - bw + 1;
     int16_t top = (int16_t)roundf(thumb_center) - bh / 2;
     if (clamp_to_bounds) {
@@ -298,8 +312,7 @@ Rect PaintValueIndicator(const Theme& theme, bool enabled,
                          int16_t parent_height, float thumb_center,
                          const SliderStyle& style, roo::string_view text) {
   ValueIndicatorBubble bubble(theme, enabled);
-  if (!bubble.layout(parent_width, parent_height, thumb_center,
-                     style.orientation, text,
+  if (!bubble.layout(parent_width, parent_height, thumb_center, style, text,
                      style.value_indicator ==
                          SliderValueIndicatorBehavior::kWithinBounds)) {
     return Rect();

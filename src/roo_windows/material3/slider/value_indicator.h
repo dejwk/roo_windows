@@ -76,8 +76,7 @@ class ValueIndicatorBubble {
   // roughly half the conservative bubble span plus a small thumb overhang.
   static Rect ConservativeBounds(int16_t parent_width, int16_t parent_height,
                                  int16_t thumb_overhang,
-                                 SliderValueIndicatorBehavior behavior,
-                                 SliderOrientation orientation);
+                                 const SliderStyle& style);
 
   // Tight bounding rectangle (in widget-local coordinates) for a bubble
   // whose thumb-center varies over [center_min, center_max] along the
@@ -93,8 +92,7 @@ class ValueIndicatorBubble {
   static Rect EnvelopeForCenterRange(int16_t parent_width,
                                      int16_t parent_height, float center_min,
                                      float center_max,
-                                     SliderValueIndicatorBehavior behavior,
-                                     SliderOrientation orientation);
+                                     const SliderStyle& style);
 
   // Measures the actual bubble size that layout() would use for `text`
   // before any clamp-to-bounds adjustments.
@@ -105,9 +103,7 @@ class ValueIndicatorBubble {
   // measured bubble size rather than the conservative maximum width.
   static Rect EnvelopeForCenterRange(int16_t parent_width,
                                      int16_t parent_height, float center_min,
-                                     float center_max,
-                                     SliderValueIndicatorBehavior behavior,
-                                     SliderOrientation orientation,
+                                     float center_max, const SliderStyle& style,
                                      int16_t bubble_width,
                                      int16_t bubble_height);
 
@@ -129,7 +125,7 @@ class ValueIndicatorBubble {
   //
   // `text` must remain valid until paint() returns.
   bool layout(int16_t parent_width, int16_t parent_height, float thumb_center,
-              SliderOrientation orientation, roo::string_view text,
+              const SliderStyle& style, roo::string_view text,
               bool clamp_to_bounds);
 
   // The bubble's bounding rectangle in the owning slider's local

@@ -268,8 +268,8 @@ Rect ResolveCurrentIndicatorBoundsForTest(const Slider& slider,
   ValueIndicatorBubble bubble(context.theme(), slider.isEnabled());
   bool clamp =
       style.value_indicator == SliderValueIndicatorBehavior::kWithinBounds;
-  bool laid_out = bubble.layout(slider.width(), slider.height(), center,
-                                style.orientation, label, clamp);
+  bool laid_out = bubble.layout(slider.width(), slider.height(), center, style,
+                                label, clamp);
   EXPECT_TRUE(laid_out);
   return laid_out ? bubble.bounds() : Rect(0, 0, -1, -1);
 }
@@ -450,8 +450,7 @@ Rect ResolveRangeIndicatorBoundsForTest(const RangeSlider& slider, float value,
   ValueIndicatorBubble bubble(context.theme(), slider.isEnabled());
   bool laid_out = bubble.layout(
       slider.width(), slider.height(),
-      axis.displayCenterFromValue(slider.range(), value), style.orientation,
-      label,
+      axis.displayCenterFromValue(slider.range(), value), style, label,
       style.value_indicator == SliderValueIndicatorBehavior::kWithinBounds);
   EXPECT_TRUE(laid_out);
   return laid_out ? bubble.bounds() : Rect(0, 0, -1, -1);
@@ -628,6 +627,51 @@ TEST(Material3Slider, VerticalSizePresetUsesExactWidthFromPreset) {
   EXPECT_TRUE(preferred.width().isExact());
   EXPECT_EQ(Scaled(52), preferred.width().value());
   EXPECT_TRUE(preferred.height().isMatchParent());
+}
+
+// The Material 3 value indicator has a 4 dp gap from the handle. When a
+// vertical slider is given extra width, that gap is measured from the centered
+// handle rather than from the slider's outer edge.
+TEST(Material3SliderValueIndicator,
+     VerticalIndicatorAnchorsToCenteredHandleInWideSlider) {
+  roo_scheduler::Scheduler scheduler;
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
+
+  SliderStyle style{};
+  style.orientation = SliderOrientation::kVertical;
+  style.value_indicator = SliderValueIndicatorBehavior::kAlways;
+  Slider slider(context, SliderRange{0.0f, 100.0f}, 50.0f,
+                SliderVariant::kStandard, style);
+  slider.layout(Rect(0, 0, Scaled(100) - 1, Scaled(168) - 1));
+
+  const int16_t handle_left =
+      (slider.width() -
+       internal::ResolveSliderSizeMetrics(style.size).handle_height) /
+      2;
+  const int16_t expected_right = handle_left - Scaled(4) - 1;
+
+  Rect bubble = ResolveCurrentIndicatorBoundsForTest(slider, context);
+  EXPECT_EQ(expected_right, bubble.xMax());
+
+  char scratch[64];
+  roo::string_view label =
+      slider.formatLabel(slider.value(), scratch, sizeof(scratch));
+  int16_t bubble_width;
+  int16_t bubble_height;
+  ValueIndicatorBubble::MeasureBubbleSize(label, bubble_width, bubble_height);
+  internal::SliderAxisMetrics axis(slider.width(), slider.height(), true,
+                                   IsSliderDirectionInverted(style));
+  const float thumb_center =
+      axis.displayCenterFromValue(slider.range(), slider.value());
+  Rect envelope = ValueIndicatorBubble::EnvelopeForCenterRange(
+      slider.width(), slider.height(), thumb_center, thumb_center, style,
+      bubble_width, bubble_height);
+  EXPECT_EQ(expected_right, envelope.xMax());
+  EXPECT_EQ(expected_right,
+            ValueIndicatorBubble::ConservativeBounds(
+                slider.width(), slider.height(), internal::kHandleWidth, style)
+                .xMax());
 }
 
 // Verifies that the slider's container visuals resolve against the primary

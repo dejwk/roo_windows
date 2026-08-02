@@ -840,8 +840,8 @@ Rect RangeSlider::valueIndicatorBoundsInWindow() const {
   internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
   Rect local = ValueIndicatorBubble::EnvelopeForCenterRange(
       width(), height(), axis.displayCenterFromValue(range_, value),
-      axis.displayCenterFromValue(range_, value), style_.value_indicator,
-      style_.orientation, bubble_width, bubble_height);
+      axis.displayCenterFromValue(range_, value), style_, bubble_width,
+      bubble_height);
   XDim dx;
   YDim dy;
   getAbsoluteOffset(dx, dy);
