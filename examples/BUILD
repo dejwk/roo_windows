@@ -31,9 +31,15 @@ roo_windows_example_build(
 )
 
 roo_windows_example_build(
-    name = "material3_buttons",
-    sketch = "material3/buttons/buttons.ino",
-    include_dir = "material3/buttons",
+    name = "material3_buttons_pool_actions",
+    sketch = "material3/buttons/pool_actions/pool_actions.ino",
+    include_dir = "material3/buttons/pool_actions",
+)
+
+roo_windows_example_build(
+    name = "material3_buttons_compact_controls",
+    sketch = "material3/buttons/compact_controls/compact_controls.ino",
+    include_dir = "material3/buttons/compact_controls",
 )
 
 roo_windows_example_build(
@@ -61,15 +67,57 @@ roo_windows_example_build(
 )
 
 roo_windows_example_build(
-    name = "material3_selectors",
-    sketch = "material3/selectors/selectors.ino",
-    include_dir = "material3/selectors",
+    name = "material3_checkbox_alarm_sources",
+    sketch = "material3/checkbox/alarm_sources/alarm_sources.ino",
+    include_dir = "material3/checkbox/alarm_sources",
 )
 
 roo_windows_example_build(
-    name = "material3_slider",
-    sketch = "material3/slider/slider.ino",
-    include_dir = "material3/slider",
+    name = "material3_radio_button_control_density",
+    sketch = "material3/radio_button/control_density/control_density.ino",
+    include_dir = "material3/radio_button/control_density",
+)
+
+roo_windows_example_build(
+    name = "material3_switch_connectivity",
+    sketch = "material3/switch/connectivity/connectivity.ino",
+    include_dir = "material3/switch/connectivity",
+)
+
+roo_windows_example_build(
+    name = "material3_slider_temperature_setpoint",
+    sketch = "material3/slider/temperature_setpoint/temperature_setpoint.ino",
+    include_dir = "material3/slider/temperature_setpoint",
+)
+
+roo_windows_example_build(
+    name = "material3_slider_stepped_fan_speed",
+    sketch = "material3/slider/stepped_fan_speed/stepped_fan_speed.ino",
+    include_dir = "material3/slider/stepped_fan_speed",
+)
+
+roo_windows_example_build(
+    name = "material3_slider_centered_balance",
+    sketch = "material3/slider/centered_balance/centered_balance.ino",
+    include_dir = "material3/slider/centered_balance",
+)
+
+roo_windows_example_build(
+    name = "material3_slider_tank_level",
+    sketch = "material3/slider/tank_level/tank_level.ino",
+    include_dir = "material3/slider/tank_level",
+)
+
+roo_windows_example_build(
+    name = "material3_slider_inset_icon",
+    sketch = "material3/slider/inset_icon/inset_icon.ino",
+    include_dir = "material3/slider/inset_icon",
+)
+
+roo_windows_example_build(
+    name = "material3_range_slider_quiet_hours",
+    sketch = "material3/range_slider/quiet_hours/quiet_hours.ino",
+    include_dir = "material3/range_slider/quiet_hours",
 )
 
 roo_windows_example_build(
@@ -102,15 +150,23 @@ filegroup(
         ":material3_app_bar_basic_top_bar_example_build",
         ":material3_app_bar_flexible_top_bar_example_build",
         ":material3_badge_example_build",
-        ":material3_buttons_example_build",
+        ":material3_buttons_compact_controls_example_build",
+        ":material3_buttons_pool_actions_example_build",
+        ":material3_checkbox_alarm_sources_example_build",
         ":material3_layout_scaffold_example_build",
         ":material3_lists_example_build",
         ":material3_navigation_bar_app_navigation_example_build",
         ":material3_navigation_rail_app_navigation_example_build",
-        ":material3_selectors_example_build",
-        ":material3_slider_example_build",
+        ":material3_radio_button_control_density_example_build",
+        ":material3_range_slider_quiet_hours_example_build",
         ":material3_search_bar_basic_search_example_build",
         ":material3_search_bar_search_app_bar_example_build",
+        ":material3_slider_centered_balance_example_build",
+        ":material3_slider_inset_icon_example_build",
+        ":material3_slider_stepped_fan_speed_example_build",
+        ":material3_slider_tank_level_example_build",
+        ":material3_slider_temperature_setpoint_example_build",
+        ":material3_switch_connectivity_example_build",
         ":material3_tabs_history_filter_example_build",
         ":material3_tabs_scrollable_categories_example_build",
         ":material3_tabs_status_pages_example_build",

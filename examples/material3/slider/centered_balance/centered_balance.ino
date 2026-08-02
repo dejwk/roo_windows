@@ -1,0 +1,178 @@
+// Learning goal: use a centered slider for a signed adjustment around neutral.
+// Move the thumb left or right and observe the signed balance value.
+
+// *************** EMULATOR SETUP BEGIN
+
+#ifdef ROO_TESTING
+
+#include "roo_testing/devices/display/ili9341/ili9341spi.h"
+#include "roo_testing/devices/touch/xpt2046/xpt2046spi.h"
+#include "roo_testing/microcontrollers/esp32/fake_esp32.h"
+#include "roo_testing/transducers/ui/viewport/flex_viewport.h"
+#include "roo_testing/transducers/ui/viewport/fltk/fltk_viewport.h"
+#include "roo_windows/fake/fltk_key_source.h"
+
+using roo_testing_transducers::FlexViewport;
+using roo_testing_transducers::FltkViewport;
+
+struct Emulator {
+  FltkViewport viewport;
+  FlexViewport flex_viewport;
+  FakeIli9341Spi display;
+  FakeXpt2046Spi touch;
+
+  Emulator()
+      : viewport(),
+        flex_viewport(viewport, 1, FlexViewport::kRotationRight),
+        display(flex_viewport),
+        touch(flex_viewport, FakeXpt2046Spi::Calibration(269, 249, 3829, 3684,
+                                                         true, false, false)) {
+    FakeEsp32().attachSpiDevice(display, 4, 5, 6);
+    FakeEsp32().gpio.attachOutput(7, display.cs());
+    FakeEsp32().gpio.attachOutput(2, display.dc());
+    FakeEsp32().gpio.attachOutput(3, display.rst());
+    FakeEsp32().attachSpiDevice(touch, 4, 5, 6);
+    FakeEsp32().gpio.attachOutput(1, touch.cs());
+  }
+} emulator;
+
+roo_windows::fake::FltkKeySource emulator_keys;
+
+#endif
+
+// *************** DISPLAY SETUP BEGIN
+
+#include <stdio.h>
+
+#include "Arduino.h"
+#include "roo_display.h"
+#include "roo_display/driver/ili9341.h"
+#include "roo_display/driver/touch_xpt2046.h"
+#include "roo_scheduler.h"
+#include "roo_windows.h"
+
+using namespace roo_display;
+using namespace roo_windows;
+
+// Change these pins and the touch calibration for your display board.
+static constexpr int kCsPin = 7;
+static constexpr int kDcPin = 2;
+static constexpr int kRstPin = 3;
+static constexpr int kSpiSckPin = 4;
+static constexpr int kSpiMisoPin = 5;
+static constexpr int kSpiMosiPin = 6;
+static constexpr int kTouchCsPin = 1;
+
+Ili9341spi<kCsPin, kDcPin, kRstPin> screen(Orientation().rotateLeft());
+TouchXpt2046<kTouchCsPin> touch;
+Display display(screen, touch,
+                TouchCalibration(269, 249, 3829, 3684,
+                                 Orientation::LeftDown()));
+
+void initDisplay() {
+  SPI.begin(kSpiSckPin, kSpiMisoPin, kSpiMosiPin);
+  display.enableTurbo();
+  display.init();
+}
+
+// *************** EXAMPLE STARTS HERE
+
+#include "roo_windows/containers/flex_layout.h"
+#include "roo_windows/material3/slider/slider.h"
+#include "roo_windows/material3/typography.h"
+#include "roo_windows/widgets/text_label.h"
+
+namespace {
+
+/// Keeps the bubble within the track near either signed extreme.
+constexpr material3::SliderStyle BalanceStyle() {
+  material3::SliderStyle style;
+  style.value_indicator =
+      material3::SliderValueIndicatorBehavior::kWithinBounds;
+  return style;
+}
+
+/// Centered slider that publishes a signed mixing adjustment.
+class BalanceSlider : public material3::Slider {
+ public:
+  /// Creates a -100 to +100 control with five-point steps.
+  BalanceSlider(ApplicationContext& context, TextLabel& status)
+      : material3::Slider(context, {-100.0f, 100.0f, 5.0f}, 0.0f,
+                          material3::SliderVariant::kCentered, BalanceStyle()),
+        status_(status) {
+    updateStatus(value());
+  }
+
+  /// Publishes the signed adjustment whenever the value changes.
+  void onValueChange(float value, bool from_user) override {
+    (void)from_user;
+    updateStatus(value);
+  }
+
+  /// Formats the value bubble with an explicit sign.
+  roo::string_view formatLabel(float value, char* scratch,
+                               size_t scratch_size) const override {
+    if (scratch_size == 0) return {};
+    int length = snprintf(scratch, scratch_size, "%+.0f", value);
+    if (length < 0) length = 0;
+    if (static_cast<size_t>(length) >= scratch_size) {
+      length = static_cast<int>(scratch_size - 1);
+    }
+    return roo::string_view(scratch, static_cast<size_t>(length));
+  }
+
+ private:
+  void updateStatus(float value) {
+    status_.setTextf("Return-water balance: %+.0f", value);
+  }
+
+  TextLabel& status_;
+};
+
+/// Mixing screen demonstrating neutral-centered value semantics.
+class CenteredBalance : public FlexLayout {
+ public:
+  /// Creates the signed balance control lesson.
+  explicit CenteredBalance(ApplicationContext& context)
+      : FlexLayout(context, FlexDirection::kColumn),
+        title_(context, "Hydraulic balance",
+               material3::text_style_title_large()),
+        guidance_(context,
+                  "Zero is neutral; the active track grows from center",
+                  material3::text_style_body_medium()),
+        status_(context, "", material3::text_style_title_medium()),
+        slider_(context, status_) {
+    setPadding(Padding(Scaled(16)));
+    setGap(Scaled(14));
+    add(title_, {.flex_grow = 0, .flex_shrink = 0});
+    add(guidance_, {.flex_grow = 0, .flex_shrink = 0});
+    add(status_, {.flex_grow = 0, .flex_shrink = 0});
+    add(slider_, {.flex_grow = 0, .flex_shrink = 1});
+  }
+
+ private:
+  TextLabel title_;
+  TextLabel guidance_;
+  TextLabel status_;
+  BalanceSlider slider_;
+};
+
+}  // namespace
+
+roo_scheduler::Scheduler scheduler;
+Environment env(scheduler);
+#ifdef ROO_TESTING
+Application app(&env, display, emulator_keys, true);
+#else
+Application app(&env, display);
+#endif
+CenteredBalance centered_balance(app.context());
+SingletonActivity activity(app, centered_balance);
+
+void setup() {
+  initDisplay();
+  app.start();
+  scheduler.run();
+}
+
+void loop() {}
