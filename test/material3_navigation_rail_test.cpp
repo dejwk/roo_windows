@@ -199,14 +199,14 @@ TEST(Material3NavigationRail, DestinationMeasuresForBothLayouts) {
 
   Dimensions collapsed = destination.measure(WidthSpec::Unspecified(0),
                                              HeightSpec::Unspecified(0));
-  EXPECT_EQ(Scaled(64), collapsed.height());
+  EXPECT_EQ(Scaled(56), collapsed.height());
   EXPECT_GE(collapsed.width(), Scaled(80));
 
   NavigationRailDestinationTestAccess::setLayout(
       destination, NavigationRailLayout::kExpanded);
   Dimensions expanded = destination.measure(WidthSpec::Unspecified(0),
                                             HeightSpec::Unspecified(0));
-  EXPECT_EQ(Scaled(64), expanded.height());
+  EXPECT_EQ(Scaled(56), expanded.height());
   EXPECT_GE(expanded.width(), Scaled(256));
 }
 
@@ -600,7 +600,7 @@ TEST(Material3NavigationRail, RailCapsDestinationsAndRetainsHeaderOnClear) {
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   NavigationRail rail(context);
-  Blank header(context, Dimensions(32, 24));
+  Blank header(context, Dimensions(40, 40));
   NavigationRailDestination first(context);
   NavigationRailDestination second(context);
   NavigationRailDestination third(context);
@@ -637,7 +637,7 @@ TEST(Material3NavigationRail, RailLayoutsHeaderAndDestinationGroupByMode) {
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
   NavigationRail rail(context);
-  Blank header(context, Dimensions(32, 24));
+  Blank header(context, Dimensions(40, 40));
   NavigationRailDestination first(context, "Home",
                                   &ic_outlined_24_action_done());
   NavigationRailDestination second(context, "Inbox",
@@ -651,10 +651,22 @@ TEST(Material3NavigationRail, RailLayoutsHeaderAndDestinationGroupByMode) {
 
   rail.measure(WidthSpec::Exactly(80), HeightSpec::Exactly(400));
   static_cast<Widget&>(rail).layout(Rect(0, 0, 79, 399));
-  EXPECT_EQ(64, first.parent_bounds().width());
-  EXPECT_LT(header.parent_bounds().yMax(), first.parent_bounds().yMin());
-  EXPECT_LT(first.parent_bounds().yMax(), second.parent_bounds().yMin());
-  EXPECT_LT(second.parent_bounds().yMax(), third.parent_bounds().yMin());
+  EXPECT_EQ(80, first.parent_bounds().width());
+  EXPECT_EQ(4, header.parent_bounds().yMin());
+  EXPECT_EQ(60, first.parent_bounds().yMin());
+  EXPECT_EQ(56, first.parent_bounds().height());
+  EXPECT_EQ(4, second.parent_bounds().yMin() - first.parent_bounds().yMax() -
+                   1);
+  EXPECT_EQ(4, third.parent_bounds().yMin() - second.parent_bounds().yMax() -
+                   1);
+
+  // The compact example display is 240 px tall. A 40 px header interaction
+  // target and three 56 px destinations fit exactly without clipping either
+  // the menu overlay or the final destination.
+  rail.measure(WidthSpec::Exactly(80), HeightSpec::Exactly(240));
+  static_cast<Widget&>(rail).layout(Rect(0, 0, 79, 239));
+  EXPECT_EQ(60, first.parent_bounds().yMin());
+  EXPECT_EQ(235, third.parent_bounds().yMax());
 
   rail.measure(WidthSpec::Exactly(80), HeightSpec::Exactly(160));
   static_cast<Widget&>(rail).layout(Rect(0, 0, 79, 159));
@@ -670,7 +682,34 @@ TEST(Material3NavigationRail, RailLayoutsHeaderAndDestinationGroupByMode) {
   rail.measure(WidthSpec::Exactly(320), HeightSpec::Exactly(400));
   static_cast<Widget&>(rail).layout(Rect(0, 0, 319, 399));
   EXPECT_EQ(NavigationRailLayout::kExpanded, first.layout());
-  EXPECT_EQ(304, first.parent_bounds().width());
+  EXPECT_EQ(320, first.parent_bounds().width());
+}
+
+TEST(Material3NavigationRail, CollapsedWidthDoesNotDependOnDestinationState) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+  NavigationRail rail(context);
+  NavigationRailDestination status(context, "Status",
+                                   &ic_outlined_24_action_done());
+  BadgedNavigationRailDestination alerts(
+      context, "Alerts", &ic_outlined_24_action_bookmark());
+  alerts.setBadgeValue(2);
+  ASSERT_TRUE(rail.add(WidgetRef(status)));
+  ASSERT_TRUE(rail.add(WidgetRef(alerts)));
+
+  EXPECT_EQ(Scaled(80),
+            rail.measure(WidthSpec::Unspecified(0),
+                         HeightSpec::Unspecified(0)).width());
+  static_cast<Widget&>(rail).layout(
+      Rect(0, 0, Scaled(80) - 1, Scaled(160) - 1));
+  EXPECT_EQ(Scaled(80), status.parent_bounds().width());
+  EXPECT_EQ(Scaled(80), alerts.parent_bounds().width());
+
+  rail.setSelectedIndex(1);
+  EXPECT_EQ(Scaled(80),
+            rail.measure(WidthSpec::Unspecified(0),
+                         HeightSpec::Unspecified(0)).width());
 }
 
 TEST(Material3NavigationRail, ArrowKeysMoveFocusWithoutChangingSelection) {

@@ -396,9 +396,9 @@ Dimensions NavigationRail::onMeasure(WidthSpec width, HeightSpec height) {
       width.resolveSize(Scaled(layout() == NavigationRailLayout::kCollapsed
                                    ? tokens.collapsed_min_width_dp
                                    : tokens.expanded_min_width_dp));
-  // Children use the padded content width rather than the surface width. This
-  // makes every destination's target area consistent with the eventual layout
-  // and lets a generic header retain its natural width.
+  // Destinations use the full rail width: their indicators are resolved
+  // internally, while their hit targets must not depend on content or labels.
+  // The header remains naturally sized and centered by onLayout().
   const XDim content_width = std::max<XDim>(
       0, rail_width - 2 * Scaled(tokens.outer_horizontal_padding_dp));
   const YDim vertical_padding = Scaled(tokens.outer_vertical_padding_dp);
@@ -444,9 +444,9 @@ void NavigationRail::onLayout(bool changed, const Rect& rect) {
 
   const XDim horizontal_padding = Scaled(tokens.outer_horizontal_padding_dp);
   const YDim vertical_padding = Scaled(tokens.outer_vertical_padding_dp);
-  // The rail surface owns the outer padding. Destinations receive this entire
-  // inner width, which is the full-width target area described by the rail
-  // contract; their indicator remains narrower and is resolved internally.
+  // The rail surface owns vertical padding. Destinations receive the entire
+  // rail width, while their indicator remains narrower and is resolved
+  // internally.
   const Rect content(
       rect.xMin() + horizontal_padding, rect.yMin() + vertical_padding,
       rect.xMax() - horizontal_padding, rect.yMax() - vertical_padding);

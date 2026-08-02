@@ -25,6 +25,10 @@ struct NavigationRailTokens {
 };
 
 inline constexpr NavigationRailTokens kNavigationRailTokens = {
-    80, 256, 64, 24, 4, 64, 32, 16, 40, 8, 16, 16, 8};
+    // Keep the collapsed rail and every destination target at the standard
+    // 80 dp / 56 dp dimensions. The Compose implementation applies 4 dp
+    // column spacing plus an 8 dp header spacer, which is a 16 dp effective
+    // header-to-first-target gap.
+    80, 256, 56, 24, 4, 56, 32, 16, 40, 0, 4, 16, 4};
 
 }  // namespace roo_windows::material3::internal
