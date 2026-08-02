@@ -29,7 +29,8 @@ constexpr int16_t kBodyGapDp = 8;
 constexpr int16_t kOneLineMinHeightDp = 56;
 constexpr int16_t kTwoLineMinHeightDp = 72;
 constexpr int16_t kThreeLineMinHeightDp = 88;
-constexpr int16_t kSegmentedListGapDp = 8;
+// Matches Jetpack Compose ListItemDefaults.SegmentedGap.
+constexpr int16_t kSegmentedListGapDp = 2;
 constexpr int16_t kExpressiveOuterCornerRadiusDp = 16;
 constexpr int16_t kExpressiveInnerCornerRadiusDp = 4;
 constexpr int16_t kExpressiveStandardSeparatorDp = 2;

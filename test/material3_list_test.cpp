@@ -1459,8 +1459,8 @@ TEST(Material3List, ListPropagatesPositionVariantStyleAndSegmentedGap) {
   list.layout(Rect(0, 0, measured.width() - 1, measured.height() - 1));
 
   EXPECT_EQ(0, first.offsetTop());
-  EXPECT_EQ(first.height() + Scaled(8), second.offsetTop());
-  EXPECT_EQ(second.offsetTop() + second.height() + Scaled(8),
+  EXPECT_EQ(first.height() + Scaled(2), second.offsetTop());
+  EXPECT_EQ(second.offsetTop() + second.height() + Scaled(2),
             third.offsetTop());
 }
 
@@ -1615,7 +1615,7 @@ TEST(Material3List, ListGapResolutionDependsOnDividerPolicy) {
   Dimensions with_divider =
       list.measure(WidthSpec::Exactly(180), HeightSpec::Unspecified(0));
 
-  EXPECT_EQ(with_gap.height(), with_divider.height() + Scaled(8) - Scaled(1));
+  EXPECT_EQ(with_gap.height(), with_divider.height() + Scaled(2) - Scaled(1));
   EXPECT_TRUE(first.visualContext().show_divider);
   EXPECT_FALSE(second.visualContext().show_divider);
 }
