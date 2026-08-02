@@ -17,7 +17,10 @@ class Checkbox : public BasicWidget {
 
   /// Creates a checkbox with the specified initial state.
   Checkbox(ApplicationContext& context, OnOffState state = OnOffState::kOff)
-      : BasicWidget(context), state_(state) {}
+      : BasicWidget(context), state_(state) {
+    // Allow point overlay to bleed outside the immediate parent.
+    setParentClipMode(ParentClipMode::kUnclipped);
+  }
 
   /// Returns true when the checkbox is in the on state.
   bool isOn() const { return state_ == OnOffState::kOn; }

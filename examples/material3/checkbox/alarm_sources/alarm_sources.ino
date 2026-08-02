@@ -142,7 +142,7 @@ class AlarmSources : public FlexLayout {
         chemistry_(context, "Chemistry drift",
                    material3::Checkbox::OnOffState::kOff, feedback_) {
     setPadding(Padding(Scaled(16), Scaled(12)));
-    setGap(Scaled(16));
+    setGap(Scaled(8));
     add(title_, {.flex_grow = 0, .flex_shrink = 0});
     add(guidance_, {.flex_grow = 0, .flex_shrink = 0});
     add(freeze_, {.flex_grow = 0, .flex_shrink = 0});

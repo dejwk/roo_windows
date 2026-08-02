@@ -19,7 +19,10 @@ class Switch : public BasicWidget {
       : BasicWidget(context),
         anim_(kIdleMask | StateBits(state)),
         selected_icon_(nullptr),
-        unselected_icon_(nullptr) {}
+        unselected_icon_(nullptr) {
+    // Allow point overlay to bleed outside the immediate parent.
+    setParentClipMode(ParentClipMode::kUnclipped);
+  }
 
   /// Returns true when the switch is on.
   bool isOn() const { return (anim_ & kOnOffStateMask) != 0; }

@@ -16,7 +16,10 @@ class RadioButton : public BasicWidget {
   /// Creates a radio button with the specified initial state.
   explicit RadioButton(ApplicationContext& context,
                        OnOffState state = OnOffState::kOff)
-      : BasicWidget(context), state_(state) {}
+      : BasicWidget(context), state_(state) {
+    // Allow point overlay to bleed outside the immediate parent.
+    setParentClipMode(ParentClipMode::kUnclipped);
+  }
 
   /// Returns true when the radio button is selected.
   bool isOn() const { return state_ == OnOffState::kOn; }

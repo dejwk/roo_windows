@@ -51,7 +51,9 @@ class VerticalScrollBar : public Widget {
 /// The contents widget is owned by the panel and measured against the panel's
 /// content area; the panel then translates child paint and touch dispatch by
 /// the current scroll offset. Use this as the base for any view that needs
-/// generic scrolling behavior.
+/// generic scrolling behavior. The direct contents widget should use
+/// `ParentClipMode::kClipped`; an unclipped contents widget may paint outside
+/// the scrolling viewport.
 class SimpleScrollablePanel : public Container,
                               private roo_scheduler::Executable {
  public:

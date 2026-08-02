@@ -14,6 +14,18 @@ ApplicationContext MakeContext(Environment& env) {
                             env.keyboardColorTheme());
 }
 
+// Verifies that the radio button lets its point overlay escape a tight
+// structural parent by default.
+TEST(Material3RadioButton, IsParentUnclippedByDefault) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+
+  RadioButton radio(context);
+
+  EXPECT_EQ(ParentClipMode::kUnclipped, radio.getParentClipMode());
+}
+
 // Verifies that the radio button contributes zero padding and zero margins,
 // so its laid-out bounds map directly to its visual footprint.
 TEST(Material3RadioButton, UsesZeroDefaultInsets) {

@@ -19,6 +19,18 @@ ApplicationContext MakeContext(Environment& env) {
                             env.keyboardColorTheme());
 }
 
+// Verifies that the switch lets its thumb-centered point overlay escape a
+// tight structural parent by default.
+TEST(Material3Switch, IsParentUnclippedByDefault) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+
+  Switch sw(context);
+
+  EXPECT_EQ(ParentClipMode::kUnclipped, sw.getParentClipMode());
+}
+
 class RecordingPanel : public Panel {
  public:
   explicit RecordingPanel(ApplicationContext& context) : Panel(context) {}

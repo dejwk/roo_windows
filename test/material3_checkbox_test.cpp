@@ -15,6 +15,18 @@ ApplicationContext MakeContext(Environment& env) {
                             env.keyboardColorTheme());
 }
 
+// Verifies that the checkbox lets its point overlay escape a tight structural
+// parent by default.
+TEST(Material3Checkbox, IsParentUnclippedByDefault) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+
+  Checkbox checkbox(context);
+
+  EXPECT_EQ(ParentClipMode::kUnclipped, checkbox.getParentClipMode());
+}
+
 // Verifies that the checkbox advertises a POINT overlay anchored at the
 // geometric center of its laid-out bounds, so press ripples expand from the
 // box's middle rather than the top-left corner.
