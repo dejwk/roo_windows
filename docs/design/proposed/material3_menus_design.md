@@ -793,6 +793,20 @@ Authoring reference:
 [embedded-cpp-code-authoring.instructions.md](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
 and
 [roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
+Runnable examples additionally follow
+[embedded-example-authoring.instructions.md](../../../.github/instructions/embedded-example-authoring.instructions.md).
+
+Phases 1 through 3 build non-presenting substrate: `Menu::show()` still returns
+`kHostBusy`, so those phases have no runnable public interaction to teach. The
+first examples land in Phase 4 with the first complete presentation path. Each
+later phase that adds user-visible behavior adds a focused example for that
+behavior in the same commit. Examples live under
+`examples/material3/menus/<facet>/<facet>.ino`; each sketch has one stated
+learning goal, a realistic embedded-device interaction, unchanged-copy
+`ROO_TESTING` support, explanatory comments, and a dedicated
+`roo_windows_example_build` target in `examples/BUILD`. Rendering variants,
+geometry matrices, and edge cases remain in golden and behavior tests rather
+than being collected into an example gallery.
 
 ### Phase 1: Core Menu Types and Build Skeleton
 
@@ -858,12 +872,29 @@ Code slice:
 4. Enter/exit the one focus scope and add behavior tests for placement, busy
    slot rejection, outside dismissal, trigger retention, and root-close focus
    restoration.
+5. Add `menus/equipment_actions`, a focused overflow-menu example in which an
+   icon button opens grouped equipment commands and invocation updates visible
+   device state. It teaches the recommended anchored `Menu::show()` path,
+   copied anchor and trigger-paint snapshots, virtual invocation/state flow,
+   and outside dismissal.
+6. Add `menus/context_actions`, a separate example in which a press on a
+   device-status region opens commands at that context position. It teaches
+   arbitrary context anchors and edge-safe placement without mixing that
+   interaction into the overflow-menu lesson.
+7. Keep each sketch self-contained for both the emulator and documented
+   physical display, add teaching comments beside setup and state flow, and
+   register `material3_menus_equipment_actions` and
+   `material3_menus_context_actions` example-build targets.
 
 Proposed commit message:
 
-> Material 3 menus Phase 4: add root presenter, popup, pin, and focus
+> Material 3 menus Phase 4: add presentation and anchored-menu examples
 
-Validation: run `bazel test //:material3_menu_test`.
+Validation: run `bazel test //:material3_menu_test`,
+`bazel build //examples:material3_menus_equipment_actions_example_build
+//examples:material3_menus_context_actions_example_build`, format both sketches
+with `clang-format`, and manually copy each sketch unchanged to
+`emulation/main.cpp` and run `bazel run :main` from `emulation`.
 
 ### Phase 5: Selection Policy and Leaf Dismissal
 
@@ -873,12 +904,27 @@ Code slice:
    single-select or multi-select behavior.
 2. Apply vibrant selected color treatment for expressive menus.
 3. Add tests for single-select dismissal and multi-select stay-open behavior.
+4. Add `menus/operating_mode`, a single-select example in which the user picks
+   one controller mode and sees the selected mode reflected in the screen
+   after the menu dismisses.
+5. Add `menus/alert_filters`, a multi-select example in which the user toggles
+   independent alert categories while the menu remains open. Keep it separate
+   because stay-open multi-selection is a different interaction and state
+   model from single selection.
+6. Add teaching comments, unchanged-copy emulator support, and dedicated
+   `material3_menus_operating_mode` and `material3_menus_alert_filters`
+   example-build targets with the sketches.
 
 Proposed commit message:
 
-> Material 3 menus Phase 5: add selection policy
+> Material 3 menus Phase 5: add selection policy and examples
 
-Validation: run `bazel test //:material3_menu_test`.
+Validation: run `bazel test //:material3_menu_test`,
+`bazel build //examples:material3_menus_operating_mode_example_build
+//examples:material3_menus_alert_filters_example_build`, format both sketches
+with `clang-format`, and exercise each unchanged-copied sketch with
+`bazel run :main` from `emulation`, verifying dismiss-on-select and stay-open
+multi-selection respectively.
 
 ### Phase 6: Submenu Chains and Active State
 
@@ -889,31 +935,50 @@ Code slice:
 2. Add placement fallback from after to before when side overflow occurs.
 3. Add focused-row movement, horizontal open/close, parent-opener restoration,
    and golden/interaction coverage for two-level submenu chains.
+4. Add `menus/nested_settings`, a focused example in which equipment settings
+   open a nested units submenu and a leaf choice updates the visible setting.
+   Explain active-parent state, directional keyboard navigation, and
+   deepest-first Back/Escape behavior next to the relevant code.
+5. Add unchanged-copy emulator support and a dedicated
+   `material3_menus_nested_settings` example-build target with the sketch.
 
 Proposed commit message:
 
-> Material 3 menus Phase 6: add submenu chains
+> Material 3 menus Phase 6: add submenu chains and nested-settings example
 
 Validation: run `bazel test //:material3_menu_test` and
-`bazel test //:material3_menu_golden_test`.
+`bazel test //:material3_menu_golden_test`, build
+`//examples:material3_menus_nested_settings_example_build`, format the sketch
+with `clang-format`, and exercise mouse/touch, keyboard, and deepest-first Back
+behavior after copying the sketch unchanged to `emulation/main.cpp` and running
+`bazel run :main`.
 
-### Phase 7: Examples and Legacy Migration Note
+### Phase 7: Migration Note and Example Audit
 
 Code slice:
 
-1. Add `examples/material3/menus/menus.ino` covering overflow, context,
-   grouped, scrollable, and submenu cases.
-2. Add a short migration note from `roo_windows::menu::Menu` to
-   `material3::Menu` in the example or docs.
-3. Keep the legacy menu composite intact; do not silently rewrite it in this
-   phase.
+1. Add a short linked migration note from `roo_windows::menu::Menu` to
+   `material3::Menu` in the menu documentation. Keep repository history out of
+   the recommended examples.
+2. Audit all five menu examples against the example-authoring checklist:
+   one stated learning goal, realistic labels and state, recommended public
+   API, explanatory comments, separated emulator and physical-display setup,
+   unchanged-copy execution, and Bazel build coverage.
+3. Confirm that exhaustive variant, token, geometry, scrolling, and edge-case
+   coverage remains in tests instead of expanding the focused examples into a
+   catalog.
+4. Keep the legacy menu composite intact; do not silently rewrite it in this
+   phase. Any future runnable compatibility lesson uses a `legacy_`-prefixed
+   directory and sketch.
 
 Proposed commit message:
 
-> Material 3 menus Phase 7: add examples and migration note
+> Material 3 menus Phase 7: document migration and audit examples
 
-Validation: run `bazel test //:material3_menu_test` and build the menu example
-under emulation.
+Validation: run `clang-format` on every menu sketch,
+`bazel test //:material3_menu_test //:material3_menu_golden_test`,
+`bazel build //examples:material3_example_builds`, and perform the documented
+unchanged-copy `bazel run :main` workflow for every menu example.
 
 ## Testing Plan
 
@@ -956,7 +1021,10 @@ Integration coverage exercises:
 - opening from a text-field anchor,
 - context-menu placement near window edges,
 - submenu placement on both left-to-right and right-to-left anchors,
-- and example compilation under the emulation harness.
+- dedicated emulator-build targets for `equipment_actions`, `context_actions`,
+  `operating_mode`, `alert_filters`, and `nested_settings`,
+- and unchanged-copy emulator launches for every menu sketch, including its
+  primary touch or keyboard interaction.
 
 ## Caveats
 
