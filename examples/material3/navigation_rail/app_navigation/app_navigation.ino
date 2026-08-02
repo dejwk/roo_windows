@@ -81,6 +81,7 @@ void initDisplay() {
 #include "roo_windows/material3/navigation_rail/navigation_rail.h"
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/icon.h"
+#include "roo_windows/widgets/text_block.h"
 #include "roo_windows/widgets/text_label.h"
 
 namespace {
@@ -89,12 +90,18 @@ class ActionIcon : public Icon {
  public:
   using Icon::Icon;
   bool isClickable() const override { return true; }
+
+  // A point interaction layer is 40 dp wide. Reserve that full footprint so
+  // the header's press overlay is not clipped against the rail's top edge.
+  Dimensions getSuggestedMinimumDimensions() const override {
+    return Dimensions(Scaled(40), Scaled(40));
+  }
 };
 
 class PoolNavigationRail : public material3::NavigationRail {
  public:
   PoolNavigationRail(ApplicationContext& context, TextLabel& title,
-                     TextLabel& detail)
+                     TextBlock& detail)
       : material3::NavigationRail(context), title_(title), detail_(detail) {}
 
  protected:
@@ -111,7 +118,7 @@ class PoolNavigationRail : public material3::NavigationRail {
 
  private:
   TextLabel& title_;
-  TextLabel& detail_;
+  TextBlock& detail_;
 };
 
 class EquipmentConsole : public FlexLayout {
@@ -130,6 +137,8 @@ class EquipmentConsole : public FlexLayout {
                 &ic_outlined_24_action_circle_notifications()),
         energy_(context, "Energy", &ic_outlined_24_action_eco()),
         navigation_(context, title_, detail_) {
+    // detail_.setWrapMode(TextWrapMode::kWordWrap);
+    // menu_feedback_.setWrapMode(TextWrapMode::kWordWrap);
     content_.setPadding(Padding(Scaled(16), Scaled(20)));
     content_.setGap(Scaled(8));
     content_.add(title_);
@@ -146,15 +155,17 @@ class EquipmentConsole : public FlexLayout {
 
     // Collapsed rails preserve content width on this 320 px example display.
     // Wider products can call setLayout(kExpanded) to show labels inline.
-    add(navigation_);
+    // Keep the persistent rail at its token width when the changing page
+    // labels make the content column's natural width larger than the display.
+    add(navigation_, {.flex_shrink = 0});
     add(content_, {.flex_grow = 1});
   }
 
  private:
   FlexLayout content_;
   TextLabel title_;
-  TextLabel detail_;
-  TextLabel menu_feedback_;
+  TextBlock detail_;
+  TextBlock menu_feedback_;
   ActionIcon menu_;
   material3::NavigationRailDestination status_;
   material3::BadgedNavigationRailDestination alerts_;
