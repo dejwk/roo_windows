@@ -295,21 +295,16 @@ class Interior : public roo_display::Drawable {
       while (run_end < line.text.size() && line.text[run_end] == ' ') {
         ++run_end;
       }
-      // Draw each space so we can apply variable spacing deterministically.
+      // A space has no foreground ink. Clear its natural advance and its
+      // justification stretch in one operation instead of invoking the font
+      // renderer for every space.
       for (size_t i = space; i < run_end; ++i) {
-        roo_display::Surface part = s;
-        part.set_dx(s.dx() + x);
-        text_style_.font().drawHorizontalString(part, " ", 1, color_,
-                                                text_style_.fontOptions());
         int16_t stretch = extra_per_space;
         if (extra_remainder > 0) {
           ++stretch;
           --extra_remainder;
         }
-        // The expanded part of justified spacing is outside glyph drawing;
-        // settle it explicitly once as background so no stale pixels remain.
-        fillGap(s, x + space_width, x + space_width + stretch - 1, row_y_min,
-                row_y_max);
+        fillGap(s, x, x + space_width + stretch - 1, row_y_min, row_y_max);
         x += space_width + stretch;
       }
       start = run_end;
