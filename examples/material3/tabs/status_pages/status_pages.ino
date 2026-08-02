@@ -145,11 +145,11 @@ class PoolStatus : public FlexLayout {
         heating_tab_(context, "Heating"),
         history_tab_(context, "History"),
         pages_(context),
-        overview_(context, "Water 27.4 °C · Pump running",
+        overview_(context, "Water 27.4°C · Pump on",
                   material3::text_style_title_large()),
-        heating_(context, "Solar collector 41.8 °C",
+        heating_(context, "Solar collector 41.8°C",
                  material3::text_style_title_large()),
-        history_(context, "Today: 25.1 °C to 27.6 °C",
+        history_(context, "Today: 25.1°C to 27.6°C",
                  material3::text_style_title_large()) {
     tabs_.bind(pages_);
     pages_.bind(tabs_);

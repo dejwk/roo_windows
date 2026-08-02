@@ -93,7 +93,7 @@ class PoolStatus : public FlexLayout {
         temperature_(context, "27.4 °C", material3::text_style_display_small()),
         temperature_label_(context, "Water temperature",
                            material3::text_style_body_medium()),
-        pump_(context, "Circulation pump running",
+        pump_(context, "Circulation pump on",
               material3::text_style_headline_small()),
         pump_detail_(context, "1,850 rpm · 96 L/min",
                      material3::text_style_body_large()),

@@ -97,7 +97,7 @@ class HistoryTabs : public material3::Tabs {
     static constexpr const char* kRanges[] = {"Today", "Last 7 days",
                                               "Last 30 days"};
     static constexpr const char* kSummaries[] = {
-        "25.1 °C to 27.6 °C", "24.4 °C to 28.0 °C", "21.8 °C to 28.3 °C"};
+        "25.1°C to 27.6°C", "24.4°C to 28.0°C", "21.8°C to 28.3°C"};
     range_.setText(kRanges[new_index]);
     summary_.setText(kSummaries[new_index]);
   }
@@ -116,7 +116,7 @@ class TemperatureHistory : public FlexLayout {
         title_(context, "Temperature history",
                material3::text_style_title_large()),
         range_(context, "Last 7 days", material3::text_style_title_medium()),
-        summary_(context, "24.4 °C to 28.0 °C",
+        summary_(context, "24.4°C to 28.0°C",
                  material3::text_style_headline_medium()),
         tabs_(context, range_, summary_),
         today_(context, "Today"),
