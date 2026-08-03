@@ -60,11 +60,13 @@ That landed code already establishes the relevant local baseline:
 4. It reuses the framework's area-overlay and click-animation pipeline instead
    of introducing a button-local ripple subsystem.
 
-The current example lives in
-[examples/material3/buttons/buttons.ino](../../../examples/material3/buttons/buttons.ino).
-That example proves the repo already wants a Material 3 button showcase, but it
-also makes the remaining gap obvious: there is still no icon-only button in the
-same family.
+The current button examples are
+[pool actions](../../../examples/material3/buttons/pool_actions/pool_actions.ino)
+and
+[compact controls](../../../examples/material3/buttons/compact_controls/compact_controls.ino).
+The compact-controls example is the natural showcase for the icon-only sibling:
+it already demonstrates constrained equipment-toolbar actions and has build
+coverage in the emulation harness.
 
 What does not exist today:
 
@@ -83,6 +85,7 @@ This document is aligned against the Material 3 icon-button documentation:
 - [Overview](https://m3.material.io/components/icon-buttons/overview)
 - [Specs](https://m3.material.io/components/icon-buttons/specs)
 - [Guidelines](https://m3.material.io/components/icon-buttons/guidelines)
+- [Android `IconButtonDefaults` reference](https://developer.android.com/reference/kotlin/androidx/compose/material3/IconButtonDefaults)
 
 The strongest current signals are:
 
@@ -139,7 +142,7 @@ button instance.
    tonal, and outlined.
 3. Support the five expressive Material 3 sizes.
 4. Support both expressive shape families: round and square.
-5. Support the three expressive width modes: narrow, default, and wide.
+5. Support the three expressive width modes: narrow, uniform, and wide.
 6. Support enabled, disabled, hovered, focused, pressed, and click-animation
    visual states through the existing widget state model.
 7. Expose icon-slot geometry so badge-aware hosts can anchor badges without
@@ -158,6 +161,10 @@ button instance.
    buttons.
 5. Keep the visible container at the spec size and rely on the shared sloppy
    touch envelope for practical minimum-target expansion.
+6. Enter and Space activation, focus traversal, disabled-state exclusion, and
+   focus restoration use the implemented shared non-touch input path.
+7. Arrow keys retain their enclosing component meaning; a standalone icon
+   button does not create a roving-focus group.
 
 ### API Requirements
 
@@ -178,8 +185,9 @@ button instance.
    enum bits.
 3. Do not add per-instance text, font, callback, or badge storage to the base
    class.
-4. Keep the base widget small enough that screens with multiple icon buttons in
-   app bars, rails, and lists remain practical on ESP32-class targets.
+4. Enforce `sizeof(IconButton) <= sizeof(BasicSurfaceWidget) +
+   sizeof(void*) + 4`; this permits the borrowed icon pointer, packed selectors,
+   and alignment without hiding another pointer-sized feature in the base.
 
 ## Design Overview
 
@@ -197,6 +205,8 @@ The core decisions are:
 - The widget bounds describe the visible container, not an inflated tap target.
   Small-button hit expansion comes from the existing widget sloppy-touch path.
 - State layers and click animation stay on the shared area-overlay pipeline.
+- Touch and keyboard activation stay on the shared widget input path; the
+  component adds no key handler or focus-owner state.
 - Badge support stays out of the base class; instead, `IconButton` exposes
   `getIconBounds()` so badge-aware hosts can reuse the button's internal layout
   geometry.
@@ -217,7 +227,7 @@ The user-facing configuration surface should be:
 - `IconButtonSize`: `kExtraSmall`, `kSmall`, `kMedium`, `kLarge`,
   `kExtraLarge`
 - `IconButtonShape`: `kRound`, `kSquare`
-- `IconButtonWidth`: `kNarrow`, `kDefault`, `kWide`
+- `IconButtonWidth`: `kNarrow`, `kUniform`, `kWide`
 
 The style enum intentionally does not use the name `IconButtonVariant`. The
 Material 3 icon-button spec already reserves `variant` for `default` versus
@@ -229,7 +239,13 @@ The constructor should therefore be narrow and explicit:
 - the default style is `kFilled`,
 - the default size is `kSmall`,
 - the default shape is `kRound`,
-- and the default width mode is `kDefault`.
+- and the default width mode is `kUniform`.
+
+The filled default matches the landed `material3::Button` constructor and gives
+the generic Roo type a visible primary-action treatment. Callers choose
+`kStandard` explicitly for the uncontained Material 3 treatment. `kUniform`
+uses the Material 3 name for the equal-width-and-height option rather than
+overloading “default” as both a selector name and a constructor policy.
 
 The base widget should also override `getDefaultMargins()` to return zero.
 Unlike text buttons, icon buttons are commonly packed into toolbars, rails,
@@ -262,17 +278,21 @@ into token data for:
 - square resting corner radius,
 - and pressed corner radius.
 
-The icon is centered inside the padded content region. In practice, the content
-padding can be derived directly from the token tables:
+The icon is centered inside the padded content region. The resolved icon slot
+is the larger of the size token and the concrete icon's anchor extents, so an
+oversized caller-supplied icon is measured rather than clipped. For the normal
+token-sized case, content padding is derived directly from the token tables:
 
 $$
 pad_x = \frac{W_{container}(size, width) - W_{icon}(size)}{2}, \qquad
 pad_y = \frac{H_{container}(size) - H_{icon}(size)}{2}
 $$
 
-`getSuggestedMinimumDimensions()` should therefore return the icon-slot size,
-while `getDefaultPadding()` supplies the token-derived padding that grows the
-natural size to the visible Material 3 container size.
+`getSuggestedMinimumDimensions()` returns the resolved icon-slot size, while
+`getDefaultPadding()` supplies token-derived padding that grows the normal
+token-sized icon to the visible Material 3 container size. When concrete icon
+extents exceed the token slot, padding is clamped at zero rather than producing
+negative insets, so the natural widget grows to contain the icon.
 
 Round buttons use a full radius at rest. Square buttons use the size-specific
 corner radii from the Material 3 table. Pressed state uses the same shared,
@@ -353,7 +373,7 @@ class BadgedIconButton : public material3::IconButton {
  protected:
   void onLayout(bool changed, const Rect& rect) override {
     IconButton::onLayout(changed, rect);
-    badge_.layout(getIconBounds(), placement_);
+    badge_.layoutForIcon(getIconBounds());
   }
 
   void paint(PaintContext& ctx) const override {
@@ -363,7 +383,6 @@ class BadgedIconButton : public material3::IconButton {
 
  private:
   material3::Badge badge_;
-  BadgePlacement placement_;
 };
 ```
 
@@ -384,6 +403,9 @@ Approximate total: about `48-56 B`.
 
 That is materially cheaper than a button that stores text, font, or appearance
 override pointers, and it keeps badge cost off the base type entirely.
+The pointer-size-aware bound in [Memory and Allocation
+Requirements](#memory-and-allocation-requirements) is the acceptance check;
+the absolute estimate is explanatory because host builds use wider pointers.
 
 ## Proposed API
 
@@ -413,35 +435,66 @@ enum class IconButtonShape : uint8_t {
 
 enum class IconButtonWidth : uint8_t {
   kNarrow,
-  kDefault,
+  kUniform,
   kWide,
 };
 
 class IconButton : public BasicSurfaceWidget {
  public:
+  /// Creates a non-toggle icon button that borrows `icon`.
   explicit IconButton(ApplicationContext& context, const MonoIcon& icon,
                       IconButtonStyle style = IconButtonStyle::kFilled);
 
+  /// Returns the active color treatment.
   IconButtonStyle style() const;
+  /// Changes the color treatment and invalidates affected paint.
   void setStyle(IconButtonStyle style);
 
+  /// Returns the active expressive size token.
   IconButtonSize size() const;
+  /// Changes size and requests layout and repaint.
   void setSize(IconButtonSize size);
 
+  /// Returns the resting shape family.
   IconButtonShape shape() const;
+  /// Changes the resting shape and invalidates affected paint.
   void setShape(IconButtonShape shape);
 
+  /// Returns the active width token.
   IconButtonWidth widthMode() const;
+  /// Changes width and requests layout and repaint.
   void setWidthMode(IconButtonWidth width_mode);
 
+  /// Returns the borrowed icon.
   const MonoIcon& icon() const;
+  /// Replaces the borrowed icon and requests layout and repaint.
   void setIcon(const MonoIcon& icon);
 
-  // Local coordinates of the resolved icon slot, for badge-aware hosts.
+  /// Returns local coordinates of the resolved icon slot.
   Rect getIconBounds() const;
 
+  /// Returns token-derived padding around the resolved icon slot.
+  Padding getDefaultPadding() const override;
+  /// Returns zero implicit outer margins.
+  Margins getDefaultMargins() const override;
+  /// Returns true because the component always participates in activation.
+  bool isClickable() const override { return true; }
+  /// Returns the semantic role used by the shared state-layer pipeline.
+  ColorToken containerRole() const override;
+  /// Returns the resolved enabled or disabled container fill.
+  Color background() const override;
+  /// Returns the resolved outline color for the outlined style.
+  Color getOutlineColor() const override;
+  /// Returns resting or press-morphed corner and outline geometry.
+  BorderStyle getBorderStyle() const override;
+  /// Paints the borrowed icon with its resolved content color.
   void paint(PaintContext& ctx) const override;
+  /// Returns the resolved icon-slot dimensions before padding.
   Dimensions getSuggestedMinimumDimensions() const override;
+
+ protected:
+  /// Invalidates shape paint when press state changes.
+  void notifyStateChanged(uint16_t state_diff) override;
 };
 
 }  // namespace material3
@@ -455,7 +508,9 @@ same commit.
 ## Implementation Plan
 
 Implementation should follow the repo-local
-[embedded C++ code authoring guidance](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md).
+[embedded C++ code authoring guidance](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
+and
+[widget authoring guidance](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
 ### Step 1: Add the core icon-button widget
 
@@ -469,44 +524,46 @@ Deliverables:
 - add token tables for style, size, shape, and width,
 - expose `getIconBounds()` as part of the first public landing,
 - add `test/material3_icon_button_test.cpp`,
-- and add a `material3_icon_button_test` target to
-  [BUILD](../../../BUILD).
+- cover defaults, mutation invalidation, token geometry, oversized icons,
+  clickability, Tab traversal, Enter/Space activation, badge-anchor geometry,
+  and the pointer-size-aware instance-size bound,
+- add a `material3_icon_button_test` target to [BUILD](../../../BUILD),
+- and extend the build-covered
+  [compact-controls example](../../../examples/material3/buttons/compact_controls/compact_controls.ino)
+  with a toolbar-style icon-button action.
 
 Proposed commit message: `Add Material 3 icon button widget`
 
-Validation: run `bazel test //:material3_button_test //:material3_icon_button_test`.
+Validation: run
+`bazel test //:material3_button_test //:material3_icon_button_test` and
+`bazel build //examples:material3_buttons_compact_controls_example_build`.
 
-### Step 2: Add rendering coverage and example coverage
+### Step 2: Add rendering coverage
 
 Deliverables:
 
 - add `test/material3_icon_button_golden_test.cpp`,
 - add golden coverage for style, size, shape, width, disabled, and pressed
   states,
-- extend
-  [examples/material3/buttons/buttons.ino](../../../examples/material3/buttons/buttons.ino)
-  with an icon-button section rather than creating a second near-duplicate
-  button-family example,
 - and add the `material3_icon_button_golden_test` target to
   [BUILD](../../../BUILD).
 
-Proposed commit message: `Add icon button goldens and demo`
+Proposed commit message: `Add Material 3 icon button rendering goldens`
 
-Validation: run `bazel test //:material3_icon_button_golden_test`, then build
-the updated buttons example through the emulation harness.
+Validation: run `bazel test //:material3_icon_button_golden_test`.
 
 ## Testing Plan
 
 Validation should cover three levels.
 
 1. Unit tests for defaults, setters, measurement, container-role mapping,
-   clickability, and `getIconBounds()`.
+   clickability, keyboard activation, `getIconBounds()`, and the instance-size
+   bound.
 2. Golden tests for the visual matrix that is easy to regress silently:
    styles, sizes, shapes, widths, disabled state, and pressed-state shape
    morph.
-3. One example build through the emulation harness using the existing
-   [buttons example](../../../examples/material3/buttons/buttons.ino) after it grows
-   an icon-button section.
+3. One example build through the emulation harness using the updated
+   [compact-controls example](../../../examples/material3/buttons/compact_controls/compact_controls.ino).
 
 The first icon-button landing does not need a badge-specific golden in the same
 commit. Badge-host adoption should be validated by the consuming surface once a
@@ -521,7 +578,8 @@ concrete badge-aware icon-button host lands.
 Rejected because icon buttons and standard buttons do not share the same public
 semantics or layout model. Folding icon buttons into `Button` would either add
 branches and unused state to every standard button or force the API to treat an
-empty label as a separate semantic mode.
+empty label as a separate semantic mode. The chosen narrow reuse seam is in
+[Internal Reuse With `material3::Button`](#internal-reuse-with-material3button).
 
 #### Add Toggle / Selected Icon Buttons In The First Landing
 
@@ -529,27 +587,31 @@ Rejected because no checked-in `roo_windows` consumer currently needs toggle
 semantics, and the toggle surface raises separate questions about selected
 state, selected shape, icon swapping, and selected-color behavior. Those
 decisions should be made on top of a landed default icon button rather than in
-the same commit.
+the same commit, as closed in [Public Surface and
+Naming](#public-surface-and-naming).
 
 #### Add A Shared `IconButtonAppearance` Pointer Now
 
 Rejected because the landed [standard button](../../../src/roo_windows/material3/button/button.h)
 already chose a theme-driven first implementation with no appearance-object
 pointer. No current icon-button consumer needs product-specific per-widget
-override data badly enough to justify carrying that pointer on every instance.
+override data badly enough to justify carrying that pointer on every instance;
+the resulting budget is recorded in [Per-Instance Cost](#per-instance-cost).
 
 #### Introduce A Dedicated Hit-Target Wrapper Or Inset Surface
 
 Rejected because the current widget framework already expands practical touch
 targets through sloppy-touch bounds. A second icon-button-specific hit-target
 mechanism would complicate layout, painting, and clipping while solving a
-problem the shared framework already handles.
+problem the shared framework already handles. [Geometry, Layout, and Hit
+Target](#geometry-layout-and-hit-target) defines the selected shared path.
 
 #### Keep The Old `IconButtonVariant` Naming For Color Styles
 
 Rejected because the current Material 3 icon-button spec already uses
 `variant` for `default` versus `toggle`. `IconButtonStyle` keeps the first
-landing aligned with that terminology and leaves room for a future toggle API.
+landing aligned with that terminology and leaves room for a future toggle API,
+as specified in [Public Surface and Naming](#public-surface-and-naming).
 
 ## Future Work
 

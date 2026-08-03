@@ -37,6 +37,7 @@ The main framework contracts with checked-in design coverage are:
 - [application_navigation_back_behavior_design.md](design/implemented/application_navigation_back_behavior_design.md)
 - [transient_presenter_lifetime_design.md](design/in_progress/transient_presenter_lifetime_design.md)
 - [transient_presentation_pins_design.md](design/in_progress/transient_presentation_pins_design.md)
+- [transient_surface_host_design.md](design/proposed/transient_surface_host_design.md)
 
 This list is not evidence that every cross-component contract is complete.
 In particular, the transient-presentation-pins design is a narrow paint-only
@@ -51,11 +52,11 @@ anchor, content reference, listener, or text view that the caller must keep
 valid.
 
 Event dispatch, gesture ownership, and the non-touch keyboard path are
-implemented. The interactive-transient slot and legacy-dialog migration are
-also implemented. Phase 0 therefore has one remaining deliverable: retain the
-supported-target theme baseline. Unfinished component adoption and optional
-foundation extensions are scheduled beside their first consumer below; they do
-not keep the implemented framework contracts open.
+implemented. Active `FocusScope` records are declared and specified but their
+enter/exit runtime is absent. The interactive-transient slot and dialog lifetime
+migration are implemented, while structural hosting remains dialog-specific.
+The missing focus activation, shared host, layer tokens, and token-scoped pin
+path are scheduled immediately before menus as P1.6a–P1.6b.
 
 ### Theme migration is complete; target evidence remains
 
@@ -157,7 +158,7 @@ the framework, existing widgets, synthetic presenters, and target measurements.
 | --- | --- | --- | --- | --- | --- |
 | <a id="p0-1"></a>[P0.1](#p0-1) | Theme ownership split | <img src="material3_roadmap_status_completed.svg" width="20" height="20" alt="Completed" title="Completed"> | [Theme color tokens](design/implemented/theme_color_tokens_design.md) | — | `FrameworkTheme` and `material3::Theme` are separate, legacy color-role APIs are absent, and host regression tests pass. |
 | <a id="p0-2"></a>[P0.2](#p0-2) | Supported-target baseline for the theme split | <img src="material3_roadmap_status_completed.svg" width="20" height="20" alt="Completed" title="Completed"> | [Target baseline](material3_target_baseline.md); evidence required by [Theme color tokens](design/implemented/theme_color_tokens_design.md) | P0.1 | Check in `docs/material3_target_baseline.md` recording board, toolchain, build flags, `.text`/`.rodata`/`.data`/`.bss`, theme-object and representative-widget sizes, stack method/result, and a target screenshot or golden comparison. |
-| <a id="p0-3"></a>[P0.3](#p0-3) | Keyboard/focus framework | <img src="material3_roadmap_status_completed.svg" width="20" height="20" alt="Completed" title="Completed"> | [Non-touch input](design/implemented/non_touch_input_design.md) | — | Key acquisition, lifecycle-safe focus, traversal, control operation, structured navigation, and hardware text entry are covered by the implemented design tests. |
+| <a id="p0-3"></a>[P0.3](#p0-3) | Keyboard/focus framework | <img src="material3_roadmap_status_completed.svg" width="20" height="20" alt="Completed" title="Completed"> | [Non-touch input](design/implemented/non_touch_input_design.md) | — | Key acquisition, focused-widget lifetime, traversal, control operation, structured navigation, and hardware text entry are covered by implemented tests. Presenter scope activation is the explicit P1.6b integration gap. |
 | <a id="p0-4"></a>[P0.4](#p0-4) | Semantic Back/Escape routing | <img src="material3_roadmap_status_completed.svg" width="20" height="20" alt="Completed" title="Completed"> | [Application navigation and back behavior](design/implemented/application_navigation_back_behavior_design.md) | P0.3 | UI and hardware Back/Escape share the semantic request path; transient precedence, focus-derived routing, task fallback, and editor fallback are tested. |
 | <a id="p0-5"></a>[P0.5](#p0-5) | Interactive-transient slot and dialog lifetime migration | <img src="material3_roadmap_status_completed.svg" width="20" height="20" alt="Completed" title="Completed"> | Phases 1 and the dialog part of Phase 2 in [Transient presenter lifetime](design/in_progress/transient_presenter_lifetime_design.md) | P0.4 | Slot occupancy, replacement reentrancy, Back policy, host/presenter destruction, detach-before-completion, and legacy-dialog adoption tests pass. Menu, sheet, and snackbar adoption are explicitly later rows. |
 
@@ -177,16 +178,19 @@ complete before the first row that depends on it.
 | <a id="p1-3"></a>[P1.3](#p1-3) | Implement compact navigation bar | <img src="material3_roadmap_status_completed.svg" width="20" height="20" alt="Completed" title="Completed"> | [Navigation bar](design/implemented/material3_navigation_bar_design.md) | P1.2 | Design Phases 1–5 are complete: fixed destinations, selection and reselection, badges, keyboard behavior, unit/golden tests, and example coverage. This is the compact navigation mode required by the reference shell. |
 | <a id="p1-4"></a>[P1.4](#p1-4) | Implement adaptive `LayoutScaffold` family | <img src="material3_roadmap_status_completed.svg" width="20" height="20" alt="Completed" title="Completed"> | [Layout scaffold](design/implemented/material3_layout_scaffold_design.md) | P1.1, P1.3 | Design Phases 1–5 are complete: breakpoint primitives; top app bar, body, bottom navigation, rail, safety/chrome geometry, and RTL; fixed-slot pane and row-major grid layouts; tests, goldens, and a build-covered catalog example. Navigation drawer remains separate component work. |
 | <a id="p1-5"></a>[P1.5](#p1-5) | Implement the shared presentation-pin host | <img src="material3_roadmap_status_completed.svg" width="20" height="20" alt="Completed" title="Completed"> | Phase 1 of [Transient presentation pins](design/in_progress/transient_presentation_pins_design.md) | — | Root-stage registration, ordering, old/new-bounds invalidation, hide/unregister, anchor teardown, and window teardown tests pass. Slider adoption is also complete; keyboard-highlighter migration remains deferred and does not block this row. |
-| <a id="p1-6"></a>[P1.6](#p1-6) | Reconcile menu ownership and input design | <img src="material3_roadmap_status_completed.svg" width="20" height="20" alt="Completed" title="Completed"> | [Menus](design/proposed/material3_menus_design.md), reconciled against Phase 3 of [Transient presenter lifetime](design/in_progress/transient_presenter_lifetime_design.md), Phase 12 of [Lists](design/in_progress/material3_lists_design.md), and P1.5 | P0.3–P0.5, P1.5 | The design uses copied anchor and trigger-paint snapshots, presenter-owned pins and child levels, one registered root task/slot/focus scope per chain, deepest-first Back/Escape, focus restoration, `ListItem`/`ListEntry` reuse, and closed keyboard semantics. |
-| <a id="p1-7"></a>[P1.7](#p1-7) | Implement Material 3 menus | <img src="material3_roadmap_status_pending.svg" width="20" height="20" alt="Pending" title="Pending"> | Menu design reconciled by P1.6 | P1.6 | Complete the reconciled menu phases; pass placement, pin, lifetime, keyboard, list reuse, submenu, golden, and example tests. |
+| <a id="p1-6"></a>[P1.6](#p1-6) | Reconcile menu ownership and input design | <img src="material3_roadmap_status_completed.svg" width="20" height="20" alt="Completed" title="Completed"> | [Menus](design/proposed/material3_menus_design.md), reconciled against Phase 3 of [Transient presenter lifetime](design/in_progress/transient_presenter_lifetime_design.md), Phase 12 of [Lists](design/in_progress/material3_lists_design.md), and P1.5 | P0.3–P0.5, P1.5 | The design uses copied anchor and trigger-paint snapshots, presenter-owned child levels, one root transient registration, deepest-first Back/Escape, `ListItem`/`ListEntry` reuse, and closed keyboard semantics. Framework hosting prerequisites are separated into P1.6a–P1.6b. |
+| <a id="p1-6a"></a>[P1.6a](#p1-6a) | Review shared transient hosting and layer anchors | <img src="material3_roadmap_status_open.svg" width="20" height="20" alt="Open" title="Open"> | [Transient surface hosting and layer anchors](design/proposed/transient_surface_host_design.md) | P1.6 | Review closes structural attachment, admission, focus integration, pointer-free layer identity, token-scoped pin integration, teardown, RAM budgets, tests, and dialog migration without `Task`. |
+| <a id="p1-6b"></a>[P1.6b](#p1-6b) | Implement menu hosting prerequisites | <img src="material3_roadmap_status_pending.svg" width="20" height="20" alt="Pending" title="Pending"> | Phases 1–3 of [Transient surface hosting and layer anchors](design/proposed/transient_surface_host_design.md), consuming the existing [Non-touch input](design/implemented/non_touch_input_design.md) focus contract and [presentation-pin](design/in_progress/transient_presentation_pins_design.md) host | P1.6a | Active focus-scope tests pass; dialogs use the shared host; stale/foreign tokens fail before admission; token-scoped pins preserve widget-pin behavior; host, layer-record, and pin size ceilings hold. |
+| <a id="p1-7"></a>[P1.7](#p1-7) | Implement Material 3 menus | <img src="material3_roadmap_status_pending.svg" width="20" height="20" alt="Pending" title="Pending"> | [Menus](design/proposed/material3_menus_design.md), reconciled by P1.6 | P1.6b | Complete the six menu-only phases; pass placement, pin integration, lifetime, keyboard, list reuse, submenu, golden, example, and memory tests. |
 | <a id="p1-8"></a>[P1.8](#p1-8) | Implement basic Material 3 dialogs | <img src="material3_roadmap_status_open.svg" width="20" height="20" alt="Open" title="Open"> | Phases 1–2 of [Dialogs](design/proposed/material3_dialogs_design.md) | P0.4, P0.5 | Basic/alert dialogs use the existing transient slot, detach content before completion, restore focus, handle Back/Escape, and pass unit and golden tests. Full-screen dialogs are deferred. |
 | <a id="p1-9"></a>[P1.9](#p1-9) | Reconcile snackbar queue ownership design | <img src="material3_roadmap_status_pending.svg" width="20" height="20" alt="Pending" title="Pending"> | Revise [Snackbar](design/proposed/material3_snackbar_design.md) against Phase 4 of [Transient presenter lifetime](design/in_progress/transient_presenter_lifetime_design.md) | P0.5, P1.4 | Replace queued non-owning text views and independent listener pointers with bounded owned payloads or self-cancelling registered request nodes; define overflow, completion, teardown, and allocation policy before code starts. |
 | <a id="p1-10"></a>[P1.10](#p1-10) | Implement snackbar widget, presenter, and queue | <img src="material3_roadmap_status_pending.svg" width="20" height="20" alt="Pending" title="Pending"> | Snackbar design reconciled by P1.9 | P0.3, P1.9 | Complete the reconciled snackbar phases; placement follows scaffold insets, and timeout/action/replacement/overflow/host-teardown tests plus goldens and example pass. |
 | <a id="p1-11"></a>[P1.11](#p1-11) | Integrate the compact settings shell | <img src="material3_roadmap_status_pending.svg" width="20" height="20" alt="Pending" title="Pending"> | No new design; integration of P1.4, P1.7, P1.8, and P1.10 | P1.4, P1.7, P1.8, P1.10 | One example/test application navigates multiple settings screens, opens a menu, confirms or cancels in a dialog, restores focus, handles touch and keyboard Back/Escape, and reports the result with a snackbar without application-local popup or Back routing. |
 
-Phase 1 exits when P1.1–P1.11 show the green check and the P1.11 application passes on
-one supported compact target. Modal sheets are not a shell prerequisite because
-the reference flow uses the basic dialog path; sheet adoption is P3.7.
+Phase 1 exits when P1.1–P1.11, including P1.6a and P1.6b, show the green check
+and the P1.11 application passes on one supported compact target. Modal sheets
+are not a shell prerequisite because the reference flow uses the basic dialog
+path; sheet adoption is P3.7.
 
 ## Phase 2: Deliver a Complete Configuration Flow
 
@@ -231,7 +235,8 @@ before implementation starts.
 | Candidate | Existing design status | Known prerequisite before scheduling |
 | --- | --- | --- |
 | Date and time pickers | Proposed designs exist | P2.1 text fields and P1.8 dialogs; confirm localization and target-size requirements. |
-| Toolbars, FABs, extended FABs, split buttons, and button groups | Proposed designs exist | Implement the proposed icon-button design first and select a concrete consuming flow. |
+| Icon buttons | [Proposed design](design/proposed/material3_icon_buttons_design.md) | Select a concrete app-bar, toolbar, menu-anchor, or badge-host consumer, then implement the design's two steps with unit, golden, keyboard, example-build, and per-instance size-budget evidence. |
+| Toolbars, FABs, extended FABs, split buttons, and button groups | Proposed designs exist | Land icon buttons first where the selected component requires them, and select a concrete consuming flow. |
 | Chips | No local design | Name a concrete filter/selection consumer, then add a chips design covering only its required variants and shared selection semantics. |
 | Focused/expanded search | No complete local design | Add an explicit search-workflow design covering query ownership, suggestions/results, focus, Back, and presentation lifetime. |
 | Tooltips and pointer-specific affordances | No complete local design | Define pointer/hover routing and tooltip lifetime before component APIs. |
