@@ -58,7 +58,7 @@ Status was audited against the source tree and tests on 2026-07-31. “Dependenc
 | FAB | Buttons and theme support are implemented; icon buttons are proposed. |
 | Icon buttons | Buttons, badges, click animation, and theme support are implemented; no icon-button implementation exists. |
 | Interaction overlay reveal | Point and area ripples, widget-local click animation, paint context, and the navigation bar's component-local fade are implemented; shared fade reveal and paint-owned overlay policy are not. |
-| Menus | Badge, paint context, back routing, non-touch input, and presentation pins are implemented. The proposed menu design is reconciled with copied anchor and trigger-paint snapshots, presenter-owned pins and child levels, one root transient registration, focus restoration, keyboard semantics, and `ListItem`/`ListEntry` reuse; implementation is P1.7. |
+| Menus | Badge, paint context, back routing, list-row reuse, non-touch input, and widget-anchored presentation pins are implemented. The proposed menu design makes a shared transient-surface host, active focus scopes, layer tokens, and rect-anchored pins explicit prerequisites; menus do not use `Task` or `Activity`. Implementation remains P1.7. |
 | Navigation drawer | List support is in progress and back routing is implemented; dialogs are proposed, and no drawer implementation exists. |
 | Segmented buttons | Buttons are implemented; the superseding button-group design and this legacy component design are not implemented. |
 | Sheets | Paint/overflow foundations and shared back behavior are implemented; icon buttons are proposed. |

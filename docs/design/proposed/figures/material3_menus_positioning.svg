@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="920" height="460" viewBox="0 0 920 460">
-  <rect width="920" height="460" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="640" viewBox="0 0 920 640">
+  <rect width="920" height="640" fill="#ffffff"/>
   <style>
     .label { font: 16px sans-serif; fill: #1f1f1f; }
     .small { font: 13px sans-serif; fill: #4a4a4a; }
@@ -11,10 +11,10 @@
   </style>
 
   <text x="28" y="34" class="label">Material 3 menu placement and submenu fallback</text>
-  <text x="28" y="56" class="small">Root menus prefer the requested side, clamp to the visible window, and submenus move before the parent item when the after-side would overflow.</text>
+  <text x="28" y="56" class="small">Root menus score both sides before clamping. Submenus flip sides when possible and replace the parent panel when neither side fits.</text>
 
-  <rect x="24" y="80" width="872" height="344" rx="18" class="task"/>
-  <text x="42" y="108" class="small">Visible task bounds</text>
+  <rect x="24" y="80" width="872" height="524" rx="18" class="task"/>
+  <text x="42" y="108" class="small">Visible window bounds</text>
 
   <text x="88" y="142" class="label">1. Preferred below-start</text>
   <rect x="108" y="166" width="86" height="30" rx="6" class="anchor"/>
@@ -44,4 +44,19 @@
   <text x="566" y="268" class="small">parent</text>
   <text x="796" y="238" class="small">after-side</text>
   <text x="796" y="260" class="small">would crop</text>
+
+  <text x="88" y="390" class="label">4. Compact in-place fallback</text>
+  <rect x="108" y="414" width="170" height="118" rx="16" class="menu" opacity="0.35"/>
+  <text x="130" y="444" class="small">Parent panel hidden</text>
+  <text x="130" y="468" class="small">while child is visible</text>
+  <line x1="292" y1="473" x2="366" y2="473" class="guide"/>
+  <text x="304" y="460" class="small">replace</text>
+  <rect x="384" y="414" width="170" height="118" rx="16" class="submenu"/>
+  <text x="406" y="444" class="small">Child uses parent's</text>
+  <text x="406" y="468" class="small">resolved rectangle</text>
+  <text x="406" y="492" class="small">Back restores parent</text>
+  <text x="600" y="440" class="small">Used only when neither side has</text>
+  <text x="600" y="464" class="small">the minimum menu width plus gutter.</text>
+  <text x="600" y="500" class="small">The logical chain remains bounded</text>
+  <text x="600" y="524" class="small">to four levels including the root.</text>
 </svg>
