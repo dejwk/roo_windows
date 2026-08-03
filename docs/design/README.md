@@ -28,7 +28,7 @@ Status was audited against the source tree and tests on 2026-07-31. “Dependenc
 | Material typography | Material 2 and Material 3 `TextStyle` catalogs, style-aware labels and paragraphs, Material 3 component role adoption, focused tests/goldens, and a build-covered catalog example are implemented. |
 | Navigation bar | The compact and medium destination layouts, selection/reselection hooks, badges, keyboard traversal, focused tests/goldens, and example are implemented. |
 | Navigation rail | Collapsed and expanded destinations, semantic selection and reselection, header and group layout, badges, RTL behavior, migrated `NavigationPanel` coverage, and the emulator-backed example are implemented. |
-| Non-touch input | Keyboard acquisition, focus lifecycle, click/value/scroll control interaction, structured list/menu/tab/rail navigation, and hardware text entry are implemented. |
+| Non-touch input | Keyboard acquisition, focused-widget lifecycle, click/value/scroll control interaction, structured list/menu/tab/rail navigation, and hardware text entry are implemented. Active intrusive focus-scope entry/exit, already specified by that design, is tracked as a transient-host prerequisite. |
 | Paint context | Clipper/overlay integration and the widget paint-hook migration are implemented. |
 | Slider | Paint context, Material 3 theme support, declarative drag ownership, lifecycle-safe terminal delivery, and transient-pin value indicators are implemented. |
 | Surface-widget refactor | The surface-ownership split is implemented; the broader visual-overflow design remains in progress. |
@@ -58,7 +58,7 @@ Status was audited against the source tree and tests on 2026-07-31. “Dependenc
 | FAB | Buttons and theme support are implemented; icon buttons are proposed. |
 | Icon buttons | Buttons, badges, click animation, and theme support are implemented; no icon-button implementation exists. |
 | Interaction overlay reveal | Point and area ripples, widget-local click animation, paint context, and the navigation bar's component-local fade are implemented; shared fade reveal and paint-owned overlay policy are not. |
-| Menus | Badge, paint context, back routing, list-row reuse, non-touch input, and widget-anchored presentation pins are implemented. The proposed menu design makes a shared transient-surface host, active focus scopes, layer tokens, and rect-anchored pins explicit prerequisites; menus do not use `Task` or `Activity`. Implementation remains P1.7. |
+| Menus | Badge, paint context, back routing, list-row reuse, non-touch input, and widget-anchored presentation pins are implemented. The separate transient-host design owns the missing host, active focus-scope, layer-token, and token-scoped-pin prerequisites; menus do not use `Task` or `Activity`. Menu implementation remains P1.7 after P1.6a–P1.6b. |
 | Navigation drawer | List support is in progress and back routing is implemented; dialogs are proposed, and no drawer implementation exists. |
 | Segmented buttons | Buttons are implemented; the superseding button-group design and this legacy component design are not implemented. |
 | Sheets | Paint/overflow foundations and shared back behavior are implemented; icon buttons are proposed. |
@@ -67,4 +67,5 @@ Status was audited against the source tree and tests on 2026-07-31. “Dependenc
 | Text fields | Paint context and non-touch input are implemented; supporting icon-button/menu behavior is proposed. |
 | Time pickers | Buttons and shared back behavior are implemented; text fields, dialogs, and icon buttons are proposed. |
 | Toolbars | Buttons are implemented; icon buttons, menus, and FABs are proposed. |
+| Transient surface hosting and layer anchors | The transient lifetime slot and widget-anchored pin host are implemented. Active focus scopes are specified but not active; the structural host, pointer-free layer tokens, and token-scoped presenter pins are proposed as P1.6a–P1.6b. |
 | Wi-Fi configuration | Existing Wi-Fi transport/configuration APIs are external prerequisites; the Material 3 screen design and its text-field/dialog dependencies are not implemented. |

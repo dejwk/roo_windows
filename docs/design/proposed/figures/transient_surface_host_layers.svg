@@ -33,10 +33,11 @@
   <text x="76" y="194" class="label">Transparent popup barrier</text>
   <text x="76" y="216" class="small">consumes outside input; emits no pixels</text>
   <rect x="196" y="230" width="196" height="78" rx="14" class="surface"/>
-  <text x="218" y="260" class="label">Borrowed menu overlay</text>
-  <text x="218" y="282" class="small">visible panels hit-test; gaps do not</text>
+  <text x="218" y="260" class="label">Visible menu panel</text>
+  <text x="218" y="282" class="small">panel contents hit-test</text>
+  <text x="76" y="320" class="small">borrowed MenuOverlay root is transparent outside panels</text>
   <line x1="314" y1="350" x2="314" y2="312" class="arrow"/>
-  <text x="324" y="342" class="small">popup paints above origin</text>
+  <text x="298" y="342" class="small">popup paints above origin</text>
 
   <text x="526" y="94" class="title">Modal presentation</text>
   <rect x="514" y="108" width="438" height="370" rx="18" class="window"/>

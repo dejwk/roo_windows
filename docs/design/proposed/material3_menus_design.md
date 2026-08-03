@@ -277,9 +277,9 @@ The stack has five parts:
 
 1. The prerequisite `TransientSurfaceHost` is a reusable `MainWindow` service
    shared by dialogs, menus, and later modal presenters. It owns structural
-   attachment, barrier policy, focus scope, and host teardown.
+   attachment, barrier policy, focus activation, and host teardown.
 2. `material3::Menu` is the one registered presenter for a chain. It owns copied
-   snapshots, policies, overlay, level records, pins, and dismissal.
+   snapshots, policies, focus scope, overlay, level records, and dismissal.
 3. `MenuOverlay` is the presenter-owned, full-window area-overlay container
    attached through the host. It hosts every visible `MenuPanel` and emits no
    background pixels.
@@ -530,10 +530,10 @@ state; first implementation opens submenus only by invocation.
 An optional snapshot contains window bounds, shape, overlay color/opacity, clip,
 and origin-layer token—never a widget or callback.
 
-The shared pin host gains a rect-anchored path scoped by a validated token. The
-menu allocates its pin only after host start. Allocation failure omits retention
-but does not prevent opening. The pin hides before overlay detach and slot
-release. Menu-aware triggers provide a snapshot helper; context menus omit it.
+The prerequisite host provides a token-scoped rect-pin path. The menu allocates
+its pin only after host start. Allocation failure omits retention but does not
+prevent opening. The pin hides before overlay detach and slot release.
+Menu-aware triggers provide a snapshot helper; context menus omit it.
 
 ### Per-Instance Footprint Budget
 
@@ -742,6 +742,11 @@ pin. Once Phase 3 lands, a stale or foreign snapshot returns
 `kAnchorUnavailable` before registration.
 Phase 3 replaces the stub with complete root presentation.
 
+The implemented path maps host `kStarted` to `MenuShowResult::kShown` and maps
+busy, reentrant replacement, and unavailable-origin results one-to-one. The
+temporary `kUnimplemented` result remains reserved for builds containing the
+Phase 1–2 public substrate without Phase 3 presentation.
+
 ## Implementation Plan
 
 Authoring references:
@@ -880,14 +885,16 @@ unchanged-copy runs, and the target-ABI memory audit.
 
 The implementation adds:
 
-- `transient_surface_host_test` for shared attachment, input, focus, layering,
-  lifetime, and dialog migration;
 - `material3_menu_row_test` for tokens, binding, adornments, selection hooks,
   and sizes;
 - `material3_menu_geometry_test` for placement, scrolling, RTL, and compact
   submenu fallback;
 - `material3_menu_test` and `material3_menu_golden_test` for integrated
   presentation, interaction, lifecycle, keyboard, and rendering.
+
+The prerequisite design owns focus, host, dialog-migration, layer-token, and
+token-scoped-pin tests. Menu integration repeats only the host behavior needed
+to prove the component contract.
 
 Every user-visible phase builds and unchanged-copy runs its example. ABI checks
 cover persistent types; the final audit records total live heap capacity for the
@@ -897,31 +904,12 @@ representative menu defined in the memory requirements.
 
 ### Rejected Alternatives
 
-#### Create a Popup Task for Each Menu
+#### Use Task, Dialog, Separate Hosts, or a General Stack
 
-Rejected in [Task and Transient Semantics](#task-and-transient-semantics).
-`Task` is a persistent route-stack owner. Per-show tasks apply the wrong
-lifecycle, lack removal, and leave input-owning panels after activity exit.
-
-#### Reuse the Dialog Component or Derive Menu from Dialog
-
-Rejected in [Shared Transient-Surface Host](#shared-transient-surface-host).
-They share attachment, isolation, focus, and teardown, but differ in chrome,
-z-layer, scrim, outside behavior, placement, results, and nested semantics.
-
-#### Keep Separate Dialog and Menu Hosts
-
-Rejected because both would own the same transient slot, focus scope, barrier,
-root attachment, invalidation, and teardown ordering, duplicating the most
-reentrancy-sensitive framework code.
-
-#### Add Nested Transient Stacking in the First Release
-
-Rejected for the initial host in [Shared Host Requirements](#shared-host-requirements).
-It would expand Back routing, focus restoration, origin validation, and
-reentrant teardown before a concrete dialog-contained menu requires it. The
-single-slot restriction is explicit and later bounded stacking remains
-possible without changing menu item or panel APIs.
+Rejected by the framework
+[Transient surface hosting and layer anchors design](transient_surface_host_design.md#rejected-alternatives).
+The menu consumes that decision and retains only menu-specific presentation,
+placement, selection, and chain behavior.
 
 #### Attach Panels Directly to MainWindow
 
@@ -943,7 +931,7 @@ Menus reuse items/entries while panels own popup and chain policy.
 
 Rejected for the standard path because composition duplicates binding, text
 slots, focus synchronization, and row surface behavior. Protected layout/paint
-hooks add the lane without `ListEntry` growth; Phase 3 validates the seam.
+hooks add the lane without `ListEntry` growth; Phase 1 validates the seam.
 
 #### Populate Submenus Through Menu& or Store Submenu Pointers
 
@@ -977,17 +965,12 @@ row-local cache. Items expose content; bound rows own live helpers.
 
 ### Accepted Trade-Offs
 
-1. `MainWindow` gains one reusable host and barrier/scrim. It replaces
-   dialog-specific host state and serves multiple families without widget growth.
-2. A chain pays for one full-window overlay during presentation to gain one
+1. A chain pays for one full-window overlay during presentation to gain one
    focus root, outside barrier, and detach point.
-3. Anchor geometry freezes until `reanchor()`, avoiding widget observers.
-4. Compact submenu fallback hides simultaneous parent context on narrow windows.
-5. First implementation resolves resting expressive shapes but defers morph
+2. Anchor geometry freezes until `reanchor()`, avoiding widget observers.
+3. Compact submenu fallback hides simultaneous parent context on narrow windows.
+4. First implementation resolves resting expressive shapes but defers morph
    animation and per-row animation state.
-6. The existing single root-transient slot means a menu and modal dialog cannot
-   be active together. `show()` reports `kHostBusy`; it never replaces the
-   existing presentation implicitly.
 
 ## Future Work
 
@@ -995,5 +978,3 @@ row-local cache. Items expose content; bound rows own live helpers.
 2. Add filtered and autocomplete menus on this host and panel substrate.
 3. Add density variants for compact pointer-oriented devices.
 4. Add hover-to-open and shape morphing after pointer and motion infrastructure.
-5. Add a bounded nested-transient stack if a concrete dialog-contained menu use
-   case justifies the extra Back, focus, and teardown state.

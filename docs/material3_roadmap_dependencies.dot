@@ -75,6 +75,11 @@ digraph material3_roadmap_dependencies {
     p1_6 [label="P1.6", fillcolor="#FFFFFF", color="#16A34A",
           fontcolor="#334155", URL="material3_roadmap.md#p1-6",
           tooltip="Reconcile menu ownership and input design"];
+    p1_6a [label="P1.6a", fillcolor="#FFFFFF", color="#CBD5E1",
+           fontcolor="#334155", URL="material3_roadmap.md#p1-6a",
+           tooltip="Review shared transient hosting and layer anchors"];
+    p1_6b [label="P1.6b", URL="material3_roadmap.md#p1-6b",
+           tooltip="Implement menu hosting prerequisites"];
     p1_7 [label="P1.7", URL="material3_roadmap.md#p1-7",
           tooltip="Implement Material 3 menus"];
     p1_8 [label="P1.8", fillcolor="#FFFFFF", color="#CBD5E1",
@@ -141,7 +146,7 @@ digraph material3_roadmap_dependencies {
   p0_3 -> p1_6;
   p0_4 -> p1_6;
   p0_5 -> p1_6;
-  p1_5 -> p1_6 -> p1_7;
+  p1_5 -> p1_6 -> p1_6a -> p1_6b -> p1_7;
   p0_4 -> p1_8;
   p0_5 -> p1_8;
   p0_5 -> p1_9;

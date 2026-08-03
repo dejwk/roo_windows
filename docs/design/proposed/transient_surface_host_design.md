@@ -110,15 +110,16 @@ borrows a presenter-owned widget root for one registered presentation.
 
 ### Focus Requirements
 
-1. Before the host enables input, it enters the active root through the
-   intrusive `FocusScope` contract already defined by Non-touch input.
-2. Focus remains inside the active scope for request, Tab, and directional
+1. Each focus-capturing presenter embeds the intrusive `FocusScope` already
+   required by Non-touch input and supplies it to the host.
+2. Before the host enables input, it enters the active root through that scope.
+3. Focus remains inside the active scope for request, Tab, and directional
    traversal.
-3. Scope entry chooses remembered, preferred, then first eligible focus in the
+4. Scope entry chooses remembered, preferred, then first eligible focus in the
    order specified by the existing design.
-4. Scope exit restores an eligible target from the previous scope without the
+5. Scope exit restores an eligible target from the previous scope without the
    presenter retaining a raw prior-focus pointer.
-5. Root detachment, presenter destruction, replacement, and window teardown
+6. Root detachment, presenter destruction, replacement, and window teardown
    all exit the scope exactly once.
 
 ### Layer-Token Requirements
@@ -153,9 +154,9 @@ borrows a presenter-owned widget root for one registered presentation.
 
 1. Do not increase `Widget`, `BasicWidget`, `SurfaceWidget`, `Container`,
    `FocusScope`, or `PresentationPin` size.
-2. Keep host active state at or below 32 bytes on the configured 32-bit ABI:
-   registration, root, optional active pin, origin token, compact policy, and
-   one `FocusScope`.
+2. Keep host active state at or below 24 bytes on the configured 32-bit ABI:
+   registration, root, optional active pin, presenter scope pointer, origin
+   token, and compact policy.
 3. Reuse the existing `Scrim`; the host does not add a second scrim object.
 4. Replacing each top-level layer pointer with a layer record adds at most four
    bytes per vector element on the 32-bit ABI.
@@ -183,7 +184,8 @@ MainWindow
 One presentation follows this sequence:
 
 1. The presenter supplies a copied origin token, borrowed root, root rectangle,
-   layer kind, admission policy, outside policy, and focus policy.
+   embedded focus scope, layer kind, admission policy, outside policy, and
+   focus policy.
 2. The host validates the origin and resolves its layer root.
 3. The host admits the registration through the existing transient slot.
 4. On `kStarted`, it attaches the reusable barrier and borrowed root in the
@@ -250,13 +252,14 @@ Phase 1 implements the already-specified active-scope operations on
 task or presenter embeds its `FocusScope`; no history allocation or map is
 introduced.
 
-The transient host owns the active presentation's scope record because the
-host controls structural attachment. It enters the scope only after the root
-is attached and exits after root detachment notifications have cleared any
-focused descendant. The remembered prior scope remains valid through its own
-intrusive lifetime contract. Exit restores only an attached, visible, enabled,
-focusable descendant; otherwise it uses that scope's normal initial-focus
-fallback.
+The host keeps only a pointer to the active presenter's scope while the
+registration is visible. It enters the scope only after the root is attached
+and exits after root detachment notifications have cleared any focused
+descendant. The scope is declared before the presenter's final registration
+member and therefore outlives host cancellation. The remembered prior scope
+remains valid through its own intrusive lifetime contract. Exit restores only
+an attached, visible, enabled, focusable descendant; otherwise it uses that
+scope's normal initial-focus fallback.
 
 ### Pointer-Free Layer Identity
 
@@ -292,10 +295,10 @@ the token. Component helpers then add their own immutable geometry and policy.
 The framework retains no widget pointer.
 
 Regular-task and popup-task descendants can produce snapshots. The active
-transient layer cannot because the first implementation deliberately forbids a
-menu nested above a modal dialog or another root transient. A context-point
-menu supplies its initiating attached widget for identity and a one-pixel
-window-coordinate rectangle for placement.
+transient child band cannot because the first implementation deliberately
+forbids a menu nested above a modal dialog or another root transient. A
+context-point menu supplies its initiating attached widget for identity and a
+one-pixel window-coordinate rectangle for placement.
 
 ### Token-Scoped Presentation Pins
 
@@ -347,8 +350,8 @@ The target-ABI ceilings are:
 | --- | ---: | --- |
 | process token issuer | 4 B | one cold-path counter |
 | top-level layer record delta | 4 B per capacity slot | token beside existing root pointer |
-| host active state | 32 B | three pointers, token, scope, packed policy |
-| `MainWindow` net fixed delta | 32 B | after removing dialog-specific pointer/state and reusing scrim |
+| host active state | 24 B | four pointers, token, packed policy |
+| `MainWindow` net fixed delta | 24 B | after removing dialog-specific pointer/state and reusing scrim |
 | inactive presenter | 0 B | no host handle or token observer |
 | token-scoped pin base delta | 0 B | active host stores identity pointer |
 
@@ -388,11 +391,11 @@ struct TransientSurfaceSpec {
   OutsideInteractionPolicy outside = OutsideInteractionPolicy::kDismiss;
   PresentationLayerToken origin_layer = {};
   bool show_scrim = false;
-  bool capture_focus = true;
   bool require_origin = false;
 };
 
-// Add kAnchorUnavailable to the existing start and finish enums.
+// Add kAnchorUnavailable to the existing start and finish enums. No other
+// existing enumerator changes value.
 
 class TransientPresentationRegistration {
  protected:
@@ -410,8 +413,9 @@ namespace internal {
 class TransientSurfaceHost {
  public:
   PresentationStartResult show(
-      TransientPresentationRegistration& registration, Widget& root,
-      const Rect& root_bounds, const TransientSurfaceSpec& spec);
+      TransientPresentationRegistration& registration, FocusScope& focus_scope,
+      Widget& root, const Rect& root_bounds,
+      const TransientSurfaceSpec& spec);
   void detach(TransientPresentationRegistration& registration);
 
   PresentationPinShowResult showPresentationPin(
@@ -429,7 +433,10 @@ class TransientSurfaceHost {
 
 Production declarations carry Doxygen comments on every public and protected
 contract. Snapshot helpers return `bool`, write the output only on success,
-and never expose token internals.
+and never expose token internals. `PresentationPin::anchor()` documents that it
+is available only to widget-anchored subclasses. Pre-paint handling treats a
+null anchor as a host-scoped pin: it skips widget visibility/geometry polling
+and uses the pin's copied bounds while its host registration remains active.
 
 ## Implementation Plan
 
