@@ -236,6 +236,7 @@ before implementation starts.
 | --- | --- | --- |
 | Date and time pickers | Proposed designs exist | P2.1 text fields and P1.8 dialogs; confirm localization and target-size requirements. |
 | Icon buttons | [Implemented design](design/proposed/material3_icon_buttons_design.md) | The non-toggle family has unit, golden, size-budget, and compact-controls toolbar coverage. Future work can adopt it in an app bar, menu anchor, or badge-aware host. |
+| Toggle icon buttons | [Proposed design](design/proposed/material3_toggle_icon_buttons_design.md) | Implement only with a concrete persistent binary toolbar or picker action; preserve independent selection semantics until button-group policy is scheduled. |
 | Toolbars, FABs, extended FABs, split buttons, and button groups | Proposed designs exist | Land icon buttons first where the selected component requires them, and select a concrete consuming flow. |
 | Chips | No local design | Name a concrete filter/selection consumer, then add a chips design covering only its required variants and shared selection semantics. |
 | Focused/expanded search | No complete local design | Add an explicit search-workflow design covering query ownership, suggestions/results, focus, Back, and presentation lifetime. |

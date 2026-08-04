@@ -215,7 +215,8 @@ The core decisions are:
   geometry.
 - There is no `ButtonBase` public class and no shared appearance pointer in the
   first landing.
-- Toggle icon buttons are deferred to a later design note.
+- Toggle icon buttons are specified by the follow-on
+  [toggle icon button design](material3_toggle_icon_buttons_design.md).
 
 This keeps the landing aligned with the real missing component rather than with
 the older combined family proposal.
@@ -614,7 +615,8 @@ as specified in [Public Surface and Naming](#public-surface-and-naming).
 
 ## Future Work
 
-- Add a separate design for toggle / selected icon buttons.
+- Implement the follow-on
+  [toggle icon button design](material3_toggle_icon_buttons_design.md).
 - Add button-group interaction rules if a concrete grouped icon-button surface
   needs the expressive shared-press behavior.
 - Add a badge-aware convenience wrapper such as `BadgedIconButton` if repeated
