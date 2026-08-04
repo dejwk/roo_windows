@@ -2,10 +2,9 @@
 
 ## Implementation status
 
-**Proposed.** The non-toggle `material3::IconButton`, shared selected widget
-state, keyboard activation, theme tokens, and click-animation pipeline are
-implemented. No toggle icon-button type, selected-shape transition, focused
-tests, golden coverage, or example adoption is checked in.
+**Implemented.** Both phases are complete: `material3::ToggleIconButton`,
+selected-state presentation and animation, focused unit and rendering coverage,
+and compact-controls example adoption are checked in.
 
 ## Objective
 

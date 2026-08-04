@@ -66,7 +66,7 @@ Status was audited against the source tree and tests on 2026-07-31. “Dependenc
 | Split button | Buttons and non-touch input are implemented; icon buttons and menus are proposed. |
 | Text fields | Paint context and non-touch input are implemented; supporting icon-button/menu behavior is proposed. |
 | Time pickers | Buttons and shared back behavior are implemented; text fields, dialogs, and icon buttons are proposed. |
-| Toggle icon buttons | The non-toggle icon button, shared selected widget state, theme tokens, and keyboard activation are implemented; the toggle widget and its focused rendering/interaction coverage are proposed. |
+| Toggle icon buttons | The toggle icon-button family, focused unit and rendering coverage, and compact-controls persistent-preference example adoption are implemented. |
 | Toolbars | Buttons are implemented; icon buttons, menus, and FABs are proposed. |
 | Transient surface hosting and layer anchors | The transient lifetime slot and widget-anchored pin host are implemented. Active focus scopes are specified but not active; the structural host, pointer-free layer tokens, and token-scoped presenter pins are proposed as P1.6a–P1.6b. |
 | Wi-Fi configuration | Existing Wi-Fi transport/configuration APIs are external prerequisites; the Material 3 screen design and its text-field/dialog dependencies are not implemented. |

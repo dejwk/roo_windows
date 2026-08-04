@@ -1,5 +1,5 @@
 // Learning goal: size controls for a constrained equipment toolbar. Tap a
-// service action to see which compact command was requested.
+// service action or preference to see its current state.
 
 // *************** EMULATOR SETUP BEGIN
 
@@ -79,6 +79,7 @@ void initDisplay() {
 #include "roo_windows/containers/flex_layout.h"
 #include "roo_windows/material3/button/button.h"
 #include "roo_windows/material3/button/icon_button.h"
+#include "roo_windows/material3/button/toggle_icon_button.h"
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_block.h"
 #include "roo_windows/widgets/text_label.h"
@@ -132,6 +133,28 @@ class ServiceIconButton : public material3::IconButton {
   ServiceAction action_;
 };
 
+/// Persistent toolbar preference that reports its state after each toggle.
+class PreferenceToggleButton : public material3::ToggleIconButton {
+ public:
+  /// Creates a toggle that reports whether the toolbar preference is saved.
+  PreferenceToggleButton(ApplicationContext& context,
+                         const MonoIcon& unselected_icon,
+                         const MonoIcon* selected_icon, TextLabel& feedback)
+      : material3::ToggleIconButton(context, unselected_icon, selected_icon,
+                                    material3::IconButtonStyle::kStandard),
+        feedback_(feedback) {}
+
+  /// Toggles the preference then reports the committed persistent state.
+  void onClicked() override {
+    material3::ToggleIconButton::onClicked();
+    feedback_.setText(isSelected() ? "Maintenance preference saved"
+                                   : "Maintenance preference cleared");
+  }
+
+ private:
+  TextLabel& feedback_;
+};
+
 /// Space-constrained maintenance toolbar using small button tokens.
 class CompactControls : public FlexLayout {
  public:
@@ -149,7 +172,9 @@ class CompactControls : public FlexLayout {
         backwash_(context, "Backwash", material3::ButtonVariant::kOutlined,
                   feedback_, ServiceAction::kBackwash),
         reset_(context, ic_outlined_24_action_done(), feedback_,
-               ServiceAction::kReset) {
+               ServiceAction::kReset),
+        preference_(context, ic_outlined_24_action_bookmark(),
+                    &ic_outlined_24_action_favorite(), feedback_) {
     setPadding(Padding(Scaled(12), Scaled(16)));
     setGap(Scaled(14));
     toolbar_.setGap(Scaled(6));
@@ -160,6 +185,7 @@ class CompactControls : public FlexLayout {
     backwash_.setSmallButtonPadding(material3::SmallButtonPadding::kReduced);
     reset_.setSize(material3::ButtonSize::kSmall);
     reset_.setStyle(material3::IconButtonStyle::kStandard);
+    preference_.setSize(material3::ButtonSize::kSmall);
     prime_.setIcon(&ic_outlined_24_action_cached());
     backwash_.setIcon(&ic_outlined_24_action_build());
     prime_.setMargins(MarginSize::kNone);
@@ -168,6 +194,7 @@ class CompactControls : public FlexLayout {
     toolbar_.add(prime_);
     toolbar_.add(backwash_);
     toolbar_.add(reset_);
+    toolbar_.add(preference_);
 
     add(title_);
     add(guidance_);
@@ -183,6 +210,7 @@ class CompactControls : public FlexLayout {
   ServiceButton prime_;
   ServiceButton backwash_;
   ServiceIconButton reset_;
+  PreferenceToggleButton preference_;
 };
 
 }  // namespace
