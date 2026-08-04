@@ -531,9 +531,11 @@ An optional snapshot contains window bounds, shape, overlay color/opacity, clip,
 and origin-layer token—never a widget or callback.
 
 The prerequisite host provides a token-scoped rect-pin path. The menu allocates
-its pin only after host start. Allocation failure omits retention but does not
-prevent opening. The pin hides before overlay detach and slot release.
-Menu-aware triggers provide a snapshot helper; context menus omit it.
+its pin only after host start. The host requires the trigger snapshot token to
+equal the active anchor snapshot token before accepting the pin. Allocation
+failure or a mismatched trigger snapshot omits retention but does not prevent
+opening. The pin hides before overlay detach and slot release. Menu-aware
+triggers provide a snapshot helper; context menus omit it.
 
 ### Per-Instance Footprint Budget
 
@@ -575,6 +577,7 @@ enum class MenuShowResult : uint8_t {
   kShown,
   kHostBusy,
   kReentrantReplacement,
+  kSurfaceUnavailable,
   kAnchorUnavailable,
   kUnimplemented,
 };
@@ -743,9 +746,9 @@ pin. Once Phase 3 lands, a stale or foreign snapshot returns
 Phase 3 replaces the stub with complete root presentation.
 
 The implemented path maps host `kStarted` to `MenuShowResult::kShown` and maps
-busy, reentrant replacement, and unavailable-origin results one-to-one. The
-temporary `kUnimplemented` result remains reserved for builds containing the
-Phase 1–2 public substrate without Phase 3 presentation.
+busy, reentrant replacement, unavailable-surface, and unavailable-origin
+results one-to-one. The temporary `kUnimplemented` result remains reserved for
+builds containing the Phase 1–2 public substrate without Phase 3 presentation.
 
 ## Implementation Plan
 
