@@ -2,10 +2,10 @@
 
 ## Implementation status
 
-**In progress.** Phase 1 (the core non-toggle widget, focused unit coverage,
-and compact-controls example adoption) is implemented. Rendering goldens remain
-Phase 2. The status of existing and outstanding prerequisites is recorded in
-the [status index](../README.md).
+**Implemented.** Phases 1 and 2 are complete: the core non-toggle widget,
+focused unit coverage, compact-controls example adoption, and rendering goldens
+are checked in. The status of existing and outstanding prerequisites is
+recorded in the [status index](../README.md).
 
 ## Objective
 
