@@ -203,7 +203,7 @@ const MonoIcon& ToggleIconButton::activeIcon() const {
 void ToggleIconButton::setSelected(bool selected) {
   if (selected == isSelected()) return;
   Widget::setSelected(selected);
-  startSelectionAnimation();
+  startSelectionAnimation(false);
 }
 
 Padding ToggleIconButton::getDefaultPadding() const {
@@ -272,9 +272,11 @@ BorderStyle ToggleIconButton::getBorderStyle() const {
     int16_t elapsed = selectionAnimationElapsedMs();
     if (elapsed >= 0 && elapsed <= kSelectionAnimationMs) {
       float progress = static_cast<float>(elapsed) / kSelectionAnimationMs;
+      uint8_t from = (selection_animation_ & kAnimationFromPressedMask) != 0
+                         ? PressedRadius(*this)
+                         : RestingRadius(*this, !isSelected());
       return BorderStyle(
-          Interpolate(RestingRadius(*this, !isSelected()),
-                      RestingRadius(*this, isSelected()), progress),
+          Interpolate(from, RestingRadius(*this, isSelected()), progress),
           outline);
     }
   }
@@ -289,7 +291,11 @@ void ToggleIconButton::paintWidgetContents(PaintContext& ctx) {
     }
   }
   Widget::paintWidgetContents(ctx);
-  if (isSelectionAnimating()) setDirty();
+  if (isSelectionAnimating()) {
+    // Corner geometry changes every frame. A surface invalidation restores the
+    // pixels exposed by the prior rounded shape before drawing the next one.
+    invalidateInterior();
+  }
 }
 
 void ToggleIconButton::paint(PaintContext& ctx) const {
@@ -308,7 +314,7 @@ bool ToggleIconButton::usesHighlighterColor() const {
 
 void ToggleIconButton::onClicked() {
   if (!isEnabled()) return;
-  toggle();
+  setSelectedFromPressed(!isSelected());
   Widget::onClicked();
 }
 
@@ -317,9 +323,16 @@ int16_t ToggleIconButton::selectionAnimationElapsedMs() const {
          (selection_animation_ & kAnimationTimeMask);
 }
 
-void ToggleIconButton::startSelectionAnimation() {
-  selection_animation_ = millis() & kAnimationTimeMask;
+void ToggleIconButton::startSelectionAnimation(bool from_pressed) {
+  selection_animation_ = (from_pressed ? kAnimationFromPressedMask : 0) |
+                         (millis() & kAnimationTimeMask);
   setDirty();
+}
+
+void ToggleIconButton::setSelectedFromPressed(bool selected) {
+  if (selected == isSelected()) return;
+  Widget::setSelected(selected);
+  startSelectionAnimation(true);
 }
 
 }  // namespace material3

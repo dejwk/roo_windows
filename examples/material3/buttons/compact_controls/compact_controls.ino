@@ -78,8 +78,6 @@ void initDisplay() {
 
 #include "roo_windows/containers/flex_layout.h"
 #include "roo_windows/material3/button/button.h"
-#include "roo_windows/material3/button/icon_button.h"
-#include "roo_windows/material3/button/toggle_icon_button.h"
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_block.h"
 #include "roo_windows/widgets/text_label.h"
@@ -112,49 +110,6 @@ class ServiceButton : public material3::Button {
   ServiceAction action_;
 };
 
-/// Compact icon-only service action for constrained toolbars.
-class ServiceIconButton : public material3::IconButton {
- public:
-  ServiceIconButton(ApplicationContext& context, const MonoIcon& icon,
-                    TextLabel& feedback, ServiceAction action)
-      : material3::IconButton(context, icon),
-        feedback_(feedback),
-        action_(action) {}
-
-  void onClicked() override {
-    static constexpr const char* kMessages[] = {"Pump priming requested",
-                                                "Filter backwash requested",
-                                                "Alarm reset requested"};
-    feedback_.setText(kMessages[static_cast<uint8_t>(action_)]);
-  }
-
- private:
-  TextLabel& feedback_;
-  ServiceAction action_;
-};
-
-/// Persistent toolbar preference that reports its state after each toggle.
-class PreferenceToggleButton : public material3::ToggleIconButton {
- public:
-  /// Creates a toggle that reports whether the toolbar preference is saved.
-  PreferenceToggleButton(ApplicationContext& context,
-                         const MonoIcon& unselected_icon,
-                         const MonoIcon* selected_icon, TextLabel& feedback)
-      : material3::ToggleIconButton(context, unselected_icon, selected_icon,
-                                    material3::IconButtonStyle::kStandard),
-        feedback_(feedback) {}
-
-  /// Toggles the preference then reports the committed persistent state.
-  void onClicked() override {
-    material3::ToggleIconButton::onClicked();
-    feedback_.setText(isSelected() ? "Maintenance preference saved"
-                                   : "Maintenance preference cleared");
-  }
-
- private:
-  TextLabel& feedback_;
-};
-
 /// Space-constrained maintenance toolbar using small button tokens.
 class CompactControls : public FlexLayout {
  public:
@@ -170,11 +125,7 @@ class CompactControls : public FlexLayout {
         prime_(context, "Prime", material3::ButtonVariant::kFilledTonal,
                feedback_, ServiceAction::kPrime),
         backwash_(context, "Backwash", material3::ButtonVariant::kOutlined,
-                  feedback_, ServiceAction::kBackwash),
-        reset_(context, ic_outlined_24_action_done(), feedback_,
-               ServiceAction::kReset),
-        preference_(context, ic_outlined_24_action_bookmark(),
-                    &ic_outlined_24_action_favorite(), feedback_) {
+                  feedback_, ServiceAction::kBackwash) {
     setPadding(Padding(Scaled(12), Scaled(16)));
     setGap(Scaled(14));
     toolbar_.setGap(Scaled(6));
@@ -183,9 +134,6 @@ class CompactControls : public FlexLayout {
     prime_.setSize(material3::ButtonSize::kExtraSmall);
     backwash_.setSize(material3::ButtonSize::kSmall);
     backwash_.setSmallButtonPadding(material3::SmallButtonPadding::kReduced);
-    reset_.setSize(material3::ButtonSize::kSmall);
-    reset_.setStyle(material3::IconButtonStyle::kStandard);
-    preference_.setSize(material3::ButtonSize::kSmall);
     prime_.setIcon(&ic_outlined_24_action_cached());
     backwash_.setIcon(&ic_outlined_24_action_build());
     prime_.setMargins(MarginSize::kNone);
@@ -193,8 +141,6 @@ class CompactControls : public FlexLayout {
 
     toolbar_.add(prime_);
     toolbar_.add(backwash_);
-    toolbar_.add(reset_);
-    toolbar_.add(preference_);
 
     add(title_);
     add(guidance_);
@@ -209,8 +155,6 @@ class CompactControls : public FlexLayout {
   TextLabel feedback_;
   ServiceButton prime_;
   ServiceButton backwash_;
-  ServiceIconButton reset_;
-  PreferenceToggleButton preference_;
 };
 
 }  // namespace

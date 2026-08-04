@@ -49,6 +49,12 @@ roo_windows_example_build(
 )
 
 roo_windows_example_build(
+    name = "material3_buttons_toggle_preference",
+    sketch = "material3/buttons/toggle_preference/toggle_preference.ino",
+    include_dir = "material3/buttons/toggle_preference",
+)
+
+roo_windows_example_build(
     name = "material3_layout_scaffold_adaptive_navigation",
     sketch = "material3/layout_scaffold/adaptive_navigation/adaptive_navigation.ino",
     include_dir = "material3/layout_scaffold/adaptive_navigation",
@@ -200,6 +206,7 @@ filegroup(
         ":material3_badge_custom_anchor_example_build",
         ":material3_badge_notification_count_example_build",
         ":material3_buttons_compact_controls_example_build",
+        ":material3_buttons_toggle_preference_example_build",
         ":material3_buttons_pool_actions_example_build",
         ":material3_checkbox_alarm_sources_example_build",
         ":material3_grid_layout_pool_dashboard_example_build",

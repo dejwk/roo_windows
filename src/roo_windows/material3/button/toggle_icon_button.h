@@ -82,17 +82,19 @@ class ToggleIconButton : public IconButton {
 
  private:
   static constexpr uint16_t kAnimationIdleMask = 0x8000;
-  static constexpr uint16_t kAnimationTimeMask = 0x3FFF;
+  static constexpr uint16_t kAnimationFromPressedMask = 0x4000;
+  static constexpr uint16_t kAnimationTimeMask = 0x1FFF;
 
   bool isSelectionAnimating() const {
     return (selection_animation_ & kAnimationIdleMask) == 0;
   }
   int16_t selectionAnimationElapsedMs() const;
-  void startSelectionAnimation();
+  void startSelectionAnimation(bool from_pressed);
+  void setSelectedFromPressed(bool selected);
 
   const MonoIcon* selected_icon_;
-  // Bit 15 marks an idle transition; remaining bits store a millis() value
-  // modulo 16384. This matches the compact switch animation representation.
+  // Bit 15 marks an idle transition; bit 14 records an input-driven
+  // pressed-shape start; the remaining bits store a time modulo 8192 ms.
   mutable uint16_t selection_animation_;
 };
 

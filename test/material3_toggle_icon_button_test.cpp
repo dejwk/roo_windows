@@ -65,6 +65,19 @@ TEST(Material3ToggleIconButton, ClickTogglesBeforeTheCallback) {
   EXPECT_EQ(1, callbacks);
 }
 
+// Verifies an input-driven change continues directly from its pressed shape.
+TEST(Material3ToggleIconButton, ClickedTransitionStartsAtPressedShape) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+  ToggleIconButton button(context, ic_outlined_24_action_done());
+
+  button.onClicked();
+
+  EXPECT_TRUE(button.isSelected());
+  EXPECT_EQ(Scaled(8), button.getBorderStyle().top_left_corner_radius());
+}
+
 // Verifies that disabled controls reject direct activation.
 TEST(Material3ToggleIconButton, DisabledClickDoesNotToggleOrNotify) {
   roo_scheduler::Scheduler scheduler;
@@ -109,13 +122,19 @@ TEST(Material3ToggleIconButton, SelectionInvertsRestingShape) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
   ApplicationContext context = MakeContext(env);
-  ToggleIconButton button(context, ic_outlined_24_action_done(), nullptr,
-                          IconButtonStyle::kFilled, true);
-  button.setShape(ButtonShape::kSquare);
+  ToggleIconButton round_off(context, ic_outlined_24_action_done());
+  ToggleIconButton round_on(context, ic_outlined_24_action_done(), nullptr,
+                            IconButtonStyle::kFilled, true);
+  ToggleIconButton square_off(context, ic_outlined_24_action_done());
+  ToggleIconButton square_on(context, ic_outlined_24_action_done(), nullptr,
+                             IconButtonStyle::kFilled, true);
+  square_off.setShape(ButtonShape::kSquare);
+  square_on.setShape(ButtonShape::kSquare);
 
-  EXPECT_EQ(0xFF, button.getBorderStyle().top_left_corner_radius());
-  button.setSelected(false);
-  EXPECT_EQ(0xFF, button.getBorderStyle().top_left_corner_radius());
+  EXPECT_EQ(0xFF, round_off.getBorderStyle().top_left_corner_radius());
+  EXPECT_EQ(Scaled(12), round_on.getBorderStyle().top_left_corner_radius());
+  EXPECT_EQ(Scaled(12), square_off.getBorderStyle().top_left_corner_radius());
+  EXPECT_EQ(0xFF, square_on.getBorderStyle().top_left_corner_radius());
 }
 
 // Verifies icon bounds stay stable across state and the RAM budget holds.

@@ -4,7 +4,8 @@
 
 **Implemented.** Both phases are complete: `material3::ToggleIconButton`,
 selected-state presentation and animation, focused unit and rendering coverage,
-and compact-controls example adoption are checked in.
+compact-controls adoption, and a dedicated toggle-preference example are
+checked in.
 
 ## Objective
 
