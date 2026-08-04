@@ -66,7 +66,7 @@ class IconButton : public BasicSurfaceWidget {
   void setIcon(const MonoIcon& icon);
 
   /// Returns the resolved icon slot in the widget's parent-local coordinates.
-  Rect getIconBounds() const;
+  virtual Rect getIconBounds() const;
 
   /// Returns token-derived padding around the resolved icon slot.
   Padding getDefaultPadding() const override;
