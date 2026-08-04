@@ -555,7 +555,10 @@ class ExtendedFloatingActionButton : public BasicSurfaceWidget {
    collapse target.
 5. The widget APIs intentionally do not expose placement, docking, badge,
    tooltip, or menu behavior.
-6. If the public declarations land before the full paint/layout behavior, the
+6. FABs intentionally retain `FabSize` and `ExtendedFabSize` rather than using
+   `ButtonSize`: their supported tiers and collapse mappings differ from the
+   standard, icon, split, and grouped button families.
+7. If the public declarations land before the full paint/layout behavior, the
    interim stubs for `paint()`, `getSuggestedMinimumDimensions()`, and other
    unsafe partial behaviors should emit `LOG(FATAL) << "Unimplemented: ..."`
    rather than silently drawing the wrong geometry.

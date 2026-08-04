@@ -6,6 +6,7 @@
 #include "roo_windows/core/basic_surface_widget.h"
 #include "roo_windows/core/border_style.h"
 #include "roo_windows/core/theme.h"
+#include "roo_windows/material3/button/button_types.h"
 
 namespace roo_windows {
 namespace material3 {
@@ -30,19 +31,6 @@ enum class ButtonVariant : uint8_t {
   kFilledTonal,
   kOutlined,
   kElevated,
-};
-
-enum class ButtonSize : uint8_t {
-  kExtraSmall,
-  kSmall,
-  kMedium,
-  kLarge,
-  kExtraLarge,
-};
-
-enum class ButtonShape : uint8_t {
-  kRound,
-  kSquare,
 };
 
 enum class SmallButtonPadding : uint8_t {

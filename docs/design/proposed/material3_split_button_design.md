@@ -489,6 +489,11 @@ coordination code. That is far too expensive for the common path.
 
 ### Split-Button Types
 
+`ButtonSize` is the shared expressive size selector from
+`material3/button/button_types.h`. A split button has its own size-token table;
+sharing the selector lets a surrounding control policy align it with standard,
+icon, and grouped buttons without coupling their layouts.
+
 ```cpp
 namespace roo_windows::material3 {
 

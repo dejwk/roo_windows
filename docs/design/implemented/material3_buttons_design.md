@@ -453,7 +453,9 @@ Variant is not the only property that should be surfaced directly.
 
 `ButtonSize`, `ButtonShape`, and `SmallButtonPadding` are common Material 3
 component choices rather than rare product-specific overrides, so they should
-be first-class enums on `Button`.
+be first-class enums on `Button`. `ButtonSize` and `ButtonShape` are defined in
+`material3/button/button_types.h` as shared selector vocabularies for the
+standard-button, icon-button, split-button, and button-group families.
 
 - `ButtonSize` selects the token set for height, padding, icon size, gap, and
    pressed-shape geometry.
@@ -474,6 +476,11 @@ spec treats it as an independent configuration rather than as a different size.
 `SmallButtonPadding` only affects layouts that use `ButtonSize::kSmall`. For
 other sizes, implementations may retain the configured value but it has no
 visual effect.
+
+Sharing a selector does not share a geometry table. Each component resolves a
+given size or shape with its own spec-derived dimensions, padding, icon slots,
+and radii. Component-specific choices such as icon-button width and visual
+styles remain separate enums.
 
 Like `setVariant()`, `setSize()`, `setShape()`, and
 `setSmallButtonPadding()` can affect measurement and decoration, so they should

@@ -151,8 +151,10 @@ justifies today.
 2. Support two entry families:
    - a label entry with an optional leading icon,
    - and an icon-only entry.
-3. Support the existing `ButtonSize` and `ButtonShape` vocabularies so grouped
-   and standalone buttons share size and shape selectors.
+3. Support the shared `ButtonSize` and `ButtonShape` vocabularies from
+   `material3/button/button_types.h` so grouped, standard, split, and icon
+   buttons share size and shape selectors. Each family still resolves those
+   selectors through its own geometry tokens.
 4. Support connected-group single-select, multi-select, and
    selection-required behavior.
 5. Keep every group in one row. No wrapping or second-line layout is part of

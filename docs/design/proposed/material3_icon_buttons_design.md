@@ -224,14 +224,23 @@ the older combined family proposal.
 The user-facing configuration surface should be:
 
 - `IconButtonStyle`: `kStandard`, `kFilled`, `kFilledTonal`, `kOutlined`
-- `IconButtonSize`: `kExtraSmall`, `kSmall`, `kMedium`, `kLarge`,
+- `ButtonSize`: `kExtraSmall`, `kSmall`, `kMedium`, `kLarge`,
   `kExtraLarge`
-- `IconButtonShape`: `kRound`, `kSquare`
+- `ButtonShape`: `kRound`, `kSquare`
 - `IconButtonWidth`: `kNarrow`, `kUniform`, `kWide`
 
 The style enum intentionally does not use the name `IconButtonVariant`. The
 Material 3 icon-button spec already reserves `variant` for `default` versus
 `toggle`, and v1 deliberately implements only the default branch.
+
+`ButtonSize` and `ButtonShape` are shared Material 3 selector vocabularies,
+defined in `material3/button/button_types.h`. They make a common control-scale
+or corner-family policy usable across standard buttons, icon buttons, split
+buttons, and button groups. They do **not** share geometry tables: each
+component maps a selected size or shape to its own spec-derived container,
+padding, icon, and radius tokens. `IconButtonStyle` and `IconButtonWidth`
+remain icon-button-specific because their meanings do not apply to every button
+family.
 
 The constructor should therefore be narrow and explicit:
 
@@ -420,19 +429,6 @@ enum class IconButtonStyle : uint8_t {
   kOutlined,
 };
 
-enum class IconButtonSize : uint8_t {
-  kExtraSmall,
-  kSmall,
-  kMedium,
-  kLarge,
-  kExtraLarge,
-};
-
-enum class IconButtonShape : uint8_t {
-  kRound,
-  kSquare,
-};
-
 enum class IconButtonWidth : uint8_t {
   kNarrow,
   kUniform,
@@ -451,14 +447,14 @@ class IconButton : public BasicSurfaceWidget {
   void setStyle(IconButtonStyle style);
 
   /// Returns the active expressive size token.
-  IconButtonSize size() const;
+  ButtonSize size() const;
   /// Changes size and requests layout and repaint.
-  void setSize(IconButtonSize size);
+  void setSize(ButtonSize size);
 
   /// Returns the resting shape family.
-  IconButtonShape shape() const;
+  ButtonShape shape() const;
   /// Changes the resting shape and invalidates affected paint.
-  void setShape(IconButtonShape shape);
+  void setShape(ButtonShape shape);
 
   /// Returns the active width token.
   IconButtonWidth widthMode() const;
