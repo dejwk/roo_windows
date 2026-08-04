@@ -2,7 +2,10 @@
 
 ## Implementation status
 
-**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+**In progress.** Phase 1 (the core non-toggle widget, focused unit coverage,
+and compact-controls example adoption) is implemented. Rendering goldens remain
+Phase 2. The status of existing and outstanding prerequisites is recorded in
+the [status index](../README.md).
 
 ## Objective
 

@@ -56,7 +56,7 @@ Status was audited against the source tree and tests on 2026-07-31. “Dependenc
 | Dialogs | Legacy dialogs and shared back behavior exist, but the Material 3 design is not implemented; icon buttons and text fields are proposed. |
 | Extended FAB | The base FAB dependency is proposed; buttons and theme support are implemented. |
 | FAB | Buttons and theme support are implemented; icon buttons are proposed. |
-| Icon buttons | Buttons, badges, click animation, and theme support are implemented; no icon-button implementation exists. |
+| Icon buttons | Phase 1 core icon buttons, unit coverage, and compact-controls example adoption are implemented; rendering goldens remain. |
 | Interaction overlay reveal | Point and area ripples, widget-local click animation, paint context, and the navigation bar's component-local fade are implemented; shared fade reveal and paint-owned overlay policy are not. |
 | Menus | Badge, paint context, back routing, list-row reuse, non-touch input, and widget-anchored presentation pins are implemented. The separate transient-host design owns the missing host, active focus-scope, layer-token, and token-scoped-pin prerequisites; menus do not use `Task` or `Activity`. Menu implementation remains P1.7 after P1.6a–P1.6b. |
 | Navigation drawer | List support is in progress and back routing is implemented; dialogs are proposed, and no drawer implementation exists. |

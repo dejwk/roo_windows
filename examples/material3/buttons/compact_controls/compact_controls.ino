@@ -78,9 +78,10 @@ void initDisplay() {
 
 #include "roo_windows/containers/flex_layout.h"
 #include "roo_windows/material3/button/button.h"
+#include "roo_windows/material3/button/icon_button.h"
 #include "roo_windows/material3/typography.h"
-#include "roo_windows/widgets/text_label.h"
 #include "roo_windows/widgets/text_block.h"
+#include "roo_windows/widgets/text_label.h"
 
 namespace {
 
@@ -110,6 +111,27 @@ class ServiceButton : public material3::Button {
   ServiceAction action_;
 };
 
+/// Compact icon-only service action for constrained toolbars.
+class ServiceIconButton : public material3::IconButton {
+ public:
+  ServiceIconButton(ApplicationContext& context, const MonoIcon& icon,
+                    TextLabel& feedback, ServiceAction action)
+      : material3::IconButton(context, icon),
+        feedback_(feedback),
+        action_(action) {}
+
+  void onClicked() override {
+    static constexpr const char* kMessages[] = {"Pump priming requested",
+                                                "Filter backwash requested",
+                                                "Alarm reset requested"};
+    feedback_.setText(kMessages[static_cast<uint8_t>(action_)]);
+  }
+
+ private:
+  TextLabel& feedback_;
+  ServiceAction action_;
+};
+
 /// Space-constrained maintenance toolbar using small button tokens.
 class CompactControls : public FlexLayout {
  public:
@@ -126,7 +148,7 @@ class CompactControls : public FlexLayout {
                feedback_, ServiceAction::kPrime),
         backwash_(context, "Backwash", material3::ButtonVariant::kOutlined,
                   feedback_, ServiceAction::kBackwash),
-        reset_(context, "Reset", material3::ButtonVariant::kText, feedback_,
+        reset_(context, ic_outlined_24_action_done(), feedback_,
                ServiceAction::kReset) {
     setPadding(Padding(Scaled(12), Scaled(16)));
     setGap(Scaled(14));
@@ -137,12 +159,11 @@ class CompactControls : public FlexLayout {
     backwash_.setSize(material3::ButtonSize::kSmall);
     backwash_.setSmallButtonPadding(material3::SmallButtonPadding::kReduced);
     reset_.setSize(material3::ButtonSize::kSmall);
-    reset_.setSmallButtonPadding(material3::SmallButtonPadding::kReduced);
+    reset_.setStyle(material3::IconButtonStyle::kStandard);
     prime_.setIcon(&ic_outlined_24_action_cached());
     backwash_.setIcon(&ic_outlined_24_action_build());
     prime_.setMargins(MarginSize::kNone);
     backwash_.setMargins(MarginSize::kNone);
-    reset_.setMargins(MarginSize::kNone);
 
     toolbar_.add(prime_);
     toolbar_.add(backwash_);
@@ -161,7 +182,7 @@ class CompactControls : public FlexLayout {
   TextLabel feedback_;
   ServiceButton prime_;
   ServiceButton backwash_;
-  ServiceButton reset_;
+  ServiceIconButton reset_;
 };
 
 }  // namespace
