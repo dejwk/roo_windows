@@ -157,9 +157,9 @@ roo_windows_example_build(
 )
 
 roo_windows_example_build(
-    name = "material3_slider_tank_level",
-    sketch = "material3/slider/tank_level/tank_level.ino",
-    include_dir = "material3/slider/tank_level",
+    name = "material3_slider_charging_level",
+    sketch = "material3/slider/charging_level/charging_level.ino",
+    include_dir = "material3/slider/charging_level",
 )
 
 roo_windows_example_build(
@@ -227,7 +227,7 @@ filegroup(
         ":material3_slider_centered_balance_example_build",
         ":material3_slider_inset_icon_example_build",
         ":material3_slider_stepped_fan_speed_example_build",
-        ":material3_slider_tank_level_example_build",
+        ":material3_slider_charging_level_example_build",
         ":material3_slider_temperature_setpoint_example_build",
         ":material3_switch_connectivity_example_build",
         ":material3_tabs_history_filter_example_build",

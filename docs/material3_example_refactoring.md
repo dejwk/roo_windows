@@ -95,7 +95,7 @@ not library implementation phases.
 | Lists | `lists/settings`, `lists/segmented_schedule`, `lists/navigation`, `lists/selection_controls`, `lists/expandable_maintenance`, `lists/legacy_baseline_menu` | Teach each list interaction independently; clearly mark baseline legacy styling. |
 | Navigation | `navigation_bar/app_navigation`, `navigation_rail/app_navigation` | Connect destination selection to visible application state. |
 | Selectors | `checkbox/alarm_sources`, `radio_button/control_density`, `switch/connectivity` | Model independent, exclusive, and boolean choices. |
-| Sliders | `slider/temperature_setpoint`, `slider/stepped_fan_speed`, `slider/centered_balance`, `slider/tank_level`, `slider/inset_icon`, `range_slider/quiet_hours` | Teach one value model or presentation facet at a time and use semantic ranges throughout. |
+| Sliders | `slider/temperature_setpoint`, `slider/stepped_fan_speed`, `slider/centered_balance`, `slider/charging_level`, `slider/inset_icon`, `range_slider/quiet_hours` | Teach one value model or presentation facet at a time and use semantic ranges throughout. |
 | Tabs | `tabs/status_pages`, `tabs/history_filter`, `tabs/scrollable_categories` | Bind primary tabs to pages; use secondary tabs as filters; handle overflow. |
 | Typography | `typography/pool_status` | Apply the semantic type scale to a realistic information hierarchy. |
 
