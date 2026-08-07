@@ -746,15 +746,14 @@ Proposed commit: `refactor: extract display-local window runtime`
 
 ### Phase 3: introduce `UiTask` and the structural `TaskPanel`
 
-- Move focus, physical-key bindings, key-repeat, task transients, and content
-  selection into `UiTask`.
-- Move the active `TextFieldEditor` connection from application state into
-  `UiTask`.
-- Remove `ApplicationContext::focus()` and resolve focus through the attached
-  task ancestry. Give each focus manager an immutable task-panel scope root.
-- Restrict each task to its construction window.
-- Make `TaskPanel` an internal widget owned by the task/window relationship.
-- Temporarily adapt existing `Task`/`Activity` behavior.
+Implement the
+[Phase 3 `UiTask` extraction design](display_ui_task_extraction_design.md):
+
+- move focus, text editing, polled key routing, armed-key state, and subtree
+  cancellation into `UiTask`;
+- make the inline `TaskPanel` the structural task boundary and remove focus
+  from `ApplicationContext`; and
+- retain current `Task`/`Activity` behavior through a temporary adapter.
 
 Validation:
 

@@ -56,6 +56,7 @@ Status was audited against the source tree and tests on 2026-07-31. “Dependenc
 | Display runtime and cross-application input | Non-touch input, Back routing, interrupted paint, and transient lifetime prerequisites are implemented; display-window extraction, display-local tasks, external driving, cross-application key bindings, and explicit modal coverage are not implemented. |
 | Display runtime Phase 1 characterization | Existing rendering, input, focus, task, Back, and transient tests are prerequisites; the integrated characterization target and ESP32-C3 runtime baseline are not implemented. |
 | Display runtime Phase 2 `DisplayWindow` extraction | The Phase 1 characterization is proposed; the one-to-one display owner, continuation relocation, compatibility forwarding, and teardown extraction are not implemented. |
+| Display runtime Phase 3 `UiTask` extraction | Phase 2 is proposed; task-local focus, editing, polled key routing, structural task ancestry, and the activity compatibility adapter are not implemented. |
 | Dialogs | Legacy dialogs and shared back behavior exist, but the Material 3 design is not implemented; icon buttons and text fields are proposed. |
 | Extended FAB | The base FAB dependency is proposed; buttons and theme support are implemented. |
 | FAB | Buttons and theme support are implemented; icon buttons are proposed. |
