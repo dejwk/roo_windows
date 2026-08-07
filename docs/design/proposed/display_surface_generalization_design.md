@@ -728,10 +728,13 @@ Proposed commit: `test: characterize roo_windows application runtime`
 
 ### Phase 2: extract `DisplayWindow` with one-to-one ownership
 
-- Move `MainWindow`, display access, touch, gesture, dirty/refresh, and
-  interrupted-paint state behind `DisplayWindow`.
-- Keep exactly one window per application.
-- Preserve current public behavior through temporary forwarding methods.
+Implement the
+[Phase 2 `DisplayWindow` extraction design](display_window_extraction_design.md):
+
+- move `MainWindow`, display access, touch, gesture, dirty/refresh, and
+  interrupted-paint state behind `DisplayWindow`;
+- keep exactly one inline window per application; and
+- preserve current public behavior through temporary forwarding methods.
 
 Validation:
 
