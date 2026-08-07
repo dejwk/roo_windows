@@ -9,67 +9,53 @@
 
 namespace roo_windows {
 
-using roo_display::Display;
-
-static constexpr roo_time::Duration kMinRefreshDuration = roo_time::Millis(200);
-
-// Do not refresh display more frequently than this (50 Hz).
-static constexpr long kMinRefreshTimeDeltaMs = 20;
 static constexpr int kKeyDrainBatchSize = 4;
 static constexpr int kMaxKeyDrainBatchesPerTick = 4;
 
-Application::Application(const Environment* env, Display& display)
-    : display_(display),
-      env_(env),
+Application::Application(const Environment* env, roo_display::Display& display)
+    : env_(env),
       context_(env->scheduler(), env->theme(), env->keyboardColorTheme()),
       keyboard_(context_, kbEngUS()),
       text_field_editor_(env->scheduler(), keyboard_),
-      root_window_(*this, display.extents()),
-      touch_sensor_(display),
-      gesture_detector_(root_window_, touch_sensor_),
       key_source_(nullptr),
-      touch_enabled_(true),
-      ticker_(env->scheduler(), [this]() { tick(); }),
-      paint_interval_(kMinRefreshDuration) {
+      window_(*this, display, true),
+      ticker_(env->scheduler(), [this]() { tick(); }) {
   roo_windows::Task* kb_task = addPopupTaskFloating();
   kb_task->enterActivity(&keyboard_);
 }
 
-Application::Application(const Environment* env, Display& display,
+Application::Application(const Environment* env, roo_display::Display& display,
                          KeySource& keys, bool enable_touch)
-    : display_(display),
-      env_(env),
+    : env_(env),
       context_(env->scheduler(), env->theme(), env->keyboardColorTheme()),
       keyboard_(context_, kbEngUS()),
       text_field_editor_(env->scheduler(), keyboard_),
-      root_window_(*this, display.extents()),
-      touch_sensor_(display),
-      gesture_detector_(root_window_, touch_sensor_),
       key_source_(&keys),
-      touch_enabled_(enable_touch),
-      ticker_(env->scheduler(), [this]() { tick(); }),
-      paint_interval_(kMinRefreshDuration) {
+      window_(*this, display, enable_touch),
+      ticker_(env->scheduler(), [this]() { tick(); }) {
   roo_windows::Task* kb_task = addPopupTaskFloating();
   kb_task->enterActivity(&keyboard_);
 }
 
 Application::~Application() {
+  ticker_.cancel();
+  window_.stop();
   for (const std::unique_ptr<Task>& task : tasks_) {
     task->clear();
   }
 }
 
 void Application::add(WidgetRef child, const roo_display::Box& box) {
-  root_window_.addTask(std::move(child), box);
+  window_.root().addTask(std::move(child), box);
 }
 
 void Application::addPopup(WidgetRef child, const roo_display::Box& box) {
-  root_window_.addPopup(std::move(child), box);
+  window_.root().addPopup(std::move(child), box);
 }
 
 BackResult Application::requestBack(Task& target, BackSource source) {
   CHECK(ownsTask(target));
-  if (root_window_.transient_presentation_slot().requestBack(source) ==
+  if (window_.root().transient_presentation_slot().requestBack(source) ==
       BackResult::kHandled) {
     return BackResult::kHandled;
   }
@@ -77,7 +63,7 @@ BackResult Application::requestBack(Task& target, BackSource source) {
 }
 
 BackResult Application::requestBackFromFocused(BackSource source) {
-  if (root_window_.transient_presentation_slot().requestBack(source) ==
+  if (window_.root().transient_presentation_slot().requestBack(source) ==
       BackResult::kHandled) {
     return BackResult::kHandled;
   }
@@ -91,7 +77,7 @@ BackResult Application::requestBackFromFocused(BackSource source) {
 
 void Application::start() {
   ui_thread_id_ = roo::this_thread::get_id();
-  if (touch_enabled_) touch_sensor_.start();
+  window_.start();
   ticker_.scheduleNow();
 }
 
@@ -101,28 +87,14 @@ void Application::run() {
 }
 
 void Application::tick() {
-  unsigned long now = millis();
   // A continuation must finish the exact frame snapshot whose foreground
   // exclusions were preserved. Advance animation again after it completes.
-  if (!root_window_.hasPaintContinuation()) {
-    root_window_.refreshClickAnimation();
-  }
+  window_.advanceFrameState();
   bool key_events_pending = drainKeyEvents();
-#if defined(ROO_THREADS_SINGLETHREADED)
-  if (touch_enabled_) touch_sensor_.pollOnce();
-#endif
-  bool gesture_dispatched = touch_enabled_ && gesture_detector_.tick();
-  bool touch_active = touch_enabled_ && gesture_detector_.isTouchDown();
+  bool touch_active = false;
+  bool gesture_dispatched = window_.servicePointerInput(touch_active);
   bool redraw_timeout = false;
-  if ((now - last_time_refreshed_ms_) >= kMinRefreshTimeDeltaMs) {
-    bool completed = refresh(roo_time::Uptime::Now() + paint_interval_);
-    if (!completed) {
-      paint_interval_ = paint_interval_ * 2;
-      redraw_timeout = true;
-    } else {
-      paint_interval_ = kMinRefreshDuration;
-    }
-  }
+  window_.refreshIfDue(redraw_timeout);
   roo_time::Duration delay =
       key_events_pending || gesture_dispatched || touch_active || redraw_timeout
           ? roo_time::Millis(0)
@@ -157,7 +129,7 @@ void Application::dispatchKeyEvent(const KeyEvent& event) {
   }
   if ((event.phase == KeyPhase::kDown || event.phase == KeyPhase::kRepeat) &&
       event.code == KeyCode::kTab) {
-    context_.focus().moveFocus(root_window_,
+    context_.focus().moveFocus(window_.root(),
                                (event.modifiers & kKeyModifierShift) != 0);
     return;
   }
@@ -189,7 +161,7 @@ void Application::dispatchKeyEvent(const KeyEvent& event) {
       default:
         goto no_directional_traversal;
     }
-    if (context_.focus().moveFocusDirection(root_window_, direction)) return;
+    if (context_.focus().moveFocusDirection(window_.root(), direction)) return;
   }
 no_directional_traversal:
   bool primary = event.code == KeyCode::kEnter || event.code == KeyCode::kSpace;
@@ -209,63 +181,15 @@ no_directional_traversal:
   }
 }
 
-namespace {
-
-class Adapter : public roo_display::Drawable {
- public:
-  Adapter(MainWindow& window, roo_time::Uptime deadline)
-      : window_(window), deadline_(deadline), completed_(false) {}
-
-  roo_display::Box extents() const override { return window_.bounds().asBox(); }
-
-  void drawTo(const roo_display::Surface& s) const override {
-    if (window_.paintWindow(s, deadline_)) {
-      completed_ = true;
-    }
-  }
-
-  bool completed() const { return completed_; }
-
- private:
-  MainWindow& window_;
-  roo_time::Uptime deadline_;
-  mutable bool completed_;
-};
-
-}  // namespace
-
 bool Application::refresh(roo_time::Uptime deadline) {
-  root_window_.updateLayout();
-  last_time_refreshed_ms_ = millis();
-  ClickAnimation& click_animation = root_window_.click_animation();
-  // refresh() is also a public, one-shot rendering entry point and therefore
-  // is not necessarily preceded by tick(). Sample immediately before starting
-  // a logical paint, then retain that sample across deadline continuations so
-  // completed and retried widgets observe the same animation frame.
-  if (!root_window_.hasPaintContinuation()) {
-    click_animation.sampleFrameTime();
-  }
-  // Close the drawing context before reporting a successful refresh. That
-  // notification may synchronously deliver deferred onClicked() calls, which
-  // can mutate the widget tree or start another interaction and must not run
-  // while the display is still drawing or flushing the preceding frame.
-  bool completed;
-  {
-    roo_display::DrawingContext dc(display_);
-    dc.setFillMode(roo_display::FillMode::kExtents);
-    Adapter adapter(root_window_, deadline);
-    dc.draw(adapter);
-    completed = adapter.completed();
-  }
-  if (completed) click_animation.notifyRefreshCompleted();
-  return completed;
+  return window_.refresh(deadline);
 }
 
 Task* Application::addTask(const roo_display::Box& bounds) {
   auto task = std::unique_ptr<Task>(new Task());
   auto task_panel = std::unique_ptr<TaskPanel>(new TaskPanel(context_, *task));
   task->init(task_panel.get());
-  root_window_.addTask(*task_panel, bounds);
+  window_.root().addTask(*task_panel, bounds);
   tasks_.push_back(std::move(task));
   task_panels_.push_back(std::move(task_panel));
   return tasks_.back().get();
@@ -275,7 +199,7 @@ Task* Application::addPopupTask(const roo_display::Box& bounds) {
   auto task = std::unique_ptr<Task>(new Task());
   auto task_panel = std::unique_ptr<TaskPanel>(new TaskPanel(context_, *task));
   task->init(task_panel.get());
-  root_window_.addPopup(*task_panel, bounds);
+  window_.root().addPopup(*task_panel, bounds);
   tasks_.push_back(std::move(task));
   task_panels_.push_back(std::move(task_panel));
   return tasks_.back().get();
@@ -290,7 +214,7 @@ bool Application::ownsTask(const Task& task) const {
 
 PresentationStartResult Application::showDialog(
     Dialog& dialog, Dialog::CallbackFn callback_fn) {
-  return root_window_.showDialog(dialog, std::move(callback_fn));
+  return window_.root().showDialog(dialog, std::move(callback_fn));
 }
 
 PresentationStartResult Application::showAlertDialog(
@@ -310,7 +234,7 @@ PresentationStartResult Application::showAlertDialog(
   return result;
 }
 
-void Application::clearDialog() { root_window_.clearDialog(); }
+void Application::clearDialog() { window_.root().clearDialog(); }
 
 namespace {
 

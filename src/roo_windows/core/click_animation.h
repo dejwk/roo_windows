@@ -7,6 +7,7 @@
 namespace roo_windows {
 
 class Application;
+class DisplayWindow;
 class Widget;
 
 /// Shared click-animation controller owned by a MainWindow.
@@ -68,6 +69,7 @@ class ClickAnimation {
 
  private:
   friend class Application;
+  friend class DisplayWindow;
 
   enum class Phase : uint8_t {
     kIdle,  // No click is in progress; the next eligible widget may start one.
@@ -100,6 +102,10 @@ class ClickAnimation {
   }
 
   void reset();
+
+  /// Releases a pending target without invalidating or calling user code.
+  void cancelForWindowTeardown() { reset(); }
+
   void deliverClick();
 
   // Every non-idle phase has exactly one target. target() deliberately hides

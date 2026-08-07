@@ -9,13 +9,10 @@
 #include "roo_windows/activities/keyboard.h"
 #include "roo_windows/core/activity.h"
 #include "roo_windows/core/application_context.h"
-#include "roo_windows/core/click_animation.h"
+#include "roo_windows/core/display_window.h"
 #include "roo_windows/core/environment.h"
-#include "roo_windows/core/gesture_detector.h"
 #include "roo_windows/core/key_source.h"
-#include "roo_windows/core/main_window.h"
 #include "roo_windows/core/task.h"
-#include "roo_windows/core/touch_sensor.h"
 #include "roo_windows/widgets/text_field.h"
 
 namespace roo_windows {
@@ -88,7 +85,7 @@ class Application {
   Task* addPopupTask(const roo_display::Box& bounds);
 
   /// Creates a regular task that fills the entire display.
-  Task* addTaskFullScreen() { return addTask(display_.extents()); }
+  Task* addTaskFullScreen() { return addTask(window_.display().extents()); }
 
   /// Creates a regular task that sizes itself based on its contents.
   Task* addTaskFloating() { return addTask(roo_display::Box(0, 0, -1, -1)); }
@@ -146,9 +143,25 @@ class Application {
   /// memory.
   void executeInUIThread(std::function<void()> fn);
 
-  MainWindow& root() { return root_window_; }
-  GestureDetector& gesture_detector() { return gesture_detector_; }
-  const GestureDetector& gesture_detector() const { return gesture_detector_; }
+  /// Returns the application-owned display-local runtime.
+  DisplayWindow& window() { return window_; }
+
+  /// Returns the application-owned display-local runtime.
+  const DisplayWindow& window() const { return window_; }
+
+  /// Compatibility forwarding accessor for the window root.
+  MainWindow& root() { return window_.root(); }
+
+  /// Compatibility forwarding accessor for the window root.
+  const MainWindow& root() const { return window_.root(); }
+
+  /// Compatibility forwarding accessor for window gesture dispatch.
+  GestureDetector& gesture_detector() { return window_.gestureDetector(); }
+
+  /// Compatibility forwarding accessor for window gesture dispatch.
+  const GestureDetector& gesture_detector() const {
+    return window_.gestureDetector();
+  }
 
   TextFieldEditor& text_field_editor() { return text_field_editor_; }
   const TextFieldEditor& text_field_editor() const {
@@ -163,6 +176,7 @@ class Application {
   /// the focus-management phase; acquisition deliberately does not interpret
   /// these samples yet.
   bool drainKeyEvents();
+
   void dispatchKeyEvent(const KeyEvent& event);
 
   /// Routes a hardware Back/Escape request through the root transient and the
@@ -173,10 +187,8 @@ class Application {
   /// Returns whether `task` is owned by this application.
   bool ownsTask(const Task& task) const;
 
-  roo_display::Display& display_;
   const Environment* env_;
   ApplicationContext context_;
-  unsigned long last_time_refreshed_ms_;
 
   // Must be declared before task_panels_, because task_panels_ use it.
   Keyboard keyboard_;
@@ -185,16 +197,12 @@ class Application {
   std::vector<std::unique_ptr<Task>> tasks_;
   std::vector<std::unique_ptr<TaskPanel>> task_panels_;
 
-  MainWindow root_window_;
-  TouchSensor touch_sensor_;
-  GestureDetector gesture_detector_;
   KeySource* key_source_;
-  bool touch_enabled_;
   Widget* armed_key_widget_ = nullptr;
   KeyCode armed_key_ = KeyCode::kUnknown;
 
+  DisplayWindow window_;
   roo_scheduler::SingletonTask ticker_;
-  roo_time::Duration paint_interval_;
 
   roo::thread::id ui_thread_id_;
 };

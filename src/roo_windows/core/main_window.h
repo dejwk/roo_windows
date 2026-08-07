@@ -15,6 +15,7 @@
 namespace roo_windows {
 
 class Application;
+class DisplayWindow;
 
 /// Root container and shared UI services owner for an Application.
 class MainWindow : public Container {
@@ -30,6 +31,9 @@ class MainWindow : public Container {
   /// Returns true while a deadline-interrupted logical paint is awaiting
   /// continuation with its completed foreground state preserved.
   bool hasPaintContinuation() const { return paint_continuation_; }
+
+  /// Drops retained interrupted-paint state before the window tears down.
+  void cancelPaintContinuation();
 
   /// Applies any pending layout requests in the widget tree.
   void updateLayout();

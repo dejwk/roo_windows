@@ -70,7 +70,7 @@ MainWindow::MainWindow(Application& app, const roo_display::Box& bounds)
 }
 
 MainWindow::~MainWindow() {
-  context().setPaintContinuation(false);
+  cancelPaintContinuation();
   while (active_pins_ != nullptr) {
     active_pins_ = std::move(active_pins_->next_);
   }
@@ -80,6 +80,11 @@ MainWindow::~MainWindow() {
   while (!tasks_.empty()) {
     removeLastFromLayer(tasks_);
   }
+}
+
+void MainWindow::cancelPaintContinuation() {
+  paint_continuation_ = false;
+  continuation_invalid_bounds_ = Rect(0, 0, -1, -1);
 }
 
 Application& MainWindow::app() const { return app_; }
@@ -136,7 +141,6 @@ bool MainWindow::paintWindow(const roo_display::Surface& s,
   }
   if (!isDirty()) {
     paint_continuation_ = false;
-    context().setPaintContinuation(false);
     continuation_invalid_bounds_ = Rect(0, 0, -1, -1);
     return true;
   }
@@ -152,12 +156,10 @@ bool MainWindow::paintWindow(const roo_display::Surface& s,
     // prefix. Clean children remain skipped on retry while their preserved
     // exclusions protect them from the remaining lower-z paint.
     paint_continuation_ = true;
-    context().setPaintContinuation(true);
     redraw_bounds_ = UnionNonEmpty(old_redraw_bounds, redraw_bounds_);
     return false;
   }
   paint_continuation_ = false;
-  context().setPaintContinuation(false);
   continuation_invalid_bounds_ = Rect(0, 0, -1, -1);
   commitPresentationPinBounds();
   return true;
