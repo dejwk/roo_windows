@@ -53,6 +53,8 @@ Status was audited against the source tree and tests on 2026-07-31. “Dependenc
 | --- | --- |
 | Button groups | Buttons are implemented; icon buttons are proposed, and no group implementation exists. |
 | Date pickers | Buttons and shared back behavior are implemented; text fields, dialogs, and icon buttons are proposed. |
+| Display runtime and cross-application input | Non-touch input, Back routing, interrupted paint, and transient lifetime prerequisites are implemented; display-window extraction, display-local tasks, external driving, cross-application key bindings, and explicit modal coverage are not implemented. |
+| Display runtime Phase 1 characterization | Existing rendering, input, focus, task, Back, and transient tests are prerequisites; the integrated characterization target and ESP32-C3 runtime baseline are not implemented. |
 | Dialogs | Legacy dialogs and shared back behavior exist, but the Material 3 design is not implemented; icon buttons and text fields are proposed. |
 | Extended FAB | The base FAB dependency is proposed; buttons and theme support are implemented. |
 | FAB | Buttons and theme support are implemented; icon buttons are proposed. |

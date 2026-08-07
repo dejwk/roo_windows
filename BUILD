@@ -66,6 +66,26 @@ cc_test(
     ],
 )
 
+# Cross-component, public-entry-point characterization retained before the
+# display runtime is extracted from Application.
+cc_test(
+    name = "display_runtime_characterization_test",
+    srcs = ["test/display_runtime_characterization_test.cpp"],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
+# Compiles named sizeof() symbols for target-ABI inspection with nm. It is not
+# linked into the runtime library or any firmware image.
+cc_library(
+    name = "display_runtime_size_probe",
+    srcs = ["benchmarks/display_runtime_size_probe.cpp"],
+    deps = [":roo_windows"],
+)
+
 cc_test(
     name = "dialog_test",
     srcs = ["test/dialog_test.cpp"],
