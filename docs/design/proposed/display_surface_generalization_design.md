@@ -12,8 +12,8 @@ The first version intentionally has a narrow topology:
 - one `DisplayWindow` borrows one `roo_display::Display`;
 - every `UiTask` belongs to exactly one `DisplayWindow`;
 - one thread may externally drive several `Application` instances; and
-- a software keyboard is always hosted by a task separate from the task that
-  receives its events.
+- the standard software-keyboard topology hosts the keyboard in a task separate
+  from the task that receives its events.
 
 This supports independently focused tasks, separately bound keyboards, several
 displays, and a keyboard on one display editing content on another. It does not
@@ -74,14 +74,16 @@ Navigation is optional state within a task, not the definition of a task.
    lifetime.
 3. Each `UiTask` owns an independent `FocusManager` and key-input routing
    state.
-4. A software keyboard is always hosted in its own `UiTask`, whether its target
-   is on the same display or another display.
+4. The standard software-keyboard topology hosts the keyboard in its own
+   `UiTask`, whether its target is on the same display or another display. This
+   is a convenience and focus-isolation policy, not a binding invariant.
 5. A task may directly host content without creating a destination or a
    one-entry navigation stack.
 6. Cross-display keyboard input is an explicit producer/consumer connection
    between two applications.
-7. The first version retains only the text-key operations already needed by
-   Roo Windows. A general IME protocol is separate future work.
+7. Cross-task keyboard delivery retains the complete existing `KeyEvent`
+   vocabulary. A separate text-input session and general IME protocol are
+   future work.
 8. This design does not introduce an application-level “outer focus scope” or
    a hierarchy of task focus scopes. Any subtree focus containment needed by a
    transient belongs to the transient-host design.
@@ -112,9 +114,9 @@ Navigation is optional state within a task, not the definition of a task.
 : Optional task state that presents one destination at a time and delegates
   history changes to a `Navigator`.
 
-`Keyboard event source` / `Keyboard event sink`
-: The two endpoints of an explicit unicast connection carrying the limited
-  text-key vocabulary defined by this design.
+`Key event emitter` / `Key event sink`
+: The two endpoints of an explicit unicast connection carrying the existing
+  `KeyEvent` vocabulary from a push-style producer to one task.
 
 ### Comparison with Android and Jetpack Compose
 
@@ -165,10 +167,11 @@ without preserving their semantics:
 - A physical or emulated key source must have one current destination task.
   Several sources may target the same task; a source is not broadcast to
   several tasks.
-- A software keyboard must be in a different task from its target. This rule is
-  identical for same-display and cross-display use.
-- A keyboard event source in one application must be bindable to a consumer in
-  another application on the same UI thread.
+- The standard software-keyboard convenience path must host its keyboard in a
+  task separate from its target so operating the keyboard does not replace the
+  target task's focus. Custom producers are not subject to this topology.
+- A key event emitter in one application must be bindable to a task in another
+  application on the same UI thread.
 - A task must support direct content without a destination stack.
 - Navigation must remain available as an optional task feature.
 - Task-modal and display-modal presentation must be distinct and have defined
@@ -189,15 +192,17 @@ without preserving their semantics:
 - All connected applications and endpoints must be used on the same UI thread.
 - Cross-application bindings must disconnect safely regardless of endpoint
   destruction order.
-- An unbound keyboard must have defined behavior.
+- An unbound key event emitter must have defined behavior.
 - No input route may be inferred from display z-order or “most recently
   touched” state when an explicit binding exists.
 
 ### Embedded constraints
 
 - Normal input dispatch, focus movement, and ticking must not allocate.
-- Each call to the external-drive API must perform bounded work so one
-  application cannot indefinitely starve another.
+- Each call to the external-drive API must bound the input, gesture, and paint
+  work performed directly by that application. The user-owned driver and
+  `roo_scheduler::Scheduler` remain responsible for cooperative scheduling and
+  fairness across applications and callbacks.
 - New persistent RAM and flash costs must be measured and recorded as the
   phases land.
 - The implementation must not require `shared_ptr`, RTTI, exceptions, or
@@ -230,9 +235,9 @@ The refactoring is split into incremental sub-designs:
    needs no navigation objects.
 3. **Expose cooperative external driving.** Add a bounded tick API so user code
    can drive several one-window applications on the same thread.
-4. **Connect keyboard producers and consumers.** Keep software keyboards in
-   separate tasks and support a lifetime-safe event binding within or across
-   applications.
+4. **Connect key producers and consumers.** Route the complete `KeyEvent`
+   vocabulary through lifetime-safe bindings within or across applications. The
+   standard software keyboard remains in a separate task.
 5. **Make modality coverage explicit.** Implement task-modal and display-modal
    host policies using the now-clear task/window boundary.
 
@@ -246,7 +251,7 @@ user-owned driver, one UI thread
     |                                      |
     +-- Application B -- DisplayWindow B -- keyboard UiTask
                                            |
-                         keyboard source --+-- explicit binding
+                       key event emitter --+-- explicit binding
                                                 to editor task's sink
 ```
 
@@ -300,8 +305,8 @@ display-specific facilities to leak back into `Application`.
 - one `FocusManager`;
 - the bindings from physical or emulated key sources to that focus manager;
 - armed-key and key-repeat state for those sources;
-- the active text-editor connection selected by focus and its limited keyboard
-  event sink;
+- the active text-editor connection selected by focus and the task's full
+  `KeyEvent` sink;
 - task-local transient state;
 - either direct content or an optional navigation host; and
 - an internal `TaskPanel` used to attach its content to its display window.
@@ -333,6 +338,26 @@ The current application-global `TextFieldEditor` state moves with
 editor connection, but can never replace the active editor of another task.
 This is what allows two focused tasks to receive text from two separately bound
 keyboards.
+
+Widgets resolve focus through their attached structural ancestry. `Widget`
+provides a task lookup that delegates through its parent; `TaskPanel` terminates
+that lookup with its owning `UiTask`. A display-modal structural host also
+terminates the lookup with the task that owns the presentation, even though the
+host is attached to the window's display-modal band rather than beneath the
+task's panel.
+
+`ApplicationContext` no longer owns or exposes a focus manager. Widget focus
+operations resolve the current `UiTask` and then use its manager. An unattached
+widget cannot acquire focus. Each `FocusManager` is constructed with its task's
+structural root and rejects a widget outside that subtree. This also prevents a
+caller using `UiTask::focus()` directly from focusing a widget in another task.
+
+Detachment clears focus before the parent link is severed. A widget destructor
+notifies the task focus manager only while the widget remains attached; an
+already detached widget has no outstanding focus reference because detachment
+performed that cancellation. Eligibility changes use the same attached-task
+lookup. These rules avoid a persistent focus-manager pointer in every widget
+and permit an unattached borrowed widget to be installed in a different task.
 
 This proposal introduces no application-level outer focus scope and no nested
 task focus scopes. If a dialog or menu must temporarily constrain traversal,
@@ -374,6 +399,11 @@ The Back order within a task is:
 3. pop the optional navigator if it has history; and
 4. report Back as unhandled to the application.
 
+Back preserves its `BackSource` through every step. Content and destination
+callbacks may synchronously replace content or mutate navigation. The fallback
+pop therefore occurs only when the navigator's generation is unchanged after
+the callback; any mutation counts as the one handled semantic step.
+
 ### Sub-design 3: externally driving several applications
 
 `Application::run()` remains a convenience for one application. A program with
@@ -394,58 +424,73 @@ application from its own loop:
 - perform at most one bounded refresh/paint slice; and
 - return whether immediate follow-up is required and the next known deadline.
 
-The external driver, not Roo Windows, decides fairness between applications.
-No call to one application's `tick()` may recursively call another
+These bounds apply only to work performed directly by the application. The
+external driver cooperatively services the shared `roo_scheduler::Scheduler`
+and decides fairness between scheduler callbacks and applications. Scheduler
+callbacks are not partitioned by application and are outside the per-application
+tick budget. No call to one application's `tick()` may recursively call another
 application's `tick()`.
 
 The first version does not add `ApplicationGroup`. A helper can be considered
 later if real programs repeat enough scheduling code to justify it.
 
-### Sub-design 4: separate keyboard task and explicit binding
+### Sub-design 4: key event producers and explicit binding
 
-A software keyboard always lives in its own `UiTask`. This is true when the
+The standard software keyboard lives in its own `UiTask`. This is true when the
 keyboard and editor share a display and when they belong to different
-applications on different displays.
+applications on different displays. Separating the tasks preserves the editor
+task's focus while keyboard controls are touched. A custom producer may live in
+the target task when it preserves focus by other means; task separation is not
+validated by the binding.
 
-The single-display convenience path still constructs two tasks internally: a
-content task, a keyboard task, and a scoped binding between them. Convenience
-does not make the keyboard part of the content task.
+The single-display convenience path constructs two tasks internally: a content
+task, a keyboard task, and a scoped binding between them. Convenience does not
+make the keyboard part of the content task.
 
-The keyboard task emits a deliberately small event vocabulary:
+Push-style producers use the existing `KeyEvent` vocabulary rather than a
+second text-only event type. A software keyboard initially emits character,
+Enter, and Backspace events. The same emitter can also produce Down, Up, Repeat,
+modifiers, Tab, arrows, Home, End, Page Up, Page Down, Delete, Back, Escape,
+Space, and other existing key codes. Controls that model a press/release
+lifecycle emit both Down and Up; a held software key emits Repeat from the
+keyboard task.
 
-- Unicode rune insertion;
-- Enter; and
-- backward delete.
+Each `KeyEventEmitter` has at most one connected sink. The target `UiTask`
+provides a `KeyEventSink` that enters the same task-local dispatch pipeline used
+by a drained physical or emulated `KeySource`. Several emitters or polled
+sources may target one task, but an event from one source is never broadcast to
+several tasks. `TaskKeyBinding` adapts a polled `KeySource` to the same target
+dispatcher; `KeyEventBinding` connects a push-style emitter.
 
-Its `KeyboardEventSource` has at most one connected sink. The target task
-provides a `KeyboardEventSink` that adapts these operations to the active
-text-field editor. Several keyboard or hardware-key sources may target one
-task, but an ordinary key event is never broadcast to several tasks.
+Delivery is synchronous on the common UI thread. The emitter calls only the
+sink operation. The sink may update task state and invalidate its window, but
+it must not tick or paint the target application inside the producer
+application's tick. The target is repainted when its external driver next calls
+`tick()`.
 
-For the first version, delivery is synchronous on the common UI thread. The
-source calls only the sink operation. The sink may update editor state and
-invalidate its window, but it must not tick or paint the target application
-inside the source application's tick. The target is repainted when its external
-driver next calls `tick()`.
+Bindings are default-constructible, non-copyable RAII connections. `connect()`
+returns `kConnected`, `kSourceAlreadyBound`, `kBindingAlreadyConnected`,
+`kWrongThread`, or `kEndpointUnavailable`. The source, binding, and sink keep
+intrusive links to one another. Destruction of any participant nulls the other
+links without dereferencing dead storage; `disconnect()` is idempotent. This
+avoids `shared_ptr` and per-event allocation.
 
-`KeyboardBinding` is a non-copyable RAII connection with registration at both
-endpoints. Destruction of the binding, source, or sink disconnects the other
-endpoint without dereferencing dead storage. This avoids `shared_ptr` and
-requires no event allocation. The implementation must assert that both
-endpoints are used from the same UI thread.
+Application thread affinity is established by `startExternalDrive()` or
+`run()`. Both applications are started before a cross-application binding is
+connected, and all connection, delivery, disconnection, and destruction happen
+on that UI thread.
 
-An unbound keyboard remains visible but its text-producing controls are
-disabled, or their events are ignored with a debug diagnostic. Events must not
-fall back to the last-touched or topmost task.
+An unbound emitter returns `false` from `emit()`. A standard software keyboard
+keeps its key controls disabled while unbound. Events never fall back to the
+last-touched or topmost task.
 
-Back is not a text-editing event. If a keyboard UI includes a button intended
-to navigate the target task, that command needs a separate, explicit command
-binding. It must not implicitly route Back across applications.
-
-This seam is intentionally not a full IME design. Composition, editor
-capability negotiation, selection queries, candidate presentation, input
-method switching, and cross-thread delivery do not affect the initial
-display-runtime decomposition and are deferred.
+The event connection deliberately does not control software-keyboard
+visibility or describe an editing session. The single-display convenience path
+preserves today's show, hide, commit, and cancellation behavior with an
+internal coordinator. A general cross-application text-input session with
+editor availability, visibility requests, composition, selection queries,
+candidate presentation, input-method switching, and cross-thread delivery is
+separate future work.
 
 ### Sub-design 5: task-modal and display-modal presentation
 
@@ -557,59 +602,65 @@ class UiTask {
   void setContent(WidgetRef root);
   void setNavigationHost(NavigationHost& host);
 
-  KeyboardEventSink& keyboardSink();
-  bool requestBack();
+  KeyEventSink& keyEventSink();
+  BackResult requestBack(
+      BackSource source = BackSource::kProgrammatic);
 };
 ```
 
 Physical or emulated key input is separately bound to a task:
 
 ```cpp
+enum class BindingResult {
+  kConnected,
+  kSourceAlreadyBound,
+  kBindingAlreadyConnected,
+  kWrongThread,
+  kEndpointUnavailable,
+};
+
 class TaskKeyBinding {
  public:
-  TaskKeyBinding(KeySource& source, UiTask& target);
+  TaskKeyBinding() = default;
   ~TaskKeyBinding();
+
+  BindingResult connect(KeySource& source, UiTask& target);
+  void disconnect();
+  bool isConnected() const;
 
   TaskKeyBinding(const TaskKeyBinding&) = delete;
   TaskKeyBinding& operator=(const TaskKeyBinding&) = delete;
 };
 ```
 
-The small software-keyboard bridge is:
+Push-style key producers use the same `KeyEvent` type:
 
 ```cpp
-enum class KeyboardEventKind {
-  kRune,
-  kEnter,
-  kDeleteBackward,
-};
-
-struct KeyboardEvent {
-  KeyboardEventKind kind;
-  char32_t rune;  // Used only for kRune.
-};
-
-class KeyboardEventSink {
+class KeyEventSink {
  public:
-  virtual bool onKeyboardEvent(const KeyboardEvent& event) = 0;
+  virtual bool onKeyEvent(const KeyEvent& event) = 0;
 
  protected:
-  ~KeyboardEventSink() = default;
+  ~KeyEventSink() = default;
 };
 
-class KeyboardEventSource {
+class KeyEventEmitter {
  public:
   bool isBound() const;
-  bool emit(const KeyboardEvent& event);
+  bool emit(const KeyEvent& event);
 };
 
-class KeyboardBinding {
+class KeyEventBinding {
  public:
-  KeyboardBinding(KeyboardEventSource& source, KeyboardEventSink& sink);
-  ~KeyboardBinding();
+  KeyEventBinding() = default;
+  ~KeyEventBinding();
 
-  KeyboardBinding(const KeyboardBinding&) = delete;
-  KeyboardBinding& operator=(const KeyboardBinding&) = delete;
+  BindingResult connect(KeyEventEmitter& source, KeyEventSink& sink);
+  void disconnect();
+  bool isConnected() const;
+
+  KeyEventBinding(const KeyEventBinding&) = delete;
+  KeyEventBinding& operator=(const KeyEventBinding&) = delete;
 };
 ```
 
@@ -624,11 +675,13 @@ Application keyboard_app(env, keyboard_display);
 UiTask& keyboard = keyboard_app.addTaskFullScreen();
 keyboard.setContent(software_keyboard);
 
-KeyboardBinding keyboard_to_editor(
-    software_keyboard.eventSource(), editor.keyboardSink());
-
 editor_app.startExternalDrive();
 keyboard_app.startExternalDrive();
+
+KeyEventBinding keyboard_to_editor;
+CHECK(keyboard_to_editor.connect(software_keyboard.keyEventEmitter(),
+                                 editor.keyEventSink()) ==
+      BindingResult::kConnected);
 
 while (running) {
   const auto now = clock.uptime();
@@ -641,10 +694,11 @@ while (running) {
 During incremental implementation, APIs that exist before their complete
 backend is available must fail explicitly:
 
-- binding endpoints from different UI threads returns `wrong_thread`;
+- binding endpoints from different UI threads returns `kWrongThread`;
+- binding an already connected source returns `kSourceAlreadyBound`;
 - attaching a task to a second window returns `already_attached`;
 - attempting conflicting modal coverage returns `host_busy`; and
-- an unbound keyboard returns `false` from `emit()`.
+- an unbound emitter returns `false` from `emit()`.
 
 ## Implementation Plan
 
@@ -655,17 +709,20 @@ and
 
 ### Phase 1: characterize the current runtime
 
-- Add focused tests for single-display rendering, interrupted paint, touch and
-  gesture routing, focus, key repeat, task switching, software keyboard input,
-  and Back.
-- Record current object sizes, static RAM, representative binary size, and
-  hot-path allocations.
+Implement the
+[display runtime characterization design](display_runtime_characterization_design.md):
+
+- add focused regression coverage for single-display rendering, interrupted
+  paint, touch and gesture routing, focus, key dispatch, task switching,
+  software keyboard input, Back, and teardown; and
+- record target-ABI object sizes, representative linked-image sections, and
+  steady-state allocation observations.
 
 Validation:
 
 - run the existing Roo Windows test suite;
 - run the new characterization tests; and
-- capture size baselines in the commit description.
+- capture the reproducible baseline report defined by the phase design.
 
 Proposed commit: `test: characterize roo_windows application runtime`
 
@@ -690,6 +747,8 @@ Proposed commit: `refactor: extract display-local window runtime`
   selection into `UiTask`.
 - Move the active `TextFieldEditor` connection from application state into
   `UiTask`.
+- Remove `ApplicationContext::focus()` and resolve focus through the attached
+  task ancestry. Give each focus manager an immutable task-panel scope root.
 - Restrict each task to its construction window.
 - Make `TaskPanel` an internal widget owned by the task/window relationship.
 - Temporarily adapt existing `Task`/`Activity` behavior.
@@ -699,6 +758,8 @@ Validation:
 - test two tasks retaining focus simultaneously;
 - test two key sources independently driving their bound tasks;
 - test touch in one task does not clear focus in another; and
+- test unattached and cross-task focus requests fail without changing either
+  task's focus;
 - test task detachment cancels all outstanding references.
 
 Proposed commit: `refactor: separate ui task from task panel`
@@ -714,6 +775,7 @@ Validation:
 
 - test a direct-content task with no navigation objects;
 - test push, replace, pop, and root Back for a navigation task; and
+- test reentrant Back callbacks that push, replace, clear, or detach content;
 - compare RAM cost of direct content with a navigation task.
 
 Proposed commit: `refactor: make task navigation optional`
@@ -729,23 +791,28 @@ Validation:
 
 - exercise independent touch, gesture, timer, and paint streams;
 - verify an interrupted paint on one application does not affect the other;
-- test per-tick work bounds and caller-controlled fairness; and
+- test the documented per-application input, gesture, and paint work bounds;
+  and
 - reject nested/reentrant `tick()` calls.
 
 Proposed commit: `feat: support externally driven applications`
 
-### Phase 6: add lifetime-safe keyboard bindings
+### Phase 6: add lifetime-safe key-event bindings
 
-- Add the limited keyboard event source, sink, and scoped binding.
+- Add the full-`KeyEvent` emitter, sink, and scoped binding.
+- Adapt polled `KeySource` bindings and push-style emitters to one task-local
+  dispatch path.
 - Adapt the existing software keyboard and text-field editor.
 - Add same-display and cross-application examples.
 
 Validation:
 
-- test software keyboard and target are always different tasks;
+- test the standard software-keyboard convenience path uses separate tasks;
 - test same- and cross-display delivery;
+- test directional navigation, modifiers, Down/Up/Repeat, Back, Escape,
+  character input, Backspace, and Delete across a binding;
 - destroy source, sink, binding, and applications in every relevant order;
-- test unbound and wrong-thread behavior; and
+- test already-bound, unbound, and wrong-thread behavior; and
 - verify dispatch does not allocate or recursively tick the target.
 
 Proposed commit: `feat: bind keyboard tasks to editor tasks`
@@ -792,9 +859,11 @@ invariants:
 - two tasks can be driven by two separately bound key sources;
 - direct-content tasks incur no hidden navigation stack;
 - navigation history changes do not change task identity;
-- a software keyboard and its target are never the same task;
+- the standard software-keyboard convenience path preserves target focus by
+  hosting the keyboard in a separate task;
 - same-display and cross-application keyboard links have identical event
   semantics;
+- cross-application keyboard links retain the complete `KeyEvent` vocabulary;
 - no key source broadcasts because of z-order, focus recency, or touch;
 - keyboard endpoint teardown is safe in all orders;
 - task-modal scrims and input barriers stop at task bounds;
@@ -812,8 +881,9 @@ invariants:
   threaded runtime will need a queue and different lifetime guarantees.
 - `UiTask` is intentionally not equivalent to Android's `Task`; the name
   reflects Roo's interaction boundary, not an activity back stack.
-- The small keyboard event protocol is sufficient for the current keyboard but
-  will not support complex text systems without a later text-input design.
+- The key-event connection preserves keyboard input but does not negotiate or
+  control an editing session. Complex text systems require a later text-input
+  design.
 - Display-modal ownership by one task preserves a single focus model, but the
   initial `host_busy` rules prohibit some nested modal combinations.
 - A display-modal presentation also blocks a same-display software-keyboard
@@ -831,11 +901,12 @@ invariants:
 - **One task spans several windows.** Deferred because there is no current use
   case and it complicates focus traversal, scrim geometry, pointer routing, and
   lifetime.
-- **Place the software keyboard in the editor task.** Rejected. The keyboard is
-  always an independently hosted task; only its event connection crosses the
-  boundary.
-- **Include a full IME protocol in this refactoring.** Deferred. Only a small
-  source/sink seam is required for the motivating multi-display design.
+- **Require every software keyboard to occupy a separate task.** Rejected. The
+  standard topology uses a separate task to preserve target focus, but a custom
+  same-task producer remains valid when it avoids taking focus.
+- **Include a full IME protocol in this refactoring.** Deferred. Full
+  `KeyEvent` delivery is required for the motivating multi-display design, but
+  editor negotiation and composition are separate concerns.
 - **Model direct content as a one-entry destination stack.** Rejected because
   it imposes navigation concepts and storage on UIs that do not navigate.
 - **Broadcast one key source to several tasks.** Rejected because ordinary text
