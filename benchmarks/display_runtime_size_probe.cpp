@@ -9,6 +9,7 @@
 #include "roo_windows/core/task.h"
 #include "roo_windows/core/touch_sensor.h"
 #include "roo_windows/core/transient_presentation.h"
+#include "roo_windows/core/ui_task.h"
 #include "roo_windows/core/widget_ref.h"
 #include "roo_windows/widgets/text_field.h"
 
@@ -25,6 +26,9 @@ ROO_WINDOWS_SIZE_PROBE(roo_windows::TextFieldEditor, text_field_editor);
 ROO_WINDOWS_SIZE_PROBE(roo_windows::Keyboard, keyboard);
 ROO_WINDOWS_SIZE_PROBE(roo_windows::Task, task);
 ROO_WINDOWS_SIZE_PROBE(roo_windows::TaskPanel, task_panel);
+ROO_WINDOWS_SIZE_PROBE(roo_windows::UiTask, ui_task);
+ROO_WINDOWS_SIZE_PROBE(roo_windows::TextField, text_field);
+ROO_WINDOWS_SIZE_PROBE(roo_windows::KeySource, key_source);
 ROO_WINDOWS_SIZE_PROBE(roo_windows::WidgetRef, widget_ref);
 ROO_WINDOWS_SIZE_PROBE(roo_windows::KeyEvent, key_event);
 ROO_WINDOWS_SIZE_PROBE(roo_windows::TransientPresentationSlot,

@@ -425,7 +425,7 @@ bool NavigationBar::onKeyEvent(const KeyEvent& event) {
     default:
       return false;
   }
-  return context().focus().moveFocusDirection(*this, direction);
+  return focusManager().moveFocusDirection(*this, direction);
 }
 
 void NavigationBar::updateSelectionFromDestination(

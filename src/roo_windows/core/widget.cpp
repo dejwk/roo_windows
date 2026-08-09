@@ -9,6 +9,7 @@
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/press_overlay.h"
 #include "roo_windows/core/rtti.h"
+#include "roo_windows/core/ui_task.h"
 #include "roo_windows/material3/theme.h"
 
 #ifndef MLOG_roo_windows_layout
@@ -39,7 +40,7 @@ Widget::Widget(Widget&& other)
 }
 
 Widget::~Widget() {
-  context_.focus().onWidgetDestroying(*this);
+  focusManager().onWidgetDestroying(*this);
   context_.widgetEvents().clearHandlers(*this);
 }
 
@@ -82,6 +83,24 @@ const MainWindow* Widget::getMainWindow() const {
 
 Task* Widget::getTask() {
   return parent_ == nullptr ? nullptr : parent_->getTask();
+}
+
+UiTask* Widget::getUiTask() {
+  return parent_ == nullptr ? nullptr : parent_->getUiTask();
+}
+
+const UiTask* Widget::getUiTask() const {
+  return parent_ == nullptr ? nullptr : parent_->getUiTask();
+}
+
+FocusManager& Widget::focusManager() {
+  UiTask* task = getUiTask();
+  return task != nullptr ? task->focus() : context_.focus();
+}
+
+const FocusManager& Widget::focusManager() const {
+  const UiTask* task = getUiTask();
+  return task != nullptr ? task->focus() : context_.focus();
 }
 
 namespace {
@@ -389,7 +408,7 @@ void Widget::setVisibility(Visibility visibility) {
   Visibility previous = this->visibility();
   if (visibility == previous) return;
   if (visibility != Visibility::kVisible) {
-    context_.focus().onWidgetEligibilityChanging(*this);
+    focusManager().onWidgetEligibilityChanging(*this);
     ClickAnimation* anim = ClickAnimationController(*this);
     if (anim != nullptr) anim->cancel(*this);
   }
@@ -417,7 +436,9 @@ void Widget::setVisibility(Visibility visibility) {
 
 void Widget::setEnabled(bool enabled) {
   if (isEnabled() == enabled) return;
-  if (!enabled) context_.focus().onWidgetEligibilityChanging(*this);
+  if (!enabled) {
+    focusManager().onWidgetEligibilityChanging(*this);
+  }
   state_ ^= kWidgetEnabled;
   if (isVisible()) {
     invalidateInterior();
@@ -446,7 +467,7 @@ void Widget::setFocused(bool focused) {
   notifyStateChanged(kWidgetFocused);
 }
 
-bool Widget::requestFocus() { return context_.focus().requestFocus(*this); }
+bool Widget::requestFocus() { return focusManager().requestFocus(*this); }
 
 void Widget::setSelected(bool selected) {
   if (selected == isSelected()) return;

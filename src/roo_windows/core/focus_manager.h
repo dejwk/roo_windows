@@ -19,6 +19,10 @@ struct FocusScope {
 /// Application-owned focus state and focus-target lifetime tracking.
 class FocusManager {
  public:
+  /// Creates focus state optionally restricted to descendants of `scope_root`.
+  explicit FocusManager(Widget* scope_root = nullptr)
+      : scope_root_(scope_root) {}
+
   /// Returns the currently focused widget, or null when no widget has focus.
   Widget* focused() const { return focused_; }
 
@@ -45,6 +49,7 @@ class FocusManager {
   void setFocused(Widget* widget);
 
   Widget* focused_ = nullptr;
+  Widget* scope_root_ = nullptr;
 };
 
 }  // namespace roo_windows

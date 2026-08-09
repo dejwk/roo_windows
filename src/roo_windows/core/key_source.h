@@ -4,6 +4,8 @@
 
 namespace roo_windows {
 
+class UiTask;
+
 /// Physical or text key understood by the framework's non-touch input path.
 enum class KeyCode : uint8_t {
   kUnknown,
@@ -54,10 +56,14 @@ struct KeyEvent {
 /// source alive for its entire lifetime.
 class KeySource {
  public:
-  virtual ~KeySource() = default;
+  virtual ~KeySource();
 
   /// Copies up to `max_events` queued events into `out` and returns the count.
   virtual int drain(KeyEvent* out, int max_events) = 0;
+
+ private:
+  friend class UiTask;
+  UiTask* attached_task_ = nullptr;
 };
 
 }  // namespace roo_windows

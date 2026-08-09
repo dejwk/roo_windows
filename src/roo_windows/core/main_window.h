@@ -55,6 +55,12 @@ class MainWindow : public Container {
   /// Adds a popup layer child. Popups render above tasks but below dialogs.
   void addPopup(WidgetRef child, const Rect& rect);
 
+  /// Detaches a regular task layer child before its owner is destroyed.
+  void removeTask(Widget& child);
+
+  /// Detaches a popup layer child before its owner is destroyed.
+  void removePopup(Widget& child);
+
   /// Returns the shared click-animation controller for this window.
   ClickAnimation& click_animation() { return click_animation_; }
 
@@ -143,6 +149,8 @@ class MainWindow : public Container {
                   const Rect& rect);
 
   void removeLastFromLayer(std::vector<Widget*>& layer);
+
+  void removeFromLayer(std::vector<Widget*>& layer, Widget& child);
 
   void detachDialog(Dialog& dialog);
 

@@ -6,6 +6,9 @@
 namespace roo_windows {
 
 bool FocusManager::requestFocus(Widget& widget) {
+  if (scope_root_ != nullptr && !isDescendantOf(widget, *scope_root_)) {
+    return false;
+  }
   if (!isEligible(widget)) return false;
   setFocused(&widget);
   return true;

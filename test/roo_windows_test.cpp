@@ -71,6 +71,17 @@ class FocusableTestWidget : public BasicWidget {
   bool last_focused_;
 };
 
+class TextFieldActivity : public Activity {
+ public:
+  TextFieldActivity(ApplicationContext& context, TextFieldEditor& editor)
+      : field(context, editor, font_body1(), "", kLeft | kMiddle,
+              TextField::NONE) {}
+
+  Widget& getContents() override { return field; }
+
+  TextField field;
+};
+
 class SloppyTouchSpyWidget : public BasicWidget {
  public:
   SloppyTouchSpyWidget(ApplicationContext& context, Dimensions dims,
@@ -283,10 +294,13 @@ TEST(Windows, TextFieldEditsFromHardwareKeys) {
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
   Application app(&env, display);
-  TextField field(app.context(), app.text_field_editor(), font_body1(), "",
-                  kLeft | kMiddle, TextField::NONE);
+  Task* task = app.addTaskFullScreen();
+  TextFieldActivity activity(app.context(), app.text_field_editor());
+  task->enterActivity(&activity);
+  app.refresh();
+  TextField& field = activity.field;
 
-  field.onFocusChanged(true);
+  ASSERT_TRUE(field.requestFocus());
   EXPECT_TRUE(field.onKeyEvent({KeyPhase::kDown, KeyCode::kCharacter, 0, 'A'}));
   EXPECT_TRUE(field.onKeyEvent({KeyPhase::kDown, KeyCode::kCharacter, 0, 'B'}));
   EXPECT_EQ("AB", field.content());
@@ -300,6 +314,7 @@ TEST(Windows, TextFieldEditsFromHardwareKeys) {
   EXPECT_FALSE(
       field.onKeyEvent({KeyPhase::kDown, KeyCode::kCharacter, 0, 'Z'}));
   EXPECT_EQ("AX", field.content());
+  task->clear();
 }
 
 // Verifies that hiding, disabling, and detaching a focused subtree clear

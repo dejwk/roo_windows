@@ -83,10 +83,10 @@ class VisibilityToggle : public BasicWidget {
   OnOffState state_;
 };
 
-/// Shared editing controller for `TextField` widgets.
+/// Shared editing controller for the `TextField` widgets in one `UiTask`.
 ///
-/// One editor is owned by the `Application` and bound to whichever
-/// `TextField` currently has focus. It receives keyboard input as a
+/// One editor is owned by each `UiTask` and bound to whichever `TextField`
+/// currently has focus in that task. It receives keyboard input as a
 /// `KeyboardListener`, maintains the cursor position, selection range, glyph
 /// metrics cache, and horizontal scroll offset, and drives cursor blinking
 /// and "recently entered glyph" reveal timers via the scheduler. Keeping this
@@ -129,6 +129,9 @@ class TextFieldEditor : public KeyboardListener {
   int16_t cursor_position() const { return cursor_position_; }
 
   bool has_selection() const { return selection_end_ > selection_begin_; }
+
+  /// Returns true when the active editing target belongs to `subtree`.
+  bool targetInSubtree(const Widget& subtree) const;
 
   /// Sets the inclusive selection range in glyph indices and updates the
   /// caret position to the selection end.
@@ -198,11 +201,13 @@ class TextField : public BasicWidget {
     UNDERLINE,
   };
 
+  /// Creates a field using task-local editor resolution after attachment.
+  ///
+  /// `editor` is retained only for source compatibility and is ignored.
   TextField(ApplicationContext& context, TextFieldEditor& editor,
             const roo_display::Font& font, std::string hint,
             roo_display::Alignment alignment, Decoration decoration)
       : BasicWidget(context),
-        editor_(editor),
         decoration_(decoration),
         value_(""),
         hint_(std::move(hint)),
@@ -211,7 +216,9 @@ class TextField : public BasicWidget {
         text_color_(roo_display::color::Transparent),
         highlight_color_(roo_display::color::Transparent),
         alignment_(alignment),
-        editable_(true) {}
+        editable_(true) {
+    (void)editor;
+  }
 
   bool isClickable() const override { return true; }
   bool showClickAnimation() const override { return false; }
@@ -300,21 +307,23 @@ class TextField : public BasicWidget {
 
   const roo_display::Font& font() const { return font_; }
 
-  TextFieldEditor& editor() const { return editor_; }
+  /// Returns this field's task-local editor.
+  TextFieldEditor& editor();
+
+  /// Returns this field's task-local editor.
+  const TextFieldEditor& editor() const;
 
  private:
   friend class TextFieldEditor;
 
-  bool isEdited() const { return editor_.isEdited(this); }
+  bool isEdited() const;
   bool isStarred() const { return starred_; }
 
  public:
   /// Binds this field to the shared editor and starts editing.
-  void edit() { editor_.edit(this); }
+  void edit();
 
  private:
-  TextFieldEditor& editor_;
-
   Decoration decoration_;
 
   std::string value_;

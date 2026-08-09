@@ -76,8 +76,8 @@ void EditTextField::triggerEdit(
     std::function<void(const std::string&)> enter_fn) {
   editing_ = true;
   text_.setContent(initial);
-  text_.edit();
   task.enterActivity(this);
+  text_.edit();
   enter_fn_ = enter_fn;
 }
 

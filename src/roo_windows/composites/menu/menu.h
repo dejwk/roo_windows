@@ -50,7 +50,7 @@ class Menu : public roo_windows::Activity {
         } else {
           return roo_windows::ScrollablePanel::onKeyEvent(event);
         }
-        if (context().focus().moveFocusDirection(*this, direction)) return true;
+        if (focusManager().moveFocusDirection(*this, direction)) return true;
       }
       return roo_windows::ScrollablePanel::onKeyEvent(event);
     }

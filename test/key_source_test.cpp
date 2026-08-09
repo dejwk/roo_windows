@@ -268,7 +268,7 @@ TEST(KeySource, UnhandledRootEscapeFromFocusedTabBubblesToTabHost) {
   scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 1);
 
   EXPECT_EQ(1u, task->activityCount());
-  EXPECT_EQ(&activity.first, app.context().focus().focused());
+  EXPECT_EQ(&activity.first, task->uiTask().focus().focused());
   EXPECT_EQ(1, activity.tabs.escape_count);
   task->clear();
 }

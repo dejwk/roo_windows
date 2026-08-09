@@ -13,6 +13,7 @@
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/key_source.h"
 #include "roo_windows/core/task.h"
+#include "roo_windows/core/ui_task.h"
 #include "roo_windows/widgets/text_field.h"
 
 namespace roo_windows {
@@ -83,6 +84,11 @@ class Application {
 
   /// Creates a new popup task occupying the supplied display rectangle.
   Task* addPopupTask(const roo_display::Box& bounds);
+
+  /// Creates a display-local interaction task in the normal layer.
+  UiTask& addUiTask(const roo_display::Box& bounds);
+  /// Creates a display-local interaction task filling the display.
+  UiTask& addUiTaskFullScreen();
 
   /// Creates a regular task that fills the entire display.
   Task* addTaskFullScreen() { return addTask(window_.display().extents()); }
@@ -163,26 +169,16 @@ class Application {
     return window_.gestureDetector();
   }
 
-  TextFieldEditor& text_field_editor() { return text_field_editor_; }
-  const TextFieldEditor& text_field_editor() const {
-    return text_field_editor_;
-  }
+  /// Deprecated compatibility accessor for the first user task's editor.
+  TextFieldEditor& text_field_editor();
+  const TextFieldEditor& text_field_editor() const;
+
+  /// Returns whether the caller is the active UI thread after `start()`.
+  bool isUiThread() const;
 
  private:
   // Handles user input (touch, etc.), and calls refresh() periodically.
   void tick();
-
-  /// Drains a bounded batch of pending key events. Event dispatch lands with
-  /// the focus-management phase; acquisition deliberately does not interpret
-  /// these samples yet.
-  bool drainKeyEvents();
-
-  void dispatchKeyEvent(const KeyEvent& event);
-
-  /// Routes a hardware Back/Escape request through the root transient and the
-  /// task containing the current focus owner. Returns unhandled when no
-  /// focus-owned task exists.
-  BackResult requestBackFromFocused(BackSource source);
 
   /// Returns whether `task` is owned by this application.
   bool ownsTask(const Task& task) const;
@@ -190,21 +186,16 @@ class Application {
   const Environment* env_;
   ApplicationContext context_;
 
-  // Must be declared before task_panels_, because task_panels_ use it.
   Keyboard keyboard_;
-  TextFieldEditor text_field_editor_;
-
-  std::vector<std::unique_ptr<Task>> tasks_;
-  std::vector<std::unique_ptr<TaskPanel>> task_panels_;
-
-  KeySource* key_source_;
-  Widget* armed_key_widget_ = nullptr;
-  KeyCode armed_key_ = KeyCode::kUnknown;
+  std::vector<std::unique_ptr<UiTask>> ui_tasks_;
+  UiTask* compatibility_task_ = nullptr;
+  KeySource* pending_key_source_ = nullptr;
 
   DisplayWindow window_;
   roo_scheduler::SingletonTask ticker_;
 
   roo::thread::id ui_thread_id_;
+  bool ui_thread_started_ = false;
 };
 
 }  // namespace roo_windows

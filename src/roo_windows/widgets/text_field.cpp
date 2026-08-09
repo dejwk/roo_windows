@@ -8,6 +8,7 @@
 #include "roo_icons/filled/action.h"
 #include "roo_io/text/unicode.h"
 #include "roo_windows/config.h"
+#include "roo_windows/core/ui_task.h"
 
 namespace roo_windows {
 
@@ -291,6 +292,14 @@ bool TextFieldEditor::isEdited(const TextField* target) const {
   return (target_ == target);
 }
 
+bool TextFieldEditor::targetInSubtree(const Widget& subtree) const {
+  for (const Widget* current = target_; current != nullptr;
+       current = current->parent()) {
+    if (current == &subtree) return true;
+  }
+  return false;
+}
+
 void TextFieldEditor::setSelection(int16_t selection_begin,
                                    int16_t selection_end) {
   if (target_ == nullptr) return;
@@ -566,60 +575,87 @@ void TextFieldEditor::forwardDelete() {
 }
 
 void TextField::onFocusChanged(bool focused) {
+  UiTask* task = getUiTask();
+  if (task == nullptr) return;
+  TextFieldEditor& text_editor = task->textFieldEditor();
   if (focused) {
-    if (editable_) editor_.edit(this, false);
+    if (editable_) text_editor.edit(this, false);
   } else if (isEdited()) {
-    editor_.edit(nullptr, false);
+    text_editor.edit(nullptr, false);
   }
+}
+
+TextFieldEditor& TextField::editor() {
+  UiTask* task = getUiTask();
+  CHECK_NOTNULL(task);
+  return task->textFieldEditor();
+}
+
+const TextFieldEditor& TextField::editor() const {
+  const UiTask* task = getUiTask();
+  CHECK_NOTNULL(task);
+  return task->textFieldEditor();
+}
+
+bool TextField::isEdited() const {
+  const UiTask* task = getUiTask();
+  return task != nullptr && task->textFieldEditor().isEdited(this);
+}
+
+void TextField::edit() {
+  UiTask* task = getUiTask();
+  if (task != nullptr) task->textFieldEditor().edit(this);
 }
 
 void TextField::setEditable(bool editable) {
   if (editable_ == editable) return;
   editable_ = editable;
-  if (!editable_ && isEdited()) editor_.edit(nullptr, false);
+  if (!editable_ && isEdited()) editor().edit(nullptr, false);
   setDirty();
 }
 
 bool TextField::onKeyEvent(const KeyEvent& event) {
   if (!editable_ ||
-      (event.phase != KeyPhase::kDown && event.phase != KeyPhase::kRepeat)) {
+      (event.phase != KeyPhase::kDown && event.phase != KeyPhase::kRepeat) ||
+      getUiTask() == nullptr) {
     return false;
   }
+  TextFieldEditor& text_editor = editor();
   const bool extend = (event.modifiers & kKeyModifierShift) != 0;
   switch (event.code) {
     case KeyCode::kCharacter:
       if (event.rune == 0) return true;
-      editor_.edit(this, false);
-      editor_.rune(event.rune);
+      text_editor.edit(this, false);
+      text_editor.rune(event.rune);
       return true;
     case KeyCode::kSpace:
       // The source delivers the printable space separately as kCharacter.
       return true;
     case KeyCode::kEnter:
-      if (!isEdited()) editor_.edit(this, false);
-      editor_.enter();
+      if (!isEdited()) text_editor.edit(this, false);
+      text_editor.enter();
       return true;
     case KeyCode::kEscape:
     case KeyCode::kBack:
-      editor_.cancel();
+      text_editor.cancel();
       return true;
     case KeyCode::kBackspace:
-      editor_.del();
+      text_editor.del();
       return true;
     case KeyCode::kDelete:
-      editor_.forwardDelete();
+      text_editor.forwardDelete();
       return true;
     case KeyCode::kLeft:
-      editor_.moveLeft(extend);
+      text_editor.moveLeft(extend);
       return true;
     case KeyCode::kRight:
-      editor_.moveRight(extend);
+      text_editor.moveRight(extend);
       return true;
     case KeyCode::kHome:
-      editor_.moveHome(extend);
+      text_editor.moveHome(extend);
       return true;
     case KeyCode::kEnd:
-      editor_.moveEnd(extend);
+      text_editor.moveEnd(extend);
       return true;
     default:
       return false;

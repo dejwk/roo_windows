@@ -79,7 +79,7 @@ bool NavigationRail::onKeyEvent(const KeyEvent& event) {
     default:
       return false;
   }
-  return context().focus().moveFocusDirection(*this, direction);
+  return focusManager().moveFocusDirection(*this, direction);
 }
 
 }  // namespace roo_windows

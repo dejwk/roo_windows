@@ -33,7 +33,9 @@ class ClickAnimation;
 class Container;
 class MainWindow;
 class GestureDetector;
+class FocusManager;
 class Task;
+class UiTask;
 class Application;
 
 typedef roo_display::RleImage4bppxBiased<roo_display::Alpha4,
@@ -274,6 +276,12 @@ class Widget {
   virtual const MainWindow* getMainWindow() const;
 
   virtual Task* getTask();
+  virtual UiTask* getUiTask();
+  virtual const UiTask* getUiTask() const;
+
+  /// Returns task-local focus, with legacy context fallback before attachment.
+  FocusManager& focusManager();
+  const FocusManager& focusManager() const;
 
   Application* getApplication() const;
 

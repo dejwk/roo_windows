@@ -3,6 +3,7 @@
 #include "roo_logging.h"
 #include "roo_windows/core/activity.h"
 #include "roo_windows/core/application.h"
+#include "roo_windows/core/ui_task.h"
 
 namespace roo_windows {
 
@@ -140,6 +141,10 @@ void Task::getAbsoluteOffset(XDim& dx, YDim& dy) const {
 MainWindow& Task::getMainWindow() const { return *panel_->getMainWindow(); }
 
 Application& Task::getApplication() const { return *panel_->getApplication(); }
+
+UiTask& Task::uiTask() { return *panel_->getUiTask(); }
+
+const UiTask& Task::uiTask() const { return *panel_->getUiTask(); }
 
 void TaskPanel::enterActivity(Activity* activity,
                               const roo_display::Box& bounds) {

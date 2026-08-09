@@ -11,6 +11,7 @@ namespace roo_windows {
 
 class Activity;
 class TaskPanel;
+class UiTask;
 
 /// Owns a stack of `Activity` instances inside one `TaskPanel`.
 ///
@@ -64,8 +65,13 @@ class Task {
   /// Returns the owning application.
   Application& getApplication() const;
 
+  /// Returns the display-local interaction owner for this adapter.
+  UiTask& uiTask();
+  const UiTask& uiTask() const;
+
  private:
   friend class Application;
+  friend class UiTask;
 
   void init(TaskPanel* panel);
 
@@ -90,12 +96,14 @@ class Task {
 /// activity's contents.
 class TaskPanel : public Panel {
  public:
-  TaskPanel(ApplicationContext& context, Task& task)
-      : Panel(context), task_(task) {}
+  TaskPanel(ApplicationContext& context, UiTask& ui_task, Task& task)
+      : Panel(context), ui_task_(ui_task), task_(task) {}
 
   /// Returns the owning task; descendants use this to resolve their host
   /// task context.
   Task* getTask() override { return &task_; }
+  UiTask* getUiTask() override { return &ui_task_; }
+  const UiTask* getUiTask() const override { return &ui_task_; }
 
   /// Builds a callback-free path through only the active activity.
   bool fillTouchTargetPath(XDim x, YDim y, std::vector<Widget*>& path) override;
@@ -107,6 +115,7 @@ class TaskPanel : public Panel {
 
   void exitActivity();
 
+  UiTask& ui_task_;
   Task& task_;
 };
 

@@ -504,7 +504,7 @@ bool Tabs::onKeyEvent(const KeyEvent& event) {
   }
   // A tab strip is a horizontal focus boundary. At either end it consumes the
   // key instead of allowing generic traversal to jump into unrelated content.
-  context().focus().moveFocusDirection(*this, direction);
+  focusManager().moveFocusDirection(*this, direction);
   return true;
 }
 

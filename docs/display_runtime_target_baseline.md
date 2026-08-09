@@ -57,6 +57,9 @@ compare it with a C3 image or a different PlatformIO environment.
 | `Keyboard` | Capture required |
 | `Task` | Capture required |
 | `TaskPanel` | Capture required |
+| `UiTask` | Capture required |
+| `TextField` | Capture required |
+| `KeySource` | Capture required |
 | `WidgetRef` | Capture required |
 | `KeyEvent` | Capture required |
 | `TransientPresentationSlot` | Capture required |

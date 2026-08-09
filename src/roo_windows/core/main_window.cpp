@@ -105,6 +105,10 @@ void MainWindow::addPopup(WidgetRef child, const Rect& rect) {
   addToLayer(popups_, std::move(child), rect);
 }
 
+void MainWindow::removeTask(Widget& child) { removeFromLayer(tasks_, child); }
+
+void MainWindow::removePopup(Widget& child) { removeFromLayer(popups_, child); }
+
 void MainWindow::refreshClickAnimation() { click_animation_.tick(); }
 
 void MainWindow::updateLayout() {
@@ -375,6 +379,15 @@ void MainWindow::removeLastFromLayer(std::vector<Widget*>& layer) {
   Widget* widget = layer.back();
   layer.pop_back();
   detachChild(widget);
+}
+
+void MainWindow::removeFromLayer(std::vector<Widget*>& layer, Widget& child) {
+  for (auto it = layer.begin(); it != layer.end(); ++it) {
+    if (*it != &child) continue;
+    layer.erase(it);
+    detachChild(&child);
+    return;
+  }
 }
 
 PresentationStartResult MainWindow::showDialog(Dialog& dialog,
