@@ -136,7 +136,7 @@ bindings.
 - Removal of `Task` or `Activity`.
 - More than one polled key source per task.
 - Push-style key producers or public scoped key bindings.
-- Cross-application external driving.
+- Cross-application shared-scheduler driving.
 - Task-modal or display-modal presentation.
 - Focus traversal between tasks, windows, or applications.
 - A full text-input or IME session protocol.
@@ -269,7 +269,7 @@ the existing geometric ranking and rejects a focused source outside the panel.
 Each application tick asks every attached task to drain up to the current
 four batches of four events. Work is therefore bounded per task and
 proportional to the number of tasks. Phase 5 replaces this temporary loop with
-an aggregate externally visible tick budget. The application schedules an
+an aggregate private callback budget. The application schedules an
 immediate follow-up when any task reports a full final batch.
 
 ### Temporary polled-source attachment
@@ -664,7 +664,7 @@ makes attachment authoritative and recovers that storage.
 ## Future Work
 
 Phase 4 replaces the required activity adapter with direct content and optional
-navigation. Phase 5 exposes bounded external driving. Phase 6 introduces
+navigation. Phase 5 adds bounded shared-scheduler driving. Phase 6 introduces
 lifetime-safe multi-source and push-event bindings and migrates the software
 keyboard to full `KeyEvent` delivery. Phase 7 assigns modal presentation to an
 owning task.

@@ -11,7 +11,7 @@ This is Phase 2 of the
 It begins only after the
 [Phase 1 characterization](display_runtime_characterization_design.md) has
 landed and establishes the ownership boundary required by later multi-task and
-external-drive phases.
+shared-scheduler phases.
 
 ## Motivation
 
@@ -114,7 +114,7 @@ does not add a reverse `DisplayWindow -> Application` link.
 ### Non-goals
 
 - More than one `DisplayWindow` per application.
-- Public external driving or a new scheduler abstraction.
+- Multi-application scheduler collaboration or a new scheduler abstraction.
 - `UiTask`, task-local focus, task-local key bindings, or optional navigation.
 - Cross-application key-event connections.
 - New task-modal or display-modal behavior.
@@ -145,8 +145,8 @@ Application
 
 `Application` continues to own the tick callback because it still combines key
 input with window work. It invokes private window operations around key dispatch
-to preserve current ordering. Phase 5 later turns that orchestration into the
-public external-drive contract.
+to preserve current ordering. Phase 5 later bounds that orchestration and lets
+several applications register it with one shared scheduler.
 
 The paint-continuation mirror leaves `ApplicationContext`. Descendants determine
 whether their attached root is continuing a paint through `getMainWindow()`.
@@ -231,8 +231,8 @@ and the completed-versus-interrupted result.
 
 The window methods return plain Boolean state; they do not schedule application
 work. `Application` combines key-pending, gesture, touch-active, and paint-timeout
-state to retain the current immediate-versus-20-ms ticker policy. This temporary
-split disappears when Phase 5 introduces the public bounded tick result.
+state to retain the current immediate-versus-20-ms ticker policy. Phase 5
+revises this private scheduling decision for bounded shared-scheduler work.
 
 ### Refresh ownership
 
@@ -523,6 +523,6 @@ preserves behavior and keeps this commit limited to ownership extraction.
 ## Future Work
 
 Phase 3 introduces display-local `UiTask` controllers and task-relative focus on
-top of this window boundary. Phase 5 exposes bounded external driving. A later
+top of this window boundary. Phase 5 adds bounded shared-scheduler driving. A later
 design can allow one application to own several windows without changing the
 display-local ownership established here.

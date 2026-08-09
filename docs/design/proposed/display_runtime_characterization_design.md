@@ -96,8 +96,8 @@ ESP32-S3 build, target-ABI object-size symbols, and ELF section reporting.
 
 ### Non-goals
 
-- Introducing `DisplayWindow`, `UiTask`, external-drive APIs, or key-event
-  bindings.
+- Introducing `DisplayWindow`, `UiTask`, shared-scheduler application driving,
+  or key-event bindings.
 - Changing task, focus, keyboard, Back, gesture, refresh, or teardown behavior.
 - Establishing multi-application fairness or scheduler partitioning.
 - Producing cycle-accurate timing benchmarks.
@@ -254,7 +254,7 @@ docs/display_runtime_target_baseline.md
 
 The integration test drives the private application tick indirectly through the
 existing `start()` and scheduler contracts. Phase 5 of the umbrella proposal
-owns the future public external-drive API.
+owns the future shared-scheduler application callback.
 
 ## Implementation Plan
 
@@ -324,8 +324,8 @@ for linked RAM and flash sections.
 #### Add a public tick API for characterization
 
 Rejected because Phase 1 must preserve production behavior and Phase 5 owns the
-external-drive contract. The existing `start()` plus one scheduler callback is
-sufficient to drive deterministic ticks.
+shared-scheduler contract. The existing `start()` plus one scheduler callback
+is sufficient to drive deterministic callbacks.
 
 #### Assert exact object sizes in host tests
 

@@ -11,7 +11,7 @@ The first version intentionally has a narrow topology:
 - one `Application` owns one `DisplayWindow`;
 - one `DisplayWindow` borrows one `roo_display::Display`;
 - every `UiTask` belongs to exactly one `DisplayWindow`;
-- one thread may externally drive several `Application` instances; and
+- one scheduler on one thread may drive several `Application` instances; and
 - the standard software-keyboard topology hosts the keyboard in a task separate
   from the task that receives its events.
 
@@ -187,8 +187,8 @@ without preserving their semantics:
   attached to the window.
 - Widget ownership or borrowing must be explicit in the content API; this
   design must not hide allocation in navigation or task operations.
-- A multi-application program must be able to use a public, non-blocking tick
-  API. `run()` may remain as a single-application convenience.
+- A multi-application program must be able to start every application and then
+  run their shared scheduler. `run()` remains a single-application convenience.
 - All connected applications and endpoints must be used on the same UI thread.
 - Cross-application bindings must disconnect safely regardless of endpoint
   destruction order.
@@ -198,11 +198,11 @@ without preserving their semantics:
 
 ### Embedded constraints
 
-- Normal input dispatch, focus movement, and ticking must not allocate.
-- Each call to the external-drive API must bound the input, gesture, and paint
-  work performed directly by that application. The user-owned driver and
-  `roo_scheduler::Scheduler` remain responsible for cooperative scheduling and
-  fairness across applications and callbacks.
+- Normal input dispatch, focus movement, and application callbacks must not
+  allocate.
+- Each scheduled application callback must bound its input, gesture, and paint
+  work. `roo_scheduler::Scheduler` orders application and unrelated callbacks;
+  applications reschedule their own work.
 - New persistent RAM and flash costs must be measured and recorded as the
   phases land.
 - The implementation must not require `shared_ptr`, RTTI, exceptions, or
@@ -233,8 +233,8 @@ The refactoring is split into incremental sub-designs:
 2. **Separate tasks from navigation.** Introduce `UiTask` as the owner of
    focus, key routing, transient state, and a hosted widget tree. Direct content
    needs no navigation objects.
-3. **Expose cooperative external driving.** Add a bounded tick API so user code
-   can drive several one-window applications on the same thread.
+3. **Support shared-scheduler driving.** Let bounded application callbacks
+   collaborate through one scheduler after the caller starts each application.
 4. **Connect key producers and consumers.** Route the complete `KeyEvent`
    vocabulary through lifetime-safe bindings within or across applications. The
    standard software keyboard remains in a separate task.
@@ -244,7 +244,7 @@ The refactoring is split into incremental sub-designs:
 The topology for the motivating cross-display example is:
 
 ```text
-user-owned driver, one UI thread
+shared scheduler, one UI thread
     |
     +-- Application A -- DisplayWindow A -- editor UiTask
     |                                      ^
@@ -271,7 +271,7 @@ a multi-window application coordinator.
 `Application` owns:
 
 - application lifecycle and the single UI-thread assertion;
-- the externally driven or convenience run loop;
+- scheduler participation and the convenience run loop;
 - application-level scheduler hooks and environment services;
 - the collection of `UiTask` controllers; and
 - its one `DisplayWindow`.
@@ -404,35 +404,28 @@ callbacks may synchronously replace content or mutate navigation. The fallback
 pop therefore occurs only when the navigator's generation is unchanged after
 the callback; any mutation counts as the one handled semantic step.
 
-### Sub-design 3: externally driving several applications
+### Sub-design 3: driving several applications on one scheduler
 
 `Application::run()` remains a convenience for one application. A program with
-several displays constructs one application per display and drives each
-application from its own loop:
+several displays constructs one application per display and uses one shared
+scheduler:
 
 1. construct applications, tasks, and cross-application bindings;
-2. start each application in externally driven mode;
-3. repeatedly call `tick(now)` for each application;
-4. sleep or service the platform until the earliest returned deadline; and
-5. destroy cross-application bindings before or during endpoint teardown.
+2. call `start()` on each application from the common UI thread;
+3. call `scheduler.run()` once; and
+4. destroy cross-application bindings before or during endpoint teardown.
 
-`tick(now)` is non-blocking and performs bounded work:
+Each application owns a private scheduler task. One dispatch drains at most a
+documented number of input events, advances due task/window timers and gesture
+recognition, and performs at most one bounded refresh/paint slice. It then
+reschedules itself immediately or at its next internal deadline. A dormant
+application is woken by new input or invalidation.
 
-- drain at most a documented number of input events;
-- advance due task/window timers;
-- advance gesture recognition;
-- perform at most one bounded refresh/paint slice; and
-- return whether immediate follow-up is required and the next known deadline.
-
-These bounds apply only to work performed directly by the application. The
-external driver cooperatively services the shared `roo_scheduler::Scheduler`
-and decides fairness between scheduler callbacks and applications. Scheduler
-callbacks are not partitioned by application and are outside the per-application
-tick budget. No call to one application's `tick()` may recursively call another
-application's `tick()`.
-
-The first version does not add `ApplicationGroup`. A helper can be considered
-later if real programs repeat enough scheduling code to justify it.
+The scheduler orders these tasks with unrelated callbacks. Equal-priority FIFO
+ordering and bounded application dispatches allow every eligible participant
+to progress. No application callback may recursively invoke another
+application's callback. Wrong state, wrong thread, and reentrancy violate the
+ownership contract and fail through `CHECK`; they are not returned to callers.
 
 ### Sub-design 4: key event producers and explicit binding
 
@@ -464,19 +457,19 @@ dispatcher; `KeyEventBinding` connects a push-style emitter.
 
 Delivery is synchronous on the common UI thread. The emitter calls only the
 sink operation. The sink may update task state and invalidate its window, but
-it must not tick or paint the target application inside the producer
-application's tick. The target is repainted when its external driver next calls
-`tick()`.
+it must not invoke or paint the target application inside the producer
+application's callback. Invalidating the target wakes its private scheduler
+task, which repaints it when the shared scheduler next dispatches it.
 
 Bindings are default-constructible, non-copyable RAII connections. `connect()`
-returns `kConnected`, `kSourceAlreadyBound`, `kBindingAlreadyConnected`,
-`kWrongThread`, or `kEndpointUnavailable`. The source, binding, and sink keep
-intrusive links to one another. Destruction of any participant nulls the other
-links without dereferencing dead storage; `disconnect()` is idempotent. This
-avoids `shared_ptr` and per-event allocation.
+checks source, binding, endpoint, lifecycle, and common-thread preconditions,
+then installs intrusive links. Violations fail through `CHECK`; `connect()`
+does not return a recoverable status. Destruction of any participant nulls the
+other links without dereferencing dead storage; `disconnect()` is idempotent.
+This avoids `shared_ptr` and per-event allocation.
 
-Application thread affinity is established by `startExternalDrive()` or
-`run()`. Both applications are started before a cross-application binding is
+Application thread affinity is established by `start()` or `run()`. Both
+applications are started before a cross-application binding is
 connected, and all connection, delivery, disconnection, and destruction happen
 on that UI thread.
 
@@ -547,7 +540,7 @@ There is no implicit cross-application Back propagation.
 Teardown must work in any application order. Each application performs the
 following logical sequence:
 
-1. stop accepting new ticks and input;
+1. stop accepting scheduled callbacks and input;
 2. disconnect keyboard and command endpoints;
 3. close or cancel modal and non-modal transients;
 4. cancel key-repeat, armed-key, gesture, and pointer-capture state;
@@ -561,15 +554,10 @@ already destroyed.
 
 ## Proposed API
 
-The following API is illustrative. Naming and error types may change during
-implementation, but the ownership and cardinality constraints are normative.
+The following API is illustrative. Naming may change during implementation,
+but the ownership, cardinality, and checked-contract constraints are normative.
 
 ```cpp
-struct TickResult {
-  bool immediate_follow_up;
-  optional<roo_time::Uptime> next_deadline;
-};
-
 class Application {
  public:
   Application(ApplicationEnvironment& env, roo_display::Display& display,
@@ -580,10 +568,10 @@ class Application {
   UiTask& addTask(Rect bounds, UiTaskOptions options = {});
   UiTask& addTaskFullScreen(UiTaskOptions options = {});
 
-  void startExternalDrive();
-  TickResult tick(roo_time::Uptime now);
+  // Schedules bounded application work on the environment's scheduler.
+  void start();
 
-  // Convenience; equivalent to driving this one application until stopped.
+  // Convenience; equivalent to start(); env.scheduler().run().
   void run();
 };
 
@@ -611,20 +599,14 @@ class UiTask {
 Physical or emulated key input is separately bound to a task:
 
 ```cpp
-enum class BindingResult {
-  kConnected,
-  kSourceAlreadyBound,
-  kBindingAlreadyConnected,
-  kWrongThread,
-  kEndpointUnavailable,
-};
-
 class TaskKeyBinding {
  public:
   TaskKeyBinding() = default;
   ~TaskKeyBinding();
 
-  BindingResult connect(KeySource& source, UiTask& target);
+  // CHECK-fails when already connected or when source, target, lifecycle,
+  // or UI-thread preconditions are not satisfied.
+  void connect(KeySource& source, UiTask& target);
   void disconnect();
   bool isConnected() const;
 
@@ -655,7 +637,9 @@ class KeyEventBinding {
   KeyEventBinding() = default;
   ~KeyEventBinding();
 
-  BindingResult connect(KeyEventEmitter& source, KeyEventSink& sink);
+  // CHECK-fails when already connected or when endpoint, lifecycle, or
+  // UI-thread preconditions are not satisfied.
+  void connect(KeyEventEmitter& source, KeyEventSink& sink);
   void disconnect();
   bool isConnected() const;
 
@@ -675,28 +659,22 @@ Application keyboard_app(env, keyboard_display);
 UiTask& keyboard = keyboard_app.addTaskFullScreen();
 keyboard.setContent(software_keyboard);
 
-editor_app.startExternalDrive();
-keyboard_app.startExternalDrive();
+editor_app.start();
+keyboard_app.start();
 
 KeyEventBinding keyboard_to_editor;
-CHECK(keyboard_to_editor.connect(software_keyboard.keyEventEmitter(),
-                                 editor.keyEventSink()) ==
-      BindingResult::kConnected);
+keyboard_to_editor.connect(software_keyboard.keyEventEmitter(),
+                           editor.keyEventSink());
 
-while (running) {
-  const auto now = clock.uptime();
-  const TickResult editor_result = editor_app.tick(now);
-  const TickResult keyboard_result = keyboard_app.tick(now);
-  waitUntilWorkIsDue(editor_result, keyboard_result);
-}
+env.scheduler().run();
 ```
 
-During incremental implementation, APIs that exist before their complete
-backend is available must fail explicitly:
+During incremental implementation, violated ownership contracts fail at the
+point of misuse:
 
-- binding endpoints from different UI threads returns `kWrongThread`;
-- binding an already connected source returns `kSourceAlreadyBound`;
-- attaching a task to a second window returns `already_attached`;
+- binding endpoints from different UI threads or binding an already connected
+  source fails through `CHECK`;
+- attaching a task to a second window fails through `CHECK`;
 - attempting conflicting modal coverage returns `host_busy`; and
 - an unbound emitter returns `false` from `emit()`.
 
@@ -764,14 +742,17 @@ Validation:
   task's focus;
 - test task detachment cancels all outstanding references.
 
-Proposed commit: `refactor: separate ui task from task panel`
+Proposed commit: `refactor: separate ui task interaction from task panel`
 
 ### Phase 4: make navigation optional
 
-- Add direct task content.
-- Introduce `NavigationHost`, `Navigator`, and `Destination` only for tasks that
-  request navigation.
-- Migrate Back ordering and remove the temporary `Activity` adapter.
+Implement the
+[Phase 4 optional navigation design](display_optional_navigation_design.md):
+
+- add direct task content with explicit borrowed or owned `WidgetRef` storage;
+- add fixed-capacity `NavigationHost`, `Navigator`, and `Destination` only for
+  tasks that request history; and
+- move activity behavior out of every `UiTask` into a compatibility-only host.
 
 Validation:
 
@@ -782,12 +763,16 @@ Validation:
 
 Proposed commit: `refactor: make task navigation optional`
 
-### Phase 5: expose bounded external driving
+### Phase 5: support shared-scheduler driving
 
-- Split initialization from `run()`.
-- Add `startExternalDrive()` and bounded `tick(now)`.
-- Add an emulator/example that drives two applications and displays on one
-  thread.
+Implement the
+[Phase 5 shared-scheduler drive design](display_external_drive_design.md):
+
+- retain `start()` as the checked scheduler-registration entry point;
+- make the private application callback aggregate-bounded and self-rescheduling;
+  and
+- add an emulator/example that starts two applications and displays on one
+  thread before entering their shared scheduler.
 
 Validation:
 
@@ -795,17 +780,21 @@ Validation:
 - verify an interrupted paint on one application does not affect the other;
 - test the documented per-application input, gesture, and paint work bounds;
   and
-- reject nested/reentrant `tick()` calls.
+- reject invalid lifecycle, wrong-thread, and reentrant callback use with
+  `CHECK`.
 
-Proposed commit: `feat: support externally driven applications`
+Proposed commit: `feat: support shared-scheduler applications`
 
 ### Phase 6: add lifetime-safe key-event bindings
 
-- Add the full-`KeyEvent` emitter, sink, and scoped binding.
-- Adapt polled `KeySource` bindings and push-style emitters to one task-local
-  dispatch path.
-- Adapt the existing software keyboard and text-field editor.
-- Add same-display and cross-application examples.
+Implement the
+[Phase 6 key-event bindings design](display_key_event_bindings_design.md):
+
+- add full-`KeyEvent` emitter, sink, and scoped intrusive bindings;
+- converge polled `KeySource` and push emitters on one task-local dispatch
+  path;
+- migrate the software keyboard and text-field editor; and
+- add same-display and cross-application examples.
 
 Validation:
 
@@ -821,8 +810,12 @@ Proposed commit: `feat: bind keyboard tasks to editor tasks`
 
 ### Phase 7: distinguish task-modal and display-modal hosts
 
-- Implement the two coverage policies, scrim bounds, admission rules, input
-  barriers, focus save/restore, and Back ordering.
+Implement the
+[Phase 7 modal hosting design](display_modal_hosting_design.md):
+
+- add task-modal and display-modal structural hosts; and
+- implement exact scrim bounds, admission rules, pointer/key barriers,
+  owner-task focus save/restore, Back ordering, and reentrant teardown.
 
 Validation:
 
@@ -836,9 +829,14 @@ Proposed commit: `feat: add explicit modal coverage policies`
 
 ### Phase 8: complete the migration and cost audit
 
-- Remove forwarding APIs and obsolete singleton state.
-- Update examples and reference documentation.
-- Record final size and timing deltas and address material regressions.
+Implement the
+[Phase 8 migration and cost-audit design](display_runtime_migration_audit_design.md):
+
+- remove forwarding APIs, legacy activities, implicit editor/input routes, and
+  obsolete singleton/back-reference state;
+- migrate examples and reference documentation to the final API; and
+- record final size, allocation, timing, and single-/dual-display hardware
+  results and remediate every defined regression gate.
 
 Validation:
 
@@ -871,7 +869,8 @@ invariants:
 - task-modal scrims and input barriers stop at task bounds;
 - display-modal scrims and input barriers cover the whole window;
 - Back performs exactly one documented semantic step;
-- external ticks are bounded and do not reenter another application; and
+- scheduled application callbacks are bounded and do not reenter another
+  application; and
 - steady-state event delivery performs no allocation.
 
 ## Caveats
@@ -928,6 +927,6 @@ invariants:
   surrounding text, editor actions, capabilities, and optional queued
   cross-thread delivery.
 - Add display hot-plug and live task migration.
-- Consider an `ApplicationGroup` convenience scheduler after the external tick
-  contract has real-world use.
+- Consider a higher-level application owner if shared construction or teardown
+  patterns justify one.
 - Generalize theme, zoom, and display metrics per window.

@@ -53,10 +53,15 @@ Status was audited against the source tree and tests on 2026-07-31. “Dependenc
 | --- | --- |
 | Button groups | Buttons are implemented; icon buttons are proposed, and no group implementation exists. |
 | Date pickers | Buttons and shared back behavior are implemented; text fields, dialogs, and icon buttons are proposed. |
-| Display runtime and cross-application input | Non-touch input, Back routing, interrupted paint, and transient lifetime prerequisites are implemented; display-window extraction, display-local tasks, external driving, cross-application key bindings, and explicit modal coverage are not implemented. |
-| Display runtime Phase 1 characterization | Existing rendering, input, focus, task, Back, and transient tests are prerequisites; the integrated characterization target and ESP32-C3 runtime baseline are not implemented. |
+| Display runtime and cross-application input | Non-touch input, Back routing, interrupted paint, and transient lifetime prerequisites are implemented; display-window extraction, display-local tasks, shared-scheduler driving, cross-application key bindings, and explicit modal coverage are not implemented. |
+| Display runtime Phase 1 characterization | Existing rendering, input, focus, task, Back, and transient tests are prerequisites; the integrated characterization target and ESP32-S3 runtime baseline are not implemented. |
 | Display runtime Phase 2 `DisplayWindow` extraction | The Phase 1 characterization is proposed; the one-to-one display owner, continuation relocation, compatibility forwarding, and teardown extraction are not implemented. |
 | Display runtime Phase 3 `UiTask` extraction | Phase 2 is proposed; task-local focus, editing, polled key routing, structural task ancestry, and the activity compatibility adapter are not implemented. |
+| Display runtime Phase 4 optional navigation | Phase 3 is proposed; direct task content, fixed-capacity optional navigation, and the compatibility-only activity host are not implemented. |
+| Display runtime Phase 5 shared-scheduler driving | Phase 4 is proposed; checked bounded application callbacks and the two-application shared-scheduler example are not implemented. |
+| Display runtime Phase 6 key-event bindings | Phase 5 is proposed; lifetime-safe polled and push bindings, full software-keyboard events, and cross-application delivery are not implemented. |
+| Display runtime Phase 7 modal hosting | Phase 6 is proposed; task/display coverage policies, barriers, focus restoration, admission, and modal Back ordering are not implemented. |
+| Display runtime Phase 8 migration and cost audit | Phases 2–7 are proposed; compatibility removal, final migration documentation, resource audit, and hardware validation are not implemented. |
 | Dialogs | Legacy dialogs and shared back behavior exist, but the Material 3 design is not implemented; icon buttons and text fields are proposed. |
 | Extended FAB | The base FAB dependency is proposed; buttons and theme support are implemented. |
 | FAB | Buttons and theme support are implemented; icon buttons are proposed. |
