@@ -33,6 +33,17 @@ history into an optional host. The new navigation controller follows the
 current `Activity` lifetime model: the application owns controllers and
 widgets, while the framework borrows them.
 
+Compose Navigation associates a lifecycle with each back-stack entry rather
+than putting callbacks on a destination object. The entry remains alive while
+it is in history, changes state as it becomes current or covered, and is
+destroyed when popped. Compose code binds asynchronous work to those states
+through lifecycle-aware effects. See the Android documentation for
+[`NavBackStackEntry`](https://developer.android.com/reference/androidx/navigation/NavBackStackEntry)
+and
+[`LifecycleStartEffect`](https://developer.android.com/topic/libraries/architecture/lifecycle).
+`roo_windows` uses four virtual callbacks as the smaller embedded equivalent of
+that observable lifecycle.
+
 ## Requirements
 
 ### Direct-content requirements
@@ -64,13 +75,36 @@ widgets, while the framework borrows them.
 5. A destination may belong to at most one host, and a host may be installed
    in at most one task.
 6. Only the current destination's widget may be attached to `TaskPanel`.
-7. Empty-history, attachment, and reentrancy preconditions must be enforced
-   with `CHECK` before current content or history changes.
+7. Empty-history, attachment, and structural-callback reentrancy preconditions
+   must be enforced with `CHECK` before current content or history changes.
 8. Reentrant destination Back callbacks must cause at most one semantic Back
    step.
 9. When a destination leaves Back unhandled and no history entry can be
    popped, the task-level Back callback must receive the final opportunity to
    handle the request.
+
+### Destination lifecycle requirements
+
+1. `Destination` must provide the same `onStart`, `onResume`, `onPause`, and
+   `onStop` lifecycle hooks and transitional states as `Activity`.
+2. `onStart` and `onStop` must delimit membership in navigation history;
+   `onResume` and `onPause` must delimit being the current attached
+   destination.
+3. Lifecycle callback attachment observations must match `Activity`: start and
+   stop run detached, while resume and pause run attached.
+4. A covered destination must remain paused in history with its widget
+   detached, so its controller and asynchronous state remain application-owned
+   and restorable.
+5. Lifecycle and Back callbacks may navigate synchronously. The outer mutation
+   must detect that it was superseded and must not perform a second lifecycle
+   transition or structural mutation.
+6. Navigation attempted from incidental focus, editing, or widget-detachment
+   callbacks during a structural detach remains a contract violation enforced
+   by `CHECK`.
+7. Direct-content tasks must not acquire destination lifecycle state or hooks.
+8. `Destination` declarations and definitions must live in dedicated
+   `core/destination.h` and `core/destination.cpp` files, structurally following
+   `Activity` where their contracts coincide.
 
 ### Compatibility requirements
 
@@ -134,6 +168,11 @@ tasks therefore contain no navigation controller or history state.
 application owns every destination and widget. A direct task constructs no
 host and pays no history allocation.
 
+Each navigation destination moves through Activity-compatible inactive,
+starting, paused, resuming, active, pausing, and stopping states. The host owns
+transition sequencing; destinations supply virtual no-op hooks and may bind
+asynchronous work either to history membership or current visibility.
+
 `TaskPanel` remains unaware of direct versus navigation policy. It is a
 specialized surface-owning `Container` with one nullable raw `content_` child
 pointer. It passes a temporary borrowed `WidgetRef` to `attachChild()` and uses
@@ -176,34 +215,58 @@ The task never deletes the widget.
 
 ### Destination and ownership
 
-`Destination` is an Activity-like borrowed controller. It supplies one root
-widget and may handle Back, but it has no lifecycle callbacks and no ownership
+`Destination` is an Activity-like borrowed controller declared in
+`core/destination.h` and defined in `core/destination.cpp`. It supplies one root
+widget, handles Back, and observes navigation lifecycle, but it has no ownership
 policy:
 
 ```cpp
 class Destination {
  public:
+  enum State {
+    INACTIVE,
+    STARTING,
+    RESUMING,
+    ACTIVE,
+    PAUSING,
+    PAUSED,
+    STOPPING,
+  };
+
   virtual ~Destination();
 
   virtual Widget& getContents() = 0;
 
-  virtual BackResult onBackRequested(BackSource source) {
-    return BackResult::kUnhandled;
-  }
+  NavigationHost* getNavigationHost();
+  UiTask* getUiTask();
+  Application* getApplication();
+  void exit();
+
+  virtual BackResult onBackRequested(BackSource source);
+
+  virtual void onStart();
+  virtual void onResume();
+  virtual void onPause();
+  virtual void onStop();
 
  protected:
   Destination();
+  State state() const;
 
  private:
   friend class NavigationHost;
   NavigationHost* host_;
+  State state_;
 };
 ```
 
-`host_` is null while the destination is outside history and identifies its
-one borrowing host while it is present. The host rejects a destination whose
-`host_` is already set. The virtual destination destructor checks that it is no
-longer in history, matching the current `Activity` lifetime contract.
+`host_` is null and `state_` is `INACTIVE` while the destination is outside
+history. The host rejects a destination whose `host_` is already set. The
+virtual destination destructor checks both detached conditions, matching the
+current `Activity` lifetime contract. `exit()` requires the destination to be
+current and delegates one `pop()` to its host. `getUiTask()` and
+`getApplication()` provide the non-legacy counterparts of `Activity`'s task and
+application accessors.
 
 The destination owns neither its widget nor framework state. Applications that
 dynamically allocate destinations retain their `unique_ptr` outside the
@@ -213,6 +276,43 @@ The current destination's widget is attached to `TaskPanel` with a temporary
 borrowed `WidgetRef`. Popping or replacing first cancels task references and
 detaches that borrowed widget through the normal container path. Inactive
 destination widgets remain detached and application-owned.
+
+### Destination lifecycle
+
+The four hooks preserve the current `Activity` meanings:
+
+- `onStart()` runs once when a destination enters history. Its `host_` is set,
+  its state is `STARTING`, and its widget is detached.
+- `onResume()` runs whenever the destination becomes current. Its state is
+  `RESUMING`, and its widget is attached before the callback.
+- `onPause()` runs whenever the current destination is about to be covered or
+  removed. Its state is `PAUSING`, and its widget remains attached throughout
+  the callback.
+- `onStop()` runs once when a destination leaves history. Its state is
+  `STOPPING`, its widget is detached, and `host_` remains available until the
+  callback returns. The host then sets state to `INACTIVE` and clears `host_`.
+
+Navigation commands apply those hooks in this order:
+
+- Push: reserve vector growth, pause and detach the current destination, append
+  and start the new destination, then attach and resume it.
+- Pop: pause and detach the current destination, stop and remove it, then attach
+  and resume the preceding destination when one exists.
+- Replace: pause and detach the current destination, stop and remove it, then
+  start, attach, and resume the replacement without resuming the destination
+  below it.
+- Clear: pause and detach the current destination, then stop and remove entries
+  from top to bottom without resuming covered destinations.
+
+Push performs any required vector growth before the first lifecycle callback,
+so allocation failure cannot leave a partially transitioned history.
+
+Lifecycle callbacks run at explicit reentrant mutation boundaries. The host
+snapshots destination identity and generation around each callback. A nested
+command may supersede the outer command; after the callback, the outer command
+continues only when its expected destination, state, generation, and attachment
+still match. The host never emits a duplicate pause, stop, start, or resume for
+one transition.
 
 ### Growable navigation history
 
@@ -224,30 +324,32 @@ there is no separate navigator facade.
 
 - `empty()` and `depth()` expose the state callers need before conditional
   commands.
-- `push(destination)` checks that the host is installed, no mutation is in
-  progress, the destination belongs to no host, and its widget is unattached;
-  it then appends the destination and may grow the vector.
+- `push(destination)` checks that the host is installed, the destination belongs
+  to no host, its widget is unattached, and the call occurs either outside a
+  mutation or from a supported lifecycle callback; it then grows history as
+  needed and begins the lifecycle transition.
 - `replace(destination)` checks the same invariants and `!empty()`, detaches the
   current widget, removes the old destination, and installs the new one.
-- `pop()` checks that no mutation is in progress and `!empty()`, removes the
-  current destination, and attaches the preceding destination when one exists.
-  Explicitly popping the root is allowed and leaves history empty.
-- `clear()` checks that no mutation is in progress, is idempotent when empty,
-  and otherwise detaches the current widget and removes every entry.
+- `pop()` checks `!empty()` and a state in which the current destination may be
+  removed, then performs its lifecycle transition. Explicitly popping the root
+  is allowed and leaves history empty.
+- `clear()` is idempotent when empty and otherwise performs lifecycle removal
+  from top to bottom.
 
-Every `CHECK` runs before current content or history changes. A mutation guard
-covers cancellation and attachment, so callbacks reached during subtree
-detachment cannot recursively detach the same widget. A navigation command
-from such a callback is a contract violation. Navigation from
-`Destination::onBackRequested()` remains supported because that callback runs
-outside the mutation guard.
+Every entry precondition `CHECK` runs before current content or history changes.
+The host distinguishes an intentional lifecycle-callback window from structural
+cancellation and attachment. Commands from lifecycle callbacks and
+`Destination::onBackRequested()` enter the state-aware reentrant path. Commands
+from incidental callbacks reached while detaching or attaching widgets remain
+contract violations because they could recursively mutate the same structural
+slot.
 
-Each successful mutation increments a wrapping generation counter. Equality,
-rather than ordering, is the only operation on it. The counter detects a
-successful mutation performed by a destination's Back callback before the
-host starts its fallback pop. Back routing snapshots raw destination pointers
-and generation values, never vector iterators or element references across a
-callback.
+Each successful lifecycle or history mutation increments a wrapping generation
+counter. Equality, rather than ordering, is the only operation on it. The
+counter detects a successful mutation performed by a destination callback
+before the outer operation resumes. Callback routing snapshots raw destination
+pointers and generation values, never vector iterators or element references
+across a callback.
 
 ### Back ordering and reentrancy
 
@@ -268,10 +370,10 @@ callback.
 
 The task callback is therefore the last-ditch handler for a navigation task at
 its root or with empty history; it does not override ordinary stack popping.
-The original `BackSource` reaches every callback unchanged. The host does not
-invoke lifecycle callbacks while attaching, hiding, surfacing, or removing
-destinations. Legacy compatibility tasks retain their existing activity Back
-behavior and do not use the task callback.
+The original `BackSource` reaches every callback unchanged. Lifecycle callbacks
+surround the attachment and history changes described above. Legacy
+compatibility tasks retain their existing activity Back behavior and do not use
+the task callback.
 
 ### TaskPanel ownership and surface semantics
 
@@ -315,10 +417,12 @@ allocations with an empty callback, assignment allocations for representative
 captureless and capturing callbacks, and warmed Back-dispatch allocations.
 
 A navigation task pays one external `NavigationHost`, its vector capacity at
-the observed history high-water mark, and one host pointer in each destination
-while it is installed. Push may allocate when history grows; replace, pop,
-Back, and clear do not allocate. The target report records direct,
-navigation-depth-two, and legacy-host costs separately.
+the observed history high-water mark, and one host pointer plus lifecycle state
+in each destination. `Destination` already has a vtable, so the four virtual
+no-op hooks add flash but no additional per-instance pointer. Push may allocate
+when history grows; replace, pop, Back, and clear do not allocate. The target
+report records direct, navigation-depth-two, destination-state, and legacy-host
+costs separately.
 
 ## Proposed API
 
@@ -327,13 +431,33 @@ using BackCallback = std::function<BackResult(BackSource)>;
 
 class Destination {
  public:
+  enum State {
+    INACTIVE,
+    STARTING,
+    RESUMING,
+    ACTIVE,
+    PAUSING,
+    PAUSED,
+    STOPPING,
+  };
+
   virtual ~Destination();
 
   virtual Widget& getContents() = 0;
+  NavigationHost* getNavigationHost();
+  UiTask* getUiTask();
+  Application* getApplication();
+  void exit();
+
   virtual BackResult onBackRequested(BackSource source);
+  virtual void onStart();
+  virtual void onResume();
+  virtual void onPause();
+  virtual void onStop();
 
  protected:
   Destination();
+  State state() const;
 };
 
 class NavigationHost {
@@ -371,6 +495,10 @@ The host must outlive its task. Task destruction detaches the current widget,
 clears the task Back callback and borrowed history entries, and disconnects the
 host; the host destructor checks that it is disconnected.
 
+`Destination` lives in `core/destination.h` with non-inline behavior in
+`core/destination.cpp`. `core/navigation_host.h` includes that public
+declaration and contains only history and transition coordination.
+
 ## Implementation Plan
 
 Implementation follows the
@@ -378,7 +506,7 @@ Implementation follows the
 and the
 [widget-authoring guidance](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
-### Phase 4a: add fixed direct content
+### Phase 4a: add fixed direct content (landed)
 
 1. Add direct task-creation APIs and specialize `TaskPanel` as a one-content
    surface-owning container.
@@ -402,9 +530,10 @@ This phase is complete when direct tasks require one borrowed widget, use no
 activity or history object, paint the task surface behind non-surface content,
 and warmed callback dispatch performs no allocation.
 
-Proposed commit: `refactor: add fixed direct ui task content`
+Landed in
+[`f7c3603`](https://github.com/dejwk/roo_windows/commit/f7c3603930501af374ef111c3a863e3fec6fe929).
 
-### Phase 4b: add borrowed optional navigation
+### Phase 4b: add borrowed optional navigation (landed)
 
 1. Add borrowed `Destination` and growable `NavigationHost` with direct command
    methods.
@@ -428,9 +557,43 @@ framework, only the current widget is attached, invalid commands fail through
 `CHECK` before mutation, task Back runs only after navigation is exhausted, and
 non-growing navigation operations do not allocate.
 
-Proposed commit: `feat: add borrowed task navigation`
+Landed in
+[`4cb02ff`](https://github.com/dejwk/roo_windows/commit/4cb02ff95245598bc31b0729e56e6ef58f83226f).
 
-### Phase 4c: isolate legacy activities
+### Phase 4c: add destination lifecycle
+
+1. Move `Destination` from `navigation_host.h/.cpp` into dedicated
+   `destination.h/.cpp` files and mirror the applicable `Activity` structure,
+   accessors, state, and default virtual hooks.
+2. Rename or privately scope the legacy `roo_windows::Destination` used by
+   `containers/navigation_rail.h` so the public task-destination type has no
+   namespace collision.
+3. Add Activity-compatible start, resume, pause, and stop sequencing to push,
+   pop, replace, clear, and task teardown.
+4. Generalize the landed Back generation checks into lifecycle-aware,
+   state-checked reentrancy without permitting navigation from incidental
+   structural-detachment callbacks.
+5. Extend `examples/simple/navigation` with asynchronous work tied separately
+   to history membership and current visibility.
+6. Add callback order, attachment observation, state, teardown, and reentrant
+   lifecycle tests, plus destination-size characterization.
+
+Focused validation:
+
+```sh
+bazel test //:navigation_host_test //:ui_task_test //:task_test \
+  //:display_runtime_characterization_test
+bazel build //examples:simple_navigation_example_build
+```
+
+This phase is complete when new destinations provide the lifecycle capabilities
+needed to migrate activity-based asynchronous work, callback order and
+attachment observations match `Activity`, supported callback navigation causes
+no duplicate transition, and destination size is recorded.
+
+Proposed commit: `feat: add navigation destination lifecycle`
+
+### Phase 4d: isolate legacy activities
 
 1. Move current activity behavior into `LegacyActivityNavigationHost`.
 2. Keep deprecated task creation and `Task` forwarding only for compatibility
@@ -458,10 +621,13 @@ Proposed commit: `refactor: isolate legacy activity navigation`
 and mode-specific preconditions. `navigation_host_test` covers borrowed
 lifetime, vector growth and retained capacity, attachment exclusivity,
 precondition death cases, supported Back reentrancy,
-destination/pop/task-callback Back ordering, and empty-history fallback.
+destination/pop/task-callback Back ordering, empty-history fallback, lifecycle
+state and callback order, callback attachment observations, teardown, and
+supported lifecycle reentrancy.
 Existing task tests exercise the legacy host. Allocation instrumentation
 distinguishes empty direct construction, callback assignment, warmed Back,
-history growth, and warmed navigation operations within retained capacity.
+history growth, warmed navigation operations within retained capacity, and the
+incremental destination-state size.
 
 A rendering test verifies that `TaskPanel` paints its themed surface behind a
 plain direct root that does not cover the entire task. Destination changes need
@@ -484,6 +650,12 @@ Applications are responsible for destination and widget lifetimes. Debug
 attachment checks make premature destruction fail close to the misuse, but
 the framework cannot make borrowed objects safe after their owners disappear.
 
+Lifecycle hooks make navigation mutations more complex than the landed Phase
+4b command guard. The state machine and generation checks are accepted because
+start/stop and resume/pause semantics are required to migrate applications that
+scope asynchronous work to a destination. Direct tasks retain no lifecycle
+state or callbacks.
+
 ### Rejected Alternatives
 
 #### Allow direct root replacement
@@ -505,6 +677,14 @@ Activity-like object.
 Rejected because application-owned destinations match the current `Activity`
 lifetime model, avoid `DestinationRef` and ownership metadata, and keep
 inactive screen state under application control.
+
+#### Omit destination lifecycle
+
+Rejected because Back and content alone cannot replace `Activity` for
+applications that start and stop asynchronous work as screens enter history or
+become current. A Compose-style observable lifecycle would add substantially
+more machinery; four Activity-compatible virtual hooks provide the required
+two lifetime scopes with no callback storage and no additional vtable pointer.
 
 #### Add Back handling to every widget
 
