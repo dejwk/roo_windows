@@ -169,7 +169,7 @@ Application app(&env, display, emulator_keys, true);
 Application app(&env, display);
 #endif
 SteppedFanSpeed stepped_fan_speed(app.context());
-UiTask& task = app.addUiTaskFullScreen(stepped_fan_speed);
+Task& task = app.addTaskFullScreen(stepped_fan_speed);
 
 void setup() {
   initDisplay();

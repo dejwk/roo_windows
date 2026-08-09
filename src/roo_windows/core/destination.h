@@ -6,7 +6,7 @@ namespace roo_windows {
 
 class Application;
 class NavigationHost;
-class UiTask;
+class Task;
 class Widget;
 
 /// An entry in a `NavigationHost` history.
@@ -26,6 +26,7 @@ class Destination {
     kPaused,
     kStopping
   };
+
   /// Destroys this detached destination.
   ///
   /// Destinations are borrowed by their host and must be removed from history
@@ -40,7 +41,7 @@ class Destination {
   NavigationHost* getNavigationHost() { return host_; }
 
   /// Returns the task this destination belongs to, or nullptr when detached.
-  UiTask* getUiTask();
+  Task* getTask();
 
   /// Returns the application this destination belongs to, or nullptr when
   /// detached.

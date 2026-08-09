@@ -91,7 +91,7 @@ TEST(DisplayRuntimeCharacterization, RefreshPaintsAndResumesInterruptedFrame) {
   NavigationHost navigation;
   Application app(&environment, display);
   ColorDestination destination(app.context());
-  app.addUiTaskFullScreen(navigation);
+  app.addTaskFullScreen(navigation);
   navigation.push(destination);
 
   EXPECT_FALSE(app.refresh(roo_time::Uptime::Start()));
@@ -122,7 +122,7 @@ TEST(DisplayRuntimeCharacterization, ScheduledTickRoutesKeySamplesAndActivation)
   NavigationHost navigation;
   Application app(&environment, display, keys, false);
   RecordingDestination destination(app.context());
-  app.addUiTaskFullScreen(navigation);
+  app.addTaskFullScreen(navigation);
   navigation.push(destination);
   ASSERT_TRUE(app.refresh());
   ASSERT_TRUE(destination.contents.requestFocus());
@@ -154,11 +154,11 @@ TEST(DisplayRuntimeCharacterization, DestructionStopsBorrowedDestinations) {
   {
     Application app(&environment, display);
     destination = new RecordingDestination(app.context());
-    app.addUiTaskFullScreen(navigation);
+    app.addTaskFullScreen(navigation);
     navigation.push(*destination);
     app.start();
   }
-  EXPECT_EQ(nullptr, destination->getUiTask());
+  EXPECT_EQ(nullptr, destination->getTask());
   EXPECT_EQ(1, destination->stop_count);
   scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 1);
   delete destination;

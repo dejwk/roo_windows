@@ -89,8 +89,8 @@ cc_test(
 )
 
 cc_test(
-    name = "ui_task_test",
-    srcs = ["test/ui_task_test.cpp"],
+    name = "navigation_task_test",
+    srcs = ["test/navigation_task_test.cpp"],
     linkstatic = 1,
     deps = [
         ":roo_windows",

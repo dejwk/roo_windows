@@ -8,7 +8,7 @@
 #include "roo_icons/filled/action.h"
 #include "roo_io/text/unicode.h"
 #include "roo_windows/config.h"
-#include "roo_windows/core/ui_task.h"
+#include "roo_windows/core/task.h"
 
 namespace roo_windows {
 
@@ -575,7 +575,7 @@ void TextFieldEditor::forwardDelete() {
 }
 
 void TextField::onFocusChanged(bool focused) {
-  UiTask* task = getUiTask();
+  Task* task = getTask();
   if (task == nullptr) return;
   TextFieldEditor& text_editor = task->textFieldEditor();
   if (focused) {
@@ -586,24 +586,24 @@ void TextField::onFocusChanged(bool focused) {
 }
 
 TextFieldEditor& TextField::editor() {
-  UiTask* task = getUiTask();
+  Task* task = getTask();
   CHECK_NOTNULL(task);
   return task->textFieldEditor();
 }
 
 const TextFieldEditor& TextField::editor() const {
-  const UiTask* task = getUiTask();
+  const Task* task = getTask();
   CHECK_NOTNULL(task);
   return task->textFieldEditor();
 }
 
 bool TextField::isEdited() const {
-  const UiTask* task = getUiTask();
+  const Task* task = getTask();
   return task != nullptr && task->textFieldEditor().isEdited(this);
 }
 
 void TextField::edit() {
-  UiTask* task = getUiTask();
+  Task* task = getTask();
   if (task != nullptr) task->textFieldEditor().edit(this);
 }
 
@@ -617,7 +617,7 @@ void TextField::setEditable(bool editable) {
 bool TextField::onKeyEvent(const KeyEvent& event) {
   if (!editable_ ||
       (event.phase != KeyPhase::kDown && event.phase != KeyPhase::kRepeat) ||
-      getUiTask() == nullptr) {
+      getTask() == nullptr) {
     return false;
   }
   TextFieldEditor& text_editor = editor();

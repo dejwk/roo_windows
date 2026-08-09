@@ -42,7 +42,7 @@ EditTextField::EditTextField(ApplicationContext& context,
   back_.setContentColor(
       context.theme().framework.color.resolve(FrameworkColorRole::kContent));
   back_.setOnInteractiveChange([&]() {
-    getUiTask()->requestBack(BackSource::kNavigationButton);
+    getTask()->requestBack(BackSource::kNavigationButton);
   });
   enter_.setOnInteractiveChange([&]() { confirm(); });
 }
@@ -83,7 +83,7 @@ void EditTextField::triggerEdit(
 }
 
 void EditTextField::triggerEditField(TextField& field) {
-  UiTask* task = field.getUiTask();
+  Task* task = field.getTask();
   CHECK(task != nullptr);
   CHECK(task->navigationHost() != nullptr);
   triggerEdit(*task->navigationHost(), field.content(), field.hint(),

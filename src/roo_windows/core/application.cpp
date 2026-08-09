@@ -18,13 +18,13 @@ Application::Application(const Environment* env, roo_display::Display& display)
   roo_display::Box keyboard_bounds(0, window_.root().height() / 2,
                                    window_.root().width() - 1,
                                    window_.root().height() - 1);
-  auto keyboard_task = std::unique_ptr<UiTask>(new UiTask(
+  auto keyboard_task = std::unique_ptr<Task>(new Task(
       *this, window_, keyboard_bounds, true, keyboard_, keyboard_.getContents()));
-  keyboard_.setUiTask(*keyboard_task);
+  keyboard_.setTask(*keyboard_task);
   keyboard_task->setVisible(false);
-  ui_tasks_.push_back(std::move(keyboard_task));
+  tasks_.push_back(std::move(keyboard_task));
   if (pending_key_source_ != nullptr) {
-    ui_tasks_.front()->attachKeySource(*pending_key_source_);
+    tasks_.front()->attachKeySource(*pending_key_source_);
   }
 }
 
@@ -39,20 +39,20 @@ Application::Application(const Environment* env, roo_display::Display& display,
   roo_display::Box keyboard_bounds(0, window_.root().height() / 2,
                                    window_.root().width() - 1,
                                    window_.root().height() - 1);
-  auto keyboard_task = std::unique_ptr<UiTask>(new UiTask(
+  auto keyboard_task = std::unique_ptr<Task>(new Task(
       *this, window_, keyboard_bounds, true, keyboard_, keyboard_.getContents()));
-  keyboard_.setUiTask(*keyboard_task);
+  keyboard_.setTask(*keyboard_task);
   keyboard_task->setVisible(false);
-  ui_tasks_.push_back(std::move(keyboard_task));
+  tasks_.push_back(std::move(keyboard_task));
   if (pending_key_source_ != nullptr) {
-    ui_tasks_.front()->attachKeySource(*pending_key_source_);
+    tasks_.front()->attachKeySource(*pending_key_source_);
   }
 }
 
 Application::~Application() {
   ticker_.cancel();
   window_.stop();
-  ui_tasks_.clear();
+  tasks_.clear();
 }
 
 void Application::add(WidgetRef child, const roo_display::Box& box) {
@@ -80,7 +80,7 @@ void Application::tick() {
   // exclusions were preserved. Advance animation again after it completes.
   window_.advanceFrameState();
   bool key_events_pending = false;
-  for (const std::unique_ptr<UiTask>& task : ui_tasks_) {
+  for (const std::unique_ptr<Task>& task : tasks_) {
     key_events_pending = task->drainKeyEvents() || key_events_pending;
   }
   bool touch_active = false;
@@ -98,13 +98,12 @@ bool Application::refresh(roo_time::Uptime deadline) {
   return window_.refresh(deadline);
 }
 
-UiTask& Application::addUiTask(Widget& content,
-                               const roo_display::Box& bounds) {
+Task& Application::addTask(Widget& content, const roo_display::Box& bounds) {
   CHECK(content.parent() == nullptr);
-  UiTask* task = new UiTask(*this, window_, bounds, false, keyboard_, content);
-  ui_tasks_.emplace_back(task);
+  Task* task = new Task(*this, window_, bounds, false, keyboard_, content);
+  tasks_.emplace_back(task);
   if (pending_key_source_ != nullptr) {
-    for (const std::unique_ptr<UiTask>& candidate : ui_tasks_) {
+    for (const std::unique_ptr<Task>& candidate : tasks_) {
       candidate->detachKeySource();
     }
     task->attachKeySource(*pending_key_source_);
@@ -112,18 +111,17 @@ UiTask& Application::addUiTask(Widget& content,
   return *task;
 }
 
-UiTask& Application::addUiTaskFullScreen(Widget& content) {
-  return addUiTask(content, window_.display().extents());
+Task& Application::addTaskFullScreen(Widget& content) {
+  return addTask(content, window_.display().extents());
 }
 
-UiTask& Application::addUiTask(NavigationHost& navigation,
-                               const roo_display::Box& bounds) {
+Task& Application::addTask(NavigationHost& navigation,
+                           const roo_display::Box& bounds) {
   CHECK(navigation.task_ == nullptr);
-  UiTask* task =
-      new UiTask(*this, window_, bounds, false, keyboard_, navigation);
-  ui_tasks_.emplace_back(task);
+  Task* task = new Task(*this, window_, bounds, false, keyboard_, navigation);
+  tasks_.emplace_back(task);
   if (pending_key_source_ != nullptr) {
-    for (const std::unique_ptr<UiTask>& candidate : ui_tasks_) {
+    for (const std::unique_ptr<Task>& candidate : tasks_) {
       candidate->detachKeySource();
     }
     task->attachKeySource(*pending_key_source_);
@@ -131,8 +129,8 @@ UiTask& Application::addUiTask(NavigationHost& navigation,
   return *task;
 }
 
-UiTask& Application::addUiTaskFullScreen(NavigationHost& navigation) {
-  return addUiTask(navigation, window_.display().extents());
+Task& Application::addTaskFullScreen(NavigationHost& navigation) {
+  return addTask(navigation, window_.display().extents());
 }
 
 PresentationStartResult Application::showDialog(

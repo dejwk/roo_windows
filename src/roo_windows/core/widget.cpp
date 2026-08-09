@@ -9,7 +9,7 @@
 #include "roo_windows/core/panel.h"
 #include "roo_windows/core/press_overlay.h"
 #include "roo_windows/core/rtti.h"
-#include "roo_windows/core/ui_task.h"
+#include "roo_windows/core/task.h"
 #include "roo_windows/material3/theme.h"
 
 #ifndef MLOG_roo_windows_layout
@@ -81,21 +81,21 @@ const MainWindow* Widget::getMainWindow() const {
   return parent_->getMainWindow();
 }
 
-UiTask* Widget::getUiTask() {
-  return parent_ == nullptr ? nullptr : parent_->getUiTask();
+Task* Widget::getTask() {
+  return parent_ == nullptr ? nullptr : parent_->getTask();
 }
 
-const UiTask* Widget::getUiTask() const {
-  return parent_ == nullptr ? nullptr : parent_->getUiTask();
+const Task* Widget::getTask() const {
+  return parent_ == nullptr ? nullptr : parent_->getTask();
 }
 
 FocusManager& Widget::focusManager() {
-  UiTask* task = getUiTask();
+  Task* task = getTask();
   return task != nullptr ? task->focus() : context_.focus();
 }
 
 const FocusManager& Widget::focusManager() const {
-  const UiTask* task = getUiTask();
+  const Task* task = getTask();
   return task != nullptr ? task->focus() : context_.focus();
 }
 

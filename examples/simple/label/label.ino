@@ -93,7 +93,7 @@ TextLabel label(app.context(), "Hello World!", material2::text_style_caption(),
 
 void setup() {
   initDisplay();
-  app.addUiTaskFullScreen(label);
+  app.addTaskFullScreen(label);
   app.start();
 
   // Never exits.

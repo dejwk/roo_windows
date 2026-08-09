@@ -148,7 +148,7 @@ roo_scheduler::Scheduler scheduler;
 Environment env(scheduler);
 Application app(&env, display);
 DashboardGrid dashboard_grid(app.context());
-UiTask& task = app.addUiTaskFullScreen(dashboard_grid);
+Task& task = app.addTaskFullScreen(dashboard_grid);
 
 void setup() {
   initDisplay();

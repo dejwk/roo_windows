@@ -1,4 +1,4 @@
-#include "roo_windows/core/ui_task.h"
+#include "roo_windows/core/task.h"
 
 #include "roo_logging.h"
 #include "roo_windows/core/application.h"
@@ -18,7 +18,7 @@ bool IsInSubtree(const Widget& candidate, const Widget& subtree) {
 }
 }  // namespace
 
-UiTask::UiTask(Application& app, DisplayWindow& window,
+Task::Task(Application& app, DisplayWindow& window,
                const roo_display::Box& bounds, bool popup, Keyboard& keyboard,
                Widget& content)
     : app_(app),
@@ -36,7 +36,7 @@ UiTask::UiTask(Application& app, DisplayWindow& window,
   }
 }
 
-UiTask::UiTask(Application& app, DisplayWindow& window,
+Task::Task(Application& app, DisplayWindow& window,
                const roo_display::Box& bounds, bool popup, Keyboard& keyboard,
                NavigationHost& navigation)
     : app_(app),
@@ -54,7 +54,7 @@ UiTask::UiTask(Application& app, DisplayWindow& window,
   }
 }
 
-UiTask::~UiTask() {
+Task::~Task() {
   detachKeySource();
   back_callback_ = {};
   editor_.cancel();
@@ -71,15 +71,15 @@ UiTask::~UiTask() {
   }
 }
 
-void UiTask::setBackCallback(BackCallback callback) {
+void Task::setBackCallback(BackCallback callback) {
   back_callback_ = std::move(callback);
 }
 
-void UiTask::setVisible(bool visible) {
+void Task::setVisible(bool visible) {
   panel_.setVisibility(visible ? Visibility::kVisible : Visibility::kGone);
 }
 
-KeySourceAttachmentResult UiTask::attachKeySource(KeySource& source) {
+KeySourceAttachmentResult Task::attachKeySource(KeySource& source) {
   if (!app_.isUiThread()) return KeySourceAttachmentResult::kWrongThread;
   if (source.attached_task_ != nullptr) {
     return KeySourceAttachmentResult::kSourceAlreadyAttached;
@@ -92,17 +92,17 @@ KeySourceAttachmentResult UiTask::attachKeySource(KeySource& source) {
   return KeySourceAttachmentResult::kAttached;
 }
 
-void UiTask::detachKeySource() {
+void Task::detachKeySource() {
   if (key_source_ == nullptr) return;
   key_source_->attached_task_ = nullptr;
   key_source_ = nullptr;
 }
 
-void UiTask::onKeySourceDestroyed(KeySource& source) {
+void Task::onKeySourceDestroyed(KeySource& source) {
   if (key_source_ == &source) key_source_ = nullptr;
 }
 
-BackResult UiTask::requestBack(BackSource source) {
+BackResult Task::requestBack(BackSource source) {
   if (window_.root().transient_presentation_slot().requestBack(source) ==
       BackResult::kHandled) {
     return BackResult::kHandled;
@@ -111,22 +111,22 @@ BackResult UiTask::requestBack(BackSource source) {
   return requestTaskBackCallback(source);
 }
 
-void UiTask::attachNavigationContent(Widget& content) {
+void Task::attachNavigationContent(Widget& content) {
   CHECK(navigation_ != nullptr);
   panel_.setContent(content, roo_display::Box(0, 0, -1, -1));
 }
 
-void UiTask::detachNavigationContent() {
+void Task::detachNavigationContent() {
   CHECK(navigation_ != nullptr);
   panel_.clearContent();
 }
 
-BackResult UiTask::requestTaskBackCallback(BackSource source) {
+BackResult Task::requestTaskBackCallback(BackSource source) {
   return back_callback_ == nullptr ? BackResult::kUnhandled
                                    : back_callback_(source);
 }
 
-bool UiTask::drainKeyEvents() {
+bool Task::drainKeyEvents() {
   if (key_source_ == nullptr) return false;
   KeyEvent events[kKeyDrainBatchSize];
   for (int batch = 0; batch < kMaxKeyDrainBatchesPerTick; ++batch) {
@@ -139,7 +139,7 @@ bool UiTask::drainKeyEvents() {
   return true;
 }
 
-void UiTask::dispatchKeyEvent(const KeyEvent& event) {
+void Task::dispatchKeyEvent(const KeyEvent& event) {
   if (event.phase == KeyPhase::kDown &&
       (event.code == KeyCode::kBack || event.code == KeyCode::kEscape)) {
     BackSource source = event.code == KeyCode::kBack ? BackSource::kBackKey
@@ -153,7 +153,7 @@ void UiTask::dispatchKeyEvent(const KeyEvent& event) {
   }
   Widget* focused = focus_.focused();
   // Application::add() remains a legacy structural path that does not create
-  // a UiTask. Preserve its context-scoped keyboard routing until that API is
+  // a Task. Preserve its context-scoped keyboard routing until that API is
   // retired; attached UI tasks always use their local focus first.
   if (focused == nullptr) focused = app_.context().focus().focused();
   if (focused == nullptr) return;
@@ -199,7 +199,7 @@ void UiTask::dispatchKeyEvent(const KeyEvent& event) {
   }
 }
 
-void UiTask::onSubtreeDetaching(Widget& subtree) {
+void Task::onSubtreeDetaching(Widget& subtree) {
   if (armed_key_widget_ != nullptr &&
       IsInSubtree(*armed_key_widget_, subtree)) {
     armed_key_widget_ = nullptr;

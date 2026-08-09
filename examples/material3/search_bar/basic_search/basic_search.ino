@@ -131,7 +131,7 @@ roo_scheduler::Scheduler scheduler;
 Environment env(scheduler);
 Application app(&env, display);
 EquipmentSearch equipment_search(app.context());
-UiTask& task = app.addUiTaskFullScreen(equipment_search);
+Task& task = app.addTaskFullScreen(equipment_search);
 
 void setup() {
   initDisplay();

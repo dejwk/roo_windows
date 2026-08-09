@@ -4,7 +4,7 @@
 
 namespace roo_windows {
 
-class UiTask;
+class Task;
 
 /// Physical or text key understood by the framework's non-touch input path.
 enum class KeyCode : uint8_t {
@@ -62,8 +62,8 @@ class KeySource {
   virtual int drain(KeyEvent* out, int max_events) = 0;
 
  private:
-  friend class UiTask;
-  UiTask* attached_task_ = nullptr;
+  friend class Task;
+  Task* attached_task_ = nullptr;
 };
 
 }  // namespace roo_windows

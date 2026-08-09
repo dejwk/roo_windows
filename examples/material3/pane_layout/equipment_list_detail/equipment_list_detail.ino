@@ -149,7 +149,7 @@ Application app(&env, display, emulator_keys, true);
 Application app(&env, display);
 #endif
 EquipmentListDetail equipment(app.context());
-UiTask& task = app.addUiTaskFullScreen(equipment);
+Task& task = app.addTaskFullScreen(equipment);
 void setup() {
   initDisplay();
   app.start();

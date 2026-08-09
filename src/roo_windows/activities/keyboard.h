@@ -31,7 +31,7 @@ class KeyboardListener {
 };
 
 class KeyboardWidget;
-class UiTask;
+class Task;
 
 /// On-screen software keyboard widget controller.
 ///
@@ -54,7 +54,7 @@ class Keyboard {
 
   /// Routes future key events to the supplied listener (may be nullptr).
   void setListener(KeyboardListener* listener);
-  void setUiTask(UiTask& task) { task_ = &task; }
+  void setTask(Task& task) { task_ = &task; }
 
   /// Makes the fixed keyboard popup visible.
   void show();
@@ -73,7 +73,7 @@ class Keyboard {
   const KeyboardWidget* contents() const;
 
   std::unique_ptr<Widget> contents_;
-  UiTask* task_ = nullptr;
+  Task* task_ = nullptr;
 };
 
 }  // namespace roo_windows

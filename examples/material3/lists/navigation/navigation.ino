@@ -147,7 +147,7 @@ Application app(&env, display, emulator_keys, true);
 Application app(&env, display);
 #endif
 EquipmentNavigation equipment_navigation(app.context());
-UiTask& task = app.addUiTaskFullScreen(equipment_navigation);
+Task& task = app.addTaskFullScreen(equipment_navigation);
 
 void setup() {
   initDisplay();

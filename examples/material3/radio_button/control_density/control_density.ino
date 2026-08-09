@@ -193,7 +193,7 @@ Application app(&env, display, emulator_keys, true);
 Application app(&env, display);
 #endif
 ControlDensity control_density(app.context());
-UiTask& task = app.addUiTaskFullScreen(control_density);
+Task& task = app.addTaskFullScreen(control_density);
 
 void setup() {
   initDisplay();

@@ -164,7 +164,7 @@ Application app(&env, display, emulator_keys, true);
 Application app(&env, display);
 #endif
 NotificationCount notification_count(app.context());
-UiTask& task = app.addUiTaskFullScreen(notification_count);
+Task& task = app.addTaskFullScreen(notification_count);
 
 void setup() {
   initDisplay();

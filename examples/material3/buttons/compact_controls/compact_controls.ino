@@ -167,7 +167,7 @@ Application app(&env, display, emulator_keys, true);
 Application app(&env, display);
 #endif
 CompactControls compact_controls(app.context());
-UiTask& task = app.addUiTaskFullScreen(compact_controls);
+Task& task = app.addTaskFullScreen(compact_controls);
 
 void setup() {
   initDisplay();

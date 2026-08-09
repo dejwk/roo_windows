@@ -121,7 +121,7 @@ Application app(&env, display, emulator_keys, true);
 Application app(&env, display);
 #endif
 PoolDashboard dashboard(app.context());
-UiTask& task = app.addUiTaskFullScreen(dashboard);
+Task& task = app.addTaskFullScreen(dashboard);
 void setup() {
   initDisplay();
   app.start();

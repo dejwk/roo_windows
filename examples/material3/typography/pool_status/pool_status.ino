@@ -137,7 +137,7 @@ Application app(&env, display, emulator_keys, true);
 Application app(&env, display);
 #endif
 PoolStatus pool_status(app.context());
-UiTask& task = app.addUiTaskFullScreen(pool_status);
+Task& task = app.addTaskFullScreen(pool_status);
 
 void setup() {
   initDisplay();

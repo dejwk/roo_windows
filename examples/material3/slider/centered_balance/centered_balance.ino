@@ -168,7 +168,7 @@ Application app(&env, display, emulator_keys, true);
 Application app(&env, display);
 #endif
 CenteredBalance centered_balance(app.context());
-UiTask& task = app.addUiTaskFullScreen(centered_balance);
+Task& task = app.addTaskFullScreen(centered_balance);
 
 void setup() {
   initDisplay();

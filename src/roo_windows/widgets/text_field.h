@@ -83,9 +83,9 @@ class VisibilityToggle : public BasicWidget {
   OnOffState state_;
 };
 
-/// Shared editing controller for the `TextField` widgets in one `UiTask`.
+/// Shared editing controller for the `TextField` widgets in one `Task`.
 ///
-/// One editor is owned by each `UiTask` and bound to whichever `TextField`
+/// One editor is owned by each `Task` and bound to whichever `TextField`
 /// currently has focus in that task. It receives keyboard input as a
 /// `KeyboardListener`, maintains the cursor position, selection range, glyph
 /// metrics cache, and horizontal scroll offset, and drives cursor blinking

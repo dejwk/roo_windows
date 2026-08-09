@@ -188,7 +188,7 @@ Application app(&env, display, emulator_keys, true);
 Application app(&env, display);
 #endif
 AdaptivePoolController pool_controller(app.context());
-UiTask& task = app.addUiTaskFullScreen(pool_controller);
+Task& task = app.addTaskFullScreen(pool_controller);
 void setup() {
   initDisplay();
   app.start();

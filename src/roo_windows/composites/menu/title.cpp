@@ -1,7 +1,7 @@
 #include "roo_windows/composites/menu/title.h"
 
 #include "roo_icons/outlined/navigation.h"
-#include "roo_windows/core/ui_task.h"
+#include "roo_windows/core/task.h"
 
 namespace roo_windows {
 namespace menu {
@@ -17,7 +17,7 @@ Title::Title(ApplicationContext& context, std::string title)
   add(back_);
   add(label_, {weight : 1});
   back_.setOnInteractiveChange([&]() {
-    getUiTask()->requestBack(BackSource::kNavigationButton);
+    getTask()->requestBack(BackSource::kNavigationButton);
   });
 }
 

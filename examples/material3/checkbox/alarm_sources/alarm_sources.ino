@@ -171,7 +171,7 @@ Application app(&env, display, emulator_keys, true);
 Application app(&env, display);
 #endif
 AlarmSources alarm_sources(app.context());
-UiTask& task = app.addUiTaskFullScreen(alarm_sources);
+Task& task = app.addTaskFullScreen(alarm_sources);
 
 void setup() {
   initDisplay();

@@ -184,7 +184,7 @@ TEST(KeySource, HardwareEscapeUsesFocusedTask) {
   QueuedKeySource keys({{KeyPhase::kDown, KeyCode::kEscape, 0, 0}});
   NavigationHost navigation;
   Application app(&environment, display, keys, false);
-  UiTask& task = app.addUiTaskFullScreen(navigation);
+  Task& task = app.addTaskFullScreen(navigation);
   BackDestination root(app.context());
   BackDestination child(app.context());
   navigation.push(root);
@@ -234,7 +234,7 @@ TEST(KeySource, UnhandledRootEscapeCancelsFocusedEditor) {
   QueuedKeySource keys({{KeyPhase::kDown, KeyCode::kEscape, 0, 0}});
   NavigationHost navigation;
   Application app(&environment, display, keys, false);
-  UiTask& task = app.addUiTaskFullScreen(navigation);
+  Task& task = app.addTaskFullScreen(navigation);
   TextFieldDestination destination(app.context(), task.textFieldEditor());
   navigation.push(destination);
   app.refresh();
@@ -261,7 +261,7 @@ TEST(KeySource, UnhandledRootEscapeFromFocusedTabBubblesToTabHost) {
   QueuedKeySource keys({{KeyPhase::kDown, KeyCode::kEscape, 0, 0}});
   NavigationHost navigation;
   Application app(&environment, display, keys, false);
-  UiTask& task = app.addUiTaskFullScreen(navigation);
+  Task& task = app.addTaskFullScreen(navigation);
   TabsDestination destination(app.context());
   navigation.push(destination);
   app.refresh();

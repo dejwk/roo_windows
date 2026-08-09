@@ -11,7 +11,7 @@
 #include "roo_windows/core/display_window.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/key_source.h"
-#include "roo_windows/core/ui_task.h"
+#include "roo_windows/core/task.h"
 #include "roo_windows/widgets/text_field.h"
 
 namespace roo_windows {
@@ -79,15 +79,15 @@ class Application {
   /// Creates a display-local direct-content task in the normal layer. The
   /// caller retains ownership of `content`, which must remain unattached and
   /// outlive the returned task.
-  UiTask& addUiTask(Widget& content, const roo_display::Box& bounds);
+  Task& addTask(Widget& content, const roo_display::Box& bounds);
   /// Creates a display-local direct-content task filling the display.
-  UiTask& addUiTaskFullScreen(Widget& content);
+  Task& addTaskFullScreen(Widget& content);
 
   /// Creates a display-local navigation task in the normal layer. The caller
   /// retains ownership of `navigation`, which must outlive the returned task.
-  UiTask& addUiTask(NavigationHost& navigation, const roo_display::Box& bounds);
+  Task& addTask(NavigationHost& navigation, const roo_display::Box& bounds);
   /// Creates a display-local navigation task filling the display.
-  UiTask& addUiTaskFullScreen(NavigationHost& navigation);
+  Task& addTaskFullScreen(NavigationHost& navigation);
 
   /// Shows a modal dialog. Dialogs are centered and scrim the screen behind
   /// them. The callback gets called with the index of the option (e.g.
@@ -160,7 +160,7 @@ class Application {
   ApplicationContext context_;
 
   Keyboard keyboard_;
-  std::vector<std::unique_ptr<UiTask>> ui_tasks_;
+  std::vector<std::unique_ptr<Task>> tasks_;
   KeySource* pending_key_source_ = nullptr;
 
   DisplayWindow window_;

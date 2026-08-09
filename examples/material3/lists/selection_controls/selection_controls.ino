@@ -198,7 +198,7 @@ Application app(&env, display, emulator_keys, true);
 Application app(&env, display);
 #endif
 SelectionControls selection_controls(app.context());
-UiTask& task = app.addUiTaskFullScreen(selection_controls);
+Task& task = app.addTaskFullScreen(selection_controls);
 
 void setup() {
   initDisplay();

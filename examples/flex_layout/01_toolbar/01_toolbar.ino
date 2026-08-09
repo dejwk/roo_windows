@@ -125,7 +125,7 @@ roo_scheduler::Scheduler scheduler;
 Environment env(scheduler);
 Application app(&env, display);
 Toolbar toolbar(app.context());
-UiTask& task = app.addUiTaskFullScreen(toolbar);
+Task& task = app.addTaskFullScreen(toolbar);
 
 void setup() {
   initDisplay();

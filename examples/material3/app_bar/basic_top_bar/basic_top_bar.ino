@@ -140,7 +140,7 @@ roo_scheduler::Scheduler scheduler;
 Environment env(scheduler);
 Application app(&env, display);
 PoolOverview pool_overview(app.context());
-UiTask& task = app.addUiTaskFullScreen(pool_overview);
+Task& task = app.addTaskFullScreen(pool_overview);
 
 void setup() {
   initDisplay();

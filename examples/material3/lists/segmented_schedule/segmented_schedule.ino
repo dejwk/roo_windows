@@ -152,7 +152,7 @@ Application app(&env, display, emulator_keys, true);
 Application app(&env, display);
 #endif
 CirculationSchedule circulation_schedule(app.context());
-UiTask& task = app.addUiTaskFullScreen(circulation_schedule);
+Task& task = app.addTaskFullScreen(circulation_schedule);
 
 void setup() {
   initDisplay();

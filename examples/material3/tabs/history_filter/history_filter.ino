@@ -158,7 +158,7 @@ Application app(&env, display, emulator_keys, true);
 Application app(&env, display);
 #endif
 TemperatureHistory temperature_history(app.context());
-UiTask& task = app.addUiTaskFullScreen(temperature_history);
+Task& task = app.addTaskFullScreen(temperature_history);
 
 void setup() {
   initDisplay();

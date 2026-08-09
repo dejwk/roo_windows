@@ -1,7 +1,7 @@
 #include "roo_windows/core/navigation_host.h"
 
 #include "roo_logging.h"
-#include "roo_windows/core/ui_task.h"
+#include "roo_windows/core/task.h"
 #include "roo_windows/core/widget.h"
 
 namespace roo_windows {
@@ -25,7 +25,7 @@ bool NavigationHost::attached(Destination& destination) const {
 void NavigationHost::beginCallback() { ++lifecycle_callback_depth_; }
 void NavigationHost::endCallback() { --lifecycle_callback_depth_; }
 
-void NavigationHost::install(UiTask& task) {
+void NavigationHost::install(Task& task) {
   CHECK(task_ == nullptr);
   CHECK(history_.empty());
   task_ = &task;

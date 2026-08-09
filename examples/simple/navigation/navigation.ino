@@ -97,7 +97,7 @@ void setup() {
 
   // The application owns the host and both destinations. The framework only
   // attaches the current destination's widget, so inactive roots stay detached.
-  app.addUiTaskFullScreen(navigation);
+  app.addTaskFullScreen(navigation);
   navigation.push(home);
   navigation.push(details);
 

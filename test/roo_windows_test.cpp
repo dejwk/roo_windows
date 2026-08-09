@@ -295,7 +295,7 @@ TEST(Windows, TextFieldEditsFromHardwareKeys) {
   Environment env(scheduler);
   NavigationHost navigation;
   Application app(&env, display);
-  UiTask& task = app.addUiTaskFullScreen(navigation);
+  Task& task = app.addTaskFullScreen(navigation);
   TextFieldDestination destination(app.context(), task.textFieldEditor());
   navigation.push(destination);
   app.refresh();

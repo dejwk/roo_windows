@@ -90,7 +90,7 @@ TEST(NavigationHost, PushPopAndClearBorrowDestinationContents) {
     Application app(&environment, display);
     first = new TestDestination(app.context());
     second = new TestDestination(app.context());
-    app.addUiTaskFullScreen(navigation);
+    app.addTaskFullScreen(navigation);
     navigation.push(*first);
     EXPECT_EQ(1u, navigation.depth());
     EXPECT_NE(nullptr, first->contents().parent());
@@ -127,7 +127,7 @@ TEST(NavigationHost, BackRoutesDestinationThenHistoryThenTask) {
     Application app(&environment, display);
     first = new TestDestination(app.context());
     second = new TestDestination(app.context());
-    UiTask& task = app.addUiTaskFullScreen(navigation);
+    Task& task = app.addTaskFullScreen(navigation);
     task.setBackCallback([&fallback_called](BackSource source) {
       fallback_called = source == BackSource::kNavigationButton;
       return BackResult::kHandled;
@@ -163,7 +163,7 @@ TEST(NavigationHost, ReentrantDestinationBackPerformsOnlyOneStep) {
   {
     Application app(&environment, display);
     next = new TestDestination(app.context());
-    UiTask& task = app.addUiTaskFullScreen(navigation);
+    Task& task = app.addTaskFullScreen(navigation);
     current = new ReentrantDestination(app.context(), navigation, *next);
     navigation.push(*current);
 
@@ -192,7 +192,7 @@ TEST(NavigationHost, DestinationLifecycleFollowsHistoryAndCurrentContent) {
     Application app(&environment, display);
     first = new LifecycleDestination(app.context(), events, 'A');
     second = new LifecycleDestination(app.context(), events, 'B');
-    app.addUiTaskFullScreen(navigation);
+    app.addTaskFullScreen(navigation);
     navigation.push(*first);
     navigation.push(*second);
     navigation.pop();

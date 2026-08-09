@@ -67,8 +67,8 @@ TEST(Application, RequestBackUsesExplicitTargetTask) {
   NavigationHost first_navigation;
   NavigationHost second_navigation;
   Application app(&environment, display);
-  UiTask& first_task = app.addUiTaskFullScreen(first_navigation);
-  UiTask& second_task = app.addUiTaskFullScreen(second_navigation);
+  Task& first_task = app.addTaskFullScreen(first_navigation);
+  Task& second_task = app.addTaskFullScreen(second_navigation);
   TestDestination first_root(app.context());
   TestDestination first_child(app.context());
   TestDestination second_root(app.context());
@@ -100,7 +100,7 @@ TEST(Application, RequestBackPrioritizesTransientPresentation) {
   Environment environment(scheduler);
   NavigationHost navigation;
   Application app(&environment, display);
-  UiTask& task = app.addUiTaskFullScreen(navigation);
+  Task& task = app.addTaskFullScreen(navigation);
   TestDestination root(app.context());
   TestDestination child(app.context());
   navigation.push(root);

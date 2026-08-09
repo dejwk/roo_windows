@@ -137,7 +137,7 @@ class MyPane : public VerticalLayout {
 };
 
 MyPane my_pane(app.context());
-UiTask& task = app.addUiTaskFullScreen(my_pane);
+Task& task = app.addTaskFullScreen(my_pane);
 
 void setup() {
   initDisplay();

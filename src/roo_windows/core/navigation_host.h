@@ -8,11 +8,11 @@
 namespace roo_windows {
 
 class NavigationHost;
-class UiTask;
+class Task;
 class Widget;
 class Application;
 
-/// Optional, caller-owned navigation history for one `UiTask`.
+/// Optional, caller-owned navigation history for one `Task`.
 ///
 /// The host borrows every `Destination` and its contents. It stores history in
 /// a growable vector; only `push()` may allocate after its retained capacity
@@ -44,10 +44,10 @@ class NavigationHost {
   size_t depth() const { return history_.size(); }
 
   /// Returns this host's task while installed, otherwise nullptr.
-  UiTask* getUiTask() const { return task_; }
+  Task* getTask() const { return task_; }
 
  private:
-  friend class UiTask;
+  friend class Task;
   friend class Application;
   friend class Destination;
 
@@ -56,7 +56,7 @@ class NavigationHost {
   Destination* current() const {
     return history_.empty() ? nullptr : history_.back();
   }
-  void install(UiTask& task);
+  void install(Task& task);
   void disconnect();
   bool mayMutate() const;
   bool attached(Destination& destination) const;
@@ -73,7 +73,7 @@ class NavigationHost {
   bool startAndResume(Destination& destination);
 
   /// Borrowed task that installs this host; null while disconnected.
-  UiTask* task_ = nullptr;
+  Task* task_ = nullptr;
   /// Borrowed destinations in history order, with the current entry at back.
   std::vector<Destination*> history_;
   /// Changes after a successful command so an outer callback can detect that

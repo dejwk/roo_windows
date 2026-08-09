@@ -191,7 +191,7 @@ Application app(&env, display, emulator_keys, true);
 Application app(&env, display);
 #endif
 ChargingLevel charging_level(app.context());
-UiTask& task = app.addUiTaskFullScreen(charging_level);
+Task& task = app.addTaskFullScreen(charging_level);
 
 void setup() {
   initDisplay();

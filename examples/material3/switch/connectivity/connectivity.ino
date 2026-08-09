@@ -170,7 +170,7 @@ Application app(&env, display, emulator_keys, true);
 Application app(&env, display);
 #endif
 Connectivity connectivity(app.context());
-UiTask& task = app.addUiTaskFullScreen(connectivity);
+Task& task = app.addTaskFullScreen(connectivity);
 
 void setup() {
   initDisplay();

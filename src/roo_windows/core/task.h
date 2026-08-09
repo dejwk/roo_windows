@@ -21,15 +21,15 @@ enum class KeySourceAttachmentResult : uint8_t {
 };
 
 /// Owns task-local focus, editing, input routing, and fixed direct content.
-class UiTask {
+class Task {
  public:
   using BackCallback = std::function<BackResult(BackSource)>;
-  ~UiTask();
+  ~Task();
 
-  UiTask(const UiTask&) = delete;
-  UiTask& operator=(const UiTask&) = delete;
-  UiTask(UiTask&&) = delete;
-  UiTask& operator=(UiTask&&) = delete;
+  Task(const Task&) = delete;
+  Task& operator=(const Task&) = delete;
+  Task(Task&&) = delete;
+  Task& operator=(Task&&) = delete;
 
   /// Returns the permanently attached display window.
   DisplayWindow& window() { return window_; }
@@ -71,10 +71,10 @@ class UiTask {
   friend class NavigationHost;
   friend class Keyboard;
 
-  UiTask(Application& app, DisplayWindow& window,
+  Task(Application& app, DisplayWindow& window,
          const roo_display::Box& bounds, bool popup, Keyboard& keyboard,
          Widget& content);
-  UiTask(Application& app, DisplayWindow& window,
+  Task(Application& app, DisplayWindow& window,
          const roo_display::Box& bounds, bool popup, Keyboard& keyboard,
          NavigationHost& navigation);
 

@@ -97,7 +97,7 @@ auto pie = SmoothPie({0, 0}, 40, 0, M_PI / 6,
                      app.context().theme().color.primaryVariant);
 Image img(app.context(), pie);
 
-UiTask& task = app.addUiTaskFullScreen(img);
+Task& task = app.addTaskFullScreen(img);
 
 void setup() {
   initDisplay();

@@ -487,7 +487,7 @@ SliderScreen slider_screen(env);
 
 void setup() {
   initDisplay();
-  app.addUiTaskFullScreen(slider_screen);
+  app.addTaskFullScreen(slider_screen);
   app.start();
 
   // Never exits.

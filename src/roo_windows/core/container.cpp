@@ -7,7 +7,7 @@
 #include "roo_display/shape/basic.h"
 #include "roo_logging.h"
 #include "roo_windows/core/main_window.h"
-#include "roo_windows/core/ui_task.h"
+#include "roo_windows/core/task.h"
 
 namespace roo_windows {
 
@@ -52,7 +52,7 @@ void Container::detachChild(Widget* child) {
   if (MainWindow* window = getMainWindow(); window != nullptr) {
     window->presentationAnchorSubtreeDetaching(*child);
   }
-  if (UiTask* task = child->getUiTask(); task != nullptr) {
+  if (Task* task = child->getTask(); task != nullptr) {
     task->onSubtreeDetaching(*child);
   } else {
     context().focus().onSubtreeDetaching(*child);
