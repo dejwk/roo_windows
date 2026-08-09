@@ -96,12 +96,14 @@ class Task {
 /// activity's contents.
 class TaskPanel : public Panel {
  public:
-  TaskPanel(ApplicationContext& context, UiTask& ui_task, Task& task)
+  TaskPanel(ApplicationContext& context, UiTask& ui_task, Task* task)
       : Panel(context), ui_task_(ui_task), task_(task) {}
+
+  ~TaskPanel();
 
   /// Returns the owning task; descendants use this to resolve their host
   /// task context.
-  Task* getTask() override { return &task_; }
+  Task* getTask() override { return task_; }
   UiTask* getUiTask() override { return &ui_task_; }
   const UiTask* getUiTask() const override { return &ui_task_; }
 
@@ -110,13 +112,16 @@ class TaskPanel : public Panel {
 
  private:
   friend class Task;
+  friend class UiTask;
 
   void enterActivity(Activity* activity, const roo_display::Box& bounds);
-
   void exitActivity();
+  void setContent(Widget& content, const roo_display::Box& bounds);
+  void clearContent();
 
   UiTask& ui_task_;
-  Task& task_;
+  Task* task_;
+  Widget* content_ = nullptr;
 };
 
 }  // namespace roo_windows

@@ -85,9 +85,15 @@ class Application {
   /// Creates a new popup task occupying the supplied display rectangle.
   Task* addPopupTask(const roo_display::Box& bounds);
 
-  /// Creates a display-local interaction task in the normal layer.
+  /// Creates a display-local direct-content task in the normal layer. The
+  /// caller retains ownership of `content`, which must remain unattached and
+  /// outlive the returned task.
+  UiTask& addUiTask(Widget& content, const roo_display::Box& bounds);
+  /// Creates a display-local direct-content task filling the display.
+  UiTask& addUiTaskFullScreen(Widget& content);
+
+  /// Legacy compatibility task creation. Prefer the direct-content overloads.
   UiTask& addUiTask(const roo_display::Box& bounds);
-  /// Creates a display-local interaction task filling the display.
   UiTask& addUiTaskFullScreen();
 
   /// Creates a regular task that fills the entire display.

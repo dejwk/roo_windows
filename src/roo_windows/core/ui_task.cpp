@@ -19,14 +19,33 @@ bool IsInSubtree(const Widget& candidate, const Widget& subtree) {
 }  // namespace
 
 UiTask::UiTask(Application& app, DisplayWindow& window,
-               const roo_display::Box& bounds, bool popup, Keyboard& keyboard)
+               const roo_display::Box& bounds, bool popup, Keyboard& keyboard,
+               Widget& content)
     : app_(app),
       window_(window),
-      panel_(app.context(), *this, legacy_task_),
+      panel_(app.context(), *this, nullptr),
       focus_(&panel_),
       editor_(app.env().scheduler(), keyboard),
       popup_(popup) {
-  legacy_task_.init(&panel_);
+  CHECK(content.parent() == nullptr);
+  panel_.setContent(content, roo_display::Box(0, 0, -1, -1));
+  if (popup) {
+    window_.root().addPopup(panel_, bounds);
+  } else {
+    window_.root().addTask(panel_, bounds);
+  }
+}
+
+UiTask::UiTask(Application& app, DisplayWindow& window,
+               const roo_display::Box& bounds, bool popup, Keyboard& keyboard)
+    : app_(app),
+      window_(window),
+      legacy_task_(new Task()),
+      panel_(app.context(), *this, legacy_task_.get()),
+      focus_(&panel_),
+      editor_(app.env().scheduler(), keyboard),
+      popup_(popup) {
+  legacy_task_->init(&panel_);
   if (popup) {
     window_.root().addPopup(panel_, bounds);
   } else {
@@ -36,14 +55,34 @@ UiTask::UiTask(Application& app, DisplayWindow& window,
 
 UiTask::~UiTask() {
   detachKeySource();
+  back_callback_ = {};
   editor_.cancel();
   focus_.onSubtreeDetaching(panel_);
-  legacy_task_.clear();
+  if (legacy_task_ != nullptr) {
+    legacy_task_->clear();
+  } else if (panel_.content_ != nullptr) {
+    panel_.clearContent();
+  }
   if (popup_) {
     window_.root().removePopup(panel_);
   } else {
     window_.root().removeTask(panel_);
   }
+}
+
+Task& UiTask::legacyActivities() {
+  CHECK(legacy_task_ != nullptr);
+  return *legacy_task_;
+}
+
+const Task& UiTask::legacyActivities() const {
+  CHECK(legacy_task_ != nullptr);
+  return *legacy_task_;
+}
+
+void UiTask::setBackCallback(BackCallback callback) {
+  CHECK(legacy_task_ == nullptr);
+  back_callback_ = std::move(callback);
 }
 
 KeySourceAttachmentResult UiTask::attachKeySource(KeySource& source) {
@@ -74,7 +113,9 @@ BackResult UiTask::requestBack(BackSource source) {
       BackResult::kHandled) {
     return BackResult::kHandled;
   }
-  return legacy_task_.requestBack(source);
+  if (legacy_task_ != nullptr) return legacy_task_->requestBack(source);
+  return back_callback_ == nullptr ? BackResult::kUnhandled
+                                   : back_callback_(source);
 }
 
 bool UiTask::drainKeyEvents() {

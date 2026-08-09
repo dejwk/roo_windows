@@ -90,10 +90,10 @@ Environment env(scheduler);
 Application app(&env, display);
 TextLabel label(app.context(), "Hello World!", material2::text_style_caption(),
                 kGravityCenter | kGravityMiddle);
-SingletonActivity activity(app, label);
 
 void setup() {
   initDisplay();
+  app.addUiTaskFullScreen(label);
   app.start();
 
   // Never exits.

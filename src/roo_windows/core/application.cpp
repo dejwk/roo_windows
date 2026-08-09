@@ -124,6 +124,24 @@ UiTask& Application::addUiTaskFullScreen() {
   return addUiTask(window_.display().extents());
 }
 
+UiTask& Application::addUiTask(Widget& content,
+                                const roo_display::Box& bounds) {
+  CHECK(content.parent() == nullptr);
+  UiTask* task = new UiTask(*this, window_, bounds, false, keyboard_, content);
+  ui_tasks_.emplace_back(task);
+  if (compatibility_task_ == nullptr && pending_key_source_ != nullptr) {
+    for (const std::unique_ptr<UiTask>& candidate : ui_tasks_) {
+      candidate->detachKeySource();
+    }
+    task->attachKeySource(*pending_key_source_);
+  }
+  return *task;
+}
+
+UiTask& Application::addUiTaskFullScreen(Widget& content) {
+  return addUiTask(content, window_.display().extents());
+}
+
 bool Application::ownsTask(const Task& task) const {
   for (const std::unique_ptr<UiTask>& candidate : ui_tasks_) {
     if (&candidate->legacyActivities() == &task) return true;

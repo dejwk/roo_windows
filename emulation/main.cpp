@@ -484,10 +484,10 @@ roo_scheduler::Scheduler scheduler;
 Environment env(scheduler);
 Application app(&env, display);
 SliderScreen slider_screen(env);
-SingletonActivity activity(app, slider_screen);
 
 void setup() {
   initDisplay();
+  app.addUiTaskFullScreen(slider_screen);
   app.start();
 
   // Never exits.

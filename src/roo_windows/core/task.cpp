@@ -146,6 +146,10 @@ UiTask& Task::uiTask() { return *panel_->getUiTask(); }
 
 const UiTask& Task::uiTask() const { return *panel_->getUiTask(); }
 
+TaskPanel::~TaskPanel() {
+  if (content_ != nullptr) clearContent();
+}
+
 void TaskPanel::enterActivity(Activity* activity,
                               const roo_display::Box& bounds) {
   add(activity->getContents(), bounds);
@@ -153,12 +157,26 @@ void TaskPanel::enterActivity(Activity* activity,
 
 void TaskPanel::exitActivity() { removeLast(); }
 
+void TaskPanel::setContent(Widget& content, const roo_display::Box& bounds) {
+  CHECK(content_ == nullptr);
+  CHECK(content.parent() == nullptr);
+  content_ = &content;
+  attachChild(WidgetRef(content), bounds);
+}
+
+void TaskPanel::clearContent() {
+  CHECK(content_ != nullptr);
+  Widget* content = content_;
+  content_ = nullptr;
+  detachChild(content);
+}
+
 bool TaskPanel::fillTouchTargetPath(XDim x, YDim y,
                                     std::vector<Widget*>& path) {
   if (!isVisible() || !isEnabled() || !bounds().contains(x, y)) return false;
   path.push_back(this);
-  if (children_.empty()) return true;
-  Widget& activity = *children_.back();
+  if (content_ == nullptr && children_.empty()) return true;
+  Widget& activity = content_ != nullptr ? *content_ : *children_.back();
   activity.fillTouchTargetPath(x - activity.offsetLeft(),
                                y - activity.offsetTop(), path);
   return true;

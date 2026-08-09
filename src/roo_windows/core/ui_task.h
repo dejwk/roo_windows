@@ -19,9 +19,10 @@ enum class KeySourceAttachmentResult : uint8_t {
   kWrongThread,
 };
 
-/// Owns task-local focus, editing, input routing, and a legacy activity stack.
+/// Owns task-local focus, editing, input routing, and fixed direct content.
 class UiTask {
  public:
+  using BackCallback = std::function<BackResult(BackSource)>;
   ~UiTask();
 
   UiTask(const UiTask&) = delete;
@@ -46,18 +47,25 @@ class UiTask {
   /// Detaches the current polled source, if any.
   void detachKeySource();
 
-  /// Routes semantic Back through the display root then the legacy adapter.
+  /// Configures the direct task's optional semantic Back handler. Passing an
+  /// empty function clears it. Legacy activity tasks retain their own routing.
+  void setBackCallback(BackCallback callback);
+
+  /// Routes semantic Back through the display root and task content.
   BackResult requestBack(BackSource source = BackSource::kProgrammatic);
 
   /// Returns the temporary activity-stack compatibility adapter.
-  Task& legacyActivities() { return legacy_task_; }
-  const Task& legacyActivities() const { return legacy_task_; }
+  Task& legacyActivities();
+  const Task& legacyActivities() const;
 
  private:
   friend class Application;
   friend class KeySource;
   friend class Container;
 
+  UiTask(Application& app, DisplayWindow& window,
+         const roo_display::Box& bounds, bool popup, Keyboard& keyboard,
+         Widget& content);
   UiTask(Application& app, DisplayWindow& window,
          const roo_display::Box& bounds, bool popup, Keyboard& keyboard);
 
@@ -68,7 +76,7 @@ class UiTask {
 
   Application& app_;
   DisplayWindow& window_;
-  Task legacy_task_;
+  std::unique_ptr<Task> legacy_task_;
   TaskPanel panel_;
   FocusManager focus_;
   TextFieldEditor editor_;
@@ -76,6 +84,11 @@ class UiTask {
   KeySource* key_source_ = nullptr;
   Widget* armed_key_widget_ = nullptr;
   KeyCode armed_key_ = KeyCode::kUnknown;
+  BackCallback back_callback_;
 };
 
 }  // namespace roo_windows
+#include <functional>
+#include <memory>
+
+#include "roo_windows/core/back_request.h"

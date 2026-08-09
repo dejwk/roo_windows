@@ -57,7 +57,7 @@ Status was audited against the source tree and tests on 2026-07-31. “Dependenc
 | Display runtime Phase 1 characterization | Existing rendering, input, focus, task, Back, and transient tests are prerequisites; the integrated characterization target and ESP32-S3 runtime baseline are not implemented. |
 | Display runtime Phase 2 `DisplayWindow` extraction | The Phase 1 characterization is proposed; the one-to-one display owner, continuation relocation, compatibility forwarding, and teardown extraction are not implemented. |
 | Display runtime Phase 3 `UiTask` extraction | Phase 2 is proposed; task-local focus, editing, polled key routing, structural task ancestry, and the activity compatibility adapter are not implemented. |
-| Display runtime Phase 4 optional navigation | Phase 3 is proposed; direct task content, fixed-capacity optional navigation, and the compatibility-only activity host are not implemented. |
+| Display runtime Phase 4 optional navigation | Phase 4a is implemented: direct tasks borrow one fixed content widget, support a task-local Back callback, and retain compatibility activity tasks. Borrowed optional navigation and legacy-host isolation remain proposed. |
 | Display runtime Phase 5 shared-scheduler driving | Phase 4 is proposed; checked bounded application callbacks and the two-application shared-scheduler example are not implemented. |
 | Display runtime Phase 6 key-event bindings | Phase 5 is proposed; lifetime-safe polled and push bindings, full software-keyboard events, and cross-application delivery are not implemented. |
 | Display runtime Phase 7 modal hosting | Phase 6 is proposed; task/display coverage policies, barriers, focus restoration, admission, and modal Back ordering are not implemented. |
