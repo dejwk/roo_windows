@@ -125,7 +125,7 @@ UiTask& Application::addUiTaskFullScreen() {
 }
 
 UiTask& Application::addUiTask(Widget& content,
-                                const roo_display::Box& bounds) {
+                               const roo_display::Box& bounds) {
   CHECK(content.parent() == nullptr);
   UiTask* task = new UiTask(*this, window_, bounds, false, keyboard_, content);
   ui_tasks_.emplace_back(task);
@@ -140,6 +140,25 @@ UiTask& Application::addUiTask(Widget& content,
 
 UiTask& Application::addUiTaskFullScreen(Widget& content) {
   return addUiTask(content, window_.display().extents());
+}
+
+UiTask& Application::addUiTask(NavigationHost& navigation,
+                               const roo_display::Box& bounds) {
+  CHECK(navigation.task_ == nullptr);
+  UiTask* task =
+      new UiTask(*this, window_, bounds, false, keyboard_, navigation);
+  ui_tasks_.emplace_back(task);
+  if (compatibility_task_ == nullptr && pending_key_source_ != nullptr) {
+    for (const std::unique_ptr<UiTask>& candidate : ui_tasks_) {
+      candidate->detachKeySource();
+    }
+    task->attachKeySource(*pending_key_source_);
+  }
+  return *task;
+}
+
+UiTask& Application::addUiTaskFullScreen(NavigationHost& navigation) {
+  return addUiTask(navigation, window_.display().extents());
 }
 
 bool Application::ownsTask(const Task& task) const {

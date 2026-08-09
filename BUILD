@@ -98,6 +98,16 @@ cc_test(
     ],
 )
 
+cc_test(
+    name = "navigation_host_test",
+    srcs = ["test/navigation_host_test.cpp"],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
 # Compiles named sizeof() symbols for target-ABI inspection with nm. It is not
 # linked into the runtime library or any firmware image.
 cc_library(

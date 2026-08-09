@@ -37,6 +37,24 @@ UiTask::UiTask(Application& app, DisplayWindow& window,
 }
 
 UiTask::UiTask(Application& app, DisplayWindow& window,
+               const roo_display::Box& bounds, bool popup, Keyboard& keyboard,
+               NavigationHost& navigation)
+    : app_(app),
+      window_(window),
+      panel_(app.context(), *this, nullptr),
+      focus_(&panel_),
+      editor_(app.env().scheduler(), keyboard),
+      popup_(popup),
+      navigation_(&navigation) {
+  navigation.install(*this);
+  if (popup) {
+    window_.root().addPopup(panel_, bounds);
+  } else {
+    window_.root().addTask(panel_, bounds);
+  }
+}
+
+UiTask::UiTask(Application& app, DisplayWindow& window,
                const roo_display::Box& bounds, bool popup, Keyboard& keyboard)
     : app_(app),
       window_(window),
@@ -60,6 +78,8 @@ UiTask::~UiTask() {
   focus_.onSubtreeDetaching(panel_);
   if (legacy_task_ != nullptr) {
     legacy_task_->clear();
+  } else if (navigation_ != nullptr) {
+    navigation_->disconnect();
   } else if (panel_.content_ != nullptr) {
     panel_.clearContent();
   }
@@ -114,6 +134,21 @@ BackResult UiTask::requestBack(BackSource source) {
     return BackResult::kHandled;
   }
   if (legacy_task_ != nullptr) return legacy_task_->requestBack(source);
+  if (navigation_ != nullptr) return navigation_->requestBack(source);
+  return requestTaskBackCallback(source);
+}
+
+void UiTask::attachNavigationContent(Widget& content) {
+  CHECK(navigation_ != nullptr);
+  panel_.setContent(content, roo_display::Box(0, 0, -1, -1));
+}
+
+void UiTask::detachNavigationContent() {
+  CHECK(navigation_ != nullptr);
+  panel_.clearContent();
+}
+
+BackResult UiTask::requestTaskBackCallback(BackSource source) {
   return back_callback_ == nullptr ? BackResult::kUnhandled
                                    : back_callback_(source);
 }

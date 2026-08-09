@@ -181,7 +181,7 @@ include:
 | `Application::root()` | `Application::window().root()` |
 | `Application::refresh()` | `Application::window().refresh()` |
 | `Application::addTask*()` returning `Task*` | `Application::addTask*()` returning `UiTask&` |
-| `Task::enterActivity()` | `UiTask::setContent()` or `Navigator::push()` |
+| `Task::enterActivity()` | `UiTask::setContent()` or `NavigationHost::push()` |
 | `Application::text_field_editor()` | `UiTask::textFieldEditor()` |
 | constructor `KeySource&` | caller-owned `TaskKeyBinding` |
 | `KeyboardListener` | `KeyEventEmitter`/`KeyEventBinding` |

@@ -219,9 +219,8 @@ destination widgets remain detached and application-owned.
 `NavigationHost` stores history in `std::vector<Destination*>`. It requires no
 capacity argument and retains vector capacity after pop or clear. A push may
 allocate when it raises the history high-water mark; pushes within retained
-capacity do not allocate. `Navigator` is a non-owning command facade returned
-by value and contains one host pointer, so the host stores no separate facade
-object.
+capacity do not allocate. The host itself is the command and query surface;
+there is no separate navigator facade.
 
 - `empty()` and `depth()` expose the state callers need before conditional
   commands.
@@ -345,11 +344,6 @@ class NavigationHost {
   NavigationHost(const NavigationHost&) = delete;
   NavigationHost& operator=(const NavigationHost&) = delete;
 
-  Navigator navigator();
-};
-
-class Navigator {
- public:
   void push(Destination& destination);
   void replace(Destination& destination);
   void pop();
@@ -412,8 +406,8 @@ Proposed commit: `refactor: add fixed direct ui task content`
 
 ### Phase 4b: add borrowed optional navigation
 
-1. Add borrowed `Destination`, growable `NavigationHost`, and value-returned
-   `Navigator`.
+1. Add borrowed `Destination` and growable `NavigationHost` with direct command
+   methods.
 2. Implement `CHECK`-enforced command preconditions, mutation exclusion,
    generation-checked Back, task-callback fallback, and ordinary borrowed child
    attachment.
@@ -530,6 +524,14 @@ Empty-history conditions are available through `empty()` and `depth()`; an
 attached destination, attached widget, or mutation-time reentrant command is a
 programming error. `CHECK` keeps those invariants explicit and matches the
 current `Activity` command style.
+
+#### Return a separate navigator facade
+
+Rejected because the design has no requirement for restricted mutation
+capabilities or independently scoped command handles. `NavigationHost` already
+owns history, task attachment, mutation state, and Back generation, so it is
+the natural command and query surface. A restricted facade can be introduced
+later if a concrete authority-separation use case appears.
 
 #### Require a maximum navigation depth
 

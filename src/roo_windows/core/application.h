@@ -92,6 +92,12 @@ class Application {
   /// Creates a display-local direct-content task filling the display.
   UiTask& addUiTaskFullScreen(Widget& content);
 
+  /// Creates a display-local navigation task in the normal layer. The caller
+  /// retains ownership of `navigation`, which must outlive the returned task.
+  UiTask& addUiTask(NavigationHost& navigation, const roo_display::Box& bounds);
+  /// Creates a display-local navigation task filling the display.
+  UiTask& addUiTaskFullScreen(NavigationHost& navigation);
+
   /// Legacy compatibility task creation. Prefer the direct-content overloads.
   UiTask& addUiTask(const roo_display::Box& bounds);
   UiTask& addUiTaskFullScreen();

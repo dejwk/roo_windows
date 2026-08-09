@@ -2,6 +2,7 @@
 
 #include "roo_windows/core/focus_manager.h"
 #include "roo_windows/core/key_source.h"
+#include "roo_windows/core/navigation_host.h"
 #include "roo_windows/core/task.h"
 #include "roo_windows/widgets/text_field.h"
 
@@ -62,10 +63,14 @@ class UiTask {
   friend class Application;
   friend class KeySource;
   friend class Container;
+  friend class NavigationHost;
 
   UiTask(Application& app, DisplayWindow& window,
          const roo_display::Box& bounds, bool popup, Keyboard& keyboard,
          Widget& content);
+  UiTask(Application& app, DisplayWindow& window,
+         const roo_display::Box& bounds, bool popup, Keyboard& keyboard,
+         NavigationHost& navigation);
   UiTask(Application& app, DisplayWindow& window,
          const roo_display::Box& bounds, bool popup, Keyboard& keyboard);
 
@@ -73,6 +78,9 @@ class UiTask {
   void dispatchKeyEvent(const KeyEvent& event);
   void onSubtreeDetaching(Widget& subtree);
   void onKeySourceDestroyed(KeySource& source);
+  void attachNavigationContent(Widget& content);
+  void detachNavigationContent();
+  BackResult requestTaskBackCallback(BackSource source);
 
   Application& app_;
   DisplayWindow& window_;
@@ -85,6 +93,7 @@ class UiTask {
   Widget* armed_key_widget_ = nullptr;
   KeyCode armed_key_ = KeyCode::kUnknown;
   BackCallback back_callback_;
+  NavigationHost* navigation_ = nullptr;
 };
 
 }  // namespace roo_windows

@@ -112,7 +112,7 @@ Navigation is optional state within a task, not the definition of a task.
 
 `NavigationHost`
 : Optional task state that presents one destination at a time and delegates
-  history changes to a `Navigator`.
+  history changes through its direct command methods.
 
 `Key event emitter` / `Key event sink`
 : The two endpoints of an explicit unicast connection carrying the existing
@@ -130,8 +130,8 @@ without preserving their semantics:
 - Android Navigation uses a navigation host and controller to present and
   mutate a destination stack
   ([Navigation design](https://developer.android.com/guide/navigation/design)).
-  Roo follows this separation by making `NavigationHost`/`Navigator` optional
-  task components rather than making all content a destination.
+  Roo follows this separation by making `NavigationHost` an optional task
+  component rather than making all content a destination.
 - Jetpack Compose focus is associated with a composition tree and can be
   grouped or redirected within that tree
   ([Compose focus](https://developer.android.com/develop/ui/compose/touch-input/focus)).
@@ -373,7 +373,7 @@ A simple task installs one root directly:
 task.setContent(widget_ref);
 ```
 
-This creates no `Destination`, `Navigator`, or hidden one-entry stack. Back is
+This creates no `Destination`, navigation host, or hidden one-entry stack. Back is
 unhandled after task-local transients have declined it, unless the direct
 content explicitly handles Back.
 
@@ -383,10 +383,10 @@ transfers ownership. Replacing content first cancels task references into the
 old subtree, detaches it, and then destroys it if the task owned it.
 
 A navigation-style task instead installs a `NavigationHost`. The host presents
-one destination, while a `Navigator` owns destination history and implements
-push, replace, and pop. The exact ownership form must fit Roo's non-allocating
-widget conventions, but the API must distinguish borrowed destinations from
-owned storage.
+one destination and owns destination history, implementing push, replace, and
+pop directly. The exact ownership form must fit Roo's non-allocating widget
+conventions, but the API must distinguish borrowed destinations from owned
+storage.
 
 This replaces the present assumption that every task is an activity stack.
 During migration, an adapter may present the current `Activity` stack through
@@ -750,8 +750,8 @@ Implement the
 [Phase 4 optional navigation design](display_optional_navigation_design.md):
 
 - add direct task content with explicit borrowed or owned `WidgetRef` storage;
-- add fixed-capacity `NavigationHost`, `Navigator`, and `Destination` only for
-  tasks that request history; and
+- add `NavigationHost` and `Destination` only for tasks that request history;
+  and
 - move activity behavior out of every `UiTask` into a compatibility-only host.
 
 Validation:

@@ -198,6 +198,12 @@ roo_windows_example_build(
     include_dir = "material3/typography/pool_status",
 )
 
+roo_windows_example_build(
+    name = "simple_navigation",
+    sketch = "simple/navigation/navigation.ino",
+    include_dir = "simple/navigation",
+)
+
 filegroup(
     name = "material3_example_builds",
     srcs = [
@@ -234,5 +240,6 @@ filegroup(
         ":material3_tabs_scrollable_categories_example_build",
         ":material3_tabs_status_pages_example_build",
         ":material3_typography_pool_status_example_build",
+        ":simple_navigation_example_build",
     ],
 )

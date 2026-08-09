@@ -132,7 +132,7 @@ bindings.
 
 ### Non-goals
 
-- Direct task content, `NavigationHost`, `Navigator`, or `Destination`.
+- Direct task content, `NavigationHost`, or `Destination`.
 - Removal of `Task` or `Activity`.
 - More than one polled key source per task.
 - Push-style key producers or public scoped key bindings.
