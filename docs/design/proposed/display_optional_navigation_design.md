@@ -106,16 +106,30 @@ that observable lifecycle.
    `core/destination.h` and `core/destination.cpp` files, structurally following
    `Activity` where their contracts coincide.
 
-### Compatibility requirements
+### Activity migration and removal requirements
 
-1. Existing activity lifecycle and Back behavior must remain available through
-   `LegacyActivityNavigationHost` until Phase 8.
-2. Legacy `Application::addTask*()` methods must create a `UiTask`, install the
-   legacy host, and return its `Task` facade.
-3. New direct-content and navigation tasks must contain no legacy `Task` or
-   `Activity` object.
-4. Existing task bounds, z-order, pointer hit testing, focus, key routing, and
-   software-keyboard compatibility must remain unchanged.
+1. Before removing `Activity`, `NavigationHost` must provide equivalent
+   lifecycle sequencing for the supported operations. In particular,
+   `replace()` must not resume the covered destination and `clear()` must not
+   resume intermediate destinations.
+2. Lifecycle callbacks must be allowed to navigate synchronously through the
+   documented state-aware reentrant path; the general structural-mutation
+   guard must remain active for incidental widget callbacks.
+3. Library components that use `Activity` must migrate to direct content or
+   `Destination`. The standard keyboard should become a fixed direct-content
+   popup task whose bounds provide its placement rather than adding placement
+   policy to every destination.
+4. Repository examples and tests must migrate from `Activity`, `Task`, and
+   `SingletonActivity` before their declarations are deleted.
+5. Phase 4 must remove `Activity`, `SingletonActivity`, the legacy `Task`
+   facade and stack, legacy task-creation overloads, `requestBack(Task&)`,
+   `Widget::getTask()`, and all legacy-only storage in `UiTask`.
+6. `TaskPanel` must move to a non-legacy implementation file and retain only
+   its structural relationship with `UiTask`; it must not retain a `Task*`.
+7. Existing task bounds, z-order, pointer hit testing, focus, key routing, and
+   software-keyboard behavior must remain unchanged through the migration.
+8. Representative downstream applications that depend on activity lifecycle
+   callbacks must compile after migration to `Destination`.
 
 ### Embedded requirements
 
@@ -139,7 +153,8 @@ that observable lifecycle.
 - Cross-task or cross-window navigation history.
 - Animated destination transitions.
 - Modal presentation policy, which belongs to Phase 7.
-- Removal of public legacy activity APIs, which belongs to Phase 8.
+- Removal of compatibility APIs unrelated to activity navigation, which
+  remains in Phase 8.
 
 ## Design Overview
 
@@ -154,15 +169,15 @@ UiTask
     ├── navigation mode
     │   └── borrowed NavigationHost
     │       └── borrowed current Destination's Widget&
-    └── legacy compatibility mode
-        └── LegacyActivityNavigationHost
 ```
 
 `UiTask` uses a private tagged payload for its fixed mode. The direct arm holds
-no mode-specific state, while the navigation and legacy arms hold their
-respective host references. The optional `std::function` Back callback is
-common `UiTask` state so direct and navigation modes can both use it. Direct
-tasks therefore contain no navigation controller or history state.
+no mode-specific state, while the navigation arm holds its host reference. The
+optional `std::function` Back callback is common `UiTask` state so direct and
+navigation modes can both use it. Direct tasks therefore contain no navigation
+controller or history state. Phases 4a through 4c temporarily retain the Phase
+3 compatibility arm; Phase 4d removes it rather than promoting it into another
+public host abstraction.
 
 `NavigationHost` owns a growable vector of raw `Destination*` entries. The
 application owns every destination and widget. A direct task constructs no
@@ -192,9 +207,9 @@ does not store a second content pointer or wrap it in a controller object. The
 panel remains the sole structural record of the attached root.
 
 An empty callback is the cleared state. `UiTask::setBackCallback({})` clears a
-previous callback. The method is valid for direct and navigation tasks and
-checks that the task is not a legacy compatibility task. There is no creation
-overload that accepts a callback.
+previous callback. The method is valid for direct and navigation tasks. During
+the pre-4d migration it checks that the task is not a legacy compatibility
+task. There is no creation overload that accepts a callback.
 
 `UiTask::requestBack()` checks the task callback only at the mode-specific
 fallback point, invokes it at most once when present, and returns its result
@@ -371,9 +386,9 @@ across a callback.
 The task callback is therefore the last-ditch handler for a navigation task at
 its root or with empty history; it does not override ordinary stack popping.
 The original `BackSource` reaches every callback unchanged. Lifecycle callbacks
-surround the attachment and history changes described above. Legacy
-compatibility tasks retain their existing activity Back behavior and do not use
-the task callback.
+surround the attachment and history changes described above. Before Phase 4d,
+temporary compatibility tasks retain their existing activity Back behavior and
+do not use the task callback.
 
 ### TaskPanel ownership and surface semantics
 
@@ -388,20 +403,27 @@ and paints exposed task regions behind plain, non-surface content. Navigation
 adds no paint behavior: the existing child-first, then container-surface
 pipeline continues to settle invalidated pixels.
 
-### Legacy activity adapter
+### Activity and Task migration
 
-`LegacyActivityNavigationHost` retains the current borrowed activity vector
-and lifecycle transitions. Only tasks created through deprecated compatibility
-APIs construct this adapter.
+Phase 4d does not introduce `LegacyActivityNavigationHost`. It uses the landed
+`Destination` lifecycle as the migration target and then deletes the legacy
+model. Lifecycle-driven controllers derive from `Destination`; single-widget
+activities become direct-content tasks. `Widget::getUiTask()` is the stable
+task identity, and navigation-aware code receives or resolves the applicable
+`NavigationHost` instead of retaining a `Task` facade.
 
-`Task` becomes a facade over the legacy host rather than a member of every
-`UiTask`. `Widget::getTask()` returns the facade for legacy-host content and
-null for direct or new-navigation content; `Widget::getUiTask()` is the stable
-task identity in all modes.
+The standard keyboard is not a navigation destination. It becomes a
+direct-content popup task with lower-display bounds, preserving the only
+library use of activity placement without adding `getPreferredPlacement()` to
+`Destination`. Menu and text-field controllers migrate to `Destination` where
+they require lifecycle or Back behavior. Navigation items store
+`Destination&` and issue commands through the host.
 
-The adapter preserves reentrant `onStart`, `onResume`, `onPause`, `onStop`, and
-Back behavior. Phase 8 removes the facade after examples and downstream code
-have migrated.
+After repository examples and tests use those replacements, Phase 4d removes
+the activity headers, sources, build targets, and legacy-only overloads and
+members. The migration is intentionally source- and ABI-breaking; a concise
+table maps the removed surfaces to direct task creation, `NavigationHost`,
+`Destination`, and `UiTask`.
 
 ### Resource budget
 
@@ -421,8 +443,9 @@ the observed history high-water mark, and one host pointer plus lifecycle state
 in each destination. `Destination` already has a vtable, so the four virtual
 no-op hooks add flash but no additional per-instance pointer. Push may allocate
 when history grows; replace, pop, Back, and clear do not allocate. The target
-report records direct, navigation-depth-two, destination-state, and legacy-host
-costs separately.
+report records direct, navigation-depth-two, and destination-state costs, and
+compares the final build with the pre-removal compatibility build so the
+savings from deleting `Task` and `Activity` remain visible.
 
 ## Proposed API
 
@@ -560,7 +583,7 @@ non-growing navigation operations do not allocate.
 Landed in
 [`4cb02ff`](https://github.com/dejwk/roo_windows/commit/4cb02ff95245598bc31b0729e56e6ef58f83226f).
 
-### Phase 4c: add destination lifecycle
+### Phase 4c: add destination lifecycle (landed)
 
 1. Move `Destination` from `navigation_host.h/.cpp` into dedicated
    `destination.h/.cpp` files and mirror the applicable `Activity` structure,
@@ -586,34 +609,58 @@ bazel test //:navigation_host_test //:ui_task_test //:task_test \
 bazel build //examples:simple_navigation_example_build
 ```
 
-This phase is complete when new destinations provide the lifecycle capabilities
-needed to migrate activity-based asynchronous work, callback order and
-attachment observations match `Activity`, supported callback navigation causes
-no duplicate transition, and destination size is recorded.
+This phase establishes the destination lifecycle needed to migrate
+activity-based asynchronous work and records its size. Phase 4d closes the
+remaining sequencing and callback-navigation parity gaps before any legacy API
+is removed.
 
-Proposed commit: `feat: add navigation destination lifecycle`
+Landed in
+[`994ebba`](https://github.com/dejwk/roo_windows/commit/994ebba).
 
-### Phase 4d: isolate legacy activities
+### Phase 4d: migrate and remove Activity and Task
 
-1. Move current activity behavior into `LegacyActivityNavigationHost`.
-2. Keep deprecated task creation and `Task` forwarding only for compatibility
-   tasks.
-3. Migrate Back routing and retain lifecycle reentrancy behavior.
-4. Record final direct, navigation, and legacy resource deltas.
+1. Close lifecycle-parity gaps before migration: implement replace without
+   resuming the covered destination, clear without resuming intermediate
+   destinations, and state-aware navigation from lifecycle callbacks while
+   preserving the structural-callback mutation guard.
+2. Migrate library controllers: convert menu and text-field activity use to
+   `Destination`, convert navigation items to destination/host references, and
+   make the standard keyboard a fixed direct-content popup task with explicit
+   lower-display bounds.
+3. Migrate all repository examples from `SingletonActivity`, `Activity`, and
+   legacy `Task` creation to fixed direct content or `NavigationHost`.
+4. Translate activity/task tests into `UiTask`, direct-content, destination,
+   and navigation-host tests. Preserve lifecycle ordering, attachment
+   observation, Back, focus, input, teardown, and placement coverage.
+5. Publish the removal mapping and compile representative downstream
+   lifecycle-using applications against `Destination` before deleting the old
+   declarations.
+6. Remove `Activity`, `SingletonActivity`, the legacy `Task` stack/facade,
+   legacy task-creation overloads, `requestBack(Task&)`, `Widget::getTask()`,
+   and legacy-only `UiTask` storage. Relocate `TaskPanel` out of the deleted
+   task implementation and remove its `Task*` relationship.
+7. Remove obsolete sources and Bazel targets, build every example, run the
+   complete test suite, and record direct/navigation resource deltas against
+   the pre-removal build.
 
 Focused validation:
 
 ```sh
-bazel test //:task_test //:application_test //:key_source_test \
-  //:ui_task_test //:navigation_host_test \
-  //:display_runtime_characterization_test
+bazel test //...
 bazel build //...
+git diff --check
 ```
 
-This phase is complete when new task modes contain no legacy object, the
-compatibility suite remains green, and all resource deltas are recorded.
+This phase is complete when no production header, source, example, test, or
+build target references `Activity`, `SingletonActivity`, the legacy `Task`
+facade, or `LegacyActivityNavigationHost`; lifecycle and placement behavior is
+covered through the new APIs; representative downstream applications compile;
+and all resource deltas are recorded.
 
-Proposed commit: `refactor: isolate legacy activity navigation`
+The work should land as reviewable commits for semantic parity, library-user
+migration, example/test migration, and final API deletion.
+
+Proposed final commit: `refactor: remove legacy activity navigation`
 
 ## Testing Plan
 
@@ -623,9 +670,9 @@ lifetime, vector growth and retained capacity, attachment exclusivity,
 precondition death cases, supported Back reentrancy,
 destination/pop/task-callback Back ordering, empty-history fallback, lifecycle
 state and callback order, callback attachment observations, teardown, and
-supported lifecycle reentrancy.
-Existing task tests exercise the legacy host. Allocation instrumentation
-distinguishes empty direct construction, callback assignment, warmed Back,
+supported lifecycle reentrancy. Migrated lifecycle characterization tests
+replace the legacy task tests. Allocation instrumentation distinguishes empty
+direct construction, callback assignment, warmed Back,
 history growth, warmed navigation operations within retained capacity, and the
 incremental destination-state size.
 
@@ -724,4 +771,5 @@ the first growth.
 ## Future Work
 
 Animated transitions, persisted navigation state, and destination factories
-require separate designs. Phase 8 removes the legacy activity host and facade.
+require separate designs. Phase 8 removes only the remaining compatibility
+surfaces unrelated to activity navigation.

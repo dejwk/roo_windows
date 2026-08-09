@@ -22,9 +22,11 @@ authoritative and turns the accumulated measurements into a release decision.
 The migration introduces `DisplayWindow`, `UiTask`, direct content, optional
 navigation, shared-scheduler driving, key-event bindings, and explicit modal
 coverage.
-Temporary surfaces include application-level display forwarding, legacy
-`Task`/`Activity` navigation, application-global editor access, direct source
-attachment, `KeyboardListener`, and application-level dialog routing.
+Phase 4 removes legacy `Task`/`Activity` navigation after migrating it to
+direct content and `Destination`. The compatibility surfaces that remain for
+Phase 8 include application-level display forwarding, application-global
+editor access, direct source attachment, `KeyboardListener`, and
+application-level dialog routing.
 
 The [Phase 1 baseline](../../display_runtime_target_baseline.md) defines the
 representative ESP32-S3 build, object-size probe, linked sections, and allocation
@@ -37,7 +39,8 @@ final state using the same toolchain and application.
 
 1. Final task creation must use `Application::addTask*()` returning `UiTask&`.
 2. Display operations must be reached through `Application::window()`.
-3. Task content must use direct `WidgetRef` or explicit `NavigationHost`.
+3. Task creation must select a fixed borrowed `Widget&` or explicit
+   `NavigationHost`.
 4. All physical and push key routes must use scoped binding objects.
 5. All modal presentation must name an owning task and coverage policy.
 6. `start()` with a shared scheduler and the `run()` convenience path must be
@@ -47,17 +50,18 @@ final state using the same toolchain and application.
 
 ### Removal requirements
 
-1. Remove legacy `Task`, `Activity`, `SingletonActivity`, `Task` facade access,
-   and `LegacyActivityNavigationHost`.
-2. Remove deprecated `Application::add/addPopup`, old task creation,
-   `requestBack(Task&)`, `text_field_editor()`, `start()`, `root()`,
-   `refresh()`, and `gesture_detector()` forwarders.
+1. Verify that the Phase 4 removal of `Task`, `Activity`,
+   `SingletonActivity`, `Widget::getTask()`, and legacy task-creation overloads
+   remains complete; Phase 8 must not reintroduce an activity adapter.
+2. Remove deprecated application display/task-name forwarding,
+   `text_field_editor()`, obsolete `start()` overloads, `root()`, `refresh()`,
+   and `gesture_detector()` forwarders.
 3. Remove the constructor that embeds one `KeySource`, Phase 3 direct source
    attachment, `KeyboardListener`, and its adapter.
 4. Remove application-level dialog forwarding and require
    `UiTask::showModal()`.
-5. Remove `Widget::getTask()` and `Widget::getApplication()`; retain structural
-   `getUiTask()` and `getMainWindow()`.
+5. Remove `Widget::getApplication()`; retain structural `getUiTask()` and
+   `getMainWindow()`. `Widget::getTask()` is already removed in Phase 4.
 6. Remove `MainWindow::app()` and its application back-reference, migrating
    every remaining caller to task, window, or context ownership.
 
@@ -143,9 +147,10 @@ application back-reference.
 
 ### Removed navigation model
 
-The activity headers, sources, tests, and build targets are removed after all
-examples use direct content or `NavigationHost`. Lifecycle-dependent examples
-move their setup/teardown to owning controllers and destination Back handlers.
+Phase 4 already removes the activity headers, sources, tests, and build targets
+after migrating examples to direct content or `NavigationHost`. Phase 8 checks
+that the boundary remains clean while removing the independent compatibility
+surfaces owned by later phases.
 
 `TaskPanel` remains an internal structural class but loses `getTask()`. Public
 code cannot name or retain it. The term “task” in final documentation always
@@ -180,8 +185,8 @@ include:
 | --- | --- |
 | `Application::root()` | `Application::window().root()` |
 | `Application::refresh()` | `Application::window().refresh()` |
-| `Application::addTask*()` returning `Task*` | `Application::addTask*()` returning `UiTask&` |
-| `Task::enterActivity()` | `UiTask::setContent()` or `NavigationHost::push()` |
+| `Application::addTask*()` returning `Task*` | fixed-widget or `NavigationHost` task creation returning `UiTask&` (removed in Phase 4) |
+| `Task::enterActivity()` | direct task creation or `NavigationHost::push()` (removed in Phase 4) |
 | `Application::text_field_editor()` | `UiTask::textFieldEditor()` |
 | constructor `KeySource&` | caller-owned `TaskKeyBinding` |
 | `KeyboardListener` | `KeyEventEmitter`/`KeyEventBinding` |
@@ -229,8 +234,14 @@ class Application {
   DisplayWindow& window();
   const DisplayWindow& window() const;
 
-  UiTask& addTask(const Rect& bounds, UiTaskOptions options = {});
-  UiTask& addTaskFullScreen(UiTaskOptions options = {});
+  UiTask& addTask(Widget& content, const Rect& bounds,
+                  UiTaskOptions options = {});
+  UiTask& addTask(NavigationHost& navigation, const Rect& bounds,
+                  UiTaskOptions options = {});
+  UiTask& addTaskFullScreen(Widget& content,
+                            UiTaskOptions options = {});
+  UiTask& addTaskFullScreen(NavigationHost& navigation,
+                            UiTaskOptions options = {});
 
   void start();
   void run();
@@ -238,8 +249,7 @@ class Application {
 
 class UiTask {
  public:
-  void setContent(WidgetRef content, BackHandler* back_handler = nullptr);
-  NavigationResult setNavigationHost(NavigationHost& host);
+  void setBackCallback(BackCallback callback);
   BackResult requestBack(
       BackSource source = BackSource::kProgrammatic);
   KeyEventSink& keyEventSink();
@@ -260,8 +270,9 @@ Implementation follows the
 
 ### Phase 8: complete migration and cost audit
 
-1. Migrate all examples, tests, and internal users to final display, task,
-   content/navigation, binding, drive, and modal APIs.
+1. Migrate all remaining examples, tests, and internal users to final display,
+   task naming, binding, drive, and modal APIs. Activity/navigation migration
+   is already complete in Phase 4.
 2. Remove every compatibility symbol and implementation listed under Removal
    requirements; simplify ownership and member layout after deletion.
 3. Add `docs/display_runtime_migration.md` and update reference documentation,
@@ -287,7 +298,7 @@ Proposed commit: `refactor: complete display runtime migration`
 Proposed commit body:
 
 > Display runtime Phase 8 completes the ownership and API migration. Remove
-> legacy application, activity, editor, input, and modal forwarding; migrate
+> legacy application, editor, input, and modal forwarding; migrate
 > all users and record the final cost and hardware audit required by
 > `display_runtime_migration_audit_design.md`.
 
@@ -304,9 +315,9 @@ results rather than timing-sensitive sleeps.
 
 ## Caveats
 
-Phase 8 intentionally breaks source and ABI compatibility with the legacy
-activity/runtime API. The migration guide and preceding deprecation window are
-the compatibility mechanism.
+Phase 8 intentionally breaks source and ABI compatibility with the remaining
+runtime forwarding APIs. Activity/Task compatibility was already broken and
+documented by Phase 4d.
 
 ### Rejected Alternatives
 

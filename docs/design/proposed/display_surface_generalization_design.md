@@ -370,39 +370,39 @@ transient-host design rather than becoming a cross-window focus hierarchy.
 A simple task installs one root directly:
 
 ```cpp
-task.setContent(widget_ref);
+UiTask& task = app.addTask(widget, bounds);
 ```
 
 This creates no `Destination`, navigation host, or hidden one-entry stack. Back is
-unhandled after task-local transients have declined it, unless the direct
-content explicitly handles Back.
+unhandled after task-local transients have declined it, unless the task's
+optional callback handles Back.
 
-`setContent()` consumes a `WidgetRef`. Passing `WidgetRef(widget)` borrows
-caller-owned storage; passing a `WidgetRef` constructed from a `unique_ptr`
-transfers ownership. Replacing content first cancels task references into the
-old subtree, detaches it, and then destroys it if the task owned it.
+Task creation borrows an unattached `Widget&` as the fixed root for the task's
+lifetime. There is no task-level root replacement or ownership transfer. A
+persistent root container may replace its own descendants when an application
+needs direct-content changes.
 
-A navigation-style task instead installs a `NavigationHost`. The host presents
-one destination and owns destination history, implementing push, replace, and
-pop directly. The exact ownership form must fit Roo's non-allocating widget
-conventions, but the API must distinguish borrowed destinations from owned
-storage.
+A navigation-style task is instead created with a borrowed `NavigationHost&`.
+The host presents one borrowed destination and stores a growable history of
+borrowed destination pointers, implementing push, replace, pop, and clear
+directly.
 
 This replaces the present assumption that every task is an activity stack.
-During migration, an adapter may present the current `Activity` stack through
-`NavigationHost`; it is removed once clients use the new API.
+After clients migrate to direct content or `Destination`, Phase 4 removes the
+current `Activity` stack without introducing a legacy navigation adapter.
 
 The Back order within a task is:
 
 1. close the applicable transient;
-2. let direct content or the current destination handle Back;
-3. pop the optional navigator if it has history; and
-4. report Back as unhandled to the application.
+2. let the current destination handle Back when navigation is present;
+3. pop navigation when more than the root entry remains;
+4. invoke the task's optional Back callback; and
+5. otherwise report Back as unhandled.
 
-Back preserves its `BackSource` through every step. Content and destination
-callbacks may synchronously replace content or mutate navigation. The fallback
-pop therefore occurs only when the navigator's generation is unchanged after
-the callback; any mutation counts as the one handled semantic step.
+Back preserves its `BackSource` through every step. Destination callbacks may
+synchronously mutate navigation. The fallback pop therefore occurs only when
+the host's generation is unchanged after the callback; any mutation counts as
+the one handled semantic step.
 
 ### Sub-design 3: driving several applications on one scheduler
 
@@ -565,8 +565,14 @@ class Application {
 
   DisplayWindow& window();
 
-  UiTask& addTask(Rect bounds, UiTaskOptions options = {});
-  UiTask& addTaskFullScreen(UiTaskOptions options = {});
+  UiTask& addTask(Widget& content, Rect bounds,
+                  UiTaskOptions options = {});
+  UiTask& addTask(NavigationHost& navigation, Rect bounds,
+                  UiTaskOptions options = {});
+  UiTask& addTaskFullScreen(Widget& content,
+                            UiTaskOptions options = {});
+  UiTask& addTaskFullScreen(NavigationHost& navigation,
+                            UiTaskOptions options = {});
 
   // Schedules bounded application work on the environment's scheduler.
   void start();
@@ -587,8 +593,7 @@ class UiTask {
   DisplayWindow& window();
   FocusManager& focus();
 
-  void setContent(WidgetRef root);
-  void setNavigationHost(NavigationHost& host);
+  void setBackCallback(BackCallback callback);
 
   KeyEventSink& keyEventSink();
   BackResult requestBack(
@@ -652,12 +657,10 @@ Example cross-display setup:
 
 ```cpp
 Application editor_app(env, editor_display);
-UiTask& editor = editor_app.addTaskFullScreen();
-editor.setContent(editor_view);
+UiTask& editor = editor_app.addTaskFullScreen(editor_view);
 
 Application keyboard_app(env, keyboard_display);
-UiTask& keyboard = keyboard_app.addTaskFullScreen();
-keyboard.setContent(software_keyboard);
+UiTask& keyboard = keyboard_app.addTaskFullScreen(software_keyboard);
 
 editor_app.start();
 keyboard_app.start();
@@ -749,17 +752,22 @@ Proposed commit: `refactor: separate ui task interaction from task panel`
 Implement the
 [Phase 4 optional navigation design](display_optional_navigation_design.md):
 
-- add direct task content with explicit borrowed or owned `WidgetRef` storage;
+- add one fixed borrowed `Widget&` as direct task content;
 - add `NavigationHost` and `Destination` only for tasks that request history;
   and
-- move activity behavior out of every `UiTask` into a compatibility-only host.
+- migrate lifecycle-dependent controllers to `Destination`, migrate singleton
+  screens to fixed direct content, and remove legacy `Task`/`Activity` rather
+  than retaining a compatibility-only host.
 
 Validation:
 
 - test a direct-content task with no navigation objects;
 - test push, replace, pop, and root Back for a navigation task; and
 - test reentrant Back callbacks that push, replace, clear, or detach content;
-- compare RAM cost of direct content with a navigation task.
+- test Activity-compatible lifecycle sequencing and lifecycle navigation;
+- compile representative downstream lifecycle users after migration; and
+- compare RAM cost of direct content with a navigation task and the
+  pre-removal legacy build.
 
 Proposed commit: `refactor: make task navigation optional`
 
@@ -832,8 +840,8 @@ Proposed commit: `feat: add explicit modal coverage policies`
 Implement the
 [Phase 8 migration and cost-audit design](display_runtime_migration_audit_design.md):
 
-- remove forwarding APIs, legacy activities, implicit editor/input routes, and
-  obsolete singleton/back-reference state;
+- verify the Phase 4 activity removal and remove the remaining forwarding APIs,
+  implicit editor/input routes, and obsolete singleton/back-reference state;
 - migrate examples and reference documentation to the final API; and
 - record final size, allocation, timing, and single-/dual-display hardware
   results and remediate every defined regression gate.
