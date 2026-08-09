@@ -4,16 +4,16 @@
 
 namespace roo_windows {
 
-void Destination::onClicked() {
+void NavigationRailEntry::onClicked() {
   if (rail()->setActive(idx_)) activator_();
   IconWithCaption::onClicked();
 }
 
-const NavigationRail* Destination::rail() const {
+const NavigationRail* NavigationRailEntry::rail() const {
   return static_cast<const NavigationRail*>(parent());
 }
 
-NavigationRail* Destination::rail() {
+NavigationRail* NavigationRailEntry::rail() {
   return static_cast<NavigationRail*>(parent());
 }
 
@@ -48,9 +48,9 @@ void NavigationRail::onLayout(bool changed, const Rect& rect) {
 void NavigationRail::addDestination(const roo_display::Pictogram& icon,
                                     std::string text,
                                     std::function<void()> activator) {
-  Destination* dest =
-      new Destination(context(), icon, std::move(text), destinations_.size(),
-                      std::move(activator));
+  NavigationRailEntry* dest =
+      new NavigationRailEntry(context(), icon, std::move(text),
+                              destinations_.size(), std::move(activator));
   destinations_.emplace_back(dest);
   add(*dest);
 }

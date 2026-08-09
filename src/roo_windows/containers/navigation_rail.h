@@ -9,15 +9,16 @@
 
 namespace roo_windows {
 
-class Destination;
+class NavigationRailEntry;
 class NavigationRail;
 
 /// One entry inside a `NavigationRail`: an icon-with-caption that activates a
 /// caller-supplied callback when clicked.
-class Destination : public IconWithCaption {
+class NavigationRailEntry : public IconWithCaption {
  public:
-  Destination(ApplicationContext& context, const roo_display::Pictogram& icon,
-              std::string text, int idx, std::function<void()> activator)
+  NavigationRailEntry(ApplicationContext& context,
+                      const roo_display::Pictogram& icon, std::string text,
+                      int idx, std::function<void()> activator)
       : IconWithCaption(context, std::move(icon), std::move(text)),
         idx_(idx),
         activator_(std::move(activator)) {}
@@ -83,7 +84,7 @@ class NavigationRail : public Panel {
   void onLayout(bool changed, const Rect& rect) override;
 
  private:
-  friend class Destination;
+  friend class NavigationRailEntry;
 
   int width_dp_;  // defaults to 72.
   int destination_size_dp_;
@@ -92,7 +93,7 @@ class NavigationRail : public Panel {
   int active_;
   VerticalDivider divider_;
 
-  std::vector<std::unique_ptr<Destination>> destinations_;
+  std::vector<std::unique_ptr<NavigationRailEntry>> destinations_;
 };
 
 }  // namespace roo_windows

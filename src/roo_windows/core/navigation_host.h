@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <vector>
 
-#include "roo_windows/core/back_request.h"
+#include "roo_windows/core/destination.h"
 
 namespace roo_windows {
 
@@ -12,33 +12,11 @@ class UiTask;
 class Widget;
 class Application;
 
-/// Borrowed controller for one navigable task root.
-class Destination {
- public:
-  virtual ~Destination();
-
-  /// Returns the caller-owned root widget for this destination.
-  virtual Widget& getContents() = 0;
-
-  /// Handles a semantic Back request before normal history traversal.
-  virtual BackResult onBackRequested(BackSource source) {
-    return BackResult::kUnhandled;
-  }
-
- protected:
-  Destination() = default;
-
- private:
-  friend class NavigationHost;
-
-  NavigationHost* host_ = nullptr;
-};
-
 /// Optional, caller-owned navigation history for one `UiTask`.
 ///
 /// The host borrows every `Destination` and its contents. It stores history in
-/// a growable vector; only `push()` may allocate after the vector
-/// has reached its retained capacity.
+/// a growable vector; only `push()` may allocate after its retained capacity
+/// has been reached.
 class NavigationHost {
  public:
   NavigationHost() = default;
@@ -65,12 +43,19 @@ class NavigationHost {
   /// Returns the number of stored destinations.
   size_t depth() const { return history_.size(); }
 
+  /// Returns this host's task while installed, otherwise nullptr.
+  UiTask* getUiTask() const { return task_; }
+
  private:
   friend class UiTask;
   friend class Application;
+  friend class Destination;
 
   /// Routes Back through the current destination and normal history fallback.
   BackResult requestBack(BackSource source);
+  Destination* current() const {
+    return history_.empty() ? nullptr : history_.back();
+  }
   void install(UiTask& task);
   void disconnect();
   UiTask* task_ = nullptr;

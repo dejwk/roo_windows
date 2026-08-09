@@ -224,13 +224,13 @@ policy:
 class Destination {
  public:
   enum State {
-    INACTIVE,
-    STARTING,
-    RESUMING,
-    ACTIVE,
-    PAUSING,
-    PAUSED,
-    STOPPING,
+    kInactive,
+    kStarting,
+    kResuming,
+    kActive,
+    kPausing,
+    kPaused,
+    kStopping,
   };
 
   virtual ~Destination();
@@ -260,7 +260,7 @@ class Destination {
 };
 ```
 
-`host_` is null and `state_` is `INACTIVE` while the destination is outside
+`host_` is null and `state_` is `kInactive` while the destination is outside
 history. The host rejects a destination whose `host_` is already set. The
 virtual destination destructor checks both detached conditions, matching the
 current `Activity` lifetime contract. `exit()` requires the destination to be
@@ -282,15 +282,15 @@ destination widgets remain detached and application-owned.
 The four hooks preserve the current `Activity` meanings:
 
 - `onStart()` runs once when a destination enters history. Its `host_` is set,
-  its state is `STARTING`, and its widget is detached.
+  its state is `kStarting`, and its widget is detached.
 - `onResume()` runs whenever the destination becomes current. Its state is
-  `RESUMING`, and its widget is attached before the callback.
+  `kResuming`, and its widget is attached before the callback.
 - `onPause()` runs whenever the current destination is about to be covered or
-  removed. Its state is `PAUSING`, and its widget remains attached throughout
+  removed. Its state is `kPausing`, and its widget remains attached throughout
   the callback.
 - `onStop()` runs once when a destination leaves history. Its state is
-  `STOPPING`, its widget is detached, and `host_` remains available until the
-  callback returns. The host then sets state to `INACTIVE` and clears `host_`.
+  `kStopping`, its widget is detached, and `host_` remains available until the
+  callback returns. The host then sets state to `kInactive` and clears `host_`.
 
 Navigation commands apply those hooks in this order:
 
@@ -432,13 +432,13 @@ using BackCallback = std::function<BackResult(BackSource)>;
 class Destination {
  public:
   enum State {
-    INACTIVE,
-    STARTING,
-    RESUMING,
-    ACTIVE,
-    PAUSING,
-    PAUSED,
-    STOPPING,
+    kInactive,
+    kStarting,
+    kResuming,
+    kActive,
+    kPausing,
+    kPaused,
+    kStopping,
   };
 
   virtual ~Destination();

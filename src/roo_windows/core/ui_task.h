@@ -34,6 +34,9 @@ class UiTask {
   /// Returns the permanently attached display window.
   DisplayWindow& window() { return window_; }
   const DisplayWindow& window() const { return window_; }
+  /// Returns the application that owns this task.
+  Application& application() { return app_; }
+  const Application& application() const { return app_; }
 
   /// Returns focus state scoped to this task panel.
   FocusManager& focus() { return focus_; }

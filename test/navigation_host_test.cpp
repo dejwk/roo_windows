@@ -1,5 +1,7 @@
 #include "roo_windows/core/navigation_host.h"
 
+#include <vector>
+
 #include "gtest/gtest.h"
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
@@ -45,6 +47,31 @@ class ReentrantDestination : public TestDestination {
  private:
   NavigationHost& navigation_;
   Destination& next_;
+};
+
+class LifecycleDestination : public TestDestination {
+ public:
+  LifecycleDestination(ApplicationContext& context, std::vector<char>& events,
+                       char name)
+      : TestDestination(context), events_(events), name_(name) {}
+
+  void onStart() override { events_.push_back(name_); }
+  void onResume() override {
+    EXPECT_NE(nullptr, contents().parent());
+    events_.push_back('R');
+  }
+  void onPause() override {
+    EXPECT_NE(nullptr, contents().parent());
+    events_.push_back('P');
+  }
+  void onStop() override {
+    EXPECT_EQ(nullptr, contents().parent());
+    events_.push_back('S');
+  }
+
+ private:
+  std::vector<char>& events_;
+  char name_;
 };
 
 // Verifies that history borrows destinations, attaching only the current root
@@ -146,6 +173,36 @@ TEST(NavigationHost, ReentrantDestinationBackPerformsOnlyOneStep) {
   }
   delete current;
   delete next;
+}
+
+// Verifies Activity-compatible lifecycle order and attachment observations for
+// destination push, pop, and teardown.
+TEST(NavigationHost, DestinationLifecycleFollowsHistoryAndCurrentContent) {
+  roo::byte raster[16 * 16 * 2] = {};
+  roo_display::OffscreenDevice<roo_display::Argb4444> device(
+      16, 16, raster, roo_display::Argb4444());
+  roo_display::Display display(device);
+  roo_scheduler::Scheduler scheduler;
+  Environment environment(scheduler);
+  NavigationHost navigation;
+  std::vector<char> events;
+  LifecycleDestination* first = nullptr;
+  LifecycleDestination* second = nullptr;
+  {
+    Application app(&environment, display);
+    first = new LifecycleDestination(app.context(), events, 'A');
+    second = new LifecycleDestination(app.context(), events, 'B');
+    app.addUiTaskFullScreen(navigation);
+    navigation.push(*first);
+    navigation.push(*second);
+    navigation.pop();
+    navigation.clear();
+  }
+  EXPECT_EQ(
+      (std::vector<char>{'A', 'R', 'P', 'B', 'R', 'P', 'S', 'R', 'P', 'S'}),
+      events);
+  delete second;
+  delete first;
 }
 
 }  // namespace

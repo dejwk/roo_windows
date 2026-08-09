@@ -6,8 +6,6 @@
 
 namespace roo_windows {
 
-Destination::~Destination() { CHECK(host_ == nullptr); }
-
 NavigationHost::~NavigationHost() {
   CHECK(task_ == nullptr);
   CHECK(history_.empty());
@@ -30,11 +28,35 @@ void NavigationHost::push(Destination& destination) {
   CHECK(destination.host_ == nullptr);
   CHECK(destination.getContents().parent() == nullptr);
 
-  history_.push_back(&destination);
   mutating_ = true;
+  Destination* previous = current();
+  if (previous != nullptr) {
+    CHECK(previous->state_ == Destination::kActive);
+    previous->state_ = Destination::kPausing;
+    previous->onPause();
+    if (previous->state_ != Destination::kPausing) {
+      mutating_ = false;
+      return;
+    }
+    task_->detachNavigationContent();
+    previous->state_ = Destination::kPaused;
+  }
+  history_.push_back(&destination);
   destination.host_ = this;
-  if (history_.size() > 1) task_->detachNavigationContent();
+  destination.state_ = Destination::kStarting;
+  destination.onStart();
+  if (destination.state_ != Destination::kStarting ||
+      current() != &destination) {
+    mutating_ = false;
+    return;
+  }
   task_->attachNavigationContent(destination.getContents());
+  destination.state_ = Destination::kResuming;
+  destination.onResume();
+  if (destination.state_ == Destination::kResuming &&
+      current() == &destination) {
+    destination.state_ = Destination::kActive;
+  }
   ++generation_;
   mutating_ = false;
 }
@@ -46,15 +68,8 @@ void NavigationHost::replace(Destination& destination) {
   CHECK(destination.host_ == nullptr);
   CHECK(destination.getContents().parent() == nullptr);
 
-  mutating_ = true;
-  Destination* previous = history_.back();
-  task_->detachNavigationContent();
-  previous->host_ = nullptr;
-  history_.back() = &destination;
-  destination.host_ = this;
-  task_->attachNavigationContent(destination.getContents());
-  ++generation_;
-  mutating_ = false;
+  pop();
+  push(destination);
 }
 
 void NavigationHost::pop() {
@@ -64,11 +79,31 @@ void NavigationHost::pop() {
 
   mutating_ = true;
   Destination* previous = history_.back();
-  task_->detachNavigationContent();
+  if (previous->state_ == Destination::kActive) {
+    previous->state_ = Destination::kPausing;
+    previous->onPause();
+    if (previous->state_ != Destination::kPausing) {
+      mutating_ = false;
+      return;
+    }
+    task_->detachNavigationContent();
+    previous->state_ = Destination::kPaused;
+  }
+  CHECK(previous->state_ == Destination::kPaused);
   history_.pop_back();
-  previous->host_ = nullptr;
+  previous->state_ = Destination::kStopping;
+  previous->onStop();
+  if (previous->state_ == Destination::kStopping) {
+    previous->state_ = Destination::kInactive;
+    previous->host_ = nullptr;
+  }
   if (!history_.empty()) {
-    task_->attachNavigationContent(history_.back()->getContents());
+    Destination* next = history_.back();
+    task_->attachNavigationContent(next->getContents());
+    next->state_ = Destination::kResuming;
+    next->onResume();
+    if (next->state_ == Destination::kResuming)
+      next->state_ = Destination::kActive;
   }
   ++generation_;
   mutating_ = false;
@@ -78,12 +113,7 @@ void NavigationHost::clear() {
   CHECK(!mutating_);
   if (history_.empty()) return;
 
-  mutating_ = true;
-  if (task_ != nullptr) task_->detachNavigationContent();
-  for (Destination* destination : history_) destination->host_ = nullptr;
-  history_.clear();
-  ++generation_;
-  mutating_ = false;
+  while (!history_.empty()) pop();
 }
 
 BackResult NavigationHost::requestBack(BackSource source) {
