@@ -175,7 +175,7 @@ Application app(&env, display, emulator_keys, true);
 Application app(&env, display);
 #endif
 CustomBadgeAnchor custom_badge_anchor(app.context());
-SingletonActivity activity(app, custom_badge_anchor);
+UiTask& task = app.addUiTaskFullScreen(custom_badge_anchor);
 
 void setup() {
   initDisplay();

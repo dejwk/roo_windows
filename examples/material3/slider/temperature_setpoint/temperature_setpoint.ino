@@ -166,7 +166,7 @@ Application app(&env, display, emulator_keys, true);
 Application app(&env, display);
 #endif
 TemperatureSetpoint temperature_setpoint(app.context());
-SingletonActivity activity(app, temperature_setpoint);
+UiTask& task = app.addUiTaskFullScreen(temperature_setpoint);
 
 void setup() {
   initDisplay();

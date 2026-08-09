@@ -175,7 +175,7 @@ TEST(NavigationHost, ReentrantDestinationBackPerformsOnlyOneStep) {
   delete next;
 }
 
-// Verifies Activity-compatible lifecycle order and attachment observations for
+// Verifies lifecycle order and attachment observations for
 // destination push, pop, and teardown.
 TEST(NavigationHost, DestinationLifecycleFollowsHistoryAndCurrentContent) {
   roo::byte raster[16 * 16 * 2] = {};

@@ -183,7 +183,7 @@ Application app(&env, display, emulator_keys, true);
 Application app(&env, display);
 #endif
 EquipmentConsole equipment_console(app.context());
-SingletonActivity activity(app, equipment_console);
+UiTask& task = app.addUiTaskFullScreen(equipment_console);
 
 void setup() {
   initDisplay();

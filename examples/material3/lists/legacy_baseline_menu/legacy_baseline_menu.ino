@@ -157,7 +157,7 @@ Application app(&env, display, emulator_keys, true);
 Application app(&env, display);
 #endif
 LegacyServiceMenu legacy_service_menu(app.context());
-SingletonActivity activity(app, legacy_service_menu);
+UiTask& task = app.addUiTaskFullScreen(legacy_service_menu);
 
 void setup() {
   initDisplay();

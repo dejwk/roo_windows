@@ -160,7 +160,7 @@ Application app(&env, display, emulator_keys, true);
 Application app(&env, display);
 #endif
 EquipmentCategories equipment_categories(app.context());
-SingletonActivity activity(app, equipment_categories);
+UiTask& task = app.addUiTaskFullScreen(equipment_categories);
 
 void setup() {
   initDisplay();

@@ -4,10 +4,10 @@
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
-#include "roo_windows/core/activity.h"
+#include "roo_windows/core/destination.h"
 #include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/environment.h"
-#include "roo_windows/core/task.h"
+#include "roo_windows/core/navigation_host.h"
 #include "roo_windows/core/transient_presentation.h"
 
 namespace roo_windows {
@@ -22,9 +22,9 @@ class TestWidget : public BasicWidget {
   }
 };
 
-class TestActivity : public Activity {
+class TestDestination : public Destination {
  public:
-  explicit TestActivity(ApplicationContext& context) : contents_(context) {}
+  explicit TestDestination(ApplicationContext& context) : contents_(context) {}
 
   Widget& getContents() override { return contents_; }
 
@@ -56,8 +56,7 @@ class BackPresentation final : public TransientPresentationRegistration {
   }
 };
 
-// Verifies that application back dispatch only changes the explicitly targeted
-// task, even when another task has a different current activity.
+// Verifies that task-local Back only changes its own navigation history.
 TEST(Application, RequestBackUsesExplicitTargetTask) {
   roo::byte raster[64 * 64 * 2] = {};
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
@@ -65,30 +64,30 @@ TEST(Application, RequestBackUsesExplicitTargetTask) {
   roo_display::Display display(device);
   roo_scheduler::Scheduler scheduler;
   Environment environment(scheduler);
+  NavigationHost first_navigation;
+  NavigationHost second_navigation;
   Application app(&environment, display);
-  Task* first_task = app.addTaskFullScreen();
-  Task* second_task = app.addTaskFullScreen();
-  TestActivity first_root(app.context());
-  TestActivity first_child(app.context());
-  TestActivity second_root(app.context());
-  TestActivity second_child(app.context());
-  first_task->enterActivity(&first_root);
-  first_task->enterActivity(&first_child);
-  second_task->enterActivity(&second_root);
-  second_task->enterActivity(&second_child);
+  UiTask& first_task = app.addUiTaskFullScreen(first_navigation);
+  UiTask& second_task = app.addUiTaskFullScreen(second_navigation);
+  TestDestination first_root(app.context());
+  TestDestination first_child(app.context());
+  TestDestination second_root(app.context());
+  TestDestination second_child(app.context());
+  first_navigation.push(first_root);
+  first_navigation.push(first_child);
+  second_navigation.push(second_root);
+  second_navigation.push(second_child);
 
   EXPECT_EQ(BackResult::kHandled,
-            app.requestBack(*second_task, BackSource::kEscapeKey));
-  EXPECT_EQ(&first_child, first_task->currentActivity());
-  EXPECT_EQ(2u, first_task->activityCount());
-  EXPECT_EQ(&second_root, second_task->currentActivity());
-  EXPECT_EQ(1u, second_task->activityCount());
+            second_task.requestBack(BackSource::kEscapeKey));
+  EXPECT_EQ(2u, first_navigation.depth());
+  EXPECT_EQ(1u, second_navigation.depth());
   EXPECT_EQ(0, first_child.back_request_count);
   EXPECT_EQ(1, second_child.back_request_count);
   EXPECT_EQ(BackSource::kEscapeKey, second_child.last_source);
 
-  first_task->clear();
-  second_task->clear();
+  first_navigation.clear();
+  second_navigation.clear();
 }
 
 // Verifies an eligible window presentation receives Back before its task.
@@ -99,25 +98,26 @@ TEST(Application, RequestBackPrioritizesTransientPresentation) {
   roo_display::Display display(device);
   roo_scheduler::Scheduler scheduler;
   Environment environment(scheduler);
+  NavigationHost navigation;
   Application app(&environment, display);
-  Task* task = app.addTaskFullScreen();
-  TestActivity root(app.context());
-  TestActivity child(app.context());
-  task->enterActivity(&root);
-  task->enterActivity(&child);
+  UiTask& task = app.addUiTaskFullScreen(navigation);
+  TestDestination root(app.context());
+  TestDestination child(app.context());
+  navigation.push(root);
+  navigation.push(child);
   BackPresentation presentation;
 
   EXPECT_EQ(PresentationStartResult::kStarted,
             app.root().transient_presentation_slot().show(
                 presentation, TransientPresentationPolicy(true)));
   EXPECT_EQ(BackResult::kHandled,
-            app.requestBack(*task, BackSource::kNavigationButton));
+            task.requestBack(BackSource::kNavigationButton));
   EXPECT_EQ(1, presentation.back_request_count);
   EXPECT_EQ(BackSource::kNavigationButton, presentation.last_source);
-  EXPECT_EQ(&child, task->currentActivity());
+  EXPECT_EQ(2u, navigation.depth());
   EXPECT_EQ(0, child.back_request_count);
 
-  task->clear();
+  navigation.clear();
 }
 
 }  // namespace

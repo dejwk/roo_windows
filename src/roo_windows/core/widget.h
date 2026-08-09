@@ -34,7 +34,6 @@ class Container;
 class MainWindow;
 class GestureDetector;
 class FocusManager;
-class Task;
 class UiTask;
 class Application;
 
@@ -275,7 +274,6 @@ class Widget {
   virtual MainWindow* getMainWindow();
   virtual const MainWindow* getMainWindow() const;
 
-  virtual Task* getTask();
   virtual UiTask* getUiTask();
   virtual const UiTask* getUiTask() const;
 

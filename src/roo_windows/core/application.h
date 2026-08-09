@@ -7,24 +7,22 @@
 #include "roo_threads.h"
 #include "roo_time.h"
 #include "roo_windows/activities/keyboard.h"
-#include "roo_windows/core/activity.h"
 #include "roo_windows/core/application_context.h"
 #include "roo_windows/core/display_window.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/key_source.h"
-#include "roo_windows/core/task.h"
 #include "roo_windows/core/ui_task.h"
 #include "roo_windows/widgets/text_field.h"
 
 namespace roo_windows {
 
-/// Top-level coordinator that owns the event loop, the display, the input
-/// pipeline, and all active `Task`s.
+/// Top-level coordinator that owns the event loop, display, input pipeline,
+/// and active display-local tasks.
 ///
 /// An application is constructed with an `Environment` (scheduler + theme) and
 /// a `roo_display::Display`. It hosts a single `MainWindow` and any number of
-/// `Task`s (full-screen or floating, normal or popup) which in turn host
-/// `Activity` stacks. `run()` enters the main loop; `refresh()` performs a
+/// display-local tasks (full-screen or popup). `run()` enters the main loop;
+/// `refresh()` performs a
 /// one-shot layout/paint pass, advances click settlement, and may deliver
 /// deferred click notifications; `executeInUIThread()` provides thread-safe
 /// re-entry from worker threads.
@@ -78,13 +76,6 @@ class Application {
   /// Adds a child widget to a new popup task at the supplied bounds.
   void addPopup(WidgetRef child, const roo_display::Box& box);
 
-  /// Creates a new regular task occupying the supplied display rectangle
-  /// and returns a non-owning pointer to it.
-  Task* addTask(const roo_display::Box& bounds);
-
-  /// Creates a new popup task occupying the supplied display rectangle.
-  Task* addPopupTask(const roo_display::Box& bounds);
-
   /// Creates a display-local direct-content task in the normal layer. The
   /// caller retains ownership of `content`, which must remain unattached and
   /// outlive the returned task.
@@ -97,29 +88,6 @@ class Application {
   UiTask& addUiTask(NavigationHost& navigation, const roo_display::Box& bounds);
   /// Creates a display-local navigation task filling the display.
   UiTask& addUiTaskFullScreen(NavigationHost& navigation);
-
-  /// Legacy compatibility task creation. Prefer the direct-content overloads.
-  UiTask& addUiTask(const roo_display::Box& bounds);
-  UiTask& addUiTaskFullScreen();
-
-  /// Creates a regular task that fills the entire display.
-  Task* addTaskFullScreen() { return addTask(window_.display().extents()); }
-
-  /// Creates a regular task that sizes itself based on its contents.
-  Task* addTaskFloating() { return addTask(roo_display::Box(0, 0, -1, -1)); }
-
-  /// Creates a popup task that sizes itself based on its contents.
-  Task* addPopupTaskFloating() {
-    return addPopupTask(roo_display::Box(0, 0, -1, -1));
-  }
-
-  /// Routes a semantic back request to an application-owned target task.
-  ///
-  /// Passing a task that does not belong to this application is a programming
-  /// error. An eligible root transient presentation receives the request
-  /// before the target task.
-  BackResult requestBack(Task& target,
-                         BackSource source = BackSource::kProgrammatic);
 
   /// Shows a modal dialog. Dialogs are centered and scrim the screen behind
   /// them. The callback gets called with the index of the option (e.g.
@@ -181,10 +149,6 @@ class Application {
     return window_.gestureDetector();
   }
 
-  /// Deprecated compatibility accessor for the first user task's editor.
-  TextFieldEditor& text_field_editor();
-  const TextFieldEditor& text_field_editor() const;
-
   /// Returns whether the caller is the active UI thread after `start()`.
   bool isUiThread() const;
 
@@ -192,15 +156,11 @@ class Application {
   // Handles user input (touch, etc.), and calls refresh() periodically.
   void tick();
 
-  /// Returns whether `task` is owned by this application.
-  bool ownsTask(const Task& task) const;
-
   const Environment* env_;
   ApplicationContext context_;
 
   Keyboard keyboard_;
   std::vector<std::unique_ptr<UiTask>> ui_tasks_;
-  UiTask* compatibility_task_ = nullptr;
   KeySource* pending_key_source_ = nullptr;
 
   DisplayWindow window_;

@@ -15,9 +15,13 @@ Application::Application(const Environment* env, roo_display::Display& display)
       keyboard_(context_, kbEngUS()),
       window_(*this, display, true),
       ticker_(env->scheduler(), [this]() { tick(); }) {
+  roo_display::Box keyboard_bounds(0, window_.root().height() / 2,
+                                   window_.root().width() - 1,
+                                   window_.root().height() - 1);
   auto keyboard_task = std::unique_ptr<UiTask>(new UiTask(
-      *this, window_, roo_display::Box(0, 0, -1, -1), true, keyboard_));
-  keyboard_task->legacyActivities().enterActivity(&keyboard_);
+      *this, window_, keyboard_bounds, true, keyboard_, keyboard_.getContents()));
+  keyboard_.setUiTask(*keyboard_task);
+  keyboard_task->setVisible(false);
   ui_tasks_.push_back(std::move(keyboard_task));
   if (pending_key_source_ != nullptr) {
     ui_tasks_.front()->attachKeySource(*pending_key_source_);
@@ -32,9 +36,13 @@ Application::Application(const Environment* env, roo_display::Display& display,
       pending_key_source_(&keys),
       window_(*this, display, enable_touch),
       ticker_(env->scheduler(), [this]() { tick(); }) {
+  roo_display::Box keyboard_bounds(0, window_.root().height() / 2,
+                                   window_.root().width() - 1,
+                                   window_.root().height() - 1);
   auto keyboard_task = std::unique_ptr<UiTask>(new UiTask(
-      *this, window_, roo_display::Box(0, 0, -1, -1), true, keyboard_));
-  keyboard_task->legacyActivities().enterActivity(&keyboard_);
+      *this, window_, keyboard_bounds, true, keyboard_, keyboard_.getContents()));
+  keyboard_.setUiTask(*keyboard_task);
+  keyboard_task->setVisible(false);
   ui_tasks_.push_back(std::move(keyboard_task));
   if (pending_key_source_ != nullptr) {
     ui_tasks_.front()->attachKeySource(*pending_key_source_);
@@ -53,11 +61,6 @@ void Application::add(WidgetRef child, const roo_display::Box& box) {
 
 void Application::addPopup(WidgetRef child, const roo_display::Box& box) {
   window_.root().addPopup(std::move(child), box);
-}
-
-BackResult Application::requestBack(Task& target, BackSource source) {
-  CHECK(ownsTask(target));
-  return target.uiTask().requestBack(source);
 }
 
 void Application::start() {
@@ -95,41 +98,12 @@ bool Application::refresh(roo_time::Uptime deadline) {
   return window_.refresh(deadline);
 }
 
-Task* Application::addTask(const roo_display::Box& bounds) {
-  return &addUiTask(bounds).legacyActivities();
-}
-
-Task* Application::addPopupTask(const roo_display::Box& bounds) {
-  UiTask* task = new UiTask(*this, window_, bounds, true, keyboard_);
-  ui_tasks_.emplace_back(task);
-  return &task->legacyActivities();
-}
-
-UiTask& Application::addUiTask(const roo_display::Box& bounds) {
-  UiTask* task = new UiTask(*this, window_, bounds, false, keyboard_);
-  ui_tasks_.emplace_back(task);
-  if (compatibility_task_ == nullptr) {
-    compatibility_task_ = task;
-    if (pending_key_source_ != nullptr) {
-      for (const std::unique_ptr<UiTask>& candidate : ui_tasks_) {
-        candidate->detachKeySource();
-      }
-      task->attachKeySource(*pending_key_source_);
-    }
-  }
-  return *task;
-}
-
-UiTask& Application::addUiTaskFullScreen() {
-  return addUiTask(window_.display().extents());
-}
-
 UiTask& Application::addUiTask(Widget& content,
                                const roo_display::Box& bounds) {
   CHECK(content.parent() == nullptr);
   UiTask* task = new UiTask(*this, window_, bounds, false, keyboard_, content);
   ui_tasks_.emplace_back(task);
-  if (compatibility_task_ == nullptr && pending_key_source_ != nullptr) {
+  if (pending_key_source_ != nullptr) {
     for (const std::unique_ptr<UiTask>& candidate : ui_tasks_) {
       candidate->detachKeySource();
     }
@@ -148,7 +122,7 @@ UiTask& Application::addUiTask(NavigationHost& navigation,
   UiTask* task =
       new UiTask(*this, window_, bounds, false, keyboard_, navigation);
   ui_tasks_.emplace_back(task);
-  if (compatibility_task_ == nullptr && pending_key_source_ != nullptr) {
+  if (pending_key_source_ != nullptr) {
     for (const std::unique_ptr<UiTask>& candidate : ui_tasks_) {
       candidate->detachKeySource();
     }
@@ -159,13 +133,6 @@ UiTask& Application::addUiTask(NavigationHost& navigation,
 
 UiTask& Application::addUiTaskFullScreen(NavigationHost& navigation) {
   return addUiTask(navigation, window_.display().extents());
-}
-
-bool Application::ownsTask(const Task& task) const {
-  for (const std::unique_ptr<UiTask>& candidate : ui_tasks_) {
-    if (&candidate->legacyActivities() == &task) return true;
-  }
-  return false;
 }
 
 PresentationStartResult Application::showDialog(
@@ -191,18 +158,6 @@ PresentationStartResult Application::showAlertDialog(
 }
 
 void Application::clearDialog() { window_.root().clearDialog(); }
-
-TextFieldEditor& Application::text_field_editor() {
-  return (compatibility_task_ != nullptr ? compatibility_task_
-                                         : ui_tasks_.front().get())
-      ->textFieldEditor();
-}
-
-const TextFieldEditor& Application::text_field_editor() const {
-  return (compatibility_task_ != nullptr ? compatibility_task_
-                                         : ui_tasks_.front().get())
-      ->textFieldEditor();
-}
 
 bool Application::isUiThread() const {
   return !ui_thread_started_ || roo::this_thread::get_id() == ui_thread_id_;

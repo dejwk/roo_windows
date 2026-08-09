@@ -5,9 +5,9 @@
 #include "roo_windows/activities/keyboard.h"
 #include "roo_windows/containers/horizontal_layout.h"
 #include "roo_windows/containers/vertical_layout.h"
-#include "roo_windows/core/activity.h"
+#include "roo_windows/core/destination.h"
 #include "roo_windows/core/application_context.h"
-#include "roo_windows/core/task.h"
+#include "roo_windows/core/navigation_host.h"
 #include "roo_windows/widgets/button.h"
 #include "roo_windows/widgets/icon.h"
 #include "roo_windows/widgets/text_field.h"
@@ -36,10 +36,10 @@ class EditedTextField : public TextField {
 /// Full-screen activity for editing a string value.
 ///
 /// Hosts a single `EditedTextField` with back / enter buttons; pushing it onto
-/// a `Task` via `triggerEdit()` (or `triggerEditField()` to round-trip a
+/// a `NavigationHost` via `triggerEdit()` (or `triggerEditField()` to round-trip a
 /// caller-owned `TextField`) suspends the underlying activity, runs the edit,
 /// and invokes the supplied confirmation callback with the entered string.
-class EditTextField : public Activity {
+class EditTextField : public Destination {
  public:
   EditTextField(ApplicationContext& context, TextFieldEditor& editor,
                 const std::string& hint);
@@ -53,7 +53,7 @@ class EditTextField : public Activity {
 
   /// Launches a text-enter activity with the specified conditions, triggering
   /// the specified function on confirmation.
-  void triggerEdit(Task& task, const std::string& initial,
+  void triggerEdit(NavigationHost& navigation, const std::string& initial,
                    const std::string& hint,
                    std::function<void(const std::string&)> enter_fn);
 

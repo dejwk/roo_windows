@@ -42,7 +42,7 @@ EditTextField::EditTextField(ApplicationContext& context,
   back_.setContentColor(
       context.theme().framework.color.resolve(FrameworkColorRole::kContent));
   back_.setOnInteractiveChange([&]() {
-    getApplication()->requestBack(*getTask(), BackSource::kNavigationButton);
+    getUiTask()->requestBack(BackSource::kNavigationButton);
   });
   enter_.setOnInteractiveChange([&]() { confirm(); });
 }
@@ -72,17 +72,21 @@ void EditTextField::cancel() {
 }
 
 void EditTextField::triggerEdit(
-    Task& task, const std::string& initial, const std::string& hint,
+    NavigationHost& navigation, const std::string& initial,
+    const std::string& hint,
     std::function<void(const std::string&)> enter_fn) {
   editing_ = true;
   text_.setContent(initial);
-  task.enterActivity(this);
+  navigation.push(*this);
   text_.edit();
   enter_fn_ = enter_fn;
 }
 
 void EditTextField::triggerEditField(TextField& field) {
-  triggerEdit(*field.getTask(), field.content(), field.hint(),
+  UiTask* task = field.getUiTask();
+  CHECK(task != nullptr);
+  CHECK(task->navigationHost() != nullptr);
+  triggerEdit(*task->navigationHost(), field.content(), field.hint(),
               [&](const std::string& value) { field.setContent(value); });
 }
 

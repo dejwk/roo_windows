@@ -23,7 +23,7 @@ UiTask::UiTask(Application& app, DisplayWindow& window,
                Widget& content)
     : app_(app),
       window_(window),
-      panel_(app.context(), *this, nullptr),
+      panel_(app.context(), *this),
       focus_(&panel_),
       editor_(app.env().scheduler(), keyboard),
       popup_(popup) {
@@ -41,7 +41,7 @@ UiTask::UiTask(Application& app, DisplayWindow& window,
                NavigationHost& navigation)
     : app_(app),
       window_(window),
-      panel_(app.context(), *this, nullptr),
+      panel_(app.context(), *this),
       focus_(&panel_),
       editor_(app.env().scheduler(), keyboard),
       popup_(popup),
@@ -54,31 +54,12 @@ UiTask::UiTask(Application& app, DisplayWindow& window,
   }
 }
 
-UiTask::UiTask(Application& app, DisplayWindow& window,
-               const roo_display::Box& bounds, bool popup, Keyboard& keyboard)
-    : app_(app),
-      window_(window),
-      legacy_task_(new Task()),
-      panel_(app.context(), *this, legacy_task_.get()),
-      focus_(&panel_),
-      editor_(app.env().scheduler(), keyboard),
-      popup_(popup) {
-  legacy_task_->init(&panel_);
-  if (popup) {
-    window_.root().addPopup(panel_, bounds);
-  } else {
-    window_.root().addTask(panel_, bounds);
-  }
-}
-
 UiTask::~UiTask() {
   detachKeySource();
   back_callback_ = {};
   editor_.cancel();
   focus_.onSubtreeDetaching(panel_);
-  if (legacy_task_ != nullptr) {
-    legacy_task_->clear();
-  } else if (navigation_ != nullptr) {
+  if (navigation_ != nullptr) {
     navigation_->disconnect();
   } else if (panel_.content_ != nullptr) {
     panel_.clearContent();
@@ -90,19 +71,12 @@ UiTask::~UiTask() {
   }
 }
 
-Task& UiTask::legacyActivities() {
-  CHECK(legacy_task_ != nullptr);
-  return *legacy_task_;
-}
-
-const Task& UiTask::legacyActivities() const {
-  CHECK(legacy_task_ != nullptr);
-  return *legacy_task_;
-}
-
 void UiTask::setBackCallback(BackCallback callback) {
-  CHECK(legacy_task_ == nullptr);
   back_callback_ = std::move(callback);
+}
+
+void UiTask::setVisible(bool visible) {
+  panel_.setVisibility(visible ? Visibility::kVisible : Visibility::kGone);
 }
 
 KeySourceAttachmentResult UiTask::attachKeySource(KeySource& source) {
@@ -133,7 +107,6 @@ BackResult UiTask::requestBack(BackSource source) {
       BackResult::kHandled) {
     return BackResult::kHandled;
   }
-  if (legacy_task_ != nullptr) return legacy_task_->requestBack(source);
   if (navigation_ != nullptr) return navigation_->requestBack(source);
   return requestTaskBackCallback(source);
 }

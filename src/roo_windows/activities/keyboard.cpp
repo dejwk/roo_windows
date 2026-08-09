@@ -11,7 +11,7 @@
 #include "roo_windows/config.h"
 #include "roo_windows/core/dimensions.h"
 #include "roo_windows/core/main_window.h"
-#include "roo_windows/core/task.h"
+#include "roo_windows/core/ui_task.h"
 #include "roo_windows/widgets/button.h"
 
 namespace roo_windows {
@@ -686,6 +686,7 @@ Keyboard::Keyboard(ApplicationContext& context, const KeyboardSpec* spec)
 Widget& Keyboard::getContents() { return *contents_; }
 
 void Keyboard::show() {
+  task_->setVisible(true);
   contents()->setPage(0);
   contents()->setVisibility(Visibility::kVisible);
 }
@@ -694,22 +695,11 @@ void Keyboard::hide() {
   contents()->setVisibility(Visibility::kGone);
   contents()->setPage(-1);
   contents()->setCapsState(CapsState::CAPS_STATE_LOW);
+  task_->setVisible(false);
 }
 
 void Keyboard::setListener(KeyboardListener* listener) {
   contents()->setListener(listener);
-}
-
-// Position the keyboard in the lower half of the screen.
-roo_display::Box Keyboard::getPreferredPlacement(const Task& task) {
-  auto& window = task.getMainWindow();
-  Dimensions dims(window.width(), window.height());
-  XDim dx;
-  YDim dy;
-  task.getAbsoluteOffset(dx, dy);
-  return roo_display::Box(0, dims.height() / 2, dims.width() - 1,
-                          dims.height() - 1)
-      .translate(-dx, -dy);
 }
 
 void Keyboard::setPage(int idx) { contents()->setPage(idx); }

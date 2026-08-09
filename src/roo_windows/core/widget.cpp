@@ -81,10 +81,6 @@ const MainWindow* Widget::getMainWindow() const {
   return parent_->getMainWindow();
 }
 
-Task* Widget::getTask() {
-  return parent_ == nullptr ? nullptr : parent_->getTask();
-}
-
 UiTask* Widget::getUiTask() {
   return parent_ == nullptr ? nullptr : parent_->getUiTask();
 }

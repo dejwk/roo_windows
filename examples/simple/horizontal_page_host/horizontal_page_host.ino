@@ -146,7 +146,7 @@ roo_scheduler::Scheduler scheduler;
 Environment env(scheduler);
 Application app(&env, display);
 HorizontalPageHostDemo demo(app.context());
-SingletonActivity activity(app, demo);
+UiTask& task = app.addUiTaskFullScreen(demo);
 
 void setup() {
   initDisplay();

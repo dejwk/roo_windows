@@ -3,7 +3,7 @@
 #include "roo_windows/core/focus_manager.h"
 #include "roo_windows/core/key_source.h"
 #include "roo_windows/core/navigation_host.h"
-#include "roo_windows/core/task.h"
+#include "roo_windows/core/task_panel.h"
 #include "roo_windows/widgets/text_field.h"
 
 namespace roo_windows {
@@ -38,6 +38,12 @@ class UiTask {
   Application& application() { return app_; }
   const Application& application() const { return app_; }
 
+  /// Returns the optional navigation host for a navigation task.
+  NavigationHost* navigationHost() const { return navigation_; }
+
+  /// Shows or hides this task layer without detaching its fixed content.
+  void setVisible(bool visible);
+
   /// Returns focus state scoped to this task panel.
   FocusManager& focus() { return focus_; }
   const FocusManager& focus() const { return focus_; }
@@ -51,22 +57,19 @@ class UiTask {
   /// Detaches the current polled source, if any.
   void detachKeySource();
 
-  /// Configures the direct task's optional semantic Back handler. Passing an
-  /// empty function clears it. Legacy activity tasks retain their own routing.
+  /// Configures this task's optional semantic Back handler. Passing an empty
+  /// function clears it.
   void setBackCallback(BackCallback callback);
 
   /// Routes semantic Back through the display root and task content.
   BackResult requestBack(BackSource source = BackSource::kProgrammatic);
-
-  /// Returns the temporary activity-stack compatibility adapter.
-  Task& legacyActivities();
-  const Task& legacyActivities() const;
 
  private:
   friend class Application;
   friend class KeySource;
   friend class Container;
   friend class NavigationHost;
+  friend class Keyboard;
 
   UiTask(Application& app, DisplayWindow& window,
          const roo_display::Box& bounds, bool popup, Keyboard& keyboard,
@@ -74,8 +77,6 @@ class UiTask {
   UiTask(Application& app, DisplayWindow& window,
          const roo_display::Box& bounds, bool popup, Keyboard& keyboard,
          NavigationHost& navigation);
-  UiTask(Application& app, DisplayWindow& window,
-         const roo_display::Box& bounds, bool popup, Keyboard& keyboard);
 
   bool drainKeyEvents();
   void dispatchKeyEvent(const KeyEvent& event);
@@ -87,7 +88,6 @@ class UiTask {
 
   Application& app_;
   DisplayWindow& window_;
-  std::unique_ptr<Task> legacy_task_;
   TaskPanel panel_;
   FocusManager focus_;
   TextFieldEditor editor_;

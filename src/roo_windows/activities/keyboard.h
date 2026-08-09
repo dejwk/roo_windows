@@ -8,7 +8,6 @@
 #include <string>
 #include <vector>
 
-#include "roo_windows/core/activity.h"
 #include "roo_windows/core/panel.h"
 #include "roo_windows/keyboard_layout/keyboard_layout.h"
 #include "roo_windows/widgets/button.h"
@@ -32,15 +31,15 @@ class KeyboardListener {
 };
 
 class KeyboardWidget;
+class UiTask;
 
-/// On-screen software keyboard activity.
+/// On-screen software keyboard widget controller.
 ///
 /// Renders the layout supplied at construction (regular / numeric / etc.)
 /// and forwards key events to the currently-bound `KeyboardListener`. Tracks
-/// caps state (`LOW`, `HIGH`, `HIGH_LOCKED`) and current page; participates
-/// in the activity stack so it can be shown above an editing surface and
-/// dismissed when the edit is complete.
-class Keyboard : public Activity {
+/// caps state (`LOW`, `HIGH`, `HIGH_LOCKED`) and current page. Its fixed
+/// popup task owns placement; show and hide only change widget visibility.
+class Keyboard {
  public:
   enum CapsState {
     CAPS_STATE_LOW = 0,
@@ -51,18 +50,15 @@ class Keyboard : public Activity {
   Keyboard(ApplicationContext& context, const KeyboardSpec* spec);
 
   /// Returns the underlying `KeyboardWidget` that renders the layout.
-  Widget& getContents() override;
+  Widget& getContents();
 
   /// Routes future key events to the supplied listener (may be nullptr).
   void setListener(KeyboardListener* listener);
+  void setUiTask(UiTask& task) { task_ = &task; }
 
-  /// Returns the preferred docking placement (typically anchored to the
-  /// bottom edge of the task surface).
-  roo_display::Box getPreferredPlacement(const Task& task) override;
-
-  /// Brings the keyboard activity onto the activity stack.
+  /// Makes the fixed keyboard popup visible.
   void show();
-  /// Pops the keyboard activity from the stack.
+  /// Hides the fixed keyboard popup.
   void hide();
 
   /// Switches to the keyboard page at the supplied index (e.g. symbols).
@@ -77,6 +73,7 @@ class Keyboard : public Activity {
   const KeyboardWidget* contents() const;
 
   std::unique_ptr<Widget> contents_;
+  UiTask* task_ = nullptr;
 };
 
 }  // namespace roo_windows

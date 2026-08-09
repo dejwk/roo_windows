@@ -58,10 +58,33 @@ class NavigationHost {
   }
   void install(UiTask& task);
   void disconnect();
+  bool mayMutate() const;
+  bool attached(Destination& destination) const;
+  void beginCallback();
+  void endCallback();
+  /// Pauses the current destination, then removes its attached widget.
+  /// Returns false when a lifecycle callback completed a nested transition.
+  bool pauseAndDetachCurrent();
+  /// Removes the current, already-detached destination from history and stops
+  /// it. Returns false when its stop callback supersedes this transition.
+  bool stopCurrent();
+  /// Starts a just-appended destination, attaches its widget, and resumes it.
+  /// Returns false when either lifecycle callback supersedes this transition.
+  bool startAndResume(Destination& destination);
+
+  /// Borrowed task that installs this host; null while disconnected.
   UiTask* task_ = nullptr;
+  /// Borrowed destinations in history order, with the current entry at back.
   std::vector<Destination*> history_;
+  /// Changes after a successful command so an outer callback can detect that
+  /// a nested command has taken over its transition.
   unsigned int generation_ = 0;
-  bool mutating_ = false;
+  /// Number of active navigation commands. Incidental structural callbacks
+  /// must not start a command while this is nonzero.
+  unsigned int mutation_depth_ = 0;
+  /// Number of active destination lifecycle or Back callbacks. These are the
+  /// only callbacks allowed to synchronously issue a nested command.
+  unsigned int lifecycle_callback_depth_ = 0;
 };
 
 }  // namespace roo_windows

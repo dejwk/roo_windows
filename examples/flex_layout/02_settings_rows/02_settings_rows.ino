@@ -150,7 +150,7 @@ roo_scheduler::Scheduler scheduler;
 Environment env(scheduler);
 Application app(&env, display);
 SettingsScreen settings_screen(app.context());
-SingletonActivity activity(app, settings_screen);
+UiTask& task = app.addUiTaskFullScreen(settings_screen);
 
 void setup() {
   initDisplay();

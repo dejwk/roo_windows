@@ -4,7 +4,8 @@
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
-#include "roo_windows/core/activity.h"
+#include "roo_windows/core/destination.h"
+#include "roo_windows/core/navigation_host.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/environment.h"
@@ -52,9 +53,9 @@ class FocusableBackWidget : public BasicWidget {
   }
 };
 
-class BackActivity : public Activity {
+class BackDestination : public Destination {
  public:
-  explicit BackActivity(ApplicationContext& context) : contents_(context) {}
+  explicit BackDestination(ApplicationContext& context) : contents_(context) {}
 
   Widget& getContents() override { return contents_; }
   BackResult onBackRequested(BackSource source) override {
@@ -84,9 +85,9 @@ class BackPresentation final : public TransientPresentationRegistration {
   }
 };
 
-class TextFieldActivity : public Activity {
+class TextFieldDestination : public Destination {
  public:
-  TextFieldActivity(ApplicationContext& context, TextFieldEditor& editor)
+  TextFieldDestination(ApplicationContext& context, TextFieldEditor& editor)
       : field(context, editor, font_body1(), "", roo_display::kLeft,
               TextField::NONE) {}
 
@@ -114,9 +115,9 @@ class EscapeCountingTabs : public material3::Tabs {
   int escape_count = 0;
 };
 
-class TabsActivity : public Activity {
+class TabsDestination : public Destination {
  public:
-  explicit TabsActivity(ApplicationContext& context)
+  explicit TabsDestination(ApplicationContext& context)
       : tabs(context), first(context, "First"), second(context, "Second") {
     tabs.addTab(first);
     tabs.addTab(second);
@@ -181,23 +182,23 @@ TEST(KeySource, HardwareEscapeUsesFocusedTask) {
   roo_scheduler::Scheduler scheduler;
   Environment environment(scheduler);
   QueuedKeySource keys({{KeyPhase::kDown, KeyCode::kEscape, 0, 0}});
+  NavigationHost navigation;
   Application app(&environment, display, keys, false);
-  Task* task = app.addTaskFullScreen();
-  BackActivity root(app.context());
-  BackActivity child(app.context());
-  task->enterActivity(&root);
-  task->enterActivity(&child);
+  UiTask& task = app.addUiTaskFullScreen(navigation);
+  BackDestination root(app.context());
+  BackDestination child(app.context());
+  navigation.push(root);
+  navigation.push(child);
   app.refresh();
   ASSERT_TRUE(child.contents().requestFocus());
 
   app.start();
   scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 1);
 
-  EXPECT_EQ(1u, task->activityCount());
-  EXPECT_EQ(&root, task->currentActivity());
+  EXPECT_EQ(1u, navigation.depth());
   EXPECT_EQ(1, child.request_count);
   EXPECT_EQ(BackSource::kEscapeKey, child.last_source);
-  task->clear();
+  navigation.clear();
 }
 
 TEST(KeySource, HardwareBackDismissesTransientWithoutFocus) {
@@ -231,22 +232,23 @@ TEST(KeySource, UnhandledRootEscapeCancelsFocusedEditor) {
   roo_scheduler::Scheduler scheduler;
   Environment environment(scheduler);
   QueuedKeySource keys({{KeyPhase::kDown, KeyCode::kEscape, 0, 0}});
+  NavigationHost navigation;
   Application app(&environment, display, keys, false);
-  Task* task = app.addTaskFullScreen();
-  TextFieldActivity activity(app.context(), app.text_field_editor());
-  task->enterActivity(&activity);
+  UiTask& task = app.addUiTaskFullScreen(navigation);
+  TextFieldDestination destination(app.context(), task.textFieldEditor());
+  navigation.push(destination);
   app.refresh();
-  ASSERT_TRUE(activity.field.requestFocus());
-  ASSERT_TRUE(app.text_field_editor().isEdited(&activity.field));
+  ASSERT_TRUE(destination.field.requestFocus());
+  ASSERT_TRUE(task.textFieldEditor().isEdited(&destination.field));
 
   app.start();
   scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 1);
 
-  EXPECT_EQ(1, activity.request_count);
-  EXPECT_EQ(BackSource::kEscapeKey, activity.last_source);
-  EXPECT_FALSE(app.text_field_editor().isEdited(&activity.field));
-  EXPECT_EQ(1u, task->activityCount());
-  task->clear();
+  EXPECT_EQ(1, destination.request_count);
+  EXPECT_EQ(BackSource::kEscapeKey, destination.last_source);
+  EXPECT_FALSE(task.textFieldEditor().isEdited(&destination.field));
+  EXPECT_EQ(1u, navigation.depth());
+  navigation.clear();
 }
 
 TEST(KeySource, UnhandledRootEscapeFromFocusedTabBubblesToTabHost) {
@@ -257,20 +259,21 @@ TEST(KeySource, UnhandledRootEscapeFromFocusedTabBubblesToTabHost) {
   roo_scheduler::Scheduler scheduler;
   Environment environment(scheduler);
   QueuedKeySource keys({{KeyPhase::kDown, KeyCode::kEscape, 0, 0}});
+  NavigationHost navigation;
   Application app(&environment, display, keys, false);
-  Task* task = app.addTaskFullScreen();
-  TabsActivity activity(app.context());
-  task->enterActivity(&activity);
+  UiTask& task = app.addUiTaskFullScreen(navigation);
+  TabsDestination destination(app.context());
+  navigation.push(destination);
   app.refresh();
-  ASSERT_TRUE(activity.first.requestFocus());
+  ASSERT_TRUE(destination.first.requestFocus());
 
   app.start();
   scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 1);
 
-  EXPECT_EQ(1u, task->activityCount());
-  EXPECT_EQ(&activity.first, task->uiTask().focus().focused());
-  EXPECT_EQ(1, activity.tabs.escape_count);
-  task->clear();
+  EXPECT_EQ(1u, navigation.depth());
+  EXPECT_EQ(&destination.first, task.focus().focused());
+  EXPECT_EQ(1, destination.tabs.escape_count);
+  navigation.clear();
 }
 
 }  // namespace

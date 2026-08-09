@@ -203,7 +203,7 @@ Application app(&env, display, emulator_keys, true);
 Application app(&env, display);
 #endif
 QuietHours quiet_hours(app.context());
-SingletonActivity activity(app, quiet_hours);
+UiTask& task = app.addUiTaskFullScreen(quiet_hours);
 
 void setup() {
   initDisplay();

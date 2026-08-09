@@ -4,7 +4,8 @@
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
-#include "roo_windows/core/activity.h"
+#include "roo_windows/core/destination.h"
+#include "roo_windows/core/navigation_host.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/environment.h"
@@ -50,9 +51,9 @@ class RecordingWidget final : public BasicWidget {
   int key_count = 0;
 };
 
-class RecordingActivity final : public Activity {
+class RecordingDestination final : public Destination {
  public:
-  explicit RecordingActivity(ApplicationContext& context) : contents(context) {}
+  explicit RecordingDestination(ApplicationContext& context) : contents(context) {}
 
   Widget& getContents() override { return contents; }
   void onStop() override { ++stop_count; }
@@ -61,9 +62,9 @@ class RecordingActivity final : public Activity {
   int stop_count = 0;
 };
 
-class ColorActivity final : public Activity {
+class ColorDestination final : public Destination {
  public:
-  explicit ColorActivity(ApplicationContext& context) : contents(context) {}
+  explicit ColorDestination(ApplicationContext& context) : contents(context) {}
   Widget& getContents() override { return contents; }
 
  private:
@@ -78,7 +79,7 @@ class ColorActivity final : public Activity {
   } contents;
 };
 
-// Verifies a public refresh paints the activity tree and a deadline-interrupted
+// Verifies a public refresh paints the destination tree and a deadline-interrupted
 // frame remains resumable through the same public one-shot entry point.
 TEST(DisplayRuntimeCharacterization, RefreshPaintsAndResumesInterruptedFrame) {
   roo::byte raster[32 * 32 * 2] = {};
@@ -87,10 +88,11 @@ TEST(DisplayRuntimeCharacterization, RefreshPaintsAndResumesInterruptedFrame) {
   roo_display::Display display(device);
   roo_scheduler::Scheduler scheduler;
   Environment environment(scheduler);
+  NavigationHost navigation;
   Application app(&environment, display);
-  Task* task = app.addTaskFullScreen();
-  ColorActivity activity(app.context());
-  task->enterActivity(&activity);
+  ColorDestination destination(app.context());
+  app.addUiTaskFullScreen(navigation);
+  navigation.push(destination);
 
   EXPECT_FALSE(app.refresh(roo_time::Uptime::Start()));
   EXPECT_TRUE(app.refresh());
@@ -101,7 +103,7 @@ TEST(DisplayRuntimeCharacterization, RefreshPaintsAndResumesInterruptedFrame) {
   EXPECT_EQ(roo_display::Argb4444().toArgbColor(
                 roo_display::Argb4444().fromArgbColor(roo_display::color::Green)),
             pixel);
-  task->clear();
+  navigation.clear();
 }
 
 // Verifies a scheduled application tick preserves the full key sample while
@@ -117,47 +119,49 @@ TEST(DisplayRuntimeCharacterization, ScheduledTickRoutesKeySamplesAndActivation)
                          kKeyModifierControl, U'x'},
                         {KeyPhase::kDown, KeyCode::kEnter, 0, 0},
                         {KeyPhase::kUp, KeyCode::kEnter, 0, 0}});
+  NavigationHost navigation;
   Application app(&environment, display, keys, false);
-  Task* task = app.addTaskFullScreen();
-  RecordingActivity activity(app.context());
-  task->enterActivity(&activity);
+  RecordingDestination destination(app.context());
+  app.addUiTaskFullScreen(navigation);
+  navigation.push(destination);
   ASSERT_TRUE(app.refresh());
-  ASSERT_TRUE(activity.contents.requestFocus());
+  ASSERT_TRUE(destination.contents.requestFocus());
 
   app.start();
   scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 1);
 
-  EXPECT_EQ(3, activity.contents.key_count);
-  EXPECT_EQ(KeyCode::kCharacter, activity.contents.first_event.code);
-  EXPECT_EQ(kKeyModifierControl, activity.contents.first_event.modifiers);
-  EXPECT_EQ(U'x', activity.contents.first_event.rune);
-  EXPECT_EQ(KeyPhase::kUp, activity.contents.last_event.phase);
-  EXPECT_EQ(KeyCode::kEnter, activity.contents.last_event.code);
-  EXPECT_FALSE(activity.contents.isPressed());
-  task->clear();
+  EXPECT_EQ(3, destination.contents.key_count);
+  EXPECT_EQ(KeyCode::kCharacter, destination.contents.first_event.code);
+  EXPECT_EQ(kKeyModifierControl, destination.contents.first_event.modifiers);
+  EXPECT_EQ(U'x', destination.contents.first_event.rune);
+  EXPECT_EQ(KeyPhase::kUp, destination.contents.last_event.phase);
+  EXPECT_EQ(KeyCode::kEnter, destination.contents.last_event.code);
+  EXPECT_FALSE(destination.contents.isPressed());
+  navigation.clear();
 }
 
-// Verifies application destruction detaches borrowed activity trees after a
-// ticker has been scheduled, before the caller destroys those activities.
-TEST(DisplayRuntimeCharacterization, DestructionStopsBorrowedActivities) {
+// Verifies application destruction detaches borrowed destinations after a
+// ticker has been scheduled, before the caller destroys them.
+TEST(DisplayRuntimeCharacterization, DestructionStopsBorrowedDestinations) {
   roo::byte raster[32 * 32 * 2] = {};
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       32, 32, raster, roo_display::Argb4444());
   roo_display::Display display(device);
   roo_scheduler::Scheduler scheduler;
   Environment environment(scheduler);
-  RecordingActivity* activity = nullptr;
+  NavigationHost navigation;
+  RecordingDestination* destination = nullptr;
   {
     Application app(&environment, display);
-    Task* task = app.addTaskFullScreen();
-    activity = new RecordingActivity(app.context());
-    task->enterActivity(activity);
+    destination = new RecordingDestination(app.context());
+    app.addUiTaskFullScreen(navigation);
+    navigation.push(*destination);
     app.start();
   }
-  EXPECT_EQ(nullptr, activity->getTask());
-  EXPECT_EQ(1, activity->stop_count);
+  EXPECT_EQ(nullptr, destination->getUiTask());
+  EXPECT_EQ(1, destination->stop_count);
   scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 1);
-  delete activity;
+  delete destination;
 }
 
 }  // namespace

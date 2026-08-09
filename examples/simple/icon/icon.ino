@@ -118,7 +118,7 @@ class MyPane : public HorizontalLayout {
 };
 
 MyPane my_pane(app.context());
-SingletonActivity activity(app, my_pane);
+UiTask& task = app.addUiTaskFullScreen(my_pane);
 
 void setup() {
   initDisplay();

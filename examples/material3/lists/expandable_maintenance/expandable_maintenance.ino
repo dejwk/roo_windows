@@ -172,7 +172,7 @@ Application app(&env, display, emulator_keys, true);
 Application app(&env, display);
 #endif
 MaintenancePlan maintenance_plan(app.context());
-SingletonActivity activity(app, maintenance_plan);
+UiTask& task = app.addUiTaskFullScreen(maintenance_plan);
 
 void setup() {
   initDisplay();

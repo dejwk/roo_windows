@@ -6,10 +6,12 @@ namespace menu {
 BasicNavigationItem::BasicNavigationItem(ApplicationContext& context,
                                          const roo_display::Pictogram& icon,
                                          roo::string_view text,
-                                         Activity& target)
+                                         NavigationHost& navigation,
+                                         Destination& target)
     : HorizontalLayout(context),
       icon_(context, icon),
       label_(context, text, material2::text_style_subtitle1()),
+      navigation_(navigation),
       target_(target) {
   setGravity(kGravityMiddle);
   add(icon_);
@@ -17,17 +19,19 @@ BasicNavigationItem::BasicNavigationItem(ApplicationContext& context,
   label_.setPadding(PaddingSize::kTiny);
   add(label_, {weight : 1});
 
-  setOnInteractiveChange([&]() { getTask()->enterActivity(&target_); });
+  setOnInteractiveChange([&]() { navigation_.push(target_); });
 }
 
 BasicNavigationItemWithSubtext::BasicNavigationItemWithSubtext(
     ApplicationContext& context, const roo_display::Pictogram& icon,
-    roo::string_view label, roo::string_view subtext, Activity& target)
+    roo::string_view label, roo::string_view subtext,
+    NavigationHost& navigation, Destination& target)
     : HorizontalLayout(context),
       icon_(context, icon),
       content_(context),
       label_(context, label, material2::text_style_subtitle1()),
       subtext_(context, subtext, material2::text_style_subtitle2()),
+      navigation_(navigation),
       target_(target) {
   setGravity(kGravityMiddle);
   add(icon_);
@@ -41,7 +45,7 @@ BasicNavigationItemWithSubtext::BasicNavigationItemWithSubtext(
   content_.add(subtext_);
   add(content_, {weight : 1});
 
-  setOnInteractiveChange([&]() { getTask()->enterActivity(&target_); });
+  setOnInteractiveChange([&]() { navigation_.push(target_); });
 }
 
 }  // namespace menu

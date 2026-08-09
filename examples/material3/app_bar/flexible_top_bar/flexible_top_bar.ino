@@ -136,7 +136,7 @@ roo_scheduler::Scheduler scheduler;
 Environment env(scheduler);
 Application app(&env, display);
 HeatingDetails heating_details(app.context());
-SingletonActivity activity(app, heating_details);
+UiTask& task = app.addUiTaskFullScreen(heating_details);
 
 void setup() {
   initDisplay();

@@ -169,7 +169,7 @@ Application app(&env, display, emulator_keys, true);
 Application app(&env, display);
 #endif
 TogglePreference toggle_preference(app.context());
-SingletonActivity activity(app, toggle_preference);
+UiTask& task = app.addUiTaskFullScreen(toggle_preference);
 
 void setup() {
   initDisplay();

@@ -4,7 +4,6 @@
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
-#include "roo_windows/core/activity.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/environment.h"
@@ -23,19 +22,6 @@ class FocusableWidget : public BasicWidget {
   }
 
   bool isFocusable() const override { return true; }
-};
-
-class FocusableActivity : public Activity {
- public:
-  explicit FocusableActivity(ApplicationContext& context)
-      : contents_(context) {}
-
-  Widget& getContents() override { return contents_; }
-
-  FocusableWidget& contents() { return contents_; }
-
- private:
-  FocusableWidget contents_;
 };
 
 class EmptyKeySource : public KeySource {
@@ -88,21 +74,17 @@ TEST(UiTask, FocusDoesNotCrossTaskBoundaries) {
   roo_scheduler::Scheduler scheduler;
   Environment environment(scheduler);
   Application app(&environment, display);
-  UiTask& first = app.addUiTaskFullScreen();
-  UiTask& second = app.addUiTaskFullScreen();
-  FocusableActivity first_activity(app.context());
-  FocusableActivity second_activity(app.context());
-  first.legacyActivities().enterActivity(&first_activity);
-  second.legacyActivities().enterActivity(&second_activity);
+  FocusableWidget first_contents(app.context());
+  FocusableWidget second_contents(app.context());
+  UiTask& first = app.addUiTaskFullScreen(first_contents);
+  UiTask& second = app.addUiTaskFullScreen(second_contents);
   app.refresh();
 
-  ASSERT_TRUE(first_activity.contents().requestFocus());
-  ASSERT_TRUE(second_activity.contents().requestFocus());
+  ASSERT_TRUE(first_contents.requestFocus());
+  ASSERT_TRUE(second_contents.requestFocus());
 
-  EXPECT_EQ(&first_activity.contents(), first.focus().focused());
-  EXPECT_EQ(&second_activity.contents(), second.focus().focused());
-  first.legacyActivities().clear();
-  second.legacyActivities().clear();
+  EXPECT_EQ(&first_contents, first.focus().focused());
+  EXPECT_EQ(&second_contents, second.focus().focused());
 }
 
 // Verifies the one-source attachment contract and explicit detachment.
@@ -114,8 +96,10 @@ TEST(UiTask, KeySourceAttachmentIsExclusive) {
   roo_scheduler::Scheduler scheduler;
   Environment environment(scheduler);
   Application app(&environment, display);
-  UiTask& first = app.addUiTaskFullScreen();
-  UiTask& second = app.addUiTaskFullScreen();
+  DirectWidget first_contents(app.context());
+  DirectWidget second_contents(app.context());
+  UiTask& first = app.addUiTaskFullScreen(first_contents);
+  UiTask& second = app.addUiTaskFullScreen(second_contents);
   EmptyKeySource first_source;
   EmptyKeySource second_source;
 

@@ -167,7 +167,7 @@ Application app(&env, display, emulator_keys, true);
 Application app(&env, display);
 #endif
 PoolSettings pool_settings(app.context());
-SingletonActivity activity(app, pool_settings);
+UiTask& task = app.addUiTaskFullScreen(pool_settings);
 
 void setup() {
   initDisplay();

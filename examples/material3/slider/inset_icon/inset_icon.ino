@@ -170,7 +170,7 @@ Application app(&env, display, emulator_keys, true);
 Application app(&env, display);
 #endif
 InsetIconSlider inset_icon_slider(app.context());
-SingletonActivity activity(app, inset_icon_slider);
+UiTask& task = app.addUiTaskFullScreen(inset_icon_slider);
 
 void setup() {
   initDisplay();

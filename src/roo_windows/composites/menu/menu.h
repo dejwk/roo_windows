@@ -4,7 +4,7 @@
 #include "roo_windows/composites/menu/title.h"
 #include "roo_windows/containers/scrollable_panel.h"
 #include "roo_windows/containers/vertical_layout.h"
-#include "roo_windows/core/activity.h"
+#include "roo_windows/core/destination.h"
 #include "roo_windows/core/widget.h"
 
 namespace roo_windows {
@@ -13,10 +13,10 @@ namespace menu {
 // You use this class to build your own menus. Subclass it, add child widgets,
 // and override the constructor to add those widgets to the canvas (calling
 // add(), using vertical layout options if needed).
-class Menu : public roo_windows::Activity {
+class Menu : public roo_windows::Destination {
  public:
   Menu(roo_windows::ApplicationContext& context, std::string title)
-      : roo_windows::Activity(),
+      : roo_windows::Destination(),
         pane_(context),
         container_(context, pane_),
         title_(context, std::move(title)) {

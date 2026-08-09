@@ -120,7 +120,7 @@ roo_scheduler::Scheduler scheduler;
 Environment env(scheduler);
 Application app(&env, display);
 ChipBar chip_bar(app.context());
-SingletonActivity activity(app, chip_bar);
+UiTask& task = app.addUiTaskFullScreen(chip_bar);
 
 void setup() {
   initDisplay();

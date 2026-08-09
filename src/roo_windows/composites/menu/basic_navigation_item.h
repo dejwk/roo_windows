@@ -4,7 +4,8 @@
 #include "roo_display/image/image.h"
 #include "roo_windows/containers/horizontal_layout.h"
 #include "roo_windows/containers/vertical_layout.h"
-#include "roo_windows/core/activity.h"
+#include "roo_windows/core/destination.h"
+#include "roo_windows/core/navigation_host.h"
 #include "roo_windows/core/application_context.h"
 #include "roo_windows/widgets/icon.h"
 #include "roo_windows/widgets/text_label.h"
@@ -21,7 +22,7 @@ class BasicNavigationItem : public HorizontalLayout {
   /// clicking the row enters `target`.
   BasicNavigationItem(ApplicationContext& context,
                       const roo_display::Pictogram& icon, roo::string_view text,
-                      Activity& target);
+                      NavigationHost& navigation, Destination& target);
 
   bool isClickable() const override { return true; }
 
@@ -33,7 +34,8 @@ class BasicNavigationItem : public HorizontalLayout {
  private:
   Icon icon_;
   StringViewLabel label_;
-  Activity& target_;
+  NavigationHost& navigation_;
+  Destination& target_;
 };
 
 /// Two-line navigation row: icon plus a primary label stacked above a
@@ -46,7 +48,9 @@ class BasicNavigationItemWithSubtext : public HorizontalLayout {
   BasicNavigationItemWithSubtext(ApplicationContext& context,
                                  const roo_display::Pictogram& icon,
                                  roo::string_view label,
-                                 roo::string_view subtext, Activity& target);
+                                 roo::string_view subtext,
+                                 NavigationHost& navigation,
+                                 Destination& target);
 
   bool isClickable() const override { return true; }
 
@@ -60,7 +64,8 @@ class BasicNavigationItemWithSubtext : public HorizontalLayout {
   VerticalLayout content_;
   StringViewLabel label_;
   StringViewLabel subtext_;
-  Activity& target_;
+  NavigationHost& navigation_;
+  Destination& target_;
 };
 
 }  // namespace menu

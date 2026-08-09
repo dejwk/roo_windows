@@ -143,7 +143,7 @@ roo_scheduler::Scheduler scheduler;
 Environment env(scheduler);
 Application app(&env, display);
 LogSearch log_search(app.context());
-SingletonActivity activity(app, log_search);
+UiTask& task = app.addUiTaskFullScreen(log_search);
 
 void setup() {
   initDisplay();

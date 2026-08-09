@@ -160,7 +160,7 @@ roo_scheduler::Scheduler scheduler;
 Environment env(scheduler);
 Application app(&env, display);
 HolyGrail holy_grail(app.context());
-SingletonActivity activity(app, holy_grail);
+UiTask& task = app.addUiTaskFullScreen(holy_grail);
 
 void setup() {
   initDisplay();
