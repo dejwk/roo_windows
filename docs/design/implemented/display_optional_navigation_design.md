@@ -7,7 +7,7 @@ state, while making destination history an explicit optional
 `NavigationHost` feature.
 
 This is Phase 4 of the
-[display runtime and cross-application input design](display_surface_generalization_design.md)
+[display runtime and cross-application input design](../in_progress/display_surface_generalization_design.md)
 and builds on the
 [Phase 3 `UiTask` extraction](display_ui_task_extraction_design.md).
 

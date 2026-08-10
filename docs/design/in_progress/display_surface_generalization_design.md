@@ -691,7 +691,7 @@ and
 ### Phase 1: characterize the current runtime
 
 Implement the
-[display runtime characterization design](display_runtime_characterization_design.md):
+[display runtime characterization design](../implemented/display_runtime_characterization_design.md):
 
 - add focused regression coverage for single-display rendering, interrupted
   paint, touch and gesture routing, focus, key dispatch, task switching,
@@ -710,7 +710,7 @@ Proposed commit: `test: characterize roo_windows application runtime`
 ### Phase 2: extract `DisplayWindow` with one-to-one ownership
 
 Implement the
-[Phase 2 `DisplayWindow` extraction design](display_window_extraction_design.md):
+[Phase 2 `DisplayWindow` extraction design](../implemented/display_window_extraction_design.md):
 
 - move `MainWindow`, display access, touch, gesture, dirty/refresh, and
   interrupted-paint state behind `DisplayWindow`;
@@ -728,7 +728,7 @@ Proposed commit: `refactor: extract display-local window runtime`
 ### Phase 3: introduce `UiTask` and the structural `TaskPanel`
 
 Implement the
-[Phase 3 `UiTask` extraction design](display_ui_task_extraction_design.md):
+[Phase 3 `UiTask` extraction design](../implemented/display_ui_task_extraction_design.md):
 
 - move focus, text editing, polled key routing, armed-key state, and subtree
   cancellation into `UiTask`;
@@ -750,7 +750,7 @@ Proposed commit: `refactor: separate ui task interaction from task panel`
 ### Phase 4: make navigation optional
 
 Implement the
-[Phase 4 optional navigation design](display_optional_navigation_design.md):
+[Phase 4 optional navigation design](../implemented/display_optional_navigation_design.md):
 
 - add one fixed borrowed `Widget&` as direct task content;
 - add `NavigationHost` and `Destination` only for tasks that request history;
@@ -774,7 +774,7 @@ Proposed commit: `refactor: make task navigation optional`
 ### Phase 5: support shared-scheduler driving
 
 Implement the
-[Phase 5 shared-scheduler drive design](display_external_drive_design.md):
+[Phase 5 shared-scheduler drive design](../implemented/display_external_drive_design.md):
 
 - retain `start()` as the checked scheduler-registration entry point;
 - make the private application callback aggregate-bounded and self-rescheduling;
@@ -796,7 +796,7 @@ Proposed commit: `feat: support shared-scheduler applications`
 ### Phase 6: add lifetime-safe key-event bindings
 
 Implement the
-[Phase 6 key-event bindings design](display_key_event_bindings_design.md):
+[Phase 6 key-event bindings design](../proposed/display_key_event_bindings_design.md):
 
 - add full-`KeyEvent` emitter, sink, and scoped intrusive bindings;
 - converge polled `KeySource` and push emitters on one task-local dispatch
@@ -819,7 +819,7 @@ Proposed commit: `feat: bind keyboard tasks to editor tasks`
 ### Phase 7: distinguish task-modal and display-modal hosts
 
 Implement the
-[Phase 7 modal hosting design](display_modal_hosting_design.md):
+[Phase 7 modal hosting design](../proposed/display_modal_hosting_design.md):
 
 - add task-modal and display-modal structural hosts; and
 - implement exact scrim bounds, admission rules, pointer/key barriers,
@@ -838,7 +838,7 @@ Proposed commit: `feat: add explicit modal coverage policies`
 ### Phase 8: complete the migration and cost audit
 
 Implement the
-[Phase 8 migration and cost-audit design](display_runtime_migration_audit_design.md):
+[Phase 8 migration and cost-audit design](../proposed/display_runtime_migration_audit_design.md):
 
 - verify the Phase 4 activity removal and remove the remaining forwarding APIs,
   implicit editor/input routes, and obsolete singleton/back-reference state;

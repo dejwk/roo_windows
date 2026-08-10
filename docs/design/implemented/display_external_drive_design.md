@@ -8,7 +8,7 @@ Let several one-display applications collaborate through one
 bound their own work.
 
 This is Phase 5 of the
-[display runtime and cross-application input design](display_surface_generalization_design.md)
+[display runtime and cross-application input design](../in_progress/display_surface_generalization_design.md)
 and assumes the window and task boundaries from Phases 2–4.
 
 ## Motivation
@@ -40,7 +40,7 @@ contracts, and multi-application coverage.
 
 Removing periodic input polling and making an idle application ticker dormant
 is a separate change described in
-[event-driven input notification and application ticker wakeup](display_event_driven_input_design.md).
+[event-driven input notification and application ticker wakeup](../proposed/display_event_driven_input_design.md).
 Phase 5 deliberately retains the existing periodic fallback until that design
 is implemented.
 
@@ -347,7 +347,7 @@ constructed, started once, and destroyed.
 ## Future Work
 
 The standalone
-[event-driven input notification design](display_event_driven_input_design.md)
+[event-driven input notification design](../proposed/display_event_driven_input_design.md)
 removes the
 periodic application fallback and separates acquisition, gesture timers,
 painting, and animation wakeups. Cross-thread application groups require an

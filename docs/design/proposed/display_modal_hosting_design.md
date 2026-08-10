@@ -7,7 +7,7 @@ coverage, input barriers, focus restoration, admission, Back routing, and
 teardown.
 
 This is Phase 7 of the
-[display runtime and cross-application input design](display_surface_generalization_design.md)
+[display runtime and cross-application input design](../in_progress/display_surface_generalization_design.md)
 and builds on task-local focus and explicit key bindings from Phases 3 and 6.
 
 ## Motivation

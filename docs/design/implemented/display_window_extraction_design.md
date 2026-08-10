@@ -7,7 +7,7 @@ Extract display-local runtime state from `Application` into one application-owne
 topology or public behavior.
 
 This is Phase 2 of the
-[display runtime and cross-application input design](display_surface_generalization_design.md).
+[display runtime and cross-application input design](../in_progress/display_surface_generalization_design.md).
 It begins only after the
 [Phase 1 characterization](display_runtime_characterization_design.md) has
 landed and establishes the ownership boundary required by later multi-task and

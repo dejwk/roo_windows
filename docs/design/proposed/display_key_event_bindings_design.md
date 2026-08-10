@@ -7,9 +7,9 @@ vocabulary from polled or push-style producers to one `UiTask`, including
 between applications driven by one shared scheduler on the same UI thread.
 
 This is Phase 6 of the
-[display runtime and cross-application input design](display_surface_generalization_design.md)
+[display runtime and cross-application input design](../in_progress/display_surface_generalization_design.md)
 and uses task-local dispatch from Phase 3 and thread affinity from the
-[Phase 5 shared-scheduler drive design](display_external_drive_design.md).
+[Phase 5 shared-scheduler drive design](../implemented/display_external_drive_design.md).
 
 ## Motivation
 

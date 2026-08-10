@@ -38,6 +38,7 @@ The main framework contracts with checked-in design coverage are:
 - [transient_presenter_lifetime_design.md](design/in_progress/transient_presenter_lifetime_design.md)
 - [transient_presentation_pins_design.md](design/in_progress/transient_presentation_pins_design.md)
 - [transient_surface_host_design.md](design/proposed/transient_surface_host_design.md)
+- [display_surface_generalization_design.md](design/in_progress/display_surface_generalization_design.md)
 
 This list is not evidence that every cross-component contract is complete.
 In particular, the transient-presentation-pins design is a narrow paint-only
@@ -57,6 +58,13 @@ enter/exit runtime is absent. The interactive-transient slot and dialog lifetime
 migration are implemented, while structural hosting remains dialog-specific.
 The missing focus activation, shared host, layer tokens, and token-scoped pin
 path are scheduled immediately before menus as P1.6a–P1.6b.
+
+Display runtime Phases 1–5 are implemented: characterization, display-local
+window and task ownership, optional navigation, and two-application shared
+scheduler driving. The umbrella design remains in progress because its
+key-event bindings, explicit modal coverage, and final migration/cost-audit
+phases remain proposed. Event-driven input notification is a separate proposed
+follow-up to the shared-scheduler phase.
 
 ### Theme migration is complete; target evidence remains
 

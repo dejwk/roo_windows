@@ -7,7 +7,7 @@ surfaces, moving all examples and documentation to the final APIs, and
 recording final behavior, size, allocation, and timing results.
 
 This is Phase 8 of the
-[display runtime and cross-application input design](display_surface_generalization_design.md).
+[display runtime and cross-application input design](../in_progress/display_surface_generalization_design.md).
 It starts only after the standalone Phase 2–7 designs are implemented.
 
 ## Motivation

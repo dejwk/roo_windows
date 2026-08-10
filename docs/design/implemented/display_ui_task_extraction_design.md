@@ -7,7 +7,7 @@ polled key routing, and task interaction state independently of its structural
 `TaskPanel` widget.
 
 This is Phase 3 of the
-[display runtime and cross-application input design](display_surface_generalization_design.md).
+[display runtime and cross-application input design](../in_progress/display_surface_generalization_design.md).
 It starts after the
 [Phase 2 `DisplayWindow` extraction](display_window_extraction_design.md) and
 retains the existing `Task`/`Activity` stack as a temporary navigation adapter.

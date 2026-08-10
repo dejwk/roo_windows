@@ -4,7 +4,7 @@
 
 Establish the behavioral and resource baseline required before extracting
 `DisplayWindow` from `Application` in the
-[display runtime and cross-application input design](display_surface_generalization_design.md).
+[display runtime and cross-application input design](../in_progress/display_surface_generalization_design.md).
 
 This phase adds regression tests and a reproducible baseline report. It changes
 no production API or runtime behavior.

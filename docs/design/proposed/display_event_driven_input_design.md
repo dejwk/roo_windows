@@ -9,7 +9,8 @@ only for input events ready to handle, a pending gesture timeout, pending
 paint, or an ongoing animation deadline.
 
 This is a follow-up to the
-[shared-scheduler drive design](display_external_drive_design.md). That design
+[shared-scheduler drive design](../implemented/display_external_drive_design.md).
+That design
 retains the existing 20 ms application fallback so that shared-scheduler
 support can remain a small, behavior-preserving change. This design removes the
 fallback after every source of work has an explicit wakeup.
