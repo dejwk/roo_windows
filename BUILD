@@ -66,6 +66,16 @@ cc_test(
     ],
 )
 
+cc_test(
+    name = "shared_scheduler_drive_test",
+    srcs = ["test/shared_scheduler_drive_test.cpp"],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
 # Cross-component, public-entry-point characterization retained before the
 # display runtime is extracted from Application.
 cc_test(
