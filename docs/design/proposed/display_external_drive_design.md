@@ -26,17 +26,23 @@ caller does not need an application group, a tick result, or a custom loop.
 
 ## Background
 
-The current private application callback drains keys, advances pointer input,
+The current private application ticker drains keys, advances pointer input,
 attempts one refresh, and reschedules a `roo_scheduler::SingletonTask`.
 [`roo_scheduler::Scheduler`](../../../../roo_scheduler/src/roo_scheduler.h)
-already dispatches eligible callbacks and sleeps until the next execution.
-Equal-priority eligible callbacks execute FIFO, so an application that
-reschedules immediate work goes behind callbacks that were already eligible.
+already dispatches eligible tasks and sleeps until the next execution.
+Equal-priority eligible tasks execute FIFO, so an application that reschedules
+immediate work goes behind tasks that were already eligible.
 
 Phase 2 places drawing and pointer state in `DisplayWindow`. Phase 3 makes key
 input task-local. Phase 4 separates content from navigation. Phase 5 preserves
-that private callback model while adding bounded display work, explicit
+that private ticker model while adding bounded display work, explicit
 contracts, and multi-application coverage.
+
+Removing periodic input polling and making an idle application ticker dormant
+is a separate change described in
+[event-driven input notification and application ticker wakeup](display_event_driven_input_design.md).
+Phase 5 deliberately retains the existing periodic fallback until that design
+is implemented.
 
 ## Requirements
 
@@ -44,50 +50,49 @@ contracts, and multi-application coverage.
 
 1. `start()` must establish UI-thread affinity, start input acquisition,
    activate preconfigured input bindings, and schedule the application's first
-   callback on `env.scheduler()`.
+   ticker on `env.scheduler()`.
 2. Several applications using the same scheduler must be startable before the
    caller enters `scheduler.run()`. The caller owns synchronization between
    applications and schedulers.
 3. `run()` must remain the single-application convenience path and be
    equivalent to `start(); env.scheduler().run();`.
 4. Starting an application more than once, invoking UI-only operations from
-   that application's wrong thread, reentering an application callback, and
+   that application's wrong thread, reentering an application ticker, and
    using an application while it is stopping are programming errors enforced
    with `CHECK`.
-5. Destruction must cancel the application's pending callback before
+5. Destruction must cancel the application's pending ticker execution before
    disconnecting input or task state.
 
 ### Work-bound requirements
 
-1. One callback must drain at most the touch sensor's fixed 16-event queue and
+1. One ticker dispatch must drain at most the touch sensor's fixed 16-event
+   queue and
    run one gesture-recognizer pass.
-2. One callback must attempt at most one refresh slice with the window's
+2. One ticker dispatch must attempt at most one refresh slice with the window's
    adaptive paint deadline.
-3. One callback must advance each due application-owned timer class at most
-   once.
-4. Bounds apply to one application's callback. Arbitrary callbacks sharing the
-   scheduler retain their own contracts.
+3. One ticker dispatch must advance each due application-owned timer class at
+   most once.
+4. Bounds apply to one application's ticker dispatch. Arbitrary tasks sharing
+   the scheduler retain their own contracts.
 
 ### Scheduling requirements
 
 1. A saturated touch queue, active touch, dispatched gestures, interrupted
-   paint, and work dirtied after the refresh slice must reschedule the
-   application immediately.
-2. Otherwise, the application must schedule its next callback at the earliest
-   known refresh, gesture, click-animation, or application-owned task
-   deadline.
-3. When the application has no known work, it must leave its ticker
-   unscheduled; new input or invalidation must schedule it.
-4. Application callbacks use the same documented scheduler priority. No
-   application may invoke another application's callback recursively.
-5. Scheduler FIFO behavior plus the per-callback bounds must allow other
-   eligible applications and unrelated callbacks to progress.
+   paint, and work dirtied after the refresh slice must reschedule the ticker
+   immediately.
+2. Otherwise, the ticker must retain the existing 20 ms periodic fallback.
+   This preserves input polling, gesture timers, and refresh cadence without
+   adding wakeup machinery to Phase 5.
+3. Application tickers use the same documented scheduler priority. No
+   application may invoke another application's ticker recursively.
+4. Scheduler FIFO behavior plus the per-dispatch bounds must allow other
+   eligible applications and unrelated tasks to progress.
 
 ### Embedded requirements
 
-1. Start, callback execution, and rescheduling must not allocate.
-2. An application callback must not sleep, call `Scheduler::run()`, or invoke
-   another application's callback.
+1. Start, ticker execution, and rescheduling must not allocate.
+2. An application ticker must not sleep, call `Scheduler::run()`, or invoke
+   another application's ticker.
 3. Existing refresh continuation, click settlement, gesture ordering, and
    full-`KeyEvent` semantics must remain unchanged.
 4. The implementation must add no virtual scheduler layer, exception, RTTI,
@@ -98,7 +103,7 @@ contracts, and multi-application coverage.
 - A public application `tick()` API or caller-managed application deadlines.
 - Recovering from lifecycle, state, affinity, or reentrancy violations.
 - A framework-owned `ApplicationGroup` or multi-window `Application`.
-- Cross-thread driving or queued cross-application delivery.
+- Event-driven input notification or a fully dormant idle application ticker.
 - Wall-clock guarantees for a single display-device operation.
 - Changing `roo_scheduler::Scheduler` APIs or its fairness policy.
 
@@ -118,8 +123,8 @@ caller
 
 Each ticker calls a private bounded `tick()` and schedules only itself. There
 is no externally driven mode, `TickResult`, or public deadline calculation.
-`Application` has constructed, started, and stopping states, plus a one-byte
-in-callback guard used by `CHECK` to reject reentrancy.
+`Application` has constructed, started, ticker-running, and stopping states.
+Its ticker guard uses those states to reject reentrancy.
 
 ## Design Details
 
@@ -163,8 +168,8 @@ show-press, long-press, tap, and fling deadline once. Multi-threaded sensor
 builds only drain the already bounded queue.
 
 Click animation and navigation-owned timers advance once when due. Other
-scheduler-owned callbacks such as editor blinkers remain independent scheduler
-work and do not run inside the application callback.
+scheduler-owned tasks such as editor blinkers remain independent scheduler
+work and do not run inside the application ticker.
 
 ### Refresh slice
 
@@ -180,29 +185,28 @@ settles click callbacks only after the drawing context closes.
 
 ### Rescheduling
 
-At the end of the callback, immediate follow-up is required when touch work
-saturated, touch is down, gesture work dispatched, paint was interrupted, or a
-callback dirtied the window after its one refresh slice.
+At the end of the ticker dispatch, immediate follow-up is required when touch
+work saturated, touch is down, gesture work dispatched, paint was interrupted,
+or a handler dirtied the window after its one refresh slice.
 The ticker uses `scheduleNow()` in those cases.
 
-Otherwise it schedules at the minimum of refresh cadence, gesture deadlines,
-click-animation deadline, and application-owned task deadlines. With no known
-work, it remains dormant. Input and invalidation paths that can make a dormant
-application runnable schedule its ticker through one internal wake operation.
-That operation may be called from another thread only through the scheduler's
-thread-safe scheduling API; it does not mutate UI state there.
+Otherwise it schedules itself after 20 ms, preserving the current polling and
+refresh behavior. Event-driven sources, independent gesture timers, direct
+invalidation wakeups, animation deadlines, and ticker dormancy are intentionally
+deferred to the standalone event-driven input design.
 
 Because each application reschedules a distinct equal-priority task, immediate
-work does not monopolize the shared loop: callbacks already eligible retain
-FIFO precedence. The bounded touch and paint phases prevent a single display
+work does not monopolize the shared loop: tasks already eligible retain FIFO
+precedence. The bounded touch and paint phases prevent a single display
 dispatch from hiding that scheduling property behind unbounded display work.
 
 ### Contract checks and teardown
 
-Public UI operations and the private callback use `CHECK` for state and thread
-preconditions. `start()` checks that state is constructed. The callback checks
-started state, UI-thread affinity, and that its RAII in-callback guard was
-clear. No status enum or fallback behavior is provided for these violations.
+Public UI operations and the private ticker use `CHECK` for state and thread
+preconditions. `start()` checks that state is constructed. A ticker dispatch
+checks started state and UI-thread affinity, and enters the ticker-running state
+through an RAII ticker guard. No status enum or fallback behavior is provided
+for these violations.
 
 Destruction changes state to stopping, cancels the ticker, stops input
 acquisition, and then performs the Phase 2/3 teardown. There is no public
@@ -211,10 +215,10 @@ UI-thread operations and assert their affinity.
 
 ### Resource budget
 
-Shared-scheduler collaboration adds lifecycle state and the reentrancy flag to
-`Application`; the accepted target increase is at most eight bytes. It adds no
-public result object and reuses the existing inline `SingletonTask`. Starting
-and warmed callback execution allocate nothing.
+Shared-scheduler collaboration adds lifecycle state to `Application`; the
+accepted target increase is at most eight bytes. It adds no public result
+object and reuses the existing inline `SingletonTask`. Starting and warmed
+ticker execution allocate nothing.
 
 ## Proposed API
 
@@ -230,7 +234,7 @@ class Application {
 };
 ```
 
-The application callback and its scheduling decision remain private.
+The application ticker and its scheduling decision remain private.
 
 Example cross-display setup:
 
@@ -256,14 +260,13 @@ Implementation follows the
 
 1. Add checked application lifecycle and UI-thread affinity while keeping
    `start()` as the scheduling entry point.
-2. Add explicit internal scheduling decisions to the existing private
-   callback, while retaining task-local key input behavior.
+2. Preserve the existing bounded ticker phases and 20 ms fallback while
+   retaining task-local key input behavior.
 3. Make `run()` the thin single-application adapter over `start()` and the
    shared scheduler.
 4. Add a two-display emulator example that starts two applications and enters
    one scheduler loop.
-5. Add focused bound, contract-death, scheduling, independence, and resource
-   tests.
+5. Add focused contract-death, scheduling, independence, and resource tests.
 
 Focused validation:
 
@@ -274,15 +277,15 @@ bazel test //:shared_scheduler_drive_test //:display_window_test \
 bazel build //...
 ```
 
-The phase is complete when touch and paint work stay within their callback
-bounds, two applications progress independently under one scheduler, invalid
-contract uses fail through `CHECK`, and target/allocation deltas are recorded.
+The phase is complete when two applications progress independently under one
+scheduler, invalid contract uses fail through `CHECK`, existing input and paint
+behavior is preserved, and target/allocation deltas are recorded.
 
 Proposed commit: `feat: support shared-scheduler applications`
 
 Proposed commit body:
 
-> Display runtime Phase 5 lets bounded application callbacks collaborate on a
+> Display runtime Phase 5 lets bounded application tickers collaborate on a
 > shared scheduler. Keep application lifecycle and affinity violations as
 > checked programming errors, and add the two-display setup specified by
 > `display_external_drive_design.md`.
@@ -290,13 +293,14 @@ Proposed commit body:
 ## Testing Plan
 
 `shared_scheduler_drive_test` owns lifecycle death tests, application-local
-thread-affinity and reentrancy death tests, touch/paint bounds,
-wake/deadline scheduling, FIFO progress, and two-application isolation.
-Existing display, input, and characterization tests ensure the private callback
+thread-affinity and reentrancy death tests, FIFO progress, and two-application
+isolation.
+Existing display, input, and characterization tests ensure the private ticker
 preserves behavior. The example is compile-covered under Bazel.
 
 Tests use deterministic clocks and scripted sources; they do not sleep.
-Allocation checks warm all sources and paint paths before measuring callbacks.
+Allocation checks warm all sources and paint paths before measuring ticker
+dispatches.
 
 ## Caveats
 
@@ -304,9 +308,9 @@ One slow display operation can exceed the requested paint duration because
 device calls are not preemptible. The implementation bounds framework work
 units and continuation scope, not hardware latency.
 
-One scheduler is also one failure and latency domain. A blocking callback from
-any participant delays every application on that scheduler; callbacks must
-honor their own bounded-work contracts.
+One scheduler is also one failure and latency domain. A blocking task from any
+participant delays every application on that scheduler; tasks must honor their
+own bounded-work contracts.
 
 ### Rejected Alternatives
 
@@ -316,15 +320,15 @@ Rejected because it makes callers reproduce deadline aggregation, wakeups, and
 fairness even though the applications already share a scheduler. Wrong state,
 thread, and reentrancy are programming errors, not recoverable tick results.
 
-#### Return lifecycle or callback status codes
+#### Return lifecycle or ticker status codes
 
 Rejected because there is no meaningful runtime recovery after violating the
 application ownership contract. `CHECK` fails at the point of misuse and keeps
-the normal API and callback path free of status plumbing.
+the normal API and ticker path free of status plumbing.
 
 #### Add framework fairness or `ApplicationGroup`
 
-Rejected because the scheduler already orders eligible callbacks. Bounded touch
+Rejected because the scheduler already orders eligible tasks. Bounded touch
 and paint work plus equal priority are sufficient for the initial
 multi-application contract without another collection or policy layer.
 
@@ -336,13 +340,17 @@ delivery and affinity.
 
 #### Permit restart after stop
 
-Rejected because input endpoints, scheduler callbacks, task content, and
+Rejected because input endpoints, scheduler tasks, task content, and
 display continuation would need a second lifecycle contract. Applications are
 constructed, started once, and destroyed.
 
 ## Future Work
 
-Cross-thread application groups require an explicit caller-owned
-synchronization policy. A higher-level convenience owner can be considered if
-real programs need coordinated construction or teardown beyond the shared
-scheduler pattern.
+The standalone
+[event-driven input notification design](display_event_driven_input_design.md)
+removes the
+periodic application fallback and separates acquisition, gesture timers,
+painting, and animation wakeups. Cross-thread application groups require an
+explicit caller-owned synchronization policy. A higher-level convenience owner
+can be considered if real programs need coordinated construction or teardown
+beyond the shared scheduler pattern.
