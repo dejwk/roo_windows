@@ -9,6 +9,20 @@
 
 namespace roo_windows {
 
+class TickerGuard {
+ public:
+  explicit TickerGuard(Application& app) : app_(app) {
+    CHECK(app_.state_ == Application::State::kStarted);
+    CHECK(roo::this_thread::get_id() == app_.ui_thread_id_);
+    app_.state_ = Application::State::kTickerRunning;
+  }
+
+  ~TickerGuard() { app_.state_ = Application::State::kStarted; }
+
+ private:
+  Application& app_;
+};
+
 Application::Application(const Environment* env, roo_display::Display& display)
     : env_(env),
       context_(env->scheduler(), env->theme(), env->keyboardColorTheme()),
@@ -52,6 +66,7 @@ Application::Application(const Environment* env, roo_display::Display& display,
 Application::~Application() {
   if (state_ != State::kConstructed) {
     CHECK(roo::this_thread::get_id() == ui_thread_id_);
+    CHECK(state_ != State::kTickerRunning);
   }
   state_ = State::kStopping;
   ticker_.cancel();
@@ -81,6 +96,8 @@ void Application::run() {
 }
 
 void Application::tick() {
+  TickerGuard ticker_guard(*this);
+
   // A continuation must finish the exact frame snapshot whose foreground
   // exclusions were preserved. Advance animation again after it completes.
   window_.advanceFrameState();

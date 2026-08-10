@@ -153,7 +153,14 @@ class Application {
   bool isUiThread() const;
 
  private:
-  enum class State : uint8_t { kConstructed, kStarted, kStopping };
+  friend class TickerGuard;
+
+  enum class State : uint8_t {
+    kConstructed,
+    kStarted,
+    kTickerRunning,
+    kStopping,
+  };
 
   // Handles user input (touch, etc.), and calls refresh() periodically.
   void tick();
