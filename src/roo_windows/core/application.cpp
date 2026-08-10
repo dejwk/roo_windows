@@ -84,10 +84,7 @@ void Application::tick() {
   // A continuation must finish the exact frame snapshot whose foreground
   // exclusions were preserved. Advance animation again after it completes.
   window_.advanceFrameState();
-  bool key_events_pending = false;
-  for (const std::unique_ptr<Task>& task : tasks_) {
-    key_events_pending = task->drainKeyEvents() || key_events_pending;
-  }
+  bool key_events_pending = drainKeyEvents();
   bool touch_active = false;
   bool gesture_dispatched = window_.servicePointerInput(touch_active);
   bool redraw_timeout = false;
@@ -97,6 +94,14 @@ void Application::tick() {
           ? roo_time::Millis(0)
           : roo_time::Millis(20);
   ticker_.scheduleAfter(delay, roo_scheduler::PRIORITY_NORMAL);
+}
+
+bool Application::drainKeyEvents() {
+  bool key_events_pending = false;
+  for (const std::unique_ptr<Task>& task : tasks_) {
+    key_events_pending = task->drainKeyEvents() || key_events_pending;
+  }
+  return key_events_pending;
 }
 
 bool Application::refresh(roo_time::Uptime deadline) {

@@ -158,6 +158,10 @@ class Application {
   // Handles user input (touch, etc.), and calls refresh() periodically.
   void tick();
 
+  /// Drains this callback's currently available key input work.
+  /// Returns true when a task consumed its complete key-drain budget.
+  bool drainKeyEvents();
+
   const Environment* env_;
   ApplicationContext context_;
 
