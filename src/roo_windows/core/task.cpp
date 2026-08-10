@@ -126,15 +126,22 @@ BackResult Task::requestTaskBackCallback(BackSource source) {
                                    : back_callback_(source);
 }
 
-bool Task::drainKeyEvents() {
-  if (key_source_ == nullptr) return false;
+Task::KeyDrainResult Task::drainOneKeyBatch() {
+  if (key_source_ == nullptr) return {false, 0, false};
   KeyEvent events[kKeyDrainBatchSize];
+  int count = key_source_->drain(events, kKeyDrainBatchSize);
+  if (count < 0) count = 0;
+  if (count > kKeyDrainBatchSize) count = kKeyDrainBatchSize;
+  for (int i = 0; i < count; ++i) {
+    dispatchKeyEvent(events[i]);
+  }
+  return {true, count, count == kKeyDrainBatchSize};
+}
+
+bool Task::drainKeyEvents() {
   for (int batch = 0; batch < kMaxKeyDrainBatchesPerTick; ++batch) {
-    int count = key_source_->drain(events, kKeyDrainBatchSize);
-    if (count <= 0) return false;
-    if (count > kKeyDrainBatchSize) count = kKeyDrainBatchSize;
-    for (int i = 0; i < count; ++i) dispatchKeyEvent(events[i]);
-    if (count < kKeyDrainBatchSize) return false;
+    KeyDrainResult result = drainOneKeyBatch();
+    if (!result.has_source || !result.source_may_have_more) return false;
   }
   return true;
 }

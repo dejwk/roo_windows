@@ -78,6 +78,15 @@ class Task {
          const roo_display::Box& bounds, bool popup, Keyboard& keyboard,
          NavigationHost& navigation);
 
+  struct KeyDrainResult {
+    bool has_source;
+    int event_count;
+    bool source_may_have_more;
+  };
+
+  // Polls the attached source once. Application still owns the existing
+  // four-probe policy; this primitive only exposes one bounded probe.
+  KeyDrainResult drainOneKeyBatch();
   bool drainKeyEvents();
   void dispatchKeyEvent(const KeyEvent& event);
   void onSubtreeDetaching(Widget& subtree);
