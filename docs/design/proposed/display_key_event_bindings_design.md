@@ -2,9 +2,10 @@
 
 ## Objective
 
-Add lifetime-safe unicast bindings that route the complete existing `KeyEvent`
-vocabulary from polled or push-style producers to one `UiTask`, including
-between applications driven by one shared scheduler on the same UI thread.
+Add lifetime-safe unicast bindings that route physical key transitions and
+resolved software-key strokes to one `UiTask`, including between applications
+driven by one shared scheduler on the same UI thread. Both forms enter the
+existing `KeyEvent` dispatcher without teaching consumers about input origin.
 
 This is Phase 6 of the
 [display runtime and cross-application input design](../in_progress/display_surface_generalization_design.md)
@@ -27,6 +28,22 @@ pipeline but temporarily permits one attached source. The current
 text-only `KeyboardListener` interface and therefore loses physical key phase,
 modifier, navigation, and command semantics.
 
+A physical keyboard reports temporal transitions: Down when a switch closes,
+optional Repeat while it remains closed, and Up when it opens. A touch
+keyboard first recognizes a pointer gesture. A short release resolves to one
+stroke, while a long press can replace the base character with an alternative.
+Emitting character Down at pointer down is therefore incorrect: the focused
+[`TextField`](../../../src/roo_windows/widgets/text_field.cpp) consumes the base
+character on Down before the long-press decision is available.
+
+Android models long-press selection as a state within the original pointer
+stream, not as a key phase. The pointer that opened the alternatives panel
+continues to deliver translated Move and Up events to that panel. AOSP
+LatinIME's
+[`PointerTracker`](https://android.googlesource.com/platform/packages/inputmethods/LatinIME/+/7f58115a861d1c7a926b8f2eb8612c02b388456a/java/src/com/android/inputmethod/keyboard/PointerTracker.java)
+uses this model, and Compose exposes the same compound gesture as
+[`detectDragGesturesAfterLongPress`](https://developer.android.com/reference/kotlin/androidx/compose/foundation/gestures/package-summary#detectDragGesturesAfterLongPress(androidx.compose.ui.input.pointer.PointerInputScope,kotlin.Function1,kotlin.Function0,kotlin.Function0,kotlin.Function2)).
+
 Phase 5 establishes one UI thread for each connected application and ensures
 that delivering an event never needs to drive the target application
 recursively.
@@ -37,8 +54,8 @@ recursively.
 
 1. Every producer must have at most one destination at a time.
 2. One `UiTask` must accept several polled sources and push emitters.
-3. Every event must enter the same task-local dispatcher with its code, phase,
-   modifiers, and rune unchanged.
+3. Every producer-supplied `KeyEvent` must enter the same task-local dispatcher
+   with its code, phase, modifiers, and rune unchanged.
 4. Delivery must never infer a target from focus recency, pointer activity,
    task z-order, or display identity.
 5. An unbound push emitter must return false and perform no side effect.
@@ -61,16 +78,24 @@ recursively.
 
 ### Software-keyboard requirements
 
-1. `Keyboard` must emit full `KeyEvent` objects rather than `KeyboardListener`
+1. `Keyboard` must use `KeyEventEmitter` rather than `KeyboardListener`
    callbacks.
 2. Character, Space, Enter, Backspace, Delete, Tab, arrows, Home, End, Page Up,
    Page Down, Back, and Escape must use existing `KeyCode` values.
-3. Pressable keys must emit Down and Up; held repeatable keys must emit Repeat
-   with unchanged modifiers.
-4. The standard single-display convenience path must keep keyboard and editor
+3. A gesture-resolved key must emit no target event at pointer down. A
+   successful short release must emit one `KeyStroke`, which the sink expands
+   to adjacent Down and Up dispatches.
+4. A transition-style producer must emit Down and Up as they occur. A held
+   repeatable key must emit Repeat with the rune and modifier snapshot captured
+   by its Down.
+5. Long-press recognition and alternative selection must remain in the
+   software-keyboard gesture controller. The task dispatcher must not infer
+   long press from elapsed time after a key Down.
+6. The standard single-display convenience path must keep keyboard and editor
    in separate tasks and own their binding internally.
-5. Keyboard controls must be disabled while their emitter is unbound.
-6. Binding must not control visibility, composition, or editor-session policy.
+7. Keyboard controls must be disabled while their emitter is unbound.
+8. Binding must not control visibility, composition, alternatives, or
+   editor-session policy.
 
 ### Embedded requirements
 
@@ -78,7 +103,9 @@ recursively.
    allocate.
 2. Endpoint and binding lists must be intrusive and must not use `shared_ptr`.
 3. Polled sources must remain subject to Phase 5's aggregate 16-event budget.
-4. Push events must use constant stack space and one synchronous dispatch.
+4. A push operation must use constant stack space and one synchronous sink
+   entry. A stroke performs adjacent Down and Up task dispatches inside that
+   entry.
 5. The implementation must not add RTTI or exceptions.
 
 ### Non-goals
@@ -87,6 +114,9 @@ recursively.
 - Cross-thread or queued delivery.
 - Text composition, selection queries, candidates, input-method negotiation,
   or surrounding-text APIs.
+- Alternate-character popup rendering and selection in Phase 6. Phase 6
+  establishes stroke semantics that allow this UI to be added without changing
+  bindings or key consumers.
 - Automatic keyboard visibility across applications.
 - Command routing outside the existing `KeyEvent` vocabulary.
 
@@ -95,10 +125,11 @@ recursively.
 Two connection types converge on one task endpoint:
 
 ```text
-KeySource -- TaskKeyBinding --+
-KeySource -- TaskKeyBinding --+--> UiTask::KeyEventSink --> dispatchKeyEvent
-                              |
-KeyEventEmitter -- KeyEventBinding
+KeySource -- TaskKeyBinding ---------+
+                                     +--> UiTask::KeyEventSink
+KeyEventEmitter -- KeyEventBinding --+          |
+                                                +-- event --> dispatchKeyEvent
+                                                +-- stroke -> Down, Up dispatch
 ```
 
 Each producer has one back-pointer to its binding. Each task sink owns an
@@ -123,8 +154,17 @@ cancels armed keys, focus, and content.
 ### Push emitter and binding
 
 `KeyEventEmitter` is composed by a producer and contains one nullable
-`KeyEventBinding*`. `emit(event)` returns false when unbound. When bound, it
-validates the common UI thread and calls the sink once.
+`KeyEventBinding*`. `emit(event)` accepts genuine Down, Up, and Repeat
+transitions. `emitStroke(stroke)` accepts a gesture that has already resolved
+to one logical key activation. Both return false when unbound. When bound, they
+validate the common UI thread and call the sink once.
+
+The sink expands a stroke to adjacent Down and Up events with the stroke's
+code, modifiers, and rune. No scheduler dispatch, paint, focus lookup outside
+the target task, or other producer event can occur between the two phases. The
+pair uses the calling binding's armed state, so it cannot settle another
+producer's press. Consumers continue to receive only `KeyEvent`; they do not
+branch on physical-versus-software origin.
 
 `KeyEventBinding` contains source and sink pointers, previous/next links in the
 sink list, and one armed-widget/key record. `connect()` validates all
@@ -164,21 +204,32 @@ but activated from `Application::startInternal()` after affinity is known.
 
 ### Software keyboard conversion
 
-`Keyboard` owns a `KeyEventEmitter`. Each key declares its `KeyCode`, rune,
-modifiers, and repeat policy in keyboard-layout data. Pointer press emits Down;
-release over the same control emits Up. Gesture cancellation calls
+`Keyboard` owns a `KeyEventEmitter`. Each externally delivered key declares its
+`KeyCode`, rune, modifiers, and emission policy in keyboard-layout data. The
+policies are stroke-on-release and transitions-while-held; page and caps
+controls remain internal actions.
+
+A regular character key uses stroke-on-release. Pointer down and show-press
+update only keyboard-local visual and gesture state. A successful tap release
+resolves case and calls `emitStroke()`. Cancellation emits nothing. This delays
+text insertion until the gesture is known to be a tap and leaves a future long
+press free to suppress the base stroke and resolve an alternative instead.
+
+A held repeatable control uses transitions-while-held. It emits Down when its
+configured press lifecycle begins, the existing scheduler emits Repeat at the
+layout's repeat delay and interval, and terminal release emits Up. Rune and
+modifiers are snapshotted at Down and retained through Repeat and Up. Explicit
+gesture or lifecycle cancellation calls
 `KeyEventEmitter::cancelActivePress()`, which clears only that binding's armed
-state without delivering semantic Up. The existing scheduler drives Repeat at
-the layout's repeat delay and interval while held.
+activation without converting cancellation into a semantic Up.
 
 `Keyboard` ceases to derive from `Activity`. It remains a controller owning its
 keyboard widget and exposes that widget as borrowed direct content for its
 dedicated `UiTask`. Application member ordering keeps the controller alive
 until after the keyboard task detaches.
 
-Character case is resolved into the Down event's rune; Up and Repeat retain
-the same rune and modifier snapshot for that press. Caps/page changes happen
-after successful semantic emission, preserving current visible behavior.
+Caps/page changes happen after successful semantic emission, preserving
+current visible behavior.
 
 `KeyboardListener` is deprecated in this phase. The compatibility adapter
 converts emitted events back to rune/enter/delete calls only for legacy users;
@@ -217,6 +268,12 @@ list heads, and availability/thread metadata. Each binding costs at most six
 pointers plus one key code and alignment. No per-event storage or allocation is
 added.
 
+`KeyStroke` is expected to occupy 8 bytes after alignment and is passed by
+reference. Stroke expansion reuses one stack `KeyEvent` for Down and Up, so it
+adds no endpoint storage or warmed allocation. The layout emission policy uses
+one byte and is expected to occupy existing `KeySpec` tail padding; the target
+report verifies the actual ABI result.
+
 The target report records all endpoint and binding sizes. Warm emit, polled
 drain, repeat, connect, disconnect, and teardown allocation counts must remain
 zero. The full software-keyboard conversion may increase flash but must not
@@ -226,6 +283,12 @@ pointer.
 ## Proposed API
 
 ```cpp
+struct KeyStroke {
+  KeyCode code;
+  uint8_t modifiers;
+  uint32_t rune;
+};
+
 class KeyEventSink {
  public:
   bool isAvailable() const;
@@ -236,6 +299,7 @@ class KeyEventEmitter {
   ~KeyEventEmitter();
   bool isBound() const;
   bool emit(const KeyEvent& event);
+  bool emitStroke(const KeyStroke& stroke);
   void cancelActivePress();
 };
 
@@ -279,7 +343,9 @@ class Keyboard {
 };
 ```
 
-All public declarations receive Doxygen thread, lifetime, ownership, and
+`KeyStroke::rune` follows the same scalar-value invariant as `KeyEvent::rune`.
+`emitStroke()` returns true when either generated phase is handled. All public
+declarations receive Doxygen thread, lifetime, ownership, and
 checked-precondition contracts. `disconnect()` and `cancelActivePress()` are
 idempotent and perform no work when no corresponding state exists.
 
@@ -294,8 +360,9 @@ Implementation follows the
    intrusive `TaskKeyBinding`; replace temporary source attachment.
 2. Integrate polled bindings with Phase 5 round-robin draining and route both
    producer forms through one `UiTask` dispatcher.
-3. Convert keyboard layout controls to full Down/Up/Repeat `KeyEvent` emission
-   and remove the editor's keyboard-listener dependency.
+3. Add `KeyStroke` delivery, convert gesture keys to stroke-on-release and held
+   controls to Down/Repeat/Up emission, and remove the editor's
+   keyboard-listener dependency.
 4. Add the single-display coordinator and same-display and cross-application
    examples.
 5. Add exhaustive semantics, contract-death, destruction-order, reentrancy,
@@ -311,28 +378,32 @@ bazel build //...
 ```
 
 The phase is complete when the full key vocabulary follows both producer paths,
-all endpoint destruction permutations disconnect safely, no event path
-allocates or recursively ticks, and target deltas are recorded.
+a touch character emits nothing before successful release, physical
+transitions retain their timing and phases, all endpoint destruction
+permutations disconnect safely, no event path allocates or recursively ticks,
+and target deltas are recorded.
 
 Proposed commit: `feat: bind keyboard tasks to editor tasks`
 
 Proposed commit body:
 
-> Display runtime Phase 6 adds lifetime-safe full-key-event connections. Route
-> polled and push producers through one task sink, migrate the software
-> keyboard, and enforce the thread and teardown contracts in
-> `display_key_event_bindings_design.md`.
+> Display runtime Phase 6 adds lifetime-safe key-input connections. Route
+> physical transitions and resolved software-key strokes through one task
+> sink, migrate the software keyboard, and enforce the thread and teardown
+> contracts in `display_key_event_bindings_design.md`.
 
 ## Testing Plan
 
 `key_event_binding_test` owns connection state, destruction order, thread
 affinity, and full-event semantics. Existing key, task, text-field, shared-
 scheduler-drive, and runtime tests retain behavioral coverage. Deterministic
-keyboard press clocks verify Down/Up/Repeat without sleeping.
+keyboard press clocks verify immediate physical Down/Up, touch
+stroke-on-release, adjacent stroke expansion, cancellation, and
+Down/Up/Repeat without sleeping.
 
 Examples compile both same-display convenience and two-application keyboard
-topologies. Allocation instrumentation covers warmed push, poll, repeat,
-disconnect, and endpoint teardown.
+topologies. Allocation instrumentation covers warmed event, stroke, poll,
+repeat, disconnect, and endpoint teardown.
 
 ## Caveats
 
@@ -346,6 +417,25 @@ task, and the shared scheduler determines when it next runs.
 
 Rejected because navigation, modifiers, physical key phases, activation,
 Back, and Escape already have established `KeyEvent` semantics.
+
+#### Emit character Down at pointer down
+
+Rejected because `TextField` consumes characters on Down. The base character
+would be committed before a long press could replace it, and a canceled touch
+would require editing rollback. Stroke-on-release resolves the gesture before
+delivery.
+
+#### Add a stroke phase to `KeyEvent`
+
+Rejected because every task and widget would need to understand producer
+origin. `emitStroke()` normalizes a resolved gesture at the sink boundary and
+keeps the established Down/Up consumer vocabulary.
+
+#### Infer long press from key Down duration
+
+Rejected because a held physical key represents device state and repeat, not a
+pointer gesture. Only the software keyboard owns the pointer stream, layout
+alternatives, and selection UI needed to resolve long press.
 
 #### Own endpoints with `shared_ptr`
 
@@ -363,6 +453,35 @@ Rejected because it would violate Phase 5 work bounds and permit recursive
 cross-application execution.
 
 ## Future Work
+
+A static alternative table in keyboard-layout data will enable an
+Android-like alternate-character popup. The popup is a transient overlay owned
+by the keyboard task, not a focus-taking menu or a separately hit-tested touch
+target. Long press suppresses the base stroke, opens the overlay, and retains
+ownership of the original pointer stream.
+
+[`GestureDetector`](../../../src/roo_windows/core/gesture_detector.h) will add
+owned long-press movement without changing drag arbitration:
+
+```cpp
+virtual void onLongPress(XDim x, YDim y);
+virtual void onLongPressMove(XDim x, YDim y, XDim dx, YDim dy);
+virtual void onLongPressFinished(XDim x, YDim y);
+```
+
+After `onLongPress()`, every Move for that pointer goes to the same owner even
+outside its bounds. The keyboard translates owner-relative coordinates into
+the overlay, and `onLongPressMove()` updates the highlighted alternative. Up
+calls `onLongPressFinished()`, commits the selected alternative with one
+`emitStroke()`, and dismisses the overlay. `onCancel()` dismisses it without a
+stroke. Showing the overlay does not start a new pointer stream or rerun hit
+testing.
+
+The warmed popup path reuses controller-owned widget storage and static
+`PROGMEM` alternative data so opening, moving, committing, and dismissing do
+not allocate. Its implementation phase adds deterministic long-press ownership,
+coordinate-translation, move-outside-bounds, Up, Cancel, and no-base-stroke
+tests before enabling alternative tables in shipped layouts.
 
 A general IME session can add composition, editor capabilities, visibility
 requests, and queued cross-thread delivery without changing unicast `KeyEvent`
