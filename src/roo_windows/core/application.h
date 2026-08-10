@@ -169,6 +169,11 @@ class Application {
   /// Returns true when a task consumed its complete key-drain budget.
   bool drainKeyEvents();
 
+  /// This is a best-effort fail-fast attempt for direct application UI entry
+  /// points.
+  /// References obtained earlier cannot be checked when they are later used.
+  void checkUiThread() const;
+
   const Environment* env_;
   ApplicationContext context_;
 

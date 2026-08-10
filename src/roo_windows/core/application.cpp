@@ -75,10 +75,12 @@ Application::~Application() {
 }
 
 void Application::add(WidgetRef child, const roo_display::Box& box) {
+  checkUiThread();
   window_.root().addTask(std::move(child), box);
 }
 
 void Application::addPopup(WidgetRef child, const roo_display::Box& box) {
+  checkUiThread();
   window_.root().addPopup(std::move(child), box);
 }
 
@@ -122,10 +124,12 @@ bool Application::drainKeyEvents() {
 }
 
 bool Application::refresh(roo_time::Uptime deadline) {
+  checkUiThread();
   return window_.refresh(deadline);
 }
 
 Task& Application::addTask(Widget& content, const roo_display::Box& bounds) {
+  checkUiThread();
   CHECK(content.parent() == nullptr);
   Task* task = new Task(*this, window_, bounds, false, keyboard_, content);
   tasks_.emplace_back(task);
@@ -144,6 +148,7 @@ Task& Application::addTaskFullScreen(Widget& content) {
 
 Task& Application::addTask(NavigationHost& navigation,
                            const roo_display::Box& bounds) {
+  checkUiThread();
   CHECK(navigation.task_ == nullptr);
   Task* task = new Task(*this, window_, bounds, false, keyboard_, navigation);
   tasks_.emplace_back(task);
@@ -162,12 +167,14 @@ Task& Application::addTaskFullScreen(NavigationHost& navigation) {
 
 PresentationStartResult Application::showDialog(
     Dialog& dialog, Dialog::CallbackFn callback_fn) {
+  checkUiThread();
   return window_.root().showDialog(dialog, std::move(callback_fn));
 }
 
 PresentationStartResult Application::showAlertDialog(
     std::string title, std::string supporting_text,
     std::vector<std::string> button_labels, Dialog::CallbackFn callback_fn) {
+  checkUiThread();
   Dialog* dialog =
       new AlertDialog(context(), std::move(title), std::move(supporting_text),
                       std::move(button_labels));
@@ -182,11 +189,19 @@ PresentationStartResult Application::showAlertDialog(
   return result;
 }
 
-void Application::clearDialog() { window_.root().clearDialog(); }
+void Application::clearDialog() {
+  checkUiThread();
+  window_.root().clearDialog();
+}
 
 bool Application::isUiThread() const {
   return state_ == State::kConstructed ||
          roo::this_thread::get_id() == ui_thread_id_;
+}
+
+void Application::checkUiThread() const {
+  CHECK(state_ != State::kStopping);
+  CHECK(isUiThread());
 }
 
 namespace {
@@ -209,6 +224,7 @@ class SyncTask : public roo_scheduler::Executable {
 }  // namespace
 
 void Application::executeInUIThread(std::function<void()> fn) {
+  CHECK(state_ == State::kStarted || state_ == State::kTickerRunning);
   if (roo::this_thread::get_id() == ui_thread_id_) {
     fn();
   } else {
