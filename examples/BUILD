@@ -204,6 +204,12 @@ roo_windows_example_build(
     include_dir = "simple/navigation",
 )
 
+roo_windows_example_build(
+    name = "simple_shared_scheduler",
+    sketch = "simple/shared_scheduler/shared_scheduler.ino",
+    include_dir = "simple/shared_scheduler",
+)
+
 filegroup(
     name = "material3_example_builds",
     srcs = [
