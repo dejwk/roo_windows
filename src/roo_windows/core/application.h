@@ -43,10 +43,14 @@ class Application {
   /// state.
   ~Application();
 
-  /// Deprecated entry point. Prefer `run()`.
+  /// Starts this application's work on `env().scheduler()`.
+  ///
+  /// Multiple applications may be started before their scheduler is run.
+  /// Repeated starts CHECK-fail.
   void start();
 
-  /// Enters the main event loop. Does not return.
+  /// Starts this application and enters `env().scheduler().run()`.
+  /// Does not return under normal scheduler operation.
   void run();
 
   /// Lays out and paints all dirty items without polling or dispatching new
