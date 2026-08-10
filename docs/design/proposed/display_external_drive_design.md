@@ -35,7 +35,7 @@ reschedules immediate work goes behind callbacks that were already eligible.
 
 Phase 2 places drawing and pointer state in `DisplayWindow`. Phase 3 makes key
 input task-local. Phase 4 separates content from navigation. Phase 5 preserves
-that private callback model while adding aggregate work limits, explicit
+that private callback model while adding bounded display work, explicit
 contracts, and multi-application coverage.
 
 ## Requirements
@@ -45,39 +45,34 @@ contracts, and multi-application coverage.
 1. `start()` must establish UI-thread affinity, start input acquisition,
    activate preconfigured input bindings, and schedule the application's first
    callback on `env.scheduler()`.
-2. Several applications using the same scheduler must be startable on the same
-   UI thread before the caller enters `scheduler.run()`.
+2. Several applications using the same scheduler must be startable before the
+   caller enters `scheduler.run()`. The caller owns synchronization between
+   applications and schedulers.
 3. `run()` must remain the single-application convenience path and be
    equivalent to `start(); env.scheduler().run();`.
-4. Starting an application more than once, starting applications that share a
-   scheduler from different threads, invoking UI-only operations from the
-   wrong thread, reentering an application callback, and using an application
-   while it is stopping are programming errors enforced with `CHECK`.
+4. Starting an application more than once, invoking UI-only operations from
+   that application's wrong thread, reentering an application callback, and
+   using an application while it is stopping are programming errors enforced
+   with `CHECK`.
 5. Destruction must cancel the application's pending callback before
    disconnecting input or task state.
 
 ### Work-bound requirements
 
-1. One application callback must dispatch at most 16 polled key events across
-   all tasks.
-2. One callback must probe at most 16 polled sources, rotating after every
-   probe so a continuously full or empty source cannot monopolize the scan.
-3. Stopping before every source has been probed must schedule immediate follow-
-   up so a later source cannot remain asleep indefinitely.
-4. One callback must drain at most the touch sensor's fixed 16-event queue and
+1. One callback must drain at most the touch sensor's fixed 16-event queue and
    run one gesture-recognizer pass.
-5. One callback must attempt at most one refresh slice with the window's
+2. One callback must attempt at most one refresh slice with the window's
    adaptive paint deadline.
-6. One callback must advance each due application-owned timer class at most
+3. One callback must advance each due application-owned timer class at most
    once.
-7. Bounds apply to one application's callback. Arbitrary callbacks sharing the
+4. Bounds apply to one application's callback. Arbitrary callbacks sharing the
    scheduler retain their own contracts.
 
 ### Scheduling requirements
 
-1. Saturated key or touch budgets, active touch, dispatched gestures,
-   interrupted paint, and work dirtied after the refresh slice must reschedule
-   the application immediately.
+1. A saturated touch queue, active touch, dispatched gestures, interrupted
+   paint, and work dirtied after the refresh slice must reschedule the
+   application immediately.
 2. Otherwise, the application must schedule its next callback at the earliest
    known refresh, gesture, click-animation, or application-owned task
    deadline.
@@ -130,17 +125,13 @@ in-callback guard used by `CHECK` to reject reentrancy.
 
 ### Start and run
 
-`start()` checks that the application is constructed and that the scheduler's
-UI-thread affinity is either unset or matches the calling thread. It then
-records affinity, starts touch acquisition, activates preconfigured bindings,
-sets the first refresh deadline, and schedules the inline `SingletonTask`
-immediately.
-
-The affinity associated with a shared scheduler is common to every Roo Windows
-application using it. It may be stored in scheduler-associated environment
-state rather than in `roo_scheduler::Scheduler` itself; this phase does not
-change the scheduler API. Starting a second application on another thread is a
-`CHECK` failure.
+`start()` checks that the application is constructed, records that
+application's UI thread, starts touch acquisition, activates preconfigured
+bindings, sets the first refresh deadline, and schedules the inline
+`SingletonTask` immediately. The framework does not impose an affinity policy
+between applications: callers using several schedulers or application threads
+must synchronize cross-application work explicitly, for example through the
+receiving application's `executeInUIThread()`.
 
 `run()` is a convenience operation:
 
@@ -155,17 +146,14 @@ It is appropriate only when the application owns entry into the scheduler
 loop. Multi-application callers call `start()` on every application and invoke
 `scheduler.run()` once.
 
-### Aggregate key budget
+### Key input
 
-`Application` stores a round-robin cursor into its task collection. A callback
-drains at most four events from one source, advances the cursor, and continues
-until 16 events, 16 source probes, or every source reports empty. Removed tasks
-repair the cursor before destruction.
-
-The final full batch or an incomplete all-source scan schedules immediate
-follow-up. Push-style events introduced in Phase 6 are synchronous and are not
-drained by this budget; their producer's application work remains subject to
-its own callback bounds.
+Key sources remain task-local. A task's existing bounded source drain preserves
+its key-event semantics and schedules an immediate follow-up when that task
+consumes its complete local batch budget. Roo Windows does not impose an
+aggregate fairness policy across several concurrently full task sources:
+applications that model independent, competing key streams are responsible for
+their own input arbitration.
 
 ### Pointer and timer work
 
@@ -192,9 +180,9 @@ settles click callbacks only after the drawing context closes.
 
 ### Rescheduling
 
-At the end of the callback, immediate follow-up is required when a key or touch
-budget saturated, touch is down, gesture work dispatched, paint was
-interrupted, or a callback dirtied the window after its one refresh slice.
+At the end of the callback, immediate follow-up is required when touch work
+saturated, touch is down, gesture work dispatched, paint was interrupted, or a
+callback dirtied the window after its one refresh slice.
 The ticker uses `scheduleNow()` in those cases.
 
 Otherwise it schedules at the minimum of refresh cadence, gesture deadlines,
@@ -206,8 +194,8 @@ thread-safe scheduling API; it does not mutate UI state there.
 
 Because each application reschedules a distinct equal-priority task, immediate
 work does not monopolize the shared loop: callbacks already eligible retain
-FIFO precedence. The bounds prevent a single dispatch from hiding that
-scheduling property behind unbounded application work.
+FIFO precedence. The bounded touch and paint phases prevent a single display
+dispatch from hiding that scheduling property behind unbounded display work.
 
 ### Contract checks and teardown
 
@@ -223,11 +211,10 @@ UI-thread operations and assert their affinity.
 
 ### Resource budget
 
-Shared-scheduler collaboration adds lifecycle state, the task cursor, and the
-reentrancy flag to `Application`; the accepted target increase is at most one
-pointer plus eight bytes. It adds no public result object and reuses the
-existing inline `SingletonTask`. Starting and warmed callback execution
-allocate nothing.
+Shared-scheduler collaboration adds lifecycle state and the reentrancy flag to
+`Application`; the accepted target increase is at most eight bytes. It adds no
+public result object and reuses the existing inline `SingletonTask`. Starting
+and warmed callback execution allocate nothing.
 
 ## Proposed API
 
@@ -235,7 +222,7 @@ allocate nothing.
 class Application {
  public:
   // Starts this application's work on env().scheduler(). CHECK-fails on
-  // repeated start, conflicting state, or scheduler/UI-thread mismatch.
+  // repeated start, conflicting state, or a wrong application UI thread.
   void start();
 
   // Convenience for start(); env().scheduler().run().
@@ -267,10 +254,10 @@ Implementation follows the
 
 ### Phase 5: support shared-scheduler application driving
 
-1. Add checked lifecycle and shared-scheduler UI-thread affinity while keeping
+1. Add checked application lifecycle and UI-thread affinity while keeping
    `start()` as the scheduling entry point.
-2. Add aggregate round-robin key draining and explicit internal scheduling
-   decisions to the existing private callback.
+2. Add explicit internal scheduling decisions to the existing private
+   callback, while retaining task-local key input behavior.
 3. Make `run()` the thin single-application adapter over `start()` and the
    shared scheduler.
 4. Add a two-display emulator example that starts two applications and enters
@@ -287,26 +274,26 @@ bazel test //:shared_scheduler_drive_test //:display_window_test \
 bazel build //...
 ```
 
-The phase is complete when every per-callback counter stays within its bound,
-two applications progress independently under one scheduler, invalid contract
-uses fail through `CHECK`, and target/allocation deltas are recorded.
+The phase is complete when touch and paint work stay within their callback
+bounds, two applications progress independently under one scheduler, invalid
+contract uses fail through `CHECK`, and target/allocation deltas are recorded.
 
 Proposed commit: `feat: support shared-scheduler applications`
 
 Proposed commit body:
 
 > Display runtime Phase 5 lets bounded application callbacks collaborate on a
-> shared scheduler. Keep lifecycle and affinity violations as checked
-> programming errors, and add the two-display setup specified by
+> shared scheduler. Keep application lifecycle and affinity violations as
+> checked programming errors, and add the two-display setup specified by
 > `display_external_drive_design.md`.
 
 ## Testing Plan
 
-`shared_scheduler_drive_test` owns lifecycle death tests, thread-affinity and
-reentrancy death tests, bounds, wake/deadline scheduling, FIFO progress, and
-two-application isolation. Existing display, input, and characterization tests
-ensure the private callback preserves behavior. The example is compile-covered
-under Bazel.
+`shared_scheduler_drive_test` owns lifecycle death tests, application-local
+thread-affinity and reentrancy death tests, touch/paint bounds,
+wake/deadline scheduling, FIFO progress, and two-application isolation.
+Existing display, input, and characterization tests ensure the private callback
+preserves behavior. The example is compile-covered under Bazel.
 
 Tests use deterministic clocks and scripted sources; they do not sleep.
 Allocation checks warm all sources and paint paths before measuring callbacks.
@@ -337,9 +324,9 @@ the normal API and callback path free of status plumbing.
 
 #### Add framework fairness or `ApplicationGroup`
 
-Rejected because the scheduler already orders eligible callbacks. Per-callback
-bounds and equal priority are sufficient for the initial multi-application
-contract without another collection or policy layer.
+Rejected because the scheduler already orders eligible callbacks. Bounded touch
+and paint work plus equal priority are sufficient for the initial
+multi-application contract without another collection or policy layer.
 
 #### Run one scheduler per application
 
@@ -355,7 +342,7 @@ constructed, started once, and destroyed.
 
 ## Future Work
 
-Cross-thread application groups require queued input and a separate
-synchronization design. A higher-level convenience owner can be considered if
+Cross-thread application groups require an explicit caller-owned
+synchronization policy. A higher-level convenience owner can be considered if
 real programs need coordinated construction or teardown beyond the shared
 scheduler pattern.
