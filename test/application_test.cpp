@@ -22,6 +22,11 @@ class TestWidget : public BasicWidget {
   }
 };
 
+class EmptyKeySource final : public KeySource {
+ public:
+  int drain(KeyEvent* out, int max_events) override { return 0; }
+};
+
 class TestDestination : public Destination {
  public:
   explicit TestDestination(ApplicationContext& context) : contents_(context) {}
@@ -55,6 +60,24 @@ class BackPresentation final : public TransientPresentationRegistration {
     return TransientPresentationRegistration::onBackRequested(source);
   }
 };
+
+TEST(Application, StartIsSingleUse) {
+  roo::byte raster[16 * 16 * 2] = {};
+  roo_display::OffscreenDevice<roo_display::Argb4444> device(
+      16, 16, raster, roo_display::Argb4444());
+  roo_display::Display display(device);
+  roo_scheduler::Scheduler scheduler;
+  Environment environment(scheduler);
+  EmptyKeySource keys;
+  Application app(&environment, display, keys, false);
+
+  EXPECT_DEATH_IF_SUPPORTED(
+      {
+        app.start();
+        app.start();
+      },
+      "");
+}
 
 // Verifies that task-local Back only changes its own navigation history.
 TEST(Application, RequestBackUsesExplicitTargetTask) {

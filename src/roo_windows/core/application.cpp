@@ -50,6 +50,10 @@ Application::Application(const Environment* env, roo_display::Display& display,
 }
 
 Application::~Application() {
+  if (state_ != State::kConstructed) {
+    CHECK(roo::this_thread::get_id() == ui_thread_id_);
+  }
+  state_ = State::kStopping;
   ticker_.cancel();
   window_.stop();
   tasks_.clear();
@@ -64,8 +68,9 @@ void Application::addPopup(WidgetRef child, const roo_display::Box& box) {
 }
 
 void Application::start() {
+  CHECK(state_ == State::kConstructed);
   ui_thread_id_ = roo::this_thread::get_id();
-  ui_thread_started_ = true;
+  state_ = State::kStarted;
   window_.start();
   ticker_.scheduleNow();
 }
@@ -158,7 +163,8 @@ PresentationStartResult Application::showAlertDialog(
 void Application::clearDialog() { window_.root().clearDialog(); }
 
 bool Application::isUiThread() const {
-  return !ui_thread_started_ || roo::this_thread::get_id() == ui_thread_id_;
+  return state_ == State::kConstructed ||
+         roo::this_thread::get_id() == ui_thread_id_;
 }
 
 namespace {

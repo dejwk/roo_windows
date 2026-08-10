@@ -153,6 +153,8 @@ class Application {
   bool isUiThread() const;
 
  private:
+  enum class State : uint8_t { kConstructed, kStarted, kStopping };
+
   // Handles user input (touch, etc.), and calls refresh() periodically.
   void tick();
 
@@ -167,7 +169,7 @@ class Application {
   roo_scheduler::SingletonTask ticker_;
 
   roo::thread::id ui_thread_id_;
-  bool ui_thread_started_ = false;
+  State state_ = State::kConstructed;
 };
 
 }  // namespace roo_windows
