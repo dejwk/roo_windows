@@ -36,6 +36,12 @@ Emitting character Down at pointer down is therefore incorrect: the focused
 [`TextField`](../../../src/roo_windows/widgets/text_field.cpp) consumes the base
 character on Down before the long-press decision is available.
 
+`KeyCode` describes framework semantics rather than physical identity. In
+particular, printable keys produce a physical event whose code may be
+`kUnknown`, plus a separate `kCharacter` text event. General hardware-key
+rollover therefore also needs a compact physical-key field that remains stable
+from Down through Repeat and Up.
+
 Android models long-press selection as a state within the original pointer
 stream, not as a key phase. The pointer that opened the alternatives panel
 continues to deliver translated Move and Up events to that panel. AOSP
@@ -60,7 +66,7 @@ recursively.
    broadcast.
 3. One `Task` must accept several polled sources and push emitters.
 4. Every producer-supplied `KeyEvent` must enter the same task-local dispatcher
-   with its code, phase, modifiers, and rune unchanged.
+   with its physical key, code, phase, modifiers, and rune unchanged.
 5. Delivery must never infer a target from focus recency, pointer activity,
    task z-order, or display identity.
 6. An unbound push emitter must return false and perform no side effect.
@@ -68,8 +74,26 @@ recursively.
 8. One `Task` retains at most one fallback Down/Up activation, tagged with the
    binding that armed it. A new activatable Down cancels the previous armed
    visual before arming the new key. An Up settles the activation only when its
-   binding and key both match, so one producer cannot settle another producer's
-   press.
+   binding and activation identity both match. Physical activation identity is
+   `PhysicalKey`; a software stroke with `PhysicalKey::kNone` uses `KeyCode`.
+   This record affects only unhandled fallback click activation; it must not
+   suppress or rewrite events delivered to consumers.
+9. `KeyEvent` must carry a normalized one-byte `PhysicalKey`. Hardware adapters
+   must use the same non-`kNone` value for one switch's Down, Repeat, and Up.
+   Physical keys use USB HID Keyboard/Keypad usage identities, including distinct
+   left/right modifiers and main/keypad controls. Resolved software-key and text
+   events use `PhysicalKey::kNone`.
+10. For each producer, overlapping transitions for distinct non-`kNone`
+    `PhysicalKey` values must remain ordered and independent. For example,
+    Down(A), Down(B), Repeat(A), Up(B), Up(A) must reach the same continuously
+    focused consumer in that order. The producer, binding, and task dispatcher
+    must not coalesce transitions, synthesize an early Up, or require one key to
+    be released before another key goes Down.
+11. Before task-level Back, Escape, Tab, navigation, or fallback activation, a
+    non-`kNone` physical transition must call the focused widget's
+    `onPhysicalKeyEvent()`. Returning true consumes the event and stops semantic
+    routing. The default implementation returns false, so standard widgets keep
+    their existing behavior without tracking pressed keys.
 
 ### Lifetime requirements
 
@@ -157,6 +181,11 @@ recursively.
   bindings or key consumers.
 - Automatic keyboard visibility across applications.
 - Command routing outside the existing `KeyEvent` vocabulary.
+- Producer or device identity and raw platform scan codes in consumer events.
+  `PhysicalKey` identifies a normalized keyboard/keypad usage, not a particular
+  device instance. The same usage pressed on two devices behind one producer is
+  therefore not distinguishable, and separate producers do not gain a global
+  temporal order.
 
 ## Design Overview
 
@@ -194,10 +223,22 @@ cold operation and scans the task's small incoming list. Outside active
 delivery, task teardown walks both lists, cancels the task-wide armed visual,
 nulls every binding endpoint, and only then cancels focus and content.
 
-The task-wide armed record contains the owning binding identity, widget, and key.
-A new activatable Down cancels any existing activation before replacing this
-record. Up settles it only when the binding identity and key match. Disconnect
-cancels the record only when the disconnecting binding owns it.
+The task-wide armed record contains the owning binding identity, widget,
+`PhysicalKey`, and `KeyCode`. A new activatable Down cancels any existing
+activation before replacing this record. Up settles it only when the binding and
+activation identities match. Disconnect cancels the record only when the
+disconnecting binding owns it.
+
+The armed record is not a general pressed-key table. For every event with a
+non-`kNone` physical key, the task first calls the focused widget's
+`onPhysicalKeyEvent()`, before task-level semantic handling including Back,
+Escape, and Tab. A special-purpose widget that continuously retains focus can
+maintain a 256-bit `PhysicalKey` pressed set from Down, Repeat, and Up and return
+true for keys it owns. Returning false continues through the existing semantic
+dispatcher. `PhysicalKey::kNone` text and software-stroke events bypass this hook.
+Standard text editors and ordinary widgets inherit the false-returning default
+and need no pressed state. The task does not retain a second copy, so multi-key
+tracking adds no binding-layer storage.
 
 ### Push emitter and binding
 
@@ -351,6 +392,13 @@ reference. Stroke expansion reuses one stack `KeyEvent` for Down and Up, so it
 adds no endpoint storage or warmed allocation. Event policy is derived from the
 existing `KeySpec::Function`, so `KeySpec` does not grow.
 
+`PhysicalKey` occupies the padding byte before `KeyEvent::rune`, so `KeyEvent`
+remains 8 bytes. Adding it to the task-wide fallback activation record costs one
+byte and must not increase that record beyond its existing pointer alignment.
+The new virtual widget hook adds no instance storage, and the task stores no
+pressed-key table or observer pointer. The target report verifies these ABI
+assumptions.
+
 The target report records task, endpoint, binding, `Keyboard`, `KeyboardWidget`,
 and `TextField` sizes. Warm emit, polled drain, repeat, connect, disconnect, and
 teardown allocation counts must remain zero. `Keyboard` gains its one-pointer
@@ -362,10 +410,28 @@ the existing four-element stack array.
 ## Proposed API
 
 ```cpp
+enum class PhysicalKey : uint8_t {
+  kNone = 0x00,
+  // Other values follow USB HID Keyboard/Keypad usage identities.
+};
+
+struct KeyEvent {
+  KeyPhase phase;
+  KeyCode code;
+  uint8_t modifiers;
+  PhysicalKey physical_key;
+  uint32_t rune;
+};
+
 struct KeyStroke {
   KeyCode code;
   uint8_t modifiers;
   uint32_t rune;
+};
+
+class Widget {
+ public:
+  virtual bool onPhysicalKeyEvent(const KeyEvent& event) { return false; }
 };
 
 class KeyEventEmitter {
@@ -413,6 +479,16 @@ class Keyboard {
 ```
 
 `KeyStroke::rune` follows the same scalar-value invariant as `KeyEvent::rune`.
+`PhysicalKey` is layout-independent switch identity; it does not replace the
+semantic `KeyCode` or resolved rune. A printable hardware switch therefore emits
+a physical transition, commonly with `KeyCode::kUnknown` and a zero rune, while
+resolved text uses a separate `kCharacter` event.
+
+Both events generated from a stroke have `PhysicalKey::kNone`. A hardware
+adapter emits non-`kNone` physical transitions separately from any resolved
+`kCharacter` text event; that text event also has `PhysicalKey::kNone` and does
+not represent held physical state.
+
 On a valid call, `emit()` and `emitStroke()` return false only when the emitter
 is unbound. Calling a bound emitter before its destination application starts is
 a checked precondition violation. A bound stroke returns true after both
@@ -428,14 +504,16 @@ Implementation follows the
 
 ### Phase 6a: add push endpoints and bindings
 
-Add `KeyEventEmitter` and a singly linked intrusive `KeyEventBinding` that
-targets `Task` directly. Tag the task-wide armed activation with its owning
-binding, implement latest-activation-wins settlement, permit construction-time
+Add `PhysicalKey` to the existing `KeyEvent` padding byte. Add `KeyEventEmitter`
+and a singly linked intrusive `KeyEventBinding` that targets `Task` directly.
+Add the default-false `Widget::onPhysicalKeyEvent()` hook ahead of task semantic
+routing. Tag the task-wide armed activation with its owning binding and physical
+identity, implement latest-activation-wins settlement, permit construction-time
 connection, and document the UI-thread and non-reentrant client preconditions.
 Emission reports delivery rather than consumer handling. Focused tests cover
 connection state, duplicate endpoint binding, pre-start connection, ordinary
-destruction orders outside delivery, full-event preservation, task-wide
-activation ownership, and zero binding-layer allocations.
+destruction orders outside delivery, full-event preservation, raw physical-event
+consumption, task-wide activation ownership, and zero binding-layer allocations.
 
 ```sh
 bazel test //:key_event_binding_test //:task_test
@@ -449,9 +527,12 @@ Add singly linked intrusive `TaskKeyBinding`, replace direct source attachment,
 and walk each task's bindings once per application tick. Give every source four
 probes of at most four events without an aggregate cursor or fairness state.
 Preserve immediate follow-up when any source consumes its complete allowance.
+Update hardware and host adapters to retain per-`PhysicalKey` pressed state
+rather than one active key, and preserve overlapping Down/Repeat/Up transitions.
 
 ```sh
-bazel test //:key_source_test //:task_test //:shared_scheduler_drive_test
+bazel test //:key_source_test //:task_test //:shared_scheduler_drive_test \
+  //fake:fltk_key_source_test
 ```
 
 Proposed commit: `feat: bind polled key sources to tasks`
@@ -482,7 +563,7 @@ coverage.
 ```sh
 bazel test //:key_event_binding_test //:key_source_test //:task_test \
   //:shared_scheduler_drive_test //:application_test //:roo_windows_test \
-  //:display_runtime_characterization_test
+  //:display_runtime_characterization_test //fake:fltk_key_source_test
 bazel build //...
 ```
 
@@ -491,10 +572,11 @@ Proposed commit: `feat: coordinate software keyboards across tasks`
 The phase is complete when every producer-supplied `KeyEvent` is preserved by
 both binding forms, each externally delivered control in the current software
 keyboard follows its specified policy, a touch character emits nothing before
-successful release, physical transitions retain their timing and phases, all
-endpoint destruction permutations outside active delivery disconnect safely,
-no binding-layer event path allocates or recursively ticks, no new cache grows
-with event history, and target deltas are recorded.
+successful release, physical transitions retain their identity, timing, and
+phases, all distinct-`PhysicalKey` overlaps from one producer retain source
+order, all endpoint destruction permutations outside active delivery disconnect
+safely, no binding-layer event path allocates or recursively ticks, no new cache
+grows with event history, and target deltas are recorded.
 
 ## Testing Plan
 
@@ -506,6 +588,18 @@ scheduler-drive, and runtime tests retain behavioral coverage.
 Deterministic keyboard press clocks verify immediate physical Down/Up, touch
 stroke-on-release, canonical Space behavior, adjacent stroke expansion,
 cancellation, and Down/Up/Repeat without sleeping.
+
+The key-source, host-adapter, and binding tests deliver Down(A), Down(B),
+Repeat(A), Up(B), and Up(A) from one source to one continuously focused special-
+purpose widget. They verify exact `PhysicalKey` order, unchanged payloads,
+simultaneous pressed-set snapshots after each transition, independent left/right
+modifier identities, and that task-wide fallback activation neither drops nor
+rewrites an overlapping event. Character resolution tests separately verify that
+text events use `PhysicalKey::kNone` and do not create duplicate held keys.
+Back, Escape, and Tab cases verify that the physical hook observes and can
+consume those transitions before their task-level semantic behavior.
+Main Enter and keypad Enter verify that the fallback activation record matches
+`PhysicalKey` and cannot settle one switch with the other's Up.
 
 Examples compile both same-display convenience and two-application keyboard
 topologies. Allocation instrumentation surrounds the warmed binding layer for
@@ -537,7 +631,28 @@ This keeps the normal human-input path simple and sparse. Clients that expose
 continuously saturated or machine-generated sources must combine or arbitrate
 them before binding when scheduler fairness matters.
 
+Multi-key detection depends on a hardware adapter emitting every transition; the
+binding layer cannot recover keyboard-matrix ghosting or rollover losses.
+`PhysicalKey` follows normalized USB HID usage identity and does not expose raw
+platform scan codes or distinguish two devices reporting the same usage through
+one producer. Events from one `KeySource` retain source order. Events from
+separate push emitters or polled sources are observed in call or task-list
+traversal order rather than by a shared hardware timestamp, so consumers that
+require one global chronology must combine those devices before binding.
+Because disconnection does not synthesize Up events, a special-purpose consumer
+must clear its pressed set when it loses focus or when its input owner disconnects
+or resets a producer. A hardware adapter that survives device unplug must emit
+terminal Up transitions for its retained pressed keys before resuming input.
+
 ### Rejected Alternatives
+
+#### Infer physical identity from `KeyCode` or rune
+
+Rejected because `KeyCode` describes framework semantics, printable physical
+keys may use `kUnknown`, and a rune is resolved text rather than a switch
+identity. Text events also do not provide the balanced physical Down/Up stream
+needed for a pressed set. A separate one-byte `PhysicalKey` preserves normalized
+hardware identity without increasing `KeyEvent` size.
 
 #### Keep activation state in every binding
 
