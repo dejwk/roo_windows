@@ -65,48 +65,54 @@ recursively.
    task z-order, or display identity.
 6. An unbound push emitter must return false and perform no side effect.
 7. Synchronous delivery must not tick, paint, or service the target scheduler.
-8. Down/Up activation and cancellation state must be isolated per binding so
-   one producer cannot settle another producer's press. A binding retains at
-   most one activation: a new activatable Down cancels the binding's previous
-   armed visual before arming the new key, and a later Up for the canceled key
-   is ignored.
+8. One `Task` retains at most one fallback Down/Up activation, tagged with the
+   binding that armed it. A new activatable Down cancels the previous armed
+   visual before arming the new key. An Up settles the activation only when its
+   binding and key both match, so one producer cannot settle another producer's
+   press.
 
 ### Lifetime requirements
 
 1. Bindings must be default-constructible, non-copyable, non-movable RAII
    objects.
-2. In a valid, non-reentrant configuration, destroying a source, sink, task,
-   binding, or application must disconnect all affected intrusive links before
-   referenced storage disappears.
+2. In a valid, non-reentrant configuration, destroying a source, task, binding,
+   or application must disconnect all affected intrusive links before referenced
+   storage disappears.
 3. `disconnect()` must be idempotent.
-4. Public connection, delivery, disconnection, and endpoint destruction after
-   start must occur on the destination sink's UI thread. A producer belonging
-   to another application must be driven on that same thread; because generic
+4. Public delivery, disconnection, and endpoint destruction after start must
+   occur on the destination task's UI thread. Connection may occur before start;
+   after start it has the same UI-thread requirement. A producer belonging to
+   another application must be driven on that same thread; because generic
    producer endpoints do not retain an owning application, this is a client
    precondition.
 5. `connect()` must `CHECK`, before mutation, the observable preconditions: the
-   binding and producer endpoint are unconnected, the destination task is
-   started and available, and the caller is its UI thread. A producer
-   application's started/stopping state is a client precondition rather than a
-   property stored in every emitter or source.
-6. A key callback must not recursively deliver to the same sink, connect or
-   disconnect any of that sink's bindings, or destroy a participating endpoint,
+   binding and producer endpoint are unconnected, the destination task is not
+   stopping, and, when its application has started, the caller is its UI thread.
+   A producer application's future or current UI thread and started/stopping
+   state are client preconditions rather than properties stored in every
+   emitter or source.
+6. A key callback must not recursively deliver to the same task, connect or
+   disconnect any of that task's bindings, or destroy a participating endpoint,
    binding, task, or application before the outer delivery returns. This is a
    documented client precondition; bindings add no dispatch-depth or deferred-
    teardown state to enforce it.
 
 ### Software-keyboard requirements
 
-1. `Keyboard` must use `KeyEventEmitter` rather than `KeyboardListener`
-   callbacks.
-2. Character, Space, Enter, Backspace, Delete, Tab, arrows, Home, End, Page Up,
-   Page Down, Back, and Escape must use existing `KeyCode` values.
+1. `Keyboard` must use `KeyEventEmitter`; Phase 6 removes `KeyboardListener` and
+   its text-only routing path.
+2. Both producer paths must preserve every existing `KeyCode`. The built-in
+   software keyboard converts only the externally delivered controls already
+   present in `KeyboardSpec`: Character, Space, Enter, and Backspace. Caps and
+   page controls remain internal. Later layouts may expose Delete, Tab, arrows,
+   Home, End, Page Up, Page Down, Back, and Escape using their existing
+   `KeyCode` values without changing the binding API.
 3. `KeyCode::kSpace` is the canonical Space event. An editable `TextField`
    inserts U+0020 for a Space Down or Repeat when Control, Alt, and Meta are
    clear; Shift does not suppress insertion. A physical source must not
    additionally emit `KeyCode::kCharacter` for that same Space transition.
 4. A gesture-resolved key must emit no target event at pointer down. A
-   successful short release must emit one `KeyStroke`, which the sink expands
+   successful short release must emit one `KeyStroke`, which the task expands
    to adjacent Down and Up dispatches.
 5. A transition-style producer must emit Down and Up as they occur. A held
    repeatable key must emit Repeat with the rune and modifier snapshot captured
@@ -132,7 +138,7 @@ recursively.
    intrusive-list order and applies that limit independently to each source.
    There is no aggregate fairness policy; clients that configure continuously
    saturated or machine-generated sources own their arbitration.
-4. A push operation must use constant stack space and one synchronous sink
+4. A push operation must use constant stack space and one synchronous task
    entry. A stroke performs adjacent Down and Up task dispatches inside that
    entry.
 5. The implementation must not add RTTI or exceptions.
@@ -158,69 +164,76 @@ Two connection types converge on one task endpoint:
 
 ```text
 KeySource -- TaskKeyBinding ---------+
-                                     +--> Task::keyEventSink()
-KeyEventEmitter -- KeyEventBinding --+          |
-                                                +-- event --> dispatchKeyEvent
-                                                +-- stroke -> Down, Up dispatch
+                                     +--> Task
+KeyEventEmitter -- KeyEventBinding --+     |
+                                           +-- event --> dispatchKeyEvent
+                                           +-- stroke -> Down, Up dispatch
 ```
 
 Each producer endpoint retains one nullable active-binding pointer required for
 delivery and lifetime-safe disconnection. Connection uses that same pointer to
 reject a second binding, without a producer-side binding list or destination
-count. Each task sink owns an intrusive list of incoming binding nodes but does
-not own them. Binding objects are caller-owned, so connection lifetime is
+count. Each task owns singly linked intrusive lists of incoming binding nodes but
+does not own them. Binding objects are caller-owned, so connection lifetime is
 explicit and allocation-free. The framework does not attempt to discover that
 several distinct endpoint objects wrap the same underlying device.
 
 ## Design Details
 
-### Task sink
+### Task destination
 
-Every `Task` contains one non-virtual `KeyEventSink` endpoint. A connected
-binding validates sink availability and the caller's affinity to the sink
-thread, then calls the task dispatcher synchronously with that binding's
-dispatch state. Delivery returns true when dispatch consumes the event and
-false when the task is stopping or the event remains unhandled.
+A connected binding calls its destination `Task` synchronously and identifies
+itself to the task dispatcher. Delivery returns true once an event reaches a
+bound task, regardless of whether a widget consumes it. An unbound emitter
+returns false; producers do not retry an event merely because it was unhandled.
 
-The sink keeps separate intrusive heads for push bindings and polled bindings.
-This avoids a type tag in the hot path. Outside active delivery, task teardown
-marks the sink unavailable, walks both lists, cancels each binding's armed
-visual, nulls every binding endpoint, and only then cancels focus and content.
+The task keeps separate singly linked intrusive heads for push bindings and
+polled bindings. This avoids a type tag in the hot path and saves the previous
+pointer that a doubly linked list would add to every binding. Disconnect is a
+cold operation and scans the task's small incoming list. Outside active
+delivery, task teardown walks both lists, cancels the task-wide armed visual,
+nulls every binding endpoint, and only then cancels focus and content.
+
+The task-wide armed record contains the owning binding identity, widget, and key.
+A new activatable Down cancels any existing activation before replacing this
+record. Up settles it only when the binding identity and key match. Disconnect
+cancels the record only when the disconnecting binding owns it.
 
 ### Push emitter and binding
 
 `KeyEventEmitter` is composed by a producer and contains one nullable
 `KeyEventBinding*`. `emit(event)` accepts genuine Down, Up, and Repeat
 transitions. `emitStroke(stroke)` accepts a gesture that has already resolved
-to one logical key activation. Both return false when unbound. When bound, they
-validate the common UI thread and call the sink once.
+to one logical key activation. Both return false when unbound and true after
+synchronous delivery to the bound task, independently of consumer handling.
+When bound, they validate the common UI thread and call the task once.
 
-The sink expands a stroke to adjacent Down and Up events with the stroke's
+The task expands a stroke to adjacent Down and Up events with the stroke's
 code, modifiers, and rune. It performs no scheduler dispatch, paint, or focus
 lookup outside the target task between the two phases. The non-reentrant client
-precondition prevents another event to the same sink from interleaving. The pair
-uses the calling binding's armed state, so it cannot settle another producer's
-press. Consumers continue to receive only `KeyEvent`; they do not branch on
-physical-versus-software origin.
+precondition prevents another event to the same task from interleaving. The pair
+uses the calling binding's identity in the task-wide armed record, so it cannot
+settle another producer's press. Consumers continue to receive only `KeyEvent`;
+they do not branch on physical-versus-software origin.
 
-`KeyEventBinding` contains source and sink pointers, previous/next links in the
-sink list, and one armed-widget/key record. `connect()` validates all
-preconditions before mutating either endpoint. `disconnect()` first cancels
-that binding's armed visual state, then unlinks the sink node, clears the
-emitter back-pointer, and nulls its own endpoints.
+`KeyEventBinding` contains source and task pointers plus one next link in the
+task list. `connect()` validates all preconditions before mutating either
+endpoint. `disconnect()` cancels the task-wide armed visual only when this
+binding owns it, scans and unlinks the task node, clears the emitter back-pointer,
+and nulls its own endpoints.
 
 Emitter destruction calls the same private disconnection primitive. Binding
-destruction and sink teardown use that primitive from their respective side;
+destruction and task teardown use that primitive from their respective side;
 it never invokes producer or task callbacks.
 
 ### Polled source binding
 
-`TaskKeyBinding` replaces Phase 3's direct attachment. It stores a
-`KeySource*`, `KeyEventSink*`, intrusive sink-list links, and its own armed-key
-record. `KeySource` keeps one nullable active-binding pointer because source
-destruction must find its valid connection. The same pointer lets `connect()`
-reject a second endpoint binding at zero additional storage cost. Phase 3's
-task-wide armed record is removed.
+`TaskKeyBinding` replaces Phase 3's direct attachment. It stores a `KeySource*`,
+`Task*`, and one next link in the task's polled-binding list. `KeySource` keeps
+one nullable active-binding pointer because source destruction must find its
+valid connection. The same pointer lets `connect()` reject a second endpoint
+binding at zero additional storage cost. Phase 3's task-wide armed record gains
+the binding identity that owns the activation.
 
 On each application tick, a task walks its polled-binding list once in stable
 link order. Each binding receives the existing source-local allowance of four
@@ -230,30 +243,30 @@ adds neither a round-robin cursor nor an aggregate budget. Clients with
 continuously saturated sources must arbitrate them before exposing them as
 bindings.
 
-The existing `Application(Environment*, Display&, KeySource&, bool)`
-constructor owns one internal `TaskKeyBinding`. It connects that source when
-the first compatibility task becomes available and the application starts.
-Phase 8 replaces the constructor with explicit configuration.
+The existing `Application(Environment*, Display&, KeySource&, bool)` constructor
+owns one internal `TaskKeyBinding`. It connects that source when the first
+compatibility task is created, including before application start. Phase 8
+replaces the constructor with explicit configuration.
 
 ### Connection validation
 
-`connect()` checks, before mutation, that the binding itself is unconnected,
-the producer endpoint's active-binding pointer is null, the sink task is started
-and available, and the caller is the sink's UI thread. Any observable violation
-fails through `CHECK`. A generic producer endpoint carries no owner pointer, so
-the client must ensure that its application is started, is not stopping, and
-uses the same UI thread. After the checks, `connect()` installs the endpoint
-links and returns `void`. Event emission and draining gain no diagnostic branch.
-
-The internal single-application convenience binding is created before start
-but activated from `Application::start()` after affinity is known.
+`connect()` checks, before mutation, that the binding itself is unconnected, the
+producer endpoint's active-binding pointer is null, and the destination task is
+not stopping. Before application start, connection is construction-time graph
+setup and needs no thread-identity check. After start, the caller must be the
+destination task's UI thread. Any observable violation fails through `CHECK`.
+A generic producer endpoint carries no owner pointer, so the client must ensure
+that its application is not stopping and that it will use, or already uses, the
+same UI thread. After the checks, `connect()` installs the endpoint links and
+returns `void`. Delivery remains forbidden until the destination application
+starts.
 
 ### Software keyboard conversion
 
-`Keyboard` owns a `KeyEventEmitter`. Each externally delivered key declares its
-`KeyCode`, rune, modifiers, and emission policy in keyboard-layout data. The
-policies are stroke-on-release and transitions-while-held; page and caps
-controls remain internal actions.
+`Keyboard` owns a `KeyEventEmitter`. The existing `KeySpec::Function` determines
+the event mapping without adding per-key emission-policy storage. Text, Space,
+and Enter use stroke-on-release. Backspace uses transitions-while-held; page and
+caps controls remain internal actions.
 
 A regular character key uses stroke-on-release. Pointer down and show-press
 update only keyboard-local visual and gesture state. A successful tap release
@@ -273,21 +286,21 @@ configured press lifecycle begins, the existing scheduler emits Repeat at the
 layout's repeat delay and interval, and terminal release emits Up. Rune and
 modifiers are snapshotted at Down and retained through Repeat and Up. Explicit
 gesture or lifecycle cancellation calls
-`KeyEventEmitter::cancelActivePress()`, which clears only that binding's armed
-activation without converting cancellation into a semantic Up.
+`KeyEventEmitter::cancelActivePress()`, which clears the task-wide armed
+activation only when that emitter's binding owns it, without converting
+cancellation into a semantic Up.
 
-`Keyboard` ceases to derive from `Activity`. It remains a controller owning its
-keyboard widget and exposes that widget as borrowed direct content for its
-dedicated `Task`. Application member ordering keeps the controller alive
-until after the keyboard task detaches.
+`Keyboard` remains a controller owning its keyboard widget and exposes that
+widget as borrowed direct content for its dedicated `Task`. Application member
+ordering keeps the controller alive until after the keyboard task detaches.
 
-Page and caps controls remain keyboard-local actions. One-shot caps resets only
-after the resolved character stroke is accepted, preserving the current visible
+Page and caps controls remain keyboard-local actions. One-shot caps resets after
+the resolved character stroke is delivered, preserving the current visible
 behavior while an emitter is bound.
 
-`KeyboardListener` is deprecated in this phase. The compatibility adapter
-converts emitted events back to rune/enter/delete calls only for legacy users;
-the standard path binds directly to `Task::keyEventSink()`.
+Phase 6 removes `KeyboardListener` and `Keyboard::setListener()`. The standard
+path binds the keyboard emitter directly to a `Task`; there is no parallel
+text-only compatibility route.
 
 ### Editor and visibility coordination
 
@@ -298,7 +311,7 @@ navigation, deletion, and commit events through its task editor.
 The single-display application owns a small `SoftwareKeyboardCoordinator`.
 Task editor activation asks it to show or hide the internal keyboard; the
 coordinator owns the binding between the keyboard task's emitter and the editor
-task sink. It does not change focus.
+task. It does not change focus.
 
 Cross-application code owns visibility and the `KeyEventBinding` separately.
 The event binding remains valid when no text field is focused; events then
@@ -306,12 +319,12 @@ follow ordinary task dispatch and can navigate or activate controls.
 
 ### Teardown ordering
 
-Outside active key delivery, application teardown first marks sinks unavailable
-and stops keyboard repeat, then disconnects internal and external bindings from
-endpoint-side intrusive lists. An emitter becomes unbound through that
-disconnection; it needs no separate availability bit. Bindings survive endpoint
-destruction as disconnected objects. Task input, editor, focus, and content are
-cancelled afterward.
+Outside active key delivery, application teardown first stops keyboard repeat,
+then task teardown cancels its armed activation and disconnects internal and
+external bindings from the task-side intrusive lists. An emitter becomes unbound
+through that disconnection; it needs no separate availability bit. Bindings
+survive endpoint destruction as disconnected objects. Task input, editor, focus,
+and content are cancelled afterward.
 
 All endpoint destruction after start has the same UI-thread precondition as
 delivery and must not be initiated reentrantly by a key callback. Detectable
@@ -319,29 +332,32 @@ wrong-thread use fails through `CHECK`; no cross-thread mutation is attempted.
 
 ### Resource budget
 
-`KeyEventEmitter` costs one pointer. `KeyEventSink` costs a task pointer, two
-list heads, and availability/thread metadata. Each binding costs at most six
-pointers plus one key code and alignment. No per-event storage or allocation is
-added.
+`KeyEventEmitter` costs one pointer. Each task has two incoming-list heads and a
+binding-identity pointer in its armed activation record. Relative to Phase 3,
+the polled head replaces the existing source pointer, while the push head and
+activation owner add two task pointers. Each binding costs three pointers:
+producer, task, and next link. No per-event storage or allocation is added.
 
 The emitter and source active-binding pointers are required for delivery and
 lifetime-safe endpoint teardown. Rejecting a second binding of the same endpoint
-reuses them and therefore adds zero bytes and one cold-path null check. No
-implementation adds a producer-side binding list, destination count, device
-identity, dispatch-depth guard, or deferred-teardown state.
+reuses them and therefore adds zero bytes and one cold-path null check. Singly
+linked task lists avoid one previous pointer per binding; idempotent disconnect
+scans the small destination list instead. No implementation adds a producer-side
+binding list, destination count, device identity, dispatch-depth guard, or
+deferred-teardown state.
 
 `KeyStroke` is expected to occupy 8 bytes after alignment and is passed by
 reference. Stroke expansion reuses one stack `KeyEvent` for Down and Up, so it
-adds no endpoint storage or warmed allocation. The layout emission policy uses
-one byte and is expected to occupy existing `KeySpec` tail padding; the target
-report verifies the actual ABI result.
+adds no endpoint storage or warmed allocation. Event policy is derived from the
+existing `KeySpec::Function`, so `KeySpec` does not grow.
 
-The target report records all endpoint and binding sizes. Warm emit, polled
-drain, repeat, connect, disconnect, and teardown allocation counts must remain
-zero. The full software-keyboard conversion may increase flash but must not
-increase `KeyboardWidget` or `TextField` instance size by more than one target
-pointer. Phase 6 introduces no event-history cache or queue. Its only event
-batch remains the existing four-element stack array.
+The target report records task, endpoint, binding, `Keyboard`, `KeyboardWidget`,
+and `TextField` sizes. Warm emit, polled drain, repeat, connect, disconnect, and
+teardown allocation counts must remain zero. `Keyboard` gains its one-pointer
+emitter; removing the listener pointer means `KeyboardWidget` does not grow.
+`TextField` does not grow, and its shared task editor loses the keyboard pointer.
+Phase 6 introduces no event-history cache or queue. Its only event batch remains
+the existing four-element stack array.
 
 ## Proposed API
 
@@ -350,11 +366,6 @@ struct KeyStroke {
   KeyCode code;
   uint8_t modifiers;
   uint32_t rune;
-};
-
-class KeyEventSink {
- public:
-  bool isAvailable() const;
 };
 
 class KeyEventEmitter {
@@ -370,7 +381,7 @@ class KeyEventBinding {
  public:
   KeyEventBinding() = default;
   ~KeyEventBinding();
-  void connect(KeyEventEmitter& source, KeyEventSink& sink);
+  void connect(KeyEventEmitter& source, Task& target);
   void disconnect();
   bool isConnected() const;
 
@@ -394,11 +405,6 @@ class TaskKeyBinding {
   TaskKeyBinding& operator=(TaskKeyBinding&&) = delete;
 };
 
-class Task {
- public:
-  KeyEventSink& keyEventSink();
-};
-
 class Keyboard {
  public:
   Widget& content();
@@ -407,10 +413,13 @@ class Keyboard {
 ```
 
 `KeyStroke::rune` follows the same scalar-value invariant as `KeyEvent::rune`.
-`emitStroke()` returns true when either generated phase is handled. All public
-declarations receive Doxygen thread, lifetime, ownership, and
-checked-precondition contracts. `disconnect()` and `cancelActivePress()` are
-idempotent and perform no work when no corresponding state exists.
+On a valid call, `emit()` and `emitStroke()` return false only when the emitter
+is unbound. Calling a bound emitter before its destination application starts is
+a checked precondition violation. A bound stroke returns true after both
+adjacent phases are delivered, regardless of consumer handling. All public
+declarations receive Doxygen thread, lifetime, ownership, and checked-
+precondition contracts. `disconnect()` and `cancelActivePress()` are idempotent
+and perform no work when no corresponding state exists.
 
 ## Implementation Plan
 
@@ -419,12 +428,14 @@ Implementation follows the
 
 ### Phase 6a: add push endpoints and bindings
 
-Add `KeyEventSink`, `KeyEventEmitter`, and intrusive `KeyEventBinding`. Move
-armed activation state into the binding, implement latest-activation-wins
-settlement, and document the UI-thread and non-reentrant client preconditions.
-Focused tests cover connection state, duplicate endpoint binding, ordinary
-destruction orders outside delivery, full-event preservation, and zero binding-
-layer allocations.
+Add `KeyEventEmitter` and a singly linked intrusive `KeyEventBinding` that
+targets `Task` directly. Tag the task-wide armed activation with its owning
+binding, implement latest-activation-wins settlement, permit construction-time
+connection, and document the UI-thread and non-reentrant client preconditions.
+Emission reports delivery rather than consumer handling. Focused tests cover
+connection state, duplicate endpoint binding, pre-start connection, ordinary
+destruction orders outside delivery, full-event preservation, task-wide
+activation ownership, and zero binding-layer allocations.
 
 ```sh
 bazel test //:key_event_binding_test //:task_test
@@ -434,10 +445,10 @@ Proposed commit: `feat: add task key-event endpoints`
 
 ### Phase 6b: bind polled sources
 
-Add intrusive `TaskKeyBinding`, replace direct source attachment, and walk each
-task's bindings once per application tick. Give every source four probes of at
-most four events without an aggregate cursor or fairness state. Preserve
-immediate follow-up when any source consumes its complete allowance.
+Add singly linked intrusive `TaskKeyBinding`, replace direct source attachment,
+and walk each task's bindings once per application tick. Give every source four
+probes of at most four events without an aggregate cursor or fairness state.
+Preserve immediate follow-up when any source consumes its complete allowance.
 
 ```sh
 bazel test //:key_source_test //:task_test //:shared_scheduler_drive_test
@@ -447,11 +458,13 @@ Proposed commit: `feat: bind polled key sources to tasks`
 
 ### Phase 6c: emit resolved software-key events
 
-Add `KeyStroke`, convert gesture keys to stroke-on-release and held controls to
-Down/Repeat/Up, make `KeyCode::kSpace` canonical, and remove the editor's
-`KeyboardListener` dependency. Deterministic press clocks cover release,
-cancellation, repeat snapshots, Space insertion and activation, and one-shot
-caps behavior without sleeping.
+Add `KeyStroke`; map the existing Text, Space, and Enter controls to
+stroke-on-release and Backspace to Down/Repeat/Up. Make `KeyCode::kSpace`
+canonical, remove `KeyboardListener` and `Keyboard::setListener()`, and remove
+the editor's keyboard dependency. Do not add controls or per-key policy storage
+for vocabulary absent from the current layouts. Deterministic press clocks cover
+release, cancellation, repeat snapshots, Space insertion and activation, and
+one-shot caps behavior without sleeping.
 
 ```sh
 bazel test //:key_event_binding_test //:roo_windows_test //:task_test
@@ -462,9 +475,9 @@ Proposed commit: `feat: emit software keyboard key events`
 ### Phase 6d: coordinate keyboard and editor tasks
 
 Add the single-display `SoftwareKeyboardCoordinator`, same-display and cross-
-application examples, compatibility handling, and the final resource report.
-Validate the complete topology, warmed binding-layer allocation paths, endpoint
-sizes, and build coverage.
+application examples, and the final resource report. Validate the complete
+topology, warmed binding-layer allocation paths, endpoint sizes, and build
+coverage.
 
 ```sh
 bazel test //:key_event_binding_test //:key_source_test //:task_test \
@@ -475,19 +488,21 @@ bazel build //...
 
 Proposed commit: `feat: coordinate software keyboards across tasks`
 
-The phase is complete when the full key vocabulary follows both producer paths,
-a touch character emits nothing before successful release, physical
-transitions retain their timing and phases, all endpoint destruction
-permutations outside active delivery disconnect safely, no binding-layer event
-path allocates or recursively ticks, no new cache grows with event history, and
-target deltas are recorded.
+The phase is complete when every producer-supplied `KeyEvent` is preserved by
+both binding forms, each externally delivered control in the current software
+keyboard follows its specified policy, a touch character emits nothing before
+successful release, physical transitions retain their timing and phases, all
+endpoint destruction permutations outside active delivery disconnect safely,
+no binding-layer event path allocates or recursively ticks, no new cache grows
+with event history, and target deltas are recorded.
 
 ## Testing Plan
 
 `key_event_binding_test` owns connection state, destruction order outside active
-delivery, sink-thread affinity, zero-storage duplicate rejection, overlapping
-activation settlement, and full-event semantics. Existing key, task, text-
-field, shared-scheduler-drive, and runtime tests retain behavioral coverage.
+delivery, task-thread affinity, pre-start connection, zero-storage duplicate
+rejection, task-wide binding-tagged activation settlement, delivery-result
+semantics, and full-event preservation. Existing key, task, text-field, shared-
+scheduler-drive, and runtime tests retain behavioral coverage.
 Deterministic keyboard press clocks verify immediate physical Down/Up, touch
 stroke-on-release, canonical Space behavior, adjacent stroke expansion,
 cancellation, and Down/Up/Repeat without sleeping.
@@ -504,12 +519,12 @@ but does not paint it. Invalidation wakes the target application's private
 task, and the shared scheduler determines when it next runs.
 
 The binding layer deliberately trusts its client at boundaries that cannot be
-checked without persistent state. Producer applications must share the sink's
+checked without persistent state. Producer applications must share the task's
 UI thread, key callbacks must not mutate the active binding topology or destroy
 participants, and wrappers around one device must preserve unicast routing.
 Violating these documented preconditions is a programming error with undefined
-behavior; Phase 6 pays no RAM for owner pointers, dispatch guards, or deferred
-teardown.
+behavior; Phase 6 pays no RAM for producer-application pointers, dispatch
+guards, or deferred teardown.
 
 Text insertion may grow consumer-owned strings and the active editor's derived
 glyph and offset vectors. Those are not binding caches, but their size follows
@@ -523,6 +538,30 @@ continuously saturated or machine-generated sources must combine or arbitrate
 them before binding when scheduler fairness matters.
 
 ### Rejected Alternatives
+
+#### Keep activation state in every binding
+
+Rejected because the focused widget has one pressed bit and one click lifecycle,
+not independent visual state for every producer. Several armed bindings could
+confirm the same widget more than once or cancel one another's visual state. One
+task-wide record tagged by binding preserves producer identity with less RAM.
+
+#### Add a separate task sink endpoint
+
+Rejected because `Task` is already the concrete destination and owns dispatch,
+lifetime, and application affinity. A `KeyEventSink` wrapper would duplicate a
+task pointer and lifecycle metadata without enabling another destination type.
+
+#### Use doubly linked incoming lists
+
+Rejected because disconnection is cold and task input fan-in is small. Scanning
+a singly linked list avoids one persistent previous pointer in every binding.
+
+#### Retain legacy input convenience APIs
+
+Rejected because backwards compatibility is not required for the software-
+keyboard API. Keeping `KeyboardListener` or `Keyboard::setListener()` would
+preserve a parallel routing model after explicit bindings replace it.
 
 #### Send text-only callbacks
 
@@ -539,7 +578,7 @@ delivery.
 #### Add a stroke phase to `KeyEvent`
 
 Rejected because every task and widget would need to understand producer
-origin. `emitStroke()` normalizes a resolved gesture at the sink boundary and
+origin. `emitStroke()` normalizes a resolved gesture at the task boundary and
 keeps the established Down/Up consumer vocabulary.
 
 #### Infer long press from key Down duration
