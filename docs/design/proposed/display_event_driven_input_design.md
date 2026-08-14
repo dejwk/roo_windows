@@ -24,10 +24,11 @@ had an explicit wakeup.
 
 Input storage already exists at its acquisition boundaries:
 
-- a task borrows one [`KeySource`](../../../src/roo_windows/core/key_source.h)
-  and drains at most four batches of four `KeyEvent` values per ticker
-  dispatch, as documented by the
-  [non-touch input design](../implemented/non_touch_input_design.md); and
+- each [`KeySource`](../../../src/roo_windows/core/key_source.h) retains its
+  bounded event storage; the temporary implementation drains one attached
+  source per task, while the final
+  [application input router](display_input_routing_design.md) drains every
+  connected source with the same four-batch allowance; and
 - [`TouchSensor`](../../../src/roo_windows/core/touch_sensor.h) stores a fixed
   ring of synthesized touch events, which
   [`GestureDetector`](../../../src/roo_windows/core/gesture_detector.h) drains
@@ -70,7 +71,7 @@ Terms shared with other Roo Windows designs retain their meanings from the
 5. Installing, replacing, and removing a readiness binding must be
    lifecycle-safe. Removal must not return while the removed binding can still
    be invoked.
-6. Independent task-local key sources must retain independent drain budgets.
+6. Independent connected key sources must retain independent drain budgets.
    The framework must add no application-wide key queue, arbitration, or
    fairness policy.
 
@@ -163,11 +164,12 @@ The solution maps to the requirements as follows:
 | Immediate ordinary invalidation plus explicit delayed dirty requests | 7–9, 12, 22 |
 | Ordered installation, producer quiescence, binding removal, and ticker stop | 5, 14–18 |
 
-The reverse link from an attached source to the application is necessary
+The reverse link from a connected source to the application is necessary
 because queue ownership alone is one-way: the UI thread knows how to drain a
 source, but a producer otherwise has no route to wake the dormant consumer.
-The binding supplies only that route and leaves storage and dispatch ownership
-unchanged.
+The readiness binding supplies only that wakeup route. The destination
+application's input router separately owns source-to-task selection and bounded
+draining.
 
 ## Design Details
 
@@ -200,32 +202,35 @@ setter performs the same notification path. A producer that races with the
 query also notifies after its write, so input queued before or during
 application start cannot wait indefinitely.
 
-Calling `setReadinessHandler({})` is quiescing because it acquires the same
-handler-state mutex used across invocation. When it returns, no invocation of
-the old binding remains in progress. A binding must not replace itself from
-inside its callback; framework-installed bindings only call the application
+Clearing a readiness handler is quiescing because it acquires the same
+handler-state mutex used across invocation. When removal returns, no invocation
+of the old handler remains in progress. A handler must not replace itself from
+inside its callback; framework-installed handlers only call an application
 ticker endpoint.
 
 The callback is long-lived rather than per-event. The application-sized lambda
 fits the standard library's small-function storage on supported targets;
 registration is nevertheless the only API point permitted to allocate.
 
-### Key-source attachment
+### Application-owned key routing
 
-Attaching a `KeySource` to a
-[`Task`](../../../src/roo_windows/core/task.h) installs a binding that calls
-that task's owning application ticker. Detaching first clears the binding and
-then clears the existing source/task attachment pointers. `KeySource`
-destruction clears its base-owned binding before notifying the task. Derived
-sources call the protected `notifyReady()` after successful queue writes and
-implement the protected queue-state query used during binding installation.
+The
+[application-owned physical input routing design](display_input_routing_design.md)
+delivers the key-readiness portion of this proposal. Connecting a `KeySource`
+registers it with the destination application's input router, which installs a
+handler that calls the application's ticker. Disconnecting first clears and
+quiesces that handler, then removes the source route. `KeySource` destruction
+uses the same operation. Tasks contain no readiness or source registration
+state.
 
-The application ticker retains the current four probes of four `KeyEvent`
-values for each task. Consuming the full 16-event budget requests an immediate
-follow-up because the source can still contain input. A partial batch ends that
-task's drain for the dispatch.
+Derived sources call the protected `notifyReady()` after successful queue
+writes and implement the protected queue-state query used during handler
+installation. One ticker dispatch walks every connected source and retains the
+current four probes of four `KeyEvent` values per source. Consuming the full
+16-event budget requests an immediate follow-up; a partial batch ends that
+source's drain for the dispatch.
 
-No source rotation is added. The bound work per task and scheduler FIFO
+No source rotation is added. The per-source work bound and scheduler FIFO
 ordering remain the fairness boundary chosen by the shared-scheduler design.
 
 ### Touch acquisition and readiness
@@ -316,7 +321,8 @@ cannot recurse.
 One ticker execution performs these phases in order:
 
 1. Advance window-owned animation state due at the sampled time.
-2. Drain each task-local key source using its existing 16-event limit.
+2. Drain each connected key source through the application input router using
+   its existing 16-event limit.
 3. Drain one touch batch, dispatch gestures, and fire due gesture transitions.
 4. Handle other application-owned UI events that are ready.
 5. Attempt at most one paint slice when immediate or deadline-owned paint is
@@ -369,7 +375,8 @@ state changes.
 `Application::start()` performs this order on its UI thread:
 
 1. Establish started state and UI-thread identity.
-2. Install bindings on attached key sources and the window touch sensor.
+2. Install readiness handlers on connected key sources and the window touch
+   sensor.
 3. Start touch acquisition or its single-threaded poll task.
 4. Request one immediate ticker execution for initial layout and paint.
 
@@ -396,7 +403,7 @@ The design pays only at the few long-lived input and application endpoints:
 | --- | --- |
 | `KeySource` | One readiness `std::function` and one handler-state mutex. |
 | `TouchSensor` | One readiness `std::function` and one handler-state mutex; single-threaded builds also replace UI-loop polling with one inline persistent scheduler task. |
-| `Application` | `ApplicationTicker` replaces `SingletonTask` and adds the earliest-deadline and synchronization state. |
+| `Application` | `ApplicationTicker` replaces `SingletonTask` and adds the earliest-deadline and synchronization state; the separate physical-routing design adds one input-router list head. |
 | `GestureDetector` | No new persistent deadline; the earliest value is derived from its existing timer records. |
 | `Widget`, `Container`, `Task` | No size change. |
 
@@ -418,23 +425,23 @@ constructing a new function object.
 
 ## Proposed API
 
-The public source APIs use existing naming and ownership:
+Key readiness is exposed to derived sources but installed only by the
+application input router. Touch readiness remains sensor-owned:
 
 ```cpp
 class KeySource {
- public:
+ protected:
   using ReadinessHandler = std::function<void()>;
 
-  /// Replaces the readiness binding. An empty handler removes it and waits
-  /// for an invocation of the previous handler to finish.
-  void setReadinessHandler(ReadinessHandler handler);
-
- protected:
   /// Invokes the current binding after a successful queue write.
   void notifyReady();
 
   /// Returns whether drain() can currently produce an event.
   virtual bool hasPendingEvents() const = 0;
+
+ private:
+  friend class ApplicationInputRouter;
+  void setReadinessHandler(ReadinessHandler handler);
 };
 
 class TouchSensor {
@@ -514,13 +521,16 @@ Proposed commit message:
 > specified by `display_event_driven_input_design.md`, retain the periodic
 > fallback, and cover request races, stop behavior, allocation, and RAM.
 
-### Phase 2: add key-source readiness
+### Phase 2: route and wake physical key sources
 
-Add the base-owned `KeySource` readiness contract, update every production,
-fake, and test source to report queue state and call `notifyReady()`, and
-install or clear the binding with task attachment. Keep the fallback. Test
-nonempty installation, post-unlock invocation, removal quiescence, destruction,
-full-budget follow-up, task isolation, and warmed allocation.
+Implement the
+[application-owned physical input routing design](display_input_routing_design.md):
+replace temporary task attachment with producer-owned connections and an
+application router, add base-owned `KeySource` readiness, and update every
+production, fake, and test source to report queue state and call
+`notifyReady()`. Keep the fallback. Test nonempty installation, post-unlock
+invocation, removal quiescence, destruction, independent-source routing,
+full-budget follow-up, application isolation, and warmed allocation.
 
 Focused validation:
 
@@ -530,11 +540,11 @@ bazel test //:key_source_test //:task_test //:shared_scheduler_drive_test
 
 Proposed commit message:
 
-> Event-driven input Phase 2 wakes applications from key sources.
+> Event-driven input Phase 2 routes and wakes physical key sources.
 >
-> Add quiescing `KeySource` readiness bindings, connect them through task
-> attachment, and preserve the bounded task-local drain behavior specified by
-> `display_event_driven_input_design.md`.
+> Add the application input router and quiescing `KeySource` readiness handlers
+> specified by `display_input_routing_design.md`, remove temporary task
+> attachment, and preserve bounded per-source draining.
 
 ### Phase 3: separate touch acquisition from application dispatch
 

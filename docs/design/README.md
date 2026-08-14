@@ -46,7 +46,7 @@ Status was audited against the source tree and tests on 2026-08-11. “Dependenc
 | Design | Dependency status |
 | --- | --- |
 | App bars/search surfaces | The component family and focused unit coverage are implemented; golden and Material 3 scaffold integration coverage remain. Non-touch input is implemented; scaffold, icon buttons, and text fields remain proposed. |
-| Display runtime and cross-application input | Phases 1–5 are implemented. Phases 6–8 remain proposed: key-event bindings, explicit modal coverage, and final migration/cost audit. |
+| Display runtime and cross-application input | Phases 1–5 are implemented. Phases 6–8 remain proposed: physical-key events and application-owned input routing, semantic software text input, explicit modal coverage, and final migration/cost audit. |
 | Material 3 lists | Phases 1 through 11 are implemented, including text policy, convenience and control rows, navigation/selection behavior, and expandable content; Phase 12 menu reuse remains. Badge and paint-context dependencies are implemented. |
 | Text system | `TextBlock` wrapping, justification, max-lines, ellipsis, caching, and golden coverage are implemented; shared rich paragraph layout and `RichTextBlock` remain. |
 | Transient presentation pins | The shared layer-scoped host and slider/range-slider adoption are implemented; keyboard-highlighter adoption remains. Visual overflow prerequisites are in progress. |
@@ -59,8 +59,11 @@ Status was audited against the source tree and tests on 2026-08-11. “Dependenc
 | --- | --- |
 | Button groups | Buttons are implemented; icon buttons are proposed, and no group implementation exists. |
 | Date pickers | Buttons and shared back behavior are implemented; text fields, dialogs, and icon buttons are proposed. |
-| Event-driven input notification and ticker wakeup | Phase 5 is implemented; source readiness handlers, dormant tickers, input-poll separation, and deadline-based wakeups are not implemented. |
-| Display runtime Phase 6 key-event bindings | Phase 5 is implemented; lifetime-safe polled and push bindings, full software-keyboard events, and cross-application delivery are not implemented. |
+| Event-driven input notification and ticker wakeup | Phase 5 is implemented; the coalescing ticker, source readiness handlers, dormant tickers, input-poll separation, and deadline-based wakeups are not implemented. Physical key readiness lands with application-owned routing. |
+| Display runtime Phase 6 input overview | Phase 5 is implemented; the split physical-event, physical-routing, and semantic-text-input sub-designs remain proposed. |
+| Physical key events | Non-touch input is implemented; normalized switch identity, overlapping-key preservation, widget-first dispatch, and switch-qualified fallback activation are proposed. |
+| Application-owned physical input routing | Shared-scheduler driving is implemented; the event-driven coalescing ticker and source readiness are proposed, as are producer-owned connections and application router ownership. |
+| Semantic software text input | Task-local editors and the current software keyboard are implemented; application-scoped active-editor selection, producer-owned emitter connections, and semantic keyboard migration are proposed. |
 | Display runtime Phase 7 modal hosting | Phase 6 is proposed; task/display coverage policies, barriers, focus restoration, admission, and modal Back ordering are not implemented. |
 | Display runtime Phase 8 migration and cost audit | Phases 2–5 are implemented; Phase 6 and Phase 7 remain proposed, as do final migration documentation, resource audit, and hardware validation. |
 | Dialogs | Legacy dialogs and shared back behavior exist, but the Material 3 design is not implemented; icon buttons and text fields are proposed. |

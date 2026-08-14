@@ -135,7 +135,7 @@ bindings.
 - Direct task content, `NavigationHost`, or `Destination`.
 - Removal of `Task` or `Activity`.
 - More than one polled key source per task.
-- Push-style key producers or public scoped key bindings.
+- Push-style key producers or general multi-source routing.
 - Cross-application shared-scheduler driving.
 - Task-modal or display-modal presentation.
 - Focus traversal between tasks, windows, or applications.
@@ -281,18 +281,18 @@ is idempotent.
 
 The public Phase 3 attachment is intentionally limited to one source per task.
 It establishes explicit routing and supports independent hardware keyboards
-without prematurely exposing the general connection object. `KeySource`
+without prematurely exposing the general connection model. `KeySource`
 destruction disconnects itself, and `UiTask` destruction disconnects before
 clearing focus or content. Phase 6 reuses this endpoint lifetime mechanism,
-adds `TaskKeyBinding`, and changes the task side from one source pointer to an
-intrusive list of connections.
+moves multi-source registration into an application-owned input router, and
+removes source storage from the task.
 
 Attachment is valid before application start and from the established UI
 thread afterward. A post-start call from another thread returns `kWrongThread`
 without changing either endpoint. `detachKeySource()` is idempotent and has the
 same thread precondition; wrong-thread use is a programming error because its
-`void` compatibility shape has no result channel. Phase 6 replaces it with the
-fully fallible binding object.
+`void` compatibility shape has no result channel. Phase 6 replaces both
+temporary task methods with source-owned connection operations.
 
 The existing application constructor's borrowed source is stored as a pending
 compatibility attachment until the first user-created legacy task exists. It
@@ -642,12 +642,13 @@ Rejected because pointer activation and keyboard ownership are independent.
 Explicit source attachment is deterministic and supports permanently assigned
 keypads.
 
-#### Introduce the final `TaskKeyBinding` now
+#### Introduce final multi-source routing now
 
 Rejected because Phase 3 needs one polled source per task, while Phase 6 also
-introduces several-source fan-in, push emitters, cross-application thread
-affinity, and software-keyboard migration. The intrusive endpoint pointer added
-here is reused by that connection design.
+introduces application-owned routing, event-driven readiness, cross-application
+thread affinity, and software-keyboard migration. The temporary endpoint
+pointer preserves explicit routing until Phase 6 replaces task attachment with
+the application-owned router.
 
 #### Remove `Task` and `Activity` in this phase
 

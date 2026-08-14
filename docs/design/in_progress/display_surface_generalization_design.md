@@ -13,7 +13,7 @@ The first version intentionally has a narrow topology:
 - every `UiTask` belongs to exactly one `DisplayWindow`;
 - one scheduler on one thread may drive several `Application` instances; and
 - the standard software-keyboard topology hosts the keyboard in a task separate
-  from the task that receives its events.
+  from the task that receives its text-input operations.
 
 This supports independently focused tasks, separately bound keyboards, several
 displays, and a keyboard on one display editing content on another. It does not
@@ -72,18 +72,18 @@ Navigation is optional state within a task, not the definition of a task.
    relationship.
 2. A `UiTask` is attached to exactly one `DisplayWindow` for its entire active
    lifetime.
-3. Each `UiTask` owns an independent `FocusManager` and key-input routing
-   state.
+3. Each `UiTask` owns an independent `FocusManager` and key-dispatch state. The
+   first version accepts one explicit physical-key source per task.
 4. The standard software-keyboard topology hosts the keyboard in its own
    `UiTask`, whether its target is on the same display or another display. This
-   is a convenience and focus-isolation policy, not a binding invariant.
+   is a convenience and focus-isolation policy, not a connection invariant.
 5. A task may directly host content without creating a destination or a
    one-entry navigation stack.
-6. Cross-display keyboard input is an explicit producer/consumer connection
-   between two applications.
-7. Cross-task keyboard delivery retains the complete existing `KeyEvent`
-   vocabulary. A separate text-input session and general IME protocol are
-   future work.
+6. Cross-display software text input is an explicit producer/destination
+   connection between two applications.
+7. Physical sources retain the existing `KeyEvent` dispatcher. Software
+   keyboards use a separate semantic text-input route to the active editor. A
+   general IME protocol remains future work.
 8. This design does not introduce an application-level “outer focus scope” or
    a hierarchy of task focus scopes. Any subtree focus containment needed by a
    transient belongs to the transient-host design.
@@ -114,9 +114,13 @@ Navigation is optional state within a task, not the definition of a task.
 : Optional task state that presents one destination at a time and delegates
   history changes through its direct command methods.
 
-`Key event emitter` / `Key event sink`
-: The two endpoints of an explicit unicast connection carrying the existing
-  `KeyEvent` vocabulary from a push-style producer to one task.
+`Physical-key connection`
+: A source-owned point-to-point route from one polled `KeySource`, through its
+  destination application's input router, to one task's `KeyEvent` dispatcher.
+
+`Text-input emitter` / `Application text input`
+: A software keyboard's semantic operation producer and the stable destination
+  application endpoint that selects its one active editor session.
 
 ### Comparison with Android and Jetpack Compose
 
@@ -165,13 +169,16 @@ without preserving their semantics:
 - A display window may contain several tasks. Each task must retain independent
   focus even while another task is touched or receives key events.
 - A physical or emulated key source must have one current destination task.
-  Several sources may target the same task; a source is not broadcast to
-  several tasks.
+  The first version permits one source per task, and a source is not broadcast
+  to several tasks.
 - The standard software-keyboard convenience path must host its keyboard in a
   task separate from its target so operating the keyboard does not replace the
   target task's focus. Custom producers are not subject to this topology.
-- A key event emitter in one application must be bindable to a task in another
-  application on the same UI thread.
+- A software text-input emitter in one application must be connectable to
+  another application's text-input endpoint on the same UI thread.
+- Software text input must use semantic editor operations rather than
+  synthesizing physical Down and Up events or entering general widget key
+  dispatch.
 - A task must support direct content without a destination stack.
 - Navigation must remain available as an optional task feature.
 - Task-modal and display-modal presentation must be distinct and have defined
@@ -190,9 +197,9 @@ without preserving their semantics:
 - A multi-application program must be able to start every application and then
   run their shared scheduler. `run()` remains a single-application convenience.
 - All connected applications and endpoints must be used on the same UI thread.
-- Cross-application bindings must disconnect safely regardless of endpoint
+- Cross-application connections must disconnect safely regardless of endpoint
   destruction order.
-- An unbound key event emitter must have defined behavior.
+- An unbound text-input emitter must return false without side effects.
 - No input route may be inferred from display z-order or “most recently
   touched” state when an explicit binding exists.
 
@@ -220,7 +227,8 @@ without preserving their semantics:
 - Running connected applications on different UI threads.
 - Mirroring one widget tree onto several displays.
 - Full IME behavior such as composition, selection ranges, candidate UI,
-  surrounding-text queries, editor actions, or input-method negotiation.
+  surrounding-text queries, arbitrary editor capabilities, or input-method
+  negotiation.
 - Per-display theme or zoom configuration.
 - A framework-owned multi-application scheduler.
 
@@ -235,9 +243,10 @@ The refactoring is split into incremental sub-designs:
    needs no navigation objects.
 3. **Support shared-scheduler driving.** Let bounded application callbacks
    collaborate through one scheduler after the caller starts each application.
-4. **Connect key producers and consumers.** Route the complete `KeyEvent`
-   vocabulary through lifetime-safe bindings within or across applications. The
-   standard software keyboard remains in a separate task.
+4. **Route physical keys and software text input separately.** Preserve
+   physical event identity, route queued sources through application-owned
+   input routers, and deliver semantic software-keyboard operations through a
+   stable application text-input endpoint.
 5. **Make modality coverage explicit.** Implement task-modal and display-modal
    host policies using the now-clear task/window boundary.
 
@@ -251,8 +260,8 @@ shared scheduler, one UI thread
     |                                      |
     +-- Application B -- DisplayWindow B -- keyboard UiTask
                                            |
-                       key event emitter --+-- explicit binding
-                                                to editor task's sink
+                         text input emitter +-- explicit connection
+                                                to editor application
 ```
 
 The arrow is an input connection, not shared focus or shared widget ownership.
@@ -303,10 +312,9 @@ display-specific facilities to leak back into `Application`.
 `UiTask` is a controller, not a widget and not intrinsically a stack. It owns:
 
 - one `FocusManager`;
-- the bindings from physical or emulated key sources to that focus manager;
-- armed-key and key-repeat state for those sources;
-- the active text-editor connection selected by focus and the task's full
-  `KeyEvent` sink;
+- the full `KeyEvent` dispatcher and pending fallback activation state;
+- one task-local `TextFieldEditor` that can register as the application's active
+  software editing session;
 - task-local transient state;
 - either direct content or an optional navigation host; and
 - an internal `TaskPanel` used to attach its content to its display window.
@@ -410,10 +418,11 @@ the one handled semantic step.
 several displays constructs one application per display and uses one shared
 scheduler:
 
-1. construct applications, tasks, and cross-application bindings;
+1. construct applications, tasks, and cross-application producer connections;
 2. call `start()` on each application from the common UI thread;
 3. call `scheduler.run()` once; and
-4. destroy cross-application bindings before or during endpoint teardown.
+4. disconnect cross-application producers explicitly or let endpoint teardown
+   clear their connections.
 
 Each application owns a private scheduler task. One dispatch drains at most a
 documented number of input events, advances due task/window timers and gesture
@@ -427,63 +436,73 @@ to progress. No application callback may recursively invoke another
 application's callback. Wrong state, wrong thread, and reentrancy violate the
 ownership contract and fail through `CHECK`; they are not returned to callers.
 
-### Sub-design 4: key event producers and explicit binding
+### Sub-design 4: physical-key routing and semantic text input
 
 The standard software keyboard lives in its own `UiTask`. This is true when the
 keyboard and editor share a display and when they belong to different
 applications on different displays. Separating the tasks preserves the editor
-task's focus while keyboard controls are touched. A custom producer may live in
+task's focus while keyboard controls are touched. A custom producer can live in
 the target task when it preserves focus by other means; task separation is not
-validated by the binding.
+validated by an input connection.
 
-The single-display convenience path constructs two tasks internally: a content
-task, a keyboard task, and a scoped binding between them. Convenience does not
-make the keyboard part of the content task.
+The single-display convenience path constructs a content task and a keyboard
+task. The keyboard's emitter connects to the stable application text-input
+endpoint. Convenience does not make the keyboard part of the content task.
 
-Push-style producers use the existing `KeyEvent` vocabulary rather than a
-second text-only event type. A software keyboard initially emits character,
-Enter, and Backspace events. The same emitter can also produce Down, Up, Repeat,
-modifiers, Tab, arrows, Home, End, Page Up, Page Down, Delete, Back, Escape,
-Space, and other existing key codes. Controls that model a press/release
-lifecycle emit both Down and Up; a held software key emits Repeat from the
-keyboard task.
+Physical and software input use separate contracts. A polled `KeySource` owns
+one explicit connection to a task. Its destination application registers and
+drains the source through an application-owned input router; the task owns only
+dispatch semantics. Physical `KeyEvent` records carry Down, Repeat, or Up
+together with normalized switch identity, semantic code, modifiers, and any
+resolved rune. Each source targets at most one task, and the first version
+accepts at most one physical source per task.
 
-Each `KeyEventEmitter` has at most one connected sink. The target `UiTask`
-provides a `KeyEventSink` that enters the same task-local dispatch pipeline used
-by a drained physical or emulated `KeySource`. Several emitters or polled
-sources may target one task, but an event from one source is never broadcast to
-several tasks. `TaskKeyBinding` adapts a polled `KeySource` to the same target
-dispatcher; `KeyEventBinding` connects a push-style emitter.
+A software keyboard instead owns a `TextInputEmitter` connected to a destination
+application. The application text-input endpoint selects its one active editor
+session. Character and Space commit runes, Backspace performs repeatable
+backward deletion, and Enter performs Done. These operations do not enter
+general widget key dispatch, navigate focus, activate controls, or synthesize
+physical Down and Up events. Hardware events handled by a focused text field
+call the same editor implementation, so the paths share editing results without
+sharing an event stream.
 
-Delivery is synchronous on the common UI thread. The emitter calls only the
-sink operation. The sink may update task state and invalidate its window, but
-it must not invoke or paint the target application inside the producer
-application's callback. Invalidating the target wakes its private scheduler
-task, which repaints it when the shared scheduler next dispatches it.
+Delivery is synchronous on the common UI thread. An input operation can update
+task state and invalidate its window, but it does not invoke or paint the target
+application inside the producer application's callback. Invalidating the target
+wakes its private scheduler task, which repaints it when the shared scheduler
+next dispatches it.
 
-Bindings are default-constructible, non-copyable RAII connections. `connect()`
-checks source, binding, endpoint, lifecycle, and common-thread preconditions,
-then installs intrusive links. Violations fail through `CHECK`; `connect()`
-does not return a recoverable status. Destruction of any participant nulls the
-other links without dereferencing dead storage; `disconnect()` is idempotent.
-This avoids `shared_ptr` and per-event allocation.
+Each producer owns its one connection state. The destination application keeps
+an intrusive incoming registry using a link stored in the producer. `connect()`
+checks endpoint, lifecycle, and common-thread preconditions; `disconnect()` is
+idempotent. Producer destruction unregisters itself, while application teardown
+clears incoming connections before tasks and editors disappear. Tasks contain
+no producer registry. This avoids standalone binding objects, `shared_ptr`, and
+per-event allocation.
 
 Application thread affinity is established by `start()` or `run()`. Both
-applications are started before a cross-application binding is
-connected, and all connection, delivery, disconnection, and destruction happen
-on that UI thread.
+applications are started before a cross-application connection is established,
+and all connection, delivery, disconnection, and destruction happen on that UI
+thread.
 
-An unbound emitter returns `false` from `emit()`. A standard software keyboard
-keeps its key controls disabled while unbound. Events never fall back to the
-last-touched or topmost task.
+An unconnected text-input emitter returns false. A connected emitter also
+returns false when its destination application has no active editor. A standard
+software keyboard keeps its controls disabled while unconnected and is normally
+hidden when the editor session ends. Input never falls back to the last-touched
+or topmost task.
 
-The event connection deliberately does not control software-keyboard
-visibility or describe an editing session. The single-display convenience path
-preserves today's show, hide, commit, and cancellation behavior with an
-internal coordinator. A general cross-application text-input session with
-editor availability, visibility requests, composition, selection queries,
-candidate presentation, input-method switching, and cross-thread delivery is
-separate future work.
+The text-input connection deliberately does not control software-keyboard
+visibility. The single-display convenience path preserves today's show, hide,
+commit, and cancellation behavior with private integration glue. A richer
+cross-application text-input session with editor availability, visibility
+requests, composition, selection queries, candidate presentation, input-method
+switching, and cross-thread delivery is separate future work.
+
+The complete decisions are split across the
+[physical-key event](../proposed/display_physical_key_event_design.md),
+[application input routing](../proposed/display_input_routing_design.md), and
+[semantic text-input](../proposed/display_semantic_text_input_design.md)
+designs.
 
 ### Sub-design 5: task-modal and display-modal presentation
 
@@ -595,61 +614,42 @@ class UiTask {
 
   void setBackCallback(BackCallback callback);
 
-  KeyEventSink& keyEventSink();
   BackResult requestBack(
       BackSource source = BackSource::kProgrammatic);
 };
 ```
 
-Physical or emulated key input is separately bound to a task:
+Physical or emulated key input owns one task connection:
 
 ```cpp
-class TaskKeyBinding {
+class KeySource {
  public:
-  TaskKeyBinding() = default;
-  ~TaskKeyBinding();
-
-  // CHECK-fails when already connected or when source, target, lifecycle,
-  // or UI-thread preconditions are not satisfied.
-  void connect(KeySource& source, UiTask& target);
+  void connect(UiTask& target);
   void disconnect();
   bool isConnected() const;
-
-  TaskKeyBinding(const TaskKeyBinding&) = delete;
-  TaskKeyBinding& operator=(const TaskKeyBinding&) = delete;
 };
 ```
 
-Push-style key producers use the same `KeyEvent` type:
+Software keyboards use semantic text-input operations:
 
 ```cpp
-class KeyEventSink {
- public:
-  virtual bool onKeyEvent(const KeyEvent& event) = 0;
-
- protected:
-  ~KeyEventSink() = default;
+enum class TextInputAction : uint8_t {
+  kDone,
 };
 
-class KeyEventEmitter {
+class TextInputEmitter {
  public:
-  bool isBound() const;
-  bool emit(const KeyEvent& event);
-};
-
-class KeyEventBinding {
- public:
-  KeyEventBinding() = default;
-  ~KeyEventBinding();
-
-  // CHECK-fails when already connected or when endpoint, lifecycle, or
-  // UI-thread preconditions are not satisfied.
-  void connect(KeyEventEmitter& source, KeyEventSink& sink);
+  TextInputEmitter() = default;
+  ~TextInputEmitter();
+  void connect(Application& destination);
   void disconnect();
   bool isConnected() const;
+  bool commitRune(uint32_t rune);
+  bool deleteBackward();
+  bool performAction(TextInputAction action);
 
-  KeyEventBinding(const KeyEventBinding&) = delete;
-  KeyEventBinding& operator=(const KeyEventBinding&) = delete;
+  TextInputEmitter(const TextInputEmitter&) = delete;
+  TextInputEmitter& operator=(const TextInputEmitter&) = delete;
 };
 ```
 
@@ -665,9 +665,7 @@ UiTask& keyboard = keyboard_app.addTaskFullScreen(software_keyboard);
 editor_app.start();
 keyboard_app.start();
 
-KeyEventBinding keyboard_to_editor;
-keyboard_to_editor.connect(software_keyboard.keyEventEmitter(),
-                           editor.keyEventSink());
+software_keyboard.textInputEmitter().connect(editor_app);
 
 env.scheduler().run();
 ```
@@ -675,11 +673,11 @@ env.scheduler().run();
 During incremental implementation, violated ownership contracts fail at the
 point of misuse:
 
-- binding endpoints from different UI threads or binding an already connected
+- connecting endpoints from different UI threads or reconnecting an active
   source fails through `CHECK`;
 - attaching a task to a second window fails through `CHECK`;
 - attempting conflicting modal coverage returns `host_busy`; and
-- an unbound emitter returns `false` from `emit()`.
+- an unbound text-input emitter returns false from its operation.
 
 ## Implementation Plan
 
@@ -793,28 +791,31 @@ Validation:
 
 Proposed commit: `feat: support shared-scheduler applications`
 
-### Phase 6: add lifetime-safe key-event bindings
+### Phase 6: add physical routing and semantic text input
 
 Implement the
-[Phase 6 key-event bindings design](../proposed/display_key_event_bindings_design.md):
+[Phase 6 input design](../proposed/display_key_event_bindings_design.md):
 
-- add full-`KeyEvent` emitter, sink, and scoped intrusive bindings;
-- converge polled `KeySource` and push emitters on one task-local dispatch
-  path;
-- migrate the software keyboard and text-field editor; and
+- add physical identity and application-owned routing for polled `KeySource`
+  objects;
+- add application-scoped semantic text-input emitters for software keyboards;
+- migrate the software keyboard and text-field editor without synthesizing key
+  phases; and
 - add same-display and cross-application examples.
 
 Validation:
 
 - test the standard software-keyboard convenience path uses separate tasks;
 - test same- and cross-display delivery;
-- test directional navigation, modifiers, Down/Up/Repeat, Back, Escape,
-  character input, Backspace, and Delete across a binding;
-- destroy source, sink, binding, and applications in every relevant order;
-- test already-bound, unbound, and wrong-thread behavior; and
+- test physical identity, overlapping Down/Up/Repeat, modifiers, navigation,
+  Back, Escape, character input, Backspace, and Delete;
+- test semantic rune commit, repeated backward deletion, Done, and inactive
+  editor behavior without widget key dispatch;
+- destroy sources, emitters, and applications in every relevant order;
+- test connected, unconnected, and wrong-thread behavior; and
 - verify dispatch does not allocate or recursively tick the target.
 
-Proposed commit: `feat: bind keyboard tasks to editor tasks`
+Proposed commit: `feat: route physical and software input`
 
 ### Phase 7: distinguish task-modal and display-modal hosts
 

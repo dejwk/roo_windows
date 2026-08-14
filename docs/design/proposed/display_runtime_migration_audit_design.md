@@ -20,8 +20,8 @@ authoritative and turns the accumulated measurements into a release decision.
 ## Background
 
 The migration introduces `DisplayWindow`, `UiTask`, direct content, optional
-navigation, shared-scheduler driving, key-event bindings, and explicit modal
-coverage.
+navigation, shared-scheduler driving, physical-key events, application-owned
+input routing, semantic text input, and explicit modal coverage.
 Phase 4 removes legacy `Task`/`Activity` navigation after migrating it to
 direct content and `Destination`. The compatibility surfaces that remain for
 Phase 8 include application-level display forwarding, application-global
@@ -41,7 +41,8 @@ final state using the same toolchain and application.
 2. Display operations must be reached through `Application::window()`.
 3. Task creation must select a fixed borrowed `Widget&` or explicit
    `NavigationHost`.
-4. All physical and push key routes must use scoped binding objects.
+4. Physical key sources and software text emitters must use their producer-owned
+   connection APIs; tasks must expose no producer attachment API.
 5. All modal presentation must name an owning task and coverage policy.
 6. `start()` with a shared scheduler and the `run()` convenience path must be
    the only supported drive modes.
@@ -69,8 +70,8 @@ final state using the same toolchain and application.
 
 1. Every repository example must use final task/content/navigation APIs.
 2. At least one example must show direct content, optional navigation,
-   same-display software keyboard binding, two shared-scheduler displays, and
-   each modal coverage policy.
+   same-display semantic software input, two shared-scheduler displays, and each
+   modal coverage policy.
 3. Public reference documentation and Doxygen comments must describe final
    ownership and lifetime rather than migration history.
 4. Compile errors from removed APIs must have direct replacements documented in
@@ -98,8 +99,8 @@ final state using the same toolchain and application.
 1. The recorded single-display configuration must pass touch, hardware keys,
    software keyboard, direct content, navigation, modal, and interrupted paint.
 2. A two-display configuration must drive two applications on one UI thread,
-   deliver cross-application keyboard events, and preserve independent pointer
-   and paint continuation state.
+   deliver cross-application semantic text operations, and preserve independent
+   pointer and paint continuation state.
 3. Hardware observations must identify board, display devices, toolchain,
    revision, and test procedure.
 
@@ -119,10 +120,10 @@ Phase 8 is a deletion-first convergence phase:
 Application
 ├── start() + shared scheduler OR run()
 ├── window() -> DisplayWindow
+├── physical input router + application text input
 └── addTask*() -> UiTask
     ├── direct content OR NavigationHost
-    ├── task-local focus/editor
-    ├── scoped key bindings
+    ├── task-local focus/editor and key dispatch
     └── explicit modal coverage
 ```
 
@@ -158,15 +159,16 @@ means `UiTask`, not an activity back stack.
 
 ### Removed input and editor compatibility
 
-The `KeySource` constructor overload is replaced by an explicit
-`TaskKeyBinding`. The temporary `UiTask::attachKeySource()` and
+The `KeySource` constructor overload is replaced by
+`KeySource::connect(UiTask&)`. The temporary `UiTask::attachKeySource()` and
 `detachKeySource()` disappear. `KeyboardListener` and application editor access
-disappear; keyboard events reach a task sink, and text fields resolve their
-task editor structurally.
+disappear; physical events reach tasks through the application input router,
+and text fields register their task editor with application text input.
 
-The single-display convenience application owns its software-keyboard
-coordinator and binding but exposes no implicit global editor. Custom layouts
-create and bind keyboard tasks explicitly.
+The single-display convenience application connects its software keyboard's
+emitter to its own text-input endpoint and exposes no public global editor.
+Custom layouts create keyboard tasks explicitly and connect their emitters to
+the destination application.
 
 ### Removed modal and Back forwarding
 
@@ -188,8 +190,8 @@ include:
 | `Application::addTask*()` returning `Task*` | fixed-widget or `NavigationHost` task creation returning `UiTask&` (removed in Phase 4) |
 | `Task::enterActivity()` | direct task creation or `NavigationHost::push()` (removed in Phase 4) |
 | `Application::text_field_editor()` | `UiTask::textFieldEditor()` |
-| constructor `KeySource&` | caller-owned `TaskKeyBinding` |
-| `KeyboardListener` | `KeyEventEmitter`/`KeyEventBinding` |
+| constructor `KeySource&` | `KeySource::connect(UiTask&)` |
+| `KeyboardListener` | `TextInputEmitter::connect(Application&)` |
 | application dialog methods | `UiTask::showModal()` |
 | `Application::start()` | retained; starts work on the shared scheduler |
 
@@ -198,7 +200,8 @@ include:
 The baseline document gains a final table for:
 
 - all Phase 1 object sizes plus `DisplayWindow`, `UiTask`, `NavigationHost`,
-  both binding types, both endpoints, and both modal hosts;
+  `KeySource`, `TextInputEmitter`, both application input services, and both
+  modal hosts;
 - `.iram0.text`, `.flash.text`, `.flash.rodata`, `.dram0.data`, and
   `.dram0.bss`;
 - construction and first-use allocations for direct, navigation, keyboard,
@@ -209,7 +212,8 @@ The baseline document gains a final table for:
 
 Timing is descriptive because display hardware dominates absolute latency. A
 host microbenchmark runs 10,000 warmed key dispatches, focus moves, navigation
-push/pop pairs, and binding emits and reports median nanoseconds per operation.
+push/pop pairs, routed key drains, and semantic text emits and reports median
+nanoseconds per operation.
 A Phase 8 median more than 10% slower than Phase 7 for the same operation blocks
 completion until attributed; target hardware observations remain the authority
 for display paths.
@@ -252,7 +256,6 @@ class UiTask {
   void setBackCallback(BackCallback callback);
   BackResult requestBack(
       BackSource source = BackSource::kProgrammatic);
-  KeyEventSink& keyEventSink();
   ModalStartResult showModal(ModalPresentationRef presentation,
                              ModalCoverage coverage);
 };
@@ -271,8 +274,8 @@ Implementation follows the
 ### Phase 8: complete migration and cost audit
 
 1. Migrate all remaining examples, tests, and internal users to final display,
-   task naming, binding, drive, and modal APIs. Activity/navigation migration
-   is already complete in Phase 4.
+   task naming, producer connection, drive, and modal APIs.
+   Activity/navigation migration is already complete in Phase 4.
 2. Remove every compatibility symbol and implementation listed under Removal
    requirements; simplify ownership and member layout after deletion.
 3. Add `docs/display_runtime_migration.md` and update reference documentation,
