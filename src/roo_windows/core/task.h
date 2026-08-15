@@ -11,7 +11,6 @@ namespace roo_windows {
 class Application;
 class ApplicationInputRouter;
 class DisplayWindow;
-class Keyboard;
 
 /// Owns task-local focus, editing, input routing, and fixed direct content.
 class Task {
@@ -59,14 +58,11 @@ class Task {
   friend class Widget;
   friend class Container;
   friend class NavigationHost;
-  friend class Keyboard;
 
-  Task(Application& app, DisplayWindow& window,
-         const roo_display::Box& bounds, bool popup, Keyboard& keyboard,
-         Widget& content);
-  Task(Application& app, DisplayWindow& window,
-         const roo_display::Box& bounds, bool popup, Keyboard& keyboard,
-         NavigationHost& navigation);
+  Task(Application& app, DisplayWindow& window, const roo_display::Box& bounds,
+       bool popup, Widget& content);
+  Task(Application& app, DisplayWindow& window, const roo_display::Box& bounds,
+       bool popup, NavigationHost& navigation);
 
   void dispatchKeyEvent(const KeyEvent& event);
   void cancelKeyActivation();

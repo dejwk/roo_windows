@@ -8,6 +8,7 @@
 #include "roo_icons/filled/action.h"
 #include "roo_io/text/unicode.h"
 #include "roo_windows/config.h"
+#include "roo_windows/core/application.h"
 #include "roo_windows/core/task.h"
 
 namespace roo_windows {
@@ -250,15 +251,17 @@ void TextField::paint(PaintContext& ctx) const {
   }
 }
 
+TextFieldEditor::~TextFieldEditor() { cancel(); }
+
 void TextFieldEditor::edit(TextField* target, bool show_software_keyboard) {
   if (target_ == target) {
     if (target_ != nullptr) {
-      keyboard_.setListener(this);
       if (show_software_keyboard) {
-        keyboard_.show();
+        application_.activateTextInput(*this);
       } else {
-        keyboard_.hide();
+        application_.deactivateTextInput(*this);
       }
+      application_.setTextEditorKeyboardListener(this, show_software_keyboard);
     }
     return;
   }
@@ -266,9 +269,9 @@ void TextFieldEditor::edit(TextField* target, bool show_software_keyboard) {
   TextField* old_target = target_;
   target_ = target;
   if (target == nullptr) {
+    application_.deactivateTextInput(*this);
     if (old_target != nullptr) old_target->onEditFinished(false);
-    keyboard_.hide();
-    keyboard_.setListener(nullptr);
+    application_.setTextEditorKeyboardListener(nullptr, false);
     if (old_target != nullptr) old_target->invalidateInterior();
     return;
   }
@@ -277,11 +280,11 @@ void TextFieldEditor::edit(TextField* target, bool show_software_keyboard) {
     old_target->invalidateInterior();
   }
   if (show_software_keyboard) {
-    keyboard_.show();
+    application_.activateTextInput(*this);
   } else {
-    keyboard_.hide();
+    application_.deactivateTextInput(*this);
   }
-  keyboard_.setListener(this);
+  application_.setTextEditorKeyboardListener(this, show_software_keyboard);
   target->invalidateInterior();
   last_glyph_recently_entered_ = false;
   measure();
@@ -468,9 +471,9 @@ void TextFieldEditor::enter() {
   last_glyph_recently_entered_ = false;
   TextField* old_target = target_;
   target_ = nullptr;
+  application_.deactivateTextInput(*this);
   old_target->onEditFinished(true);
-  keyboard_.hide();
-  keyboard_.setListener(nullptr);
+  application_.setTextEditorKeyboardListener(nullptr, false);
   old_target->invalidateInterior();
   return;
 }

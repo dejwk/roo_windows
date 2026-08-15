@@ -12,11 +12,13 @@
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/key_source.h"
 #include "roo_windows/core/task.h"
+#include "roo_windows/core/text_input.h"
 #include "roo_windows/widgets/text_field.h"
 
 namespace roo_windows {
 
 class ApplicationInputRouter;
+class ApplicationTextInput;
 
 /// Top-level coordinator that owns the event loop, display, input pipeline,
 /// and active display-local tasks.
@@ -160,7 +162,10 @@ class Application {
 
  private:
   friend class ApplicationInputRouter;
+  friend class ApplicationTextInput;
   friend class KeySource;
+  friend class TextInputEmitter;
+  friend class TextFieldEditor;
   friend class TickerGuard;
 
   enum class State : uint8_t {
@@ -181,6 +186,15 @@ class Application {
   void disconnectKeySource(KeySource& source);
   void requestKeySourceTick();
 
+  void connectTextInputEmitter(TextInputEmitter& emitter);
+  void disconnectTextInputEmitter(TextInputEmitter& emitter);
+  bool commitTextInputRune(uint32_t rune);
+  bool deleteTextInputBackward();
+  bool performTextInputAction(TextInputAction action);
+  void activateTextInput(TextFieldEditor& editor);
+  void deactivateTextInput(TextFieldEditor& editor);
+  void setTextEditorKeyboardListener(TextFieldEditor* editor, bool visible);
+
   /// This is a best-effort fail-fast attempt for direct application UI entry
   /// points.
   /// References obtained earlier cannot be checked when they are later used.
@@ -195,6 +209,7 @@ class Application {
   // callers connect sources directly to their selected task.
   KeySource* legacy_key_source_ = nullptr;
   std::unique_ptr<ApplicationInputRouter> input_router_;
+  std::unique_ptr<ApplicationTextInput> text_input_;
 
   DisplayWindow window_;
   std::unique_ptr<class ApplicationTicker> ticker_;

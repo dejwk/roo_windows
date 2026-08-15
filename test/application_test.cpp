@@ -4,11 +4,12 @@
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
-#include "roo_windows/core/destination.h"
 #include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/destination.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/navigation_host.h"
 #include "roo_windows/core/transient_presentation.h"
+#include "roo_windows/widgets/text_field.h"
 
 namespace roo_windows {
 namespace {
@@ -47,6 +48,17 @@ class TestDestination : public Destination {
 
  private:
   TestWidget contents_;
+};
+
+class TextInputDestination : public Destination {
+ public:
+  TextInputDestination(ApplicationContext& context, TextFieldEditor& editor)
+      : field(context, editor, font_body1(), "", roo_display::kLeft,
+              TextField::NONE) {}
+
+  Widget& getContents() override { return field; }
+
+  TextField field;
 };
 
 class BackPresentation final : public TransientPresentationRegistration {
@@ -144,6 +156,84 @@ TEST(Application, RequestBackPrioritizesTransientPresentation) {
   EXPECT_EQ(0, child.back_request_count);
 
   navigation.clear();
+}
+
+TEST(Application, TextInputEmitterTargetsTheActiveEditor) {
+  roo::byte raster[64 * 64 * 2] = {};
+  roo_display::OffscreenDevice<roo_display::Argb4444> device(
+      64, 64, raster, roo_display::Argb4444());
+  roo_display::Display display(device);
+  roo_scheduler::Scheduler scheduler;
+  Environment environment(scheduler);
+  NavigationHost navigation;
+  Application app(&environment, display);
+  Task& task = app.addTaskFullScreen(navigation);
+  TextInputDestination destination(app.context(), task.textFieldEditor());
+  navigation.push(destination);
+  TextInputEmitter emitter;
+
+  EXPECT_FALSE(emitter.commitRune(U'A'));
+  emitter.connect(app);
+  EXPECT_FALSE(emitter.commitRune(U'A'));
+  EXPECT_FALSE(emitter.deleteBackward());
+
+  destination.field.edit();
+  EXPECT_FALSE(emitter.commitRune(0xd800));
+  EXPECT_TRUE(emitter.commitRune(U'A'));
+  EXPECT_EQ("A", destination.field.content());
+  EXPECT_TRUE(emitter.deleteBackward());
+  EXPECT_EQ("", destination.field.content());
+  EXPECT_TRUE(emitter.performAction(TextInputAction::kDone));
+  EXPECT_FALSE(emitter.commitRune(U'B'));
+
+  navigation.clear();
+}
+
+TEST(Application, TextInputActivationReplacesThePreviousEditor) {
+  roo::byte raster[64 * 64 * 2] = {};
+  roo_display::OffscreenDevice<roo_display::Argb4444> device(
+      64, 64, raster, roo_display::Argb4444());
+  roo_display::Display display(device);
+  roo_scheduler::Scheduler scheduler;
+  Environment environment(scheduler);
+  NavigationHost first_navigation;
+  NavigationHost second_navigation;
+  Application app(&environment, display);
+  Task& first_task = app.addTaskFullScreen(first_navigation);
+  Task& second_task = app.addTaskFullScreen(second_navigation);
+  TextInputDestination first(app.context(), first_task.textFieldEditor());
+  TextInputDestination second(app.context(), second_task.textFieldEditor());
+  first_navigation.push(first);
+  second_navigation.push(second);
+  TextInputEmitter emitter;
+  emitter.connect(app);
+
+  first.field.edit();
+  ASSERT_TRUE(emitter.commitRune(U'A'));
+  second.field.edit();
+  EXPECT_TRUE(emitter.commitRune(U'B'));
+  EXPECT_EQ("A", first.field.content());
+  EXPECT_EQ("B", second.field.content());
+
+  first_navigation.clear();
+  second_navigation.clear();
+}
+
+TEST(Application, TextInputEmitterOutlivesItsDestination) {
+  roo::byte raster[16 * 16 * 2] = {};
+  roo_display::OffscreenDevice<roo_display::Argb4444> device(
+      16, 16, raster, roo_display::Argb4444());
+  roo_display::Display display(device);
+  roo_scheduler::Scheduler scheduler;
+  Environment environment(scheduler);
+  TextInputEmitter emitter;
+  {
+    Application app(&environment, display);
+    emitter.connect(app);
+    ASSERT_TRUE(emitter.isConnected());
+  }
+  EXPECT_FALSE(emitter.isConnected());
+  EXPECT_FALSE(emitter.performAction(TextInputAction::kDone));
 }
 
 }  // namespace

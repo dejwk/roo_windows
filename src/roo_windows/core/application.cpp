@@ -77,8 +77,8 @@ class ApplicationTicker final : public roo_scheduler::Executable {
 
   void scheduleLocked(roo_time::Uptime when) {
     scheduled_at_ = when;
-    scheduled_id_ = scheduler_.scheduleOn(when, *this,
-                                           roo_scheduler::PRIORITY_NORMAL);
+    scheduled_id_ =
+        scheduler_.scheduleOn(when, *this, roo_scheduler::PRIORITY_NORMAL);
   }
 
   roo_scheduler::Scheduler& scheduler_;
@@ -195,7 +195,8 @@ class ApplicationInputRouter {
   // The handler carries no event payload. It only wakes the stable ticker;
   // the UI thread later drains the source's own queue in source order.
   void installReadinessHandler(KeySource& source) {
-    source.setReadinessHandler([app = &app_]() { app->requestKeySourceTick(); });
+    source.setReadinessHandler(
+        [app = &app_]() { app->requestKeySourceTick(); });
   }
 
   static constexpr int kDrainBatchSize = 4;
@@ -203,6 +204,100 @@ class ApplicationInputRouter {
 
   Application& app_;
   KeySource* head_ = nullptr;
+};
+
+/// Owns synchronous semantic-text delivery and all incoming emitter routes.
+///
+/// Emitter links are producer-owned, which lets application teardown detach
+/// every surviving producer before task editors are destroyed.
+class ApplicationTextInput {
+ public:
+  explicit ApplicationTextInput(Application& app) : app_(app) {}
+
+  void connect(TextInputEmitter& emitter) {
+    CHECK(emitter.destination_application_ == nullptr);
+    CHECK(app_.state_ != Application::State::kStopping);
+    if (app_.state_ != Application::State::kConstructed) {
+      CHECK(app_.isUiThread());
+    }
+    emitter.destination_application_ = &app_;
+    emitter.next_emitter_ = head_;
+    head_ = &emitter;
+  }
+
+  void disconnect(TextInputEmitter& emitter) {
+    if (emitter.destination_application_ == nullptr) return;
+    CHECK(emitter.destination_application_ == &app_);
+    if (app_.state_ != Application::State::kStopping) {
+      CHECK(app_.isUiThread());
+    }
+    TextInputEmitter** link = &head_;
+    while (*link != &emitter) {
+      CHECK(*link != nullptr);
+      link = &(*link)->next_emitter_;
+    }
+    *link = emitter.next_emitter_;
+    emitter.destination_application_ = nullptr;
+    emitter.next_emitter_ = nullptr;
+  }
+
+  void clear() {
+    while (head_ != nullptr) disconnect(*head_);
+    active_editor_ = nullptr;
+  }
+
+  void activate(TextFieldEditor& editor) {
+    checkUiThread();
+    if (active_editor_ == &editor) return;
+    TextFieldEditor* old_editor = active_editor_;
+    active_editor_ = nullptr;
+    if (old_editor != nullptr) old_editor->cancel();
+    active_editor_ = &editor;
+  }
+
+  void deactivate(TextFieldEditor& editor) {
+    if (app_.state_ != Application::State::kStopping) checkUiThread();
+    if (active_editor_ == &editor) active_editor_ = nullptr;
+  }
+
+  bool commitRune(uint32_t rune) {
+    checkUiThread();
+    if (active_editor_ == nullptr || !isUnicodeScalar(rune)) return false;
+    active_editor_->rune(rune);
+    return true;
+  }
+
+  bool deleteBackward() {
+    checkUiThread();
+    if (active_editor_ == nullptr) return false;
+    active_editor_->del();
+    return true;
+  }
+
+  bool performAction(TextInputAction action) {
+    checkUiThread();
+    if (active_editor_ == nullptr) return false;
+    switch (action) {
+      case TextInputAction::kDone:
+        active_editor_->enter();
+        return true;
+    }
+    return false;
+  }
+
+ private:
+  static bool isUnicodeScalar(uint32_t rune) {
+    return rune <= 0x10ffff && (rune < 0xd800 || rune > 0xdfff);
+  }
+
+  void checkUiThread() const {
+    CHECK(app_.state_ != Application::State::kStopping);
+    CHECK(app_.isUiThread());
+  }
+
+  Application& app_;
+  TextInputEmitter* head_ = nullptr;
+  TextFieldEditor* active_editor_ = nullptr;
 };
 
 /// Marks the interval in which Application::tick() owns UI dispatch.
@@ -230,13 +325,14 @@ Application::Application(const Environment* env, roo_display::Display& display)
       context_(env->scheduler(), env->theme(), env->keyboardColorTheme()),
       keyboard_(context_, kbEngUS()),
       input_router_(new ApplicationInputRouter(*this)),
+      text_input_(new ApplicationTextInput(*this)),
       window_(*this, display, true),
       ticker_(new ApplicationTicker(env->scheduler(), [this]() { tick(); })) {
   roo_display::Box keyboard_bounds(0, window_.root().height() / 2,
                                    window_.root().width() - 1,
                                    window_.root().height() - 1);
-  auto keyboard_task = std::unique_ptr<Task>(new Task(
-      *this, window_, keyboard_bounds, true, keyboard_, keyboard_.getContents()));
+  auto keyboard_task = std::unique_ptr<Task>(
+      new Task(*this, window_, keyboard_bounds, true, keyboard_.getContents()));
   keyboard_.setTask(*keyboard_task);
   keyboard_task->setVisible(false);
   tasks_.push_back(std::move(keyboard_task));
@@ -248,13 +344,14 @@ Application::Application(const Environment* env, roo_display::Display& display,
       context_(env->scheduler(), env->theme(), env->keyboardColorTheme()),
       keyboard_(context_, kbEngUS()),
       input_router_(new ApplicationInputRouter(*this)),
+      text_input_(new ApplicationTextInput(*this)),
       window_(*this, display, enable_touch),
       ticker_(new ApplicationTicker(env->scheduler(), [this]() { tick(); })) {
   roo_display::Box keyboard_bounds(0, window_.root().height() / 2,
                                    window_.root().width() - 1,
                                    window_.root().height() - 1);
-  auto keyboard_task = std::unique_ptr<Task>(new Task(
-      *this, window_, keyboard_bounds, true, keyboard_, keyboard_.getContents()));
+  auto keyboard_task = std::unique_ptr<Task>(
+      new Task(*this, window_, keyboard_bounds, true, keyboard_.getContents()));
   keyboard_.setTask(*keyboard_task);
   keyboard_task->setVisible(false);
   tasks_.push_back(std::move(keyboard_task));
@@ -272,6 +369,7 @@ Application::~Application() {
   // tasks and their fallback state are still valid.
   ticker_->stop();
   input_router_->clear();
+  text_input_->clear();
   window_.stop();
   tasks_.clear();
 }
@@ -332,7 +430,7 @@ bool Application::refresh(roo_time::Uptime deadline) {
 Task& Application::addTask(Widget& content, const roo_display::Box& bounds) {
   checkUiThread();
   CHECK(content.parent() == nullptr);
-  Task* task = new Task(*this, window_, bounds, false, keyboard_, content);
+  Task* task = new Task(*this, window_, bounds, false, content);
   tasks_.emplace_back(task);
   if (legacy_key_source_ != nullptr && legacy_key_source_->isConnected()) {
     legacy_key_source_->disconnect();
@@ -349,7 +447,7 @@ Task& Application::addTask(NavigationHost& navigation,
                            const roo_display::Box& bounds) {
   checkUiThread();
   CHECK(navigation.task_ == nullptr);
-  Task* task = new Task(*this, window_, bounds, false, keyboard_, navigation);
+  Task* task = new Task(*this, window_, bounds, false, navigation);
   tasks_.emplace_back(task);
   if (legacy_key_source_ != nullptr && legacy_key_source_->isConnected()) {
     legacy_key_source_->disconnect();
@@ -412,6 +510,44 @@ void Application::disconnectKeySource(KeySource& source) {
 // Called by a source readiness handler. The ticker coalesces concurrent
 // producer notifications and keeps dispatch on the application UI thread.
 void Application::requestKeySourceTick() { ticker_->requestNow(); }
+
+void Application::connectTextInputEmitter(TextInputEmitter& emitter) {
+  text_input_->connect(emitter);
+}
+
+void Application::disconnectTextInputEmitter(TextInputEmitter& emitter) {
+  text_input_->disconnect(emitter);
+}
+
+bool Application::commitTextInputRune(uint32_t rune) {
+  return text_input_->commitRune(rune);
+}
+
+bool Application::deleteTextInputBackward() {
+  return text_input_->deleteBackward();
+}
+
+bool Application::performTextInputAction(TextInputAction action) {
+  return text_input_->performAction(action);
+}
+
+void Application::activateTextInput(TextFieldEditor& editor) {
+  text_input_->activate(editor);
+}
+
+void Application::deactivateTextInput(TextFieldEditor& editor) {
+  text_input_->deactivate(editor);
+}
+
+void Application::setTextEditorKeyboardListener(TextFieldEditor* editor,
+                                                bool visible) {
+  keyboard_.setListener(editor);
+  if (visible) {
+    keyboard_.show();
+  } else {
+    keyboard_.hide();
+  }
+}
 
 namespace {
 

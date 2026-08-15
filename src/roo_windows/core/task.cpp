@@ -16,13 +16,12 @@ bool IsInSubtree(const Widget& candidate, const Widget& subtree) {
 }  // namespace
 
 Task::Task(Application& app, DisplayWindow& window,
-               const roo_display::Box& bounds, bool popup, Keyboard& keyboard,
-               Widget& content)
+           const roo_display::Box& bounds, bool popup, Widget& content)
     : app_(app),
       window_(window),
       panel_(app.context(), *this),
       focus_(&panel_),
-      editor_(app.env().scheduler(), keyboard),
+      editor_(app, app.env().scheduler()),
       popup_(popup) {
   CHECK(content.parent() == nullptr);
   panel_.setContent(content, roo_display::Box(0, 0, -1, -1));
@@ -34,13 +33,13 @@ Task::Task(Application& app, DisplayWindow& window,
 }
 
 Task::Task(Application& app, DisplayWindow& window,
-               const roo_display::Box& bounds, bool popup, Keyboard& keyboard,
-               NavigationHost& navigation)
+           const roo_display::Box& bounds, bool popup,
+           NavigationHost& navigation)
     : app_(app),
       window_(window),
       panel_(app.context(), *this),
       focus_(&panel_),
-      editor_(app.env().scheduler(), keyboard),
+      editor_(app, app.env().scheduler()),
       popup_(popup),
       navigation_(&navigation) {
   navigation.install(*this);

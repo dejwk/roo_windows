@@ -13,6 +13,7 @@
 
 namespace roo_windows {
 
+class Application;
 class TextField;
 
 static constexpr roo_time::Duration kCursorBlinkInterval =
@@ -93,9 +94,9 @@ class VisibilityToggle : public BasicWidget {
 /// state centrally avoids paying for it on every `TextField` instance.
 class TextFieldEditor : public KeyboardListener {
  public:
-  TextFieldEditor(roo_scheduler::Scheduler& scheduler, Keyboard& keyboard)
-      : scheduler_(scheduler),
-        keyboard_(keyboard),
+  TextFieldEditor(Application& application, roo_scheduler::Scheduler& scheduler)
+      : application_(application),
+        scheduler_(scheduler),
         cursor_blinker_(scheduler, [this]() { blinkCursor(); }),
         blinking_cursor_is_on_(false),
         last_cursor_shown_time_(roo_time::Uptime::Now()),
@@ -107,6 +108,8 @@ class TextFieldEditor : public KeyboardListener {
         selection_end_(0),
         selection_anchor_(0),
         draw_xoffset_(0) {}
+
+  ~TextFieldEditor();
 
   /// Begins editing `target` as the active field; any previously active
   /// field is implicitly committed and unbound first.
@@ -166,8 +169,8 @@ class TextFieldEditor : public KeyboardListener {
   void hideLastGlyph();
   void moveCursor(int16_t position, bool extend_selection);
 
+  Application& application_;
   roo_scheduler::Scheduler& scheduler_;
-  Keyboard& keyboard_;
   roo_scheduler::SingletonTask cursor_blinker_;
   bool blinking_cursor_is_on_;
   roo_time::Uptime last_cursor_shown_time_;
