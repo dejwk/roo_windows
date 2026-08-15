@@ -116,9 +116,11 @@ TEST(DisplayRuntimeCharacterization, ScheduledTickRoutesKeySamplesAndActivation)
   roo_scheduler::Scheduler scheduler;
   Environment environment(scheduler);
   QueuedKeySource keys({{KeyPhase::kDown, KeyCode::kCharacter,
-                         kKeyModifierControl, U'x'},
-                        {KeyPhase::kDown, KeyCode::kEnter, 0, 0},
-                        {KeyPhase::kUp, KeyCode::kEnter, 0, 0}});
+                         kKeyModifierControl, PhysicalKey::kX, U'x'},
+                        {KeyPhase::kDown, KeyCode::kEnter, 0,
+                         PhysicalKey::kEnter, 0},
+                        {KeyPhase::kUp, KeyCode::kEnter, 0,
+                         PhysicalKey::kEnter, 0}});
   NavigationHost navigation;
   Application app(&environment, display, keys, false);
   RecordingDestination destination(app.context());
@@ -136,6 +138,8 @@ TEST(DisplayRuntimeCharacterization, ScheduledTickRoutesKeySamplesAndActivation)
   EXPECT_EQ(U'x', destination.contents.first_event.rune);
   EXPECT_EQ(KeyPhase::kUp, destination.contents.last_event.phase);
   EXPECT_EQ(KeyCode::kEnter, destination.contents.last_event.code);
+  EXPECT_EQ(PhysicalKey::kEnter,
+            destination.contents.last_event.physical_key);
   EXPECT_FALSE(destination.contents.isPressed());
   navigation.clear();
 }

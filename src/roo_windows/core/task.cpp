@@ -94,12 +94,16 @@ KeySourceAttachmentResult Task::attachKeySource(KeySource& source) {
 
 void Task::detachKeySource() {
   if (key_source_ == nullptr) return;
+  if (armed_key_widget_ != nullptr) onWidgetFocusLost(*armed_key_widget_);
   key_source_->attached_task_ = nullptr;
   key_source_ = nullptr;
 }
 
 void Task::onKeySourceDestroyed(KeySource& source) {
-  if (key_source_ == &source) key_source_ = nullptr;
+  if (key_source_ == &source) {
+    if (armed_key_widget_ != nullptr) onWidgetFocusLost(*armed_key_widget_);
+    key_source_ = nullptr;
+  }
 }
 
 BackResult Task::requestBack(BackSource source) {
@@ -147,6 +151,19 @@ bool Task::drainKeyEvents() {
 }
 
 void Task::dispatchKeyEvent(const KeyEvent& event) {
+  Widget* focused = focus_.focused();
+  // Application::add() remains a legacy structural path that does not create
+  // a Task. Preserve its context-scoped keyboard routing until that API is
+  // retired; attached UI tasks always use their local focus first.
+  if (focused == nullptr) focused = app_.context().focus().focused();
+  if (focused != nullptr) {
+    if (focused->onKeyEvent(event)) return;
+    for (Widget* ancestor = focused->parent();
+         ancestor != nullptr && ancestor != &panel_;
+         ancestor = ancestor->parent()) {
+      if (ancestor->onKeyEvent(event)) return;
+    }
+  }
   if (event.phase == KeyPhase::kDown &&
       (event.code == KeyCode::kBack || event.code == KeyCode::kEscape)) {
     BackSource source = event.code == KeyCode::kBack ? BackSource::kBackKey
@@ -157,18 +174,6 @@ void Task::dispatchKeyEvent(const KeyEvent& event) {
       event.code == KeyCode::kTab) {
     focus_.moveFocus(panel_, (event.modifiers & kKeyModifierShift) != 0);
     return;
-  }
-  Widget* focused = focus_.focused();
-  // Application::add() remains a legacy structural path that does not create
-  // a Task. Preserve its context-scoped keyboard routing until that API is
-  // retired; attached UI tasks always use their local focus first.
-  if (focused == nullptr) focused = app_.context().focus().focused();
-  if (focused == nullptr) return;
-  if (focused->onKeyEvent(event)) return;
-  for (Widget* ancestor = focused->parent();
-       ancestor != nullptr && ancestor != &panel_;
-       ancestor = ancestor->parent()) {
-    if (ancestor->onKeyEvent(event)) return;
   }
   if (event.phase == KeyPhase::kDown || event.phase == KeyPhase::kRepeat) {
     FocusDirection direction;
@@ -193,24 +198,32 @@ void Task::dispatchKeyEvent(const KeyEvent& event) {
     if (is_directional && focus_.moveFocusDirection(panel_, direction)) return;
   }
   if (event.code != KeyCode::kEnter && event.code != KeyCode::kSpace) return;
+  if (focused == nullptr) return;
   if (event.phase == KeyPhase::kDown && focused->isClickable() &&
       focused->isEnabled()) {
+    if (armed_key_widget_ != nullptr) onWidgetFocusLost(*armed_key_widget_);
     armed_key_widget_ = focused;
-    armed_key_ = event.code;
+    armed_key_ = event.physical_key;
     focused->Widget::onShowPress(focused->width() / 2, focused->height() / 2);
   } else if (event.phase == KeyPhase::kUp && armed_key_widget_ == focused &&
-             armed_key_ == event.code) {
+             armed_key_ == event.physical_key) {
     armed_key_widget_ = nullptr;
-    armed_key_ = KeyCode::kUnknown;
+    armed_key_ = PhysicalKey::kNone;
     focused->onSingleTapUp(focused->width() / 2, focused->height() / 2);
   }
+}
+
+void Task::onWidgetFocusLost(Widget& widget) {
+  if (armed_key_widget_ != &widget) return;
+  armed_key_widget_->setPressed(false);
+  armed_key_widget_ = nullptr;
+  armed_key_ = PhysicalKey::kNone;
 }
 
 void Task::onSubtreeDetaching(Widget& subtree) {
   if (armed_key_widget_ != nullptr &&
       IsInSubtree(*armed_key_widget_, subtree)) {
-    armed_key_widget_ = nullptr;
-    armed_key_ = KeyCode::kUnknown;
+    onWidgetFocusLost(*armed_key_widget_);
   }
   if (editor_.targetInSubtree(subtree)) editor_.cancel();
   focus_.onSubtreeDetaching(subtree);

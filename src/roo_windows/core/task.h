@@ -67,6 +67,7 @@ class Task {
  private:
   friend class Application;
   friend class KeySource;
+  friend class Widget;
   friend class Container;
   friend class NavigationHost;
   friend class Keyboard;
@@ -90,6 +91,7 @@ class Task {
   bool drainKeyEvents();
   void dispatchKeyEvent(const KeyEvent& event);
   void onSubtreeDetaching(Widget& subtree);
+  void onWidgetFocusLost(Widget& widget);
   void onKeySourceDestroyed(KeySource& source);
   void attachNavigationContent(Widget& content);
   void detachNavigationContent();
@@ -103,7 +105,7 @@ class Task {
   bool popup_;
   KeySource* key_source_ = nullptr;
   Widget* armed_key_widget_ = nullptr;
-  KeyCode armed_key_ = KeyCode::kUnknown;
+  PhysicalKey armed_key_ = PhysicalKey::kNone;
   BackCallback back_callback_;
   NavigationHost* navigation_ = nullptr;
 };

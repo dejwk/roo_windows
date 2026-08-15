@@ -34,9 +34,10 @@ class FltkKeySource : public KeySource {
  private:
   static int dispatchFltkEvent(int event, Fl_Window* window);
   static void installDispatcher();
-  void onFltkEvent(KeyPhase phase);
+  void onFltkEvent(KeyPhase phase, int key, PhysicalKey physical_key);
 
   static KeyCode keyCode(int key);
+  static PhysicalKey physicalKey(int key);
   static uint8_t modifiers();
   static bool decodeRune(const char* text, int length, uint32_t* rune);
 
@@ -44,10 +45,7 @@ class FltkKeySource : public KeySource {
   KeyEvent queue_[kQueueCapacity];
   int head_;
   int tail_;
-  int active_fltk_key_;
-  bool key_is_down_;
-  uint64_t last_repeat_millis_;
-
+  bool keys_down_[256];
   static FltkKeySource* active_source_;
   static bool dispatcher_installed_;
 };

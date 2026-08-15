@@ -629,7 +629,8 @@ bool TextField::onKeyEvent(const KeyEvent& event) {
       text_editor.rune(event.rune);
       return true;
     case KeyCode::kSpace:
-      // The source delivers the printable space separately as kCharacter.
+      text_editor.edit(this, false);
+      text_editor.rune(U' ');
       return true;
     case KeyCode::kEnter:
       if (!isEdited()) text_editor.edit(this, false);
@@ -638,7 +639,8 @@ bool TextField::onKeyEvent(const KeyEvent& event) {
     case KeyCode::kEscape:
     case KeyCode::kBack:
       text_editor.cancel();
-      return true;
+      // Preserve task-level Back/Escape semantics after ending this edit.
+      return false;
     case KeyCode::kBackspace:
       text_editor.del();
       return true;

@@ -454,6 +454,9 @@ void Widget::setHover(bool hover) {
 
 void Widget::setFocused(bool focused) {
   if (focused == isFocused()) return;
+  if (!focused) {
+    if (Task* task = getTask(); task != nullptr) task->onWidgetFocusLost(*this);
+  }
   state_ ^= kWidgetFocused;
   if (isVisible()) {
     invalidateInterior();

@@ -1,9 +1,22 @@
 # Display runtime Phase 6 input design
 
+## Status
+
+The [physical key event design](display_physical_key_event_design.md) is
+implemented. `KeyEvent` now preserves physical HID identity, focused widgets
+receive complete events before task shortcuts, and fallback activation pairs
+Down and Up by physical switch.
+
+The runtime is otherwise still at the transitional boundary: a `Task` owns its
+temporary `KeySource` attachment and the application polls it, while the
+built-in software keyboard still uses `KeyboardListener`. Application-owned
+physical routing and semantic software text input remain proposed below.
+
 ## Objective
 
-Add physical-key identity, event-driven physical-source routing, and semantic
-software text input without making tasks own producer connections.
+Complete the input architecture around the landed physical-key identity by
+adding event-driven physical-source routing and semantic software text input,
+without leaving producer connections in tasks.
 
 ## Motivation
 
@@ -43,15 +56,29 @@ before task and editor storage.
 
 ## Design Overview
 
-Phase 6 is divided into three independently reviewable designs:
+Phase 6 has three architectural areas. This list describes responsibility
+boundaries, not the number or order of implementation commits:
 
 1. [Physical key events](display_physical_key_event_design.md) add normalized
-   switch identity and define widget-before-task dispatch.
+   switch identity and define widget-before-task dispatch. This area is
+   complete.
 2. [Physical input routing](display_input_routing_design.md) moves source
    registration, readiness, bounded draining, and teardown into an
-   application-owned input router.
+   application-owned input router. This area is one remaining delivery
+   increment.
 3. [Semantic text input](display_semantic_text_input_design.md) gives software
    keyboards direct editor operations through a stable application endpoint.
+   This area is split into three remaining increments: introduce the endpoint,
+   convert the built-in keyboard, and then integrate session visibility and the
+   cross-application example.
+
+The mapping is therefore:
+
+| Architectural area | Delivery increments | Status |
+| --- | --- | --- |
+| Physical key events | Preserve and dispatch physical identity | Complete |
+| Physical input routing | Route and wake physical sources | Remaining |
+| Semantic text input | Endpoint; keyboard conversion; integration | Remaining |
 
 ```text
 KeySource queue -- readiness --> ApplicationInputRouter --> Task key dispatch
@@ -71,14 +98,21 @@ synchronously on the common UI thread.
 
 ### Dependency order
 
-The coalescing application ticker from the event-driven design lands before
-physical source readiness. Physical-key representation is independent and can
-land next. The application input router and key readiness then land together so
-no temporary task-owned readiness attachment is introduced.
+Physical-key representation has landed independently of readiness. Before the
+remaining physical-routing increment, Phase 1 of the
+[event-driven input design](display_event_driven_input_design.md) must replace
+the current periodic scheduler task with the coalescing application ticker.
+The application input router and key readiness then land together, directly
+replacing temporary task-owned polling rather than adding another transitional
+attachment API.
 
-Semantic text input follows independently. The final periodic fallback is
-removed only after key readiness, touch acquisition, gesture deadlines,
-invalidation, and animation deadlines are all explicit.
+Semantic text input does not depend on physical routing, but its three
+increments are ordered internally: the stable application endpoint must exist
+before the keyboard can emit to it, and the converted keyboard must exist
+before visibility and cross-application behavior can be integrated. The final
+periodic fallback is separate event-driven work and is removed only after key
+readiness, touch acquisition, gesture deadlines, invalidation, and animation
+deadlines are all explicit.
 
 ### Lifetime boundary
 
@@ -110,36 +144,62 @@ final API.
 Implementation follows the
 [embedded C++ guidance](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md).
 
-### Phase 6a: preserve physical switch identity
+The plan below enumerates delivery increments, whereas the Design Overview
+enumerates architectural areas. One area is complete, physical routing maps to
+one remaining increment, and semantic text input maps to three. The
+event-driven ticker prerequisite is tracked by the event-driven input design
+and is not an additional Phase 6 increment.
 
-Implement the physical-key event design and its adapter and dispatch tests.
+### Completed: preserve physical switch identity
 
-Proposed commit: `feat: preserve and dispatch physical key identity`
+Implemented the physical-key event design, including the compact physical HID
+identity, adapter transition tracking, widget-first dispatch, physical-switch
+fallback matching, cancellation, and focused tests.
 
-### Phase 6b: route ready physical sources through applications
+Landed commit: `5ff89a2` (`Implemented physical key event support in
+lib/roo_windows.`)
 
-Implement the application input router and the key-readiness portion of the
-event-driven design. Remove temporary task source attachment in the same
-commit.
+### Remaining 1: route ready physical sources through applications
+
+Prerequisite: the coalescing application ticker from event-driven input Phase 1.
+
+Implement `KeySource::connect(Task&)`, producer readiness, and the private
+application input router. Move the existing bounded drain policy from `Task`
+to the router and remove `Task::attachKeySource()`, `detachKeySource()`, and its
+source pointer in the same commit. At the end of this increment, sources wake
+only their destination application, the application owns route teardown, and
+tasks only interpret delivered key events. The periodic application fallback
+remains.
 
 Proposed commit: `feat: route and wake physical key sources`
 
-### Phase 6c: add application-scoped semantic text input
+### Remaining 2: add application-scoped semantic text input
 
-Add application text input, producer-owned emitter connections, active-editor
-registration, and shared editor methods.
+Add `ApplicationTextInput`, producer-owned `TextInputEmitter` connections, one
+active-editor registration per application, and shared editor operations. This
+increment establishes routing and lifetime behavior but does not yet convert
+the built-in keyboard, which continues using `KeyboardListener` until the next
+increment.
 
 Proposed commit: `feat: add application-scoped text input`
 
-### Phase 6d: convert the built-in keyboard
+### Remaining 3: convert the built-in keyboard
 
-Replace `KeyboardListener` with semantic rune, deletion, and Done operations.
+Replace `KeyboardListener` with the keyboard-owned `TextInputEmitter`. Character
+and Space release commit runes, Enter performs Done, and Backspace deletes on
+press and repeats while held. At the end of this increment, software keyboard
+gestures no longer synthesize or share the physical-key contract.
 
 Proposed commit: `feat: emit semantic software text input`
 
-### Phase 6e: integrate visibility and cross-application use
+### Remaining 4: integrate visibility and cross-application use
 
-Add private single-display visibility glue and the two-application example.
+Connect editing-session start and completion to the standard built-in
+keyboard's show/hide policy without putting visibility in the emitter contract.
+Add the two-application example and integration coverage showing that a
+keyboard owned by one application can synchronously edit the active editor in
+another application on the same UI thread. This is integration and policy
+work; it adds no new input representation.
 
 Proposed commit: `feat: integrate software keyboard editor sessions`
 

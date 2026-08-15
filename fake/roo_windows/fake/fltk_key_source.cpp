@@ -4,8 +4,6 @@
 #include <FL/Fl.H>
 #include <FL/Fl_Window.H>
 
-#include <chrono>
-
 namespace roo_windows::fake {
 
 FltkKeySource* FltkKeySource::active_source_ = nullptr;
@@ -13,14 +11,18 @@ bool FltkKeySource::dispatcher_installed_ = false;
 
 namespace {
 bool dispatching = false;
+
+bool IsPrintablePhysicalKey(PhysicalKey key) {
+  uint8_t usage = static_cast<uint8_t>(key);
+  return (usage >= 0x04 && usage <= 0x38) ||
+         (usage >= 0x54 && usage <= 0x63);
+}
 }
 
 FltkKeySource::FltkKeySource()
     : head_(0),
-      tail_(0),
-      active_fltk_key_(0),
-      key_is_down_(false),
-      last_repeat_millis_(0) {
+      tail_(0) {
+  for (bool& key_down : keys_down_) key_down = false;
   pthread_mutex_init(&mutex_, nullptr);
   active_source_ = this;
 }
@@ -66,18 +68,21 @@ int FltkKeySource::dispatchFltkEvent(int event, Fl_Window* window) {
   bool consumed = false;
   if (active_source_ != nullptr && (event == FL_KEYDOWN || event == FL_KEYUP)) {
     int key = Fl::event_key();
+    PhysicalKey physical_key = physicalKey(key);
+    if (physical_key == PhysicalKey::kNone) {
+      dispatching = false;
+      return window == nullptr ? 0 : Fl::handle_(event, window);
+    }
+    uint8_t index = static_cast<uint8_t>(physical_key);
     KeyPhase phase = KeyPhase::kUp;
     if (event == FL_KEYDOWN) {
-      phase = active_source_->key_is_down_ &&
-                      active_source_->active_fltk_key_ == key
-                  ? KeyPhase::kRepeat
-                  : KeyPhase::kDown;
-      active_source_->active_fltk_key_ = key;
-      active_source_->key_is_down_ = true;
-    } else if (active_source_->active_fltk_key_ == key) {
-      active_source_->key_is_down_ = false;
+      phase = active_source_->keys_down_[index] ? KeyPhase::kRepeat
+                                                 : KeyPhase::kDown;
+      active_source_->keys_down_[index] = true;
+    } else {
+      active_source_->keys_down_[index] = false;
     }
-    active_source_->onFltkEvent(phase);
+    active_source_->onFltkEvent(phase, key, physical_key);
     // Keyboard input belongs to the Roo Windows key source once normalized.
     // Passing it on would let FLTK independently interpret Escape (or Tab)
     // after the framework has queued its semantic handling.
@@ -89,25 +94,19 @@ int FltkKeySource::dispatchFltkEvent(int event, Fl_Window* window) {
   return result;
 }
 
-void FltkKeySource::onFltkEvent(KeyPhase phase) {
-  constexpr uint64_t kRepeatIntervalMillis = 50;
-  uint64_t now = static_cast<uint64_t>(
-      std::chrono::duration_cast<std::chrono::milliseconds>(
-          std::chrono::steady_clock::now().time_since_epoch())
-          .count());
-  if (phase == KeyPhase::kRepeat) {
-    if (now - last_repeat_millis_ < kRepeatIntervalMillis) return;
-    last_repeat_millis_ = now;
-  } else if (phase == KeyPhase::kDown) {
-    last_repeat_millis_ = now;
+void FltkKeySource::onFltkEvent(KeyPhase phase, int key,
+                                PhysicalKey physical_key) {
+  KeyCode code = keyCode(key);
+  uint32_t rune = 0;
+  if (phase != KeyPhase::kUp && code == KeyCode::kUnknown &&
+      decodeRune(Fl::event_text(), Fl::event_length(), &rune)) {
+    code = KeyCode::kCharacter;
   }
-  enqueue({phase, keyCode(Fl::event_key()), modifiers(), 0});
-  if (phase != KeyPhase::kDown) return;
-
-  uint32_t rune;
-  if (decodeRune(Fl::event_text(), Fl::event_length(), &rune)) {
-    enqueue({KeyPhase::kDown, KeyCode::kCharacter, modifiers(), rune});
+  if (phase == KeyPhase::kUp && code == KeyCode::kUnknown &&
+      IsPrintablePhysicalKey(physical_key)) {
+    code = KeyCode::kCharacter;
   }
+  enqueue({phase, code, modifiers(), physical_key, rune});
 }
 
 KeyCode FltkKeySource::keyCode(int key) {
@@ -143,6 +142,82 @@ KeyCode FltkKeySource::keyCode(int key) {
       return KeyCode::kEnd;
     default:
       return KeyCode::kUnknown;
+  }
+}
+
+PhysicalKey FltkKeySource::physicalKey(int key) {
+  constexpr PhysicalKey kLetters[] = {
+      PhysicalKey::kA, PhysicalKey::kB, PhysicalKey::kC, PhysicalKey::kD,
+      PhysicalKey::kE, PhysicalKey::kF, PhysicalKey::kG, PhysicalKey::kH,
+      PhysicalKey::kI, PhysicalKey::kJ, PhysicalKey::kK, PhysicalKey::kL,
+      PhysicalKey::kM, PhysicalKey::kN, PhysicalKey::kO, PhysicalKey::kP,
+      PhysicalKey::kQ, PhysicalKey::kR, PhysicalKey::kS, PhysicalKey::kT,
+      PhysicalKey::kU, PhysicalKey::kV, PhysicalKey::kW, PhysicalKey::kX,
+      PhysicalKey::kY, PhysicalKey::kZ,
+  };
+  constexpr PhysicalKey kDigits[] = {
+      PhysicalKey::kDigit1, PhysicalKey::kDigit2, PhysicalKey::kDigit3,
+      PhysicalKey::kDigit4, PhysicalKey::kDigit5, PhysicalKey::kDigit6,
+      PhysicalKey::kDigit7, PhysicalKey::kDigit8, PhysicalKey::kDigit9,
+  };
+  constexpr PhysicalKey kKeypadDigits[] = {
+      PhysicalKey::kKeypad1, PhysicalKey::kKeypad2, PhysicalKey::kKeypad3,
+      PhysicalKey::kKeypad4, PhysicalKey::kKeypad5, PhysicalKey::kKeypad6,
+      PhysicalKey::kKeypad7, PhysicalKey::kKeypad8, PhysicalKey::kKeypad9,
+  };
+  if (key >= 'a' && key <= 'z') {
+    return kLetters[key - 'a'];
+  }
+  if (key >= 'A' && key <= 'Z') {
+    return kLetters[key - 'A'];
+  }
+  if (key >= '1' && key <= '9') {
+    return kDigits[key - '1'];
+  }
+  if (key == '0') return PhysicalKey::kDigit0;
+  switch (key) {
+    case '-': case '_': return PhysicalKey::kMinus;
+    case '=': case '+': return PhysicalKey::kEqual;
+    case '[': case '{': return PhysicalKey::kLeftBracket;
+    case ']': case '}': return PhysicalKey::kRightBracket;
+    case '\\': case '|': return PhysicalKey::kBackslash;
+    case ';': case ':': return PhysicalKey::kSemicolon;
+    case '\'': case '"': return PhysicalKey::kApostrophe;
+    case '`': case '~': return PhysicalKey::kGrave;
+    case ',': case '<': return PhysicalKey::kComma;
+    case '.': case '>': return PhysicalKey::kPeriod;
+    case '/': case '?': return PhysicalKey::kSlash;
+    default: break;
+  }
+  if (key >= FL_KP + '1' && key <= FL_KP + '9') {
+    return kKeypadDigits[key - (FL_KP + '1')];
+  }
+  if (key == FL_KP + '0') return PhysicalKey::kKeypad0;
+  switch (key) {
+    case FL_Enter: return PhysicalKey::kEnter;
+    case FL_KP_Enter: return PhysicalKey::kKeypadEnter;
+    case FL_Escape: return PhysicalKey::kEscape;
+    case FL_BackSpace: return PhysicalKey::kBackspace;
+    case FL_Tab: return PhysicalKey::kTab;
+    case ' ': return PhysicalKey::kSpace;
+    case FL_Delete: return PhysicalKey::kDelete;
+    case FL_Home: return PhysicalKey::kHome;
+    case FL_Page_Up: return PhysicalKey::kPageUp;
+    case FL_End: return PhysicalKey::kEnd;
+    case FL_Page_Down: return PhysicalKey::kPageDown;
+    case FL_Right: return PhysicalKey::kRight;
+    case FL_Left: return PhysicalKey::kLeft;
+    case FL_Down: return PhysicalKey::kDown;
+    case FL_Up: return PhysicalKey::kUp;
+    case FL_Shift_L: return PhysicalKey::kLeftShift;
+    case FL_Shift_R: return PhysicalKey::kRightShift;
+    case FL_Control_L: return PhysicalKey::kLeftControl;
+    case FL_Control_R: return PhysicalKey::kRightControl;
+    case FL_Alt_L: return PhysicalKey::kLeftAlt;
+    case FL_Alt_R: return PhysicalKey::kRightAlt;
+    case FL_Meta_L: return PhysicalKey::kLeftMeta;
+    case FL_Meta_R: return PhysicalKey::kRightMeta;
+    default: return PhysicalKey::kNone;
   }
 }
 
