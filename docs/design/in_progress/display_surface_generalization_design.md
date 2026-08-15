@@ -1,5 +1,14 @@
 # Roo Windows display runtime and cross-application input design
 
+## Status
+
+In progress. Phases 1–5 and Phase 6a–6b are implemented: display-local state,
+task extraction, optional navigation, shared scheduling, physical-key identity,
+and readiness-driven application-owned physical routing. Phase 6c–6e semantic
+text input, Phase 7 modal hosting, and Phase 8 migration and cost audit remain
+proposed. The ticker still has its 20 ms fallback until the later event-driven
+input phases provide explicit touch, gesture, paint, and animation wakeups.
+
 ## Objective
 
 Refactor the single-display Roo Windows runtime into explicit `Application`,
@@ -500,7 +509,7 @@ switching, and cross-thread delivery is separate future work.
 
 The complete decisions are split across the
 [physical-key event](../implemented/display_physical_key_event_design.md),
-[application input routing](../proposed/display_input_routing_design.md), and
+[application input routing](../implemented/display_input_routing_design.md), and
 [semantic text-input](../proposed/display_semantic_text_input_design.md)
 designs.
 
@@ -791,7 +800,7 @@ Validation:
 
 Proposed commit: `feat: support shared-scheduler applications`
 
-The [Phase 6 input design](../proposed/display_key_event_bindings_design.md)
+The [Phase 6 input design](display_key_event_bindings_design.md)
 splits this runtime phase into five reviewable delivery increments.
 
 ### Completed Phase 6a: preserve physical switch identity
@@ -803,14 +812,17 @@ and FLTK-adapter tests cover the landed behavior.
 Landed commit: `d23a103` (`Implemented physical key event support in
 lib/roo_windows.`)
 
-### Phase 6b: route and wake physical key sources
+### Completed Phase 6b: route and wake physical key sources
 
-Add producer-owned source connections, the application input router,
+Added producer-owned source connections, the application input router,
 quiescing readiness, and FLTK adoption of the shared `HostEventEndpoint`
-gateway. Validate route and source lifetime, bounded draining, application
-isolation, host-thread handoff, and warmed allocation.
+gateway. Focused route and source-lifetime, bounded-drain, application-
+isolation, host-thread-handoff, and warmed-allocation coverage validates the
+delivery.
 
-Proposed commit: `feat: route and wake physical key sources`
+The coalescing ticker remains backed by the 20 ms fallback until the remaining
+event-driven input phases make touch, gesture, paint, and animation wakeups
+explicit.
 
 ### Phase 6c: add application-scoped semantic text input
 

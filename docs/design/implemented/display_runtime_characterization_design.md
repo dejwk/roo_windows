@@ -184,8 +184,8 @@ precedence and verifies that only one visible layer changes.
 
 The keyboard cases deliberately exercise the full existing `KeyEvent` model,
 not only the software keyboard's current rune/Enter/delete listener. This
-baseline protects directional navigation and generic widget activation when
-Phase 6 later connects push-style producers across applications.
+baseline protects directional navigation and generic widget activation as
+Phase 6 connects push-style producers across applications.
 
 The software-keyboard cases separately record the current editor coordination:
 starting another edit finishes the previous target without confirmation, Enter

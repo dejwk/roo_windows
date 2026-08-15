@@ -1,5 +1,14 @@
 # Event-Driven Input Notification and Application Ticker Wakeup Design
 
+## Status
+
+In progress. Phases 1 and 2 are implemented: `ApplicationTicker` coalesces
+requests while retaining the 20 ms fallback, and physical key sources wake the
+application through producer-owned readiness handlers and the application input
+router. FLTK crosses from its native event thread through `roo_testing`'s
+`HostEventEndpoint`. Phases 3–7—touch acquisition, gesture, paint, and
+animation deadlines, then removal of the fallback—remain proposed.
+
 ## Objective
 
 Make an idle application ticker dormant while preserving bounded input,
@@ -25,10 +34,9 @@ had an explicit wakeup.
 Input storage already exists at its acquisition boundaries:
 
 - each [`KeySource`](../../../src/roo_windows/core/key_source.h) retains its
-  bounded event storage; the temporary implementation drains one attached
-  source per task, while the final
-  [application input router](display_input_routing_design.md) drains every
-  connected source with the same four-batch allowance; and
+  bounded event storage; the implemented
+  [application input router](../implemented/display_input_routing_design.md)
+  drains every connected source with the same four-batch allowance; and
 - [`TouchSensor`](../../../src/roo_windows/core/touch_sensor.h) stores a fixed
   ring of synthesized touch events, which
   [`GestureDetector`](../../../src/roo_windows/core/gesture_detector.h) drains
@@ -56,10 +64,10 @@ An FLTK emulator callback has a stricter boundary: its native host pthread is
 neither a FreeRTOS task nor a simulated interrupt. It cannot safely invoke a
 readiness binding that enters `roo_threads` or the scheduler. `roo_testing` now
 provides `HostEventEndpoint`, which transfers readiness through the simulated
-tick to a shared FreeRTOS delivery task. Phase 2 adopts the gateway as defined
-by the [physical input routing design](display_input_routing_design.md). The
-[native-host event injection design](../in_progress/display_emulator_host_event_injection_design.md)
-records the implemented gateway and remaining Roo Windows migration.
+tick to a shared FreeRTOS delivery task. The completed Phase 2 uses the gateway
+as defined by the [physical input routing design](../implemented/display_input_routing_design.md).
+The [native-host event injection design](../implemented/display_emulator_host_event_injection_design.md)
+records the completed gateway and Roo Windows migration.
 
 Terms shared with other Roo Windows designs retain their meanings from the
 [design glossary](../glossary.md).
@@ -235,13 +243,13 @@ foreign host producer: it writes a fixed SPSC queue and atomic readiness flag,
 then calls `HostEventEndpoint::notifyFromHost()`. The shared gateway task
 invokes `notifyReady()` after the simulated tick observes that flag. The FLTK
 pthread never enters this callback or any FreeRTOS-backed handler mutex. The
-[native-host event injection design](../in_progress/display_emulator_host_event_injection_design.md)
+[native-host event injection design](../implemented/display_emulator_host_event_injection_design.md)
 defines that `roo_testing` boundary without changing this readiness contract.
 
 ### Application-owned key routing
 
 The
-[application-owned physical input routing design](display_input_routing_design.md)
+[application-owned physical input routing design](../implemented/display_input_routing_design.md)
 delivers the key-readiness portion of this proposal. Connecting a `KeySource`
 registers it with the destination application's input router, which installs a
 handler that calls the application's ticker. Disconnecting first clears and
@@ -524,12 +532,13 @@ and the
 Each phase is one commit and retains the 20 ms application fallback until
 Phase 7.
 
-### Phase 1: add the coalescing application ticker
+### Completed Phase 1: add the coalescing application ticker
 
-Replace `SingletonTask` with the synchronized earliest-deadline ticker while
+Replaced `SingletonTask` with the synchronized earliest-deadline ticker while
 continuing to request the 20 ms fallback at the end of every clean dispatch.
-Add deterministic concurrent-request, earlier-deadline, stale-identifier,
-during-dispatch, stop, allocation, and size-probe coverage.
+Focused deterministic coverage exercises concurrent requests, earlier
+deadlines, stale identifiers, requests during dispatch, stopping, allocation,
+and the size probe.
 
 Focused validation:
 
@@ -539,7 +548,7 @@ bazel test //:application_test //:shared_scheduler_drive_test \
 bazel build //:display_runtime_size_probe
 ```
 
-Proposed commit message:
+Delivered change:
 
 > Event-driven input Phase 1 adds the coalescing application ticker.
 >
@@ -547,19 +556,17 @@ Proposed commit message:
 > specified by `display_event_driven_input_design.md`, retain the periodic
 > fallback, and cover request races, stop behavior, allocation, and RAM.
 
-### Phase 2: route and wake physical key sources
+### Completed Phase 2: route and wake physical key sources
 
-Implement the
-[application-owned physical input routing design](display_input_routing_design.md):
-replace temporary task attachment with producer-owned connections and an
-application router, add base-owned `KeySource` readiness, and update every
-production, fake, and test source to report queue state and call
-`notifyReady()`. For FLTK, add the fixed SPSC queue and `HostEventEndpoint`
-adoption from the routing design, and move dispatcher installation before the
-FLTK event loop. Keep the fallback. Test nonempty installation, post-unlock
-invocation, removal quiescence, destruction, independent-source routing,
-full-budget follow-up, application isolation, warmed allocation, one-tick host
-handoff, and a routed callback that successfully uses a FreeRTOS semaphore.
+Implemented the [application-owned physical input routing design](../implemented/display_input_routing_design.md):
+temporary task attachment is replaced with producer-owned connections and an
+application router, and base-owned `KeySource` readiness reports queue state
+and calls `notifyReady()`. FLTK uses the fixed SPSC queue and
+`HostEventEndpoint`, with dispatcher installation before the event loop. The
+fallback remains. Tests cover nonempty installation, post-unlock invocation,
+removal quiescence, destruction, independent-source routing, full-budget
+follow-up, application isolation, warmed allocation, one-tick host handoff,
+and a routed callback that successfully uses a FreeRTOS semaphore.
 
 Focused validation:
 
@@ -567,7 +574,7 @@ Focused validation:
 bazel test //:key_source_test //:task_test //:shared_scheduler_drive_test
 ```
 
-Proposed commit message:
+Delivered change:
 
 > Event-driven input Phase 2 routes and wakes physical key sources.
 >
@@ -725,10 +732,9 @@ Scheduler and mutex operations are bounded framework operations, not hard
 real-time guarantees. A slow task or display operation on a shared scheduler
 can still delay an eligible application.
 
-Phase 2 depends on the locally overridden `roo_testing` module until the
-version containing `HostEventEndpoint` is released. The override is an
-integration measure only; the runtime design directly uses the process-wide
-gateway and contains no per-source polling task.
+Phase 2 uses the published `roo_testing` 1.3.7 module and its `roo_io` 2.2.5
+dependency changes; no local module override is required. The runtime directly
+uses the process-wide gateway and contains no per-source polling task.
 
 ### Rejected Alternatives
 

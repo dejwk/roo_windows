@@ -1,5 +1,12 @@
 # Emulator Native-Host Event Injection Design
 
+## Status
+
+Implemented. `roo_testing` provides the fixed-capacity host-event gateway, and
+Roo Windows uses it to hand FLTK key readiness from the native event thread to
+the FreeRTOS application context. The published `roo_testing` 1.3.7 and
+`roo_io` 2.2.5 modules supply this without local module overrides.
+
 ## Objective
 
 Wake emulated FreeRTOS work from native host event threads without invoking
@@ -30,12 +37,12 @@ including their `FromISR` variants. The
 creates one controlled pthread per FreeRTOS task, while
 [FLTK assigns event handling to its GUI thread](https://www.fltk.org/doc-1.3/advanced.html).
 
-The current `FltkKeySource` avoids that entry by putting normalized events in a
-bounded host queue. The application later polls that queue on its FreeRTOS UI
-task. The host event gateway described below is implemented in `roo_testing`
-commit `e0a1398`. The
-[physical input routing design](../proposed/display_input_routing_design.md)
-adopts it directly when application-owned readiness lands.
+`FltkKeySource` puts normalized events in a bounded host queue and hands only
+readiness to the gateway. The endpoint handler runs in a FreeRTOS task and
+notifies the application-owned input router, which drains the queue on the
+application UI task. The host event gateway was implemented in `roo_testing`
+commit `e0a1398`; the [physical input routing design](../implemented/display_input_routing_design.md)
+records the completed Roo Windows adoption.
 
 ## Requirements
 
@@ -250,14 +257,13 @@ bazel test //test:host_event_gateway_test \
 Landed commit: `e0a1398` (`Implemented the 'host event endpoint' for delivering
 notifications from external emulation host to the FreeRTOS environment.`)
 
-### Phase 2: migrate FLTK key readiness to the gateway
+### Completed Phase 2: migrate FLTK key readiness to the gateway
 
-Replace `FltkKeySource` application polling with `HostEventEndpoint`, use a
-single-producer/single-consumer atomic ring, and move dispatcher setup out
-of FreeRTOS-side draining. Validate dormant-application wakeup, key ordering and
-overflow, source destruction, and a widget callback that successfully uses a
-FreeRTOS semaphore from the application UI task. Update the routing and
-event-driven design status in the same commit.
+Replaced `FltkKeySource` application polling with `HostEventEndpoint`, used a
+single-producer/single-consumer atomic ring, and moved dispatcher setup out of
+FreeRTOS-side draining. Roo Windows validation covers dormant-application
+wakeup, key ordering and overflow, source destruction, and a widget callback
+that successfully uses a FreeRTOS semaphore from the application UI task.
 
 Focused validation from the `roo_windows` workspace:
 
@@ -266,7 +272,7 @@ bazel test //fake:fltk_key_source_test //:key_source_test \
   //:shared_scheduler_drive_test
 ```
 
-Proposed commit message:
+Delivered change:
 
 > Bridge FLTK input through emulated FreeRTOS.
 >

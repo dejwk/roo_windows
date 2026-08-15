@@ -613,8 +613,9 @@ general bindings add further state.
 
 The legacy software keyboard has one fixed compatibility destination during
 this phase. Other tasks remain fully operable through their attached physical
-key sources. Phase 6 removes this temporary limitation with explicit
-full-`KeyEvent` bindings.
+key sources. The completed physical-routing portion of Phase 6 replaces those
+temporary attachments with application-owned routes; semantic software text
+input remains separate work.
 
 ### Rejected Alternatives
 
@@ -644,11 +645,10 @@ keypads.
 
 #### Introduce final multi-source routing now
 
-Rejected because Phase 3 needs one polled source per task, while Phase 6 also
-introduces application-owned routing, event-driven readiness, cross-application
-thread affinity, and software-keyboard migration. The temporary endpoint
-pointer preserves explicit routing until Phase 6 replaces task attachment with
-the application-owned router.
+Rejected because Phase 3 needed one polled source per task before Phase 6 could
+introduce application-owned routing and event-driven readiness. The temporary
+endpoint pointer preserved explicit routing until the completed physical-routing
+increment replaced task attachment with the application-owned router.
 
 #### Remove `Task` and `Activity` in this phase
 
@@ -664,8 +664,8 @@ makes attachment authoritative and recovers that storage.
 
 ## Future Work
 
-Phase 4 replaces the required activity adapter with direct content and optional
-navigation. Phase 5 adds bounded shared-scheduler driving. Phase 6 introduces
-lifetime-safe multi-source and push-event bindings and migrates the software
-keyboard to full `KeyEvent` delivery. Phase 7 assigns modal presentation to an
-owning task.
+Phase 4 replaced the required activity adapter with direct content and optional
+navigation. Phase 5 added bounded shared-scheduler driving. Phase 6 physical
+routing now provides lifetime-safe producer-owned push-event bindings; semantic
+software text input remains a separate Phase 6 increment. Phase 7 will assign
+modal presentation to an owning task.

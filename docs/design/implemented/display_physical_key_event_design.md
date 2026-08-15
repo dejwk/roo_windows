@@ -105,8 +105,8 @@ ordering rule rather than a physical-key-only API.
 The task retains one pending fallback activation containing the focused widget
 and `PhysicalKey`. A new unhandled Enter or Space Down cancels the previous
 pressed visual before replacing it. An Up completes the click only when both
-values match. Detaching the task's physical source cancels the pending
-activation first; the proposed application input router preserves this order.
+values match. Disconnecting the task's routed physical source cancels the
+pending activation first; the application input router preserves this order.
 
 ## Proposed API
 

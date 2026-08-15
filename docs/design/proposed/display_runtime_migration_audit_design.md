@@ -8,7 +8,9 @@ recording final behavior, size, allocation, and timing results.
 
 This is Phase 8 of the
 [display runtime and cross-application input design](../in_progress/display_surface_generalization_design.md).
-It starts only after the standalone Phase 2–7 designs are implemented.
+It starts only after the remaining standalone Phase 6 semantic-text-input and
+Phase 7 designs are implemented. Phases 2–5 and Phase 6 physical routing are
+already complete.
 
 ## Motivation
 
@@ -25,8 +27,7 @@ input routing, semantic text input, and explicit modal coverage.
 Phase 4 removes legacy `Task`/`Activity` navigation after migrating it to
 direct content and `Destination`. The compatibility surfaces that remain for
 Phase 8 include application-level display forwarding, application-global
-editor access, direct source attachment, `KeyboardListener`, and
-application-level dialog routing.
+editor access, `KeyboardListener`, and application-level dialog routing.
 
 The [Phase 1 baseline](../../display_runtime_target_baseline.md) defines the
 representative ESP32-S3 build, object-size probe, linked sections, and allocation

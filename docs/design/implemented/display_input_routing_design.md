@@ -1,5 +1,14 @@
 # Application-Owned Physical Input Routing Design
 
+## Status
+
+Implemented. `KeySource` owns one destination connection and a quiescing
+readiness handler; the private application router owns incoming routes and
+bounded draining. `ApplicationTicker` coalesces readiness with its existing
+20 ms fallback, and `FltkKeySource` uses the published `roo_testing`
+`HostEventEndpoint` plus a fixed SPSC event ring. Touch, gesture, paint, and
+animation wakeups remain follow-on work in the event-driven input design.
+
 ## Objective
 
 Route ready physical key sources to tasks through the destination application
@@ -17,22 +26,23 @@ already meet at the application ticker.
 
 A [`KeySource`](../../../src/roo_windows/core/key_source.h) owns or borrows its
 bounded event queue and exposes `drain()`. The
-[event-driven input design](display_event_driven_input_design.md) adds a
+[event-driven input design](../in_progress/display_event_driven_input_design.md) adds a
 thread-safe, quiescing readiness handler that wakes a destination application
 after a producer commits input.
 
-The current temporary API attaches at most one source directly to one task.
-The application ticker enumerates tasks, and each task polls its attached
-source. Tasks are constructed and owned by `Application`; callers receive
-borrowed references and do not destroy tasks independently.
+The former temporary API attached at most one source directly to one task and
+had the application ticker poll task attachments. The implemented route keeps
+tasks free of producer registration and polling state. Tasks are constructed
+and owned by `Application`; callers receive borrowed references and do not
+destroy tasks independently.
 
 Embedded producers and FreeRTOS-owned emulator workers execute in a supported
 producer-task context. The FLTK callback thread does not: it is a native host
 pthread outside the simulated kernel. `roo_testing` now supplies the
 `HostEventEndpoint` gateway that crosses this boundary through its simulated
 tick and a FreeRTOS delivery task. The
-[native-host event injection design](../in_progress/display_emulator_host_event_injection_design.md)
-documents that implemented facility and the remaining Roo Windows adoption.
+[native-host event injection design](../implemented/display_emulator_host_event_injection_design.md)
+documents the implemented facility and its Roo Windows adoption.
 
 ## Requirements
 
@@ -214,7 +224,7 @@ pointer is removed without replacement, so the target task size cannot grow.
 emulation. The process-wide endpoint table and 4096-byte gateway task stack are
 owned by `roo_testing`; none of this state enters embedded builds.
 
-## Proposed API
+## API
 
 ```cpp
 class KeySource {
@@ -246,26 +256,25 @@ class KeySource {
 `ApplicationInputRouter` remains private. Final task APIs contain no
 `attachKeySource()`, `detachKeySource()`, or drain operation.
 
-## Implementation Plan
+## Delivered implementation
 
 Implementation follows the
 [embedded C++ guidance](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md).
-The coalescing ticker from event-driven input Phase 1 lands first.
+The coalescing ticker from event-driven input Phase 1 landed first.
 
-### Step 1: route and wake physical key sources
+### Completed: route and wake physical key sources
 
-Add `connect()`, `disconnect()`, and the application router. Replace temporary
-task attachment and move bounded enumeration into the router while retaining
-the periodic fallback. Add the quiescing readiness handler to `KeySource`,
-update every source to report queue state and notification, and install handlers
-from the application router. For FLTK emulation, replace the mutex queue with
-the 32-entry SPSC ring, connect a `HostEventEndpoint`, and install the FLTK
-dispatcher before its event loop starts. Validate duplicate source and
-destination rejection, independent routes, post-unlock and nonempty
-notification, producer races, both destruction orders, per-source limits, task
-size, warmed allocation, stopped-ticker rejection, full-budget immediate
-follow-up, one-tick FLTK handoff, and a routed callback that uses a FreeRTOS
-semaphore from the application UI task.
+Added `connect()`, `disconnect()`, and the application router, replacing task
+attachment with bounded router enumeration while retaining the periodic
+fallback. `KeySource` now owns the quiescing readiness handler and reports
+queue state; the router installs handlers during its lifecycle. FLTK emulation
+uses the 32-entry SPSC ring, connects a `HostEventEndpoint`, and installs its
+dispatcher before the event loop starts. Focused coverage validates duplicate
+source and destination rejection, independent routes, post-unlock and
+nonempty notification, producer races, both destruction orders, per-source
+limits, task size, warmed allocation, stopped-ticker rejection, full-budget
+immediate follow-up, one-tick FLTK handoff, and a routed callback that uses a
+FreeRTOS semaphore from the application UI task.
 
 Focused validation:
 
@@ -275,7 +284,7 @@ bazel test //:key_source_test //:task_test \
 bazel build //:display_runtime_size_probe
 ```
 
-Proposed commit message:
+Delivered change:
 
 > Route and wake physical key sources through applications.
 >
@@ -283,7 +292,7 @@ Proposed commit message:
 > readiness, and FLTK host-event gateway adoption from
 > `display_input_routing_design.md`.
 
-## Testing Plan
+## Validation
 
 Focused source and router tests cover connection, affinity, notification,
 draining, reentrancy preconditions, destruction, and allocation. Shared-

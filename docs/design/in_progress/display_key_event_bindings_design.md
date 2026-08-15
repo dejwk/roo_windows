@@ -1,5 +1,13 @@
 # Display runtime Phase 6 input design
 
+## Status
+
+In progress. Physical `KeyEvent` identity and application-owned physical input
+routing are implemented, including `KeySource` readiness, the private
+application router, the coalescing ticker, and the FLTK host-event handoff.
+Application-scoped semantic text input and software-keyboard migration remain
+proposed.
+
 ## Objective
 
 Complete the input architecture around the landed physical-key identity by
@@ -20,10 +28,10 @@ is implemented. `KeyEvent` now preserves physical HID identity, focused
 widgets receive complete events before task shortcuts, and fallback activation
 pairs Down and Up by physical switch.
 
-The runtime is otherwise still at the transitional boundary: a `Task` owns its
-temporary `KeySource` attachment and the application polls it, while the
-built-in software keyboard still uses `KeyboardListener`. Application-owned
-physical routing and semantic software text input remain proposed below.
+The temporary task-owned `KeySource` attachment is gone: sources now connect to
+their destination application's input router and wake it through readiness.
+The built-in software keyboard still uses `KeyboardListener`, so semantic
+software text input remains proposed below.
 
 Phases 1–5 of the
 [display runtime design](../in_progress/display_surface_generalization_design.md)
@@ -60,10 +68,9 @@ boundaries, not the number or order of implementation commits:
 1. [Physical key events](../implemented/display_physical_key_event_design.md)
    add normalized switch identity and define widget-before-task dispatch. This
    area is complete.
-2. [Physical input routing](display_input_routing_design.md) moves source
+2. [Physical input routing](../implemented/display_input_routing_design.md) moves source
    registration, readiness, bounded draining, and teardown into an
-   application-owned input router. This area is one remaining delivery
-   increment.
+   application-owned input router. This area is complete.
 3. [Semantic text input](display_semantic_text_input_design.md) gives software
    keyboards direct editor operations through a stable application endpoint.
    This area is split into three remaining increments: introduce the endpoint,
@@ -75,7 +82,7 @@ The mapping is therefore:
 | Architectural area | Requirements | Delivery increments | Status |
 | --- | --- | --- | --- |
 | Physical key events | 1, 3, 5–6 | Preserve and dispatch physical identity | Complete |
-| Physical input routing | 2–3, 5–6 | Route and wake physical sources | Remaining |
+| Physical input routing | 2–3, 5–6 | Route and wake physical sources | Complete |
 | Semantic text input | 1–2, 4–6 | Endpoint; keyboard conversion; integration | Remaining |
 
 ```text
@@ -96,13 +103,10 @@ synchronously on the common UI thread.
 
 ### Dependency order
 
-Physical-key representation has landed independently of readiness. Before the
-remaining physical-routing increment, Phase 1 of the
-[event-driven input design](display_event_driven_input_design.md) must replace
-the current periodic scheduler task with the coalescing application ticker.
-The application input router and key readiness then land together, directly
-replacing temporary task-owned polling rather than adding another transitional
-attachment API.
+Physical-key representation, the coalescing ticker, and physical routing have
+landed. The [event-driven input design](display_event_driven_input_design.md)
+still retains the periodic fallback until its later touch, gesture, paint, and
+animation phases are complete.
 
 Semantic text input does not depend on physical routing, but its three
 increments are ordered internally: the stable application endpoint must exist
@@ -143,10 +147,10 @@ Implementation follows the
 [embedded C++ guidance](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md).
 
 The plan below enumerates delivery increments, whereas the Design Overview
-enumerates architectural areas. One area is complete, physical routing maps to
-one remaining increment, and semantic text input maps to three. The
-event-driven ticker prerequisite is tracked by the event-driven input design
-and is not an additional Phase 6 increment.
+enumerates architectural areas. Two areas are complete, and semantic text input
+maps to the three remaining increments. The event-driven ticker prerequisite is
+tracked by the event-driven input design and is not an additional Phase 6
+increment.
 
 ### Completed: preserve physical switch identity
 
@@ -163,21 +167,17 @@ Landed validation:
 bazel test //:key_source_test //:task_test //fake:fltk_key_source_test
 ```
 
-### Remaining 1: route ready physical sources through applications
+### Completed: route ready physical sources through applications
 
-Prerequisite: the coalescing application ticker from event-driven input Phase 1.
-
-Implement `KeySource::connect(Task&)`, producer readiness, and the private
-application input router. Move the existing bounded drain policy from `Task`
-to the router and remove `Task::attachKeySource()`, `detachKeySource()`, and its
-source pointer in the same commit. At the end of this increment, sources wake
-only their destination application, the application owns route teardown, and
-tasks only interpret delivered key events. The periodic application fallback
-remains. FLTK emulation crosses from its native UI pthread through the
-shared `HostEventEndpoint` gateway specified by the
-[physical input routing design](display_input_routing_design.md). The separate
-[native-host event injection design](../in_progress/display_emulator_host_event_injection_design.md)
-records the landed `roo_testing` facility and its Roo Windows adoption.
+The coalescing application ticker is in place. `KeySource` provides readiness
+registration and the private application input router replaces task attachment
+and polling with source-owned `connect()`/`disconnect()` state and bounded
+per-source draining on the destination application UI thread. Source readiness
+starts and stops with the application lifecycle, and routes clear before task
+destruction. In FLTK emulation, the native event thread publishes to the SPSC
+ring and `HostEventEndpoint` calls `notifyReady()` from the gateway's FreeRTOS
+task; dispatcher installation happens before the event loop. The periodic
+application fallback remains.
 
 Focused validation:
 
@@ -186,9 +186,9 @@ bazel test //:key_source_test //:task_test \
   //:shared_scheduler_drive_test //fake:fltk_key_source_test
 ```
 
-Proposed commit: `feat: route and wake physical key sources`
+Delivered change: `feat: route and wake physical key sources`
 
-### Remaining 2: add application-scoped semantic text input
+### Remaining 1: add application-scoped semantic text input
 
 Add `ApplicationTextInput`, producer-owned `TextInputEmitter` connections, one
 active-editor registration per application, and shared editor operations. This
@@ -204,7 +204,7 @@ bazel test //:application_test //:task_test //:roo_windows_test
 
 Proposed commit: `feat: add application-scoped text input`
 
-### Remaining 3: convert the built-in keyboard
+### Remaining 2: convert the built-in keyboard
 
 Replace `KeyboardListener` with the keyboard-owned `TextInputEmitter`. Character
 and Space release commit runes, Enter performs Done, and Backspace deletes on
@@ -219,7 +219,7 @@ bazel test //:roo_windows_test //:task_test
 
 Proposed commit: `feat: emit semantic software text input`
 
-### Remaining 4: integrate visibility and cross-application use
+### Remaining 3: integrate visibility and cross-application use
 
 Connect editing-session start and completion to the standard built-in
 keyboard's show/hide policy without putting visibility in the emitter contract.
