@@ -251,6 +251,39 @@ TEST(KeySource, ReadySourceWakesItsDestinationApplication) {
   EXPECT_EQ(KeyCode::kCharacter, contents.last_key);
 }
 
+// A programmatic edit can begin while navigation has attached the new field
+// but before its first layout. The software keyboard must not displace the
+// field's physical-key focus once that layout makes the field eligible.
+TEST(KeySource, HardwareTextInputKeepsProgrammaticallyEditedFieldFocused) {
+  roo::byte raster[64 * 64 * 2] = {};
+  roo_display::OffscreenDevice<roo_display::Argb4444> device(
+      64, 64, raster, roo_display::Argb4444());
+  roo_display::Display display(device);
+  roo_scheduler::Scheduler scheduler;
+  Environment environment(scheduler);
+  NavigationHost navigation;
+  Application app(&environment, display);
+  Task& task = app.addTaskFullScreen(navigation);
+  TextFieldDestination destination(app.context(), task.textFieldEditor());
+  navigation.push(destination);
+
+  // This is the password-activity sequence: editing starts immediately after
+  // navigation, before refresh assigns the field's bounds.
+  destination.field.edit();
+  destination.field.layout(roo_windows::Rect(0, 0, 63, 31));
+  ASSERT_TRUE(destination.field.isFocused());
+
+  TextInputEmitter soft_keyboard;
+  soft_keyboard.connect(app);
+  ASSERT_TRUE(soft_keyboard.commitRune(U'S'));
+
+  EXPECT_TRUE(destination.field.onKeyEvent(
+      {KeyPhase::kDown, KeyCode::kCharacter, 0, PhysicalKey::kA, U'A'}));
+
+  EXPECT_EQ("SA", destination.field.content());
+  navigation.clear();
+}
+
 TEST(KeySource, HardwareEscapeUsesFocusedTask) {
   roo::byte raster[32 * 32 * 2] = {};
   roo_display::OffscreenDevice<roo_display::Argb4444> device(

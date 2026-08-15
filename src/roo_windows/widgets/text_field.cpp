@@ -582,7 +582,12 @@ void TextField::onFocusChanged(bool focused) {
   if (task == nullptr) return;
   TextFieldEditor& text_editor = task->textFieldEditor();
   if (focused) {
-    if (editable_) text_editor.edit(this, false);
+    // TextField::edit() may have already opened the software keyboard before
+    // this field receives its first layout bounds. Do not hide that keyboard
+    // when the deferred focus request succeeds.
+    if (editable_ && !text_editor.isEdited(this)) {
+      text_editor.edit(this, false);
+    }
   } else if (isEdited()) {
     text_editor.edit(nullptr, false);
   }
@@ -607,7 +612,20 @@ bool TextField::isEdited() const {
 
 void TextField::edit() {
   Task* task = getTask();
-  if (task != nullptr) task->textFieldEditor().edit(this);
+  if (!editable_ || task == nullptr) return;
+
+  // A pointer- or programmatically-started edit must own the task's physical
+  // keyboard focus as well as the software editor session. A just-attached
+  // field has empty bounds until its first layout, so leave the editor active
+  // in that case; onLayout() will claim focus once it becomes eligible.
+  requestFocus();
+  task->textFieldEditor().edit(this);
+}
+
+void TextField::onLayout(bool changed, const Rect& rect) {
+  (void)changed;
+  (void)rect;
+  if (isEdited() && !isFocused()) requestFocus();
 }
 
 void TextField::setEditable(bool editable) {

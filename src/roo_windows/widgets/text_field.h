@@ -322,6 +322,11 @@ class TextField : public BasicWidget {
   bool isEdited() const;
   bool isStarred() const { return starred_; }
 
+ protected:
+  /// Completes a focus request deferred until this newly attached field has
+  /// non-empty layout bounds.
+  void onLayout(bool changed, const Rect& rect) override;
+
  public:
   /// Binds this field to the shared editor and starts editing.
   void edit();
