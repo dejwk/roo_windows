@@ -8,7 +8,7 @@ Design documents are filed by implementation status:
 - `in_progress/`: a usable subset or prerequisite has landed, but part of the defined scope remains.
 - `proposed/`: none of the design's own scope is implemented. Existing prerequisites may still be available.
 
-Status was audited against the source tree and tests on 2026-08-11. “Dependency status” distinguishes implemented prerequisites from proposed or partially implemented work; a design can be proposed even when all of its prerequisites are available.
+Status was audited against the source tree and tests on 2026-08-15. “Dependency status” distinguishes implemented prerequisites from proposed or partially implemented work; a design can be proposed even when all of its prerequisites are available.
 
 ## Implemented
 
@@ -34,6 +34,7 @@ Status was audited against the source tree and tests on 2026-08-11. “Dependenc
 | Navigation bar | The compact and medium destination layouts, selection/reselection hooks, badges, keyboard traversal, focused tests/goldens, and example are implemented. |
 | Navigation rail | Collapsed and expanded destinations, semantic selection and reselection, header and group layout, badges, RTL behavior, migrated `NavigationPanel` coverage, and the emulator-backed example are implemented. |
 | Non-touch input | Keyboard acquisition, focused-widget lifecycle, click/value/scroll control interaction, structured list/menu/tab/rail navigation, and hardware text entry are implemented. Active intrusive focus-scope entry/exit, already specified by that design, is tracked as a transient-host prerequisite. |
+| Physical key events | Compact HID switch identity, overlapping-key preservation, widget-first dispatch, and physical-switch-qualified fallback activation are implemented. Application-owned source readiness and routing remain proposed separately. |
 | Paint context | Clipper/overlay integration and the widget paint-hook migration are implemented. |
 | Slider | Paint context, Material 3 theme support, declarative drag ownership, lifecycle-safe terminal delivery, and transient-pin value indicators are implemented. |
 | Surface-widget refactor | The surface-ownership split is implemented; the broader visual-overflow design remains in progress. |
@@ -46,7 +47,8 @@ Status was audited against the source tree and tests on 2026-08-11. “Dependenc
 | Design | Dependency status |
 | --- | --- |
 | App bars/search surfaces | The component family and focused unit coverage are implemented; golden and Material 3 scaffold integration coverage remain. Non-touch input is implemented; scaffold, icon buttons, and text fields remain proposed. |
-| Display runtime and cross-application input | Phases 1–5 are implemented. Phases 6–8 remain proposed: physical-key events and application-owned input routing, semantic software text input, explicit modal coverage, and final migration/cost audit. |
+| Display runtime and cross-application input | Phases 1–5 and the physical-key portion of Phase 6 are implemented. Application-owned input routing, semantic software text input, explicit modal coverage, and the final migration/cost audit remain proposed. |
+| Emulator native-host event injection | The fixed endpoint table, tick handoff, and shared FreeRTOS delivery task are implemented in `roo_testing` at `e0a1398`; Roo Windows FLTK adoption remains. Local overrides in `roo_display`, `roo_windows`, and the end-to-end workspace provide the implementation until versioned `roo_testing` and `roo_io` releases are available. |
 | Material 3 lists | Phases 1 through 11 are implemented, including text policy, convenience and control rows, navigation/selection behavior, and expandable content; Phase 12 menu reuse remains. Badge and paint-context dependencies are implemented. |
 | Text system | `TextBlock` wrapping, justification, max-lines, ellipsis, caching, and golden coverage are implemented; shared rich paragraph layout and `RichTextBlock` remain. |
 | Transient presentation pins | The shared layer-scoped host and slider/range-slider adoption are implemented; keyboard-highlighter adoption remains. Visual overflow prerequisites are in progress. |
@@ -59,10 +61,9 @@ Status was audited against the source tree and tests on 2026-08-11. “Dependenc
 | --- | --- |
 | Button groups | Buttons are implemented; icon buttons are proposed, and no group implementation exists. |
 | Date pickers | Buttons and shared back behavior are implemented; text fields, dialogs, and icon buttons are proposed. |
-| Event-driven input notification and ticker wakeup | Phase 5 is implemented; the coalescing ticker, source readiness handlers, dormant tickers, input-poll separation, and deadline-based wakeups are not implemented. Physical key readiness lands with application-owned routing. |
-| Display runtime Phase 6 input overview | Phase 5 is implemented; the split physical-event, physical-routing, and semantic-text-input sub-designs remain proposed. |
-| Physical key events | Non-touch input is implemented; normalized switch identity, overlapping-key preservation, widget-first dispatch, and switch-qualified fallback activation are proposed. |
-| Application-owned physical input routing | Shared-scheduler driving is implemented; the event-driven coalescing ticker and source readiness are proposed, as are producer-owned connections and application router ownership. |
+| Event-driven input notification and ticker wakeup | The shared-scheduler Phase 5 prerequisite is implemented. This design's seven phases remain proposed: coalescing ticker, source readiness, touch-poll separation, gesture and animation deadlines, paint wakeup, and final dormancy. |
+| Display runtime Phase 6 input overview | Phase 5 and physical key events are implemented; application-owned physical routing and semantic text input remain proposed. |
+| Application-owned physical input routing | Shared-scheduler driving, physical key events, and the native-host gateway are implemented. The coalescing ticker, producer-owned connections, application router, source readiness, and FLTK gateway adoption are proposed. |
 | Semantic software text input | Task-local editors and the current software keyboard are implemented; application-scoped active-editor selection, producer-owned emitter connections, and semantic keyboard migration are proposed. |
 | Display runtime Phase 7 modal hosting | Phase 6 is proposed; task/display coverage policies, barriers, focus restoration, admission, and modal Back ordering are not implemented. |
 | Display runtime Phase 8 migration and cost audit | Phases 2–5 are implemented; Phase 6 and Phase 7 remain proposed, as do final migration documentation, resource audit, and hardware validation. |

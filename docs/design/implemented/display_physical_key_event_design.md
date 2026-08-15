@@ -54,9 +54,8 @@ that state the **pending fallback activation**.
 `PhysicalKey` is a one-byte USB HID Keyboard/Keypad usage identity. It occupies
 the existing padding before `KeyEvent::rune`, so the event remains eight bytes.
 
-The existing `Widget::onKeyEvent()` becomes the single widget entry point for
-the complete event. Task dispatch changes order rather than adding a second
-virtual hook:
+`Widget::onKeyEvent()` is the single widget entry point for the complete event.
+Task dispatch changes order rather than adding a second virtual hook:
 
 ```text
 KeyEvent
@@ -68,9 +67,9 @@ KeyEvent
    `--> Enter-or-Space fallback activation
 ```
 
-The application input router allows at most one source per task and cancels
-fallback activation when that source disconnects. The task therefore needs no
-source or route identity in its pending state.
+The source-detachment path cancels fallback activation before a task loses its
+sole physical source. The task therefore needs no source or route identity in
+its pending state.
 
 ## Design Details
 
@@ -88,7 +87,7 @@ Repeat.
 
 This is a simple hardware layout result, not an IME protocol. Composition,
 multi-scalar commits, candidates, and surrounding-text operations use the
-[semantic text-input path](display_semantic_text_input_design.md).
+[semantic text-input path](../proposed/display_semantic_text_input_design.md).
 
 ### Widget-first dispatch
 
@@ -106,8 +105,8 @@ ordering rule rather than a physical-key-only API.
 The task retains one pending fallback activation containing the focused widget
 and `PhysicalKey`. A new unhandled Enter or Space Down cancels the previous
 pressed visual before replacing it. An Up completes the click only when both
-values match. The input router cancels the task's pending activation before its
-only physical source disconnects.
+values match. Detaching the task's physical source cancels the pending
+activation first; the proposed application input router preserves this order.
 
 ## Proposed API
 
@@ -134,16 +133,23 @@ dispatch receives no binding or source object.
 Implementation follows the
 [embedded C++ guidance](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md).
 
-### Step 1: preserve and dispatch physical identity
+### Completed: preserve and dispatch physical identity
 
-Add `PhysicalKey`, update production, fake, and test adapters, and preserve
-overlapping transition sequences. Reorder the existing `onKeyEvent()` path
-ahead of task semantics and qualify fallback activation with switch identity.
-Validate ABI size, adapter rollover, character payloads, widget consumption,
-pressed-state replacement, and source-disconnect, focus, and subtree
-cancellation.
+Added `PhysicalKey`, updated production, fake, and test adapters, preserved
+overlapping transition sequences, reordered the existing `onKeyEvent()` path
+ahead of task semantics, and qualified fallback activation with switch
+identity. Validation covers ABI size, adapter rollover, character payloads,
+widget consumption, pressed-state replacement, and source-disconnect, focus,
+and subtree cancellation.
 
-Proposed commit: `feat: preserve and dispatch physical key identity`
+Landed validation:
+
+```sh
+bazel test //:key_source_test //:task_test //fake:fltk_key_source_test
+```
+
+Landed commit: `d23a103` (`Implemented physical key event support in
+lib/roo_windows.`)
 
 ## Testing Plan
 

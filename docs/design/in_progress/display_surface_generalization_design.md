@@ -499,7 +499,7 @@ requests, composition, selection queries, candidate presentation, input-method
 switching, and cross-thread delivery is separate future work.
 
 The complete decisions are split across the
-[physical-key event](../proposed/display_physical_key_event_design.md),
+[physical-key event](../implemented/display_physical_key_event_design.md),
 [application input routing](../proposed/display_input_routing_design.md), and
 [semantic text-input](../proposed/display_semantic_text_input_design.md)
 designs.
@@ -791,31 +791,51 @@ Validation:
 
 Proposed commit: `feat: support shared-scheduler applications`
 
-### Phase 6: add physical routing and semantic text input
+The [Phase 6 input design](../proposed/display_key_event_bindings_design.md)
+splits this runtime phase into five reviewable delivery increments.
 
-Implement the
-[Phase 6 input design](../proposed/display_key_event_bindings_design.md):
+### Completed Phase 6a: preserve physical switch identity
 
-- add physical identity and application-owned routing for polled `KeySource`
-  objects;
-- add application-scoped semantic text-input emitters for software keyboards;
-- migrate the software keyboard and text-field editor without synthesizing key
-  phases; and
-- add same-display and cross-application examples.
+Added compact HID identity, overlapping transition preservation, widget-first
+dispatch, and switch-qualified fallback activation. Focused key-source, task,
+and FLTK-adapter tests cover the landed behavior.
 
-Validation:
+Landed commit: `d23a103` (`Implemented physical key event support in
+lib/roo_windows.`)
 
-- test the standard software-keyboard convenience path uses separate tasks;
-- test same- and cross-display delivery;
-- test physical identity, overlapping Down/Up/Repeat, modifiers, navigation,
-  Back, Escape, character input, Backspace, and Delete;
-- test semantic rune commit, repeated backward deletion, Done, and inactive
-  editor behavior without widget key dispatch;
-- destroy sources, emitters, and applications in every relevant order;
-- test connected, unconnected, and wrong-thread behavior; and
-- verify dispatch does not allocate or recursively tick the target.
+### Phase 6b: route and wake physical key sources
 
-Proposed commit: `feat: route physical and software input`
+Add producer-owned source connections, the application input router,
+quiescing readiness, and FLTK adoption of the shared `HostEventEndpoint`
+gateway. Validate route and source lifetime, bounded draining, application
+isolation, host-thread handoff, and warmed allocation.
+
+Proposed commit: `feat: route and wake physical key sources`
+
+### Phase 6c: add application-scoped semantic text input
+
+Add the stable application endpoint, producer-owned emitter connection, active
+editor registration, and editor operations. Validate affinity, inactive
+results, endpoint replacement, both destruction orders, and zero routing
+allocation.
+
+Proposed commit: `feat: add application-scoped text input`
+
+### Phase 6d: convert the built-in keyboard
+
+Replace `KeyboardListener` with semantic rune, Done, and repeated Backspace
+operations. Validate release and cancellation timing, repeat bounds, and that
+software input does not enter physical key dispatch.
+
+Proposed commit: `feat: emit semantic software text input`
+
+### Phase 6e: integrate editor sessions
+
+Add keyboard visibility policy, the cross-application example, and dormant
+destination wakeup coverage. Validate same-thread cross-application delivery
+and focus preservation.
+
+Proposed commit: `feat: integrate software keyboard editor sessions`
 
 ### Phase 7: distinguish task-modal and display-modal hosts
 

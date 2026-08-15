@@ -1,17 +1,5 @@
 # Display runtime Phase 6 input design
 
-## Status
-
-The [physical key event design](display_physical_key_event_design.md) is
-implemented. `KeyEvent` now preserves physical HID identity, focused widgets
-receive complete events before task shortcuts, and fallback activation pairs
-Down and Up by physical switch.
-
-The runtime is otherwise still at the transitional boundary: a `Task` owns its
-temporary `KeySource` attachment and the application polls it, while the
-built-in software keyboard still uses `KeyboardListener`. Application-owned
-physical routing and semantic software text input remain proposed below.
-
 ## Objective
 
 Complete the input architecture around the landed physical-key identity by
@@ -26,6 +14,16 @@ but not event representation, acquisition, or delivery. Treating them as one
 binding feature obscures those boundaries and duplicates lifetime machinery.
 
 ## Background
+
+The [physical key event design](../implemented/display_physical_key_event_design.md)
+is implemented. `KeyEvent` now preserves physical HID identity, focused
+widgets receive complete events before task shortcuts, and fallback activation
+pairs Down and Up by physical switch.
+
+The runtime is otherwise still at the transitional boundary: a `Task` owns its
+temporary `KeySource` attachment and the application polls it, while the
+built-in software keyboard still uses `KeyboardListener`. Application-owned
+physical routing and semantic software text input remain proposed below.
 
 Phases 1–5 of the
 [display runtime design](../in_progress/display_surface_generalization_design.md)
@@ -59,9 +57,9 @@ before task and editor storage.
 Phase 6 has three architectural areas. This list describes responsibility
 boundaries, not the number or order of implementation commits:
 
-1. [Physical key events](display_physical_key_event_design.md) add normalized
-   switch identity and define widget-before-task dispatch. This area is
-   complete.
+1. [Physical key events](../implemented/display_physical_key_event_design.md)
+   add normalized switch identity and define widget-before-task dispatch. This
+   area is complete.
 2. [Physical input routing](display_input_routing_design.md) moves source
    registration, readiness, bounded draining, and teardown into an
    application-owned input router. This area is one remaining delivery
@@ -74,11 +72,11 @@ boundaries, not the number or order of implementation commits:
 
 The mapping is therefore:
 
-| Architectural area | Delivery increments | Status |
-| --- | --- | --- |
-| Physical key events | Preserve and dispatch physical identity | Complete |
-| Physical input routing | Route and wake physical sources | Remaining |
-| Semantic text input | Endpoint; keyboard conversion; integration | Remaining |
+| Architectural area | Requirements | Delivery increments | Status |
+| --- | --- | --- | --- |
+| Physical key events | 1, 3, 5–6 | Preserve and dispatch physical identity | Complete |
+| Physical input routing | 2–3, 5–6 | Route and wake physical sources | Remaining |
+| Semantic text input | 1–2, 4–6 | Endpoint; keyboard conversion; integration | Remaining |
 
 ```text
 KeySource queue -- readiness --> ApplicationInputRouter --> Task key dispatch
@@ -156,8 +154,14 @@ Implemented the physical-key event design, including the compact physical HID
 identity, adapter transition tracking, widget-first dispatch, physical-switch
 fallback matching, cancellation, and focused tests.
 
-Landed commit: `5ff89a2` (`Implemented physical key event support in
+Landed commit: `d23a103` (`Implemented physical key event support in
 lib/roo_windows.`)
+
+Landed validation:
+
+```sh
+bazel test //:key_source_test //:task_test //fake:fltk_key_source_test
+```
 
 ### Remaining 1: route ready physical sources through applications
 
@@ -169,7 +173,18 @@ to the router and remove `Task::attachKeySource()`, `detachKeySource()`, and its
 source pointer in the same commit. At the end of this increment, sources wake
 only their destination application, the application owns route teardown, and
 tasks only interpret delivered key events. The periodic application fallback
-remains.
+remains. FLTK emulation crosses from its native UI pthread through the
+shared `HostEventEndpoint` gateway specified by the
+[physical input routing design](display_input_routing_design.md). The separate
+[native-host event injection design](../in_progress/display_emulator_host_event_injection_design.md)
+records the landed `roo_testing` facility and its Roo Windows adoption.
+
+Focused validation:
+
+```sh
+bazel test //:key_source_test //:task_test \
+  //:shared_scheduler_drive_test //fake:fltk_key_source_test
+```
 
 Proposed commit: `feat: route and wake physical key sources`
 
@@ -181,6 +196,12 @@ increment establishes routing and lifetime behavior but does not yet convert
 the built-in keyboard, which continues using `KeyboardListener` until the next
 increment.
 
+Focused validation:
+
+```sh
+bazel test //:application_test //:task_test //:roo_windows_test
+```
+
 Proposed commit: `feat: add application-scoped text input`
 
 ### Remaining 3: convert the built-in keyboard
@@ -189,6 +210,12 @@ Replace `KeyboardListener` with the keyboard-owned `TextInputEmitter`. Character
 and Space release commit runes, Enter performs Done, and Backspace deletes on
 press and repeats while held. At the end of this increment, software keyboard
 gestures no longer synthesize or share the physical-key contract.
+
+Focused validation:
+
+```sh
+bazel test //:roo_windows_test //:task_test
+```
 
 Proposed commit: `feat: emit semantic software text input`
 
@@ -200,6 +227,13 @@ Add the two-application example and integration coverage showing that a
 keyboard owned by one application can synchronously edit the active editor in
 another application on the same UI thread. This is integration and policy
 work; it adds no new input representation.
+
+Focused validation:
+
+```sh
+bazel test //:application_test //:shared_scheduler_drive_test \
+  //:roo_windows_test
+```
 
 Proposed commit: `feat: integrate software keyboard editor sessions`
 
@@ -214,8 +248,10 @@ repainting after input.
 ## Caveats
 
 Applications using synchronous cross-application text input must share one UI
-thread. Physical producers can notify from worker threads, but route mutation
-and delivery remain destination-application operations.
+thread. Physical producers in a supported task context can notify from worker
+threads, but route mutation and delivery remain destination-application
+operations. A native emulator pthread first hands readiness to a FreeRTOS task;
+it never invokes the application readiness callback itself.
 
 Phase 6 deliberately formalizes one active software editing session per
 application. Several tasks can retain independent focus, but only the editor

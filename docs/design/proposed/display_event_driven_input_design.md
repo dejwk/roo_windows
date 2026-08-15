@@ -52,6 +52,15 @@ phase. Both behaviors currently rely on the fallback cadence.
 `scheduled_` flag. Calling one `SingletonTask` from input producer and UI
 threads would therefore race.
 
+An FLTK emulator callback has a stricter boundary: its native host pthread is
+neither a FreeRTOS task nor a simulated interrupt. It cannot safely invoke a
+readiness binding that enters `roo_threads` or the scheduler. `roo_testing` now
+provides `HostEventEndpoint`, which transfers readiness through the simulated
+tick to a shared FreeRTOS delivery task. Phase 2 adopts the gateway as defined
+by the [physical input routing design](display_input_routing_design.md). The
+[native-host event injection design](../in_progress/display_emulator_host_event_injection_design.md)
+records the implemented gateway and remaining Roo Windows migration.
+
 Terms shared with other Roo Windows designs retain their meanings from the
 [design glossary](../glossary.md).
 
@@ -65,9 +74,11 @@ Terms shared with other Roo Windows designs retain their meanings from the
    ordering, and overflow policy. A readiness signal carries no event data.
 3. A source must signal only after releasing the lock that protects its event
    queue.
-4. A producer thread must be able to signal readiness without entering widget
-   code, waiting for UI work to finish, or allocating after registration has
-   warmed.
+4. A producer in a synchronization context supported by its target must be
+   able to signal readiness without entering widget code, waiting for UI work
+   to finish, or allocating after registration has warmed. A native emulator
+   pthread must first transfer readiness to a FreeRTOS task or simulated
+   interrupt gateway and must not invoke the binding itself.
 5. Installing, replacing, and removing a readiness binding must be
    lifecycle-safe. Removal must not return while the removed binding can still
    be invoked.
@@ -121,7 +132,7 @@ Terms shared with other Roo Windows designs retain their meanings from the
 
 ## Design Overview
 
-The proposal introduces four document-local concepts:
+The proposal introduces five document-local concepts:
 
 - A **readiness binding** is one long-lived `std::function<void()>` stored by an
   input source. It represents the application to wake, has no event payload,
@@ -130,6 +141,9 @@ The proposal introduces four document-local concepts:
 - A **notification edge** is one invocation of a readiness binding after a
   source commits an event. It announces that draining can make progress; it
   does not promise one edge per queued event.
+- A **foreign-host handoff** publishes emulator input to a source-owned queue
+  and transfers only readiness into a valid FreeRTOS task before the binding
+  runs. Phase 2 uses the process-wide `roo_testing` gateway task.
 - A **coalescing ticker** is the application-owned scheduler executable that
   stores at most one effective execution time. It replaces the unsynchronized
   `SingletonTask` and rejects requests after stopping.
@@ -143,6 +157,8 @@ worker or the single-threaded touch poll task remains independent.
 
 ```text
 key producer ─> KeySource queue ── readiness binding ──┐
+                                                      │
+FLTK pthread ─> host queue ─> host-event gateway ──────┤
                                                       ├─> coalescing ticker
 touch poller ─> TouchSensor ring ─ readiness binding ─┘    │
                                                          │ earliest request
@@ -158,7 +174,7 @@ The solution maps to the requirements as follows:
 
 | Solution element | Requirements satisfied |
 | --- | --- |
-| Payload-free readiness bindings on existing sources | 1–6, 13, 19–20 |
+| Payload-free readiness bindings and foreign-host handoff | 1–6, 13–14, 19–20 |
 | One synchronized, earliest-deadline ticker per application | 7–12, 17, 20–21 |
 | Gesture detector reporting its next timer deadline | 8–9, 12, 14 |
 | Immediate ordinary invalidation plus explicit delayed dirty requests | 7–9, 12, 22 |
@@ -211,6 +227,16 @@ ticker endpoint.
 The callback is long-lived rather than per-event. The application-sized lambda
 fits the standard library's small-function storage on supported targets;
 registration is nevertheless the only API point permitted to allocate.
+
+The binding invocation context must be valid for the synchronization used by
+its target. Embedded interrupt producers use an established interrupt-to-task
+handoff, and ordinary workers invoke from FreeRTOS task context. FLTK is a
+foreign host producer: it writes a fixed SPSC queue and atomic readiness flag,
+then calls `HostEventEndpoint::notifyFromHost()`. The shared gateway task
+invokes `notifyReady()` after the simulated tick observes that flag. The FLTK
+pthread never enters this callback or any FreeRTOS-backed handler mutex. The
+[native-host event injection design](../in_progress/display_emulator_host_event_injection_design.md)
+defines that `roo_testing` boundary without changing this readiness contract.
 
 ### Application-owned key routing
 
@@ -528,9 +554,12 @@ Implement the
 replace temporary task attachment with producer-owned connections and an
 application router, add base-owned `KeySource` readiness, and update every
 production, fake, and test source to report queue state and call
-`notifyReady()`. Keep the fallback. Test nonempty installation, post-unlock
+`notifyReady()`. For FLTK, add the fixed SPSC queue and `HostEventEndpoint`
+adoption from the routing design, and move dispatcher installation before the
+FLTK event loop. Keep the fallback. Test nonempty installation, post-unlock
 invocation, removal quiescence, destruction, independent-source routing,
-full-budget follow-up, application isolation, and warmed allocation.
+full-budget follow-up, application isolation, warmed allocation, one-tick host
+handoff, and a routed callback that successfully uses a FreeRTOS semaphore.
 
 Focused validation:
 
@@ -696,6 +725,11 @@ Scheduler and mutex operations are bounded framework operations, not hard
 real-time guarantees. A slow task or display operation on a shared scheduler
 can still delay an eligible application.
 
+Phase 2 depends on the locally overridden `roo_testing` module until the
+version containing `HostEventEndpoint` is released. The override is an
+integration measure only; the runtime design directly uses the process-wide
+gateway and contains no per-source polling task.
+
 ### Rejected Alternatives
 
 #### Deliver event batches through readiness bindings
@@ -738,6 +772,14 @@ preserves the established frame intervals.
 
 Rejected because direct dispatch bypasses application affinity, event
 ordering, reentrancy protection, gesture arbitration, and paint boundaries.
+
+#### Treat a native emulator pthread as a producer task
+
+Rejected because the FreeRTOS POSIX port controls its own task pthreads and
+kernel entry. A native FLTK pthread has neither FreeRTOS task identity nor
+simulated interrupt context, so direct readiness invocation can reach invalid
+FreeRTOS synchronization. `HostEventEndpoint` establishes the required context
+boundary through the simulated tick and gateway task.
 
 #### Replace `std::function` with per-source virtual application hooks
 

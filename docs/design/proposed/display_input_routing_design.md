@@ -26,6 +26,14 @@ The application ticker enumerates tasks, and each task polls its attached
 source. Tasks are constructed and owned by `Application`; callers receive
 borrowed references and do not destroy tasks independently.
 
+Embedded producers and FreeRTOS-owned emulator workers execute in a supported
+producer-task context. The FLTK callback thread does not: it is a native host
+pthread outside the simulated kernel. `roo_testing` now supplies the
+`HostEventEndpoint` gateway that crosses this boundary through its simulated
+tick and a FreeRTOS delivery task. The
+[native-host event injection design](../in_progress/display_emulator_host_event_injection_design.md)
+documents that implemented facility and the remaining Roo Windows adoption.
+
 ## Requirements
 
 1. Each source must have at most one destination task, and each task must have
@@ -34,8 +42,8 @@ borrowed references and do not destroy tasks independently.
    recency, pointer activity, z-order, or display identity.
 3. A source must notify its destination application after making input
    drainable, including input queued before application start.
-4. Producer-thread notification must not enter task or widget code, wait for UI
-   work, or allocate after registration has warmed.
+4. Notification from a supported producer task must not enter task or widget
+   code, wait for UI work, or allocate after registration has warmed.
 5. Destination-side draining and dispatch must occur on the application's UI
    thread and must not recursively invoke its ticker.
 6. Every connected source must retain four probes of four events per ticker
@@ -51,6 +59,12 @@ borrowed references and do not destroy tasks independently.
     teardown must not allocate.
 11. `Task` must store no source pointer, connection list, or drain method and
     must not grow.
+12. A foreign native host thread must not call FreeRTOS, `roo_threads`,
+    scheduler, widget, or application code; it must transfer readiness to a
+    FreeRTOS task before `notifyReady()` runs.
+13. FLTK input must use the shared native-host gateway, with at most one
+    simulated tick between publishing readiness and making its FreeRTOS
+    handler eligible.
 
 ## Design Overview
 
@@ -59,15 +73,18 @@ owned by the destination `Application`. Each connected `KeySource` supplies its
 own intrusive route node because a source can have only one destination.
 
 ```text
-producer thread                         application UI thread
-
-KeySource queue -- readiness edge --> ApplicationTicker
-      ^                                      |
-      |                                      v
-      +---------- ApplicationInputRouter::drainReadySources()
-                                      |
-                                      v
-                              Task::dispatchKeyEvent()
+supported producer task ─> KeySource queue ─> notifyReady() ─┐
+                                                             │
+FLTK host thread ─> SPSC queue ─> HostEventEndpoint           │
+                                      │                       │
+                                      v                       v
+                              shared gateway task ─> ApplicationTicker
+                                                              │
+                                                              v
+                                       ApplicationInputRouter::drainReadySources()
+                                                              │
+                                                              v
+                                                   Task::dispatchKeyEvent()
 ```
 
 The route node contains destination application and task pointers plus one
@@ -83,6 +100,16 @@ This supports independent sources for different tasks without task storage: the
 application walks sources once and passes each event to its declared task.
 Application ownership also supplies the teardown order needed to remove routes
 before tasks disappear.
+
+The solution maps to the requirements as follows:
+
+| Solution element | Requirements satisfied |
+| --- | --- |
+| Producer-owned route node and application router | 1–3, 7–11 |
+| Payload-free readiness into the application ticker | 3–6, 10 |
+| Per-source bounded draining on the UI thread | 5–7, 10 |
+| Quiescing handler and ordered route teardown | 8–10 |
+| FLTK queue and shared `HostEventEndpoint` gateway | 12–13 |
 
 ## Design Details
 
@@ -115,8 +142,32 @@ replacement and removal use the quiescing mutex contract from the event-driven
 design. When removal returns, the old handler is no longer executing.
 
 A derived source with a producer worker must stop and join that worker before
-its base `KeySource` destructor disconnects. Disconnecting from inside the
-readiness callback or an input handler is a checked precondition violation.
+its base `KeySource` destructor disconnects. A derived source calls
+`notifyReady()` only from a task context supported by its platform. A foreign
+native host producer uses the handoff below instead. Disconnecting from inside
+the readiness callback or an input handler is a checked precondition violation.
+
+### FLTK host-event endpoint
+
+`FltkKeySource` uses a fixed 32-entry single-producer/single-consumer ring. The
+FLTK callback publishes a normalized event to that ring, calls
+`HostEventEndpoint::notifyFromHost()`, and returns. That call performs only a
+lock-free release store. It enters no FreeRTOS, `roo_threads`, scheduler, Roo
+Windows, or application API.
+
+The `roo_testing` tick hook observes pending endpoints and wakes its shared
+FreeRTOS gateway task. The endpoint handler calls `KeySource::notifyReady()`
+from that valid task context. Several host events can coalesce into one
+readiness edge because their payloads remain in the source ring. A notification
+racing with delivery remains set for the next tick. The gateway introduces at
+most one tick of readiness latency and does not restore application-level
+polling.
+
+FLTK event-dispatch registration moves out of `drain()` and completes before
+the FLTK event loop starts. Shutdown first disables and quiesces native FLTK
+callbacks, disconnects the host event endpoint from a FreeRTOS task, and only
+then clears the source readiness handler and destroys source storage. Endpoint
+disconnection waits for an in-flight gateway handler to return.
 
 ### Bounded draining
 
@@ -159,6 +210,10 @@ and mutex specified by the event-driven design. `Application` gains one list
 head; the router itself has no per-route allocation. The temporary task source
 pointer is removed without replacement, so the target task size cannot grow.
 
+`FltkKeySource` adds one host event endpoint and SPSC indices only to host
+emulation. The process-wide endpoint table and 4096-byte gateway task stack are
+owned by `roo_testing`; none of this state enters embedded builds.
+
 ## Proposed API
 
 ```cpp
@@ -180,6 +235,7 @@ class KeySource {
 
  protected:
   /// Notifies the connected application after input becomes drainable.
+  /// Must run in a task context supported by the current platform.
   void notifyReady();
 
   /// Returns whether `drain()` can currently produce an event.
@@ -202,19 +258,39 @@ Add `connect()`, `disconnect()`, and the application router. Replace temporary
 task attachment and move bounded enumeration into the router while retaining
 the periodic fallback. Add the quiescing readiness handler to `KeySource`,
 update every source to report queue state and notification, and install handlers
-from the application router. Validate duplicate source and destination
-rejection, independent routes, post-unlock and nonempty notification, producer
-races, both destruction orders, per-source limits, task size, warmed allocation,
-stopped-ticker rejection, and full-budget immediate follow-up.
+from the application router. For FLTK emulation, replace the mutex queue with
+the 32-entry SPSC ring, connect a `HostEventEndpoint`, and install the FLTK
+dispatcher before its event loop starts. Validate duplicate source and
+destination rejection, independent routes, post-unlock and nonempty
+notification, producer races, both destruction orders, per-source limits, task
+size, warmed allocation, stopped-ticker rejection, full-budget immediate
+follow-up, one-tick FLTK handoff, and a routed callback that uses a FreeRTOS
+semaphore from the application UI task.
 
-Proposed commit: `feat: route and wake physical key sources`
+Focused validation:
+
+```sh
+bazel test //:key_source_test //:task_test \
+  //:shared_scheduler_drive_test //fake:fltk_key_source_test
+bazel build //:display_runtime_size_probe
+```
+
+Proposed commit message:
+
+> Route and wake physical key sources through applications.
+>
+> Add producer-owned routes, bounded application draining, quiescing
+> readiness, and FLTK host-event gateway adoption from
+> `display_input_routing_design.md`.
 
 ## Testing Plan
 
 Focused source and router tests cover connection, affinity, notification,
 draining, reentrancy preconditions, destruction, and allocation. Shared-
 scheduler integration covers independently routed sources in two applications
-and verifies that ready input wakes only its destination.
+and verifies that ready input wakes only its destination. FLTK integration
+proves that its native callback only publishes queue state and that the
+eventual application callback runs in a valid FreeRTOS task context.
 
 ## Caveats
 
@@ -224,6 +300,11 @@ them behind one `KeySource`.
 
 Public route mutation is synchronous and UI-thread-only after start. The
 framework does not pay for deferred mutation or dispatch-depth state.
+
+Until the next `roo_testing` and `roo_io` releases, integration builds use local
+module overrides so Roo Windows can compile against `HostEventEndpoint`. Those
+overrides are removed after versioned modules containing the gateway and its
+dependency fixes are published.
 
 ### Rejected Alternatives
 
