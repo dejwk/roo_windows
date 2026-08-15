@@ -185,10 +185,6 @@ void NavigationDestinationBase::notifyStateChanged(uint16_t state_diff) {
   Widget::notifyStateChanged(state_diff);
 }
 
-Rect NavigationDestinationBase::getDirectPaintExclusionBounds() const {
-  return Rect(0, 0, -1, -1);
-}
-
 }  // namespace internal
 }  // namespace material3
 }  // namespace roo_windows

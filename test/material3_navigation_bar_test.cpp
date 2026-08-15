@@ -564,6 +564,61 @@ TEST(Material3NavigationBar, ArrowKeysMoveFocusWithoutChangingSelection) {
   EXPECT_EQ(&second, context.focus().focused());
 }
 
+TEST(Material3NavigationBar, WrappedFocusRestoresEveryDestination) {
+  constexpr int16_t kWidth = 300;
+  constexpr int16_t kHeight = 64;
+  roo::byte raster[kWidth * kHeight * 2] = {};
+  roo_display::OffscreenDevice<roo_display::Argb4444> offscreen(
+      kWidth, kHeight, raster, roo_display::Argb4444());
+  roo_display::Display display(offscreen);
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  Application app(&env, display);
+
+  auto bar = std::make_unique<NavigationBar>(app.context());
+  auto status = std::make_unique<NavigationBarDestination>(
+      app.context(), "Status", &ic_outlined_24_action_done());
+  auto schedule = std::make_unique<NavigationBarDestination>(
+      app.context(), "Schedule", &ic_outlined_24_action_bookmark());
+  auto settings = std::make_unique<NavigationBarDestination>(
+      app.context(), "Settings", &ic_outlined_24_action_done());
+  NavigationBarDestination* status_raw = status.get();
+  NavigationBarDestination* schedule_raw = schedule.get();
+  NavigationBarDestination* settings_raw = settings.get();
+  ASSERT_TRUE(bar->add(WidgetRef(std::move(status))));
+  ASSERT_TRUE(bar->add(WidgetRef(std::move(schedule))));
+  ASSERT_TRUE(bar->add(WidgetRef(std::move(settings))));
+  app.add(std::move(bar), roo_display::Box(0, 0, kWidth - 1, kHeight - 1));
+  ASSERT_TRUE(app.refresh());
+
+  ASSERT_TRUE(status_raw->requestFocus());
+  ASSERT_TRUE(app.refresh());
+  roo_display::Color status_focused[kWidth * kHeight];
+  for (int16_t y = 0; y < kHeight; ++y) {
+    for (int16_t x = 0; x < kWidth; ++x) {
+      const int index = y * kWidth + x;
+      offscreen.raster().readColors(&x, &y, 1, &status_focused[index]);
+    }
+  }
+
+  ASSERT_TRUE(schedule_raw->requestFocus());
+  ASSERT_TRUE(app.refresh());
+  ASSERT_TRUE(settings_raw->requestFocus());
+  ASSERT_TRUE(app.refresh());
+  ASSERT_TRUE(status_raw->requestFocus());
+  ASSERT_TRUE(app.refresh());
+
+  for (int16_t y = 0; y < kHeight; ++y) {
+    for (int16_t x = 0; x < kWidth; ++x) {
+      const int index = y * kWidth + x;
+      roo_display::Color actual;
+      offscreen.raster().readColors(&x, &y, 1, &actual);
+      EXPECT_EQ(status_focused[index], actual) << "at (" << x << ", " << y
+                                                 << ')';
+    }
+  }
+}
+
 }  // namespace
 }  // namespace material3
 }  // namespace roo_windows

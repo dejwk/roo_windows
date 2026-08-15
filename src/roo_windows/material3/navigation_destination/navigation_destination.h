@@ -71,7 +71,6 @@ class NavigationDestinationBase : public BasicWidget {
 
   void onClicked() override;
   void notifyStateChanged(uint16_t state_diff) override;
-  Rect getDirectPaintExclusionBounds() const override;
 
  private:
   virtual NavigationDestinationGeometry resolveDestinationGeometry() const = 0;
