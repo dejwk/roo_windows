@@ -9,16 +9,9 @@
 namespace roo_windows {
 
 class Application;
+class ApplicationInputRouter;
 class DisplayWindow;
 class Keyboard;
-
-/// Result of attaching one polled key source to a display-local task.
-enum class KeySourceAttachmentResult : uint8_t {
-  kAttached,
-  kSourceAlreadyAttached,
-  kTaskAlreadyHasSource,
-  kWrongThread,
-};
 
 /// Owns task-local focus, editing, input routing, and fixed direct content.
 class Task {
@@ -52,11 +45,6 @@ class Task {
   TextFieldEditor& textFieldEditor() { return editor_; }
   const TextFieldEditor& textFieldEditor() const { return editor_; }
 
-  /// Attaches `source` when both source and task have no attachment.
-  KeySourceAttachmentResult attachKeySource(KeySource& source);
-  /// Detaches the current polled source, if any.
-  void detachKeySource();
-
   /// Configures this task's optional semantic Back handler. Passing an empty
   /// function clears it.
   void setBackCallback(BackCallback callback);
@@ -66,6 +54,7 @@ class Task {
 
  private:
   friend class Application;
+  friend class ApplicationInputRouter;
   friend class KeySource;
   friend class Widget;
   friend class Container;
@@ -79,20 +68,10 @@ class Task {
          const roo_display::Box& bounds, bool popup, Keyboard& keyboard,
          NavigationHost& navigation);
 
-  struct KeyDrainResult {
-    bool has_source;
-    int event_count;
-    bool source_may_have_more;
-  };
-
-  // Polls the attached source once. Application still owns the existing
-  // four-probe policy; this primitive only exposes one bounded probe.
-  KeyDrainResult drainOneKeyBatch();
-  bool drainKeyEvents();
   void dispatchKeyEvent(const KeyEvent& event);
+  void cancelKeyActivation();
   void onSubtreeDetaching(Widget& subtree);
   void onWidgetFocusLost(Widget& widget);
-  void onKeySourceDestroyed(KeySource& source);
   void attachNavigationContent(Widget& content);
   void detachNavigationContent();
   BackResult requestTaskBackCallback(BackSource source);
@@ -103,7 +82,6 @@ class Task {
   FocusManager focus_;
   TextFieldEditor editor_;
   bool popup_;
-  KeySource* key_source_ = nullptr;
   Widget* armed_key_widget_ = nullptr;
   PhysicalKey armed_key_ = PhysicalKey::kNone;
   BackCallback back_callback_;

@@ -1,9 +1,10 @@
 #pragma once
 
+#include <atomic>
+#include <cstdint>
 #include <pthread.h>
 
-#include <cstdint>
-
+#include "roo_testing/host_event/host_event_endpoint.h"
 #include "roo_windows/core/key_source.h"
 
 class Fl_Window;
@@ -32,8 +33,13 @@ class FltkKeySource : public KeySource {
   bool enqueue(const KeyEvent& event);
 
  private:
+  bool hasPendingEvents() const override;
+  void onReadinessStart() override;
+  void onReadinessStop() override;
+
   static int dispatchFltkEvent(int event, Fl_Window* window);
   static void installDispatcher();
+  static void onHostEventReady(void* context);
   void onFltkEvent(KeyPhase phase, int key, PhysicalKey physical_key);
 
   static KeyCode keyCode(int key);
@@ -41,12 +47,14 @@ class FltkKeySource : public KeySource {
   static uint8_t modifiers();
   static bool decodeRune(const char* text, int length, uint32_t* rune);
 
-  pthread_mutex_t mutex_;
   KeyEvent queue_[kQueueCapacity];
-  int head_;
-  int tail_;
+  std::atomic<uint8_t> head_;
+  std::atomic<uint8_t> tail_;
+  roo_testing::HostEventEndpoint host_event_endpoint_;
+  bool host_event_started_ = false;
   bool keys_down_[256];
   static FltkKeySource* active_source_;
+  static pthread_mutex_t active_source_mutex_;
   static bool dispatcher_installed_;
 };
 

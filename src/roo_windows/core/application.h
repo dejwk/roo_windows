@@ -16,6 +16,8 @@
 
 namespace roo_windows {
 
+class ApplicationInputRouter;
+
 /// Top-level coordinator that owns the event loop, display, input pipeline,
 /// and active display-local tasks.
 ///
@@ -157,6 +159,8 @@ class Application {
   bool isUiThread() const;
 
  private:
+  friend class ApplicationInputRouter;
+  friend class KeySource;
   friend class TickerGuard;
 
   enum class State : uint8_t {
@@ -169,9 +173,13 @@ class Application {
   // Handles user input (touch, etc.), and calls refresh() periodically.
   void tick();
 
-  /// Drains this callback's currently available key input work.
-  /// Returns true when a task consumed its complete key-drain budget.
+  /// Drains routed physical input. Returns true when a source consumed its
+  /// complete per-dispatch key-drain budget.
   bool drainKeyEvents();
+
+  void connectKeySource(KeySource& source, Task& destination);
+  void disconnectKeySource(KeySource& source);
+  void requestKeySourceTick();
 
   /// This is a best-effort fail-fast attempt for direct application UI entry
   /// points.
@@ -183,10 +191,13 @@ class Application {
 
   Keyboard keyboard_;
   std::vector<std::unique_ptr<Task>> tasks_;
-  KeySource* pending_key_source_ = nullptr;
+  // Compatibility-only source supplied through the legacy constructor. New
+  // callers connect sources directly to their selected task.
+  KeySource* legacy_key_source_ = nullptr;
+  std::unique_ptr<ApplicationInputRouter> input_router_;
 
   DisplayWindow window_;
-  roo_scheduler::SingletonTask ticker_;
+  std::unique_ptr<class ApplicationTicker> ticker_;
 
   roo::thread::id ui_thread_id_;
   State state_ = State::kConstructed;

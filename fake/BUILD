@@ -10,6 +10,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "//:roo_windows",
+        "@roo_testing//roo_testing/host_event",
         "@roo_testing//roo_testing/transducers/ui/viewport/fltk",
     ],
 )

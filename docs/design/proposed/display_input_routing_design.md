@@ -301,10 +301,9 @@ them behind one `KeySource`.
 Public route mutation is synchronous and UI-thread-only after start. The
 framework does not pay for deferred mutation or dispatch-depth state.
 
-Until the next `roo_testing` and `roo_io` releases, integration builds use local
-module overrides so Roo Windows can compile against `HostEventEndpoint`. Those
-overrides are removed after versioned modules containing the gateway and its
-dependency fixes are published.
+Integration builds use the published `roo_testing` 1.3.7
+`HostEventEndpoint` gateway and its `roo_io` 2.2.5 dependency fixes; no local
+module overrides are required.
 
 ### Rejected Alternatives
 

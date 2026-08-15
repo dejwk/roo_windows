@@ -291,10 +291,9 @@ the application's former 20 ms fallback.
 The 32-slot table and 4096-byte task stack are host-process costs. Neither is
 compiled into embedded targets.
 
-Until the gateway and companion `roo_io` changes have versioned releases,
-`roo_display`, `roo_windows`, and the end-to-end Roo Windows test workspace use
-local module overrides. Those overrides are removed immediately after both
-releases.
+The gateway is published in `roo_testing` 1.3.7 with its companion `roo_io`
+2.2.5 changes. `roo_display`, `roo_windows`, and the end-to-end Roo Windows
+test workspace therefore use their versioned module dependencies directly.
 
 ### Rejected Alternatives
 

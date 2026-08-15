@@ -20,6 +20,8 @@ class OneKeySource final : public KeySource {
   bool delivered() const { return delivered_; }
 
  private:
+  bool hasPendingEvents() const override { return !delivered_; }
+
   bool delivered_ = false;
 };
 

@@ -27,6 +27,9 @@ class FocusableWidget : public BasicWidget {
 class EmptyKeySource : public KeySource {
  public:
   int drain(KeyEvent* out, int max_events) override { return 0; }
+
+ private:
+  bool hasPendingEvents() const override { return false; }
 };
 
 class DirectWidget : public BasicWidget {
@@ -87,8 +90,8 @@ TEST(Task, FocusDoesNotCrossTaskBoundaries) {
   EXPECT_EQ(&second_contents, second.focus().focused());
 }
 
-// Verifies the one-source attachment contract and explicit detachment.
-TEST(Task, KeySourceAttachmentIsExclusive) {
+// Verifies the one-source-per-task route contract and explicit disconnection.
+TEST(Task, KeySourceConnectionIsExclusive) {
   roo::byte raster[16 * 16 * 2] = {};
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       16, 16, raster, roo_display::Argb4444());
@@ -103,16 +106,14 @@ TEST(Task, KeySourceAttachmentIsExclusive) {
   EmptyKeySource first_source;
   EmptyKeySource second_source;
 
-  EXPECT_EQ(KeySourceAttachmentResult::kAttached,
-            first.attachKeySource(first_source));
-  EXPECT_EQ(KeySourceAttachmentResult::kSourceAlreadyAttached,
-            second.attachKeySource(first_source));
-  EXPECT_EQ(KeySourceAttachmentResult::kTaskAlreadyHasSource,
-            first.attachKeySource(second_source));
+  first_source.connect(first);
+  EXPECT_TRUE(first_source.isConnected());
+  EXPECT_DEATH_IF_SUPPORTED(first_source.connect(second), "");
+  EXPECT_DEATH_IF_SUPPORTED(second_source.connect(first), "");
 
-  first.detachKeySource();
-  EXPECT_EQ(KeySourceAttachmentResult::kAttached,
-            second.attachKeySource(first_source));
+  first_source.disconnect();
+  second_source.connect(first);
+  EXPECT_TRUE(second_source.isConnected());
 }
 
 }  // namespace

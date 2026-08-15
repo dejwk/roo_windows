@@ -3,20 +3,222 @@
 #include "roo_display.h"
 #include "roo_logging.h"
 #include "roo_threads.h"
+#include "roo_threads/mutex.h"
 #include "roo_threads/semaphore.h"
 #include "roo_windows/dialogs/alert_dialog.h"
 #include "roo_windows/keyboard_layout/en_us.h"
 
 namespace roo_windows {
 
+/// Thread-safe, coalescing scheduler endpoint for one Application.
+///
+/// Producers can request an immediate dispatch from any thread. During a UI
+/// dispatch, requests are recorded and merged into the single follow-up task
+/// so that producer callbacks never re-enter application code.
+class ApplicationTicker final : public roo_scheduler::Executable {
+ public:
+  /// Creates a ticker that invokes `callback` for each accepted dispatch.
+  ApplicationTicker(roo_scheduler::Scheduler& scheduler,
+                    std::function<void()> callback)
+      : scheduler_(scheduler), callback_(std::move(callback)) {}
+
+  /// Requests an application dispatch as soon as the scheduler can run it.
+  void requestNow() { requestAt(roo_time::Uptime::Now()); }
+
+  /// Requests a dispatch after `delay`, retaining an earlier pending request.
+  void requestAfter(roo_time::Duration delay) {
+    requestAt(roo_time::Uptime::Now() + delay);
+  }
+
+  /// Rejects future requests and cancels a pending scheduler execution.
+  void stop() {
+    roo::lock_guard<roo::mutex> lock(mutex_);
+    stopped_ = true;
+    if (scheduled_id_ >= 0) scheduler_.cancel(scheduled_id_);
+    scheduled_id_ = -1;
+    scheduled_at_ = roo_time::Uptime::Max();
+    after_dispatch_at_ = roo_time::Uptime::Max();
+  }
+
+  /// Runs the current scheduler execution and schedules its merged successor.
+  void execute(roo_scheduler::ExecutionID id) override {
+    {
+      roo::lock_guard<roo::mutex> lock(mutex_);
+      if (stopped_ || id != scheduled_id_) return;
+      scheduled_id_ = -1;
+      scheduled_at_ = roo_time::Uptime::Max();
+      dispatching_ = true;
+      after_dispatch_at_ = roo_time::Uptime::Max();
+    }
+
+    callback_();
+
+    roo::lock_guard<roo::mutex> lock(mutex_);
+    dispatching_ = false;
+    if (stopped_ || after_dispatch_at_ == roo_time::Uptime::Max()) return;
+    scheduleLocked(after_dispatch_at_);
+    after_dispatch_at_ = roo_time::Uptime::Max();
+  }
+
+ private:
+  // Calls into the scheduler only while ticker state is protected. A request
+  // made while dispatching is deferred instead, preventing recursive tick().
+  void requestAt(roo_time::Uptime when) {
+    roo::lock_guard<roo::mutex> lock(mutex_);
+    if (stopped_) return;
+    if (dispatching_) {
+      if (when < after_dispatch_at_) after_dispatch_at_ = when;
+      return;
+    }
+    if (scheduled_id_ >= 0 && scheduled_at_ <= when) return;
+    if (scheduled_id_ >= 0) scheduler_.cancel(scheduled_id_);
+    scheduleLocked(when);
+  }
+
+  void scheduleLocked(roo_time::Uptime when) {
+    scheduled_at_ = when;
+    scheduled_id_ = scheduler_.scheduleOn(when, *this,
+                                           roo_scheduler::PRIORITY_NORMAL);
+  }
+
+  roo_scheduler::Scheduler& scheduler_;
+  std::function<void()> callback_;
+  roo::mutex mutex_;
+  roo_scheduler::ExecutionID scheduled_id_ = -1;
+  roo_time::Uptime scheduled_at_ = roo_time::Uptime::Max();
+  roo_time::Uptime after_dispatch_at_ = roo_time::Uptime::Max();
+  bool stopped_ = false;
+  bool dispatching_ = false;
+};
+
+/// Owns all incoming physical-key routes for one Application.
+///
+/// Each KeySource supplies its intrusive list node, so connection and draining
+/// require no per-route allocation and Task remains free of producer state.
+class ApplicationInputRouter {
+ public:
+  /// Creates the router that delivers sources into `app`'s tasks.
+  explicit ApplicationInputRouter(Application& app) : app_(app) {}
+
+  /// Connects an unused source to an unused task in this application.
+  ///
+  /// After startup, this is a UI-thread operation. Connecting installs the
+  /// producer callback immediately so pre-existing queued input wakes app.
+  void connect(KeySource& source, Task& destination) {
+    CHECK(source.destination_application_ == nullptr);
+    CHECK(&destination.application() == &app_);
+    CHECK(app_.state_ != Application::State::kStopping);
+    if (app_.state_ != Application::State::kConstructed) {
+      CHECK(app_.isUiThread());
+    }
+    for (KeySource* candidate = head_; candidate != nullptr;
+         candidate = candidate->next_source_) {
+      CHECK(candidate->destination_task_ != &destination);
+    }
+
+    source.destination_application_ = &app_;
+    source.destination_task_ = &destination;
+    source.next_source_ = head_;
+    head_ = &source;
+    if (app_.state_ != Application::State::kConstructed) {
+      source.onReadinessStart();
+      installReadinessHandler(source);
+    }
+  }
+
+  /// Quiesces a source callback, cancels its pending fallback click, and
+  /// removes the source from this application's incoming list.
+  void disconnect(KeySource& source) {
+    if (source.destination_application_ == nullptr) return;
+    CHECK(source.destination_application_ == &app_);
+    if (app_.state_ != Application::State::kStopping) {
+      CHECK(app_.isUiThread());
+    }
+    // A host bridge must stop and quiesce before its handler can be removed.
+    // That ordering prevents a bridge task from reaching a stale source.
+    source.onReadinessStop();
+    source.setReadinessHandler({});
+    source.destination_task_->cancelKeyActivation();
+    KeySource** link = &head_;
+    while (*link != &source) {
+      CHECK(*link != nullptr);
+      link = &(*link)->next_source_;
+    }
+    *link = source.next_source_;
+    source.destination_application_ = nullptr;
+    source.destination_task_ = nullptr;
+    source.next_source_ = nullptr;
+  }
+
+  /// Installs readiness callbacks for routes configured before app startup.
+  void start() {
+    for (KeySource* source = head_; source != nullptr;
+         source = source->next_source_) {
+      source->onReadinessStart();
+      installReadinessHandler(*source);
+    }
+  }
+
+  /// Disconnects every source before application-owned tasks are destroyed.
+  void clear() {
+    while (head_ != nullptr) disconnect(*head_);
+  }
+
+  /// Drains each source under its independent four-batch, four-event budget.
+  ///
+  /// Returns true when a source uses all sixteen event slots, which asks the
+  /// periodic application path to schedule an immediate follow-up dispatch.
+  bool drainReadySources() {
+    bool has_full_budget_source = false;
+    for (KeySource* source = head_; source != nullptr;
+         source = source->next_source_) {
+      bool consumed_full_budget = true;
+      for (int batch = 0; batch < kMaxDrainBatches; ++batch) {
+        KeyEvent events[kDrainBatchSize];
+        int count = source->drain(events, kDrainBatchSize);
+        if (count < 0) count = 0;
+        if (count > kDrainBatchSize) count = kDrainBatchSize;
+        for (int i = 0; i < count; ++i) {
+          source->destination_task_->dispatchKeyEvent(events[i]);
+        }
+        if (count != kDrainBatchSize) {
+          consumed_full_budget = false;
+          break;
+        }
+      }
+      has_full_budget_source = has_full_budget_source || consumed_full_budget;
+    }
+    return has_full_budget_source;
+  }
+
+ private:
+  // The handler carries no event payload. It only wakes the stable ticker;
+  // the UI thread later drains the source's own queue in source order.
+  void installReadinessHandler(KeySource& source) {
+    source.setReadinessHandler([app = &app_]() { app->requestKeySourceTick(); });
+  }
+
+  static constexpr int kDrainBatchSize = 4;
+  static constexpr int kMaxDrainBatches = 4;
+
+  Application& app_;
+  KeySource* head_ = nullptr;
+};
+
+/// Marks the interval in which Application::tick() owns UI dispatch.
+///
+/// The state prevents nested ticker execution and gives destruction a simple
+/// fail-fast check while the callback is running.
 class TickerGuard {
  public:
+  /// Enters ticker dispatch for `app`; requires its UI thread.
   explicit TickerGuard(Application& app) : app_(app) {
     CHECK(app_.state_ == Application::State::kStarted);
     CHECK(roo::this_thread::get_id() == app_.ui_thread_id_);
     app_.state_ = Application::State::kTickerRunning;
   }
 
+  /// Restores the started state after the dispatch callback returns.
   ~TickerGuard() { app_.state_ = Application::State::kStarted; }
 
  private:
@@ -27,8 +229,9 @@ Application::Application(const Environment* env, roo_display::Display& display)
     : env_(env),
       context_(env->scheduler(), env->theme(), env->keyboardColorTheme()),
       keyboard_(context_, kbEngUS()),
+      input_router_(new ApplicationInputRouter(*this)),
       window_(*this, display, true),
-      ticker_(env->scheduler(), [this]() { tick(); }) {
+      ticker_(new ApplicationTicker(env->scheduler(), [this]() { tick(); })) {
   roo_display::Box keyboard_bounds(0, window_.root().height() / 2,
                                    window_.root().width() - 1,
                                    window_.root().height() - 1);
@@ -37,9 +240,6 @@ Application::Application(const Environment* env, roo_display::Display& display)
   keyboard_.setTask(*keyboard_task);
   keyboard_task->setVisible(false);
   tasks_.push_back(std::move(keyboard_task));
-  if (pending_key_source_ != nullptr) {
-    tasks_.front()->attachKeySource(*pending_key_source_);
-  }
 }
 
 Application::Application(const Environment* env, roo_display::Display& display,
@@ -47,9 +247,9 @@ Application::Application(const Environment* env, roo_display::Display& display,
     : env_(env),
       context_(env->scheduler(), env->theme(), env->keyboardColorTheme()),
       keyboard_(context_, kbEngUS()),
-      pending_key_source_(&keys),
+      input_router_(new ApplicationInputRouter(*this)),
       window_(*this, display, enable_touch),
-      ticker_(env->scheduler(), [this]() { tick(); }) {
+      ticker_(new ApplicationTicker(env->scheduler(), [this]() { tick(); })) {
   roo_display::Box keyboard_bounds(0, window_.root().height() / 2,
                                    window_.root().width() - 1,
                                    window_.root().height() - 1);
@@ -58,9 +258,8 @@ Application::Application(const Environment* env, roo_display::Display& display,
   keyboard_.setTask(*keyboard_task);
   keyboard_task->setVisible(false);
   tasks_.push_back(std::move(keyboard_task));
-  if (pending_key_source_ != nullptr) {
-    tasks_.front()->attachKeySource(*pending_key_source_);
-  }
+  legacy_key_source_ = &keys;
+  keys.connect(*tasks_.front());
 }
 
 Application::~Application() {
@@ -69,7 +268,10 @@ Application::~Application() {
     CHECK(state_ != State::kTickerRunning);
   }
   state_ = State::kStopping;
-  ticker_.cancel();
+  // Reject wakeups before clearing handlers, then remove all routes while
+  // tasks and their fallback state are still valid.
+  ticker_->stop();
+  input_router_->clear();
   window_.stop();
   tasks_.clear();
 }
@@ -88,8 +290,11 @@ void Application::start() {
   CHECK(state_ == State::kConstructed);
   ui_thread_id_ = roo::this_thread::get_id();
   state_ = State::kStarted;
+  // Installing handlers queries queue state, so input enqueued before start
+  // cannot wait for the periodic fallback to be observed.
+  input_router_->start();
   window_.start();
-  ticker_.scheduleNow();
+  ticker_->requestNow();
 }
 
 void Application::run() {
@@ -112,15 +317,11 @@ void Application::tick() {
       key_events_pending || gesture_dispatched || touch_active || redraw_timeout
           ? roo_time::Millis(0)
           : roo_time::Millis(20);
-  ticker_.scheduleAfter(delay, roo_scheduler::PRIORITY_NORMAL);
+  ticker_->requestAfter(delay);
 }
 
 bool Application::drainKeyEvents() {
-  bool key_events_pending = false;
-  for (const std::unique_ptr<Task>& task : tasks_) {
-    key_events_pending = task->drainKeyEvents() || key_events_pending;
-  }
-  return key_events_pending;
+  return input_router_->drainReadySources();
 }
 
 bool Application::refresh(roo_time::Uptime deadline) {
@@ -133,11 +334,9 @@ Task& Application::addTask(Widget& content, const roo_display::Box& bounds) {
   CHECK(content.parent() == nullptr);
   Task* task = new Task(*this, window_, bounds, false, keyboard_, content);
   tasks_.emplace_back(task);
-  if (pending_key_source_ != nullptr) {
-    for (const std::unique_ptr<Task>& candidate : tasks_) {
-      candidate->detachKeySource();
-    }
-    task->attachKeySource(*pending_key_source_);
+  if (legacy_key_source_ != nullptr && legacy_key_source_->isConnected()) {
+    legacy_key_source_->disconnect();
+    legacy_key_source_->connect(*task);
   }
   return *task;
 }
@@ -152,11 +351,9 @@ Task& Application::addTask(NavigationHost& navigation,
   CHECK(navigation.task_ == nullptr);
   Task* task = new Task(*this, window_, bounds, false, keyboard_, navigation);
   tasks_.emplace_back(task);
-  if (pending_key_source_ != nullptr) {
-    for (const std::unique_ptr<Task>& candidate : tasks_) {
-      candidate->detachKeySource();
-    }
-    task->attachKeySource(*pending_key_source_);
+  if (legacy_key_source_ != nullptr && legacy_key_source_->isConnected()) {
+    legacy_key_source_->disconnect();
+    legacy_key_source_->connect(*task);
   }
   return *task;
 }
@@ -204,13 +401,27 @@ void Application::checkUiThread() const {
   CHECK(isUiThread());
 }
 
+void Application::connectKeySource(KeySource& source, Task& destination) {
+  input_router_->connect(source, destination);
+}
+
+void Application::disconnectKeySource(KeySource& source) {
+  input_router_->disconnect(source);
+}
+
+// Called by a source readiness handler. The ticker coalesces concurrent
+// producer notifications and keeps dispatch on the application UI thread.
+void Application::requestKeySourceTick() { ticker_->requestNow(); }
+
 namespace {
 
 class SyncTask : public roo_scheduler::Executable {
  public:
+  /// Creates one scheduler task that invokes `fn` and then releases `sem`.
   SyncTask(std::function<void()> fn, roo::binary_semaphore& sem)
       : fn_(std::move(fn)), sem_(sem) {}
 
+  /// Runs the UI callback and unblocks its waiting caller.
   void execute(roo_scheduler::ExecutionID id) override {
     fn_();
     sem_.release();

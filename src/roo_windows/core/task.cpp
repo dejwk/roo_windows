@@ -6,9 +6,6 @@
 
 namespace roo_windows {
 namespace {
-constexpr int kKeyDrainBatchSize = 4;
-constexpr int kMaxKeyDrainBatchesPerTick = 4;
-
 bool IsInSubtree(const Widget& candidate, const Widget& subtree) {
   for (const Widget* current = &candidate; current != nullptr;
        current = current->parent()) {
@@ -55,7 +52,6 @@ Task::Task(Application& app, DisplayWindow& window,
 }
 
 Task::~Task() {
-  detachKeySource();
   back_callback_ = {};
   editor_.cancel();
   focus_.onSubtreeDetaching(panel_);
@@ -77,33 +73,6 @@ void Task::setBackCallback(BackCallback callback) {
 
 void Task::setVisible(bool visible) {
   panel_.setVisibility(visible ? Visibility::kVisible : Visibility::kGone);
-}
-
-KeySourceAttachmentResult Task::attachKeySource(KeySource& source) {
-  if (!app_.isUiThread()) return KeySourceAttachmentResult::kWrongThread;
-  if (source.attached_task_ != nullptr) {
-    return KeySourceAttachmentResult::kSourceAlreadyAttached;
-  }
-  if (key_source_ != nullptr) {
-    return KeySourceAttachmentResult::kTaskAlreadyHasSource;
-  }
-  source.attached_task_ = this;
-  key_source_ = &source;
-  return KeySourceAttachmentResult::kAttached;
-}
-
-void Task::detachKeySource() {
-  if (key_source_ == nullptr) return;
-  if (armed_key_widget_ != nullptr) onWidgetFocusLost(*armed_key_widget_);
-  key_source_->attached_task_ = nullptr;
-  key_source_ = nullptr;
-}
-
-void Task::onKeySourceDestroyed(KeySource& source) {
-  if (key_source_ == &source) {
-    if (armed_key_widget_ != nullptr) onWidgetFocusLost(*armed_key_widget_);
-    key_source_ = nullptr;
-  }
 }
 
 BackResult Task::requestBack(BackSource source) {
@@ -128,26 +97,6 @@ void Task::detachNavigationContent() {
 BackResult Task::requestTaskBackCallback(BackSource source) {
   return back_callback_ == nullptr ? BackResult::kUnhandled
                                    : back_callback_(source);
-}
-
-Task::KeyDrainResult Task::drainOneKeyBatch() {
-  if (key_source_ == nullptr) return {false, 0, false};
-  KeyEvent events[kKeyDrainBatchSize];
-  int count = key_source_->drain(events, kKeyDrainBatchSize);
-  if (count < 0) count = 0;
-  if (count > kKeyDrainBatchSize) count = kKeyDrainBatchSize;
-  for (int i = 0; i < count; ++i) {
-    dispatchKeyEvent(events[i]);
-  }
-  return {true, count, count == kKeyDrainBatchSize};
-}
-
-bool Task::drainKeyEvents() {
-  for (int batch = 0; batch < kMaxKeyDrainBatchesPerTick; ++batch) {
-    KeyDrainResult result = drainOneKeyBatch();
-    if (!result.has_source || !result.source_may_have_more) return false;
-  }
-  return true;
 }
 
 void Task::dispatchKeyEvent(const KeyEvent& event) {
@@ -218,6 +167,12 @@ void Task::onWidgetFocusLost(Widget& widget) {
   armed_key_widget_->setPressed(false);
   armed_key_widget_ = nullptr;
   armed_key_ = PhysicalKey::kNone;
+}
+
+void Task::cancelKeyActivation() {
+  // The router calls this before unlinking a source so a pressed fallback
+  // control cannot remain visually armed after its producing switch vanishes.
+  if (armed_key_widget_ != nullptr) onWidgetFocusLost(*armed_key_widget_);
 }
 
 void Task::onSubtreeDetaching(Widget& subtree) {

@@ -1,9 +1,14 @@
 #pragma once
 
+#include <functional>
 #include <stdint.h>
+
+#include "roo_threads/mutex.h"
 
 namespace roo_windows {
 
+class Application;
+class ApplicationInputRouter;
 class Task;
 
 /// Physical or text key understood by the framework's non-touch input path.
@@ -171,12 +176,56 @@ class KeySource {
  public:
   virtual ~KeySource();
 
+  /// Connects this source to one task in its owning application.
+  ///
+  /// A source and a task can each participate in at most one route. Once an
+  /// application has started, route changes must be made on its UI thread.
+  void connect(Task& destination);
+
+  /// Removes this source's route. Safe to call when already disconnected.
+  void disconnect();
+
+  /// Returns whether this source currently has a destination task.
+  bool isConnected() const { return destination_application_ != nullptr; }
+
   /// Copies up to `max_events` queued events into `out` and returns the count.
   virtual int drain(KeyEvent* out, int max_events) = 0;
 
+ protected:
+  /// Notifies the destination application after input becomes drainable.
+  ///
+  /// Derived sources must call this after releasing their queue lock whenever
+  /// a successful write leaves an event available to `drain()`.
+  void notifyReady();
+
+  /// Returns whether `drain()` can currently produce an event.
+  virtual bool hasPendingEvents() const = 0;
+
+  /// Starts any producer-specific readiness bridge on the destination UI
+  /// thread, before the application installs its readiness handler.
+  virtual void onReadinessStart() {}
+
+  /// Stops a producer-specific readiness bridge on the destination UI thread,
+  /// before the application clears and quiesces its readiness handler.
+  virtual void onReadinessStop() {}
+
  private:
-  friend class Task;
-  Task* attached_task_ = nullptr;
+  using ReadinessHandler = std::function<void()>;
+
+  friend class Application;
+  friend class ApplicationInputRouter;
+
+  // Replaces the readiness callback. Holding the mutex while invoking the
+  // callback makes clearing it quiescing: when this returns no invocation of
+  // the previous callback can still be in progress.
+  void setReadinessHandler(ReadinessHandler handler);
+
+  Application* destination_application_ = nullptr;
+  Task* destination_task_ = nullptr;
+  KeySource* next_source_ = nullptr;
+
+  roo::mutex readiness_mutex_;
+  ReadinessHandler readiness_handler_;
 };
 
 }  // namespace roo_windows

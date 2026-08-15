@@ -34,8 +34,14 @@ class QueuedKeySource : public KeySource {
   int drain_calls() const { return drain_calls_; }
   const std::vector<int>& max_events() const { return max_events_; }
   size_t remaining() const { return events_.size() - next_; }
+  void push(KeyEvent event) {
+    events_.push_back(event);
+    notifyReady();
+  }
 
  private:
+  bool hasPendingEvents() const override { return next_ < events_.size(); }
+
   std::vector<KeyEvent> events_;
   size_t next_;
   int drain_calls_;
@@ -51,6 +57,24 @@ class FocusableBackWidget : public BasicWidget {
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(1, 1);
   }
+};
+
+class KeyRecordingWidget : public BasicWidget {
+ public:
+  explicit KeyRecordingWidget(ApplicationContext& context) : BasicWidget(context) {}
+
+  bool isFocusable() const override { return true; }
+  Dimensions getSuggestedMinimumDimensions() const override {
+    return Dimensions(1, 1);
+  }
+  bool onKeyEvent(const KeyEvent& event) override {
+    ++key_count;
+    last_key = event.code;
+    return true;
+  }
+
+  int key_count = 0;
+  KeyCode last_key = KeyCode::kUnknown;
 };
 
 class BackDestination : public Destination {
@@ -172,6 +196,59 @@ TEST(KeySource, ApplicationStopsAtTheFirstPartialBatch) {
   EXPECT_EQ(1, keys.drain_calls());
   EXPECT_EQ(0u, keys.remaining());
   EXPECT_EQ((std::vector<int>{4}), keys.max_events());
+}
+
+TEST(KeySource, RoutesEachSourceToItsDeclaredTask) {
+  roo::byte raster[32 * 16 * 2] = {};
+  roo_display::OffscreenDevice<roo_display::Argb4444> device(
+      32, 16, raster, roo_display::Argb4444());
+  roo_display::Display display(device);
+  roo_scheduler::Scheduler scheduler;
+  Environment environment(scheduler);
+  Application app(&environment, display);
+  KeyRecordingWidget first_contents(app.context());
+  KeyRecordingWidget second_contents(app.context());
+  Task& first = app.addTaskFullScreen(first_contents);
+  Task& second = app.addTaskFullScreen(second_contents);
+  QueuedKeySource first_keys({{KeyPhase::kDown, KeyCode::kCharacter, 0, 0}});
+  QueuedKeySource second_keys({{KeyPhase::kDown, KeyCode::kTab, 0, 0}});
+  first_keys.connect(first);
+  second_keys.connect(second);
+  app.refresh();
+  ASSERT_TRUE(first_contents.requestFocus());
+  ASSERT_TRUE(second_contents.requestFocus());
+
+  app.start();
+  scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 1);
+
+  EXPECT_EQ(1, first_contents.key_count);
+  EXPECT_EQ(KeyCode::kCharacter, first_contents.last_key);
+  EXPECT_EQ(1, second_contents.key_count);
+  EXPECT_EQ(KeyCode::kTab, second_contents.last_key);
+}
+
+TEST(KeySource, ReadySourceWakesItsDestinationApplication) {
+  roo::byte raster[16 * 16 * 2] = {};
+  roo_display::OffscreenDevice<roo_display::Argb4444> device(
+      16, 16, raster, roo_display::Argb4444());
+  roo_display::Display display(device);
+  roo_scheduler::Scheduler scheduler;
+  Environment environment(scheduler);
+  Application app(&environment, display);
+  KeyRecordingWidget contents(app.context());
+  Task& task = app.addTaskFullScreen(contents);
+  QueuedKeySource keys({});
+  keys.connect(task);
+  app.refresh();
+  ASSERT_TRUE(contents.requestFocus());
+  app.start();
+  scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 1);
+
+  keys.push({KeyPhase::kDown, KeyCode::kCharacter, 0, 0});
+  scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 1);
+
+  EXPECT_EQ(1, contents.key_count);
+  EXPECT_EQ(KeyCode::kCharacter, contents.last_key);
 }
 
 TEST(KeySource, HardwareEscapeUsesFocusedTask) {

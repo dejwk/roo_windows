@@ -4,9 +4,12 @@
 #include <FL/Fl.H>
 #include <FL/Fl_Window.H>
 
+#include "roo_logging.h"
+
 namespace roo_windows::fake {
 
 FltkKeySource* FltkKeySource::active_source_ = nullptr;
+pthread_mutex_t FltkKeySource::active_source_mutex_ = PTHREAD_MUTEX_INITIALIZER;
 bool FltkKeySource::dispatcher_installed_ = false;
 
 namespace {
@@ -23,24 +26,33 @@ FltkKeySource::FltkKeySource()
     : head_(0),
       tail_(0) {
   for (bool& key_down : keys_down_) key_down = false;
-  pthread_mutex_init(&mutex_, nullptr);
+  pthread_mutex_lock(&active_source_mutex_);
   active_source_ = this;
+  pthread_mutex_unlock(&active_source_mutex_);
+  // Register before FLTK starts its native event loop. The callback itself
+  // only writes the SPSC ring and notifies the host-event endpoint.
+  installDispatcher();
 }
 
 FltkKeySource::~FltkKeySource() {
+  // Remove the FreeRTOS-side endpoint before base destruction disconnects the
+  // application route. Then wait for any native callback that still holds the
+  // active-source lock before making this object unreachable from FLTK.
+  onReadinessStop();
+  pthread_mutex_lock(&active_source_mutex_);
   if (active_source_ == this) active_source_ = nullptr;
-  pthread_mutex_destroy(&mutex_);
+  pthread_mutex_unlock(&active_source_mutex_);
 }
 
 int FltkKeySource::drain(KeyEvent* out, int max_events) {
-  installDispatcher();
-  pthread_mutex_lock(&mutex_);
   int count = 0;
-  while (head_ != tail_ && count < max_events) {
-    out[count++] = queue_[head_];
-    head_ = (head_ + 1) % kQueueCapacity;
+  uint8_t head = head_.load(std::memory_order_relaxed);
+  uint8_t tail = tail_.load(std::memory_order_acquire);
+  while (head != tail && count < max_events) {
+    out[count++] = queue_[head];
+    head = (head + 1) % kQueueCapacity;
   }
-  pthread_mutex_unlock(&mutex_);
+  head_.store(head, std::memory_order_release);
   return count;
 }
 
@@ -51,43 +63,70 @@ void FltkKeySource::installDispatcher() {
 }
 
 bool FltkKeySource::enqueue(const KeyEvent& event) {
-  pthread_mutex_lock(&mutex_);
-  int next_tail = (tail_ + 1) % kQueueCapacity;
-  bool accepted = next_tail != head_;
+  uint8_t tail = tail_.load(std::memory_order_relaxed);
+  uint8_t next_tail = (tail + 1) % kQueueCapacity;
+  bool accepted = next_tail != head_.load(std::memory_order_acquire);
   if (accepted) {
-    queue_[tail_] = event;
-    tail_ = next_tail;
+    queue_[tail] = event;
+    tail_.store(next_tail, std::memory_order_release);
   }
-  pthread_mutex_unlock(&mutex_);
+  if (accepted) host_event_endpoint_.notifyFromHost();
   return accepted;
+}
+
+bool FltkKeySource::hasPendingEvents() const {
+  return head_.load(std::memory_order_acquire) !=
+         tail_.load(std::memory_order_acquire);
+}
+
+void FltkKeySource::onReadinessStart() {
+  if (host_event_started_) return;
+  CHECK(roo_testing::HostEventConnectResult::kConnected ==
+        host_event_endpoint_.connect(&FltkKeySource::onHostEventReady, this));
+  host_event_started_ = true;
+}
+
+void FltkKeySource::onReadinessStop() {
+  if (!host_event_started_) return;
+  host_event_endpoint_.disconnect();
+  host_event_started_ = false;
+}
+
+void FltkKeySource::onHostEventReady(void* context) {
+  // The roo_testing gateway invokes this in a FreeRTOS task, so normal
+  // KeySource handler synchronization and scheduler notification are valid.
+  static_cast<FltkKeySource*>(context)->notifyReady();
 }
 
 int FltkKeySource::dispatchFltkEvent(int event, Fl_Window* window) {
   if (dispatching) return window == nullptr ? 0 : Fl::handle_(event, window);
   dispatching = true;
   bool consumed = false;
-  if (active_source_ != nullptr && (event == FL_KEYDOWN || event == FL_KEYUP)) {
+  pthread_mutex_lock(&active_source_mutex_);
+  FltkKeySource* source = active_source_;
+  if (source != nullptr && (event == FL_KEYDOWN || event == FL_KEYUP)) {
     int key = Fl::event_key();
     PhysicalKey physical_key = physicalKey(key);
     if (physical_key == PhysicalKey::kNone) {
+      pthread_mutex_unlock(&active_source_mutex_);
       dispatching = false;
       return window == nullptr ? 0 : Fl::handle_(event, window);
     }
     uint8_t index = static_cast<uint8_t>(physical_key);
     KeyPhase phase = KeyPhase::kUp;
     if (event == FL_KEYDOWN) {
-      phase = active_source_->keys_down_[index] ? KeyPhase::kRepeat
-                                                 : KeyPhase::kDown;
-      active_source_->keys_down_[index] = true;
+      phase = source->keys_down_[index] ? KeyPhase::kRepeat : KeyPhase::kDown;
+      source->keys_down_[index] = true;
     } else {
-      active_source_->keys_down_[index] = false;
+      source->keys_down_[index] = false;
     }
-    active_source_->onFltkEvent(phase, key, physical_key);
+    source->onFltkEvent(phase, key, physical_key);
     // Keyboard input belongs to the Roo Windows key source once normalized.
     // Passing it on would let FLTK independently interpret Escape (or Tab)
     // after the framework has queued its semantic handling.
     consumed = true;
   }
+  pthread_mutex_unlock(&active_source_mutex_);
   int result =
       consumed ? 1 : (window == nullptr ? 0 : Fl::handle_(event, window));
   dispatching = false;

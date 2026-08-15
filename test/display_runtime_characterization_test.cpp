@@ -28,6 +28,8 @@ class QueuedKeySource final : public KeySource {
   }
 
  private:
+  bool hasPendingEvents() const override { return !events_.empty(); }
+
   std::deque<KeyEvent> events_;
 };
 

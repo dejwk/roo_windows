@@ -139,6 +139,8 @@ class QueuedKeySource : public KeySource {
   void push(KeyEvent event) { events_.push_back(event); }
 
  private:
+  bool hasPendingEvents() const override { return !events_.empty(); }
+
   std::vector<KeyEvent> events_;
 };
 

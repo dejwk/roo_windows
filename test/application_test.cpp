@@ -25,6 +25,9 @@ class TestWidget : public BasicWidget {
 class EmptyKeySource final : public KeySource {
  public:
   int drain(KeyEvent* out, int max_events) override { return 0; }
+
+ private:
+  bool hasPendingEvents() const override { return false; }
 };
 
 class TestDestination : public Destination {
