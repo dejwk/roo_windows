@@ -1,4 +1,6 @@
 // Learning goal: run two independent display applications on one scheduler.
+// The emulator and hardware paths both run the applications on separate
+// displays.
 
 // *************** EMULATOR SETUP BEGIN
 
@@ -9,6 +11,7 @@
 #include "roo_testing/microcontrollers/esp32/fake_esp32.h"
 #include "roo_testing/transducers/ui/viewport/flex_viewport.h"
 #include "roo_testing/transducers/ui/viewport/fltk/fltk_viewport.h"
+#include "roo_windows/fake/fltk_key_source.h"
 
 using roo_testing_transducers::FlexViewport;
 using roo_testing_transducers::FltkViewport;
@@ -33,8 +36,7 @@ struct Emulator {
         first_touch(first_flex, FakeXpt2046Spi::Calibration(
                                     269, 249, 3829, 3684, true, false, false)),
         second_touch(second_flex, FakeXpt2046Spi::Calibration(
-                                      269, 249, 3829, 3684, true, false,
-                                      false)) {
+                                      269, 249, 3829, 3684, true, false, false)) {
     FakeEsp32().attachSpiDevice(first_display, 4, 5, 6);
     FakeEsp32().gpio.attachOutput(7, first_display.cs());
     FakeEsp32().gpio.attachOutput(2, first_display.dc());
@@ -50,6 +52,8 @@ struct Emulator {
     FakeEsp32().gpio.attachOutput(9, second_touch.cs());
   }
 } emulator;
+
+roo_windows::fake::FltkKeySource emulator_keys;
 
 #endif
 
@@ -67,13 +71,13 @@ static constexpr int kSpiMisoPin = 5;
 static constexpr int kSpiMosiPin = 6;
 
 Ili9341spi<7, 2, 3> first_screen(Orientation().rotateLeft());
-Ili9341spi<8, 10, 11> second_screen(Orientation().rotateLeft());
 TouchXpt2046<1> first_touch;
-TouchXpt2046<9> second_touch;
-
 Display first_display(first_screen, first_touch,
                       TouchCalibration(269, 249, 3829, 3684,
                                        Orientation::LeftDown()));
+
+Ili9341spi<8, 10, 11> second_screen(Orientation().rotateLeft());
+TouchXpt2046<9> second_touch;
 Display second_display(second_screen, second_touch,
                        TouchCalibration(269, 249, 3829, 3684,
                                         Orientation::LeftDown()));
@@ -88,26 +92,60 @@ void initDisplays() {
 
 #include "roo_scheduler.h"
 #include "roo_windows.h"
+#include "roo_windows/containers/aligned_layout.h"
+#include "roo_windows/core/destination.h"
+#include "roo_windows/core/navigation_host.h"
 #include "roo_windows/widgets/text_label.h"
+#include "roo_windows/widgets/text_field.h"
 
 using namespace roo_windows;
 
 roo_scheduler::Scheduler scheduler;
 Environment env(scheduler);
+
+class EditorDestination : public Destination {
+ public:
+  explicit EditorDestination(ApplicationContext& context)
+      : contents(context),
+        field(context, font_body1(), "Type here",
+              roo_display::kLeft | roo_display::kMiddle,
+              TextField::UNDERLINE) {
+    contents.add(field, roo_display::kLeft | roo_display::kTop);
+  }
+
+  Widget& getContents() override { return contents; }
+
+  AlignedLayout contents;
+  TextField field;
+};
+
+#ifdef ROO_TESTING
+Application first_app(&env, first_display);
+Application second_app(&env, second_display, emulator_keys, true);
+#else
 Application first_app(&env, first_display);
 Application second_app(&env, second_display);
-TextLabel first_label(first_app.context(), "First application",
+#endif
+TextLabel first_label(first_app.context(), "Keyboard application",
                       material2::text_style_caption(),
                       kGravityCenter | kGravityMiddle);
-TextLabel second_label(second_app.context(), "Second application",
-                       material2::text_style_caption(),
-                       kGravityCenter | kGravityMiddle);
+NavigationHost editor_navigation;
+EditorDestination editor_destination(second_app.context());
 
 void setup() {
   initDisplays();
 
   first_app.addTaskFullScreen(first_label);
-  second_app.addTaskFullScreen(second_label);
+  Task& editor_task = second_app.addTaskFullScreen(editor_navigation);
+  editor_navigation.push(editor_destination);
+  // Keep the field focused, but leave keyboard presentation entirely to the
+  // first application.
+  editor_task.textFieldEditor().edit(&editor_destination.field, false);
+
+  // Keyboard presentation stays with the first application, while its
+  // semantic input synchronously edits the active field in the second.
+  first_app.keyboard().connect(second_app);
+  first_app.keyboard().show();
 
   // Each application schedules only its own work. Enter the shared scheduler
   // once, after every application has started.

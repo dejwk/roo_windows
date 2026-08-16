@@ -257,11 +257,7 @@ TextFieldEditor::~TextFieldEditor() { cancel(); }
 void TextFieldEditor::edit(TextField* target, bool show_software_keyboard) {
   if (target_ == target) {
     if (target_ != nullptr) {
-      if (show_software_keyboard) {
-        application_.activateTextInput(*this);
-      } else {
-        application_.deactivateTextInput(*this);
-      }
+      application_.activateTextInput(*this);
       application_.setTextEditorKeyboardVisibility(show_software_keyboard);
     }
     return;
@@ -280,11 +276,10 @@ void TextFieldEditor::edit(TextField* target, bool show_software_keyboard) {
     old_target->onEditFinished(false);
     old_target->invalidateInterior();
   }
-  if (show_software_keyboard) {
-    application_.activateTextInput(*this);
-  } else {
-    application_.deactivateTextInput(*this);
-  }
+  // Local keyboard presentation is independent of semantic input routing.
+  // An external keyboard may target this editor while its own application
+  // keeps its software keyboard hidden.
+  application_.activateTextInput(*this);
   application_.setTextEditorKeyboardVisibility(show_software_keyboard);
   target->invalidateInterior();
   last_glyph_recently_entered_ = false;

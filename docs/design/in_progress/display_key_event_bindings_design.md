@@ -2,13 +2,13 @@
 
 ## Status
 
-In progress. Physical `KeyEvent` identity, application-owned physical input
+Implemented. Physical `KeyEvent` identity, application-owned physical input
 routing, and the application-scoped semantic text-input endpoint are
 implemented. This includes `KeySource` readiness, the private application
 router, the coalescing ticker, the FLTK host-event handoff, and synchronous
 `TextInputEmitter` delivery to one active editor. The built-in software
-keyboard emits semantic input through its own `TextInputEmitter`; only
-cross-application integration remains proposed.
+keyboard emits semantic input through its own `TextInputEmitter`, and its
+source-owned presentation can target another application's active editor.
 
 ## Objective
 
@@ -78,9 +78,8 @@ boundaries, not the number or order of implementation commits:
    registration, readiness, bounded draining, and teardown into an
    application-owned input router. This area is complete.
 3. Semantic text input gives software keyboards direct editor operations
-   through a stable application endpoint. The endpoint and keyboard conversion
-   are complete; the remaining increment integrates its visibility policy with
-   a cross-application example.
+   through a stable application endpoint. The endpoint, keyboard conversion,
+   visibility policy, and cross-application example are complete.
 
 The mapping is therefore:
 
@@ -88,7 +87,7 @@ The mapping is therefore:
 | --- | --- | --- | --- |
 | Physical key events | 1, 3, 5–6 | Preserve and dispatch physical identity | Complete |
 | Physical input routing | 2–3, 5–6 | Route and wake physical sources | Complete |
-| Semantic text input | 1–2, 4–6 | Endpoint; keyboard conversion; integration | Keyboard conversion complete; 1 remaining |
+| Semantic text input | 1–2, 4–6 | Endpoint; keyboard conversion; integration | Complete |
 
 ```text
 KeySource queue -- readiness --> ApplicationInputRouter --> Task key dispatch
@@ -171,9 +170,8 @@ Implementation follows the
 [embedded C++ guidance](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md).
 
 The plan below enumerates delivery increments, whereas the Design Overview
-enumerates architectural areas. The physical areas, semantic-text endpoint,
-and keyboard conversion are complete; one semantic-text increment remains.
-The event-driven
+enumerates architectural areas. The physical areas and semantic-text work are
+complete. The event-driven
 ticker prerequisite is tracked by the event-driven input design and is not an
 additional Phase 6 increment.
 
@@ -251,14 +249,15 @@ bazel test //:roo_windows_test //:task_test
 
 Delivered change: `feat: emit semantic software text input`
 
-### Remaining 1: integrate visibility and cross-application use
+### Completed: integrate visibility and cross-application use
 
-Connect editing-session start and completion to the standard built-in
-keyboard's show/hide policy without putting visibility in the emitter contract.
-Add the two-application example and integration coverage showing that a
-keyboard owned by one application can synchronously edit the active editor in
-another application on the same UI thread. This is integration and policy
-work; it adds no new input representation.
+Editing-session start and completion retain the standard local built-in
+keyboard show/hide policy without putting visibility in the emitter contract.
+`Application::keyboard()` exposes each source-owned presenter; reconnecting it
+to another application changes only its semantic destination. The shared
+scheduler example and integration test show that a keyboard owned by one
+application synchronously edits the active editor in another application on
+the same UI thread.
 
 Focused validation:
 
@@ -267,16 +266,15 @@ bazel test //:application_test //:shared_scheduler_drive_test \
   //:roo_windows_test
 ```
 
-Proposed commit: `feat: integrate software keyboard editor sessions`
+Delivered change: `feat: integrate software keyboard editor sessions`
 
 ## Testing Plan
 
 The completed endpoint coverage exercises inactive delivery, invalid scalar
 rejection, backward deletion, Done, replacement of the active editor, and an
-emitter that outlives its destination. The sub-designs own the remaining focused
-event, routing, thread, editor, and allocation tests. Phase 6 integration will
-add one scheduler driving two applications, a software keyboard targeting the
-other application's active editor, and dormant-target repainting after input.
+emitter that outlives its destination. The shared-scheduler integration test
+drives a software keyboard owned by one application into the other
+application's active editor.
 
 ## Caveats
 
