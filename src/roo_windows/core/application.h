@@ -193,7 +193,7 @@ class Application {
   bool performTextInputAction(TextInputAction action);
   void activateTextInput(TextFieldEditor& editor);
   void deactivateTextInput(TextFieldEditor& editor);
-  void setTextEditorKeyboardListener(TextFieldEditor* editor, bool visible);
+  void setTextEditorKeyboardVisibility(bool visible);
 
   /// This is a best-effort fail-fast attempt for direct application UI entry
   /// points.

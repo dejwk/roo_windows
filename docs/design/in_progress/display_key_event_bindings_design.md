@@ -7,8 +7,8 @@ routing, and the application-scoped semantic text-input endpoint are
 implemented. This includes `KeySource` readiness, the private application
 router, the coalescing ticker, the FLTK host-event handoff, and synchronous
 `TextInputEmitter` delivery to one active editor. The built-in software
-keyboard still uses `KeyboardListener`; its conversion to an emitter and
-cross-application integration remain proposed.
+keyboard emits semantic input through its own `TextInputEmitter`; only
+cross-application integration remains proposed.
 
 ## Objective
 
@@ -35,8 +35,8 @@ their destination application's input router and wake it through readiness.
 `TextInputEmitter` now delivers semantic rune, backward-delete, and Done
 operations directly to an application's active `TextFieldEditor`. Activating a
 different editor cancels the previous semantic editing session. The built-in
-software keyboard still uses `KeyboardListener`, so it has not yet become an
-emitter itself.
+software keyboard is also an emitter, so its gestures do not synthesize
+physical key events.
 
 Phases 1–5 of the
 [display runtime design](../in_progress/display_surface_generalization_design.md)
@@ -78,9 +78,9 @@ boundaries, not the number or order of implementation commits:
    registration, readiness, bounded draining, and teardown into an
    application-owned input router. This area is complete.
 3. Semantic text input gives software keyboards direct editor operations
-   through a stable application endpoint. The endpoint is complete; the two
-   remaining increments convert the built-in keyboard and then integrate its
-   visibility policy with a cross-application example.
+   through a stable application endpoint. The endpoint and keyboard conversion
+   are complete; the remaining increment integrates its visibility policy with
+   a cross-application example.
 
 The mapping is therefore:
 
@@ -88,7 +88,7 @@ The mapping is therefore:
 | --- | --- | --- | --- |
 | Physical key events | 1, 3, 5–6 | Preserve and dispatch physical identity | Complete |
 | Physical input routing | 2–3, 5–6 | Route and wake physical sources | Complete |
-| Semantic text input | 1–2, 4–6 | Endpoint; keyboard conversion; integration | Endpoint complete; 2 remaining |
+| Semantic text input | 1–2, 4–6 | Endpoint; keyboard conversion; integration | Keyboard conversion complete; 1 remaining |
 
 ```text
 KeySource queue -- readiness --> ApplicationInputRouter --> Task key dispatch
@@ -171,8 +171,9 @@ Implementation follows the
 [embedded C++ guidance](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md).
 
 The plan below enumerates delivery increments, whereas the Design Overview
-enumerates architectural areas. The physical areas and the semantic-text
-endpoint are complete; two semantic-text increments remain. The event-driven
+enumerates architectural areas. The physical areas, semantic-text endpoint,
+and keyboard conversion are complete; one semantic-text increment remains.
+The event-driven
 ticker prerequisite is tracked by the event-driven input design and is not an
 additional Phase 6 increment.
 
@@ -223,8 +224,8 @@ emitter list and active editor before task destruction, allowing an emitter to
 outlive its destination safely.
 
 `TextFieldEditor` now registers its semantic session through `Application`
-while preserving the existing built-in `KeyboardListener` behavior. This keeps
-the endpoint independent of keyboard presentation until the next increment.
+while preserving keyboard presentation policy separately from the semantic
+input endpoint.
 
 Landed commit: `548986b` (`Implemented the application-scoped semantic text
 input.`)
@@ -235,12 +236,12 @@ Focused validation:
 bazel test //:application_test //:task_test //:roo_windows_test
 ```
 
-### Remaining 1: convert the built-in keyboard
+### Completed: convert the built-in keyboard
 
-Replace `KeyboardListener` with the keyboard-owned `TextInputEmitter`. Character
-and Space release commit runes, Enter performs Done, and Backspace deletes on
-press and repeats while held. At the end of this increment, software keyboard
-gestures no longer synthesize or share the physical-key contract.
+Replaced `KeyboardListener` with the keyboard-owned `TextInputEmitter`.
+Character and Space release commit runes, Enter performs Done, and Backspace
+deletes on press and repeats while held. Software keyboard gestures no longer
+synthesize or share the physical-key contract.
 
 Focused validation:
 
@@ -248,9 +249,9 @@ Focused validation:
 bazel test //:roo_windows_test //:task_test
 ```
 
-Proposed commit: `feat: emit semantic software text input`
+Delivered change: `feat: emit semantic software text input`
 
-### Remaining 2: integrate visibility and cross-application use
+### Remaining 1: integrate visibility and cross-application use
 
 Connect editing-session start and completion to the standard built-in
 keyboard's show/hide policy without putting visibility in the emitter contract.

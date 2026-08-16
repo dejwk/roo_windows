@@ -334,6 +334,7 @@ Application::Application(const Environment* env, roo_display::Display& display)
   auto keyboard_task = std::unique_ptr<Task>(
       new Task(*this, window_, keyboard_bounds, true, keyboard_.getContents()));
   keyboard_.setTask(*keyboard_task);
+  keyboard_.connect(*this);
   keyboard_task->setVisible(false);
   tasks_.push_back(std::move(keyboard_task));
 }
@@ -353,6 +354,7 @@ Application::Application(const Environment* env, roo_display::Display& display,
   auto keyboard_task = std::unique_ptr<Task>(
       new Task(*this, window_, keyboard_bounds, true, keyboard_.getContents()));
   keyboard_.setTask(*keyboard_task);
+  keyboard_.connect(*this);
   keyboard_task->setVisible(false);
   tasks_.push_back(std::move(keyboard_task));
   legacy_key_source_ = &keys;
@@ -539,9 +541,7 @@ void Application::deactivateTextInput(TextFieldEditor& editor) {
   text_input_->deactivate(editor);
 }
 
-void Application::setTextEditorKeyboardListener(TextFieldEditor* editor,
-                                                bool visible) {
-  keyboard_.setListener(editor);
+void Application::setTextEditorKeyboardVisibility(bool visible) {
   if (visible) {
     keyboard_.show();
   } else {

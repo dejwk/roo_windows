@@ -87,12 +87,12 @@ class VisibilityToggle : public BasicWidget {
 /// Shared editing controller for the `TextField` widgets in one `Task`.
 ///
 /// One editor is owned by each `Task` and bound to whichever `TextField`
-/// currently has focus in that task. It receives keyboard input as a
-/// `KeyboardListener`, maintains the cursor position, selection range, glyph
+/// currently has focus in that task. It receives semantic text input,
+/// maintains the cursor position, selection range, glyph
 /// metrics cache, and horizontal scroll offset, and drives cursor blinking
 /// and "recently entered glyph" reveal timers via the scheduler. Keeping this
 /// state centrally avoids paying for it on every `TextField` instance.
-class TextFieldEditor : public KeyboardListener {
+class TextFieldEditor {
  public:
   TextFieldEditor(Application& application, roo_scheduler::Scheduler& scheduler)
       : application_(application),
@@ -142,14 +142,14 @@ class TextFieldEditor : public KeyboardListener {
 
   /// Inserts (or overwrites the current selection with) a single Unicode
   /// code point at the caret and advances it.
-  void rune(uint32_t rune) override;
+  void rune(uint32_t rune);
 
   /// Confirms the edit and notifies the target's `onEditFinished(true)`.
-  void enter() override;
+  void enter();
 
   /// Deletes the current selection, or the glyph before the caret if no
   /// selection is active.
-  void del() override;
+  void del();
 
   void cancel();
   void forwardDelete();

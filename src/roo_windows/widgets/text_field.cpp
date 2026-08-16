@@ -261,7 +261,7 @@ void TextFieldEditor::edit(TextField* target, bool show_software_keyboard) {
       } else {
         application_.deactivateTextInput(*this);
       }
-      application_.setTextEditorKeyboardListener(this, show_software_keyboard);
+      application_.setTextEditorKeyboardVisibility(show_software_keyboard);
     }
     return;
   }
@@ -271,7 +271,7 @@ void TextFieldEditor::edit(TextField* target, bool show_software_keyboard) {
   if (target == nullptr) {
     application_.deactivateTextInput(*this);
     if (old_target != nullptr) old_target->onEditFinished(false);
-    application_.setTextEditorKeyboardListener(nullptr, false);
+    application_.setTextEditorKeyboardVisibility(false);
     if (old_target != nullptr) old_target->invalidateInterior();
     return;
   }
@@ -284,7 +284,7 @@ void TextFieldEditor::edit(TextField* target, bool show_software_keyboard) {
   } else {
     application_.deactivateTextInput(*this);
   }
-  application_.setTextEditorKeyboardListener(this, show_software_keyboard);
+  application_.setTextEditorKeyboardVisibility(show_software_keyboard);
   target->invalidateInterior();
   last_glyph_recently_entered_ = false;
   measure();
@@ -473,7 +473,7 @@ void TextFieldEditor::enter() {
   target_ = nullptr;
   application_.deactivateTextInput(*this);
   old_target->onEditFinished(true);
-  application_.setTextEditorKeyboardListener(nullptr, false);
+  application_.setTextEditorKeyboardVisibility(false);
   old_target->invalidateInterior();
   return;
 }

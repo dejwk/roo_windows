@@ -12,6 +12,7 @@
 #include "roo_windows/core/dimensions.h"
 #include "roo_windows/core/main_window.h"
 #include "roo_windows/core/task.h"
+#include "roo_scheduler.h"
 #include "roo_windows/widgets/button.h"
 
 namespace roo_windows {
@@ -83,6 +84,8 @@ static const int kMinRowHeight = 10;
 static const int kPreferredRowHeight = 10;
 static const int kMinCellWidth = 5;
 static const int kPreferredCellWidth = 15;
+static const roo_time::Duration kDeleteRepeatDelay = roo_time::Millis(400);
+static const roo_time::Duration kDeleteRepeatInterval = roo_time::Millis(60);
 
 namespace {
 
@@ -173,13 +176,12 @@ class KeyboardPage : public Panel {
 
 class KeyboardWidget : public Panel {
  public:
-  KeyboardWidget(ApplicationContext& context, const KeyboardSpec* spec);
+  KeyboardWidget(ApplicationContext& context, const KeyboardSpec* spec,
+                 TextInputEmitter& text_input);
 
   const KeyboardColorTheme& color_theme() const { return color_theme_; }
 
-  void setListener(KeyboardListener* listener) { listener_ = listener; }
-
-  KeyboardListener* listener() const { return listener_; }
+  TextInputEmitter& textInput() { return text_input_; }
 
   Padding getPadding() const override { return Padding(1); }
 
@@ -201,7 +203,7 @@ class KeyboardWidget : public Panel {
   const KeyboardColorTheme& color_theme_;
   Keyboard::CapsState caps_state_;
   KeyboardPage* current_page_;
-  KeyboardListener* listener_;
+  TextInputEmitter& text_input_;
 };
 
 KeyboardWidget& KeyboardButton::keyboard() {
@@ -243,11 +245,9 @@ class TextButton : public KeyboardButton {
   void onSingleTapUp(XDim x, YDim y) override {
     KeyboardPage* page = ((KeyboardPage*)parent());
     page->hideHighlighter();
-    KeyboardListener* listener = page->keyboard()->listener();
     Keyboard::CapsState caps = keyboard().caps_state();
-    if (listener != nullptr) {
-      listener->rune(caps == Keyboard::CAPS_STATE_LOW ? rune_ : rune_caps_);
-    }
+    page->keyboard()->textInput().commitRune(
+        caps == Keyboard::CAPS_STATE_LOW ? rune_ : rune_caps_);
     if (caps == Keyboard::CAPS_STATE_HIGH) {
       // Flip back.
       keyboard().setCapsState(Keyboard::CAPS_STATE_LOW);
@@ -267,10 +267,7 @@ class SpaceButton : public KeyboardButton {
 
   void onSingleTapUp(XDim x, YDim y) override {
     KeyboardPage* page = ((KeyboardPage*)parent());
-    KeyboardListener* listener = page->keyboard()->listener();
-    if (listener != nullptr) {
-      listener->rune(' ');
-    }
+    page->keyboard()->textInput().commitRune(' ');
     Button::onSingleTapUp(x, y);
   }
 };
@@ -284,10 +281,7 @@ class EnterButton : public KeyboardButton {
 
   void onSingleTapUp(XDim x, YDim y) override {
     KeyboardPage* page = ((KeyboardPage*)parent());
-    KeyboardListener* listener = page->keyboard()->listener();
-    if (listener != nullptr) {
-      listener->enter();
-    }
+    page->keyboard()->textInput().performAction(TextInputAction::kDone);
     Button::onSingleTapUp(x, y);
   }
 };
@@ -348,18 +342,44 @@ class ShiftButton : public KeyboardButton {
 class DelButton : public KeyboardButton {
  public:
   DelButton(ApplicationContext& context, const MonoIcon& icon)
-      : KeyboardButton(context, icon) {}
+      : KeyboardButton(context, icon),
+        repeat_(context.scheduler(), [this]() { repeatDelete(); }) {}
 
   bool showClickAnimation() const override { return false; }
 
+  void onShowPress(XDim x, YDim y) override {
+    deleteBackward();
+    repeat_.scheduleAfter(kDeleteRepeatDelay);
+    KeyboardButton::onShowPress(x, y);
+  }
+
+  bool supportsLongPress() override { return true; }
+
   void onSingleTapUp(XDim x, YDim y) override {
-    KeyboardPage* page = ((KeyboardPage*)parent());
-    KeyboardListener* listener = page->keyboard()->listener();
-    if (listener != nullptr) {
-      listener->del();
-    }
+    repeat_.cancel();
     Button::onSingleTapUp(x, y);
   }
+
+  void onLongPressFinished(XDim x, YDim y) override {
+    repeat_.cancel();
+    KeyboardButton::onLongPressFinished(x, y);
+  }
+
+  void onCancel() override {
+    repeat_.cancel();
+    KeyboardButton::onCancel();
+  }
+
+ private:
+  void deleteBackward() { keyboard().textInput().deleteBackward(); }
+
+  void repeatDelete() {
+    if (!isPressed()) return;
+    deleteBackward();
+    repeat_.scheduleAfter(kDeleteRepeatInterval);
+  }
+
+  roo_scheduler::SingletonTask repeat_;
 };
 
 class PageSwitchButton : public KeyboardButton {
@@ -386,11 +406,12 @@ const KeyboardWidget* KeyboardPage::keyboard() const {
 KeyboardWidget* KeyboardPage::keyboard() { return (KeyboardWidget*)parent(); }
 
 KeyboardWidget::KeyboardWidget(ApplicationContext& context,
-                               const KeyboardSpec* spec)
+                               const KeyboardSpec* spec,
+                               TextInputEmitter& text_input)
     : Panel(context),
       color_theme_(context.keyboardColorTheme()),
       caps_state_(Keyboard::CAPS_STATE_LOW),
-      listener_(nullptr) {
+      text_input_(text_input) {
   setParentClipMode(ParentClipMode::kUnclipped);
   for (int i = 0; i < spec->page_count; ++i) {
     auto page = new KeyboardPage(context, &spec->pages[i]);
@@ -679,7 +700,7 @@ Dimensions PressHighlighter::getSuggestedMinimumDimensions() const {
 }
 
 Keyboard::Keyboard(ApplicationContext& context, const KeyboardSpec* spec)
-    : contents_(new KeyboardWidget(context, spec)) {
+    : contents_(new KeyboardWidget(context, spec, text_input_)) {
   contents_->setVisibility(Visibility::kGone);
 }
 
@@ -698,8 +719,8 @@ void Keyboard::hide() {
   task_->setVisible(false);
 }
 
-void Keyboard::setListener(KeyboardListener* listener) {
-  contents()->setListener(listener);
+void Keyboard::connect(Application& destination) {
+  text_input_.connect(destination);
 }
 
 void Keyboard::setPage(int idx) { contents()->setPage(idx); }
