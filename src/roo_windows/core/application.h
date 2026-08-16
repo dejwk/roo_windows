@@ -77,6 +77,14 @@ class Application {
   /// Returns the application-owned runtime context.
   const ApplicationContext& context() const { return context_; }
 
+  /// Returns this application's built-in software keyboard. Its visibility is
+  /// local presentation policy; its semantic input destination can be changed
+  /// with `Keyboard::connect()`.
+  Keyboard& keyboard() { return keyboard_; }
+
+  /// Returns this application's built-in software keyboard.
+  const Keyboard& keyboard() const { return keyboard_; }
+
   /// Adds a child widget to a new full-screen-ish task at the supplied
   /// bounds and immediately starts it.
   void add(WidgetRef child, const roo_display::Box& box);
