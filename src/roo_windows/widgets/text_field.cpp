@@ -153,7 +153,8 @@ void TextField::paint(PaintContext& ctx) const {
   int16_t advance_width;
   if (isEdited()) {
     // The metrics are captured in the editor.
-    advance_width = editor().glyphs().back().advance();
+    const auto& glyphs = editor().glyphs();
+    advance_width = glyphs.empty() ? 0 : glyphs.back().advance();
     if (editor().cursor_position() == (int)editor().glyphs().size()) {
       // Leave two pixels for the cursor at the end of text.
       advance_width += 2;
