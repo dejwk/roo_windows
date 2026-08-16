@@ -38,7 +38,9 @@ class Keyboard {
   /// Returns the underlying `KeyboardWidget` that renders the layout.
   Widget& getContents();
 
-  /// Connects this keyboard's semantic input emitter to `destination`.
+  /// Routes this keyboard's semantic input to `destination`, replacing any
+  /// previous destination. The caller must use a UI thread shared with
+  /// `destination` after it has started.
   void connect(Application& destination);
   void setTask(Task& task) { task_ = &task; }
 

@@ -720,6 +720,7 @@ void Keyboard::hide() {
 }
 
 void Keyboard::connect(Application& destination) {
+  text_input_.disconnect();
   text_input_.connect(destination);
 }
 
