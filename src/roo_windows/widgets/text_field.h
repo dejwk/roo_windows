@@ -205,11 +205,9 @@ class TextField : public BasicWidget {
   };
 
   /// Creates a field using task-local editor resolution after attachment.
-  ///
-  /// `editor` is retained only for source compatibility and is ignored.
-  TextField(ApplicationContext& context, TextFieldEditor& editor,
-            const roo_display::Font& font, std::string hint,
-            roo_display::Alignment alignment, Decoration decoration)
+  TextField(ApplicationContext& context, const roo_display::Font& font,
+            std::string hint, roo_display::Alignment alignment,
+            Decoration decoration)
       : BasicWidget(context),
         decoration_(decoration),
         value_(""),
@@ -219,9 +217,7 @@ class TextField : public BasicWidget {
         text_color_(roo_display::color::Transparent),
         highlight_color_(roo_display::color::Transparent),
         alignment_(alignment),
-        editable_(true) {
-    (void)editor;
-  }
+        editable_(true) {}
 
   bool isClickable() const override { return true; }
   // TODO: Replace this with an outline focus indication once text-field focus

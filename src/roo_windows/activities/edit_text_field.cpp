@@ -10,10 +10,9 @@
 namespace roo_windows {
 
 EditedTextField::EditedTextField(ApplicationContext& context,
-                                 TextFieldEditor& editor,
                                  const std::string& hint,
                                  EditTextField& activity)
-    : TextField(context, editor, roo_windows::font_body1(), hint,
+    : TextField(context, roo_windows::font_body1(), hint,
                 roo_display::kLeft | roo_display::kMiddle, UNDERLINE),
       activity_(activity) {}
 
@@ -26,12 +25,12 @@ void EditedTextField::onEditFinished(bool confirmed) {
 }
 
 EditTextField::EditTextField(ApplicationContext& context,
-                             TextFieldEditor& editor, const std::string& hint)
+                             const std::string& hint)
     : main_pane_(context),
       content_pane_(context),
       back_(context, SCALED_ROO_ICON(outlined, navigation_arrow_back),
             Button::TEXT),
-      text_(context, editor, hint, *this),
+      text_(context, hint, *this),
       enter_(context, SCALED_ROO_ICON(outlined, navigation_check)),
       editing_(false),
       enter_fn_(nullptr) {

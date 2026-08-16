@@ -52,8 +52,8 @@ class TestDestination : public Destination {
 
 class TextInputDestination : public Destination {
  public:
-  TextInputDestination(ApplicationContext& context, TextFieldEditor& editor)
-      : field(context, editor, font_body1(), "", roo_display::kLeft,
+  explicit TextInputDestination(ApplicationContext& context)
+      : field(context, font_body1(), "", roo_display::kLeft,
               TextField::NONE) {}
 
   Widget& getContents() override { return field; }
@@ -105,7 +105,7 @@ TEST(Application, RequestBackUsesExplicitTargetTask) {
   NavigationHost first_navigation;
   NavigationHost second_navigation;
   Application app(&environment, display);
-  Task& first_task = app.addTaskFullScreen(first_navigation);
+  app.addTaskFullScreen(first_navigation);
   Task& second_task = app.addTaskFullScreen(second_navigation);
   TestDestination first_root(app.context());
   TestDestination first_child(app.context());
@@ -138,7 +138,7 @@ TEST(Application, RequestBackPrioritizesTransientPresentation) {
   Environment environment(scheduler);
   NavigationHost navigation;
   Application app(&environment, display);
-  Task& task = app.addTaskFullScreen(navigation);
+  app.addTaskFullScreen(navigation);
   TestDestination root(app.context());
   TestDestination child(app.context());
   navigation.push(root);
@@ -168,7 +168,7 @@ TEST(Application, TextInputEmitterTargetsTheActiveEditor) {
   NavigationHost navigation;
   Application app(&environment, display);
   Task& task = app.addTaskFullScreen(navigation);
-  TextInputDestination destination(app.context(), task.textFieldEditor());
+  TextInputDestination destination(app.context());
   navigation.push(destination);
   TextInputEmitter emitter;
 
@@ -199,10 +199,10 @@ TEST(Application, TextInputActivationReplacesThePreviousEditor) {
   NavigationHost first_navigation;
   NavigationHost second_navigation;
   Application app(&environment, display);
-  Task& first_task = app.addTaskFullScreen(first_navigation);
-  Task& second_task = app.addTaskFullScreen(second_navigation);
-  TextInputDestination first(app.context(), first_task.textFieldEditor());
-  TextInputDestination second(app.context(), second_task.textFieldEditor());
+  app.addTaskFullScreen(first_navigation);
+  app.addTaskFullScreen(second_navigation);
+  TextInputDestination first(app.context());
+  TextInputDestination second(app.context());
   first_navigation.push(first);
   second_navigation.push(second);
   TextInputEmitter emitter;

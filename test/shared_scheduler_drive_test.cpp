@@ -31,8 +31,8 @@ class OneKeySource final : public KeySource {
 
 class TextInputDestination final : public Destination {
  public:
-  TextInputDestination(ApplicationContext& context, TextFieldEditor& editor)
-      : field(context, editor, font_body1(), "", roo_display::kLeft,
+  explicit TextInputDestination(ApplicationContext& context)
+      : field(context, font_body1(), "", roo_display::kLeft,
               TextField::NONE) {}
 
   Widget& getContents() override { return field; }
@@ -80,8 +80,7 @@ TEST(SharedSchedulerDrive, KeyboardCanTargetAnotherApplicationEditor) {
   Application destination(&environment, destination_display);
   Task& destination_task =
       destination.addTaskFullScreen(destination_navigation);
-  TextInputDestination target(destination.context(),
-                              destination_task.textFieldEditor());
+  TextInputDestination target(destination.context());
   destination_navigation.push(target);
 
   source.start();
@@ -89,7 +88,9 @@ TEST(SharedSchedulerDrive, KeyboardCanTargetAnotherApplicationEditor) {
   scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 2);
 
   ASSERT_TRUE(destination.refresh());
-  target.field.edit();
+  // Keep the destination's local keyboard hidden while accepting semantic
+  // input from the source application's keyboard.
+  destination_task.textFieldEditor().edit(&target.field, false);
   EXPECT_TRUE(destination.refresh());
 
   // The source keyboard remains a source-owned presenter, while its semantic

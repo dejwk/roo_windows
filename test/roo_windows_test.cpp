@@ -73,8 +73,8 @@ class FocusableTestWidget : public BasicWidget {
 
 class TextFieldDestination : public Destination {
  public:
-  TextFieldDestination(ApplicationContext& context, TextFieldEditor& editor)
-      : field(context, editor, font_body1(), "", kLeft | kMiddle,
+  explicit TextFieldDestination(ApplicationContext& context)
+      : field(context, font_body1(), "", kLeft | kMiddle,
               TextField::NONE) {}
 
   Widget& getContents() override { return field; }
@@ -295,8 +295,8 @@ TEST(Windows, TextFieldEditsFromHardwareKeys) {
   Environment env(scheduler);
   NavigationHost navigation;
   Application app(&env, display);
-  Task& task = app.addTaskFullScreen(navigation);
-  TextFieldDestination destination(app.context(), task.textFieldEditor());
+  app.addTaskFullScreen(navigation);
+  TextFieldDestination destination(app.context());
   navigation.push(destination);
   app.refresh();
   TextField& field = destination.field;

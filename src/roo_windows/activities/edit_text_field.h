@@ -22,8 +22,8 @@ class EditTextField;
 /// the activity can confirm or cancel the edit.
 class EditedTextField : public TextField {
  public:
-  EditedTextField(ApplicationContext& context, TextFieldEditor& editor,
-                  const std::string& hint, EditTextField& activity);
+  EditedTextField(ApplicationContext& context, const std::string& hint,
+                  EditTextField& activity);
 
   /// Confirms or cancels the activity-driven edit through the owning
   /// `EditTextField`.
@@ -41,8 +41,7 @@ class EditedTextField : public TextField {
 /// and invokes the supplied confirmation callback with the entered string.
 class EditTextField : public Destination {
  public:
-  EditTextField(ApplicationContext& context, TextFieldEditor& editor,
-                const std::string& hint);
+  EditTextField(ApplicationContext& context, const std::string& hint);
 
   /// Returns the activity's root pane (containing the editor and action
   /// buttons).

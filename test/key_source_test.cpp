@@ -111,8 +111,8 @@ class BackPresentation final : public TransientPresentationRegistration {
 
 class TextFieldDestination : public Destination {
  public:
-  TextFieldDestination(ApplicationContext& context, TextFieldEditor& editor)
-      : field(context, editor, font_body1(), "", roo_display::kLeft,
+  explicit TextFieldDestination(ApplicationContext& context)
+      : field(context, font_body1(), "", roo_display::kLeft,
               TextField::NONE) {}
 
   Widget& getContents() override { return field; }
@@ -263,8 +263,8 @@ TEST(KeySource, HardwareTextInputKeepsProgrammaticallyEditedFieldFocused) {
   Environment environment(scheduler);
   NavigationHost navigation;
   Application app(&environment, display);
-  Task& task = app.addTaskFullScreen(navigation);
-  TextFieldDestination destination(app.context(), task.textFieldEditor());
+  app.addTaskFullScreen(navigation);
+  TextFieldDestination destination(app.context());
   navigation.push(destination);
 
   // This is the password-activity sequence: editing starts immediately after
@@ -294,7 +294,7 @@ TEST(KeySource, HardwareEscapeUsesFocusedTask) {
   QueuedKeySource keys({{KeyPhase::kDown, KeyCode::kEscape, 0, 0}});
   NavigationHost navigation;
   Application app(&environment, display, keys, false);
-  Task& task = app.addTaskFullScreen(navigation);
+  app.addTaskFullScreen(navigation);
   BackDestination root(app.context());
   BackDestination child(app.context());
   navigation.push(root);
@@ -345,7 +345,7 @@ TEST(KeySource, UnhandledRootEscapeCancelsFocusedEditor) {
   NavigationHost navigation;
   Application app(&environment, display, keys, false);
   Task& task = app.addTaskFullScreen(navigation);
-  TextFieldDestination destination(app.context(), task.textFieldEditor());
+  TextFieldDestination destination(app.context());
   navigation.push(destination);
   app.refresh();
   ASSERT_TRUE(destination.field.requestFocus());

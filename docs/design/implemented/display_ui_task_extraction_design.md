@@ -494,11 +494,6 @@ class TextField {
             std::string hint, roo_display::Alignment alignment,
             Decoration decoration);
 
-  // Deprecated; `editor` is ignored and task ancestry selects the editor.
-  TextField(ApplicationContext& context, TextFieldEditor& editor,
-            const roo_display::Font& font, std::string hint,
-            roo_display::Alignment alignment, Decoration decoration);
-
   bool edit();
   TextFieldEditor& editor() const;
 };
