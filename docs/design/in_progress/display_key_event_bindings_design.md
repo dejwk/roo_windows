@@ -2,11 +2,13 @@
 
 ## Status
 
-In progress. Physical `KeyEvent` identity and application-owned physical input
-routing are implemented, including `KeySource` readiness, the private
-application router, the coalescing ticker, and the FLTK host-event handoff.
-Application-scoped semantic text input and software-keyboard migration remain
-proposed.
+In progress. Physical `KeyEvent` identity, application-owned physical input
+routing, and the application-scoped semantic text-input endpoint are
+implemented. This includes `KeySource` readiness, the private application
+router, the coalescing ticker, the FLTK host-event handoff, and synchronous
+`TextInputEmitter` delivery to one active editor. The built-in software
+keyboard still uses `KeyboardListener`; its conversion to an emitter and
+cross-application integration remain proposed.
 
 ## Objective
 
@@ -30,8 +32,11 @@ pairs Down and Up by physical switch.
 
 The temporary task-owned `KeySource` attachment is gone: sources now connect to
 their destination application's input router and wake it through readiness.
-The built-in software keyboard still uses `KeyboardListener`, so semantic
-software text input remains proposed below.
+`TextInputEmitter` now delivers semantic rune, backward-delete, and Done
+operations directly to an application's active `TextFieldEditor`. Activating a
+different editor cancels the previous semantic editing session. The built-in
+software keyboard still uses `KeyboardListener`, so it has not yet become an
+emitter itself.
 
 Phases 1–5 of the
 [display runtime design](../in_progress/display_surface_generalization_design.md)
@@ -57,8 +62,9 @@ before task and editor storage.
    event queue.
 5. Application shutdown must quiesce producer callbacks and clear incoming
    connections before destroying their destinations.
-6. Delivery after initialization must not allocate or recursively drive an
-   application.
+6. Route setup and delivery infrastructure after initialization must not
+   allocate or recursively drive an application. Existing editor mutations
+   retain their own storage behavior.
 
 ## Design Overview
 
@@ -71,11 +77,10 @@ boundaries, not the number or order of implementation commits:
 2. [Physical input routing](../implemented/display_input_routing_design.md) moves source
    registration, readiness, bounded draining, and teardown into an
    application-owned input router. This area is complete.
-3. [Semantic text input](display_semantic_text_input_design.md) gives software
-   keyboards direct editor operations through a stable application endpoint.
-   This area is split into three remaining increments: introduce the endpoint,
-   convert the built-in keyboard, and then integrate session visibility and the
-   cross-application example.
+3. Semantic text input gives software keyboards direct editor operations
+   through a stable application endpoint. The endpoint is complete; the two
+   remaining increments convert the built-in keyboard and then integrate its
+   visibility policy with a cross-application example.
 
 The mapping is therefore:
 
@@ -83,7 +88,7 @@ The mapping is therefore:
 | --- | --- | --- | --- |
 | Physical key events | 1, 3, 5–6 | Preserve and dispatch physical identity | Complete |
 | Physical input routing | 2–3, 5–6 | Route and wake physical sources | Complete |
-| Semantic text input | 1–2, 4–6 | Endpoint; keyboard conversion; integration | Remaining |
+| Semantic text input | 1–2, 4–6 | Endpoint; keyboard conversion; integration | Endpoint complete; 2 remaining |
 
 ```text
 KeySource queue -- readiness --> ApplicationInputRouter --> Task key dispatch
@@ -108,13 +113,12 @@ landed. The [event-driven input design](display_event_driven_input_design.md)
 still retains the periodic fallback until its later touch, gesture, paint, and
 animation phases are complete.
 
-Semantic text input does not depend on physical routing, but its three
-increments are ordered internally: the stable application endpoint must exist
-before the keyboard can emit to it, and the converted keyboard must exist
-before visibility and cross-application behavior can be integrated. The final
-periodic fallback is separate event-driven work and is removed only after key
-readiness, touch acquisition, gesture deadlines, invalidation, and animation
-deadlines are all explicit.
+Semantic text input does not depend on physical routing. Its stable application
+endpoint has landed, so the keyboard can next emit to it. The converted keyboard
+must exist before its visibility and cross-application behavior are integrated.
+The final periodic fallback is separate event-driven work and is removed only
+after key readiness, touch acquisition, gesture deadlines, invalidation, and
+animation deadlines are all explicit.
 
 ### Lifetime boundary
 
@@ -128,18 +132,38 @@ stops its ticker, quiesces physical readiness callbacks, clears both incoming
 registries and its active text editor, and then destroys tasks. Tasks are
 application-owned and are not independently destroyed by callers.
 
+### Storage and allocation
+
+Each `TextInputEmitter` stores its destination pointer and intrusive-list link;
+the private `ApplicationTextInput` stores only the list head and active-editor
+pointer. `Application` adds one owning pointer for that endpoint. `Task`'s
+existing `TextFieldEditor` now refers to `Application` in place of its direct
+`Keyboard` reference, so the endpoint adds no per-task editor state and no
+per-`TextField` state.
+
+Connecting, disconnecting, and routing use those intrusive links and do not
+allocate after initialization. A semantic operation invokes the existing editor
+directly. It can still grow a field's caller-owned text or glyph-metrics
+storage, just as the pre-existing editor path can; that editor work is outside
+the routing allocation guarantee.
+
 ## Proposed API
 
-The public APIs are defined by the three sub-designs. Their common connection
-shape is producer-owned:
+The completed public semantic-input API is producer-owned:
 
 ```cpp
-source.connect(destination);
-source.disconnect();
+TextInputEmitter emitter;
+emitter.connect(application);
+emitter.commitRune(U'A');
+emitter.deleteBackward();
+emitter.performAction(TextInputAction::kDone);
+emitter.disconnect();
 ```
 
-No task exposes producer attachment, binding-list, or polling methods in the
-final API.
+An operation returns `false` without side effects when its emitter is
+disconnected or the destination has no active editor. Rune delivery also
+rejects non-Unicode scalars. No task exposes producer attachment, binding-list,
+or polling methods in the final API.
 
 ## Implementation Plan
 
@@ -147,10 +171,10 @@ Implementation follows the
 [embedded C++ guidance](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md).
 
 The plan below enumerates delivery increments, whereas the Design Overview
-enumerates architectural areas. Two areas are complete, and semantic text input
-maps to the three remaining increments. The event-driven ticker prerequisite is
-tracked by the event-driven input design and is not an additional Phase 6
-increment.
+enumerates architectural areas. The physical areas and the semantic-text
+endpoint are complete; two semantic-text increments remain. The event-driven
+ticker prerequisite is tracked by the event-driven input design and is not an
+additional Phase 6 increment.
 
 ### Completed: preserve physical switch identity
 
@@ -188,13 +212,22 @@ bazel test //:key_source_test //:task_test \
 
 Delivered change: `feat: route and wake physical key sources`
 
-### Remaining 1: add application-scoped semantic text input
+### Completed: add application-scoped semantic text input
 
-Add `ApplicationTextInput`, producer-owned `TextInputEmitter` connections, one
-active-editor registration per application, and shared editor operations. This
-increment establishes routing and lifetime behavior but does not yet convert
-the built-in keyboard, which continues using `KeyboardListener` until the next
-increment.
+`TextInputEmitter` now owns one connection to an `ApplicationTextInput`
+endpoint. The endpoint maintains the intrusive incoming-emitter list and one
+active `TextFieldEditor`, validates Unicode scalars, and synchronously performs
+rune, backward-delete, and Done operations. An editor activation replaces and
+cancels the previous semantic editing session. Application teardown clears the
+emitter list and active editor before task destruction, allowing an emitter to
+outlive its destination safely.
+
+`TextFieldEditor` now registers its semantic session through `Application`
+while preserving the existing built-in `KeyboardListener` behavior. This keeps
+the endpoint independent of keyboard presentation until the next increment.
+
+Landed commit: `548986b` (`Implemented the application-scoped semantic text
+input.`)
 
 Focused validation:
 
@@ -202,9 +235,7 @@ Focused validation:
 bazel test //:application_test //:task_test //:roo_windows_test
 ```
 
-Proposed commit: `feat: add application-scoped text input`
-
-### Remaining 2: convert the built-in keyboard
+### Remaining 1: convert the built-in keyboard
 
 Replace `KeyboardListener` with the keyboard-owned `TextInputEmitter`. Character
 and Space release commit runes, Enter performs Done, and Backspace deletes on
@@ -219,7 +250,7 @@ bazel test //:roo_windows_test //:task_test
 
 Proposed commit: `feat: emit semantic software text input`
 
-### Remaining 3: integrate visibility and cross-application use
+### Remaining 2: integrate visibility and cross-application use
 
 Connect editing-session start and completion to the standard built-in
 keyboard's show/hide policy without putting visibility in the emitter contract.
@@ -239,11 +270,12 @@ Proposed commit: `feat: integrate software keyboard editor sessions`
 
 ## Testing Plan
 
-The sub-designs own focused event, routing, lifetime, thread, editor, and
-allocation tests. Phase 6 integration additionally covers one scheduler driving
-two applications, a software keyboard targeting the other application's active
-editor, source and application destruction in either order, and dormant-target
-repainting after input.
+The completed endpoint coverage exercises inactive delivery, invalid scalar
+rejection, backward deletion, Done, replacement of the active editor, and an
+emitter that outlives its destination. The sub-designs own the remaining focused
+event, routing, thread, editor, and allocation tests. Phase 6 integration will
+add one scheduler driving two applications, a software keyboard targeting the
+other application's active editor, and dormant-target repainting after input.
 
 ## Caveats
 
