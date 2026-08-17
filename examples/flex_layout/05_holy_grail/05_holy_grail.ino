@@ -106,7 +106,7 @@ class NamedPanel : public FlexLayout {
   BorderStyle getBorderStyle() const override { return BorderStyle(0, 1); }
 
   Color getOutlineColor() const override {
-    return theme().color.outlineVariant;
+    return theme().material3Theme().color.outlineVariant;
   }
 
  private:

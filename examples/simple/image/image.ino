@@ -94,7 +94,7 @@ Application app(&env, display);
 // captured via the roo_display::Drawable interface. See
 // https://github.com/dejwk/roo_display to learn more.
 auto pie = SmoothPie({0, 0}, 40, 0, M_PI / 6,
-                     app.context().theme().color.primaryVariant);
+                     app.context().theme().material3Theme().color.primary);
 Image img(app.context(), pie);
 
 Task& task = app.addTaskFullScreen(img);

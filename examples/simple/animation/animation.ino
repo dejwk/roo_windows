@@ -128,7 +128,8 @@ class AnimatedArc : public Image {
     if (angle2 < angle1) angle2 += 2.0f * M_PI;
     arc_ =
         MakeTileOf(SmoothThickArc({0, 0}, 15, 14, angle1, angle2,
-                                  theme().color.primaryVariant, ENDING_ROUNDED),
+                                  theme().material3Theme().color.primary,
+                                  ENDING_ROUNDED),
                    arc_extents(), kNoAlign);
     invalidateInterior();
   }

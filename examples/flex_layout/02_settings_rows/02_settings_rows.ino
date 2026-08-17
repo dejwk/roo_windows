@@ -99,7 +99,8 @@ class SettingRow : public FlexLayout {
         labels_(context, FlexDirection::kColumn),
         primary_(context, primary, material2::text_style_body1()),
         secondary_(context, secondary, material2::text_style_caption()),
-        toggle_(context, initial_on) {
+        toggle_(context, initial_on ? Switch::OnOffState::kOn
+                                    : Switch::OnOffState::kOff) {
     setAlignItems(AlignItems::kCenter);
     setPadding(Padding(Scaled(12), Scaled(8)));
     setGap(Scaled(12));

@@ -1,19 +1,24 @@
-## roo_windows emulator harness
+# roo_windows scratch emulator harness
 
-This directory is a small Bazel workspace for running `roo_windows` examples
-under the `dejwk/roo_testing` emulator.
+Checked-in examples are first-class targets in the main workspace. Run them
+directly from the repository root, for example:
+
+```sh
+bazel run //examples/simple/navigation:navigation
+```
+
+This directory remains a separate, small Bazel workspace for ad-hoc sketches,
+multi-file experiments, and local dependency overrides. Its `main.cpp` is
+deliberately scratch state rather than the canonical copy of an example.
 
 ### Usage
 
-1. Copy the example `.ino` file you want to run into this directory.
-2. Rename it to `main.cpp`.
-3. From this directory, run:
+1. Edit `main.cpp`, or add supporting `.cpp` and `.h` files under `src/`.
+2. From this directory, run:
 
 ```sh
 bazel run :main
 ```
 
-The local `BUILD` file intentionally only includes `*.cpp` and `*.h` files in
-this directory. Do not move example sources into nested folders, because Bazel
-creates `bazel-*` symlinks here and recursive globs would pick up generated
-artifacts from the output tree.
+The local `BUILD` file intentionally includes only top-level `*.cpp`/`*.h` and
+`src/**/*.cpp`/`src/**/*.h`. Bazel output symlinks are excluded by that shape.
