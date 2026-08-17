@@ -27,9 +27,11 @@ Related instructions:
   Run tests from there, for example:
   `(cd lib/roo_windows; bazel test //:overlay_test)`
 - Prefer the narrowest relevant Bazel target first, then widen only if needed.
-- To verify that an example sketch compiles under emulation, copy the sketch to
-  `roo_windows/emulation/main.cpp`, then run:
-  `(cd lib/roo_windows/emulation; bazel build :main)`
+- To verify that an example sketch compiles under emulation, build its
+  hierarchical target from the main workspace, for example:
+  `(cd lib/roo_windows; bazel build //examples/simple/navigation:navigation)`
+- Use `roo_windows/emulation` only as a scratch workspace for local or
+  multi-file experiments.
 
 ## Formatting
 
@@ -40,7 +42,6 @@ Related instructions:
 
 - Widget-related changes also follow the widget authoring instruction when relevant.
 - Validation uses the narrowest relevant Bazel target first.
-- Example-sketch compile coverage uses the emulation `:main` build when
-  relevant.
+- Example-sketch compile coverage uses its main-workspace hierarchical target.
 - `clang-format` has been run on every changed C++ source and header file
   before review or submission.

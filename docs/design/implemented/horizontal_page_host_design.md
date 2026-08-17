@@ -596,8 +596,7 @@ Proposed commit message:
 Validation:
 
 - `bazel test //:horizontal_page_host_test`
-- `bazel run //emulation:main` with the example selected in the emulation
-  harness
+- `bazel run //examples/simple/horizontal_page_host:horizontal_page_host`
 
 ### Phase 2: Adjacent Neighbor Activation And Swipe Settle
 
@@ -616,7 +615,7 @@ Proposed commit message:
 Validation:
 
 - `bazel test //:horizontal_page_host_test`
-- `bazel run //emulation:main` to verify gesture feel and settle behavior
+- `bazel run //examples/simple/horizontal_page_host:horizontal_page_host` to verify gesture feel and settle behavior
 
 ### Phase 3: Blit Integration And Coverage
 
@@ -637,7 +636,7 @@ Validation:
 
 - `bazel test //:horizontal_page_host_test`
 - `bazel test //:horizontal_page_host_render_test`
-- `bazel run //emulation:main` to verify heavy-page drag smoothness
+- `bazel run //examples/simple/horizontal_page_host:horizontal_page_host` to verify heavy-page drag smoothness
 
 ### Phase 4: Host Integration Guide And Non-Tabs Example
 
@@ -657,7 +656,7 @@ Validation:
 
 - `bazel test //:horizontal_page_host_test`
 - `bazel test //:horizontal_page_host_render_test`
-- `bazel run //emulation:main` with the host integration example selected
+- `bazel run //examples/simple/horizontal_page_host:horizontal_page_host`
 
 ### Phase 5: Material Tabs Integration (After Tabs Lands)
 

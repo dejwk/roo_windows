@@ -425,8 +425,7 @@ Validation:
 - run `bazel test //:roo_windows_test //:material3_slider_test`,
 - build one representative constructor-time-registration example under
   emulation, using [examples/simple/button/button.ino](../../../examples/simple/button/button.ino)
-  copied to `emulation/main.cpp`, then run `bazel build :main` from
-  `emulation`.
+  built as `//examples/simple/button:button` from the main workspace.
 
 ### Phase 3: Move Interactive-Change Storage Out of Widget
 

@@ -4,8 +4,6 @@ cc_binary(
     name = "main",
     srcs = glob(["*.cpp", "*.h", "src/**/*.cpp", "src/**/*.h"], allow_empty = True),
     defines = [
-        "ROO_TESTING",
-        "ARDUINO=10805",
         "ROO_LOGGING_COLORLOGTOSTDERR=1",
     ],
     linkstatic = 1,

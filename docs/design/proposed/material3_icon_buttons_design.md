@@ -536,7 +536,7 @@ Proposed commit message: `Add Material 3 icon button widget`
 
 Validation: run
 `bazel test //:material3_button_test //:material3_icon_button_test` and
-`bazel build //examples:material3_buttons_compact_controls_example_build`.
+`bazel build //examples/material3/buttons/compact_controls:compact_controls`.
 
 ### Step 2: Add rendering coverage
 

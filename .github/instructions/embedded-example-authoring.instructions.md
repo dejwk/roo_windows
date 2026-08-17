@@ -56,8 +56,8 @@ feature, and adapt the demonstrated pattern to an embedded application.
 ## Emulator Compatibility
 
 - Every `.ino` example must be self-contained and runnable with the
-  `roo_testing` emulator by copying it, unchanged, to `emulation/main.cpp` and
-  running `bazel run :main` from the `emulation` directory.
+  `roo_testing` emulator through a leaf-package target whose name matches the
+  sketch basename, such as `//examples/simple/navigation:navigation`.
 - Keep the `ROO_TESTING` device setup in the sketch and keep the physical
   display setup usable on the documented hardware. Emulator-specific behavior
   must remain behind `#ifdef ROO_TESTING`.
@@ -69,10 +69,11 @@ feature, and adapt the demonstrated pattern to an embedded application.
 The manual validation workflow is:
 
 ```sh
-cp examples/<feature>/<facet>/<facet>.ino emulation/main.cpp
-cd emulation
-bazel run :main
+bazel run //examples/<feature>/<facet>:<facet>
 ```
+
+Use the separate `emulation` workspace only as a scratch harness for local or
+multi-file experiments that do not belong in the checked-in examples.
 
 ## Comments and Presentation
 
@@ -103,7 +104,6 @@ bazel run :main
   prefix.
 - Comments explain setup, API decisions, interaction, state flow, and likely
   customization points.
-- Copying the sketch unchanged to `emulation/main.cpp` and running
-  `bazel run :main` succeeds.
+- The sketch's hierarchical `bazel run` target starts under the emulator.
 - Automated Bazel build coverage includes the sketch's emulator path.
 - The sketch is formatted with `clang-format`.

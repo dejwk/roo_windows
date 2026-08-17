@@ -1,5 +1,11 @@
 common --registry="https://raw.githubusercontent.com/dejwk/roo-registry/main/" --registry="https://bcr.bazel.build"
 
+import %workspace%/bazelrc/esp32/base.bazelrc
+import %workspace%/bazelrc/esp32/arduino.bazelrc
+
+# Arduino-only workspace: preserve plain Bazel invocations.
+build --config=roo_testing_arduino_esp32
+
 build:asan --strip=never
 build:asan --copt -fsanitize=address
 build:asan --copt -DADDRESS_SANITIZER
@@ -8,7 +14,5 @@ build:asan --copt -g
 build:asan --copt -fno-omit-frame-pointer
 build:asan --linkopt -fsanitize=address
 
-build --copt -DARDUINO=10308
-build --copt -DROO_TESTING
 build --copt -DROO_LOGGING_COLORLOGTOSTDERR=1
 build --copt -DROO_LANG=10427

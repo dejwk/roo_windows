@@ -721,7 +721,6 @@ cc_binary(
     ],
     defines = [
         "ROO_BENCHMARK_EXIT_AFTER_RUN=1",
-        "ROO_TESTING"
     ],
     linkstatic = 1,
     tags = ["manual"],

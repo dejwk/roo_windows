@@ -606,7 +606,7 @@ Focused validation:
 ```sh
 bazel test //:navigation_host_test //:ui_task_test //:task_test \
   //:display_runtime_characterization_test
-bazel build //examples:simple_navigation_example_build
+bazel build //examples/simple/navigation:navigation
 ```
 
 This phase establishes the destination lifecycle needed to migrate

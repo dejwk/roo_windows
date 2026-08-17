@@ -973,8 +973,7 @@ Proposed commit message:
 Validation:
 
 - `bazel test //:material3_tabs_test`
-- `bazel run //emulation:main` with the tabs example selected in the emulation
-  harness
+- `bazel run //examples/material3/tabs/status_pages:status_pages`
 
 ### Phase 2: Indicator Paint Order and Secondary Variant
 
@@ -1017,7 +1016,7 @@ Validation:
 
 - `bazel test //:material3_tabs_test`
 - `bazel test //:material3_tabs_golden_test`
-- `bazel run //emulation:main` to manually verify drag, fling, and tab
+- `bazel run //examples/material3/tabs/status_pages:status_pages` to manually verify drag, fling, and tab
   selection feel
 
 ### Phase 4: Badged Tabs

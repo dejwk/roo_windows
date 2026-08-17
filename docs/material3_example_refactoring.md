@@ -34,8 +34,8 @@ and the
   Material 3 API.
 - Every sketch explains its learning goal, important API choices, interaction
   and state flow, and hardware customization points in comments.
-- Every sketch runs unchanged when copied to `emulation/main.cpp` and invoked
-  with `bazel run :main`.
+- Every sketch has a hierarchical main-workspace target and runs unchanged
+  with `bazel run //examples/<feature>/<facet>:<facet>`.
 - Every sketch has non-interactive Bazel build coverage for its emulator path.
 - Rare or retained legacy behavior is isolated under a `legacy_` prefix.
 - Exhaustive rendering states and edge cases remain in unit and golden tests,
@@ -50,8 +50,9 @@ meaningful interaction, such as selecting a pump mode, changing a temperature
 setpoint, or navigating between status pages.
 
 The common emulator and display scaffolding stays visible in each `.ino` file
-so sketches remain independently copyable. A shared source include would make
-the examples shorter, but would violate the unchanged-copy workflow.
+so sketches remain independently usable in Bazel and on hardware. A shared
+source include would make the examples shorter, but would make each sketch a
+less useful standalone teaching artifact.
 
 ## Design Details
 
@@ -119,10 +120,10 @@ Every new sketch will follow the same readable progression:
 ## Proposed API
 
 No public library API change is proposed. The examples establish a repository
-contract: every `.ino` is a standalone teaching artifact and an emulator-build
-input. Bazel will expose one build-coverage target per sketch, generated through
-a small BUILD macro or an equivalent explicit target list so adding an example
-without validation is visible in review.
+contract: every `.ino` is a standalone teaching artifact and a runnable
+emulator input. Bazel exposes one hierarchical `cc_binary` target per sketch,
+using the sketch basename as the target name, so adding an example without
+build and run coverage is visible in review.
 
 ## Implementation Plan
 
@@ -139,7 +140,7 @@ Proposed commit message:
 > Add the repository's embedded example-authoring guidance and build-cover every Material 3 sketch through the same `ROO_TESTING` configuration used by the emulator workflow described in `docs/material3_example_refactoring.md`.
 
 Validation: build every generated Material 3 example target, then manually run
-one unchanged copied sketch with `bazel run :main`.
+one through its hierarchical `bazel run` label.
 
 ### 2. Refactor navigation, app bars, search, and tabs
 
@@ -208,32 +209,32 @@ medium, and expanded viewport sizes; run the pane, grid, and scaffold tests.
 
 Check names, learning-goal comments, Material 3 typography, realistic labels,
 formatting, and the absence of phase/history language across the collection.
-Run the exact copy-and-run workflow for every sketch and update the emulator
-README to link the authoring policy.
+Run each sketch's main-workspace target and update the examples and scratch
+emulator READMEs to link the authoring policy.
 
 Proposed commit message:
 
 > Material 3 examples phase 6: complete the learning and emulator audit
 >
-> Apply the final editorial checklist from `docs/material3_example_refactoring.md`, verify every sketch through the documented copy-and-run workflow, and link repository guidance from the emulator documentation.
+> Apply the final editorial checklist from `docs/material3_example_refactoring.md`, verify every sketch through its hierarchical runnable target, and link repository guidance from the examples documentation.
 
 Validation: run `clang-format` on every example, build all example targets, run
-the relevant Material 3 test suite, and manually launch every copied sketch with
-`bazel run :main`.
+the relevant Material 3 test suite, and manually launch every sketch through
+its main-workspace target.
 
 ## Testing Plan
 
 Automated validation compiles every example with `ROO_TESTING`, the same fake
 display, touch device, viewport, and optional key source used by the emulator.
 Feature unit and golden tests remain the exhaustive behavioral and rendering
-coverage. Manual validation launches each sketch after the documented unchanged
-copy to confirm that build-only coverage has not missed startup, layout, input,
-or interaction issues.
+coverage. Manual validation launches each sketch through its declared runnable
+target to confirm that build-only coverage has not missed startup, layout,
+input, or interaction issues.
 
 ## Caveats
 
 - Repeating emulator and hardware setup adds lines to every sketch, but keeps
-  each `.ino` independently usable and preserves the required copy workflow.
+  each `.ino` independently usable in both the emulator and Arduino tooling.
 - The target map intentionally omits some combinations currently shown in the
   slider, button, and badge catalogs. Those combinations belong in tests or API
   reference material because they do not justify separate learning examples.
@@ -251,6 +252,6 @@ exhaustive coverage.
 
 #### Extract common setup into a shared example header
 
-A shared header would reduce duplication but copying a single `.ino` into the
-emulation directory would no longer be sufficient. Standalone sketches take
+A shared header would reduce duplication but make a single `.ino` insufficient
+when moving the lesson into an Arduino project. Standalone sketches take
 priority over minimizing boilerplate.
