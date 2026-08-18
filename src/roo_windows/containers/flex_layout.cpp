@@ -261,8 +261,9 @@ static HeightSpec makeHeightSpec(FlexDirection d, int16_t main_constraint,
 static void computeJustify(JustifyContent mode, int16_t free_space,
                            int item_count, int16_t gap, int16_t& out_offset,
                            int16_t& out_between) {
+  out_offset = 0;
+  out_between = gap;
   if (item_count == 0) {
-    out_offset = 0;
     out_between = 0;
     return;
   }
@@ -301,9 +302,9 @@ static void computeJustify(JustifyContent mode, int16_t free_space,
 static void computeAlignContent(AlignContent mode, int16_t free_space,
                                 int line_count, int16_t& out_offset,
                                 int16_t& out_between) {
+  out_offset = 0;
+  out_between = 0;
   if (line_count == 0) {
-    out_offset = 0;
-    out_between = 0;
     return;
   }
   switch (mode) {
