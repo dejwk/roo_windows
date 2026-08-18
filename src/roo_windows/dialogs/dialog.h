@@ -108,6 +108,8 @@ class Dialog : public VerticalLayout {
    public:
     using HorizontalLayout::HorizontalLayout;
 
+    void clearChildrenForDestruction() { removeAll(); }
+
     PreferredSize getPreferredSize() const override {
       return PreferredSize(PreferredSize::MatchParentWidth(),
                            PreferredSize::WrapContentHeight());

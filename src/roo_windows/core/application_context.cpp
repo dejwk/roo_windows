@@ -7,7 +7,13 @@ ApplicationContext::ApplicationContext(
     const KeyboardColorTheme& keyboard_color_theme)
     : scheduler_(scheduler),
       theme_(theme),
-      keyboard_color_theme_(keyboard_color_theme) {}
+      keyboard_color_theme_(keyboard_color_theme),
+      lifetime_(new Lifetime(*this)) {}
+
+ApplicationContext::~ApplicationContext() {
+  lifetime_->context = nullptr;
+  lifetime_->release();
+}
 
 roo_scheduler::Scheduler& ApplicationContext::scheduler() const {
   return scheduler_;

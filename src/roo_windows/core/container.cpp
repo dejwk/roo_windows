@@ -49,19 +49,22 @@ void Container::attachChild(WidgetRef ref, const Rect& bounds) {
 
 void Container::detachChild(Widget* child) {
   CHECK(child->parent() == this);
-  if (MainWindow* window = getMainWindow(); window != nullptr) {
-    window->presentationAnchorSubtreeDetaching(*child);
-  }
-  if (Task* task = child->getTask(); task != nullptr) {
-    task->onSubtreeDetaching(*child);
-  } else {
-    context().focus().onSubtreeDetaching(*child);
+  ApplicationContext* live_context = child->tryContext();
+  if (live_context != nullptr) {
+    if (MainWindow* window = getMainWindow(); window != nullptr) {
+      window->presentationAnchorSubtreeDetaching(*child);
+    }
+    if (Task* task = child->getTask(); task != nullptr) {
+      task->onSubtreeDetaching(*child);
+    } else {
+      live_context->focus().onSubtreeDetaching(*child);
+    }
+    if (child->isVisible()) {
+      childHidden(child);
+      requestLayout();
+    }
   }
   bool owned = child->isOwnedByParent();
-  if (child->isVisible()) {
-    childHidden(child);
-    requestLayout();
-  }
   child->setParent(nullptr, false);
   if (owned) delete child;
 }

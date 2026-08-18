@@ -292,6 +292,14 @@ class ScrollableBlitPanel : public SimpleScrollablePanel {
                       Direction direction = Direction::kVertical)
       : SimpleScrollablePanel(context, direction), blit_cache_(context) {}
 
+  ~ScrollableBlitPanel() override {
+    // Detach the member wrapper before it is destroyed and before the base
+    // destructor consults its content pointer. The wrapper then releases any
+    // adopted child while both objects are still alive.
+    SimpleScrollablePanel::clearContents();
+    blit_cache_.clearChild();
+  }
+
   /// Wraps `new_contents` in the internal `BlitCacheContainer` and installs
   /// it as the panel's scrolled content.
   void setContents(WidgetRef new_contents) {

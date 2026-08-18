@@ -42,10 +42,19 @@ Dialog::Dialog(ApplicationContext& context,
 }
 
 Dialog::~Dialog() {
-  if (!registration_.isActive()) return;
-  MainWindow* window = getMainWindow();
-  if (window != nullptr) window->detachDialog(*this);
-  registration_.cancelPresentation();
+  clearPresentationContent();
+  if (registration_.isActive()) {
+    MainWindow* window = getMainWindow();
+    if (window != nullptr) window->detachDialog(*this);
+    registration_.cancelPresentation();
+  }
+
+  // Panel stores borrowed pointers to these member widgets. Detach them while
+  // the pointees are still alive; C++ destroys members before base classes and
+  // destroys buttons_ before button_panel_.
+  button_panel_.clearChildrenForDestruction();
+  title_panel_.clearChildrenForDestruction();
+  removeAll();
 }
 
 void Dialog::setTitle(std::string title) { title_.setText(std::move(title)); }

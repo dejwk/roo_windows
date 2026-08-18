@@ -26,22 +26,33 @@ namespace roo_windows {
 static const bool kTerminateAnimationsOnCancel = true;
 
 Widget::Widget(ApplicationContext& context)
-    : context_(context),
+    : context_lifetime_(context.lifetime_),
       parent_(nullptr),
       parent_bounds_(0, 0, -1, -1),
-      state_(kWidgetEnabled | kDirty | kInvalidated) {}
+      state_(kWidgetEnabled | kDirty | kInvalidated) {
+  context_lifetime_->retain();
+}
 
 Widget::Widget(Widget&& other)
-    : context_(other.context_),
+    : context_lifetime_(other.context_lifetime_),
       parent_(other.parent_),
       parent_bounds_(other.parent_bounds_),
       state_(other.state_) {
-  context_.widgetEvents().moveHandlers(other, *this);
+  context_lifetime_->retain();
+  context().widgetEvents().moveHandlers(other, *this);
 }
 
 Widget::~Widget() {
-  focusManager().onWidgetDestroying(*this);
-  context_.widgetEvents().clearHandlers(*this);
+  if (tryContext() != nullptr) {
+    focusManager().onWidgetDestroying(*this);
+  }
+  // Focus-loss callbacks can tear down the application, so resolve the
+  // context again before touching the independent event service.
+  if (ApplicationContext* live_context = tryContext();
+      live_context != nullptr) {
+    live_context->widgetEvents().clearHandlers(*this);
+  }
+  context_lifetime_->release();
 }
 
 PresentationPinShowResult Widget::showPresentationPin(
@@ -91,12 +102,12 @@ const Task* Widget::getTask() const {
 
 FocusManager& Widget::focusManager() {
   Task* task = getTask();
-  return task != nullptr ? task->focus() : context_.focus();
+  return task != nullptr ? task->focus() : context().focus();
 }
 
 const FocusManager& Widget::focusManager() const {
   const Task* task = getTask();
-  return task != nullptr ? task->focus() : context_.focus();
+  return task != nullptr ? task->focus() : context().focus();
 }
 
 namespace {
@@ -275,7 +286,7 @@ roo_display::Color Widget::defaultColor() const {
              : ::roo_windows::material3::ColorToken::kBackground;
 }
 
-const Theme& Widget::theme() const { return context_.theme(); }
+const Theme& Widget::theme() const { return context().theme(); }
 
 void Widget::setDirty(const Rect& bounds) {
   markDirty();
@@ -515,7 +526,7 @@ void Widget::setDragged(bool dragged) {
 }
 
 void Widget::triggerInteractiveChange() {
-  context_.widgetEvents().dispatchInteractiveChange(*this);
+  context().widgetEvents().dispatchInteractiveChange(*this);
 }
 
 void Widget::notifyParentInvalidatedRegion(const Rect& rect) {

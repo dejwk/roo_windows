@@ -30,6 +30,7 @@ namespace roo_windows {
 class BlitCacheContainer : public Container {
  public:
   BlitCacheContainer(ApplicationContext& context);
+  ~BlitCacheContainer() override;
 
   /// Replaces the held child widget. Detaches the previous child (if any).
   void setChild(WidgetRef child);

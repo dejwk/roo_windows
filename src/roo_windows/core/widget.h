@@ -91,6 +91,9 @@ enum class DragClaim : uint8_t { kReject, kAccept, kDefer };
 /// Widgets are non-copyable but movable, and are normally owned by their parent
 /// `Container` (see `kWidgetOwnedByParent`). Most accessors must be called only
 /// after the widget has been attached to a parent / application tree.
+/// Caller-owned widgets may be destroyed after their originating context.
+/// Context-independent state remains inspectable, while any API that requires
+/// runtime services will fail its context-liveness check.
 class Widget {
  public:
   static constexpr int16_t kMinSloppyTouchTargetSpan = 50;
@@ -314,12 +317,12 @@ class Widget {
   // Sets a handler to be called when the state of this widget changes due to
   // touch interaction. For simple clickable items, called by onClicked().
   void setOnInteractiveChange(std::function<void()> handler) {
-    context_.widgetEvents().setInteractiveChangeHandler(*this,
-                                                        std::move(handler));
+    context().widgetEvents().setInteractiveChangeHandler(*this,
+                                                         std::move(handler));
   }
 
   bool hasInteractiveChangeHandler() const {
-    return context_.widgetEvents().hasInteractiveChangeHandler(*this);
+    return context().widgetEvents().hasInteractiveChangeHandler(*this);
   }
 
   // Gesture lifecycle callbacks below are dispatched by Application's gesture
@@ -603,8 +606,18 @@ class Widget {
   void layout(const Rect& rect);
 
  protected:
-  ApplicationContext& context() { return context_; }
-  const ApplicationContext& context() const { return context_; }
+  /// Returns the context while it is alive. Runtime-dependent widget APIs
+  /// require their originating context to outlive the call.
+  ApplicationContext& context() {
+    ApplicationContext* live_context = tryContext();
+    CHECK(live_context != nullptr) << "widget context is no longer alive";
+    return *live_context;
+  }
+  const ApplicationContext& context() const {
+    const ApplicationContext* live_context = tryContext();
+    CHECK(live_context != nullptr) << "widget context is no longer alive";
+    return *live_context;
+  }
 
   void triggerInteractiveChange();
 
@@ -760,6 +773,11 @@ class Widget {
   friend class OverlaySpec;
   friend class ClickAnimation;
 
+  ApplicationContext* tryContext() { return context_lifetime_->context; }
+  const ApplicationContext* tryContext() const {
+    return context_lifetime_->context;
+  }
+
   void clearClicking();
 
   // Called by the framework. Receives the parent's canvas. Determines
@@ -783,7 +801,7 @@ class Widget {
 
   void setParentBounds(const Rect& parent_bounds);
 
-  ApplicationContext& context_;
+  ApplicationContext::Lifetime* context_lifetime_;
   Container* parent_;
   Rect parent_bounds_;
   uint16_t state_;

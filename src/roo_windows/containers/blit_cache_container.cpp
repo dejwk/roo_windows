@@ -89,6 +89,8 @@ BlitCacheContainer::BlitCacheContainer(ApplicationContext& context)
       moving_(false),
       blit_supported_(-1) {}
 
+BlitCacheContainer::~BlitCacheContainer() { clearChild(); }
+
 void BlitCacheContainer::setChild(WidgetRef child) {
   if (child_ != nullptr) {
     detachChild(child_);

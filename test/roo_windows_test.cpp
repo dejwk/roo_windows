@@ -452,6 +452,23 @@ TEST(Windows, WidgetDestructorClearsDispatcherHandlers) {
   replacement->~DispatcherTestWidget();
 }
 
+// Verifies that a standalone context invalidates its widget lifetime handle,
+// allowing a caller-owned widget with a registered handler to be destroyed
+// after the context's runtime services are gone.
+TEST(Windows, WidgetMayBeDestroyedAfterStandaloneContext) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  DispatcherTestWidget* widget = nullptr;
+  {
+    ApplicationContext context(scheduler, env.theme(),
+                               env.keyboardColorTheme());
+    widget = new DispatcherTestWidget(context);
+    widget->setOnInteractiveChange([]() {});
+  }
+
+  delete widget;
+}
+
 // Verifies that the later-added child is painted on top of the earlier child
 // where they overlap, while the earlier child remains visible outside the
 // overlap.
