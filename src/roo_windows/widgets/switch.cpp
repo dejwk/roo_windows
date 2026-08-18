@@ -15,10 +15,10 @@ namespace roo_windows {
 namespace {
 
 // Used at different zoom levels.
-const ::roo_display::Pictogram& slider_18();
-const ::roo_display::Pictogram& slider_24();
-const ::roo_display::Pictogram& slider_36();
-const ::roo_display::Pictogram& slider_48();
+[[maybe_unused]] const ::roo_display::Pictogram& slider_18();
+[[maybe_unused]] const ::roo_display::Pictogram& slider_24();
+[[maybe_unused]] const ::roo_display::Pictogram& slider_36();
+[[maybe_unused]] const ::roo_display::Pictogram& slider_48();
 
 static constexpr int kSwitchAnimationMs = 120;
 }  // namespace
