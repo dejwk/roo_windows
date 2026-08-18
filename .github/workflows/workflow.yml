@@ -2,35 +2,19 @@ name: CI
 
 on:
   push: {}
+  pull_request: {}
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build_and_test:
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v3
-
-    - uses: bazel-contrib/setup-bazel@0.15.0
-      with:
-        # Avoid downloading Bazel every time.
-        bazelisk-cache: true
-        # Store build cache per workflow.
-        disk-cache: ${{ github.workflow }}
-        # Share repository cache between workflows.
-        repository-cache: true
-
-    - name: Build
-      run: |
-        bazel build //...
-
-    - name: Test
-      run: |
-        bazel test //... --test_output=errors
-
-    - name: Build with address sanitizer
-      run: |
-        bazel build --config=asan //...
-
-    - name: Test with address sanitizer
-      run: |
-        bazel test --config=asan //... --test_output=errors
+  ci:
+    uses: dejwk/roo_testing/.github/workflows/client-ci.yml@953eed22666e4148b687bae5ecdbebe1b9350422 # roo_testing 2.0.0
+    with:
+      profiles: '["arduino"]'
+      system_packages: libx11-dev libjpeg-dev libpng-dev zlib1g-dev

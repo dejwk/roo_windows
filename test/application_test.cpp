@@ -138,7 +138,7 @@ TEST(Application, RequestBackPrioritizesTransientPresentation) {
   Environment environment(scheduler);
   NavigationHost navigation;
   Application app(&environment, display);
-  app.addTaskFullScreen(navigation);
+  Task& task = app.addTaskFullScreen(navigation);
   TestDestination root(app.context());
   TestDestination child(app.context());
   navigation.push(root);
@@ -167,7 +167,7 @@ TEST(Application, TextInputEmitterTargetsTheActiveEditor) {
   Environment environment(scheduler);
   NavigationHost navigation;
   Application app(&environment, display);
-  Task& task = app.addTaskFullScreen(navigation);
+  app.addTaskFullScreen(navigation);
   TextInputDestination destination(app.context());
   navigation.push(destination);
   TextInputEmitter emitter;
