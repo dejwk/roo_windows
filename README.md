@@ -8,6 +8,7 @@ Host builds use the roo_testing 2.0 Arduino ESP32 profile. With Bazelisk 1.21
 or newer, a plain command defaults to that profile and prints a notice:
 
     bazel test ...
+    bazel test ... --config=asan
     bazel test ... --config=roo_testing_arduino_esp32
     bazel run //examples/simple/navigation:navigation
 
