@@ -7,6 +7,7 @@
 #include "roo_testing/microcontrollers/esp32/fake_esp32.h"
 #include "roo_testing/transducers/ui/viewport/flex_viewport.h"
 #include "roo_testing/transducers/ui/viewport/fltk/fltk_viewport.h"
+#include "roo_windows/fake/fltk_key_source.h"
 
 using roo_testing_transducers::FlexViewport;
 using roo_testing_transducers::FltkViewport;
@@ -32,6 +33,8 @@ struct Emulator {
     FakeEsp32().gpio.attachOutput(1, touch.cs());
   }
 } emulator;
+
+roo_windows::fake::FltkKeySource emulator_keys;
 
 #endif
 
@@ -86,7 +89,11 @@ void initDisplay() {
 
 roo_scheduler::Scheduler scheduler;
 Environment env(scheduler);
+#ifdef ROO_TESTING
+Application app(&env, display, emulator_keys, true);
+#else
 Application app(&env, display);
+#endif
 
 // Simple container to put our button in. (Without it, the button would take
 // full screen).
