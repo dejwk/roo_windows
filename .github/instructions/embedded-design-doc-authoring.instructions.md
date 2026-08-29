@@ -1,3 +1,4 @@
+---
 name: "Embedded Design Doc Authoring"
 description: "Use when writing or updating design docs, implementation plans, rendering docs, or API proposals in this repository. Shared baseline across roo libraries."
 applyTo:

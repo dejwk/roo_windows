@@ -28,6 +28,8 @@ policy on top of this baseline.
   unnecessary line count when the code can stay clear without them.
 - Keep `CHECK` and related assertion macros at their point of use so failures
   report the source line that expresses the violated contract.
+- Embedded-target code must build with exceptions disabled (`-fno-exceptions`);
+  do not use `throw`, `try`, `catch`, or exception-dependent behavior.
 - Avoid `const_cast` as a way to bridge const/non-const API mismatches,
   especially for borrowed inputs where callers may rely on immutability.
   Only use it when the target is provably non-mutating for that call path;
