@@ -11,16 +11,6 @@
 namespace roo_windows {
 namespace {
 
-class ManualTimeScope {
- public:
-  ManualTimeScope() { system_time_set_auto_sync(false); }
-
-  ~ManualTimeScope() {
-    system_time_set_auto_sync(true);
-    system_time_sync();
-  }
-};
-
 class ScriptedTouchDevice : public roo_display::TouchDevice {
  public:
   struct Sample {
@@ -98,7 +88,6 @@ roo_display::Display makeDisplay(roo_display::DisplayDevice& display_device,
 }
 
 TEST(TouchSensor, PreservesRecentVelocityWhenUpObservationIsDelayed) {
-  ManualTimeScope time_scope;
   constexpr int16_t kWidth = 100;
   constexpr int16_t kHeight = 100;
   roo::byte raster[kWidth * kHeight * 2];
@@ -127,7 +116,6 @@ TEST(TouchSensor, PreservesRecentVelocityWhenUpObservationIsDelayed) {
 }
 
 TEST(TouchSensor, ClearsVelocityAfterStationaryHoldBeforeRelease) {
-  ManualTimeScope time_scope;
   constexpr int16_t kWidth = 100;
   constexpr int16_t kHeight = 100;
   roo::byte raster[kWidth * kHeight * 2];
@@ -160,7 +148,6 @@ TEST(TouchSensor, ClearsVelocityAfterStationaryHoldBeforeRelease) {
 }
 
 TEST(TouchSensor, UsesReportedSampleTimestampForVelocity) {
-  ManualTimeScope time_scope;
   constexpr int16_t kWidth = 100;
   constexpr int16_t kHeight = 100;
   roo::byte raster[kWidth * kHeight * 2];
@@ -188,7 +175,6 @@ TEST(TouchSensor, UsesReportedSampleTimestampForVelocity) {
 }
 
 TEST(TouchSensor, UsesDriverProvidedVelocity) {
-  ManualTimeScope time_scope;
   constexpr int16_t kWidth = 100;
   constexpr int16_t kHeight = 100;
   roo::byte raster[kWidth * kHeight * 2];
