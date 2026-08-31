@@ -399,13 +399,13 @@ PresentationStartResult MainWindow::showDialog(Dialog& dialog,
   active_dialog_ = &dialog;
   attachChild(scrim_, bounds());
   pending_scrim_blit_ = true;
+  dialog.beginPresentation(std::move(callback_fn));
   Dimensions dims =
       dialog.measure(WidthSpec::AtMost(width()), HeightSpec::AtMost(height()));
   XDim offsetLeft = (width() - dims.width()) / 2;
   YDim offsetTop = (height() - dims.height()) / 2;
   attachChild(dialog, Rect(offsetLeft, offsetTop, offsetLeft + dims.width() - 1,
                            offsetTop + dims.height() - 1));
-  dialog.beginPresentation(std::move(callback_fn));
   return PresentationStartResult::kStarted;
 }
 

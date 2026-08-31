@@ -42,6 +42,31 @@ class TestDialog final : public Dialog {
   }
 };
 
+class EnterContentDialog final : public Dialog {
+ public:
+  EnterContentDialog(ApplicationContext& context, int& measure_count)
+      : Dialog(context, {}), content_(context, measure_count) {}
+
+ private:
+  class MeasuredContent final : public BasicWidget {
+   public:
+    MeasuredContent(ApplicationContext& context, int& measure_count)
+        : BasicWidget(context), measure_count_(measure_count) {}
+
+    Dimensions getSuggestedMinimumDimensions() const override {
+      ++measure_count_;
+      return Dimensions(32, 16);
+    }
+
+   private:
+    int& measure_count_;
+  };
+
+  void onEnter() override { setPresentationContent(content_); }
+
+  MeasuredContent content_;
+};
+
 class DialogTest : public ::testing::Test {
  protected:
   DialogTest()
@@ -83,6 +108,18 @@ TEST_F(DialogTest, CloseDetachesContentBeforeCompletion) {
   EXPECT_EQ(nullptr, content.parent());
   EXPECT_EQ(1, dialog.exit_count);
   EXPECT_EQ(-1, dialog.exit_result);
+}
+
+// Content attached by onEnter participates in the dialog's initial measure.
+TEST_F(DialogTest, OnEnterContentIsMeasuredBeforeDialogIsAttached) {
+  int measure_count = 0;
+  EnterContentDialog dialog(app_.context(), measure_count);
+
+  EXPECT_EQ(PresentationStartResult::kStarted,
+            app_.showDialog(dialog, nullptr));
+  EXPECT_GT(measure_count, 0);
+
+  app_.clearDialog();
 }
 
 // Verifies dialog actions finish the registered presentation exactly once.
