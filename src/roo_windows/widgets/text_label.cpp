@@ -8,6 +8,22 @@ namespace roo_windows {
 
 namespace {
 
+int16_t FloorHalf(int16_t value) {
+  return value >= 0 ? value / 2 : -((-value + 1) / 2);
+}
+
+int16_t CeilHalf(int16_t value) { return value - FloorHalf(value); }
+
+roo_display::Box StyledLabelAnchorExtents(const TextStyle& text_style,
+                                          int16_t advance) {
+  // Shift the traditional single-line anchor box so that its middle follows
+  // the middle of the ascent. Descent does not affect visual centering.
+  const int16_t excess = text_style.lineGap() + text_style.descent();
+  return roo_display::Box(
+      0, -(text_style.ascent() + text_style.lineGap()) + FloorHalf(excess),
+      advance - 1, -text_style.descent() + CeilHalf(excess));
+}
+
 class StyledStringViewLabel : public roo_display::Drawable {
  public:
   StyledStringViewLabel(roo::string_view text, const TextStyle& text_style,
@@ -23,9 +39,7 @@ class StyledStringViewLabel : public roo_display::Drawable {
   }
 
   roo_display::Box anchorExtents() const override {
-    return roo_display::Box(
-        0, -text_style_.baselineOffset(), metrics_.advance() - 1,
-        text_style_.lineHeight() - text_style_.baselineOffset() - 1);
+    return StyledLabelAnchorExtents(text_style_, metrics_.advance());
   }
 
  private:
@@ -66,8 +80,7 @@ Rect ResolveLabelContentBounds(const Rect& logical_bounds,
   const auto& font = text_style.font();
   auto metrics =
       font.getHorizontalStringMetrics(text, text_style.fontOptions());
-  Rect anchor_bounds(0, -text_style.baselineOffset(), metrics.advance() - 1,
-                     text_style.lineHeight() - text_style.baselineOffset() - 1);
+  Rect anchor_bounds(StyledLabelAnchorExtents(text_style, metrics.advance()));
   auto offset =
       ResolveAlignmentOffset(logical_bounds, anchor_bounds, alignment);
   // A constrained label may clip a long string. Its direct-paint exclusion

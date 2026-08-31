@@ -194,18 +194,49 @@ TEST(TextLabel, ContentBoundsFollowDrawableInkExtents) {
   label.setPadding(PaddingSize::kNone);
 
   Dimensions dims = label.getSuggestedMinimumDimensions();
-  label.layout(Rect(0, 0, dims.width() - 1, dims.height() - 1));
+  constexpr int16_t kLabelHeight = 40;
+  label.layout(Rect(0, 0, dims.width() - 1, kLabelHeight - 1));
 
   auto metrics =
       font.font().getHorizontalStringMetrics("abc", font.fontOptions());
-  Rect anchor_bounds(0, -font.baselineOffset(), metrics.advance() - 1,
-                     font.lineHeight() - font.baselineOffset() - 1);
+  const int16_t excess = font.lineGap() + font.descent();
+  const int16_t excess_floor_half =
+      excess >= 0 ? excess / 2 : -((-excess + 1) / 2);
+  const int16_t excess_ceil_half = excess - excess_floor_half;
+  Rect anchor_bounds(0, -(font.ascent() + font.lineGap()) + excess_floor_half,
+                     metrics.advance() - 1, -font.descent() + excess_ceil_half);
   auto offset = ResolveAlignmentOffset(
       label.bounds(), anchor_bounds, roo_display::kLeft | roo_display::kMiddle);
   Rect expected =
       Rect(metrics.screen_extents()).translate(offset.first, offset.second);
 
   EXPECT_EQ(expected, label.getContentBounds());
+}
+
+// Verifies that vertical-middle gravity centers the above-baseline font body
+// for both owning and string-view labels. Descent does not pull the requested
+// center toward the baseline.
+TEST(TextLabel, MiddleGravityCentersAscentForBothLabelKinds) {
+  roo_scheduler::Scheduler scheduler;
+  Environment bootstrap(scheduler);
+  ApplicationContext context = MakeContext(bootstrap);
+  const TextStyle& style = material2::text_style_subtitle1();
+  constexpr int16_t kWidth = 80;
+  constexpr int16_t kHeight = 48;
+
+  TextLabel owned(context, "Wi-Fi", style, kGravityLeft | kGravityMiddle);
+  StringViewLabel viewed(context, "Wi-Fi", style,
+                         kGravityLeft | kGravityMiddle);
+  owned.layout(Rect(0, 0, kWidth - 1, kHeight - 1));
+  viewed.layout(Rect(0, 0, kWidth - 1, kHeight - 1));
+
+  auto metrics =
+      style.font().getHorizontalStringMetrics("Wi-Fi", style.fontOptions());
+  const int16_t baseline = (kHeight - 1) / 2 + (style.ascent() + 1) / 2;
+  Rect expected = Rect(metrics.screen_extents()).translate(0, baseline);
+
+  EXPECT_EQ(expected, owned.getContentBounds());
+  EXPECT_EQ(expected, viewed.getContentBounds());
 }
 
 // Verifies that an empty TextLabel (both std::string and string_view flavors)
