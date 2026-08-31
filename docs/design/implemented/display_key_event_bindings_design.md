@@ -25,7 +25,7 @@ binding feature obscures those boundaries and duplicates lifetime machinery.
 
 ## Background
 
-The [physical key event design](../implemented/display_physical_key_event_design.md)
+The [physical key event design](display_physical_key_event_design.md)
 is implemented. `KeyEvent` now preserves physical HID identity, focused
 widgets receive complete events before task shortcuts, and fallback activation
 pairs Down and Up by physical switch.
@@ -41,7 +41,7 @@ physical key events.
 Phases 1–5 of the
 [display runtime design](../in_progress/display_surface_generalization_design.md)
 establish application-owned tasks and shared-scheduler driving. The
-[event-driven input design](display_event_driven_input_design.md) replaces the
+[event-driven input design](../in_progress/display_event_driven_input_design.md) replaces the
 idle application cadence with readiness notifications and explicit deadlines.
 
 The original Phase 6 proposal put physical and software producer lists in each
@@ -71,10 +71,10 @@ before task and editor storage.
 Phase 6 has three architectural areas. This list describes responsibility
 boundaries, not the number or order of implementation commits:
 
-1. [Physical key events](../implemented/display_physical_key_event_design.md)
+1. [Physical key events](display_physical_key_event_design.md)
    add normalized switch identity and define widget-before-task dispatch. This
    area is complete.
-2. [Physical input routing](../implemented/display_input_routing_design.md) moves source
+2. [Physical input routing](display_input_routing_design.md) moves source
    registration, readiness, bounded draining, and teardown into an
    application-owned input router. This area is complete.
 3. Semantic text input gives software keyboards direct editor operations
@@ -108,7 +108,7 @@ synchronously on the common UI thread.
 ### Dependency order
 
 Physical-key representation, the coalescing ticker, and physical routing have
-landed. The [event-driven input design](display_event_driven_input_design.md)
+landed. The [event-driven input design](../in_progress/display_event_driven_input_design.md)
 still retains the periodic fallback until its later touch, gesture, paint, and
 animation phases are complete.
 

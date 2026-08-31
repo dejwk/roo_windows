@@ -8,7 +8,7 @@ Status note (2026-05): [material3::Button](../../../src/roo_windows/material3/bu
 is now implemented in
 [src/roo_windows/material3/button/button.cpp](../../../src/roo_windows/material3/button/button.cpp).
 The remaining icon-only work is tracked in
-[material3_icon_buttons_design.md](../proposed/material3_icon_buttons_design.md). This
+[material3_icon_buttons_design.md](material3_icon_buttons_design.md). This
 document records the original combined family proposal and is no longer the
 authoritative source for the icon-button landing.
 

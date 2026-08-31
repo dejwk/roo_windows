@@ -8,15 +8,16 @@ Design documents are filed by implementation status:
 - `in_progress/`: a usable subset or prerequisite has landed, but part of the defined scope remains.
 - `proposed/`: none of the design's own scope is implemented. Existing prerequisites may still be available.
 
-Status was audited against the source tree and tests on 2026-08-15. “Dependency status” distinguishes implemented prerequisites from proposed or partially implemented work; a design can be proposed even when all of its prerequisites are available.
+Status was audited against the source tree and tests on 2026-09-01. “Dependency status” distinguishes implemented prerequisites from proposed or partially implemented work; a design can be proposed even when all of its prerequisites are available.
 
 ## Implemented
 
 | Design | Dependency status |
 | --- | --- |
+| App bars/search surfaces | The component family, focused unit and golden coverage, example, and adaptive scaffold integration are implemented. Focused/expanded search remains separate future work. |
 | Back request coordination | Task/activity semantics, explicit and focus-derived application routing, UI and hardware Back/Escape entry, root transient precedence, legacy-dialog registration, and editor fallback are implemented. Future presenter adoption is tracked by component designs. |
 | Badge | Paint context and visual-overflow foundations are implemented; the shared transient lifetime contract remains in progress and is not required by the badge scope. |
-| Button | Surface widgets, click animation, and Material 3 theme support are implemented; icon buttons are a separate proposed design. |
+| Button | Surface widgets, click animation, and Material 3 theme support are implemented; icon buttons are implemented as a separate family. |
 | Click-animation customization | The shared click-animation controller and widget-local animation view are implemented. |
 | Click-animation lifecycle and settlement | Stable per-frame timing, slow-display rendering, deferred semantic delivery, held-press settlement, late-release coalescing, and transient-overlay cleanup are implemented. |
 | Click-animation lifecycle simplification | Changes 1–3 are implemented: characterization and mechanical cleanup, one-target phase ownership, atomic admission, identity-checked cancellation, reentrant delivery, and completed-refresh settlement. |
@@ -25,8 +26,10 @@ Status was audited against the source tree and tests on 2026-08-15. “Dependenc
 | Display runtime Phase 3 task extraction | Task-local focus, editing, key routing, and structural task ownership are implemented. |
 | Display runtime Phase 4 optional navigation | Direct borrowed task content, borrowed `NavigationHost`/`Destination`, destination lifecycle, and removal of legacy activity navigation are implemented. |
 | Display runtime Phase 5 shared-scheduler driving | Checked application lifecycle and ticker dispatch, shared-scheduler two-application coverage, and a two-display emulator example are implemented. |
+| Display runtime Phase 6 input | Physical-key identity, application-owned readiness routing, application-scoped semantic text input, built-in keyboard conversion, and cross-application editor integration are implemented. |
 | Gesture arbitration and ownership | Callback-free hit paths, explicit tap/long-press/drag roles, directional arbitration, strong ownership, and lifecycle-safe terminal delivery are implemented without compatibility routing. |
 | Horizontal page host | Viewport layout, adjacent swipe/settle, blit wrappers, examples, and tabs synchronization are implemented. |
+| Icon buttons | The non-toggle icon-button family, focused unit coverage, compact-controls example adoption, and rendering goldens are implemented. |
 | Interrupted paint continuation | Deadline-bounded paint attempts retain completed exclusions and overlays, selectively reopen state changed between attempts, and preserve one animation snapshot until refresh completion. |
 | Layout scaffold | Shared adaptive primitives, the fixed-slot `LayoutScaffold` shell, fixed-slot `PaneLayout`, row-major `GridLayout`, and a build-covered catalog with app-bar, navigation-bar, and navigation-rail composition are implemented. Navigation drawer remains separate component work. |
 | Material 3 tabs | Fixed, scrollable, badged, and page-host-integrated tabs are implemented; later extensions are tracked as future work. |
@@ -38,9 +41,11 @@ Status was audited against the source tree and tests on 2026-08-15. “Dependenc
 | Application-owned physical input routing | Producer-owned `KeySource` connections, readiness-handler quiescence, bounded application-owned draining, and FLTK's `HostEventEndpoint`/SPSC handoff are implemented. |
 | Emulator native-host event injection | `roo_testing`'s fixed endpoint table, tick handoff, and shared FreeRTOS delivery task are implemented, and Roo Windows uses them for FLTK key input. The published `roo_testing` 1.3.7 and `roo_io` 2.2.5 modules require no local overrides. |
 | Paint context | Clipper/overlay integration and the widget paint-hook migration are implemented. |
+| Semantic software text input | Application-scoped active-editor selection, producer-owned emitter connections, semantic keyboard operations, teardown, and cross-application integration are implemented. |
 | Slider | Paint context, Material 3 theme support, declarative drag ownership, lifecycle-safe terminal delivery, and transient-pin value indicators are implemented. |
 | Surface-widget refactor | The surface-ownership split is implemented; the broader visual-overflow design remains in progress. |
 | Theme color tokens | Framework theme separation and Material 3 token ownership are implemented in the current tree. |
+| Toggle icon buttons | The toggle icon-button family, focused unit and rendering coverage, and compact-controls persistent-preference example adoption are implemented. |
 | Widget event dispatch | `ApplicationContext` and sparse interactive-change dispatch are implemented. |
 | Widget state compaction | Widget event dispatch is implemented, and both compaction phases are implemented. |
 
@@ -48,8 +53,7 @@ Status was audited against the source tree and tests on 2026-08-15. “Dependenc
 
 | Design | Dependency status |
 | --- | --- |
-| App bars/search surfaces | The component family and focused unit coverage are implemented; golden and Material 3 scaffold integration coverage remain. Non-touch input is implemented; scaffold, icon buttons, and text fields remain proposed. |
-| Display runtime and cross-application input | Phases 1–5 and physical-key routing in Phase 6 are implemented. Semantic software text input, explicit modal coverage, and the final migration/cost audit remain proposed. |
+| Display runtime and cross-application input | Phases 1–6 are implemented. Explicit modal coverage and the final migration/cost audit remain proposed. |
 | Event-driven input notification and ticker wakeup | The coalescing ticker and readiness-driven physical-key routing are implemented while retaining the 20 ms fallback. Touch acquisition, gesture/paint/animation deadlines, and final ticker dormancy remain. |
 | Material 3 lists | Phases 1 through 11 are implemented, including text policy, convenience and control rows, navigation/selection behavior, and expandable content; Phase 12 menu reuse remains. Badge and paint-context dependencies are implemented. |
 | Text system | `TextBlock` wrapping, justification, max-lines, ellipsis, caching, and golden coverage are implemented; shared rich paragraph layout and `RichTextBlock` remain. |
@@ -61,26 +65,22 @@ Status was audited against the source tree and tests on 2026-08-15. “Dependenc
 
 | Design | Dependency status |
 | --- | --- |
-| Button groups | Buttons are implemented; icon buttons are proposed, and no group implementation exists. |
-| Date pickers | Buttons and shared back behavior are implemented; text fields, dialogs, and icon buttons are proposed. |
-| Display runtime Phase 6 input overview | Physical key events and application-owned physical routing are implemented; application-scoped semantic text input and keyboard migration remain proposed. |
-| Semantic software text input | Task-local editors and the current software keyboard are implemented; application-scoped active-editor selection, producer-owned emitter connections, and semantic keyboard migration are proposed. |
-| Display runtime Phase 7 modal hosting | Physical routing in Phase 6 is implemented, but semantic text input and all task/display coverage policies, barriers, focus restoration, admission, and modal Back ordering are not implemented. |
-| Display runtime Phase 8 migration and cost audit | Phases 2–5 and physical routing in Phase 6 are implemented; semantic text input, Phase 7, final migration documentation, resource audit, and hardware validation remain proposed. |
-| Dialogs | Legacy dialogs and shared back behavior exist, but the Material 3 design is not implemented; icon buttons and text fields are proposed. |
+| Button groups | Buttons and icon buttons are implemented; no group implementation exists. |
+| Date pickers | Buttons, icon buttons, and shared back behavior are implemented; text fields and dialogs are proposed. |
+| Display runtime Phase 7 modal hosting | Phase 6 input is implemented, but all task/display coverage policies, barriers, focus restoration, admission, and modal Back ordering are not implemented. |
+| Display runtime Phase 8 migration and cost audit | Phases 2–6 are implemented; Phase 7, final migration documentation, resource audit, and hardware validation remain proposed. |
+| Dialogs | Legacy dialogs, icon buttons, and shared back behavior exist, but the Material 3 design and text fields are not implemented. |
 | Extended FAB | The base FAB dependency is proposed; buttons and theme support are implemented. |
-| FAB | Buttons and theme support are implemented; icon buttons are proposed. |
-| Icon buttons | The non-toggle icon-button family, focused unit coverage, compact-controls example adoption, and rendering goldens are implemented. |
+| FAB | Buttons, icon buttons, and theme support are implemented; the FAB family is not. |
 | Interaction overlay reveal | Point and area ripples, widget-local click animation, paint context, and the navigation bar's component-local fade are implemented; shared fade reveal and paint-owned overlay policy are not. |
 | Menus | Badge, paint context, back routing, list-row reuse, non-touch input, and widget-anchored presentation pins are implemented. The separate transient-host design owns the missing host, active focus-scope, layer-token, and token-scoped-pin prerequisites; menus do not use `Task` or `Activity`. Menu implementation remains P1.7 after P1.6a–P1.6b. |
 | Navigation drawer | List support is in progress and back routing is implemented; dialogs are proposed, and no drawer implementation exists. |
 | Segmented buttons | Buttons are implemented; the superseding button-group design and this legacy component design are not implemented. |
-| Sheets | Paint/overflow foundations and shared back behavior are implemented; icon buttons are proposed. |
-| Snackbar | Paint/overflow foundations and non-touch input are implemented; scaffold is proposed. Before implementation, the snackbar design must replace queued non-owning strings and listener pointers with the ownership model required by the in-progress transient-lifetime design. |
-| Split button | Buttons and non-touch input are implemented; icon buttons and menus are proposed. |
-| Text fields | Paint context and non-touch input are implemented; supporting icon-button/menu behavior is proposed. |
-| Time pickers | Buttons and shared back behavior are implemented; text fields, dialogs, and icon buttons are proposed. |
-| Toggle icon buttons | The toggle icon-button family, focused unit and rendering coverage, and compact-controls persistent-preference example adoption are implemented. |
-| Toolbars | Buttons are implemented; icon buttons, menus, and FABs are proposed. |
+| Sheets | Paint/overflow foundations, icon buttons, and shared back behavior are implemented; the sheet family is not. |
+| Snackbar | Paint/overflow foundations, non-touch input, and scaffold are implemented. Before implementation, the snackbar design must replace queued non-owning strings and listener pointers with the ownership model required by the in-progress transient-lifetime design. |
+| Split button | Buttons, icon buttons, and non-touch input are implemented; menus and split buttons are proposed. |
+| Text fields | Paint context, non-touch input, and icon buttons are implemented; supporting menu behavior and the text-field family are proposed. |
+| Time pickers | Buttons, icon buttons, and shared back behavior are implemented; text fields and dialogs are proposed. |
+| Toolbars | Buttons and icon buttons are implemented; menus, FABs, and toolbars are proposed. |
 | Transient surface hosting and layer anchors | The transient lifetime slot and widget-anchored pin host are implemented. Active focus scopes are specified but not active; the structural host, pointer-free layer tokens, and token-scoped presenter pins are proposed as P1.6a–P1.6b. |
 | Wi-Fi configuration | Existing Wi-Fi transport/configuration APIs are external prerequisites; the Material 3 screen design and its text-field/dialog dependencies are not implemented. |

@@ -87,7 +87,7 @@ Repeat.
 
 This is a simple hardware layout result, not an IME protocol. Composition,
 multi-scalar commits, candidates, and surrounding-text operations use the
-[semantic text-input path](../proposed/display_semantic_text_input_design.md).
+[semantic text-input path](display_semantic_text_input_design.md).
 
 ### Widget-first dispatch
 

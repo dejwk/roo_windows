@@ -1,5 +1,14 @@
 # Semantic Software Text Input Design
 
+## Status
+
+Implemented. `TextInputEmitter` synchronously targets one active editor per
+application, safely disconnects across emitter and application teardown, and
+keeps semantic software input separate from physical key dispatch. The built-in
+keyboard emits semantic rune, backward-delete, and Done operations, retains its
+presentation policy separately, and can edit another application on the shared
+UI thread.
+
 ## Objective
 
 Deliver software-keyboard editing operations to one active editor per
@@ -52,7 +61,7 @@ already reach the same editor operations through `TextFieldEditor`.
 
 ## Design Overview
 
-The proposal introduces two concepts:
+The implementation uses two concepts:
 
 - A **text-input emitter** is the software controller's producer endpoint. It
   owns its single connection to a destination application.
@@ -207,31 +216,34 @@ and checked-precondition documentation.
 Implementation follows the
 [embedded C++ guidance](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md).
 
-### Step 1: add application text input
+### Completed Step 1: add application text input
 
 Add `ApplicationTextInput`, producer-owned emitter connections, active-editor
 registration, and shared editor methods. Remove the editor's `Keyboard*` and
 validate activation replacement, inactive return values, both endpoint
 destruction orders, thread checks, and zero routing allocation.
 
-Proposed commit: `feat: add application-scoped text input`
+Landed commit: `548986b` (`Implemented the application-scoped semantic text
+input.`)
 
-### Step 2: convert the built-in keyboard
+### Completed Step 2: convert the built-in keyboard
 
 Replace `KeyboardListener` with `TextInputEmitter`. Convert release-time rune,
 Space, and Done operations plus press-time repeated Backspace. Add deterministic
 gesture-clock tests for release, cancellation, repeat, one-shot caps, and
 long-press-ready suppression.
 
-Proposed commit: `feat: emit semantic software text input`
+Landed commit: `5526c52` (`Replaced KeyboardListener with keyboard-owned
+TextInputEmitter.`)
 
-### Step 3: integrate visibility and cross-application use
+### Completed Step 3: integrate visibility and cross-application use
 
 Add the standard private show/hide glue and a two-application example. Validate
 that keyboard touches preserve editor-task focus, input never reaches ordinary
 key dispatch, and editing invalidation wakes a dormant destination.
 
-Proposed commit: `feat: integrate software keyboard editor sessions`
+Landed commit: `97b658c` (`Route software keyboard input across
+applications.`)
 
 ## Testing Plan
 

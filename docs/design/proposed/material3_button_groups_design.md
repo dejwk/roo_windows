@@ -116,7 +116,7 @@ The decisive signals carried into this design are:
 The relevant local references are:
 
 - [../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md)
-- [material3_icon_buttons_design.md](material3_icon_buttons_design.md)
+- [material3_icon_buttons_design.md](../implemented/material3_icon_buttons_design.md)
 - [material3_segmented_buttons_design.md](material3_segmented_buttons_design.md)
 - [../.github/instructions/roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
 

@@ -2,12 +2,13 @@
 
 ## Status
 
-In progress. Phases 1–5 and Phase 6a–6b are implemented: display-local state,
-task extraction, optional navigation, shared scheduling, physical-key identity,
-and readiness-driven application-owned physical routing. Phase 6c–6e semantic
-text input, Phase 7 modal hosting, and Phase 8 migration and cost audit remain
-proposed. The ticker still has its 20 ms fallback until the later event-driven
-input phases provide explicit touch, gesture, paint, and animation wakeups.
+In progress. Phases 1–6 are implemented: display-local state, task extraction,
+optional navigation, shared scheduling, physical-key identity, readiness-driven
+application-owned physical routing, semantic text input, built-in keyboard
+conversion, and cross-application editor integration. Phase 7 modal hosting and
+Phase 8 migration and cost audit remain proposed. The ticker still has its 20 ms
+fallback until the later event-driven input phases provide explicit touch,
+gesture, paint, and animation wakeups.
 
 ## Objective
 
@@ -510,7 +511,7 @@ switching, and cross-thread delivery is separate future work.
 The complete decisions are split across the
 [physical-key event](../implemented/display_physical_key_event_design.md),
 [application input routing](../implemented/display_input_routing_design.md), and
-[semantic text-input](../proposed/display_semantic_text_input_design.md)
+[semantic text-input](../implemented/display_semantic_text_input_design.md)
 designs.
 
 ### Sub-design 5: task-modal and display-modal presentation
@@ -800,7 +801,7 @@ Validation:
 
 Proposed commit: `feat: support shared-scheduler applications`
 
-The [Phase 6 input design](display_key_event_bindings_design.md)
+The [Phase 6 input design](../implemented/display_key_event_bindings_design.md)
 splits this runtime phase into five reviewable delivery increments.
 
 ### Completed Phase 6a: preserve physical switch identity
@@ -824,30 +825,31 @@ The coalescing ticker remains backed by the 20 ms fallback until the remaining
 event-driven input phases make touch, gesture, paint, and animation wakeups
 explicit.
 
-### Phase 6c: add application-scoped semantic text input
+### Completed Phase 6c: add application-scoped semantic text input
 
-Add the stable application endpoint, producer-owned emitter connection, active
-editor registration, and editor operations. Validate affinity, inactive
-results, endpoint replacement, both destruction orders, and zero routing
-allocation.
+Added the stable application endpoint, producer-owned emitter connection,
+active-editor registration, and editor operations. Focused tests cover inactive
+results, endpoint replacement, both destruction orders, and routing behavior.
 
-Proposed commit: `feat: add application-scoped text input`
+Landed commit: `548986b` (`Implemented the application-scoped semantic text
+input.`)
 
-### Phase 6d: convert the built-in keyboard
+### Completed Phase 6d: convert the built-in keyboard
 
-Replace `KeyboardListener` with semantic rune, Done, and repeated Backspace
-operations. Validate release and cancellation timing, repeat bounds, and that
-software input does not enter physical key dispatch.
+Replaced `KeyboardListener` with semantic rune, Done, and repeated Backspace
+operations while keeping software input out of physical key dispatch.
 
-Proposed commit: `feat: emit semantic software text input`
+Landed commit: `5526c52` (`Replaced KeyboardListener with keyboard-owned
+TextInputEmitter.`)
 
-### Phase 6e: integrate editor sessions
+### Completed Phase 6e: integrate editor sessions
 
-Add keyboard visibility policy, the cross-application example, and dormant
-destination wakeup coverage. Validate same-thread cross-application delivery
-and focus preservation.
+Added keyboard visibility policy and the cross-application example. Integration
+coverage validates same-thread cross-application delivery and focus
+preservation.
 
-Proposed commit: `feat: integrate software keyboard editor sessions`
+Landed commit: `97b658c` (`Route software keyboard input across
+applications.`)
 
 ### Phase 7: distinguish task-modal and display-modal hosts
 

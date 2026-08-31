@@ -1,5 +1,11 @@
 # Display runtime Phase 8 migration and cost-audit design
 
+## Status
+
+Proposed. Display runtime Phases 1–6 are implemented. Phase 8 starts after the
+Phase 7 modal-hosting ownership and coverage design is reconciled with shared
+transient hosting and implemented.
+
 ## Objective
 
 Complete the display-runtime migration by removing temporary compatibility
@@ -8,9 +14,8 @@ recording final behavior, size, allocation, and timing results.
 
 This is Phase 8 of the
 [display runtime and cross-application input design](../in_progress/display_surface_generalization_design.md).
-It starts only after the remaining standalone Phase 6 semantic-text-input and
-Phase 7 designs are implemented. Phases 2–5 and Phase 6 physical routing are
-already complete.
+It starts only after the Phase 7 modal-hosting design is reconciled and
+implemented. Phases 2–6 are already complete.
 
 ## Motivation
 
@@ -27,7 +32,8 @@ input routing, semantic text input, and explicit modal coverage.
 Phase 4 removes legacy `Task`/`Activity` navigation after migrating it to
 direct content and `Destination`. The compatibility surfaces that remain for
 Phase 8 include application-level display forwarding, application-global
-editor access, `KeyboardListener`, and application-level dialog routing.
+editor access, and application-level dialog routing. `KeyboardListener` has
+already been removed by Phase 6.
 
 The [Phase 1 baseline](../../display_runtime_target_baseline.md) defines the
 representative ESP32-S3 build, object-size probe, linked sections, and allocation
@@ -58,8 +64,8 @@ final state using the same toolchain and application.
 2. Remove deprecated application display/task-name forwarding,
    `text_field_editor()`, obsolete `start()` overloads, `root()`, `refresh()`,
    and `gesture_detector()` forwarders.
-3. Remove the constructor that embeds one `KeySource`, Phase 3 direct source
-   attachment, `KeyboardListener`, and its adapter.
+3. Verify that the constructor embedding one `KeySource`, Phase 3 direct source
+   attachment, `KeyboardListener`, and its adapter remain absent.
 4. Remove application-level dialog forwarding and require
    `UiTask::showModal()`.
 5. Remove `Widget::getApplication()`; retain structural `getUiTask()` and
@@ -160,11 +166,12 @@ means `UiTask`, not an activity back stack.
 
 ### Removed input and editor compatibility
 
-The `KeySource` constructor overload is replaced by
-`KeySource::connect(UiTask&)`. The temporary `UiTask::attachKeySource()` and
-`detachKeySource()` disappear. `KeyboardListener` and application editor access
-disappear; physical events reach tasks through the application input router,
-and text fields register their task editor with application text input.
+The `KeySource` constructor overload has been replaced by
+`KeySource::connect(UiTask&)`. The temporary `UiTask::attachKeySource()`,
+`detachKeySource()`, and `KeyboardListener` are already absent. Phase 8 removes
+remaining application editor compatibility; physical events reach tasks through
+the application input router, and text fields register their task editor with
+application text input.
 
 The single-display convenience application connects its software keyboard's
 emitter to its own text-input endpoint and exposes no public global editor.

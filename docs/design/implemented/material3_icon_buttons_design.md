@@ -33,11 +33,11 @@ not attempt to design toggle / selected icon buttons in the same landing.
 but it still has no icon-only companion. That gap is already visible in nearby
 designs:
 
-- the [badge design](../implemented/material3_badge_design.md) assumes a future
+- the [badge design](material3_badge_design.md) assumes a future
   `BadgedIconButton` host,
-- the [menus design](material3_menus_design.md) calls out icon buttons as popup
+- the [menus design](../proposed/material3_menus_design.md) calls out icon buttons as popup
   anchors,
-- and the [navigation rail design](../implemented/material3_navigation_rail_design.md) keeps a
+- and the [navigation rail design](material3_navigation_rail_design.md) keeps a
   generic header slot partly because a checked-in Material 3 icon button does
   not exist yet.
 
@@ -118,7 +118,7 @@ The most relevant current framework seams are:
 - [Widget](../../../src/roo_windows/core/widget.h), which already expands small touch
   targets through `getSloppyTouchBounds()` and `getSloppyTouchParentBounds()`,
 - and the current click-animation model documented in
-  [../implemented/click_animation_customization_design.md](../implemented/click_animation_customization_design.md).
+  [click_animation_customization_design.md](click_animation_customization_design.md).
 
 Those seams close two important local decisions:
 
@@ -129,7 +129,7 @@ Those seams close two important local decisions:
    touch envelope rather than from a second icon-button-specific hit-target
    mechanism.
 
-The current [badge design](../implemented/material3_badge_design.md) also matters. Badges are
+The current [badge design](material3_badge_design.md) also matters. Badges are
 already modeled as owner-painted adornments rather than as child widgets, so
 the icon-button design needs a cheap way for badge-aware hosts to ask, "where
 is the icon slot inside this button?" without baking badge state into every

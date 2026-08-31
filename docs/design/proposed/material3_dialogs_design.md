@@ -77,7 +77,7 @@ The relevant existing seams are:
 - [src/roo_windows/material3/button/button.h](../../../src/roo_windows/material3/button/button.h),
   which already provides the Material 3 text-button implementation needed for
   dialog actions,
-- and [material3_icon_buttons_design.md](material3_icon_buttons_design.md),
+- and [material3_icon_buttons_design.md](../implemented/material3_icon_buttons_design.md),
   which exists as a design note but has no landed implementation yet.
 
 Those seams constrain the dialog design directly.
@@ -137,7 +137,7 @@ The most relevant local references are:
 - [material3_sheets_design.md](material3_sheets_design.md)
 - [material3_snackbar_design.md](material3_snackbar_design.md)
 - [non_touch_input_design.md](../implemented/non_touch_input_design.md)
-- [material3_icon_buttons_design.md](material3_icon_buttons_design.md)
+- [material3_icon_buttons_design.md](../implemented/material3_icon_buttons_design.md)
 - [embedded-design-doc-authoring.instructions.md](../../../.github/instructions/embedded-design-doc-authoring.instructions.md)
 - [roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
 

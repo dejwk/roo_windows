@@ -2,12 +2,12 @@
 
 ## Implementation status
 
-**Component verification complete; scaffold integration deferred to P1.4.**
+**Implemented.**
 The `AppBar`, `SearchBar`, and `SearchAppBar` component family, token-backed
 geometry and colors, bounded slots, adaptive layout, activation hit routing,
-focused unit tests, golden coverage, and example are implemented. Integration
-with the proposed Material 3 scaffold remains P1.4. The status of existing and
-outstanding prerequisites is recorded in the [status index](../README.md).
+focused unit tests, golden coverage, example, and adaptive `LayoutScaffold`
+integration are implemented. The status of existing and outstanding
+prerequisites is recorded in the [status index](../README.md).
 
 ## Objective
 
@@ -72,13 +72,13 @@ What exists today:
   adaptive widths, and hit routing,
 - `examples/material3/app_bars/app_bars.ino` demonstrates the implemented
   family,
-- [material3_layout_scaffold_design.md](../implemented/material3_layout_scaffold_design.md)
+- [material3_layout_scaffold_design.md](material3_layout_scaffold_design.md)
   already defines one top-bar slot on the scaffold,
 - [material3_toolbars_design.md](../proposed/material3_toolbars_design.md) already closes
   on bottom and floating toolbars and explicitly excludes top app bars,
 - [material3_text_fields_design.md](../proposed/material3_text_fields_design.md) already
   defines the shared editor direction for real text editing,
-- [non_touch_input_design.md](../implemented/non_touch_input_design.md) already defines the
+- [non_touch_input_design.md](non_touch_input_design.md) already defines the
   focus-layering and semantic-action direction for keyboard and pointer input,
 - [src/roo_windows/core/theme.h](../../../src/roo_windows/core/theme.h) already
   provides the surface-role vocabulary needed for app-bar and search-surface
@@ -89,7 +89,7 @@ What exists today:
 What does not exist yet:
 
 - no focused-search or search-view surface,
-- and no implemented Material 3 scaffold or scaffold integration test.
+- and no complete focused-search or search-view workflow.
 
 The current Material 3 theme exposes color and state-layer tokens, but not the
 Material 3 typography scale. The implementation currently maps the named roles
@@ -177,11 +177,11 @@ already called out separately in
 
 The most relevant local references are:
 
-- [material3_layout_scaffold_design.md](../implemented/material3_layout_scaffold_design.md)
+- [material3_layout_scaffold_design.md](material3_layout_scaffold_design.md)
 - [material3_toolbars_design.md](../proposed/material3_toolbars_design.md)
 - [material3_text_fields_design.md](../proposed/material3_text_fields_design.md)
-- [non_touch_input_design.md](../implemented/non_touch_input_design.md)
-- [material3_icon_buttons_design.md](../proposed/material3_icon_buttons_design.md)
+- [non_touch_input_design.md](non_touch_input_design.md)
+- [material3_icon_buttons_design.md](material3_icon_buttons_design.md)
 - [../.github/instructions/roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
 
 Those references close the main local constraints:
