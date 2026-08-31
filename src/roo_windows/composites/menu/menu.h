@@ -2,8 +2,8 @@
 
 #include "roo_display/core/utf8.h"
 #include "roo_windows/composites/menu/title.h"
+#include "roo_windows/containers/flex_layout.h"
 #include "roo_windows/containers/scrollable_panel.h"
-#include "roo_windows/containers/vertical_layout.h"
 #include "roo_windows/core/destination.h"
 #include "roo_windows/core/widget.h"
 
@@ -12,7 +12,7 @@ namespace menu {
 
 // You use this class to build your own menus. Subclass it, add child widgets,
 // and override the constructor to add those widgets to the canvas (calling
-// add(), using vertical layout options if needed).
+// add(), using flex layout options if needed).
 class Menu : public roo_windows::Destination {
  public:
   Menu(roo_windows::ApplicationContext& context, std::string title)
@@ -23,11 +23,9 @@ class Menu : public roo_windows::Destination {
     pane_.add(title_);
   }
 
-  /// Adds a child widget below the title with the supplied vertical layout
-  /// params.
+  /// Adds a child widget below the title with the supplied flex layout params.
   void add(roo_windows::WidgetRef child,
-           roo_windows::VerticalLayout::Params params =
-               roo_windows::VerticalLayout::Params()) {
+           roo_windows::FlexLayout::Params params = {}) {
     pane_.add(std::move(child), params);
   }
 
@@ -62,9 +60,13 @@ class Menu : public roo_windows::Destination {
     }
   };
 
-  class Pane : public roo_windows::VerticalLayout {
-    using roo_windows::VerticalLayout::VerticalLayout;
+  class Pane : public roo_windows::FlexLayout {
+   public:
+    explicit Pane(roo_windows::ApplicationContext& context)
+        : roo_windows::FlexLayout(context,
+                                  roo_windows::FlexDirection::kColumn) {}
 
+   private:
     roo_windows::PreferredSize getPreferredSize() const override {
       return roo_windows::PreferredSize(
           roo_windows::PreferredSize::MatchParentWidth(),

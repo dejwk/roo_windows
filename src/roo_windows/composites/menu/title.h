@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "roo_windows/containers/horizontal_layout.h"
+#include "roo_windows/containers/flex_layout.h"
 #include "roo_windows/widgets/icon.h"
 #include "roo_windows/widgets/text_label.h"
 
@@ -10,7 +10,7 @@ namespace roo_windows {
 namespace menu {
 
 // The title of the activity, with the back button.
-class Title : public roo_windows::HorizontalLayout {
+class Title : public roo_windows::FlexLayout {
  public:
   /// Builds the title row with a back-button icon and the supplied label.
   Title(roo_windows::ApplicationContext& context, std::string title);

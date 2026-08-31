@@ -2,11 +2,10 @@
 
 #include "roo_display/core/utf8.h"
 #include "roo_display/image/image.h"
-#include "roo_windows/containers/horizontal_layout.h"
-#include "roo_windows/containers/vertical_layout.h"
+#include "roo_windows/containers/flex_layout.h"
+#include "roo_windows/core/application_context.h"
 #include "roo_windows/core/destination.h"
 #include "roo_windows/core/navigation_host.h"
-#include "roo_windows/core/application_context.h"
 #include "roo_windows/widgets/icon.h"
 #include "roo_windows/widgets/text_label.h"
 
@@ -16,7 +15,7 @@
 namespace roo_windows {
 namespace menu {
 
-class BasicNavigationItem : public HorizontalLayout {
+class BasicNavigationItem : public FlexLayout {
  public:
   /// Builds a single-line navigation row with the supplied icon and label;
   /// clicking the row enters `target`.
@@ -41,7 +40,7 @@ class BasicNavigationItem : public HorizontalLayout {
 /// Two-line navigation row: icon plus a primary label stacked above a
 /// secondary subtext line. Like `BasicNavigationItem`, clicking enters the
 /// supplied target activity.
-class BasicNavigationItemWithSubtext : public HorizontalLayout {
+class BasicNavigationItemWithSubtext : public FlexLayout {
  public:
   /// Builds a navigation row with an icon, a primary label and a secondary
   /// subtext line; clicking the row enters `target`.
@@ -61,7 +60,7 @@ class BasicNavigationItemWithSubtext : public HorizontalLayout {
 
  private:
   Icon icon_;
-  VerticalLayout content_;
+  FlexLayout content_;
   StringViewLabel label_;
   StringViewLabel subtext_;
   NavigationHost& navigation_;

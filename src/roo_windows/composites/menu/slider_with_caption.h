@@ -4,8 +4,7 @@
 
 #include "roo_display/ui/string_printer.h"
 #include "roo_windows/containers/aligned_layout.h"
-#include "roo_windows/containers/horizontal_layout.h"
-#include "roo_windows/containers/vertical_layout.h"
+#include "roo_windows/containers/flex_layout.h"
 #include "roo_windows/widgets/slider.h"
 #include "roo_windows/widgets/text_label.h"
 
@@ -17,7 +16,7 @@ namespace menu {
 /// Subclasses provide `formatValue()` to render the right-aligned readout
 /// string from the slider's raw 16-bit position. Used to build settings menus
 /// where each row exposes a single numeric/enumerated knob.
-class BaseSliderWithCaption : public roo_windows::VerticalLayout {
+class BaseSliderWithCaption : public roo_windows::FlexLayout {
  public:
   BaseSliderWithCaption(roo_windows::ApplicationContext& context,
                         std::string caption);

@@ -8,20 +8,24 @@ namespace menu {
 
 BaseSliderWithCaption::BaseSliderWithCaption(ApplicationContext& context,
                                              std::string caption)
-    : VerticalLayout(context),
+    : FlexLayout(context, FlexDirection::kColumn),
       text_section_(context),
       caption_(context, std::move(caption), material2::text_style_body1()),
       value_(context, "", material2::text_style_body1()),
       slider_(context) {
-  caption_.setMargins(MarginSize::kLarge, MarginSize::kNone);
-  value_.setMargins(MarginSize::kLarge, MarginSize::kNone);
-  caption_.setPadding(PaddingSize::kRegular, PaddingSize::kNone);
-  value_.setPadding(PaddingSize::kRegular, PaddingSize::kNone);
+  setPadding(Padding(PaddingSize::kSmall, PaddingSize::kTiny));
+  setGap(Scaled(8));
+  caption_.setMargins(MarginSize::kNone);
+  value_.setMargins(MarginSize::kNone);
+  caption_.setPadding(PaddingSize::kNone);
+  value_.setPadding(PaddingSize::kNone);
   text_section_.add(caption_, roo_display::kLeft);
   text_section_.add(value_, roo_display::kRight);
-  add(text_section_);
-  slider_.setMargins(MarginSize::kRegular, MarginSize::kNegativeSmall);
-  add(slider_);
+  add(text_section_,
+      {.flex_grow = 0, .flex_shrink = 0, .align_self = AlignSelf::kStretch});
+  slider_.setMargins(MarginSize::kNone);
+  add(slider_,
+      {.flex_grow = 0, .flex_shrink = 1, .align_self = AlignSelf::kStretch});
   slider_.setOnInteractiveChange([this]() {
     value_.setText(formatValue(slider_.getPos()));
     triggerInteractiveChange();
