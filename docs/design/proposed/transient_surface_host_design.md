@@ -3,14 +3,16 @@
 ## Objective
 
 Add design-system-independent framework infrastructure for attaching one
-temporary interactive surface to `MainWindow` without creating a `Task`, and
-for referring safely to the persistent top-level window layer from which that
-surface originated.
+temporary interactive surface to `MainWindow` without creating a `Task`, while
+associating that surface with an existing interaction-owning task and referring
+safely to the persistent top-level window layer from which it originated.
 
 The infrastructure provides:
 
 - one shared popup/modal structural host used by legacy dialogs, Material 3
   menus, and later interactive transient presenters;
+- one explicit interaction owner for focus, key dispatch, Back eligibility,
+  and teardown without giving the transient route lifecycle;
 - atomic admission, attachment, input isolation, optional focus entry, and
   teardown;
 - copied, pointer-free layer tokens for validating an origin layer after the
@@ -26,7 +28,8 @@ cancellation, and token-scoped pin path do not.
 ## Motivation
 
 The existing transient slot makes presenter lifetime and Back routing safe,
-but it does not attach a surface, isolate input, manage focus, or own a scrim.
+but it does not attach a surface, isolate input, identify the task whose focus
+and keys the surface uses, manage focus, or own a scrim.
 Legacy dialogs still perform that work directly in `MainWindow`; menus would
 otherwise duplicate it or misuse route-oriented `Task` infrastructure.
 
@@ -66,15 +69,17 @@ This design consumes those contracts rather than redefining them.
 
 ### Uncovered Framework Gap
 
-No existing design defines:
+No existing implementation defines:
 
 1. a reusable structural host that combines the transient slot with popup or
    modal attachment, barrier/scrim policy, focus activation, and teardown;
-2. a pointer-free identity for a regular-task or popup-task layer; or
-3. the exact integration seam that lets an active registered presenter attach
+2. the explicit association between a window-hosted transient and the existing
+   task that owns its focus, keys, Back context, and teardown;
+3. a pointer-free identity for a regular-task or popup-task layer; or
+4. the exact integration seam that lets an active registered presenter attach
    a copied-geometry pin to that identified layer.
 
-Those three pieces are the scope of this design. Menu rows, placement,
+Those four pieces are the scope of this design. Menu rows, placement,
 selection, and submenu behavior remain in the
 [Material 3 menus design](material3_menus_design.md).
 
@@ -90,11 +95,16 @@ modal, anchor, scrim, and presentation pin retain their
   popup-task collection;
 - **origin layer**: the top-level presentation layer containing the widget used
   to create a copied snapshot;
+- **interaction owner**: the existing `Task` whose `FocusManager`, physical-key
+  route, Back context, and lifetime govern the hosted surface; this association
+  does not make the transient a task or route;
 - **hosted transient root**: the one presenter-owned widget borrowed and
   attached by the host for an active presentation;
+- **interaction boundary**: one reusable host-owned single-child container that
+  structurally exposes the interaction owner to the hosted transient root;
 - **transient child band**: the two trailing `MainWindow` child positions
   reserved while the host is occupied, containing the barrier followed by the
-  hosted transient root; and
+  interaction boundary; the hosted root is the boundary's child; and
 - **host kind**: the operational popup-or-modal class used for barrier paint and
   replacement compatibility. A popup host kind uses a transparent barrier; a
   modal host kind uses the existing painted scrim. Both isolate input from
@@ -110,7 +120,10 @@ absorbed but is not an outside activation.
 The [design glossary](../glossary.md) defines a `Task` as the route-stack owner
 for persistent application UI and a transient surface as temporary UI layered
 over it. The host does not create, enter, pause, resume, or remove tasks. It
-borrows a presenter-owned widget root for one registered presentation.
+requires one already-attached task as the interaction owner, borrows a
+presenter-owned widget root for one registered presentation, and closes the
+presentation before that owner detaches. “Not a task” and “owned for
+interaction by a task” are therefore separate statements.
 
 ## Requirements
 
@@ -119,47 +132,59 @@ borrows a presenter-owned widget root for one registered presentation.
 1. `MainWindow` owns one reusable `TransientSurfaceHost`.
 2. The host admits at most one interactive transient, preserving the existing
    `TransientPresentationSlot` contract.
-3. The host supports popup and modal host kinds without conflating their
+3. Every hosted interactive surface names one existing task in the receiving
+   window as its immutable interaction owner.
+4. The host supports popup and modal host kinds without conflating their
    barrier paint or replacement compatibility. Outside-interaction policy
    remains independently selectable.
-4. Admission validates every fallible prerequisite before replacing an active
-   presentation: incoming registration state, root attachability, application
-   context, focus-scope availability, origin requirement, and token validity.
-5. Only `kStarted` attaches the incoming root, enters focus, or permits a pin.
-6. The presenter owns the root for the entire presentation; the host borrows
+5. The first shared host always covers the complete display. Task-bounded
+   coverage is the Phase 7 extension defined separately by
+   [Display runtime task-bounded coverage](display_modal_hosting_design.md).
+6. Admission validates every fallible prerequisite before replacing an active
+   presentation: incoming registration state, owner attachment and window,
+   root attachability, application context, focus-scope availability, origin
+   requirement, and token validity.
+7. Only `kStarted` attaches the incoming root, enters focus, or permits a pin.
+8. The presenter owns the root for the entire presentation; the host borrows
    and detaches it without deleting it.
-7. A popup barrier consumes outside input without painting. A modal barrier
+9. A popup barrier consumes outside input without painting. A modal barrier
    paints the existing scrim and consumes outside input.
-8. Outside policy is one of absorb, dismiss, or presenter-handled. Presenter
+10. Outside policy is one of absorb, dismiss, or presenter-handled. Presenter
    handling uses a virtual hook on the registered participant, not a stored
    callback.
-9. Menus replace an active popup presentation but never a modal presentation.
+11. Menus replace an active popup presentation but never a modal presentation.
    Legacy dialogs reject every occupied host.
-10. Host and presenter destruction use the same idempotent structural teardown
+12. Host, interaction-owner, and presenter destruction use the same idempotent
+    structural teardown
     as explicit dismissal. Presenter destruction invokes no presenter virtual
     hook and delivers no completion.
-11. A component that requires copied-origin validation sets
+13. A component that requires copied-origin validation sets
     `require_origin`; an origin-free component such as the legacy dialog does
     not fabricate a token.
 
 ### Focus Requirements
 
 1. Each focus-capturing presenter embeds the intrusive `FocusScope` already
-   required by Non-touch input and supplies it to the host. A presenter that
-   intentionally leaves focus in the previous scope supplies no scope.
-2. Before the host enables input, it enters the active root through that scope.
+   required by Non-touch input and supplies it to the host. The host enters that
+   scope through the interaction owner's `FocusManager`; it never chooses the
+   focused, topmost, or most recently touched task implicitly.
+2. Before the host enables input, it enters the reusable interaction boundary
+   through that scope.
    Scope entry itself succeeds even if no eligible descendant receives focus.
 3. Focus remains inside the active scope for request, Tab, and directional
    traversal.
 4. Scope entry chooses remembered, preferred, then first eligible focus in the
    order specified by the existing design.
-5. Scope exit restores an eligible target from the previous scope without the
-   presenter retaining a raw prior-focus pointer.
+5. Scope exit restores an eligible target from the same interaction owner's
+   previous scope without the presenter retaining a raw prior-focus pointer.
 6. Root detachment, presenter destruction, replacement, and window teardown
    all exit the scope exactly once, before the root loses its parent chain.
 7. Detaching or destroying a previous scope while a transient scope is active
    unlinks that previous scope from the intrusive chain; no `previous` link may
    dangle.
+8. A presenter that supplies no scope is key-passive: ordinary keys from its
+   interaction owner are absorbed rather than delivered to underlying content.
+   Back and Escape still follow the registration policy.
 
 ### Layer-Token Requirements
 
@@ -195,25 +220,40 @@ borrows a presenter-owned widget root for one registered presentation.
 
 ### Input-Lifetime Requirements
 
-1. The barrier and hosted root are the only eligible touch targets above lower
-   application content while the host is active.
+1. The barrier and descendants of the hosted root are the only eligible touch
+   targets above lower application content while the host is active.
 2. Before either subtree detaches, the gesture detector cancels and clears any
    in-flight path or role pointer into that subtree while the parent chain is
    still intact.
 3. A completed barrier activation applies outside policy exactly once. Absorb
    does nothing further, dismiss finishes with `kOutsideInteraction`, and
    presenter-handled invokes the registered participant's zero-storage hook.
-4. Attachment starts accepting new input only after the barrier, root, and
-   optional focus scope are structurally active.
+4. Attachment starts accepting new input only after the barrier, boundary,
+   root, and optional focus scope are structurally active.
+5. While display-wide hosting is active, ordinary keys from non-owner tasks are
+   absorbed without changing their retained focus or armed-control state.
+6. Owner-task keys route only through the active focus scope. When no focus
+   scope was supplied, ordinary owner-task keys are absorbed.
+7. Back or Escape from any task in the window is offered to the one root
+   transient registration before task-local content or navigation.
+8. Display-wide hosting rejects semantic text-input delivery unless the active
+   editor belongs to the interaction owner and is a descendant of the hosted
+   root. A key-passive root therefore cannot leak software input to underlying
+   owner content.
+9. Interaction-owner detachment or transition to an unavailable task state
+   finishes the presentation before the owner's panel, focus manager, or editor
+   storage becomes invalid.
 
 ### Embedded Requirements
 
 1. Do not increase `Widget`, `BasicWidget`, `SurfaceWidget`, `Container`,
    `FocusScope`, or `PresentationPin` size.
-2. Keep combined host and hosted-slot state at or below 24 bytes of net new
-   `MainWindow` storage on the configured 32-bit ABI after removing
-   dialog-specific state: root, optional active pin, presenter scope pointer,
-   hosted-slot association, origin token, and compact policy.
+2. Keep the reusable single-child interaction boundary at or below
+   `sizeof(Container) + 2 * sizeof(void*)` and the complete net `MainWindow`
+   fixed-state increase at or below 96 bytes on the configured 32-bit ABI after
+   removing dialog-specific state. The latter includes the boundary, root,
+   optional active pin, presenter scope pointer, hosted-slot association,
+   interaction owner, origin token, and compact policy.
 3. Reuse the existing `Scrim`; the host does not add a second scrim object.
 4. Replacing each top-level layer pointer with a layer record adds at most four
    bytes per vector element on the 32-bit ABI.
@@ -234,25 +274,28 @@ MainWindow
 ├── regular task layers      ← origin token and trigger pin scope
 ├── popup task layers
 └── active transient band    ← one of:
-    ├── popup: transparent barrier + presenter root
-    └── modal: scrim barrier + presenter root
+    ├── popup: transparent barrier + interaction boundary + presenter root
+    └── modal: scrim barrier + interaction boundary + presenter root
+
+interaction boundary ───────→ existing owner Task / FocusManager
 ```
 
 One presentation follows this sequence:
 
-1. The presenter supplies a borrowed root, root rectangle, optional embedded
-   focus scope, host kind, admission policy, outside policy, and an origin token
-   only when origin validation is required.
-2. The host preflights every prerequisite and, when required, resolves the
-   origin-layer root.
+1. The presenter supplies an existing interaction-owning task, borrowed root,
+   root rectangle, optional embedded focus scope, host kind, admission policy,
+   outside policy, and an origin token only when origin validation is required.
+2. The host preflights every prerequisite, validates the interaction owner, and
+   when required resolves the origin-layer root.
 3. The host admits the registration through the existing transient slot and
    records itself as that slot occupant's structural attachment owner.
-4. On `kStarted`, it attaches the reusable barrier and borrowed root in the
-   transient child band, enters focus, then enables input.
+4. On `kStarted`, it attaches the reusable barrier and interaction boundary in
+   the transient child band, attaches the borrowed root inside the boundary,
+   enters the owner's focus scope, then enables input.
 5. The presenter can add one optional copied-geometry pin through the host.
 6. Every terminal path cancels component work, hides the pin, exits focus,
-   cancels retained input paths, detaches the root and barrier, vacates the
-   slot, then optionally delivers completion.
+   cancels retained input paths, detaches the root, boundary, and barrier,
+   vacates the slot, then optionally delivers completion.
 
 ![Shared transient hosting and copied layer identity](figures/transient_surface_host_layers.svg)
 
@@ -264,11 +307,20 @@ framework, or introduce an arbitrary transient stack.
 
 ### Reusable Transient Child Band
 
-The host is non-widget state. It does not embed another `Container` in
-`MainWindow`. Instead, `MainWindow` reserves a transient child band after its
-task and popup-task records and directly attaches two borrowed children while
-the slot is occupied: the reusable barrier followed by the presenter root.
-The root is therefore topmost.
+The host is non-widget coordination state. `MainWindow` embeds one reusable
+`TransientInteractionBoundary`, a fixed single-child container whose only
+additional state is the active interaction-owner pointer and borrowed-root
+pointer. `MainWindow` reserves a transient child band after its task and
+popup-task records and attaches the reusable barrier followed by the boundary
+while the slot is occupied. The presenter root is attached inside the boundary
+and remains topmost.
+
+The boundary overrides structural task lookup with the explicitly supplied
+interaction owner. Descendants therefore resolve `Widget::getTask()`,
+`focusManager()`, editor services, and task-scoped event behavior to that owner
+even though the boundary itself is attached at window level. The owner pointer
+is installed only after admission preflight and cleared after the presenter root
+has detached.
 
 The existing `Scrim` becomes the reusable barrier. In popup mode it hit-tests
 but emits no overlay; in modal mode it emits its existing scrim overlay. Its
@@ -282,10 +334,10 @@ This fallback is a `MainWindow` transient-band rule, not ordinary sibling hit
 testing. Generic `Container::fillTouchTargetPath()` stops after a containing
 child declines a hit, which would prevent a full-window transparent overlay
 from reaching the barrier. While the host is active, `MainWindow` therefore
-tries the hosted root first and, when it declines without modifying the path,
-tries the barrier directly regardless of the root's bounds. It never continues
-to lower task or popup children. The hosted root's failure contract is to leave
-the incoming path unchanged.
+tries the interaction boundary first and, when its hosted root declines without
+modifying the path, tries the barrier directly regardless of the root's bounds.
+It never continues to lower task or popup children. The hosted root's failure
+contract is to leave the incoming path unchanged.
 
 The host kind determines how the transient child band behaves in
 `MainWindow` traversal:
@@ -312,7 +364,8 @@ after invoking it.
 
 `GestureDetector` gains a subtree-detach operation that cancels roles and clears
 its retained path when any target belongs to the departing subtree. The host
-uses it for both the root and barrier before either parent link changes. This is
+uses it for the root, boundary, and barrier before their parent links change.
+This is
 separate from merely marking the host finishing: disabling future hit tests
 does not invalidate pointers retained by an input stream already in progress.
 
@@ -337,7 +390,7 @@ void TransientSurfaceHost::detachHostedSurface(
 On normal finish, the slot first invokes the registration's component detach
 hook so the presenter can disable its dispatch, cancel work, and detach borrowed
 children inside its root. It then invokes `detachHostedSurface()` for pin,
-focus, gesture, root, and barrier cleanup; only afterward does it vacate the slot
+focus, gesture, root, boundary, and barrier cleanup; only afterward does it vacate the slot
 and deliver component completion.
 
 Registration-destructor cancellation takes the other deliberate path: the slot
@@ -346,7 +399,9 @@ and delivers no presenter virtual call or completion. The registration remains
 the presenter's final member, so the borrowed root and embedded focus scope are
 still alive during that structural call. This makes presenter destruction safe
 without requiring every presenter destructor to remember a host-specific
-detach call.
+detach call. Interaction-owner teardown is different: it performs a normal
+finish with `kInteractionOwnerDetached` while presenter callbacks and owner
+services are still valid.
 
 `MainWindow` destruction explicitly clears the slot with `kHostDestroyed`
 before destroying presentation pins or detaching task and popup roots. Member
@@ -361,11 +416,14 @@ uses `replace()`. A cross-kind request is `kHostBusy` and never dismisses the
 occupant implicitly.
 
 Before either operation the host verifies that the incoming registration is
-idle, the root is detached and belongs to the host's application context, the
-optional focus scope is inactive, and any required origin token resolves in the
-receiving window. Invalid root or scope state returns `kSurfaceUnavailable`;
-invalid or missing required origin returns `kAnchorUnavailable`. This prevents
-an invalid incoming menu from dismissing a valid visible menu.
+idle; the interaction owner is attached, available, and belongs to the
+receiving window; the root is detached and belongs to the same application
+context; the optional focus scope is inactive; and any required origin token
+resolves in the receiving window. An invalid owner returns
+`kInteractionOwnerUnavailable`, invalid root or scope state returns
+`kSurfaceUnavailable`, and invalid or missing required origin returns
+`kAnchorUnavailable`. This prevents an invalid incoming menu from dismissing a
+valid visible menu.
 
 After slot admission, child attachment and scope activation are non-failing.
 `FocusManager::enterScope()` returns whether it assigned an eligible target,
@@ -380,15 +438,18 @@ from post-detach completion.
 ### Focus-Scope Integration
 
 Phase 1 implements the already-specified active-scope operations on
-`FocusManager`. The manager stores the active scope pointer. Each focus-owning
-task or presenter embeds its `FocusScope`; no history allocation or map is
-introduced.
+`FocusManager`. Each task manager stores its active scope pointer. Each
+focus-owning task or presenter embeds its `FocusScope`; no history allocation
+or map is introduced.
 
 The host keeps only a nullable pointer to the active presenter's scope while the
-registration is visible. It enters a supplied scope only after the root is
-attached. During finish it exits the scope and clears focused state before
-canceling input paths or detaching the root. A null scope leaves the prior scope
-active and is appropriate only for a deliberately passive surface.
+registration is visible. It invokes `enterScope()` on the explicit interaction
+owner's manager only after the root and boundary are attached. While a scope is
+active, that root replaces the task panel as the manager's legal traversal root;
+task key dispatch uses the manager's active root for focused bubbling, Tab, and
+directional movement. During finish the host exits the scope before canceling
+input paths or detaching the root. A null scope leaves retained focus unchanged
+but does not let ordinary keys reach underlying content.
 
 The scope is declared before the presenter's final registration member and
 therefore outlives destructor cancellation. `FocusManager` owns intrusive-chain
@@ -400,6 +461,28 @@ is destroyed. Hosted presenters are already unlinked by normal finish or
 registration-destructor cancellation. Scope exit restores only an attached,
 visible, enabled, focusable descendant; otherwise it uses the previous scope's
 normal initial-focus fallback.
+
+### Key Routing and Interaction-Owner Lifetime
+
+The shared host is display-wide, so it is the window's key barrier while
+occupied. Before ordinary task dispatch, `Task::dispatchKeyEvent()` consults the
+host. Back and Escape use the existing root registration and retain global
+precedence. Non-owner ordinary keys are consumed without touching that task's
+focus or armed-control state. Owner keys route through the owner's active focus
+scope; a key-passive presentation consumes them after Back/Escape eligibility.
+
+`Task` teardown and transition to a host-ineligible state notify the host before
+clearing focus, editor, key, or panel state. A matching active presentation
+finishes with `kInteractionOwnerDetached`, exits focus, and clears the boundary
+owner pointer before teardown proceeds. Interaction-owner storage is borrowed
+and safe because no path lets the task disappear while the host retains it.
+
+`ApplicationTextInput` also consults the host before using its active editor.
+During display coverage, delivery succeeds only when that editor belongs to the
+interaction owner and remains below the hosted root; otherwise the semantic
+operation returns `false` without mutation. This preserves text fields inside a
+dialog while preventing a passive popup or non-owner editor from bypassing the
+key barrier.
 
 ### Pointer-Free Layer Identity
 
@@ -483,10 +566,12 @@ Every terminal path performs:
    component-owned work and detach borrowed children inside its root;
 3. hide the optional presenter pin;
 4. exit the optional focus scope and restore an eligible prior target;
-5. cancel and clear in-flight gesture state targeting the root or barrier;
-6. detach the borrowed presenter root;
-7. detach the barrier, invalidating revealed regions;
-8. clear root, token, pin, scope, host association, and policy state;
+5. cancel and clear in-flight gesture state targeting the root, boundary, or
+   barrier;
+6. detach the borrowed presenter root from the interaction boundary;
+7. detach the boundary and barrier, invalidating revealed regions;
+8. clear root, interaction owner, token, pin, scope, host association, and
+   policy state;
 9. vacate the transient slot and become idle;
 10. on normal finish, deliver component completion;
 11. perform no presenter access after completion.
@@ -502,7 +587,13 @@ are destroyed.
 
 `MainWindow::showDialog()` becomes a compatibility facade that supplies the
 dialog registration, centered card rectangle, modal kind, scrim barrier,
-focus capture, `kRejectIfBusy`, and outside absorption to the host.
+focus capture, `kRejectIfBusy`, outside absorption, and an explicit
+compatibility task to the host. `Application::showDialog()` selects the oldest
+attached, available regular task from its owned task collection and returns
+`kInteractionOwnerUnavailable` when none exists. This temporary rule lives only
+at the legacy API boundary; the host never infers an interaction owner from
+focus or z-order. New component APIs require the calling task explicitly, and
+display Phase 8 removes the facade.
 
 The dialog remains the presenter and owns its callback/result behavior. The
 host replaces `active_dialog_`, direct scrim attachment, and
@@ -516,8 +607,9 @@ The target-ABI ceilings are:
 | --- | ---: | --- |
 | process token issuer | 4 B | one cold-path counter |
 | top-level layer record delta | 4 B per capacity slot | token beside existing root pointer |
-| combined host and hosted-slot state | 24 B | root, pin, scope, host association, token, packed policy |
-| `MainWindow` net fixed delta | 24 B | after removing dialog-specific pointer/state and reusing scrim |
+| reusable interaction boundary | `sizeof(Container) + 2 * sizeof(void*)` | container state, owner, and borrowed root |
+| combined host and hosted-slot state | 24 B | root, pin, scope, owner/host association, token, packed policy |
+| `MainWindow` net fixed delta | 96 B | boundary plus host/slot state after removing dialog-specific state and reusing scrim |
 | inactive presenter | 0 B | no host handle or token observer |
 | token-scoped pin base delta | 0 B | active host stores identity pointer |
 
@@ -585,9 +677,10 @@ struct TransientSurfaceSpec {
   bool require_origin = false;
 };
 
-// Add kSurfaceUnavailable and kAnchorUnavailable to PresentationStartResult,
-// and kAnchorUnavailable to PresentationFinishReason. No existing enumerator
-// changes value.
+// Add kInteractionOwnerUnavailable, kSurfaceUnavailable, and
+// kAnchorUnavailable to PresentationStartResult. Add
+// kInteractionOwnerDetached and kAnchorUnavailable to
+// PresentationFinishReason. No existing enumerator changes value.
 
 class TransientPresentationRegistration {
  protected:
@@ -614,8 +707,8 @@ namespace internal {
 class TransientSurfaceHost {
  public:
   PresentationStartResult show(
-      TransientPresentationRegistration& registration, Widget& root,
-      const Rect& root_bounds, FocusScope* focus_scope,
+      TransientPresentationRegistration& registration, Task& interaction_owner,
+      Widget& root, const Rect& root_bounds, FocusScope* focus_scope,
       const TransientSurfaceSpec& spec);
 
   PresentationPinShowResult showPresentationPin(
@@ -657,9 +750,11 @@ and [widget authoring](../../../.github/instructions/roo-windows-widget-authorin
 Code slice:
 
 1. Implement enter, containment, initial-focus, exit, and restoration behavior
-   already specified by the Non-touch input design.
+   already specified by the Non-touch input design, including an active scope
+   root that may be structurally outside the task panel.
 2. Integrate scope lifetime and intrusive `previous`-link unlinking with subtree
-   detach, task/popup changes, and the current legacy dialog path.
+   detach, task/popup changes, and the current legacy dialog path; make task key
+   traversal use the active scope root.
 3. Define `enterScope()` success as scope activation independent of whether an
    eligible widget receives focus.
 4. Test nested entry/exit, previous-scope destruction, ineligible remembered
@@ -681,20 +776,27 @@ the target-ABI size procedure for focus-owning records.
 Code slice:
 
 1. Add the reusable transient child band, popup/modal host kinds,
-   barrier/scrim behavior, complete admission preflight, and non-failing
-   register-then-attach behavior.
+   barrier/scrim behavior, reusable interaction boundary, explicit task-owner
+   validation, complete admission preflight, and non-failing register-then-
+   attach behavior.
 2. Add the hosted-slot association so normal finish and destructor cancellation
    both invoke structural teardown before slot vacancy.
 3. Route completed outside activation through the barrier and registration hook.
 4. Add transient-band hit traversal so a full-window root can decline directly
    to the barrier without exposing lower children.
-5. Add gesture-subtree cancellation before transient child detachment.
-6. Implement deterministic finish ordering and revealed-region invalidation.
-7. Migrate legacy dialogs without behavior or callback changes.
-8. Test invalid root/scope preflight, admission, replacement reentrancy, outside
-   policies, focus, in-flight gestures, teardown, destruction, and dialog
-   compatibility.
-9. Record hosted-slot, host, and `MainWindow` fixed-size deltas.
+5. Add the display-wide physical- and semantic-input barrier: global
+   Back/Escape precedence, owner-key routing through the active scope,
+   absorption of non-owner or key-passive ordinary keys, and editor delivery
+   only inside the hosted owner subtree.
+6. Add gesture-subtree cancellation before transient child detachment.
+7. Implement deterministic finish ordering, owner-teardown notification, and
+   revealed-region invalidation.
+8. Migrate legacy dialogs without behavior or callback changes.
+9. Test invalid/foreign owners, invalid root/scope preflight, admission,
+   replacement reentrancy, outside policies, owner and non-owner keys, passive
+   presentations, semantic editor isolation, focus, in-flight gestures, owner
+   teardown, destruction, and dialog compatibility.
+10. Record boundary, hosted-slot, host, and `MainWindow` fixed-size deltas.
 
 Proposed commit message:
 
@@ -736,8 +838,9 @@ target-ABI record and snapshot size procedure.
 ## Testing Plan
 
 Focused validation covers active and previous focus-scope lifetime, complete
-host admission preflight, hosted-slot normal and destructor teardown,
-popup/modal input isolation, in-flight gesture cancellation, dialog
+host admission preflight, explicit interaction-owner validation and teardown,
+hosted-slot normal and destructor teardown, popup/modal pointer, physical-key,
+and semantic-editor isolation, in-flight gesture cancellation, dialog
 compatibility, token issuance and foreign/stale rejection, origin-layer removal,
 token-scoped pin ordering and cleanup, allocation failure, reentrancy, and
 target-ABI ceilings.
@@ -750,17 +853,32 @@ dialog tests in Phase 2 and Material 3 menu tests/examples in the menu design.
 
 ### Rejected Alternatives
 
-#### Use Task for Temporary Surfaces
+#### Create a Task for Each Temporary Surface
 
 Rejected because a `Task` owns persistent route and activity lifecycle. A
 short-lived popup needs attachment, input isolation, focus, and teardown but no
-route stack or activity transitions.
+route stack or activity transitions. Associating it with an existing task for
+interaction semantics provides the required identity without inventing a
+route.
+
+#### Infer the Interaction Owner
+
+Rejected because focused, topmost, and most recently touched tasks can differ,
+especially on a multi-task display. The presenting component names the owner
+explicitly and admission validates that the task belongs to the receiving
+window.
 
 #### Keep Dialog and Menu Attachment Separate
 
 Rejected because both paths need the same slot admission, barrier, focus,
 invalidation, reentrancy, and teardown ordering. Component-specific presenters
 remain separate above the shared host.
+
+#### Add a Separate Display-Modal Host
+
+Rejected because it would duplicate slot admission, focus, Back, key barriers,
+and teardown while permitting contradictory active states. Phase 7 extends the
+same host with task-bounded attachment; it does not add another host.
 
 #### Derive the Host or Menu from Dialog
 
@@ -824,15 +942,20 @@ and supplies a zero-storage virtual hook.
    bounded RAM over a lookup table.
 3. Process token exhaustion disables new copied-anchor snapshots while leaving
    attached layers and ordinary UI functional.
-4. The first host cannot present a menu above an active modal dialog.
-5. A token remains valid across activity changes inside the same top-level task
+4. The reusable interaction boundary adds fixed window state to avoid a task
+   pointer or ancestry adapter in every presenter.
+5. The first host cannot present a menu above an active modal dialog.
+6. A token remains valid across activity changes inside the same top-level task
    layer; components that require route-sensitive dismissal do so explicitly.
 
 ## Future Work
 
-1. Add bounded nested-transient admission only after a concrete component
+1. Extend the same host with task-bounded modal coverage in
+   [Display runtime Phase 7](display_modal_hosting_design.md); retain one global
+   slot and the same interaction-owner contract.
+2. Add bounded nested-transient admission only after a concrete component
    defines visual, input, focus, and Back ordering for two active roots.
-2. Add live reanchoring registration only for a component that cannot use an
+3. Add live reanchoring registration only for a component that cannot use an
    explicit copied `reanchor()` operation.
-3. Generalize token-scoped pin multiplicity if a presenter requires more than
+4. Generalize token-scoped pin multiplicity if a presenter requires more than
    one independently invalidated paint plan.

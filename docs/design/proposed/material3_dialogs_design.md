@@ -2,7 +2,10 @@
 
 ## Implementation status
 
-**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+**Proposed; host architecture reconciled by P1.6a.** None of the dialog-family
+scope is implemented. The shared transient host is the P1.6b prerequisite for
+basic-dialog presentation. The status of other prerequisites is recorded in
+the [status index](../README.md).
 
 ## Objective
 
@@ -19,8 +22,8 @@ The design provides:
 - a full-screen dialog surface for compact-window task flows and short wizard
   sequences,
 - generic caller-owned body content with pinned header and action chrome,
-- modal and focus behavior that reuse the current dialog, popup, and scrim
-  layering,
+- modal and focus behavior that reuse the one shared transient host, explicit
+  interaction-owner task, and scrim,
 - and a storage model that keeps per-instance RAM bounded by fixed action-slot
   storage instead of dynamic button arrays or per-action callbacks.
 
@@ -47,8 +50,8 @@ The gap is visible in three places:
    as a missing design track.
 
 The library therefore needs a dialog design that is implementation-grounded,
-uses the existing layering seams, and is explicit about where full-screen flows
-belong.
+uses the reviewed shared-host seam, and is explicit about where full-screen
+flows belong.
 
 ## Background
 
@@ -61,7 +64,7 @@ The relevant existing seams are:
 
 - [src/roo_windows/core/application.h](../../../src/roo_windows/core/application.h)
   and [src/roo_windows/core/main_window.cpp](../../../src/roo_windows/core/main_window.cpp),
-  which already expose one modal dialog slot above popups and regular tasks,
+  which expose the legacy modal dialog path above popups and regular tasks,
 - [src/roo_windows/widgets/scrim.h](../../../src/roo_windows/widgets/scrim.h),
   which already provides the overlay-backed scrim widget used by the modal
   dialog path,
@@ -77,27 +80,31 @@ The relevant existing seams are:
 - [src/roo_windows/material3/button/button.h](../../../src/roo_windows/material3/button/button.h),
   which already provides the Material 3 text-button implementation needed for
   dialog actions,
-- and [material3_icon_buttons_design.md](../implemented/material3_icon_buttons_design.md),
-  which exists as a design note but has no landed implementation yet.
+- [material3_icon_buttons_design.md](../implemented/material3_icon_buttons_design.md),
+  whose implementation can supply the full-screen close affordance,
+- and [transient_surface_host_design.md](transient_surface_host_design.md),
+  which replaces dialog-specific attachment with one display-wide popup/modal
+  host and an explicit interaction owner.
 
 Those seams constrain the dialog design directly.
 
-First, the current modal dialog slot is already the correct host for centered
-basic dialogs. It attaches a `Scrim`, centers the surface, and blocks lower
-layers.
+First, the current visual behavior is correct for centered basic dialogs, but
+its dialog-specific attachment is not the final host. P1.6b migrates legacy
+dialogs to the shared host that attaches the `Scrim`, borrows the root, activates
+owner-task focus, and blocks lower layers.
 
-Second, the current host supports only one active modal dialog. That matters
-because Material 3 full-screen dialogs are the only dialogs over which another
-basic dialog may appear. A full-screen dialog therefore cannot simply reuse the
-same singular centered-dialog slot.
+Second, the reviewed framework intentionally supports one root interactive
+transient per window. Basic and full-screen dialogs therefore use the same slot
+and do not stack. Material's basic-over-full-screen allowance is deferred until
+a concrete use case justifies a bounded nested-transient design.
 
 Third, the legacy `Dialog` scaffold is not a good surface to restyle in place.
 It currently stores a `std::vector<SimpleButton>` plus a per-instance
 `std::function` callback, which pushes RAM and ownership policy into the base
 widget in a way that the newer Material 3 component families avoid.
 
-Fourth, full-screen dialog chrome cannot depend on a public `material3::IconButton`
-yet because that widget family is not implemented in source.
+Fourth, the Material 3 icon-button family is now implemented, so full-screen
+dialog chrome reuses it rather than carrying a private substitute.
 
 ### Material 3 Signals
 
@@ -124,8 +131,10 @@ The strongest current signals are:
    stack vertically the confirm action appears above the dismissive action.
 9. When dialog content scrolls, the header and actions remain pinned while only
    the body scrolls.
-10. Full-screen dialogs are intended for compact windows and are the only
-    dialogs over which a later basic dialog may appear.
+10. Full-screen dialogs are intended for compact windows. Material permits a
+    later basic dialog above them, but the initial Roo Windows implementation
+    deliberately defers that stacking behavior to preserve the one-root
+    transient contract.
 
 Material also allows custom-positioned basic dialogs on larger screens, but
 that positioning freedom is not required for the first embedded dialog landing.
@@ -143,18 +152,18 @@ The most relevant local references are:
 
 Those references close six local decisions:
 
-1. basic dialogs should reuse the existing modal dialog slot and `Scrim`,
-2. full-screen dialogs should use the popup layer rather than the singular
-   centered-dialog slot,
+1. both variants should use the shared transient host with modal kind and
+   display coverage,
+2. the component must explicitly supply the existing task that owns focus,
+   physical keys, Back context, and teardown,
 3. dialog bodies should reuse `SimpleScrollablePanel` instead of introducing a
    dialog-local scroller,
 4. action buttons should reuse the landed Material 3 text-button
    implementation,
-5. the full-screen close affordance must be dialog-local rather than a public
-   dependency on an unimplemented icon-button family,
-6. and keyboard focus must follow the layering rules already defined in
-   [non_touch_input_design.md](../implemented/non_touch_input_design.md): basic dialogs first,
-   then focus-capturing popups, then regular tasks.
+5. the full-screen close affordance should reuse the implemented
+   `material3::IconButton`,
+6. and keyboard focus must use the explicit interaction owner's `FocusManager`
+   and the shared host's active scope.
 
 ## Requirements
 
@@ -167,9 +176,9 @@ Those references close six local decisions:
 3. Support a full-screen dialog surface with close affordance, optional confirm
    action, and generic body content.
 4. Keep header and action chrome pinned while dialog body content scrolls.
-5. Support showing a basic dialog above a full-screen dialog.
-6. Reuse the existing scrim, popup, and modal layering primitives instead of
-   adding a second dialog subsystem.
+5. Use one root transient slot; basic and full-screen dialogs do not coexist.
+6. Reuse the shared transient host and existing scrim instead of adding a
+   dialog-specific or full-screen host.
 7. Reuse the existing Material 3 text-button implementation for dialog actions.
 8. Keep the current legacy dialog family available during migration.
 
@@ -191,6 +200,10 @@ Those references close six local decisions:
 9. Full-screen dialog confirm action must be able to veto close so validation
    and discard-confirm flows can keep the dialog open.
 10. Focus must remain inside the active dialog scope.
+11. Every show operation must receive one attached interaction-owning task;
+    the host must not infer it from focus or z-order.
+12. Semantic software input must reach an active text editor inside the dialog
+    and must not reach an underlying owner or non-owner editor while displayed.
 
 Basic and full-screen Material 3 dialog presenters must use the root
 interactive-transient slot defined by the
@@ -206,18 +219,17 @@ dismissal completion, and do not introduce a dialog-local Back dispatcher.
    dialogs rather than one enum-configured mega-widget.
 3. Keep action descriptors borrowed and fixed-capacity rather than heap-owned.
 4. Avoid new per-action `std::function` storage on the base dialog widgets.
-5. Avoid a required public dependency on `material3::IconButton` for the
-   full-screen close affordance.
-6. Keep host integration close to the existing `Application::showDialog()` /
-   `clearDialog()` naming.
-7. Define explicit behavior when callers attempt unsupported host states such
-   as stacking a second full-screen dialog.
+5. Reuse `material3::IconButton` for the full-screen close affordance.
+6. Put `show(Task&)` and `dismiss()` on the component presenters; application-
+   level compatibility forwarding is not part of the final API.
+7. Return the shared host's explicit busy/unavailable result for unsupported
+   host states rather than asserting on normal runtime contention.
 
 ### Memory and Allocation Requirements
 
 1. Do not allocate on paint, scroll, key dispatch, or action-state updates.
 2. Keep action storage to fixed slots and packed flags rather than vectors.
-3. Keep scrim ownership and popup-host state off the base dialog widgets.
+3. Keep scrim ownership and shared-host state off the base dialog widgets.
 4. Add pointer-size-aware size-budget assertions for the new public dialog
    types.
 5. Keep the base dialog family generic and avoid storing alert-only strings,
@@ -241,9 +253,10 @@ pieces:
 
 The core architectural decisions are:
 
-- basic dialogs use the existing modal dialog slot and `Scrim`,
-- full-screen dialogs use a full-window focus-capturing popup host instead of
-  the singular modal-dialog slot,
+- both variants use modal kind and display coverage in the one shared host,
+- every presentation explicitly supplies an existing interaction-owner task,
+- basic and full-screen variants are mutually exclusive in the root transient
+  slot,
 - the body content is always caller-owned `WidgetRef` content rather than a
   dialog-family-specific item model,
 - basic and full-screen variants stay separate public types because their host
@@ -269,7 +282,7 @@ In scope:
 - full-screen dialogs,
 - generic caller-owned body content,
 - fixed-capacity action-role modeling,
-- and host integration for a basic dialog above a full-screen dialog.
+- and integration with the shared host's one-slot and explicit-owner contract.
 
 Out of scope:
 
@@ -322,42 +335,35 @@ That choice is deliberate:
 
 ### Host Integration
 
-The dialog family uses two existing layering seams rather than inventing a new
-modal stack.
+Both variants use the
+[shared transient host](transient_surface_host_design.md) with modal kind,
+display coverage, outside absorption, `kRejectIfBusy`, and a presenter-owned
+`FocusScope`. `show(Task&)` supplies the existing task whose focus manager,
+physical-key route, Back context, and lifetime govern the dialog. The host
+derives the receiving window from that task and validates the owner before
+touching the root transient slot.
 
-`BasicDialog` is hosted by the modal dialog path in
-[src/roo_windows/core/main_window.cpp](../../../src/roo_windows/core/main_window.cpp).
-That path already attaches a `Scrim`, centers the child surface, and makes the
-dialog the top-most interactive layer.
+For `BasicDialog`, the borrowed hosted root is the centered surface and the
+host's reusable scrim covers the display. For `FullScreenDialog`, the borrowed
+root fills the display; the modal barrier still isolates input, but its scrim is
+completely occluded by the opaque full-screen surface. Both resolve task-
+scoped services through the host's reusable interaction boundary.
 
-`FullScreenDialog` is hosted as one full-window popup child or popup task with
-focus-capture semantics from [non_touch_input_design.md](../implemented/non_touch_input_design.md).
-This split is the most important architectural decision in the design.
+The one root slot makes host rules simple:
 
-A full-screen dialog fills the whole window, so it does not need a scrim.
-More importantly, Material explicitly allows a basic dialog to appear above a
-full-screen dialog for flows such as discard confirmation or a general error
-that occurs while the user is editing. Reusing the singular centered-dialog slot
-for the full-screen variant would block that flow.
+1. either one basic dialog or one full-screen dialog may be active;
+2. any second root transient returns `kHostBusy` without changing the active
+   presentation;
+3. Back and Escape use the shared registration and finish before completion;
+4. owner, presenter, and window teardown use the shared idempotent ordering;
+5. no `Application::showDialog()` or `clearDialog()` API participates in the
+   final Material 3 path.
 
-The resulting z-order is:
-
-1. regular tasks,
-2. focus-capturing popups such as a full-screen dialog,
-3. centered basic modal dialogs.
-
-The host rules are closed as follows:
-
-1. zero or one full-screen dialog may be active,
-2. zero or one centered basic dialog may be active,
-3. a centered basic dialog may appear while a full-screen dialog is active,
-4. a full-screen dialog may not appear while a centered basic dialog is active,
-5. and `clearDialog()` clears the centered basic dialog first, otherwise the
-   full-screen dialog, otherwise no-ops.
-
-Attempting to show a second full-screen dialog is a programmer error. The host
-should `CHECK` that no full-screen dialog is already active before attaching a
-new one.
+Material's optional basic-above-full-screen behavior is intentionally not
+implemented. A full-screen workflow handles discard confirmation inline or
+finishes and opens a basic dialog from post-detach completion. Supporting both
+roots concurrently would require the separate bounded nesting design identified
+by the host's future-work section.
 
 ### BasicDialog
 
@@ -471,8 +477,8 @@ while simple acknowledgement dialogs still land on the button.
 
 #### Host and Layout Model
 
-`FullScreenDialog` is a full-window popup-hosted surface rather than a centered
-floating dialog.
+`FullScreenDialog` is a full-window surface hosted by the same modal transient
+path as `BasicDialog`, rather than by a popup task or second host.
 
 It covers the host bounds directly:
 
@@ -500,11 +506,8 @@ The header contains:
 - an optional short title,
 - and an optional trailing confirming text action.
 
-The close affordance uses a private dialog-local icon-action widget with a
-`24dp` glyph and a `48dp` effective touch target. It is not a public
-`material3::IconButton` dependency. Once a public icon-button implementation
-lands, the internal close-affordance widget may be swapped out without any API
-change.
+The close affordance uses `material3::IconButton` with a `24dp` glyph and a
+`48dp` effective touch target.
 
 The confirming action stays in the header rather than in a second bottom action
 bar. That keeps the compact full-screen surface narrower in scope, matches the
@@ -539,26 +542,16 @@ without per-instance callback storage:
 - reject confirm while a required field is invalid,
 - show inline errors and keep editing,
 - intercept a close request,
-- and show a centered basic dialog above the full-screen dialog asking whether
-  unsaved edits should be discarded.
+- and show inline discard confirmation or finish and open a basic confirmation
+  from post-detach completion.
 
 #### Focus and Overlay Behavior
 
-The full-screen dialog host is a focus-capturing popup scope as defined by
-[non_touch_input_design.md](../implemented/non_touch_input_design.md).
-
-That choice has three benefits:
-
-1. it blocks the regular task beneath the dialog,
-2. it still allows a centered modal basic dialog above the full-screen dialog,
-3. and it keeps menus and other popup-local surfaces inside the full-screen
-   flow on the popup layer rather than trying to tunnel through the centered
-   dialog slot.
-
-Before the shared non-touch input work lands in code, the full-screen popup
-host still behaves correctly for touch because it owns the full window. The
-focus-capture policy becomes relevant only once the shared focus manager and key
-dispatcher exist.
+The full-screen dialog supplies a focus-capturing scope to the shared host. The
+host enters it through the explicit interaction owner's `FocusManager`, routes
+owner keys only inside that scope, absorbs ordinary non-owner keys, and restores
+eligible prior focus during finish. Menus and other root transients return busy
+until the full-screen dialog finishes.
 
 ### Action and Result Semantics
 
@@ -581,7 +574,13 @@ values:
 - `kBack`,
 - `kEscape`,
 - `kCloseButton`,
-- `kProgrammatic`.
+- `kProgrammatic`,
+- `kInteractionOwnerDetached`,
+- `kHostDestroyed`.
+
+Owner and host teardown are mandatory and do not call the full-screen veto
+hook. Presenter destruction performs structural cleanup without a virtual
+completion callback, following the shared registration contract.
 
 The result ordering is intentionally different between the two public variants:
 
@@ -608,7 +607,7 @@ The chosen storage model keeps the per-instance cost bounded as follows:
   policy.
 - `FullScreenDialog` reuses the same scaffold and adds one small close-
   affordance widget plus one optional confirming action descriptor.
-- Host-owned modal state, scrim ownership, and popup-layer integration stay on
+- Host-owned modal state, scrim ownership, and structural integration stay on
   `MainWindow` rather than on every dialog instance.
 
 The design explicitly does not store:
@@ -618,9 +617,8 @@ The design explicitly does not store:
 - a second scroller,
 - or a general appearance object pointer.
 
-That is the right tradeoff here. The repo only ever shows one centered basic
-dialog and one full-screen dialog at a time, but the base classes still need to
-avoid speculative RAM cost.
+That is the right tradeoff here. The shared slot shows one basic or full-screen
+dialog at a time, and the base classes still avoid speculative RAM cost.
 
 ### Repaint and Invalidation Consequences
 
@@ -642,9 +640,8 @@ For full-screen dialogs:
    dialog surface itself covers the window,
 2. body scrolling remains local to the scrollable body region,
 3. the close affordance invalidates only its own bounds,
-4. and a later centered basic dialog above the full-screen dialog reuses the
-   existing modal scrim path without any full-screen-dialog-specific repaint
-   machinery.
+4. and the host's completely occluded scrim requires no special full-screen
+   repaint path.
 
 The first landing does not add enter or exit motion. That is deliberate. Motion
 tokens are still a broader theme-system task, and animating the scrim or a
@@ -667,6 +664,16 @@ enum class DialogDismissReason : uint8_t {
   kEscape,
   kCloseButton,
   kProgrammatic,
+  kInteractionOwnerDetached,
+  kHostDestroyed,
+};
+
+enum class DialogShowResult : uint8_t {
+  kShown,
+  kHostBusy,
+  kAlreadyPresented,
+  kInteractionOwnerUnavailable,
+  kSurfaceUnavailable,
 };
 
 struct DialogActionSpec {
@@ -686,6 +693,9 @@ class BasicDialog : public Container {
   void setHeadline(roo::string_view headline);
   void setBody(WidgetRef body);
   void setActionEnabled(uint8_t action_id, bool enabled);
+  DialogShowResult show(Task& interaction_owner);
+  bool isShowing() const;
+  void dismiss();
 
  protected:
   virtual Widget* preferredFocusChild();
@@ -711,6 +721,9 @@ class FullScreenDialog : public Container {
   void setBody(WidgetRef body);
   void setConfirmAction(const DialogActionSpec& action);
   void clearConfirmAction();
+  DialogShowResult show(Task& interaction_owner);
+  bool isShowing() const;
+  void dismiss();
 
  protected:
   virtual Widget* preferredFocusChild();
@@ -721,31 +734,19 @@ class FullScreenDialog : public Container {
 };
 
 }  // namespace roo_windows::material3
-
-namespace roo_windows {
-
-class Application {
- public:
-  void showDialog(material3::BasicDialog& dialog);
-  void showDialog(material3::FullScreenDialog& dialog);
-  void clearDialog();
-};
-
-}  // namespace roo_windows
 ```
 
 API notes:
 
 1. `BasicDialog` action arrays are borrowed and validated immediately. Invalid
    one-or-two-action combinations `CHECK`.
-2. `showDialog(material3::FullScreenDialog&)` `CHECK`s that no centered basic
-   dialog or second full-screen dialog is active.
-3. `clearDialog()` clears the top-most active dialog scope: centered basic
-   first, otherwise full-screen.
+2. `show(Task&)` validates the owner and maps shared-host admission results
+   without attaching partial dialog structure on failure.
+3. `dismiss()` is idempotent. Action and dismissal completion run after the
+   host detaches the dialog and vacates the root transient slot.
 4. The existing callback-based legacy dialog APIs remain unchanged during
-   migration. If a callback convenience overload is added later for the
-   Material 3 family, the callback storage belongs on the host, not on the base
-   dialog widgets.
+   dialog-family implementation; P1.6b migrates their structure to the same
+   host and display Phase 8 later removes application-level forwarding.
 
 ## Implementation Plan
 
@@ -754,18 +755,20 @@ Authoring reference: follow the local
 and the
 [roo_windows widget authoring instruction](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
-### Phase 1: Shared Scaffold and Host Support
+### Phase 1: Shared Scaffold and Presenter Integration
 
 Code slice:
 
 1. Add `src/roo_windows/material3/dialog/` with `DialogActionSpec`,
-   `DialogScaffoldBase`, `DialogActionStrip`, the private close-affordance
-   widget, and size-budget helpers.
-2. Extend the dialog host so `Application` / `MainWindow` can manage one
-   centered basic dialog plus one popup-hosted full-screen dialog, and make
-   `clearDialog()` clear the top-most active dialog scope.
+   `DialogScaffoldBase`, `DialogActionStrip`, presentation registrations, and
+   size-budget helpers.
+2. Add the reusable dialog-presentation seam over the prerequisite shared host
+   with explicit task ownership, modal kind, display coverage, outside
+   absorption, and reject-if-busy admission. Do not add dialog-specific host
+   state.
 3. Add `test/material3_dialog_test.cpp` coverage for action-role validation,
-   host-state validation, and size-budget assertions.
+   owner and host-result validation, semantic-editor isolation, mutual
+   exclusion, teardown, and size-budget assertions.
 
 Proposed commit message:
 
@@ -798,16 +801,14 @@ Validation: run `bazel test //:material3_dialog_test //:material3_dialog_golden_
 
 Code slice:
 
-1. Add `FullScreenDialog` and its popup-hosted full-window wrapper.
-2. Implement the private close affordance, header confirm action, request-veto
-   hooks, and the host path that allows a centered basic dialog above an active
-   full-screen dialog.
+1. Add `FullScreenDialog` and its full-window hosted root.
+2. Implement the icon-button close affordance, header confirm action, request-
+   veto hooks, and shared-host lifecycle.
 3. Expand dialog tests with close-veto coverage, confirm-accept versus
-   confirm-reject coverage, and host stacking coverage for a centered basic
-   dialog above a full-screen dialog.
+   confirm-reject coverage, and busy results for attempts to open a second root
+   transient.
 4. Update `examples/material3/dialogs/dialogs.ino` with one compact wizard
-   flow that triggers a discard-confirm basic dialog from the full-screen
-   dialog.
+   flow with inline discard confirmation in the full-screen dialog.
 
 Proposed commit message:
 
@@ -820,8 +821,8 @@ Validation: run `bazel test //:material3_dialog_test //:material3_dialog_golden_
 Validation coverage for the full dialog family should include:
 
 1. `//:material3_dialog_test` coverage for action-role validation, host-state
-   validation, dismissal reasons, confirm-veto behavior, and top-most
-   `clearDialog()` semantics.
+   validation, explicit-owner failures, dismissal reasons, confirm-veto
+   behavior, mutual exclusion, and owner teardown.
 2. `//:material3_dialog_golden_test` coverage for centered basic-dialog width
    clamping, icon versus no-icon alignment, action-strip stacking fallback,
    divider appearance at body clipping edges, and full-screen header geometry.
@@ -846,7 +847,9 @@ That is the right first step, but it does have visible consequences:
    screens in the first landing,
 3. centered basic dialogs remain default-centered and do not yet expose the
    custom-positioning flexibility Material allows on larger displays,
-4. and the first landing does not include motion transitions.
+4. basic dialogs cannot stack above full-screen dialogs under the shared
+   one-root contract,
+5. and the first landing does not include motion transitions.
 
 ### Rejected Alternatives
 
@@ -855,22 +858,21 @@ That is the right first step, but it does have visible consequences:
 Rejected in [Current Starting Point in `roo_windows`](#current-starting-point-in-roo_windows)
 and [Host Integration](#host-integration). The legacy scaffold bakes in a
 dynamic button vector, a per-instance callback, and a single centered-host
-model. Material 3 needs a separate full-screen route and a tighter action
-policy, so a quiet in-place restyle would hide the real architectural change.
+model. Material 3 needs a distinct full-screen presenter and a tighter action
+policy, so a quiet in-place restyle would hide the real component change.
 
-#### Put full-screen dialogs on the singular modal-dialog slot
+#### Add a Separate Full-Screen Host to Permit Stacking
 
-Rejected in [Host Integration](#host-integration) and
-[FullScreenDialog](#fullscreendialog). Material explicitly allows a later basic
-dialog to appear above a full-screen dialog. Reusing the singular centered-
-dialog slot for the full-screen variant would block discard-confirm and
-error-over-edit flows.
+Rejected because it would bypass the framework's one root transient slot and
+duplicate admission, focus, key, Back, and teardown ordering. Both variants use
+the shared host. Nested dialog presentation remains future work that requires a
+bounded host design and a concrete product use case.
 
 #### Expose one public `Dialog` type with presentation enums
 
 Rejected in [Design Overview](#design-overview), [BasicDialog](#basicdialog),
 and [FullScreenDialog](#fullscreendialog). The centered basic and full-screen
-variants differ in host layer, action policy, dismissal behavior, and chrome.
+variants differ in geometry, action policy, dismissal behavior, and chrome.
 One enum-configured mega-widget would force every instance to carry irrelevant
 state and would make the API harder to understand.
 
@@ -881,12 +883,10 @@ most interruptive decision surface in the current Material 3 family. Scrim-tap
 dismissal is appropriate for sheets; it is the wrong default for destructive
 actions, blocking errors, and confirmation requests.
 
-#### Depend on a public `material3::IconButton` before landing dialogs
+#### Add a Private Full-Screen Icon Button
 
-Rejected in [Current Starting Point in `roo_windows`](#current-starting-point-in-roo_windows)
-and [FullScreenDialog](#fullscreendialog). The repo has an icon-button design
-doc but no implementation. Making dialogs wait for that family would block a
-more urgent interruption surface on an unrelated dependency.
+Rejected because `material3::IconButton` is implemented. A private duplicate
+would add component code, tests, and RAM policy without a distinct behavior.
 
 #### Add a second pinned bottom action bar to the full-screen dialog
 
@@ -906,4 +906,6 @@ Intentional follow-ons that stay out of this design:
    Material 3 scaffolds,
 4. enter and exit motion once the broader Material 3 motion-token story lands,
 5. picker-specific wrappers such as date and time dialogs once those component
-   families are designed.
+   families are designed,
+6. bounded nested-transient support if a concrete workflow requires a basic
+   dialog above an active full-screen dialog.

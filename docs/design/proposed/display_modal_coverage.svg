@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="760" height="310" viewBox="0 0 760 310">
   <rect width="760" height="310" fill="white"/>
   <g font-family="sans-serif" font-size="14" fill="#202124" stroke="#202124">
-    <text x="185" y="24" text-anchor="middle" stroke="none" font-weight="bold">Task-modal coverage</text>
+    <text x="185" y="24" text-anchor="middle" stroke="none" font-weight="bold">Shared host: task coverage</text>
     <rect x="25" y="42" width="320" height="235" fill="#f8f9fa" stroke-width="2"/>
     <rect x="40" y="62" width="135" height="195" fill="#d2e3fc"/>
     <rect x="195" y="62" width="135" height="195" fill="#ceead6"/>
@@ -9,10 +9,10 @@
     <text x="262" y="82" text-anchor="middle" stroke="none">Task B</text>
     <rect x="40" y="62" width="135" height="195" fill="#5f6368" fill-opacity="0.45"/>
     <rect x="58" y="122" width="99" height="70" rx="7" fill="white" stroke="#1a73e8" stroke-width="2"/>
-    <text x="107" y="152" text-anchor="middle" stroke="none">Task modal</text>
-    <text x="107" y="171" text-anchor="middle" stroke="none">A only</text>
+    <text x="107" y="152" text-anchor="middle" stroke="none">Transient root</text>
+    <text x="107" y="171" text-anchor="middle" stroke="none">owner: Task A</text>
     <text x="262" y="238" text-anchor="middle" stroke="none">interactive</text>
-    <text x="570" y="24" text-anchor="middle" stroke="none" font-weight="bold">Display-modal coverage</text>
+    <text x="570" y="24" text-anchor="middle" stroke="none" font-weight="bold">Shared host: display coverage</text>
     <rect x="405" y="42" width="320" height="235" fill="#f8f9fa" stroke-width="2"/>
     <rect x="420" y="62" width="135" height="195" fill="#d2e3fc"/>
     <rect x="575" y="62" width="135" height="195" fill="#ceead6"/>
@@ -20,11 +20,11 @@
     <text x="642" y="82" text-anchor="middle" stroke="none">Task B</text>
     <rect x="405" y="42" width="320" height="235" fill="#5f6368" fill-opacity="0.45"/>
     <rect x="505" y="122" width="120" height="70" rx="7" fill="white" stroke="#d93025" stroke-width="2"/>
-    <text x="565" y="152" text-anchor="middle" stroke="none">Display modal</text>
-    <text x="565" y="171" text-anchor="middle" stroke="none">whole window</text>
+    <text x="565" y="152" text-anchor="middle" stroke="none">Transient root</text>
+    <text x="565" y="171" text-anchor="middle" stroke="none">owner: Task A</text>
   </g>
   <g font-family="sans-serif" font-size="12" fill="#5f6368">
-    <text x="185" y="298" text-anchor="middle">Scrim and barrier stop at Task A bounds</text>
-    <text x="565" y="298" text-anchor="middle">Scrim and barrier cover both tasks</text>
+    <text x="185" y="298" text-anchor="middle">Same barrier/boundary attach inside Task A</text>
+    <text x="565" y="298" text-anchor="middle">Same barrier/boundary attach to MainWindow</text>
   </g>
 </svg>

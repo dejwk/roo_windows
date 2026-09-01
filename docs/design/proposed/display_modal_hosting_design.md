@@ -1,354 +1,372 @@
-# Display runtime Phase 7 modal hosting design
+# Display Runtime Phase 7 Task-Bounded Transient Coverage Design
 
 ## Objective
 
-Add explicit task-modal and display-modal presentation policies with defined
-coverage, input barriers, focus restoration, admission, Back routing, and
-teardown.
+Extend the one shared `MainWindow` transient-surface host with task-bounded
+modal coverage. The extension changes where the host temporarily attaches its
+reusable barrier and interaction boundary; it does not add another host,
+another slot, or another modal presentation API.
 
 This is Phase 7 of the
-[display runtime and cross-application input design](../in_progress/display_surface_generalization_design.md)
-and builds on task-local focus and explicit key bindings from Phases 3 and 6.
+[display runtime and cross-application input design](../in_progress/display_surface_generalization_design.md).
+It follows the display-wide popup/modal host defined by
+[Transient surface hosting and layer anchors](transient_surface_host_design.md).
+
+**Status: Proposed.** The shared display-wide host is a prerequisite. This
+phase is not independently implementable before that host and its explicit
+interaction-owner contract land.
 
 ## Motivation
 
-A modal surface needs an owning task for focus and keyboard semantics, but its
-visual and input coverage is not always task-sized. Making coverage explicit
-prevents a dialog in one region from accidentally blocking a whole display and
-prevents a display-wide surface from leaving sibling tasks interactive.
+The initial shared host covers a complete display, which is the correct policy
+for application dialogs and menus. A multi-task display also needs a weaker
+modal policy: block one task while leaving sibling tasks visible and
+interactive. Examples include confirmation for one pane and task-local
+configuration that must not freeze an adjacent monitoring pane.
+
+The older Phase 7 proposal modeled task and display modality as separate hosts,
+with one inactive modal slot in every task. That conflicts with the shared
+transient host in four ways:
+
+1. it creates competing admission and Back owners;
+2. it duplicates focus, scrim, input-barrier, and teardown machinery;
+3. it allows simultaneous roots that the framework's one-transient lifetime
+   contract intentionally forbids; and
+4. it adds fixed storage to every task for a use case that may never be active.
+
+The resolved model has one presentation slot per window and one immutable
+interaction owner per presentation. Coverage is only an attachment policy.
 
 ## Background
 
-The current root transient and scrim live in
-[`MainWindow`](../../../src/roo_windows/core/main_window.h). The
-[transient presentation lifetime design](../in_progress/transient_presenter_lifetime_design.md)
-provides registration and teardown rules, while Phase 3 makes `UiTask` the
-focus owner. Phase 4 defines task Back ordering, and Phase 6 identifies the
-originating task for every key event.
+The shared host establishes these prerequisites:
 
-Phase 7 assigns every modal presentation both an owning `UiTask` and one fixed
-coverage policy.
+- `MainWindow` owns one `TransientSurfaceHost` and one
+  `TransientPresentationSlot`;
+- every presentation explicitly names an attached `Task` as its interaction
+  owner;
+- one reusable `TransientInteractionBoundary` makes hosted descendants resolve
+  task-scoped focus, editor, and input services to that owner;
+- the owner's `FocusManager` activates the presenter scope;
+- display-wide hosting absorbs ordinary keys from non-owner tasks while giving
+  Back/Escape global transient precedence; and
+- all finish paths detach structure before vacating the slot or delivering
+  completion.
+
+Phase 7 preserves those rules. It adds task-bounded placement of the same
+barrier and boundary inside the interaction owner's `TaskPanel`.
+
+### Terminology
+
+- **interaction owner**: the existing task whose focus manager, key route, Back
+  context, and lifetime govern the active transient;
+- **display coverage**: the shared host's initial policy, attached in
+  `MainWindow`'s final transient band and blocking every task in that window;
+- **task coverage**: this phase's policy, attached at the top of the interaction
+  owner's panel and blocking only that task; and
+- **coverage parent**: the structural parent selected at admission:
+  `MainWindow` for display coverage or the owner's `TaskPanel` for task
+  coverage.
+
+Coverage does not choose the interaction owner, imply a new task, or define a
+second lifetime domain.
 
 ## Requirements
 
-### Coverage requirements
+### Coverage Requirements
 
-1. A task-modal presentation must paint and scrim only inside its task panel.
-2. A display-modal presentation must paint in the window's top modal band and
-   scrim the complete display extent.
-3. Every modal presentation must retain one owning task for focus, key, Back,
-   and teardown even when hosted outside that task panel.
-4. Modal content must resolve `getUiTask()` to its owner through structural
-   ancestry.
-5. Coverage must not change after presentation starts.
+1. Task coverage paints and accepts pointer input only inside the interaction
+   owner's task-panel bounds.
+2. Its barrier and interaction boundary are the final children in that panel
+   while the presentation is active.
+3. Sibling task panels retain their existing paint order, hit testing, focus
+   state, and key behavior.
+4. The active coverage policy is fixed until the presentation finishes.
+5. Hosted descendants resolve `Widget::getTask()` and task-scoped services to
+   the explicit interaction owner through the same reusable boundary used by
+   display coverage.
+6. The host rejects task coverage when the owner is detached, unavailable,
+   belongs to another window, or cannot expose a valid task-panel attachment
+   point.
 
-### Input requirements
+### Admission and Lifetime Requirements
 
-1. Task-modal pointer and key barriers must block underlying content only in
-   the owner task.
-2. Other tasks must remain pointer- and key-interactive while a task-modal
-   presentation is open.
-3. A display-modal barrier must block ordinary pointer and key delivery to
-   every non-owner task in its window.
-4. Back or Escape from any task in that window must first close the display-
-   modal presentation.
-5. No modal state or Back request may propagate to another application.
+1. Display and task coverage share the existing one-presentation-per-window
+   slot.
+2. A task-covered presentation therefore cannot coexist with another task-
+   covered or display-covered presentation, even in a different task.
+3. A failed task-coverage start leaves the active presentation, focus, and
+   widget structure unchanged.
+4. Presenter destruction, explicit finish, replacement, owner teardown, and
+   window teardown use the shared host's existing idempotent finish ordering.
+5. Owner teardown finishes a task-covered presentation before its boundary,
+   panel, focus manager, editor, or key state becomes invalid.
 
-### Focus requirements
+### Input and Back Requirements
 
-1. Opening a modal must save the owner's focused widget, then move focus to the
-   first eligible modal descendant or clear focus when none exists.
-2. Closing must restore the saved widget only when it remains eligible and
-   attached to the owner task's non-modal content.
-3. Saved focus must be invalidated before its subtree detaches or is destroyed.
-4. Other tasks must retain their focus state while display-modal input is
-   suspended.
-5. Modal focus containment must not create an application- or window-global
-   focus manager.
+1. Within the owner panel, hit traversal tries the hosted boundary and then the
+   barrier; it never falls through to the owner's ordinary content.
+2. Pointer input outside the owner panel follows ordinary sibling-task z-order
+   and never reaches the task-covered presentation.
+3. Ordinary keys associated with the owner task route through the active focus
+   scope, or are absorbed when the presenter is key-passive.
+4. Ordinary keys associated with another task follow that task's unchanged
+   dispatch path.
+5. Semantic text input targeting the owner task succeeds only for an active
+   editor below the hosted root. An active editor in a sibling task retains its
+   normal semantic-input path.
+6. Back or Escape associated with the owner task is offered to the active root
+   transient before owner content or navigation.
+7. Back or Escape associated with another task does not close the task-covered
+   presentation and follows that other task's normal ordering.
+8. Programmatic Back requires an explicit task and obeys the same rule.
+9. No input or Back request crosses an application boundary.
 
-### Admission requirements
+### Focus Requirements
 
-1. Each task may own at most one task-modal presentation.
-2. Each display window may own at most one display-modal presentation.
-3. Different tasks may hold task-modal presentations simultaneously.
-4. Starting a display-modal presentation while any task-modal presentation is
-   active must return `kHostBusy`.
-5. Starting a task-modal presentation while a display-modal presentation is
-   active must return `kHostBusy`.
-6. A failed start must preserve focus, content, and every active presentation.
+1. Task coverage uses the interaction owner's existing `FocusManager` and the
+   same intrusive `FocusScope` contract as display coverage.
+2. Opening, containment, traversal, exit, and restoration do not store a second
+   saved-focus pointer in the host or task.
+3. Sibling tasks retain their focused widgets while the presentation is open.
+4. Focus exits before the hosted root or boundary detaches.
 
-### Embedded requirements
+### Embedded Requirements
 
-1. Opening, input routing, Back, closing, and focus restoration must not
-   allocate beyond explicitly transferred owned presentation content.
-2. Hosts and scrims must be inline state owned by `UiTask` or `DisplayWindow`.
-3. Presentation teardown must be safe under reentrant close callbacks.
-4. No modal operation may use RTTI, exceptions, or shared ownership.
+1. Phase 7 adds no permanent host, slot, scrim, boundary, or saved-focus state
+   to `Task` or `TaskPanel`.
+2. It reuses the `MainWindow` host, slot, barrier, and interaction boundary.
+3. Coverage fits in existing packed active-policy storage; Phase 7 adds no
+   fixed `MainWindow` size beyond the shared-host budget.
+4. Open, input routing, Back, close, and focus restoration allocate nothing.
+5. No operation uses RTTI, exceptions, shared ownership, or a task lookup map.
 
 ### Non-goals
 
-- Nested modal stacks in one task or window.
-- One modal surface covering several displays.
-- Auxiliary-task exceptions to a display-modal barrier.
-- Cross-application Back propagation.
-- Relaxing the initial task/display admission exclusions.
+- A second display-modal host or component-specific dialog host.
+- Simultaneous task-covered presentations in sibling tasks.
+- Concurrent task and display coverage.
+- Nested transient stacks.
+- Dialog migration; the initial shared-host phase already owns it.
+- Cross-display coverage or auxiliary-task exceptions.
 
 ## Design Overview
 
-The two coverage policies use distinct structural hosts:
+The host moves the same two reusable structural children between two possible
+parents while idle-to-active admission is committed:
 
-![Task-modal and display-modal coverage](display_modal_coverage.svg)
+```text
+one MainWindow TransientSurfaceHost + one slot
+                         │
+              coverage selected at show()
+                 ┌───────┴────────┐
+                 │                │
+          display coverage    task coverage
+                 │                │
+        MainWindow final band  owner TaskPanel final band
+                 │                │
+          barrier + interaction boundary + presenter root
+```
 
-Task-modal content is the top child inside its `TaskPanel`. Display-modal
-content is attached to `MainWindow`'s final band through a `DisplayModalPanel`
-that overrides task lookup with the owning task. Both use the same
-`ModalPresentation` controller and focus protocol.
+![Shared host with task and display coverage](display_modal_coverage.svg)
+
+The interaction owner is explicit in both branches. The only new behavior is
+that task coverage limits pointer and Back/key isolation to that owner.
 
 ## Design Details
 
-### Presentation controller
+### Coverage Selection and Attachment
 
-`ModalPresentation` is a non-copyable controller containing a `WidgetRef`
-content root, scrim color, close callback, and active host registration. The
-caller can borrow or transfer content ownership. Back always closes the active
-modal as the one semantic step; modal content does not veto dismissal.
+Phase 7 adds `TransientSurfaceCoverage::kTask` beside the existing default
+`kDisplay`. Admission resolves the coverage parent before it touches the slot.
+For task coverage it obtains the interaction owner's currently attached
+`TaskPanel` and its local inclusive bounds.
 
-`ModalPresentationRef` mirrors the repository's other ownership references and
-lets `showModal()` borrow or own the controller. The host owns an owning ref
-until close; borrowed controller and content storage must outlive registration.
+After slot admission, the host attaches its reusable barrier and interaction
+boundary as the panel's final children, attaches the borrowed presenter root
+inside the boundary, enters the owner's scope, and enables input. Finish
+reverses this through the shared deterministic teardown path. The reusable
+children are never attached to both parents.
 
-Coverage is passed to start and stored in the registration. There is no setter
-while active.
+No `TaskModalPanel`, `ModalPresentation`, per-task modal slot, or task-owned
+scrim is introduced. Components continue to use their presenter-specific APIs,
+which delegate to the shared host.
 
-### Task-modal host
+### Paint, Bounds, and Hit Testing
 
-Each `UiTask` owns one inline `TaskModalPanel` above its ordinary content. When
-inactive it has no child, paints nothing, and does not participate in hit
-testing. When active it covers the task-local inclusive rectangle
-`Rect(0, 0, width - 1, height - 1)` and paints in this order:
+The task-covered barrier uses the owner's panel-local inclusive rectangle
+`Rect(0, 0, width - 1, height - 1)`. Modal kind paints the existing scrim in
+that rectangle before the boundary; popup kind remains transparent, although
+Phase 7's motivating consumer is modal.
 
-1. existing task content;
-2. task-bounds scrim; and
-3. modal content.
+The panel's active-host seam checks the boundary first and, if its full-bounds
+root declines without changing the path, checks the barrier directly. It stops
+there for points inside the panel. `MainWindow` continues ordinary sibling
+selection for points outside it, so a higher sibling can cover or receive input
+over an overlapping region exactly as before.
 
-Its hit path ends inside modal content or the scrim barrier; it never descends
-to ordinary content. Sibling task panels remain normal `MainWindow` children.
+This means task coverage follows actual task-panel stacking. It does not paint
+above an overlapping sibling merely because its owner opened the transient.
+That result is intentional: covering sibling geometry would be display
+coverage under a different name.
 
-### Display-modal host
+### Key Routing and Back
 
-`DisplayWindow` owns one inline `DisplayModalPanel` in `MainWindow`'s final
-band, above task panels, popups, non-modal presentations, pins, and their
-scrims. The panel covers the complete display bounds and paints its scrim
-before modal content.
+The one host remains discoverable from window/task dispatch, but its policy
+decides whether it is a barrier for a given event:
 
-The panel stores a borrowed owning `UiTask*` and overrides `getUiTask()` so
-focus, editor, and task services resolve correctly despite its display-level
-attachment. Owner teardown closes the presentation before the task pointer is
-cleared.
+| Active coverage | Target/source task | Ordinary key | Semantic text | Back/Escape |
+| --- | --- | --- | --- | --- |
+| display | owner | active scope or absorb | hosted editor only | finish root transient |
+| display | other | absorb | reject | finish root transient |
+| task | owner | active scope or absorb | hosted editor only | finish root transient |
+| task | other | normal task dispatch | normal active editor | normal task Back order |
 
-While a display modal is active, the owner's `FocusManager` recognizes the
-`DisplayModalPanel` as its one alternate structural root in addition to its
-primary `TaskPanel`. Focus requests outside those roots still fail. Modal close
-removes the alternate root before ordinary focus restoration, so the display-
-hosted subtree cannot retain focus after detachment.
+The task identity already attached to a physical key event is authoritative.
+The host never substitutes the focused or topmost task. Programmatic Back must
+likewise supply its task explicitly. Semantic delivery uses the destination
+editor's task and ancestry rather than inventing a source-task identity.
 
-### Pointer and key barriers
+### Focus and Teardown
 
-Normal `MainWindow` hit testing checks the display-modal panel first. When it is
-active, no underlying path is built. Without it, task z-order operates normally
-and an active task-modal panel blocks only descent within its own task.
+The boundary still exposes the interaction owner, and the host still enters
+the scope through that owner's `FocusManager`. The focus manager's active root
+is the boundary, so traversal does not leak into ordinary owner content even
+though both are children of the same panel.
 
-`UiTask::dispatchKeyEvent()` first asks its window for an active display modal.
-Back and Escape close it regardless of source task. Other events from a
-non-owner task are consumed by the barrier without changing that task's focus
-or armed state. Owner events route only through modal descendants and their
-task-local focus manager.
+Finish disables host input, runs the presenter's detach hook, removes an
+optional pin, exits focus, cancels retained gesture paths, detaches the root,
+boundary, and barrier, clears the interaction owner and coverage parent, and
+then vacates the shared slot. Owner teardown uses
+`kInteractionOwnerDetached`. No task-local observer remains afterward.
 
-With no display modal, an active task modal receives its owner's events before
-ordinary content. Other task sinks remain unchanged.
+### Compatibility
 
-### Focus save and restore
+Display coverage remains the default so the initial shared-host API and its
+legacy-dialog migration do not change behavior when Phase 7 lands. New task-
+coverage consumers opt in explicitly. Deprecated application dialog forwarding
+continues to choose its compatibility task at the API boundary and requests
+display coverage.
 
-The host stores one raw saved-focus pointer plus the owning task generation.
-This is safe because `UiTask::onSubtreeDetaching()` clears the saved pointer
-whenever the saved subtree leaves the task. No field is added to `Widget`.
-
-Opening saves the current pointer, installs modal content, and requests the
-first eligible focus target using task traversal constrained to the modal
-panel. If none exists, it clears owner focus so underlying content cannot
-receive keys.
-
-Closing first clears focus inside modal content, detaches modal content, then
-restores the saved widget only when the task generation is unchanged and the
-focus manager still considers it eligible within ordinary task content. A
-callback that focuses another widget suppresses restoration.
-
-### Admission and reentrancy
-
-Window admission tracks one display registration and a count of active
-task-modal registrations. Validation finishes before ownership or focus moves.
-The two conflict checks therefore cannot partially open a presentation.
-
-Every registration has a generation. Close marks it inactive and detaches
-content before invoking the close callback. Recursive close is a no-op; a
-callback can open a new presentation, whose generation prevents the outer
-close from clearing new state.
-
-### Back ordering
-
-For an event associated with task `T`, the complete order is:
-
-1. close the window display-modal presentation;
-2. close `T`'s task-modal presentation;
-3. ask `T`'s non-modal transient;
-4. ask direct content or the current destination; and
-5. pop `T`'s navigator when its generation is unchanged and depth exceeds one.
-
-Programmatic Back requires an explicit `UiTask&` and uses the same order.
-Display-modal close is handled even when another task originated the request.
-
-### Compatibility and teardown
-
-Existing application-level dialog APIs target the first user-created
-compatibility task and request display-modal coverage. They are deprecated and
-removed in Phase 8. New code calls `UiTask::showModal()` explicitly.
-
-Application teardown marks input unavailable, closes the display-modal host,
-closes every task-modal host, cancels bindings and interaction state, and then
-detaches ordinary task content. Close callbacks run while endpoints and widget
-ancestry remain valid.
-
-### Resource budget
-
-Each `UiTask` adds one inactive task-modal slot, saved-focus pointer, and
-generation; the accepted target increase is at most four pointers plus eight
-bytes. `DisplayWindow` adds the corresponding display slot and modal panel; its
-accepted increase is the slot/panel sizes plus two pointers and eight bytes.
-
-Inactive modal hosts allocate nothing and add no paint or hit-test traversal
-beyond one predictable active check. Warm open, close, Back, barrier, and focus
-restore paths allocate nothing.
-
-## Proposed API
+## Proposed API Delta
 
 ```cpp
-enum class ModalCoverage : uint8_t { kTask, kDisplay };
-
-enum class ModalStartResult {
-  kStarted,
-  kHostBusy,
-  kAlreadyPresented,
-  kOwnerStopping,
-  kWrongThread,
+enum class TransientSurfaceCoverage : uint8_t {
+  kDisplay,
+  kTask,
 };
 
-class ModalPresentation {
- public:
-  ModalPresentation(WidgetRef content, roo_display::Color scrim);
-  ~ModalPresentation();
-
-  ModalPresentation(const ModalPresentation&) = delete;
-  ModalPresentation& operator=(const ModalPresentation&) = delete;
-
-  bool isShowing() const;
-  void close();
-};
-
-class UiTask {
- public:
-  ModalStartResult showModal(ModalPresentationRef presentation,
-                             ModalCoverage coverage);
-  bool hasTaskModal() const;
-};
-
-class DisplayWindow {
- public:
-  bool hasDisplayModal() const;
+struct TransientSurfaceSpec {
+  TransientSurfaceKind kind = TransientSurfaceKind::kPopup;
+  TransientAdmissionPolicy admission =
+      TransientAdmissionPolicy::kRejectIfBusy;
+  OutsideInteractionPolicy outside = OutsideInteractionPolicy::kDismiss;
+  TransientSurfaceCoverage coverage =
+      TransientSurfaceCoverage::kDisplay;
+  PresentationLayerToken origin_layer = {};
+  bool require_origin = false;
 };
 ```
 
-All declarations receive Doxygen coverage, ownership, callback, focus, and
-thread contracts. `close()` is idempotent and must run on the owning UI thread
-after application start.
+There is deliberately no generic `Task::showModal()`, `ModalPresentation`,
+`hasTaskModal()`, or `hasDisplayModal()` API. Component presenters already own
+results, callbacks, chrome, and close policy; the internal host owns structural
+coverage.
 
 ## Implementation Plan
 
 Implementation follows the
 [embedded C++ guidance](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md).
 
-### Phase 7: distinguish task-modal and display-modal hosts
+### Phase 7: Extend the Shared Host with Task Coverage
 
-1. Add modal controller/reference types, inline task/display host panels, and
-   admission bookkeeping.
-2. Implement exact scrim geometry, paint bands, pointer barriers, and
-   owner-task ancestry for display-hosted content.
-3. Add focus save/contain/restore, complete Back ordering, reentrant close, and
-   teardown.
-4. Migrate dialog internals and retain deprecated application forwarding to the
-   first compatibility task.
-5. Add focused behavioral tests and task/display coverage goldens; record size,
-   flash, and allocation deltas.
+1. Add the coverage policy and complete task-panel parent validation during
+   admission.
+2. Add the `TaskPanel` attachment/hit-routing seam without permanent per-task
+   modal state.
+3. Make physical-key, semantic-editor, and Back barriers conditional on
+   coverage and source/target-task identity.
+4. Reuse existing focus, gesture cancellation, teardown, and owner-detach
+   paths unchanged.
+5. Add focused behavior tests and task/display coverage goldens; record
+   `MainWindow`, `Task`, `TaskPanel`, and packed-state sizes.
 
-Focused validation:
+Proposed commit: `feat: add task-bounded transient coverage`
+
+Validation:
 
 ```sh
-bazel test //:modal_host_test //:ui_task_test //:application_test \
+bazel test //:transient_surface_host_test //:task_test \
   //:key_event_binding_test //:transient_presentation_lifetime_test \
   //:roo_windows_test
 bazel build //...
 ```
 
-The phase is complete when admission, both input barriers, focus restoration,
-Back ordering, reentrant teardown, and both goldens pass with zero steady-state
-allocation.
-
-Proposed commit: `feat: add explicit modal coverage policies`
-
-Proposed commit body:
-
-> Display runtime Phase 7 adds task-modal and display-modal presentation hosts.
-> Enforce exact coverage, input barriers, owner-task focus, admission, Back,
-> and teardown semantics from `display_modal_hosting_design.md`.
+The phase is complete when the same host passes both coverage goldens, owner
+and sibling input/Back tests, owner teardown, reentrant finish, zero-allocation
+warm paths, and the requirement that `Task` and `TaskPanel` gain no fixed modal
+state.
 
 ## Testing Plan
 
-`modal_host_test` owns admission, routing, focus, Back, and reentrancy. Golden
-tests verify task-bounds versus display-bounds scrims and final-band z-order.
-Existing transient lifetime tests cover controller and endpoint destruction.
+Host tests cover valid and invalid task parents, global single-slot conflicts,
+task-panel geometry, overlapping sibling z-order, root-to-barrier fallback,
+owner versus sibling physical and semantic input, owner versus sibling Back,
+focus containment and restoration, owner teardown, presenter destruction, replacement
+reentrancy, and window teardown.
 
-Tests include simultaneous task modals in disjoint and overlapping tasks, a
-display modal opened from each task, saved-focus removal, and all conflicting
-start combinations.
+Golden tests render identical modal content once with display coverage and once
+inside one of two task panels with task coverage. Allocation and ABI checks
+verify that the extension adds no per-task storage or warm-path allocation.
 
 ## Caveats
 
-A display modal blocks a same-display software-keyboard task. Text entry in
-that surface therefore uses hardware input or a keyboard on another display.
-This is the deterministic consequence of whole-display modality.
+Task coverage deliberately cannot coexist across sibling tasks. This is more
+restrictive than the visual model could permit, but it preserves one focus,
+Back, admission, and teardown authority until a real simultaneous-modal use
+case justifies a bounded multi-slot design.
+
+A task-covered surface can be overlapped by a higher sibling task. Callers that
+must dominate the entire window choose display coverage.
 
 ### Rejected Alternatives
 
-#### Infer coverage from widget bounds
+#### Separate Task and Display Hosts
 
-Rejected because layout geometry does not state which sibling tasks input must
-block. Coverage is an explicit semantic property.
+Rejected because two hosts duplicate lifecycle machinery and can disagree
+about admission, focus, and Back precedence. Coverage is a policy of the one
+host.
 
-#### Use a window-global focus manager
+#### One Modal Slot per Task
 
-Rejected because modal content belongs to one task and must restore that task's
-focus without erasing focus retained by siblings.
+Rejected because it adds fixed state to every task and immediately requires
+multi-scope Back and replacement ordering. There is no current component that
+requires simultaneous task modals.
 
-#### Permit nested modal stacks
+#### Infer Coverage from Presenter Bounds
 
-Rejected because Back, scrim composition, focus restoration, and cross-task
-admission would require an ordering policy absent from current use cases.
+Rejected because geometry does not state whether sibling tasks must remain
+interactive. Coverage is an explicit semantic property.
 
-#### Allow task and display modals concurrently
+#### Infer the Interaction Owner
 
-Rejected because their barrier and Back precedence would be surprising and is
-unnecessary for the first explicit policy.
+Rejected because focus, z-order, and last input can identify different tasks.
+The component supplies one existing owner and the host validates it.
+
+#### Attach Task Coverage at Window Level
+
+Rejected because a window-level hit barrier would steal pointer input from
+overlapping sibling tasks even when painted to task-sized bounds. Task coverage
+must participate inside the owner panel's structural order.
+
+#### Use a Window-Global Focus Manager
+
+Rejected because the transient belongs to one task's focus history and must
+not erase the focus retained by siblings.
 
 ## Future Work
 
-Nested presentations and an explicit auxiliary-task exception require separate
-designs with revised admission, focus, and Back rules.
+Simultaneous task-covered presentations require a concrete component and a
+separate bounded design for multiple slots, key sources, Back selection,
+replacement, and teardown ordering. Auxiliary-task exceptions to display
+coverage likewise require an explicit input and focus policy.

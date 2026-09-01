@@ -135,14 +135,14 @@ Several local pieces already fit a keyboard-first extension.
 Several local design docs explicitly assume touch-primary behavior or defer
 keyboard / pointer focus routing:
 
-- [material3_split_button_design.md](material3_split_button_design.md)
+- [material3_split_button_design.md](../proposed/material3_split_button_design.md)
   explicitly says v1 does not add per-segment hover or keyboard-focus routing
   because touch is still the primary interaction model.
-- [material3_menus_design.md](material3_menus_design.md) explicitly avoids a
+- [material3_menus_design.md](../proposed/material3_menus_design.md) explicitly avoids a
   hover-only interaction model for embedded touch targets.
 - [../implemented/material3_slider_design.md](../implemented/material3_slider_design.md) defers keyboard
   focus movement APIs beyond what the base framework supports.
-- [material3_text_fields_design.md](material3_text_fields_design.md) assumes
+- [material3_text_fields_design.md](../proposed/material3_text_fields_design.md) assumes
   focused and hovered visuals will eventually come from the framework's widget
   state model.
 
@@ -172,8 +172,9 @@ The new interaction model must respect four existing framework constraints.
 ### Functional Requirements
 
 1. A keyboard-only user must be able to operate the active UI without touch.
-2. The active layer must own keyboard focus: modal dialog first, then
-   focus-capturing popups, then the top regular task.
+2. Each key route must retain one task focus owner. A window-hosted transient
+   explicitly selects that task's manager and activates its presenter scope;
+   focus or z-order must not choose the owner implicitly.
 3. Focused widgets must show focused visuals through the shared widget-state
    model when their paint path uses that model.
 4. Mixed-input systems must be supported: touch-only, keyboard-only,
@@ -450,29 +451,23 @@ The manager's responsibilities are:
 
 #### Focus Scope Storage and Resolution
 
-Each regular `TaskPanel`, focus-capturing popup presenter, and dialog presenter
-embeds a `FocusScope` containing its root widget, its last focused descendant,
-and a link to the previously active scope. On a 32-bit target this costs about
-12 bytes per focus-owning layer. It avoids a focus-history map, fixed unused
+Each task and each focus-capturing presenter embeds a `FocusScope` containing
+its root widget, its last focused descendant, and a link to the previously
+active scope in that task's manager. On a 32-bit target this costs about 12
+bytes per focus-owning layer. It avoids a focus-history map, fixed unused
 capacity, and allocation during scope changes.
 
-The framework already knows about regular tasks, popups, and modal dialogs.
-Keyboard focus must follow the same layering.
+Ordinary task content supplies the base scope. An interactive transient does
+not become a task: its shared host receives an existing interaction owner
+explicitly, attaches a reusable structural boundary that resolves to that task,
+and enters the presenter scope through that task's `FocusManager`. While
+active, the scope root replaces the task panel as the manager's legal traversal
+root. The host exits the scope before detachment. It never chooses the focused,
+topmost, or most recently touched task.
 
-The active focus scope should be resolved as:
-
-1. the active modal dialog, if present,
-2. otherwise the top-most popup layer that explicitly captures keyboard focus,
-3. otherwise the top regular task's current activity root.
-
-This requires one new distinction that the touch-only framework does not need:
-
-- some popups are focus-capturing,
-- some popups are passive overlays.
-
-That distinction matters immediately because the shared on-screen keyboard is a
-popup task today. On mixed-input systems, it must not automatically steal
-hardware-key focus from the field being edited.
+Popup tasks that are genuine persistent layers retain a separate capture
+policy. This distinction matters because the shared on-screen keyboard can be
+a passive popup task and must not steal hardware-key focus from the editor task.
 
 The design therefore adds a small popup focus-capture policy.
 
@@ -766,7 +761,7 @@ not naturally fall out of the simple clickable model.
 
 4. Childless compound widgets
 
-   [material3_split_button_design.md](material3_split_button_design.md)
+   [material3_split_button_design.md](../proposed/material3_split_button_design.md)
    explicitly deferred per-segment hover and keyboard-focus routing because the
    framework had no such model.
 
@@ -792,18 +787,20 @@ Primary implementation surfaces are:
 - [src/roo_windows/core/main_window.cpp](../../../src/roo_windows/core/main_window.cpp),
 - [src/roo_windows/core/task.h](../../../src/roo_windows/core/task.h),
 - [src/roo_windows/core/task.cpp](../../../src/roo_windows/core/task.cpp),
-- [src/roo_windows/core/activity.h](../../../src/roo_windows/core/activity.h),
+- [src/roo_windows/core/navigation_host.h](../../../src/roo_windows/core/navigation_host.h),
 - and [src/roo_windows/dialogs/dialog.h](../../../src/roo_windows/dialogs/dialog.h).
 
 The integration rules are:
 
-1. entering a new activity updates the active focus scope,
+1. entering a new activity updates its task manager's base focus scope,
 2. pausing or hiding an activity clears focused descendants in that scope,
-3. showing a dialog replaces the active focus scope with the dialog,
-4. closing a dialog restores focus to the previous scope when possible,
+3. showing a dialog or menu explicitly selects its interaction-owner task and
+   enters the presenter scope through that manager,
+4. closing a presenter restores focus through the same manager's previous
+   scope when possible,
 5. passive popups stay visible without stealing keyboard focus,
-6. focus changes caused by touch or pointer clicks must still respect the
-   top-most active focus-capturing layer.
+6. focus changes caused by touch or pointer clicks must still respect that
+   manager's active scope root.
 
 ### Emulation and Platform Work
 

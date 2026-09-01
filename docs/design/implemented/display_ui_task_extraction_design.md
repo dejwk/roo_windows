@@ -259,8 +259,9 @@ attached KeySource
 
 Back and Escape first ask the existing root transient to handle the request,
 then call the task's legacy Back adapter, then continue ordinary key dispatch
-when unhandled. This preserves current display-root transient behavior until
-Phase 7 introduces task-modal and display-modal ownership.
+when unhandled. This preserves current display-root transient behavior. The
+shared-host design later adds an explicit interaction owner, and Phase 7 adds
+task-bounded coverage to the same one-slot host.
 
 Ancestor delivery stops after `TaskPanel`; it never reaches `MainWindow` or a
 sibling task. Tab traversal wraps within the panel. Directional traversal uses

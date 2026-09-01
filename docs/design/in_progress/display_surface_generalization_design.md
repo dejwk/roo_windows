@@ -5,8 +5,9 @@
 In progress. Phases 1–6 are implemented: display-local state, task extraction,
 optional navigation, shared scheduling, physical-key identity, readiness-driven
 application-owned physical routing, semantic text input, built-in keyboard
-conversion, and cross-application editor integration. Phase 7 modal hosting and
-Phase 8 migration and cost audit remain proposed. The ticker still has its 20 ms
+conversion, and cross-application editor integration. Phase 7 task-bounded
+transient coverage and Phase 8 migration and cost audit remain proposed. The
+ticker still has its 20 ms
 fallback until the later event-driven input phases provide explicit touch,
 gesture, paint, and animation wakeups.
 
@@ -44,8 +45,8 @@ keyboard. Those assumptions make several useful configurations difficult:
 - two independently driven displays;
 - a permanent software keyboard on one display that edits a field on another;
 - a simple UI with one widget tree and no navigation history; and
-- task-local and display-wide modal UI with predictable scrims and input
-  blocking.
+- task-bounded and display-wide transient UI with predictable scrims and input
+  blocking through one shared host.
 
 Some current classes also combine unrelated responsibilities. `Application`
 owns display access, touch input, gesture detection, rendering continuation,
@@ -191,8 +192,9 @@ without preserving their semantics:
   dispatch.
 - A task must support direct content without a destination stack.
 - Navigation must remain available as an optional task feature.
-- Task-modal and display-modal presentation must be distinct and have defined
-  scrim, input, focus, and Back behavior.
+- Display-wide transient hosting must be canonical. Task-bounded coverage must
+  extend that same host and preserve one explicit task owner, slot, focus
+  protocol, and teardown path.
 - Existing Back behavior must continue to represent one semantic step, not one
   internal structural operation.
 
@@ -249,7 +251,7 @@ The refactoring is split into incremental sub-designs:
 1. **Extract display-local runtime state.** Introduce `DisplayWindow` beneath
    `Application` without changing the one-application/one-display behavior.
 2. **Separate tasks from navigation.** Introduce `UiTask` as the owner of
-   focus, key routing, transient state, and a hosted widget tree. Direct content
+   focus, key routing, editor state, and a hosted widget tree. Direct content
    needs no navigation objects.
 3. **Support shared-scheduler driving.** Let bounded application callbacks
    collaborate through one scheduler after the caller starts each application.
@@ -257,8 +259,9 @@ The refactoring is split into incremental sub-designs:
    physical event identity, route queued sources through application-owned
    input routers, and deliver semantic software-keyboard operations through a
    stable application text-input endpoint.
-5. **Make modality coverage explicit.** Implement task-modal and display-modal
-   host policies using the now-clear task/window boundary.
+5. **Extend shared transient coverage.** Keep display-wide hosting as the
+   canonical policy and add task-bounded attachment to the same host using the
+   now-clear task/window boundary.
 
 The topology for the motivating cross-display example is:
 
@@ -303,7 +306,8 @@ a multi-window application coordinator.
 - dirty-region and refresh state;
 - interrupted-paint continuation;
 - pointer capture and display-local click animation; and
-- the display-modal presentation band and scrim.
+- the one shared transient-surface host, presentation slot, interaction
+  boundary, and reusable barrier/scrim.
 
 Paint continuation currently stored in application context must move into
 `DisplayWindow`. A paint interrupted on one display must never be resumed
@@ -325,7 +329,6 @@ display-specific facilities to leak back into `Application`.
 - the full `KeyEvent` dispatcher and pending fallback activation state;
 - one task-local `TextFieldEditor` that can register as the application's active
   software editing session;
-- task-local transient state;
 - either direct content or an optional navigation host; and
 - an internal `TaskPanel` used to attach its content to its display window.
 
@@ -333,7 +336,8 @@ The `TaskPanel` owns only structural widget responsibilities:
 
 - bounds, layout, and parent/child attachment;
 - pointer hit testing for the task's region;
-- task-local overlay and scrim placement; and
+- the temporary attachment seam used when the window's shared host selects
+  task-bounded coverage; and
 - forwarding widget callbacks to its `UiTask`.
 
 A `UiTask` is attached to exactly one `DisplayWindow`. It cannot be attached to
@@ -359,10 +363,10 @@ keyboards.
 
 Widgets resolve focus through their attached structural ancestry. `Widget`
 provides a task lookup that delegates through its parent; `TaskPanel` terminates
-that lookup with its owning `UiTask`. A display-modal structural host also
-terminates the lookup with the task that owns the presentation, even though the
-host is attached to the window's display-modal band rather than beneath the
-task's panel.
+that lookup with its owning `UiTask`. The shared transient host's reusable
+interaction boundary also terminates the lookup with the explicit interaction
+owner when attached at window level. The boundary is reused inside the owner
+panel for task-bounded coverage, avoiding a per-component ancestry adapter.
 
 `ApplicationContext` no longer owns or exposes a focus manager. Widget focus
 operations resolve the current `UiTask` and then use its manager. An unattached
@@ -378,10 +382,11 @@ lookup. These rules avoid a persistent focus-manager pointer in every widget
 and permit an unattached borrowed widget to be installed in a different task.
 
 This proposal introduces no application-level outer focus scope and no nested
-task focus scopes. If a dialog or menu must temporarily constrain traversal,
-its transient host may save the task's current focus, move focus into the
-transient subtree, and restore it on close. That mechanism remains part of the
-transient-host design rather than becoming a cross-window focus hierarchy.
+task focus scopes. A dialog or menu that temporarily constrains traversal
+supplies an intrusive scope to the shared host, which enters it through the
+explicit interaction owner's manager and restores through the same scope
+chain. That mechanism remains part of the transient-host design rather than
+becoming a cross-window focus hierarchy.
 
 ### Direct content and optional navigation
 
@@ -514,55 +519,50 @@ The complete decisions are split across the
 [semantic text-input](../implemented/display_semantic_text_input_design.md)
 designs.
 
-### Sub-design 5: task-modal and display-modal presentation
+### Sub-design 5: shared transient host and task-bounded coverage
 
-Every modal presentation has an owning `UiTask`, which supplies its focus and
-keyboard context. The coverage policy determines where the transient is
-painted and which input it blocks.
+`DisplayWindow` owns one shared transient host and one root transient slot.
+Every hosted presentation explicitly names an existing `UiTask` as its
+interaction owner for focus, physical keys, Back context, and teardown. The
+surface is temporary UI, not a task or route.
 
-A task-modal presentation:
+The initial host uses display coverage. Its reusable barrier and interaction
+boundary attach in the window's final band, the scrim spans the complete
+display for modal kind, and ordinary input from non-owner tasks is absorbed.
+Semantic text input is accepted only for an owner editor below the hosted root.
+Back or Escape from any task receives global root-transient precedence.
 
-- is hosted inside the owning task's `TaskPanel`;
-- sizes its scrim to that panel;
-- blocks pointer and key delivery only to underlying content of that task; and
-- leaves other tasks on the display interactive.
+Phase 7 adds task coverage to that same host. The reusable barrier and boundary
+instead attach as final children of the owner's `TaskPanel`; the scrim and
+pointer barrier stop at the panel bounds, and sibling tasks keep their normal
+pointer, physical-key, semantic-editor, focus, and Back behavior. Owner semantic
+input is accepted only below the hosted root. The boundary exposes the explicit
+owner to hosted descendants in both coverage modes.
 
-A display-modal presentation:
+Both policies use the owner's existing `FocusManager` and intrusive presenter
+scope. Scope exit restores eligible focus through the manager's scope chain;
+the host stores no independent saved-focus pointer. Sibling tasks retain their
+focus state even while display-wide input is suspended.
 
-- is hosted in the `DisplayWindow`'s top modal band;
-- sizes its scrim to the whole display window;
-- redirects pointer input to its owner and suspends ordinary input delivery to
-  every other task in that window; and
-- uses the owning task's focus manager rather than creating a window-global
-  focus manager.
+Coverage is immutable while active and does not change admission cardinality:
+one window has at most one hosted interactive transient. Task-covered
+presentations therefore do not coexist in sibling tasks and cannot coexist
+with display coverage. This retains one admission, focus, key, Back, and
+teardown authority; concurrency requires a later design backed by a concrete
+use case.
 
-While either kind is open, the owning task remembers its previous focused
-widget, moves focus to eligible modal content, and restores the previous focus
-when the modal closes if that widget is still valid. Other tasks retain their
-focus state even while display-modal input is suspended.
+For a Back event explicitly associated with task `T`:
 
-To keep the first version deterministic:
+1. a display-covered root transient closes regardless of its owner;
+2. a task-covered root transient closes only when `T` is its interaction owner;
+3. otherwise `T` continues with its ordinary transient, content, and navigation
+   Back order.
 
-- different tasks may each have one task-modal presentation at the same time;
-- a task may have at most one task-modal presentation;
-- a display may have at most one display-modal presentation;
-- opening a display-modal presentation while any task-modal presentation is
-  active returns `host_busy`; and
-- opening a task-modal presentation while a display-modal presentation is
-  active returns `host_busy`.
-
-These admission rules can be relaxed later if a real use case establishes a
-clear ordering policy.
-
-The display-level Back order is:
-
-1. close the display-modal presentation, if any;
-2. identify the task from the Back source's explicit binding;
-3. close that task's task-modal presentation, if any; and
-4. continue with that task's non-modal transient, content, and navigation Back
-   order.
-
-There is no implicit cross-application Back propagation.
+There is no implicit task selection and no cross-application Back propagation.
+The complete contracts are in
+[Transient surface hosting and layer anchors](../proposed/transient_surface_host_design.md)
+and the
+[Phase 7 task-bounded coverage design](../proposed/display_modal_hosting_design.md).
 
 ### Teardown and cancellation
 
@@ -851,24 +851,26 @@ preservation.
 Landed commit: `97b658c` (`Route software keyboard input across
 applications.`)
 
-### Phase 7: distinguish task-modal and display-modal hosts
+### Phase 7: extend the shared host with task-bounded coverage
 
 Implement the
-[Phase 7 modal hosting design](../proposed/display_modal_hosting_design.md):
+[Phase 7 task-bounded coverage design](../proposed/display_modal_hosting_design.md):
 
-- add task-modal and display-modal structural hosts; and
-- implement exact scrim bounds, admission rules, pointer/key barriers,
-  owner-task focus save/restore, Back ordering, and reentrant teardown.
+- add task coverage as an attachment policy of the one shared window host; and
+- implement task-panel bounds, owner/sibling pointer, physical-key, and
+  semantic-editor barriers, source-task Back behavior, and reentrant teardown
+  by reusing the existing owner, focus-scope, and single-slot contracts.
 
 Validation:
 
-- test independent task-modal presentations on separate tasks;
-- test a display-modal presentation blocks all non-owner tasks;
-- test `host_busy` combinations;
-- test focus restoration after content removal; and
-- use golden tests for both scrim bounds and overlay z-order.
+- test that the global slot rejects a second presentation from any task;
+- test task coverage leaves sibling pointer, key, editor, focus, and Back paths
+  active;
+- test display coverage blocks ordinary non-owner input;
+- test focus restoration and owner teardown; and
+- use golden tests for task- and display-bounded scrims and structural z-order.
 
-Proposed commit: `feat: add explicit modal coverage policies`
+Proposed commit: `feat: add task-bounded transient coverage`
 
 ### Phase 8: complete the migration and cost audit
 
@@ -909,8 +911,8 @@ invariants:
 - cross-application keyboard links retain the complete `KeyEvent` vocabulary;
 - no key source broadcasts because of z-order, focus recency, or touch;
 - keyboard endpoint teardown is safe in all orders;
-- task-modal scrims and input barriers stop at task bounds;
-- display-modal scrims and input barriers cover the whole window;
+- task-covered scrims and input barriers stop at owner-task bounds;
+- display-covered scrims and input barriers cover the whole window;
 - Back performs exactly one documented semantic step;
 - scheduled application callbacks are bounded and do not reenter another
   application; and
@@ -928,11 +930,12 @@ invariants:
 - The key-event connection preserves keyboard input but does not negotiate or
   control an editing session. Complex text systems require a later text-input
   design.
-- Display-modal ownership by one task preserves a single focus model, but the
-  initial `host_busy` rules prohibit some nested modal combinations.
-- A display-modal presentation also blocks a same-display software-keyboard
+- One shared transient slot prohibits simultaneous task-covered presentations
+  even in different tasks. A later multi-slot design requires a concrete use
+  case and explicit Back, replacement, and teardown ordering.
+- A display-covered presentation also blocks a same-display software-keyboard
   task. Text entry in such a presentation therefore requires a hardware
-  keyboard, a keyboard on another display, or use of task-modal coverage. An
+  keyboard, a keyboard on another display, or use of task coverage. An
   explicit auxiliary-task exception is future work if this limitation proves
   material.
 

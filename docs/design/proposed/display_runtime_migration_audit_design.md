@@ -2,9 +2,9 @@
 
 ## Status
 
-Proposed. Display runtime Phases 1–6 are implemented. Phase 8 starts after the
-Phase 7 modal-hosting ownership and coverage design is reconciled with shared
-transient hosting and implemented.
+Proposed. Display runtime Phases 1–6 are implemented. The Phase 7 design is now
+reconciled as a task-bounded extension of shared transient hosting. Phase 8
+starts after the shared host and that coverage extension are implemented.
 
 ## Objective
 
@@ -14,8 +14,9 @@ recording final behavior, size, allocation, and timing results.
 
 This is Phase 8 of the
 [display runtime and cross-application input design](../in_progress/display_surface_generalization_design.md).
-It starts only after the Phase 7 modal-hosting design is reconciled and
-implemented. Phases 2–6 are already complete.
+It starts only after the shared transient host and the reconciled Phase 7
+task-bounded coverage extension are implemented. Phases 2–6 are already
+complete.
 
 ## Motivation
 
@@ -28,7 +29,7 @@ authoritative and turns the accumulated measurements into a release decision.
 
 The migration introduces `DisplayWindow`, `UiTask`, direct content, optional
 navigation, shared-scheduler driving, physical-key events, application-owned
-input routing, semantic text input, and explicit modal coverage.
+input routing, semantic text input, and explicit transient coverage.
 Phase 4 removes legacy `Task`/`Activity` navigation after migrating it to
 direct content and `Destination`. The compatibility surfaces that remain for
 Phase 8 include application-level display forwarding, application-global
@@ -50,7 +51,9 @@ final state using the same toolchain and application.
    `NavigationHost`.
 4. Physical key sources and software text emitters must use their producer-owned
    connection APIs; tasks must expose no producer attachment API.
-5. All modal presentation must name an owning task and coverage policy.
+5. Every hosted interactive presentation must name an existing interaction-
+   owning task. Coverage is explicit where the component supports more than
+   display coverage; no host API may infer an owner.
 6. `start()` with a shared scheduler and the `run()` convenience path must be
    the only supported drive modes.
 7. No production compatibility API may silently select a task, editor, focus
@@ -66,8 +69,9 @@ final state using the same toolchain and application.
    and `gesture_detector()` forwarders.
 3. Verify that the constructor embedding one `KeySource`, Phase 3 direct source
    attachment, `KeyboardListener`, and its adapter remain absent.
-4. Remove application-level dialog forwarding and require
-   `UiTask::showModal()`.
+4. Remove application-level dialog forwarding. Component presenter APIs such
+   as `BasicDialog::show(UiTask&)` must supply the interaction owner to the
+   shared host; do not add a generic `UiTask::showModal()` facade.
 5. Remove `Widget::getApplication()`; retain structural `getUiTask()` and
    `getMainWindow()`. `Widget::getTask()` is already removed in Phase 4.
 6. Remove `MainWindow::app()` and its application back-reference, migrating
@@ -77,8 +81,8 @@ final state using the same toolchain and application.
 
 1. Every repository example must use final task/content/navigation APIs.
 2. At least one example must show direct content, optional navigation,
-   same-display semantic software input, two shared-scheduler displays, and each
-   modal coverage policy.
+   same-display semantic software input, two shared-scheduler displays, and
+   both display- and task-covered transient presentation.
 3. Public reference documentation and Doxygen comments must describe final
    ownership and lifetime rather than migration history.
 4. Compile errors from removed APIs must have direct replacements documented in
@@ -92,7 +96,7 @@ final state using the same toolchain and application.
 3. Construction, first-use, and warmed steady-state allocations must be
    recorded separately.
 4. Warm application callback, key dispatch, focus traversal, navigation,
-   modal routing, completed refresh, and continuation paths must allocate zero
+   transient routing, completed refresh, and continuation paths must allocate zero
    times.
 5. Direct-content tasks must allocate no navigation storage.
 6. Phase 8 cleanup itself must not increase any linked flash/RAM section by
@@ -131,7 +135,7 @@ Application
 └── addTask*() -> UiTask
     ├── direct content OR NavigationHost
     ├── task-local focus/editor and key dispatch
-    └── explicit modal coverage
+    └── explicit interaction ownership for component presenters
 ```
 
 No compatibility route remains in production. A migration guide maps every
@@ -178,12 +182,14 @@ emitter to its own text-input endpoint and exposes no public global editor.
 Custom layouts create keyboard tasks explicitly and connect their emitters to
 the destination application.
 
-### Removed modal and Back forwarding
+### Removed Dialog and Back Forwarding
 
 Programmatic Back is requested from an explicit `UiTask`. Application-level
-dialog functions are replaced with task modal calls and an explicit
-`ModalCoverage`. No operation chooses “the focused task,” because several tasks
-can retain focus simultaneously.
+dialog functions are replaced with component-specific presentation calls that
+take an explicit `UiTask&`; a component that exposes both coverage policies
+also takes or encodes that policy. There is no generic task modal controller.
+No operation chooses “the focused task,” because several tasks can retain focus
+simultaneously.
 
 ### Migration guide
 
@@ -200,7 +206,7 @@ include:
 | `Application::text_field_editor()` | `UiTask::textFieldEditor()` |
 | constructor `KeySource&` | `KeySource::connect(UiTask&)` |
 | `KeyboardListener` | `TextInputEmitter::connect(Application&)` |
-| application dialog methods | `UiTask::showModal()` |
+| application dialog methods | `BasicDialog::show(UiTask&)` or the corresponding component presenter API |
 | `Application::start()` | retained; starts work on the shared scheduler |
 
 ### Cost report
@@ -208,8 +214,8 @@ include:
 The baseline document gains a final table for:
 
 - all Phase 1 object sizes plus `DisplayWindow`, `UiTask`, `NavigationHost`,
-  `KeySource`, `TextInputEmitter`, both application input services, and both
-  modal hosts;
+  `KeySource`, `TextInputEmitter`, both application input services, the shared
+  transient host/boundary, and the task-coverage path;
 - `.iram0.text`, `.flash.text`, `.flash.rodata`, `.dram0.data`, and
   `.dram0.bss`;
 - construction and first-use allocations for direct, navigation, keyboard,
@@ -264,8 +270,13 @@ class UiTask {
   void setBackCallback(BackCallback callback);
   BackResult requestBack(
       BackSource source = BackSource::kProgrammatic);
-  ModalStartResult showModal(ModalPresentationRef presentation,
-                             ModalCoverage coverage);
+};
+
+// Representative component-owned API; exact result types remain with each
+// presenter family.
+class BasicDialog {
+ public:
+  PresentationStartResult show(UiTask& interaction_owner);
 };
 ```
 
@@ -282,7 +293,7 @@ Implementation follows the
 ### Phase 8: complete migration and cost audit
 
 1. Migrate all remaining examples, tests, and internal users to final display,
-   task naming, producer connection, drive, and modal APIs.
+   task naming, producer connection, drive, and component presentation APIs.
    Activity/navigation migration is already complete in Phase 4.
 2. Remove every compatibility symbol and implementation listed under Removal
    requirements; simplify ownership and member layout after deletion.
@@ -309,7 +320,7 @@ Proposed commit: `refactor: complete display runtime migration`
 Proposed commit body:
 
 > Display runtime Phase 8 completes the ownership and API migration. Remove
-> legacy application, editor, input, and modal forwarding; migrate
+> legacy application, editor, input, and dialog forwarding; migrate
 > all users and record the final cost and hardware audit required by
 > `display_runtime_migration_audit_design.md`.
 

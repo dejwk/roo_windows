@@ -121,6 +121,22 @@ Showing another independent dialog, menu, or modal sheet must fail or
 explicitly replace the occupant. Nested submenus belong to one menu presenter
 and do not occupy additional global slots.
 
+### Interaction owner
+
+The existing task whose focus manager, physical-key route, semantic Back
+context, and lifetime govern a hosted interactive transient. Associating a
+surface with an interaction owner does not make that surface a task, activity,
+or route. The presenting component supplies the owner explicitly; the host does
+not infer it from focus, z-order, or recent input.
+
+### Transient coverage
+
+The structural region whose underlying content is blocked by a hosted
+transient. Display coverage attaches the shared barrier and hosted root in the
+window's final band. Task coverage attaches the same reusable host children in
+the interaction owner's task panel and leaves sibling tasks interactive.
+Coverage is independent of which task is the interaction owner.
+
 ### Presentation chain
 
 Component-owned nested temporary UI that acts as one root presentation. A menu

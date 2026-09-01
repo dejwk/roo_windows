@@ -19,6 +19,8 @@ menu implementation scope is implemented. The shared host and copied-layer
 infrastructure are specified separately by
 [Transient surface hosting and layer anchors](transient_surface_host_design.md)
 and must land before menu presentation. Menus do not create or enter a `Task`.
+Each presentation nevertheless names one existing task as its interaction owner
+for focus, physical keys, Back context, and teardown.
 Existing and outstanding prerequisites are recorded in the
 [status index](../README.md).
 
@@ -65,6 +67,8 @@ The relevant implemented pieces are:
 The missing implementations are:
 
 - no detachable, non-route transient surface host,
+- no reusable interaction boundary or explicit host-to-task association,
+- no display-wide ordinary-key barrier for a hosted transient,
 - no active focus-scope enter/exit runtime,
 - no host-issued layer token for validating copied popup anchors,
 - and no rect-anchored presentation pin scoped to a copied layer token.
@@ -86,6 +90,8 @@ transient. That distinction is preserved:
 
 - a menu never calls `Application::addPopupTask()`,
 - a menu never enters an `Activity`,
+- `show()` explicitly receives the existing task whose focus and input context
+  the menu uses,
 - its Back behavior comes only from its root transient registration,
 - and its surface is attached only for one presentation.
 
@@ -183,12 +189,13 @@ Accordingly:
 
 ### Lifetime and Ownership Requirements
 
-1. A presenter never retains a trigger widget, anchor widget, task, activity,
-   or application listener.
+1. A presenter never retains a trigger widget, anchor widget, activity, or
+   application listener. The shared host temporarily retains the explicitly
+   supplied interaction owner and closes before that task detaches.
 2. Anchor and trigger snapshots contain only copied geometry, tokens, and a
    host-issued layer identity.
-3. The host validates that identity against the `MainWindow` supplied to
-   `show()` and rejects stale or foreign snapshots.
+3. The host validates that identity against the interaction owner's
+   `MainWindow` and rejects stale or foreign snapshots.
 4. Borrowed groups, rows, items, and slot widgets outlive active attachment;
    adopted content is deleted by ordinary `WidgetRef` detachment.
 5. Submenu population targets only the scoped child-level builder.
@@ -299,7 +306,9 @@ MainWindow
 
 ### Key Decisions
 
-1. Menus use the shared host, not `Task`, `Activity`, or dialog APIs.
+1. Menus use the shared host and do not create a `Task`, enter an `Activity`, or
+   call dialog APIs; they explicitly borrow an existing task as interaction
+   owner.
 2. Dialogs and menus share hosting, focus, isolation, and teardown, but retain
    separate presenters and surfaces.
 3. One chain uses one registration, host session, focus scope, and overlay.
@@ -320,8 +329,10 @@ The normative structural, admission, focus, barrier, token, pin, and teardown
 contracts are defined by
 [Transient surface hosting and layer anchors](transient_surface_host_design.md).
 The menu requests popup `kReplaceSameKind`, `kDismiss` outside behavior,
-required-origin validation, no scrim, and focus capture. Host implementation is
-not part of the menu phases below.
+required-origin validation, no scrim, display coverage, focus capture, and the
+task supplied to `show()` as interaction owner. Host implementation is not part
+of the menu phases below. The host derives the receiving window from that task
+and never infers an owner from focus, z-order, or the anchor token.
 
 `MenuOverlay` is the one borrowed presenter root. It occupies the window for
 panel layout but returns no touch target outside visible panels, so the host's
@@ -505,10 +516,12 @@ generation for post-hook validation.
 
 ### Focus and Keyboard Semantics
 
-The host enters one `FocusScope` rooted at its active layer. `FocusManager`
+The host enters one `FocusScope` through the explicit interaction owner's
+`FocusManager`, rooted at the reusable interaction boundary. The manager
 retains and validates prior focus. Detach restores it when eligible, otherwise
 uses preferred-child then first-eligible fallback. The menu stores no raw prior
-target.
+target. While the display-covered menu is active, ordinary keys from other
+tasks are absorbed by the host.
 
 Initial focus chooses selected enabled row, then first enabled row. The deepest
 visible level handles:
@@ -577,6 +590,7 @@ enum class MenuShowResult : uint8_t {
   kShown,
   kHostBusy,
   kReentrantReplacement,
+  kInteractionOwnerUnavailable,
   kSurfaceUnavailable,
   kAnchorUnavailable,
   kUnimplemented,
@@ -721,7 +735,7 @@ class Menu {
   void addGroup(MenuGroup& group);
   void addGroup(std::unique_ptr<MenuGroup> group);
   void clearGroups();
-  MenuShowResult show(MainWindow& window);
+  MenuShowResult show(Task& interaction_owner);
   bool reanchor(const MenuAnchorSnapshot& anchor);
   void dismissChain();
 
@@ -746,8 +760,8 @@ pin. Once Phase 3 lands, a stale or foreign snapshot returns
 Phase 3 replaces the stub with complete root presentation.
 
 The implemented path maps host `kStarted` to `MenuShowResult::kShown` and maps
-busy, reentrant replacement, unavailable-surface, and unavailable-origin
-results one-to-one. The temporary `kUnimplemented` result remains reserved for
+busy, reentrant replacement, unavailable-owner, unavailable-surface, and
+unavailable-origin results one-to-one. The temporary `kUnimplemented` result remains reserved for
 builds containing the Phase 1–2 public substrate without Phase 3 presentation.
 
 ## Implementation Plan
@@ -803,10 +817,11 @@ Validation: `bazel test //:material3_menu_geometry_test
 
 Code slice:
 
-1. Replace the stub with host presentation, snapshot validation, outside
-   dismissal, focus, trigger retention, and all finish paths.
-2. Test busy/replacement, stale anchors, outside consumption, restoration, pin
-   failure, dismissal, and teardown.
+1. Replace the stub with explicit-owner host presentation, snapshot validation,
+   outside dismissal, focus, trigger retention, and all finish paths.
+2. Test busy/replacement, unavailable and foreign owners, stale anchors,
+   outside consumption, owner/non-owner key routing, restoration, pin failure,
+   dismissal, and owner teardown.
 3. Add `menus/equipment_actions` for overflow anchoring.
 4. Add `menus/context_actions` for context-point edge placement.
 5. Add build targets and unchanged-copy emulator validation.
@@ -907,12 +922,13 @@ representative menu defined in the memory requirements.
 
 ### Rejected Alternatives
 
-#### Use Task, Dialog, Separate Hosts, or a General Stack
+#### Create a Task, Reuse Dialog APIs, or Add Another Host/Stack
 
 Rejected by the framework
 [Transient surface hosting and layer anchors design](transient_surface_host_design.md#rejected-alternatives).
 The menu consumes that decision and retains only menu-specific presentation,
-placement, selection, and chain behavior.
+placement, selection, and chain behavior. Supplying an existing interaction
+owner is not creating a task or using task route lifecycle.
 
 #### Attach Panels Directly to MainWindow
 

@@ -47,11 +47,13 @@ and [interactive transient](../glossary.md#interactive-transient).
 
 ### Existing route model
 
-[Task](../../../src/roo_windows/core/task.h) owns a stack of borrowed
-[`Activity`](../../../src/roo_windows/core/activity.h) objects.
-`enterActivity()` and `exitActivity()` enforce activity state and call
-`onStart()`, `onResume()`, `onPause()`, and `onStop()` in order. That is the
-framework's route model and remains unchanged.
+[Task](../../../src/roo_windows/core/task.h) originally owned a stack of
+borrowed [`Activity`](../glossary.md#activity) objects.
+`enterActivity()` and `exitActivity()` enforced activity state and called
+`onStart()`, `onResume()`, `onPause()`, and `onStop()` in order. That was the
+historical route model against which this Back contract was implemented;
+display-runtime Phase 4 later replaced it with direct content and optional
+`NavigationHost` without changing transient-first semantic Back.
 
 [MainWindow](../../../src/roo_windows/core/main_window.h) provides the visual
 layer order: regular tasks, popup tasks, then the modal dialog. Visual priority
@@ -62,8 +64,8 @@ The core route path is implemented:
 
 1. `Application::dispatchKeyEvent()` maps hardware Back and Escape down events
    into the semantic request path without repeating route pops.
-2. The request offers the root transient slot first, even when no widget owns
-   focus, then derives a target task from the focused widget.
+2. The request identifies its explicit or focus-derived task and offers the
+   eligible root transient slot first, even when no widget owns focus.
 3. An unhandled root request continues to the focused widget, allowing text
    editing to cancel local state after transient and activity policy run.
 
@@ -90,7 +92,9 @@ The boundary is explicit:
 The shared lifetime slot and legacy-dialog migration are implemented. Future
 transient components must join that same slot rather than introduce a second
 Back-participant registry; their adoption requirements live in their component
-designs and do not hold this framework contract open.
+designs and do not hold this framework contract open. The shared-host design
+adds an explicit interaction owner, and display-runtime Phase 7 later makes
+eligibility conditional on coverage without changing slot cardinality.
 
 ### Target task is explicit
 
@@ -221,10 +225,13 @@ Tabs, navigation bars, rails, drawers, and `HorizontalPageHost` synchronize peer
 selection without creating route entries. Applications implement selection
 history in the owning activity when desired.
 
-Task fallback uses the supplied target. Global transients receive precedence
-regardless of the initiating task. A popup `Task` used as a genuine route can be
-the target; a popup-backed transient finishes through lifetime registration and
-does not expose its implementation task as route history.
+Task fallback uses the supplied target. A display-covered transient receives
+precedence regardless of the initiating task. The Phase 7 task-covered
+extension receives precedence only when the supplied target is its explicit
+interaction owner; a request for a sibling task follows that sibling's normal
+Back order. A popup `Task` used as a genuine route can be the target; a popup-
+backed transient finishes through lifetime registration and does not expose its
+implementation task as route history.
 
 ### Cost
 

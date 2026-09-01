@@ -25,7 +25,6 @@
       .dim { stroke: #6b7280; stroke-width: 2; fill: none; marker-start: url(#arrow); marker-end: url(#arrow); }
       .leader { stroke: #6b7280; stroke-width: 2; fill: none; }
       .note { fill: #ffffff; stroke: #d1d5db; stroke-width: 2; }
-      .overlay-dialog { fill: #fffaf4; stroke: #7a8896; stroke-width: 2; }
     </style>
   </defs>
 
@@ -52,23 +51,22 @@
   <text class="small" x="259" y="419">Cancel</text>
   <text class="small" x="326" y="419">Agree</text>
 
-  <text class="title" x="120" y="158">Centered floating modal surface</text>
+  <text class="title" x="280" y="158">Centered modal</text>
   <line class="dim" x1="120" y1="166" x2="396" y2="166" />
-  <text class="small" x="194" y="156">280dp to 560dp width clamp</text>
 
-  <rect class="note" x="62" y="116" width="174" height="100" rx="14" ry="14" />
+  <rect class="note" x="62" y="116" width="210" height="112" rx="14" ry="14" />
   <text class="title" x="80" y="144">Pinned chrome</text>
   <text class="small" x="80" y="172">Only the body scrolls.</text>
   <text class="small" x="80" y="196">Header and actions stay</text>
   <text class="small" x="80" y="220">visible through overflow.</text>
-  <path class="leader" d="M 236 184 H 252 V 330 H 266" />
+  <path class="leader" d="M 272 184 H 282 V 330 H 294" />
 
-  <rect class="note" x="64" y="450" width="188" height="98" rx="14" ry="14" />
+  <rect class="note" x="64" y="450" width="230" height="108" rx="14" ry="14" />
   <text class="title" x="82" y="478">Dismiss policy</text>
   <text class="small" x="82" y="506">Touches outside the dialog</text>
   <text class="small" x="82" y="530">are absorbed, not used as</text>
   <text class="small" x="82" y="554">scrim-tap dismissal.</text>
-  <path class="leader" d="M 252 494 H 288 V 448" />
+  <path class="leader" d="M 294 494 H 306 V 448" />
 
   <text class="section" x="520" y="66">FULL-SCREEN DIALOG</text>
   <rect class="window" x="508" y="82" width="410" height="500" rx="14" ry="14" />
@@ -89,27 +87,17 @@
   <line class="content-line" x1="550" y1="508" x2="796" y2="508" />
   <path class="leader" d="M 868 198 V 518" stroke="#5576a4" stroke-width="2" marker-end="url(#arrow)" fill="none" />
 
-  <rect class="overlay-dialog" x="734" y="212" width="126" height="92" rx="18" ry="18" />
-  <line class="content-line" x1="752" y1="240" x2="842" y2="240" />
-  <rect class="action" x="756" y="262" width="40" height="22" rx="11" ry="11" />
-  <rect class="action" x="808" y="262" width="38" height="22" rx="11" ry="11" />
-
-  <text class="title" x="522" y="78">Full-window popup-hosted surface</text>
-  <line class="dim" x1="522" y1="86" x2="904" y2="86" />
-  <text class="small" x="652" y="76">0dp corners, 56dp header</text>
-
-  <rect class="note" x="536" y="170" width="166" height="104" rx="14" ry="14" />
+  <rect class="note" x="536" y="170" width="210" height="112" rx="14" ry="14" />
   <text class="title" x="554" y="198">Header actions</text>
   <text class="small" x="554" y="226">Close stays leading and</text>
   <text class="small" x="554" y="250">the optional confirm</text>
   <text class="small" x="554" y="274">action stays trailing.</text>
-  <path class="leader" d="M 702 220 H 730 V 124 H 812" />
+  <path class="leader" d="M 746 220 H 762 V 124 H 812" />
 
-  <rect class="note" x="536" y="428" width="192" height="116" rx="14" ry="14" />
-  <text class="title" x="554" y="456">Layering difference</text>
-  <text class="small" x="554" y="484">Because this dialog lives on</text>
-  <text class="small" x="554" y="508">the popup layer, a later basic</text>
-  <text class="small" x="554" y="532">dialog can still appear above</text>
-  <text class="small" x="554" y="556">it for discard confirmation.</text>
-  <path class="leader" d="M 728 484 H 742 V 304" />
+  <rect class="note" x="536" y="428" width="230" height="116" rx="14" ry="14" />
+  <text class="title" x="554" y="456">Shared-host policy</text>
+  <text class="small" x="554" y="484">Both variants use the same</text>
+  <text class="small" x="554" y="508">modal host and root slot, so</text>
+  <text class="small" x="554" y="532">their roots do not coexist.</text>
+  <path class="leader" d="M 766 484 H 780 V 410" />
 </svg>

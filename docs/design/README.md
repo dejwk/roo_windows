@@ -67,13 +67,13 @@ Status was audited against the source tree and tests on 2026-09-01. “Dependenc
 | --- | --- |
 | Button groups | Buttons and icon buttons are implemented; no group implementation exists. |
 | Date pickers | Buttons, icon buttons, and shared back behavior are implemented; text fields and dialogs are proposed. |
-| Display runtime Phase 7 modal hosting | Phase 6 input is implemented, but all task/display coverage policies, barriers, focus restoration, admission, and modal Back ordering are not implemented. |
-| Display runtime Phase 8 migration and cost audit | Phases 2–6 are implemented; Phase 7, final migration documentation, resource audit, and hardware validation remain proposed. |
-| Dialogs | Legacy dialogs, icon buttons, and shared back behavior exist, but the Material 3 design and text fields are not implemented. |
+| Display runtime Phase 7 task-bounded transient coverage | Phase 6 input is implemented. Phase 7 is reconciled as task-bounded attachment of the one shared window host, retaining one slot and explicit interaction owner; the extension remains unimplemented. |
+| Display runtime Phase 8 migration and cost audit | Phases 2–6 are implemented and Phase 7 is architecturally reconciled; the shared host, task-coverage extension, final migration documentation, resource audit, and hardware validation remain proposed. |
+| Dialogs | Legacy dialogs, icon buttons, and shared Back behavior exist. The Material 3 host contract is reconciled around explicit task ownership and the one shared slot; basic dialogs remain P1.8 behind P1.6b, and full-screen dialogs remain a later phase. |
 | Extended FAB | The base FAB dependency is proposed; buttons and theme support are implemented. |
 | FAB | Buttons, icon buttons, and theme support are implemented; the FAB family is not. |
 | Interaction overlay reveal | Point and area ripples, widget-local click animation, paint context, and the navigation bar's component-local fade are implemented; shared fade reveal and paint-owned overlay policy are not. |
-| Menus | Badge, paint context, back routing, list-row reuse, non-touch input, and widget-anchored presentation pins are implemented. The separate transient-host design owns the missing host, active focus-scope, layer-token, and token-scoped-pin prerequisites; menus do not use `Task` or `Activity`. Menu implementation remains P1.7 after P1.6a–P1.6b. |
+| Menus | Badge, paint context, back routing, list-row reuse, non-touch input, and widget-anchored presentation pins are implemented. The separate transient-host design owns the missing host, active focus-scope, layer-token, and token-scoped-pin prerequisites. Menus do not create a `Task` or enter an `Activity`; `show()` explicitly borrows an existing task as interaction owner. Menu implementation remains P1.7 after P1.6b. |
 | Navigation drawer | List support is in progress and back routing is implemented; dialogs are proposed, and no drawer implementation exists. |
 | Segmented buttons | Buttons are implemented; the superseding button-group design and this legacy component design are not implemented. |
 | Sheets | Paint/overflow foundations, icon buttons, and shared back behavior are implemented; the sheet family is not. |
@@ -82,5 +82,5 @@ Status was audited against the source tree and tests on 2026-09-01. “Dependenc
 | Text fields | Paint context, non-touch input, and icon buttons are implemented; supporting menu behavior and the text-field family are proposed. |
 | Time pickers | Buttons, icon buttons, and shared back behavior are implemented; text fields and dialogs are proposed. |
 | Toolbars | Buttons and icon buttons are implemented; menus, FABs, and toolbars are proposed. |
-| Transient surface hosting and layer anchors | The transient lifetime slot and widget-anchored pin host are implemented. Active focus scopes are specified but not active; the structural host, pointer-free layer tokens, and token-scoped presenter pins are proposed as P1.6a–P1.6b. |
+| Transient surface hosting and layer anchors | The transient lifetime slot and widget-anchored pin host are implemented. The completed P1.6a review closes explicit interaction ownership, a reusable structural boundary, display-wide pointer/physical-key/semantic-editor isolation, focus integration, layer tokens, presenter pins, and legacy-dialog migration; implementation remains P1.6b. |
 | Wi-Fi configuration | Existing Wi-Fi transport/configuration APIs are external prerequisites; the Material 3 screen design and its text-field/dialog dependencies are not implemented. |
