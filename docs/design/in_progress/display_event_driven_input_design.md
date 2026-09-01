@@ -6,8 +6,8 @@ In progress. Phases 1 and 2 are implemented: `ApplicationTicker` coalesces
 requests while retaining the 20 ms fallback, and physical key sources wake the
 application through producer-owned readiness handlers and the application input
 router. FLTK crosses from its native event thread through `roo_testing`'s
-`HostEventEndpoint`. Phases 3–7—touch acquisition, gesture, paint, and
-animation deadlines, then removal of the fallback—remain proposed.
+`HostEventEndpoint`. Phases 3–7—touch acquisition, gesture and animation
+deadlines, paint wakeups, then removal of the fallback—remain proposed.
 
 ## Objective
 
@@ -131,8 +131,11 @@ Terms shared with other Roo Windows designs retain their meanings from the
 
 19. The design must add no framework event queue. `TouchSensor` must retain its
     fixed ring, and key sources must retain their current bounded storage.
-20. Registration is allowed to allocate. Readiness invocation, warmed
-    scheduling, input draining, and ticker execution must not allocate.
+20. Registration, startup warmup, and the first gesture-path discovery after a
+    UI-topology change are allowed to allocate. In steady state, readiness
+    invocation, warmed scheduling, input draining against a widget tree no
+    deeper than the warmed gesture-path capacity, and ticker execution must not
+    allocate.
 21. The design must add no virtual scheduler layer, public application
     `tick()` API, exception, RTTI use, framework-owned application collection,
     or per-event function object.
@@ -234,7 +237,8 @@ ticker endpoint.
 
 The callback is long-lived rather than per-event. The application-sized lambda
 fits the standard library's small-function storage on supported targets;
-registration is nevertheless the only API point permitted to allocate.
+registration is nevertheless permitted to allocate before steady-state
+notification begins.
 
 The binding invocation context must be valid for the synchronization used by
 its target. Embedded interrupt producers use an established interrupt-to-task
@@ -293,9 +297,9 @@ contract and is outside this proposal.
 ### Gesture deadlines and event ordering
 
 `GestureDetector` keeps its existing show-press, tap, and long-press records.
-After it drains the current touch batch and fires every transition due at the
-sampled time, `nextTimeoutDeadline()` returns the earliest remaining deadline,
-or `roo_time::Uptime::Max()` when none remains.
+After it chronologically merges the current touch batch with transitions due at
+the sampled time, `nextTimeoutDeadline()` returns the earliest remaining
+deadline, or `roo_time::Uptime::Max()` when none remains.
 
 The detector schedules a transition from the DOWN event's `when_us` timestamp,
 not from the later drain time. It retains the current 32-bit wrap-safe signed
@@ -304,10 +308,15 @@ earliest nonnegative remaining microsecond delta to
 `roo_time::Uptime::Now() + delta`; an already due value maps to
 `roo_time::Uptime::Now()`.
 
-The detector processes queued timestamped events before evaluating timers. An
-UP or qualifying MOVE whose sample timestamp is at or before a transition
-deadline therefore cancels or changes the gesture before the transition can
-fire, even when the ticker starts slightly late.
+The detector compares queued event timestamps with pending transition
+timestamps using the same 32-bit wrap-safe ordering. Before each queued event,
+it fires every transition whose timestamp is strictly earlier than the event's
+timestamp. The event wins ties: an UP or qualifying MOVE timestamped exactly at
+a transition deadline cancels or changes the gesture before that transition can
+fire. After the batch, the detector fires every remaining transition due at the
+dispatch's sampled time. Thus an event at or before a deadline can cancel that
+transition, while an event after the deadline cannot erase a transition that
+should already have occurred, even when the ticker starts late.
 
 The application submits the returned deadline to its ticker. It creates no
 gesture-specific scheduler task. A press with one pending long-press
@@ -357,7 +366,8 @@ One ticker execution performs these phases in order:
 1. Advance window-owned animation state due at the sampled time.
 2. Drain each connected key source through the application input router using
    its existing 16-event limit.
-3. Drain one touch batch, dispatch gestures, and fire due gesture transitions.
+3. Drain one touch batch and chronologically merge gesture events with due
+   transitions, with input winning equal-timestamp ties.
 4. Handle other application-owned UI events that are ready.
 5. Attempt at most one paint slice when immediate or deadline-owned paint is
    due.
@@ -365,9 +375,9 @@ One ticker execution performs these phases in order:
    and delayed-paint deadline.
 7. Return no deadline when the application is clean and no timed work remains.
 
-Draining timestamped touch input before gesture timers is the only ordering
-change needed for a late dispatch. The remaining phase order preserves click
-settlement and paint continuation contracts.
+Chronologically merging timestamped touch input with gesture timers is the only
+ordering change needed for a late dispatch. The remaining phase order preserves
+click settlement and paint continuation contracts.
 
 Consuming a complete key budget, interrupted painting, or ordinary invalidation
 created after the paint slice returns an immediate deadline. Otherwise the
@@ -380,6 +390,17 @@ Ordinary `Widget::setDirty()`, `invalidateInterior()`, layout invalidation, and
 After recording dirty geometry, the root calls `requestNow()`. An application
 dormant before an external state change therefore paints without waiting for a
 cadence.
+
+The existing 20 ms minimum interval between ordinary refresh starts remains a
+paint deadline rather than an implicit polling cadence. If an immediate
+invalidation dispatch arrives before that interval has elapsed,
+`DisplayWindow` skips the paint slice and returns
+`roo_time::Uptime::Now() + remaining_interval` as its delayed-paint deadline.
+The ticker schedules that deadline, so the application neither spins
+immediately nor becomes dormant while dirty. No new persistent timestamp is
+needed: the remaining interval is derived from the existing last-refresh sample
+at the dispatch's sampled time. A retained interrupted-paint continuation is
+already eligible and bypasses this ordinary-refresh throttle.
 
 An interrupted logical paint retains continuation state and requests
 `requestNow()`. Completion clears that request source. The existing adaptive
@@ -455,7 +476,11 @@ The size probe must report no increase for `Widget`, `Container`, or `Task`.
 Queue storage, gesture-path storage, and paint-continuation storage do not
 change. Handler registration can allocate; producer notification calls the
 warmed small-function target and schedules a persistent executable without
-constructing a new function object.
+constructing a new function object. `GestureDetector` retains its existing
+growable target-path vector: startup path discovery or the first path discovery
+after a later UI-topology change may grow its capacity, but repeated input
+against a tree no deeper than the warmed maximum is steady-state
+allocation-free.
 
 ## Proposed API
 
@@ -607,11 +632,11 @@ Proposed commit message:
 
 ### Phase 4: schedule gesture transitions at their deadlines
 
-Expose the detector's earliest deadline, drain timestamped input before firing
-due transitions, and merge that deadline into ticker scheduling. Keep the
-fallback. Add deterministic tests for show-press and long-press timing,
-same-deadline input cancellation, wrap-safe timestamp comparison, and cleared
-gesture state.
+Expose the detector's earliest deadline, chronologically merge timestamped
+input with due transitions, and merge the next deadline into ticker scheduling.
+Keep the fallback. Add deterministic tests for show-press and long-press
+timing, before-, equal-, and after-deadline input ordering, wrap-safe timestamp
+comparison, and cleared gesture state.
 
 Focused validation:
 
@@ -624,40 +649,19 @@ Proposed commit message:
 
 > Event-driven input Phase 4 schedules gesture transitions explicitly.
 >
-> Report the earliest `GestureDetector` deadline and preserve timestamped
-> input-before-timeout ordering as specified by
+> Report the earliest `GestureDetector` deadline and preserve chronological
+> input-and-timeout ordering as specified by
 > `display_event_driven_input_design.md`.
 
-### Phase 5: wake ordinary and interrupted painting
-
-Route root invalidation and paint continuation to `requestNow()` while keeping
-the fallback. Test a dormant-equivalent ticker state by canceling its fallback,
-then verify external invalidation, invalidation during dispatch, one-slice
-paint bounds, interrupted continuation, and completed continuation settlement.
-
-Focused validation:
-
-```sh
-bazel test //:display_window_test //:roo_windows_test \
-  //:display_runtime_characterization_test
-```
-
-Proposed commit message:
-
-> Event-driven input Phase 5 wakes immediate paint work.
->
-> Connect ordinary invalidation and interrupted logical paint to the
-> application ticker without changing the continuation contract documented by
-> `display_event_driven_input_design.md`.
-
-### Phase 6: give animations explicit frame deadlines
+### Phase 5: give animations explicit frame deadlines
 
 Add `requestAnimationFrameAt()` without increasing base widget size. Migrate
-click feedback and every widget that self-dirties from its paint path, retain
-each established frame interval, and update the widget-authoring documentation
-in the same commit. Add tests for deadline coalescing, no immediate animation
-loop, earlier ordinary invalidation, terminal cancellation, and animation
-completion.
+click feedback and every widget that self-dirties from its paint path before
+ordinary invalidation is connected to immediate ticker wakeups. Retain each
+established frame interval and update the widget-authoring documentation in the
+same commit. Add tests for deadline coalescing, no immediate animation loop,
+terminal cancellation, and animation completion in a dormant-equivalent ticker
+state.
 
 Focused validation:
 
@@ -669,11 +673,38 @@ bazel build //:display_runtime_size_probe
 
 Proposed commit message:
 
-> Event-driven input Phase 6 schedules animation frames by deadline.
+> Event-driven input Phase 5 schedules animation frames by deadline.
 >
 > Replace paint-time self-dirty loops with the delayed animation wakeup from
 > `display_event_driven_input_design.md`, migrate click and widget animations,
 > and document the widget-authoring contract.
+
+### Phase 6: wake ordinary and interrupted painting
+
+Route root invalidation and paint continuation to `requestNow()` while keeping
+the fallback. Test a dormant-equivalent ticker state by canceling its fallback,
+then verify external invalidation, invalidation during dispatch, one-slice
+paint bounds, interrupted continuation, and completed continuation settlement.
+Also verify that an ordinary invalidation inside the minimum refresh interval
+schedules the exact next eligible paint deadline and neither spins nor becomes
+dormant while dirty, and that ordinary invalidation preempts a later animation
+deadline.
+
+Focused validation:
+
+```sh
+bazel test //:display_window_test //:roo_windows_test \
+  //:display_runtime_characterization_test
+```
+
+Proposed commit message:
+
+> Event-driven input Phase 6 wakes immediate and deadline-owned paint work.
+>
+> Connect ordinary invalidation and interrupted logical paint to the
+> application ticker, preserve the minimum-refresh deadline, and retain the
+> continuation contract documented by
+> `display_event_driven_input_design.md`.
 
 ### Phase 7: remove the application fallback
 
@@ -706,14 +737,15 @@ Proposed commit message:
 Deterministic clocks and scripted sources cover four validation layers:
 
 - source contracts: post-commit and post-unlock readiness, nonempty
-  installation, quiescing removal, queue overflow behavior, and warmed
-  allocation;
+  installation, quiescing removal, queue overflow behavior, and steady-state
+  allocation after registration warmup;
 - ticker contracts: concurrent earliest-deadline coalescing, stale execution
   rejection, non-recursive during-dispatch wakeups, stop rejection, and
   scheduler allocation after warmup;
 - application behavior: bounded key and touch draining, timestamp-ordered
-  gesture transitions, ordinary invalidation, interrupted paint, animation
-  deadlines, and clean dormancy; and
+  gesture transitions on both sides of a deadline, ordinary invalidation,
+  throttled-paint deadlines, interrupted paint, animation deadlines, and clean
+  dormancy; and
 - integration and resource behavior: two independently scheduled
   applications, an independent single-threaded sensor poll task, unchanged
   base widget sizes, and the accepted source and application RAM deltas.
