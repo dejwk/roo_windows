@@ -214,6 +214,7 @@ MenuEntry::MenuEntry(ApplicationContext& context)
 MenuEntry::~MenuEntry() { prepareForItemDestruction(); }
 
 void MenuEntry::setMenuItem(MenuItem& item) {
+  CHECK(menu_ == nullptr);
   ListEntry::setItem(item);
   syncAdornments();
   ListEntryVisualContext visual = visualContext();
@@ -232,19 +233,59 @@ const MenuItem* MenuEntry::menuItem() const {
 
 bool MenuEntry::isClickable() const {
   const MenuItem* bound = menuItem();
-  return bound != nullptr && bound->isEnabled();
+  return menu_ != nullptr && bound != nullptr && bound->isEnabled();
 }
 
 void MenuEntry::prepareForItemDestruction() {
+  unbindFromMenu();
   adornments_.reset();
   ListEntry::clearItem();
 }
 
 void MenuEntry::onSingleTapUp(XDim x, YDim y) {
-  ListEntry::onSingleTapUp(x, y);
+  if (getMainWindow() != nullptr) Widget::onSingleTapUp(x, y);
+  if (menu_ == nullptr) return;
+  Menu* owner = menu_;
+  uint8_t level = level_;
+  uint16_t row = row_;
+  uint16_t generation = level_generation_;
+  suppress_next_click_dispatch_ = true;
+  owner->invokeEntry(*this, level, row, generation);
 }
 
-void MenuEntry::onClicked() { ListEntry::onClicked(); }
+void MenuEntry::onClicked() {
+  if (suppress_next_click_dispatch_) {
+    suppress_next_click_dispatch_ = false;
+    return;
+  }
+  if (menu_ != nullptr) {
+    menu_->invokeEntry(*this, level_, row_, level_generation_);
+  }
+}
+
+void MenuEntry::bindToMenu(Menu& owner, uint8_t level, uint16_t row,
+                           uint16_t generation) {
+  CHECK(menu_ == nullptr || menu_ == &owner);
+  menu_ = &owner;
+  level_ = level;
+  row_ = row;
+  level_generation_ = generation;
+  suppress_next_click_dispatch_ = false;
+  ListEntryVisualContext visual = visualContext();
+  const MenuItem* bound = menuItem();
+  visual.enabled = bound != nullptr && bound->isEnabled();
+  visual.selected = bound != nullptr && bound->isSelected();
+  setVisualContext(visual);
+  syncAdornments();
+}
+
+void MenuEntry::unbindFromMenu() {
+  menu_ = nullptr;
+  level_ = 0;
+  row_ = 0;
+  level_generation_ = 0;
+  suppress_next_click_dispatch_ = false;
+}
 
 void MenuEntry::syncAdornments() {
   const MenuItem* bound = menuItem();
@@ -395,8 +436,8 @@ void MenuEntry::paintWidgetContents(PaintContext& ctx) {
   }
 }
 
-static_assert(sizeof(MenuEntry) <= sizeof(ListEntry) + sizeof(void*) + 4,
-              "Phase 1 menu rows may add only pay-for-use adornment state");
+static_assert(sizeof(MenuEntry) <= sizeof(ListEntry) + 24,
+              "menu rows stay within the designed adornment/binding delta");
 
 class Menu::Impl {
  public:
@@ -412,6 +453,7 @@ class Menu::Impl {
    protected:
     void detachPresentation(PresentationFinishReason reason) override {
       (void)reason;
+      owner_.unbindAllEntries();
     }
 
     void onFinished(PresentationFinishReason reason) override {
@@ -448,6 +490,9 @@ class Menu::Impl {
       if (window.bounds().empty() || impl_.root_panel.groupCount() == 0) {
         return false;
       }
+      ++impl_.level_generation[0];
+      if (impl_.level_generation[0] == 0) ++impl_.level_generation[0];
+      impl_.presenter.bindRootEntries();
       const internal::MenuTokens& tokens = impl_.RootTokens();
       int16_t margin = Scaled(tokens.viewport_margin_dp);
       if (window.width() <= 2 * margin || window.height() <= 2 * margin) {
@@ -475,7 +520,9 @@ class Menu::Impl {
       return true;
     }
 
-    void deleteAfterFailedAdmission() override {}
+    void deleteAfterFailedAdmission() override {
+      impl_.presenter.unbindAllEntries();
+    }
 
     Impl& impl_;
     ::roo_windows::Task& owner_;
@@ -484,7 +531,11 @@ class Menu::Impl {
   };
 
   explicit Impl(Menu& owner, ApplicationContext& context)
-      : root_panel(context), overlay(context), registration(owner) {
+      : policy(),
+        presenter(owner),
+        root_panel(context),
+        overlay(context),
+        registration(owner) {
     root_panel.setPolicy(policy);
     overlay.addPanel(root_panel, Rect());
   }
@@ -542,6 +593,7 @@ class Menu::Impl {
   }
 
   MenuPolicy policy;
+  Menu& presenter;
   internal::MenuPanel root_panel;
   internal::MenuOverlay overlay;
   internal::MenuPanel* level_panels[kMaxLevels] = {&root_panel, nullptr,
@@ -602,6 +654,111 @@ void Menu::clearGroups() {
   CHECK(!impl_->registration.isActive());
   impl_->focus_scope.clearRememberedFocus();
   impl_->root_panel.clearGroups();
+}
+
+void Menu::bindRootEntries() {
+  uint16_t row_index = 0;
+  for (int group_index = 0; group_index < impl_->root_panel.groupCount();
+       ++group_index) {
+    MenuGroup& group = impl_->root_panel.groupAt(group_index);
+    for (MenuEntry* entry : group.entries_) {
+      entry->bindToMenu(*this, 0, row_index++, impl_->level_generation[0]);
+      ListEntryVisualContext visual = entry->visualContext();
+      visual.variant = impl_->policy.variant;
+      visual.style = impl_->policy.variant == ListVariant::kExpressive
+                         ? ListStyle::kSegmented
+                         : ListStyle::kStandard;
+      if (impl_->policy.selection_mode == SelectionMode::kNone &&
+          entry->menuItem() != nullptr && entry->menuItem()->isSelectable()) {
+        visual.selected = false;
+        LOG(WARNING) << "Selectable menu item bound in SelectionMode::kNone";
+      }
+      entry->setVisualContext(visual);
+    }
+  }
+}
+
+void Menu::unbindAllEntries() {
+  for (int group_index = 0; group_index < impl_->root_panel.groupCount();
+       ++group_index) {
+    MenuGroup& group = impl_->root_panel.groupAt(group_index);
+    for (MenuEntry* entry : group.entries_) entry->unbindFromMenu();
+  }
+}
+
+void Menu::invokeEntry(MenuEntry& entry, uint8_t level, uint16_t row,
+                       uint16_t generation) {
+  if (!impl_->registration.isActive() || level != 0 ||
+      generation != impl_->level_generation[0] || entry.menu_ != this) {
+    return;
+  }
+
+  MenuEntry* resolved = nullptr;
+  uint16_t current_row = 0;
+  for (int group_index = 0; group_index < impl_->root_panel.groupCount();
+       ++group_index) {
+    MenuGroup& group = impl_->root_panel.groupAt(group_index);
+    for (MenuEntry* candidate : group.entries_) {
+      if (current_row++ == row) resolved = candidate;
+    }
+  }
+  if (resolved != &entry) return;
+  MenuItem* item = entry.menuItem();
+  if (item == nullptr || !item->isEnabled()) return;
+  if (item->hasSubmenu()) return;
+
+  const bool selectable = item->isSelectable() &&
+                          impl_->policy.selection_mode != SelectionMode::kNone;
+  const bool was_selected = item->isSelected();
+  const SelectionMode selection_mode = impl_->policy.selection_mode;
+  const MenuLeafDismissal dismissal = item->leafDismissal();
+
+  if (selectable && selection_mode == SelectionMode::kSingle) {
+    for (int group_index = 0; group_index < impl_->root_panel.groupCount();
+         ++group_index) {
+      MenuGroup& group = impl_->root_panel.groupAt(group_index);
+      for (MenuEntry* candidate : group.entries_) {
+        MenuItem* candidate_item = candidate->menuItem();
+        if (candidate_item != nullptr && candidate_item->isSelectable()) {
+          candidate_item->setSelectedFromMenu(candidate == &entry);
+        }
+        candidate->refreshFromItem();
+        ListEntryVisualContext visual = candidate->visualContext();
+        visual.enabled =
+            candidate_item != nullptr && candidate_item->isEnabled();
+        visual.selected =
+            candidate_item != nullptr && candidate_item->isSelected();
+        candidate->setVisualContext(visual);
+        candidate->syncAdornments();
+      }
+    }
+  } else if (selectable && selection_mode == SelectionMode::kMultiple) {
+    item->setSelectedFromMenu(!was_selected);
+    entry.refreshFromItem();
+    ListEntryVisualContext visual = entry.visualContext();
+    visual.enabled = item->isEnabled();
+    visual.selected = item->isSelected();
+    entry.setVisualContext(visual);
+    entry.syncAdornments();
+  }
+
+  item->onInvoked();
+  // Invocation is application code: it may replace the active presenter or
+  // otherwise invalidate this row. Revalidate registration and generation
+  // before consulting presenter state, and never dereference `item` again.
+  if (!impl_->registration.isActive() ||
+      generation != impl_->level_generation[0] || entry.menu_ != this) {
+    return;
+  }
+
+  bool should_dismiss = dismissal == MenuLeafDismissal::kDismiss;
+  if (dismissal == MenuLeafDismissal::kDefault) {
+    should_dismiss =
+        !(selectable && selection_mode == SelectionMode::kMultiple);
+  }
+  if (should_dismiss) {
+    impl_->registration.finish(PresentationFinishReason::kAction);
+  }
 }
 
 MenuShowResult Menu::show(::roo_windows::Task& interaction_owner,

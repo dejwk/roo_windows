@@ -18,6 +18,8 @@ class MenuGroupStack final : public Container {
   void addGroup(std::unique_ptr<MenuGroup> group);
   void clearGroups();
   int groupCount() const;
+  MenuGroup& groupAt(int idx);
+  const MenuGroup& groupAt(int idx) const;
   void setSeparatorMode(MenuSeparatorMode mode, ListVariant variant);
   Widget* preferredFocusChild() override;
 
@@ -48,6 +50,8 @@ class MenuPanel final : public Container {
   void addGroup(std::unique_ptr<MenuGroup> group);
   void clearGroups();
   int groupCount() const;
+  MenuGroup& groupAt(int idx);
+  const MenuGroup& groupAt(int idx) const;
   bool isScrolling() const;
 
   Color background() const override;

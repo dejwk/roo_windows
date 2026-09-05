@@ -25,10 +25,11 @@ results remain component-specific.
 
 ## Background
 
-**Status: In progress; Phases 1–3 implemented.** Menu tokens, items, rows,
+**Status: In progress; Phases 1–4 implemented.** Menu tokens, items, rows,
 adornments, groups, panels, scrolling, deterministic placement, synchronous
-source capture, host presentation, focus, trigger retention, and root teardown
-are implemented. The shared composite host,
+source capture, host presentation, focus, trigger retention, root teardown,
+item-owned selection, exactly-once invocation, and leaf dismissal policy are
+implemented. The shared composite host,
 synchronous source-capture contract, and presenter-pin integration are
 specified separately by
 [Transient surface hosting](../implemented/transient_surface_hosting_design.md)

@@ -44,6 +44,29 @@ class RecordingMenu final : public Menu {
   PresentationFinishReason last_reason_ = PresentationFinishReason::kCancel;
 };
 
+class RecordingItem final : public StandardMenuItem {
+ public:
+  explicit RecordingItem(const StandardMenuItemInit& init)
+      : StandardMenuItem(init) {}
+
+  void onInvoked() override { ++invocations_; }
+  MenuLeafDismissal leafDismissal() const override { return dismissal_; }
+  int invocations() const { return invocations_; }
+  void setDismissal(MenuLeafDismissal dismissal) { dismissal_ = dismissal; }
+
+ private:
+  int invocations_ = 0;
+  MenuLeafDismissal dismissal_ = MenuLeafDismissal::kDefault;
+};
+
+class TestMenuEntry final : public MenuEntry {
+ public:
+  using MenuEntry::MenuEntry;
+
+  void Tap() { onSingleTapUp(1, 1); }
+  void DeferredClick() { onClicked(); }
+};
+
 class Material3MenuTest : public testing::Test {
  protected:
   Material3MenuTest()
@@ -54,7 +77,7 @@ class Material3MenuTest : public testing::Test {
         content_(app_.context()),
         source_(app_.context()),
         owner_(app_.addTaskFullScreen(content_)),
-        item_(StandardMenuItemInit{"Open", {}, nullptr, true, false, false}),
+        item_(StandardMenuItemInit{"Open", {}, nullptr, true, true, false}),
         row_(app_.context()),
         group_(app_.context()),
         menu_(app_.context()) {
@@ -81,8 +104,8 @@ class Material3MenuTest : public testing::Test {
   TestPanel content_;
   SourceWidget source_;
   Task& owner_;
-  StandardMenuItem item_;
-  MenuEntry row_;
+  RecordingItem item_;
+  TestMenuEntry row_;
   MenuGroup group_;
   RecordingMenu menu_;
 };
@@ -149,6 +172,50 @@ TEST_F(Material3MenuTest, InvalidOptionalTriggerDoesNotFailPresentation) {
   MenuTriggerPaintSource trigger{detached, 8, 0xFF000000, 20};
   EXPECT_EQ(MenuShowResult::kShown,
             menu_.show(owner_, source_, MenuPlacement::kBelowStart, &trigger));
+}
+
+TEST_F(Material3MenuTest, SingleSelectionInvokesOnceAndDismisses) {
+  MenuPolicy policy;
+  policy.selection_mode = SelectionMode::kSingle;
+  menu_.setPolicy(policy);
+  ASSERT_EQ(MenuShowResult::kShown, menu_.show(owner_, source_));
+
+  row_.Tap();
+  row_.DeferredClick();
+
+  EXPECT_TRUE(item_.isSelected());
+  EXPECT_EQ(1, item_.invocations());
+  EXPECT_EQ(1, menu_.finishes());
+  EXPECT_EQ(PresentationFinishReason::kAction, menu_.lastReason());
+  EXPECT_FALSE(row_.isClickable());
+}
+
+TEST_F(Material3MenuTest, MultipleSelectionTogglesAndStaysOpenByDefault) {
+  MenuPolicy policy;
+  policy.selection_mode = SelectionMode::kMultiple;
+  menu_.setPolicy(policy);
+  ASSERT_EQ(MenuShowResult::kShown, menu_.show(owner_, source_));
+
+  row_.Tap();
+  row_.DeferredClick();
+
+  EXPECT_TRUE(item_.isSelected());
+  EXPECT_EQ(1, item_.invocations());
+  EXPECT_EQ(0, menu_.finishes());
+  EXPECT_TRUE(row_.isClickable());
+}
+
+TEST_F(Material3MenuTest, LeafDismissalOverrideKeepsSingleSelectionOpen) {
+  MenuPolicy policy;
+  policy.selection_mode = SelectionMode::kSingle;
+  menu_.setPolicy(policy);
+  item_.setDismissal(MenuLeafDismissal::kKeepOpen);
+  ASSERT_EQ(MenuShowResult::kShown, menu_.show(owner_, source_));
+
+  row_.Tap();
+
+  EXPECT_TRUE(item_.isSelected());
+  EXPECT_EQ(0, menu_.finishes());
 }
 
 }  // namespace

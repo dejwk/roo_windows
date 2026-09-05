@@ -116,6 +116,16 @@ void MenuGroupStack::clearGroups() {
 
 int MenuGroupStack::groupCount() const { return groups_.size(); }
 
+MenuGroup& MenuGroupStack::groupAt(int idx) {
+  return const_cast<MenuGroup&>(
+      static_cast<const MenuGroupStack&>(*this).groupAt(idx));
+}
+
+const MenuGroup& MenuGroupStack::groupAt(int idx) const {
+  CHECK(idx >= 0 && static_cast<size_t>(idx) < groups_.size());
+  return *groups_[idx];
+}
+
 void MenuGroupStack::setSeparatorMode(MenuSeparatorMode mode,
                                       ListVariant variant) {
   separator_mode_ = mode;
@@ -237,6 +247,12 @@ void MenuPanel::addGroup(std::unique_ptr<MenuGroup> group) {
 void MenuPanel::clearGroups() { groups_.clearGroups(); }
 
 int MenuPanel::groupCount() const { return groups_.groupCount(); }
+
+MenuGroup& MenuPanel::groupAt(int idx) { return groups_.groupAt(idx); }
+
+const MenuGroup& MenuPanel::groupAt(int idx) const {
+  return groups_.groupAt(idx);
+}
 
 bool MenuPanel::isScrolling() const { return scrolling_; }
 

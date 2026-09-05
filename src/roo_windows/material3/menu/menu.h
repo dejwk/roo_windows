@@ -225,6 +225,8 @@ class MenuEntry : public ListEntry {
   void paintWidgetContents(PaintContext& ctx) override;
 
  private:
+  friend class Menu;
+
   struct AdornmentState;
 
   using ListEntry::clearItem;
@@ -232,8 +234,16 @@ class MenuEntry : public ListEntry {
 
   void syncAdornments();
   int16_t trailingLaneWidth() const;
+  void bindToMenu(Menu& owner, uint8_t level, uint16_t row,
+                  uint16_t generation);
+  void unbindFromMenu();
 
   std::unique_ptr<AdornmentState> adornments_;
+  Menu* menu_ = nullptr;
+  uint16_t level_generation_ = 0;
+  uint16_t row_ = 0;
+  uint8_t level_ = 0;
+  bool suppress_next_click_dispatch_ = false;
 };
 
 /// Menu row that owns its item inline and destroys the binding first.
@@ -295,6 +305,8 @@ class MenuGroup final : public Container {
   void onLayout(bool changed, const Rect& rect) override;
 
  private:
+  friend class Menu;
+
   std::vector<MenuEntry*> entries_;
 };
 
@@ -376,6 +388,12 @@ class Menu {
 
  private:
   friend class MenuLevelBuilder;
+  friend class MenuEntry;
+
+  void bindRootEntries();
+  void unbindAllEntries();
+  void invokeEntry(MenuEntry& entry, uint8_t level, uint16_t row,
+                   uint16_t generation);
 
   MenuShowResult showCaptured(::roo_windows::Task& interaction_owner,
                               const Rect& bounds_in_window,

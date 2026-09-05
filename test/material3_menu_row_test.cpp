@@ -15,8 +15,8 @@ static_assert(std::is_base_of<ListItem, MenuItem>::value,
               "menu items reuse the Material 3 list content contract");
 static_assert(std::is_base_of<ListEntry, MenuEntry>::value,
               "menu rows reuse the Material 3 list row substrate");
-static_assert(sizeof(MenuEntry) <= sizeof(ListEntry) + sizeof(void*) + 4,
-              "row adornments remain pay-for-use");
+static_assert(sizeof(MenuEntry) <= sizeof(ListEntry) + 24,
+              "row adornments and transient binding stay bounded");
 
 TEST(Material3MenuRow, TokenTablesCoverAllVisualFamilies) {
   EXPECT_EQ(112, internal::kBaselineMenuTokens.min_width_dp);
@@ -91,7 +91,7 @@ TEST(Material3MenuRow, BindingReflectsStateAndReservesTrailingLane) {
   decorated_row.setMenuItem(decorated);
 
   EXPECT_EQ(&plain, plain_row.menuItem());
-  EXPECT_TRUE(plain_row.isClickable());
+  EXPECT_FALSE(plain_row.isClickable());
   EXPECT_TRUE(decorated_row.visualContext().selected);
   EXPECT_GE(
       decorated_row
