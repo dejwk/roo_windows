@@ -1,12 +1,5 @@
 # Roo Windows Transient Presentation Pins Design
 
-## Implementation status
-
-**In progress.** Phases 1 and 2 are implemented: the layer-scoped pin host is
-available and both slider variants use active-only pins for value indicators.
-Phase 3, keyboard-highlighter adoption, remains outstanding. The status of
-prerequisites is recorded in the [status index](../README.md).
-
 ## Objective
 
 Define a general-purpose, paint-only presentation mechanism for visuals that
@@ -48,6 +41,13 @@ focus, or own layout.
 
 ## Background
 
+**Status: In progress.** Phases 1 and 2 are implemented: the layer-scoped pin
+host is available and both slider variants use active-only pins for value
+indicators. Phase 3, keyboard-highlighter adoption, and the display-coverage
+hosted-pin integration owned by Phase 4 of the transient-surface-host design
+remain outstanding. The status of prerequisites is recorded in the
+[status index](../README.md).
+
 ### Pre-Phase-2 Slider Indicator Path
 
 The indicator remains a non-widget helper in
@@ -86,11 +86,17 @@ locally.
 [non_touch_input_design.md](../implemented/non_touch_input_design.md) already treats tasks,
 popups, and modal dialogs as real routing and focus boundaries.
 [../src/roo_windows/core/main_window.cpp](../../../src/roo_windows/core/main_window.cpp)
-paints those same boundaries in order:
+currently paints those same boundaries in order:
 
 1. regular tasks,
 2. popup tasks,
-3. modal dialog plus scrim.
+3. legacy modal dialog plus scrim.
+
+The initial display-wide transient host adds one composite
+`TransientHostLayer` above task roots. The canonical presentation slot makes
+that hosted layer and the legacy dialog path mutually exclusive, and pin
+traversal treats the attached display-wide host layer as another top-level
+z-scope root.
 
 That ordering is the right place to anchor "always-front within my active
 layer" visuals.
@@ -121,17 +127,26 @@ visuals.
 
 1. A transient visual anchored inside a slider, keyboard, or similar widget
    must escape arbitrary ancestor clipping inside the same window.
-2. The visual must paint above ordinary contents of its owning task, popup, or
-   dialog layer.
+2. The visual must paint above ordinary contents of its owning task, popup,
+   hosted, or legacy-dialog layer.
 3. The visual must remain below higher layers: task pins stay under popups and
-   dialogs, popup pins stay under dialogs.
+   the active composite host or legacy dialog, while popup pins stay under that
+   active top layer.
 4. The default final clip must be the main window bounds, not intermediate
    container bounds.
-5. The mechanism must support widget-anchored and rect-anchored visuals.
+5. The mechanism must support widget-anchored visuals and the owner-scoped,
+   rect-anchored visual of an active display-covered hosted presentation.
 6. The mechanism must support multiple simultaneous pins with deterministic
    within-layer z-order.
 7. The mechanism must remain paint-only by default. It must not add hit
    testing, focus, gesture capture, or layout semantics.
+8. While Phase 7 task coverage is active, every ordinary widget pin whose
+   effective z-scope is the covered owner `TaskPanel` must remain registered but
+   be suppressed by a computed coverage check. A new ordinary widget pin in that
+   scope is admitted and follows the same suppression.
+9. The task-covered presenter's hosted trigger-pin operation must destroy its
+   incoming pin and return `kAnchorUnavailable`; sibling-task pins and every
+   display-coverage pin retain their normal behavior.
 
 ### Rendering and Invalidation Requirements
 
@@ -143,6 +158,9 @@ visuals.
    exclusions, overlays, and decorations needed for its actual geometry before
    lower-z content paints. The host must not assume the full bounds are opaque.
 4. Pins must not expand `maxBounds()` on unrelated ancestor containers.
+5. Entering and leaving task coverage must invalidate every affected pin's
+   current clipped bounds and conservative presented envelope. A still-active
+   pin must resume after finish without a new anchor event.
 
 ### Embedded and API Requirements
 
@@ -161,14 +179,18 @@ visuals.
    result; the transient visual is omitted for that presentation.
 5. The mechanism's object RAM and allocator overhead must be paid only while a
    pin is active.
-6. Interactive anchored surfaces such as full menus or the existing on-screen
-   keyboard remain popup tasks or dialogs, not pins.
+6. Interactive surfaces remain structural widgets, not pins: menus use the
+   composite `TransientHostLayer`, the existing on-screen keyboard remains a
+   popup task, and legacy dialogs retain their direct dialog-and-scrim path.
 7. Contract-defining declarations must carry Doxygen comments and follow the
    repository's `camelCase()` instance-method convention.
 8. Pin painters must follow the single-final-write and foreground-first
    exclusion rules; they must not pre-clear and redraw the same pixels.
 9. Every implementation phase must include focused tests, `Verifies ...`
    comments on non-trivial cases, and the narrowest relevant validation target.
+10. Task-coverage suppression must add no state to an individual pin. Admission,
+    paint eligibility, and finish derive it from the active host and effective
+    z-scope.
 
 ## Design Overview
 
@@ -194,8 +216,8 @@ front-to-back child pass. Immediately before each top-level child, it paints
 that child's pins from highest to lowest pin z-order and lets each pin settle
 its geometry through the shared `PaintContext`:
 
-1. visit the active dialog, popup tasks, and regular tasks in the existing
-   reverse-child paint order,
+1. visit the active composite host or legacy dialog, popup tasks, and regular
+   tasks in the existing reverse-child paint order,
 2. before each root, paint pins whose z-scope is that root,
 3. let each pin register exclusions, overlays, and decorations for its actual
    geometry,
@@ -206,7 +228,7 @@ That produces the wanted behavior:
 
 - a slider in a scroll panel settles its pill above the whole task layer,
 - a keyboard key preview can rise above the keyboard popup's local bounds but
-  still remain below a modal dialog,
+  still remain below an active composite host or legacy dialog,
 - and a menu trigger press retention pin stays above its task contents without
   adding menu-specific root logic.
 
@@ -217,17 +239,18 @@ escape or that intentionally participates in the normal widget paint pipeline.
 Pins are reserved for transient visuals that are semantically "presentation on
 top of the layer," not ordinary content.
 
-![Layer-scoped presentation pins solve ancestor clipping without becoming a second widget tree](figures/transient_presentation_pins_layers.svg)
+![Layer-scoped presentation pins solve ancestor clipping without becoming a second widget tree](../proposed/figures/transient_presentation_pins_layers.svg)
 
-Figure 1. The current slider bubble lives inside the clipped tree. The proposed
-pin settles above the layer root, outside the clipped tree, and is clipped only
-at the window edge unless it asks for a tighter clip.
+Figure 1. Before Phase 2, the slider bubble lived inside the clipped tree. The
+implemented pin settles above the layer root, outside the clipped tree, and is
+clipped only at the window edge unless it asks for a tighter clip.
 
 ## Design Details
 
-### Why The Current Slider Path Still Clips
+### Why the Pre-Phase-2 Slider Path Clipped
 
-The current slider and range slider already do three local things correctly:
+Before Phase 2, the slider and range slider already did three local things
+correctly:
 
 1. they report transient bubble overflow through
    `getParentTransientPaintBounds()`,
@@ -260,12 +283,21 @@ Chosen structure:
 - and window teardown iteratively unlinks and deletes the complete list before
   child teardown begins.
 
-The host permits at most one active pin per registered anchor. One pin can
-compose several related shapes, such as both range-slider indicators. This
-constraint gives widgets a storage-free identity: they show, invalidate, query,
-or hide their active pin through their own address, and do not retain a pin
-pointer or handle. Multiple pins remain supported across distinct anchors and
-retain deterministic registration z-order.
+The widget-facing path permits at most one active pin per registered widget
+anchor. One pin can compose several related shapes, such as both range-slider
+indicators. This constraint gives widgets a storage-free identity: they show,
+invalidate, query, or hide their active pin through their own address, and do
+not retain a pin pointer or handle. Multiple pins remain supported across
+distinct widget anchors and retain deterministic registration z-order.
+
+The display-covered hosted-presenter path separately permits one optional pin
+per active `TransientPresentationRegistration`. The transient host gates this
+path by the registration and retains the successful pin's raw identity for
+dirtying and deterministic removal; the pin list remains owned by `MainWindow`.
+Hosted mode reuses the existing fields without colliding with an ordinary
+widget pin: `anchor_` stores the owner root and `z_scope_root_ == nullptr` is the
+hosted sentinel. Widget-facing duplicate, query, dirty, and hide operations
+match only entries whose `z_scope_root_` is non-null.
 
 The anchor constructs the concrete pin with `new (std::nothrow)` and transfers
 it as a `std::unique_ptr<PresentationPin>` through its widget-facing show
@@ -275,12 +307,17 @@ a variadic `MainWindow` emplace template. The window validates the anchor and
 duplicate constraint, adopts a non-null pointer, and destroys a rejected
 pointer before returning. A null pointer reports `kAllocationFailed`.
 
-The retained `anchor_` is a host-observed geometry and lifetime participant,
-not an unobserved presenter pointer. `Container::detachChild()` asks the window
-to erase pins anchored anywhere in the departing subtree before it clears
-parent links or deletes owned children. Rect-anchored presenters register
-against a stable attached presentation or layer root and keep copied geometry
-inside their heap pin; they do not retain the initiating trigger widget.
+For a widget pin, the retained `anchor_` is a host-observed geometry and
+lifetime participant, not an unobserved presenter pointer.
+`Container::detachChild()` asks the window to erase pins anchored anywhere in
+the departing subtree before it clears parent links or deletes owned children.
+For a hosted rect pin, `anchor_` names the explicit interaction owner's stable
+top-level root and the null `z_scope_root_` marks hosted mode. The effective
+z-scope is `anchor_`; that root supplies lifetime and z-order only. The pin keeps
+copied geometry and paint, and retains neither the initiating trigger widget
+nor a durable layer identity. Owner-subtree teardown first closes the hosted
+session, whose handle-based hide clears the host's raw pointer; the ordinary
+anchor scan then handles any remaining widget pins before parent links clear.
 
 Approximate 32-bit RAM impact:
 
@@ -313,7 +350,24 @@ The host assigns each pin a z-scope root during registration:
 
 - the top-level `TaskPanel` for ordinary task content,
 - the top-level popup `TaskPanel` for popup content,
-- or the active dialog widget.
+- the active display-covered composite `TransientHostLayer` for widget pins
+  inside hosted content,
+- or the active legacy dialog widget.
+
+Task-covered content is the exception. Its composite host is nested in the
+owner `TaskPanel`, where the existing top-level pin stage cannot order or clip
+a pin correctly. Phase 7 therefore keeps ordinary widget pins with that
+effective scope registered but computes them as paint-suppressed while coverage
+is active. New ordinary widget pins are admitted under the same rule. The
+covered presenter's hosted trigger pin is different: because it cannot render
+during the only session that owns it, the host destroys the incoming pin and
+returns `kAnchorUnavailable` without changing the presentation. Sibling-task
+and display-coverage pins remain eligible.
+
+The optional rect pin of a display-covered hosted presenter deliberately uses
+the interaction owner's `TaskPanel`, not `TransientHostLayer`, as its z-scope.
+It therefore paints above the owner's content and below the window-level
+composite host.
 
 `MainWindow` paints the pin immediately before that root in the framework's
 front-to-back paint order, then excludes the settled pin pixels from the root
@@ -342,15 +396,15 @@ exclusions before that lower-z content paints. That is the decisive change.
 
 Consequences:
 
-- pins no longer need the current slider bubble trick of pre-painting inside
+- pins no longer need the pre-Phase-2 slider bubble trick of pre-painting inside
   the slider's local pass,
 - each pin excludes only pixels its paint plan has fully settled,
 - and no lower-z sibling in the same layer can erase them later.
 
-Higher layers still win naturally because `MainWindow` already visits dialogs
-before popups and popups before tasks. Their pixels are settled before a
-lower-layer pin is reached, and the existing clipper state prevents the pin
-from overwriting them.
+Higher layers still win naturally because `MainWindow` visits the composite
+host or legacy dialog before popups, and popups before tasks. Their pixels are
+settled before a lower-layer pin is reached, and the existing clipper state
+prevents the pin from overwriting them.
 
 Within one z-scope root, later successful registration is higher. Pins are
 therefore painted in reverse registration order, matching the widget-tree
@@ -388,22 +442,37 @@ The envelope union handles an empty operand explicitly rather than passing an
 empty sentinel directly to `Rect::Extent()`.
 After the entire window paint completes before its deadline, the host commits
 each eligible pin's `presented_bounds_` to its current clipped bounds and clears
-the envelope for pins suppressed by anchor visibility. If the deadline
-interrupts the frame, the host does not commit: the conservative union remains,
-and `paintWindow()` already retains the interrupted frame's redraw bounds.
+the envelope for pins suppressed by anchor visibility or task coverage. If the
+deadline interrupts the frame, the host does not commit: the conservative union
+remains, and `paintWindow()` already retains the interrupted frame's redraw
+bounds.
 Hiding before the first paint therefore restores an empty envelope; hiding
 after a partial frame restores every region that the pin may have touched.
 
 `MainWindow::paintWindow()` runs `preparePresentationPinsForPaint()` before its
 clean-window early return and before it constructs the redraw-clipped canvas.
 For each active pin, that pass resolves effective anchor visibility and current
-bounds. A visibility or geometry difference invalidates the old/new union, so
-ancestor scrolling and layout can expand the frame's redraw clip before paint
-begins. The no-pin path is one null-head check. For $P$ active pins and maximum
-widget depth $D$, preflight costs at most $P \times D$ parent-pointer
-comparisons plus $P$ bounds evaluations per `paintWindow()` call. The normal
-interactive case has one pin, so polling avoids permanent observer state and
-removes move and visibility hooks from every widget.
+bounds. It also derives task-coverage suppression by comparing the pin's
+effective z-scope with the active host's covered owner panel; the pin stores no
+suppression bit. A visibility or geometry difference invalidates the old/new
+union, so ancestor scrolling and layout can expand the frame's redraw clip
+before paint begins. The no-pin path is one null-head check. For $P$ active pins
+and maximum widget depth $D$, preflight costs at most $P \times D$
+parent-pointer comparisons plus $P$ bounds evaluations per `paintWindow()`
+call. The normal interactive case has one pin, so polling avoids permanent
+observer state and removes move and visibility hooks from every widget.
+
+At the final non-failing task-coverage admission step,
+`invalidatePresentationPinsForScope()` scans pins with the covered panel as
+their effective z-scope and invalidates the union of each pin's current clipped
+bounds and `presented_bounds_`. It does not unlink or delete a pin. Finish
+repeats that invalidation while the covered scope is still known, then clears
+coverage so the same pins become paint-eligible on the next frame. This covers
+both a pin whose old pixels are still represented by `presented_bounds_` and one
+whose suppressed frame already committed an empty envelope. A pin shown while
+covered is registered normally and invalidates its initial bounds, but paint and
+commit treat it as suppressed until finish. Ordinary hide, subtree detach, and
+window teardown retain their existing deletion behavior.
 
 Geometry polling cannot detect a content-only change when bounds stay equal.
 An anchor therefore calls `setPresentationPinDirty()` whenever data read by its
@@ -486,6 +555,14 @@ replaced. Phase 2 must demonstrate no pin-related target-ABI size increase in
 `Slider` or `RangeSlider`; active heap payload and allocator overhead are
 reported separately.
 
+For example, a `Slider` configured with
+`SliderValueIndicatorBehavior::kAlways` can already have a registered pin when
+its task becomes covered. Admission invalidates its current and presented
+bounds, and `hasPresentationPin()` remains true while computed suppression keeps
+it off screen. Finish invalidates those bounds again and removes the computed
+suppression. The next paint reuses and displays the same pin without a slider
+visibility transition, a new anchor event, or another allocation.
+
 ### Keyboard And Menu Adoption
 
 The pin system is complementary to popup tasks, not a replacement for them.
@@ -510,9 +587,15 @@ The presenter-owned trigger retention already described in
 [material3_menus_design.md](../proposed/material3_menus_design.md) uses the same
 `PresentationPin` API instead of introducing a menu-only hook in
 `MainWindow`. The pin host becomes the shared implementation, and menu code
-supplies copied trigger-specific geometry and paint. It registers against the
-attached task or popup root, not the initiating trigger widget, so the pin does
-not weaken the transient-presenter copied-anchor contract.
+supplies copied trigger-specific geometry and paint. Show or reanchor validates
+the live trigger source in the explicit interaction owner's current top-level
+task layer and copies it synchronously. The host gates the optional pin by the
+active registration, uses that owner root for lifetime and effective z-order,
+and retains a raw pin handle for exact removal. This optional hosted pin is
+available only for display coverage. Under task coverage it could not paint
+before the owning registration finishes, so the host destroys the candidate,
+returns `kAnchorUnavailable`, and leaves the presentation itself active. No
+trigger pointer, layer token, or generation is retained.
 
 ## Proposed API
 
@@ -529,9 +612,14 @@ namespace roo_windows {
 
 class Widget;
 
+namespace internal {
+class TransientSurfaceHost;
+}  // namespace internal
+
 /// Result of attempting to register a presentation pin.
 enum class PresentationPinShowResult : uint8_t {
-  /// The pin was registered and its initial bounds were invalidated.
+  /// The pin was registered and its initial bounds were invalidated. An
+  /// ordinary widget pin may still be paint-suppressed by task coverage.
   kShown,
   /// The pin was already registered; its existing registration is unchanged.
   /// The newly supplied pin is destroyed.
@@ -555,7 +643,8 @@ class PresentationPin {
  protected:
   PresentationPin() = default;
 
-  /// Returns the registered anchor while this host-owned pin is active.
+  /// Returns the registered anchor of a widget pin while it is active.
+  /// Hosted copied-geometry pins must not use this as a geometry source.
   Widget& anchor() const { return *anchor_; }
 
   /// Returns current paint bounds in MainWindow coordinates.
@@ -576,7 +665,14 @@ class PresentationPin {
  private:
   friend class MainWindow;
 
+  bool isHosted() const { return z_scope_root_ == nullptr; }
+  Widget& effectiveZScopeRoot() const {
+    return *(isHosted() ? anchor_ : z_scope_root_);
+  }
+
   std::unique_ptr<PresentationPin> next_;
+  // Always the lifetime anchor. For hosted pins this is also the effective
+  // z-scope root, and z_scope_root_ is null as the hosted-mode sentinel.
   Widget* anchor_ = nullptr;
   Widget* z_scope_root_ = nullptr;
   Rect presented_bounds_{0, 0, -1, -1};
@@ -588,7 +684,8 @@ class Widget {
   ///
   /// At most one pin may be registered per anchor. A null pointer reports
   /// `kAllocationFailed`. The call consumes and destroys `pin` when the anchor
-  /// is unavailable or already has an active pin.
+  /// is unavailable or already has an active pin. Task coverage still admits
+  /// an ordinary widget pin, although paint is suppressed while coverage lasts.
   PresentationPinShowResult showPresentationPin(
       std::unique_ptr<PresentationPin> pin);
 
@@ -619,6 +716,7 @@ class MainWindow : public Container {
  private:
   friend class Container;
   friend class Widget;
+  friend class internal::TransientSurfaceHost;
 
   /// Validates `anchor` and adopts `pin` into the active registry.
   PresentationPinShowResult showPresentationPin(
@@ -633,6 +731,18 @@ class MainWindow : public Container {
   /// Removes and deletes the active pin registered to `anchor`, if any.
   void hidePresentationPin(const Widget& anchor);
 
+  /// Adopts one hosted copied-geometry pin and returns its non-owning identity
+  /// through `active_pin`. Uses a null z-scope field as the hosted-mode marker.
+  PresentationPinShowResult showHostedPresentationPin(
+      Widget& owner_root, std::unique_ptr<PresentationPin> pin,
+      PresentationPin*& active_pin);
+
+  /// Invalidates a hosted pin previously returned by the show helper.
+  void setHostedPresentationPinDirty(PresentationPin& active_pin);
+
+  /// Unlinks a hosted pin and clears the host's non-owning identity.
+  void hideHostedPresentationPin(PresentationPin*& active_pin);
+
   /// Marks `rect` dirty and invalidated and includes it in the next display
   /// redraw clip.
   void invalidatePresentationRegion(const Rect& rect);
@@ -640,7 +750,12 @@ class MainWindow : public Container {
   /// Deletes pins before `subtree` loses its parent chain.
   void presentationAnchorSubtreeDetaching(Widget& subtree);
 
-  /// Polls active pin visibility and bounds before choosing the redraw clip.
+  /// Invalidates current and presented bounds for pins whose effective z-scope
+  /// changes task-coverage suppression; it does not unlink them.
+  void invalidatePresentationPinsForScope(Widget& scope_root);
+
+  /// Polls active pin visibility, coverage suppression, and bounds before
+  /// choosing the redraw clip.
   void preparePresentationPinsForPaint();
 
   /// Settles eligible pins registered above `root` in pin z-order.
@@ -654,6 +769,27 @@ class MainWindow : public Container {
 
 }  // namespace roo_windows
 ```
+
+The widget-facing API remains unchanged. The display-coverage transient-host
+integration uses the private handle-based helpers behind the registration-gated
+`TransientSurfaceHost` methods specified by
+[transient_surface_host_design.md](../proposed/transient_surface_host_design.md).
+On successful display-coverage admission, `showHostedPresentationPin()` stores
+the interaction owner's top-level root in `anchor_`, leaves `z_scope_root_`
+null, and writes the adopted object's address to the host's initially null
+`active_pin` slot. The effective scope helper uses `z_scope_root_` for widget
+pins and `anchor_` for hosted pins. Handle-based dirty and hide operations verify
+that identity in the list; hide unlinks the object and clears the caller's slot.
+Thus the path does not consume the owner's widget-pin identity and adds no layer
+token or `PresentationPin` field.
+
+Task coverage does not call that hosted adoption helper: the
+registration-gated host entry point consumes and destroys the incoming pin,
+returns `kAnchorUnavailable`, and preserves its existing presentation. Ordinary
+widget calls still reach `MainWindow::showPresentationPin()`, including calls
+from the covered owner subtree; successful pins remain queryable in the list
+but the paint path computes them as suppressed from the active host and their
+effective z-scope.
 
 `MainWindow::paintChildren()` specializes the existing compact
 `Container::paintChildren()` loop. It keeps the same reverse iteration,
@@ -701,8 +837,9 @@ The slider allocates and transfers the pin only on the hidden-to-visible
 transition. The static cast is safe because this private creation path
 registers `ValueIndicatorPin` only through a `Slider`; no RTTI is required.
 The private nested class can reuse existing private bubble geometry and paint
-helpers without adding widget-facing geometry API. Range slider, keyboard, and
-framework presenter pins follow the same pattern.
+helpers without adding widget-facing geometry API. Range-slider and keyboard
+widget pins follow the same pattern. A hosted presenter pin instead stores its
+copied geometry and paint inline and uses the private handle-based path below.
 
 `Widget::showPresentationPin()` routes through its attached `MainWindow`.
 The host treats a null pointer as `kAllocationFailed`, then validates attachment
@@ -711,15 +848,31 @@ caches the anchor and direct layer child, initializes the presented envelope,
 links the unique pointer at the list head, and invalidates the initial bounds.
 On rejection the by-value unique pointer destroys the candidate. An invisible
 anchor is valid but its pin remains suppressed until preflight observes it as
-visible. Reparenting follows the existing detach-then-attach lifecycle: detach
+visible. An anchor in a task-covered owner panel is likewise valid: the call
+returns `kShown`, retains the pin, and suppresses its paint until coverage
+finishes. Reparenting follows the existing detach-then-attach lifecycle: detach
 deletes the old pin, and the next presentation transition allocates a new one.
 
-`MainWindow::~MainWindow()` iteratively unlinks and deletes the pin list at the
-start of its destructor body, before it detaches popup and task children. The
-iterative path moves `next_` out before each delete so destruction does not
-recurse with list depth. Hide and subtree-detach removal use the same
-pointer-to-`unique_ptr` unlink operation; deleting one pin never deletes the
-remaining tail.
+The private hosted show helper instead requires an attached owner root and an
+initially null handle. It adopts the pin with `anchor_ = &owner_root` and
+`z_scope_root_ = nullptr`, then returns the stable heap address through that
+handle. Widget-keyed operations skip entries with a null z-scope field. Pin
+painting uses `z_scope_root_` when non-null and otherwise uses `anchor_` as the
+effective scope. The handle-based dirty and hide helpers verify the exact list
+member; hide unlinks it and nulls the handle. Before an owner root detaches,
+task teardown makes the owner unavailable and closes its hosted session, so no
+raw hosted handle survives the subsequent generic anchor scan.
+
+`DisplayWindow::stop()` permanently shuts down the canonical presentation slot
+before `Application::~Application()` clears tasks. That gives an associated
+transient host a chance to hide its rect pin and detach the composite layer.
+`MainWindow::~MainWindow()` repeats the idempotent shutdown as a fallback, then
+iteratively unlinks and deletes any remaining widget-pin list before it detaches
+popup and task children. The iterative path moves `next_` out before each delete
+so destruction does not recurse with list depth. Hide and subtree-detach removal
+use the same pointer-to-`unique_ptr` unlink operation; deleting one pin never
+deletes the remaining tail. Task-coverage transition invalidation does not use
+that unlink path and never changes registration.
 
 ## Implementation Plan
 
@@ -871,6 +1024,26 @@ Validation:
 - `bazel test //:keyboard_presentation_pin_test`
 - `bazel test //:overlay_test`
 
+### Dependent Phase 7: Coordinate Task-Coverage Suppression
+
+The task-bounded extension in
+[display_modal_hosting_design.md](../proposed/display_modal_hosting_design.md)
+must:
+
+1. derive ordinary-pin suppression from the active task-covered host and each
+   pin's effective z-scope without adding a `PresentationPin` field,
+2. call `invalidatePresentationPinsForScope()` at admission and finish to
+   invalidate each matching pin's current clipped and presented bounds without
+   unlinking it,
+3. continue to admit ordinary widget pins while covered, but reject the
+   presenter's session-local hosted trigger pin with `kAnchorUnavailable`, and
+4. preserve normal hide, subtree-detach, sibling-task, and display-coverage
+   behavior.
+
+Validation extends `transient_presentation_pin_test` and the Phase 7 host tests
+with transition invalidation, retained registration, automatic resumption, and
+zero per-pin suppression-state cases.
+
 ## Testing Plan
 
 Validation proceeds from the focused host or component target to
@@ -879,9 +1052,19 @@ smoke case. Phase 1 covers pin state, lifecycle, invalidation, ordering, and
 rendering, including allocation failure and repeated allocation/deletion.
 Phase 2 covers zero dormant slider RAM and slider/range-slider adoption in task,
 scrolled, popup, and dialog layers. Phase 3 covers keyboard allocation,
-persistent size, popup-layer rendering, and focus/ownership invariants. Every
-non-trivial test carries a `Verifies ...` comment immediately before its
-declaration.
+persistent size, popup-layer rendering, and focus/ownership invariants. Host
+integration additionally covers coexistence with a widget pin on the same owner
+root, handle clearing, owner teardown, and unchanged widget lookup. Phase 7
+coverage additionally proves that admission invalidates and computed-suppresses
+a pre-existing owner-panel pin without removing its registration; a new
+ordinary widget pin returns `kShown` but remains invisible; finish invalidates
+current and presented bounds; and an existing `kAlways` slider pin resumes with
+the same identity and no new anchor event. It also verifies that the covered
+presenter's hosted trigger pin returns `kAnchorUnavailable`, sibling-task pins
+remain visible, display-coverage pins keep their normal ordering, ordinary hide
+and detach still delete, and no default-window-clipped owner pin crosses the
+panel boundary. Every non-trivial test carries a `Verifies ...` comment
+immediately before its declaration.
 
 ## Caveats
 
@@ -894,14 +1077,27 @@ leave stale pixels or repaint too much. The implementation must therefore keep
 the "bounds first, paint second" discipline and test old and new invalidation
 unions carefully.
 
-The registered `anchor_` is narrowly scoped to attached widget-tree geometry
-and teardown. It is not a general weak reference and must not be copied into
-queued presentation data. Rect-anchored presenters retain copied geometry and
-use their attached layer root solely as the registration anchor, consistent
-with the transient-presenter lifetime design. The host-observed pin registry is
-the explicit live-anchor registration extension required by that design: it
-provides pre-paint geometry polling and detach notification, while ordinary
-presenters continue to snapshot anchors.
+For ordinary widget pins, the registered `anchor_` is narrowly scoped to live
+widget-tree geometry and teardown. It is not a general weak reference and must
+not be copied into queued presentation data. A display-covered hosted rect pin
+instead retains copied geometry and uses the explicit interaction owner's
+top-level root only for lifetime and effective z-order. The null
+`z_scope_root_` sentinel separates it from widget lookup, and the host's raw
+handle supplies exact removal identity. Neither the initiating widget nor a
+durable layer or generation identity is retained.
+
+Task-bounded coverage cannot paint a pin scoped to the covered owner
+`TaskPanel`. Its composite host is nested inside that panel, so the existing
+root-stage pin would paint above rather than below the host. Ordinary slider
+and range-slider pins also default to the full-window clip and could escape
+over a sibling task. The host therefore computes those ordinary widget pins as
+suppressed while retaining their registrations, including pins admitted during
+coverage. Admission and finish invalidate their current and presented bounds,
+so a still-active pin resumes automatically. The covered presenter's hosted
+trigger pin alone is destroyed with `kAnchorUnavailable`: its registration and
+the coverage interval have the same lifetime, so it could never render. No
+per-pin suppression state is stored. A future clipped nested pin stage is
+required to make owner-panel pins visible during coverage.
 
 Heap allocation introduces allocator metadata, bounded allocation latency, and
 possible fragmentation. The design limits that exposure to one small allocation
@@ -1009,8 +1205,12 @@ schedule the full old/new union before canvas construction.
    future feature genuinely needs hit testing outside the widget tree. That is
    a different problem than paint-only transient feedback and should not be
    folded into `PresentationPin`.
-2. Fold the planned menu trigger retention in
-   [material3_menus_design.md](../proposed/material3_menus_design.md) onto this shared pin
-   host once the menu presenter lands.
+2. Add the display-coverage owner-scoped, active-registration pin integration
+   in Phase 4 of
+   [transient_surface_host_design.md](../proposed/transient_surface_host_design.md),
+   then use it for the copied menu trigger visual described by
+   [material3_menus_design.md](../proposed/material3_menus_design.md).
 3. Extend keyboard adopters from the press highlighter to richer key preview or
    selection affordances as those surfaces are implemented.
+4. Add a clipped nested task pin stage only if task-covered components require
+   owner-panel pins to remain visible rather than registered but suppressed.

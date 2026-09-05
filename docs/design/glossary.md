@@ -17,10 +17,11 @@ that policy and deletes the child.
 ### Borrowed object
 
 An object used without taking allocation ownership. The borrower must stop
-using and structurally detach it before its owner destroys it. `Task` entries
-are borrowed `Activity*` objects. Moving `WidgetRef(Widget&)` into
-`attachChild()` attaches a borrowed widget; the container subsequently stores
-only its raw pointer.
+using and structurally detach it before its owner destroys it. A `Task`
+borrows either one fixed content root or one caller-owned `NavigationHost`; a
+`NavigationHost` in turn borrows its `Destination` entries. Moving
+`WidgetRef(Widget&)` into `attachChild()` attaches a borrowed widget; the
+container subsequently stores only its raw pointer.
 
 ### WidgetRef
 
@@ -35,7 +36,8 @@ the slot goes through `detachChild()`, which deletes only a parent-owned child.
 
 The framework object that provides structural placement or a scarce runtime
 slot. A host does not necessarily own the allocation. `MainWindow` hosts the
-active dialog and its scrim; a `TaskPanel` hosts the current activity widget.
+active dialog and its scrim; a `TaskPanel` hosts its task's fixed content or
+the current content supplied by its optional navigation host.
 
 ### Owner
 
@@ -60,30 +62,33 @@ is not a valid lifetime token.
 
 ## Application Navigation
 
-### Activity
+### Destination
 
-A borrowed entry on a `Task` route stack. It supplies one root widget and
-receives start, resume, pause, stop, and semantic Back lifecycle calls. For
-example, opening a full-screen editor can push an activity above a settings
-activity.
+A caller-owned, borrowed entry in an optional `NavigationHost`. It supplies
+one content root and receives start, resume, pause, stop, and semantic Back
+lifecycle calls. For example, a navigation host can push a full-screen editor
+destination above a settings destination.
 
 ### Task
 
-The framework route-stack owner for one region of application UI. A task can
-fill the display or occupy a smaller pane. Back pops its current activity only
-when more than the root remains.
+The framework interaction owner for one region of application UI. A task owns
+focus, text editing, physical-key activation, semantic Back fallback, and its
+structural `TaskPanel`. It borrows either fixed direct content or an optional
+`NavigationHost`; direct-content tasks allocate no navigation history.
 
 ### Route
 
-A persistent application navigation entry represented by an `Activity` in a
-`Task`. A dialog, menu, snackbar, or modal sheet is temporary UI and is not a
+A persistent application navigation entry represented by a `Destination` in
+an optional `NavigationHost`. A task with fixed direct content has no route
+history. A dialog, menu, snackbar, or modal sheet is temporary UI and is not a
 route.
 
 ### Semantic Back request
 
-A source-independent navigation request used by UI Back buttons, hardware Back,
-Escape, and application code. It first offers dismissal to eligible temporary
-UI, then activity-local state, and finally the target task's route stack.
+A task-explicit navigation request used by UI Back buttons, hardware Back,
+Escape, and application code. `Task::requestBack()` first offers the request to
+the root interactive transient, then to the task's optional `NavigationHost`,
+and finally to the task-local fallback callback.
 
 ## Temporary UI
 
@@ -125,17 +130,17 @@ and do not occupy additional global slots.
 
 The existing task whose focus manager, physical-key route, semantic Back
 context, and lifetime govern a hosted interactive transient. Associating a
-surface with an interaction owner does not make that surface a task, activity,
-or route. The presenting component supplies the owner explicitly; the host does
-not infer it from focus, z-order, or recent input.
+surface with an interaction owner does not make that surface a task,
+destination, or route. The presenting component supplies the owner explicitly;
+the host does not infer it from focus, z-order, or recent input.
 
 ### Transient coverage
 
 The structural region whose underlying content is blocked by a hosted
-transient. Display coverage attaches the shared barrier and hosted root in the
-window's final band. Task coverage attaches the same reusable host children in
-the interaction owner's task panel and leaves sibling tasks interactive.
-Coverage is independent of which task is the interaction owner.
+transient. Display coverage attaches the shared composite host layer in the
+window's final band. Task coverage attaches the same reusable layer in the
+interaction owner's task panel and leaves sibling tasks interactive. Coverage
+is independent of which task is the interaction owner.
 
 ### Presentation chain
 
@@ -146,9 +151,9 @@ deepest submenu without requiring a global list of all three surfaces.
 ### Anchor
 
 The widget or geometry from which a popup is positioned, such as the overflow
-icon that opens a menu. A presenter snapshots the anchor's bounds during
-`show()` rather than retaining the widget pointer after its activity can be
-popped.
+icon that opens a menu. A presenter synchronously copies the anchor's bounds
+during `show()` rather than retaining the widget pointer after task content can
+be replaced or detached.
 
 ### Scrim
 
@@ -160,7 +165,8 @@ use a scrim.
 
 A surface painted above its normal task content, often near an anchor. Popup
 describes placement, not ownership or Back behavior: the long-lived software
-keyboard and a short-lived menu can both use popup layers.
+keyboard uses a popup task, while a short-lived menu uses the shared transient
+host.
 
 ### Modal
 
@@ -175,10 +181,13 @@ the presentation.
 
 ### Finish
 
-The idempotent terminal operation that disables input, detaches temporary
-surfaces and attached content, clears host reachability, changes state to idle,
-and only then delivers completion. Detachment deletes parent-owned content and
-leaves borrowed content alive according to the container ownership flag.
+The idempotent terminal operation that disables input, detaches hosted surface
+structure and any session-bound content, clears host reachability, changes
+state to idle, and only then delivers completion. Persistent presenter children
+can remain inside the now-detached root until replacement, explicit clearing,
+or presenter destruction. When a content attachment ends, detachment deletes
+parent-owned content and leaves borrowed content alive according to the
+container ownership flag.
 
 ### Completion
 

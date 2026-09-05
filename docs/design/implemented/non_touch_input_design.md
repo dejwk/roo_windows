@@ -1,62 +1,37 @@
 # Roo Windows Non-Touch Input and Keyboard Navigation Design
 
-## Implementation status
-
-**Implemented.** Phases 1 through 6 are implemented: key acquisition,
-lifecycle-safe focus state plumbing, simple-control activation, scroll/value
-control navigation, structured navigation surfaces, and hardware-keyboard text
-entry. The status of existing and outstanding prerequisites is recorded in the
-[status index](../README.md).
-
 ## Objective
 
 Add framework-level support for non-touch displays to `roo_windows`, with
 keyboard navigation as the first-class new input path and mouse / pointer
-support as a later extension.
-
-The design must preserve the existing touch model, stay within the library's
-embedded memory and paint budgets, and make the UI usable on displays that do
-not expose touch hardware at all.
-
-The intended end state is that a user can:
-
-- move focus through the active UI using Tab or directional keys,
-- see focused, hovered, pressed, selected, and activated visuals resolve
-  consistently,
-- activate clickables, operate dialogs, adjust value controls, and scroll
-  content without touch,
-- edit text from a hardware keyboard,
-- and later use a mouse without reworking the same core contracts again.
-
-This is a keyboard-first design. Mouse support is deliberately secondary.
+support as a later extension, while preserving the existing touch model and
+embedded resource bounds.
 
 ## Motivation
 
-`roo_windows` already contains many of the visual concepts needed for non-touch
-interaction, but not the runtime machinery.
+Before this work, `roo_windows` contained many of the visual concepts needed
+for non-touch interaction, but not the runtime machinery. It already:
 
-Today the library:
-
-- stores `hover` and `focused` bits on `Widget`,
-- resolves hover, focus, selected, activated, dragged, and pressed overlays in
+- stored `hover` and `focused` bits on `Widget`,
+- resolved hover, focus, selected, activated, dragged, and pressed overlays in
   the shared paint path,
-- and several Material 3 component designs already refer to focused and hovered
+- and several Material 3 component designs already referred to focused and hovered
   visuals.
 
-At the same time, the runtime is still explicitly touch-centric:
+At the same time, its runtime was explicitly touch-centric:
 
-- `Application` owns a `TouchSensor` and a `GestureDetector`,
-- the event loop only drains touch input,
-- widget interaction is routed through touch gesture callbacks,
-- there is no focus manager,
-- there is no keyboard event model,
-- there are no focus traversal contracts,
-- and emulation is wired to a fake touch controller rather than host keyboard
+- `Application` owned a `TouchSensor` and a `GestureDetector`,
+- the event loop drained only touch input,
+- widget interaction was routed through touch gesture callbacks,
+- there was no focus manager,
+- there was no keyboard event model,
+- there were no focus traversal contracts,
+- and emulation was wired to a fake touch controller rather than host keyboard
   or mouse events.
 
-That mismatch is now the main blocker. The missing work is not just "add a few
-key handlers". The library needs a framework-owned interaction model for
-non-touch input.
+That mismatch required more than a few key handlers. It required
+framework-owned input routing, task-local focus and activation state, and
+component-specific key behavior.
 
 The existing semantic endpoint for simple controls is already `onClicked()`:
 touch gesture recognition eventually schedules that callback through the
@@ -68,46 +43,55 @@ can express that meaning in `onKeyEvent()`.
 
 ## Background
 
-### Current Status in `roo_windows`
+**Status: Implemented with a scoped-focus follow-on.** Key acquisition,
+task-local focus and traversal, simple-control activation, scroll/value-control
+navigation, structured navigation surfaces, and hardware-keyboard text entry
+are implemented. `FocusScope` is declared, but presenter-scope entry,
+containment, exit, and restoration remain the P1.6b work specified by
+[Transient surface hosting](../proposed/transient_surface_host_design.md).
+Automatic popup source capture remains Future Work. The
+[status index](../README.md) records the wider dependency state.
 
-As of 2026-07:
+### Original Baseline in `roo_windows`
+
+When this design was proposed in 2026-07:
 
 - [src/roo_windows/core/application.h](../../../src/roo_windows/core/application.h)
   and [src/roo_windows/core/application.cpp](../../../src/roo_windows/core/application.cpp)
-  own the top-level event loop and currently route only touch input.
+  owned the top-level event loop and routed only touch input.
 - [src/roo_windows/core/touch_sensor.h](../../../src/roo_windows/core/touch_sensor.h)
-  polls the underlying display for touch state and emits `DOWN` / `MOVE` /
+  polled the underlying display for touch state and emitted `DOWN` / `MOVE` /
   `UP` samples.
 - [src/roo_windows/core/gesture_detector.h](../../../src/roo_windows/core/gesture_detector.h)
-  translates those raw samples into gesture callbacks such as `onDown()`,
+  translated those raw samples into gesture callbacks such as `onDown()`,
   `onShowPress()`, `onSingleTapUp()`, `onDragStart()`, `onDrag()`,
   `onDragFinished()`, and `onFling()`.
-- [src/roo_windows/core/widget.h](../../../src/roo_windows/core/widget.h) exposes a
-  touch-oriented interaction surface. The public state bits include
-  `kWidgetHover` and `kWidgetFocused`, but there are no public or protected
+- [src/roo_windows/core/widget.h](../../../src/roo_windows/core/widget.h) exposed a
+  touch-oriented interaction surface. Its state bits included
+  `kWidgetHover` and `kWidgetFocused`, but there were no public or protected
   mutators for either state and no focus traversal API.
 - [src/roo_windows/core/widget.cpp](../../../src/roo_windows/core/widget.cpp)
-  already accounts for hover and focus in overlay opacity, transient paint
+  already accounted for hover and focus in overlay opacity, transient paint
   bounds, and invalidation.
 - [src/roo_windows/core/task.h](../../../src/roo_windows/core/task.h),
   [src/roo_windows/core/task.cpp](../../../src/roo_windows/core/task.cpp),
   [src/roo_windows/core/main_window.h](../../../src/roo_windows/core/main_window.h),
   and [src/roo_windows/core/main_window.cpp](../../../src/roo_windows/core/main_window.cpp)
-  already define the active-layer routing boundaries for tasks, popups, and
+  already defined the active-layer routing boundaries for tasks, popups, and
   dialogs, but only for touch.
 - [src/roo_windows/widgets/text_field.h](../../../src/roo_windows/widgets/text_field.h)
   and [src/roo_windows/widgets/text_field.cpp](../../../src/roo_windows/widgets/text_field.cpp)
-  contain a shared `TextFieldEditor` and `KeyboardListener`, but they are
+  contained a shared `TextFieldEditor` and `KeyboardListener`, but they were
   wired to the on-screen [activities/keyboard.h](../../../src/roo_windows/activities/keyboard.h)
-  activity, not to a hardware keyboard source.
+  surface, not to a hardware keyboard source.
 - [src/roo_windows/material3/list/list.h](../../../src/roo_windows/material3/list/list.h)
-  already carries `pressed`, `focused`, and `hovered` inside
+  already carried `pressed`, `focused`, and `hovered` inside
   `ListEntryVisualContext`, proving that some families already expect focus and
   hover to exist as real runtime concepts.
-- [emulation/main.cpp](../../../emulation/main.cpp) sets up a fake touch controller
-  for host emulation. It does not bind host keyboard or mouse events into the
+- [emulation/main.cpp](../../../emulation/main.cpp) set up a fake touch controller
+  for host emulation. It did not bind host keyboard or mouse events into the
   library.
-- [library.json](../../../library.json) still describes the project as a
+- [library.json](../../../library.json) described the project as a
   touch-based UI library.
 
 ### Existing Local Seams Worth Reusing
@@ -115,8 +99,10 @@ As of 2026-07:
 Several local pieces already fit a keyboard-first extension.
 
 1. [src/roo_windows/core/application_context.h](../../../src/roo_windows/core/application_context.h)
-   is now the application-owned runtime service bundle. It is the correct home
-   for a focus manager or similar shared interaction service.
+   established the pattern of centralized runtime services. The implemented
+   model gives attached UI tasks their own focus manager and retains the
+   context manager only as a compatibility fallback for legacy unattached
+   routes.
 2. [src/roo_windows/core/widget_event_dispatcher.h](../../../src/roo_windows/core/widget_event_dispatcher.h)
    already centralizes sparse widget-related event state in application-owned
    storage rather than charging every widget instance.
@@ -126,7 +112,7 @@ Several local pieces already fit a keyboard-first extension.
 4. [src/roo_windows/core/widget.cpp](../../../src/roo_windows/core/widget.cpp)
    already has the shared invalidation and overlay math needed when hover or
    focus starts and stops.
-5. The touch path itself works and should remain the touch path. It does not
+5. The touch path itself worked and remains the touch path. It does not
    need to be redesigned into an abstract pointer engine before keyboard
    navigation lands.
 
@@ -154,7 +140,7 @@ This design fills that gap.
 The new interaction model must respect four existing framework constraints.
 
 1. Touch behavior must remain compatible.
-   Existing touch-driven widgets, tests, and examples should not need a broad
+   Existing touch-driven widgets, tests, and examples must not need a broad
    rewrite.
 2. Hot interaction paths must avoid allocation.
    Focus changes, key dispatch, hover updates, click animation, and paint-time
@@ -164,7 +150,7 @@ The new interaction model must respect four existing framework constraints.
    framework. Keyboard focus must obey those same boundaries.
 4. Non-touch input sources are not display features.
    A hardware keyboard, keypad, rotary encoder, USB HID host, BLE remote, or
-   host-emulator key stream should not be forced through
+   host-emulator key stream must not be forced through
    `roo_display::Display`.
 
 ## Requirements
@@ -199,16 +185,16 @@ The new interaction model must respect four existing framework constraints.
 5. The framework must expose container override points for focus traversal and
    preferred initial focus.
 6. The keyboard path must not synthesize fake touch coordinates.
-7. The base framework should provide semantic defaults so simple clickables do
+7. The base framework must provide semantic defaults so simple clickables do
    not each need bespoke key handling.
 
 ### Embedded Constraints
 
 1. Do not allocate on focus transfer, key dispatch, hover changes, paint, or
    pointer move.
-2. Keep per-widget storage overhead small; prefer app-owned runtime services.
+2. Keep per-widget storage overhead small; retain routing and interaction state
+   in task- or application-owned runtime services.
 3. Preserve the current click animation and overlay invalidation behavior.
-4. Do not force every popup to capture keyboard focus.
 
 ### Non-Goals for the First Implementation
 
@@ -232,10 +218,13 @@ displays usable.
 
 The design extends the framework in layers.
 
-1. Keep the current touch pipeline for touch.
-2. Add an optional key-source abstraction.
-3. Add an application-owned focus manager.
-4. Extend `Widget` with key-event hooks and shared keyboard activation.
+1. Retain the current touch pipeline for touch.
+2. Route optional key sources through an application-owned input router to an
+   explicitly selected task.
+3. Give each task its own focus manager, editor, and keyboard-activation state;
+   retain the application-context manager only for the legacy non-task path.
+4. Extend `Widget` with focus and key-event hooks and reuse the existing click
+   semantic for simple keyboard activation.
 5. Roll out keyboard behavior across widget families incrementally.
 6. Add mouse / pointer behavior later on top of the same focus and lifecycle
    model, while defining pointer routing only when it is implemented.
@@ -249,51 +238,57 @@ show-press, fling, and touch-target expansion semantics. Keyboard navigation
 has none of those properties. The correct model is focus plus key dispatch,
 with activation reusing the existing click semantic.
 
-The proposed runtime shape is:
+The implemented runtime shape is:
 
 ```text
-TouchSource   -> GestureDetector -> touched widget path
-KeySource     -> KeyDispatcher   -> FocusManager -> focused widget / click
+TouchSensor -> GestureDetector -> touched widget path
+KeySource   -> ApplicationInputRouter -> bound Task -> focus / key / click
 ```
 
 Touch remains direct-widget routing. Keyboard adds focus and key routing; its
 simple-control fallback joins the existing click path only after a valid
 keyboard press-and-release lifecycle.
 
+The retained touch path satisfies functional Requirement 8. Explicit
+source-to-task routing and task-local state satisfy functional Requirements 1
+and 2 and API Requirements 1 and 2. Widget hooks, component adoption, and
+fallback activation satisfy the implemented portions of functional
+Requirements 3 through 7 and API Requirements 3 through 7. P1.6b supplies the
+remaining presenter containment and preferred-initial-focus behavior.
+
 ## Design Details
 
 ### Input Source Abstraction
 
-The current `Application` constructor bakes touch acquisition directly into the
-framework by owning a `TouchSensor` bound to a `roo_display::Display`.
-That is too narrow for non-touch displays.
+The implemented [`KeySource`](../../../src/roo_windows/core/key_source.h) is a
+non-blocking producer-owned source. `connect(Task&)` binds it explicitly to one
+task in that task's application; a source and task each participate in at most
+one route. `disconnect()` is idempotent, and the source destructor disconnects
+automatically. A derived source stops and quiesces producer-specific callbacks
+before base destruction disconnects its route; application destruction also
+disconnects every source before destroying tasks.
 
-The first implementation introduces one thin non-touch source interface. The
-source is borrowed by `Application`; its owner must keep it alive until the
-application is destroyed. `drain()` is non-blocking, preserves source order,
-and leaves events beyond `max_events` queued for the next call.
+The private application input router owns the incoming route list and performs
+all draining and delivery on the UI thread. `drain()` preserves source order,
+writes at most `max_events`, and leaves the remainder queued. `notifyReady()`
+wakes the destination application after a producer makes input drainable. The
+[physical input routing design](display_input_routing_design.md) defines the
+connection, readiness, thread-affinity, and teardown contracts in full.
 
 Each tick drains a four-event stack buffer at most four times. Consuming all
 16 events schedules an immediate follow-up tick. This bounds input work per
 tick without dropping queued events.
 
-```cpp
-class KeySource {
- public:
-  virtual ~KeySource() = default;
-  virtual int drain(KeyEvent* out, int max_events) = 0;
-};
-
-```
-
-`Application` gains an overload that accepts a key source and an explicit
-`enable_touch` flag while preserving the current touch-only constructor.
+`Application` retains an overload that accepts a borrowed compatibility key
+source and an explicit `enable_touch` flag. Multi-task code uses
+`KeySource::connect(task)` for each additional explicit route.
 
 Compatibility rule:
 
-- existing `Application(env, display)` keeps constructing the legacy touch
-  source internally,
-- callers that want keyboard support pass a `KeySource`,
+- existing `Application(env, display)` keeps its touch behavior,
+- the compatibility `Application(env, display, keys, enable_touch)` overload
+  routes `keys` to the latest task created through `addTask()`,
+- new callers connect a `KeySource` to their selected task explicitly,
 - callers with no touch hardware pass `enable_touch == false`.
 
 The existing touch pipeline remains concrete. A general `TouchSource` is not
@@ -302,40 +297,11 @@ before pointer routing exists.
 
 ### Key Event Type
 
-The framework needs explicit, compact event types.
-
-Suggested baseline keyboard event type:
-
-```cpp
-enum class KeyCode : uint8_t {
-  kUnknown,
-  kTab,
-  kEnter,
-  kSpace,
-  kEscape,
-  kBack,
-  kUp,
-  kDown,
-  kLeft,
-  kRight,
-  kPageUp,
-  kPageDown,
-  kHome,
-  kEnd,
-  kDelete,
-  kBackspace,
-  kCharacter,
-};
-
-enum class KeyPhase : uint8_t { kDown, kUp, kRepeat };
-
-struct KeyEvent {
-  KeyPhase phase;
-  KeyCode code;
-  uint8_t modifiers;
-  uint32_t rune;  // valid when code == kCharacter.
-};
-```
+The exact `KeyCode`, `KeyPhase`, `PhysicalKey`, modifier, and `KeyEvent`
+definitions live in
+[`key_source.h`](../../../src/roo_windows/core/key_source.h). `KeyEvent` stores
+phase, logical code, modifiers, physical-switch identity, and an optional
+Unicode scalar in eight bytes.
 
 The first keyboard pass only needs enough expressiveness for:
 
@@ -346,28 +312,40 @@ The first keyboard pass only needs enough expressiveness for:
 - text entry,
 - and edit navigation.
 
-Physical keys and produced text are distinct. Printable keys produce physical
-events for shortcuts and separate `kCharacter` events for text. Modifier bits
-are `Shift`, `Control`, `Alt`, and `Meta`. Sources reject invalid Unicode
-scalar values. Space does not produce both activation and text: an editor
-consumes the physical Space event and receives its character event; other
-widgets receive Space only as an activation key.
+Physical switch identity and logical meaning are distinct fields in one event.
+A `kCharacter` down or repeat carries a Unicode scalar; every production
+transition carries the `PhysicalKey` that pairs press, repeat, and release, and
+`rune` is zero for other cases. Modifier bits are Shift, Control, Alt, and Meta.
+Sources reject invalid Unicode scalar values. Space uses `KeyCode::kSpace`: an
+editor consumes it as text, while other widgets use it only as an activation
+key.
 
 ### Key Dispatch Order
 
-Key routing is target-first and consumption-based. `KeyDispatcher` handles
-each event in this fixed order:
+The implemented ordinary-task route in
+[`Task::dispatchKeyEvent()`](../../../src/roo_windows/core/task.cpp) is
+target-first and consumption-based:
 
-1. On Back or Escape down, call the shared
-   [`Application::requestBack()`](application_navigation_back_behavior_design.md)
-   path. A handled request stops dispatch; an unhandled request continues so a
-   root editor can cancel local edit state.
-2. On Tab down, move focus forward or backward according to Shift. Widgets do
-   not consume Tab in the first implementation.
-3. Deliver the event to the focused widget's `onKeyEvent()`.
-4. If unhandled, bubble through its ancestors, nearest first.
-5. Apply framework fallback: Enter and Space use primary activation; arrows
-   use directional traversal; other keys remain unhandled.
+1. Deliver the event to the task's focused widget, then bubble it through that
+   widget's ancestors, nearest first. The application-context focus target is
+   used only for the legacy non-task route.
+2. On an unhandled Back or Escape down, call `Task::requestBack()`. That method
+   offers the window's root transient slot first, then the task's
+   `NavigationHost`, then its optional task callback.
+3. On an unhandled Tab down or repeat, traverse forward or backward according
+   to Shift.
+4. On an unhandled directional down or repeat, run geometry traversal.
+5. On an unhandled Enter or Space transition, run the task's primary-activation
+   fallback. Other keys remain unhandled.
+
+This is the current pre-P1.6b order. Display-wide hosted presentation changes
+Back and Escape ordering: while an eligible hosted root is active, the root
+transient receives those keys before task-local widgets, navigation, or editor
+fallback. It also absorbs ordinary keys from non-owner tasks and constrains
+owner keys to the active presenter scope. Phase 3 of
+[Transient surface hosting](../proposed/transient_surface_host_design.md)
+implements and tests that delta; it does not retroactively describe the
+current ordinary-task dispatcher.
 
 Controls consume keys that have local meaning before traversal fallback. Text
 editors consume character, caret, deletion, Home, End, Enter, and Space input.
@@ -380,8 +358,8 @@ continues to ignore repeat.
 
 ### Keyboard Activation Lifecycle
 
-The focus manager stores one armed-widget pointer and one armed key; widgets
-gain no per-instance key-state field.
+Each `Task` stores one armed-widget pointer and one physical-key identity;
+widgets gain no per-instance key-state field.
 
 - An unhandled Enter or Space down on an enabled clickable arms the focused
   widget and sets its pressed state.
@@ -394,145 +372,138 @@ gain no per-instance key-state field.
   mismatched release cancels the arm and clears pressed state.
 - Repeat never activates or re-arms.
 
-The primary action starts the existing click-animation path at
-`getPointOverlayFocus()` and schedules exactly one existing `onClicked()`
-semantic.
+The primary action calls the existing show-press and single-tap-up hooks at the
+widget's local center. Those hooks use the existing click-animation controller
+and schedule exactly one existing `onClicked()` semantic.
 
-### Application-Owned Interaction Services
+### Runtime Interaction Ownership
 
-The framework needs one application-owned service that tracks focus and one
-small dispatcher that translates key events into focus movement or widget
-actions.
+The implemented ownership split follows the lifetime of each kind of state:
 
-The correct home is [ApplicationContext](../../../src/roo_windows/core/application_context.h).
+- `Application` owns the private input router and drains ready sources before
+  pointer service and refresh.
+- Each `Task` owns its `FocusManager`, `TextFieldEditor`, and incomplete
+  Enter/Space activation.
+- `Widget::focusManager()` resolves to the containing task's manager.
+- `ApplicationContext::focus()` remains a compatibility fallback for widgets
+  attached through the legacy `Application::add()` path, which does not create
+  a `Task`.
 
-`ApplicationContext` should gain:
-
-```cpp
-FocusManager& focus();
-const FocusManager& focus() const;
-```
-
-`Application` remains the owner of input polling and dispatch order.
-
-The intended `Application::tick()` order becomes:
-
-1. refresh click animation,
-2. drain and dispatch pending key events,
-3. drain and dispatch pending touch events through the existing gesture
-   detector,
-4. refresh layout and paint,
-5. reschedule the ticker based on input, focus-blink, and animation activity.
-
-The touch path stays intact. The new work is additive.
+This split lets multiple explicitly routed tasks retain independent focus and
+edit state while keeping acquisition and producer teardown application-owned.
+The touch pipeline remains unchanged.
 
 ### Focus Manager
 
-The framework currently has no owner for focus. That is the central missing
-piece.
+The design assigns focus ownership to `FocusManager`. The implemented runtime
+now gives each `Task` its own manager; the remaining extension is switching
+that manager temporarily into a presenter-owned scope.
 
-`FocusManager` owns:
+The current `FocusManager` owns:
 
 - the currently focused widget,
-- the current active focus scope root,
-- one intrusive `FocusScope` record per focus-owning task or presenter,
-- and the logic that validates whether a focus target is still visible,
+- the current legal focus root, and
+- the logic that validates whether a focus target is still visible,
   enabled, attached, and within the active scope.
 
-The manager's responsibilities are:
+Its implemented responsibilities are:
 
-1. choose the active focus scope,
-2. assign initial focus when the scope changes,
-3. honor `requestFocus()` calls,
-4. move focus forward, backward, or directionally,
-5. clear focus when the widget is hidden, disabled, detached, or leaves the
+1. honor `requestFocus()` calls,
+2. move focus forward, backward, or directionally,
+3. clear focus when the widget is hidden, disabled, detached, or leaves the
    active scope,
-6. and update the widget's focused bit.
+4. and update the widget's focused bit.
+
+P1.6b adds presenter-scope admission, entry, initial focus, exit, and
+restoration without adding manager storage.
 
 #### Focus Scope Storage and Resolution
 
-Each task and each focus-capturing presenter embeds a `FocusScope` containing
-its root widget, its last focused descendant, and a link to the previously
-active scope in that task's manager. On a 32-bit target this costs about 12
-bytes per focus-owning layer. It avoids a focus-history map, fixed unused
-capacity, and allocation during scope changes.
+Ordinary task content is the implicit base scope represented by the task
+manager's existing focused-widget and legal-root pointers; `Task` embeds no
+`FocusScope`. Each focus-capturing presenter embeds a `FocusScope` containing
+its active root, its last focused descendant, and the base-task focus candidate
+to restore. On a 32-bit target this costs 12 bytes per presenter and preserves
+the declared `FocusScope`, `FocusManager`, and `Task` sizes. It avoids a focus-
+history map, fixed unused capacity, and allocation during scope changes.
+
+The manager admits a presenter scope only while its task-panel base root is
+active. Same-owner host replacement can preflight the incoming scope against
+the exact outgoing scope, but it still exits the outgoing scope before entering
+the incoming one. The shared host's one-presentation limit therefore needs no
+intrusive stack: the manager performs one base-to-presenter transition and the
+matching presenter-to-base transition. Component-owned menu levels remain
+inside the same presenter scope. A second independently owned focus scope is
+rejected rather than pushed.
+
+The record also exposes a zero-storage `clearRememberedFocus()` operation.
+Every presenter operation that replaces, detaches, or deletes a descendant
+calls it before changing an inactive scoped tree. The manager's ordinary
+subtree-detachment notification covers current focus in the active tree. On
+entry, the manager finds the remembered presenter address by scanning the
+current live root before dereferencing it. On exit it performs the same scan in
+the live base root before dereferencing the saved base-task address. An address
+not found in the applicable tree is cleared. This keeps reopen memory without
+registering inactive presenter scopes or retaining an arbitrary scope stack.
 
 Ordinary task content supplies the base scope. An interactive transient does
 not become a task: its shared host receives an existing interaction owner
 explicitly, attaches a reusable structural boundary that resolves to that task,
 and enters the presenter scope through that task's `FocusManager`. While
 active, the scope root replaces the task panel as the manager's legal traversal
-root. The host exits the scope before detachment. It never chooses the focused,
-topmost, or most recently touched task.
+root. Even an empty active presenter scope suppresses the legacy
+application-context focus fallback. The host exits the scope before detachment.
+It never chooses the focused, topmost, or most recently touched task.
 
-Popup tasks that are genuine persistent layers retain a separate capture
-policy. This distinction matters because the shared on-screen keyboard can be
-a passive popup task and must not steal hardware-key focus from the editor task.
+Persistent popup tasks already retain independent task-local focus. Merely
+showing one does not redirect a physical source; `KeySource::connect()` remains
+the explicit routing operation. The built-in on-screen keyboard routes semantic
+text through the editor connection rather than stealing the editor task's
+physical-key focus. Automatic popup route switching is outside this design and
+is recorded in Future Work.
 
-The design therefore adds a small popup focus-capture policy.
+#### Presenter Initial Focus (P1.6b)
 
-Suggested shape:
-
-```cpp
-enum class FocusCapturePolicy : uint8_t {
-  kPassive,
-  kCapturesFocus,
-};
-```
-
-Regular tasks default to `kCapturesFocus`. Existing keyboard popup paths can
-stay `kPassive`.
-
-Focus capture and back participation are independent. A passive popup can
-register with the shared back dispatcher and dismiss before the underlying
-activity receives Back or Escape. The focus manager does not invent a second
-dismissal route.
-
-#### Initial Focus
-
-When a new focus scope becomes active, the manager should choose the initial
+When a presenter scope becomes active, the manager chooses initial
 focus in this order:
 
 1. previously focused descendant within that same scope, if still valid,
 2. the scope root's preferred focus child, if one is supplied,
 3. otherwise the first focusable descendant in traversal order.
 
-This gives dialogs, menus, and structured surfaces a hook for sensible default
-focus without forcing bespoke policy into the global manager.
+This gives dialogs, menus, and structured surfaces a zero-storage hook for
+sensible default focus without putting component policy in the task manager.
 
 #### Mixed-Input Behavior
 
-On mixed-input systems:
-
-- a successful touch activation on a focusable widget should transfer focus to
-  that widget,
-- hover should not imply focus,
-- and focus should remain sticky until a later focus change, scope change, or
-  target invalidation.
-
-A successful touch tap requests focus immediately before scheduling its click
-semantic. This ordering remains safe when `onClicked()` removes the target.
-Non-click touch gestures do not move focus.
+Touch and keyboard continue to use distinct routes. Ordinary touch activation
+does not implicitly move keyboard focus. A text field explicitly requests its
+task's focus when editing begins; other components request focus only when that
+behavior is part of their own contract. Hover does not imply focus, and focus
+remains sticky until an explicit focus change, presenter-scope change, or target
+invalidation. Future primary-pointer routing defines its own focus-transfer
+policy with the pointer API.
 
 #### Focus Lifetime and Tree Mutation
 
 Raw focus pointers require mandatory lifecycle notification.
 `Container::detachChild()` calls
-`FocusManager::onSubtreeDetaching(child)` before changing parent links or
-applying parent-owned deletion. While the tree is intact, the manager clears
-the focused target and every active scope record that points to the child or a
-descendant, cancels keyboard activation, and removes focused visual state.
+the containing `Task::onSubtreeDetaching(child)` before changing parent links
+or applying parent-owned deletion. While the tree is intact, the task cancels
+an armed descendant and editor session, and its manager clears a focused
+descendant and removes focused visual state. The context manager receives the
+same notification for the legacy non-task path.
 
-`Widget::~Widget()` calls `FocusManager::onWidgetDestroying(*this)` as a
-debug-checked fallback before sparse event handlers are removed. Destruction
-of an attached widget is already invalid. A match in this fallback is a debug
-failure because it proves that a detach notification was skipped; release
-builds still clear an exact match without dereferencing it.
+`Widget::~Widget()` calls `FocusManager::onWidgetDestroying(*this)` as an
+exact-match fallback before sparse event handlers are removed. Normal attached
+subtree removal still uses the pre-detachment path because that path can see and
+clear descendant state while parent links remain intact.
 
 Visibility and enabled-state changes notify the manager before applying the
-transition. When the changed subtree contains focus, the manager moves to the
-next eligible target or clears focus. Scope exit clears visible focus but
-retains its last-focused pointer until subtree detachment or scope destruction.
+transition. When the changed subtree contains focus, the manager clears focus.
+P1.6b scope exit clears visible presenter focus, remembers that presenter
+target, and restores a validated base target. The remembered presenter target
+persists until explicit inactive-tree invalidation or scope destruction.
 
 A focus target is eligible only when it is focusable, has non-empty laid-out
 bounds, remains attached below the active scope root, and it and every ancestor
@@ -540,27 +511,17 @@ through that root are visible and enabled.
 
 ### Widget Contract Changes
 
-`Widget` already stores focus and hover bits. The framework needs real APIs to
-drive them.
-
-The proposed additions are:
-
-```cpp
-virtual bool isFocusable() const { return isClickable(); }
-
-void requestFocus();
-
-virtual void onFocusChanged(bool focused) {}
-
-virtual bool onKeyEvent(const KeyEvent& event) { return false; }
-```
+`Widget` already stored focus and hover bits. Its implemented public contract in
+[`widget.h`](../../../src/roo_windows/core/widget.h) now provides
+`isFocusable()`, boolean `requestFocus()`, `onFocusChanged()`, `onKeyEvent()`,
+`setFocused()`, and `setHover()`.
 
 If an eligible focused widget leaves Enter or Space unhandled, the framework's
-keyboard-activation fallback should:
+keyboard-activation fallback:
 
-- verify that the widget is clickable and enabled,
-- show pressed / click animation feedback centered on `getPointOverlayFocus()`,
-- and queue the existing `onClicked()` semantic through the same
+- verifies that the widget is clickable and enabled,
+- shows pressed / click animation feedback from the widget's local center,
+- and queues the existing `onClicked()` semantic through the same
   main-window-owned click-animation controller used by touch.
 
 This fallback is framework dispatch logic, not a new virtual widget action.
@@ -570,15 +531,9 @@ text field handles editing keys and characters directly. Touch continues to
 reach `onClicked()` through gesture recognition, so an input-origin parameter
 would have no truthful role in this design.
 
-The widget must also gain real state mutators analogous to `setPressed()`:
-
-```cpp
-void setFocused(bool focused);
-void setHover(bool hover);
-```
-
-Those mutators should reuse the same invalidation and interaction-bounds logic
-already used by pressed, selected, activated, and dragged state.
+The focus and hover mutators reuse the same invalidation and
+interaction-bounds logic already used by pressed, selected, activated, and
+dragged state.
 
 The base framework must not try to emulate keyboard interaction by injecting
 fabricated touch streams. That would
@@ -587,8 +542,8 @@ sloppy hit bounds, and fling recognition.
 
 ### Traversal Model
 
-The focus manager needs a default traversal model plus container override
-points.
+The focus manager provides a default traversal model plus a small set of
+container enumeration and reveal hooks.
 
 #### Forward / Backward Traversal
 
@@ -617,18 +572,12 @@ split layouts without every container needing a bespoke neighbor table.
 
 #### Container Override Points
 
-Some containers need tighter control. The framework should expose lightweight
-hooks such as:
-
-```cpp
-virtual Widget* preferredFocusChild();
-virtual Widget* nextFocusable(FocusDirection direction, Widget* from);
-virtual bool revealFocusedDescendant(Widget& descendant);
-```
-
-These hooks let lists, menus, tab bars, navigation surfaces, and custom
-composites keep navigation local when the generic geometry search is not the
-desired user model.
+`Widget::focusChildCount()` and `focusChildAt()` expose the allocation-free
+traversal tree, while `revealFocusedDescendant()` lets a clipping container
+handle reveal. Components that need roving or control-specific movement consume
+the corresponding key in `onKeyEvent()` before framework traversal. P1.6b adds
+only `preferredFocusChild()` for presenter initial-focus selection; it does not
+add a generic `nextFocusable()` contract.
 
 #### Focus Reveal
 
@@ -645,8 +594,8 @@ edge.
 
 ### Component Adoption Strategy
 
-The core framework work is necessary but not sufficient. Several widget
-families need follow-on behavior work.
+The core framework supplies routing and focus mechanics; widget families add
+their own control semantics where the simple-click fallback is insufficient.
 
 #### Simple Clickables
 
@@ -662,7 +611,8 @@ This includes:
 - and simple navigation items that already route through
   `setOnInteractiveChange()`.
 
-Most of these can adopt keyboard support with minimal component-specific code:
+The implemented base behavior gives these controls keyboard support with
+minimal component-specific code:
 
 - become focusable,
 - accept the shared Enter / Space activation fallback,
@@ -682,7 +632,7 @@ Affected surfaces include:
 - and scroll containers such as
   [src/roo_windows/containers/scrollable_panel.h](../../../src/roo_windows/containers/scrollable_panel.h).
 
-They need explicit keyboard handling in `onKeyEvent()`:
+They implement control-specific keyboard handling in `onKeyEvent()`:
 
 - Left / Down -> decrement,
 - Right / Up -> increment,
@@ -690,74 +640,61 @@ They need explicit keyboard handling in `onKeyEvent()`:
 - PageUp / PageDown for coarse movement where appropriate,
 - and focus reveal inside scrolling parents.
 
-The current touch-scroll handlers are not enough because they assume pointer
+Touch-scroll handlers alone are not enough because they assume pointer
 motion rather than discrete value deltas.
 
 #### Text Entry
 
-Text entry needs its own explicit treatment.
-
-The current shared editor already gives the library:
+Text entry has its own task-local editor. The implemented editor provides:
 
 - shared mutable editing state,
 - cursor blink scheduling,
 - insertion of printable runes,
-- Enter / commit,
-- and Delete / backspace-like removal.
-
-What it does not yet provide is the hardware-keyboard behavior needed for a
-non-touch UI:
-
 - caret movement with Left / Right,
 - Home / End,
 - selection extension with Shift,
-- focus-vs-edit ownership rules,
-- and a policy for coexistence between hardware keyboard input and the
-  on-screen keyboard popup.
+- Enter / commit,
+- forward Delete and backward deletion,
+- and task-local focus-versus-edit ownership.
 
-The design therefore expands `TextFieldEditor` from a soft-keyboard sink into a
-real key-editing engine.
+The implemented policy is:
 
-Policy choice:
-
-- when an editable text field gains focus on a hardware-keyboard-capable
-  system, it should enter edit mode immediately,
+- when an editable text field gains focus, it enters edit mode immediately,
 - typed characters go straight to the shared editor,
 - Tab and Shift+Tab move focus out of the field,
 - Enter confirms,
-- Escape or Back cancels,
-- and the software keyboard is not automatically shown unless the active input
-  policy explicitly asks for it.
+- Escape or Back cancels editing and remains unhandled for task-level Back,
+- and hardware-key focus does not automatically show the software keyboard.
 
 This preserves the current touch-only software-keyboard path while making the
 field usable on keyboard-only targets.
 
 #### Compound and Structured Controls
 
-Several compound families need explicit non-touch adoption work because they do
-not naturally fall out of the simple clickable model.
+Compound families require component-owned policy because they do not naturally
+fall out of the simple clickable model.
 
 1. Dialogs
 
-   [src/roo_windows/dialogs/dialog.h](../../../src/roo_windows/dialogs/dialog.h)
-   currently enforces modality only for touch-down dispatch. Dialogs need a
-   focus-capturing scope, sensible initial focus, keyboard button traversal,
-   Enter default-action handling, and Escape dismissal.
+   Legacy [Dialog](../../../src/roo_windows/dialogs/dialog.h) participates in
+   the root Back slot but retains its direct compatibility structure and does
+   not gain a presenter scope. New Material 3 dialogs gain focus containment,
+   initial focus, keyboard button traversal, and Escape dismissal through
+   P1.6b hosting and the
+   [Material 3 dialog design](../proposed/material3_dialogs_design.md).
 
 2. Lists and list-derived navigation surfaces
 
-   [src/roo_windows/material3/list/list.h](../../../src/roo_windows/material3/list/list.h)
-   already stores `pressed`, `focused`, and `hovered` in the resolved visual
-   context. That means keyboard support is not just a widget-bit problem. The
-   owning list needs to drive those bits into row visual contexts during
-   `refreshEntryVisualContexts()` and choose whether focus is row-local,
-   selection-local, or roving.
+   [List](../../../src/roo_windows/material3/list/list.h) drives focused state
+   into each row's resolved visual context and consumes component-specific
+   navigation keys. Focus and selection remain distinct.
 
 3. Menus, tabs, drawers, rails, and bars
 
-   These families need predictable directional traversal and a distinction
-   between focused destination and selected destination. The global focus
-   manager can provide the base mechanics, but each family needs local policy.
+   Implemented tabs, navigation bars, rails, and the existing composite menu
+   consume component-specific movement where needed and preserve the
+   distinction between focused and selected destinations. The proposed
+   Material 3 menu uses the P1.6b presenter scope.
 
 4. Childless compound widgets
 
@@ -765,17 +702,9 @@ not naturally fall out of the simple clickable model.
    explicitly deferred per-segment hover and keyboard-focus routing because the
    framework had no such model.
 
-   Full keyboard support changes that. A split button cannot stay a single
-   undifferentiated focus target forever if both the primary segment and the
-   menu segment must be usable from the keyboard.
-
-   The preferred order is:
-
-   - use real child widgets where the storage cost is acceptable,
-   - otherwise introduce a small virtual-focus-node abstraction for the narrow
-     cases that need sub-widget focus granularity,
-   - but do not block the keyboard-first core on solving every childless
-     compound control at once.
+   Its component design owns the remaining choice of real child focus targets
+   or another bounded representation. The keyboard core does not invent
+   virtual focus nodes before that consumer closes the decision.
 
 ### Task, Popup, and Dialog Integration
 
@@ -792,34 +721,30 @@ Primary implementation surfaces are:
 
 The integration rules are:
 
-1. entering a new activity updates its task manager's base focus scope,
-2. pausing or hiding an activity clears focused descendants in that scope,
-3. showing a dialog or menu explicitly selects its interaction-owner task and
-   enters the presenter scope through that manager,
-4. closing a presenter restores focus through the same manager's previous
-   scope when possible,
-5. passive popups stay visible without stealing keyboard focus,
-6. focus changes caused by touch or pointer clicks must still respect that
-   manager's active scope root.
+1. A task's permanently attached `TaskPanel` is its manager's implicit base
+   root; replacing navigation content does not replace that root.
+2. Hiding, disabling, detaching, or deleting focused task content clears its
+   focused descendant.
+3. P1.6b dialogs and menus explicitly select an interaction-owner task and
+   enter their presenter scope through that manager.
+4. Closing a hosted presenter restores focus through the same manager's base
+   task scope when possible.
+5. Persistent popup tasks retain independent focus, and visibility does not
+   redirect a connected physical source.
+6. Every focus request, including one initiated by a touch-aware component,
+   remains constrained by that manager's active legal root.
+7. Legacy dialogs retain the direct compatibility path and therefore do not
+   gain P1.6b focus containment or restoration.
 
 ### Emulation and Platform Work
 
-To make the feature real rather than theoretical, platform integration must
-change alongside the core.
-
-The first required host seam is
-[emulation/main.cpp](../../../emulation/main.cpp).
-
-Today it builds:
-
-- a fake display,
-- a fake touch controller,
-- and a host viewport.
-
-It must also provide a host-backed `KeySource`.
-
-That gives the library a real keyboard smoke path in the emulator rather than
-only in embedded integration code.
+The implemented host seam is
+[`FltkKeySource`](../../../fake/roo_windows/fake/fltk_key_source.h). It converts
+host key events into the same bounded source contract and uses the shared
+native-host handoff described by the physical input routing design. Examples
+pass that source through the compatibility constructor; their first UI
+`addTask()` becomes its destination, providing an end-to-end keyboard smoke
+path in the emulator. Multi-source applications use explicit `connect()` calls.
 
 On real hardware, different devices can provide these new sources:
 
@@ -832,58 +757,29 @@ On real hardware, different devices can provide these new sources:
 Those integrations implement `KeySource`. They do not extend the meaning of
 `roo_display::Display`.
 
-### Documentation and Packaging Follow-Up
-
-Once the keyboard-first phases land, follow-up docs should update the library's
-public description.
-
-That includes at least:
-
-- [library.json](../../../library.json),
-- relevant examples,
-- and any README or usage docs that still present the library as touch-only.
-
-That metadata change should happen after the feature is real, not before.
-
 ## Proposed API
 
-The public surface added by this design is:
+The authoritative implemented declarations are:
 
-```cpp
-enum class KeyPhase : uint8_t { kDown, kUp, kRepeat };
+- [`key_source.h`](../../../src/roo_windows/core/key_source.h) for `KeyCode`,
+  `KeyPhase`, `PhysicalKey`, modifiers, `KeyEvent`, and the source-owned
+  `connect()` / `disconnect()` / readiness contract;
+- [`widget.h`](../../../src/roo_windows/core/widget.h) for focusability, focus
+  requests and notifications, key handling, focus-child enumeration, reveal,
+  and focus/hover state mutation;
+- [`focus_manager.h`](../../../src/roo_windows/core/focus_manager.h) for current
+  task-local focus, traversal, eligibility, and lifecycle cleanup;
+- [`task.h`](../../../src/roo_windows/core/task.h) for the task-owned focus
+  manager, editor, key dispatch state, and semantic Back entry point; and
+- [`application.h`](../../../src/roo_windows/core/application.h) for the
+  touch-only and compatibility key-source constructors.
 
-struct KeyEvent {
-  KeyPhase phase;
-  KeyCode code;
-  uint8_t modifiers;
-  uint32_t rune;  // Valid only for kCharacter.
-};
-
-class KeySource {
- public:
-  virtual ~KeySource() = default;
-  virtual int drain(KeyEvent* out, int max_events) = 0;
-};
-
-class Widget {
- public:
-  virtual bool isFocusable() const { return isClickable(); }
-  bool requestFocus();
-  virtual bool onKeyEvent(const KeyEvent& event) { return false; }
-  virtual void onFocusChanged(bool focused) {}
-};
-
-class Application {
- public:
-  Application(const Environment* env, roo_display::Display& display);
-  Application(const Environment* env, roo_display::Display& display,
-              KeySource& keys, bool enable_touch);
-};
-```
-
-Framework-only `FocusManager`, `KeyDispatcher`, `FocusScope`, focus-state
-mutators, and traversal hooks remain internal or protected. No pointer API is
-introduced before working pointer routing exists.
+This document does not duplicate those declarations because their physical-key
+and source-lifetime details have evolved since the initial proposal. P1.6b's
+zero-storage `FocusManager` accessors, one-level `FocusScope` operations, and
+`Widget::preferredFocusChild()` are specified in the
+[Transient surface hosting Proposed API](../proposed/transient_surface_host_design.md#proposed-api).
+No pointer API lands before working pointer routing exists.
 
 ### Migration and Compatibility
 
@@ -894,7 +790,8 @@ Compatibility rules:
 1. Existing `Application(env, display)` continues to work.
 2. If no key source is provided, behavior is unchanged.
 3. Existing touch-driven widgets keep their current touch semantics.
-4. The new keyboard path is additive.
+4. Explicit `KeySource::connect(Task&)` is the current multi-task routing API;
+   the constructor overload remains a compatibility convenience.
 5. Widgets that do not override new key hooks still compile and remain
    keyboard-inert unless the base semantics already make sense.
 
@@ -909,7 +806,7 @@ Authoring references: follow the
 and the
 [roo_windows widget authoring instruction](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
-### Phase 1: Key Acquisition
+### Phase 1: Key Acquisition — Implemented
 
 Add `KeySource`, bounded draining, optional keyboard-only construction, source
 tests, and host-emulator source plumbing.
@@ -924,46 +821,53 @@ Proposed commit message:
 
 Validation: run the new key-source target and build the emulator.
 
-### Phase 2: Focus Manager and Widget State Plumbing
+The later
+[physical input routing design](display_input_routing_design.md) replaced
+constructor-only borrowing with explicit source-owned task connections and
+readiness notification; it is the authoritative routing contract.
 
-Add intrusive focus scopes, lifecycle notifications, eligibility checks,
-focus state hooks, restoration, and popup focus-capture policy. Add tests that
-detach, delete, hide, and disable focused or remembered descendants from
-inside callbacks.
+### Phase 2: Focus Manager and Widget State Plumbing — Implemented Base
+
+Add task-local focus ownership, lifecycle notifications, eligibility checks,
+focus state hooks, traversal, and the declared presenter record. Tests detach,
+delete, hide, and disable focused descendants from inside callbacks. Active
+base-to-presenter entry/exit, restoration, and inactive-scope memory clearing
+remain the P1.6b Phase 1 slice in the transient-host plan.
 
 Proposed commit message:
 
 > Non-touch input phase 2: add lifecycle-safe focus ownership
 >
-> Add intrusive focus scopes, framework focus state plumbing, mandatory tree
-> mutation notifications, restoration, and mutation-focused tests from the
-> non-touch input design without increasing base widget size.
+> Add task-local focus ownership, framework focus state plumbing, mandatory
+> tree-mutation notifications, allocation-free traversal, and mutation-focused
+> tests from the non-touch input design without increasing base widget size.
 
-Validation: run focus-manager, widget, container, task, and dialog targets.
+Validation: run focus-manager, widget, container, and task targets.
 
-### Phase 3: Simple Clickables and Dialog Focus
+### Phase 3: Simple Clickables and Key Dispatch — Implemented
 
-1. Make simple clickables focusable by default.
-2. Map Enter / Space to the existing click semantic.
-3. Add focus transfer on successful touch click.
-4. Make dialogs true keyboard focus scopes.
-5. Add Tab, Shift+Tab, arrow-key, Enter, and Escape behavior to dialogs.
+1. Route task keys target-first and bubble unhandled events through ancestors.
+2. Make simple clickables focusable by default.
+3. Map a matching Enter / Space press and release to the existing click
+   semantic.
+4. Add Tab, Shift+Tab, and directional traversal.
 
-This delivers the first end-to-end keyboard story for common buttons and modal
-surfaces.
+This delivers the first end-to-end keyboard story for common buttons. Hosted
+dialog focus containment is deliberately not claimed by this phase: P1.6b adds
+the manager mechanics, and the Material 3 dialog phase adopts them. Legacy
+dialogs retain the compatibility behavior described above.
 
 Proposed commit message:
 
 > Non-touch input phase 3: route keys and activate focused controls
 >
 > Add target-first routing, deterministic traversal, release-based activation,
-> dialog focus trapping, touch focus transfer, examples, and interaction tests
-> from the non-touch input design.
+> examples, and interaction tests from the non-touch input design.
 
-Validation: run key-dispatch, traversal, button, dialog, click-animation,
-gesture, and emulator targets.
+Validation: run key-source, task, focus-manager, button, click-animation, and
+emulator targets.
 
-### Phase 4: Scroll Containers and Value Controls
+### Phase 4: Scroll Containers and Value Controls — Implemented
 
 1. Add focus reveal to scroll containers.
 2. Add keyboard scrolling to scrollable panels where appropriate.
@@ -983,15 +887,16 @@ Proposed commit message:
 Validation: run slider, scroll-container, simple-control, traversal, and
 emulator targets.
 
-### Phase 5: Structured Navigation Surfaces
+### Phase 5: Existing Structured Navigation Surfaces — Implemented
 
 1. Add list row focus policy and visual-context plumbing.
-2. Add menu navigation by keyboard.
-3. Add tabs, navigation bar, rail, and drawer traversal policy.
-4. Solve the highest-value compound-control cases using real child focus where
-   practical.
+2. Add keyboard navigation to the existing composite menu.
+3. Add tabs, navigation bar, and navigation rail traversal policy.
+4. Use real child focus for the implemented compound controls that require it.
 
 This phase turns the keyboard core into a real application-navigation model.
+Material 3 menus, drawers, and other new presenters retain adoption work in
+their component designs.
 
 Proposed commit message:
 
@@ -1003,7 +908,7 @@ Proposed commit message:
 
 Validation: run list, menu, navigation-family, traversal, and emulator targets.
 
-### Phase 6: Text Entry
+### Phase 6: Text Entry — Implemented
 
 1. Expand `TextFieldEditor` to support caret movement and selection by key.
 2. Add hardware-keyboard text editing policy to text fields.
@@ -1030,7 +935,8 @@ emulator targets.
 Core validation covers:
 
 1. focus state transitions,
-2. focus scope changes across task, popup, and dialog boundaries,
+2. focus changes across task and popup boundaries plus P1.6b presenter-scope
+   entry, exit, and restoration,
 3. Tab and directional traversal,
 4. focus reveal inside scroll containers,
 5. keyboard primary-action dispatch,
@@ -1038,10 +944,12 @@ Core validation covers:
 7. text-field editing by hardware keyboard,
 8. and emulator smoke coverage for host keyboard input.
 
-Each phase runs the existing touch tests for the components it changes. The
-emulator supplies the end-to-end host-keyboard smoke path. Size checks verify
-that `sizeof(Widget)` does not increase and record the actual
-`ApplicationContext` and `FocusScope` deltas against the design estimates.
+Each implemented phase runs the existing touch tests for the components it
+changes. The emulator supplies the end-to-end host-keyboard smoke path. Current
+compile-time checks bound `sizeof(Widget)` and `sizeof(KeyEvent)`. P1.6b adds
+target-ABI probes showing that repurposing the third `FocusScope` pointer and
+exposing the current legal root do not change `FocusManager`, `FocusScope`, or
+`Task` size.
 
 ## Caveats
 
@@ -1049,9 +957,11 @@ Directional traversal is an O(n) scan. Key events are infrequent and embedded
 interfaces normally contain few focusable widgets, so constant storage is
 preferred over neighbor tables or cached vectors.
 
-The design depends on the shared back-behavior proposal for Back and Escape.
-Phase 3 lands after that proposal's core dispatcher; Phases 1 and 2 remain
-independently implementable and testable.
+Ordinary task dispatch currently offers Back and Escape to the focused widget
+before calling `Task::requestBack()`. P1.6b intentionally changes that order
+while a hosted root is active so the eligible root transient wins before a
+task-local editor or other content. Tests must cover both orders rather than
+treating the P1.6b rule as already implemented everywhere.
 
 ### Rejected Alternatives
 
@@ -1079,7 +989,7 @@ validated the keyboard lifecycle.
 Rejected because non-touch inputs often come from devices unrelated to the
 display itself.
 
-The right abstraction boundary is input source interfaces owned by the
+The right abstraction boundary is producer-owned input sources routed by the
 application, not a display object that suddenly becomes a keyboard host.
 
 #### Let Every Widget Family Invent Its Own Local Focus Model
@@ -1087,8 +997,9 @@ application, not a display object that suddenly becomes a keyboard host.
 Rejected because focus scope, modality, and traversal must work across the
 whole active UI tree, not only within one component family.
 
-Dialogs, popups, tasks, and mixed-input focus transfer require one framework
-owner.
+Each key route needs one task-local focus owner, and a hosted presenter must use
+that same explicit owner. Component-local policy builds on that owner instead
+of creating an unrelated focus service.
 
 #### Delay Keyboard Until Mouse Is Also Ready
 
@@ -1101,16 +1012,18 @@ user's immediate need.
 
 #### Force Every Popup to Capture Focus
 
-Rejected because some popups, especially the existing on-screen keyboard, are
-supporting surfaces rather than the keyboard navigation destination.
-
-The framework needs passive popups as a first-class concept.
+Rejected because a persistent popup is already a separate task with independent
+focus, while physical input stays on the task selected by
+`KeySource::connect()`. The built-in on-screen keyboard sends semantic text to
+its connected editor and does not require a global focus-capture enum. An
+automatic route-switching policy waits for a concrete popup consumer.
 
 #### Store Remembered Focus in a Hash Map
 
 Rejected because scope changes would allocate or require fixed unused
-capacity. Intrusive scope records charge only focus-owning layers and make
-nesting explicit.
+capacity. The scheduled host charges one fixed three-pointer record only to a
+focus-capturing presenter, reuses its third pointer to remember displaced base
+focus, and supports exactly one presenter scope above the task's implicit base.
 
 #### Activate on Key Down
 
@@ -1130,3 +1043,14 @@ primary-button focus transfer, wheel bubbling, and emulator coverage on top of
 the focus and key-routing contracts defined here. Platform IME,
 accessibility, context menus, drag-and-drop, and mouse text selection remain
 separate designs.
+
+Persistent popup tasks can gain automatic physical-source capture only after a
+concrete consumer defines when a visible popup redirects a source, how the
+previous task route is restored, and how source and task teardown cancel that
+transition. Until then, visibility does not change `KeySource::connect()`.
+
+A packaging follow-up will update [library.json](../../../library.json), README
+text, and usage documentation to advertise keyboard-only and mixed-input use
+now that the runtime and emulator paths are implemented. This is a discovery
+gap, not a runtime dependency. Childless compound controls such as split
+buttons retain their component-owned focus-granularity decision.

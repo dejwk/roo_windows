@@ -7,10 +7,9 @@
     .window { fill: #faf7f2; stroke: #6b6257; stroke-width: 2; }
     .task { fill: #d7ebff; stroke: #2f6690; stroke-width: 2; }
     .pin { fill: #eadcff; stroke: #7351a3; stroke-width: 2; }
-    .barrier { fill: #f2f2f2; stroke: #777777; stroke-width: 2; stroke-dasharray: 6 4; }
+    .popup-host { fill: #f4fbf7; stroke: #1b7f5a; stroke-width: 2; }
+    .dialog-host { fill: #d9d9d9; stroke: #1b7f5a; stroke-width: 2; }
     .surface { fill: #fff4dc; stroke: #8d6b2f; stroke-width: 2; }
-    .scrim { fill: #d9d9d9; stroke: #666666; stroke-width: 2; }
-    .boundary { fill: none; stroke: #1b7f5a; stroke-width: 2; }
     .arrow { stroke: #4a4a4a; stroke-width: 2; marker-end: url(#arrow); }
   </style>
   <defs>
@@ -19,45 +18,45 @@
     </marker>
   </defs>
 
-  <text x="28" y="34" class="title">Shared transient host: one display-wide structural path, two host kinds</text>
-  <text x="28" y="56" class="small">The origin token identifies a layer; an explicit existing task owns focus and keys for the borrowed root.</text>
+  <text x="28" y="34" class="title">One reusable TransientHostLayer, two example profiles</text>
+  <text x="28" y="56" class="small">An explicit attached Task owns focus, keys, Back context, and lifetime for the borrowed presenter root.</text>
 
-  <text x="42" y="94" class="title">Popup presentation</text>
+  <text x="42" y="94" class="title">Menu profile</text>
   <rect x="28" y="108" width="438" height="370" rx="18" class="window"/>
   <text x="46" y="136" class="small">MainWindow</text>
-  <rect x="58" y="382" width="378" height="62" rx="10" class="task"/>
-  <text x="78" y="409" class="label">Origin layer; interaction owner supplied separately</text>
-  <text x="78" y="429" class="small">copied token = 0x…; no retained widget anchor</text>
-  <rect x="102" y="350" width="170" height="30" rx="8" class="pin"/>
-  <text x="120" y="370" class="small">optional trigger paint pin</text>
-  <rect x="58" y="166" width="378" height="166" rx="12" class="barrier"/>
-  <text x="76" y="194" class="label">Transparent popup barrier</text>
-  <text x="76" y="216" class="small">consumes outside input; emits no pixels</text>
-  <rect x="186" y="224" width="216" height="100" rx="12" class="boundary"/>
-  <text x="196" y="241" class="small">owner-task boundary</text>
-  <rect x="196" y="248" width="196" height="62" rx="14" class="surface"/>
-  <text x="218" y="272" class="label">Visible menu panel</text>
-  <text x="218" y="294" class="small">panel contents hit-test</text>
-  <text x="76" y="320" class="small">borrowed MenuOverlay root is transparent outside panels</text>
-  <line x1="314" y1="350" x2="314" y2="312" class="arrow"/>
-  <text x="298" y="342" class="small">popup paints above origin</text>
 
-  <text x="526" y="94" class="title">Modal presentation</text>
+  <rect x="58" y="158" width="378" height="168" rx="12" class="popup-host"/>
+  <text x="76" y="184" class="label">Composite TransientHostLayer</text>
+  <text x="76" y="205" class="small">transparent paint; declined root hits become outside input</text>
+  <text x="76" y="226" class="small">borrowed MenuOverlay root; presenter-owned FocusScope</text>
+  <rect x="206" y="236" width="202" height="70" rx="14" class="surface"/>
+  <text x="228" y="264" class="label">Visible menu panel</text>
+  <text x="228" y="286" class="small">outside activation dismisses</text>
+
+  <rect x="90" y="344" width="196" height="30" rx="8" class="pin"/>
+  <text x="108" y="364" class="small">optional owner-scoped trigger pin</text>
+  <rect x="58" y="382" width="378" height="62" rx="10" class="task"/>
+  <text x="78" y="409" class="label">Explicit interaction-owner Task</text>
+  <text x="78" y="429" class="small">live placement and trigger sources must belong here</text>
+  <line x1="410" y1="326" x2="410" y2="380" class="arrow"/>
+  <text x="302" y="356" class="small">owner association</text>
+
+  <text x="526" y="94" class="title">Basic dialog profile</text>
   <rect x="514" y="108" width="438" height="370" rx="18" class="window"/>
   <text x="532" y="136" class="small">MainWindow</text>
-  <rect x="544" y="382" width="378" height="62" rx="10" class="task"/>
-  <text x="564" y="409" class="label">Interaction-owner task layer</text>
-  <text x="564" y="429" class="small">supplies focus, physical keys, Back context, lifetime</text>
-  <rect x="544" y="166" width="378" height="166" rx="12" class="scrim" opacity="0.62"/>
-  <text x="562" y="194" class="label">Scrim barrier</text>
-  <text x="562" y="216" class="small">paints dimming and absorbs outside input</text>
-  <rect x="618" y="224" width="230" height="100" rx="12" class="boundary"/>
-  <text x="628" y="241" class="small">owner-task boundary</text>
-  <rect x="628" y="248" width="210" height="62" rx="14" class="surface"/>
-  <text x="652" y="272" class="label">Borrowed dialog card</text>
-  <text x="652" y="294" class="small">dialog retains result semantics</text>
-  <line x1="734" y1="382" x2="734" y2="314" class="arrow"/>
-  <text x="746" y="354" class="small">modal host is topmost</text>
 
-  <text x="28" y="506" class="small">Only one side is active: the existing transient slot admits one independent root per window.</text>
+  <rect x="544" y="158" width="378" height="168" rx="12" class="dialog-host"/>
+  <text x="562" y="184" class="label">Composite TransientHostLayer</text>
+  <text x="562" y="205" class="small">scrim paint; outside input is absorbed</text>
+  <rect x="630" y="226" width="206" height="80" rx="14" class="surface"/>
+  <text x="654" y="258" class="label">Borrowed dialog card</text>
+  <text x="654" y="280" class="small">dialog owns result semantics</text>
+
+  <rect x="544" y="382" width="378" height="62" rx="10" class="task"/>
+  <text x="564" y="409" class="label">Explicit interaction-owner Task</text>
+  <text x="564" y="429" class="small">presenter supplies its mandatory FocusScope</text>
+  <line x1="896" y1="326" x2="896" y2="380" class="arrow"/>
+  <text x="788" y="356" class="small">owner association</text>
+
+  <text x="28" y="506" class="small">Only one profile is active: both use the canonical window slot and the same display-wide composite layer.</text>
 </svg>

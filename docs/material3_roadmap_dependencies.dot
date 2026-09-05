@@ -77,7 +77,7 @@ digraph material3_roadmap_dependencies {
           tooltip="Reconcile menu ownership and input design"];
     p1_6a [label="P1.6a", fillcolor="#FFFFFF", color="#16A34A",
            fontcolor="#334155", URL="material3_roadmap.md#p1-6a",
-           tooltip="Review shared transient hosting and layer anchors"];
+           tooltip="Review shared transient hosting"];
     p1_6b [label="P1.6b", URL="material3_roadmap.md#p1-6b",
            tooltip="Implement menu hosting prerequisites"];
     p1_7 [label="P1.7", URL="material3_roadmap.md#p1-7",
@@ -133,7 +133,7 @@ digraph material3_roadmap_dependencies {
           tooltip="Implement multiline Material 3 text fields"];
     p3_7 [label="P3.7", fillcolor="#FFFFFF", color="#CBD5E1",
           fontcolor="#334155", URL="material3_roadmap.md#p3-7",
-          tooltip="Implement modal sheets and adopt transient lifetime"];
+          tooltip="Reconcile and implement modal sheets on the shared host"];
   }
 
   p0_1 -> p0_2;
@@ -175,4 +175,5 @@ digraph material3_roadmap_dependencies {
   p2_1 -> p3_5 -> p3_6;
   p0_5 -> p3_7;
   p1_4 -> p3_7;
+  p1_6b -> p3_7;
 }

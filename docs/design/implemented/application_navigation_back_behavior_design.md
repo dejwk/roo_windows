@@ -1,248 +1,198 @@
 # Roo Windows Back Request Coordination Design
 
-## Implementation status
-
-**Implemented.** Phases 1 through 4 provide task/activity semantics, explicit
-and focus-derived application target routing, UI and hardware Back/Escape
-entry, root transient-slot precedence, dialog registration, and editor
-fallback after an unhandled root request. Adoption by future menu, sheet,
-drawer, and Material 3 dialog presenters is component-owned future work. See
-the [status index](../README.md) for dependency status.
-
 ## Objective
 
-Add one semantic back-request path without adding another navigation model.
-
-The path coordinates existing owners in this order:
-
-1. the active root interactive transient gets the first dismissal opportunity;
-2. the current `Activity` of the target `Task` can handle activity-local state;
-3. the `Task` pops one activity only when more than its root remains.
-
-`Task` plus `Activity` remains the complete framework route-stack abstraction.
-Tabs, page hosts, navigation bars, rails, and drawers remain selectors or
-presentation surfaces rather than implicit route owners.
+Provide one explicit, task-owned semantic Back operation that coordinates
+temporary UI, optional navigation history, and task-local fallback without
+inferring a destination task.
 
 ## Motivation
 
-The framework does not need another navigator. `Task::enterActivity()` and
-`Task::exitActivity()` already provide push, pop, and lifecycle transitions.
-
-It does need a semantic operation distinct from unconditional
-`Task::exitActivity()`. Back or Escape must first close a visible dialog,
-submenu, modal sheet, or modal drawer; it must let the current activity leave
-edit mode or reject navigation; and it must not pop the root activity into an
-empty task. Existing callers invoke `exitActivity()` directly, so every input
-source would otherwise need to reimplement those rules.
-
-This design adds only that coordination. It adds no route objects, destination
-history, URL-like state, or second route stack.
+A UI can contain several independently focused tasks. Back therefore needs a
+known task and a stable order, while physical Back and Escape must still give
+focused widgets an opportunity to handle key-local state before navigation.
+Centralizing the semantic fallback prevents buttons and application logic from
+bypassing an active transient or popping navigation directly.
 
 ## Background
 
-The [Roo Windows design glossary](../glossary.md) defines the navigation and
-temporary-UI terms used here, including [task](../glossary.md#task),
-[activity](../glossary.md#activity), [semantic Back request](../glossary.md#semantic-back-request),
-and [interactive transient](../glossary.md#interactive-transient).
+The current runtime has four relevant owners:
 
-### Existing route model
+- [`Task`](../../../src/roo_windows/core/task.h) owns one task-local focus
+  manager, either fixed content or an optional `NavigationHost`, and an optional
+  final `BackCallback`.
+- [`NavigationHost`](../../../src/roo_windows/core/navigation_host.h) owns the
+  optional destination-history policy for one task. Its `Destination` objects
+  are borrowed.
+- [`TransientPresentationSlot`](../../../src/roo_windows/core/transient_presentation.h)
+  holds the window's one root interactive transient and gates Back and Escape
+  through registration policy.
+- [`KeySource`](../../../src/roo_windows/core/key_source.h) connects explicitly
+  to one destination `Task`; focus does not select the task receiving its
+  events.
 
-[Task](../../../src/roo_windows/core/task.h) originally owned a stack of
-borrowed [`Activity`](../glossary.md#activity) objects.
-`enterActivity()` and `exitActivity()` enforced activity state and called
-`onStart()`, `onResume()`, `onPause()`, and `onStop()` in order. That was the
-historical route model against which this Back contract was implemented;
-display-runtime Phase 4 later replaced it with direct content and optional
-`NavigationHost` without changing transient-first semantic Back.
+An earlier version of this design described a borrowed `Activity` stack and an
+`Application::requestBack()` entry point with explicit or focus-derived task
+routing. The display-runtime migration replaced that model with fixed task
+content, optional `NavigationHost` history, and task-local callbacks. The
+current code has no `Activity`, `enterActivity()`, `exitActivity()`,
+`activityCount()`, or `Application::requestBack()` API. The useful historical
+constraint remains: one Back request performs one ordered semantic fallback
+instead of letting each input source manipulate navigation independently.
 
-[MainWindow](../../../src/roo_windows/core/main_window.h) provides the visual
-layer order: regular tasks, popup tasks, then the modal dialog. Visual priority
-cannot implement semantic Back because a popup task is a generic host and does
-not know whether its contents dismiss, navigate internally, or ignore Back.
-
-The core route path is implemented:
-
-1. `Application::dispatchKeyEvent()` maps hardware Back and Escape down events
-   into the semantic request path without repeating route pops.
-2. The request identifies its explicit or focus-derived task and offers the
-   eligible root transient slot first, even when no widget owns focus.
-3. An unhandled root request continues to the focused widget, allowing text
-   editing to cancel local state after transient and activity policy run.
-
-### Dependency on transient presenter lifetime
-
-The [transient presenter lifetime design](../in_progress/transient_presenter_lifetime_design.md)
-defines the single interactive-transient slot, finish reasons, destruction
-safety, and slot-removal-before-completion ordering.
-
-This design reuses that registration. It does not add a separate
-`BackParticipant` stack. The window has one registered root interactive
-transient; nested UI such as submenus remains inside that component's own
-presentation chain.
-
-The boundary is explicit:
-
-- the lifetime design owns registration, slot occupancy, teardown, and
-  `finish(PresentationFinishReason)`;
-- this design maps Back or Escape to `PresentationFinishReason::kBack` on the
-  eligible slot occupant;
-- when no transient consumes, this design delegates to the target task;
-- presentation pins do not dispatch Back, though lifetime teardown hides them.
-
-The shared lifetime slot and legacy-dialog migration are implemented. Future
-transient components must join that same slot rather than introduce a second
-Back-participant registry; their adoption requirements live in their component
-designs and do not hold this framework contract open. The shared-host design
-adds an explicit interaction owner, and display-runtime Phase 7 later makes
-eligibility conditional on coverage without changing slot cardinality.
-
-### Target task is explicit
-
-Applications can contain multiple regular tasks. Creation or paint order does
-not identify the intended navigation target.
-
-- A UI back button uses its containing task.
-- Application code supplies a task explicitly.
-- Non-touch input uses the task containing the focus owner.
-
-The [non-touch input design](../implemented/non_touch_input_design.md) owns focus resolution.
-Hardware routing derives the target task from its focused widget. With no
-eligible transient and no focus-owned or explicitly supplied task, the request
-is unhandled; the framework does not guess.
+The baseline contract in this document is implemented. P1.6b of
+[Transient surface hosting](../proposed/transient_surface_host_design.md)
+adds a narrow hosted-presentation exception: eligible Back and Escape reach
+the active hosted root before the ordinary focused-widget path. The
+[Phase 7 task-bounded transient design](../proposed/display_modal_hosting_design.md)
+then makes that early offer source-task-aware. Neither delta is implemented.
 
 ## Requirements
 
-### Functional requirements
+### Functional Requirements
 
-1. Keep `Task` and `Activity` as the only framework route stack.
-2. Share one semantic operation across UI Back, keyboard Back, Escape, and
-   application code.
-3. Dismiss the eligible interactive-transient slot occupant before consulting
-   a task.
-4. Let the current activity consume a request for local state or policy.
-5. Pop one activity when unconsumed and more than the root remains.
-6. Preserve a root task and return unhandled when its activity does not consume.
-7. Require an explicit or focus-derived target task.
-8. Keep selector state and selection history application-owned.
+1. UI and application code must identify the target task explicitly.
+2. Each physical key source must retain its configured task destination; Back
+   routing must not infer a task from focus, creation order, or visual z-order.
+3. On the implemented ordinary route, a physical Back or Escape event must
+   visit the focused widget and its structural ancestors before entering
+   semantic Back fallback. P1.6b's active-host exception is specified in
+   [Future Work](#future-work).
+4. An unhandled Back or Escape key-down and every direct semantic request must
+   use this order: root interactive transient, optional task navigation, then
+   the task's fallback callback.
+5. A navigation destination must receive Back before its history entry is
+   popped, and the root entry must not be popped implicitly.
+6. A task without navigation history must still support transient precedence
+   and a task-local fallback callback.
+7. `BackSource` must distinguish programmatic, hardware Back, Escape, and UI
+   navigation-button requests through every semantic stage.
+8. One semantic request must produce at most one transient or navigation
+   transition, including when a callback changes navigation reentrantly.
 
-### Lifetime requirements
+### Lifetime Requirements
 
-1. Transients use their normal idempotent finish path.
-2. Dispatch retains no callback, presenter, or activity pointer after return.
-3. A transient vacates its slot before completion runs.
-4. Completion can reentrantly open, destroy, or replace presentation state.
-5. One request dismisses or pops at most one semantic level.
+1. Dispatch must not add a retained widget, destination, callback, task, or
+   transient reference beyond the owners that already define the route.
+2. Transient dismissal must use the registration's ordinary idempotent finish
+   path and vacate the slot before completion delivery.
+3. Navigation callbacks may synchronously replace, clear, or otherwise change
+   history; the outer request must observe that mutation and stop.
+4. Clearing a task's callback, disconnecting its navigation host, or destroying
+   the task must leave no callable Back target behind.
 
-### Embedded requirements
+### Embedded Requirements
 
-1. Request handling allocates no memory.
-2. `Activity` gains no per-instance storage.
-3. Widgets and selectors gain no back callbacks or history fields.
-4. The lifetime registration supplies the only per-presenter coordination
-   state.
-5. Dispatch is constant-time apart from component finish work.
+1. Back dispatch must not allocate.
+2. No per-widget Back registry, route record, or focus-derived application
+   routing state may be added.
+3. Direct-content tasks must not allocate navigation history; they use the
+   task's fixed callback storage, and navigation history remains opt-in.
+4. Dispatch cost is bounded by one focused-widget ancestor walk followed by
+   constant-size semantic routing and component callback work.
 
 ## Design Overview
 
-Back is an operation on existing owners, not stored navigation state.
+A *semantic Back request* is the synchronous call
+`Task::requestBack(BackSource)`. The caller already knows the task. The task
+offers the request to its window's transient slot, then to its optional
+navigation host, and finally to its own callback.
+
+Current physical input has one extra, earlier stage. Its explicitly connected
+task runs normal focused-widget key dispatch first. Only an unhandled Back or
+Escape key-down enters the same semantic task operation:
 
 ```text
-Back / Escape / UI button
-            |
- Application::requestBack(target, source)
-            |
-   eligible interactive transient? -- yes --> handle one level
-            |
-            no
-            v
-   Task::requestBack(source)
-            |
-   Activity::onBackRequested()
-            |
-   handled, or pop one when depth > 1,
-   or leave root unhandled
+UI or application code --------------------------+
+                                                   |
+KeySource -> configured Task -> focused widget    |
+                              -> ancestors         |
+                              -> unhandled Down ---+
+                                                   v
+                                      Task::requestBack(source)
+                                                   |
+                         transient slot -> NavigationHost -> BackCallback
 ```
 
-Dispatch finishes at most one level. There is no application route history and
-no widget-tree Back bubbling.
+This split satisfies both ownership rules: the source or caller chooses the
+task, and focused controls retain ordinary key behavior without becoming a
+second semantic Back registry. P1.6b changes only the ordering while an
+eligible hosted root is active; the ordinary route remains widget-first.
 
 ## Design Details
 
-### Task and activity behavior
+### Explicit Task Selection
 
-`Task::requestBack()` owns route fallback because `Task` owns the activity
-stack. It snapshots the current activity and calls
-`Activity::onBackRequested(source)`.
+A navigation button obtains its attached task and calls
+`task.requestBack(BackSource::kNavigationButton)`. Application logic retains or
+receives the intended `Task&` and calls the same operation, normally with
+`kProgrammatic`. There is no application-level overload that guesses from
+focus. Calling code must not invoke `NavigationHost::pop()` merely to simulate
+Back because doing so skips transient and destination policy.
 
-After the hook:
+A `KeySource` establishes its target with `connect(Task&)`. The application
+input router delivers every drained event to that same task's private
+`dispatchKeyEvent()` entry point. Moving focus inside a task, or focusing a
+different task through another input route, does not rewrite the connection.
 
-- `kHandled` ends the request;
-- if the stack was cleared or its top changed reentrantly, return `kHandled`;
-- if the same activity remains and depth is greater than one, call the existing
-  `exitActivity()` once and return `kHandled`;
-- if the same activity remains as the root, return `kUnhandled`.
+### Current Physical Back and Escape
 
-The root guard belongs in `requestBack()`. `exitActivity()` remains an explicit
-programmatic pop with its current precondition. The default activity hook is
-unhandled, so existing activities require no state or override.
+`Task::dispatchKeyEvent()` calls `onKeyEvent()` on the focused widget and then
+on each ancestor up to, but not including, the task panel. A `true` result ends
+dispatch. A handler can update local state and return `false` to permit normal
+fallback; the text field uses that behavior to end editing before semantic Back
+continues.
 
-### Activity-local navigation
+If the widget path leaves a `KeyPhase::kDown` event with `KeyCode::kBack` or
+`KeyCode::kEscape` unhandled, the task maps it to `BackSource::kBackKey` or
+`BackSource::kEscapeKey` and calls `requestBack()`. Key-up and repeat events do
+not initiate semantic Back. If the semantic request is also unhandled, ordinary
+key dispatch ends without selecting another task.
 
-The activity owns navigation below its route entry: edit/selection mode,
-activity-local wizard steps, unsaved-change confirmation, or branch history.
-Opening a confirmation dialog counts as handled, preventing an immediate pop
-under the new dialog.
+### Semantic Task Order
 
-### Transient precedence
+`Task::requestBack()` implements the following fixed sequence:
 
-Only the root interactive transient marked Back- or Escape-dismissible
-participates in the shared slot.
+1. Call the window's `TransientPresentationSlot::requestBack(source)`. The slot
+   invokes its active registration only when that registration's fixed policy
+   accepts the source. A handled result ends the request.
+2. If the task has a `NavigationHost`, delegate to it. The current destination
+   gets first refusal. If it returns unhandled and still remains current, the
+   host pops exactly one entry only when history depth is greater than one.
+3. If navigation is absent, empty, or at an unhandled root, invoke the task's
+   optional `BackCallback`. An empty callback returns `kUnhandled`.
 
-- Dialogs, menu chains, modal sheets, and modal drawers participate.
-- A menu presenter closes its deepest submenu before its parent while occupying
-  one shared slot.
-- Snackbars do not participate by default.
-- Standard sheets/drawers, ripples, standalone scrims, keyboard previews, and
-  presentation pins do not participate.
+`NavigationHost` snapshots its current destination and mutation generation
+around `Destination::onBackRequested()`. If the callback navigates, detaches the
+destination, or disconnects the host, the outer request returns `kHandled`
+instead of applying a second pop or fallback.
 
-Participation policy is fixed at registration. If finish opens another
-transient reentrantly, the current request still ends after the first finish.
+The transient slot similarly owns presenter eligibility and finish ordering.
+Its default eligible handler finishes the presentation with
+`PresentationFinishReason::kBack`; a component can instead handle one internal
+level while retaining the root registration. Snackbars and paint-only
+presentation pins do not occupy this slot.
 
-### Back, Escape, and UI buttons
+### Current Window-Wide Slot Boundary
 
-Back and Escape share priority but retain distinct `BackSource` values for
-activity policy. Eligible transient presenters map both to finish reason
-`kBack`.
-
-A UI button calls
-`Application::requestBack(*getTask(), BackSource::kNavigationButton)`, never
-`exitActivity()` directly. This preserves transient precedence if presentation
-state changes around event dispatch.
-
-### Selectors and multiple tasks
-
-Tabs, navigation bars, rails, drawers, and `HorizontalPageHost` synchronize peer
-selection without creating route entries. Applications implement selection
-history in the owning activity when desired.
-
-Task fallback uses the supplied target. A display-covered transient receives
-precedence regardless of the initiating task. The Phase 7 task-covered
-extension receives precedence only when the supplied target is its explicit
-interaction owner; a request for a sibling task follows that sibling's normal
-Back order. A popup `Task` used as a genuine route can be the target; a popup-
-backed transient finishes through lifetime registration and does not expose its
-implementation task as route history.
+The implemented slot receives only `BackSource`, so a call from any task in the
+window offers the current eligible root transient first. The public caller is
+still task-explicit; only the slot lacks the source-task identity needed to
+distinguish future display coverage from task coverage. That limitation is the
+precise Phase 7 delta described in [Future Work](#future-work).
 
 ### Cost
 
-The task path adds one virtual function to the existing `Activity` vtable, with
-no polymorphic-object size increase, plus an activity-count query and request
-method. Transient dispatch reuses the lifetime registration's slot pointer;
-two policy bits fit its flags byte. The window pays for one occupant pointer,
-and registrations have no linked-list field or separate `BackDispatcher`
-entry.
+`Task` stores one fixed `std::function` callback slot and one nullable navigation
+host pointer as part of the current task runtime. The callback can be empty. The
+semantic request performs no allocation. `NavigationHost` can allocate when
+history grows during `push()`, but Back dispatch and a normal pop reuse existing
+storage. Physical dispatch adds only the existing parent walk from focused
+widget to task panel.
 
 ## Proposed API
+
+The implemented public API is:
 
 ```cpp
 namespace roo_windows {
@@ -256,8 +206,9 @@ enum class BackSource : uint8_t {
 
 enum class BackResult : uint8_t { kUnhandled, kHandled };
 
-class Activity {
+class Destination {
  public:
+  /// Gives this destination first refusal before history fallback.
   virtual BackResult onBackRequested(BackSource source) {
     return BackResult::kUnhandled;
   }
@@ -265,165 +216,165 @@ class Activity {
 
 class Task {
  public:
-  size_t activityCount() const;
-  BackResult requestBack(BackSource source);
-};
+  using BackCallback = std::function<BackResult(BackSource)>;
 
-class Application {
- public:
+  /// Configures the task's final fallback. An empty function clears it.
+  void setBackCallback(BackCallback callback);
+
+  /// Routes semantic Back through the window slot and this task's content.
   BackResult requestBack(
-      Task& target,
       BackSource source = BackSource::kProgrammatic);
 };
 
-struct TransientPresentationPolicy {
-  bool dismiss_on_back : 1 = false;
-  bool dismiss_on_escape : 1 = false;
+class KeySource {
+ public:
+  /// Connects this physical source to one explicit task.
+  void connect(Task& destination);
 };
 
 }  // namespace roo_windows
 ```
 
-`Application::requestBack()` verifies that the target belongs to the
-application, checks the transient host, then calls `target.requestBack()`.
-Passing a detached or foreign task is a programming error.
-
-Policy is fixed while registered; changing it requires re-registration. No
-predictive API lands before a gesture and animation contract can test it end to
-end.
+`NavigationHost::requestBack()` and `Task::dispatchKeyEvent()` remain private
+coordination methods. There is intentionally no focus-derived
+`Application::requestBack()`, `Activity`, `enterActivity()`, `exitActivity()`,
+or `activityCount()` API.
 
 ## Implementation Plan
 
 Authoring reference: follow the
 [embedded C++ code-authoring instructions](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
-and [roo_windows widget-authoring instructions](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
+and
+[Roo Windows widget-authoring instructions](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
-### Phase 1: Task and activity semantics — implemented
+### Phase 1: Add Task-Owned Semantic Back (Implemented)
 
-Add the enums, default activity hook, activity-count query, and
-`Task::requestBack()`. Test root preservation, one pop, consumption, and
-reentrant clear/pop/push. Update API comments in the same commit.
-
-Proposed commit message:
-
-> task: add semantic back request handling
-
-Validation: `bazel test //:task_test`.
-
-### Phase 2: Application entry point and UI adoption — implemented
-
-Add `Application::requestBack(Task&, BackSource)` with task fallback only.
-Convert existing activity Back buttons, including the composite menu title,
-from direct pop. Test target selection in a multi-task application and update
-one existing example or emulator flow.
+Add `BackSource`, `BackResult`, the optional task callback, and
+`Task::requestBack()`. Route the existing transient slot before the direct-task
+callback and preserve synchronous, allocation-free result propagation.
 
 Proposed commit message:
 
-> application: route back requests to their target task
-
-Validation: `bazel test //:task_test //:application_test` and build the updated
-example or emulator target.
-
-### Phase 3: Transient precedence — implemented
-
-After Phase 1 of the [lifetime design](../in_progress/transient_presenter_lifetime_design.md),
-add fixed Back/Escape policy bits and offer the request to the slot occupant
-before task fallback. Test slot-removal-before-completion, replacement
-reentrancy, one finish per request, and fallback with no eligible transient.
-
-Proposed commit message:
-
-> presentation: dismiss active transient on back request
+> task: add task-owned semantic Back routing
 
 Validation:
 
-- `bazel test //:back_request_test
-  //:transient_presentation_lifetime_test`
+```sh
+bazel test //:task_test //:transient_presentation_lifetime_test \
+  //:application_test
+```
 
-### Phase 4: Non-touch integration — implemented
+### Phase 2: Integrate Optional Navigation (Implemented)
 
-Route hardware Back and Escape using the focus-owned task, and reconcile editor
-cancellation with transient-first dispatch. When route handling leaves a
-request unhandled, it resumes normal focused-widget dispatch through
-structural ancestors, as other keys do. Add focused tests for no-target
-requests, dialog precedence, activity fallback, editor cancellation, and
-focused-tab propagation, plus an updated reference application.
+Add `Destination::onBackRequested()` and route an installed `NavigationHost`
+between the transient slot and task callback. Preserve the root entry, pop one
+non-root entry, and treat reentrant history mutation as consumption.
 
 Proposed commit message:
 
-> input: route hardware back requests through focused tasks
+> navigation: route Back through destination history
 
-Validation: `//:back_request_test`, `//:application_test`,
-`//:transient_presentation_lifetime_test`, text-field tests, and the
-reference-application build.
+Validation:
+
+```sh
+bazel test //:navigation_host_test //:navigation_task_test
+```
+
+### Phase 3: Route Explicit Physical and UI Sources (Implemented)
+
+Connect each `KeySource` to one task, perform widget-and-ancestor key dispatch
+before Back/Escape semantic fallback, and convert framework navigation buttons
+to call their attached task rather than manipulating history directly. Keep
+`BackSource` intact through every stage.
+
+Proposed commit message:
+
+> input: route Back and Escape through explicit tasks
+
+Validation:
+
+```sh
+bazel test //:key_source_test //:roo_windows_test
+bazel build //examples:simple_navigation_example_build
+```
 
 ## Testing Plan
 
-Task tests cover activity consumption, root preservation, one-level pop, and
-reentrant stack changes. Presentation-slot tests cover exclusivity,
-eligibility, exactly-once finish, and destruction-safe removal. Application and
-reference tests cover dialog precedence, focus-derived target selection,
-editor cancellation, and activity fallback.
+The maintained suite uses `task_test` for direct-content callback behavior,
+`navigation_host_test` and `navigation_task_test` for destination, root, pop,
+and reentrancy behavior, `application_test` and
+`transient_presentation_lifetime_test` for slot precedence, and
+`key_source_test` for explicit physical routing plus focused widget and ancestor
+delivery. `roo_windows_test` and the simple navigation example cover framework
+call-site integration. No golden test is needed because this contract changes
+event routing rather than pixels.
 
-Supported-target validation records stack delta and confirms that request
-handling allocates nothing. No rendering golden is needed because this design
-changes semantic routing, not geometry or pixels.
+Regression coverage must distinguish direct `Task::requestBack()` from
+physical dispatch: the direct call begins at the transient slot, while a
+physical key can be consumed by the focused widget path before the slot is
+consulted. It must also verify all four `BackSource` values and an unhandled
+empty callback. These are current-state tests; P1.6b adds separate hosted
+root-first cases without changing the no-host assertions.
 
 ## Caveats
 
-A hardware source with neither an eligible transient nor a focus-owned task is
-unhandled. Applications wanting a global fallback explicitly select that task.
+The current transient slot is window-wide and receives no task identity. Until
+Phase 7, any task's semantic request can offer Back to the one eligible root
+transient. Applications needing task-local temporary UI cannot infer isolation
+from task focus or bounds.
 
-Activities remain borrowed and must outlive task membership. This design does
-not introduce route ownership or general weak references.
+A focused key handler that mutates state and returns `false` deliberately allows
+the same physical event to continue into semantic Back. A handler that wants to
+stop transient and navigation fallback must return `true`.
+
+Installing a capturing `BackCallback` can allocate because it is a
+`std::function`; the no-allocation guarantee applies to dispatch after the
+callback is installed.
 
 ### Rejected Alternatives
 
-#### Add a navigator or route-controller hierarchy
+#### Focus-Derived Application Routing
 
-Rejected because `Task` and `Activity` already own route stack and lifecycle.
+Rejected because several tasks can retain independent focus and a non-touch
+source already has an explicit destination. A global application entry point
+would either guess or duplicate the task parameter.
 
-#### Call `exitActivity()` for every Back source
+#### Direct Navigation Pop for Back Buttons
 
-Rejected because it bypasses transient and local policy and can remove root.
+Rejected because it bypasses the transient slot, destination policy, task
+fallback, and one-step reentrancy guards.
 
-#### Add a separate `BackDispatcher` stack
+#### A Separate Back-Participant Stack
 
-Rejected because the lifetime host already owns the only root
-interactive-transient slot; another stack adds RAM and destruction/order
-races.
-
-#### Bubble through the widget tree
-
-Rejected because widgets do not own routes and modal priority does not follow
-ordinary parentage.
-
-#### Pick the newest regular task
-
-Rejected because creation order does not identify intent in multi-pane apps.
-
-#### Record selector history
-
-Rejected because peer destinations are not universally hierarchical routes and
-implicit history adds storage and application policy to reusable widgets.
+Rejected because the transient slot already owns the one root interactive
+presentation, while nested submenu order belongs to its presenter. A second
+registry would duplicate ordering and teardown state.
 
 ## Future Work
 
-Each future interactive transient owns its adoption of this contract.
-[Material 3 menus](../proposed/material3_menus_design.md) must register one
-root chain and dismiss the deepest submenu first;
-[modal sheets](../proposed/material3_sheets_design.md) and
-[modal drawers](../proposed/material3_navigation_drawer_design.md) must
-register as Back/Escape-dismissible; [Material 3 dialogs](../proposed/material3_dialogs_design.md)
-must use the same root slot as legacy dialogs.
-[Snackbars](../proposed/material3_snackbar_design.md) remain passive by
-default. These obligations are defined and tested with their components.
+P1.6b of
+[Transient surface hosting](../proposed/transient_surface_host_design.md)
+adds one early physical-key check while a hosted association is active. An
+eligible Back or Escape is offered to the hosted root before the focused
+widget, its ancestors, editor fallback, navigation, or task callback. If the
+root handles the request, dispatch stops. If it declines, dispatch continues
+through that task's ordinary widget path and then directly through navigation
+and the task callback; it does not offer the same physical event to the root a
+second time. With no eligible hosted association, the current widget-first
+route is unchanged. Direct `Task::requestBack()` remains slot-first.
 
-Predictive Back can extend this path after gesture, cancellation, and component
-motion contracts exist. It must preserve transient-first and explicit-target
-ownership, lock one consumer for the gesture, and commit through this semantic
-request path.
+[Display-runtime Phase 7](../proposed/display_modal_hosting_design.md) then
+replaces the internal source-less slot operation with
+`TransientPresentationSlot::requestBack(Task& source_task, BackSource source)`.
+`Task::requestBack()` will pass `*this`. A display-covered presentation will be
+offered requests from every task in the same window; a task-covered
+presentation will be offered only its interaction owner's requests. An
+ineligible or unhandled presentation will leave that same source task to
+continue through its `NavigationHost` and `BackCallback`. The physical route
+retains P1.6b's single-offer rule. These are already designed future deltas,
+not current behavior.
 
-Soft-keyboard hide-on-back remains owned by editable-text and non-touch-input
-work. It can participate as a transient or activity-local state without another
-navigation layer.
+Future transient components adopt the same root slot and define their internal
+Back step in their component designs. Predictive Back requires a separate
+gesture, cancellation, and progress contract while retaining explicit task
+ownership and the semantic order above.
