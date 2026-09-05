@@ -70,11 +70,11 @@ Those seams constrain the dialog design directly.
 
 First, the current visual behavior is correct for centered basic dialogs, but
 its dialog-specific attachment is not the path for new Material 3 dialogs.
-P1.6b lands the shared-host prerequisites without structurally migrating legacy
-`Dialog`.
-New Material 3 dialogs adopt the host in P1.8: its combined layer borrows the
-root, selects barrier paint independently, activates the presenter-owned focus
-scope, and blocks lower layers.
+P1.6b migrates legacy `Dialog` to preconfigured measurable roots, explicit task
+ownership, and the shared structural host, removing the dialog-specific
+`MainWindow` attachment path. New Material 3 dialogs adopt that same host in
+P1.8: its combined layer borrows the root, selects barrier paint independently,
+activates the presenter-owned focus scope, and blocks lower layers.
 
 Second, the reviewed framework intentionally supports one root interactive
 transient per window. Basic and full-screen dialogs therefore use the same host
@@ -169,6 +169,8 @@ Those references close six local decisions:
 8. Keep the current legacy dialog family available during migration.
 9. Preserve a reusable dialog's configured body state across dismissal and
    reopen; replacing the body ends the old borrow or adoption explicitly.
+10. Migrate suitable in-repository legacy alert and radio-list dialog call
+    sites to the Material 3 basic-dialog family when it lands.
 
 ### Interaction Requirements
 
@@ -302,6 +304,8 @@ In scope:
 - full-screen dialogs,
 - generic caller-provided body content,
 - fixed-capacity action-role modeling,
+- migration of suitable in-repository legacy alert and radio-list dialog call
+  sites,
 - and integration with the shared host's one-slot and explicit-owner contract.
 
 Out of scope:
@@ -311,7 +315,7 @@ Out of scope:
   class,
 - custom-positioned basic dialogs on wide layouts,
 - animated container-transform transitions,
-- and mass migration of every existing legacy dialog call site.
+- migration of external callers or removal of the legacy dialog types.
 
 Those exclusions keep the first Material 3 dialog landing narrow and focused on
 the actual missing family rather than on every dialog-like workflow at once.
@@ -993,9 +997,10 @@ API notes:
    and dismissal completion run after the host detaches the complete dialog
    root and vacates its active presentation; they do not detach the persistent
    body from that root.
-11. The existing callback-based legacy dialog APIs and structural path remain
-   unchanged in P1.6b. Any later structural migration is scoped separately from
-   the shared-host prerequisite.
+11. P1.6b has already moved the callback-based legacy dialog API to explicit
+   task ownership and the common structural host. This design may migrate call
+   sites to Material 3 types, but does not reintroduce a separate host path or
+   remove the legacy visual types required by external callers.
 
 The excerpt includes the internal scaffold inheritance and its required
 `Container` overrides so the concrete dialog roots satisfy the base contract.
@@ -1091,6 +1096,10 @@ Code slice:
    layout, horizontal versus stacked actions, and width clamping.
 4. Add `examples/material3/dialogs/dialogs.ino` showing alert and choice-style
    basic dialogs.
+5. Migrate suitable in-repository legacy `AlertDialog` and `RadioListDialog`
+   call sites to `material3::AlertDialog` or a `BasicDialog` with generic list
+   body content. Keep the legacy types only for callers that intentionally
+   retain their visual/API contract.
 
 Proposed commit message:
 
@@ -1149,8 +1158,10 @@ Validation coverage for the full dialog family includes:
 
 ## Caveats
 
-The chosen design lands the Material 3 dialog family without trying to erase
-the legacy dialog APIs in the same change set.
+The chosen design lands the Material 3 dialog family without forcing removal
+of the legacy dialog types in the same change set. Their structural hosting is
+already unified by P1.6b; this design migrates suitable in-repository callers
+to the new visual family.
 
 That is the right first step, but it does have visible consequences:
 
@@ -1229,10 +1240,8 @@ Intentional follow-ons that stay out of this design:
 1. adaptive wrappers that switch a shared dialog model between centered basic
    and full-screen presentation based on window size,
 2. custom-positioned basic dialogs on larger screens,
-3. migration of legacy `AlertDialog` and `RadioListDialog` callers onto the new
-   Material 3 scaffolds,
-4. enter and exit motion once the broader Material 3 motion-token story lands,
-5. picker-specific wrappers such as date and time dialogs once those component
+3. enter and exit motion once the broader Material 3 motion-token story lands,
+4. picker-specific wrappers such as date and time dialogs once those component
    families are designed,
-6. bounded nested-transient support if a concrete workflow requires a basic
+5. bounded nested-transient support if a concrete workflow requires a basic
    dialog above an active full-screen dialog.

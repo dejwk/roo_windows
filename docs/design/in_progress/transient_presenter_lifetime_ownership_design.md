@@ -562,8 +562,8 @@ class TransientPresentationRegistration {
   TransientPresentationRegistration() = default;
 
   // Component hook for session-bound content, timers, and input state. A
-  // null-associated legacy or standalone presenter also removes its direct
-  // surface here; hosted root removal follows through non-virtual host cleanup.
+  // null-associated standalone presenter also removes any direct surface here;
+  // hosted root removal follows through non-virtual host cleanup.
   virtual void detachPresentation(PresentationFinishReason reason) = 0;
 
   // Application-facing completion hook. Runs after state becomes kIdle.
@@ -744,13 +744,15 @@ rather than putting a type-erased result or callback in the framework base.
 - The dialog object is the registered participant rather than a borrowed
   dialog plus a callback stored by `MainWindow`.
 - That completed legacy adoption changes lifetime and slot participation only.
-  Existing `Dialog` keeps its direct `MainWindow` dialog-and-scrim attachment,
-  preparation, measurement, and centering path and has a null hosted
-  association.
+  In the current implementation, `Dialog` still keeps its direct `MainWindow`
+  dialog-and-scrim attachment, preparation, measurement, and centering path and
+  has a null hosted association.
 - The current one-dialog limit becomes the shared one-interactive-transient
   limit rather than a dialog-specific special case.
-- New Material 3 dialogs use the composite transient host; P1.6b does not
-  structurally migrate the legacy API.
+- P1.6b migrates the legacy API to preconfigured measurable roots, explicit
+  task ownership, a presenter focus scope, and the composite transient host;
+  it then removes the direct `MainWindow` dialog path. New Material 3 dialogs
+  use that same host.
 - A Material 3 dialog's configured body remains in its presenter subtree while
   idle. A borrowed body stays caller-owned through replacement or dialog
   destruction; an adopted body is deleted at that endpoint, not on dismissal.

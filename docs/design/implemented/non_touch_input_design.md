@@ -676,11 +676,12 @@ fall out of the simple clickable model.
 
 1. Dialogs
 
-   Legacy [Dialog](../../../src/roo_windows/dialogs/dialog.h) participates in
-   the root Back slot but retains its direct compatibility structure and does
-   not gain a presenter scope. New Material 3 dialogs gain focus containment,
-   initial focus, keyboard button traversal, and Escape dismissal through
-   P1.6b hosting and the
+   Legacy [Dialog](../../../src/roo_windows/dialogs/dialog.h) currently
+   participates in the root Back slot through its direct compatibility
+   structure. P1.6b migrates it to an explicit interaction owner and presenter
+   scope. New Material 3 dialogs use the same focus containment, initial focus,
+   keyboard button traversal, and Escape dismissal contract through P1.6b
+   hosting and the
    [Material 3 dialog design](../proposed/material3_dialogs_design.md).
 
 2. Lists and list-derived navigation surfaces
@@ -733,8 +734,8 @@ The integration rules are:
    redirect a connected physical source.
 6. Every focus request, including one initiated by a touch-aware component,
    remains constrained by that manager's active legal root.
-7. Legacy dialogs retain the direct compatibility path and therefore do not
-   gain P1.6b focus containment or restoration.
+7. Migrated legacy dialogs require an explicit interaction-owner task and gain
+   the same P1.6b focus containment and restoration as other hosted presenters.
 
 ### Emulation and Platform Work
 

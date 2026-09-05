@@ -645,9 +645,10 @@ The complete contracts are in
 and the
 [Phase 7 task-bounded coverage design](../proposed/display_runtime_phase_7_task_bounded_transient_coverage_design.md).
 
-P1.6b leaves legacy dialog structure unchanged. Legacy dialogs continue to
-share the logical one-presentation capacity, while new hosted components use
-the composite layer. Any later legacy structural migration is separate work.
+P1.6b migrates legacy dialogs to preconfigured measurable roots, explicit task
+ownership, and the composite host, then removes the dialog-specific
+`MainWindow` path. They continue to use display coverage. Phase 7 adds task
+coverage as an opt-in policy; it does not change legacy dialog APIs.
 
 ### Teardown and cancellation
 

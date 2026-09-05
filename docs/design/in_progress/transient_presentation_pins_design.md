@@ -179,9 +179,9 @@ visuals.
    result; the transient visual is omitted for that presentation.
 5. The mechanism's object RAM and allocator overhead must be paid only while a
    pin is active.
-6. Interactive surfaces remain structural widgets, not pins: menus use the
-   composite `TransientHostLayer`, the existing on-screen keyboard remains a
-   popup task, and legacy dialogs retain their direct dialog-and-scrim path.
+6. Interactive surfaces remain structural widgets, not pins: menus and
+   migrated legacy dialogs use the composite `TransientHostLayer`, while the
+   existing on-screen keyboard remains a popup task.
 7. Contract-defining declarations must carry Doxygen comments and follow the
    repository's `camelCase()` instance-method convention.
 8. Pin painters must follow the single-final-write and foreground-first

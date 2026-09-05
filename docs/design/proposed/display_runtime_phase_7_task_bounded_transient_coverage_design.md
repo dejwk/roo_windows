@@ -177,8 +177,9 @@ second lifetime domain.
 - Concurrent task and display coverage.
 - Nested transient stacks.
 - Visible pins scoped to the covered owner task during task coverage.
-- Legacy-dialog migration; P1.6b leaves legacy dialog structure unchanged and
-  Phase 7 does not alter that decision.
+- Legacy-dialog migration, which belongs to P1.6b. Phase 7 consumes the
+  resulting common hosted path but does not change dialog APIs or content
+  preparation.
 - Cross-display coverage or auxiliary-task exceptions.
 
 ## Design Overview
@@ -317,8 +318,9 @@ Phase 7 replaces the source-less slot entry point with
 `TransientPresentationSlot::requestBack(Task& source_task, BackSource source)`.
 `Task::requestBack()` passes `*this`; physical Escape reaches the same path
 through its dispatching task. The slot first verifies that `source_task`
-belongs to its window. A legacy dialog or display-covered host is offered Back
-from every same-window task. A task-covered host is offered Back only when
+belongs to its window. A display-covered host, including a migrated legacy
+dialog, is offered Back from every same-window task. A task-covered host is
+offered Back only when
 `source_task` is its interaction owner; otherwise the slot returns
 `kUnhandled` and the source task continues its normal Back order. Production
 code has no source-less bypass after Phase 7.
@@ -375,10 +377,10 @@ by the outer transition.
 ### Compatibility
 
 Existing hosted component profiles continue to select display coverage. New
-task-coverage consumers opt in explicitly. P1.6b leaves legacy dialog structure
-unchanged; legacy dialogs continue to share the logical one-presentation
-capacity without using this coverage field. Any later structural migration is
-separate work.
+task-coverage consumers opt in explicitly. P1.6b has already migrated legacy
+dialogs onto the same host with explicit owners and display coverage. Phase 7
+does not move them to task coverage; a future component API may request that
+policy explicitly if it has a task-local dialog use case.
 
 ## Proposed API
 

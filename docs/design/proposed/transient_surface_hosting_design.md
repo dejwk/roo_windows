@@ -26,6 +26,106 @@ cross-task presenter requires them.
 presentation-pin host exist. The shared structural host, active focus-scope
 runtime, display-wide input isolation, and presenter-owned rect-pin path do not.
 
+### Concrete Use Cases
+
+The host is easier to understand as the common machinery behind several user
+interactions.
+
+#### An anchored menu
+
+A user presses the overflow button on a settings screen. The menu appears next
+to that button and the button remains visually pressed while the menu is open.
+Keyboard focus moves into the menu. A tap anywhere else closes it without
+activating the settings screen underneath. Back closes the deepest submenu
+first and eventually closes the complete menu. If navigation destroys the
+settings task, the menu closes without retaining a pointer to the old overflow
+button.
+
+The menu presenter owns menu placement, rows, selection, and its submenu chain.
+The shared host only copies the live button geometry, attaches the menu above
+the display, activates its focus scope, isolates lower input, and performs safe
+teardown. The pressed button image is an optional paint-only presentation pin.
+
+#### A confirmation dialog
+
+A user chooses "Erase settings." A centered dialog appears above a scrim and
+temporarily becomes the only interactive surface in the window. Focus moves to
+the dialog actions. Outside taps are absorbed, Back cancels, and selecting an
+action removes the complete hosted structure before application completion is
+called. The completion callback may then navigate, destroy the dialog, or open
+another presentation.
+
+The dialog presenter owns its contents, action policy, and result. The host
+owns neither the dialog allocation nor its meaning; it supplies the scrim,
+exclusive input boundary, task context, focus transition, and finish ordering.
+
+#### A modal sheet
+
+A user opens a filter panel from the bottom of the display. The sheet and scrim
+block the content behind them, but the sheet presenter retains control of its
+drag state and close animation. An outside tap or Back asks the presenter to
+close; the presenter may animate to its final position before calling the
+host's terminal `finish()` operation. Borrowed form content is detached before
+the completion callback can destroy it.
+
+Standard in-layout bottom and side sheets are not transient-host consumers:
+they remain ordinary application content. Only their temporary modal wrappers
+need this infrastructure.
+
+### What These Presentations Have in Common
+
+Menus, dialogs, and modal sheets look and behave differently, but each needs
+the same failure-prone framework work:
+
+1. temporarily attach one presenter-owned widget subtree above ordinary
+   application content;
+2. associate it with an existing task for focus, keys, text editing, Back, and
+   owner teardown without pretending that the temporary UI is a new route or
+   task;
+3. prevent covered pointer, key, and editor input from leaking to the content
+   behind it;
+4. coordinate one scarce root-presentation slot, including busy and replacement
+   behavior;
+5. handle presenter, task, and window destruction without retaining dead
+   pointers; and
+6. disable input and detach structure before invoking application code that may
+   destroy or replace the presenter.
+
+Implementing those rules separately in every component would duplicate the
+hardest lifetime, focus, input, and reentrancy logic. It would also let two
+components disagree about which one receives Back or which one is visually and
+interactively on top. The shared host factors out those mechanics while leaving
+component semantics with the presenter.
+
+The differences remain explicit policy rather than a generic "popup type": a
+menu uses a transparent barrier and outside dismissal, a basic dialog uses a
+scrim and absorbs outside taps, a full-screen dialog needs no visible scrim,
+and a modal sheet handles an outside request itself so it can animate or veto.
+
+### Likely Future Consumers and Non-Consumers
+
+The host is design-system-independent and is not limited to the first three
+Material 3 families. Plausible later consumers include:
+
+- modal navigation drawers;
+- custom confirmation, color-picker, inspector, or command-palette surfaces;
+- interactive anchored popovers that need focus and outside dismissal; and
+- component-specific modal presenters, such as date or time pickers, when they
+  cannot be expressed simply as content inside the Material 3 dialog family.
+
+Several Material 3 experiences reuse a component presenter rather than adding
+a new host concept. Exposed dropdowns and context menus are menu presentations;
+most modal pickers can use dialog presentation; compact adaptations may use a
+modal sheet. A new component belongs on this host only when it is temporary,
+structurally above ordinary content, and needs an input/focus/Back boundary.
+
+Conversely, a snackbar normally allows underlying interaction and uses its own
+bounded queue; a ripple or interaction fade is widget-local paint; a tooltip or
+slider value indicator can often be a paint-only presentation pin; the
+software keyboard remains a long-lived popup task; and standard sheets remain
+ordinary layout. Those are intentionally not forced through the interactive
+transient host.
+
 ### Implemented Foundations
 
 The proposal builds on these existing contracts:
@@ -87,19 +187,60 @@ Menu rows, placement, selection, submenu behavior, and trigger-paint contents
 remain in the
 [Material 3 menus design](material3_menus_design.md).
 
-### Legacy Dialog Constraint
+### Legacy Dialog Sequencing and Selected Migration
 
-Legacy dialog preparation cannot use the new one-shot host transaction without
-changing behavior. The current path admits the dialog, invokes
-`Dialog::onEnter()`, measures the content produced by that hook, centers the
-result, and only then attaches the dialog. Existing tests require
-`onEnter()`-installed content to affect the first measurement.
+Legacy dialogs fit the conceptual model: they are temporary interactive roots,
+need a scrim, exclude lower input, receive Back, and must detach before
+completion. Their compatibility exception is caused by the shape of the old
+API, not by a fundamental difference in dialog layout.
 
-Preparing before host admission would mutate a dialog that a busy host then
-rejects. Supplying bounds before preparation is impossible. P1.6b therefore
-leaves legacy dialog structure unchanged. Legacy dialogs and hosted surfaces
-continue to share the existing logical slot, so they remain mutually exclusive.
-Material 3 dialogs use the new host through their explicit `show(Task&)` API.
+The current opening sequence is:
+
+1. `MainWindow::showDialog()` admits the dialog to the logical slot. A busy
+   slot returns without changing the dialog.
+2. It attaches the scrim and calls `Dialog::beginPresentation()`.
+3. `beginPresentation()` invokes the subclass's `onEnter()` hook. Existing
+   subclasses may create or attach their presentation content in that hook.
+4. `MainWindow` measures the now-populated dialog, centers it, and attaches it.
+
+The order of steps 3 and 4 is observable. In particular,
+`OnEnterContentIsMeasuredBeforeDialogIsAttached` verifies that content attached
+by `onEnter()` participates in the first measurement.
+
+The new host instead accepts the presenter's final root bounds as an input to
+one atomic `show()` transaction. It preflights all inputs before mutating either
+the incoming presenter or the current presentation. A legacy dialog cannot
+supply those bounds until after `onEnter()`, because that hook may change the
+content to be measured. Calling `onEnter()` before preflight would preserve the
+layout result but would change another observable rule: a dialog rejected by a
+busy host would already have entered and mutated its content despite never
+being shown.
+
+This design chooses a source-breaking migration rather than preserving that
+sequencing contract through a special host transaction:
+
+1. Legacy dialog subclasses configure all structure that affects measurement
+   before `show(Task&)`. `onEnter()` may remain as a successful-entry
+   notification, but it must not install, remove, or replace content needed for
+   the current presentation's initial measurement.
+2. The owner-inferred `Application::showDialog()` entry point is replaced by
+   `Dialog::show(Task&, CallbackFn)`. It measures the complete detached dialog
+   root and presents it through the common host with a presenter-owned focus
+   scope and the nonreplaceable scrim profile. The owning alert convenience
+   likewise receives an explicit `Task&`.
+3. Built-in legacy dialogs and repository call sites are updated to the new
+   configuration contract. Call sites for which the Material 3 family is the
+   right replacement migrate to that family when it lands; the remaining
+   legacy visual types still use the same common host.
+4. Once all legacy dialog presentations use the host, `MainWindow` removes its
+   `active_dialog_`, dialog-specific child enumeration, and direct scrim/dialog
+   attachment path.
+
+This deliberately changes subclasses that populate content in `onEnter()`.
+That compatibility cost is preferable to retaining two structural host paths
+or adding prepare, rollback, and reentrancy semantics used only by the old API.
+The existing busy-host rule remains: rejected `show(Task&)` calls do not invoke
+`onEnter()` or otherwise mutate presentation state.
 
 ## Requirements
 
@@ -137,9 +278,10 @@ Material 3 dialogs use the new host through their explicit `show(Task&)` API.
    completion and performs no presenter access afterward.
 9. **P9 — Shutdown closure.** Window shutdown permanently rejects new
    admissions before finishing the active presentation.
-10. **P10 — Legacy coexistence.** Legacy dialogs retain their current
-    preparation, centering, and attachment behavior while sharing the same
-    one-presentation capacity.
+10. **P10 — One production structural path.** Legacy dialog subclasses and
+    callers migrate to preconfigured measurable roots and explicit interaction
+    owners; every remaining legacy dialog uses the common host. The old direct
+    `MainWindow` dialog/scrim path is removed.
 
 ### Focus and Input Requirements
 
@@ -233,7 +375,7 @@ Material 3 dialogs use the new host through their explicit `show(Task&)` API.
    hosted-slot association, and packed active policy at or below 32 bytes on
    the configured 32-bit ABI.
 3. Keep the net fixed `MainWindow` increase at or below 96 bytes after
-   accounting for reused legacy dialog and scrim state.
+   accounting for removal or reuse of legacy dialog and scrim state.
 4. Add no state to regular-task or popup-task vector elements.
 5. Showing, dismissal, focus entry and exit, validation, input quiescence, and
    structural attachment allocate nothing. Existing top-level vector growth
@@ -262,10 +404,10 @@ The design introduces five document-local concepts:
 
 `TransientSurfaceHost` is a `MainWindow` service and non-widget coordinator.
 The existing `TransientPresentationSlot` remains the logical admission
-authority during legacy compatibility. A private hosted-admission seam records
-the coordinator for hosted occupants; legacy dialog occupants leave that
-association empty and retain their current structural path. No new component
-uses the standalone path.
+authority. A private hosted-admission seam records the coordinator for every
+production structural occupant, including migrated legacy dialogs. A null host
+association remains possible only for direct use of the lower-level lifetime
+primitive and its focused tests; it is not a second production attachment path.
 
 `MainWindow` attaches one direct host-layer child:
 
@@ -289,7 +431,7 @@ The major solution elements map to the requirements as follows:
 | --- | --- |
 | shared logical slot | P1 |
 | hosted cleanup seam and permanent shutdown guard | P7–P9 |
-| nullable hosted association plus unchanged legacy path | P10 |
+| common hosted association plus migrated legacy dialogs | P10 |
 | explicit interaction owner and availability bit | P2, I7, I10–I11, A2, A5–A6 |
 | one composite host layer | P3, I5, B1–B2 |
 | two-pass preflight, admission guard, and synchronous caller-lifetime contract | P4, P6 |
@@ -429,8 +571,8 @@ that panel.
 
 Replacement applies only when the request asks for replacement, the active
 occupant is structurally hosted, and that occupant's stored profile is
-replaceable. Legacy dialogs and nonreplaceable hosted surfaces return
-`kHostBusy`.
+replaceable. Migrated legacy dialogs and other nonreplaceable hosted surfaces
+return `kHostBusy`.
 
 The host does not call `TransientPresentationSlot::replace()` for hosted
 replacement. Public standalone `replace()` returns `kHostBusy` without
@@ -464,14 +606,14 @@ these callbacks.
 ### Hosted-Slot Lifecycle Seam
 
 The existing slot remains responsible for registration state, Back dispatch,
-completion ordering, and legacy dialog exclusivity. Its private hosted-show
+completion ordering, and root-presentation exclusivity. Its private hosted-show
 operation installs the registration and one nullable structural-host pointer
-atomically. Legacy dialog and direct standalone slot operations produce a null
-association; no new structural presenter uses either path. Public
+atomically. Direct standalone slot operations produce a null association; no
+production structural presenter uses that path. Public
 `TransientPresentationSlot::replace()` checks the association before invoking
 completion and rejects a hosted occupant with `kHostBusy`. It can therefore
-replace a null-associated standalone or legacy occupant, but it cannot bypass
-the hosted surface profile. The structural host uses its private finish and
+replace a null-associated standalone participant, but it cannot bypass the
+hosted surface profile. The structural host uses its private finish and
 hosted-show seams after validating that profile.
 
 The slot's `admission_closed_` flag is the permanent shutdown state.
@@ -499,8 +641,9 @@ and component storage remain alive during non-virtual host cleanup.
 `TransientPresentationSlot::shutdown()` permanently rejects admission before
 finishing an occupant with `kHostDestroyed`. `MainWindow` invokes it before
 destroying the host layer, scrim, pins, tasks, or popup roots. Reentrant
-completion therefore cannot reopen either a hosted surface or a legacy dialog.
-The slot destructor calls the same idempotent operation as a fallback.
+completion therefore cannot reopen a hosted surface, including a migrated
+legacy dialog. The slot destructor calls the same idempotent operation as a
+fallback.
 
 ### Focus Integration
 
@@ -685,20 +828,36 @@ Presenter destruction skips steps 2, 9, and 10. Window shutdown sets the
 permanent slot guard before step 1. Interaction-owner teardown marks the owner
 unavailable before step 1.
 
-### Legacy Dialog Coexistence
+### Legacy Dialog Migration
 
-Legacy `MainWindow::showDialog()` continues to:
+The migrated legacy presentation path is:
 
-1. admit its registration through the shared slot;
-2. attach the existing scrim directly;
-3. invoke `beginPresentation()` and `onEnter()`;
-4. measure and center the resulting content; and
-5. attach the dialog directly.
+1. application code or the dialog constructor configures the complete content
+   tree before presentation;
+2. `Dialog::show(Task&, CallbackFn)` validates the explicit owner and measures
+   the detached, already-populated dialog;
+3. the dialog's embedded registration and focus scope are admitted through the
+   shared host with display coverage, scrim paint, outside absorption,
+   reject-if-busy admission, and a nonreplaceable occupant policy;
+4. after successful admission, `onEnter()` runs only as a non-structural
+   lifecycle notification; and
+5. every close path uses common host teardown before `onExit()` and application
+   completion.
 
-The host treats a legacy slot occupant as nonreplaceable. New Material 3
-dialogs use the shared structural host and require `show(Task&)`. No
-oldest-task rule is added, and no legacy call is made focus-scoped by an
-unrelated task.
+`AlertDialog`, `RadioListDialog`, and repository subclasses that currently call
+`setPresentationContent()` from `onEnter()` move that attachment into
+construction or an explicit inactive configuration method. The old
+`Application::showDialog(Dialog&, CallbackFn)` and `clearDialog()` operations
+are removed rather than guessing an owner or retaining a dialog-specific
+control pointer. Caller-owned dialogs close through `Dialog::close()`; the
+heap-owning alert convenience becomes `showAlertDialog(Task&, ...)` and closes
+through its actions or Back. Applications needing a programmatic handle own an
+`AlertDialog` and call `close()`. `MainWindow` no longer enumerates a separate
+dialog and scrim pair once migration is complete.
+
+New Material 3 dialogs use the same structural host directly. As they land,
+call sites that do not require the legacy visual/API contract migrate to the
+Material 3 family instead of being mechanically adapted to the old type.
 
 ### RAM Budget
 
@@ -1043,21 +1202,19 @@ Code slice:
    empty-root, wholly outside, partially intersecting, and fully contained root
    bounds; all incoming reject/replace and occupant replaceable/nonreplaceable
    combinations; direct slot `replace()` rejection without completion for
-   both kinds of hosted occupant; a legacy null-host occupant that standalone
-   `replace()` can still replace; initial rejection; reentrant
+   both kinds of hosted occupant; a synthetic null-host participant that
+   standalone `replace()` can still replace; initial rejection; reentrant
    replacement; and a repeated-preflight failure that leaves the outgoing
    presentation finished, makes no host-side incoming change, and leaves the
    slot empty.
-7. Preserve legacy `onEnter()`-before-first-measure and centering tests, and
-   update the design index and framework API documentation for the hosted path.
+7. Update the design index and framework API documentation for the hosted path.
 
 Proposed commit message:
 
 > Transient surfaces Phase 2: add the composite window host.
 >
 > Add one owner-bound host layer, explicit surface profiles, callback-safe
-> replacement, hosted-slot teardown, and shutdown closure without changing
-> legacy dialog structure.
+> replacement, hosted-slot teardown, and shutdown closure.
 
 Validation: `bazel test //:transient_surface_host_test
 //:transient_presentation_lifetime_test //:dialog_test
@@ -1122,10 +1279,53 @@ Validation: `bazel test //:transient_presentation_pin_test
 //:material3_slider_test //:display_window_test` plus target-ABI pin and
 `TransientSourceGeometry` sizes.
 
+### Phase 5: Migrate Legacy Dialogs to the Common Host
+
+Code slice:
+
+1. Add a presenter-owned `FocusScope` and `show(Task&, CallbackFn)` to `Dialog`.
+   Remove the owner-inferred `Application::showDialog(Dialog&, CallbackFn)` and
+   `clearDialog()` entry points; change the heap-owning alert convenience to
+   `showAlertDialog(Task&, ...)`.
+2. Require the complete measurement-affecting dialog tree to be configured
+   while idle. Keep `onEnter()` only as a post-admission, non-structural
+   lifecycle notification; document that it cannot install, remove, or replace
+   presentation content.
+3. Move `AlertDialog`, `RadioListDialog`, repository test subclasses, and all
+   in-repository callers off `onEnter()` content attachment. Migrate suitable
+   application-facing callers to Material 3 dialogs when that family is
+   available; adapt only callers that intentionally retain the legacy visual
+   type.
+4. Measure and center the preconfigured detached root, then admit it through
+   `TransientSurfaceHost` with display coverage, scrim paint, outside
+   absorption, Back/Escape eligibility, reject-if-busy admission, and a
+   nonreplaceable occupant policy.
+5. Remove `MainWindow::active_dialog_`, its dialog-specific child enumeration,
+   `detachDialog()`, and the direct scrim/dialog attachment path. Retain one
+   shared scrim owned by the composite host.
+6. Replace the old `onEnter()`-before-measure regression with tests proving
+   preconfigured content participates in initial measurement, busy rejection
+   invokes no entry hook, explicit owner focus is contained and restored,
+   owner teardown closes the dialog, and every result still detaches before
+   `onExit()` and application completion.
+
+Proposed commit message:
+
+> Transient surfaces Phase 5: migrate legacy dialogs to the shared host.
+>
+> Make dialog structure measurable before admission, require an explicit task,
+> route remaining legacy dialogs through the composite host, and remove the
+> dialog-specific MainWindow path.
+
+Validation: `bazel test //:dialog_test
+//:transient_surface_host_test //:transient_presentation_lifetime_test
+//:application_test //:material3_slider_test` plus the `MainWindow` and
+`Dialog` target-ABI size probes.
+
 ## Testing Plan
 
-Validation uses synthetic presenters for framework behavior and retains legacy
-dialog tests as compatibility coverage. The focused targets cover:
+Validation uses synthetic presenters for framework behavior and migrated legacy
+dialogs as a concrete scrim-profile consumer. The focused targets cover:
 
 - the complete request/occupant replacement matrix, initial atomic rejection,
   rejection of direct slot replacement for both kinds of hosted occupant,
@@ -1154,6 +1354,9 @@ dialog tests as compatibility coverage. The focused targets cover:
   restoration;
 - display-coverage owner-scoped pin ordering, invalidation, allocation failure,
   and unchanged slider pins; and
+- migrated legacy-dialog preconfiguration, explicit owner focus and teardown,
+  busy rejection without entry notification, and removal of the direct
+  `MainWindow` dialog path; and
 - the `TransientHostLayer`, coordinator, `MainWindow`, pin, focus, and
   `TransientSourceGeometry` ABI ceilings.
 
@@ -1231,11 +1434,14 @@ Rejected because one composite layer provides the same paint, service
 resolution, root-first hit testing, and outside absorption without special
 `MainWindow` sibling fallback.
 
-#### Migrate Legacy Dialog Structure in P1.6b
+#### Preserve Structural `onEnter()` and the Direct Legacy Host Path
 
-Rejected because `onEnter()` produces content needed to compute bounds after
-slot admission. A one-shot host call cannot preserve both reject-without-
-mutation and current first-measure behavior.
+Rejected because it would retain two production attachment, focus, input, and
+teardown paths indefinitely. The selected migration accepts source changes:
+legacy content becomes measurable before `show(Task&)`, and `onEnter()` becomes
+a non-structural notification after successful admission. This preserves
+reject-without-mutation semantics without adding a special preparation
+transaction to the common host.
 
 #### Use the Canonical Window Slot Directly for New Structural Presenters
 
@@ -1245,8 +1451,9 @@ lifetime primitive and for focused tests; they do not attach window structure
 or provide host input and focus guarantees. Public standalone `replace()`
 returns `kHostBusy` whenever the active occupant has a non-null hosted
 association, so it cannot evade the profile's replacement decision. The legacy
-accessor remains the one compatibility seam in `MainWindow`; new window-root
-presenters use the host.
+dialog accessor is removed during migration; direct slot access remains only a
+lifetime primitive and focused-test seam. Production window-root presenters
+use the host.
 
 #### Couple Paint and Replacement Through Popup or Modal Kind
 
@@ -1283,7 +1490,7 @@ state keeps focus, Back, and teardown bounded.
 The following are accepted capability losses relative to the previous host and
 Phase 7 design drafts; they are not requirements of the scheduled Material 3
 Menu or Dialog consumers or of the currently specified modal-sheet profile.
-Seven rows remove an explicit previous-draft requirement or decision. Five rows
+Six rows remove an explicit previous-draft requirement or decision. Five rows
 remove behavior that a previous model could express but did not require; the
 first column distinguishes the two cases.
 
@@ -1298,7 +1505,6 @@ first column distinguishes the two cases.
 | **Expressible:** use a hidden or empty attached widget only as layer provenance | A keyboard shortcut opens a menu at saved coordinates while its attached toolbar button is temporarily hidden or laid out at zero size. The previous layer snapshot could still prove which attached top-level layer contained that button. | Live widget capture rejects a source without non-empty visible bounds. The caller can use `showFromRect()`, but that overload carries no widget-layer provenance. |
 | **Required:** restrict replacement to the same popup/modal class | An incoming modal replacement request replaces an existing modal sheet but is rejected when the current occupant is a popup menu. The previous `kReplaceSameKind` policy expressed that partition without an occupant opt-in bit. | `replaceable` is an occupant-wide boolean: every replacement-enabled request can replace it, or none can. Scheduled non-menu profiles choose nonreplaceable; a future consumer needing replacement classes requires a new compatibility key. |
 | **Required:** preserve unrestricted public slot replacement | A custom diagnostic overlay calls `window.transient_presentation_slot().replace()` while a hosted menu is active. The previous public contract finished that menu through host cleanup and admitted the standalone overlay in one operation unless menu completion reentrantly filled the slot. | Public slot `replace()` returns `kHostBusy` without invoking completion whenever `active_host_` is non-null. The caller must explicitly finish the hosted surface and then attempt standalone admission, accepting the intervening empty/reentrant state, or migrate the overlay to policy-checked hosted admission. |
-| **Required:** migrate legacy dialogs to the common structural host | `Application::showDialog()` opens a legacy dialog containing a text field while two tasks are attached. The previous draft moved it through the host, selected the oldest attached task as compatibility owner, and thereby applied presenter focus containment/restoration, key/editor isolation, owner teardown, and the common host structure. | P1.6b preserves the existing direct scrim/dialog path, supplies no interaction owner or presenter scope, and records a null host association. Legacy behavior remains compatible, but it does not gain those new-host guarantees and structural instrumentation must handle the compatibility case. |
 | **Expressible:** suspend task coverage by hiding its owner panel | A two-pane controller keeps a task-local settings sheet open, hides that task while the user inspects the other pane full-screen, and shows it again with the same sheet and focus scope still active. The previous Phase 7 draft left the nested session attached, so it could disappear and reappear with the task. | Task coverage rejects a hidden owner. Hiding an active owner finishes the sheet with `kCoverageParentHidden` under the admission guard; showing the task later restores only ordinary task content. The component can retain its form model and explicitly create a new presentation. |
 | **Expressible:** paint owner-scoped pins above task coverage | A task-local confirmation sheet opens while an underlying slider's `kAlways` value bubble is visible, or retains a copied trigger highlight for the sheet itself. The previous unchanged window-level pin stage could paint either pin above the nested host and even let its default clip reach a sibling task. | Ordinary owner-panel pins remain registered but are computed-suppressed until coverage finishes. The same session's hosted trigger pin returns `kAnchorUnavailable`, so neither visual can appear above task coverage. |
 
@@ -1331,13 +1537,10 @@ comes with the class-selective replacement loss above.
    asynchronous show and reanchor without retaining a widget pointer.
 4. An explicit preserve-focus policy supports touch-only blocking surfaces
    while keeping an underlying editor continuously focused.
-5. Legacy dialog migration defines an explicit `Task&` API and a preparation
-   transaction that preserves `onEnter()` measurement before removing the
-   compatibility path.
-6. A bounded nested-root design adds ordering only after a concrete component
+5. A bounded nested-root design adds ordering only after a concrete component
    requires two independently registered roots.
-7. A nested-focus design adds a bounded explicit-scope stack only when one
+6. A nested-focus design adds a bounded explicit-scope stack only when one
    hosted root requires independently owned focus regions; scheduled menu and
    submenu levels share one presenter scope.
-8. Live reanchoring and multiple presenter pins receive separate designs tied
+7. Live reanchoring and multiple presenter pins receive separate designs tied
    to concrete consumers.
