@@ -19,10 +19,15 @@ AlertDialog::AlertDialog(ApplicationContext& context, std::string title,
   setTitle(std::move(title));
 }
 
+AlertDialog::~AlertDialog() { prepareForDerivedDestruction(); }
+
 void AlertDialog::setSupportingText(std::string supporting_text) {
   supporting_text_.setContent(std::move(supporting_text));
 }
 
-void AlertDialog::onEnter() { setPresentationContent(supporting_text_); }
+bool AlertDialog::onEnter() {
+  setPresentationContent(supporting_text_);
+  return true;
+}
 
 }  // namespace roo_windows

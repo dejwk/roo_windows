@@ -103,8 +103,11 @@ class MyPane : public AlignedLayout {
       : AlignedLayout(context), button_(context, "Click me!") {
     add(button_, kCenter | kMiddle);
     button_.setOnInteractiveChange([this]() {
-      app.showAlertDialog("Notification", "The button has been clicked.",
-                          {"OK"}, nullptr);
+      Task* owner = getTask();
+      if (owner != nullptr) {
+        app.showAlertDialog(*owner, "Notification",
+                            "The button has been clicked.", {"OK"}, nullptr);
+      }
     });
   }
 

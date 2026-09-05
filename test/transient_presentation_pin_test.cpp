@@ -167,6 +167,10 @@ class HostedPinTest : public ::testing::Test {
 class TestDialog final : public Dialog {
  public:
   explicit TestDialog(ApplicationContext& context) : Dialog(context, {}) {}
+
+  void setContent(WidgetRef content) {
+    setPresentationContent(std::move(content));
+  }
 };
 
 std::unique_ptr<MutablePin> MakePin(MutablePinState& state) {
@@ -516,8 +520,11 @@ TEST_F(RooWindowsRenderTest, DialogPinIsHighestInDialogLayer) {
   auto task = std::make_unique<TestPanel>(context(), roo_display::color::Red);
   app_.add(std::move(task), Box(0, 0, kWidth - 1, kHeight - 1));
   TestDialog dialog(context());
-  ASSERT_EQ(PresentationStartResult::kStarted,
-            app_.showDialog(dialog, [](int) {}));
+  PinAnchor dialog_content(context());
+  dialog.setContent(dialog_content);
+  Task* owner = app_.keyboard().getContents().getTask();
+  ASSERT_NE(nullptr, owner);
+  ASSERT_EQ(PresentationStartResult::kStarted, dialog.show(*owner, [](int) {}));
   MutablePinState state;
   state.color = roo_display::color::Yellow;
   ASSERT_EQ(PresentationPinShowResult::kShown,
@@ -525,6 +532,7 @@ TEST_F(RooWindowsRenderTest, DialogPinIsHighestInDialogLayer) {
   ASSERT_TRUE(refresh());
   EXPECT_EQ(QuantizeToArgb4444(roo_display::color::Yellow), pixelAt(4, 4));
   dialog.hidePresentationPin();
+  dialog.close();
 }
 
 // Verifies detaching an ancestor removes every active pin in that subtree

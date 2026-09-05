@@ -6,7 +6,7 @@
 #include "roo_windows/containers/scrollable_panel.h"
 #include "roo_windows/containers/vertical_layout.h"
 #include "roo_windows/core/panel.h"
-#include "roo_windows/core/transient_presentation.h"
+#include "roo_windows/core/transient_surface_host.h"
 #include "roo_windows/widgets/button.h"
 #include "roo_windows/widgets/divider.h"
 #include "roo_windows/widgets/text_label.h"
@@ -30,6 +30,12 @@ class Dialog : public VerticalLayout {
 
   /// Cancels an active presentation without delivering application completion.
   ~Dialog() override;
+
+  /// Prepares and shows this dialog through `interaction_owner`'s window.
+  ///
+  /// Busy or invalid admission performs no lifecycle callbacks. Once
+  /// preparation starts, `onEnter()` is paired with exactly one `onExit()`.
+  PresentationStartResult show(Task& interaction_owner, CallbackFn callback_fn);
 
   /// Replaces the dialog's title text.
   void setTitle(std::string title);
@@ -82,19 +88,36 @@ class Dialog : public VerticalLayout {
   ScrollablePanel contents_;
   HorizontalDivider divider2_;
 
-  /// Lifecycle hook invoked when the dialog becomes visible.
-  virtual void onEnter() {}
-  /// Lifecycle hook invoked when the dialog is dismissed with `result`.
-  virtual void onExit(int result) {}
+  /// Enters a detached presentation session before initial measurement.
+  ///
+  /// Returning false aborts admission; `onExit()` is still called once.
+  virtual bool onEnter() { return true; }
+
+  /// Exits a prepared session after presentation content is detached.
+  virtual void onExit() {}
+
+  /// Notifies the subclass after successful structural attachment.
+  virtual void onShow() {}
+
+  /// Notifies the subclass after shown interaction has completely detached.
+  ///
+  /// This runs while the canonical slot is idle and before application
+  /// completion receives `result`.
+  virtual void onDismiss(int result) { (void)result; }
+
+  /// Releases derived presentation resources while the derived type is live.
+  ///
+  /// A derived destructor must call this first when it overrides the
+  /// preparation pair or owns borrowed presentation-scoped content.
+  void prepareForDerivedDestruction();
 
  private:
-  friend class MainWindow;
-
   class Registration final : public TransientPresentationRegistration {
    public:
     explicit Registration(Dialog& dialog) : dialog_(dialog) {}
 
     void cancelPresentation() { cancel(); }
+    void disablePresentationInput() { disableHostedInput(); }
 
    protected:
     void detachPresentation(PresentationFinishReason reason) override;
@@ -102,6 +125,22 @@ class Dialog : public VerticalLayout {
 
    private:
     Dialog& dialog_;
+  };
+
+  class Preparation final : public internal::TransientSurfacePreparation {
+   public:
+    Preparation(Dialog& dialog, Task& owner, CallbackFn callback_fn)
+        : dialog_(dialog),
+          owner_(owner),
+          callback_fn_(std::move(callback_fn)) {}
+
+   private:
+    bool createAndResolveBounds(Rect& root_bounds_in_window) override;
+    void deleteAfterFailedAdmission() override;
+
+    Dialog& dialog_;
+    Task& owner_;
+    CallbackFn callback_fn_;
   };
 
   class FullWidthPanel : public HorizontalLayout {
@@ -116,7 +155,9 @@ class Dialog : public VerticalLayout {
     }
   };
 
-  void beginPresentation(CallbackFn callback_fn);
+  bool beginPresentation(CallbackFn callback_fn);
+  void endPresentationSession();
+  void rollbackPreparedPresentation();
   void detachPresentation(PresentationFinishReason reason);
   void notifyFinished(PresentationFinishReason reason);
   void clearPresentationContent();
@@ -133,6 +174,8 @@ class Dialog : public VerticalLayout {
   CallbackFn callback_fn_;
   int result_ = -1;
   Widget* presentation_content_ = nullptr;
+  bool session_entered_ = false;
+  FocusScope focus_scope_;
 
   // Must remain last so it vacates the window slot before dialog members.
   Registration registration_;

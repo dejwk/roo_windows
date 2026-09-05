@@ -164,7 +164,7 @@ PresentationStartResult TransientSurfaceHost::preflight(
     TransientPresentationRegistration& registration, Task& owner, Widget& root,
     const Rect& root_bounds_in_window, FocusScope& scope,
     const TransientSurfaceSpec& spec, const FocusScope* replaced_scope,
-    bool allow_admission_guard) const {
+    bool allow_admission_guard, bool validate_root_bounds) const {
   const TransientPresentationSlot& slot = window_.transient_presentation_slot_;
   if (slot.admission_closed_ ||
       (slot.admission_guard_ && !allow_admission_guard) || slot.clearing_ ||
@@ -177,13 +177,74 @@ PresentationStartResult TransientSurfaceHost::preflight(
   }
   if (root.parent() != nullptr ||
       root.tryContext() != &window_.app().context() ||
-      window_.bounds().empty() || root_bounds_in_window.empty() ||
-      !window_.bounds().intersects(root_bounds_in_window) ||
+      window_.bounds().empty() ||
+      (validate_root_bounds &&
+       (root_bounds_in_window.empty() ||
+        !window_.bounds().intersects(root_bounds_in_window))) ||
       !IsValid(spec.barrier) || !IsValid(spec.admission) ||
       !IsValid(spec.outside) ||
       !owner.focus_.canAdmitScope(scope, owner.panel_, replaced_scope)) {
     return PresentationStartResult::kSurfaceUnavailable;
   }
+  return PresentationStartResult::kStarted;
+}
+
+PresentationStartResult TransientSurfaceHost::showPrepared(
+    TransientPresentationRegistration& registration, Task& owner, Widget& root,
+    FocusScope& scope, const TransientSurfaceSpec& spec,
+    TransientSurfacePreparation& preparation) {
+  TransientPresentationSlot& slot = window_.transient_presentation_slot_;
+  TransientPresentationRegistration* outgoing = slot.active_;
+  const FocusScope* replaced_scope = nullptr;
+  if (outgoing != nullptr) {
+    if (spec.admission != TransientAdmissionPolicy::kReplaceReplaceable ||
+        slot.active_host_ != this || (active_policy_ & kReplaceable) == 0) {
+      return PresentationStartResult::kHostBusy;
+    }
+    if (window_.host_layer_.owner_ == &owner) replaced_scope = active_scope_;
+  }
+
+  PresentationStartResult result =
+      preflight(registration, owner, root, Rect(), scope, spec, replaced_scope,
+                false, false);
+  if (result != PresentationStartResult::kStarted) return result;
+
+  if (outgoing != nullptr) {
+    outgoing->finish(PresentationFinishReason::kReplacement);
+    if (slot.active_ != nullptr) {
+      return PresentationStartResult::kReentrantReplacement;
+    }
+    result = preflight(registration, owner, root, Rect(), scope, spec, nullptr,
+                       false, false);
+    if (result != PresentationStartResult::kStarted) return result;
+  }
+
+  TransientPresentationSlot::AdmissionGuard guard(slot);
+  Rect root_bounds_in_window;
+  if (!preparation.createAndResolveBounds(root_bounds_in_window)) {
+    preparation.deleteAfterFailedAdmission();
+    return PresentationStartResult::kSurfaceUnavailable;
+  }
+  result = preflight(registration, owner, root, root_bounds_in_window, scope,
+                     spec, nullptr, true);
+  if (result != PresentationStartResult::kStarted) {
+    preparation.deleteAfterFailedAdmission();
+    return result;
+  }
+  owner.window().gestureDetector().cancelForDisplayCoverage();
+  window_.cancelTaskKeyActivationForDisplayCoverage();
+  result = preflight(registration, owner, root, root_bounds_in_window, scope,
+                     spec, nullptr, true);
+  if (result != PresentationStartResult::kStarted) {
+    preparation.deleteAfterFailedAdmission();
+    return result;
+  }
+  result = slot.showHosted(registration, spec.back, *this);
+  if (result != PresentationStartResult::kStarted) {
+    preparation.deleteAfterFailedAdmission();
+    return result;
+  }
+  attachHostedSurface(root, root_bounds_in_window, owner, scope, spec);
   return PresentationStartResult::kStarted;
 }
 

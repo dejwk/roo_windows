@@ -70,12 +70,12 @@ for arbitrary overlap that these component semantics do not require.
 
 ## Background
 
-**Status: Phases 1 and dialog lifetime adoption implemented.** The framework
+**Status: Phases 1 and dialog lifetime/hosting adoption implemented.** The framework
 provides the shared registration, single-slot, finish-order, and Back-
-participant contract, and legacy dialogs now use it while retaining their
-direct `MainWindow` dialog-and-scrim structural path. The composite transient
-host, modal-sheet wrappers, menu adoption, and snackbar adoption remain
-outstanding. The status of prerequisites is recorded in the
+participant contract, and legacy dialogs now use the composite transient host
+with explicit task ownership and guarded preparation. Modal-sheet wrappers,
+menu adoption, and snackbar adoption remain outstanding. The status of
+prerequisites is recorded in the
 [status index](../README.md).
 
 ### Terminology
@@ -743,13 +743,12 @@ rather than putting a type-erased result or callback in the framework base.
 
 - The dialog object is the registered participant rather than a borrowed
   dialog plus a callback stored by `MainWindow`.
-- That completed legacy adoption changes lifetime and slot participation only.
-  In the current implementation, `Dialog` still keeps its direct `MainWindow`
-  dialog-and-scrim attachment, preparation, measurement, and centering path and
-  has a null hosted association.
+- The initial lifetime adoption changed slot participation only; the completed
+  transient-host migration now provides dialog-and-scrim attachment, guarded
+  preparation, measurement, centering, focus, and input isolation.
 - The current one-dialog limit becomes the shared one-interactive-transient
   limit rather than a dialog-specific special case.
-- P1.6b migrates the legacy API to guarded preparation before measurement,
+- P1.6b migrated the legacy API to guarded preparation before measurement,
   explicit task ownership, a presenter focus scope, and the composite transient
   host. Persistent content remains valid, while deferred content uses balanced
   create/delete presentation hooks. The phase then removes the direct
@@ -925,8 +924,8 @@ Shared contract tests must cover:
    display and task coverage, and never dereference sources later;
 8. nested menus finish deepest-first while using one window slot;
 9. hosted association cleanup removes its optional hosted pin, focus, roots,
-   and composite-layer state before slot vacancy and completion, while legacy
-   dialogs retain their direct structural path;
+   and composite-layer state before slot vacancy and completion, including for
+   migrated legacy dialogs;
 10. task coverage preserves existing and newly shown ordinary pin
     registrations while suppressing their paint, rejects the presenter's hosted
     trigger pin with `kAnchorUnavailable`, and leaves sibling and display pins

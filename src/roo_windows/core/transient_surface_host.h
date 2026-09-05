@@ -82,6 +82,26 @@ struct TransientSourceGeometry {
 bool CaptureTransientSourceGeometry(Task& owner, const Widget& source,
                                     TransientSourceGeometry& output);
 
+class TransientSurfaceHost;
+
+/// Adapts a detached root whose final bounds require session preparation.
+///
+/// The host retains no adapter pointer after the synchronous show operation.
+class TransientSurfacePreparation {
+ public:
+  /// Destroys the non-retained preparation adapter.
+  virtual ~TransientSurfacePreparation() = default;
+
+ private:
+  friend class TransientSurfaceHost;
+
+  /// Creates session resources and resolves final window-coordinate bounds.
+  virtual bool createAndResolveBounds(Rect& root_bounds_in_window) = 0;
+
+  /// Balances creation when the prepared presentation does not commit.
+  virtual void deleteAfterFailedAdmission() = 0;
+};
+
 /// Reusable full-window structural layer for one borrowed transient root.
 class TransientHostLayer : public Container {
  public:
@@ -163,6 +183,16 @@ class TransientSurfaceHost {
                                FocusScope& scope,
                                const TransientSurfaceSpec& spec);
 
+  /// Prepares, measures, and admits a root in one guarded transaction.
+  ///
+  /// Initial owner, registration, root, scope, and policy validation precedes
+  /// preparation. Once preparation starts, every failure invokes balanced
+  /// deletion exactly once.
+  PresentationStartResult showPrepared(
+      TransientPresentationRegistration& registration, Task& owner,
+      Widget& root, FocusScope& scope, const TransientSurfaceSpec& spec,
+      TransientSurfacePreparation& preparation);
+
   /// Shows one copied-geometry pin below the active hosted surface.
   ///
   /// `registration` must be this display host's active registration. The call
@@ -181,6 +211,7 @@ class TransientSurfaceHost {
   friend class ::roo_windows::MainWindow;
   friend class ::roo_windows::ApplicationTextInput;
   friend class ::roo_windows::Task;
+  friend class ::roo_windows::TransientPresentationRegistration;
   friend class ::roo_windows::TransientPresentationSlot;
 
   /// Validates every caller-owned input without changing host state.
@@ -188,7 +219,8 @@ class TransientSurfaceHost {
       TransientPresentationRegistration& registration, Task& owner,
       Widget& root, const Rect& root_bounds_in_window, FocusScope& scope,
       const TransientSurfaceSpec& spec, const FocusScope* replaced_scope,
-      bool allow_admission_guard = false) const;
+      bool allow_admission_guard = false,
+      bool validate_root_bounds = true) const;
 
   /// Returns whether this coordinator currently owns the canonical slot.
   bool isActive() const;

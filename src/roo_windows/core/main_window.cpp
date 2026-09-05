@@ -5,7 +5,6 @@
 #include "roo_display/color/color.h"
 #include "roo_display/color/color_set.h"
 #include "roo_display/filter/clip_exclude_rects.h"
-#include "roo_display/filter/foreground.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/press_overlay.h"
 
@@ -175,15 +174,6 @@ bool MainWindow::paintWindow(const roo_display::Surface& s,
     initialized_ = true;
     s.drawObject(roo_display::Fill(
         theme().framework.color.resolve(FrameworkColorRole::kCanvas)));
-  }
-  if (pending_scrim_blit_) {
-    pending_scrim_blit_ = false;
-    if (s.out().getCapabilities().supportsBlending()) {
-      s.out().fillRect(roo_display::BlendingMode::kSourceOverOpaque,
-                       bounds().asBox(), scrim_.color());
-    } else {
-      invalidateBeneath(bounds(), &scrim_, /*clip=*/true);
-    }
   }
   if (!isDirty()) {
     paint_continuation_ = false;
@@ -487,40 +477,6 @@ void MainWindow::removeFromLayer(std::vector<Widget*>& layer, Widget& child) {
     detachChild(&child);
     return;
   }
-}
-
-PresentationStartResult MainWindow::showDialog(Dialog& dialog,
-                                               Dialog::CallbackFn callback_fn) {
-  PresentationStartResult result = transient_presentation_slot_.show(
-      dialog.registration(), TransientPresentationPolicy(true, true));
-  if (result != PresentationStartResult::kStarted) return result;
-
-  active_dialog_ = &dialog;
-  attachChild(scrim_, bounds());
-  pending_scrim_blit_ = true;
-  dialog.beginPresentation(std::move(callback_fn));
-  Dimensions dims =
-      dialog.measure(WidthSpec::AtMost(width()), HeightSpec::AtMost(height()));
-  XDim offsetLeft = (width() - dims.width()) / 2;
-  YDim offsetTop = (height() - dims.height()) / 2;
-  attachChild(dialog, Rect(offsetLeft, offsetTop, offsetLeft + dims.width() - 1,
-                           offsetTop + dims.height() - 1));
-  return PresentationStartResult::kStarted;
-}
-
-void MainWindow::clearDialog() {
-  if (active_dialog_ != nullptr) {
-    active_dialog_->close();
-  }
-}
-
-void MainWindow::detachDialog(Dialog& dialog) {
-  if (active_dialog_ != &dialog) return;
-  active_dialog_ = nullptr;
-  pending_scrim_blit_ = false;
-  detachChild(&dialog);
-  detachChild(&scrim_);
-  invalidateInterior();
 }
 
 }  // namespace roo_windows

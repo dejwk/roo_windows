@@ -30,10 +30,10 @@ flows belong.
 
 ## Background
 
-**Status: Proposed; host architecture reconciled by P1.6a.** None of the
-dialog-family scope is implemented. The shared transient host is the P1.6b
-prerequisite for dialog presentation. The status of other prerequisites is
-recorded in the [status index](../README.md).
+**Status: Proposed; shared-host prerequisite implemented by P1.6b.** None of
+the dialog-family scope is implemented. The shared transient host and guarded
+prepared-admission path are available for dialog presentation. The status of
+other prerequisites is recorded in the [status index](../README.md).
 
 ### Current Starting Point in `roo_windows`
 
@@ -62,7 +62,7 @@ The relevant existing seams are:
   dialog actions,
 - [material3_icon_buttons_design.md](../implemented/material3_icon_buttons_design.md),
   whose implementation can supply the full-screen close affordance,
-- and [transient_surface_hosting_design.md](../in_progress/transient_surface_hosting_design.md),
+- and [transient_surface_hosting_design.md](../implemented/transient_surface_hosting_design.md),
   which defines one display-wide transient host layer with an explicit
   interaction owner.
 
@@ -70,7 +70,7 @@ Those seams constrain the dialog design directly.
 
 First, the current visual behavior is correct for centered basic dialogs, but
 its dialog-specific attachment is not the path for new Material 3 dialogs.
-P1.6b migrates legacy `Dialog` to guarded preparation before measurement,
+P1.6b migrated legacy `Dialog` to guarded preparation before measurement,
 explicit task ownership, and the shared structural host, removing the
 dialog-specific `MainWindow` attachment path. Legacy subclasses may keep
 persistent children or balance presentation-scoped children through
@@ -402,7 +402,7 @@ That choice is deliberate:
 ### Host Integration
 
 Both variants use the
-[shared transient host](../in_progress/transient_surface_hosting_design.md) with display coverage,
+[shared transient host](../implemented/transient_surface_hosting_design.md) with display coverage,
 outside absorption, `kRejectIfBusy`, and a presenter-owned `FocusScope`.
 Barrier paint is independent: `BasicDialog` requests the scrim, while
 `FullScreenDialog` requests a transparent input barrier because its opaque root

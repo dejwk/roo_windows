@@ -36,7 +36,7 @@ Status was audited against the source tree and tests on 2026-09-05. “Dependenc
 | Material typography | Material 2 and Material 3 `TextStyle` catalogs, style-aware labels and paragraphs, Material 3 component role adoption, focused tests/goldens, and a build-covered catalog example are implemented. |
 | Navigation bar | The compact and medium destination layouts, selection/reselection hooks, badges, keyboard traversal, focused tests/goldens, and example are implemented. |
 | Navigation rail | Collapsed and expanded destinations, semantic selection and reselection, header and group layout, badges, RTL behavior, migrated `NavigationPanel` coverage, and the emulator-backed example are implemented. |
-| Non-touch input | Keyboard acquisition, focused-widget lifecycle, click/value/scroll control interaction, structured list/menu/tab/rail navigation, hardware text entry, presenter focus scopes, and display-wide hosted key, Back/Escape, and semantic-editor isolation are implemented. Remaining transient-host phases are tracked separately. |
+| Non-touch input | Keyboard acquisition, focused-widget lifecycle, click/value/scroll control interaction, structured list/menu/tab/rail navigation, hardware text entry, presenter focus scopes, and display-wide hosted key, Back/Escape, and semantic-editor isolation are implemented. Task-bounded coverage remains a separate proposed extension. |
 | Physical key events | Compact HID switch identity, overlapping-key preservation, widget-first dispatch, and physical-switch-qualified fallback activation are implemented. Application-owned source readiness and routing are implemented separately. |
 | Application-owned physical input routing | Producer-owned `KeySource` connections, readiness-handler quiescence, bounded application-owned draining, and FLTK's `HostEventEndpoint`/SPSC handoff are implemented. |
 | Emulator native-host event injection | `roo_testing`'s fixed endpoint table, tick handoff, and shared FreeRTOS delivery task are implemented, and Roo Windows uses them for FLTK key input. The published `roo_testing` 1.3.7 and `roo_io` 2.2.5 modules require no local overrides. |
@@ -46,6 +46,7 @@ Status was audited against the source tree and tests on 2026-09-05. “Dependenc
 | Surface-widget refactor | The surface-ownership split is implemented; the broader visual-overflow design remains in progress. |
 | Theme color tokens | Framework theme separation and Material 3 token ownership are implemented in the current tree. |
 | Toggle icon buttons | The toggle icon-button family, focused unit and rendering coverage, and compact-controls persistent-preference example adoption are implemented. |
+| Transient surface hosting | Presenter-owned focus scopes, the owner-bound composite host, policy preflight and replacement, display-wide input isolation, owner-scoped copied-geometry pins, guarded prepared admission, and explicit-owner legacy-dialog migration are implemented. |
 | Widget event dispatch | `ApplicationContext` and sparse interactive-change dispatch are implemented. |
 | Widget state compaction | Widget event dispatch is implemented, and both compaction phases are implemented. |
 
@@ -58,8 +59,7 @@ Status was audited against the source tree and tests on 2026-09-05. “Dependenc
 | Material 3 lists | Phases 1 through 11 are implemented, including text policy, convenience and control rows, navigation/selection behavior, and expandable content; Phase 12 menu reuse remains. Badge and paint-context dependencies are implemented. |
 | Text system | `TextBlock` wrapping, justification, max-lines, ellipsis, caching, and golden coverage are implemented; shared rich paragraph layout and `RichTextBlock` remain. |
 | Transient presentation pins | The shared layer-scoped host, slider/range-slider adoption, and display-covered presenter-pin integration are implemented; keyboard-highlighter adoption remains. Visual overflow prerequisites are in progress. |
-| Transient presenter lifetime and ownership | The shared slot and legacy-dialog lifetime/Back adoption are implemented; legacy structural hosting remains unchanged, modal sheets have no implementation to adopt, and menu/snackbar migrations remain. |
-| Transient surface hosting | Phases 1–4 implement presenter-owned focus scopes, the owner-bound composite host, source capture, policy preflight, hosted replacement, paint composition, shutdown-safe cleanup, display-wide input isolation, and owner-scoped copied-geometry pins. Prepared admission and legacy-dialog migration remain. |
+| Transient presenter lifetime and ownership | The shared slot and legacy-dialog lifetime, Back, and structural-host adoption are implemented; modal sheets have no implementation to adopt, and menu/snackbar migrations remain. |
 | Visual overflow | Surface ownership, ink bounds, direct-paint exclusion, persistent/transient bound separation, and root-stage transient pins are implemented; the broader design remains in progress. |
 
 ## Proposed

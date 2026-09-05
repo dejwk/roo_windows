@@ -13,6 +13,7 @@
 #include "roo_windows/core/key_source.h"
 #include "roo_windows/core/task.h"
 #include "roo_windows/core/text_input.h"
+#include "roo_windows/dialogs/dialog.h"
 #include "roo_windows/widgets/text_field.h"
 
 namespace roo_windows {
@@ -105,29 +106,12 @@ class Application {
   /// Creates a display-local navigation task filling the display.
   Task& addTaskFullScreen(NavigationHost& navigation);
 
-  /// Shows a modal dialog. Dialogs are centered and scrim the screen behind
-  /// them. The callback gets called with the index of the option (e.g.
-  /// button) selected in the dialog.
-  ///
-  /// While a dialog is showing, it is modal - i.e. it is not possible to
-  /// enter activities or show other dialogs.
-  ///
-  /// The dialog can be closed by user action, or programmatically by calling
-  /// `clearDialog()`. Both paths invoke `callback_fn` and remove the dialog
-  /// from the task. Returns `kHostBusy` when another root presentation is
-  /// already visible.
-  PresentationStartResult showDialog(Dialog& dialog,
-                                     Dialog::CallbackFn callback_fn);
-
   /// Convenience function showing a new, heap-allocated alert dialog with
-  /// the specified contents. See `showDialog()`. The dialog is deleted after
-  /// the callback has been called, or immediately if the host is busy.
+  /// the specified contents through `interaction_owner`. The dialog is
+  /// deleted after completion, or immediately when admission fails.
   PresentationStartResult showAlertDialog(
-      std::string title, std::string supporting_text,
+      Task& interaction_owner, std::string title, std::string supporting_text,
       std::vector<std::string> button_labels, Dialog::CallbackFn callback_fn);
-
-  /// If a dialog is open, closes it. Otherwise, no-op.
-  void clearDialog();
 
   /// Schedules the specified function to be executed in the UI thread.
   /// Blocks until the function completes. If called from the UI thread,

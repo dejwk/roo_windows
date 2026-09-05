@@ -641,7 +641,7 @@ There is no implicit task selection and no cross-application Back propagation.
 the existing `BackSource`; physical Back and Escape therefore preserve the
 dispatch task, and programmatic Back is invoked on an explicit task object.
 The complete contracts are in
-[Transient surface hosting](transient_surface_hosting_design.md)
+[Transient surface hosting](../implemented/transient_surface_hosting_design.md)
 and the
 [Phase 7 task-bounded coverage design](../proposed/display_runtime_phase_7_task_bounded_transient_coverage_design.md).
 

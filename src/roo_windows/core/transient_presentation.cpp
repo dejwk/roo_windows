@@ -42,6 +42,13 @@ void TransientPresentationRegistration::cancel() {
   if (slot_ != nullptr) slot_->cancel(*this);
 }
 
+void TransientPresentationRegistration::disableHostedInput() {
+  if (slot_ != nullptr && slot_->active_ == this &&
+      slot_->active_host_ != nullptr) {
+    slot_->active_host_->disableHostedInput(*this);
+  }
+}
+
 TransientPresentationSlot::~TransientPresentationSlot() {
   shutdown(PresentationFinishReason::kHostDestroyed);
 }
@@ -103,9 +110,18 @@ TransientPresentationSlot::AdmissionGuard::~AdmissionGuard() {
 PresentationStartResult TransientPresentationSlot::showHosted(
     TransientPresentationRegistration& registration,
     TransientPresentationPolicy policy, internal::TransientSurfaceHost& host) {
-  PresentationStartResult result = show(registration, policy);
-  if (result == PresentationStartResult::kStarted) active_host_ = &host;
-  return result;
+  // The structural host may commit while its private admission guard is
+  // active. Public show()/replace() remain closed throughout that transaction.
+  if (admission_closed_ || clearing_ || active_ != nullptr ||
+      registration.slot_ != nullptr || registration.isActive()) {
+    return PresentationStartResult::kHostBusy;
+  }
+  active_ = &registration;
+  active_host_ = &host;
+  registration.slot_ = this;
+  registration.policy_ = EncodePolicy(policy);
+  registration.state_ = PresentationState::kVisible;
+  return PresentationStartResult::kStarted;
 }
 
 void TransientPresentationSlot::shutdown(PresentationFinishReason reason) {

@@ -1,6 +1,7 @@
 #include "dialog.h"
 
-#include "roo_windows/core/main_window.h"
+#include "roo_windows/core/display_window.h"
+#include "roo_windows/core/task.h"
 #include "roo_windows/widgets/button.h"
 
 namespace roo_windows {
@@ -42,12 +43,7 @@ Dialog::Dialog(ApplicationContext& context,
 }
 
 Dialog::~Dialog() {
-  clearPresentationContent();
-  if (registration_.isActive()) {
-    MainWindow* window = getMainWindow();
-    if (window != nullptr) window->detachDialog(*this);
-    registration_.cancelPresentation();
-  }
+  prepareForDerivedDestruction();
 
   // Panel stores borrowed pointers to these member widgets. Detach them while
   // the pointees are still alive; C++ destroys members before base classes and
@@ -55,6 +51,21 @@ Dialog::~Dialog() {
   button_panel_.clearChildrenForDestruction();
   title_panel_.clearChildrenForDestruction();
   removeAll();
+}
+
+PresentationStartResult Dialog::show(Task& interaction_owner,
+                                     CallbackFn callback_fn) {
+  static constexpr TransientSurfaceSpec kDialogSpec{
+      TransientBarrierPaint::kScrim, TransientAdmissionPolicy::kRejectIfBusy,
+      OutsideInteractionPolicy::kAbsorb,
+      TransientPresentationPolicy(true, true), false};
+  Preparation preparation(*this, interaction_owner, std::move(callback_fn));
+  PresentationStartResult result =
+      internal::GetTransientSurfaceHost(interaction_owner)
+          .showPrepared(registration_, interaction_owner, *this, focus_scope_,
+                        kDialogSpec, preparation);
+  if (result == PresentationStartResult::kStarted) onShow();
+  return result;
 }
 
 void Dialog::setTitle(std::string title) { title_.setText(std::move(title)); }
@@ -77,23 +88,39 @@ void Dialog::close() {
   registration_.finish(PresentationFinishReason::kCancel);
 }
 
-void Dialog::beginPresentation(CallbackFn callback_fn) {
+bool Dialog::beginPresentation(CallbackFn callback_fn) {
+  CHECK(!session_entered_);
   result_ = -1;
   setCallbackFn(std::move(callback_fn));
-  onEnter();
+  session_entered_ = true;
+  return onEnter();
 }
 
 void Dialog::detachPresentation(PresentationFinishReason) {
-  clearPresentationContent();
-  MainWindow* window = getMainWindow();
-  if (window != nullptr) window->detachDialog(*this);
+  endPresentationSession();
 }
 
 void Dialog::notifyFinished(PresentationFinishReason) {
   Dialog::CallbackFn callback_fn = std::move(callback_fn_);
   callback_fn_ = nullptr;
-  onExit(result_);
+  onDismiss(result_);
   if (callback_fn != nullptr) callback_fn(result_);
+}
+
+bool Dialog::Preparation::createAndResolveBounds(Rect& root_bounds_in_window) {
+  if (!dialog_.beginPresentation(std::move(callback_fn_))) return false;
+  MainWindow& window = owner_.window().root();
+  Dimensions dims = dialog_.measure(WidthSpec::AtMost(window.width()),
+                                    HeightSpec::AtMost(window.height()));
+  XDim left = (window.width() - dims.width()) / 2;
+  YDim top = (window.height() - dims.height()) / 2;
+  root_bounds_in_window =
+      Rect(left, top, left + dims.width() - 1, top + dims.height() - 1);
+  return true;
+}
+
+void Dialog::Preparation::deleteAfterFailedAdmission() {
+  dialog_.rollbackPreparedPresentation();
 }
 
 void Dialog::Registration::detachPresentation(PresentationFinishReason reason) {
@@ -106,10 +133,33 @@ void Dialog::Registration::onFinished(PresentationFinishReason reason) {
 
 void Dialog::clearPresentationContent() {
   if (presentation_content_ == nullptr) return;
+  focus_scope_.clearRememberedFocus();
   // ScrollablePanel's inherited clearContents() bypasses its blit-cache
   // wrapper. Dispatch through the derived content setter to detach the child.
   contents_.setContents(WidgetRef());
   presentation_content_ = nullptr;
+}
+
+void Dialog::endPresentationSession() {
+  if (!session_entered_) return;
+  clearPresentationContent();
+  session_entered_ = false;
+  onExit();
+}
+
+void Dialog::rollbackPreparedPresentation() {
+  endPresentationSession();
+  callback_fn_ = nullptr;
+}
+
+void Dialog::prepareForDerivedDestruction() {
+  if (registration_.isActive()) {
+    registration_.disablePresentationInput();
+    endPresentationSession();
+    registration_.cancelPresentation();
+  } else {
+    rollbackPreparedPresentation();
+  }
 }
 
 }  // namespace roo_windows

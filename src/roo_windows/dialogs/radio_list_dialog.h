@@ -21,6 +21,9 @@ class RadioListDialog : public Dialog {
     init();
   }
 
+  /// Detaches the borrowed list before its inline storage is destroyed.
+  ~RadioListDialog() override { prepareForDerivedDestruction(); }
+
   /// Returns the currently selected index in the wrapped `RadioList`.
   int selected() const { return list_.selected(); }
 
@@ -52,7 +55,10 @@ class RadioListDialog : public Dialog {
   void contentsChanged() { list_.modelChanged(); }
 
  protected:
-  void onEnter() override { setPresentationContent(list_); }
+  bool onEnter() override {
+    setPresentationContent(list_);
+    return true;
+  }
 
   /// Hook fired on interactive selection changes; default implementation
   /// re-emits the panel-level interactive-change signal.

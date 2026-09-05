@@ -22,7 +22,7 @@ cross-task presenter requires them.
 
 ## Background
 
-**Status: In progress.** Phases 1 through 4 are implemented. Presenter-owned focus
+**Status: Implemented.** All five phases are implemented. Presenter-owned focus
 scopes provide zero-growth admission, containment, selection, routing, and
 restoration. The window-owned composite host now adds owner-bound structural
 attachment, transparent or scrim paint, root-first hit testing, complete
@@ -30,7 +30,8 @@ profile preflight, callback-safe replacement, source-geometry capture, and
 shutdown-safe cleanup. Display-wide gesture, key, Back/Escape, and semantic
 editor isolation is also implemented, including deferred outside activation.
 Display-covered presenters may own one copied-geometry pin below the host
-layer. Prepared admission and legacy-dialog migration do not yet exist.
+layer. Guarded prepared admission and explicit-owner legacy-dialog migration
+complete the shared framework host.
 
 ### Concrete Use Cases
 
@@ -1560,7 +1561,7 @@ failure, frozen source geometry after source movement and detachment, finish
 cleanup, and unchanged widget lookup. The target-ABI probe emits named
 `PresentationPin` and `TransientSourceGeometry` symbols.
 
-### Phase 5: Migrate Legacy Dialogs to the Common Host
+### Phase 5: Migrate Legacy Dialogs to the Common Host — Implemented
 
 Code slice:
 
@@ -1612,6 +1613,14 @@ Validation: `bazel test //:dialog_test
 //:transient_surface_host_test //:transient_presentation_lifetime_test
 //:application_test //:material3_slider_test` plus the `MainWindow` and
 `Dialog` target-ABI size probes.
+
+Implemented coverage proves creation-before-measurement, persistent detached
+configuration, no lifecycle callbacks on busy rejection, balanced cleanup on
+preparation and repeated-preflight failure, the protected derived-destruction
+seam, explicit-owner focus and Back routing, and strict exit/dismiss/completion
+ordering. Legacy `MainWindow` dialog enumeration and the owner-inferred
+application APIs are removed; dialogs now use the composite host and shared
+scrim exclusively.
 
 ## Testing Plan
 

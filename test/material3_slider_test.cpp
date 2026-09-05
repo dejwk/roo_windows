@@ -2972,8 +2972,9 @@ TEST_F(Material3SliderRenderTest, IndicatorPinsRegisterInPopupAndDialogLayers) {
       context(), SliderRange{}, 0.6f, SliderVariant::kStandard, style);
   Slider* dialog_raw = dialog_slider.get();
   dialog.setContent(WidgetRef(std::move(dialog_slider)));
-  ASSERT_EQ(PresentationStartResult::kStarted,
-            app_.showDialog(dialog, [](int) {}));
+  Task* owner = app_.keyboard().getContents().getTask();
+  ASSERT_NE(nullptr, owner);
+  ASSERT_EQ(PresentationStartResult::kStarted, dialog.show(*owner, [](int) {}));
   ASSERT_TRUE(app_.refresh());
   EXPECT_TRUE(dialog_raw->hasPresentationPin());
 }

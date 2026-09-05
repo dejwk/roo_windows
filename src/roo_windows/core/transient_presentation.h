@@ -103,6 +103,9 @@ class TransientPresentationRegistration {
   /// Vacates the slot without terminal delivery during presenter destruction.
   void cancel();
 
+  /// Disables an associated structural host before derived teardown begins.
+  void disableHostedInput();
+
  private:
   friend class TransientPresentationSlot;
   friend class internal::TransientSurfaceHost;

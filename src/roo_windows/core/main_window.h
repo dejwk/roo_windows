@@ -10,7 +10,6 @@
 #include "roo_windows/core/presentation_pin.h"
 #include "roo_windows/core/transient_presentation.h"
 #include "roo_windows/core/transient_surface_host.h"
-#include "roo_windows/dialogs/dialog.h"
 #include "roo_windows/widgets/scrim.h"
 
 namespace roo_windows {
@@ -79,17 +78,9 @@ class MainWindow : public Container {
     return transient_presentation_slot_;
   }
 
-  /// Shows a modal dialog when the interactive transient slot is available.
-  PresentationStartResult showDialog(Dialog& dialog,
-                                     Dialog::CallbackFn callback_fn);
-
-  /// If a dialog is currently open, closes it (callback receives -1).
-  void clearDialog();
-
  protected:
   int getChildrenCount() const override {
     return static_cast<int>(tasks_.size()) + static_cast<int>(popups_.size()) +
-           (active_dialog_ != nullptr ? 2 : 0) +
            (host_layer_.parent() != nullptr ? 1 : 0);
   }
 
@@ -100,11 +91,6 @@ class MainWindow : public Container {
     int popup_count = static_cast<int>(popups_.size());
     if (idx < popup_count) return *popups_[idx];
     idx -= popup_count;
-    if (active_dialog_ != nullptr) {
-      if (idx == 0) return scrim_;
-      if (idx == 1) return *active_dialog_;
-      idx -= 2;
-    }
     return host_layer_;
   }
 
@@ -115,11 +101,6 @@ class MainWindow : public Container {
     int popup_count = static_cast<int>(popups_.size());
     if (idx < popup_count) return *popups_[idx];
     idx -= popup_count;
-    if (active_dialog_ != nullptr) {
-      if (idx == 0) return scrim_;
-      if (idx == 1) return *active_dialog_;
-      idx -= 2;
-    }
     return host_layer_;
   }
 
@@ -132,7 +113,6 @@ class MainWindow : public Container {
   void paintChildren(PaintContext& ctx) override;
 
  private:
-  friend class Dialog;
   friend class ApplicationTextInput;
   friend class DisplayWindow;
   friend class Container;
@@ -203,8 +183,6 @@ class MainWindow : public Container {
 
   void removeFromLayer(std::vector<Widget*>& layer, Widget& child);
 
-  void detachDialog(Dialog& dialog);
-
   Application& app_;
 
   // Regular application tasks rendered behind popup overlays such as the
@@ -227,10 +205,6 @@ class MainWindow : public Container {
   Rect continuation_invalid_bounds_ = Rect(0, 0, -1, -1);
 
   bool initialized_ = false;
-
-  Dialog* active_dialog_ = nullptr;
-
-  bool pending_scrim_blit_ = false;
 
   Scrim scrim_;
 

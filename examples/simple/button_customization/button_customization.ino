@@ -116,20 +116,27 @@ class MyPane : public VerticalLayout {
     add(button3_);
     add(button4_);
     button1_.setOnInteractiveChange([this]() {
-      app.showAlertDialog("Notification", "Button 1 clicked.", {"OK"}, nullptr);
+      showNotification("Button 1 clicked.");
     });
     button2_.setOnInteractiveChange([this]() {
-      app.showAlertDialog("Notification", "Button 2 clicked.", {"OK"}, nullptr);
+      showNotification("Button 2 clicked.");
     });
     button3_.setOnInteractiveChange([this]() {
-      app.showAlertDialog("Notification", "Button 3 clicked.", {"OK"}, nullptr);
+      showNotification("Button 3 clicked.");
     });
     button4_.setOnInteractiveChange([this]() {
-      app.showAlertDialog("Notification", "Button 4 clicked.", {"OK"}, nullptr);
+      showNotification("Button 4 clicked.");
     });
   }
 
  private:
+  void showNotification(const char* message) {
+    Task* owner = getTask();
+    if (owner != nullptr) {
+      app.showAlertDialog(*owner, "Notification", message, {"OK"}, nullptr);
+    }
+  }
+
   SimpleButton button1_;
   SimpleButton button2_;
   SimpleButton button3_;

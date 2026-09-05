@@ -20,11 +20,14 @@ class AlertDialog : public Dialog {
               std::string supporting_text,
               std::vector<std::string> button_labels = {kStrDialogOK});
 
+  /// Detaches the borrowed supporting text before its storage is destroyed.
+  ~AlertDialog() override;
+
   /// Replaces the multi-line supporting text.
   void setSupportingText(std::string supporting_text);
 
  protected:
-  void onEnter() override;
+  bool onEnter() override;
 
  private:
   TextBlock supporting_text_;

@@ -474,21 +474,15 @@ Task& Application::addTaskFullScreen(NavigationHost& navigation) {
   return addTask(navigation, window_.display().extents());
 }
 
-PresentationStartResult Application::showDialog(
-    Dialog& dialog, Dialog::CallbackFn callback_fn) {
-  checkUiThread();
-  return window_.root().showDialog(dialog, std::move(callback_fn));
-}
-
 PresentationStartResult Application::showAlertDialog(
-    std::string title, std::string supporting_text,
+    Task& interaction_owner, std::string title, std::string supporting_text,
     std::vector<std::string> button_labels, Dialog::CallbackFn callback_fn) {
   checkUiThread();
   Dialog* dialog =
       new AlertDialog(context(), std::move(title), std::move(supporting_text),
                       std::move(button_labels));
   PresentationStartResult result =
-      showDialog(*dialog, [dialog, callback_fn](int id) {
+      dialog->show(interaction_owner, [dialog, callback_fn](int id) {
         if (callback_fn != nullptr) {
           callback_fn(id);
         }
@@ -496,11 +490,6 @@ PresentationStartResult Application::showAlertDialog(
       });
   if (result != PresentationStartResult::kStarted) delete dialog;
   return result;
-}
-
-void Application::clearDialog() {
-  checkUiThread();
-  window_.root().clearDialog();
 }
 
 bool Application::isUiThread() const {
