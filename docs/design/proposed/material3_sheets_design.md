@@ -40,7 +40,7 @@ That gap matters for three reasons:
 1. Material 3 treats bottom sheets as the compact and medium-window secondary
    surface, and it treats side sheets as the medium and expanded-window sibling
    for much of the same content.
-2. The checked-in [menu design](material3_menus_design.md) explicitly defers
+2. The checked-in [menu design](../implemented/material3_menus_design.md) explicitly defers
    compact-window bottom-sheet adaptation until `roo_windows` has a bottom-sheet
    primitive.
 3. Without a library sheet primitive, every application that needs filters,
@@ -130,7 +130,7 @@ The product signals that matter most here are:
 
 The most relevant local references are:
 
-- [material3_menus_design.md](material3_menus_design.md)
+- [material3_menus_design.md](../implemented/material3_menus_design.md)
 - [material3_navigation_drawer_design.md](material3_navigation_drawer_design.md)
 - [material3_snackbar_design.md](material3_snackbar_design.md)
 - [embedded-design-doc-authoring.instructions.md](../../../.github/instructions/embedded-design-doc-authoring.instructions.md)

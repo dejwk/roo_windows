@@ -90,7 +90,7 @@ The most relevant local references are:
 
 - [roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
 - [../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md)
-- [../in_progress/material3_lists_design.md](../in_progress/material3_lists_design.md)
+- [material3_lists_design.md](material3_lists_design.md)
 - [../implemented/material3_badge_design.md](../implemented/material3_badge_design.md)
 - [material3_navigation_rail_design.md](../implemented/material3_navigation_rail_design.md)
 

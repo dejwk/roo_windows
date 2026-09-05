@@ -19,4 +19,4 @@ Use the instruction as the normative source for:
 - [../.github/instructions/roo-windows-widget-authoring.instructions.md](../.github/instructions/roo-windows-widget-authoring.instructions.md)
 - [material3_slider_design.md](design/implemented/material3_slider_design.md)
 - [surface_widget_refactor_design.md](design/implemented/surface_widget_refactor_design.md)
-- [material3_lists_design.md](design/in_progress/material3_lists_design.md)
+- [material3_lists_design.md](design/implemented/material3_lists_design.md)

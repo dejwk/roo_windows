@@ -51,7 +51,7 @@ this design needs:
   and [src/roo_windows/material3/switch/switch.h](../../../src/roo_windows/material3/switch/switch.h)
   show the repo's current selection-state patterns: compact widgets, no new
   callback surface, and click handling through the existing widget base class.
-- [../in_progress/material3_lists_design.md](../in_progress/material3_lists_design.md) already closes on a
+- [../implemented/material3_lists_design.md](../implemented/material3_lists_design.md) already closes on a
   shared-band paint model where the owner container keeps separator ownership
   instead of making every child paint overlapping borders.
 - [material3_navigation_rail_design.md](../implemented/material3_navigation_rail_design.md)
@@ -103,7 +103,7 @@ The relevant signals carried into this design are:
 The most relevant local references are:
 
 - [../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md)
-- [../in_progress/material3_lists_design.md](../in_progress/material3_lists_design.md)
+- [../implemented/material3_lists_design.md](../implemented/material3_lists_design.md)
 - [material3_navigation_rail_design.md](../implemented/material3_navigation_rail_design.md)
 - [widget_authoring.md](../../widget_authoring.md)
 - [../.github/instructions/roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)

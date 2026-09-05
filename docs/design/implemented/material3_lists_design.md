@@ -49,13 +49,13 @@ lists, menus, and adjacent Material 3 surfaces with shared primitives.
 
 ### Current Status in `roo_windows`
 
-As of 2026-07, the list family is implemented through Phase 11. In addition to
+As of 2026-09, the list family is implemented through Phase 12. In addition to
 the baseline API, row infrastructure, sequencing, generic ownership bridge,
 expressive shapes, and divider painting, the current tree implements text
 wrapping/truncation policy, visual convenience items, invocation and navigation
 rows, checkbox/radio/switch selection items, and reusable animated
-`ExpandablePanel` content. Phase 12 menu reuse remains future work, so the
-overall design remains in progress.
+`ExpandablePanel` content. Material 3 menus now derive `MenuItem` from
+`ListItem` and `MenuEntry` from `ListEntry`, completing the menu-reuse phase.
 
 What exists today:
 
@@ -80,18 +80,16 @@ What exists today:
    is no longer just a future direction for generic composition.
 - `ListLayout` remains the existing recycled fixed-height list container.
 - `ScrollablePanel` remains a content-agnostic scrolling surface.
-- existing list- and menu-like composites still sit on older primitives rather
-   than on shared Material 3 row primitives.
+- the legacy route-like menu composite remains on its older full-screen
+   primitives by design, while transient Material 3 menus reuse list rows.
 
-What does not exist yet:
+Later extensions outside this design include:
 
-- no selection-driven corner-radius override beyond the current position-based
-   expressive shapes,
-- no Material 3 menu implementation built from shared list-row primitives,
-- and no Phase 12 menu-row reuse integration.
+- additional selection-driven shape treatments beyond the implemented
+  position and selected-row shapes.
 
-The rest of this document records the chosen architecture and keeps the landed
-Phases 1 through 11 aligned with the remaining menu-reuse work.
+The rest of this document records the implemented architecture for all twelve
+phases.
 
 ### Material 3 Sources
 
@@ -1950,6 +1948,8 @@ Validation: run `bazel test //:material3_list_test` and the relevant golden
 target once expandable-row goldens are added.
 
 ### Phase 12: Menu Reuse
+
+**Implemented by the Material 3 menu family.**
 
 Code slice:
 

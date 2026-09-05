@@ -19,6 +19,8 @@
 namespace material3_menu_example {
 
 #ifdef ROO_TESTING
+// The emulator supplies the same 320x240 display, touch controller, and key
+// source used by the sketch. A hardware build skips this adapter entirely.
 struct Emulator {
   roo_testing_transducers::FltkViewport viewport;
   roo_testing_transducers::FlexViewport flex_viewport;
@@ -45,6 +47,8 @@ inline Emulator emulator;
 inline roo_windows::fake::FltkKeySource emulator_keys;
 #endif
 
+// This is the physical-device-facing stack. Change pin numbers and calibration
+// here when adapting any menu example to another display board.
 inline roo_display::Ili9341spi<7, 2, 3> screen(
     roo_display::Orientation().rotateLeft());
 inline roo_display::TouchXpt2046<1> touch;
@@ -61,6 +65,7 @@ inline roo_windows::Application app(&environment, display);
 #endif
 
 inline void Start() {
+  // Roo's scheduler owns the application loop, so Arduino loop() stays empty.
   SPI.begin(4, 5, 6);
   display.enableTurbo();
   display.init();

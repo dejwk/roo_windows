@@ -10,7 +10,7 @@ The immediate driver is the Material 3 slider value indicator in
 [../implemented/material3_slider_design.md](../implemented/material3_slider_design.md). The same mechanism
 also serves keyboard preview or highlighter surfaces and the
 presenter-owned trigger retention already proposed in
-[material3_menus_design.md](../proposed/material3_menus_design.md).
+[material3_menus_design.md](../implemented/material3_menus_design.md).
 
 ## Motivation
 
@@ -103,7 +103,7 @@ layer" visuals.
 
 ### Existing Pin Precedent
 
-[material3_menus_design.md](../proposed/material3_menus_design.md) already proposed a
+[material3_menus_design.md](../implemented/material3_menus_design.md) specifies a
 presenter-owned root trigger overlay pin for menu press retention. This
 document generalizes that one-off idea into a shared framework primitive
 instead of adding separate root hooks for menus, sliders, and keyboard
@@ -584,7 +584,7 @@ That directly matches the popup or passive-overlay split already established in
 #### Menus
 
 The presenter-owned trigger retention already described in
-[material3_menus_design.md](../proposed/material3_menus_design.md) uses the same
+[material3_menus_design.md](../implemented/material3_menus_design.md) uses the same
 `PresentationPin` API instead of introducing a menu-only hook in
 `MainWindow`. The pin host becomes the shared implementation, and menu code
 supplies copied trigger-specific geometry and paint. Show or reanchor validates
@@ -1209,7 +1209,7 @@ schedule the full old/new union before canvas construction.
    in Phase 4 of
    [transient_surface_hosting_design.md](../implemented/transient_surface_hosting_design.md),
    then use it for the copied menu trigger visual described by
-   [material3_menus_design.md](../proposed/material3_menus_design.md).
+   [material3_menus_design.md](../implemented/material3_menus_design.md).
 3. Extend keyboard adopters from the press highlighter to richer key preview or
    selection affordances as those surfaces are implemented.
 4. Add a clipped nested task pin stage only if task-covered components require

@@ -192,7 +192,7 @@ No implemented facility currently:
 
 Menu rows, placement, selection, submenu behavior, and trigger-paint contents
 remain in the
-[Material 3 menus design](../proposed/material3_menus_design.md).
+[Material 3 menus design](material3_menus_design.md).
 
 ### Legacy Dialog Sequencing and Selected Migration
 

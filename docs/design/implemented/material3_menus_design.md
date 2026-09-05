@@ -25,16 +25,16 @@ results remain component-specific.
 
 ## Background
 
-**Status: In progress; Phases 1–5 implemented.** Menu tokens, items, rows,
+**Status: Implemented; Phases 1–6 complete.** Menu tokens, items, rows,
 adornments, groups, panels, scrolling, deterministic placement, synchronous
 source capture, host presentation, focus, trigger retention, root teardown,
 item-owned selection, exactly-once invocation, leaf dismissal, bounded submenu
-chains, cascading/compact fallback, and keyboard navigation are implemented.
-The shared composite host,
-synchronous source-capture contract, and presenter-pin integration are
-specified separately by
-[Transient surface hosting](../implemented/transient_surface_hosting_design.md)
-and must land before menu presentation. Menus do not create or enter a `Task`.
+chains, cascading/compact fallback, keyboard navigation, legacy migration
+guidance, focused examples, and the target-ABI memory audit are implemented.
+The shared composite host, synchronous source-capture contract, and
+presenter-pin integration are implemented by
+[Transient surface hosting](transient_surface_hosting_design.md). Menus do not
+create or enter a `Task`.
 Each presentation nevertheless names one existing task as its interaction owner
 for focus, physical keys, Back context, and teardown. Existing and outstanding
 prerequisites are recorded in the [status index](../README.md).
@@ -752,29 +752,34 @@ slot release. Menu-aware triggers supply the optional live source and paint
 style; context menus omit it. Later trigger movement or detachment does not
 change the copied pin until `reanchor()` recaptures or clears it.
 
-### Per-Instance Footprint Budget
+### Per-Instance Footprint Audit
 
-Initial 32-bit ABI ceilings are:
+The final ESP32-C3 GCC 14.2.0 audit records these 32-bit ABI sizes:
 
-| Type | Ceiling | Notes |
-| --- | ---: | --- |
-| `Menu` | 96 B plus level storage | copied placement/paint data, scope, registration, one admission bit, four bounded records |
-| `MenuOverlay` | 72 B plus four child pointers | persistent presenter root; attached to the host only while showing |
-| `MenuPanel` | 80 B plus group capacity | surface and optional scroll pointer |
-| `MenuGroup` | 64 B plus row capacity | row vector and separator state |
-| `MenuEntry` | `sizeof(ListEntry) + 24 B` | menu state and optional adornment pointer |
-| plain `StandardMenuItem` | 48 B | two text views, leading pointer, packed state |
-| trailing payload | 40 B maximum | only when configured |
-| badge row state | 32 B maximum | only while bound |
+| Type | Measured | Original ceiling | Result and trade-off |
+| --- | ---: | ---: | --- |
+| `Menu` | 12 B | 96 B plus level storage | Persistent state is behind one pimpl allocation. |
+| internal `Menu::Impl` allocation | 456 B | included above | Contains the root panel, overlay, focus scope, registration, and four bounded level records. |
+| `MenuOverlay` | 56 B | 72 B plus child pointers | Pass. |
+| `MenuPanel` | 280 B | 80 B plus group capacity | Revised: the original estimate omitted the inline 168 B `SimpleScrollablePanel` and 56 B group stack; keeping the viewport persistent avoids show-time structural allocation. |
+| `MenuGroup` | 56 B | 64 B plus row capacity | Pass. |
+| `MenuEntry` | 104 B | `sizeof(ListEntry) + 24 B` | Pass: `ListEntry` is 88 B, so the delta is 16 B. |
+| plain `StandardMenuItem` | 32 B | 48 B | Pass. |
+| trailing payload | 32 B | 40 B | Pass. |
+| bound adornment state | 64 B | 32 B | Revised: the original estimate omitted the inline 20 B `Badge` plus resolved icon and badge geometry; it remains optional and absent on plain rows. |
+| generated single-line text slot | 48 B | 48 B | Pass. |
 
-The implementation records actual sizes and total capacity for a root menu with
-two groups, twelve rows, and two visible submenu panels. A phase fails if a
-ceiling is exceeded without updating this design with measured trade-off.
+The representative live-heap model uses two six-row root groups plus two
+visible child panels containing four rows each, eight adorned rows, and four
+item payloads. Menu-owned object payload and current vector capacities total
+5,688 B, below the revised 6 KiB ceiling; allocator headers and caller-owned
+content are excluded. The reproducible probe and assumptions are published in
+[`docs/material3_menus.md`](../../material3_menus.md#memory-and-allocation-audit).
 
 ## Proposed API
 
 The host's start/finish reasons and popup profile are defined by
-[Transient surface hosting](../implemented/transient_surface_hosting_design.md#proposed-api).
+[Transient surface hosting](transient_surface_hosting_design.md#proposed-api).
 The same framework prerequisite supplies this internal, non-owning source
 capture result and helper; it is not Material 3 public API:
 
@@ -1248,6 +1253,8 @@ Validation: both menu targets, nested example build, and touch/keyboard/RTL/
 compact/deepest-Back emulator checks.
 
 ### Phase 6: Publish Migration Guidance and Final Memory Audit
+
+**Implemented.**
 
 Code slice:
 

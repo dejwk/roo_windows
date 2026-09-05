@@ -124,7 +124,7 @@ keyboard / pointer focus routing:
 - [material3_split_button_design.md](../proposed/material3_split_button_design.md)
   explicitly says v1 does not add per-segment hover or keyboard-focus routing
   because touch is still the primary interaction model.
-- [material3_menus_design.md](../proposed/material3_menus_design.md) explicitly avoids a
+- [material3_menus_design.md](material3_menus_design.md) explicitly avoids a
   hover-only interaction model for embedded touch targets.
 - [../implemented/material3_slider_design.md](../implemented/material3_slider_design.md) defers keyboard
   focus movement APIs beyond what the base framework supports.

@@ -22,6 +22,8 @@ class ContextButton final : public material3::Button {
 
   void onClicked() override {
     if (owner_ != nullptr) {
+      // Context input can provide window coordinates directly. Edge-aware
+      // placement constrains this lower-right point to the visible viewport.
       menu_.showFromRect(*owner_, Rect(300, 220, 300, 220),
                          material3::MenuPlacement::kBelowEnd);
     }
@@ -47,6 +49,8 @@ class ContextActions final : public FlexLayout {
         open_(context, menu_) {
     setPadding(Padding(Scaled(16)));
     setGap(Scaled(12));
+    // Persistent item/row/group objects make repeated opening allocation-light
+    // and keep all non-owning bindings valid for the menu's lifetime.
     copy_row_.setMenuItem(copy_);
     details_row_.setMenuItem(details_);
     group_.add(copy_row_);

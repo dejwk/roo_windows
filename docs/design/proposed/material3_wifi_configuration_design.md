@@ -23,7 +23,7 @@ The design provides:
   edit flow,
 - a small reusable widget set for Wi-Fi rows, signal glyphs, and config forms,
   built on the existing Material 3 direction from
-  [../in_progress/material3_lists_design.md](../in_progress/material3_lists_design.md),
+  [../implemented/material3_lists_design.md](../implemented/material3_lists_design.md),
   [../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md), and
   [material3_text_fields_design.md](material3_text_fields_design.md),
 - and a controller-facing state model that is richer than the current direct
@@ -103,7 +103,7 @@ This design is intentionally aligned with the newer `roo_windows` direction.
 
 The most relevant nearby pieces are:
 
-- [../in_progress/material3_lists_design.md](../in_progress/material3_lists_design.md), which defines the
+- [../implemented/material3_lists_design.md](../implemented/material3_lists_design.md), which defines the
   small-row settings and list-item vocabulary for Material 3 surfaces,
 - [material3_text_fields_design.md](material3_text_fields_design.md), which
   defines the intended inline-editing and secure-field story,

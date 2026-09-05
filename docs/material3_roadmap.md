@@ -47,8 +47,8 @@ mechanism for escaping ancestor clipping. It defines registration, layer
 ordering, invalidation, and limited pin teardown behavior; it does not define a
 general lifetime contract for interactive menus, sheets, dialogs, or queued
 snackbars. The shared transient slot and legacy-dialog adoption are
-implemented, but menu and snackbar adoption remain, and modal sheets do not
-yet exist. Component designs therefore still make different caller-owned and
+implemented, Material 3 menus now use that host, snackbar adoption remains,
+and modal sheets do not yet exist. Component designs therefore still make different caller-owned and
 borrowed-lifetime assumptions, and some permit a visible presenter to hold an
 anchor, content reference, listener, or text view that the caller must keep
 valid.
@@ -56,8 +56,8 @@ valid.
 Event dispatch, gesture ownership, and the non-touch keyboard path are
 implemented. Active `FocusScope` records now support one presenter scope with
 contained routing and validated restoration. The interactive-transient slot
-and dialog lifetime migration are implemented, while structural hosting
-remains dialog-specific.
+and dialog lifetime migration are implemented, and structural hosting is
+shared by dialogs and Material 3 menus.
 The reviewed host design now requires one explicit interaction-owning task,
 one combined `TransientHostLayer`, mandatory presenter-owned focus activation,
 and display-wide physical/semantic input barriers. Barrier paint, outside
@@ -74,8 +74,8 @@ Display runtime Phases 1–6 are implemented: characterization, display-local
 window and task ownership, optional navigation, two-application shared
 scheduler driving, physical input routing, semantic text input, and
 cross-application editor integration. The umbrella design remains in progress
-because the shared host, its Phase 7 task-bounded coverage extension, and the
-final migration/cost-audit phase remain proposed. Event-driven input
+because its Phase 7 task-bounded coverage extension and the final
+migration/cost-audit phase remain proposed. Event-driven input
 notification is a separate in-progress follow-up;
 its coalescing ticker and physical-key wakeup phases are implemented while the
 20 ms fallback remains.
@@ -101,8 +101,8 @@ app bars, navigation bar/rail/drawer, toolbars, tabs, lists, menus, sheets,
 dialogs, snackbar, buttons, FABs, badge, sliders, text fields, and date/time
 pickers. The app-bar/search-entry component family is implemented and covered
 by focused unit tests, goldens, an example, and scaffold integration. The list
-family is implemented through Phase 11,
-with menu reuse still outstanding. The remaining shell families are largely
+family is implemented through Phase 12, including Material 3 menu reuse. The
+remaining shell families are largely
 design work or integration work.
 
 Several source families still lack matching design documents:
@@ -200,10 +200,10 @@ complete before the first row that depends on it.
 | <a id="p1-3"></a>[P1.3](#p1-3) | Implement compact navigation bar | <img src="material3_roadmap_status_completed.svg" width="20" height="20" alt="Completed" title="Completed"> | [Navigation bar](design/implemented/material3_navigation_bar_design.md) | P1.2 | Design Phases 1–5 are complete: fixed destinations, selection and reselection, badges, keyboard behavior, unit/golden tests, and example coverage. This is the compact navigation mode required by the reference shell. |
 | <a id="p1-4"></a>[P1.4](#p1-4) | Implement adaptive `LayoutScaffold` family | <img src="material3_roadmap_status_completed.svg" width="20" height="20" alt="Completed" title="Completed"> | [Layout scaffold](design/implemented/material3_layout_scaffold_design.md) | P1.1, P1.3 | Design Phases 1–5 are complete: breakpoint primitives; top app bar, body, bottom navigation, rail, safety/chrome geometry, and RTL; fixed-slot pane and row-major grid layouts; tests, goldens, and a build-covered catalog example. Navigation drawer remains separate component work. |
 | <a id="p1-5"></a>[P1.5](#p1-5) | Implement the shared presentation-pin host | <img src="material3_roadmap_status_completed.svg" width="20" height="20" alt="Completed" title="Completed"> | Phase 1 of [Transient presentation pins](design/in_progress/transient_presentation_pins_design.md) | — | Root-stage registration, ordering, old/new-bounds invalidation, hide/unregister, anchor teardown, and window teardown tests pass. Slider adoption is also complete; keyboard-highlighter migration remains deferred and does not block this row. |
-| <a id="p1-6"></a>[P1.6](#p1-6) | Reconcile menu ownership and input design | <img src="material3_roadmap_status_completed.svg" width="20" height="20" alt="Completed" title="Completed"> | [Menus](design/in_progress/material3_menus_design.md), reconciled against Phase 5 of [Transient presenter lifetime and ownership](design/in_progress/transient_presenter_lifetime_ownership_design.md), Phase 12 of [Lists](design/in_progress/material3_lists_design.md), and P1.5 | P0.3–P0.5, P1.5 | The design synchronously copies placement and trigger-paint geometry from live widget sources, uses presenter-owned child levels, one root transient registration, deepest-first Back/Escape, `ListItem`/`ListEntry` reuse, and closed keyboard semantics. Framework hosting prerequisites are separated into P1.6a–P1.6b. |
+| <a id="p1-6"></a>[P1.6](#p1-6) | Reconcile menu ownership and input design | <img src="material3_roadmap_status_completed.svg" width="20" height="20" alt="Completed" title="Completed"> | [Menus](design/implemented/material3_menus_design.md), reconciled against Phase 5 of [Transient presenter lifetime and ownership](design/in_progress/transient_presenter_lifetime_ownership_design.md), Phase 12 of [Lists](design/implemented/material3_lists_design.md), and P1.5 | P0.3–P0.5, P1.5 | The design synchronously copies placement and trigger-paint geometry from live widget sources, uses presenter-owned child levels, one root transient registration, deepest-first Back/Escape, `ListItem`/`ListEntry` reuse, and closed keyboard semantics. Framework hosting prerequisites are separated into P1.6a–P1.6b. |
 | <a id="p1-6a"></a>[P1.6a](#p1-6a) | Review shared transient hosting | <img src="material3_roadmap_status_completed.svg" width="20" height="20" alt="Completed" title="Completed"> | [Transient surface hosting](design/implemented/transient_surface_hosting_design.md) | P1.6 | The review closes one combined host layer, explicit interaction ownership, independent barrier-paint, outside-interaction, and admission policies, display-wide pointer/key barriers, mandatory presenter-owned focus integration, synchronous source validation, presenter-pin integration, deterministic teardown, RAM budgets, and tests without creating a `Task`. Phase 7 is reconciled as task-bounded coverage of the same host. |
 | <a id="p1-6b"></a>[P1.6b](#p1-6b) | Implement shared transient hosting | <img src="material3_roadmap_status_completed.svg" width="20" height="20" alt="Completed" title="Completed"> | [Transient surface hosting](design/implemented/transient_surface_hosting_design.md), consuming the existing [Non-touch input](design/implemented/non_touch_input_design.md) focus contract and [presentation-pin](design/in_progress/transient_presentation_pins_design.md) host | P1.6a | All five phases are implemented: focus scopes, composite hosting, display-wide input isolation, owner-scoped pins, guarded prepared admission, and legacy-dialog migration. |
-| <a id="p1-7"></a>[P1.7](#p1-7) | Implement Material 3 menus | <img src="material3_roadmap_status_in_progress.svg" width="20" height="20" alt="In progress" title="In progress"> | [Menus](design/in_progress/material3_menus_design.md), reconciled by P1.6 | P1.6b | Phases 1–5 implement rows, panels, placement, hosting, selection/invocation, bounded cascading and compact submenu chains, complete level-local keyboard navigation, and all five focused examples. Complete the migration and final memory audit. |
+| <a id="p1-7"></a>[P1.7](#p1-7) | Implement Material 3 menus | <img src="material3_roadmap_status_completed.svg" width="20" height="20" alt="Completed" title="Completed"> | [Menus](design/implemented/material3_menus_design.md), reconciled by P1.6 | P1.6b | All six phases are implemented: rows, panels, placement, shared hosting, selection/invocation, bounded submenu chains, keyboard navigation, five focused examples, migration guidance, and the target-ABI memory audit. |
 | <a id="p1-8"></a>[P1.8](#p1-8) | Implement basic Material 3 dialogs | <img src="material3_roadmap_status_completed.svg" width="20" height="20" alt="Completed" title="Completed"> | Phases 1–2 of [Dialogs](design/implemented/material3_dialogs_design.md) | P0.4, P0.5, P1.6b | The shared scaffold and public basic/alert dialogs use the display-covered host with an explicit interaction owner, retain configured body state for reopen, restore focus, handle Back/Escape, and pass unit and golden tests. In-repository legacy alert examples use the Material 3 family; external compatibility types remain. Phase 3 full-screen dialogs are also implemented. |
 | <a id="p1-9"></a>[P1.9](#p1-9) | Reconcile snackbar queue ownership design | <img src="material3_roadmap_status_open.svg" width="20" height="20" alt="Open" title="Open"> | Revise [Snackbar](design/proposed/material3_snackbar_design.md) against Phase 6 of [Transient presenter lifetime and ownership](design/in_progress/transient_presenter_lifetime_ownership_design.md) | P0.5, P1.4 | Replace queued non-owning text views and independent listener pointers with bounded owned payloads or self-cancelling registered request nodes; define overflow, completion, teardown, and allocation policy before code starts. |
 | <a id="p1-10"></a>[P1.10](#p1-10) | Implement snackbar widget, presenter, and queue | <img src="material3_roadmap_status_pending.svg" width="20" height="20" alt="Pending" title="Pending"> | Snackbar design reconciled by P1.9 | P0.3, P1.9 | Complete the reconciled snackbar phases; placement follows scaffold insets, and timeout/action/replacement/overflow/host-teardown tests plus goldens and example pass. |

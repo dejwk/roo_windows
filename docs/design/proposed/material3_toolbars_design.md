@@ -60,7 +60,7 @@ What exists today:
 - the checked-in theme token surface in [theme.h](../../../src/roo_windows/core/theme.h),
   including the legacy `ROO_WINDOWS_TOOLBAR_ICON_SIZE` macro,
 - the checked-in design docs for [Material 3 buttons](../implemented/material3_buttons_design.md),
-  [menus](material3_menus_design.md), and
+  [menus](../implemented/material3_menus_design.md), and
   [FABs](material3_fabs_design.md).
 
 What does not exist yet:
@@ -133,7 +133,7 @@ The most relevant local references are:
 
 - [../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md)
 - [material3_fabs_design.md](material3_fabs_design.md)
-- [material3_menus_design.md](material3_menus_design.md)
+- [material3_menus_design.md](../implemented/material3_menus_design.md)
 - [material3_navigation_rail_design.md](../implemented/material3_navigation_rail_design.md)
 - [../implemented/material3_badge_design.md](../implemented/material3_badge_design.md)
 - [widget_authoring.md](../../widget_authoring.md)
@@ -495,7 +495,7 @@ force the toolbar to own some combination of:
 - a toolbar-local popup/menu controller,
 - or a second action descriptor model parallel to real child widgets.
 
-That would either duplicate [material3_menus_design.md](material3_menus_design.md)
+That would either duplicate [material3_menus_design.md](../implemented/material3_menus_design.md)
 or make arbitrary toolbar children impossible to express cleanly.
 
 The chosen design keeps overflow explicit:

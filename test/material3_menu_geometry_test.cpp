@@ -117,6 +117,32 @@ TEST(Material3MenuGeometry, PanelCoercesHeightToPersistentScrolling) {
   panel.clearGroups();
 }
 
+TEST(Material3MenuGeometry, ScrollingCoercesExpressiveGapsToDividers) {
+  roo_scheduler::Scheduler scheduler;
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
+  internal::MenuPanel panel(context);
+  MenuPolicy policy;
+  policy.separator_mode = MenuSeparatorMode::kGap;
+  panel.setPolicy(policy);
+  for (int group_index = 0; group_index < 2; ++group_index) {
+    auto group = std::make_unique<MenuGroup>(context);
+    for (int row_index = 0; row_index < 2; ++row_index) {
+      group->add(std::make_unique<MenuRow<StandardMenuItem>>(context));
+    }
+    panel.addGroup(std::move(group));
+  }
+
+  panel.measure(WidthSpec::AtMost(200), HeightSpec::AtMost(100));
+  EXPECT_TRUE(panel.isScrolling());
+  EXPECT_EQ(MenuSeparatorMode::kDivider, panel.effectiveSeparatorMode());
+
+  panel.measure(WidthSpec::AtMost(200), HeightSpec::AtMost(300));
+  EXPECT_FALSE(panel.isScrolling());
+  EXPECT_EQ(MenuSeparatorMode::kGap, panel.effectiveSeparatorMode());
+  panel.clearGroups();
+}
+
 TEST(Material3MenuGeometry, OverlayRemainsTransparent) {
   roo_scheduler::Scheduler scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),

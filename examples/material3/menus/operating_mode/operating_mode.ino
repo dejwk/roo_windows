@@ -14,11 +14,11 @@ namespace {
 class ModeItem final : public material3::StandardMenuItem {
  public:
   ModeItem(roo::string_view label, TextLabel& status, bool selected)
-      : StandardMenuItem(
-            material3::StandardMenuItemInit{label, {}, nullptr, true, true,
-                                             selected}),
+      : StandardMenuItem(material3::StandardMenuItemInit{
+            label, {}, nullptr, true, true, selected}),
         label_(label),
         status_(status) {}
+  // Selection is updated by Menu before this semantic action is delivered.
   void onInvoked() override { status_.setText(label_); }
 
  private:
@@ -61,6 +61,8 @@ class OperatingModeCatalog final : public FlexLayout {
     service_row_.setMenuItem(service_);
     group_.add(automatic_row_);
     group_.add(service_row_);
+    // Single selection deselects the other mode and dismisses after invoking
+    // the chosen item. The item itself remains the source of selected state.
     material3::MenuPolicy policy;
     policy.selection_mode = material3::SelectionMode::kSingle;
     menu_.setPolicy(policy);

@@ -20,6 +20,8 @@ class SettingsSubmenu final : public material3::StandardMenuItem {
   bool hasSubmenu() const override { return true; }
 
   void populateSubmenu(material3::MenuLevelBuilder& builder) override {
+    // Child rows are presentation-scoped. The builder adopts them
+    // synchronously and releases the level when it closes or is replaced.
     auto group = std::make_unique<material3::MenuGroup>(context_);
     material3::StandardMenuItemInit brightness;
     brightness.headline = "Brightness";
@@ -69,6 +71,8 @@ class NestedSettingsCatalog final : public FlexLayout {
     setGap(Scaled(12));
     display_row_.setMenuItem(display_);
     connectivity_row_.setMenuItem(connectivity_);
+    // A submenu item appears beside its sibling like any other MenuItem; its
+    // hasSubmenu()/populateSubmenu() hooks add the forward indicator and level.
     group_.add(display_row_);
     group_.add(connectivity_row_);
     menu_.addGroup(group_);

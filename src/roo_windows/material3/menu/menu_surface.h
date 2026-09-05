@@ -21,6 +21,7 @@ class MenuGroupStack final : public Container {
   MenuGroup& groupAt(int idx);
   const MenuGroup& groupAt(int idx) const;
   void setSeparatorMode(MenuSeparatorMode mode, ListVariant variant);
+  MenuSeparatorMode separatorMode() const;
   Widget* preferredFocusChild() override;
 
  protected:
@@ -34,6 +35,10 @@ class MenuGroupStack final : public Container {
   void onLayout(bool changed, const Rect& rect) override;
 
  private:
+  friend class MenuPanel;
+
+  void setResolvedSeparatorMode(MenuSeparatorMode mode, ListVariant variant);
+
   std::vector<MenuGroup*> groups_;
   MenuSeparatorMode separator_mode_ = MenuSeparatorMode::kNone;
   ListVariant variant_ = ListVariant::kExpressive;
@@ -53,6 +58,9 @@ class MenuPanel final : public Container {
   MenuGroup& groupAt(int idx);
   const MenuGroup& groupAt(int idx) const;
   bool isScrolling() const;
+
+  /// Returns the separator actually used after scrolling coercion.
+  MenuSeparatorMode effectiveSeparatorMode() const;
 
   Color background() const override;
   BorderStyle getBorderStyle() const override;

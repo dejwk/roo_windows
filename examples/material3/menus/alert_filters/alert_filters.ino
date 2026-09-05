@@ -32,8 +32,8 @@ class AlertFiltersCatalog final : public FlexLayout {
   explicit AlertFiltersCatalog(ApplicationContext& context)
       : FlexLayout(context, FlexDirection::kColumn),
         title_(context, "Visible alerts", material3::text_style_title_large()),
-        warnings_(material3::StandardMenuItemInit{"Warnings", {}, nullptr,
-                                                   true, true, true}),
+        warnings_(material3::StandardMenuItemInit{
+            "Warnings", {}, nullptr, true, true, true}),
         maintenance_(material3::StandardMenuItemInit{
             "Maintenance", {}, nullptr, true, true, false}),
         warnings_row_(context),
@@ -47,6 +47,8 @@ class AlertFiltersCatalog final : public FlexLayout {
     maintenance_row_.setMenuItem(maintenance_);
     group_.add(warnings_row_);
     group_.add(maintenance_row_);
+    // Multiple-selection invocation toggles each item independently and keeps
+    // the menu open so several filters can be changed in one visit.
     material3::MenuPolicy policy;
     policy.selection_mode = material3::SelectionMode::kMultiple;
     menu_.setPolicy(policy);

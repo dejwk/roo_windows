@@ -22,8 +22,10 @@ class OpenMenuButton final : public material3::Button {
 
   void onClicked() override {
     if (owner_ == nullptr) return;
+    // Placement and pressed-paint geometry are copied during show(); the menu
+    // does not retain this button as a live anchor.
     material3::MenuTriggerPaintSource trigger{*this, Scaled(20), 0xFF000000,
-                                               20};
+                                              20};
     menu_.show(*owner_, *this, material3::MenuPlacement::kBelowEnd, &trigger);
   }
 
@@ -46,6 +48,9 @@ class EquipmentActions final : public FlexLayout {
         open_(context, menu_) {
     setPadding(Padding(Scaled(16)));
     setGap(Scaled(12));
+    // Items hold semantic state, rows present them, and groups determine
+    // section boundaries. All are declared before menu_ so their borrows stay
+    // valid until the menu has been destroyed.
     inspect_row_.setMenuItem(inspect_);
     restart_row_.setMenuItem(restart_);
     group_.add(inspect_row_);

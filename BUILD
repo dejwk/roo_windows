@@ -126,6 +126,18 @@ cc_library(
     deps = [":roo_windows"],
 )
 
+# Compiles named sizeof() symbols for Material 3 menu target-ABI inspection.
+cc_library(
+    name = "material3_menu_size_probe",
+    srcs = ["benchmarks/material3_menu_size_probe.cpp"],
+    hdrs = [
+        "benchmarks/Arduino.h",
+        "benchmarks/pgmspace.h",
+        "benchmarks/standalone_abi_logging_stub.h",
+    ],
+    deps = [":roo_windows"],
+)
+
 cc_test(
     name = "dialog_test",
     srcs = ["test/dialog_test.cpp"],

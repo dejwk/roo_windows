@@ -265,6 +265,12 @@ void StringViewLabel::clearText() {
   requestLayout();
 }
 
+void StringViewLabel::setColor(roo_display::Color color) {
+  if (color_ == color) return;
+  color_ = color;
+  invalidateInterior();
+}
+
 void StringViewLabel::setTextStyle(const TextStyle& text_style) {
   if (text_style_ == &text_style) return;
   Rect old_bounds = value_.empty() ? Rect(0, 0, -1, -1) : maxParentBounds();

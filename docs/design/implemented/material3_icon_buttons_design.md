@@ -35,7 +35,7 @@ designs:
 
 - the [badge design](material3_badge_design.md) assumes a future
   `BadgedIconButton` host,
-- the [menus design](../proposed/material3_menus_design.md) calls out icon buttons as popup
+- the [menus design](material3_menus_design.md) calls out icon buttons as popup
   anchors,
 - and the [navigation rail design](material3_navigation_rail_design.md) keeps a
   generic header slot partly because a checked-in Material 3 icon button does

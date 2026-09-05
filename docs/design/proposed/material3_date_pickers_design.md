@@ -74,7 +74,7 @@ As of 2026-05, the relevant pieces are:
 - the checked-in [Material 3 text-field design](material3_text_fields_design.md),
   which already closes the future `material3::TextField` API and explicitly
   leaves room for picker-field follow-on work,
-- the checked-in [Material 3 menus design](material3_menus_design.md), which
+- the checked-in [Material 3 menus design](../implemented/material3_menus_design.md), which
   already closes the anchored-popup placement algorithm that docked pickers
   should reuse,
 - the checked-in [non-touch input design](../implemented/non_touch_input_design.md), which
@@ -136,7 +136,7 @@ The product signals that matter most here are:
 The most relevant local references are:
 
 - [material3_text_fields_design.md](material3_text_fields_design.md)
-- [material3_menus_design.md](material3_menus_design.md)
+- [material3_menus_design.md](../implemented/material3_menus_design.md)
 - [material3_sheets_design.md](material3_sheets_design.md)
 - [non_touch_input_design.md](../implemented/non_touch_input_design.md)
 - [widget_authoring.md](../../widget_authoring.md)
@@ -503,7 +503,7 @@ While the picker is open:
 - and cancel or outside dismissal restores the pre-open field text and value.
 
 Anchored popup placement reuses the same full-screen-overlay and candidate-
-placement strategy already closed in [material3_menus_design.md](material3_menus_design.md).
+placement strategy already closed in [material3_menus_design.md](../implemented/material3_menus_design.md).
 The docked picker prefers a below-start placement aligned to the field. When
 that fixed-size popup would crop required targets even after clamping to the
 visible bounds, `DockedDatePickerField` promotes itself to `ModalDatePicker`
@@ -804,7 +804,7 @@ Code slice:
 1. Add `DockedDatePickerField` as a `material3::TextField` subclass with a
    trailing calendar affordance.
 2. Reuse the anchored-popup placement algorithm from
-   [material3_menus_design.md](material3_menus_design.md) for the docked panel.
+   [material3_menus_design.md](../implemented/material3_menus_design.md) for the docked panel.
 3. Share one temporary session between the field text and the popup body.
 4. Add automatic promotion to `ModalDatePicker` when the docked popup cannot
    fit while preserving required target sizes.

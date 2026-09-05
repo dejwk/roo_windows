@@ -131,7 +131,7 @@ The main product signals carried into this design are:
 
 The most relevant local references are:
 
-- [../in_progress/material3_lists_design.md](../in_progress/material3_lists_design.md)
+- [../implemented/material3_lists_design.md](../implemented/material3_lists_design.md)
 - [../implemented/material3_badge_design.md](../implemented/material3_badge_design.md)
 - [material3_navigation_rail_design.md](../implemented/material3_navigation_rail_design.md)
 - [../implemented/paint_context_design.md](../implemented/paint_context_design.md)

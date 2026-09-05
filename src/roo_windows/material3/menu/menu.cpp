@@ -59,7 +59,7 @@ class FrozenMenuTriggerPin final : public PresentationPin {
       uint16_t corner_radius, uint32_t overlay_argb, uint8_t overlay_opacity)
       : bounds_(geometry.bounds_in_window),
         clip_(geometry.visible_bounds_in_window),
-        corner_radius_(corner_radius),
+        corner_radius_(std::min<uint16_t>(corner_radius, UINT8_MAX)),
         color_(roo_display::Color(overlay_argb).withA(overlay_opacity)) {}
 
  protected:
@@ -104,6 +104,13 @@ struct MenuEntry::AdornmentState {
   Rect icon_bounds;
   Rect badge_anchor;
 };
+
+#if defined(ROO_WINDOWS_MENU_ABI_PROBE)
+unsigned char
+    StandardMenuItem::abi_probe_trailing_payload_[sizeof(TrailingPayload)] = {};
+unsigned char MenuEntry::abi_probe_adornment_state_[sizeof(AdornmentState)] =
+    {};
+#endif
 
 StandardMenuItem::StandardMenuItem(const StandardMenuItemInit& init)
     : headline_(init.headline),
@@ -236,6 +243,30 @@ bool MenuEntry::isClickable() const {
   return menu_ != nullptr && bound != nullptr && visualContext().enabled;
 }
 
+ColorToken MenuEntry::containerRole() const {
+  if (!vibrant_) return ListEntry::containerRole();
+  return visualContext().selected
+             ? internal::kExpressiveVibrantMenuTokens.selected_container
+             : internal::kExpressiveVibrantMenuTokens.panel_container;
+}
+
+Color MenuEntry::background() const {
+  if (!vibrant_) return ListEntry::background();
+  return theme().material3Theme().color.resolve(containerRole());
+}
+
+Color MenuEntry::headlineColor() const {
+  if (!vibrant_) return ListEntry::headlineColor();
+  const internal::MenuTokens& tokens = internal::kExpressiveVibrantMenuTokens;
+  return theme().material3Theme().color.resolve(visualContext().selected
+                                                    ? tokens.selected_content
+                                                    : tokens.panel_content);
+}
+
+Color MenuEntry::supportingColor() const {
+  return vibrant_ ? headlineColor() : ListEntry::supportingColor();
+}
+
 bool MenuEntry::onKeyEvent(const KeyEvent& event) {
   return menu_ != nullptr && menu_->handleEntryKey(*this, event);
 }
@@ -268,13 +299,14 @@ void MenuEntry::onClicked() {
 }
 
 void MenuEntry::bindToMenu(Menu& owner, uint8_t level, uint16_t row,
-                           uint16_t generation) {
+                           uint16_t generation, bool vibrant) {
   CHECK(menu_ == nullptr || menu_ == &owner);
   menu_ = &owner;
   level_ = level;
   row_ = row;
   level_generation_ = generation;
   submenu_allowed_ = level < 3;
+  vibrant_ = vibrant;
   suppress_next_click_dispatch_ = false;
   ListEntryVisualContext visual = visualContext();
   const MenuItem* bound = menuItem();
@@ -286,12 +318,15 @@ void MenuEntry::bindToMenu(Menu& owner, uint8_t level, uint16_t row,
 }
 
 void MenuEntry::unbindFromMenu() {
+  bool was_vibrant = vibrant_;
   menu_ = nullptr;
   level_ = 0;
   row_ = 0;
   level_generation_ = 0;
   submenu_allowed_ = true;
+  vibrant_ = false;
   suppress_next_click_dispatch_ = false;
+  if (was_vibrant) refreshFromItem();
 }
 
 void MenuEntry::syncAdornments() {
@@ -626,6 +661,10 @@ class Menu::Impl {
   Registration registration;
 };
 
+#if defined(ROO_WINDOWS_MENU_ABI_PROBE)
+unsigned char Menu::abi_probe_implementation_[sizeof(Impl)] = {};
+#endif
+
 MenuLevelBuilder::MenuLevelBuilder(Menu& owner, uint8_t level,
                                    uint16_t generation)
     : owner_(&owner), generation_(generation), level_(level) {}
@@ -681,8 +720,10 @@ void Menu::bindLevelEntries(uint8_t level) {
   for (int group_index = 0; group_index < panel->groupCount(); ++group_index) {
     MenuGroup& group = panel->groupAt(group_index);
     for (MenuEntry* entry : group.entries_) {
-      entry->bindToMenu(*this, level, row_index++,
-                        impl_->level_generation[level]);
+      entry->bindToMenu(
+          *this, level, row_index++, impl_->level_generation[level],
+          impl_->policy.variant == ListVariant::kExpressive &&
+              impl_->policy.color_style == MenuColorStyle::kVibrant);
       ListEntryVisualContext visual = entry->visualContext();
       visual.variant = impl_->policy.variant;
       visual.style = impl_->policy.variant == ListVariant::kExpressive
@@ -694,6 +735,7 @@ void Menu::bindLevelEntries(uint8_t level) {
         LOG(WARNING) << "Selectable menu item bound in SelectionMode::kNone";
       }
       entry->setVisualContext(visual);
+      entry->refreshFromItem();
     }
   }
 }

@@ -15,7 +15,7 @@ The design should provide:
   family,
 - one primary segment that behaves like a normal button action,
 - one trailing segment that opens a related
-  [`Menu`](material3_menus_design.md),
+  [`Menu`](../implemented/material3_menus_design.md),
 - the four supported Material 3 split-button color styles: elevated, filled,
   filled tonal, and outlined,
 - the same expressive size range as buttons: extra small, small, medium,
@@ -32,7 +32,7 @@ describe an existing implementation.
 
 `roo_windows` now has Material 3 buttons in
 [../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md) and a designed
-Material 3 menu family in [material3_menus_design.md](material3_menus_design.md),
+Material 3 menu family in [material3_menus_design.md](../implemented/material3_menus_design.md),
 but it still lacks the specific control that Material 3 uses for a default
 action plus related alternatives.
 
@@ -63,7 +63,7 @@ As of 2026-05, the relevant current pieces are:
 - the surface paint and decoration hooks in
   [`SurfaceWidget`](../../../src/roo_windows/core/surface_widget.h),
 - and the proposed Material 3 menu API in
-  [material3_menus_design.md](material3_menus_design.md), especially
+  [material3_menus_design.md](../implemented/material3_menus_design.md), especially
   `Menu`, `MenuAnchor`, and `Menu::show(Application&)`.
 
 What does not exist yet:
@@ -397,7 +397,7 @@ change the open visual independently; the trailing segment remains open for the
 entire root chain lifetime.
 
 If `Menu::show(Application&)` is still in its stub state from
-[material3_menus_design.md](material3_menus_design.md), the existing menu
+[material3_menus_design.md](../implemented/material3_menus_design.md), the existing menu
 warning is the interim behavior. `SplitButton` must not latch the activated
 state when no menu was actually presented.
 
@@ -546,7 +546,7 @@ class SplitButton : public BasicSurfaceWidget {
 ### Companion Menu Amendment
 
 `SplitButton` needs one narrow addition to the menu API proposed in
-[material3_menus_design.md](material3_menus_design.md): an optional lifecycle
+[material3_menus_design.md](../implemented/material3_menus_design.md): an optional lifecycle
 observer that reports root-menu presentation and dismissal.
 
 ```cpp
@@ -603,7 +603,7 @@ Authoring reference:
 [../.github/instructions/roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
 
 Prerequisite: the baseline `Menu` declarations from
-[material3_menus_design.md](material3_menus_design.md) have landed.
+[material3_menus_design.md](../implemented/material3_menus_design.md) have landed.
 
 ### Phase 1: Add the Menu Lifecycle Hook and Shared Button Helpers
 

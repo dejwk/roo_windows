@@ -781,6 +781,7 @@ void ListEntry::syncTextSlotsFromItem() {
     if (mode == TextSlotMode::kLabel) {
       StringViewLabel* label = static_cast<StringViewLabel*>(slot);
       label->setText(text);
+      label->setColor(color);
       return;
     }
     TextBlock* block = static_cast<TextBlock*>(slot);
@@ -793,16 +794,20 @@ void ListEntry::syncTextSlotsFromItem() {
     block->setEllipsize(policy.overflow == TextOverflowPolicy::kTruncate);
   };
 
-  const Theme& theme = context().theme();
-  const ColorScheme& colors = theme.material3Theme().color;
   sync_slot(overline_text_, overline_mode_, item_->overlineText(),
-            item_->overlinePolicy(), FontForOverline(),
-            colors.onSurfaceVariant);
+            item_->overlinePolicy(), FontForOverline(), supportingColor());
   sync_slot(headline_text_, headline_mode_, item_->headlineText(),
-            item_->headlinePolicy(), FontForHeadline(), colors.onSurface);
+            item_->headlinePolicy(), FontForHeadline(), headlineColor());
   sync_slot(supporting_text_, supporting_mode_, item_->supportingText(),
-            item_->supportingPolicy(), FontForSupporting(),
-            colors.onSurfaceVariant);
+            item_->supportingPolicy(), FontForSupporting(), supportingColor());
+}
+
+Color ListEntry::headlineColor() const {
+  return context().theme().material3Theme().color.onSurface;
+}
+
+Color ListEntry::supportingColor() const {
+  return context().theme().material3Theme().color.onSurfaceVariant;
 }
 
 void ListEntry::setItem(ListItem& item) {

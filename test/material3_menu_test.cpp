@@ -152,6 +152,17 @@ TEST_F(Material3MenuTest, PresentsWithExplicitOwnerAndCapturesFocus) {
   EXPECT_NE(&row_, owner_.focus().focused());
 }
 
+TEST_F(Material3MenuTest, VibrantPolicyColorsRowsFromThePanelFamily) {
+  MenuPolicy policy;
+  policy.color_style = MenuColorStyle::kVibrant;
+  menu_.setPolicy(policy);
+  ASSERT_EQ(MenuShowResult::kShown, menu_.show(owner_, source_));
+
+  const ColorScheme& colors = app_.context().theme().material3Theme().color;
+  EXPECT_EQ(colors.tertiaryContainer, row_.background());
+  EXPECT_EQ(ColorToken::kTertiaryContainer, row_.containerRole());
+}
+
 TEST_F(Material3MenuTest, RejectsDetachedRequiredSourceWithoutMutation) {
   SourceWidget detached(app_.context());
   Widget* prior_scope = owner_.focus().scopeRoot();

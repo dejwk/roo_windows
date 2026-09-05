@@ -110,6 +110,9 @@ class StringViewLabel : public BasicWidget {
   /// Resets the label to an empty view.
   void clearText();
 
+  /// Replaces the paint color without changing the borrowed text.
+  void setColor(roo_display::Color color);
+
   const TextStyle& textStyle() const { return *text_style_; }
   const roo_display::Font& font() const { return textStyle().font(); }
   void setTextStyle(const TextStyle& text_style);

@@ -70,11 +70,12 @@ for arbitrary overlap that these component semantics do not require.
 
 ## Background
 
-**Status: Phases 1 and dialog lifetime/hosting adoption implemented.** The framework
+**Status: Phases 1 and dialog/menu lifetime/hosting adoption implemented.** The framework
 provides the shared registration, single-slot, finish-order, and Back-
 participant contract, and legacy dialogs now use the composite transient host
-with explicit task ownership and guarded preparation. Modal-sheet wrappers,
-menu adoption, and snackbar adoption remain outstanding. The status of
+with explicit task ownership and guarded preparation. Material 3 menus use the
+same registered lifetime and composite host; modal-sheet wrappers and snackbar
+adoption remain outstanding. The status of
 prerequisites is recorded in the
 [status index](../README.md).
 

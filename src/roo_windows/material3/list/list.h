@@ -346,6 +346,13 @@ class ListEntry : public Container {
   void onFocusChanged(bool focused) override;
 
  protected:
+  /// Resolves the primary text color used when text slots are synchronized.
+  /// Derived row families may override this to match a specialized container.
+  virtual Color headlineColor() const;
+
+  /// Resolves overline and supporting text for a specialized container.
+  virtual Color supportingColor() const;
+
   int getChildrenCount() const override;
   const Widget& getChild(int idx) const override;
   Widget& getChild(int idx) override;

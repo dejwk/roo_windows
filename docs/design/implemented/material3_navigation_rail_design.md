@@ -144,7 +144,7 @@ The most relevant local references are:
 - [../implemented/material3_badge_design.md](../implemented/material3_badge_design.md)
 - [../implemented/paint_context_design.md](../implemented/paint_context_design.md)
 - [../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md)
-- [../in_progress/material3_lists_design.md](../in_progress/material3_lists_design.md)
+- [material3_lists_design.md](material3_lists_design.md)
 - [widget_authoring.md](../../widget_authoring.md)
 
 Those references imply three important local constraints:

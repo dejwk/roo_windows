@@ -128,10 +128,20 @@ const MenuGroup& MenuGroupStack::groupAt(int idx) const {
 
 void MenuGroupStack::setSeparatorMode(MenuSeparatorMode mode,
                                       ListVariant variant) {
-  separator_mode_ = mode;
-  variant_ = variant;
+  if (separator_mode_ == mode && variant_ == variant) return;
+  setResolvedSeparatorMode(mode, variant);
   requestLayout();
   invalidateInterior();
+}
+
+void MenuGroupStack::setResolvedSeparatorMode(MenuSeparatorMode mode,
+                                              ListVariant variant) {
+  separator_mode_ = mode;
+  variant_ = variant;
+}
+
+MenuSeparatorMode MenuGroupStack::separatorMode() const {
+  return separator_mode_;
 }
 
 Color MenuGroupStack::background() const {
@@ -256,6 +266,10 @@ const MenuGroup& MenuPanel::groupAt(int idx) const {
 
 bool MenuPanel::isScrolling() const { return scrolling_; }
 
+MenuSeparatorMode MenuPanel::effectiveSeparatorMode() const {
+  return groups_.separatorMode();
+}
+
 Color MenuPanel::background() const {
   return theme().material3Theme().color.resolve(tokens().panel_container);
 }
@@ -290,6 +304,9 @@ Widget& MenuPanel::getChild(int idx) {
 }
 
 Dimensions MenuPanel::onMeasure(WidthSpec width, HeightSpec height) {
+  // Re-evaluate the configured mode on every measure. A panel that stopped
+  // scrolling must be able to recover its requested expressive gaps.
+  groups_.setResolvedSeparatorMode(policy_.separator_mode, policy_.variant);
   int16_t max_width = Scaled(tokens().max_width_dp);
   int16_t available_width = width.kind() == UNSPECIFIED
                                 ? max_width
@@ -303,6 +320,15 @@ Dimensions MenuPanel::onMeasure(WidthSpec width, HeightSpec height) {
                                              HeightSpec::Unspecified(0));
   int32_t resolved_height = height.resolveSize(final_content.height());
   scrolling_ = final_content.height() > resolved_height;
+  if (scrolling_ && policy_.separator_mode == MenuSeparatorMode::kGap) {
+    // Gaps expose the panel between groups and become visually ambiguous while
+    // content moves under a viewport. Scrollable menus therefore use stable
+    // one-pixel dividers and remeasure before laying out the viewport.
+    groups_.setResolvedSeparatorMode(MenuSeparatorMode::kDivider,
+                                     policy_.variant);
+    final_content = groups_.measure(WidthSpec::Exactly(resolved_width),
+                                    HeightSpec::Unspecified(0));
+  }
   viewport_.setVerticalScrollBarPresence(
       scrolling_ ? VerticalScrollBar::Presence::kAlwaysShown
                  : VerticalScrollBar::Presence::kAlwaysHidden);

@@ -58,31 +58,49 @@ enum class MenuShowResult : uint8_t {
 
 /// Optional source copied synchronously to retain a trigger's pressed paint.
 struct MenuTriggerPaintSource {
+  /// Attached widget whose clipped window geometry is copied during admission.
   const Widget& widget;
+
+  /// Corner radius of the copied pressed overlay, clamped to 255 pixels.
   uint16_t corner_radius = 0;
+
+  /// RGB color of the overlay; its input alpha is replaced by
+  /// `overlay_opacity`.
   uint32_t overlay_argb = 0;
+
+  /// Alpha applied to the copied overlay while the menu remains active.
   uint8_t overlay_opacity = 0;
 };
 
 /// Presentation and selection policy shared by one menu chain.
 struct MenuPolicy {
+  /// Baseline or expressive row geometry and shapes.
   ListVariant variant = ListVariant::kExpressive;
+  /// Standard surface colors or the expressive tertiary/primary family.
   MenuColorStyle color_style = MenuColorStyle::kStandard;
+  /// Requested boundary treatment between consecutive groups.
   MenuSeparatorMode separator_mode = MenuSeparatorMode::kNone;
+  /// Whether invocation mutates no, one, or multiple selectable items.
   SelectionMode selection_mode = SelectionMode::kNone;
+  /// Resolves start/end placement and forward/backward submenu arrows.
   LayoutDirection layout_direction = LayoutDirection::kLeftToRight;
 };
 
 /// Badge content exposed by a menu item to its bound row.
 struct MenuBadgeSpec {
+  /// Hidden, dot, or text badge presentation.
   BadgeMode mode = BadgeMode::kHidden;
+  /// Stable caller-owned text used only when `mode` is `kText`.
   roo::string_view text = {};
 };
 
 /// Optional owner-painted content in a menu row's trailing lane.
 struct MenuTrailingAffordances {
+  /// Stable caller-owned accelerator hint, such as "Ctrl+S".
   roo_display::StringView shortcut = {};
+  /// Optional caller-owned trailing drawable.
   const roo_display::Drawable* icon = nullptr;
+  /// Optional badge copied into row-owned presentation state while bound.
   MenuBadgeSpec badge = {};
 };
 
@@ -121,11 +139,17 @@ class MenuItem : public ListItem {
 
 /// Construction-time stable borrows and initial state for a standard item.
 struct StandardMenuItemInit {
+  /// Stable caller-owned primary label.
   roo_display::StringView headline = {};
+  /// Stable caller-owned secondary label.
   roo_display::StringView supporting = {};
+  /// Optional detached caller-owned widget borrowed for the binding lifetime.
   Widget* leading = nullptr;
+  /// Initial eligibility for focus and invocation.
   bool enabled = true;
+  /// Whether the owning menu may mutate this item's selection state.
   bool selectable = false;
+  /// Initial item-owned selection state.
   bool selected = false;
 };
 
@@ -181,6 +205,10 @@ class StandardMenuItem : public MenuItem {
  private:
   struct TrailingPayload;
 
+#if defined(ROO_WINDOWS_MENU_ABI_PROBE)
+  static unsigned char abi_probe_trailing_payload_[];
+#endif
+
   TrailingPayload& ensureTrailingPayload();
   void releaseEmptyTrailingPayload();
 
@@ -214,6 +242,12 @@ class MenuEntry : public ListEntry {
   /// Returns true when a bound, enabled item can be activated.
   bool isClickable() const override;
 
+  /// Returns the menu-token container role for standard or vibrant paint.
+  ColorToken containerRole() const override;
+
+  /// Resolves the menu-token row fill for standard or vibrant paint.
+  Color background() const override;
+
   /// Handles level-local traversal and submenu navigation keys.
   bool onKeyEvent(const KeyEvent& event) override;
 
@@ -221,10 +255,25 @@ class MenuEntry : public ListEntry {
   /// Clears the base binding before a derived inline item is destroyed.
   void prepareForItemDestruction();
 
+  /// Uses the menu content role for headline text.
+  Color headlineColor() const override;
+
+  /// Uses the menu content role for supporting text.
+  Color supportingColor() const override;
+
+  /// Dispatches a confirmed tap exactly once through the owning menu.
   void onSingleTapUp(XDim x, YDim y) override;
+
+  /// Suppresses the deferred click paired with an already-dispatched tap.
   void onClicked() override;
+
+  /// Reserves the complete owner-painted trailing lane before list measure.
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
+
+  /// Lays out list content before resolving trailing adornment anchors.
   void onLayout(bool changed, const Rect& rect) override;
+
+  /// Paints adornments over the list-backed content without allocating.
   void paintWidgetContents(PaintContext& ctx) override;
 
  private:
@@ -232,13 +281,17 @@ class MenuEntry : public ListEntry {
 
   struct AdornmentState;
 
+#if defined(ROO_WINDOWS_MENU_ABI_PROBE)
+  static unsigned char abi_probe_adornment_state_[];
+#endif
+
   using ListEntry::clearItem;
   using ListEntry::setItem;
 
   void syncAdornments();
   int16_t trailingLaneWidth() const;
-  void bindToMenu(Menu& owner, uint8_t level, uint16_t row,
-                  uint16_t generation);
+  void bindToMenu(Menu& owner, uint8_t level, uint16_t row, uint16_t generation,
+                  bool vibrant);
   void unbindFromMenu();
 
   std::unique_ptr<AdornmentState> adornments_;
@@ -247,6 +300,7 @@ class MenuEntry : public ListEntry {
   uint16_t row_ = 0;
   uint8_t level_ = 0;
   bool submenu_allowed_ = true;
+  bool vibrant_ = false;
   bool suppress_next_click_dispatch_ = false;
 };
 
@@ -347,6 +401,9 @@ class Menu {
   virtual ~Menu();
 
   /// Replaces the policy used by the next presentation.
+  ///
+  /// Policy cannot change while admission or presentation is active. Expressive
+  /// gaps are automatically rendered as dividers when a panel must scroll.
   void setPolicy(const MenuPolicy& policy);
 
   /// Adds a detached borrowed group to the persistent root panel.
@@ -359,28 +416,46 @@ class Menu {
   void clearGroups();
 
   /// Presents below or beside an attached placement source.
+  ///
+  /// `interaction_owner` supplies the focus scope and receives restored focus
+  /// after dismissal; the menu does not create or navigate a task. Admission
+  /// can fail when the source is detached or belongs to another owner, the
+  /// shared transient slot cannot start, the window has no usable surface, or
+  /// this instance is already active. Failure leaves focus and menu ownership
+  /// unchanged. A successful call synchronously attaches the overlay, focuses
+  /// its first eligible row, and makes it the active interactive transient.
   MenuShowResult show(::roo_windows::Task& interaction_owner,
                       const Widget& placement_source,
                       MenuPlacement placement = MenuPlacement::kBelowStart,
                       const MenuTriggerPaintSource* trigger = nullptr);
 
   /// Presents relative to a rectangle already expressed in window coordinates.
+  ///
+  /// This variant skips widget provenance checks but otherwise has the same
+  /// admission, focus activation, failure, and dismissal semantics as `show()`.
   MenuShowResult showFromRect(
       ::roo_windows::Task& interaction_owner, const Rect& bounds_in_window,
       MenuPlacement placement = MenuPlacement::kBelowStart,
       const MenuTriggerPaintSource* trigger = nullptr);
 
   /// Recaptures a live placement source for an active menu.
+  ///
+  /// Returns false without moving the menu when it is inactive or when the
+  /// source is detached, clipped away, or outside the interaction owner.
   bool reanchor(const Widget& placement_source,
                 MenuPlacement placement = MenuPlacement::kBelowStart,
                 const MenuTriggerPaintSource* trigger = nullptr);
 
   /// Reanchors an active menu to a window-coordinate rectangle.
+  ///
+  /// Returns false when this menu is not the active presentation.
   bool reanchorFromRect(const Rect& bounds_in_window,
                         MenuPlacement placement = MenuPlacement::kBelowStart,
                         const MenuTriggerPaintSource* trigger = nullptr);
 
   /// Dismisses the complete chain as a cancellation.
+  ///
+  /// Detachment and focus restoration complete before `onFinished()` runs.
   void dismissChain();
 
  protected:
@@ -412,6 +487,9 @@ class Menu {
                               const MenuTriggerPaintSource* trigger);
 
   class Impl;
+#if defined(ROO_WINDOWS_MENU_ABI_PROBE)
+  static unsigned char abi_probe_implementation_[];
+#endif
   std::unique_ptr<Impl> impl_;
   uint8_t admission_in_progress_ : 1;
 };
