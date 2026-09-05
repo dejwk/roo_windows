@@ -749,10 +749,11 @@ rather than putting a type-erased result or callback in the framework base.
   has a null hosted association.
 - The current one-dialog limit becomes the shared one-interactive-transient
   limit rather than a dialog-specific special case.
-- P1.6b migrates the legacy API to preconfigured measurable roots, explicit
-  task ownership, a presenter focus scope, and the composite transient host;
-  it then removes the direct `MainWindow` dialog path. New Material 3 dialogs
-  use that same host.
+- P1.6b migrates the legacy API to guarded preparation before measurement,
+  explicit task ownership, a presenter focus scope, and the composite transient
+  host. Persistent content remains valid, while deferred content uses balanced
+  create/delete presentation hooks. The phase then removes the direct
+  `MainWindow` dialog path. New Material 3 dialogs use that same host.
 - A Material 3 dialog's configured body remains in its presenter subtree while
   idle. A borrowed body stays caller-owned through replacement or dialog
   destruction; an adopted body is deleted at that endpoint, not on dismissal.

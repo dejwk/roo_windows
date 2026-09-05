@@ -216,31 +216,43 @@ layout result but would change another observable rule: a dialog rejected by a
 busy host would already have entered and mutated its content despite never
 being shown.
 
-This design chooses a source-breaking migration rather than preserving that
-sequencing contract through a special host transaction:
+The host therefore supports an optional guarded preparation transaction, and
+legacy dialogs migrate onto it:
 
-1. Legacy dialog subclasses configure all structure that affects measurement
-   before `show(Task&)`. `onEnter()` may remain as a successful-entry
-   notification, but it must not install, remove, or replace content needed for
-   the current presentation's initial measurement.
-2. The owner-inferred `Application::showDialog()` entry point is replaced by
-   `Dialog::show(Task&, CallbackFn)`. It measures the complete detached dialog
-   root and presents it through the common host with a presenter-owned focus
-   scope and the nonreplaceable scrim profile. The owning alert convenience
-   likewise receives an explicit `Task&`.
-3. Built-in legacy dialogs and repository call sites are updated to the new
-   configuration contract. Call sites for which the Material 3 family is the
-   right replacement migrate to that family when it lands; the remaining
-   legacy visual types still use the same common host.
-4. Once all legacy dialog presentations use the host, `MainWindow` removes its
+1. The owner-inferred `Application::showDialog()` entry point is replaced by
+   `Dialog::show(Task&, CallbackFn)`. The owning alert convenience likewise
+   receives an explicit `Task&`.
+2. After a non-mutating admission preflight succeeds, the host closes
+   reentrant admission and calls the new preparation form of
+   `Dialog::onEnter()`. That hook may allocate and attach session-only content
+   while the dialog root is still detached.
+3. The dialog measures the prepared tree and returns its centered bounds. The
+   host revalidates all prerequisites before attaching anything. If preparation
+   or revalidation fails, it detaches partial content and calls `onExit()`
+   before returning.
+4. After successful attachment, `onShow()` provides the visible-entry
+   notification.
+5. Normal finish disables input, detaches session content, calls `onExit()`,
+   and removes the hosted root before `onDismiss()` and application completion.
+6. Built-in and application dialogs may instead keep persistent content
+   configured while idle by leaving `onEnter()` / `onExit()` empty. Call
+   sites for which the Material 3 family is the right replacement migrate to
+   that family when it lands.
+7. Once all legacy dialog presentations use the host, `MainWindow` removes its
    `active_dialog_`, dialog-specific child enumeration, and direct scrim/dialog
    attachment path.
 
-This deliberately changes subclasses that populate content in `onEnter()`.
-That compatibility cost is preferable to retaining two structural host paths
-or adding prepare, rollback, and reentrancy semantics used only by the old API.
-The existing busy-host rule remains: rejected `show(Task&)` calls do not invoke
-`onEnter()` or otherwise mutate presentation state.
+`onEnter()` / `onExit()` refer to entering and leaving one prepared
+presentation session, not to the C++ lifetime of the `Dialog` object. Every
+call to `onEnter()` is paired with exactly one `onExit()`, including preparation
+failure and admission rollback. `onShow()` / `onDismiss()` are reserved for a
+session that actually becomes visible. Dismissal means that interaction has
+concluded, whether through an action, Back, programmatic close, replacement,
+owner teardown, or host shutdown; it is not merely a paint-visibility change.
+A busy request rejected by the initial preflight invokes neither pair and does
+not mutate the dialog. This keeps the RAM-saving behavior of the old
+mixed-purpose `onEnter()` pattern without retaining a second structural host
+path.
 
 ## Requirements
 
@@ -273,15 +285,28 @@ The existing busy-host rule remains: rejected `show(Task&)` calls do not invoke
 7. **P7 — Unified teardown.** Explicit finish, replacement, interaction-owner
    teardown, presenter destruction, and window shutdown use one idempotent
    structural cleanup order.
-8. **P8 — Destruction safety.** Presenter destruction invokes no presenter
-   virtual hook and delivers no completion. Normal finish detaches before
-   completion and performs no presenter access afterward.
+8. **P8 — Destruction safety.** The registration or base-presenter destructor
+   invokes no derived presenter virtual hook and delivers no completion. A
+   derived presenter whose session resources require virtual cleanup invokes
+   the protected pre-destruction seam while its dynamic type is still intact.
+   Normal finish detaches before completion and performs no presenter access
+   afterward.
 9. **P9 — Shutdown closure.** Window shutdown permanently rejects new
    admissions before finishing the active presentation.
-10. **P10 — One production structural path.** Legacy dialog subclasses and
-    callers migrate to preconfigured measurable roots and explicit interaction
-    owners; every remaining legacy dialog uses the common host. The old direct
+10. **P10 — One production structural path.** Legacy dialog callers migrate to
+    explicit interaction owners. A guarded preparation transaction supports
+    either persistent preconfigured content or presentation-scoped content;
+    every remaining legacy dialog uses the common host, and the old direct
     `MainWindow` dialog/scrim path is removed.
+11. **P11 — Deferred construction.** A presenter may request prepared admission
+    when its root bounds depend on session-only children. Preparation runs only
+    after non-mutating preflight succeeds and while canonical admission is
+    guarded. The host revalidates every prerequisite before attachment.
+12. **P12 — Balanced preparation.** Once prepared admission invokes component
+    creation, exactly one component deletion follows on preparation failure,
+    repeated-preflight failure, normal finish, presenter destruction, owner
+    teardown, or window shutdown. Failed presentations invoke neither
+    `onShow()` nor `onDismiss()` and deliver no application completion.
 
 ### Focus and Input Requirements
 
@@ -377,9 +402,12 @@ The existing busy-host rule remains: rejected `show(Task&)` calls do not invoke
 3. Keep the net fixed `MainWindow` increase at or below 96 bytes after
    accounting for removal or reuse of legacy dialog and scrim state.
 4. Add no state to regular-task or popup-task vector elements.
-5. Showing, dismissal, focus entry and exit, validation, input quiescence, and
-   structural attachment allocate nothing. Existing top-level vector growth
-   and optional pin allocation remain the only relevant allocations.
+5. Host admission, dismissal, focus entry and exit, validation, input
+   quiescence, and structural attachment allocate nothing. Existing top-level
+   vector growth and optional pin allocation remain the host's only relevant
+   allocations. A presenter's optional preparation hook may deliberately
+   allocate session content; that allocation is component-owned and paired
+   with deletion before the presentation becomes idle.
 6. Paint, hit testing, focus traversal, and active-state validation add no
    per-frame heap work.
 
@@ -432,6 +460,7 @@ The major solution elements map to the requirements as follows:
 | shared logical slot | P1 |
 | hosted cleanup seam and permanent shutdown guard | P7–P9 |
 | common hosted association plus migrated legacy dialogs | P10 |
+| guarded prepare, measure, revalidate, and rollback seam | P11–P12 |
 | explicit interaction owner and availability bit | P2, I7, I10–I11, A2, A5–A6 |
 | one composite host layer | P3, I5, B1–B2 |
 | two-pass preflight, admission guard, and synchronous caller-lifetime contract | P4, P6 |
@@ -443,7 +472,7 @@ The major solution elements map to the requirements as follows:
 | display-coverage owner-scoped copied-geometry pin | A5–A8 |
 | measured type ceilings and target-ABI probes | Embedded requirements 1–6 |
 
-One admission follows this sequence:
+An ordinary admission follows this sequence:
 
 1. The presenter validates and copies the required live placement source, then
    independently captures optional trigger paint. Invalid trigger paint is
@@ -460,6 +489,13 @@ One admission follows this sequence:
 7. A display-covered presenter registers its optional copied-geometry pin.
 8. Every terminal path disables input, performs component and structural
    teardown, vacates the slot, and then delivers normal completion.
+
+Prepared admission adds one bounded step after initial preflight or outgoing
+replacement and before input quiescence: under the admission guard, the
+presenter creates session content and resolves final bounds. The host then
+repeats complete preflight. Any failure invokes balanced component deletion
+before releasing the guard. The remaining attach and finish sequence is
+identical to ordinary admission.
 
 The host shares infrastructure, not component semantics. Menus retain chains
 and placement; dialogs retain results and chrome; sheets retain drag and
@@ -824,7 +860,9 @@ Every normal terminal path performs:
 9. deliver completion; and
 10. perform no presenter access after completion.
 
-Presenter destruction skips steps 2, 9, and 10. Window shutdown sets the
+The registration/base-destructor fallback skips steps 2, 9, and 10. A dialog
+subclass with derived session resources performs step 2 through its protected
+pre-destruction seam before entering base destruction. Window shutdown sets the
 permanent slot guard before step 1. Interaction-owner teardown marks the owner
 unavailable before step 1.
 
@@ -832,21 +870,66 @@ unavailable before step 1.
 
 The migrated legacy presentation path is:
 
-1. application code or the dialog constructor configures the complete content
-   tree before presentation;
-2. `Dialog::show(Task&, CallbackFn)` validates the explicit owner and measures
-   the detached, already-populated dialog;
-3. the dialog's embedded registration and focus scope are admitted through the
-   shared host with display coverage, scrim paint, outside absorption,
-   reject-if-busy admission, and a nonreplaceable occupant policy;
-4. after successful admission, `onEnter()` runs only as a non-structural
-   lifecycle notification; and
-5. every close path uses common host teardown before `onExit()` and application
-   completion.
+1. `Dialog::show(Task&, CallbackFn)` asks the host for guarded prepared
+   admission with the explicit interaction owner and nonreplaceable scrim
+   profile;
+2. after initial preflight and before attachment, the dialog's
+   `onEnter()` hook optionally creates and installs session-bound content;
+3. the dialog measures that prepared tree and returns centered bounds to the
+   host;
+4. the host revalidates, quiesces covered input, admits the registration and
+   focus scope, and attaches the composite layer and dialog root;
+5. `onShow()` runs as the visible-entry notification; and
+6. every rollback or close path detaches session content and pairs creation
+   with `onExit()`. Successful presentations additionally run `onDismiss()`
+   after common host teardown and before application completion.
 
-`AlertDialog`, `RadioListDialog`, and repository subclasses that currently call
-`setPresentationContent()` from `onEnter()` move that attachment into
-construction or an explicit inactive configuration method. The old
+The default `onEnter()` / `onExit()` hooks do nothing, so a dialog with
+persistent preconfigured content pays no presentation-time construction cost.
+A RAM-sensitive subclass overrides them: entry can allocate or activate its
+content only after initial preflight, while exit releases presenter-owned
+session storage after the base has detached that content.
+
+The proposed protected surface is deliberately explicit about creation
+failure:
+
+```cpp
+// Called while the dialog is detached. Returning false aborts presentation;
+// onExit() is still called exactly once.
+virtual bool onEnter() { return true; }
+
+// Called only after a matching onEnter(), after the base has detached
+// presentation-scoped widget content.
+virtual void onExit() {}
+
+// Called after successful attachment.
+virtual void onShow() {}
+
+// Called after a shown interaction concludes and detachment succeeds, before
+// application completion. This includes non-user teardown reasons.
+virtual void onDismiss(int result) {}
+
+// Required at the start of a derived destructor when the derived class
+// overrides the lifecycle pair or owns borrowed presentation-scoped content.
+void prepareForDerivedDestruction();
+```
+
+For example, an allocation-on-show subclass returns false if it cannot create
+its child, otherwise passes an owned `WidgetRef` to
+`setPresentationContent()`. The base detaches and deletes that child before
+calling `onExit()`. A subclass that borrows a child from its own session
+storage uses the exit hook to release that storage after detach.
+Its destructor begins with `prepareForDerivedDestruction()` so virtual cleanup
+runs before derived members are destroyed. The seam and the later generic
+registration cleanup are mutually idempotent; that fallback does not attempt
+derived virtual cleanup.
+
+`AlertDialog`, `RadioListDialog`, and repository subclasses that currently
+call `setPresentationContent()` from the old `onEnter()` keep that work in the
+new boolean `onEnter()` and return success. Overrides that used `onEnter()` only
+as a visible notification move to `onShow()`, and old `onExit(int)` overrides
+move to `onDismiss(int)`. Subclasses may retain inline children or change to
+allocation-on-show independently of the host contract. The old
 `Application::showDialog(Dialog&, CallbackFn)` and `clearDialog()` operations
 are removed rather than guessing an owner or retaining a dialog-specific
 control pointer. Caller-owned dialogs close through `Dialog::close()`; the
@@ -858,6 +941,24 @@ dialog and scrim pair once migration is complete.
 New Material 3 dialogs use the same structural host directly. As they land,
 call sites that do not require the legacy visual/API contract migrate to the
 Material 3 family instead of being mechanically adapted to the old type.
+
+The pairing order is strict:
+
+```text
+initial preflight
+  -> onEnter()
+  -> measure and repeated preflight
+  -> attach and onShow()
+  -> disable input and detach session content
+  -> onExit()
+  -> detach host structure and become idle
+  -> onDismiss() and application completion
+```
+
+If creation or repeated preflight fails, the middle of that sequence becomes
+`detach partial session content -> onExit() -> return failure`. `onShow()`,
+`onDismiss()`, and application completion are not invoked for a presentation
+that never attaches.
 
 ### RAM Budget
 
@@ -1017,6 +1118,24 @@ struct TransientSourceGeometry {
   Rect visible_bounds_in_window;
 };
 
+// Optional stack- or presenter-owned adapter for roots whose final bounds
+// depend on session-only children. The host retains no pointer after show.
+class TransientSurfacePreparation {
+ public:
+  virtual ~TransientSurfacePreparation() = default;
+
+ private:
+  friend class TransientSurfaceHost;
+
+  // Creates session resources and returns final root bounds in window
+  // coordinates. False maps to kSurfaceUnavailable.
+  virtual bool createAndResolveBounds(Rect& root_bounds_in_window) = 0;
+
+  // Balances creation when admission does not commit. Normal committed cleanup
+  // remains the presenter's registration detach responsibility.
+  virtual void deleteAfterFailedAdmission() = 0;
+};
+
 // Synchronously copies geometry only when source physically belongs to the
 // interaction owner's attached top-level TaskPanel, and only when its physical
 // parent chain contains no TransientHostLayer. Leaves output unchanged on
@@ -1035,6 +1154,14 @@ class TransientSurfaceHost {
       const Rect& root_bounds_in_window,
       FocusScope& focus_scope,
       const TransientSurfaceSpec& spec);
+
+  PresentationStartResult showPrepared(
+      TransientPresentationRegistration& registration,
+      Task& interaction_owner,
+      Widget& root,
+      FocusScope& focus_scope,
+      const TransientSurfaceSpec& spec,
+      TransientSurfacePreparation& preparation);
 
   PresentationPinShowResult showPresentationPin(
       TransientPresentationRegistration& registration,
@@ -1123,6 +1250,26 @@ added. `MainWindow` befriends only this internal resolver and the host.
 
 `showPresentationPin()` is available only to a display-covered active
 registration.
+
+`showPrepared()` performs the same initial preflight as `show()` except for
+final bounds, resolves approved replacement before creating incoming content,
+then sets the canonical admission guard. It calls
+`createAndResolveBounds()`, repeats full preflight with the returned bounds,
+quiesces input, repeats preflight again, and commits. After creation, every
+non-commit return calls `deleteAfterFailedAdmission()` exactly once before
+releasing the guard. A successful commit transfers that one cleanup obligation
+to the registration's normal component detach hook. The host does not retain
+the preparation adapter or add callback storage.
+
+`Dialog::show()` creates a stack adapter that forwards creation to
+`onEnter()`, measuring and centering itself, and forwards rollback to its
+balanced session-content cleanup plus `onExit()`. A subclass that overrides the
+pair and owns inline or borrowed session resources must call the protected
+`prepareForDerivedDestruction()` seam at the start of its destructor. C++ base
+destruction cannot safely dispatch a derived virtual deletion hook after the
+derived members have begun to die. The seam cancels any active host session,
+detaches session content, and invokes the deletion hook while the derived type
+is still alive; final registration destruction remains an idempotent fallback.
 
 The existing public `TransientPresentationSlot::replace()` gains one guard:
 when `active_host_` is non-null, it returns `kHostBusy` before finishing the
@@ -1283,20 +1430,28 @@ Validation: `bazel test //:transient_presentation_pin_test
 
 Code slice:
 
-1. Add a presenter-owned `FocusScope` and `show(Task&, CallbackFn)` to `Dialog`.
-   Remove the owner-inferred `Application::showDialog(Dialog&, CallbackFn)` and
-   `clearDialog()` entry points; change the heap-owning alert convenience to
+1. Add a presenter-owned `FocusScope`, `show(Task&, CallbackFn)`, balanced
+   `onEnter()` / `onExit()` preparation hooks and the `onShow()` /
+   `onDismiss()` interaction hooks, plus the protected derived-destruction seam
+   to `Dialog`. Remove the
+   owner-inferred
+   `Application::showDialog(Dialog&, CallbackFn)` and `clearDialog()` entry
+   points; change the heap-owning alert convenience to
    `showAlertDialog(Task&, ...)`.
-2. Require the complete measurement-affecting dialog tree to be configured
-   while idle. Keep `onEnter()` only as a post-admission, non-structural
-   lifecycle notification; document that it cannot install, remove, or replace
-   presentation content.
-3. Move `AlertDialog`, `RadioListDialog`, repository test subclasses, and all
-   in-repository callers off `onEnter()` content attachment. Migrate suitable
-   application-facing callers to Material 3 dialogs when that family is
-   available; adapt only callers that intentionally retain the legacy visual
-   type.
-4. Measure and center the preconfigured detached root, then admit it through
+2. Add the allocation-free guarded prepared-admission path to
+   `TransientSurfaceHost`. Initial preflight and any approved replacement
+   happen before dialog creation; creation, measurement, repeated preflight,
+   quiescence, and commit then form one guarded transaction with balanced
+   rollback.
+3. Move presentation-scoped structural work in `AlertDialog`,
+   `RadioListDialog`, and repository test subclasses into the boolean
+   `onEnter()`, with matching release in `onExit()`. A dialog may instead retain
+   preconfigured children and use the default no-op preparation pair. Move
+   visible interaction notifications to `onShow()` / `onDismiss()`. Migrate
+   suitable application-facing callers to Material 3 dialogs when that family
+   is available; adapt only callers that intentionally retain the legacy
+   visual type.
+4. Measure and center the prepared detached root, then admit it through
    `TransientSurfaceHost` with display coverage, scrim paint, outside
    absorption, Back/Escape eligibility, reject-if-busy admission, and a
    nonreplaceable occupant policy.
@@ -1304,17 +1459,19 @@ Code slice:
    `detachDialog()`, and the direct scrim/dialog attachment path. Retain one
    shared scrim owned by the composite host.
 6. Replace the old `onEnter()`-before-measure regression with tests proving
-   preconfigured content participates in initial measurement, busy rejection
-   invokes no entry hook, explicit owner focus is contained and restored,
-   owner teardown closes the dialog, and every result still detaches before
-   `onExit()` and application completion.
+   presentation-scoped content is created before initial measurement,
+   persistent content needs no presentation allocation, busy rejection invokes
+   neither lifecycle pair, and preparation or repeated-preflight failure calls
+   deletion exactly once. Cover the derived-destruction seam, explicit owner
+   focus and teardown, and the guarantee that `onExit()` cleanup and
+   `onDismiss()` both precede application completion.
 
 Proposed commit message:
 
 > Transient surfaces Phase 5: migrate legacy dialogs to the shared host.
 >
-> Make dialog structure measurable before admission, require an explicit task,
-> route remaining legacy dialogs through the composite host, and remove the
+> Add guarded create-and-measure admission, require an explicit task, route
+> remaining legacy dialogs through the composite host, and remove the
 > dialog-specific MainWindow path.
 
 Validation: `bazel test //:dialog_test
@@ -1354,9 +1511,10 @@ dialogs as a concrete scrim-profile consumer. The focused targets cover:
   restoration;
 - display-coverage owner-scoped pin ordering, invalidation, allocation failure,
   and unchanged slider pins; and
-- migrated legacy-dialog preconfiguration, explicit owner focus and teardown,
-  busy rejection without entry notification, and removal of the direct
-  `MainWindow` dialog path; and
+- migrated legacy-dialog prepared construction and balanced deletion,
+  allocation-free persistent-content use, rollback and derived-destruction
+  cleanup, explicit owner focus and teardown, busy rejection without lifecycle
+  notification, and removal of the direct `MainWindow` dialog path; and
 - the `TransientHostLayer`, coordinator, `MainWindow`, pin, focus, and
   `TransientSourceGeometry` ABI ceilings.
 
@@ -1434,14 +1592,15 @@ Rejected because one composite layer provides the same paint, service
 resolution, root-first hit testing, and outside absorption without special
 `MainWindow` sibling fallback.
 
-#### Preserve Structural `onEnter()` and the Direct Legacy Host Path
+#### Preserve the Existing Mixed `onEnter()` Semantics and Direct Host Path
 
 Rejected because it would retain two production attachment, focus, input, and
 teardown paths indefinitely. The selected migration accepts source changes:
-legacy content becomes measurable before `show(Task&)`, and `onEnter()` becomes
-a non-structural notification after successful admission. This preserves
-reject-without-mutation semantics without adding a special preparation
-transaction to the common host.
+the boolean `onEnter()` is exclusively preparation before measurement,
+`onExit()` balances its resources, and visible notifications move to
+`onShow()` / `onDismiss()`. The common host's guarded preparation transaction
+preserves reject-without-mutation for initial preflight and provides
+deterministic rollback after construction begins.
 
 #### Use the Canonical Window Slot Directly for New Structural Presenters
 

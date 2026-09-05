@@ -70,10 +70,13 @@ Those seams constrain the dialog design directly.
 
 First, the current visual behavior is correct for centered basic dialogs, but
 its dialog-specific attachment is not the path for new Material 3 dialogs.
-P1.6b migrates legacy `Dialog` to preconfigured measurable roots, explicit task
-ownership, and the shared structural host, removing the dialog-specific
-`MainWindow` attachment path. New Material 3 dialogs adopt that same host in
-P1.8: its combined layer borrows the root, selects barrier paint independently,
+P1.6b migrates legacy `Dialog` to guarded preparation before measurement,
+explicit task ownership, and the shared structural host, removing the
+dialog-specific `MainWindow` attachment path. Legacy subclasses may keep
+persistent children or balance presentation-scoped children through
+`onEnter()` / `onExit()`; `onShow()` / `onDismiss()` delimit an interaction that
+actually became visible. New Material 3 dialogs adopt that same host in P1.8:
+its combined layer borrows the root, selects barrier paint independently,
 activates the presenter-owned focus scope, and blocks lower layers.
 
 Second, the reviewed framework intentionally supports one root interactive

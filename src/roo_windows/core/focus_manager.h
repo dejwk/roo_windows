@@ -28,8 +28,10 @@ class FocusManager {
 
   /// Attempts to move focus to an eligible, attached widget.
   bool requestFocus(Widget& widget);
+
   /// Moves focus through focusable descendants of `root`, wrapping at ends.
   bool moveFocus(Widget& root, bool backwards);
+
   /// Moves focus to the best eligible descendant in `direction`. Unlike Tab
   /// traversal, directional movement does not wrap.
   bool moveFocusDirection(Widget& root, FocusDirection direction);
