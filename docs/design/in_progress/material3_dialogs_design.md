@@ -16,8 +16,8 @@ The gap is visible in three places:
 1. [src/roo_windows/dialogs/dialog.h](../../../src/roo_windows/dialogs/dialog.h)
    provides one centered scaffold with a legacy shape, a dynamic footer-button
    vector, and no distinction between basic and full-screen variants.
-2. [material3_sheets_design.md](material3_sheets_design.md) and
-   [material3_snackbar_design.md](material3_snackbar_design.md) already cover
+2. [material3_sheets_design.md](../proposed/material3_sheets_design.md) and
+   [material3_snackbar_design.md](../proposed/material3_snackbar_design.md) already cover
    the neighboring interruption surfaces, so dialogs are now the most obvious
    missing part of the Material 3 interruption story.
 3. [material3_roadmap.md](../../material3_roadmap.md) explicitly calls out
@@ -30,10 +30,11 @@ flows belong.
 
 ## Background
 
-**Status: Proposed; shared-host prerequisite implemented by P1.6b.** None of
-the dialog-family scope is implemented. The shared transient host and guarded
-prepared-admission path are available for dialog presentation. The status of
-other prerequisites is recorded in the [status index](../README.md).
+**Status: In progress.** Phase 1 is implemented: the fixed action model, shared
+scaffold, persistent body ownership, presenter-owned focus scope, and explicit-
+owner shared-host seam are covered by `material3_dialog_test`. Basic, alert,
+and full-screen public presenters remain in Phases 2 and 3. The status of other
+prerequisites is recorded in the [status index](../README.md).
 
 ### Current Starting Point in `roo_windows`
 
@@ -130,8 +131,8 @@ that positioning freedom is not required for the first embedded dialog landing.
 
 The most relevant local references are:
 
-- [material3_sheets_design.md](material3_sheets_design.md)
-- [material3_snackbar_design.md](material3_snackbar_design.md)
+- [material3_sheets_design.md](../proposed/material3_sheets_design.md)
+- [material3_snackbar_design.md](../proposed/material3_snackbar_design.md)
 - [non_touch_input_design.md](../implemented/non_touch_input_design.md)
 - [material3_icon_buttons_design.md](../implemented/material3_icon_buttons_design.md)
 - [embedded-design-doc-authoring.instructions.md](../../../.github/instructions/embedded-design-doc-authoring.instructions.md)
@@ -1052,6 +1053,11 @@ and the
 [roo_windows widget authoring instruction](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
 ### Phase 1: Shared Scaffold and Presenter Integration
+
+**Status: Implemented.** The shared scaffold, action validation and fixed
+storage, persistent borrowed/adopted body contract, focus re-entry, semantic
+editor isolation, host-result mapping, mutual exclusion, teardown, and size
+budgets are covered by `//:material3_dialog_test`.
 
 Code slice:
 

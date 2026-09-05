@@ -687,7 +687,7 @@ fall out of the simple clickable model.
    scope. New Material 3 dialogs use the same focus containment, initial focus,
    keyboard button traversal, and Escape dismissal contract through P1.6b
    hosting and the
-   [Material 3 dialog design](../proposed/material3_dialogs_design.md).
+   [Material 3 dialog design](../in_progress/material3_dialogs_design.md).
 
 2. Lists and list-derived navigation surfaces
 
