@@ -94,6 +94,12 @@ class TransientPresentationRegistration {
   /// `PresentationFinishReason::kBack`.
   virtual BackResult onBackRequested(BackSource source);
 
+  /// Handles a completed outside tap when the active surface delegates it.
+  ///
+  /// The handler may leave the presentation open, finish it, or destroy its
+  /// presenter. The host performs no presenter access after this call.
+  virtual void onOutsideInteraction() {}
+
   /// Vacates the slot without terminal delivery during presenter destruction.
   void cancel();
 
@@ -140,6 +146,15 @@ class TransientPresentationSlot {
   friend class TransientPresentationRegistration;
   friend class internal::TransientSurfaceHost;
 
+  class AdmissionGuard {
+   public:
+    explicit AdmissionGuard(TransientPresentationSlot& slot);
+    ~AdmissionGuard();
+
+   private:
+    TransientPresentationSlot& slot_;
+  };
+
   PresentationStartResult showHosted(
       TransientPresentationRegistration& registration,
       TransientPresentationPolicy policy, internal::TransientSurfaceHost& host);
@@ -154,6 +169,7 @@ class TransientPresentationSlot {
   internal::TransientSurfaceHost* active_host_ = nullptr;
   bool clearing_ = false;
   bool admission_closed_ = false;
+  bool admission_guard_ = false;
 };
 
 }  // namespace roo_windows

@@ -16,6 +16,10 @@ constexpr uint8_t kBack = 1 << 4;
 constexpr uint8_t kEscape = 1 << 5;
 constexpr uint8_t kReplaceable = 1 << 6;
 
+constexpr uint8_t kInputEnabled = 1 << 0;
+constexpr uint8_t kBarrierHit = 1 << 1;
+constexpr uint8_t kOutsideActivationPending = 1 << 2;
+
 // Validates enum values before policy packing makes them indistinguishable.
 bool IsValid(TransientBarrierPaint value) {
   return value == TransientBarrierPaint::kTransparent ||
@@ -62,18 +66,31 @@ Widget& TransientHostLayer::getChild(int index) {
 
 bool TransientHostLayer::fillTouchTargetPath(XDim x, YDim y,
                                              std::vector<Widget*>& path) {
-  if (!isVisible() || !isEnabled() || !bounds().contains(x, y) ||
-      root_ == nullptr) {
+  if ((input_state_ & kInputEnabled) == 0 || !isVisible() || !isEnabled() ||
+      !bounds().contains(x, y) || root_ == nullptr) {
     return false;
   }
   path.push_back(this);
   size_t host_path_size = path.size();
   if (root_->fillTouchTargetPath(x - root_->offsetLeft(),
                                  y - root_->offsetTop(), path)) {
+    input_state_ &= ~kBarrierHit;
     return true;
   }
   path.resize(host_path_size);
+  input_state_ |= kBarrierHit;
   return true;
+}
+
+bool TransientHostLayer::supportsTap() const {
+  return (input_state_ & (kInputEnabled | kBarrierHit)) ==
+         (kInputEnabled | kBarrierHit);
+}
+
+void TransientHostLayer::onSingleTapUp(XDim x, YDim y) {
+  (void)x;
+  (void)y;
+  if (supportsTap()) input_state_ |= kOutsideActivationPending;
 }
 
 void TransientHostLayer::attachSurface(Task& owner, Widget& root, Scrim* scrim,
@@ -84,16 +101,32 @@ void TransientHostLayer::attachSurface(Task& owner, Widget& root, Scrim* scrim,
   owner_ = &owner;
   root_ = &root;
   scrim_ = scrim;
+  input_state_ = 0;
   if (scrim_ != nullptr) attachChild(WidgetRef(*scrim_), bounds());
   attachChild(WidgetRef(root), root_bounds);
 }
 
 void TransientHostLayer::detachSurface() {
+  disableInput();
   if (root_ != nullptr && root_->parent() == this) detachChild(root_);
   if (scrim_ != nullptr && scrim_->parent() == this) detachChild(scrim_);
   root_ = nullptr;
   scrim_ = nullptr;
   owner_ = nullptr;
+}
+
+void TransientHostLayer::enableInput() { input_state_ = kInputEnabled; }
+
+void TransientHostLayer::disableInput() { input_state_ = 0; }
+
+bool TransientHostLayer::isInputEnabled() const {
+  return (input_state_ & kInputEnabled) != 0;
+}
+
+bool TransientHostLayer::takePendingOutsideActivation() {
+  bool pending = (input_state_ & kOutsideActivationPending) != 0;
+  input_state_ &= ~kOutsideActivationPending;
+  return pending;
 }
 
 bool CaptureTransientSourceGeometry(Task& owner, const Widget& source,
@@ -130,9 +163,12 @@ bool CaptureTransientSourceGeometry(Task& owner, const Widget& source,
 PresentationStartResult TransientSurfaceHost::preflight(
     TransientPresentationRegistration& registration, Task& owner, Widget& root,
     const Rect& root_bounds_in_window, FocusScope& scope,
-    const TransientSurfaceSpec& spec, const FocusScope* replaced_scope) const {
+    const TransientSurfaceSpec& spec, const FocusScope* replaced_scope,
+    bool allow_admission_guard) const {
   const TransientPresentationSlot& slot = window_.transient_presentation_slot_;
-  if (slot.admission_closed_ || slot.clearing_ || registration.isActive()) {
+  if (slot.admission_closed_ ||
+      (slot.admission_guard_ && !allow_admission_guard) || slot.clearing_ ||
+      registration.isActive()) {
     return PresentationStartResult::kHostBusy;
   }
   if (!owner.presentation_available_ || &owner.window().root() != &window_ ||
@@ -181,6 +217,18 @@ PresentationStartResult TransientSurfaceHost::show(
     if (result != PresentationStartResult::kStarted) return result;
   }
 
+  {
+    // Cancellation callbacks run while canonical admission is closed. They
+    // may mutate any incoming prerequisite, so validate everything again
+    // before making the registration or borrowed tree visible.
+    TransientPresentationSlot::AdmissionGuard guard(slot);
+    owner.window().gestureDetector().cancelForDisplayCoverage();
+    window_.cancelTaskKeyActivationForDisplayCoverage();
+    result = preflight(registration, owner, root, root_bounds_in_window, scope,
+                       spec, nullptr, true);
+    if (result != PresentationStartResult::kStarted) return result;
+  }
+
   result = slot.showHosted(registration, spec.back, *this);
   if (result != PresentationStartResult::kStarted) return result;
   attachHostedSurface(root, root_bounds_in_window, owner, scope, spec);
@@ -197,6 +245,63 @@ void TransientSurfaceHost::attachHostedSurface(
       spec.barrier == TransientBarrierPaint::kScrim ? &window_.scrim_ : nullptr;
   window_.host_layer_.attachSurface(owner, root, scrim, root_bounds_in_window);
   owner.focus_.enterScope(scope, root, owner.panel_);
+  window_.host_layer_.enableInput();
+}
+
+bool TransientSurfaceHost::isActive() const {
+  const TransientPresentationSlot& slot = window_.transient_presentation_slot_;
+  return slot.active_host_ == this && slot.active_ != nullptr;
+}
+
+TransientPresentationRegistration* TransientSurfaceHost::activeRegistration()
+    const {
+  return isActive() ? window_.transient_presentation_slot_.active_ : nullptr;
+}
+
+bool TransientSurfaceHost::isInputEnabled() const {
+  return isActive() && window_.host_layer_.isInputEnabled();
+}
+
+bool TransientSurfaceHost::isInteractionOwner(const Task& task) const {
+  return isActive() && window_.host_layer_.owner_ == &task;
+}
+
+bool TransientSurfaceHost::allowsSemanticTextInput(
+    const TextFieldEditor& editor) const {
+  if (!isActive()) return true;
+  if (!isInputEnabled()) return false;
+  Task* owner = window_.host_layer_.owner_;
+  Widget* root = window_.host_layer_.root_;
+  return owner != nullptr && root != nullptr && &owner->editor_ == &editor &&
+         editor.targetInSubtree(*root);
+}
+
+void TransientSurfaceHost::flushPendingOutsideInteraction() {
+  if (!window_.host_layer_.takePendingOutsideActivation() || !isActive()) {
+    return;
+  }
+  TransientPresentationRegistration* registration =
+      window_.transient_presentation_slot_.active_;
+  OutsideInteractionPolicy policy = static_cast<OutsideInteractionPolicy>(
+      (active_policy_ >> kOutsideShift) & 0x3);
+  switch (policy) {
+    case OutsideInteractionPolicy::kAbsorb:
+      return;
+    case OutsideInteractionPolicy::kDismiss:
+      registration->finish(PresentationFinishReason::kOutsideInteraction);
+      return;
+    case OutsideInteractionPolicy::kPresenterHandled:
+      registration->onOutsideInteraction();
+      return;
+  }
+}
+
+void TransientSurfaceHost::disableHostedInput(
+    TransientPresentationRegistration& registration) {
+  const TransientPresentationSlot& slot = window_.transient_presentation_slot_;
+  if (slot.active_ == &registration && slot.active_host_ == this) {
+    window_.host_layer_.disableInput();
+  }
 }
 
 void TransientSurfaceHost::detachHostedSurface(

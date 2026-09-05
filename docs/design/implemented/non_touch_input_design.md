@@ -338,14 +338,13 @@ target-first and consumption-based:
 5. On an unhandled Enter or Space transition, run the task's primary-activation
    fallback. Other keys remain unhandled.
 
-This is the current pre-P1.6b order. Display-wide hosted presentation changes
-Back and Escape ordering: while an eligible hosted root is active, the root
-transient receives those keys before task-local widgets, navigation, or editor
-fallback. It also absorbs ordinary keys from non-owner tasks and constrains
-owner keys to the active presenter scope. Phase 3 of
+This remains the ordinary-task order. Display-wide hosted presentation uses an
+implemented exception: while an eligible hosted root is active, the root
+transient receives Back and Escape before task-local widgets, navigation, or
+editor fallback. It also absorbs ordinary keys from non-owner tasks and
+constrains owner keys to the active presenter scope. Phase 3 of
 [Transient surface hosting](../in_progress/transient_surface_hosting_design.md)
-implements and tests that delta; it does not retroactively describe the
-current ordinary-task dispatcher.
+implements and tests that delta without changing the ordinary-task route.
 
 Controls consume keys that have local meaning before traversal fallback. Text
 editors consume character, caret, deletion, Home, End, Enter, and Space input.
@@ -964,11 +963,10 @@ Directional traversal is an O(n) scan. Key events are infrequent and embedded
 interfaces normally contain few focusable widgets, so constant storage is
 preferred over neighbor tables or cached vectors.
 
-Ordinary task dispatch currently offers Back and Escape to the focused widget
-before calling `Task::requestBack()`. P1.6b intentionally changes that order
-while a hosted root is active so the eligible root transient wins before a
-task-local editor or other content. Tests must cover both orders rather than
-treating the P1.6b rule as already implemented everywhere.
+Ordinary task dispatch offers Back and Escape to the focused widget before
+calling `Task::requestBack()`. While a hosted root is active, the implemented
+display-wide exception offers those keys to the eligible root transient first,
+before a task-local editor or other content. Tests cover both routes.
 
 ### Rejected Alternatives
 

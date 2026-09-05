@@ -16,6 +16,7 @@
 namespace roo_windows {
 
 class Application;
+class ApplicationTextInput;
 class DisplayWindow;
 
 /// Root container and shared UI services owner for an Application.
@@ -132,9 +133,11 @@ class MainWindow : public Container {
 
  private:
   friend class Dialog;
+  friend class ApplicationTextInput;
   friend class DisplayWindow;
   friend class Container;
   friend class Widget;
+  friend class Task;
   friend class internal::TransientSurfaceHost;
   friend internal::TransientSurfaceHost& internal::GetTransientSurfaceHost(
       Task& interaction_owner);
@@ -145,8 +148,20 @@ class MainWindow : public Container {
   /// Permanently closes transient admission and finishes any active surface.
   void beginShutdown();
 
+  /// Detaches root-owned content while display-local services still exist.
+  void prepareForDestruction();
+
   void attachTransientHostLayer();
   void detachTransientHostLayer();
+
+  /// Cancels Enter/Space activation armed in any task covered by the host.
+  void cancelTaskKeyActivationForDisplayCoverage();
+
+  /// Removes gesture-detector references before `subtree` loses parent links.
+  void gestureTargetSubtreeDetaching(Widget& subtree);
+
+  /// Delivers a completed outside activation after touch dispatch unwinds.
+  void flushPendingOutsideInteraction();
 
   PresentationPinShowResult showPresentationPin(
       Widget& anchor, std::unique_ptr<PresentationPin> pin);

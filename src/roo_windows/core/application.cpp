@@ -262,21 +262,33 @@ class ApplicationTextInput {
 
   bool commitRune(uint32_t rune) {
     checkUiThread();
-    if (active_editor_ == nullptr || !isUnicodeScalar(rune)) return false;
+    if (active_editor_ == nullptr || !isUnicodeScalar(rune) ||
+        !app_.window_.root().transient_surface_host_.allowsSemanticTextInput(
+            *active_editor_)) {
+      return false;
+    }
     active_editor_->rune(rune);
     return true;
   }
 
   bool deleteBackward() {
     checkUiThread();
-    if (active_editor_ == nullptr) return false;
+    if (active_editor_ == nullptr ||
+        !app_.window_.root().transient_surface_host_.allowsSemanticTextInput(
+            *active_editor_)) {
+      return false;
+    }
     active_editor_->del();
     return true;
   }
 
   bool performAction(TextInputAction action) {
     checkUiThread();
-    if (active_editor_ == nullptr) return false;
+    if (active_editor_ == nullptr ||
+        !app_.window_.root().transient_surface_host_.allowsSemanticTextInput(
+            *active_editor_)) {
+      return false;
+    }
     switch (action) {
       case TextInputAction::kDone:
         active_editor_->enter();

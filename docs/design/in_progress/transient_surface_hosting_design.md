@@ -22,13 +22,15 @@ cross-task presenter requires them.
 
 ## Background
 
-**Status: In progress.** Phases 1 and 2 are implemented. Presenter-owned focus
+**Status: In progress.** Phases 1 through 3 are implemented. Presenter-owned focus
 scopes provide zero-growth admission, containment, selection, routing, and
 restoration. The window-owned composite host now adds owner-bound structural
 attachment, transparent or scrim paint, root-first hit testing, complete
 profile preflight, callback-safe replacement, source-geometry capture, and
-shutdown-safe cleanup. Display-wide input isolation, prepared surfaces,
-presenter-owned rect pins, and component migration do not yet exist.
+shutdown-safe cleanup. Display-wide gesture, key, Back/Escape, and semantic
+editor isolation is also implemented, including deferred outside activation.
+Prepared surfaces, presenter-owned rect pins, and component migration do not
+yet exist.
 
 ### Concrete Use Cases
 
@@ -1415,7 +1417,8 @@ Code slice:
 6. Keep [Non-touch input](../implemented/non_touch_input_design.md) aligned
    with this contract: its final-state description uses the implicit task base
    and exactly one explicit presenter scope, while its current-state section
-   remains clearly labeled as pre-P1.6b behavior.
+   distinguishes ordinary target-first dispatch from hosted root-first
+   Back/Escape dispatch.
 
 Proposed commit message:
 
@@ -1481,7 +1484,7 @@ emits named `TransientHostLayer` and `TransientSurfaceHost` symbols alongside
 `MainWindow`, `TransientPresentationSlot`, and `Task`; the availability flag
 shares the existing packed task flag byte.
 
-### Phase 3: Add Display-Wide Input Isolation
+### Phase 3: Add Display-Wide Input Isolation — Implemented
 
 Code slice:
 
@@ -1510,6 +1513,16 @@ Proposed commit message:
 
 Validation: `bazel test //:task_test //:application_test
 //:display_window_test //:transient_presentation_lifetime_test`.
+
+Implemented coverage additionally exercises the host through the real gesture
+dispatcher: admission cancels an active lower drag, a surface opened by a
+successful terminal callback does not receive a contradictory cancellation,
+and callback mutation is caught by repeated preflight. Outside activation is
+latched during terminal dispatch and delivered afterward for absorb, dismiss,
+and presenter-handled policies, including handlers that leave the surface
+open, finish it, or destroy their presenter. Key coverage includes owner and
+non-owner Enter/Space cancellation, ordinary-key and semantic-editor
+containment, and display-wide Back/Escape precedence.
 
 ### Phase 4: Add Display-Coverage Owner-Scoped Presenter Pins
 

@@ -52,6 +52,7 @@ void Container::detachChild(Widget* child) {
   ApplicationContext* live_context = child->tryContext();
   if (live_context != nullptr) {
     if (MainWindow* window = getMainWindow(); window != nullptr) {
+      window->gestureTargetSubtreeDetaching(*child);
       window->presentationAnchorSubtreeDetaching(*child);
     }
     if (Task* task = child->getTask(); task != nullptr) {

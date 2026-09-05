@@ -108,6 +108,26 @@ BackResult Task::requestTaskBackCallback(BackSource source) {
 }
 
 void Task::dispatchKeyEvent(const KeyEvent& event) {
+  internal::TransientSurfaceHost& host = window_.root().transient_surface_host_;
+  bool hosted = host.isActive();
+  if (hosted && !host.isInputEnabled()) return;
+  bool is_back_down =
+      event.phase == KeyPhase::kDown &&
+      (event.code == KeyCode::kBack || event.code == KeyCode::kEscape);
+  if (hosted && is_back_down) {
+    TransientPresentationRegistration* registration = host.activeRegistration();
+    BackSource source = event.code == KeyCode::kBack ? BackSource::kBackKey
+                                                     : BackSource::kEscapeKey;
+    if (window_.root().transient_presentation_slot().requestBack(source) ==
+        BackResult::kHandled) {
+      return;
+    }
+    // A declining hook may have finished or destroyed its presenter. The
+    // event was still covered at dispatch entry and must not leak below it.
+    if (host.activeRegistration() != registration) return;
+  }
+  if (hosted && !host.isInteractionOwner(*this)) return;
+
   Widget* scope_root = focus_.scopeRoot();
   bool presenter_scope_active = scope_root != &panel_;
   Widget* focused = focus_.focused();
@@ -130,6 +150,9 @@ void Task::dispatchKeyEvent(const KeyEvent& event) {
   }
   if (event.phase == KeyPhase::kDown &&
       (event.code == KeyCode::kBack || event.code == KeyCode::kEscape)) {
+    // Hosted Back was already offered before focused-widget routing. Do not
+    // offer it to the registration twice or continue into task-local state.
+    if (hosted) return;
     BackSource source = event.code == KeyCode::kBack ? BackSource::kBackKey
                                                      : BackSource::kEscapeKey;
     if (requestBack(source) == BackResult::kHandled) return;

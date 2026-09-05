@@ -58,6 +58,19 @@ class GestureDetector {
   /// superseded and gives each started role one cancellation notification.
   void cancel();
 
+  /// Quiesces a stream before display-wide transient coverage begins.
+  ///
+  /// A retained non-terminal stream is canceled. A surface opened from its
+  /// own successful terminal callback clears that completed stream without
+  /// delivering a contradictory cancellation to the same target.
+  void cancelForDisplayCoverage();
+
+  /// Cancels retained roles and removes hit-path entries inside `subtree`.
+  ///
+  /// Call this while the subtree still has its parent chain, immediately
+  /// before structural detachment.
+  void cancelTargetsInSubtree(Widget& subtree);
+
   /// Returns the total X movement since the initial touch-down sample.
   int16_t xTotalMoveDelta() const { return latest_.x() - initial_down_.x(); }
 

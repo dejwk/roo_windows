@@ -9,9 +9,11 @@
 
 namespace roo_windows {
 
+class ApplicationTextInput;
 class MainWindow;
 class Scrim;
 class Task;
+class TextFieldEditor;
 
 /// Selects the barrier paint behind a hosted transient surface.
 enum class TransientBarrierPaint : uint8_t { kTransparent, kScrim };
@@ -101,6 +103,12 @@ class TransientHostLayer : public Container {
   /// path so lower MainWindow children are not considered.
   bool fillTouchTargetPath(XDim x, YDim y, std::vector<Widget*>& path) override;
 
+  /// Returns whether the current host-only hit is eligible for a tap role.
+  bool supportsTap() const override;
+
+  /// Defers one completed outside activation until terminal dispatch unwinds.
+  void onSingleTapUp(XDim x, YDim y) override;
+
  protected:
   /// Returns the optional scrim followed by the borrowed root.
   int getChildrenCount() const override;
@@ -123,12 +131,17 @@ class TransientHostLayer : public Container {
   void attachSurface(Task& owner, Widget& root, Scrim* scrim,
                      const Rect& root_bounds);
   void detachSurface();
+  void enableInput();
+  void disableInput();
+  bool isInputEnabled() const;
+  bool takePendingOutsideActivation();
 
   bool isTransientHostLayer() const override { return true; }
 
   Task* owner_ = nullptr;
   Widget* root_ = nullptr;
   Scrim* scrim_ = nullptr;
+  uint8_t input_state_ = 0;
 };
 
 /// Coordinates one structurally hosted transient surface for a window.
@@ -149,7 +162,8 @@ class TransientSurfaceHost {
                                const TransientSurfaceSpec& spec);
 
  private:
-  friend class MainWindow;
+  friend class ::roo_windows::MainWindow;
+  friend class ::roo_windows::ApplicationTextInput;
   friend class ::roo_windows::Task;
   friend class ::roo_windows::TransientPresentationSlot;
 
@@ -157,7 +171,29 @@ class TransientSurfaceHost {
   PresentationStartResult preflight(
       TransientPresentationRegistration& registration, Task& owner,
       Widget& root, const Rect& root_bounds_in_window, FocusScope& scope,
-      const TransientSurfaceSpec& spec, const FocusScope* replaced_scope) const;
+      const TransientSurfaceSpec& spec, const FocusScope* replaced_scope,
+      bool allow_admission_guard = false) const;
+
+  /// Returns whether this coordinator currently owns the canonical slot.
+  bool isActive() const;
+
+  /// Returns the current hosted registration, or null while inactive.
+  TransientPresentationRegistration* activeRegistration() const;
+
+  /// Returns whether the active host has completed input activation.
+  bool isInputEnabled() const;
+
+  /// Returns whether `task` supplies the active surface's interaction state.
+  bool isInteractionOwner(const Task& task) const;
+
+  /// Applies owner and hosted-subtree semantic-editor containment.
+  bool allowsSemanticTextInput(const TextFieldEditor& editor) const;
+
+  /// Delivers a pending outside action after terminal gesture dispatch.
+  void flushPendingOutsideInteraction();
+
+  /// Prevents new pointer and key work before component detachment begins.
+  void disableHostedInput(TransientPresentationRegistration& registration);
 
   /// Attaches the admitted structure and activates its focus scope.
   void attachHostedSurface(Widget& root, const Rect& root_bounds_in_window,

@@ -40,7 +40,12 @@ DisplayWindow::DisplayWindow(Application& app, roo_display::Display& display,
       gesture_detector_(root_, touch_sensor_),
       touch_enabled_(touch_enabled) {}
 
-DisplayWindow::~DisplayWindow() { stop(); }
+DisplayWindow::~DisplayWindow() {
+  stop();
+  // Root detachment can consult display-local gesture state. Empty the root
+  // here, before automatic member destruction reaches the detector.
+  root_.prepareForDestruction();
+}
 
 void DisplayWindow::start() {
   if (touch_enabled_) touch_sensor_.start();
@@ -65,6 +70,7 @@ bool DisplayWindow::servicePointerInput(bool& touch_active) {
   if (touch_enabled_) touch_sensor_.pollOnce();
 #endif
   bool dispatched = touch_enabled_ && gesture_detector_.tick();
+  root_.flushPendingOutsideInteraction();
   touch_active = touch_enabled_ && gesture_detector_.isTouchDown();
   return dispatched;
 }
@@ -81,6 +87,10 @@ bool DisplayWindow::refreshIfDue(bool& redraw_timeout) {
     paint_interval_ = kMinRefreshDuration;
   }
   return completed;
+}
+
+void DisplayWindow::cancelGestureTargetsInSubtree(Widget& subtree) {
+  gesture_detector_.cancelTargetsInSubtree(subtree);
 }
 
 bool DisplayWindow::refresh(roo_time::Uptime deadline) {

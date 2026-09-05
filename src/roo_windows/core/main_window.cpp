@@ -73,6 +73,10 @@ MainWindow::MainWindow(Application& app, const roo_display::Box& bounds)
 
 MainWindow::~MainWindow() {
   beginShutdown();
+  prepareForDestruction();
+}
+
+void MainWindow::prepareForDestruction() {
   cancelPaintContinuation();
   while (active_pins_ != nullptr) {
     active_pins_ = std::move(active_pins_->next_);
@@ -97,6 +101,27 @@ void MainWindow::attachTransientHostLayer() {
 
 void MainWindow::detachTransientHostLayer() {
   if (host_layer_.parent() == this) detachChild(&host_layer_);
+}
+
+void MainWindow::cancelTaskKeyActivationForDisplayCoverage() {
+  for (Widget* child : tasks_) {
+    if (Task* task = child->getTask(); task != nullptr) {
+      task->cancelKeyActivation();
+    }
+  }
+  for (Widget* child : popups_) {
+    if (Task* task = child->getTask(); task != nullptr) {
+      task->cancelKeyActivation();
+    }
+  }
+}
+
+void MainWindow::gestureTargetSubtreeDetaching(Widget& subtree) {
+  app_.window().cancelGestureTargetsInSubtree(subtree);
+}
+
+void MainWindow::flushPendingOutsideInteraction() {
+  transient_surface_host_.flushPendingOutsideInteraction();
 }
 
 void MainWindow::cancelPaintContinuation() {

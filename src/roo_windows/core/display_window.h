@@ -48,6 +48,7 @@ class DisplayWindow {
 
  private:
   friend class Application;
+  friend class MainWindow;
 
   /// Constructs the mandatory window for its owning application.
   DisplayWindow(Application& app, roo_display::Display& display,
@@ -67,6 +68,9 @@ class DisplayWindow {
 
   /// Refreshes when the cadence permits and reports deadline interruption.
   bool refreshIfDue(bool& redraw_timeout);
+
+  /// Clears gesture references into a subtree before it loses parent links.
+  void cancelGestureTargetsInSubtree(Widget& subtree);
 
   roo_display::Display& display_;
   MainWindow root_;

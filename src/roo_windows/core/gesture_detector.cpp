@@ -1,6 +1,20 @@
 #include "roo_windows/core/gesture_detector.h"
 
+#include <algorithm>
+
 namespace roo_windows {
+namespace {
+
+// Uses the still-attached physical parent chain during pre-detach cleanup.
+bool IsInSubtree(const Widget& candidate, const Widget& subtree) {
+  for (const Widget* current = &candidate; current != nullptr;
+       current = current->parent()) {
+    if (current == &subtree) return true;
+  }
+  return false;
+}
+
+}  // namespace
 
 bool GestureDetector::tick() {
   now_us_ = micros();
@@ -288,6 +302,49 @@ void GestureDetector::cancel() {
   cancelRolesExcept(nullptr);
   is_down_ = false;
   clearStream();
+}
+
+void GestureDetector::cancelForDisplayCoverage() {
+  if (phase_ == Phase::kIdle) return;
+  if (!is_down_) {
+    // A host opened synchronously from terminal UP. That role already
+    // completed successfully and must not receive onCancel() as well.
+    clearStream();
+    return;
+  }
+  cancel();
+}
+
+void GestureDetector::cancelTargetsInSubtree(Widget& subtree) {
+  Widget** roles[] = {&tap_target_, &long_press_target_, &drag_target_};
+  Widget* canceled[3] = {};
+  int canceled_count = 0;
+  bool terminal_dispatch = !is_down_;
+  // Remove structural references before invoking callbacks that may mutate
+  // or destroy the departing presenter subtree.
+  touch_target_path_.erase(
+      std::remove_if(
+          touch_target_path_.begin(), touch_target_path_.end(),
+          [&subtree](Widget* target) { return IsInSubtree(*target, subtree); }),
+      touch_target_path_.end());
+  for (Widget** role : roles) {
+    if (*role == nullptr || !IsInSubtree(**role, subtree)) continue;
+    bool already_canceled = false;
+    for (int i = 0; i < canceled_count; ++i) {
+      if (canceled[i] == *role) already_canceled = true;
+    }
+    if (!already_canceled) canceled[canceled_count++] = *role;
+    *role = nullptr;
+  }
+  if (canceled_count > 0) {
+    cancelEvents();
+    if (phase_ != Phase::kIdle) phase_ = Phase::kPressTracking;
+    // Detachment from a successful terminal callback removes retained
+    // addresses but must not contradict that completion with onCancel().
+    if (!terminal_dispatch) {
+      for (int i = 0; i < canceled_count; ++i) canceled[i]->onCancel();
+    }
+  }
 }
 
 bool GestureDetector::offerIntercept(Panel* target, TouchEvent::Type type) {

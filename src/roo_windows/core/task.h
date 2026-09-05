@@ -62,6 +62,7 @@ class Task {
   friend class Application;
   friend class ApplicationInputRouter;
   friend class KeySource;
+  friend class MainWindow;
   friend class Widget;
   friend class Container;
   friend class NavigationHost;

@@ -1,5 +1,6 @@
 #include "roo_windows/core/transient_presentation.h"
 
+#include "roo_logging.h"
 #include "roo_windows/core/transient_surface_host.h"
 
 namespace roo_windows {
@@ -48,8 +49,9 @@ TransientPresentationSlot::~TransientPresentationSlot() {
 PresentationStartResult TransientPresentationSlot::show(
     TransientPresentationRegistration& registration,
     TransientPresentationPolicy policy) {
-  if (admission_closed_ || clearing_ || active_ != nullptr ||
-      registration.slot_ != nullptr || registration.isActive()) {
+  if (admission_closed_ || admission_guard_ || clearing_ ||
+      active_ != nullptr || registration.slot_ != nullptr ||
+      registration.isActive()) {
     return PresentationStartResult::kHostBusy;
   }
   active_ = &registration;
@@ -62,8 +64,9 @@ PresentationStartResult TransientPresentationSlot::show(
 PresentationStartResult TransientPresentationSlot::replace(
     TransientPresentationRegistration& registration,
     TransientPresentationPolicy policy) {
-  if (admission_closed_ || clearing_ || registration.slot_ != nullptr ||
-      active_host_ != nullptr || registration.isActive()) {
+  if (admission_closed_ || admission_guard_ || clearing_ ||
+      registration.slot_ != nullptr || active_host_ != nullptr ||
+      registration.isActive()) {
     return PresentationStartResult::kHostBusy;
   }
   if (active_ == nullptr) return show(registration, policy);
@@ -84,6 +87,17 @@ BackResult TransientPresentationSlot::requestBack(BackSource source) {
 
 void TransientPresentationSlot::clear(PresentationFinishReason reason) {
   if (active_ != nullptr) active_->finish(reason);
+}
+
+TransientPresentationSlot::AdmissionGuard::AdmissionGuard(
+    TransientPresentationSlot& slot)
+    : slot_(slot) {
+  CHECK(!slot_.admission_guard_);
+  slot_.admission_guard_ = true;
+}
+
+TransientPresentationSlot::AdmissionGuard::~AdmissionGuard() {
+  slot_.admission_guard_ = false;
 }
 
 PresentationStartResult TransientPresentationSlot::showHosted(
@@ -109,6 +123,9 @@ void TransientPresentationSlot::finish(
 
   clearing_ = true;
   registration.state_ = PresentationState::kFinishing;
+  if (active_host_ != nullptr) {
+    active_host_->disableHostedInput(registration);
+  }
   registration.detachPresentation(reason);
   if (active_host_ != nullptr) {
     active_host_->detachHostedSurface(registration, reason);
@@ -125,6 +142,7 @@ void TransientPresentationSlot::finish(
 void TransientPresentationSlot::cancel(
     TransientPresentationRegistration& registration) {
   if (active_ == &registration && active_host_ != nullptr) {
+    active_host_->disableHostedInput(registration);
     active_host_->detachHostedSurface(
         registration, PresentationFinishReason::kOwnerDestroyed);
   }
