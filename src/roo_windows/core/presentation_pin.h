@@ -59,6 +59,12 @@ class PresentationPin {
  private:
   friend class MainWindow;
 
+  bool isHosted() const { return z_scope_root_ == nullptr; }
+
+  Widget& effectiveZScopeRoot() const {
+    return *(isHosted() ? anchor_ : z_scope_root_);
+  }
+
   std::unique_ptr<PresentationPin> next_;
   Widget* anchor_ = nullptr;
   Widget* z_scope_root_ = nullptr;

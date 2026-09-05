@@ -6,6 +6,7 @@
 #include "roo_windows/core/focus_manager.h"
 #include "roo_windows/core/gesture_detector.h"
 #include "roo_windows/core/main_window.h"
+#include "roo_windows/core/presentation_pin.h"
 #include "roo_windows/core/task.h"
 #include "roo_windows/core/task_panel.h"
 #include "roo_windows/core/touch_sensor.h"
@@ -34,6 +35,9 @@ ROO_WINDOWS_SIZE_PROBE(roo_windows::WidgetRef, widget_ref);
 ROO_WINDOWS_SIZE_PROBE(roo_windows::KeyEvent, key_event);
 ROO_WINDOWS_SIZE_PROBE(roo_windows::TransientPresentationSlot,
                        transient_presentation_slot);
+ROO_WINDOWS_SIZE_PROBE(roo_windows::PresentationPin, presentation_pin);
+ROO_WINDOWS_SIZE_PROBE(roo_windows::internal::TransientSourceGeometry,
+                       transient_source_geometry);
 ROO_WINDOWS_SIZE_PROBE(roo_windows::internal::TransientHostLayer,
                        transient_host_layer);
 ROO_WINDOWS_SIZE_PROBE(roo_windows::internal::TransientSurfaceHost,

@@ -43,9 +43,9 @@ focus, or own layout.
 
 **Status: In progress.** Phases 1 and 2 are implemented: the layer-scoped pin
 host is available and both slider variants use active-only pins for value
-indicators. Phase 3, keyboard-highlighter adoption, and the display-coverage
-hosted-pin integration owned by Phase 4 of the transient-surface-host design
-remain outstanding. The status of prerequisites is recorded in the
+indicators. Display-coverage hosted-pin integration is implemented by Phase 4
+of the transient-surface-host design. Phase 3 keyboard-highlighter adoption
+remains outstanding. The status of prerequisites is recorded in the
 [status index](../README.md).
 
 ### Pre-Phase-2 Slider Indicator Path

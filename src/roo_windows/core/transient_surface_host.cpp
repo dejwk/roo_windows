@@ -235,6 +235,31 @@ PresentationStartResult TransientSurfaceHost::show(
   return PresentationStartResult::kStarted;
 }
 
+PresentationPinShowResult TransientSurfaceHost::showPresentationPin(
+    TransientPresentationRegistration& registration,
+    std::unique_ptr<PresentationPin> pin) {
+  if (activeRegistration() != &registration ||
+      window_.host_layer_.owner_ == nullptr) {
+    return PresentationPinShowResult::kAnchorUnavailable;
+  }
+  return window_.showHostedPresentationPin(window_.host_layer_.owner_->panel_,
+                                           std::move(pin), active_pin_);
+}
+
+void TransientSurfaceHost::setPresentationPinDirty(
+    TransientPresentationRegistration& registration) {
+  if (activeRegistration() == &registration && active_pin_ != nullptr) {
+    window_.setHostedPresentationPinDirty(*active_pin_);
+  }
+}
+
+void TransientSurfaceHost::hidePresentationPin(
+    TransientPresentationRegistration& registration) {
+  if (activeRegistration() == &registration) {
+    window_.hideHostedPresentationPin(active_pin_);
+  }
+}
+
 void TransientSurfaceHost::attachHostedSurface(
     Widget& root, const Rect& root_bounds_in_window, Task& owner,
     FocusScope& scope, const TransientSurfaceSpec& spec) {
@@ -310,6 +335,7 @@ void TransientSurfaceHost::detachHostedSurface(
   (void)registration;
   (void)reason;
   Task* owner = window_.host_layer_.owner_;
+  window_.hideHostedPresentationPin(active_pin_);
   if (owner != nullptr && active_scope_ != nullptr &&
       active_scope_->root != nullptr) {
     owner->focus_.exitScope(*active_scope_, owner->panel_);

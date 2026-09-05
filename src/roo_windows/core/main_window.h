@@ -170,6 +170,17 @@ class MainWindow : public Container {
   void setPresentationPinDirty(const Widget& anchor);
   void hidePresentationPin(const Widget& anchor);
 
+  /// Adopts one hosted pin and returns its stable non-owning identity.
+  PresentationPinShowResult showHostedPresentationPin(
+      Widget& owner_root, std::unique_ptr<PresentationPin> pin,
+      PresentationPin*& active_pin);
+
+  /// Invalidates a hosted pin previously returned by the show helper.
+  void setHostedPresentationPinDirty(PresentationPin& active_pin);
+
+  /// Unlinks a hosted pin and clears its caller-owned non-owning identity.
+  void hideHostedPresentationPin(PresentationPin*& active_pin);
+
   /// Schedules a full root-tree repaint of the affected pin region.
   void invalidatePresentationRegion(const Rect& rect);
 

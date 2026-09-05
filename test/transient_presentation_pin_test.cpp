@@ -8,6 +8,7 @@
 #include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/core/panel.h"
+#include "roo_windows/core/transient_surface_host.h"
 #include "roo_windows/dialogs/dialog.h"
 #include "roo_windows_render_test_support.h"
 
@@ -84,6 +85,85 @@ class MutablePin final : public PresentationPin {
   MutablePinState& state_;
 };
 
+struct HostedPinState {
+  Color color = roo_display::color::Green;
+  int painted = 0;
+  int destroyed = 0;
+};
+
+class FrozenHostedPin final : public PresentationPin {
+ public:
+  FrozenHostedPin(const internal::TransientSourceGeometry& geometry,
+                  HostedPinState& state)
+      : bounds_(geometry.bounds_in_window), state_(state) {}
+
+  FrozenHostedPin(Rect bounds, HostedPinState& state)
+      : bounds_(bounds), state_(state) {}
+
+  ~FrozenHostedPin() override { ++state_.destroyed; }
+
+ protected:
+  Rect boundsInWindow() const override { return bounds_; }
+
+  void paint(PaintContext& ctx) const override {
+    ++state_.painted;
+    Rect settled = Rect::Intersect(bounds_, ctx.localClip());
+    ctx.fillRect(settled, state_.color);
+    ctx.addExclusion(settled);
+  }
+
+ private:
+  Rect bounds_;
+  HostedPinState& state_;
+};
+
+class HostedRegistration final : public TransientPresentationRegistration {
+ protected:
+  void detachPresentation(PresentationFinishReason reason) override {
+    (void)reason;
+  }
+};
+
+constexpr TransientSurfaceSpec kHostedPinSpec{
+    TransientBarrierPaint::kTransparent,
+    TransientAdmissionPolicy::kRejectIfBusy, OutsideInteractionPolicy::kAbsorb,
+    TransientPresentationPolicy(), false};
+
+class HostedPinTest : public ::testing::Test {
+ protected:
+  HostedPinTest()
+      : device_(64, 48, raster_, roo_display::Argb4444()),
+        display_(device_),
+        environment_(scheduler_),
+        app_(&environment_, display_) {
+    owner_content_ =
+        std::make_unique<TestPanel>(app_.context(), roo_display::color::Red);
+    owner_ = &app_.addTaskFullScreen(*owner_content_);
+    host_ = &internal::GetTransientSurfaceHost(*owner_);
+  }
+
+  Color pixelAt(int16_t x, int16_t y) const {
+    int16_t px[] = {x};
+    int16_t py[] = {y};
+    Color color[1];
+    device_.raster().readColors(px, py, 1, color);
+    return color[0];
+  }
+
+  bool refresh() { return app_.refresh(); }
+
+  roo::byte raster_[64 * 48 * 2] = {};
+  roo_display::OffscreenDevice<roo_display::Argb4444> device_;
+  roo_display::Display display_;
+  roo_scheduler::Scheduler scheduler_;
+  Environment environment_;
+  // Declared before Application so the borrowed task content outlives it.
+  std::unique_ptr<TestPanel> owner_content_;
+  Application app_;
+  Task* owner_ = nullptr;
+  internal::TransientSurfaceHost* host_ = nullptr;
+};
+
 class TestDialog final : public Dialog {
  public:
   explicit TestDialog(ApplicationContext& context) : Dialog(context, {}) {}
@@ -91,6 +171,113 @@ class TestDialog final : public Dialog {
 
 std::unique_ptr<MutablePin> MakePin(MutablePinState& state) {
   return std::make_unique<MutablePin>(state);
+}
+
+// Verifies a hosted pin shares the owner layer without consuming the ordinary
+// widget-pin identity of that exact owner root.
+TEST_F(HostedPinTest, HostedAndOwnerRootWidgetPinsRemainDistinct) {
+  Widget& owner_root = *owner_->focus().scopeRoot();
+  MutablePinState widget_state;
+  widget_state.color = roo_display::color::Blue;
+  widget_state.bounds = Rect(2, 2, 12, 12);
+  widget_state.dirty = widget_state.bounds;
+  ASSERT_EQ(PresentationPinShowResult::kShown,
+            owner_root.showPresentationPin(MakePin(widget_state)));
+
+  TestPanel hosted_root(app_.context(), roo_display::color::Yellow);
+  FocusScope scope;
+  HostedRegistration registration;
+  ASSERT_EQ(PresentationStartResult::kStarted,
+            host_->show(registration, *owner_, hosted_root, Rect(2, 2, 7, 7),
+                        scope, kHostedPinSpec));
+  HostedPinState hosted_state;
+  ASSERT_EQ(PresentationPinShowResult::kShown,
+            host_->showPresentationPin(registration,
+                                       std::make_unique<FrozenHostedPin>(
+                                           Rect(2, 2, 12, 12), hosted_state)));
+  EXPECT_TRUE(owner_root.hasPresentationPin());
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(QuantizeToArgb4444(roo_display::color::Yellow), pixelAt(4, 4));
+  EXPECT_EQ(QuantizeToArgb4444(roo_display::color::Green), pixelAt(10, 10));
+
+  host_->hidePresentationPin(registration);
+  EXPECT_EQ(1, hosted_state.destroyed);
+  EXPECT_TRUE(owner_root.hasPresentationPin());
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(QuantizeToArgb4444(roo_display::color::Blue), pixelAt(10, 10));
+  registration.finish(PresentationFinishReason::kCancel);
+  owner_root.hidePresentationPin();
+}
+
+// Verifies a hosted pin retains copied source geometry after the source moves
+// and detaches, supports handle-based dirtiness, and is hidden before finish.
+TEST_F(HostedPinTest, HostedPinUsesFrozenGeometryAndDeterministicCleanup) {
+  PinAnchor source(app_.context());
+  owner_content_->add(WidgetRef(source), Rect(3, 4, 8, 9));
+  ASSERT_TRUE(refresh());
+  internal::TransientSourceGeometry geometry;
+  ASSERT_TRUE(
+      internal::CaptureTransientSourceGeometry(*owner_, source, geometry));
+
+  TestPanel hosted_root(app_.context(), roo_display::color::Yellow);
+  FocusScope scope;
+  HostedRegistration registration;
+  ASSERT_EQ(PresentationStartResult::kStarted,
+            host_->show(registration, *owner_, hosted_root,
+                        Rect(40, 30, 55, 43), scope, kHostedPinSpec));
+  HostedPinState state;
+  ASSERT_EQ(
+      PresentationPinShowResult::kShown,
+      host_->showPresentationPin(
+          registration, std::make_unique<FrozenHostedPin>(geometry, state)));
+  owner_content_->removeLast();
+  owner_content_->add(WidgetRef(source), Rect(20, 20, 25, 25));
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(QuantizeToArgb4444(roo_display::color::Green), pixelAt(4, 5));
+  EXPECT_NE(QuantizeToArgb4444(roo_display::color::Green), pixelAt(22, 22));
+
+  state.color = roo_display::color::Blue;
+  host_->setPresentationPinDirty(registration);
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(QuantizeToArgb4444(roo_display::color::Blue), pixelAt(4, 5));
+  registration.finish(PresentationFinishReason::kCancel);
+  EXPECT_EQ(1, state.destroyed);
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(QuantizeToArgb4444(roo_display::color::Red), pixelAt(4, 5));
+  owner_content_->removeLast();
+}
+
+// Verifies hosted pin admission consumes failures, permits one pin per active
+// registration, and rejects use after the hosted session has ended.
+TEST_F(HostedPinTest, HostedPinAdmissionValidatesActiveRegistration) {
+  HostedRegistration registration;
+  HostedPinState inactive_state;
+  EXPECT_EQ(PresentationPinShowResult::kAnchorUnavailable,
+            host_->showPresentationPin(registration,
+                                       std::make_unique<FrozenHostedPin>(
+                                           Rect(2, 2, 7, 7), inactive_state)));
+  EXPECT_EQ(1, inactive_state.destroyed);
+
+  TestPanel hosted_root(app_.context(), roo_display::color::Yellow);
+  FocusScope scope;
+  ASSERT_EQ(PresentationStartResult::kStarted,
+            host_->show(registration, *owner_, hosted_root,
+                        Rect(40, 30, 55, 43), scope, kHostedPinSpec));
+  EXPECT_EQ(PresentationPinShowResult::kAllocationFailed,
+            host_->showPresentationPin(registration, nullptr));
+  HostedPinState active_state;
+  HostedPinState duplicate_state;
+  ASSERT_EQ(PresentationPinShowResult::kShown,
+            host_->showPresentationPin(registration,
+                                       std::make_unique<FrozenHostedPin>(
+                                           Rect(2, 2, 7, 7), active_state)));
+  EXPECT_EQ(PresentationPinShowResult::kAlreadyRegistered,
+            host_->showPresentationPin(
+                registration, std::make_unique<FrozenHostedPin>(
+                                  Rect(8, 8, 12, 12), duplicate_state)));
+  EXPECT_EQ(1, duplicate_state.destroyed);
+  registration.finish(PresentationFinishReason::kCancel);
+  EXPECT_EQ(1, active_state.destroyed);
 }
 
 // Verifies rejected pins are consumed and an attached anchor owns exactly one

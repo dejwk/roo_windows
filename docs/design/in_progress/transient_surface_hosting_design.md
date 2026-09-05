@@ -22,15 +22,15 @@ cross-task presenter requires them.
 
 ## Background
 
-**Status: In progress.** Phases 1 through 3 are implemented. Presenter-owned focus
+**Status: In progress.** Phases 1 through 4 are implemented. Presenter-owned focus
 scopes provide zero-growth admission, containment, selection, routing, and
 restoration. The window-owned composite host now adds owner-bound structural
 attachment, transparent or scrim paint, root-first hit testing, complete
 profile preflight, callback-safe replacement, source-geometry capture, and
 shutdown-safe cleanup. Display-wide gesture, key, Back/Escape, and semantic
 editor isolation is also implemented, including deferred outside activation.
-Prepared surfaces, presenter-owned rect pins, and component migration do not
-yet exist.
+Display-covered presenters may own one copied-geometry pin below the host
+layer. Prepared admission and legacy-dialog migration do not yet exist.
 
 ### Concrete Use Cases
 
@@ -1524,7 +1524,7 @@ open, finish it, or destroy their presenter. Key coverage includes owner and
 non-owner Enter/Space cancellation, ordinary-key and semantic-editor
 containment, and display-wide Back/Escape precedence.
 
-### Phase 4: Add Display-Coverage Owner-Scoped Presenter Pins
+### Phase 4: Add Display-Coverage Owner-Scoped Presenter Pins — Implemented
 
 Code slice:
 
@@ -1552,6 +1552,13 @@ Proposed commit message:
 Validation: `bazel test //:transient_presentation_pin_test
 //:material3_slider_test //:display_window_test` plus target-ABI pin and
 `TransientSourceGeometry` sizes.
+
+Implemented coverage verifies hosted-pin ordering above owner content and
+below the hosted root, coexistence with an ordinary widget pin on the exact
+owner task root, handle-based dirtying and removal, allocation and duplicate
+failure, frozen source geometry after source movement and detachment, finish
+cleanup, and unchanged widget lookup. The target-ABI probe emits named
+`PresentationPin` and `TransientSourceGeometry` symbols.
 
 ### Phase 5: Migrate Legacy Dialogs to the Common Host
 

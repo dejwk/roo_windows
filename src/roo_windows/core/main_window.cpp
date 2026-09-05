@@ -240,7 +240,7 @@ PresentationPinShowResult MainWindow::showPresentationPin(
   }
   for (PresentationPin* current = active_pins_.get(); current != nullptr;
        current = current->next_.get()) {
-    if (current->anchor_ == &anchor) {
+    if (!current->isHosted() && current->anchor_ == &anchor) {
       return PresentationPinShowResult::kAlreadyRegistered;
     }
   }
@@ -266,7 +266,7 @@ PresentationPinShowResult MainWindow::showPresentationPin(
 bool MainWindow::hasPresentationPin(const Widget& anchor) const {
   for (const PresentationPin* current = active_pins_.get(); current != nullptr;
        current = current->next_.get()) {
-    if (current->anchor_ == &anchor) return true;
+    if (!current->isHosted() && current->anchor_ == &anchor) return true;
   }
   return false;
 }
@@ -282,7 +282,10 @@ void MainWindow::invalidatePresentationRegion(const Rect& rect) {
 void MainWindow::setPresentationPinDirty(const Widget& anchor) {
   for (PresentationPin* current = active_pins_.get(); current != nullptr;
        current = current->next_.get()) {
-    if (current->anchor_ != &anchor || !IsEffectivelyVisible(anchor)) continue;
+    if (current->isHosted() || current->anchor_ != &anchor ||
+        !IsEffectivelyVisible(anchor)) {
+      continue;
+    }
     invalidatePresentationRegion(Rect::Intersect(
         current->dirtyBoundsInWindow(), current->clipBoundsInWindow()));
     return;
@@ -292,13 +295,67 @@ void MainWindow::setPresentationPinDirty(const Widget& anchor) {
 void MainWindow::hidePresentationPin(const Widget& anchor) {
   std::unique_ptr<PresentationPin>* link = &active_pins_;
   while (*link != nullptr) {
-    if ((*link)->anchor_ == &anchor) {
+    if (!(*link)->isHosted() && (*link)->anchor_ == &anchor) {
       invalidatePresentationRegion((*link)->presented_bounds_);
       *link = std::move((*link)->next_);
       return;
     }
     link = &((*link)->next_);
   }
+}
+
+PresentationPinShowResult MainWindow::showHostedPresentationPin(
+    Widget& owner_root, std::unique_ptr<PresentationPin> pin,
+    PresentationPin*& active_pin) {
+  if (pin == nullptr) return PresentationPinShowResult::kAllocationFailed;
+  if (active_pin != nullptr) {
+    return PresentationPinShowResult::kAlreadyRegistered;
+  }
+  if (owner_root.parent() != this || owner_root.getMainWindow() != this) {
+    return PresentationPinShowResult::kAnchorUnavailable;
+  }
+  pin->anchor_ = &owner_root;
+  pin->z_scope_root_ = nullptr;
+  pin->next_ = std::move(active_pins_);
+  active_pins_ = std::move(pin);
+  active_pin = active_pins_.get();
+  if (IsEffectivelyVisible(owner_root)) {
+    invalidatePresentationRegion(
+        Rect::Intersect(Rect::Intersect(active_pin->boundsInWindow(),
+                                        active_pin->clipBoundsInWindow()),
+                        bounds()));
+  }
+  return PresentationPinShowResult::kShown;
+}
+
+void MainWindow::setHostedPresentationPinDirty(PresentationPin& active_pin) {
+  for (PresentationPin* current = active_pins_.get(); current != nullptr;
+       current = current->next_.get()) {
+    if (current != &active_pin) continue;
+    CHECK(current->isHosted());
+    if (IsEffectivelyVisible(*current->anchor_)) {
+      invalidatePresentationRegion(Rect::Intersect(
+          current->dirtyBoundsInWindow(), current->clipBoundsInWindow()));
+    }
+    return;
+  }
+  CHECK(false);
+}
+
+void MainWindow::hideHostedPresentationPin(PresentationPin*& active_pin) {
+  if (active_pin == nullptr) return;
+  std::unique_ptr<PresentationPin>* link = &active_pins_;
+  while (*link != nullptr) {
+    if (link->get() == active_pin) {
+      CHECK((*link)->isHosted());
+      invalidatePresentationRegion((*link)->presented_bounds_);
+      *link = std::move((*link)->next_);
+      active_pin = nullptr;
+      return;
+    }
+    link = &((*link)->next_);
+  }
+  CHECK(false);
 }
 
 void MainWindow::presentationAnchorSubtreeDetaching(Widget& subtree) {
@@ -333,7 +390,7 @@ void MainWindow::preparePresentationPinsForPaint() {
 void MainWindow::paintPinsBeforeScopeRoot(Widget& root, PaintContext& ctx) {
   for (PresentationPin* current = active_pins_.get(); current != nullptr;
        current = current->next_.get()) {
-    if (current->z_scope_root_ != &root ||
+    if (&current->effectiveZScopeRoot() != &root ||
         !IsEffectivelyVisible(*current->anchor_)) {
       continue;
     }
