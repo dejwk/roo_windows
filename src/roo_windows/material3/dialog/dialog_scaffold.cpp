@@ -15,6 +15,9 @@ namespace {
 constexpr int16_t kScaffoldPadding = Scaled(24);
 constexpr int16_t kSectionGap = Scaled(16);
 constexpr int16_t kActionGap = Scaled(8);
+constexpr int16_t kFullScreenHeaderHeight = Scaled(56);
+constexpr int16_t kFullScreenControlSlot = Scaled(48);
+constexpr int16_t kFullScreenHeaderInset = Scaled(4);
 
 DialogShowResult MapStartResult(PresentationStartResult result) {
   switch (result) {
@@ -89,6 +92,29 @@ class BasicDialogPreparation final
   Task& owner_;
 };
 
+class FullScreenDialogPreparation final
+    : public ::roo_windows::internal::TransientSurfacePreparation {
+ public:
+  FullScreenDialogPreparation(DialogScaffoldBase& scaffold, Task& owner)
+      : scaffold_(scaffold), owner_(owner) {}
+
+ private:
+  bool createAndResolveBounds(Rect& root_bounds_in_window) override {
+    const MainWindow& window = owner_.window().root();
+    if (window.bounds().empty()) return false;
+    scaffold_.measure(WidthSpec::Exactly(window.width()),
+                      HeightSpec::Exactly(window.height()));
+    scaffold_.layout(Rect(0, 0, window.width() - 1, window.height() - 1));
+    root_bounds_in_window = window.bounds();
+    return true;
+  }
+
+  void deleteAfterFailedAdmission() override {}
+
+  DialogScaffoldBase& scaffold_;
+  Task& owner_;
+};
+
 }  // namespace
 
 DialogScaffoldBase::DialogScaffoldBase(ApplicationContext& context,
@@ -96,7 +122,10 @@ DialogScaffoldBase::DialogScaffoldBase(ApplicationContext& context,
                                        DialogScaffoldVariant variant)
     : Container(context),
       variant_(variant),
-      title_(context, "", text_style_headline_small()),
+      title_(context, "",
+             variant == DialogScaffoldVariant::kFullScreen
+                 ? text_style_title_large()
+                 : text_style_headline_small()),
       top_divider_(context),
       body_scroller_(context, *this),
       bottom_divider_(context),
@@ -232,6 +261,21 @@ DialogShowResult DialogScaffoldBase::showBasicDialogSurface(
                         spec, preparation));
 }
 
+DialogShowResult DialogScaffoldBase::showFullScreenDialogSurface(
+    Task& interaction_owner) {
+  if (registration_.isActive()) return DialogShowResult::kAlreadyPresented;
+  const TransientSurfaceSpec spec{TransientBarrierPaint::kTransparent,
+                                  TransientAdmissionPolicy::kRejectIfBusy,
+                                  OutsideInteractionPolicy::kAbsorb,
+                                  TransientPresentationPolicy(true, true),
+                                  false};
+  FullScreenDialogPreparation preparation(*this, interaction_owner);
+  return MapStartResult(
+      ::roo_windows::internal::GetTransientSurfaceHost(interaction_owner)
+          .showPrepared(registration_, interaction_owner, *this, focus_scope_,
+                        spec, preparation));
+}
+
 void DialogScaffoldBase::finishDialog(PresentationFinishReason reason) {
   registration_.finish(reason);
 }
@@ -273,6 +317,10 @@ Widget& DialogScaffoldBase::getChild(int idx) {
       return bottom_divider_;
     default:
       idx -= 4;
+      if (variant_ == DialogScaffoldVariant::kFullScreen &&
+          chrome_[0] != nullptr && chrome_[1] != nullptr) {
+        return idx == 0 ? *chrome_[1] : *chrome_[0];
+      }
       if (chrome_[0] != nullptr) {
         if (idx == 0) return *chrome_[0];
         --idx;
@@ -283,6 +331,40 @@ Widget& DialogScaffoldBase::getChild(int idx) {
 }
 
 Dimensions DialogScaffoldBase::onMeasure(WidthSpec width, HeightSpec height) {
+  if (variant_ == DialogScaffoldVariant::kFullScreen) {
+    content_inset_ = 0;
+    title_height_ = 0;
+    icon_height_ = 0;
+    const XDim title_width = std::max<XDim>(
+        0,
+        width.value() - 2 * (kFullScreenHeaderInset + kFullScreenControlSlot));
+    if (!title_.isGone()) {
+      Dimensions title =
+          title_.measure(WidthSpec::AtMost(title_width),
+                         HeightSpec::AtMost(kFullScreenHeaderHeight));
+      title_height_ = title.height();
+    }
+    for (uint8_t i = 0; i < 2; ++i) {
+      chrome_width_[i] = 0;
+      chrome_height_[i] = 0;
+      if (chrome_[i] == nullptr || chrome_[i]->isGone()) continue;
+      Dimensions chrome = chrome_[i]->measure(
+          WidthSpec::Exactly(
+              i == 0
+                  ? kFullScreenControlSlot
+                  : std::min<XDim>(width.value() / 3,
+                                   chrome_[i]->getNaturalDimensions().width())),
+          HeightSpec::Exactly(kFullScreenControlSlot));
+      chrome_width_[i] = chrome.width();
+      chrome_height_[i] = chrome.height();
+    }
+    const YDim body_height =
+        std::max<YDim>(0, height.value() - kFullScreenHeaderHeight);
+    body_scroller_.measure(WidthSpec::Exactly(width.value()),
+                           HeightSpec::Exactly(body_height));
+    return Dimensions(width.resolveSize(width.value()),
+                      height.resolveSize(height.value()));
+  }
   content_inset_ = std::min<int16_t>(
       kScaffoldPadding,
       std::max<int16_t>(0,
@@ -301,6 +383,8 @@ Dimensions DialogScaffoldBase::onMeasure(WidthSpec width, HeightSpec height) {
   if (icon_height_ > 0) fixed_height += icon_height_ + kSectionGap;
   chrome_height_[0] = 0;
   chrome_height_[1] = 0;
+  chrome_width_[0] = 0;
+  chrome_width_[1] = 0;
   if (!title_.isGone()) {
     Dimensions measured = title_.measure(WidthSpec::AtMost(available_width),
                                          HeightSpec::AtMost(available_height));
@@ -314,6 +398,7 @@ Dimensions DialogScaffoldBase::onMeasure(WidthSpec width, HeightSpec height) {
     Dimensions measured = chrome->measure(WidthSpec::AtMost(available_width),
                                           HeightSpec::AtMost(available_height));
     desired_width = std::max(desired_width, measured.width());
+    chrome_width_[i] = measured.width();
     chrome_height_[i] = measured.height();
     fixed_height += measured.height() + kSectionGap;
   }
@@ -328,6 +413,47 @@ Dimensions DialogScaffoldBase::onMeasure(WidthSpec width, HeightSpec height) {
 }
 
 void DialogScaffoldBase::onLayout(bool, const Rect& rect) {
+  if (variant_ == DialogScaffoldVariant::kFullScreen) {
+    const YDim header_height =
+        std::min<YDim>(kFullScreenHeaderHeight, rect.height());
+    const YDim control_top =
+        std::max<YDim>(0, (header_height - kFullScreenControlSlot) / 2);
+    Widget* leading = chrome_[0];
+    Widget* trailing = chrome_[1];
+    XDim leading_left = kFullScreenHeaderInset;
+    XDim trailing_right = rect.width() - kFullScreenHeaderInset - 1;
+    if (direction_ == LayoutDirection::kRightToLeft) {
+      std::swap(leading, trailing);
+    }
+    if (leading != nullptr && !leading->isGone()) {
+      const XDim w =
+          leading == chrome_[0] ? chrome_width_[0] : chrome_width_[1];
+      leading->layout(Rect(leading_left, control_top, leading_left + w - 1,
+                           control_top + kFullScreenControlSlot - 1));
+      leading_left += w;
+    }
+    if (trailing != nullptr && !trailing->isGone()) {
+      const XDim w =
+          trailing == chrome_[0] ? chrome_width_[0] : chrome_width_[1];
+      trailing->layout(Rect(trailing_right - w + 1, control_top, trailing_right,
+                            control_top + kFullScreenControlSlot - 1));
+      trailing_right -= w;
+    }
+    if (!title_.isGone()) {
+      const YDim title_top = (header_height - title_height_) / 2;
+      title_.layout(Rect(leading_left + kFullScreenHeaderInset, title_top,
+                         trailing_right - kFullScreenHeaderInset,
+                         title_top + title_height_ - 1));
+    }
+    const YDim body_top = header_height;
+    body_scroller_.layout(
+        Rect(0, body_top, rect.width() - 1, rect.height() - 1));
+    top_divider_.layout(Rect(0, body_top, rect.width() - 1, body_top + 1));
+    bottom_divider_.layout(
+        Rect(0, rect.height() - 2, rect.width() - 1, rect.height() - 1));
+    updateDividers();
+    return;
+  }
   const int16_t left = content_inset_;
   const int16_t right =
       std::max<int16_t>(left - 1, rect.width() - content_inset_ - 1);
@@ -398,8 +524,8 @@ DialogActionStrip::ActionButton::ActionButton(ApplicationContext& context,
     : Button(context, {}, ButtonVariant::kText), strip_(strip), slot_(slot) {}
 
 void DialogActionStrip::ActionButton::onClicked() {
-  strip_.invoke(slot_);
   Button::onClicked();
+  strip_.invoke(slot_);
 }
 
 DialogActionStrip::DialogActionStrip(ApplicationContext& context,

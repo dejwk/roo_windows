@@ -25,10 +25,10 @@ class BasicDialog : public internal::DialogScaffoldBase,
   ~BasicDialog() override;
 
   /// Sets the optional borrowed leading icon.
-  void setIcon(const MonoIcon* icon) { setDialogIcon(icon); }
+  void setIcon(const MonoIcon* icon);
 
   /// Clears the optional icon.
-  void clearIcon() { setDialogIcon(nullptr); }
+  void clearIcon();
 
   /// Replaces the owned, wrapping headline text.
   void setHeadline(std::string headline) {

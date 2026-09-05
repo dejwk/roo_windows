@@ -10,6 +10,7 @@
 #include "roo_windows/core/basic_surface_widget.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/material3/dialog/basic_dialog.h"
+#include "roo_windows/material3/dialog/full_screen_dialog.h"
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_block.h"
 
@@ -42,7 +43,8 @@ class Material3DialogGoldenTest : public testing::Test {
         owner_(app_.addTaskFullScreen(backdrop_)) {}
 
   roo_display::Offscreen<roo_display::Rgb888> capture() const {
-    return test::CaptureRgb(offscreen_.raster(), 0, 0, kWidth, kHeight);
+    return ::roo_windows::test::CaptureRgb(offscreen_.raster(), 0, 0, kWidth,
+                                           kHeight);
   }
 
   roo::byte raster_[kWidth * kHeight * 2] = {};
@@ -69,7 +71,7 @@ TEST_F(Material3DialogGoldenTest, BasicDialogWithIconAndActions) {
   ASSERT_EQ(DialogShowResult::kShown, dialog.show(owner_));
   ASSERT_TRUE(app_.refresh());
 
-  EXPECT_TRUE(test::CompareOrUpdateGolden(
+  EXPECT_TRUE(::roo_windows::test::CompareOrUpdateGolden(
       capture(), "test/goldens/material3_dialog/basic_icon_actions.ppm",
       "material3_dialog_basic_icon_actions"));
 }
@@ -82,9 +84,40 @@ TEST_F(Material3DialogGoldenTest, AlertDialogOwnedProse) {
   ASSERT_EQ(DialogShowResult::kShown, dialog.show(owner_));
   ASSERT_TRUE(app_.refresh());
 
-  EXPECT_TRUE(test::CompareOrUpdateGolden(
+  EXPECT_TRUE(::roo_windows::test::CompareOrUpdateGolden(
       capture(), "test/goldens/material3_dialog/alert_owned_prose.ppm",
       "material3_dialog_alert_owned_prose"));
+}
+
+TEST_F(Material3DialogGoldenTest, FullScreenDialogHeader) {
+  TextBlock body(app_.context(),
+                 "Step 2 of 3\n\nChoose the filtration schedule to apply after "
+                 "the maintenance window.",
+                 text_style_body_large());
+  FullScreenDialog dialog(app_.context(), WidgetRef(body));
+  dialog.setHeaderTitle("Edit schedule");
+  dialog.setConfirmAction({7, "Save", DialogActionRole::kConfirm, true});
+  ASSERT_EQ(DialogShowResult::kShown, dialog.show(owner_));
+  ASSERT_TRUE(app_.refresh());
+
+  EXPECT_TRUE(::roo_windows::test::CompareOrUpdateGolden(
+      capture(), "test/goldens/material3_dialog/full_screen_header.ppm",
+      "material3_dialog_full_screen_header"));
+}
+
+TEST_F(Material3DialogGoldenTest, FullScreenDialogRtlHeader) {
+  TextBlock body(app_.context(), "RTL full-screen content",
+                 text_style_body_large());
+  FullScreenDialog dialog(app_.context(), WidgetRef(body));
+  dialog.setHeaderTitle("Schedule");
+  dialog.setConfirmAction({7, "Save", DialogActionRole::kConfirm, true});
+  dialog.setLayoutDirection(LayoutDirection::kRightToLeft);
+  ASSERT_EQ(DialogShowResult::kShown, dialog.show(owner_));
+  ASSERT_TRUE(app_.refresh());
+
+  EXPECT_TRUE(::roo_windows::test::CompareOrUpdateGolden(
+      capture(), "test/goldens/material3_dialog/full_screen_rtl_header.ppm",
+      "material3_dialog_full_screen_rtl_header"));
 }
 
 }  // namespace

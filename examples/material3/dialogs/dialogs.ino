@@ -69,6 +69,7 @@ void initDisplay() {
 #include "roo_windows/containers/flex_layout.h"
 #include "roo_windows/material3/button/button.h"
 #include "roo_windows/material3/dialog/basic_dialog.h"
+#include "roo_windows/material3/dialog/full_screen_dialog.h"
 #include "roo_windows/material3/typography.h"
 #include "roo_windows/widgets/text_block.h"
 #include "roo_windows/widgets/text_label.h"
@@ -122,6 +123,41 @@ class ChoiceDialog final : public material3::BasicDialog {
   TextLabel& status_;
 };
 
+class WizardDialog final : public material3::FullScreenDialog {
+ public:
+  WizardDialog(ApplicationContext& context, TextBlock& body, TextLabel& status)
+      : FullScreenDialog(context, WidgetRef(body)),
+        body_(body),
+        status_(status) {
+    setHeaderTitle("Setup wizard");
+    setConfirmAction({5, "Save", DialogActionRole::kConfirm});
+  }
+
+ protected:
+  bool onDismissRequested(material3::DialogDismissReason) override {
+    if (!discard_pending_) {
+      discard_pending_ = true;
+      body_.setText("Discard the wizard changes? Press close or Back again to "
+                    "confirm.");
+      return false;
+    }
+    return true;
+  }
+
+  void onDismissed(material3::DialogDismissReason) override {
+    discard_pending_ = false;
+    body_.setText("Step 1 of 2\n\nChoose a circulation profile, then save.");
+    status_.setText("Wizard dismissed");
+  }
+
+  void onConfirmed(uint8_t) override { status_.setText("Wizard saved"); }
+
+ private:
+  TextBlock& body_;
+  TextLabel& status_;
+  bool discard_pending_ = false;
+};
+
 template <typename DialogT>
 class OpenDialogButton final : public material3::Button {
  public:
@@ -152,31 +188,41 @@ class DialogCatalog final : public FlexLayout {
         choice_body_(context,
                      "Eco: quiet filtration\nBoost: maximum circulation",
                      material3::text_style_body_medium()),
+        wizard_body_(context,
+                     "Step 1 of 2\n\nChoose a circulation profile, then save.",
+                     material3::text_style_body_large()),
         alert_(context, status_),
         choice_(context, choice_body_, status_),
+        wizard_(context, wizard_body_, status_),
         open_alert_(context, "Open alert", alert_),
-        open_choice_(context, "Choose profile", choice_) {
+        open_choice_(context, "Choose profile", choice_),
+        open_wizard_(context, "Open wizard", wizard_) {
     setPadding(Padding(Scaled(16)));
     setGap(Scaled(12));
     add(title_);
     add(open_alert_);
     add(open_choice_);
+    add(open_wizard_);
     add(status_);
   }
 
   void bind(Task& owner) {
     open_alert_.bind(owner);
     open_choice_.bind(owner);
+    open_wizard_.bind(owner);
   }
 
  private:
   TextLabel title_;
   TextLabel status_;
   TextBlock choice_body_;
+  TextBlock wizard_body_;
   StatusAlert alert_;
   ChoiceDialog choice_;
+  WizardDialog wizard_;
   OpenDialogButton<StatusAlert> open_alert_;
   OpenDialogButton<ChoiceDialog> open_choice_;
+  OpenDialogButton<WizardDialog> open_wizard_;
 };
 
 }  // namespace

@@ -14,12 +14,25 @@ BasicDialog::BasicDialog(ApplicationContext& context, WidgetRef body,
 
 BasicDialog::~BasicDialog() { prepareForDerivedDestruction(); }
 
+void BasicDialog::setIcon(const MonoIcon* icon) {
+  setDialogIcon(icon);
+  dialogTitle().setTextAlign(
+      icon == nullptr ? (layoutDirection() == LayoutDirection::kLeftToRight
+                             ? TextAlign::kStart
+                             : TextAlign::kEnd)
+                      : TextAlign::kCenter);
+}
+
+void BasicDialog::clearIcon() { setIcon(nullptr); }
+
 void BasicDialog::setLayoutDirection(LayoutDirection direction) {
   setDialogLayoutDirection(direction);
   actions_.setLayoutDirection(direction);
-  dialogTitle().setTextAlign(direction == LayoutDirection::kLeftToRight
-                                 ? TextAlign::kStart
-                                 : TextAlign::kEnd);
+  dialogTitle().setTextAlign(hasDialogIcon()
+                                 ? TextAlign::kCenter
+                                 : (direction == LayoutDirection::kLeftToRight
+                                        ? TextAlign::kStart
+                                        : TextAlign::kEnd));
 }
 
 DialogShowResult BasicDialog::show(Task& interaction_owner) {

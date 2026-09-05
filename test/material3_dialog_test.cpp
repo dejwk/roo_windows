@@ -11,9 +11,23 @@
 #include "roo_windows/core/text_input.h"
 #include "roo_windows/material3/dialog/basic_dialog.h"
 #include "roo_windows/material3/dialog/dialog_scaffold.h"
+#include "roo_windows/material3/dialog/full_screen_dialog.h"
 #include "roo_windows/widgets/text_field.h"
 
 namespace roo_windows::material3 {
+
+namespace test {
+
+class DialogTestAccess {
+ public:
+  static Widget& CloseButton(FullScreenDialog& dialog) { return dialog.close_; }
+  static Widget& ConfirmButton(FullScreenDialog& dialog) {
+    return dialog.confirm_;
+  }
+};
+
+}  // namespace test
+
 namespace {
 
 class TestContent final : public BasicWidget {
@@ -145,6 +159,50 @@ class InlineBodyDialog final : public BasicDialog {
   };
 
   InlineBody body_;
+};
+
+class TestFullScreenDialog final : public FullScreenDialog {
+ public:
+  TestFullScreenDialog(ApplicationContext& context, WidgetRef body)
+      : FullScreenDialog(context, std::move(body)) {}
+
+  const std::string& headerTitle() { return dialogTitle().text(); }
+
+  bool allow_dismiss = true;
+  bool allow_confirm = true;
+  int dismiss_request_count = 0;
+  int confirm_request_count = 0;
+  int dismiss_count = 0;
+  int confirmed_count = 0;
+  uint8_t last_confirm_id = 0;
+  DialogDismissReason last_request_reason = DialogDismissReason::kProgrammatic;
+  DialogDismissReason last_dismiss_reason = DialogDismissReason::kProgrammatic;
+  bool detached_during_callback = false;
+
+ protected:
+  bool onDismissRequested(DialogDismissReason reason) override {
+    ++dismiss_request_count;
+    last_request_reason = reason;
+    return allow_dismiss;
+  }
+
+  bool onConfirmRequested(uint8_t action_id) override {
+    ++confirm_request_count;
+    last_confirm_id = action_id;
+    return allow_confirm;
+  }
+
+  void onDismissed(DialogDismissReason reason) override {
+    ++dismiss_count;
+    last_dismiss_reason = reason;
+    detached_during_callback = !isShowing() && parent() == nullptr;
+  }
+
+  void onConfirmed(uint8_t action_id) override {
+    ++confirmed_count;
+    last_confirm_id = action_id;
+    detached_during_callback = !isShowing() && parent() == nullptr;
+  }
 };
 
 class Material3DialogTest : public ::testing::Test {
@@ -431,11 +489,145 @@ TEST_F(Material3DialogTest, DerivedInlineBodyUsesPredestructionSeam) {
   EXPECT_TRUE(detached_before_delete);
 }
 
+TEST_F(Material3DialogTest, FullScreenDialogCoversWindowWithSquareSurface) {
+  TestContent body(app_.context());
+  TestFullScreenDialog dialog(app_.context(), WidgetRef(body));
+  dialog.setHeaderTitle("Edit schedule");
+
+  ASSERT_EQ(DialogShowResult::kShown, dialog.show(owner_));
+  EXPECT_EQ(0, dialog.offsetLeft());
+  EXPECT_EQ(0, dialog.offsetTop());
+  EXPECT_EQ(320, dialog.width());
+  EXPECT_EQ(240, dialog.height());
+  EXPECT_FALSE(dialog.getBorderStyle().hasRoundedCorners());
+  dialog.dismiss();
+}
+
+TEST_F(Material3DialogTest, FullScreenCloseRequestCanVetoThenAccept) {
+  TestFullScreenDialog dialog(app_.context(), WidgetRef());
+  dialog.allow_dismiss = false;
+  ASSERT_EQ(DialogShowResult::kShown, dialog.show(owner_));
+
+  test::DialogTestAccess::CloseButton(dialog).onClicked();
+  EXPECT_TRUE(dialog.isShowing());
+  EXPECT_EQ(1, dialog.dismiss_request_count);
+  EXPECT_EQ(DialogDismissReason::kCloseButton, dialog.last_request_reason);
+
+  dialog.allow_dismiss = true;
+  test::DialogTestAccess::CloseButton(dialog).onClicked();
+  EXPECT_FALSE(dialog.isShowing());
+  EXPECT_EQ(1, dialog.dismiss_count);
+  EXPECT_EQ(DialogDismissReason::kCloseButton, dialog.last_dismiss_reason);
+  EXPECT_TRUE(dialog.detached_during_callback);
+}
+
+TEST_F(Material3DialogTest, FullScreenBackAndEscapeUseVetoHook) {
+  TestFullScreenDialog dialog(app_.context(), WidgetRef());
+  dialog.allow_dismiss = false;
+  ASSERT_EQ(DialogShowResult::kShown, dialog.show(owner_));
+  EXPECT_EQ(BackResult::kHandled, owner_.requestBack(BackSource::kBackKey));
+  EXPECT_TRUE(dialog.isShowing());
+  EXPECT_EQ(DialogDismissReason::kBack, dialog.last_request_reason);
+
+  dialog.allow_dismiss = true;
+  EXPECT_EQ(BackResult::kHandled, owner_.requestBack(BackSource::kEscapeKey));
+  EXPECT_FALSE(dialog.isShowing());
+  EXPECT_EQ(DialogDismissReason::kEscape, dialog.last_dismiss_reason);
+}
+
+TEST_F(Material3DialogTest, FullScreenProgrammaticDismissBypassesVeto) {
+  TestFullScreenDialog dialog(app_.context(), WidgetRef());
+  dialog.allow_dismiss = false;
+  ASSERT_EQ(DialogShowResult::kShown, dialog.show(owner_));
+
+  dialog.dismiss();
+
+  EXPECT_EQ(0, dialog.dismiss_request_count);
+  EXPECT_EQ(1, dialog.dismiss_count);
+  EXPECT_EQ(DialogDismissReason::kProgrammatic, dialog.last_dismiss_reason);
+}
+
+TEST_F(Material3DialogTest, FullScreenConfirmCanRejectThenAccept) {
+  TestFullScreenDialog dialog(app_.context(), WidgetRef());
+  DialogActionSpec confirm{23, "Save", DialogActionRole::kConfirm};
+  dialog.setConfirmAction(confirm);
+  dialog.allow_confirm = false;
+  ASSERT_EQ(DialogShowResult::kShown, dialog.show(owner_));
+
+  test::DialogTestAccess::ConfirmButton(dialog).onClicked();
+  EXPECT_TRUE(dialog.isShowing());
+  EXPECT_EQ(1, dialog.confirm_request_count);
+  EXPECT_EQ(0, dialog.confirmed_count);
+
+  dialog.allow_confirm = true;
+  test::DialogTestAccess::ConfirmButton(dialog).onClicked();
+  EXPECT_FALSE(dialog.isShowing());
+  EXPECT_EQ(2, dialog.confirm_request_count);
+  EXPECT_EQ(1, dialog.confirmed_count);
+  EXPECT_EQ(23, dialog.last_confirm_id);
+  EXPECT_TRUE(dialog.detached_during_callback);
+}
+
+TEST_F(Material3DialogTest, FullScreenHeaderMirrorsWithLayoutDirection) {
+  TestFullScreenDialog dialog(app_.context(), WidgetRef());
+  DialogActionSpec confirm{23, "Save", DialogActionRole::kConfirm};
+  dialog.setConfirmAction(confirm);
+  ASSERT_EQ(DialogShowResult::kShown, dialog.show(owner_));
+  Widget& close = test::DialogTestAccess::CloseButton(dialog);
+  Widget& save = test::DialogTestAccess::ConfirmButton(dialog);
+  EXPECT_LT(close.offsetLeft(), save.offsetLeft());
+
+  dialog.setLayoutDirection(LayoutDirection::kRightToLeft);
+  ASSERT_TRUE(app_.refresh());
+  EXPECT_GT(close.offsetLeft(), save.offsetLeft());
+  dialog.dismiss();
+}
+
+TEST_F(Material3DialogTest, FullScreenOwnsCallLocalHeaderTitle) {
+  TestFullScreenDialog dialog(app_.context(), WidgetRef());
+  {
+    std::string title = "Owned wizard title";
+    dialog.setHeaderTitle(std::move(title));
+  }
+  EXPECT_EQ("Owned wizard title", dialog.headerTitle());
+}
+
+TEST_F(Material3DialogTest, FullScreenRejectsNonConfirmHeaderAction) {
+  TestFullScreenDialog dialog(app_.context(), WidgetRef());
+  DialogActionSpec dismiss{1, "Cancel", DialogActionRole::kDismiss};
+  EXPECT_DEATH_IF_SUPPORTED(dialog.setConfirmAction(dismiss), "");
+}
+
+TEST_F(Material3DialogTest, FullScreenDialogIsMutuallyExclusiveWithBasic) {
+  DialogActionSpec action{1, "OK", DialogActionRole::kAcknowledge};
+  TestBasicDialog basic(app_.context(), WidgetRef(), &action, 1);
+  TestFullScreenDialog full_screen(app_.context(), WidgetRef());
+  ASSERT_EQ(DialogShowResult::kShown, basic.show(owner_));
+
+  EXPECT_EQ(DialogShowResult::kHostBusy, full_screen.show(owner_));
+  EXPECT_FALSE(full_screen.isShowing());
+  basic.dismiss();
+}
+
+TEST_F(Material3DialogTest, ActiveFullScreenDestructionCancelsHost) {
+  TestContent body(app_.context());
+  auto dialog =
+      std::make_unique<TestFullScreenDialog>(app_.context(), WidgetRef(body));
+  ASSERT_EQ(DialogShowResult::kShown, dialog->show(owner_));
+
+  dialog.reset();
+
+  EXPECT_EQ(nullptr, body.parent());
+  EXPECT_FALSE(
+      app_.root().transient_presentation_slot().hasActivePresentation());
+}
+
 TEST(Material3DialogSize, SharedScaffoldRemainsBounded) {
   EXPECT_LE(sizeof(TestScaffold), 1024u + 24u * sizeof(void*));
   EXPECT_LE(sizeof(internal::DialogActionStrip), 768u + 16u * sizeof(void*));
   EXPECT_LE(sizeof(BasicDialog), 2048u + 48u * sizeof(void*));
   EXPECT_LE(sizeof(AlertDialog), 2560u + 64u * sizeof(void*));
+  EXPECT_LE(sizeof(FullScreenDialog), 2560u + 64u * sizeof(void*));
 }
 
 }  // namespace

@@ -77,6 +77,9 @@ class DialogScaffoldBase : public Container {
   /// Sets or clears the borrowed basic-dialog icon.
   void setDialogIcon(const MonoIcon* icon);
 
+  /// Returns whether the scaffold has a borrowed icon configured.
+  bool hasDialogIcon() const { return icon_ != nullptr; }
+
   /// Returns the currently attached body, or null.
   Widget* dialogBody() { return body_; }
   const Widget* dialogBody() const { return body_; }
@@ -99,6 +102,10 @@ class DialogScaffoldBase : public Container {
   /// window during guarded host preparation.
   DialogShowResult showBasicDialogSurface(Task& interaction_owner);
 
+  /// Measures a full-screen dialog to the complete interaction-owner window
+  /// during guarded host preparation.
+  DialogShowResult showFullScreenDialogSurface(Task& interaction_owner);
+
   /// Returns whether this scaffold currently occupies the shared host.
   bool isDialogShowing() const { return registration_.isActive(); }
 
@@ -110,6 +117,9 @@ class DialogScaffoldBase : public Container {
   /// Call this at the beginning of every derived destructor whose inline
   /// members are attached to the scaffold. It is safe to call repeatedly.
   void prepareForDerivedDestruction();
+
+  /// Forgets an inactive descendant address before chrome replacement.
+  void clearDialogRememberedFocus() { focus_scope_.clearRememberedFocus(); }
 
   /// Returns the first derived-chrome focus preference, if any.
   virtual Widget* preferredChromeFocusChild();
@@ -172,6 +182,7 @@ class DialogScaffoldBase : public Container {
   int16_t content_inset_ = 0;
   int16_t icon_height_ = 0;
   YDim title_height_ = 0;
+  XDim chrome_width_[2] = {0, 0};
   YDim chrome_height_[2] = {0, 0};
   FocusScope focus_scope_;
 

@@ -30,10 +30,9 @@ flows belong.
 
 ## Background
 
-**Status: In progress.** Phases 1 and 2 are implemented: the shared scaffold,
-fixed action model, persistent body ownership, presenter-owned focus scope,
-explicit-owner host seam, and public basic/alert dialog family have unit,
-golden, and example coverage. The full-screen presenter remains in Phase 3.
+**Status: Implemented.** All three phases are implemented. The shared scaffold,
+public basic/alert family, and full-screen presenter have explicit-owner host,
+focus, lifetime, veto, unit, golden, and build-covered example integration.
 The status of other prerequisites is recorded in the [status index](../README.md).
 
 ### Current Starting Point in `roo_windows`
@@ -1124,6 +1123,13 @@ Proposed commit message:
 Validation: run `bazel test //:material3_dialog_test //:material3_dialog_golden_test`.
 
 ### Phase 3: Full-Screen Dialog Family
+
+**Status: Implemented.** `FullScreenDialog` provides a transparent-barrier
+full-window root, Material 3 close icon button, optional confirming header
+action, explicit LTR/RTL header geometry, request-veto hooks, unconditional
+programmatic dismissal, owned title storage, typed post-detach completion,
+unit and golden coverage, and the catalog's compact wizard flow with inline
+discard confirmation.
 
 Code slice:
 
