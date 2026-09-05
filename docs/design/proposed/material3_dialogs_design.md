@@ -62,7 +62,7 @@ The relevant existing seams are:
   dialog actions,
 - [material3_icon_buttons_design.md](../implemented/material3_icon_buttons_design.md),
   whose implementation can supply the full-screen close affordance,
-- and [transient_surface_hosting_design.md](transient_surface_hosting_design.md),
+- and [transient_surface_hosting_design.md](../in_progress/transient_surface_hosting_design.md),
   which defines one display-wide transient host layer with an explicit
   interaction owner.
 
@@ -402,7 +402,7 @@ That choice is deliberate:
 ### Host Integration
 
 Both variants use the
-[shared transient host](transient_surface_hosting_design.md) with display coverage,
+[shared transient host](../in_progress/transient_surface_hosting_design.md) with display coverage,
 outside absorption, `kRejectIfBusy`, and a presenter-owned `FocusScope`.
 Barrier paint is independent: `BasicDialog` requests the scrim, while
 `FullScreenDialog` requests a transparent input barrier because its opaque root

@@ -99,17 +99,24 @@ BackResult Task::requestTaskBackCallback(BackSource source) {
 }
 
 void Task::dispatchKeyEvent(const KeyEvent& event) {
+  Widget* scope_root = focus_.scopeRoot();
+  bool presenter_scope_active = scope_root != &panel_;
   Widget* focused = focus_.focused();
-  // Application::add() remains a legacy structural path that does not create
-  // a Task. Preserve its context-scoped keyboard routing until that API is
-  // retired; attached UI tasks always use their local focus first.
-  if (focused == nullptr) focused = app_.context().focus().focused();
+  // An explicit presenter scope is a complete key boundary even when it has no
+  // focused descendant. Only the implicit task scope retains the legacy
+  // Application::add() context-focus fallback.
+  if (focused == nullptr && !presenter_scope_active) {
+    focused = app_.context().focus().focused();
+  }
   if (focused != nullptr) {
     if (focused->onKeyEvent(event)) return;
-    for (Widget* ancestor = focused->parent();
-         ancestor != nullptr && ancestor != &panel_;
+    for (Widget* ancestor = focused->parent(); ancestor != nullptr;
          ancestor = ancestor->parent()) {
+      // Ordinary task routing stops before TaskPanel. Presenter routing
+      // includes its explicit root, then stops before the structural host.
+      if (!presenter_scope_active && ancestor == scope_root) break;
       if (ancestor->onKeyEvent(event)) return;
+      if (ancestor == scope_root) break;
     }
   }
   if (event.phase == KeyPhase::kDown &&
@@ -120,7 +127,7 @@ void Task::dispatchKeyEvent(const KeyEvent& event) {
   }
   if ((event.phase == KeyPhase::kDown || event.phase == KeyPhase::kRepeat) &&
       event.code == KeyCode::kTab) {
-    focus_.moveFocus(panel_, (event.modifiers & kKeyModifierShift) != 0);
+    focus_.moveFocus(*scope_root, (event.modifiers & kKeyModifierShift) != 0);
     return;
   }
   if (event.phase == KeyPhase::kDown || event.phase == KeyPhase::kRepeat) {
@@ -143,7 +150,9 @@ void Task::dispatchKeyEvent(const KeyEvent& event) {
         is_directional = false;
         break;
     }
-    if (is_directional && focus_.moveFocusDirection(panel_, direction)) return;
+    if (is_directional && focus_.moveFocusDirection(*scope_root, direction)) {
+      return;
+    }
   }
   if (event.code != KeyCode::kEnter && event.code != KeyCode::kSpace) return;
   if (focused == nullptr) return;

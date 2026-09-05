@@ -773,7 +773,7 @@ class MainWindow : public Container {
 The widget-facing API remains unchanged. The display-coverage transient-host
 integration uses the private handle-based helpers behind the registration-gated
 `TransientSurfaceHost` methods specified by
-[transient_surface_hosting_design.md](../proposed/transient_surface_hosting_design.md).
+[transient_surface_hosting_design.md](transient_surface_hosting_design.md).
 On successful display-coverage admission, `showHostedPresentationPin()` stores
 the interaction owner's top-level root in `anchor_`, leaves `z_scope_root_`
 null, and writes the adopted object's address to the host's initially null
@@ -1207,7 +1207,7 @@ schedule the full old/new union before canvas construction.
    folded into `PresentationPin`.
 2. Add the display-coverage owner-scoped, active-registration pin integration
    in Phase 4 of
-   [transient_surface_hosting_design.md](../proposed/transient_surface_hosting_design.md),
+   [transient_surface_hosting_design.md](transient_surface_hosting_design.md),
    then use it for the copied menu trigger visual described by
    [material3_menus_design.md](../proposed/material3_menus_design.md).
 3. Extend keyboard adopters from the press highlighter to richer key preview or

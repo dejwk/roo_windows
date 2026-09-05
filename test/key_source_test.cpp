@@ -4,11 +4,12 @@
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_scheduler.h"
-#include "roo_windows/core/destination.h"
-#include "roo_windows/core/navigation_host.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/destination.h"
 #include "roo_windows/core/environment.h"
+#include "roo_windows/core/navigation_host.h"
+#include "roo_windows/core/panel.h"
 #include "roo_windows/core/transient_presentation.h"
 #include "roo_windows/material3/tabs/tabs.h"
 #include "roo_windows/widgets/text_field.h"
@@ -61,7 +62,8 @@ class FocusableBackWidget : public BasicWidget {
 
 class KeyRecordingWidget : public BasicWidget {
  public:
-  explicit KeyRecordingWidget(ApplicationContext& context) : BasicWidget(context) {}
+  explicit KeyRecordingWidget(ApplicationContext& context)
+      : BasicWidget(context) {}
 
   bool isFocusable() const override { return true; }
   Dimensions getSuggestedMinimumDimensions() const override {
@@ -75,6 +77,33 @@ class KeyRecordingWidget : public BasicWidget {
 
   int key_count = 0;
   KeyCode last_key = KeyCode::kUnknown;
+};
+
+class BubblingKeyWidget : public KeyRecordingWidget {
+ public:
+  using KeyRecordingWidget::KeyRecordingWidget;
+
+  bool onKeyEvent(const KeyEvent& event) override {
+    KeyRecordingWidget::onKeyEvent(event);
+    return false;
+  }
+};
+
+class ScopedKeyPanel : public Panel {
+ public:
+  using Panel::add;
+  using Panel::Panel;
+
+  bool onKeyEvent(const KeyEvent&) override {
+    ++key_count;
+    return consume_keys;
+  }
+
+  Widget* preferredFocusChild() override { return preferred; }
+
+  bool consume_keys = true;
+  int key_count = 0;
+  Widget* preferred = nullptr;
 };
 
 class BackDestination : public Destination {
@@ -112,8 +141,7 @@ class BackPresentation final : public TransientPresentationRegistration {
 class TextFieldDestination : public Destination {
  public:
   explicit TextFieldDestination(ApplicationContext& context)
-      : field(context, font_body1(), "", roo_display::kLeft,
-              TextField::NONE) {}
+      : field(context, font_body1(), "", roo_display::kLeft, TextField::NONE) {}
 
   Widget& getContents() override { return field; }
   BackResult onBackRequested(BackSource source) override {
@@ -225,6 +253,116 @@ TEST(KeySource, RoutesEachSourceToItsDeclaredTask) {
   EXPECT_EQ(KeyCode::kCharacter, first_contents.last_key);
   EXPECT_EQ(1, second_contents.key_count);
   EXPECT_EQ(KeyCode::kTab, second_contents.last_key);
+}
+
+// Verifies focused key bubbling includes the explicit presenter root and does
+// not continue into the task panel above that logical boundary.
+TEST(KeySource, PresenterScopeKeyBubblingIncludesExplicitRoot) {
+  roo::byte raster[32 * 16 * 2] = {};
+  roo_display::OffscreenDevice<roo_display::Argb4444> device(
+      32, 16, raster, roo_display::Argb4444());
+  roo_display::Display display(device);
+  roo_scheduler::Scheduler scheduler;
+  Environment environment(scheduler);
+  Application app(&environment, display);
+  FocusableBackWidget contents(app.context());
+  Task& task = app.addTaskFullScreen(contents);
+  QueuedKeySource keys(
+      {{KeyPhase::kDown, KeyCode::kCharacter, 0, PhysicalKey::kA, 'A'}});
+  keys.connect(task);
+  app.refresh();
+
+  ScopedKeyPanel presenter(app.context());
+  BubblingKeyWidget child(app.context());
+  presenter.add(WidgetRef(child));
+  presenter.layout(Rect(0, 0, 15, 15));
+  child.layout(Rect(0, 0, 7, 7));
+  presenter.preferred = &child;
+  FocusScope scope;
+  Widget* base_root = task.focus().scopeRoot();
+  task.focus().enterScope(scope, presenter, *base_root);
+
+  app.start();
+  scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 1);
+
+  EXPECT_EQ(1, child.key_count);
+  EXPECT_EQ(1, presenter.key_count);
+  task.focus().exitScope(scope, *base_root);
+}
+
+// Verifies an active empty presenter scope absorbs ordinary task keys instead
+// of falling back to a populated legacy application-context focus manager.
+TEST(KeySource, EmptyPresenterScopeSuppressesLegacyContextFocusFallback) {
+  roo::byte raster[32 * 16 * 2] = {};
+  roo_display::OffscreenDevice<roo_display::Argb4444> device(
+      32, 16, raster, roo_display::Argb4444());
+  roo_display::Display display(device);
+  roo_scheduler::Scheduler scheduler;
+  Environment environment(scheduler);
+  Application app(&environment, display);
+  FocusableBackWidget contents(app.context());
+  Task& task = app.addTaskFullScreen(contents);
+  QueuedKeySource keys(
+      {{KeyPhase::kDown, KeyCode::kCharacter, 0, PhysicalKey::kA, 'A'}});
+  keys.connect(task);
+  app.refresh();
+
+  ScopedKeyPanel legacy_root(app.context());
+  KeyRecordingWidget legacy_target(app.context());
+  legacy_root.add(WidgetRef(legacy_target));
+  legacy_target.layout(Rect(0, 0, 7, 7));
+  ASSERT_TRUE(app.context().focus().requestFocus(legacy_target));
+
+  ScopedKeyPanel presenter(app.context());
+  FocusScope scope;
+  Widget* base_root = task.focus().scopeRoot();
+  task.focus().enterScope(scope, presenter, *base_root);
+
+  app.start();
+  scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 1);
+
+  EXPECT_EQ(0, legacy_target.key_count);
+  EXPECT_EQ(nullptr, task.focus().focused());
+  task.focus().exitScope(scope, *base_root);
+}
+
+// Verifies task Tab fallback traverses the active presenter root instead of
+// escaping into the task panel's ordinary content.
+TEST(KeySource, PresenterScopeTabTraversalUsesExplicitRoot) {
+  roo::byte raster[32 * 16 * 2] = {};
+  roo_display::OffscreenDevice<roo_display::Argb4444> device(
+      32, 16, raster, roo_display::Argb4444());
+  roo_display::Display display(device);
+  roo_scheduler::Scheduler scheduler;
+  Environment environment(scheduler);
+  Application app(&environment, display);
+  FocusableBackWidget contents(app.context());
+  Task& task = app.addTaskFullScreen(contents);
+  QueuedKeySource keys(
+      {{KeyPhase::kDown, KeyCode::kTab, 0, PhysicalKey::kTab, 0}});
+  keys.connect(task);
+  app.refresh();
+
+  ScopedKeyPanel presenter(app.context());
+  presenter.consume_keys = false;
+  FocusableBackWidget first(app.context());
+  FocusableBackWidget second(app.context());
+  presenter.add(WidgetRef(first));
+  presenter.add(WidgetRef(second));
+  first.layout(Rect(0, 0, 7, 7));
+  second.layout(Rect(8, 0, 15, 7));
+  presenter.preferred = &first;
+  FocusScope scope;
+  Widget* base_root = task.focus().scopeRoot();
+  task.focus().enterScope(scope, presenter, *base_root);
+  ASSERT_EQ(&first, task.focus().focused());
+
+  app.start();
+  scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 1);
+
+  EXPECT_EQ(&second, task.focus().focused());
+  EXPECT_FALSE(contents.isFocused());
+  task.focus().exitScope(scope, *base_root);
 }
 
 TEST(KeySource, ReadySourceWakesItsDestinationApplication) {

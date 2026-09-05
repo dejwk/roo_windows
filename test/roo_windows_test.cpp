@@ -1,6 +1,7 @@
 #include <Arduino.h>
 
 #include <new>
+#include <type_traits>
 
 #include "roo_display/shape/basic.h"
 #include "roo_windows/widgets/text_field.h"
@@ -44,6 +45,20 @@ class ExposedPanel : public Panel {
   using Panel::removeLast;
 };
 
+class PreferredFocusPanel : public ExposedPanel {
+ public:
+  using ExposedPanel::ExposedPanel;
+
+  Widget* preferredFocusChild() override { return preferred_; }
+
+  Widget* preferred_ = nullptr;
+};
+
+static_assert(!std::is_copy_constructible<FocusScope>::value,
+              "An active focus scope must retain a stable address");
+static_assert(!std::is_move_constructible<FocusScope>::value,
+              "An active focus scope must retain a stable address");
+
 class OpaqueExposedPanel : public ExposedPanel {
  public:
   using ExposedPanel::ExposedPanel;
@@ -74,8 +89,7 @@ class FocusableTestWidget : public BasicWidget {
 class TextFieldDestination : public Destination {
  public:
   explicit TextFieldDestination(ApplicationContext& context)
-      : field(context, font_body1(), "", kLeft | kMiddle,
-              TextField::NONE) {}
+      : field(context, font_body1(), "", kLeft | kMiddle, TextField::NONE) {}
 
   Widget& getContents() override { return field; }
 
@@ -344,6 +358,164 @@ TEST(Windows, FocusManagerClearsInvalidFocusedDescendants) {
   panel.removeLast();
   EXPECT_EQ(nullptr, context.focus().focused());
   EXPECT_FALSE(child.isFocused());
+}
+
+// Verifies scope entry prefers an explicitly selected descendant, contains
+// focus requests, remembers presenter focus, and restores base focus on exit.
+TEST(Windows, FocusManagerEntersContainsAndRestoresPresenterScope) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context(scheduler, env.theme(), env.keyboardColorTheme());
+  PreferredFocusPanel base(context);
+  FocusableTestWidget base_first(context);
+  FocusableTestWidget base_second(context);
+  base.add(WidgetRef(base_first));
+  base.add(WidgetRef(base_second));
+  base_first.layout(Rect(0, 0, 9, 9));
+  base_second.layout(Rect(10, 0, 19, 9));
+
+  PreferredFocusPanel presenter(context);
+  FocusableTestWidget presenter_first(context);
+  FocusableTestWidget presenter_second(context);
+  presenter.add(WidgetRef(presenter_first));
+  presenter.add(WidgetRef(presenter_second));
+  presenter_first.layout(Rect(0, 0, 9, 9));
+  presenter_second.layout(Rect(10, 0, 19, 9));
+  presenter.preferred_ = &presenter_second;
+
+  FocusManager manager(&base);
+  ASSERT_TRUE(manager.requestFocus(base_second));
+  FocusScope scope;
+  ASSERT_TRUE(manager.canAdmitScope(scope, base, nullptr));
+  manager.enterScope(scope, presenter, base);
+
+  EXPECT_EQ(&presenter, manager.scopeRoot());
+  EXPECT_EQ(&presenter_second, manager.focused());
+  EXPECT_FALSE(manager.requestFocus(base_first));
+  ASSERT_TRUE(manager.requestFocus(presenter_first));
+
+  manager.exitScope(scope, base);
+  EXPECT_EQ(&base, manager.scopeRoot());
+  EXPECT_EQ(&base_second, manager.focused());
+  EXPECT_EQ(&presenter_first, scope.last_focused);
+
+  manager.enterScope(scope, presenter, base);
+  EXPECT_EQ(&presenter_first, manager.focused());
+  manager.exitScope(scope, base);
+}
+
+// Verifies an empty scope remains active without focus and an invalid
+// remembered address falls back to the root's fresh preferred target.
+TEST(Windows, FocusManagerAcceptsEmptyScopeAndValidatesRememberedAddress) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context(scheduler, env.theme(), env.keyboardColorTheme());
+  ExposedPanel base(context);
+  FocusableTestWidget base_target(context);
+  base.add(WidgetRef(base_target));
+  base_target.layout(Rect(0, 0, 9, 9));
+  FocusManager manager(&base);
+  ASSERT_TRUE(manager.requestFocus(base_target));
+
+  ExposedPanel empty_presenter(context);
+  FocusScope empty_scope;
+  manager.enterScope(empty_scope, empty_presenter, base);
+  EXPECT_EQ(&empty_presenter, manager.scopeRoot());
+  EXPECT_EQ(nullptr, manager.focused());
+  EXPECT_FALSE(manager.requestFocus(base_target));
+  manager.exitScope(empty_scope, base);
+  EXPECT_EQ(&base_target, manager.focused());
+
+  PreferredFocusPanel presenter(context);
+  FocusableTestWidget fallback(context);
+  presenter.add(WidgetRef(fallback));
+  fallback.layout(Rect(0, 0, 9, 9));
+  presenter.preferred_ = &fallback;
+  auto removed = std::make_unique<FocusableTestWidget>(context);
+  Widget* removed_address = removed.get();
+  presenter.add(WidgetRef(std::move(removed)));
+  presenter.removeLast();
+  empty_scope.last_focused = removed_address;
+
+  manager.enterScope(empty_scope, presenter, base);
+  EXPECT_EQ(&fallback, manager.focused());
+  EXPECT_EQ(nullptr, empty_scope.last_focused);
+  manager.exitScope(empty_scope, base);
+}
+
+// Verifies a root preference is advisory: normal focus eligibility may reject
+// it while the presenter scope still activates successfully without focus.
+TEST(Windows, FocusManagerAllowsIneligiblePreferredTarget) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context(scheduler, env.theme(), env.keyboardColorTheme());
+  ExposedPanel base(context);
+  PreferredFocusPanel presenter(context);
+  FocusableTestWidget disabled(context);
+  presenter.add(WidgetRef(disabled));
+  disabled.layout(Rect(0, 0, 9, 9));
+  disabled.setEnabled(false);
+  presenter.preferred_ = &disabled;
+
+  FocusManager manager(&base);
+  FocusScope scope;
+  manager.enterScope(scope, presenter, base);
+
+  EXPECT_EQ(&presenter, manager.scopeRoot());
+  EXPECT_EQ(nullptr, manager.focused());
+  manager.exitScope(scope, base);
+}
+
+// Verifies restoration scans the live base tree before consulting a saved
+// address that was removed while presenter focus covered the task.
+TEST(Windows, FocusManagerFallsBackWhenSavedBaseTargetWasRemoved) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context(scheduler, env.theme(), env.keyboardColorTheme());
+  PreferredFocusPanel base(context);
+  FocusableTestWidget fallback(context);
+  base.add(WidgetRef(fallback));
+  fallback.layout(Rect(0, 0, 9, 9));
+  auto removed = std::make_unique<FocusableTestWidget>(context);
+  FocusableTestWidget* removed_ptr = removed.get();
+  base.add(WidgetRef(std::move(removed)));
+  removed_ptr->layout(Rect(10, 0, 19, 9));
+  base.preferred_ = &fallback;
+
+  ExposedPanel presenter(context);
+  FocusableTestWidget presenter_target(context);
+  presenter.add(WidgetRef(presenter_target));
+  presenter_target.layout(Rect(0, 0, 9, 9));
+
+  FocusManager manager(&base);
+  ASSERT_TRUE(manager.requestFocus(*removed_ptr));
+  FocusScope scope;
+  manager.enterScope(scope, presenter, base);
+  base.removeLast();
+  manager.exitScope(scope, base);
+
+  EXPECT_EQ(&fallback, manager.focused());
+}
+
+// Verifies preflight permits only an inactive incoming same-owner replacement
+// scope and rejects an unrelated nested presenter scope.
+TEST(Windows, FocusManagerPreflightsSinglePresenterScopeReplacement) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context(scheduler, env.theme(), env.keyboardColorTheme());
+  ExposedPanel base(context);
+  ExposedPanel outgoing_root(context);
+  FocusManager manager(&base);
+  FocusScope outgoing;
+  FocusScope incoming;
+
+  manager.enterScope(outgoing, outgoing_root, base);
+  EXPECT_FALSE(manager.canAdmitScope(incoming, base, nullptr));
+  EXPECT_TRUE(manager.canAdmitScope(incoming, base, &outgoing));
+  EXPECT_FALSE(manager.canAdmitScope(outgoing, base, &outgoing));
+
+  manager.exitScope(outgoing, base);
+  EXPECT_TRUE(manager.canAdmitScope(incoming, base, nullptr));
 }
 
 // Verifies that the phase-1 widget-event dispatcher stores, replaces,

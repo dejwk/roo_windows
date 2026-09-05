@@ -43,12 +43,12 @@ can express that meaning in `onKeyEvent()`.
 
 ## Background
 
-**Status: Implemented with a scoped-focus follow-on.** Key acquisition,
+**Status: Implemented.** Key acquisition,
 task-local focus and traversal, simple-control activation, scroll/value-control
-navigation, structured navigation surfaces, and hardware-keyboard text entry
-are implemented. `FocusScope` is declared, but presenter-scope entry,
-containment, exit, and restoration remain the P1.6b work specified by
-[Transient surface hosting](../proposed/transient_surface_hosting_design.md).
+navigation, structured navigation surfaces, hardware-keyboard text entry, and
+one-level presenter focus-scope entry, containment, exit, and restoration are
+implemented. Structural use of that scope by the window host remains in later
+phases of [Transient surface hosting](../in_progress/transient_surface_hosting_design.md).
 Automatic popup source capture remains Future Work. The
 [status index](../README.md) records the wider dependency state.
 
@@ -343,7 +343,7 @@ Back and Escape ordering: while an eligible hosted root is active, the root
 transient receives those keys before task-local widgets, navigation, or editor
 fallback. It also absorbs ordinary keys from non-owner tasks and constrains
 owner keys to the active presenter scope. Phase 3 of
-[Transient surface hosting](../proposed/transient_surface_hosting_design.md)
+[Transient surface hosting](../in_progress/transient_surface_hosting_design.md)
 implements and tests that delta; it does not retroactively describe the
 current ordinary-task dispatcher.
 
@@ -396,8 +396,8 @@ The touch pipeline remains unchanged.
 ### Focus Manager
 
 The design assigns focus ownership to `FocusManager`. The implemented runtime
-now gives each `Task` its own manager; the remaining extension is switching
-that manager temporarily into a presenter-owned scope.
+gives each `Task` its own manager and can switch that manager temporarily into
+one presenter-owned scope.
 
 The current `FocusManager` owns:
 
@@ -412,10 +412,9 @@ Its implemented responsibilities are:
 2. move focus forward, backward, or directionally,
 3. clear focus when the widget is hidden, disabled, detached, or leaves the
    active scope,
-4. and update the widget's focused bit.
-
-P1.6b adds presenter-scope admission, entry, initial focus, exit, and
-restoration without adding manager storage.
+4. update the widget's focused bit, and
+5. preflight, enter, contain, and exit one presenter scope while remembering
+   and safely restoring focus without adding manager storage.
 
 #### Focus Scope Storage and Resolution
 
@@ -462,14 +461,20 @@ text through the editor connection rather than stealing the editor task's
 physical-key focus. Automatic popup route switching is outside this design and
 is recorded in Future Work.
 
-#### Presenter Initial Focus (P1.6b)
+#### Presenter Initial Focus
 
 When a presenter scope becomes active, the manager chooses initial
 focus in this order:
 
 1. previously focused descendant within that same scope, if still valid,
-2. the scope root's preferred focus child, if one is supplied,
-3. otherwise the first focusable descendant in traversal order.
+2. otherwise the live preferred focus child supplied synchronously by the
+   scope root.
+
+A null preference deliberately starts the scope without focus. A non-null
+preference must remain a live `Widget` for the synchronous call, but it need
+not already be attached, eligible, or inside the scope. The manager applies
+ordinary containment and eligibility checks through `requestFocus()`; rejection
+also leaves the scope active without focus and requires no validation scan.
 
 This gives dialogs, menus, and structured surfaces a zero-storage hook for
 sensible default focus without putting component policy in the task manager.
@@ -575,9 +580,10 @@ split layouts without every container needing a bespoke neighbor table.
 `Widget::focusChildCount()` and `focusChildAt()` expose the allocation-free
 traversal tree, while `revealFocusedDescendant()` lets a clipping container
 handle reveal. Components that need roving or control-specific movement consume
-the corresponding key in `onKeyEvent()` before framework traversal. P1.6b adds
-only `preferredFocusChild()` for presenter initial-focus selection; it does not
-add a generic `nextFocusable()` contract.
+the corresponding key in `onKeyEvent()` before framework traversal. Transient
+surface hosting Phase 1 adds only `preferredFocusChild()` for authoritative
+presenter initial-focus selection; it does not add a generic `nextFocusable()`
+contract.
 
 #### Focus Reveal
 
@@ -776,10 +782,10 @@ The authoritative implemented declarations are:
   touch-only and compatibility key-source constructors.
 
 This document does not duplicate those declarations because their physical-key
-and source-lifetime details have evolved since the initial proposal. P1.6b's
+and source-lifetime details have evolved since the initial proposal. The
 zero-storage `FocusManager` accessors, one-level `FocusScope` operations, and
-`Widget::preferredFocusChild()` are specified in the
-[Transient surface hosting Proposed API](../proposed/transient_surface_hosting_design.md#proposed-api).
+`Widget::preferredFocusChild()` are implemented as specified in the
+[Transient surface hosting API](../in_progress/transient_surface_hosting_design.md#proposed-api).
 No pointer API lands before working pointer routing exists.
 
 ### Migration and Compatibility
@@ -947,10 +953,10 @@ Core validation covers:
 
 Each implemented phase runs the existing touch tests for the components it
 changes. The emulator supplies the end-to-end host-keyboard smoke path. Current
-compile-time checks bound `sizeof(Widget)` and `sizeof(KeyEvent)`. P1.6b adds
-target-ABI probes showing that repurposing the third `FocusScope` pointer and
-exposing the current legal root do not change `FocusManager`, `FocusScope`, or
-`Task` size.
+compile-time checks bound `sizeof(Widget)` and `sizeof(KeyEvent)`. The target-ABI
+probe includes named `FocusManager`, `FocusScope`, and `Task` symbols, showing
+that repurposing the third `FocusScope` pointer and exposing the current legal
+root add no storage to those types.
 
 ## Caveats
 

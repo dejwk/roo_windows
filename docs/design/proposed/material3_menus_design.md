@@ -29,7 +29,7 @@ results remain component-specific.
 menu implementation scope is implemented. The shared composite host,
 synchronous source-capture contract, and presenter-pin integration are
 specified separately by
-[Transient surface hosting](transient_surface_hosting_design.md)
+[Transient surface hosting](../in_progress/transient_surface_hosting_design.md)
 and must land before menu presentation. Menus do not create or enter a `Task`.
 Each presentation nevertheless names one existing task as its interaction owner
 for focus, physical keys, Back context, and teardown. Existing and outstanding
@@ -66,7 +66,7 @@ The missing implementations are:
 - and no owner-scoped rectangle presentation pin for copied trigger paint.
 
 The structural host and synchronous source-capture contract are owned by
-[Transient surface hosting](transient_surface_hosting_design.md).
+[Transient surface hosting](../in_progress/transient_surface_hosting_design.md).
 Active focus behavior is already specified by
 [Non-touch input](../implemented/non_touch_input_design.md#focus-scope-storage-and-resolution),
 and rect-anchored painting by
@@ -170,7 +170,7 @@ Accordingly:
 ### Framework Prerequisite Requirements
 
 1. The menu-hosting phases of
-   [Transient surface hosting](transient_surface_hosting_design.md) are implemented
+   [Transient surface hosting](../in_progress/transient_surface_hosting_design.md) are implemented
    before root menu presentation.
 2. The host admits the menu with its popup profile: one transparent composite
    host layer, a replacement-enabled request, outside dismissal, display-wide
@@ -406,7 +406,7 @@ The major pieces map to the requirements as follows:
 
 The normative structural, admission, focus, barrier, source-capture, pin, and
 teardown contracts are defined by
-[Transient surface hosting](transient_surface_hosting_design.md). The menu requests
+[Transient surface hosting](../in_progress/transient_surface_hosting_design.md). The menu requests
 replacement, paints no scrim, dismisses on a completed primary outside tap,
 covers the display, and captures focus through its embedded `FocusScope`. A
 request can replace any active occupant that declares itself replaceable; the
@@ -770,7 +770,7 @@ ceiling is exceeded without updating this design with measured trade-off.
 ## Proposed API
 
 The host's start/finish reasons and popup profile are defined by
-[Transient surface hosting](transient_surface_hosting_design.md#proposed-api).
+[Transient surface hosting](../in_progress/transient_surface_hosting_design.md#proposed-api).
 The same framework prerequisite supplies this internal, non-owning source
 capture result and helper; it is not Material 3 public API:
 
@@ -1295,7 +1295,7 @@ representative menu defined in the memory requirements.
 #### Create a Task, Reuse Dialog APIs, or Add Another Host/Stack
 
 Rejected by the framework
-[Transient surface hosting design](transient_surface_hosting_design.md#rejected-alternatives).
+[Transient surface hosting design](../in_progress/transient_surface_hosting_design.md#rejected-alternatives).
 The menu consumes that decision and retains only menu-specific presentation,
 placement, selection, and chain behavior. Supplying an existing interaction
 owner is not creating a task or using task route lifecycle.

@@ -6,10 +6,10 @@
 #include "roo_windows/core/focus_manager.h"
 #include "roo_windows/core/gesture_detector.h"
 #include "roo_windows/core/main_window.h"
+#include "roo_windows/core/task.h"
 #include "roo_windows/core/task_panel.h"
 #include "roo_windows/core/touch_sensor.h"
 #include "roo_windows/core/transient_presentation.h"
-#include "roo_windows/core/task.h"
 #include "roo_windows/core/widget_ref.h"
 #include "roo_windows/widgets/text_field.h"
 
@@ -22,6 +22,7 @@ ROO_WINDOWS_SIZE_PROBE(roo_windows::MainWindow, main_window);
 ROO_WINDOWS_SIZE_PROBE(roo_windows::TouchSensor, touch_sensor);
 ROO_WINDOWS_SIZE_PROBE(roo_windows::GestureDetector, gesture_detector);
 ROO_WINDOWS_SIZE_PROBE(roo_windows::FocusManager, focus_manager);
+ROO_WINDOWS_SIZE_PROBE(roo_windows::FocusScope, focus_scope);
 ROO_WINDOWS_SIZE_PROBE(roo_windows::TextFieldEditor, text_field_editor);
 ROO_WINDOWS_SIZE_PROBE(roo_windows::Keyboard, keyboard);
 ROO_WINDOWS_SIZE_PROBE(roo_windows::TaskPanel, task_panel);

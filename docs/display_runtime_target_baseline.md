@@ -53,6 +53,7 @@ compare it with a C3 image or a different PlatformIO environment.
 | `TouchSensor` | Capture required |
 | `GestureDetector` | Capture required |
 | `FocusManager` | Capture required |
+| `FocusScope` | Capture required |
 | `TextFieldEditor` | Capture required |
 | `Keyboard` | Capture required |
 | `Task` | Capture required |

@@ -6,7 +6,7 @@
 namespace roo_windows {
 
 bool FocusManager::requestFocus(Widget& widget) {
-  if (scope_root_ != nullptr && !isDescendantOf(widget, *scope_root_)) {
+  if (scope_root_ != nullptr && !IsDescendantOf(widget, *scope_root_)) {
     return false;
   }
   if (!isEligible(widget)) return false;
@@ -39,6 +39,65 @@ void FindFocusable(Widget& widget, Widget*& first, Widget*& last,
 }
 
 }  // namespace
+
+bool FocusManager::canAdmitScope(const FocusScope& incoming,
+                                 const Widget& base_root,
+                                 const FocusScope* replaced_scope) const {
+  if (incoming.root != nullptr || incoming.restore_focused_ != nullptr) {
+    return false;
+  }
+  if (scope_root_ == &base_root) return true;
+  return replaced_scope != nullptr && replaced_scope->root != nullptr &&
+         scope_root_ == replaced_scope->root;
+}
+
+void FocusManager::enterScope(FocusScope& scope, Widget& root,
+                              Widget& base_root) {
+  CHECK(canAdmitScope(scope, base_root, nullptr));
+
+  scope.restore_focused_ = focused_;
+  setFocused(nullptr);
+  scope.root = &root;
+  scope_root_ = &root;
+
+  // Remembered addresses survive while the scope is inactive, so prove tree
+  // membership before dereferencing one. A fresh root preference only needs
+  // ordinary requestFocus() containment and eligibility checks.
+  if (!ContainsAddress(root, scope.last_focused)) {
+    scope.last_focused = nullptr;
+  }
+  if (scope.last_focused != nullptr && isEligible(*scope.last_focused)) {
+    setFocused(scope.last_focused);
+    return;
+  }
+
+  Widget* preferred = root.preferredFocusChild();
+  if (preferred != nullptr) requestFocus(*preferred);
+}
+
+void FocusManager::exitScope(FocusScope& scope, Widget& base_root) {
+  CHECK(scope.root != nullptr);
+  CHECK(scope_root_ == scope.root);
+
+  scope.last_focused =
+      ContainsAddress(*scope.root, focused_) ? focused_ : nullptr;
+  setFocused(nullptr);
+  scope_root_ = &base_root;
+
+  Widget* restore = ContainsAddress(base_root, scope.restore_focused_)
+                        ? scope.restore_focused_
+                        : nullptr;
+  if (restore != nullptr && isEligible(*restore)) {
+    setFocused(restore);
+  } else {
+    // The live base root owns fallback policy. Normal focus checks may reject
+    // its preference; nullptr or rejection deliberately restores no focus.
+    Widget* preferred = base_root.preferredFocusChild();
+    if (preferred != nullptr) requestFocus(*preferred);
+  }
+  scope.root = nullptr;
+  scope.restore_focused_ = nullptr;
+}
 
 bool FocusManager::moveFocus(Widget& root, bool backwards) {
   Widget* first = nullptr;
@@ -186,7 +245,7 @@ void FindDirectionalFocusable(Widget& widget, const Rect& source,
 }  // namespace
 
 bool FocusManager::moveFocusDirection(Widget& root, FocusDirection direction) {
-  if (focused_ == nullptr || !isDescendantOf(*focused_, root)) return false;
+  if (focused_ == nullptr || !IsDescendantOf(*focused_, root)) return false;
   DirectionalCandidate best;
   int ordinal = 0;
   FindDirectionalFocusable(root, AbsoluteBounds(*focused_), direction, ordinal,
@@ -195,7 +254,7 @@ bool FocusManager::moveFocusDirection(Widget& root, FocusDirection direction) {
 }
 
 void FocusManager::onSubtreeDetaching(Widget& subtree) {
-  if (focused_ != nullptr && isDescendantOf(*focused_, subtree)) {
+  if (focused_ != nullptr && IsDescendantOf(*focused_, subtree)) {
     setFocused(nullptr);
   }
 }
@@ -205,7 +264,7 @@ void FocusManager::onWidgetDestroying(Widget& widget) {
 }
 
 void FocusManager::onWidgetEligibilityChanging(Widget& widget) {
-  if (focused_ != nullptr && isDescendantOf(*focused_, widget)) {
+  if (focused_ != nullptr && IsDescendantOf(*focused_, widget)) {
     setFocused(nullptr);
   }
 }
@@ -222,11 +281,21 @@ bool FocusManager::isEligible(const Widget& widget) const {
   return true;
 }
 
-bool FocusManager::isDescendantOf(const Widget& widget,
+bool FocusManager::IsDescendantOf(const Widget& widget,
                                   const Widget& ancestor) {
   for (const Widget* current = &widget; current != nullptr;
        current = current->parent()) {
     if (current == &ancestor) return true;
+  }
+  return false;
+}
+
+bool FocusManager::ContainsAddress(Widget& root, const Widget* candidate) {
+  if (candidate == nullptr) return false;
+  if (&root == candidate) return true;
+  for (int i = 0; i < root.focusChildCount(); ++i) {
+    Widget* child = root.focusChildAt(i);
+    if (child != nullptr && ContainsAddress(*child, candidate)) return true;
   }
   return false;
 }

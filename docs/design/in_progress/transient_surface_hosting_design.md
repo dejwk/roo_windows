@@ -22,9 +22,12 @@ cross-task presenter requires them.
 
 ## Background
 
-**Status: Proposed.** The transient lifetime slot and widget-anchored
-presentation-pin host exist. The shared structural host, active focus-scope
-runtime, display-wide input isolation, and presenter-owned rect-pin path do not.
+**Status: In progress.** Phase 1 is implemented: presenter-owned focus scopes
+support admission preflight, entry, containment, remembered and preferred
+selection, task key routing, and validated base-focus restoration without
+growing `FocusManager`, `FocusScope`, or `Task`. The shared structural host,
+display-wide input isolation, and presenter-owned rect-pin path do not yet
+exist.
 
 ### Concrete Use Cases
 
@@ -139,8 +142,8 @@ The proposal builds on these existing contracts:
   slot but still attaches itself and the scrim through dialog-specific
   `MainWindow` state.
 - [`FocusManager`](../../../src/roo_windows/core/focus_manager.h) tracks focused
-  widget lifetime and traversal. `FocusScope` storage is declared, while scope
-  entry, containment, exit, and restoration remain unimplemented.
+  widget lifetime and traversal and now activates one presenter-owned
+  `FocusScope` above a task's implicit base scope.
 - [`GestureDetector`](../../../src/roo_windows/core/gesture_detector.h) retains
   raw target-path and gesture-role pointers for the duration of one touch
   stream.
@@ -185,7 +188,7 @@ No implemented facility currently:
 
 Menu rows, placement, selection, submenu behavior, and trigger-paint contents
 remain in the
-[Material 3 menus design](material3_menus_design.md).
+[Material 3 menus design](../proposed/material3_menus_design.md).
 
 ### Legacy Dialog Sequencing and Selected Migration
 
@@ -336,9 +339,10 @@ Thus a successful presentation calls `onEnter()`, `onShow()`, `onExit()`, and
    remain inside the active presenter scope. Activation succeeds even when no
    eligible descendant receives focus.
 3. **I3 — Focus memory.** Scope entry selects a still-valid remembered target,
-   then the preferred or first eligible target. Scope exit restores a
-   still-valid target from the owner's implicit base scope, then that base
-   scope's preferred or first eligible target.
+   then the live preferred target supplied synchronously by the scope root.
+   Scope exit restores a still-valid target from the owner's implicit base
+   scope, then that base root's synchronously supplied preferred target. A null
+   preference intentionally leaves the applicable scope without focus.
 4. **I4 — Scope lifetime.** Every terminal path exits the scope exactly once
    before its root loses the parent chain and clears the saved base-focus
    pointer. A presenter clears remembered focus before changing an inactive
@@ -730,8 +734,8 @@ After structural attachment and before input enablement,
    clears the manager's current focus;
 2. records the borrowed presenter root in the scope and makes it the manager's
    legal traversal root; and
-3. selects a still-live `last_focused`, then the preferred or first eligible
-   descendant.
+3. selects a still-live `last_focused`, then the live preferred descendant
+   returned by the root. A null preference leaves the active scope empty.
 
 The third pointer is named `restore_focused_`; it replaces the unimplemented
 `previous`-scope link without changing `sizeof(FocusScope)`. Scope activation
@@ -753,8 +757,9 @@ Exit occurs before root detachment. The manager records the current live
 presenter target, or null, as `last_focused` and clears current focus. It then
 restores `scope_root_` to the owner's `TaskPanel`, validates
 `restore_focused_` by finding its address in that live base tree before
-dereference, and otherwise selects the base root's preferred or first eligible
-target. Finally, it clears both active-only scope pointers.
+dereference, and otherwise asks the live base root for its preferred target. A
+null preference leaves base focus empty. Finally, it clears both active-only
+scope pointers.
 
 `FocusScope` remains non-copyable and non-movable because the active host holds
 its exact address. It stores no manager pointer. Normal finish or the
@@ -1110,32 +1115,50 @@ struct FocusScope {
 
 class FocusManager {
  public:
-  /// Returns the root that bounds current focus dispatch and traversal.
+  /// Returns the root of the current legal focus subtree.
+  ///
+  /// This is normally the task panel and becomes the presenter root while its
+  /// scope is active. Focus requests and traversal remain below this root;
+  /// task key bubbling includes an explicit presenter root and stops there.
   Widget* scopeRoot() { return scope_root_; }
 
   /// @copydoc scopeRoot()
   const Widget* scopeRoot() const { return scope_root_; }
 
-  /// Reports whether `incoming` can replace the current base or hosted scope.
+  /// Reports whether `incoming` can be activated for `base_root`.
+  ///
+  /// The incoming record must be inactive. The manager must be rooted at the
+  /// base, or at the exact non-null root of a supplied same-owner outgoing
+  /// replacement scope. This method changes no focus state.
   bool canAdmitScope(const FocusScope& incoming,
                      const Widget& base_root,
                      const FocusScope* replaced_scope) const;
 
-  /// Activates `scope` under `base_root` and captures base focus for restore.
+  /// Replaces the base scope with presenter `root` and `scope`.
+  ///
+  /// Saves base focus, clears it, installs the presenter root as the legal
+  /// focus/key boundary, and selects remembered or root-preferred focus. A
+  /// null preference leaves the presenter scope active without focus.
   void enterScope(FocusScope& scope,
                   Widget& root,
                   Widget& base_root);
 
-  /// Deactivates `scope` and restores an eligible target under `base_root`.
+  /// Deactivates `scope` and returns the manager to `base_root`.
+  ///
+  /// Remembers presenter focus, clears it, restores the base boundary, and
+  /// selects the still-valid saved base target or its root preference.
   void exitScope(FocusScope& scope, Widget& base_root);
 };
 
 class Widget {
  public:
-  /// Returns the preferred descendant to focus when entering this subtree.
+  /// Returns the preferred focus candidate when entering this subtree.
   ///
-  /// Existing members remain unchanged. Phase 1 lands this zero-storage hook
-  /// from the non-touch-input design.
+  /// Called synchronously on the live root after it becomes the legal focus
+  /// boundary. A non-null result must remain a live Widget for that call but
+  /// need not be attached, eligible, or in the scope. Normal focus checks may
+  /// reject it, leaving the entering scope active without focus. Null requests
+  /// the same empty-focus state.
   virtual Widget* preferredFocusChild() { return nullptr; }
 
  private:
@@ -1354,14 +1377,16 @@ Implementation follows the
 and the
 [Roo Windows widget-authoring guidance](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
 
-In particular, namespace-level functions use Google-style capitalized names
-(`CaptureTransientSourceGeometry()` and `GetTransientSurfaceHost()`), while
-instance methods use the repository's `camelCase()` exception. Production
+In particular, namespace-level functions and static methods use Google-style
+capitalized names (`CaptureTransientSourceGeometry()` and
+`GetTransientSurfaceHost()`), static methods are declared before instance
+methods in their access section, and instance methods use the repository's
+`camelCase()` exception. Production
 public and protected declarations carry `///` Doxygen comments with separator
 lines. Preparation uses virtual no-op hooks rather than retained callbacks, and
 `WidgetRef` remains only a temporary ownership-transfer argument.
 
-### Phase 1: Activate Presenter-Owned Focus Scopes
+### Phase 1: Activate Presenter-Owned Focus Scopes — Implemented
 
 Code slice:
 
@@ -1370,7 +1395,7 @@ Code slice:
    storage to `restore_focused_`; add no `Task`, manager, or scope bytes.
 2. Implement base-state preflight, its narrow same-owner replacement-scope
    allowance, single presenter-scope entry, containment,
-   remembered/preferred/first selection, exit, and validated base-focus
+   remembered/preferred selection, exit, and validated base-focus
    restoration. Repeated preflight requires base state and rejects a nested
    explicit scope.
 3. Make presenter scopes non-copyable and non-movable and add the
@@ -1380,7 +1405,7 @@ Code slice:
    `FocusManager::scopeRoot()` accessor. Route task traversal and focused
    bubbling through that root, include an explicit presenter root in bubbling,
    and suppress legacy context-focus fallback while it is active.
-5. Test an empty scope that still starts, remembered and fallback selection,
+5. Test an empty scope that still starts, remembered and preferred selection,
    removal of the saved base target while covered, same-owner replacement,
    rejected unrelated nested entry, explicit-root bubbling, empty-scope key
    isolation from a populated legacy context manager, and final-registration
@@ -1401,6 +1426,11 @@ Proposed commit message:
 
 Validation: `bazel test //:roo_windows_test //:task_test` and the configured
 target-ABI focus size probe.
+
+Implemented coverage additionally runs `//:key_source_test` for explicit-root
+bubbling and traversal plus empty-scope isolation. The size probe now emits
+named symbols for `FocusManager`, `FocusScope`, and `Task`; the phase reuses the
+existing two manager pointers and three scope pointers and adds no `Task` state.
 
 ### Phase 2: Add the Composite Structural Host
 
@@ -1640,7 +1670,7 @@ remain valid through presenter-destruction cleanup. Presenter ownership gives
 the final registration member a stable record and also preserves remembered
 focus when the presenter's subtree is unchanged. A persistent network dialog
 can reopen at its last edited field; replacing that field first clears the
-remembered address and falls back to the new tree's preferred or first target.
+remembered address and falls back to the new tree's preferred target.
 
 #### Add a Key-Passive Null-Scope Mode
 
@@ -1751,7 +1781,7 @@ comes with the class-selective replacement loss above.
 
 ## Future Work
 
-1. [Display runtime Phase 7 task-bounded transient coverage](display_runtime_phase_7_task_bounded_transient_coverage_design.md)
+1. [Display runtime Phase 7 task-bounded transient coverage](../proposed/display_runtime_phase_7_task_bounded_transient_coverage_design.md)
    attaches the same composite host layer beneath the owner `TaskPanel` and
    preserves sibling-task input. It requires a visible, non-empty owner panel;
    hiding that panel finishes its task-covered session instead of suspending

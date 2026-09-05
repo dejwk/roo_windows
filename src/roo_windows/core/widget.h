@@ -453,6 +453,17 @@ class Widget {
   /// Returns whether this widget can own keyboard focus.
   virtual bool isFocusable() const { return isClickable(); }
 
+  /// Returns the preferred focus candidate when entering this subtree.
+  ///
+  /// The focus manager calls this synchronously on a live scope root after
+  /// making it the legal focus boundary. A non-null result must remain a live
+  /// `Widget` for the duration of that call, but need not be attached,
+  /// eligible, or inside the scope. The manager applies its normal focus
+  /// eligibility and containment checks; rejection leaves the entering scope
+  /// active without initial focus. Returning null deliberately requests the
+  /// same empty-focus state.
+  virtual Widget* preferredFocusChild() { return nullptr; }
+
   /// Requests keyboard focus for this attached, eligible widget.
   bool requestFocus();
 

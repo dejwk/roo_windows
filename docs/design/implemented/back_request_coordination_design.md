@@ -41,7 +41,7 @@ constraint remains: one Back request performs one ordered semantic fallback
 instead of letting each input source manipulate navigation independently.
 
 The baseline contract in this document is implemented. P1.6b of
-[Transient surface hosting](../proposed/transient_surface_hosting_design.md)
+[Transient surface hosting](../in_progress/transient_surface_hosting_design.md)
 adds a narrow hosted-presentation exception: eligible Back and Escape reach
 the active hosted root before the ordinary focused-widget path. The
 [Phase 7 task-bounded transient design](../proposed/display_runtime_phase_7_task_bounded_transient_coverage_design.md)
@@ -353,7 +353,7 @@ registry would duplicate ordering and teardown state.
 ## Future Work
 
 P1.6b of
-[Transient surface hosting](../proposed/transient_surface_hosting_design.md)
+[Transient surface hosting](../in_progress/transient_surface_hosting_design.md)
 adds one early physical-key check while a hosted association is active. An
 eligible Back or Escape is offered to the hosted root before the focused
 widget, its ancestors, editor fallback, navigation, or task callback. If the
