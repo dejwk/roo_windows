@@ -8,11 +8,16 @@
 
 #include "roo_display/core/utf8.h"
 #include "roo_windows/core/layout_direction.h"
+#include "roo_windows/core/transient_presentation.h"
 #include "roo_windows/material3/badge/badge.h"
 #include "roo_windows/material3/list/list.h"
 
 namespace roo_display {
 class Drawable;
+}
+
+namespace roo_windows {
+class Task;
 }
 
 namespace roo_windows::material3 {
@@ -256,6 +261,122 @@ class MenuRow : public MenuEntry {
 
  private:
   Item item_;
+};
+
+/// Ordered group of borrowed or adopted menu rows.
+class MenuGroup final : public Container {
+ public:
+  /// Creates an empty, transparent group.
+  explicit MenuGroup(ApplicationContext& context);
+
+  /// Detaches all remaining rows, deleting rows adopted by `add()`.
+  ~MenuGroup() override;
+
+  /// Appends a detached caller-owned row.
+  void add(MenuEntry& entry);
+
+  /// Appends and adopts a detached row.
+  void add(std::unique_ptr<MenuEntry> entry);
+
+  /// Detaches all rows and deletes adopted rows.
+  void clear();
+
+ protected:
+  void paint(PaintContext& ctx) const override;
+  Color background() const override;
+  bool fullyCoversBoundsWithOpaqueColors() const override;
+  int getChildrenCount() const override;
+  const Widget& getChild(int idx) const override;
+  Widget& getChild(int idx) override;
+  Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
+  void onLayout(bool changed, const Rect& rect) override;
+
+ private:
+  std::vector<MenuEntry*> entries_;
+};
+
+/// Scoped, synchronous target used while one submenu level is populated.
+class MenuLevelBuilder {
+ public:
+  MenuLevelBuilder(const MenuLevelBuilder&) = delete;
+  MenuLevelBuilder& operator=(const MenuLevelBuilder&) = delete;
+  MenuLevelBuilder(MenuLevelBuilder&&) = delete;
+  MenuLevelBuilder& operator=(MenuLevelBuilder&&) = delete;
+
+  /// Adds a borrowed group to the child level being populated.
+  void addGroup(MenuGroup& group);
+
+  /// Adds and adopts a group in the child level being populated.
+  void addGroup(std::unique_ptr<MenuGroup> group);
+
+ private:
+  friend class Menu;
+  MenuLevelBuilder(Menu& owner, uint8_t level, uint16_t generation);
+
+  Menu* owner_;
+  uint16_t generation_;
+  uint8_t level_;
+};
+
+/// Reusable presenter and persistent root structure for one menu chain.
+class Menu {
+ public:
+  /// Creates an idle menu using `context` for its persistent widget tree.
+  explicit Menu(ApplicationContext& context);
+
+  /// Cancels an active presentation and releases all persistent structure.
+  virtual ~Menu();
+
+  /// Replaces the policy used by the next presentation.
+  void setPolicy(const MenuPolicy& policy);
+
+  /// Adds a detached borrowed group to the persistent root panel.
+  void addGroup(MenuGroup& group);
+
+  /// Adds and adopts a group in the persistent root panel.
+  void addGroup(std::unique_ptr<MenuGroup> group);
+
+  /// Detaches all persistent root groups.
+  void clearGroups();
+
+  /// Presents below or beside an attached placement source.
+  MenuShowResult show(::roo_windows::Task& interaction_owner,
+                      const Widget& placement_source,
+                      MenuPlacement placement = MenuPlacement::kBelowStart,
+                      const MenuTriggerPaintSource* trigger = nullptr);
+
+  /// Presents relative to a rectangle already expressed in window coordinates.
+  MenuShowResult showFromRect(
+      ::roo_windows::Task& interaction_owner, const Rect& bounds_in_window,
+      MenuPlacement placement = MenuPlacement::kBelowStart,
+      const MenuTriggerPaintSource* trigger = nullptr);
+
+  /// Recaptures a live placement source for an active menu.
+  bool reanchor(const Widget& placement_source,
+                MenuPlacement placement = MenuPlacement::kBelowStart,
+                const MenuTriggerPaintSource* trigger = nullptr);
+
+  /// Reanchors an active menu to a window-coordinate rectangle.
+  bool reanchorFromRect(const Rect& bounds_in_window,
+                        MenuPlacement placement = MenuPlacement::kBelowStart,
+                        const MenuTriggerPaintSource* trigger = nullptr);
+
+  /// Dismisses the complete chain as a cancellation.
+  void dismissChain();
+
+ protected:
+  /// Detaches persistent borrowed members before a derived destructor runs.
+  void prepareForDerivedDestruction();
+
+  /// Receives terminal delivery only after host and menu structure detach.
+  virtual void onFinished(PresentationFinishReason reason) { (void)reason; }
+
+ private:
+  friend class MenuLevelBuilder;
+
+  class Impl;
+  std::unique_ptr<Impl> impl_;
+  uint8_t admission_in_progress_ : 1;
 };
 
 }  // namespace roo_windows::material3

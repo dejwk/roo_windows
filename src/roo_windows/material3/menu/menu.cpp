@@ -5,8 +5,10 @@
 #include <new>
 
 #include "roo_display/ui/text_label.h"
+#include "roo_logging.h"
 #include "roo_windows/core/paint_context.h"
 #include "roo_windows/core/theme.h"
+#include "roo_windows/material3/menu/menu_surface.h"
 #include "roo_windows/material3/menu/menu_tokens.h"
 #include "roo_windows/material3/typography.h"
 
@@ -337,5 +339,129 @@ void MenuEntry::paintWidgetContents(PaintContext& ctx) {
 
 static_assert(sizeof(MenuEntry) <= sizeof(ListEntry) + sizeof(void*) + 4,
               "Phase 1 menu rows may add only pay-for-use adornment state");
+
+class Menu::Impl {
+ public:
+  static constexpr uint8_t kMaxLevels = 4;
+
+  explicit Impl(ApplicationContext& context)
+      : root_panel(context), overlay(context) {
+    root_panel.setPolicy(policy);
+    overlay.addPanel(root_panel, Rect());
+  }
+
+  void AddLevelGroup(uint8_t level, uint16_t generation, MenuGroup& group) {
+    CHECK(population_active);
+    CHECK_EQ(level, population_level);
+    CHECK_EQ(generation, level_generation[level]);
+    CHECK(level < kMaxLevels);
+    CHECK(level_panels[level] != nullptr);
+    level_panels[level]->addGroup(group);
+  }
+
+  void AddLevelGroup(uint8_t level, uint16_t generation,
+                     std::unique_ptr<MenuGroup> group) {
+    CHECK(population_active);
+    CHECK_EQ(level, population_level);
+    CHECK_EQ(generation, level_generation[level]);
+    CHECK(level < kMaxLevels);
+    CHECK(level_panels[level] != nullptr);
+    level_panels[level]->addGroup(std::move(group));
+  }
+
+  MenuPolicy policy;
+  internal::MenuPanel root_panel;
+  internal::MenuOverlay overlay;
+  internal::MenuPanel* level_panels[kMaxLevels] = {&root_panel, nullptr,
+                                                   nullptr, nullptr};
+  uint16_t level_generation[kMaxLevels] = {1, 1, 1, 1};
+  uint8_t population_level = 0;
+  bool population_active = false;
+};
+
+MenuLevelBuilder::MenuLevelBuilder(Menu& owner, uint8_t level,
+                                   uint16_t generation)
+    : owner_(&owner), generation_(generation), level_(level) {}
+
+void MenuLevelBuilder::addGroup(MenuGroup& group) {
+  owner_->impl_->AddLevelGroup(level_, generation_, group);
+}
+
+void MenuLevelBuilder::addGroup(std::unique_ptr<MenuGroup> group) {
+  owner_->impl_->AddLevelGroup(level_, generation_, std::move(group));
+}
+
+Menu::Menu(ApplicationContext& context)
+    : impl_(new Impl(context)), admission_in_progress_(false) {}
+
+Menu::~Menu() { prepareForDerivedDestruction(); }
+
+void Menu::setPolicy(const MenuPolicy& policy) {
+  CHECK(!admission_in_progress_);
+  impl_->policy = policy;
+  impl_->root_panel.setPolicy(policy);
+}
+
+void Menu::addGroup(MenuGroup& group) {
+  CHECK(!admission_in_progress_);
+  impl_->root_panel.addGroup(group);
+}
+
+void Menu::addGroup(std::unique_ptr<MenuGroup> group) {
+  CHECK(!admission_in_progress_);
+  impl_->root_panel.addGroup(std::move(group));
+}
+
+void Menu::clearGroups() {
+  CHECK(!admission_in_progress_);
+  impl_->root_panel.clearGroups();
+}
+
+MenuShowResult Menu::show(::roo_windows::Task& interaction_owner,
+                          const Widget& placement_source,
+                          MenuPlacement placement,
+                          const MenuTriggerPaintSource* trigger) {
+  (void)interaction_owner;
+  (void)placement_source;
+  (void)placement;
+  (void)trigger;
+  LOG(WARNING) << "Unimplemented: Material 3 menu presentation";
+  return MenuShowResult::kUnimplemented;
+}
+
+MenuShowResult Menu::showFromRect(::roo_windows::Task& interaction_owner,
+                                  const Rect& bounds_in_window,
+                                  MenuPlacement placement,
+                                  const MenuTriggerPaintSource* trigger) {
+  (void)interaction_owner;
+  (void)bounds_in_window;
+  (void)placement;
+  (void)trigger;
+  LOG(WARNING) << "Unimplemented: Material 3 menu presentation";
+  return MenuShowResult::kUnimplemented;
+}
+
+bool Menu::reanchor(const Widget& placement_source, MenuPlacement placement,
+                    const MenuTriggerPaintSource* trigger) {
+  (void)placement_source;
+  (void)placement;
+  (void)trigger;
+  return false;
+}
+
+bool Menu::reanchorFromRect(const Rect& bounds_in_window,
+                            MenuPlacement placement,
+                            const MenuTriggerPaintSource* trigger) {
+  (void)bounds_in_window;
+  (void)placement;
+  (void)trigger;
+  return false;
+}
+
+void Menu::dismissChain() {}
+
+void Menu::prepareForDerivedDestruction() {
+  if (impl_) impl_->root_panel.clearGroups();
+}
 
 }  // namespace roo_windows::material3
