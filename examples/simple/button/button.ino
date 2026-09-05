@@ -84,7 +84,7 @@ void initDisplay() {
 // *************** EXAMPLE STARTS HERE
 
 #include "roo_windows/containers/aligned_layout.h"
-#include "roo_windows/dialogs/alert_dialog.h"
+#include "roo_windows/material3/dialog/basic_dialog.h"
 #include "roo_windows/widgets/button.h"
 
 roo_scheduler::Scheduler scheduler;
@@ -100,19 +100,25 @@ Application app(&env, display);
 class MyPane : public AlignedLayout {
  public:
   MyPane(ApplicationContext& context)
-      : AlignedLayout(context), button_(context, "Click me!") {
+      : AlignedLayout(context),
+        button_(context, "Click me!"),
+        alert_(context, "Notification", "The button has been clicked.",
+               &kOkAction, 1) {
     add(button_, kCenter | kMiddle);
     button_.setOnInteractiveChange([this]() {
       Task* owner = getTask();
       if (owner != nullptr) {
-        app.showAlertDialog(*owner, "Notification",
-                            "The button has been clicked.", {"OK"}, nullptr);
+        alert_.show(*owner);
       }
     });
   }
 
  private:
+  static constexpr material3::DialogActionSpec kOkAction{
+      0, "OK", material3::DialogActionRole::kAcknowledge};
+
   SimpleButton button_;
+  material3::AlertDialog alert_;
 };
 
 MyPane my_pane(app.context());

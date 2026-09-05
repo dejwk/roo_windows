@@ -24,7 +24,10 @@ enum class DialogChromeSlot : uint8_t { kPrimary, kSecondary };
 
 class DialogActionDelegate {
  public:
+  /// Destroys the lifetime-coupled presenter interface.
   virtual ~DialogActionDelegate() = default;
+
+  /// Routes an enabled fixed action to its owning dialog presenter.
   virtual void invokeDialogAction(uint8_t id, DialogActionRole role) = 0;
 };
 
@@ -45,6 +48,9 @@ class DialogScaffoldBase : public Container {
 
   /// Returns a 28dp basic shape or a rectangular full-screen shape.
   BorderStyle getBorderStyle() const override;
+
+  /// Paints the optional basic-dialog icon above the owned title.
+  void paint(PaintContext& ctx) const override;
 
   /// Keeps the scaffold itself out of the focus traversal.
   bool isFocusable() const override { return false; }
@@ -68,6 +74,9 @@ class DialogScaffoldBase : public Container {
   /// Replaces the owned title/headline string.
   void setDialogTitle(std::string title);
 
+  /// Sets or clears the borrowed basic-dialog icon.
+  void setDialogIcon(const MonoIcon* icon);
+
   /// Returns the currently attached body, or null.
   Widget* dialogBody() { return body_; }
   const Widget* dialogBody() const { return body_; }
@@ -85,6 +94,10 @@ class DialogScaffoldBase : public Container {
   DialogShowResult showDialogSurface(Task& interaction_owner,
                                      const Rect& bounds_in_window,
                                      TransientBarrierPaint barrier);
+
+  /// Measures and centers a basic dialog inside the interaction owner's
+  /// window during guarded host preparation.
+  DialogShowResult showBasicDialogSurface(Task& interaction_owner);
 
   /// Returns whether this scaffold currently occupies the shared host.
   bool isDialogShowing() const { return registration_.isActive(); }
@@ -110,6 +123,18 @@ class DialogScaffoldBase : public Container {
   }
 
  private:
+  class DialogBodyScroller final : public SimpleScrollablePanel {
+   public:
+    DialogBodyScroller(ApplicationContext& context, DialogScaffoldBase& owner)
+        : SimpleScrollablePanel(context), owner_(owner) {}
+
+    /// Updates conditional divider visibility after scrolling.
+    void onScrollPositionChanged() override { owner_.updateDividers(); }
+
+   private:
+    DialogScaffoldBase& owner_;
+  };
+
   class Registration final : public TransientPresentationRegistration {
    public:
     explicit Registration(DialogScaffoldBase& owner) : owner_(owner) {}
@@ -133,16 +158,19 @@ class DialogScaffoldBase : public Container {
   void onLayout(bool changed, const Rect& rect) override;
 
   void clearDialogBody();
+  void updateDividers();
 
   DialogScaffoldVariant variant_;
   LayoutDirection direction_ = LayoutDirection::kLeftToRight;
   TextBlock title_;
   HorizontalDivider top_divider_;
-  SimpleScrollablePanel body_scroller_;
+  DialogBodyScroller body_scroller_;
   HorizontalDivider bottom_divider_;
   Widget* body_ = nullptr;
   Widget* chrome_[2] = {nullptr, nullptr};
+  const MonoIcon* icon_ = nullptr;
   int16_t content_inset_ = 0;
+  int16_t icon_height_ = 0;
   YDim title_height_ = 0;
   YDim chrome_height_[2] = {0, 0};
   FocusScope focus_scope_;
@@ -169,6 +197,12 @@ class DialogActionStrip final : public Container {
 
   /// Returns the copied descriptor for testing and presenter routing.
   const DialogActionSpec& action(uint8_t index) const;
+
+  /// Returns one inline action button.
+  Widget& actionButton(uint8_t index);
+
+  /// Returns one inline action button.
+  const Widget& actionButton(uint8_t index) const;
 
   /// Returns the number of active fixed slots.
   uint8_t actionCount() const { return action_count_; }
@@ -201,6 +235,7 @@ class DialogActionStrip final : public Container {
     ActionButton(ApplicationContext& context, DialogActionStrip& strip,
                  uint8_t slot);
 
+    /// Routes activation through the fixed strip without callback storage.
     void onClicked() override;
 
    private:

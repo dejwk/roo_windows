@@ -2,7 +2,10 @@
 
 #include <algorithm>
 
+#include "roo_display/ui/alignment.h"
+#include "roo_display/ui/tile.h"
 #include "roo_logging.h"
+#include "roo_windows/core/display_window.h"
 #include "roo_windows/core/task.h"
 #include "roo_windows/material3/typography.h"
 
@@ -53,6 +56,39 @@ class FixedBoundsPreparation final
   Rect bounds_;
 };
 
+class BasicDialogPreparation final
+    : public ::roo_windows::internal::TransientSurfacePreparation {
+ public:
+  BasicDialogPreparation(DialogScaffoldBase& scaffold, Task& owner)
+      : scaffold_(scaffold), owner_(owner) {}
+
+ private:
+  bool createAndResolveBounds(Rect& root_bounds_in_window) override {
+    const MainWindow& window = owner_.window().root();
+    const XDim edge = window.width() <= Scaled(600) ? Scaled(24) : Scaled(56);
+    const XDim available_width = std::max<XDim>(1, window.width() - 2 * edge);
+    const YDim available_height = std::max<YDim>(1, window.height() - 2 * edge);
+    const XDim maximum_width = std::min<XDim>(Scaled(560), available_width);
+    Dimensions natural = scaffold_.measure(
+        WidthSpec::AtMost(maximum_width), HeightSpec::AtMost(available_height));
+    const XDim minimum_width = std::min<XDim>(Scaled(280), available_width);
+    const XDim width = std::max<XDim>(minimum_width, natural.width());
+    Dimensions measured = scaffold_.measure(
+        WidthSpec::Exactly(width), HeightSpec::AtMost(available_height));
+    const XDim left = (window.width() - measured.width()) / 2;
+    const YDim top = (window.height() - measured.height()) / 2;
+    scaffold_.layout(Rect(0, 0, measured.width() - 1, measured.height() - 1));
+    root_bounds_in_window = Rect(left, top, left + measured.width() - 1,
+                                 top + measured.height() - 1);
+    return true;
+  }
+
+  void deleteAfterFailedAdmission() override {}
+
+  DialogScaffoldBase& scaffold_;
+  Task& owner_;
+};
+
 }  // namespace
 
 DialogScaffoldBase::DialogScaffoldBase(ApplicationContext& context,
@@ -62,7 +98,7 @@ DialogScaffoldBase::DialogScaffoldBase(ApplicationContext& context,
       variant_(variant),
       title_(context, "", text_style_headline_small()),
       top_divider_(context),
-      body_scroller_(context),
+      body_scroller_(context, *this),
       bottom_divider_(context),
       registration_(*this) {
   title_.setWrapMode(TextWrapMode::kWordWrap);
@@ -97,6 +133,18 @@ Color DialogScaffoldBase::background() const {
 BorderStyle DialogScaffoldBase::getBorderStyle() const {
   return BorderStyle(variant_ == DialogScaffoldVariant::kBasic ? Scaled(28) : 0,
                      0);
+}
+
+void DialogScaffoldBase::paint(PaintContext& ctx) const {
+  if (icon_ == nullptr || icon_height_ == 0) return;
+  roo_display::Pictogram icon(*icon_);
+  icon.color_mode().setColor(roo_display::AlphaBlend(
+      ctx.bgcolor(), theme().material3Theme().color.secondary));
+  ctx.drawTiled(
+      icon,
+      Rect(content_inset_, content_inset_, width() - content_inset_ - 1,
+           content_inset_ + icon_height_ - 1),
+      roo_display::kCenter | roo_display::kMiddle, isInvalidated());
 }
 
 Widget* DialogScaffoldBase::preferredFocusChild() {
@@ -142,6 +190,13 @@ void DialogScaffoldBase::setDialogTitle(std::string title) {
   title_.setVisibility(empty ? Visibility::kGone : Visibility::kVisible);
 }
 
+void DialogScaffoldBase::setDialogIcon(const MonoIcon* icon) {
+  if (icon_ == icon) return;
+  icon_ = icon;
+  invalidateInterior();
+  requestLayout();
+}
+
 void DialogScaffoldBase::setDialogLayoutDirection(LayoutDirection direction) {
   if (direction_ == direction) return;
   direction_ = direction;
@@ -157,6 +212,20 @@ DialogShowResult DialogScaffoldBase::showDialogSurface(
       OutsideInteractionPolicy::kAbsorb,
       TransientPresentationPolicy(true, true), false};
   FixedBoundsPreparation preparation(*this, bounds_in_window);
+  return MapStartResult(
+      ::roo_windows::internal::GetTransientSurfaceHost(interaction_owner)
+          .showPrepared(registration_, interaction_owner, *this, focus_scope_,
+                        spec, preparation));
+}
+
+DialogShowResult DialogScaffoldBase::showBasicDialogSurface(
+    Task& interaction_owner) {
+  if (registration_.isActive()) return DialogShowResult::kAlreadyPresented;
+  const TransientSurfaceSpec spec{
+      TransientBarrierPaint::kScrim, TransientAdmissionPolicy::kRejectIfBusy,
+      OutsideInteractionPolicy::kAbsorb,
+      TransientPresentationPolicy(true, true), false};
+  BasicDialogPreparation preparation(*this, interaction_owner);
   return MapStartResult(
       ::roo_windows::internal::GetTransientSurfaceHost(interaction_owner)
           .showPrepared(registration_, interaction_owner, *this, focus_scope_,
@@ -197,9 +266,9 @@ Widget& DialogScaffoldBase::getChild(int idx) {
     case 0:
       return title_;
     case 1:
-      return top_divider_;
-    case 2:
       return body_scroller_;
+    case 2:
+      return top_divider_;
     case 3:
       return bottom_divider_;
     default:
@@ -228,6 +297,8 @@ Dimensions DialogScaffoldBase::onMeasure(WidthSpec width, HeightSpec height) {
   int16_t fixed_height = 0;
   int16_t desired_width = 0;
   title_height_ = 0;
+  icon_height_ = icon_ == nullptr ? 0 : AnchorDimensionsOf(*icon_).height();
+  if (icon_height_ > 0) fixed_height += icon_height_ + kSectionGap;
   chrome_height_[0] = 0;
   chrome_height_[1] = 0;
   if (!title_.isGone()) {
@@ -271,6 +342,7 @@ void DialogScaffoldBase::onLayout(bool, const Rect& rect) {
     chrome->layout(Rect(left, bottom, right, bottom + h - 1));
     bottom -= kSectionGap;
   }
+  if (icon_height_ > 0) top += icon_height_ + kSectionGap;
   if (!title_.isGone()) {
     const YDim h = title_height_;
     title_.layout(Rect(left, top, right, top + h - 1));
@@ -280,6 +352,7 @@ void DialogScaffoldBase::onLayout(bool, const Rect& rect) {
   body_scroller_.layout(Rect(left, top, right, body_bottom));
   top_divider_.layout(Rect(left, top, right, top + 1));
   bottom_divider_.layout(Rect(left, body_bottom - 1, right, body_bottom));
+  updateDividers();
 }
 
 void DialogScaffoldBase::clearDialogBody() {
@@ -287,6 +360,20 @@ void DialogScaffoldBase::clearDialogBody() {
   focus_scope_.clearRememberedFocus();
   body_scroller_.clearContents();
   body_ = nullptr;
+}
+
+void DialogScaffoldBase::updateDividers() {
+  const Widget* contents = body_scroller_.contents();
+  const bool clipped =
+      contents != nullptr && contents->height() > body_scroller_.height();
+  const SimpleScrollablePanel::ScrollPosition position =
+      body_scroller_.getScrollPosition();
+  top_divider_.setVisibility(clipped && position.y > 0 ? Visibility::kVisible
+                                                       : Visibility::kGone);
+  bottom_divider_.setVisibility(
+      clipped && position.y < contents->height() - body_scroller_.height()
+          ? Visibility::kVisible
+          : Visibility::kGone);
 }
 
 void DialogScaffoldBase::Registration::detachPresentation(
@@ -373,6 +460,15 @@ void DialogActionStrip::setLayoutDirection(LayoutDirection direction) {
 const DialogActionSpec& DialogActionStrip::action(uint8_t index) const {
   CHECK_LT(index, action_count_);
   return actions_[index];
+}
+
+Widget& DialogActionStrip::actionButton(uint8_t index) {
+  CHECK_LT(index, action_count_);
+  return buttons_[index];
+}
+
+const Widget& DialogActionStrip::actionButton(uint8_t index) const {
+  return const_cast<DialogActionStrip*>(this)->actionButton(index);
 }
 
 Widget* DialogActionStrip::preferredFocusChild() {

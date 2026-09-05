@@ -57,7 +57,7 @@ Status was audited against the source tree and tests on 2026-09-05. “Dependenc
 | Display runtime and cross-application input | Phases 1–6 are implemented. Explicit modal coverage and the final migration/cost audit remain proposed. |
 | Event-driven input notification and ticker wakeup | The coalescing ticker and readiness-driven physical-key routing are implemented while retaining the 20 ms fallback. Touch acquisition, gesture/paint/animation deadlines, and final ticker dormancy remain. |
 | Material 3 lists | Phases 1 through 11 are implemented, including text policy, convenience and control rows, navigation/selection behavior, and expandable content; Phase 12 menu reuse remains. Badge and paint-context dependencies are implemented. |
-| Material 3 dialogs | Phase 1 is implemented: fixed action descriptors, the shared pinned-chrome scaffold, persistent body ownership, presenter focus, explicit-owner shared-host integration, and focused lifecycle/input tests. Basic, alert, and full-screen presenters remain. |
+| Material 3 dialogs | Phases 1 and 2 are implemented: fixed action descriptors, the shared pinned-chrome scaffold, persistent body ownership, presenter focus, explicit-owner shared-host integration, and the public basic/alert family with focused unit, golden, and example coverage. Full-screen dialogs remain. |
 | Text system | `TextBlock` wrapping, justification, max-lines, ellipsis, caching, and golden coverage are implemented; shared rich paragraph layout and `RichTextBlock` remain. |
 | Transient presentation pins | The shared layer-scoped host, slider/range-slider adoption, and display-covered presenter-pin integration are implemented; keyboard-highlighter adoption remains. Visual overflow prerequisites are in progress. |
 | Transient presenter lifetime and ownership | The shared slot and legacy-dialog lifetime, Back, and structural-host adoption are implemented; modal sheets have no implementation to adopt, and menu/snackbar migrations remain. |
@@ -68,19 +68,19 @@ Status was audited against the source tree and tests on 2026-09-05. “Dependenc
 | Design | Dependency status |
 | --- | --- |
 | Button groups | Buttons and icon buttons are implemented; no group implementation exists. |
-| Date pickers | Buttons, icon buttons, and shared back behavior are implemented; text fields and dialogs are proposed. |
+| Date pickers | Buttons, icon buttons, basic dialogs, and shared back behavior are implemented; text fields and picker-specific integration remain proposed. |
 | Display runtime Phase 7 task-bounded transient coverage | Phase 6 input is implemented. Phase 7 is reconciled as task-bounded attachment of the one shared window host layer, retaining one active-presentation authority and explicit interaction owner; the extension remains unimplemented. |
 | Display runtime Phase 8 migration and cost audit | Phases 2–6 are implemented and Phase 7 is architecturally reconciled; the shared host, task-coverage extension, final migration documentation, resource audit, and hardware validation remain proposed. |
 | Extended FAB | The base FAB dependency is proposed; buttons and theme support are implemented. |
 | FAB | Buttons, icon buttons, and theme support are implemented; the FAB family is not. |
 | Interaction overlay reveal | Point and area ripples, widget-local click animation, paint context, and the navigation bar's component-local fade are implemented; shared fade reveal and paint-owned overlay policy are not. |
 | Menus | Badge, paint context, back routing, list-row reuse, non-touch input, and widget-anchored presentation pins are implemented. The separate transient-host design owns the missing combined host layer, active focus-scope, synchronous source validation, and rect-pin integration prerequisites. Menus do not create a `Task` or install a `Destination`; `show()` explicitly borrows an existing task as interaction owner and copies source geometry during that call. Menu implementation remains P1.7 after P1.6b. |
-| Navigation drawer | List support is in progress and back routing is implemented; dialogs are proposed, and no drawer implementation exists. |
+| Navigation drawer | List support and basic dialogs are implemented and back routing exists; no drawer implementation exists. |
 | Segmented buttons | Buttons are implemented; the superseding button-group design and this legacy component design are not implemented. |
 | Sheets | Paint/overflow foundations, icon buttons, and shared back behavior are implemented; the sheet family is not. Before implementation, modal sheets must be reconciled to use the P1.6b shared host with explicit task ownership, host-owned barrier paint, presenter-owned focus, and presenter-handled outside dismissal. |
 | Snackbar | Paint/overflow foundations, non-touch input, and scaffold are implemented. Before implementation, the snackbar design must replace queued non-owning strings and listener pointers with the ownership model required by the in-progress transient-lifetime design. |
 | Split button | Buttons, icon buttons, and non-touch input are implemented; menus and split buttons are proposed. |
 | Text fields | Paint context, non-touch input, and icon buttons are implemented; supporting menu behavior and the text-field family are proposed. |
-| Time pickers | Buttons, icon buttons, and shared back behavior are implemented; text fields and dialogs are proposed. |
+| Time pickers | Buttons, icon buttons, basic dialogs, and shared back behavior are implemented; text fields and picker-specific integration remain proposed. |
 | Toolbars | Buttons and icon buttons are implemented; menus, FABs, and toolbars are proposed. |
 | Wi-Fi configuration | Existing Wi-Fi transport/configuration APIs are external prerequisites; the Material 3 screen design and its text-field/dialog dependencies are not implemented. |

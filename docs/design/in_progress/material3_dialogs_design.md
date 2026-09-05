@@ -30,11 +30,11 @@ flows belong.
 
 ## Background
 
-**Status: In progress.** Phase 1 is implemented: the fixed action model, shared
-scaffold, persistent body ownership, presenter-owned focus scope, and explicit-
-owner shared-host seam are covered by `material3_dialog_test`. Basic, alert,
-and full-screen public presenters remain in Phases 2 and 3. The status of other
-prerequisites is recorded in the [status index](../README.md).
+**Status: In progress.** Phases 1 and 2 are implemented: the shared scaffold,
+fixed action model, persistent body ownership, presenter-owned focus scope,
+explicit-owner host seam, and public basic/alert dialog family have unit,
+golden, and example coverage. The full-screen presenter remains in Phase 3.
+The status of other prerequisites is recorded in the [status index](../README.md).
 
 ### Current Starting Point in `roo_windows`
 
@@ -1083,6 +1083,13 @@ Proposed commit message:
 Validation: run `bazel test //:material3_dialog_test`.
 
 ### Phase 2: Basic Dialog Family
+
+**Status: Implemented.** `BasicDialog` and `AlertDialog` provide centered
+width-clamped Material 3 surfaces, owned prose, persistent generic bodies,
+fixed role-validated actions, typed action/dismiss completion, Back/Escape and
+focus restoration, explicit LTR/RTL action order, stacking fallback, conditional
+body dividers, goldens, and a build-covered catalog. The repository's two
+legacy alert example callers now use `material3::AlertDialog`.
 
 Code slice:
 

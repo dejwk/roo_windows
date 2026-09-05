@@ -83,7 +83,7 @@ void initDisplay() {
 
 #include "roo_icons/filled/24/action.h"
 #include "roo_windows/containers/vertical_layout.h"
-#include "roo_windows/dialogs/alert_dialog.h"
+#include "roo_windows/material3/dialog/basic_dialog.h"
 #include "roo_windows/widgets/button.h"
 
 roo_scheduler::Scheduler scheduler;
@@ -100,7 +100,8 @@ class MyPane : public VerticalLayout {
         button2_(context, SCALED_ROO_ICON(filled, action_arrow_circle_right),
                  "Outlined combo", Button::OUTLINED),
         button3_(context, SCALED_ROO_ICON(filled, action_done), Button::TEXT),
-        button4_(context, "Custom", Button::OUTLINED) {
+        button4_(context, "Custom", Button::OUTLINED),
+        alert_(context, "Notification", "", &kOkAction, 1) {
     button4_.setInteriorColor(roo_display::color::Beige);
     button4_.setOutlineColor(roo_display::color::DeepPink);
     button4_.setContentColor(roo_display::color::SaddleBrown);
@@ -133,14 +134,19 @@ class MyPane : public VerticalLayout {
   void showNotification(const char* message) {
     Task* owner = getTask();
     if (owner != nullptr) {
-      app.showAlertDialog(*owner, "Notification", message, {"OK"}, nullptr);
+      alert_.setSupportingText(message);
+      alert_.show(*owner);
     }
   }
+
+  static constexpr material3::DialogActionSpec kOkAction{
+      0, "OK", material3::DialogActionRole::kAcknowledge};
 
   SimpleButton button1_;
   SimpleButton button2_;
   SimpleButton button3_;
   SimpleButton button4_;
+  material3::AlertDialog alert_;
 };
 
 MyPane my_pane(app.context());
