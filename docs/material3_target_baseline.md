@@ -93,10 +93,13 @@ quantized ARGB4444 output:
 bazel test //:theme_color_tokens_test //:material3_badge_golden_test
 ```
 
-The golden image is [material3_badge.ppm](../test/goldens/material3_badge.ppm).
-It is a repeatable comparison of the rendered pixels; a physical target photo
-is optional supplementary evidence, not a substitute for this regression
-test.
+The golden images are
+[badge_states_row.ppm](../test/goldens/material3_badge/badge_states_row.ppm)
+and
+[overflow_clipping_row.ppm](../test/goldens/material3_badge/overflow_clipping_row.ppm).
+They provide repeatable comparisons of the rendered pixels; a physical target
+photo is optional supplementary evidence, not a substitute for these
+regression tests.
 
 ## Interpretation
 

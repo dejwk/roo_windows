@@ -21,8 +21,8 @@ semantic Back behavior, but not framework ownership of their screens.
 ## Background
 
 Phase 3 gives each `UiTask` an inline structural panel and keeps the current
-[`Task`](../../../src/roo_windows/core/task.h)/[`Activity`](../../../src/roo_windows/core/activity.h)
-stack as a compatibility adapter. [`WidgetRef`](../../../src/roo_windows/core/widget_ref.h)
+[`Task`](../../../src/roo_windows/core/task.h)/`Activity` stack as a
+compatibility adapter. [`WidgetRef`](../../../src/roo_windows/core/widget_ref.h)
 is a temporary ownership-transfer parameter for container attachment.
 [`BackResult`](../../../src/roo_windows/core/back_request.h) and `BackSource`
 already represent semantic Back handling.

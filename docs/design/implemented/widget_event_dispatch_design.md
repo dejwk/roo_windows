@@ -62,7 +62,7 @@ Before this migration:
 The construction-order concern is manageable. Shipped examples already
 construct `Application` before the top-level widget tree, for example
 [examples/simple/button/button.ino](../../../examples/simple/button/button.ino) and
-[examples/material3/slider/slider.ino](../../../examples/material3/slider/slider.ino).
+[examples/material3/slider/temperature_setpoint/temperature_setpoint.ino](../../../examples/material3/slider/temperature_setpoint/temperature_setpoint.ino).
 The migration is source-breaking, but it does not require a new runtime
 lifecycle model.
 

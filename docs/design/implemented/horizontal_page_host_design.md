@@ -19,7 +19,7 @@ The component should provide:
 - optional adjacent-page swipe and settle behavior,
 - viewport-based measurement and layout,
 - and a selection contract that can synchronize with external components such
-  as [../in_progress/material3_tabs_design.md](../in_progress/material3_tabs_design.md) without making those
+  as [material3_tabs_design.md](material3_tabs_design.md) without making those
   components own content-page gesture state.
 
 The result should be a generic container, not a Material-only tab extension,
@@ -29,7 +29,7 @@ controller.
 ## Motivation
 
 The tabs design intentionally leaves swipe-within-content-area out of
-[../in_progress/material3_tabs_design.md](../in_progress/material3_tabs_design.md). That is the right split,
+[material3_tabs_design.md](material3_tabs_design.md). That is the right split,
 but it leaves a real framework gap.
 
 `roo_windows` currently has:
@@ -83,7 +83,7 @@ What exists today:
 - [src/roo_windows/core/widget_ref.h](../../../src/roo_windows/core/widget_ref.h)
   already supports borrowed and owned child storage through move-only
   `WidgetRef`.
-- [../in_progress/material3_tabs_design.md](../in_progress/material3_tabs_design.md) now explicitly leaves
+- [material3_tabs_design.md](material3_tabs_design.md) now explicitly leaves
   content-area swipe out of `Tabs` and points toward a separate page host.
 
 The final integration phase is also landed:
@@ -98,7 +98,7 @@ The final integration phase is also landed:
 The most relevant local references are:
 
 - [roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
-- [../in_progress/material3_tabs_design.md](../in_progress/material3_tabs_design.md)
+- [material3_tabs_design.md](material3_tabs_design.md)
 - [../implemented/paint_context_design.md](../implemented/paint_context_design.md)
 - [../in_progress/visual_overflow_design.md](../in_progress/visual_overflow_design.md)
 - [src/roo_windows/containers/scrollable_panel.h](../../../src/roo_windows/containers/scrollable_panel.h)

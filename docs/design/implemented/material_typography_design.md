@@ -11,7 +11,7 @@ elimination.
 **Implementation status: implemented.** `TextStyle`, both Material catalogs,
 style-aware labels and paragraphs, and the adopted Material 3 component roles
 are implemented. The build-covered
-[`typography catalog`](../../../examples/material3/typography/typography.ino)
+[`typography status-screen example`](../../../examples/material3/typography/pool_status/pool_status.ino)
 uses every adopted role and compiles at zoom 75, 100, 150, and 200.
 
 ## Motivation

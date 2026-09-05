@@ -57,7 +57,7 @@ As of 2026-05, the relevant current pieces are:
   [src/roo_windows/material3/button/button.cpp](../../../src/roo_windows/material3/button/button.cpp),
   which already prove out token-backed Material 3 surface widgets,
 - the corresponding example in
-  [examples/material3/buttons/buttons.ino](../../../examples/material3/buttons/buttons.ino)
+  [examples/material3/buttons/pool_actions/pool_actions.ino](../../../examples/material3/buttons/pool_actions/pool_actions.ino)
   and tests in
   [test/material3_button_test.cpp](../../../test/material3_button_test.cpp),
 - the current surface, overlay, and click-animation pipeline in

@@ -59,7 +59,7 @@ What exists today:
   implement a Material 3 standard `Button` with token-backed size presets,
   icon-plus-label measurement, theme-resolved colors, and reuse of the
   existing `BasicSurfaceWidget` surface pipeline.
-- [examples/material3/buttons/buttons.ino](../../../examples/material3/buttons/buttons.ino)
+- [examples/material3/buttons/pool_actions/pool_actions.ino](../../../examples/material3/buttons/pool_actions/pool_actions.ino)
   already exercises the current Material 3 button surface.
 - [test/material3_button_test.cpp](../../../test/material3_button_test.cpp) already
   provides a host-side unit-test pattern for a Material 3 action widget.

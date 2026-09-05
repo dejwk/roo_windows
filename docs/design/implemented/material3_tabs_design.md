@@ -65,13 +65,13 @@ What exists today:
   row.
 - [src/roo_windows/containers/horizontal_page_host.h](../../../src/roo_windows/containers/horizontal_page_host.h)
   and
-  [../in_progress/horizontal_page_host_design.md](../in_progress/horizontal_page_host_design.md)
+  [horizontal_page_host_design.md](horizontal_page_host_design.md)
   provide a separate content-area swipe host for tab-row integration.
 - [src/roo_windows/material3/tabs/tabs.h](../../../src/roo_windows/material3/tabs/tabs.h)
   and
   [tabs.cpp](../../../src/roo_windows/material3/tabs/tabs.cpp)
   provide fixed, scrollable, and badged Material 3 tabs.
-- [examples/material3/tabs/tabs.ino](../../../examples/material3/tabs/tabs.ino)
+- [examples/material3/tabs/status_pages/status_pages.ino](../../../examples/material3/tabs/status_pages/status_pages.ino)
   demonstrates two-way tabs-plus-`HorizontalPageHost` synchronization.
 - [widget_authoring.md](../../widget_authoring.md) and the repo-local
   [roo-windows-widget-authoring instruction](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
@@ -769,7 +769,7 @@ host placed below `Tabs`, not inside the row itself.
 
 That companion container now exists as `HorizontalPageHost`; the relevant
 design and constraints live in
-[../in_progress/horizontal_page_host_design.md](../in_progress/horizontal_page_host_design.md).
+[horizontal_page_host_design.md](horizontal_page_host_design.md).
 
 That host should own:
 
@@ -952,7 +952,7 @@ Recommended order:
 1. implement tabs phases 1-4 first,
 2. then wire tabs to `HorizontalPageHost` in tabs phase 5,
 3. and keep any additional host-only polishing in
-  [../in_progress/horizontal_page_host_design.md](../in_progress/horizontal_page_host_design.md) independent
+  [horizontal_page_host_design.md](horizontal_page_host_design.md) independent
   from tabs core delivery.
 
 ### Phase 1: Core Fixed Tabs
@@ -1059,7 +1059,7 @@ Validation:
 
 Status: implemented in
 [test/material3_tabs_test.cpp](../../../test/material3_tabs_test.cpp) and
-[examples/material3/tabs/tabs.ino](../../../examples/material3/tabs/tabs.ino).
+[examples/material3/tabs/status_pages/status_pages.ino](../../../examples/material3/tabs/status_pages/status_pages.ino).
 
 ## Testing Plan
 

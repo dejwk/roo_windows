@@ -368,7 +368,7 @@ The regression scope is split by abstraction:
   because the implementation preserves their animation-frame and composition
   boundaries across retries.
 - The
-  [`navigation_rail.ino`](../../../examples/material3/navigation_rail/navigation_rail.ino)
+  [`app_navigation.ino`](../../../examples/material3/navigation_rail/app_navigation/app_navigation.ino)
   short-deadline reproduction checks the original disappearing-destination
   behavior on the target display path.
 

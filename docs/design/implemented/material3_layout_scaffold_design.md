@@ -122,9 +122,9 @@ The most relevant local references are:
 
 - [material3_navigation_bar_design.md](../implemented/material3_navigation_bar_design.md)
 - [material3_navigation_rail_design.md](../implemented/material3_navigation_rail_design.md)
-- [material3_navigation_drawer_design.md](material3_navigation_drawer_design.md)
-- [material3_toolbars_design.md](material3_toolbars_design.md)
-- [material3_extended_fab_design.md](material3_extended_fab_design.md)
+- [material3_navigation_drawer_design.md](../proposed/material3_navigation_drawer_design.md)
+- [material3_toolbars_design.md](../proposed/material3_toolbars_design.md)
+- [material3_extended_fab_design.md](../proposed/material3_extended_fab_design.md)
 - [widget_authoring.md](../../widget_authoring.md)
 
 Those references imply six important local constraints:
