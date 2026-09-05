@@ -11,6 +11,13 @@ namespace roo_windows {
 class Application;
 class ApplicationInputRouter;
 class DisplayWindow;
+class Task;
+namespace internal {
+class TransientSurfaceHost;
+struct TransientSourceGeometry;
+bool CaptureTransientSourceGeometry(Task& owner, const Widget& source,
+                                    TransientSourceGeometry& output);
+}  // namespace internal
 
 /// Owns task-local focus, editing, input routing, and fixed direct content.
 class Task {
@@ -58,6 +65,10 @@ class Task {
   friend class Widget;
   friend class Container;
   friend class NavigationHost;
+  friend class internal::TransientSurfaceHost;
+  friend bool internal::CaptureTransientSourceGeometry(
+      Task& owner, const Widget& source,
+      internal::TransientSourceGeometry& output);
 
   Task(Application& app, DisplayWindow& window, const roo_display::Box& bounds,
        bool popup, Widget& content);
@@ -77,7 +88,8 @@ class Task {
   TaskPanel panel_;
   FocusManager focus_;
   TextFieldEditor editor_;
-  bool popup_;
+  bool popup_ : 1;
+  bool presentation_available_ : 1;
   Widget* armed_key_widget_ = nullptr;
   PhysicalKey armed_key_ = PhysicalKey::kNone;
   BackCallback back_callback_;

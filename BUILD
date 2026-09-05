@@ -147,6 +147,19 @@ cc_test(
 )
 
 cc_test(
+    name = "transient_surface_host_test",
+    srcs = [
+        "test/roo_windows_render_test_support.h",
+        "test/transient_surface_host_test.cpp",
+    ],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
+cc_test(
     name = "transient_presentation_pin_test",
     srcs = [
         "test/roo_windows_render_test_support.h",

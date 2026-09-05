@@ -59,7 +59,7 @@ Status was audited against the source tree and tests on 2026-09-05. “Dependenc
 | Text system | `TextBlock` wrapping, justification, max-lines, ellipsis, caching, and golden coverage are implemented; shared rich paragraph layout and `RichTextBlock` remain. |
 | Transient presentation pins | The shared layer-scoped host and slider/range-slider adoption are implemented; keyboard-highlighter adoption and P1.6b display-covered presenter-pin integration remain. Visual overflow prerequisites are in progress. |
 | Transient presenter lifetime and ownership | The shared slot and legacy-dialog lifetime/Back adoption are implemented; legacy structural hosting remains unchanged, modal sheets have no implementation to adopt, and menu/snackbar migrations remain. |
-| Transient surface hosting | Phase 1 activates presenter-owned focus scopes with zero-growth admission, containment, remembered/preferred focus, restoration, and scoped task-key routing. The composite host, display-wide input isolation, presenter pins, and legacy-dialog migration remain. |
+| Transient surface hosting | Phases 1–2 implement presenter-owned focus scopes plus the owner-bound composite host, source capture, policy preflight, hosted replacement, paint composition, and shutdown-safe cleanup. Display-wide input isolation, prepared surfaces, presenter pins, and legacy-dialog migration remain. |
 | Visual overflow | Surface ownership, ink bounds, direct-paint exclusion, persistent/transient bound separation, and root-stage transient pins are implemented; the broader design remains in progress. |
 
 ## Proposed

@@ -10,6 +10,7 @@
 #include "roo_windows/core/task_panel.h"
 #include "roo_windows/core/touch_sensor.h"
 #include "roo_windows/core/transient_presentation.h"
+#include "roo_windows/core/transient_surface_host.h"
 #include "roo_windows/core/widget_ref.h"
 #include "roo_windows/widgets/text_field.h"
 
@@ -33,3 +34,7 @@ ROO_WINDOWS_SIZE_PROBE(roo_windows::WidgetRef, widget_ref);
 ROO_WINDOWS_SIZE_PROBE(roo_windows::KeyEvent, key_event);
 ROO_WINDOWS_SIZE_PROBE(roo_windows::TransientPresentationSlot,
                        transient_presentation_slot);
+ROO_WINDOWS_SIZE_PROBE(roo_windows::internal::TransientHostLayer,
+                       transient_host_layer);
+ROO_WINDOWS_SIZE_PROBE(roo_windows::internal::TransientSurfaceHost,
+                       transient_surface_host);

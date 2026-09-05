@@ -3,6 +3,7 @@
 #include "roo_logging.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/display_window.h"
+#include "roo_windows/core/transient_surface_host.h"
 
 namespace roo_windows {
 namespace {
@@ -22,7 +23,8 @@ Task::Task(Application& app, DisplayWindow& window,
       panel_(app.context(), *this),
       focus_(&panel_),
       editor_(app, app.env().scheduler()),
-      popup_(popup) {
+      popup_(popup),
+      presentation_available_(false) {
   CHECK(content.parent() == nullptr);
   panel_.setContent(content, roo_display::Box(0, 0, -1, -1));
   if (popup) {
@@ -30,6 +32,7 @@ Task::Task(Application& app, DisplayWindow& window,
   } else {
     window_.root().addTask(panel_, bounds);
   }
+  presentation_available_ = true;
 }
 
 Task::Task(Application& app, DisplayWindow& window,
@@ -41,6 +44,7 @@ Task::Task(Application& app, DisplayWindow& window,
       focus_(&panel_),
       editor_(app, app.env().scheduler()),
       popup_(popup),
+      presentation_available_(false),
       navigation_(&navigation) {
   navigation.install(*this);
   if (popup) {
@@ -48,9 +52,14 @@ Task::Task(Application& app, DisplayWindow& window,
   } else {
     window_.root().addTask(panel_, bounds);
   }
+  presentation_available_ = true;
 }
 
 Task::~Task() {
+  // Reentrant completion must observe an unavailable owner before any task
+  // service or structural state starts to disappear.
+  presentation_available_ = false;
+  internal::GetTransientSurfaceHost(*this).interactionOwnerUnavailable(*this);
   back_callback_ = {};
   editor_.cancel();
   focus_.onSubtreeDetaching(panel_);

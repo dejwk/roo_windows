@@ -36,6 +36,13 @@ class GestureDetector;
 class FocusManager;
 class Task;
 class Application;
+class Widget;
+namespace internal {
+class TransientSurfaceHost;
+struct TransientSourceGeometry;
+bool CaptureTransientSourceGeometry(Task& owner, const Widget& source,
+                                    TransientSourceGeometry& output);
+}  // namespace internal
 
 typedef roo_display::RleImage4bppxBiased<roo_display::Alpha4,
                                          roo_display::ProgMemPtr>
@@ -783,11 +790,17 @@ class Widget {
   friend class MainWindow;
   friend class OverlaySpec;
   friend class ClickAnimation;
+  friend class internal::TransientSurfaceHost;
+  friend bool internal::CaptureTransientSourceGeometry(
+      Task& owner, const Widget& source,
+      internal::TransientSourceGeometry& output);
 
   ApplicationContext* tryContext() { return context_lifetime_->context; }
   const ApplicationContext* tryContext() const {
     return context_lifetime_->context;
   }
+
+  virtual bool isTransientHostLayer() const { return false; }
 
   void clearClicking();
 

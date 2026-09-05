@@ -48,6 +48,9 @@ void DisplayWindow::start() {
 
 void DisplayWindow::stop() {
   if (touch_enabled_) touch_sensor_.stop();
+  // Close admission before callbacks or task teardown can attempt to reopen a
+  // presentation into a window whose input and paint services are stopping.
+  root_.beginShutdown();
   gesture_detector_.cancel();
   root_.click_animation().cancelForWindowTeardown();
   root_.cancelPaintContinuation();

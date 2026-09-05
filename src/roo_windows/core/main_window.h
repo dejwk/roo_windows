@@ -9,6 +9,7 @@
 #include "roo_windows/core/gesture_detector.h"
 #include "roo_windows/core/presentation_pin.h"
 #include "roo_windows/core/transient_presentation.h"
+#include "roo_windows/core/transient_surface_host.h"
 #include "roo_windows/dialogs/dialog.h"
 #include "roo_windows/widgets/scrim.h"
 
@@ -87,7 +88,8 @@ class MainWindow : public Container {
  protected:
   int getChildrenCount() const override {
     return static_cast<int>(tasks_.size()) + static_cast<int>(popups_.size()) +
-           (active_dialog_ != nullptr ? 2 : 0);
+           (active_dialog_ != nullptr ? 2 : 0) +
+           (host_layer_.parent() != nullptr ? 1 : 0);
   }
 
   const Widget& getChild(int idx) const override {
@@ -96,8 +98,13 @@ class MainWindow : public Container {
     idx -= task_count;
     int popup_count = static_cast<int>(popups_.size());
     if (idx < popup_count) return *popups_[idx];
-    return idx == popup_count ? static_cast<const Widget&>(scrim_)
-                              : static_cast<const Widget&>(*active_dialog_);
+    idx -= popup_count;
+    if (active_dialog_ != nullptr) {
+      if (idx == 0) return scrim_;
+      if (idx == 1) return *active_dialog_;
+      idx -= 2;
+    }
+    return host_layer_;
   }
 
   Widget& getChild(int idx) override {
@@ -106,8 +113,13 @@ class MainWindow : public Container {
     idx -= task_count;
     int popup_count = static_cast<int>(popups_.size());
     if (idx < popup_count) return *popups_[idx];
-    return idx == popup_count ? static_cast<Widget&>(scrim_)
-                              : static_cast<Widget&>(*active_dialog_);
+    idx -= popup_count;
+    if (active_dialog_ != nullptr) {
+      if (idx == 0) return scrim_;
+      if (idx == 1) return *active_dialog_;
+      idx -= 2;
+    }
+    return host_layer_;
   }
 
   void propagateDirty(const Widget* child, const Rect& rect) override;
@@ -120,8 +132,21 @@ class MainWindow : public Container {
 
  private:
   friend class Dialog;
+  friend class DisplayWindow;
   friend class Container;
   friend class Widget;
+  friend class internal::TransientSurfaceHost;
+  friend internal::TransientSurfaceHost& internal::GetTransientSurfaceHost(
+      Task& interaction_owner);
+  friend bool internal::CaptureTransientSourceGeometry(
+      Task& owner, const Widget& source,
+      internal::TransientSourceGeometry& output);
+
+  /// Permanently closes transient admission and finishes any active surface.
+  void beginShutdown();
+
+  void attachTransientHostLayer();
+  void detachTransientHostLayer();
 
   PresentationPinShowResult showPresentationPin(
       Widget& anchor, std::unique_ptr<PresentationPin> pin);
@@ -183,11 +208,14 @@ class MainWindow : public Container {
 
   Scrim scrim_;
 
+  internal::TransientHostLayer host_layer_;
+  internal::TransientSurfaceHost transient_surface_host_;
+
+  std::unique_ptr<PresentationPin> active_pins_;
+
   // Kept last so it clears presenter reachability before other window
   // resources are destroyed.
   TransientPresentationSlot transient_presentation_slot_;
-
-  std::unique_ptr<PresentationPin> active_pins_;
 };
 
 }  // namespace roo_windows

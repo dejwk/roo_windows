@@ -22,12 +22,13 @@ cross-task presenter requires them.
 
 ## Background
 
-**Status: In progress.** Phase 1 is implemented: presenter-owned focus scopes
-support admission preflight, entry, containment, remembered and preferred
-selection, task key routing, and validated base-focus restoration without
-growing `FocusManager`, `FocusScope`, or `Task`. The shared structural host,
-display-wide input isolation, and presenter-owned rect-pin path do not yet
-exist.
+**Status: In progress.** Phases 1 and 2 are implemented. Presenter-owned focus
+scopes provide zero-growth admission, containment, selection, routing, and
+restoration. The window-owned composite host now adds owner-bound structural
+attachment, transparent or scrim paint, root-first hit testing, complete
+profile preflight, callback-safe replacement, source-geometry capture, and
+shutdown-safe cleanup. Display-wide input isolation, prepared surfaces,
+presenter-owned rect pins, and component migration do not yet exist.
 
 ### Concrete Use Cases
 
@@ -1432,7 +1433,7 @@ bubbling and traversal plus empty-scope isolation. The size probe now emits
 named symbols for `FocusManager`, `FocusScope`, and `Task`; the phase reuses the
 existing two manager pointers and three scope pointers and adds no `Task` state.
 
-### Phase 2: Add the Composite Structural Host
+### Phase 2: Add the Composite Structural Host — Implemented
 
 Code slice:
 
@@ -1470,6 +1471,15 @@ Proposed commit message:
 Validation: `bazel test //:transient_surface_host_test
 //:transient_presentation_lifetime_test //:dialog_test
 //:display_window_test` plus target-ABI host and window sizes.
+
+Implemented coverage exercises transparent and scrim composition, root-first
+hit routing, focus activation and restoration, intersecting-bounds policy,
+both sides of hosted replacement, standalone-slot compatibility, reentrant
+replacement, repeated-preflight failure, source-chain validation, presenter
+destruction cleanup, and permanent shutdown closure. The target-ABI probe now
+emits named `TransientHostLayer` and `TransientSurfaceHost` symbols alongside
+`MainWindow`, `TransientPresentationSlot`, and `Task`; the availability flag
+shares the existing packed task flag byte.
 
 ### Phase 3: Add Display-Wide Input Isolation
 

@@ -6,6 +6,11 @@
 
 namespace roo_windows {
 
+class MainWindow;
+namespace internal {
+class TransientSurfaceHost;
+}
+
 /// Tracks the lifecycle of a transient presentation.
 enum class PresentationState : uint8_t {
   kIdle,
@@ -23,6 +28,7 @@ enum class PresentationFinishReason : uint8_t {
   kOwnerDestroyed,
   kHostDestroyed,
   kTimeout,
+  kInteractionOwnerDetached,
 };
 
 /// Reports whether a presentation registration occupied a host slot.
@@ -30,6 +36,8 @@ enum class PresentationStartResult : uint8_t {
   kStarted,
   kHostBusy,
   kReentrantReplacement,
+  kInteractionOwnerUnavailable,
+  kSurfaceUnavailable,
 };
 
 /// Selects which semantic Back requests a presentation receives.
@@ -91,6 +99,7 @@ class TransientPresentationRegistration {
 
  private:
   friend class TransientPresentationSlot;
+  friend class internal::TransientSurfaceHost;
 
   TransientPresentationSlot* slot_ = nullptr;
   PresentationState state_ = PresentationState::kIdle;
@@ -127,15 +136,24 @@ class TransientPresentationSlot {
   bool hasActivePresentation() const { return active_ != nullptr; }
 
  private:
+  friend class MainWindow;
   friend class TransientPresentationRegistration;
+  friend class internal::TransientSurfaceHost;
+
+  PresentationStartResult showHosted(
+      TransientPresentationRegistration& registration,
+      TransientPresentationPolicy policy, internal::TransientSurfaceHost& host);
+
+  void shutdown(PresentationFinishReason reason);
 
   void finish(TransientPresentationRegistration& registration,
               PresentationFinishReason reason);
   void cancel(TransientPresentationRegistration& registration);
 
   TransientPresentationRegistration* active_ = nullptr;
+  internal::TransientSurfaceHost* active_host_ = nullptr;
   bool clearing_ = false;
-  bool destroying_ = false;
+  bool admission_closed_ = false;
 };
 
 }  // namespace roo_windows

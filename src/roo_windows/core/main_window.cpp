@@ -15,7 +15,7 @@ using roo_display::Display;
 
 namespace {
 
-void maybeAddColor(roo_display::internal::ColorSet& palette, Color color) {
+void MaybeAddColor(roo_display::internal::ColorSet& palette, Color color) {
   if (palette.size() >= 15) return;
   palette.insert(color);
 }
@@ -32,36 +32,38 @@ MainWindow::MainWindow(Application& app, const roo_display::Box& bounds)
     : Container(app.context()),
       app_(app),
       redraw_bounds_(bounds),
-      scrim_(app.context()) {
+      scrim_(app.context()),
+      host_layer_(app.context()),
+      transient_surface_host_(*this) {
   parent_bounds_ = Rect(bounds);
   invalidateDescending();
   const ApplicationContext& context = app.context();
   roo_display::internal::ColorSet color_set;
   const FrameworkTheme& framework = context.theme().framework;
-  maybeAddColor(color_set,
+  MaybeAddColor(color_set,
                 framework.color.resolve(FrameworkColorRole::kCanvas));
-  maybeAddColor(color_set,
+  MaybeAddColor(color_set,
                 framework.color.resolve(FrameworkColorRole::kSurface));
-  maybeAddColor(color_set,
+  MaybeAddColor(color_set,
                 framework.color.resolve(FrameworkColorRole::kEmphasis));
-  maybeAddColor(color_set, context.keyboardColorTheme().background);
+  MaybeAddColor(color_set, context.keyboardColorTheme().background);
   {
     Color c = framework.interaction.resolve(FrameworkColorRole::kSurface,
                                             InteractionState::kPressed);
     c = AlphaBlend(framework.color.resolve(FrameworkColorRole::kSurface), c);
-    maybeAddColor(color_set, c);
+    MaybeAddColor(color_set, c);
   }
   {
     Color c = framework.color.resolve(FrameworkColorRole::kEmphasis);
     c.set_a(framework.interaction.disabledContentOpacity);
     c = AlphaBlend(framework.color.resolve(FrameworkColorRole::kSurface), c);
-    maybeAddColor(color_set, c);
+    MaybeAddColor(color_set, c);
   }
 
-  maybeAddColor(color_set, context.keyboardColorTheme().normalButton);
-  maybeAddColor(color_set,
+  MaybeAddColor(color_set, context.keyboardColorTheme().normalButton);
+  MaybeAddColor(color_set,
                 framework.color.resolve(FrameworkColorRole::kCritical));
-  maybeAddColor(color_set, context.keyboardColorTheme().modifierButton);
+  MaybeAddColor(color_set, context.keyboardColorTheme().modifierButton);
   Color palette[color_set.size()];
   std::copy(color_set.begin(), color_set.end(), palette);
   // background_fill_buffer_.setPalette(palette, color_set.size());
@@ -70,6 +72,7 @@ MainWindow::MainWindow(Application& app, const roo_display::Box& bounds)
 }
 
 MainWindow::~MainWindow() {
+  beginShutdown();
   cancelPaintContinuation();
   while (active_pins_ != nullptr) {
     active_pins_ = std::move(active_pins_->next_);
@@ -80,6 +83,20 @@ MainWindow::~MainWindow() {
   while (!tasks_.empty()) {
     removeLastFromLayer(tasks_);
   }
+}
+
+void MainWindow::beginShutdown() {
+  transient_presentation_slot_.shutdown(
+      PresentationFinishReason::kHostDestroyed);
+}
+
+void MainWindow::attachTransientHostLayer() {
+  CHECK(host_layer_.parent() == nullptr);
+  attachChild(WidgetRef(host_layer_), bounds());
+}
+
+void MainWindow::detachTransientHostLayer() {
+  if (host_layer_.parent() == this) detachChild(&host_layer_);
 }
 
 void MainWindow::cancelPaintContinuation() {
