@@ -49,9 +49,9 @@ The proposal builds on these existing contracts:
   clipping.
 
 The normative supporting designs are
-[Transient presenter lifetime](../in_progress/transient_presenter_lifetime_design.md),
+[Transient presenter lifetime and ownership](../in_progress/transient_presenter_lifetime_ownership_design.md),
 [Non-touch input](../implemented/non_touch_input_design.md#focus-scope-storage-and-resolution),
-[Application navigation and Back behavior](../implemented/application_navigation_back_behavior_design.md#future-work),
+[Back request coordination](../implemented/back_request_coordination_design.md#future-work),
 [Gesture arbitration and ownership](../implemented/gesture_arbitration_ownership_design.md),
 and
 [Transient presentation pins](../in_progress/transient_presentation_pins_design.md).
@@ -1312,7 +1312,7 @@ comes with the class-selective replacement loss above.
 
 ## Future Work
 
-1. [Display runtime task-bounded coverage](display_modal_hosting_design.md)
+1. [Display runtime Phase 7 task-bounded transient coverage](display_runtime_phase_7_task_bounded_transient_coverage_design.md)
    attaches the same composite host layer beneath the owner `TaskPanel` and
    preserves sibling-task input. It requires a visible, non-empty owner panel;
    hiding that panel finishes its task-covered session instead of suspending

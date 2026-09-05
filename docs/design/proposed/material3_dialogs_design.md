@@ -62,7 +62,7 @@ The relevant existing seams are:
   dialog actions,
 - [material3_icon_buttons_design.md](../implemented/material3_icon_buttons_design.md),
   whose implementation can supply the full-screen close affordance,
-- and [transient_surface_host_design.md](transient_surface_host_design.md),
+- and [transient_surface_hosting_design.md](transient_surface_hosting_design.md),
   which defines one display-wide transient host layer with an explicit
   interaction owner.
 
@@ -197,7 +197,7 @@ Those references close six local decisions:
 
 Basic and full-screen Material 3 dialog presenters must use the root
 interactive-transient slot defined by the
-[Back request coordination design](../implemented/application_navigation_back_behavior_design.md).
+[Back request coordination design](../implemented/back_request_coordination_design.md).
 Both make Back and Escape eligible for delivery and do not introduce a
 dialog-local Back dispatcher. A basic dialog finishes automatically. A
 full-screen dialog consumes the request but remains active when its dismissal
@@ -395,7 +395,7 @@ That choice is deliberate:
 ### Host Integration
 
 Both variants use the
-[shared transient host](transient_surface_host_design.md) with display coverage,
+[shared transient host](transient_surface_hosting_design.md) with display coverage,
 outside absorption, `kRejectIfBusy`, and a presenter-owned `FocusScope`.
 Barrier paint is independent: `BasicDialog` requests the scrim, while
 `FullScreenDialog` requests a transparent input barrier because its opaque root

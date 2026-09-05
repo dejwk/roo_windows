@@ -41,10 +41,10 @@ constraint remains: one Back request performs one ordered semantic fallback
 instead of letting each input source manipulate navigation independently.
 
 The baseline contract in this document is implemented. P1.6b of
-[Transient surface hosting](../proposed/transient_surface_host_design.md)
+[Transient surface hosting](../proposed/transient_surface_hosting_design.md)
 adds a narrow hosted-presentation exception: eligible Back and Escape reach
 the active hosted root before the ordinary focused-widget path. The
-[Phase 7 task-bounded transient design](../proposed/display_modal_hosting_design.md)
+[Phase 7 task-bounded transient design](../proposed/display_runtime_phase_7_task_bounded_transient_coverage_design.md)
 then makes that early offer source-task-aware. Neither delta is implemented.
 
 ## Requirements
@@ -353,7 +353,7 @@ registry would duplicate ordering and teardown state.
 ## Future Work
 
 P1.6b of
-[Transient surface hosting](../proposed/transient_surface_host_design.md)
+[Transient surface hosting](../proposed/transient_surface_hosting_design.md)
 adds one early physical-key check while a hosted association is active. An
 eligible Back or Escape is offered to the hosted root before the focused
 widget, its ancestors, editor fallback, navigation, or task callback. If the
@@ -363,7 +363,7 @@ and the task callback; it does not offer the same physical event to the root a
 second time. With no eligible hosted association, the current widget-first
 route is unchanged. Direct `Task::requestBack()` remains slot-first.
 
-[Display-runtime Phase 7](../proposed/display_modal_hosting_design.md) then
+[Display-runtime Phase 7](../proposed/display_runtime_phase_7_task_bounded_transient_coverage_design.md) then
 replaces the internal source-less slot operation with
 `TransientPresentationSlot::requestBack(Task& source_task, BackSource source)`.
 `Task::requestBack()` will pass `*this`. A display-covered presentation will be

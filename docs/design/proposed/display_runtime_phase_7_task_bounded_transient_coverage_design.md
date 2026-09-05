@@ -35,7 +35,7 @@ does not select barrier paint, outside behavior, or admission behavior.
 [display runtime and cross-application input design](../in_progress/display_surface_generalization_design.md).
 It follows, and is not independently implementable before, the display-wide
 host and explicit interaction-owner contract in
-[Transient surface hosting](transient_surface_host_design.md).
+[Transient surface hosting](transient_surface_hosting_design.md).
 
 The base design owns admission, replacement, barrier and outside behavior,
 focus, display-wide input isolation, and teardown. In particular:

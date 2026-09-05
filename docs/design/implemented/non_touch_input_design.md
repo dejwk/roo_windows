@@ -48,7 +48,7 @@ task-local focus and traversal, simple-control activation, scroll/value-control
 navigation, structured navigation surfaces, and hardware-keyboard text entry
 are implemented. `FocusScope` is declared, but presenter-scope entry,
 containment, exit, and restoration remain the P1.6b work specified by
-[Transient surface hosting](../proposed/transient_surface_host_design.md).
+[Transient surface hosting](../proposed/transient_surface_hosting_design.md).
 Automatic popup source capture remains Future Work. The
 [status index](../README.md) records the wider dependency state.
 
@@ -343,7 +343,7 @@ Back and Escape ordering: while an eligible hosted root is active, the root
 transient receives those keys before task-local widgets, navigation, or editor
 fallback. It also absorbs ordinary keys from non-owner tasks and constrains
 owner keys to the active presenter scope. Phase 3 of
-[Transient surface hosting](../proposed/transient_surface_host_design.md)
+[Transient surface hosting](../proposed/transient_surface_hosting_design.md)
 implements and tests that delta; it does not retroactively describe the
 current ordinary-task dispatcher.
 
@@ -778,7 +778,7 @@ This document does not duplicate those declarations because their physical-key
 and source-lifetime details have evolved since the initial proposal. P1.6b's
 zero-storage `FocusManager` accessors, one-level `FocusScope` operations, and
 `Widget::preferredFocusChild()` are specified in the
-[Transient surface hosting Proposed API](../proposed/transient_surface_host_design.md#proposed-api).
+[Transient surface hosting Proposed API](../proposed/transient_surface_hosting_design.md#proposed-api).
 No pointer API lands before working pointer routing exists.
 
 ### Migration and Compatibility
