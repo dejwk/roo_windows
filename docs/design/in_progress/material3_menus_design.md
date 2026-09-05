@@ -25,8 +25,9 @@ results remain component-specific.
 
 ## Background
 
-**Status: In progress; Phases 1–2 implemented.** Menu tokens, items, rows,
-adornments, groups, panels, scrolling, and deterministic root/submenu placement
+**Status: In progress; Phases 1–3 implemented.** Menu tokens, items, rows,
+adornments, groups, panels, scrolling, deterministic placement, synchronous
+source capture, host presentation, focus, trigger retention, and root teardown
 are implemented. The shared composite host,
 synchronous source-capture contract, and presenter-pin integration are
 specified separately by

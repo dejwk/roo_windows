@@ -19,6 +19,7 @@ class MenuGroupStack final : public Container {
   void clearGroups();
   int groupCount() const;
   void setSeparatorMode(MenuSeparatorMode mode, ListVariant variant);
+  Widget* preferredFocusChild() override;
 
  protected:
   void paint(PaintContext& ctx) const override;
@@ -51,6 +52,8 @@ class MenuPanel final : public Container {
 
   Color background() const override;
   BorderStyle getBorderStyle() const override;
+  bool isFocusable() const override { return false; }
+  Widget* preferredFocusChild() override;
 
  protected:
   int getChildrenCount() const override;
@@ -81,6 +84,8 @@ class MenuOverlay final : public Container {
 
   Color background() const override;
   bool fullyCoversBoundsWithOpaqueColors() const override;
+  bool isFocusable() const override { return false; }
+  Widget* preferredFocusChild() override;
 
  protected:
   void paint(PaintContext& ctx) const override;

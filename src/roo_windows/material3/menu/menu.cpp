@@ -6,8 +6,13 @@
 
 #include "roo_display/ui/text_label.h"
 #include "roo_logging.h"
+#include "roo_windows/core/display_window.h"
+#include "roo_windows/core/main_window.h"
 #include "roo_windows/core/paint_context.h"
+#include "roo_windows/core/task.h"
 #include "roo_windows/core/theme.h"
+#include "roo_windows/core/transient_surface_host.h"
+#include "roo_windows/material3/menu/menu_geometry.h"
 #include "roo_windows/material3/menu/menu_surface.h"
 #include "roo_windows/material3/menu/menu_tokens.h"
 #include "roo_windows/material3/typography.h"
@@ -30,6 +35,59 @@ int16_t ShortcutWidth(roo::string_view shortcut) {
                                   text_style_label_large().fontOptions())
       .advance();
 }
+
+MenuShowResult MapStartResult(PresentationStartResult result) {
+  switch (result) {
+    case PresentationStartResult::kStarted:
+      return MenuShowResult::kShown;
+    case PresentationStartResult::kHostBusy:
+      return MenuShowResult::kHostBusy;
+    case PresentationStartResult::kReentrantReplacement:
+      return MenuShowResult::kReentrantReplacement;
+    case PresentationStartResult::kInteractionOwnerUnavailable:
+      return MenuShowResult::kInteractionOwnerUnavailable;
+    case PresentationStartResult::kSurfaceUnavailable:
+      return MenuShowResult::kSurfaceUnavailable;
+  }
+  return MenuShowResult::kSurfaceUnavailable;
+}
+
+class FrozenMenuTriggerPin final : public PresentationPin {
+ public:
+  FrozenMenuTriggerPin(
+      const ::roo_windows::internal::TransientSourceGeometry& geometry,
+      uint16_t corner_radius, uint32_t overlay_argb, uint8_t overlay_opacity)
+      : bounds_(geometry.bounds_in_window),
+        clip_(geometry.visible_bounds_in_window),
+        corner_radius_(corner_radius),
+        color_(roo_display::Color(overlay_argb).withA(overlay_opacity)) {}
+
+ protected:
+  Rect boundsInWindow() const override { return bounds_; }
+  Rect clipBoundsInWindow() const override { return clip_; }
+
+  void paint(PaintContext& ctx) const override {
+    Rect settled =
+        Rect::Intersect(Rect::Intersect(bounds_, clip_), ctx.localClip());
+    if (settled.empty()) return;
+    PaintDecoration decoration;
+    decoration.bounds = settled;
+    decoration.background = color_;
+    decoration.corner_radii = {static_cast<uint8_t>(corner_radius_),
+                               static_cast<uint8_t>(corner_radius_),
+                               static_cast<uint8_t>(corner_radius_),
+                               static_cast<uint8_t>(corner_radius_)};
+    ctx.fillRect(settled, color_);
+    ctx.addDecoration(decoration);
+    ctx.addExclusion(settled);
+  }
+
+ private:
+  Rect bounds_;
+  Rect clip_;
+  uint16_t corner_radius_;
+  roo_display::Color color_;
+};
 
 }  // namespace
 
@@ -344,10 +402,124 @@ class Menu::Impl {
  public:
   static constexpr uint8_t kMaxLevels = 4;
 
-  explicit Impl(ApplicationContext& context)
-      : root_panel(context), overlay(context) {
+  class Registration final : public TransientPresentationRegistration {
+   public:
+    explicit Registration(Menu& owner) : owner_(owner) {}
+
+    void CancelPresentation() { cancel(); }
+    void DisablePresentationInput() { disableHostedInput(); }
+
+   protected:
+    void detachPresentation(PresentationFinishReason reason) override {
+      (void)reason;
+    }
+
+    void onFinished(PresentationFinishReason reason) override {
+      Impl& impl = *owner_.impl_;
+      impl.interaction_owner = nullptr;
+      impl.focus_scope.clearRememberedFocus();
+      owner_.onFinished(reason);
+    }
+
+    BackResult onBackRequested(BackSource source) override {
+      (void)source;
+      finish(PresentationFinishReason::kBack);
+      return BackResult::kHandled;
+    }
+
+    void onOutsideInteraction() override {
+      finish(PresentationFinishReason::kOutsideInteraction);
+    }
+
+   private:
+    Menu& owner_;
+  };
+
+  class Preparation final
+      : public ::roo_windows::internal::TransientSurfacePreparation {
+   public:
+    Preparation(Impl& impl, ::roo_windows::Task& owner, const Rect& anchor,
+                MenuPlacement placement)
+        : impl_(impl), owner_(owner), anchor_(anchor), placement_(placement) {}
+
+   private:
+    bool createAndResolveBounds(Rect& root_bounds_in_window) override {
+      MainWindow& window = owner_.window().root();
+      if (window.bounds().empty() || impl_.root_panel.groupCount() == 0) {
+        return false;
+      }
+      const internal::MenuTokens& tokens = impl_.RootTokens();
+      int16_t margin = Scaled(tokens.viewport_margin_dp);
+      if (window.width() <= 2 * margin || window.height() <= 2 * margin) {
+        return false;
+      }
+      Rect viewport(margin, margin, window.width() - margin - 1,
+                    window.height() - margin - 1);
+      Dimensions desired =
+          impl_.root_panel.measure(WidthSpec::AtMost(viewport.width()),
+                                   HeightSpec::AtMost(viewport.height()));
+      internal::MenuPlacementResult placement =
+          internal::ResolveRootMenuPlacement(viewport, anchor_, desired,
+                                             placement_,
+                                             impl_.policy.layout_direction);
+      if (placement.bounds.empty()) return false;
+      impl_.root_panel.measure(WidthSpec::Exactly(placement.bounds.width()),
+                               HeightSpec::Exactly(placement.bounds.height()));
+      impl_.root_panel.layout(placement.bounds);
+      impl_.overlay.measure(WidthSpec::Exactly(window.width()),
+                            HeightSpec::Exactly(window.height()));
+      impl_.overlay.layout(Rect(0, 0, window.width() - 1, window.height() - 1));
+      impl_.anchor = anchor_;
+      impl_.placement = placement_;
+      root_bounds_in_window = window.bounds();
+      return true;
+    }
+
+    void deleteAfterFailedAdmission() override {}
+
+    Impl& impl_;
+    ::roo_windows::Task& owner_;
+    Rect anchor_;
+    MenuPlacement placement_;
+  };
+
+  explicit Impl(Menu& owner, ApplicationContext& context)
+      : root_panel(context), overlay(context), registration(owner) {
     root_panel.setPolicy(policy);
     overlay.addPanel(root_panel, Rect());
+  }
+
+  const internal::MenuTokens& RootTokens() const {
+    if (policy.variant == ListVariant::kBaseline) {
+      return internal::kBaselineMenuTokens;
+    }
+    return policy.color_style == MenuColorStyle::kVibrant
+               ? internal::kExpressiveVibrantMenuTokens
+               : internal::kExpressiveStandardMenuTokens;
+  }
+
+  bool RelayoutRoot(const Rect& new_anchor, MenuPlacement new_placement) {
+    if (interaction_owner == nullptr) return false;
+    MainWindow& window = interaction_owner->window().root();
+    const internal::MenuTokens& tokens = RootTokens();
+    int16_t margin = Scaled(tokens.viewport_margin_dp);
+    if (window.width() <= 2 * margin || window.height() <= 2 * margin) {
+      return false;
+    }
+    Rect viewport(margin, margin, window.width() - margin - 1,
+                  window.height() - margin - 1);
+    Dimensions desired =
+        root_panel.measure(WidthSpec::AtMost(viewport.width()),
+                           HeightSpec::AtMost(viewport.height()));
+    internal::MenuPlacementResult resolved = internal::ResolveRootMenuPlacement(
+        viewport, new_anchor, desired, new_placement, policy.layout_direction);
+    if (resolved.bounds.empty()) return false;
+    root_panel.measure(WidthSpec::Exactly(resolved.bounds.width()),
+                       HeightSpec::Exactly(resolved.bounds.height()));
+    overlay.setPanelBounds(root_panel, resolved.bounds);
+    anchor = new_anchor;
+    placement = new_placement;
+    return true;
   }
 
   void AddLevelGroup(uint8_t level, uint16_t generation, MenuGroup& group) {
@@ -377,6 +549,14 @@ class Menu::Impl {
   uint16_t level_generation[kMaxLevels] = {1, 1, 1, 1};
   uint8_t population_level = 0;
   bool population_active = false;
+  FocusScope focus_scope;
+  ::roo_windows::Task* interaction_owner = nullptr;
+  Rect anchor;
+  MenuPlacement placement = MenuPlacement::kBelowStart;
+
+  // Must remain last so presenter destruction vacates the shared host before
+  // any borrowed root structure or focus record can die.
+  Registration registration;
 };
 
 MenuLevelBuilder::MenuLevelBuilder(Menu& owner, uint8_t level,
@@ -392,28 +572,35 @@ void MenuLevelBuilder::addGroup(std::unique_ptr<MenuGroup> group) {
 }
 
 Menu::Menu(ApplicationContext& context)
-    : impl_(new Impl(context)), admission_in_progress_(false) {}
+    : impl_(new Impl(*this, context)), admission_in_progress_(false) {}
 
 Menu::~Menu() { prepareForDerivedDestruction(); }
 
 void Menu::setPolicy(const MenuPolicy& policy) {
   CHECK(!admission_in_progress_);
+  CHECK(!impl_->registration.isActive());
   impl_->policy = policy;
   impl_->root_panel.setPolicy(policy);
 }
 
 void Menu::addGroup(MenuGroup& group) {
   CHECK(!admission_in_progress_);
+  CHECK(!impl_->registration.isActive());
+  impl_->focus_scope.clearRememberedFocus();
   impl_->root_panel.addGroup(group);
 }
 
 void Menu::addGroup(std::unique_ptr<MenuGroup> group) {
   CHECK(!admission_in_progress_);
+  CHECK(!impl_->registration.isActive());
+  impl_->focus_scope.clearRememberedFocus();
   impl_->root_panel.addGroup(std::move(group));
 }
 
 void Menu::clearGroups() {
   CHECK(!admission_in_progress_);
+  CHECK(!impl_->registration.isActive());
+  impl_->focus_scope.clearRememberedFocus();
   impl_->root_panel.clearGroups();
 }
 
@@ -421,47 +608,124 @@ MenuShowResult Menu::show(::roo_windows::Task& interaction_owner,
                           const Widget& placement_source,
                           MenuPlacement placement,
                           const MenuTriggerPaintSource* trigger) {
-  (void)interaction_owner;
-  (void)placement_source;
-  (void)placement;
-  (void)trigger;
-  LOG(WARNING) << "Unimplemented: Material 3 menu presentation";
-  return MenuShowResult::kUnimplemented;
+  if (impl_->registration.isActive()) return MenuShowResult::kAlreadyPresented;
+  if (admission_in_progress_) return MenuShowResult::kReentrantReplacement;
+  admission_in_progress_ = true;
+  ::roo_windows::internal::TransientSourceGeometry placement_geometry;
+  if (!::roo_windows::internal::CaptureTransientSourceGeometry(
+          interaction_owner, placement_source, placement_geometry)) {
+    admission_in_progress_ = false;
+    return MenuShowResult::kAnchorUnavailable;
+  }
+  MenuShowResult result =
+      showCaptured(interaction_owner, placement_geometry.bounds_in_window,
+                   placement, trigger);
+  admission_in_progress_ = false;
+  return result;
 }
 
 MenuShowResult Menu::showFromRect(::roo_windows::Task& interaction_owner,
                                   const Rect& bounds_in_window,
                                   MenuPlacement placement,
                                   const MenuTriggerPaintSource* trigger) {
-  (void)interaction_owner;
-  (void)bounds_in_window;
-  (void)placement;
-  (void)trigger;
-  LOG(WARNING) << "Unimplemented: Material 3 menu presentation";
-  return MenuShowResult::kUnimplemented;
+  if (impl_->registration.isActive()) return MenuShowResult::kAlreadyPresented;
+  if (admission_in_progress_) return MenuShowResult::kReentrantReplacement;
+  admission_in_progress_ = true;
+  MenuShowResult result =
+      showCaptured(interaction_owner, bounds_in_window, placement, trigger);
+  admission_in_progress_ = false;
+  return result;
+}
+
+MenuShowResult Menu::showCaptured(::roo_windows::Task& interaction_owner,
+                                  const Rect& bounds_in_window,
+                                  MenuPlacement placement,
+                                  const MenuTriggerPaintSource* trigger) {
+  if (bounds_in_window.empty()) return MenuShowResult::kAnchorUnavailable;
+
+  ::roo_windows::internal::TransientSourceGeometry trigger_geometry;
+  bool has_trigger = trigger != nullptr &&
+                     ::roo_windows::internal::CaptureTransientSourceGeometry(
+                         interaction_owner, trigger->widget, trigger_geometry);
+  const TransientSurfaceSpec spec{TransientBarrierPaint::kTransparent,
+                                  TransientAdmissionPolicy::kReplaceReplaceable,
+                                  OutsideInteractionPolicy::kPresenterHandled,
+                                  TransientPresentationPolicy(true, true),
+                                  true};
+  Impl::Preparation preparation(*impl_, interaction_owner, bounds_in_window,
+                                placement);
+  PresentationStartResult started =
+      ::roo_windows::internal::GetTransientSurfaceHost(interaction_owner)
+          .showPrepared(impl_->registration, interaction_owner, impl_->overlay,
+                        impl_->focus_scope, spec, preparation);
+  if (started != PresentationStartResult::kStarted) {
+    return MapStartResult(started);
+  }
+  impl_->interaction_owner = &interaction_owner;
+  if (has_trigger) {
+    std::unique_ptr<PresentationPin> pin(
+        new (std::nothrow) FrozenMenuTriggerPin(
+            trigger_geometry, trigger->corner_radius, trigger->overlay_argb,
+            trigger->overlay_opacity));
+    ::roo_windows::internal::GetTransientSurfaceHost(interaction_owner)
+        .showPresentationPin(impl_->registration, std::move(pin));
+  }
+  return MenuShowResult::kShown;
 }
 
 bool Menu::reanchor(const Widget& placement_source, MenuPlacement placement,
                     const MenuTriggerPaintSource* trigger) {
-  (void)placement_source;
-  (void)placement;
-  (void)trigger;
-  return false;
+  if (!impl_->registration.isActive() || impl_->interaction_owner == nullptr) {
+    return false;
+  }
+  ::roo_windows::internal::TransientSourceGeometry geometry;
+  if (!::roo_windows::internal::CaptureTransientSourceGeometry(
+          *impl_->interaction_owner, placement_source, geometry)) {
+    return false;
+  }
+  return reanchorFromRect(geometry.bounds_in_window, placement, trigger);
 }
 
 bool Menu::reanchorFromRect(const Rect& bounds_in_window,
                             MenuPlacement placement,
                             const MenuTriggerPaintSource* trigger) {
-  (void)bounds_in_window;
-  (void)placement;
-  (void)trigger;
-  return false;
+  if (!impl_->registration.isActive() || impl_->interaction_owner == nullptr ||
+      bounds_in_window.empty()) {
+    return false;
+  }
+  ::roo_windows::internal::TransientSourceGeometry trigger_geometry;
+  bool has_trigger =
+      trigger != nullptr &&
+      ::roo_windows::internal::CaptureTransientSourceGeometry(
+          *impl_->interaction_owner, trigger->widget, trigger_geometry);
+  if (!impl_->RelayoutRoot(bounds_in_window, placement)) return false;
+  auto& host = ::roo_windows::internal::GetTransientSurfaceHost(
+      *impl_->interaction_owner);
+  host.hidePresentationPin(impl_->registration);
+  if (has_trigger) {
+    std::unique_ptr<PresentationPin> pin(
+        new (std::nothrow) FrozenMenuTriggerPin(
+            trigger_geometry, trigger->corner_radius, trigger->overlay_argb,
+            trigger->overlay_opacity));
+    host.showPresentationPin(impl_->registration, std::move(pin));
+  }
+  return true;
 }
 
-void Menu::dismissChain() {}
+void Menu::dismissChain() {
+  if (impl_->registration.isActive()) {
+    impl_->registration.finish(PresentationFinishReason::kCancel);
+  }
+}
 
 void Menu::prepareForDerivedDestruction() {
-  if (impl_) impl_->root_panel.clearGroups();
+  if (!impl_) return;
+  if (impl_->registration.isActive()) {
+    impl_->registration.DisablePresentationInput();
+    impl_->registration.CancelPresentation();
+  }
+  impl_->focus_scope.clearRememberedFocus();
+  impl_->root_panel.clearGroups();
 }
 
 }  // namespace roo_windows::material3

@@ -281,6 +281,9 @@ class MenuGroup final : public Container {
   /// Detaches all rows and deletes adopted rows.
   void clear();
 
+  /// Returns the first enabled row, or null when the group has none.
+  Widget* preferredFocusChild() override;
+
  protected:
   void paint(PaintContext& ctx) const override;
   Color background() const override;
@@ -373,6 +376,11 @@ class Menu {
 
  private:
   friend class MenuLevelBuilder;
+
+  MenuShowResult showCaptured(::roo_windows::Task& interaction_owner,
+                              const Rect& bounds_in_window,
+                              MenuPlacement placement,
+                              const MenuTriggerPaintSource* trigger);
 
   class Impl;
   std::unique_ptr<Impl> impl_;

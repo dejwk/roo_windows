@@ -100,6 +100,16 @@ alias(
 )
 
 alias(
+    name = "material3_menus_equipment_actions_example_build",
+    actual = "//examples/material3/menus/equipment_actions",
+)
+
+alias(
+    name = "material3_menus_context_actions_example_build",
+    actual = "//examples/material3/menus/context_actions",
+)
+
+alias(
     name = "material3_navigation_rail_app_navigation_example_build",
     actual = "//examples/material3/navigation_rail/app_navigation",
 )
@@ -198,6 +208,8 @@ filegroup(
         "//examples/material3/lists/segmented_schedule",
         "//examples/material3/lists/selection_controls",
         "//examples/material3/lists/settings",
+        "//examples/material3/menus/context_actions",
+        "//examples/material3/menus/equipment_actions",
         "//examples/material3/navigation_bar/app_navigation",
         "//examples/material3/navigation_rail/app_navigation",
         "//examples/material3/pane_layout/equipment_list_detail",

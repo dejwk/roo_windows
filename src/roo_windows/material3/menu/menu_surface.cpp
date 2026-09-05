@@ -43,6 +43,13 @@ Color MenuGroup::background() const { return roo_display::color::Transparent; }
 
 bool MenuGroup::fullyCoversBoundsWithOpaqueColors() const { return false; }
 
+Widget* MenuGroup::preferredFocusChild() {
+  for (MenuEntry* entry : entries_) {
+    if (!entry->isGone() && entry->isClickable()) return entry;
+  }
+  return nullptr;
+}
+
 int MenuGroup::getChildrenCount() const { return entries_.size(); }
 
 const Widget& MenuGroup::getChild(int idx) const {
@@ -242,6 +249,18 @@ BorderStyle MenuPanel::getBorderStyle() const {
   return BorderStyle(radius, 0);
 }
 
+Widget* MenuPanel::preferredFocusChild() {
+  return groups_.preferredFocusChild();
+}
+
+Widget* MenuGroupStack::preferredFocusChild() {
+  for (MenuGroup* group : groups_) {
+    Widget* preferred = group->preferredFocusChild();
+    if (preferred != nullptr) return preferred;
+  }
+  return nullptr;
+}
+
 int MenuPanel::getChildrenCount() const { return 1; }
 
 const Widget& MenuPanel::getChild(int idx) const {
@@ -312,6 +331,11 @@ Color MenuOverlay::background() const {
 }
 
 bool MenuOverlay::fullyCoversBoundsWithOpaqueColors() const { return false; }
+
+Widget* MenuOverlay::preferredFocusChild() {
+  if (panels_.empty()) return nullptr;
+  return panels_.back()->preferredFocusChild();
+}
 
 void MenuOverlay::paint(PaintContext& ctx) const { (void)ctx; }
 
