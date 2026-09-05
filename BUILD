@@ -161,6 +161,30 @@ cc_test(
 )
 
 cc_test(
+    name = "material3_menu_row_test",
+    srcs = ["test/material3_menu_row_test.cpp"],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
+cc_test(
+    name = "material3_menu_golden_test",
+    srcs = ["test/material3_menu_golden_test.cpp"],
+    data = glob([
+        "test/goldens/**/*.ppm",
+    ], allow_empty = True),
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        ":test_golden_utils",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
+cc_test(
     name = "transient_presentation_lifetime_test",
     srcs = ["test/transient_presentation_lifetime_test.cpp"],
     linkstatic = 1,

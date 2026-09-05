@@ -25,8 +25,8 @@ results remain component-specific.
 
 ## Background
 
-**Status: Proposed; P1.6 menu reconciliation complete.** None of the defined
-menu implementation scope is implemented. The shared composite host,
+**Status: In progress; Phase 1 implemented.** Menu tokens, standard items,
+list-backed rows, and pay-for-use trailing adornments are implemented. The shared composite host,
 synchronous source-capture contract, and presenter-pin integration are
 specified separately by
 [Transient surface hosting](../implemented/transient_surface_hosting_design.md)
