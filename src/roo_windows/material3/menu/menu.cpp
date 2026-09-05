@@ -233,7 +233,11 @@ const MenuItem* MenuEntry::menuItem() const {
 
 bool MenuEntry::isClickable() const {
   const MenuItem* bound = menuItem();
-  return menu_ != nullptr && bound != nullptr && bound->isEnabled();
+  return menu_ != nullptr && bound != nullptr && visualContext().enabled;
+}
+
+bool MenuEntry::onKeyEvent(const KeyEvent& event) {
+  return menu_ != nullptr && menu_->handleEntryKey(*this, event);
 }
 
 void MenuEntry::prepareForItemDestruction() {
@@ -270,10 +274,12 @@ void MenuEntry::bindToMenu(Menu& owner, uint8_t level, uint16_t row,
   level_ = level;
   row_ = row;
   level_generation_ = generation;
+  submenu_allowed_ = level < 3;
   suppress_next_click_dispatch_ = false;
   ListEntryVisualContext visual = visualContext();
   const MenuItem* bound = menuItem();
-  visual.enabled = bound != nullptr && bound->isEnabled();
+  visual.enabled = bound != nullptr && bound->isEnabled() &&
+                   (submenu_allowed_ || !bound->hasSubmenu());
   visual.selected = bound != nullptr && bound->isSelected();
   setVisualContext(visual);
   syncAdornments();
@@ -284,6 +290,7 @@ void MenuEntry::unbindFromMenu() {
   level_ = 0;
   row_ = 0;
   level_generation_ = 0;
+  submenu_allowed_ = true;
   suppress_next_click_dispatch_ = false;
 }
 
@@ -295,7 +302,7 @@ void MenuEntry::syncAdornments() {
   if (content.shortcut.empty() && content.icon == nullptr &&
       content.badge.mode == BadgeMode::kHidden &&
       !(bound != nullptr && bound->isSelectable()) &&
-      !(bound != nullptr && bound->hasSubmenu())) {
+      !(bound != nullptr && bound->hasSubmenu() && submenu_allowed_)) {
     adornments_.reset();
     return;
   }
@@ -336,7 +343,7 @@ int16_t MenuEntry::trailingLaneWidth() const {
     width += Scaled(24);
     ++count;
   }
-  if (bound != nullptr && bound->hasSubmenu()) {
+  if (bound != nullptr && bound->hasSubmenu() && submenu_allowed_) {
     width += Scaled(tokens.icon_size_dp);
     ++count;
   }
@@ -394,7 +401,7 @@ void MenuEntry::paintWidgetContents(PaintContext& ctx) {
   Rect cursor = adornments_->icon_bounds;
   const MenuItem* bound = menuItem();
 
-  if (bound != nullptr && bound->hasSubmenu()) {
+  if (bound != nullptr && bound->hasSubmenu() && submenu_allowed_) {
     int16_t mid_x = (cursor.xMin() + cursor.xMax()) / 2;
     int16_t mid_y = (cursor.yMin() + cursor.yMax()) / 2;
     int16_t arm = std::max<int16_t>(2, Scaled(4));
@@ -453,6 +460,7 @@ class Menu::Impl {
    protected:
     void detachPresentation(PresentationFinishReason reason) override {
       (void)reason;
+      owner_.closeLevelsFrom(1, false);
       owner_.unbindAllEntries();
     }
 
@@ -465,6 +473,7 @@ class Menu::Impl {
 
     BackResult onBackRequested(BackSource source) override {
       (void)source;
+      if (owner_.closeDeepestLevel()) return BackResult::kHandled;
       finish(PresentationFinishReason::kBack);
       return BackResult::kHandled;
     }
@@ -533,6 +542,7 @@ class Menu::Impl {
   explicit Impl(Menu& owner, ApplicationContext& context)
       : policy(),
         presenter(owner),
+        context(context),
         root_panel(context),
         overlay(context),
         registration(owner) {
@@ -575,9 +585,9 @@ class Menu::Impl {
 
   void AddLevelGroup(uint8_t level, uint16_t generation, MenuGroup& group) {
     CHECK(population_active);
+    CHECK(level < kMaxLevels);
     CHECK_EQ(level, population_level);
     CHECK_EQ(generation, level_generation[level]);
-    CHECK(level < kMaxLevels);
     CHECK(level_panels[level] != nullptr);
     level_panels[level]->addGroup(group);
   }
@@ -585,20 +595,25 @@ class Menu::Impl {
   void AddLevelGroup(uint8_t level, uint16_t generation,
                      std::unique_ptr<MenuGroup> group) {
     CHECK(population_active);
+    CHECK(level < kMaxLevels);
     CHECK_EQ(level, population_level);
     CHECK_EQ(generation, level_generation[level]);
-    CHECK(level < kMaxLevels);
     CHECK(level_panels[level] != nullptr);
     level_panels[level]->addGroup(std::move(group));
   }
 
   MenuPolicy policy;
   Menu& presenter;
+  ApplicationContext& context;
   internal::MenuPanel root_panel;
   internal::MenuOverlay overlay;
+  std::unique_ptr<internal::MenuPanel> child_panels[kMaxLevels];
   internal::MenuPanel* level_panels[kMaxLevels] = {&root_panel, nullptr,
                                                    nullptr, nullptr};
   uint16_t level_generation[kMaxLevels] = {1, 1, 1, 1};
+  uint16_t opener_row[kMaxLevels] = {0, 0, 0, 0};
+  uint8_t parent_level[kMaxLevels] = {0, 0, 0, 0};
+  bool cascading[kMaxLevels] = {false, false, false, false};
   uint8_t population_level = 0;
   bool population_active = false;
   FocusScope focus_scope;
@@ -656,13 +671,18 @@ void Menu::clearGroups() {
   impl_->root_panel.clearGroups();
 }
 
-void Menu::bindRootEntries() {
+void Menu::bindRootEntries() { bindLevelEntries(0); }
+
+void Menu::bindLevelEntries(uint8_t level) {
+  CHECK(level < Impl::kMaxLevels);
+  internal::MenuPanel* panel = impl_->level_panels[level];
+  CHECK(panel != nullptr);
   uint16_t row_index = 0;
-  for (int group_index = 0; group_index < impl_->root_panel.groupCount();
-       ++group_index) {
-    MenuGroup& group = impl_->root_panel.groupAt(group_index);
+  for (int group_index = 0; group_index < panel->groupCount(); ++group_index) {
+    MenuGroup& group = panel->groupAt(group_index);
     for (MenuEntry* entry : group.entries_) {
-      entry->bindToMenu(*this, 0, row_index++, impl_->level_generation[0]);
+      entry->bindToMenu(*this, level, row_index++,
+                        impl_->level_generation[level]);
       ListEntryVisualContext visual = entry->visualContext();
       visual.variant = impl_->policy.variant;
       visual.style = impl_->policy.variant == ListVariant::kExpressive
@@ -678,34 +698,241 @@ void Menu::bindRootEntries() {
   }
 }
 
-void Menu::unbindAllEntries() {
-  for (int group_index = 0; group_index < impl_->root_panel.groupCount();
-       ++group_index) {
-    MenuGroup& group = impl_->root_panel.groupAt(group_index);
+void Menu::unbindLevelEntries(uint8_t level) {
+  if (level >= Impl::kMaxLevels || impl_->level_panels[level] == nullptr)
+    return;
+  internal::MenuPanel& panel = *impl_->level_panels[level];
+  for (int group_index = 0; group_index < panel.groupCount(); ++group_index) {
+    MenuGroup& group = panel.groupAt(group_index);
     for (MenuEntry* entry : group.entries_) entry->unbindFromMenu();
   }
 }
 
-void Menu::invokeEntry(MenuEntry& entry, uint8_t level, uint16_t row,
-                       uint16_t generation) {
-  if (!impl_->registration.isActive() || level != 0 ||
-      generation != impl_->level_generation[0] || entry.menu_ != this) {
+void Menu::unbindAllEntries() {
+  for (int level = Impl::kMaxLevels - 1; level >= 0; --level) {
+    unbindLevelEntries(level);
+  }
+}
+
+void Menu::closeLevelsFrom(uint8_t first_level, bool restore_focus) {
+  if (first_level == 0 || first_level >= Impl::kMaxLevels) return;
+  uint8_t restore_parent = impl_->parent_level[first_level];
+  uint16_t restore_row = impl_->opener_row[first_level];
+  bool closed_any = false;
+  for (int level = Impl::kMaxLevels - 1; level >= first_level; --level) {
+    internal::MenuPanel* panel = impl_->level_panels[level];
+    if (panel == nullptr) continue;
+    closed_any = true;
+    unbindLevelEntries(level);
+    impl_->overlay.removePanel(*panel);
+    panel->clearGroups();
+    uint8_t parent = impl_->parent_level[level];
+    if (!impl_->cascading[level] && impl_->level_panels[parent] != nullptr) {
+      impl_->level_panels[parent]->setVisibility(Visibility::kVisible);
+    }
+    impl_->level_panels[level] = nullptr;
+    impl_->child_panels[level].reset();
+    ++impl_->level_generation[level];
+  }
+  if (!closed_any || !restore_focus || impl_->interaction_owner == nullptr ||
+      impl_->level_panels[restore_parent] == nullptr) {
+    return;
+  }
+  uint16_t index = 0;
+  internal::MenuPanel& parent = *impl_->level_panels[restore_parent];
+  for (int group_index = 0; group_index < parent.groupCount(); ++group_index) {
+    MenuGroup& group = parent.groupAt(group_index);
+    for (MenuEntry* entry : group.entries_) {
+      if (index++ == restore_row) {
+        impl_->interaction_owner->focus().requestFocus(*entry);
+        return;
+      }
+    }
+  }
+}
+
+bool Menu::closeDeepestLevel() {
+  for (int level = Impl::kMaxLevels - 1; level > 0; --level) {
+    if (impl_->level_panels[level] != nullptr) {
+      closeLevelsFrom(level, true);
+      return true;
+    }
+  }
+  return false;
+}
+
+void Menu::openSubmenu(MenuEntry& entry, MenuItem& item, uint8_t level,
+                       uint16_t row, uint16_t generation) {
+  if (level + 1 >= Impl::kMaxLevels ||
+      generation != impl_->level_generation[level] ||
+      impl_->interaction_owner == nullptr) {
+    return;
+  }
+  const uint8_t child_level = level + 1;
+  closeLevelsFrom(child_level, false);
+  std::unique_ptr<internal::MenuPanel> child(
+      new (std::nothrow) internal::MenuPanel(impl_->context));
+  if (!child) return;
+  child->setPolicy(impl_->policy);
+  ++impl_->level_generation[child_level];
+  if (impl_->level_generation[child_level] == 0) {
+    ++impl_->level_generation[child_level];
+  }
+  impl_->child_panels[child_level] = std::move(child);
+  impl_->level_panels[child_level] = impl_->child_panels[child_level].get();
+  impl_->parent_level[child_level] = level;
+  impl_->opener_row[child_level] = row;
+  impl_->population_level = child_level;
+  impl_->population_active = true;
+  MenuLevelBuilder builder(*this, child_level,
+                           impl_->level_generation[child_level]);
+  item.populateSubmenu(builder);
+  impl_->population_active = false;
+  if (impl_->level_panels[child_level]->groupCount() == 0) {
+    impl_->level_panels[child_level] = nullptr;
+    impl_->child_panels[child_level].reset();
     return;
   }
 
+  MainWindow& window = impl_->interaction_owner->window().root();
+  const internal::MenuTokens& tokens = impl_->RootTokens();
+  int16_t margin = Scaled(tokens.viewport_margin_dp);
+  Rect viewport(margin, margin, window.width() - margin - 1,
+                window.height() - margin - 1);
+  internal::MenuPanel& panel = *impl_->level_panels[child_level];
+  Dimensions desired = panel.measure(WidthSpec::AtMost(viewport.width()),
+                                     HeightSpec::AtMost(viewport.height()));
+  int32_t x = 0;
+  int32_t y = 0;
+  Widget* current = &entry;
+  while (current != &impl_->overlay) {
+    if (current == nullptr) {
+      impl_->level_panels[child_level] = nullptr;
+      impl_->child_panels[child_level].reset();
+      return;
+    }
+    x += current->bounds().xMin();
+    y += current->bounds().yMin();
+    current = current->parent();
+  }
+  Rect opener(x, y, x + entry.width() - 1, y + entry.height() - 1);
+  Rect parent = impl_->level_panels[level]->bounds();
+  internal::SubmenuPlacementResult resolved = internal::ResolveSubmenuPlacement(
+      viewport, opener, parent, desired, Scaled(tokens.min_width_dp),
+      Scaled(tokens.submenu_gutter_dp), impl_->policy.layout_direction);
+  panel.measure(WidthSpec::Exactly(resolved.bounds.width()),
+                HeightSpec::Exactly(resolved.bounds.height()));
+  panel.layout(resolved.bounds);
+  impl_->cascading[child_level] = resolved.cascading;
+  if (!resolved.cascading) {
+    impl_->level_panels[level]->setVisibility(Visibility::kGone);
+  }
+  impl_->overlay.addPanel(panel, resolved.bounds);
+  bindLevelEntries(child_level);
+  if (Widget* preferred = panel.preferredFocusChild(); preferred != nullptr) {
+    impl_->interaction_owner->focus().requestFocus(*preferred);
+  } else {
+    closeLevelsFrom(child_level, true);
+  }
+}
+
+bool Menu::handleEntryKey(MenuEntry& entry, const KeyEvent& event) {
+  if (!impl_->registration.isActive() || entry.menu_ != this ||
+      (event.phase != KeyPhase::kDown && event.phase != KeyPhase::kRepeat)) {
+    return false;
+  }
+  uint8_t level = entry.level_;
+  if (level >= Impl::kMaxLevels || impl_->level_panels[level] == nullptr ||
+      entry.level_generation_ != impl_->level_generation[level]) {
+    return false;
+  }
+  const bool backwards = event.code == KeyCode::kUp ||
+                         (event.code == KeyCode::kTab &&
+                          (event.modifiers & kKeyModifierShift) != 0);
+  if (event.code == KeyCode::kUp || event.code == KeyCode::kDown ||
+      event.code == KeyCode::kTab || event.code == KeyCode::kHome ||
+      event.code == KeyCode::kEnd) {
+    internal::MenuPanel& panel = *impl_->level_panels[level];
+    int eligible_count = 0;
+    int current_index = -1;
+    for (int group_index = 0; group_index < panel.groupCount(); ++group_index) {
+      MenuGroup& group = panel.groupAt(group_index);
+      for (MenuEntry* candidate : group.entries_) {
+        if (!candidate->isClickable()) continue;
+        if (candidate == &entry) current_index = eligible_count;
+        ++eligible_count;
+      }
+    }
+    if (eligible_count == 0) return true;
+    int target_index;
+    if (event.code == KeyCode::kHome) {
+      target_index = 0;
+    } else if (event.code == KeyCode::kEnd) {
+      target_index = eligible_count - 1;
+    } else {
+      target_index = current_index < 0 ? 0 : current_index;
+      target_index += backwards ? -1 : 1;
+      if (target_index < 0) target_index = eligible_count - 1;
+      if (target_index >= eligible_count) target_index = 0;
+    }
+    int index = 0;
+    for (int group_index = 0; group_index < panel.groupCount(); ++group_index) {
+      MenuGroup& group = panel.groupAt(group_index);
+      for (MenuEntry* candidate : group.entries_) {
+        if (!candidate->isClickable()) continue;
+        if (index++ == target_index) {
+          impl_->interaction_owner->focus().requestFocus(*candidate);
+          return true;
+        }
+      }
+    }
+    return true;
+  }
+  const KeyCode after =
+      impl_->policy.layout_direction == LayoutDirection::kLeftToRight
+          ? KeyCode::kRight
+          : KeyCode::kLeft;
+  const KeyCode before =
+      impl_->policy.layout_direction == LayoutDirection::kLeftToRight
+          ? KeyCode::kLeft
+          : KeyCode::kRight;
+  if (event.code == after && entry.menuItem() != nullptr &&
+      entry.menuItem()->hasSubmenu()) {
+    invokeEntry(entry, entry.level_, entry.row_, entry.level_generation_);
+    return true;
+  }
+  if (event.code == before && level > 0) {
+    closeLevelsFrom(level, true);
+    return true;
+  }
+  return false;
+}
+
+void Menu::invokeEntry(MenuEntry& entry, uint8_t level, uint16_t row,
+                       uint16_t generation) {
+  if (!impl_->registration.isActive() || level >= Impl::kMaxLevels ||
+      impl_->level_panels[level] == nullptr ||
+      generation != impl_->level_generation[level] || entry.menu_ != this) {
+    return;
+  }
+
+  internal::MenuPanel& active_panel = *impl_->level_panels[level];
   MenuEntry* resolved = nullptr;
   uint16_t current_row = 0;
-  for (int group_index = 0; group_index < impl_->root_panel.groupCount();
+  for (int group_index = 0; group_index < active_panel.groupCount();
        ++group_index) {
-    MenuGroup& group = impl_->root_panel.groupAt(group_index);
+    MenuGroup& group = active_panel.groupAt(group_index);
     for (MenuEntry* candidate : group.entries_) {
       if (current_row++ == row) resolved = candidate;
     }
   }
   if (resolved != &entry) return;
   MenuItem* item = entry.menuItem();
-  if (item == nullptr || !item->isEnabled()) return;
-  if (item->hasSubmenu()) return;
+  if (item == nullptr || !item->isEnabled() || !entry.isClickable()) return;
+  if (item->hasSubmenu()) {
+    openSubmenu(entry, *item, level, row, generation);
+    return;
+  }
 
   const bool selectable = item->isSelectable() &&
                           impl_->policy.selection_mode != SelectionMode::kNone;
@@ -714,9 +941,9 @@ void Menu::invokeEntry(MenuEntry& entry, uint8_t level, uint16_t row,
   const MenuLeafDismissal dismissal = item->leafDismissal();
 
   if (selectable && selection_mode == SelectionMode::kSingle) {
-    for (int group_index = 0; group_index < impl_->root_panel.groupCount();
+    for (int group_index = 0; group_index < active_panel.groupCount();
          ++group_index) {
-      MenuGroup& group = impl_->root_panel.groupAt(group_index);
+      MenuGroup& group = active_panel.groupAt(group_index);
       for (MenuEntry* candidate : group.entries_) {
         MenuItem* candidate_item = candidate->menuItem();
         if (candidate_item != nullptr && candidate_item->isSelectable()) {
@@ -724,8 +951,9 @@ void Menu::invokeEntry(MenuEntry& entry, uint8_t level, uint16_t row,
         }
         candidate->refreshFromItem();
         ListEntryVisualContext visual = candidate->visualContext();
-        visual.enabled =
-            candidate_item != nullptr && candidate_item->isEnabled();
+        visual.enabled = candidate_item != nullptr &&
+                         candidate_item->isEnabled() &&
+                         (level < 3 || !candidate_item->hasSubmenu());
         visual.selected =
             candidate_item != nullptr && candidate_item->isSelected();
         candidate->setVisualContext(visual);
@@ -747,7 +975,7 @@ void Menu::invokeEntry(MenuEntry& entry, uint8_t level, uint16_t row,
   // otherwise invalidate this row. Revalidate registration and generation
   // before consulting presenter state, and never dereference `item` again.
   if (!impl_->registration.isActive() ||
-      generation != impl_->level_generation[0] || entry.menu_ != this) {
+      generation != impl_->level_generation[level] || entry.menu_ != this) {
     return;
   }
 

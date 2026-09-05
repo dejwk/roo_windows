@@ -51,12 +51,39 @@ class RecordingItem final : public StandardMenuItem {
 
   void onInvoked() override { ++invocations_; }
   MenuLeafDismissal leafDismissal() const override { return dismissal_; }
+  bool hasSubmenu() const override { return has_submenu_; }
+  void populateSubmenu(MenuLevelBuilder& builder) override {
+    auto group = std::make_unique<MenuGroup>(*context_);
+    StandardMenuItemInit first_init;
+    first_init.headline = "Child one";
+    auto first =
+        std::make_unique<MenuRow<StandardMenuItem>>(*context_, first_init);
+    first_child_ = first.get();
+    StandardMenuItemInit second_init;
+    second_init.headline = "Child two";
+    auto second =
+        std::make_unique<MenuRow<StandardMenuItem>>(*context_, second_init);
+    second_child_ = second.get();
+    group->add(std::move(first));
+    group->add(std::move(second));
+    builder.addGroup(std::move(group));
+  }
   int invocations() const { return invocations_; }
   void setDismissal(MenuLeafDismissal dismissal) { dismissal_ = dismissal; }
+  void enableSubmenu(ApplicationContext& context) {
+    context_ = &context;
+    has_submenu_ = true;
+  }
+  MenuEntry* firstChild() const { return first_child_; }
+  MenuEntry* secondChild() const { return second_child_; }
 
  private:
   int invocations_ = 0;
   MenuLeafDismissal dismissal_ = MenuLeafDismissal::kDefault;
+  ApplicationContext* context_ = nullptr;
+  MenuEntry* first_child_ = nullptr;
+  MenuEntry* second_child_ = nullptr;
+  bool has_submenu_ = false;
 };
 
 class TestMenuEntry final : public MenuEntry {
@@ -65,6 +92,10 @@ class TestMenuEntry final : public MenuEntry {
 
   void Tap() { onSingleTapUp(1, 1); }
   void DeferredClick() { onClicked(); }
+  bool Key(KeyCode code, uint8_t modifiers = 0) {
+    return onKeyEvent(
+        KeyEvent{KeyPhase::kDown, code, modifiers, PhysicalKey::kNone, 0});
+  }
 };
 
 class Material3MenuTest : public testing::Test {
@@ -216,6 +247,53 @@ TEST_F(Material3MenuTest, LeafDismissalOverrideKeepsSingleSelectionOpen) {
 
   EXPECT_TRUE(item_.isSelected());
   EXPECT_EQ(0, menu_.finishes());
+}
+
+TEST_F(Material3MenuTest, SubmenuOpensAndBackClosesDeepestFirst) {
+  item_.enableSubmenu(app_.context());
+  ASSERT_EQ(MenuShowResult::kShown, menu_.show(owner_, source_));
+
+  row_.Tap();
+  ASSERT_NE(nullptr, item_.firstChild());
+  EXPECT_EQ(item_.firstChild(), owner_.focus().focused());
+  EXPECT_EQ(0, menu_.finishes());
+
+  EXPECT_EQ(BackResult::kHandled, owner_.requestBack(BackSource::kBackKey));
+  EXPECT_EQ(&row_, owner_.focus().focused());
+  EXPECT_EQ(0, menu_.finishes());
+  EXPECT_EQ(BackResult::kHandled, owner_.requestBack(BackSource::kBackKey));
+  EXPECT_EQ(1, menu_.finishes());
+}
+
+TEST_F(Material3MenuTest, SubmenuRowsHandleWrappedTraversalAndHomeEnd) {
+  item_.enableSubmenu(app_.context());
+  ASSERT_EQ(MenuShowResult::kShown, menu_.show(owner_, source_));
+  row_.Tap();
+  ASSERT_EQ(item_.firstChild(), owner_.focus().focused());
+
+  EXPECT_TRUE(item_.firstChild()->onKeyEvent(
+      KeyEvent{KeyPhase::kDown, KeyCode::kDown, 0, PhysicalKey::kNone, 0}));
+  EXPECT_EQ(item_.secondChild(), owner_.focus().focused());
+  EXPECT_TRUE(item_.secondChild()->onKeyEvent(
+      KeyEvent{KeyPhase::kDown, KeyCode::kDown, 0, PhysicalKey::kNone, 0}));
+  EXPECT_EQ(item_.firstChild(), owner_.focus().focused());
+  EXPECT_TRUE(item_.firstChild()->onKeyEvent(
+      KeyEvent{KeyPhase::kDown, KeyCode::kEnd, 0, PhysicalKey::kNone, 0}));
+  EXPECT_EQ(item_.secondChild(), owner_.focus().focused());
+}
+
+TEST_F(Material3MenuTest, RtlAfterArrowOpensAndBeforeArrowRestoresParent) {
+  item_.enableSubmenu(app_.context());
+  MenuPolicy policy;
+  policy.layout_direction = LayoutDirection::kRightToLeft;
+  menu_.setPolicy(policy);
+  ASSERT_EQ(MenuShowResult::kShown, menu_.show(owner_, source_));
+
+  EXPECT_TRUE(row_.Key(KeyCode::kLeft));
+  ASSERT_EQ(item_.firstChild(), owner_.focus().focused());
+  EXPECT_TRUE(item_.firstChild()->onKeyEvent(
+      KeyEvent{KeyPhase::kDown, KeyCode::kRight, 0, PhysicalKey::kNone, 0}));
+  EXPECT_EQ(&row_, owner_.focus().focused());
 }
 
 }  // namespace

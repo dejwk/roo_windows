@@ -120,6 +120,11 @@ alias(
 )
 
 alias(
+    name = "material3_menus_nested_settings_example_build",
+    actual = "//examples/material3/menus/nested_settings",
+)
+
+alias(
     name = "material3_navigation_rail_app_navigation_example_build",
     actual = "//examples/material3/navigation_rail/app_navigation",
 )
@@ -220,6 +225,7 @@ filegroup(
         "//examples/material3/lists/settings",
         "//examples/material3/menus/context_actions",
         "//examples/material3/menus/equipment_actions",
+        "//examples/material3/menus/nested_settings",
         "//examples/material3/menus/alert_filters",
         "//examples/material3/menus/operating_mode",
         "//examples/material3/navigation_bar/app_navigation",

@@ -61,6 +61,36 @@ class Material3MenuGoldenTest : public testing::Test {
   Task& owner_;
 };
 
+class GoldenMenuEntry final : public MenuEntry {
+ public:
+  using MenuEntry::MenuEntry;
+  void Tap() { onSingleTapUp(1, 1); }
+};
+
+class GoldenSubmenuItem final : public StandardMenuItem {
+ public:
+  explicit GoldenSubmenuItem(ApplicationContext& context)
+      : StandardMenuItem(StandardMenuItemInit{"Display", {}}),
+        context_(context) {}
+
+  bool hasSubmenu() const override { return true; }
+
+  void populateSubmenu(MenuLevelBuilder& builder) override {
+    auto group = std::make_unique<MenuGroup>(context_);
+    StandardMenuItemInit brightness;
+    brightness.headline = "Brightness";
+    StandardMenuItemInit contrast;
+    contrast.headline = "High contrast";
+    group->add(
+        std::make_unique<MenuRow<StandardMenuItem>>(context_, brightness));
+    group->add(std::make_unique<MenuRow<StandardMenuItem>>(context_, contrast));
+    builder.addGroup(std::move(group));
+  }
+
+ private:
+  ApplicationContext& context_;
+};
+
 TEST_F(Material3MenuGoldenTest, SelectedRowWithTrailingAdornments) {
   StandardMenuItemInit init;
   init.headline = "Filtration mode";
@@ -80,6 +110,27 @@ TEST_F(Material3MenuGoldenTest, SelectedRowWithTrailingAdornments) {
       Capture(), "test/goldens/material3_menu/selected_adornments.ppm",
       "material3_menu_selected_adornments"));
   panel_.removeLast();
+}
+
+TEST_F(Material3MenuGoldenTest, ActiveCascadingSubmenu) {
+  GoldenSubmenuItem item(app_.context());
+  GoldenMenuEntry row(app_.context());
+  row.setMenuItem(item);
+  MenuGroup group(app_.context());
+  group.add(row);
+  Menu menu(app_.context());
+  menu.addGroup(group);
+  ASSERT_EQ(MenuShowResult::kShown,
+            menu.showFromRect(owner_, Rect(8, 8, 8, 8)));
+  row.Tap();
+  ASSERT_TRUE(app_.refresh());
+
+  EXPECT_TRUE(::roo_windows::test::CompareOrUpdateGolden(
+      Capture(), "test/goldens/material3_menu/active_submenu.ppm",
+      "material3_menu_active_submenu"));
+  menu.dismissChain();
+  menu.clearGroups();
+  group.clear();
 }
 
 }  // namespace

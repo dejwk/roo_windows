@@ -214,6 +214,9 @@ class MenuEntry : public ListEntry {
   /// Returns true when a bound, enabled item can be activated.
   bool isClickable() const override;
 
+  /// Handles level-local traversal and submenu navigation keys.
+  bool onKeyEvent(const KeyEvent& event) override;
+
  protected:
   /// Clears the base binding before a derived inline item is destroyed.
   void prepareForItemDestruction();
@@ -243,6 +246,7 @@ class MenuEntry : public ListEntry {
   uint16_t level_generation_ = 0;
   uint16_t row_ = 0;
   uint8_t level_ = 0;
+  bool submenu_allowed_ = true;
   bool suppress_next_click_dispatch_ = false;
 };
 
@@ -391,7 +395,14 @@ class Menu {
   friend class MenuEntry;
 
   void bindRootEntries();
+  void bindLevelEntries(uint8_t level);
+  void unbindLevelEntries(uint8_t level);
   void unbindAllEntries();
+  bool handleEntryKey(MenuEntry& entry, const KeyEvent& event);
+  bool closeDeepestLevel();
+  void closeLevelsFrom(uint8_t first_level, bool restore_focus);
+  void openSubmenu(MenuEntry& entry, MenuItem& item, uint8_t level,
+                   uint16_t row, uint16_t generation);
   void invokeEntry(MenuEntry& entry, uint8_t level, uint16_t row,
                    uint16_t generation);
 
