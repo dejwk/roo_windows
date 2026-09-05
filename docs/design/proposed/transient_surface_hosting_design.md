@@ -254,6 +254,25 @@ not mutate the dialog. This keeps the RAM-saving behavior of the old
 mixed-purpose `onEnter()` pattern without retaining a second structural host
 path.
 
+These names describe lifecycle milestones, not nested callback scopes.
+`onShow()` returns immediately after notifying the subclass; it does not leave
+an outstanding call that `onDismiss()` later unwinds. Similarly, the user
+interaction becomes terminal before teardown starts, but its `onDismiss()`
+notification is deliberately delayed until teardown has made the host idle.
+That is why resource cleanup appears between the two interaction
+notifications:
+
+| Callback | When it runs | Guarantee at that point |
+| --- | --- | --- |
+| `onEnter()` | After initial preflight, before measurement | The root is detached; the subclass may create session content. |
+| `onShow()` | After admission and attachment | The prepared dialog is visible and eligible for input. |
+| `onExit()` | During teardown, after session content is detached | It balances `onEnter()` and may release remaining session resources. |
+| `onDismiss(result)` | After structural teardown and the host-idle transition | A shown interaction has concluded; application completion has not run yet. |
+
+Thus a successful presentation calls `onEnter()`, `onShow()`, `onExit()`, and
+`onDismiss()` in that order. A failed prepared admission calls only
+`onEnter()` and `onExit()`. An initial-preflight rejection calls none of them.
+
 ## Requirements
 
 ### Presentation and Lifetime Requirements
@@ -798,7 +817,7 @@ the panel. Completion cannot reopen against the unavailable owner.
 
 The host has no generic anchor object. A component validates and copies live
 sources before host admission through
-`internal::captureTransientSourceGeometry()`:
+`internal::CaptureTransientSourceGeometry()`:
 
 - the owner is presentation-available;
 - the source is effectively visible and has non-empty visible bounds;
@@ -894,23 +913,29 @@ The proposed protected surface is deliberately explicit about creation
 failure:
 
 ```cpp
-// Called while the dialog is detached. Returning false aborts presentation;
-// onExit() is still called exactly once.
+/// Enters a detached presentation session before measurement.
+///
+/// Returning false aborts presentation; `onExit()` is still called exactly
+/// once.
 virtual bool onEnter() { return true; }
 
-// Called only after a matching onEnter(), after the base has detached
-// presentation-scoped widget content.
+/// Exits a presentation session after the base detaches session content.
+///
+/// Called only after a matching `onEnter()`.
 virtual void onExit() {}
 
-// Called after successful attachment.
+/// Notifies the subclass after successful attachment.
 virtual void onShow() {}
 
-// Called after a shown interaction concludes and detachment succeeds, before
-// application completion. This includes non-user teardown reasons.
+/// Notifies the subclass after a shown interaction concludes and detaches.
+///
+/// Runs before application completion and includes non-user teardown reasons.
 virtual void onDismiss(int result) {}
 
-// Required at the start of a derived destructor when the derived class
-// overrides the lifecycle pair or owns borrowed presentation-scoped content.
+/// Safely releases presentation resources while the derived type is alive.
+///
+/// A derived destructor must call this first when it overrides the lifecycle
+/// pair or owns borrowed presentation-scoped content.
 void prepareForDerivedDestruction();
 ```
 
@@ -991,23 +1016,28 @@ namespace internal {
 class TransientSurfaceHost;
 }  // namespace internal
 
+/// Selects the barrier paint behind a hosted transient surface.
 enum class TransientBarrierPaint : uint8_t {
   kTransparent,
   kScrim,
 };
 
+/// Selects how a request treats an existing hosted presentation.
 enum class TransientAdmissionPolicy : uint8_t {
   kRejectIfBusy,
   kReplaceReplaceable,
 };
 
+/// Selects how pointer interaction outside the hosted root is handled.
 enum class OutsideInteractionPolicy : uint8_t {
   kAbsorb,
   kDismiss,
   kPresenterHandled,
 };
 
+/// Immutable policies copied by the host during synchronous admission.
 struct TransientSurfaceSpec {
+  /// Creates a complete transient-surface policy.
   constexpr TransientSurfaceSpec(
       TransientBarrierPaint barrier,
       TransientAdmissionPolicy admission,
@@ -1033,6 +1063,7 @@ struct TransientSurfaceSpec {
 
 class TransientPresentationRegistration {
  protected:
+  /// Handles an outside interaction when the active profile delegates it.
   virtual void onOutsideInteraction() {}
 
  private:
@@ -1044,10 +1075,13 @@ class TransientPresentationSlot {
   friend class MainWindow;
   friend class internal::TransientSurfaceHost;
 
+  // Admits a registration already validated by its structural host.
   PresentationStartResult showHosted(
       TransientPresentationRegistration& registration,
       TransientPresentationPolicy policy,
       internal::TransientSurfaceHost& host);
+
+  // Permanently closes admission and finishes the current registration.
   void shutdown(PresentationFinishReason reason);
 
   internal::TransientSurfaceHost* active_host_ = nullptr;
@@ -1055,6 +1089,7 @@ class TransientPresentationSlot {
   bool admission_guard_ = false;
 };
 
+/// Presenter-owned focus state for one transient surface.
 struct FocusScope {
   FocusScope() = default;
   FocusScope(const FocusScope&) = delete;
@@ -1062,6 +1097,7 @@ struct FocusScope {
   FocusScope(FocusScope&&) = delete;
   FocusScope& operator=(FocusScope&&) = delete;
 
+  /// Clears the presenter-local focus target remembered for reopening.
   void clearRememberedFocus() { last_focused = nullptr; }
 
   Widget* root = nullptr;
@@ -1074,22 +1110,32 @@ struct FocusScope {
 
 class FocusManager {
  public:
+  /// Returns the root that bounds current focus dispatch and traversal.
   Widget* scopeRoot() { return scope_root_; }
+
+  /// @copydoc scopeRoot()
   const Widget* scopeRoot() const { return scope_root_; }
 
+  /// Reports whether `incoming` can replace the current base or hosted scope.
   bool canAdmitScope(const FocusScope& incoming,
                      const Widget& base_root,
                      const FocusScope* replaced_scope) const;
+
+  /// Activates `scope` under `base_root` and captures base focus for restore.
   void enterScope(FocusScope& scope,
                   Widget& root,
                   Widget& base_root);
+
+  /// Deactivates `scope` and restores an eligible target under `base_root`.
   void exitScope(FocusScope& scope, Widget& base_root);
 };
 
 class Widget {
  public:
-  // Existing members remain unchanged. Phase 1 lands this zero-storage focus
-  // selection hook from the non-touch-input design.
+  /// Returns the preferred descendant to focus when entering this subtree.
+  ///
+  /// Existing members remain unchanged. Phase 1 lands this zero-storage hook
+  /// from the non-touch-input design.
   virtual Widget* preferredFocusChild() { return nullptr; }
 
  private:
@@ -1107,46 +1153,57 @@ class Task {
 
 class GestureDetector {
  public:
+  /// Cancels gesture state that could activate content under display coverage.
   void cancelForDisplayCoverage();
+
+  /// Cancels every gesture target inside `subtree` before it is detached.
   void cancelTargetsInSubtree(Widget& subtree);
 };
 
 namespace internal {
 
+/// Frozen window-coordinate source geometry used during one admission.
 struct TransientSourceGeometry {
   Rect bounds_in_window;
   Rect visible_bounds_in_window;
 };
 
-// Optional stack- or presenter-owned adapter for roots whose final bounds
-// depend on session-only children. The host retains no pointer after show.
+/// Adapts a root whose final bounds depend on session-only children.
+///
+/// The adapter may live on the stack or in the presenter. The host retains no
+/// pointer after the synchronous show operation.
 class TransientSurfacePreparation {
  public:
+  /// Destroys the non-retained preparation adapter.
   virtual ~TransientSurfacePreparation() = default;
 
  private:
   friend class TransientSurfaceHost;
 
-  // Creates session resources and returns final root bounds in window
-  // coordinates. False maps to kSurfaceUnavailable.
+  /// Creates session resources and returns final root bounds in window
+  /// coordinates. False maps to `kSurfaceUnavailable`.
   virtual bool createAndResolveBounds(Rect& root_bounds_in_window) = 0;
 
-  // Balances creation when admission does not commit. Normal committed cleanup
-  // remains the presenter's registration detach responsibility.
+  /// Balances creation when admission does not commit.
+  ///
+  /// Normal committed cleanup remains the registration's detach responsibility.
   virtual void deleteAfterFailedAdmission() = 0;
 };
 
-// Synchronously copies geometry only when source physically belongs to the
-// interaction owner's attached top-level TaskPanel, and only when its physical
-// parent chain contains no TransientHostLayer. Leaves output unchanged on
-// failure.
-bool captureTransientSourceGeometry(
+/// Synchronously copies geometry from a source owned by `interaction_owner`.
+///
+/// Requires the source to belong physically to the owner's attached top-level
+/// `TaskPanel` and its parent chain to contain no `TransientHostLayer`. Leaves
+/// `output` unchanged on failure.
+bool CaptureTransientSourceGeometry(
     Task& interaction_owner,
     const Widget& source,
     TransientSourceGeometry& output);
 
+/// Coordinates one structural transient presentation for a window.
 class TransientSurfaceHost {
  public:
+  /// Admits a root whose final window-coordinate bounds are already known.
   PresentationStartResult show(
       TransientPresentationRegistration& registration,
       Task& interaction_owner,
@@ -1155,6 +1212,7 @@ class TransientSurfaceHost {
       FocusScope& focus_scope,
       const TransientSurfaceSpec& spec);
 
+  /// Prepares, measures, and admits a root in one guarded transaction.
   PresentationStartResult showPrepared(
       TransientPresentationRegistration& registration,
       Task& interaction_owner,
@@ -1163,17 +1221,23 @@ class TransientSurfaceHost {
       const TransientSurfaceSpec& spec,
       TransientSurfacePreparation& preparation);
 
+  /// Shows a display-coverage pin for the active hosted registration.
   PresentationPinShowResult showPresentationPin(
       TransientPresentationRegistration& registration,
       std::unique_ptr<PresentationPin> pin);
+
+  /// Marks the active registration's display-coverage pin dirty.
   void setPresentationPinDirty(
       TransientPresentationRegistration& registration);
+
+  /// Hides the active registration's display-coverage pin.
   void hidePresentationPin(
       TransientPresentationRegistration& registration);
 
  private:
   friend class TransientPresentationSlot;
 
+  // Detaches the active root through the common idempotent teardown order.
   void detachHostedSurface(
       TransientPresentationRegistration& registration,
       PresentationFinishReason reason);
@@ -1181,9 +1245,11 @@ class TransientSurfaceHost {
   PresentationPin* active_pin_ = nullptr;
 };
 
-// Resolves the host owned by interaction_owner.window(). Availability and
-// attachment validation remain part of TransientSurfaceHost::show().
-TransientSurfaceHost& transientSurfaceHost(Task& interaction_owner);
+/// Resolves the host owned by `interaction_owner.window()`.
+///
+/// Availability and attachment validation remain part of
+/// `TransientSurfaceHost::show()`.
+TransientSurfaceHost& GetTransientSurfaceHost(Task& interaction_owner);
 
 }  // namespace internal
 
@@ -1191,11 +1257,12 @@ class MainWindow : public Container {
  private:
   friend class DisplayWindow;
   friend class internal::TransientSurfaceHost;
-  friend internal::TransientSurfaceHost& internal::transientSurfaceHost(Task&);
-  friend bool internal::captureTransientSourceGeometry(
+  friend internal::TransientSurfaceHost& internal::GetTransientSurfaceHost(
+      Task&);
+  friend bool internal::CaptureTransientSourceGeometry(
       Task&, const Widget&, internal::TransientSourceGeometry&);
 
-  // Idempotently closes admission and finishes the active presentation.
+  /// Idempotently closes admission and finishes the active presentation.
   void beginShutdown();
 };
 }  // namespace roo_windows
@@ -1243,7 +1310,7 @@ cancels gesture, click-animation, and paint state. This happens before
 seam as a fallback, but it is not the first shutdown boundary.
 
 Production declarations carry Doxygen comments on every public and protected
-contract. Component implementations call `internal::transientSurfaceHost()`
+contract. Component implementations call `internal::GetTransientSurfaceHost()`
 with their explicit `Task&`; the internal function resolves its
 `DisplayWindow` and window-owned host. No public `MainWindow` host accessor is
 added. `MainWindow` befriends only this internal resolver and the host.
@@ -1286,6 +1353,13 @@ Implementation follows the
 [embedded C++ code-authoring guidance](../../../.github/instructions/embedded-cpp-code-authoring.instructions.md)
 and the
 [Roo Windows widget-authoring guidance](../../../.github/instructions/roo-windows-widget-authoring.instructions.md).
+
+In particular, namespace-level functions use Google-style capitalized names
+(`CaptureTransientSourceGeometry()` and `GetTransientSurfaceHost()`), while
+instance methods use the repository's `camelCase()` exception. Production
+public and protected declarations carry `///` Doxygen comments with separator
+lines. Preparation uses virtual no-op hooks rather than retained callbacks, and
+`WidgetRef` remains only a temporary ownership-transfer argument.
 
 ### Phase 1: Activate Presenter-Owned Focus Scopes
 

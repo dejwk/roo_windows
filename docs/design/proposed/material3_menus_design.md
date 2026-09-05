@@ -450,7 +450,7 @@ policy-update mechanism.
 
 Either overload accepts an optional trigger-paint source that can differ from
 the placement widget. Both sources use the framework's shared
-`internal::captureTransientSourceGeometry()` helper. The helper first resolves
+`internal::CaptureTransientSourceGeometry()` helper. The helper first resolves
 the explicit owner's live top-level `TaskPanel`, then walks `Widget::parent()`
 from the source until it reaches the expected `MainWindow` or a null parent,
 rejecting immediately if it encounters a `TransientHostLayer` anywhere in
@@ -782,7 +782,8 @@ struct TransientSourceGeometry {
   Rect visible_bounds_in_window;
 };
 
-bool captureTransientSourceGeometry(
+/// Copies valid source geometry without modifying `output` on failure.
+bool CaptureTransientSourceGeometry(
     Task& interaction_owner,
     const Widget& source,
     TransientSourceGeometry& output);
