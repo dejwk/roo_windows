@@ -362,7 +362,7 @@ void Container::invalidateBeneath(const Rect& bounds, const Widget* widget,
   bool fully_overwritten = false;
   if (parent() == nullptr) {
     fully_overwritten = true;
-  } else {
+  } else if (fullyCoversBoundsWithOpaqueColors()) {
     uint16_t thickness = getBorderStyle().getThickness();
     if (thickness == 0 && (clip || this->bounds().contains(clipped))) {
       fully_overwritten = true;
