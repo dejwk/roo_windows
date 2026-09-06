@@ -139,6 +139,11 @@ class Material3MenuTest : public testing::Test {
                                            1);
   }
 
+  void CompleteRowTap() {
+    row_.Tap();
+    ASSERT_TRUE(app_.refresh());
+  }
+
   roo::byte raster_[320 * 240 * 2] = {};
   roo_display::OffscreenDevice<roo_display::Argb4444> device_;
   roo_display::Display display_;
@@ -274,7 +279,7 @@ TEST_F(Material3MenuTest, SingleSelectionInvokesOnceAndDismisses) {
   menu_.setPolicy(policy);
   ASSERT_EQ(MenuShowResult::kShown, menu_.show(owner_, source_));
 
-  row_.Tap();
+  CompleteRowTap();
 
   EXPECT_TRUE(item_.isSelected());
   EXPECT_EQ(1, item_.invocations());
@@ -286,7 +291,7 @@ TEST_F(Material3MenuTest, SingleSelectionInvokesOnceAndDismisses) {
 TEST_F(Material3MenuTest, QuickDismissalCancelsDetachedRowAnimation) {
   ASSERT_EQ(MenuShowResult::kShown, menu_.show(owner_, source_));
 
-  row_.Tap();
+  CompleteRowTap();
 
   EXPECT_EQ(1, item_.invocations());
   EXPECT_EQ(1, menu_.finishes());
@@ -300,7 +305,7 @@ TEST_F(Material3MenuTest, MultipleSelectionTogglesAndStaysOpenByDefault) {
   menu_.setPolicy(policy);
   ASSERT_EQ(MenuShowResult::kShown, menu_.show(owner_, source_));
 
-  row_.Tap();
+  CompleteRowTap();
 
   EXPECT_TRUE(item_.isSelected());
   EXPECT_EQ(1, item_.invocations());
@@ -322,13 +327,13 @@ TEST_F(Material3MenuTest, HeldThenQuickTapEachToggleMultipleSelectionOnce) {
   app_.root().refreshClickAnimation();
   ASSERT_TRUE(app_.refresh());
 
-  row_.Tap();
+  CompleteRowTap();
   EXPECT_TRUE(item_.isSelected());
   EXPECT_EQ(1, item_.invocations());
 
   // A normal quick tap follows the held release. It must be a separate,
   // single toggle, not be swallowed by stale duplicate-dispatch state.
-  row_.Tap();
+  CompleteRowTap();
   EXPECT_FALSE(item_.isSelected());
   EXPECT_EQ(2, item_.invocations());
 }
@@ -340,7 +345,7 @@ TEST_F(Material3MenuTest, LeafDismissalOverrideKeepsSingleSelectionOpen) {
   item_.setDismissal(MenuLeafDismissal::kKeepOpen);
   ASSERT_EQ(MenuShowResult::kShown, menu_.show(owner_, source_));
 
-  row_.Tap();
+  CompleteRowTap();
 
   EXPECT_TRUE(item_.isSelected());
   EXPECT_EQ(0, menu_.finishes());
@@ -350,7 +355,7 @@ TEST_F(Material3MenuTest, SubmenuOpensAndBackClosesDeepestFirst) {
   item_.enableSubmenu(app_.context());
   ASSERT_EQ(MenuShowResult::kShown, menu_.show(owner_, source_));
 
-  row_.Tap();
+  CompleteRowTap();
   ASSERT_NE(nullptr, item_.firstChild());
   EXPECT_EQ(item_.firstChild(), owner_.focus().focused());
   EXPECT_EQ(0, menu_.finishes());
@@ -365,7 +370,7 @@ TEST_F(Material3MenuTest, SubmenuOpensAndBackClosesDeepestFirst) {
 TEST_F(Material3MenuTest, SubmenuRowsHandleWrappedTraversalAndHomeEnd) {
   item_.enableSubmenu(app_.context());
   ASSERT_EQ(MenuShowResult::kShown, menu_.show(owner_, source_));
-  row_.Tap();
+  CompleteRowTap();
   ASSERT_EQ(item_.firstChild(), owner_.focus().focused());
 
   EXPECT_TRUE(item_.firstChild()->onKeyEvent(
