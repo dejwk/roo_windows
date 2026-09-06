@@ -125,15 +125,23 @@ TEST(Material3MenuGeometry, PanelIncludesCanonicalContentMargins) {
                              DefaultKeyboardColorTheme());
   internal::MenuPanel panel(context);
   auto group = std::make_unique<MenuGroup>(context);
-  group->add(std::make_unique<MenuRow<StandardMenuItem>>(context));
+  auto row = std::make_unique<MenuRow<StandardMenuItem>>(context);
+  MenuGroup* group_ptr = group.get();
+  MenuEntry* row_ptr = row.get();
+  group->add(std::move(row));
   panel.addGroup(std::move(group));
 
   Dimensions size =
       panel.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+  panel.layout(Rect(0, 0, size.width() - 1, size.height() - 1));
 
   // The menu minimum includes its padding; padding must not expand it.
   EXPECT_EQ(Scaled(112), size.width());
   EXPECT_EQ(Scaled(56 + 2 * 4), size.height());
+  // The scroll viewport must retain MenuPanel's exact content width rather
+  // than shrinking this text-only group to its wrap-content measurement.
+  EXPECT_EQ(size.width() - 2 * Scaled(4), group_ptr->width());
+  EXPECT_EQ(group_ptr->width(), row_ptr->width());
   panel.clearGroups();
 }
 

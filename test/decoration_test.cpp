@@ -111,6 +111,22 @@ TEST_F(DecorationGoldenTest, RoundUniformNoOutlineElevation0) {
       "decoration_round_uniform_no_outline_e0"));
 }
 
+TEST(DecorationTest, RoundedEdgeMultipliesTranslucentBackgroundAlpha) {
+  Decoration decoration(roo_display::Box(0, 0, 19, 19), 0, OverlaySpec(),
+                        nullptr, Color(20, 0, 0, 0), {8, 8, 8, 8}, 0,
+                        roo_display::color::Transparent);
+  const int16_t x = 0;
+  const int16_t y = 5;
+  Color result;
+  decoration.readColors(&x, &y, 1, &result);
+
+  // Rounded-edge coverage can only reduce a translucent fill's alpha. Before
+  // the fix, the coverage value replaced 20 and made this edge much darker
+  // than the fill itself.
+  EXPECT_GT(result.a(), 0);
+  EXPECT_LE(result.a(), 20);
+}
+
 // Verifies that a card with per-corner radii (4, 12, 18, 8) and no outline
 // renders identically to the locked-down golden image.
 TEST_F(DecorationGoldenTest, RoundVariableNoOutlineElevation0) {

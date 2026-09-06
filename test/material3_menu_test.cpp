@@ -292,6 +292,17 @@ TEST_F(Material3MenuTest, SingleSelectionInvokesOnceAndDismisses) {
   EXPECT_FALSE(row_.isClickable());
 }
 
+TEST_F(Material3MenuTest, QuickDismissalCancelsDetachedRowAnimation) {
+  ASSERT_EQ(MenuShowResult::kShown, menu_.show(owner_, source_));
+
+  row_.Tap();
+
+  EXPECT_EQ(1, item_.invocations());
+  EXPECT_EQ(1, menu_.finishes());
+  EXPECT_FALSE(app_.root().click_animation().isBusy());
+  EXPECT_FALSE(row_.isClicking());
+}
+
 TEST_F(Material3MenuTest, MultipleSelectionTogglesAndStaysOpenByDefault) {
   MenuPolicy policy;
   policy.selection_mode = SelectionMode::kMultiple;
