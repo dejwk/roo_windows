@@ -25,6 +25,14 @@ Rect UnionNonEmpty(const Rect& a, const Rect& b) {
   return Rect::Extent(a, b);
 }
 
+bool IsInSubtree(const Widget& candidate, const Widget& subtree) {
+  for (const Widget* current = &candidate; current != nullptr;
+       current = current->parent()) {
+    if (current == &subtree) return true;
+  }
+  return false;
+}
+
 }  // namespace
 
 MainWindow::MainWindow(Application& app, const roo_display::Box& bounds)
@@ -116,6 +124,10 @@ void MainWindow::cancelTaskKeyActivationForDisplayCoverage() {
 }
 
 void MainWindow::gestureTargetSubtreeDetaching(Widget& subtree) {
+  const Widget* click_target = click_animation_.target();
+  if (click_target != nullptr && IsInSubtree(*click_target, subtree)) {
+    click_animation_.cancel(*const_cast<Widget*>(click_target));
+  }
   app_.window().cancelGestureTargetsInSubtree(subtree);
 }
 
@@ -209,14 +221,6 @@ bool IsEffectivelyVisible(const Widget& widget) {
     if (!current->isVisible()) return false;
   }
   return true;
-}
-
-bool IsInSubtree(const Widget& candidate, const Widget& subtree) {
-  for (const Widget* current = &candidate; current != nullptr;
-       current = current->parent()) {
-    if (current == &subtree) return true;
-  }
-  return false;
 }
 
 }  // namespace
