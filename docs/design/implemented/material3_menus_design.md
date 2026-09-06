@@ -729,8 +729,11 @@ initial-focus rule below. The menu stores no raw prior owner target. While the
 display-covered menu is active, ordinary keys from other tasks are absorbed by
 the host.
 
-Initial focus chooses selected enabled row, then first enabled row. The deepest
-visible level handles:
+Entering the root menu scope deliberately leaves row focus empty. This captures
+and bounds keyboard dispatch without showing keyboard-focus treatment merely
+because a pointer opened the menu. The first Tab focuses the first enabled row
+(or the last for Shift+Tab). Explicit keyboard submenu navigation focuses the
+child level's first enabled row. The deepest visible level handles:
 
 1. Up/Down: previous/next enabled row with wrap.
 2. Home/End: first/last enabled row.

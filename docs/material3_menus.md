@@ -2,8 +2,9 @@
 
 `roo_windows::material3::Menu` presents a transient, anchored set of actions in
 the shared window host. It borrows an existing `Task` as the interaction owner,
-captures placement geometry synchronously, moves focus into the menu, and
-restores valid prior focus when the chain closes.
+captures placement geometry synchronously, bounds focus traversal to the menu,
+and restores valid prior focus when the chain closes. Opening leaves row focus
+empty; Tab or Shift+Tab selects the first or last eligible row.
 
 This is intentionally different from the legacy `roo_windows::menu::Menu`.
 The legacy type is a full-screen `Destination` with a title and arbitrary

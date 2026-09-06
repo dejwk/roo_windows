@@ -154,10 +154,13 @@ class Material3MenuTest : public testing::Test {
   RecordingMenu menu_;
 };
 
-TEST_F(Material3MenuTest, PresentsWithExplicitOwnerAndCapturesFocus) {
+TEST_F(Material3MenuTest, CapturesFocusScopeWithoutInitiallyFocusingARow) {
   EXPECT_EQ(MenuShowResult::kShown, menu_.show(owner_, source_));
-  EXPECT_EQ(&row_, owner_.focus().focused());
+  EXPECT_EQ(nullptr, owner_.focus().focused());
   EXPECT_NE(&content_, owner_.focus().scopeRoot());
+
+  ASSERT_TRUE(owner_.focus().moveFocus(*owner_.focus().scopeRoot(), false));
+  EXPECT_EQ(&row_, owner_.focus().focused());
 
   EXPECT_EQ(BackResult::kHandled, owner_.requestBack(BackSource::kBackKey));
   EXPECT_EQ(1, menu_.finishes());
@@ -225,6 +228,8 @@ TEST_F(Material3MenuTest, RectanglePresentationNeedsNoWidgetProvenance) {
   EXPECT_EQ(MenuShowResult::kShown,
             menu_.showFromRect(owner_, Rect(300, 220, 300, 220),
                                MenuPlacement::kBelowEnd));
+  EXPECT_EQ(nullptr, owner_.focus().focused());
+  ASSERT_TRUE(owner_.focus().moveFocus(*owner_.focus().scopeRoot(), false));
   EXPECT_EQ(&row_, owner_.focus().focused());
   menu_.dismissChain();
   EXPECT_EQ(PresentationFinishReason::kCancel, menu_.lastReason());
@@ -253,6 +258,8 @@ TEST_F(Material3MenuTest, ActiveInstanceAndReplacementAreDeterministic) {
 
 TEST_F(Material3MenuTest, ReanchorIsAtomicForInvalidRequiredSource) {
   EXPECT_EQ(MenuShowResult::kShown, menu_.show(owner_, source_));
+  ASSERT_TRUE(owner_.focus().moveFocus(*owner_.focus().scopeRoot(), false));
+  ASSERT_EQ(&row_, owner_.focus().focused());
   SourceWidget detached(app_.context());
   EXPECT_FALSE(menu_.reanchor(detached));
   EXPECT_EQ(&row_, owner_.focus().focused());

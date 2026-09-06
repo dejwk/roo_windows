@@ -99,6 +99,9 @@ class MenuPanel final : public Container {
 };
 
 /// Transparent full-window owner of all currently visible menu panels.
+///
+/// It intentionally inherits the null preferred-focus target: entering the
+/// menu scope captures traversal without focusing a row until Tab is pressed.
 class MenuOverlay final : public Container {
  public:
   explicit MenuOverlay(ApplicationContext& context);
@@ -113,7 +116,6 @@ class MenuOverlay final : public Container {
   bool fullyCoversBoundsWithOpaqueColors() const override;
   bool fillTouchTargetPath(XDim x, YDim y, std::vector<Widget*>& path) override;
   bool isFocusable() const override { return false; }
-  Widget* preferredFocusChild() override;
 
  protected:
   void paint(PaintContext& ctx) const override;

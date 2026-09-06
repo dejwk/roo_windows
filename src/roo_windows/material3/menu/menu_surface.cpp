@@ -424,11 +424,6 @@ bool MenuOverlay::fillTouchTargetPath(XDim x, YDim y,
   return false;
 }
 
-Widget* MenuOverlay::preferredFocusChild() {
-  if (panels_.empty()) return nullptr;
-  return panels_.back()->preferredFocusChild();
-}
-
 void MenuOverlay::paint(PaintContext& ctx) const { (void)ctx; }
 
 int MenuOverlay::getChildrenCount() const { return panels_.size(); }
