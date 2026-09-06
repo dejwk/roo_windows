@@ -345,13 +345,23 @@ void MenuEntry::prepareForItemDestruction() {
 }
 
 void MenuEntry::onSingleTapUp(XDim x, YDim y) {
+  if (menu_ == nullptr) {
+    if (getMainWindow() != nullptr) Widget::onSingleTapUp(x, y);
+    return;
+  }
+  // A completed held press can synchronously deliver Widget::onClicked()
+  // from the base tap-up handler. Arm suppression first so that delivery and
+  // the explicit menu invocation below remain one logical menu action.
+  suppress_next_click_dispatch_ = true;
   if (getMainWindow() != nullptr) Widget::onSingleTapUp(x, y);
-  if (menu_ == nullptr) return;
+  if (menu_ == nullptr) {
+    suppress_next_click_dispatch_ = false;
+    return;
+  }
   Menu* owner = menu_;
   uint8_t level = level_;
   uint16_t row = row_;
   uint16_t generation = level_generation_;
-  suppress_next_click_dispatch_ = true;
   owner->invokeEntry(*this, level, row, generation);
 }
 

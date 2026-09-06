@@ -307,6 +307,34 @@ TEST_F(Material3MenuTest, MultipleSelectionTogglesAndStaysOpenByDefault) {
   EXPECT_TRUE(row_.isClickable());
 }
 
+TEST_F(Material3MenuTest, HeldThenQuickTapEachToggleMultipleSelectionOnce) {
+  MenuPolicy policy;
+  policy.selection_mode = SelectionMode::kMultiple;
+  menu_.setPolicy(policy);
+  ASSERT_EQ(MenuShowResult::kShown, menu_.show(owner_, source_));
+
+  // Let the press feedback settle while the pointer remains down. Releasing
+  // now makes ClickAnimation deliver its deferred click synchronously from
+  // Widget::onSingleTapUp().
+  row_.onShowPress(1, 1);
+  delay(kPressAnimationMillis + 120);
+  app_.root().refreshClickAnimation();
+  ASSERT_TRUE(app_.refresh());
+
+  row_.Tap();
+  EXPECT_TRUE(item_.isSelected());
+  EXPECT_EQ(1, item_.invocations());
+
+  // A normal quick tap follows the held release. It must be a separate,
+  // single toggle, not be swallowed by stale duplicate-dispatch state.
+  row_.Tap();
+  EXPECT_FALSE(item_.isSelected());
+  EXPECT_EQ(2, item_.invocations());
+  row_.DeferredClick();
+  EXPECT_FALSE(item_.isSelected());
+  EXPECT_EQ(2, item_.invocations());
+}
+
 TEST_F(Material3MenuTest, LeafDismissalOverrideKeepsSingleSelectionOpen) {
   MenuPolicy policy;
   policy.selection_mode = SelectionMode::kSingle;

@@ -350,18 +350,15 @@ Dimensions MenuPanel::onMeasure(WidthSpec width, HeightSpec height) {
   // panel concern and is therefore removed once here, for every kind of entry.
   WidthSpec available_content_width =
       WidthSpec::AtMost(available_width)
-          .getChildWidthSpec(2 * padding,
-                             PreferredSize::MatchParentWidth());
+          .getChildWidthSpec(2 * padding, PreferredSize::MatchParentWidth());
   Dimensions desired =
       groups_.measure(available_content_width, HeightSpec::Unspecified(0));
-  int16_t resolved_width =
-      std::max<int16_t>(Scaled(tokens().min_width_dp),
-                        desired.width() + 2 * padding);
+  int16_t resolved_width = std::max<int16_t>(Scaled(tokens().min_width_dp),
+                                             desired.width() + 2 * padding);
   resolved_width = width.resolveSize(resolved_width);
   WidthSpec content_width =
       WidthSpec::Exactly(resolved_width)
-          .getChildWidthSpec(2 * padding,
-                             PreferredSize::MatchParentWidth());
+          .getChildWidthSpec(2 * padding, PreferredSize::MatchParentWidth());
   Dimensions final_content =
       groups_.measure(content_width, HeightSpec::Unspecified(0));
   // The same token reserves stationary surface space above and below the
@@ -371,8 +368,7 @@ Dimensions MenuPanel::onMeasure(WidthSpec width, HeightSpec height) {
   int32_t resolved_height = height.resolveSize(desired_height);
   HeightSpec viewport_height =
       HeightSpec::Exactly(resolved_height)
-          .getChildHeightSpec(2 * padding,
-                              PreferredSize::MatchParentHeight());
+          .getChildHeightSpec(2 * padding, PreferredSize::MatchParentHeight());
   scrolling_ = final_content.height() > viewport_height.value();
   if (scrolling_ && policy_.separator_mode == MenuSeparatorMode::kGap) {
     // Gaps expose the panel between groups and become visually ambiguous while
@@ -380,8 +376,7 @@ Dimensions MenuPanel::onMeasure(WidthSpec width, HeightSpec height) {
     // one-pixel dividers and remeasure before laying out the viewport.
     groups_.setResolvedSeparatorMode(MenuSeparatorMode::kDivider,
                                      policy_.variant);
-    final_content =
-        groups_.measure(content_width, HeightSpec::Unspecified(0));
+    final_content = groups_.measure(content_width, HeightSpec::Unspecified(0));
   }
   viewport_.setVerticalScrollBarPresence(
       scrolling_ ? VerticalScrollBar::Presence::kAlwaysShown
