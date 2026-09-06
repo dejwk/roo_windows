@@ -577,6 +577,7 @@ Geometry and colors live in shared const tables referenced by variant:
 | minimum width | 112 dp | 112 dp |
 | maximum preferred width | 280 dp | 280 dp |
 | horizontal item padding | 12 dp | 12 dp |
+| menu content padding (all edges) | 0 dp | 4 dp |
 | minimum one-line height | 48 dp | list-token resolved |
 | leading/trailing icon | 24 dp | 20 dp |
 | trailing-lane gap | 12 dp | 16 dp |
@@ -585,6 +586,9 @@ Geometry and colors live in shared const tables referenced by variant:
 | viewport margin | 8 dp | 8 dp |
 | submenu gutter | 4 dp | 4 dp |
 
+Menu content padding belongs to the panel rather than individual rows, so it
+applies uniformly to selectable and non-selectable entries.
+
 Baseline shape, elevation, typography, and state colors map to landed Material
 menu/list roles. Expressive group and item shapes map to the pinned
 `SegmentedMenuTokens`: leading, middle, trailing, standalone, selected, and
@@ -592,11 +596,11 @@ inactive. Standard expressive colors use surface roles; vibrant colors use
 tertiary-container roles. Disabled opacity reuses list disabled tokens.
 
 The table summarizes the principal layout values. `menu_tokens.h` transcribes
-the complete set of menu roles used by this design from the pinned source
-revision, and a field-by-field mapping test fails when any role is omitted.
-When prose on the Material site and the pinned AndroidX tokens differ, the
-pinned tokens are normative for this implementation; changing the revision is
-a separate reviewed design update. Row and panel code never selects visual
+the menu-specific roles used by this design from the pinned source revision;
+inherited row shapes remain owned by the shared list implementation. When prose
+on the Material site and the pinned AndroidX tokens differ, the pinned tokens
+are normative for this implementation; changing the revision is a separate
+reviewed design update. Menu-specific row and panel code never selects visual
 tokens ad hoc.
 
 ### Content and Trailing Adornments

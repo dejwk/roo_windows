@@ -28,6 +28,9 @@ TEST(Material3MenuRow, TokenTablesCoverAllVisualFamilies) {
             internal::kExpressiveVibrantMenuTokens.panel_container);
   EXPECT_EQ(0, internal::kBaselineMenuTokens.group_gap_dp);
   EXPECT_EQ(2, internal::kExpressiveStandardMenuTokens.group_gap_dp);
+  EXPECT_EQ(0, internal::kBaselineMenuTokens.content_padding_dp);
+  EXPECT_EQ(4, internal::kExpressiveStandardMenuTokens.content_padding_dp);
+  EXPECT_EQ(4, internal::kExpressiveVibrantMenuTokens.content_padding_dp);
 }
 
 TEST(Material3MenuRow, StandardItemExposesStableContentAndMutableState) {

@@ -469,8 +469,11 @@ Dimensions MenuEntry::onMeasure(WidthSpec width, HeightSpec height) {
   if (width.kind() == AT_MOST)
     resolved_width = std::min(resolved_width, width.value());
   const internal::MenuTokens& tokens = TokensFor(visualContext());
+  // Minimum menu width belongs to MenuPanel so its content padding remains
+  // inside that minimum. A row simply honors the content-width constraint it
+  // receives from the already-inset viewport.
   return Dimensions(
-      std::max<int16_t>(Scaled(tokens.min_width_dp), resolved_width),
+      resolved_width,
       std::max<int16_t>(Scaled(tokens.min_item_height_dp), base.height()));
 }
 

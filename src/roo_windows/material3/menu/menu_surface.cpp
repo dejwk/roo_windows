@@ -69,6 +69,9 @@ Widget& MenuGroup::getChild(int idx) {
 }
 
 Dimensions MenuGroup::onMeasure(WidthSpec width, HeightSpec height) {
+  // Measure rows without a height cap because the panel's persistent viewport
+  // owns vertical overflow. Width is passed through unchanged: the panel has
+  // already removed its content padding before measuring the group stack.
   int16_t measured_width = 0;
   int32_t measured_height = 0;
   for (MenuEntry* entry : entries_) {
@@ -76,6 +79,8 @@ Dimensions MenuGroup::onMeasure(WidthSpec width, HeightSpec height) {
     measured_width = std::max(measured_width, size.width());
     measured_height += size.height();
   }
+  // Gaps exist only between segmented siblings; panel padding owns all four
+  // outer edges and therefore must not be duplicated here.
   if (entries_.size() > 1) {
     measured_height += (entries_.size() - 1) * rowGap();
   }
@@ -85,6 +90,8 @@ Dimensions MenuGroup::onMeasure(WidthSpec width, HeightSpec height) {
 
 void MenuGroup::onLayout(bool changed, const Rect& rect) {
   (void)changed;
+  // Every entry spans the already-inset group width, regardless of selection
+  // capability. This keeps text and row shapes aligned across mixed menus.
   int32_t y = 0;
   int16_t gap = rowGap();
   for (size_t i = 0; i < entries_.size(); ++i) {
@@ -337,35 +344,60 @@ Dimensions MenuPanel::onMeasure(WidthSpec width, HeightSpec height) {
   int16_t available_width = width.kind() == UNSPECIFIED
                                 ? max_width
                                 : std::min<int16_t>(max_width, width.value());
-  Dimensions desired = groups_.measure(WidthSpec::AtMost(available_width),
-                                       HeightSpec::Unspecified(0));
+  int16_t padding = Scaled(tokens().content_padding_dp);
+  // First measure loosely to discover the widest row, then remeasure exactly
+  // so every group and row shares the resolved content width. Padding is a
+  // panel concern and is therefore removed once here, for every kind of entry.
+  WidthSpec available_content_width =
+      WidthSpec::AtMost(available_width)
+          .getChildWidthSpec(2 * padding,
+                             PreferredSize::MatchParentWidth());
+  Dimensions desired =
+      groups_.measure(available_content_width, HeightSpec::Unspecified(0));
   int16_t resolved_width =
-      std::max<int16_t>(Scaled(tokens().min_width_dp), desired.width());
+      std::max<int16_t>(Scaled(tokens().min_width_dp),
+                        desired.width() + 2 * padding);
   resolved_width = width.resolveSize(resolved_width);
-  Dimensions final_content = groups_.measure(WidthSpec::Exactly(resolved_width),
-                                             HeightSpec::Unspecified(0));
-  int32_t resolved_height = height.resolveSize(final_content.height());
-  scrolling_ = final_content.height() > resolved_height;
+  WidthSpec content_width =
+      WidthSpec::Exactly(resolved_width)
+          .getChildWidthSpec(2 * padding,
+                             PreferredSize::MatchParentWidth());
+  Dimensions final_content =
+      groups_.measure(content_width, HeightSpec::Unspecified(0));
+  // The same token reserves stationary surface space above and below the
+  // scrolling viewport. Overflow therefore compares scrollable content only
+  // with the space actually available to it.
+  int32_t desired_height = final_content.height() + 2 * padding;
+  int32_t resolved_height = height.resolveSize(desired_height);
+  HeightSpec viewport_height =
+      HeightSpec::Exactly(resolved_height)
+          .getChildHeightSpec(2 * padding,
+                              PreferredSize::MatchParentHeight());
+  scrolling_ = final_content.height() > viewport_height.value();
   if (scrolling_ && policy_.separator_mode == MenuSeparatorMode::kGap) {
     // Gaps expose the panel between groups and become visually ambiguous while
     // content moves under a viewport. Scrollable menus therefore use stable
     // one-pixel dividers and remeasure before laying out the viewport.
     groups_.setResolvedSeparatorMode(MenuSeparatorMode::kDivider,
                                      policy_.variant);
-    final_content = groups_.measure(WidthSpec::Exactly(resolved_width),
-                                    HeightSpec::Unspecified(0));
+    final_content =
+        groups_.measure(content_width, HeightSpec::Unspecified(0));
   }
   viewport_.setVerticalScrollBarPresence(
       scrolling_ ? VerticalScrollBar::Presence::kAlwaysShown
                  : VerticalScrollBar::Presence::kAlwaysHidden);
-  viewport_.measure(WidthSpec::Exactly(resolved_width),
-                    HeightSpec::Exactly(resolved_height));
+  viewport_.measure(content_width, viewport_height);
   return Dimensions(resolved_width, resolved_height);
 }
 
 void MenuPanel::onLayout(bool changed, const Rect& rect) {
   (void)changed;
-  viewport_.layout(Rect(0, 0, rect.width() - 1, rect.height() - 1));
+  // Inset the viewport on all four sides by the same panel token used during
+  // measurement. Groups and rows can consequently lay out at (0, 0) without
+  // knowing whether their panel is baseline or expressive.
+  int16_t padding = Scaled(tokens().content_padding_dp);
+  viewport_.layout(Rect(padding, padding, rect.width() - padding - 1,
+                        rect.height() - padding - 1));
 }
 
 MenuOverlay::MenuOverlay(ApplicationContext& context) : Container(context) {}

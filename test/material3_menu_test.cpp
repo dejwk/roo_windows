@@ -196,7 +196,10 @@ TEST_F(Material3MenuTest, ExpressiveGroupKeepsPerItemDecorationGeometry) {
 
   EXPECT_EQ(ListItemPosition::kFirst, first_row.visualContext().position);
   EXPECT_EQ(ListItemPosition::kLast, second_row.visualContext().position);
+  EXPECT_EQ(0, first_row.offsetTop());
   EXPECT_EQ(first_row.height() + Scaled(2), second_row.offsetTop());
+  EXPECT_EQ(0, first_row.offsetLeft());
+  EXPECT_EQ(group.width(), first_row.width());
 
   menu.dismissChain();
   menu.clearGroups();

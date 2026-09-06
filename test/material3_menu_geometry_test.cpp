@@ -119,6 +119,24 @@ TEST(Material3MenuGeometry, PanelCoercesHeightToPersistentScrolling) {
   panel.clearGroups();
 }
 
+TEST(Material3MenuGeometry, PanelIncludesCanonicalContentMargins) {
+  roo_scheduler::Scheduler scheduler;
+  ApplicationContext context(scheduler, DefaultTheme(),
+                             DefaultKeyboardColorTheme());
+  internal::MenuPanel panel(context);
+  auto group = std::make_unique<MenuGroup>(context);
+  group->add(std::make_unique<MenuRow<StandardMenuItem>>(context));
+  panel.addGroup(std::move(group));
+
+  Dimensions size =
+      panel.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+
+  // The menu minimum includes its padding; padding must not expand it.
+  EXPECT_EQ(Scaled(112), size.width());
+  EXPECT_EQ(Scaled(56 + 2 * 4), size.height());
+  panel.clearGroups();
+}
+
 TEST(Material3MenuGeometry, ScrollingCoercesExpressiveGapsToDividers) {
   roo_scheduler::Scheduler scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),

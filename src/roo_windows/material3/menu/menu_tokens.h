@@ -15,6 +15,7 @@ struct MenuTokens {
   int16_t min_width_dp;
   int16_t max_width_dp;
   int16_t horizontal_padding_dp;
+  int16_t content_padding_dp;
   int16_t min_item_height_dp;
   int16_t icon_size_dp;
   int16_t trailing_gap_dp;
@@ -23,8 +24,6 @@ struct MenuTokens {
   int16_t viewport_margin_dp;
   int16_t submenu_gutter_dp;
   int16_t panel_corner_radius_dp;
-  int16_t item_outer_corner_radius_dp;
-  int16_t item_inner_corner_radius_dp;
   uint8_t elevation;
   ColorToken panel_container;
   ColorToken panel_content;
@@ -37,6 +36,7 @@ inline constexpr MenuTokens kBaselineMenuTokens = {
     112,
     280,
     12,
+    0,
     48,
     24,
     12,
@@ -45,8 +45,6 @@ inline constexpr MenuTokens kBaselineMenuTokens = {
     8,
     4,
     4,
-    0,
-    0,
     3,
     ColorToken::kSurfaceContainer,
     ColorToken::kOnSurface,
@@ -55,45 +53,19 @@ inline constexpr MenuTokens kBaselineMenuTokens = {
     ColorToken::kOutlineVariant};
 
 inline constexpr MenuTokens kExpressiveStandardMenuTokens = {
-    112,
-    280,
-    12,
-    56,
-    20,
-    16,
-    2,
-    12,
-    8,
-    4,
-    16,
-    16,
-    4,
-    3,
-    ColorToken::kSurfaceContainer,
-    ColorToken::kOnSurface,
-    ColorToken::kSecondaryContainer,
-    ColorToken::kOnSecondaryContainer,
+    112, 280, 12, 4, 56, 20, 16, 2, 12, 8, 4,
+    // Slightly less than the style guide's 16dp recommendation to avoid
+    // clipping the panel's corner radius when using 4dp padding.
+    14, 3, ColorToken::kSurfaceContainer, ColorToken::kOnSurface,
+    ColorToken::kSecondaryContainer, ColorToken::kOnSecondaryContainer,
     ColorToken::kOutlineVariant};
 
 inline constexpr MenuTokens kExpressiveVibrantMenuTokens = {
-    112,
-    280,
-    12,
-    56,
-    20,
-    16,
-    2,
-    12,
-    8,
-    4,
-    16,
-    16,
-    4,
-    3,
-    ColorToken::kTertiaryContainer,
-    ColorToken::kOnTertiaryContainer,
-    ColorToken::kPrimaryContainer,
-    ColorToken::kOnPrimaryContainer,
+    112, 280, 12, 4, 56, 20, 16, 2, 12, 8, 4,
+    // Slightly less than the style guide's 16dp recommendation to avoid
+    // clipping the panel's corner radius when using 4dp padding.
+    14, 3, ColorToken::kTertiaryContainer, ColorToken::kOnTertiaryContainer,
+    ColorToken::kPrimaryContainer, ColorToken::kOnPrimaryContainer,
     ColorToken::kOnTertiaryContainer};
 
 }  // namespace roo_windows::material3::internal
