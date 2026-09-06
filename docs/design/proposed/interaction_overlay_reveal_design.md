@@ -151,8 +151,10 @@ This design follows the
 
 1. Existing widgets that override only `getOverlayType()` retain ripple
    behavior.
-2. `showClickAnimation()` retains its current meaning: whether the shared
-   click timeline starts and click delivery is deferred through it.
+2. `getClickActivationPolicy()` determines whether the shared click timeline
+   starts and how semantic delivery relates to it. Existing widgets retain
+   their current feedback and delivery behavior when migrated to the
+   corresponding activation outcome.
 3. Existing custom animation consumers such as Material 3 button shape morphs
    continue to read the same `ClickAnimation::progress()`.
 4. Existing `OVERLAY_NONE` widgets remain outside automatic state-layer
