@@ -56,22 +56,6 @@ enum class MenuShowResult : uint8_t {
   kUnimplemented,
 };
 
-/// Optional source copied synchronously to retain a trigger's pressed paint.
-struct MenuTriggerPaintSource {
-  /// Attached widget whose clipped window geometry is copied during admission.
-  const Widget& widget;
-
-  /// Corner radius of the copied pressed overlay, clamped to 255 pixels.
-  uint16_t corner_radius = 0;
-
-  /// RGB color of the overlay; its input alpha is replaced by
-  /// `overlay_opacity`.
-  uint32_t overlay_argb = 0;
-
-  /// Alpha applied to the copied overlay while the menu remains active.
-  uint8_t overlay_opacity = 0;
-};
-
 /// Presentation and selection policy shared by one menu chain.
 struct MenuPolicy {
   /// Baseline or expressive row geometry and shapes.
@@ -429,8 +413,7 @@ class Menu {
   /// its first eligible row, and makes it the active interactive transient.
   MenuShowResult show(::roo_windows::Task& interaction_owner,
                       const Widget& placement_source,
-                      MenuPlacement placement = MenuPlacement::kBelowStart,
-                      const MenuTriggerPaintSource* trigger = nullptr);
+                      MenuPlacement placement = MenuPlacement::kBelowStart);
 
   /// Presents relative to a rectangle already expressed in window coordinates.
   ///
@@ -438,23 +421,20 @@ class Menu {
   /// admission, focus activation, failure, and dismissal semantics as `show()`.
   MenuShowResult showFromRect(
       ::roo_windows::Task& interaction_owner, const Rect& bounds_in_window,
-      MenuPlacement placement = MenuPlacement::kBelowStart,
-      const MenuTriggerPaintSource* trigger = nullptr);
+      MenuPlacement placement = MenuPlacement::kBelowStart);
 
   /// Recaptures a live placement source for an active menu.
   ///
   /// Returns false without moving the menu when it is inactive or when the
   /// source is detached, clipped away, or outside the interaction owner.
   bool reanchor(const Widget& placement_source,
-                MenuPlacement placement = MenuPlacement::kBelowStart,
-                const MenuTriggerPaintSource* trigger = nullptr);
+                MenuPlacement placement = MenuPlacement::kBelowStart);
 
   /// Reanchors an active menu to a window-coordinate rectangle.
   ///
   /// Returns false when this menu is not the active presentation.
   bool reanchorFromRect(const Rect& bounds_in_window,
-                        MenuPlacement placement = MenuPlacement::kBelowStart,
-                        const MenuTriggerPaintSource* trigger = nullptr);
+                        MenuPlacement placement = MenuPlacement::kBelowStart);
 
   /// Dismisses the complete chain as a cancellation.
   ///
@@ -486,8 +466,7 @@ class Menu {
 
   MenuShowResult showCaptured(::roo_windows::Task& interaction_owner,
                               const Rect& bounds_in_window,
-                              MenuPlacement placement,
-                              const MenuTriggerPaintSource* trigger);
+                              MenuPlacement placement);
 
   class Impl;
 #if defined(ROO_WINDOWS_MENU_ABI_PROBE)

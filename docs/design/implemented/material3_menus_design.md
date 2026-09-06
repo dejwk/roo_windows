@@ -27,12 +27,12 @@ results remain component-specific.
 
 **Status: Implemented; Phases 1–6 complete.** Menu tokens, items, rows,
 adornments, groups, panels, scrolling, deterministic placement, synchronous
-source capture, host presentation, focus, trigger retention, root teardown,
+source capture, host presentation, focus, root teardown,
 item-owned selection, exactly-once invocation, leaf dismissal, bounded submenu
 chains, cascading/compact fallback, keyboard navigation, legacy migration
 guidance, focused examples, and the target-ABI memory audit are implemented.
-The shared composite host, synchronous source-capture contract, and
-presenter-pin integration are implemented by
+The shared composite host and synchronous source-capture contract are
+implemented by
 [Transient surface hosting](transient_surface_hosting_design.md). Menus do not
 create or enter a `Task`.
 Each presentation nevertheless names one existing task as its interaction owner
@@ -54,8 +54,6 @@ The relevant implemented pieces are:
 - [`FocusManager`](../../../src/roo_windows/core/focus_manager.h), which provides
   focused-widget lifetime tracking and traversal but does not yet activate or
   restore the declared `FocusScope` records,
-- the [`PresentationPin`](../../../src/roo_windows/core/presentation_pin.h) host,
-  which currently requires a live widget anchor,
 - the Material 3 list substrate in
   [`material3/list/list.h`](../../../src/roo_windows/material3/list/list.h),
 - the owner-painted [`material3::Badge`](../../../src/roo_windows/material3/badge/badge.h),
@@ -66,8 +64,7 @@ The missing implementations are:
 - no detachable, non-route composite transient surface host,
 - no explicit host-to-task association,
 - no display-wide ordinary-key barrier for a hosted transient,
-- no active focus-scope enter/exit runtime,
-- and no owner-scoped rectangle presentation pin for copied trigger paint.
+- and no active focus-scope enter/exit runtime.
 
 The structural host and synchronous source-capture contract are owned by
 [Transient surface hosting](../implemented/transient_surface_hosting_design.md).
@@ -164,12 +161,10 @@ Accordingly:
 7. Support single-select and multi-select menus.
 8. Support headline and optional supporting text, leading visuals, shortcut
    text, trailing icons, badges, checkmarks, and submenu chevrons.
-9. Keep the root trigger visually pressed while its chain is open when an
-   optional live trigger-paint source is supplied at show or reanchor time.
-10. Dismiss on a completed primary outside tap, root Back/Escape, or a leaf
+9. Dismiss on a completed primary outside tap, root Back/Escape, or a leaf
     whose resolved policy is `kDismiss`.
-11. Keep one semantic action per row.
-12. Keep the legacy menu composite available during migration.
+10. Keep one semantic action per row.
+11. Keep the legacy menu composite available during migration.
 
 ### Framework Prerequisite Requirements
 
@@ -183,17 +178,15 @@ Accordingly:
    its deepest child before dismissing the root chain.
 3. The host borrows the presenter-owned `MenuOverlay` only after successful
    admission and detaches it before menu completion.
-4. The menu uses the host's one optional owner-scoped rectangle pin for copied
-   trigger paint; allocation failure omits only that visual.
-5. Hosted menus and legacy or standalone root transients contend through the
+4. Hosted menus and legacy or standalone root transients contend through the
    window's one canonical slot. Scheduled hosted modals are nonreplaceable;
    legacy and standalone slot occupants have no hosted replaceability
    declaration. Showing a menu during any of those conflicts returns busy, and
    the menu never creates a task.
-6. Before enabling display-wide menu input, the host cancels any covered lower-
+5. Before enabling display-wide menu input, the host cancels any covered lower-
    layer pointer stream and armed key activation. It does not let the opening
    release activate both the trigger and a newly attached menu target.
-7. The framework supplies one shared, allocation-free source-capture helper that
+6. The framework supplies one shared, allocation-free source-capture helper that
    validates a widget by walking its parent chain to the expected `MainWindow`
    and exact interaction-owner task layer. The helper rejects a detached root,
    a descendant of a detached mini-tree, and a source inside any
@@ -202,22 +195,20 @@ Accordingly:
 
 ### Lifetime and Ownership Requirements
 
-1. A presenter never retains a trigger widget, placement widget, destination,
+1. A presenter never retains a placement widget, destination,
    or application listener. The shared host temporarily retains the explicitly
    supplied interaction owner and closes before that task detaches.
 2. The widget-placement `show()` and `reanchor()` overloads synchronously
    resolve a required live placement source. Rectangle overloads consume
-   caller-supplied window coordinates. Every overload independently attempts
-   to capture an optional live trigger source.
+   caller-supplied window coordinates.
 3. A required placement source must be attached in the interaction owner's
    top-level task layer. Invalid placement makes `show()` return
    `kAnchorUnavailable` or `reanchor()` return `false` before the operation
-   mutates an active presentation. An invalid optional trigger does not fail
-   placement or admission; the operation continues without a trigger pin.
-4. Each operation copies resolved window-coordinate geometry, the menu's
-   configured layout direction, and valid optional trigger paint, then retains
-   no source widget, layer identity, or observer.
-5. Copied placement and trigger paint remain frozen after the call. Descendant
+   mutates an active presentation.
+4. Each operation copies resolved window-coordinate geometry and the menu's
+   configured layout direction, then retains no source widget, layer identity,
+   or observer.
+5. Copied placement remains frozen after the call. Descendant
    source detachment and destination or task-content replacement do not move or
    close the menu; interaction-owner detachment still closes it through the
    host.
@@ -326,7 +317,7 @@ In scope:
 - cascading and compact in-place submenus,
 - list-backed rows,
 - focus and keyboard behavior,
-- synchronous live-source capture with copied placement and trigger paint,
+- synchronous live-source capture with copied placement,
 - and focused examples and migration documentation.
 
 Out of scope:
@@ -348,8 +339,8 @@ The stack has five parts:
    drives the reusable composite `TransientHostLayer`, interaction-owner
    association, focus activation, and teardown.
 2. `material3::Menu` is the one registered presenter for a chain. It owns copied
-   placement and trigger-paint data, policies, its mandatory focus scope,
-   overlay, level records, and dismissal.
+   placement data, policies, its mandatory focus scope, overlay, level records,
+   and dismissal.
 3. `MenuOverlay` is the presenter-owned, full-window area-overlay container
    attached through the host. It hosts every visible `MenuPanel` and emits no
    background pixels.
@@ -382,9 +373,8 @@ MainWindow
 4. Items, entries, selection enums, and visual context are reused; `List` is not.
 5. Selection mutation is item-owned through virtual hooks.
 6. Submenu population uses a scoped `MenuLevelBuilder`, not `Menu&`.
-7. Placement and trigger paint are captured from live sources and then frozen.
-   Only explicit `reanchor()` with new live sources moves a visible menu or
-   refreshes its trigger pin.
+7. Placement is captured from a live source and then frozen. Only explicit
+   `reanchor()` with a new live source moves a visible menu.
 8. The standard path uses owner-painted adornments and no embedded controls.
 9. Submenus fall back to in-place navigation on narrow viewports and never
    overlap the opener.
@@ -424,7 +414,7 @@ from focus, z-order, or a source widget.
 panel layout but returns no touch target outside visible panels. The combined
 host layer then becomes the transparent outside target, consumes the stream,
 and dismisses on completed activation. Only successful host admission attaches
-the overlay or permits the optional trigger pin.
+the overlay.
 
 During menu finish, the presenter disables row/key dispatch, unbinds every
 entry, and closes and detaches descendant levels before returning from its
@@ -452,16 +442,15 @@ clear admission guard, so every active chain uses one immutable configured polic
 `reanchor()` recaptures geometry under that same policy rather than becoming a
 policy-update mechanism.
 
-Either overload accepts an optional trigger-paint source that can differ from
-the placement widget. Both sources use the framework's shared
+The widget overload uses the framework's shared
 `internal::CaptureTransientSourceGeometry()` helper. The helper first resolves
 the explicit owner's live top-level `TaskPanel`, then walks `Widget::parent()`
 from the source until it reaches the expected `MainWindow` or a null parent,
 rejecting immediately if it encounters a `TransientHostLayer` anywhere in
 that ancestry. It accepts only when the
 direct child below the window is the exact owner panel. Only after both proofs
-does it call geometry accessors and copy the full and visible bounds in window
-coordinates. It never calls
+does it call geometry accessors, verify non-empty visible bounds, and copy the
+full bounds in window coordinates. It never calls
 `Widget::getMainWindow() const` on an unproven chain. Consequently, a root with
 no parent, a descendant whose mini-tree has no window parent, a foreign
 task/window source, a source in the display-wide host, and a source in a host
@@ -470,22 +459,15 @@ nested beneath the owner panel by task coverage all fail even when
 
 Before replacement or admission, the menu captures the required placement
 source through this helper. Placement failure returns `kAnchorUnavailable`
-without changing the visible menu. The menu captures the trigger independently;
-a detached, foreign-window, different-owner, or host-layer trigger is omitted,
-as is a pin whose allocation fails. Source capture is complete before a
+without changing the visible menu. Source capture is complete before a
 replacement completion callback runs, so that callback can destroy the former
 source without invalidating the copied geometry.
 
 Relayout, descendant detachment, destination changes, and task-content changes
-do not move the open menu
-or its trigger paint. `reanchor()` repeats the live validation, resolves
-placement again, and invalidates the old and new rectangles. Its optional
-trigger argument is a complete replacement: a valid non-null source recaptures
-the pin, while null or an invalid source removes it. Invalid required placement
-returns `false` and preserves the old placement and pin. Valid placement with
-an invalid trigger returns `true`, moves the menu, and removes the old pin.
-Moving placement to a source in another top-level layer is intentionally
-unsupported.
+do not move the open menu. `reanchor()` repeats the live validation, resolves
+placement again, and invalidates the old and new rectangles. Invalid required
+placement returns `false` and preserves the old placement. Moving placement to
+a source in another top-level layer is intentionally unsupported.
 
 ### Root Placement
 
@@ -751,21 +733,6 @@ Forward is Right in LTR and Left in RTL. Child close restores its enabled opener
 then nearest enabled parent row, then scope fallback. Hover changes only hover
 state; first implementation opens submenus only by invocation.
 
-### Trigger Press Retention
-
-An optional live trigger source can differ from the placement source but must be
-attached in the same explicit owner's top-level task layer. During `show()` or
-`reanchor()`, the menu copies its window bounds, clip, shape, and overlay
-color/opacity, then retains neither widget nor layer identity.
-
-The prerequisite host provides an owner-scoped rectangle-pin path. The menu
-allocates its pin only after host start, and the host settles it immediately
-before the interaction owner's top-level layer. Allocation failure omits
-retention but does not prevent opening. The pin hides before overlay detach and
-slot release. Menu-aware triggers supply the optional live source and paint
-style; context menus omit it. Later trigger movement or detachment does not
-change the copied pin until `reanchor()` recaptures or clears it.
-
 ### Per-Instance Footprint Audit
 
 The final ESP32-C3 GCC 14.2.0 audit records these 32-bit ABI sizes:
@@ -802,7 +769,6 @@ namespace roo_windows::internal {
 
 struct TransientSourceGeometry {
   Rect bounds_in_window;
-  Rect visible_bounds_in_window;
 };
 
 /// Copies valid source geometry without modifying `output` on failure.
@@ -816,8 +782,8 @@ bool CaptureTransientSourceGeometry(
 
 The helper returns `false` without modifying `output` unless the complete parent
 walk proves that `source` belongs to the owner's exact attached top-level task
-layer. This gives placement and trigger capture one implementation and one set
-of detached-tree and host-layer rejection tests.
+layer. This gives placement capture one implementation and one set of
+detached-tree and host-layer rejection tests.
 
 ### Menu API
 
@@ -839,13 +805,6 @@ enum class MenuShowResult : uint8_t {
   kSurfaceUnavailable,
   kAnchorUnavailable,
   kUnimplemented,
-};
-
-struct MenuTriggerPaintSource {
-  const Widget& widget;
-  uint16_t corner_radius = 0;
-  uint32_t overlay_argb = 0;
-  uint8_t overlay_opacity = 0;
 };
 
 struct MenuPolicy {
@@ -1012,20 +971,16 @@ class Menu {
   void clearGroups();
   MenuShowResult show(
       Task& interaction_owner, const Widget& placement_source,
-      MenuPlacement placement = MenuPlacement::kBelowStart,
-      const MenuTriggerPaintSource* trigger = nullptr);
+      MenuPlacement placement = MenuPlacement::kBelowStart);
   MenuShowResult showFromRect(
       Task& interaction_owner, const Rect& bounds_in_window,
-      MenuPlacement placement = MenuPlacement::kBelowStart,
-      const MenuTriggerPaintSource* trigger = nullptr);
+      MenuPlacement placement = MenuPlacement::kBelowStart);
   bool reanchor(
       const Widget& placement_source,
-      MenuPlacement placement = MenuPlacement::kBelowStart,
-      const MenuTriggerPaintSource* trigger = nullptr);
+      MenuPlacement placement = MenuPlacement::kBelowStart);
   bool reanchorFromRect(
       const Rect& bounds_in_window,
-      MenuPlacement placement = MenuPlacement::kBelowStart,
-      const MenuTriggerPaintSource* trigger = nullptr);
+      MenuPlacement placement = MenuPlacement::kBelowStart);
   void dismissChain();
 
  protected:
@@ -1047,11 +1002,10 @@ class Menu {
 
 Production declarations add Doxygen comments to every public and protected
 contract.
-`Menu` is intentionally not a `Task` or `Destination`. `placement_source` and
-`MenuTriggerPaintSource::widget` are borrowed only through the source-capture
-step at the start of the call. That step precedes synchronous replacement
-completion. The implementation never stores either address. A null or invalid
-`trigger` omits the pin on show and clears it on reanchor.
+`Menu` is intentionally not a `Task` or `Destination`. `placement_source` is
+borrowed only through the source-capture step at the start of the call. That
+step precedes synchronous replacement completion. The implementation never
+stores its address.
 
 `StandardMenuItem` configuration uses documented stable borrows rather than
 presentation-session borrows. Headline, supporting, shortcut, and badge-text
@@ -1110,12 +1064,11 @@ Phases 1 and 2 add non-presenting menu substrate. During those phases `show()`
 and `showFromRect()` log
 `LOG(WARNING) << "Unimplemented: Material 3 menu presentation"` and return
 `kUnimplemented`; both `reanchor()` forms return `false`, and `dismissChain()`
-is an idle no-op. None attaches a partial tree, changes active focus, or creates
-a pin.
+is an idle no-op. None attaches a partial tree or changes active focus.
 Once Phase 3 lands, an invalid, detached, foreign-window,
 different-owner-layer, or host-layer required placement source returns
-`kAnchorUnavailable` before replacement or registration. An invalid optional
-trigger is omitted. Phase 3 replaces the stub with complete root presentation.
+`kAnchorUnavailable` before replacement or registration. Phase 3 replaces the
+stub with complete root presentation.
 
 Once Phase 3 lands, the complete path maps host `kStarted` to
 `MenuShowResult::kShown` and maps
@@ -1184,16 +1137,15 @@ Validation: `bazel test //:material3_menu_geometry_test
 Code slice:
 
 1. Replace the stub with explicit-owner host presentation, the shared safe
-   parent-chain helper for synchronous placement/trigger capture, completed-
-   outside-tap dismissal with full-stream absorption, mandatory presenter-owned
-   focus, owner-scoped trigger retention, and all finish paths.
+   parent-chain helper for synchronous placement capture, completed-outside-tap
+   dismissal with full-stream absorption, mandatory presenter-owned focus, and
+   all finish paths.
 2. Test busy/replacement, unavailable and foreign owners, a detached source
    root, a source below a detached mini-tree, different-owner-layer and host-
-   layer sources, distinct same-owner placement/trigger sources, invalid
-   optional-trigger omission, frozen geometry after source movement or
-   detachment, atomic placement-reanchor failure, successful placement reanchor
-   that clears an invalid trigger, replacement completion that destroys a
-   source after capture, rect placement without widget provenance, completed
+   layer sources, frozen geometry after source movement or detachment, atomic
+   placement-reanchor failure, successful placement reanchor, replacement
+   completion that destroys a source after capture, rect placement without
+   widget provenance, completed
    outside-tap dismissal, outside drag/cancel absorption without dismissal or
    lower activation, owner/non-owner key routing, focus restoration and
    post-exit/pre-completion remembered-focus clearing, idle `clearGroups()` followed by
@@ -1202,8 +1154,7 @@ Code slice:
    `clearGroups()` rejection during replacement admission, same-instance active
    and reentrant-show reporting, builder copy/move rejection and stale-
    generation validation, active and idle destruction of a derived presenter
-   with an inline borrowed root group, pin failure, dismissal, and owner
-   teardown.
+   with an inline borrowed root group, dismissal, and owner teardown.
 3. Add `menus/equipment_actions` for overflow anchoring.
 4. Add `menus/context_actions` for context-point edge placement.
 5. Add build targets and unchanged-copy emulator validation.
@@ -1213,8 +1164,7 @@ Proposed commit message:
 > Material 3 menus Phase 3: present anchored root menus.
 >
 > Connect menus to the shared host, capture live same-owner sources, restore
-> focus, retain optional owner-scoped trigger paint, cover teardown, and add two
-> focused examples.
+> focus, cover teardown, and add two focused examples.
 
 Validation: `bazel test //:material3_menu_test`, both example builds, formatting,
 and unchanged-copy emulator runs.
@@ -1304,7 +1254,7 @@ The implementation adds:
   interaction, lifecycle, keyboard, and rendering.
 
 The prerequisite design owns focus, combined-host-layer, canonical-slot,
-source-capture, owner-scoped-pin, and input-barrier tests. Menu integration
+source-capture, and input-barrier tests. Menu integration
 repeats only the host behavior needed to prove the shared parent-chain helper's
 safe rejection cases, synchronous same-owner capture, frozen placement,
 completed-activation outside policy, and the component's popup profile.
@@ -1385,8 +1335,8 @@ row-local cache. Items expose content; bound rows own live helpers.
 
 1. A chain pays for one full-window overlay during presentation to gain one
    focus root, outside barrier, and detach point.
-2. Placement and trigger paint freeze until `reanchor()`, avoiding widget
-   observers; descendant source detachment does not close the menu.
+2. Placement freezes until `reanchor()`, avoiding widget observers; descendant
+   source detachment does not close the menu.
 3. A rectangle or context-point placement has no attachment proof. For example,
    a queued context-menu command can open at the copied coordinates after the
    row formerly under that point has been replaced.
@@ -1402,5 +1352,9 @@ row-local cache. Items expose content; bound rows own live helpers.
 2. Add filtered and autocomplete menus on this host and panel substrate.
 3. Add density variants for compact pointer-oriented devices.
 4. Add hover-to-open and shape morphing after pointer and motion infrastructure.
-5. Add durable or cross-layer placement/trigger origins only after a concrete
-   menu requires them.
+5. Add durable or cross-layer placement origins only after a concrete menu
+   requires them.
+6. Consider an opt-in menu-trigger component that owns explicit open-state
+   styling. For example, a custom button could observe menu presentation and
+   dismissal and apply its own live overlay without making generic menus retain
+   or repaint their anchors.

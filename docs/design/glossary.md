@@ -198,9 +198,9 @@ the presenter.
 
 ### Presentation pin
 
-A paint-only record that temporarily keeps copied visual material at a root
-paint stage, such as the pressed appearance of a menu trigger while its popup
-is open. A pin does not own input, presenter lifetime, or Back registration.
+A paint-only record that temporarily draws widget-owned visual material at a
+root paint stage, such as a slider value indicator that must escape local
+clipping. A pin does not own input, presenter lifetime, or Back registration.
 
 ### Presentation queue
 

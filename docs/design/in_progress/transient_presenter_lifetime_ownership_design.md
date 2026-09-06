@@ -192,8 +192,6 @@ It does not apply to:
     registration of each nested surface.
 12. Task coverage must not shorten the lifetime of an ordinary widget pin:
     existing and newly admitted pins remain registered but paint-suppressed.
-    The session-local hosted trigger pin is rejected because it cannot
-    render before that same session ends.
 13. Hiding the interaction owner's panel finishes a task-covered presentation
     before the panel becomes hidden. The presentation is not suspended or
     automatically restored when the panel becomes visible again.
@@ -351,13 +349,11 @@ Presenters do not retain a widget anchor by default. An interactive presenter
 supplies its interaction-owner `Task` explicitly; the owner selects the window
 and interaction services rather than an anchor or current-focus heuristic.
 
-On `show()`, the presenter synchronously validates a live placement source and
-any distinct optional trigger-paint source in that owner's current top-level
-task layer, then copies:
+On `show()`, the presenter synchronously validates a live placement source in
+that owner's current top-level task layer, then copies:
 
 - the placement rectangle in window coordinates,
-- component-configured layout direction,
-- and any trigger-specific geometry and paint needed after the surface opens.
+- and component-configured layout direction.
 
 The shared capture helper first walks public `parent()` links until it either
 reaches the expected `MainWindow` through the owner's direct `TaskPanel` or
@@ -369,9 +365,9 @@ detached root or a descendant inside a detached mini-tree is a normal
 validation failure rather than a null-parent dereference.
 
 The surface is then positioned from copied data. Later relayout does not follow
-either source automatically. A caller that needs live repositioning calls
-`reanchor()` with new live sources; that method repeats same-owner-layer
-validation, resolves new copies synchronously, and invalidates the old and new
+the source automatically. A caller that needs live repositioning calls
+`reanchor()` with a new live source; that method repeats same-owner-layer
+validation, resolves a new copy synchronously, and invalidates the old and new
 presentation bounds. Placement state retains no source widget, layer token,
 attachment generation, or other durable source-layer identity.
 
@@ -384,21 +380,15 @@ anchor registration owned by the anchor and presenter, including detach
 notification. Such a feature is a separate extension and may not retain a raw
 `Widget*` under this contract.
 
-Paint-only trigger retention can copy its paint plan into a
-`PresentationPin`. `MainWindow` owns the pin while a display-covered hosted
-session associates it with the active registration and the interaction owner's
-top-level root for lifetime and z-order. The host hides it before root
-detachment or slot vacancy. During task coverage, ordinary widget pins scoped
-to the covered owner panel remain registered, including pins newly shown while
-covered, but a check derived from the active host suppresses their paint. Entry
+During task coverage, ordinary widget pins scoped to the covered owner panel
+remain registered, including pins newly shown while covered, but a check
+derived from the active host suppresses their paint. Entry
 and finish invalidate their current and presented bounds; when coverage clears,
 a still-active pin resumes without a new event from its anchor. For example, a
 pre-existing `SliderValueIndicatorBehavior::kAlways` pin reappears after finish
 with the same registration and allocation even though slider state did not
-change. The session's hosted trigger-pin request instead destroys the incoming
-candidate and returns `kAnchorUnavailable`, because that pin cannot render
-before its owning registration finishes. Sibling and display-coverage pins are
-unaffected. Pins do not extend source-widget or presenter lifetime.
+change. Sibling and display-coverage pins are unaffected. Pins do not extend
+source-widget lifetime.
 
 ### Content Attachment Contracts
 
@@ -442,11 +432,11 @@ The required order is:
 3. invoke the registration's component detach hook to cancel component work and
    detach session-bound component children; persistent presenter children stay
    attached while the complete presenter root is detached in the next step,
-4. for a hosted occupant, invoke non-virtual host cleanup to hide its optional
-   hosted pin, invalidate current and presented bounds for ordinary pins whose
-   task-coverage suppression is ending, exit focus, and detach its root, scrim,
-   and composite layer; a null hosted association retains the legacy or
-   standalone component's direct structural cleanup,
+4. for a hosted occupant, invoke non-virtual host cleanup to invalidate current
+   and presented bounds for ordinary pins whose task-coverage suppression is
+   ending, exit focus, and detach its root, scrim, and composite layer; a null
+   hosted association retains the legacy or standalone component's direct
+   structural cleanup,
 5. vacate the interactive slot or remove the entry from its queue,
 6. set state to `kIdle`,
 7. copy any result value needed by the hook,
@@ -717,10 +707,8 @@ rather than putting a type-erased result or callback in the framework base.
 
 - The root menu presenter is the one registered lifetime participant.
 - The menu names its interaction-owner task explicitly. Show and reanchor
-  synchronously validate live placement and optional distinct trigger sources
-  in that owner's top-level layer, then retain only frozen copies.
-- Optional copied trigger paint uses the display-covered hosted registration's
-  owner-scoped rect pin; no source widget or layer token is retained.
+  synchronously validate live placement in that owner's top-level layer, then
+  retain only frozen geometry.
 - Submenus are component-owned entries in that presenter's internal chain; they
   do not occupy additional window slots.
 - Closing a parent finishes the deepest submenu first and then the parent.
@@ -786,12 +774,8 @@ runs. A menu occupant can consume Back by closing an internal submenu while
 remaining registered.
 
 `PresentationPin` is a paint-only `MainWindow` resource, not an interactive
-lifetime owner. A display-covered hosted session may associate one optional
-rect pin with its active registration and the explicit owner's top-level root.
-The host hides it before detaching the composite layer or vacating the slot;
-task-covered sessions reject that hosted trigger pin with
-`kAnchorUnavailable`. Ordinary widget pins in the covered owner scope keep
-their registrations and normal hide/detach lifetime, but are computed-
+lifetime owner. Ordinary widget pins in the covered owner scope keep their
+registrations and normal hide/detach lifetime, but are computed-
 suppressed until coverage ends; pins shown during coverage are admitted under
 the same rule. Admission and finish invalidate current and presented bounds,
 allowing a still-active pin to resume without anchor notification. Sibling-task,
@@ -870,15 +854,12 @@ Validation: `bazel test //:modal_sheet_test
 ### Phase 5: Menu Adoption
 
 1. Accept an explicit interaction owner; synchronously validate live placement
-   and optional trigger sources in that owner's top-level layer at show or
-   reanchor time, then retain only frozen copies.
+   in that owner's top-level layer at show or reanchor time, then retain only
+   frozen geometry.
 2. Keep the full submenu chain inside one registered menu presenter and apply
    deepest-first Back behavior.
-3. Bind optional trigger retention through the display-coverage owner-scoped
-   hosted-pin path in Phase 4 of the transient-surface-host design.
-4. Under task coverage, reject only that session's hosted trigger pin; leave
-   ordinary widget pin registration and computed suppression to the shared pin
-   host.
+3. Leave trigger open-state styling to concrete triggering components rather
+   than the generic menu presenter.
 
 Proposed commit message:
 
@@ -924,13 +905,11 @@ Shared contract tests must cover:
    `getMainWindow()`, reject sources inside host layers under both
    display and task coverage, and never dereference sources later;
 8. nested menus finish deepest-first while using one window slot;
-9. hosted association cleanup removes its optional hosted pin, focus, roots,
-   and composite-layer state before slot vacancy and completion, including for
-   migrated legacy dialogs;
+9. hosted association cleanup removes focus, roots, and composite-layer state
+   before slot vacancy and completion, including for migrated legacy dialogs;
 10. task coverage preserves existing and newly shown ordinary pin
-    registrations while suppressing their paint, rejects the presenter's hosted
-    trigger pin with `kAnchorUnavailable`, and leaves sibling and display pins
-    unaffected;
+    registrations while suppressing their paint and leaves sibling and display
+    pins unaffected;
 11. a hidden task-coverage owner is rejected, hiding an active owner finishes
     with `kCoverageParentHidden` before the panel becomes hidden, completion
     cannot reopen while that hide transition is guarded, and showing the panel
@@ -954,9 +933,7 @@ one modal sheet, one dialog, and the snackbar queue.
 Owner-panel pins cannot render during task coverage until a nested pin stage
 can place them below the nested host and clip them to the task. Computed
 suppression preserves ordinary pin lifetime without adding a flag to each pin;
-normal hide and detach can still delete one while covered. The presenter's
-hosted trigger pin is not preserved because its lifetime cannot outlast the
-coverage that makes it invisible.
+normal hide and detach can still delete one while covered.
 
 ### Rejected Alternatives
 
@@ -1023,8 +1000,8 @@ raw-child storage model. Persistent configuration borrows retain one explicit
 caller obligation: their backing storage must survive until the documented
 replace, clear, or configuration-owner destruction endpoint, and the framework
 cannot diagnose an early destruction. More hazardous call-scoped temporal
-borrows are removed: live placement and trigger sources are validated and
-copied synchronously, queued payload is owned or self-registering, and deferred
+borrows are removed: live placement sources are validated and copied
+synchronously, queued payload is owned or self-registering, and deferred
 behavior belongs to the registered participant.
 
 The resulting ownership model is consistent with the implementation:

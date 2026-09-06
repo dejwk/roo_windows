@@ -184,8 +184,7 @@ without preserving their semantics:
   are admitted, but both are computed-suppressed until coverage finishes.
 - Task-coverage admission and finish must invalidate each affected pin's
   current and presented bounds so still-active pins resume without a new anchor
-  event. The presenter's hosted trigger-pin operation alone returns
-  `kAnchorUnavailable` because that session-local pin can never render.
+  event.
 - Existing Back behavior must continue to represent one semantic step, not one
   internal structural operation.
 
@@ -600,8 +599,8 @@ owner's incomplete key activation without disturbing sibling tasks. Detachment
 likewise clears retained targets in the departing host-layer subtree before its
 parent link changes.
 
-Display coverage retains existing widget pins and the base host's optional
-presenter pin. Task coverage instead computes every ordinary widget pin whose
+Display coverage retains existing widget pins. Task coverage instead computes
+every ordinary widget pin whose
 effective z-scope is the covered `TaskPanel` as suppressed; those pins remain
 registered, and new ordinary widget pins are admitted but suppressed. At the
 final non-failing admission step and again at finish, `MainWindow` invalidates
@@ -610,13 +609,9 @@ presented envelope without unlinking it. Once coverage clears, a still-active
 pin resumes on the next paint without a new anchor event. Normal hide and
 subtree detach still delete pins.
 
-The covered presenter's hosted trigger-pin request is the one rejection: the
-host destroys that incoming candidate and returns `kAnchorUnavailable` because
-the pin cannot become visible before its owning session finishes. Otherwise a
-top-level owner pin would paint above the nested host layer and its default
-window clip could cross a sibling task. Sibling-task pins and all
-display-coverage pin behavior remain unchanged. Components that require
-visible retained trigger paint use display coverage.
+Without suppression, a top-level owner pin would paint above the nested host
+layer and its default window clip could cross a sibling task. Sibling-task pins
+and all display-coverage pin behavior remain unchanged.
 
 Coverage is immutable while active and does not change admission cardinality:
 one window has at most one hosted interactive transient. Task-covered
@@ -861,11 +856,7 @@ the next frame. For example, an existing `Slider` pin configured with
 reappears after finish without a slider state change, anchor callback, or new
 allocation. Normal hide and subtree detach still unlink and delete pins.
 
-The task-covered presenter's hosted trigger-pin request instead destroys the
-incoming candidate, reports `PresentationPinShowResult::kAnchorUnavailable`,
-and leaves the active presentation unchanged; that session-local pin cannot
-render during its own lifetime. Sibling-panel pins and every display-coverage
-pin retain their normal behavior.
+Sibling-panel pins and every display-coverage pin retain their normal behavior.
 
 Physical or emulated key input owns one task connection:
 
@@ -1143,9 +1134,8 @@ Implement the
 - compute-suppress ordinary widget pins scoped to the covered `TaskPanel`
   without removing their registrations or adding per-pin state, admit new
   ordinary pins under the same suppression, invalidate current and presented
-  bounds at admission and finish, reject only the session's hosted trigger pin
-  with `kAnchorUnavailable`, and leave sibling and display-coverage pin behavior
-  unchanged.
+  bounds at admission and finish, and leave sibling and display-coverage pin
+  behavior unchanged.
 
 Validation:
 
@@ -1170,9 +1160,8 @@ Validation:
   suppressed at commit, a new ordinary pin is admitted but suppressed, and both
   transition invalidations cover current and presented bounds;
 - test an existing `kAlways` slider pin resumes after finish without an anchor
-  event or new allocation, the covered presenter's hosted trigger pin returns
-  `kAnchorUnavailable` without changing the presentation, sibling-panel pins
-  remain visible, and display coverage retains hosted-pin ordering;
+  event or new allocation, sibling-panel pins remain visible, and display
+  coverage retains pin ordering;
 - test display coverage blocks ordinary non-owner input;
 - test borrowed-root focus containment, restoration, owner teardown, and
   participant-defined Back outcomes;
@@ -1228,8 +1217,7 @@ invariants:
 - task coverage preserves but computed-suppresses existing and newly admitted
   ordinary pins scoped to its owner panel, invalidates them at both transitions,
   and lets still-active pins resume without a new anchor event;
-- task coverage rejects only its presenter's hosted trigger pin, while sibling
-  and display-coverage pins retain their behavior;
+- sibling and display-coverage pins retain their behavior;
 - Back performs exactly one documented semantic step;
 - scheduled application callbacks are bounded and do not reenter another
   application; and
@@ -1259,9 +1247,7 @@ invariants:
   stage would otherwise paint them above the nested host layer and their
   default window clip could reach a sibling task. Existing and newly admitted
   ordinary pins stay registered without per-pin suppression state; transition
-  invalidation lets still-active pins reappear after coverage ends. The
-  session's hosted trigger pin is rejected because it cannot render before
-  that same session ends.
+  invalidation lets still-active pins reappear after coverage ends.
 - A display-covered presentation also blocks a same-display software-keyboard
   task. Text entry in such a presentation therefore requires a hardware
   keyboard, a keyboard on another display, or use of task coverage. An

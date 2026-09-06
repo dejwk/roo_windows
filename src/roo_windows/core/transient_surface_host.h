@@ -1,11 +1,9 @@
 #pragma once
 
 #include <cstdint>
-#include <memory>
 
 #include "roo_windows/core/container.h"
 #include "roo_windows/core/focus_manager.h"
-#include "roo_windows/core/presentation_pin.h"
 #include "roo_windows/core/rect.h"
 #include "roo_windows/core/transient_presentation.h"
 
@@ -65,13 +63,10 @@ struct TransientSurfaceSpec {
 
 namespace internal {
 
-/// Frozen source geometry copied in receiving-window coordinates.
+/// Source geometry copied in receiving-window coordinates.
 struct TransientSourceGeometry {
   /// Full source bounds in receiving-window coordinates.
   Rect bounds_in_window;
-
-  /// Ancestor-clipped source bounds in receiving-window coordinates.
-  Rect visible_bounds_in_window;
 };
 
 /// Synchronously copies geometry from a source physically owned by `owner`.
@@ -193,20 +188,6 @@ class TransientSurfaceHost {
       Widget& root, FocusScope& scope, const TransientSurfaceSpec& spec,
       TransientSurfacePreparation& preparation);
 
-  /// Shows one copied-geometry pin below the active hosted surface.
-  ///
-  /// `registration` must be this display host's active registration. The call
-  /// consumes `pin` on every result and permits one hosted pin per session.
-  PresentationPinShowResult showPresentationPin(
-      TransientPresentationRegistration& registration,
-      std::unique_ptr<PresentationPin> pin);
-
-  /// Invalidates the active registration's hosted pin, if it has one.
-  void setPresentationPinDirty(TransientPresentationRegistration& registration);
-
-  /// Removes the active registration's hosted pin, if it has one.
-  void hidePresentationPin(TransientPresentationRegistration& registration);
-
  private:
   friend class ::roo_windows::MainWindow;
   friend class ::roo_windows::ApplicationTextInput;
@@ -260,7 +241,6 @@ class TransientSurfaceHost {
 
   MainWindow& window_;
   FocusScope* active_scope_ = nullptr;
-  PresentationPin* active_pin_ = nullptr;
   uint8_t active_policy_ = 0;
 };
 

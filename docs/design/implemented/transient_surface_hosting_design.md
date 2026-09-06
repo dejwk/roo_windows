@@ -22,16 +22,15 @@ cross-task presenter requires them.
 
 ## Background
 
-**Status: Implemented.** All five phases are implemented. Presenter-owned focus
+**Status: Implemented.** All four phases are implemented. Presenter-owned focus
 scopes provide zero-growth admission, containment, selection, routing, and
 restoration. The window-owned composite host now adds owner-bound structural
 attachment, transparent or scrim paint, root-first hit testing, complete
 profile preflight, callback-safe replacement, source-geometry capture, and
 shutdown-safe cleanup. Display-wide gesture, key, Back/Escape, and semantic
 editor isolation is also implemented, including deferred outside activation.
-Display-covered presenters may own one copied-geometry pin below the host
-layer. Guarded prepared admission and explicit-owner legacy-dialog migration
-complete the shared framework host.
+Guarded prepared admission and explicit-owner legacy-dialog migration complete
+the shared framework host.
 
 ### Concrete Use Cases
 
@@ -41,7 +40,7 @@ interactions.
 #### An anchored menu
 
 A user presses the overflow button on a settings screen. The menu appears next
-to that button and the button remains visually pressed while the menu is open.
+to that button, and ordinary press feedback ends with the opening gesture.
 Keyboard focus moves into the menu. A tap anywhere else closes it without
 activating the settings screen underneath. Back closes the deepest submenu
 first and eventually closes the complete menu. If navigation destroys the
@@ -51,7 +50,7 @@ button.
 The menu presenter owns menu placement, rows, selection, and its submenu chain.
 The shared host only copies the live button geometry, attaches the menu above
 the display, activates its focus scope, isolates lower input, and performs safe
-teardown. The pressed button image is an optional paint-only presentation pin.
+teardown.
 
 #### A confirmation dialog
 
@@ -185,13 +184,10 @@ No implemented facility currently:
 1. borrows one presenter-owned root into a reusable window-level layer;
 2. makes that root resolve task services through an explicit existing task;
 3. blocks covered pointer, physical-key, and semantic-editor input;
-4. combines transparent popup isolation and scrimmed modal presentation;
-5. activates and restores a presenter-owned focus scope; or
-6. registers copied trigger paint against the interaction owner's stable
-   top-level layer.
+4. combines transparent popup isolation and scrimmed modal presentation; or
+5. activates and restores a presenter-owned focus scope.
 
-Menu rows, placement, selection, submenu behavior, and trigger-paint contents
-remain in the
+Menu rows, placement, selection, and submenu behavior remain in the
 [Material 3 menus design](material3_menus_design.md).
 
 ### Legacy Dialog Sequencing and Selected Migration
@@ -297,7 +293,7 @@ Thus a successful presentation calls `onEnter()`, `onShow()`, `onExit()`, and
 4. **P4 — Incoming-side atomicity.** Failed initial preflight leaves the current
    presentation and incoming surface unchanged. Once requested replacement has
    finished the outgoing presentation, a failed repeated preflight makes no
-   host-side attachment, focus, or pin change for the incoming surface and
+   host-side attachment or focus change for the incoming surface and
    leaves the canonical slot empty; callback side effects remain, and the host
    does not restore the outgoing presentation. Every prerequisite is
    revalidated after callbacks.
@@ -390,32 +386,20 @@ Thus a successful presentation calls `onEnter()`, `onShow()`, `onExit()`, and
    behavior, Back policy, replacement request, and occupant replaceability.
    There are no popup-oriented defaults that silently apply to a modal.
 
-### Placement and Presentation-Pin Requirements
+### Placement Requirements
 
-1. **A1 — Synchronous source capture.** Widget-derived placement and trigger
-   paint are validated and copied during the same `show()` or `reanchor()`
-   call that consumes them.
+1. **A1 — Synchronous source capture.** Widget-derived placement is validated
+   and copied during the same `show()` or `reanchor()` call that consumes it.
 2. **A2 — Owner-layer scope.** Required placement is accepted only from the
-   explicit interaction owner's current top-level layer. Optional trigger paint
-   can use a distinct widget, but is retained only when that widget belongs to
-   the same layer.
+   explicit interaction owner's current top-level layer.
 3. **A3 — Frozen values.** After capture, the presenter retains only copied
-   geometry and paint data. Source-widget detachment, destination or task-
-   content replacement, and relayout do not move or finish an active surface;
-   explicit `reanchor()` or component dismissal does.
+   geometry. Source-widget detachment, destination or task-content replacement,
+   and relayout do not move or finish an active surface; explicit `reanchor()`
+   or component dismissal does.
 4. **A4 — No durable identity.** The initial host exposes no layer token,
    attachment generation, delayed copied-origin validation, or cross-layer
    origin.
-5. **A5 — One optional pin.** An active display-covered hosted presenter
-   registers at most one copied-geometry pin against the interaction owner's
-   stable top-level root.
-6. **A6 — Pin teardown.** The host hides the optional pin before root
-   detachment or slot vacancy. Owner teardown removes it before the owner layer
-   loses its parent chain.
-7. **A7 — Optional visual failure.** Pin allocation or trigger-source failure
-   omits only retained trigger paint; it does not fail an otherwise valid
-   interactive presentation.
-8. **A8 — Existing behavior.** Display coverage leaves widget-anchored pins
+5. **A5 — Existing behavior.** Display coverage leaves widget-anchored pins
    and slider behavior unchanged.
 
 ### Embedded Requirements
@@ -431,8 +415,8 @@ Thus a successful presentation calls `onEnter()`, `onShow()`, `onExit()`, and
 4. Add no state to regular-task or popup-task vector elements.
 5. Host admission, dismissal, focus entry and exit, validation, input
    quiescence, and structural attachment allocate nothing. Existing top-level
-   vector growth and optional pin allocation remain the host's only relevant
-   allocations. A presenter's optional preparation hook may deliberately
+   vector growth remains the host's only relevant allocation. A presenter's
+   optional preparation hook may deliberately
    allocate session content; that allocation is component-owned and paired
    with deletion before the presentation becomes idle.
 6. Paint, hit testing, focus traversal, and active-state validation add no
@@ -449,7 +433,7 @@ The design introduces five document-local concepts:
   coverage host does not require that panel to be visible, while Phase 7 task
   coverage additionally requires its coverage parent to be visible;
 - **host session**: the coordinator state connecting one active registration,
-  interaction owner, focus scope, borrowed root, policy, and optional pin;
+  interaction owner, focus scope, borrowed root, and policy;
 - **`TransientHostLayer`**: one reusable full-display `Container` attached above
   regular and popup tasks; it exposes the interaction owner to descendants,
   contains optional scrim paint and the borrowed root, and becomes the outside
@@ -488,7 +472,7 @@ The major solution elements map to the requirements as follows:
 | hosted cleanup seam and permanent shutdown guard | P7–P9 |
 | common hosted association plus migrated legacy dialogs | P10 |
 | guarded prepare, measure, revalidate, and rollback seam | P11–P12 |
-| explicit interaction owner and availability bit | P2, I7, I10–I11, A2, A5–A6 |
+| explicit interaction owner and availability bit | P2, I7, I10–I11, A2–A4 |
 | one composite host layer | P3, I5, B1–B2 |
 | two-pass preflight, admission guard, and synchronous caller-lifetime contract | P4, P6 |
 | incoming replacement request plus occupant replaceability | P5, B6 |
@@ -496,14 +480,12 @@ The major solution elements map to the requirements as follows:
 | admission-time pointer and key quiescence | I6, I8 |
 | explicit surface profile and deferred outside dispatch | I9, B1, B3–B6 |
 | synchronous owner-layer source capture | A1–A4 |
-| display-coverage owner-scoped copied-geometry pin | A5–A8 |
+| unchanged widget-anchored pin behavior | A5 |
 | measured type ceilings and target-ABI probes | Embedded requirements 1–6 |
 
 An ordinary admission follows this sequence:
 
-1. The presenter validates and copies the required live placement source, then
-   independently captures optional trigger paint. Invalid trigger paint is
-   discarded without failing admission.
+1. The presenter validates and copies the required live placement source.
 2. The host preflights registration, owner, root, scope, application context,
    bounds, and policy.
 3. Replacement finishes only an occupant that opted into replacement. The
@@ -513,8 +495,7 @@ An ordinary admission follows this sequence:
 5. The slot admits the registration and installs the hosted association.
 6. The host attaches the composite layer and root, enters the presenter scope,
    and enables input.
-7. A display-covered presenter registers its optional copied-geometry pin.
-8. Every terminal path disables input, performs component and structural
+7. Every terminal path disables input, performs component and structural
    teardown, vacates the slot, and then delivers normal completion.
 
 Prepared admission adds one bounded step after initial preflight or outgoing
@@ -657,7 +638,7 @@ incoming prerequisite without filling the slot, step 4 returns the result that
 initial preflight would now produce: `kHostBusy` for registration state,
 `kInteractionOwnerUnavailable` for owner state, or `kSurfaceUnavailable` for
 root, scope, bounds, context, or policy state. The host makes no incoming
-attachment, focus, or pin change, callback side effects remain, and the
+attachment or focus change, callback side effects remain, and the
 canonical slot stays empty. When completion fills the slot, step 3 returns
 `kReentrantReplacement`. The same incoming-side guarantee applies when an input
 cancellation callback invalidates a prerequisite before step 7. The slot-level
@@ -822,7 +803,7 @@ Owner removal first marks the task unavailable, finishes the presentation with
 `kInteractionOwnerDetached`, and only then clears task services and detaches
 the panel. Completion cannot reopen against the unavailable owner.
 
-### Synchronous Source Capture and Display-Coverage Pins
+### Synchronous Source Capture
 
 The host has no generic anchor object. A component validates and copies live
 sources before host admission through
@@ -834,10 +815,9 @@ sources before host admission through
   `TransientHostLayer` encountered anywhere in the chain, reaches the owner's
   `MainWindow`, and requires its direct child to be the owner's registered
   `TaskPanel`;
-- it copies full and visible window-coordinate bounds and changes no output on
-  failure;
-- required placement failure leaves the presentation unchanged; and
-- optional trigger failure clears or omits only the pin.
+- it verifies non-empty visible bounds, copies full window-coordinate bounds,
+  and changes no output on failure; and
+- required placement failure leaves the presentation unchanged.
 
 Checking only `source.getTask()` is insufficient. A widget inside a
 `TransientHostLayer` resolves that method to the interaction owner. A
@@ -857,21 +837,6 @@ completion. The simplified contract carries no attachment generation. A future
 internal detach and reattachment of the same owner object during a queued
 workflow is therefore indistinguishable from continuous attachment.
 
-After a display-covered host starts, an optional trigger-paint pin stores
-copied geometry and paint data. The private pin-registry helper stores the
-interaction owner's stable top-level root in the existing non-null `anchor_`
-field and leaves `z_scope_root_` null as the hosted-mode sentinel. Its effective
-z-scope is the owner root, but the pin never interprets that root as a geometry
-anchor.
-
-Widget-facing pin lookup matches only entries with non-null `z_scope_root_`, so
-a hosted pin cannot collide with an ordinary widget pin anchored to the owner
-root. On success the host stores the returned non-owning `PresentationPin*` and
-uses private handle-based dirty and hide helpers; hide clears the handle. This
-adds no pin field or token. Trigger-source validation failure and pin allocation
-failure omit the visual. Host and owner teardown hide the pin before the owner
-root loses its parent chain.
-
 ### Finish Ordering
 
 Every normal terminal path performs:
@@ -879,14 +844,13 @@ Every normal terminal path performs:
 1. mark the registration finishing and disable host and component input;
 2. invoke the participant detach hook to stop component work and detach any
    session-bound children; persistent presenter children remain inside the root;
-3. hide the optional presenter pin;
-4. exit focus and restore an eligible owner target;
-5. notify generic subtree-detachment input cleanup;
-6. detach the presenter root, optional scrim, and composite host layer;
-7. clear root, owner, scope, pin, pending outside action, and packed policy;
-8. vacate the slot and become idle;
-9. deliver completion; and
-10. perform no presenter access after completion.
+3. exit focus and restore an eligible owner target;
+4. notify generic subtree-detachment input cleanup;
+5. detach the presenter root, optional scrim, and composite host layer;
+6. clear root, owner, scope, pending outside action, and packed policy;
+7. vacate the slot and become idle;
+8. deliver completion; and
+9. perform no presenter access after completion.
 
 The registration/base-destructor fallback skips steps 2, 9, and 10. A dialog
 subclass with derived session resources performs step 2 through its protected
@@ -1004,10 +968,9 @@ The target 32-bit ABI ceilings are:
 | top-level layer record delta | 0 B | vectors remain `Widget*` |
 | task and base-focus delta | 0 B | existing manager fields are the implicit base; the presenter scope reuses its third pointer for restoration |
 | reusable composite layer | `sizeof(Container) + 4 * sizeof(void*)` | owner, root, optional scrim view, packed hit state and padding |
-| coordinator plus hosted-slot state | 32 B | scope, pin, host association, admission/shutdown state, packed profile |
+| coordinator plus hosted-slot state | 32 B | scope, host association, admission/shutdown state, packed profile |
 | `MainWindow` net fixed delta | 96 B | composite layer and coordinator after shared-state accounting |
 | inactive presenter host delta | 0 B | presenter already owns registration and required focus scope |
-| `PresentationPin` delta | 0 B | owner root reuses `anchor_`; null `z_scope_root_` marks hosted mode |
 
 The implementation phases record actual padding and vector-capacity effects.
 A ceiling increase requires a design amendment containing the measured trade-off.
@@ -1192,7 +1155,6 @@ namespace internal {
 /// Frozen window-coordinate source geometry used during one admission.
 struct TransientSourceGeometry {
   Rect bounds_in_window;
-  Rect visible_bounds_in_window;
 };
 
 /// Adapts a root whose final bounds depend on session-only children.
@@ -1248,19 +1210,6 @@ class TransientSurfaceHost {
       const TransientSurfaceSpec& spec,
       TransientSurfacePreparation& preparation);
 
-  /// Shows a display-coverage pin for the active hosted registration.
-  PresentationPinShowResult showPresentationPin(
-      TransientPresentationRegistration& registration,
-      std::unique_ptr<PresentationPin> pin);
-
-  /// Marks the active registration's display-coverage pin dirty.
-  void setPresentationPinDirty(
-      TransientPresentationRegistration& registration);
-
-  /// Hides the active registration's display-coverage pin.
-  void hidePresentationPin(
-      TransientPresentationRegistration& registration);
-
  private:
   friend class TransientPresentationSlot;
 
@@ -1269,7 +1218,6 @@ class TransientSurfaceHost {
       TransientPresentationRegistration& registration,
       PresentationFinishReason reason);
 
-  PresentationPin* active_pin_ = nullptr;
 };
 
 /// Resolves the host owned by `interaction_owner.window()`.
@@ -1341,9 +1289,6 @@ contract. Component implementations call `internal::GetTransientSurfaceHost()`
 with their explicit `Task&`; the internal function resolves its
 `DisplayWindow` and window-owned host. No public `MainWindow` host accessor is
 added. `MainWindow` befriends only this internal resolver and the host.
-
-`showPresentationPin()` is available only to a display-covered active
-registration.
 
 `showPrepared()` performs the same initial preflight as `show()` except for
 final bounds, resolves approved replacement before creating incoming content,
@@ -1525,43 +1470,7 @@ open, finish it, or destroy their presenter. Key coverage includes owner and
 non-owner Enter/Space cancellation, ordinary-key and semantic-editor
 containment, and display-wide Back/Escape precedence.
 
-### Phase 4: Add Display-Coverage Owner-Scoped Presenter Pins — Implemented
-
-Code slice:
-
-1. Add the display-coverage active-registration pin path using the interaction
-   owner's stable top-level root in `anchor_`, null `z_scope_root_` as a
-   hosted-mode sentinel, and `anchor_` as the effective z-scope.
-2. Return a non-owning pin handle to the host and add private handle-based dirty
-   and hide helpers. Widget-facing lookup considers only non-null z-scope fields,
-   so an owner-root widget pin cannot collide.
-3. Preserve copied geometry, dirty-region propagation, allocation-failure
-   behavior, hide-before-detach ordering, and unchanged widget-pin behavior.
-4. Test pin ordering, owner-root collision, invalidation, owner teardown,
-   allocation failure, a source that moves or detaches after capture without
-   changing the frozen copied geometry or paint, and unchanged slider behavior;
-   update pin documentation in the same change.
-
-Proposed commit message:
-
-> Transient surfaces Phase 4: add owner-scoped presenter pins.
->
-> Register one copied-geometry trigger visual against the interaction-owner
-> layer, integrate deterministic host cleanup, and preserve widget-anchored
-> pin behavior with focused rendering and lifetime tests.
-
-Validation: `bazel test //:transient_presentation_pin_test
-//:material3_slider_test //:display_window_test` plus target-ABI pin and
-`TransientSourceGeometry` sizes.
-
-Implemented coverage verifies hosted-pin ordering above owner content and
-below the hosted root, coexistence with an ordinary widget pin on the exact
-owner task root, handle-based dirtying and removal, allocation and duplicate
-failure, frozen source geometry after source movement and detachment, finish
-cleanup, and unchanged widget lookup. The target-ABI probe emits named
-`PresentationPin` and `TransientSourceGeometry` symbols.
-
-### Phase 5: Migrate Legacy Dialogs to the Common Host — Implemented
+### Phase 4: Migrate Legacy Dialogs to the Common Host — Implemented
 
 Code slice:
 
@@ -1652,13 +1561,11 @@ dialogs as a concrete scrim-profile consumer. The focused targets cover:
   with explicit memory clear, same-owner replacement, rejected unrelated
   nested scope entry, removed saved-base targets, and preferred/first base
   restoration;
-- display-coverage owner-scoped pin ordering, invalidation, allocation failure,
-  and unchanged slider pins; and
 - migrated legacy-dialog prepared construction and balanced deletion,
   allocation-free persistent-content use, rollback and derived-destruction
   cleanup, explicit owner focus and teardown, busy rejection without lifecycle
   notification, and removal of the direct `MainWindow` dialog path; and
-- the `TransientHostLayer`, coordinator, `MainWindow`, pin, focus, and
+- the `TransientHostLayer`, coordinator, `MainWindow`, focus, and
   `TransientSourceGeometry` ABI ceilings.
 
 Menu and Material 3 dialog phases add their component rendering, public API,
@@ -1799,7 +1706,7 @@ first column distinguishes the two cases.
 | Previous-design contract lost | Concrete workflow that is no longer expressible | Simplified behavior |
 | --- | --- | --- |
 | **Required:** validate delayed copied-origin provenance | A file browser copies its overflow-button position, starts an asynchronous directory scan, and queues a menu. While the scan runs, a shell rebuild detaches and reattaches the same long-lived task panel. The previous token-bearing snapshot rejected that stale generation. It also rejected code that captured placement in Window A and later passed it to a rectangle show call owned by Window B. | `showFromRect()` accepts copied window coordinates and has no widget, generation, or originating-window provenance. The caller must cancel stale work and preserve window identity; the host cannot distinguish either error. |
-| **Expressible:** use an origin in a different top-level layer from the interaction owner | An editor-owned menu uses the editor task for focus and keys but anchors to a “Paste” button in a software-keyboard popup, then closes automatically when that keyboard layer disappears. | A live placement or trigger source must physically descend from the owner task's `TaskPanel`. The keyboard button is rejected with `kAnchorUnavailable`; a rectangle call can place the menu but cannot promise keyboard-origin lifetime. |
+| **Expressible:** use an origin in a different top-level layer from the interaction owner | An editor-owned menu uses the editor task for focus and keys but anchors to a “Paste” button in a software-keyboard popup, then closes automatically when that keyboard layer disappears. | A live placement source must physically descend from the owner task's `TaskPanel`. The keyboard button is rejected with `kAnchorUnavailable`; a rectangle call can place the menu but cannot promise keyboard-origin lifetime. |
 | **Required:** allow a null focus scope for key-passive hosting | A touch tutorial shades the display and absorbs typing while leaving the text cursor continuously focused in the underlying editor. | Every hosted root supplies and activates a focus scope. The tutorial must become a non-hosted paint effect or wait for a future explicit preserve-focus policy. |
 | **Required:** unlink and restore an arbitrary intrusive chain of focus scopes | A hosted settings sheet pushes a separately owned color-picker focus scope, then pops it and restores focus to the sheet before the sheet itself closes. The previous intrusive `previous` chain represented base → sheet → picker. | The manager accepts only implicit task base → one presenter scope. The picker remains internal to the sheet's traversal root and shares its scope, or requires a future nested-scope design. |
 | **Required:** preserve non-owner armed controls during display coverage | A user holds Space on a left-task “Start pump” button while a menu opens in the right owner task and closes before key-up. The previous draft explicitly preserved the non-owner task's armed control. | Display-wide admission cancels incomplete activation in every covered task. The later key-up does nothing, preventing activation from crossing the transient boundary. |
@@ -1808,7 +1715,7 @@ first column distinguishes the two cases.
 | **Required:** restrict replacement to the same popup/modal class | An incoming modal replacement request replaces an existing modal sheet but is rejected when the current occupant is a popup menu. The previous `kReplaceSameKind` policy expressed that partition without an occupant opt-in bit. | `replaceable` is an occupant-wide boolean: every replacement-enabled request can replace it, or none can. Scheduled non-menu profiles choose nonreplaceable; a future consumer needing replacement classes requires a new compatibility key. |
 | **Required:** preserve unrestricted public slot replacement | A custom diagnostic overlay calls `window.transient_presentation_slot().replace()` while a hosted menu is active. The previous public contract finished that menu through host cleanup and admitted the standalone overlay in one operation unless menu completion reentrantly filled the slot. | Public slot `replace()` returns `kHostBusy` without invoking completion whenever `active_host_` is non-null. The caller must explicitly finish the hosted surface and then attempt standalone admission, accepting the intervening empty/reentrant state, or migrate the overlay to policy-checked hosted admission. |
 | **Expressible:** suspend task coverage by hiding its owner panel | A two-pane controller keeps a task-local settings sheet open, hides that task while the user inspects the other pane full-screen, and shows it again with the same sheet and focus scope still active. The previous Phase 7 draft left the nested session attached, so it could disappear and reappear with the task. | Task coverage rejects a hidden owner. Hiding an active owner finishes the sheet with `kCoverageParentHidden` under the admission guard; showing the task later restores only ordinary task content. The component can retain its form model and explicitly create a new presentation. |
-| **Expressible:** paint owner-scoped pins above task coverage | A task-local confirmation sheet opens while an underlying slider's `kAlways` value bubble is visible, or retains a copied trigger highlight for the sheet itself. The previous unchanged window-level pin stage could paint either pin above the nested host and even let its default clip reach a sibling task. | Ordinary owner-panel pins remain registered but are computed-suppressed until coverage finishes. The same session's hosted trigger pin returns `kAnchorUnavailable`, so neither visual can appear above task coverage. |
+| **Expressible:** paint owner-scoped pins above task coverage | A task-local confirmation sheet opens while an underlying slider's `kAlways` value bubble is visible. The previous unchanged window-level pin stage could paint the pin above the nested host and even let its default clip reach a sibling task. | Ordinary owner-panel pins remain registered but are computed-suppressed until coverage finishes. |
 
 The previous drafts already froze captured geometry and admitted only one root,
 so live automatic reanchoring and simultaneous task-local roots are unchanged
@@ -1827,11 +1734,10 @@ comes with the class-selective replacement loss above.
    invisible focus and Back ownership. Ordinary widget pins anchored in the
    covered owner task remain registered, and new ones are admitted, but their
    computed visibility is suppressed while coverage is active. Admission and
-   finish invalidate the affected old and new pin envelopes. A same-session
-   hosted trigger pin returns `kAnchorUnavailable`. Pins scoped to sibling
-   tasks and pins used by display-wide hosting remain unchanged. A later panel-
-   local pin stage is required before a task-covered hosted trigger pin is
-   supported.
+   finish invalidate the affected old and new pin envelopes. Pins scoped to
+   sibling tasks and pins used by display-wide hosting remain unchanged. A
+   later panel-local pin stage is required to render owner pins during task
+   coverage.
 2. A cross-layer-origin design introduces a live origin lifetime distinct from
    the interaction owner for keyboard, global-toolbar, or multi-region
    presenters.
@@ -1844,5 +1750,4 @@ comes with the class-selective replacement loss above.
 6. A nested-focus design adds a bounded explicit-scope stack only when one
    hosted root requires independently owned focus regions; scheduled menu and
    submenu levels share one presenter scope.
-7. Live reanchoring and multiple presenter pins receive separate designs tied
-   to concrete consumers.
+7. Live reanchoring receives a separate design tied to a concrete consumer.

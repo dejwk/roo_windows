@@ -78,9 +78,9 @@ Two existing facts drive this design:
 
 1. the current `Button` implementation is correct for one clickable surface,
    but not for two independently interactive segments,
-2. and the current menu design keeps generic trigger retention at whole-widget
-   granularity, which is too broad for a split button whose trailing segment
-   alone is the menu trigger.
+2. and the current menu design deliberately leaves trigger open-state styling
+   to a concrete component, which lets a split button style only its trailing
+   segment.
 
 ### Material 3 Signals
 
@@ -123,10 +123,10 @@ exist at whole-widget granularity. That is useful storage, but it is not by
 itself enough to tell the paint path which split-button segment is currently
 active.
 
-Third, the menu design deliberately keeps generic trigger retention off base
-widget storage by using a presenter-owned trigger pin. That is still the right
-default for ordinary buttons, but a split button needs a narrower open visual:
-only the trailing segment should stay visually selected.
+Third, menus deliberately do not retain or restyle their triggering widget.
+Any open-state treatment belongs to the concrete trigger component. A split
+button needs such a treatment to be segment-local: only the trailing segment
+should stay visually selected.
 
 ## Requirements
 
@@ -362,19 +362,12 @@ avoiding a second callback field on every split-button instance.
 
 ### Menu Integration and Open-State Lifecycle
 
-The trailing segment opens the bound `Menu`, but it does not use the generic
-menu trigger pin designed for ordinary buttons.
-
-The generic menu trigger pin is intentionally whole-widget. If `SplitButton`
-used it directly, the entire control would stay visually pressed while the menu
-was open. That would be wrong for Material 3 split buttons.
-
-The chosen integration is therefore:
+The trailing segment opens the bound `Menu`. Because generic menus do not
+retain or restyle their trigger, the chosen component-specific integration is:
 
 1. `SplitButton` computes a `MenuAnchor` from the trailing segment bounds,
 2. `SplitButton` sets that anchor on the bound `Menu`,
-3. `SplitButton` does not request the menu system's whole-widget trigger pin,
-4. and `SplitButton` instead listens for root-menu presentation and dismissal
+3. `SplitButton` listens for root-menu presentation and dismissal
    through a narrow `MenuPresentationObserver` hook.
 
 When the root menu is shown, the observer toggles the widget's existing
@@ -727,7 +720,7 @@ Integration coverage should exercise:
 
 The design depends on the menu family exposing a narrow presentation observer.
 That is a real dependency, but it is intentionally smaller than broadening the
-menu trigger-pin model or adding general callback plumbing to widgets.
+generic menu contract or adding general callback plumbing to widgets.
 
 The first implementation also keeps hover and focus whole-control rather than
 segment-local. That is a deliberate touch-first compromise tied to the current

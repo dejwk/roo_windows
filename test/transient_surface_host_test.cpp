@@ -505,28 +505,24 @@ TEST_F(HostTest, CapturesOnlyOwnerTaskSourceGeometry) {
   FocusableWidget source(app_.context());
   task_content_.add(WidgetRef(source), Rect(4, 5, 11, 14));
   ASSERT_TRUE(app_.refresh());
-  TransientSourceGeometry output{Rect(90, 91, 92, 93), Rect(94, 95, 96, 97)};
+  TransientSourceGeometry output{Rect(90, 91, 92, 93)};
 
   ASSERT_TRUE(CaptureTransientSourceGeometry(owner_, source, output));
   EXPECT_EQ(Rect(4, 5, 11, 14), output.bounds_in_window);
-  EXPECT_EQ(Rect(4, 5, 11, 14), output.visible_bounds_in_window);
 
   auxiliary_task_content_ = std::make_unique<TestPanel>(app_.context());
   Task& other = app_.addTaskFullScreen(*auxiliary_task_content_);
-  TransientSourceGeometry unchanged{Rect(1, 2, 3, 4), Rect(5, 6, 7, 8)};
+  TransientSourceGeometry unchanged{Rect(1, 2, 3, 4)};
   EXPECT_FALSE(CaptureTransientSourceGeometry(other, source, unchanged));
   EXPECT_EQ(Rect(1, 2, 3, 4), unchanged.bounds_in_window);
-  EXPECT_EQ(Rect(5, 6, 7, 8), unchanged.visible_bounds_in_window);
 
   source.setVisibility(Visibility::kInvisible);
   EXPECT_FALSE(CaptureTransientSourceGeometry(owner_, source, unchanged));
   EXPECT_EQ(Rect(1, 2, 3, 4), unchanged.bounds_in_window);
-  EXPECT_EQ(Rect(5, 6, 7, 8), unchanged.visible_bounds_in_window);
   source.setVisibility(Visibility::kVisible);
   source.layout(Rect(0, 0, -1, -1));
   EXPECT_FALSE(CaptureTransientSourceGeometry(owner_, source, unchanged));
   EXPECT_EQ(Rect(1, 2, 3, 4), unchanged.bounds_in_window);
-  EXPECT_EQ(Rect(5, 6, 7, 8), unchanged.visible_bounds_in_window);
 }
 
 // Verifies detached mini-trees and both display-attached and task-nested host
@@ -535,7 +531,7 @@ TEST_F(HostTest, RejectsDetachedAndHostedSourceChains) {
   TestPanel detached_root(app_.context());
   FocusableWidget detached_source(app_.context());
   detached_root.add(WidgetRef(detached_source), Rect(0, 0, 4, 4));
-  TransientSourceGeometry output{Rect(1, 1, 2, 2), Rect(1, 1, 2, 2)};
+  TransientSourceGeometry output{Rect(1, 1, 2, 2)};
   EXPECT_FALSE(CaptureTransientSourceGeometry(owner_, detached_source, output));
 
   TransientHostLayer nested_host(app_.context());

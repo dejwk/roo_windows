@@ -143,21 +143,14 @@ second lifetime domain.
 
 ### Presentation-Pin Requirements
 
-1. Display-covered presentations retain the base host's one optional hosted
-   presenter pin.
-2. Task coverage temporarily suppresses every ordinary widget pin whose
+1. Task coverage temporarily suppresses every ordinary widget pin whose
    effective z-scope is the owner `TaskPanel`, including slider, range-slider,
    and keyboard pins. Existing pins remain registered, and newly shown widget
    pins are admitted but not painted until coverage finishes.
-3. Admission and finish invalidate the suppressed pins' paint bounds so old
+2. Admission and finish invalidate the suppressed pins' paint bounds so old
    pixels disappear and still-active pins resume without requiring an anchor
    event. Pin destruction and ordinary anchor teardown remain unchanged.
-4. The task-covered presenter's hosted trigger-pin operation destroys its
-   incoming pin, returns `kAnchorUnavailable`, and leaves the presentation
-   unchanged because that pin cannot become visible during its own lifetime.
-5. Sibling-task and display-coverage pins retain their normal behavior. A
-   component that requires visible retained trigger paint chooses display
-   coverage.
+3. Sibling-task and display-coverage pins retain their normal behavior.
 
 ### Embedded Requirements
 
@@ -214,7 +207,7 @@ The major solution elements map to the requirements as follows:
 | guarded finish when an owner panel hides | Admission and Lifetime 5–6; Focus 4 |
 | coverage-aware pointer, key, editor, and source-task Back routing | Coverage 3; Input and Back 1–10 |
 | presenter-owned owner focus scope | Focus 1–4 |
-| computed owner-panel pin suppression and hosted-pin rejection | Presentation-Pin 1–5 |
+| computed owner-panel pin suppression | Presentation-Pin 1–3 |
 | private direct links without RTTI or maps | Embedded 5 |
 
 ## Design Details
@@ -350,9 +343,7 @@ empty presented envelope. Finish invalidates each still-live pin's current
 bounds as it removes coverage, so a `kAlways` slider indicator that predates
 the modal resumes without a layout or state-change callback. New widget pins
 can enter the registry while covered but follow the same suppression. Ordinary
-hide and subtree teardown still delete them. The task-covered presenter's own
-hosted trigger-pin request returns `kAnchorUnavailable` instead of allocating a
-visual that cannot appear before its registration ends.
+hide and subtree teardown still delete them.
 
 Without suppression, an owner-panel pin would paint above the nested host; a
 slider pin's default window clip could also cross into a sibling task.
@@ -493,8 +484,8 @@ Implementation follows the
    the existing admission guard, finishes an owned task-covered session with
    `kCoverageParentHidden`, and only then hides the panel.
 5. Add zero-state suppression for ordinary owner-panel widget pins, invalidate
-   them on coverage entry/exit, reject only the task-covered presenter's hosted
-   trigger pin, and retain sibling and display-coverage pin behavior.
+   them on coverage entry/exit, and retain sibling and display-coverage pin
+   behavior.
 6. Add focused behavior tests, including initially hidden owners, an incoming
    owner hidden by a replacement or cancellation callback, guarded active-
    owner hiding, and no automatic resumption; add task/display coverage goldens
@@ -530,8 +521,7 @@ owner versus sibling physical and semantic input, source-tagged programmatic
 and physical Back offers plus participant outcomes, borrowed-root focus
 containment and restoration, suppression and automatic resumption of an
 existing `kAlways` slider pin, admission-but-suppression of a new owner widget
-pin, hosted trigger-pin rejection, sibling-pin preservation, unchanged display
-pin behavior, owner teardown, presenter
+pin, sibling-pin preservation, unchanged display pin behavior, owner teardown, presenter
 destruction, replacement reentrancy, and window teardown.
 
 Golden tests render identical modal content once with display coverage and once
@@ -558,9 +548,8 @@ pin stage operates at `MainWindow` top-level roots. Such a pin would paint above
 the nested `TransientHostLayer`, allowing ordinary content to cover the hosted
 surface; its default window clip can also escape over a sibling task. Computed
 suppression preserves registered widget pins and lets them resume after finish.
-The session's hosted trigger pin is omitted because its lifetime ends with that
-same coverage. Display coverage retains visible pins because its host layer is
-itself a top-level child above the owner root.
+Display coverage retains visible pins because its host layer is itself a
+top-level child above the owner root.
 
 ### Rejected Alternatives
 
@@ -615,6 +604,6 @@ coverage likewise require an explicit input and focus policy.
 
 Visible task-covered pins require a panel-local nested pin stage or another
 explicit z-scope mechanism that clips to the owner panel and orders each
-ordinary or trigger pin below the nested host layer. That extension must
+ordinary pin below the nested host layer. That extension must
 preserve the current direct-to-display paint ordering and add no permanent pin
 state to every `TaskPanel`.

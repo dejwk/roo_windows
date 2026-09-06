@@ -1,4 +1,4 @@
-// Opens an anchored overflow menu and retains the trigger's pressed paint.
+// Opens an anchored overflow menu.
 
 #include "examples/material3/menus/example_runtime.h"
 #include "roo_windows/containers/flex_layout.h"
@@ -22,11 +22,7 @@ class OpenMenuButton final : public material3::Button {
 
   void onClicked() override {
     if (owner_ == nullptr) return;
-    // Placement and pressed-paint geometry are copied during show(); the menu
-    // does not retain this button as a live anchor.
-    material3::MenuTriggerPaintSource trigger{*this, Scaled(20), 0xFF000000,
-                                              20};
-    menu_.show(*owner_, *this, material3::MenuPlacement::kBelowEnd, &trigger);
+    menu_.show(*owner_, *this, material3::MenuPlacement::kBelowEnd);
   }
 
  private:

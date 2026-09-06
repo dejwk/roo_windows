@@ -6,7 +6,6 @@
     .small { font: 12px sans-serif; fill: #4a4a4a; }
     .window { fill: #faf7f2; stroke: #6b6257; stroke-width: 2; }
     .task { fill: #d7ebff; stroke: #2f6690; stroke-width: 2; }
-    .pin { fill: #eadcff; stroke: #7351a3; stroke-width: 2; }
     .popup-host { fill: #f4fbf7; stroke: #1b7f5a; stroke-width: 2; }
     .dialog-host { fill: #d9d9d9; stroke: #1b7f5a; stroke-width: 2; }
     .surface { fill: #fff4dc; stroke: #8d6b2f; stroke-width: 2; }
@@ -33,11 +32,9 @@
   <text x="228" y="264" class="label">Visible menu panel</text>
   <text x="228" y="286" class="small">outside activation dismisses</text>
 
-  <rect x="90" y="344" width="196" height="30" rx="8" class="pin"/>
-  <text x="108" y="364" class="small">optional owner-scoped trigger pin</text>
   <rect x="58" y="382" width="378" height="62" rx="10" class="task"/>
   <text x="78" y="409" class="label">Explicit interaction-owner Task</text>
-  <text x="78" y="429" class="small">live placement and trigger sources must belong here</text>
+  <text x="78" y="429" class="small">live placement sources must belong here</text>
   <line x1="410" y1="326" x2="410" y2="380" class="arrow"/>
   <text x="302" y="356" class="small">owner association</text>
 

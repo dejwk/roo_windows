@@ -121,47 +121,6 @@ MenuShowResult MapStartResult(PresentationStartResult result) {
   return MenuShowResult::kSurfaceUnavailable;
 }
 
-class FrozenMenuTriggerPin final : public PresentationPin {
- public:
-  FrozenMenuTriggerPin(
-      const ::roo_windows::internal::TransientSourceGeometry& geometry,
-      uint16_t corner_radius, uint32_t overlay_argb, uint8_t overlay_opacity)
-      : bounds_(geometry.bounds_in_window),
-        clip_(geometry.visible_bounds_in_window),
-        corner_radius_(std::min<uint16_t>(corner_radius, UINT8_MAX)),
-        color_(roo_display::Color(overlay_argb).withA(overlay_opacity)) {}
-
- protected:
-  Rect boundsInWindow() const override { return bounds_; }
-  Rect clipBoundsInWindow() const override { return clip_; }
-
-  void paint(PaintContext& ctx) const override {
-    Rect settled =
-        Rect::Intersect(Rect::Intersect(bounds_, clip_), ctx.localClip());
-    if (settled.empty()) return;
-    PaintDecoration decoration;
-    // `settled` is only the portion of this pin that needs painting in the
-    // current pass. Keeping it as the decoration bounds would turn a partial
-    // invalidation into a smaller, independently rounded rectangle, leaving
-    // a false border along the invalidation edge. The PaintContext already
-    // clips the decoration to `settled`; preserve the copied trigger geometry
-    // so its rounded edge is calculated from the real bounds.
-    decoration.bounds = bounds_;
-    decoration.background = color_;
-    decoration.corner_radii = {static_cast<uint8_t>(corner_radius_),
-                               static_cast<uint8_t>(corner_radius_),
-                               static_cast<uint8_t>(corner_radius_),
-                               static_cast<uint8_t>(corner_radius_)};
-    ctx.addDecoration(decoration);
-  }
-
- private:
-  Rect bounds_;
-  Rect clip_;
-  uint16_t corner_radius_;
-  roo_display::Color color_;
-};
-
 }  // namespace
 
 struct StandardMenuItem::TrailingPayload {
@@ -1121,8 +1080,7 @@ void Menu::invokeEntry(MenuEntry& entry, uint8_t level, uint16_t row,
 
 MenuShowResult Menu::show(::roo_windows::Task& interaction_owner,
                           const Widget& placement_source,
-                          MenuPlacement placement,
-                          const MenuTriggerPaintSource* trigger) {
+                          MenuPlacement placement) {
   if (impl_->registration.isActive()) return MenuShowResult::kAlreadyPresented;
   if (admission_in_progress_) return MenuShowResult::kReentrantReplacement;
   admission_in_progress_ = true;
@@ -1132,36 +1090,28 @@ MenuShowResult Menu::show(::roo_windows::Task& interaction_owner,
     admission_in_progress_ = false;
     return MenuShowResult::kAnchorUnavailable;
   }
-  MenuShowResult result =
-      showCaptured(interaction_owner, placement_geometry.bounds_in_window,
-                   placement, trigger);
+  MenuShowResult result = showCaptured(
+      interaction_owner, placement_geometry.bounds_in_window, placement);
   admission_in_progress_ = false;
   return result;
 }
 
 MenuShowResult Menu::showFromRect(::roo_windows::Task& interaction_owner,
                                   const Rect& bounds_in_window,
-                                  MenuPlacement placement,
-                                  const MenuTriggerPaintSource* trigger) {
+                                  MenuPlacement placement) {
   if (impl_->registration.isActive()) return MenuShowResult::kAlreadyPresented;
   if (admission_in_progress_) return MenuShowResult::kReentrantReplacement;
   admission_in_progress_ = true;
   MenuShowResult result =
-      showCaptured(interaction_owner, bounds_in_window, placement, trigger);
+      showCaptured(interaction_owner, bounds_in_window, placement);
   admission_in_progress_ = false;
   return result;
 }
 
 MenuShowResult Menu::showCaptured(::roo_windows::Task& interaction_owner,
                                   const Rect& bounds_in_window,
-                                  MenuPlacement placement,
-                                  const MenuTriggerPaintSource* trigger) {
+                                  MenuPlacement placement) {
   if (bounds_in_window.empty()) return MenuShowResult::kAnchorUnavailable;
-
-  ::roo_windows::internal::TransientSourceGeometry trigger_geometry;
-  bool has_trigger = trigger != nullptr &&
-                     ::roo_windows::internal::CaptureTransientSourceGeometry(
-                         interaction_owner, trigger->widget, trigger_geometry);
   const TransientSurfaceSpec spec{TransientBarrierPaint::kTransparent,
                                   TransientAdmissionPolicy::kReplaceReplaceable,
                                   OutsideInteractionPolicy::kPresenterHandled,
@@ -1177,19 +1127,10 @@ MenuShowResult Menu::showCaptured(::roo_windows::Task& interaction_owner,
     return MapStartResult(started);
   }
   impl_->interaction_owner = &interaction_owner;
-  if (has_trigger) {
-    std::unique_ptr<PresentationPin> pin(
-        new (std::nothrow) FrozenMenuTriggerPin(
-            trigger_geometry, trigger->corner_radius, trigger->overlay_argb,
-            trigger->overlay_opacity));
-    ::roo_windows::internal::GetTransientSurfaceHost(interaction_owner)
-        .showPresentationPin(impl_->registration, std::move(pin));
-  }
   return MenuShowResult::kShown;
 }
 
-bool Menu::reanchor(const Widget& placement_source, MenuPlacement placement,
-                    const MenuTriggerPaintSource* trigger) {
+bool Menu::reanchor(const Widget& placement_source, MenuPlacement placement) {
   if (!impl_->registration.isActive() || impl_->interaction_owner == nullptr) {
     return false;
   }
@@ -1198,33 +1139,16 @@ bool Menu::reanchor(const Widget& placement_source, MenuPlacement placement,
           *impl_->interaction_owner, placement_source, geometry)) {
     return false;
   }
-  return reanchorFromRect(geometry.bounds_in_window, placement, trigger);
+  return reanchorFromRect(geometry.bounds_in_window, placement);
 }
 
 bool Menu::reanchorFromRect(const Rect& bounds_in_window,
-                            MenuPlacement placement,
-                            const MenuTriggerPaintSource* trigger) {
+                            MenuPlacement placement) {
   if (!impl_->registration.isActive() || impl_->interaction_owner == nullptr ||
       bounds_in_window.empty()) {
     return false;
   }
-  ::roo_windows::internal::TransientSourceGeometry trigger_geometry;
-  bool has_trigger =
-      trigger != nullptr &&
-      ::roo_windows::internal::CaptureTransientSourceGeometry(
-          *impl_->interaction_owner, trigger->widget, trigger_geometry);
-  if (!impl_->RelayoutRoot(bounds_in_window, placement)) return false;
-  auto& host = ::roo_windows::internal::GetTransientSurfaceHost(
-      *impl_->interaction_owner);
-  host.hidePresentationPin(impl_->registration);
-  if (has_trigger) {
-    std::unique_ptr<PresentationPin> pin(
-        new (std::nothrow) FrozenMenuTriggerPin(
-            trigger_geometry, trigger->corner_radius, trigger->overlay_argb,
-            trigger->overlay_opacity));
-    host.showPresentationPin(impl_->registration, std::move(pin));
-  }
-  return true;
+  return impl_->RelayoutRoot(bounds_in_window, placement);
 }
 
 void Menu::dismissChain() {

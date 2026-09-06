@@ -269,13 +269,6 @@ TEST_F(Material3MenuTest, ReanchorIsAtomicForInvalidRequiredSource) {
   EXPECT_TRUE(menu_.reanchorFromRect(Rect(8, 8, 8, 8), MenuPlacement::kAfter));
 }
 
-TEST_F(Material3MenuTest, InvalidOptionalTriggerDoesNotFailPresentation) {
-  SourceWidget detached(app_.context());
-  MenuTriggerPaintSource trigger{detached, 8, 0xFF000000, 20};
-  EXPECT_EQ(MenuShowResult::kShown,
-            menu_.show(owner_, source_, MenuPlacement::kBelowStart, &trigger));
-}
-
 TEST_F(Material3MenuTest, SingleSelectionInvokesOnceAndDismisses) {
   MenuPolicy policy;
   policy.selection_mode = SelectionMode::kSingle;
