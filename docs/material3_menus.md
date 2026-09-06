@@ -84,12 +84,12 @@ bash benchmarks/material3_menu_size_probe.sh \
 | `MenuRow<StandardMenuItem>` | 136 |
 | `MenuGroup` / `MenuOverlay` | 56 / 56 |
 | `MenuPanel` / `SimpleScrollablePanel` | 280 / 168 |
-| optional trailing payload / bound adornment state | 32 / 64 |
+| optional trailing payload / bound adornment state | 32 / 44 |
 | generated single-line text slot | 48 |
 
 For a deliberately busy three-level chain—two six-row root groups, one
 four-row group in each of two visible child panels, eight adorned rows, and
-four optional item payloads—the modeled live allocation payload is 5,688
+four optional item payloads—the modeled live allocation payload is 5,528
 bytes. This includes current vector capacities (128 bytes) and all menu-owned
 objects and generated text slots; allocator headers and caller-owned strings,
 icons, application objects, and the 12-byte stack-resident `Menu` are excluded.

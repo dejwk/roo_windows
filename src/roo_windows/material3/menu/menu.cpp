@@ -5,6 +5,7 @@
 #include <new>
 
 #include "roo_display/ui/text_label.h"
+#include "roo_icons/filled/24/navigation.h"
 #include "roo_logging.h"
 #include "roo_windows/core/display_window.h"
 #include "roo_windows/core/main_window.h"
@@ -34,6 +35,67 @@ int16_t ShortcutWidth(roo::string_view shortcut) {
       .getHorizontalStringMetrics(shortcut,
                                   text_style_label_large().fontOptions())
       .advance();
+}
+
+struct MenuAdornmentGeometry {
+  Rect submenu;
+  Rect badge_anchor;
+  Rect icon;
+  Rect checkmark;
+  Rect shortcut;
+};
+
+Rect EmptyRect() { return Rect(0, 0, -1, -1); }
+
+Rect TakeTrailingSlot(int16_t& right, int16_t width, int16_t height,
+                      int16_t row_height, int16_t gap) {
+  int16_t top = std::max<int16_t>(0, (row_height - height) / 2);
+  Rect result(right - width + 1, top, right, top + height - 1);
+  right = result.xMin() - gap - 1;
+  return result;
+}
+
+MenuAdornmentGeometry ResolveMenuAdornmentGeometry(
+    int16_t row_width, int16_t row_height, const internal::MenuTokens& tokens,
+    bool has_submenu, bool has_badge, bool has_icon, bool is_selectable,
+    int16_t shortcut_width) {
+  MenuAdornmentGeometry result{EmptyRect(), EmptyRect(), EmptyRect(),
+                               EmptyRect(), EmptyRect()};
+  const int16_t icon_size = Scaled(tokens.icon_size_dp);
+  const int16_t gap = Scaled(tokens.trailing_gap_dp);
+  int16_t right = row_width - Scaled(tokens.horizontal_padding_dp) - 1;
+  if (has_submenu) {
+    result.submenu =
+        TakeTrailingSlot(right, icon_size, icon_size, row_height, gap);
+  }
+  if (has_badge) {
+    result.badge_anchor =
+        TakeTrailingSlot(right, Scaled(24), icon_size, row_height, gap);
+  }
+  if (has_icon) {
+    result.icon =
+        TakeTrailingSlot(right, icon_size, icon_size, row_height, gap);
+  }
+  if (is_selectable) {
+    result.checkmark =
+        TakeTrailingSlot(right, icon_size, icon_size, row_height, gap);
+  }
+  if (shortcut_width > 0) {
+    result.shortcut =
+        TakeTrailingSlot(right, shortcut_width, icon_size, row_height, gap);
+  }
+  return result;
+}
+
+void PaintTintedIcon(PaintContext& ctx, const MonoIcon& source,
+                     const Rect& bounds, Color color) {
+  if (bounds.empty()) return;
+  MonoIcon icon = source;
+  icon.color_mode().setColor(color);
+  PaintContext icon_context = ctx.clipped(bounds);
+  icon_context.drawTiled(icon, bounds,
+                         roo_display::kCenter | roo_display::kMiddle);
+  ctx.addExclusion(bounds);
 }
 
 MenuShowResult MapStartResult(PresentationStartResult result) {
@@ -101,8 +163,6 @@ struct StandardMenuItem::TrailingPayload {
 struct MenuEntry::AdornmentState {
   MenuTrailingAffordances content;
   Badge badge;
-  Rect icon_bounds;
-  Rect badge_anchor;
 };
 
 #if defined(ROO_WINDOWS_MENU_ABI_PROBE)
@@ -387,7 +447,6 @@ int16_t MenuEntry::trailingLaneWidth() const {
 }
 
 Dimensions MenuEntry::onMeasure(WidthSpec width, HeightSpec height) {
-  syncAdornments();
   int16_t lane = trailingLaneWidth();
   WidthSpec content_width = width;
   if (width.kind() == AT_MOST) {
@@ -419,46 +478,46 @@ void MenuEntry::onLayout(bool changed, const Rect& rect) {
 
   if (!adornments_) return;
   const internal::MenuTokens& tokens = TokensFor(visualContext());
-  int16_t size = Scaled(tokens.icon_size_dp);
-  int16_t end = rect.width() - Scaled(tokens.horizontal_padding_dp) - 1;
-  int16_t top = std::max<int16_t>(0, (rect.height() - size) / 2);
-  adornments_->icon_bounds = Rect(end - size + 1, top, end, top + size - 1);
-  adornments_->badge_anchor = adornments_->icon_bounds;
-  adornments_->badge.layoutForIcon(adornments_->badge_anchor);
+  const MenuItem* bound = menuItem();
+  MenuAdornmentGeometry geometry = ResolveMenuAdornmentGeometry(
+      rect.width(), rect.height(), tokens,
+      bound != nullptr && bound->hasSubmenu() && submenu_allowed_,
+      adornments_->badge.visible(), adornments_->content.icon != nullptr,
+      bound != nullptr && bound->isSelectable(),
+      ShortcutWidth(adornments_->content.shortcut));
+  adornments_->badge.layoutForIcon(geometry.badge_anchor);
 }
 
-void MenuEntry::paintWidgetContents(PaintContext& ctx) {
-  ListEntry::paintWidgetContents(ctx);
-  if (!adornments_) return;
+void MenuEntry::paint(PaintContext& ctx) const {
+  if (!adornments_) {
+    ListEntry::paint(ctx);
+    return;
+  }
 
   const Theme& current_theme = theme();
-  Color color = current_theme.material3Theme().color.onSurfaceVariant;
-  Rect cursor = adornments_->icon_bounds;
+  Color color = headlineColor();
   const MenuItem* bound = menuItem();
+  MenuAdornmentGeometry geometry = ResolveMenuAdornmentGeometry(
+      width(), height(), TokensFor(visualContext()),
+      bound != nullptr && bound->hasSubmenu() && submenu_allowed_,
+      adornments_->badge.visible(), adornments_->content.icon != nullptr,
+      bound != nullptr && bound->isSelectable(),
+      ShortcutWidth(adornments_->content.shortcut));
 
   if (bound != nullptr && bound->hasSubmenu() && submenu_allowed_) {
-    int16_t mid_x = (cursor.xMin() + cursor.xMax()) / 2;
-    int16_t mid_y = (cursor.yMin() + cursor.yMax()) / 2;
-    int16_t arm = std::max<int16_t>(2, Scaled(4));
-    for (int16_t i = 0; i <= arm; ++i) {
-      ctx.fillRect(mid_x - arm + i, mid_y - arm + i, mid_x - arm + i,
-                   mid_y - arm + i, color);
-      ctx.fillRect(mid_x - arm + i, mid_y + arm - i, mid_x - arm + i,
-                   mid_y + arm - i, color);
-    }
-    ctx.addExclusion(cursor);
-  } else if (adornments_->content.icon != nullptr) {
-    ctx.drawTiled(*adornments_->content.icon, cursor,
-                  roo_display::kCenter | roo_display::kMiddle, false);
-    ctx.addExclusion(cursor);
+    PaintTintedIcon(ctx, ic_filled_24_navigation_chevron_right(),
+                    geometry.submenu, color);
+  }
+  if (adornments_->content.icon != nullptr) {
+    PaintContext icon_context = ctx.clipped(geometry.icon);
+    icon_context.drawTiled(*adornments_->content.icon, geometry.icon,
+                           roo_display::kCenter | roo_display::kMiddle);
+    ctx.addExclusion(geometry.icon);
   }
 
   if (bound != nullptr && bound->isSelectable() && bound->isSelected()) {
-    int16_t x = cursor.xMin() - Scaled(28);
-    int16_t y = (cursor.yMin() + cursor.yMax()) / 2;
-    ctx.drawHLine(x, y, x + Scaled(4), color);
-    ctx.drawHLine(x + Scaled(4), y, x + Scaled(9), color);
-    ctx.addExclusion(Rect(x, y - Scaled(5), x + Scaled(9), y + Scaled(5)));
+    PaintTintedIcon(ctx, ic_filled_24_navigation_check(), geometry.checkmark,
+                    color);
   }
 
   if (!adornments_->content.shortcut.empty()) {
@@ -466,16 +525,18 @@ void MenuEntry::paintWidgetContents(PaintContext& ctx) {
     roo_display::StringViewLabel label(adornments_->content.shortcut,
                                        style.font(), color,
                                        style.fontOptions());
-    Rect text_bounds(Scaled(12), 0, Scaled(12) + label.extents().width() - 1,
-                     height() - 1);
-    ctx.drawTiled(label, text_bounds,
-                  roo_display::kRight | roo_display::kMiddle, false);
-    ctx.addExclusion(text_bounds);
+    ctx.drawTiled(label, geometry.shortcut,
+                  roo_display::kRight | roo_display::kMiddle);
+    ctx.addExclusion(geometry.shortcut);
   }
 
   if (adornments_->badge.visible()) {
     adornments_->badge.paint(ctx, current_theme);
   }
+
+  // The row surface is lower-z than every adornment. Exclusions above keep
+  // this final pass disjoint from already-settled foreground pixels.
+  ListEntry::paint(ctx);
 }
 
 static_assert(sizeof(MenuEntry) <= sizeof(ListEntry) + 24,

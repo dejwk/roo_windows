@@ -217,6 +217,7 @@ void MenuGroupStack::paint(PaintContext& ctx) const {
   for (size_t i = 0; i + 1 < groups_.size(); ++i) {
     int32_t y = groups_[i]->bounds().yMax() + 1;
     ctx.drawHLine(inset, y, width() - inset - 1, color);
+    ctx.addExclusion(Rect(inset, y, width() - inset - 1, y));
   }
 }
 

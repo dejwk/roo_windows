@@ -559,9 +559,11 @@ the fourth level binds as disabled and without a chevron.
   opaque coverage so invalidation does not treat those gaps as filled.
 - `MenuEntry` owns row state layers and final adornment pixels.
 
-`MenuEntry::paintWidgetContents()` paints front-most adornments, excludes only
-fully settled pixels, then delegates to the `ListEntry`/`Container` path. The
-reserved lane prevents overlap with list slot children.
+`MenuEntry::paint()` paints front-most adornments, excludes only fully settled
+pixels, then delegates to the inherited row-surface paint. The standard widget
+pipeline still owns child traversal, invalidation, persistent decoration, and
+the final direct exclusion. The reserved lane prevents overlap with list slot
+children.
 
 ### Menu Tokens
 
@@ -768,13 +770,13 @@ The final ESP32-C3 GCC 14.2.0 audit records these 32-bit ABI sizes:
 | `MenuEntry` | 104 B | `sizeof(ListEntry) + 24 B` | Pass: `ListEntry` is 88 B, so the delta is 16 B. |
 | plain `StandardMenuItem` | 32 B | 48 B | Pass. |
 | trailing payload | 32 B | 40 B | Pass. |
-| bound adornment state | 64 B | 32 B | Revised: the original estimate omitted the inline 20 B `Badge` plus resolved icon and badge geometry; it remains optional and absent on plain rows. |
+| bound adornment state | 44 B | 32 B | Revised: the original estimate omitted the inline 20 B `Badge`; all other adornment geometry is now resolved on the stack, and the state remains optional and absent on plain rows. |
 | generated single-line text slot | 48 B | 48 B | Pass. |
 
 The representative live-heap model uses two six-row root groups plus two
 visible child panels containing four rows each, eight adorned rows, and four
 item payloads. Menu-owned object payload and current vector capacities total
-5,688 B, below the revised 6 KiB ceiling; allocator headers and caller-owned
+5,528 B, below the revised 6 KiB ceiling; allocator headers and caller-owned
 content are excluded. The reproducible probe and assumptions are published in
 [`docs/material3_menus.md`](../../material3_menus.md#memory-and-allocation-audit).
 

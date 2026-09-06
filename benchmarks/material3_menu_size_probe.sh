@@ -24,6 +24,7 @@ includes=(
   -I"${roo_dir}/roo_fonts_basic/src"
   -I"${roo_dir}/roo_fonts_material/src"
   -I"${roo_dir}/roo_io/src"
+  -I"${roo_dir}/roo_icons/src"
   -I"${roo_dir}/roo_locale/src"
   -I"${roo_dir}/roo_logging/src"
   -I"${roo_dir}/roo_quantity/src"

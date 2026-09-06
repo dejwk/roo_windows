@@ -273,8 +273,8 @@ class MenuEntry : public ListEntry {
   /// Lays out list content before resolving trailing adornment anchors.
   void onLayout(bool changed, const Rect& rect) override;
 
-  /// Paints adornments over the list-backed content without allocating.
-  void paintWidgetContents(PaintContext& ctx) override;
+  /// Settles and excludes adornments before painting the inherited row surface.
+  void paint(PaintContext& ctx) const override;
 
  private:
   friend class Menu;
