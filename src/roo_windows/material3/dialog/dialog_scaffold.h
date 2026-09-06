@@ -247,6 +247,10 @@ class DialogActionStrip final : public Container {
                  uint8_t slot);
 
     /// Routes activation through the fixed strip without callback storage.
+    ClickActivationPolicy getClickActivationPolicy() const override {
+      return ClickActivationPolicy::kAfterForcedFinalFrame;
+    }
+
     void onClicked() override;
 
    private:

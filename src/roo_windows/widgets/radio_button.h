@@ -51,6 +51,10 @@ class RadioButton : public BasicWidget {
 
   bool isClickable() const override { return true; }
 
+  ClickActivationPolicy getClickActivationPolicy() const override {
+    return ClickActivationPolicy::kImmediateContinueAnimation;
+  }
+
   /// Forces the on state on click (mimicking radio-group semantics where
   /// only the selected button can be off-to-on toggled by the user).
   void onClicked() override;

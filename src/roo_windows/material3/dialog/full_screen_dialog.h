@@ -85,6 +85,10 @@ class FullScreenDialog : public internal::DialogScaffoldBase {
     CloseButton(ApplicationContext& context, FullScreenDialog& owner);
 
     /// Requests vetoable close-button dismissal.
+    ClickActivationPolicy getClickActivationPolicy() const override {
+      return ClickActivationPolicy::kAfterForcedFinalFrame;
+    }
+
     void onClicked() override;
 
    private:
@@ -96,6 +100,10 @@ class FullScreenDialog : public internal::DialogScaffoldBase {
     ConfirmButton(ApplicationContext& context, FullScreenDialog& owner);
 
     /// Requests vetoable confirmation.
+    ClickActivationPolicy getClickActivationPolicy() const override {
+      return ClickActivationPolicy::kAfterForcedFinalFrame;
+    }
+
     void onClicked() override;
 
    private:

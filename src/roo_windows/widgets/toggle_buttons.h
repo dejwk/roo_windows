@@ -54,6 +54,10 @@ class ToggleButtons : public Panel {
     bool useOverlayOnActivation() const override { return true; }
     bool isClickable() const override { return true; }
 
+    ClickActivationPolicy getClickActivationPolicy() const override {
+      return ClickActivationPolicy::kImmediateContinueAnimation;
+    }
+
     /// Notifies the parent group that this button became active, then runs
     /// the base click hook.
     void onClicked() override {

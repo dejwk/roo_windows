@@ -69,6 +69,10 @@ class VisibilityToggle : public BasicWidget {
 
   bool isClickable() const override { return true; }
 
+  ClickActivationPolicy getClickActivationPolicy() const override {
+    return ClickActivationPolicy::kImmediateContinueAnimation;
+  }
+
   /// Toggles the on/off state and then runs the base click behavior so the
   /// owning text field can react.
   void onClicked() override {
@@ -226,7 +230,7 @@ class TextField : public BasicWidget {
   OverlayType getOverlayType() const override { return OVERLAY_NONE; }
 
   ClickActivationPolicy getClickActivationPolicy() const override {
-    return ClickActivationPolicy::kAfterRefreshNoAnimation;
+    return ClickActivationPolicy::kImmediateNoAnimation;
   }
 
   bool useOverlayOnPress() const override { return false; }

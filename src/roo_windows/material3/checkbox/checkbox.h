@@ -65,6 +65,10 @@ class Checkbox : public BasicWidget {
 
   bool isClickable() const override { return true; }
 
+  ClickActivationPolicy getClickActivationPolicy() const override {
+    return ClickActivationPolicy::kImmediateContinueAnimation;
+  }
+
   /// Resolves the surface color role based on the current on/off state.
   ::roo_windows::material3::ColorToken effectiveContainerRole() const override;
 

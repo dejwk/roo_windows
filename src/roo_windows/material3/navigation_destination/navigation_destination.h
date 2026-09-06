@@ -48,6 +48,10 @@ class NavigationDestinationBase : public BasicWidget {
   bool selected() const;
   bool isClickable() const override;
 
+  ClickActivationPolicy getClickActivationPolicy() const override {
+    return ClickActivationPolicy::kAfterForcedFinalFrame;
+  }
+
   OverlayType getOverlayType() const override { return OVERLAY_CUSTOM; }
 
   ClickOverlayAnimation getClickOverlayAnimation() const override {

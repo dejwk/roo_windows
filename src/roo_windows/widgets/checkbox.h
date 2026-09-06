@@ -56,6 +56,10 @@ class Checkbox : public BasicWidget {
 
   bool isClickable() const override { return true; }
 
+  ClickActivationPolicy getClickActivationPolicy() const override {
+    return ClickActivationPolicy::kImmediateContinueAnimation;
+  }
+
   /// Cycles the on/off state through kOff -> kOn (indeterminate is not part
   /// of the click cycle, only of programmatic setOnOffState()).
   void onClicked() override;

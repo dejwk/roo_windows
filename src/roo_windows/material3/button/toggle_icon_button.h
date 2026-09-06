@@ -77,6 +77,10 @@ class ToggleIconButton : public IconButton {
   /// Uses the accent interaction layer for selected standard buttons.
   bool usesHighlighterColor() const override;
 
+  ClickActivationPolicy getClickActivationPolicy() const override {
+    return ClickActivationPolicy::kImmediateContinueAnimation;
+  }
+
   /// Toggles state before forwarding the interactive-change notification.
   void onClicked() override;
 

@@ -378,20 +378,14 @@ TEST(Material3NavigationRail,
   NavigationRailDestinationTestAccess::tapUp(*home_raw, home_raw->width() / 2,
                                              home_raw->height() / 2);
   ASSERT_TRUE(app.refresh());
+  EXPECT_TRUE(home_raw->selected());
+  EXPECT_EQ(std::vector<int>({0}),
+            static_cast<TestNavigationRail*>(home_raw->parent())->reselected);
 
   delay(kPressAnimationMillis + 20);
   app.root().refreshClickAnimation();
   ASSERT_TRUE(app.refresh());
   ASSERT_FALSE(home_raw->isClicking());
-  ASSERT_TRUE(home_raw->isDirty());
-
-  // The completed final refresh invokes and invalidates after drawing returns.
-  // Reselection therefore has one selected settlement frame even though the
-  // owner does not change selected state.
-  EXPECT_TRUE(home_raw->selected());
-  EXPECT_EQ(std::vector<int>({0}),
-            static_cast<TestNavigationRail*>(home_raw->parent())->reselected);
-  ASSERT_TRUE(app.refresh());
   EXPECT_FALSE(home_raw->isDirty());
 }
 
