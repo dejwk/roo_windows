@@ -33,9 +33,12 @@ class AlertFiltersCatalog final : public FlexLayout {
       : FlexLayout(context, FlexDirection::kColumn),
         title_(context, "Visible alerts", material3::text_style_title_large()),
         warnings_(material3::StandardMenuItemInit{
-            "Warnings", {}, nullptr, true, true, true}),
+            "Warnings", {}, nullptr,
+            material3::StandardMenuItemFlags::kSelectable |
+                material3::StandardMenuItemFlags::kSelected}),
         maintenance_(material3::StandardMenuItemInit{
-            "Maintenance", {}, nullptr, true, true, false}),
+            "Maintenance", {}, nullptr,
+            material3::StandardMenuItemFlags::kSelectable}),
         warnings_row_(context),
         maintenance_row_(context),
         group_(context),

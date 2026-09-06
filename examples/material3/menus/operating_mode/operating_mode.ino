@@ -15,7 +15,10 @@ class ModeItem final : public material3::StandardMenuItem {
  public:
   ModeItem(roo::string_view label, TextLabel& status, bool selected)
       : StandardMenuItem(material3::StandardMenuItemInit{
-            label, {}, nullptr, true, true, selected}),
+            label, {}, nullptr,
+            material3::StandardMenuItemFlags::kSelectable |
+                (selected ? material3::StandardMenuItemFlags::kSelected
+                          : material3::StandardMenuItemFlags::kDefault)}),
         label_(label),
         status_(status) {}
   // Selection is updated by Menu before this semantic action is delivered.

@@ -34,14 +34,18 @@ TEST(Material3MenuRow, TokenTablesCoverAllVisualFamilies) {
 }
 
 TEST(Material3MenuRow, StandardItemExposesStableContentAndMutableState) {
-  StandardMenuItem item(
-      StandardMenuItemInit{"Pump", "Automatic", nullptr, true, true, false});
+  StandardMenuItem item(StandardMenuItemInit{
+      "Pump", "Automatic", nullptr, StandardMenuItemFlags::kSelectable});
 
   EXPECT_EQ("Pump", item.headlineText());
   EXPECT_EQ("Automatic", item.supportingText());
   EXPECT_TRUE(item.isEnabled());
   EXPECT_TRUE(item.isSelectable());
   EXPECT_FALSE(item.isSelected());
+
+  StandardMenuItem passive(StandardMenuItemInit{
+      "Paused", {}, nullptr, StandardMenuItemFlags::kPassive});
+  EXPECT_FALSE(passive.isEnabled());
 
   item.setSelectedFromMenu(true);
   item.setEnabled(false);
@@ -82,8 +86,8 @@ TEST(Material3MenuRow, BindingReflectsStateAndReservesTrailingLane) {
   StandardMenuItem plain(plain_init);
   StandardMenuItemInit decorated_init;
   decorated_init.headline = "Open";
-  decorated_init.selectable = true;
-  decorated_init.selected = true;
+  decorated_init.flags =
+      StandardMenuItemFlags::kSelectable | StandardMenuItemFlags::kSelected;
   StandardMenuItem decorated(decorated_init);
   decorated.setShortcut("Enter");
   decorated.setBadgeDot();

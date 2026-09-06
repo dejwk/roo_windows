@@ -110,7 +110,8 @@ class Material3MenuTest : public testing::Test {
         content_(app_.context()),
         source_(app_.context()),
         owner_(app_.addTaskFullScreen(content_)),
-        item_(StandardMenuItemInit{"Open", {}, nullptr, true, true, false}),
+        item_(StandardMenuItemInit{
+            "Open", {}, nullptr, StandardMenuItemFlags::kSelectable}),
         row_(app_.context()),
         group_(app_.context()),
         menu_(app_.context()) {
@@ -242,8 +243,7 @@ TEST_F(Material3MenuTest, ActiveInstanceAndReplacementAreDeterministic) {
   EXPECT_EQ(MenuShowResult::kShown, menu_.show(owner_, source_));
   EXPECT_EQ(MenuShowResult::kAlreadyPresented, menu_.show(owner_, source_));
 
-  StandardMenuItem second_item(
-      StandardMenuItemInit{"Second", {}, nullptr, true, false, false});
+  StandardMenuItem second_item(StandardMenuItemInit{"Second"});
   MenuEntry second_row(app_.context());
   second_row.setMenuItem(second_item);
   MenuGroup second_group(app_.context());

@@ -844,13 +844,18 @@ class MenuItem : public ListItem {
   virtual void onInvoked() {}
 };
 
+enum class StandardMenuItemFlags : uint8_t {
+  kDefault = 0,
+  kPassive = 1 << 0,
+  kSelectable = 1 << 1,
+  kSelected = 1 << 2,
+};
+
 struct StandardMenuItemInit {
   roo_display::StringView headline = {};
   roo_display::StringView supporting = {};
   Widget* leading = nullptr;
-  bool enabled = true;
-  bool selectable = false;
-  bool selected = false;
+  StandardMenuItemFlags flags = StandardMenuItemFlags::kDefault;
 };
 
 class StandardMenuItem : public MenuItem {

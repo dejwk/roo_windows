@@ -34,6 +34,31 @@ enum class MenuSeparatorMode : uint8_t { kNone, kDivider, kGap };
 /// Overrides whether invoking a leaf closes its menu chain.
 enum class MenuLeafDismissal : uint8_t { kDefault, kDismiss, kKeepOpen };
 
+/// Initial state bits for a standard menu item.
+enum class StandardMenuItemFlags : uint8_t {
+  /// The default interactive, non-selectable, and unselected state.
+  kDefault = 0,
+  /// The item is shown but does not respond to menu interaction.
+  kPassive = 1 << 0,
+  /// The owning menu may mutate the item's selection state.
+  kSelectable = 1 << 1,
+  /// The item's initial selection state is selected.
+  kSelected = 1 << 2,
+};
+
+/// Combines initial state bits for a standard menu item.
+inline constexpr StandardMenuItemFlags operator|(StandardMenuItemFlags lhs,
+                                                 StandardMenuItemFlags rhs) {
+  return static_cast<StandardMenuItemFlags>(static_cast<uint8_t>(lhs) |
+                                            static_cast<uint8_t>(rhs));
+}
+
+/// Returns whether `flags` contains `flag`.
+inline constexpr bool HasStandardMenuItemFlag(StandardMenuItemFlags flags,
+                                              StandardMenuItemFlags flag) {
+  return (static_cast<uint8_t>(flags) & static_cast<uint8_t>(flag)) != 0;
+}
+
 /// Placement preference for an anchored root menu.
 enum class MenuPlacement : uint8_t {
   kBelowStart,
@@ -129,12 +154,8 @@ struct StandardMenuItemInit {
   roo_display::StringView supporting = {};
   /// Optional detached caller-owned widget borrowed for the binding lifetime.
   Widget* leading = nullptr;
-  /// Initial eligibility for focus and invocation.
-  bool enabled = true;
-  /// Whether the owning menu may mutate this item's selection state.
-  bool selectable = false;
-  /// Initial item-owned selection state.
-  bool selected = false;
+  /// Initial state; defaults to an interactive item.
+  StandardMenuItemFlags flags = StandardMenuItemFlags::kDefault;
 };
 
 /// Standard text-and-leading-visual Material 3 menu item.

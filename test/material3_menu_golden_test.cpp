@@ -95,8 +95,8 @@ TEST_F(Material3MenuGoldenTest, SelectedRowWithTrailingAdornments) {
   StandardMenuItemInit init;
   init.headline = "Filtration mode";
   init.supporting = "Automatic";
-  init.selectable = true;
-  init.selected = true;
+  init.flags =
+      StandardMenuItemFlags::kSelectable | StandardMenuItemFlags::kSelected;
   StandardMenuItem item(init);
   item.setShortcut("Ctrl+F");
   item.setBadgeText("3");

@@ -147,9 +147,12 @@ StandardMenuItem::StandardMenuItem(const StandardMenuItemInit& init)
       supporting_(init.supporting),
       leading_(init.leading),
       trailing_(),
-      enabled_(init.enabled),
-      selectable_(init.selectable),
-      selected_(init.selected) {}
+      enabled_(!HasStandardMenuItemFlag(init.flags,
+                                        StandardMenuItemFlags::kPassive)),
+      selectable_(HasStandardMenuItemFlag(init.flags,
+                                          StandardMenuItemFlags::kSelectable)),
+      selected_(HasStandardMenuItemFlag(init.flags,
+                                        StandardMenuItemFlags::kSelected)) {}
 
 StandardMenuItem::~StandardMenuItem() = default;
 
