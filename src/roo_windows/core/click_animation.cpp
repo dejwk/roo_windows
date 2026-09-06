@@ -121,7 +121,12 @@ bool ClickAnimation::tryStart(Widget& widget, int16_t x, int16_t y) {
 }
 
 void ClickAnimation::cancel(Widget& widget) {
-  if (target_ == &widget) reset();
+  if (target_ != &widget) return;
+  // A detached widget can be rebound later (for example, a reusable menu
+  // row). Do not leave its visual click state behind after releasing the
+  // shared controller.
+  widget.clearClicking();
+  reset();
 }
 
 bool ClickAnimation::tryConfirm(Widget& widget) {
