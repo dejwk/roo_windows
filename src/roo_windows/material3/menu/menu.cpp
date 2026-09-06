@@ -140,15 +140,19 @@ class FrozenMenuTriggerPin final : public PresentationPin {
         Rect::Intersect(Rect::Intersect(bounds_, clip_), ctx.localClip());
     if (settled.empty()) return;
     PaintDecoration decoration;
-    decoration.bounds = settled;
+    // `settled` is only the portion of this pin that needs painting in the
+    // current pass. Keeping it as the decoration bounds would turn a partial
+    // invalidation into a smaller, independently rounded rectangle, leaving
+    // a false border along the invalidation edge. The PaintContext already
+    // clips the decoration to `settled`; preserve the copied trigger geometry
+    // so its rounded edge is calculated from the real bounds.
+    decoration.bounds = bounds_;
     decoration.background = color_;
     decoration.corner_radii = {static_cast<uint8_t>(corner_radius_),
                                static_cast<uint8_t>(corner_radius_),
                                static_cast<uint8_t>(corner_radius_),
                                static_cast<uint8_t>(corner_radius_)};
-    ctx.fillRect(settled, color_);
     ctx.addDecoration(decoration);
-    ctx.addExclusion(settled);
   }
 
  private:
