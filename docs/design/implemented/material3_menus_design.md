@@ -549,7 +549,9 @@ the fourth level binds as disabled and without a chevron.
   barrier/scrim paint.
 - `MenuOverlay` owns area-overlay and child-host semantics but emits no
   background pixels. It reports a transparent background and never claims
-  opaque rectangular coverage.
+  opaque rectangular coverage. Its group stack and scrolling viewport likewise
+  publish empty direct-paint exclusions: they are structural layers and must
+  not mask the panel decoration assembled behind their row children.
 - `MenuPanel` owns popup background, outline, elevation, and scroll viewport.
 - `MenuGroup` owns row sequence and separator spacing but emits no background;
   uncovered gaps reveal the `MenuPanel` surface for both standard and vibrant

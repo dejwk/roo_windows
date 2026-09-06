@@ -8,6 +8,18 @@
 
 namespace roo_windows::material3::internal {
 
+/// Transparent scrolling viewport that leaves menu-surface paint to its panel.
+class MenuViewport final : public SimpleScrollablePanel {
+ public:
+  using SimpleScrollablePanel::SimpleScrollablePanel;
+
+ protected:
+  Color background() const override { return roo_display::color::Transparent; }
+  bool fullyCoversBoundsWithOpaqueColors() const override { return false; }
+  Rect getDirectPaintExclusionBounds() const override { return Rect(); }
+  void paint(PaintContext& ctx) const override { (void)ctx; }
+};
+
 /// Vertical group stack owned by one menu panel.
 class MenuGroupStack final : public Container {
  public:
@@ -28,6 +40,7 @@ class MenuGroupStack final : public Container {
   void paint(PaintContext& ctx) const override;
   Color background() const override;
   bool fullyCoversBoundsWithOpaqueColors() const override;
+  Rect getDirectPaintExclusionBounds() const override { return Rect(); }
   int getChildrenCount() const override;
   const Widget& getChild(int idx) const override;
   Widget& getChild(int idx) override;
@@ -63,7 +76,9 @@ class MenuPanel final : public Container {
   MenuSeparatorMode effectiveSeparatorMode() const;
 
   Color background() const override;
+  ColorToken containerRole() const override;
   BorderStyle getBorderStyle() const override;
+  uint8_t getElevation() const override;
   bool isFocusable() const override { return false; }
   Widget* preferredFocusChild() override;
 
@@ -78,7 +93,7 @@ class MenuPanel final : public Container {
   const MenuTokens& tokens() const;
 
   MenuGroupStack groups_;
-  SimpleScrollablePanel viewport_;
+  MenuViewport viewport_;
   MenuPolicy policy_;
   bool scrolling_ = false;
 };
@@ -96,11 +111,13 @@ class MenuOverlay final : public Container {
 
   Color background() const override;
   bool fullyCoversBoundsWithOpaqueColors() const override;
+  bool fillTouchTargetPath(XDim x, YDim y, std::vector<Widget*>& path) override;
   bool isFocusable() const override { return false; }
   Widget* preferredFocusChild() override;
 
  protected:
   void paint(PaintContext& ctx) const override;
+  Rect getDirectPaintExclusionBounds() const override { return Rect(); }
   int getChildrenCount() const override;
   const Widget& getChild(int idx) const override;
   Widget& getChild(int idx) override;

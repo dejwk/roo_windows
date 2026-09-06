@@ -274,10 +274,14 @@ Color MenuPanel::background() const {
   return theme().material3Theme().color.resolve(tokens().panel_container);
 }
 
+ColorToken MenuPanel::containerRole() const { return tokens().panel_container; }
+
 BorderStyle MenuPanel::getBorderStyle() const {
   uint8_t radius = Scaled(tokens().panel_corner_radius_dp);
   return BorderStyle(radius, 0);
 }
+
+uint8_t MenuPanel::getElevation() const { return tokens().elevation; }
 
 Widget* MenuPanel::preferredFocusChild() {
   return groups_.preferredFocusChild();
@@ -373,6 +377,30 @@ Color MenuOverlay::background() const {
 }
 
 bool MenuOverlay::fullyCoversBoundsWithOpaqueColors() const { return false; }
+
+bool MenuOverlay::fillTouchTargetPath(XDim x, YDim y,
+                                      std::vector<Widget*>& path) {
+  if (!isVisible() || !isEnabled() || !bounds().contains(x, y)) return false;
+  const size_t original_path_size = path.size();
+  path.push_back(this);
+  for (auto panel = panels_.rbegin(); panel != panels_.rend(); ++panel) {
+    MenuPanel& child = **panel;
+    if (!child.isVisible() || !child.isEnabled() ||
+        !child.parent_bounds().contains(x, y)) {
+      continue;
+    }
+    if (child.fillTouchTargetPath(x - child.offsetLeft(), y - child.offsetTop(),
+                                  path)) {
+      return true;
+    }
+    path.resize(original_path_size + 1);
+    break;
+  }
+  // The full-window overlay is structural, not interactive. Returning false
+  // lets TransientHostLayer turn this point into an outside-barrier hit.
+  path.resize(original_path_size);
+  return false;
+}
 
 Widget* MenuOverlay::preferredFocusChild() {
   if (panels_.empty()) return nullptr;

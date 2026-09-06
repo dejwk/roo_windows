@@ -356,6 +356,7 @@ class MenuGroup final : public Container {
   void paint(PaintContext& ctx) const override;
   Color background() const override;
   bool fullyCoversBoundsWithOpaqueColors() const override;
+  Rect getDirectPaintExclusionBounds() const override { return Rect(); }
   int getChildrenCount() const override;
   const Widget& getChild(int idx) const override;
   Widget& getChild(int idx) override;

@@ -114,6 +114,8 @@ TEST(Material3MenuGeometry, PanelCoercesHeightToPersistentScrolling) {
       panel.measure(WidthSpec::AtMost(200), HeightSpec::AtMost(100));
   EXPECT_EQ(100, size.height());
   EXPECT_TRUE(panel.isScrolling());
+  EXPECT_EQ(internal::kExpressiveStandardMenuTokens.elevation,
+            panel.getElevation());
   panel.clearGroups();
 }
 

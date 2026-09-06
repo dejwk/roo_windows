@@ -1,3 +1,5 @@
+#include <vector>
+
 #include "gtest/gtest.h"
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
@@ -126,6 +128,17 @@ class Material3MenuTest : public testing::Test {
     content_.removeLast();
   }
 
+  void CompleteTapAt(XDim x, YDim y) {
+    std::vector<Widget*> path;
+    ASSERT_TRUE(app_.root().fillTouchTargetPath(x, y, path));
+    ASSERT_FALSE(path.empty());
+    ASSERT_NE(&source_, path.back());
+    path.back()->onSingleTapUp(x, y);
+    app_.start();
+    scheduler_.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum,
+                                           1);
+  }
+
   roo::byte raster_[320 * 240 * 2] = {};
   roo_display::OffscreenDevice<roo_display::Argb4444> device_;
   roo_display::Display display_;
@@ -161,6 +174,19 @@ TEST_F(Material3MenuTest, VibrantPolicyColorsRowsFromThePanelFamily) {
   const ColorScheme& colors = app_.context().theme().material3Theme().color;
   EXPECT_EQ(colors.tertiaryContainer, row_.background());
   EXPECT_EQ(ColorToken::kTertiaryContainer, row_.containerRole());
+}
+
+TEST_F(Material3MenuTest, TapOnOpenerDismissesWithoutReachingOpener) {
+  ASSERT_EQ(MenuShowResult::kShown, menu_.show(owner_, source_));
+
+  // This point is on the opening source but above the below-anchored menu.
+  // While the menu is active the host absorbs the source's click and treats it
+  // as an outside activation of the menu chain.
+  CompleteTapAt(50, 40);
+
+  EXPECT_EQ(1, menu_.finishes());
+  EXPECT_EQ(PresentationFinishReason::kOutsideInteraction, menu_.lastReason());
+  EXPECT_NE(&row_, owner_.focus().focused());
 }
 
 TEST_F(Material3MenuTest, RejectsDetachedRequiredSourceWithoutMutation) {
