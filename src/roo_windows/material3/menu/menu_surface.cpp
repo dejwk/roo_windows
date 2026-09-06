@@ -8,6 +8,12 @@
 
 namespace roo_windows::material3 {
 
+namespace {
+
+constexpr int16_t kSegmentedMenuRowGapDp = 2;
+
+}  // namespace
+
 MenuGroup::MenuGroup(ApplicationContext& context) : Container(context) {}
 
 MenuGroup::~MenuGroup() { clear(); }
@@ -70,6 +76,9 @@ Dimensions MenuGroup::onMeasure(WidthSpec width, HeightSpec height) {
     measured_width = std::max(measured_width, size.width());
     measured_height += size.height();
   }
+  if (entries_.size() > 1) {
+    measured_height += (entries_.size() - 1) * rowGap();
+  }
   return Dimensions(width.resolveSize(measured_width),
                     height.resolveSize(measured_height));
 }
@@ -77,12 +86,24 @@ Dimensions MenuGroup::onMeasure(WidthSpec width, HeightSpec height) {
 void MenuGroup::onLayout(bool changed, const Rect& rect) {
   (void)changed;
   int32_t y = 0;
-  for (MenuEntry* entry : entries_) {
+  int16_t gap = rowGap();
+  for (size_t i = 0; i < entries_.size(); ++i) {
+    MenuEntry* entry = entries_[i];
     Dimensions size = entry->measure(WidthSpec::Exactly(rect.width()),
                                      HeightSpec::Unspecified(0));
     entry->layout(Rect(0, y, rect.width() - 1, y + size.height() - 1));
     y += size.height();
+    if (i + 1 < entries_.size()) y += gap;
   }
+}
+
+int16_t MenuGroup::rowGap() const {
+  if (entries_.empty()) return 0;
+  const ListEntryVisualContext& visual = entries_.front()->visualContext();
+  return visual.variant == ListVariant::kExpressive &&
+                 visual.style == ListStyle::kSegmented
+             ? Scaled(kSegmentedMenuRowGapDp)
+             : 0;
 }
 
 namespace internal {

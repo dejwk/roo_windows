@@ -366,6 +366,8 @@ class MenuGroup final : public Container {
  private:
   friend class Menu;
 
+  int16_t rowGap() const;
+
   std::vector<MenuEntry*> entries_;
 };
 

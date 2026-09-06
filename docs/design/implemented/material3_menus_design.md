@@ -555,8 +555,11 @@ the fourth level binds as disabled and without a chevron.
 - `MenuPanel` owns popup background, outline, elevation, and scroll viewport.
 - `MenuGroup` owns row sequence and separator spacing but emits no background;
   uncovered gaps reveal the `MenuPanel` surface for both standard and vibrant
-  color styles. Like the overlay, it reports transparent background and false
-  opaque coverage so invalidation does not treat those gaps as filled.
+  color styles. Expressive groups resolve first/middle/last row positions and
+  retain the segmented two-dp inter-row gap so each row decoration remains
+  independently visible. Like the overlay, the group reports transparent
+  background and false opaque coverage so invalidation does not treat those
+  gaps as filled.
 - `MenuEntry` owns row state layers and final adornment pixels.
 
 `MenuEntry::paint()` paints front-most adornments, excludes only fully settled

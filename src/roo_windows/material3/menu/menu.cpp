@@ -98,6 +98,13 @@ void PaintTintedIcon(PaintContext& ctx, const MonoIcon& source,
   ctx.addExclusion(bounds);
 }
 
+ListItemPosition PositionInGroup(size_t index, size_t count) {
+  if (count <= 1) return ListItemPosition::kSingle;
+  if (index == 0) return ListItemPosition::kFirst;
+  if (index + 1 == count) return ListItemPosition::kLast;
+  return ListItemPosition::kMiddle;
+}
+
 MenuShowResult MapStartResult(PresentationStartResult result) {
   switch (result) {
     case PresentationStartResult::kStarted:
@@ -780,7 +787,8 @@ void Menu::bindLevelEntries(uint8_t level) {
   uint16_t row_index = 0;
   for (int group_index = 0; group_index < panel->groupCount(); ++group_index) {
     MenuGroup& group = panel->groupAt(group_index);
-    for (MenuEntry* entry : group.entries_) {
+    for (size_t group_row = 0; group_row < group.entries_.size(); ++group_row) {
+      MenuEntry* entry = group.entries_[group_row];
       entry->bindToMenu(
           *this, level, row_index++, impl_->level_generation[level],
           impl_->policy.variant == ListVariant::kExpressive &&
@@ -790,6 +798,7 @@ void Menu::bindLevelEntries(uint8_t level) {
       visual.style = impl_->policy.variant == ListVariant::kExpressive
                          ? ListStyle::kSegmented
                          : ListStyle::kStandard;
+      visual.position = PositionInGroup(group_row, group.entries_.size());
       if (impl_->policy.selection_mode == SelectionMode::kNone &&
           entry->menuItem() != nullptr && entry->menuItem()->isSelectable()) {
         visual.selected = false;
@@ -903,6 +912,7 @@ void Menu::openSubmenu(MenuEntry& entry, MenuItem& item, uint8_t level,
   Rect viewport(margin, margin, window.width() - margin - 1,
                 window.height() - margin - 1);
   internal::MenuPanel& panel = *impl_->level_panels[child_level];
+  bindLevelEntries(child_level);
   Dimensions desired = panel.measure(WidthSpec::AtMost(viewport.width()),
                                      HeightSpec::AtMost(viewport.height()));
   int32_t x = 0;
@@ -910,6 +920,7 @@ void Menu::openSubmenu(MenuEntry& entry, MenuItem& item, uint8_t level,
   Widget* current = &entry;
   while (current != &impl_->overlay) {
     if (current == nullptr) {
+      unbindLevelEntries(child_level);
       impl_->level_panels[child_level] = nullptr;
       impl_->child_panels[child_level].reset();
       return;
@@ -931,7 +942,6 @@ void Menu::openSubmenu(MenuEntry& entry, MenuItem& item, uint8_t level,
     impl_->level_panels[level]->setVisibility(Visibility::kGone);
   }
   impl_->overlay.addPanel(panel, resolved.bounds);
-  bindLevelEntries(child_level);
   if (Widget* preferred = panel.preferredFocusChild(); preferred != nullptr) {
     impl_->interaction_owner->focus().requestFocus(*preferred);
   } else {

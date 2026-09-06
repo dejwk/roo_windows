@@ -176,6 +176,30 @@ TEST_F(Material3MenuTest, VibrantPolicyColorsRowsFromThePanelFamily) {
   EXPECT_EQ(ColorToken::kTertiaryContainer, row_.containerRole());
 }
 
+TEST_F(Material3MenuTest, ExpressiveGroupKeepsPerItemDecorationGeometry) {
+  StandardMenuItem first(StandardMenuItemInit{"First"});
+  StandardMenuItem second(StandardMenuItemInit{"Second"});
+  TestMenuEntry first_row(app_.context());
+  TestMenuEntry second_row(app_.context());
+  MenuGroup group(app_.context());
+  RecordingMenu menu(app_.context());
+  first_row.setMenuItem(first);
+  second_row.setMenuItem(second);
+  group.add(first_row);
+  group.add(second_row);
+  menu.addGroup(group);
+
+  ASSERT_EQ(MenuShowResult::kShown, menu.show(owner_, source_));
+
+  EXPECT_EQ(ListItemPosition::kFirst, first_row.visualContext().position);
+  EXPECT_EQ(ListItemPosition::kLast, second_row.visualContext().position);
+  EXPECT_EQ(first_row.height() + Scaled(2), second_row.offsetTop());
+
+  menu.dismissChain();
+  menu.clearGroups();
+  group.clear();
+}
+
 TEST_F(Material3MenuTest, TapOnOpenerDismissesWithoutReachingOpener) {
   ASSERT_EQ(MenuShowResult::kShown, menu_.show(owner_, source_));
 
