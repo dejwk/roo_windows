@@ -35,6 +35,10 @@ class MenuGroupStack final : public Container {
   void setSeparatorMode(MenuSeparatorMode mode, ListVariant variant);
   MenuSeparatorMode separatorMode() const;
   Widget* preferredFocusChild() override;
+  PreferredSize getPreferredSize() const override {
+    return PreferredSize(PreferredSize::MatchParentWidth(),
+                         PreferredSize::WrapContentHeight());
+  }
 
  protected:
   void paint(PaintContext& ctx) const override;
