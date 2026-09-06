@@ -138,7 +138,9 @@ class KeyRecordingWidget : public FocusableWidget {
 
   bool isClickable() const override { return clickable; }
 
-  bool showClickAnimation() const override { return false; }
+  ClickActivationPolicy getClickActivationPolicy() const override {
+    return ClickActivationPolicy::kAfterRefreshNoAnimation;
+  }
 
   bool clickable = false;
   bool consume = true;

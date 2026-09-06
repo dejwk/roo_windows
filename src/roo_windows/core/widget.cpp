@@ -826,7 +826,10 @@ void Widget::onShowPress(XDim x, YDim y) {
   if (isPressed()) return;
   ClickAnimation* anim = ClickAnimationController(*this);
   if (anim == nullptr) return;
-  if (showClickAnimation()) {
+  ClickActivationPolicy policy = getClickActivationPolicy();
+  bool animated = policy != ClickActivationPolicy::kAfterRefreshNoAnimation &&
+                  policy != ClickActivationPolicy::kImmediateNoAnimation;
+  if (animated) {
     if (!anim->tryStart(*this, x, y)) return;
     setClicking();
   } else if (anim->isBusy()) {
@@ -843,14 +846,18 @@ void Widget::onSingleTapUp(XDim x, YDim y) {
   } else {
     // Quick release (onShowPress not yet triggered).
     if (anim == nullptr) return;
-    if (showClickAnimation()) {
+    ClickActivationPolicy policy = getClickActivationPolicy();
+    bool animated =
+        policy != ClickActivationPolicy::kAfterRefreshNoAnimation &&
+        policy != ClickActivationPolicy::kImmediateNoAnimation;
+    if (animated) {
       if (!anim->tryStart(*this, x, y)) return;
       setClicking();
       setDirty();
     }
   }
   if (anim == nullptr) return;
-  anim->tryConfirm(*this);
+  anim->tryConfirm(*this, getClickActivationPolicy());
 }
 
 void Widget::onLongPress(XDim dx, YDim dy) {}

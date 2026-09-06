@@ -94,7 +94,9 @@ class RangeSlider : public BasicWidget {
   bool useOverlayOnPress() const override { return false; }
 
   /// The slider uses direct pressed-state painting rather than click animation.
-  bool showClickAnimation() const override { return false; }
+  ClickActivationPolicy getClickActivationPolicy() const override {
+    return ClickActivationPolicy::kAfterRefreshNoAnimation;
+  }
 
   /// Range sliders participate in press handling.
   bool isClickable() const override { return true; }

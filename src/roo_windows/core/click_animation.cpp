@@ -43,8 +43,13 @@ void ClickAnimation::notifyRefreshCompleted() {
   // The final paint used the pre-clear transient state. Invalidate its spill
   // once more so siblings underneath it are refreshed during settlement.
   invalidateTransientFootprint();
-  if (phase_ == Phase::kAnimatingConfirmed) {
+  if (phase_ == Phase::kAnimatingConfirmed ||
+      phase_ == Phase::kFinishingConfirmed) {
     deliverClick();
+  } else if (phase_ == Phase::kAnimatingDelivered) {
+    Widget* target = target_;
+    reset();
+    target->invalidateInterior();
   } else if (target_->isPressed()) {
     target_->invalidateInterior();
     phase_ = Phase::kAwaitingRelease;
@@ -94,6 +99,7 @@ void ClickAnimation::deliverClick() {
 
 float ClickAnimation::progress() const {
   if (target() == nullptr) return 1.0f;
+  if (phase_ == Phase::kFinishingConfirmed) return 1.0f;
   float result = (float)sampled_elapsed_millis_ / kPressAnimationMillis;
   if (result > 1.0f) result = 1.0f;
   return result;
@@ -125,21 +131,53 @@ void ClickAnimation::cancel(Widget& widget) {
   // A detached widget can be rebound later (for example, a reusable menu
   // row). Do not leave its visual click state behind after releasing the
   // shared controller.
+  invalidateTransientFootprint();
   widget.clearClicking();
   reset();
+  widget.invalidateInterior();
 }
 
-bool ClickAnimation::tryConfirm(Widget& widget) {
+bool ClickAnimation::tryConfirm(Widget& widget,
+                                ClickActivationPolicy policy) {
   if (phase_ == Phase::kIdle) {
-    target_ = &widget;
-    phase_ = Phase::kAwaitingRefresh;
-    return true;
+    if (policy == ClickActivationPolicy::kAfterRefreshNoAnimation) {
+      target_ = &widget;
+      phase_ = Phase::kAwaitingRefresh;
+      return true;
+    }
+    if (policy == ClickActivationPolicy::kImmediateNoAnimation) {
+      widget.invalidateInterior();
+      widget.onClicked();
+      return true;
+    }
+    return false;
   }
   if (target_ != &widget) return false;
 
   if (phase_ == Phase::kAnimatingUnconfirmed) {
-    phase_ = Phase::kAnimatingConfirmed;
-    return true;
+    switch (policy) {
+      case ClickActivationPolicy::kAfterNaturalAnimation:
+        phase_ = Phase::kAnimatingConfirmed;
+        return true;
+      case ClickActivationPolicy::kAfterForcedFinalFrame:
+        phase_ = Phase::kFinishingConfirmed;
+        target_->invalidateInterior();
+        return true;
+      case ClickActivationPolicy::kImmediateCancelAnimation:
+        invalidateTransientFootprint();
+        widget.clearClicking();
+        reset();
+        widget.invalidateInterior();
+        widget.onClicked();
+        return true;
+      case ClickActivationPolicy::kImmediateContinueAnimation:
+        phase_ = Phase::kAnimatingDelivered;
+        widget.onClicked();
+        return true;
+      case ClickActivationPolicy::kAfterRefreshNoAnimation:
+      case ClickActivationPolicy::kImmediateNoAnimation:
+        return false;
+    }
   }
 
   if (phase_ == Phase::kAwaitingRelease) {
@@ -150,6 +188,8 @@ bool ClickAnimation::tryConfirm(Widget& widget) {
   // A matching target is already confirmed; competing targets were rejected
   // above without mutating the interaction.
   return phase_ == Phase::kAnimatingConfirmed ||
+         phase_ == Phase::kFinishingConfirmed ||
+         phase_ == Phase::kAnimatingDelivered ||
          phase_ == Phase::kAwaitingRefresh;
 }
 

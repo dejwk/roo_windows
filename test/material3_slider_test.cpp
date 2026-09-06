@@ -697,7 +697,8 @@ TEST(Material3Slider, PressStateDoesNotUseOverlayOrClickAnimation) {
   Slider slider(context);
 
   EXPECT_FALSE(slider.useOverlayOnPress());
-  EXPECT_FALSE(slider.showClickAnimation());
+  EXPECT_EQ(ClickActivationPolicy::kAfterRefreshNoAnimation,
+            slider.getClickActivationPolicy());
 }
 
 // Verifies that a unit-range slider preserves the supplied semantic value.
@@ -1410,7 +1411,8 @@ TEST(Material3RangeSlider, PressStateDoesNotUseOverlayOrClickAnimation) {
   RangeSlider slider(context, SliderRange{0.0f, 10.0f}, 2.0f, 8.0f);
 
   EXPECT_FALSE(slider.useOverlayOnPress());
-  EXPECT_FALSE(slider.showClickAnimation());
+  EXPECT_EQ(ClickActivationPolicy::kAfterRefreshNoAnimation,
+            slider.getClickActivationPolicy());
 }
 
 // Verifies that the range slider's extra-large preset feeds through all size

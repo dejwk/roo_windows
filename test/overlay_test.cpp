@@ -83,7 +83,24 @@ class NonAnimatedClickableIcon : public ClickableIcon {
  public:
   using ClickableIcon::ClickableIcon;
 
-  bool showClickAnimation() const override { return false; }
+  ClickActivationPolicy getClickActivationPolicy() const override {
+    return ClickActivationPolicy::kAfterRefreshNoAnimation;
+  }
+};
+
+class PolicyClickableIcon : public ClickableIcon {
+ public:
+  PolicyClickableIcon(ApplicationContext& context,
+                      ClickActivationPolicy policy)
+      : ClickableIcon(context, ic_outlined_24_navigation_menu()),
+        policy_(policy) {}
+
+  ClickActivationPolicy getClickActivationPolicy() const override {
+    return policy_;
+  }
+
+ private:
+  ClickActivationPolicy policy_;
 };
 
 class ReentrantClickableIcon : public ClickableIcon {
@@ -1077,6 +1094,58 @@ TEST_F(RooWindowsRenderTest, NonAnimatedClickWaitsForCompletedRefresh) {
 
   ASSERT_TRUE(refresh());
   EXPECT_FALSE(icon_ptr->isDirty());
+}
+
+TEST_F(RooWindowsRenderTest, ActivationPoliciesDeliverAtTheirSelectedBoundary) {
+  auto forced = std::make_unique<PolicyClickableIcon>(
+      context(), ClickActivationPolicy::kAfterForcedFinalFrame);
+  PolicyClickableIcon* forced_ptr = forced.get();
+  app_.add(std::move(forced), Box(0, 8, 23, 31));
+  ASSERT_TRUE(refresh());
+
+  forced_ptr->onSingleTapUp(forced_ptr->width() / 2,
+                            forced_ptr->height() / 2);
+  ASSERT_NE(nullptr, forced_ptr->getClickAnimation());
+  EXPECT_FLOAT_EQ(1.0f, forced_ptr->getClickAnimation()->progress());
+  EXPECT_EQ(0, forced_ptr->clickCount());
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(1, forced_ptr->clickCount());
+
+  auto cancel = std::make_unique<PolicyClickableIcon>(
+      context(), ClickActivationPolicy::kImmediateCancelAnimation);
+  PolicyClickableIcon* cancel_ptr = cancel.get();
+  app_.add(std::move(cancel), Box(0, 8, 23, 31));
+  ASSERT_TRUE(refresh());
+  cancel_ptr->onShowPress(cancel_ptr->width() / 2, cancel_ptr->height() / 2);
+  cancel_ptr->onSingleTapUp(cancel_ptr->width() / 2, cancel_ptr->height() / 2);
+  EXPECT_EQ(1, cancel_ptr->clickCount());
+  EXPECT_EQ(nullptr, cancel_ptr->getClickAnimation());
+  EXPECT_FALSE(app_.root().click_animation().isBusy());
+
+  auto continue_animation = std::make_unique<PolicyClickableIcon>(
+      context(), ClickActivationPolicy::kImmediateContinueAnimation);
+  PolicyClickableIcon* continue_ptr = continue_animation.get();
+  app_.add(std::move(continue_animation), Box(0, 8, 23, 31));
+  ASSERT_TRUE(refresh());
+  continue_ptr->onShowPress(continue_ptr->width() / 2,
+                             continue_ptr->height() / 2);
+  continue_ptr->onSingleTapUp(continue_ptr->width() / 2,
+                               continue_ptr->height() / 2);
+  EXPECT_EQ(1, continue_ptr->clickCount());
+  EXPECT_EQ(continue_ptr, app_.root().click_animation().target());
+  delay(kPressAnimationMillis + 20);
+  ASSERT_TRUE(refresh());
+  EXPECT_FALSE(app_.root().click_animation().isBusy());
+
+  auto immediate = std::make_unique<PolicyClickableIcon>(
+      context(), ClickActivationPolicy::kImmediateNoAnimation);
+  PolicyClickableIcon* immediate_ptr = immediate.get();
+  app_.add(std::move(immediate), Box(0, 8, 23, 31));
+  ASSERT_TRUE(refresh());
+  immediate_ptr->onSingleTapUp(immediate_ptr->width() / 2,
+                                immediate_ptr->height() / 2);
+  EXPECT_EQ(1, immediate_ptr->clickCount());
+  EXPECT_FALSE(app_.root().click_animation().isBusy());
 }
 
 // Admission is owned by ClickAnimation itself: a second recognized press

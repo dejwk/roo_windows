@@ -105,6 +105,10 @@ class KeyboardButton : public SimpleButton {
  public:
   using SimpleButton::SimpleButton;
 
+  ClickActivationPolicy getClickActivationPolicy() const override {
+    return ClickActivationPolicy::kAfterRefreshNoAnimation;
+  }
+
   virtual void capsStateUpdated() {}
 
   void onCancel() override;
@@ -225,8 +229,6 @@ class TextButton : public KeyboardButton {
     setFont(font_body1());
   }
 
-  bool showClickAnimation() const override { return false; }
-
   void onShowPress(XDim x, YDim y) override {
     ((KeyboardPage*)parent())->showHighlighter(*this);
     Button::onShowPress(x, y);
@@ -263,8 +265,6 @@ class SpaceButton : public KeyboardButton {
  public:
   SpaceButton(ApplicationContext& context) : KeyboardButton(context, "") {}
 
-  bool showClickAnimation() const override { return false; }
-
   void onSingleTapUp(XDim x, YDim y) override {
     KeyboardPage* page = ((KeyboardPage*)parent());
     page->keyboard()->textInput().commitRune(' ');
@@ -277,8 +277,6 @@ class EnterButton : public KeyboardButton {
   EnterButton(ApplicationContext& context, const MonoIcon& icon)
       : KeyboardButton(context, icon) {}
 
-  bool showClickAnimation() const override { return false; }
-
   void onSingleTapUp(XDim x, YDim y) override {
     KeyboardPage* page = ((KeyboardPage*)parent());
     page->keyboard()->textInput().performAction(TextInputAction::kDone);
@@ -290,8 +288,6 @@ class ShiftButton : public KeyboardButton {
  public:
   ShiftButton(ApplicationContext& context)
       : KeyboardButton(context, shift_24()) {}
-
-  bool showClickAnimation() const override { return false; }
 
   void onShowPress(XDim x, YDim y) override {
     auto& kb = keyboard();
@@ -345,8 +341,6 @@ class DelButton : public KeyboardButton {
       : KeyboardButton(context, icon),
         repeat_(context.scheduler(), [this]() { repeatDelete(); }) {}
 
-  bool showClickAnimation() const override { return false; }
-
   void onShowPress(XDim x, YDim y) override {
     deleteBackward();
     repeat_.scheduleAfter(kDeleteRepeatDelay);
@@ -387,8 +381,6 @@ class PageSwitchButton : public KeyboardButton {
   PageSwitchButton(ApplicationContext& context, std::string label,
                    uint8_t target)
       : KeyboardButton(context, std::move(label)), target_(target) {}
-
-  bool showClickAnimation() const override { return false; }
 
   void onShowPress(XDim x, YDim y) override {
     keyboard().setPage(target_);

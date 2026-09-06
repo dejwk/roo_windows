@@ -9,6 +9,7 @@ namespace roo_windows {
 class Application;
 class DisplayWindow;
 class Widget;
+enum class ClickActivationPolicy : uint8_t;
 
 /// Shared click-animation controller owned by a MainWindow.
 ///
@@ -58,11 +59,9 @@ class ClickAnimation {
   /// Returns false without changing ownership when the controller is busy.
   bool tryStart(Widget& target, int16_t x, int16_t y);
 
-  /// Confirms the matching animated target, or reserves a non-animated click
-  /// for delivery after a completed refresh when idle. Confirming a finished
-  /// held target delivers its action synchronously. Returns false without
-  /// changing ownership when another widget owns the controller.
-  bool tryConfirm(Widget& target);
+  /// Confirms or delivers target according to policy. Returns false without
+  /// changing ownership when another interaction owns the controller.
+  bool tryConfirm(Widget& target, ClickActivationPolicy policy);
 
   /// Cancels the interaction only when it is owned by `target`.
   void cancel(Widget& target);
@@ -77,6 +76,9 @@ class ClickAnimation {
                             // released the press over this widget yet.
     kAnimatingConfirmed,  // The user released over this widget; finish drawing
                           // the feedback before running the widget's action.
+    kFinishingConfirmed,  // The final feedback frame must be painted before
+                          // running the widget's action.
+    kAnimatingDelivered,  // The action ran; feedback continues visually.
     kAwaitingRelease,  // Feedback finished while the press remains held; keep
                        // the widget pressed until release, then run its action.
     kAwaitingRefresh,  // A click without animated feedback waits until a full
@@ -98,7 +100,9 @@ class ClickAnimation {
 
   bool isAnimationPending() const {
     return phase_ == Phase::kAnimatingUnconfirmed ||
-           phase_ == Phase::kAnimatingConfirmed;
+           phase_ == Phase::kAnimatingConfirmed ||
+           phase_ == Phase::kFinishingConfirmed ||
+           phase_ == Phase::kAnimatingDelivered;
   }
 
   void reset();

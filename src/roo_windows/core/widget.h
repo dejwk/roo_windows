@@ -30,6 +30,16 @@
 namespace roo_windows {
 
 class ClickAnimation;
+
+enum class ClickActivationPolicy : uint8_t {
+  kAfterNaturalAnimation,
+  kAfterForcedFinalFrame,
+  kImmediateCancelAnimation,
+  kImmediateContinueAnimation,
+  kAfterRefreshNoAnimation,
+  kImmediateNoAnimation,
+};
+
 class Container;
 class MainWindow;
 class GestureDetector;
@@ -37,6 +47,7 @@ class FocusManager;
 class Task;
 class Application;
 class Widget;
+
 namespace internal {
 class TransientSurfaceHost;
 struct TransientSourceGeometry;
@@ -544,7 +555,10 @@ class Widget {
 
   virtual bool isClickable() const;
 
-  virtual bool showClickAnimation() const { return true; }
+  /// Selects visual feedback and semantic delivery for click activation.
+  virtual ClickActivationPolicy getClickActivationPolicy() const {
+    return ClickActivationPolicy::kAfterNaturalAnimation;
+  }
 
   virtual bool usesHighlighterColor() const { return false; }
 

@@ -220,10 +220,15 @@ class TextField : public BasicWidget {
         editable_(true) {}
 
   bool isClickable() const override { return true; }
+
   // TODO: Replace this with an outline focus indication once text-field focus
   // styling is specified. A point overlay obscures the editing surface.
   OverlayType getOverlayType() const override { return OVERLAY_NONE; }
-  bool showClickAnimation() const override { return false; }
+
+  ClickActivationPolicy getClickActivationPolicy() const override {
+    return ClickActivationPolicy::kAfterRefreshNoAnimation;
+  }
+
   bool useOverlayOnPress() const override { return false; }
 
   /// Hook for subclasses; called when the editor finishes editing this field
