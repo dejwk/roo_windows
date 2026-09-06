@@ -496,10 +496,12 @@ roo_display::Color Decoration::read(int16_t x, int16_t y) const {
       c = AlphaBlend(c, outline);
     }
   }
-  if (bg_alpha != 0) {
-    // We need to put the background in front of the shadow.
+  // We need to put the background, if any, in front of the shadow.
+  if (bg_alpha == 0xFF) {
+    c = AlphaBlend(c, bgcolor_.withA(bg_alpha));
+  } else if (bg_alpha != 0) {
     roo_display::Color bg = bgcolor_;
-    bg.set_a(bg_alpha);
+    bg.set_a((uint16_t(bg.a()) * bg_alpha + 127) / 255);
     c = AlphaBlend(c, bg);
   }
   if (press_overlay_ != nullptr) {
