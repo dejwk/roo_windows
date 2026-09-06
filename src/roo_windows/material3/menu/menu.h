@@ -266,10 +266,7 @@ class MenuEntry : public ListEntry {
   /// Uses the menu content role for supporting text.
   Color supportingColor() const override;
 
-  /// Dispatches a confirmed tap exactly once through the owning menu.
-  void onSingleTapUp(XDim x, YDim y) override;
-
-  /// Suppresses the deferred click paired with an already-dispatched tap.
+  /// Dispatches a confirmed tap through the owning menu.
   void onClicked() override;
 
   /// Reserves the complete owner-painted trailing lane before list measure.
@@ -306,7 +303,6 @@ class MenuEntry : public ListEntry {
   uint8_t level_ = 0;
   bool submenu_allowed_ = true;
   bool vibrant_ = false;
-  bool suppress_next_click_dispatch_ = false;
 };
 
 /// Menu row that owns its item inline and destroys the binding first.

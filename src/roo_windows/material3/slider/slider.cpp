@@ -7,6 +7,7 @@
 #include "roo_display/shape/smooth.h"
 #include "roo_logging.h"
 #include "roo_windows/core/overlay_spec.h"
+#include "roo_windows/core/main_window.h"
 #include "roo_windows/material3/slider/slider_internal.h"
 #include "roo_windows/material3/slider/slider_paint_internal.h"
 #include "roo_windows/material3/slider/slider_size_internal.h"
@@ -368,6 +369,9 @@ void Slider::onDown(XDim x, YDim y) {
 
 void Slider::onSingleTapUp(XDim x, YDim y) {
   if (!isEnabled()) return;
+  if (getMainWindow()->click_animation().isBusy()) {
+    return;
+  }
   BasicWidget::onSingleTapUp(x, y);
   internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
   float value =

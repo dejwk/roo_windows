@@ -70,8 +70,12 @@ class Switch : public BasicWidget {
   /// overlay (so the halo follows the thumb during animation).
   roo_display::FpPoint getPointOverlayFocus() const override;
 
+  ClickActivationPolicy getClickActivationPolicy() const override {
+    return ClickActivationPolicy::kImmediateContinueAnimation;
+  }
+
   /// Toggles the on/off state and starts the thumb animation.
-  void onSingleTapUp(XDim x, YDim y) override;
+  void onClicked() override;
 
  private:
   static constexpr uint16_t kIdleMask = 0x8000;

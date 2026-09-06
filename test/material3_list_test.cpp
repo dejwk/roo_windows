@@ -504,10 +504,9 @@ TEST(Material3List, NavigationRowsDelegateRowClickToItemInvokePath) {
   EXPECT_EQ(2, invocation_count);
 }
 
-// Verifies that row invocation starts at tap-up confirmation so state changes
-// can run concurrently with click animation, and deferred onClicked does not
-// invoke the item a second time.
-TEST(Material3List, NavigationRowsInvokeOnTapUpWithoutDoubleInvokeOnClick) {
+// Verifies that row invocation is routed solely through the click hook, even
+// for direct unit-test tap-up activation.
+TEST(Material3List, NavigationRowsInvokeOnceThroughClickHook) {
   roo_scheduler::Scheduler scheduler;
   ApplicationContext context(scheduler, DefaultTheme(),
                              DefaultKeyboardColorTheme());
@@ -520,11 +519,9 @@ TEST(Material3List, NavigationRowsInvokeOnTapUpWithoutDoubleInvokeOnClick) {
   EXPECT_TRUE(row.isClickable());
   EXPECT_EQ(0, invocation_count);
 
-  row.onSingleTapUp(0, 0);
-  EXPECT_EQ(1, invocation_count);
-
   row.onClicked();
   EXPECT_EQ(1, invocation_count);
+
 }
 
 // Verifies that Phase 10 selection convenience items expose semantic state

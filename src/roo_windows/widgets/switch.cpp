@@ -23,11 +23,11 @@ namespace {
 static constexpr int kSwitchAnimationMs = 120;
 }  // namespace
 
-void Switch::onSingleTapUp(XDim x, YDim y) {
+void Switch::onClicked() {
   toggle();
   anim_ = (anim_ & kOnOffStateMask) |
           (roo_time::Uptime::Now().inMillis() & kTimeMask);
-  Widget::onSingleTapUp(x, y);
+  Widget::onClicked();
 }
 
 int16_t Switch::time_animating_ms() const {

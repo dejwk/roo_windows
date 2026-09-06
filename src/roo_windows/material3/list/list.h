@@ -335,12 +335,12 @@ class ListEntry : public Container {
   /// Returns whether this row should behave as a clickable surface.
   bool isClickable() const override;
 
+  ClickActivationPolicy getClickActivationPolicy() const override {
+    return ClickActivationPolicy::kImmediateContinueAnimation;
+  }
+
   /// Invokes the currently bound item action, if one is available.
   void onClicked() override;
-
-  /// Starts row invocation when tap-up is confirmed, while click animation
-  /// continues, and defers duplicate suppression to onClicked().
-  void onSingleTapUp(XDim x, YDim y) override;
 
   /// Keeps the list-provided visual context synchronized with focus state.
   void onFocusChanged(bool focused) override;
@@ -381,7 +381,6 @@ class ListEntry : public Container {
   TextSlotMode overline_mode_;
   TextSlotMode headline_mode_;
   TextSlotMode supporting_mode_;
-  bool suppress_next_click_invoke_;
   ListEntryVisualContext visual_context_;
 };
 

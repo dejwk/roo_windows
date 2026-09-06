@@ -91,8 +91,7 @@ Rect LerpRect(const Rect& from, const Rect& to, float t) {
 Tab::Tab(ApplicationContext& context, roo::string_view label)
     : SurfaceWidget(context),
       label_(label),
-      icon_(nullptr),
-      click_handled_on_release_(false) {}
+      icon_(nullptr) {}
 
 void Tab::setLabel(roo::string_view label) {
   if (label_ == label) return;
@@ -247,22 +246,19 @@ void Tab::paint(PaintContext& ctx) const {
   }
 }
 
-void Tab::onSingleTapUp(XDim x, YDim y) {
-  Widget::onSingleTapUp(x, y);
-  if (parent() != nullptr) {
-    Tabs* tabs = static_cast<Tabs*>(parent());
-    if (tabs->selectionCommitMode() == TabsSelectionCommitMode::kOnRelease) {
-      click_handled_on_release_ = true;
-      tabs->handleTabClicked(*this);
-    }
+ClickActivationPolicy Tab::getClickActivationPolicy() const {
+  if (parent() != nullptr &&
+      static_cast<const Tabs*>(parent())->selectionCommitMode() ==
+          TabsSelectionCommitMode::kOnRelease) {
+    return ClickActivationPolicy::kImmediateContinueAnimation;
   }
+  return ClickActivationPolicy::kAfterNaturalAnimation;
 }
 
 void Tab::onClicked() {
-  if (parent() != nullptr && !click_handled_on_release_) {
+  if (parent() != nullptr) {
     static_cast<Tabs*>(parent())->handleTabClicked(*this);
   }
-  click_handled_on_release_ = false;
   Widget::onClicked();
 }
 

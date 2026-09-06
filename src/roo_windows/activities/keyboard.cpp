@@ -106,7 +106,7 @@ class KeyboardButton : public SimpleButton {
   using SimpleButton::SimpleButton;
 
   ClickActivationPolicy getClickActivationPolicy() const override {
-    return ClickActivationPolicy::kAfterRefreshNoAnimation;
+    return ClickActivationPolicy::kImmediateNoAnimation;
   }
 
   virtual void capsStateUpdated() {}
@@ -247,6 +247,11 @@ class TextButton : public KeyboardButton {
   void onSingleTapUp(XDim x, YDim y) override {
     KeyboardPage* page = ((KeyboardPage*)parent());
     page->hideHighlighter();
+    KeyboardButton::onSingleTapUp(x, y);
+  }
+
+  void onClicked() override {
+    KeyboardPage* page = ((KeyboardPage*)parent());
     Keyboard::CapsState caps = keyboard().caps_state();
     page->keyboard()->textInput().commitRune(
         caps == Keyboard::CAPS_STATE_LOW ? rune_ : rune_caps_);
@@ -254,7 +259,7 @@ class TextButton : public KeyboardButton {
       // Flip back.
       keyboard().setCapsState(Keyboard::CAPS_STATE_LOW);
     }
-    Button::onSingleTapUp(x, y);
+    KeyboardButton::onClicked();
   }
 
   uint16_t rune_;
@@ -265,10 +270,10 @@ class SpaceButton : public KeyboardButton {
  public:
   SpaceButton(ApplicationContext& context) : KeyboardButton(context, "") {}
 
-  void onSingleTapUp(XDim x, YDim y) override {
+  void onClicked() override {
     KeyboardPage* page = ((KeyboardPage*)parent());
     page->keyboard()->textInput().commitRune(' ');
-    Button::onSingleTapUp(x, y);
+    KeyboardButton::onClicked();
   }
 };
 
@@ -277,10 +282,10 @@ class EnterButton : public KeyboardButton {
   EnterButton(ApplicationContext& context, const MonoIcon& icon)
       : KeyboardButton(context, icon) {}
 
-  void onSingleTapUp(XDim x, YDim y) override {
+  void onClicked() override {
     KeyboardPage* page = ((KeyboardPage*)parent());
     page->keyboard()->textInput().performAction(TextInputAction::kDone);
-    Button::onSingleTapUp(x, y);
+    KeyboardButton::onClicked();
   }
 };
 
@@ -351,7 +356,7 @@ class DelButton : public KeyboardButton {
 
   void onSingleTapUp(XDim x, YDim y) override {
     repeat_.cancel();
-    Button::onSingleTapUp(x, y);
+    KeyboardButton::onSingleTapUp(x, y);
   }
 
   void onLongPressFinished(XDim x, YDim y) override {

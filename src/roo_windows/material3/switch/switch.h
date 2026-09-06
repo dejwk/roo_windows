@@ -102,8 +102,12 @@ class Switch : public BasicWidget {
   /// Resolves the surface color role based on the current on/off state.
   ::roo_windows::material3::ColorToken effectiveContainerRole() const override;
 
+  ClickActivationPolicy getClickActivationPolicy() const override {
+    return ClickActivationPolicy::kImmediateContinueAnimation;
+  }
+
   /// Toggles the on/off state and starts the thumb animation.
-  void onSingleTapUp(XDim x, YDim y) override;
+  void onClicked() override;
 
  private:
   static constexpr uint16_t kIdleMask = 0x8000;

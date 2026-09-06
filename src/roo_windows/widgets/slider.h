@@ -24,6 +24,10 @@ class Slider : public BasicWidget {
 
   bool isClickable() const override { return true; }
 
+  ClickActivationPolicy getClickActivationPolicy() const override {
+    return ClickActivationPolicy::kImmediateCancelAnimation;
+  }
+
   /// Adjusts the value with arrow, page, Home, and End keys.
   bool onKeyEvent(const KeyEvent& event) override;
 
@@ -32,6 +36,8 @@ class Slider : public BasicWidget {
 
   /// Treats a tap-up as a final position commit.
   void onSingleTapUp(XDim x, YDim y) override;
+
+  void onClicked() override {}
 
   /// Captures the press location so the slider can show a static press
   /// overlay before scrolling starts.

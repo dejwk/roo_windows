@@ -6,6 +6,7 @@
 
 #include "roo_display/shape/smooth.h"
 #include "roo_windows/core/overlay_spec.h"
+#include "roo_windows/core/main_window.h"
 #include "roo_windows/material3/slider/slider_internal.h"
 #include "roo_windows/material3/slider/slider_paint_internal.h"
 #include "roo_windows/material3/slider/slider_size_internal.h"
@@ -331,6 +332,9 @@ void RangeSlider::onDown(XDim x, YDim y) {
 
 void RangeSlider::onSingleTapUp(XDim x, YDim y) {
   if (!isEnabled()) return;
+  if (getMainWindow()->click_animation().isBusy()) {
+    return;
+  }
   internal::SliderAxisMetrics axis = MakeSliderAxisMetrics(*this);
   int16_t primary_coord = axis.primaryCoordFromPoint(x, y);
   float start_center = axis.centerFromValue(range_, start_value_);

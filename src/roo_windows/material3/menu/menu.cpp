@@ -310,32 +310,7 @@ void MenuEntry::prepareForItemDestruction() {
   ListEntry::clearItem();
 }
 
-void MenuEntry::onSingleTapUp(XDim x, YDim y) {
-  if (menu_ == nullptr) {
-    if (getMainWindow() != nullptr) Widget::onSingleTapUp(x, y);
-    return;
-  }
-  // A completed held press can synchronously deliver Widget::onClicked()
-  // from the base tap-up handler. Arm suppression first so that delivery and
-  // the explicit menu invocation below remain one logical menu action.
-  suppress_next_click_dispatch_ = true;
-  if (getMainWindow() != nullptr) Widget::onSingleTapUp(x, y);
-  if (menu_ == nullptr) {
-    suppress_next_click_dispatch_ = false;
-    return;
-  }
-  Menu* owner = menu_;
-  uint8_t level = level_;
-  uint16_t row = row_;
-  uint16_t generation = level_generation_;
-  owner->invokeEntry(*this, level, row, generation);
-}
-
 void MenuEntry::onClicked() {
-  if (suppress_next_click_dispatch_) {
-    suppress_next_click_dispatch_ = false;
-    return;
-  }
   if (menu_ != nullptr) {
     menu_->invokeEntry(*this, level_, row_, level_generation_);
   }
@@ -350,7 +325,6 @@ void MenuEntry::bindToMenu(Menu& owner, uint8_t level, uint16_t row,
   level_generation_ = generation;
   submenu_allowed_ = level < 3;
   vibrant_ = vibrant;
-  suppress_next_click_dispatch_ = false;
   ListEntryVisualContext visual = visualContext();
   const MenuItem* bound = menuItem();
   visual.enabled = bound != nullptr && bound->isEnabled() &&
@@ -368,7 +342,6 @@ void MenuEntry::unbindFromMenu() {
   level_generation_ = 0;
   submenu_allowed_ = true;
   vibrant_ = false;
-  suppress_next_click_dispatch_ = false;
   if (was_vibrant) refreshFromItem();
 }
 

@@ -93,7 +93,6 @@ class TestMenuEntry final : public MenuEntry {
   using MenuEntry::MenuEntry;
 
   void Tap() { onSingleTapUp(1, 1); }
-  void DeferredClick() { onClicked(); }
   bool Key(KeyCode code, uint8_t modifiers = 0) {
     return onKeyEvent(
         KeyEvent{KeyPhase::kDown, code, modifiers, PhysicalKey::kNone, 0});
@@ -276,7 +275,6 @@ TEST_F(Material3MenuTest, SingleSelectionInvokesOnceAndDismisses) {
   ASSERT_EQ(MenuShowResult::kShown, menu_.show(owner_, source_));
 
   row_.Tap();
-  row_.DeferredClick();
 
   EXPECT_TRUE(item_.isSelected());
   EXPECT_EQ(1, item_.invocations());
@@ -303,7 +301,6 @@ TEST_F(Material3MenuTest, MultipleSelectionTogglesAndStaysOpenByDefault) {
   ASSERT_EQ(MenuShowResult::kShown, menu_.show(owner_, source_));
 
   row_.Tap();
-  row_.DeferredClick();
 
   EXPECT_TRUE(item_.isSelected());
   EXPECT_EQ(1, item_.invocations());
@@ -332,9 +329,6 @@ TEST_F(Material3MenuTest, HeldThenQuickTapEachToggleMultipleSelectionOnce) {
   // A normal quick tap follows the held release. It must be a separate,
   // single toggle, not be swallowed by stale duplicate-dispatch state.
   row_.Tap();
-  EXPECT_FALSE(item_.isSelected());
-  EXPECT_EQ(2, item_.invocations());
-  row_.DeferredClick();
   EXPECT_FALSE(item_.isSelected());
   EXPECT_EQ(2, item_.invocations());
 }

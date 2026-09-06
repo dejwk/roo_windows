@@ -84,7 +84,7 @@ class Tab : public SurfaceWidget {
   Rect getCoreContentBounds() const;
   Rect getContentPaintBounds() const;
   Rect getDirectPaintExclusionBounds() const override;
-  void onSingleTapUp(XDim x, YDim y) override;
+  ClickActivationPolicy getClickActivationPolicy() const override;
   void onClicked() override;
   virtual Dimensions getContentMinimumDimensions() const;
   virtual void paintContent(PaintContext& ctx, const Rect& content_bounds,
@@ -95,7 +95,6 @@ class Tab : public SurfaceWidget {
 
   roo::string_view label_;
   const MonoIcon* icon_;
-  uint8_t click_handled_on_release_ : 1;
 };
 
 class BadgedTab : public Tab {

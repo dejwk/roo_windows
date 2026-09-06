@@ -188,8 +188,10 @@ class Slider : public BasicWidget {
 
   /// The slider uses direct pressed-state painting rather than click animation.
   ClickActivationPolicy getClickActivationPolicy() const override {
-    return ClickActivationPolicy::kAfterRefreshNoAnimation;
+    return ClickActivationPolicy::kImmediateNoAnimation;
   }
+
+  void onClicked() override {}
 
   /// Sliders participate in press handling.
   bool isClickable() const override { return true; }

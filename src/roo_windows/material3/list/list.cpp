@@ -692,7 +692,6 @@ ListEntry::ListEntry(ApplicationContext& context)
       overline_mode_(TextSlotMode::kNone),
       headline_mode_(TextSlotMode::kNone),
       supporting_mode_(TextSlotMode::kNone),
-      suppress_next_click_invoke_(false),
       visual_context_() {}
 
 ListEntry::~ListEntry() { clearItem(); }
@@ -953,24 +952,10 @@ bool ListEntry::isClickable() const {
 }
 
 void ListEntry::onClicked() {
-  if (item_ != nullptr && !suppress_next_click_invoke_) {
+  if (item_ != nullptr) {
     item_->invoke();
   }
-  suppress_next_click_invoke_ = false;
   Widget::onClicked();
-}
-
-void ListEntry::onSingleTapUp(XDim x, YDim y) {
-  if (getMainWindow() == nullptr) {
-    // Allows direct unit-test invocation without a live gesture detector.
-  } else {
-    Widget::onSingleTapUp(x, y);
-  }
-
-  if (item_ != nullptr && item_->isInvokable()) {
-    item_->invoke();
-    suppress_next_click_invoke_ = true;
-  }
 }
 
 void ListEntry::onFocusChanged(bool focused) {

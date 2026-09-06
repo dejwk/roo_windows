@@ -5,6 +5,7 @@
 #include "roo_display/shape/smooth.h"
 #include "roo_display/ui/tile.h"
 #include "roo_windows/core/container.h"
+#include "roo_windows/core/main_window.h"
 #include "roo_windows/material3/theme.h"
 #include "roo_windows/widgets/resources/circle.h"
 #include "roo_windows/widgets/resources/circular_shadow.h"
@@ -46,6 +47,10 @@ void Slider::onDown(XDim x, YDim y) {
 }
 
 void Slider::onSingleTapUp(XDim x, YDim y) {
+  ClickAnimation& animation = getMainWindow()->click_animation();
+  if (animation.isBusy() && animation.target() != this) {
+    return;
+  }
   BasicWidget::onSingleTapUp(x, y);
   Padding p = getPadding();
   int16_t range = range_from_width(width(), p);

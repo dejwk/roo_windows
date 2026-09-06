@@ -697,7 +697,7 @@ TEST(Material3Slider, PressStateDoesNotUseOverlayOrClickAnimation) {
   Slider slider(context);
 
   EXPECT_FALSE(slider.useOverlayOnPress());
-  EXPECT_EQ(ClickActivationPolicy::kAfterRefreshNoAnimation,
+  EXPECT_EQ(ClickActivationPolicy::kImmediateNoAnimation,
             slider.getClickActivationPolicy());
 }
 
@@ -1411,7 +1411,7 @@ TEST(Material3RangeSlider, PressStateDoesNotUseOverlayOrClickAnimation) {
   RangeSlider slider(context, SliderRange{0.0f, 10.0f}, 2.0f, 8.0f);
 
   EXPECT_FALSE(slider.useOverlayOnPress());
-  EXPECT_EQ(ClickActivationPolicy::kAfterRefreshNoAnimation,
+  EXPECT_EQ(ClickActivationPolicy::kImmediateNoAnimation,
             slider.getClickActivationPolicy());
 }
 
