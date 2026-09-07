@@ -165,15 +165,19 @@ BorderStyle DialogScaffoldBase::getBorderStyle() const {
 }
 
 void DialogScaffoldBase::paint(PaintContext& ctx) const {
-  if (icon_ == nullptr || icon_height_ == 0) return;
-  roo_display::Pictogram icon(*icon_);
-  icon.color_mode().setColor(roo_display::AlphaBlend(
-      ctx.bgcolor(), theme().material3Theme().color.secondary));
-  ctx.drawTiled(
-      icon,
-      Rect(content_inset_, content_inset_, width() - content_inset_ - 1,
-           content_inset_ + icon_height_ - 1),
-      roo_display::kCenter | roo_display::kMiddle, isInvalidated());
+  if (icon_ != nullptr && icon_height_ > 0) {
+    roo_display::Pictogram icon(*icon_);
+    icon.color_mode().setColor(roo_display::AlphaBlend(
+        ctx.bgcolor(), theme().material3Theme().color.secondary));
+    const Rect icon_bounds(
+        content_inset_, content_inset_, width() - content_inset_ - 1,
+        content_inset_ + icon_height_ - 1);
+    ctx.drawTiled(icon, icon_bounds,
+                  roo_display::kCenter | roo_display::kMiddle,
+                  isInvalidated());
+    ctx.addExclusion(icon_bounds);
+  }
+  Container::paint(ctx);
 }
 
 Widget* DialogScaffoldBase::preferredFocusChild() {

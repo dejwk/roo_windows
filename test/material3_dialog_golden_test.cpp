@@ -68,6 +68,7 @@ TEST_F(Material3DialogGoldenTest, BasicDialogWithIconAndActions) {
   BasicDialog dialog(app_.context(), WidgetRef(body), actions, 2);
   dialog.setIcon(&ic_outlined_24_alert_warning());
   dialog.setHeadline("Restart controller?");
+  ASSERT_TRUE(app_.refresh());
   ASSERT_EQ(DialogShowResult::kShown, dialog.show(owner_));
   ASSERT_TRUE(app_.refresh());
 
@@ -81,6 +82,7 @@ TEST_F(Material3DialogGoldenTest, AlertDialogOwnedProse) {
   AlertDialog dialog(app_.context(), "Water level warning",
                      "The fill valve has remained open longer than expected.",
                      &action, 1);
+  ASSERT_TRUE(app_.refresh());
   ASSERT_EQ(DialogShowResult::kShown, dialog.show(owner_));
   ASSERT_TRUE(app_.refresh());
 
@@ -97,6 +99,7 @@ TEST_F(Material3DialogGoldenTest, FullScreenDialogHeader) {
   FullScreenDialog dialog(app_.context(), WidgetRef(body));
   dialog.setHeaderTitle("Edit schedule");
   dialog.setConfirmAction({7, "Save", DialogActionRole::kConfirm, true});
+  ASSERT_TRUE(app_.refresh());
   ASSERT_EQ(DialogShowResult::kShown, dialog.show(owner_));
   ASSERT_TRUE(app_.refresh());
 
@@ -112,6 +115,7 @@ TEST_F(Material3DialogGoldenTest, FullScreenDialogRtlHeader) {
   dialog.setHeaderTitle("Schedule");
   dialog.setConfirmAction({7, "Save", DialogActionRole::kConfirm, true});
   dialog.setLayoutDirection(LayoutDirection::kRightToLeft);
+  ASSERT_TRUE(app_.refresh());
   ASSERT_EQ(DialogShowResult::kShown, dialog.show(owner_));
   ASSERT_TRUE(app_.refresh());
 

@@ -138,8 +138,23 @@ class DialogScaffoldBase : public Container {
     DialogBodyScroller(ApplicationContext& context, DialogScaffoldBase& owner)
         : SimpleScrollablePanel(context), owner_(owner) {}
 
+    /// Leaves viewport gaps to the scaffold-owned dialog surface.
+    void paint(PaintContext& ctx) const override { (void)ctx; }
+
+    /// Inherits the scaffold's effective background without owning a fill.
+    Color background() const override {
+      return roo_display::color::Transparent;
+    }
+
+    /// Reports that unpainted viewport pixels remain transparent.
+    bool fullyCoversBoundsWithOpaqueColors() const override { return false; }
+
     /// Updates conditional divider visibility after scrolling.
     void onScrollPositionChanged() override { owner_.updateDividers(); }
+
+   protected:
+    /// Claims no direct surface pixels; descendants publish their own ink.
+    Rect getDirectPaintExclusionBounds() const override { return Rect(); }
 
    private:
     DialogScaffoldBase& owner_;
@@ -234,6 +249,9 @@ class DialogActionStrip final : public Container {
   bool fullyCoversBoundsWithOpaqueColors() const override { return false; }
 
  protected:
+  /// Claims no direct surface pixels; buttons publish their own exclusions.
+  Rect getDirectPaintExclusionBounds() const override { return Rect(); }
+
   int getChildrenCount() const override;
   const Widget& getChild(int idx) const override;
   Widget& getChild(int idx) override;
