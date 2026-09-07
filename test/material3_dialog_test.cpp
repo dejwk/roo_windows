@@ -267,6 +267,14 @@ TEST_F(Material3DialogTest, ActionStripUsesLogicalHorizontalOrder) {
   internal::DialogActionStrip strip(app_.context(), delegate, actions, 2);
   strip.measure(WidthSpec::Exactly(240), HeightSpec::AtMost(80));
   strip.layout(Rect(0, 0, 239, 79));
+  EXPECT_EQ(strip.actionButton(0).getNaturalDimensions().width(),
+            strip.actionButton(0).width());
+  EXPECT_EQ(strip.actionButton(0).getNaturalDimensions().height(),
+            strip.actionButton(0).height());
+  EXPECT_EQ(strip.actionButton(1).getNaturalDimensions().width(),
+            strip.actionButton(1).width());
+  EXPECT_EQ(strip.actionButton(1).getNaturalDimensions().height(),
+            strip.actionButton(1).height());
   EXPECT_LT(strip.actionButton(0).offsetLeft(),
             strip.actionButton(1).offsetLeft());
 

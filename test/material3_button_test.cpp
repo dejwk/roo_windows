@@ -111,6 +111,21 @@ TEST(Material3Button, ReportsMinimumHeightOfFortyDp) {
   EXPECT_EQ(Scaled(40), b.getNaturalDimensions().height());
 }
 
+// Verifies direct measurement includes the button's Material padding rather
+// than returning only its foreground content dimensions.
+TEST(Material3Button, MeasuresPaddedNaturalDimensions) {
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  ApplicationContext context = MakeContext(env);
+
+  Button b(context, "Restart");
+  const Dimensions natural = b.getNaturalDimensions();
+  const Dimensions measured =
+      b.measure(WidthSpec::AtMost(320), HeightSpec::AtMost(240));
+  EXPECT_EQ(natural.width(), measured.width());
+  EXPECT_EQ(natural.height(), measured.height());
+}
+
 // Verifies that the default small-button layout uses the reduced 16 dp side
 // padding for both text-only and icon-bearing configurations.
 TEST(Material3Button, DefaultHorizontalPaddingIsSixteenDpPerSide) {

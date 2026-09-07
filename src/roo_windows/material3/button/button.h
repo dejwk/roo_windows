@@ -140,11 +140,13 @@ class Button : public BasicSurfaceWidget {
   /// Paints the button's label and optional leading icon.
   void paint(PaintContext& ctx) const override;
 
-  /// Returns the minimum size needed for the current content and Material 3
-  /// padding constraints.
+  /// Returns the content-only minimum; natural size adds Material padding.
   Dimensions getSuggestedMinimumDimensions() const override;
 
  protected:
+  /// Resolves the content plus Material padding against parent constraints.
+  Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
+
   /// Tracks press transitions to drive the corner-radius morph animation.
   void notifyStateChanged(uint16_t state_diff) override;
 

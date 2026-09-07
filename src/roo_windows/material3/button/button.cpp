@@ -375,6 +375,12 @@ Dimensions Button::getSuggestedMinimumDimensions() const {
   return Dimensions(metrics.content_width, metrics.content_height);
 }
 
+Dimensions Button::onMeasure(WidthSpec width, HeightSpec height) {
+  const Dimensions natural = getNaturalDimensions();
+  return Dimensions(width.resolveSize(natural.width()),
+                    height.resolveSize(natural.height()));
+}
+
 void Button::paint(PaintContext& ctx) const { paintWithCanvas(ctx.canvas()); }
 
 void Button::paintWithCanvas(const Canvas& canvas) const {
