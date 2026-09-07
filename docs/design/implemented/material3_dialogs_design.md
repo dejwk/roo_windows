@@ -375,9 +375,10 @@ storage base.
 The body is persistent dialog configuration, not presentation-session state.
 Dismissal detaches the complete dialog root from the transient host but leaves
 the body attached inside the dialog subtree, allowing the same dialog instance
-to reopen with its form state and remembered focus. A borrowed body must remain
-live until `setBody()` replaces it or the dialog is destroyed. An adopted body
-is deleted at that same endpoint rather than when a presentation finishes.
+to reopen with its form state. Focus starts empty on each presentation. A
+borrowed body must remain live until `setBody()` replaces it or the dialog is
+destroyed. An adopted body is deleted at that same endpoint rather than when a
+presentation finishes.
 
 `AlertDialog` supplies its own supporting `TextBlock` through the base-from-
 member idiom. Private `internal::AlertDialogBodyStorage` is its first base and
@@ -557,27 +558,20 @@ Basic dialogs are deliberately strict.
 - Back and Escape dismiss the dialog with a typed dismiss reason through the
   shared key-routing path.
 
-Initial focus uses the ordering described in
-[non_touch_input_design.md](../implemented/non_touch_input_design.md): a
-remembered descendant that remains eligible, then the first eligible descendant
-in the dialog's focus traversal order.
-
-`setBody()` clears the presenter's remembered focus before replacing the body.
-The active-scope subtree-detachment hook would also clear a focused body
-descendant, but the explicit call is required while the dialog is inactive,
-when that scope is not linked into a `FocusManager`.
+Opening a dialog activates its modal focus scope without automatically focusing
+a descendant. Each presentation clears remembered dialog focus, so reopening
+also starts empty. Tab or Shift+Tab explicitly enters the dialog's traversal
+order. `setBody()` additionally clears any inactive remembered address before
+replacing the body.
 
 For basic dialogs, that traversal order is:
 
 1. focusable body descendants,
 2. then enabled actions.
 
-This keeps selection dialogs and forms focused on their working area first,
-while simple acknowledgement dialogs still land on the button. The dialog root
-does not become focusable merely to avoid a null target. When neither a body
-descendant nor an action is eligible, scope activation succeeds with no focused
-widget; a valid basic-dialog configuration normally avoids that state because
-its acknowledgement or dismiss action is always enabled.
+This makes selection dialogs and forms enter their working area first on Tab,
+while simple acknowledgement dialogs enter their button. Shift+Tab enters at
+the opposite end. The dialog root remains non-focusable.
 
 ### FullScreenDialog
 

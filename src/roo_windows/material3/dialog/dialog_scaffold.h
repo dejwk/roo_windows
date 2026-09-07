@@ -55,8 +55,8 @@ class DialogScaffoldBase : public Container {
   /// Keeps the scaffold itself out of the focus traversal.
   bool isFocusable() const override { return false; }
 
-  /// Selects the body preference first, then derived action chrome.
-  Widget* preferredFocusChild() override;
+  /// Opens with an empty focus state; keyboard traversal enters on Tab.
+  Widget* preferredFocusChild() override { return nullptr; }
 
  protected:
   DialogScaffoldBase(ApplicationContext& context, WidgetRef body,
@@ -120,9 +120,6 @@ class DialogScaffoldBase : public Container {
 
   /// Forgets an inactive descendant address before chrome replacement.
   void clearDialogRememberedFocus() { focus_scope_.clearRememberedFocus(); }
-
-  /// Returns the first derived-chrome focus preference, if any.
-  virtual Widget* preferredChromeFocusChild();
 
   /// Handles an eligible Back or Escape request while still attached.
   virtual BackResult onDialogBackRequested(BackSource source);
@@ -235,9 +232,6 @@ class DialogActionStrip final : public Container {
 
   /// Returns whether the last measurement selected vertical stacking.
   bool isStacked() const { return stacked_; }
-
-  /// Returns the first enabled button in traversal order.
-  Widget* preferredFocusChild() override;
 
   /// Emits no pixels; gaps reveal the owning dialog surface.
   void paint(PaintContext& ctx) const override { (void)ctx; }

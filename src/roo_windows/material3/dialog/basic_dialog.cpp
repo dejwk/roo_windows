@@ -56,10 +56,6 @@ void BasicDialog::invokeDialogAction(uint8_t id, DialogActionRole role) {
   finishDialog(PresentationFinishReason::kAction);
 }
 
-Widget* BasicDialog::preferredChromeFocusChild() {
-  return actions_.preferredFocusChild();
-}
-
 BackResult BasicDialog::onDialogBackRequested(BackSource source) {
   completion_kind_ = CompletionKind::kDismiss;
   dismiss_reason_ = DismissReasonFor(source);

@@ -337,16 +337,20 @@ TEST_F(Material3DialogTest, BorrowedAndAdoptedBodiesPersistUntilReplacement) {
   EXPECT_EQ(nullptr, borrowed.parent());
 }
 
-TEST_F(Material3DialogTest, InactiveBodyReplacementSelectsNewFocusOnReentry) {
+TEST_F(Material3DialogTest, DialogFocusStartsEmptyAndTabEntersOnEveryShow) {
   TestContent first(app_.context());
   TestContent second(app_.context());
   TestScaffold dialog(app_.context(), WidgetRef(first));
 
   ASSERT_EQ(DialogShowResult::kShown, dialog.show(owner_));
+  EXPECT_EQ(nullptr, owner_.focus().focused());
+  EXPECT_TRUE(owner_.focus().moveFocus(dialog, false));
   EXPECT_EQ(&first, owner_.focus().focused());
   dialog.dismiss();
   dialog.setBody(WidgetRef(second));
   ASSERT_EQ(DialogShowResult::kShown, dialog.show(owner_));
+  EXPECT_EQ(nullptr, owner_.focus().focused());
+  EXPECT_TRUE(owner_.focus().moveFocus(dialog, false));
   EXPECT_EQ(&second, owner_.focus().focused());
   dialog.dismiss();
 }
@@ -401,6 +405,8 @@ TEST_F(Material3DialogTest, BasicActionClosesBeforeTypedCompletion) {
   DialogActionSpec action{17, "OK", DialogActionRole::kAcknowledge};
   TestBasicDialog dialog(app_.context(), WidgetRef(), &action, 1);
   ASSERT_EQ(DialogShowResult::kShown, dialog.show(owner_));
+  ASSERT_EQ(nullptr, owner_.focus().focused());
+  ASSERT_TRUE(owner_.focus().moveFocus(dialog, false));
   Widget* focused = owner_.focus().focused();
   ASSERT_NE(nullptr, focused);
 
@@ -436,6 +442,8 @@ TEST_F(Material3DialogTest, BasicDialogRestoresOwnerFocusAfterDismissal) {
   TestBasicDialog dialog(app_.context(), WidgetRef(body), &action, 1);
 
   ASSERT_EQ(DialogShowResult::kShown, dialog.show(owner_));
+  EXPECT_EQ(nullptr, owner_.focus().focused());
+  ASSERT_TRUE(owner_.focus().moveFocus(dialog, false));
   EXPECT_EQ(&body, owner_.focus().focused());
   dialog.dismiss();
   EXPECT_EQ(&owner_focus, owner_.focus().focused());

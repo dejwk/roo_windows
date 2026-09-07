@@ -180,15 +180,6 @@ void DialogScaffoldBase::paint(PaintContext& ctx) const {
   Container::paint(ctx);
 }
 
-Widget* DialogScaffoldBase::preferredFocusChild() {
-  if (body_ != nullptr) {
-    Widget* preferred = body_->preferredFocusChild();
-    if (preferred != nullptr) return preferred;
-    if (body_->isFocusable()) return body_;
-  }
-  return preferredChromeFocusChild();
-}
-
 void DialogScaffoldBase::attachDerivedChrome(DialogChromeSlot slot,
                                              Widget& chrome) {
   const uint8_t idx = static_cast<uint8_t>(slot);
@@ -244,6 +235,7 @@ DialogShowResult DialogScaffoldBase::showDialogSurface(
       barrier, TransientAdmissionPolicy::kRejectIfBusy,
       OutsideInteractionPolicy::kAbsorb,
       TransientPresentationPolicy(true, true), false};
+  focus_scope_.clearRememberedFocus();
   FixedBoundsPreparation preparation(*this, bounds_in_window);
   return MapStartResult(
       ::roo_windows::internal::GetTransientSurfaceHost(interaction_owner)
@@ -258,6 +250,7 @@ DialogShowResult DialogScaffoldBase::showBasicDialogSurface(
       TransientBarrierPaint::kScrim, TransientAdmissionPolicy::kRejectIfBusy,
       OutsideInteractionPolicy::kAbsorb,
       TransientPresentationPolicy(true, true), false};
+  focus_scope_.clearRememberedFocus();
   BasicDialogPreparation preparation(*this, interaction_owner);
   return MapStartResult(
       ::roo_windows::internal::GetTransientSurfaceHost(interaction_owner)
@@ -273,6 +266,7 @@ DialogShowResult DialogScaffoldBase::showFullScreenDialogSurface(
                                   OutsideInteractionPolicy::kAbsorb,
                                   TransientPresentationPolicy(true, true),
                                   false};
+  focus_scope_.clearRememberedFocus();
   FullScreenDialogPreparation preparation(*this, interaction_owner);
   return MapStartResult(
       ::roo_windows::internal::GetTransientSurfaceHost(interaction_owner)
@@ -293,8 +287,6 @@ void DialogScaffoldBase::prepareForDerivedDestruction() {
   detachDerivedChrome(DialogChromeSlot::kSecondary);
   detachDerivedChrome(DialogChromeSlot::kPrimary);
 }
-
-Widget* DialogScaffoldBase::preferredChromeFocusChild() { return nullptr; }
 
 BackResult DialogScaffoldBase::onDialogBackRequested(BackSource) {
   finishDialog(PresentationFinishReason::kBack);
@@ -509,7 +501,7 @@ void DialogScaffoldBase::updateDividers() {
 void DialogScaffoldBase::Registration::detachPresentation(
     PresentationFinishReason) {
   // The host detaches the complete root. Persistent body and chrome remain
-  // assembled so reopening preserves state and remembered focus.
+  // assembled so reopening preserves their state.
 }
 
 void DialogScaffoldBase::Registration::onFinished(
@@ -599,13 +591,6 @@ Widget& DialogActionStrip::actionButton(uint8_t index) {
 
 const Widget& DialogActionStrip::actionButton(uint8_t index) const {
   return const_cast<DialogActionStrip*>(this)->actionButton(index);
-}
-
-Widget* DialogActionStrip::preferredFocusChild() {
-  for (uint8_t i = 0; i < action_count_; ++i) {
-    if (buttons_[i].isEnabled()) return &buttons_[i];
-  }
-  return nullptr;
 }
 
 int DialogActionStrip::getChildrenCount() const { return action_count_; }

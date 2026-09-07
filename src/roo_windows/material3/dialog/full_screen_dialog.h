@@ -117,7 +117,6 @@ class FullScreenDialog : public internal::DialogScaffoldBase {
 
   void requestClose();
   void requestConfirm();
-  Widget* preferredChromeFocusChild() override;
   BackResult onDialogBackRequested(BackSource source) override;
   void onDialogPresentationFinished(PresentationFinishReason reason) override;
 

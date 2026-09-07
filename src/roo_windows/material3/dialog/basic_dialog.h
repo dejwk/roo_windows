@@ -76,7 +76,6 @@ class BasicDialog : public internal::DialogScaffoldBase,
   static DialogDismissReason DismissReasonFor(PresentationFinishReason reason);
 
   void invokeDialogAction(uint8_t id, DialogActionRole role) override;
-  Widget* preferredChromeFocusChild() override;
   BackResult onDialogBackRequested(BackSource source) override;
   void onDialogPresentationFinished(PresentationFinishReason reason) override;
 

@@ -94,11 +94,6 @@ void FullScreenDialog::requestConfirm() {
   finishDialog(PresentationFinishReason::kAction);
 }
 
-Widget* FullScreenDialog::preferredChromeFocusChild() {
-  if (has_confirm_action_ && confirm_.isEnabled()) return &confirm_;
-  return &close_;
-}
-
 BackResult FullScreenDialog::onDialogBackRequested(BackSource source) {
   const DialogDismissReason reason = DismissReasonFor(source);
   if (onDismissRequested(reason)) {
