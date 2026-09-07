@@ -76,6 +76,7 @@ class ClickAnimation {
  private:
   friend class Application;
   friend class DisplayWindow;
+  friend class Widget;
 
   enum class Phase : uint8_t {
     kIdle,  // No click is in progress; the next eligible widget may start one.
@@ -114,6 +115,10 @@ class ClickAnimation {
            phase_ == Phase::kFinishingConfirmed ||
            phase_ == Phase::kAnimatingDelivered ||
            phase_ == Phase::kFinishingDelivered;
+  }
+
+  bool isAnimationPendingFor(const Widget& target) const {
+    return target_ == &target && isAnimationPending();
   }
 
   void reset();

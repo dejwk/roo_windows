@@ -305,7 +305,8 @@ class Widget {
   Application* getApplication() const;
 
   /// Returns the click animation while this widget is actively drawing its
-  /// animated feedback, or nullptr otherwise.
+  /// animated feedback, including its provisionally cleared final paint, or
+  /// nullptr otherwise.
   ///
   /// Widget paint code should use this widget-local view instead of querying
   /// the MainWindow-owned controller directly. It returns nullptr during

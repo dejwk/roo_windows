@@ -89,7 +89,7 @@ Application* Widget::getApplication() const {
 }
 
 const MainWindow* Widget::getMainWindow() const {
-  return parent_->getMainWindow();
+  return parent_ == nullptr ? nullptr : parent_->getMainWindow();
 }
 
 Task* Widget::getTask() {
@@ -125,9 +125,13 @@ const ClickAnimation* ClickAnimationController(const Widget& widget) {
 }  // namespace
 
 const ClickAnimation* Widget::getClickAnimation() const {
-  if (!isClicking()) return nullptr;
   const ClickAnimation* anim = ClickAnimationController(*this);
-  return (anim != nullptr && anim->target() == this) ? anim : nullptr;
+  // paintWidgetModded() provisionally clears kWidgetClicking before emitting
+  // the final contents and decoration. Controller ownership remains pending
+  // until that refresh completes, so paint-time shape morphs must still see
+  // the terminal animation progress during this narrow interval.
+  return (anim != nullptr && anim->isAnimationPendingFor(*this)) ? anim
+                                                                 : nullptr;
 }
 
 void Widget::getAbsoluteBounds(Rect& full, Rect& visible) const {

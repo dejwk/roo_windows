@@ -73,6 +73,25 @@ class Material3ButtonClickAnimationTest : public testing::Test {
   Application app_;
 };
 
+class FinalFrameRecordingButton : public Button {
+ public:
+  using Button::Button;
+
+  ClickActivationPolicy getClickActivationPolicy() const override {
+    return ClickActivationPolicy::kAfterForcedFinalFrame;
+  }
+
+  uint8_t radius_at_last_paint() const { return radius_at_last_paint_; }
+
+  void paint(PaintContext& ctx) const override {
+    radius_at_last_paint_ = getBorderStyle().top_left_corner_radius();
+    Button::paint(ctx);
+  }
+
+ private:
+  mutable uint8_t radius_at_last_paint_ = 0;
+};
+
 // Verifies that a default button comes up with the intended Material 3 visual
 // variant and geometry selectors, while preserving the supplied label.
 TEST(Material3Button, DefaultVariantIsFilled) {
@@ -345,6 +364,23 @@ TEST_F(Material3ButtonClickAnimationTest,
   app_.root().refreshClickAnimation();
   EXPECT_EQ(pressed_radius,
             button_ptr->getBorderStyle().top_left_corner_radius());
+}
+
+TEST_F(Material3ButtonClickAnimationTest,
+       ForcedFinalFramePaintsFullyMorphedPressedShape) {
+  auto button = std::make_unique<FinalFrameRecordingButton>(context(), "Save");
+  FinalFrameRecordingButton* button_ptr = button.get();
+  app_.add(std::move(button), roo_display::Box(20, 20, 139, 59));
+  ASSERT_TRUE(refresh());
+
+  button_ptr->onSingleTapUp(button_ptr->width() / 2,
+                            button_ptr->height() / 2);
+  ASSERT_TRUE(button_ptr->isClicking());
+  ASSERT_TRUE(refresh());
+
+  EXPECT_EQ((uint8_t)Scaled(8), button_ptr->radius_at_last_paint());
+  EXPECT_FALSE(button_ptr->isClicking());
+  EXPECT_EQ(0xFF, button_ptr->getBorderStyle().top_left_corner_radius());
 }
 
 // Verifies that rounded button contents stay clipped to the rectangular
