@@ -484,7 +484,8 @@ void BlitCacheContainer::paintWidgetContents(PaintContext& ctx) {
       clipper.addExclusion(blit_dest);
     }
   }
-  Container::paintWidgetContents(ctx);
+  PaintContext paint_ctx(paint_canvas, clipper);
+  Container::paintWidgetContents(paint_ctx);
 
   if (clipper.wasPaintInterrupted()) {
     // Preserve incremental frame recovery but disable blit reuse after an

@@ -216,7 +216,6 @@ void HorizontalPageHost::onDrag(XDim x, YDim y, XDim dx, YDim dy) {
   setTargetIndex(resolveGestureSettleTarget(0));
   syncActiveSlots();
   updateActivePagePositions();
-  invalidateInterior();
 }
 
 void HorizontalPageHost::onFling(XDim x, YDim y, XDim vx, YDim vy) {
