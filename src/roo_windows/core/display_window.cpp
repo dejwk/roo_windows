@@ -94,6 +94,10 @@ void DisplayWindow::cancelGestureTargetsInSubtree(Widget& subtree) {
 }
 
 bool DisplayWindow::refresh(roo_time::Uptime deadline) {
+  // Deferred transient completion runs on a fresh framework entry, after the
+  // prior completed refresh settled click delivery. If completion destroys
+  // this window, returning immediately avoids subsequent member access.
+  if (root_.transient_presentation_slot().finishDeferredIfReady()) return true;
   root_.updateLayout();
   last_time_refreshed_ms_ = millis();
   ClickAnimation& click_animation = root_.click_animation();

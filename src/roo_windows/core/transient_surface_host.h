@@ -224,6 +224,14 @@ class TransientSurfaceHost {
   /// Prevents new pointer and key work before component detachment begins.
   void disableHostedInput(TransientPresentationRegistration& registration);
 
+  /// Forces the hosted tree's active feedback to its final frame.
+  bool forceFinalClickFrame(
+      TransientPresentationRegistration& registration);
+
+  /// Returns whether click feedback still targets the hosted tree.
+  bool hasClickFeedbackInHostedTree(
+      const TransientPresentationRegistration& registration) const;
+
   /// Attaches the admitted structure and activates its focus scope.
   void attachHostedSurface(Widget& root, const Rect& root_bounds_in_window,
                            Task& owner, FocusScope& scope,

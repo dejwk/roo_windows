@@ -256,10 +256,6 @@ class MenuEntry : public ListEntry {
   /// Handles level-local traversal and submenu navigation keys.
   bool onKeyEvent(const KeyEvent& event) override;
 
-  ClickActivationPolicy getClickActivationPolicy() const override {
-    return ClickActivationPolicy::kAfterForcedFinalFrame;
-  }
-
  protected:
   /// Clears the base binding before a derived inline item is destroyed.
   void prepareForItemDestruction();

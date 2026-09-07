@@ -7,6 +7,7 @@
 namespace roo_windows {
 
 class MainWindow;
+class DisplayWindow;
 namespace internal {
 class TransientSurfaceHost;
 }
@@ -75,8 +76,10 @@ class TransientPresentationRegistration {
 
   /// Finishes a visible presentation through its registered host slot.
   ///
-  /// This operation is idempotent. The presentation is detached and removed
-  /// from the slot before `onFinished()` receives the reason.
+  /// This operation is idempotent. A hosted presentation with active click
+  /// feedback remains attached, with input disabled, through a forced final
+  /// feedback frame. Otherwise it is detached synchronously. In either case,
+  /// it is removed from the slot before `onFinished()` receives the reason.
   void finish(PresentationFinishReason reason);
 
  protected:
@@ -146,6 +149,7 @@ class TransientPresentationSlot {
 
  private:
   friend class MainWindow;
+  friend class DisplayWindow;
   friend class TransientPresentationRegistration;
   friend class internal::TransientSurfaceHost;
 
@@ -166,6 +170,9 @@ class TransientPresentationSlot {
 
   void finish(TransientPresentationRegistration& registration,
               PresentationFinishReason reason);
+  void finishNow(TransientPresentationRegistration& registration,
+                 PresentationFinishReason reason);
+  bool finishDeferredIfReady();
   void cancel(TransientPresentationRegistration& registration);
 
   TransientPresentationRegistration* active_ = nullptr;

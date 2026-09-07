@@ -20,6 +20,14 @@ constexpr uint8_t kInputEnabled = 1 << 0;
 constexpr uint8_t kBarrierHit = 1 << 1;
 constexpr uint8_t kOutsideActivationPending = 1 << 2;
 
+bool IsInSubtree(const Widget& candidate, const Widget& subtree) {
+  for (const Widget* current = &candidate; current != nullptr;
+       current = current->parent()) {
+    if (current == &subtree) return true;
+  }
+  return false;
+}
+
 // Validates enum values before policy packing makes them indistinguishable.
 bool IsValid(TransientBarrierPaint value) {
   return value == TransientBarrierPaint::kTransparent ||
@@ -362,6 +370,29 @@ void TransientSurfaceHost::disableHostedInput(
   if (slot.active_ == &registration && slot.active_host_ == this) {
     window_.host_layer_.disableInput();
   }
+}
+
+bool TransientSurfaceHost::forceFinalClickFrame(
+    TransientPresentationRegistration& registration) {
+  const TransientPresentationSlot& slot = window_.transient_presentation_slot_;
+  const Widget* root = window_.host_layer_.root_;
+  const Widget* target = window_.click_animation().target();
+  // A display has one shared click controller, so exact subtree containment is
+  // required: feedback owned by the underlying task must not delay this host.
+  if (slot.active_ != &registration || slot.active_host_ != this ||
+      root == nullptr || target == nullptr || !IsInSubtree(*target, *root)) {
+    return false;
+  }
+  return window_.click_animation().forceFinalFrame(*target);
+}
+
+bool TransientSurfaceHost::hasClickFeedbackInHostedTree(
+    const TransientPresentationRegistration& registration) const {
+  const TransientPresentationSlot& slot = window_.transient_presentation_slot_;
+  const Widget* root = window_.host_layer_.root_;
+  const Widget* target = window_.click_animation().target();
+  return slot.active_ == &registration && slot.active_host_ == this &&
+         root != nullptr && target != nullptr && IsInSubtree(*target, *root);
 }
 
 void TransientSurfaceHost::detachHostedSurface(

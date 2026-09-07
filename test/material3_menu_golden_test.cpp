@@ -129,6 +129,8 @@ TEST_F(Material3MenuGoldenTest, ActiveCascadingSubmenu) {
       Capture(), "test/goldens/material3_menu/active_submenu.ppm",
       "material3_menu_active_submenu"));
   menu.dismissChain();
+  ASSERT_TRUE(app_.refresh());
+  ASSERT_TRUE(app_.refresh());
   menu.clearGroups();
   group.clear();
 }

@@ -46,7 +46,9 @@ void ClickAnimation::notifyRefreshCompleted() {
   if (phase_ == Phase::kAnimatingConfirmed ||
       phase_ == Phase::kFinishingConfirmed) {
     deliverClick();
-  } else if (phase_ == Phase::kAnimatingDelivered) {
+  } else if (phase_ == Phase::kAnimatingDelivered ||
+             phase_ == Phase::kFinishingDelivered ||
+             phase_ == Phase::kFinishingUnconfirmed) {
     Widget* target = target_;
     reset();
     target->invalidateInterior();
@@ -99,7 +101,11 @@ void ClickAnimation::deliverClick() {
 
 float ClickAnimation::progress() const {
   if (target() == nullptr) return 1.0f;
-  if (phase_ == Phase::kFinishingConfirmed) return 1.0f;
+  if (phase_ == Phase::kFinishingUnconfirmed ||
+      phase_ == Phase::kFinishingConfirmed ||
+      phase_ == Phase::kFinishingDelivered) {
+    return 1.0f;
+  }
   float result = (float)sampled_elapsed_millis_ / kPressAnimationMillis;
   if (result > 1.0f) result = 1.0f;
   return result;
@@ -135,6 +141,34 @@ void ClickAnimation::cancel(Widget& widget) {
   widget.clearClicking();
   reset();
   widget.invalidateInterior();
+}
+
+bool ClickAnimation::forceFinalFrame(const Widget& widget) {
+  if (target_ != &widget) return false;
+  // Finishing changes only the visual deadline. Separate phases retain whether
+  // notifyRefreshCompleted() must deliver, settle an already-delivered action,
+  // or discard an interaction that was never confirmed.
+  switch (phase_) {
+    case Phase::kAnimatingUnconfirmed:
+      phase_ = Phase::kFinishingUnconfirmed;
+      break;
+    case Phase::kAnimatingConfirmed:
+    case Phase::kFinishingConfirmed:
+      phase_ = Phase::kFinishingConfirmed;
+      break;
+    case Phase::kAnimatingDelivered:
+    case Phase::kFinishingDelivered:
+      phase_ = Phase::kFinishingDelivered;
+      break;
+    case Phase::kFinishingUnconfirmed:
+      break;
+    case Phase::kIdle:
+    case Phase::kAwaitingRelease:
+    case Phase::kAwaitingRefresh:
+      return false;
+  }
+  target_->invalidateInterior();
+  return true;
 }
 
 bool ClickAnimation::tryConfirm(Widget& widget,
@@ -188,8 +222,10 @@ bool ClickAnimation::tryConfirm(Widget& widget,
   // A matching target is already confirmed; competing targets were rejected
   // above without mutating the interaction.
   return phase_ == Phase::kAnimatingConfirmed ||
+         phase_ == Phase::kFinishingUnconfirmed ||
          phase_ == Phase::kFinishingConfirmed ||
          phase_ == Phase::kAnimatingDelivered ||
+         phase_ == Phase::kFinishingDelivered ||
          phase_ == Phase::kAwaitingRefresh;
 }
 

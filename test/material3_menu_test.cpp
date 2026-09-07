@@ -123,6 +123,8 @@ class Material3MenuTest : public testing::Test {
 
   ~Material3MenuTest() override {
     menu_.dismissChain();
+    app_.refresh();
+    app_.refresh();
     menu_.clearGroups();
     group_.clear();
     content_.removeLast();
@@ -141,6 +143,7 @@ class Material3MenuTest : public testing::Test {
 
   void CompleteRowTap() {
     row_.Tap();
+    ASSERT_TRUE(app_.refresh());
     ASSERT_TRUE(app_.refresh());
   }
 
@@ -364,6 +367,8 @@ TEST_F(Material3MenuTest, SubmenuOpensAndBackClosesDeepestFirst) {
   EXPECT_EQ(&row_, owner_.focus().focused());
   EXPECT_EQ(0, menu_.finishes());
   EXPECT_EQ(BackResult::kHandled, owner_.requestBack(BackSource::kBackKey));
+  ASSERT_TRUE(app_.refresh());
+  ASSERT_TRUE(app_.refresh());
   EXPECT_EQ(1, menu_.finishes());
 }
 

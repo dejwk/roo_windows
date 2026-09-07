@@ -66,6 +66,13 @@ class ClickAnimation {
   /// Cancels the interaction only when it is owned by `target`.
   void cancel(Widget& target);
 
+  /// Forces an active visual interaction owned by `target` to paint its final
+  /// frame while preserving whether its semantic action is still pending,
+  /// already delivered, or unconfirmed.
+  ///
+  /// Returns false when `target` does not own active animated feedback.
+  bool forceFinalFrame(const Widget& target);
+
  private:
   friend class Application;
   friend class DisplayWindow;
@@ -76,9 +83,11 @@ class ClickAnimation {
                             // released the press over this widget yet.
     kAnimatingConfirmed,  // The user released over this widget; finish drawing
                           // the feedback before running the widget's action.
+    kFinishingUnconfirmed,  // Paint one final frame, then cancel semantics.
     kFinishingConfirmed,  // The final feedback frame must be painted before
                           // running the widget's action.
     kAnimatingDelivered,  // The action ran; feedback continues visually.
+    kFinishingDelivered,  // Paint one final frame after action delivery.
     kAwaitingRelease,  // Feedback finished while the press remains held; keep
                        // the widget pressed until release, then run its action.
     kAwaitingRefresh,  // A click without animated feedback waits until a full
@@ -101,8 +110,10 @@ class ClickAnimation {
   bool isAnimationPending() const {
     return phase_ == Phase::kAnimatingUnconfirmed ||
            phase_ == Phase::kAnimatingConfirmed ||
+           phase_ == Phase::kFinishingUnconfirmed ||
            phase_ == Phase::kFinishingConfirmed ||
-           phase_ == Phase::kAnimatingDelivered;
+           phase_ == Phase::kAnimatingDelivered ||
+           phase_ == Phase::kFinishingDelivered;
   }
 
   void reset();

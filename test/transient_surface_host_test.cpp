@@ -104,6 +104,34 @@ class TestRegistration : public TransientPresentationRegistration {
   }
 };
 
+class FinishingClickWidget : public test_support::ColorBoxWidget {
+ public:
+  FinishingClickWidget(ApplicationContext& context,
+                       TestRegistration& registration,
+                       ClickActivationPolicy policy)
+      : ColorBoxWidget(context, roo_display::color::Blue, Dimensions(8, 8)),
+        registration_(registration),
+        policy_(policy) {}
+
+  bool isClickable() const override { return true; }
+
+  ClickActivationPolicy getClickActivationPolicy() const override {
+    return policy_;
+  }
+
+  int click_count = 0;
+
+ protected:
+  void onClicked() override {
+    ++click_count;
+    registration_.finish(PresentationFinishReason::kAction);
+  }
+
+ private:
+  TestRegistration& registration_;
+  ClickActivationPolicy policy_;
+};
+
 class QueuedKeySource : public KeySource {
  public:
   void push(KeyEvent event) {
@@ -315,6 +343,138 @@ class HostTest : public ::testing::Test {
   Task& owner_;
   TransientSurfaceHost& host_;
 };
+
+TEST_F(HostTest, ActionCloseWaitsForImmediateClicksForcedFinalFrame) {
+  TestPanel root(app_.context());
+  FocusScope scope;
+  TestRegistration registration;
+  FinishingClickWidget action(
+      app_.context(), registration,
+      ClickActivationPolicy::kImmediateContinueAnimation);
+  root.add(WidgetRef(action), Rect(0, 0, 7, 7));
+  ASSERT_EQ(PresentationStartResult::kStarted,
+            host_.show(registration, owner_, root, Rect(8, 8, 23, 23), scope,
+                       kTransparentReject));
+  ASSERT_TRUE(app_.refresh());
+
+  action.onShowPress(3, 3);
+  action.onSingleTapUp(3, 3);
+
+  EXPECT_EQ(1, action.click_count);
+  EXPECT_EQ(PresentationState::kFinishing, registration.state());
+  EXPECT_EQ(0, registration.detach_count);
+  EXPECT_NE(nullptr, root.parent());
+  ASSERT_EQ(&action, app_.root().click_animation().target());
+  EXPECT_FLOAT_EQ(1.0f, action.getClickAnimation()->progress());
+
+  ASSERT_TRUE(app_.refresh());
+  EXPECT_EQ(PresentationState::kFinishing, registration.state());
+  EXPECT_EQ(0, registration.detach_count);
+  EXPECT_FALSE(app_.root().click_animation().isBusy());
+
+  ASSERT_TRUE(app_.refresh());
+  EXPECT_FALSE(registration.isActive());
+  EXPECT_EQ(1, registration.detach_count);
+  EXPECT_EQ(1, registration.finish_count);
+  EXPECT_EQ(PresentationFinishReason::kAction, registration.detach_reason);
+  EXPECT_EQ(nullptr, root.parent());
+}
+
+TEST_F(HostTest, ConfirmedClickIsDeliveredBeforeDeferredExternalClose) {
+  TestPanel root(app_.context());
+  FocusScope scope;
+  TestRegistration registration;
+  FinishingClickWidget action(app_.context(), registration,
+                              ClickActivationPolicy::kAfterNaturalAnimation);
+  root.add(WidgetRef(action), Rect(0, 0, 7, 7));
+  ASSERT_EQ(PresentationStartResult::kStarted,
+            host_.show(registration, owner_, root, Rect(8, 8, 23, 23), scope,
+                       kTransparentReject));
+  ASSERT_TRUE(app_.refresh());
+
+  action.onShowPress(3, 3);
+  action.onSingleTapUp(3, 3);
+  registration.finish(PresentationFinishReason::kCancel);
+
+  EXPECT_EQ(0, action.click_count);
+  EXPECT_EQ(PresentationState::kFinishing, registration.state());
+  EXPECT_EQ(BackResult::kHandled, owner_.requestBack(BackSource::kBackKey));
+  ASSERT_NE(nullptr, action.getClickAnimation());
+  EXPECT_FLOAT_EQ(1.0f, action.getClickAnimation()->progress());
+
+  ASSERT_TRUE(app_.refresh());
+  EXPECT_EQ(1, action.click_count);
+  EXPECT_EQ(0, registration.detach_count);
+  EXPECT_EQ(PresentationState::kFinishing, registration.state());
+
+  ASSERT_TRUE(app_.refresh());
+  EXPECT_FALSE(registration.isActive());
+  EXPECT_EQ(1, registration.detach_count);
+  EXPECT_EQ(PresentationFinishReason::kCancel, registration.detach_reason);
+}
+
+TEST_F(HostTest, UnconfirmedClickGetsFinalFrameWithoutSemanticDelivery) {
+  TestPanel root(app_.context());
+  FocusScope scope;
+  TestRegistration registration;
+  FinishingClickWidget action(
+      app_.context(), registration,
+      ClickActivationPolicy::kImmediateContinueAnimation);
+  root.add(WidgetRef(action), Rect(0, 0, 7, 7));
+  ASSERT_EQ(PresentationStartResult::kStarted,
+            host_.show(registration, owner_, root, Rect(8, 8, 23, 23), scope,
+                       kTransparentReject));
+  ASSERT_TRUE(app_.refresh());
+
+  action.onShowPress(3, 3);
+  registration.finish(PresentationFinishReason::kOutsideInteraction);
+
+  EXPECT_EQ(PresentationState::kFinishing, registration.state());
+  ASSERT_NE(nullptr, action.getClickAnimation());
+  EXPECT_FLOAT_EQ(1.0f, action.getClickAnimation()->progress());
+
+  ASSERT_TRUE(app_.refresh());
+  EXPECT_EQ(0, action.click_count);
+  EXPECT_EQ(0, registration.detach_count);
+  EXPECT_FALSE(app_.root().click_animation().isBusy());
+
+  ASSERT_TRUE(app_.refresh());
+  EXPECT_FALSE(registration.isActive());
+  EXPECT_EQ(0, action.click_count);
+  EXPECT_EQ(PresentationFinishReason::kOutsideInteraction,
+            registration.detach_reason);
+}
+
+TEST_F(HostTest, ReplacementCancelsFeedbackAndDetachesSynchronously) {
+  TestPanel first_root(app_.context());
+  TestPanel second_root(app_.context());
+  FocusScope first_scope;
+  FocusScope second_scope;
+  TestRegistration first;
+  TestRegistration second;
+  FinishingClickWidget action(
+      app_.context(), first,
+      ClickActivationPolicy::kImmediateContinueAnimation);
+  first_root.add(WidgetRef(action), Rect(0, 0, 7, 7));
+  ASSERT_EQ(PresentationStartResult::kStarted,
+            host_.show(first, owner_, first_root, Rect(8, 8, 23, 23),
+                       first_scope, kTransparentReplaceable));
+  ASSERT_TRUE(app_.refresh());
+  action.onShowPress(3, 3);
+  ASSERT_EQ(&action, app_.root().click_animation().target());
+
+  EXPECT_EQ(PresentationStartResult::kStarted,
+            host_.show(second, owner_, second_root, Rect(8, 8, 23, 23),
+                       second_scope, kTransparentReplaceable));
+
+  EXPECT_FALSE(first.isActive());
+  EXPECT_EQ(PresentationFinishReason::kReplacement, first.detach_reason);
+  EXPECT_EQ(nullptr, first_root.parent());
+  EXPECT_FALSE(app_.root().click_animation().isBusy());
+  EXPECT_FALSE(action.isClicking());
+  EXPECT_TRUE(second.isActive());
+  second.finish(PresentationFinishReason::kCancel);
+}
 
 // Verifies admission attaches one borrowed root through the explicit task,
 // activates its focus scope, blocks lower hit testing, and fully detaches.
