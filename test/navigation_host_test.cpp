@@ -205,5 +205,41 @@ TEST(NavigationHost, DestinationLifecycleFollowsHistoryAndCurrentContent) {
   delete first;
 }
 
+TEST(NavigationHost, RemovedCallbackFollowsReentrantStop) {
+  roo::byte raster[16 * 16 * 2] = {};
+  roo_display::OffscreenDevice<roo_display::Argb4444> device(
+      16, 16, raster, roo_display::Argb4444());
+  roo_display::Display display(device);
+  roo_scheduler::Scheduler scheduler;
+  Environment environment(scheduler);
+  NavigationHost navigation_;
+  Application app_(&environment, display);
+  app_.addTaskFullScreen(navigation_);
+  TestWidget outgoing_content(app_.context());
+  TestDestination next(app_.context());
+  class NavigatingOnStop final : public Destination {
+   public:
+    NavigatingOnStop(Widget& content, Destination& next)
+        : content_(content), next_(next) {}
+    Widget& getContents() override { return content_; }
+    void onStop() override { getNavigationHost()->push(next_); }
+    void onRemoved() override {
+      EXPECT_EQ(nullptr, getNavigationHost());
+      ++removals;
+    }
+    int removals = 0;
+
+   private:
+    Widget& content_;
+    Destination& next_;
+  } outgoing(outgoing_content, next);
+  navigation_.push(outgoing);
+  navigation_.pop();
+  EXPECT_EQ(1, outgoing.removals);
+  EXPECT_EQ(nullptr, outgoing.getNavigationHost());
+  EXPECT_NE(nullptr, next.contents().parent());
+  navigation_.pop();
+}
+
 }  // namespace
 }  // namespace roo_windows

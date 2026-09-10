@@ -61,7 +61,10 @@ bool NavigationHost::pauseAndDetachCurrent() {
   // Detachment is deliberately outside the lifecycle callback window. A
   // navigation request from an incidental widget callback is a contract
   // violation, enforced by mayMutate().
+  const unsigned int callback_depth = lifecycle_callback_depth_;
+  lifecycle_callback_depth_ = 0;
   if (attached(*destination)) task_->detachNavigationContent();
+  lifecycle_callback_depth_ = callback_depth;
   destination->state_ = Destination::kPaused;
   return true;
 }
@@ -81,14 +84,18 @@ bool NavigationHost::stopCurrent() {
     beginCallback();
     destination->onStop();
     endCallback();
-    // A nested lifecycle command owns any state it established. Do not clear
-    // host_ or overwrite the state after that command has superseded us.
-    if (generation != generation_ ||
-        destination->state_ != Destination::kStopping) {
-      return false;
-    }
+    // This entry was removed before onStop and cannot be re-admitted until
+    // its association is cleared. Finish its removal even when onStop started
+    // another transition; the generation check below still preserves that
+    // transition's current content.
+    CHECK(destination->state_ == Destination::kStopping);
     destination->state_ = Destination::kInactive;
     destination->host_ = nullptr;
+    beginCallback();
+    destination->onRemoved();
+    endCallback();
+    // onRemoved may destroy the destination or start a new transition.
+    return generation == generation_;
   }
   return true;
 }

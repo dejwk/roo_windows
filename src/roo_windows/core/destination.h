@@ -39,6 +39,7 @@ class Destination {
   /// Returns the navigation host this destination belongs to, or nullptr when
   /// detached from history.
   NavigationHost* getNavigationHost() { return host_; }
+  const NavigationHost* getNavigationHost() const { return host_; }
 
   /// Returns the task this destination belongs to, or nullptr when detached.
   Task* getTask();
@@ -73,6 +74,11 @@ class Destination {
 
   /// Called when this destination leaves navigation history while detached.
   virtual void onStop() {}
+
+  /// Called after stop, once history membership and host association are gone.
+  /// The contents are detached. May destroy this destination or navigate;
+  /// the host never accesses this destination after this callback.
+  virtual void onRemoved() {}
 
  protected:
   /// Constructs an inactive destination outside navigation history.
