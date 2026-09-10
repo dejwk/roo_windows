@@ -1191,16 +1191,16 @@ TEST(Material3List, ListEntryResolvesShapeFromVariantPositionAndSelection) {
 
   entry.setVisualContext(visual_context);
   BorderStyle single = entry.getBorderStyle();
-  EXPECT_EQ(Scaled(16), single.top_left_corner_radius());
-  EXPECT_EQ(Scaled(16), single.top_right_corner_radius());
-  EXPECT_EQ(Scaled(16), single.bottom_right_corner_radius());
-  EXPECT_EQ(Scaled(16), single.bottom_left_corner_radius());
+  EXPECT_EQ(Scaled(12), single.top_left_corner_radius());
+  EXPECT_EQ(Scaled(12), single.top_right_corner_radius());
+  EXPECT_EQ(Scaled(12), single.bottom_right_corner_radius());
+  EXPECT_EQ(Scaled(12), single.bottom_left_corner_radius());
 
   visual_context.position = ListItemPosition::kFirst;
   entry.setVisualContext(visual_context);
   BorderStyle first = entry.getBorderStyle();
-  EXPECT_EQ(Scaled(16), first.top_left_corner_radius());
-  EXPECT_EQ(Scaled(16), first.top_right_corner_radius());
+  EXPECT_EQ(Scaled(12), first.top_left_corner_radius());
+  EXPECT_EQ(Scaled(12), first.top_right_corner_radius());
   EXPECT_EQ(Scaled(4), first.bottom_right_corner_radius());
   EXPECT_EQ(Scaled(4), first.bottom_left_corner_radius());
 
@@ -1217,17 +1217,17 @@ TEST(Material3List, ListEntryResolvesShapeFromVariantPositionAndSelection) {
   BorderStyle last = entry.getBorderStyle();
   EXPECT_EQ(Scaled(4), last.top_left_corner_radius());
   EXPECT_EQ(Scaled(4), last.top_right_corner_radius());
-  EXPECT_EQ(Scaled(16), last.bottom_right_corner_radius());
-  EXPECT_EQ(Scaled(16), last.bottom_left_corner_radius());
+  EXPECT_EQ(Scaled(12), last.bottom_right_corner_radius());
+  EXPECT_EQ(Scaled(12), last.bottom_left_corner_radius());
 
   visual_context.position = ListItemPosition::kMiddle;
   visual_context.selected = true;
   entry.setVisualContext(visual_context);
   BorderStyle selected_middle = entry.getBorderStyle();
-  EXPECT_EQ(Scaled(16), selected_middle.top_left_corner_radius());
-  EXPECT_EQ(Scaled(16), selected_middle.top_right_corner_radius());
-  EXPECT_EQ(Scaled(16), selected_middle.bottom_right_corner_radius());
-  EXPECT_EQ(Scaled(16), selected_middle.bottom_left_corner_radius());
+  EXPECT_EQ(Scaled(12), selected_middle.top_left_corner_radius());
+  EXPECT_EQ(Scaled(12), selected_middle.top_right_corner_radius());
+  EXPECT_EQ(Scaled(12), selected_middle.bottom_right_corner_radius());
+  EXPECT_EQ(Scaled(12), selected_middle.bottom_left_corner_radius());
 
   visual_context.variant = ListVariant::kBaseline;
   visual_context.position = ListItemPosition::kFirst;

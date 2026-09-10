@@ -843,6 +843,11 @@ Token-backed and implementation-backed conclusions:
    including selected and pressed states, and Compose additionally models
    focused, hovered, and dragged shapes.
 
+The current Roo row implementation uses 12dp outer corners and 4dp inner
+corners, following the menu-padding adjustment. Selected rows use 12dp on all
+four corners. The 16dp container guidance above is distinct from this current
+per-row geometry; the regression tests cover the implemented row values.
+
 The proposed default behavior is:
 
 1. Baseline rows use square corners throughout.
@@ -1489,7 +1494,7 @@ subset of the desired list feature set.
 | Feature | Phase 4 status | Notes |
 | --- | --- | --- |
 | Segmented expressive list with row gaps | Implemented | `ListStyle::kSegmented` uses list-owned separator bands: with divider mode `kNone` the full segmented gap is kept, and with visible dividers the separator shrinks to the divider-band thickness required by the shared-band model. |
-| Rounded expressive row corners, including softer inner corners between adjacent items | Implemented | `ListEntry::getBorderStyle()` resolves expressive first/middle/last/single radii directly from `ListEntryVisualContext`, using `Scaled(16)` outer corners and `Scaled(4)` inner corners. |
+| Rounded expressive row corners, including softer inner corners between adjacent items | Implemented | `ListEntry::getBorderStyle()` resolves expressive first/middle/last/single radii directly from `ListEntryVisualContext`, using `Scaled(12)` outer corners and `Scaled(4)` inner corners. |
 | Leading or trailing icons | Partial | Any borrowed widget can occupy the leading or trailing slot, so existing widgets such as `Icon` can be bound manually. There is no list-specific icon convenience surface yet. |
 | Avatars | Missing | There is no avatar-specific helper item, `ListRow<Item>` bridge usage, or example in the landed list API. |
 | Clickable rows for navigation or drill-in | Missing in the stock list types | `ListEntry` is a `Container`, so `setOnInteractiveChange()` alone does not make it clickable. A custom subclass can add click handling, but the list API does not provide it yet. |
