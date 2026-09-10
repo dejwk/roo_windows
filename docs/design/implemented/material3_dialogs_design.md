@@ -75,15 +75,14 @@ explicit task ownership, and the shared structural host, removing the
 dialog-specific `MainWindow` attachment path. Legacy subclasses may keep
 persistent children or balance presentation-scoped children through
 `onEnter()` / `onExit()`; `onShow()` / `onDismiss()` delimit an interaction that
-actually became visible. New Material 3 dialogs adopt that same host in P1.8:
+actually became visible. Material 3 basic dialogs adopt that host in P1.8:
 its combined layer borrows the root, selects barrier paint independently,
 activates the presenter-owned focus scope, and blocks lower layers.
 
 Second, the reviewed framework intentionally supports one root interactive
-transient per window. Basic and full-screen dialogs therefore use the same host
-admission authority and do not stack. Material's basic-over-full-screen
-allowance is deferred until a concrete use case justifies a bounded
-nested-transient design.
+transient per window. Basic dialogs occupy that slot. Full-screen dialogs now
+use navigation destinations, leaving it free for menus and basic dialogs.
+Nested transient roots remain outside this design.
 
 Third, the legacy `Dialog` scaffold is not a good surface to restyle in place.
 It currently stores a `std::vector<SimpleButton>` plus a per-instance
@@ -118,10 +117,8 @@ The strongest current signals are:
    stack vertically the confirm action appears above the dismissive action.
 9. When dialog content scrolls, the header and actions remain pinned while only
    the body scrolls.
-10. Full-screen dialogs are intended for compact windows. Material permits a
-    later basic dialog above them, but the initial Roo Windows implementation
-    deliberately defers that stacking behavior to preserve the one-root
-    transient contract.
+10. Full-screen dialogs are intended for compact windows. A navigation-backed
+    full-screen dialog can open a basic dialog through the free transient slot.
 
 Material also allows custom-positioned basic dialogs on larger screens, but
 that positioning freedom is not required for the first embedded dialog landing.
@@ -139,9 +136,8 @@ The most relevant local references are:
 
 Those references close six local decisions:
 
-1. both variants use the shared transient host with display coverage,
-   outside absorption, and reject-if-busy admission, while basic dialogs select
-   scrim barrier paint and full-screen dialogs select transparent barrier paint,
+1. basic dialogs use the shared transient host with a scrim and reject-if-busy
+   admission; full-screen dialogs use navigation destinations,
 2. the component must explicitly supply the existing task that owns focus,
    physical keys, Back context, and teardown,
 3. dialog bodies reuse `SimpleScrollablePanel` instead of introducing a
@@ -151,7 +147,7 @@ Those references close six local decisions:
 5. the full-screen close affordance reuses the implemented
    `material3::IconButton`,
 6. and keyboard focus must use the explicit interaction owner's `FocusManager`
-   and the shared host's active scope.
+   and the relevant task or transient focus scope.
 
 ## Requirements
 
@@ -164,10 +160,10 @@ Those references close six local decisions:
 3. Support a full-screen dialog surface with close affordance, optional confirm
    action, and generic body content.
 4. Keep header and action chrome pinned while dialog body content scrolls.
-5. Use one root transient host admission; basic and full-screen dialogs do not
-   coexist.
-6. Reuse the shared transient host and existing scrim paint instead of adding a
-   dialog-specific or full-screen host.
+5. Preserve one transient slot; full-screen navigation destinations may open
+   a menu or basic dialog in that slot.
+6. Reuse the shared transient host for basic dialogs and the existing navigation
+   host for full-screen dialogs.
 7. Reuse the existing Material 3 text-button implementation for dialog actions.
 8. Keep the current legacy dialog family available during migration.
 9. Preserve a reusable dialog's configured body state across dismissal and
@@ -200,13 +196,12 @@ Those references close six local decisions:
 13. Logical leading, trailing, and action order must use an explicit dialog
     layout direction rather than an inferred task or widget property.
 
-Basic and full-screen Material 3 dialog presenters must use the root
-interactive-transient slot defined by the
+Basic Material 3 dialogs use the root interactive-transient slot defined by the
 [Back request coordination design](../implemented/back_request_coordination_design.md).
-Both make Back and Escape eligible for delivery and do not introduce a
-dialog-local Back dispatcher. A basic dialog finishes automatically. A
-full-screen dialog consumes the request but remains active when its dismissal
-hook vetoes it; an accepted request vacates the slot before completion.
+Full-screen dialogs use destination Back routing, after the transient slot.
+Neither introduces a dialog-local Back dispatcher. A basic dialog finishes
+automatically. A full-screen dialog consumes Back but remains in history when
+its hook vetoes dismissal; an accepted request removes it before completion.
 
 ### API Requirements
 
@@ -241,7 +236,7 @@ hook vetoes it; an accepted request vacates the slot before completion.
 
 ## Design Overview
 
-The Material 3 dialog family has three public surfaces and three internal
+The Material 3 dialog family has three public surfaces and shared internal
 support pieces:
 
 1. `material3::BasicDialog` is the centered floating dialog surface.
@@ -249,7 +244,7 @@ support pieces:
    headline plus supporting text.
 3. `material3::FullScreenDialog` is the compact-window full-screen dialog
    surface.
-4. An internal `DialogScaffoldBase` owns the pinned-chrome layout, shared body
+4. An internal `DialogScaffold` owns the pinned-chrome layout, shared body
    scroller, token resolution, and conditional divider behavior used by both
    public variants.
 5. An internal `DialogActionStrip` owns the fixed one-or-two-action model for
@@ -259,13 +254,12 @@ support pieces:
 
 The core architectural decisions are:
 
-- both variants use display coverage, outside absorption, and reject-if-busy
-  admission in the one shared host,
-- basic dialogs request scrim barrier paint while full-screen dialogs request a
-  transparent input barrier,
+- basic dialogs use display coverage, outside absorption, and reject-if-busy
+  admission in the shared transient host,
+- full-screen dialogs fill their navigation task without a transient barrier,
 - every presentation explicitly supplies an existing interaction-owner task,
-- basic and full-screen variants are mutually exclusive in the root transient
-  slot,
+- full-screen destinations may open one transient menu or basic dialog above
+  their content,
 - the generic body slot accepts a `WidgetRef` at configuration boundaries
   rather than a dialog-family-specific item model; `AlertDialog` fills that
   slot with its internal supporting-text widget,
@@ -285,13 +279,13 @@ The major pieces satisfy the requirements as follows:
 | --- | --- |
 | shared host plus explicit surface profiles | enforces one-root admission, lower-layer isolation, busy results, and common teardown |
 | explicit `Task` and presenter-owned `FocusScope` | supplies the required focus, key, Back, editor, and owner-lifetime context |
-| `DialogScaffoldBase` plus `SimpleScrollablePanel` | keeps caller-provided body content generic while pinning header and action chrome |
+| `DialogScaffold` plus `SimpleScrollablePanel` | keeps caller-provided body content generic while pinning header and action chrome |
 | persistent attached body child and ordered alert body-storage base | preserves configured form state across dismissal while keeping borrow, adoption, and destruction order explicit |
 | existing owning `TextBlock` for wrapping prose | avoids a second multiline widget/storage policy and makes call-local headline/supporting strings safe |
 | fixed `DialogActionStrip` and virtual request hooks | enforces action roles and veto semantics without dynamic arrays or per-action callbacks |
 | explicit `LayoutDirection` | resolves logical placement without an unavailable inherited direction |
 
-![Material 3 dialogs: basic and full-screen geometry, pinned scroll regions, and layering differences](figures/material3_dialog_layouts.svg)
+![Material 3 dialogs: basic and full-screen geometry, pinned scroll regions, and layering differences](../proposed/figures/material3_dialog_layouts.svg)
 
 ## Design Details
 
@@ -325,8 +319,9 @@ the actual missing family rather than on every dialog-like workflow at once.
 
 ### Shared Surface Substrate
 
-`DialogScaffoldBase` is an internal `Container` subclass shared by
-`BasicDialog` and `FullScreenDialog`.
+`DialogScaffold` is the internal `Container` layout shared by both variants.
+`DialogScaffoldBase` adds transient registration and a focus scope for
+`BasicDialog`; `FullScreenDialog` instead embeds a navigation destination.
 
 It owns:
 
@@ -364,7 +359,7 @@ The derived chrome slots solve a different lifetime problem. `BasicDialog`
 attaches its inline action strip through the primary slot. `FullScreenDialog`
 attaches its inline close and confirm controls through the primary and
 secondary slots. Each derived destructor calls the scaffold's callback-free
-pre-destruction seam, which closes an active registration and detaches these
+pre-destruction seam, which cancels transient hosting or removes the current destination and detaches these
 borrowed chrome widgets and the body before inline or externally borrowed
 storage can be destroyed. The scaffold then detaches its base-owned title and
 scroll infrastructure in its base destructor. A further subclass that installs
@@ -373,7 +368,7 @@ the built-in `AlertDialog` obtains the equivalent ordering through its first
 storage base.
 
 The body is persistent dialog configuration, not presentation-session state.
-Dismissal detaches the complete dialog root from the transient host but leaves
+Dismissal detaches the complete dialog root from its host but leaves
 the body attached inside the dialog subtree, allowing the same dialog instance
 to reopen with its form state. Focus starts empty on each presentation. A
 borrowed body must remain live until `setBody()` replaces it or the dialog is
@@ -402,38 +397,36 @@ That choice is deliberate:
 
 ### Host Integration
 
-Both variants use the
-[shared transient host](../implemented/transient_surface_hosting_design.md) with display coverage,
-outside absorption, `kRejectIfBusy`, and a presenter-owned `FocusScope`.
-Barrier paint is independent: `BasicDialog` requests the scrim, while
-`FullScreenDialog` requests a transparent input barrier because its opaque root
-already fills the display. `show(Task&)` supplies the existing task whose focus
-manager, physical-key route, Back context, and lifetime govern the dialog. The
-host derives the receiving window from that task and validates the owner before
-touching its admission state.
+`BasicDialog` and `AlertDialog` use the
+[shared transient host](transient_surface_hosting_design.md), with a scrim,
+display coverage, outside absorption, `kRejectIfBusy`, and a presenter-owned
+`FocusScope`. The single-slot restriction continues to apply to these roots.
 
-For `BasicDialog`, the borrowed hosted root is the centered surface and the
-combined host layer paints the scrim across the display. For
-`FullScreenDialog`, the borrowed root fills the display and the transparent
-host layer still isolates input. In both cases the layer resolves task-scoped
-services through the explicitly supplied interaction owner.
+`FullScreenDialog` uses the owner's `NavigationHost`. Its embedded, borrowed
+`Destination` exposes the scaffold as task content, leaving the transient slot
+available for dropdown menus and basic confirmation dialogs. Menu anchors have
+ordinary task ancestry and pass the existing source validation unchanged.
 
-The one-active-presentation host makes its rules simple:
+`show(Task&)` returns `kNavigationUnavailable` for a direct-content task. It
+rejects an unavailable navigation host or incompatible/already-attached root,
+and returns `kHostBusy` if a transient is already active. Success pushes the
+dialog; the previous destination pauses and detaches. Task layout on the next
+refresh sizes the dialog to the task bounds. Use `addTaskFullScreen(navigation)`
+for a full-window dialog. No scrim or outside-input barrier is allocated for
+the full-screen dialog, and it does not isolate other application tasks.
 
-1. either one basic dialog or one full-screen dialog may be active;
-2. any second root transient returns `kHostBusy` without changing the active
-   presentation;
-3. Back and Escape use the shared registration; basic dialogs finish, while a
-   full-screen dialog finishes only after its request hook accepts dismissal;
-4. owner, presenter, and window teardown use the shared idempotent ordering;
-5. no `Application::showDialog()` or `clearDialog()` API participates in the
-   final Material 3 path.
+Back goes to the transient slot before the current destination. A menu consumes
+the first Back; a later Back reaches the dialog's veto hook. A basic dialog can
+likewise run above a full-screen dialog. Basic-above-basic and menu-above-basic
+remain unsupported because they would require nested transient roots.
 
-Material's optional basic-above-full-screen behavior is intentionally not
-implemented. A full-screen workflow handles discard confirmation inline or
-finishes and opens a basic dialog from post-detach completion. Supporting both
-roots concurrently would require the separate bounded nesting design identified
-by the host's future-work section.
+Before navigation detaches current content, `Task` makes presentation admission
+unavailable, finishes any transient belonging to that task with
+`kInteractionOwnerDetached`, then detaches the content and restores availability.
+This applies to push, replace, pop, and clear. It prevents captured menu geometry
+and focus from surviving the destination that supplied them. Other tasks'
+transients are not cleared. These structural completion callbacks must not
+mutate navigation; the existing lifecycle callback mutation rules still apply.
 
 ### BasicDialog
 
@@ -577,10 +570,9 @@ the opposite end. The dialog root remains non-focusable.
 
 #### Host and Layout Model
 
-`FullScreenDialog` is a full-window surface hosted by the same shared transient
-path as `BasicDialog`, rather than by a popup task or second host.
-
-It covers the host bounds directly:
+`FullScreenDialog` is a navigation destination with dialog-specific chrome and
+veto hooks. It fills its task bounds (`W` and `H` below), becoming full-window
+when the navigation task itself fills the window:
 
 $$
 w_{full} = W
@@ -622,6 +614,36 @@ Long or variable-length explanatory titles do not belong in the header. When a
 title does not fit comfortably beside the close and confirm controls, the
 header keeps a short title and the longer explanation moves into the body.
 
+#### Navigation Membership and Completion
+
+`isShowing()` means membership in history, including while another destination
+covers the dialog. `isCurrent()` distinguishes the currently selected entry.
+Covering and resuming preserve the body and do not deliver completion. Calling
+`show()` again while covered returns `kAlreadyPresented`.
+
+`dismiss()` bypasses veto and pops a current dialog; it is a no-op when absent
+and a contract violation when covered. Destruction removes a current dialog
+without dialog completion. A covered dialog must leave history before its
+storage is destroyed. Subclasses with inline body widgets must call
+`prepareForDerivedDestruction()` before those members die.
+
+Accepted Close, Back, and confirmation remove the destination. External pop,
+replace, or clear also complete it, bypassing veto and reporting
+`kProgrammatic`; task teardown reports `kInteractionOwnerDetached`. The
+full-screen dialog no longer receives transient-host destruction events.
+
+`Destination::onRemoved()` runs after `onStop()`, structural detachment, and
+clearing both history membership and the host association. The full-screen
+adapter delivers typed completion there. The callback may destroy or reopen
+the dialog, or navigate elsewhere: the host does not dereference the removed
+destination afterward and uses its transition generation to respect nested
+navigation. The previous destination normally resumes after this callback;
+completion must not assume that previous content is already attached.
+
+Full-screen focus follows ordinary task navigation. There is no additional
+presenter focus scope or remembered focus in the dialog. Menus and basic dialogs
+opened above it still use their normal transient focus scopes and restoration.
+
 #### Request-Veto Model
 
 Unlike `BasicDialog`, the full-screen variant cannot auto-close on every user
@@ -630,7 +652,7 @@ confirmation.
 
 The full-screen request model is therefore:
 
-1. the close button and every eligible shared Back request call
+1. the close button and every eligible destination Back request call
    `onDismissRequested(reason)`,
 2. if that hook returns `true`, the host removes the full-screen dialog and
    then calls `onDismissed(reason)`,
@@ -657,18 +679,15 @@ without per-instance callback storage:
 - reject confirm while a required field is invalid,
 - show inline errors and keep editing,
 - intercept a close request,
-- and show inline discard confirmation or finish and open a basic confirmation
-  from post-detach completion.
+- and open a basic discard-confirmation dialog while remaining in history.
 
 #### Focus and Overlay Behavior
 
-The full-screen dialog supplies a focus-capturing scope to the shared host. The
-host enters it through the explicit interaction owner's `FocusManager`, routes
-owner keys only inside that scope, absorbs ordinary non-owner keys, and restores
-eligible prior focus during finish. Menus and other root transients return busy
-until the full-screen dialog finishes. As with a basic dialog, only eligible body
-or action descendants receive focus. The full-screen root remains unfocusable,
-and the always-enabled close affordance supplies the final action fallback.
+The full-screen dialog uses ordinary task focus and key routing. Only eligible
+body or action descendants receive focus; the root remains unfocusable. Menus
+and basic dialogs use their own transient scopes above it and restore eligible
+focus into its content on dismissal. Full-screen navigation does not restore
+the prior destination's focus through a presenter scope.
 
 ### Action and Result Semantics
 
@@ -702,14 +721,13 @@ values:
 
 `BackSource::kBackKey` and `BackSource::kNavigationButton` map to `kBack`,
 `BackSource::kEscapeKey` maps to `kEscape`, and
-`BackSource::kProgrammatic` maps to `kProgrammatic`. A direct `dismiss()` also
-reports `kProgrammatic`, but unlike a programmatic shared Back request it does
+semantic `BackSource::kProgrammatic` maps to `kBack`. A direct `dismiss()`
+reports `kProgrammatic`; unlike a programmatic Back request it does
 not invoke `onDismissRequested()`.
 
-Programmatic dismissal, owner teardown, and host teardown are mandatory and do
-not call the full-screen veto hook. Presenter destruction performs structural
-cleanup without a virtual completion callback, following the shared
-registration contract.
+Explicit dismissal, external navigation removal, and task teardown bypass the
+full-screen veto hook. Basic dialogs also finish on transient-host teardown.
+Presenter destruction performs structural cleanup without dialog completion.
 
 The result ordering is intentionally different between the two public variants:
 
@@ -736,7 +754,8 @@ The chosen storage model keeps the per-instance cost bounded as follows:
   heap widget, body-pointer, or extra action-policy field.
 - `FullScreenDialog` reuses the same scaffold and adds one small close-
   affordance widget, one fixed header-action widget, and one optional confirming
-  action descriptor.
+  action descriptor and an embedded borrowed destination. It carries no transient
+  registration or presenter focus scope.
 - Host-owned active state, barrier paint, and structural integration stay on
   `MainWindow` rather than on every dialog instance.
 
@@ -747,8 +766,9 @@ The design explicitly does not store:
 - a second scroller,
 - or a general appearance object pointer.
 
-That is the right tradeoff here. The shared host shows one basic or full-screen
-dialog at a time, and the base classes still avoid speculative RAM cost. For a
+The transient host shows one basic dialog or menu at a time, including above a
+full-screen destination. The base classes keep presentation-specific storage
+out of the shared layout. For a
 text value longer than the standard library's inline string capacity, each
 `TextBlock` retains approximately its text capacity in bytes plus one
 `LineLayout` record per laid-out line (about 16 bytes per line on the 32-bit
@@ -809,6 +829,7 @@ enum class DialogShowResult : uint8_t {
   kAlreadyPresented,
   kInteractionOwnerUnavailable,
   kSurfaceUnavailable,
+  kNavigationUnavailable,
 };
 
 struct DialogActionSpec {
@@ -831,50 +852,20 @@ enum class DialogChromeSlot : uint8_t {
   kSecondary,
 };
 
-class DialogScaffoldBase : public Container {
- public:
-  ~DialogScaffoldBase() override;
-  ColorToken containerRole() const override;
-  Color background() const override;
-  BorderStyle getBorderStyle() const override;
+class DialogScaffold : public Container {
+  // Shared body scroller, title, chrome slots, layout, and child traversal.
+ protected:
+  DialogScaffold(ApplicationContext& context, WidgetRef body,
+                 DialogScaffoldVariant variant);
+  virtual void prepareForDerivedDestruction();
+};
 
+class DialogScaffoldBase : public DialogScaffold {
+  // Basic-dialog transient registration and focus scope.
  protected:
   DialogScaffoldBase(ApplicationContext& context, WidgetRef body,
                      DialogScaffoldVariant variant);
-  void attachDerivedChrome(DialogChromeSlot slot, Widget& chrome);
-  void prepareForDerivedDestruction();
-
- private:
-  int getChildrenCount() const override;
-  const Widget& getChild(int idx) const override;
-  Widget& getChild(int idx) override;
-  Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
-  void onLayout(bool changed, const Rect& rect) override;
-};
-
-class AlertDialogBodyStorage {
- protected:
-  AlertDialogBodyStorage(ApplicationContext& context,
-                         std::string supporting_text);
-
-  TextBlock supporting_text_;
-};
-
-class DialogActionStrip final : public Container {
- public:
-  DialogActionStrip(ApplicationContext& context, BasicDialog& owner,
-                    const DialogActionSpec* actions, uint8_t action_count);
-  ~DialogActionStrip() override;
-
- protected:
-  void paint(PaintContext& ctx) const override;
-  Color background() const override;
-  bool fullyCoversBoundsWithOpaqueColors() const override;
-  int getChildrenCount() const override;
-  const Widget& getChild(int idx) const override;
-  Widget& getChild(int idx) override;
-  Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
-  void onLayout(bool changed, const Rect& rect) override;
+  void prepareForDerivedDestruction() override;
 };
 }  // namespace internal
 
@@ -927,7 +918,7 @@ class AlertDialog : private internal::AlertDialogBodyStorage,
   using BasicDialog::onDismissed;
 };
 
-class FullScreenDialog : public internal::DialogScaffoldBase {
+class FullScreenDialog : public internal::DialogScaffold {
  public:
   FullScreenDialog(ApplicationContext& context, WidgetRef body);
   ~FullScreenDialog() override;
@@ -941,9 +932,11 @@ class FullScreenDialog : public internal::DialogScaffoldBase {
   LayoutDirection layoutDirection() const;
   DialogShowResult show(Task& interaction_owner);
   bool isShowing() const;
+  bool isCurrent() const;
   void dismiss();
 
  protected:
+  void prepareForDerivedDestruction() override;
   virtual bool onDismissRequested(DialogDismissReason reason) { return true; }
   virtual bool onConfirmRequested(uint8_t action_id) { return true; }
   virtual void onDismissed(DialogDismissReason reason) {}
@@ -1010,11 +1003,10 @@ Both variants retain the framework's zero-elevation default; the shared host
 owns basic-dialog scrim paint. The
 `BasicDialog` and `FullScreenDialog` destructors call
 `prepareForDerivedDestruction()` before their inline chrome members die. That
-seam first performs callback-free registration cancellation and then detaches
-the body and both derived-chrome slots. `DialogScaffoldBase::~DialogScaffoldBase()`
-repeats callback-free cancellation defensively, requires the body and both
-derived-chrome child slots to be empty, and detaches the remaining base-owned
-children.
+seam first cancels transient hosting or removes the current destination without
+dialog completion, then detaches the body and both derived-chrome slots. The
+layout base detaches the remaining base-owned children. A covered full-screen
+dialog must be removed from navigation before destruction.
 For an `AlertDialog`, the complete `BasicDialog` base is destroyed before
 `AlertDialogBodyStorage`, so the borrowed supporting `TextBlock` is no longer
 attached when its storage dies. Private inheritance deliberately prevents a
@@ -1024,7 +1016,7 @@ installed as the body calls `prepareForDerivedDestruction()` at the beginning
 of its own destructor; the ordinary external-borrow contract instead requires
 the caller-owned body to outlive dialog destruction.
 
-The start-result mapping is exhaustive:
+For basic dialogs, the shared-host start-result mapping is exhaustive:
 
 | Shared-host result | Dialog result |
 | --- | --- |
@@ -1118,8 +1110,8 @@ Validation: run `bazel test //:material3_dialog_test //:material3_dialog_golden_
 
 ### Phase 3: Full-Screen Dialog Family
 
-**Status: Implemented.** `FullScreenDialog` provides a transparent-barrier
-full-window root, Material 3 close icon button, optional confirming header
+**Status: Implemented and refactored to navigation.** `FullScreenDialog` provides
+a task-filling destination, Material 3 close icon button, optional confirming header
 action, explicit LTR/RTL header geometry, request-veto hooks, unconditional
 programmatic dismissal, owned title storage, typed post-detach completion,
 unit and golden coverage, and the catalog's compact wizard flow with inline
@@ -1127,10 +1119,10 @@ discard confirmation.
 
 Code slice:
 
-1. Add `FullScreenDialog` and its full-window hosted root.
+1. Add `FullScreenDialog` and its navigation-backed task content.
 2. Implement the icon-button close affordance, header confirm action, request-
-   veto hooks, `surfaceContainerHigh` zero-radius root, and shared-host
-   lifecycle.
+   veto hooks, `surfaceContainerHigh` zero-radius root, and navigation
+   lifecycle with safe post-removal completion.
 3. Expand dialog tests with close/Back/Escape veto coverage, unconditional
    programmatic dismissal, confirm-accept versus confirm-reject coverage,
    LTR/RTL header layout, owned title rendering after a call-local source string
@@ -1142,6 +1134,12 @@ Code slice:
 Proposed commit message:
 
 > Material 3 dialogs: add full-screen dialog family
+
+Navigation-refactor regression coverage includes anchored menus, basic dialogs
+above full-screen content, transient-first Back, focus return from menus,
+cover/resume without completion, cleanup on navigation, blocked re-admission,
+self-destruction and reopening from completion, task teardown, and clipped
+absolute anchor geometry. Existing full-screen golden images remain unchanged.
 
 Validation: run `bazel test //:material3_dialog_test //:material3_dialog_golden_test`.
 
@@ -1187,8 +1185,8 @@ That is the right first step, but it does have visible consequences:
    screens in the first landing,
 3. centered basic dialogs remain default-centered and do not yet expose the
    custom-positioning flexibility Material allows on larger displays,
-4. basic dialogs cannot stack above full-screen dialogs under the shared
-   one-root contract,
+4. full-screen dialogs require navigation tasks, and covered dialogs must leave
+   history before explicit dismissal or destruction,
 5. caller-owned body, action-label, and icon backing storage must remain live
    through its documented persistent configuration lifetime,
 6. and the first landing does not include motion transitions.
@@ -1206,9 +1204,10 @@ policy, so a quiet in-place restyle would hide the real component change.
 #### Add a Separate Full-Screen Host to Permit Stacking
 
 Rejected because it would bypass the framework's one root transient slot and
-duplicate admission, focus, key, Back, and teardown ordering. Both variants use
-the shared host. Nested dialog presentation remains future work that requires a
-bounded host design and a concrete product use case.
+duplicate admission, focus, key, Back, and teardown ordering. Full-screen dialogs
+now use the existing navigation host and ordinary task routing. Basic dialogs
+use the transient host. Nested transient roots remain future work; basic dialogs
+and menus above a full-screen destination need no nesting support.
 
 #### Expose one public `Dialog` type with presentation enums
 
@@ -1259,5 +1258,5 @@ Intentional follow-ons that stay out of this design:
 3. enter and exit motion once the broader Material 3 motion-token story lands,
 4. picker-specific wrappers such as date and time dialogs once those component
    families are designed,
-5. bounded nested-transient support if a concrete workflow requires a basic
-   dialog above an active full-screen dialog.
+5. bounded nested-transient support if a concrete workflow requires menus or
+   another basic dialog above an active basic dialog.

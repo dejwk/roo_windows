@@ -29,6 +29,15 @@ class Backdrop final : public BasicSurfaceWidget {
   }
 };
 
+class BackdropDestination final : public Destination {
+ public:
+  explicit BackdropDestination(Widget& content) : content_(content) {}
+  Widget& getContents() override { return content_; }
+
+ private:
+  Widget& content_;
+};
+
 class Material3DialogGoldenTest : public testing::Test {
  protected:
   static constexpr int16_t kWidth = 320;
@@ -40,7 +49,11 @@ class Material3DialogGoldenTest : public testing::Test {
         environment_(scheduler_),
         app_(&environment_, display_),
         backdrop_(app_.context()),
-        owner_(app_.addTaskFullScreen(backdrop_)) {}
+        destination_(backdrop_),
+        owner_(app_.addTaskFullScreen(navigation_)) {
+    navigation_.push(destination_);
+  }
+  ~Material3DialogGoldenTest() override { navigation_.clear(); }
 
   roo_display::Offscreen<roo_display::Rgb888> capture() const {
     return ::roo_windows::test::CaptureRgb(offscreen_.raster(), 0, 0, kWidth,
@@ -52,8 +65,10 @@ class Material3DialogGoldenTest : public testing::Test {
   roo_display::Display display_;
   roo_scheduler::Scheduler scheduler_;
   Environment environment_;
+  NavigationHost navigation_;
   Application app_;
   Backdrop backdrop_;
+  BackdropDestination destination_;
   Task& owner_;
 };
 

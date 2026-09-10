@@ -137,8 +137,9 @@ class WizardDialog final : public material3::FullScreenDialog {
   bool onDismissRequested(material3::DialogDismissReason) override {
     if (!discard_pending_) {
       discard_pending_ = true;
-      body_.setText("Discard the wizard changes? Press close or Back again to "
-                    "confirm.");
+      body_.setText(
+          "Discard the wizard changes? Press close or Back again to "
+          "confirm.");
       return false;
     }
     return true;
@@ -229,15 +230,21 @@ class DialogCatalog final : public FlexLayout {
 
 roo_scheduler::Scheduler scheduler;
 Environment env(scheduler);
+NavigationHost navigation;
 #ifdef ROO_TESTING
 Application app(&env, display, emulator_keys, true);
 #else
 Application app(&env, display);
 #endif
 DialogCatalog catalog(app.context());
-Task& task = app.addTaskFullScreen(catalog);
+class CatalogDestination final : public Destination {
+ public:
+  Widget& getContents() override { return catalog; }
+} catalog_destination;
+Task& task = app.addTaskFullScreen(navigation);
 
 void setup() {
+  navigation.push(catalog_destination);
   catalog.bind(task);
   initDisplay();
   app.start();

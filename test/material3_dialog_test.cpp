@@ -12,6 +12,7 @@
 #include "roo_windows/material3/dialog/basic_dialog.h"
 #include "roo_windows/material3/dialog/dialog_scaffold.h"
 #include "roo_windows/material3/dialog/full_screen_dialog.h"
+#include "roo_windows/material3/menu/menu.h"
 #include "roo_windows/widgets/text_field.h"
 
 namespace roo_windows::material3 {
@@ -205,6 +206,19 @@ class TestFullScreenDialog final : public FullScreenDialog {
   }
 };
 
+class TestDestination final : public Destination {
+ public:
+  explicit TestDestination(Widget& content) : content_(content) {}
+  Widget& getContents() override { return content_; }
+  int pauses = 0;
+  int resumes = 0;
+  void onPause() override { ++pauses; }
+  void onResume() override { ++resumes; }
+
+ private:
+  Widget& content_;
+};
+
 class Material3DialogTest : public ::testing::Test {
  protected:
   Material3DialogTest()
@@ -213,16 +227,27 @@ class Material3DialogTest : public ::testing::Test {
         environment_(scheduler_),
         app_(&environment_, display_),
         task_content_(app_.context()),
-        owner_(app_.addTaskFullScreen(task_content_)) {}
+        owner_(app_.addTaskFullScreen(task_content_)),
+        navigation_content_(app_.context()),
+        root_(navigation_content_),
+        navigation_owner_(app_.addTaskFullScreen(navigation_)) {
+    navigation_.push(root_);
+  }
+
+  ~Material3DialogTest() override { navigation_.clear(); }
 
   roo::byte raster_[320 * 240 * 2] = {};
   roo_display::OffscreenDevice<roo_display::Argb4444> device_;
   roo_display::Display display_;
   roo_scheduler::Scheduler scheduler_;
   Environment environment_;
+  NavigationHost navigation_;
   Application app_;
   TestPanel task_content_;
   Task& owner_;
+  TestContent navigation_content_;
+  TestDestination root_;
+  Task& navigation_owner_;
 };
 
 TEST_F(Material3DialogTest, ActionStripValidatesAndCopiesFixedDescriptors) {
@@ -510,7 +535,8 @@ TEST_F(Material3DialogTest, FullScreenDialogCoversWindowWithSquareSurface) {
   TestFullScreenDialog dialog(app_.context(), WidgetRef(body));
   dialog.setHeaderTitle("Edit schedule");
 
-  ASSERT_EQ(DialogShowResult::kShown, dialog.show(owner_));
+  ASSERT_EQ(DialogShowResult::kShown, dialog.show(navigation_owner_));
+  ASSERT_TRUE(app_.refresh());
   EXPECT_EQ(0, dialog.offsetLeft());
   EXPECT_EQ(0, dialog.offsetTop());
   EXPECT_EQ(320, dialog.width());
@@ -522,7 +548,7 @@ TEST_F(Material3DialogTest, FullScreenDialogCoversWindowWithSquareSurface) {
 TEST_F(Material3DialogTest, FullScreenCloseRequestCanVetoThenAccept) {
   TestFullScreenDialog dialog(app_.context(), WidgetRef());
   dialog.allow_dismiss = false;
-  ASSERT_EQ(DialogShowResult::kShown, dialog.show(owner_));
+  ASSERT_EQ(DialogShowResult::kShown, dialog.show(navigation_owner_));
 
   test::DialogTestAccess::CloseButton(dialog).onClicked();
   EXPECT_TRUE(dialog.isShowing());
@@ -540,13 +566,15 @@ TEST_F(Material3DialogTest, FullScreenCloseRequestCanVetoThenAccept) {
 TEST_F(Material3DialogTest, FullScreenBackAndEscapeUseVetoHook) {
   TestFullScreenDialog dialog(app_.context(), WidgetRef());
   dialog.allow_dismiss = false;
-  ASSERT_EQ(DialogShowResult::kShown, dialog.show(owner_));
-  EXPECT_EQ(BackResult::kHandled, owner_.requestBack(BackSource::kBackKey));
+  ASSERT_EQ(DialogShowResult::kShown, dialog.show(navigation_owner_));
+  EXPECT_EQ(BackResult::kHandled,
+            navigation_owner_.requestBack(BackSource::kBackKey));
   EXPECT_TRUE(dialog.isShowing());
   EXPECT_EQ(DialogDismissReason::kBack, dialog.last_request_reason);
 
   dialog.allow_dismiss = true;
-  EXPECT_EQ(BackResult::kHandled, owner_.requestBack(BackSource::kEscapeKey));
+  EXPECT_EQ(BackResult::kHandled,
+            navigation_owner_.requestBack(BackSource::kEscapeKey));
   EXPECT_FALSE(dialog.isShowing());
   EXPECT_EQ(DialogDismissReason::kEscape, dialog.last_dismiss_reason);
 }
@@ -554,7 +582,7 @@ TEST_F(Material3DialogTest, FullScreenBackAndEscapeUseVetoHook) {
 TEST_F(Material3DialogTest, FullScreenProgrammaticDismissBypassesVeto) {
   TestFullScreenDialog dialog(app_.context(), WidgetRef());
   dialog.allow_dismiss = false;
-  ASSERT_EQ(DialogShowResult::kShown, dialog.show(owner_));
+  ASSERT_EQ(DialogShowResult::kShown, dialog.show(navigation_owner_));
 
   dialog.dismiss();
 
@@ -568,7 +596,7 @@ TEST_F(Material3DialogTest, FullScreenConfirmCanRejectThenAccept) {
   DialogActionSpec confirm{23, "Save", DialogActionRole::kConfirm};
   dialog.setConfirmAction(confirm);
   dialog.allow_confirm = false;
-  ASSERT_EQ(DialogShowResult::kShown, dialog.show(owner_));
+  ASSERT_EQ(DialogShowResult::kShown, dialog.show(navigation_owner_));
 
   test::DialogTestAccess::ConfirmButton(dialog).onClicked();
   EXPECT_TRUE(dialog.isShowing());
@@ -588,7 +616,8 @@ TEST_F(Material3DialogTest, FullScreenHeaderMirrorsWithLayoutDirection) {
   TestFullScreenDialog dialog(app_.context(), WidgetRef());
   DialogActionSpec confirm{23, "Save", DialogActionRole::kConfirm};
   dialog.setConfirmAction(confirm);
-  ASSERT_EQ(DialogShowResult::kShown, dialog.show(owner_));
+  ASSERT_EQ(DialogShowResult::kShown, dialog.show(navigation_owner_));
+  ASSERT_TRUE(app_.refresh());
   Widget& close = test::DialogTestAccess::CloseButton(dialog);
   Widget& save = test::DialogTestAccess::ConfirmButton(dialog);
   EXPECT_LT(close.offsetLeft(), save.offsetLeft());
@@ -614,28 +643,152 @@ TEST_F(Material3DialogTest, FullScreenRejectsNonConfirmHeaderAction) {
   EXPECT_DEATH_IF_SUPPORTED(dialog.setConfirmAction(dismiss), "");
 }
 
-TEST_F(Material3DialogTest, FullScreenDialogIsMutuallyExclusiveWithBasic) {
+TEST_F(Material3DialogTest, FullScreenShowRejectsAlreadyActiveTransient) {
   DialogActionSpec action{1, "OK", DialogActionRole::kAcknowledge};
   TestBasicDialog basic(app_.context(), WidgetRef(), &action, 1);
   TestFullScreenDialog full_screen(app_.context(), WidgetRef());
-  ASSERT_EQ(DialogShowResult::kShown, basic.show(owner_));
+  ASSERT_EQ(DialogShowResult::kShown, basic.show(navigation_owner_));
 
-  EXPECT_EQ(DialogShowResult::kHostBusy, full_screen.show(owner_));
+  EXPECT_EQ(DialogShowResult::kHostBusy, full_screen.show(navigation_owner_));
   EXPECT_FALSE(full_screen.isShowing());
   basic.dismiss();
 }
 
-TEST_F(Material3DialogTest, ActiveFullScreenDestructionCancelsHost) {
+TEST_F(Material3DialogTest, ActiveFullScreenDestructionRemovesDestination) {
   TestContent body(app_.context());
   auto dialog =
       std::make_unique<TestFullScreenDialog>(app_.context(), WidgetRef(body));
-  ASSERT_EQ(DialogShowResult::kShown, dialog->show(owner_));
+  ASSERT_EQ(DialogShowResult::kShown, dialog->show(navigation_owner_));
 
   dialog.reset();
 
   EXPECT_EQ(nullptr, body.parent());
   EXPECT_FALSE(
       app_.root().transient_presentation_slot().hasActivePresentation());
+}
+
+TEST_F(Material3DialogTest, FullScreenRequiresNavigation) {
+  TestFullScreenDialog dialog(app_.context(), WidgetRef());
+  EXPECT_EQ(DialogShowResult::kNavigationUnavailable, dialog.show(owner_));
+  EXPECT_FALSE(dialog.isShowing());
+}
+
+TEST_F(Material3DialogTest, FullScreenMenuUsesFreeTransientSlotAndBackOrder) {
+  TestContent anchor(app_.context());
+  TestFullScreenDialog dialog(app_.context(), WidgetRef(anchor));
+  StandardMenuItem item(StandardMenuItemInit{"Option"});
+  MenuRow<StandardMenuItem> row(app_.context());
+  row.setMenuItem(item);
+  MenuGroup group(app_.context());
+  group.add(row);
+  Menu menu(app_.context());
+  menu.addGroup(group);
+  ASSERT_EQ(DialogShowResult::kShown, dialog.show(navigation_owner_));
+  ASSERT_TRUE(app_.refresh());
+  EXPECT_EQ(2u, navigation_.depth());
+  EXPECT_EQ(1, root_.pauses);
+  ASSERT_TRUE(anchor.requestFocus());
+  ASSERT_EQ(MenuShowResult::kShown, menu.show(navigation_owner_, anchor));
+  EXPECT_EQ(BackResult::kHandled, navigation_owner_.requestBack());
+  EXPECT_FALSE(
+      app_.root().transient_presentation_slot().hasActivePresentation());
+  EXPECT_TRUE(dialog.isCurrent());
+  EXPECT_EQ(0, dialog.dismiss_request_count);
+  EXPECT_EQ(&anchor, navigation_owner_.focus().focused());
+  EXPECT_EQ(BackResult::kHandled, navigation_owner_.requestBack());
+  EXPECT_FALSE(dialog.isShowing());
+  EXPECT_EQ(1u, navigation_.depth());
+  EXPECT_EQ(2, root_.resumes);
+}
+
+TEST_F(Material3DialogTest, FullScreenCanOpenBasicDialog) {
+  TestFullScreenDialog dialog(app_.context(), WidgetRef());
+  DialogActionSpec action{1, "OK", DialogActionRole::kAcknowledge};
+  TestBasicDialog basic(app_.context(), WidgetRef(), &action, 1);
+  ASSERT_EQ(DialogShowResult::kShown, dialog.show(navigation_owner_));
+  ASSERT_TRUE(app_.refresh());
+  ASSERT_EQ(DialogShowResult::kShown, basic.show(navigation_owner_));
+  navigation_owner_.requestBack();
+  EXPECT_FALSE(basic.isShowing());
+  EXPECT_TRUE(dialog.isCurrent());
+  dialog.dismiss();
+}
+
+TEST_F(Material3DialogTest, NavigationClosesMenuBeforeCoveringDialog) {
+  TestContent anchor(app_.context());
+  TestContent next_content(app_.context());
+  TestDestination next(next_content);
+  TestFullScreenDialog dialog(app_.context(), WidgetRef(anchor));
+  StandardMenuItem item(StandardMenuItemInit{"Option"});
+  MenuRow<StandardMenuItem> row(app_.context());
+  row.setMenuItem(item);
+  MenuGroup group(app_.context());
+  group.add(row);
+  Menu menu(app_.context());
+  menu.addGroup(group);
+  ASSERT_EQ(DialogShowResult::kShown, dialog.show(navigation_owner_));
+  ASSERT_TRUE(app_.refresh());
+  ASSERT_EQ(MenuShowResult::kShown, menu.show(navigation_owner_, anchor));
+  navigation_.push(next);
+  EXPECT_FALSE(
+      app_.root().transient_presentation_slot().hasActivePresentation());
+  EXPECT_TRUE(dialog.isShowing());
+  EXPECT_FALSE(dialog.isCurrent());
+  EXPECT_EQ(0, dialog.dismiss_count);
+  EXPECT_EQ(DialogShowResult::kAlreadyPresented,
+            dialog.show(navigation_owner_));
+  EXPECT_DEATH_IF_SUPPORTED(dialog.dismiss(), "");
+  navigation_.pop();
+  EXPECT_TRUE(dialog.isCurrent());
+  ASSERT_TRUE(app_.refresh());
+  ASSERT_EQ(MenuShowResult::kShown, menu.show(navigation_owner_, anchor));
+  dialog.dismiss();
+  EXPECT_FALSE(
+      app_.root().transient_presentation_slot().hasActivePresentation());
+  EXPECT_TRUE(dialog.detached_during_callback);
+}
+
+TEST_F(Material3DialogTest, FullScreenCompletionCanDestroyDialog) {
+  class SelfDeletingDialog final : public FullScreenDialog {
+   public:
+    SelfDeletingDialog(ApplicationContext& context,
+                       std::unique_ptr<SelfDeletingDialog>& storage)
+        : FullScreenDialog(context, WidgetRef()), storage_(storage) {}
+    void onDismissed(DialogDismissReason) override { storage_.reset(); }
+
+   private:
+    std::unique_ptr<SelfDeletingDialog>& storage_;
+  };
+  std::unique_ptr<SelfDeletingDialog> dialog;
+  dialog = std::make_unique<SelfDeletingDialog>(app_.context(), dialog);
+  ASSERT_EQ(DialogShowResult::kShown, dialog->show(navigation_owner_));
+  navigation_owner_.requestBack();
+  EXPECT_EQ(nullptr, dialog);
+  EXPECT_EQ(1u, navigation_.depth());
+}
+
+TEST_F(Material3DialogTest, FullScreenCompletionCanReopenDialog) {
+  class ReopeningDialog final : public FullScreenDialog {
+   public:
+    ReopeningDialog(ApplicationContext& context, Task& task)
+        : FullScreenDialog(context, WidgetRef()), task_(task) {}
+    void onDismissed(DialogDismissReason) override {
+      if (reopen) {
+        reopen = false;
+        EXPECT_EQ(DialogShowResult::kShown, show(task_));
+      }
+    }
+    bool reopen = true;
+
+   private:
+    Task& task_;
+  } dialog(app_.context(), navigation_owner_);
+  ASSERT_EQ(DialogShowResult::kShown, dialog.show(navigation_owner_));
+  dialog.dismiss();
+  EXPECT_TRUE(dialog.isCurrent());
+  EXPECT_EQ(2u, navigation_.depth());
+  dialog.dismiss();
+  EXPECT_FALSE(dialog.isShowing());
 }
 
 TEST_F(Material3DialogTest, AbsoluteBoundsPreserveAncestorClipping) {
@@ -650,6 +803,84 @@ TEST_F(Material3DialogTest, AbsoluteBoundsPreserveAncestorClipping) {
   EXPECT_EQ(Rect(20, 40, 34, 59), visible);
   nested.removeLast();
   task_content_.removeLast();
+}
+
+TEST_F(Material3DialogTest, NavigationClearCompletesCoveredDialogOnce) {
+  TestFullScreenDialog dialog(app_.context(), WidgetRef());
+  TestContent next_content(app_.context());
+  TestDestination next(next_content);
+  ASSERT_EQ(DialogShowResult::kShown, dialog.show(navigation_owner_));
+  navigation_.push(next);
+  navigation_.clear();
+  EXPECT_FALSE(dialog.isShowing());
+  EXPECT_EQ(1, dialog.dismiss_count);
+  EXPECT_TRUE(dialog.detached_during_callback);
+  EXPECT_EQ(DialogDismissReason::kProgrammatic, dialog.last_dismiss_reason);
+  dialog.dismiss();
+  EXPECT_EQ(1, dialog.dismiss_count);
+}
+
+TEST_F(Material3DialogTest, TaskTeardownCompletesDialogAndRejectsReopen) {
+  NavigationHost host;
+  auto app = std::make_unique<Application>(&environment_, display_);
+  Task& task = app->addTaskFullScreen(host);
+  class TeardownDialog final : public FullScreenDialog {
+   public:
+    TeardownDialog(ApplicationContext& context, Task& task)
+        : FullScreenDialog(context, WidgetRef()), task_(task) {}
+    void onDismissed(DialogDismissReason reason) override {
+      ++completions;
+      EXPECT_EQ(DialogDismissReason::kInteractionOwnerDetached, reason);
+      EXPECT_EQ(DialogShowResult::kInteractionOwnerUnavailable, show(task_));
+    }
+    int completions = 0;
+
+   private:
+    Task& task_;
+  } dialog(app->context(), task);
+  ASSERT_EQ(DialogShowResult::kShown, dialog.show(task));
+  app.reset();
+  EXPECT_EQ(1, dialog.completions);
+  EXPECT_FALSE(dialog.isShowing());
+  EXPECT_TRUE(host.empty());
+}
+
+TEST_F(Material3DialogTest, TransientCompletionCannotReadmitDuringNavigation) {
+  TestFullScreenDialog dialog(app_.context(), WidgetRef());
+  TestFullScreenDialog replacement(app_.context(), WidgetRef());
+  class ReopeningMenu final : public Menu {
+   public:
+    ReopeningMenu(ApplicationContext& context, Task& task,
+                  FullScreenDialog& replacement)
+        : Menu(context), task_(task), replacement_(replacement) {}
+    void onFinished(PresentationFinishReason reason) override {
+      EXPECT_EQ(PresentationFinishReason::kInteractionOwnerDetached, reason);
+      EXPECT_EQ(MenuShowResult::kInteractionOwnerUnavailable,
+                showFromRect(task_, Rect(0, 0, 20, 20)));
+      EXPECT_EQ(DialogShowResult::kInteractionOwnerUnavailable,
+                replacement_.show(task_));
+      ++completions;
+    }
+    int completions = 0;
+
+   private:
+    Task& task_;
+    FullScreenDialog& replacement_;
+  } menu(app_.context(), navigation_owner_, replacement);
+  StandardMenuItem item(StandardMenuItemInit{"Option"});
+  MenuRow<StandardMenuItem> row(app_.context());
+  row.setMenuItem(item);
+  MenuGroup group(app_.context());
+  group.add(row);
+  menu.addGroup(group);
+  ASSERT_EQ(DialogShowResult::kShown, dialog.show(navigation_owner_));
+  ASSERT_TRUE(app_.refresh());
+  ASSERT_EQ(MenuShowResult::kShown,
+            menu.showFromRect(navigation_owner_, Rect(0, 0, 20, 20)));
+  dialog.dismiss();
+  EXPECT_EQ(1, menu.completions);
+  EXPECT_FALSE(replacement.isShowing());
+  menu.clearGroups();
 }
 
 TEST(Material3DialogSize, SharedScaffoldRemainsBounded) {

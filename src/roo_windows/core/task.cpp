@@ -99,7 +99,14 @@ void Task::attachNavigationContent(Widget& content) {
 
 void Task::detachNavigationContent() {
   CHECK(navigation_ != nullptr);
+  // A transient belongs to the task, but its anchor belongs to the outgoing
+  // destination. End it before detaching that content, blocking re-admission
+  // from its completion callback throughout the structural change.
+  const bool available = presentation_available_;
+  presentation_available_ = false;
+  internal::GetTransientSurfaceHost(*this).interactionOwnerUnavailable(*this);
   panel_.clearContent();
+  presentation_available_ = available;
 }
 
 BackResult Task::requestTaskBackCallback(BackSource source) {

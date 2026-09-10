@@ -105,7 +105,7 @@ component semantics with the presenter.
 
 The differences remain explicit policy rather than a generic "popup type": a
 menu uses a transparent barrier and outside dismissal, a basic dialog uses a
-scrim and absorbs outside taps, a full-screen dialog needs no visible scrim,
+scrim and absorbs outside taps, an opaque full-window transient needs no visible scrim,
 and a modal sheet handles an outside request itself so it can animate or veto.
 
 ### Likely Future Consumers and Non-Consumers
@@ -576,11 +576,12 @@ combination explicitly:
 | --- | --- | --- | --- | --- | --- |
 | Menu | transparent | replace replaceable | dismiss | eligible; presenter closes deepest level | yes |
 | Basic or alert dialog | scrim | reject | absorb | eligible; default handler dismisses | no |
-| Full-screen dialog | transparent | reject | absorb | eligible; presenter can veto | no |
 | Modal sheet | scrim | reject | presenter handled | eligible; presenter animates close | no |
 
-A full-screen dialog remains modal through exclusivity, focus, key routing, and
-pointer absorption without painting an occluded scrim. Presenter-handled
+Full-screen dialogs now use navigation destinations and do not occupy this
+host. Their ordinary task ancestry allows anchored menus and basic dialogs
+above them without nested transients. See the
+[dialog host integration](material3_dialogs_design.md#host-integration). Presenter-handled
 outside interaction lets a sheet animate, collapse, or veto before it
 eventually finishes.
 
@@ -936,7 +937,8 @@ through its actions or Back. Applications needing a programmatic handle own an
 `AlertDialog` and call `close()`. `MainWindow` no longer enumerates a separate
 dialog and scrim pair once migration is complete.
 
-New Material 3 dialogs use the same structural host directly. As they land,
+Material 3 basic and alert dialogs use the same structural host directly;
+full-screen dialogs use navigation. As they land,
 call sites that do not require the legacy visual/API contract migrate to the
 Material 3 family instead of being mechanically adapted to the old type.
 
@@ -1667,7 +1669,7 @@ use the host.
 #### Couple Paint and Replacement Through Popup or Modal Kind
 
 Rejected because modality, scrim paint, outside behavior, and replaceability
-are independent. A full-screen dialog is exclusive and input-modal while its
+are independent. An opaque full-window transient can be exclusive and input-modal while its
 opaque root makes scrim paint unnecessary. Removing kind also removes
 same-kind-only replacement, as recorded in the
 [capability delta](#capability-delta-from-the-previous-design-drafts).
@@ -1721,7 +1723,7 @@ The previous drafts already froze captured geometry and admitted only one root,
 so live automatic reanchoring and simultaneous task-local roots are unchanged
 limitations rather than simplification losses. The simplified model gains
 orthogonality among barrier paint, outside behavior, Back/Escape eligibility,
-replacement request, and occupant replaceability: a full-screen dialog can be
+replacement request, and occupant replaceability: an opaque full-window transient can be
 input-modal and nonreplaceable without painting an invisible scrim. That gain
 comes with the class-selective replacement loss above.
 

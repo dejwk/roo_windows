@@ -92,29 +92,6 @@ class BasicDialogPreparation final
   Task& owner_;
 };
 
-class FullScreenDialogPreparation final
-    : public ::roo_windows::internal::TransientSurfacePreparation {
- public:
-  FullScreenDialogPreparation(DialogScaffold& scaffold, Task& owner)
-      : scaffold_(scaffold), owner_(owner) {}
-
- private:
-  bool createAndResolveBounds(Rect& root_bounds_in_window) override {
-    const MainWindow& window = owner_.window().root();
-    if (window.bounds().empty()) return false;
-    scaffold_.measure(WidthSpec::Exactly(window.width()),
-                      HeightSpec::Exactly(window.height()));
-    scaffold_.layout(Rect(0, 0, window.width() - 1, window.height() - 1));
-    root_bounds_in_window = window.bounds();
-    return true;
-  }
-
-  void deleteAfterFailedAdmission() override {}
-
-  DialogScaffold& scaffold_;
-  Task& owner_;
-};
-
 }  // namespace
 
 DialogScaffold::DialogScaffold(ApplicationContext& context, WidgetRef body,
@@ -249,22 +226,6 @@ DialogShowResult DialogScaffoldBase::showBasicDialogSurface(
       TransientPresentationPolicy(true, true), false};
   focus_scope_.clearRememberedFocus();
   BasicDialogPreparation preparation(*this, interaction_owner);
-  return MapStartResult(
-      ::roo_windows::internal::GetTransientSurfaceHost(interaction_owner)
-          .showPrepared(registration_, interaction_owner, *this, focus_scope_,
-                        spec, preparation));
-}
-
-DialogShowResult DialogScaffoldBase::showFullScreenDialogSurface(
-    Task& interaction_owner) {
-  if (registration_.isActive()) return DialogShowResult::kAlreadyPresented;
-  const TransientSurfaceSpec spec{TransientBarrierPaint::kTransparent,
-                                  TransientAdmissionPolicy::kRejectIfBusy,
-                                  OutsideInteractionPolicy::kAbsorb,
-                                  TransientPresentationPolicy(true, true),
-                                  false};
-  focus_scope_.clearRememberedFocus();
-  FullScreenDialogPreparation preparation(*this, interaction_owner);
   return MapStartResult(
       ::roo_windows::internal::GetTransientSurfaceHost(interaction_owner)
           .showPrepared(registration_, interaction_owner, *this, focus_scope_,

@@ -11,6 +11,10 @@ NavigationHost::~NavigationHost() {
   CHECK(history_.empty());
 }
 
+bool NavigationHost::isAvailable() const {
+  return task_ != nullptr && task_->presentation_available_ && mayMutate();
+}
+
 bool NavigationHost::mayMutate() const {
   // Widget attachment and detachment can synchronously notify arbitrary
   // application code. Only destination lifecycle and Back callbacks receive

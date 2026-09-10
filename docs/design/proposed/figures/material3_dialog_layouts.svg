@@ -95,9 +95,9 @@
   <path class="leader" d="M 746 220 H 762 V 124 H 812" />
 
   <rect class="note" x="536" y="428" width="230" height="116" rx="14" ry="14" />
-  <text class="title" x="554" y="456">Shared-host policy</text>
-  <text class="small" x="554" y="484">Both variants use the same</text>
-  <text class="small" x="554" y="508">modal host and root slot, so</text>
-  <text class="small" x="554" y="532">their roots do not coexist.</text>
+  <text class="title" x="554" y="456">Navigation content</text>
+  <text class="small" x="554" y="484">Full-screen uses navigation.</text>
+  <text class="small" x="554" y="508">The transient slot stays free</text>
+  <text class="small" x="554" y="532">for menus and basic dialogs.</text>
   <path class="leader" d="M 766 484 H 780 V 410" />
 </svg>

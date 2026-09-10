@@ -41,7 +41,7 @@ through lifecycle-aware effects. See the Android documentation for
 [`NavBackStackEntry`](https://developer.android.com/reference/androidx/navigation/NavBackStackEntry)
 and
 [`LifecycleStartEffect`](https://developer.android.com/topic/libraries/architecture/lifecycle).
-`roo_windows` uses four virtual callbacks as the smaller embedded equivalent of
+`roo_windows` uses small virtual callbacks as the smaller embedded equivalent of
 that observable lifecycle.
 
 ## Requirements
@@ -440,7 +440,7 @@ captureless and capturing callbacks, and warmed Back-dispatch allocations.
 
 A navigation task pays one external `NavigationHost`, its vector capacity at
 the observed history high-water mark, and one host pointer plus lifecycle state
-in each destination. `Destination` already has a vtable, so the four virtual
+in each destination. `Destination` already has a vtable, so the lifecycle virtual
 no-op hooks add flash but no additional per-instance pointer. Push may allocate
 when history grows; replace, pop, Back, and clear do not allocate. The target
 report records direct, navigation-depth-two, and destination-state costs, and
@@ -773,3 +773,31 @@ the first growth.
 Animated transitions, persisted navigation state, and destination factories
 require separate designs. Phase 8 removes only the remaining compatibility
 surfaces unrelated to activity navigation.
+
+## Full-screen dialog integration
+
+Material 3 `FullScreenDialog` embeds a borrowed `Destination` and fills its
+navigation task's bounds. The previous destination pauses while the dialog is
+current. Transient menus and basic dialogs can open above this task content;
+Back continues to visit the transient slot before navigation.
+
+Before detaching navigation content, the task finishes its hosted transient
+with `kInteractionOwnerDetached` while temporarily rejecting new presentation
+admission. Other tasks' transients remain unchanged. Transient completion during
+this structural step is not a destination lifecycle callback and must not
+mutate navigation.
+
+`Destination::onRemoved()` supplements start/resume/pause/stop. It runs after
+`onStop()`, once contents are detached, the history entry is removed, and the
+host pointer and state have been reset. It may destroy its destination or issue
+a navigation command; the host does not access that destination afterward.
+Removal completes even if `onStop()` navigates. Generation checks let the
+nested command supersede the outer transition without leaving the removed
+destination associated with its old host. `onStop()` retains its existing context and lifetime contract. Normal pop
+resumes the previous destination after `onRemoved()` returns.
+
+`NavigationHost::isAvailable()` reports installed, non-tearing-down admission
+within an allowed mutation context. `isCurrent(destination)` distinguishes a
+current entry from one retained underneath it. See the
+[dialog design](material3_dialogs_design.md#navigation-membership-and-completion)
+for full-screen completion, covered dismissal, and destruction rules.

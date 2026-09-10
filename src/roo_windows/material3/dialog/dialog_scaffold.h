@@ -152,7 +152,7 @@ class DialogScaffold : public Container {
   YDim chrome_height_[2] = {0, 0};
 };
 
-/// Dialog layout with single-slot transient presentation.
+/// Basic-dialog layout with single-slot transient presentation.
 class DialogScaffoldBase : public DialogScaffold {
  public:
   ~DialogScaffoldBase() override;
@@ -169,10 +169,6 @@ class DialogScaffoldBase : public DialogScaffold {
   /// Measures and centers a basic dialog inside the interaction owner's
   /// window during guarded host preparation.
   DialogShowResult showBasicDialogSurface(Task& interaction_owner);
-
-  /// Measures a full-screen dialog to the complete interaction-owner window
-  /// during guarded host preparation.
-  DialogShowResult showFullScreenDialogSurface(Task& interaction_owner);
 
   /// Returns whether this scaffold currently occupies the shared host.
   bool isDialogShowing() const { return registration_.isActive(); }

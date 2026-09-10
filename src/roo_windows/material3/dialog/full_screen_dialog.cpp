@@ -2,6 +2,8 @@
 
 #include "roo_icons/outlined/24/navigation.h"
 #include "roo_logging.h"
+#include "roo_windows/core/application.h"
+#include "roo_windows/core/task.h"
 
 namespace roo_windows::material3 {
 
@@ -28,10 +30,11 @@ void FullScreenDialog::ConfirmButton::onClicked() {
 }
 
 FullScreenDialog::FullScreenDialog(ApplicationContext& context, WidgetRef body)
-    : DialogScaffoldBase(context, std::move(body),
-                         internal::DialogScaffoldVariant::kFullScreen),
+    : DialogScaffold(context, std::move(body),
+                     internal::DialogScaffoldVariant::kFullScreen),
       close_(context, *this),
-      confirm_(context, *this) {
+      confirm_(context, *this),
+      destination_(*this) {
   attachDerivedChrome(internal::DialogChromeSlot::kPrimary, close_);
   attachDerivedChrome(internal::DialogChromeSlot::kSecondary, confirm_);
 }
@@ -65,81 +68,102 @@ void FullScreenDialog::setLayoutDirection(LayoutDirection direction) {
 
 DialogShowResult FullScreenDialog::show(Task& interaction_owner) {
   if (isShowing()) return DialogShowResult::kAlreadyPresented;
+  NavigationHost* navigation = interaction_owner.navigationHost();
+  if (navigation == nullptr) return DialogShowResult::kNavigationUnavailable;
+  if (!navigation->isAvailable())
+    return DialogShowResult::kInteractionOwnerUnavailable;
+  if (destroying_ || parent() != nullptr ||
+      &context() != &interaction_owner.application().context())
+    return DialogShowResult::kSurfaceUnavailable;
+  if (interaction_owner.window()
+          .root()
+          .transient_presentation_slot()
+          .hasActivePresentation())
+    return DialogShowResult::kHostBusy;
   completion_kind_ = CompletionKind::kDismiss;
   dismiss_reason_ = DialogDismissReason::kProgrammatic;
-  return showFullScreenDialogSurface(interaction_owner);
+  navigation->push(destination_);
+  return isShowing() ? DialogShowResult::kShown
+                     : DialogShowResult::kSurfaceUnavailable;
 }
 
 void FullScreenDialog::dismiss() {
   if (!isShowing()) return;
+  CHECK(isCurrent());
   completion_kind_ = CompletionKind::kDismiss;
   dismiss_reason_ = DialogDismissReason::kProgrammatic;
-  finishDialog(PresentationFinishReason::kCancel);
+  destination_.exit();
 }
 
 void FullScreenDialog::requestClose() {
-  if (!isShowing()) return;
+  if (!isCurrent()) return;
   constexpr DialogDismissReason kReason = DialogDismissReason::kCloseButton;
   if (!onDismissRequested(kReason)) return;
   completion_kind_ = CompletionKind::kDismiss;
   dismiss_reason_ = kReason;
-  finishDialog(PresentationFinishReason::kCancel);
+  destination_.exit();
 }
 
 void FullScreenDialog::requestConfirm() {
-  if (!isShowing() || !has_confirm_action_ || !confirm_action_.enabled) return;
+  if (!isCurrent() || !has_confirm_action_ || !confirm_action_.enabled) return;
   const uint8_t id = confirm_action_.id;
   if (!onConfirmRequested(id)) return;
   completion_kind_ = CompletionKind::kConfirm;
-  finishDialog(PresentationFinishReason::kAction);
+  destination_.exit();
 }
 
-BackResult FullScreenDialog::onDialogBackRequested(BackSource source) {
+BackResult FullScreenDialog::requestBack(BackSource source) {
   const DialogDismissReason reason = DismissReasonFor(source);
   if (onDismissRequested(reason)) {
     completion_kind_ = CompletionKind::kDismiss;
     dismiss_reason_ = reason;
-    finishDialog(PresentationFinishReason::kBack);
+    destination_.exit();
   }
   return BackResult::kHandled;
 }
 
-void FullScreenDialog::onDialogPresentationFinished(
-    PresentationFinishReason reason) {
-  const CompletionKind kind = completion_kind_;
-  completion_kind_ = CompletionKind::kDismiss;
-  if (kind == CompletionKind::kConfirm &&
-      reason == PresentationFinishReason::kAction) {
-    const uint8_t id = confirm_action_.id;
-    onConfirmed(id);
-    return;
+bool FullScreenDialog::isShowing() const {
+  return destination_.getNavigationHost() != nullptr;
+}
+
+bool FullScreenDialog::isCurrent() const {
+  auto* host = destination_.getNavigationHost();
+  return host != nullptr && host->isCurrent(destination_);
+}
+
+void FullScreenDialog::prepareForDerivedDestruction() {
+  destroying_ = true;
+  if (isShowing()) {
+    CHECK(isCurrent());
+    destination_.exit();
   }
-  const DialogDismissReason dismiss_reason =
-      reason == PresentationFinishReason::kBack ||
-              reason == PresentationFinishReason::kCancel
-          ? dismiss_reason_
-          : DismissReasonFor(reason);
-  onDismissed(dismiss_reason);
+  DialogScaffold::prepareForDerivedDestruction();
+}
+
+void FullScreenDialog::DialogDestination::onStop() {
+  if (!getNavigationHost()->isAvailable()) {
+    owner_.completion_kind_ = CompletionKind::kDismiss;
+    owner_.dismiss_reason_ = DialogDismissReason::kInteractionOwnerDetached;
+  }
+}
+
+void FullScreenDialog::complete() {
+  const CompletionKind kind = completion_kind_;
+  const uint8_t id = confirm_action_.id;
+  const DialogDismissReason reason = dismiss_reason_;
+  completion_kind_ = CompletionKind::kDismiss;
+  dismiss_reason_ = DialogDismissReason::kProgrammatic;
+  if (destroying_) return;
+  if (kind == CompletionKind::kConfirm) {
+    onConfirmed(id);
+  } else {
+    onDismissed(reason);
+  }
 }
 
 DialogDismissReason FullScreenDialog::DismissReasonFor(BackSource source) {
   return source == BackSource::kEscapeKey ? DialogDismissReason::kEscape
                                           : DialogDismissReason::kBack;
-}
-
-DialogDismissReason FullScreenDialog::DismissReasonFor(
-    PresentationFinishReason reason) {
-  switch (reason) {
-    case PresentationFinishReason::kOwnerDestroyed:
-    case PresentationFinishReason::kInteractionOwnerDetached:
-      return DialogDismissReason::kInteractionOwnerDetached;
-    case PresentationFinishReason::kHostDestroyed:
-      return DialogDismissReason::kHostDestroyed;
-    case PresentationFinishReason::kBack:
-      return DialogDismissReason::kBack;
-    default:
-      return DialogDismissReason::kProgrammatic;
-  }
 }
 
 }  // namespace roo_windows::material3

@@ -43,6 +43,14 @@ class NavigationHost {
   /// Returns the number of stored destinations.
   size_t depth() const { return history_.size(); }
 
+  /// Returns whether new destinations can currently be admitted.
+  bool isAvailable() const;
+
+  /// Returns whether this destination is the current history entry.
+  bool isCurrent(const Destination& destination) const {
+    return current() == &destination;
+  }
+
   /// Returns this host's task while installed, otherwise nullptr.
   Task* getTask() const { return task_; }
 

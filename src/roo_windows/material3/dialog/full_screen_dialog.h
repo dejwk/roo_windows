@@ -4,6 +4,7 @@
 
 #include <string>
 
+#include "roo_windows/core/destination.h"
 #include "roo_windows/material3/button/icon_button.h"
 #include "roo_windows/material3/dialog/dialog_scaffold.h"
 
@@ -17,13 +18,14 @@ class DialogTestAccess;
 ///
 /// Close, Back, Escape, and optional confirmation first consult synchronous
 /// veto hooks. `dismiss()` bypasses those hooks. Accepted completion callbacks
-/// run only after the shared host has detached the dialog root.
-class FullScreenDialog : public internal::DialogScaffoldBase {
+/// run only after the navigation host has removed the destination.
+class FullScreenDialog : public internal::DialogScaffold {
  public:
   /// Creates a full-screen dialog with persistent generic body content.
   FullScreenDialog(ApplicationContext& context, WidgetRef body);
 
-  /// Cancels hosting and detaches body/header controls before members die.
+  /// Removes a current dialog without completion, then detaches its controls.
+  /// A covered dialog must be removed from history before destruction.
   ~FullScreenDialog() override;
 
   /// Replaces the owned short header title.
@@ -49,16 +51,25 @@ class FullScreenDialog : public internal::DialogScaffoldBase {
   /// Returns the explicit logical layout direction.
   LayoutDirection layoutDirection() const { return dialogLayoutDirection(); }
 
-  /// Attempts to show this full-window root through the owner's shared host.
+  /// Pushes this dialog into the owner's navigation history.
+  /// Requires a navigation task; fills that task's bounds. Use a full-screen
+  /// task for a full-window dialog. Layout runs on the next refresh.
   DialogShowResult show(Task& interaction_owner);
 
-  /// Returns whether this dialog currently occupies the shared host.
-  bool isShowing() const { return isDialogShowing(); }
+  /// Returns whether the dialog belongs to history, including while covered.
+  bool isShowing() const;
 
-  /// Unconditionally dismisses an active dialog as programmatic dismissal.
+  /// Returns whether this dialog is the current navigation destination.
+  bool isCurrent() const;
+
+  /// Dismisses the current dialog, bypassing veto. No-op when not showing.
+  /// Dismissing a covered dialog is a contract violation.
   void dismiss();
 
  protected:
+  /// Call before inline body/chrome members die. Safe to call repeatedly.
+  void prepareForDerivedDestruction() override;
+
   /// Decides whether a close, Back, or Escape request may dismiss the dialog.
   virtual bool onDismissRequested(DialogDismissReason reason) {
     (void)reason;
@@ -113,12 +124,25 @@ class FullScreenDialog : public internal::DialogScaffoldBase {
   enum class CompletionKind : uint8_t { kDismiss, kConfirm };
 
   static DialogDismissReason DismissReasonFor(BackSource source);
-  static DialogDismissReason DismissReasonFor(PresentationFinishReason reason);
 
   void requestClose();
   void requestConfirm();
-  BackResult onDialogBackRequested(BackSource source) override;
-  void onDialogPresentationFinished(PresentationFinishReason reason) override;
+  BackResult requestBack(BackSource source);
+  void complete();
+
+  class DialogDestination final : public Destination {
+   public:
+    explicit DialogDestination(FullScreenDialog& owner) : owner_(owner) {}
+    Widget& getContents() override { return owner_; }
+    BackResult onBackRequested(BackSource source) override {
+      return owner_.requestBack(source);
+    }
+    void onStop() override;
+    void onRemoved() override { owner_.complete(); }
+
+   private:
+    FullScreenDialog& owner_;
+  };
 
   CloseButton close_;
   ConfirmButton confirm_;
@@ -126,6 +150,8 @@ class FullScreenDialog : public internal::DialogScaffoldBase {
   CompletionKind completion_kind_ = CompletionKind::kDismiss;
   DialogDismissReason dismiss_reason_ = DialogDismissReason::kProgrammatic;
   bool has_confirm_action_ = false;
+  bool destroying_ = false;
+  DialogDestination destination_;
 };
 
 }  // namespace roo_windows::material3
