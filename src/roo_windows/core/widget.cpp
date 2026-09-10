@@ -140,8 +140,9 @@ void Widget::getAbsoluteBounds(Rect& full, Rect& visible) const {
   } else {
     parent()->getAbsoluteBounds(full, visible);
     full = parent_bounds().translate(full.xMin(), full.yMin());
-    visible =
-        Rect::Intersect(visible.translate(full.xMin(), full.yMin()), full);
+    // The parent returns both rectangles in window coordinates already.
+    // Translate only the child's bounds, then intersect with parent clipping.
+    visible = Rect::Intersect(visible, full);
   }
 }
 

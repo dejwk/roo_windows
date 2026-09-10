@@ -638,6 +638,20 @@ TEST_F(Material3DialogTest, ActiveFullScreenDestructionCancelsHost) {
       app_.root().transient_presentation_slot().hasActivePresentation());
 }
 
+TEST_F(Material3DialogTest, AbsoluteBoundsPreserveAncestorClipping) {
+  TestPanel nested(app_.context());
+  TestContent anchor(app_.context());
+  nested.add(WidgetRef(anchor), Rect(-5, 10, 14, 29));
+  task_content_.add(WidgetRef(nested), Rect(20, 30, 69, 79));
+  ASSERT_TRUE(app_.refresh());
+  Rect full, visible;
+  anchor.getAbsoluteBounds(full, visible);
+  EXPECT_EQ(Rect(15, 40, 34, 59), full);
+  EXPECT_EQ(Rect(20, 40, 34, 59), visible);
+  nested.removeLast();
+  task_content_.removeLast();
+}
+
 TEST(Material3DialogSize, SharedScaffoldRemainsBounded) {
   EXPECT_LE(sizeof(TestScaffold), 1024u + 24u * sizeof(void*));
   EXPECT_LE(sizeof(internal::DialogActionStrip), 768u + 16u * sizeof(void*));
