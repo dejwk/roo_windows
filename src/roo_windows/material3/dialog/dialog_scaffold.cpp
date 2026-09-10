@@ -37,7 +37,7 @@ DialogShowResult MapStartResult(PresentationStartResult result) {
 class FixedBoundsPreparation final
     : public ::roo_windows::internal::TransientSurfacePreparation {
  public:
-  FixedBoundsPreparation(DialogScaffoldBase& scaffold, const Rect& bounds)
+  FixedBoundsPreparation(DialogScaffold& scaffold, const Rect& bounds)
       : scaffold_(scaffold), bounds_(bounds) {}
 
  private:
@@ -55,14 +55,14 @@ class FixedBoundsPreparation final
 
   void deleteAfterFailedAdmission() override {}
 
-  DialogScaffoldBase& scaffold_;
+  DialogScaffold& scaffold_;
   Rect bounds_;
 };
 
 class BasicDialogPreparation final
     : public ::roo_windows::internal::TransientSurfacePreparation {
  public:
-  BasicDialogPreparation(DialogScaffoldBase& scaffold, Task& owner)
+  BasicDialogPreparation(DialogScaffold& scaffold, Task& owner)
       : scaffold_(scaffold), owner_(owner) {}
 
  private:
@@ -88,14 +88,14 @@ class BasicDialogPreparation final
 
   void deleteAfterFailedAdmission() override {}
 
-  DialogScaffoldBase& scaffold_;
+  DialogScaffold& scaffold_;
   Task& owner_;
 };
 
 class FullScreenDialogPreparation final
     : public ::roo_windows::internal::TransientSurfacePreparation {
  public:
-  FullScreenDialogPreparation(DialogScaffoldBase& scaffold, Task& owner)
+  FullScreenDialogPreparation(DialogScaffold& scaffold, Task& owner)
       : scaffold_(scaffold), owner_(owner) {}
 
  private:
@@ -111,15 +111,14 @@ class FullScreenDialogPreparation final
 
   void deleteAfterFailedAdmission() override {}
 
-  DialogScaffoldBase& scaffold_;
+  DialogScaffold& scaffold_;
   Task& owner_;
 };
 
 }  // namespace
 
-DialogScaffoldBase::DialogScaffoldBase(ApplicationContext& context,
-                                       WidgetRef body,
-                                       DialogScaffoldVariant variant)
+DialogScaffold::DialogScaffold(ApplicationContext& context, WidgetRef body,
+                               DialogScaffoldVariant variant)
     : Container(context),
       variant_(variant),
       title_(context, "",
@@ -128,8 +127,7 @@ DialogScaffoldBase::DialogScaffoldBase(ApplicationContext& context,
                  : text_style_headline_small()),
       top_divider_(context),
       body_scroller_(context, *this),
-      bottom_divider_(context),
-      registration_(*this) {
+      bottom_divider_(context) {
   title_.setWrapMode(TextWrapMode::kWordWrap);
   title_.setMaxLines(2);
   title_.setEllipsize(true);
@@ -143,7 +141,7 @@ DialogScaffoldBase::DialogScaffoldBase(ApplicationContext& context,
   setDialogBody(std::move(body));
 }
 
-DialogScaffoldBase::~DialogScaffoldBase() {
+DialogScaffold::~DialogScaffold() {
   prepareForDerivedDestruction();
   detachChild(&bottom_divider_);
   detachChild(&body_scroller_);
@@ -151,37 +149,36 @@ DialogScaffoldBase::~DialogScaffoldBase() {
   detachChild(&title_);
 }
 
-ColorToken DialogScaffoldBase::containerRole() const {
+ColorToken DialogScaffold::containerRole() const {
   return ColorToken::kSurfaceContainerHigh;
 }
 
-Color DialogScaffoldBase::background() const {
+Color DialogScaffold::background() const {
   return theme().material3Theme().color.surfaceContainerHigh;
 }
 
-BorderStyle DialogScaffoldBase::getBorderStyle() const {
+BorderStyle DialogScaffold::getBorderStyle() const {
   return BorderStyle(variant_ == DialogScaffoldVariant::kBasic ? Scaled(28) : 0,
                      0);
 }
 
-void DialogScaffoldBase::paint(PaintContext& ctx) const {
+void DialogScaffold::paint(PaintContext& ctx) const {
   if (icon_ != nullptr && icon_height_ > 0) {
     roo_display::Pictogram icon(*icon_);
     icon.color_mode().setColor(roo_display::AlphaBlend(
         ctx.bgcolor(), theme().material3Theme().color.secondary));
-    const Rect icon_bounds(
-        content_inset_, content_inset_, width() - content_inset_ - 1,
-        content_inset_ + icon_height_ - 1);
+    const Rect icon_bounds(content_inset_, content_inset_,
+                           width() - content_inset_ - 1,
+                           content_inset_ + icon_height_ - 1);
     ctx.drawTiled(icon, icon_bounds,
-                  roo_display::kCenter | roo_display::kMiddle,
-                  isInvalidated());
+                  roo_display::kCenter | roo_display::kMiddle, isInvalidated());
     ctx.addExclusion(icon_bounds);
   }
   Container::paint(ctx);
 }
 
-void DialogScaffoldBase::attachDerivedChrome(DialogChromeSlot slot,
-                                             Widget& chrome) {
+void DialogScaffold::attachDerivedChrome(DialogChromeSlot slot,
+                                         Widget& chrome) {
   const uint8_t idx = static_cast<uint8_t>(slot);
   CHECK(chrome_[idx] == nullptr);
   chrome_[idx] = &chrome;
@@ -189,7 +186,7 @@ void DialogScaffoldBase::attachDerivedChrome(DialogChromeSlot slot,
   requestLayout();
 }
 
-void DialogScaffoldBase::detachDerivedChrome(DialogChromeSlot slot) {
+void DialogScaffold::detachDerivedChrome(DialogChromeSlot slot) {
   const uint8_t idx = static_cast<uint8_t>(slot);
   if (chrome_[idx] == nullptr) return;
   detachChild(chrome_[idx]);
@@ -197,7 +194,7 @@ void DialogScaffoldBase::detachDerivedChrome(DialogChromeSlot slot) {
   requestLayout();
 }
 
-void DialogScaffoldBase::setDialogBody(WidgetRef body) {
+void DialogScaffold::setDialogBody(WidgetRef body) {
   if (body_ == body.get() &&
       (body_ == nullptr || body_->isOwnedByParent() == body.is_owned())) {
     return;
@@ -208,20 +205,20 @@ void DialogScaffoldBase::setDialogBody(WidgetRef body) {
   requestLayout();
 }
 
-void DialogScaffoldBase::setDialogTitle(std::string title) {
+void DialogScaffold::setDialogTitle(std::string title) {
   const bool empty = title.empty();
   title_.setText(std::move(title));
   title_.setVisibility(empty ? Visibility::kGone : Visibility::kVisible);
 }
 
-void DialogScaffoldBase::setDialogIcon(const MonoIcon* icon) {
+void DialogScaffold::setDialogIcon(const MonoIcon* icon) {
   if (icon_ == icon) return;
   icon_ = icon;
   invalidateInterior();
   requestLayout();
 }
 
-void DialogScaffoldBase::setDialogLayoutDirection(LayoutDirection direction) {
+void DialogScaffold::setDialogLayoutDirection(LayoutDirection direction) {
   if (direction_ == direction) return;
   direction_ = direction;
   requestLayout();
@@ -278,11 +275,22 @@ void DialogScaffoldBase::finishDialog(PresentationFinishReason reason) {
   registration_.finish(reason);
 }
 
+DialogScaffoldBase::DialogScaffoldBase(ApplicationContext& context,
+                                       WidgetRef body,
+                                       DialogScaffoldVariant variant)
+    : DialogScaffold(context, std::move(body), variant), registration_(*this) {}
+
+DialogScaffoldBase::~DialogScaffoldBase() { prepareForDerivedDestruction(); }
+
 void DialogScaffoldBase::prepareForDerivedDestruction() {
   if (registration_.isActive()) {
     registration_.disablePresentationInput();
     registration_.cancelPresentation();
   }
+  DialogScaffold::prepareForDerivedDestruction();
+}
+
+void DialogScaffold::prepareForDerivedDestruction() {
   clearDialogBody();
   detachDerivedChrome(DialogChromeSlot::kSecondary);
   detachDerivedChrome(DialogChromeSlot::kPrimary);
@@ -293,15 +301,15 @@ BackResult DialogScaffoldBase::onDialogBackRequested(BackSource) {
   return BackResult::kHandled;
 }
 
-int DialogScaffoldBase::getChildrenCount() const {
+int DialogScaffold::getChildrenCount() const {
   return 4 + (chrome_[0] != nullptr ? 1 : 0) + (chrome_[1] != nullptr ? 1 : 0);
 }
 
-const Widget& DialogScaffoldBase::getChild(int idx) const {
-  return const_cast<DialogScaffoldBase*>(this)->getChild(idx);
+const Widget& DialogScaffold::getChild(int idx) const {
+  return const_cast<DialogScaffold*>(this)->getChild(idx);
 }
 
-Widget& DialogScaffoldBase::getChild(int idx) {
+Widget& DialogScaffold::getChild(int idx) {
   switch (idx) {
     case 0:
       return title_;
@@ -326,7 +334,7 @@ Widget& DialogScaffoldBase::getChild(int idx) {
   }
 }
 
-Dimensions DialogScaffoldBase::onMeasure(WidthSpec width, HeightSpec height) {
+Dimensions DialogScaffold::onMeasure(WidthSpec width, HeightSpec height) {
   if (variant_ == DialogScaffoldVariant::kFullScreen) {
     content_inset_ = 0;
     title_height_ = 0;
@@ -408,7 +416,7 @@ Dimensions DialogScaffoldBase::onMeasure(WidthSpec width, HeightSpec height) {
       height.resolveSize(body.height() + fixed_height + vertical_padding));
 }
 
-void DialogScaffoldBase::onLayout(bool, const Rect& rect) {
+void DialogScaffold::onLayout(bool, const Rect& rect) {
   if (variant_ == DialogScaffoldVariant::kFullScreen) {
     const YDim header_height =
         std::min<YDim>(kFullScreenHeaderHeight, rect.height());
@@ -477,14 +485,14 @@ void DialogScaffoldBase::onLayout(bool, const Rect& rect) {
   updateDividers();
 }
 
-void DialogScaffoldBase::clearDialogBody() {
+void DialogScaffold::clearDialogBody() {
   if (body_ == nullptr) return;
-  focus_scope_.clearRememberedFocus();
+  clearDialogRememberedFocus();
   body_scroller_.clearContents();
   body_ = nullptr;
 }
 
-void DialogScaffoldBase::updateDividers() {
+void DialogScaffold::updateDividers() {
   const Widget* contents = body_scroller_.contents();
   const bool clipped =
       contents != nullptr && contents->height() > body_scroller_.height();

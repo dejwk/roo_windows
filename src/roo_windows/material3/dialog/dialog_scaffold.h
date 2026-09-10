@@ -16,7 +16,7 @@
 
 namespace roo_windows::material3::internal {
 
-/// Selects the shape and host barrier used by a dialog scaffold.
+/// Selects the shape and chrome layout used by a dialog scaffold.
 enum class DialogScaffoldVariant : uint8_t { kBasic, kFullScreen };
 
 /// Identifies one derived-owned chrome child attached to the scaffold.
@@ -31,14 +31,14 @@ class DialogActionDelegate {
   virtual void invokeDialogAction(uint8_t id, DialogActionRole role) = 0;
 };
 
-/// Shared pinned-chrome and transient-presentation substrate for dialogs.
+/// Shared pinned-chrome layout for transient and navigation-backed dialogs.
 ///
 /// The body remains attached when a presentation is dismissed, preserving
 /// caller state across reopen. Derived destructors must call
 /// `prepareForDerivedDestruction()` before inline body or chrome storage dies.
-class DialogScaffoldBase : public Container {
+class DialogScaffold : public Container {
  public:
-  ~DialogScaffoldBase() override;
+  ~DialogScaffold() override;
 
   /// Publishes the Material 3 surface-container-high semantic role.
   ColorToken containerRole() const override;
@@ -59,8 +59,8 @@ class DialogScaffoldBase : public Container {
   Widget* preferredFocusChild() override { return nullptr; }
 
  protected:
-  DialogScaffoldBase(ApplicationContext& context, WidgetRef body,
-                     DialogScaffoldVariant variant);
+  DialogScaffold(ApplicationContext& context, WidgetRef body,
+                 DialogScaffoldVariant variant);
 
   /// Attaches a lifetime-coupled, derived-owned chrome widget.
   void attachDerivedChrome(DialogChromeSlot slot, Widget& chrome);
@@ -93,46 +93,16 @@ class DialogScaffoldBase : public Container {
   /// Returns the explicit logical layout direction.
   LayoutDirection dialogLayoutDirection() const { return direction_; }
 
-  /// Attempts to host this detached root at the supplied window bounds.
-  DialogShowResult showDialogSurface(Task& interaction_owner,
-                                     const Rect& bounds_in_window,
-                                     TransientBarrierPaint barrier);
+  /// Detaches persistent body and derived chrome before their storage dies.
+  virtual void prepareForDerivedDestruction();
 
-  /// Measures and centers a basic dialog inside the interaction owner's
-  /// window during guarded host preparation.
-  DialogShowResult showBasicDialogSurface(Task& interaction_owner);
-
-  /// Measures a full-screen dialog to the complete interaction-owner window
-  /// during guarded host preparation.
-  DialogShowResult showFullScreenDialogSurface(Task& interaction_owner);
-
-  /// Returns whether this scaffold currently occupies the shared host.
-  bool isDialogShowing() const { return registration_.isActive(); }
-
-  /// Finishes an active scaffold with a shared presentation reason.
-  void finishDialog(PresentationFinishReason reason);
-
-  /// Disables input, cancels registration, and detaches body and chrome.
-  ///
-  /// Call this at the beginning of every derived destructor whose inline
-  /// members are attached to the scaffold. It is safe to call repeatedly.
-  void prepareForDerivedDestruction();
-
-  /// Forgets an inactive descendant address before chrome replacement.
-  void clearDialogRememberedFocus() { focus_scope_.clearRememberedFocus(); }
-
-  /// Handles an eligible Back or Escape request while still attached.
-  virtual BackResult onDialogBackRequested(BackSource source);
-
-  /// Receives completion after the host has detached the root and gone idle.
-  virtual void onDialogPresentationFinished(PresentationFinishReason reason) {
-    (void)reason;
-  }
+  /// Hook for presenters that retain focus across structural detachment.
+  virtual void clearDialogRememberedFocus() {}
 
  private:
   class DialogBodyScroller final : public SimpleScrollablePanel {
    public:
-    DialogBodyScroller(ApplicationContext& context, DialogScaffoldBase& owner)
+    DialogBodyScroller(ApplicationContext& context, DialogScaffold& owner)
         : SimpleScrollablePanel(context), owner_(owner) {}
 
     /// Leaves viewport gaps to the scaffold-owned dialog surface.
@@ -154,23 +124,7 @@ class DialogScaffoldBase : public Container {
     Rect getDirectPaintExclusionBounds() const override { return Rect(); }
 
    private:
-    DialogScaffoldBase& owner_;
-  };
-
-  class Registration final : public TransientPresentationRegistration {
-   public:
-    explicit Registration(DialogScaffoldBase& owner) : owner_(owner) {}
-
-    void cancelPresentation() { cancel(); }
-    void disablePresentationInput() { disableHostedInput(); }
-
-   protected:
-    void detachPresentation(PresentationFinishReason reason) override;
-    void onFinished(PresentationFinishReason reason) override;
-    BackResult onBackRequested(BackSource source) override;
-
-   private:
-    DialogScaffoldBase& owner_;
+    DialogScaffold& owner_;
   };
 
   int getChildrenCount() const override;
@@ -196,9 +150,74 @@ class DialogScaffoldBase : public Container {
   YDim title_height_ = 0;
   XDim chrome_width_[2] = {0, 0};
   YDim chrome_height_[2] = {0, 0};
-  FocusScope focus_scope_;
+};
 
-  // Must remain last so it vacates the host before scaffold members die.
+/// Dialog layout with single-slot transient presentation.
+class DialogScaffoldBase : public DialogScaffold {
+ public:
+  ~DialogScaffoldBase() override;
+
+ protected:
+  DialogScaffoldBase(ApplicationContext& context, WidgetRef body,
+                     DialogScaffoldVariant variant);
+
+  /// Attempts to host this detached root at the supplied window bounds.
+  DialogShowResult showDialogSurface(Task& interaction_owner,
+                                     const Rect& bounds_in_window,
+                                     TransientBarrierPaint barrier);
+
+  /// Measures and centers a basic dialog inside the interaction owner's
+  /// window during guarded host preparation.
+  DialogShowResult showBasicDialogSurface(Task& interaction_owner);
+
+  /// Measures a full-screen dialog to the complete interaction-owner window
+  /// during guarded host preparation.
+  DialogShowResult showFullScreenDialogSurface(Task& interaction_owner);
+
+  /// Returns whether this scaffold currently occupies the shared host.
+  bool isDialogShowing() const { return registration_.isActive(); }
+
+  /// Finishes an active scaffold with a shared presentation reason.
+  void finishDialog(PresentationFinishReason reason);
+
+  /// Disables input, cancels registration, and detaches body and chrome.
+  ///
+  /// Call this at the beginning of every derived destructor whose inline
+  /// members are attached to the scaffold. It is safe to call repeatedly.
+  void prepareForDerivedDestruction() override;
+
+  /// Forgets an inactive descendant address before chrome replacement.
+  void clearDialogRememberedFocus() override {
+    focus_scope_.clearRememberedFocus();
+  }
+
+  /// Handles an eligible Back or Escape request while still attached.
+  virtual BackResult onDialogBackRequested(BackSource source);
+
+  /// Receives completion after the host has detached the root and gone idle.
+  virtual void onDialogPresentationFinished(PresentationFinishReason reason) {
+    (void)reason;
+  }
+
+ private:
+  class Registration final : public TransientPresentationRegistration {
+   public:
+    explicit Registration(DialogScaffoldBase& owner) : owner_(owner) {}
+
+    void cancelPresentation() { cancel(); }
+    void disablePresentationInput() { disableHostedInput(); }
+
+   protected:
+    void detachPresentation(PresentationFinishReason reason) override;
+    void onFinished(PresentationFinishReason reason) override;
+    BackResult onBackRequested(BackSource source) override;
+
+   private:
+    DialogScaffoldBase& owner_;
+  };
+
+  FocusScope focus_scope_;
+  // Cancel hosting before layout storage is destroyed.
   Registration registration_;
 };
 
