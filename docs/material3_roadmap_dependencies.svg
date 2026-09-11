@@ -73,7 +73,7 @@
 <g id="node20" class="node">
 <title>p2_2</title>
 <g id="a_node20"><a xlink:href="material3_roadmap.md#p2-2" xlink:title="Design progress indicators" target="_top">
-<path fill="#ffffff" stroke="#cbd5e1" stroke-width="2.2" d="M152,-106C152,-106 122,-106 122,-106 116,-106 110,-100 110,-94 110,-94 110,-82 110,-82 110,-76 116,-70 122,-70 122,-70 152,-70 152,-70 158,-70 164,-76 164,-82 164,-82 164,-94 164,-94 164,-100 158,-106 152,-106"/>
+<path fill="#ffffff" stroke="#16a34a" stroke-width="2.2" d="M152,-106C152,-106 122,-106 122,-106 116,-106 110,-100 110,-94 110,-94 110,-82 110,-82 110,-76 116,-70 122,-70 122,-70 152,-70 152,-70 158,-70 164,-76 164,-82 164,-82 164,-94 164,-94 164,-100 158,-106 152,-106"/>
 <text text-anchor="middle" x="137" y="-85.5" font-family="DejaVu Sans" font-size="10.00" fill="#334155">P2.2</text>
 </a>
 </g>
@@ -445,7 +445,7 @@
 <g id="node21" class="node">
 <title>p2_3</title>
 <g id="a_node21"><a xlink:href="material3_roadmap.md#p2-3" xlink:title="Implement progress indicators" target="_top">
-<path fill="#ffffff" stroke="#eab308" stroke-width="2.2" d="M716,-106C716,-106 686,-106 686,-106 680,-106 674,-100 674,-94 674,-94 674,-82 674,-82 674,-76 680,-70 686,-70 686,-70 716,-70 716,-70 722,-70 728,-76 728,-82 728,-82 728,-94 728,-94 728,-100 722,-106 716,-106"/>
+<path fill="#ffffff" stroke="#cbd5e1" stroke-width="2.2" d="M716,-106C716,-106 686,-106 686,-106 680,-106 674,-100 674,-94 674,-94 674,-82 674,-82 674,-76 680,-70 686,-70 686,-70 716,-70 716,-70 722,-70 728,-76 728,-82 728,-82 728,-94 728,-94 728,-100 722,-106 716,-106"/>
 <text text-anchor="middle" x="701" y="-85.5" font-family="DejaVu Sans" font-size="10.00" fill="#334155">P2.3</text>
 </a>
 </g>
