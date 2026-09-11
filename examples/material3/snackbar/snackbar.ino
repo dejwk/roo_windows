@@ -1,5 +1,4 @@
-// Material 3 alert and generic basic-dialog examples. The dialog objects and
-// their borrowed action labels live for the application lifetime.
+// Material 3 snackbar queue, replacement, and obstacle-placement catalog.
 
 #ifdef ROO_TESTING
 #include "roo_testing/devices/display/ili9341/ili9341spi.h"
@@ -20,7 +19,7 @@ struct Emulator {
 
   Emulator()
       : viewport(),
-        flex_viewport(viewport, 1, FlexViewport::kRotationRight),
+        flex_viewport(viewport, 1, FlexViewport::kRotationNone),
         display(flex_viewport),
         touch(flex_viewport, FakeXpt2046Spi::Calibration(269, 249, 3829, 3684,
                                                          true, false, false)) {
@@ -90,25 +89,32 @@ void setup() {
                        material3::SnackbarDuration::kDefault, true);
   queued.configure("Waiting message");
   replacement.configure("Updated feedback");
-  short_button.setOnInteractiveChange(
-      [] { host.snackbars().show(short_message); });
+  short_button.setOnInteractiveChange([] {
+    host.setSnackbarAvoidance(nullptr, 0);
+    host.snackbars().show(short_message);
+  });
   queue_button.setOnInteractiveChange([] {
+    host.setSnackbarAvoidance(nullptr, 0);
     host.snackbars().show(persistent);
     host.snackbars().show(queued);
   });
-  replace_button.setOnInteractiveChange(
-      [] { host.snackbars().replaceCurrent(replacement); });
+  replace_button.setOnInteractiveChange([] {
+    host.setSnackbarAvoidance(nullptr, 0);
+    host.snackbars().replaceCurrent(replacement);
+  });
   avoid_button.setOnInteractiveChange([] {
-    Rect obstacle(0, 160, 319, 239);
+    const Rect band = host.bodyBounds();
+    const Rect obstacle(band.xMin(), band.yMax() - Scaled(64) + 1, band.xMax(),
+                        band.yMax());
     host.setSnackbarAvoidance(&obstacle, 1);
     host.snackbars().show(short_message);
   });
   controls.setGap(Scaled(8));
   controls.setPadding(Padding(Scaled(8)));
+  controls.add(avoid_button);
   controls.add(short_button);
   controls.add(queue_button);
   controls.add(replace_button);
-  controls.add(avoid_button);
   host.setBody(controls);
   app.addTaskFullScreen(host);
   initDisplay();

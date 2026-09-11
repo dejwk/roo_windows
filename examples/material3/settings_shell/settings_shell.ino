@@ -1,5 +1,4 @@
-// Material 3 alert and generic basic-dialog examples. The dialog objects and
-// their borrowed action labels live for the application lifetime.
+// Material 3 compact settings shell with dialogs, menus, and feedback.
 
 #ifdef ROO_TESTING
 #include "roo_testing/devices/display/ili9341/ili9341spi.h"
@@ -20,7 +19,7 @@ struct Emulator {
 
   Emulator()
       : viewport(),
-        flex_viewport(viewport, 1, FlexViewport::kRotationRight),
+        flex_viewport(viewport, 1, FlexViewport::kRotationNone),
         display(flex_viewport),
         touch(flex_viewport, FakeXpt2046Spi::Calibration(269, 249, 3829, 3684,
                                                          true, false, false)) {

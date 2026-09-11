@@ -399,6 +399,26 @@ TEST_F(SnackbarTest, MotionAndDismissalRestoreDecorations) {
             std::vector<roo::byte>(raster_, raster_ + sizeof(raster_)));
 }
 
+// Verifies clearing copied avoidance geometry restores default placement for
+// both the live snackbar and subsequent requests.
+TEST_F(SnackbarTest, ClearingAvoidanceRestoresPlacement) {
+  Request a, b;
+  presenter().show(a);
+  app_->refresh();
+  const Rect normal = host_.snackbarWidget().parent_bounds();
+  const Rect obstacle(0, normal.yMin(), host_.width() - 1, host_.height() - 1);
+  ASSERT_TRUE(host_.setSnackbarAvoidance(&obstacle, 1));
+  app_->refresh();
+  EXPECT_LT(host_.snackbarWidget().parent_bounds().yMax(), obstacle.yMin());
+  ASSERT_TRUE(host_.setSnackbarAvoidance(nullptr, 0));
+  app_->refresh();
+  EXPECT_EQ(normal, host_.snackbarWidget().parent_bounds());
+  presenter().dismissCurrent();
+  presenter().show(b);
+  app_->refresh();
+  EXPECT_EQ(normal, host_.snackbarWidget().parent_bounds());
+}
+
 // Verifies a motion frame only writes the snackbar band, then idle writes
 // nothing.
 TEST_F(SnackbarTest, AnimationDoesNotRepaintWholeDisplay) {
