@@ -23,6 +23,48 @@ Write so a human reader can understand the problem, vocabulary, decisions, and
 rationale without reconstructing them from the proposed API or implementation
 plan. Implementation precision does not replace explanatory clarity.
 
+## Explanatory Clarity and Simplicity
+
+Explain the problem before presenting its solution. Start with a concrete
+situation, the current behavior or missing capability, and why it matters.
+Apply this locally too: before introducing a cache, identity, callback, or
+synchronization step, explain the failure or cost that makes it necessary.
+A well-explained problem often makes the proposed mechanism understandable
+without repeating an explicit requirements mapping for every sentence.
+
+Teach in a linear order: current context and problem, new concepts, a small
+worked example, then detailed mechanics and edge cases. Define terms and all
+complexity variables before using them. Prefer descriptive operation names to
+unexplained shorthand such as “flush.” Explain what an operation does and does
+not signify when the name has several established meanings.
+
+State the reason for each consequential decision, not just its definition.
+Show a representative consumer using it. For complexity claims, identify the
+input dimensions, when the work runs, realistic counts, and the worst case.
+Distinguish expected from guaranteed bounds and retained capacity from live
+size. A product of two quantities is not automatically quadratic in tree size;
+explain when those quantities grow together.
+
+Favor the simplest design that meets demonstrated requirements. Readable
+implementation and compiled code size are design costs alongside RAM and CPU.
+Prefer established repository patterns and containers unless a concrete need
+justifies custom infrastructure. Evaluate whether identities, handles, policies,
+callbacks, and generic extension points are needed by current consumers. Remove
+unneeded machinery instead of merely documenting it more thoroughly.
+
+Compare alternatives fairly: describe what each does well, its costs, and why
+the chosen tradeoff fits this repository. Quantify eager versus lazy ownership,
+shared versus per-instance state, and idle versus active costs when those drive
+the decision. Do not equate “no heap allocation” with “no RAM cost,” or dismiss
+a hash table simply because iteration is also needed. Include relevant private
+state in API sketches so the resource argument is inspectable.
+
+Use examples to illuminate different concepts, not to restate every rule.
+Keep each contract in one authoritative place and link to it elsewhere. Before
+finishing, read as a reviewer unfamiliar with the proposal: can they explain
+the problem, why each major mechanism exists, and why a simpler alternative was
+not sufficient without reconstructing the argument from implementation details?
+
 ## Required Structure
 
 Use this section order unless a narrower document genuinely needs less:
@@ -41,7 +83,8 @@ Use this section order unless a narrower document genuinely needs less:
 
 ## Writing Rules
 
-- Be succinct.
+- Be succinct without compressing away the problem, rationale, or examples needed
+  for a reader to understand the proposal.
 - Keep Objective succinct and limited to the intended outcome. Do not put term
   definitions there; it is acceptable for full understanding of the Objective
   to require the Background that follows.
@@ -152,6 +195,15 @@ Rules:
   with a decision or a planned experiment.
 
 ## Checklist
+
+- The problem is clear before the solution, both for the overall proposal and
+  for nontrivial mechanisms introduced within it.
+- Concepts and complexity variables are defined before use; examples make the
+  important decisions concrete without repeating the contract.
+- Simpler alternatives and existing repo patterns have been evaluated fairly;
+  custom infrastructure and extensibility serve demonstrated requirements.
+- Resource reasoning covers readable implementation, compiled size, and relevant
+  private state, as well as RAM/CPU and realistic versus worst-case workloads.
 
 - Section order matches the required structure.
 - References are generally hyperlinks when a stable link target exists.
