@@ -84,10 +84,10 @@ digraph material3_roadmap_dependencies {
           tooltip="Implement Material 3 menus"];
     p1_8 [label="P1.8", URL="material3_roadmap.md#p1-8",
           tooltip="Implement basic Material 3 dialogs"];
-    p1_9 [label="P1.9", fillcolor="#FFFFFF", color="#CBD5E1",
+    p1_9 [label="P1.9", fillcolor="#FFFFFF", color="#16A34A",
           fontcolor="#334155", URL="material3_roadmap.md#p1-9",
           tooltip="Reconcile snackbar queue ownership design"];
-    p1_10 [label="P1.10", URL="material3_roadmap.md#p1-10",
+    p1_10 [label="P1.10", color="#2563EB", URL="material3_roadmap.md#p1-10",
            tooltip="Implement snackbar widget, presenter, and queue"];
     p1_11 [label="P1.11", URL="material3_roadmap.md#p1-11",
            tooltip="Integrate the compact settings shell"];
