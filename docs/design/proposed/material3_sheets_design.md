@@ -75,7 +75,7 @@ The nearest current primitives are:
 - [material3_navigation_drawer_design.md](material3_navigation_drawer_design.md),
   which already established the local pattern of splitting an embedded sheet
   surface from a scrim-backed modal wrapper,
-- and [material3_snackbar_design.md](material3_snackbar_design.md), which
+- and [material3_snackbar_design.md](../implemented/material3_snackbar_design.md), which
   documents the current popup-layer hit-testing behavior and its consequences
   for transient surfaces.
 
@@ -132,7 +132,7 @@ The most relevant local references are:
 
 - [material3_menus_design.md](../implemented/material3_menus_design.md)
 - [material3_navigation_drawer_design.md](material3_navigation_drawer_design.md)
-- [material3_snackbar_design.md](material3_snackbar_design.md)
+- [material3_snackbar_design.md](../implemented/material3_snackbar_design.md)
 - [embedded-design-doc-authoring.instructions.md](../../../.github/instructions/embedded-design-doc-authoring.instructions.md)
 - [roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
 

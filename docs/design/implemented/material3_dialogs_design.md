@@ -17,7 +17,7 @@ The gap is visible in three places:
    provides one centered scaffold with a legacy shape, a dynamic footer-button
    vector, and no distinction between basic and full-screen variants.
 2. [material3_sheets_design.md](../proposed/material3_sheets_design.md) and
-   [material3_snackbar_design.md](../proposed/material3_snackbar_design.md) already cover
+   [material3_snackbar_design.md](material3_snackbar_design.md) already cover
    the neighboring interruption surfaces, so dialogs are now the most obvious
    missing part of the Material 3 interruption story.
 3. [material3_roadmap.md](../../material3_roadmap.md) explicitly calls out
@@ -128,7 +128,7 @@ that positioning freedom is not required for the first embedded dialog landing.
 The most relevant local references are:
 
 - [material3_sheets_design.md](../proposed/material3_sheets_design.md)
-- [material3_snackbar_design.md](../proposed/material3_snackbar_design.md)
+- [material3_snackbar_design.md](material3_snackbar_design.md)
 - [non_touch_input_design.md](../implemented/non_touch_input_design.md)
 - [material3_icon_buttons_design.md](../implemented/material3_icon_buttons_design.md)
 - [embedded-design-doc-authoring.instructions.md](../../../.github/instructions/embedded-design-doc-authoring.instructions.md)

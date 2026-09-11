@@ -78,18 +78,18 @@ digraph material3_roadmap_dependencies {
     p1_6a [label="P1.6a", fillcolor="#FFFFFF", color="#16A34A",
            fontcolor="#334155", URL="material3_roadmap.md#p1-6a",
            tooltip="Review shared transient hosting"];
-    p1_6b [label="P1.6b", URL="material3_roadmap.md#p1-6b",
+    p1_6b [color="#16A34A", label="P1.6b", URL="material3_roadmap.md#p1-6b",
            tooltip="Implement menu hosting prerequisites"];
-    p1_7 [label="P1.7", URL="material3_roadmap.md#p1-7",
+    p1_7 [color="#16A34A", label="P1.7", URL="material3_roadmap.md#p1-7",
           tooltip="Implement Material 3 menus"];
-    p1_8 [label="P1.8", URL="material3_roadmap.md#p1-8",
+    p1_8 [color="#16A34A", label="P1.8", URL="material3_roadmap.md#p1-8",
           tooltip="Implement basic Material 3 dialogs"];
     p1_9 [label="P1.9", fillcolor="#FFFFFF", color="#16A34A",
           fontcolor="#334155", URL="material3_roadmap.md#p1-9",
           tooltip="Reconcile snackbar queue ownership design"];
-    p1_10 [label="P1.10", color="#2563EB", URL="material3_roadmap.md#p1-10",
+    p1_10 [label="P1.10", color="#16A34A", URL="material3_roadmap.md#p1-10",
            tooltip="Implement snackbar widget, presenter, and queue"];
-    p1_11 [label="P1.11", URL="material3_roadmap.md#p1-11",
+    p1_11 [color="#2563EB", label="P1.11", URL="material3_roadmap.md#p1-11",
            tooltip="Integrate the compact settings shell"];
   }
 
@@ -104,11 +104,11 @@ digraph material3_roadmap_dependencies {
     p2_2 [label="P2.2", fillcolor="#FFFFFF", color="#CBD5E1",
           fontcolor="#334155", URL="material3_roadmap.md#p2-2",
           tooltip="Design progress indicators"];
-    p2_3 [label="P2.3", URL="material3_roadmap.md#p2-3",
+    p2_3 [color="#EAB308", label="P2.3", URL="material3_roadmap.md#p2-3",
           tooltip="Implement progress indicators"];
-    p2_4 [label="P2.4", URL="material3_roadmap.md#p2-4",
+    p2_4 [color="#EAB308", label="P2.4", URL="material3_roadmap.md#p2-4",
           tooltip="Implement the Material 3 Wi-Fi configuration flow"];
-    p2_5 [label="P2.5", URL="material3_roadmap.md#p2-5",
+    p2_5 [color="#EAB308", label="P2.5", URL="material3_roadmap.md#p2-5",
           tooltip="Verify the configuration flow on target"];
   }
 
@@ -120,16 +120,16 @@ digraph material3_roadmap_dependencies {
     p3_1 [label="P3.1", fillcolor="#FFFFFF", color="#CBD5E1",
           fontcolor="#334155", URL="material3_roadmap.md#p3-1",
           tooltip="Specify the existing card, checkbox, radio-button, and switch families"];
-    p3_2 [label="P3.2", URL="material3_roadmap.md#p3-2",
+    p3_2 [color="#EAB308", label="P3.2", URL="material3_roadmap.md#p3-2",
           tooltip="Reconcile existing control implementations with P3.1"];
     p3_3 [label="P3.3", fillcolor="#FFFFFF", color="#CBD5E1",
           fontcolor="#334155", URL="material3_roadmap.md#p3-3",
           tooltip="Design adaptive navigation orchestration"];
-    p3_4 [label="P3.4", URL="material3_roadmap.md#p3-4",
+    p3_4 [color="#EAB308", label="P3.4", URL="material3_roadmap.md#p3-4",
           tooltip="Implement adaptive navigation"];
-    p3_5 [label="P3.5", URL="material3_roadmap.md#p3-5",
+    p3_5 [color="#EAB308", label="P3.5", URL="material3_roadmap.md#p3-5",
           tooltip="Design multiline editing and composition"];
-    p3_6 [label="P3.6", URL="material3_roadmap.md#p3-6",
+    p3_6 [color="#EAB308", label="P3.6", URL="material3_roadmap.md#p3-6",
           tooltip="Implement multiline Material 3 text fields"];
     p3_7 [label="P3.7", fillcolor="#FFFFFF", color="#CBD5E1",
           fontcolor="#334155", URL="material3_roadmap.md#p3-7",

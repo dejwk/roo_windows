@@ -2,9 +2,10 @@
 
 ## Status and review
 
-P1.9 ownership reconciliation, reviewed against the current task-owned
+**Implemented (P1.9–P1.10).** Ownership reconciliation was reviewed against the current task-owned
 navigation, focus, scaffold, and transient-lifetime contracts on 2026-09-11.
-Implementation is P1.10; the compact settings integration is P1.11.
+The widget, registered presenter, timing, placement, tests and catalog are implemented.
+The compact settings integration is P1.11.
 
 This document replaces the earlier popup-slot proposal. The implementation uses
 an opt-in `SnackbarHost : LayoutScaffold`. Its one additional child occupies
@@ -45,7 +46,8 @@ FIFO pending entries, and accepts at full capacity because it reuses the slot.
 
 Completion unlinks the node and clears visual text borrows before callback.
 Callbacks may delete their own request, cancel other requests, enqueue feedback,
-or destroy the host. A presenter lifetime guard validates continued ownership
+or remove the destination and destroy the now-detached host. The normal borrowed
+widget lifetime contract still forbids destroying attached task content. A presenter lifetime guard validates continued ownership
 after a callback. Clear and host shutdown block admission while draining so a
 completion cannot replenish an infinite queue. Shutdown cancels the scheduler,
 clears all registration links and visibility, then reports `kHostUnavailable`.
@@ -76,7 +78,8 @@ Tokens use the current Material 3 theme:
 
 Width is constrained first. A long action moves to a second row when horizontal
 controls would leave less than 80dp for text. RTL mirrors message/control order
-and start alignment. Parent clipping handles pathological tiny viewports.
+and start alignment. If both controls cannot share a row, Close gets its own
+row rather than losing its label. Parent clipping handles pathological tiny viewports.
 
 The base surface pipeline paints children before the inverse background,
 retaining normal rounded-corner and shadow exclusions. No pre-clear/overdraw

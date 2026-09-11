@@ -70,12 +70,12 @@ for arbitrary overlap that these component semantics do not require.
 
 ## Background
 
-**Status: Phases 1 and dialog/menu lifetime/hosting adoption implemented.** The framework
+**Status: Phases 1 and dialog/menu lifetime/hosting and Phase 6 snackbar adoption implemented.** The framework
 provides the shared registration, single-slot, finish-order, and Back-
 participant contract, and legacy dialogs now use the composite transient host
 with explicit task ownership and guarded preparation. Material 3 menus use the
-same registered lifetime and composite host; modal-sheet wrappers and snackbar
-adoption remain outstanding. The status of
+same registered lifetime and composite host. Snackbar requests own their text and
+self-cancel through their scaffold presenter; modal-sheet wrappers remain outstanding. The status of
 prerequisites is recorded in the
 [status index](../README.md).
 
@@ -754,13 +754,14 @@ rather than putting a type-erased result or callback in the framework base.
 
 #### Snackbars
 
-- The stable `SnackbarPresenter` owns its visible slot and scheduler state.
+- `SnackbarHost` owns its presenter and visual; `SnackbarPresenter` manages
+  registered request nodes and scheduler state.
 - Snackbar state is independent of the interactive-transient slot because a
   snackbar does not consume Back by default.
 - Queued payloads are fully owned, including text and action labels, or use
   intrusive request nodes that cancel themselves on destruction.
-- The proposed copied request containing non-owning strings and a separate
-  `SnackbarListener*` is replaced; it does not meet this contract.
+- `SnackbarRequest` owns bounded message/action strings and its virtual terminal
+  callback; request destruction cancels registration before releasing either.
 - Timeout, action, replacement, explicit dismissal, queue clearing, and host
   teardown converge on the same finish ordering.
 
@@ -869,6 +870,8 @@ Validation: `bazel test //:material3_menu_test
 //:transient_presentation_lifetime_test`.
 
 ### Phase 6: Snackbar Queue Adoption
+
+Implemented by [P1.9–P1.10 snackbar](../implemented/material3_snackbar_design.md).
 
 1. Choose and document owning bounded payload storage or intrusive request
    nodes.

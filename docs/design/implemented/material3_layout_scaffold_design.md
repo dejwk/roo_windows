@@ -1391,3 +1391,10 @@ pretending that all targets can discover them locally.
    way to receive posture geometry from the host platform.
 6. Add a higher-level adaptive navigation shell that wires future Material 3
    bar, rail, and drawer widgets into one convenience API.
+
+## Implemented snackbar integration
+
+`SnackbarHost` is an opt-in subclass with one overlay child bounded to the
+snackbar rectangle. It derives placement from `bodyBounds()`, leaving ordinary
+scaffolds at their existing fixed-slot RAM cost. Task-root detachment cancels
+its registered requests. See the [snackbar design](material3_snackbar_design.md).

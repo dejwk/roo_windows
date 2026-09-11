@@ -53,6 +53,7 @@ Status was audited against the source tree and tests on 2026-09-05. “Dependenc
 | Transient surface hosting | Presenter-owned focus scopes, the owner-bound composite host, policy preflight and replacement, display-wide input isolation, guarded prepared admission, and explicit-owner legacy-dialog migration are implemented. |
 | Widget event dispatch | `ApplicationContext` and sparse interactive-change dispatch are implemented. |
 | Widget state compaction | Widget event dispatch is implemented, and both compaction phases are implemented. |
+| [Snackbar](implemented/material3_snackbar_design.md) | Owning registered requests, bounded queue, inverse-surface widget, opt-in scaffold host, timing, focus/input, goldens, catalog and target cost checks are implemented. |
 
 ## In progress
 
@@ -62,7 +63,7 @@ Status was audited against the source tree and tests on 2026-09-05. “Dependenc
 | Event-driven input notification and ticker wakeup | The coalescing ticker and readiness-driven physical-key routing are implemented while retaining the 20 ms fallback. Touch acquisition, gesture/paint/animation deadlines, and final ticker dormancy remain. |
 | Text system | `TextBlock` wrapping, justification, max-lines, ellipsis, caching, and golden coverage are implemented; shared rich paragraph layout and `RichTextBlock` remain. |
 | Transient presentation pins | The shared layer-scoped host and slider/range-slider adoption are implemented; keyboard-highlighter adoption remains. Visual overflow prerequisites are in progress. |
-| Transient presenter lifetime and ownership | The shared slot, legacy-dialog and Material 3 menu lifetime, Back, and structural-host adoption are implemented; modal sheets have no implementation to adopt, and snackbar migration remains. |
+| Transient presenter lifetime and ownership | The shared slot, legacy-dialog and Material 3 menu lifetime, Back, and structural-host adoption are implemented; snackbar queue adoption is also implemented; modal sheets have no implementation to adopt. |
 | Visual overflow | Surface ownership, ink bounds, direct-paint exclusion, persistent/transient bound separation, and root-stage transient pins are implemented; the broader design remains in progress. |
 
 ## Proposed
@@ -80,7 +81,6 @@ Status was audited against the source tree and tests on 2026-09-05. “Dependenc
 | Navigation drawer | List support and basic dialogs are implemented and back routing exists; no drawer implementation exists. |
 | Segmented buttons | Buttons are implemented; the superseding button-group design and this legacy component design are not implemented. |
 | Sheets | Paint/overflow foundations, icon buttons, and shared back behavior are implemented; the sheet family is not. Before implementation, modal sheets must be reconciled to use the P1.6b shared host with explicit task ownership, host-owned barrier paint, presenter-owned focus, and presenter-handled outside dismissal. |
-| Snackbar | Paint/overflow foundations, non-touch input, and scaffold are implemented. Before implementation, the snackbar design must replace queued non-owning strings and listener pointers with the ownership model required by the in-progress transient-lifetime design. |
 | Split button | Buttons, icon buttons, non-touch input, and menus are implemented; split buttons remain proposed. |
 | Text fields | Paint context, non-touch input, icon buttons, and supporting menus are implemented; the text-field family is proposed. |
 | Time pickers | Buttons, icon buttons, basic dialogs, and shared back behavior are implemented; text fields and picker-specific integration remain proposed. |

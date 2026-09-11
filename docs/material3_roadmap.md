@@ -47,8 +47,8 @@ mechanism for escaping ancestor clipping. It defines registration, layer
 ordering, invalidation, and limited pin teardown behavior; it does not define a
 general lifetime contract for interactive menus, sheets, dialogs, or queued
 snackbars. The shared transient slot and legacy-dialog adoption are
-implemented, Material 3 menus now use that host, snackbar adoption remains,
-and modal sheets do not yet exist. Component designs therefore still make different caller-owned and
+implemented, Material 3 menus now use that host, and snackbar requests use an
+owning registered queue in an opt-in scaffold host. Modal sheets do not yet exist. Component designs therefore still make different caller-owned and
 borrowed-lifetime assumptions, and some permit a visible presenter to hold an
 anchor, content reference, listener, or text view that the caller must keep
 valid.
@@ -63,11 +63,11 @@ one combined `TransientHostLayer`, mandatory presenter-owned focus activation,
 and display-wide physical/semantic input barriers. Barrier paint, outside
 behavior, and admission remain independent policies. Menus provide a live
 widget source at `show()` so placement geometry is copied synchronously.
-P1.6b also migrates legacy dialogs to guarded preparation before measurement,
-an explicit interaction owner, and the same composite host, then removes the
+P1.6b migrated legacy dialogs to guarded preparation before measurement,
+an explicit interaction owner, and the same composite host, and removed the
 dialog-specific `MainWindow` path. Dialogs may retain preconfigured children or
 create and release presentation-scoped children through a balanced lifecycle
-pair. Implementation is scheduled immediately before menus.
+pair. Menus now consume the same host.
 
 Display runtime Phases 1–6 are implemented: characterization, display-local
 window and task ownership, task-owned navigation, two-application shared
@@ -204,9 +204,9 @@ complete before the first row that depends on it.
 | <a id="p1-6b"></a>[P1.6b](#p1-6b) | Implement shared transient hosting | <img src="material3_roadmap_status_completed.svg" width="20" height="20" alt="Completed" title="Completed"> | [Transient surface hosting](design/implemented/transient_surface_hosting_design.md), consuming the existing [Non-touch input](design/implemented/non_touch_input_design.md) focus contract | P1.6a | All four phases are implemented: focus scopes, composite hosting with guarded prepared admission, display-wide input isolation, and legacy-dialog migration. |
 | <a id="p1-7"></a>[P1.7](#p1-7) | Implement Material 3 menus | <img src="material3_roadmap_status_completed.svg" width="20" height="20" alt="Completed" title="Completed"> | [Menus](design/implemented/material3_menus_design.md), reconciled by P1.6 | P1.6b | All six phases are implemented: rows, panels, placement, shared hosting, selection/invocation, bounded submenu chains, keyboard navigation, five focused examples, migration guidance, and the target-ABI memory audit. |
 | <a id="p1-8"></a>[P1.8](#p1-8) | Implement basic Material 3 dialogs | <img src="material3_roadmap_status_completed.svg" width="20" height="20" alt="Completed" title="Completed"> | Phases 1–2 of [Dialogs](design/implemented/material3_dialogs_design.md) | P0.4, P0.5, P1.6b | The shared scaffold and public basic/alert dialogs use the display-covered host with an explicit interaction owner, retain configured body state for reopen, restore focus, handle Back/Escape, and pass unit and golden tests. In-repository legacy alert examples use the Material 3 family; external compatibility types remain. Phase 3 full-screen dialogs use task-owned navigation, leaving the transient slot free for dropdown menus and basic confirmation dialogs. All tasks support them, including the widget convenience overload; see [task-owned navigation](design/implemented/task_owned_navigation_design.md). |
-| <a id="p1-9"></a>[P1.9](#p1-9) | Reconcile snackbar queue ownership design | <img src="material3_roadmap_status_completed.svg" width="20" height="20" alt="Completed" title="Completed"> | Revise [Snackbar](design/proposed/material3_snackbar_design.md) against Phase 6 of [Transient presenter lifetime and ownership](design/in_progress/transient_presenter_lifetime_ownership_design.md) | P0.5, P1.4 | Replace queued non-owning text views and independent listener pointers with bounded owned payloads or self-cancelling registered request nodes; define overflow, completion, teardown, and allocation policy before code starts. |
-| <a id="p1-10"></a>[P1.10](#p1-10) | Implement snackbar widget, presenter, and queue | <img src="material3_roadmap_status_in_progress.svg" width="20" height="20" alt="In progress" title="In progress"> | Snackbar design reconciled by P1.9 | P0.3, P1.9 | Complete the reconciled snackbar phases; placement follows scaffold insets, and timeout/action/replacement/overflow/host-teardown tests plus goldens and example pass. |
-| <a id="p1-11"></a>[P1.11](#p1-11) | Integrate the compact settings shell | <img src="material3_roadmap_status_pending.svg" width="20" height="20" alt="Pending" title="Pending"> | No new design; integration of P1.4, P1.7, P1.8, and P1.10 | P1.4, P1.7, P1.8, P1.10 | One example/test application navigates multiple settings screens, opens a menu, confirms or cancels in a dialog, restores focus, handles touch and keyboard Back/Escape, and reports the result with a snackbar without application-local popup or Back routing. |
+| <a id="p1-9"></a>[P1.9](#p1-9) | Reconcile snackbar queue ownership design | <img src="material3_roadmap_status_completed.svg" width="20" height="20" alt="Completed" title="Completed"> | Revise [Snackbar](design/implemented/material3_snackbar_design.md) against Phase 6 of [Transient presenter lifetime and ownership](design/in_progress/transient_presenter_lifetime_ownership_design.md) | P0.5, P1.4 | Replace queued non-owning text views and independent listener pointers with bounded owned payloads or self-cancelling registered request nodes; define overflow, completion, teardown, and allocation policy before code starts. |
+| <a id="p1-10"></a>[P1.10](#p1-10) | Implement snackbar widget, presenter, and queue | <img src="material3_roadmap_status_completed.svg" width="20" height="20" alt="Completed" title="Completed"> | [Snackbar](design/implemented/material3_snackbar_design.md), reconciled by P1.9 | P0.3, P1.9 | The owning request queue, widget, opt-in scaffold host, timeout/motion, keyboard behavior, placement and lifecycle tests, seven goldens, and catalog pass. ESP32-C3 RAM/code/stack audit is complete. |
+| <a id="p1-11"></a>[P1.11](#p1-11) | Integrate the compact settings shell | <img src="material3_roadmap_status_in_progress.svg" width="20" height="20" alt="In progress" title="In progress"> | No new design; integration of P1.4, P1.7, P1.8, and P1.10 | P1.4, P1.7, P1.8, P1.10 | One example/test application navigates multiple settings screens, opens a menu, confirms or cancels in a dialog, restores focus, handles touch and keyboard Back/Escape, and reports the result with a snackbar without application-local popup or Back routing. |
 
 Phase 1 exits when P1.1–P1.11, including P1.6a and P1.6b, show the green check
 and the P1.11 application passes on one supported compact target. Modal sheets
