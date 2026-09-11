@@ -372,6 +372,33 @@ TEST_F(SnackbarTest, VisibilityAndDestinationLifetime) {
   EXPECT_EQ(SnackbarShowResult::kHostUnavailable, presenter().show(a));
 }
 
+// Verifies moving and dismissing an elevated snackbar restores every pixel,
+// including decorations outside its logical bounds.
+TEST_F(SnackbarTest, MotionAndDismissalRestoreDecorations) {
+  const std::vector<roo::byte> baseline(raster_, raster_ + sizeof(raster_));
+  presenter().setAnimationsEnabled(true);
+  Request a;
+  presenter().show(a);
+  app_->refresh();
+  for (int i = 0; i < 5; ++i) {
+    test::SnackbarTestAccess::advance(presenter(), 30);
+    app_->refresh();
+  }
+  const std::vector<roo::byte> animated(raster_, raster_ + sizeof(raster_));
+  host_.invalidateInterior();
+  app_->refresh();
+  EXPECT_EQ(animated,
+            std::vector<roo::byte>(raster_, raster_ + sizeof(raster_)));
+  presenter().dismissCurrent();
+  for (int i = 0; i < 5; ++i) {
+    test::SnackbarTestAccess::advance(presenter(), 20);
+    app_->refresh();
+  }
+  EXPECT_FALSE(presenter().isShowing());
+  EXPECT_EQ(baseline,
+            std::vector<roo::byte>(raster_, raster_ + sizeof(raster_)));
+}
+
 // Verifies a motion frame only writes the snackbar band, then idle writes
 // nothing.
 TEST_F(SnackbarTest, AnimationDoesNotRepaintWholeDisplay) {

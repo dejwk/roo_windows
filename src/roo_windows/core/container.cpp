@@ -455,7 +455,9 @@ Rect Container::maxBounds() const {
           child.maxBounds().translate(child.offsetLeft(), child.offsetTop()));
     }
   }
-  return cached_max_bounds_;
+  // The cached subtree bounds do not include this container's own decoration.
+  // Resolve it here so movement, hiding, and elevation changes include shadows.
+  return Rect::Extent(cached_max_bounds_, getVisualBounds());
 }
 
 Rect Container::maxParentBounds() const {
