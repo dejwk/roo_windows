@@ -857,3 +857,13 @@ cc_test(
     linkstatic = 1,
     deps = [":roo_windows", ":test_golden_utils", "@roo_testing//:arduino_gtest_main"],
 )
+
+cc_test(
+    name = "material3_settings_shell_test",
+    srcs = ["test/material3_settings_shell_test.cpp"],
+    data = glob(["test/goldens/**/*.ppm"]),
+    linkstatic = 1,
+    deps = [":roo_windows", ":test_golden_utils",
+            "//examples/material3/settings_shell:settings_shell_ui",
+            "@roo_testing//:arduino_gtest_main"],
+)

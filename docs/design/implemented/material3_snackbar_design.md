@@ -5,7 +5,8 @@
 **Implemented (P1.9–P1.10).** Ownership reconciliation was reviewed against the current task-owned
 navigation, focus, scaffold, and transient-lifetime contracts on 2026-09-11.
 The widget, registered presenter, timing, placement, tests and catalog are implemented.
-The compact settings integration is P1.11.
+The compact settings integration is P1.11. Validation and measured RAM, code,
+stack and repaint evidence are in the [Phase 1 acceptance report](../../material3_phase1_acceptance.md).
 
 This document replaces the earlier popup-slot proposal. The implementation uses
 an opt-in `SnackbarHost : LayoutScaffold`. Its one additional child occupies
