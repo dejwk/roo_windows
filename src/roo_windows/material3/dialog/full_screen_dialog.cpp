@@ -68,8 +68,7 @@ void FullScreenDialog::setLayoutDirection(LayoutDirection direction) {
 
 DialogShowResult FullScreenDialog::show(Task& interaction_owner) {
   if (isShowing()) return DialogShowResult::kAlreadyPresented;
-  NavigationHost* navigation = interaction_owner.navigationHost();
-  if (navigation == nullptr) return DialogShowResult::kNavigationUnavailable;
+  NavigationHost* navigation = &interaction_owner.navigation();
   if (!navigation->isAvailable())
     return DialogShowResult::kInteractionOwnerUnavailable;
   if (destroying_ || parent() != nullptr ||

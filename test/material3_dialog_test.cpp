@@ -230,7 +230,7 @@ class Material3DialogTest : public ::testing::Test {
         owner_(app_.addTaskFullScreen(task_content_)),
         navigation_content_(app_.context()),
         root_(navigation_content_),
-        navigation_owner_(app_.addTaskFullScreen(navigation_)) {
+        navigation_owner_(app_.addTaskFullScreen()) {
     navigation_.push(root_);
   }
 
@@ -241,13 +241,13 @@ class Material3DialogTest : public ::testing::Test {
   roo_display::Display display_;
   roo_scheduler::Scheduler scheduler_;
   Environment environment_;
-  NavigationHost navigation_;
   Application app_;
   TestPanel task_content_;
   Task& owner_;
   TestContent navigation_content_;
   TestDestination root_;
   Task& navigation_owner_;
+  NavigationHost& navigation_ = navigation_owner_.navigation();
 };
 
 TEST_F(Material3DialogTest, ActionStripValidatesAndCopiesFixedDescriptors) {
@@ -667,10 +667,28 @@ TEST_F(Material3DialogTest, ActiveFullScreenDestructionRemovesDestination) {
       app_.root().transient_presentation_slot().hasActivePresentation());
 }
 
-TEST_F(Material3DialogTest, FullScreenRequiresNavigation) {
-  TestFullScreenDialog dialog(app_.context(), WidgetRef());
-  EXPECT_EQ(DialogShowResult::kNavigationUnavailable, dialog.show(owner_));
+TEST_F(Material3DialogTest, FullScreenWorksWithWidgetConvenienceTask) {
+  TestContent anchor(app_.context());
+  TestFullScreenDialog dialog(app_.context(), WidgetRef(anchor));
+  EXPECT_EQ(1u, owner_.navigation().depth());
+  ASSERT_EQ(DialogShowResult::kShown, dialog.show(owner_));
+  EXPECT_EQ(2u, owner_.navigation().depth());
+  EXPECT_EQ(nullptr, task_content_.parent());
+  ASSERT_TRUE(app_.refresh());
+  StandardMenuItem item(StandardMenuItemInit{"Option"});
+  MenuRow<StandardMenuItem> row(app_.context());
+  row.setMenuItem(item);
+  MenuGroup group(app_.context());
+  group.add(row);
+  Menu menu(app_.context());
+  menu.addGroup(group);
+  ASSERT_EQ(MenuShowResult::kShown, menu.show(owner_, anchor));
+  owner_.requestBack();
+  EXPECT_TRUE(dialog.isCurrent());
+  owner_.requestBack();
   EXPECT_FALSE(dialog.isShowing());
+  EXPECT_EQ(1u, owner_.navigation().depth());
+  EXPECT_NE(nullptr, task_content_.parent());
 }
 
 TEST_F(Material3DialogTest, FullScreenMenuUsesFreeTransientSlotAndBackOrder) {
@@ -821,9 +839,8 @@ TEST_F(Material3DialogTest, NavigationClearCompletesCoveredDialogOnce) {
 }
 
 TEST_F(Material3DialogTest, TaskTeardownCompletesDialogAndRejectsReopen) {
-  NavigationHost host;
   auto app = std::make_unique<Application>(&environment_, display_);
-  Task& task = app->addTaskFullScreen(host);
+  Task& task = app->addTaskFullScreen();
   class TeardownDialog final : public FullScreenDialog {
    public:
     TeardownDialog(ApplicationContext& context, Task& task)
@@ -842,7 +859,7 @@ TEST_F(Material3DialogTest, TaskTeardownCompletesDialogAndRejectsReopen) {
   app.reset();
   EXPECT_EQ(1, dialog.completions);
   EXPECT_FALSE(dialog.isShowing());
-  EXPECT_TRUE(host.empty());
+  EXPECT_EQ(nullptr, dialog.parent());
 }
 
 TEST_F(Material3DialogTest, TransientCompletionCannotReadmitDuringNavigation) {

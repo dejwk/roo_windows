@@ -55,8 +55,8 @@ class DestructionTrackingWidget : public FocusableWidget {
   bool& destroyed_;
 };
 
-// Verifies that a direct task borrows one fixed root and routes Back through
-// its task-local callback without constructing an activity stack.
+// Verifies the widget overload borrows its root and routes Back-at-root
+// through the task callback without popping the convenience destination.
 TEST(Task, DirectContentIsBorrowedAndHandlesBack) {
   roo::byte raster[16 * 16 * 2] = {};
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
@@ -71,6 +71,8 @@ TEST(Task, DirectContentIsBorrowedAndHandlesBack) {
     contents = new DirectWidget(app.context());
     contents->setOnInteractiveChange([]() {});
     Task& task = app.addTaskFullScreen(*contents);
+    EXPECT_EQ(1u, task.navigation().depth());
+    EXPECT_EQ(&task.navigation(), task.navigationHost());
     EXPECT_EQ(&task, contents->getTask());
     ASSERT_TRUE(app.refresh());
     ASSERT_TRUE(contents->requestFocus());
@@ -81,6 +83,7 @@ TEST(Task, DirectContentIsBorrowedAndHandlesBack) {
     });
     EXPECT_EQ(BackResult::kHandled, task.requestBack(BackSource::kBackKey));
     EXPECT_TRUE(called);
+    EXPECT_EQ(1u, task.navigation().depth());
   }
   EXPECT_EQ(nullptr, contents->parent());
   EXPECT_FALSE(contents->isFocused());
@@ -165,6 +168,42 @@ TEST(Task, KeySourceConnectionIsExclusive) {
   first_source.disconnect();
   second_source.connect(first);
   EXPECT_TRUE(second_source.isConnected());
+}
+
+TEST(Task, WidgetConvenienceRootResumesAndCanBeReplacedOrRemoved) {
+  roo::byte raster[16 * 16 * 2] = {};
+  roo_display::OffscreenDevice<roo_display::Argb4444> device(
+      16, 16, raster, roo_display::Argb4444());
+  roo_display::Display display(device);
+  roo_scheduler::Scheduler scheduler;
+  Environment environment(scheduler);
+  auto app = std::make_unique<Application>(&environment, display);
+  DirectWidget content(app->context());
+  class Page final : public Destination {
+   public:
+    explicit Page(ApplicationContext& context) : widget_(context) {}
+    Widget& getContents() override { return widget_; }
+
+   private:
+    DirectWidget widget_;
+  } page(app->context());
+  Task& task = app->addTaskFullScreen(content);
+  task.navigation().push(page);
+  EXPECT_EQ(nullptr, content.parent());
+  EXPECT_EQ(nullptr, content.getTask());
+  EXPECT_EQ(2u, task.navigation().depth());
+  EXPECT_EQ(BackResult::kHandled, task.requestBack());
+  EXPECT_EQ(&task, content.getTask());
+  EXPECT_EQ(1u, task.navigation().depth());
+  task.navigation().replace(page);
+  EXPECT_EQ(nullptr, content.parent());
+  EXPECT_EQ(1u, task.navigation().depth());
+  task.navigation().clear();
+  EXPECT_TRUE(task.navigation().empty());
+  EXPECT_EQ(BackResult::kUnhandled, task.requestBack());
+  app.reset();
+  EXPECT_EQ(nullptr, content.parent());
+  EXPECT_EQ(nullptr, page.getNavigationHost());
 }
 
 }  // namespace

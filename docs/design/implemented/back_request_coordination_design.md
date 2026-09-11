@@ -1,9 +1,12 @@
 # Roo Windows Back Request Coordination Design
 
+> Navigation ownership is now defined by [task-owned navigation](task_owned_navigation_design.md).
+> Widget convenience tasks use the same navigation and Back path.
+
 ## Objective
 
 Provide one explicit, task-owned semantic Back operation that coordinates
-temporary UI, optional navigation history, and task-local fallback without
+temporary UI, task-owned navigation history, and task-local fallback without
 inferring a destination task.
 
 ## Motivation
@@ -19,7 +22,7 @@ bypassing an active transient or popping navigation directly.
 The current runtime has four relevant owners:
 
 - [`Task`](../../../src/roo_windows/core/task.h) owns one task-local focus
-  manager, either fixed content or an optional `NavigationHost`, and an optional
+  manager, a task-owned `NavigationHost`, and an optional
   final `BackCallback`.
 - [`NavigationHost`](../../../src/roo_windows/core/navigation_host.h) owns the
   optional destination-history policy for one task. Its `Destination` objects
@@ -34,7 +37,7 @@ The current runtime has four relevant owners:
 An earlier version of this design described a borrowed `Activity` stack and an
 `Application::requestBack()` entry point with explicit or focus-derived task
 routing. The display-runtime migration replaced that model with fixed task
-content, optional `NavigationHost` history, and task-local callbacks. The
+content, task-owned `NavigationHost` history, and task-local callbacks. The
 current code has no `Activity`, `enterActivity()`, `exitActivity()`,
 `activityCount()`, or `Application::requestBack()` API. The useful historical
 constraint remains: one Back request performs one ordered semantic fallback
@@ -156,10 +159,10 @@ key dispatch ends without selecting another task.
 1. Call the window's `TransientPresentationSlot::requestBack(source)`. The slot
    invokes its active registration only when that registration's fixed policy
    accepts the source. A handled result ends the request.
-2. If the task has a `NavigationHost`, delegate to it. The current destination
+2. Delegate to the task-owned `NavigationHost`. The current destination
    gets first refusal. If it returns unhandled and still remains current, the
    host pops exactly one entry only when history depth is greater than one.
-3. If navigation is absent, empty, or at an unhandled root, invoke the task's
+3. If navigation is empty or at an unhandled root, invoke the task's
    optional `BackCallback`. An empty callback returns `kUnhandled`.
 
 `NavigationHost` snapshots its current destination and mutation generation
@@ -183,8 +186,8 @@ precise Phase 7 delta described in [Future Work](#future-work).
 
 ### Cost
 
-`Task` stores one fixed `std::function` callback slot and one nullable navigation
-host pointer as part of the current task runtime. The callback can be empty. The
+`Task` stores one fixed `std::function` callback slot and an inline navigation
+host as part of the current task runtime. The callback can be empty. The
 semantic request performs no allocation. `NavigationHost` can allocate when
 history grows during `push()`, but Back dispatch and a normal pop reuse existing
 storage. Physical dispatch adds only the existing parent walk from focused

@@ -110,16 +110,16 @@ class NavigationTaskTest : public ::testing::Test {
   NavigationTaskTest()
       : display_(device_),
         app_(&environment_, display_),
-        task_(app_.addTaskFullScreen(navigation_)) {}
+        task_(app_.addTaskFullScreen()) {}
 
   roo::byte raster_[64 * 64 * 2] = {};
   roo_display::OffscreenDevice<Argb4444> device_{64, 64, raster_, Argb4444()};
   Display display_;
   roo_scheduler::Scheduler scheduler_;
   Environment environment_{scheduler_};
-  NavigationHost navigation_;
   Application app_;
   Task& task_;
+  NavigationHost& navigation_ = task_.navigation();
 };
 
 // Verifies that the default hook leaves a root activity in place.

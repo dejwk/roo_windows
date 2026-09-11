@@ -26,7 +26,6 @@ enum class DialogShowResult : uint8_t {
   kAlreadyPresented,
   kInteractionOwnerUnavailable,
   kSurfaceUnavailable,
-  kNavigationUnavailable,
 };
 
 /// Describes one fixed-capacity basic-dialog action.

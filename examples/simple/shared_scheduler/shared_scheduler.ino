@@ -129,14 +129,15 @@ Application second_app(&env, second_display);
 TextLabel first_label(first_app.context(), "Keyboard application",
                       material2::text_style_caption(),
                       kGravityCenter | kGravityMiddle);
-NavigationHost editor_navigation;
+
 EditorDestination editor_destination(second_app.context());
 
 void setup() {
   initDisplays();
 
   first_app.addTaskFullScreen(first_label);
-  Task& editor_task = second_app.addTaskFullScreen(editor_navigation);
+  Task& editor_task = second_app.addTaskFullScreen();
+  NavigationHost& editor_navigation = editor_task.navigation();
   editor_navigation.push(editor_destination);
   // Keep the field focused, but leave keyboard presentation entirely to the
   // first application.

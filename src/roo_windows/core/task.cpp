@@ -18,6 +18,14 @@ bool IsInSubtree(const Widget& candidate, const Widget& subtree) {
 
 Task::Task(Application& app, DisplayWindow& window,
            const roo_display::Box& bounds, bool popup, Widget& content)
+    : Task(app, window, bounds, popup) {
+  CHECK(content.parent() == nullptr);
+  initial_destination_.content_ = &content;
+  navigation_.push(initial_destination_);
+}
+
+Task::Task(Application& app, DisplayWindow& window,
+           const roo_display::Box& bounds, bool popup)
     : app_(app),
       window_(window),
       panel_(app.context(), *this),
@@ -25,28 +33,7 @@ Task::Task(Application& app, DisplayWindow& window,
       editor_(app, app.env().scheduler()),
       popup_(popup),
       presentation_available_(false) {
-  CHECK(content.parent() == nullptr);
-  panel_.setContent(content, roo_display::Box(0, 0, -1, -1));
-  if (popup) {
-    window_.root().addPopup(panel_, bounds);
-  } else {
-    window_.root().addTask(panel_, bounds);
-  }
-  presentation_available_ = true;
-}
-
-Task::Task(Application& app, DisplayWindow& window,
-           const roo_display::Box& bounds, bool popup,
-           NavigationHost& navigation)
-    : app_(app),
-      window_(window),
-      panel_(app.context(), *this),
-      focus_(&panel_),
-      editor_(app, app.env().scheduler()),
-      popup_(popup),
-      presentation_available_(false),
-      navigation_(&navigation) {
-  navigation.install(*this);
+  navigation_.install(*this);
   if (popup) {
     window_.root().addPopup(panel_, bounds);
   } else {
@@ -63,11 +50,7 @@ Task::~Task() {
   back_callback_ = {};
   editor_.cancel();
   focus_.onSubtreeDetaching(panel_);
-  if (navigation_ != nullptr) {
-    navigation_->disconnect();
-  } else if (panel_.content_ != nullptr) {
-    panel_.clearContent();
-  }
+  navigation_.disconnect();
   if (popup_) {
     window_.root().removePopup(panel_);
   } else {
@@ -88,17 +71,14 @@ BackResult Task::requestBack(BackSource source) {
       BackResult::kHandled) {
     return BackResult::kHandled;
   }
-  if (navigation_ != nullptr) return navigation_->requestBack(source);
-  return requestTaskBackCallback(source);
+  return navigation_.requestBack(source);
 }
 
 void Task::attachNavigationContent(Widget& content) {
-  CHECK(navigation_ != nullptr);
   panel_.setContent(content, roo_display::Box(0, 0, -1, -1));
 }
 
 void Task::detachNavigationContent() {
-  CHECK(navigation_ != nullptr);
   // A transient belongs to the task, but its anchor belongs to the outgoing
   // destination. End it before detaching that content, blocking re-admission
   // from its completion callback throughout the structural change.

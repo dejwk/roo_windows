@@ -399,9 +399,9 @@ TEST(KeySource, HardwareTextInputKeepsProgrammaticallyEditedFieldFocused) {
   roo_display::Display display(device);
   roo_scheduler::Scheduler scheduler;
   Environment environment(scheduler);
-  NavigationHost navigation;
+
   Application app(&environment, display);
-  app.addTaskFullScreen(navigation);
+  NavigationHost& navigation = app.addTaskFullScreen().navigation();
   TextFieldDestination destination(app.context());
   navigation.push(destination);
 
@@ -430,9 +430,9 @@ TEST(KeySource, HardwareEscapeUsesFocusedTask) {
   roo_scheduler::Scheduler scheduler;
   Environment environment(scheduler);
   QueuedKeySource keys({{KeyPhase::kDown, KeyCode::kEscape, 0, 0}});
-  NavigationHost navigation;
+
   Application app(&environment, display, keys, false);
-  app.addTaskFullScreen(navigation);
+  NavigationHost& navigation = app.addTaskFullScreen().navigation();
   BackDestination root(app.context());
   BackDestination child(app.context());
   navigation.push(root);
@@ -480,9 +480,10 @@ TEST(KeySource, UnhandledRootEscapeCancelsFocusedEditor) {
   roo_scheduler::Scheduler scheduler;
   Environment environment(scheduler);
   QueuedKeySource keys({{KeyPhase::kDown, KeyCode::kEscape, 0, 0}});
-  NavigationHost navigation;
+
   Application app(&environment, display, keys, false);
-  Task& task = app.addTaskFullScreen(navigation);
+  Task& task = app.addTaskFullScreen();
+  NavigationHost& navigation = task.navigation();
   TextFieldDestination destination(app.context());
   navigation.push(destination);
   app.refresh();
@@ -507,9 +508,10 @@ TEST(KeySource, UnhandledRootEscapeFromFocusedTabBubblesToTabHost) {
   roo_scheduler::Scheduler scheduler;
   Environment environment(scheduler);
   QueuedKeySource keys({{KeyPhase::kDown, KeyCode::kEscape, 0, 0}});
-  NavigationHost navigation;
+
   Application app(&environment, display, keys, false);
-  Task& task = app.addTaskFullScreen(navigation);
+  Task& task = app.addTaskFullScreen();
+  NavigationHost& navigation = task.navigation();
   TabsDestination destination(app.context());
   navigation.push(destination);
   app.refresh();

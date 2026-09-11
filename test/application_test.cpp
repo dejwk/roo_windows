@@ -102,11 +102,11 @@ TEST(Application, RequestBackUsesExplicitTargetTask) {
   roo_display::Display display(device);
   roo_scheduler::Scheduler scheduler;
   Environment environment(scheduler);
-  NavigationHost first_navigation;
-  NavigationHost second_navigation;
+
   Application app(&environment, display);
-  app.addTaskFullScreen(first_navigation);
-  Task& second_task = app.addTaskFullScreen(second_navigation);
+  NavigationHost& first_navigation = app.addTaskFullScreen().navigation();
+  Task& second_task = app.addTaskFullScreen();
+  NavigationHost& second_navigation = second_task.navigation();
   TestDestination first_root(app.context());
   TestDestination first_child(app.context());
   TestDestination second_root(app.context());
@@ -136,9 +136,10 @@ TEST(Application, RequestBackPrioritizesTransientPresentation) {
   roo_display::Display display(device);
   roo_scheduler::Scheduler scheduler;
   Environment environment(scheduler);
-  NavigationHost navigation;
+
   Application app(&environment, display);
-  Task& task = app.addTaskFullScreen(navigation);
+  Task& task = app.addTaskFullScreen();
+  NavigationHost& navigation = task.navigation();
   TestDestination root(app.context());
   TestDestination child(app.context());
   navigation.push(root);
@@ -165,9 +166,9 @@ TEST(Application, TextInputEmitterTargetsTheActiveEditor) {
   roo_display::Display display(device);
   roo_scheduler::Scheduler scheduler;
   Environment environment(scheduler);
-  NavigationHost navigation;
+
   Application app(&environment, display);
-  app.addTaskFullScreen(navigation);
+  NavigationHost& navigation = app.addTaskFullScreen().navigation();
   TextInputDestination destination(app.context());
   navigation.push(destination);
   TextInputEmitter emitter;
@@ -196,11 +197,10 @@ TEST(Application, TextInputActivationReplacesThePreviousEditor) {
   roo_display::Display display(device);
   roo_scheduler::Scheduler scheduler;
   Environment environment(scheduler);
-  NavigationHost first_navigation;
-  NavigationHost second_navigation;
+
   Application app(&environment, display);
-  app.addTaskFullScreen(first_navigation);
-  app.addTaskFullScreen(second_navigation);
+  NavigationHost& first_navigation = app.addTaskFullScreen().navigation();
+  NavigationHost& second_navigation = app.addTaskFullScreen().navigation();
   TextInputDestination first(app.context());
   TextInputDestination second(app.context());
   first_navigation.push(first);

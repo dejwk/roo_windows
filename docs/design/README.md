@@ -15,7 +15,7 @@ Status was audited against the source tree and tests on 2026-09-05. “Dependenc
 | Design | Dependency status |
 | --- | --- |
 | App bars/search surfaces | The component family, focused unit and golden coverage, example, and adaptive scaffold integration are implemented. Focused/expanded search remains separate future work. |
-| Back request coordination | Explicit `Task::requestBack()` routing through the transient slot, optional `NavigationHost`, and task callback is implemented. Ordinary physical Back/Escape follows the configured task's focused-widget path first; an active display-wide hosted surface now receives it first. Phase 7 adds source-task filtering for task-bounded coverage. |
+| Back request coordination | Explicit `Task::requestBack()` routing through the transient slot, task-owned `NavigationHost`, and task callback is implemented. Ordinary physical Back/Escape follows the configured task's focused-widget path first; an active display-wide hosted surface now receives it first. Phase 7 adds source-task filtering for task-bounded coverage. |
 | Badge | Paint context and visual-overflow foundations are implemented; the shared transient lifetime contract remains in progress and is not required by the badge scope. |
 | Button | Surface widgets, click animation, and Material 3 theme support are implemented; icon buttons are implemented as a separate family. |
 | Click-animation customization | The shared click-animation controller and widget-local animation view are implemented. |
@@ -24,7 +24,8 @@ Status was audited against the source tree and tests on 2026-09-05. “Dependenc
 | Display runtime Phase 1 characterization | The integrated runtime characterization target, size probe, and ESP32-S3 baseline report are implemented. |
 | Display runtime Phase 2 `DisplayWindow` extraction | One `DisplayWindow` now owns display-local pointer, paint, continuation, and teardown state for each application. |
 | Display runtime Phase 3 task extraction | Task-local focus, editing, key routing, and structural task ownership are implemented. |
-| Display runtime Phase 4 optional navigation | Direct borrowed task content, borrowed `NavigationHost`/`Destination`, destination lifecycle, and removal of legacy activity navigation are implemented. |
+| Display runtime Phase 4 optional navigation | Historical foundation; the optional host ownership/API is superseded by task-owned navigation. Borrowed destinations and their lifecycle remain. |
+| [Task-owned navigation](implemented/task_owned_navigation_design.md) | Every task owns its host; widget convenience tasks use an inline borrowing destination and support full-screen dialogs. Initial history storage is allocation-free. |
 | Display runtime Phase 5 shared-scheduler driving | Checked application lifecycle and ticker dispatch, shared-scheduler two-application coverage, and a two-display emulator example are implemented. |
 | Display runtime Phase 6 input | Physical-key identity, application-owned readiness routing, application-scoped semantic text input, built-in keyboard conversion, and cross-application editor integration are implemented. |
 | Gesture arbitration and ownership | Callback-free hit paths, explicit tap/long-press/drag roles, directional arbitration, strong ownership, and lifecycle-safe terminal delivery are implemented without compatibility routing. |

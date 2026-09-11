@@ -88,16 +88,16 @@ class LabelDestination : public Destination {
 roo_scheduler::Scheduler scheduler;
 Environment env(scheduler);
 Application app(&env, display);
-NavigationHost navigation;
+
 LabelDestination home(app.context(), "Pool controls");
 LabelDestination details(app.context(), "Pump details");
 
 void setup() {
   initDisplay();
 
-  // The application owns the host and both destinations. The framework only
-  // attaches the current destination's widget, so inactive roots stay detached.
-  app.addTaskFullScreen(navigation);
+  // The task owns its navigation host; the application owns the destinations.
+  // Only the current destination's widget is attached.
+  NavigationHost& navigation = app.addTaskFullScreen().navigation();
   navigation.push(home);
   navigation.push(details);
 

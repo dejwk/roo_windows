@@ -407,11 +407,12 @@ display coverage, outside absorption, `kRejectIfBusy`, and a presenter-owned
 available for dropdown menus and basic confirmation dialogs. Menu anchors have
 ordinary task ancestry and pass the existing source validation unchanged.
 
-`show(Task&)` returns `kNavigationUnavailable` for a direct-content task. It
+Every task owns navigation, including the widget convenience variant; see
+[task-owned navigation](task_owned_navigation_design.md). `show(Task&)`
 rejects an unavailable navigation host or incompatible/already-attached root,
 and returns `kHostBusy` if a transient is already active. Success pushes the
 dialog; the previous destination pauses and detaches. Task layout on the next
-refresh sizes the dialog to the task bounds. Use `addTaskFullScreen(navigation)`
+refresh sizes the dialog to the task bounds. Use `addTaskFullScreen()` or `addTaskFullScreen(widget)`
 for a full-window dialog. No scrim or outside-input barrier is allocated for
 the full-screen dialog, and it does not isolate other application tasks.
 
@@ -829,7 +830,6 @@ enum class DialogShowResult : uint8_t {
   kAlreadyPresented,
   kInteractionOwnerUnavailable,
   kSurfaceUnavailable,
-  kNavigationUnavailable,
 };
 
 struct DialogActionSpec {
@@ -1185,8 +1185,8 @@ That is the right first step, but it does have visible consequences:
    screens in the first landing,
 3. centered basic dialogs remain default-centered and do not yet expose the
    custom-positioning flexibility Material allows on larger displays,
-4. full-screen dialogs require navigation tasks, and covered dialogs must leave
-   history before explicit dismissal or destruction,
+4. covered full-screen dialogs must become current before explicit dismissal
+   or leave history before destruction,
 5. caller-owned body, action-label, and icon backing storage must remain live
    through its documented persistent configuration lifetime,
 6. and the first landing does not include motion transitions.

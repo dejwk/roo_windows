@@ -1,5 +1,9 @@
 # Display runtime Phase 4 optional navigation design
 
+> Historical Phase 4 design. The optional, caller-owned host API described here
+> is superseded by [task-owned navigation](task_owned_navigation_design.md).
+> Every task now owns navigation, including the widget convenience variant.
+
 ## Objective
 
 Allow a `UiTask` to host one fixed, borrowed content widget without navigation

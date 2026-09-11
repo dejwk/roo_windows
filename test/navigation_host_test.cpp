@@ -1,5 +1,6 @@
 #include "roo_windows/core/navigation_host.h"
 
+#include <memory>
 #include <vector>
 
 #include "gtest/gtest.h"
@@ -11,6 +12,14 @@
 #include "roo_windows/core/environment.h"
 
 namespace roo_windows {
+namespace test {
+class NavigationHostTestAccess {
+ public:
+  static size_t OverflowCapacity(const NavigationHost& host) {
+    return host.history_.capacity();
+  }
+};
+}  // namespace test
 namespace {
 
 class TestWidget : public BasicWidget {
@@ -83,14 +92,14 @@ TEST(NavigationHost, PushPopAndClearBorrowDestinationContents) {
   roo_display::Display display(device);
   roo_scheduler::Scheduler scheduler;
   Environment environment(scheduler);
-  NavigationHost navigation;
+
   TestDestination* first = nullptr;
   TestDestination* second = nullptr;
   {
     Application app(&environment, display);
     first = new TestDestination(app.context());
     second = new TestDestination(app.context());
-    app.addTaskFullScreen(navigation);
+    NavigationHost& navigation = app.addTaskFullScreen().navigation();
     navigation.push(*first);
     EXPECT_EQ(1u, navigation.depth());
     EXPECT_NE(nullptr, first->contents().parent());
@@ -119,7 +128,7 @@ TEST(NavigationHost, BackRoutesDestinationThenHistoryThenTask) {
   roo_display::Display display(device);
   roo_scheduler::Scheduler scheduler;
   Environment environment(scheduler);
-  NavigationHost navigation;
+
   TestDestination* first = nullptr;
   TestDestination* second = nullptr;
   bool fallback_called = false;
@@ -127,7 +136,8 @@ TEST(NavigationHost, BackRoutesDestinationThenHistoryThenTask) {
     Application app(&environment, display);
     first = new TestDestination(app.context());
     second = new TestDestination(app.context());
-    Task& task = app.addTaskFullScreen(navigation);
+    Task& task = app.addTaskFullScreen();
+    NavigationHost& navigation = task.navigation();
     task.setBackCallback([&fallback_called](BackSource source) {
       fallback_called = source == BackSource::kNavigationButton;
       return BackResult::kHandled;
@@ -157,13 +167,14 @@ TEST(NavigationHost, ReentrantDestinationBackPerformsOnlyOneStep) {
   roo_display::Display display(device);
   roo_scheduler::Scheduler scheduler;
   Environment environment(scheduler);
-  NavigationHost navigation;
+
   TestDestination* next = nullptr;
   ReentrantDestination* current = nullptr;
   {
     Application app(&environment, display);
     next = new TestDestination(app.context());
-    Task& task = app.addTaskFullScreen(navigation);
+    Task& task = app.addTaskFullScreen();
+    NavigationHost& navigation = task.navigation();
     current = new ReentrantDestination(app.context(), navigation, *next);
     navigation.push(*current);
 
@@ -184,7 +195,7 @@ TEST(NavigationHost, DestinationLifecycleFollowsHistoryAndCurrentContent) {
   roo_display::Display display(device);
   roo_scheduler::Scheduler scheduler;
   Environment environment(scheduler);
-  NavigationHost navigation;
+
   std::vector<char> events;
   LifecycleDestination* first = nullptr;
   LifecycleDestination* second = nullptr;
@@ -192,7 +203,7 @@ TEST(NavigationHost, DestinationLifecycleFollowsHistoryAndCurrentContent) {
     Application app(&environment, display);
     first = new LifecycleDestination(app.context(), events, 'A');
     second = new LifecycleDestination(app.context(), events, 'B');
-    app.addTaskFullScreen(navigation);
+    NavigationHost& navigation = app.addTaskFullScreen().navigation();
     navigation.push(*first);
     navigation.push(*second);
     navigation.pop();
@@ -212,9 +223,9 @@ TEST(NavigationHost, RemovedCallbackFollowsReentrantStop) {
   roo_display::Display display(device);
   roo_scheduler::Scheduler scheduler;
   Environment environment(scheduler);
-  NavigationHost navigation_;
+
   Application app_(&environment, display);
-  app_.addTaskFullScreen(navigation_);
+  NavigationHost& navigation_ = app_.addTaskFullScreen().navigation();
   TestWidget outgoing_content(app_.context());
   TestDestination next(app_.context());
   class NavigatingOnStop final : public Destination {
@@ -239,6 +250,105 @@ TEST(NavigationHost, RemovedCallbackFollowsReentrantStop) {
   EXPECT_EQ(nullptr, outgoing.getNavigationHost());
   EXPECT_NE(nullptr, next.contents().parent());
   navigation_.pop();
+}
+
+TEST(NavigationHost, RootUsesInlineStorageAndOverflowCapacityIsRetained) {
+  roo::byte raster[16 * 16 * 2] = {};
+  roo_display::OffscreenDevice<roo_display::Argb4444> device(
+      16, 16, raster, roo_display::Argb4444());
+  roo_display::Display display(device);
+  roo_scheduler::Scheduler scheduler;
+  Environment environment(scheduler);
+  Application app(&environment, display);
+  NavigationHost& navigation = app.addTaskFullScreen().navigation();
+  TestDestination first(app.context());
+  TestDestination second(app.context());
+  TestDestination third(app.context());
+  EXPECT_EQ(0u, test::NavigationHostTestAccess::OverflowCapacity(navigation));
+  navigation.push(first);
+  EXPECT_EQ(1u, navigation.depth());
+  EXPECT_EQ(0u, test::NavigationHostTestAccess::OverflowCapacity(navigation));
+  navigation.replace(second);
+  EXPECT_EQ(nullptr, first.getNavigationHost());
+  EXPECT_EQ(0u, test::NavigationHostTestAccess::OverflowCapacity(navigation));
+  navigation.push(third);
+  EXPECT_EQ(2u, navigation.depth());
+  const size_t capacity =
+      test::NavigationHostTestAccess::OverflowCapacity(navigation);
+  EXPECT_GE(capacity, 1u);
+  navigation.replace(first);
+  EXPECT_EQ(capacity,
+            test::NavigationHostTestAccess::OverflowCapacity(navigation));
+  EXPECT_EQ(nullptr, third.getNavigationHost());
+  navigation.pop();
+  EXPECT_TRUE(navigation.isCurrent(second));
+  navigation.pop();
+  EXPECT_TRUE(navigation.empty());
+  navigation.push(first);
+  EXPECT_EQ(1u, navigation.depth());
+  navigation.clear();
+  EXPECT_EQ(capacity,
+            test::NavigationHostTestAccess::OverflowCapacity(navigation));
+}
+
+TEST(NavigationHost, RootCanRedirectDuringStartWithoutAllocatingHistory) {
+  roo::byte raster[16 * 16 * 2] = {};
+  roo_display::OffscreenDevice<roo_display::Argb4444> device(
+      16, 16, raster, roo_display::Argb4444());
+  roo_display::Display display(device);
+  roo_scheduler::Scheduler scheduler;
+  Environment environment(scheduler);
+  Application app(&environment, display);
+  NavigationHost& navigation = app.addTaskFullScreen().navigation();
+  TestDestination next(app.context());
+  class RedirectingDestination final : public TestDestination {
+   public:
+    RedirectingDestination(ApplicationContext& context, Destination& next)
+        : TestDestination(context), next_(next) {}
+    void onStart() override { getNavigationHost()->replace(next_); }
+
+   private:
+    Destination& next_;
+  } first(app.context(), next);
+  navigation.push(first);
+  EXPECT_EQ(nullptr, first.getNavigationHost());
+  EXPECT_TRUE(navigation.isCurrent(next));
+  EXPECT_EQ(1u, navigation.depth());
+  EXPECT_EQ(0u, test::NavigationHostTestAccess::OverflowCapacity(navigation));
+  navigation.clear();
+}
+
+TEST(NavigationHost, TaskTeardownDrainsHistoryAfterReentrantRemoval) {
+  roo::byte raster[16 * 16 * 2] = {};
+  roo_display::OffscreenDevice<roo_display::Argb4444> device(
+      16, 16, raster, roo_display::Argb4444());
+  roo_display::Display display(device);
+  roo_scheduler::Scheduler scheduler;
+  Environment environment(scheduler);
+  auto app = std::make_unique<Application>(&environment, display);
+  NavigationHost& navigation = app->addTaskFullScreen().navigation();
+  TestDestination root(app->context());
+  TestDestination middle(app->context());
+  class RemovingDestination final : public TestDestination {
+   public:
+    RemovingDestination(ApplicationContext& context, NavigationHost& navigation)
+        : TestDestination(context), navigation_(navigation) {}
+    void onRemoved() override {
+      EXPECT_FALSE(navigation_.isAvailable());
+      navigation_.pop();
+    }
+
+   private:
+    NavigationHost& navigation_;
+  } top(app->context(), navigation);
+  navigation.push(root);
+  navigation.push(middle);
+  navigation.push(top);
+  app.reset();
+  EXPECT_EQ(nullptr, top.getNavigationHost());
+  EXPECT_EQ(nullptr, middle.getNavigationHost());
+  EXPECT_EQ(nullptr, root.getNavigationHost());
+  EXPECT_EQ(nullptr, root.contents().parent());
 }
 
 }  // namespace

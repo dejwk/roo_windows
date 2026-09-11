@@ -90,10 +90,10 @@ TEST(DisplayRuntimeCharacterization, RefreshPaintsAndResumesInterruptedFrame) {
   roo_display::Display display(device);
   roo_scheduler::Scheduler scheduler;
   Environment environment(scheduler);
-  NavigationHost navigation;
+
   Application app(&environment, display);
   ColorDestination destination(app.context());
-  app.addTaskFullScreen(navigation);
+  NavigationHost& navigation = app.addTaskFullScreen().navigation();
   navigation.push(destination);
 
   EXPECT_FALSE(app.refresh(roo_time::Uptime::Start()));
@@ -123,10 +123,10 @@ TEST(DisplayRuntimeCharacterization, ScheduledTickRoutesKeySamplesAndActivation)
                          PhysicalKey::kEnter, 0},
                         {KeyPhase::kUp, KeyCode::kEnter, 0,
                          PhysicalKey::kEnter, 0}});
-  NavigationHost navigation;
+
   Application app(&environment, display, keys, false);
   RecordingDestination destination(app.context());
-  app.addTaskFullScreen(navigation);
+  NavigationHost& navigation = app.addTaskFullScreen().navigation();
   navigation.push(destination);
   ASSERT_TRUE(app.refresh());
   ASSERT_TRUE(destination.contents.requestFocus());
@@ -155,12 +155,12 @@ TEST(DisplayRuntimeCharacterization, DestructionStopsBorrowedDestinations) {
   roo_display::Display display(device);
   roo_scheduler::Scheduler scheduler;
   Environment environment(scheduler);
-  NavigationHost navigation;
+
   RecordingDestination* destination = nullptr;
   {
     Application app(&environment, display);
     destination = new RecordingDestination(app.context());
-    app.addTaskFullScreen(navigation);
+    NavigationHost& navigation = app.addTaskFullScreen().navigation();
     navigation.push(*destination);
     app.start();
   }

@@ -93,18 +93,19 @@ class Application {
   /// Adds a child widget to a new popup task at the supplied bounds.
   void addPopup(WidgetRef child, const roo_display::Box& box);
 
-  /// Creates a display-local direct-content task in the normal layer. The
-  /// caller retains ownership of `content`, which must remain unattached and
-  /// outlive the returned task.
+  /// Creates a task with a task-owned destination borrowing `content`.
+  /// The widget must be unattached and remain alive until its destination is
+  /// removed (normally at task destruction). It detaches while
+  /// covered by another destination and reattaches when that entry is popped.
   Task& addTask(Widget& content, const roo_display::Box& bounds);
-  /// Creates a display-local direct-content task filling the display.
+  /// Creates a widget-backed task filling the display.
   Task& addTaskFullScreen(Widget& content);
 
-  /// Creates a display-local navigation task in the normal layer. The caller
-  /// retains ownership of `navigation`, which must outlive the returned task.
-  Task& addTask(NavigationHost& navigation, const roo_display::Box& bounds);
-  /// Creates a display-local navigation task filling the display.
-  Task& addTaskFullScreen(NavigationHost& navigation);
+  /// Creates a task with empty, task-owned navigation history.
+  /// Push caller-owned destinations through the returned task's navigation().
+  Task& addTask(const roo_display::Box& bounds);
+  /// Creates an empty task filling the display.
+  Task& addTaskFullScreen();
 
   /// Convenience function showing a new, heap-allocated alert dialog with
   /// the specified contents through `interaction_owner`. The dialog is

@@ -8,7 +8,7 @@ namespace roo_windows {
 
 NavigationHost::~NavigationHost() {
   CHECK(task_ == nullptr);
-  CHECK(history_.empty());
+  CHECK(empty());
 }
 
 bool NavigationHost::isAvailable() const {
@@ -29,16 +29,35 @@ bool NavigationHost::attached(Destination& destination) const {
 void NavigationHost::beginCallback() { ++lifecycle_callback_depth_; }
 void NavigationHost::endCallback() { --lifecycle_callback_depth_; }
 
+void NavigationHost::append(Destination& destination) {
+  if (root_ == nullptr) {
+    root_ = &destination;
+  } else {
+    history_.push_back(&destination);
+  }
+}
+
+void NavigationHost::removeCurrent() {
+  if (history_.empty()) {
+    root_ = nullptr;
+  } else {
+    history_.pop_back();
+  }
+}
+
 void NavigationHost::install(Task& task) {
   CHECK(task_ == nullptr);
-  CHECK(history_.empty());
+  CHECK(empty());
   task_ = &task;
 }
 
 void NavigationHost::disconnect() {
   // Teardown uses the regular lifecycle path so every entry observes stop
   // while the task and host are still available to it.
-  clear();
+  // Teardown callbacks may remove additional entries themselves. Such a
+  // nested command supersedes clear's transition, so keep draining. Task
+  // availability already blocks push/replace from replenishing history.
+  while (!empty()) clear();
   task_ = nullptr;
 }
 
@@ -59,7 +78,8 @@ bool NavigationHost::pauseAndDetachCurrent() {
       return false;
     }
   }
-  CHECK(destination->state_ == Destination::kPausing ||
+  CHECK(destination->state_ == Destination::kStarting ||
+        destination->state_ == Destination::kPausing ||
         destination->state_ == Destination::kPaused ||
         destination->state_ == Destination::kResuming);
   // Detachment is deliberately outside the lifecycle callback window. A
@@ -82,7 +102,7 @@ bool NavigationHost::stopCurrent() {
   if (destination->state_ != Destination::kStopping) {
     // Remove the entry before onStop(): it is no longer current, but retains
     // host_ until the callback returns so it can still resolve its context.
-    history_.pop_back();
+    removeCurrent();
     destination->state_ = Destination::kStopping;
     unsigned int generation = generation_;
     beginCallback();
@@ -134,30 +154,31 @@ bool NavigationHost::startAndResume(Destination& destination) {
 }
 
 void NavigationHost::push(Destination& destination) {
-  CHECK(task_ != nullptr);
+  CHECK(isAvailable());
   CHECK(mayMutate());
   CHECK(destination.host_ == nullptr);
   CHECK(destination.getContents().parent() == nullptr);
   // Do any capacity growth before lifecycle code can observe a transition;
   // a vector allocation cannot then leave a partially paused history.
-  if (history_.size() == history_.capacity()) history_.reserve(history_.size() + 1);
+  if (!empty() && history_.size() == history_.capacity())
+    history_.reserve(history_.size() + 1);
   ++mutation_depth_;
   if (!pauseAndDetachCurrent()) {
     --mutation_depth_;
     return;
   }
-  history_.push_back(&destination);
+  append(destination);
   if (startAndResume(destination)) ++generation_;
   --mutation_depth_;
 }
 
 void NavigationHost::replace(Destination& destination) {
-  CHECK(task_ != nullptr);
+  CHECK(isAvailable());
   CHECK(mayMutate());
-  CHECK(!history_.empty());
+  CHECK(!empty());
   CHECK(destination.host_ == nullptr);
   CHECK(destination.getContents().parent() == nullptr);
-  if (history_.size() == history_.capacity()) history_.reserve(history_.size() + 1);
+
   ++mutation_depth_;
   if (!pauseAndDetachCurrent() || !stopCurrent()) {
     --mutation_depth_;
@@ -165,7 +186,7 @@ void NavigationHost::replace(Destination& destination) {
   }
   // Do not resume the covered destination below the replacement: replace is
   // one removal followed directly by one start/attach/resume transition.
-  history_.push_back(&destination);
+  append(destination);
   if (startAndResume(destination)) ++generation_;
   --mutation_depth_;
 }
@@ -173,13 +194,13 @@ void NavigationHost::replace(Destination& destination) {
 void NavigationHost::pop() {
   CHECK(task_ != nullptr);
   CHECK(mayMutate());
-  CHECK(!history_.empty());
+  CHECK(!empty());
   ++mutation_depth_;
   if (!pauseAndDetachCurrent() || !stopCurrent()) {
     --mutation_depth_;
     return;
   }
-  if (!history_.empty()) {
+  if (!empty()) {
     Destination* destination = current();
     CHECK(destination->state_ == Destination::kPaused);
     // Only pop restores the now-current covered entry. Its widget must be
@@ -201,7 +222,7 @@ void NavigationHost::pop() {
 
 void NavigationHost::clear() {
   CHECK(mayMutate());
-  if (history_.empty()) return;
+  if (empty()) return;
   ++mutation_depth_;
   if (!pauseAndDetachCurrent()) {
     --mutation_depth_;
@@ -210,7 +231,7 @@ void NavigationHost::clear() {
   // Stop top to bottom; never attach or resume an intermediate destination.
   // This preserves the distinction between leaving history and becoming the
   // visible destination.
-  while (!history_.empty()) {
+  while (!empty()) {
     if (!stopCurrent()) break;
   }
   ++generation_;
@@ -218,7 +239,7 @@ void NavigationHost::clear() {
 }
 
 BackResult NavigationHost::requestBack(BackSource source) {
-  if (history_.empty()) return task_->requestTaskBackCallback(source);
+  if (empty()) return task_->requestTaskBackCallback(source);
   Destination* destination = current();
   // Back handlers get the same state-aware reentrant window as lifecycle
   // handlers. A nested command consumes this one semantic Back request.
@@ -229,11 +250,11 @@ BackResult NavigationHost::requestBack(BackSource source) {
   if (result == BackResult::kHandled) return BackResult::kHandled;
   // Do not apply the normal pop fallback after a callback navigated, detached
   // the widget, or disconnected the task.
-  if (task_ == nullptr || history_.empty() || current() != destination ||
+  if (task_ == nullptr || empty() || current() != destination ||
       generation_ != generation || !attached(*destination)) {
     return BackResult::kHandled;
   }
-  if (history_.size() > 1) {
+  if (depth() > 1) {
     pop();
     return BackResult::kHandled;
   }

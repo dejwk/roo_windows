@@ -84,8 +84,7 @@ void EditTextField::triggerEdit(
 void EditTextField::triggerEditField(TextField& field) {
   Task* task = field.getTask();
   CHECK(task != nullptr);
-  CHECK(task->navigationHost() != nullptr);
-  triggerEdit(*task->navigationHost(), field.content(), field.hint(),
+  triggerEdit(task->navigation(), field.content(), field.hint(),
               [&](const std::string& value) { field.setContent(value); });
 }
 

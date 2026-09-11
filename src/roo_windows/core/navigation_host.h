@@ -7,19 +7,21 @@
 
 namespace roo_windows {
 
-class NavigationHost;
 class Task;
 class Widget;
 class Application;
+namespace test {
+class NavigationHostTestAccess;
+}
 
-/// Optional, caller-owned navigation history for one `Task`.
+/// Navigation history owned by one `Task`.
 ///
 /// The host borrows every `Destination` and its contents. It stores history in
-/// a growable vector; only `push()` may allocate after its retained capacity
-/// has been reached.
+/// an inline root slot and a growable vector for entries above it. Initial
+/// root push and root replacement allocate no history storage; later pushes
+/// may allocate once retained capacity has been reached.
 class NavigationHost {
  public:
-  NavigationHost() = default;
   ~NavigationHost();
 
   NavigationHost(const NavigationHost&) = delete;
@@ -38,10 +40,10 @@ class NavigationHost {
   void clear();
 
   /// Returns whether the host has no destinations.
-  bool empty() const { return history_.empty(); }
+  bool empty() const { return root_ == nullptr; }
 
   /// Returns the number of stored destinations.
-  size_t depth() const { return history_.size(); }
+  size_t depth() const { return empty() ? 0 : 1 + history_.size(); }
 
   /// Returns whether new destinations can currently be admitted.
   bool isAvailable() const;
@@ -55,15 +57,20 @@ class NavigationHost {
   Task* getTask() const { return task_; }
 
  private:
+  NavigationHost() = default;
+
   friend class Task;
+  friend class test::NavigationHostTestAccess;
   friend class Application;
   friend class Destination;
 
   /// Routes Back through the current destination and normal history fallback.
   BackResult requestBack(BackSource source);
   Destination* current() const {
-    return history_.empty() ? nullptr : history_.back();
+    return history_.empty() ? root_ : history_.back();
   }
+  void append(Destination& destination);
+  void removeCurrent();
   void install(Task& task);
   void disconnect();
   bool mayMutate() const;
@@ -82,7 +89,9 @@ class NavigationHost {
 
   /// Borrowed task that installs this host; null while disconnected.
   Task* task_ = nullptr;
-  /// Borrowed destinations in history order, with the current entry at back.
+  /// Stores the first borrowed destination without a vector allocation.
+  Destination* root_ = nullptr;
+  /// Borrowed destinations above the root, with the current entry at back.
   std::vector<Destination*> history_;
   /// Changes after a successful command so an outer callback can detect that
   /// a nested command has taken over its transition.

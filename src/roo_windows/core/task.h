@@ -19,7 +19,7 @@ bool CaptureTransientSourceGeometry(Task& owner, const Widget& source,
                                     TransientSourceGeometry& output);
 }  // namespace internal
 
-/// Owns task-local focus, editing, input routing, and fixed direct content.
+/// Owns task-local navigation, focus, editing, and input routing.
 class Task {
  public:
   using BackCallback = std::function<BackResult(BackSource)>;
@@ -37,10 +37,15 @@ class Task {
   Application& application() { return app_; }
   const Application& application() const { return app_; }
 
-  /// Returns the optional navigation host for a navigation task.
-  NavigationHost* navigationHost() const { return navigation_; }
+  /// Returns the navigation history owned by this task.
+  NavigationHost& navigation() { return navigation_; }
+  const NavigationHost& navigation() const { return navigation_; }
 
-  /// Shows or hides this task layer without detaching its fixed content.
+  /// Pointer-form compatibility accessor; always non-null for a live task.
+  NavigationHost* navigationHost() { return &navigation_; }
+  const NavigationHost* navigationHost() const { return &navigation_; }
+
+  /// Shows or hides this task layer without detaching its current content.
   void setVisible(bool visible);
 
   /// Returns focus state scoped to this task panel.
@@ -74,7 +79,7 @@ class Task {
   Task(Application& app, DisplayWindow& window, const roo_display::Box& bounds,
        bool popup, Widget& content);
   Task(Application& app, DisplayWindow& window, const roo_display::Box& bounds,
-       bool popup, NavigationHost& navigation);
+       bool popup);
 
   void dispatchKeyEvent(const KeyEvent& event);
   void cancelKeyActivation();
@@ -94,7 +99,18 @@ class Task {
   Widget* armed_key_widget_ = nullptr;
   PhysicalKey armed_key_ = PhysicalKey::kNone;
   BackCallback back_callback_;
-  NavigationHost* navigation_ = nullptr;
+  class WidgetDestination final : public Destination {
+   public:
+    Widget& getContents() override { return *content_; }
+
+   private:
+    friend class Task;
+    Widget* content_ = nullptr;
+  };
+
+  // Task destruction disconnects navigation before either member dies.
+  NavigationHost navigation_;
+  WidgetDestination initial_destination_;
 };
 
 }  // namespace roo_windows

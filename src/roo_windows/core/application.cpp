@@ -457,11 +457,9 @@ Task& Application::addTaskFullScreen(Widget& content) {
   return addTask(content, window_.display().extents());
 }
 
-Task& Application::addTask(NavigationHost& navigation,
-                           const roo_display::Box& bounds) {
+Task& Application::addTask(const roo_display::Box& bounds) {
   checkUiThread();
-  CHECK(navigation.task_ == nullptr);
-  Task* task = new Task(*this, window_, bounds, false, navigation);
+  Task* task = new Task(*this, window_, bounds, false);
   tasks_.emplace_back(task);
   if (legacy_key_source_ != nullptr && legacy_key_source_->isConnected()) {
     legacy_key_source_->disconnect();
@@ -470,8 +468,8 @@ Task& Application::addTask(NavigationHost& navigation,
   return *task;
 }
 
-Task& Application::addTaskFullScreen(NavigationHost& navigation) {
-  return addTask(navigation, window_.display().extents());
+Task& Application::addTaskFullScreen() {
+  return addTask(window_.display().extents());
 }
 
 PresentationStartResult Application::showAlertDialog(

@@ -52,8 +52,8 @@ class FullScreenDialog : public internal::DialogScaffold {
   LayoutDirection layoutDirection() const { return dialogLayoutDirection(); }
 
   /// Pushes this dialog into the owner's navigation history.
-  /// Requires a navigation task; fills that task's bounds. Use a full-screen
-  /// task for a full-window dialog. Layout runs on the next refresh.
+  /// Works with empty and widget-backed tasks, filling the task's bounds.
+  /// Use a full-screen task for a full-window dialog. Layout runs on refresh.
   DialogShowResult show(Task& interaction_owner);
 
   /// Returns whether the dialog belongs to history, including while covered.

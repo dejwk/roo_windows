@@ -230,21 +230,15 @@ class DialogCatalog final : public FlexLayout {
 
 roo_scheduler::Scheduler scheduler;
 Environment env(scheduler);
-NavigationHost navigation;
 #ifdef ROO_TESTING
 Application app(&env, display, emulator_keys, true);
 #else
 Application app(&env, display);
 #endif
 DialogCatalog catalog(app.context());
-class CatalogDestination final : public Destination {
- public:
-  Widget& getContents() override { return catalog; }
-} catalog_destination;
-Task& task = app.addTaskFullScreen(navigation);
+Task& task = app.addTaskFullScreen(catalog);
 
 void setup() {
-  navigation.push(catalog_destination);
   catalog.bind(task);
   initDisplay();
   app.start();

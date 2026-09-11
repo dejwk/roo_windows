@@ -75,11 +75,11 @@ TEST(SharedSchedulerDrive, KeyboardCanTargetAnotherApplicationEditor) {
   roo_display::Display destination_display(destination_device);
   roo_scheduler::Scheduler scheduler;
   Environment environment(scheduler);
-  NavigationHost destination_navigation;
+
   Application source(&environment, source_display);
   Application destination(&environment, destination_display);
-  Task& destination_task =
-      destination.addTaskFullScreen(destination_navigation);
+  Task& destination_task = destination.addTaskFullScreen();
+  NavigationHost& destination_navigation = destination_task.navigation();
   TextInputDestination target(destination.context());
   destination_navigation.push(target);
 

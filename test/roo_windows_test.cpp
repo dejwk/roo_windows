@@ -307,9 +307,9 @@ TEST(Windows, TextFieldEditsFromHardwareKeys) {
   Display display(offscreen);
   roo_scheduler::Scheduler scheduler;
   Environment env(scheduler);
-  NavigationHost navigation;
+
   Application app(&env, display);
-  app.addTaskFullScreen(navigation);
+  NavigationHost& navigation = app.addTaskFullScreen().navigation();
   TextFieldDestination destination(app.context());
   navigation.push(destination);
   app.refresh();

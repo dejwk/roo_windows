@@ -18,8 +18,8 @@ that policy and deletes the child.
 
 An object used without taking allocation ownership. The borrower must stop
 using and structurally detach it before its owner destroys it. A `Task`
-borrows either one fixed content root or one caller-owned `NavigationHost`; a
-`NavigationHost` in turn borrows its `Destination` entries. Moving
+owns a `NavigationHost` that borrows its `Destination` entries; the task-owned
+convenience destination borrows its supplied widget. Moving
 `WidgetRef(Widget&)` into `attachChild()` attaches a borrowed widget; the
 container subsequently stores only its raw pointer.
 
@@ -36,8 +36,8 @@ the slot goes through `detachChild()`, which deletes only a parent-owned child.
 
 The framework object that provides structural placement or a scarce runtime
 slot. A host does not necessarily own the allocation. `MainWindow` hosts the
-active dialog and its scrim; a `TaskPanel` hosts its task's fixed content or
-the current content supplied by its optional navigation host.
+active dialog and its scrim; a `TaskPanel` hosts the current content supplied by its task-owned navigation
+host.
 
 ### Owner
 
@@ -64,7 +64,8 @@ is not a valid lifetime token.
 
 ### Destination
 
-A caller-owned, borrowed entry in an optional `NavigationHost`. It supplies
+An entry borrowed by a task-owned `NavigationHost`. Explicit destinations are
+caller-owned; the widget convenience adapter is task-owned. It supplies
 one content root and receives start, resume, pause, stop, and semantic Back
 lifecycle calls. For example, a navigation host can push a full-screen editor
 destination above a settings destination.
@@ -73,21 +74,22 @@ destination above a settings destination.
 
 The framework interaction owner for one region of application UI. A task owns
 focus, text editing, physical-key activation, semantic Back fallback, and its
-structural `TaskPanel`. It borrows either fixed direct content or an optional
-`NavigationHost`; direct-content tasks allocate no navigation history.
+structural `TaskPanel` and `NavigationHost`. The widget convenience variant
+creates an inline destination borrowing the supplied widget. Empty and
+single-entry histories allocate no history storage.
 
 ### Route
 
 A persistent application navigation entry represented by a `Destination` in
-an optional `NavigationHost`. A task with fixed direct content has no route
-history. A dialog, menu, snackbar, or modal sheet is temporary UI and is not a
-route.
+a task-owned `NavigationHost`. A full-screen dialog also uses a destination
+for its temporary task flow. Basic dialogs, menus, snackbars, and modal sheets
+use transient presentation instead.
 
 ### Semantic Back request
 
 A task-explicit navigation request used by UI Back buttons, hardware Back,
 Escape, and application code. `Task::requestBack()` first offers the request to
-the root interactive transient, then to the task's optional `NavigationHost`,
+the root interactive transient, then to the task's `NavigationHost`,
 and finally to the task-local fallback callback.
 
 ## Temporary UI
