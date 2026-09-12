@@ -207,8 +207,9 @@ The storage choices are explicit.
 
 The switch packing is the only special case worth keeping because both switch
 implementations already own a 16-bit animation field. Their current animation
-durations are far below 14 bits of timing range, so one spare bit can encode
-the binary `OnOffState` with no behavior loss and no new per-instance field.
+registry owns timing, so the word now uses one bit for the binary `OnOffState`
+and nine bits for the applied `0..256` thumb fraction. This retains a compact
+idle representation with no per-instance timestamp or scheduler handle.
 
 ### RAM Impact
 
@@ -380,9 +381,18 @@ selector-facing APIs and examples, and refreshed the focused selector tests.
 Phase 2 packed redraw and layout flags into `Widget::state_`, removed
 `redraw_status_`, and lowered the 32-bit `Widget` size guard to 24 B.
 
+The later widget-animation migration preserved both switches' 16-bit local
+word while replacing paint-time masked timestamps with application-registry
+value tracks. Material motion remains 100 ms and legacy motion 120 ms;
+programmatic setters snap, rapid clicks retarget from the applied fraction, and
+hidden/detached switches cancel and snap to logical state. The idle widget
+ceilings remain `sizeof(BasicWidget) + 2 * sizeof(void*) + 8` for Material and
+`sizeof(BasicWidget) + 8` for legacy. Each active thumb temporarily consumes
+one registry record, budgeted separately at no more than 128 B.
+
 The rollout was validated with:
 
-- `bazel test //:roo_windows_test //:material3_checkbox_test //:material3_checkbox_golden_test //:material3_radio_button_test //:material3_switch_test //:overlay_test`
+- `bazel test //:roo_windows_test //:material3_checkbox_test //:material3_checkbox_golden_test //:material3_radio_button_test //:material3_switch_test //:switch_golden_test //:overlay_test`
 - `bazel test //:roo_windows_test //:overlay_test //:flex_layout_test`
 - `bazel test ...`
 

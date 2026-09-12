@@ -1,5 +1,6 @@
-// Learning goal: model immediate boolean settings with switches. Toggle each
-// connection and observe the resulting device state.
+// Learning goal: model immediate boolean settings with switches. Logical state
+// changes on release while a registry value track animates the thumb alongside
+// independent click feedback.
 
 // *************** EMULATOR SETUP BEGIN
 

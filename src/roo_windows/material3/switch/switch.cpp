@@ -1,7 +1,5 @@
 #include "roo_windows/material3/switch/switch.h"
 
-#include <Arduino.h>
-
 #include "roo_display/color/interpolation.h"
 #include "roo_display/composition/streamable_stack.h"
 #include "roo_display/shape/basic.h"
@@ -105,26 +103,56 @@ void Switch::setUnselectedIcon(const MonoIcon* icon) {
   invalidateInterior();
 }
 
+void Switch::setOnOffState(OnOffState state) {
+  if (onOffState() == state) return;
+  context().animations().cancel(*this, kThumb);
+  state_ = StateBits(state) | EndpointFraction(state);
+  setDirty();
+}
+
 void Switch::onClicked() {
-  toggle();
-  anim_ = (anim_ & kOnOffStateMask) | (millis() & kTimeMask);
+  OnOffState target = isOn() ? OnOffState::kOff : OnOffState::kOn;
+  state_ = (state_ & kFractionMask) | StateBits(target);
+  startThumbTransition();
   Widget::onClicked();
 }
 
-int16_t Switch::timeAnimatingMs() const {
-  return (millis() & kTimeMask) - (anim_ & kTimeMask);
+bool Switch::isAnimating() const {
+  return context().animations().contains(*this, kThumb);
+}
+
+void Switch::setAppliedThumbFraction(int16_t fraction) {
+  if (fraction < 0) fraction = 0;
+  if (fraction > 256) fraction = 256;
+  state_ = (state_ & kOnOffStateMask) | static_cast<uint16_t>(fraction);
+}
+
+void Switch::startThumbTransition() {
+  const int16_t target = isOn() ? 256 : 0;
+  const int16_t current = appliedThumbFraction();
+  context().animations().cancel(*this, kThumb);
+  if (current == target ||
+      presentationState() != PresentationState::kPresented) {
+    snapThumbToLogicalState();
+    return;
+  }
+  AnimationSpec spec = AnimationSpec::value(
+      static_cast<float>(current), static_cast<float>(target),
+      roo_time::Millis(kSwitchAnimationMs));
+  if (context().animations().start(*this, kThumb, spec) !=
+      AnimationStatus::kOk) {
+    snapThumbToLogicalState();
+  }
+}
+
+void Switch::snapThumbToLogicalState() {
+  context().animations().cancel(*this, kThumb);
+  setAppliedThumbFraction(isOn() ? 256 : 0);
+  setDirty();
 }
 
 int16_t Switch::toggleAnimationFraction() const {
-  if (!isAnimating()) return isOn() ? 256 : 0;
-  int16_t ms = timeAnimatingMs();
-  if (ms < 0 || ms > kSwitchAnimationMs) {
-    return isOn() ? 256 : 0;
-  }
-  int16_t progress = (ms * 256 + kSwitchAnimationMs / 2) / kSwitchAnimationMs;
-  if (progress < 0) progress = 0;
-  if (progress > 256) progress = 256;
-  return isOn() ? progress : 256 - progress;
+  return appliedThumbFraction();
 }
 
 int16_t Switch::currentThumbDiameter() const {
@@ -164,17 +192,23 @@ roo_display::FpPoint Switch::getPointOverlayFocus() const {
              : ::roo_windows::material3::ColorToken::kSurfaceContainerHighest;
 }
 
-void Switch::paintWidgetContents(PaintContext& ctx) {
-  if (isAnimating()) {
-    int16_t ms = timeAnimatingMs();
-    if (ms < 0 || ms > kSwitchAnimationMs) {
-      anim_ = (anim_ & kOnOffStateMask) | kIdleMask;
-    }
+void Switch::onAnimationFrame(AnimationTag tag, const AnimationSample& sample) {
+  if (tag != kThumb) {
+    BasicWidget::onAnimationFrame(tag, sample);
+    return;
   }
-  Widget::paintWidgetContents(ctx);
-  if (isAnimating()) {
-    setDirty();
+  int16_t fraction = static_cast<int16_t>(sample.value + 0.5f);
+  if (fraction == appliedThumbFraction()) return;
+  setAppliedThumbFraction(fraction);
+  setDirty();
+}
+
+void Switch::onPresentationChanged(const PresentationChange& change) {
+  if (change.state == PresentationState::kPresented &&
+      !change.detached_since_delivery) {
+    return;
   }
+  snapThumbToLogicalState();
 }
 
 void Switch::paint(PaintContext& ctx) const {

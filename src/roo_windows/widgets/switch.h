@@ -15,10 +15,13 @@ class Switch : public BasicWidget {
   /// Creates a switch with the specified initial state.
   explicit Switch(ApplicationContext& context,
                   OnOffState state = OnOffState::kOff)
-      : BasicWidget(context), anim_(kIdleMask | StateBits(state)) {}
+      : BasicWidget(context),
+        state_(StateBits(state) | EndpointFraction(state)) {
+    context.presentations().observe(*this);
+  }
 
   /// Returns true when the switch is on.
-  bool isOn() const { return (anim_ & kOnOffStateMask) != 0; }
+  bool isOn() const { return (state_ & kOnOffStateMask) != 0; }
 
   /// Returns true when the switch is off.
   bool isOff() const { return !isOn(); }
@@ -37,13 +40,8 @@ class Switch : public BasicWidget {
   /// Toggles between the on and off states.
   void toggle() { isOn() ? setOff() : setOn(); }
 
-  /// Updates the logical state and schedules a repaint when it changes.
-  void setOnOffState(OnOffState state) {
-    uint16_t updated = (anim_ & ~kOnOffStateMask) | StateBits(state);
-    if (updated == anim_) return;
-    anim_ = updated;
-    setDirty();
-  }
+  /// Updates the logical state and snaps the thumb when it changes.
+  void setOnOffState(OnOffState state);
 
   /// Convenience overload of `setOn()`/`setOff()` that routes to whichever
   /// matches the bool argument.
@@ -54,9 +52,6 @@ class Switch : public BasicWidget {
       setOff();
     }
   }
-
-  /// Drives the thumb animation timing on each paint pass.
-  void paintWidgetContents(PaintContext& ctx) override;
 
   /// Paints the track and thumb at the current animated position.
   void paint(PaintContext& ctx) const override;
@@ -77,22 +72,34 @@ class Switch : public BasicWidget {
   /// Toggles the on/off state and starts the thumb animation.
   void onClicked() override;
 
+ protected:
+  void onAnimationFrame(AnimationTag tag,
+                        const AnimationSample& sample) override;
+  void onPresentationChanged(const PresentationChange& change) override;
+
+  static constexpr AnimationTag kThumb = 0;
+
  private:
-  static constexpr uint16_t kIdleMask = 0x8000;
-  static constexpr uint16_t kOnOffStateMask = 0x4000;
-  static constexpr uint16_t kTimeMask = 0x3FFF;
+  static constexpr uint16_t kOnOffStateMask = 0x8000;
+  static constexpr uint16_t kFractionMask = 0x01FF;
 
   static constexpr uint16_t StateBits(OnOffState state) {
     return state == OnOffState::kOn ? kOnOffStateMask : 0;
   }
 
-  bool isAnimating() const { return (anim_ & kIdleMask) == 0; }
-  int16_t time_animating_ms() const;
+  static constexpr uint16_t EndpointFraction(OnOffState state) {
+    return state == OnOffState::kOn ? 256 : 0;
+  }
+
+  int16_t appliedThumbFraction() const { return state_ & kFractionMask; }
+  void setAppliedThumbFraction(int16_t fraction);
+  void startThumbTransition();
+  void snapThumbToLogicalState();
   int16_t currentThumbOffsetX() const;
 
-  // Bit 15 = 1 means idle; bit 14 stores the logical on/off state; the lower
-  // 14 bits store the animation start time modulo 16384 ms.
-  uint16_t anim_;
+  // Bit 15 stores the logical state; bits [8:0] store the applied 0..256
+  // thumb fraction. Active timing lives in the application registry.
+  uint16_t state_;
 };
 
 }  // namespace roo_windows
