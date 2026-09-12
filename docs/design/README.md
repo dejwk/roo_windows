@@ -25,6 +25,7 @@ Status was audited against the source tree and tests on 2026-09-12. “Dependenc
 | Display runtime Phase 2 `DisplayWindow` extraction | One `DisplayWindow` now owns display-local pointer, paint, continuation, and teardown state for each application. |
 | Display runtime Phase 3 task extraction | Task-local focus, editing, key routing, and structural task ownership are implemented. |
 | Display runtime Phase 4 optional navigation | Historical foundation; the optional host ownership/API is superseded by task-owned navigation. Borrowed destinations and their lifecycle remain. |
+| [Progress indicators](implemented/material3_progress_indicators_design.md) | Standard linear/circular components use the shared animation registry; geometry, presentation, composition and embedded-cost acceptance pass. |
 | [Task-owned navigation](implemented/task_owned_navigation_design.md) | Every task owns its host; widget convenience tasks use an inline borrowing destination and support full-screen dialogs. Initial history storage is allocation-free. |
 | Display runtime Phase 5 shared-scheduler driving | Checked application lifecycle and ticker dispatch, shared-scheduler two-application coverage, and a two-display emulator example are implemented. |
 | Display runtime Phase 6 input | Physical-key identity, application-owned readiness routing, application-scoped semantic text input, built-in keyboard conversion, and cross-application editor integration are implemented. |
@@ -81,7 +82,6 @@ Status was audited against the source tree and tests on 2026-09-12. “Dependenc
 | Interaction overlay reveal | Point and area ripples, widget-local click animation, paint context, and the navigation bar's component-local fade are implemented; shared fade reveal and paint-owned overlay policy are not. |
 | Navigation drawer | List support and basic dialogs are implemented and back routing exists; no drawer implementation exists. |
 | [Presentation registry](implemented/presentation_registry_design.md) | Effective presentation queries and targeted deferred widget notifications are implemented; consumers choose their lifecycle policies. |
-| [Progress indicators](proposed/material3_progress_indicators_design.md) | Material component design uses the implemented presentation and widget animation registries; P2.3 implements the components themselves. |
 | Segmented buttons | Buttons are implemented; the superseding button-group design and this legacy component design are not implemented. |
 | Sheets | Paint/overflow foundations, icon buttons, and shared back behavior are implemented; the sheet family is not. Before implementation, modal sheets must be reconciled to use the P1.6b shared host with explicit task ownership, host-owned barrier paint, presenter-owned focus, and presenter-handled outside dismissal. |
 | Split button | Buttons, icon buttons, non-touch input, and menus are implemented; split buttons remain proposed. |

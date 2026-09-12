@@ -11,9 +11,16 @@ enum class ProgressIndicatorMode : uint8_t { kDeterminate, kIndeterminate };
 /// Passive foreground indicator; mutations belong on the UI thread.
 class ProgressIndicator : public Widget {
  public:
+  /// Indicators retain their identity in the widget and animation registries.
   ProgressIndicator(const ProgressIndicator&) = delete;
+
+  /// Disallows copying widget identity.
   ProgressIndicator& operator=(const ProgressIndicator&) = delete;
+
+  /// Disallows moving widget identity.
   ProgressIndicator(ProgressIndicator&&) = delete;
+
+  /// Disallows move assignment of widget identity.
   ProgressIndicator& operator=(ProgressIndicator&&) = delete;
 
   /// Clamps finite values to [0, 1] and selects determinate mode. Rejects

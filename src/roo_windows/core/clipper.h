@@ -187,6 +187,8 @@ class ClipperState {
   // get invalidated.
   std::deque<Decoration> decorations_;
   std::deque<roo_display::SmoothShape> shape_overlays_;
+  size_t shape_overlay_count_ = 0;
+  roo_display::RasterizableStack overlay_stack_{roo_display::Box(0, 0, -1, -1)};
   std::deque<OverlaySpecStackEntry> overlay_specs_;
 
   std::vector<ClippedOverlay> overlays_;
@@ -212,12 +214,13 @@ class ClipperOutput : public roo_display::DisplayOutput {
         bounded_exclusions_(state.bounded_exclusions_),
         decorations_(state.decorations_),
         shape_overlays_(state.shape_overlays_),
+        shape_overlay_count_(state.shape_overlay_count_),
         overlays_(state.overlays_),
         overlay_specs_(state.overlay_specs_),
         scoped_press_overlay_active_(false),
         scoped_press_overlay_clip_(0, 0, -1, -1),
         valid_(false),
-        overlay_stack_(roo_display::Box(0, 0, -1, -1)),
+        overlay_stack_(state.overlay_stack_),
         overlay_filter_(out, &overlay_stack_),
         rect_union_(nullptr, nullptr),
         rect_union_filter_(overlay_filter_, &rect_union_),
@@ -229,7 +232,7 @@ class ClipperOutput : public roo_display::DisplayOutput {
       exclusions_.clear();
       overlays_.clear();
       decorations_.clear();
-      shape_overlays_.clear();
+      shape_overlay_count_ = 0;
     }
   }
 
@@ -307,8 +310,14 @@ class ClipperOutput : public roo_display::DisplayOutput {
   /// Stores a device-space smooth shape overlay owned by the clipper.
   void addOverlayShape(roo_display::SmoothShape overlay,
                        roo_display::Box clip_box) {
-    shape_overlays_.push_back(std::move(overlay));
-    addOverlay(&shape_overlays_.back(), clip_box);
+    // Reuse stable deque slots instead of freeing/reallocating its blocks at
+    // every frame. Referenced slots remain untouched during a continuation.
+    if (shape_overlay_count_ == shape_overlays_.size()) {
+      shape_overlays_.push_back(std::move(overlay));
+    } else {
+      shape_overlays_[shape_overlay_count_] = std::move(overlay);
+    }
+    addOverlay(&shape_overlays_[shape_overlay_count_++], clip_box);
   }
 
   const PressOverlay* configurePressOverlay(const PressOverlaySpec& spec) {
@@ -526,12 +535,13 @@ class ClipperOutput : public roo_display::DisplayOutput {
   std::vector<roo_display::Box>& bounded_exclusions_;
   std::deque<Decoration>& decorations_;
   std::deque<roo_display::SmoothShape>& shape_overlays_;
+  size_t& shape_overlay_count_;
   std::vector<ClippedOverlay>& overlays_;
   std::deque<internal::OverlaySpecStackEntry>& overlay_specs_;
   bool scoped_press_overlay_active_;
   roo_display::Box scoped_press_overlay_clip_;
   bool valid_;
-  roo_display::RasterizableStack overlay_stack_;
+  roo_display::RasterizableStack& overlay_stack_;
   roo_display::ForegroundFilter overlay_filter_;
   roo_display::RectUnion rect_union_;
   roo_display::RectUnionFilter rect_union_filter_;

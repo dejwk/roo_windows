@@ -104,7 +104,7 @@ digraph material3_roadmap_dependencies {
     p2_2 [label="P2.2", fillcolor="#FFFFFF", color="#16A34A",
           fontcolor="#334155", URL="material3_roadmap.md#p2-2",
           tooltip="Design progress indicators"];
-    p2_3 [color="#CBD5E1", label="P2.3", URL="material3_roadmap.md#p2-3",
+    p2_3 [color="#16A34A", label="P2.3", URL="material3_roadmap.md#p2-3",
           tooltip="Implement progress indicators"];
     p2_4 [color="#EAB308", label="P2.4", URL="material3_roadmap.md#p2-4",
           tooltip="Implement the Material 3 Wi-Fi configuration flow"];

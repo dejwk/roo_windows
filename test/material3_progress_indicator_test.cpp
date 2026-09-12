@@ -4,6 +4,12 @@
 
 #include "golden_image.h"
 #include "gtest/gtest.h"
+#include "roo_windows/containers/vertical_layout.h"
+#include "roo_windows/dialogs/dialog.h"
+#include "roo_windows/material3/dialog/basic_dialog.h"
+#include "roo_windows/material3/dialog/full_screen_dialog.h"
+#include "roo_windows/material3/list/list.h"
+#include "roo_windows/material3/menu/menu.h"
 #include "roo_windows/material3/progress_indicator/progress_geometry.h"
 #include "roo_windows/material3/progress_indicator/progress_indicator.h"
 #include "roo_windows/material3/theme.h"
@@ -420,5 +426,135 @@ TEST(ProgressAcceptanceTest, BoundedWritesAndCoherentContinuation) {
   task.navigation().clear();
   app.refresh();
 }
+/// Legacy dialog that borrows indicator content for each presentation.
+class ProgressLegacyDialog : public ::roo_windows::Dialog {
+ public:
+  explicit ProgressLegacyDialog(ApplicationContext& context)
+      : Dialog(context, {"Close"}) {}
+  using Dialog::setPresentationContent;
+};
+
+// Verifies indeterminate content follows both dialog families and navigation
+// ownership without taking over the independently managed menu host.
+TEST(ProgressAcceptanceTest, DialogAndNavigationOwnership) {
+  roo::byte raster[260 * 120 * 2] = {};
+  ProgressDisplay device(raster);
+  roo_display::Display display(device);
+  roo_scheduler::Scheduler scheduler;
+  Environment env(scheduler);
+  Application app(&env, display);
+  AnimatedProgress<LinearProgressIndicator> root_indicator(app.context());
+  AnimatedProgress<CircularProgressIndicator> dialog_indicator(app.context());
+  Pattern root(app.context());
+  root.add(root_indicator, Rect(0, 0, 239, 3));
+  Task& task = app.addTaskFullScreen(root);
+  root_indicator.setIndeterminate();
+  dialog_indicator.setIndeterminate();
+  ASSERT_TRUE(app.refresh());
+  EXPECT_TRUE(root_indicator.active());
+  {
+    FullScreenDialog dialog(app.context(), dialog_indicator);
+    dialog.setHeaderTitle("Working");
+    dialog.show(task);
+    ASSERT_TRUE(app.refresh());
+    EXPECT_FALSE(root_indicator.active());
+    EXPECT_TRUE(dialog_indicator.active());
+    dialog.dismiss();
+    ASSERT_TRUE(app.refresh());
+    EXPECT_TRUE(root_indicator.active());
+    EXPECT_FALSE(dialog_indicator.active());
+  }
+  {
+    const DialogActionSpec action{1, "Close", DialogActionRole::kAcknowledge};
+    BasicDialog dialog(app.context(), dialog_indicator, &action, 1);
+    dialog.show(task);
+    ASSERT_TRUE(app.refresh());
+    EXPECT_TRUE(dialog_indicator.active());
+    dialog.dismiss();
+    ASSERT_TRUE(app.refresh());
+    EXPECT_FALSE(dialog_indicator.active());
+  }
+  {
+    ProgressLegacyDialog dialog(app.context());
+    dialog.setPresentationContent(dialog_indicator);
+    dialog.show(task, [](int) {});
+    ASSERT_TRUE(app.refresh());
+    EXPECT_TRUE(dialog_indicator.active());
+    dialog.close();
+    ASSERT_TRUE(app.refresh());
+    EXPECT_FALSE(dialog_indicator.active());
+  }
+  root.removeAll();
+  task.navigation().clear();
+  app.refresh();
+}
+class ProgressColumn : public VerticalLayout {
+ public:
+  using VerticalLayout::VerticalLayout;
+  ~ProgressColumn() override { removeAll(); }
+};
+
+// Verifies list-slot attachment and ancestor visibility remain independent of
+// an anchored menu sharing the same task.
+TEST_F(ProgressTest, NestedListAndIndependentMenu) {
+  AnimatedProgress<CircularProgressIndicator> progress(context());
+  StandardListItem item(
+      StandardListItemInit::OneLine("Working", nullptr, &progress));
+  ListEntry entry(context());
+  entry.setItem(item);
+  ProgressColumn inner(context());
+  inner.add(entry);
+  ProgressColumn outer(context());
+  outer.add(inner);
+  Task& task = app_.addTaskFullScreen(outer);
+  progress.setIndeterminate();
+  ASSERT_TRUE(refresh());
+  EXPECT_TRUE(progress.active());
+  MenuGroup group(context());
+  group.add(std::make_unique<MenuRow<StandardMenuItem>>(
+      context(), StandardMenuItemInit{"Action", {}}));
+  Menu menu(context());
+  menu.addGroup(group);
+  EXPECT_EQ(MenuShowResult::kShown, menu.show(task, entry));
+  ASSERT_TRUE(refresh());
+  EXPECT_TRUE(progress.active());
+  menu.dismissChain();
+  ASSERT_TRUE(refresh());
+  EXPECT_TRUE(progress.active());
+  outer.setVisibility(Visibility::kInvisible);
+  ASSERT_TRUE(refresh());
+  EXPECT_FALSE(progress.active());
+  outer.setVisibility(Visibility::kVisible);
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(0, progress.phase());
+  task.navigation().clear();
+  refresh();
+}
+
+// Verifies constrained tiny footprints and empty widgets are paint-safe.
+TEST_F(ProgressTest, TinyAndEmptyBounds) {
+  LinearProgressIndicator linear(context());
+  CircularProgressIndicator circular(context());
+  Pattern pattern(context());
+  pattern.add(linear, Rect(10, 10, 10, 10));
+  pattern.add(circular, Rect(20, 20, 20, 20));
+  Task& task = app_.addTaskFullScreen(pattern);
+  for (float value : {0.0f, 0.001f, 0.5f, 0.99f, 1.0f}) {
+    linear.setProgress(value);
+    circular.setProgress(value);
+    EXPECT_TRUE(refresh());
+  }
+  linear.layout(Rect(0, 0, -1, -1));
+  circular.layout(Rect(0, 0, -1, -1));
+  linear.setIndeterminate();
+  circular.setIndeterminate();
+  EXPECT_TRUE(refresh());
+  EXPECT_FALSE(context().animations().contains(linear, 0));
+  EXPECT_FALSE(context().animations().contains(circular, 0));
+  pattern.removeAll();
+  task.navigation().clear();
+  refresh();
+}
+
 }  // namespace
 }  // namespace roo_windows::material3

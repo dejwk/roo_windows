@@ -1,6 +1,8 @@
 # Material 3 progress indicators
 
-Status: proposed implementation. Framework dependencies are now specified in
+Status: implemented (Phases 1–3). Acceptance evidence and reproduction are in
+[Progress indicator acceptance](../../material3_progress_acceptance.md).
+Framework dependencies are specified in
 [Presentation registry](../implemented/presentation_registry_design.md) and
 [Widget animation registry](../implemented/widget_animation_registry_design.md). This document
 owns the Material component contract, not a second scheduler or registry.
@@ -266,7 +268,7 @@ require implementation correction or a reviewed design revision, not a silent
 increase. At nominal size the invalidation envelope is a 240×4 band or at most
 a 48×48 circle footprint; no containing-page invalidation is permitted.
 
-## Proposed API
+## API
 
 Place both classes and their shared state base in
 `material3/progress_indicator/progress_indicator.h`, with out-of-line rendering
@@ -323,7 +325,7 @@ and [widget authoring](../../../.github/instructions/roo-windows-widget-authorin
 Implement the two framework dependencies first. Each component phase is one
 commit including its tests and example/documentation slice.
 
-### Phase 1: static geometry and API
+### Phase 1: static geometry and API — implemented
 
 Implement both shapes, measurement, theme roles, determinate and reduced-motion
 rendering. Add light/dark goldens at zero, tiny positive, half, near-one and one,
@@ -338,7 +340,7 @@ static fallback; repeated setters and paint never warn.
 > Add linear and circular widgets, component API, static fallback, catalog and
 > geometry/paint tests under the Material 3 progress indicators design.
 
-### Phase 2: shared animation integration
+### Phase 2: shared animation integration — implemented
 
 Register the custom-time track described above and remove the temporary warning.
 Add motion controls to the catalog and fixed-phase goldens. Test waveform
@@ -351,7 +353,7 @@ Validate slow continuation and bounded display writes without widget-local timer
 > Add time-derived indeterminate geometry through the common registry and verify
 > component suspension, lifetime, phase goldens, and frame-coherent rendering.
 
-### Phase 3: composition and cost acceptance
+### Phase 3: composition and cost acceptance — implemented
 
 Extend the example with a full-screen dialog and an independently opening menu.
 Test nested lists, navigation and dialog ownership; record resource gates and
