@@ -35,6 +35,29 @@ This is the canonical widget-authoring guidance for the repository.
 - Resolve default colors and geometry from the active `Theme`.
 - Avoid allocations on hot paint, drag, scroll, and animation paths.
 
+## Animation Scheduling
+
+- Use `ApplicationContext::animations()` for widget animation tracks. Apply
+  sampled values and invalidate their changed bounds in `onAnimationFrame()`;
+  paint methods consume those values without starting a future repaint loop.
+- Retain each animation's minimum frame interval. The default is 20 ms;
+  scroll motion, progress indicators, and caret blinking have explicit cadences.
+- Shared click feedback is the core-owned exception. Render the retained
+  `ClickAnimation` sample through existing overlay hooks. The controller requests
+  its frames and invalidates transient spill before layout. Do not add a widget
+  track or paint-time self-dirtying merely to keep a click overlay moving.
+- Terminal click painting may still clear clicking state provisionally and
+  restore it when painting is interrupted. Semantic delivery waits for the
+  completed logical paint; this is settlement, not a recurring animation loop.
+- Preserve samples across paint continuation; elapsed time advances at the next
+  new logical frame. Do not read wall-clock time from paint to advance animation.
+- Keep semantic timers (password masking, scrollbar hiding, snackbar expiry,
+  keyboard repeat) as scheduled semantic work. Their callbacks can change state
+  or start a registry track; they are not visual frame drivers.
+- Do not add a general widget wakeup API without a concrete consumer that cannot
+  use the registry or the shared click controller. Paint eligibility and deferred
+  framework wakeups belong in the application/display core.
+
 ## Per-Instance Cost
 
 - Apply pay-for-what-you-use rigorously. Do not add effectively no-op fields,

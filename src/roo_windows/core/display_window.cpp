@@ -67,10 +67,6 @@ void DisplayWindow::stop() {
   root_.cancelPaintContinuation();
 }
 
-void DisplayWindow::advanceFrameState() {
-  if (!root_.hasPaintContinuation()) root_.refreshClickAnimation();
-}
-
 void DisplayWindow::servicePointerInput() {
   if (touch_enabled_) gesture_detector_.tick();
   root_.flushPendingOutsideInteraction();
@@ -104,6 +100,7 @@ bool DisplayWindow::refresh(roo_time::Uptime deadline) {
   if (root_.transient_presentation_slot().finishDeferredIfReady()) return true;
   AnimationRegistry& animations = root_.app().context().animations();
   if (!root_.hasPaintContinuation()) {
+    root_.refreshClickAnimation();
     animations.beginFrame(roo_time::Uptime::Now());
     while (animations.dispatchNext()) {
       root_.app().context().presentations().deliverPendingChanges();
@@ -117,7 +114,6 @@ bool DisplayWindow::refresh(roo_time::Uptime deadline) {
   root_.app().context().presentations().deliverPendingChanges();
   last_time_refreshed_ms_ = millis();
   ClickAnimation& click_animation = root_.click_animation();
-  if (!root_.hasPaintContinuation()) click_animation.sampleFrameTime();
   bool completed;
   {
     roo_display::DrawingContext context(display_);
@@ -126,6 +122,11 @@ bool DisplayWindow::refresh(roo_time::Uptime deadline) {
     context.draw(adapter);
     completed = adapter.completed();
   }
+  if (!root_.hasPaintContinuation()) {
+    root_.app().requestAnimationFrameAt(click_animation.nextFrameDeadline());
+  }
+  // Semantic delivery can destroy the application; do not touch members after
+  // it.
   if (completed) click_animation.notifyRefreshCompleted();
   return completed;
 }

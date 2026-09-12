@@ -421,9 +421,6 @@ void Application::run() {
 void Application::tick() {
   TickerGuard ticker_guard(*this);
 
-  // A continuation must finish the exact frame snapshot whose foreground
-  // exclusions were preserved. Advance animation again after it completes.
-  window_.advanceFrameState();
   bool key_events_pending = drainKeyEvents();
   window_.servicePointerInput();
   bool redraw_timeout = false;
@@ -433,6 +430,16 @@ void Application::tick() {
                                  : roo_time::Millis(20);
   ticker_->requestAfter(delay);
   ticker_->requestAt(window_.gestureDetector().nextTimeoutDeadline());
+  if (!window_.root().hasPaintContinuation()) {
+    roo_time::Uptime next =
+        window_.root().click_animation().nextFrameDeadline();
+    // A resumed frame may leave an overdue sample while painting is throttled.
+    // Keep the fallback instead of rearming that deadline in an immediate loop;
+    // Phase 6 will collect the exact eligible paint retry with other work.
+    if (next != roo_time::Uptime::Max() && next > roo_time::Uptime::Now()) {
+      ticker_->requestAt(next);
+    }
+  }
 }
 
 bool Application::drainKeyEvents() {

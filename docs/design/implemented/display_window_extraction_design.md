@@ -216,23 +216,22 @@ changing the paint algorithm.
 ordering through private friend-only window operations:
 
 ```text
-DisplayWindow::advanceFrameState()
 Application::drainKeyEvents()
 DisplayWindow::servicePointerInput()
 DisplayWindow::refreshIfDue()
 Application schedules its next ticker deadline
 ```
 
-`advanceFrameState()` advances click animation only when no interrupted paint is
-active. `servicePointerInput()` drains gesture input and dispatches due
-transitions. Since
+`servicePointerInput()` drains gesture input and dispatches due transitions.
+Since event-driven input Phase 5, click animation and registry samples advance
+before layout in a new logical refresh; continued slices retain both samples. Since
 [event-driven input Phase 3](../in_progress/display_event_driven_input_design.md),
 single-threaded touch acquisition runs in the sensor-owned scheduler task. `refreshIfDue()` owns refresh throttling, adaptive paint deadline state,
 and the completed-versus-interrupted result.
 
-The window methods do not schedule application work. Since event-driven input
-Phase 4, `Application` combines key-pending and paint-timeout state with the
-earliest gesture deadline and the retained 20 ms fallback. A held touch alone
+The window forwards animation frame deadlines to the application endpoint.
+`Application` combines key-pending and paint-timeout state with gesture and click
+frame deadlines and the retained 20 ms fallback. A held touch alone
 does not request immediate redispatch.
 
 ### Refresh ownership

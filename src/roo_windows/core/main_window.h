@@ -25,8 +25,8 @@ class MainWindow : public Container {
 
   ~MainWindow() override;
 
-  /// Drives the shared click-animation forward one tick and invalidates
-  /// regions that changed.
+  /// Samples and invalidates click feedback for a new logical frame.
+  /// Leaves a retained paint continuation on its original sample.
   void refreshClickAnimation();
 
   /// Returns true while a deadline-interrupted logical paint is awaiting

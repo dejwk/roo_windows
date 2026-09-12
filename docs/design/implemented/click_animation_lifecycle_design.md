@@ -108,16 +108,16 @@ held target in `kAwaitingRelease`; framework code must inspect
 
 ## Runtime ordering
 
-The normal application tick is ordered as follows:
+Since [event-driven input Phase 5](../in_progress/display_event_driven_input_design.md),
+the normal application tick is ordered as follows:
 
 ```text
-ClickAnimation::tick()
-    -> key input
-    -> touch polling / GestureDetector::tick()
+key input
+    -> GestureDetector::tick()
         -> onShowPress(), onSingleTapUp(), or onCancel()
-    -> Application::refresh()
-        -> sampleFrameTime()
-        -> paint and close DrawingContext
+    -> DisplayWindow::refreshIfDue()
+        -> new logical frame: ClickAnimation::tick() and registry samples
+        -> layout, paint, and close DrawingContext
         -> if completed: ClickAnimation::notifyRefreshCompleted()
 ```
 
@@ -129,9 +129,10 @@ post-completion/pre-retirement interval in which a release needs special
 handling.
 
 `Application::refresh()` is also a public one-shot entry point and is not
-necessarily preceded by `Application::tick()`. It therefore calls
-`sampleFrameTime()` itself immediately before drawing. After drawing, it
-destroys the `DrawingContext` before calling `notifyRefreshCompleted()` for a
+necessarily preceded by `Application::tick()`. Its display window therefore
+samples and invalidates click feedback before layout in each new logical frame,
+without relying on a preceding ticker pass. After drawing, it destroys the
+`DrawingContext` before calling `notifyRefreshCompleted()` for a
 successful pass. Display unnesting or flushing is consequently complete before
 `onClicked()` can mutate layout or start another interaction. An interrupted
 refresh does not notify the controller, so deferred clicks remain pending.
@@ -139,12 +140,16 @@ refresh does not notify the controller, so deferred clicks remain pending.
 ## Frame-time sampling
 
 `ClickAnimation::progress()` reads `sampled_elapsed_millis_`; it does not read
-`millis()` directly.
+`millis()` directly. A sampled forced finish overrides progress to 1 without
+changing the elapsed timestamp used for frame pacing. If requested between
+continued paint slices, that override waits until the next logical frame.
 
-The sample is updated:
-
-- at the beginning of `ClickAnimation::tick()`, for lifecycle decisions, and
-- immediately before an `Application::refresh()`, for drawing.
+The sample is updated by `ClickAnimation::tick()` before layout in each new
+logical refresh. Continued paint slices skip sampling, including calls through
+`MainWindow::refreshClickAnimation()`. The controller derives its next 20 ms
+frame deadline from that retained sample. Base overlay painting consumes the
+sample without dirtying itself for another frame; controller invalidation owns
+that next frame and transient spill cleanup.
 
 Every progress read within one refresh therefore observes the same value. A
 slow paint does not advance the animation halfway through a widget or display

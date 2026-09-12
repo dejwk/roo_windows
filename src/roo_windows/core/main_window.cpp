@@ -167,7 +167,9 @@ void MainWindow::removeTask(Widget& child) { removeFromLayer(tasks_, child); }
 
 void MainWindow::removePopup(Widget& child) { removeFromLayer(popups_, child); }
 
-void MainWindow::refreshClickAnimation() { click_animation_.tick(); }
+void MainWindow::refreshClickAnimation() {
+  if (!hasPaintContinuation()) click_animation_.tick();
+}
 
 void MainWindow::updateLayout() {
   if (isLayoutRequested()) {

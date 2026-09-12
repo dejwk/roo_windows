@@ -2,13 +2,41 @@
 
 #include <Arduino.h>
 
+#include "roo_windows/core/application.h"
 #include "roo_windows/core/widget.h"
 
 namespace roo_windows {
 
+namespace {
+constexpr uint32_t kClickFrameIntervalMillis = 20;
+}  // namespace
+
+void ClickAnimation::RequestFrame(Widget& target) {
+  Application* app = target.getApplication();
+  if (app != nullptr) app->requestAnimationFrameAt(roo_time::Uptime::Now());
+}
+
+roo_time::Uptime ClickAnimation::nextFrameDeadline() const {
+  if (!isAnimationPending() || !target_->isClicking()) {
+    return roo_time::Uptime::Max();
+  }
+  roo_time::Uptime now = roo_time::Uptime::Now();
+  // Derive the deadline from the last sampled frame, not from this query.
+  // Use the same wrapping millisecond clock as the retained click sample.
+  uint32_t next_ms = static_cast<uint32_t>(click_anim_start_millis_) +
+                     static_cast<uint32_t>(sampled_elapsed_millis_) +
+                     kClickFrameIntervalMillis;
+  int32_t remaining =
+      static_cast<int32_t>(next_ms - static_cast<uint32_t>(now.inMillis()));
+  return remaining <= 0 ? now
+                        : now + roo_time::Millis(remaining) -
+                              roo_time::Micros(now.inMicros() % 1000);
+}
+
 ClickAnimation::ClickAnimation()
     : target_(nullptr),
       phase_(Phase::kIdle),
+      finishing_sampled_(false),
       previous_transient_footprint_(0, 0, -1, -1),
       click_anim_start_millis_(0),
       sampled_elapsed_millis_(0),
@@ -40,6 +68,7 @@ void ClickAnimation::notifyRefreshCompleted() {
   }
   if (!isAnimationPending() || target_->isClicking()) return;
 
+  RequestFrame(*target_);
   // The final paint used the pre-clear transient state. Invalidate its spill
   // once more so siblings underneath it are refreshed during settlement.
   invalidateTransientFootprint();
@@ -65,7 +94,9 @@ void ClickAnimation::notifyRefreshCompleted() {
 
 void ClickAnimation::sampleFrameTime() {
   if (!isAnimationPending()) return;
-  sampled_elapsed_millis_ = millis() - click_anim_start_millis_;
+  sampled_elapsed_millis_ = static_cast<uint32_t>(millis()) -
+                            static_cast<uint32_t>(click_anim_start_millis_);
+  if (isFinishing()) finishing_sampled_ = true;
 }
 
 void ClickAnimation::invalidateTransientFootprint() {
@@ -86,12 +117,14 @@ void ClickAnimation::resetTransientFootprint() {
 void ClickAnimation::reset() {
   target_ = nullptr;
   phase_ = Phase::kIdle;
+  finishing_sampled_ = false;
   resetTransientFootprint();
   sampled_elapsed_millis_ = 0;
 }
 
 void ClickAnimation::deliverClick() {
   Widget* target = target_;
+  RequestFrame(*target);
   // Release ownership before calling user code so a reentrant callback can
   // start another interaction.
   reset();
@@ -101,11 +134,7 @@ void ClickAnimation::deliverClick() {
 
 float ClickAnimation::progress() const {
   if (target() == nullptr) return 1.0f;
-  if (phase_ == Phase::kFinishingUnconfirmed ||
-      phase_ == Phase::kFinishingConfirmed ||
-      phase_ == Phase::kFinishingDelivered) {
-    return 1.0f;
-  }
+  if (isFinishing() && finishing_sampled_) return 1.0f;
   float result = (float)sampled_elapsed_millis_ / kPressAnimationMillis;
   if (result > 1.0f) result = 1.0f;
   return result;
@@ -129,11 +158,13 @@ bool ClickAnimation::tryStart(Widget& widget, int16_t x, int16_t y) {
   click_anim_y_ = y;
   resetTransientFootprint();
   sampled_elapsed_millis_ = 0;
+  RequestFrame(widget);
   return true;
 }
 
 void ClickAnimation::cancel(Widget& widget) {
   if (target_ != &widget) return;
+  RequestFrame(widget);
   // A detached widget can be rebound later (for example, a reusable menu
   // row). Do not leave its visual click state behind after releasing the
   // shared controller.
@@ -167,19 +198,27 @@ bool ClickAnimation::forceFinalFrame(const Widget& widget) {
     case Phase::kAwaitingRefresh:
       return false;
   }
+  // A forced finish is sampled immediately unless a logical paint still owns
+  // the old value. In that case the next new frame applies the finishing phase.
+  const MainWindow* window = widget.getMainWindow();
+  if (window == nullptr || !window->hasPaintContinuation()) {
+    finishing_sampled_ = true;
+  }
   target_->invalidateInterior();
+  RequestFrame(*target_);
   return true;
 }
 
-bool ClickAnimation::tryConfirm(Widget& widget,
-                                ClickActivationPolicy policy) {
+bool ClickAnimation::tryConfirm(Widget& widget, ClickActivationPolicy policy) {
   if (phase_ == Phase::kIdle) {
     if (policy == ClickActivationPolicy::kAfterRefreshNoAnimation) {
       target_ = &widget;
       phase_ = Phase::kAwaitingRefresh;
+      RequestFrame(widget);
       return true;
     }
     if (policy == ClickActivationPolicy::kImmediateNoAnimation) {
+      RequestFrame(widget);
       widget.invalidateInterior();
       widget.onClicked();
       return true;
@@ -189,14 +228,17 @@ bool ClickAnimation::tryConfirm(Widget& widget,
   if (target_ != &widget) return false;
 
   if (phase_ == Phase::kAnimatingUnconfirmed) {
+    if (policy == ClickActivationPolicy::kAfterRefreshNoAnimation ||
+        policy == ClickActivationPolicy::kImmediateNoAnimation)
+      return false;
+    RequestFrame(widget);
     switch (policy) {
       case ClickActivationPolicy::kAfterNaturalAnimation:
         phase_ = Phase::kAnimatingConfirmed;
         return true;
       case ClickActivationPolicy::kAfterForcedFinalFrame:
-        phase_ = Phase::kFinishingConfirmed;
-        target_->invalidateInterior();
-        return true;
+        phase_ = Phase::kAnimatingConfirmed;
+        return forceFinalFrame(widget);
       case ClickActivationPolicy::kImmediateCancelAnimation:
         invalidateTransientFootprint();
         widget.clearClicking();

@@ -160,6 +160,7 @@ class Application {
   friend class ApplicationTextInput;
   friend class AnimationRegistry;
   friend class DisplayWindow;
+  friend class ClickAnimation;
   friend class KeySource;
   friend class TextInputEmitter;
   friend class TextFieldEditor;

@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress. Phases 1–4 are implemented: `ApplicationTicker` coalesces
+In progress. Phases 1–5 are implemented: `ApplicationTicker` coalesces
 requests while retaining the 20 ms fallback, and physical key sources wake the
 application through producer-owned readiness handlers and the application input
 router. FLTK crosses from its native event thread through `roo_testing`'s
@@ -10,8 +10,8 @@ router. FLTK crosses from its native event thread through `roo_testing`'s
 have also landed, including explicit frame requests and pre-layout sampling.
 Touch acquisition now signals readiness and uses an independent sensor-owned
 poll task in single-threaded builds. Gesture transitions now use source-time
-deadlines and chronological input ordering. Phase 5 covers
-remaining click feedback and animation scheduling integration; Phase 6 covers
+deadlines and chronological input ordering. Click feedback now owns frame
+deadlines and is sampled before layout without paint-time self-dirtying; Phase 6 covers
 paint eligibility and deferred framework work. Phase 7 removes the fallback only after those paths are complete.
 
 ## Objective
@@ -72,8 +72,10 @@ logical-paint state as described by the
 [interrupted paint continuation design](../implemented/interrupted_paint_continuation_design.md).
 The implemented [widget animation registry](../implemented/widget_animation_registry_design.md)
 now owns the migrated widget animation deadlines and pre-layout samples.
-`ClickAnimation` still advances from the window-owned ticker phase, and the base
-widget click overlay still self-dirties during paint. The fallback also masks
+`ClickAnimation` now advances before layout in each new logical frame and
+publishes a 20 ms frame deadline; the base click overlay no longer self-dirties
+during paint. Continued paint slices retain the original click and registry
+samples. The fallback also masks
 early frame requests consumed by the display throttle and deferred work serviced
 only on a later refresh. Registry delivery alone does not establish dormancy.
 
@@ -768,35 +770,58 @@ Delivered change:
 > input-and-timeout ordering as specified by
 > `display_event_driven_input_design.md`.
 
-### Phase 5: finish click deadlines and audit animation integration
+### Completed Phase 5: finish click deadlines and audit animation integration
 
-The [generic registry](../implemented/widget_animation_registry_design.md) and
-its widget migrations are implemented. Retain their frame requests and sampling
-path. Audit remaining paint-time self-dirty loops, including the base widget
-click overlay, and give window-owned click feedback explicit frame deadlines.
-Preserve activation policies, transient spill cleanup, final-paint delivery,
-and the existing frame intervals. Keep the fallback.
+Added `ClickAnimation::nextFrameDeadline()`, derived from its existing sampled
+millisecond timestamp. Start, confirmation,
+forced final frames, cancellation, and settlement request frame work through the
+application endpoint. Active feedback retains a 20 ms cadence; idle, held
+settlement, and non-animated states publish no recurring animation deadline.
 
-Do not repeat the widget migrations or add a general delayed-dirty helper by
-default. Update widget-authoring guidance around registry use and any concrete
-remaining exception. Audit semantic timers separately: password masking,
-scrollbar hiding, and snackbar readable-time expiry remain scheduled semantic
-work, not animation loops to migrate.
+Click sampling and invalidation now run before layout in a new logical refresh,
+alongside registry delivery. Continued paint slices and the compatibility
+`MainWindow::refreshClickAnimation()` entry preserve the retained sample.
+Base-widget overlay painting no longer dirties itself or invalidates its parent
+for another animation frame. Controller invalidation retains the current and
+previous transient footprints, and completed final paints still settle the
+chosen activation policy and request cleanup. A forced finish requested between
+paint slices takes effect in the next logical frame, while a separate sampled
+flag leaves the pacing timestamp intact. An overdue retained deadline does not
+rearm throttled painting in an immediate loop; the fallback supplies that retry.
 
-Test deadline coalescing, no immediate animation loop, terminal cancellation,
-click final-paint settlement, and retained samples during continuation. Complete
-scheduler-driven fallback-free integration validation in Phase 6, where paint
-eligibility and delayed retries become available.
+The animation audit found the remaining visual updates in registry callbacks,
+not recurring paint-time loops: legacy and Material 3 switches, lists, tabs,
+page/scroll motion, toggle-icon selection, progress indicators, and the legacy
+marquee retain their tracks. Existing 10 ms scroll motion, 33 ms Material 3
+progress, and 500 ms caret intervals remain unchanged. Password masking,
+scrollbar hiding, snackbar readable-time expiry, and keyboard repeat/long-press
+remain separately scheduled semantic work. Layout-dependent text geometry
+invalidation is not an animation driver. Widget-authoring guidance now records
+these boundaries; no additional widget scheduling API was needed.
+
+Deterministic tests cover stable deadlines, no paint self-dirtying or immediate
+animation loop, control-request coalescing, independent click/registry intervals,
+terminal cancellation, natural/forced final-paint settlement, held/non-animated
+states, millisecond-clock wrap, forced completion between slices, and overdue
+deadlines after continuation. Existing overlay tests retain
+activation-policy and transient-spill coverage. Throttled retries, deferred
+completion wakeups, and fallback-free integration remain Phase 6 work; the
+application fallback is retained.
 
 Focused validation:
 
 ```sh
-bazel test //:animation_registry_test //:roo_windows_test //:display_window_test \
-  //:material3_switch_test //:material3_list_test
+bazel test //:click_animation_test //:overlay_test //:animation_registry_test \
+  //:roo_windows_test //:display_window_test //:material3_switch_test \
+  //:material3_list_test
 bazel build //:display_runtime_size_probe
 ```
 
-Proposed commit message:
+The host size probe remains unchanged: `Application` is 2280 bytes,
+`MainWindow` 872 bytes, and `Task` 432 bytes. The forced-finish sample flag fits
+existing padding on this host ABI; no embedded-target size measurement was run.
+
+Delivered change:
 
 > Event-driven input Phase 5 completes click frame deadlines.
 >

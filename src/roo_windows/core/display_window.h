@@ -60,9 +60,6 @@ class DisplayWindow {
   /// Stops acquisition and clears transient gesture and paint state.
   void stop();
 
-  /// Advances retained click feedback when no logical paint is continuing.
-  void advanceFrameState();
-
   /// Drains pointer input and dispatches gestures and due transitions.
   void servicePointerInput();
 

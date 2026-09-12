@@ -2,6 +2,7 @@
 
 #include <inttypes.h>
 
+#include "roo_time.h"
 #include "roo_windows/core/rect.h"
 
 namespace roo_windows {
@@ -26,6 +27,11 @@ class ClickAnimation {
   /// Samples progress, invalidates active feedback, and marks stalled
   /// unconfirmed feedback finished.
   void tick();
+
+  /// Returns the next 20 ms click frame deadline, or Uptime::Max() when no
+  /// animated feedback needs sampling. Framework-facing; input and semantic
+  /// control changes request their first frame separately.
+  roo_time::Uptime nextFrameDeadline() const;
 
   /// Returns normalized animation progress clamped to `[0, 1]`.
   ///
@@ -85,10 +91,10 @@ class ClickAnimation {
     kAnimatingConfirmed,  // The user released over this widget; finish drawing
                           // the feedback before running the widget's action.
     kFinishingUnconfirmed,  // Paint one final frame, then cancel semantics.
-    kFinishingConfirmed,  // The final feedback frame must be painted before
-                          // running the widget's action.
-    kAnimatingDelivered,  // The action ran; feedback continues visually.
-    kFinishingDelivered,  // Paint one final frame after action delivery.
+    kFinishingConfirmed,    // The final feedback frame must be painted before
+                            // running the widget's action.
+    kAnimatingDelivered,    // The action ran; feedback continues visually.
+    kFinishingDelivered,    // Paint one final frame after action delivery.
     kAwaitingRelease,  // Feedback finished while the press remains held; keep
                        // the widget pressed until release, then run its action.
     kAwaitingRefresh,  // A click without animated feedback waits until a full
@@ -108,6 +114,12 @@ class ClickAnimation {
 
   void resetTransientFootprint();
 
+  bool isFinishing() const {
+    return phase_ == Phase::kFinishingUnconfirmed ||
+           phase_ == Phase::kFinishingConfirmed ||
+           phase_ == Phase::kFinishingDelivered;
+  }
+
   bool isAnimationPending() const {
     return phase_ == Phase::kAnimatingUnconfirmed ||
            phase_ == Phase::kAnimatingConfirmed ||
@@ -121,6 +133,9 @@ class ClickAnimation {
     return target_ == &target && isAnimationPending();
   }
 
+  // Requests a frame through the owning application without entering UI work.
+  static void RequestFrame(Widget& target);
+
   void reset();
 
   /// Releases a pending target without invalidating or calling user code.
@@ -132,6 +147,10 @@ class ClickAnimation {
   // it in kAwaitingRefresh because no visual animation owns the widget then.
   Widget* target_;
   Phase phase_;
+
+  // A forced finish takes effect only after the retained paint sample is
+  // released. Keep this separate from elapsed time, which also paces frames.
+  bool finishing_sampled_;
 
   // Last transient parent-space footprint reported by the active target.
   // Keeping the full Rect preserves the framework's extended Y coordinate

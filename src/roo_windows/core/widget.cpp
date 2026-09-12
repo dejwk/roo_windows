@@ -752,9 +752,8 @@ void Widget::paintWidgetModded(PaintContext& ctx) {
     // If click_animation is true, we need to redraw the overlay.
     bool click_animation = ((state_ & kWidgetClicking) != 0);
     if (click_animation) {
-      // If click_animation_continues is true, we need to invalidate ourselves
-      // after redrawing, so that we receive a subsequent paint request
-      // shortly.
+      // ClickAnimation invalidates feedback before the next logical frame.
+      // Painting consumes this sample without scheduling or self-dirtying.
       if (overlay_spec.is_click_animation_in_progress()) {
         if (overlay_spec.has_press_overlay() && overlay_spec.is_point()) {
           clipper.setPressOverlay(overlay_spec.press_overlay(),
@@ -765,8 +764,6 @@ void Widget::paintWidgetModded(PaintContext& ctx) {
           clipper.setScopedPressOverlay(overlay_spec.press_overlay(),
                                         canvas.clip_box());
         }
-        setDirty();
-        notifyParentInvalidatedRegion(maxParentBounds());
       } else {
         // Clear provisionally so state-change invalidations are consumed by
         // this final overlay paint. If the refresh deadline prevents that

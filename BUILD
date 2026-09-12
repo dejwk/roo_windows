@@ -351,6 +351,17 @@ cc_test(
 )
 
 cc_test(
+    name = "click_animation_test",
+    srcs = ["test/click_animation_test.cpp"],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+        "@roo_testing//roo_testing/system:manual_time_mode",
+    ],
+)
+
+cc_test(
     name = "overlay_test",
     srcs = [
         "test/overlay_test.cpp",
