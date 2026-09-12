@@ -1,5 +1,5 @@
 // Learning goal: keep expansion state inside an invokable list item and use
-// ExpandablePanel as measured, animated body content below its row.
+// ExpandablePanel as measured body content animated by the shared frame clock.
 
 // *************** EMULATOR SETUP BEGIN
 
@@ -107,6 +107,8 @@ class MaintenanceItem : public material3::InvokableListItemBase {
         details_(context, std::string(details),
                  material3::text_style_body_medium(), kTop | kLeft),
         details_panel_(context) {
+    // Duration is wall-clock time; extra measurement or paint work does not
+    // change the speed of this transition.
     details_panel_.setAnimationDuration(180);
     details_panel_.setExpanded(false, false);
     details_panel_.setContent(WidgetRef(details_));

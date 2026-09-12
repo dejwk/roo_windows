@@ -9,6 +9,7 @@
 #include "roo_scheduler.h"
 #include "roo_windows/containers/flex_layout.h"
 #include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/destination.h"
 #include "roo_windows/core/environment.h"
 #include "roo_windows/material3/list/list.h"
 #include "roo_windows/widgets/text_label.h"
@@ -135,6 +136,16 @@ class TestExpandablePanel : public ExpandablePanel {
 
   using ExpandablePanel::getChild;
   using ExpandablePanel::getChildrenCount;
+};
+
+class WidgetDestination : public Destination {
+ public:
+  explicit WidgetDestination(Widget& contents) : contents_(contents) {}
+
+  Widget& getContents() override { return contents_; }
+
+ private:
+  Widget& contents_;
 };
 
 class TrackingListEntry : public ListEntry {
@@ -683,40 +694,163 @@ TEST(Material3List, ExpandablePanelAttachesContentAndResolvesHeight) {
   EXPECT_EQ(0, panel.getChildrenCount());
 }
 
-// Verifies that ExpandablePanel progresses through clipped intermediate
-// measured heights while animating between collapsed and expanded states.
-TEST(Material3List, ExpandablePanelAnimationProducesIntermediateHeights) {
-  roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(),
-                             DefaultKeyboardColorTheme());
-  ExpandablePanel panel(context);
-  TestWidget content(context, Dimensions(80, 30));
+// Verifies expansion starts from zero height and follows elapsed time rather
+// than the number of measurement passes.
+TEST_F(Material3ListRenderTest,
+       ExpandablePanelAnimationUsesElapsedTimeFromZeroHeight) {
+  auto panel = std::make_unique<ExpandablePanel>(context());
+  ExpandablePanel* panel_ptr = panel.get();
+  auto content = std::make_unique<TestWidget>(context(), Dimensions(80, 30));
+  panel_ptr->setAnimationDuration(100);
+  panel_ptr->setContent(WidgetRef(std::move(content)));
+  app_.add(WidgetRef(std::move(panel)), roo_display::Box(0, 0, 79, 29));
+  ASSERT_TRUE(refresh());
 
-  panel.setAnimationDuration(100);
-  panel.setContent(WidgetRef(content));
-  panel.setExpanded(false, false);
-  panel.setExpanded(true, true);
+  panel_ptr->setExpanded(true);
+  ASSERT_TRUE(refresh());
+  Dimensions start = panel_ptr->measure(WidthSpec::Unspecified(0),
+                                        HeightSpec::Unspecified(0));
+  EXPECT_EQ(0, start.height());
 
-  Dimensions step1 =
-      panel.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
-  Dimensions step2 =
-      panel.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
-  Dimensions step3 =
-      panel.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+  // Repeated measurement does not advance registry-owned time.
+  Dimensions repeated = panel_ptr->measure(WidthSpec::Unspecified(0),
+                                           HeightSpec::Unspecified(0));
+  EXPECT_EQ(start.height(), repeated.height());
 
-  EXPECT_TRUE(panel.isAnimating());
-  EXPECT_GT(step1.height(), 0);
-  EXPECT_GT(step2.height(), step1.height());
-  EXPECT_GT(step3.height(), step2.height());
-  EXPECT_LT(step3.height(), 30);
+  delay(45);
+  ASSERT_TRUE(refresh());
+  Dimensions middle = panel_ptr->measure(WidthSpec::Unspecified(0),
+                                         HeightSpec::Unspecified(0));
+  EXPECT_TRUE(panel_ptr->isAnimating());
+  EXPECT_GT(middle.height(), 0);
+  EXPECT_LT(middle.height(), 30);
 
-  for (int i = 0; i < 6; ++i) {
-    panel.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
-  }
-  EXPECT_FALSE(panel.isAnimating());
-  Dimensions expanded =
-      panel.measure(WidthSpec::Unspecified(0), HeightSpec::Unspecified(0));
+  delay(70);
+  ASSERT_TRUE(refresh());
+  EXPECT_FALSE(panel_ptr->isAnimating());
+  Dimensions expanded = panel_ptr->measure(WidthSpec::Unspecified(0),
+                                           HeightSpec::Unspecified(0));
   EXPECT_EQ(30, expanded.height());
+}
+
+// Verifies a rapid direction change retargets from the last applied fraction
+// and preserves full-range travel speed.
+TEST_F(Material3ListRenderTest, ExpandablePanelRapidReversalIsContinuous) {
+  auto panel = std::make_unique<ExpandablePanel>(context());
+  ExpandablePanel* panel_ptr = panel.get();
+  auto content = std::make_unique<TestWidget>(context(), Dimensions(80, 40));
+  panel_ptr->setAnimationDuration(120);
+  panel_ptr->setContent(WidgetRef(std::move(content)));
+  app_.add(WidgetRef(std::move(panel)), roo_display::Box(0, 0, 79, 39));
+  ASSERT_TRUE(refresh());
+
+  panel_ptr->setExpanded(true);
+  ASSERT_TRUE(refresh());
+  delay(65);
+  ASSERT_TRUE(refresh());
+  const int16_t outward =
+      panel_ptr->measure(WidthSpec::Unspecified(0),
+                         HeightSpec::Unspecified(0)).height();
+  ASSERT_GT(outward, 0);
+  ASSERT_LT(outward, 40);
+
+  panel_ptr->setExpanded(false);
+  ASSERT_TRUE(refresh());
+  const int16_t reversal =
+      panel_ptr->measure(WidthSpec::Unspecified(0),
+                         HeightSpec::Unspecified(0)).height();
+  EXPECT_EQ(outward, reversal);
+  delay(30);
+  ASSERT_TRUE(refresh());
+  const int16_t returning =
+      panel_ptr->measure(WidthSpec::Unspecified(0),
+                         HeightSpec::Unspecified(0)).height();
+  EXPECT_GT(returning, 0);
+  EXPECT_LT(returning, reversal);
+
+  delay(60);
+  ASSERT_TRUE(refresh());
+  EXPECT_FALSE(panel_ptr->isAnimating());
+  EXPECT_EQ(0, panel_ptr->measure(WidthSpec::Unspecified(0),
+                                  HeightSpec::Unspecified(0)).height());
+}
+
+// Verifies hidden time is excluded from a panel's finite transition and the
+// same channel continues when its presentation becomes visible again.
+TEST_F(Material3ListRenderTest, ExpandablePanelPausesWhileHidden) {
+  auto panel = std::make_unique<ExpandablePanel>(context());
+  ExpandablePanel* panel_ptr = panel.get();
+  auto content = std::make_unique<TestWidget>(context(), Dimensions(80, 40));
+  panel_ptr->setAnimationDuration(120);
+  panel_ptr->setContent(WidgetRef(std::move(content)));
+  app_.add(WidgetRef(std::move(panel)), roo_display::Box(0, 0, 79, 39));
+  ASSERT_TRUE(refresh());
+
+  panel_ptr->setExpanded(true);
+  ASSERT_TRUE(refresh());
+  delay(45);
+  ASSERT_TRUE(refresh());
+  panel_ptr->setVisibility(Visibility::kInvisible);
+  ASSERT_TRUE(refresh());
+  const int16_t paused =
+      panel_ptr->measure(WidthSpec::Unspecified(0),
+                         HeightSpec::Unspecified(0)).height();
+  ASSERT_GT(paused, 0);
+  ASSERT_LT(paused, 40);
+
+  delay(150);
+  ASSERT_TRUE(refresh());
+  EXPECT_TRUE(panel_ptr->isAnimating());
+  EXPECT_EQ(paused, panel_ptr->measure(WidthSpec::Unspecified(0),
+                                      HeightSpec::Unspecified(0)).height());
+
+  panel_ptr->setVisibility(Visibility::kVisible);
+  ASSERT_TRUE(refresh());
+  delay(100);
+  ASSERT_TRUE(refresh());
+  EXPECT_FALSE(panel_ptr->isAnimating());
+  EXPECT_EQ(40, panel_ptr->measure(WidthSpec::Unspecified(0),
+                                   HeightSpec::Unspecified(0)).height());
+}
+
+// Verifies navigation detachment cancels an active channel and the next
+// presentation reconciles directly to the last requested endpoint.
+TEST_F(Material3ListRenderTest,
+       ExpandablePanelSnapsAfterNavigationDetachAndReattach) {
+  TestWidget content(context(), Dimensions(80, 30));
+  ExpandablePanel panel(context());
+  panel.setAnimationDuration(120);
+  panel.setContent(WidgetRef(content));
+  TestWidget covering_page(context(), Dimensions(80, 30));
+  WidgetDestination panel_destination(panel);
+  WidgetDestination covering_destination(covering_page);
+
+  Task& task = app_.addTaskFullScreen();
+  task.navigation().push(panel_destination);
+  ASSERT_TRUE(refresh());
+  panel.setExpanded(true);
+  ASSERT_TRUE(refresh());
+  delay(45);
+  ASSERT_TRUE(refresh());
+  const int16_t partial =
+      panel.measure(WidthSpec::Unspecified(0),
+                    HeightSpec::Unspecified(0)).height();
+  ASSERT_GT(partial, 0);
+  ASSERT_LT(partial, 30);
+
+  task.navigation().push(covering_destination);
+  ASSERT_TRUE(refresh());
+  EXPECT_FALSE(panel.isAnimating());
+  delay(140);
+  ASSERT_TRUE(refresh());
+
+  task.navigation().pop();
+  ASSERT_TRUE(refresh());
+  EXPECT_TRUE(panel.isExpanded());
+  EXPECT_FALSE(panel.isAnimating());
+  EXPECT_EQ(30, panel.measure(WidthSpec::Unspecified(0),
+                              HeightSpec::Unspecified(0)).height());
+  task.navigation().clear();
 }
 
 // Verifies that ExpandablePanel keeps body child layout clipped to the
@@ -744,27 +878,28 @@ TEST(Material3List, ExpandablePanelClipsChildLayoutToVisibleHeight) {
 
 // Verifies that expandable-row usage keeps expansion state in item-owned body
 // content while ListEntry remains a reusable row surface.
-TEST(Material3List, ExpandableBodyItemTogglesPanelThroughRowInvocation) {
-  roo_scheduler::Scheduler scheduler;
-  ApplicationContext context(scheduler, DefaultTheme(),
-                             DefaultKeyboardColorTheme());
-  TestListRow<ExpandableBodyListItem> row(context, "Filter schedule",
-                                          "Tap to expand details",
-                                          "Expanded body details line.");
+TEST_F(Material3ListRenderTest,
+       ExpandableBodyItemTogglesPanelThroughRowInvocation) {
+  auto row = std::make_unique<TestListRow<ExpandableBodyListItem>>(
+      context(), "Filter schedule", "Tap to expand details",
+      "Expanded body details line.");
+  TestListRow<ExpandableBodyListItem>* row_ptr = row.get();
+  app_.add(WidgetRef(std::move(row)), roo_display::Box(0, 0, 179, 139));
+  ASSERT_TRUE(refresh());
 
-  EXPECT_TRUE(row.isClickable());
+  EXPECT_TRUE(row_ptr->isClickable());
   Dimensions collapsed =
-      row.measure(WidthSpec::Exactly(180), HeightSpec::Unspecified(0));
+      row_ptr->measure(WidthSpec::Exactly(180), HeightSpec::Unspecified(0));
 
-  row.onClicked();
-  for (int i = 0; i < 8; ++i) {
-    row.measure(WidthSpec::Exactly(180), HeightSpec::Unspecified(0));
-  }
-  EXPECT_TRUE(row.item().bodyPanel().isExpanded());
-  EXPECT_FALSE(row.item().bodyPanel().isAnimating());
+  row_ptr->onClicked();
+  ASSERT_TRUE(refresh());
+  delay(200);
+  ASSERT_TRUE(refresh());
+  EXPECT_TRUE(row_ptr->item().bodyPanel().isExpanded());
+  EXPECT_FALSE(row_ptr->item().bodyPanel().isAnimating());
 
   Dimensions expanded =
-      row.measure(WidthSpec::Exactly(180), HeightSpec::Unspecified(0));
+      row_ptr->measure(WidthSpec::Exactly(180), HeightSpec::Unspecified(0));
   EXPECT_GT(expanded.height(), collapsed.height());
 }
 

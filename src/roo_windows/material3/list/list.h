@@ -259,25 +259,33 @@ class ExpandablePanel : public Container {
   Dimensions getSuggestedMinimumDimensions() const override;
 
  protected:
-  void paintWidgetContents(PaintContext& ctx) override;
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
   void onLayout(bool changed, const Rect& rect) override;
+  void onAnimationFrame(AnimationTag tag,
+                        const AnimationSample& sample) override;
+  void onPresentationChanged(const PresentationChange& change) override;
 
   int getChildrenCount() const override;
   const Widget& getChild(int idx) const override;
   Widget& getChild(int idx) override;
 
  private:
-  // Advances progress toward the expanded/collapsed target by one frame.
-  void stepAnimation();
+  static constexpr AnimationTag kExpansion = 0;
+
+  // Starts or retargets the elapsed-time expansion channel.
+  void animateToRequestedState();
+
+  // Applies the requested endpoint and removes any live expansion channel.
+  void snapToRequestedState();
 
   // Resolves the visible clipped height from full child content height.
   int16_t resolveVisibleHeight(int16_t full_height) const;
 
   WidgetRef content_;
+  float expansion_fraction_;
   uint16_t animation_duration_millis_;
-  uint16_t animation_progress_millis_;
-  bool expanded_;
+  bool expanded_ : 1;
+  bool snap_when_presented_ : 1;
 };
 
 /// Material 3 row surface that binds one stable `ListItem` at a time.

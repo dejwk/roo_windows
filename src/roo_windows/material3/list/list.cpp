@@ -8,6 +8,7 @@
 #include "roo_display/ui/text_label.h"
 #include "roo_icons/filled/24/navigation.h"
 #include "roo_logging.h"
+#include "roo_windows/core/application_context.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/material3/theme.h"
 #include "roo_windows/material3/typography.h"
@@ -36,7 +37,6 @@ constexpr int16_t kExpressiveInnerCornerRadiusDp = 4;
 constexpr int16_t kExpressiveStandardSeparatorDp = 2;
 constexpr int16_t kDividerThicknessDp = 1;
 constexpr int16_t kAvatarSizeDp = 40;
-constexpr uint16_t kExpandableAnimationFrameMillis = 20;
 
 struct RowTokens {
   int16_t horizontal_padding;
@@ -513,9 +513,12 @@ StandardListItemInit StandardListItemInit::ThreeLine(
 ExpandablePanel::ExpandablePanel(ApplicationContext& context)
     : Container(context),
       content_(),
+      expansion_fraction_(0.0f),
       animation_duration_millis_(0),
-      animation_progress_millis_(0),
-      expanded_(false) {}
+      expanded_(false),
+      snap_when_presented_(false) {
+  context.presentations().observe(*this);
+}
 
 void ExpandablePanel::setContent(WidgetRef content) {
   Widget* incoming = content.get();
@@ -548,11 +551,17 @@ void ExpandablePanel::clearContent() {
 }
 
 void ExpandablePanel::setExpanded(bool expanded, bool animate) {
-  if (expanded_ == expanded && !isAnimating()) return;
+  const float requested_fraction = expanded ? 1.0f : 0.0f;
+  if (expanded_ == expanded &&
+      (animate || expansion_fraction_ == requested_fraction)) {
+    return;
+  }
 
   expanded_ = expanded;
   if (!animate || animation_duration_millis_ == 0) {
-    animation_progress_millis_ = expanded_ ? animation_duration_millis_ : 0;
+    snapToRequestedState();
+  } else {
+    animateToRequestedState();
   }
 
   requestLayout();
@@ -562,22 +571,17 @@ void ExpandablePanel::setExpanded(bool expanded, bool animate) {
 bool ExpandablePanel::isExpanded() const { return expanded_; }
 
 bool ExpandablePanel::isAnimating() const {
-  if (animation_duration_millis_ == 0) return false;
-  if (expanded_) {
-    return animation_progress_millis_ < animation_duration_millis_;
-  }
-  return animation_progress_millis_ > 0;
+  if (animation_duration_millis_ == 0 || snap_when_presented_) return false;
+  return expansion_fraction_ != (expanded_ ? 1.0f : 0.0f);
 }
 
 void ExpandablePanel::setAnimationDuration(uint16_t millis) {
-  uint16_t old_duration = animation_duration_millis_;
+  if (animation_duration_millis_ == millis) return;
   animation_duration_millis_ = millis;
   if (animation_duration_millis_ == 0) {
-    animation_progress_millis_ = 0;
-  } else if (old_duration == 0) {
-    animation_progress_millis_ = expanded_ ? animation_duration_millis_ : 0;
-  } else if (animation_progress_millis_ > old_duration) {
-    animation_progress_millis_ = old_duration;
+    snapToRequestedState();
+  } else if (isAnimating()) {
+    animateToRequestedState();
   }
   requestLayout();
   invalidateInterior();
@@ -593,51 +597,62 @@ Dimensions ExpandablePanel::getSuggestedMinimumDimensions() const {
                     resolveVisibleHeight(suggested.height()));
 }
 
-void ExpandablePanel::paintWidgetContents(PaintContext& ctx) {
-  Container::paintWidgetContents(ctx);
-  if (isAnimating()) {
-    // Keep relayout and repaint active while the clipped height is changing.
-    requestLayout();
-    invalidateInterior();
+void ExpandablePanel::animateToRequestedState() {
+  AnimationRegistry& animations = context().animations();
+  const float target = expanded_ ? 1.0f : 0.0f;
+  if (expansion_fraction_ == target) {
+    animations.cancel(*this, kExpansion);
+    snap_when_presented_ = false;
+    return;
+  }
+
+  if (presentationState() == PresentationState::kDetached) {
+    animations.cancel(*this, kExpansion);
+    snap_when_presented_ = true;
+    return;
+  }
+
+  const float distance = target > expansion_fraction_
+                             ? target - expansion_fraction_
+                             : expansion_fraction_ - target;
+  uint32_t travel_millis = static_cast<uint32_t>(
+      static_cast<float>(animation_duration_millis_) * distance + 0.5f);
+  if (travel_millis == 0) travel_millis = 1;
+
+  AnimationStatus status;
+  if (animations.contains(*this, kExpansion)) {
+    status = animations.retarget(*this, kExpansion, target,
+                                 roo_time::Millis(travel_millis));
+  } else {
+    status = animations.start(
+        *this, kExpansion,
+        AnimationSpec::value(expansion_fraction_, target,
+                             roo_time::Millis(travel_millis)));
+  }
+  if (status != AnimationStatus::kOk) {
+    snapToRequestedState();
+    return;
+  }
+
+  snap_when_presented_ = false;
+  if (presentationState() == PresentationState::kHidden) {
+    animations.pause(*this, kExpansion);
   }
 }
 
-void ExpandablePanel::stepAnimation() {
-  if (!isAnimating()) return;
-
-  uint16_t delta = std::min<uint16_t>(kExpandableAnimationFrameMillis,
-                                      animation_duration_millis_);
-  if (delta == 0) delta = 1;
-
-  if (expanded_) {
-    animation_progress_millis_ = std::min<uint16_t>(
-        animation_duration_millis_, animation_progress_millis_ + delta);
-  } else {
-    animation_progress_millis_ =
-        (animation_progress_millis_ > delta)
-            ? static_cast<uint16_t>(animation_progress_millis_ - delta)
-            : 0;
-  }
+void ExpandablePanel::snapToRequestedState() {
+  context().animations().cancel(*this, kExpansion);
+  expansion_fraction_ = expanded_ ? 1.0f : 0.0f;
+  snap_when_presented_ = false;
 }
 
 int16_t ExpandablePanel::resolveVisibleHeight(int16_t full_height) const {
   if (full_height <= 0) return 0;
-  if (animation_duration_millis_ == 0) {
-    return expanded_ ? full_height : 0;
-  }
-
-  uint16_t clamped_progress = std::min<uint16_t>(animation_progress_millis_,
-                                                 animation_duration_millis_);
-  return static_cast<int16_t>(
-      (static_cast<int32_t>(full_height) * clamped_progress) /
-      animation_duration_millis_);
+  return static_cast<int16_t>(static_cast<float>(full_height) *
+                              expansion_fraction_);
 }
 
 Dimensions ExpandablePanel::onMeasure(WidthSpec width, HeightSpec height) {
-  if (isAnimating()) {
-    stepAnimation();
-  }
-
   Widget* content = content_.get();
   if (content == nullptr || content->isGone()) {
     return Dimensions(width.resolveSize(0), height.resolveSize(0));
@@ -663,6 +678,41 @@ void ExpandablePanel::onLayout(bool changed, const Rect& rect) {
   // max-bounds cannot spill into sibling paint/invalidation regions during
   // expand/collapse animation.
   content->layout(Rect(0, 0, rect.width() - 1, rect.height() - 1));
+}
+
+void ExpandablePanel::onAnimationFrame(AnimationTag tag,
+                                       const AnimationSample& sample) {
+  if (tag != kExpansion) {
+    Container::onAnimationFrame(tag, sample);
+    return;
+  }
+  if (expansion_fraction_ == sample.value) return;
+  expansion_fraction_ = sample.value;
+  requestLayout();
+  invalidateInterior();
+}
+
+void ExpandablePanel::onPresentationChanged(
+    const PresentationChange& change) {
+  AnimationRegistry& animations = context().animations();
+  if (change.detached_since_delivery ||
+      change.state == PresentationState::kDetached) {
+    animations.cancel(*this, kExpansion);
+    snap_when_presented_ =
+        expansion_fraction_ != (expanded_ ? 1.0f : 0.0f);
+    return;
+  }
+  if (change.state == PresentationState::kHidden) {
+    animations.pause(*this, kExpansion);
+    return;
+  }
+  if (snap_when_presented_) {
+    snapToRequestedState();
+    requestLayout();
+    invalidateInterior();
+    return;
+  }
+  animations.resume(*this, kExpansion);
 }
 
 int ExpandablePanel::getChildrenCount() const {

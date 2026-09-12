@@ -355,7 +355,10 @@ At a high level:
    convenience items for navigation or common controls are possible follow-up
    variants, not part of the baseline implementation target. Thin row
    wrappers remain optional later if a specific surface still needs them.
-- `ExpandablePanel` provides reusable expandable body behavior.
+- `ExpandablePanel` provides reusable expandable body behavior. Its measured
+   height follows an elapsed-time value track in the application animation
+   registry; hidden panels pause, while detached panels cancel and reconcile
+   to their requested endpoint when next presented.
 
 ### Key Decisions
 
@@ -991,7 +994,7 @@ types appear, approximate baseline targets are:
 | `StandardListItem` | ~52 B | rich non-owning descriptor: three text views, three compact text policies, three slot pointers, divider hint, and packed alignment bits |
 | `StringViewLabel` | ~48 B per occupied text slot | default widget for one-line standard overline, headline, or supporting text |
 | `TextBlock` | ~112 B plus line-vector capacity | current opt-in wrapped-text widget; this assumes one owned 24 B `std::string` and one 12 B `std::vector` control block on the ESP32 toolchain |
-| `ExpandablePanel` | ~60 B | reusable body widget: `Container`, one `WidgetRef`, two animation counters, and one expanded flag |
+| `ExpandablePanel` | ~60 B | reusable body widget: `Container`, one `WidgetRef`, one expansion fraction, a duration, and packed requested/reconciliation flags |
 | Owning slot adapter | +4 B per slot over raw pointer | `WidgetRef` ownership flag and padding |
 
 Likely follow-up targets, to be measured against the baseline implementation:
