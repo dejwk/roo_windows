@@ -307,8 +307,12 @@ Every `UiTask` owns one `TextFieldEditor`. The editor borrows its owning
 the designated compatibility task receives the keyboard pointer. The task
 reference lets `edit(target)` reject an unattached or cross-task field without
 replacing the current target. Cursor, selection, glyph cache, horizontal
-scroll, blink timers, recent-glyph state, and active target are therefore
-independent per task.
+scroll, caret visibility, recent-glyph state, and active target are therefore
+independent per task. While an editor is bound, a sparse custom-time track on
+that field supplies 500 ms blink boundaries; focus loss, rebinding, hiding, or
+detachment cancels the channel before the editor releases the target. The
+password field's recently-entered-glyph hider remains a separate one-shot
+scheduler deadline.
 
 `TextField` removes its stored `TextFieldEditor&`. It resolves the attached
 `UiTask` when editing starts and retains no editor pointer itself. This removes

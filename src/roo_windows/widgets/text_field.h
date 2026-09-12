@@ -93,17 +93,16 @@ class VisibilityToggle : public BasicWidget {
 /// One editor is owned by each `Task` and bound to whichever `TextField`
 /// currently has focus in that task. It receives semantic text input,
 /// maintains the cursor position, selection range, glyph
-/// metrics cache, and horizontal scroll offset, and drives cursor blinking
-/// and "recently entered glyph" reveal timers via the scheduler. Keeping this
-/// state centrally avoids paying for it on every `TextField` instance.
+/// metrics cache, and horizontal scroll offset. Caret blinking uses a sparse
+/// animation track on the active field; the one-shot "recently entered glyph"
+/// reveal deadline remains scheduler-owned. Keeping this state centrally
+/// avoids paying for it on every `TextField` instance.
 class TextFieldEditor {
  public:
   TextFieldEditor(Application& application, roo_scheduler::Scheduler& scheduler)
       : application_(application),
         scheduler_(scheduler),
-        cursor_blinker_(scheduler, [this]() { blinkCursor(); }),
         blinking_cursor_is_on_(false),
-        last_cursor_shown_time_(roo_time::Uptime::Now()),
         last_glyph_hider_(scheduler, [this]() { hideLastGlyph(); }),
         last_glyph_recently_entered_(false),
         target_(nullptr),
@@ -167,7 +166,8 @@ class TextFieldEditor {
 
   void measure();
   void restartCursor();
-  void blinkCursor();
+  void stopCursor(TextField& target);
+  void applyCursorFrame(TextField& target, const AnimationSample& sample);
 
   void restartLastGlyphRecentlyEntered();
   void hideLastGlyph();
@@ -175,9 +175,7 @@ class TextFieldEditor {
 
   Application& application_;
   roo_scheduler::Scheduler& scheduler_;
-  roo_scheduler::SingletonTask cursor_blinker_;
   bool blinking_cursor_is_on_;
-  roo_time::Uptime last_cursor_shown_time_;
   roo_scheduler::SingletonTask last_glyph_hider_;
 
   // True if the last (rightmost) glyph is considered as 'recently entered'
@@ -334,6 +332,10 @@ class TextField : public BasicWidget {
   /// Completes a focus request deferred until this newly attached field has
   /// non-empty layout bounds.
   void onLayout(bool changed, const Rect& rect) override;
+  void onAnimationFrame(AnimationTag tag,
+                        const AnimationSample& sample) override;
+
+  static constexpr AnimationTag kCaret = 0;
 
  public:
   /// Binds this field to the shared editor and starts editing.

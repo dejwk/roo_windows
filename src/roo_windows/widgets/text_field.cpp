@@ -259,11 +259,13 @@ void TextFieldEditor::edit(TextField* target, bool show_software_keyboard) {
     if (target_ != nullptr) {
       application_.activateTextInput(*this);
       application_.setTextEditorKeyboardVisibility(show_software_keyboard);
+      restartCursor();
     }
     return;
   }
   last_glyph_recently_entered_ = false;
   TextField* old_target = target_;
+  if (old_target != nullptr) stopCursor(*old_target);
   target_ = target;
   if (target == nullptr) {
     application_.deactivateTextInput(*this);
@@ -393,20 +395,6 @@ void TextFieldEditor::measure() {
   cursor_position_ = empty ? 0 : glyphs_.size();
 }
 
-void TextFieldEditor::blinkCursor() {
-  if (target_ == nullptr) return;
-  auto now = roo_time::Uptime::Now();
-  if (now - last_cursor_shown_time_ > 2 * kCursorBlinkInterval) {
-    restartCursor();
-    target_->setDirty();
-  }
-  if (now - last_cursor_shown_time_ > kCursorBlinkInterval) {
-    blinking_cursor_is_on_ = false;
-    target_->setDirty();
-    cursor_blinker_.scheduleAfter(kCursorBlinkInterval);
-  }
-}
-
 void TextFieldEditor::restartLastGlyphRecentlyEntered() {
   if (target_ == nullptr) return;
   // Note: need to check for empty as a special case, because we may
@@ -425,9 +413,29 @@ void TextFieldEditor::hideLastGlyph() {
 }
 
 void TextFieldEditor::restartCursor() {
-  last_cursor_shown_time_ = roo_time::Uptime::Now();
+  if (target_ == nullptr) return;
+  target_->context().animations().cancel(*target_, TextField::kCaret);
   blinking_cursor_is_on_ = true;
-  cursor_blinker_.scheduleAfter(kCursorBlinkInterval);
+  target_->invalidateInterior();
+  if (target_->presentationState() != PresentationState::kPresented) return;
+  AnimationSpec spec = AnimationSpec::customTime();
+  spec.minimum_interval = kCursorBlinkInterval;
+  target_->context().animations().start(*target_, TextField::kCaret, spec);
+}
+
+void TextFieldEditor::stopCursor(TextField& target) {
+  target.context().animations().cancel(target, TextField::kCaret);
+  blinking_cursor_is_on_ = false;
+}
+
+void TextFieldEditor::applyCursorFrame(TextField& target,
+                                       const AnimationSample& sample) {
+  if (target_ != &target) return;
+  bool cursor_on =
+      (sample.elapsed.inMillis() / kCursorBlinkInterval.inMillis()) % 2 == 0;
+  if (cursor_on == blinking_cursor_is_on_) return;
+  blinking_cursor_is_on_ = cursor_on;
+  target.invalidateInterior();
 }
 
 void TextFieldEditor::rune(uint32_t rune) {
@@ -466,6 +474,7 @@ void TextFieldEditor::enter() {
   if (target_ == nullptr) return;
   last_glyph_recently_entered_ = false;
   TextField* old_target = target_;
+  stopCursor(*old_target);
   target_ = nullptr;
   application_.deactivateTextInput(*this);
   old_target->onEditFinished(true);
@@ -622,6 +631,20 @@ void TextField::onLayout(bool changed, const Rect& rect) {
   (void)changed;
   (void)rect;
   if (isEdited() && !isFocused()) requestFocus();
+}
+
+void TextField::onAnimationFrame(AnimationTag tag,
+                                 const AnimationSample& sample) {
+  if (tag != kCaret) {
+    BasicWidget::onAnimationFrame(tag, sample);
+    return;
+  }
+  Task* task = getTask();
+  if (task == nullptr) return;
+  TextFieldEditor& text_editor = task->textFieldEditor();
+  if (text_editor.isEdited(this)) {
+    text_editor.applyCursorFrame(*this, sample);
+  }
 }
 
 void TextField::setEditable(bool editable) {

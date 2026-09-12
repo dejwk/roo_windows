@@ -167,9 +167,10 @@ detector drains no more than the fixed sensor queue capacity and evaluates each
 show-press, long-press, tap, and fling deadline once. Multi-threaded sensor
 builds only drain the already bounded queue.
 
-Click animation and navigation-owned timers advance once when due. Other
-scheduler-owned tasks such as editor blinkers remain independent scheduler
-work and do not run inside the application ticker.
+Click animation and navigation-owned timers advance once when due. Caret
+blinking is a slow custom-time channel in the application animation pass; its
+500 ms minimum interval avoids display-cadence polling. One-shot deadlines such
+as delayed password masking remain independent scheduler work.
 
 ### Refresh slice
 

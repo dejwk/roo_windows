@@ -140,7 +140,8 @@ void setup() {
   NavigationHost& editor_navigation = editor_task.navigation();
   editor_navigation.push(editor_destination);
   // Keep the field focused, but leave keyboard presentation entirely to the
-  // first application.
+  // first application. Its 500 ms caret track belongs to second_app; the
+  // shared scheduler wakes that application only at blink boundaries.
   editor_task.textFieldEditor().edit(&editor_destination.field, false);
 
   // Keyboard presentation stays with the first application, while its
