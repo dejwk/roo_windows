@@ -48,11 +48,17 @@ DisplayWindow::~DisplayWindow() {
 }
 
 void DisplayWindow::start() {
-  if (touch_enabled_) touch_sensor_.start();
+  if (!touch_enabled_) return;
+  Application& app = root_.app();
+  touch_sensor_.setReadinessHandler([&app]() { app.requestInputTick(); });
+  touch_sensor_.start(app.env().scheduler());
 }
 
 void DisplayWindow::stop() {
-  if (touch_enabled_) touch_sensor_.stop();
+  if (touch_enabled_) {
+    touch_sensor_.stop();
+    touch_sensor_.setReadinessHandler(nullptr);
+  }
   // Close admission before callbacks or task teardown can attempt to reopen a
   // presentation into a window whose input and paint services are stopping.
   root_.beginShutdown();
@@ -66,9 +72,6 @@ void DisplayWindow::advanceFrameState() {
 }
 
 bool DisplayWindow::servicePointerInput(bool& touch_active) {
-#if defined(ROO_THREADS_SINGLETHREADED)
-  if (touch_enabled_) touch_sensor_.pollOnce();
-#endif
   bool dispatched = touch_enabled_ && gesture_detector_.tick();
   root_.flushPendingOutsideInteraction();
   touch_active = touch_enabled_ && gesture_detector_.isTouchDown();

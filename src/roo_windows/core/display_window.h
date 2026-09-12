@@ -63,7 +63,7 @@ class DisplayWindow {
   /// Advances retained click feedback when no logical paint is continuing.
   void advanceFrameState();
 
-  /// Polls and dispatches pointer input, returning whether an event dispatched.
+  /// Drains pointer input and returns whether a gesture was dispatched.
   bool servicePointerInput(bool& touch_active);
 
   /// Refreshes when the cadence permits and reports deadline interruption.

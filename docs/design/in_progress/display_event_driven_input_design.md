@@ -2,17 +2,23 @@
 
 ## Status
 
-In progress. Phases 1 and 2 are implemented: `ApplicationTicker` coalesces
+In progress. Phases 1–3 are implemented: `ApplicationTicker` coalesces
 requests while retaining the 20 ms fallback, and physical key sources wake the
 application through producer-owned readiness handlers and the application input
 router. FLTK crosses from its native event thread through `roo_testing`'s
-`HostEventEndpoint`. Phases 3–7—touch acquisition, gesture and animation
-deadlines, paint wakeups, then removal of the fallback—remain proposed.
+`HostEventEndpoint`. The widget animation registry and its widget migrations
+have also landed, including explicit frame requests and pre-layout sampling.
+Touch acquisition now signals readiness and uses an independent sensor-owned
+poll task in single-threaded builds. Phase 4 remains proposed. Phase 5 now covers
+remaining click feedback and animation scheduling integration; Phase 6 covers
+paint eligibility and deferred framework work. Phase 7 removes the fallback only after those paths are complete.
 
 ## Objective
 
 Make an idle application ticker dormant while preserving bounded input,
-gesture, animation, and paint progress through explicit wakeups and deadlines.
+gesture, animation, deferred framework work, and paint progress through explicit
+wakeups and deadlines. Remove avoidable UI wakeups so the platform can use idle
+periods for sleep when its other work and input hardware permit it.
 
 ## Motivation
 
@@ -20,6 +26,17 @@ The application ticker currently falls back to a 20 ms cadence even when the
 window is clean and no input is available. That cadence couples hardware
 acquisition, gesture timing, animation, and painting, and consumes scheduler
 and CPU time for static applications.
+
+Idle CPU usage is the primary benefit. An application displaying static content,
+including an e-paper interface, should not need periodic UI dispatch merely to
+keep its event loop alive. Application dormancy creates an opportunity for
+platform power management; it does not itself enter microcontroller sleep.
+
+This work adds scheduling responsibility to the core. Most widget-level
+simplification has already landed through the animation registry. Keep the
+remaining complexity in application/display work collection, with one final
+decision about eligibility and the next dispatch. Avoid another general widget
+wakeup API unless the remaining-consumer audit establishes a concrete need.
 
 ## Background
 
@@ -43,17 +60,21 @@ Input storage already exists at its acquisition boundaries:
   on the application's UI thread.
 
 In multi-threaded builds, `TouchSensor` polls the display on its worker thread.
-In single-threaded builds,
+In single-threaded builds, `TouchSensor` polls through its own persistent
+scheduler executable, independently of application dispatch.
 [`DisplayWindow::servicePointerInput()`](../../../src/roo_windows/core/display_window.cpp)
-polls once from every application ticker dispatch. `GestureDetector` also
+only drains touch input and dispatches gestures. `GestureDetector` also
 evaluates show-press and long-press timers from that dispatch.
 
 Painting is already bounded and resumable. An interrupted refresh retains its
 logical-paint state as described by the
 [interrupted paint continuation design](../implemented/interrupted_paint_continuation_design.md).
-Ordinary widget animation code keeps itself dirty for another application
-ticker dispatch, while `ClickAnimation` advances from the window-owned ticker
-phase. Both behaviors currently rely on the fallback cadence.
+The implemented [widget animation registry](../implemented/widget_animation_registry_design.md)
+now owns the migrated widget animation deadlines and pre-layout samples.
+`ClickAnimation` still advances from the window-owned ticker phase, and the base
+widget click overlay still self-dirties during paint. The fallback also masks
+early frame requests consumed by the display throttle and deferred work serviced
+only on a later refresh. Registry delivery alone does not establish dormancy.
 
 `roo_scheduler::Scheduler` accepts concurrent scheduling and cancellation, but
 `roo_scheduler::SingletonTask` protects neither its pending identifier nor its
@@ -96,12 +117,13 @@ Terms shared with other Roo Windows designs retain their meanings from the
 
 ### Scheduling
 
-7. Ready input, ordinary window invalidation, and interrupted paint must
-   request immediate application work.
+7. Ready input, ordinary window invalidation, interrupted paint, and newly
+   eligible deferred framework work must request immediate application work.
 8. A pending gesture transition, animation frame, or intentionally delayed
    paint must request application work at its earliest deadline.
 9. An application with none of those work sources must leave its ticker
-   unscheduled.
+   unscheduled. Pending deferred callbacks count as work even when the root is
+   clean and no animation track remains.
 10. Concurrent requests must coalesce to the earliest requested execution.
     A later request must never postpone an earlier one.
 11. A request received during ticker dispatch must produce a later scheduler
@@ -158,9 +180,10 @@ The proposal introduces five document-local concepts:
 - A **coalescing ticker** is the application-owned scheduler executable that
   stores at most one effective execution time. It replaces the unsynchronized
   `SingletonTask` and rejects requests after stopping.
-- A **delayed dirty request** marks animation-owned paint state dirty while
-  requesting its next application dispatch at a stated deadline instead of
-  immediately. Ordinary invalidation remains an immediate request.
+- A **frame deadline** identifies when an animation needs a new frame opportunity,
+  even before its sample has made a widget dirty. The registry and remaining
+  click controller publish these deadlines; ordinary invalidation remains an
+  immediate request.
 
 An application is **dormant** when its coalescing ticker has no pending
 execution. Dormancy affects application dispatch only; a touch acquisition
@@ -188,7 +211,7 @@ The solution maps to the requirements as follows:
 | Payload-free readiness bindings and foreign-host handoff | 1–6, 13–14, 19–20 |
 | One synchronized, earliest-deadline ticker per application | 7–12, 17, 20–21 |
 | Gesture detector reporting its next timer deadline | 8–9, 12, 14 |
-| Immediate ordinary invalidation plus explicit delayed dirty requests | 7–9, 12, 22 |
+| Immediate ordinary invalidation plus explicit frame deadlines | 7–9, 12, 22 |
 | Ordered installation, producer quiescence, binding removal, and ticker stop | 5, 14–18 |
 
 The reverse link from a connected source to the application is necessary
@@ -368,22 +391,32 @@ One ticker execution performs these phases in order:
    its existing 16-event limit.
 3. Drain one touch batch and chronologically merge gesture events with due
    transitions, with input winning equal-timestamp ties.
-4. Handle other application-owned UI events that are ready.
-5. Attempt at most one paint slice when immediate or deadline-owned paint is
-   due. On a new logical frame, deliver pending presentation notifications and
-   run the proposed generic animation registry's due samples before layout/paint.
-   A retained paint continuation skips animation sampling.
-6. Collect immediate continuation needs and the earliest gesture, animation,
-   and delayed-paint deadline.
-7. Return no deadline when the application is clean and no timed work remains.
+4. Service ready deferred framework work, including transient activity changes
+   and eligible transient completion, independently of paint dirtiness. Preserve
+   the existing lifetime boundary for callbacks that can destroy their owner.
+5. Attempt at most one eligible paint slice. A retained continuation is eligible
+   immediately and skips animation sampling. For a new logical frame, ordinary
+   dirtiness or a due registry/click deadline constitutes frame work. Deliver
+   pending presentation notifications and run the implemented registry's due
+   samples before layout/paint; retain post-layout presentation delivery.
+6. Collect remaining immediate work and the earliest gesture or eligible frame
+   deadline in one application/display decision. Merge that result with external
+   requests recorded by the ticker during dispatch.
+7. Return no deadline when no input follow-up, deferred work, continuation,
+   ordinary dirtiness, or timed work remains.
 
-Chronologically merging timestamped touch input with gesture timers is the only
-ordering change needed for a late dispatch. The remaining phase order preserves
-click settlement and paint continuation contracts.
+Chronologically merge timestamped touch input with gesture timers for late
+dispatch. Separating deferred work from paint eligibility must preserve click
+settlement, callback lifetime, and paint continuation contracts. In particular,
+transient completion that becomes eligible after final click paint runs on a
+later framework entry, outside that click callback.
 
-Consuming a complete key budget, interrupted painting, or ordinary invalidation
-created after the paint slice returns an immediate deadline. Otherwise the
-ticker uses the minimum of the outstanding timed deadlines.
+Consuming a complete key budget, interrupted painting, newly eligible deferred
+work, or ordinary invalidation created after the paint slice requests an
+immediate follow-up. Dirtiness consumed by the current frame does not produce
+another immediate request. Frame work that is still throttled contributes the
+next eligible paint deadline rather than repeatedly requesting immediate work.
+Otherwise the ticker uses the minimum of the outstanding timed deadlines.
 
 The implemented [widget animation registry](../implemented/widget_animation_registry_design.md)
 adds an explicit deadline source to step 6 and a pre-layout sample pass to step 5.
@@ -394,36 +427,77 @@ continuation, its overdue sample deadlines wait until a new frame is permitted.
 This preserves coherent samples while allowing the ticker to resume paint
 immediately. See the registry design for delay and minimum-interval rules.
 
+### Work sources and ownership
+
+The final dispatch decision uses existing source state, rather than treating a
+clean root or an empty animation registry as sufficient evidence of dormancy.
+This inventory is the fallback-removal checklist:
+
+| Work source | Wakeup and completion rule |
+| --- | --- |
+| Physical keys | Producer readiness; a full drain budget requests one immediate follow-up. |
+| Touch | Sensor readiness; acquisition remains independent of application dispatch. |
+| Gesture transitions | Detector's earliest timeout; a held touch alone requests no dispatch. |
+| Ordinary dirty/layout work | Root wakeup; outstanding work obeys the next eligible new-frame time. |
+| Registry tracks | Start/control requests plus the registry's earliest deadline, even when the root is clean. |
+| Click feedback | Controller frame deadlines and final-paint settlement; no recurring deadline after settlement. |
+| Interrupted paint | Immediate continuation until the retained logical frame completes. |
+| Presentation notifications | Preserve the registry's existing scheduled delivery and pre/post-layout delivery; resulting invalidation wakes paint. |
+| Transient activity notifications | Explicit application wakeup; pending delivery is serviced even with a clean root and no active tracks. |
+| Deferred transient completion | When final click paint settles, explicitly request the later framework entry needed to finish the presentation. |
+| Semantic timers | Keep existing scheduler tasks, such as password masking, scrollbar hiding, and snackbar readable-time expiry; resulting UI changes use ordinary invalidation or animation requests. |
+| UI-thread callbacks | Preserve `executeInUIThread()` delivery; UI changes wake through the same invalidation and frame paths. |
+
+Use source-owned pending state and core-only queries where needed. There is no
+new application-wide work queue or per-widget wakeup field. Deferred delivery
+must remain bounded: work raised during delivery can request a later dispatch
+rather than recursively draining callbacks. Quiesce or cancel every added wakeup
+source during teardown.
+
 ### Invalidation, paint continuation, and animation
 
 Ordinary `Widget::setDirty()`, `invalidateInterior()`, layout invalidation, and
 `DisplayWindow::requestRefresh()` propagate to `MainWindow` as they do today.
-After recording dirty geometry, the root calls `requestNow()`. An application
-dormant before an external state change therefore paints without waiting for a
-cadence.
+After recording dirty geometry outside the current frame's consumption phase,
+the root calls `requestNow()`. During dispatch, core work collection distinguishes
+invalidation consumed by the current frame from work still outstanding afterward.
+An application dormant before an external state change therefore requests work
+without waiting for a cadence.
 
 The existing 20 ms minimum interval between ordinary refresh starts remains a
-paint deadline rather than an implicit polling cadence. If an immediate
-invalidation dispatch arrives before that interval has elapsed,
+paint deadline rather than an implicit polling cadence. If ordinary invalidation
+or a due animation frame arrives before that interval has elapsed,
 `DisplayWindow` skips the paint slice and returns
 `roo_time::Uptime::Now() + remaining_interval` as its delayed-paint deadline.
 The ticker schedules that deadline, so the application neither spins
-immediately nor becomes dormant while dirty. No new persistent timestamp is
+immediately nor becomes dormant with unserviced frame work. This applies to a
+new track, delayed track expiry, seek/finish request, and zero-interval track,
+even when no widget is dirty before sampling. A dispatch that does no frame work
+does not update the last-refresh time. No new persistent timestamp is
 needed: the remaining interval is derived from the existing last-refresh sample
-at the dispatch's sampled time. A retained interrupted-paint continuation is
-already eligible and bypasses this ordinary-refresh throttle.
+at the dispatch's sampled time. Check for a retained interrupted-paint
+continuation before applying this ordinary-refresh throttle. A continuation is
+already eligible; it must not take the current `refreshIfDue()` early return.
+Deferred notification delivery is independent of this throttle and cannot lose
+its only wakeup because a paint slice is not yet eligible.
 
 An interrupted logical paint retains continuation state and requests
 `requestNow()`. Completion clears that request source. The existing adaptive
 paint-slice duration remains a work bound, not a future refresh cadence.
 
-Animation code that currently calls `setDirty()` from
-`paintWidgetContents()` changes to
-`requestAnimationFrameAt(next_frame_deadline)`. This protected widget helper
-marks the same widget state dirty but propagates a delayed wakeup classification
-to `MainWindow`. It adds no widget field. An unrelated ordinary invalidation
-can paint that dirty animation state earlier; the animation then publishes its
-next deadline again.
+Registry consumers already publish frame intent through their tracks; retain
+that path. Audit remaining paint-time self-dirtying, particularly the base
+widget click overlay and `ClickAnimation::tick()`. Give click feedback a
+core-owned next-frame deadline and remove its reliance on repeated ordinary
+invalidation for future frames. Its due advancement can invalidate the frame
+being consumed without scheduling another immediate pass.
+
+A general protected `Widget::requestAnimationFrameAt()` delayed-dirty helper is
+not a required deliverable. Add one only if the audit identifies a remaining
+consumer that cannot reasonably use registry tracks or the window-owned click
+controller, and document that consumer and its pacing contract first. The
+existing application-level frame request is a core scheduling endpoint, not a
+new widget API.
 
 The default visual frame interval remains 20 ms, preserving the current
 50-frame-per-second upper rate. Animations with an existing explicit cadence,
@@ -527,7 +601,7 @@ class TouchSensor {
 };
 ```
 
-Gesture timing and animation wakeups remain framework-facing APIs:
+Gesture timing remains a framework-facing API:
 
 ```cpp
 class GestureDetector {
@@ -535,14 +609,12 @@ class GestureDetector {
   /// Returns the earliest pending gesture transition, or Uptime::Max().
   roo_time::Uptime nextTimeoutDeadline() const;
 };
-
-class Widget {
- protected:
-  /// Keeps this widget dirty and requests its next animation paint no earlier
-  /// than deadline.
-  void requestAnimationFrameAt(roo_time::Uptime deadline);
-};
 ```
+
+The existing application-level animation request and registry deadline query
+remain core integration points. Phase 5 adds a core-only click deadline query;
+Phase 6 adds only the pending-work queries needed by the inventory above. No
+new protected widget scheduling API is assumed.
 
 The ticker API remains private:
 
@@ -618,22 +690,42 @@ Delivered change:
 > specified by `display_input_routing_design.md`, remove temporary task
 > attachment, and preserve bounded per-source draining.
 
-### Phase 3: separate touch acquisition from application dispatch
+### Completed Phase 3: separate touch acquisition from application dispatch
 
-Add touch readiness, notify after ring mutation, and move single-threaded
-polling to the sensor-owned periodic scheduler task. Keep the fallback. Update
-touch documentation and tests for overflow replacement, nonempty
-installation, post-unlock notification, stop, poll-task independence, and
-allocation.
+Added quiescing touch readiness with notification after every ring write,
+including full-ring MOVE replacement. `start(Scheduler&)` starts the existing
+worker or a persistent single-threaded executable that polls immediately and
+rearms after 20 ms. The window binds readiness to the application ticker before
+starting acquisition, then stops acquisition and removes the binding during
+teardown. Stop clears the ring and sample history; the worker stop flag is atomic.
+The application fallback remains. Tests cover overflow, nonempty installation,
+post-unlock draining, replacement/removal, removal quiescence, worker shutdown,
+restart, independent polling, pre-fallback application wakeup, disabled touch,
+and warmed allocation. Single-threaded `executeInUIThread()` invokes directly
+without compiling the worker-only semaphore bridge.
 
 Focused validation:
 
 ```sh
 bazel test //:touch_sensor_test //:display_window_test \
   //:display_runtime_characterization_test
+bazel test //:touch_sensor_test //:display_window_test \
+  //:display_runtime_characterization_test --copt=-DROO_THREADS_SINGLETHREADED \
+  --per_file_copt='external/roo_display.*/src/roo_display/driver/touch_gt911.cpp@-UROO_THREADS_SINGLETHREADED' \
+  --per_file_copt='src/roo_windows/core/application.cpp,external/roo_scheduler.*/src/roo_scheduler.cpp@-ffunction-sections' \
+  --linkopt=-Wl,--gc-sections
 ```
 
-Proposed commit message:
+The published `roo_display` GT911 driver requires a worker thread and cannot
+compile with the single-threaded backend. The per-file option keeps only that
+unused hardware driver on its normal backend; these tests use offscreen displays
+and scripted touch devices. Roo Windows, its sensor task, and the scheduler all
+compile with the single-threaded backend. The published scheduler also references
+an unavailable untimed condition-variable wait in `Scheduler::run()`. Function
+sections and linker garbage collection omit that unused blocking entry point;
+these deterministic tests drive `executeEligibleTasksUpToNow()` explicitly.
+
+Delivered change:
 
 > Event-driven input Phase 3 gives touch acquisition an independent wakeup.
 >
@@ -664,72 +756,103 @@ Proposed commit message:
 > input-and-timeout ordering as specified by
 > `display_event_driven_input_design.md`.
 
-### Phase 5: give animations explicit frame deadlines
+### Phase 5: finish click deadlines and audit animation integration
 
-The [generic registry](../implemented/widget_animation_registry_design.md) publishes
-explicit deadlines in its own initial implementation. Its consumers need no
-`requestAnimationFrameAt()` calls. The helper below remains the compatibility
-path for unmigrated click/paint-driven animations; the fallback cannot be removed
-until both paths and every legacy source have been audited.
+The [generic registry](../implemented/widget_animation_registry_design.md) and
+its widget migrations are implemented. Retain their frame requests and sampling
+path. Audit remaining paint-time self-dirty loops, including the base widget
+click overlay, and give window-owned click feedback explicit frame deadlines.
+Preserve activation policies, transient spill cleanup, final-paint delivery,
+and the existing frame intervals. Keep the fallback.
 
-Add `requestAnimationFrameAt()` without increasing base widget size. Migrate
-click feedback and every widget that self-dirties from its paint path before
-ordinary invalidation is connected to immediate ticker wakeups. Retain each
-established frame interval and update the widget-authoring documentation in the
-same commit. Add tests for deadline coalescing, no immediate animation loop,
-terminal cancellation, and animation completion in a dormant-equivalent ticker
-state.
+Do not repeat the widget migrations or add a general delayed-dirty helper by
+default. Update widget-authoring guidance around registry use and any concrete
+remaining exception. Audit semantic timers separately: password masking,
+scrollbar hiding, and snackbar readable-time expiry remain scheduled semantic
+work, not animation loops to migrate.
+
+Test deadline coalescing, no immediate animation loop, terminal cancellation,
+click final-paint settlement, and retained samples during continuation. Complete
+scheduler-driven fallback-free integration validation in Phase 6, where paint
+eligibility and delayed retries become available.
 
 Focused validation:
 
 ```sh
-bazel test //:roo_windows_test //:display_window_test \
+bazel test //:animation_registry_test //:roo_windows_test //:display_window_test \
   //:material3_switch_test //:material3_list_test
 bazel build //:display_runtime_size_probe
 ```
 
 Proposed commit message:
 
-> Event-driven input Phase 5 schedules animation frames by deadline.
+> Event-driven input Phase 5 completes click frame deadlines.
 >
-> Replace paint-time self-dirty loops with the delayed animation wakeup from
-> `display_event_driven_input_design.md`, migrate click and widget animations,
-> and document the widget-authoring contract.
+> Replace remaining click paint-time self-dirty loops with controller-owned
+> frame deadlines, retain registry consumers, and preserve final-paint semantics
+> as specified by `display_event_driven_input_design.md`.
 
-### Phase 6: wake ordinary and interrupted painting
+### Phase 6: collect pending work and schedule eligible painting
 
-Route root invalidation and paint continuation to `requestNow()` while keeping
-the fallback. Test a dormant-equivalent ticker state by canceling its fallback,
-then verify external invalidation, invalidation during dispatch, one-slice
-paint bounds, interrupted continuation, and completed continuation settlement.
-Also verify that an ordinary invalidation inside the minimum refresh interval
-schedules the exact next eligible paint deadline and neither spins nor becomes
-dormant while dirty, and that ordinary invalidation preempts a later animation
-deadline.
+Centralize the final work decision in application/display core while keeping
+production's fallback. Connect root invalidation, paint continuation, and all
+pending framework work in the inventory above. Service deferred notifications
+independently of paint eligibility, and explicitly wake the later framework
+entry needed for transient completion after click settlement.
+
+Apply the minimum refresh interval only to new frames. Return the exact eligible
+paint deadline for throttled dirty or animation work, including clean-root
+animation starts and control requests. Check continuation first and resume it
+immediately. Consume pre-paint invalidation within the current frame, retain
+post-paint work, and collect registry deadlines after dispatch work. Do not let
+an overdue animation deadline spin while a continuation owns the frame.
+
+Use a test fixture that suppresses fallback generation for the entire scenario;
+canceling one pending fallback is insufficient if dispatch recreates it. Drive
+the real scheduler and application path with a deterministic clock, rather than
+only calling registry sampling or manual refresh. Cover:
+
+- invalidation outside dispatch, during sampling, and after paint;
+- a request inside the 20 ms throttle interval, with exact next eligibility;
+- clean-root track start, delayed expiry, seek/finish, zero interval, and a
+  33 ms interval that is not forced onto a periodic 20 ms grid;
+- one paint slice per dispatch, immediate short-slice continuation, frozen
+  animation samples, and a new frame after continuation settlement;
+- transient activity delivery without dirtiness or tracks, final-click deferred
+  completion, and bounded reentrant notifications;
+- semantic timer expiry causing repaint or animation while otherwise dormant;
+- ordinary invalidation preempting a later frame deadline, cancellation of the
+  last track, and settlement with no recurring application wakeups.
 
 Focused validation:
 
 ```sh
-bazel test //:display_window_test //:roo_windows_test \
+bazel test //:application_test //:animation_registry_test \
+  //:display_window_test //:roo_windows_test \
+  //:transient_activity_observer_test //:transient_presentation_lifetime_test \
   //:display_runtime_characterization_test
 ```
 
 Proposed commit message:
 
-> Event-driven input Phase 6 wakes immediate and deadline-owned paint work.
+> Event-driven input Phase 6 schedules all pending framework and paint work.
 >
-> Connect ordinary invalidation and interrupted logical paint to the
-> application ticker, preserve the minimum-refresh deadline, and retain the
-> continuation contract documented by
-> `display_event_driven_input_design.md`.
+> Centralize work collection, preserve deferred callback settlement, retry
+> throttled frame requests at their eligibility deadline, and resume interrupted
+> paint immediately as specified by `display_event_driven_input_design.md`.
 
 ### Phase 7: remove the application fallback
 
 Delete the final 20 ms fallback and schedule only the immediate work and
 deadlines introduced by Phases 2–6. Add dormancy, two-application isolation,
 single-threaded touch-poll independence, and full no-sleep deterministic
-coverage. Update the shared-scheduler design's follow-up status and the design
-index in the same commit.
+coverage. Verify every inventory row has a wakeup and settlement test before
+removing the fallback. For a clean application with touch disabled and no timed
+work, advancing the deterministic clock must cause zero additional application
+dispatches or display paints. Repeat after a completed interaction and after
+animation/deferred-work settlement. With polling touch enabled, count sensor
+polls separately and verify they do not dispatch an idle application. Update the
+shared-scheduler design's follow-up status and the design index in the same commit.
 
 Focused validation:
 
@@ -761,21 +884,36 @@ Deterministic clocks and scripted sources cover four validation layers:
   scheduler allocation after warmup;
 - application behavior: bounded key and touch draining, timestamp-ordered
   gesture transitions on both sides of a deadline, ordinary invalidation,
-  throttled-paint deadlines, interrupted paint, animation deadlines, and clean
-  dormancy; and
+  throttled dirty and clean-root animation requests, immediate interrupted paint,
+  deferred activity/completion, semantic timer effects, and clean dormancy; and
 - integration and resource behavior: two independently scheduled
   applications, an independent single-threaded sensor poll task, unchanged
   base widget sizes, and the accepted source and application RAM deltas.
 
-Tests do not sleep. The final phase runs the complete test and build graph
-after the narrow phase targets pass.
+Tests do not sleep. Fallback-free integration tests drive the real scheduler;
+manual refresh and direct registry tests remain useful unit coverage but do not
+prove wakeup correctness. Record application dispatch and paint counts over an
+idle interval, distinguishing independent sensor or semantic tasks. The final
+phase runs the complete test and build graph after the narrow phase targets pass.
+
+Target measurements may compare idle dispatch counts and CPU active time before
+and after fallback removal. MCU sleep residency and current draw require a
+separate platform setup; they are not inferred from host dormancy tests.
 
 ## Caveats
 
 The application ticker can become dormant while a single-threaded sensor poll
 task still wakes every 20 ms. This design removes unnecessary UI and paint
 dispatch; it does not reduce hardware polling without an interrupt-capable
-touch contract.
+touch contract. The multi-threaded sensor worker likewise retains polling.
+Disabling touch avoids that source; a future interrupt-capable input path could
+wake an otherwise idle system on interaction.
+
+This proposal does not add a sleep API or select light/deep sleep modes. The
+platform must account for all scheduler work, wake-capable inputs, display or
+bus operations still in flight, and clock/lifetime behavior across sleep. A
+clean application is not proof that the entire MCU is safe to suspend. E-paper
+transfer completion and panel power policy remain display/platform concerns.
 
 Scheduler and mutex operations are bounded framework operations, not hard
 real-time guarantees. A slow task or display operation on a shared scheduler
@@ -818,10 +956,10 @@ transitions without another executable per gesture.
 #### Treat animation dirtiness as ordinary invalidation
 
 Rejected because an animation that marks itself dirty during paint would
-request another immediate dispatch and spin without frame pacing. The delayed
-dirty contract in
+request another immediate dispatch and spin without frame pacing. Registry and
+click-controller frame deadlines, with current-frame invalidation consumption in
 [Invalidation, paint continuation, and animation](#invalidation-paint-continuation-and-animation)
-preserves the established frame intervals.
+preserve the established frame intervals.
 
 #### Dispatch widgets directly from producer threads
 
@@ -848,3 +986,10 @@ state to widgets or allocating per event.
 An interrupt-capable touch-device contract can replace periodic sensor polling
 on supported hardware. That change is independent of application ticker
 dormancy and requires a corresponding display-driver API.
+
+A subsequent platform power-management design can use scheduler idle periods and
+the earliest pending deadline to select a supported sleep mode and arrange input
+wake sources. Define clock continuity, timer recovery, and display-transfer
+completion there, and validate wake-to-interaction behavior and actual current
+draw on a target such as an e-paper device. This proposal supplies application
+dormancy as a prerequisite; platform sleep is a separate deliverable.

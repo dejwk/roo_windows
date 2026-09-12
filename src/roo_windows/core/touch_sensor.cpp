@@ -2,6 +2,7 @@
 
 #include <cstdlib>
 #include <limits>
+#include <utility>
 
 #include "roo_time.h"
 
@@ -50,9 +51,28 @@ TouchSensor::TouchSensor(roo_display::Display& display)
       velocity_y_(0),
       last_velocity_update_us_(0) {}
 
-TouchSensor::~TouchSensor() { stop(); }
+TouchSensor::~TouchSensor() {
+  stop();
+  setReadinessHandler(nullptr);
+}
 
-void TouchSensor::start() {
+void TouchSensor::setReadinessHandler(ReadinessHandler handler) {
+  roo::lock_guard<roo::mutex> lock(readiness_mutex_);
+  readiness_handler_ = std::move(handler);
+  bool pending;
+  {
+    roo::lock_guard<roo::mutex> queue_lock(mutex_);
+    pending = head_ != tail_;
+  }
+  if (readiness_handler_ != nullptr && pending) readiness_handler_();
+}
+
+void TouchSensor::notifyReady() {
+  roo::lock_guard<roo::mutex> lock(readiness_mutex_);
+  if (readiness_handler_ != nullptr) readiness_handler_();
+}
+
+void TouchSensor::start(roo_scheduler::Scheduler& scheduler) {
   if (started_) return;
   started_ = true;
 #if !defined(ROO_THREADS_SINGLETHREADED)
@@ -71,20 +91,45 @@ void TouchSensor::start() {
 #else
   worker_ = roo::thread([this]() { run(); });
 #endif
+#else
+  poll_task_.scheduler_ = &scheduler;
+  poll_task_.id_ = scheduler.scheduleNow(poll_task_);
 #endif
 }
 
 void TouchSensor::stop() {
-  if (!started_) return;
   started_ = false;
 #if !defined(ROO_THREADS_SINGLETHREADED)
   running_ = false;
   if (worker_.joinable()) {
     worker_.join();
   }
+#else
+  if (poll_task_.scheduler_ != nullptr) {
+    poll_task_.scheduler_->cancel(poll_task_.id_);
+    poll_task_.scheduler_ = nullptr;
+    poll_task_.id_ = -1;
+  }
 #endif
+  roo::lock_guard<roo::mutex> lock(mutex_);
+  head_ = tail_ = 0;
+  is_down_ = false;
+  x_ = y_ = 0;
+  latest_us_ = 0;
+  velocity_x_ = velocity_y_ = 0;
+  last_velocity_update_us_ = 0;
 }
 
+#if defined(ROO_THREADS_SINGLETHREADED)
+void TouchSensor::PollTask::execute(roo_scheduler::ExecutionID id) {
+  if (!sensor_.started_ || id != id_) return;
+  sensor_.pollOnce();
+  id_ =
+      scheduler_->scheduleAfter(roo_time::Micros(kSensorPollIntervalUs), *this);
+}
+#endif
+
+#if !defined(ROO_THREADS_SINGLETHREADED)
 void TouchSensor::run() {
   while (running_) {
     roo_time::Uptime start = roo_time::Uptime::Now();
@@ -98,6 +143,8 @@ void TouchSensor::run() {
     }
   }
 }
+
+#endif
 
 void TouchSensor::pollOnce() {
   roo_display::TouchPoint point;
@@ -191,21 +238,24 @@ int TouchSensor::drain(Event* out, int max_events) {
 }
 
 void TouchSensor::pushEvent(const Event& event) {
-  roo::lock_guard<roo::mutex> lock(mutex_);
-  int next_tail = (tail_ + 1) % kQueueCapacity;
-  if (next_tail == head_) {
-    if (event.type == Event::MOVE) {
-      int prev = (tail_ - 1 + kQueueCapacity) % kQueueCapacity;
-      if (queue_[prev].type == Event::MOVE) {
-        queue_[prev] = event;
-        return;
+  {
+    roo::lock_guard<roo::mutex> lock(mutex_);
+    int next_tail = (tail_ + 1) % kQueueCapacity;
+    int prev = (tail_ - 1 + kQueueCapacity) % kQueueCapacity;
+    if (next_tail == head_ && event.type == Event::MOVE &&
+        queue_[prev].type == Event::MOVE) {
+      queue_[prev] = event;
+    } else {
+      if (next_tail == head_) {
+        // Queue full and cannot coalesce: drop the oldest event.
+        head_ = (head_ + 1) % kQueueCapacity;
       }
+      queue_[tail_] = event;
+      tail_ = next_tail;
     }
-    // Queue full and cannot coalesce: drop the oldest event.
-    head_ = (head_ + 1) % kQueueCapacity;
   }
-  queue_[tail_] = event;
-  tail_ = next_tail;
+  // Replacements also contain drainable input; never invoke under ring lock.
+  notifyReady();
 }
 
 }  // namespace roo_windows

@@ -162,10 +162,12 @@ their own input arbitration.
 
 ### Pointer and timer work
 
-In single-threaded builds, the window polls the touch device once. The gesture
-detector drains no more than the fixed sensor queue capacity and evaluates each
-show-press, long-press, tap, and fling deadline once. Multi-threaded sensor
-builds only drain the already bounded queue.
+Since [event-driven input Phase 3](../in_progress/display_event_driven_input_design.md),
+single-threaded touch acquisition uses a sensor-owned 20 ms scheduler task;
+multi-threaded builds retain the sensor worker. Both signal readiness after
+queue mutation. The application gesture detector drains no more than the fixed
+sensor queue capacity and evaluates each show-press, long-press, tap, and fling
+deadline once per dispatch.
 
 Click animation and navigation-owned timers advance once when due. Caret
 blinking is a slow custom-time channel in the application animation pass; its

@@ -196,8 +196,7 @@ class ApplicationInputRouter {
   // The handler carries no event payload. It only wakes the stable ticker;
   // the UI thread later drains the source's own queue in source order.
   void installReadinessHandler(KeySource& source) {
-    source.setReadinessHandler(
-        [app = &app_]() { app->requestKeySourceTick(); });
+    source.setReadinessHandler([app = &app_]() { app->requestInputTick(); });
   }
 
   static constexpr int kDrainBatchSize = 4;
@@ -515,7 +514,7 @@ void Application::disconnectKeySource(KeySource& source) {
 
 // Called by a source readiness handler. The ticker coalesces concurrent
 // producer notifications and keeps dispatch on the application UI thread.
-void Application::requestKeySourceTick() { ticker_->requestNow(); }
+void Application::requestInputTick() { ticker_->requestNow(); }
 
 void Application::requestAnimationFrameAt(roo_time::Uptime deadline) {
   if (state_ == State::kConstructed || state_ == State::kStopping ||
@@ -561,6 +560,7 @@ void Application::setTextEditorKeyboardVisibility(bool visible) {
   }
 }
 
+#if !defined(ROO_THREADS_SINGLETHREADED)
 namespace {
 
 class SyncTask : public roo_scheduler::Executable {
@@ -582,8 +582,13 @@ class SyncTask : public roo_scheduler::Executable {
 
 }  // namespace
 
+#endif
+
 void Application::executeInUIThread(std::function<void()> fn) {
   CHECK(state_ == State::kStarted || state_ == State::kTickerRunning);
+#if defined(ROO_THREADS_SINGLETHREADED)
+  fn();
+#else
   if (roo::this_thread::get_id() == ui_thread_id_) {
     fn();
   } else {
@@ -593,6 +598,7 @@ void Application::executeInUIThread(std::function<void()> fn) {
     // Wait until the task finishes.
     sem.acquire();
   }
+#endif
 }
 
 }  // namespace roo_windows

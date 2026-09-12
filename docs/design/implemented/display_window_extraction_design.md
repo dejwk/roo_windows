@@ -224,9 +224,10 @@ Application schedules its next ticker deadline
 ```
 
 `advanceFrameState()` advances click animation only when no interrupted paint is
-active. `servicePointerInput()` performs the single-threaded touch poll, drains
-gesture input, and reports whether a gesture was dispatched or touch remains
-down. `refreshIfDue()` owns refresh throttling, adaptive paint deadline state,
+active. `servicePointerInput()` drains gesture input and reports whether a
+gesture was dispatched or touch remains down. Since
+[event-driven input Phase 3](../in_progress/display_event_driven_input_design.md),
+single-threaded touch acquisition runs in the sensor-owned scheduler task. `refreshIfDue()` owns refresh throttling, adaptive paint deadline state,
 and the completed-versus-interrupted result.
 
 The window methods return plain Boolean state; they do not schedule application

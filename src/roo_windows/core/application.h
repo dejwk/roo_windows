@@ -182,7 +182,7 @@ class Application {
 
   void connectKeySource(KeySource& source, Task& destination);
   void disconnectKeySource(KeySource& source);
-  void requestKeySourceTick();
+  void requestInputTick();
   void requestAnimationFrameAt(roo_time::Uptime deadline);
 
   void connectTextInputEmitter(TextInputEmitter& emitter);
