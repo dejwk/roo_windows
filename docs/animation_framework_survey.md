@@ -7,7 +7,7 @@ services exist. Source references below distinguish existing behavior from
 recommended changes. No runtime benchmarking was performed.
 
 The recommendations below preserve the original survey for comparison. The
-subsequent [animation design](design/proposed/widget_animation_registry_design.md)
+subsequent [animation design](design/implemented/widget_animation_registry_design.md)
 and [presentation design](design/implemented/presentation_registry_design.md) are
 authoritative for implementation. Review selected simpler eager services, virtual
 widget hooks, per-widget integer tags, standard small hash maps, and widget-owned
@@ -326,7 +326,7 @@ jumps, zero-height expansion, two simultaneous tab channels, and two application
 sharing a scheduler. Report object sizes separately from linked firmware deltas.
 
 The subsequent [presentation design](design/implemented/presentation_registry_design.md)
-and [animation design](design/proposed/widget_animation_registry_design.md) close
+and [animation design](design/implemented/widget_animation_registry_design.md) close
 the implementation choices discussed here and take precedence over survey
 recommendations, including the explicit restriction on synchronous Application
 destruction inside frame callbacks.

@@ -385,7 +385,7 @@ Consuming a complete key budget, interrupted painting, or ordinary invalidation
 created after the paint slice returns an immediate deadline. Otherwise the
 ticker uses the minimum of the outstanding timed deadlines.
 
-The proposed [widget animation registry](../proposed/widget_animation_registry_design.md)
+The implemented [widget animation registry](../implemented/widget_animation_registry_design.md)
 adds an explicit deadline source to step 6 and a pre-layout sample pass to step 5.
 It does not move existing window-owned click advancement from step 1. Its update
 hooks can request dirty/layout work consumed by the current paint; that work
@@ -666,7 +666,7 @@ Proposed commit message:
 
 ### Phase 5: give animations explicit frame deadlines
 
-The [generic registry](../proposed/widget_animation_registry_design.md) publishes
+The [generic registry](../implemented/widget_animation_registry_design.md) publishes
 explicit deadlines in its own initial implementation. Its consumers need no
 `requestAnimationFrameAt()` calls. The helper below remains the compatibility
 path for unmigrated click/paint-driven animations; the fallback cannot be removed

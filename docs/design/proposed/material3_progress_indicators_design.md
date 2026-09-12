@@ -2,7 +2,7 @@
 
 Status: proposed implementation. Framework dependencies are now specified in
 [Presentation registry](../implemented/presentation_registry_design.md) and
-[Widget animation registry](widget_animation_registry_design.md). This document
+[Widget animation registry](../implemented/widget_animation_registry_design.md). This document
 owns the Material component contract, not a second scheduler or registry.
 
 ## Objective

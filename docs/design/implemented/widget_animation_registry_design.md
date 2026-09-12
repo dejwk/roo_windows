@@ -1,9 +1,11 @@
 # Widget animation registry
 
-Status: proposed. The [animation survey](../../animation_framework_survey.md)
-records current use cases and comparisons. Widget classes can combine this
-service with [Presentation notifications](../implemented/presentation_registry_design.md),
-but the animation API does not depend on that service.
+Status: implemented. The [animation survey](../../animation_framework_survey.md)
+records the original use cases and comparisons, and the
+[acceptance report](../../animation_registry_acceptance.md) records the final
+resource and migration results. Widget classes can combine this service with
+[Presentation notifications](presentation_registry_design.md), but the animation
+API does not depend on that service.
 
 ## Objective
 
@@ -34,7 +36,7 @@ replaces reliance on periodic dispatch with explicit deadlines. New animations
 must publish their next deadline from the outset, so removing the fallback tick
 does not stop an animation after its first frame.
 
-[Interrupted painting](../implemented/interrupted_paint_continuation_design.md)
+[Interrupted painting](interrupted_paint_continuation_design.md)
 can spread one logical frame across multiple drawing attempts. A logical frame
 is one consistent set of widget values; continuing its paint must not advance
 those values midway through the screen.

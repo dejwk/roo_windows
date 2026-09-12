@@ -8,7 +8,7 @@ Design documents are filed by implementation status:
 - `in_progress/`: a usable subset or prerequisite has landed, but part of the defined scope remains.
 - `proposed/`: none of the design's own scope is implemented. Existing prerequisites may still be available.
 
-Status was audited against the source tree and tests on 2026-09-05. “Dependency status” distinguishes implemented prerequisites from proposed or partially implemented work; a design can be proposed even when all of its prerequisites are available.
+Status was audited against the source tree and tests on 2026-09-12. “Dependency status” distinguishes implemented prerequisites from proposed or partially implemented work; a design can be proposed even when all of its prerequisites are available.
 
 ## Implemented
 
@@ -51,6 +51,7 @@ Status was audited against the source tree and tests on 2026-09-05. “Dependenc
 | Theme color tokens | Framework theme separation and Material 3 token ownership are implemented in the current tree. |
 | Toggle icon buttons | The toggle icon-button family, focused unit and rendering coverage, and compact-controls persistent-preference example adoption are implemented. |
 | Transient surface hosting | Presenter-owned focus scopes, the owner-bound composite host, policy preflight and replacement, display-wide input isolation, guarded prepared admission, and explicit-owner legacy-dialog migration are implemented. |
+| [Widget animation registry](implemented/widget_animation_registry_design.md) | Shared frame driving, tagged playback, lifecycle handling, all planned non-click consumer migrations, and target resource acceptance are implemented. Click migration remains explicitly out of scope. |
 | Widget event dispatch | `ApplicationContext` and sparse interactive-change dispatch are implemented. |
 | Widget state compaction | Widget event dispatch is implemented, and both compaction phases are implemented. |
 | [Snackbar](implemented/material3_snackbar_design.md) | Owning registered requests, bounded queue, inverse-surface widget, opt-in scaffold host, timing, focus/input, goldens, catalog and target cost checks are implemented. |
@@ -80,8 +81,7 @@ Status was audited against the source tree and tests on 2026-09-05. “Dependenc
 | Interaction overlay reveal | Point and area ripples, widget-local click animation, paint context, and the navigation bar's component-local fade are implemented; shared fade reveal and paint-owned overlay policy are not. |
 | Navigation drawer | List support and basic dialogs are implemented and back routing exists; no drawer implementation exists. |
 | [Presentation registry](implemented/presentation_registry_design.md) | Effective presentation queries and targeted deferred widget notifications are implemented; consumers choose their lifecycle policies. |
-| [Widget animation registry](proposed/widget_animation_registry_design.md) | Proposed shared frame driving, tagged playback and terminal-paint settlement; depends on the presentation registry. Click migration is deferred. |
-| [Progress indicators](proposed/material3_progress_indicators_design.md) | Material component design uses the proposed presentation and widget animation registries; P2.3 implementation includes those prerequisites. |
+| [Progress indicators](proposed/material3_progress_indicators_design.md) | Material component design uses the implemented presentation and widget animation registries; P2.3 implements the components themselves. |
 | Segmented buttons | Buttons are implemented; the superseding button-group design and this legacy component design are not implemented. |
 | Sheets | Paint/overflow foundations, icon buttons, and shared back behavior are implemented; the sheet family is not. Before implementation, modal sheets must be reconciled to use the P1.6b shared host with explicit task ownership, host-owned barrier paint, presenter-owned focus, and presenter-handled outside dismissal. |
 | Split button | Buttons, icon buttons, non-touch input, and menus are implemented; split buttons remain proposed. |

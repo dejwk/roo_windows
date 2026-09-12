@@ -1,7 +1,7 @@
 # Presentation registry
 
 Status: implemented. Used by widget implementations alongside the independent
-[Widget animation registry](../proposed/widget_animation_registry_design.md).
+[Widget animation registry](widget_animation_registry_design.md).
 
 ## Objective
 
