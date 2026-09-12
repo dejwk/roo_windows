@@ -425,15 +425,14 @@ void Application::tick() {
   // exclusions were preserved. Advance animation again after it completes.
   window_.advanceFrameState();
   bool key_events_pending = drainKeyEvents();
-  bool touch_active = false;
-  bool gesture_dispatched = window_.servicePointerInput(touch_active);
+  window_.servicePointerInput();
   bool redraw_timeout = false;
   window_.refreshIfDue(redraw_timeout);
-  roo_time::Duration delay =
-      key_events_pending || gesture_dispatched || touch_active || redraw_timeout
-          ? roo_time::Millis(0)
-          : roo_time::Millis(20);
+  roo_time::Duration delay = key_events_pending || redraw_timeout
+                                 ? roo_time::Millis(0)
+                                 : roo_time::Millis(20);
   ticker_->requestAfter(delay);
+  ticker_->requestAt(window_.gestureDetector().nextTimeoutDeadline());
 }
 
 bool Application::drainKeyEvents() {

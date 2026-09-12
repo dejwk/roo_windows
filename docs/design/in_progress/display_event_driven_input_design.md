@@ -2,14 +2,15 @@
 
 ## Status
 
-In progress. Phases 1–3 are implemented: `ApplicationTicker` coalesces
+In progress. Phases 1–4 are implemented: `ApplicationTicker` coalesces
 requests while retaining the 20 ms fallback, and physical key sources wake the
 application through producer-owned readiness handlers and the application input
 router. FLTK crosses from its native event thread through `roo_testing`'s
 `HostEventEndpoint`. The widget animation registry and its widget migrations
 have also landed, including explicit frame requests and pre-layout sampling.
 Touch acquisition now signals readiness and uses an independent sensor-owned
-poll task in single-threaded builds. Phase 4 remains proposed. Phase 5 now covers
+poll task in single-threaded builds. Gesture transitions now use source-time
+deadlines and chronological input ordering. Phase 5 covers
 remaining click feedback and animation scheduling integration; Phase 6 covers
 paint eligibility and deferred framework work. Phase 7 removes the fallback only after those paths are complete.
 
@@ -733,22 +734,33 @@ Delivered change:
 > polling while retaining its fixed ring and the application fallback from
 > `display_event_driven_input_design.md`.
 
-### Phase 4: schedule gesture transitions at their deadlines
+### Completed Phase 4: schedule gesture transitions at their deadlines
 
-Expose the detector's earliest deadline, chronologically merge timestamped
-input with due transitions, and merge the next deadline into ticker scheduling.
-Keep the fallback. Add deterministic tests for show-press and long-press
-timing, before-, equal-, and after-deadline input ordering, wrap-safe timestamp
-comparison, and cleared gesture state.
+Added `GestureDetector::nextTimeoutDeadline()` and source-timestamp-based
+show-press and long-press scheduling. Each fixed touch batch is merged with
+transitions chronologically: strictly earlier timers fire before input, input
+wins ties, and remaining due timers fire at the dispatch's sampled time.
+Explicit 32-bit subtraction preserves wrap ordering on embedded and host builds.
+Canceled or absent roles expose no deadline; callbacks can cancel later timers.
+
+The application merges the earliest gesture deadline with its retained 20 ms
+fallback and immediate key-budget/paint-continuation requests. A held touch no
+longer requests immediate redispatch by itself. Tests cover both deadlines,
+late batches, before/equal/after UP and MOVE, wraparound, timer-only delivery,
+cancellation and target detachment, absent roles, warmed allocation, and an
+application deadline between sensor polls and fallback ticks.
 
 Focused validation:
 
 ```sh
 bazel test //:roo_windows_test //:touch_sensor_test \
-  //:display_runtime_characterization_test
+  //:display_runtime_characterization_test //:transient_surface_host_test
 ```
 
-Proposed commit message:
+The single-threaded validation command and dependency workarounds from Phase 3
+also run `//:display_window_test`, including the application deadline test.
+
+Delivered change:
 
 > Event-driven input Phase 4 schedules gesture transitions explicitly.
 >

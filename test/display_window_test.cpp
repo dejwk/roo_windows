@@ -4,6 +4,7 @@
 #include "roo_scheduler.h"
 #include "roo_testing/system/timer.h"
 #include "roo_windows/core/application.h"
+#include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/environment.h"
 
 namespace roo_windows {
@@ -33,13 +34,17 @@ class CountingTouchDevice : public roo_display::TouchDevice {
   roo_display::TouchResult getTouch(roo_display::TouchPoint* points,
                                     int max_points) override {
     ++polls;
+    roo_time::Uptime when = sample_when == roo_time::Uptime::Max()
+                                ? roo_time::Uptime::Now()
+                                : sample_when;
     if (down && max_points > 0) {
       points[0] = roo_display::TouchPoint();
       points[0].x = points[0].y = 1024;
-      return roo_display::TouchResult(roo_time::Uptime::Now(), 1);
+      return roo_display::TouchResult(when, 1);
     }
-    return roo_display::TouchResult(roo_time::Uptime::Now(), 0);
+    return roo_display::TouchResult(when, 0);
   }
+  roo_time::Uptime sample_when = roo_time::Uptime::Max();
   int polls = 0;
   bool down = false;
 };
@@ -122,6 +127,63 @@ TEST(DisplayWindow, DisabledTouchNeverPolls) {
   }
   EXPECT_EQ(0, touch.polls);
 }
+class DeadlineRecordingWidget : public BasicWidget {
+ public:
+  using BasicWidget::BasicWidget;
+  Dimensions getSuggestedMinimumDimensions() const override {
+    return Dimensions(8, 8);
+  }
+  bool supportsLongPress() override { return true; }
+  void onDown(XDim, YDim) override {}
+  void onLongPress(XDim, YDim) override { ++long_presses; }
+  int long_presses = 0;
+};
+
+// Verifies a timer-only application dispatch preempts both polling and the
+// fallback grid, and a held contact causes no immediate redispatch loop.
+TEST(DisplayWindow, GestureDeadlinePreemptsFallbackWithoutNewTouch) {
+  roo::byte raster[32 * 24 * 2] = {};
+  roo_display::OffscreenDevice<roo_display::Argb4444> device(
+      32, 24, raster, roo_display::Argb4444());
+  CountingTouchDevice touch;
+  roo_display::Display display(device, touch);
+  roo_scheduler::Scheduler scheduler;
+  Environment environment(scheduler);
+  DispatchCountingSource keys;
+  std::unique_ptr<Application> app(
+      new Application(&environment, display, keys, true));
+  DeadlineRecordingWidget target(app->context());
+  app->addTaskFullScreen(target);
+  app->refresh();
+  system_time_delay_micros(15000);
+  roo_time::Uptime start = roo_time::Uptime::Now();
+  touch.down = true;
+  touch.sample_when = start - roo_time::Millis(15);
+  app->start();
+  scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 4);
+  EXPECT_EQ(1, keys.dispatches);
+  EXPECT_EQ(start + roo_time::Millis(20), scheduler.getNearestExecutionTime());
+  for (int i = 0; i < 14; ++i) {
+    system_time_delay_micros(20000);
+    scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 4);
+  }
+  ASSERT_EQ(0, target.long_presses);
+  EXPECT_EQ(start + roo_time::Millis(285), scheduler.getNearestExecutionTime());
+  int polls_before = touch.polls;
+  int dispatches_before = keys.dispatches;
+  system_time_delay_micros(4999);
+  scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 4);
+  EXPECT_EQ(dispatches_before, keys.dispatches);
+  system_time_delay_micros(1);
+  scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 4);
+  EXPECT_EQ(1, target.long_presses);
+  EXPECT_EQ(polls_before, touch.polls);
+  EXPECT_EQ(dispatches_before + 1, keys.dispatches);
+  EXPECT_EQ(start + roo_time::Millis(300), scheduler.getNearestExecutionTime());
+  app.reset();
+  EXPECT_TRUE(scheduler.empty());
+}
+
 #endif
 
 }  // namespace

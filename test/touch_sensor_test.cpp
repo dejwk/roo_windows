@@ -1,5 +1,6 @@
 #include "roo_windows/core/touch_sensor.h"
 
+#include <algorithm>
 #include <cstdlib>
 #include <new>
 #include <vector>
@@ -8,6 +9,8 @@
 #include "roo_display.h"
 #include "roo_display/core/offscreen.h"
 #include "roo_testing/system/timer.h"
+#include "roo_windows/core/basic_widget.h"
+#include "roo_windows/core/gesture_detector.h"
 
 namespace {
 thread_local bool g_track_touch_allocations = false;
@@ -478,6 +481,247 @@ TEST_F(TouchReadinessTest, WarmedPollTaskDoesNotAllocate) {
   sensor_.setReadinessHandler(nullptr);
 }
 #endif
+
+class DeadlineTouchDevice : public roo_display::TouchDevice {
+ public:
+  roo_display::TouchResult getTouch(roo_display::TouchPoint* points,
+                                    int max_points) override {
+    if (down && max_points > 0) {
+      points[0] = roo_display::TouchPoint();
+      points[0].x = x;
+      points[0].y = 512;
+      return roo_display::TouchResult(when, 1);
+    }
+    return roo_display::TouchResult(when, 0);
+  }
+  bool down = false;
+  int16_t x = 512;
+  roo_time::Uptime when;
+};
+
+class DeadlinePanel : public Panel {
+ public:
+  using Panel::add;
+  using Panel::Panel;
+  using Panel::removeAll;
+  DragAxis dragAxis() const override { return DragAxis::kHorizontal; }
+};
+
+class DeadlineWidget : public BasicWidget {
+ public:
+  explicit DeadlineWidget(ApplicationContext& context) : BasicWidget(context) {
+    trace.reserve(32);
+  }
+  Dimensions getSuggestedMinimumDimensions() const override {
+    return Dimensions(8, 8);
+  }
+  bool supportsTap() const override { return tap_enabled; }
+  bool supportsLongPress() override { return long_enabled; }
+  DragAxis dragAxis() const override { return DragAxis::kHorizontal; }
+  void onDown(XDim, YDim) override { trace.push_back('D'); }
+  void onShowPress(XDim, YDim) override {
+    trace.push_back('S');
+    if (cancel_on_show != nullptr) cancel_on_show->cancel();
+  }
+  void onLongPress(XDim, YDim) override { trace.push_back('L'); }
+  void onLongPressFinished(XDim, YDim) override { trace.push_back('F'); }
+  void onSingleTapUp(XDim, YDim) override { trace.push_back('T'); }
+  void onDragStart(XDim, YDim) override { trace.push_back('G'); }
+  void onCancel() override { trace.push_back('C'); }
+  bool tap_enabled = true;
+  bool long_enabled = true;
+  GestureDetector* cancel_on_show = nullptr;
+  std::vector<char> trace;
+};
+
+class GestureDeadlineTest : public testing::TestWithParam<int> {
+ protected:
+  GestureDeadlineTest() {
+    root_.add(WidgetRef(target_), Rect(0, 0, 63, 63));
+    root_.layout(Rect(0, 0, 63, 63));
+  }
+  ~GestureDeadlineTest() override {
+    detector_.cancel();
+    root_.removeAll();
+  }
+
+  void advanceTo(roo_time::Uptime when) {
+    int64_t delta = (when - roo_time::Uptime::Now()).inMicros();
+    ASSERT_GE(delta, 0);
+    system_time_delay_micros(delta);
+  }
+
+  void sample(bool down, roo_time::Uptime when, int16_t x = 512) {
+    touch_.down = down;
+    touch_.when = when;
+    touch_.x = x;
+    sensor_.pollOnce();
+  }
+
+  int count(char event) const {
+    return std::count(target_.trace.begin(), target_.trace.end(), event);
+  }
+
+  roo::byte raster_[64 * 64 * 2] = {};
+  roo_display::OffscreenDevice<roo_display::Argb4444> offscreen_{
+      64, 64, raster_, roo_display::Argb4444()};
+  DeadlineTouchDevice touch_;
+  roo_display::Display display_{offscreen_, touch_};
+  roo_scheduler::Scheduler scheduler_;
+  ApplicationContext context_{scheduler_, DefaultTheme(),
+                              DefaultKeyboardColorTheme()};
+  DeadlinePanel root_{context_};
+  DeadlineWidget target_{context_};
+  TouchSensor sensor_{display_};
+  GestureDetector detector_{root_, sensor_};
+};
+
+// Verifies deadlines originate at acquisition, report overdue work as now,
+// fire once without new input, and disappear after the last transition.
+TEST_F(GestureDeadlineTest, SourceTimestampDeadlinesAndTimerOnlyDispatch) {
+  EXPECT_EQ(roo_time::Uptime::Max(), detector_.nextTimeoutDeadline());
+  roo_time::Uptime down = roo_time::Uptime::Now();
+  sample(true, down);
+  advanceTo(down + roo_time::Millis(50));
+  detector_.tick();
+  EXPECT_EQ(down + roo_time::Millis(100), detector_.nextTimeoutDeadline());
+  advanceTo(down + roo_time::Millis(150));
+  EXPECT_EQ(roo_time::Uptime::Now(), detector_.nextTimeoutDeadline());
+  detector_.tick();
+  EXPECT_EQ(1, count('S'));
+  EXPECT_EQ(down + roo_time::Millis(300), detector_.nextTimeoutDeadline());
+  advanceTo(down + roo_time::Millis(300));
+  detector_.tick();
+  detector_.tick();
+  EXPECT_EQ(1, count('L'));
+  EXPECT_EQ(roo_time::Uptime::Max(), detector_.nextTimeoutDeadline());
+}
+
+// Verifies queued UP wins before/equal deadline and cannot erase an earlier
+// show-press or long-press, even when the entire interaction drains late.
+TEST_P(GestureDeadlineTest, UpOrderingAcrossBothDeadlines) {
+  for (int timeout : {100000, 300000}) {
+    roo_time::Uptime down = roo_time::Uptime::Now();
+    sample(true, down);
+    sample(false, down + roo_time::Micros(timeout + GetParam()));
+    advanceTo(down + roo_time::Millis(400));
+    detector_.tick();
+    EXPECT_EQ(GetParam() > 0 ? 1 : 0, count(timeout == 100000 ? 'S' : 'L'));
+    EXPECT_EQ(timeout == 300000 && GetParam() > 0 ? 0 : 1, count('T'));
+    EXPECT_EQ(timeout == 300000 && GetParam() > 0 ? 1 : 0, count('F'));
+    EXPECT_EQ(roo_time::Uptime::Max(), detector_.nextTimeoutDeadline());
+    target_.trace.clear();
+  }
+}
+
+// Verifies a MOVE crossing slop cancels a transition at/before its deadline,
+// while movement after long-press cannot claim the already-owned gesture.
+TEST_P(GestureDeadlineTest, MoveOrderingAcrossBothDeadlines) {
+  for (int timeout : {100000, 300000}) {
+    roo_time::Uptime down = roo_time::Uptime::Now();
+    sample(true, down);
+    sample(true, down + roo_time::Micros(timeout + GetParam()), 3072);
+    advanceTo(down + roo_time::Millis(400));
+    detector_.tick();
+    EXPECT_EQ(GetParam() > 0 ? 1 : 0, count(timeout == 100000 ? 'S' : 'L'));
+    EXPECT_EQ(timeout == 300000 && GetParam() > 0 ? 0 : 1, count('G'));
+    EXPECT_EQ(roo_time::Uptime::Max(), detector_.nextTimeoutDeadline());
+    detector_.cancel();
+    sensor_.stop();
+    target_.trace.clear();
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(BeforeEqualAfter, GestureDeadlineTest,
+                         testing::Values(-1, 0, 1));
+
+// Verifies a complete late press fires show-press, then long-press, then UP.
+TEST_F(GestureDeadlineTest, LateBatchPreservesCallbackOrder) {
+  roo_time::Uptime down = roo_time::Uptime::Now();
+  sample(true, down);
+  sample(false, down + roo_time::Millis(350));
+  advanceTo(down + roo_time::Millis(400));
+  detector_.tick();
+  EXPECT_EQ((std::vector<char>{'D', 'S', 'L', 'F'}), target_.trace);
+}
+
+// Verifies source timestamp wrap uses 32-bit arithmetic even on 64-bit hosts.
+TEST_P(GestureDeadlineTest, LongPressOrderingAcrossTimestampWrap) {
+  uint64_t now = roo_time::Uptime::Now().inMicros();
+  uint64_t boundary = ((now >> 32) + 1) << 32;
+  if (boundary - now < 50000) boundary += uint64_t{1} << 32;
+  roo_time::Uptime down =
+      roo_time::Uptime::Start() + roo_time::Micros(boundary - 50000);
+  advanceTo(down);
+  sample(true, down);
+  detector_.tick();
+  EXPECT_EQ(down + roo_time::Millis(100), detector_.nextTimeoutDeadline());
+  sample(false, down + roo_time::Micros(300000 + GetParam()));
+  advanceTo(down + roo_time::Millis(400));
+  detector_.tick();
+  EXPECT_EQ(GetParam() > 0 ? 1 : 0, count('L'));
+  EXPECT_EQ(roo_time::Uptime::Max(), detector_.nextTimeoutDeadline());
+}
+
+// Verifies cancellation and subtree removal discard timers, including a
+// cancellation inside show-press while long-press is already overdue.
+TEST_F(GestureDeadlineTest, CanceledAndDetachedTimersNeverFire) {
+  sample(true, roo_time::Uptime::Now());
+  detector_.tick();
+  detector_.cancel();
+  EXPECT_EQ(roo_time::Uptime::Max(), detector_.nextTimeoutDeadline());
+  sensor_.stop();
+  sample(true, roo_time::Uptime::Now());
+  detector_.tick();
+  detector_.cancelTargetsInSubtree(target_);
+  EXPECT_EQ(roo_time::Uptime::Max(), detector_.nextTimeoutDeadline());
+  detector_.cancel();
+  sensor_.stop();
+  target_.cancel_on_show = &detector_;
+  sample(true, roo_time::Uptime::Now());
+  system_time_delay_micros(400000);
+  detector_.tick();
+  EXPECT_EQ(1, count('S'));
+  EXPECT_EQ(0, count('L'));
+  EXPECT_FALSE(detector_.isTouchDown());
+  EXPECT_EQ(roo_time::Uptime::Max(), detector_.nextTimeoutDeadline());
+}
+
+// Verifies absent tap/long-press roles do not leave spurious deadlines.
+TEST_F(GestureDeadlineTest, OnlyActionableRolesPublishDeadlines) {
+  target_.tap_enabled = false;
+  sample(true, roo_time::Uptime::Now());
+  detector_.tick();
+  EXPECT_EQ(roo_time::Uptime::Now() + roo_time::Millis(300),
+            detector_.nextTimeoutDeadline());
+  detector_.cancel();
+  sensor_.stop();
+  target_.long_enabled = false;
+  sample(true, roo_time::Uptime::Now());
+  detector_.tick();
+  EXPECT_EQ(roo_time::Uptime::Max(), detector_.nextTimeoutDeadline());
+}
+
+// Verifies warmed hit-path discovery, deadline queries, timeout delivery, and
+// completed press streams introduce no steady-state allocations.
+TEST_F(GestureDeadlineTest, WarmedGestureDeadlinesDoNotAllocate) {
+  auto press = [&]() {
+    sample(true, roo_time::Uptime::Now());
+    detector_.tick();
+    detector_.nextTimeoutDeadline();
+    system_time_delay_micros(300000);
+    detector_.tick();
+    sample(false, roo_time::Uptime::Now());
+    detector_.tick();
+    target_.trace.clear();
+  };
+  press();
+  g_touch_allocations = 0;
+  g_track_touch_allocations = true;
+  for (int i = 0; i < 100; ++i) press();
+  g_track_touch_allocations = false;
+  EXPECT_EQ(0u, g_touch_allocations);
+}
 
 }  // namespace
 }  // namespace roo_windows

@@ -71,11 +71,9 @@ void DisplayWindow::advanceFrameState() {
   if (!root_.hasPaintContinuation()) root_.refreshClickAnimation();
 }
 
-bool DisplayWindow::servicePointerInput(bool& touch_active) {
-  bool dispatched = touch_enabled_ && gesture_detector_.tick();
+void DisplayWindow::servicePointerInput() {
+  if (touch_enabled_) gesture_detector_.tick();
   root_.flushPendingOutsideInteraction();
-  touch_active = touch_enabled_ && gesture_detector_.isTouchDown();
-  return dispatched;
 }
 
 bool DisplayWindow::refreshIfDue(bool& redraw_timeout) {

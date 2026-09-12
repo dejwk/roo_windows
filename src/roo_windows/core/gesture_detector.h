@@ -28,7 +28,7 @@ static constexpr int16_t kMaxFlingVelocity = 8000;  // Pixels per second.
 
 /// Translates raw touch samples into widget gesture callbacks.
 ///
-/// Polls the bound `TouchSensor`, tracks one in-flight gesture at a time, and
+/// Drains the bound `TouchSensor`, tracks one in-flight gesture at a time, and
 /// builds a callback-free hit path, selects gesture roles, and dispatches the
 /// owned drag lifecycle callbacks. Also runs the scheduled show-press / tap /
 /// long-press timers.
@@ -50,9 +50,12 @@ class GestureDetector {
         drag_target_(nullptr) {}
 
   /// Drains pending touch events, fires due timers, and dispatches gestures.
-  /// Returns true if an interaction is in progress and at least one touch
-  /// event was dispatched during this call.
+  /// Input wins ties with timer deadlines. Returns whether touch remains down.
   bool tick();
+
+  /// Returns the earliest pending gesture transition, or Uptime::Max().
+  /// Due transitions map to now; source timestamps use 32-bit wrap ordering.
+  roo_time::Uptime nextTimeoutDeadline() const;
 
   /// Aborts the active input stream. This is used when touch input is lost or
   /// superseded and gives each started role one cancellation notification.
@@ -102,7 +105,7 @@ class GestureDetector {
    public:
     ScheduledEvent() : scheduled_(false), when_(0) {}
 
-    void schedule(unsigned long when) {
+    void schedule(uint32_t when) {
       scheduled_ = true;
       when_ = when;
     }
@@ -110,14 +113,18 @@ class GestureDetector {
     void clear() { scheduled_ = false; }
 
     bool isScheduled() const { return scheduled_; }
-    bool isDue(unsigned long now) const {
-      return scheduled_ && (long)(now - when_) >= 0;
-    }
+    uint32_t when() const { return when_; }
 
    private:
     boolean scheduled_;
-    unsigned long when_;
+    uint32_t when_;
   };
+
+  // Selects the earliest timer with a live gesture role.
+  const ScheduledEvent* nextTimeoutEvent() const;
+
+  // Fires transitions before a source timestamp, optionally including ties.
+  void dispatchTimeouts(uint32_t when, bool inclusive);
 
   bool dispatch(TouchEvent::Type type);
   bool arbitrateDrag();
@@ -142,7 +149,6 @@ class GestureDetector {
   Widget& root_;
   TouchSensor& sensor_;
 
-  unsigned long now_us_;
   bool is_down_;
   bool moved_outside_tap_region_;
   bool drag_just_claimed_;

@@ -17,11 +17,12 @@ bool IsInSubtree(const Widget& candidate, const Widget& subtree) {
 }  // namespace
 
 bool GestureDetector::tick() {
-  now_us_ = micros();
+  const uint32_t now_us = static_cast<uint32_t>(micros());
   TouchSensor::Event events[TouchSensor::kQueueCapacity];
   int event_count = sensor_.drain(events, TouchSensor::kQueueCapacity);
   for (int i = 0; i < event_count; ++i) {
     const TouchSensor::Event& event = events[i];
+    dispatchTimeouts(static_cast<uint32_t>(event.when_us), false);
     if (event.type == TouchSensor::Event::DOWN) {
       if (is_down_) cancel();
       is_down_ = true;
@@ -35,15 +36,15 @@ bool GestureDetector::tick() {
       moved_outside_tap_region_ = false;
       drag_just_claimed_ = false;
       if (long_press_target_ != nullptr) {
-        long_press_event_.schedule(now_us_ + kLongPressTimeoutUs);
+        long_press_event_.schedule(event.when_us + kLongPressTimeoutUs);
       }
-      Widget* press_target =
-          tap_target_ != nullptr ? tap_target_ : long_press_target_;
-      bool should_delay_press_state = press_target != nullptr &&
-                                      press_target->parent() != nullptr &&
-                                      press_target->parent()->isScrollable();
-      show_press_event_.schedule(
-          now_us_ + (should_delay_press_state ? kShowPressTimeoutUs : 0));
+      if (tap_target_ != nullptr) {
+        uint32_t show_delay = tap_target_->parent() != nullptr &&
+                                      tap_target_->parent()->isScrollable()
+                                  ? kShowPressTimeoutUs
+                                  : 0;
+        show_press_event_.schedule(event.when_us + show_delay);
+      }
       beginRole(tap_target_);
       if (long_press_target_ != tap_target_) beginRole(long_press_target_);
       if (drag_target_ != tap_target_ && drag_target_ != long_press_target_) {
@@ -69,24 +70,67 @@ bool GestureDetector::tick() {
     }
   }
 
-  if (tap_target_ != nullptr && show_press_event_.isDue(now_us_)) {
-    Widget* touch_target = tap_target_;
-    XDim dx;
-    YDim dy;
-    touch_target->getAbsoluteOffset(dx, dy);
-    show_press_event_.clear();
-    touch_target->onShowPress(latest_.x() - dx, latest_.y() - dy);
-  }
-  if (long_press_target_ != nullptr && long_press_event_.isDue(now_us_)) {
-    XDim dx;
-    YDim dy;
-    long_press_target_->getAbsoluteOffset(dx, dy);
-    long_press_event_.clear();
-    phase_ = Phase::kLongPress;
-    cancelRolesExcept(long_press_target_);
-    long_press_target_->onLongPress(latest_.x() - dx, latest_.y() - dy);
-  }
+  dispatchTimeouts(now_us, true);
   return is_down_;
+}
+
+const GestureDetector::ScheduledEvent* GestureDetector::nextTimeoutEvent()
+    const {
+  const ScheduledEvent* next = nullptr;
+  if (tap_target_ != nullptr && show_press_event_.isScheduled()) {
+    next = &show_press_event_;
+  }
+  if (long_press_target_ != nullptr && long_press_event_.isScheduled() &&
+      (next == nullptr ||
+       static_cast<int32_t>(long_press_event_.when() - next->when()) < 0)) {
+    next = &long_press_event_;
+  }
+  return next;
+}
+
+roo_time::Uptime GestureDetector::nextTimeoutDeadline() const {
+  const ScheduledEvent* next = nextTimeoutEvent();
+  if (next == nullptr) return roo_time::Uptime::Max();
+  roo_time::Uptime now = roo_time::Uptime::Now();
+  int32_t remaining = static_cast<int32_t>(
+      next->when() - static_cast<uint32_t>(now.inMicros()));
+  return remaining <= 0 ? now : now + roo_time::Micros(remaining);
+}
+
+void GestureDetector::dispatchTimeouts(uint32_t when, bool inclusive) {
+  // A press has at most two actionable timers: show-press and long-press.
+  // Each is cleared before its callback, so two iterations can deliver both
+  // when dispatch is late. The retained tap_event_ record is not scheduled or
+  // selected by nextTimeoutEvent(), so it does not add a third transition.
+  // Recheck after each callback because it can cancel the stream or detach a
+  // remaining target. The fixed cap also bounds work if a callback reenters
+  // the detector and starts another stream; any remaining due timer is exposed
+  // by nextTimeoutDeadline() for a later dispatch.
+  for (int i = 0; i < 2; ++i) {
+    const ScheduledEvent* next = nextTimeoutEvent();
+    if (next == nullptr) return;
+    int32_t elapsed = static_cast<int32_t>(when - next->when());
+    if (elapsed < 0 || (elapsed == 0 && !inclusive)) return;
+    if (next == &show_press_event_) {
+      Widget* target = tap_target_;
+      XDim dx;
+      YDim dy;
+      target->getAbsoluteOffset(dx, dy);
+      show_press_event_.clear();
+      target->onShowPress(latest_.x() - dx, latest_.y() - dy);
+    } else {
+      Widget* target = long_press_target_;
+      XDim dx;
+      YDim dy;
+      target->getAbsoluteOffset(dx, dy);
+      long_press_event_.clear();
+      phase_ = Phase::kLongPress;
+      cancelRolesExcept(target);
+      if (long_press_target_ == target && phase_ == Phase::kLongPress) {
+        target->onLongPress(latest_.x() - dx, latest_.y() - dy);
+      }
+    }
+  }
 }
 
 bool GestureDetector::dispatch(TouchEvent::Type type) {
