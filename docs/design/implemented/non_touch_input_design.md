@@ -128,7 +128,7 @@ keyboard / pointer focus routing:
   hover-only interaction model for embedded touch targets.
 - [../implemented/material3_slider_design.md](../implemented/material3_slider_design.md) defers keyboard
   focus movement APIs beyond what the base framework supports.
-- [material3_text_fields_design.md](../proposed/material3_text_fields_design.md) assumes
+- [material3_text_fields_design.md](../implemented/material3_text_fields_design.md) assumes
   focused and hovered visuals will eventually come from the framework's widget
   state model.
 
@@ -672,8 +672,8 @@ The implemented legacy `roo_windows::TextField` policy is:
 - and hardware-key focus does not automatically show the software keyboard.
 
 This preserves the current touch-only software-keyboard path while making the
-field usable on keyboard-only targets. The proposed
-[Material 3 text-field family](../proposed/material3_text_fields_design.md)
+field usable on keyboard-only targets. The implemented
+[Material 3 text-field family](../implemented/material3_text_fields_design.md)
 chooses focused-idle traversal and explicit edit activation through its own
 `onKeyEvent()` handling. That additive policy does not change legacy behavior
 or the task-wide dispatch contract.

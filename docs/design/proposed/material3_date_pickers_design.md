@@ -21,7 +21,7 @@ The design provides:
 - one modal date input presentation that shares the same draft state,
   validation, and confirmation flow,
 - one docked date-picker field that reuses the landed
-  [material3::TextField](material3_text_fields_design.md) surface and opens an
+  [material3::TextField](../implemented/material3_text_fields_design.md) surface and opens an
   anchored calendar popup below the field when that popup fits,
 - compile-time localized month labels, weekday labels, headlines, and numeric
   date parsing or formatting selected by `ROO_WINDOWS_LANG`,
@@ -44,7 +44,7 @@ That gap matters for three reasons:
 1. Applications currently have to reinvent civil-date math, month navigation,
    parsing, validation, popup placement, and confirmation behavior each time a
    screen needs date input.
-2. The checked-in [Material 3 text-field design](material3_text_fields_design.md)
+2. The checked-in [Material 3 text-field design](../implemented/material3_text_fields_design.md)
    explicitly calls out picker-style fields as the next layer on top of the
    text-field family.
 3. Material 3 treats date picking as a standard interaction pattern with three
@@ -71,7 +71,7 @@ As of 2026-05, the relevant pieces are:
   modal surfaces,
 - the shared [ScrollablePanel](../../../src/roo_windows/containers/scrollable_panel.h)
   path for drag and fling behavior,
-- the checked-in [Material 3 text-field design](material3_text_fields_design.md),
+- the checked-in [Material 3 text-field design](../implemented/material3_text_fields_design.md),
   which already closes the future `material3::TextField` API and explicitly
   leaves room for picker-field follow-on work,
 - the checked-in [Material 3 menus design](../implemented/material3_menus_design.md), which
@@ -135,7 +135,7 @@ The product signals that matter most here are:
 
 The most relevant local references are:
 
-- [material3_text_fields_design.md](material3_text_fields_design.md)
+- [material3_text_fields_design.md](../implemented/material3_text_fields_design.md)
 - [material3_menus_design.md](../implemented/material3_menus_design.md)
 - [material3_sheets_design.md](material3_sheets_design.md)
 - [non_touch_input_design.md](../implemented/non_touch_input_design.md)
@@ -777,7 +777,7 @@ Validation: run `bazel test //:material3_date_picker_test` and
 
 Code slice:
 
-1. After the text-field work from [material3_text_fields_design.md](material3_text_fields_design.md)
+1. After the text-field work from [material3_text_fields_design.md](../implemented/material3_text_fields_design.md)
    lands, add the modal input body using one outlined `material3::TextField`.
 2. Bind the field text to the shared draft session and codec-driven placeholder
    text.

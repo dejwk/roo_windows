@@ -2,9 +2,11 @@
 
 ## Implementation status
 
-**Proposed.** None of the defined scope has landed. Reviewed against the
-committed runtime on 2026-09-12. Existing and outstanding prerequisites are
-recorded in the [status index](../README.md).
+**Implemented (single-line scope), 2026-09-12.** Filled/outlined fields, the
+shared task editor, secure reveal, tests and example are available. The
+`roo_display` stream-allocation optimization was explicitly deferred; paint is
+not allocation-free. See the [acceptance report](../../material3_text_fields_acceptance.md)
+and [status index](../README.md).
 
 ## Objective
 
@@ -28,8 +30,8 @@ The design should provide:
 - and a clear follow-on seam for multiline fields once the shared editable
   text work from [text_system_design.md](../in_progress/text_system_design.md) lands.
 
-This document defines the intended API family and rollout plan. It does not
-describe an existing implementation.
+This document records the reviewed API and implementation plan. The acceptance
+report above records the delivered scope, measurements and deferred work.
 
 ## Motivation
 
@@ -81,7 +83,7 @@ The existing prerequisites are:
   transient-host tests already cover parts of editing, focus and isolation.
 
 Remaining work includes the abstract edit-target seam, the Material 3 surface
-and slots, correct viewport scrolling, allocation-free masked paint, dedicated
+and slots, correct viewport scrolling, masked paint without a temporary owned mask string, dedicated
 editor/component regression tests, goldens and an example. The existing
 `draw_xoffset_` member alone is not evidence of working caret-follow scrolling:
 the committed implementation never updates it.
@@ -99,8 +101,10 @@ This revision supersedes the original application-owned-editor assumptions:
 4. Make affordance hooks return whether they handled activation. A `void`
    override cannot communicate the promised fallback behavior.
 5. Permit value and shared metric-cache growth at edit/mutation boundaries;
-   require no allocation during paint, visual focus/hover changes, caret frames,
-   or reveal toggles once the active buffer's metrics are prepared.
+   require no editor-state allocation during visual focus/hover changes, caret
+   frames, or reveal toggles once the active buffer's metrics are prepared.
+   Upstream glyph-reader allocations during paint are a documented, explicitly
+   deferred exception (see the acceptance report).
 6. Include target lifetime, callback reentrancy, Unicode offsets, masking
    deadlines, and actual target-ABI size measurements in acceptance criteria.
 
@@ -174,18 +178,19 @@ The first design question is not whether a text field can be as small as a
 
 The right baseline is:
 
-- `BasicSurfaceWidget` base: roughly `40-50 B`,
-- one owned `std::string` control block for the editable value: typically about
-  `12 B` on a 32-bit toolchain before heap capacity,
+- `BasicSurfaceWidget` base: `28 B` on the measured ESP32-C3 ABI,
+- one owned `std::string` control block for the editable value, with
+  ABI-dependent inline storage and separate heap capacity,
 - five non-owning `roo::string_view` slot values for label, supporting text,
   error text, prefix, and suffix: `5 * 8 B = 40 B`,
 - two optional icon pointers: `8 B`,
 - and packed state for variant and field-local flags, plus an interface vptr if
   `TextEditTarget` is implemented through multiple inheritance.
 
-The earlier `100-120 B` estimate is a provisional target, not a measured
-limit. Record `sizeof(BasicSurfaceWidget)`, `sizeof(TextField)`,
-`sizeof(SecureTextField)` and editor cache capacity on the supported 32-bit
+The original `100-120 B` estimate is superseded by the measured ESP32-C3
+108-byte base and secure fields (28-byte `BasicSurfaceWidget`). Host sizes are
+184, 184 and 40 bytes respectively; the acceptance report records the ABI. Record `sizeof(BasicSurfaceWidget)`, `sizeof(TextField)`,
+`sizeof(SecureTextField)` on the supported 32-bit
 ESP32 toolchain and the host ABI before setting exact budget assertions. That
 is materially heavier than a button or list row, but it is an
 acceptable tradeoff because screens usually host only a small number of text
@@ -259,10 +264,12 @@ not using."
 
 ### Embedded Constraints
 
-1. Do not allocate on paint, hover, visual focus changes, caret frames or
-   reveal toggles. Edit activation and text mutation may grow the owned value
-   and task-shared glyph/UTF-8-offset caches. Retain cache capacity across
-   sessions; do not allocate per-widget editor or masked-string buffers.
+1. Do not add widget-owned paint buffers or allocate on warmed editor-state,
+   hover, visual focus, caret or reveal updates. Edit activation and text
+   mutation may grow the owned value and task-shared glyph/UTF-8-offset caches.
+   Retain cache capacity across sessions. Painting still allocates upstream raw,
+   RLE, clipping and overlay readers in `roo_display`; that optimization is
+   deferred separately and the resource test records its cost.
 2. Do not add a child vector or generic child-slot container surface to the
    common field path.
 3. Keep the incremental RAM cost of `SecureTextField` to one packed reveal bit
@@ -510,7 +517,8 @@ Use shared geometry tokens for the 4dp corner radius, 1dp idle and 2dp focused
 stroke, and a 4dp gap on each side of the outlined label notch. Keep the whole
 notch and floated label within measured bounds: reserve half a small-label line
 box above the outlined container, with the floated label centered on its top
-stroke. This inset is additional to the 56dp container and is present in both
+stroke using only the font ascent, as in `TextLabel`. Descent and the specific
+caption do not alter the baseline. This inset is additional to the 56dp container and is present in both
 resting and floated states, so editing does not change measured height. The
 filled floated label and input occupy separate line boxes, centered together
 inside its 56dp container. The example should align container bands when mixing
@@ -524,7 +532,10 @@ text uses UTF-8-safe single-line ellipsis computed without an owned temporary
 string. Labels and affixes do not grow the field beyond parent constraints.
 
 Mirror leading/trailing icons, padding, affixes and assistive alignment through
-the effective layout direction. This is slot mirroring, not a claim of a bidi
+the explicit `layoutDirection()` (default LTR), assigned with
+`setLayoutDirection()`. Direction is packed into the existing flags, matching
+other childless Material 3 components; it is not inherited from a container.
+This is slot mirroring, not a claim of a bidi
 editing engine. Test with Latin text in RTL layouts to separate these contracts.
 
 ### Read-Only, Error, and Secure States
@@ -744,6 +755,9 @@ class TextField : public BasicSurfaceWidget {
 
   bool readOnly() const;
   void setReadOnly(bool read_only);
+
+  LayoutDirection layoutDirection() const;
+  void setLayoutDirection(LayoutDirection direction);
 
   bool isEdited() const;
   void edit();
@@ -1035,3 +1049,14 @@ the next deliberate follow-on once the shared editor core exists.
    than a mandatory base-field feature.
 5. Add placeholder text only if a concrete product need appears that is not
    already satisfied by the floating-label model.
+
+## Software keyboard avoidance
+
+When the software keyboard opens, a task whose edited field has a vertical
+scroll ancestor measures and lays out its content in the space above the
+keyboard, then asks the ancestor scrollers to reveal the field. Static forms
+pan inside the task's clipping boundary. Closing the keyboard restores the
+normal layout; the live editor, buffer and selection remain intact. Physical
+keyboard activation leaves the viewport unchanged. This applies to the task's
+content tree; transient surfaces retain their own host layout. Full-screen
+extraction for fields taller than the available viewport remains deferred.

@@ -25,7 +25,7 @@ The design provides:
   built on the existing Material 3 direction from
   [../implemented/material3_lists_design.md](../implemented/material3_lists_design.md),
   [../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md), and
-  [material3_text_fields_design.md](material3_text_fields_design.md),
+  [material3_text_fields_design.md](../implemented/material3_text_fields_design.md),
 - and a controller-facing state model that is richer than the current direct
   `roo_wifi::Controller` coupling.
 
@@ -105,7 +105,7 @@ The most relevant nearby pieces are:
 
 - [../implemented/material3_lists_design.md](../implemented/material3_lists_design.md), which defines the
   small-row settings and list-item vocabulary for Material 3 surfaces,
-- [material3_text_fields_design.md](material3_text_fields_design.md), which
+- [material3_text_fields_design.md](../implemented/material3_text_fields_design.md), which
   defines the intended inline-editing and secure-field story,
 - [../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md), which provides
   the action-button family for connect, forget, save, and cancel actions,
@@ -850,7 +850,7 @@ Authoring reference:
 [../.github/instructions/roo-windows-widget-authoring.instructions.md](../../../.github/instructions/roo-windows-widget-authoring.instructions.md)
 
 Prerequisite: the baseline Material 3 text-field and button work from
-[material3_text_fields_design.md](material3_text_fields_design.md) and
+[material3_text_fields_design.md](../implemented/material3_text_fields_design.md) and
 [../implemented/material3_buttons_design.md](../implemented/material3_buttons_design.md) is available for
 the edit and action surfaces.
 

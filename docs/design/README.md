@@ -57,6 +57,7 @@ Status was audited against the source tree and tests on 2026-09-12. “Dependenc
 | Widget event dispatch | `ApplicationContext` and sparse interactive-change dispatch are implemented. |
 | Widget state compaction | Widget event dispatch is implemented, and both compaction phases are implemented. |
 | [Snackbar](implemented/material3_snackbar_design.md) | Owning registered requests, bounded queue, inverse-surface widget, opt-in scaffold host, timing, focus/input, goldens, catalog and target cost checks are implemented. |
+| [Text fields](implemented/material3_text_fields_design.md) | Filled/outlined single-line fields, task-owned abstract editing, secure reveal, keyboard/touch activation, tests and example are implemented. Upstream glyph-stream paint allocations are explicitly deferred. |
 
 ## In progress
 
@@ -74,7 +75,7 @@ Status was audited against the source tree and tests on 2026-09-12. “Dependenc
 | --- | --- |
 | Button groups | Buttons and icon buttons are implemented; no group implementation exists. |
 | Click delivery policy | Click-animation lifecycle and settlement are implemented; widget-selected semantic delivery timing is not. |
-| Date pickers | Buttons, icon buttons, basic dialogs, and shared back behavior are implemented; text fields and picker-specific integration remain proposed. |
+| Date pickers | Buttons, icon buttons, basic dialogs, and shared back behavior are implemented; single-line text fields are implemented; picker-specific integration remains proposed. |
 | Display runtime Phase 7 task-bounded transient coverage | Phase 6 input is implemented. Phase 7 is reconciled as task-bounded attachment of the one shared window host layer, retaining one active-presentation authority and explicit interaction owner; the extension remains unimplemented. |
 | Display runtime Phase 8 migration and cost audit | Phases 2–6 are implemented and Phase 7 is architecturally reconciled; the shared host, task-coverage extension, final migration documentation, resource audit, and hardware validation remain proposed. |
 | Extended FAB | The base FAB dependency is proposed; buttons and theme support are implemented. |
@@ -85,7 +86,6 @@ Status was audited against the source tree and tests on 2026-09-12. “Dependenc
 | Segmented buttons | Buttons are implemented; the superseding button-group design and this legacy component design are not implemented. |
 | Sheets | Paint/overflow foundations, icon buttons, and shared back behavior are implemented; the sheet family is not. Before implementation, modal sheets must be reconciled to use the P1.6b shared host with explicit task ownership, host-owned barrier paint, presenter-owned focus, and presenter-handled outside dismissal. |
 | Split button | Buttons, icon buttons, non-touch input, and menus are implemented; split buttons remain proposed. |
-| [Text fields](proposed/material3_text_fields_design.md) | Reviewed 2026-09-12 against task-owned editing, application semantic input, animation and Material 3 typography. The field family and abstract edit-target seam remain proposed; focused-idle activation is a new-family policy. |
-| Time pickers | Buttons, icon buttons, basic dialogs, and shared back behavior are implemented; text fields and picker-specific integration remain proposed. |
+| Time pickers | Buttons, icon buttons, basic dialogs, and shared back behavior are implemented; single-line text fields are implemented; picker-specific integration remains proposed. |
 | Toolbars | Buttons, icon buttons, and menus are implemented; FABs and toolbars are proposed. |
-| Wi-Fi configuration | Existing Wi-Fi transport/configuration APIs are external prerequisites; the Material 3 screen design and its text-field/dialog dependencies are not implemented. |
+| Wi-Fi configuration | Existing Wi-Fi transport/configuration APIs are external prerequisites; single-line text fields and dialogs are implemented; the Material 3 configuration screen remains proposed. |
