@@ -1029,3 +1029,10 @@ cc_library(
     srcs = ["benchmarks/material3_progress_size_probe.cpp"],
     deps = [":roo_windows"],
 )
+
+cc_test(
+    name = "text_field_test",
+    srcs = ["test/text_field_test.cpp", "test/roo_windows_render_test_support.h"],
+    linkstatic = 1,
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+)

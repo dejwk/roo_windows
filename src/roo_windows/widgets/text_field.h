@@ -8,6 +8,7 @@
 #include "roo_time.h"
 #include "roo_windows/activities/keyboard.h"
 #include "roo_windows/config.h"
+#include "roo_windows/internal/text_edit_target.h"
 #include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/panel.h"
 
@@ -115,11 +116,11 @@ class TextFieldEditor {
   ~TextFieldEditor();
 
   /// Begins editing `target` as the active field; any previously active
-  /// field is implicitly committed and unbound first.
-  void edit(TextField* target, bool show_software_keyboard = true);
+  /// field is finished with confirmed=false and unbound first.
+  void edit(internal::TextEditTarget* target, bool show_software_keyboard = true);
 
   /// True iff this editor is currently bound to `target`.
-  bool isEdited(const TextField* target) const;
+  bool isEdited(const internal::TextEditTarget* target) const;
 
   bool lastGlyphRecentlyEntered() const { return last_glyph_recently_entered_; }
 
@@ -161,17 +162,24 @@ class TextFieldEditor {
   void moveHome(bool extend_selection = false);
   void moveEnd(bool extend_selection = false);
 
+  void applyCursorFrame(internal::TextEditTarget& target, const AnimationSample& sample);
+  void refreshMetrics();
+  void resetMetrics();
+  void ensureCursorVisible(int16_t viewport_width);
+
  private:
   friend class TextField;
 
   void measure();
   void restartCursor();
-  void stopCursor(TextField& target);
-  void applyCursorFrame(TextField& target, const AnimationSample& sample);
+  void stopCursor(internal::TextEditTarget& target);
+
 
   void restartLastGlyphRecentlyEntered();
   void hideLastGlyph();
   void moveCursor(int16_t position, bool extend_selection);
+  void finish(bool confirmed);
+  void changed();
 
   Application& application_;
   roo_scheduler::Scheduler& scheduler_;
@@ -182,7 +190,7 @@ class TextFieldEditor {
   // and meant to be shown.
   bool last_glyph_recently_entered_;
 
-  TextField* target_;
+  internal::TextEditTarget* target_;
   std::vector<roo_display::GlyphMetrics> glyphs_;
   std::vector<int16_t> offsets_;
   int16_t cursor_position_;
@@ -199,7 +207,7 @@ class TextFieldEditor {
 /// scroll) is delegated to the shared `TextFieldEditor`, so individual fields
 /// stay lightweight. Set `setStarred(true)` to render the value as bullet
 /// characters for password-style fields.
-class TextField : public BasicWidget {
+class TextField : public BasicWidget, public internal::TextEditTarget {
  public:
   enum Decoration {
     NONE,
@@ -222,6 +230,14 @@ class TextField : public BasicWidget {
         editable_(true) {}
 
   bool isClickable() const override { return true; }
+
+  Widget& editWidget() override { return *this; }
+  const Widget& editWidget() const override { return *this; }
+  std::string& textBuffer() override { return value_; }
+  const std::string& textBuffer() const override { return value_; }
+  const roo_display::Font& textFont() const override { return font_; }
+  bool obscureText() const override { return starred_; }
+  void notifyEditVisualChange() override { invalidateInterior(); }
 
   // TODO: Replace this with an outline focus indication once text-field focus
   // styling is specified. A point overlay obscures the editing surface.
