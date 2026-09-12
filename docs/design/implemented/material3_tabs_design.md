@@ -278,8 +278,7 @@ The core decisions are:
 
 ### Type Split and Ownership
 
-`Tabs` derives from `Container` and, temporarily, from
-`roo_scheduler::Executable`.
+`Tabs` derives directly from `Container`.
 
 `Container` is the right semantic base because the row owns:
 
@@ -288,9 +287,11 @@ The core decisions are:
 - the indicator animation,
 - and the scroll viewport semantics.
 
-The executable base remains only for `ScrollableTabs` strip motion until that
-consumer is migrated. Indicator interpolation uses the widget animation
-registry and is never routed through the scheduler callback.
+Indicator interpolation uses registry tag `0`. `ScrollableTabs` reserves tag
+`1` for its independent custom-time strip-motion track. Both channels are
+sampled by the application animation registry, so neither class inherits
+`roo_scheduler::Executable` or stores a scheduler reference, ticket, or local
+animation timestamp.
 
 `Tab` derives from `SurfaceWidget`, not plain `Widget`, `BasicWidget`, or
 `BasicSurfaceWidget`.
@@ -313,21 +314,24 @@ for inline `Badge` storage and badge-layout logic.
 
 ### `Tabs` Container
 
-`Tabs` stores:
+Base `Tabs` stores:
 
 - a vector of tab child pointers,
 - one selected-index field,
 - one variant field (`primary` or `secondary`),
 - one layout-mode field (`fixed` or `scrollable`),
 - one divider-visibility bit,
-- the current scroll position, content width, and viewport width for
-  scrollable layout,
-- one shared scroll-motion helper when scrollable mode is enabled,
 - and the start/current/target rectangles for the row-owned active indicator.
+
+Only `ScrollableTabs` adds the current strip position and width, gesture bit,
+and shared scroll-motion state. Active strip timing remains registry-owned.
 
 The registry owns the indicator's 0-to-1 timing track. `Tabs` reserves tag `0`
 as `kIndicator`; the base-class tag range ends at `1`, where derived
-`ScrollableTabs` channels begin.
+`ScrollableTabs` owns `kScroll`. Selection may run both channels on the same
+logical frame. A new drag cancels only `kScroll`; hidden or detached rows snap
+the base indicator, cancel strip physics, and clamp the current offset without
+resuming stale motion.
 
 The row exposes two virtual hooks:
 
@@ -763,8 +767,8 @@ Target host-side size budgets are:
 The important point is not the exact host byte count. It is the shape:
 
 - badge-free tabs stay cheap,
-- the row owns indicator geometry and scroll state once while the registry owns
-  active timing,
+- the row owns indicator geometry and the scrollable subclass owns physics
+  state once, while the registry owns both active timing channels,
 - and the API avoids per-tab callback or controller storage.
 
 The implementation should enforce this with pointer-size-aware `static_assert`
@@ -896,7 +900,7 @@ class BadgedTab : public Tab {
   Dimensions getSuggestedMinimumDimensions() const override;
 };
 
-class Tabs : public Container, private roo_scheduler::Executable {
+class Tabs : public Container {
  public:
   explicit Tabs(ApplicationContext& context,
                 TabsVariant variant = TabsVariant::kPrimary,

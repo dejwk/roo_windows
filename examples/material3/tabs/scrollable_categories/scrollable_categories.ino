@@ -1,5 +1,6 @@
 // Learning goal: use scrollable tabs when useful categories cannot fit in one
-// fixed row. Drag the tabs horizontally, then select an equipment category.
+// fixed row. Selection drives the indicator and strip as concurrent registry
+// channels; dragging interrupts only strip motion.
 
 // *************** EMULATOR SETUP BEGIN
 
@@ -124,8 +125,8 @@ class EquipmentCategories : public FlexLayout {
     setPadding(Padding(Scaled(12), Scaled(14)));
     setGap(Scaled(10));
 
-    // ScrollableTabs retains the normal tab selection API while paying for
-    // horizontal scrolling only in this overflow-oriented subclass.
+    // ScrollableTabs retains the normal selection API while paying for one
+    // additional custom-time registry channel only in this overflow subclass.
     tabs_.addTab(all_);
     tabs_.addTab(pumps_);
     tabs_.addTab(valves_);

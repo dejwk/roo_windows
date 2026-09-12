@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "roo_backport/string_view.h"
-#include "roo_scheduler.h"
 #include "roo_windows/containers/scroll_motion_controller.h"
 #include "roo_windows/core/container.h"
 #include "roo_windows/core/surface_widget.h"
@@ -141,7 +140,7 @@ class BadgedTab : public Tab {
   Badge badge_;
 };
 
-class Tabs : public Container, protected roo_scheduler::Executable {
+class Tabs : public Container {
  public:
   /// Creates a Material 3 tabs row with explicit variant and layout mode.
   explicit Tabs(ApplicationContext& context,
@@ -255,13 +254,9 @@ class Tabs : public Container, protected roo_scheduler::Executable {
   void onPresentationChanged(const PresentationChange& change) override;
 
   // Base Tabs owns [0, kFirstScrollableAnimationTag); subclasses allocate
-  // independent channels starting at kFirstScrollableAnimationTag.
+  // independent registry channels starting at kFirstScrollableAnimationTag.
   static constexpr AnimationTag kIndicator = 0;
   static constexpr AnimationTag kFirstScrollableAnimationTag = 1;
-
-  // Retained only until ScrollableTabs moves its separate scroll channel to
-  // the animation registry.
-  void execute(roo_scheduler::ExecutionID id) override;
 
  private:
   friend class Tab;
@@ -278,10 +273,6 @@ class Tabs : public Container, protected roo_scheduler::Executable {
 
   std::vector<Tab*> tabs_;
 
- protected:
-  roo_scheduler::Scheduler& scheduler_;
-
- private:
   Rect indicator_current_;
   Rect indicator_start_;
   Rect indicator_target_;
@@ -293,15 +284,15 @@ class Tabs : public Container, protected roo_scheduler::Executable {
   uint8_t selection_commit_mode_ : 1;
 };
 
-/// Material 3 tabs row that pays for horizontal scroll state only when the
-/// caller asks for scrollable-tab behavior.
+/// Material 3 tabs row that pays for horizontal scroll state and one custom-
+/// time registry channel only when the caller asks for scrollable behavior.
 class ScrollableTabs : public Tabs {
  public:
   /// Creates a Material 3 scrollable tabs row.
   explicit ScrollableTabs(ApplicationContext& context,
                           TabsVariant variant = TabsVariant::kPrimary);
 
-  /// Cancels any pending scroll animation callback.
+  /// Cancels any active strip-motion channel.
   ~ScrollableTabs() override;
 
   /// Changes between fixed fallback and scrollable layout behavior.
@@ -332,7 +323,13 @@ class ScrollableTabs : public Tabs {
                                bool animate) override;
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
   void onLayout(bool changed, const Rect& rect) override;
-  void execute(roo_scheduler::ExecutionID id) override;
+  void onAnimationFrame(AnimationTag tag,
+                        const AnimationSample& sample) override;
+  void onAnimationFinished(AnimationTag tag,
+                           AnimationFinishReason reason) override;
+  void onPresentationChanged(const PresentationChange& change) override;
+
+  static constexpr AnimationTag kScroll = kFirstScrollableAnimationTag;
 
  private:
   scroll_motion::Geometry motionGeometry() const;
@@ -341,11 +338,11 @@ class ScrollableTabs : public Tabs {
   XDim selectedTabCenterInStrip() const;
   void revealSelectedTab(bool animate);
   bool isTabDescendant(const Widget& descendant) const;
-  void cancelPendingScrollUpdate();
-  void scheduleScrollUpdate();
+  void cancelScrollMotion();
+  void startScrollMotion();
+  void stopScrollAndClamp();
 
   scroll_motion::State scroll_motion_;
-  roo_scheduler::ExecutionID scroll_notification_id_;
   XDim scroll_x_;
   XDim strip_width_;
   uint8_t intercepted_gesture_ : 1;

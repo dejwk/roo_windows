@@ -67,6 +67,39 @@ class RecordingTabs : public Tabs {
   }
 };
 
+class RecordingScrollableTabs : public ScrollableTabs {
+ public:
+  using ScrollableTabs::ScrollableTabs;
+
+  bool indicatorActive() const {
+    return context().animations().contains(*this, kIndicator);
+  }
+
+  bool scrollActive() const {
+    return context().animations().contains(*this, kScroll);
+  }
+
+  int indicatorFrameCount() const { return indicator_frame_count_; }
+  int scrollFrameCount() const { return scroll_frame_count_; }
+
+  void resetFrameCounts() {
+    indicator_frame_count_ = 0;
+    scroll_frame_count_ = 0;
+  }
+
+ protected:
+  void onAnimationFrame(AnimationTag tag,
+                        const AnimationSample& sample) override {
+    if (tag == kIndicator) ++indicator_frame_count_;
+    if (tag == kScroll) ++scroll_frame_count_;
+    ScrollableTabs::onAnimationFrame(tag, sample);
+  }
+
+ private:
+  int indicator_frame_count_ = 0;
+  int scroll_frame_count_ = 0;
+};
+
 class Material3TabsRenderTest
     : public RooWindowsRenderTestSized<180, Scaled(48)> {};
 
@@ -483,31 +516,190 @@ TEST(Material3Tabs, ScrollableSelectionRevealsSelectedTab) {
   EXPECT_GT(history_raw->offsetLeft() + history_raw->width(), 0);
 }
 
-// User-initiated selection keeps its immediate state change, but moves the
-// strip over several scheduler ticks instead of snapping to the selected tab.
-TEST(Material3Tabs, ScrollableAnimatedSelectionRevealsSelectedTabOverTime) {
-  roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
-  ApplicationContext context = MakeContext(env);
+// User-initiated selection starts independent indicator and strip channels;
+// one application frame samples both, and a drag cancels only strip motion.
+TEST_F(Material3TabsRenderTest,
+       ScrollableSelectionDrivesConcurrentIndependentChannels) {
+  auto tabs = std::make_unique<RecordingScrollableTabs>(context());
+  RecordingScrollableTabs* tabs_ptr = tabs.get();
+  tabs_ptr->addTab(std::make_unique<Tab>(context(), "Overview"));
+  tabs_ptr->addTab(std::make_unique<Tab>(context(), "Heating"));
+  tabs_ptr->addTab(std::make_unique<Tab>(context(), "Long history"));
+  app_.add(std::move(tabs), roo_display::Box(0, 0, 139, Scaled(48) - 1));
+  ASSERT_TRUE(refresh());
 
-  ScrollableTabs tabs(context);
-  tabs.addTab(std::make_unique<Tab>(context, "Overview"));
-  tabs.addTab(std::make_unique<Tab>(context, "Heating"));
-  tabs.addTab(std::make_unique<Tab>(context, "Long history"));
-  tabs.measure(WidthSpec::Exactly(140), HeightSpec::Exactly(48));
-  tabs.layout(Rect(0, 0, 139, 47));
+  ASSERT_TRUE(tabs_ptr->setSelectedIndex(2, true));
+  EXPECT_EQ(2, tabs_ptr->selectedIndex());
+  EXPECT_EQ(0, tabs_ptr->scrollOffsetForTest());
+  EXPECT_TRUE(tabs_ptr->indicatorActive());
+  EXPECT_TRUE(tabs_ptr->scrollActive());
 
-  EXPECT_TRUE(tabs.setSelectedIndex(2, true));
-  EXPECT_EQ(2, tabs.selectedIndex());
-  EXPECT_EQ(0, tabs.scrollOffsetForTest());
+  ASSERT_TRUE(refresh());
+  tabs_ptr->resetFrameCounts();
+  delay(65);
+  ASSERT_TRUE(refresh());
+  EXPECT_GT(tabs_ptr->indicatorFrameCount(), 0);
+  EXPECT_GT(tabs_ptr->scrollFrameCount(), 0);
+  EXPECT_LT(tabs_ptr->scrollOffsetForTest(), 0);
 
-  scheduler.delay(roo_time::Millis(120));
+  const XDim interrupted = tabs_ptr->scrollOffsetForTest();
+  tabs_ptr->onDragStart(20, 20);
+  EXPECT_TRUE(tabs_ptr->indicatorActive());
+  EXPECT_FALSE(tabs_ptr->scrollActive());
+  delay(170);
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(interrupted, tabs_ptr->scrollOffsetForTest());
+  EXPECT_FALSE(tabs_ptr->indicatorActive());
+}
 
-  EXPECT_LT(tabs.scrollOffsetForTest(), 0);
+// Verifies a replacement selection preserves the last applied strip position
+// and gives the new programmatic motion a fresh zero-based time epoch.
+TEST_F(Material3TabsRenderTest, RepeatedSelectionRevealRetargetsContinuously) {
+  auto tabs = std::make_unique<RecordingScrollableTabs>(context());
+  RecordingScrollableTabs* tabs_ptr = tabs.get();
+  tabs_ptr->addTab(std::make_unique<Tab>(context(), "Overview"));
+  tabs_ptr->addTab(std::make_unique<Tab>(context(), "Heating"));
+  tabs_ptr->addTab(std::make_unique<Tab>(context(), "Long history"));
+  app_.add(std::move(tabs), roo_display::Box(0, 0, 139, Scaled(48) - 1));
+  ASSERT_TRUE(refresh());
 
-  scheduler.delay(roo_time::Millis(180));
+  ASSERT_TRUE(tabs_ptr->setSelectedIndex(2, true));
+  ASSERT_TRUE(refresh());
+  delay(65);
+  ASSERT_TRUE(refresh());
+  const XDim before_retarget = tabs_ptr->scrollOffsetForTest();
+  ASSERT_LT(before_retarget, 0);
 
-  EXPECT_LT(tabs.scrollOffsetForTest(), 0);
+  ASSERT_TRUE(tabs_ptr->setSelectedIndex(1, true));
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(before_retarget, tabs_ptr->scrollOffsetForTest());
+  EXPECT_TRUE(tabs_ptr->indicatorActive());
+  EXPECT_TRUE(tabs_ptr->scrollActive());
+
+  delay(270);
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(1, tabs_ptr->selectedIndex());
+  EXPECT_FALSE(tabs_ptr->indicatorActive());
+  EXPECT_FALSE(tabs_ptr->scrollActive());
+}
+
+// Verifies fling and boundary spring-back use the derived custom-time channel
+// and remove it once the reusable motion model reaches rest.
+TEST_F(Material3TabsRenderTest, ScrollableFlingSettlesAndRemovesChannel) {
+  auto tabs = std::make_unique<RecordingScrollableTabs>(context());
+  RecordingScrollableTabs* tabs_ptr = tabs.get();
+  tabs_ptr->addTab(std::make_unique<Tab>(context(), "Overview"));
+  tabs_ptr->addTab(std::make_unique<Tab>(context(), "Heating"));
+  tabs_ptr->addTab(std::make_unique<Tab>(context(), "Long history"));
+  app_.add(std::move(tabs), roo_display::Box(0, 0, 139, Scaled(48) - 1));
+  ASSERT_TRUE(refresh());
+
+  tabs_ptr->onDragStart(20, 20);
+  tabs_ptr->onDrag(20, 20, -30, 0);
+  tabs_ptr->onFling(20, 20, -5000, 0);
+  tabs_ptr->onDragFinished(20, 20);
+  ASSERT_TRUE(refresh());
+  EXPECT_TRUE(tabs_ptr->scrollActive());
+
+  delay(650);
+  ASSERT_TRUE(refresh());
+  EXPECT_TRUE(tabs_ptr->scrollActive());
+  delay(550);
+  ASSERT_TRUE(refresh());
+  EXPECT_FALSE(tabs_ptr->scrollActive());
+  const XDim settled = tabs_ptr->scrollOffsetForTest();
+  delay(80);
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(settled, tabs_ptr->scrollOffsetForTest());
+}
+
+// Verifies layout changes clamp and stop strip physics while allowing the
+// independent indicator value track to continue toward its updated geometry.
+TEST_F(Material3TabsRenderTest, RelayoutCancelsOnlyStripMotion) {
+  auto tabs = std::make_unique<RecordingScrollableTabs>(context());
+  RecordingScrollableTabs* tabs_ptr = tabs.get();
+  tabs_ptr->addTab(std::make_unique<Tab>(context(), "Overview"));
+  tabs_ptr->addTab(std::make_unique<Tab>(context(), "Heating"));
+  tabs_ptr->addTab(std::make_unique<Tab>(context(), "Long history"));
+  app_.add(std::move(tabs), roo_display::Box(0, 0, 139, Scaled(48) - 1));
+  ASSERT_TRUE(refresh());
+
+  ASSERT_TRUE(tabs_ptr->setSelectedIndex(2, true));
+  ASSERT_TRUE(refresh());
+  delay(65);
+  ASSERT_TRUE(refresh());
+  ASSERT_TRUE(tabs_ptr->indicatorActive());
+  ASSERT_TRUE(tabs_ptr->scrollActive());
+
+  tabs_ptr->layout(Rect(0, 0, 119, Scaled(48) - 1));
+  EXPECT_TRUE(tabs_ptr->indicatorActive());
+  EXPECT_FALSE(tabs_ptr->scrollActive());
+  delay(170);
+  ASSERT_TRUE(refresh());
+  EXPECT_FALSE(tabs_ptr->indicatorActive());
+}
+
+// Verifies hiding discards an overshoot spring and clamps the strip; showing
+// the row again does not resume either scroll or indicator animation.
+TEST_F(Material3TabsRenderTest, HiddenScrollableTabsCancelAndClampChannels) {
+  auto tabs = std::make_unique<RecordingScrollableTabs>(context());
+  RecordingScrollableTabs* tabs_ptr = tabs.get();
+  tabs_ptr->addTab(std::make_unique<Tab>(context(), "Overview"));
+  tabs_ptr->addTab(std::make_unique<Tab>(context(), "Heating"));
+  tabs_ptr->addTab(std::make_unique<Tab>(context(), "Long history"));
+  app_.add(std::move(tabs), roo_display::Box(0, 0, 139, Scaled(48) - 1));
+  ASSERT_TRUE(refresh());
+
+  tabs_ptr->onDragStart(20, 20);
+  tabs_ptr->onDrag(20, 20, -1000, 0);
+  const XDim overshoot = tabs_ptr->scrollOffsetForTest();
+  tabs_ptr->onDragFinished(20, 20);
+  ASSERT_TRUE(tabs_ptr->scrollActive());
+  ASSERT_TRUE(tabs_ptr->setSelectedIndex(2, true));
+  ASSERT_TRUE(tabs_ptr->indicatorActive());
+  ASSERT_TRUE(tabs_ptr->scrollActive());
+
+  tabs_ptr->setVisibility(Visibility::kInvisible);
+  ASSERT_TRUE(refresh());
+  EXPECT_FALSE(tabs_ptr->indicatorActive());
+  EXPECT_FALSE(tabs_ptr->scrollActive());
+  EXPECT_GT(tabs_ptr->scrollOffsetForTest(), overshoot);
+  const XDim clamped = tabs_ptr->scrollOffsetForTest();
+
+  tabs_ptr->setVisibility(Visibility::kVisible);
+  ASSERT_TRUE(refresh());
+  delay(270);
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(clamped, tabs_ptr->scrollOffsetForTest());
+  EXPECT_FALSE(tabs_ptr->indicatorActive());
+  EXPECT_FALSE(tabs_ptr->scrollActive());
+}
+
+// Verifies navigation detachment forwards through the base indicator policy
+// and also cancels the derived strip channel while the borrowed row stays live.
+TEST_F(Material3TabsRenderTest, DetachedScrollableTabsCancelBothChannels) {
+  RecordingScrollableTabs tabs(context());
+  tabs.addTab(std::make_unique<Tab>(context(), "Overview"));
+  tabs.addTab(std::make_unique<Tab>(context(), "Heating"));
+  tabs.addTab(std::make_unique<Tab>(context(), "Long history"));
+  Task& task = app_.addTaskFullScreen(tabs);
+  ASSERT_TRUE(refresh());
+
+  ASSERT_TRUE(tabs.setSelectedIndex(2, true));
+  ASSERT_TRUE(refresh());
+  delay(65);
+  ASSERT_TRUE(refresh());
+  ASSERT_TRUE(tabs.indicatorActive());
+  ASSERT_TRUE(tabs.scrollActive());
+
+  task.navigation().clear();
+  ASSERT_TRUE(refresh());
+  EXPECT_FALSE(tabs.indicatorActive());
+  EXPECT_FALSE(tabs.scrollActive());
+  const XDim detached = tabs.scrollOffsetForTest();
+  delay(270);
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(detached, tabs.scrollOffsetForTest());
 }
 
 // Focus reveal is independent from selection: arrow-key traversal may expose

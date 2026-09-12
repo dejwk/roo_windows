@@ -38,6 +38,7 @@ constexpr int16_t kScrollableLeadingInsetDp = 52;
 constexpr int16_t kDividerHeightPx = 1;
 constexpr int16_t kIndicatorFrameMs = 10;
 constexpr int16_t kIndicatorDurationMs = 200;
+constexpr int16_t kScrollFrameMs = 10;
 
 Rect EmptyRect() { return Rect(0, 0, -1, -1); }
 
@@ -418,7 +419,6 @@ void BadgedTab::handleBadgeGeometryChange(const Rect& old_bounds,
 Tabs::Tabs(ApplicationContext& context, TabsVariant variant, TabsMode mode)
     : Container(context),
       tabs_(),
-      scheduler_(context.scheduler()),
       indicator_current_(0, 0, -1, -1),
       indicator_start_(0, 0, -1, -1),
       indicator_target_(0, 0, -1, -1),
@@ -704,12 +704,6 @@ void Tabs::onPresentationChanged(const PresentationChange& change) {
   }
 }
 
-void Tabs::execute(roo_scheduler::ExecutionID id) {
-  // Until Phase 9, this inherited Executable exists only so ScrollableTabs can
-  // schedule its independent strip-scrolling callback.
-  (void)id;
-}
-
 void Tabs::syncIndicatorAfterLayout() {
   if (!context().animations().contains(*this, kIndicator)) {
     snapIndicatorToSelection();
@@ -759,16 +753,15 @@ void Tabs::onLayout(bool changed, const Rect& rect) {
 ScrollableTabs::ScrollableTabs(ApplicationContext& context, TabsVariant variant)
     : Tabs(context, variant, TabsMode::kScrollable),
       scroll_motion_(),
-      scroll_notification_id_(-1),
       scroll_x_(0),
       strip_width_(0),
       intercepted_gesture_(false) {}
 
-ScrollableTabs::~ScrollableTabs() { cancelPendingScrollUpdate(); }
+ScrollableTabs::~ScrollableTabs() { cancelScrollMotion(); }
 
 void ScrollableTabs::setMode(TabsMode mode) {
   if (this->mode() == mode) return;
-  cancelPendingScrollUpdate();
+  cancelScrollMotion();
   scroll_x_ = 0;
   scroll_motion_ = scroll_motion::State();
   intercepted_gesture_ = false;
@@ -799,6 +792,8 @@ void ScrollableTabs::onLayout(bool changed, const Rect& rect) {
   (void)rect;
   int count = tabCount();
   if (count == 0) {
+    cancelScrollMotion();
+    scroll_motion_ = scroll_motion::State();
     strip_width_ = 0;
     scroll_x_ = 0;
     snapIndicatorToSelection();
@@ -813,6 +808,7 @@ void ScrollableTabs::onLayout(bool changed, const Rect& rect) {
     strip_x += child.width();
   }
   strip_width_ = strip_x;
+  cancelScrollMotion();
   scroll_motion::Geometry geometry = motionGeometry();
   scroll_motion::Result clamped =
       scroll_motion_.scrollTo(geometry, scroll_x_, 0, scroll_x_, 0);
@@ -864,6 +860,7 @@ bool ScrollableTabs::revealFocusedDescendant(Widget& descendant) {
   } else if (target.xMax() >= width()) {
     target_scroll -= target.xMax() - width() + 1;
   }
+  cancelScrollMotion();
   applyScrollResult(scroll_motion_.scrollTo(motionGeometry(), scroll_x_, 0,
                                             target_scroll, 0));
   return true;
@@ -895,7 +892,7 @@ void ScrollableTabs::onDragStart(XDim x, YDim y) {
   (void)x;
   (void)y;
   if (mode() != TabsMode::kScrollable) return;
-  cancelPendingScrollUpdate();
+  cancelScrollMotion();
   applyScrollResult(scroll_motion_.onDown(motionGeometry(), scroll_x_, 0));
 }
 
@@ -915,22 +912,22 @@ void ScrollableTabs::onFling(XDim x, YDim y, XDim vx, YDim vy) {
   (void)y;
   (void)vy;
   if (mode() != TabsMode::kScrollable) return;
+  cancelScrollMotion();
   scroll_motion::Result result =
-      scroll_motion_.onFling(motionGeometry(), scroll_x_, 0, vx, 0,
-                             roo_time::Uptime::Now().inMillis());
+      scroll_motion_.onFling(motionGeometry(), scroll_x_, 0, vx, 0, 0);
   applyScrollResult(result);
-  if (result.needs_tick) scheduleScrollUpdate();
+  if (result.needs_tick) startScrollMotion();
 }
 
 void ScrollableTabs::onDragFinished(XDim x, YDim y) {
   (void)x;
   (void)y;
   if (mode() == TabsMode::kScrollable) {
+    cancelScrollMotion();
     scroll_motion::Result result =
-        scroll_motion_.onTouchUp(motionGeometry(), scroll_x_, 0,
-                                 roo_time::Uptime::Now().inMillis());
+        scroll_motion_.onTouchUp(motionGeometry(), scroll_x_, 0, 0);
     applyScrollResult(result);
-    if (result.needs_tick) scheduleScrollUpdate();
+    if (result.needs_tick) startScrollMotion();
   }
   intercepted_gesture_ = false;
 }
@@ -940,17 +937,35 @@ void ScrollableTabs::onCancel() {
   intercepted_gesture_ = false;
 }
 
-void ScrollableTabs::execute(roo_scheduler::ExecutionID id) {
-  if (id != scroll_notification_id_) {
-    Tabs::execute(id);
+void ScrollableTabs::onAnimationFrame(AnimationTag tag,
+                                      const AnimationSample& sample) {
+  if (tag != kScroll) {
+    Tabs::onAnimationFrame(tag, sample);
     return;
   }
-  scroll_notification_id_ = -1;
+  // Fling admission already applies the scroll helper's immediate kick.
+  if (sample.elapsed.inMicros() == 0) return;
   scroll_motion::Result result =
       scroll_motion_.tick(motionGeometry(), scroll_x_, 0,
-                          roo_time::Uptime::Now().inMillis());
+                          sample.elapsed.inMillis());
   applyScrollResult(result);
-  if (result.needs_tick) scheduleScrollUpdate();
+  if (!result.needs_tick) cancelScrollMotion();
+}
+
+void ScrollableTabs::onAnimationFinished(AnimationTag tag,
+                                         AnimationFinishReason reason) {
+  if (tag == kScroll) return;
+  Tabs::onAnimationFinished(tag, reason);
+}
+
+void ScrollableTabs::onPresentationChanged(
+    const PresentationChange& change) {
+  Tabs::onPresentationChanged(change);
+  if (change.state == PresentationState::kPresented &&
+      !change.detached_since_delivery) {
+    return;
+  }
+  stopScrollAndClamp();
 }
 
 scroll_motion::Geometry ScrollableTabs::motionGeometry() const {
@@ -986,32 +1001,46 @@ XDim ScrollableTabs::selectedTabCenterInStrip() const {
 
 void ScrollableTabs::revealSelectedTab(bool animate) {
   if (selectedIndex() < 0 || width() <= 0 || strip_width_ <= width()) {
+    cancelScrollMotion();
     applyScrollResult(
         scroll_motion_.scrollTo(motionGeometry(), scroll_x_, 0, 0, 0));
     return;
   }
   XDim center = selectedTabCenterInStrip();
   XDim target = width() / 2 - center;
+  cancelScrollMotion();
   scroll_motion::Result result =
       animate
           ? scroll_motion_.animateTo(motionGeometry(), scroll_x_, 0, target, 0,
-                                     roo_time::Uptime::Now().inMillis())
+                                     0)
           : scroll_motion_.scrollTo(motionGeometry(), scroll_x_, 0, target, 0);
   applyScrollResult(result);
-  if (result.needs_tick) scheduleScrollUpdate();
+  if (result.needs_tick) startScrollMotion();
 }
 
-void ScrollableTabs::cancelPendingScrollUpdate() {
-  if (scroll_notification_id_ > 0) {
-    scheduler_.cancel(scroll_notification_id_);
-    scroll_notification_id_ = -1;
+void ScrollableTabs::cancelScrollMotion() {
+  context().animations().cancel(*this, kScroll);
+}
+
+void ScrollableTabs::startScrollMotion() {
+  cancelScrollMotion();
+  if (!scroll_motion_.isAnimating()) return;
+  if (presentationState() != PresentationState::kPresented) {
+    stopScrollAndClamp();
+    return;
+  }
+  AnimationSpec spec = AnimationSpec::customTime();
+  spec.minimum_interval = roo_time::Millis(kScrollFrameMs);
+  if (context().animations().start(*this, kScroll, spec) !=
+      AnimationStatus::kOk) {
+    stopScrollAndClamp();
   }
 }
 
-void ScrollableTabs::scheduleScrollUpdate() {
-  cancelPendingScrollUpdate();
-  scroll_notification_id_ =
-      scheduler_.scheduleAfter(roo_time::Millis(kIndicatorFrameMs), *this);
+void ScrollableTabs::stopScrollAndClamp() {
+  cancelScrollMotion();
+  applyScrollResult(scroll_motion_.scrollTo(motionGeometry(), scroll_x_, 0,
+                                            scroll_x_, 0));
 }
 
 }  // namespace material3
