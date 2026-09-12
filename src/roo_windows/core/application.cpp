@@ -257,6 +257,10 @@ class ApplicationTextInput {
     if (active_editor_ == &editor) active_editor_ = nullptr;
   }
 
+  bool isActiveEditor(const TextFieldEditor& editor) const {
+    return active_editor_ == &editor;
+  }
+
   bool commitRune(uint32_t rune) {
     checkUiThread();
     if (active_editor_ == nullptr || !isUnicodeScalar(rune) ||
@@ -552,6 +556,27 @@ void Application::setTextEditorKeyboardVisibility(bool visible) {
   } else {
     keyboard_.hide();
   }
+  if (state_ == State::kStopping) return;
+  // Recompute both outgoing and incoming owners during input transfer.
+  for (const auto& task : tasks_) task->panel_.requestLayout();
+}
+
+Rect Application::textEditorViewport(const Task& task) const {
+  Rect viewport = task.panel_.bounds();
+  if (!keyboard_.getContents().isVisible() ||
+      !text_input_->isActiveEditor(task.textFieldEditor()))
+    return viewport;
+  // Transient surfaces have their own host layout; do not move the task's
+  // underlying content for an editor outside that content tree.
+  const Widget* ancestor = task.textFieldEditor().editedWidget();
+  while (ancestor != nullptr && ancestor != &task.panel_)
+    ancestor = ancestor->parent();
+  if (ancestor == nullptr) return viewport;
+  // The keyboard task has fixed root-local placement even before first layout.
+  const Widget* keyboard_panel = keyboard_.getContents().parent();
+  if (keyboard_panel == nullptr) return viewport;
+  int top = keyboard_panel->offsetTop() - task.panel_.offsetTop();
+  return Rect::Intersect(viewport, Rect(0, 0, viewport.xMax(), top - 1));
 }
 
 #if !defined(ROO_THREADS_SINGLETHREADED)

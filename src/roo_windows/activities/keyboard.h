@@ -38,6 +38,9 @@ class Keyboard {
   /// Returns the underlying `KeyboardWidget` that renders the layout.
   Widget& getContents();
 
+  /// Returns the keyboard widget without changing its state.
+  const Widget& getContents() const;
+
   /// Routes this keyboard's semantic input to `destination`, replacing any
   /// previous destination. The caller must use a UI thread shared with
   /// `destination` after it has started.

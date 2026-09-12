@@ -123,6 +123,11 @@ class TextFieldEditor {
   /// True iff this editor is currently bound to `target`.
   bool isEdited(const internal::TextEditTarget* target) const;
 
+  /// Returns the bound target widget, or nullptr outside an edit session.
+  Widget* editedWidget() const {
+    return target_ == nullptr ? nullptr : &target_->editWidget();
+  }
+
   bool lastGlyphRecentlyEntered() const { return last_glyph_recently_entered_; }
 
   const std::vector<roo_display::GlyphMetrics>& glyphs() const {

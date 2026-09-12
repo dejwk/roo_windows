@@ -703,6 +703,8 @@ Keyboard::Keyboard(ApplicationContext& context, const KeyboardSpec* spec)
 
 Widget& Keyboard::getContents() { return *contents_; }
 
+const Widget& Keyboard::getContents() const { return *contents_; }
+
 void Keyboard::show() {
   task_->setVisible(true);
   contents()->setPage(0);

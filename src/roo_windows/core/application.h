@@ -162,6 +162,7 @@ class Application {
  private:
   friend struct test::ApplicationWorkTestAccess;
   friend class Widget;
+  friend class TaskPanel;
   friend class ApplicationInputRouter;
   friend class ApplicationTextInput;
   friend class AnimationRegistry;
@@ -201,6 +202,9 @@ class Application {
   void activateTextInput(TextFieldEditor& editor);
   void deactivateTextInput(TextFieldEditor& editor);
   void setTextEditorKeyboardVisibility(bool visible);
+
+  // Unobscured content area in the owning task panel's local coordinates.
+  Rect textEditorViewport(const Task& task) const;
 
   /// This is a best-effort fail-fast attempt for direct application UI entry
   /// points.
