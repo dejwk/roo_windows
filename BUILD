@@ -995,3 +995,11 @@ cc_test(
             "//examples/material3/settings_shell:settings_shell_ui",
             "@roo_testing//:arduino_gtest_main"],
 )
+
+cc_test(
+    name = "material3_progress_indicator_test",
+    srcs = ["test/material3_progress_indicator_test.cpp", "test/roo_windows_render_test_support.h"],
+    data = glob(["test/goldens/progress/*.ppm"], allow_empty = True),
+    linkstatic = 1,
+    deps = [":roo_windows", ":test_golden_utils", "@roo_testing//:arduino_gtest_main"],
+)
