@@ -1,4 +1,5 @@
-// Material 3 snackbar queue, replacement, and obstacle-placement catalog.
+// Material 3 snackbar queue, shared-track motion, semantic timeout,
+// replacement, and obstacle-placement catalog.
 
 #ifdef ROO_TESTING
 #include "roo_testing/devices/display/ili9341/ili9341spi.h"

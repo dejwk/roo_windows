@@ -250,7 +250,8 @@ void SimpleScrollablePanel::execute(roo_scheduler::EventID id) {
 }
 
 void SimpleScrollablePanel::cancelMotion() {
-  context().animations().cancel(*this, kMotion);
+  ApplicationContext* live_context = tryContext();
+  if (live_context != nullptr) live_context->animations().cancel(*this, kMotion);
 }
 
 void SimpleScrollablePanel::startMotionTrack() {

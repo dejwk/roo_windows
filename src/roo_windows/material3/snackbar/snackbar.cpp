@@ -1,11 +1,10 @@
 #include "roo_windows/material3/snackbar/snackbar.h"
 
-#include <Arduino.h>
-
 #include <algorithm>
 
 #include "roo_display/ui/text_label.h"
 #include "roo_logging.h"
+#include "roo_windows/core/application.h"
 #include "roo_windows/core/main_window.h"
 #include "roo_windows/core/task.h"
 #include "roo_windows/material3/typography.h"
@@ -18,13 +17,6 @@ constexpr int16_t kVerticalPadding = Scaled(12);
 constexpr int16_t kControlHeight = Scaled(48);
 constexpr uint32_t kEnterMs = 150;
 constexpr uint32_t kExitMs = 100;
-
-bool VisibleAncestors(const Widget& widget) {
-  for (const Widget* w = &widget; w != nullptr; w = w->parent()) {
-    if (!w->isVisible()) return false;
-  }
-  return true;
-}
 }  // namespace
 
 SnackbarRequest::~SnackbarRequest() {
@@ -252,43 +244,136 @@ SnackbarShowResult SnackbarPresenter::replaceCurrent(SnackbarRequest& request) {
   return SnackbarShowResult::kShown;
 }
 
-void SnackbarPresenter::cancelTimer() {
-  if (timer_ > 0) host_.context().scheduler().cancel(timer_);
-  timer_ = -1;
+void SnackbarPresenter::cancelMotion() {
+  Application* app = host_.getApplication();
+  if (app != nullptr) {
+    app->context().animations().cancel(host_, SnackbarHost::kMotion);
+  }
 }
 
-void SnackbarPresenter::schedule() {
-  cancelTimer();
-  if (head_ != nullptr && !draining_ &&
-      (phase_ != Phase::kVisible || timeout_ms_ != 0))
-    timer_ =
-        host_.context().scheduler().scheduleAfter(roo_time::Millis(20), *this);
+void SnackbarPresenter::consumeReadableTime(roo_time::Uptime now) {
+  if (timeout_id_ < 0 || !timeout_enabled_) return;
+  roo_time::Duration elapsed = now - timeout_anchor_;
+  if (elapsed <= roo_time::Duration()) return;
+  if (elapsed >= timeout_remaining_) {
+    timeout_remaining_ = roo_time::Duration();
+  } else {
+    timeout_remaining_ -= elapsed;
+  }
+}
+
+void SnackbarPresenter::cancelTimeout(roo_time::Uptime now,
+                                      bool consume_elapsed) {
+  if (timeout_id_ < 0) return;
+  if (consume_elapsed) consumeReadableTime(now);
+  Application* app = host_.getApplication();
+  if (app != nullptr) app->context().scheduler().cancel(timeout_id_);
+  timeout_id_ = -1;
+}
+
+void SnackbarPresenter::armTimeout(roo_time::Uptime now) {
+  if (!timeout_enabled_ || timeout_id_ >= 0 || head_ == nullptr ||
+      phase_ != Phase::kVisible || readableTimePaused()) {
+    return;
+  }
+  Application* app = host_.getApplication();
+  if (app == nullptr) return;
+  timeout_anchor_ = now;
+  timeout_id_ = app->context().scheduler().scheduleAfter(
+      timeout_remaining_, *this);
+}
+
+bool SnackbarPresenter::motionPaused() const {
+  return host_.detaching_ ||
+         host_.presentationState() != PresentationState::kPresented ||
+         host_.target_.empty() || transient_active_;
+}
+
+bool SnackbarPresenter::readableTimePaused() const {
+  return motionPaused() || control_focused_;
+}
+
+void SnackbarPresenter::reconcile(roo_time::Uptime now) {
+  if (head_ == nullptr || draining_) {
+    cancelTimeout(now, false);
+    return;
+  }
+  Application* app = host_.getApplication();
+  if (app == nullptr) {
+    cancelTimeout(now, false);
+    return;
+  }
+  AnimationRegistry& animations = app->context().animations();
+  if (animations.contains(host_, SnackbarHost::kMotion)) {
+    if (motionPaused()) {
+      animations.pause(host_, SnackbarHost::kMotion);
+    } else {
+      animations.resume(host_, SnackbarHost::kMotion);
+    }
+  }
+  if (phase_ != Phase::kVisible || readableTimePaused()) {
+    cancelTimeout(now);
+  } else {
+    armTimeout(now);
+  }
+}
+
+bool SnackbarPresenter::startMotion(float from, float to,
+                                    roo_time::Duration duration) {
+  offset_ = from;
+  host_.placeSnackbar(false);
+  AnimationSpec spec = AnimationSpec::value(from, to, duration);
+  spec.minimum_interval = roo_time::Millis(20);
+  spec.easing.kind = EasingKind::kLinear;
+  Application* app = host_.getApplication();
+  if (app == nullptr ||
+      app->context().animations().start(host_, SnackbarHost::kMotion, spec) !=
+      AnimationStatus::kOk) {
+    offset_ = to;
+    host_.placeSnackbar(false);
+    return false;
+  }
+  return true;
 }
 
 void SnackbarPresenter::start() {
-  cancelTimer();
-  elapsed_ms_ = phase_ms_ = 0;
-  last_ms_ = millis();
+  const roo_time::Uptime now = roo_time::Uptime::Now();
+  cancelMotion();
+  cancelTimeout(now, false);
   phase_ = animations_ ? Phase::kEntering : Phase::kVisible;
   SnackbarDuration duration = head_->duration_;
   if (duration == SnackbarDuration::kDefault)
     duration = head_->action_.empty() && !head_->show_dismiss_
                    ? SnackbarDuration::kShort
                    : SnackbarDuration::kPersistent;
-  timeout_ms_ = duration == SnackbarDuration::kShort  ? 4000
-                : duration == SnackbarDuration::kLong ? 10000
-                                                      : 0;
+  timeout_enabled_ = duration != SnackbarDuration::kPersistent;
+  timeout_remaining_ = duration == SnackbarDuration::kShort
+                           ? roo_time::Seconds(4)
+                       : duration == SnackbarDuration::kLong
+                           ? roo_time::Seconds(10)
+                           : roo_time::Duration();
   host_.widget_.setContent(head_->message_, head_->action_,
                            head_->show_dismiss_);
   host_.widget_.setVisibility(Visibility::kVisible);
   host_.placeSnackbar(true);
   host_.observeTransientActivity();
-  schedule();
+  if (animations_ &&
+      !startMotion(1.0f, 0.0f, roo_time::Millis(kEnterMs))) {
+    phase_ = Phase::kVisible;
+  } else if (!animations_) {
+    offset_ = 0.0f;
+    host_.placeSnackbar(false);
+  }
+  reconcile(now);
 }
 
 void SnackbarPresenter::finish(SnackbarDismissReason reason, bool notify) {
   if (head_ == nullptr) return;
-  cancelTimer();
+  cancelMotion();
+  cancelTimeout(roo_time::Uptime::Now(), false);
+  // Suppress readable-time rearming if hiding the old visual clears focus
+  // before the next request is configured.
+  phase_ = Phase::kExiting;
   SnackbarRequest* old = head_;
   head_ = old->next_;
   old->next_ = nullptr;
@@ -321,18 +406,22 @@ void SnackbarPresenter::dismissCurrent(SnackbarDismissReason reason) {
     finish(reason);
     return;
   }
+  cancelTimeout(roo_time::Uptime::Now());
   phase_ = Phase::kExiting;
-  phase_ms_ = 0;
-  last_ms_ = millis();
   exit_reason_ = reason;
-  schedule();
+  if (!startMotion(offset_, 1.0f, roo_time::Millis(kExitMs))) {
+    finish(reason);
+    return;
+  }
+  reconcile(roo_time::Uptime::Now());
 }
 
 void SnackbarPresenter::drain(SnackbarDismissReason reason) {
   if (draining_) return;
   std::shared_ptr<Lifetime> live = lifetime_;
   draining_ = true;
-  cancelTimer();
+  cancelMotion();
+  cancelTimeout(roo_time::Uptime::Now(), false);
   while (head_ != nullptr) {
     finish(reason);
     if (live->owner == nullptr) return;
@@ -351,67 +440,69 @@ void SnackbarPresenter::shutdown() {
 void SnackbarPresenter::setAnimationsEnabled(bool enabled) {
   animations_ = enabled;
   if (enabled || head_ == nullptr) return;
+  cancelMotion();
+  cancelTimeout(roo_time::Uptime::Now());
   if (phase_ == Phase::kExiting) {
     finish(exit_reason_);
     return;
   }
   phase_ = Phase::kVisible;
-  phase_ms_ = 0;
+  offset_ = 0.0f;
+  host_.placeSnackbar(false);
+  reconcile(roo_time::Uptime::Now());
+}
+
+void SnackbarPresenter::motionFrame(float value) {
+  if (head_ == nullptr || phase_ == Phase::kVisible) return;
+  offset_ = std::max(0.0f, std::min(1.0f, value));
   host_.placeSnackbar(false);
 }
 
-float SnackbarPresenter::offset() const {
-  if (phase_ == Phase::kEntering)
-    return 1.0f - std::min(1.0f, static_cast<float>(phase_ms_) / kEnterMs);
-  if (phase_ == Phase::kExiting)
-    return std::min(1.0f, static_cast<float>(phase_ms_) / kExitMs);
-  return 0;
-}
-
-void SnackbarPresenter::update(uint32_t now) {
-  const uint32_t delta = now - last_ms_;
-  last_ms_ = now;
+void SnackbarPresenter::motionFinished(AnimationFinishReason reason) {
+  (void)reason;
   if (head_ == nullptr) return;
-  bool paused = !VisibleAncestors(host_) || host_.target_.empty();
-  MainWindow* window = host_.getMainWindow();
-  if (window == nullptr) {
-    shutdown();
+  if (phase_ == Phase::kEntering) {
+    offset_ = 0.0f;
+    phase_ = Phase::kVisible;
+    host_.placeSnackbar(false);
+    reconcile(roo_time::Uptime::Now());
     return;
   }
-  paused |= transient_active_;
-  if (!paused) {
-    if (phase_ == Phase::kVisible) {
-      if (!control_focused_) elapsed_ms_ += delta;
-      if (timeout_ms_ != 0 && elapsed_ms_ >= timeout_ms_) {
-        dismissCurrent(SnackbarDismissReason::kTimeout);
-        return;
-      }
-    } else {
-      phase_ms_ += delta;
-      if (phase_ == Phase::kExiting && phase_ms_ >= kExitMs) {
-        finish(exit_reason_);
-        return;
-      }
-      if (phase_ == Phase::kEntering && phase_ms_ >= kEnterMs)
-        phase_ = Phase::kVisible;
-      host_.placeSnackbar(false);
-    }
+  if (phase_ == Phase::kExiting) {
+    offset_ = 1.0f;
+    host_.placeSnackbar(false);
+    finish(exit_reason_);  // Terminal: callback may destroy the host.
   }
-  schedule();
+}
+
+void SnackbarPresenter::presentationOrLayoutChanged() {
+  reconcile(roo_time::Uptime::Now());
 }
 
 void SnackbarPresenter::transientActivityChanged(bool active) {
   transient_active_ = active;
+  reconcile(roo_time::Uptime::Now());
 }
 
 void SnackbarPresenter::controlFocusChanged(bool focused) {
   control_focused_ = focused;
+  reconcile(roo_time::Uptime::Now());
 }
 
 void SnackbarPresenter::execute(roo_scheduler::ExecutionID id) {
-  if (id != timer_) return;
-  timer_ = -1;
-  update(millis());
+  if (id != timeout_id_) return;
+  const roo_time::Uptime now = roo_time::Uptime::Now();
+  consumeReadableTime(now);
+  timeout_id_ = -1;
+  if (head_ == nullptr || phase_ != Phase::kVisible ||
+      readableTimePaused()) {
+    return;
+  }
+  if (timeout_remaining_ > roo_time::Duration()) {
+    armTimeout(now);
+    return;
+  }
+  dismissCurrent(SnackbarDismissReason::kTimeout);
 }
 
 SnackbarHost::Visual::Visual(ApplicationContext& context,
@@ -429,6 +520,7 @@ void SnackbarHost::Visual::onControlFocusChanged(bool focused) {
 
 SnackbarHost::SnackbarHost(ApplicationContext& context)
     : LayoutScaffold(context), presenter_(*this), widget_(context, presenter_) {
+  context.presentations().observe(*this);
   attachChild(widget_);
   widget_.setVisibility(Visibility::kGone);
 }
@@ -454,6 +546,29 @@ void SnackbarHost::onTransientActivityChanged(bool active) {
   presenter_.transientActivityChanged(active);
 }
 
+void SnackbarHost::onAnimationFrame(AnimationTag tag,
+                                    const AnimationSample& sample) {
+  if (tag != kMotion) {
+    LayoutScaffold::onAnimationFrame(tag, sample);
+    return;
+  }
+  presenter_.motionFrame(sample.value);
+}
+
+void SnackbarHost::onAnimationFinished(AnimationTag tag,
+                                       AnimationFinishReason reason) {
+  if (tag != kMotion) {
+    LayoutScaffold::onAnimationFinished(tag, reason);
+    return;
+  }
+  presenter_.motionFinished(reason);
+}
+
+void SnackbarHost::onPresentationChanged(const PresentationChange& change) {
+  (void)change;
+  presenter_.presentationOrLayoutChanged();
+}
+
 void SnackbarHost::observeTransientActivity() {
   MainWindow* window = getMainWindow();
   if (window == nullptr) return;
@@ -476,12 +591,14 @@ bool SnackbarHost::setSnackbarAvoidance(const Rect* rectangles, size_t count) {
   for (size_t i = 0; i < count; ++i) avoidance_[i] = rectangles[i];
   avoidance_count_ = count;
   placeSnackbar(true);
+  presenter_.presentationOrLayoutChanged();
   return true;
 }
 
 void SnackbarHost::setSnackbarStartAligned(bool start) {
   start_aligned_ = start;
   placeSnackbar(true);
+  presenter_.presentationOrLayoutChanged();
 }
 
 int SnackbarHost::getChildrenCount() const {
@@ -499,6 +616,7 @@ Widget& SnackbarHost::getChild(int index) {
 void SnackbarHost::onLayout(bool changed, const Rect& rect) {
   LayoutScaffold::onLayout(changed, rect);
   placeSnackbar(true);
+  presenter_.presentationOrLayoutChanged();
 }
 
 void SnackbarHost::placeSnackbar(bool measure) {

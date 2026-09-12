@@ -122,14 +122,31 @@ the pause through ordinary focus eligibility cleanup. This intentionally avoids
 a general focus-listener service. Neither the activity nor focus hook invokes
 application callbacks or changes the widget hierarchy.
 
-A single presenter scheduler execution drives 150ms slide-in and 100ms slide-out
-transitions plus visible-duration accounting. The full visible budget excludes
-transition time. Geometry is timestamp-derived, not frame-count-derived.
-`setAnimationsEnabled(false)` snaps to final placement and disables transitions.
-Callbacks occur after exit; replacement, clear, cancellation and host teardown
-settle immediately. Scheduler work stops when idle or disconnected. Animation
-updates invalidate only old/new snackbar bounds (including existing shadow
-outsets); they never request full-host relayout every tick.
+One application animation-registry value track on `SnackbarHost` drives offset
+1→0 over 150ms for entry and the currently applied offset→1 over 100ms for
+exit. It uses linear interpolation at a 20ms minimum sample interval. Dismissal
+during entry therefore continues from the visible pose instead of jumping to
+the settled position. Host animation hooks forward samples and completion to
+the presenter; entry completion starts readable time, while exit completion
+finishes the request as its final action because that callback may destroy the
+host. Animation updates invalidate only old/new snackbar bounds, including
+existing shadow outsets, and never request full-host relayout per frame.
+
+Readable time uses one semantic scheduler deadline, not an animation frame
+driver. The presenter stores remaining duration and an `Uptime` anchor. It arms
+the full remaining 4s/10s only during an unpaused visible phase, subtracts
+elapsed eligible time once before every pause, and cancels the deadline until
+resume. Persistent requests schedule no deadline. Hidden, detached, empty-target,
+and shared-transient conditions pause motion and readable time; action or
+dismiss focus pauses readable time only. A deadline that becomes exhausted
+during lifecycle reconciliation is scheduled for later execution, so lifecycle
+hooks never deliver a request callback.
+
+`setAnimationsEnabled(false)` cancels the track and snaps to final placement;
+if exit is active it completes immediately. Replacement, clear, cancellation,
+host teardown, and animation disable cancel both the track and deadline before
+queue callbacks. Scheduler work stops while paused, idle, persistent, or
+disconnected. The full readable budget excludes transition time.
 
 ## RAM, allocation, and cost gates
 
@@ -158,9 +175,11 @@ integration evidence in the Phase 1 acceptance report; estimates are not results
    replacement, exactly-once completion, callback destruction/reentrancy,
    request/host/application teardown, outside hit pass-through and keyboard tests.
 3. Timing, placement and transitions: short/long/default/persistent behavior,
-   event-driven modal/focus pause observation, focused-control removal,
-   observer teardown, scheduler cancellation, obstacle/bar/safety geometry,
-   reduced motion, and bounded dirty/invalidation coverage.
+   one shared value track, one semantic deadline, event-driven modal/focus pause,
+   remaining-time resume, exit during entry, focused-control removal, observer
+   teardown, callback-driven host deletion, scheduler cancellation,
+   obstacle/bar/safety geometry, reduced motion, and bounded dirty/invalidation
+   coverage.
 4. Example and target evidence: short/persistent/queue/replacement/avoidance
    catalog, plus P1.11 settings navigation/menu/dialog/snackbar integration.
 

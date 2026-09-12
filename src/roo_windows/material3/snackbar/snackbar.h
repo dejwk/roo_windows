@@ -159,7 +159,7 @@ class SnackbarWidget : public Container {
   bool rtl_ = false;
 };
 
-/// Bounded intrusive FIFO, one timer and one live widget per host.
+/// Bounded intrusive FIFO, one semantic timeout and one live widget per host.
 class SnackbarPresenter : private roo_scheduler::Executable {
  public:
   /// Cancels all registrations and scheduled work before releasing state.
@@ -202,31 +202,39 @@ class SnackbarPresenter : private roo_scheduler::Executable {
   explicit SnackbarPresenter(SnackbarHost& host);
   void execute(roo_scheduler::ExecutionID id) override;
   void cancel(SnackbarRequest& request);
-  void cancelTimer();
-  void schedule();
+  void cancelMotion();
+  void cancelTimeout(roo_time::Uptime now, bool consume_elapsed = true);
+  void consumeReadableTime(roo_time::Uptime now);
+  void armTimeout(roo_time::Uptime now);
+  void reconcile(roo_time::Uptime now);
+  bool motionPaused() const;
+  bool readableTimePaused() const;
+  bool startMotion(float from, float to, roo_time::Duration duration);
   void start();
   void finish(SnackbarDismissReason reason, bool notify = true);
   void shutdown();
   void drain(SnackbarDismissReason reason);
   bool available() const;
-  void update(uint32_t now);
-  float offset() const;
+  float offset() const { return offset_; }
+  void motionFrame(float value);
+  void motionFinished(AnimationFinishReason reason);
+  void presentationOrLayoutChanged();
   void transientActivityChanged(bool active);
   void controlFocusChanged(bool focused);
 
   SnackbarHost& host_;
   std::shared_ptr<Lifetime> lifetime_;
   SnackbarRequest* head_ = nullptr;
-  roo_scheduler::ExecutionID timer_ = -1;
-  uint32_t last_ms_ = 0;
-  uint32_t elapsed_ms_ = 0;
-  uint32_t phase_ms_ = 0;
-  uint32_t timeout_ms_ = 0;
+  roo_scheduler::ExecutionID timeout_id_ = -1;
+  roo_time::Uptime timeout_anchor_;
+  roo_time::Duration timeout_remaining_;
+  float offset_ = 0.0f;
   enum class Phase : uint8_t { kEntering, kVisible, kExiting };
   Phase phase_ = Phase::kVisible;
   SnackbarDismissReason exit_reason_ = SnackbarDismissReason::kProgrammatic;
   bool animations_ = true;
   bool draining_ = false;
+  bool timeout_enabled_ = false;
   bool transient_active_ = false;
   bool control_focused_ = false;
 };
@@ -261,6 +269,11 @@ class SnackbarHost : public LayoutScaffold {
  protected:
   void onLayout(bool changed, const Rect& rect) override;
   void setParent(Container* parent, bool is_owned) override;
+  void onAnimationFrame(AnimationTag tag,
+                        const AnimationSample& sample) override;
+  void onAnimationFinished(AnimationTag tag,
+                           AnimationFinishReason reason) override;
+  void onPresentationChanged(const PresentationChange& change) override;
   void onTransientActivityChanged(bool active) override;
   int getChildrenCount() const override;
   const Widget& getChild(int index) const override;
@@ -268,6 +281,7 @@ class SnackbarHost : public LayoutScaffold {
 
  private:
   friend class SnackbarPresenter;
+  friend class test::SnackbarTestAccess;
   class Visual final : public SnackbarWidget {
    public:
     Visual(ApplicationContext& context, SnackbarPresenter& presenter);
@@ -283,6 +297,7 @@ class SnackbarHost : public LayoutScaffold {
   void placeSnackbar(bool measure);
   void observeTransientActivity();
   void unobserveTransientActivity();
+  static constexpr AnimationTag kMotion = 0;
   SnackbarPresenter presenter_;
   Visual widget_;
   Rect target_{0, 0, -1, -1};
