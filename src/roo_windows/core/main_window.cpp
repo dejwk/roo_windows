@@ -41,7 +41,8 @@ MainWindow::MainWindow(Application& app, const roo_display::Box& bounds)
       redraw_bounds_(bounds),
       scrim_(app.context()),
       host_layer_(app.context()),
-      transient_surface_host_(*this) {
+      transient_surface_host_(*this),
+      transient_presentation_slot_(*this) {
   parent_bounds_ = Rect(bounds);
   invalidateDescending();
   const ApplicationContext& context = app.context();
@@ -76,6 +77,10 @@ MainWindow::MainWindow(Application& app, const roo_display::Box& bounds)
   // background_fill_buffer_.setPalette(palette, color_set.size());
   // background_fill_buffer_.setPrefilled(
   //     framework.color.resolve(FrameworkColorRole::kCanvas));
+}
+
+void MainWindow::transientActivityObserverSubtreeDetaching(Widget& subtree) {
+  transient_presentation_slot_.activityObserverSubtreeDetaching(subtree);
 }
 
 MainWindow::~MainWindow() {

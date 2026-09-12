@@ -122,6 +122,9 @@ class SnackbarWidget : public Container {
   /// Receives explicit Close activation.
   virtual void onDismiss() {}
 
+  /// Reports focus changes from either internal snackbar control.
+  virtual void onControlFocusChanged(bool focused) { (void)focused; }
+
   Dimensions onMeasure(WidthSpec width, HeightSpec height) override;
   void onLayout(bool changed, const Rect& rect) override;
   int getChildrenCount() const override { return 3; }
@@ -137,6 +140,9 @@ class SnackbarWidget : public Container {
     Color background() const override;
     void paint(PaintContext& ctx) const override;
     void onClicked() override;
+
+   protected:
+    void onFocusChanged(bool focused) override;
 
    private:
     SnackbarWidget& owner_;
@@ -205,6 +211,8 @@ class SnackbarPresenter : private roo_scheduler::Executable {
   bool available() const;
   void update(uint32_t now);
   float offset() const;
+  void transientActivityChanged(bool active);
+  void controlFocusChanged(bool focused);
 
   SnackbarHost& host_;
   std::shared_ptr<Lifetime> lifetime_;
@@ -219,6 +227,8 @@ class SnackbarPresenter : private roo_scheduler::Executable {
   SnackbarDismissReason exit_reason_ = SnackbarDismissReason::kProgrammatic;
   bool animations_ = true;
   bool draining_ = false;
+  bool transient_active_ = false;
+  bool control_focused_ = false;
 };
 
 /// Opt-in scaffold with one snackbar lane; use as a task destination root.
@@ -251,6 +261,7 @@ class SnackbarHost : public LayoutScaffold {
  protected:
   void onLayout(bool changed, const Rect& rect) override;
   void setParent(Container* parent, bool is_owned) override;
+  void onTransientActivityChanged(bool active) override;
   int getChildrenCount() const override;
   const Widget& getChild(int index) const override;
   Widget& getChild(int index) override;
@@ -264,11 +275,14 @@ class SnackbarHost : public LayoutScaffold {
    protected:
     void onAction() override;
     void onDismiss() override;
+    void onControlFocusChanged(bool focused) override;
 
    private:
     SnackbarPresenter& presenter_;
   };
   void placeSnackbar(bool measure);
+  void observeTransientActivity();
+  void unobserveTransientActivity();
   SnackbarPresenter presenter_;
   Visual widget_;
   Rect target_{0, 0, -1, -1};

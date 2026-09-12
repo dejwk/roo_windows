@@ -1,13 +1,16 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
 
+#include "roo_collections_flat_small_hash_map.h"
 #include "roo_windows/core/back_request.h"
 
 namespace roo_windows {
 
 class MainWindow;
 class DisplayWindow;
+class Widget;
 namespace internal {
 class TransientSurfaceHost;
 }
@@ -125,6 +128,7 @@ class TransientPresentationSlot {
   ~TransientPresentationSlot();
 
   TransientPresentationSlot() = default;
+  explicit TransientPresentationSlot(MainWindow& window) : window_(&window) {}
   TransientPresentationSlot(const TransientPresentationSlot&) = delete;
   TransientPresentationSlot& operator=(const TransientPresentationSlot&) =
       delete;
@@ -147,11 +151,20 @@ class TransientPresentationSlot {
   /// Returns whether a registration currently occupies this slot.
   bool hasActivePresentation() const { return active_ != nullptr; }
 
+  /// Observes changes to `hasActivePresentation()` for an attached widget.
+  /// The hook is delivered during application dispatch, before animations.
+  /// It must not invoke application callbacks or mutate the widget hierarchy.
+  bool observeActivity(Widget& widget);
+
+  /// Stops activity observation. This operation is idempotent.
+  void unobserveActivity(Widget& widget);
+
  private:
   friend class MainWindow;
   friend class DisplayWindow;
   friend class TransientPresentationRegistration;
   friend class internal::TransientSurfaceHost;
+  friend class Container;
 
   /// Returns whether this slot permanently rejects new presentations.
   bool isAdmissionClosed() const { return admission_closed_; }
@@ -170,6 +183,10 @@ class TransientPresentationSlot {
       TransientPresentationPolicy policy, internal::TransientSurfaceHost& host);
 
   void shutdown(PresentationFinishReason reason);
+  void noteActivityChanged();
+  void deliverPendingActivityChanges();
+  void activityObserverSubtreeDetaching(Widget& subtree);
+  void clearActivityObservers();
 
   void finish(TransientPresentationRegistration& registration,
               PresentationFinishReason reason);
@@ -178,11 +195,21 @@ class TransientPresentationSlot {
   bool finishDeferredIfReady();
   void cancel(TransientPresentationRegistration& registration);
 
+  struct ActivityObserver {
+    bool last_active = false;
+  };
+
+  MainWindow* window_ = nullptr;
   TransientPresentationRegistration* active_ = nullptr;
   internal::TransientSurfaceHost* active_host_ = nullptr;
+  roo_collections::FlatSmallHashMap<Widget*, ActivityObserver>
+      activity_observers_;
+  std::vector<Widget*> activity_delivery_;
   bool clearing_ = false;
   bool admission_closed_ = false;
   bool admission_guard_ = false;
+  bool activity_pending_ = false;
+  bool delivering_activity_ = false;
 };
 
 }  // namespace roo_windows

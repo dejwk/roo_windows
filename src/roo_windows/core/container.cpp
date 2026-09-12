@@ -55,6 +55,7 @@ void Container::detachChild(Widget* child) {
       live_context->presentations().noteSubtreeDetach(*child);
       window->gestureTargetSubtreeDetaching(*child);
       window->presentationAnchorSubtreeDetaching(*child);
+      window->transientActivityObserverSubtreeDetaching(*child);
     }
     if (Task* task = child->getTask(); task != nullptr) {
       task->onSubtreeDetaching(*child);

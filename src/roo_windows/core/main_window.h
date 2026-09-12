@@ -160,6 +160,9 @@ class MainWindow : public Container {
   /// Removes pins before an anchor subtree loses its parent chain.
   void presentationAnchorSubtreeDetaching(Widget& subtree);
 
+  /// Removes transient-activity observers before a subtree loses parent links.
+  void transientActivityObserverSubtreeDetaching(Widget& subtree);
+
   /// Detects visibility and geometry changes before choosing the redraw clip.
   void preparePresentationPinsForPaint();
 

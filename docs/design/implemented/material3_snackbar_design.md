@@ -108,6 +108,20 @@ Short is 4 seconds; long is 10 seconds; persistent has no expiry. Timed messages
 pause while a shared transient is active, the host is hidden, or a snackbar
 control has focus. This preserves actionable reading time without stealing focus.
 
+The host observes shared transient activity only while it owns a current
+request. It reads the slot's current value when subscribing, then receives
+coalesced false-to-true and true-to-false changes before animation dispatch.
+Queue exhaustion, finishing the final request, detachment, and destruction all
+unsubscribe. Reattachment subscribes again when a request becomes current.
+These notifications report slot occupancy only; they do not imply modality.
+
+The action and dismiss controls are internal `Button` subclasses. Their focus
+hooks update the presenter's readable-time pause state immediately, then invoke
+the base button hook. Hiding or removing a focused snackbar therefore clears
+the pause through ordinary focus eligibility cleanup. This intentionally avoids
+a general focus-listener service. Neither the activity nor focus hook invokes
+application callbacks or changes the widget hierarchy.
+
 A single presenter scheduler execution drives 150ms slide-in and 100ms slide-out
 transitions plus visible-duration accounting. The full visible budget excludes
 transition time. Geometry is timestamp-derived, not frame-count-derived.
@@ -144,8 +158,9 @@ integration evidence in the Phase 1 acceptance report; estimates are not results
    replacement, exactly-once completion, callback destruction/reentrancy,
    request/host/application teardown, outside hit pass-through and keyboard tests.
 3. Timing, placement and transitions: short/long/default/persistent behavior,
-   modal/focus/visibility pause, scheduler cancellation, obstacle/bar/safety
-   geometry, reduced motion, and bounded dirty/invalidation coverage.
+   event-driven modal/focus pause observation, focused-control removal,
+   observer teardown, scheduler cancellation, obstacle/bar/safety geometry,
+   reduced motion, and bounded dirty/invalidation coverage.
 4. Example and target evidence: short/persistent/queue/replacement/avoidance
    catalog, plus P1.11 settings navigation/menu/dialog/snackbar integration.
 

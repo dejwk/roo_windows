@@ -23,7 +23,8 @@ class TestPresenter final : public TransientPresentationRegistration {
   PresentationFinishReason detach_reason = PresentationFinishReason::kAction;
   PresentationFinishReason completion_reason =
       PresentationFinishReason::kAction;
-  PresentationState state_seen_by_completion = PresentationState::kVisible;
+  TransientPresentationState state_seen_by_completion =
+      TransientPresentationState::kVisible;
   bool slot_empty_seen_by_completion = false;
 
  protected:
@@ -60,12 +61,13 @@ TEST(TransientPresentationLifetime, ExplicitFinishIsIdempotent) {
   presenter.finish(PresentationFinishReason::kCancel);
 
   EXPECT_FALSE(slot.hasActivePresentation());
-  EXPECT_EQ(PresentationState::kIdle, presenter.state());
+  EXPECT_EQ(TransientPresentationState::kIdle, presenter.state());
   EXPECT_EQ(1, presenter.detach_count);
   EXPECT_EQ(PresentationFinishReason::kAction, presenter.detach_reason);
   EXPECT_EQ(1, presenter.completion_count);
   EXPECT_EQ(PresentationFinishReason::kAction, presenter.completion_reason);
-  EXPECT_EQ(PresentationState::kIdle, presenter.state_seen_by_completion);
+  EXPECT_EQ(TransientPresentationState::kIdle,
+            presenter.state_seen_by_completion);
 }
 
 // Verifies an occupied slot rejects an unrelated root presentation.
@@ -94,7 +96,8 @@ TEST(TransientPresentationLifetime, ReplaceDetectsReentrantCompletion) {
 
   EXPECT_EQ(1, current.detach_count);
   EXPECT_EQ(PresentationFinishReason::kReplacement, current.detach_reason);
-  EXPECT_EQ(PresentationState::kIdle, current.state_seen_by_completion);
+  EXPECT_EQ(TransientPresentationState::kIdle,
+            current.state_seen_by_completion);
   EXPECT_TRUE(current.slot_empty_seen_by_completion);
   EXPECT_TRUE(reopened.isActive());
   EXPECT_FALSE(requested.isActive());
@@ -135,7 +138,7 @@ TEST(TransientPresentationLifetime, HostDestructionFinishesPresenter) {
     EXPECT_EQ(PresentationStartResult::kStarted, slot->show(presenter));
   }
 
-  EXPECT_EQ(PresentationState::kIdle, presenter.state());
+  EXPECT_EQ(TransientPresentationState::kIdle, presenter.state());
   EXPECT_EQ(1, presenter.detach_count);
   EXPECT_EQ(PresentationFinishReason::kHostDestroyed, presenter.detach_reason);
   EXPECT_EQ(1, presenter.completion_count);

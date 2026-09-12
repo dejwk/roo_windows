@@ -50,6 +50,9 @@ Widget::~Widget() {
   if (ApplicationContext* live_context = tryContext();
       live_context != nullptr) {
     live_context->animations().clearTarget(*this);
+    if (MainWindow* window = getMainWindow(); window != nullptr) {
+      window->transient_presentation_slot().unobserveActivity(*this);
+    }
   }
   if (tryContext() != nullptr) {
     focusManager().onWidgetDestroying(*this);

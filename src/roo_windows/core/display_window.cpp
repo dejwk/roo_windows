@@ -96,6 +96,7 @@ void DisplayWindow::cancelGestureTargetsInSubtree(Widget& subtree) {
 
 bool DisplayWindow::refresh(roo_time::Uptime deadline) {
   root_.app().context().presentations().deliverPendingChanges();
+  root_.transient_presentation_slot().deliverPendingActivityChanges();
   // Deferred transient completion runs on a fresh framework entry, after the
   // prior completed refresh settled click delivery. If completion destroys
   // this window, returning immediately avoids subsequent member access.

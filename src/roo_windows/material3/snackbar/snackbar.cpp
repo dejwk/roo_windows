@@ -68,6 +68,11 @@ void SnackbarWidget::Control::onClicked() {
     owner_.onAction();
 }
 
+void SnackbarWidget::Control::onFocusChanged(bool focused) {
+  owner_.onControlFocusChanged(focused);
+  Button::onFocusChanged(focused);
+}
+
 SnackbarWidget::SnackbarWidget(ApplicationContext& context)
     : Container(context),
       message_(context, "", text_style_body_medium()),
@@ -277,6 +282,7 @@ void SnackbarPresenter::start() {
                            head_->show_dismiss_);
   host_.widget_.setVisibility(Visibility::kVisible);
   host_.placeSnackbar(true);
+  host_.observeTransientActivity();
   schedule();
 }
 
@@ -289,7 +295,11 @@ void SnackbarPresenter::finish(SnackbarDismissReason reason, bool notify) {
   old->presenter_ = nullptr;
   host_.widget_.setVisibility(Visibility::kGone);
   host_.widget_.setContent("", {}, false);
-  if (head_ != nullptr && !draining_) start();
+  if (head_ != nullptr && !draining_) {
+    start();
+  } else {
+    host_.unobserveTransientActivity();
+  }
   if (notify) old->onFinished(reason);  // Terminal: callback may destroy host.
 }
 
@@ -335,6 +345,7 @@ void SnackbarPresenter::clear() { drain(SnackbarDismissReason::kCleared); }
 void SnackbarPresenter::shutdown() {
   draining_ = false;
   drain(SnackbarDismissReason::kHostUnavailable);
+  host_.unobserveTransientActivity();
 }
 
 void SnackbarPresenter::setAnimationsEnabled(bool enabled) {
@@ -367,13 +378,10 @@ void SnackbarPresenter::update(uint32_t now) {
     shutdown();
     return;
   }
-  paused |= window->transient_presentation_slot().hasActivePresentation();
+  paused |= transient_active_;
   if (!paused) {
     if (phase_ == Phase::kVisible) {
-      const Widget* focused = host_.getTask()->focus().focused();
-      if (focused != &host_.widget_.actionButton() &&
-          focused != &host_.widget_.dismissButton())
-        elapsed_ms_ += delta;
+      if (!control_focused_) elapsed_ms_ += delta;
       if (timeout_ms_ != 0 && elapsed_ms_ >= timeout_ms_) {
         dismissCurrent(SnackbarDismissReason::kTimeout);
         return;
@@ -392,6 +400,14 @@ void SnackbarPresenter::update(uint32_t now) {
   schedule();
 }
 
+void SnackbarPresenter::transientActivityChanged(bool active) {
+  transient_active_ = active;
+}
+
+void SnackbarPresenter::controlFocusChanged(bool focused) {
+  control_focused_ = focused;
+}
+
 void SnackbarPresenter::execute(roo_scheduler::ExecutionID id) {
   if (id != timer_) return;
   timer_ = -1;
@@ -407,6 +423,9 @@ void SnackbarHost::Visual::onAction() {
 void SnackbarHost::Visual::onDismiss() {
   presenter_.dismissCurrent(SnackbarDismissReason::kDismiss);
 }
+void SnackbarHost::Visual::onControlFocusChanged(bool focused) {
+  presenter_.controlFocusChanged(focused);
+}
 
 SnackbarHost::SnackbarHost(ApplicationContext& context)
     : LayoutScaffold(context), presenter_(*this), widget_(context, presenter_) {
@@ -416,6 +435,7 @@ SnackbarHost::SnackbarHost(ApplicationContext& context)
 
 SnackbarHost::~SnackbarHost() {
   detaching_ = true;
+  unobserveTransientActivity();
   presenter_.shutdown();
   detachChild(&widget_);
 }
@@ -423,10 +443,32 @@ SnackbarHost::~SnackbarHost() {
 void SnackbarHost::setParent(Container* parent, bool is_owned) {
   if (parent == nullptr) {
     detaching_ = true;
+    unobserveTransientActivity();
     presenter_.shutdown();
   }
   LayoutScaffold::setParent(parent, is_owned);
   detaching_ = parent == nullptr;
+}
+
+void SnackbarHost::onTransientActivityChanged(bool active) {
+  presenter_.transientActivityChanged(active);
+}
+
+void SnackbarHost::observeTransientActivity() {
+  MainWindow* window = getMainWindow();
+  if (window == nullptr) return;
+  TransientPresentationSlot& slot =
+      window->transient_presentation_slot();
+  presenter_.transientActivityChanged(slot.hasActivePresentation());
+  slot.observeActivity(*this);
+}
+
+void SnackbarHost::unobserveTransientActivity() {
+  MainWindow* window = getMainWindow();
+  if (window != nullptr) {
+    window->transient_presentation_slot().unobserveActivity(*this);
+  }
+  presenter_.transientActivityChanged(false);
 }
 
 bool SnackbarHost::setSnackbarAvoidance(const Rect* rectangles, size_t count) {

@@ -21,6 +21,7 @@ namespace roo_windows {
 class ApplicationInputRouter;
 class ApplicationTextInput;
 class AnimationRegistry;
+class TransientPresentationSlot;
 
 /// Top-level coordinator that owns the event loop, display, input pipeline,
 /// and active display-local tasks.
@@ -162,6 +163,7 @@ class Application {
   friend class KeySource;
   friend class TextInputEmitter;
   friend class TextFieldEditor;
+  friend class TransientPresentationSlot;
   friend class TickerGuard;
 
   enum class State : uint8_t {

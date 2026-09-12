@@ -361,14 +361,14 @@ TEST_F(HostTest, ActionCloseWaitsForImmediateClicksForcedFinalFrame) {
   action.onSingleTapUp(3, 3);
 
   EXPECT_EQ(1, action.click_count);
-  EXPECT_EQ(PresentationState::kFinishing, registration.state());
+  EXPECT_EQ(TransientPresentationState::kFinishing, registration.state());
   EXPECT_EQ(0, registration.detach_count);
   EXPECT_NE(nullptr, root.parent());
   ASSERT_EQ(&action, app_.root().click_animation().target());
   EXPECT_FLOAT_EQ(1.0f, action.getClickAnimation()->progress());
 
   ASSERT_TRUE(app_.refresh());
-  EXPECT_EQ(PresentationState::kFinishing, registration.state());
+  EXPECT_EQ(TransientPresentationState::kFinishing, registration.state());
   EXPECT_EQ(0, registration.detach_count);
   EXPECT_FALSE(app_.root().click_animation().isBusy());
 
@@ -397,7 +397,7 @@ TEST_F(HostTest, ConfirmedClickIsDeliveredBeforeDeferredExternalClose) {
   registration.finish(PresentationFinishReason::kCancel);
 
   EXPECT_EQ(0, action.click_count);
-  EXPECT_EQ(PresentationState::kFinishing, registration.state());
+  EXPECT_EQ(TransientPresentationState::kFinishing, registration.state());
   EXPECT_EQ(BackResult::kHandled, owner_.requestBack(BackSource::kBackKey));
   ASSERT_NE(nullptr, action.getClickAnimation());
   EXPECT_FLOAT_EQ(1.0f, action.getClickAnimation()->progress());
@@ -405,7 +405,7 @@ TEST_F(HostTest, ConfirmedClickIsDeliveredBeforeDeferredExternalClose) {
   ASSERT_TRUE(app_.refresh());
   EXPECT_EQ(1, action.click_count);
   EXPECT_EQ(0, registration.detach_count);
-  EXPECT_EQ(PresentationState::kFinishing, registration.state());
+  EXPECT_EQ(TransientPresentationState::kFinishing, registration.state());
 
   ASSERT_TRUE(app_.refresh());
   EXPECT_FALSE(registration.isActive());
@@ -429,7 +429,7 @@ TEST_F(HostTest, UnconfirmedClickGetsFinalFrameWithoutSemanticDelivery) {
   action.onShowPress(3, 3);
   registration.finish(PresentationFinishReason::kOutsideInteraction);
 
-  EXPECT_EQ(PresentationState::kFinishing, registration.state());
+  EXPECT_EQ(TransientPresentationState::kFinishing, registration.state());
   ASSERT_NE(nullptr, action.getClickAnimation());
   EXPECT_FLOAT_EQ(1.0f, action.getClickAnimation()->progress());
 

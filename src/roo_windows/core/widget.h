@@ -49,6 +49,7 @@ class FocusManager;
 class Task;
 class Application;
 class Widget;
+class TransientPresentationSlot;
 
 namespace internal {
 class TransientSurfaceHost;
@@ -677,6 +678,9 @@ class Widget {
   /// Reports removal after a finite animation's terminal sample was applied.
   virtual void onAnimationFinished(AnimationTag, AnimationFinishReason) {}
 
+  /// Reports whether this window has an active transient presentation.
+  virtual void onTransientActivityChanged(bool active) { (void)active; }
+
   void notifyParentInvalidatedRegion(const Rect& rect);
 
   // Called after any widget-state flag mutation. Subclasses may use this to
@@ -824,6 +828,7 @@ class Widget {
  private:
   friend class AnimationRegistry;
   friend class PresentationRegistry;
+  friend class TransientPresentationSlot;
   friend class Container;
   friend class SimpleScrollablePanel;
   friend class ScrollableBlitPanel;

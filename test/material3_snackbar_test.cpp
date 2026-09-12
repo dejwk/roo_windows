@@ -16,6 +16,12 @@ class SnackbarTestAccess {
     p.update(p.last_ms_ + ms);
   }
   static bool scheduled(const SnackbarPresenter& p) { return p.timer_ > 0; }
+  static bool transientActive(const SnackbarPresenter& p) {
+    return p.transient_active_;
+  }
+  static bool controlFocused(const SnackbarPresenter& p) {
+    return p.control_focused_;
+  }
 };
 }  // namespace test
 namespace {
@@ -252,9 +258,13 @@ TEST_F(SnackbarTest, TimeoutModalPauseFocusPauseAndPersistentDefault) {
   DialogActionSpec ok{1, "OK", DialogActionRole::kAcknowledge};
   AlertDialog dialog(app_->context(), "Confirm", "Continue?", &ok, 1);
   ASSERT_EQ(DialogShowResult::kShown, dialog.show(task_));
+  ASSERT_TRUE(app_->refresh());
+  EXPECT_TRUE(test::SnackbarTestAccess::transientActive(presenter()));
   test::SnackbarTestAccess::advance(presenter(), 5000);
   EXPECT_TRUE(a.isRegistered());
   dialog.dismiss();
+  ASSERT_TRUE(app_->refresh());
+  EXPECT_FALSE(test::SnackbarTestAccess::transientActive(presenter()));
   test::SnackbarTestAccess::advance(presenter(), 1);
   EXPECT_EQ(SnackbarDismissReason::kTimeout, a.reasons.at(0));
   Request persistent("Saved", "Undo");
@@ -268,9 +278,11 @@ TEST_F(SnackbarTest, TimeoutModalPauseFocusPauseAndPersistentDefault) {
   app_->refresh();
   ASSERT_TRUE(
       task_.focus().requestFocus(host_.snackbarWidget().actionButton()));
+  EXPECT_TRUE(test::SnackbarTestAccess::controlFocused(presenter()));
   test::SnackbarTestAccess::advance(presenter(), 10000);
   EXPECT_TRUE(timed.isRegistered());
   task_.focus().requestFocus(body_);
+  EXPECT_FALSE(test::SnackbarTestAccess::controlFocused(presenter()));
   test::SnackbarTestAccess::advance(presenter(), 10000);
   EXPECT_EQ(SnackbarDismissReason::kTimeout, timed.reasons.at(0));
 }
@@ -292,6 +304,20 @@ TEST_F(SnackbarTest, FocusTouchAndBackUseOrdinaryTaskRouting) {
   EXPECT_EQ(&host_.snackbarWidget().actionButton(), task_.focus().focused());
   host_.snackbarWidget().actionButton().onClicked();
   EXPECT_EQ(SnackbarDismissReason::kAction, a.reasons.at(0));
+  EXPECT_NE(&host_.snackbarWidget().actionButton(), task_.focus().focused());
+}
+
+TEST_F(SnackbarTest, RemovingFocusedControlClearsReadableTimePause) {
+  Request request("Saved", "Undo");
+  presenter().show(request);
+  ASSERT_TRUE(app_->refresh());
+  ASSERT_TRUE(
+      task_.focus().requestFocus(host_.snackbarWidget().actionButton()));
+  ASSERT_TRUE(test::SnackbarTestAccess::controlFocused(presenter()));
+
+  presenter().clear();
+
+  EXPECT_FALSE(test::SnackbarTestAccess::controlFocused(presenter()));
   EXPECT_NE(&host_.snackbarWidget().actionButton(), task_.focus().focused());
 }
 

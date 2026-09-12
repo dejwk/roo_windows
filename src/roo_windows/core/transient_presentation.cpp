@@ -1,7 +1,10 @@
 #include "roo_windows/core/transient_presentation.h"
 
 #include "roo_logging.h"
+#include "roo_windows/core/application.h"
+#include "roo_windows/core/main_window.h"
 #include "roo_windows/core/transient_surface_host.h"
+#include "roo_windows/core/widget.h"
 
 namespace roo_windows {
 namespace {
@@ -73,6 +76,92 @@ TransientPresentationSlot::~TransientPresentationSlot() {
   shutdown(PresentationFinishReason::kHostDestroyed);
 }
 
+bool TransientPresentationSlot::observeActivity(Widget& widget) {
+  if (admission_closed_ || window_ == nullptr ||
+      widget.getMainWindow() != window_) {
+    return false;
+  }
+  if (activity_observers_.find(&widget) != activity_observers_.end()) {
+    return true;
+  }
+  activity_observers_.insert(std::make_pair(
+      &widget, ActivityObserver{hasActivePresentation()}));
+  activity_delivery_.reserve(activity_observers_.size());
+  return true;
+}
+
+void TransientPresentationSlot::unobserveActivity(Widget& widget) {
+  for (Widget*& pending : activity_delivery_) {
+    if (pending == &widget) pending = nullptr;
+  }
+  activity_observers_.erase(&widget);
+  if (activity_observers_.empty()) activity_pending_ = false;
+}
+
+void TransientPresentationSlot::noteActivityChanged() {
+  if (admission_closed_ || activity_observers_.empty() || activity_pending_) {
+    return;
+  }
+  activity_pending_ = true;
+  if (window_ != nullptr) {
+    window_->app().requestAnimationFrameAt(roo_time::Uptime::Start());
+  }
+}
+
+void TransientPresentationSlot::deliverPendingActivityChanges() {
+  if (admission_closed_ || !activity_pending_ || delivering_activity_) return;
+  activity_pending_ = false;
+  delivering_activity_ = true;
+  activity_delivery_.clear();
+  activity_delivery_.reserve(activity_observers_.size());
+  for (const auto& item : activity_observers_) {
+    activity_delivery_.push_back(item.first);
+  }
+  const bool active = hasActivePresentation();
+  for (Widget* widget : activity_delivery_) {
+    if (widget == nullptr) continue;
+    auto found = activity_observers_.find(widget);
+    if (found == activity_observers_.end()) continue;
+    ActivityObserver& observer = found->second;
+    if (observer.last_active == active) continue;
+    observer.last_active = active;
+    widget->onTransientActivityChanged(active);
+  }
+  activity_delivery_.clear();
+  delivering_activity_ = false;
+}
+
+void TransientPresentationSlot::activityObserverSubtreeDetaching(
+    Widget& subtree) {
+  for (auto it = activity_observers_.begin();
+       it != activity_observers_.end();) {
+    Widget* candidate = it->first;
+    bool remove = false;
+    for (Widget* current = candidate; current != nullptr;
+         current = current->parent()) {
+      if (current == &subtree) {
+        remove = true;
+        break;
+      }
+    }
+    if (remove) {
+      for (Widget*& pending : activity_delivery_) {
+        if (pending == candidate) pending = nullptr;
+      }
+      it = activity_observers_.erase(it);
+    } else {
+      ++it;
+    }
+  }
+  if (activity_observers_.empty()) activity_pending_ = false;
+}
+
+void TransientPresentationSlot::clearActivityObservers() {
+  activity_pending_ = false;
+  activity_delivery_.clear();
+  activity_observers_.clear();
+}
+
 PresentationStartResult TransientPresentationSlot::show(
     TransientPresentationRegistration& registration,
     TransientPresentationPolicy policy) {
@@ -85,6 +174,7 @@ PresentationStartResult TransientPresentationSlot::show(
   registration.slot_ = this;
   registration.policy_ = EncodePolicy(policy);
   registration.state_ = TransientPresentationState::kVisible;
+  noteActivityChanged();
   return PresentationStartResult::kStarted;
 }
 
@@ -154,12 +244,14 @@ PresentationStartResult TransientPresentationSlot::showHosted(
   registration.slot_ = this;
   registration.policy_ = EncodePolicy(policy);
   registration.state_ = TransientPresentationState::kVisible;
+  noteActivityChanged();
   return PresentationStartResult::kStarted;
 }
 
 void TransientPresentationSlot::shutdown(PresentationFinishReason reason) {
   admission_closed_ = true;
   clear(reason);
+  clearActivityObservers();
 }
 
 void TransientPresentationSlot::finish(
@@ -211,6 +303,7 @@ void TransientPresentationSlot::finishNow(
   registration.policy_ = 0;
   registration.state_ = TransientPresentationState::kIdle;
   clearing_ = false;
+  noteActivityChanged();
   registration.onFinished(reason);
 }
 
@@ -245,6 +338,7 @@ void TransientPresentationSlot::cancel(
   registration.slot_ = nullptr;
   registration.policy_ = 0;
   registration.state_ = TransientPresentationState::kIdle;
+  noteActivityChanged();
 }
 
 }  // namespace roo_windows

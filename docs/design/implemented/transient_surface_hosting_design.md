@@ -509,6 +509,36 @@ The host shares infrastructure, not component semantics. Menus retain chains
 and placement; dialogs retain results and chrome; sheets retain drag and
 animation state.
 
+### Opt-in activity observation
+
+Some ordinary task content, currently snackbar hosts, must pause work whenever
+the shared slot is occupied without becoming part of the transient surface.
+`TransientPresentationSlot` therefore offers a narrow activity signal instead
+of requiring those widgets to poll `hasActivePresentation()`. An attached
+widget may idempotently observe its own window's slot and may idempotently stop;
+cross-window and detached registration is rejected. Registration captures the
+current state but does not synthesize a change notification. Consumers that
+need the current value read `hasActivePresentation()` when subscribing.
+
+The slot stores borrowed `Widget*` keys in a `FlatSmallHashMap`. Every real
+empty-to-active or active-to-empty transition requests application dispatch,
+and replacement is coalesced because the slot remains active throughout.
+Dispatch copies the keys into retained snapshot storage, checks membership
+again before each call, and invalidates snapshot entries on unsubscribe. This
+makes unsubscribe and peer destruction during delivery safe without allocating
+on ordinary delivery. The protected no-op
+`Widget::onTransientActivityChanged(bool)` hook runs after slot state is
+consistent and before the animation pass. It must not invoke application
+callbacks or mutate the widget hierarchy.
+
+Detaching a subtree removes all borrowed observer keys before parent links are
+cleared; widget destruction performs the same removal while its root remains
+reachable. Window shutdown clears observers silently. Observation introduces
+no timer, and an idle slot schedules no recurring work. The 32-bit ceiling is
+96 bytes for slot control plus nine bytes per allocated observer bucket;
+retained snapshot capacity is accounted separately in the animation registry's
+final resource report.
+
 ## Design Details
 
 ### Composite Host Layer
