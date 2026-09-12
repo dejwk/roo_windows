@@ -1,4 +1,5 @@
 #include <memory>
+#include <vector>
 
 #include "gtest/gtest.h"
 #include "roo_display.h"
@@ -18,6 +19,27 @@ class TestWidget final : public BasicWidget {
 
   Dimensions getSuggestedMinimumDimensions() const override {
     return Dimensions(1, 1);
+  }
+};
+
+class ObservingWidget final : public BasicWidget {
+ public:
+  explicit ObservingWidget(ApplicationContext& context)
+      : BasicWidget(context) {}
+
+  bool observePresentation() {
+    return context().presentations().observe(*this);
+  }
+
+  std::vector<PresentationChange> changes;
+
+ private:
+  Dimensions getSuggestedMinimumDimensions() const override {
+    return Dimensions(1, 1);
+  }
+
+  void onPresentationChanged(const PresentationChange& change) override {
+    changes.push_back(change);
   }
 };
 
@@ -117,5 +139,39 @@ TEST(PresentationRegistry, QueryKeepsIndependentApplicationsIndependent) {
   EXPECT_EQ(PresentationState::kPresented, raw_second->presentationState());
 }
 
+// Verifies initial delivery and coalesced ancestor visibility changes reach
+// only the subscribed widget during refresh.
+TEST(PresentationRegistry, ObservedWidgetReceivesCoalescedChanges) {
+  roo::byte raster[16 * 16 * 2] = {};
+  roo_display::OffscreenDevice<roo_display::Argb4444> device(
+      16, 16, raster, roo_display::Argb4444());
+  roo_display::Display display(device);
+  roo_scheduler::Scheduler scheduler;
+  Environment environment(scheduler);
+  Application app(&environment, display);
+
+  auto parent = std::make_unique<TestPanel>(app.context());
+  TestPanel* raw_parent = parent.get();
+  auto child = std::make_unique<ObservingWidget>(app.context());
+  ObservingWidget* raw_child = child.get();
+  raw_parent->add(WidgetRef(std::move(child)), Rect(0, 0, -1, -1));
+  app.add(WidgetRef(std::move(parent)), roo_display::Box(0, 0, 15, 15));
+
+  ASSERT_TRUE(raw_child->observePresentation());
+  ASSERT_TRUE(app.refresh());
+  ASSERT_EQ(1u, raw_child->changes.size());
+  EXPECT_EQ(PresentationState::kPresented, raw_child->changes.back().state);
+  EXPECT_FALSE(raw_child->changes.back().detached_since_delivery);
+
+  raw_parent->setVisibility(Visibility::kInvisible);
+  raw_parent->setVisibility(Visibility::kVisible);
+  ASSERT_TRUE(app.refresh());
+  EXPECT_EQ(1u, raw_child->changes.size());
+
+  raw_parent->setVisibility(Visibility::kInvisible);
+  ASSERT_TRUE(app.refresh());
+  ASSERT_EQ(2u, raw_child->changes.size());
+  EXPECT_EQ(PresentationState::kHidden, raw_child->changes.back().state);
+}
 }  // namespace
 }  // namespace roo_windows

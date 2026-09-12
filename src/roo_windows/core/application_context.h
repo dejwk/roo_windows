@@ -5,6 +5,7 @@
 
 #include "roo_scheduler.h"
 #include "roo_windows/core/focus_manager.h"
+#include "roo_windows/core/presentation_registry.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/core/widget_event_dispatcher.h"
 
@@ -51,6 +52,9 @@ class ApplicationContext {
   /// Returns the application-owned keyboard-focus service.
   FocusManager& focus() { return focus_; }
 
+  /// Returns the application-owned presentation notification service.
+  PresentationRegistry& presentations() { return presentations_; }
+
   /// Returns the application-owned keyboard-focus service.
   const FocusManager& focus() const { return focus_; }
 
@@ -81,6 +85,7 @@ class ApplicationContext {
   const KeyboardColorTheme& keyboard_color_theme_;
   WidgetEventDispatcher widget_events_;
   FocusManager focus_;
+  PresentationRegistry presentations_;
   Lifetime* lifetime_;
 };
 

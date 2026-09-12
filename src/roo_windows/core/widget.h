@@ -308,6 +308,9 @@ class Widget {
     return presentationState() == PresentationState::kPresented;
   }
 
+  /// Receives a deferred effective-presentation change while observed.
+  virtual void onPresentationChanged(const PresentationChange&) {}
+
   virtual Task* getTask();
   virtual const Task* getTask() const;
 
@@ -812,6 +815,7 @@ class Widget {
   }
 
  private:
+  friend class PresentationRegistry;
   friend class Container;
   friend class SimpleScrollablePanel;
   friend class ScrollableBlitPanel;

@@ -8,9 +8,11 @@ ApplicationContext::ApplicationContext(
     : scheduler_(scheduler),
       theme_(theme),
       keyboard_color_theme_(keyboard_color_theme),
+      presentations_(*this),
       lifetime_(new Lifetime(*this)) {}
 
 ApplicationContext::~ApplicationContext() {
+  presentations_.stop();
   lifetime_->context = nullptr;
   lifetime_->release();
 }

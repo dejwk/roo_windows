@@ -51,6 +51,7 @@ Widget::~Widget() {
   if (ApplicationContext* live_context = tryContext();
       live_context != nullptr) {
     live_context->widgetEvents().clearHandlers(*this);
+    live_context->presentations().unobserve(*this);
   }
   context_lifetime_->release();
 }
@@ -460,6 +461,7 @@ void Widget::setVisibility(Visibility visibility) {
     if (previous == Visibility::kVisible && parent() != nullptr)
       parent()->childHidden(this);
   }
+  context().presentations().requestReevaluation();
 }
 
 void Widget::setEnabled(bool enabled) {
@@ -588,6 +590,10 @@ void Widget::setParent(Container* parent, bool owned) {
     state_ |= kWidgetOwnedByParent;
   } else {
     state_ &= ~kWidgetOwnedByParent;
+  }
+  if (ApplicationContext* live_context = tryContext();
+      live_context != nullptr) {
+    live_context->presentations().requestReevaluation();
   }
 }
 

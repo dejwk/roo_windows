@@ -79,6 +79,7 @@ bool DisplayWindow::refreshIfDue(bool& redraw_timeout) {
   redraw_timeout = false;
   unsigned long now = millis();
   if ((now - last_time_refreshed_ms_) < kMinRefreshTimeDeltaMs) return true;
+  root_.app().context().presentations().deliverPendingChanges();
   bool completed = refresh(roo_time::Uptime::Now() + paint_interval_);
   if (!completed) {
     paint_interval_ = paint_interval_ * 2;
@@ -94,6 +95,7 @@ void DisplayWindow::cancelGestureTargetsInSubtree(Widget& subtree) {
 }
 
 bool DisplayWindow::refresh(roo_time::Uptime deadline) {
+  root_.app().context().presentations().deliverPendingChanges();
   // Deferred transient completion runs on a fresh framework entry, after the
   // prior completed refresh settled click delivery. If completion destroys
   // this window, returning immediately avoids subsequent member access.
