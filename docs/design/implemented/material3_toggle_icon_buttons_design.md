@@ -2,10 +2,10 @@
 
 ## Implementation status
 
-**Implemented.** Both phases are complete: `material3::ToggleIconButton`,
-selected-state presentation and animation, focused unit and rendering coverage,
-compact-controls adoption, and a dedicated toggle-preference example are
-checked in.
+**Implemented.** Both component phases and the animation-registry migration are
+complete: `material3::ToggleIconButton`, registry-driven selected-state
+presentation, focused unit and rendering coverage, compact-controls adoption,
+and a dedicated toggle-preference example are checked in.
 
 ## Objective
 
@@ -148,7 +148,7 @@ the documentation should still call out the checkbox-like semantic explicitly.
 1. Do not allocate during construction, measurement, selection changes,
    animation, or paint.
 2. Reuse `Widget::kWidgetSelected`; do not store duplicate logical state.
-3. Add at most one icon pointer and one 16-bit packed transition timestamp
+3. Add at most one icon pointer and one 16-bit packed transition sample
    beyond the `IconButton` base.
 4. Enforce `sizeof(ToggleIconButton) <= sizeof(IconButton) +
    sizeof(void*) + 4`, including host alignment slack.
@@ -299,18 +299,21 @@ This shape inversion makes selection visible even when the same icon is used
 for both states. Pressed shape remains the size-specific pressed radius shared
 with `IconButton`.
 
-Selection transitions interpolate from the pre-change resting radius to the
-post-change resting radius over 100 ms, matching the compact time-driven
-pattern already used by `material3::Switch`. The transition stores the start
-time modulo 16384 ms plus an idle bit in one `uint16_t`. While active,
-`paintWidgetContents()` marks the button dirty; elapsed-time validation stops
-the transition after the bounded duration. A delayed or wrapped timestamp
-settles directly at the target shape.
+Selection transitions interpolate from the currently applied radius to the
+post-change resting radius over 100 ms. The application animation registry owns
+the clock and supplies a 0-to-1 value sample. The widget keeps only a packed
+start radius and applied 8-bit fraction in one `uint16_t`; it has no local
+timestamp, scheduler ticket, or paint-driven advancement. Rapid programmatic
+changes capture the currently applied radius before replacing the track, so
+they remain continuous instead of jumping to either endpoint.
 
-Press geometry has priority over the selected transition. If the shared click
-animation or pressed bit is active, `getBorderStyle()` resolves the existing
-pressed morph. Once press feedback ends, the current selected transition
-continues or settles at the selected resting shape. Color and icon state change
+Rendering precedence remains shared click-driven morph, pressed appearance,
+then the independent selection morph. Selection timing therefore continues
+while click appearance is visible, and it never takes ownership of the shared
+click controller. Each selection frame invalidates the bounded surface interior
+so pixels exposed by shrinking rounded corners are restored. Hidden or detached
+buttons cancel their track and snap to logical selected-rest geometry; showing
+or reattaching does not resume stale work. Color and icon state change
 atomically with logical selection; only corner radius is interpolated.
 
 Reduced-motion policy is intentionally shared with current framework controls:
@@ -385,7 +388,6 @@ class ToggleIconButton : public IconButton {
   Color background() const override;
   Color getOutlineColor() const override;
   BorderStyle getBorderStyle() const override;
-  void paintWidgetContents(PaintContext& ctx) override;
   void paint(PaintContext& ctx) const override;
   Dimensions getSuggestedMinimumDimensions() const override;
 
@@ -396,7 +398,7 @@ class ToggleIconButton : public IconButton {
 
  private:
   const MonoIcon* selected_icon_;
-  uint16_t selection_animation_;
+  uint16_t selection_transition_;  // Start radius plus applied fraction.
 };
 
 }  // namespace material3
@@ -425,7 +427,8 @@ Deliverables:
 - cover constructor defaults, state mutation, callback ordering, exactly-once
   touch and keyboard toggling, disabled input, all style token mappings,
   outline removal, shape inversion, stable two-icon measurement, badge bounds,
-  animation settlement, timestamp wrap, and storage budget,
+  animation settlement, rapid retargeting, presentation lifecycle, and storage
+  budget,
 - and add the corresponding Bazel target.
 
 Validation:
@@ -465,8 +468,8 @@ Testing has four layers:
    animation lifecycle, keyboard/touch parity, and size budgets.
 2. Existing icon-button tests guard the shared-helper refactor against changes
    to the non-toggle component.
-3. Golden tests cover the selected/unselected visual matrix that is difficult
-   to characterize with individual pixel assertions.
+3. Golden tests cover the selected/unselected visual matrix and prove that a
+   completed shrinking-corner transition restores the exact resting pixels.
 4. The emulator-built compact-controls example provides one concrete toolbar
    consumer and demonstrates reading the new state from a callback.
 

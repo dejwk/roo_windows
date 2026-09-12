@@ -62,9 +62,6 @@ class ToggleIconButton : public IconButton {
   /// Resolves the resting, selected-transition, or pressed border geometry.
   BorderStyle getBorderStyle() const override;
 
-  /// Advances the short selection transition and schedules its next frame.
-  void paintWidgetContents(PaintContext& ctx) override;
-
   /// Paints the active borrowed icon with its state-derived content color.
   void paint(PaintContext& ctx) const override;
 
@@ -84,22 +81,30 @@ class ToggleIconButton : public IconButton {
   /// Toggles state before forwarding the interactive-change notification.
   void onClicked() override;
 
- private:
-  static constexpr uint16_t kAnimationIdleMask = 0x8000;
-  static constexpr uint16_t kAnimationFromPressedMask = 0x4000;
-  static constexpr uint16_t kAnimationTimeMask = 0x1FFF;
+ protected:
+  void onAnimationFrame(AnimationTag tag,
+                        const AnimationSample& sample) override;
+  void onPresentationChanged(const PresentationChange& change) override;
 
-  bool isSelectionAnimating() const {
-    return (selection_animation_ & kAnimationIdleMask) == 0;
-  }
-  int16_t selectionAnimationElapsedMs() const;
-  void startSelectionAnimation(bool from_pressed);
+  static constexpr AnimationTag kSelection = 0;
+
+ private:
+  static constexpr uint16_t kStartRadiusShift = 8;
+  static constexpr uint16_t kFractionMask = 0x00FF;
+
+  bool isSelectionAnimating() const;
+  uint8_t selectionStartRadius() const;
+  float selectionFraction() const;
+  uint8_t selectionRadius() const;
+  void setSelectionFraction(uint8_t fraction);
+  void startSelectionAnimation(uint8_t from_radius);
+  void snapSelectionToRest();
   void setSelectedFromPressed(bool selected);
 
   const MonoIcon* selected_icon_;
-  // Bit 15 marks an idle transition; bit 14 records an input-driven
-  // pressed-shape start; the remaining bits store a time modulo 8192 ms.
-  mutable uint16_t selection_animation_;
+  // The high byte stores the applied transition's start radius and the low
+  // byte its sampled 0..255 fraction. Active timing is registry-owned.
+  uint16_t selection_transition_;
 };
 
 }  // namespace material3

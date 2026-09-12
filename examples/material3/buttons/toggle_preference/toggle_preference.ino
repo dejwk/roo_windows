@@ -1,5 +1,5 @@
 // Learning goal: compare Material 3 icon-button types, then use the toggle
-// type for a persistent pool-equipment preference.
+// type for a persistent preference whose shape morph is application-driven.
 
 // *************** EMULATOR SETUP BEGIN
 
@@ -128,8 +128,9 @@ class TogglePreference : public FlexLayout {
     outlined_.setOnInteractiveChange(
         [this]() { feedback_.setText("Secondary action requested"); });
 
-    // ToggleIconButton commits its state before this callback, so application
-    // code can use isSelected() as the single source of truth.
+    // ToggleIconButton commits its state before this callback, then its
+    // registry value track completes the shape morph independently of click
+    // feedback. Application code only needs the selected state.
     reminder_.setOnInteractiveChange([this]() {
       feedback_.setText(reminder_.isSelected() ? "Reminder preference is saved"
                                                : "Reminder preference is off");

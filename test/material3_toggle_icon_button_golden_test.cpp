@@ -69,6 +69,24 @@ class Material3ToggleIconButtonGoldenTest : public testing::Test {
     return test::CaptureRgb(offscreen_.raster(), 0, 0, kWidth, kHeight);
   }
 
+  roo_display::Offscreen<roo_display::Rgb888> RenderShrinkingTransition(
+      bool animate_selection) {
+    Application app(&env_, display_);
+    AddBackdrop(app);
+    ToggleIconButton* button = AddButton(
+        app, 100, 80, IconButtonStyle::kFilled, !animate_selection,
+        ButtonSize::kMedium, ButtonShape::kRound, true,
+        &ic_outlined_48_action_favorite());
+    EXPECT_TRUE(app.refresh());
+    if (animate_selection) {
+      button->setSelected(true);
+      EXPECT_TRUE(app.refresh());
+      delay(110);
+      EXPECT_TRUE(app.refresh());
+    }
+    return Capture();
+  }
+
   roo::byte raster_[kWidth * kHeight * 2];
   roo_display::OffscreenDevice<roo_display::Argb4444> offscreen_;
   roo_display::Display display_;
@@ -136,6 +154,25 @@ TEST_F(Material3ToggleIconButtonGoldenTest, DisabledAndOutlinedSelection) {
       Capture(),
       "test/goldens/material3_toggle_icon_button/disabled_and_outlined.ppm",
       "material3_toggle_icon_button_disabled_and_outlined"));
+}
+
+// Locks down the selected resting pixels used as the shrinking-morph target.
+TEST_F(Material3ToggleIconButtonGoldenTest, ShrinkingTransitionRestingTarget) {
+  auto image = RenderShrinkingTransition(false);
+  EXPECT_TRUE(test::CompareOrUpdateGolden(
+      image,
+      "test/goldens/material3_toggle_icon_button/shrinking_transition.ppm",
+      "material3_toggle_icon_button_shrinking_rest"));
+}
+
+// Verifies shrinking rounded geometry restores every vacated surface pixel.
+TEST_F(Material3ToggleIconButtonGoldenTest,
+       ShrinkingTransitionFinalMatchesRestingTarget) {
+  auto image = RenderShrinkingTransition(true);
+  EXPECT_TRUE(test::CompareOrUpdateGolden(
+      image,
+      "test/goldens/material3_toggle_icon_button/shrinking_transition.ppm",
+      "material3_toggle_icon_button_shrinking_animated_final"));
 }
 
 }  // namespace

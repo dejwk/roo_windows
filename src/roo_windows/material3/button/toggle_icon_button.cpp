@@ -1,7 +1,5 @@
 #include "roo_windows/material3/button/toggle_icon_button.h"
 
-#include <Arduino.h>
-
 #include <algorithm>
 #include <cmath>
 
@@ -178,9 +176,9 @@ ToggleIconButton::ToggleIconButton(ApplicationContext& context,
                                    IconButtonStyle style, bool selected)
     : IconButton(context, unselected_icon, style),
       selected_icon_(selected_icon),
-      selection_animation_(kAnimationIdleMask) {
+      selection_transition_(kFractionMask) {
   Widget::setSelected(selected);
-  selection_animation_ = kAnimationIdleMask;
+  context.presentations().observe(*this);
 }
 
 void ToggleIconButton::setUnselectedIcon(const MonoIcon& icon) {
@@ -202,8 +200,9 @@ const MonoIcon& ToggleIconButton::activeIcon() const {
 
 void ToggleIconButton::setSelected(bool selected) {
   if (selected == isSelected()) return;
+  uint8_t from_radius = selectionRadius();
   Widget::setSelected(selected);
-  startSelectionAnimation(false);
+  startSelectionAnimation(from_radius);
 }
 
 Padding ToggleIconButton::getDefaultPadding() const {
@@ -268,34 +267,7 @@ BorderStyle ToggleIconButton::getBorderStyle() const {
                        outline);
   }
   if (isPressed()) return BorderStyle(PressedRadius(*this), outline);
-  if (isSelectionAnimating()) {
-    int16_t elapsed = selectionAnimationElapsedMs();
-    if (elapsed >= 0 && elapsed <= kSelectionAnimationMs) {
-      float progress = static_cast<float>(elapsed) / kSelectionAnimationMs;
-      uint8_t from = (selection_animation_ & kAnimationFromPressedMask) != 0
-                         ? PressedRadius(*this)
-                         : RestingRadius(*this, !isSelected());
-      return BorderStyle(
-          Interpolate(from, RestingRadius(*this, isSelected()), progress),
-          outline);
-    }
-  }
-  return BorderStyle(RestingRadius(*this, isSelected()), outline);
-}
-
-void ToggleIconButton::paintWidgetContents(PaintContext& ctx) {
-  if (isSelectionAnimating()) {
-    int16_t elapsed = selectionAnimationElapsedMs();
-    if (elapsed < 0 || elapsed > kSelectionAnimationMs) {
-      selection_animation_ = kAnimationIdleMask;
-    }
-  }
-  Widget::paintWidgetContents(ctx);
-  if (isSelectionAnimating()) {
-    // Corner geometry changes every frame. A surface invalidation restores the
-    // pixels exposed by the prior rounded shape before drawing the next one.
-    invalidateInterior();
-  }
+  return BorderStyle(selectionRadius(), outline);
 }
 
 void ToggleIconButton::paint(PaintContext& ctx) const {
@@ -318,21 +290,84 @@ void ToggleIconButton::onClicked() {
   Widget::onClicked();
 }
 
-int16_t ToggleIconButton::selectionAnimationElapsedMs() const {
-  return (millis() & kAnimationTimeMask) -
-         (selection_animation_ & kAnimationTimeMask);
+bool ToggleIconButton::isSelectionAnimating() const {
+  return context().animations().contains(*this, kSelection);
 }
 
-void ToggleIconButton::startSelectionAnimation(bool from_pressed) {
-  selection_animation_ = (from_pressed ? kAnimationFromPressedMask : 0) |
-                         (millis() & kAnimationTimeMask);
-  setDirty();
+uint8_t ToggleIconButton::selectionStartRadius() const {
+  return static_cast<uint8_t>(selection_transition_ >> kStartRadiusShift);
+}
+
+float ToggleIconButton::selectionFraction() const {
+  return static_cast<float>(selection_transition_ & kFractionMask) / 255.0f;
+}
+
+uint8_t ToggleIconButton::selectionRadius() const {
+  if (!isSelectionAnimating()) return RestingRadius(*this, isSelected());
+  return Interpolate(selectionStartRadius(),
+                     RestingRadius(*this, isSelected()), selectionFraction());
+}
+
+void ToggleIconButton::setSelectionFraction(uint8_t fraction) {
+  selection_transition_ =
+      (selection_transition_ & ~kFractionMask) | fraction;
+}
+
+void ToggleIconButton::startSelectionAnimation(uint8_t from_radius) {
+  context().animations().cancel(*this, kSelection);
+  uint8_t target = RestingRadius(*this, isSelected());
+  selection_transition_ =
+      (static_cast<uint16_t>(from_radius) << kStartRadiusShift);
+  invalidateInterior();
+  if (from_radius == target ||
+      presentationState() != PresentationState::kPresented) {
+    snapSelectionToRest();
+    return;
+  }
+  AnimationSpec spec = AnimationSpec::value(
+      0.0f, 1.0f, roo_time::Millis(kSelectionAnimationMs));
+  if (context().animations().start(*this, kSelection, spec) !=
+      AnimationStatus::kOk) {
+    snapSelectionToRest();
+  }
+}
+
+void ToggleIconButton::snapSelectionToRest() {
+  context().animations().cancel(*this, kSelection);
+  selection_transition_ =
+      (static_cast<uint16_t>(RestingRadius(*this, isSelected()))
+       << kStartRadiusShift) |
+      kFractionMask;
+  invalidateInterior();
+}
+
+void ToggleIconButton::onAnimationFrame(AnimationTag tag,
+                                        const AnimationSample& sample) {
+  if (tag != kSelection) {
+    IconButton::onAnimationFrame(tag, sample);
+    return;
+  }
+  uint8_t fraction = static_cast<uint8_t>(
+      std::lround(std::max(0.0f, std::min(1.0f, sample.value)) * 255.0f));
+  if (fraction == (selection_transition_ & kFractionMask)) return;
+  setSelectionFraction(fraction);
+  // Restore pixels exposed by a shrinking rounded surface before repainting.
+  invalidateInterior();
+}
+
+void ToggleIconButton::onPresentationChanged(
+    const PresentationChange& change) {
+  if (change.state == PresentationState::kPresented &&
+      !change.detached_since_delivery) {
+    return;
+  }
+  snapSelectionToRest();
 }
 
 void ToggleIconButton::setSelectedFromPressed(bool selected) {
   if (selected == isSelected()) return;
   Widget::setSelected(selected);
-  startSelectionAnimation(true);
+  startSelectionAnimation(PressedRadius(*this));
 }
 
 }  // namespace material3

@@ -563,6 +563,7 @@ cc_test(
     name = "material3_toggle_icon_button_test",
     srcs = [
         "test/material3_toggle_icon_button_test.cpp",
+        "test/roo_windows_render_test_support.h",
     ],
     linkstatic = 1,
     deps = [
