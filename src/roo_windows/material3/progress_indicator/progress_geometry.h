@@ -24,6 +24,13 @@ struct ProgressArc {
   float thickness = 0;
 };
 
+/// Evaluates the standard 1800 ms disjoint linear waveform.
+LinearProgressGeometry LinearIndeterminate(float width, float gap,
+                                           unsigned phase_ms);
+
+/// Evaluates the standard 5400 ms advancing circular waveform (radians).
+ProgressInterval CircularIndeterminate(unsigned phase_ms);
+
 /// Computes active, gap, inactive and stop domains in logical coordinates.
 LinearProgressGeometry LinearDeterminate(float width, float thickness,
                                          float gap, float progress);

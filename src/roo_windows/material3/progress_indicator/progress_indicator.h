@@ -44,11 +44,18 @@ class ProgressIndicator : public Widget {
     return Rect(0, 0, -1, -1);
   }
   void invalidateInk();
+  void onLayout(bool changed, const Rect& rect) override;
+  void onPresentationChanged(const PresentationChange& change) override;
+  void onAnimationFrame(AnimationTag tag,
+                        const AnimationSample& sample) override;
+  static constexpr AnimationTag kIndeterminate = 0;
   bool rightToLeft() const { return rtl_; }
   void setRightToLeft(bool rtl);
   uint16_t phaseMillis() const { return phase_ms_; }
 
  private:
+  void reconcileAnimation();
+
   float fraction_ = 0;
   uint16_t phase_ms_ = 0;
   bool indeterminate_ : 1;

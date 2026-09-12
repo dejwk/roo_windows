@@ -95,6 +95,8 @@ material3::Button next(app.context(), "Next value");
 material3::Button unknown(app.context(), "Unknown duration");
 material3::Button direction(app.context(), "Mirror direction");
 
+material3::Button motion(app.context(), "Toggle motion");
+
 void setup() {
   initDisplay();
   catalog.setPadding(Padding(Scaled(16)));
@@ -104,6 +106,12 @@ void setup() {
   catalog.add(next);
   catalog.add(unknown);
   catalog.add(direction);
+  catalog.add(motion);
+  motion.setOnInteractiveChange([] {
+    bool enabled = !linear.motionEnabled();
+    linear.setMotionEnabled(enabled);
+    circular.setMotionEnabled(enabled);
+  });
   next.setOnInteractiveChange([] {
     float value = linear.progress() >= 1 ? 0 : linear.progress() + 0.25f;
     linear.setProgress(value);

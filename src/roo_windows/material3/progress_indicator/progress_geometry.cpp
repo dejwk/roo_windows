@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cmath>
 
+#include "roo_windows/core/animation_evaluator.h"
+
 namespace roo_windows::material3::internal {
 namespace {
 constexpr float kTurn = 6.283185307179586f;
@@ -65,4 +67,34 @@ ProgressArc CircularTrack(float progress, float radius, float thickness,
   return FitProgressArc(progress * kTurn + gap / radius, kTurn - gap / radius,
                         radius, thickness);
 }
+namespace {
+/// Clamps channel time before applying the framework's bounded Bezier solve.
+float Channel(float time, float delay, float duration, float x1, float x2) {
+  float fraction = std::max(0.0f, std::min(1.0f, (time - delay) / duration));
+  return ::roo_windows::internal::EvaluateEasing(
+      {EasingKind::kCubicBezier, x1, 0, x2, 1}, fraction);
+}
+}  // namespace
+
+LinearProgressGeometry LinearIndeterminate(float width, float gap,
+                                           unsigned phase_ms) {
+  float t = phase_ms % 1800;
+  return LinearSegments(width, gap,
+                        {width * Channel(t, 1267, 533, 0.2f, 0.8f),
+                         width * Channel(t, 1000, 567, 0.4f, 1)},
+                        {width * Channel(t, 333, 850, 0, 0.65f),
+                         width * Channel(t, 0, 750, 0.1f, 0.45f)});
+}
+
+ProgressInterval CircularIndeterminate(unsigned phase_ms) {
+  float t = phase_ms % 5400;
+  float start = 1520 * t / 5400 - 20;
+  float end = 1520 * t / 5400;
+  for (int i = 0; i < 4; ++i) {
+    start += 250 * Channel(t, 667 + 1350 * i, 667, 0.4f, 0.2f);
+    end += 250 * Channel(t, 1350 * i, 667, 0.4f, 0.2f);
+  }
+  return {start * (kTurn / 360), end * (kTurn / 360)};
+}
+
 }  // namespace roo_windows::material3::internal

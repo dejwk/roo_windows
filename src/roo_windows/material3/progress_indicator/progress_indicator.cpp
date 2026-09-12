@@ -78,8 +78,10 @@ bool ProgressIndicator::setProgress(float fraction) {
   if (!std::isfinite(fraction)) return false;
   fraction = std::max(0.0f, std::min(1.0f, fraction));
   if (!indeterminate_ && fraction_ == fraction) return true;
+  context().animations().cancel(*this, kIndeterminate);
   indeterminate_ = false;
   fraction_ = fraction;
+  reconcileAnimation();
   invalidateInk();
   return true;
 }
@@ -87,15 +89,57 @@ bool ProgressIndicator::setProgress(float fraction) {
 void ProgressIndicator::setIndeterminate() {
   if (indeterminate_) return;
   indeterminate_ = true;
-  if (motion_enabled_) LOG(WARNING) << "Unimplemented: progress animation";
+  reconcileAnimation();
   invalidateInk();
 }
 
 void ProgressIndicator::setMotionEnabled(bool enabled) {
   if (motion_enabled_ == enabled) return;
   motion_enabled_ = enabled;
-  if (enabled && indeterminate_)
-    LOG(WARNING) << "Unimplemented: progress animation";
+  reconcileAnimation();
+  invalidateInk();
+}
+
+void ProgressIndicator::reconcileAnimation() {
+  const bool wanted = indeterminate_ && motion_enabled_;
+  if (wanted)
+    context().presentations().observe(*this);
+  else
+    context().presentations().unobserve(*this);
+  if (!wanted || !isPresented() || bounds().empty()) {
+    context().animations().cancel(*this, kIndeterminate);
+    phase_ms_ = 0;
+    return;
+  }
+  if (context().animations().contains(*this, kIndeterminate)) return;
+  phase_ms_ = 0;
+  AnimationSpec spec = AnimationSpec::CustomTime();
+  spec.minimum_interval = roo_time::Millis(33);
+  context().animations().start(*this, kIndeterminate, spec);
+}
+
+void ProgressIndicator::onLayout(bool changed, const Rect& rect) {
+  Widget::onLayout(changed, rect);
+  reconcileAnimation();
+}
+
+void ProgressIndicator::onPresentationChanged(
+    const PresentationChange& change) {
+  Widget::onPresentationChanged(change);
+  if (change.detached_since_delivery)
+    context().animations().cancel(*this, kIndeterminate);
+  reconcileAnimation();
+}
+
+void ProgressIndicator::onAnimationFrame(AnimationTag tag,
+                                         const AnimationSample& sample) {
+  if (tag != kIndeterminate) {
+    Widget::onAnimationFrame(tag, sample);
+    return;
+  }
+  uint16_t phase = sample.elapsed.inMillis() % (circular_ ? 5400 : 1800);
+  if (phase == phase_ms_) return;
+  phase_ms_ = phase;
   invalidateInk();
 }
 
@@ -148,6 +192,10 @@ void LinearProgressIndicator::paint(PaintContext& ctx) const {
                                         progress())
           : internal::LinearSegments(width(), 4 * kScale,
                                      {width() * 0.4f, width() * 0.6f});
+  if (mode() == ProgressIndicatorMode::kIndeterminate && motionEnabled()) {
+    geometry =
+        internal::LinearIndeterminate(width(), 4 * kScale, phaseMillis());
+  }
   const auto& colors = theme().material3Theme().color;
   for (int i = 0; i < geometry.active_count; ++i)
     AddSegment(ctx, bounds(), geometry.active[i], thickness, rightToLeft(),
@@ -177,9 +225,11 @@ void CircularProgressIndicator::paint(PaintContext& ctx) const {
   float thickness = 4 * scale;
   const auto& colors = theme().material3Theme().color;
   bool known = mode() == ProgressIndicatorMode::kDeterminate;
+  internal::ProgressInterval active{0, (known ? progress() : 0.25f) * kTurn};
+  if (!known && motionEnabled())
+    active = internal::CircularIndeterminate(phaseMillis());
   AddArc(ctx, bounds(), radius,
-         internal::FitProgressArc(0, (known ? progress() : 0.25f) * kTurn,
-                                  radius, thickness),
+         internal::FitProgressArc(active.start, active.end, radius, thickness),
          colors.primary);
   if (known)
     AddArc(ctx, bounds(), radius,
