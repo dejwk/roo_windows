@@ -9,9 +9,11 @@ ApplicationContext::ApplicationContext(
       theme_(theme),
       keyboard_color_theme_(keyboard_color_theme),
       presentations_(*this),
+      animations_(*this),
       lifetime_(new Lifetime(*this)) {}
 
 ApplicationContext::~ApplicationContext() {
+  animations_.stop();
   presentations_.stop();
   lifetime_->context = nullptr;
   lifetime_->release();

@@ -10,6 +10,7 @@
 #include "roo_display/image/image.h"
 #include "roo_display/shape/point.h"
 #include "roo_logging.h"
+#include "roo_windows/core/animation_types.h"
 #include "roo_windows/core/application_context.h"
 #include "roo_windows/core/border_style.h"
 #include "roo_windows/core/canvas.h"
@@ -670,6 +671,12 @@ class Widget {
 
   void triggerInteractiveChange();
 
+  /// Applies one due sample for a subclass-owned animation channel.
+  virtual void onAnimationFrame(AnimationTag, const AnimationSample&) {}
+
+  /// Reports removal after a finite animation's terminal sample was applied.
+  virtual void onAnimationFinished(AnimationTag, AnimationFinishReason) {}
+
   void notifyParentInvalidatedRegion(const Rect& rect);
 
   // Called after any widget-state flag mutation. Subclasses may use this to
@@ -815,6 +822,7 @@ class Widget {
   }
 
  private:
+  friend class AnimationRegistry;
   friend class PresentationRegistry;
   friend class Container;
   friend class SimpleScrollablePanel;

@@ -3,6 +3,8 @@
 /// Includes core windowing application primitives.
 
 #include "roo_windows/config.h"
+#include "roo_windows/core/animation_registry.h"
+#include "roo_windows/core/animation_types.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/display_window.h"
 #include "roo_windows/core/environment.h"

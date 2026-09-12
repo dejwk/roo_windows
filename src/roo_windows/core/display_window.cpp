@@ -100,7 +100,19 @@ bool DisplayWindow::refresh(roo_time::Uptime deadline) {
   // prior completed refresh settled click delivery. If completion destroys
   // this window, returning immediately avoids subsequent member access.
   if (root_.transient_presentation_slot().finishDeferredIfReady()) return true;
+  AnimationRegistry& animations = root_.app().context().animations();
+  if (!root_.hasPaintContinuation()) {
+    animations.beginFrame(roo_time::Uptime::Now());
+    while (animations.dispatchNext()) {
+      root_.app().context().presentations().deliverPendingChanges();
+    }
+    animations.endFrame();
+    root_.app().requestAnimationFrameAt(animations.nextFrameDeadline());
+  }
   root_.updateLayout();
+  // Layout can change effective presentation. Deliver that state before paint,
+  // but do not run a second animation pass in the same logical frame.
+  root_.app().context().presentations().deliverPendingChanges();
   last_time_refreshed_ms_ = millis();
   ClickAnimation& click_animation = root_.click_animation();
   if (!root_.hasPaintContinuation()) click_animation.sampleFrameTime();

@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include "roo_scheduler.h"
+#include "roo_windows/core/animation_registry.h"
 #include "roo_windows/core/focus_manager.h"
 #include "roo_windows/core/presentation_registry.h"
 #include "roo_windows/core/theme.h"
@@ -11,6 +12,7 @@
 
 namespace roo_windows {
 
+class Application;
 class Widget;
 
 /// Bundles application-scoped runtime services shared by widgets.
@@ -49,6 +51,12 @@ class ApplicationContext {
   /// Returns the widget-event dispatcher.
   const WidgetEventDispatcher& widgetEvents() const;
 
+  /// Returns the application-owned widget animation service.
+  AnimationRegistry& animations() { return animations_; }
+
+  /// Returns the application-owned widget animation service.
+  const AnimationRegistry& animations() const { return animations_; }
+
   /// Returns the application-owned keyboard-focus service.
   FocusManager& focus() { return focus_; }
 
@@ -59,6 +67,8 @@ class ApplicationContext {
   const FocusManager& focus() const { return focus_; }
 
  private:
+  friend class AnimationRegistry;
+  friend class Application;
   friend class Widget;
 
   struct Lifetime {
@@ -86,6 +96,8 @@ class ApplicationContext {
   WidgetEventDispatcher widget_events_;
   FocusManager focus_;
   PresentationRegistry presentations_;
+  AnimationRegistry animations_;
+  Application* frame_driver_ = nullptr;
   Lifetime* lifetime_;
 };
 

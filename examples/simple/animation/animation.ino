@@ -99,24 +99,40 @@ Application app(&env, display);
 class AnimatedArc : public Image {
  public:
   AnimatedArc(ApplicationContext& context)
-      : Image(context),
-        // Initial condition; doesn't matter much (as long as we're using the
-        // correct extents) since we're updating it quickly.
-        arc_(SmoothShape(), arc_extents(), kNoAlign),
-        updater_(context.scheduler(), [this]() { update(); }, Millis(20)) {
+      : Image(context), arc_(SmoothShape(), arc_extents(), kNoAlign) {
     setImage(&arc_);
-    updater_.startInstantly();
+    AnimationSpec motion = AnimationSpec::customTime();
+    motion.minimum_interval = Millis(20);
+    context.animations().start(*this, kMotion, motion);
+    AnimationSpec color = AnimationSpec::customTime();
+    color.minimum_interval = Millis(500);
+    context.animations().start(*this, kColor, color);
   }
 
  private:
+  enum : AnimationTag { kMotion, kColor };
+
   constexpr Box arc_extents() const { return Box(-25, -25, 24, 24); }
 
-  // Called periodically to generate subsequent image frames.
-  void update() {
+  void onAnimationFrame(AnimationTag tag,
+                        const AnimationSample& sample) override {
+    if (tag == kMotion) {
+      motion_ms_ = sample.elapsed.inMillis();
+    } else if (tag == kColor) {
+      alternate_color_ = (sample.elapsed.inMillis() / 500) % 2 != 0;
+    } else {
+      Image::onAnimationFrame(tag, sample);
+      return;
+    }
+    updateArc();
+  }
+
+  // Regenerates the image from the independently sampled motion and color.
+  void updateArc() {
     static int64_t period_1 = 1700;
     static int64_t period_2 = 1000;
     static float period_rel = 1.0f / ((1.0f / period_2) - (1.0f / period_1));
-    int64_t now = roo_time::Uptime::Now().inMillis() % (period_1 * period_2);
+    int64_t now = motion_ms_ % (period_1 * period_2);
     int64_t remainder_1 = now % period_1;
     int64_t remainder_2 = now % period_2;
     float angle1 = 2.0 * M_PI * ((float)remainder_1 / period_1);
@@ -128,7 +144,9 @@ class AnimatedArc : public Image {
     if (angle2 < angle1) angle2 += 2.0f * M_PI;
     arc_ =
         MakeTileOf(SmoothThickArc({0, 0}, 15, 14, angle1, angle2,
-                                  theme().material3Theme().color.primary,
+                                  alternate_color_
+                                      ? theme().material3Theme().color.tertiary
+                                      : theme().material3Theme().color.primary,
                                   ENDING_ROUNDED),
                    arc_extents(), kNoAlign);
     invalidateInterior();
@@ -137,7 +155,8 @@ class AnimatedArc : public Image {
   // We use the tile to put the center of the arc's curvature at an absolute
   // point.
   TileOf<SmoothShape> arc_;
-  roo_scheduler::RepetitiveTask updater_;
+  int64_t motion_ms_ = 0;
+  bool alternate_color_ = false;
 };
 
 // Custom, small two-bitmap sprite, using 2 bits per pixel, tiled into a larger
@@ -149,8 +168,8 @@ class Ghost : public Drawable {
 
   Box extents() const override { return Box(0, 0, 300, 27); }
 
-  // Advances the ghost to the next animation frame.
-  void next() { step_ = (step_ + 1) % 100; }
+  // Selects the ghost's analytical position and sprite frame.
+  void setStep(int step) { step_ = step % 100; }
 
   virtual void drawTo(const Surface& s) const {
     static const uint8_t ghost2[] PROGMEM = {
@@ -195,22 +214,27 @@ class Ghost : public Drawable {
 // Animated image using a custom drawable.
 class GhostImage : public Image {
  public:
-  GhostImage(ApplicationContext& context)
-      : Image(context),
-        updater_(context.scheduler(), [this] { update(); }, Seconds(0.04)) {
+  GhostImage(ApplicationContext& context) : Image(context) {
     setImage(&ghost_);
-    updater_.start();
+    AnimationSpec spec = AnimationSpec::customTime();
+    spec.minimum_interval = Millis(40);
+    context.animations().start(*this, kMotion, spec);
   }
 
  private:
-  // Called periodically to generate subsequent image frames.
-  void update() {
-    ghost_.next();
+  static constexpr AnimationTag kMotion = 0;
+
+  void onAnimationFrame(AnimationTag tag,
+                        const AnimationSample& sample) override {
+    if (tag != kMotion) {
+      Image::onAnimationFrame(tag, sample);
+      return;
+    }
+    ghost_.setStep(sample.elapsed.inMillis() / 40);
     invalidateInterior();
   }
 
   Ghost ghost_;
-  roo_scheduler::RepetitiveTask updater_;
 };
 
 // A simple vertical pane containing three animated objects. Two of them are
@@ -225,33 +249,36 @@ class MyPane : public VerticalLayout {
       : VerticalLayout(context),
         arc_(context),
         ghost_(context),
-        warning_icon_(context, ic_filled_36_alert_warning(), color::DarkOrange),
-        icon_updater_(
-            context.scheduler(), [this]() { updateIcon(); }, Seconds(0.25)) {
+        warning_icon_(context, ic_filled_36_alert_warning(),
+                      color::DarkOrange) {
     add(arc_);
     add(ghost_);
 
     add(warning_icon_);
-    icon_updater_.startInstantly();
+    AnimationSpec warning = AnimationSpec::customTime();
+    warning.minimum_interval = Millis(250);
+    context.animations().start(*this, kWarningBlink, warning);
   }
 
  private:
-  // Called periodically to toggle icon visibility.
-  void updateIcon() {
-    // Toggle visibility.
-    warning_icon_.setVisibility(warning_icon_.isVisible()
-                                    ? Visibility::kInvisible
-                                    : Visibility::kVisible);
+  static constexpr AnimationTag kWarningBlink = 0;
+
+  void onAnimationFrame(AnimationTag tag,
+                        const AnimationSample& sample) override {
+    if (tag != kWarningBlink) {
+      VerticalLayout::onAnimationFrame(tag, sample);
+      return;
+    }
+    warning_icon_.setVisibility((sample.elapsed.inMillis() / 250) % 2 == 0
+                                    ? Visibility::kVisible
+                                    : Visibility::kInvisible);
   }
 
   AnimatedArc arc_;
   GhostImage ghost_;
 
-  // For the warning icon, we control animation directly from the container. (We
-  // could have subclassed the Icon instead, but for simple cases it may be
-  // easier to do things this way.)
+  // The warning icon demonstrates a container-owned animation channel.
   Icon warning_icon_;
-  roo_scheduler::RepetitiveTask icon_updater_;
 };
 
 MyPane my_pane(app.context());

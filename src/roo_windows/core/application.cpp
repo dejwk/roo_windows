@@ -30,6 +30,19 @@ class ApplicationTicker final : public roo_scheduler::Executable {
     requestAt(roo_time::Uptime::Now() + delay);
   }
 
+  /// Requests a dispatch at `when`, retaining an earlier pending request.
+  void requestAt(roo_time::Uptime when) {
+    roo::lock_guard<roo::mutex> lock(mutex_);
+    if (stopped_) return;
+    if (dispatching_) {
+      if (when < after_dispatch_at_) after_dispatch_at_ = when;
+      return;
+    }
+    if (scheduled_id_ >= 0 && scheduled_at_ <= when) return;
+    if (scheduled_id_ >= 0) scheduler_.cancel(scheduled_id_);
+    scheduleLocked(when);
+  }
+
   /// Rejects future requests and cancels a pending scheduler execution.
   void stop() {
     roo::lock_guard<roo::mutex> lock(mutex_);
@@ -63,18 +76,6 @@ class ApplicationTicker final : public roo_scheduler::Executable {
  private:
   // Calls into the scheduler only while ticker state is protected. A request
   // made while dispatching is deferred instead, preventing recursive tick().
-  void requestAt(roo_time::Uptime when) {
-    roo::lock_guard<roo::mutex> lock(mutex_);
-    if (stopped_) return;
-    if (dispatching_) {
-      if (when < after_dispatch_at_) after_dispatch_at_ = when;
-      return;
-    }
-    if (scheduled_id_ >= 0 && scheduled_at_ <= when) return;
-    if (scheduled_id_ >= 0) scheduler_.cancel(scheduled_id_);
-    scheduleLocked(when);
-  }
-
   void scheduleLocked(roo_time::Uptime when) {
     scheduled_at_ = when;
     scheduled_id_ =
@@ -340,6 +341,7 @@ Application::Application(const Environment* env, roo_display::Display& display)
       text_input_(new ApplicationTextInput(*this)),
       window_(*this, display, true),
       ticker_(new ApplicationTicker(env->scheduler(), [this]() { tick(); })) {
+  context_.frame_driver_ = this;
   roo_display::Box keyboard_bounds(0, window_.root().height() / 2,
                                    window_.root().width() - 1,
                                    window_.root().height() - 1);
@@ -360,6 +362,7 @@ Application::Application(const Environment* env, roo_display::Display& display,
       text_input_(new ApplicationTextInput(*this)),
       window_(*this, display, enable_touch),
       ticker_(new ApplicationTicker(env->scheduler(), [this]() { tick(); })) {
+  context_.frame_driver_ = this;
   roo_display::Box keyboard_bounds(0, window_.root().height() / 2,
                                    window_.root().width() - 1,
                                    window_.root().height() - 1);
@@ -382,6 +385,8 @@ Application::~Application() {
   // Reject wakeups before clearing handlers, then remove all routes while
   // tasks and their fallback state are still valid.
   ticker_->stop();
+  context_.animations().stop();
+  context_.frame_driver_ = nullptr;
   input_router_->clear();
   text_input_->clear();
   window_.stop();
@@ -511,6 +516,14 @@ void Application::disconnectKeySource(KeySource& source) {
 // Called by a source readiness handler. The ticker coalesces concurrent
 // producer notifications and keeps dispatch on the application UI thread.
 void Application::requestKeySourceTick() { ticker_->requestNow(); }
+
+void Application::requestAnimationFrameAt(roo_time::Uptime deadline) {
+  if (state_ == State::kConstructed || state_ == State::kStopping ||
+      deadline == roo_time::Uptime::Max()) {
+    return;
+  }
+  ticker_->requestAt(deadline);
+}
 
 void Application::connectTextInputEmitter(TextInputEmitter& emitter) {
   text_input_->connect(emitter);

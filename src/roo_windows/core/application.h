@@ -20,6 +20,7 @@ namespace roo_windows {
 
 class ApplicationInputRouter;
 class ApplicationTextInput;
+class AnimationRegistry;
 
 /// Top-level coordinator that owns the event loop, display, input pipeline,
 /// and active display-local tasks.
@@ -156,6 +157,8 @@ class Application {
  private:
   friend class ApplicationInputRouter;
   friend class ApplicationTextInput;
+  friend class AnimationRegistry;
+  friend class DisplayWindow;
   friend class KeySource;
   friend class TextInputEmitter;
   friend class TextFieldEditor;
@@ -178,6 +181,7 @@ class Application {
   void connectKeySource(KeySource& source, Task& destination);
   void disconnectKeySource(KeySource& source);
   void requestKeySourceTick();
+  void requestAnimationFrameAt(roo_time::Uptime deadline);
 
   void connectTextInputEmitter(TextInputEmitter& emitter);
   void disconnectTextInputEmitter(TextInputEmitter& emitter);

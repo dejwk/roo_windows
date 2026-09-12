@@ -39,10 +39,18 @@ Widget::Widget(Widget&& other)
       parent_bounds_(other.parent_bounds_),
       state_(other.state_) {
   context_lifetime_->retain();
+  if (ApplicationContext* live_context = tryContext();
+      live_context != nullptr) {
+    live_context->animations().clearTarget(other);
+  }
   context().widgetEvents().moveHandlers(other, *this);
 }
 
 Widget::~Widget() {
+  if (ApplicationContext* live_context = tryContext();
+      live_context != nullptr) {
+    live_context->animations().clearTarget(*this);
+  }
   if (tryContext() != nullptr) {
     focusManager().onWidgetDestroying(*this);
   }
