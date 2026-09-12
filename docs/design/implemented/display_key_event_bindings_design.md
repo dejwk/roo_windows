@@ -41,7 +41,7 @@ physical key events.
 Phases 1–5 of the
 [display runtime design](../in_progress/display_surface_generalization_design.md)
 establish application-owned tasks and shared-scheduler driving. The
-[event-driven input design](../in_progress/display_event_driven_input_design.md) replaces the
+[event-driven input design](display_event_driven_input_design.md) replaces the
 idle application cadence with readiness notifications and explicit deadlines.
 
 The original Phase 6 proposal put physical and software producer lists in each
@@ -108,16 +108,15 @@ synchronously on the common UI thread.
 ### Dependency order
 
 Physical-key representation, the coalescing ticker, and physical routing have
-landed. The [event-driven input design](../in_progress/display_event_driven_input_design.md)
-still retains the periodic fallback until its later touch, gesture, paint, and
-animation phases are complete.
+landed. The [event-driven input design](display_event_driven_input_design.md)
+is complete, including independent touch acquisition, gesture/paint/animation
+deadlines, and removal of the periodic application fallback.
 
 Semantic text input does not depend on physical routing. Its stable application
 endpoint has landed, so the keyboard can next emit to it. The converted keyboard
 must exist before its visibility and cross-application behavior are integrated.
-The final periodic fallback is separate event-driven work and is removed only
-after key readiness, touch acquisition, gesture deadlines, invalidation, and
-animation deadlines are all explicit.
+The separate event-driven work has made key readiness, touch acquisition,
+gesture deadlines, invalidation, and animation deadlines explicit.
 
 ### Lifetime boundary
 

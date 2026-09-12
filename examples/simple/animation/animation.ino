@@ -102,10 +102,10 @@ class AnimatedArc : public Image {
   AnimatedArc(ApplicationContext& context)
       : Image(context), arc_(SmoothShape(), arc_extents(), kNoAlign) {
     setImage(&arc_);
-    AnimationSpec motion = AnimationSpec::customTime();
+    AnimationSpec motion = AnimationSpec::CustomTime();
     motion.minimum_interval = Millis(20);
     context.animations().start(*this, kMotion, motion);
-    AnimationSpec color = AnimationSpec::customTime();
+    AnimationSpec color = AnimationSpec::CustomTime();
     color.minimum_interval = Millis(500);
     context.animations().start(*this, kColor, color);
   }
@@ -217,7 +217,7 @@ class GhostImage : public Image {
  public:
   GhostImage(ApplicationContext& context) : Image(context) {
     setImage(&ghost_);
-    AnimationSpec spec = AnimationSpec::customTime();
+    AnimationSpec spec = AnimationSpec::CustomTime();
     spec.minimum_interval = Millis(40);
     context.animations().start(*this, kMotion, spec);
   }
@@ -261,7 +261,7 @@ class MyPane : public VerticalLayout {
     add(progress_);
 
     add(warning_icon_);
-    AnimationSpec warning = AnimationSpec::customTime();
+    AnimationSpec warning = AnimationSpec::CustomTime();
     warning.minimum_interval = Millis(250);
     context.animations().start(*this, kWarningBlink, warning);
   }

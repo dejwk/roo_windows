@@ -122,7 +122,7 @@ also calls `deliverPendingChanges()` before animation/layout; when it gets there
 first, it cancels the queued notification. The last unsubscribe cancels pending
 work. New requests after stop do nothing. There is no recurring ticket.
 
-The [event-driven dispatch design](../in_progress/display_event_driven_input_design.md)
+The [event-driven dispatch design](display_event_driven_input_design.md)
 uses the same context scheduler. A presentation hook that starts or resumes an
 animation requests an application wake through that service. Presentation
 therefore works even after periodic application polling is removed.

@@ -2,20 +2,13 @@
 
 ## Status
 
-In progress. Phases 1–6 are implemented: `ApplicationTicker` coalesces
-requests while retaining the 20 ms fallback, and physical key sources wake the
-application through producer-owned readiness handlers and the application input
-router. FLTK crosses from its native event thread through `roo_testing`'s
-`HostEventEndpoint`. The widget animation registry and its widget migrations
-have also landed, including explicit frame requests and pre-layout sampling.
-Touch acquisition now signals readiness and uses an independent sensor-owned
-poll task in single-threaded builds. Gesture transitions now use source-time
-deadlines and chronological input ordering. Click feedback now owns frame
-deadlines and is sampled before layout without paint-time self-dirtying. Phase 6
-collects pending work, retries painting at exact eligibility, resumes retained
-slices immediately, and services deferred notifications independently of paint.
-Fallback-free scheduler tests cover these paths; Phase 7 removes the production
-fallback after final isolation and integration coverage.
+**Implemented.** Phases 1–7 provide readiness-driven physical input, independent
+touch acquisition, chronological gesture deadlines, controller/registry animation
+frames, eligible paint retries, and bounded deferred work. Application tickers
+have no periodic fallback: a settled application with touch disabled and no timed
+work remains dormant. Sensor polling and semantic timers retain their own
+scheduler tasks. Deterministic production-path tests cover dormancy, settlement,
+two-application isolation, and single-threaded sensor-poll independence.
 
 ## Objective
 
@@ -26,10 +19,10 @@ periods for sleep when its other work and input hardware permit it.
 
 ## Motivation
 
-The application ticker currently falls back to a 20 ms cadence even when the
-window is clean and no input is available. That cadence couples hardware
-acquisition, gesture timing, animation, and painting, and consumes scheduler
-and CPU time for static applications.
+Before this design, the application ticker fell back to a 20 ms cadence even
+when the window was clean and no input was available. That cadence coupled
+hardware acquisition, gesture timing, animation, and painting, consuming
+scheduler and CPU time for static applications.
 
 Idle CPU usage is the primary benefit. An application displaying static content,
 including an e-paper interface, should not need periodic UI dispatch merely to
@@ -408,8 +401,7 @@ One ticker execution performs these phases in order:
    deadline in one application/display decision. Merge that result with external
    requests recorded by the ticker during dispatch.
 6. Return no work deadline when no input follow-up, deferred work, continuation,
-   ordinary dirtiness, or timed work remains. Production separately retains its
-   20 ms fallback until Phase 7.
+   ordinary dirtiness, or timed work remains. The ticker is then dormant.
 
 Chronologically merge timestamped touch input with gesture timers for late
 dispatch. Separating deferred work from paint eligibility must preserve click
@@ -893,30 +885,67 @@ Delivered change:
 > throttled frame requests at their eligibility deadline, and resume interrupted
 > paint immediately as specified by `display_event_driven_input_design.md`.
 
-### Phase 7: remove the application fallback
+### Completed Phase 7: remove the application fallback
 
-Delete the final 20 ms fallback and schedule only the immediate work and
-deadlines introduced by Phases 2–6. Add dormancy, two-application isolation,
-single-threaded touch-poll independence, and full no-sleep deterministic
-coverage. Verify every inventory row has a wakeup and settlement test before
-removing the fallback. For a clean application with touch disabled and no timed
-work, advancing the deterministic clock must cause zero additional application
-dispatches or display paints. Repeat after a completed interaction and after
-animation/deferred-work settlement. With polling touch enabled, count sensor
-polls separately and verify they do not dispatch an idle application. Update the
-shared-scheduler design's follow-up status and the design index in the same commit.
+Removed the periodic application request and temporary fallback-test switch.
+The Phase 6 work scenarios now run unchanged scheduling semantics through the
+production path. Dormancy checks advance ten seconds of manual time and assert
+unchanged application dispatch and paint counts plus an empty scheduler. They
+cover startup, ordinary invalidation, natural click completion, animation and
+transient settlement, semantic timers, presentation notifications, physical-key
+readiness, and UI-thread callback effects.
 
-Focused validation:
+Two applications share a scheduler while retaining independent work: animation
+in one does not dispatch or paint its dormant peer, and invalidation in the peer
+does not wake the first. In the single-threaded configuration, fifty sensor polls
+advance without any application dispatch or paint, both before interaction and
+after release settlement. Touch readiness and off-grid gesture deadlines still
+wake the application. All integration scenarios use deterministic time without
+sleeping; independent acquisition counts are separate from UI counts.
+
+Wakeup/settlement inventory coverage:
+
+| Source | Production-path coverage |
+| --- | --- |
+| Physical keys | `PhysicalReadinessReturnsToDormancy`; key-source bounded drain and routing tests. |
+| Touch | `TouchPollWakesApplication`, `IdleSensorPollsDoNotDispatchOrPaintApplication`; sensor queue/readiness tests. |
+| Gesture transitions | `GestureDeadlineWakesWithoutNewTouch`; chronological detector tests. |
+| Dirty/layout work | `DirtyWorkRetriesAtExactEligibility`, `LayoutAndRootRefreshWakeDormantApplication`. |
+| Registry tracks | Clean start, 33 ms/zero intervals, delay/seek/finish, cancellation, and sampling-time control tests. |
+| Click feedback | `NaturalInteractionReturnsToDormancy`, post-paint and non-animated settlement tests. |
+| Interrupted paint | `ShortSlicesResumeImmediatelyWithFrozenSamples`, including click and registry samples. |
+| Presentation notifications | `PresentationNotificationWakesPaintAndSettles`. |
+| Transient activity | `CleanTransientActivityIsDeliveredInBoundedBatches`. |
+| Deferred transient completion | `HostedFinishRunsAfterFinalClickOnLaterEntry`. |
+| Semantic timers | `SemanticTimerStartsWorkWhileDormant`, `SemanticTimerInvalidatesDormantWindow`. |
+| UI-thread callbacks | `UiThreadCallbackWakesDormantPaint`; existing thread handoff tests. |
+
+Validation:
 
 ```sh
 bazel test //:application_test //:shared_scheduler_drive_test \
   //:display_window_test //:key_source_test //:touch_sensor_test \
   //:display_runtime_characterization_test
+bazel test //:application_test //:display_window_test //:touch_sensor_test \
+  //:shared_scheduler_drive_test //:display_runtime_characterization_test \
+  --copt=-DROO_THREADS_SINGLETHREADED \
+  --per_file_copt='external/roo_display.*/src/roo_display/driver/touch_gt911.cpp@-UROO_THREADS_SINGLETHREADED' \
+  --per_file_copt='src/roo_windows/core/application.cpp,external/roo_scheduler.*/src/roo_scheduler.cpp@-ffunction-sections' \
+  --linkopt=-Wl,--gc-sections
 bazel test //...
 bazel build //...
 ```
 
-Proposed commit message:
+The single-threaded configuration retains the Phase 3 GT911 compile exception;
+the sensor and application paths under test use the single-threaded backend.
+
+Validation passed: all 77 default test targets (73 executed, four cached), all
+297 build targets, and all five focused single-threaded targets. The application
+suite includes twenty production scheduler scenarios. Full-graph compilation
+also found four stale `AnimationSpec::customTime()` calls in the animation
+example; they now use the current `CustomTime()` factory.
+
+Delivered change:
 
 > Event-driven input Phase 7 makes idle application tickers dormant.
 >

@@ -38,11 +38,10 @@ input task-local. Phase 4 separates content from navigation. Phase 5 preserves
 that private ticker model while adding bounded display work, explicit
 contracts, and multi-application coverage.
 
-Removing periodic input polling and making an idle application ticker dormant
-is a separate change described in
-[event-driven input notification and application ticker wakeup](../in_progress/display_event_driven_input_design.md).
-Phase 5 deliberately retains the existing periodic fallback until that design
-is implemented.
+Periodic application polling has since been removed by
+[event-driven input notification and application ticker wakeup](display_event_driven_input_design.md).
+That follow-up is implemented: source readiness and timed work wake each
+application, while a clean application without pending work remains dormant.
 
 ## Requirements
 
@@ -80,9 +79,8 @@ is implemented.
 1. A saturated touch queue, active touch, dispatched gestures, interrupted
    paint, and work dirtied after the refresh slice must reschedule the ticker
    immediately.
-2. Otherwise, the ticker must retain the existing 20 ms periodic fallback.
-   This preserves input polling, gesture timers, and refresh cadence without
-   adding wakeup machinery to Phase 5.
+2. Phase 5 retained the 20 ms fallback pending explicit wakeup machinery. The
+   implemented event-driven follow-up replaces it with collected work deadlines.
 3. Application tickers use the same documented scheduler priority. No
    application may invoke another application's ticker recursively.
 4. Scheduler FIFO behavior plus the per-dispatch bounds must allow other
@@ -162,7 +160,7 @@ their own input arbitration.
 
 ### Pointer and timer work
 
-Since [event-driven input Phase 3](../in_progress/display_event_driven_input_design.md),
+Since [event-driven input Phase 3](display_event_driven_input_design.md),
 single-threaded touch acquisition uses a sensor-owned 20 ms scheduler task;
 multi-threaded builds retain the sensor worker. Both signal readiness after
 queue mutation. The application gesture detector drains no more than the fixed
@@ -188,15 +186,12 @@ settles click callbacks only after the drawing context closes.
 
 ### Rescheduling
 
-At the end of the ticker dispatch, immediate follow-up is required when touch
-work saturated, touch is down, gesture work dispatched, paint was interrupted,
-or a handler dirtied the window after its one refresh slice.
-The ticker uses `scheduleNow()` in those cases.
-
-Otherwise it schedules itself after 20 ms, preserving the current polling and
-refresh behavior. Event-driven sources, independent gesture timers, direct
-invalidation wakeups, animation deadlines, and ticker dormancy are intentionally
-deferred to the standalone event-driven input design.
+The implemented event-driven input follow-up replaces the Phase 5 fallback.
+Application dispatch collects remaining input, deferred framework work,
+continuation, and eligible paint/animation/gesture deadlines. A continuation
+resumes immediately; new dirty or animated frames obey the 20 ms minimum refresh
+interval. A held touch alone does not dispatch the UI, and no pending work means
+no application execution is scheduled. Sensor polling remains independent.
 
 Because each application reschedules a distinct equal-priority task, immediate
 work does not monopolize the shared loop: tasks already eligible retain FIFO
@@ -347,13 +342,11 @@ Rejected because input endpoints, scheduler tasks, task content, and
 display continuation would need a second lifecycle contract. Applications are
 constructed, started once, and destroyed.
 
-## Future Work
+## Follow-up status and future work
 
-The standalone
-[event-driven input notification design](../in_progress/display_event_driven_input_design.md)
-removes the
-periodic application fallback and separates acquisition, gesture timers,
-painting, and animation wakeups. Cross-thread application groups require an
+The [event-driven input notification design](display_event_driven_input_design.md)
+is implemented, including fallback removal, idle dormancy, and scheduler-driven
+isolation/settlement coverage. Cross-thread application groups require an
 explicit caller-owned synchronization policy. A higher-level convenience owner
 can be considered if real programs need coordinated construction or teardown
 beyond the shared scheduler pattern.

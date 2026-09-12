@@ -86,7 +86,7 @@ its editing session exists.
 
 Delivery is synchronous because no payload storage exists. Invalidation caused
 by editing requests the destination application's ticker through the
-[event-driven invalidation path](../in_progress/display_event_driven_input_design.md); delivery
+[event-driven invalidation path](display_event_driven_input_design.md); delivery
 does not recursively tick or paint that application.
 
 ## Design Details

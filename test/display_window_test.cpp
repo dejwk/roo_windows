@@ -63,8 +63,8 @@ class DispatchCountingSource : public KeySource {
 };
 
 // Verifies sensor polling runs separately from UI dispatch and touch readiness
-// preempts the retained fallback. Destruction cancels both sources of work.
-TEST(DisplayWindow, TouchPollWakesApplicationBeforeFallback) {
+// wakes its destination. Destruction cancels both sources of work.
+TEST(DisplayWindow, TouchPollWakesApplication) {
   roo::byte raster[32 * 24 * 2] = {};
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       32, 24, raster, roo_display::Argb4444());
@@ -92,7 +92,7 @@ TEST(DisplayWindow, TouchPollWakesApplicationBeforeFallback) {
     scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 1);
     EXPECT_EQ(2, keys.dispatches);
     EXPECT_EQ(1, touch.polls);
-    // The fallback is now due at 30 ms, while the next sensor poll is at 20 ms.
+    // The next sensor poll is at 20 ms; it wakes UI work only for new input.
     system_time_delay_micros(10000);
     touch.down = true;
     scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 1);
@@ -139,9 +139,9 @@ class DeadlineRecordingWidget : public BasicWidget {
   int long_presses = 0;
 };
 
-// Verifies a timer-only application dispatch preempts both polling and the
-// fallback grid, and a held contact causes no immediate redispatch loop.
-TEST(DisplayWindow, GestureDeadlinePreemptsFallbackWithoutNewTouch) {
+// Verifies a timer-only application dispatch preempts polling, and a held
+// contact causes no immediate redispatch loop.
+TEST(DisplayWindow, GestureDeadlineWakesWithoutNewTouch) {
   roo::byte raster[32 * 24 * 2] = {};
   roo_display::OffscreenDevice<roo_display::Argb4444> device(
       32, 24, raster, roo_display::Argb4444());
@@ -182,6 +182,63 @@ TEST(DisplayWindow, GestureDeadlinePreemptsFallbackWithoutNewTouch) {
   EXPECT_EQ(start + roo_time::Millis(300), scheduler.getNearestExecutionTime());
   app.reset();
   EXPECT_TRUE(scheduler.empty());
+}
+
+class IdlePaintWidget : public BasicWidget {
+ public:
+  using BasicWidget::BasicWidget;
+  Dimensions getSuggestedMinimumDimensions() const override {
+    return Dimensions(8, 8);
+  }
+  void paint(PaintContext&) const override { ++paints; }
+  mutable int paints = 0;
+};
+
+// Verifies independent single-threaded sensor polling keeps running while
+// settled UI dispatch and paint counts stay fixed, also after touch release.
+TEST(DisplayWindow, IdleSensorPollsDoNotDispatchOrPaintApplication) {
+  roo::byte raster[32 * 24 * 2] = {};
+  roo_display::OffscreenDevice<roo_display::Argb4444> device(
+      32, 24, raster, roo_display::Argb4444());
+  CountingTouchDevice touch;
+  roo_display::Display display(device, touch);
+  roo_scheduler::Scheduler scheduler;
+  Environment environment(scheduler);
+  DispatchCountingSource keys;
+  Application app(&environment, display, keys, true);
+  auto child = std::make_unique<IdlePaintWidget>(app.context());
+  IdlePaintWidget* target = child.get();
+  app.add(std::move(child), roo_display::Box(0, 0, 31, 23));
+  system_time_delay_micros(20000);
+  app.start();
+  scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum, 8);
+  for (int scenario = 0; scenario < 2; ++scenario) {
+    int polls = touch.polls;
+    int dispatches = keys.dispatches;
+    int paints = target->paints;
+    for (int i = 0; i < 50; ++i) {
+      system_time_delay_micros(20000);
+      scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum,
+                                            8);
+    }
+    EXPECT_EQ(polls + 50, touch.polls);
+    EXPECT_EQ(dispatches, keys.dispatches);
+    EXPECT_EQ(paints, target->paints);
+    if (scenario == 0) {
+      touch.down = true;
+      system_time_delay_micros(20000);
+      scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum,
+                                            8);
+      EXPECT_GT(keys.dispatches, dispatches);
+      touch.down = false;
+      for (int i = 0; i < 30; ++i) {
+        system_time_delay_micros(20000);
+        scheduler.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum,
+                                              8);
+      }
+      EXPECT_FALSE(app.gesture_detector().isTouchDown());
+    }
+  }
 }
 
 #endif

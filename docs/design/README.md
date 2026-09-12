@@ -17,6 +17,7 @@ Status was audited against the source tree and tests on 2026-09-12. “Dependenc
 | App bars/search surfaces | The component family, focused unit and golden coverage, example, and adaptive scaffold integration are implemented. Focused/expanded search remains separate future work. |
 | Back request coordination | Explicit `Task::requestBack()` routing through the transient slot, task-owned `NavigationHost`, and task callback is implemented. Ordinary physical Back/Escape follows the configured task's focused-widget path first; an active display-wide hosted surface now receives it first. Phase 7 adds source-task filtering for task-bounded coverage. |
 | Badge | Paint context and visual-overflow foundations are implemented; the shared transient lifetime contract remains in progress and is not required by the badge scope. |
+| [Event-driven input notification and ticker wakeup](implemented/display_event_driven_input_design.md) | Phases 1–7 implement explicit input, gesture, animation, paint, and deferred-work wakeups. Idle application tickers are dormant; scheduler integration covers settlement, isolation, and independent sensor polling. |
 | Button | Surface widgets, click animation, and Material 3 theme support are implemented; icon buttons are implemented as a separate family. |
 | Click-animation customization | The shared click-animation controller and widget-local animation view are implemented. |
 | Click-animation lifecycle and settlement | Stable per-frame timing, slow-display rendering, deferred semantic delivery, held-press settlement, late-release coalescing, and transient-overlay cleanup are implemented. |
@@ -62,7 +63,6 @@ Status was audited against the source tree and tests on 2026-09-12. “Dependenc
 | Design | Dependency status |
 | --- | --- |
 | Display runtime and cross-application input | Phases 1–6 are implemented. Explicit modal coverage and the final migration/cost audit remain proposed. |
-| Event-driven input notification and ticker wakeup | The coalescing ticker and readiness-driven physical-key routing are implemented while retaining the 20 ms fallback. Touch acquisition, gesture/paint/animation deadlines, and final ticker dormancy remain. |
 | Text system | `TextBlock` wrapping, justification, max-lines, ellipsis, caching, and golden coverage are implemented; shared rich paragraph layout and `RichTextBlock` remain. |
 | Transient presentation pins | The shared layer-scoped host and slider/range-slider adoption are implemented; keyboard-highlighter adoption remains. Visual overflow prerequisites are in progress. |
 | Transient presenter lifetime and ownership | The shared slot, legacy-dialog and Material 3 menu lifetime, Back, and structural-host adoption are implemented; snackbar queue adoption is also implemented; modal sheets have no implementation to adopt. |

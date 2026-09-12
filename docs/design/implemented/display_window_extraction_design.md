@@ -223,14 +223,14 @@ Application schedules its next ticker deadline
 ```
 
 `servicePointerInput()` drains gesture input and dispatches due transitions.
-Since [event-driven input Phases 5–6](../in_progress/display_event_driven_input_design.md),
+Since [event-driven input Phases 5–6](display_event_driven_input_design.md),
 click and registry samples advance before layout in a new logical refresh;
 continued slices retain both samples. Touch acquisition remains independent.
 `refreshIfDue()` services deferred work before checking paint eligibility and
 attempts at most one slice. A continuation bypasses the ordinary frame throttle.
 
 `Application` combines key-pending work, gesture deadlines, the window's final
-`nextWorkDeadline()` result, and the retained 20 ms production fallback. The
+`nextWorkDeadline()` result. The event-driven follow-up removed the fallback. The
 window collects deferred activity/completion and exact eligible dirty/layout or
 animation deadlines. Work consumed by sampling/layout/paint does not request a
 redundant immediate dispatch; post-paint work remains scheduled. A held touch

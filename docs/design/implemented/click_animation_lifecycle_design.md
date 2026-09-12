@@ -108,7 +108,7 @@ held target in `kAwaitingRelease`; framework code must inspect
 
 ## Runtime ordering
 
-Since [event-driven input Phase 5](../in_progress/display_event_driven_input_design.md),
+Since [event-driven input Phase 5](display_event_driven_input_design.md),
 the normal application tick is ordered as follows:
 
 ```text

@@ -25,11 +25,6 @@ class ApplicationTicker final : public roo_scheduler::Executable {
   /// Requests an application dispatch as soon as the scheduler can run it.
   void requestNow() { requestAt(roo_time::Uptime::Now()); }
 
-  /// Requests a dispatch after `delay`, retaining an earlier pending request.
-  void requestAfter(roo_time::Duration delay) {
-    requestAt(roo_time::Uptime::Now() + delay);
-  }
-
   /// Requests a dispatch at `when`, retaining an earlier pending request.
   void requestAt(roo_time::Uptime when) {
     if (when == roo_time::Uptime::Max()) return;
@@ -426,7 +421,6 @@ void Application::tick() {
   window_.servicePointerInput();
   window_.refreshIfDue();
   if (key_events_pending) ticker_->requestNow();
-  if (fallback_enabled_) ticker_->requestAfter(roo_time::Millis(20));
   ticker_->requestAt(window_.gestureDetector().nextTimeoutDeadline());
   ticker_->requestAt(window_.nextWorkDeadline());
 }

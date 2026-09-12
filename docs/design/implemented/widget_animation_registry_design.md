@@ -31,7 +31,7 @@ operations even when both use a fraction from zero to one.
 
 [ApplicationContext](../../../src/roo_windows/core/application_context.h) borrows
 the Environment scheduler. The existing application ticker runs on that scheduler.
-The [event-driven redesign](../in_progress/display_event_driven_input_design.md)
+The [event-driven redesign](display_event_driven_input_design.md)
 replaces reliance on periodic dispatch with explicit deadlines. New animations
 must publish their next deadline from the outset, so removing the fallback tick
 does not stop an animation after its first frame.
@@ -264,10 +264,10 @@ sample. Direct widget semantic changes retain the existing invalidation rules.
 Cancellation of the last track can leave one already scheduled ticker wake; that
 wake observes no work and stops. It must not recreate periodic polling.
 
-The event-driven Phase 5 `requestAnimationFrameAt()` helper remains useful for
-unmigrated paint-driven and click animations. New registry consumers do not use
-it. Removing the fallback still requires auditing every legacy animation source;
-introducing this registry alone does not complete that migration.
+The core `requestAnimationFrameAt()` helper serves registry and shared click
+controllers. Widget consumers use the registry. Event-driven input Phases 5–7
+completed the remaining-consumer audit, eligible-paint integration, and fallback
+removal; that work is separate from introducing this registry.
 
 ### Presentation is a widget policy
 
@@ -783,8 +783,8 @@ only a packed timestamp. Report increases explicitly.
 Require every existing non-click visual driver in the migration table to be
 removed, all listed semantic timers to be documented, and zero recurring
 animation-originated wakes in a settled application without caret/spinner or
-semantic timed work. The application-wide touch-poll fallback is owned by the
-separate event-driven-input design and is not an animation wake. The Phase 16
+semantic timed work. The separate event-driven-input design has removed the
+application fallback; independent sensor polls are not animation wakes. The Phase 16
 target review replaces the original nonpositive migration-size hypothesis with
 a 16 KiB text+rodata ceiling for the complete mixed-widget fixture against a
 baseline already linking the registry. The measured 14,478-byte increase and

@@ -11,9 +11,6 @@
 namespace roo_windows {
 namespace test {
 struct ApplicationWorkTestAccess {
-  static void DisableFallback(Application& app) {
-    app.fallback_enabled_ = false;
-  }
   static void SetPaintBudget(Application& app, roo_time::Duration budget) {
     app.window_.paint_interval_ = budget;
   }
@@ -23,14 +20,24 @@ namespace {
 
 class WorkKeys : public KeySource {
  public:
-  int drain(KeyEvent*, int) override {
+  int drain(KeyEvent* events, int capacity) override {
     ++dispatches;
-    return 0;
+    if (!pending || capacity == 0) return 0;
+    events[0] = {KeyPhase::kDown, KeyCode::kCharacter, 0, 0};
+    pending = false;
+    ++delivered;
+    return 1;
+  }
+  void post() {
+    pending = true;
+    notifyReady();
   }
   int dispatches = 0;
+  int delivered = 0;
 
  private:
-  bool hasPendingEvents() const override { return false; }
+  bool hasPendingEvents() const override { return pending; }
+  bool pending = false;
 };
 
 class WorkWidget : public BasicSurfaceWidget {
@@ -65,6 +72,11 @@ class WorkWidget : public BasicSurfaceWidget {
     activity.push_back(active);
     if (activity_action) activity_action(active);
   }
+  void onPresentationChanged(const PresentationChange&) override {
+    ++presentation_changes;
+    invalidateInterior();
+  }
+  int presentation_changes = 0;
   mutable int paints = 0;
   int paint_delay_us = 0;
   int clicks = 0;
@@ -91,7 +103,6 @@ class WorkRegistration : public TransientPresentationRegistration {
 class ApplicationWorkTest : public testing::Test {
  protected:
   void SetUp() override {
-    test::ApplicationWorkTestAccess::DisableFallback(app_);
     auto widget = std::make_unique<WorkWidget>(app_.context());
     widget_ = widget.get();
     app_.add(std::move(widget), roo_display::Box(0, 0, 15, 15));
@@ -115,6 +126,21 @@ class ApplicationWorkTest : public testing::Test {
       system_time_delay_micros((next() - roo_time::Uptime::Now()).inMicros());
     }
     dispatchOne();
+  }
+  // Advances through an idle interval and checks dispatch, paint, and queue
+  // state together; a recurring ticker cannot hide behind clean-root paints.
+  void expectDormant() {
+    ASSERT_EQ(roo_time::Uptime::Max(), next());
+    int dispatches = keys_.dispatches;
+    int paints = widget_->paints;
+    for (int i = 0; i < 10; ++i) {
+      advance(1000);
+      scheduler_.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum,
+                                             8);
+    }
+    EXPECT_EQ(dispatches, keys_.dispatches);
+    EXPECT_EQ(paints, widget_->paints);
+    EXPECT_TRUE(scheduler_.empty());
   }
   AnimationRegistry& animations() { return app_.context().animations(); }
   TransientPresentationSlot& slot() {
@@ -149,6 +175,7 @@ TEST_F(ApplicationWorkTest, DirtyWorkRetriesAtExactEligibility) {
   advance(1000);
   dispatchOne();
   EXPECT_EQ(paints + 1, widget_->paints);
+  expectDormant();
 }
 
 // Verifies layout-only changes and direct full-root invalidation each wake
@@ -187,6 +214,7 @@ TEST_F(ApplicationWorkTest, CleanTrackStartAndSamplingUseExactDeadlines) {
   runAtNext();
   EXPECT_FALSE(animations().contains(*widget_, 0));
   EXPECT_EQ(roo_time::Uptime::Max(), next());
+  expectDormant();
 }
 
 // Verifies delay expiry within the refresh interval retries at eligibility,
@@ -263,6 +291,7 @@ TEST_F(ApplicationWorkTest, PostPaintClickWorkSurvivesCollection) {
   runAtNext();
   EXPECT_FALSE(widget_->isDirty());
   EXPECT_EQ(roo_time::Uptime::Max(), next());
+  expectDormant();
 }
 
 // Verifies a semantic scheduler timer can create animation while the
@@ -304,6 +333,7 @@ TEST_F(ApplicationWorkTest, CleanTransientActivityIsDeliveredInBoundedBatches) {
   EXPECT_EQ(paints, widget_->paints);
   EXPECT_EQ(roo_time::Uptime::Max(), next());
   widget_->activity_action = nullptr;
+  expectDormant();
 }
 
 // Verifies each dispatch emits at most one short slice, continuation bypasses
@@ -382,6 +412,7 @@ TEST_F(ApplicationWorkTest, SemanticTimerInvalidatesDormantWindow) {
   dispatchOne();
   EXPECT_EQ(paints + 1, widget_->paints);
   EXPECT_EQ(roo_time::Uptime::Max(), next());
+  expectDormant();
 }
 
 // Verifies final-click settlement explicitly wakes the next framework entry
@@ -419,6 +450,98 @@ TEST_F(ApplicationWorkTest, HostedFinishRunsAfterFinalClickOnLaterEntry) {
   EXPECT_EQ(roo_time::Uptime::Now() + roo_time::Millis(20), next());
   runAtNext();
   EXPECT_EQ(roo_time::Uptime::Max(), next());
+  expectDormant();
+}
+
+// Verifies startup alone settles into dormancy on the production path.
+TEST_F(ApplicationWorkTest, CleanStartupHasNoRecurringDispatchesOrPaints) {
+  expectDormant();
+}
+
+// Verifies a naturally completed interaction and its cleanup settle without
+// manual refresh or forced completion, then stay dormant as time advances.
+TEST_F(ApplicationWorkTest, NaturalInteractionReturnsToDormancy) {
+  widget_->onSingleTapUp(4, 4);
+  for (int i = 0; i < 20 && next() != roo_time::Uptime::Max(); ++i) runAtNext();
+  EXPECT_EQ(1, widget_->clicks);
+  EXPECT_FALSE(app_.root().click_animation().isBusy());
+  expectDormant();
+}
+
+// Verifies input-independent painting and animation in either application do
+// not wake its dormant peer on the same scheduler.
+TEST_F(ApplicationWorkTest,
+       TwoApplicationsKeepIndependentWakeupsAndSettlement) {
+  roo::byte raster[32 * 32 * 2] = {};
+  roo_display::OffscreenDevice<roo_display::Argb4444> device(
+      32, 32, raster, roo_display::Argb4444());
+  roo_display::Display display(device);
+  WorkKeys keys;
+  Application other(&environment_, display, keys, false);
+  auto child = std::make_unique<WorkWidget>(other.context());
+  WorkWidget* peer = child.get();
+  other.add(std::move(child), roo_display::Box(0, 0, 15, 15));
+  other.start();
+  dispatchOne();
+  ASSERT_EQ(roo_time::Uptime::Max(), next());
+  int peer_dispatches = keys.dispatches;
+  int peer_paints = peer->paints;
+  animations().start(*widget_, 0,
+                     AnimationSpec::Value(0, 1, roo_time::Millis(66)));
+  for (int i = 0; i < 12 && next() != roo_time::Uptime::Max(); ++i) runAtNext();
+  EXPECT_EQ(peer_dispatches, keys.dispatches);
+  EXPECT_EQ(peer_paints, peer->paints);
+  expectDormant();
+  int first_dispatches = keys_.dispatches;
+  int first_paints = widget_->paints;
+  peer->invalidateInterior();
+  dispatchOne();
+  EXPECT_EQ(peer_dispatches + 1, keys.dispatches);
+  EXPECT_EQ(peer_paints + 1, peer->paints);
+  EXPECT_EQ(first_dispatches, keys_.dispatches);
+  EXPECT_EQ(first_paints, widget_->paints);
+  expectDormant();
+  EXPECT_EQ(peer_dispatches + 1, keys.dispatches);
+  EXPECT_EQ(peer_paints + 1, peer->paints);
+}
+
+// Verifies a ready physical key source wakes a dormant application and its
+// consumed input leaves no polling execution behind.
+TEST_F(ApplicationWorkTest, PhysicalReadinessReturnsToDormancy) {
+  expectDormant();
+  int before = keys_.dispatches;
+  keys_.post();
+  EXPECT_EQ(roo_time::Uptime::Now(), next());
+  dispatchOne();
+  EXPECT_EQ(before + 1, keys_.dispatches);
+  EXPECT_EQ(1, keys_.delivered);
+  expectDormant();
+}
+
+// Verifies the presentation registry's own scheduled notification can cause
+// repaint while the application is dormant, then both schedulers settle.
+TEST_F(ApplicationWorkTest, PresentationNotificationWakesPaintAndSettles) {
+  advance(30);
+  int paints = widget_->paints;
+  ASSERT_TRUE(app_.context().presentations().observe(*widget_));
+  dispatchOne();
+  EXPECT_EQ(1, widget_->presentation_changes);
+  EXPECT_EQ(roo_time::Uptime::Now(), next());
+  dispatchOne();
+  EXPECT_EQ(paints + 1, widget_->paints);
+  expectDormant();
+}
+
+// Verifies UI-thread callback delivery preserves the ordinary invalidation
+// wakeup path without depending on a periodic application dispatch.
+TEST_F(ApplicationWorkTest, UiThreadCallbackWakesDormantPaint) {
+  expectDormant();
+  int paints = widget_->paints;
+  app_.executeInUIThread([&]() { widget_->invalidateInterior(); });
+  EXPECT_EQ(roo_time::Uptime::Now(), next());
+  dispatchOne();
+  EXPECT_EQ(paints + 1, widget_->paints);
+  expectDormant();
 }
 
 }  // namespace

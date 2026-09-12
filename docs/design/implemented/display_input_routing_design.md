@@ -26,7 +26,7 @@ already meet at the application ticker.
 
 A [`KeySource`](../../../src/roo_windows/core/key_source.h) owns or borrows its
 bounded event queue and exposes `drain()`. The
-[event-driven input design](../in_progress/display_event_driven_input_design.md) adds a
+[event-driven input design](display_event_driven_input_design.md) adds a
 thread-safe, quiescing readiness handler that wakes a destination application
 after a producer commits input.
 

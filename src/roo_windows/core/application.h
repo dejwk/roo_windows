@@ -181,7 +181,7 @@ class Application {
   };
 
   // Services input and framework work, paints once if eligible, then collects
-  // the next deadline. The production fallback remains until Phase 7.
+  // the next deadline, leaving the ticker dormant when no work remains.
   void tick();
 
   /// Drains routed physical input. Returns true when a source consumed its
@@ -223,8 +223,6 @@ class Application {
 
   roo::thread::id ui_thread_id_;
   State state_ = State::kConstructed;
-  // Phase 6 tests suppress generation for the entire scheduler scenario.
-  bool fallback_enabled_ = true;
 };
 
 }  // namespace roo_windows
