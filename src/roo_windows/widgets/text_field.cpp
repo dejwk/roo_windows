@@ -240,7 +240,7 @@ void TextFieldEditor::setSelection(int16_t selection_begin,
 // Decode offsets independently of visual masking; retain byte-sized capacity
 // so reveal/expiry never allocates for the active buffer.
 void TextFieldEditor::measure() {
-  const std::string& value = target_->textBuffer();
+  roo::string_view value = target_->value();
   glyphs_.resize(value.size());
   offsets_.resize(value.size());
   roo_io::Utf8Decoder decoder(value);
@@ -263,7 +263,7 @@ void TextFieldEditor::measure() {
     for (size_t i = 0; i < count; ++i) {
       GlyphMetrics glyph = mask;
       if (i + 1 == count && last_glyph_recently_entered_) {
-        roo_io::Utf8Decoder last(roo::string_view(value).substr(offsets_[i]));
+        roo_io::Utf8Decoder last(value.substr(offsets_[i]));
         last.next(rune);
         target_->textFont().getGlyphMetrics(rune, FontLayout::kHorizontal,
                                             &glyph);
@@ -298,7 +298,7 @@ void TextFieldEditor::restartLastGlyphRecentlyEntered() {
   if (target_ == nullptr) return;
   // Note: need to check for empty as a special case, because we may
   // be showing the hint.
-  if (target_->textBuffer().empty() ||
+  if (target_->value().empty() ||
       static_cast<size_t>(cursor_position()) == glyphs_.size()) {
     last_glyph_recently_entered_ = true;
     last_glyph_hider_.scheduleAfter(kShowLastGlyphInterval);
@@ -434,7 +434,7 @@ void TextFieldEditor::moveEnd(bool extend_selection) {
 
 void TextFieldEditor::del() {
   if (target_ == nullptr) return;
-  if (target_->textBuffer().empty()) return;
+  if (target_->value().empty()) return;
   last_glyph_recently_entered_ = false;
   last_glyph_hider_.cancel();
   restartCursor();
@@ -468,7 +468,7 @@ void TextFieldEditor::del() {
 }
 
 void TextFieldEditor::forwardDelete() {
-  if (target_ == nullptr || target_->textBuffer().empty()) return;
+  if (target_ == nullptr || target_->value().empty()) return;
   if (has_selection()) {
     del();
     return;

@@ -249,9 +249,8 @@ class TextField : public BasicWidget, public internal::TextEditTarget {
   bool isClickable() const override { return true; }
 
   Widget& editWidget() override { return *this; }
-  const Widget& editWidget() const override { return *this; }
   std::string& textBuffer() override { return value_; }
-  const std::string& textBuffer() const override { return value_; }
+  roo::string_view value() const override { return value_; }
   const roo_display::Font& textFont() const override { return font_; }
   bool obscureText() const override { return starred_; }
   void notifyEditVisualChange() override { invalidateInterior(); }

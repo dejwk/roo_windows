@@ -166,9 +166,8 @@ class TextField : public BasicSurfaceWidget, private internal::TextEditTarget {
   void startEditing(bool show_keyboard);
   void updateScroll();
   Widget& editWidget() override { return *this; }
-  const Widget& editWidget() const override { return *this; }
   std::string& textBuffer() override { return value_; }
-  const std::string& textBuffer() const override { return value_; }
+  roo::string_view value() const override { return value_; }
   const roo_display::Font& textFont() const override {
     return text_style_body_large().font();
   }

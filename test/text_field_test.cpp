@@ -13,9 +13,8 @@ class Target : public BasicWidget, public internal::TextEditTarget {
     return {100, 40};
   }
   Widget& editWidget() override { return *this; }
-  const Widget& editWidget() const override { return *this; }
-  std::string& textBuffer() override { return value; }
-  const std::string& textBuffer() const override { return value; }
+  std::string& textBuffer() override { return buffer; }
+  roo::string_view value() const override { return buffer; }
   const roo_display::Font& textFont() const override { return font_body1(); }
   bool obscureText() const override { return masked; }
   void notifyEditVisualChange() override { setDirty(); }
@@ -25,7 +24,7 @@ class Target : public BasicWidget, public internal::TextEditTarget {
     if (finished) finished();
   }
   std::function<void()> finished;
-  std::string value;
+  std::string buffer;
   bool masked = false;
   int changes = 0, result = -1;
 };
@@ -37,20 +36,20 @@ TEST_F(TextFieldTest, AbstractTargetUnicodeSelectionAndCompletion) {
   Task& task = app_.addTaskFullScreen(target);
   auto& editor = task.textFieldEditor();
   target.masked = true;
-  target.value = u8"aé猫";
+  target.buffer = u8"aé猫";
   editor.edit(&target, false);
   ASSERT_EQ(3u, editor.glyphs().size());
   editor.setSelection(1, 2);
   editor.rune(U'ß');
-  EXPECT_EQ(u8"aß猫", target.value);
+  EXPECT_EQ(u8"aß猫", target.buffer);
   editor.forwardDelete();
-  EXPECT_EQ(u8"aß", target.value);
+  EXPECT_EQ(u8"aß", target.buffer);
   editor.del();
-  EXPECT_EQ("a", target.value);
+  EXPECT_EQ("a", target.buffer);
   EXPECT_EQ(3, target.changes);
   editor.cancel();
   EXPECT_EQ(0, target.result);
-  EXPECT_EQ("a", target.value);
+  EXPECT_EQ("a", target.buffer);
   editor.edit(&target, false);
   editor.enter();
   EXPECT_EQ(1, target.result);
@@ -101,7 +100,7 @@ TEST_F(TextFieldTest, CrossTaskActivationRespectsReentrantEditor) {
   TextInputEmitter input;
   input.connect(app_);
   EXPECT_TRUE(input.commitRune(U'x'));
-  EXPECT_EQ("x", third.value);
+  EXPECT_EQ("x", third.buffer);
   first.finished = {};
   a.navigation().clear();
   b.navigation().clear();
@@ -125,9 +124,9 @@ TEST_F(TextFieldTest, MaskExpiryPreservesSelectionAndFiltersControls) {
   EXPECT_EQ(1, editor.selection_end());
   editor.rune(U'\n');
   editor.rune(0xd800);
-  EXPECT_EQ(u8"é猫", target.value);
+  EXPECT_EQ(u8"é猫", target.buffer);
   editor.rune(U'ß');
-  EXPECT_EQ(u8"ß猫", target.value);
+  EXPECT_EQ(u8"ß猫", target.buffer);
   task.navigation().clear();
 }
 // Verifies mask changes preserve Unicode selection, while replacing the buffer

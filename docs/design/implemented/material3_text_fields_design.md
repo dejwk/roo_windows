@@ -794,9 +794,8 @@ class TextEditTarget {
   virtual ~TextEditTarget() {}
 
   virtual Widget& editWidget() = 0;
-  virtual const Widget& editWidget() const = 0;
   virtual std::string& textBuffer() = 0;
-  virtual const std::string& textBuffer() const = 0;
+  virtual roo::string_view value() const = 0;
   virtual const roo_display::Font& textFont() const = 0;
   virtual roo_display::Font::Options textFontOptions() const = 0;
   virtual bool obscureText() const = 0;
@@ -810,7 +809,11 @@ class TextEditTarget {
 ```
 
 `TextFieldEditor` then binds `internal::TextEditTarget*` instead of the legacy
-concrete widget type.
+concrete widget type. Only `textBuffer()` exposes mutable string storage;
+read-only measurement uses the borrowed `value()` view. The widget accessor
+needs only its mutable form for lifecycle and animation integration. The
+[interface header](../../../src/roo_windows/internal/text_edit_target.h) documents
+ownership, view lifetime, metric refresh and callback reentrancy contracts.
 
 ## Implementation Plan
 
