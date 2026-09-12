@@ -114,6 +114,11 @@ class ClickAnimation {
 
   void resetTransientFootprint();
 
+  // Non-animated deferred activation still needs a completed refresh.
+  bool needsSettlementRefresh() const {
+    return phase_ == Phase::kAwaitingRefresh;
+  }
+
   bool isFinishing() const {
     return phase_ == Phase::kFinishingUnconfirmed ||
            phase_ == Phase::kFinishingConfirmed ||

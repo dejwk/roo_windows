@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress. Phases 1–5 are implemented: `ApplicationTicker` coalesces
+In progress. Phases 1–6 are implemented: `ApplicationTicker` coalesces
 requests while retaining the 20 ms fallback, and physical key sources wake the
 application through producer-owned readiness handlers and the application input
 router. FLTK crosses from its native event thread through `roo_testing`'s
@@ -11,8 +11,11 @@ have also landed, including explicit frame requests and pre-layout sampling.
 Touch acquisition now signals readiness and uses an independent sensor-owned
 poll task in single-threaded builds. Gesture transitions now use source-time
 deadlines and chronological input ordering. Click feedback now owns frame
-deadlines and is sampled before layout without paint-time self-dirtying; Phase 6 covers
-paint eligibility and deferred framework work. Phase 7 removes the fallback only after those paths are complete.
+deadlines and is sampled before layout without paint-time self-dirtying. Phase 6
+collects pending work, retries painting at exact eligibility, resumes retained
+slices immediately, and services deferred notifications independently of paint.
+Fallback-free scheduler tests cover these paths; Phase 7 removes the production
+fallback after final isolation and integration coverage.
 
 ## Objective
 
@@ -75,7 +78,7 @@ now owns the migrated widget animation deadlines and pre-layout samples.
 `ClickAnimation` now advances before layout in each new logical frame and
 publishes a 20 ms frame deadline; the base click overlay no longer self-dirties
 during paint. Continued paint slices retain the original click and registry
-samples. The fallback also masks
+samples. Before Phase 6, the fallback also masked
 early frame requests consumed by the display throttle and deferred work serviced
 only on a later refresh. Registry delivery alone does not establish dormancy.
 
@@ -389,24 +392,24 @@ cannot recurse.
 
 One ticker execution performs these phases in order:
 
-1. Advance window-owned animation state due at the sampled time.
-2. Drain each connected key source through the application input router using
+1. Drain each connected key source through the application input router using
    its existing 16-event limit.
-3. Drain one touch batch and chronologically merge gesture events with due
+2. Drain one touch batch and chronologically merge gesture events with due
    transitions, with input winning equal-timestamp ties.
-4. Service ready deferred framework work, including transient activity changes
+3. Service ready deferred framework work, including transient activity changes
    and eligible transient completion, independently of paint dirtiness. Preserve
    the existing lifetime boundary for callbacks that can destroy their owner.
-5. Attempt at most one eligible paint slice. A retained continuation is eligible
+4. Attempt at most one eligible paint slice. A retained continuation is eligible
    immediately and skips animation sampling. For a new logical frame, ordinary
-   dirtiness or a due registry/click deadline constitutes frame work. Deliver
-   pending presentation notifications and run the implemented registry's due
-   samples before layout/paint; retain post-layout presentation delivery.
-6. Collect remaining immediate work and the earliest gesture or eligible frame
+   dirtiness, layout, deferred non-animated click settlement, or a due registry/
+   click deadline constitutes frame work. Sample click and registry animation
+   before layout/paint; retain pre/post-layout presentation delivery.
+5. Collect remaining immediate work and the earliest gesture or eligible frame
    deadline in one application/display decision. Merge that result with external
    requests recorded by the ticker during dispatch.
-7. Return no deadline when no input follow-up, deferred work, continuation,
-   ordinary dirtiness, or timed work remains.
+6. Return no work deadline when no input follow-up, deferred work, continuation,
+   ordinary dirtiness, or timed work remains. Production separately retains its
+   20 ms fallback until Phase 7.
 
 Chronologically merge timestamped touch input with gesture timers for late
 dispatch. Separating deferred work from paint eligibility must preserve click
@@ -422,8 +425,8 @@ next eligible paint deadline rather than repeatedly requesting immediate work.
 Otherwise the ticker uses the minimum of the outstanding timed deadlines.
 
 The implemented [widget animation registry](../implemented/widget_animation_registry_design.md)
-adds an explicit deadline source to step 6 and a pre-layout sample pass to step 5.
-It does not move existing window-owned click advancement from step 1. Its update
+adds an explicit deadline source to step 5 and a pre-layout sample pass to step 4.
+Click advancement shares that new-logical-frame boundary. Registry update
 hooks can request dirty/layout work consumed by the current paint; that work
 must not cause a recursive immediate animation pass. During a retained paint
 continuation, its overdue sample deadlines wait until a new frame is permitted.
@@ -829,37 +832,42 @@ Delivered change:
 > frame deadlines, retain registry consumers, and preserve final-paint semantics
 > as specified by `display_event_driven_input_design.md`.
 
-### Phase 6: collect pending work and schedule eligible painting
+### Completed Phase 6: collect pending work and schedule eligible painting
 
-Centralize the final work decision in application/display core while keeping
-production's fallback. Connect root invalidation, paint continuation, and all
-pending framework work in the inventory above. Service deferred notifications
-independently of paint eligibility, and explicitly wake the later framework
-entry needed for transient completion after click settlement.
+`DisplayWindow::nextWorkDeadline()` now collects source-owned deferred work and
+eligible painting. `nextPaintDeadline()` combines dirty/layout state, deferred
+non-animated click settlement, and registry/click deadlines. It derives the
+remaining 20 ms throttle from the existing wrapping refresh timestamp, preserving
+millisecond boundaries even when queried between them. A dispatch without frame
+work does not change that timestamp. Continuation is checked first and resumes
+immediately, with at most one slice per dispatch and no resampling.
 
-Apply the minimum refresh interval only to new frames. Return the exact eligible
-paint deadline for throttled dirty or animation work, including clean-root
-animation starts and control requests. Check continuation first and resume it
-immediately. Consume pre-paint invalidation within the current frame, retain
-post-paint work, and collect registry deadlines after dispatch work. Do not let
-an overdue animation deadline spin while a continuation owns the frame.
+Root dirty and layout propagation now wakes the application. During dispatch or
+one-shot refresh, UI-owned frame requests are consumed through final collection:
+pre-paint invalidation can settle in the current frame, while remaining dirty
+state and animation controls contribute the next eligible deadline. Producer
+input requests still go directly through the synchronized ticker. Registry
+cancellation can leave one already scheduled opportunity; it performs no paint
+when no work remains and does not schedule another execution.
 
-Use a test fixture that suppresses fallback generation for the entire scenario;
-canceling one pending fallback is insufficient if dispatch recreates it. Drive
-the real scheduler and application path with a deterministic clock, rather than
-only calling registry sampling or manual refresh. Cover:
+Deferred activity delivery runs once per framework entry before paint eligibility
+is checked. Source-owned pending queries retain reentrant notifications for a
+later dispatch. Final click settlement makes hosted completion eligible; the
+collector explicitly schedules that later framework entry without waiting for
+paint cadence. Manual refresh retains the same deferred-completion boundary and
+terminal callback remains the last member access on its display delivery path.
+Existing presentation-registry notifications and semantic scheduler tasks remain
+independently scheduled; their invalidation and animation effects now wake paint.
 
-- invalidation outside dispatch, during sampling, and after paint;
-- a request inside the 20 ms throttle interval, with exact next eligibility;
-- clean-root track start, delayed expiry, seek/finish, zero interval, and a
-  33 ms interval that is not forced onto a periodic 20 ms grid;
-- one paint slice per dispatch, immediate short-slice continuation, frozen
-  animation samples, and a new frame after continuation settlement;
-- transient activity delivery without dirtiness or tracks, final-click deferred
-  completion, and bounded reentrant notifications;
-- semantic timer expiry causing repaint or animation while otherwise dormant;
-- ordinary invalidation preempting a later frame deadline, cancellation of the
-  last track, and settlement with no recurring application wakeups.
+The production 20 ms fallback remains. `ApplicationWorkTest` disables its
+creation throughout each scenario using private friend access and drives the
+real scheduler with manual time. Fourteen scenarios cover ordinary/root/layout
+invalidation, exact throttled retries, clean-root track starts, delay/seek/finish,
+zero and 33 ms intervals, sampling-time controls, post-paint click cleanup,
+non-animated click settlement, short continuation slices with frozen samples,
+clean/reentrant activity notification, hosted deferred completion, cancellation,
+and semantic timers that invalidate or start animation. No scenario cancels a
+single fallback and assumes it stays disabled.
 
 Focused validation:
 
@@ -867,10 +875,17 @@ Focused validation:
 bazel test //:application_test //:animation_registry_test \
   //:display_window_test //:roo_windows_test \
   //:transient_activity_observer_test //:transient_presentation_lifetime_test \
-  //:display_runtime_characterization_test
+  //:display_runtime_characterization_test //:transient_surface_host_test \
+  //:click_animation_test //:overlay_test
+bazel build //:display_runtime_size_probe
 ```
 
-Proposed commit message:
+The host size probe remains unchanged: `Application` is 2280 bytes,
+`MainWindow` 872 bytes, and `Task` 432 bytes. The core refresh and temporary
+fallback-test flags fit existing host padding. No widget/container fields or
+persistent timestamps were added; embedded-target sizes were not measured.
+
+Delivered change:
 
 > Event-driven input Phase 6 schedules all pending framework and paint work.
 >

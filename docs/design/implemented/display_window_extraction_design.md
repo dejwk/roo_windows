@@ -75,9 +75,9 @@ does not add a reverse `DisplayWindow -> Application` link.
    must remain source-compatible.
 2. The default software keyboard and existing task/activity topology must remain
    unchanged.
-3. Tick ordering must remain: advance display click state, drain application key
-   input, poll and dispatch pointer input, attempt refresh, then reschedule the
-   application ticker.
+3. Tick ordering must preserve input, deferred delivery, and completed-paint
+   settlement. Event-driven input Phases 5–6 place click sampling alongside
+   registry sampling before layout in each new logical frame.
 4. A deadline-interrupted paint must resume the same logical frame with its
    retained exclusions, overlays, and animation sample.
 5. New invalidation during a continuation must reopen only the affected region.
@@ -223,25 +223,27 @@ Application schedules its next ticker deadline
 ```
 
 `servicePointerInput()` drains gesture input and dispatches due transitions.
-Since event-driven input Phase 5, click animation and registry samples advance
-before layout in a new logical refresh; continued slices retain both samples. Since
-[event-driven input Phase 3](../in_progress/display_event_driven_input_design.md),
-single-threaded touch acquisition runs in the sensor-owned scheduler task. `refreshIfDue()` owns refresh throttling, adaptive paint deadline state,
-and the completed-versus-interrupted result.
+Since [event-driven input Phases 5–6](../in_progress/display_event_driven_input_design.md),
+click and registry samples advance before layout in a new logical refresh;
+continued slices retain both samples. Touch acquisition remains independent.
+`refreshIfDue()` services deferred work before checking paint eligibility and
+attempts at most one slice. A continuation bypasses the ordinary frame throttle.
 
-The window forwards animation frame deadlines to the application endpoint.
-`Application` combines key-pending and paint-timeout state with gesture and click
-frame deadlines and the retained 20 ms fallback. A held touch alone
-does not request immediate redispatch.
+`Application` combines key-pending work, gesture deadlines, the window's final
+`nextWorkDeadline()` result, and the retained 20 ms production fallback. The
+window collects deferred activity/completion and exact eligible dirty/layout or
+animation deadlines. Work consumed by sampling/layout/paint does not request a
+redundant immediate dispatch; post-paint work remains scheduled. A held touch
+alone does not request immediate redispatch.
 
 ### Refresh ownership
 
 `DisplayWindow::refresh(deadline)` performs the complete one-shot display
 operation:
 
-1. update root layout;
-2. record the refresh timestamp;
-3. sample click-animation time only for a new logical paint;
+1. deliver deferred framework work, returning after terminal completion;
+2. sample click and registry animation only for a new logical paint;
+3. update layout, deliver presentation changes, and record refresh time;
 4. create a `roo_display::DrawingContext` for the borrowed display;
 5. draw an adapter that invokes `MainWindow::paintWindow()`;
 6. destroy the drawing context, completing output flush; and
@@ -251,9 +253,9 @@ The adapter moves from `application.cpp` into `display_window.cpp`. A callback
 delivered by step 7 can mutate the widget tree safely because the physical
 drawing scope has already closed.
 
-`requestRefresh()` invalidates the complete root bounds. It schedules no ticker
-and performs no synchronous drawing. The existing application ticker observes
-the dirtied root on its normal pass.
+`requestRefresh()` invalidates the complete root bounds and wakes the application
+through root dirty propagation. Drawing runs asynchronously when a new frame is
+eligible; invalidation consumed by an active refresh needs no extra dispatch.
 
 ### Paint-continuation lookup
 

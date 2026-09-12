@@ -325,6 +325,8 @@ void Widget::setDirty(const Rect& bounds) {
   markDirty();
   if (parent_ != nullptr) {
     parent_->propagateDirty(this, bounds.translate(offsetLeft(), offsetTop()));
+  } else if (getMainWindow() != nullptr && context().frame_driver_ != nullptr) {
+    context().frame_driver_->requestAnimationFrameAt(roo_time::Uptime::Now());
   }
 }
 
@@ -392,7 +394,11 @@ void Widget::layout(const Rect& rect) {
 
 void Widget::onRequestLayout() {
   markLayoutRequested();
-  if (parent() != nullptr) parent()->requestLayout();
+  if (parent() != nullptr) {
+    parent()->requestLayout();
+  } else if (getMainWindow() != nullptr && context().frame_driver_ != nullptr) {
+    context().frame_driver_->requestAnimationFrameAt(roo_time::Uptime::Now());
+  }
 }
 
 namespace {

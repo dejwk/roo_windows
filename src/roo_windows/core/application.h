@@ -18,6 +18,10 @@
 
 namespace roo_windows {
 
+namespace test {
+struct ApplicationWorkTestAccess;
+}
+
 class ApplicationInputRouter;
 class ApplicationTextInput;
 class AnimationRegistry;
@@ -156,6 +160,8 @@ class Application {
   bool isUiThread() const;
 
  private:
+  friend struct test::ApplicationWorkTestAccess;
+  friend class Widget;
   friend class ApplicationInputRouter;
   friend class ApplicationTextInput;
   friend class AnimationRegistry;
@@ -174,7 +180,8 @@ class Application {
     kStopping,
   };
 
-  // Handles user input (touch, etc.), and calls refresh() periodically.
+  // Services input and framework work, paints once if eligible, then collects
+  // the next deadline. The production fallback remains until Phase 7.
   void tick();
 
   /// Drains routed physical input. Returns true when a source consumed its
@@ -216,6 +223,8 @@ class Application {
 
   roo::thread::id ui_thread_id_;
   State state_ = State::kConstructed;
+  // Phase 6 tests suppress generation for the entire scheduler scenario.
+  bool fallback_enabled_ = true;
 };
 
 }  // namespace roo_windows

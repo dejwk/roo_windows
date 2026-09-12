@@ -32,6 +32,7 @@ class ApplicationTicker final : public roo_scheduler::Executable {
 
   /// Requests a dispatch at `when`, retaining an earlier pending request.
   void requestAt(roo_time::Uptime when) {
+    if (when == roo_time::Uptime::Max()) return;
     roo::lock_guard<roo::mutex> lock(mutex_);
     if (stopped_) return;
     if (dispatching_) {
@@ -423,23 +424,11 @@ void Application::tick() {
 
   bool key_events_pending = drainKeyEvents();
   window_.servicePointerInput();
-  bool redraw_timeout = false;
-  window_.refreshIfDue(redraw_timeout);
-  roo_time::Duration delay = key_events_pending || redraw_timeout
-                                 ? roo_time::Millis(0)
-                                 : roo_time::Millis(20);
-  ticker_->requestAfter(delay);
+  window_.refreshIfDue();
+  if (key_events_pending) ticker_->requestNow();
+  if (fallback_enabled_) ticker_->requestAfter(roo_time::Millis(20));
   ticker_->requestAt(window_.gestureDetector().nextTimeoutDeadline());
-  if (!window_.root().hasPaintContinuation()) {
-    roo_time::Uptime next =
-        window_.root().click_animation().nextFrameDeadline();
-    // A resumed frame may leave an overdue sample while painting is throttled.
-    // Keep the fallback instead of rearming that deadline in an immediate loop;
-    // Phase 6 will collect the exact eligible paint retry with other work.
-    if (next != roo_time::Uptime::Max() && next > roo_time::Uptime::Now()) {
-      ticker_->requestAt(next);
-    }
-  }
+  ticker_->requestAt(window_.nextWorkDeadline());
 }
 
 bool Application::drainKeyEvents() {
@@ -523,8 +512,12 @@ void Application::disconnectKeySource(KeySource& source) {
 void Application::requestInputTick() { ticker_->requestNow(); }
 
 void Application::requestAnimationFrameAt(roo_time::Uptime deadline) {
+  // UI-owned sources retain their pending state. Collection after dispatch (or
+  // a one-shot refresh) replaces requests consumed by sampling/layout/paint.
+  // Producer input requests use the ticker directly and are never suppressed.
   if (state_ == State::kConstructed || state_ == State::kStopping ||
-      deadline == roo_time::Uptime::Max()) {
+      deadline == roo_time::Uptime::Max() || state_ == State::kTickerRunning ||
+      window_.refreshing_) {
     return;
   }
   ticker_->requestAt(deadline);

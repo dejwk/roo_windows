@@ -2,6 +2,8 @@
 
 #include <Arduino.h>
 
+#include <algorithm>
+
 #include "roo_windows/core/application.h"
 
 namespace roo_windows {
@@ -72,32 +74,67 @@ void DisplayWindow::servicePointerInput() {
   root_.flushPendingOutsideInteraction();
 }
 
-bool DisplayWindow::refreshIfDue(bool& redraw_timeout) {
-  redraw_timeout = false;
-  unsigned long now = millis();
-  if ((now - last_time_refreshed_ms_) < kMinRefreshTimeDeltaMs) return true;
-  root_.app().context().presentations().deliverPendingChanges();
-  bool completed = refresh(roo_time::Uptime::Now() + paint_interval_);
+roo_time::Uptime DisplayWindow::nextPaintDeadline() const {
+  roo_time::Uptime now = roo_time::Uptime::Now();
+  if (root_.hasPaintContinuation()) return now;
+  roo_time::Uptime desired =
+      std::min(root_.app().context().animations().nextFrameDeadline(),
+               root_.click_animation().nextFrameDeadline());
+  if (root_.isDirty() || root_.isLayoutRequested() ||
+      root_.click_animation().needsSettlementRefresh())
+    desired = now;
+  if (desired == roo_time::Uptime::Max()) return desired;
+  // Keep the existing wrapping millisecond refresh clock. Queries between
+  // millisecond boundaries must not postpone the eligible paint time.
+  uint32_t elapsed = static_cast<uint32_t>(now.inMillis()) -
+                     static_cast<uint32_t>(last_time_refreshed_ms_);
+  roo_time::Uptime eligible = now;
+  if (elapsed < kMinRefreshTimeDeltaMs) {
+    eligible += roo_time::Millis(kMinRefreshTimeDeltaMs - elapsed) -
+                roo_time::Micros(now.inMicros() % 1000);
+  }
+  return std::max(desired, eligible);
+}
+
+roo_time::Uptime DisplayWindow::nextWorkDeadline() const {
+  if (root_.transient_presentation_slot().hasPendingFrameworkWork()) {
+    return roo_time::Uptime::Now();
+  }
+  return nextPaintDeadline();
+}
+
+void DisplayWindow::refreshIfDue() {
+  if (serviceDeferredWork()) return;
+  if (nextPaintDeadline() > roo_time::Uptime::Now()) return;
+  bool completed = refreshPaint(roo_time::Uptime::Now() + paint_interval_);
   if (!completed) {
     paint_interval_ = paint_interval_ * 2;
-    redraw_timeout = true;
   } else {
     paint_interval_ = kMinRefreshDuration;
   }
-  return completed;
 }
 
 void DisplayWindow::cancelGestureTargetsInSubtree(Widget& subtree) {
   gesture_detector_.cancelTargetsInSubtree(subtree);
 }
 
-bool DisplayWindow::refresh(roo_time::Uptime deadline) {
+bool DisplayWindow::serviceDeferredWork() {
   root_.app().context().presentations().deliverPendingChanges();
   root_.transient_presentation_slot().deliverPendingActivityChanges();
-  // Deferred transient completion runs on a fresh framework entry, after the
-  // prior completed refresh settled click delivery. If completion destroys
-  // this window, returning immediately avoids subsequent member access.
-  if (root_.transient_presentation_slot().finishDeferredIfReady()) return true;
+  // Terminal delivery stays on a fresh framework entry after click settlement.
+  // It can destroy the owner, so make it the last member access on this path.
+  if (!root_.transient_presentation_slot().isDeferredFinishReady())
+    return false;
+  return root_.transient_presentation_slot().finishDeferredIfReady();
+}
+
+bool DisplayWindow::refresh(roo_time::Uptime deadline) {
+  if (serviceDeferredWork()) return true;
+  return refreshPaint(deadline);
+}
+
+bool DisplayWindow::refreshPaint(roo_time::Uptime deadline) {
+  refreshing_ = true;
   AnimationRegistry& animations = root_.app().context().animations();
   if (!root_.hasPaintContinuation()) {
     root_.refreshClickAnimation();
@@ -106,7 +143,6 @@ bool DisplayWindow::refresh(roo_time::Uptime deadline) {
       root_.app().context().presentations().deliverPendingChanges();
     }
     animations.endFrame();
-    root_.app().requestAnimationFrameAt(animations.nextFrameDeadline());
   }
   root_.updateLayout();
   // Layout can change effective presentation. Deliver that state before paint,
@@ -122,9 +158,8 @@ bool DisplayWindow::refresh(roo_time::Uptime deadline) {
     context.draw(adapter);
     completed = adapter.completed();
   }
-  if (!root_.hasPaintContinuation()) {
-    root_.app().requestAnimationFrameAt(click_animation.nextFrameDeadline());
-  }
+  refreshing_ = false;
+  root_.app().requestAnimationFrameAt(nextWorkDeadline());
   // Semantic delivery can destroy the application; do not touch members after
   // it.
   if (completed) click_animation.notifyRefreshCompleted();

@@ -217,7 +217,8 @@ TEST_F(ClickFrameTest,
   system_time_delay_micros(20000);
   dispatch();
   EXPECT_EQ(1, target_->registry_samples);
-  EXPECT_EQ(now + roo_time::Millis(33), scheduler_.getNearestExecutionTime());
+  // The click paint at 20 ms makes the next new frame eligible at 40 ms.
+  EXPECT_EQ(now + roo_time::Millis(40), scheduler_.getNearestExecutionTime());
   app_.context().animations().cancel(*target_, 0);
   animation().cancel(*target_);
   EXPECT_FALSE(app_.context().animations().contains(*target_, 0));
@@ -261,7 +262,7 @@ TEST_F(ClickFrameTest, ForcedFinishBetweenSlicesWaitsForNextLogicalFrame) {
 }
 
 // Verifies an overdue retained sample requests at most one immediate follow-up
-// after continuation; the fallback covers the still-throttled new paint.
+// after continuation; the collector schedules the next eligible new paint.
 TEST_F(ClickFrameTest, ResumedClickDoesNotSpinOnOverdueFrameDeadline) {
   app_.start();
   dispatch();
@@ -273,7 +274,7 @@ TEST_F(ClickFrameTest, ResumedClickDoesNotSpinOnOverdueFrameDeadline) {
   system_time_delay_micros(100000);
   int before = keys_.dispatches;
   dispatch();
-  EXPECT_EQ(before + 2, keys_.dispatches);
+  EXPECT_EQ(before + 1, keys_.dispatches);
   EXPECT_NEAR(0.1f, target_->painted_progress, 0.001f);
   EXPECT_EQ(roo_time::Uptime::Now() + roo_time::Millis(20),
             scheduler_.getNearestExecutionTime());

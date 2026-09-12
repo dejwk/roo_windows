@@ -193,6 +193,11 @@ class TransientPresentationSlot {
   void finishNow(TransientPresentationRegistration& registration,
                  PresentationFinishReason reason);
   bool finishDeferredIfReady();
+  // Source-owned work that can run before painting is eligible.
+  bool isDeferredFinishReady() const;
+  bool hasPendingFrameworkWork() const {
+    return activity_pending_ || isDeferredFinishReady();
+  }
   void cancel(TransientPresentationRegistration& registration);
 
   struct ActivityObserver {

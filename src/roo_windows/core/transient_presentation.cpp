@@ -84,8 +84,8 @@ bool TransientPresentationSlot::observeActivity(Widget& widget) {
   if (activity_observers_.find(&widget) != activity_observers_.end()) {
     return true;
   }
-  activity_observers_.insert(std::make_pair(
-      &widget, ActivityObserver{hasActivePresentation()}));
+  activity_observers_.insert(
+      std::make_pair(&widget, ActivityObserver{hasActivePresentation()}));
   activity_delivery_.reserve(activity_observers_.size());
   return true;
 }
@@ -307,15 +307,15 @@ void TransientPresentationSlot::finishNow(
   registration.onFinished(reason);
 }
 
+bool TransientPresentationSlot::isDeferredFinishReady() const {
+  // The hosted target is released only after final-paint settlement or cancel.
+  return active_ != nullptr && active_host_ != nullptr && !clearing_ &&
+         active_->state_ == TransientPresentationState::kFinishing &&
+         !active_host_->hasClickFeedbackInHostedTree(*active_);
+}
+
 bool TransientPresentationSlot::finishDeferredIfReady() {
-  // The controller retains target() through the final paint and clears it only
-  // after a completed refresh (or explicit cancellation). Therefore losing the
-  // hosted target is the settlement boundary, not merely reaching progress 1.
-  if (active_ == nullptr || active_host_ == nullptr || clearing_ ||
-      active_->state_ != TransientPresentationState::kFinishing ||
-      active_host_->hasClickFeedbackInHostedTree(*active_)) {
-    return false;
-  }
+  if (!isDeferredFinishReady()) return false;
   TransientPresentationRegistration* registration = active_;
   PresentationFinishReason reason =
       static_cast<PresentationFinishReason>(registration->policy_);

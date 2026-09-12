@@ -58,11 +58,12 @@ cc_test(
 
 cc_test(
     name = "application_test",
-    srcs = ["test/application_test.cpp"],
+    srcs = ["test/application_test.cpp", "test/application_work_test.cpp"],
     linkstatic = 1,
     deps = [
         ":roo_windows",
         "@roo_testing//:arduino_gtest_main",
+        "@roo_testing//roo_testing/system:manual_time_mode",
     ],
 )
 
