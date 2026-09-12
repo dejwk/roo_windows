@@ -6,60 +6,142 @@
 #include "roo_windows/material3/typography.h"
 
 namespace roo_windows::material3 {
+/// Material 3 single-line container treatment.
 enum class TextFieldVariant : uint8_t { kFilled, kOutlined };
 
-// Single-line owner-painted field. Only text() is owned. All slot strings and
-// icon pointers must outlive their assignment. Input must be valid single-line
-// UTF-8. Editing uses the owning Task, never a per-field editor or child
-// widget.
+/// Single-line owner-painted field. Only text() is owned. All slot strings and
+/// icon pointers must outlive their assignment. Input must be valid single-line
+/// UTF-8. Editing uses the owning Task, never a per-field editor or child
+/// widget.
 class TextField : public BasicSurfaceWidget, private internal::TextEditTarget {
  public:
+  /// Creates a field with a borrowed label and an empty owned value.
   explicit TextField(ApplicationContext& context, roo::string_view label,
                      TextFieldVariant variant = TextFieldVariant::kFilled);
+
+  /// Ends an active edit session before destroying the target.
   ~TextField() override;
+
+  /// Returns the container treatment.
   TextFieldVariant variant() const;
+
+  /// Changes the container treatment and remeasures its label clearance.
   void setVariant(TextFieldVariant variant);
+
+  /// Returns the live value; cancel does not revert edits.
   const std::string& text() const { return value_; }
+
+  /// Replaces the valid single-line UTF-8 value; notifies once on change.
   void setText(std::string value);
+
+  /// Returns the borrowed resting/floating label.
   roo::string_view label() const { return label_; }
+
+  /// Assigns a borrowed resting/floating label.
   void setLabel(roo::string_view value);
+
+  /// Returns the borrowed supporting message.
   roo::string_view supportingText() const { return supporting_; }
+
+  /// Assigns supporting text, shown when error state is inactive.
   void setSupportingText(roo::string_view value);
+
+  /// Returns the borrowed error message.
   roo::string_view errorText() const { return error_; }
-  // Activates error state even if value is empty. clearError restores support.
+
+  /// Assigns an error message and activates error state, even when empty.
   void setErrorText(roo::string_view value);
+
+  /// Clears error state and restores supporting text; retains the error view.
   void clearError();
+
+  /// Returns whether error state is active.
   bool hasError() const { return flags_ & kError; }
+
+  /// Returns the borrowed input prefix.
   roo::string_view prefixText() const { return prefix_; }
+
+  /// Assigns a borrowed prefix shown with floated-label content.
   void setPrefixText(roo::string_view value);
+
+  /// Returns the borrowed input suffix.
   roo::string_view suffixText() const { return suffix_; }
+
+  /// Assigns a borrowed suffix shown with floated-label content.
   void setSuffixText(roo::string_view value);
+
+  /// Returns the borrowed leading icon.
   const MonoIcon* leadingIcon() const { return leading_; }
+
+  /// Assigns the leading affordance, or nullptr to remove it.
   void setLeadingIcon(const MonoIcon* icon);
+
+  /// Returns the assigned base icon; secure fields override the effective slot.
   const MonoIcon* trailingIcon() const { return trailing_; }
+
+  /// Assigns the base trailing affordance, or nullptr for error fallback.
   void setTrailingIcon(const MonoIcon* icon);
+
+  /// Returns whether activation avoids editing the value.
   bool readOnly() const { return flags_ & kReadOnly; }
+
+  /// Changes editability; making an active field read-only ends its session.
   void setReadOnly(bool value);
-  // Like other childless M3 components, direction is explicit and packed.
+
+  /// Returns the explicit direction used to place leading/trailing slots.
   LayoutDirection layoutDirection() const;
+
+  /// Mirrors slot layout without reordering the logical UTF-8 value.
   void setLayoutDirection(LayoutDirection direction);
+
+  /// Returns whether the owning task editor is bound to this field.
   bool isEdited() const;
+
+  /// Requests focus and editing with the software keyboard when eligible.
   void edit();
+
+  /// Uses the field palette to resolve disabled colors once.
   bool useAutomaticDisabledStyle() const override { return false; }
+
+  /// Participates in normal widget activation.
   bool isClickable() const override { return true; }
+
+  /// Paints state layers as part of the final field surface.
   OverlayType getOverlayType() const override { return OVERLAY_NONE; }
+
+  /// Keeps press coloring in the owner-painted palette.
   bool useOverlayOnPress() const override { return false; }
+
+  /// Settles affordance activation without a separate click animation.
   ClickActivationPolicy getClickActivationPolicy() const override {
     return ClickActivationPolicy::kImmediateNoAnimation;
   }
+
+  /// Leaves corners and outlined label clearance to the ancestor surface.
   bool fullyCoversBoundsWithOpaqueColors() const override { return false; }
+
+  /// Returns the fixed container and optional assistive-row minimum.
   Dimensions getSuggestedMinimumDimensions() const override;
+
+  /// Expands horizontally and wraps the required vertical space.
   PreferredSize getPreferredSize() const override;
+
+  /// Paints slots, editing state, and container with foreground exclusions.
   void paint(PaintContext& ctx) const override;
+
+  /// Dispatches a pending affordance or activates the field.
   void onClicked() override;
+
+  /// Selects an occupied owner-local affordance before click settlement.
   void onSingleTapUp(XDim x, YDim y) override;
+
+  /// Clears pending affordance and activation-key state.
   void onCancel() override;
+
+  /// Handles explicit edit activation and active single-line editing keys.
   bool onKeyEvent(const KeyEvent& event) override;
+
+  /// Updates the floating label and ends editing on blur.
   void onFocusChanged(bool focused) override;
 
  protected:

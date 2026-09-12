@@ -1052,6 +1052,18 @@ cc_test(
 )
 
 cc_test(
+    name = "material3_text_field_resource_test",
+    srcs = ["test/material3_text_field_resource_test.cpp", "test/roo_windows_render_test_support.h"],
+    linkstatic = 1,
+    deps = [":roo_windows", "@roo_testing//:arduino_gtest_main"],
+)
+cc_library(
+    name = "material3_text_field_size_probe",
+    srcs = ["benchmarks/material3_text_field_size_probe.cpp"],
+    deps = [":roo_windows"],
+)
+
+cc_test(
     name = "text_field_keyboard_avoidance_test",
     srcs = ["test/text_field_keyboard_avoidance_test.cpp", "test/roo_windows_render_test_support.h"],
     linkstatic = 1,

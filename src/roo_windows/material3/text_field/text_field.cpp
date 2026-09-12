@@ -228,12 +228,18 @@ void TextField::paint(PaintContext& ctx) const {
   Color fill = outlined ? ancestor : colors.surfaceContainerHighest;
   if (!isEnabled() && !outlined)
     fill = Opacity(colors.onSurface, 10, ancestor);
-  else if (isPressed())
-    fill = Opacity(colors.onSurface, 26, fill);
-  else if (isHover())
-    fill = Opacity(colors.onSurface, 20, fill);
+  else if (isEnabled() && (isPressed() || isHover()))
+    fill = AlphaBlend(fill, theme().material3Theme().state.resolve(
+                                outlined ? ColorToken::kSurface
+                                         : ColorToken::kSurfaceContainerHighest,
+                                isPressed() ? InteractionState::kPressed
+                                            : InteractionState::kHover));
   Color input =
-      isEnabled() ? colors.onSurface : Opacity(colors.onSurface, 97, fill);
+      isEnabled()
+          ? colors.onSurface
+          : Opacity(colors.onSurface,
+                    theme().material3Theme().state.disabledContentOpacity,
+                    fill);
   Color secondary = isEnabled() ? colors.onSurfaceVariant : input;
   Color accent = !isEnabled()                  ? input
                  : hasError()                  ? colors.error
@@ -265,10 +271,17 @@ void TextField::paint(PaintContext& ctx) const {
     if (outlined && !label.empty()) {
       PaintContext part = ctx.clipped(label);
       part.setBgcolor(ancestor);
+      StringViewLabel caption(label_, small.font(), label_color,
+                              small.fontOptions());
+      // Match TextLabel: center the font ascent on the stroke. Descenders
+      // and the particular caption must not change the baseline.
+      int stroke = isEnabled() && (isFocused() || isEdited())
+                       ? kTokens.focus_stroke
+                       : kTokens.idle_stroke;
+      int baseline = (2 * s.container.yMin() + stroke - 1 + small.ascent()) / 2;
       part.drawTiled(
-          StringViewLabel(label_, small.font(), label_color,
-                          small.fontOptions()),
-          label, kCenter | kBaseline.toTop().shiftBy(small.baselineOffset()));
+          caption, label,
+          kCenter | kBaseline.toTop().shiftBy(baseline - label.yMin()));
       ctx.addExclusion(label);
     } else
       text(label_, small, label, label_color, fill);
@@ -383,8 +396,11 @@ bool TextField::isEdited() const {
 }
 void TextField::startEditing(bool show_keyboard) {
   Task* task = getTask();
-  if (!isEnabled() || readOnly() || task == nullptr) return;
-  requestFocus();
+  if (!isEnabled() || !isVisible() || readOnly() || task == nullptr ||
+      presentationState() == PresentationState::kHidden)
+    return;
+  if (!requestFocus() && !bounds().empty()) return;
+  invalidateInterior();
   task->textFieldEditor().edit(this, show_keyboard);
 }
 void TextField::edit() { startEditing(true); }
@@ -447,7 +463,8 @@ void TextField::notifyEditVisualChange() {
     setDirty(slots().viewport);
 }
 void TextField::notifyTextChanged() {
-  invalidateInterior();
+  Slots s = slots();
+  setDirty(Rect(0, 0, width() - 1, s.viewport.yMax()));
   onTextChanged();
 }
 void TextField::maskingChanged() {
