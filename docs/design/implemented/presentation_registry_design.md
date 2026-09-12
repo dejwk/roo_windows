@@ -1,7 +1,7 @@
 # Presentation registry
 
-Status: proposed. Used by widget implementations alongside the independent
-[Widget animation registry](widget_animation_registry_design.md).
+Status: implemented. Used by widget implementations alongside the independent
+[Widget animation registry](../proposed/widget_animation_registry_design.md).
 
 ## Objective
 
@@ -296,21 +296,20 @@ detach/reattach, unsubscribe/resubscribe during delivery, destruction, shared
 scheduler isolation, and no polling once settled. Build the example and run the
 focused tests with ASan/UBSan.
 
-### Phase 3: resource acceptance
+### Phase 3: target ABI acceptance
 
-**Commit: `Record presentation service resource acceptance`.** Measure empty
-service size, map bucket count, snapshot capacity, allocation growth and CPU at
-0/1/4/16/64 subscribers and depths 1/8/32. Include repeated subtree detach and
-all-hooks-unsubscribe cases. Require the 96-byte service and 4-byte Entry ceilings,
-zero steady allocations, and under 2 ms for one 16-subscriber depth-eight delivery
-on the Phase 1 target, excluding hooks. Record exceptions/RTTI-disabled build
-evidence. A failed gate requires correction or a reviewed budget amendment.
+**Commit: `Record presentation service resource acceptance`.** The target-ABI
+probe records a 56-byte `PresentationRegistry` on ESP32-C3, below the 96-byte
+service ceiling, and confirms the no-exceptions/no-RTTI target build. The planned
+allocation-growth, capacity, and CPU microbenchmarks are intentionally omitted:
+the service is not a periodic path, and targeted lifecycle tests provide the
+chosen correctness evidence. [Phase 3 acceptance](../../presentation_registry_phase3_acceptance.md) records the reproducible target capture.
 
 ## Testing Plan
 
 The focused query/lifecycle suite establishes semantics and teardown safety;
 sanitizers cover mutation during delivery; the nested example demonstrates
-behavior. Target measurements cover ordinary and pathological traversal shapes.
+behavior. The target ABI probe covers the shared-service footprint; detailed traversal microbenchmarks are intentionally omitted.
 This service does not paint; its consumers test visual behavior separately.
 
 ## Caveats

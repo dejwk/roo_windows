@@ -36,10 +36,11 @@ def main():
     types = {
         "snackbar_host": "SnackbarHost", "scaffold": "LayoutScaffold",
         "snackbar_presenter": "SnackbarPresenter", "snackbar_request": "SnackbarRequest",
-        "snackbar_widget": "SnackbarWidget", "task": "roo_windows::Task",
+        "snackbar_widget": "SnackbarWidget", "task": "roo_windows::Task", "presentation_registry": "roo_windows::PresentationRegistry",
     }
     probe = ('#include "roo_windows/material3/snackbar/snackbar.h"\n'
              '#include "roo_windows/core/task.h"\n'
+             '#include "roo_windows/core/presentation_registry.h"\n'
              'using namespace roo_windows::material3;\nextern "C" {\n')
     probe += "".join(f"char phase1_size_{name}[sizeof({kind})];\n"
                      for name, kind in types.items())
