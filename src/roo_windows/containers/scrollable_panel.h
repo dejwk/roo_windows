@@ -53,7 +53,9 @@ class VerticalScrollBar : public Widget {
 /// the current scroll offset. Use this as the base for any view that needs
 /// generic scrolling behavior. The direct contents widget should use
 /// `ParentClipMode::kClipped`; an unclipped contents widget may paint outside
-/// the scrolling viewport.
+/// the scrolling viewport. Fling and spring-back physics use one application
+/// animation-registry channel; transient scrollbar hiding remains a separate
+/// one-shot scheduler deadline.
 class SimpleScrollablePanel : public Container,
                               private roo_scheduler::Executable {
  public:
@@ -75,13 +77,15 @@ class SimpleScrollablePanel : public Container,
         scroll_bar_(context),
         scroll_bar_gesture_(false),
         scheduler_(context.scheduler()),
-        notification_id_(-1),
+        hide_notification_id_(-1),
         motion_() {
     scroll_bar_.setVisibility(Visibility::kInvisible);
+    context.presentations().observe(*this);
   }
 
-  ~SimpleScrollablePanel() {
-    cancelPendingUpdate();
+  ~SimpleScrollablePanel() override {
+    cancelMotion();
+    cancelHideScrollBarUpdate();
     clearContents();  // Delete if owned.
   }
 
@@ -90,6 +94,10 @@ class SimpleScrollablePanel : public Container,
         contents()->isOwnedByParent() == new_contents.is_owned()) {
       return;
     }
+    cancelMotion();
+    cancelHideScrollBarUpdate();
+    motion_ = scroll_motion::State();
+    scroll_bar_.setVisibility(Visibility::kInvisible);
     if (contents_ != nullptr) {
       detachChild(contents_);
       detachChild(&scroll_bar_);
@@ -237,13 +245,21 @@ class SimpleScrollablePanel : public Container,
 
   void onLayout(bool changed, const Rect& rect) override;
 
+  void onAnimationFrame(AnimationTag tag,
+                        const AnimationSample& sample) override;
+  void onPresentationChanged(const PresentationChange& change) override;
+
+  static constexpr AnimationTag kMotion = 0;
+
  private:
   void execute(roo_scheduler::EventID id) override;
 
   void scrollVertically(YDim yscroll);
 
-  void cancelPendingUpdate();
-  void scheduleScrollAnimationUpdate();
+  void cancelMotion();
+  void startMotionTrack();
+  void stopMotionAndClamp();
+  void cancelHideScrollBarUpdate();
   void scheduleHideScrollBarUpdate();
   static scroll_motion::Axis AxisForDirection(Direction direction);
   scroll_motion::Geometry motionGeometry() const;
@@ -269,7 +285,7 @@ class SimpleScrollablePanel : public Container,
   bool scroll_bar_gesture_;
 
   roo_scheduler::Scheduler& scheduler_;
-  roo_scheduler::ExecutionID notification_id_;
+  roo_scheduler::ExecutionID hide_notification_id_;
 
   // Whether the 'down' event has been confirmed as a touch of the scroll bar in
   // its active region.

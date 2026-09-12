@@ -1,5 +1,5 @@
-// Learning goal: use a segmented Material 3 list to group related schedule
-// entries while preserving clear first, middle, and last row shapes.
+// Learning goal: use a registry-driven scrollable panel to browse a segmented
+// Material 3 list while preserving clear first, middle, and last row shapes.
 
 // *************** EMULATOR SETUP BEGIN
 

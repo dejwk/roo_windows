@@ -413,7 +413,7 @@ that class already owns a dense cluster of behavior:
 - damped overshoot and maximum bounce distance,
 - fling velocity capping and deceleration,
 - interrupted fling and spring-back state,
-- scheduler-driven animation ticks,
+- caller-supplied animation-clock ticks,
 - gesture claiming and child/parent disambiguation,
 - and clamped `scrollTo(...)` behavior at content bounds.
 
@@ -450,11 +450,19 @@ Plain fixed `Tabs` does not store the scroll-motion state at all.
 
 The helper's time boundary is `TimestampMillis`, a signed 64-bit millisecond
 value. Every timestamp supplied during one motion must use the same epoch.
-Existing scheduler consumers temporarily pass `Uptime::Now().inMillis()`;
-registry consumers reset a new motion to track-relative zero. This avoids the
-platform-width and wrap behavior of Arduino `unsigned long`. The wider fields
-raise the estimated ESP32 `State` footprint from roughly 32 B to 48 B; the
-64-bit host size remains capped at 48 B.
+Registry consumers reset a new motion to track-relative zero and pass custom
+track samples as elapsed milliseconds. This avoids the platform-width and wrap
+behavior of Arduino `unsigned long`. The wider fields raise the estimated
+ESP32 `State` footprint from roughly 32 B to 48 B; the 64-bit host size remains
+capped at 48 B.
+
+`SimpleScrollablePanel` now uses one registry custom-time channel for fling and
+spring-back motion, retaining its 10 ms minimum interval. A touch-down cancels
+that channel at the last applied position. Re-layout, hidden presentation, or
+detachment cancels and clamps the motion to current legal geometry, so stale
+momentum is never resumed. Its scrollbar hide operation remains a distinct
+one-shot scheduler deadline: hiding transient chrome is delayed semantic work
+and never advances scroll physics.
 
 An illustrative API shape:
 

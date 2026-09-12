@@ -484,6 +484,19 @@ cc_test(
 )
 
 cc_test(
+    name = "scrollable_panel_animation_test",
+    srcs = [
+        "test/roo_windows_render_test_support.h",
+        "test/scrollable_panel_animation_test.cpp",
+    ],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
+cc_test(
     name = "material3_switch_test",
     srcs = [
         "test/material3_switch_test.cpp",

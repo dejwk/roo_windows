@@ -9,6 +9,8 @@ namespace roo_windows {
 namespace {
 
 static const roo_time::Duration kDelayHideScrollbar = roo_time::Millis(1200);
+static const roo_time::Duration kScrollMotionFrameInterval =
+    roo_time::Millis(10);
 
 // The area on the side of the panel whose touch is interpreted as an
 // interaction with the scroll bar.
@@ -69,6 +71,7 @@ Dimensions VerticalScrollBar::getSuggestedMinimumDimensions() const {
 void SimpleScrollablePanel::scrollTo(XDim x, YDim y) {
   Widget* c = contents();
   if (c == nullptr) return;
+  cancelMotion();
   ScrollPosition current = currentScrollPosition();
   applyScrollResult(
       motion_.scrollTo(motionGeometry(), current.x, current.y, x, y));
@@ -237,45 +240,55 @@ void SimpleScrollablePanel::onLayout(bool changed, const Rect& rect) {
 }
 
 void SimpleScrollablePanel::execute(roo_scheduler::EventID id) {
-  (void)id;
-  notification_id_ = -1;
-
-  if (roo_time::Uptime::Now() >= deadline_hide_scrollbar_) {
-    scroll_bar_.setVisibility(Visibility::kInvisible);
+  if (id != hide_notification_id_) return;
+  hide_notification_id_ = -1;
+  if (roo_time::Uptime::Now() < deadline_hide_scrollbar_) {
+    scheduleHideScrollBarUpdate();
+    return;
   }
+  scroll_bar_.setVisibility(Visibility::kInvisible);
+}
 
+void SimpleScrollablePanel::cancelMotion() {
+  context().animations().cancel(*this, kMotion);
+}
+
+void SimpleScrollablePanel::startMotionTrack() {
+  cancelMotion();
   if (!motion_.isAnimating()) return;
+  if (presentationState() != PresentationState::kPresented) {
+    stopMotionAndClamp();
+    return;
+  }
+  AnimationSpec spec = AnimationSpec::customTime();
+  spec.minimum_interval = kScrollMotionFrameInterval;
+  if (context().animations().start(*this, kMotion, spec) !=
+      AnimationStatus::kOk) {
+    stopMotionAndClamp();
+  }
+}
+
+void SimpleScrollablePanel::stopMotionAndClamp() {
+  cancelMotion();
+  if (contents() == nullptr) {
+    motion_ = scroll_motion::State();
+    return;
+  }
   ScrollPosition current = currentScrollPosition();
-  scroll_motion::Result result =
-      motion_.tick(motionGeometry(), current.x, current.y,
-                   roo_time::Uptime::Now().inMillis());
-  applyScrollResult(result);
-  if (result.needs_tick) {
-    scheduleScrollAnimationUpdate();
-  } else {
-    if (scroll_bar_presence_ ==
-        VerticalScrollBar::Presence::kShownWhenScrolling) {
-      deadline_hide_scrollbar_ = roo_time::Uptime::Now() + kDelayHideScrollbar;
-      scheduleHideScrollBarUpdate();
-    }
-  }
+  applyScrollResult(motion_.scrollTo(motionGeometry(), current.x, current.y,
+                                     current.x, current.y));
 }
 
-void SimpleScrollablePanel::cancelPendingUpdate() {
-  if (notification_id_ > 0) {
-    scheduler_.cancel(notification_id_);
-    notification_id_ = -1;
+void SimpleScrollablePanel::cancelHideScrollBarUpdate() {
+  if (hide_notification_id_ > 0) {
+    scheduler_.cancel(hide_notification_id_);
+    hide_notification_id_ = -1;
   }
-}
-
-void SimpleScrollablePanel::scheduleScrollAnimationUpdate() {
-  cancelPendingUpdate();
-  notification_id_ = scheduler_.scheduleAfter(roo_time::Millis(10), *this);
 }
 
 void SimpleScrollablePanel::scheduleHideScrollBarUpdate() {
-  cancelPendingUpdate();
-  notification_id_ = scheduler_.scheduleAfter(kDelayHideScrollbar, *this);
+  cancelHideScrollBarUpdate();
+  hide_notification_id_ = scheduler_.scheduleOn(deadline_hide_scrollbar_, *this);
 }
 
 scroll_motion::Axis SimpleScrollablePanel::AxisForDirection(
@@ -385,7 +398,8 @@ bool SimpleScrollablePanel::onInterceptTouchEvent(const TouchEvent& event) {
 void SimpleScrollablePanel::onDragStart(XDim x, YDim y) {
   (void)x;
   (void)y;
-  cancelPendingUpdate();
+  cancelMotion();
+  cancelHideScrollBarUpdate();
   if (contents() != nullptr) {
     ScrollPosition current = currentScrollPosition();
     applyScrollResult(motion_.onDown(motionGeometry(), current.x, current.y));
@@ -463,11 +477,11 @@ void SimpleScrollablePanel::onFling(XDim x, YDim y, XDim vx, YDim vy) {
     return;
   }
   ScrollPosition current = currentScrollPosition();
+  cancelMotion();
   scroll_motion::Result result =
-      motion_.onFling(motionGeometry(), current.x, current.y, vx, vy,
-                      roo_time::Uptime::Now().inMillis());
+      motion_.onFling(motionGeometry(), current.x, current.y, vx, vy, 0);
   applyScrollResult(result);
-  if (result.needs_tick) scheduleScrollAnimationUpdate();
+  if (result.needs_tick) startMotionTrack();
 }
 
 void SimpleScrollablePanel::onDragFinished(XDim vx, YDim vy) {
@@ -477,18 +491,52 @@ void SimpleScrollablePanel::onDragFinished(XDim vx, YDim vy) {
   is_scroll_bar_scrolled_ = false;
   if (contents() != nullptr) {
     ScrollPosition current = currentScrollPosition();
+    cancelMotion();
     scroll_motion::Result scroll_result =
-        motion_.onTouchUp(motionGeometry(), current.x, current.y,
-                          roo_time::Uptime::Now().inMillis());
+        motion_.onTouchUp(motionGeometry(), current.x, current.y, 0);
     applyScrollResult(scroll_result);
     if (scroll_result.needs_tick) {
-      scheduleScrollAnimationUpdate();
+      startMotionTrack();
     } else if (scroll_bar_presence_ ==
                VerticalScrollBar::Presence::kShownWhenScrolling) {
       deadline_hide_scrollbar_ = roo_time::Uptime::Now() + kDelayHideScrollbar;
       scheduleHideScrollBarUpdate();
     }
   }
+}
+
+void SimpleScrollablePanel::onAnimationFrame(
+    AnimationTag tag, const AnimationSample& sample) {
+  if (tag != kMotion) {
+    Container::onAnimationFrame(tag, sample);
+    return;
+  }
+  // Fling admission already applies the legacy 20 ms kick. Keep the zero-time
+  // sample from momentarily undoing that immediate visual response.
+  if (sample.elapsed.inMicros() == 0) return;
+  ScrollPosition current = currentScrollPosition();
+  scroll_motion::Result result = motion_.tick(
+      motionGeometry(), current.x, current.y, sample.elapsed.inMillis());
+  applyScrollResult(result);
+  if (result.needs_tick) return;
+
+  cancelMotion();
+  if (scroll_bar_presence_ ==
+      VerticalScrollBar::Presence::kShownWhenScrolling) {
+    deadline_hide_scrollbar_ = roo_time::Uptime::Now() + kDelayHideScrollbar;
+    scheduleHideScrollBarUpdate();
+  }
+}
+
+void SimpleScrollablePanel::onPresentationChanged(
+    const PresentationChange& change) {
+  if (change.state == PresentationState::kPresented &&
+      !change.detached_since_delivery) {
+    return;
+  }
+  stopMotionAndClamp();
+  cancelHideScrollBarUpdate();
+  scroll_bar_.setVisibility(Visibility::kInvisible);
 }
 
 }  // namespace roo_windows
