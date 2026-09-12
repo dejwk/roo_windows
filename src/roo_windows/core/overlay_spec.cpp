@@ -76,7 +76,7 @@ OverlaySpec::OverlaySpec()
 
 OverlaySpec::OverlaySpec(Widget& widget, const Canvas& canvas)
     : is_modded_(false),
-      is_disabled_(!widget.isEnabled()),
+      is_disabled_(!widget.isEnabled() && widget.useAutomaticDisabledStyle()),
       target_(Target::kNone),
       click_animation_in_progress_(false),
       press_overlay_spec_() {

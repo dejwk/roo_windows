@@ -466,6 +466,10 @@ class Widget {
 
   bool isGone() const { return (state_ & kWidgetGone) != 0; }
 
+  // Owner-painted components may resolve their complete disabled palette.
+  // The default retains the framework translucency treatment.
+  virtual bool useAutomaticDisabledStyle() const { return true; }
+
   bool isEnabled() const { return (state_ & kWidgetEnabled) != 0; }
 
   bool isHover() const { return (state_ & kWidgetHover) != 0; }
