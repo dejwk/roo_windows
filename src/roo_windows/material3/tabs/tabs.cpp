@@ -942,7 +942,8 @@ void ScrollableTabs::onAnimationFrame(AnimationTag tag,
   // Fling admission already applies the scroll helper's immediate kick.
   if (sample.elapsed.inMicros() == 0) return;
   scroll_motion::Result result = scroll_motion_.tick(
-      motionGeometry(), scroll_x_, 0, sample.elapsed.inMillis());
+      motionGeometry(), scroll_x_, 0,
+      static_cast<scroll_motion::TimestampMillis>(sample.elapsed.inMillis()));
   applyScrollResult(result);
   if (!result.needs_tick) cancelScrollMotion();
 }

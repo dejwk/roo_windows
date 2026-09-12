@@ -54,6 +54,8 @@ ROO_WINDOWS_ANIMATION_SIZE_PROBE(roo_windows::HorizontalPageHost,
 ROO_WINDOWS_ANIMATION_SIZE_PROBE(roo_windows::material3::Tabs, tabs);
 ROO_WINDOWS_ANIMATION_SIZE_PROBE(roo_windows::material3::ScrollableTabs,
                                  scrollable_tabs);
+ROO_WINDOWS_ANIMATION_SIZE_PROBE(roo_windows::scroll_motion::State,
+                                 scroll_motion_state);
 ROO_WINDOWS_ANIMATION_SIZE_PROBE(roo_windows::SimpleScrollablePanel,
                                  simple_scrollable_panel);
 ROO_WINDOWS_ANIMATION_SIZE_PROBE(roo_windows::material3::Switch,

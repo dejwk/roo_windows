@@ -14,8 +14,10 @@ namespace {
 constexpr float kDeceleration = 300.0f;
 constexpr float kMaxVelocity = 5000.0f;
 constexpr int16_t kMaxOvershootPx = Scaled(40);
-constexpr TimestampMillis kSpringBackDurationMs = 500;
-constexpr TimestampMillis kProgrammaticScrollDurationMs = 250;
+constexpr DurationMillis kSpringBackDurationMs = 500;
+constexpr DurationMillis kProgrammaticScrollDurationMs = 250;
+constexpr DurationMillis kMaxForwardDeltaMs =
+    std::numeric_limits<DurationMillis>::max() / 2;
 
 template <typename T>
 T Clamp(T input, T min_val, T max_val) {
@@ -29,18 +31,12 @@ Result MakeResult(const Geometry& geometry, XDim x, YDim y, bool changed,
   return {x, y, changed, needs_tick, geometry.isInOvershoot(x, y)};
 }
 
-TimestampMillis AddSaturated(TimestampMillis start,
-                             TimestampMillis duration) {
-  const TimestampMillis max = std::numeric_limits<TimestampMillis>::max();
-  return start > max - duration ? max : start + duration;
-}
-
-TimestampMillis ElapsedSince(TimestampMillis now, TimestampMillis start) {
-  if (now <= start) return 0;
-  if (start < 0 && now > std::numeric_limits<TimestampMillis>::max() + start) {
-    return std::numeric_limits<TimestampMillis>::max();
-  }
-  return now - start;
+DurationMillis ElapsedSince(TimestampMillis now, TimestampMillis start) {
+  const DurationMillis elapsed = now - start;
+  // A larger modular difference denotes a nearby reading before `start`, not
+  // a forward interval of more than half the clock range. Motion durations are
+  // orders of magnitude shorter than this ambiguity boundary.
+  return elapsed <= kMaxForwardDeltaMs ? elapsed : 0;
 }
 
 // Returns a damped signed overshoot that asymptotically approaches the maximum
@@ -249,9 +245,8 @@ Result State::onFling(const Geometry& geometry, XDim current_x, YDim current_y,
     v_abs = kMaxVelocity;
   }
 
-  TimestampMillis duration_ms =
-      static_cast<TimestampMillis>(1000.0f * v_abs / kDeceleration);
-  anim_.fling.end_time_ms = AddSaturated(anim_.fling.start_time_ms, duration_ms);
+  anim_.fling.duration_ms =
+      static_cast<DurationMillis>(1000.0f * v_abs / kDeceleration);
   anim_.fling.decel_x = -kDeceleration * anim_.fling.start_vx / v_abs;
   anim_.fling.decel_y = -kDeceleration * anim_.fling.start_vy / v_abs;
 
@@ -275,7 +270,7 @@ Result State::onTouchUp(const Geometry& geometry, XDim current_x,
 Result State::tick(const Geometry& geometry, XDim current_x, YDim current_y,
                    TimestampMillis now_ms) {
   if (phase_ == Phase::kProgrammatic) {
-    TimestampMillis elapsed =
+    DurationMillis elapsed =
         ElapsedSince(now_ms, anim_.programmatic.start_time_ms);
     if (elapsed >= kProgrammaticScrollDurationMs) {
       phase_ = Phase::kIdle;
@@ -298,15 +293,15 @@ Result State::tick(const Geometry& geometry, XDim current_x, YDim current_y,
   }
 
   if (phase_ == Phase::kSpringBack) {
-    float t = static_cast<float>(
-                  ElapsedSince(now_ms, anim_.springback.start_time_ms)) /
-              1000.0f;
-    const float duration = kSpringBackDurationMs / 1000.0f;
-    if (t >= duration) {
+    DurationMillis elapsed =
+        ElapsedSince(now_ms, anim_.springback.start_time_ms);
+    if (elapsed >= kSpringBackDurationMs) {
       phase_ = Phase::kIdle;
       return scrollTo(geometry, current_x, current_y, anim_.springback.target_x,
                       anim_.springback.target_y);
     }
+    float t = static_cast<float>(elapsed) / 1000.0f;
+    const float duration = kSpringBackDurationMs / 1000.0f;
     float frac = 1.0f - t / duration;
     float ease = frac * frac;
     XDim ox = static_cast<XDim>(std::round(anim_.springback.start_ox * ease));
@@ -322,16 +317,11 @@ Result State::tick(const Geometry& geometry, XDim current_x, YDim current_y,
     return MakeResult(geometry, current_x, current_y, false, false);
   }
 
-  bool scroll_in_progress = true;
-  TimestampMillis t_end = now_ms;
-  if (t_end >= anim_.fling.end_time_ms) {
-    t_end = anim_.fling.end_time_ms;
-    scroll_in_progress = false;
-  }
+  DurationMillis elapsed = ElapsedSince(now_ms, anim_.fling.start_time_ms);
+  bool scroll_in_progress = elapsed < anim_.fling.duration_ms;
+  if (!scroll_in_progress) elapsed = anim_.fling.duration_ms;
 
-  float t = static_cast<float>(
-                ElapsedSince(t_end, anim_.fling.start_time_ms)) /
-            1000.0f;
+  float t = static_cast<float>(elapsed) / 1000.0f;
   XDim target_x = current_x;
   YDim target_y = current_y;
   if (anim_.fling.start_vx != 0) {

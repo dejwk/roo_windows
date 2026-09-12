@@ -7,6 +7,30 @@ production-widget migration. The measured candidate is Phase 15 commit
 `/home/dawidk/.cache/roo_windows/animation-registry-phase16`; no Bazel output or
 repository cache was placed under `/tmp`.
 
+## Phase 17: compact motion clock
+
+Phase 17 changes the shared scroll-motion clock from signed 64-bit milliseconds
+to modular `uint32_t` timestamps and durations. It also replaces the fling's
+absolute end timestamp with a 32-bit duration. Timestamp ordering now uses only
+modular subtraction under a 2^31-1 ms maximum-forward-difference contract.
+
+The target ABI probe was rerun with both installed ESP toolchains. ESP32-C3
+RISC-V and ESP32-S3 Xtensa produced identical results:
+
+| Type | Phase 15 | Phase 17 | Delta |
+| --- | ---: | ---: | ---: |
+| `TimestampMillis` | 8 | 4 | -4 |
+| `DurationMillis` | not separate | 4 | — |
+| `scroll_motion::State` | not recorded | 36 | — |
+| `ScrollableTabs` | 152 | 136 | -16 |
+| `SimpleScrollablePanel` | 176 | 168 | -8 |
+
+The size probe now records `scroll_motion::State` directly. The focused motion,
+scrollable-panel animation, and Material 3 tabs tests pass, and the changed
+controller compiles with both target compilers. The registry CPU, stack, linked
+firmware, allocation, and high-water figures elsewhere in this report remain
+the historical Phase 15 measurements; they were not rerun for Phase 17.
+
 ## Target and build
 
 | Setting | Captured value |
@@ -107,25 +131,27 @@ references, execution IDs, timestamps, and paint/measurement-time advancement.
 | `TextFieldEditor` / `TextField` | Cursor `SingletonTask` and last-shown uptime | Cursor state, bound field, slow custom-time tag; password-mask deadline remains semantic work |
 | `SnackbarHost` / presenter | Private recurring 20 ms timer, frame updater and elapsed timeout accumulation | Applied offset, motion tag, one readable-time deadline, queue/lifetime guard and transient/focus/presentation pause state |
 
-Target idle object sizes make increases explicit. `SnackbarHost` includes its
-presenter; `SimpleScrollablePanel` retains the semantic hide deadline. Shared
-registry storage is in `ApplicationContext`, not in each widget.
+Target idle object sizes make the migration history explicit. `SnackbarHost`
+includes its presenter; `SimpleScrollablePanel` retains the semantic hide
+deadline. Shared registry storage is in `ApplicationContext`, not in each
+widget. The Phase 17 column comes from the refreshed target ABI probe;
+unaffected types retain their Phase 15 sizes.
 
-| Type | Phase 3 | Phase 15 | Delta |
-| --- | ---: | ---: | ---: |
-| `ExpandablePanel` | 60 | 60 | 0 |
-| `HorizontalPageHost` | 188 | 148 | -40 |
-| `Tabs` | 112 | 92 | -20 |
-| `ScrollableTabs` | 160 | 152 | -8 |
-| `SimpleScrollablePanel` | 168 | 176 | +8 |
-| Material switch | 36 | 36 | 0 |
-| Legacy switch | 28 | 28 | 0 |
-| `ToggleIconButton` | 44 | 44 | 0 |
-| Legacy `ProgressBar` | 32 | 32 | 0 |
-| `TextFieldEditor` | 136 | 88 | -48 |
-| `TextField` | 104 | 104 | 0 |
-| Snackbar presenter | 44 | 56 | +12 |
-| `SnackbarHost` | 512 | 528 | +16 |
+| Type | Phase 3 | Phase 15 | Phase 17 | Phase 17 vs Phase 15 | Phase 17 vs Phase 3 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `ExpandablePanel` | 60 | 60 | 60 | 0 | 0 |
+| `HorizontalPageHost` | 188 | 148 | 148 | 0 | -40 |
+| `Tabs` | 112 | 92 | 92 | 0 | -20 |
+| `ScrollableTabs` | 160 | 152 | 136 | -16 | -24 |
+| `SimpleScrollablePanel` | 168 | 176 | 168 | -8 | 0 |
+| Material switch | 36 | 36 | 36 | 0 | 0 |
+| Legacy switch | 28 | 28 | 28 | 0 | 0 |
+| `ToggleIconButton` | 44 | 44 | 44 | 0 | 0 |
+| Legacy `ProgressBar` | 32 | 32 | 32 | 0 | 0 |
+| `TextFieldEditor` | 136 | 88 | 88 | 0 | -48 |
+| `TextField` | 104 | 104 | 104 | 0 | 0 |
+| Snackbar presenter | 44 | 56 | 56 | 0 | +12 |
+| `SnackbarHost` | 512 | 528 | 528 | 0 | +16 |
 
 ## Linked migration fixture and budget amendment
 

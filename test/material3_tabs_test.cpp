@@ -389,7 +389,7 @@ TEST(Material3Tabs, FixedLayoutDividesWidthEqually) {
 // widgets pass extents per call so fixed tabs do not inherit scroll bounds.
 TEST(Material3Tabs, ScrollMotionStateDoesNotStoreGeometry) {
   EXPECT_LT(sizeof(Tabs), sizeof(ScrollableTabs));
-  EXPECT_LE(sizeof(scroll_motion::State), 48U);
+  EXPECT_LE(sizeof(scroll_motion::State), 40U);
   EXPECT_LE(sizeof(scroll_motion::Geometry), 16U);
 }
 

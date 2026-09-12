@@ -452,13 +452,19 @@ by laying out the tab strip at `strip_x + scroll_x`, recalculates indicator
 bounds from the translated tab geometry, and invalidates the tab-row viewport.
 Plain fixed `Tabs` does not store the scroll-motion state at all.
 
-The helper's time boundary is `TimestampMillis`, a signed 64-bit millisecond
-value. Every timestamp supplied during one motion must use the same epoch.
+The helper's time boundary is `TimestampMillis`, an explicitly 32-bit unsigned
+millisecond value. Every timestamp supplied during one motion must use the same
+epoch. Timestamp ordering is never tested directly: the evaluator subtracts
+the stored start from the current timestamp modulo 2^32 and interprets only
+forward differences of at most 2^31-1 ms. A larger difference denotes a nearby
+reading before the start and is treated as zero elapsed time. This half-range
+contract is ample for motions measured in seconds and makes rollover safe while
+keeping the controller state compact on 32-bit targets.
+
 Registry consumers reset a new motion to track-relative zero and pass custom
-track samples as elapsed milliseconds. This avoids the platform-width and wrap
-behavior of Arduino `unsigned long`. The wider fields raise the estimated
-ESP32 `State` footprint from roughly 32 B to 48 B; the 64-bit host size remains
-capped at 48 B.
+track samples as elapsed milliseconds. Fling state stores its duration rather
+than an absolute end timestamp, so completion also compares elapsed duration
+and never orders two circular timestamps.
 
 `SimpleScrollablePanel` now uses one registry custom-time channel for fling and
 spring-back motion, retaining its 10 ms minimum interval. A touch-down cancels
@@ -474,7 +480,8 @@ An illustrative API shape:
 namespace scroll_motion {
 
 enum class Axis { kHorizontal, kVertical, kBoth };
-using TimestampMillis = int64_t;
+using TimestampMillis = uint32_t;
+using DurationMillis = uint32_t;
 
 class Geometry {
  public:

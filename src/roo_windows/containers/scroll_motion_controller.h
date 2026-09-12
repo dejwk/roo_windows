@@ -8,8 +8,16 @@ namespace roo_windows {
 
 namespace scroll_motion {
 
-/// Signed millisecond timestamp. All values in one motion share one epoch.
-using TimestampMillis = int64_t;
+/// Millisecond timestamp modulo 2^32. All values in one motion share one epoch.
+///
+/// Timestamp ordering is established only by subtracting two timestamps. The
+/// current reading must remain within 2^31 milliseconds of the stored motion
+/// start; under that assumption unsigned subtraction remains valid across
+/// wraparound.
+using TimestampMillis = uint32_t;
+
+/// Duration used by the compact motion clock.
+using DurationMillis = uint32_t;
 
 /// Axes on which drag/fling motion is allowed.
 enum class Axis : uint8_t {
@@ -144,7 +152,7 @@ class State {
     } drag;
     struct {
       TimestampMillis start_time_ms;
-      TimestampMillis end_time_ms;
+      DurationMillis duration_ms;
       float start_vx;
       float start_vy;
       float decel_x;

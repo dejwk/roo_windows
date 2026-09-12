@@ -600,14 +600,14 @@ patterned-background restoration and unchanged click activation timing.
 
 ### Phase 7: reusable physics time input
 
-**Commit: `Give scroll motion an explicit duration-based clock`.** Change the
-shared scroll_motion evaluator's timestamp parameters and stored timestamps from
-platform-width unsigned long to signed 64-bit millisecond values. Keep fling,
-resistance, spring-back and programmatic equations unchanged. Temporarily adapt
-existing callers with Uptime milliseconds so this commit builds independently.
-Test trajectories, phase transitions and long-uptime arithmetic in the pure
-motion tests; record the state-size delta. Document that all times in one motion
-must share an epoch. This closes the clock decision before the consumers migrate.
+**Commit: `Give scroll motion an explicit duration-based clock`.** The initial
+implementation changed the shared scroll-motion evaluator from platform-width
+`unsigned long` to signed 64-bit milliseconds. A later compact-clock revision
+made the width explicitly `uint32_t`, stored fling duration instead of an end
+timestamp, and defined ordering through modular subtraction with a 2^31-1 ms
+forward-difference limit. Keep fling, resistance, spring-back and programmatic
+equations unchanged. Test trajectories and phase transitions across timestamp
+wrap in the pure motion tests. All times in one motion must share an epoch.
 
 ### Phase 8: scrollable panel motion
 

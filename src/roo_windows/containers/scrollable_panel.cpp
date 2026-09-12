@@ -519,7 +519,8 @@ void SimpleScrollablePanel::onAnimationFrame(AnimationTag tag,
   if (sample.elapsed.inMicros() == 0) return;
   ScrollPosition current = currentScrollPosition();
   scroll_motion::Result result = motion_.tick(
-      motionGeometry(), current.x, current.y, sample.elapsed.inMillis());
+      motionGeometry(), current.x, current.y,
+      static_cast<scroll_motion::TimestampMillis>(sample.elapsed.inMillis()));
   applyScrollResult(result);
   if (result.needs_tick) return;
 
