@@ -97,6 +97,16 @@ cc_test(
 )
 
 cc_test(
+    name = "animation_registry_resource_test",
+    srcs = ["test/animation_registry_resource_test.cpp"],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
+cc_test(
     name = "shared_scheduler_drive_test",
     srcs = ["test/shared_scheduler_drive_test.cpp"],
     linkstatic = 1,
@@ -153,6 +163,26 @@ cc_test(
 cc_library(
     name = "display_runtime_size_probe",
     srcs = ["benchmarks/display_runtime_size_probe.cpp"],
+    deps = [":roo_windows"],
+)
+
+# Compiles every migration consumer into one target-link fixture. Acceptance
+# builds call this function from the representative settings-shell firmware.
+cc_library(
+    name = "animation_registry_mixed_fixture",
+    srcs = ["benchmarks/animation_registry_mixed_fixture.cpp"],
+    deps = [":roo_windows"],
+)
+
+# Compiles named animation-registry and migrated-consumer sizeof() symbols for
+# target-ABI inspection with nm. It is not linked into firmware images.
+cc_library(
+    name = "animation_registry_size_probe",
+    srcs = ["benchmarks/animation_registry_size_probe.cpp"],
+    hdrs = [
+        "benchmarks/Arduino.h",
+        "benchmarks/pgmspace.h",
+    ],
     deps = [":roo_windows"],
 )
 

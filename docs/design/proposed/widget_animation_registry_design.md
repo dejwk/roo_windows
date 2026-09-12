@@ -779,14 +779,19 @@ not proof of a RAM or flash reduction: switches in particular previously used
 only a packed timestamp. Report increases explicitly.
 
 Require every existing non-click visual driver in the migration table to be
-removed, all listed semantic timers to be documented, and zero recurring wakes
-in a settled application without caret/spinner or semantic timed work. Require
-that the migration-only text+rodata delta (against a baseline already linking
-the registry) is nonpositive for the complete mixed-widget fixture. This checks
-that consumers actually remove duplicated machinery. A failed code-size gate
-requires simplification or a reviewed budget amendment, not a claim that fewer
-source lines suffice. Do not move the design to implemented with an unfinished
-migration hidden in Future Work.
+removed, all listed semantic timers to be documented, and zero recurring
+animation-originated wakes in a settled application without caret/spinner or
+semantic timed work. The application-wide touch-poll fallback is owned by the
+separate event-driven-input design and is not an animation wake. The Phase 16
+target review replaces the original nonpositive migration-size hypothesis with
+a 16 KiB text+rodata ceiling for the complete mixed-widget fixture against a
+baseline already linking the registry. The measured 14,478-byte increase and
+its attribution are recorded in the
+[acceptance report](../../animation_registry_acceptance.md); centralization is
+not presented as a flash saving. A failed code-size gate requires simplification
+or another reviewed budget amendment, not a claim that fewer source lines
+suffice. Do not move the design to implemented with an unfinished migration
+hidden in Future Work.
 
 ## Testing Plan
 

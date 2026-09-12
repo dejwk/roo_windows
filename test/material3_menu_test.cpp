@@ -137,8 +137,11 @@ class Material3MenuTest : public testing::Test {
     ASSERT_NE(&source_, path.back());
     path.back()->onSingleTapUp(x, y);
     app_.start();
+    // Attaching the menu can leave a presentation-registry delivery ahead of
+    // the application's initial ticker task. Drain both immediate tasks so the
+    // queued tap reaches the transient host.
     scheduler_.executeEligibleTasksUpToNow(roo_scheduler::Priority::kMinimum,
-                                           1);
+                                           2);
   }
 
   void CompleteRowTap() {
