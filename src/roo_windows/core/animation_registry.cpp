@@ -23,16 +23,6 @@ roo_time::Uptime addSaturated(roo_time::Uptime base,
   return base + duration;
 }
 
-roo_time::Uptime addSaturated(roo_time::Uptime base, roo_time::Duration first,
-                              roo_time::Duration second) {
-  const int64_t max_us = std::numeric_limits<int64_t>::max();
-  if (first.inMicros() > max_us - second.inMicros()) {
-    return roo_time::Uptime::Max();
-  }
-  return addSaturated(base,
-                      roo_time::Micros(first.inMicros() + second.inMicros()));
-}
-
 }  // namespace
 
 AnimationRegistry::AnimationRegistry(ApplicationContext& context)
@@ -58,10 +48,6 @@ AnimationStatus AnimationRegistry::start(Widget& target, AnimationTag tag,
   if (!internal::isValidAnimationSpec(spec)) {
     return AnimationStatus::kInvalidSpec;
   }
-  if (spec.kind == AnimationKind::kValue &&
-      (spec.legs != 1 || spec.playback != AnimationPlayback::kRestart)) {
-    return AnimationStatus::kUnsupported;
-  }
   if (target.tryContext() != &context_) return AnimationStatus::kNotFound;
   if (stopped_ || context_.frame_driver_ == nullptr) {
     return AnimationStatus::kNoFrameDriver;
@@ -73,6 +59,7 @@ AnimationStatus AnimationRegistry::start(Widget& target, AnimationTag tag,
   invalidateDispatchItem(key);
   Track track;
   track.spec = spec;
+  track.last_value = spec.from;
   if (existing == tracks_.end()) {
     tracks_.insert(std::make_pair(key, track));
   } else {
@@ -94,35 +81,125 @@ AnimationStatus AnimationRegistry::cancel(Widget& target, AnimationTag tag) {
 }
 
 AnimationStatus AnimationRegistry::pause(Widget& target, AnimationTag tag) {
-  return find(target, tag) == tracks_.end() ? AnimationStatus::kNotFound
-                                            : AnimationStatus::kUnsupported;
+  if (stopped_ || target.tryContext() != &context_) {
+    return AnimationStatus::kNotFound;
+  }
+  TrackMap::iterator found = find(target, tag);
+  if (found == tracks_.end()) return AnimationStatus::kNotFound;
+  invalidateDispatchItem(ChannelKey{&target, tag});
+  Track& track = found->second;
+  if (!track.paused) {
+    if (track.anchored)
+      track.elapsed_at_anchor = elapsedAt(track, controlTime());
+    track.paused = true;
+  }
+  return AnimationStatus::kOk;
 }
 
 AnimationStatus AnimationRegistry::resume(Widget& target, AnimationTag tag) {
-  return find(target, tag) == tracks_.end() ? AnimationStatus::kNotFound
-                                            : AnimationStatus::kUnsupported;
+  if (stopped_ || target.tryContext() != &context_) {
+    return AnimationStatus::kNotFound;
+  }
+  TrackMap::iterator found = find(target, tag);
+  if (found == tracks_.end()) return AnimationStatus::kNotFound;
+  invalidateDispatchItem(ChannelKey{&target, tag});
+  Track& track = found->second;
+  if (track.paused) {
+    track.anchor = controlTime();
+    track.paused = false;
+  }
+  requestFrame(roo_time::Uptime::Start());
+  return AnimationStatus::kOk;
 }
 
 AnimationStatus AnimationRegistry::restart(Widget& target, AnimationTag tag) {
-  return find(target, tag) == tracks_.end() ? AnimationStatus::kNotFound
-                                            : AnimationStatus::kUnsupported;
+  if (stopped_ || target.tryContext() != &context_) {
+    return AnimationStatus::kNotFound;
+  }
+  TrackMap::iterator found = find(target, tag);
+  if (found == tracks_.end()) return AnimationStatus::kNotFound;
+  invalidateDispatchItem(ChannelKey{&target, tag});
+  Track& track = found->second;
+  track.anchor = roo_time::Uptime();
+  track.elapsed_at_anchor = roo_time::Duration();
+  track.last_sample_elapsed = roo_time::Duration();
+  track.last_value = track.spec.from;
+  track.anchored = false;
+  track.sampled = false;
+  track.seek_pending = false;
+  track.finish_pending = false;
+  requestFrame(roo_time::Uptime::Start());
+  return AnimationStatus::kOk;
 }
 
 AnimationStatus AnimationRegistry::seek(Widget& target, AnimationTag tag,
-                                        roo_time::Duration) {
-  return find(target, tag) == tracks_.end() ? AnimationStatus::kNotFound
-                                            : AnimationStatus::kUnsupported;
+                                        roo_time::Duration elapsed) {
+  if (stopped_ || target.tryContext() != &context_) {
+    return AnimationStatus::kNotFound;
+  }
+  TrackMap::iterator found = find(target, tag);
+  if (found == tracks_.end()) return AnimationStatus::kNotFound;
+  if (elapsed.inMicros() < 0) return AnimationStatus::kInvalidSpec;
+  invalidateDispatchItem(ChannelKey{&target, tag});
+  Track& track = found->second;
+  const roo_time::Duration end = internal::animationEnd(track.spec);
+  if (end != roo_time::Duration::Max() && elapsed > end) elapsed = end;
+  track.elapsed_at_anchor = elapsed;
+  track.anchor = controlTime();
+  track.anchored = true;
+  track.seek_pending = true;
+  track.finish_pending = false;
+  requestFrame(roo_time::Uptime::Start());
+  return AnimationStatus::kOk;
 }
 
 AnimationStatus AnimationRegistry::retarget(Widget& target, AnimationTag tag,
-                                            float, roo_time::Duration) {
-  return find(target, tag) == tracks_.end() ? AnimationStatus::kNotFound
-                                            : AnimationStatus::kUnsupported;
+                                            float to,
+                                            roo_time::Duration duration) {
+  if (stopped_ || target.tryContext() != &context_) {
+    return AnimationStatus::kNotFound;
+  }
+  TrackMap::iterator found = find(target, tag);
+  if (found == tracks_.end()) return AnimationStatus::kNotFound;
+  if (found->second.spec.kind != AnimationKind::kValue) {
+    return AnimationStatus::kUnsupported;
+  }
+  AnimationSpec replacement =
+      AnimationSpec::value(found->second.sampled ? found->second.last_value
+                                                 : found->second.spec.from,
+                           to, duration);
+  replacement.minimum_interval = found->second.spec.minimum_interval;
+  replacement.easing = found->second.spec.easing;
+  if (!internal::isValidAnimationSpec(replacement)) {
+    return AnimationStatus::kInvalidSpec;
+  }
+
+  invalidateDispatchItem(ChannelKey{&target, tag});
+  const bool paused = found->second.paused;
+  Track track;
+  track.spec = replacement;
+  track.last_value = replacement.from;
+  track.paused = paused;
+  found->second = track;
+  requestFrame(roo_time::Uptime::Start());
+  return AnimationStatus::kOk;
 }
 
 AnimationStatus AnimationRegistry::finish(Widget& target, AnimationTag tag) {
-  return find(target, tag) == tracks_.end() ? AnimationStatus::kNotFound
-                                            : AnimationStatus::kUnsupported;
+  if (stopped_ || target.tryContext() != &context_) {
+    return AnimationStatus::kNotFound;
+  }
+  TrackMap::iterator found = find(target, tag);
+  if (found == tracks_.end()) return AnimationStatus::kNotFound;
+  if (found->second.spec.kind != AnimationKind::kValue ||
+      found->second.spec.legs == 0) {
+    return AnimationStatus::kUnsupported;
+  }
+  invalidateDispatchItem(ChannelKey{&target, tag});
+  found->second.finish_pending = true;
+  found->second.seek_pending = false;
+  requestFrame(roo_time::Uptime::Start());
+  return AnimationStatus::kOk;
 }
 
 bool AnimationRegistry::contains(const Widget& target, AnimationTag tag) const {
@@ -157,16 +234,50 @@ void AnimationRegistry::requestFrame(roo_time::Uptime deadline) {
   }
 }
 
+roo_time::Uptime AnimationRegistry::controlTime() const {
+  return dispatching_ ? frame_time_ : roo_time::Uptime::Now();
+}
+
+roo_time::Duration AnimationRegistry::elapsedAt(const Track& track,
+                                                roo_time::Uptime now) const {
+  if (!track.anchored || track.paused) return track.elapsed_at_anchor;
+  roo_time::Duration since_anchor = now - track.anchor;
+  if (since_anchor.inMicros() < 0) since_anchor = roo_time::Duration();
+  const int64_t max_us = std::numeric_limits<int64_t>::max();
+  if (track.elapsed_at_anchor.inMicros() > max_us - since_anchor.inMicros()) {
+    return roo_time::Duration::Max();
+  }
+  roo_time::Duration elapsed = track.elapsed_at_anchor + since_anchor;
+  const roo_time::Duration end = internal::animationEnd(track.spec);
+  return end != roo_time::Duration::Max() && elapsed > end ? end : elapsed;
+}
+
+roo_time::Uptime AnimationRegistry::deadlineAtElapsed(
+    const Track& track, roo_time::Duration elapsed) const {
+  if (elapsed <= track.elapsed_at_anchor) return track.anchor;
+  return addSaturated(track.anchor, elapsed - track.elapsed_at_anchor);
+}
+
 roo_time::Uptime AnimationRegistry::trackDeadline(const Track& track) const {
+  if (track.seek_pending || track.finish_pending) {
+    return roo_time::Uptime::Start();
+  }
+  if (track.paused) return roo_time::Uptime::Max();
   if (!track.anchored) return roo_time::Uptime::Start();
   const roo_time::Duration end = internal::animationEnd(track.spec);
   if (!track.sampled) return track.anchor;
   if (track.last_sample_elapsed < track.spec.delay) {
-    return addSaturated(track.anchor, track.spec.delay);
+    return deadlineAtElapsed(track, track.spec.delay);
   }
-  const roo_time::Uptime interval_deadline = addSaturated(
-      track.anchor, track.last_sample_elapsed, track.spec.minimum_interval);
-  const roo_time::Uptime end_deadline = addSaturated(track.anchor, end);
+  roo_time::Duration interval_elapsed = roo_time::Duration::Max();
+  const int64_t max_us = std::numeric_limits<int64_t>::max();
+  if (track.last_sample_elapsed.inMicros() <=
+      max_us - track.spec.minimum_interval.inMicros()) {
+    interval_elapsed = track.last_sample_elapsed + track.spec.minimum_interval;
+  }
+  const roo_time::Uptime interval_deadline =
+      deadlineAtElapsed(track, interval_elapsed);
+  const roo_time::Uptime end_deadline = deadlineAtElapsed(track, end);
   return std::min(interval_deadline, end_deadline);
 }
 
@@ -206,24 +317,33 @@ bool AnimationRegistry::dispatchNext() {
   Track& track = found->second;
   if (!track.anchored) {
     track.anchor = frame_time_;
+    track.elapsed_at_anchor = roo_time::Duration();
     track.anchored = true;
   }
-  roo_time::Duration elapsed = frame_time_ - track.anchor;
-  if (elapsed.inMicros() < 0) elapsed = roo_time::Duration();
+  const bool forced = track.finish_pending;
+  const bool sought = track.seek_pending;
+  const roo_time::Duration elapsed = forced ? internal::animationEnd(track.spec)
+                                            : elapsedAt(track, frame_time_);
   const roo_time::Duration delta = track.sampled
                                        ? elapsed - track.last_sample_elapsed
                                        : roo_time::Duration();
-  const AnimationSample sample =
+  AnimationSample sample =
       internal::evaluateAnimation(track.spec, elapsed, delta);
+  if (sought && !forced) sample.terminal = false;
   track.last_sample_elapsed = elapsed;
+  track.last_value = sample.value;
   track.sampled = true;
+  track.seek_pending = false;
+  track.finish_pending = false;
   key.target->onAnimationFrame(key.tag, sample);
 
   if (!sample.terminal || !dispatch_[item_index].valid) return true;
   found = tracks_.find(key);
   if (found == tracks_.end()) return true;
   tracks_.erase(key);
-  key.target->onAnimationFinished(key.tag, AnimationFinishReason::kCompleted);
+  key.target->onAnimationFinished(key.tag,
+                                  forced ? AnimationFinishReason::kForced
+                                         : AnimationFinishReason::kCompleted);
   return true;
 }
 

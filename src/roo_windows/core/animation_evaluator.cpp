@@ -7,22 +7,22 @@
 namespace roo_windows::internal {
 namespace {
 
-bool isValidEasingKind(AnimationEasingKind kind) {
+bool isValidEasingKind(EasingKind kind) {
   switch (kind) {
-    case AnimationEasingKind::kLinear:
-    case AnimationEasingKind::kQuadraticIn:
-    case AnimationEasingKind::kQuadraticOut:
-    case AnimationEasingKind::kSmoothstep:
-    case AnimationEasingKind::kCubicBezier:
+    case EasingKind::kLinear:
+    case EasingKind::kQuadraticIn:
+    case EasingKind::kQuadraticOut:
+    case EasingKind::kSmoothstep:
+    case EasingKind::kCubicBezier:
       return true;
   }
   return false;
 }
 
-bool isValidPlayback(AnimationPlayback playback) {
+bool isValidPlayback(Playback playback) {
   switch (playback) {
-    case AnimationPlayback::kRestart:
-    case AnimationPlayback::kReverse:
+    case Playback::kRestart:
+    case Playback::kReverse:
       return true;
   }
   return false;
@@ -58,15 +58,15 @@ bool isValidAnimationSpec(const AnimationSpec& spec) {
   if (spec.kind == AnimationKind::kCustomTime) {
     return spec.duration.inMicros() == 0 && spec.delay.inMicros() == 0 &&
            spec.from == 0.0f && spec.to == 0.0f && spec.legs == 0 &&
-           spec.playback == AnimationPlayback::kRestart &&
-           spec.easing.kind == AnimationEasingKind::kLinear &&
-           spec.easing.x1 == 0.0f && spec.easing.y1 == 0.0f &&
-           spec.easing.x2 == 0.0f && spec.easing.y2 == 0.0f;
+           spec.playback == Playback::kRestart &&
+           spec.easing.kind == EasingKind::kLinear && spec.easing.x1 == 0.0f &&
+           spec.easing.y1 == 0.0f && spec.easing.x2 == 0.0f &&
+           spec.easing.y2 == 0.0f;
   }
 
   if (!std::isfinite(spec.from) || !std::isfinite(spec.to)) return false;
   if (spec.legs == 0 && spec.duration.inMicros() == 0) return false;
-  if (spec.easing.kind == AnimationEasingKind::kCubicBezier) {
+  if (spec.easing.kind == EasingKind::kCubicBezier) {
     if (!std::isfinite(spec.easing.x1) || !std::isfinite(spec.easing.y1) ||
         !std::isfinite(spec.easing.x2) || !std::isfinite(spec.easing.y2) ||
         spec.easing.x1 < 0.0f || spec.easing.x1 > 1.0f ||
@@ -92,21 +92,21 @@ roo_time::Duration animationEnd(const AnimationSpec& spec) {
                           spec.duration.inMicros() * spec.legs);
 }
 
-float evaluateAnimationEasing(const AnimationEasing& easing, float fraction) {
+float evaluateEasing(const Easing& easing, float fraction) {
   if (fraction <= 0.0f) return 0.0f;
   if (fraction >= 1.0f) return 1.0f;
   switch (easing.kind) {
-    case AnimationEasingKind::kLinear:
+    case EasingKind::kLinear:
       return fraction;
-    case AnimationEasingKind::kQuadraticIn:
+    case EasingKind::kQuadraticIn:
       return fraction * fraction;
-    case AnimationEasingKind::kQuadraticOut: {
+    case EasingKind::kQuadraticOut: {
       const float remaining = 1.0f - fraction;
       return 1.0f - remaining * remaining;
     }
-    case AnimationEasingKind::kSmoothstep:
+    case EasingKind::kSmoothstep:
       return fraction * fraction * (3.0f - 2.0f * fraction);
-    case AnimationEasingKind::kCubicBezier: {
+    case EasingKind::kCubicBezier: {
       float lower = 0.0f;
       float upper = 1.0f;
       // Monotonic x controls permit a small, fixed-cost bisection solve.
@@ -147,7 +147,7 @@ AnimationSample evaluateAnimation(const AnimationSpec& spec,
     sample.terminal = true;
     sample.leg = spec.legs - 1;
     sample.reverse =
-        spec.playback == AnimationPlayback::kReverse && (sample.leg & 1U) != 0;
+        spec.playback == Playback::kReverse && (sample.leg & 1U) != 0;
     sample.fraction = sample.reverse ? 0.0f : 1.0f;
     sample.value = spec.from + (spec.to - spec.from) * sample.fraction;
     return sample;
@@ -164,9 +164,9 @@ AnimationSample evaluateAnimation(const AnimationSpec& spec,
   sample.leg = static_cast<uint64_t>(active_us / duration_us);
   const float raw_fraction =
       static_cast<float>(active_us % duration_us) / duration_us;
-  const float eased = evaluateAnimationEasing(spec.easing, raw_fraction);
+  const float eased = evaluateEasing(spec.easing, raw_fraction);
   sample.reverse =
-      spec.playback == AnimationPlayback::kReverse && (sample.leg & 1U) != 0;
+      spec.playback == Playback::kReverse && (sample.leg & 1U) != 0;
   sample.fraction = sample.reverse ? 1.0f - eased : eased;
   sample.value = spec.from + (spec.to - spec.from) * sample.fraction;
   return sample;

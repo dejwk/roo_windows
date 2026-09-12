@@ -1,5 +1,6 @@
 #include "roo_windows/core/animation_registry.h"
 
+#include <limits>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -26,6 +27,14 @@ struct AnimationRegistryTestAccess {
 
   static roo_time::Uptime nextDeadline(const AnimationRegistry& registry) {
     return registry.nextFrameDeadline();
+  }
+
+  static size_t dispatchCapacity(const AnimationRegistry& registry) {
+    return registry.dispatch_.capacity();
+  }
+
+  static uint16_t trackCapacity(const AnimationRegistry& registry) {
+    return registry.tracks_.capacity();
   }
 };
 
@@ -70,6 +79,7 @@ class RecordingWidget : public BasicWidget {
   std::vector<std::pair<AnimationTag, AnimationFinishReason>> finishes;
   RecordingWidget** peer_to_delete = nullptr;
   bool replace_on_frame = false;
+  size_t pause_on_frame_number = 0;
 
  protected:
   void onAnimationFrame(AnimationTag tag,
@@ -86,6 +96,10 @@ class RecordingWidget : public BasicWidget {
       context().animations().start(
           *this, tag,
           AnimationSpec::value(sample.value, 10.0f, roo_time::Millis(100)));
+    }
+    if (pause_on_frame_number == frames.size()) {
+      pause_on_frame_number = 0;
+      context().animations().pause(*this, tag);
     }
   }
 
@@ -310,20 +324,195 @@ TEST(AnimationRegistry, PaintContinuationFreezesAnimationSamples) {
   EXPECT_EQ(raw->frames.size(), 1u);
 }
 
-TEST(AnimationRegistry, ControlsRemainExplicitlyUnsupported) {
+TEST(AnimationRegistry, RepeatsAndReversesAcrossLargeTimeJumps) {
+  TestApplication fixture;
+  RecordingWidget widget(fixture.app().context());
+  AnimationSpec spec =
+      AnimationSpec::value(10.0f, 20.0f, roo_time::Millis(100));
+  spec.legs = 4;
+  spec.playback = Playback::kReverse;
+  ASSERT_EQ(AnimationStatus::kOk, fixture.registry().start(widget, 0, spec));
+  const roo_time::Uptime anchor = roo_time::Uptime::Now();
+  test::AnimationRegistryTestAccess::dispatch(fixture.registry(), anchor);
+  test::AnimationRegistryTestAccess::dispatch(fixture.registry(),
+                                              anchor + roo_time::Millis(250));
+  ASSERT_EQ(widget.frames.size(), 2u);
+  EXPECT_EQ(widget.frames.back().sample.leg, 2u);
+  EXPECT_FALSE(widget.frames.back().sample.reverse);
+  EXPECT_FLOAT_EQ(widget.frames.back().sample.value, 15.0f);
+
+  test::AnimationRegistryTestAccess::dispatch(fixture.registry(),
+                                              anchor + roo_time::Millis(400));
+  ASSERT_EQ(widget.finishes.size(), 1u);
+  EXPECT_FLOAT_EQ(widget.frames.back().sample.value, 10.0f);
+}
+
+// Verifies pause captures the dispatch timestamp and resume continues from the
+// frozen elapsed value rather than restarting.
+TEST(AnimationRegistry, PausesAndResumesFromFrozenElapsedTime) {
+  TestApplication fixture;
+  RecordingWidget widget(fixture.app().context());
+  widget.pause_on_frame_number = 2;
+  AnimationSpec spec = AnimationSpec::value(0.0f, 1.0f, roo_time::Millis(100));
+  spec.minimum_interval = roo_time::Duration();
+  ASSERT_EQ(AnimationStatus::kOk, fixture.registry().start(widget, 0, spec));
+  const roo_time::Uptime anchor = roo_time::Uptime::Now();
+  test::AnimationRegistryTestAccess::dispatch(fixture.registry(), anchor);
+  test::AnimationRegistryTestAccess::dispatch(fixture.registry(),
+                                              anchor + roo_time::Millis(40));
+  EXPECT_EQ(test::AnimationRegistryTestAccess::nextDeadline(fixture.registry()),
+            roo_time::Uptime::Max());
+
+  ASSERT_EQ(AnimationStatus::kOk, fixture.registry().resume(widget, 0));
+  const roo_time::Uptime resumed = roo_time::Uptime::Now();
+  test::AnimationRegistryTestAccess::dispatch(fixture.registry(),
+                                              resumed + roo_time::Millis(30));
+  ASSERT_EQ(widget.frames.size(), 3u);
+  EXPECT_NEAR(widget.frames.back().sample.fraction, 0.7f, 0.02f);
+}
+
+TEST(AnimationRegistry, RestartResetsTimeAndFirstSampleState) {
+  TestApplication fixture;
+  RecordingWidget widget(fixture.app().context());
+  AnimationSpec spec = AnimationSpec::value(4.0f, 8.0f, roo_time::Millis(100));
+  spec.minimum_interval = roo_time::Duration();
+  ASSERT_EQ(AnimationStatus::kOk, fixture.registry().start(widget, 0, spec));
+  const roo_time::Uptime anchor = roo_time::Uptime::Now();
+  test::AnimationRegistryTestAccess::dispatch(fixture.registry(), anchor);
+  test::AnimationRegistryTestAccess::dispatch(fixture.registry(),
+                                              anchor + roo_time::Millis(50));
+  ASSERT_GT(widget.frames.back().sample.value, 4.0f);
+
+  ASSERT_EQ(AnimationStatus::kOk, fixture.registry().restart(widget, 0));
+  test::AnimationRegistryTestAccess::dispatch(fixture.registry(),
+                                              roo_time::Uptime::Now());
+  EXPECT_FLOAT_EQ(widget.frames.back().sample.value, 4.0f);
+  EXPECT_EQ(widget.frames.back().sample.delta, roo_time::Duration());
+}
+
+// Verifies seek applies one endpoint sample without completion, then a running
+// track completes on its following naturally driven frame.
+TEST(AnimationRegistry, SeekToEndDoesNotCompleteOnSeekFrame) {
+  TestApplication fixture;
+  RecordingWidget widget(fixture.app().context());
+  AnimationSpec spec = AnimationSpec::value(0.0f, 1.0f, roo_time::Millis(100));
+  spec.minimum_interval = roo_time::Duration();
+  ASSERT_EQ(AnimationStatus::kOk, fixture.registry().start(widget, 0, spec));
+  test::AnimationRegistryTestAccess::dispatch(fixture.registry(),
+                                              roo_time::Uptime::Now());
+
+  ASSERT_EQ(AnimationStatus::kOk,
+            fixture.registry().seek(widget, 0, roo_time::Millis(200)));
+  EXPECT_EQ(widget.frames.size(), 1u);
+  const roo_time::Uptime seek_time = roo_time::Uptime::Now();
+  test::AnimationRegistryTestAccess::dispatch(fixture.registry(), seek_time);
+  EXPECT_FALSE(widget.frames.back().sample.terminal);
+  EXPECT_TRUE(widget.finishes.empty());
+  EXPECT_TRUE(fixture.registry().contains(widget, 0));
+
+  test::AnimationRegistryTestAccess::dispatch(fixture.registry(), seek_time);
+  EXPECT_TRUE(widget.frames.back().sample.terminal);
+  EXPECT_EQ(widget.finishes.size(), 1u);
+}
+
+TEST(AnimationRegistry, FinishOverridesPauseForExactForcedEndpoint) {
+  TestApplication fixture;
+  RecordingWidget widget(fixture.app().context());
+  AnimationSpec spec = AnimationSpec::value(2.0f, 6.0f, roo_time::Millis(100));
+  ASSERT_EQ(AnimationStatus::kOk, fixture.registry().start(widget, 0, spec));
+  ASSERT_EQ(AnimationStatus::kOk, fixture.registry().pause(widget, 0));
+  ASSERT_EQ(AnimationStatus::kOk, fixture.registry().finish(widget, 0));
+  test::AnimationRegistryTestAccess::dispatch(fixture.registry(),
+                                              roo_time::Uptime::Now());
+
+  ASSERT_EQ(widget.frames.size(), 1u);
+  EXPECT_FLOAT_EQ(widget.frames.back().sample.value, 6.0f);
+  EXPECT_TRUE(widget.frames.back().sample.terminal);
+  ASSERT_EQ(widget.finishes.size(), 1u);
+  EXPECT_EQ(widget.finishes.back().second, AnimationFinishReason::kForced);
+}
+
+TEST(AnimationRegistry, RetargetsFromLastAppliedValueAndPreservesEasing) {
+  TestApplication fixture;
+  RecordingWidget widget(fixture.app().context());
+  AnimationSpec spec = AnimationSpec::value(0.0f, 10.0f, roo_time::Millis(100));
+  spec.minimum_interval = roo_time::Duration();
+  spec.easing.kind = EasingKind::kQuadraticIn;
+  ASSERT_EQ(AnimationStatus::kOk, fixture.registry().start(widget, 0, spec));
+  const roo_time::Uptime anchor = roo_time::Uptime::Now();
+  test::AnimationRegistryTestAccess::dispatch(fixture.registry(), anchor);
+  test::AnimationRegistryTestAccess::dispatch(fixture.registry(),
+                                              anchor + roo_time::Millis(50));
+  ASSERT_FLOAT_EQ(widget.frames.back().sample.value, 2.5f);
+
+  ASSERT_EQ(AnimationStatus::kOk, fixture.registry().retarget(
+                                      widget, 0, 6.5f, roo_time::Millis(100)));
+  test::AnimationRegistryTestAccess::dispatch(fixture.registry(),
+                                              roo_time::Uptime::Now());
+  EXPECT_FLOAT_EQ(widget.frames.back().sample.value, 2.5f);
+}
+
+// Verifies invalid retarget input leaves the old channel intact and still
+// finishable at its original endpoint.
+TEST(AnimationRegistry, InvalidRetargetLeavesCurrentTrackIntact) {
+  TestApplication fixture;
+  RecordingWidget widget(fixture.app().context());
+  ASSERT_EQ(
+      AnimationStatus::kOk,
+      fixture.registry().start(
+          widget, 0, AnimationSpec::value(0.0f, 1.0f, roo_time::Millis(100))));
+  EXPECT_EQ(AnimationStatus::kInvalidSpec,
+            fixture.registry().retarget(widget, 0,
+                                        std::numeric_limits<float>::infinity(),
+                                        roo_time::Millis(100)));
+  ASSERT_EQ(AnimationStatus::kOk, fixture.registry().finish(widget, 0));
+  test::AnimationRegistryTestAccess::dispatch(fixture.registry(),
+                                              roo_time::Uptime::Now());
+  EXPECT_FLOAT_EQ(widget.frames.back().sample.value, 1.0f);
+}
+
+TEST(AnimationRegistry, CustomTimeRejectsValueOnlyControls) {
   TestApplication fixture;
   RecordingWidget widget(fixture.app().context());
   ASSERT_EQ(AnimationStatus::kOk,
             fixture.registry().start(widget, 0, AnimationSpec::customTime()));
-  EXPECT_EQ(AnimationStatus::kUnsupported, fixture.registry().pause(widget, 0));
-  EXPECT_EQ(AnimationStatus::kUnsupported,
-            fixture.registry().restart(widget, 0));
-  EXPECT_EQ(AnimationStatus::kUnsupported,
-            fixture.registry().seek(widget, 0, roo_time::Millis(5)));
-  EXPECT_EQ(AnimationStatus::kUnsupported,
-            fixture.registry().retarget(widget, 0, 2.0f, roo_time::Millis(10)));
+  EXPECT_EQ(
+      AnimationStatus::kUnsupported,
+      fixture.registry().retarget(widget, 0, 1.0f, roo_time::Millis(100)));
   EXPECT_EQ(AnimationStatus::kUnsupported,
             fixture.registry().finish(widget, 0));
+  EXPECT_TRUE(fixture.registry().contains(widget, 0));
+}
+
+// Verifies warmed dispatch and control operations retain both map and snapshot
+// capacity instead of allocating on ordinary frames.
+TEST(AnimationRegistry, OrdinaryFramesAndControlsRetainStorageCapacity) {
+  TestApplication fixture;
+  RecordingWidget widget(fixture.app().context());
+  ASSERT_EQ(AnimationStatus::kOk,
+            fixture.registry().start(widget, 0, AnimationSpec::customTime()));
+  const roo_time::Uptime anchor = roo_time::Uptime::Now();
+  test::AnimationRegistryTestAccess::dispatch(fixture.registry(), anchor);
+  const size_t dispatch_capacity =
+      test::AnimationRegistryTestAccess::dispatchCapacity(fixture.registry());
+  const uint16_t track_capacity =
+      test::AnimationRegistryTestAccess::trackCapacity(fixture.registry());
+
+  ASSERT_EQ(AnimationStatus::kOk,
+            fixture.registry().seek(widget, 0, roo_time::Millis(100)));
+  test::AnimationRegistryTestAccess::dispatch(fixture.registry(),
+                                              roo_time::Uptime::Now());
+  ASSERT_EQ(AnimationStatus::kOk, fixture.registry().pause(widget, 0));
+  ASSERT_EQ(AnimationStatus::kOk, fixture.registry().resume(widget, 0));
+  test::AnimationRegistryTestAccess::dispatch(fixture.registry(),
+                                              roo_time::Uptime::Now());
+
+  EXPECT_EQ(
+      test::AnimationRegistryTestAccess::dispatchCapacity(fixture.registry()),
+      dispatch_capacity);
+  EXPECT_EQ(
+      test::AnimationRegistryTestAccess::trackCapacity(fixture.registry()),
+      track_capacity);
 }
 
 }  // namespace

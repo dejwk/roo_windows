@@ -14,8 +14,8 @@ TEST(AnimationSpecTest, ProvidesDocumentedDefaults) {
   EXPECT_EQ(value.kind, AnimationKind::kValue);
   EXPECT_EQ(value.legs, 1u);
   EXPECT_EQ(value.minimum_interval, roo_time::Millis(20));
-  EXPECT_EQ(value.playback, AnimationPlayback::kRestart);
-  EXPECT_EQ(value.easing.kind, AnimationEasingKind::kLinear);
+  EXPECT_EQ(value.playback, Playback::kRestart);
+  EXPECT_EQ(value.easing.kind, EasingKind::kLinear);
 
   AnimationSpec custom = AnimationSpec::customTime();
   EXPECT_EQ(custom.kind, AnimationKind::kCustomTime);
@@ -36,9 +36,9 @@ TEST(AnimationSpecTest, RejectsInvalidFieldsAndDurationOverflow) {
   spec.minimum_interval = roo_time::Micros(-1);
   EXPECT_FALSE(isValidAnimationSpec(spec));
   spec.minimum_interval = roo_time::Millis(20);
-  spec.playback = static_cast<AnimationPlayback>(99);
+  spec.playback = static_cast<Playback>(99);
   EXPECT_FALSE(isValidAnimationSpec(spec));
-  spec.playback = AnimationPlayback::kRestart;
+  spec.playback = Playback::kRestart;
   spec.kind = static_cast<AnimationKind>(99);
   EXPECT_FALSE(isValidAnimationSpec(spec));
 
@@ -76,7 +76,7 @@ TEST(AnimationEvaluatorTest, EvaluatesLegBoundariesAndTerminalEndpoints) {
   AnimationSpec spec =
       AnimationSpec::value(20.0f, 100.0f, roo_time::Millis(200));
   spec.legs = 2;
-  spec.playback = AnimationPlayback::kReverse;
+  spec.playback = Playback::kReverse;
 
   AnimationSample quarter =
       evaluateAnimation(spec, roo_time::Millis(50), roo_time::Millis(50));
@@ -104,7 +104,7 @@ TEST(AnimationEvaluatorTest, AppliesDelayOnceAndEasingPerLeg) {
   AnimationSpec spec =
       AnimationSpec::value(20.0f, 100.0f, roo_time::Millis(200));
   spec.delay = roo_time::Millis(30);
-  spec.easing.kind = AnimationEasingKind::kQuadraticOut;
+  spec.easing.kind = EasingKind::kQuadraticOut;
 
   AnimationSample delayed =
       evaluateAnimation(spec, roo_time::Millis(20), roo_time::Duration());
@@ -120,27 +120,25 @@ TEST(AnimationEvaluatorTest, AppliesDelayOnceAndEasingPerLeg) {
 }
 
 TEST(AnimationEvaluatorTest, EvaluatesPresetCurvesAtExactEndpoints) {
-  const AnimationEasingKind kinds[] = {
-      AnimationEasingKind::kLinear, AnimationEasingKind::kQuadraticIn,
-      AnimationEasingKind::kQuadraticOut, AnimationEasingKind::kSmoothstep,
-      AnimationEasingKind::kCubicBezier};
-  for (AnimationEasingKind kind : kinds) {
-    AnimationEasing easing;
+  const EasingKind kinds[] = {
+      EasingKind::kLinear, EasingKind::kQuadraticIn, EasingKind::kQuadraticOut,
+      EasingKind::kSmoothstep, EasingKind::kCubicBezier};
+  for (EasingKind kind : kinds) {
+    Easing easing;
     easing.kind = kind;
     easing.x1 = 0.4f;
     easing.y1 = 0.0f;
     easing.x2 = 0.2f;
     easing.y2 = 1.0f;
-    EXPECT_FLOAT_EQ(evaluateAnimationEasing(easing, 0.0f), 0.0f);
-    EXPECT_FLOAT_EQ(evaluateAnimationEasing(easing, 1.0f), 1.0f);
+    EXPECT_FLOAT_EQ(evaluateEasing(easing, 0.0f), 0.0f);
+    EXPECT_FLOAT_EQ(evaluateEasing(easing, 1.0f), 1.0f);
   }
 }
 
 // Verifies the fixed-iteration Bezier solver stays within half a pixel at the
 // largest audited 568-pixel extent.
 TEST(AnimationEvaluatorTest, CubicBezierAccuracyFitsPixelBudget) {
-  AnimationEasing easing{AnimationEasingKind::kCubicBezier, 0.4f, 0.0f, 0.2f,
-                         1.0f};
+  Easing easing{EasingKind::kCubicBezier, 0.4f, 0.0f, 0.2f, 1.0f};
   for (int i = 1; i < 100; ++i) {
     const float x = i / 100.0f;
     float lower = 0.0f;
@@ -162,8 +160,7 @@ TEST(AnimationEvaluatorTest, CubicBezierAccuracyFitsPixelBudget) {
                             3.0f * (easing.y2 - 2.0f * easing.y1)) *
                                t * t +
                            3.0f * easing.y1 * t;
-    EXPECT_LT(std::abs(evaluateAnimationEasing(easing, x) - expected) * 568.0f,
-              0.5f);
+    EXPECT_LT(std::abs(evaluateEasing(easing, x) - expected) * 568.0f, 0.5f);
   }
 }
 

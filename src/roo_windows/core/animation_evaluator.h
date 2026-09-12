@@ -11,7 +11,7 @@ bool isValidAnimationSpec(const AnimationSpec& spec);
 roo_time::Duration animationEnd(const AnimationSpec& spec);
 
 /// Evaluates easing at a raw fraction in the inclusive range [0, 1].
-float evaluateAnimationEasing(const AnimationEasing& easing, float fraction);
+float evaluateEasing(const Easing& easing, float fraction);
 
 /// Evaluates a validated specification at elapsed time since its anchor.
 AnimationSample evaluateAnimation(const AnimationSpec& spec,
