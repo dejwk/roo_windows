@@ -131,8 +131,9 @@ The strongest signals are:
    separate integration concern,
 5. and badge support is optional rather than baked into every tab instance.
 
-Those signals fit `roo_windows` well: one row can afford animation and scroll
-state, while dozens of tabs should remain as cheap leaf widgets.
+Those signals fit `roo_windows` well: one row can retain indicator geometry and
+scroll state, while the application registry owns active animation timing and
+dozens of tabs remain cheap leaf widgets.
 
 ### Local Framework Signals
 
@@ -277,7 +278,8 @@ The core decisions are:
 
 ### Type Split and Ownership
 
-`Tabs` derives from `Container` and `roo_scheduler::Executable`.
+`Tabs` derives from `Container` and, temporarily, from
+`roo_scheduler::Executable`.
 
 `Container` is the right semantic base because the row owns:
 
@@ -286,11 +288,9 @@ The core decisions are:
 - the indicator animation,
 - and the scroll viewport semantics.
 
-`roo_scheduler::Executable` is the right animation hook because the row needs a
-single timer-driven path for:
-
-- indicator interpolation,
-- advancing shared scroll motion while flinging or springing back.
+The executable base remains only for `ScrollableTabs` strip motion until that
+consumer is migrated. Indicator interpolation uses the widget animation
+registry and is never routed through the scheduler callback.
 
 `Tab` derives from `SurfaceWidget`, not plain `Widget`, `BasicWidget`, or
 `BasicSurfaceWidget`.
@@ -323,7 +323,11 @@ for inline `Badge` storage and badge-layout logic.
 - the current scroll position, content width, and viewport width for
   scrollable layout,
 - one shared scroll-motion helper when scrollable mode is enabled,
-- and one row-owned animation state for the active indicator.
+- and the start/current/target rectangles for the row-owned active indicator.
+
+The registry owns the indicator's 0-to-1 timing track. `Tabs` reserves tag `0`
+as `kIndicator`; the base-class tag range ends at `1`, where derived
+`ScrollableTabs` channels begin.
 
 The row exposes two virtual hooks:
 
@@ -624,11 +628,15 @@ content bounds. The secondary indicator uses the selected tab's full horizontal
 bounds. Both variants align to the row's bottom edge just above the divider.
 
 Selection changes animate one row-owned indicator rectangle from the old bounds
-to the new bounds over `200ms`. The row interpolates both left edge and width;
-it does not animate each tab separately.
+to the new bounds over `200ms` using a quadratic ease-out registry track with a
+`10ms` minimum interval. The sample interpolates all four rectangle edges
+together; it does not animate each tab separately. A replacement selection
+captures the last applied rectangle before starting a fresh 0-to-1 track.
 
 Programmatic selection changes can opt out of animation. Initial layout also
-snaps directly to the selected indicator geometry.
+snaps directly to the selected indicator geometry. Layout changes update the
+retained target rectangle while a track is active. Hidden or detached rows
+cancel and snap to the selected tab without invoking application callbacks.
 
 ### Paint Model and Invalidation
 
@@ -733,12 +741,13 @@ Target host-side size budgets are:
 1. `Tab`: `sizeof(SurfaceWidget) + sizeof(roo::string_view) + sizeof(void*) + 4`
 2. `BadgedTab`: `sizeof(Tab) + sizeof(Badge) + 4`
 3. `Tabs`: `sizeof(Container) + 3 * sizeof(void*) + 40`, plus tab-pointer
-   vector capacity
+   vector capacity; no indicator notification ID or timestamps
 
 The important point is not the exact host byte count. It is the shape:
 
 - badge-free tabs stay cheap,
-- the row owns animation and scroll state once,
+- the row owns indicator geometry and scroll state once while the registry owns
+  active timing,
 - and the API avoids per-tab callback or controller storage.
 
 The implementation should enforce this with pointer-size-aware `static_assert`

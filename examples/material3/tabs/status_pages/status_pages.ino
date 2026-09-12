@@ -1,5 +1,6 @@
-// Learning goal: bind primary tabs to swipeable application pages. Tap a tab
-// or swipe the page area; both interactions keep selection synchronized.
+// Learning goal: bind primary tabs to swipeable application pages. Independent
+// registry channels keep the tab indicator and page settle synchronized even
+// when a slow display skips intermediate frames.
 
 // *************** EMULATOR SETUP BEGIN
 

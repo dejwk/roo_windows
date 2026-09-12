@@ -248,15 +248,23 @@ class Tabs : public Container, protected roo_scheduler::Executable {
   Rect targetIndicatorBounds() const;
   void snapIndicatorToSelection();
   void syncIndicatorAfterLayout();
+  void onAnimationFrame(AnimationTag tag,
+                        const AnimationSample& sample) override;
+  void onAnimationFinished(AnimationTag tag,
+                           AnimationFinishReason reason) override;
+  void onPresentationChanged(const PresentationChange& change) override;
+
+  // Base Tabs owns [0, kFirstScrollableAnimationTag); subclasses allocate
+  // independent channels starting at kFirstScrollableAnimationTag.
+  static constexpr AnimationTag kIndicator = 0;
+  static constexpr AnimationTag kFirstScrollableAnimationTag = 1;
+
+  // Retained only until ScrollableTabs moves its separate scroll channel to
+  // the animation registry.
   void execute(roo_scheduler::ExecutionID id) override;
 
  private:
   friend class Tab;
-
-  enum class IndicatorAnimationState : uint8_t {
-    kIdle,
-    kAnimating,
-  };
 
   void addTabImpl(WidgetRef tab, Tab* raw);
   void handleTabClicked(const Tab& tab);
@@ -266,8 +274,7 @@ class Tabs : public Container, protected roo_scheduler::Executable {
   Rect indicatorBoundsForIndex(int index) const;
   Rect indicatorPaintBoundsForTab(const Tab& tab) const;
   void startIndicatorTransition(const Rect& from, const Rect& to, bool animate);
-  void cancelPendingIndicatorUpdate();
-  void scheduleIndicatorUpdate();
+  void cancelIndicatorTransition();
 
   std::vector<Tab*> tabs_;
 
@@ -275,18 +282,14 @@ class Tabs : public Container, protected roo_scheduler::Executable {
   roo_scheduler::Scheduler& scheduler_;
 
  private:
-  roo_scheduler::ExecutionID notification_id_;
   Rect indicator_current_;
   Rect indicator_start_;
   Rect indicator_target_;
-  unsigned long indicator_start_time_ms_;
-  unsigned long indicator_end_time_ms_;
   int16_t selected_index_;
   uint8_t variant_ : 2;
   uint8_t mode_ : 2;
   uint8_t shows_divider_ : 1;
   uint8_t warned_scrollable_ : 1;
-  uint8_t indicator_animation_state_ : 1;
   uint8_t selection_commit_mode_ : 1;
 };
 

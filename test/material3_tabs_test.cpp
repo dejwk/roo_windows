@@ -780,6 +780,128 @@ TEST_F(Material3TabsRenderTest, ProgrammaticSelectionSnapsIndicator) {
             pixelAt(90, Scaled(45)));
 }
 
+// Verifies a replacement selection captures the rectangle already applied by
+// the registry, so the indicator does not jump before changing direction.
+TEST_F(Material3TabsRenderTest, RapidSelectionReplacesIndicatorContinuously) {
+  auto tabs = std::make_unique<Tabs>(context());
+  Tabs* tabs_raw = tabs.get();
+  tabs->addTab(std::make_unique<Tab>(context(), "One"));
+  tabs->addTab(std::make_unique<Tab>(context(), "Two"));
+  tabs->addTab(std::make_unique<Tab>(context(), "Three"));
+  app_.add(std::move(tabs), roo_display::Box(0, 0, 179, Scaled(48) - 1));
+  ASSERT_TRUE(refresh());
+
+  ASSERT_TRUE(tabs_raw->setSelectedIndex(1, true));
+  ASSERT_TRUE(refresh());
+  delay(65);
+  ASSERT_TRUE(refresh());
+  std::vector<roo_display::Color> before(180);
+  for (int x = 0; x < 180; ++x) before[x] = pixelAt(x, Scaled(45));
+
+  ASSERT_TRUE(tabs_raw->setSelectedIndex(2, true));
+  ASSERT_TRUE(refresh());
+  for (int x = 0; x < 180; ++x) {
+    EXPECT_EQ(before[x], pixelAt(x, Scaled(45))) << "x=" << x;
+  }
+
+  delay(220);
+  ASSERT_TRUE(refresh());
+  const roo_display::Color primary =
+      QuantizeToArgb4444(env_.theme().material3Theme().color.primary);
+  const roo_display::Color surface =
+      QuantizeToArgb4444(env_.theme().material3Theme().color.surface);
+  EXPECT_EQ(surface, pixelAt(90, Scaled(45)));
+  EXPECT_EQ(primary, pixelAt(150, Scaled(45)));
+}
+
+// Verifies all rectangle edges interpolate in the reverse physical direction;
+// this is the geometry path used when logical RTL ordering supplies decreasing
+// target coordinates.
+TEST_F(Material3TabsRenderTest, IndicatorInterpolatesTowardLowerCoordinates) {
+  auto tabs = std::make_unique<Tabs>(context());
+  Tabs* tabs_raw = tabs.get();
+  tabs->addTab(std::make_unique<Tab>(context(), "One"));
+  tabs->addTab(std::make_unique<Tab>(context(), "Two"));
+  tabs->addTab(std::make_unique<Tab>(context(), "Three"));
+  app_.add(std::move(tabs), roo_display::Box(0, 0, 179, Scaled(48) - 1));
+  ASSERT_TRUE(refresh());
+  ASSERT_TRUE(tabs_raw->setSelectedIndex(2, false));
+  ASSERT_TRUE(refresh());
+
+  ASSERT_TRUE(tabs_raw->setSelectedIndex(0, true));
+  ASSERT_TRUE(refresh());
+  delay(90);
+  ASSERT_TRUE(refresh());
+  const roo_display::Color primary =
+      QuantizeToArgb4444(env_.theme().material3Theme().color.primary);
+  bool has_middle_indicator = false;
+  for (int x = 60; x < 120; ++x) {
+    has_middle_indicator |= pixelAt(x, Scaled(45)) == primary;
+  }
+  EXPECT_TRUE(has_middle_indicator);
+
+  delay(130);
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(primary, pixelAt(30, Scaled(45)));
+  EXPECT_NE(primary, pixelAt(150, Scaled(45)));
+}
+
+// Verifies a layout change replaces the target rectangle while an existing
+// fraction track continues, then lands on the selected tab's resized bounds.
+TEST_F(Material3TabsRenderTest, IndicatorTracksResizedTargetDuringAnimation) {
+  auto tabs = std::make_unique<Tabs>(context());
+  Tabs* tabs_raw = tabs.get();
+  tabs->addTab(std::make_unique<Tab>(context(), "One"));
+  tabs->addTab(std::make_unique<Tab>(context(), "Two"));
+  tabs->addTab(std::make_unique<Tab>(context(), "Three"));
+  app_.add(std::move(tabs), roo_display::Box(0, 0, 179, Scaled(48) - 1));
+  ASSERT_TRUE(refresh());
+
+  ASSERT_TRUE(tabs_raw->setSelectedIndex(2, true));
+  ASSERT_TRUE(refresh());
+  delay(55);
+  ASSERT_TRUE(refresh());
+  tabs_raw->layout(Rect(0, 0, 119, Scaled(48) - 1));
+  delay(170);
+  ASSERT_TRUE(refresh());
+
+  const roo_display::Color primary =
+      QuantizeToArgb4444(env_.theme().material3Theme().color.primary);
+  EXPECT_EQ(primary, pixelAt(100, Scaled(45)));
+  EXPECT_NE(primary, pixelAt(150, Scaled(45)));
+}
+
+// Verifies hidden rows and selected-item removal cancel the indicator channel
+// and settle geometry without affecting click activation behavior.
+TEST_F(Material3TabsRenderTest, HiddenAndClearedTabsCancelIndicator) {
+  auto tabs = std::make_unique<Tabs>(context());
+  Tabs* tabs_raw = tabs.get();
+  tabs->addTab(std::make_unique<Tab>(context(), "One"));
+  tabs->addTab(std::make_unique<Tab>(context(), "Two"));
+  app_.add(std::move(tabs), roo_display::Box(0, 0, 179, Scaled(48) - 1));
+  ASSERT_TRUE(refresh());
+
+  ASSERT_TRUE(tabs_raw->setSelectedIndex(1, true));
+  ASSERT_TRUE(refresh());
+  delay(45);
+  ASSERT_TRUE(refresh());
+  tabs_raw->setVisibility(Visibility::kInvisible);
+  ASSERT_TRUE(refresh());
+  delay(220);
+  ASSERT_TRUE(refresh());
+  tabs_raw->setVisibility(Visibility::kVisible);
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(QuantizeToArgb4444(env_.theme().material3Theme().color.primary),
+            pixelAt(135, Scaled(45)));
+
+  tabs_raw->setSelectedIndex(0, true);
+  ASSERT_TRUE(refresh());
+  tabs_raw->clearTabs();
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(-1, tabs_raw->selectedIndex());
+  EXPECT_EQ(0, tabs_raw->tabCount());
+}
+
 }  // namespace
 }  // namespace material3
 }  // namespace roo_windows

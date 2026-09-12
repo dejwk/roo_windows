@@ -37,7 +37,7 @@ constexpr int16_t kSecondaryIndicatorHeightDp = 2;
 constexpr int16_t kScrollableLeadingInsetDp = 52;
 constexpr int16_t kDividerHeightPx = 1;
 constexpr int16_t kIndicatorFrameMs = 10;
-constexpr unsigned long kIndicatorDurationMs = 200;
+constexpr int16_t kIndicatorDurationMs = 200;
 
 Rect EmptyRect() { return Rect(0, 0, -1, -1); }
 
@@ -419,24 +419,21 @@ Tabs::Tabs(ApplicationContext& context, TabsVariant variant, TabsMode mode)
     : Container(context),
       tabs_(),
       scheduler_(context.scheduler()),
-      notification_id_(-1),
       indicator_current_(0, 0, -1, -1),
       indicator_start_(0, 0, -1, -1),
       indicator_target_(0, 0, -1, -1),
-      indicator_start_time_ms_(0),
-      indicator_end_time_ms_(0),
       selected_index_(-1),
       variant_(static_cast<uint8_t>(variant)),
       mode_(static_cast<uint8_t>(mode)),
       shows_divider_(true),
       warned_scrollable_(false),
-      indicator_animation_state_(
-          static_cast<uint8_t>(IndicatorAnimationState::kIdle)),
       selection_commit_mode_(
-          static_cast<uint8_t>(TabsSelectionCommitMode::kOnRelease)) {}
+          static_cast<uint8_t>(TabsSelectionCommitMode::kOnRelease)) {
+  context.presentations().observe(*this);
+}
 
 Tabs::~Tabs() {
-  cancelPendingIndicatorUpdate();
+  cancelIndicatorTransition();
   clearTabs();
 }
 
@@ -523,7 +520,7 @@ void Tabs::addTabImpl(WidgetRef tab, Tab* raw) {
 }
 
 void Tabs::clearTabs() {
-  cancelPendingIndicatorUpdate();
+  cancelIndicatorTransition();
   while (!tabs_.empty()) {
     Tab* tab = tabs_.back();
     tabs_.pop_back();
@@ -533,8 +530,6 @@ void Tabs::clearTabs() {
   indicator_current_ = Rect(0, 0, -1, -1);
   indicator_start_ = Rect(0, 0, -1, -1);
   indicator_target_ = Rect(0, 0, -1, -1);
-  indicator_animation_state_ =
-      static_cast<uint8_t>(IndicatorAnimationState::kIdle);
 }
 
 bool Tabs::setSelectedIndex(int index, bool animate) {
@@ -649,9 +644,7 @@ Rect Tabs::targetIndicatorBounds() const {
 }
 
 void Tabs::snapIndicatorToSelection() {
-  cancelPendingIndicatorUpdate();
-  indicator_animation_state_ =
-      static_cast<uint8_t>(IndicatorAnimationState::kIdle);
+  cancelIndicatorTransition();
   indicator_current_ = targetIndicatorBounds();
   indicator_start_ = indicator_current_;
   indicator_target_ = indicator_current_;
@@ -659,11 +652,10 @@ void Tabs::snapIndicatorToSelection() {
 
 void Tabs::startIndicatorTransition(const Rect& from, const Rect& to,
                                     bool animate) {
-  cancelPendingIndicatorUpdate();
+  cancelIndicatorTransition();
   indicator_target_ = to;
-  if (!animate || from.empty() || to.empty() || from == to) {
-    indicator_animation_state_ =
-        static_cast<uint8_t>(IndicatorAnimationState::kIdle);
+  if (!animate || from.empty() || to.empty() || from == to ||
+      presentationState() != PresentationState::kPresented) {
     indicator_current_ = to;
     indicator_start_ = to;
     invalidateInterior();
@@ -672,57 +664,54 @@ void Tabs::startIndicatorTransition(const Rect& from, const Rect& to,
 
   indicator_start_ = from;
   indicator_current_ = from;
-  indicator_start_time_ms_ = millis();
-  indicator_end_time_ms_ = indicator_start_time_ms_ + kIndicatorDurationMs;
-  indicator_animation_state_ =
-      static_cast<uint8_t>(IndicatorAnimationState::kAnimating);
   invalidateInterior(Rect::Extent(from, to));
-  scheduleIndicatorUpdate();
-}
-
-void Tabs::cancelPendingIndicatorUpdate() {
-  if (notification_id_ > 0) {
-    scheduler_.cancel(notification_id_);
-    notification_id_ = -1;
+  AnimationSpec spec = AnimationSpec::value(
+      0.0f, 1.0f, roo_time::Millis(kIndicatorDurationMs));
+  spec.minimum_interval = roo_time::Millis(kIndicatorFrameMs);
+  spec.easing.kind = EasingKind::kQuadraticOut;
+  if (context().animations().start(*this, kIndicator, spec) !=
+      AnimationStatus::kOk) {
+    snapIndicatorToSelection();
   }
 }
 
-void Tabs::scheduleIndicatorUpdate() {
-  cancelPendingIndicatorUpdate();
-  notification_id_ =
-      scheduler_.scheduleAfter(roo_time::Millis(kIndicatorFrameMs), *this);
+void Tabs::cancelIndicatorTransition() {
+  context().animations().cancel(*this, kIndicator);
+}
+
+void Tabs::onAnimationFrame(AnimationTag tag,
+                            const AnimationSample& sample) {
+  if (tag != kIndicator) {
+    Container::onAnimationFrame(tag, sample);
+    return;
+  }
+  Rect previous = indicator_current_;
+  indicator_current_ =
+      LerpRect(indicator_start_, indicator_target_, sample.value);
+  invalidateInterior(Rect::Extent(previous, indicator_current_));
+}
+
+void Tabs::onAnimationFinished(AnimationTag tag,
+                               AnimationFinishReason reason) {
+  if (tag == kIndicator) return;
+  Container::onAnimationFinished(tag, reason);
+}
+
+void Tabs::onPresentationChanged(const PresentationChange& change) {
+  if (change.state != PresentationState::kPresented ||
+      change.detached_since_delivery) {
+    snapIndicatorToSelection();
+  }
 }
 
 void Tabs::execute(roo_scheduler::ExecutionID id) {
+  // Until Phase 9, this inherited Executable exists only so ScrollableTabs can
+  // schedule its independent strip-scrolling callback.
   (void)id;
-  notification_id_ = -1;
-  if (static_cast<IndicatorAnimationState>(indicator_animation_state_) !=
-      IndicatorAnimationState::kAnimating) {
-    return;
-  }
-
-  Rect previous = indicator_current_;
-  unsigned long now = millis();
-  if ((long)(now - indicator_end_time_ms_) >= 0) {
-    indicator_current_ = indicator_target_;
-    indicator_animation_state_ =
-        static_cast<uint8_t>(IndicatorAnimationState::kIdle);
-    invalidateInterior(Rect::Extent(previous, indicator_current_));
-    return;
-  }
-
-  float t = (float)(now - indicator_start_time_ms_) /
-            (float)(indicator_end_time_ms_ - indicator_start_time_ms_);
-  t = std::max(0.0f, std::min(1.0f, t));
-  float eased = 1.0f - (1.0f - t) * (1.0f - t);
-  indicator_current_ = LerpRect(indicator_start_, indicator_target_, eased);
-  invalidateInterior(Rect::Extent(previous, indicator_current_));
-  scheduleIndicatorUpdate();
 }
 
 void Tabs::syncIndicatorAfterLayout() {
-  if (static_cast<IndicatorAnimationState>(indicator_animation_state_) ==
-      IndicatorAnimationState::kIdle) {
+  if (!context().animations().contains(*this, kIndicator)) {
     snapIndicatorToSelection();
   } else {
     indicator_target_ = targetIndicatorBounds();
