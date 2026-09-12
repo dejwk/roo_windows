@@ -7,7 +7,7 @@
 namespace roo_windows::internal {
 namespace {
 
-bool isValidEasingKind(EasingKind kind) {
+bool IsValidEasingKind(EasingKind kind) {
   switch (kind) {
     case EasingKind::kLinear:
     case EasingKind::kQuadraticIn:
@@ -19,7 +19,7 @@ bool isValidEasingKind(EasingKind kind) {
   return false;
 }
 
-bool isValidPlayback(Playback playback) {
+bool IsValidPlayback(Playback playback) {
   switch (playback) {
     case Playback::kRestart:
     case Playback::kReverse:
@@ -28,7 +28,7 @@ bool isValidPlayback(Playback playback) {
   return false;
 }
 
-bool isValidKind(AnimationKind kind) {
+bool IsValidKind(AnimationKind kind) {
   switch (kind) {
     case AnimationKind::kValue:
     case AnimationKind::kCustomTime:
@@ -37,7 +37,7 @@ bool isValidKind(AnimationKind kind) {
   return false;
 }
 
-float cubicBezier(float p1, float p2, float t) {
+float CubicBezier(float p1, float p2, float t) {
   // Horner form of the cubic with fixed endpoints 0 and 1.
   return ((1.0f + 3.0f * (p1 - p2)) * t + 3.0f * (p2 - 2.0f * p1)) * t * t +
          3.0f * p1 * t;
@@ -45,9 +45,9 @@ float cubicBezier(float p1, float p2, float t) {
 
 }  // namespace
 
-bool isValidAnimationSpec(const AnimationSpec& spec) {
-  if (!isValidKind(spec.kind) || !isValidPlayback(spec.playback) ||
-      !isValidEasingKind(spec.easing.kind)) {
+bool IsValidAnimationSpec(const AnimationSpec& spec) {
+  if (!IsValidKind(spec.kind) || !IsValidPlayback(spec.playback) ||
+      !IsValidEasingKind(spec.easing.kind)) {
     return false;
   }
   if (spec.duration.inMicros() < 0 || spec.delay.inMicros() < 0 ||
@@ -84,7 +84,7 @@ bool isValidAnimationSpec(const AnimationSpec& spec) {
   return duration_us <= (max_us - delay_us) / spec.legs;
 }
 
-roo_time::Duration animationEnd(const AnimationSpec& spec) {
+roo_time::Duration AnimationEnd(const AnimationSpec& spec) {
   if (spec.kind == AnimationKind::kCustomTime || spec.legs == 0) {
     return roo_time::Duration::Max();
   }
@@ -92,7 +92,7 @@ roo_time::Duration animationEnd(const AnimationSpec& spec) {
                           spec.duration.inMicros() * spec.legs);
 }
 
-float evaluateEasing(const Easing& easing, float fraction) {
+float EvaluateEasing(const Easing& easing, float fraction) {
   if (fraction <= 0.0f) return 0.0f;
   if (fraction >= 1.0f) return 1.0f;
   switch (easing.kind) {
@@ -112,19 +112,19 @@ float evaluateEasing(const Easing& easing, float fraction) {
       // Monotonic x controls permit a small, fixed-cost bisection solve.
       for (int i = 0; i < 16; ++i) {
         const float parameter = (lower + upper) * 0.5f;
-        if (cubicBezier(easing.x1, easing.x2, parameter) < fraction) {
+        if (CubicBezier(easing.x1, easing.x2, parameter) < fraction) {
           lower = parameter;
         } else {
           upper = parameter;
         }
       }
-      return cubicBezier(easing.y1, easing.y2, (lower + upper) * 0.5f);
+      return CubicBezier(easing.y1, easing.y2, (lower + upper) * 0.5f);
     }
   }
   return fraction;
 }
 
-AnimationSample evaluateAnimation(const AnimationSpec& spec,
+AnimationSample EvaluateAnimation(const AnimationSpec& spec,
                                   roo_time::Duration elapsed,
                                   roo_time::Duration delta) {
   AnimationSample sample;
@@ -143,7 +143,7 @@ AnimationSample evaluateAnimation(const AnimationSpec& spec,
   sample.value = spec.from;
   if (elapsed_us < delay_us) return sample;
 
-  if (spec.legs > 0 && elapsed >= animationEnd(spec)) {
+  if (spec.legs > 0 && elapsed >= AnimationEnd(spec)) {
     sample.terminal = true;
     sample.leg = spec.legs - 1;
     sample.reverse =
@@ -164,7 +164,7 @@ AnimationSample evaluateAnimation(const AnimationSpec& spec,
   sample.leg = static_cast<uint64_t>(active_us / duration_us);
   const float raw_fraction =
       static_cast<float>(active_us % duration_us) / duration_us;
-  const float eased = evaluateEasing(spec.easing, raw_fraction);
+  const float eased = EvaluateEasing(spec.easing, raw_fraction);
   sample.reverse =
       spec.playback == Playback::kReverse && (sample.leg & 1U) != 0;
   sample.fraction = sample.reverse ? 1.0f - eased : eased;

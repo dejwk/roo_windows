@@ -228,8 +228,7 @@ void HorizontalPageHost::onFling(XDim x, YDim y, XDim vx, YDim vy) {
 void HorizontalPageHost::onDragFinished(XDim x, YDim y) {
   (void)x;
   (void)y;
-  if (pageCount() > 1 && settled_index_ >= 0 &&
-      !isSettling()) {
+  if (pageCount() > 1 && settled_index_ >= 0 && !isSettling()) {
     int target = resolveGestureSettleTarget(0);
     startSettleToIndex(target);
   }
@@ -398,9 +397,9 @@ void HorizontalPageHost::startSettleToIndex(int target_index) {
     return;
   }
 
-  AnimationSpec spec = AnimationSpec::value(
-      page_position_, static_cast<float>(target_index),
-      roo_time::Millis(kSettleDurationMs));
+  AnimationSpec spec =
+      AnimationSpec::Value(page_position_, static_cast<float>(target_index),
+                           roo_time::Millis(kSettleDurationMs));
   spec.minimum_interval = roo_time::Millis(kSettleFrameMs);
   spec.easing.kind = EasingKind::kQuadraticOut;
   if (context().animations().start(*this, kSettle, spec) !=
@@ -495,8 +494,8 @@ float HorizontalPageHost::applyEdgeResistance(float raw_position) const {
   return raw_position;
 }
 
-void HorizontalPageHost::onAnimationFrame(
-    AnimationTag tag, const AnimationSample& sample) {
+void HorizontalPageHost::onAnimationFrame(AnimationTag tag,
+                                          const AnimationSample& sample) {
   if (tag != kSettle) {
     Container::onAnimationFrame(tag, sample);
     return;

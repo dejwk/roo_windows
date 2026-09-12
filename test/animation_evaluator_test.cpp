@@ -10,89 +10,89 @@ namespace roo_windows::internal {
 namespace {
 
 TEST(AnimationSpecTest, ProvidesDocumentedDefaults) {
-  AnimationSpec value = AnimationSpec::value(2.0f, 5.0f, roo_time::Millis(80));
+  AnimationSpec value = AnimationSpec::Value(2.0f, 5.0f, roo_time::Millis(80));
   EXPECT_EQ(value.kind, AnimationKind::kValue);
   EXPECT_EQ(value.legs, 1u);
   EXPECT_EQ(value.minimum_interval, roo_time::Millis(20));
   EXPECT_EQ(value.playback, Playback::kRestart);
   EXPECT_EQ(value.easing.kind, EasingKind::kLinear);
 
-  AnimationSpec custom = AnimationSpec::customTime();
+  AnimationSpec custom = AnimationSpec::CustomTime();
   EXPECT_EQ(custom.kind, AnimationKind::kCustomTime);
   EXPECT_EQ(custom.legs, 0u);
   EXPECT_EQ(custom.minimum_interval, roo_time::Millis(20));
-  EXPECT_TRUE(isValidAnimationSpec(custom));
+  EXPECT_TRUE(IsValidAnimationSpec(custom));
 }
 
 // Verifies invalid input and overflowing finite lengths are rejected before a
 // registry can replace an existing channel.
 TEST(AnimationSpecTest, RejectsInvalidFieldsAndDurationOverflow) {
-  AnimationSpec spec = AnimationSpec::value(0.0f, 1.0f, roo_time::Millis(10));
-  EXPECT_TRUE(isValidAnimationSpec(spec));
+  AnimationSpec spec = AnimationSpec::Value(0.0f, 1.0f, roo_time::Millis(10));
+  EXPECT_TRUE(IsValidAnimationSpec(spec));
 
   spec.from = std::numeric_limits<float>::infinity();
-  EXPECT_FALSE(isValidAnimationSpec(spec));
+  EXPECT_FALSE(IsValidAnimationSpec(spec));
   spec.from = 0.0f;
   spec.minimum_interval = roo_time::Micros(-1);
-  EXPECT_FALSE(isValidAnimationSpec(spec));
+  EXPECT_FALSE(IsValidAnimationSpec(spec));
   spec.minimum_interval = roo_time::Millis(20);
   spec.playback = static_cast<Playback>(99);
-  EXPECT_FALSE(isValidAnimationSpec(spec));
+  EXPECT_FALSE(IsValidAnimationSpec(spec));
   spec.playback = Playback::kRestart;
   spec.kind = static_cast<AnimationKind>(99);
-  EXPECT_FALSE(isValidAnimationSpec(spec));
+  EXPECT_FALSE(IsValidAnimationSpec(spec));
 
-  spec = AnimationSpec::value(0.0f, 1.0f, roo_time::Duration::Max());
+  spec = AnimationSpec::Value(0.0f, 1.0f, roo_time::Duration::Max());
   spec.delay = roo_time::Micros(1);
-  EXPECT_FALSE(isValidAnimationSpec(spec));
-  spec = AnimationSpec::value(0.0f, 1.0f, roo_time::Duration::Max());
+  EXPECT_FALSE(IsValidAnimationSpec(spec));
+  spec = AnimationSpec::Value(0.0f, 1.0f, roo_time::Duration::Max());
   spec.legs = 2;
-  EXPECT_FALSE(isValidAnimationSpec(spec));
+  EXPECT_FALSE(IsValidAnimationSpec(spec));
 }
 
 // Verifies zero-duration and indefinite specifications follow the explicit
 // finite/infinite boundary in the design.
 TEST(AnimationSpecTest, ValidatesFiniteAndInfiniteZeroDuration) {
-  AnimationSpec finite = AnimationSpec::value(3.0f, 9.0f, roo_time::Duration());
-  EXPECT_TRUE(isValidAnimationSpec(finite));
+  AnimationSpec finite = AnimationSpec::Value(3.0f, 9.0f, roo_time::Duration());
+  EXPECT_TRUE(IsValidAnimationSpec(finite));
   AnimationSample terminal =
-      evaluateAnimation(finite, roo_time::Duration(), roo_time::Duration());
+      EvaluateAnimation(finite, roo_time::Duration(), roo_time::Duration());
   EXPECT_TRUE(terminal.terminal);
   EXPECT_FLOAT_EQ(terminal.value, 9.0f);
 
   finite.legs = 0;
-  EXPECT_FALSE(isValidAnimationSpec(finite));
+  EXPECT_FALSE(IsValidAnimationSpec(finite));
 
   AnimationSpec repeating =
-      AnimationSpec::value(0.0f, 1.0f, roo_time::Millis(10));
+      AnimationSpec::Value(0.0f, 1.0f, roo_time::Millis(10));
   repeating.legs = 0;
-  EXPECT_TRUE(isValidAnimationSpec(repeating));
-  EXPECT_EQ(animationEnd(repeating), roo_time::Duration::Max());
+  EXPECT_TRUE(IsValidAnimationSpec(repeating));
+  EXPECT_EQ(AnimationEnd(repeating), roo_time::Duration::Max());
 }
 
 // Verifies exact boundaries start a new leg while a finite end delivers the
 // last leg's exact endpoint.
 TEST(AnimationEvaluatorTest, EvaluatesLegBoundariesAndTerminalEndpoints) {
   AnimationSpec spec =
-      AnimationSpec::value(20.0f, 100.0f, roo_time::Millis(200));
+      AnimationSpec::Value(20.0f, 100.0f, roo_time::Millis(200));
   spec.legs = 2;
   spec.playback = Playback::kReverse;
 
   AnimationSample quarter =
-      evaluateAnimation(spec, roo_time::Millis(50), roo_time::Millis(50));
+      EvaluateAnimation(spec, roo_time::Millis(50), roo_time::Millis(50));
   EXPECT_EQ(quarter.leg, 0u);
   EXPECT_FLOAT_EQ(quarter.fraction, 0.25f);
   EXPECT_FLOAT_EQ(quarter.value, 40.0f);
 
   AnimationSample boundary =
-      evaluateAnimation(spec, roo_time::Millis(200), roo_time::Millis(150));
+      EvaluateAnimation(spec, roo_time::Millis(200), roo_time::Millis(150));
   EXPECT_EQ(boundary.leg, 1u);
   EXPECT_TRUE(boundary.reverse);
   EXPECT_FLOAT_EQ(boundary.fraction, 1.0f);
   EXPECT_FLOAT_EQ(boundary.value, 100.0f);
 
   AnimationSample terminal =
-      evaluateAnimation(spec, roo_time::Millis(400), roo_time::Millis(200));
+      EvaluateAnimation(spec, roo_time::Millis(400), roo_time::Millis(200));
   EXPECT_TRUE(terminal.terminal);
   EXPECT_EQ(terminal.leg, 1u);
   EXPECT_TRUE(terminal.reverse);
@@ -102,18 +102,18 @@ TEST(AnimationEvaluatorTest, EvaluatesLegBoundariesAndTerminalEndpoints) {
 
 TEST(AnimationEvaluatorTest, AppliesDelayOnceAndEasingPerLeg) {
   AnimationSpec spec =
-      AnimationSpec::value(20.0f, 100.0f, roo_time::Millis(200));
+      AnimationSpec::Value(20.0f, 100.0f, roo_time::Millis(200));
   spec.delay = roo_time::Millis(30);
   spec.easing.kind = EasingKind::kQuadraticOut;
 
   AnimationSample delayed =
-      evaluateAnimation(spec, roo_time::Millis(20), roo_time::Duration());
+      EvaluateAnimation(spec, roo_time::Millis(20), roo_time::Duration());
   EXPECT_EQ(delayed.elapsed, roo_time::Duration());
   EXPECT_FLOAT_EQ(delayed.value, 20.0f);
   EXPECT_FALSE(delayed.terminal);
 
   AnimationSample quarter =
-      evaluateAnimation(spec, roo_time::Millis(80), roo_time::Millis(60));
+      EvaluateAnimation(spec, roo_time::Millis(80), roo_time::Millis(60));
   EXPECT_EQ(quarter.elapsed, roo_time::Millis(50));
   EXPECT_FLOAT_EQ(quarter.fraction, 0.4375f);
   EXPECT_FLOAT_EQ(quarter.value, 55.0f);
@@ -130,8 +130,8 @@ TEST(AnimationEvaluatorTest, EvaluatesPresetCurvesAtExactEndpoints) {
     easing.y1 = 0.0f;
     easing.x2 = 0.2f;
     easing.y2 = 1.0f;
-    EXPECT_FLOAT_EQ(evaluateEasing(easing, 0.0f), 0.0f);
-    EXPECT_FLOAT_EQ(evaluateEasing(easing, 1.0f), 1.0f);
+    EXPECT_FLOAT_EQ(EvaluateEasing(easing, 0.0f), 0.0f);
+    EXPECT_FLOAT_EQ(EvaluateEasing(easing, 1.0f), 1.0f);
   }
 }
 
@@ -160,7 +160,7 @@ TEST(AnimationEvaluatorTest, CubicBezierAccuracyFitsPixelBudget) {
                             3.0f * (easing.y2 - 2.0f * easing.y1)) *
                                t * t +
                            3.0f * easing.y1 * t;
-    EXPECT_LT(std::abs(evaluateEasing(easing, x) - expected) * 568.0f, 0.5f);
+    EXPECT_LT(std::abs(EvaluateEasing(easing, x) - expected) * 568.0f, 0.5f);
   }
 }
 
@@ -170,15 +170,15 @@ TEST(AnimationEvaluatorTest, UsesLongUptimeDifferences) {
   const roo_time::Uptime anchor =
       roo_time::Uptime::Start() + roo_time::Hours(24 * 40);
   const roo_time::Uptime now = anchor + roo_time::Millis(75);
-  AnimationSpec spec = AnimationSpec::value(0.0f, 1.0f, roo_time::Millis(100));
+  AnimationSpec spec = AnimationSpec::Value(0.0f, 1.0f, roo_time::Millis(100));
   AnimationSample sample =
-      evaluateAnimation(spec, now - anchor, roo_time::Duration());
+      EvaluateAnimation(spec, now - anchor, roo_time::Duration());
   EXPECT_FLOAT_EQ(sample.fraction, 0.75f);
 }
 
 TEST(AnimationEvaluatorTest, CustomTimePassesElapsedAndDeltaOnly) {
   AnimationSample sample =
-      evaluateAnimation(AnimationSpec::customTime(), roo_time::Hours(24 * 40),
+      EvaluateAnimation(AnimationSpec::CustomTime(), roo_time::Hours(24 * 40),
                         roo_time::Millis(33));
   EXPECT_EQ(sample.elapsed, roo_time::Hours(24 * 40));
   EXPECT_EQ(sample.delta, roo_time::Millis(33));

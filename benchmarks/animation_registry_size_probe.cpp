@@ -17,13 +17,13 @@
 namespace roo_windows::test {
 
 struct AnimationRegistryTestAccess {
-  static constexpr size_t channelKeySize() {
+  static constexpr size_t ChannelKeySize() {
     return sizeof(AnimationRegistry::ChannelKey);
   }
-  static constexpr size_t trackSize() {
+  static constexpr size_t TrackSize() {
     return sizeof(AnimationRegistry::Track);
   }
-  static constexpr size_t dispatchItemSize() {
+  static constexpr size_t DispatchItemSize() {
     return sizeof(AnimationRegistry::DispatchItem);
   }
 };
@@ -37,12 +37,12 @@ struct AnimationRegistryTestAccess {
 
 ROO_WINDOWS_ANIMATION_SIZE_PROBE(roo_windows::AnimationRegistry, registry);
 ROO_WINDOWS_ANIMATION_VALUE_PROBE(
-    roo_windows::test::AnimationRegistryTestAccess::channelKeySize(),
+    roo_windows::test::AnimationRegistryTestAccess::ChannelKeySize(),
     channel_key);
 ROO_WINDOWS_ANIMATION_VALUE_PROBE(
-    roo_windows::test::AnimationRegistryTestAccess::trackSize(), track);
+    roo_windows::test::AnimationRegistryTestAccess::TrackSize(), track);
 ROO_WINDOWS_ANIMATION_VALUE_PROBE(
-    roo_windows::test::AnimationRegistryTestAccess::dispatchItemSize(),
+    roo_windows::test::AnimationRegistryTestAccess::DispatchItemSize(),
     dispatch_item);
 ROO_WINDOWS_ANIMATION_SIZE_PROBE(roo_windows::ApplicationContext,
                                  application_context);

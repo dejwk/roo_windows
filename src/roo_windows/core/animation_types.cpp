@@ -2,7 +2,7 @@
 
 namespace roo_windows {
 
-AnimationSpec AnimationSpec::value(float from, float to,
+AnimationSpec AnimationSpec::Value(float from, float to,
                                    roo_time::Duration duration) {
   AnimationSpec spec;
   spec.duration = duration;
@@ -12,7 +12,7 @@ AnimationSpec AnimationSpec::value(float from, float to,
   return spec;
 }
 
-AnimationSpec AnimationSpec::customTime() {
+AnimationSpec AnimationSpec::CustomTime() {
   AnimationSpec spec;
   spec.minimum_interval = roo_time::Millis(20);
   spec.legs = 0;

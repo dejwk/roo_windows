@@ -161,34 +161,34 @@ namespace roo_windows {
 namespace test {
 
 struct AnimationRegistryTestAccess {
-  static void dispatch(AnimationRegistry& registry, roo_time::Uptime now) {
+  static void Dispatch(AnimationRegistry& registry, roo_time::Uptime now) {
     registry.beginFrame(now);
     while (registry.dispatchNext()) {
     }
     registry.endFrame();
   }
 
-  static size_t dispatchCapacity(const AnimationRegistry& registry) {
+  static size_t DispatchCapacity(const AnimationRegistry& registry) {
     return registry.dispatch_.capacity();
   }
 
-  static roo_time::Uptime nextDeadline(const AnimationRegistry& registry) {
+  static roo_time::Uptime NextDeadline(const AnimationRegistry& registry) {
     return registry.nextFrameDeadline();
   }
 
-  static uint16_t trackCapacity(const AnimationRegistry& registry) {
+  static uint16_t TrackCapacity(const AnimationRegistry& registry) {
     return registry.tracks_.capacity();
   }
 
-  static constexpr size_t channelKeySize() {
+  static constexpr size_t ChannelKeySize() {
     return sizeof(AnimationRegistry::ChannelKey);
   }
 
-  static constexpr size_t trackSize() {
+  static constexpr size_t TrackSize() {
     return sizeof(AnimationRegistry::Track);
   }
 
-  static constexpr size_t dispatchItemSize() {
+  static constexpr size_t DispatchItemSize() {
     return sizeof(AnimationRegistry::DispatchItem);
   }
 };
@@ -255,22 +255,22 @@ CapacitySample Populate(TestApplication& fixture, size_t count,
     EXPECT_EQ(AnimationStatus::kOk,
               fixture.registry().start(*widgets.back(), 0, spec));
   }
-  test::AnimationRegistryTestAccess::dispatch(
+  test::AnimationRegistryTestAccess::Dispatch(
       fixture.registry(), roo_time::Uptime::Start() + roo_time::Seconds(1));
   return CapacitySample{
       count,
-      test::AnimationRegistryTestAccess::trackCapacity(fixture.registry()),
-      test::AnimationRegistryTestAccess::dispatchCapacity(fixture.registry())};
+      test::AnimationRegistryTestAccess::TrackCapacity(fixture.registry()),
+      test::AnimationRegistryTestAccess::DispatchCapacity(fixture.registry())};
 }
 
 TEST(AnimationRegistryResources, TargetSizedRecordsStayWithinCeilings) {
   constexpr size_t kPointerAdjustment =
       sizeof(void*) > 4 ? 5 * (sizeof(void*) - 4) : 0;
   EXPECT_LE(sizeof(AnimationRegistry), 96U + kPointerAdjustment);
-  EXPECT_LE(test::AnimationRegistryTestAccess::channelKeySize(),
+  EXPECT_LE(test::AnimationRegistryTestAccess::ChannelKeySize(),
             8U + 2 * (sizeof(void*) - 4));
-  EXPECT_LE(test::AnimationRegistryTestAccess::trackSize(), 128U);
-  EXPECT_LE(test::AnimationRegistryTestAccess::dispatchItemSize(),
+  EXPECT_LE(test::AnimationRegistryTestAccess::TrackSize(), 128U);
+  EXPECT_LE(test::AnimationRegistryTestAccess::DispatchItemSize(),
             12U + 3 * (sizeof(void*) - 4));
   EXPECT_EQ(sizeof(Widget), sizeof(BasicWidget));
 }
@@ -280,16 +280,16 @@ TEST(AnimationRegistryResources, ReportsCapacityAndRetainsItAcrossChurn) {
     TestApplication fixture;
     std::vector<std::unique_ptr<ProbeWidget>> widgets;
     CapacitySample sample =
-        Populate(fixture, count, widgets, AnimationSpec::customTime());
+        Populate(fixture, count, widgets, AnimationSpec::CustomTime());
     std::cout << "tracks=" << sample.live << " buckets=" << sample.buckets
               << " snapshot_capacity=" << sample.snapshot << '\n';
     for (auto& widget : widgets) {
       EXPECT_EQ(AnimationStatus::kOk, fixture.registry().cancel(*widget, 0));
     }
-    EXPECT_EQ(sample.buckets, test::AnimationRegistryTestAccess::trackCapacity(
+    EXPECT_EQ(sample.buckets, test::AnimationRegistryTestAccess::TrackCapacity(
                                   fixture.registry()));
     EXPECT_EQ(sample.snapshot,
-              test::AnimationRegistryTestAccess::dispatchCapacity(
+              test::AnimationRegistryTestAccess::DispatchCapacity(
                   fixture.registry()));
   }
 }
@@ -298,11 +298,11 @@ TEST(AnimationRegistryResources, WarmedFrameAndControlsAllocateNothing) {
   TestApplication fixture;
   std::vector<std::unique_ptr<ProbeWidget>> widgets;
   CapacitySample sample =
-      Populate(fixture, 16, widgets, AnimationSpec::customTime());
+      Populate(fixture, 16, widgets, AnimationSpec::CustomTime());
   BeginAllocationTracking();
   const roo_time::Uptime next =
       roo_time::Uptime::Start() + roo_time::Seconds(1) + roo_time::Millis(20);
-  test::AnimationRegistryTestAccess::dispatch(fixture.registry(), next);
+  test::AnimationRegistryTestAccess::Dispatch(fixture.registry(), next);
   for (auto& widget : widgets) {
     EXPECT_EQ(AnimationStatus::kOk, fixture.registry().pause(*widget, 0));
     EXPECT_EQ(AnimationStatus::kOk, fixture.registry().resume(*widget, 0));
@@ -313,11 +313,11 @@ TEST(AnimationRegistryResources, WarmedFrameAndControlsAllocateNothing) {
   EndAllocationTracking();
   std::cout << "warmed_frame_allocations=" << g_allocation_count << '\n';
   EXPECT_EQ(0U, g_allocation_count);
-  EXPECT_EQ(sample.buckets, test::AnimationRegistryTestAccess::trackCapacity(
+  EXPECT_EQ(sample.buckets, test::AnimationRegistryTestAccess::TrackCapacity(
                                 fixture.registry()));
   EXPECT_EQ(
       sample.snapshot,
-      test::AnimationRegistryTestAccess::dispatchCapacity(fixture.registry()));
+      test::AnimationRegistryTestAccess::DispatchCapacity(fixture.registry()));
   for (const auto& widget : widgets) EXPECT_EQ(2U, widget->frameCount());
 }
 
@@ -333,9 +333,9 @@ TEST(AnimationRegistryResources, ReportsPeakActiveHeapByWorkload) {
     for (auto& widget : widgets) {
       ASSERT_EQ(
           AnimationStatus::kOk,
-          fixture.registry().start(*widget, 0, AnimationSpec::customTime()));
+          fixture.registry().start(*widget, 0, AnimationSpec::CustomTime()));
     }
-    test::AnimationRegistryTestAccess::dispatch(
+    test::AnimationRegistryTestAccess::Dispatch(
         fixture.registry(), roo_time::Uptime::Start() + roo_time::Seconds(1));
     EndAllocationTracking();
     std::cout << "tracks=" << count
@@ -348,7 +348,7 @@ TEST(AnimationRegistryResources, ReportsPeakActiveHeapByWorkload) {
 int64_t MeasureDispatchMicros(EasingKind easing, bool mutation_heavy) {
   TestApplication fixture;
   std::vector<std::unique_ptr<ProbeWidget>> widgets;
-  AnimationSpec spec = AnimationSpec::value(0.0f, 1.0f, roo_time::Seconds(10));
+  AnimationSpec spec = AnimationSpec::Value(0.0f, 1.0f, roo_time::Seconds(10));
   spec.legs = 0;
   spec.minimum_interval = roo_time::Duration();
   spec.easing.kind = easing;
@@ -371,7 +371,7 @@ int64_t MeasureDispatchMicros(EasingKind easing, bool mutation_heavy) {
     }
     now += roo_time::Millis(1);
     const auto begin = std::chrono::steady_clock::now();
-    test::AnimationRegistryTestAccess::dispatch(fixture.registry(), now);
+    test::AnimationRegistryTestAccess::Dispatch(fixture.registry(), now);
     const auto end = std::chrono::steady_clock::now();
     worst = std::max<int64_t>(
         worst,
@@ -397,10 +397,10 @@ TEST(AnimationRegistryResources, SixteenTrackDispatchStaysBelowTwoMillis) {
 TEST(AnimationRegistryResources, SettledTracksPublishNoRecurringWake) {
   TestApplication fixture;
   std::vector<std::unique_ptr<ProbeWidget>> widgets;
-  AnimationSpec spec = AnimationSpec::value(0.0f, 1.0f, roo_time::Millis(10));
+  AnimationSpec spec = AnimationSpec::Value(0.0f, 1.0f, roo_time::Millis(10));
   Populate(fixture, 16, widgets, spec);
 
-  test::AnimationRegistryTestAccess::dispatch(
+  test::AnimationRegistryTestAccess::Dispatch(
       fixture.registry(),
       roo_time::Uptime::Start() + roo_time::Seconds(1) + roo_time::Millis(10));
 
@@ -409,7 +409,7 @@ TEST(AnimationRegistryResources, SettledTracksPublishNoRecurringWake) {
   }
   EXPECT_EQ(
       roo_time::Uptime::Max(),
-      test::AnimationRegistryTestAccess::nextDeadline(fixture.registry()));
+      test::AnimationRegistryTestAccess::NextDeadline(fixture.registry()));
 }
 
 }  // namespace

@@ -18,22 +18,22 @@ namespace roo_windows {
 namespace test {
 
 struct AnimationRegistryTestAccess {
-  static void dispatch(AnimationRegistry& registry, roo_time::Uptime now) {
+  static void Dispatch(AnimationRegistry& registry, roo_time::Uptime now) {
     registry.beginFrame(now);
     while (registry.dispatchNext()) {
     }
     registry.endFrame();
   }
 
-  static roo_time::Uptime nextDeadline(const AnimationRegistry& registry) {
+  static roo_time::Uptime NextDeadline(const AnimationRegistry& registry) {
     return registry.nextFrameDeadline();
   }
 
-  static size_t dispatchCapacity(const AnimationRegistry& registry) {
+  static size_t DispatchCapacity(const AnimationRegistry& registry) {
     return registry.dispatch_.capacity();
   }
 
-  static uint16_t trackCapacity(const AnimationRegistry& registry) {
+  static uint16_t TrackCapacity(const AnimationRegistry& registry) {
     return registry.tracks_.capacity();
   }
 };
@@ -95,7 +95,7 @@ class RecordingWidget : public BasicWidget {
       replace_on_frame = false;
       context().animations().start(
           *this, tag,
-          AnimationSpec::value(sample.value, 10.0f, roo_time::Millis(100)));
+          AnimationSpec::Value(sample.value, 10.0f, roo_time::Millis(100)));
     }
     if (pause_on_frame_number == frames.size()) {
       pause_on_frame_number = 0;
@@ -123,7 +123,7 @@ class GrowingWidget final : public RecordingWidget {
     grew_ = true;
     for (int i = 0; i < 24; ++i) {
       auto widget = std::make_unique<RecordingWidget>(context());
-      context().animations().start(*widget, 0, AnimationSpec::customTime());
+      context().animations().start(*widget, 0, AnimationSpec::CustomTime());
       added_.push_back(std::move(widget));
     }
   }
@@ -141,7 +141,7 @@ TEST(AnimationRegistry, StandaloneContextHasNoFrameDriver) {
                              DefaultKeyboardColorTheme());
   RecordingWidget widget(context);
   EXPECT_EQ(AnimationStatus::kNoFrameDriver,
-            context.animations().start(widget, 0, AnimationSpec::customTime()));
+            context.animations().start(widget, 0, AnimationSpec::CustomTime()));
 }
 
 // Verifies channels share one frame timestamp while tags remain independent.
@@ -149,13 +149,13 @@ TEST(AnimationRegistry, DispatchesTwoChannelsOnOneWidget) {
   TestApplication fixture;
   RecordingWidget widget(fixture.app().context());
   ASSERT_EQ(AnimationStatus::kOk,
-            fixture.registry().start(widget, 1, AnimationSpec::customTime()));
+            fixture.registry().start(widget, 1, AnimationSpec::CustomTime()));
   ASSERT_EQ(AnimationStatus::kOk,
-            fixture.registry().start(widget, 2, AnimationSpec::customTime()));
+            fixture.registry().start(widget, 2, AnimationSpec::CustomTime()));
 
   const roo_time::Uptime now =
       roo_time::Uptime::Start() + roo_time::Hours(24 * 40);
-  test::AnimationRegistryTestAccess::dispatch(fixture.registry(), now);
+  test::AnimationRegistryTestAccess::Dispatch(fixture.registry(), now);
   ASSERT_EQ(widget.frames.size(), 2u);
   EXPECT_EQ(widget.frames[0].sample.elapsed, roo_time::Duration());
   EXPECT_EQ(widget.frames[1].sample.elapsed, roo_time::Duration());
@@ -168,22 +168,22 @@ TEST(AnimationRegistry, DispatchesTwoChannelsOnOneWidget) {
 TEST(AnimationRegistry, PublishesInitialDelayDeadline) {
   TestApplication fixture;
   RecordingWidget widget(fixture.app().context());
-  AnimationSpec spec = AnimationSpec::value(3.0f, 9.0f, roo_time::Millis(100));
+  AnimationSpec spec = AnimationSpec::Value(3.0f, 9.0f, roo_time::Millis(100));
   spec.delay = roo_time::Millis(40);
   ASSERT_EQ(AnimationStatus::kOk, fixture.registry().start(widget, 0, spec));
   const roo_time::Uptime anchor =
       roo_time::Uptime::Start() + roo_time::Hours(24 * 40);
 
-  test::AnimationRegistryTestAccess::dispatch(fixture.registry(), anchor);
+  test::AnimationRegistryTestAccess::Dispatch(fixture.registry(), anchor);
   ASSERT_EQ(widget.frames.size(), 1u);
   EXPECT_FLOAT_EQ(widget.frames.back().sample.value, 3.0f);
-  EXPECT_EQ(test::AnimationRegistryTestAccess::nextDeadline(fixture.registry()),
+  EXPECT_EQ(test::AnimationRegistryTestAccess::NextDeadline(fixture.registry()),
             anchor + roo_time::Millis(40));
 
-  test::AnimationRegistryTestAccess::dispatch(fixture.registry(),
+  test::AnimationRegistryTestAccess::Dispatch(fixture.registry(),
                                               anchor + roo_time::Millis(39));
   EXPECT_EQ(widget.frames.size(), 1u);
-  test::AnimationRegistryTestAccess::dispatch(fixture.registry(),
+  test::AnimationRegistryTestAccess::Dispatch(fixture.registry(),
                                               anchor + roo_time::Millis(40));
   EXPECT_EQ(widget.frames.size(), 2u);
 }
@@ -195,9 +195,9 @@ TEST(AnimationRegistry, DeliversTerminalFrameThenCompletion) {
   ASSERT_EQ(
       AnimationStatus::kOk,
       fixture.registry().start(
-          widget, 7, AnimationSpec::value(2.0f, 8.0f, roo_time::Duration())));
+          widget, 7, AnimationSpec::Value(2.0f, 8.0f, roo_time::Duration())));
 
-  test::AnimationRegistryTestAccess::dispatch(fixture.registry(),
+  test::AnimationRegistryTestAccess::Dispatch(fixture.registry(),
                                               roo_time::Uptime::Start());
   ASSERT_EQ(widget.frames.size(), 1u);
   EXPECT_TRUE(widget.frames.back().sample.terminal);
@@ -215,9 +215,9 @@ TEST(AnimationRegistry, CallbackReplacementSuppressesStaleCompletion) {
   ASSERT_EQ(
       AnimationStatus::kOk,
       fixture.registry().start(
-          widget, 0, AnimationSpec::value(0.0f, 1.0f, roo_time::Duration())));
+          widget, 0, AnimationSpec::Value(0.0f, 1.0f, roo_time::Duration())));
 
-  test::AnimationRegistryTestAccess::dispatch(fixture.registry(),
+  test::AnimationRegistryTestAccess::Dispatch(fixture.registry(),
                                               roo_time::Uptime::Start());
   EXPECT_TRUE(widget.finishes.empty());
   EXPECT_TRUE(fixture.registry().contains(widget, 0));
@@ -232,16 +232,16 @@ TEST(AnimationRegistry, CallbackCanDeleteAnotherAnimatedWidget) {
   first->peer_to_delete = &second;
   second->peer_to_delete = &first;
   ASSERT_EQ(AnimationStatus::kOk,
-            fixture.registry().start(*first, 0, AnimationSpec::customTime()));
+            fixture.registry().start(*first, 0, AnimationSpec::CustomTime()));
   ASSERT_EQ(AnimationStatus::kOk,
-            fixture.registry().start(*second, 0, AnimationSpec::customTime()));
+            fixture.registry().start(*second, 0, AnimationSpec::CustomTime()));
 
-  test::AnimationRegistryTestAccess::dispatch(fixture.registry(),
+  test::AnimationRegistryTestAccess::Dispatch(fixture.registry(),
                                               roo_time::Uptime::Start());
   RecordingWidget* survivor = first != nullptr ? first : second;
   EXPECT_EQ(survivor->frames.size(), 1u);
   delete survivor;
-  EXPECT_EQ(test::AnimationRegistryTestAccess::nextDeadline(fixture.registry()),
+  EXPECT_EQ(test::AnimationRegistryTestAccess::NextDeadline(fixture.registry()),
             roo_time::Uptime::Max());
 }
 
@@ -252,14 +252,14 @@ TEST(AnimationRegistry, CallbackGrowthStartsOnNextFrame) {
   std::vector<std::unique_ptr<RecordingWidget>> added;
   GrowingWidget owner(fixture.app().context(), added);
   ASSERT_EQ(AnimationStatus::kOk,
-            fixture.registry().start(owner, 0, AnimationSpec::customTime()));
+            fixture.registry().start(owner, 0, AnimationSpec::CustomTime()));
 
-  test::AnimationRegistryTestAccess::dispatch(fixture.registry(),
+  test::AnimationRegistryTestAccess::Dispatch(fixture.registry(),
                                               roo_time::Uptime::Start());
   ASSERT_EQ(added.size(), 24u);
   for (const auto& widget : added) EXPECT_TRUE(widget->frames.empty());
 
-  test::AnimationRegistryTestAccess::dispatch(
+  test::AnimationRegistryTestAccess::Dispatch(
       fixture.registry(), roo_time::Uptime::Start() + roo_time::Millis(20));
   for (const auto& widget : added) EXPECT_EQ(widget->frames.size(), 1u);
 }
@@ -272,9 +272,9 @@ TEST(AnimationRegistry, KeepsApplicationsAndContextsIndependent) {
 
   EXPECT_EQ(
       AnimationStatus::kNotFound,
-      first_fixture.registry().start(second, 0, AnimationSpec::customTime()));
+      first_fixture.registry().start(second, 0, AnimationSpec::CustomTime()));
   ASSERT_EQ(AnimationStatus::kOk, first_fixture.registry().start(
-                                      first, 0, AnimationSpec::customTime()));
+                                      first, 0, AnimationSpec::CustomTime()));
   EXPECT_EQ(AnimationStatus::kNotFound,
             second_fixture.registry().cancel(first, 0));
   EXPECT_TRUE(first_fixture.registry().contains(first, 0));
@@ -284,11 +284,11 @@ TEST(AnimationRegistry, WidgetDestructionSilentlyClearsAllChannels) {
   TestApplication fixture;
   auto widget = std::make_unique<RecordingWidget>(fixture.app().context());
   ASSERT_EQ(AnimationStatus::kOk,
-            fixture.registry().start(*widget, 1, AnimationSpec::customTime()));
+            fixture.registry().start(*widget, 1, AnimationSpec::CustomTime()));
   ASSERT_EQ(AnimationStatus::kOk,
-            fixture.registry().start(*widget, 2, AnimationSpec::customTime()));
+            fixture.registry().start(*widget, 2, AnimationSpec::CustomTime()));
   widget.reset();
-  EXPECT_EQ(test::AnimationRegistryTestAccess::nextDeadline(fixture.registry()),
+  EXPECT_EQ(test::AnimationRegistryTestAccess::NextDeadline(fixture.registry()),
             roo_time::Uptime::Max());
 }
 
@@ -298,7 +298,7 @@ TEST(AnimationRegistry, ManualRefreshDispatchesBeforeLayoutAndPaint) {
   ASSERT_EQ(
       AnimationStatus::kOk,
       fixture.registry().start(
-          widget, 0, AnimationSpec::value(0.0f, 1.0f, roo_time::Duration())));
+          widget, 0, AnimationSpec::Value(0.0f, 1.0f, roo_time::Duration())));
   ASSERT_TRUE(fixture.app().refresh());
   ASSERT_EQ(widget.frames.size(), 1u);
   EXPECT_EQ(widget.finishes.size(), 1u);
@@ -316,7 +316,7 @@ TEST(AnimationRegistry, PaintContinuationFreezesAnimationSamples) {
   ASSERT_EQ(
       AnimationStatus::kOk,
       fixture.registry().start(
-          *raw, 0, AnimationSpec::value(0.0f, 1.0f, roo_time::Duration())));
+          *raw, 0, AnimationSpec::Value(0.0f, 1.0f, roo_time::Duration())));
 
   ASSERT_TRUE(fixture.app().refresh());
   EXPECT_TRUE(raw->frames.empty());
@@ -328,20 +328,20 @@ TEST(AnimationRegistry, RepeatsAndReversesAcrossLargeTimeJumps) {
   TestApplication fixture;
   RecordingWidget widget(fixture.app().context());
   AnimationSpec spec =
-      AnimationSpec::value(10.0f, 20.0f, roo_time::Millis(100));
+      AnimationSpec::Value(10.0f, 20.0f, roo_time::Millis(100));
   spec.legs = 4;
   spec.playback = Playback::kReverse;
   ASSERT_EQ(AnimationStatus::kOk, fixture.registry().start(widget, 0, spec));
   const roo_time::Uptime anchor = roo_time::Uptime::Now();
-  test::AnimationRegistryTestAccess::dispatch(fixture.registry(), anchor);
-  test::AnimationRegistryTestAccess::dispatch(fixture.registry(),
+  test::AnimationRegistryTestAccess::Dispatch(fixture.registry(), anchor);
+  test::AnimationRegistryTestAccess::Dispatch(fixture.registry(),
                                               anchor + roo_time::Millis(250));
   ASSERT_EQ(widget.frames.size(), 2u);
   EXPECT_EQ(widget.frames.back().sample.leg, 2u);
   EXPECT_FALSE(widget.frames.back().sample.reverse);
   EXPECT_FLOAT_EQ(widget.frames.back().sample.value, 15.0f);
 
-  test::AnimationRegistryTestAccess::dispatch(fixture.registry(),
+  test::AnimationRegistryTestAccess::Dispatch(fixture.registry(),
                                               anchor + roo_time::Millis(400));
   ASSERT_EQ(widget.finishes.size(), 1u);
   EXPECT_FLOAT_EQ(widget.frames.back().sample.value, 10.0f);
@@ -353,19 +353,19 @@ TEST(AnimationRegistry, PausesAndResumesFromFrozenElapsedTime) {
   TestApplication fixture;
   RecordingWidget widget(fixture.app().context());
   widget.pause_on_frame_number = 2;
-  AnimationSpec spec = AnimationSpec::value(0.0f, 1.0f, roo_time::Millis(100));
+  AnimationSpec spec = AnimationSpec::Value(0.0f, 1.0f, roo_time::Millis(100));
   spec.minimum_interval = roo_time::Duration();
   ASSERT_EQ(AnimationStatus::kOk, fixture.registry().start(widget, 0, spec));
   const roo_time::Uptime anchor = roo_time::Uptime::Now();
-  test::AnimationRegistryTestAccess::dispatch(fixture.registry(), anchor);
-  test::AnimationRegistryTestAccess::dispatch(fixture.registry(),
+  test::AnimationRegistryTestAccess::Dispatch(fixture.registry(), anchor);
+  test::AnimationRegistryTestAccess::Dispatch(fixture.registry(),
                                               anchor + roo_time::Millis(40));
-  EXPECT_EQ(test::AnimationRegistryTestAccess::nextDeadline(fixture.registry()),
+  EXPECT_EQ(test::AnimationRegistryTestAccess::NextDeadline(fixture.registry()),
             roo_time::Uptime::Max());
 
   ASSERT_EQ(AnimationStatus::kOk, fixture.registry().resume(widget, 0));
   const roo_time::Uptime resumed = roo_time::Uptime::Now();
-  test::AnimationRegistryTestAccess::dispatch(fixture.registry(),
+  test::AnimationRegistryTestAccess::Dispatch(fixture.registry(),
                                               resumed + roo_time::Millis(30));
   ASSERT_EQ(widget.frames.size(), 3u);
   EXPECT_NEAR(widget.frames.back().sample.fraction, 0.7f, 0.02f);
@@ -374,17 +374,17 @@ TEST(AnimationRegistry, PausesAndResumesFromFrozenElapsedTime) {
 TEST(AnimationRegistry, RestartResetsTimeAndFirstSampleState) {
   TestApplication fixture;
   RecordingWidget widget(fixture.app().context());
-  AnimationSpec spec = AnimationSpec::value(4.0f, 8.0f, roo_time::Millis(100));
+  AnimationSpec spec = AnimationSpec::Value(4.0f, 8.0f, roo_time::Millis(100));
   spec.minimum_interval = roo_time::Duration();
   ASSERT_EQ(AnimationStatus::kOk, fixture.registry().start(widget, 0, spec));
   const roo_time::Uptime anchor = roo_time::Uptime::Now();
-  test::AnimationRegistryTestAccess::dispatch(fixture.registry(), anchor);
-  test::AnimationRegistryTestAccess::dispatch(fixture.registry(),
+  test::AnimationRegistryTestAccess::Dispatch(fixture.registry(), anchor);
+  test::AnimationRegistryTestAccess::Dispatch(fixture.registry(),
                                               anchor + roo_time::Millis(50));
   ASSERT_GT(widget.frames.back().sample.value, 4.0f);
 
   ASSERT_EQ(AnimationStatus::kOk, fixture.registry().restart(widget, 0));
-  test::AnimationRegistryTestAccess::dispatch(fixture.registry(),
+  test::AnimationRegistryTestAccess::Dispatch(fixture.registry(),
                                               roo_time::Uptime::Now());
   EXPECT_FLOAT_EQ(widget.frames.back().sample.value, 4.0f);
   EXPECT_EQ(widget.frames.back().sample.delta, roo_time::Duration());
@@ -395,22 +395,22 @@ TEST(AnimationRegistry, RestartResetsTimeAndFirstSampleState) {
 TEST(AnimationRegistry, SeekToEndDoesNotCompleteOnSeekFrame) {
   TestApplication fixture;
   RecordingWidget widget(fixture.app().context());
-  AnimationSpec spec = AnimationSpec::value(0.0f, 1.0f, roo_time::Millis(100));
+  AnimationSpec spec = AnimationSpec::Value(0.0f, 1.0f, roo_time::Millis(100));
   spec.minimum_interval = roo_time::Duration();
   ASSERT_EQ(AnimationStatus::kOk, fixture.registry().start(widget, 0, spec));
-  test::AnimationRegistryTestAccess::dispatch(fixture.registry(),
+  test::AnimationRegistryTestAccess::Dispatch(fixture.registry(),
                                               roo_time::Uptime::Now());
 
   ASSERT_EQ(AnimationStatus::kOk,
             fixture.registry().seek(widget, 0, roo_time::Millis(200)));
   EXPECT_EQ(widget.frames.size(), 1u);
   const roo_time::Uptime seek_time = roo_time::Uptime::Now();
-  test::AnimationRegistryTestAccess::dispatch(fixture.registry(), seek_time);
+  test::AnimationRegistryTestAccess::Dispatch(fixture.registry(), seek_time);
   EXPECT_FALSE(widget.frames.back().sample.terminal);
   EXPECT_TRUE(widget.finishes.empty());
   EXPECT_TRUE(fixture.registry().contains(widget, 0));
 
-  test::AnimationRegistryTestAccess::dispatch(fixture.registry(), seek_time);
+  test::AnimationRegistryTestAccess::Dispatch(fixture.registry(), seek_time);
   EXPECT_TRUE(widget.frames.back().sample.terminal);
   EXPECT_EQ(widget.finishes.size(), 1u);
 }
@@ -418,11 +418,11 @@ TEST(AnimationRegistry, SeekToEndDoesNotCompleteOnSeekFrame) {
 TEST(AnimationRegistry, FinishOverridesPauseForExactForcedEndpoint) {
   TestApplication fixture;
   RecordingWidget widget(fixture.app().context());
-  AnimationSpec spec = AnimationSpec::value(2.0f, 6.0f, roo_time::Millis(100));
+  AnimationSpec spec = AnimationSpec::Value(2.0f, 6.0f, roo_time::Millis(100));
   ASSERT_EQ(AnimationStatus::kOk, fixture.registry().start(widget, 0, spec));
   ASSERT_EQ(AnimationStatus::kOk, fixture.registry().pause(widget, 0));
   ASSERT_EQ(AnimationStatus::kOk, fixture.registry().finish(widget, 0));
-  test::AnimationRegistryTestAccess::dispatch(fixture.registry(),
+  test::AnimationRegistryTestAccess::Dispatch(fixture.registry(),
                                               roo_time::Uptime::Now());
 
   ASSERT_EQ(widget.frames.size(), 1u);
@@ -435,19 +435,19 @@ TEST(AnimationRegistry, FinishOverridesPauseForExactForcedEndpoint) {
 TEST(AnimationRegistry, RetargetsFromLastAppliedValueAndPreservesEasing) {
   TestApplication fixture;
   RecordingWidget widget(fixture.app().context());
-  AnimationSpec spec = AnimationSpec::value(0.0f, 10.0f, roo_time::Millis(100));
+  AnimationSpec spec = AnimationSpec::Value(0.0f, 10.0f, roo_time::Millis(100));
   spec.minimum_interval = roo_time::Duration();
   spec.easing.kind = EasingKind::kQuadraticIn;
   ASSERT_EQ(AnimationStatus::kOk, fixture.registry().start(widget, 0, spec));
   const roo_time::Uptime anchor = roo_time::Uptime::Now();
-  test::AnimationRegistryTestAccess::dispatch(fixture.registry(), anchor);
-  test::AnimationRegistryTestAccess::dispatch(fixture.registry(),
+  test::AnimationRegistryTestAccess::Dispatch(fixture.registry(), anchor);
+  test::AnimationRegistryTestAccess::Dispatch(fixture.registry(),
                                               anchor + roo_time::Millis(50));
   ASSERT_FLOAT_EQ(widget.frames.back().sample.value, 2.5f);
 
   ASSERT_EQ(AnimationStatus::kOk, fixture.registry().retarget(
                                       widget, 0, 6.5f, roo_time::Millis(100)));
-  test::AnimationRegistryTestAccess::dispatch(fixture.registry(),
+  test::AnimationRegistryTestAccess::Dispatch(fixture.registry(),
                                               roo_time::Uptime::Now());
   EXPECT_FLOAT_EQ(widget.frames.back().sample.value, 2.5f);
 }
@@ -460,13 +460,13 @@ TEST(AnimationRegistry, InvalidRetargetLeavesCurrentTrackIntact) {
   ASSERT_EQ(
       AnimationStatus::kOk,
       fixture.registry().start(
-          widget, 0, AnimationSpec::value(0.0f, 1.0f, roo_time::Millis(100))));
+          widget, 0, AnimationSpec::Value(0.0f, 1.0f, roo_time::Millis(100))));
   EXPECT_EQ(AnimationStatus::kInvalidSpec,
             fixture.registry().retarget(widget, 0,
                                         std::numeric_limits<float>::infinity(),
                                         roo_time::Millis(100)));
   ASSERT_EQ(AnimationStatus::kOk, fixture.registry().finish(widget, 0));
-  test::AnimationRegistryTestAccess::dispatch(fixture.registry(),
+  test::AnimationRegistryTestAccess::Dispatch(fixture.registry(),
                                               roo_time::Uptime::Now());
   EXPECT_FLOAT_EQ(widget.frames.back().sample.value, 1.0f);
 }
@@ -475,7 +475,7 @@ TEST(AnimationRegistry, CustomTimeRejectsValueOnlyControls) {
   TestApplication fixture;
   RecordingWidget widget(fixture.app().context());
   ASSERT_EQ(AnimationStatus::kOk,
-            fixture.registry().start(widget, 0, AnimationSpec::customTime()));
+            fixture.registry().start(widget, 0, AnimationSpec::CustomTime()));
   EXPECT_EQ(
       AnimationStatus::kUnsupported,
       fixture.registry().retarget(widget, 0, 1.0f, roo_time::Millis(100)));
@@ -490,28 +490,28 @@ TEST(AnimationRegistry, OrdinaryFramesAndControlsRetainStorageCapacity) {
   TestApplication fixture;
   RecordingWidget widget(fixture.app().context());
   ASSERT_EQ(AnimationStatus::kOk,
-            fixture.registry().start(widget, 0, AnimationSpec::customTime()));
+            fixture.registry().start(widget, 0, AnimationSpec::CustomTime()));
   const roo_time::Uptime anchor = roo_time::Uptime::Now();
-  test::AnimationRegistryTestAccess::dispatch(fixture.registry(), anchor);
+  test::AnimationRegistryTestAccess::Dispatch(fixture.registry(), anchor);
   const size_t dispatch_capacity =
-      test::AnimationRegistryTestAccess::dispatchCapacity(fixture.registry());
+      test::AnimationRegistryTestAccess::DispatchCapacity(fixture.registry());
   const uint16_t track_capacity =
-      test::AnimationRegistryTestAccess::trackCapacity(fixture.registry());
+      test::AnimationRegistryTestAccess::TrackCapacity(fixture.registry());
 
   ASSERT_EQ(AnimationStatus::kOk,
             fixture.registry().seek(widget, 0, roo_time::Millis(100)));
-  test::AnimationRegistryTestAccess::dispatch(fixture.registry(),
+  test::AnimationRegistryTestAccess::Dispatch(fixture.registry(),
                                               roo_time::Uptime::Now());
   ASSERT_EQ(AnimationStatus::kOk, fixture.registry().pause(widget, 0));
   ASSERT_EQ(AnimationStatus::kOk, fixture.registry().resume(widget, 0));
-  test::AnimationRegistryTestAccess::dispatch(fixture.registry(),
+  test::AnimationRegistryTestAccess::Dispatch(fixture.registry(),
                                               roo_time::Uptime::Now());
 
   EXPECT_EQ(
-      test::AnimationRegistryTestAccess::dispatchCapacity(fixture.registry()),
+      test::AnimationRegistryTestAccess::DispatchCapacity(fixture.registry()),
       dispatch_capacity);
   EXPECT_EQ(
-      test::AnimationRegistryTestAccess::trackCapacity(fixture.registry()),
+      test::AnimationRegistryTestAccess::TrackCapacity(fixture.registry()),
       track_capacity);
 }
 

@@ -624,10 +624,10 @@ void ExpandablePanel::animateToRequestedState() {
     status = animations.retarget(*this, kExpansion, target,
                                  roo_time::Millis(travel_millis));
   } else {
-    status = animations.start(
-        *this, kExpansion,
-        AnimationSpec::value(expansion_fraction_, target,
-                             roo_time::Millis(travel_millis)));
+    status =
+        animations.start(*this, kExpansion,
+                         AnimationSpec::Value(expansion_fraction_, target,
+                                              roo_time::Millis(travel_millis)));
   }
   if (status != AnimationStatus::kOk) {
     snapToRequestedState();
@@ -692,14 +692,12 @@ void ExpandablePanel::onAnimationFrame(AnimationTag tag,
   invalidateInterior();
 }
 
-void ExpandablePanel::onPresentationChanged(
-    const PresentationChange& change) {
+void ExpandablePanel::onPresentationChanged(const PresentationChange& change) {
   AnimationRegistry& animations = context().animations();
   if (change.detached_since_delivery ||
       change.state == PresentationState::kDetached) {
     animations.cancel(*this, kExpansion);
-    snap_when_presented_ =
-        expansion_fraction_ != (expanded_ ? 1.0f : 0.0f);
+    snap_when_presented_ = expansion_fraction_ != (expanded_ ? 1.0f : 0.0f);
     return;
   }
   if (change.state == PresentationState::kHidden) {

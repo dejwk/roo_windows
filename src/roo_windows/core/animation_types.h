@@ -53,10 +53,10 @@ struct Easing {
 /// Defines time-to-value behavior copied into one animation channel.
 struct AnimationSpec {
   /// Creates a single-leg value animation with no delay and a 20 ms interval.
-  static AnimationSpec value(float from, float to, roo_time::Duration duration);
+  static AnimationSpec Value(float from, float to, roo_time::Duration duration);
 
   /// Creates an indefinite custom-time animation with a 20 ms interval.
-  static AnimationSpec customTime();
+  static AnimationSpec CustomTime();
 
   /// Duration of each value leg; unused and zero for custom-time tracks.
   roo_time::Duration duration;

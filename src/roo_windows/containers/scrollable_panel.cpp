@@ -251,7 +251,8 @@ void SimpleScrollablePanel::execute(roo_scheduler::EventID id) {
 
 void SimpleScrollablePanel::cancelMotion() {
   ApplicationContext* live_context = tryContext();
-  if (live_context != nullptr) live_context->animations().cancel(*this, kMotion);
+  if (live_context != nullptr)
+    live_context->animations().cancel(*this, kMotion);
 }
 
 void SimpleScrollablePanel::startMotionTrack() {
@@ -261,7 +262,7 @@ void SimpleScrollablePanel::startMotionTrack() {
     stopMotionAndClamp();
     return;
   }
-  AnimationSpec spec = AnimationSpec::customTime();
+  AnimationSpec spec = AnimationSpec::CustomTime();
   spec.minimum_interval = kScrollMotionFrameInterval;
   if (context().animations().start(*this, kMotion, spec) !=
       AnimationStatus::kOk) {
@@ -289,7 +290,8 @@ void SimpleScrollablePanel::cancelHideScrollBarUpdate() {
 
 void SimpleScrollablePanel::scheduleHideScrollBarUpdate() {
   cancelHideScrollBarUpdate();
-  hide_notification_id_ = scheduler_.scheduleOn(deadline_hide_scrollbar_, *this);
+  hide_notification_id_ =
+      scheduler_.scheduleOn(deadline_hide_scrollbar_, *this);
 }
 
 scroll_motion::Axis SimpleScrollablePanel::AxisForDirection(
@@ -506,8 +508,8 @@ void SimpleScrollablePanel::onDragFinished(XDim vx, YDim vy) {
   }
 }
 
-void SimpleScrollablePanel::onAnimationFrame(
-    AnimationTag tag, const AnimationSample& sample) {
+void SimpleScrollablePanel::onAnimationFrame(AnimationTag tag,
+                                             const AnimationSample& sample) {
   if (tag != kMotion) {
     Container::onAnimationFrame(tag, sample);
     return;

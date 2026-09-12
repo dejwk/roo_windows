@@ -136,7 +136,7 @@ void Switch::startThumbTransition() {
     snapThumbToLogicalState();
     return;
   }
-  AnimationSpec spec = AnimationSpec::value(
+  AnimationSpec spec = AnimationSpec::Value(
       static_cast<float>(current), static_cast<float>(target),
       roo_time::Millis(kSwitchAnimationMs));
   if (context().animations().start(*this, kThumb, spec) !=

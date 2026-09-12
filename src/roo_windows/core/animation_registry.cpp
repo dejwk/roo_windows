@@ -13,7 +13,7 @@
 namespace roo_windows {
 namespace {
 
-roo_time::Uptime addSaturated(roo_time::Uptime base,
+roo_time::Uptime AddSaturated(roo_time::Uptime base,
                               roo_time::Duration duration) {
   const int64_t max_us = std::numeric_limits<int64_t>::max();
   if (duration == roo_time::Duration::Max() ||
@@ -45,7 +45,7 @@ AnimationRegistry::TrackMap::const_iterator AnimationRegistry::find(
 
 AnimationStatus AnimationRegistry::start(Widget& target, AnimationTag tag,
                                          const AnimationSpec& spec) {
-  if (!internal::isValidAnimationSpec(spec)) {
+  if (!internal::IsValidAnimationSpec(spec)) {
     return AnimationStatus::kInvalidSpec;
   }
   if (target.tryContext() != &context_) return AnimationStatus::kNotFound;
@@ -142,7 +142,7 @@ AnimationStatus AnimationRegistry::seek(Widget& target, AnimationTag tag,
   if (elapsed.inMicros() < 0) return AnimationStatus::kInvalidSpec;
   invalidateDispatchItem(ChannelKey{&target, tag});
   Track& track = found->second;
-  const roo_time::Duration end = internal::animationEnd(track.spec);
+  const roo_time::Duration end = internal::AnimationEnd(track.spec);
   if (end != roo_time::Duration::Max() && elapsed > end) elapsed = end;
   track.elapsed_at_anchor = elapsed;
   track.anchor = controlTime();
@@ -165,12 +165,12 @@ AnimationStatus AnimationRegistry::retarget(Widget& target, AnimationTag tag,
     return AnimationStatus::kUnsupported;
   }
   AnimationSpec replacement =
-      AnimationSpec::value(found->second.sampled ? found->second.last_value
+      AnimationSpec::Value(found->second.sampled ? found->second.last_value
                                                  : found->second.spec.from,
                            to, duration);
   replacement.minimum_interval = found->second.spec.minimum_interval;
   replacement.easing = found->second.spec.easing;
-  if (!internal::isValidAnimationSpec(replacement)) {
+  if (!internal::IsValidAnimationSpec(replacement)) {
     return AnimationStatus::kInvalidSpec;
   }
 
@@ -248,14 +248,14 @@ roo_time::Duration AnimationRegistry::elapsedAt(const Track& track,
     return roo_time::Duration::Max();
   }
   roo_time::Duration elapsed = track.elapsed_at_anchor + since_anchor;
-  const roo_time::Duration end = internal::animationEnd(track.spec);
+  const roo_time::Duration end = internal::AnimationEnd(track.spec);
   return end != roo_time::Duration::Max() && elapsed > end ? end : elapsed;
 }
 
 roo_time::Uptime AnimationRegistry::deadlineAtElapsed(
     const Track& track, roo_time::Duration elapsed) const {
   if (elapsed <= track.elapsed_at_anchor) return track.anchor;
-  return addSaturated(track.anchor, elapsed - track.elapsed_at_anchor);
+  return AddSaturated(track.anchor, elapsed - track.elapsed_at_anchor);
 }
 
 roo_time::Uptime AnimationRegistry::trackDeadline(const Track& track) const {
@@ -264,7 +264,7 @@ roo_time::Uptime AnimationRegistry::trackDeadline(const Track& track) const {
   }
   if (track.paused) return roo_time::Uptime::Max();
   if (!track.anchored) return roo_time::Uptime::Start();
-  const roo_time::Duration end = internal::animationEnd(track.spec);
+  const roo_time::Duration end = internal::AnimationEnd(track.spec);
   if (!track.sampled) return track.anchor;
   if (track.last_sample_elapsed < track.spec.delay) {
     return deadlineAtElapsed(track, track.spec.delay);
@@ -322,13 +322,13 @@ bool AnimationRegistry::dispatchNext() {
   }
   const bool forced = track.finish_pending;
   const bool sought = track.seek_pending;
-  const roo_time::Duration elapsed = forced ? internal::animationEnd(track.spec)
+  const roo_time::Duration elapsed = forced ? internal::AnimationEnd(track.spec)
                                             : elapsedAt(track, frame_time_);
   const roo_time::Duration delta = track.sampled
                                        ? elapsed - track.last_sample_elapsed
                                        : roo_time::Duration();
   AnimationSample sample =
-      internal::evaluateAnimation(track.spec, elapsed, delta);
+      internal::EvaluateAnimation(track.spec, elapsed, delta);
   if (sought && !forced) sample.terminal = false;
   track.last_sample_elapsed = elapsed;
   track.last_value = sample.value;

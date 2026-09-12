@@ -512,7 +512,7 @@ follows existing roo collection conventions rather than claiming recoverability.
 No default-tag overload is needed: `0` is explicit and inexpensive.
 
 For example, an expandable panel starts
-`animations().start(*this, kExpansion, AnimationSpec::value(fraction_, 1, duration))`.
+`animations().start(*this, kExpansion, AnimationSpec::Value(fraction_, 1, duration))`.
 Its frame hook checks the tag, assigns `sample.value` to `fraction_`, and requests
 layout when the measured height changes. A second input uses retarget to head
 back toward zero from the last applied fraction. Paint remains independent of

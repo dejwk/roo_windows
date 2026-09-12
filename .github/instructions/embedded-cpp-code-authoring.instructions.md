@@ -20,10 +20,13 @@ policy on top of this baseline.
 
 ## Core Conventions
 
-- Follow Google-style C++, except instance methods use `camelCase()`.
-  Trivial accessors and mutators (one-line field getters/setters and
-  STL-mimicking container methods) may keep `snake_case()` when that reads
-  more naturally, matching the spelling of the underlying field.
+- Follow Google-style C++. Namespace-level functions and static methods use
+  `CapitalizedNames()`, while instance methods use `camelCase()`. Trivial
+  accessors and mutators (one-line field getters/setters and STL-mimicking
+  container methods) may keep `snake_case()` when that reads more naturally,
+  matching the spelling of the underlying field. Language- and
+  framework-mandated names such as allocation operators and Arduino `setup()`
+  and `loop()` retain their required spelling.
 - Favor readability. Avoid redundant branches, repeated explanations, and
   unnecessary line count when the code can stay clear without them.
 - Keep `CHECK` and related assertion macros at their point of use so failures
@@ -98,6 +101,8 @@ policy on top of this baseline.
 ## Checklist
 
 - Public API declarations have `///` Doxygen comments.
+- Namespace-level functions and static methods use `CapitalizedNames()` unless
+  their spelling is fixed by the language or framework.
 - Documented public methods and functions have empty separator lines between
   their declarations.
 - Adjacent `struct` and `class` declarations have empty separator lines.

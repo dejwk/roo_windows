@@ -21,7 +21,7 @@
 namespace roo_windows::test {
 
 struct AnimationRegistryTestAccess {
-  static void dispatch(AnimationRegistry& registry, roo_time::Uptime now) {
+  static void Dispatch(AnimationRegistry& registry, roo_time::Uptime now) {
     registry.beginFrame(now);
     while (registry.dispatchNext()) {
     }
@@ -78,7 +78,7 @@ class ProbeWidget final : public BasicWidget {
 uint32_t MeasureDispatchCycles(EasingKind easing, bool mutation_heavy) {
   TestApplication fixture;
   std::array<std::unique_ptr<ProbeWidget>, 16> widgets;
-  AnimationSpec spec = AnimationSpec::value(0.0f, 1.0f, roo_time::Seconds(10));
+  AnimationSpec spec = AnimationSpec::Value(0.0f, 1.0f, roo_time::Seconds(10));
   spec.minimum_interval = roo_time::Duration();
   spec.easing.kind = easing;
   if (easing == EasingKind::kCubicBezier) {
@@ -91,7 +91,7 @@ uint32_t MeasureDispatchCycles(EasingKind easing, bool mutation_heavy) {
     widget = std::make_unique<ProbeWidget>(fixture.context());
     fixture.registry().start(*widget, 0, spec);
   }
-  AnimationRegistryTestAccess::dispatch(
+  AnimationRegistryTestAccess::Dispatch(
       fixture.registry(), roo_time::Uptime::Start() + roo_time::Seconds(1));
   for (auto& widget : widgets) widget->pauseSelfOnFrame(mutation_heavy);
 
@@ -103,7 +103,7 @@ uint32_t MeasureDispatchCycles(EasingKind easing, bool mutation_heavy) {
     }
     now += roo_time::Millis(1);
     const uint32_t begin = esp_cpu_get_cycle_count();
-    AnimationRegistryTestAccess::dispatch(fixture.registry(), now);
+    AnimationRegistryTestAccess::Dispatch(fixture.registry(), now);
     const uint32_t elapsed = esp_cpu_get_cycle_count() - begin;
     worst = std::max(worst, elapsed);
   }

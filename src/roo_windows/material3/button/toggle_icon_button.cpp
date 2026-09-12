@@ -304,13 +304,12 @@ float ToggleIconButton::selectionFraction() const {
 
 uint8_t ToggleIconButton::selectionRadius() const {
   if (!isSelectionAnimating()) return RestingRadius(*this, isSelected());
-  return Interpolate(selectionStartRadius(),
-                     RestingRadius(*this, isSelected()), selectionFraction());
+  return Interpolate(selectionStartRadius(), RestingRadius(*this, isSelected()),
+                     selectionFraction());
 }
 
 void ToggleIconButton::setSelectionFraction(uint8_t fraction) {
-  selection_transition_ =
-      (selection_transition_ & ~kFractionMask) | fraction;
+  selection_transition_ = (selection_transition_ & ~kFractionMask) | fraction;
 }
 
 void ToggleIconButton::startSelectionAnimation(uint8_t from_radius) {
@@ -324,8 +323,8 @@ void ToggleIconButton::startSelectionAnimation(uint8_t from_radius) {
     snapSelectionToRest();
     return;
   }
-  AnimationSpec spec = AnimationSpec::value(
-      0.0f, 1.0f, roo_time::Millis(kSelectionAnimationMs));
+  AnimationSpec spec =
+      AnimationSpec::Value(0.0f, 1.0f, roo_time::Millis(kSelectionAnimationMs));
   if (context().animations().start(*this, kSelection, spec) !=
       AnimationStatus::kOk) {
     snapSelectionToRest();
@@ -355,8 +354,7 @@ void ToggleIconButton::onAnimationFrame(AnimationTag tag,
   invalidateInterior();
 }
 
-void ToggleIconButton::onPresentationChanged(
-    const PresentationChange& change) {
+void ToggleIconButton::onPresentationChanged(const PresentationChange& change) {
   if (change.state == PresentationState::kPresented &&
       !change.detached_since_delivery) {
     return;

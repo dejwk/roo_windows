@@ -418,7 +418,7 @@ void TextFieldEditor::restartCursor() {
   blinking_cursor_is_on_ = true;
   target_->invalidateInterior();
   if (target_->presentationState() != PresentationState::kPresented) return;
-  AnimationSpec spec = AnimationSpec::customTime();
+  AnimationSpec spec = AnimationSpec::CustomTime();
   spec.minimum_interval = kCursorBlinkInterval;
   target_->context().animations().start(*target_, TextField::kCaret, spec);
 }

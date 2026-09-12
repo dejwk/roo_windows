@@ -35,7 +35,7 @@ void ProgressBar::startMarquee() {
     return;
   }
   if (context().animations().start(*this, kMarquee,
-                                   AnimationSpec::customTime()) !=
+                                   AnimationSpec::CustomTime()) !=
       AnimationStatus::kOk) {
     marquee_phase_ms_ = 0;
   }
@@ -52,8 +52,8 @@ void ProgressBar::onAnimationFrame(AnimationTag tag,
     Widget::onAnimationFrame(tag, sample);
     return;
   }
-  uint16_t phase = static_cast<uint16_t>(
-      sample.elapsed.inMillis() % kMarqueePeriodMs);
+  uint16_t phase =
+      static_cast<uint16_t>(sample.elapsed.inMillis() % kMarqueePeriodMs);
   if (phase == marquee_phase_ms_) return;
   marquee_phase_ms_ = phase;
   invalidateInterior();

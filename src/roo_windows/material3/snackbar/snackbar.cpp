@@ -279,8 +279,8 @@ void SnackbarPresenter::armTimeout(roo_time::Uptime now) {
   Application* app = host_.getApplication();
   if (app == nullptr) return;
   timeout_anchor_ = now;
-  timeout_id_ = app->context().scheduler().scheduleAfter(
-      timeout_remaining_, *this);
+  timeout_id_ =
+      app->context().scheduler().scheduleAfter(timeout_remaining_, *this);
 }
 
 bool SnackbarPresenter::motionPaused() const {
@@ -322,13 +322,13 @@ bool SnackbarPresenter::startMotion(float from, float to,
                                     roo_time::Duration duration) {
   offset_ = from;
   host_.placeSnackbar(false);
-  AnimationSpec spec = AnimationSpec::value(from, to, duration);
+  AnimationSpec spec = AnimationSpec::Value(from, to, duration);
   spec.minimum_interval = roo_time::Millis(20);
   spec.easing.kind = EasingKind::kLinear;
   Application* app = host_.getApplication();
   if (app == nullptr ||
       app->context().animations().start(host_, SnackbarHost::kMotion, spec) !=
-      AnimationStatus::kOk) {
+          AnimationStatus::kOk) {
     offset_ = to;
     host_.placeSnackbar(false);
     return false;
@@ -347,18 +347,16 @@ void SnackbarPresenter::start() {
                    ? SnackbarDuration::kShort
                    : SnackbarDuration::kPersistent;
   timeout_enabled_ = duration != SnackbarDuration::kPersistent;
-  timeout_remaining_ = duration == SnackbarDuration::kShort
-                           ? roo_time::Seconds(4)
-                       : duration == SnackbarDuration::kLong
-                           ? roo_time::Seconds(10)
-                           : roo_time::Duration();
+  timeout_remaining_ =
+      duration == SnackbarDuration::kShort  ? roo_time::Seconds(4)
+      : duration == SnackbarDuration::kLong ? roo_time::Seconds(10)
+                                            : roo_time::Duration();
   host_.widget_.setContent(head_->message_, head_->action_,
                            head_->show_dismiss_);
   host_.widget_.setVisibility(Visibility::kVisible);
   host_.placeSnackbar(true);
   host_.observeTransientActivity();
-  if (animations_ &&
-      !startMotion(1.0f, 0.0f, roo_time::Millis(kEnterMs))) {
+  if (animations_ && !startMotion(1.0f, 0.0f, roo_time::Millis(kEnterMs))) {
     phase_ = Phase::kVisible;
   } else if (!animations_) {
     offset_ = 0.0f;
@@ -494,8 +492,7 @@ void SnackbarPresenter::execute(roo_scheduler::ExecutionID id) {
   const roo_time::Uptime now = roo_time::Uptime::Now();
   consumeReadableTime(now);
   timeout_id_ = -1;
-  if (head_ == nullptr || phase_ != Phase::kVisible ||
-      readableTimePaused()) {
+  if (head_ == nullptr || phase_ != Phase::kVisible || readableTimePaused()) {
     return;
   }
   if (timeout_remaining_ > roo_time::Duration()) {
@@ -572,8 +569,7 @@ void SnackbarHost::onPresentationChanged(const PresentationChange& change) {
 void SnackbarHost::observeTransientActivity() {
   MainWindow* window = getMainWindow();
   if (window == nullptr) return;
-  TransientPresentationSlot& slot =
-      window->transient_presentation_slot();
+  TransientPresentationSlot& slot = window->transient_presentation_slot();
   presenter_.transientActivityChanged(slot.hasActivePresentation());
   slot.observeActivity(*this);
 }

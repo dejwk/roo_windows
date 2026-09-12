@@ -214,7 +214,7 @@ elevation, state layer, hit target, or tab stop is introduced.
 
 Use class-local integer tag `kIndeterminate = 0` through
 `context().animations()`. The component overrides `onAnimationFrame()` for this
-tag. Select `AnimationSpec::customTime()` with a 33 ms minimum sample interval;
+tag. Select `AnimationSpec::CustomTime()` with a 33 ms minimum sample interval;
 publish phase `sample.elapsed.inMillis() % period`, with period 1800/5400 ms
 respectively, and invalidate the ink envelope only when phase changes. The
 component does not override the empty completion hook. Delta is not accumulated.

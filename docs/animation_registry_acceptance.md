@@ -86,7 +86,7 @@ Target object sections for `animation_registry.cpp` plus
 `animation_evaluator.cpp` total 8,938 bytes text and 2,585 bytes rodata, or
 11,523 bytes combined against the 16 KiB ceiling. GCC `.su` output reports
 96 bytes for `beginFrame`, 128 bytes for `dispatchNext`, zero for `endFrame`,
-and 64 bytes for `evaluateAnimation`; the largest new dispatch frame is therefore
+and 64 bytes for `EvaluateAnimation`; the largest new dispatch frame is therefore
 128 bytes against the 384-byte ceiling. These are compiler frames, not a full
 call-chain watermark.
 

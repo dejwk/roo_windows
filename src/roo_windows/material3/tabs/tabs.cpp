@@ -90,9 +90,7 @@ Rect LerpRect(const Rect& from, const Rect& to, float t) {
 }  // namespace
 
 Tab::Tab(ApplicationContext& context, roo::string_view label)
-    : SurfaceWidget(context),
-      label_(label),
-      icon_(nullptr) {}
+    : SurfaceWidget(context), label_(label), icon_(nullptr) {}
 
 void Tab::setLabel(roo::string_view label) {
   if (label_ == label) return;
@@ -665,8 +663,8 @@ void Tabs::startIndicatorTransition(const Rect& from, const Rect& to,
   indicator_start_ = from;
   indicator_current_ = from;
   invalidateInterior(Rect::Extent(from, to));
-  AnimationSpec spec = AnimationSpec::value(
-      0.0f, 1.0f, roo_time::Millis(kIndicatorDurationMs));
+  AnimationSpec spec =
+      AnimationSpec::Value(0.0f, 1.0f, roo_time::Millis(kIndicatorDurationMs));
   spec.minimum_interval = roo_time::Millis(kIndicatorFrameMs);
   spec.easing.kind = EasingKind::kQuadraticOut;
   if (context().animations().start(*this, kIndicator, spec) !=
@@ -679,8 +677,7 @@ void Tabs::cancelIndicatorTransition() {
   context().animations().cancel(*this, kIndicator);
 }
 
-void Tabs::onAnimationFrame(AnimationTag tag,
-                            const AnimationSample& sample) {
+void Tabs::onAnimationFrame(AnimationTag tag, const AnimationSample& sample) {
   if (tag != kIndicator) {
     Container::onAnimationFrame(tag, sample);
     return;
@@ -691,8 +688,7 @@ void Tabs::onAnimationFrame(AnimationTag tag,
   invalidateInterior(Rect::Extent(previous, indicator_current_));
 }
 
-void Tabs::onAnimationFinished(AnimationTag tag,
-                               AnimationFinishReason reason) {
+void Tabs::onAnimationFinished(AnimationTag tag, AnimationFinishReason reason) {
   if (tag == kIndicator) return;
   Container::onAnimationFinished(tag, reason);
 }
@@ -945,9 +941,8 @@ void ScrollableTabs::onAnimationFrame(AnimationTag tag,
   }
   // Fling admission already applies the scroll helper's immediate kick.
   if (sample.elapsed.inMicros() == 0) return;
-  scroll_motion::Result result =
-      scroll_motion_.tick(motionGeometry(), scroll_x_, 0,
-                          sample.elapsed.inMillis());
+  scroll_motion::Result result = scroll_motion_.tick(
+      motionGeometry(), scroll_x_, 0, sample.elapsed.inMillis());
   applyScrollResult(result);
   if (!result.needs_tick) cancelScrollMotion();
 }
@@ -958,8 +953,7 @@ void ScrollableTabs::onAnimationFinished(AnimationTag tag,
   Tabs::onAnimationFinished(tag, reason);
 }
 
-void ScrollableTabs::onPresentationChanged(
-    const PresentationChange& change) {
+void ScrollableTabs::onPresentationChanged(const PresentationChange& change) {
   Tabs::onPresentationChanged(change);
   if (change.state == PresentationState::kPresented &&
       !change.detached_since_delivery) {
@@ -1029,7 +1023,7 @@ void ScrollableTabs::startScrollMotion() {
     stopScrollAndClamp();
     return;
   }
-  AnimationSpec spec = AnimationSpec::customTime();
+  AnimationSpec spec = AnimationSpec::CustomTime();
   spec.minimum_interval = roo_time::Millis(kScrollFrameMs);
   if (context().animations().start(*this, kScroll, spec) !=
       AnimationStatus::kOk) {
@@ -1039,8 +1033,8 @@ void ScrollableTabs::startScrollMotion() {
 
 void ScrollableTabs::stopScrollAndClamp() {
   cancelScrollMotion();
-  applyScrollResult(scroll_motion_.scrollTo(motionGeometry(), scroll_x_, 0,
-                                            scroll_x_, 0));
+  applyScrollResult(
+      scroll_motion_.scrollTo(motionGeometry(), scroll_x_, 0, scroll_x_, 0));
 }
 
 }  // namespace material3
