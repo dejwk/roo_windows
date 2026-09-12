@@ -404,34 +404,34 @@ TEST(Material3Tabs, SelectionChangesDriveHorizontalPageHost) {
 
 // Verifies the other half of the phase-5 integration pattern: a settled swipe
 // gesture in the content host updates the tab row without recursive work.
-TEST(Material3Tabs, HorizontalPageHostGestureDrivesSelection) {
-  roo_scheduler::Scheduler scheduler;
-  Environment env(scheduler);
-  ApplicationContext context = MakeContext(env);
+TEST_F(Material3TabsRenderTest, HorizontalPageHostGestureDrivesSelection) {
+  PageBoundTabs tabs(context());
+  auto pages = std::make_unique<BoundPageHost>(context());
+  BoundPageHost* pages_ptr = pages.get();
+  tabs.bind(*pages_ptr);
+  pages_ptr->bind(tabs);
 
-  PageBoundTabs tabs(context);
-  BoundPageHost pages(context);
-  tabs.bind(pages);
-  pages.bind(tabs);
-
-  tabs.addTab(std::make_unique<Tab>(context, "One"));
-  tabs.addTab(std::make_unique<Tab>(context, "Two"));
-  tabs.addTab(std::make_unique<Tab>(context, "Three"));
-  pages.addPage(std::make_unique<ProbePage>(context));
-  pages.addPage(std::make_unique<ProbePage>(context));
-  pages.addPage(std::make_unique<ProbePage>(context));
+  tabs.addTab(std::make_unique<Tab>(context(), "One"));
+  tabs.addTab(std::make_unique<Tab>(context(), "Two"));
+  tabs.addTab(std::make_unique<Tab>(context(), "Three"));
+  pages_ptr->addPage(std::make_unique<ProbePage>(context()));
+  pages_ptr->addPage(std::make_unique<ProbePage>(context()));
+  pages_ptr->addPage(std::make_unique<ProbePage>(context()));
+  app_.add(WidgetRef(std::move(pages)),
+           roo_display::Box(0, 0, 179, Scaled(48) - 1));
+  ASSERT_TRUE(refresh());
 
   ASSERT_EQ(0, tabs.selectedIndex());
-  ASSERT_EQ(0, pages.currentIndex());
+  ASSERT_EQ(0, pages_ptr->currentIndex());
 
-  pages.measure(WidthSpec::Exactly(100), HeightSpec::Exactly(40));
-  pages.layout(Rect(0, 0, 99, 39));
-  pages.onDragStart(0, 0);
-  pages.onFling(0, 0, -1200, 0);
-  scheduler.delay(roo_time::Millis(220));
+  pages_ptr->onDragStart(0, 0);
+  pages_ptr->onFling(0, 0, -1200, 0);
+  ASSERT_TRUE(refresh());
+  delay(220);
+  ASSERT_TRUE(refresh());
 
   EXPECT_EQ(1, tabs.selectedIndex());
-  EXPECT_EQ(1, pages.currentIndex());
+  EXPECT_EQ(1, pages_ptr->currentIndex());
 }
 
 // Verifies that scrollable tabs use intrinsic child widths and the Material 3

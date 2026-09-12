@@ -54,16 +54,17 @@ inside `Tabs`, `ScrollablePanel`, or application code.
 
 ### Current Status in `roo_windows`
 
-As of 2026-06, the core `HorizontalPageHost` implementation is landed through
-the swipe/settle and blit-wrapper phases.
+As of 2026-09, the core `HorizontalPageHost` implementation is landed through
+the swipe/settle and blit-wrapper phases, and settling uses the application
+animation registry.
 
 What exists today:
 
 - [src/roo_windows/containers/horizontal_page_host.h](../../../src/roo_windows/containers/horizontal_page_host.h)
    and
    [src/roo_windows/containers/horizontal_page_host.cpp](../../../src/roo_windows/containers/horizontal_page_host.cpp)
-   provide a viewport-based horizontal page host with adjacent-page swipe
-   settle and bounded active-slot wrappers.
+   provide a viewport-based horizontal page host with registry-driven
+   adjacent-page settling and bounded active-slot wrappers.
 - [test/horizontal_page_host_test.cpp](../../../test/horizontal_page_host_test.cpp)
    provides unit coverage for selection, measurement/layout, gesture handling,
    settle behavior, and size budgets.
@@ -225,10 +226,9 @@ The core decisions are:
 
 ### Type and Ownership Model
 
-`HorizontalPageHost` derives from `Container` and
-`roo_scheduler::Executable`.
-
-`roo_scheduler::Executable` is the animation hook for settle motion.
+`HorizontalPageHost` derives only from `Container`. Its settle motion is one
+tagged value track owned by the application animation registry, so the host
+does not store a scheduler reference, notification ID, or timestamps.
 
 `Container` is chosen because the host needs:
 
@@ -368,6 +368,13 @@ deliberately differently from gesture travel:
 That keeps the active child set bounded and avoids animating through a long
 strip of intermediate pages that are not otherwise active.
 
+Each adjacent settle is a 180 ms quadratic ease-out value track with a 10 ms
+minimum sampling interval. A new drag or programmatic target starts from the
+last position applied before layout. Hidden hosts pause this channel. A
+navigation detachment cancels it, and the next presentation silently reconciles
+the settled index and page position to the retained target without firing a
+semantic completion callback while offscreen.
+
 ### Gesture Handling
 
 The host intercepts a gesture only after horizontal motion dominates vertical
@@ -487,8 +494,9 @@ The base-case cost should stay explicit.
 
 Target host-side size budget:
 
-1. `HorizontalPageHost`: `sizeof(Container) + sizeof(std::vector<WidgetRef>) +
-   3 * sizeof(void*) + 24`
+1. `HorizontalPageHost`: the bounded page/slot vectors and gesture state, with
+   no per-instance scheduler reference, notification ID, or settle timestamps.
+   The active registry track exists only during a settle.
 
 Blit acceleration budget:
 
@@ -514,8 +522,7 @@ specific.
 ```cpp
 namespace roo_windows {
 
-class HorizontalPageHost : public Container,
-                           private roo_scheduler::Executable {
+class HorizontalPageHost : public Container {
  public:
   explicit HorizontalPageHost(ApplicationContext& context);
 
@@ -683,8 +690,9 @@ Validation should cover three layers.
 1. Unit tests for current-index changes, active-child set membership,
    viewport-based measurement, layout offsets, edge resistance, and settle
    target choice.
-2. Render or golden tests for viewport clipping and adjacent-page exposure at
-   mid-drag.
+2. Render or golden tests for viewport clipping, adjacent-page exposure,
+   interruption at the last applied position, hidden pause/resume, navigation
+   detach/reattach, slow-frame completion, and callback deletion.
 3. Manual emulation checks for swipe feel and tabs synchronization.
 
 The intended test target names are:

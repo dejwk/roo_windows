@@ -1,3 +1,6 @@
+// Learning goal: combine direct swipe with registry-driven page settling; a
+// slow display may skip intermediate positions without extending the motion.
+
 // *************** EMULATOR SETUP BEGIN
 
 #ifdef ROO_TESTING

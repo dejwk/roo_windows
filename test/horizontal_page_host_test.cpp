@@ -339,8 +339,8 @@ TEST(HorizontalPageHost, EdgeResistanceAccumulatesRawDrag) {
   EXPECT_EQ(Rect(33, 0, 132, 39), SlotBoundsForPage(first_ptr));
 }
 
-// Verifies the phase-3 size budget with pointer-size-aware limits so bounded
-// blit-wrapper state and swipe/settle fields stay contained.
+// Verifies the host stays within its pointer-size-aware budget after moving
+// scheduler and timestamp state into the shared animation registry.
 TEST(HorizontalPageHost, PhaseThreeSizeBudget) {
   constexpr size_t kHorizontalPageHostBudget =
       sizeof(Container) + sizeof(std::vector<WidgetRef>) +

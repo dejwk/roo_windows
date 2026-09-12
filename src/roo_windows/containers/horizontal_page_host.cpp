@@ -13,7 +13,7 @@ namespace {
 
 constexpr int16_t kMaxOvershootPx = Scaled(40);
 constexpr int16_t kSettleFrameMs = 10;
-constexpr unsigned long kSettleDurationMs = 180;
+constexpr int16_t kSettleDurationMs = 180;
 
 template <typename T>
 T Clamp(T value, T min_value, T max_value) {
@@ -30,12 +30,9 @@ HorizontalPageHost::HorizontalPageHost(ApplicationContext& context)
       page_to_slot_(),
       slot_wrappers_(),
       active_slots_(),
-      scheduler_(context.scheduler()),
-      notification_id_(-1),
-      animation_state_(AnimationState::kIdle),
-      settle_{0, 0, 0.0f, 0.0f, -1, -1},
       dragging_(false),
       intercepted_gesture_(false),
+      reconcile_when_presented_(false),
       settled_index_(-1),
       target_index_(-1),
       raw_drag_position_(0.0f),
@@ -44,10 +41,11 @@ HorizontalPageHost::HorizontalPageHost(ApplicationContext& context)
     slot_wrappers_[i] = std::make_unique<BlitCacheContainer>(context);
     active_slots_[i].wrapper = slot_wrappers_[i].get();
   }
+  context.presentations().observe(*this);
 }
 
 HorizontalPageHost::~HorizontalPageHost() {
-  cancelPendingUpdate();
+  cancelSettle();
   clearPages();
 }
 
@@ -71,10 +69,10 @@ void HorizontalPageHost::addPage(WidgetRef page) {
 }
 
 void HorizontalPageHost::clearPages() {
-  cancelPendingUpdate();
-  animation_state_ = AnimationState::kIdle;
+  cancelSettle();
   dragging_ = false;
   intercepted_gesture_ = false;
+  reconcile_when_presented_ = false;
   for (int i = 0; i < kSlotCount; ++i) {
     clearSlot(static_cast<SlotId>(i));
   }
@@ -96,7 +94,7 @@ int HorizontalPageHost::targetIndex() const { return target_index_; }
 
 bool HorizontalPageHost::setCurrentIndex(int index, bool animate) {
   if (index < 0 || index >= pageCount()) return false;
-  if (index == settled_index_) return false;
+  if (index == target_index_) return false;
   if (animate && std::abs(index - settled_index_) == 1) {
     startSettleToIndex(index);
     return true;
@@ -154,7 +152,7 @@ void HorizontalPageHost::onLayout(bool changed, const Rect& rect) {
 bool HorizontalPageHost::onInterceptTouchEvent(const TouchEvent& event) {
   // Keep ownership while a settle is running so a fresh touch can interrupt
   // animation immediately instead of leaking move/up to descendants.
-  if (animation_state_ == AnimationState::kSettling) {
+  if (isSettling()) {
     intercepted_gesture_ = true;
     return true;
   }
@@ -191,8 +189,8 @@ void HorizontalPageHost::onDragStart(XDim x, YDim y) {
   (void)y;
   // A new touch should always take over immediately from any in-flight settle
   // animation, so cancel scheduled ticks and start from the current page state.
-  cancelPendingUpdate();
-  animation_state_ = AnimationState::kIdle;
+  cancelSettle();
+  reconcile_when_presented_ = false;
   dragging_ = true;
   raw_drag_position_ = page_position_;
   setTargetIndex(resolveGestureSettleTarget(0));
@@ -231,7 +229,7 @@ void HorizontalPageHost::onDragFinished(XDim x, YDim y) {
   (void)x;
   (void)y;
   if (pageCount() > 1 && settled_index_ >= 0 &&
-      animation_state_ != AnimationState::kSettling) {
+      !isSettling()) {
     int target = resolveGestureSettleTarget(0);
     startSettleToIndex(target);
   }
@@ -371,50 +369,55 @@ void HorizontalPageHost::updateActivePagePositions() {
   }
 }
 
-void HorizontalPageHost::cancelPendingUpdate() {
-  if (notification_id_ > 0) {
-    scheduler_.cancel(notification_id_);
-    notification_id_ = -1;
-  }
+void HorizontalPageHost::cancelSettle() {
+  context().animations().cancel(*this, kSettle);
 }
 
-void HorizontalPageHost::scheduleSettleUpdate() {
-  cancelPendingUpdate();
-  notification_id_ =
-      scheduler_.scheduleAfter(roo_time::Millis(kSettleFrameMs), *this);
+bool HorizontalPageHost::isSettling() const {
+  return context().animations().contains(*this, kSettle);
 }
 
 void HorizontalPageHost::startSettleToIndex(int target_index) {
   if (settled_index_ < 0 || pageCount() == 0) return;
   target_index = Clamp(target_index, 0, pageCount() - 1);
   target_index = Clamp(target_index, settled_index_ - 1, settled_index_ + 1);
-  cancelPendingUpdate();
-
-  settle_.old_index = settled_index_;
-  settle_.target_index = target_index;
+  cancelSettle();
   setTargetIndex(target_index);
-  settle_.start_position = page_position_;
-  settle_.target_position = target_index;
-  settle_.start_time_ms = millis();
-  settle_.end_time_ms = settle_.start_time_ms + kSettleDurationMs;
-  animation_state_ = AnimationState::kSettling;
 
   syncActiveSlots();
   updateActivePagePositions();
   invalidateInterior();
 
-  if (settle_.start_position == settle_.target_position) {
+  if (page_position_ == static_cast<float>(target_index)) {
     snapToIndex(target_index);
     return;
   }
 
-  scheduleSettleUpdate();
+  if (presentationState() == PresentationState::kDetached) {
+    reconcile_when_presented_ = true;
+    return;
+  }
+
+  AnimationSpec spec = AnimationSpec::value(
+      page_position_, static_cast<float>(target_index),
+      roo_time::Millis(kSettleDurationMs));
+  spec.minimum_interval = roo_time::Millis(kSettleFrameMs);
+  spec.easing.kind = EasingKind::kQuadraticOut;
+  if (context().animations().start(*this, kSettle, spec) !=
+      AnimationStatus::kOk) {
+    snapToIndex(target_index);
+    return;
+  }
+  reconcile_when_presented_ = false;
+  if (presentationState() == PresentationState::kHidden) {
+    context().animations().pause(*this, kSettle);
+  }
 }
 
 void HorizontalPageHost::snapToIndex(int target_index) {
   target_index = Clamp(target_index, 0, pageCount() - 1);
-  cancelPendingUpdate();
-  animation_state_ = AnimationState::kIdle;
+  cancelSettle();
+  reconcile_when_presented_ = false;
   setTargetIndex(target_index);
 
   int old_index = settled_index_;
@@ -428,6 +431,19 @@ void HorizontalPageHost::snapToIndex(int target_index) {
   if (old_index != settled_index_) {
     onSettledIndexChanged(old_index, settled_index_);
   }
+}
+
+void HorizontalPageHost::reconcileToTarget() {
+  if (pageCount() == 0 || target_index_ < 0) return;
+  settled_index_ = Clamp(target_index_, 0, pageCount() - 1);
+  target_index_ = settled_index_;
+  raw_drag_position_ = settled_index_;
+  page_position_ = settled_index_;
+  reconcile_when_presented_ = false;
+  syncActiveSlots();
+  updateActivePagePositions();
+  requestLayout();
+  invalidateInterior();
 }
 
 void HorizontalPageHost::setTargetIndex(int target_index) {
@@ -479,28 +495,50 @@ float HorizontalPageHost::applyEdgeResistance(float raw_position) const {
   return raw_position;
 }
 
-void HorizontalPageHost::execute(roo_scheduler::ExecutionID id) {
-  (void)id;
-  notification_id_ = -1;
-  if (animation_state_ != AnimationState::kSettling) return;
-
-  unsigned long now = millis();
-  if ((long)(now - settle_.end_time_ms) >= 0) {
-    snapToIndex(settle_.target_index);
+void HorizontalPageHost::onAnimationFrame(
+    AnimationTag tag, const AnimationSample& sample) {
+  if (tag != kSettle) {
+    Container::onAnimationFrame(tag, sample);
     return;
   }
-
-  float t = (float)(now - settle_.start_time_ms) /
-            (float)(settle_.end_time_ms - settle_.start_time_ms);
-  t = Clamp(t, 0.0f, 1.0f);
-  float eased = 1.0f - (1.0f - t) * (1.0f - t);
-  page_position_ = settle_.start_position +
-                   (settle_.target_position - settle_.start_position) * eased;
-
+  page_position_ = sample.value;
   syncActiveSlots();
   updateActivePagePositions();
   invalidateInterior();
-  scheduleSettleUpdate();
+}
+
+void HorizontalPageHost::onAnimationFinished(AnimationTag tag,
+                                             AnimationFinishReason reason) {
+  (void)reason;
+  if (tag != kSettle) {
+    Container::onAnimationFinished(tag, reason);
+    return;
+  }
+  // This may invoke user code and therefore must remain the last operation.
+  snapToIndex(target_index_);
+}
+
+void HorizontalPageHost::onPresentationChanged(
+    const PresentationChange& change) {
+  AnimationRegistry& animations = context().animations();
+  if (change.detached_since_delivery ||
+      change.state == PresentationState::kDetached) {
+    animations.cancel(*this, kSettle);
+    reconcile_when_presented_ =
+        target_index_ >= 0 &&
+        (settled_index_ != target_index_ ||
+         page_position_ != static_cast<float>(target_index_));
+    return;
+  }
+  if (change.state == PresentationState::kHidden) {
+    animations.pause(*this, kSettle);
+    return;
+  }
+  if (reconcile_when_presented_) {
+    reconcileToTarget();
+    return;
+  }
+  animations.resume(*this, kSettle);
 }
 
 }  // namespace roo_windows

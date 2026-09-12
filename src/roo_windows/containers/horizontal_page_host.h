@@ -5,7 +5,6 @@
 #include <memory>
 #include <vector>
 
-#include "roo_scheduler.h"
 #include "roo_windows/containers/blit_cache_container.h"
 #include "roo_windows/core/container.h"
 #include "roo_windows/core/touch_event.h"
@@ -17,7 +16,7 @@ namespace roo_windows {
 ///
 /// Phase 1 behavior supports programmatic page selection and current-page-only
 /// layout. Swipe and settle animation hooks are reserved for later phases.
-class HorizontalPageHost : public Container, private roo_scheduler::Executable {
+class HorizontalPageHost : public Container {
  public:
   /// Creates an empty page host.
   explicit HorizontalPageHost(ApplicationContext& context);
@@ -88,6 +87,12 @@ class HorizontalPageHost : public Container, private roo_scheduler::Executable {
   void onDragFinished(XDim x, YDim y) override;
   void onCancel() override;
 
+  void onAnimationFrame(AnimationTag tag,
+                        const AnimationSample& sample) override;
+  void onAnimationFinished(AnimationTag tag,
+                           AnimationFinishReason reason) override;
+  void onPresentationChanged(const PresentationChange& change) override;
+
   bool shouldDelayChildPressedState() override { return true; }
 
   int getChildrenCount() const override;
@@ -109,12 +114,7 @@ class HorizontalPageHost : public Container, private roo_scheduler::Executable {
     bool attached = false;
   };
 
-  enum class AnimationState : uint8_t {
-    kIdle,
-    kSettling,
-  };
-
-  void execute(roo_scheduler::ExecutionID id) override;
+  static constexpr AnimationTag kSettle = 0;
 
   /// Binds slots to pages according to the current settled index.
   void syncActiveSlots();
@@ -132,17 +132,20 @@ class HorizontalPageHost : public Container, private roo_scheduler::Executable {
   /// Positions active pages based on the current fractional page position.
   void updateActivePagePositions();
 
-  /// Stops a pending settle callback, if one is scheduled.
-  void cancelPendingUpdate();
+  /// Silently removes the shared settle channel.
+  void cancelSettle();
 
-  /// Schedules the next settle animation tick.
-  void scheduleSettleUpdate();
+  /// Returns whether the shared settle channel is active.
+  bool isSettling() const;
 
   /// Starts settle animation toward target page index.
   void startSettleToIndex(int target_index);
 
   /// Snaps immediately to target page index.
   void snapToIndex(int target_index);
+
+  /// Silently applies the selected target after a detached interval.
+  void reconcileToTarget();
 
   /// Updates the transient target page and notifies subclasses on changes.
   void setTargetIndex(int target_index);
@@ -158,22 +161,9 @@ class HorizontalPageHost : public Container, private roo_scheduler::Executable {
   std::array<std::unique_ptr<BlitCacheContainer>, kSlotCount> slot_wrappers_;
   std::array<ActiveSlot, kSlotCount> active_slots_;
 
-  roo_scheduler::Scheduler& scheduler_;
-  roo_scheduler::ExecutionID notification_id_;
-
-  AnimationState animation_state_;
-
-  struct {
-    unsigned long start_time_ms;
-    unsigned long end_time_ms;
-    float start_position;
-    float target_position;
-    int old_index;
-    int target_index;
-  } settle_;
-
   bool dragging_;
   bool intercepted_gesture_;
+  bool reconcile_when_presented_;
 
   int settled_index_;
   int target_index_;

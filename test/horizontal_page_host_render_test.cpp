@@ -1,5 +1,8 @@
+#include <functional>
+
 #include "gtest/gtest.h"
 #include "roo_windows/containers/horizontal_page_host.h"
+#include "roo_windows/core/destination.h"
 #include "roo_windows_render_test_support.h"
 
 using namespace roo_display;
@@ -16,7 +19,52 @@ class TestHorizontalPageHost : public HorizontalPageHost {
 
   using HorizontalPageHost::onDrag;
   using HorizontalPageHost::onDragStart;
+  using HorizontalPageHost::onFling;
+
+  int settledChangeCount() const { return settled_change_count_; }
+
+ protected:
+  void onSettledIndexChanged(int old_index, int new_index) override {
+    (void)old_index;
+    (void)new_index;
+    ++settled_change_count_;
+  }
+
+ private:
+  int settled_change_count_ = 0;
 };
+
+class WidgetDestination : public Destination {
+ public:
+  explicit WidgetDestination(Widget& contents) : contents_(contents) {}
+  Widget& getContents() override { return contents_; }
+
+ private:
+  Widget& contents_;
+};
+
+class DeletingHorizontalPageHost : public HorizontalPageHost {
+ public:
+  DeletingHorizontalPageHost(ApplicationContext& context,
+                             std::function<void()>& delete_callback)
+      : HorizontalPageHost(context), delete_callback_(delete_callback) {}
+
+ protected:
+  void onSettledIndexChanged(int old_index, int new_index) override {
+    (void)old_index;
+    (void)new_index;
+    delete_callback_();
+  }
+
+ private:
+  std::function<void()>& delete_callback_;
+};
+
+Rect SlotBoundsForPage(const Widget& page) {
+  const Container* wrapper = page.parent();
+  return wrapper == nullptr ? Rect(0, 0, -1, -1)
+                            : wrapper->parent_bounds();
+}
 
 // Models the display traffic relevant to a slow address-window device. Blits
 // are framebuffer-local operations, so they are counted separately and do not
@@ -167,6 +215,130 @@ TEST_F(HorizontalPageHostRenderTest, RevealedStripRepaintsWithBlitSupport) {
   ASSERT_TRUE(refresh());
   EXPECT_NE(QuantizeToArgb4444(color::Red), pixelAt(10, 20));
   EXPECT_EQ(QuantizeToArgb4444(color::Red), pixelAt(40, 20));
+}
+
+// Verifies a drag takes over at the last applied registry sample and no stale
+// settle update moves the page afterward.
+TEST_F(HorizontalPageHostRenderTest, DragInterruptsSettleAtAppliedPosition) {
+  auto host = std::make_unique<TestHorizontalPageHost>(context());
+  TestHorizontalPageHost* host_ptr = host.get();
+  auto first = std::make_unique<ColorBoxWidget>(context(), color::Red,
+                                                Dimensions(kWidth, kHeight));
+  ColorBoxWidget* first_ptr = first.get();
+  host_ptr->addPage(std::move(first));
+  host_ptr->addPage(std::make_unique<ColorBoxWidget>(
+      context(), color::Blue, Dimensions(kWidth, kHeight)));
+  app_.add(std::move(host), Box(0, 0, kWidth - 1, kHeight - 1));
+  ASSERT_TRUE(refresh());
+
+  ASSERT_TRUE(host_ptr->setCurrentIndex(1));
+  ASSERT_TRUE(refresh());
+  delay(65);
+  ASSERT_TRUE(refresh());
+  const Rect interrupted = SlotBoundsForPage(*first_ptr);
+  ASSERT_LT(interrupted.xMin(), 0);
+  ASSERT_GT(interrupted.xMin(), -kWidth);
+
+  host_ptr->onDragStart(0, 0);
+  delay(220);
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(interrupted, SlotBoundsForPage(*first_ptr));
+  EXPECT_EQ(0, host_ptr->currentIndex());
+}
+
+// Verifies hidden time is excluded from settling and the retained channel
+// resumes from its frozen page position.
+TEST_F(HorizontalPageHostRenderTest, SettlePausesWhileHidden) {
+  auto host = std::make_unique<TestHorizontalPageHost>(context());
+  TestHorizontalPageHost* host_ptr = host.get();
+  auto first = std::make_unique<ColorBoxWidget>(context(), color::Red,
+                                                Dimensions(kWidth, kHeight));
+  ColorBoxWidget* first_ptr = first.get();
+  host_ptr->addPage(std::move(first));
+  host_ptr->addPage(std::make_unique<ColorBoxWidget>(
+      context(), color::Blue, Dimensions(kWidth, kHeight)));
+  app_.add(std::move(host), Box(0, 0, kWidth - 1, kHeight - 1));
+  ASSERT_TRUE(refresh());
+
+  ASSERT_TRUE(host_ptr->setCurrentIndex(1));
+  ASSERT_TRUE(refresh());
+  delay(65);
+  ASSERT_TRUE(refresh());
+  host_ptr->setVisibility(Visibility::kInvisible);
+  ASSERT_TRUE(refresh());
+  const Rect paused = SlotBoundsForPage(*first_ptr);
+
+  delay(220);
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(paused, SlotBoundsForPage(*first_ptr));
+  EXPECT_EQ(0, host_ptr->currentIndex());
+
+  host_ptr->setVisibility(Visibility::kVisible);
+  ASSERT_TRUE(refresh());
+  delay(140);
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(1, host_ptr->currentIndex());
+  EXPECT_EQ(1, host_ptr->settledChangeCount());
+}
+
+// Verifies covering navigation cancels settling and returning silently applies
+// the selected target without reporting an offscreen semantic completion.
+TEST_F(HorizontalPageHostRenderTest,
+       NavigationDetachReconcilesTargetWithoutCallback) {
+  TestHorizontalPageHost host(context());
+  host.addPage(std::make_unique<ColorBoxWidget>(
+      context(), color::Red, Dimensions(kWidth, kHeight)));
+  host.addPage(std::make_unique<ColorBoxWidget>(
+      context(), color::Blue, Dimensions(kWidth, kHeight)));
+  ColorBoxWidget covering(context(), color::Green,
+                          Dimensions(kWidth, kHeight));
+  WidgetDestination covering_destination(covering);
+  Task& task = app_.addTaskFullScreen(host);
+  ASSERT_TRUE(refresh());
+
+  ASSERT_TRUE(host.setCurrentIndex(1));
+  ASSERT_TRUE(refresh());
+  delay(65);
+  ASSERT_TRUE(refresh());
+  task.navigation().push(covering_destination);
+  ASSERT_TRUE(refresh());
+  delay(220);
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(0, host.currentIndex());
+
+  task.navigation().pop();
+  ASSERT_TRUE(refresh());
+  EXPECT_EQ(1, host.currentIndex());
+  EXPECT_EQ(0, host.settledChangeCount());
+  task.navigation().clear();
+}
+
+// Verifies the settled-index notification can detach and delete the host. The
+// completion hook must not touch host state after invoking user code.
+TEST_F(HorizontalPageHostRenderTest, CompletionCallbackCanDeleteHost) {
+  std::unique_ptr<DeletingHorizontalPageHost> host;
+  Task* task = nullptr;
+  bool deleted = false;
+  std::function<void()> delete_callback = [&] {
+    task->navigation().clear();
+    host.reset();
+    deleted = true;
+  };
+  host = std::make_unique<DeletingHorizontalPageHost>(context(),
+                                                       delete_callback);
+  host->addPage(std::make_unique<ColorBoxWidget>(
+      context(), color::Red, Dimensions(kWidth, kHeight)));
+  host->addPage(std::make_unique<ColorBoxWidget>(
+      context(), color::Blue, Dimensions(kWidth, kHeight)));
+  task = &app_.addTaskFullScreen(*host);
+  ASSERT_TRUE(refresh());
+
+  ASSERT_TRUE(host->setCurrentIndex(1));
+  ASSERT_TRUE(refresh());
+  delay(220);
+  ASSERT_TRUE(refresh());
+  EXPECT_TRUE(deleted);
+  EXPECT_EQ(nullptr, host.get());
 }
 
 class NoBlitOffscreenDevice : public OffscreenDevice<Argb4444> {
