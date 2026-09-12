@@ -12,10 +12,9 @@ namespace roo_windows {
 class ProgressBar : public Widget {
  public:
   ProgressBar(ApplicationContext& context)
-      : Widget(context), progress_(-1), color_(0) {}
-
-  /// Drives the indeterminate animation timing on each paint pass.
-  void paintWidgetContents(PaintContext& ctx) override;
+      : Widget(context), progress_(-1), marquee_phase_ms_(0), color_(0) {
+    context.presentations().observe(*this);
+  }
 
   /// Paints the determinate fill bar, or the current marquee segment when
   /// indeterminate.
@@ -41,19 +40,30 @@ class ProgressBar : public Widget {
 
   /// Sets a determinate progress in hundredths of a percent (`[0, 10000]`).
   /// Negative values switch to indeterminate. No-op if unchanged.
-  void setProgress(int16_t progress) {
-    if (progress > 10000) progress = 10000;
-    if (progress < -1) progress = -1;
-    if (progress_ == progress) return;
-    progress_ = progress;
-    setDirty();
-  }
+  void setProgress(int16_t progress);
 
   bool isIndeterminate() const { return (progress_ < 0); }
 
+ protected:
+  void onAnimationFrame(AnimationTag tag,
+                        const AnimationSample& sample) override;
+  void onPresentationChanged(const PresentationChange& change) override;
+  void onLayout(bool changed, const Rect& rect) override;
+
+  static constexpr AnimationTag kMarquee = 0;
+  uint16_t appliedMarqueePhaseMs() const { return marquee_phase_ms_; }
+
  private:
+  void startMarquee();
+  void stopMarquee();
+  bool hasDrawableBounds() const { return width() > 0 && height() > 0; }
+
   // negative = indeterminate. Otherwise, in [0-10000], in 1/100 of a percent.
   int16_t progress_;
+
+  // Applied position within the 1424 ms marquee waveform. Timing is owned by
+  // the application animation registry.
+  uint16_t marquee_phase_ms_;
 
   roo_display::Color color_;
 };

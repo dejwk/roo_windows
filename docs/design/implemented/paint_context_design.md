@@ -515,11 +515,6 @@ existing geometry and replace direct `canvas` calls with context calls:
 ```cpp
 void Blank::paint(PaintContext& ctx) const { ctx.clear(); }
 
-void ProgressBar::paintWidgetContents(PaintContext& ctx) {
-  Widget::paintWidgetContents(ctx);
-  if (progress_ < 0) setDirty();
-}
-
 void ProgressBar::paint(PaintContext& ctx) const {
   const Theme& th = theme();
   Color bar_color = color_ == color::Transparent ? th.color.primary : color_;
@@ -533,7 +528,8 @@ void ProgressBar::paint(PaintContext& ctx) const {
     return;
   }
 
-  int16_t start = (uint32_t)(millis() % (1024 + 400) - 200) * width() / 1024;
+  int16_t start = static_cast<uint32_t>(marquee_phase_ms_ - 200) *
+                  width() / 1024;
   int16_t end = start + width() / 5;
   if (start < 0) start = 0;
   if (start >= width()) start = width() - 1;

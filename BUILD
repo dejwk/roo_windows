@@ -573,6 +573,19 @@ cc_test(
 )
 
 cc_test(
+    name = "progress_bar_test",
+    srcs = [
+        "test/progress_bar_test.cpp",
+        "test/roo_windows_render_test_support.h",
+    ],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
+cc_test(
     name = "material3_icon_button_golden_test",
     srcs = ["test/material3_icon_button_golden_test.cpp"],
     data = glob([

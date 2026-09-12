@@ -90,6 +90,7 @@ void initDisplay() {
 #include "roo_logging.h"
 #include "roo_windows/widgets/icon.h"
 #include "roo_windows/widgets/image.h"
+#include "roo_windows/widgets/progress_bar.h"
 
 roo_scheduler::Scheduler scheduler;
 Environment env(scheduler);
@@ -237,7 +238,7 @@ class GhostImage : public Image {
   Ghost ghost_;
 };
 
-// A simple vertical pane containing three animated objects. Two of them are
+// A simple vertical pane containing four animated objects. Two of them are
 // Images (based off roo_display::Drawable), implemented as custom classes that
 // fully encapsulate their animation logic. The other demonstrates a simpler and
 // also more general case: any widget can be animated simply by changing some of
@@ -249,10 +250,15 @@ class MyPane : public VerticalLayout {
       : VerticalLayout(context),
         arc_(context),
         ghost_(context),
+        progress_(context),
         warning_icon_(context, ic_filled_36_alert_warning(),
                       color::DarkOrange) {
     add(arc_);
     add(ghost_);
+
+    // Indeterminate ProgressBar subscribes to the same application frame
+    // service only while it is presented with non-empty bounds.
+    add(progress_);
 
     add(warning_icon_);
     AnimationSpec warning = AnimationSpec::customTime();
@@ -276,6 +282,7 @@ class MyPane : public VerticalLayout {
 
   AnimatedArc arc_;
   GhostImage ghost_;
+  ProgressBar progress_;
 
   // The warning icon demonstrates a container-owned animation channel.
   Icon warning_icon_;
