@@ -2,7 +2,6 @@
 #include "roo_windows/widgets/text_field.h"
 
 #include <algorithm>
-#include "roo_windows/internal/single_line_text.h"
 
 #include "roo_backport/string_view.h"
 #include "roo_display/ui/text_label.h"
@@ -11,6 +10,7 @@
 #include "roo_windows/config.h"
 #include "roo_windows/core/application.h"
 #include "roo_windows/core/task.h"
+#include "roo_windows/internal/single_line_text.h"
 
 namespace roo_windows {
 
@@ -172,7 +172,10 @@ TextFieldEditor::~TextFieldEditor() { cancel(); }
 
 void TextFieldEditor::edit(internal::TextEditTarget* target,
                            bool show_software_keyboard) {
-  if (target == nullptr) { finish(false); return; }
+  if (target == nullptr) {
+    finish(false);
+    return;
+  }
   if (target_ == target) {
     application_.activateTextInput(*this);
     if (target_ != target) return;
@@ -204,8 +207,9 @@ bool TextFieldEditor::isEdited(const internal::TextEditTarget* target) const {
 }
 
 bool TextFieldEditor::targetInSubtree(const Widget& subtree) const {
-  for (const Widget* current = target_ == nullptr ? nullptr : &target_->editWidget(); current != nullptr;
-       current = current->parent()) {
+  for (const Widget* current = target_ == nullptr ? nullptr
+                                                  : &target_->editWidget();
+       current != nullptr; current = current->parent()) {
     if (current == &subtree) return true;
   }
   return false;
@@ -261,11 +265,13 @@ void TextFieldEditor::measure() {
       if (i + 1 == count && last_glyph_recently_entered_) {
         roo_io::Utf8Decoder last(roo::string_view(value).substr(offsets_[i]));
         last.next(rune);
-        target_->textFont().getGlyphMetrics(rune, FontLayout::kHorizontal, &glyph);
+        target_->textFont().getGlyphMetrics(rune, FontLayout::kHorizontal,
+                                            &glyph);
       }
       if (i != 0) x += target_->textFontOptions().trackingPx();
       glyphs_[i] = GlyphMetrics(glyph.glyphXMin() + x, glyph.glyphYMin(),
-          glyph.glyphXMax() + x, glyph.glyphYMax(), glyph.advance() + x);
+                                glyph.glyphXMax() + x, glyph.glyphYMax(),
+                                glyph.advance() + x);
       x += glyph.advance();
     }
   }
@@ -310,7 +316,9 @@ void TextFieldEditor::restartCursor() {
   application_.context().animations().cancel(target_->editWidget(), 0);
   blinking_cursor_is_on_ = true;
   target_->notifyEditVisualChange();
-  if (target_->editWidget().presentationState() != PresentationState::kPresented) return;
+  if (target_->editWidget().presentationState() !=
+      PresentationState::kPresented)
+    return;
   AnimationSpec spec = AnimationSpec::CustomTime();
   spec.minimum_interval = kCursorBlinkInterval;
   application_.context().animations().start(target_->editWidget(), 0, spec);
@@ -332,16 +340,18 @@ void TextFieldEditor::applyCursorFrame(internal::TextEditTarget& target,
 }
 
 void TextFieldEditor::rune(uint32_t rune) {
-  if (target_ == nullptr || rune < 0x20 ||
-      (rune >= 0x7f && rune <= 0x9f) || rune > 0x10ffff ||
-      (rune >= 0xd800 && rune <= 0xdfff) || rune == 0x2028 || rune == 0x2029) return;
+  if (target_ == nullptr || rune < 0x20 || (rune >= 0x7f && rune <= 0x9f) ||
+      rune > 0x10ffff || (rune >= 0xd800 && rune <= 0xdfff) || rune == 0x2028 ||
+      rune == 0x2029)
+    return;
   restartCursor();
   last_glyph_hider_.cancel();
   last_glyph_recently_entered_ = false;
   if (!has_selection()) restartLastGlyphRecentlyEntered();
   std::string& val = target_->textBuffer();
   size_t insert_at = cursor_position_ == (int)offsets_.size()
-      ? val.size() : offsets_[cursor_position_];
+                         ? val.size()
+                         : offsets_[cursor_position_];
   if (has_selection()) {
     // Delete the selected text, remove the selection, and set the cursor
     // where there was the selection.
@@ -426,6 +436,7 @@ void TextFieldEditor::del() {
   if (target_ == nullptr) return;
   if (target_->textBuffer().empty()) return;
   last_glyph_recently_entered_ = false;
+  last_glyph_hider_.cancel();
   restartCursor();
   if (has_selection()) {
     // Delete the selected text, remove the selection, and set the cursor
@@ -464,6 +475,7 @@ void TextFieldEditor::forwardDelete() {
   }
   if (cursor_position_ >= static_cast<int16_t>(offsets_.size())) return;
   last_glyph_recently_entered_ = false;
+  last_glyph_hider_.cancel();
   restartCursor();
   std::string& val = target_->textBuffer();
   int16_t saved_pos = cursor_position_;
@@ -604,7 +616,8 @@ bool TextField::onKeyEvent(const KeyEvent& event) {
 namespace roo_windows {
 void TextFieldEditor::refreshMetrics() {
   if (target_ == nullptr) return;
-  int16_t cursor = cursor_position_, begin = selection_begin_, end = selection_end_;
+  int16_t cursor = cursor_position_, begin = selection_begin_,
+          end = selection_end_;
   int16_t anchor = selection_anchor_, offset = draw_xoffset_;
   measure();
   cursor_position_ = std::min<int16_t>(cursor, glyphs_.size());
@@ -615,9 +628,10 @@ void TextFieldEditor::refreshMetrics() {
   target_->notifyEditVisualChange();
 }
 void TextFieldEditor::ensureCursorVisible(int16_t width) {
-  int16_t caret = cursor_position_ == 0 ? 0 : glyphs_[cursor_position_ - 1].advance();
+  int16_t caret =
+      cursor_position_ == 0 ? 0 : glyphs_[cursor_position_ - 1].advance();
   width = std::max<int16_t>(2, width);
   if (caret + draw_xoffset_ > width - 2) draw_xoffset_ = width - 2 - caret;
   if (caret + draw_xoffset_ < 0) draw_xoffset_ = -caret;
 }
-}
+}  // namespace roo_windows

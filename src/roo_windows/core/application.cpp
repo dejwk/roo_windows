@@ -246,9 +246,10 @@ class ApplicationTextInput {
     checkUiThread();
     if (active_editor_ == &editor) return;
     TextFieldEditor* old_editor = active_editor_;
-    active_editor_ = nullptr;
-    if (old_editor != nullptr) old_editor->cancel();
+    // Publish first: a completion callback may activate a third editor or
+    // detach the incoming field. Its decision must not be overwritten here.
     active_editor_ = &editor;
+    if (old_editor != nullptr) old_editor->cancel();
   }
 
   void deactivate(TextFieldEditor& editor) {

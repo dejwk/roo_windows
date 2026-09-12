@@ -8,9 +8,9 @@
 #include "roo_time.h"
 #include "roo_windows/activities/keyboard.h"
 #include "roo_windows/config.h"
-#include "roo_windows/internal/text_edit_target.h"
 #include "roo_windows/core/basic_widget.h"
 #include "roo_windows/core/panel.h"
+#include "roo_windows/internal/text_edit_target.h"
 
 namespace roo_windows {
 
@@ -117,7 +117,8 @@ class TextFieldEditor {
 
   /// Begins editing `target` as the active field; any previously active
   /// field is finished with confirmed=false and unbound first.
-  void edit(internal::TextEditTarget* target, bool show_software_keyboard = true);
+  void edit(internal::TextEditTarget* target,
+            bool show_software_keyboard = true);
 
   /// True iff this editor is currently bound to `target`.
   bool isEdited(const internal::TextEditTarget* target) const;
@@ -162,9 +163,17 @@ class TextFieldEditor {
   void moveHome(bool extend_selection = false);
   void moveEnd(bool extend_selection = false);
 
-  void applyCursorFrame(internal::TextEditTarget& target, const AnimationSample& sample);
+  /// Applies a registry sample to the matching active target.
+  void applyCursorFrame(internal::TextEditTarget& target,
+                        const AnimationSample& sample);
+
+  /// Remeasures masking/font state while retaining selection and caret.
   void refreshMetrics();
+
+  /// Remeasures a replaced value, clears selection and cancels recent reveal.
   void resetMetrics();
+
+  /// Adjusts the horizontal offset to keep the caret in the given viewport.
   void ensureCursorVisible(int16_t viewport_width);
 
  private:
@@ -173,7 +182,6 @@ class TextFieldEditor {
   void measure();
   void restartCursor();
   void stopCursor(internal::TextEditTarget& target);
-
 
   void restartLastGlyphRecentlyEntered();
   void hideLastGlyph();
@@ -229,6 +237,10 @@ class TextField : public BasicWidget, public internal::TextEditTarget {
         alignment_(alignment),
         editable_(true) {}
 
+  ~TextField() override {
+    if (isEdited()) editor().cancel();
+  }
+
   bool isClickable() const override { return true; }
 
   Widget& editWidget() override { return *this; }
@@ -270,7 +282,7 @@ class TextField : public BasicWidget, public internal::TextEditTarget {
   void setStarred(bool starred) {
     if (starred == starred_) return;
     starred_ = starred;
-    if (isEdited()) editor().measure();
+    if (isEdited()) editor().refreshMetrics();
     setDirty();
   }
 
@@ -326,7 +338,7 @@ class TextField : public BasicWidget, public internal::TextEditTarget {
   void setContent(std::string value) {
     if (value_ == value) return;
     value_ = std::move(value);
-    if (isEdited()) editor().measure();
+    if (isEdited()) editor().resetMetrics();
     setDirty();
   }
 

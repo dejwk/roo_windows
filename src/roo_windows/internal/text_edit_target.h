@@ -1,7 +1,9 @@
 #pragma once
 #include <string>
+
 #include "roo_windows/core/widget.h"
-namespace roo_windows { namespace internal {
+namespace roo_windows {
+namespace internal {
 // Adapter to the task-local editor, including widget lifetime and animation.
 class TextEditTarget {
  public:
@@ -17,4 +19,5 @@ class TextEditTarget {
   virtual void notifyTextChanged() {}
   virtual void onEditFinished(bool confirmed) = 0;
 };
-} }
+}  // namespace internal
+}  // namespace roo_windows
