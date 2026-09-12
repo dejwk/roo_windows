@@ -13,7 +13,7 @@ class TransientSurfaceHost;
 }
 
 /// Tracks the lifecycle of a transient presentation.
-enum class PresentationState : uint8_t {
+enum class TransientPresentationState : uint8_t {
   kIdle,
   kVisible,
   kFinishing,
@@ -69,10 +69,10 @@ class TransientPresentationRegistration {
       const TransientPresentationRegistration&) = delete;
 
   /// Returns the presentation lifecycle state.
-  PresentationState state() const { return state_; }
+  TransientPresentationState state() const { return state_; }
 
   /// Returns whether this registration currently occupies a slot.
-  bool isActive() const { return state_ != PresentationState::kIdle; }
+  bool isActive() const { return state_ != TransientPresentationState::kIdle; }
 
   /// Finishes a visible presentation through its registered host slot.
   ///
@@ -114,7 +114,7 @@ class TransientPresentationRegistration {
   friend class internal::TransientSurfaceHost;
 
   TransientPresentationSlot* slot_ = nullptr;
-  PresentationState state_ = PresentationState::kIdle;
+  TransientPresentationState state_ = TransientPresentationState::kIdle;
   uint8_t policy_ = 0;
 };
 
@@ -152,6 +152,9 @@ class TransientPresentationSlot {
   friend class DisplayWindow;
   friend class TransientPresentationRegistration;
   friend class internal::TransientSurfaceHost;
+
+  /// Returns whether this slot permanently rejects new presentations.
+  bool isAdmissionClosed() const { return admission_closed_; }
 
   class AdmissionGuard {
    public:

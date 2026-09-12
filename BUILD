@@ -67,6 +67,16 @@ cc_test(
 )
 
 cc_test(
+    name = "presentation_registry_test",
+    srcs = ["test/presentation_registry_test.cpp"],
+    linkstatic = 1,
+    deps = [
+        ":roo_windows",
+        "@roo_testing//:arduino_gtest_main",
+    ],
+)
+
+cc_test(
     name = "shared_scheduler_drive_test",
     srcs = ["test/shared_scheduler_drive_test.cpp"],
     linkstatic = 1,

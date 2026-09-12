@@ -41,6 +41,10 @@ class MainWindow : public Container {
 
   MainWindow* getMainWindow() override { return this; }
   const MainWindow* getMainWindow() const override { return this; }
+  /// Returns whether this window has begun permanent teardown.
+  bool isShuttingDown() const {
+    return transient_presentation_slot_.isAdmissionClosed();
+  }
 
   /// Performs a single paint pass onto the supplied display surface, bounded
   /// by `deadline`. Returns false when the deadline interrupted painting.

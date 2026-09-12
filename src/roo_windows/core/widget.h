@@ -23,6 +23,7 @@
 #include "roo_windows/core/paint_context.h"
 #include "roo_windows/core/preferred_size.h"
 #include "roo_windows/core/presentation_pin.h"
+#include "roo_windows/core/presentation_registry.h"
 #include "roo_windows/core/rect.h"
 #include "roo_windows/core/theme.h"
 #include "roo_windows/core/touch_event.h"
@@ -294,6 +295,18 @@ class Widget {
 
   virtual MainWindow* getMainWindow();
   virtual const MainWindow* getMainWindow() const;
+
+  /// Returns this widget's current effective presentation state.
+  ///
+  /// A widget is presented only when it reaches a live MainWindow and every
+  /// widget in that parent chain is visible. Zero-sized widgets remain
+  /// presented; geometry and occlusion are outside this classification.
+  PresentationState presentationState() const;
+
+  /// Returns whether this widget is currently attached and visible.
+  bool isPresented() const {
+    return presentationState() == PresentationState::kPresented;
+  }
 
   virtual Task* getTask();
   virtual const Task* getTask() const;

@@ -84,7 +84,7 @@ PresentationStartResult TransientPresentationSlot::show(
   active_ = &registration;
   registration.slot_ = this;
   registration.policy_ = EncodePolicy(policy);
-  registration.state_ = PresentationState::kVisible;
+  registration.state_ = TransientPresentationState::kVisible;
   return PresentationStartResult::kStarted;
 }
 
@@ -110,7 +110,7 @@ BackResult TransientPresentationSlot::requestBack(BackSource source) {
   }
   // Preserve transient input isolation while its final feedback frame is
   // pending; the stored byte contains the finish reason rather than policy.
-  if (registration->state_ == PresentationState::kFinishing) {
+  if (registration->state_ == TransientPresentationState::kFinishing) {
     return BackResult::kHandled;
   }
   if (!IsBackAllowed(registration->policy_, source)) {
@@ -121,7 +121,7 @@ BackResult TransientPresentationSlot::requestBack(BackSource source) {
 
 void TransientPresentationSlot::clear(PresentationFinishReason reason) {
   if (active_ == nullptr) return;
-  if (active_->state_ == PresentationState::kFinishing &&
+  if (active_->state_ == TransientPresentationState::kFinishing &&
       !AllowsFeedbackCompletion(reason)) {
     finishNow(*active_, reason);
     return;
@@ -153,7 +153,7 @@ PresentationStartResult TransientPresentationSlot::showHosted(
   active_host_ = &host;
   registration.slot_ = this;
   registration.policy_ = EncodePolicy(policy);
-  registration.state_ = PresentationState::kVisible;
+  registration.state_ = TransientPresentationState::kVisible;
   return PresentationStartResult::kStarted;
 }
 
@@ -166,14 +166,14 @@ void TransientPresentationSlot::finish(
     TransientPresentationRegistration& registration,
     PresentationFinishReason reason) {
   if (active_ != &registration || clearing_) return;
-  if (registration.state_ == PresentationState::kFinishing) {
+  if (registration.state_ == TransientPresentationState::kFinishing) {
     // Ordinary finish requests are idempotent and preserve the first terminal
     // reason. A lifetime-ending request instead preempts visual feedback so no
     // dying owner or host remains borrowed across a refresh.
     if (!AllowsFeedbackCompletion(reason)) finishNow(registration, reason);
     return;
   }
-  if (registration.state_ != PresentationState::kVisible) return;
+  if (registration.state_ != TransientPresentationState::kVisible) return;
 
   if (active_host_ != nullptr && AllowsFeedbackCompletion(reason) &&
       active_host_->forceFinalClickFrame(registration)) {
@@ -182,7 +182,7 @@ void TransientPresentationSlot::finish(
     // unconfirmed press remains canceled. Keep the tree attached so that exact
     // state can produce one final frame, but close every input path now.
     active_host_->disableHostedInput(registration);
-    registration.state_ = PresentationState::kFinishing;
+    registration.state_ = TransientPresentationState::kFinishing;
     // The input policy is no longer observable once finishing begins, so its
     // byte stores the deferred terminal reason without increasing footprint.
     registration.policy_ = static_cast<uint8_t>(reason);
@@ -199,7 +199,7 @@ void TransientPresentationSlot::finishNow(
   // delivery follows it. Consequently detach hooks cannot reenter admission,
   // but onFinished() may safely admit the next presentation.
   clearing_ = true;
-  registration.state_ = PresentationState::kFinishing;
+  registration.state_ = TransientPresentationState::kFinishing;
   if (active_host_ != nullptr) active_host_->disableHostedInput(registration);
   registration.detachPresentation(reason);
   if (active_host_ != nullptr) {
@@ -209,7 +209,7 @@ void TransientPresentationSlot::finishNow(
   active_host_ = nullptr;
   registration.slot_ = nullptr;
   registration.policy_ = 0;
-  registration.state_ = PresentationState::kIdle;
+  registration.state_ = TransientPresentationState::kIdle;
   clearing_ = false;
   registration.onFinished(reason);
 }
@@ -219,7 +219,7 @@ bool TransientPresentationSlot::finishDeferredIfReady() {
   // after a completed refresh (or explicit cancellation). Therefore losing the
   // hosted target is the settlement boundary, not merely reaching progress 1.
   if (active_ == nullptr || active_host_ == nullptr || clearing_ ||
-      active_->state_ != PresentationState::kFinishing ||
+      active_->state_ != TransientPresentationState::kFinishing ||
       active_host_->hasClickFeedbackInHostedTree(*active_)) {
     return false;
   }
@@ -244,7 +244,7 @@ void TransientPresentationSlot::cancel(
   if (active_ == nullptr) active_host_ = nullptr;
   registration.slot_ = nullptr;
   registration.policy_ = 0;
-  registration.state_ = PresentationState::kIdle;
+  registration.state_ = TransientPresentationState::kIdle;
 }
 
 }  // namespace roo_windows

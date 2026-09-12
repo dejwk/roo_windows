@@ -92,6 +92,22 @@ const MainWindow* Widget::getMainWindow() const {
   return parent_ == nullptr ? nullptr : parent_->getMainWindow();
 }
 
+PresentationState Widget::presentationState() const {
+  if (tryContext() == nullptr) return PresentationState::kDetached;
+
+  const MainWindow* root = getMainWindow();
+  if (root == nullptr || root->isShuttingDown()) {
+    return PresentationState::kDetached;
+  }
+
+  for (const Widget* current = this; current != nullptr;
+       current = current->parent()) {
+    if (!current->isVisible()) return PresentationState::kHidden;
+    if (current == root) return PresentationState::kPresented;
+  }
+  return PresentationState::kDetached;
+}
+
 Task* Widget::getTask() {
   return parent_ == nullptr ? nullptr : parent_->getTask();
 }
@@ -852,9 +868,8 @@ void Widget::onSingleTapUp(XDim x, YDim y) {
     // Quick release (onShowPress not yet triggered).
     if (anim == nullptr) return;
     ClickActivationPolicy policy = getClickActivationPolicy();
-    bool animated =
-        policy != ClickActivationPolicy::kAfterRefreshNoAnimation &&
-        policy != ClickActivationPolicy::kImmediateNoAnimation;
+    bool animated = policy != ClickActivationPolicy::kAfterRefreshNoAnimation &&
+                    policy != ClickActivationPolicy::kImmediateNoAnimation;
     if (animated) {
       if (!anim->tryStart(*this, x, y)) return;
       setClicking();
