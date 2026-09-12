@@ -370,7 +370,9 @@ One ticker execution performs these phases in order:
    transitions, with input winning equal-timestamp ties.
 4. Handle other application-owned UI events that are ready.
 5. Attempt at most one paint slice when immediate or deadline-owned paint is
-   due.
+   due. On a new logical frame, deliver pending presentation notifications and
+   run the proposed generic animation registry's due samples before layout/paint.
+   A retained paint continuation skips animation sampling.
 6. Collect immediate continuation needs and the earliest gesture, animation,
    and delayed-paint deadline.
 7. Return no deadline when the application is clean and no timed work remains.
@@ -382,6 +384,15 @@ click settlement and paint continuation contracts.
 Consuming a complete key budget, interrupted painting, or ordinary invalidation
 created after the paint slice returns an immediate deadline. Otherwise the
 ticker uses the minimum of the outstanding timed deadlines.
+
+The proposed [widget animation registry](../proposed/widget_animation_registry_design.md)
+adds an explicit deadline source to step 6 and a pre-layout sample pass to step 5.
+It does not move existing window-owned click advancement from step 1. Its update
+hooks can request dirty/layout work consumed by the current paint; that work
+must not cause a recursive immediate animation pass. During a retained paint
+continuation, its overdue sample deadlines wait until a new frame is permitted.
+This preserves coherent samples while allowing the ticker to resume paint
+immediately. See the registry design for delay and minimum-interval rules.
 
 ### Invalidation, paint continuation, and animation
 
@@ -654,6 +665,12 @@ Proposed commit message:
 > `display_event_driven_input_design.md`.
 
 ### Phase 5: give animations explicit frame deadlines
+
+The [generic registry](../proposed/widget_animation_registry_design.md) publishes
+explicit deadlines in its own initial implementation. Its consumers need no
+`requestAnimationFrameAt()` calls. The helper below remains the compatibility
+path for unmigrated click/paint-driven animations; the fallback cannot be removed
+until both paths and every legacy source have been audited.
 
 Add `requestAnimationFrameAt()` without increasing base widget size. Migrate
 click feedback and every widget that self-dirties from its paint path before

@@ -79,7 +79,9 @@ Status was audited against the source tree and tests on 2026-09-05. “Dependenc
 | FAB | Buttons, icon buttons, and theme support are implemented; the FAB family is not. |
 | Interaction overlay reveal | Point and area ripples, widget-local click animation, paint context, and the navigation bar's component-local fade are implemented; shared fade reveal and paint-owned overlay policy are not. |
 | Navigation drawer | List support and basic dialogs are implemented and back routing exists; no drawer implementation exists. |
-| [Progress indicators](proposed/material3_progress_indicators_design.md) | P2.2 design is complete; the no-storage subtree presentation-lifecycle notification, linear/circular widgets, animation controller, and target verification remain proposed P2.3 work. |
+| [Presentation registry](implemented/presentation_registry_design.md) | Effective presentation queries and targeted deferred widget notifications are implemented; consumers choose their lifecycle policies. |
+| [Widget animation registry](proposed/widget_animation_registry_design.md) | Proposed shared frame driving, tagged playback and terminal-paint settlement; depends on the presentation registry. Click migration is deferred. |
+| [Progress indicators](proposed/material3_progress_indicators_design.md) | Material component design uses the proposed presentation and widget animation registries; P2.3 implementation includes those prerequisites. |
 | Segmented buttons | Buttons are implemented; the superseding button-group design and this legacy component design are not implemented. |
 | Sheets | Paint/overflow foundations, icon buttons, and shared back behavior are implemented; the sheet family is not. Before implementation, modal sheets must be reconciled to use the P1.6b shared host with explicit task ownership, host-owned barrier paint, presenter-owned focus, and presenter-handled outside dismissal. |
 | Split button | Buttons, icon buttons, non-touch input, and menus are implemented; split buttons remain proposed. |

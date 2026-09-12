@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="250" viewBox="0 0 860 250" role="img" aria-labelledby="title desc">
+<title id="title">Animation updates and interrupted paint</title><desc id="desc">A new frame delivers presentation changes, samples tracks, lays out and paints. An interrupted paint resumes with the same sample. A completed paint permits a new animation sample.</desc>
+<rect width="860" height="250" fill="white"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10Z" fill="#475569"/></marker></defs>
+<g font-family="sans-serif" font-size="14" fill="#253047">
+<text x="20" y="27" font-size="18">One sample per logical frame; no animation advancement during continuation</text>
+<g fill="#f5f3ff" stroke="#6750a4"><rect x="20" y="58" width="165" height="60" rx="6"/><rect x="215" y="58" width="165" height="60" rx="6"/><rect x="410" y="58" width="150" height="60" rx="6"/><rect x="590" y="58" width="100" height="60" rx="6"/><rect x="590" y="175" width="235" height="50" rx="6"/></g>
+<text x="34" y="84">Deliver presentation</text><text x="34" y="103">Widget reacts</text><text x="229" y="84">Sample all due tracks</text><text x="229" y="103">Update widget state</text><text x="425" y="84">Layout once</text><text x="425" y="103">Deliver changes</text><text x="607" y="94">Paint</text><text x="606" y="197">Complete logical frame</text><text x="606" y="216">Next sample permitted</text>
+<g fill="none" stroke="#475569" stroke-width="1.5" marker-end="url(#a)"><path d="M185 88 H211"/><path d="M380 88 H406"/><path d="M560 88 H586"/><path d="M640 118 V171"/><path d="M690 78 H816 V143 H674 V121"/></g>
+<text x="710" y="67">Interrupted?</text><text x="709" y="163">Resume same state</text><text x="25" y="177">Handlers mark bounded ink dirty or request layout.</text><text x="25" y="201">Painting resolves foreground and ancestor surfaces once.</text><text x="25" y="225">The next new frame skips unseen elapsed-time samples.</text>
+</g></svg>
