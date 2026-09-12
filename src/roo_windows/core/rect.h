@@ -77,9 +77,9 @@ class Rect {
 
   bool empty() const { return xMax() < xMin() || yMax() < yMin(); }
   XDim xMin() const { return xMin_; }
-  YDim yMin() const { return ((int32_t)yMinHi_) << 16 | yMinLo_; }
+  YDim yMin() const { return static_cast<int32_t>(yMinHi_) * 65536 + yMinLo_; }
   XDim xMax() const { return xMax_; }
-  YDim yMax() const { return ((int32_t)yMaxHi_) << 16 | yMaxLo_; }
+  YDim yMax() const { return static_cast<int32_t>(yMaxHi_) * 65536 + yMaxLo_; }
   XDim width() const { return xMax() - xMin() + 1; }
   YDim height() const { return yMax() - yMin() + 1; }
 

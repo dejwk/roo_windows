@@ -1003,3 +1003,22 @@ TEST_F(RooWindowsRenderTest, DrawTiledIgnoresEmptyBoundsWithoutBorder) {
 }
 
 }  // namespace roo_windows
+
+// Verifies signed 24-bit Y reconstruction without shifting negative signed
+// values, including both packing boundaries and the empty-rectangle sentinel.
+TEST(RectTest, PackedNegativeCoordinatesAreDefined) {
+  for (int32_t y : {-8388608, -65537, -65536, -1, 0, 65535, 65536, 8388607}) {
+    roo_windows::Rect rect(-2, y, 2, y);
+    EXPECT_EQ(y, rect.yMin());
+    EXPECT_EQ(y, rect.yMax());
+    EXPECT_EQ(1, rect.height());
+    EXPECT_TRUE(rect.contains(0, y));
+  }
+  roo_windows::Rect empty(0, 0, -1, -1);
+  EXPECT_TRUE(empty.empty());
+  EXPECT_EQ(-1, empty.yMax());
+  roo_windows::Rect moved =
+      roo_windows::Rect(0, -65537, 2, -65535).translate(0, 65536);
+  EXPECT_EQ(-1, moved.yMin());
+  EXPECT_EQ(1, moved.yMax());
+}
