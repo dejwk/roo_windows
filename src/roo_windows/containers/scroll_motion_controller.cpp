@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 #include "roo_windows/core/gesture_detector.h"
 
@@ -13,8 +14,8 @@ namespace {
 constexpr float kDeceleration = 300.0f;
 constexpr float kMaxVelocity = 5000.0f;
 constexpr int16_t kMaxOvershootPx = Scaled(40);
-constexpr unsigned long kSpringBackDurationMs = 500;
-constexpr unsigned long kProgrammaticScrollDurationMs = 250;
+constexpr TimestampMillis kSpringBackDurationMs = 500;
+constexpr TimestampMillis kProgrammaticScrollDurationMs = 250;
 
 template <typename T>
 T Clamp(T input, T min_val, T max_val) {
@@ -26,6 +27,20 @@ T Clamp(T input, T min_val, T max_val) {
 Result MakeResult(const Geometry& geometry, XDim x, YDim y, bool changed,
                   bool needs_tick) {
   return {x, y, changed, needs_tick, geometry.isInOvershoot(x, y)};
+}
+
+TimestampMillis AddSaturated(TimestampMillis start,
+                             TimestampMillis duration) {
+  const TimestampMillis max = std::numeric_limits<TimestampMillis>::max();
+  return start > max - duration ? max : start + duration;
+}
+
+TimestampMillis ElapsedSince(TimestampMillis now, TimestampMillis start) {
+  if (now <= start) return 0;
+  if (start < 0 && now > std::numeric_limits<TimestampMillis>::max() + start) {
+    return std::numeric_limits<TimestampMillis>::max();
+  }
+  return now - start;
 }
 
 // Returns a damped signed overshoot that asymptotically approaches the maximum
@@ -122,7 +137,7 @@ Result State::scrollToDraggedRaw(const Geometry& geometry, XDim current_x,
 }
 
 Result State::startSpringBack(const Geometry& geometry, XDim current_x,
-                              YDim current_y, unsigned long now_ms) {
+                              YDim current_y, TimestampMillis now_ms) {
   if (!geometry.isInOvershoot(current_x, current_y)) {
     return MakeResult(geometry, current_x, current_y, false, false);
   }
@@ -146,7 +161,7 @@ Result State::scrollTo(const Geometry& geometry, XDim current_x, YDim current_y,
 
 Result State::animateTo(const Geometry& geometry, XDim current_x,
                         YDim current_y, XDim target_x, YDim target_y,
-                        unsigned long now_ms) {
+                        TimestampMillis now_ms) {
   target_x = geometry.clampX(target_x);
   target_y = geometry.clampY(target_y);
   if (current_x == target_x && current_y == target_y) {
@@ -192,7 +207,7 @@ Result State::onDrag(const Geometry& geometry, XDim current_x, YDim current_y,
 }
 
 Result State::onFling(const Geometry& geometry, XDim current_x, YDim current_y,
-                      XDim vx, YDim vy, unsigned long now_ms) {
+                      XDim vx, YDim vy, TimestampMillis now_ms) {
   if (!geometry.canScroll()) {
     return MakeResult(geometry, current_x, current_y, false, false);
   }
@@ -234,9 +249,9 @@ Result State::onFling(const Geometry& geometry, XDim current_x, YDim current_y,
     v_abs = kMaxVelocity;
   }
 
-  unsigned long duration_ms =
-      static_cast<unsigned long>(1000.0f * v_abs / kDeceleration);
-  anim_.fling.end_time_ms = anim_.fling.start_time_ms + duration_ms;
+  TimestampMillis duration_ms =
+      static_cast<TimestampMillis>(1000.0f * v_abs / kDeceleration);
+  anim_.fling.end_time_ms = AddSaturated(anim_.fling.start_time_ms, duration_ms);
   anim_.fling.decel_x = -kDeceleration * anim_.fling.start_vx / v_abs;
   anim_.fling.decel_y = -kDeceleration * anim_.fling.start_vy / v_abs;
 
@@ -249,7 +264,7 @@ Result State::onFling(const Geometry& geometry, XDim current_x, YDim current_y,
 }
 
 Result State::onTouchUp(const Geometry& geometry, XDim current_x,
-                        YDim current_y, unsigned long now_ms) {
+                        YDim current_y, TimestampMillis now_ms) {
   if (phase_ != Phase::kFlinging) {
     phase_ = Phase::kIdle;
     return startSpringBack(geometry, current_x, current_y, now_ms);
@@ -258,9 +273,10 @@ Result State::onTouchUp(const Geometry& geometry, XDim current_x,
 }
 
 Result State::tick(const Geometry& geometry, XDim current_x, YDim current_y,
-                   unsigned long now_ms) {
+                   TimestampMillis now_ms) {
   if (phase_ == Phase::kProgrammatic) {
-    unsigned long elapsed = now_ms - anim_.programmatic.start_time_ms;
+    TimestampMillis elapsed =
+        ElapsedSince(now_ms, anim_.programmatic.start_time_ms);
     if (elapsed >= kProgrammaticScrollDurationMs) {
       phase_ = Phase::kIdle;
       return scrollToRaw(geometry, current_x, current_y,
@@ -282,8 +298,9 @@ Result State::tick(const Geometry& geometry, XDim current_x, YDim current_y,
   }
 
   if (phase_ == Phase::kSpringBack) {
-    float t =
-        static_cast<float>(now_ms - anim_.springback.start_time_ms) / 1000.0f;
+    float t = static_cast<float>(
+                  ElapsedSince(now_ms, anim_.springback.start_time_ms)) /
+              1000.0f;
     const float duration = kSpringBackDurationMs / 1000.0f;
     if (t >= duration) {
       phase_ = Phase::kIdle;
@@ -306,13 +323,15 @@ Result State::tick(const Geometry& geometry, XDim current_x, YDim current_y,
   }
 
   bool scroll_in_progress = true;
-  unsigned long t_end = now_ms;
-  if (static_cast<long>(t_end - anim_.fling.end_time_ms) >= 0) {
+  TimestampMillis t_end = now_ms;
+  if (t_end >= anim_.fling.end_time_ms) {
     t_end = anim_.fling.end_time_ms;
     scroll_in_progress = false;
   }
 
-  float t = (t_end - anim_.fling.start_time_ms) / 1000.0f;
+  float t = static_cast<float>(
+                ElapsedSince(t_end, anim_.fling.start_time_ms)) /
+            1000.0f;
   XDim target_x = current_x;
   YDim target_y = current_y;
   if (anim_.fling.start_vx != 0) {

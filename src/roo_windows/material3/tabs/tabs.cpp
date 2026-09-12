@@ -916,7 +916,8 @@ void ScrollableTabs::onFling(XDim x, YDim y, XDim vx, YDim vy) {
   (void)vy;
   if (mode() != TabsMode::kScrollable) return;
   scroll_motion::Result result =
-      scroll_motion_.onFling(motionGeometry(), scroll_x_, 0, vx, 0, millis());
+      scroll_motion_.onFling(motionGeometry(), scroll_x_, 0, vx, 0,
+                             roo_time::Uptime::Now().inMillis());
   applyScrollResult(result);
   if (result.needs_tick) scheduleScrollUpdate();
 }
@@ -926,7 +927,8 @@ void ScrollableTabs::onDragFinished(XDim x, YDim y) {
   (void)y;
   if (mode() == TabsMode::kScrollable) {
     scroll_motion::Result result =
-        scroll_motion_.onTouchUp(motionGeometry(), scroll_x_, 0, millis());
+        scroll_motion_.onTouchUp(motionGeometry(), scroll_x_, 0,
+                                 roo_time::Uptime::Now().inMillis());
     applyScrollResult(result);
     if (result.needs_tick) scheduleScrollUpdate();
   }
@@ -945,7 +947,8 @@ void ScrollableTabs::execute(roo_scheduler::ExecutionID id) {
   }
   scroll_notification_id_ = -1;
   scroll_motion::Result result =
-      scroll_motion_.tick(motionGeometry(), scroll_x_, 0, millis());
+      scroll_motion_.tick(motionGeometry(), scroll_x_, 0,
+                          roo_time::Uptime::Now().inMillis());
   applyScrollResult(result);
   if (result.needs_tick) scheduleScrollUpdate();
 }
@@ -992,7 +995,7 @@ void ScrollableTabs::revealSelectedTab(bool animate) {
   scroll_motion::Result result =
       animate
           ? scroll_motion_.animateTo(motionGeometry(), scroll_x_, 0, target, 0,
-                                     millis())
+                                     roo_time::Uptime::Now().inMillis())
           : scroll_motion_.scrollTo(motionGeometry(), scroll_x_, 0, target, 0);
   applyScrollResult(result);
   if (result.needs_tick) scheduleScrollUpdate();

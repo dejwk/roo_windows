@@ -8,6 +8,9 @@ namespace roo_windows {
 
 namespace scroll_motion {
 
+/// Signed millisecond timestamp. All values in one motion share one epoch.
+using TimestampMillis = int64_t;
+
 /// Axes on which drag/fling motion is allowed.
 enum class Axis : uint8_t {
   kHorizontal,
@@ -106,7 +109,7 @@ class State {
                   XDim target_x, YDim target_y);
   /// Starts an eased animation to the requested content origin.
   Result animateTo(const Geometry& geometry, XDim current_x, YDim current_y,
-                   XDim target_x, YDim target_y, unsigned long now_ms);
+                   XDim target_x, YDim target_y, TimestampMillis now_ms);
   /// Starts a drag gesture and interrupts any in-flight animation.
   Result onDown(const Geometry& geometry, XDim current_x, YDim current_y);
   /// Applies a drag delta, preserving raw overshoot for resistance damping.
@@ -114,13 +117,13 @@ class State {
                 XDim dx, YDim dy);
   /// Starts a decelerating fling seeded from release velocity.
   Result onFling(const Geometry& geometry, XDim current_x, YDim current_y,
-                 XDim vx, YDim vy, unsigned long now_ms);
+                 XDim vx, YDim vy, TimestampMillis now_ms);
   /// Ends direct touch input, starting spring-back if release is in overshoot.
   Result onTouchUp(const Geometry& geometry, XDim current_x, YDim current_y,
-                   unsigned long now_ms);
+                   TimestampMillis now_ms);
   /// Advances the active fling or spring-back animation.
   Result tick(const Geometry& geometry, XDim current_x, YDim current_y,
-              unsigned long now_ms);
+              TimestampMillis now_ms);
 
  private:
   /// Applies an unclamped visual origin, masking disabled axes to zero.
@@ -131,7 +134,7 @@ class State {
                             YDim current_y, XDim raw_x, YDim raw_y) const;
   /// Starts spring-back animation toward the nearest in-bounds origin.
   Result startSpringBack(const Geometry& geometry, XDim current_x,
-                         YDim current_y, unsigned long now_ms);
+                         YDim current_y, TimestampMillis now_ms);
 
   Phase phase_;
   union {
@@ -140,8 +143,8 @@ class State {
       YDim raw_y;
     } drag;
     struct {
-      unsigned long start_time_ms;
-      unsigned long end_time_ms;
+      TimestampMillis start_time_ms;
+      TimestampMillis end_time_ms;
       float start_vx;
       float start_vy;
       float decel_x;
@@ -150,14 +153,14 @@ class State {
       YDim y_start;
     } fling;
     struct {
-      unsigned long start_time_ms;
+      TimestampMillis start_time_ms;
       XDim start_ox;
       YDim start_oy;
       XDim target_x;
       YDim target_y;
     } springback;
     struct {
-      unsigned long start_time_ms;
+      TimestampMillis start_time_ms;
       XDim start_x;
       YDim start_y;
       XDim target_x;

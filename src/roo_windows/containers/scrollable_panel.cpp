@@ -247,7 +247,8 @@ void SimpleScrollablePanel::execute(roo_scheduler::EventID id) {
   if (!motion_.isAnimating()) return;
   ScrollPosition current = currentScrollPosition();
   scroll_motion::Result result =
-      motion_.tick(motionGeometry(), current.x, current.y, millis());
+      motion_.tick(motionGeometry(), current.x, current.y,
+                   roo_time::Uptime::Now().inMillis());
   applyScrollResult(result);
   if (result.needs_tick) {
     scheduleScrollAnimationUpdate();
@@ -463,7 +464,8 @@ void SimpleScrollablePanel::onFling(XDim x, YDim y, XDim vx, YDim vy) {
   }
   ScrollPosition current = currentScrollPosition();
   scroll_motion::Result result =
-      motion_.onFling(motionGeometry(), current.x, current.y, vx, vy, millis());
+      motion_.onFling(motionGeometry(), current.x, current.y, vx, vy,
+                      roo_time::Uptime::Now().inMillis());
   applyScrollResult(result);
   if (result.needs_tick) scheduleScrollAnimationUpdate();
 }
@@ -476,7 +478,8 @@ void SimpleScrollablePanel::onDragFinished(XDim vx, YDim vy) {
   if (contents() != nullptr) {
     ScrollPosition current = currentScrollPosition();
     scroll_motion::Result scroll_result =
-        motion_.onTouchUp(motionGeometry(), current.x, current.y, millis());
+        motion_.onTouchUp(motionGeometry(), current.x, current.y,
+                          roo_time::Uptime::Now().inMillis());
     applyScrollResult(scroll_result);
     if (scroll_result.needs_tick) {
       scheduleScrollAnimationUpdate();

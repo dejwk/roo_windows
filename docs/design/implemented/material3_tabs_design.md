@@ -448,12 +448,21 @@ by laying out the tab strip at `strip_x + scroll_x`, recalculates indicator
 bounds from the translated tab geometry, and invalidates the tab-row viewport.
 Plain fixed `Tabs` does not store the scroll-motion state at all.
 
+The helper's time boundary is `TimestampMillis`, a signed 64-bit millisecond
+value. Every timestamp supplied during one motion must use the same epoch.
+Existing scheduler consumers temporarily pass `Uptime::Now().inMillis()`;
+registry consumers reset a new motion to track-relative zero. This avoids the
+platform-width and wrap behavior of Arduino `unsigned long`. The wider fields
+raise the estimated ESP32 `State` footprint from roughly 32 B to 48 B; the
+64-bit host size remains capped at 48 B.
+
 An illustrative API shape:
 
 ```cpp
 namespace scroll_motion {
 
 enum class Axis { kHorizontal, kVertical, kBoth };
+using TimestampMillis = int64_t;
 
 class Geometry {
  public:
@@ -470,9 +479,9 @@ class State {
   Result onDrag(const Geometry& geometry, XDim current_x, YDim current_y,
                 XDim dx, YDim dy);
   Result onFling(const Geometry& geometry, XDim current_x, YDim current_y,
-                 XDim vx, YDim vy, unsigned long now_ms);
+                 XDim vx, YDim vy, TimestampMillis now_ms);
   Result tick(const Geometry& geometry, XDim current_x, YDim current_y,
-              unsigned long now_ms);
+              TimestampMillis now_ms);
 };
 
 struct Result {
