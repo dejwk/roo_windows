@@ -85,7 +85,7 @@ Status was audited against the source tree and tests on 2026-09-12. “Dependenc
 | Segmented buttons | Buttons are implemented; the superseding button-group design and this legacy component design are not implemented. |
 | Sheets | Paint/overflow foundations, icon buttons, and shared back behavior are implemented; the sheet family is not. Before implementation, modal sheets must be reconciled to use the P1.6b shared host with explicit task ownership, host-owned barrier paint, presenter-owned focus, and presenter-handled outside dismissal. |
 | Split button | Buttons, icon buttons, non-touch input, and menus are implemented; split buttons remain proposed. |
-| Text fields | Paint context, non-touch input, icon buttons, and supporting menus are implemented; the text-field family is proposed. |
+| [Text fields](proposed/material3_text_fields_design.md) | Reviewed 2026-09-12 against task-owned editing, application semantic input, animation and Material 3 typography. The field family and abstract edit-target seam remain proposed; focused-idle activation is a new-family policy. |
 | Time pickers | Buttons, icon buttons, basic dialogs, and shared back behavior are implemented; text fields and picker-specific integration remain proposed. |
 | Toolbars | Buttons, icon buttons, and menus are implemented; FABs and toolbars are proposed. |
 | Wi-Fi configuration | Existing Wi-Fi transport/configuration APIs are external prerequisites; the Material 3 screen design and its text-field/dialog dependencies are not implemented. |

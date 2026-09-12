@@ -662,7 +662,7 @@ Text entry has its own task-local editor. The implemented editor provides:
 - forward Delete and backward deletion,
 - and task-local focus-versus-edit ownership.
 
-The implemented policy is:
+The implemented legacy `roo_windows::TextField` policy is:
 
 - when an editable text field gains focus, it enters edit mode immediately,
 - typed characters go straight to the shared editor,
@@ -672,7 +672,11 @@ The implemented policy is:
 - and hardware-key focus does not automatically show the software keyboard.
 
 This preserves the current touch-only software-keyboard path while making the
-field usable on keyboard-only targets.
+field usable on keyboard-only targets. The proposed
+[Material 3 text-field family](../proposed/material3_text_fields_design.md)
+chooses focused-idle traversal and explicit edit activation through its own
+`onKeyEvent()` handling. That additive policy does not change legacy behavior
+or the task-wide dispatch contract.
 
 #### Compound and Structured Controls
 

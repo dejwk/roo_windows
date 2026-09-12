@@ -2,13 +2,15 @@
 
 ## Implementation status
 
-**Proposed.** None of the defined scope is implemented. The status of existing and outstanding prerequisites is recorded in the [status index](../README.md).
+**Proposed.** None of the defined scope has landed. Reviewed against the
+committed runtime on 2026-09-12. Existing and outstanding prerequisites are
+recorded in the [status index](../README.md).
 
 ## Objective
 
 Add a Material 3 text-field family to `roo_windows` that fits the framework's
-embedded-first widget model and closes directly on the current application-
-owned keyboard and text-editing infrastructure.
+embedded-first widget model and uses the current application-owned keyboard
+and task-owned editing infrastructure.
 
 The design should provide:
 
@@ -21,7 +23,7 @@ The design should provide:
   field,
 - token-backed geometry, typography, color, and state handling through the
   current theme model,
-- direct inline editing with the shared application-owned editor and software
+- direct inline editing with the shared task-owned editor and software
   keyboard rather than a second text-input subsystem,
 - and a clear follow-on seam for multiline fields once the shared editable
   text work from [text_system_design.md](../in_progress/text_system_design.md) lands.
@@ -37,14 +39,14 @@ shape for Material 3.
 The current widget:
 
 - is a non-surface-owning underlined `BasicWidget`,
-- requires the caller to thread a `TextFieldEditor&` through construction,
+- already resolves its editor through its owning `Task`,
 - has no filled or outlined Material 3 container semantics,
 - has no floating label, supporting text, error text, prefix, or suffix model,
 - and has no Material 3 migration boundary comparable to the checked-in button,
   slider, list, badge, or navigation-rail families.
 
-Wrapping that API in place would preserve the wrong constructor model and the
-wrong surface contract. The Material 3 family should land as an additive API
+Wrapping that API in place would preserve the wrong surface contract and
+legacy hint, decoration, and focus behavior. The Material 3 family should land as an additive API
 that reuses the existing editor runtime while replacing the old visual and slot
 model.
 
@@ -52,39 +54,60 @@ model.
 
 ### Current Starting Point in `roo_windows`
 
-As of 2026-05, `roo_windows` has no Material 3 text-field family.
+As of the 2026-09-12 review, no Material 3 text-field family has landed.
+The existing prerequisites are:
 
-What exists today:
-
-- [widgets/text_field.h](../../../src/roo_windows/widgets/text_field.h) defines a
-  legacy single-line `TextField` that stores an owned `std::string`, paints
-  directly, supports masking, and starts editing on click.
-- The same header defines `TextFieldEditor`, a shared application-owned editor
-  that tracks cursor position, selection, glyph metrics, and horizontal scroll
-  state for the active field only.
-- [core/application.h](../../../src/roo_windows/core/application.h) owns one
-  `Keyboard` and one `TextFieldEditor` for the whole application.
+- [widgets/text_field.h](../../../src/roo_windows/widgets/text_field.h) defines
+  the legacy `roo_windows::TextField` (there is no `widgets` namespace). It
+  accepts `ApplicationContext&`, font, hint and alignment; it no longer accepts
+  a constructor-injected editor. It owns its value and hint strings.
+- [core/task.h](../../../src/roo_windows/core/task.h) owns one `TextFieldEditor`
+  and `FocusManager` per task. `Widget::getTask()` resolves the owner, and
+  `Task::textFieldEditor()` exposes that task's editor.
+- [core/application.h](../../../src/roo_windows/core/application.h) owns the
+  software `Keyboard` and semantic text-input routing. Only one editor is the
+  active semantic input target in an application at a time; connecting an
+  external producer does not change task ownership.
+- The editor already supports Unicode insertion, selection, physical-key
+  movement/deletion, and confirm/cancel. Its caret uses the application context's
+  animation registry; recent-glyph masking uses a scheduler timer.
 - [activities/edit_text_field.h](../../../src/roo_windows/activities/edit_text_field.h)
-  provides a legacy full-screen editing activity built on that same editor.
-- [widgets/text_block.h](../../../src/roo_windows/widgets/text_block.h) now supports
-  wrapping, alignment, max lines, and ellipsis for read-only text.
-- [text_system_design.md](../in_progress/text_system_design.md) already defines the intended
-  long-term split between simple labels, wrapped text, rich text, and a future
-  reusable `TextEditor`.
+  remains a legacy navigation destination using the same runtime.
+- [material3/typography.h](../../../src/roo_windows/material3/typography.h)
+  provides Material 3 `TextStyle` roles, including font, line height and tracking.
+- `TextBlock` supports wrapping, alignment, max lines and ellipsis. Shared rich
+  and editable paragraph layout remains follow-on work.
+- `text_field_animation_test`, `key_source_test`, `application_test`, and
+  transient-host tests already cover parts of editing, focus and isolation.
 
-What does not exist yet:
+Remaining work includes the abstract edit-target seam, the Material 3 surface
+and slots, correct viewport scrolling, allocation-free masked paint, dedicated
+editor/component regression tests, goldens and an example. The existing
+`draw_xoffset_` member alone is not evidence of working caret-follow scrolling:
+the committed implementation never updates it.
 
-- no Material 3 filled or outlined field surface,
-- no floating label contract,
-- no supporting-text or error-text layout model,
-- no prefix or suffix support,
-- no Material 3 slot-aware icon affordance model,
-- no `ApplicationContext` accessor for the shared editor runtime,
-- no test target dedicated to text editing,
-- and no Material 3 text-field example sketch.
+### Review Decisions
 
-The existing legacy field is therefore useful as the editing baseline, but not
-as the target Material 3 API.
+This revision supersedes the original application-owned-editor assumptions:
+
+1. Preserve task-owned editors; do not add an ambiguous no-argument
+   `ApplicationContext::textFieldEditor()` accessor or another editor service.
+2. Use Material 3 `TextStyle` roles and identical font options in measurement
+   and paint; do not fall back to the older `font_body1()`/`font_body2()` mapping.
+3. Keep the proposal's focused-idle state for the new family, explicitly as a
+   component policy different from the legacy field's edit-on-focus policy.
+4. Make affordance hooks return whether they handled activation. A `void`
+   override cannot communicate the promised fallback behavior.
+5. Permit value and shared metric-cache growth at edit/mutation boundaries;
+   require no allocation during paint, visual focus/hover changes, caret frames,
+   or reveal toggles once the active buffer's metrics are prepared.
+6. Include target lifetime, callback reentrancy, Unicode offsets, masking
+   deadlines, and actual target-ABI size measurements in acceptance criteria.
+
+The upstream Material references below remain the visual baseline. This review
+reconciles local architecture and contracts; it does not claim a fresh upstream
+specification audit (the reference pages require JavaScript in the available
+reader).
 
 ### Material 3 Signals
 
@@ -134,7 +157,7 @@ drive four local decisions.
 
 1. A Material 3 text field must be a surface-owning widget, so it should
    derive from `BasicSurfaceWidget`, not from the legacy non-surface
-   `widgets::TextField`.
+   `roo_windows::TextField`.
 2. The common path should not pay for a child vector, nested icon widgets, or
    per-instance callback storage. Hit-testing and painting for the slots should
    stay owner-local.
@@ -157,10 +180,14 @@ The right baseline is:
 - five non-owning `roo::string_view` slot values for label, supporting text,
   error text, prefix, and suffix: `5 * 8 B = 40 B`,
 - two optional icon pointers: `8 B`,
-- and one packed state byte for variant and field-local flags.
+- and packed state for variant and field-local flags, plus an interface vptr if
+  `TextEditTarget` is implemented through multiple inheritance.
 
-That puts the base field in the rough `100-120 B` range before string
-capacity. That is materially heavier than a button or list row, but it is an
+The earlier `100-120 B` estimate is a provisional target, not a measured
+limit. Record `sizeof(BasicSurfaceWidget)`, `sizeof(TextField)`,
+`sizeof(SecureTextField)` and editor cache capacity on the supported 32-bit
+ESP32 toolchain and the host ABI before setting exact budget assertions. That
+is materially heavier than a button or list row, but it is an
 acceptable tradeoff because screens usually host only a small number of text
 fields and those fields already need owned mutable text.
 
@@ -175,7 +202,7 @@ not using."
 
 1. Support the Material 3 filled and outlined text-field variants.
 2. Support single-line editable text with cursor, selection, horizontal scroll,
-   and software-keyboard input through the shared application-owned editor.
+   and software-keyboard input through the shared task-owned editor.
 3. Support a floating label that stays visible while empty, focused, and
    populated states transition.
 4. Support optional supporting text and optional error text, with error text
@@ -196,9 +223,10 @@ not using."
 
 1. Clicking or tapping the main container starts editing when the field is
    editable.
-2. Under the framework contract in [non_touch_input_design.md](../implemented/non_touch_input_design.md),
-   focus traversal alone does not start editing; semantic activate starts
-   editing instead.
+2. For this new family, focus traversal alone does not start editing;
+   semantic activation starts editing. This intentionally differs from the
+   legacy field policy documented in
+   [non_touch_input_design.md](../implemented/non_touch_input_design.md).
 3. Clicking or tapping the main container invokes normal widget interaction
    without showing the keyboard when the field is read-only.
 4. Leading and trailing affordances must be hit-tested inside the field widget
@@ -220,8 +248,8 @@ not using."
 3. Store only the editable value as owned text on the base widget.
 4. Store label, supporting text, error text, prefix, and suffix as non-owning
    `roo::string_view` values.
-5. Expose the shared editor through `ApplicationContext` so new Material 3
-   fields do not take `TextFieldEditor&` constructor arguments.
+5. Resolve the existing editor through `getTask()->textFieldEditor()`;
+   constructors need only `ApplicationContext&`, as current widgets already do.
 6. Use virtual hooks and subclasses for uncommon behavior rather than adding
    new stored `std::function` members.
 7. Keep secure reveal state off the base field by using a dedicated subclass.
@@ -231,7 +259,10 @@ not using."
 
 ### Embedded Constraints
 
-1. Do not allocate on paint, click, hover, focus, or caret-blink paths.
+1. Do not allocate on paint, hover, visual focus changes, caret frames or
+   reveal toggles. Edit activation and text mutation may grow the owned value
+   and task-shared glyph/UTF-8-offset caches. Retain cache capacity across
+   sessions; do not allocate per-widget editor or masked-string buffers.
 2. Do not add a child vector or generic child-slot container surface to the
    common field path.
 3. Keep the incremental RAM cost of `SecureTextField` to one packed reveal bit
@@ -253,8 +284,8 @@ The design has four core pieces:
 3. `TextFieldEditor` is retained as the single-line editing engine, but it is
    generalized to bind an abstract edit target rather than the legacy concrete
    field type.
-4. `ApplicationContext` gains access to the shared `TextFieldEditor` so new
-   fields do not require constructor-injected editor references.
+4. The field resolves the existing task-local editor at the edit boundary;
+   `ApplicationContext` continues to provide theme and animation services.
 
 Key decisions:
 
@@ -264,7 +295,8 @@ Key decisions:
    container.
 4. The base field stores only the state that every field needs: value,
    non-owning slot text, two icon pointers, one read-only bit, one error bit,
-   and one variant selector.
+   one variant selector, and packed pending-affordance state if required by
+   deferred click settlement.
 5. Password reveal state lives only on `SecureTextField`.
 6. Multiline is deferred until the shared editable-text core from
    [text_system_design.md](../in_progress/text_system_design.md) is ready.
@@ -275,36 +307,64 @@ Key decisions:
 
 The current single-line editor is reusable, but only after one local refactor.
 
-Today `TextFieldEditor` depends directly on the legacy `widgets::TextField`
+Today `TextFieldEditor` depends directly on the legacy `roo_windows::TextField`
 type and reaches into that concrete widget for value mutation, font lookup,
 masking, and edit-finished callbacks. That coupling prevents reuse by a new
 Material 3 surface-owning field.
 
 The design therefore introduces a small internal `TextEditTarget` interface.
-`TextFieldEditor` binds a `TextEditTarget*`, not a legacy `widgets::TextField*`.
+`TextFieldEditor` binds a `TextEditTarget*`, not a legacy `roo_windows::TextField*`.
 The target contract stays intentionally narrow:
 
-- access to the owned editable `std::string`,
-- access to the font used for editable text,
+- access to the owned editable `std::string`, font and `Font::Options`,
 - access to the current obscured-text policy,
-- a repaint hook for selection, caret, and scroll changes,
-- and `onEditFinished(bool)` for confirm or cancel.
+- access to the owning `Widget` for subtree membership and caret animation,
+- separate text-mutation and visual-change notifications,
+- and `onEditFinished(bool)` for completion.
 
-The editor stops consulting placeholder or hint text entirely. It manages only
-the actual editable string. That is a better long-term contract for both the
-legacy field and the new Material 3 field, because placeholder and label paint
-belong to the owner surface, not to the shared editing core.
+The legacy target returns its existing font and default options. Material 3
+returns the body-large font and its tracking options. Measurement, masked
+advances, selection boundaries, cursor placement and paint must use the same
+options. Hint and label strings never enter the editor's glyph cache.
 
-`Application` continues to own one `Keyboard` and one `TextFieldEditor`. The
-only public runtime change is that `ApplicationContext` gains:
+`Task` continues to own its editor, while `Application` continues to own the
+keyboard and active semantic input routing. The new field uses
+`getTask()->textFieldEditor()` only while attached; `edit()` is a no-op for a
+detached, disabled or read-only field, and `isEdited()` is false when detached.
+No `ApplicationContext` editor accessor is added.
 
-```cpp
-TextFieldEditor& textFieldEditor() const;
-```
+Caret frames remain on `ApplicationContext::animations()` with the existing
+500 ms cadence and retained animation samples. The target widget forwards its
+reserved caret animation tag to the editor. Recent-glyph expiry remains a
+1500 ms semantic timer; no paint-time clock reads or repaint loops are added.
 
-That keeps the service application-scoped while letting widgets obtain it
-through the same context object they already use for theme, scheduler, and
-widget-event access.
+Editor corrections required by reuse:
+
+- UTF-8 byte offsets must be decoded independently of masked glyph advances.
+  Selection and caret indices remain code-point indices, not byte indices;
+  grapheme clusters, bidi shaping and IME composition remain out of scope.
+- Separate new-session measurement from visual remeasurement. Reveal changes
+  and recent-glyph expiry preserve selection, caret and viewport scroll.
+- Update horizontal scrolling after mutation, caret/selection changes and
+  viewport layout changes, keeping the caret inside the available viewport.
+  Paint consumes the resulting offset without mutating editor state.
+- Notify text changes exactly once after an actual buffer mutation. Cursor,
+  selection, blink and reveal changes send only visual notifications.
+- Reject newline and control input at the single-line input boundary. Public
+  `setText()` accepts valid single-line UTF-8; document that caller contract.
+- End sessions and cancel the masking timer on blur, disabling, read-only
+  transition, detach, destruction or semantic input transfer. Preserve existing
+  task/presenter input isolation; hidden or covered targets must not resume a
+  stale session on re-presentation.
+- Settle editor ownership, timer/animation cleanup, keyboard visibility and
+  repaint before invoking completion callbacks. Callbacks may detach or destroy
+  the old target, or start another edit. Do not dereference a completed target
+  afterward or overwrite a session established reentrantly. Apply the same
+  lifetime discipline to `onTextChanged()`.
+
+Both cancel and confirm retain the live value. Switching targets finishes the
+previous target with `confirmed == false`, matching the committed implementation
+(the old header's “implicitly committed” comment is inaccurate).
 
 ### Surface Ownership and Slot Model
 
@@ -348,7 +408,7 @@ the spec is explicit.
 
 The field measures in two bands:
 
-1. the container band,
+1. the container band (plus reserved outlined-label top clearance),
 2. the assistive band.
 
 For the base single-line family:
@@ -365,9 +425,9 @@ resolved side paddings and the measured widths of the occupied prefix, suffix,
 and icon slots.
 
 For single-line editing, text overflow is handled only through horizontal
-scrolling in the shared editor. That matches the Material guidance for
-single-line fields and reuses the current `draw_xoffset_` machinery already
-implemented in `TextFieldEditor`.
+scrolling in the shared editor. Complete the editor's existing
+`draw_xoffset_` seam with caret-follow updates; it is currently only stored and
+read by paint.
 
 The label has two positions:
 
@@ -379,10 +439,12 @@ The label has two positions:
 The label is treated as floated whenever either of the following is true:
 
 - the editable value is non-empty,
-- or the field is currently bound to the shared editor.
+- or the field is focused or currently bound to its task editor.
 
 That rule keeps the label stable during edit start and after content entry
-without adding a separate stored animation state in v1.
+without adding a separate stored animation state in v1. Focused-idle empty
+fields therefore float their label too; prefix/suffix text is painted only
+while the label is floated, so it never collides with the resting label.
 
 ### Variant-Specific Container Paint
 
@@ -420,20 +482,50 @@ overlay widget.
 
 ### Typography Mapping
 
-The current `Theme` does not expose Material 3 typography tokens directly, so
-the field resolves them through the existing font helpers in
-[theme.h](../../../src/roo_windows/core/theme.h).
+Resolve roles through
+[material3/typography.h](../../../src/roo_windows/material3/typography.h):
 
-The intended mapping is:
+| Content | Material 3 style |
+| --- | --- |
+| Input, resting label, prefix and suffix | `text_style_body_large()` |
+| Floated label and supporting/error text | `text_style_body_small()` |
 
-- input text: `font_body1()`,
-- resting label: `font_body1()`,
-- floated label: `font_body2()`,
-- prefix and suffix text: `font_body1()`,
-- supporting or error text: `font_body2()`.
+Use `TextStyle::lineHeight()` and `baselineOffset()` for layout and pass
+`fontOptions()` to both measurement and drawing. Tracking differs by configured
+zoom level, so testing only the 100% catalog is insufficient. These are shared
+immutable styles; no style object is stored on each field.
 
-This matches the current local typography granularity and keeps the field in
-the same visual neighborhood as the landed Material 3 list and button work.
+### Constrained Layout and Direction
+
+Preferred width is match-parent with a conservative suggested minimum; exact
+slot measurement belongs in `onMeasure()` or an owner-local layout helper.
+The helper is also the authority for painting, viewport bounds and hit testing.
+
+The container is 56dp high. A non-empty active assistive message adds a 4dp gap
+and one body-small line box; no message means no reserved row. Error replaces
+supporting text, including the case of an empty error message. Changing whether
+a row exists requests layout and invalidates its old and new coverage.
+
+Use shared geometry tokens for the 4dp corner radius, 1dp idle and 2dp focused
+stroke, and a 4dp gap on each side of the outlined label notch. Keep the whole
+notch and floated label within measured bounds: reserve half a small-label line
+box above the outlined container, with the floated label centered on its top
+stroke. This inset is additional to the 56dp container and is present in both
+resting and floated states, so editing does not change measured height. The
+filled floated label and input occupy separate line boxes, centered together
+inside its 56dp container. The example should align container bands when mixing
+variants rather than assuming identical outer widget heights.
+
+Measure occupied affix and icon slots before resolving the remaining viewport.
+Clamp all rectangles to available bounds under tight parent constraints; empty
+viewports must not cause negative dimensions, overlapping writes or invalid
+scroll arithmetic. Clip affixes and label to their allotted regions. Assistive
+text uses UTF-8-safe single-line ellipsis computed without an owned temporary
+string. Labels and affixes do not grow the field beyond parent constraints.
+
+Mirror leading/trailing icons, padding, affixes and assistive alignment through
+the effective layout direction. This is slot mirroring, not a claim of a bidi
+editing engine. Test with Latin text in RTL layouts to separate these contracts.
 
 ### Read-Only, Error, and Secure States
 
@@ -475,26 +567,35 @@ reusing the current editor's "recently entered glyph" reveal behavior.
 
 ### Focus, Activation, and Edit Session Boundaries
 
-This design follows the framework contract in
-[non_touch_input_design.md](../implemented/non_touch_input_design.md): focus and editing are
-separate states.
+The current legacy policy in
+[non_touch_input_design.md](../implemented/non_touch_input_design.md) enters editing
+on focus without opening the software keyboard. The new family deliberately
+keeps the original proposal's explicit-activation policy. This is component-owned
+key handling, not a change to task-wide key dispatch or legacy field behavior.
 
 A field can therefore be focused without being edited. The chosen rules are:
 
 - touch click or tap on an editable field starts editing immediately,
 - semantic activate on a focused editable field starts editing through the
-   same `edit()` boundary,
+  same binding boundary, keeping the local software keyboard hidden for
+  hardware-key activation,
 - focus traversal alone never starts editing,
 - and read-only fields remain focusable and activatable, but activation runs
    the ordinary container action path instead of binding the editor.
 
-While a field is focused but not edited, directional navigation remains a
-focus-manager concern. While a field is edited, printable text, delete or
-backspace, caret movement, and selection-changing keys are routed to the
-shared editor instead of being reinterpreted as synthetic touch gestures.
-That keeps the field aligned with the keyboard-first rule in
-[non_touch_input_design.md](../implemented/non_touch_input_design.md): semantic keyboard
-interaction is focus plus action, not fake pointer input.
+While focused-idle, directional keys and Tab remain focus-manager operations;
+Enter or Space activates editing on key-down and consumes the matching key-up
+without inserting text or immediately confirming. Printable characters do not
+implicitly activate an idle field. Handle these keys in `onKeyEvent()` so the
+framework's generic coordinate-based click fallback cannot target an icon slot.
+
+While edited, characters, Space, Backspace/Delete, Left/Right, Home/End and Shift
+selection route directly to the task editor. Enter confirms; Escape/Back cancels
+and remains unhandled for existing task Back behavior. Tab/Shift+Tab traverses
+out and blur ends the session; Up/Down remain traversal operations for v1.
+Read-only activation invokes the ordinary widget action without binding an
+editor or keyboard. Touch/programmatic `edit()` requests task focus and shows
+the local keyboard; a pre-layout request claims focus once eligible.
 
 Confirm and cancel also keep the current editor contract. Both end the edit
 session and keep the current text buffer contents. The only semantic
@@ -514,12 +615,35 @@ The field therefore exposes virtual hooks instead of per-instance
 
 - `onTextChanged()` for immediate edit updates,
 - `onEditFinished(bool confirmed)` for commit and cancel,
-- `onLeadingAffordanceClicked()` and
-  `onTrailingAffordanceClicked()` for icon-slot actions.
+- `bool onLeadingAffordanceClicked()` and
+  `bool onTrailingAffordanceClicked()` for icon-slot actions.
 
-The default icon-affordance hooks are no-ops. If a tap lands on an occupied
-icon slot and the subclass or consumer does not override the hook, the field
-falls back to the ordinary container click behavior.
+Affordance hooks return `true` when handled; the default returns `false`,
+falling back to the ordinary container click. A handled action does not also
+start editing or emit the container action. Use owner-local occupied-slot hit
+regions, enlarged into available slot padding and clipped to the container;
+assistive text is not a click target. Share the normal immediate click settlement
+path and clear any packed pending-slot state on cancellation, so a canceled tap
+cannot redirect later keyboard activation. No child icon buttons are created.
+
+`setErrorText()` activates the error bit even for an empty message;
+`clearError()` clears that bit and restores supporting text without losing the
+stored error view. Disabled visual colors take precedence over focus/error
+palette emphasis, but message precedence remains error over supporting text.
+`setText()` notifies `onTextChanged()` once only when the value changes; when
+edited it resets selection and places the caret at the end of the new value.
+All non-owning strings and icon pointers must outlive their current assignment.
+
+Secure fields reserve their trailing slot for the reveal control; a base
+`setTrailingIcon()` assignment does not replace that effective affordance.
+Document this precedence and test it. Its handled hook toggles reveal without
+starting or ending editing. Error fallback appears only when no effective
+explicit or secure trailing affordance occupies the slot. Read-only secure
+fields may reveal their value; disabled fields cannot activate either slot.
+Do not build a temporary masked string in paint. Decode and draw one mask glyph
+per code point, revealing only a complete final code point during the existing
+recent-entry interval. Deletion, replacement, cancellation and target transfer
+clear that interval; expiry must repaint without changing selection or caret.
 
 ### Repaint and Invalidation Consequences
 
@@ -538,9 +662,10 @@ The chosen paint contract is:
    drawn in their final colors; the field does not prefill and then redraw the
    same pixels with a different color,
 3. editor-driven visual changes call `notifyEditVisualChange()`, which dirties
-   only the viewport in the common case and also dirties the label band and
-   outlined-notch strip when the populated-or-focused float state flips,
-4. assistive-row text changes repaint only the assistive band unless the error
+   only the viewport for caret/selection/scroll changes; text mutation also
+   dirties the label and notch band, and session/focus changes dirty the main
+   container because indicator thickness and palette can change,
+4. assistive-row text changes repaint only the assistive band unless row presence requires relayout or the error
    bit also changes the main container palette,
 5. invalidated repaint redraws the full clipped field bounds in one pass,
    including the assistive row and any floated-label notch.
@@ -558,7 +683,8 @@ The migration plan is additive and non-breaking.
    API.
 2. Generalize `TextFieldEditor` so both the legacy and Material 3 fields can
    use the same editing core.
-3. Add the editor accessor to `ApplicationContext`.
+3. Resolve editing through the existing owning `Task`; preserve application
+   semantic input routing and presentation isolation.
 4. Leave [activities/edit_text_field.h](../../../src/roo_windows/activities/edit_text_field.h)
    available as a legacy full-screen wrapper.
 5. Migrate examples and new code to the Material 3 family gradually.
@@ -568,7 +694,10 @@ drift in the old API.
 
 ## Proposed API
 
-The intended public surface is:
+The intended public surface is shown below. The implementation also privately
+implements `internal::TextEditTarget`; those adapter methods are not additional
+public widget state. Completion dispatch uses the interface even though the
+application-facing override hook is protected.
 
 ```cpp
 namespace roo_windows {
@@ -622,8 +751,8 @@ class TextField : public BasicSurfaceWidget {
  protected:
   virtual void onTextChanged() {}
   virtual void onEditFinished(bool confirmed) {}
-  virtual void onLeadingAffordanceClicked() {}
-  virtual void onTrailingAffordanceClicked() {}
+  virtual bool onLeadingAffordanceClicked() { return false; }
+  virtual bool onTrailingAffordanceClicked() { return false; }
 };
 
 class SecureTextField : public TextField {
@@ -650,11 +779,15 @@ class TextEditTarget {
  public:
   virtual ~TextEditTarget() {}
 
+  virtual Widget& editWidget() = 0;
+  virtual const Widget& editWidget() const = 0;
   virtual std::string& textBuffer() = 0;
   virtual const std::string& textBuffer() const = 0;
   virtual const roo_display::Font& textFont() const = 0;
+  virtual roo_display::Font::Options textFontOptions() const = 0;
   virtual bool obscureText() const = 0;
   virtual void notifyEditVisualChange() = 0;
+  virtual void notifyTextChanged() = 0;
   virtual void onEditFinished(bool confirmed) = 0;
 };
 
@@ -676,10 +809,12 @@ Code slice:
 
 1. Add the internal `TextEditTarget` abstraction.
 2. Refactor `TextFieldEditor` to bind that abstraction rather than the legacy
-   `widgets::TextField` type.
+   `roo_windows::TextField` type.
 3. Stop using hint text inside the editor's glyph-measurement path.
-4. Add `ApplicationContext::textFieldEditor()`.
-5. Keep the legacy [widgets/text_field.h](../../../src/roo_windows/widgets/text_field.h)
+4. Preserve `Task::textFieldEditor()` and existing application input routing.
+5. Add font options, mutation notifications, widget lifetime access and the
+   required UTF-8/remeasurement/scroll corrections to the shared seam.
+6. Keep the legacy [widgets/text_field.h](../../../src/roo_windows/widgets/text_field.h)
    behavior unchanged from a caller perspective.
 
 Proposed commit message:
@@ -687,9 +822,8 @@ Proposed commit message:
 > Text field runtime Phase 1: generalize the shared editor.
 >
 > Extract an abstract text-edit target, route `TextFieldEditor` through it,
-> and expose the shared editor from `ApplicationContext` so new widget families
-> can reuse the existing keyboard path without constructor-injected editor
-> references.
+> and preserve task ownership, font options, lifetime handling and the
+> existing application keyboard path.
 
 Validation: add `text_field_test` for editor-target binding, selection,
 cursor, masking, and confirm or cancel behavior, and run
@@ -721,8 +855,7 @@ and size-budget cases.
 
 Code slice:
 
-1. Bind `material3::TextField` to the shared `TextFieldEditor` through
-   `ApplicationContext`.
+1. Bind `material3::TextField` to its owning task's `TextFieldEditor`.
 2. Implement editable versus read-only click behavior and the explicit
    focused-idle versus actively edited state split.
 3. Reuse the shared single-line cursor, selection, and horizontal-scroll path.
@@ -773,8 +906,9 @@ Code slice:
 
 1. Add a representative example sketch under
    `examples/material3/text_fields/text_fields.ino`.
-2. Update or add a small in-repo usage site to prefer the new Material 3 field
-   where a Material 3 form surface is desired.
+2. Use the new example as the initial Material 3 form usage site. Migrate an
+   existing form only if its semantics fit; do not expand this slice into an
+   unrelated screen redesign.
 3. Keep the legacy full-screen edit activity available, but stop extending it
    as the primary authoring path for new Material 3 work.
 4. Add example-build coverage for the new sketch.
@@ -810,23 +944,37 @@ Validation coverage should include:
 5. RTL-focused render cases for leading or trailing slot mirroring and error-
    icon placement.
 6. Keyboard-only integration coverage for focused-idle versus semantic-
-   activate entry after the framework work in
-   [non_touch_input_design.md](../implemented/non_touch_input_design.md) is
-   implemented.
-7. Example compilation once `examples/material3/text_fields/text_fields.ino`
-   lands.
+   activate entry using the already implemented task key-routing and presenter isolation
+   contracts in [non_touch_input_design.md](../implemented/non_touch_input_design.md).
+7. Compile `//examples/material3/text_fields:text_fields` through the existing
+   `roo_windows_example` macro, including its supported firmware build path.
+8. Retain existing `text_field_animation_test`, `key_source_test`, application,
+   dialog and transient-host regression coverage after the shared editor change.
+9. Test two task editors, semantic input transfer, hidden/disabled/detached
+   targets, masking-timer teardown, and callbacks that destroy or replace the
+   target or reenter editing.
+10. Cover UTF-8 insertion/deletion under masking, reveal/expiry while selected,
+    narrow and zero-width viewports, `setText()` during editing, tracking at
+    multiple zoom levels, and exact-once change/completion notifications.
+11. Count allocations in warmed paint, caret, reveal and visual-state paths;
+    report edit-session/cache growth separately. Add a target-ABI size probe
+    and pointer-size-aware budgets for both public types.
+12. Compare dirty repaint against a fresh invalidated render for each transition;
+    verify pixels outside the dirty band remain unchanged and no pixel receives
+    different intermediate colors in a single pass. Check outlined notches and
+    assistive row removal on a non-default ancestor background.
 
 ## Caveats
 
 ### Rejected Alternatives
 
-#### Mutate the Legacy `widgets::TextField` In Place
+#### Mutate the Legacy `roo_windows::TextField` In Place
 
 This was rejected.
 
-The legacy field is the wrong base type, the wrong constructor model, and the
-wrong slot model for Material 3. Reskinning it in place would keep the editor
-injection requirement and the non-surface widget contract.
+The legacy field has the wrong surface and slot model for Material 3.
+Reskinning it in place would mix the new contracts with legacy hint,
+decoration and edit-on-focus behavior.
 
 #### Expose Separate `FilledTextField` and `OutlinedTextField` Classes
 
