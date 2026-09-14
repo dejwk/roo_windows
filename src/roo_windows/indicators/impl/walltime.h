@@ -5,6 +5,8 @@
 
 namespace roo_windows {
 
+using UtcOffset = roo_time::TimeZone;
+
 /// Base widget that renders the current wall-clock time as `HH:MM`.
 ///
 /// Holds a non-owning `WallTimeClock` pointer, the display time zone, and
@@ -14,14 +16,12 @@ namespace roo_windows {
 class WalltimeIndicatorBase : public Widget {
  public:
   WalltimeIndicatorBase(ApplicationContext& context,
-                        const roo_time::WallTimeClock* clock,
-                        roo_time::UtcOffset tz);
+                        const roo_time::WallTimeClock* clock, UtcOffset tz);
 
   /// Constructs the indicator with an explicit tint color (transparent means
   /// inherit the parent's content color).
   WalltimeIndicatorBase(ApplicationContext& context, roo_display::Color color,
-                        const roo_time::WallTimeClock* clock,
-                        roo_time::UtcOffset tz);
+                        const roo_time::WallTimeClock* clock, UtcOffset tz);
 
   /// Reads the current time from the clock; if the minute changed, refreshes
   /// the cached `HH:MM` string and invalidates the widget.
@@ -37,7 +37,7 @@ class WalltimeIndicatorBase : public Widget {
 
   Color color_;  // If transparent, use parent's default content color.
   const roo_time::WallTimeClock* clock_;
-  roo_time::UtcOffset tz_;
+  UtcOffset utc_offset_;
   std::string val_;
   int16_t hour_, minute_;
 };

@@ -8,28 +8,27 @@
 namespace roo_windows {
 
 using roo_display::Color;
-using roo_time::UtcOffset;
 using roo_time::WallTimeClock;
 
 WalltimeIndicatorBase::WalltimeIndicatorBase(ApplicationContext& context,
                                              const WallTimeClock* clock,
-                                             UtcOffset tz)
+                                             UtcOffset utc_offset)
     : WalltimeIndicatorBase(context, roo_display::color::Transparent, clock,
-                            tz) {}
+                            utc_offset) {}
 
 WalltimeIndicatorBase::WalltimeIndicatorBase(ApplicationContext& context,
                                              Color color,
                                              const WallTimeClock* clock,
-                                             UtcOffset tz)
+                                             UtcOffset utc_offset)
     : Widget(context),
       color_(color),
       clock_(clock),
-      tz_(tz),
+      utc_offset_(utc_offset),
       hour_(-1),
       minute_(-1) {}
 
 void WalltimeIndicatorBase::update() {
-  roo_time::DateTime now(clock_->now(), tz_);
+  roo_time::DateTime now(clock_->now(), utc_offset_);
   if (now.hour() == hour_ && now.minute() == minute_) return;
   hour_ = now.hour();
   minute_ = now.minute();
