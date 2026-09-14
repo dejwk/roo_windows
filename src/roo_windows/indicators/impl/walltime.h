@@ -15,13 +15,13 @@ class WalltimeIndicatorBase : public Widget {
  public:
   WalltimeIndicatorBase(ApplicationContext& context,
                         const roo_time::WallTimeClock* clock,
-                        roo_time::TimeZone tz);
+                        roo_time::UtcOffset tz);
 
   /// Constructs the indicator with an explicit tint color (transparent means
   /// inherit the parent's content color).
   WalltimeIndicatorBase(ApplicationContext& context, roo_display::Color color,
                         const roo_time::WallTimeClock* clock,
-                        roo_time::TimeZone tz);
+                        roo_time::UtcOffset tz);
 
   /// Reads the current time from the clock; if the minute changed, refreshes
   /// the cached `HH:MM` string and invalidates the widget.
@@ -37,7 +37,7 @@ class WalltimeIndicatorBase : public Widget {
 
   Color color_;  // If transparent, use parent's default content color.
   const roo_time::WallTimeClock* clock_;
-  roo_time::TimeZone tz_;
+  roo_time::UtcOffset tz_;
   std::string val_;
   int16_t hour_, minute_;
 };
