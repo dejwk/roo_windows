@@ -24,7 +24,7 @@ action keys and long-press alternatives. Generated `kbEngUSLayout()` and
 use `Open()` to follow the library's C++ naming conventions.
 
 The binary contract is in the
-[design](../../docs/design/proposed/keyboard_binary_layout_design.md).
+[design](../../docs/design/implemented/keyboard_binary_layout_design.md).
 A binary is at most 65,535 bytes. Failed validation leaves an empty view; normal
 firmware uses generated accessors whose bytes are checked once on first use.
 
@@ -65,7 +65,7 @@ language-specific letter popups. `a` has nine alternatives, which increased the
 original design's limit of eight by one. Non-Polish `ß` remains `ß` in its upper
 variant because the scalar-only format cannot emit a multi-character uppercase
 expansion. Polish accented uppercase pairs are explicit. The pl-PL binary is
-1,438 bytes. Small displays suppress strips that cannot meet minimum cell size,
+1,440 bytes. Small displays suppress strips that cannot meet minimum cell size,
 as specified by the design.
 
 A custom keyboard can be constructed as `Keyboard(context, kbPolPLLayout())`.
@@ -86,3 +86,37 @@ press, resets page/caps, and preserves visibility. The
 [Polish place-name example](../../examples/keyboard/polish_place_name/polish_place_name.ino)
 shows text editing with this layout. Run its emulator target with
 `bazel run //examples/keyboard/polish_place_name:polish_place_name`.
+
+The bundled default fonts cover Polish letters and their uppercase forms. Four
+captured symbols (`√`, `∆`, `℅`, `€`) are absent from their character maps;
+the binary retains those exact characters, but displaying them needs fonts with
+that coverage. This is a rendering-font limitation, not a substitution in the
+captured keyboard data.
+
+## Migration and target validation
+
+The application-owned keyboard now defaults to `kbEngUSLayout()` from
+`roo_windows/keyboard_layout/en_us_binary.h`. Custom callers can replace a legacy
+`Keyboard(context, kbEngUS())` with `Keyboard(context, kbEngUSLayout())`.
+The old `KeyboardSpec` constructor and `kbEngUS()` tables remain available;
+removing them is a future breaking-release change. Generated data contains no
+pointers, and a layout view borrows its bytes for the duration of its use.
+
+The [acceptance report](../../docs/keyboard_layout_acceptance.md) records tests,
+firmware size, and target memory measurements. To prepare the Polish example for
+ESP32-C3, first resolve dependencies with the focused Bazel tests, then run:
+
+```sh
+python3 tools/keyboard_layout/prepare_target.py --output-dir /home/dawidk/keyboard-validation
+pio run -d /home/dawidk/keyboard-validation -j 4
+pio run -d /home/dawidk/keyboard-validation -j 4 -t compiledb
+python3 tools/keyboard_layout/target_check.py --compile-db /home/dawidk/keyboard-validation/compile_commands.json --output-dir /home/dawidk/keyboard-validation/abi
+```
+
+Choose a dedicated persistent directory suitable for your machine. The helper
+uses the Roo source versions resolved by this repository's Bazel module graph;
+this avoids mixing incompatible local development checkouts. `--bazel-external`
+can select another resolved external directory, and `--platform` can pin a
+PlatformIO platform release. Configure the example's SPI pins and touch
+calibration before uploading to hardware. Do not run firmware and Bazel builds
+concurrently on memory-constrained machines.

@@ -13,6 +13,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  keyboard-layouts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate compiler and checked-in keyboard artifacts
+        run: python3 tools/keyboard_layout/test_compile.py
+
   ci:
     uses: dejwk/roo_testing/.github/workflows/client-ci.yml@afd219965d65e8d8bcc29b902220a4b19dea66a8 # roo_testing 2.0.0
     with:

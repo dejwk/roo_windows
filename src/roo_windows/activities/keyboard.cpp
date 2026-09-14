@@ -111,6 +111,8 @@ class KeyboardWidget final : public SurfaceWidget {
         text_input_(text_input),
         repeat_(context.scheduler(), [this]() { repeatDelete(); }) {}
 
+  ~KeyboardWidget() override { hidePresentationPin(); }
+
   Color background() const override { return colorTheme().background; }
 
   bool isClickable() const override { return true; }
@@ -199,8 +201,8 @@ class KeyboardWidget final : public SurfaceWidget {
   void includeDamage(const Rect& bounds);
 
   KeyboardLayoutView::Page page() const;
-  KeyboardLayoutView::Key keyAt(int row, int key) const;
-  int rowKeyCount(int row) const;
+  KeyboardLayoutView::Key keyAt(int row, int key,
+                                bool include_start = false) const;
 
   const KeyboardSpec* spec_ = nullptr;
   KeyboardLayoutView layout_;
@@ -453,16 +455,16 @@ Dimensions KeyboardWidget::onMeasure(WidthSpec width, HeightSpec height) {
 }
 
 KeyboardWidget::Grid KeyboardWidget::grid() const {
-  const int cell_width =
-      std::max(kMinCellWidth, (width() - 2 * kPagePaddingPx) / page().width);
-  const int row_height = std::max(
+  const int cell_width = std::max<int>(
+      kMinCellWidth, (width() - 2 * kPagePaddingPx) / page().width);
+  const int row_height = std::max<int>(
       kMinRowHeight,
       (height() - 2 * kPagePaddingPx - kExtraTopPaddingPx) / page().row_count);
   return {cell_width, row_height,
-          std::max(0, (width() - page().width * cell_width) / 2),
-          std::max(0, (height() - kExtraTopPaddingPx -
-                       page().row_count * row_height) /
-                          2) +
+          std::max<int>(0, (width() - page().width * cell_width) / 2),
+          std::max<int>(0, (height() - kExtraTopPaddingPx -
+                            page().row_count * row_height) /
+                               2) +
               kExtraTopPaddingPx};
 }
 
@@ -478,15 +480,9 @@ KeyboardLayoutView::Page KeyboardWidget::page() const {
   return result;
 }
 
-int KeyboardWidget::rowKeyCount(int row) const {
-  if (spec_ != nullptr) return spec_->pages[page_idx_].rows[row].key_count;
-  KeyboardLayoutView::Row result;
-  layout_.readRow(page_idx_, row, result);
-  return result.key_count;
-}
-
 // Decode legacy layouts only during migration; generated records need no scan.
-KeyboardLayoutView::Key KeyboardWidget::keyAt(int row_idx, int key_idx) const {
+KeyboardLayoutView::Key KeyboardWidget::keyAt(int row_idx, int key_idx,
+                                              bool include_start) const {
   KeyboardLayoutView::Key result;
   if (page_idx_ < 0 || row_idx < 0 || key_idx < 0) return result;
   if (spec_ == nullptr) {
@@ -496,7 +492,9 @@ KeyboardLayoutView::Key KeyboardWidget::keyAt(int row_idx, int key_idx) const {
   const KeyboardRowSpec& row = spec_->pages[page_idx_].rows[row_idx];
   const KeySpec& key = row.keys[key_idx];
   result.start = row.start_offset;
-  for (int i = 0; i < key_idx; ++i) result.start += row.keys[i].width;
+  if (include_start) {
+    for (int i = 0; i < key_idx; ++i) result.start += row.keys[i].width;
+  }
   result.width = key.width;
   result.function = static_cast<KeyboardLayoutView::Function>(key.function);
   result.character = {key.data, row.keys_caps[key_idx].data};
@@ -507,15 +505,15 @@ KeyboardLayoutView::Key KeyboardWidget::keyAt(int row_idx, int key_idx) const {
 
 Rect KeyboardWidget::keyBounds(int row_idx, int key_idx) const {
   const Grid g = grid();
-  const KeyboardLayoutView::Key key = keyAt(row_idx, key_idx);
+  const KeyboardLayoutView::Key key = keyAt(row_idx, key_idx, true);
   return keyBounds(g, g.left + key.start * g.cell_width, row_idx, key.width);
 }
 
 Rect KeyboardWidget::keyBounds(const Grid& g, int x, int row_idx,
                                int key_width) const {
   const int y = g.top + row_idx * g.row_height;
-  const int mx = std::max(1, g.cell_width * kButtonMarginPercent / 100);
-  const int my = std::max(1, g.row_height * kButtonMarginPercent / 100);
+  const int mx = std::max<int>(1, g.cell_width * kButtonMarginPercent / 100);
+  const int my = std::max<int>(1, g.row_height * kButtonMarginPercent / 100);
   return Rect(x + mx, y + my, x + key_width * g.cell_width - mx - 1,
               y + g.row_height - my - 1);
 }
@@ -689,21 +687,27 @@ void KeyboardWidget::paint(PaintContext& ctx) const {
   const Grid g = grid();
   const Rect clip = ctx.localClip();
   if (clip.empty()) return;
-  const int first_row = std::max(0, (clip.yMin() - g.top) / g.row_height);
+  const int first_row = std::max<int>(0, (clip.yMin() - g.top) / g.row_height);
   const int last_row =
       std::min<int>(page().row_count - 1, (clip.yMax() - g.top) / g.row_height);
-  const int left = std::max(g.left, static_cast<int>(clip.xMin()));
-  const int past = std::min(g.left + page().width * g.cell_width,
-                            static_cast<int>(clip.xMax()) + 1);
+  const int left = std::max<int>(g.left, static_cast<int>(clip.xMin()));
+  const int past = std::min<int>(g.left + page().width * g.cell_width,
+                                 static_cast<int>(clip.xMax()) + 1);
   if (left < past) {
     for (int row_idx = first_row; row_idx <= last_row; ++row_idx) {
-      KeyboardLayoutView::KeyRange range{
-          0, static_cast<uint16_t>(rowKeyCount(row_idx))};
-      if (spec_ == nullptr) {
-        range = layout_.findKeyRange(
-            page_idx_, row_idx, (left - g.left) / g.cell_width,
-            (past - g.left + g.cell_width - 1) / g.cell_width);
+      if (spec_ != nullptr) {
+        const KeyboardRowSpec& row = spec_->pages[page_idx_].rows[row_idx];
+        int x = g.left + row.start_offset * g.cell_width;
+        for (int key = 0; key < row.key_count && x < past; ++key) {
+          const Rect face = keyBounds(g, x, row_idx, row.keys[key].width);
+          if (face.intersects(clip)) paintKey(ctx, row_idx, key, face);
+          x += row.keys[key].width * g.cell_width;
+        }
+        continue;
       }
+      const KeyboardLayoutView::KeyRange range = layout_.findKeyRange(
+          page_idx_, row_idx, (left - g.left) / g.cell_width,
+          (past - g.left + g.cell_width - 1) / g.cell_width);
       for (int key = range.first; key < range.past_last; ++key) {
         const Rect face = keyBounds(row_idx, key);
         if (face.intersects(clip)) paintKey(ctx, row_idx, key, face);

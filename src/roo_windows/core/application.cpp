@@ -6,7 +6,7 @@
 #include "roo_threads/mutex.h"
 #include "roo_threads/semaphore.h"
 #include "roo_windows/dialogs/alert_dialog.h"
-#include "roo_windows/keyboard_layout/en_us.h"
+#include "roo_windows/keyboard_layout/en_us_binary.h"
 
 namespace roo_windows {
 
@@ -336,7 +336,7 @@ class TickerGuard {
 Application::Application(const Environment* env, roo_display::Display& display)
     : env_(env),
       context_(env->scheduler(), env->theme(), env->keyboardColorTheme()),
-      keyboard_(context_, kbEngUS()),
+      keyboard_(context_, kbEngUSLayout()),
       input_router_(new ApplicationInputRouter(*this)),
       text_input_(new ApplicationTextInput(*this)),
       window_(*this, display, true),
@@ -357,7 +357,7 @@ Application::Application(const Environment* env, roo_display::Display& display,
                          KeySource& keys, bool enable_touch)
     : env_(env),
       context_(env->scheduler(), env->theme(), env->keyboardColorTheme()),
-      keyboard_(context_, kbEngUS()),
+      keyboard_(context_, kbEngUSLayout()),
       input_router_(new ApplicationInputRouter(*this)),
       text_input_(new ApplicationTextInput(*this)),
       window_(*this, display, enable_touch),

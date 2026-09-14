@@ -221,6 +221,33 @@ KeyboardLayoutView {name}() {{
     return {prefix.with_suffix('.h'): header.encode(), prefix.with_suffix('.cpp'): cpp.encode(), prefix.with_suffix('.rwkb'): data}
 
 
+def size_report(data):
+    """Describe canonical section sizes for a compiler-produced blob."""
+    pages = data[5]
+    rows = keys = 0
+    menus, labels = set(), set()
+    for p in range(pages):
+        page = 8 + 4 * p
+        count = data[page + 1]
+        table = int.from_bytes(data[page + 2:page + 4], 'big')
+        rows += count
+        for r in range(count):
+            row = table + 4 * r
+            count = data[row]
+            table_keys = int.from_bytes(data[row + 2:row + 4], 'big')
+            keys += count
+            for k in range(count):
+                key = table_keys + 11 * k
+                menu = int.from_bytes(data[key + 9:key + 11], 'big')
+                if menu:
+                    menus.add(menu)
+                if data[key + 2] & 7 == 5:
+                    labels.add(int.from_bytes(data[key + 6:key + 9], 'big'))
+    return {'header/pages': 8 + 4 * pages, 'rows': 4 * rows, 'keys': 11 * keys,
+            'alternatives': sum(1 + 6 * data[m] for m in menus),
+            'labels': sum(1 + data[label] for label in labels)}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('input', type=Path)
@@ -240,7 +267,8 @@ def main():
             else:
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_bytes(data)
-        print(f'{args.input.name}: {len(blob)} bytes')
+        print(f'{args.input.name}: {len(blob)} bytes; ' +
+              ', '.join(f'{name}={size}' for name, size in size_report(blob).items()))
     except (ValueError, OSError) as error:
         print(error, file=sys.stderr)
         return 1

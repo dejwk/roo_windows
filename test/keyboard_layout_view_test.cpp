@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "gtest/gtest.h"
+#include "roo_windows/core/theme.h"
 #include "roo_windows/keyboard_layout/accent_demo.h"
 #include "roo_windows/keyboard_layout/en_us.h"
 #include "roo_windows/keyboard_layout/en_us_binary.h"
@@ -13,6 +14,17 @@
 namespace roo_windows {
 namespace {
 using View = KeyboardLayoutView;
+
+// Verifies the keyboard's default font can display the Polish letter choices.
+TEST(KeyboardLayoutViewTest, DefaultFontCoversPolishLetters) {
+  for (char32_t rune : U"ąćęłńóśźżĄĆĘŁŃÓŚŹŻ") {
+    if (rune == 0) continue;
+    roo_display::GlyphMetrics metrics;
+    EXPECT_TRUE(font_body1().getGlyphMetrics(
+        rune, roo_display::FontLayout::kHorizontal, &metrics))
+        << static_cast<uint32_t>(rune);
+  }
+}
 
 // Verifies every original US key, uppercase value, label, width, and page
 // target.
@@ -151,6 +163,52 @@ TEST(KeyboardLayoutViewTest, RejectsMalformedBlobs) {
   EXPECT_EQ(View::Error::kUnsupportedVersion,
             View::Open(bad.data(), bad.size(), view));
   EXPECT_TRUE(view.empty());
+}
+
+// Verifies all 255 row-local indices remain usable without a sentinel
+// collision.
+TEST(KeyboardLayoutViewTest, MaximumWidthRowHasNoReservedKeyIndex) {
+  std::vector<uint8_t> data(16 + 255 * 11, 0);
+  const uint8_t header[] = {'R', 'W', 'K', 'B', 1,   1, 0, 0,
+                            255, 1,   0,   12,  255, 0, 0, 16};
+  std::copy(std::begin(header), std::end(header), data.begin());
+  data[6] = data.size() >> 8;
+  data[7] = data.size() & 255;
+  for (int k = 0; k < 255; ++k) {
+    data[16 + k * 11] = k;
+    data[17 + k * 11] = 1;
+    data[21 + k * 11] = 'a';
+    data[24 + k * 11] = 'A';
+  }
+  View view;
+  ASSERT_EQ(View::Error::kOk, View::Open(data.data(), data.size(), view));
+  for (int k = 0; k < 255; ++k) EXPECT_EQ(k, view.findKey(0, 0, k));
+  View::KeyRange range = view.findKeyRange(0, 0, 127, 255);
+  EXPECT_EQ(127, range.first);
+  EXPECT_EQ(255, range.past_last);
+  EXPECT_EQ(-1, view.findKey(0, 0, 255));
+}
+
+// Verifies flash label validation rejects overlong UTF-8 and invalid payload
+// offsets.
+TEST(KeyboardLayoutViewTest, RejectsInvalidLabelAndMenuPayloads) {
+  std::vector<uint8_t> data = {'R', 'W', 'K', 'B', 1,  1,  0, 30, 2,    1,
+                               0,   12,  1,   0,   0,  16, 0, 2,  5,    0,
+                               0,   0,   0,   0,   27, 0,  0, 2,  0xC3, 0xA9};
+  View view;
+  ASSERT_EQ(View::Error::kOk, View::Open(data.data(), data.size(), view));
+  char label[2];
+  size_t length;
+  ASSERT_TRUE(view.copyLabel(0, 0, 0, label, sizeof(label), length));
+  EXPECT_EQ(std::string(u8"é"), std::string(label, length));
+  data[28] = 0xC0;
+  EXPECT_EQ(View::Error::kInvalidData,
+            View::Open(data.data(), data.size(), view));
+  data[18] = 0;
+  data[24] = 'a';
+  data[26] = 27;
+  EXPECT_EQ(View::Error::kInvalidData,
+            View::Open(data.data(), data.size(), view));
 }
 
 }  // namespace

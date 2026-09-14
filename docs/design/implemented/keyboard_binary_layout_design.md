@@ -1,7 +1,8 @@
 # Compact keyboard layouts and long-press alternatives
 
-Status: In progress. Phases 1–5 are implemented. Built-in migration and final
-target validation remain in phase 6.
+Status: Implemented. Phases 1–6 are complete. Host tests and ESP32-C3 firmware
+builds pass; physical touchscreen acceptance remains manual. See the
+[acceptance report](../../keyboard_layout_acceptance.md) for measurements and limits.
 
 Implementation adjustment: AOSP Polish has nine alternatives for `a`; version 1
 accepts nine alternatives (ten choices including the base). Static C++ entry
@@ -178,7 +179,7 @@ Output has no timestamps or machine paths. Ordering follows page, row, and key
 order; identical label strings and alternative lists share storage in first-use
 order. Key records are not deduplicated in version 1.
 
-`format` must be 1. `name` is a valid C++ identifier. Page IDs are unique strings;
+`format` must be 1. `name` is a lowercase, underscore-separated identifier. Page IDs are unique strings;
 page switches resolve them to their array index. Every key specifies exactly one
 of `text` or `action`. Width defaults to 2; row offset defaults to 0; shape defaults
 to `rounded_rect`. `upper` defaults to the exact `text` value: no locale-dependent

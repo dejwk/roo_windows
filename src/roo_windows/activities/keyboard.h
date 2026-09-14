@@ -19,9 +19,9 @@ class Application;
 
 /// On-screen software keyboard widget controller.
 ///
-/// Renders the layout supplied at construction (regular / numeric / etc.)
-/// with one surface widget, reading keys directly from the borrowed spec.
-/// The spec and its tables must outlive the keyboard.
+/// Renders a borrowed generated layout with one surface widget. Layout bytes
+/// must outlive the keyboard or remain alive until replaced by setLayout().
+/// The legacy spec constructor is retained for custom-layout migration.
 ///
 /// Emits semantic text input to its connected application. Tracks caps
 /// state (`LOW`, `HIGH`, `HIGH_LOCKED`) and current page. Its fixed popup task

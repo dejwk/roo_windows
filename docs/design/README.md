@@ -14,6 +14,7 @@ Status was audited against the source tree and tests on 2026-09-12. “Dependenc
 
 | Design | Dependency status |
 | --- | --- |
+| [Compact keyboard layouts and long-press alternatives](implemented/keyboard_binary_layout_design.md) | Generated en-US/pl-PL assets, validated byte reader, binary-search lookup, circular action faces, and long-press selection are implemented. Host regressions and ESP32-C3 build/resource checks pass; physical touchscreen checks remain manual. |
 | App bars/search surfaces | The component family, focused unit and golden coverage, example, and adaptive scaffold integration are implemented. Focused/expanded search remains separate future work. |
 | Back request coordination | Explicit `Task::requestBack()` routing through the transient slot, task-owned `NavigationHost`, and task callback is implemented. Ordinary physical Back/Escape follows the configured task's focused-widget path first; an active display-wide hosted surface now receives it first. Phase 7 adds source-task filtering for task-bounded coverage. |
 | Badge | Paint context and visual-overflow foundations are implemented; the shared transient lifetime contract remains in progress and is not required by the badge scope. |
@@ -73,7 +74,6 @@ Status was audited against the source tree and tests on 2026-09-12. “Dependenc
 
 | Design | Dependency status |
 | --- | --- |
-| [Compact keyboard layouts and long-press alternatives](proposed/keyboard_binary_layout_design.md) | Existing keyboard surface, semantic text input, and presentation pins provide foundations. Binary layouts, binary-search lookup, circular action faces, and long-press movement/selection are proposed. |
 | Button groups | Buttons and icon buttons are implemented; no group implementation exists. |
 | Click delivery policy | Click-animation lifecycle and settlement are implemented; widget-selected semantic delivery timing is not. |
 | Date pickers | Buttons, icon buttons, basic dialogs, and shared back behavior are implemented; single-line text fields are implemented; picker-specific integration remains proposed. |

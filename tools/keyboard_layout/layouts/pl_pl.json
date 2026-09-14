@@ -445,7 +445,7 @@
               "action": "switch_page",
               "width": 3,
               "target": "symbols",
-              "label": "=\\<"
+              "label": "= \\ <"
             },
             {
               "text": "*",

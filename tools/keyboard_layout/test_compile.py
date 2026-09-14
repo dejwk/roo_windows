@@ -19,6 +19,7 @@ class CompilerTest(unittest.TestCase):
         self.assertEqual(b'RWKB\x01\x01\x00\x69', data[:8])
         self.assertEqual(bytes([10, 2, 0, 12]), data[8:12])
         self.assertEqual(105, len(data))
+        self.assertEqual(len(data), sum(compiler.size_report(data).values()))
         self.assertEqual(data, compiler.compile_layout(copy.deepcopy(self.demo)))
 
     def test_invalid_fields_scalars_and_intervals(self):
@@ -50,6 +51,16 @@ class CompilerTest(unittest.TestCase):
         self.demo['pages'] = [dict(page, id=str(i)) for i in range(10)]
         with self.assertRaisesRegex(ValueError, '65535'):
             compiler.compile_layout(self.demo)
+
+    def test_generated_assets_are_current(self):
+        repository = ROOT.parents[1]
+        for name, basename in [('en_us', 'en_us_binary'), ('pl_pl', 'pl_pl'), ('accent_demo', 'accent_demo')]:
+            prefix = repository / 'src/roo_windows/keyboard_layout' / basename
+            outputs = compiler.artifacts(compiler.load(ROOT / 'layouts' / (name + '.json')), prefix)
+            for path, data in outputs.items():
+                if path.suffix == '.rwkb':
+                    path = ROOT / 'generated' / (name + '.rwkb')
+                self.assertEqual(data, path.read_bytes(), str(path))
 
     def test_captured_assets(self):
         en = compiler.compile_layout(compiler.load(ROOT/'layouts/en_us.json'))
