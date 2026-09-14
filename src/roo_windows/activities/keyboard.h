@@ -9,6 +9,7 @@
 #include "roo_windows/core/text_input.h"
 #include "roo_windows/core/widget.h"
 #include "roo_windows/keyboard_layout/keyboard_layout.h"
+#include "roo_windows/keyboard_layout/keyboard_layout_view.h"
 
 namespace roo_windows {
 
@@ -34,6 +35,9 @@ class Keyboard {
   };
 
   Keyboard(ApplicationContext& context, const KeyboardSpec* spec);
+
+  /// Borrows validated layout bytes, which must outlive this keyboard.
+  Keyboard(ApplicationContext& context, KeyboardLayoutView layout);
 
   /// Returns the underlying `KeyboardWidget` that renders the layout.
   Widget& getContents();

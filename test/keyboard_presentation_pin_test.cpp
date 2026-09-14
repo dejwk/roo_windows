@@ -3,6 +3,7 @@
 #include "gtest/gtest.h"
 #include "roo_testing/system/timer.h"
 #include "roo_windows/core/task.h"
+#include "roo_windows/keyboard_layout/en_us_binary.h"
 #include "roo_windows/widgets/button.h"
 #include "roo_windows/widgets/text_field.h"
 #include "roo_windows_render_test_support.h"
@@ -115,6 +116,37 @@ class KeyboardPresentationPinTest : public RooWindowsRenderTestSized<412, 320> {
   TextField field_;
   Task* task_ = nullptr;
 };
+
+// Verifies generated layouts deliver text and page actions through the same
+// editor.
+TEST_F(KeyboardPresentationPinTest,
+       GeneratedKeyboardDeliversTextAndSwitchesPages) {
+  app_.keyboard().hide();
+  Keyboard binary(context(), kbEngUSLayout());
+  Task& owner =
+      app_.addTask(binary.getContents(), roo_display::Box(0, 146, 412, 174));
+  binary.setTask(owner);
+  binary.connect(app_);
+  binary.show();
+  ASSERT_TRUE(refresh());
+  Widget& keys = binary.getContents();
+  keys.layout(Rect(0, 0, 411, 173));
+  task_->textFieldEditor().edit(&field_, false);
+  keys.onDown(26, 28);
+  keys.onSingleTapUp(26, 28);
+  EXPECT_EQ("q", field_.content());
+  binary.setPage(1);
+  keys.layout(Rect(0, 0, 411, 173));
+  keys.onDown(26, 28);
+  keys.onSingleTapUp(26, 28);
+  EXPECT_EQ("q1", field_.content());
+  binary.setPage(-2);
+  keys.onDown(26, 28);
+  keys.onSingleTapUp(26, 28);
+  EXPECT_EQ("q11", field_.content());
+  binary.hide();
+  owner.navigation().clear();
+}
 
 // Verifies the preview escapes the leaf keyboard while retaining task focus,
 // and disappears on cancellation without committing the pressed character.

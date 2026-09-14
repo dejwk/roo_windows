@@ -67,3 +67,9 @@ variant because the scalar-only format cannot emit a multi-character uppercase
 expansion. Polish accented uppercase pairs are explicit. The pl-PL binary is
 1,438 bytes. Small displays suppress strips that cannot meet minimum cell size,
 as specified by the design.
+
+A custom keyboard can be constructed as `Keyboard(context, kbPolPLLayout())`.
+Attach its `getContents()` to a task, call `setTask(task)`, connect it to the editor
+application with `connect(application)`, and use `show()`/`hide()` for visibility.
+The layout's static bytes are shared; drawing searches only for the clipped
+range endpoints, then decodes each visited key directly.
