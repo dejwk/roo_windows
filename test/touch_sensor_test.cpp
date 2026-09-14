@@ -524,6 +524,14 @@ class DeadlineWidget : public BasicWidget {
     if (cancel_on_show != nullptr) cancel_on_show->cancel();
   }
   void onLongPress(XDim, YDim) override { trace.push_back('L'); }
+  void onLongPressMove(XDim x, YDim y) override {
+    trace.push_back('M');
+    last_move_x = x;
+    if (cancel_on_move != nullptr)
+      cancel_on_move->cancelTargetsInSubtree(*this);
+  }
+  int last_move_x = -1;
+  GestureDetector* cancel_on_move = nullptr;
   void onLongPressFinished(XDim, YDim) override { trace.push_back('F'); }
   void onSingleTapUp(XDim, YDim) override { trace.push_back('T'); }
   void onDragStart(XDim, YDim) override { trace.push_back('G'); }
@@ -634,6 +642,34 @@ TEST_P(GestureDeadlineTest, MoveOrderingAcrossBothDeadlines) {
 
 INSTANTIATE_TEST_SUITE_P(BeforeEqualAfter, GestureDeadlineTest,
                          testing::Values(-1, 0, 1));
+
+// Verifies long-press movement stays with its owner and cannot become a drag.
+TEST_F(GestureDeadlineTest, LongPressMovesRetainOwnershipUntilRelease) {
+  roo_time::Uptime down = roo_time::Uptime::Now();
+  sample(true, down);
+  sample(true, down + roo_time::Millis(350), 3072);
+  sample(false, down + roo_time::Millis(400), 3072);
+  advanceTo(down + roo_time::Millis(450));
+  detector_.tick();
+  EXPECT_EQ((std::vector<char>{'D', 'S', 'L', 'M', 'F'}), target_.trace);
+  EXPECT_GT(target_.last_move_x, 32);
+  EXPECT_EQ(0, count('G'));
+}
+
+// Verifies invalidating the owner from its move callback suppresses terminal
+// delivery.
+TEST_F(GestureDeadlineTest, LongPressMoveCanDetachItsOwner) {
+  target_.cancel_on_move = &detector_;
+  roo_time::Uptime down = roo_time::Uptime::Now();
+  sample(true, down);
+  sample(true, down + roo_time::Millis(350), 3072);
+  sample(false, down + roo_time::Millis(400), 3072);
+  advanceTo(down + roo_time::Millis(450));
+  detector_.tick();
+  EXPECT_EQ(1, count('M'));
+  EXPECT_EQ(1, count('C'));
+  EXPECT_EQ(0, count('F'));
+}
 
 // Verifies a complete late press fires show-press, then long-press, then UP.
 TEST_F(GestureDeadlineTest, LateBatchPreservesCallbackOrder) {

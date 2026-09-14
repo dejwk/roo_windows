@@ -439,6 +439,11 @@ class Widget {
   // supportsLongPress() in order to receive this notification.
   virtual void onLongPressFinished(XDim x, YDim y);
 
+  /// Receives local-coordinate moves after long-press ownership is established,
+  /// including movement outside this widget. The default implementation is
+  /// inert.
+  virtual void onLongPressMove(XDim x, YDim y) {}
+
   /// Called after onDragFinished() when a fling qualifies for this owner's
   /// declared drag axis.
   virtual void onFling(XDim x, YDim y, XDim vx, YDim vy);

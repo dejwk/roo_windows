@@ -134,6 +134,17 @@ void GestureDetector::dispatchTimeouts(uint32_t when, bool inclusive) {
 }
 
 bool GestureDetector::dispatch(TouchEvent::Type type) {
+  if (type == TouchEvent::MOVE && phase_ == Phase::kLongPress) {
+    Widget* target = long_press_target_;
+    if (target == nullptr) return false;
+    XDim x;
+    YDim y;
+    target->getAbsoluteOffset(x, y);
+    target->onLongPressMove(latest_.x() - x, latest_.y() - y);
+    // The callback can cancel or detach its target; do not dereference it
+    // again.
+    return true;
+  }
   if (type == TouchEvent::MOVE && phase_ == Phase::kDragOwned) {
     return dispatchOwnedMove();
   }
